@@ -1,0 +1,1 @@
+from .WordHandler import WordHandler
