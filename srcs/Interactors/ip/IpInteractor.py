@@ -39,8 +39,9 @@ class IpInteractor(IInteractor):
     def send(self, host, port, data, response=False):
         sent = False
         s = None
-        for res in socket.getaddrinfo(self._host, self._port, socket.AF_UNSPEC,
-                                        socket.SOCKET_STREAM):
+        for res in socket.getaddrinfo(self._host, self._port,
+                                        socket.AF_UNSPEC,
+                                        socket.SOCK_STREAM):
             af, socktype, proto, canonname, sa = res
             try:
                 s = socket.socket(af, socktype, proto)
@@ -49,7 +50,7 @@ class IpInteractor(IInteractor):
                 continue
             try:
                 s.connect(sa)
-            except OSError as e:
+            except Exception as e:
                 s.close()
                 s = None
                 continue
@@ -57,14 +58,14 @@ class IpInteractor(IInteractor):
         if s is None:
             self.log_error("Could not open socket")
             return False
-        with s:
-            try:
-                s.sendall(data)
-                if response is True:
-                    return s.recv(self._response_buff)
-                sent = True
-            except Exception as e:
-                self.log_error("Could not send data: {}".format(e))
+        try:
+            s.sendall(data)
+            if response is True:
+                return s.recv(self._response_buff)
+            sent = True
+        except Exception as e:
+            self.log_error("Could not send data: {}".format(e))
+        s.close()
         return sent
 
     def interact(self, data, *args, **kwargs):

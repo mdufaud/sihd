@@ -47,43 +47,48 @@ class IpReader(IReader):
     def is_up(self):
         return self._socket is not None
 
-    def send(self, co, msg):
-        client = self._clients.get(co, None)
-        if client is None:
-            self.log_error("No such client {}".format(co))
-            return False
-        client.queue.put(msg)
-        if co not in self._outputs:
-            self._outputs.append(co)
-        return True
-
     def setup_server(self, port):
         if self.is_up():
             return True
-        socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if not socket:
             return False
         try:
-            socket.setblocking(0)
-            socket.bind((socket.gethostname(), port))
-            socket.listen(self._max_co)
-        except OSError as e:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.setblocking(0)
+            host = ""
+            self.log_debug("Addr: {} - Port: {}".format(host, port))
+            sock.bind((host, port))
+            sock.listen(self._max_co)
+        except (OSError, socket.error) as e:
             self.log_error("Error setting up server: {}".format(e))
             self.stop_server(False)
             return False
         self._start_time = time.time()
-        self._socket = socket
+        self._socket = sock
         self._port = port
-        self._inputs = [socket]
+        self._inputs = [sock]
         return True
 
     def get_server(self):
         return self._socket
 
+    def stop_server(self, do_time=False):
+        if self.is_up():
+            self._socket.close()
+            self._socket = None
+        if do_time:
+            stop_time = time.time()
+            self.notify_info("Server has shut down")
+            self.log_info("Server was up for {0:.3f} seconds"\
+                    .format(stop_time - self._start_time))
+
+    """ Select """
+
     def _accept_client(self):
         co, client_addr = self._socket.accept()
         self.log_debug("New connection from {}".format(client_addr))
-        con.setblocking(0)
+        co.setblocking(0)
         self._inputs.append(co)
         self._clients[co] = {
             "addr": client_addr,
@@ -97,21 +102,33 @@ class IpReader(IReader):
         if co in self._outputs:
             self._outputs.remove(co)
         client = self._clients[co]
-        self.log_debug("Client {} has left".format(client.addr))
+        self.log_debug("Client {} has left".format(client["addr"]))
         self._clients[co] = {}
         co.close()
 
     def _read_client(self, co):
         client = self._clients[co]
-        serv = self._socket
-        data = serv.recv(self._rcv_buf)
+        data = co.recv(self._rcv_buf)
         if data:
-            client.msg += 1
+            client["msg"] += 1
             self.notify_observers((data, co))
         else:
             self._remove_client(co)
 
+    """ Sender part """
+
+    def send(self, co, msg):
+        client = self._clients.get(co, None)
+        if client is None:
+            self.log_error("No such client {}".format(co))
+            return False
+        client.queue.put(msg)
+        if co not in self._outputs:
+            self._outputs.append(co)
+        return True
+
     def __do_write(self, writable):
+        server = self._socket
         for sock in writable:
             client = self._clients.get(co, None)
             if client is None:
@@ -121,16 +138,13 @@ class IpReader(IReader):
             except Queue.Empty:
                 outputs.remove(co)
                 continue
-            total = len(next_msg)
-            sent = 0
-            while total >= sent:
-                ret = server.send(next_msg)
-                if ret < 0:
-                    err = "Error sending to client {}".format(client.addr)
-                    self.log_error(err)
-                    self.notify_error(err)
-                    break
-                sent += ret
+            try:
+                server.send(next_msg)
+            except Exception as e:
+                err = "Error sending to client {}".format(client.addr)
+                self.log_error(err)
+                self.notify_error(err)
+                continue
 
     def _do_select(self):
         server = self._socket
@@ -148,19 +162,10 @@ class IpReader(IReader):
             if sock is server:
                 self._accept_client()
             else:
-                self._read_client()
+                self._read_client(sock)
+        #TODO do keep ?
         self.__do_write(writable)
         return True
-
-    def stop_server(self, do_time=False):
-        if self.is_up():
-            self._socket.close()
-            self._socket = None
-        if do_time:
-            stop_time = time.time()
-            self.notify_info("Server has shut down")
-            self.log_info("Server was up for {0:.3f} seconds"\
-                    .format(stop_time - self._start_time))
 
     """ IService """
 

@@ -1,3 +1,3 @@
 from .IReader import IReader
-import sys
-import ip
+from .sys import *
+from .ip import *

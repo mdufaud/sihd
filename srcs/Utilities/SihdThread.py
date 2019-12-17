@@ -9,13 +9,18 @@ import time
 
 class SihdThread(threading.Thread):
  
-    def __init__(self, parent):
+    def __init__(self, parent=None, msleep=1):
         threading.Thread.__init__(self)
         self._stopped = True
         self._paused = False
         self._stepfun = None
         self._parent = parent
-        self._sleep = parent.get_conf_val("thread_usleep") or 100
+        if parent is not None:
+            self._msleep = parent.get_conf_val("thread_msleep") or msleep
+        else:
+            self._msleep = msleep
+        self._msleep = self._msleep / 1e3
+
 
     @staticmethod
     def is_main_thread():
@@ -48,13 +53,15 @@ class SihdThread(threading.Thread):
 
     def run(self):
         self._stopped = False
+        ms = self._msleep
         if self._stepfun is None:
             raise RuntimeError("No function to execute")
         while not self._stopped:
             if self._stepfun() == False:
                 break
+            time.sleep(ms)
             while self._paused:
-                time.usleep(self._sleep)
+                time.sleep(0.05)
 
     def is_running(self):
         return self._stopped == False
