@@ -117,7 +117,6 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         if self._path is None:
             self.error("No path set for app")
             return
-        self.say("Making conf file {}".format(self.get_conf_path()))
         config.add_section("Logger")
         config.set("Logger", "level", "info")
         config.set("Logger", "directory", os.path.join(self._path, "logs"))
@@ -125,10 +124,13 @@ class IApp(Utilities.IService, Utilities.ILoggable,
     def __read_conf(self, path):
         self._conf_path = path
         obj = ConfigParser.SafeConfigParser()
-        if not os.path.isfile(self._conf_path):
+        if not os.path.isfile(path):
+            self.say("Making conf file {}".format(self.get_conf_path()))
+            self.__setup_logger_conf(obj)
+        elif not obj.has_section("Logger"):
             self.__setup_logger_conf(obj)
         else:
-            obj.read(self._conf_path)
+            obj.read(path)
         self.load_conf(obj)
         Utilities.ILoggable.setup_log(self.get_name(),
                                     obj.get("Logger", "level"),
@@ -141,7 +143,7 @@ class IApp(Utilities.IService, Utilities.ILoggable,
     def _write_conf(self, obj=None):
         if obj is None:
             obj = self.get_conf_obj()
-        with open(self._conf_path, 'wb') as configfile:
+        with open(self._conf_path, 'w') as configfile:
             obj.write(configfile)
             self.log_debug("Conf file {} is written".format(self.get_conf_path()))
 

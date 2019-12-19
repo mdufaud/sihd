@@ -66,7 +66,7 @@ class IpHandler(IHandler):
         if data:
             client["msg"] += 1
             self._reader = reader
-            self.notify_observers(data, co)
+            self.notify_observers(data.decode(), co)
             self._reader = None
         else:
             self._remove_client(reader, co)
@@ -75,7 +75,7 @@ class IpHandler(IHandler):
         data, server = co.recvfrom(self._rcv_buf)
         if data:
             self._reader = reader
-            self.notify_observers(data, co)
+            self.notify_observers(data.decode(), co)
             self._reader = None
         else:
             self._remove_client(reader, co)
@@ -119,7 +119,7 @@ class IpHandler(IHandler):
                 outputs.remove(co)
                 continue
             try:
-                server.sendall(next_msg)
+                server.sendall(next_msg.encode())
             except Exception as e:
                 err = "Error sending to client {}".format(client.addr)
                 self.log_error(err)

@@ -8,5 +8,5 @@ except ImportError:
     pass
 try:
     from .WxPython import *
-except ImportError:
+except ImportError as e:
     pass

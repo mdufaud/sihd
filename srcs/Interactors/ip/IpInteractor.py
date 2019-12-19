@@ -56,7 +56,7 @@ class IpInteractor(IInteractor):
                             self._host, self._port))
             return False
         try:
-            s.sendto(data, (self._host, self._port))
+            s.sendto(data.encode(), (self._host, self._port))
             if response is True:
                 data, server = s.recvfrom(self._response_buff)
                 return data
@@ -91,7 +91,7 @@ class IpInteractor(IInteractor):
                             self._host, self._port))
             return False
         try:
-            s.sendall(data)
+            s.sendall(data.encode())
             if response is True:
                 return s.recv(self._response_buff)
             sent = True

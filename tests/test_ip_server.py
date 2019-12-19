@@ -58,6 +58,7 @@ def test(fun, t):
     reader.load_conf()
     ip_handler.load_conf()
     assert(reader.start())
+    thread = None
     try:
         thread = sender_thread(fun)
         time.sleep(1)
@@ -66,12 +67,17 @@ def test(fun, t):
         thread.stop()
         time.sleep(1)
     except Exception as e:
+        if thread:
+            thread.stop()
         logger.error("{}".format(e))
     assert(reader.stop())
 
 if __name__ == '__main__':
-    logger.info("Starting test UDP")
-    test(send_udp, "udp")
-    logger.info("Starting test TCP")
-    test(send_tcp, "tcp")
-    logger.info("Test ending")
+    try:
+        logger.info("Starting test UDP")
+        test(send_udp, "udp")
+        logger.info("Starting test TCP")
+        test(send_tcp, "tcp")
+        logger.info("Test ending")
+    except KeyboardInterrupt as e:
+        sys.exit(1)

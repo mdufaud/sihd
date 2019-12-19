@@ -68,7 +68,7 @@ class LineReader(IReader):
             self._reader.close()
             self._reader = None
         try:
-            fp = open(path)
+            fp = open(path, 'r')
             self._reader = fp
         except IOError as err:
             self.notify_error(err)
