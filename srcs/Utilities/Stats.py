@@ -76,12 +76,14 @@ def stat_it(method):
         obj = __get_stat(method)
         obj.add_time(end - begin)
         obj.add_return(ret)
+        return ret
     return wrapper
 
 def count_it(method):
     def wrapper(*args, **kwars):
-        method(*args, **kwargs)
+        ret = method(*args, **kwargs)
         __get_stat(method).add_count()
+        return ret
     return wrapper
 
 def get_stats():

@@ -19,7 +19,7 @@ class WordHandler(IHandler):
         self._skipped = 0
 
     def _handle_result(self, line):
-        if not isinstance(line, basestring):
+        if not isinstance(line, str):
             return
         toskip = self._toskip
         if toskip:
@@ -43,7 +43,7 @@ class WordHandler(IHandler):
     def _load_conf_impl(self):
         self._delimiter = self.get_conf_val("delimiter")
         toskip = self.get_conf_val("skip")
-        if isinstance(toskip, basestring):
+        if isinstance(toskip, str):
             self._toskip = toskip.split(";")
         return True
 

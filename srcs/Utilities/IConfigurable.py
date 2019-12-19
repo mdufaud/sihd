@@ -58,8 +58,12 @@ class IConfigurable(INamedObject):
             self.__is_configured = True
         return self.__is_configured
 
-    def set_conf(self, key, value):
-        self.__default_conf[key] = value
+    def set_conf(self, key, value=None):
+        if isinstance(key, dict):
+            for k, v in key.items():
+                self.set_conf(k, v)
+        else:
+            self.__default_conf[key] = value
 
     def set_conf_file(self, key, value):
         """ Set a value in the obj configuration """

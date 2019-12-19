@@ -9,18 +9,14 @@ import time
 
 class SihdThread(threading.Thread):
  
-    def __init__(self, parent=None, msleep=1):
+    def __init__(self, parent=None, frequency=50, timeout=None):
         threading.Thread.__init__(self)
         self._stopped = True
         self._paused = False
         self._stepfun = None
         self._parent = parent
-        if parent is not None:
-            self._msleep = parent.get_conf_val("thread_msleep") or msleep
-        else:
-            self._msleep = msleep
-        self._msleep = self._msleep / 1e3
-
+        self.set_timeout(timeout)
+        self.set_frequency(frequency)
 
     @staticmethod
     def is_main_thread():
@@ -35,6 +31,14 @@ class SihdThread(threading.Thread):
             raise NotImplementedError("Class `{}` does not implement `{}`"\
                     .format(instance.__class__.__name__, fun_name))
         return None
+
+    def set_frequency(self, frequency):
+        if frequency is 0 or frequency is None:
+            return
+        self._sleep = float(1. / int(frequency))
+
+    def set_timeout(self, timeout):
+        self._timeout = timeout
 
     def stop(self):
         self._stopped = True
@@ -52,14 +56,27 @@ class SihdThread(threading.Thread):
         self._stepfun = fun
 
     def run(self):
-        self._stopped = False
-        ms = self._msleep
         if self._stepfun is None:
             raise RuntimeError("No function to execute")
+        self._stopped = False
+        sleep = self._sleep
+        start = time.time()
+        timeout = self._timeout
+        fun = self._stepfun
+        res = None
         while not self._stopped:
-            if self._stepfun() == False:
-                break
-            time.sleep(ms)
+            if timeout is not None:
+                now = time.time()
+                if ((start + timeout) <= now):
+                    return
+            try:
+                res = fun()
+            except Exception as e:
+                self.stop()
+                raise
+            if res is None or res is False:
+                return
+            time.sleep(sleep)
             while self._paused:
                 time.sleep(0.05)
 

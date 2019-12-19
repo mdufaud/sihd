@@ -1,2 +1,3 @@
 from .IHandler import IHandler
-import sys
+from .sys import *
+from .ip import *

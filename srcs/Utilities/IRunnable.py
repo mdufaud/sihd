@@ -25,7 +25,7 @@ class IRunnable(INamedObject):
         return None
 
     def set_run_method(self, method):
-        if isinstance(method, basestring):
+        if isinstance(method, str):
             self._run_method = SihdThread.find_method_by_str(self, method)
         else:
             self._run_method = method
@@ -64,10 +64,10 @@ class IRunnable(INamedObject):
             return False
         return self._thread.is_alive()
 
-    def setup_thread(self):
+    def setup_thread(self, **kwargs):
         """ Method to call before anything else """
         if self._thread is not None:
             self.stop_thread()
-        self._thread = SihdThread(self)
+        self._thread = SihdThread(self, **kwargs)
         self._thread.daemon = True
         self.set_run_method(self._run_method)

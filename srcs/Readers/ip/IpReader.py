@@ -7,24 +7,22 @@ import time
 import os
 import socket
 import select
-import Queue
 
 from sihd.srcs.Readers.IReader import IReader
 
 class IpReader(IReader):
     
-    def __init__(self, port=None, app=None, name="IpReader"):
+    def __init__(self, app=None, name="IpReader"):
         super(IpReader, self).__init__(app=app, name=name)
         self._socket = None
-        if port >= 0:
-            self.setup_server(port)
         self._inputs = []
         self._outputs = []
-        self._clients = {}
+        self._listening = False
         self._set_default_conf({
             "port": 42042,
             "max_co": 5,
-            "rcv_buf": 4096,
+            "type": "tcp",
+            "protocol": "ipv4",
         })
         self.set_run_method(self._do_select)
 
@@ -34,13 +32,68 @@ class IpReader(IReader):
         max_co = self.get_conf_val("max_co")
         if max_co:
             self._max_co = int(max_co)
-        rcv_buf = self.get_conf_val("rcv_buf")
-        if rcv_buf:
-            self._rcv_buf = rcv_buf
+        socket = self.get_conf_val("type")
+        if socket:
+            self._socket_type = IpReader.get_socket_type(socket)
+        protocol = self.get_conf_val("protocol")
+        if protocol:
+            self._protocol = IpReader.get_protocol(protocol)
         if self._socket is None:
             port = self.get_conf_val("port")
             self.setup_server(port)
         return True
+
+    """ Getters """
+
+    @staticmethod
+    def get_protocol(type):
+        if type == "ipv4":
+            return socket.AF_INET
+        elif type == "ipv6":
+            return socket.AF_INET6
+        elif type == "unix":
+            return socket.AF_UNIX
+        return None
+
+    @staticmethod
+    def get_socket_type(type):
+        if type == "udp":
+            return socket.SOCK_DGRAM
+        elif type == "tcp":
+            return socket.SOCK_STREAM
+        elif type == "raw":
+            return socket.SOCK_RAW
+        return None
+
+    def is_raw(self):
+        return self._socket_type == socket.SOCK_RAW
+
+    def is_tcp(self):
+        return self._socket_type == socket.SOCK_STREAM
+
+    def is_udp(self):
+        return self._socket_type == socket.SOCK_DGRAM
+
+    def get_serv_addr(self):
+        return ("localhost", self._port)
+
+    def get_server(self):
+        return self._socket
+
+    """ Select utilities """
+
+    def add_input(self, co):
+        self._inputs.append(co)
+
+    def add_output(self, co):
+        self._outputs.append(co)
+
+    def remove_input(self, co):
+        self._inputs.remove(co)
+
+    def remove_output(self, co):
+        if co in self._outputs:
+            self._outputs.remove(co)
 
     """ Reader """
 
@@ -50,31 +103,45 @@ class IpReader(IReader):
     def setup_server(self, port):
         if self.is_up():
             return True
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        if not socket:
+        self._port = port
+        sock = socket.socket(self._protocol, self._socket_type)
+        if not sock:
+            self.log_error("Could not open socket")
             return False
         try:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.setblocking(0)
-            host = ""
-            self.log_debug("Addr: {} - Port: {}".format(host, port))
-            sock.bind((host, port))
-            sock.listen(self._max_co)
         except (OSError, socket.error) as e:
-            self.log_error("Error setting up server: {}".format(e))
+            self.log_error("Error sock opt server: {}".format(e))
             self.stop_server(False)
             return False
+        try:
+            addr = self.get_serv_addr()
+            self.log_debug("Binding on {}:{}".format(addr[0], addr[1]))
+            sock.bind(addr)
+        except (OSError, socket.error) as e:
+            self.log_error("Error bind server: {}".format(e))
+            self.stop_server(False)
+            return False
+        self._listening = False
+        if self._socket_type == socket.SOCK_STREAM:
+            try:
+                sock.listen(self._max_co)
+                self._listening = True
+            except (OSError, socket.error) as e:
+                self.log_error("Error listen server: {}".format(e))
+                self.stop_server(False)
+                return False
         self._start_time = time.time()
         self._socket = sock
-        self._port = port
         self._inputs = [sock]
+        self._outputs = []
         return True
-
-    def get_server(self):
-        return self._socket
 
     def stop_server(self, do_time=False):
         if self.is_up():
+            self._inputs = []
+            self._outputs = []
             self._socket.close()
             self._socket = None
         if do_time:
@@ -85,86 +152,25 @@ class IpReader(IReader):
 
     """ Select """
 
-    def _accept_client(self):
-        co, client_addr = self._socket.accept()
-        self.log_debug("New connection from {}".format(client_addr))
-        co.setblocking(0)
-        self._inputs.append(co)
-        self._clients[co] = {
-            "addr": client_addr,
-            "socket": co,
-            "msg": 0,
-            "queue": Queue.Queue(),
-        }
-
-    def _remove_client(self, co):
-        self._inputs.remove(co)
-        if co in self._outputs:
-            self._outputs.remove(co)
-        client = self._clients[co]
-        self.log_debug("Client {} has left".format(client["addr"]))
-        self._clients[co] = {}
-        co.close()
-
-    def _read_client(self, co):
-        client = self._clients[co]
-        data = co.recv(self._rcv_buf)
-        if data:
-            client["msg"] += 1
-            self.notify_observers((data, co))
-        else:
-            self._remove_client(co)
-
-    """ Sender part """
-
-    def send(self, co, msg):
-        client = self._clients.get(co, None)
-        if client is None:
-            self.log_error("No such client {}".format(co))
-            return False
-        client.queue.put(msg)
-        if co not in self._outputs:
-            self._outputs.append(co)
-        return True
-
-    def __do_write(self, writable):
-        server = self._socket
-        for sock in writable:
-            client = self._clients.get(co, None)
-            if client is None:
-                continue
-            try:
-                next_msg = client.queue.get_nowait()
-            except Queue.Empty:
-                outputs.remove(co)
-                continue
-            try:
-                server.send(next_msg)
-            except Exception as e:
-                err = "Error sending to client {}".format(client.addr)
-                self.log_error(err)
-                self.notify_error(err)
-                continue
-
     def _do_select(self):
         server = self._socket
         outputs = self._outputs
         inputs = self._inputs
         readable, writable, exceptional = select.select(inputs,
                                                         outputs,
-                                                        inputs)
+                                                        inputs,
+                                                        1)
         if exceptional:
             err = "Exceptional: {}".format(exceptional)
             self.log_error(err)
             self.notify_error(err)
             return False
-        for sock in readable:
-            if sock is server:
-                self._accept_client()
-            else:
-                self._read_client(sock)
-        #TODO do keep ?
-        self.__do_write(writable)
+        if self.is_active() and (readable or writable):
+            try:
+                self.notify_observers(readable, writable)
+            except Exception as e:
+                self.stop()
+                raise
         return True
 
     """ IService """
@@ -175,9 +181,10 @@ class IpReader(IReader):
             return False
         self.setup_thread()
         self._start_time = time.time()
-        s = "Accepting connections ({} max)".format(self._max_co)
-        self.log_info(s)
-        self.notify_info(s)
+        if self._listening is True:
+            s = "Accepting connections ({} max)".format(self._max_co)
+            self.log_info(s)
+            self.notify_info(s)
         self.start_thread()
         return True
 

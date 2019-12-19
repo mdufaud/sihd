@@ -19,8 +19,6 @@ class LineReader(IReader):
         if path:
             self.set_source(path)
         self._set_default_conf({
-            "pause_time": "0.005",
-            "pause_every_lines": "0",
             "path": "/path/to/file",
         })
         self.set_run_method(self._read_line)
@@ -28,12 +26,6 @@ class LineReader(IReader):
     """ IConfigurable """
 
     def _load_conf_impl(self):
-        val = self.get_conf_val("pause_time")
-        if val:
-            self._pause_time = float(val)
-        val = self.get_conf_val("pause_every_lines")
-        if val:
-            self._pause_every_lines = int(val)
         path = self.get_conf_val("path", not_default=True)
         if path:
             self.set_source(path)
@@ -88,9 +80,6 @@ class LineReader(IReader):
     def _read_line(self):
         if self._to_recover > 0 and self._recover() == True:
             return True
-        pause = self._pause_every_lines
-        if pause != 0.0 and self._lines % pause == 0:
-            time.sleep(self._pause_time)
         try:
             line = self._reader.readline()
         except EOFError as e:

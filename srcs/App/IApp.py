@@ -327,26 +327,30 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         self._loop_impl = self._timed_loop
         return True
 
-    def _timed_loop(self):
-        ret = True
-        max_sec = self._max_sec_timed_loop
+    def _timed_loop(self, timeout=None):
+        max_sec = timeout or self._max_sec_timed_loop
         try:
             i = 0
             while i < max_sec and self.is_running():
                 time.sleep(1)
                 i += 1
         except KeyboardInterrupt:
-            ret = self.stop()
-        return ret
+            pass
+        return self.stop()
 
-    def _infinite_loop(self):
+    def _infinite_loop(self, timeout=None):
         ret = True
+        start = time.time()
+        now = start
         try:
             while self.is_running():
                 time.sleep(1)
+                now += 1
+                if timeout is not None and now >= (start + timeout):
+                    break
         except KeyboardInterrupt:
-            ret = self.stop()
-        return ret
+            pass
+        return self.stop()
 
-    def loop(self):
-        return self._loop_impl()
+    def loop(self, timeout=None):
+        return self._loop_impl(timeout=timeout)

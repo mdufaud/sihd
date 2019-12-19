@@ -16,14 +16,14 @@ class IObservable(INamedObject):
         assert(handler.handle)
         self.handlers.add(handler)
 
-    def notify_observers(self, data):
+    def notify_observers(self, *args):
         for handler in self.handlers:
-            handler.handle(self, data)
+            handler.handle(self, *args)
 
-    def notify_error(self, error):
+    def notify_error(self, *args):
         for handler in self.handlers:
-            handler.on_error(self, error)
+            handler.on_error(self, *args)
 
-    def notify_info(self, info):
+    def notify_info(self, *args):
         for handler in self.handlers:
-            handler.on_info(self, info)
+            handler.on_info(self, *args)

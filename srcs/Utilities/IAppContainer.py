@@ -6,6 +6,10 @@ from __future__ import print_function
 
 class IAppContainer(object):
 
+    def __init__(self, *args, **kwargs):
+        self.__wm_app = None
+        super(IAppContainer, self).__init__(*args, **kwargs)
+
     def set_app(self, app):
         self.__wm_app = app
 

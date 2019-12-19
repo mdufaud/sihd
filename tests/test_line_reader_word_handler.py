@@ -48,7 +48,7 @@ def test_file(path, lines, skipped, check_words={}):
     if app.setup() is False:
         sys.exit(1)
     app.start()
-    app.loop()
+    app.loop(timeout=5)
     assert_expected(app, lines, skipped, check_words)
 
 if __name__ == '__main__':
