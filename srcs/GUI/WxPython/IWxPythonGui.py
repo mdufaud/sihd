@@ -12,11 +12,14 @@ import logging
 from ..IGui import IGui
 from ... import Utilities
 
-import wx
+wx = None
 
 class IWxPythonGui(IGui):
 
     def __init__(self, app=None, name="IWxPythonGui"):
+        global wx
+        if wx is None:
+            import wx
         super(IWxPythonGui, self).__init__(app=app, name=name)
         if app:
             self.get_app().set_loop(self.start_gui)

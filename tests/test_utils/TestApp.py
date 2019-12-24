@@ -60,7 +60,7 @@ class TestApp(sihd.App.IApp):
             return
         self.log_info(service.get_state())
         if stopped:
-            self.stop()
+            self.log_info("Reader {} ended and stopped".format(service.get_name()))
 
     def _configure_handler(self, handler):
         #Decorate with stats

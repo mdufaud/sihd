@@ -7,7 +7,7 @@ from __future__ import print_function
 import sys
 import logging
 
-import curses
+curses = None
 
 from ..IGui import IGui
 from ... import Utilities
@@ -15,6 +15,9 @@ from ... import Utilities
 class ICursesGui(IGui):
 
     def __init__(self, app=None, name="ICursesGui"):
+        global curses
+        if curses is None:
+            import curses
         super(ICursesGui, self).__init__(app=app, name=name)
         self.set_run_method(self.__start_gui)
         self._log_handler = None

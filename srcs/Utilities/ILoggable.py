@@ -104,7 +104,7 @@ class ILoggable(INamedObject):
         if directory is None:
             return
         file_handler = RotatingFileHandler(ILoggable._get_filename(directory, app_name),
-                                            'a', 1e6, 1, encoding='utf-8')
+                                            'a+', 1e6, 1, encoding='utf-8')
         file_handler.setLevel(log_level)
         file_handler.setFormatter(ILoggable.get_formatter())
         ILoggable.logger.addHandler(file_handler)

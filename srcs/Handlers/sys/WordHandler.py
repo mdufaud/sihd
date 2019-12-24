@@ -27,16 +27,14 @@ class WordHandler(IHandler):
                 if line.find(skip) == 0:
                     self._skipped += 1
                     return
-        if line[-1] == "\n":
-            line = line[0:-1]
+        line = line.strip()
         lst = line.split(self._delimiter)
         d = self._stats
+        get = d.get
         for word in lst:
             if word == "":
                 continue
-            if d.get(word, None) is None:
-                d[word] = 0
-            d[word] += 1
+            d[word] = get(word, 0) + 1
 
     """ IConfigurable """
 

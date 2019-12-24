@@ -1,7 +1,13 @@
-import wx
+try:
+    import wx
+    Frame = wx.Frame
+except ImportError:
+    wx = None
+    Frame = object
+
 import os.path
 
-class MainWindow(wx.Frame):
+class MainWindow(Frame):
     def __init__(self, filename='noname.txt'):
         super(MainWindow, self).__init__(None, size=(400,200))
         self.filename = filename

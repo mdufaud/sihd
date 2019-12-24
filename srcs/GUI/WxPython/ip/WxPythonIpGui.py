@@ -10,14 +10,23 @@ import logging
 
 from sihd.srcs.GUI.WxPython.IWxPythonGui import IWxPythonGui
 
-import wx
+try:
+    import wx
+    Panel = wx.Panel
+    Frame = wx.Frame
+except ImportError:
+    wx = None
+    Panel = object
+    Frame = object
 
 class WxPythonIpGui(IWxPythonGui):
 
     def __init__(self, app=None, name="WxPythonIpGui"):
+        global wx
+        if wx is None:
+            import wx
         super(WxPythonIpGui, self).__init__(app=app, name=name)
         self._set_default_conf({
-            "smth": 0,
         })
 
     def _make_frames(self, app):
@@ -27,28 +36,36 @@ class WxPythonIpGui(IWxPythonGui):
     """ IConfigurable """
 
     def _load_conf_impl(self):
-        smth = self.get_conf_val("smth")
-        if smth:
-            self._smth = int(smth)
         return True
 
     """ IObservable """
 
     def handle(self, reader, message, co):
         if self.frame and self.frame.logframe:
-            if message[-1] == "\n":
-                message = message[0:-1]
+            message = message.strip()
             if message != "":
                 self.frame.logframe.log(message)
+            if message == "stop":
+                self.stop(True)
         return True
 
     def on_info(self, reader, info):
-        return
+        info = info.strip()
+        if info != "":
+            self.frame.logframe.log(info)
 
     def on_error(self, reader, err):
-        return
+        err = err.strip()
+        if err != "":
+            self.frame.logframe.log(err)
+        self.stop(True)
 
-class LogFrame(wx.Panel):
+    def _stop_impl(self):
+        if self.frame:
+            self.frame.Close()
+        return True
+
+class LogFrame(Panel):
 
     def __init__(self, *args, **kwargs):
         super(LogFrame, self).__init__(*args, **kwargs)
@@ -83,7 +100,7 @@ class LogFrame(wx.Panel):
     def __log(self, message):
         self.logger.AppendText('%s\n'%message)
 
-class MainIpWindow(wx.Frame):
+class MainIpWindow(Frame):
 
     def __init__(self, *args, **kwargs):
         super(MainIpWindow, self).__init__(*args, **kwargs)
@@ -123,7 +140,7 @@ class MainIpWindow(wx.Frame):
     # Event handlers:
 
     def OnAbout(self, event):
-        dialog = wx.MessageDialog(self, 'An IP GUI\nin wxPython',
+        dialog = wx.MessageDialog(self, 'A WxPython Ip Gui',
                                     'About Sample Editor', wx.OK)
         dialog.ShowModal()
         dialog.Destroy()

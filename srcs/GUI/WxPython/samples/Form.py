@@ -1,6 +1,11 @@
-import wx
+try:
+    import wx
+    Panel = wx.Panel
+except ImportError:
+    wx = None
+    Panel = object
 
-class Form(wx.Panel):
+class Form(Panel):
     ''' The Form class is a wx.Panel that creates a bunch of controls
         and handlers for callbacks. Doing the layout of the controls is 
         the responsibility of subclasses (by means of the doLayout()

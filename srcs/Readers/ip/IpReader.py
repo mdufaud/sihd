@@ -40,7 +40,7 @@ class IpReader(IReader):
             self._protocol = IpReader.get_protocol(protocol)
         if self._socket is None:
             port = self.get_conf_val("port")
-            self.setup_server(port)
+            self.set_source(port)
         return True
 
     """ Getters """
@@ -100,7 +100,7 @@ class IpReader(IReader):
     def is_up(self):
         return self._socket is not None
 
-    def setup_server(self, port):
+    def set_source(self, port):
         if self.is_up():
             return True
         self._port = port

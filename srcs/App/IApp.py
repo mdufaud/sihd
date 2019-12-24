@@ -45,12 +45,6 @@ class IApp(Utilities.IService, Utilities.ILoggable,
     def setup(self, *args, **kwargs):
         ret = False
         self.log_debug("Starting application setup")
-        """
-        try:
-            ret = self._setup_impl(*args, **kwargs)
-        except Exception as e:
-            self.log_error(e)
-        """
         ret = self._setup_impl(*args, **kwargs)
         if ret is False:
             self.log_error("Application setup has failed")
@@ -179,15 +173,12 @@ class IApp(Utilities.IService, Utilities.ILoggable,
             if reader.get_name() == name:
                 return reader
         for handler in self.handlers:
-            handler.pause()
             if handler.get_name() == name:
                 return handler
         for gui in self.guis:
-            gui.pause()
             if gui.get_name() == name:
                 return gui
         for interactor in self.interactors:
-            interactor.pause()
             if interactor.get_name() == name:
                 return interactor
         self.log_error("children {0} not found".format(name))
@@ -225,56 +216,90 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         """ Services must be configured before start """
         self.log_info("App starting")
         self.load_children_conf()
-        self.__call_children(self.interactors, "start")
-        self.__call_children(self.guis, "start")
-        self.__call_children(self.handlers, "start")
-        self.__call_children(self.readers, "start")
-        self.log_info("App started")
-        return True
+        i_ret = self.__call_children(self.interactors, "start")
+        g_ret = self.__call_children(self.guis, "start")
+        h_ret = self.__call_children(self.handlers, "start")
+        r_ret = self.__call_children(self.readers, "start")
+        if r_ret and h_ret and g_ret and i_ret:
+            self.log_info("App started")
+            return True
+        self.log_warning("Some app services did not start")
+        return False
 
     def _stop_impl(self):
         self.log_info("App stopping")
-        self.__call_children(self.readers, "stop")
-        self.__call_children(self.handlers, "stop")
-        self.__call_children(self.guis, "stop")
-        self.__call_children(self.interactors, "stop")
+        r_ret = self.__call_children(self.readers, "stop")
+        h_ret = self.__call_children(self.handlers, "stop")
+        g_ret = self.__call_children(self.guis, "stop")
+        i_ret = self.__call_children(self.interactors, "stop")
         self._write_conf()
-        self.log_info("App stopped")
-        return True
+        if r_ret and h_ret and g_ret and i_ret:
+            self.log_info("App stopped")
+            return True
+        self.log_warning("Some app services did not stop")
+        return False
 
     def _pause_impl(self):
-        self.__call_children(self.readers, "pause")
-        self.__call_children(self.handlers, "pause")
-        self.__call_children(self.guis, "pause")
-        self.__call_children(self.interactors, "pause")
-        self.log_info("App paused")
-        return True
+        r_ret = self.__call_children(self.readers, "pause")
+        h_ret = self.__call_children(self.handlers, "pause")
+        g_ret = self.__call_children(self.guis, "pause")
+        i_ret = self.__call_children(self.interactors, "pause")
+        if r_ret and h_ret and g_ret and i_ret:
+            self.log_info("App paused")
+            return True
+        self.log_warning("Some app services did not pause")
+        return False
 
     def _resume_impl(self):
-        self.__call_children(self.interactors, "resume")
-        self.__call_children(self.guis, "resume")
-        self.__call_children(self.handlers, "resume")
-        self.__call_children(self.readers, "resume")
-        self.log_info("App resumed")
-        return True
+        i_ret = self.__call_children(self.interactors, "resume")
+        g_ret = self.__call_children(self.guis, "resume")
+        r_ret = self.__call_children(self.readers, "resume")
+        h_ret = self.__call_children(self.handlers, "resume")
+        if r_ret and h_ret and g_ret and i_ret:
+            self.log_info("App resumed")
+            return True
+        self.log_warning("Some app services did not resume")
+        return False
 
     def _reset_impl(self):
-        self.__call_children(self.interactors, "reset")
-        self.__call_children(self.guis, "reset")
-        self.__call_children(self.handlers, "reset")
-        self.__call_children(self.readers, "reset")
-        self.log_info("App reset")
-        return True
+        i_ret = self.__call_children(self.interactors, "reset")
+        g_ret = self.__call_children(self.guis, "reset")
+        r_ret = self.__call_children(self.readers, "reset")
+        h_ret = self.__call_children(self.handlers, "reset")
+        if r_ret and h_ret and g_ret and i_ret:
+            self.log_info("App is reset")
+            return True
+        self.log_warning("Some app services did not reset")
+        return False
 
-    def pause_readers(self, to_pause_reader=None):
-        for reader in self.readers:
-            if to_pause_reader is None or to_pause_reader == reader:
-                reader.pause()
 
-    def resume_readers(self, to_resume_reader=None):
+    def pause_readers(self):
         for reader in self.readers:
-            if to_resume_reader is None or to_resume_reader == reader:
-                reader.resume()
+            reader.pause()
+
+    def resume_readers(self):
+        for reader in self.readers:
+            reader.resume()
+
+    def remove_reader(self, reader):
+        if reader.is_active():
+            reader.stop()
+        self.readers.remove(reader)
+
+    def remove_handler(self, handler):
+        if handler.is_active():
+            handler.stop()
+        self.handlers.remove(handler)
+
+    def remove_gui(self, gui):
+        if gui.is_active():
+            gui.stop()
+        self.guis.remove(gui)
+
+    def remove_interactor(self, interactor):
+        if interactor.is_active():
+            interactor.stop()
+        self.interactors.remove(interactor)
 
     def add_reader(self, reader):
         self.readers.add(reader)

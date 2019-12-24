@@ -35,14 +35,16 @@ class IService(ILoggable):
 
     """ Start """
 
-    def start(self):
+    def start(self, force=False):
         if self._stopped is False:
-            self.log_debug("Tried to start an already started service")
-            return True
+            self.log_debug("Starting an already started service")
+            if force is False:
+                return False
         if self._start_impl() is True:
             self._stopped = False
             self.__notify_change()
-        self.log_debug("%s" % ("is started" if not self._stopped else "did not start"))
+            self.log_debug("%s" %
+                    ("is started" if not self._stopped else "did not start"))
         return (not self._stopped)
 
     def _start_impl(self):
@@ -50,14 +52,16 @@ class IService(ILoggable):
 
     """ Stop """
 
-    def stop(self):
+    def stop(self, force=False):
         if self._stopped is True:
-            self.log_debug("Tried to stop an already stopped service")
-            return True
+            self.log_debug("Stopping an already stopped service")
+            if force is False:
+                return True
         if self._stop_impl() is True:
             self._stopped = True
             self.__notify_change()
-        self.log_debug("%s" % ("is stopped" if self._stopped else "did not stop"))
+            self.log_debug("%s" %
+                    ("is stopped" if self._stopped else "did not stop"))
         return self._stopped
 
     def _stop_impl(self):
@@ -65,35 +69,39 @@ class IService(ILoggable):
 
     """ Pause """
 
-    def pause(self):
+    def pause(self, force=False):
         if self._paused is True:
-            self.log_debug("Tried to pause an already paused service")
-            return True
+            self.log_debug("Pausing an already paused service")
+            if force is False:
+                return True
         if self._pause_impl() is True:
             self._paused = True
             self.__notify_change()
-        self.log_debug("%s" % ("is paused" if self._paused else "did not pause"))
+            self.log_debug("%s" %
+                    ("is paused" if self._paused else "did not pause"))
         return self._paused
 
     def _pause_impl(self):
         self.log_debug("Called a non implemented function: pause")
-        return True
+        return False
 
     """ Resume """
 
-    def resume(self):
+    def resume(self, force=False):
         if self._paused is False:
-            self.log_debug("Tried to resume a non paused service")
-            return True
+            self.log_debug("Resuming a non paused service")
+            if force is False:
+                return True
         if self._pause_impl() is True:
             self._paused = False
             self.__notify_change()
-        self.log_debug("%s" % ("is resumed" if not self._paused else "did not resume"))
+            self.log_debug("%s" %
+                    ("is resumed" if not self._paused else "did not resume"))
         return not self._paused
 
     def _resume_impl(self):
         self.log_debug("Called a non implemented function: resume")
-        return True
+        return False
 
     """ Reset """
 
@@ -106,7 +114,7 @@ class IService(ILoggable):
 
     def _reset_impl(self):
         self.log_debug("Called a non implemented function: reset")
-        return True
+        return False
 
     """ State Observation """
 
@@ -115,15 +123,31 @@ class IService(ILoggable):
 
     def __notify_change(self):
         for obs in self._state_observers:
-            obs.service_state_changed(self, self._stopped,
-                                        self._paused)
+            obs.service_state_changed(self, self._stopped, self._paused)
 
     """ Delete """
+
+    def __service_exception(self, ex):
+        import logging
+        logger = logging.getLogger()
+        logger.error("Service {} exception: {}".format(self.get_name(), ex))
+        try:
+            import traceback
+            traceback.print_exc()
+        except ImportError:
+            pass
 
     def _del_impl(self):
         return
 
     def __del__(self):
         if self._stopped is False:
-            self.stop()
-        self._del_impl()
+            try:
+                self.stop()
+            except Exception as ex:
+                self.__service_exception(ex)
+        try:
+            self._del_impl()
+        except Exception as ex:
+            self.__service_exception(ex)
+
