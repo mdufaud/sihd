@@ -6,7 +6,6 @@ from __future__ import print_function
 import sys
 import os
 import time
-import argparse
 
 """ Our Stuff """
 import sihd
@@ -16,28 +15,34 @@ class TestApp(sihd.App.IApp):
     def __init__(self, test_number):
         self._test = str(test_number)
         super(TestApp, self).__init__("TestApp" + self._test)
+        self.set_path(os.path.join(self.get_sihd_path(), "tests"))
         self.load_app_conf()
-        sihd.srcs.Utilities.ILoggable.set_color(True)
+        sihd.Utilities.ILoggable.set_color(True)
 
     def _setup_impl(self):
+        #Get args for app
         args = self.parse_args()
+        #If time args has been set, will set a limited app loop
         if args.time:
             self.set_timed_loop(args.time)
+        #Setting up LineReader
         reader = sihd.Readers.sys.LineReader(args.file, self, "LineReader" + self._test)
+        #Set configuration for this reader
         self._configure_reader(reader)
+        #Will be notified of state change
         reader.add_state_observer(self)
+        #Setting up WordHandler
         handler = sihd.Handlers.sys.WordHandler(self, "WordHandler" + self._test)
+        #Set configuration for this handler
         self._configure_handler(handler)
-        #gui = Wifimapper.GUI.WxPython.dot11.WxPythonDot11Gui(self)
         reader.add_observer(handler)
-        #handler.add_observer(gui)
+        #Remember for further access those services
         self._word_handler = handler
         self._line_reader = reader
         return True
 
-    def define_args(self):
-        """ Create arguments """
-        parser = argparse.ArgumentParser(prog='TestApp' + self._test)
+    def define_args(self, parser):
+        """ Add arguments """
         parser.add_argument("-f", "--file",
                 type=str,
                 default=None,
@@ -50,7 +55,6 @@ class TestApp(sihd.App.IApp):
                 type=int,
                 default=None,
                 help="Timer until stop")
-        return parser
 
     def service_state_changed(self, service, stopped, paused):
         #Exit only if no gui attached

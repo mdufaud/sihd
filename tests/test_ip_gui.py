@@ -10,6 +10,9 @@ import time
 import test_utils
 import sihd
 
+
+""" Setting up basic logging """
+
 import logging
 logger = logging.getLogger()
 logging.basicConfig(level=logging.DEBUG)
@@ -17,9 +20,9 @@ logging.basicConfig(level=logging.DEBUG)
 import socket
 
 def test_ihm():
-    reader = sihd.srcs.Readers.IpReader()
-    handler = sihd.srcs.Handlers.IpHandler()
-    gui = sihd.srcs.GUI.WxPython.ip.WxPythonIpGui()
+    reader = sihd.Readers.IpReader()
+    handler = sihd.Handlers.IpHandler()
+    gui = sihd.GUI.WxPython.ip.WxPythonIpGui()
     reader.add_observer(handler)
     handler.add_observer(gui)
     reader.set_conf("port", 4200)

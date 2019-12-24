@@ -22,7 +22,6 @@ class IpHandler(IHandler):
             "rcv_buf": 4096,
         })
 
-
     """ IConfigurable """
 
     def _load_conf_impl(self):

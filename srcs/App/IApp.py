@@ -6,6 +6,7 @@ from __future__ import print_function
 import os
 import sys
 import time
+import argparse
 
 try:
     import ConfigParser
@@ -13,11 +14,8 @@ except ImportError:
     import configparser
     ConfigParser = configparser
 
-from .. import Utilities
-from .. import Readers
-from .. import Handlers
-from .. import GUI
-from .. import Interactors
+import sihd
+from sihd.srcs import Utilities, Readers, Handlers, GUI, Interactors
 
 class IApp(Utilities.IService, Utilities.ILoggable,
             Utilities.IConfigurable, Utilities.IDumpable,
@@ -25,22 +23,21 @@ class IApp(Utilities.IService, Utilities.ILoggable,
 
     def __init__(self, name="IApp", *args, **kwargs):
         super(IApp, self).__init__(name, *args, **kwargs)
+        #Path
         self._path = None
+        self._path = IApp.get_sihd_path()
+        self._conf_path = None
+        #Services
         self.readers = set()
         self.handlers = set()
         self.guis = set()
         self.interactors = set()
-        self._conf_path = None
-        self._path = IApp.get_actual_path()
         self._children_configured = False
+        #App
+        self._loop_impl = self._infinite_loop
+        #Args
         self.args = None
         self.__args_setted = None
-        self._loop_impl = self._infinite_loop
-
-    @staticmethod
-    def get_actual_path():
-        path = os.getcwd()
-        return path
 
     def setup(self, *args, **kwargs):
         ret = False
@@ -62,8 +59,11 @@ class IApp(Utilities.IService, Utilities.ILoggable,
     ###############
     """
 
-    def define_args(self):
-        """ To be implemented by children """
+    def define_args(self, parser):
+        """
+            To be implemented by children
+            Should add args to ArgumentParser
+        """
         return None
 
     def is_args(self):
@@ -79,12 +79,16 @@ class IApp(Utilities.IService, Utilities.ILoggable,
 
     def set_args(self, args):
         """ args = ['--foo', 'BAR'] - Bypass command line args """
-        self.__args_setted = args
+        lst = None
+        if isinstance(args, str):
+            lst = args.strip().split(" ")
+        elif isinstance(args, list):
+            lst = args
+        self.__args_setted = lst
 
     def parse_args(self):
-        parser = self.define_args();
-        if parser is None:
-            return None
+        parser = argparse.ArgumentParser(prog=self.get_name())
+        self.define_args(parser);
         if self.__args_setted is not None:
             self.args = parser.parse_args(args=self.__args_setted)
         else:
@@ -135,11 +139,14 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         return self._conf_path
 
     def _write_conf(self, obj=None):
+        obj = self.get_conf_obj() if obj is None else obj
         if obj is None:
-            obj = self.get_conf_obj()
-        with open(self._conf_path, 'w') as configfile:
+            self.log_error("No object to write configuration to")
+            return False
+        with open(self._conf_path, 'w+') as configfile:
             obj.write(configfile)
             self.log_debug("Conf file {} is written".format(self.get_conf_path()))
+        return True
 
     def load_children_conf(self):
         conf = self.get_conf_obj()
@@ -161,6 +168,16 @@ class IApp(Utilities.IService, Utilities.ILoggable,
     Utilities
     ###############
     """
+
+    def set_cwd_path(self):
+        self.set_path(os.getcwd())
+
+    def set_module_path(self, module):
+        self.set_path(os.path.dirname(module))
+
+    @staticmethod
+    def get_sihd_path():
+        return os.path.dirname(sihd.__file__)
 
     def set_path(self, path):
         self._path = path

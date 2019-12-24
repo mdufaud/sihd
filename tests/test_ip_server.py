@@ -10,6 +10,8 @@ import time
 import test_utils
 import sihd
 
+""" Setting up basic logging """
+
 import logging
 logger = logging.getLogger()
 logging.basicConfig(level=logging.DEBUG)
@@ -31,25 +33,25 @@ class TestHandler(IHandler):
         return True
 
 def send_udp():
-    interactor = sihd.srcs.Interactors.IpInteractor()
+    interactor = sihd.Interactors.IpInteractor()
     interactor.set_conf({"host": "localhost", "port": 4200, "type": "udp"})
     interactor.load_conf()
     return interactor.interact("Some message")
 
 def send_tcp():
-    interactor = sihd.srcs.Interactors.IpInteractor()
+    interactor = sihd.Interactors.IpInteractor()
     interactor.set_conf({"host": "localhost", "port": 4200})
     interactor.load_conf()
     return interactor.interact("Some message")
 
 def sender_thread(fun):
-    thread = sihd.srcs.Utilities.SihdThread(frequency=10, timeout=1.2)
+    thread = sihd.Utilities.SihdThread(frequency=10, timeout=1.2)
     thread.set_stepfun(fun)
     return thread
 
 def test(fun, t):
-    reader = sihd.srcs.Readers.IpReader()
-    ip_handler = sihd.srcs.Handlers.IpHandler()
+    reader = sihd.Readers.IpReader()
+    ip_handler = sihd.Handlers.IpHandler()
     test_handler = TestHandler()
     reader.add_observer(ip_handler)
     ip_handler.add_observer(test_handler)

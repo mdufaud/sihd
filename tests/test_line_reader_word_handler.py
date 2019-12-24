@@ -48,12 +48,12 @@ def test_file(path, lines, skipped, check_words={}):
     if app.setup() is False:
         sys.exit(1)
     app.start()
-    app.loop(timeout=4)
+    app.loop(timeout=1)
     assert_expected(app, lines, skipped, check_words, prt=False)
 
 if __name__ == '__main__':
     try:
-        dir_path = os.path.join("resources", "Txt")
+        dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
         test_file(os.path.join(dir_path, "5_lines.txt"), 5, 0, {"world": 2})
         test_file(os.path.join(dir_path, "comments_and_empty_lines.txt"), 19, 6, {"A": 2})
     except KeyboardInterrupt as e:
