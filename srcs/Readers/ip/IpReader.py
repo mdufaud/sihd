@@ -29,6 +29,7 @@ class IpReader(IReader):
     """ IConfigurable """
 
     def _load_conf_impl(self):
+        super(IpReader, self)._load_conf_impl()
         max_co = self.get_conf_val("max_co")
         if max_co:
             self._max_co = int(max_co)
@@ -103,7 +104,7 @@ class IpReader(IReader):
     def set_source(self, port):
         if self.is_up():
             return True
-        self._port = port
+        self._port = int(port)
         sock = socket.socket(self._protocol, self._socket_type)
         if not sock:
             self.log_error("Could not open socket")
@@ -119,8 +120,8 @@ class IpReader(IReader):
             addr = self.get_serv_addr()
             self.log_debug("Binding on {}:{}".format(addr[0], addr[1]))
             sock.bind(addr)
-        except (OSError, socket.error) as e:
-            self.log_error("Error bind server: {}".format(e))
+        except (OSError, TypeError, socket.error) as e:
+            self.log_error("Error bind server ({}): {}".format(addr, e))
             self.stop_server(False)
             return False
         self._listening = False
@@ -179,24 +180,12 @@ class IpReader(IReader):
         if self._socket is None:
             self.log_error("Server is not up")
             return False
-        self.setup_thread()
-        self._start_time = time.time()
         if self._listening is True:
             s = "Accepting connections ({} max)".format(self._max_co)
             self.log_info(s)
             self.notify_info(s)
-        self.start_thread()
-        return True
+        return super(IpReader, self)._start_impl()
 
     def _stop_impl(self):
         self.stop_server(True)
-        self.stop_thread()
-        return True
-
-    def _pause_impl(self):
-        self.pause_thread()
-        return True
-
-    def _resume_impl(self):
-        self.resume_thread()
-        return True
+        return super(IpReader, self)._stop_impl()

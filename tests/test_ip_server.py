@@ -32,24 +32,32 @@ class TestHandler(IHandler):
             self.log_info("Received: {}".format(msg))
         return True
 
-def send_udp():
+def get_udp_sender():
     interactor = sihd.Interactors.IpInteractor()
-    interactor.set_conf({"host": "localhost", "port": 4200, "type": "udp"})
+    interactor.set_conf({
+        "host": "localhost",
+        "port": 4200,
+        "type": "udp",
+        "thread_frequency": 10,
+        "thread_timeout": 0.5,
+    })
     interactor.load_conf()
-    return interactor.interact("Some message")
+    interactor.set_interaction("Some udp message")
+    return interactor
 
-def send_tcp():
+def get_tcp_sender():
     interactor = sihd.Interactors.IpInteractor()
-    interactor.set_conf({"host": "localhost", "port": 4200})
+    interactor.set_conf({
+        "host": "localhost",
+        "port": 4200,
+        "thread_frequency": 100,
+        "thread_max_iterations": 5
+    })
     interactor.load_conf()
-    return interactor.interact("Some message")
+    interactor.set_interaction("Some tcp message")
+    return interactor
 
-def sender_thread(fun):
-    thread = sihd.Utilities.SihdThread(frequency=10, timeout=1.2)
-    thread.set_stepfun(fun)
-    return thread
-
-def test(fun, t):
+def test(get_interactor, t):
     reader = sihd.Readers.IpReader()
     ip_handler = sihd.Handlers.IpHandler()
     test_handler = TestHandler()
@@ -60,26 +68,24 @@ def test(fun, t):
     reader.load_conf()
     ip_handler.load_conf()
     assert(reader.start())
-    thread = None
+    interactor = get_interactor()
     try:
-        thread = sender_thread(fun)
         time.sleep(1)
-        thread.start()
+        interactor.start()
         time.sleep(2)
-        thread.stop()
+        interactor.stop()
         time.sleep(1)
     except Exception as e:
-        if thread:
-            thread.stop()
+        interactor.stop()
         logger.error("{}".format(e))
     assert(reader.stop())
 
 if __name__ == '__main__':
     try:
         logger.info("Starting test UDP")
-        test(send_udp, "udp")
+        test(get_udp_sender, "udp")
         logger.info("Starting test TCP")
-        test(send_tcp, "tcp")
+        test(get_tcp_sender, "tcp")
         logger.info("Test ending")
     except KeyboardInterrupt as e:
         sys.exit(1)

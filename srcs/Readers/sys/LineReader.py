@@ -14,18 +14,20 @@ class LineReader(IReader):
 
     def __init__(self, path=None, app=None, name="LineReader"):
         super(LineReader, self).__init__(app=app, name=name)
+        self.set_run_method(self._read_line)
+        self._set_default_conf({
+            "path": "/path/to/file",
+        })
         self._fully_read = False
         self._reader = None
         if path:
             self.set_source(path)
-        self._set_default_conf({
-            "path": "/path/to/file",
-        })
-        self.set_run_method(self._read_line)
+
 
     """ IConfigurable """
 
     def _load_conf_impl(self):
+        super(LineReader, self)._load_conf_impl()
         path = self.get_conf_val("path", not_default=True)
         if path:
             self.set_source(path)
@@ -106,26 +108,14 @@ class LineReader(IReader):
         if self._reader is None:
             self.log_error("No reader has been set")
             return False
-        self.setup_thread()
-        self._start_time = time.time()
         s = "Reading file {name}".format(name=self._path)
         self.log_info(s)
         self.notify_info(s)
-        self.start_thread()
-        return True
+        return super(LineReader, self)._start_impl()
 
     def _stop_impl(self):
         if self._reader:
             self._reader.close()
             self._reader = None
-        self.stop_thread()
         LineReader.files_read[self._path] = (self._lines, self._fully_read == False)
-        return True
-
-    def _pause_impl(self):
-        self.pause_thread()
-        return True
-
-    def _resume_impl(self):
-        self.resume_thread()
-        return True
+        return super(LineReader, self)._stop_impl()

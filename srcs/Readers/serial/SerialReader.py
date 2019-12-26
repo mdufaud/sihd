@@ -30,6 +30,7 @@ class SerialReader(IReader):
     """ IConfigurable """
 
     def _load_conf_impl(self):
+        super(SerialReader, self)._load_conf_impl()
         baudrate = self.get_conf_val("baudrate")
         if baudrate:
             self._baudrate = int(baudrate)
@@ -69,14 +70,11 @@ class SerialReader(IReader):
         except EOFError as e:
             line = None
         if line is None:
-            self._read_end()
+            self.stop()
             return False
         self.notify_observers(line)
         self._lines += 1
         return True
-
-    def _read_end(self):
-        self.stop()
 
     """ IService """
 
@@ -84,22 +82,10 @@ class SerialReader(IReader):
         if self._serial is None:
             self.log_error("No serial reader has been set")
             return False
-        self.setup_thread()
-        self._start_time = time.time()
-        self.start_thread()
-        return True
+        return super(SerialReader, self)._start_impl()
 
     def _stop_impl(self):
         if self._serial:
             self._serial.close()
             self._serial = None
-        self.stop_thread()
-        return True
-
-    def _pause_impl(self):
-        self.pause_thread()
-        return True
-
-    def _resume_impl(self):
-        self.resume_thread()
-        return True
+        return super(SerialReader, self)._stop_impl()

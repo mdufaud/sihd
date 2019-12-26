@@ -11,3 +11,4 @@ from .IConfigurable import IConfigurable
 from .IServiceStateObserver import IServiceStateObserver
 from .Factory import Factory
 from .Stats import stat_it, count_it, get_stats
+from .ISequenceable import ISequenceable

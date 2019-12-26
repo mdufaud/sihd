@@ -22,6 +22,7 @@ class IpInteractor(IInteractor):
     """ IConfigurable """
 
     def _load_conf_impl(self):
+        super(IpInteractor, self)._load_conf_impl()
         port = self.get_conf_val("port")
         if port:
             self._port = int(port)
@@ -35,6 +36,12 @@ class IpInteractor(IInteractor):
         if reponse_buff:
             self._reponse_buff = reponse_buff
         return True
+
+    """ IInteractor """
+
+    #Override
+    def set_interaction(self, action):
+        self._interaction = action.encode()
 
     """ Interactor """
 
@@ -56,7 +63,7 @@ class IpInteractor(IInteractor):
                             self._host, self._port))
             return False
         try:
-            s.sendto(data.encode(), (self._host, self._port))
+            s.sendto(data, (self._host, self._port))
             if response is True:
                 data, server = s.recvfrom(self._response_buff)
                 return data
@@ -65,7 +72,6 @@ class IpInteractor(IInteractor):
             self.log_error("Could not send data: {}".format(e))
         s.close()
         return sent
-
 
     def send_tcp(self, host, port, data, response=False):
         sent = False
@@ -91,7 +97,7 @@ class IpInteractor(IInteractor):
                             self._host, self._port))
             return False
         try:
-            s.sendall(data.encode())
+            s.sendall(data)
             if response is True:
                 return s.recv(self._response_buff)
             sent = True
@@ -100,7 +106,7 @@ class IpInteractor(IInteractor):
         s.close()
         return sent
 
-    def interact(self, data, *args, **kwargs):
+    def _interact_impl(self, data, *args, **kwargs):
         t = self._type
         if t == "tcp":
             return self.send_tcp(self._host, self._port, data, *args, **kwargs)

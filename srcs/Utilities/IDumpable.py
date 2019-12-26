@@ -12,30 +12,31 @@ class IDumpable(INamedObject):
     def __init__(self, name="IDumpable"):
         super(IDumpable, self).__init__(name)
 
-    # Should return a buffer
-    def dump(self):
+    def _dump(self):
+        """ Should return a buffer """
         return None
 
-    # Fill var with buffer
-    def load(self, buf):
+    def _load(self, buf):
+        """ Fill vars with read buffer """
         return False
 
-    # Check if file is good format
-    def has_load_magic(self, buf):
+    def _has_load_magic(self, buf):
+        """ Check if file is good format """
         return True
 
-    # Auto dump to file
     def dump_to_file(self, filename):
-        with open(filename, "w") as f:
-            f.write(self.dump())
+        """ Auto dump to file """
+        dump = self._dump()
+        if dump is None:
+            return False
+        with open(filename, "w+") as f:
+            f.write(dump)
         return True
 
-    # Load from file if has good magic
     def load_from_file(self, filename):
+        """ Load from file if has good magic """
         with open(filename, "r") as f:
             buf = f.read()
-            if self.has_load_magic(buf):
-                self.load(buf)
-            else:
-                return False
-        return True
+            if self._has_load_magic(buf):
+                return self._load(buf)
+        return False

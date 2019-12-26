@@ -19,6 +19,9 @@ class IConfigurable(INamedObject):
         self.__has_section = False
         self.__is_configured = False
 
+    def is_configured(self):
+        return self.__is_configured
+
     def set_conf_obj(self, config_obj):
         self.__config = config_obj
 
@@ -80,7 +83,8 @@ class IConfigurable(INamedObject):
             MUST be called at obj init time
             Used to set a default configuration for obj to be put in file
         """
-        self.__default_conf = dic
+        if isinstance(dic, dict):
+            self.__default_conf.update(dic)
 
     def _load_conf_impl(self):
         """
@@ -109,4 +113,4 @@ class IConfigurable(INamedObject):
         else:
             fun = self.set_conf
         for key, value in self.__default_conf.items():
-            fun(key, value)
+            fun(key, str(value))

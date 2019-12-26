@@ -33,6 +33,7 @@ def assert_expected(app, lines, skipped,
     print()
     for key, obj in sihd.Utilities.Stats.get_stats().items():
         print(obj)
+    print()
     sihd.Utilities.Stats.reset()
 
 def test_file(path, lines, skipped, check_words={}):

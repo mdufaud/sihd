@@ -340,16 +340,20 @@ class IApp(Utilities.IService, Utilities.ILoggable,
     def emergency_backup(self, err):
         return
 
-    def is_reader(self, service):
+    @staticmethod
+    def is_reader(service):
         return isinstance(service, Readers.IReader)
 
-    def is_handler(self, service):
+    @staticmethod
+    def is_handler(service):
         return isinstance(service, Handlers.IHandler)
 
-    def is_gui(self, service):
+    @staticmethod
+    def is_gui(service):
         return isinstance(service, GUI.IGui)
 
-    def is_interactor(self, service):
+    @staticmethod
+    def is_interactor(service):
         return isinstance(service, Interactors.IInteractors)
 
     """
