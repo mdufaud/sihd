@@ -173,7 +173,7 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         self.set_path(os.getcwd())
 
     def set_module_path(self, module):
-        self.set_path(os.path.dirname(module))
+        self.set_path(os.path.dirname(module.__file__))
 
     @staticmethod
     def get_sihd_path():

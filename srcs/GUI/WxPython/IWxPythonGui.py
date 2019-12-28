@@ -24,7 +24,7 @@ class IWxPythonGui(IGui):
         if app:
             self.get_app().set_loop(self.start_gui)
 
-    def start_gui(self):
+    def start_gui(self, **kwargs):
         app = wx.App(False)
         self._app = app
         self._make_frames(app)

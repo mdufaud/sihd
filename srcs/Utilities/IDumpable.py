@@ -24,7 +24,7 @@ class IDumpable(INamedObject):
         """ Check if file is good format """
         return True
 
-    def dump_to_file(self, filename):
+    def dump_to(self, filename):
         """ Auto dump to file """
         dump = self._dump()
         if dump is None:
@@ -33,7 +33,7 @@ class IDumpable(INamedObject):
             f.write(dump)
         return True
 
-    def load_from_file(self, filename):
+    def load_from(self, filename):
         """ Load from file if has good magic """
         with open(filename, "r") as f:
             buf = f.read()
