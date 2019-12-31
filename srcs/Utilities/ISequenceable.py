@@ -25,7 +25,7 @@ class ISequenceable(IService, IConfigurable, IRunnable):
 
     """ IConfigurable """
 
-    def _load_conf_impl(self):
+    def _setup_impl(self):
         frequency = self.get_conf_val("thread_frequency")
         if frequency:
             self.__frequency = int(frequency)
@@ -42,7 +42,7 @@ class ISequenceable(IService, IConfigurable, IRunnable):
     def _start_impl(self):
         ret = True
         if self.is_configured == False:
-            ret = self.load_conf()
+            ret = self.setup()
         if ret is True:
             self.setup_thread(frequency=self.__frequency,
                                 timeout=self.__timeout,

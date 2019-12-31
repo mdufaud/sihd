@@ -21,8 +21,8 @@ class IpInteractor(IInteractor):
 
     """ IConfigurable """
 
-    def _load_conf_impl(self):
-        super(IpInteractor, self)._load_conf_impl()
+    def _setup_impl(self):
+        super(IpInteractor, self)._setup_impl()
         port = self.get_conf_val("port")
         if port:
             self._port = int(port)

@@ -47,7 +47,7 @@ def test_file(path, lines, skipped, check_words={}):
             "-f", path,
             "-s",
         ])
-    if app.setup() is False:
+    if app.setup_app() is False:
         sys.exit(1)
     app.start()
     app.loop(timeout=1)

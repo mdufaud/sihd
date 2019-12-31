@@ -49,7 +49,7 @@ def test_reader():
     test_handler = TestHandler()
     reader.add_observer(test_handler)
     reader.set_conf("first_question", "How are you ? ")
-    reader.load_conf()
+    reader.setup()
     assert(reader.start())
     try:
         while reader.is_active():

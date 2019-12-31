@@ -15,12 +15,23 @@ tests:
 	@set -e && cd tests && rm -f logs/* && for TEST in `/bin/ls [^_]*.py`; \
 	do \
 		echo "==== Starting test $$TEST ===="; \
+		$(PYTHON) $$TEST 0>&-;  \
+		echo "==== End of test $$TEST ====\n"; echo "" ;\
+	done && cd ..
+
+
+itests:
+	@set -e && cd tests && rm -f logs/* && for TEST in `/bin/ls [^_]*.py`; \
+	do \
+		echo "==== Starting test $$TEST ===="; \
 		$(PYTHON) $$TEST;  \
 		echo "==== End of test $$TEST ====\n"; echo "" ;\
 	done && cd ..
 
 clean:
+	#Clean .pyc and pycache
 	find . -name "*.pyc" -type f -exec rm {} \;
+	find . -name "__pycache__" -type d -exec rmdir {} \;
 
 testclean:
 	@cd tests && rm -f logs/* && rm -f config/* && cd ..

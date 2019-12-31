@@ -41,7 +41,7 @@ def get_udp_sender():
         "thread_frequency": 10,
         "thread_timeout": 0.5,
     })
-    interactor.load_conf()
+    interactor.setup()
     interactor.set_interaction("Some udp message")
     return interactor
 
@@ -53,7 +53,7 @@ def get_tcp_sender():
         "thread_frequency": 100,
         "thread_max_iterations": 5
     })
-    interactor.load_conf()
+    interactor.setup()
     interactor.set_interaction("Some tcp message")
     return interactor
 
@@ -65,8 +65,8 @@ def test(get_interactor, t):
     ip_handler.add_observer(test_handler)
     reader.set_conf("port", 4200)
     reader.set_conf("type", t)
-    reader.load_conf()
-    ip_handler.load_conf()
+    reader.setup()
+    ip_handler.setup()
     assert(reader.start())
     interactor = get_interactor()
     try:

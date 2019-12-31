@@ -28,8 +28,8 @@ class IpReader(IReader):
 
     """ IConfigurable """
 
-    def _load_conf_impl(self):
-        super(IpReader, self)._load_conf_impl()
+    def _setup_impl(self):
+        super(IpReader, self)._setup_impl()
         max_co = self.get_conf_val("max_co")
         if max_co:
             self._max_co = int(max_co)

@@ -46,7 +46,7 @@ class IConfigurable(INamedObject):
             return None
         return val
 
-    def load_conf(self, config_obj=None):
+    def setup(self, config_obj=None):
         """
             Load configuration from either file or default conf
             Calls load conf implementation
@@ -57,7 +57,7 @@ class IConfigurable(INamedObject):
         if config_obj is not None:
             self.set_conf_obj(config_obj)
         self.__setup_default_conf()
-        if self._load_conf_impl():
+        if self._setup_impl():
             self.__is_configured = True
         return self.__is_configured
 
@@ -86,7 +86,7 @@ class IConfigurable(INamedObject):
         if isinstance(dic, dict):
             self.__default_conf.update(dic)
 
-    def _load_conf_impl(self):
+    def _setup_impl(self):
         """
             MUST be implemented by children
             Used for loading configuration from default conf or file

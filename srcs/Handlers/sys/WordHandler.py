@@ -38,7 +38,7 @@ class WordHandler(IHandler):
 
     """ IConfigurable """
 
-    def _load_conf_impl(self):
+    def _setup_impl(self):
         self._delimiter = self.get_conf_val("delimiter")
         toskip = self.get_conf_val("skip")
         if isinstance(toskip, str):

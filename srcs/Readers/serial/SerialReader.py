@@ -29,8 +29,8 @@ class SerialReader(IReader):
 
     """ IConfigurable """
 
-    def _load_conf_impl(self):
-        super(SerialReader, self)._load_conf_impl()
+    def _setup_impl(self):
+        super(SerialReader, self)._setup_impl()
         baudrate = self.get_conf_val("baudrate")
         if baudrate:
             self._baudrate = int(baudrate)

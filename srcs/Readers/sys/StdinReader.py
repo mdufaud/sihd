@@ -26,8 +26,8 @@ class StdinReader(IReader):
 
     """ IConfigurable """
 
-    def _load_conf_impl(self):
-        super(StdinReader, self)._load_conf_impl()
+    def _setup_impl(self):
+        super(StdinReader, self)._setup_impl()
         q = self.get_conf_val("first_question")
         if q is not None:
             self._question = str(q)
@@ -39,6 +39,9 @@ class StdinReader(IReader):
         try:
             line = input(self._question)
         except EOFError as e:
+            line = None
+        except IOError as e:
+            self.log_error("Impossible to get input: {}".format(e))
             line = None
         if self.is_active():
             self.notify_observers(line)

@@ -24,7 +24,7 @@ class IpHandler(IHandler):
 
     """ IConfigurable """
 
-    def _load_conf_impl(self):
+    def _setup_impl(self):
         rcv_buf = self.get_conf_val("rcv_buf")
         if rcv_buf:
             self._rcv_buf = int(rcv_buf)

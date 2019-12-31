@@ -35,7 +35,7 @@ class WxPythonIpGui(IWxPythonGui):
 
     """ IConfigurable """
 
-    def _load_conf_impl(self):
+    def _setup_impl(self):
         return True
 
     """ IObservable """

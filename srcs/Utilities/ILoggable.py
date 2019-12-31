@@ -18,6 +18,9 @@ class ILoggable(INamedObject):
     __level = None
     __original_emit = logging.StreamHandler.emit
     __is_color = False
+    __warning_count = 0
+    __error_count = 0
+    __critical_count = 0
 
     def __init__(self, name="ILoggable"):
         super(ILoggable, self).__init__(name)
@@ -35,12 +38,15 @@ class ILoggable(INamedObject):
 
     def log_warning(self, msg):
         self.__log("warning", msg)
+        ILoggable.__warning_count += 1
 
     def log_error(self, msg):
         self.__log("error", msg)
+        ILoggable.__error_count += 1
 
     def log_critical(self, msg):
         self.__log("critical", msg)
+        ILoggable.__critical_count += 1
 
     @staticmethod
     def _get_level(level):

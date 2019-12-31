@@ -19,7 +19,7 @@ class TestApp(sihd.App.IApp):
         self.load_app_conf()
         sihd.Utilities.ILoggable.set_color(True)
 
-    def _setup_impl(self):
+    def _setup_app_impl(self):
         #Get args for app
         args = self.parse_args()
         #If time args has been set, will set a limited app loop

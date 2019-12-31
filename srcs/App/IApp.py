@@ -39,17 +39,17 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         self.args = None
         self.__args_setted = None
 
-    def setup(self, *args, **kwargs):
+    def setup_app(self, *args, **kwargs):
         ret = False
         self.log_debug("Starting application setup")
-        ret = self._setup_impl(*args, **kwargs)
+        ret = self._setup_app_impl(*args, **kwargs)
         if ret is False:
             self.log_error("Application setup has failed")
         else:
             self.log_debug("Application successfully setup")
         return ret
 
-    def _setup_impl(self):
+    def _setup_app_impl(self):
         """ To be implemented by children """
         return False
 
@@ -129,7 +129,7 @@ class IApp(Utilities.IService, Utilities.ILoggable,
             self.__setup_logger_conf(obj)
         else:
             obj.read(path)
-        self.load_conf(obj)
+        self.setup(obj)
         Utilities.ILoggable.setup_log(self.get_name(),
                                     obj.get("Logger", "level"),
                                     obj.get("Logger", "directory"))
@@ -169,10 +169,10 @@ class IApp(Utilities.IService, Utilities.ILoggable,
             self.log_debug("Services already configured")
             return False
         self._children_configured = True
-        self.__call_children(self.interactors, "load_conf", conf)
-        self.__call_children(self.guis, "load_conf", conf)
-        self.__call_children(self.handlers, "load_conf", conf)
-        self.__call_children(self.readers, "load_conf", conf)
+        self.__call_children(self.interactors, "setup", conf)
+        self.__call_children(self.guis, "setup", conf)
+        self.__call_children(self.handlers, "setup", conf)
+        self.__call_children(self.readers, "setup", conf)
         self.log_info("Services are configured")
         return True
 

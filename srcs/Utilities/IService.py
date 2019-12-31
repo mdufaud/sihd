@@ -26,11 +26,11 @@ class IService(ILoggable):
     def get_state(self):
         s = "Service {}: ".format(self.get_name())
         if self._stopped:
-            s += " Stopped"
+            s += "Stopped"
         else:
-            s += " Running"
+            s += "Running"
         if self._paused:
-            s += " (paused)"
+            s += "(paused)"
         return s
 
     """ Start """
