@@ -21,7 +21,6 @@ tests:
 
 clean:
 	find . -name "*.pyc" -type f -exec rm {} \;
-	find . -name "__pycache__" -type d -exec rmdir {} \;
 
 testclean:
 	@cd tests && rm -f logs/* && rm -f config/* && cd ..

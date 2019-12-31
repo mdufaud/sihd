@@ -9,6 +9,11 @@ import sys
 
 from sihd.srcs.Readers.IReader import IReader
 
+try:
+    input = raw_input
+except NameError:
+    pass
+
 class StdinReader(IReader):
 
     def __init__(self, path=None, app=None, name="StdinReader"):
@@ -35,11 +40,11 @@ class StdinReader(IReader):
             line = input(self._question)
         except EOFError as e:
             line = None
+        if self.is_active():
+            self.notify_observers(line)
         if line is None:
             self.stop()
             return False
-        if self.is_active():
-            self.notify_observers(line)
         return True
 
     def set_question(self, question):

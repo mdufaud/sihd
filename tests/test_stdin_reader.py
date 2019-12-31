@@ -27,14 +27,18 @@ class TestHandler(IHandler):
         self._step = 0
 
     def handle(self, reader, line):
+        if line is None:
+            print()
+            logger.info("Client has stopped input")
+            return
         line = line.strip()
-        print("Received {}".format(line))
+        print("Received: '{}'".format(line))
         step = self._step
         if step is 0:
             reader.set_question("Great - Type 5 now: ")
             self._step = 1
         elif step is 1 and line is '5':
-            reader.set_question("Thanks ! Type q to quit\n")
+            reader.set_question("Thanks ! Type q to quit: ")
             self._step = 2
         elif step is 2 and line is 'q':
             reader.stop()
@@ -48,9 +52,10 @@ def test_reader():
     reader.load_conf()
     assert(reader.start())
     try:
-        time.sleep(30)
+        while reader.is_active():
+            time.sleep(1)
     except KeyboardInterrupt:
-        print("\n - Interrupted")
+        print("\nKeyboard Interruption")
         pass
     assert(reader.stop())
 
