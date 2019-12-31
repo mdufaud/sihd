@@ -40,6 +40,7 @@ def test_file(path, lines, skipped, check_words={}):
     global x
     print("Test-{} with file '{}' with {} lines and {} comments".format(x, path, lines, skipped))
     app = test_utils.TestApp(x)
+    app.set_path(path)
     x += 1
     if not app.is_args():
         app.set_args([
