@@ -56,6 +56,8 @@ class ILoggable(INamedObject):
             return logging.CRITICAL
         raise RuntimeError("Level unknown {}".format(level))
 
+    """ Class methods """
+
     @staticmethod
     def _get_filename(directory, app_name):
         now = datetime.datetime.now()
@@ -103,6 +105,13 @@ class ILoggable(INamedObject):
         ILoggable.add_stream_handler()
         if directory is None:
             return
+        if not os.path.exists(directory):
+            try:
+                os.makedirs(directory)
+            except Exception as e:
+                ILoggable.logger.error("Could not make directories"
+                                        " for log directory: {}".format(e))
+                return
         file_handler = RotatingFileHandler(ILoggable._get_filename(directory, app_name),
                                             'a+', 1e6, 1, encoding='utf-8')
         file_handler.setLevel(log_level)

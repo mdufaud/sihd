@@ -15,9 +15,6 @@ class TestApp(sihd.App.IApp):
     def __init__(self, test_number):
         self._test = str(test_number)
         super(TestApp, self).__init__("TestApp" + self._test)
-        #Path problem when sihd was ln -s in a python path
-        #self.set_path(os.path.join(self.get_sihd_path(), "tests"))
-        #Path is now relative
         self.set_path(os.path.dirname(os.path.dirname((__file__))))
         self.load_app_conf()
         sihd.Utilities.ILoggable.set_color(True)

@@ -143,9 +143,22 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         if obj is None:
             self.log_error("No object to write configuration to")
             return False
-        with open(self._conf_path, 'w+') as configfile:
-            obj.write(configfile)
-            self.log_debug("Conf file {} is written".format(self.get_conf_path()))
+        path = self.get_conf_path()
+        directory = os.path.dirname(path)
+        if not os.path.exists(directory):
+            try:
+                os.makedirs(directory)
+            except Exception as e:
+                self.log_error("Could not make directories"
+                                " for app configuration directory: {}".format(e))
+                return
+        try:
+            with open(path, 'w+') as configfile:
+                obj.write(configfile)
+                self.log_debug("Conf file {} is written".format(path))
+        except IOError as e:
+            self.log_error("Could not write app configuration: {}".format(e))
+            return False
         return True
 
     def load_children_conf(self):
