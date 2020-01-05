@@ -14,6 +14,8 @@ class IObservable(INamedObject):
 
     def add_observer(self, handler):
         assert(handler.handle)
+        assert(handler.on_info)
+        assert(handler.on_error)
         self.handlers.add(handler)
 
     def notify_observers(self, *args):

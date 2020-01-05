@@ -131,6 +131,8 @@ class CmdInteractor(IInteractor):
         except subprocess.TimeoutExpired:
             self.log_error("Timed out communication ({})".format(timeout))
             out, errs = self.end_process(kill=True)
+        if errs == b"":
+            errs = None
         return out, errs
 
     def end_process(self, kill=False):

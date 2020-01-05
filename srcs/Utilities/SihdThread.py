@@ -75,13 +75,16 @@ class SihdThread(threading.Thread):
             raise RuntimeError("No function to execute")
         self._stopped = False
         get_now = time.time
+        sleep = time.sleep
         start = get_now()
-        sleep = self._sleep
+        sleep_time = self._sleep
         timeout = self._timeout
         fun = self._stepfun
         max_iter = self._max_iter
         ret = None
         while not self._stopped:
+            while self._paused:
+                sleep(0.05)
             now = get_now()
             # Check timeout
             if timeout is not None:
@@ -101,11 +104,9 @@ class SihdThread(threading.Thread):
                 return
             # Pause
             end = get_now()
-            pause = sleep - (end - now)
+            pause = sleep_time - (end - now)
             if pause > 0.0:
-                time.sleep(pause)
-            while self._paused:
-                time.sleep(0.1)
+                sleep(pause)
 
     def is_running(self):
         return self._stopped == False

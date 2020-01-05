@@ -78,7 +78,7 @@ class IService(ILoggable):
             self._paused = True
             self.__notify_change()
             self.log_debug("%s" %
-                    ("is paused" if self._paused else "did not pause"))
+                ("is paused" if self._paused else "did not pause"))
         return self._paused
 
     def _pause_impl(self):
@@ -92,7 +92,7 @@ class IService(ILoggable):
             self.log_debug("Resuming a non paused service")
             if force is False:
                 return True
-        if self._pause_impl() is True:
+        if self._resume_impl() is True:
             self._paused = False
             self.__notify_change()
             self.log_debug("%s" %

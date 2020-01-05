@@ -47,6 +47,8 @@ class ISequenceable(IService, IConfigurable, IRunnable):
             self.setup_thread(frequency=self.__frequency,
                                 timeout=self.__timeout,
                                 max_iter=self.__max_iter)
+            if self.is_paused():
+                self.pause_thread()
             self._start_time = time.time()
             self.start_thread()
         return ret

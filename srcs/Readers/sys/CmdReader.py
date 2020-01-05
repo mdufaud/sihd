@@ -9,9 +9,10 @@ import sys
 import select
 
 from sihd.srcs.Readers.IReader import IReader
+from sihd.srcs.Utilities.IObserver import IObserver
 from sihd.srcs.Interactors.sys.CmdInteractor import CmdInteractor
 
-class CmdReader(IReader):
+class CmdReader(IReader, IObserver):
 
     def __init__(self, path=None, app=None, name="CmdReader"):
         super(CmdReader, self).__init__(app=app, name=name)
@@ -30,6 +31,7 @@ class CmdReader(IReader):
         self._handle_proc = True
         self._cmd = ""
         self._last_proc = None
+        self.__pipe_reader = None
 
     """ IConfigurable """
 
@@ -117,6 +119,34 @@ class CmdReader(IReader):
             self.end_process()
         self._last_proc = None
 
+    def configure_pipe_cmd_reader(self, reader):
+        if isinstance(reader, CmdReader):
+            reader.add_observer(self)
+            reader.set_handle_process(False)
+            reader.set_pipe(['stdout', 'stderr'])
+            self.__pipe_reader = reader
+            self.pause()
+        else:
+            self.log_warning("Incompatible reader {} "
+                            "for pipes".format(reader.get_name()))
+
+    def handle(self, reader, proc):
+        """ Permits CmdReader chaining """
+        if not self.is_running():
+            return
+        err = True
+        if reader != self.__pipe_reader:
+            self.log_error("Handling wrong reader: {}".format(reader.get_name()))
+        elif proc and proc.stdout:
+            self._interactor.set_stdin(proc.stdout)
+            self.resume()
+            reader.pause()
+            err = False
+        else:
+            self.log_error("Wrong value type for handling")
+        if err:
+            self.stop()
+
     def _execute(self):
         self.__clear_last_proc()
         proc = self._interactor.execute()
@@ -133,6 +163,10 @@ class CmdReader(IReader):
                                 "'{}': {}".format(self._cmd, errs.decode()))
                     proc = None
             self._last_proc = proc
+            if self.__pipe_reader:
+                self.__pipe_reader.end_process()
+                self.__pipe_reader.resume()
+                self.pause()
         else:
             self.log_error("Error in command '{}'".format(self._cmd))
         return proc is not None
