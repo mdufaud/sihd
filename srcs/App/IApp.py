@@ -75,7 +75,7 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         args = self.args
         if args and args.contains(name) is True:
             return args.__getattribute__(name)
-        return self.get_conf_val(name)
+        return self.get_conf(name)
 
     def set_args(self, args):
         """ args = ['--foo', 'BAR'] - Bypass command line args """
@@ -169,11 +169,25 @@ class IApp(Utilities.IService, Utilities.ILoggable,
             self.log_debug("Services already configured")
             return False
         self._children_configured = True
-        self.__call_children(self.interactors, "setup", conf)
-        self.__call_children(self.guis, "setup", conf)
-        self.__call_children(self.handlers, "setup", conf)
-        self.__call_children(self.readers, "setup", conf)
+        fun = self.__call_children
+        fun(self.interactors, "setup", conf)
+        fun(self.guis, "setup", conf)
+        fun(self.handlers, "setup", conf)
+        fun(self.readers, "setup", conf)
         self.log_info("Services are configured")
+        return True
+
+    def save_children_conf(self):
+        if not self._children_configured:
+            self.log_debug("Services should be configured before "
+                            "setting their configurations")
+            return False
+        fun = self.__call_children
+        fun(self.interactors, "save_conf", conf)
+        fun(self.guis, "save_conf", conf)
+        fun(self.handlers, "save_conf", conf)
+        fun(self.readers, "save_conf", conf)
+        self.log_info("Services configurations are saved")
         return True
 
     """
@@ -246,10 +260,11 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         """ Services must be configured before start """
         self.log_info("App starting")
         self.load_children_conf()
-        i_ret = self.__call_children(self.interactors, "start")
-        g_ret = self.__call_children(self.guis, "start")
-        h_ret = self.__call_children(self.handlers, "start")
-        r_ret = self.__call_children(self.readers, "start")
+        fun = self.__call_children
+        i_ret = fun(self.interactors, "start")
+        g_ret = fun(self.guis, "start")
+        h_ret = fun(self.handlers, "start")
+        r_ret = fun(self.readers, "start")
         if r_ret and h_ret and g_ret and i_ret:
             self.log_info("App started")
             return True
@@ -258,10 +273,11 @@ class IApp(Utilities.IService, Utilities.ILoggable,
 
     def _stop_impl(self):
         self.log_info("App stopping")
-        r_ret = self.__call_children(self.readers, "stop")
-        h_ret = self.__call_children(self.handlers, "stop")
-        g_ret = self.__call_children(self.guis, "stop")
-        i_ret = self.__call_children(self.interactors, "stop")
+        fun = self.__call_children
+        r_ret = fun(self.readers, "stop")
+        h_ret = fun(self.handlers, "stop")
+        g_ret = fun(self.guis, "stop")
+        i_ret = fun(self.interactors, "stop")
         self._write_conf()
         if r_ret and h_ret and g_ret and i_ret:
             self.log_info("App stopped")
@@ -270,10 +286,11 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         return False
 
     def _pause_impl(self):
-        r_ret = self.__call_children(self.readers, "pause")
-        h_ret = self.__call_children(self.handlers, "pause")
-        g_ret = self.__call_children(self.guis, "pause")
-        i_ret = self.__call_children(self.interactors, "pause")
+        fun = self.__call_children
+        r_ret = fun(self.readers, "pause")
+        h_ret = fun(self.handlers, "pause")
+        g_ret = fun(self.guis, "pause")
+        i_ret = fun(self.interactors, "pause")
         if r_ret and h_ret and g_ret and i_ret:
             self.log_info("App paused")
             return True
@@ -281,10 +298,11 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         return False
 
     def _resume_impl(self):
-        i_ret = self.__call_children(self.interactors, "resume")
-        g_ret = self.__call_children(self.guis, "resume")
-        r_ret = self.__call_children(self.readers, "resume")
-        h_ret = self.__call_children(self.handlers, "resume")
+        fun = self.__call_children
+        i_ret = fun(self.interactors, "resume")
+        g_ret = fun(self.guis, "resume")
+        r_ret = fun(self.readers, "resume")
+        h_ret = fun(self.handlers, "resume")
         if r_ret and h_ret and g_ret and i_ret:
             self.log_info("App resumed")
             return True
@@ -292,16 +310,16 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         return False
 
     def _reset_impl(self):
-        i_ret = self.__call_children(self.interactors, "reset")
-        g_ret = self.__call_children(self.guis, "reset")
-        r_ret = self.__call_children(self.readers, "reset")
-        h_ret = self.__call_children(self.handlers, "reset")
+        fun = self.__call_children
+        i_ret = fun(self.interactors, "reset")
+        g_ret = fun(self.guis, "reset")
+        r_ret = fun(self.readers, "reset")
+        h_ret = fun(self.handlers, "reset")
         if r_ret and h_ret and g_ret and i_ret:
             self.log_info("App is reset")
             return True
         self.log_warning("Some app services did not reset")
         return False
-
 
     def pause_readers(self):
         for reader in self.readers:

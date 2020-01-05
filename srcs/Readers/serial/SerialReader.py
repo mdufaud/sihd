@@ -31,13 +31,13 @@ class SerialReader(IReader):
 
     def _setup_impl(self):
         super(SerialReader, self)._setup_impl()
-        baudrate = self.get_conf_val("baudrate")
+        baudrate = self.get_conf("baudrate")
         if baudrate:
             self._baudrate = int(baudrate)
-        timeout = self.get_conf_val("timeout")
+        timeout = self.get_conf("timeout")
         if timeout:
             self._timeout = int(timeout)
-        port = self.get_conf_val("port", not_default=True)
+        port = self.get_conf("port", default=False)
         if port:
             self.set_source(port)
         if not self._serial:

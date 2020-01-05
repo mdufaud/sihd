@@ -27,11 +27,14 @@ class TestHandler(IHandler):
         self._step = 0
 
     def handle(self, reader, line):
-        if line is None:
+        line = line.decode('ascii')
+        if line == "":
             print()
             logger.info("Client has stopped input")
             return
         line = line.strip()
+        if line == "":
+            return
         print("Received: '{}'".format(line))
         step = self._step
         if step is 0:
@@ -48,7 +51,7 @@ def test_reader():
     reader = sihd.Readers.StdinReader()
     test_handler = TestHandler()
     reader.add_observer(test_handler)
-    reader.set_conf("first_question", "How are you ? ")
+    reader.set_conf("question", "How are you ? ")
     reader.setup()
     assert(reader.start())
     try:

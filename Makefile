@@ -30,8 +30,8 @@ itests:
 
 clean:
 	#Clean .pyc and pycache
-	find . -name "*.pyc" -type f -exec rm {} \;
-	find . -name "__pycache__" -type d -exec rmdir {} \;
+	find . -name "*.pyc" -type f | xargs rm
+	find . -name "__pycache__" -type d | xargs rmdir
 
 testclean:
 	@cd tests && rm -f logs/* && rm -f config/* && cd ..

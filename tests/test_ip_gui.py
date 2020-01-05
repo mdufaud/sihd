@@ -21,7 +21,7 @@ import socket
 
 def test_ihm():
     reader = sihd.Readers.IpReader()
-    handler = sihd.Handlers.IpHandler()
+    handler = sihd.Handlers.IpServerHandler()
     gui = sihd.GUI.WxPython.ip.WxPythonIpGui()
     reader.add_observer(handler)
     handler.add_observer(gui)

@@ -26,13 +26,13 @@ class ISequenceable(IService, IConfigurable, IRunnable):
     """ IConfigurable """
 
     def _setup_impl(self):
-        frequency = self.get_conf_val("thread_frequency")
+        frequency = self.get_conf("thread_frequency")
         if frequency:
             self.__frequency = int(frequency)
-        timeout = self.get_conf_val("thread_timeout")
+        timeout = self.get_conf("thread_timeout")
         if timeout:
             self.__timeout = float(timeout)
-        max_iter = self.get_conf_val("thread_max_iterations")
+        max_iter = self.get_conf("thread_max_iterations")
         if max_iter:
             self.__max_iter = int(max_iter)
         return True

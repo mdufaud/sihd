@@ -12,10 +12,10 @@ except ImportError:
 
 from sihd.srcs.Handlers.IHandler import IHandler
 
-class IpHandler(IHandler):
+class IpServerHandler(IHandler):
 
-    def __init__(self, app=None, name="IpHandler"):
-        super(IpHandler, self).__init__(app=app, name=name)
+    def __init__(self, app=None, name="IpServerHandler"):
+        super(IpServerHandler, self).__init__(app=app, name=name)
         self._reader = None
         self._clients = {}
         self._set_default_conf({
@@ -25,7 +25,7 @@ class IpHandler(IHandler):
     """ IConfigurable """
 
     def _setup_impl(self):
-        rcv_buf = self.get_conf_val("rcv_buf")
+        rcv_buf = self.get_conf("rcv_buf")
         if rcv_buf:
             self._rcv_buf = int(rcv_buf)
         return True

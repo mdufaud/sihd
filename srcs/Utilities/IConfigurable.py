@@ -15,20 +15,32 @@ class IConfigurable(INamedObject):
     def __init__(self, name="IConfigurable"):
         super(IConfigurable, self).__init__(name)
         self.__default_conf = {}
-        self.__config = None
+        self.__conf = {}
+        self.__conf_obj = None
         self.__has_section = False
         self.__is_configured = False
 
-    def is_configured(self):
+    def setup(self, config_obj=None):
+        """
+            Load configuration from either file or default/setted conf
+            Calls setup implementation from children (_setup_impl)
+            Can only be called once
+        """
+        if self.__is_configured is True:
+            return
+        if config_obj is not None:
+            self.set_conf_obj(config_obj)
+        if self.__setup_section():
+            self.__write_default_conf()
+        if self._setup_impl():
+            self.__is_configured = True
         return self.__is_configured
 
-    def set_conf_obj(self, config_obj):
-        self.__config = config_obj
+    def is_configured(self):
+        """ Returns true if obj is setup """
+        return self.__is_configured
 
-    def get_conf_obj(self):
-        return self.__config
-
-    def get_conf_val(self, key, not_default=False):
+    def get_conf(self, key, default=True):
         """
             Get value from conf - Either from file or dict
 
@@ -37,46 +49,57 @@ class IConfigurable(INamedObject):
             @return value or None if not found
         """
         conf = self.get_conf_obj()
-        if not conf and not_default is False:
-            return self.get_default_conf(key)
-        if not conf.has_option(self.get_name(), key):
-            return None
-        val = conf.get(self.get_name(), key)
-        if not_default is True and val == self.get_default_conf(key):
+        if conf:
+            if not conf.has_option(self.get_name(), key):
+                return None
+            val = conf.get(self.get_name(), key)
+        else:
+            val = self.__conf.get(key, None)
+        if default is False and val == self.get_default_conf(key):
             return None
         return val
 
-    def setup(self, config_obj=None):
-        """
-            Load configuration from either file or default conf
-            Calls load conf implementation
-            Can only be called once
-        """
-        if self.__is_configured is True:
-            return
-        if config_obj is not None:
-            self.set_conf_obj(config_obj)
-        self.__setup_default_conf()
-        if self._setup_impl():
-            self.__is_configured = True
-        return self.__is_configured
-
     def set_conf(self, key, value=None):
+        """
+            Set value in dic
+            @param dic dictionnary to complete
+            @param key can be a string or a dictionnary
+            @param value can be anything - default: None
+        """
         if isinstance(key, dict):
-            for k, v in key.items():
-                self.set_conf(k, v)
+            self.__conf.update(key)
         else:
-            self.__default_conf[key] = value
+            self.__conf[key] = value
 
     def set_conf_file(self, key, value):
         """ Set a value in the obj configuration """
-        if self.get_conf_obj():
+        obj = self.get_conf_obj()
+        if obj:
             if not self.__has_section:
                 self.__setup_section()
-            self.__config.set(self.get_name(), key, value)
+            obj.set(self.get_name(), key, value)
+
+
+    def get_default_conf_dict(self):
+        return self.__default_conf
 
     def get_default_conf(self, key):
+        """ Get the value from default dict """
         return self.__default_conf.get(key, None)
+
+    def set_conf_obj(self, config_obj):
+        """ Set the configparser obj """
+        self.__conf_obj = config_obj
+
+    def get_conf_obj(self):
+        """ Returns the configparser obj """
+        return self.__conf_obj
+
+    def save_conf(self):
+        """ Writes configured obj to file """
+        self.__write_dict_conf(self, self.__conf)
+
+    """ To be called by children """
 
     def _set_default_conf(self, dic):
         """
@@ -85,6 +108,7 @@ class IConfigurable(INamedObject):
         """
         if isinstance(dic, dict):
             self.__default_conf.update(dic)
+            self.__conf.update(dic)
 
     def _setup_impl(self):
         """
@@ -96,21 +120,25 @@ class IConfigurable(INamedObject):
     """ Private """
 
     def __setup_section(self):
-        conf = self.__config
+        """ Sets section for obj in configparser """
+        conf = self.get_conf_obj()
+        added = False
         if conf and not conf.has_section(self.get_name()):
-                conf.add_section(self.get_name())
+            conf.add_section(self.get_name())
+            added = True
         self.__has_section = True
+        return added
 
-    def __setup_default_conf(self):
-        """ Called when no section exists for obj in file """
-        if self.__default_conf is None:
+    def __write_dict_conf(self, dic):
+        """ Writes dictionnary in configparser """
+        if not self.get_conf_obj() or not dic:
             return
         if not self.__has_section:
             self.__setup_section()
-        fun = None
-        if self.get_conf_obj():
-            fun = self.set_conf_file
-        else:
-            fun = self.set_conf
-        for key, value in self.__default_conf.items():
+        fun = self.set_conf_file
+        for key, value in dic.items():
             fun(key, str(value))
+
+    def __write_default_conf(self):
+        """ Called when no section exists for obj in file """
+        self.__write_dict_conf(self.__default_conf)

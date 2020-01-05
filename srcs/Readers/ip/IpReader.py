@@ -30,17 +30,17 @@ class IpReader(IReader):
 
     def _setup_impl(self):
         super(IpReader, self)._setup_impl()
-        max_co = self.get_conf_val("max_co")
+        max_co = self.get_conf("max_co")
         if max_co:
             self._max_co = int(max_co)
-        socket = self.get_conf_val("type")
+        socket = self.get_conf("type")
         if socket:
             self._socket_type = IpReader.get_socket_type(socket)
-        protocol = self.get_conf_val("protocol")
+        protocol = self.get_conf("protocol")
         if protocol:
             self._protocol = IpReader.get_protocol(protocol)
         if self._socket is None:
-            port = self.get_conf_val("port")
+            port = self.get_conf("port")
             self.set_source(port)
         return True
 
@@ -162,7 +162,7 @@ class IpReader(IReader):
                                                         inputs,
                                                         1)
         if exceptional:
-            err = "Exceptional: {}".format(exceptional)
+            err = "Select exceptional: {}".format(exceptional)
             self.log_error(err)
             self.notify_error(err)
             return False

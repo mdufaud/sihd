@@ -59,7 +59,7 @@ def get_tcp_sender():
 
 def test(get_interactor, t):
     reader = sihd.Readers.IpReader()
-    ip_handler = sihd.Handlers.IpHandler()
+    ip_handler = sihd.Handlers.IpServerHandler()
     test_handler = TestHandler()
     reader.add_observer(ip_handler)
     ip_handler.add_observer(test_handler)
