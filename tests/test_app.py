@@ -8,55 +8,62 @@ import sys
 
 import test_utils
 import sihd
+import unittest
 
-x = 1
+class TestApp(unittest.TestCase):
 
-def assert_expected(app, lines, skipped,
+    def setUp(self):
+        self.x = 0
+        pass
+
+    def tearDown(self):
+        pass
+
+    def file_expect(self, app, lines, skipped,
                     check_words, prt=False):
-    reader = app._line_reader
-    handler = app._word_handler 
-    words_dict = handler._stats
+        reader = app._line_reader
+        handler = app._word_handler 
+        words_dict = handler._stats
 
-    for key, value in words_dict.items():
-        if prt:
-            print("{}: {}".format(key, value))
-        expected = check_words.get(key, None)
-        if expected is not None:
-            assert(expected == value), "{}: {} != {}".format(key, value, expected)
+        for key, value in words_dict.items():
+            if prt:
+                print("{}: {}".format(key, value))
+            expected = check_words.get(key, None)
+            if expected is not None:
+                self.assertEquals(expected, value), "{}: {} != {}".format(key, value, expected)
 
-    assert(handler._skipped == skipped), "{} != {}".format(handler._skipped, skipped)
-    assert(reader._lines == lines), "{} != {}".format(reader._lines, lines)
-    assert(reader._fully_read)
+        self.assertEquals(handler._skipped, skipped), "{} != {}".format(handler._skipped, skipped)
+        self.assertEquals(reader._lines, lines), "{} != {}".format(reader._lines, lines)
+        self.assertTrue(reader._fully_read)
 
-    if not app.args.stats:
-        return
-    print()
-    for key, obj in sihd.Utilities.Stats.get_stats().items():
-        print(obj)
-    print()
-    sihd.Utilities.Stats.reset()
+        if not app.args.stats:
+            return
+        print()
+        for key, obj in sihd.Utilities.Stats.get_stats().items():
+            print(obj)
+        print()
+        sihd.Utilities.Stats.reset()
 
-def test_file(path, lines, skipped, check_words={}):
-    global x
-    print("Test-{} with file '{}' with {} lines and {} comments".format(x, path, lines, skipped))
-    app = test_utils.TestApp(x)
-    app.set_path(path)
-    x += 1
-    if not app.is_args():
-        app.set_args([
-            "-f", path,
-            "-s",
-        ])
-    if app.setup_app() is False:
-        sys.exit(1)
-    app.start()
-    app.loop(timeout=1)
-    assert_expected(app, lines, skipped, check_words, prt=False)
+    def do_file(self, path, lines, skipped, check_words={}):
+        print("Test-{} with file '{}' with {} lines and {} comments".format(self.x, path, lines, skipped))
+        app = test_utils.TestApp(self.x)
+        app.set_path(path)
+        self.x += 1
+        if not app.is_args():
+            app.set_args([
+                "-f", path,
+                "-s",
+            ])
+        if app.setup_app() is False:
+            sys.exit(1)
+        app.start()
+        app.loop(timeout=1)
+        self.file_expect(app, lines, skipped, check_words, prt=False)
+
+    def test_file_reader(self):
+        dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
+        self.do_file(os.path.join(dir_path, "5_lines.txt"), 5, 0, {"world": 2})
+        self.do_file(os.path.join(dir_path, "comments_and_empty_lines.txt"), 19, 6, {"A": 2})
 
 if __name__ == '__main__':
-    try:
-        dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
-        test_file(os.path.join(dir_path, "5_lines.txt"), 5, 0, {"world": 2})
-        test_file(os.path.join(dir_path, "comments_and_empty_lines.txt"), 19, 6, {"A": 2})
-    except KeyboardInterrupt as e:
-        sys.exit(1)
+    unittest.main(verbosity=2)

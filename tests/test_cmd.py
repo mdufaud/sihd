@@ -7,7 +7,6 @@ import os
 import sys
 import time
 
-import test_utils
 import sihd
 
 """ Setting up basic logging """
@@ -16,117 +15,195 @@ import logging
 logger = logging.getLogger()
 logging.basicConfig(level=logging.DEBUG)
 
-def test_service(cmd):
-    interactor = sihd.Interactors.sys.CmdInteractor()
-    interactor.set_conf({
-        "cmd": cmd,
-        "devnull": "stdout"
-    })
-    assert(interactor.setup())
-    assert(interactor.start())
-    time.sleep(0.1)
-    #thread frequency base is 50hz -> 0.1 sec = ~5 iter
-    assert(interactor._thread._iter >= 4)
-    assert(interactor.stop())
+import unittest
 
-def test_cmd(cmd):
-    interactor = sihd.Interactors.sys.CmdInteractor()
-    assert(interactor.exe(cmd))
+from sihd.srcs.Handlers.IHandler import IHandler
 
-def test_err(cmd):
-    interactor = sihd.Interactors.sys.CmdInteractor()
-    assert(interactor.exe(cmd) is False)
+class TestHandler(IHandler):
 
-def test_pipe(cmd1, cmd2):
-    """ First cmd - Piping result """
-    itrc1 = sihd.Interactors.sys.CmdInteractor()
-    itrc1.set_conf({
-        "cmd": cmd1,
-        "pipe": "stdout"
-    })
-    itrc1.setup()
-    """ Second cmd """
-    itrc2 = sihd.Interactors.sys.CmdInteractor()
-    itrc2.set_conf({
-        "cmd": cmd2,
-        "pipe": "stdout",
-    })
-    itrc2.setup()
-    """ Execution """
-    proc1 = itrc1.execute()
-    assert(proc1)
-    # Do not communicate() and end proc1 before piping
-    itrc2.set_stdin(proc1.stdout)
-    proc2 = itrc2.execute()
-    assert(proc2)
-    out, errs = itrc2.communicate()
-    itrc1.end_process()
-    assert(errs is None)
-    assert(out.decode('ascii') == "12\n")
-    assert(proc1.returncode == 0)
-    assert(proc2.returncode == 0)
+    def __init__(self, app=None, name="TestHandler"):
+        super(TestHandler, self).__init__(app=app, name=name)
+        self.out = None
+        self.err = None
 
-def test_err_str(cmd):
-    interactor = sihd.Interactors.sys.CmdInteractor()
-    interactor.set_stderr_pipe()
-    interactor.execute(cmd)
-    out, errs = interactor.communicate()
-    assert(errs is not None)
-    assert(errs.decode('ascii').find('no_folder') > 0)
-    assert(len(errs.decode('ascii')) > 10)
+    def handle(self, reader, data):
+        print("Received: ", data)
+        self.out = data.decode()
+        return True
 
-def test_err_pipe(cmd1, cmd2):
-    """ First cmd - Piping result """
-    itrc1 = sihd.Interactors.sys.CmdInteractor()
-    itrc1.set_conf({
-        "cmd": cmd1,
-        "pipe": "stdout"
-    })
-    itrc1.setup()
-    """ Second cmd """
-    itrc2 = sihd.Interactors.sys.CmdInteractor()
-    itrc2.set_conf({
-        "cmd": cmd2,
+    def on_error(self, reader, error):
+        print("Error rcv: ", error)
+        self.err = error.decode()
+        return True
 
-    })
-    itrc2.setup()
-    """ Execution """
-    proc1 = itrc1.execute()
-    assert(proc1)
-    itrc2.set_stdin(proc1.stdout)
-    proc2 = itrc2.execute()
-    assert(proc2 is None)
-    itrc1.end_process()
+class TestCmd(unittest.TestCase):
 
-def test_communication(cmd, data):
-    itrc = sihd.Interactors.sys.CmdInteractor()
-    itrc.set_cmd(cmd)
-    itrc.set_stdin_pipe()
-    itrc.set_stdout_pipe()
-    itrc.set_stderr_out()
-    """ Test should success """
-    proc = itrc.execute()
-    out, errs = itrc.communicate(timeout=2, input=data.encode())
-    assert(errs is None)
-    assert(out.decode() == "{}\n".format(len(data)))
-    """ Test should fail as no input comes """
-    proc = itrc.execute()
-    out, errs = itrc.communicate(timeout=1)
-    assert(errs is None)
-    assert(out.decode() == "0\n")
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def do_cmd_reader(self, cmd, out=None, err=None):
+        reader = sihd.Readers.CmdReader()
+        reader.set_conf({
+            "cmd": cmd
+        })
+        h = TestHandler()
+        reader.add_observer(h)
+        reader.setup()
+        self.assertTrue(reader.start())
+        try:
+            time.sleep(0.3)
+        except KeyboardInterrupt:
+            print("\nKeyboard Interruption")
+            pass
+        self.assertTrue(reader.stop())
+        if out:
+            self.assertTrue(h.out == out)
+        if err:
+            self.assertTrue(h.err.find(err) != -1)
+
+    def test_reader_service(self):
+        self.do_cmd_reader("echo Hello World", out="Hello World\n")
+        self.do_cmd_reader("ls /smth", err="/smth")
+
+    def do_pipe_cmd_reader(self, cmd1, cmd2, out=None, err=None):
+        reader1 = sihd.Readers.CmdReader(name="FirstCmd")
+        reader1.set_conf("cmd", cmd1)
+        reader2 = sihd.Readers.CmdReader(name="SecondCmd")
+        reader2.set_conf("cmd", cmd2)
+        reader1.setup()
+        reader2.setup()
+        reader2.configure_pipe_cmd_reader(reader1)
+        h = TestHandler()
+        reader2.add_observer(h)
+        self.assertTrue(reader1.start())
+        self.assertTrue(reader2.start())
+        try:
+            time.sleep(0.5)
+        except KeyboardInterrupt:
+            print("\nKeyboard Interruption")
+            pass
+        self.assertTrue(reader2.stop())
+        self.assertTrue(reader1.stop())
+        if out:
+            self.assertTrue(h.out == out)
+        if err:
+            self.assertTrue(h.err.find(err) != -1)
+
+    def test_reader_pipe_service(self):
+        self.do_pipe_cmd_reader("echo Hello World", "wc -c", out="12\n")
+
+    def test_interactor_service(self):
+        cmd = "ls -l"
+        interactor = sihd.Interactors.sys.CmdInteractor()
+        interactor.set_conf({
+            "cmd": cmd,
+            "devnull": "stdout"
+        })
+        self.assertTrue(interactor.setup())
+        self.assertTrue(interactor.start())
+        time.sleep(0.1)
+        #thread frequency base is 50hz -> 0.1 sec = ~5 iter
+        self.assertTrue(interactor._thread._iter >= 4)
+        self.assertTrue(interactor.stop())
+
+    def test_cmd(self):
+        cmd = "echo Hello World"
+        interactor = sihd.Interactors.sys.CmdInteractor()
+        self.assertTrue(interactor.exe(cmd))
+
+    def test_err(self):
+        cmd = "/no_file"
+        interactor = sihd.Interactors.sys.CmdInteractor()
+        self.assertTrue(interactor.exe(cmd) is False)
+
+    def test_pipe(self):
+        cmd1 = "echo Hello World"
+        cmd2 = "wc -c"
+        """ First cmd - Piping result """
+        itrc1 = sihd.Interactors.sys.CmdInteractor()
+        itrc1.set_conf({
+            "cmd": cmd1,
+            "pipe": "stdout"
+        })
+        itrc1.setup()
+        """ Second cmd """
+        itrc2 = sihd.Interactors.sys.CmdInteractor()
+        itrc2.set_conf({
+            "cmd": cmd2,
+            "pipe": "stdout",
+        })
+        itrc2.setup()
+        """ Execution """
+        proc1 = itrc1.execute()
+        self.assertTrue(proc1)
+        # Do not communicate() and end proc1 before piping
+        itrc2.set_stdin(proc1.stdout)
+        proc2 = itrc2.execute()
+        self.assertTrue(proc2)
+        out, errs = itrc2.communicate()
+        itrc1.end_process()
+        self.assertTrue(errs is None)
+        self.assertTrue(out.decode('ascii') == "12\n")
+        self.assertTrue(proc1.returncode == 0)
+        self.assertTrue(proc2.returncode == 0)
+
+    def test_err_str(self):
+        cmd = "ls no_folder"
+        interactor = sihd.Interactors.sys.CmdInteractor()
+        interactor.set_stderr_pipe()
+        interactor.execute(cmd)
+        out, errs = interactor.communicate()
+        self.assertTrue(errs is not None)
+        self.assertTrue(errs.decode('ascii').find('no_folder') > 0)
+        self.assertTrue(len(errs.decode('ascii')) > 10)
+
+    def test_err_pipe(self):
+        cmd1 = "ls -l"
+        cmd2 = "/no_file"
+        """ First cmd - Piping result """
+        itrc1 = sihd.Interactors.sys.CmdInteractor()
+        itrc1.set_conf({
+            "cmd": cmd1,
+            "pipe": "stdout"
+        })
+        itrc1.setup()
+        """ Second cmd """
+        itrc2 = sihd.Interactors.sys.CmdInteractor()
+        itrc2.set_conf({
+            "cmd": cmd2,
+
+        })
+        itrc2.setup()
+        """ Execution """
+        proc1 = itrc1.execute()
+        self.assertTrue(proc1)
+        itrc2.set_stdin(proc1.stdout)
+        proc2 = itrc2.execute()
+        self.assertTrue(proc2 is None)
+        itrc1.end_process()
+
+    def test_communication(self):
+        cmd = "wc -c"
+        data = "Hello World"
+        itrc = sihd.Interactors.sys.CmdInteractor()
+        itrc.set_cmd(cmd)
+        itrc.set_stdin_pipe()
+        itrc.set_stdout_pipe()
+        itrc.set_stderr_out()
+        """ Test should success """
+        proc = itrc.execute()
+        out, errs = itrc.communicate(timeout=2, input=data.encode())
+        self.assertTrue(errs is None)
+        self.assertTrue(out.decode() == "{}\n".format(len(data)))
+        """ Test should fail as no input comes """
+        proc = itrc.execute()
+        out, errs = itrc.communicate(timeout=1)
+        self.assertTrue(errs is None)
+        self.assertTrue(out.decode() == "0\n")
+
 
 if __name__ == '__main__':
-    logger.info("Starting test")
-    ls = "ls -l"
-    test_service(ls)
-    echo = "echo Hello World"
-    test_cmd(echo)
-    wc = "wc -c"
-    test_pipe(echo, wc)
-    err = "/no_file"
-    err2 = "ls no_folder"
-    test_err(err)
-    test_err_str(err2)
-    test_err_pipe(ls, err)
-    test_communication(wc, "Hello World")
-    logger.info("Test ending")
+    unittest.main()

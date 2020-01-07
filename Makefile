@@ -15,7 +15,7 @@ tests:
 	@set -e && cd tests && rm -f logs/* && for TEST in `/bin/ls [^_]*.py`; \
 	do \
 		echo "==== Starting test $$TEST ===="; \
-		$(PYTHON) $$TEST 0>&-;  \
+		$(PYTHON3) $$TEST 0>&-;  \
 		echo "==== End of test $$TEST ====\n"; echo "" ;\
 	done && cd ..
 
@@ -24,7 +24,7 @@ itests:
 	@set -e && cd tests && rm -f logs/* && for TEST in `/bin/ls [^_]*.py`; \
 	do \
 		echo "==== Starting test $$TEST ===="; \
-		$(PYTHON) $$TEST;  \
+		$(PYTHON3) $$TEST;  \
 		echo "==== End of test $$TEST ====\n"; echo "" ;\
 	done && cd ..
 

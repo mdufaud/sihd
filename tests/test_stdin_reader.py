@@ -17,6 +17,7 @@ logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
 
 import socket
+import unittest
 
 from sihd.srcs.Handlers.IHandler import IHandler
 
@@ -47,23 +48,29 @@ class TestHandler(IHandler):
             reader.stop()
         return True
 
-def test_reader():
-    reader = sihd.Readers.StdinReader()
-    test_handler = TestHandler()
-    reader.add_observer(test_handler)
-    reader.set_conf("question", "How are you ? ")
-    reader.setup()
-    assert(reader.start())
-    try:
-        while reader.is_active():
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\nKeyboard Interruption")
+class TestStdinReader(unittest.TestCase):
+
+    def setUp(self):
         pass
-    assert(reader.stop())
+
+    def tearDown(self):
+        pass
+
+    @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
+    def test_reader(self):
+        reader = sihd.Readers.StdinReader()
+        test_handler = TestHandler()
+        reader.add_observer(test_handler)
+        reader.set_conf("question", "How are you ? ")
+        reader.setup()
+        self.assertTrue(reader.start())
+        try:
+            while reader.is_active():
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("\nKeyboard Interruption")
+            pass
+        self.assertTrue(reader.stop())
 
 if __name__ == '__main__':
-    logger.info("Starting test")
-    if sys.stdout.isatty():
-        test_reader()
-    logger.info("Test ending")
+    unittest.main(verbosity=2)
