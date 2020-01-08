@@ -27,19 +27,36 @@ class TestHttp(unittest.TestCase):
     def test_wrong_url(self):
         url = "http://www.a@E2e2esasfzzzzzzzzzzz.com"
         interactor = sihd.Interactors.ip.HttpInteractor()
-        self.assertFalse(interactor.get(url))
+        html = interactor.make_request(url).send()
+        self.assertTrue(html is None)
 
-    def test_action(self):
-        url = "https://www.google.com"
+    def test_get(self):
+        url = "http://httpbin.org/get"
         interactor = sihd.Interactors.ip.HttpInteractor()
-        self.assertTrue(interactor.get(url))
+        html = interactor.make_request(url, query={"get": "cookies"}).send().decode()
+        print(html)
+        self.assertTrue(html is not None)
+
+    def test_post(self):
+        url = "http://httpbin.org/post"
+        interactor = sihd.Interactors.ip.HttpInteractor()
+        html = interactor.make_request(url, post={'hello': 'world'}).send().decode()
+        print(html)
+        self.assertTrue(html is not None)
+
+    def test_error_404(self):
+        url = "http://httpbin.org/status/300"
+        interactor = sihd.Interactors.ip.HttpInteractor()
+        html = interactor.make_request(url).send()
+        print(html)
+        self.assertTrue(html is None)
+
 
     def test_service(self):
         url = "https://www.google.com"
         interactor = sihd.Interactors.ip.HttpInteractor()
         interactor.set_conf({
             "url": url,
-            "type": "get"
         })
         interactor.setup()
         interactor.start()
