@@ -38,13 +38,13 @@ class TestHandler(IHandler):
             return
         print("Received: '{}'".format(line))
         step = self._step
-        if step is 0:
+        if step == 0:
             reader.set_question("Great - Type 5 now: ")
             self._step = 1
-        elif step is 1 and line is '5':
+        elif step == 1 and line == '5':
             reader.set_question("Thanks ! Type q to quit: ")
             self._step = 2
-        elif step is 2 and line is 'q':
+        elif step == 2 and line == 'q':
             reader.stop()
         return True
 
