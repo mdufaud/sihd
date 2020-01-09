@@ -18,7 +18,6 @@ class IReader(Utilities.ISequenceable, Utilities.IAppContainer,
     def set_source(self, source):
         return
 
-
     """ IAppContainer """
 
     def set_app(self, app):

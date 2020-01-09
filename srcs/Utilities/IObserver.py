@@ -11,8 +11,8 @@ class IObserver(INamedObject):
     def __init__(self, name="IObserver"):
         super(IObserver, self).__init__(name)
 
-    def handle(self, observable, *args):
-        raise NotImplementedError("Handle not implemented")
+    def on_notify(self, observable, *args, **kwargs):
+        raise NotImplementedError("on_notify not implemented")
 
     def on_error(self, observable, *args):
         return

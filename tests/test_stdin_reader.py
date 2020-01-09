@@ -59,10 +59,11 @@ class TestStdinReader(unittest.TestCase):
     @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
     def test_reader(self):
         reader = sihd.Readers.StdinReader()
-        test_handler = TestHandler()
-        reader.add_observer(test_handler)
+        handler = TestHandler()
+        reader.add_observer(handler)
         reader.set_conf("question", "How are you ? ")
         reader.setup()
+        self.assertTrue(handler.start())
         self.assertTrue(reader.start())
         try:
             while reader.is_active():
@@ -71,6 +72,7 @@ class TestStdinReader(unittest.TestCase):
             print("\nKeyboard Interruption")
             pass
         self.assertTrue(reader.stop())
+        self.assertTrue(handler.stop())
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

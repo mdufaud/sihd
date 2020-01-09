@@ -121,7 +121,7 @@ class IApp(Utilities.IService, Utilities.ILoggable,
 
     def __read_conf(self, path):
         self._conf_path = path
-        obj = ConfigParser.SafeConfigParser()
+        obj = ConfigParser.ConfigParser()
         if not os.path.isfile(path):
             self.say("Making conf file {}".format(self.get_conf_path()))
             self.__setup_logger_conf(obj)

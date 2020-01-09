@@ -1,8 +1,1 @@
-from .srcs import API
-from .srcs import App
-from .srcs import Readers
-from .srcs import Handlers
-from .srcs import Interactors
-from .srcs import GUI
-from .srcs import Tools
-from .srcs import Utilities
+from .srcs import API, App, Readers, Handlers, Interactors, GUI, Tools, Utilities

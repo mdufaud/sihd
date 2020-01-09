@@ -10,22 +10,22 @@ class IObservable(INamedObject):
 
     def __init__(self, name="IObservable"):
         super(IObservable, self).__init__(name)
-        self.handlers = set()
+        self.observers = set()
 
-    def add_observer(self, handler):
-        assert(handler.handle)
-        assert(handler.on_info)
-        assert(handler.on_error)
-        self.handlers.add(handler)
+    def add_observer(self, observer):
+        assert(observer.on_notify)
+        assert(observer.on_info)
+        assert(observer.on_error)
+        self.observers.add(observer)
 
     def notify_observers(self, *args):
-        for handler in self.handlers:
-            handler.handle(self, *args)
+        for observer in self.observers:
+            observer.on_notify(self, *args)
 
     def notify_error(self, *args):
-        for handler in self.handlers:
-            handler.on_error(self, *args)
+        for observer in self.observers:
+            observer.on_error(self, *args)
 
     def notify_info(self, *args):
-        for handler in self.handlers:
-            handler.on_info(self, *args)
+        for observer in self.observers:
+            observer.on_info(self, *args)

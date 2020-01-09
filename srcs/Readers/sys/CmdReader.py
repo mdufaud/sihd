@@ -130,7 +130,7 @@ class CmdReader(IReader, IObserver):
             self.log_warning("Incompatible reader {} "
                             "for pipes".format(reader.get_name()))
 
-    def handle(self, reader, proc):
+    def on_notify(self, reader, proc):
         """ Permits CmdReader chaining """
         if not self.is_running():
             return

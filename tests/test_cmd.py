@@ -50,6 +50,7 @@ class TestCmd(unittest.TestCase):
             "cmd": cmd
         })
         h = TestHandler()
+        self.assertTrue(h.start())
         reader.add_observer(h)
         reader.setup()
         self.assertTrue(reader.start())
@@ -59,6 +60,7 @@ class TestCmd(unittest.TestCase):
             print("\nKeyboard Interruption")
             pass
         self.assertTrue(reader.stop())
+        self.assertTrue(h.stop())
         if out:
             self.assertTrue(h.out == out)
         if err:
@@ -77,6 +79,7 @@ class TestCmd(unittest.TestCase):
         reader2.setup()
         reader2.configure_pipe_cmd_reader(reader1)
         h = TestHandler()
+        self.assertTrue(h.start())
         reader2.add_observer(h)
         self.assertTrue(reader1.start())
         self.assertTrue(reader2.start())
@@ -87,6 +90,7 @@ class TestCmd(unittest.TestCase):
             pass
         self.assertTrue(reader2.stop())
         self.assertTrue(reader1.stop())
+        self.assertTrue(h.stop())
         if out:
             self.assertTrue(h.out == out)
         if err:
