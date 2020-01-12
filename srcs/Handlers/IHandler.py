@@ -31,3 +31,8 @@ class IHandler(Core.IService, Core.IAppContainer,
 
     def _stop_impl(self):
         return True
+
+    def _dump(self):
+        state = self.__dict__.copy()
+        del state['_log']
+        return state

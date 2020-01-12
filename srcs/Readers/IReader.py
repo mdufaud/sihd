@@ -15,6 +15,7 @@ class IReader(Core.ISequenceable, Core.IAppContainer,
         self.__data_saved = []
         if (app):
             self.set_app(app)
+        self.__notify = self.notify_observers
 
     def set_source(self, source):
         raise NotImplementedError("set_source not implemented")
@@ -27,11 +28,22 @@ class IReader(Core.ISequenceable, Core.IAppContainer,
 
     """ IDumpable """
 
+    def _dump(self):
+        state = self.__dict__.copy()
+        del state['_log']
+        del state['_run_method']
+        del state['notify_observers']
+        return state
+
     def is_saving_data(self):
         return self.__saving_data
 
     def save_data(self, active):
         self.__saving_data = active
+        if active:
+            self.notify_observers = self.__save_notify
+        else:
+            self.notify_observers = self.__notify
 
     def get_data_saved(self):
         return self.__data_saved
@@ -39,8 +51,6 @@ class IReader(Core.ISequenceable, Core.IAppContainer,
     def clear_data_saved(self):
         self.__data_saved = []
 
-    def notify_observers(self, *args):
-        if self.__saving_data:
-            now = time.time()
-            self.__data_saved.append((now, *args))
-        return super().notify_observers(*args)
+    def __save_notify(self, *args):
+        self.__data_saved.append(args)
+        return self.__notify(*args)

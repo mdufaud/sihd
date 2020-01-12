@@ -20,7 +20,7 @@ class IService(ILoggable):
     def is_active(self):
         return (not self._paused and not self._stopped)
 
-    def get_state(self):
+    def get_service_state(self):
         s = "Service {}: ".format(self.get_name())
         if self._stopped:
             s += "Stopped"
@@ -40,8 +40,8 @@ class IService(ILoggable):
         if self._start_impl() is True:
             self._stopped = False
             self.__notify_change()
-            self.log_debug("%s" %
-                    ("is started" if not self._stopped else "did not start"))
+        self.log_debug("%s" %
+                ("is started" if not self._stopped else "did not start"))
         return (not self._stopped)
 
     def _start_impl(self):
@@ -57,8 +57,8 @@ class IService(ILoggable):
         if self._stop_impl() is True:
             self._stopped = True
             self.__notify_change()
-            self.log_debug("%s" %
-                    ("is stopped" if self._stopped else "did not stop"))
+        self.log_debug("%s" %
+                ("is stopped" if self._stopped else "did not stop"))
         return self._stopped
 
     def _stop_impl(self):
@@ -74,8 +74,8 @@ class IService(ILoggable):
         if self._pause_impl() is True:
             self._paused = True
             self.__notify_change()
-            self.log_debug("%s" %
-                ("is paused" if self._paused else "did not pause"))
+        self.log_debug("%s" %
+            ("is paused" if self._paused else "did not pause"))
         return self._paused
 
     def _pause_impl(self):
@@ -92,8 +92,8 @@ class IService(ILoggable):
         if self._resume_impl() is True:
             self._paused = False
             self.__notify_change()
-            self.log_debug("%s" %
-                    ("is resumed" if not self._paused else "did not resume"))
+        self.log_debug("%s" %
+                ("is resumed" if not self._paused else "did not resume"))
         return not self._paused
 
     def _resume_impl(self):
@@ -125,6 +125,7 @@ class IService(ILoggable):
     """ Delete """
 
     def __service_exception(self, ex):
+        """ Print traceback from an exception """
         import logging
         logger = logging.getLogger()
         logger.error("Service {} exception: {}".format(self.get_name(), ex))
@@ -135,15 +136,13 @@ class IService(ILoggable):
             pass
 
     def _del_impl(self):
+        """ Change here to do specific stuff on death """
         return
 
     def __del__(self):
-        if self._stopped is False:
-            try:
-                self.stop()
-            except Exception as ex:
-                self.__service_exception(ex)
         try:
+            if self._stopped is False:
+                    self.stop()
             self._del_impl()
         except Exception as ex:
             self.__service_exception(ex)

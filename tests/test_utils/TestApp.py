@@ -62,7 +62,7 @@ class TestApp(sihd.App.IApp):
             return
         if self.is_reader(service) is False:
             return
-        self.log_info(service.get_state())
+        self.log_info(service.get_service_state())
         if stopped:
             self.log_info("Reader {} ended and stopped".format(service.get_name()))
 
