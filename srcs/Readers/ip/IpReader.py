@@ -2,7 +2,7 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
+
 import time
 import os
 import socket
@@ -147,7 +147,6 @@ class IpReader(IReader):
             self._socket = None
         if do_time:
             stop_time = time.time()
-            self.notify_info("Server has shut down")
             self.log_info("Server was up for {0:.3f} seconds"\
                     .format(stop_time - self._start_time))
 
@@ -183,7 +182,6 @@ class IpReader(IReader):
         if self._listening is True:
             s = "Accepting connections ({} max)".format(self._max_co)
             self.log_info(s)
-            self.notify_info(s)
         return super(IpReader, self)._start_impl()
 
     def _stop_impl(self):

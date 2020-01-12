@@ -2,7 +2,7 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
+
 import sys
 import os
 import time
@@ -17,7 +17,7 @@ class TestApp(sihd.App.IApp):
         super(TestApp, self).__init__("TestApp" + self._test)
         self.set_path(os.path.dirname(os.path.dirname((__file__))))
         self.load_app_conf()
-        sihd.Utilities.ILoggable.set_color(True)
+        sihd.Core.ILoggable.set_color(True)
 
     def _setup_app_impl(self):
         #Get args for app
@@ -69,10 +69,10 @@ class TestApp(sihd.App.IApp):
     def _configure_handler(self, handler):
         #Decorate with stats
         if self.args.stats:
-            handler.handle = sihd.Utilities.Stats.stat_it(handler.handle)
+            handler.handle = sihd.Core.Stats.stat_it(handler.handle)
 
     def _configure_reader(self, reader):
         #Decorate with stats
         if self.args.stats:
-            method = sihd.Utilities.Stats.stat_it(reader.get_run_method())
+            method = sihd.Core.Stats.stat_it(reader.get_run_method())
             reader.set_run_method(method)

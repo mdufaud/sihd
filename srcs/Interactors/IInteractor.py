@@ -2,12 +2,11 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
 
-from .. import Utilities
+from sihd.srcs import Core
 
-class IInteractor(Utilities.ISequenceable, Utilities.ILoggable,
-                    Utilities.IAppContainer):
+class IInteractor(Core.ISequenceable, Core.ILoggable,
+                    Core.IAppContainer):
 
     def __init__(self, app=None, name="IInteractor"):
         super(IInteractor, self).__init__(name)

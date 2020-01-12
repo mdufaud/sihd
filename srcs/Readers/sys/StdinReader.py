@@ -2,7 +2,7 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
+
 import time
 import os
 import sys
@@ -19,7 +19,7 @@ class StdinReader(IReader):
         })
         self._question = ""
         self._asked = False
-        self.set_run_method(self._read_input)
+        self.set_run_method(self.diffuse_input)
         self._inputs = [sys.stdin.fileno()]
         self._buffer = 4096
 
@@ -40,7 +40,19 @@ class StdinReader(IReader):
         print(self._question, end="", flush=True)
         self._asked = True
 
-    def _read_input(self):
+    def get_input(self, timeout=0):
+        inputs = self._inputs
+        buf = self._buffer
+        r, w, e = select.select(inputs, [], [], timeout)
+        if e:
+            self.log_error("Select exceptional: {}".format(e))
+            return None
+        line = None
+        if self.is_active() and r:
+            line = os.read(r[0], buf)
+        return line
+
+    def diffuse_input(self):
         self.__ask()
         inputs = self._inputs
         buf = self._buffer
@@ -50,17 +62,16 @@ class StdinReader(IReader):
             self.log_error(err)
             self.notify_error(err)
             return False
-        if self.is_active() and r:
-            try:
-                line = os.read(r[0], buf)
-                self.notify_observers(line)
-            except Exception as e:
-                self.stop()
-                raise
-            if line == b'':
-                self.stop()
-                return False
-            self._asked = False
+        try:
+            line = self.get_input(timeout=1.0)
+        except Exception as e:
+            self.stop()
+            raise
+        if line == b'':
+            self.stop()
+            return False
+        self.notify_observers(line)
+        self._asked = False
         return True
 
     def set_question(self, question):

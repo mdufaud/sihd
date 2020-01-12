@@ -1,4 +1,4 @@
-from .Utilities import *
+from .Core import *
 from .Readers import *
 from .Handlers import *
 from .GUI import *

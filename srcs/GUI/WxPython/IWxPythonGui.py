@@ -2,15 +2,14 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
 
 import os
 import os.path
 import sys
 import logging
 
-from ..IGui import IGui
-from ... import Utilities
+from sihd.srcs.GUI.IGui import IGui
+from sihd.srcs import Core
 
 wx = None
 

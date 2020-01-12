@@ -2,7 +2,7 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
+
 import os
 import sys
 import time
@@ -15,11 +15,11 @@ except ImportError:
     ConfigParser = configparser
 
 import sihd
-from sihd.srcs import Utilities, Readers, Handlers, GUI, Interactors
+from sihd.srcs import Core, Readers, Handlers, GUI, Interactors
 
-class IApp(Utilities.IService, Utilities.ILoggable,
-            Utilities.IConfigurable, Utilities.IDumpable,
-            Utilities.IServiceStateObserver):
+class IApp(Core.IService, Core.ILoggable,
+            Core.IConfigurable, Core.IDumpable,
+            Core.IServiceStateObserver):
 
     def __init__(self, name="IApp", *args, **kwargs):
         super(IApp, self).__init__(name, *args, **kwargs)
@@ -73,8 +73,8 @@ class IApp(Utilities.IService, Utilities.ILoggable,
 
     def get_arg(self, name):
         args = self.args
-        if args and args.contains(name) is True:
-            return args.__getattribute__(name)
+        if args:
+            return vars(args).get(name, None)
         return self.get_conf(name)
 
     def set_args(self, args):
@@ -88,7 +88,7 @@ class IApp(Utilities.IService, Utilities.ILoggable,
 
     def parse_args(self):
         parser = argparse.ArgumentParser(prog=self.get_name())
-        self.define_args(parser);
+        self.define_args(parser)
         if self.__args_setted is not None:
             self.args = parser.parse_args(args=self.__args_setted)
         else:
@@ -125,12 +125,12 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         if not os.path.isfile(path):
             self.say("Making conf file {}".format(self.get_conf_path()))
             self.__setup_logger_conf(obj)
-        elif not obj.has_section("Logger"):
-            self.__setup_logger_conf(obj)
         else:
             obj.read(path)
+            if not obj.has_section("Logger"):
+                self.__setup_logger_conf(obj)
         self.setup(obj)
-        Utilities.ILoggable.setup_log(self.get_name(),
+        Core.ILoggable.setup_log(self.get_name(),
                                     obj.get("Logger", "level"),
                                     obj.get("Logger", "directory"))
         self.log_debug("Logger is setup")
@@ -162,13 +162,11 @@ class IApp(Utilities.IService, Utilities.ILoggable,
         return True
 
     def load_children_conf(self):
-        conf = self.get_conf_obj()
-        if conf is None:
-            return
         if self._children_configured:
             self.log_debug("Services already configured")
             return False
         self._children_configured = True
+        conf = self.get_conf_obj()
         fun = self.__call_children
         fun(self.interactors, "setup", conf)
         fun(self.guis, "setup", conf)
@@ -192,7 +190,7 @@ class IApp(Utilities.IService, Utilities.ILoggable,
 
     """
     ###############
-    Utilities
+    Utils
     ###############
     """
 

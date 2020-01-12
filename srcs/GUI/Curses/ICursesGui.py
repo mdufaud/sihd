@@ -2,15 +2,15 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
+
 
 import sys
 import logging
 
 curses = None
 
-from ..IGui import IGui
-from ... import Utilities
+from sihd.srcs.GUI.IGui import IGui
+from sihd.srcs import Core
 
 class ICursesGui(IGui):
 

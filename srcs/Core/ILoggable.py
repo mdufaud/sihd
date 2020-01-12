@@ -2,7 +2,7 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
+
 import os
 import sys
 import datetime
@@ -15,6 +15,7 @@ from .INamedObject import INamedObject
 class ILoggable(INamedObject):
 
     logger = logging.getLogger()
+    __file_handler = None
     __level = None
     __original_emit = logging.StreamHandler.emit
     __is_color = False
@@ -99,6 +100,10 @@ class ILoggable(INamedObject):
         
     @staticmethod
     def remove_handlers():
+        file_handler = ILoggable.__file_handler
+        if file_handler:
+            file_handler.close()
+            ILoggable.__file_handler = None
         logging.root.handlers = []
 
     # Setup global logger
@@ -123,6 +128,7 @@ class ILoggable(INamedObject):
         file_handler.setLevel(log_level)
         file_handler.setFormatter(ILoggable.get_formatter())
         ILoggable.logger.addHandler(file_handler)
+        ILoggable.__file_handler = file_handler
         ILoggable.logger.debug("Logger is setup")
 
     @staticmethod

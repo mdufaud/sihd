@@ -2,13 +2,12 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
 
-from .. import Utilities
+from sihd.srcs import Core
 
-class IHandler(Utilities.IService, Utilities.IAppContainer,
-                Utilities.IObservable, Utilities.IObserver,
-                Utilities.IConfigurable, Utilities.IDumpable):
+class IHandler(Core.IService, Core.IAppContainer,
+                Core.IObservable, Core.IObserver,
+                Core.IConfigurable, Core.IDumpable):
 
     def __init__(self, app=None, name="IHandler"):
         super(IHandler, self).__init__(name)

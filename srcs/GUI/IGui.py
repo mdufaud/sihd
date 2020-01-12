@@ -2,13 +2,12 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
 
-from .. import Utilities
+from sihd.srcs import Core
 
-class IGui(Utilities.IService, Utilities.IAppContainer,
-            Utilities.IObserver, Utilities.ILoggable,
-            Utilities.IConfigurable, Utilities.IRunnable):
+class IGui(Core.IService, Core.IAppContainer,
+            Core.IObserver, Core.ILoggable,
+            Core.IConfigurable, Core.IRunnable):
 
     def __init__(self, app=None, name="IGui"):
         super(IGui, self).__init__(name)

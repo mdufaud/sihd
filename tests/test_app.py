@@ -2,7 +2,7 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
+
 import os
 import sys
 
@@ -30,19 +30,19 @@ class TestApp(unittest.TestCase):
                 print("{}: {}".format(key, value))
             expected = check_words.get(key, None)
             if expected is not None:
-                self.assertEquals(expected, value), "{}: {} != {}".format(key, value, expected)
+                self.assertEqual(expected, value), "{}: {} != {}".format(key, value, expected)
 
-        self.assertEquals(handler._skipped, skipped), "{} != {}".format(handler._skipped, skipped)
-        self.assertEquals(reader._lines, lines), "{} != {}".format(reader._lines, lines)
+        self.assertEqual(handler._skipped, skipped), "{} != {}".format(handler._skipped, skipped)
+        self.assertEqual(reader._lines, lines), "{} != {}".format(reader._lines, lines)
         self.assertTrue(reader._fully_read)
 
         if not app.args.stats:
             return
         print()
-        for key, obj in sihd.Utilities.Stats.get_stats().items():
+        for key, obj in sihd.Core.Stats.get_stats().items():
             print(obj)
         print()
-        sihd.Utilities.Stats.reset()
+        sihd.Core.Stats.reset()
 
     def do_file(self, path, lines, skipped, check_words={}):
         print("Test-{} with file '{}' with {} lines and {} comments".format(self.x, path, lines, skipped))

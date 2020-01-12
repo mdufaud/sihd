@@ -2,7 +2,7 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
+
 import os
 import sys
 import time
@@ -21,13 +21,15 @@ import unittest
 
 from sihd.srcs.Handlers.IHandler import IHandler
 
-class TestHandler(IHandler):
+class StdinHandler(IHandler):
 
-    def __init__(self, app=None, name="TestHandler"):
-        super(TestHandler, self).__init__(app=app, name=name)
+    def __init__(self, app=None, name="StdinHandler"):
+        super(StdinHandler, self).__init__(app=app, name=name)
         self._step = 0
 
     def handle(self, reader, line):
+        if line is None:
+            return None
         line = line.decode('ascii')
         if line == "":
             print()
@@ -48,7 +50,19 @@ class TestHandler(IHandler):
             reader.stop()
         return True
 
-class TestStdinReader(unittest.TestCase):
+class PcapHandler(IHandler):
+
+    def __init__(self, app=None, name="PcapHandler"):
+        super(PcapHandler, self).__init__(app=app, name=name)
+
+    def handle(self, reader, info, pkt):
+        s = "data: " + str(pkt[:10])
+        if info.cap_len > 10:
+            s += "..."
+        print(info, s)
+        assert(len(pkt) == info.cap_len)
+
+class TestReader(unittest.TestCase):
 
     def setUp(self):
         pass
@@ -57,9 +71,9 @@ class TestStdinReader(unittest.TestCase):
         pass
 
     @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
-    def test_reader(self):
+    def test_stdin_reader(self):
         reader = sihd.Readers.StdinReader()
-        handler = TestHandler()
+        handler = StdinHandler()
         reader.add_observer(handler)
         reader.set_conf("question", "How are you ? ")
         reader.setup()
@@ -73,6 +87,22 @@ class TestStdinReader(unittest.TestCase):
             pass
         self.assertTrue(reader.stop())
         self.assertTrue(handler.stop())
+
+    def test_pcap_reader(self):
+        pcap_path = os.path.join(os.path.dirname(__file__), "resources", "Pcap", "new.pcap")
+        reader = sihd.Readers.PcapReader()
+        reader.set_conf({
+            "path": pcap_path,
+        })
+        reader.setup()
+        handler = PcapHandler()
+        reader.add_observer(handler)
+        self.assertTrue(handler.start())
+        self.assertTrue(reader.start())
+        time.sleep(1)
+        self.assertTrue(reader.stop())
+        self.assertTrue(handler.stop())
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

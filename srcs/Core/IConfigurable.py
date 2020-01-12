@@ -2,7 +2,6 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
 import os
 import datetime
 import logging
@@ -49,14 +48,22 @@ class IConfigurable(INamedObject):
             @return value or None if not found
         """
         conf = self.get_conf_obj()
+        #Gets conf from either obj or setted configuration
         if conf:
-            if not conf.has_option(self.get_name(), key):
-                return None
-            val = conf.get(self.get_name(), key)
+            if conf.has_option(self.get_name(), key):
+                val = conf.get(self.get_name(), key)
         else:
             val = self.__conf.get(key, None)
-        if default is False and val == self.get_default_conf(key):
-            return None
+        if default is False:
+            #Checks if val is equal to default
+            val_default = self.get_default_conf(key)
+            if val_default == val:
+                val = self.__conf.get(key, None)
+                if val_default == val:
+                    val = None
+        elif val is None:
+            #If config has not been found elsewhere
+            val = self.get_default_conf(key)
         return val
 
     def set_conf(self, key, value=None):
@@ -79,7 +86,6 @@ class IConfigurable(INamedObject):
                 self.__setup_section()
             obj.set(self.get_name(), key, value)
 
-
     def get_default_conf_dict(self):
         return self.__default_conf
 
@@ -97,7 +103,9 @@ class IConfigurable(INamedObject):
 
     def save_conf(self):
         """ Writes configured obj to file """
-        self.__write_dict_conf(self, self.__conf)
+        dic = dict(self.__default_conf)
+        dic.update(self.__conf)
+        self.__write_dict_conf(self, dic)
 
     """ To be called by children """
 
@@ -108,7 +116,6 @@ class IConfigurable(INamedObject):
         """
         if isinstance(dic, dict):
             self.__default_conf.update(dic)
-            self.__conf.update(dic)
 
     def _setup_impl(self):
         """
@@ -123,7 +130,7 @@ class IConfigurable(INamedObject):
         """ Sets section for obj in configparser """
         conf = self.get_conf_obj()
         added = False
-        if conf and not conf.has_section(self.get_name()):
+        if conf and conf.has_section(self.get_name()) is False:
             conf.add_section(self.get_name())
             added = True
         self.__has_section = True

@@ -2,14 +2,14 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
+
 import time
 import os
 import sys
 import select
 
 from sihd.srcs.Readers.IReader import IReader
-from sihd.srcs.Utilities.IObserver import IObserver
+from sihd.srcs.Core.IObserver import IObserver
 from sihd.srcs.Interactors.sys.CmdInteractor import CmdInteractor
 
 class CmdReader(IReader, IObserver):
@@ -27,7 +27,7 @@ class CmdReader(IReader, IObserver):
             "handle_process": True,
             'thread_frequency': 10,
         })
-        self.set_run_method(self._execute)
+        self.set_run_method(self.diffuse_execution)
         self._handle_proc = True
         self._cmd = ""
         self._last_proc = None
@@ -146,8 +146,23 @@ class CmdReader(IReader, IObserver):
             self.log_error("Wrong value type for handling")
         if err:
             self.stop()
+        return not err
 
-    def _execute(self):
+    def execute(self):
+        self.__clear_last_proc()
+        itr = self._interactor
+        ret = None
+        if itr:
+            proc = itr.execute()
+            if self._handle_proc is True:
+                out, errs = itr.communicate()
+                ret = out if errs is None else None
+            else:
+                ret = proc
+            self._last_proc = proc
+        return ret
+
+    def diffuse_execution(self):
         self.__clear_last_proc()
         proc = self._interactor.execute()
         if proc:

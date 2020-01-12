@@ -2,7 +2,6 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
 
 class IServiceStateObserver(object):
 

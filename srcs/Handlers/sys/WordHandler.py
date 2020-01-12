@@ -2,7 +2,7 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
+
 
 from sihd.srcs.Handlers.IHandler import IHandler
 
@@ -11,7 +11,7 @@ class WordHandler(IHandler):
     def __init__(self, app=None, name="WordHandler"):
         super(WordHandler, self).__init__(app=app, name=name)
         self._set_default_conf({
-            "delimiter": " ",
+            "delimiter": "",
             "skip": "#;//",
         })
         self._stats = {}
@@ -39,7 +39,11 @@ class WordHandler(IHandler):
     """ IConfigurable """
 
     def _setup_impl(self):
-        self._delimiter = self.get_conf("delimiter")
+        delimiter = self.get_conf("delimiter")
+        if isinstance(delimiter, str) and len(delimiter) >= 1:
+            self._delimiter = delimiter
+        else:
+            self._delimiter = None
         toskip = self.get_conf("skip")
         if isinstance(toskip, str):
             self._toskip = toskip.split(";")

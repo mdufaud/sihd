@@ -2,7 +2,7 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
+
 import time
 import os
 
@@ -14,7 +14,7 @@ class LineReader(IReader):
 
     def __init__(self, path=None, app=None, name="LineReader"):
         super(LineReader, self).__init__(app=app, name=name)
-        self.set_run_method(self._read_line)
+        self.set_run_method(self.diffuse_line)
         self._set_default_conf({
             "path": "/path/to/file",
         })
@@ -42,9 +42,8 @@ class LineReader(IReader):
             return
         tupl = LineReader.files_read[self._path]
         if tupl[1] == False:
-            s = "File already read"
-            self.say(s)
-            self.notify_info(s)
+            s = "File {} already read".format(self._path)
+            self.log_info(s)
             return
         self._to_recover = tupl[0]
         s = "To recover {}".format(self._to_recover)
@@ -60,7 +59,6 @@ class LineReader(IReader):
             return True
         s = "Recovered {}".format(self._path)
         self.log_info(s)
-        self.notify_info(s)
 
     def set_source(self, path):
         self._path = os.path.abspath(path) if path else None
@@ -79,13 +77,20 @@ class LineReader(IReader):
         self._can_recover()
         return True
 
-    def _read_line(self):
-        if self._to_recover > 0 and self._recover() == True:
-            return True
+    def read_line(self):
+        reader = self._reader
+        if not reader:
+            return None
         try:
             line = self._reader.readline()
         except EOFError as e:
             line = None
+        return line
+
+    def diffuse_line(self):
+        if self._to_recover > 0 and self._recover() == True:
+            return True
+        line = self.read_line()
         if line is None or line == "":
             self._read_end()
             return False
@@ -95,8 +100,8 @@ class LineReader(IReader):
 
     def _read_end(self):
         stop_time = time.time()
-        self.notify_info("File {0:s} read - {1:d} packets".format(self._path, self._lines))
-        self.log_info("took {0:.3f} seconds to read and process {1:d} lines"\
+        self.log_info("File {0:s} read - {1:d} packets".format(self._path, self._lines))
+        self.log_debug("took {0:.3f} seconds to read and process {1:d} lines"\
                 .format(stop_time - self._start_time, self._lines))
         self._fully_read = True
         LineReader.files_read[self._path] = (self._lines, False)
@@ -110,7 +115,6 @@ class LineReader(IReader):
             return False
         s = "Reading file {name}".format(name=self._path)
         self.log_info(s)
-        self.notify_info(s)
         return super(LineReader, self)._start_impl()
 
     def _stop_impl(self):

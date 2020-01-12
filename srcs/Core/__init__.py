@@ -12,3 +12,7 @@ from .IServiceStateObserver import IServiceStateObserver
 from .Factory import Factory
 from .Stats import stat_it, count_it, get_stats
 from .ISequenceable import ISequenceable
+
+from .IWorker import IWorker
+from .IConsumer import IConsumer
+from .IProducer import IProducer

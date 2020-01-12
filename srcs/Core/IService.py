@@ -1,9 +1,6 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
-from __future__ import print_function
-
 from .ILoggable import ILoggable
 
 class IService(ILoggable):

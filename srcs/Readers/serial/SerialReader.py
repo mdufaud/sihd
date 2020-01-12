@@ -2,7 +2,7 @@
 #coding: utf-8
 
 """ System """
-from __future__ import print_function
+
 import time
 import os
 
@@ -25,7 +25,7 @@ class SerialReader(IReader):
             "baudrate": 9600,
             "timeout": 1,
         })
-        self.set_run_method(self._read_line)
+        self.set_run_method(self._read_serial)
 
     """ IConfigurable """
 
@@ -38,6 +38,7 @@ class SerialReader(IReader):
         if timeout:
             self._timeout = int(timeout)
         port = self.get_conf("port", default=False)
+        print(port)
         if port:
             self.set_source(port)
         if not self._serial:
@@ -53,18 +54,19 @@ class SerialReader(IReader):
             self._serial.close()
             self._serial = None
         try:
-            serial = serial.Serial(port, baudrate=self._baudrate, timeout=self._timeout)
-            self._serial = serial
+            ser = serial.Serial(port, baudrate=self._baudrate, timeout=self._timeout)
+            self._serial = ser
         except IOError as err:
-            self.notify_error(err)
             self.log_error("Cannot open: {}".format(err))
             return False
-        s = "Reading nmea packets on port: {}".format(port)
+        s = "Reading on port: {}".format(port)
         self.log_info(s)
-        self.notify_info(s)
         return True
 
-    def _read_line(self):
+    def get_serial(self):
+        return self._serial
+
+    def _read_serial(self):
         try:
             line = self._serial.readline()
         except EOFError as e:
