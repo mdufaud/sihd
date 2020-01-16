@@ -2,8 +2,6 @@
 #coding: utf-8
 
 """ System """
-
-
 import sys
 import logging
 
@@ -23,7 +21,7 @@ class ICursesGui(IGui):
         self._log_handler = None
         self.__curses_on = False
 
-    # Utilities
+    # Core
 
     def _get_maxes(self):
         return self._stdscr.getmaxyx()
@@ -32,10 +30,10 @@ class ICursesGui(IGui):
 
     def _set_log_win(self, win):
         # Create a logger in curses and removes stream logger
-        Utilities.ILoggable.remove_stream_handlers()
+        Core.ILoggable.remove_stream_handlers()
         log_handler = CursesHandler(win)
-        log_handler.setFormatter(Utilities.ILoggable.get_formatter())
-        Utilities.ILoggable.logger.addHandler(log_handler)
+        log_handler.setFormatter(Core.ILoggable.get_formatter())
+        Core.ILoggable.logger.addHandler(log_handler)
         self._log_handler = log_handler
 
     def _create_win(self, height, width, y, x):
@@ -104,9 +102,9 @@ class ICursesGui(IGui):
 
     def _stop_impl(self):
         if self._log_handler is not None:
-            Utilities.ILoggable.logger.removeHandler(self._log_handler)
+            Core.ILoggable.logger.removeHandler(self._log_handler)
             self._log_handler = None
-            Utilities.ILoggable.add_stream_handler()
+            Core.ILoggable.add_stream_handler()
         self.remove_curses()
         self.stop_thread()
         return True
