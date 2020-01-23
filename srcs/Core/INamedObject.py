@@ -12,16 +12,20 @@ class INamedObject(object):
         self.set_name(name)
 
     def set_name(self, name):
-        self._name = name
+        self.__name = name
 
     def get_name(self):
-        return self._name
+        return self.__name
+
+    def get_description(self):
+        return None
 
     def say(self, s, prefix="", **kwargs):
         print("{0}: {1}{2}".format(self.get_name(), prefix, s), **kwargs)
 
     def error(self, err, **kwargs):
         self.say(err, prefix="Error: ", file=sys.stderr)
+        return False
 
     def get_parent_classes(self):
         kls = self.__class__
@@ -48,4 +52,10 @@ class INamedObject(object):
         return s
 
     def __str__(self):
-        return "{0}: {1}".format(self.__class__.__name__, self.get_name())
+        desc = self.get_description()
+        s = "{0}(name={1}".format(self.__class__.__name__, self.get_name())
+        if desc:
+            s += "{0}, {1})".format(s, desc)
+        else:
+            s += ")"
+        return s

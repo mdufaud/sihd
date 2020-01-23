@@ -14,7 +14,7 @@ import sihd
 
 import logging
 logger = logging.getLogger()
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 import socket
 import unittest
@@ -105,14 +105,15 @@ class TestReader(unittest.TestCase):
         writer.write_pcap(path)
 
     def test_pcap_reader(self):
-        pcap_path = os.path.join(os.path.dirname(__file__), "resources", "Pcap", "test.pcap")
+        pcap_path = os.path.join(os.path.dirname(__file__), "resources", "Pcap", "test_simple.pcap")
         lst = ['hello', 'world', 'are', 'you', 'alive']
         self.make_pcap(pcap_path, lst)
         reader = sihd.Readers.PcapReader()
         reader.set_conf("path", pcap_path)
-        reader.setup()
+        self.assertTrue(reader.setup())
         handler = PcapHandler()
         reader.add_observer(handler)
+        logger.info("Setup done. Starting")
         self.assertTrue(handler.start())
         self.assertTrue(reader.start())
         time.sleep(1)
@@ -128,14 +129,16 @@ class TestReader(unittest.TestCase):
         reader = sihd.Readers.PcapReader()
         handler = PcapHandler()
         reader.add_observer(handler)
-        self.assertTrue(handler.start())
         reader.set_conf("path", pcap_path)
         reader.setup()
         reader.save_data(True)
+        logger.info("Setup done. Starting")
+        self.assertTrue(handler.start())
         self.assertTrue(reader.start())
         time.sleep(1)
         self.assertTrue(reader.stop())
         self.assertTrue(handler.stop())
+        logger.info("Dumping")
         """ We dump then load from dump and check if saved data are the same """
         saved = reader.get_data_saved()
         reader.set_dump_magic("--TEST--")
@@ -153,6 +156,7 @@ class TestReader(unittest.TestCase):
         rcv2 = handler.received
         self.assertEqual(rcv, rcv2)
         handler.received = []
+        logger.info("Starting again after dumps")
         """ We then test the reader to see if it still works from being pickled loaded """
         pcap_path2 = os.path.join(os.path.dirname(__file__), "resources", "Pcap", "test2.pcap")
         lst = ['dont', 'forget', 'your', 'nems']

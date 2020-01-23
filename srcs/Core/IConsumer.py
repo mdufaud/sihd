@@ -15,6 +15,9 @@ class IConsumer(INamedObject):
             import queue
         self.__conso = {}
 
+    def get_consumables(self):
+        return self.__conso.items()
+
     def add_to_consume(self, producer):
         queue = producer.get_producing_queue()
         self.__conso[producer] = queue

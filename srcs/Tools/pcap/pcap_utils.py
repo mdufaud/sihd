@@ -115,9 +115,9 @@ class PcapReader:
             fd.close()
         self.fd = None
 
-    def read_all(self, filename):
+    def read_all(self, filename, mode='rb'):
         lst = None
-        self.open(filename)
+        self.open(filename, mode)
         ret = self.check_magic()
         ret = ret and self.check_header()
         if ret:
@@ -191,10 +191,9 @@ class PcapWriter:
                         2, 4, 0, 0, 0xffff, self.linktype)
         return hdr
 
-    def write_pcap(self, filename, append=False):
-        mode = 'ab' if append else 'wb'
+    def write_pcap(self, filename, mode='wb'):
         with open(filename, mode) as fd:
-            if not append:
+            if mode[0] == 'w':
                 hdr = self.get_header()
                 fd.write(hdr)
                 fd.flush()

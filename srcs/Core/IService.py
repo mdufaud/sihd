@@ -45,7 +45,7 @@ class IService(ILoggable):
         return (not self._stopped)
 
     def _start_impl(self):
-        raise NotImplementedError("Start not implemented")
+        return True
 
     """ Stop """
 
@@ -62,7 +62,7 @@ class IService(ILoggable):
         return self._stopped
 
     def _stop_impl(self):
-        raise NotImplementedError("Stop not implemented")
+        return True
 
     """ Pause """
 
@@ -79,8 +79,7 @@ class IService(ILoggable):
         return self._paused
 
     def _pause_impl(self):
-        self.log_debug("Called a non implemented function: pause")
-        return False
+        return True
 
     """ Resume """
 
@@ -97,8 +96,7 @@ class IService(ILoggable):
         return not self._paused
 
     def _resume_impl(self):
-        self.log_debug("Called a non implemented function: resume")
-        return False
+        return True
 
     """ Reset """
 

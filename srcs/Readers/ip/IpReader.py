@@ -133,7 +133,6 @@ class IpReader(IReader):
                 self.log_error("Error listen server: {}".format(e))
                 self.stop_server(False)
                 return False
-        self._start_time = time.time()
         self._socket = sock
         self._inputs = [sock]
         self._outputs = []
@@ -148,7 +147,7 @@ class IpReader(IReader):
         if do_time:
             stop_time = time.time()
             self.log_info("Server was up for {0:.3f} seconds"\
-                    .format(stop_time - self._start_time))
+                    .format(stop_time - self.get_thread_start_time()))
 
     """ Select """
 

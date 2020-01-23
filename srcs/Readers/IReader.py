@@ -6,19 +6,25 @@
 from sihd.srcs import Core
 import time
 
-class IReader(Core.ISequenceable, Core.IAppContainer,
-                Core.IObservable, Core.IDumpable):
+class IReader(Core.IThreadedService, Core.IAppContainer,
+                Core.IObservable, Core.IDumpable, Core.IProducer):
 
     def __init__(self, app=None, name="IReader"):
         super(IReader, self).__init__(name)
         self.__saving_data = False
+        self.__is_multiprocess = False
         self.__data_saved = []
         if (app):
             self.set_app(app)
         self.__notify = self.notify_observers
 
-    def set_source(self, source):
-        raise NotImplementedError("set_source not implemented")
+    """ IObservable """
+
+    def notify_observers(self, *args):
+        if self.__is_multiprocess:
+            self.produce(*args)
+        else:
+            super().notify_observers(*args)
 
     """ IAppContainer """
 
@@ -29,11 +35,20 @@ class IReader(Core.ISequenceable, Core.IAppContainer,
     """ IDumpable """
 
     def _dump(self):
-        state = self.__dict__.copy()
+        state = super()._dump()
         del state['_log']
         del state['_run_method']
         del state['notify_observers']
+        del state['_IProducer__out_queue']
         return state
+
+    """ Reader """
+
+    def set_source(self, source):
+        raise NotImplementedError("set_source not implemented")
+
+    def set_multiprocess(self, active):
+        self.__is_multiprocess = active
 
     def is_saving_data(self):
         return self.__saving_data
@@ -41,7 +56,7 @@ class IReader(Core.ISequenceable, Core.IAppContainer,
     def save_data(self, active):
         self.__saving_data = active
         if active:
-            self.notify_observers = self.__save_notify
+            self.notify_observers = self.__save_notify(self.notify_observers)
         else:
             self.notify_observers = self.__notify
 
@@ -51,6 +66,8 @@ class IReader(Core.ISequenceable, Core.IAppContainer,
     def clear_data_saved(self):
         self.__data_saved = []
 
-    def __save_notify(self, *args):
-        self.__data_saved.append(args)
-        return self.__notify(*args)
+    def __save_notify(self, fun):
+        def wrapper(*args):
+            self.__data_saved.append(args)
+            return fun(*args)
+        return wrapper

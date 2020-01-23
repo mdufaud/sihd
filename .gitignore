@@ -2,6 +2,7 @@
 *.log
 *.pcap
 *.ini
+*.dump
 
 # vim
 *.swp

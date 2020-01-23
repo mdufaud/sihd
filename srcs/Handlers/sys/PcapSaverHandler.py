@@ -4,9 +4,8 @@
 from sihd.srcs.Handlers.IHandler import IHandler
 from sihd.srcs.Core.IDumpable import IDumpable
 
-base64 = None
-
 from sihd.srcs.Tools.pcap import PcapWriter
+from sihd.srcs.Tools.pcap import PcapReader
 
 class PcapSaverHandler(IHandler, IDumpable):
 
@@ -23,33 +22,25 @@ class PcapSaverHandler(IHandler, IDumpable):
 
     """ IObservable """
 
-
     def handle(self, observable, *args):
         self.__writer.add_pkt(args)
         return True
 
     """ IDumpable """
 
-    def _load(self, buf):
-        binary = base64.b64decode(buf)
-        s = binary.decode('utf-8')
-        datas = s.split('\n')
-        lst = self.__data_saved
-        for data in datas:
-            pyvar = eval(data)
-            lst.append(pyvar)
-        return True
+    def dump_to(self, filename, perm="wb+"):
+        try:
+            self.__writer.write_pcap(filename, mode=perm)
+            return True
+        except IOError as e:
+            self.log_error(e)
+        return False
 
-    def __encode_data(self, data):
-        s = str(data) + "\n"
-        binary = s.encode('utf-8')
-        b64 = base64.b64encode(binary)
-        return b64
-
-    def _dump(self):
-        ret = None
-        for source, lst in self.__sources_data.items():
-            for datas in lst:
-                b64 = self.__encode_data(datas)
-                ret = b64 if ret is None else ret + b64
-        return ret
+    def load_from(self, filename, perm='rb'):
+        reader = PcapReader()
+        writer = self.__writer
+        lst = reader.read_all(filename, perm)
+        for capinfo, pkt in lst:
+            writer.add_pkt(pkt, capinfo.sec, capinfo.usec,
+                            capinfo.cap_len, capinfo.orig_len)
+        return len(lst) > 0

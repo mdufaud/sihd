@@ -22,8 +22,10 @@ class IProducer(INamedObject):
     def get_producing_queue(self):
         return self.__out_queue
 
-    def produce(self, data):
+    def produce(self, *datas):
+        if len(datas) == 1:
+            datas = datas[0]
         try:
-            self.__out_queue.put(data)
+            self.__out_queue.put(datas)
         except queue.Full as e:
             self.log_warning("Queue full: {}".format(e))

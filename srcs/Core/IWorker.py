@@ -5,6 +5,7 @@
 import time
 
 from .ILoggable import ILoggable
+from .IProducer import IProducer
 
 queue = None
 multiprocessing = None
@@ -13,7 +14,7 @@ class Namespace:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-class IWorker(ILoggable):
+class IWorker(ILoggable, IProducer):
 
     _states = Namespace(work=1, pause=2, stop=3)
 
@@ -27,7 +28,6 @@ class IWorker(ILoggable):
             import queue
         self.__proc = {}
         self.__n_workers = 2
-        self.__worker_queue = multiprocessing.Queue()
         self.__worker_state = multiprocessing.Value('i', self._states.work)
 
     def set_max_worker(self):
@@ -41,14 +41,16 @@ class IWorker(ILoggable):
         self.log_error("Worker number {} not positive int".format(num))
         return False
 
-    def make_workers(self):
-        in_queue = self.__worker_queue
+    def make_workers(self, n=None):
+        if n is None:
+            n = self.__n_workers
+        in_queue = self.get_producing_queue()
         state = self.__worker_state
         fun = self.__worker_loop
-        for i in range(self.__n_workers):
+        for i in range(n):
+            args = (i + 1, in_queue, out_queue, state,)
             out_queue = multiprocessing.Queue()
-            proc = multiprocessing.Process(target=fun, daemon=True,
-                                            args=(i + 1, in_queue, out_queue, state,))
+            proc = multiprocessing.Process(target=fun, daemon=True, args=args)
             self.__proc[proc] = out_queue
 
     def pause_workers(self):
@@ -71,12 +73,6 @@ class IWorker(ILoggable):
         dic = self.__proc
         for proc, queue in dic.items():
             proc.start()
-
-    def get_work(self):
-        queue = self.__worker_queue
-        if queue.empty():
-            return None
-        return queue.get()
 
     def do_work(self, data, queue, i):
         raise NotImplementedError("do_work not implemented")

@@ -26,13 +26,7 @@ class IHandler(Core.IService, Core.IAppContainer,
         super(IHandler, self).set_app(app)
         app.add_handler(self)
 
-    def _start_impl(self):
-        return True
-
-    def _stop_impl(self):
-        return True
-
     def _dump(self):
-        state = self.__dict__.copy()
+        state = super()._dump()
         del state['_log']
         return state

@@ -16,14 +16,11 @@ class IGui(Core.IService, Core.IAppContainer,
 
     def on_notify(self, observable, *args, **kwargs):
         if self.is_active():
-            self.handle(observable, *args, **kwargs)
-
-    def handle(self, observable, *args, **kwargs):
-        raise NotImplementedError("handle not implemented")
+            self.update(observable, *args, **kwargs)
 
     def set_app(self, app):
         super(IGui, self).set_app(app)
         app.add_gui(self)
 
-    def update(self): 
+    def update(self, observable, *args, **kwargs):
         raise NotImplementedError("update not implemented")

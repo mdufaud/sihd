@@ -35,7 +35,7 @@ class StdinReader(IReader):
     """ Reader """
 
     def __ask(self):
-        if self._asked:
+        if self._asked is True:
             return
         print(self._question, end="", flush=True)
         self._asked = True
@@ -54,19 +54,14 @@ class StdinReader(IReader):
 
     def diffuse_input(self):
         self.__ask()
-        inputs = self._inputs
-        buf = self._buffer
-        r, w, e = select.select(inputs, [], [], 1)
-        if e:
-            err = "Select exceptional: {}".format(e)
-            self.log_error(err)
-            self.notify_error(err)
-            return False
         try:
             line = self.get_input(timeout=1.0)
         except Exception as e:
             self.stop()
             raise
+        #Timeout
+        if line is None:
+            return True
         if line == b'':
             self.stop()
             return False

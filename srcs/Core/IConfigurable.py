@@ -31,7 +31,7 @@ class IConfigurable(INamedObject):
             self.set_conf_obj(config_obj)
         if self.__setup_section():
             self.__write_default_conf()
-        if self._setup_impl():
+        if self._setup_impl() is True:
             self.__is_configured = True
         return self.__is_configured
 
@@ -47,6 +47,7 @@ class IConfigurable(INamedObject):
             @param not_default returns None if value is still default
             @return value or None if not found
         """
+        val = None
         conf = self.get_conf_obj()
         #Gets conf from either obj or setted configuration
         if conf:

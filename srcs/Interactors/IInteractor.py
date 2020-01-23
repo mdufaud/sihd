@@ -5,7 +5,7 @@
 
 from sihd.srcs import Core
 
-class IInteractor(Core.ISequenceable, Core.ILoggable,
+class IInteractor(Core.IThreadedService, Core.ILoggable,
                     Core.IAppContainer):
 
     def __init__(self, app=None, name="IInteractor"):

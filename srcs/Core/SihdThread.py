@@ -96,7 +96,7 @@ class SihdThread(threading.Thread):
             except Exception as e:
                 self.stop()
                 raise
-            if not ret:
+            if ret is None or ret is False:
                 return
             # Iterations
             self._iter += 1
