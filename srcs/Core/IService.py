@@ -126,7 +126,7 @@ class IService(ILoggable):
         """ Print traceback from an exception """
         import logging
         logger = logging.getLogger()
-        logger.error("Service {} exception: {}".format(self.get_name(), ex))
+        logger.error("Service exception: {}".format(ex))
         try:
             import traceback
             traceback.print_exc()
@@ -139,8 +139,12 @@ class IService(ILoggable):
 
     def __del__(self):
         try:
-            if self._stopped is False:
-                    self.stop()
+            stopped = self._stopped
+        except AttributeError:
+            return
+        try:
+            if stopped is False:
+                self.stop()
             self._del_impl()
         except Exception as ex:
             self.__service_exception(ex)

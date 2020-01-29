@@ -67,7 +67,7 @@ class IConfigurable(INamedObject):
             val = self.get_default_conf(key)
         return val
 
-    def set_conf(self, key, value=None):
+    def set_conf(self, key, value=None, force=False):
         """
             Set value in dic
             @param dic dictionnary to complete
@@ -76,8 +76,10 @@ class IConfigurable(INamedObject):
         """
         if isinstance(key, dict):
             self.__conf.update(key)
-        else:
-            self.__conf[key] = value
+            return
+        self.__conf[key] = value
+        if force is True:
+            self.set_conf_file(key, value)
 
     def set_conf_file(self, key, value):
         """ Set a value in the obj configuration """

@@ -12,7 +12,7 @@ class LineReader(IReader):
     
     files_read = {}  
 
-    def __init__(self, path=None, app=None, name="LineReader"):
+    def __init__(self, app=None, name="LineReader"):
         super(LineReader, self).__init__(app=app, name=name)
         self.set_run_method(self.diffuse_line)
         self._set_default_conf({
@@ -20,9 +20,6 @@ class LineReader(IReader):
         })
         self._fully_read = False
         self._reader = None
-        if path:
-            self.set_source(path)
-
 
     """ IConfigurable """
 

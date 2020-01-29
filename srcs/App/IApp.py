@@ -107,9 +107,8 @@ class IApp(Core.IService, Core.ILoggable,
             filename = self.get_name() + ".ini"
             conf = os.path.join("config", filename)
             to_read = os.path.join(self._path, conf)
-            self.__read_conf(to_read)
-        else:
-            self.__read_conf(path)
+            path = to_read
+        return self.__apply_conf(path)
 
     def __setup_logger_conf(self, config):
         if self._path is None:
@@ -119,21 +118,31 @@ class IApp(Core.IService, Core.ILoggable,
         config.set("Logger", "level", "info")
         config.set("Logger", "directory", os.path.join(self._path, "logs"))
 
-    def __read_conf(self, path):
+    def __apply_conf(self, path):
+        """ Load and apply conf from path and setup itself """
         self._conf_path = path
         obj = ConfigParser.ConfigParser()
+        is_first = False
         if not os.path.isfile(path):
             self.say("Making conf file {}".format(self.get_conf_path()))
             self.__setup_logger_conf(obj)
+            is_first = True
         else:
             obj.read(path)
             if not obj.has_section("Logger"):
                 self.__setup_logger_conf(obj)
-        self.setup(obj)
         Core.ILoggable.setup_log(self.get_name(),
                                     obj.get("Logger", "level"),
                                     obj.get("Logger", "directory"))
         self.log_debug("Logger is setup")
+        ret = False
+        try:
+            ret = self.setup(obj)
+        except Exception as e:
+            self.log_error(e)
+        if ret is True and is_first is True:
+            ret = self._write_conf(obj)
+        return ret
 
     def get_conf_path(self):
         return self._conf_path

@@ -20,7 +20,7 @@ class IpReader(IReader):
         self._listening = False
         self._set_default_conf({
             "port": 42042,
-            "max_co": 5,
+            "max_connexions": 5,
             "type": "tcp",
             "protocol": "ipv4",
         })
@@ -30,7 +30,7 @@ class IpReader(IReader):
 
     def _setup_impl(self):
         super(IpReader, self)._setup_impl()
-        max_co = self.get_conf("max_co")
+        max_co = self.get_conf("max_connexions")
         if max_co:
             self._max_co = int(max_co)
         socket = self.get_conf("type")
@@ -41,7 +41,8 @@ class IpReader(IReader):
             self._protocol = IpReader.get_protocol(protocol)
         if self._socket is None:
             port = self.get_conf("port")
-            self.set_source(port)
+            if port:
+                self.set_source(port)
         return True
 
     """ Getters """

@@ -26,7 +26,8 @@ class TestApp(sihd.App.IApp):
         if args.time:
             self.set_timed_loop(args.time)
         #Setting up LineReader
-        reader = sihd.Readers.sys.LineReader(args.file, self, "LineReader" + self._test)
+        reader = sihd.Readers.sys.LineReader(self, "LineReader" + self._test)
+        reader.set_conf("path", args.file)
         #Set configuration for this reader
         self._configure_reader(reader)
         #Will be notified of state change

@@ -13,7 +13,7 @@ class PcapReader(IReader):
     
     files_read = {}  
 
-    def __init__(self, path=None, app=None, name="PcapReader"):
+    def __init__(self, app=None, name="PcapReader"):
         super(PcapReader, self).__init__(app=app, name=name)
         self.set_run_method(self.diffuse_pkt)
         self._set_default_conf({
@@ -23,8 +23,6 @@ class PcapReader(IReader):
         self._reader = None
         self._bytes = 0
         self.__last_pkt_info = None
-        if path:
-            self.set_source(path)
 
     """ IConfigurable """
 

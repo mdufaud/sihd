@@ -12,14 +12,12 @@ from sihd.srcs.Readers.IReader import IReader
 
 class SerialReader(IReader):
     
-    def __init__(self, port=None, app=None, name="SerialReader"):
+    def __init__(self, app=None, name="SerialReader"):
         global serial
         if serial is None:
             import serial
         super(SerialReader, self).__init__(app=app, name=name)
         self._serial = None
-        if port:
-            self.set_source(port)
         self._set_default_conf({
             "port": "/dev/some_device",
             "baudrate": 9600,
@@ -38,7 +36,6 @@ class SerialReader(IReader):
         if timeout:
             self._timeout = int(timeout)
         port = self.get_conf("port", default=False)
-        print(port)
         if port:
             self.set_source(port)
         if not self._serial:
@@ -48,7 +45,6 @@ class SerialReader(IReader):
     """ Reader """
 
     def set_source(self, port):
-        self._path = os.path.abspath(port) if port else None
         self._lines = 0
         if self._serial:
             self._serial.close()
@@ -59,6 +55,7 @@ class SerialReader(IReader):
         except IOError as err:
             self.log_error("Cannot open: {}".format(err))
             return False
+        self._path = port
         s = "Reading on port: {}".format(port)
         self.log_info(s)
         return True
