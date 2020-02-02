@@ -42,10 +42,12 @@ class IApp(Core.IService, Core.ILoggable,
     def setup_app(self, *args, **kwargs):
         ret = False
         self.log_debug("Starting application setup")
+        self.load_app_conf()
         ret = self._setup_app_impl(*args, **kwargs)
         if ret is False:
             self.log_error("Application setup has failed")
         else:
+            self.save_children_conf()
             self.log_debug("Application successfully setup")
         return ret
 
@@ -122,11 +124,9 @@ class IApp(Core.IService, Core.ILoggable,
         """ Load and apply conf from path and setup itself """
         self._conf_path = path
         obj = ConfigParser.ConfigParser()
-        is_first = False
         if not os.path.isfile(path):
             self.say("Making conf file {}".format(self.get_conf_path()))
             self.__setup_logger_conf(obj)
-            is_first = True
         else:
             obj.read(path)
             if not obj.has_section("Logger"):
@@ -140,8 +140,6 @@ class IApp(Core.IService, Core.ILoggable,
             ret = self.setup(obj)
         except Exception as e:
             self.log_error(e)
-        if ret is True and is_first is True:
-            ret = self.save_children_conf()
         return ret
 
     def get_conf_path(self):
@@ -177,21 +175,24 @@ class IApp(Core.IService, Core.ILoggable,
         self._children_configured = True
         conf = self.get_conf_obj()
         fun = self.__call_children
-        fun(self.interactors, "setup", conf)
-        fun(self.guis, "setup", conf)
-        fun(self.handlers, "setup", conf)
-        fun(self.readers, "setup", conf)
-        self.log_info("Services are configured")
-        return True
+        ret_i = fun(self.interactors, "setup", conf)
+        ret_g = fun(self.guis, "setup", conf)
+        ret_h = fun(self.handlers, "setup", conf)
+        ret_r = fun(self.readers, "setup", conf)
+        if ret_i and ret_g and ret_h and ret_r:
+            self.log_info("Services are configured")
+            return True
+        self.log_warning("Some services could not be configured")
+        return False
 
     def save_children_conf(self):
-        conf = self.get_conf_obj()
         fun = self.__call_children
-        fun(self.interactors, "save_conf", conf)
-        fun(self.guis, "save_conf", conf)
-        fun(self.handlers, "save_conf", conf)
-        fun(self.readers, "save_conf", conf)
+        fun(self.interactors, "save_conf")
+        fun(self.guis, "save_conf")
+        fun(self.handlers, "save_conf")
+        fun(self.readers, "save_conf")
         self.log_info("Services configurations are saved")
+        conf = self.get_conf_obj()
         self._write_conf(conf)
         return True
 
@@ -293,14 +294,15 @@ class IApp(Core.IService, Core.ILoggable,
     def _start_impl(self):
         """ Services must be configured before start """
         self.log_info("App starting")
-        self.load_children_conf()
-        fun = self.__call_children
-        i_ret = fun(self.interactors, "start")
-        g_ret = fun(self.guis, "start")
-        h_ret = fun(self.handlers, "start")
-        if h_ret and g_ret and i_ret:
-            self.log_info("App started")
-            return True
+        ret = self.load_children_conf()
+        if ret:
+            fun = self.__call_children
+            i_ret = fun(self.interactors, "start")
+            g_ret = fun(self.guis, "start")
+            h_ret = fun(self.handlers, "start")
+            if h_ret and g_ret and i_ret:
+                self.log_info("App started")
+                return True
         self.log_warning("Some app services did not start")
         return False
 

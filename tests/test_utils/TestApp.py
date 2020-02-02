@@ -16,7 +16,6 @@ class TestApp(sihd.App.IApp):
         self._test = str(test_number)
         super(TestApp, self).__init__("TestApp" + self._test)
         self.set_path(os.path.dirname(os.path.dirname((__file__))))
-        self.load_app_conf()
         sihd.Core.ILoggable.set_color(True)
 
     def _setup_app_impl(self):

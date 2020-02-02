@@ -15,7 +15,17 @@ tests:
 	@set -e && cd tests && rm -f logs/* && for TEST in `/bin/ls [^_]*.py`; \
 	do \
 		echo "==== Starting test $$TEST ===="; \
-		$(PYTHON3) $$TEST 0>&-;  \
+		$(PYTHON3) $$TEST 0>&- ; \
+		if [ "$$?" == "1" ] ; then \
+			echo ;\
+			echo "**************************" ;\
+			echo "**************************" ;\
+			echo "********* FAILED *********" ;\
+			echo "**************************" ;\
+			echo "**************************" ;\
+			echo ;\
+			exit 1;\
+		fi ;\
 		echo "==== End of test $$TEST ====\n"; echo "" ;\
 	done && cd ..
 
@@ -24,7 +34,17 @@ itests:
 	@set -e && cd tests && rm -f logs/* && for TEST in `/bin/ls [^_]*.py`; \
 	do \
 		echo "==== Starting test $$TEST ===="; \
-		$(PYTHON3) $$TEST;  \
+		$(PYTHON3) $$TEST; \
+		if [ "$$?" == "1" ] ; then \
+			echo ;\
+			echo "**************************" ;\
+			echo "**************************" ;\
+			echo "********* FAILED *********" ;\
+			echo "**************************" ;\
+			echo "**************************" ;\
+			echo ;\
+			exit 1;\
+		fi ;\
 		echo "==== End of test $$TEST ====\n"; echo "" ;\
 	done && cd ..
 
