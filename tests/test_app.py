@@ -47,7 +47,7 @@ class TestApp(unittest.TestCase):
     def do_file(self, path, lines, skipped, check_words={}):
         print("Test-{} with file '{}' with {} lines and {} comments".format(self.x, path, lines, skipped))
         app = test_utils.TestApp(self.x)
-        app.set_path(path)
+        #app.set_path(path)
         self.x += 1
         if not app.is_args():
             app.set_args([
@@ -56,8 +56,9 @@ class TestApp(unittest.TestCase):
             ])
         if app.setup_app() is False:
             sys.exit(1)
-        app.start()
+        app.start_all()
         app.loop(timeout=1)
+        app.stop()
         self.file_expect(app, lines, skipped, check_words, prt=False)
 
     def test_file_reader(self):

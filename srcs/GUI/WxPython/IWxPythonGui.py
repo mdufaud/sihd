@@ -20,10 +20,8 @@ class IWxPythonGui(IGui):
         if wx is None:
             import wx
         super(IWxPythonGui, self).__init__(app=app, name=name)
-        if app:
-            self.get_app().set_loop(self.start_gui)
 
-    def start_gui(self, **kwargs):
+    def gui_loop(self, **kwargs):
         app = wx.App(False)
         self._app = app
         self._make_frames(app)
@@ -42,7 +40,7 @@ class IWxPythonGui(IGui):
 
     def _start_impl(self):
         if self.get_app() is None:
-            self.start_gui()
+            self.gui_loop()
         return True
 
     def _stop_impl(self):

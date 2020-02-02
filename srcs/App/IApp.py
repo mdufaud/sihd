@@ -219,7 +219,7 @@ class IApp(Core.IService, Core.ILoggable,
     def get_path(self):
         return self._path
 
-    def get_child(self, name):
+    def get_service(self, name):
         for reader in self.readers:
             if reader.get_name() == name:
                 return reader
@@ -232,7 +232,6 @@ class IApp(Core.IService, Core.ILoggable,
         for interactor in self.interactors:
             if interactor.get_name() == name:
                 return interactor
-        self.log_error("children {0} not found".format(name))
         return None
 
     def __call_child(self, child, fun, arg=None):
@@ -263,6 +262,36 @@ class IApp(Core.IService, Core.ILoggable,
     ###############
     """
 
+    def get_services_status(self):
+        st_readers = {}
+        st_handlers = {}
+        st_guis = {}
+        st_interactors = {}
+        status = {
+            "readers": st_readers,
+            "handlers": st_handlers,
+            "guis": st_guis,
+            "interactors": st_interactors,
+        }
+        for reader in self.readers:
+            st_readers[reader.get_name()] = reader.get_service_state()
+        for handler in self.handlers:
+            st_handlers[handler.get_name()] = handler.get_service_state()
+        for gui in self.guis:
+            st_guis[gui.get_name()] = gui.get_service_state()
+        for interactor in self.interactors:
+            st_interactors[interactor.get_name()] = interactor.get_service_state()
+        return status
+
+    def start_all(self):
+        if self.start() is False:
+            return False
+        if self.__call_children(self.readers, "start"):
+            self.log_info("App readers started")
+            return True
+        self.log_warning("Some app readers did not start")
+        return False
+
     def _start_impl(self):
         """ Services must be configured before start """
         self.log_info("App starting")
@@ -271,8 +300,7 @@ class IApp(Core.IService, Core.ILoggable,
         i_ret = fun(self.interactors, "start")
         g_ret = fun(self.guis, "start")
         h_ret = fun(self.handlers, "start")
-        r_ret = fun(self.readers, "start")
-        if r_ret and h_ret and g_ret and i_ret:
+        if h_ret and g_ret and i_ret:
             self.log_info("App started")
             return True
         self.log_warning("Some app services did not start")
@@ -378,6 +406,18 @@ class IApp(Core.IService, Core.ILoggable,
     def emergency_backup(self, err):
         return
 
+    def get_readers(self):
+        return self.readers
+
+    def get_handlers(self):
+        return self.handlers
+
+    def get_guis(self):
+        return self.guis
+
+    def get_interactors(self):
+        return self.interactors
+
     @staticmethod
     def is_reader(service):
         return isinstance(service, Readers.IReader)
@@ -392,7 +432,7 @@ class IApp(Core.IService, Core.ILoggable,
 
     @staticmethod
     def is_interactor(service):
-        return isinstance(service, Interactors.IInteractors)
+        return isinstance(service, Interactors.IInteractor)
 
     """
     ###############
@@ -422,7 +462,6 @@ class IApp(Core.IService, Core.ILoggable,
                 i += 1
         except KeyboardInterrupt:
             pass
-        return self.stop()
 
     def _infinite_loop(self, timeout=None):
         ret = True
@@ -436,7 +475,6 @@ class IApp(Core.IService, Core.ILoggable,
                     break
         except KeyboardInterrupt:
             pass
-        return self.stop()
 
     def loop(self, timeout=None):
         return self._loop_impl(timeout=timeout)

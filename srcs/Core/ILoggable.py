@@ -90,10 +90,11 @@ class ILoggable(INamedObject):
                 logging.root.removeHandler(handler)
 
     @staticmethod
-    def add_stream_handler(stream=sys.stderr):
+    def add_stream_handler(stream=sys.stderr, level="info"):
         ILoggable.remove_stream_handlers()
         handler = StreamHandler(stream)
-        log_level = ILoggable._get_level(ILoggable.__level)
+        level = ILoggable.__level if ILoggable.__level is not None else level
+        log_level = ILoggable._get_level(level)
         handler.setLevel(log_level)
         handler.setFormatter(ILoggable.get_formatter())
         ILoggable.logger.addHandler(handler)

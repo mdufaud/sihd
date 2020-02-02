@@ -21,13 +21,13 @@ class IService(ILoggable):
         return (not self._paused and not self._stopped)
 
     def get_service_state(self):
-        s = "Service {}: ".format(self.get_name())
+        s = ""
         if self._stopped:
             s += "Stopped"
         else:
             s += "Running"
         if self._paused:
-            s += "(paused)"
+            s += " (paused)"
         return s
 
     """ Start """
@@ -119,33 +119,3 @@ class IService(ILoggable):
     def __notify_change(self):
         for obs in self._state_observers:
             obs.service_state_changed(self, self._stopped, self._paused)
-
-    """ Delete """
-
-    def __service_exception(self, ex):
-        """ Print traceback from an exception """
-        import logging
-        logger = logging.getLogger()
-        logger.error("Service exception: {}".format(ex))
-        try:
-            import traceback
-            traceback.print_exc()
-        except ImportError:
-            pass
-
-    def _del_impl(self):
-        """ Change here to do specific stuff on death """
-        return
-
-    def __del__(self):
-        try:
-            stopped = self._stopped
-        except AttributeError:
-            return
-        try:
-            if stopped is False:
-                self.stop()
-            self._del_impl()
-        except Exception as ex:
-            self.__service_exception(ex)
-

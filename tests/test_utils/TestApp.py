@@ -59,13 +59,17 @@ class TestApp(sihd.App.IApp):
 
     def service_state_changed(self, service, stopped, paused):
         #Exit only if no gui attached
+        self.is_handler(service)
+        self.is_interactor(service)
         if self.guis:
+            if self.is_gui(service) is False:
+                return
+        elif self.is_reader(service) is False:
             return
-        if self.is_reader(service) is False:
-            return
-        self.log_info(service.get_service_state())
+        self.log_info("{}: {}".format(service.get_name(), service.get_service_state()))
         if stopped:
             self.log_info("Reader {} ended and stopped".format(service.get_name()))
+            self.stop()
 
     def _configure_handler(self, handler):
         #Decorate with stats
