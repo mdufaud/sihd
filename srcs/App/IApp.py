@@ -141,7 +141,7 @@ class IApp(Core.IService, Core.ILoggable,
         except Exception as e:
             self.log_error(e)
         if ret is True and is_first is True:
-            ret = self._write_conf(obj)
+            ret = self.save_children_conf()
         return ret
 
     def get_conf_path(self):
@@ -185,10 +185,7 @@ class IApp(Core.IService, Core.ILoggable,
         return True
 
     def save_children_conf(self):
-        if not self._children_configured:
-            self.log_debug("Services should be configured before "
-                            "setting their configurations")
-            return False
+        conf = self.get_conf_obj()
         fun = self.__call_children
         fun(self.interactors, "save_conf", conf)
         fun(self.guis, "save_conf", conf)
