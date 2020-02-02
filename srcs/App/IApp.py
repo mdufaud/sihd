@@ -192,6 +192,7 @@ class IApp(Core.IService, Core.ILoggable,
         fun(self.handlers, "save_conf", conf)
         fun(self.readers, "save_conf", conf)
         self.log_info("Services configurations are saved")
+        self._write_conf(obj)
         return True
 
     """
