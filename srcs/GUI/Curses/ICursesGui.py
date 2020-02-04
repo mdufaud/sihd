@@ -201,7 +201,17 @@ class ICursesGui(IGui):
     def resize(self):
         self.stdscr.clear()
         self.stdscr.refresh()
-        
+
+    def loop(self):
+        """ Default loop implementation """
+        stdscr = self.stdscr
+        c = stdscr.getch()
+        if c == curses.KEY_RESIZE:
+            self.resize()
+        elif c != -1 and self.input(c, curses) == False:
+            return False
+        return True
+
     def input(self, char, curses):
         return False
 
@@ -214,12 +224,8 @@ class ICursesGui(IGui):
         stdscr.refresh()
         self.setup_windows()
         stdscr.nodelay(True)
-        while self.is_curses_on():
-            c = stdscr.getch()
-            if c == curses.KEY_RESIZE:
-                self.resize()
-            elif c != -1 and self.input(c, curses) == False:
-                break
+        while self.is_curses_on() and self.loop() is True:
+            pass
         self.stop()
 
     # Services

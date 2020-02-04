@@ -7,7 +7,6 @@ import time
 from .ILoggable import ILoggable
 from .IProducer import IProducer
 
-queue = None
 multiprocessing = None
 
 class Namespace:
@@ -21,14 +20,14 @@ class IWorker(ILoggable, IProducer):
     def __init__(self, name="IWorker"):
         super(IWorker, self).__init__(name)
         global multiprocessing
-        if multiprocessing is None:
-            import multiprocessing
-        global queue
-        if queue is None:
-            import queue
+        try:
+            if multiprocessing is None:
+                import multiprocessing
+            self.__worker_state = multiprocessing.Value('i', self._states.work)
+        except ImportError:
+            self._worker_state = None
         self.__proc = {}
         self.__n_workers = 2
-        self.__worker_state = multiprocessing.Value('i', self._states.work)
 
     def set_max_worker(self):
         return self.set_worker_number(multiprocessing.cpu_count())
@@ -42,6 +41,9 @@ class IWorker(ILoggable, IProducer):
         return False
 
     def make_workers(self, n=None):
+        if multiprocessing is None:
+            self.log_error("Multiprocessing is not supported on your machine")
+            return
         if n is None:
             n = self.__n_workers
         in_queue = self.get_producing_queue()
@@ -71,6 +73,9 @@ class IWorker(ILoggable, IProducer):
 
     def start_workers(self):
         dic = self.__proc
+        if not dic:
+            self.log_error("You have to make workers before you start")
+            return
         for proc, queue in dic.items():
             proc.start()
 

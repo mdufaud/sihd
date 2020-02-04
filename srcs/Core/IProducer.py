@@ -4,20 +4,19 @@
 """ System """
 from .INamedObject import INamedObject
 
-multiprocessing = None
-queue = None
+Queue = None
 
 class IProducer(INamedObject):
 
     def __init__(self, name="IProducer"):
-        global multiprocessing
-        if multiprocessing is None:
-            import multiprocessing
-        global queue
-        if queue is None:
-            import queue
+        global Queue
+        try:
+            if Queue is None:
+                from multiprocessing import Queue
+            self.__out_queue = Queue()
+        except ImportError:
+            self.__out_queue = None
         super(IProducer, self).__init__(name)
-        self.__out_queue = multiprocessing.Queue()
 
     def get_producing_queue(self):
         return self.__out_queue
