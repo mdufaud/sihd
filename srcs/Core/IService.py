@@ -2,8 +2,9 @@
 #coding: utf-8
 
 from .ILoggable import ILoggable
+from .IConfigurable import IConfigurable
 
-class IService(ILoggable):
+class IService(ILoggable, IConfigurable):
 
     def __init__(self, name="IService"):
         super(IService, self).__init__(name)

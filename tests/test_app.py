@@ -47,24 +47,23 @@ class TestApp(unittest.TestCase):
     def do_file(self, path, lines, skipped, check_words={}):
         print("Test-{} with file '{}' with {} lines and {} comments".format(self.x, path, lines, skipped))
         app = test_utils.TestApp(self.x)
-        #app.set_path(path)
         self.x += 1
-        if not app.is_args():
-            app.set_args([
-                "-f", path,
-                "-s",
-            ])
+        app.set_args([
+            "-f", path,
+            "-s",
+        ])
         if app.setup_app() is False:
             sys.exit(1)
         app.start_all()
         app.loop(timeout=1)
         app.stop()
+        os.remove(app.get_conf_path())
         self.file_expect(app, lines, skipped, check_words, prt=False)
 
     def test_file_reader(self):
         dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
         self.do_file(os.path.join(dir_path, "5_lines.txt"), 5, 0, {"world": 2})
-        self.do_file(os.path.join(dir_path, "comments_and_empty_lines.txt"), 19, 6, {"A": 2})
+        self.do_file(os.path.join(dir_path, "comments_and_empty_lines.txt"), 10, 6, {"A": 2})
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -15,12 +15,12 @@ class PcapReader(IReader):
 
     def __init__(self, app=None, name="PcapReader"):
         super(PcapReader, self).__init__(app=app, name=name)
-        self.set_run_method(self.diffuse_pkt)
+        self.set_step_method(self.diffuse_pkt)
         self._set_default_conf({
             "path": "/path/to/file",
         })
         self._fully_read = False
-        self._reader = None
+        self._pcap_reader = None
         self._bytes = 0
         self.__last_pkt_info = None
 
@@ -31,7 +31,7 @@ class PcapReader(IReader):
         path = self.get_conf("path", default=False)
         if path:
             self.set_source(path)
-        if not self._reader:
+        if not self._pcap_reader:
             return False
         return True
 
@@ -51,7 +51,7 @@ class PcapReader(IReader):
 
     def _recover(self):
         while self.is_active() and self._to_recover > 0:
-            bytes_read = self._reader.fd(self._to_recover)
+            bytes_read = self._pcap_reader.fd(self._to_recover)
             self._to_recover -= bytes_read
         if self._to_recover > 0:
             return False
@@ -71,9 +71,9 @@ class PcapReader(IReader):
         if reader.check_magic() is True:
             if reader.check_header() is True:
                 self.__last_pkt_info = None
-                if self._reader:
-                    self._reader.close()
-                self._reader = reader
+                if self._pcap_reader:
+                    self._pcap_reader.close()
+                self._pcap_reader = reader
                 self._can_recover()
             else:
                 self.log_error("Invalid pcap file {}".format(path))
@@ -82,7 +82,7 @@ class PcapReader(IReader):
         return reader.is_open()
 
     def get_pcap_header(self):
-        rd = self._reader
+        rd = self._pcap_reader
         if rd:
             return rd.get_header()
         return None
@@ -94,14 +94,14 @@ class PcapReader(IReader):
         if self._to_recover > 0 and self._recover() == False:
             return True
         try:
-            info, pkt = self._reader.read_pkt()
+            info, pkt = self._pcap_reader.read_pkt()
         except EOFError as e:
             pkt = None
         if pkt is None:
             self._read_end()
             return False
         self.__last_pkt_info = info
-        self.notify_observers(pkt)
+        self.deliver(pkt)
         self._pkts += 1
         return True
 
@@ -117,7 +117,7 @@ class PcapReader(IReader):
     """ IService """
 
     def _start_impl(self):
-        if self._reader is None:
+        if self._pcap_reader is None:
             self.log_error("No reader has been set")
             return False
         s = "Reading file {name}".format(name=self._path)
@@ -125,8 +125,8 @@ class PcapReader(IReader):
         return super(PcapReader, self)._start_impl()
 
     def _stop_impl(self):
-        if self._reader:
-            self._reader.close()
-            self._reader = None
+        if self._pcap_reader:
+            self._pcap_reader.close()
+            self._pcap_reader = None
         PcapReader.files_read[self._path] = (self._pkts, self._fully_read == False)
         return super(PcapReader, self)._stop_impl()

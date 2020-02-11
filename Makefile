@@ -11,7 +11,22 @@ endif
 PYTHON=$(shell command -v python)
 PYTHON3=$(shell command -v python3)
 
+lt:
+	@ls -1 tests | grep test | cut -d '.' -f1 | cut -d '_' -f2 | sed -r '/^\s*$$/d'
+
 tests:
+	@if [ ! -z ${T} ] ; then \
+		$(eval ARGS := $(shell echo "-p '*${T}*'")) true; \
+	fi
+	@$(PYTHON3) -m unittest discover -v -s tests $(ARGS) 0>&-
+
+itests:
+	@if [ ! -z ${T} ] ; then \
+		$(eval ARGS := $(shell echo "-p '*${T}*'")) true; \
+	fi
+	@$(PYTHON3) -m unittest discover -v -s tests $(ARGS)
+
+ftests:
 	@set -e && cd tests && rm -f logs/* && for TEST in `/bin/ls [^_]*.py`; \
 	do \
 		echo "==== Starting test $$TEST ===="; \
@@ -30,7 +45,7 @@ tests:
 	done && cd ..
 
 
-itests:
+fitests:
 	@set -e && cd tests && rm -f logs/* && for TEST in `/bin/ls [^_]*.py`; \
 	do \
 		echo "==== Starting test $$TEST ===="; \

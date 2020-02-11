@@ -24,7 +24,7 @@ class IpReader(IReader):
             "type": "tcp",
             "protocol": "ipv4",
         })
-        self.set_run_method(self._do_select)
+        self.set_step_method(self._do_select)
 
     """ IConfigurable """
 

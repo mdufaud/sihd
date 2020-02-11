@@ -85,7 +85,7 @@ class TestReader(unittest.TestCase):
         handler = StdinHandler()
         reader.add_observer(handler)
         reader.set_conf("question", "How are you ? ")
-        reader.setup()
+        self.assertTrue(reader.setup())
         self.assertTrue(handler.start())
         self.assertTrue(reader.start())
         try:
@@ -130,7 +130,7 @@ class TestReader(unittest.TestCase):
         handler = PcapHandler()
         reader.add_observer(handler)
         reader.set_conf("path", pcap_path)
-        reader.setup()
+        self.assertTrue(reader.setup())
         reader.save_data(True)
         logger.info("Setup done. Starting")
         self.assertTrue(handler.start())
@@ -138,17 +138,21 @@ class TestReader(unittest.TestCase):
         time.sleep(1)
         self.assertTrue(reader.stop())
         self.assertTrue(handler.stop())
+
         logger.info("Dumping")
-        """ We dump then load from dump and check if saved data are the same """
+        #We dump then load from dump and check if saved data are the same
         saved = reader.get_data_saved()
+        data_saved = [d[1] for d in saved]
         reader.set_dump_magic("--TEST--")
         path = os.path.join(os.path.dirname(__file__), "resources", "Dump", "test.dump")
         reader.dump_to(path)
         reader.clear_data_saved()
         reader.load_from(path)
         loaded = reader.get_data_saved()
-        self.assertEqual(saved, loaded)
-        """ Testing a dump on the handler too """
+        data_loaded = [d[1] for d in loaded]
+        self.assertEqual(data_saved, data_loaded)
+
+        #Testing a dump on the handler too
         path = os.path.join(os.path.dirname(__file__), "resources", "Dump", "test_handler.dump")
         handler.dump_to(path)
         rcv = handler.received
@@ -156,20 +160,24 @@ class TestReader(unittest.TestCase):
         rcv2 = handler.received
         self.assertEqual(rcv, rcv2)
         handler.received = []
+
         logger.info("Starting again after dumps")
-        """ We then test the reader to see if it still works from being pickled loaded """
+        #We then test the reader to see if it still works from being pickled loaded
         pcap_path2 = os.path.join(os.path.dirname(__file__), "resources", "Pcap", "test2.pcap")
         lst = ['dont', 'forget', 'your', 'nems']
         self.make_pcap(pcap_path2, lst)
-        reader.set_source(pcap_path2)
+        self.assertTrue(reader.set_source(pcap_path2))
         reader.clear_data_saved()
         self.assertTrue(handler.start())
         self.assertTrue(reader.start())
         time.sleep(1)
         self.assertTrue(reader.stop())
         self.assertTrue(handler.stop())
+
         saved = reader.get_data_saved()
-        self.assertEqual(saved, [(el.encode('utf-8'),) for el in lst])
+        data_saved = [d[1] for d in saved]
+        data_test = [(el.encode('utf-8'),) for el in lst]
+        self.assertEqual(data_saved, data_test)
         for i, el in enumerate(handler.received):
             self.assertEqual(el, lst[i])
 

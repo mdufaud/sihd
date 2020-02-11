@@ -78,5 +78,5 @@ class TestApp(sihd.App.IApp):
     def _configure_reader(self, reader):
         #Decorate with stats
         if self.args.stats:
-            method = sihd.Core.Stats.stat_it(reader.get_run_method())
-            reader.set_run_method(method)
+            method = sihd.Core.Stats.stat_it(reader.get_step_method())
+            reader.set_step_method(method)

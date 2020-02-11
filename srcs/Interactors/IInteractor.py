@@ -12,7 +12,7 @@ class IInteractor(Core.IThreadedService, Core.ILoggable,
         super(IInteractor, self).__init__(name)
         if (app):
             self.set_app(app)
-        self.set_run_method(self.interact)
+        self.set_step_method(self.interact)
         self._interaction = None
 
     def set_app(self, app):

@@ -8,7 +8,7 @@ from .IService import IService
 from .IConfigurable import IConfigurable
 from .IRunnable import IRunnable
 
-class IThreadedService(IService, IConfigurable, IRunnable):
+class IThreadedService(IService, IRunnable):
 
     def __init__(self, name="IThreadedService"):
         super(IThreadedService, self).__init__(name)
@@ -28,10 +28,11 @@ class IThreadedService(IService, IConfigurable, IRunnable):
     """ IConfigurable """
 
     def _setup_impl(self):
+        ret = super()._setup_impl()
         self.__thread_freq = int(self.get_conf("thread_frequency"))
         self.__thread_timeout = float(self.get_conf("thread_timeout"))
         self.__thread_max_iter = int(self.get_conf("thread_max_iterations"))
-        return True
+        return ret
 
     """ IService """
 

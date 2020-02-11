@@ -110,6 +110,7 @@ class TestCmd(unittest.TestCase):
         self.assertTrue(interactor.start())
         time.sleep(0.1)
         #thread frequency base is 50hz -> 0.1 sec = ~5 iter
+        print(interactor)
         self.assertTrue(interactor._thread._iter >= 4)
         self.assertTrue(interactor.stop())
 

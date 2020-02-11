@@ -2,7 +2,6 @@
 #coding: utf-8
 
 """ System """
-
 import time
 import os
 import sys
@@ -27,7 +26,7 @@ class CmdReader(IReader, IObserver):
             "handle_process": True,
             'thread_frequency': 10,
         })
-        self.set_run_method(self.diffuse_execution)
+        self.set_step_method(self.diffuse_execution)
         self._handle_proc = True
         self._cmd = ""
         self._last_proc = None
@@ -167,11 +166,11 @@ class CmdReader(IReader, IObserver):
         proc = self._interactor.execute()
         if proc:
             if self._handle_proc is False:
-                self.notify_observers(proc)
+                self.deliver(proc)
             else:
                 out, errs = self._interactor.communicate()
                 if errs is None:
-                    self.notify_observers(out)
+                    self.deliver(out)
                 else:
                     self.notify_error(errs)
                     self.log_error("Error handling command "

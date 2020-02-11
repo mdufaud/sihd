@@ -7,7 +7,7 @@ from sihd.srcs.Core.IDumpable import IDumpable
 from sihd.srcs.Tools.pcap import PcapWriter
 from sihd.srcs.Tools.pcap import PcapReader
 
-class PcapSaverHandler(IHandler, IDumpable):
+class PcapSaverHandler(IHandler):
 
     def __init__(self, app=None, name="PcapSaverHandler"):
         global base64

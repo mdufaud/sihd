@@ -2,7 +2,6 @@
 #coding: utf-8
 
 """ System """
-
 import time
 import os
 
@@ -14,7 +13,7 @@ class LineReader(IReader):
 
     def __init__(self, app=None, name="LineReader"):
         super(LineReader, self).__init__(app=app, name=name)
-        self.set_run_method(self.diffuse_line)
+        self.set_step_method(self.diffuse_line)
         self._set_default_conf({
             "path": "/path/to/file",
         })
@@ -58,7 +57,6 @@ class LineReader(IReader):
         self.log_info(s)
 
     def set_source(self, path):
-        self._path = os.path.abspath(path) if path else None
         self._lines = 0
         self._to_recover = 0
         if self._reader:
@@ -67,6 +65,7 @@ class LineReader(IReader):
         try:
             fp = open(path, 'r')
             self._reader = fp
+            self._path = path
         except IOError as err:
             self.notify_error(err)
             self.log_error("Cannot open: {}".format(err))
@@ -91,8 +90,10 @@ class LineReader(IReader):
         if line is None or line == "":
             self._read_end()
             return False
-        self.notify_observers(line)
-        self._lines += 1
+        line = line.strip()
+        if line != "":
+            self.deliver(line)
+            self._lines += 1
         return True
 
     def _read_end(self):

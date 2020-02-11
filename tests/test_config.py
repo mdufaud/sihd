@@ -88,11 +88,10 @@ class TestConfig(unittest.TestCase):
         self.write_conf(path_config, obj)
 
         path = __file__
-        if not app.is_args():
-            app.set_args([
-                "-f", path,
-                "-s",
-            ])
+        app.set_args([
+            "-f", path,
+            "-s",
+        ])
         if app.setup_app() is False:
             sys.exit(1)
         self.assertTrue(app.start())
@@ -112,11 +111,10 @@ class TestConfig(unittest.TestCase):
     def test_app_config(self):
         path = __file__
         app = test_utils.TestApp("ConfigTest")
-        if not app.is_args():
-            app.set_args([
-                "-f", path,
-                "-s",
-            ])
+        app.set_args([
+            "-f", path,
+            "-s",
+        ])
         if app.setup_app() is False:
             sys.exit(1)
         self.assertTrue(app.start())

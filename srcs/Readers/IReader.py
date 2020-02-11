@@ -2,53 +2,41 @@
 #coding: utf-8
 
 """ System """
-
 from sihd.srcs import Core
 import time
 
-class IReader(Core.IThreadedService, Core.IAppContainer,
-                Core.IObservable, Core.IDumpable, Core.IProducer):
+class IReader(Core.IPolyService, Core.IAppContainer):
 
     def __init__(self, app=None, name="IReader"):
         super(IReader, self).__init__(name)
         self.__saving_data = False
-        self.__is_multiprocess = False
         self.__data_saved = []
+        self.set_service_threading()
         if (app):
             self.set_app(app)
-        self.__notify = self.notify_observers
 
-    """ IObservable """
+    """ IProcessedService """
 
-    def notify_observers(self, *args):
-        if self.__is_multiprocess:
-            self.produce(*args)
-        else:
-            super().notify_observers(*args)
-
-    """ IAppContainer """
-
-    def set_app(self, app):
-        super(IReader, self).set_app(app)
-        app.add_reader(self)
+    def do_work(self, i, queue, data, producer):
+        return self.step_method()
 
     """ IDumpable """
 
     def _dump(self):
-        state = super()._dump()
-        del state['_log']
-        del state['_run_method']
-        del state['notify_observers']
-        del state['_IProducer__out_queue']
-        return state
+        dic = super()._dump()
+        dic.update({"data_saved": self.__data_saved})
+        return dic
+
+    def _load(self, dic):
+        super()._load(dic)
+        data_saved = dic.get("data_saved", None)
+        if data_saved:
+            self.__data_saved.extend(data_saved)
 
     """ Reader """
 
     def set_source(self, source):
         raise NotImplementedError("set_source not implemented")
-
-    def set_multiprocess(self, active):
-        self.__is_multiprocess = active
 
     def is_saving_data(self):
         return self.__saving_data
@@ -56,9 +44,9 @@ class IReader(Core.IThreadedService, Core.IAppContainer,
     def save_data(self, active):
         self.__saving_data = active
         if active:
-            self.notify_observers = self.__save_notify(self.notify_observers)
+            self.deliver = self.__save_decorator(self.deliver)
         else:
-            self.notify_observers = self.__notify
+            self.deliver = self.__default_deliver
 
     def get_data_saved(self):
         return self.__data_saved
@@ -66,8 +54,14 @@ class IReader(Core.IThreadedService, Core.IAppContainer,
     def clear_data_saved(self):
         self.__data_saved = []
 
-    def __save_notify(self, fun):
+    def __save_decorator(self, fun):
         def wrapper(*args):
-            self.__data_saved.append(args)
+            self.__data_saved.append((time.time(), args))
             return fun(*args)
         return wrapper
+
+    """ IAppContainer """
+
+    def set_app(self, app):
+        super(IReader, self).set_app(app)
+        app.add_reader(self)

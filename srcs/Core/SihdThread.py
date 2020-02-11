@@ -2,8 +2,6 @@
 #coding: utf-8
 
 """ System """
-
-
 import threading
 import time
 
@@ -13,7 +11,7 @@ class SihdThread(threading.Thread):
         threading.Thread.__init__(self)
         self._stopped = True
         self._paused = False
-        self._stepfun = None
+        self.step_method = None
         self._iter = 0
         self._parent = parent
         if not self.set_max_iter(max_iter):
@@ -64,14 +62,14 @@ class SihdThread(threading.Thread):
     def resume(self):
         self._paused = False
 
-    def get_stepfun(self):
-        return self._stepfun
+    def get_step_method(self):
+        return self.step_method
 
-    def set_stepfun(self, fun):
-        self._stepfun = fun
+    def set_step_method(self, method):
+        self.step_method = method
 
     def run(self):
-        if self._stepfun is None:
+        if self.step_method is None:
             raise RuntimeError("No function to execute")
         self._stopped = False
         get_now = time.time
@@ -79,7 +77,7 @@ class SihdThread(threading.Thread):
         start = get_now()
         sleep_time = self._sleep
         timeout = self._timeout
-        fun = self._stepfun
+        step = self.step_method
         max_iter = self._max_iter
         ret = None
         while not self._stopped:
@@ -92,7 +90,7 @@ class SihdThread(threading.Thread):
                     return
             # Execution
             try:
-                ret = fun()
+                ret = step()
             except Exception as e:
                 self.stop()
                 raise

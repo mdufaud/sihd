@@ -2,8 +2,6 @@
 #coding: utf-8
 
 """ System """
-
-
 import sys
 
 class INamedObject(object):

@@ -12,7 +12,9 @@ from .IServiceStateObserver import IServiceStateObserver
 from .Factory import Factory
 from .Stats import stat_it, count_it, get_stats
 from .IThreadedService import IThreadedService
-
-from .IWorker import IWorker
+from .IProcessedService import IProcessedService
+from .IPolyService import IPolyService
+from .SihdWorker import SihdWorker
 from .IConsumer import IConsumer
 from .IProducer import IProducer
+from .IDeliverer import IDeliverer

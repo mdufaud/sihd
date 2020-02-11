@@ -13,14 +13,14 @@ class IObservable(INamedObject):
     def add_observer(self, observer):
         self.__observers.add(observer)
 
-    def notify_observers(self, *args):
+    def notify_observers(self, *datas):
         for observer in self.__observers:
-            observer.on_notify(self, *args)
+            observer.on_notify(self, *datas)
 
-    def notify_error(self, *args):
+    def notify_error(self, err):
         for observer in self.__observers:
-            observer.on_error(self, *args)
+            observer.on_error(self, err)
 
-    def notify_info(self, *args):
+    def notify_info(self, info):
         for observer in self.__observers:
-            observer.on_info(self, *args)
+            observer.on_info(self, info)

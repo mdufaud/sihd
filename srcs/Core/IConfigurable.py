@@ -73,6 +73,9 @@ class IConfigurable(INamedObject):
         """
         if isinstance(key, dict):
             self.__conf.update(key)
+            if force is True:
+                for k, v in key.items():
+                    self.set_conf_file(k, v)
             return
         self.__conf[key] = value
         if force is True:

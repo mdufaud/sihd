@@ -29,7 +29,7 @@ class ILoggable(INamedObject):
 
     def __log(self, fun_name, msg):
         fun = getattr(self._log, fun_name)
-        fun("{0} : {1}".format(self.get_name(), msg))
+        fun("{0}: {1}".format(self.get_name(), msg))
 
     def log_debug(self, msg):
         self.__log("debug", msg)

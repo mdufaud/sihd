@@ -14,18 +14,11 @@ class IDumpable(INamedObject):
         self.__file_magic = None
 
     def _dump(self):
-        """ Del problematic keys to make your dump work """
-        state = self.__dict__.copy()
-        return state
+        return {}
 
-    def _load(self, state):
+    def _load(self, dic):
         """ You can change here to do specific stuff on loading """
-        self.__dict__.update(state.__dict__)
-
-    def __getstate__(self):
-        """ Called py pickle.dump(self) """
-        to_dump = self._dump()
-        return to_dump or {}
+        pass
 
     def set_dump_magic(self, magic):
         """ Set a magic number at the end of the file """
@@ -40,10 +33,13 @@ class IDumpable(INamedObject):
 
     def dump_to(self, filename, perm="wb+"):
         """ Use pickle to dump object to file """
+        dump = self._dump()
+        if dump is None:
+            return True
         with open(filename, perm) as f:
             if self.__file_magic:
                 f.write(self.__file_magic)
-            pickle.dump(self, f)
+            pickle.dump(dump, f)
         return True
 
     def load_from(self, filename, perm='rb'):
@@ -55,4 +51,4 @@ class IDumpable(INamedObject):
                     return False
                 data = pickle.load(f)
                 self._load(data)
-        return False
+        return True

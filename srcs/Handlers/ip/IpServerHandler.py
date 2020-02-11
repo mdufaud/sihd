@@ -2,8 +2,6 @@
 #coding: utf-8
 
 """ System """
-
-
 try:
     import Queue
 except ImportError:

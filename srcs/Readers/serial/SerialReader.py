@@ -23,7 +23,7 @@ class SerialReader(IReader):
             "baudrate": 9600,
             "timeout": 1,
         })
-        self.set_run_method(self._read_serial)
+        self.set_step_method(self._read_serial)
 
     """ IConfigurable """
 
@@ -71,7 +71,7 @@ class SerialReader(IReader):
         if line is None:
             self.stop()
             return False
-        self.notify_observers(line)
+        self.deliver(line)
         self._lines += 1
         return True
 

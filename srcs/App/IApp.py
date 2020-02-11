@@ -89,12 +89,15 @@ class IApp(Core.IService, Core.ILoggable,
         self.__args_setted = lst
 
     def parse_args(self):
-        parser = argparse.ArgumentParser(prog=self.get_name())
+        parser = argparse.ArgumentParser(prog=self.get_name(),
+                                            conflict_handler='resolve')
         self.define_args(parser)
         if self.__args_setted is not None:
-            self.args = parser.parse_args(args=self.__args_setted)
+            self.args, unknown = parser.parse_known_args(args=self.__args_setted)
         else:
-            self.args = parser.parse_args()
+            self.args, unknown = parser.parse_known_args()
+        if unknown:
+            self.log_debug("Unknown args: {}".format(unknown))
         return self.args
 
     """
@@ -282,14 +285,17 @@ class IApp(Core.IService, Core.ILoggable,
             st_interactors[interactor.get_name()] = interactor.get_service_state()
         return status
 
-    def start_all(self):
-        if self.start() is False:
-            return False
+    def start_readers(self):
         if self.__call_children(self.readers, "start"):
             self.log_info("App readers started")
             return True
         self.log_warning("Some app readers did not start")
         return False
+
+    def start_all(self):
+        if self.start() is False:
+            return False
+        return self.start_readers()
 
     def _start_impl(self):
         """ Services must be configured before start """

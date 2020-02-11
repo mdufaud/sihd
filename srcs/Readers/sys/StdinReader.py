@@ -19,7 +19,7 @@ class StdinReader(IReader):
         })
         self._question = ""
         self._asked = False
-        self.set_run_method(self.diffuse_input)
+        self.set_step_method(self.diffuse_input)
         self._inputs = [sys.stdin.fileno()]
         self._buffer = 4096
 
@@ -65,7 +65,7 @@ class StdinReader(IReader):
         if line == b'':
             self.stop()
             return False
-        self.notify_observers(line)
+        self.deliver(line)
         self._asked = False
         return True
 
