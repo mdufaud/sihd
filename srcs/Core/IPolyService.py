@@ -37,10 +37,16 @@ class IPolyService(IThreadedService, IProcessedService, IDeliverer, IDumpable):
     def set_service_threading(self):
         self.__type = self.__service_types.thread
 
+    def is_service_threading(self):
+        return self.__type == self.__service_types.thread
+
     """ Process """
 
     def set_service_multiprocess(self):
         self.__type = self.__service_types.process
+
+    def is_service_multiprocess(self):
+        return self.__type == self.__service_types.process
 
     """ Service """
 

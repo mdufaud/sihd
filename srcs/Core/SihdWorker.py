@@ -20,15 +20,15 @@ class SihdWorker(ILoggable):
     def __init__(self, parent, name="SihdWorker"):
         super(SihdWorker, self).__init__(name)
         global multiprocessing
-        try:
-            if multiprocessing is None:
-                import multiprocessing
-            self.__worker_state = multiprocessing.Value('i', self._states.work)
-        except ImportError:
-            self._worker_state = None
+        if multiprocessing is None:
+            import multiprocessing
         global queue
         if queue is None:
             import queue
+        try:
+            self.__worker_state = multiprocessing.Value('i', self._states.work)
+        except FileNotFoundError:
+            self._worker_state = None
         self.__parent = parent
         self.__proc = {}
         self.__n_workers = 2
@@ -59,7 +59,10 @@ class SihdWorker(ILoggable):
 
     def make_workers(self, out_queue, producers=None, number=None):
         if multiprocessing is None:
-            self.log_error("Multiprocessing is not supported on your machine")
+            self.log_error("Multiprocessing is not supported on your system")
+            return False
+        if self.__worker_state is None:
+            self.log_error("Shared memory not found on your system")
             return False
         if number is None:
             number = self.__n_workers
@@ -143,6 +146,7 @@ class SihdWorker(ILoggable):
                     else:
                         number += 1
             else:
+                #Yes i know, but making a function here might impact performance
                 producer = None
                 data = None
                 try:

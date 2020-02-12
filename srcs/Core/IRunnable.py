@@ -2,8 +2,6 @@
 #coding: utf-8
 
 """ System """
-
-
 from .INamedObject import INamedObject
 from .SihdThread import SihdThread
 

@@ -18,9 +18,9 @@ class IProcessedService(IService, IProducer, IConsumer):
         self._set_default_conf({
             "process_workers": 1,
         })
+        self.__worker = None
+        self.__workers_nbr = 1
         self.__process_start_time = None
-        self.__worker = SihdWorker(self)
-        self.__worker.set_work_method(self.do_work)
 
     def get_process_start_time(self):
         return self.__process_start_time
@@ -29,8 +29,7 @@ class IProcessedService(IService, IProducer, IConsumer):
 
     def _setup_impl(self):
         ret = super()._setup_impl()
-        workers = int(self.get_conf("process_workers"))
-        self.__worker.set_worker_number(workers)
+        self.__workers_nbr = int(self.get_conf("process_workers"))
         return ret
 
     """ Worker method """
@@ -47,11 +46,12 @@ class IProcessedService(IService, IProducer, IConsumer):
     """ IService """
 
     def _start_impl(self):
-        worker = self.__worker
+        worker = SihdWorker(self)
+        worker.set_work_method(self.do_work)
+        worker.set_worker_number(self.__workers_nbr)
+        self.__worker = worker 
         producers = self.get_producers()
         out_queue = self.get_producing_queue()
-        if not worker:
-            self.log_error("Not supporting multiprocessing process")
         if not out_queue:
             self.log_error("Not supporting multiprocessing queue")
         if not worker or not out_queue:
@@ -70,6 +70,7 @@ class IProcessedService(IService, IProducer, IConsumer):
 
     def _stop_impl(self):
         self.__worker.stop_workers()
+        self.__worker = None
         return True
 
     def _pause_impl(self):
