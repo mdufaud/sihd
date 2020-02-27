@@ -244,7 +244,7 @@ class IApp(Core.IService, Core.ILoggable,
             ret = fun(arg)
         return ret
 
-    def __call_children(self, children_lst, fun_name, arg=None):
+    def __call_children(self, children_lst, fun_name, arg=None, fail=True):
         ret = True
         for child in children_lst:
             try:
@@ -253,9 +253,9 @@ class IApp(Core.IService, Core.ILoggable,
                 raise NotImplementedError("Class `{}` does not implement `{}`"\
                         .format(child.__class__.__name__, fun_name))
             ret = ret and self.__call_child(child, fun, arg)
-            if not ret:
-                self.log_error("Could not {} service {}".format(fun_name,
-                                                        child.get_name()))
+            if not ret and fail:
+                self.log_error("Could not {} for service {}".format(fun_name,
+                                                            child.get_name()))
         return ret
 
     """
@@ -292,10 +292,15 @@ class IApp(Core.IService, Core.ILoggable,
         self.log_warning("Some app readers did not start")
         return False
 
+    def start_interactors(self):
+        if self.__call_children(self.interactors, "start"):
+            self.log_info("App interactors started")
+            return True
+        self.log_warning("Some app interactors did not start")
+        return False
+
     def start_all(self):
-        if self.start() is False:
-            return False
-        return self.start_readers()
+        return self.start() and self.start_readers() and self.start_interactors()
 
     def _start_impl(self):
         """ Services must be configured before start """
@@ -303,10 +308,9 @@ class IApp(Core.IService, Core.ILoggable,
         ret = self.load_children_conf()
         if ret:
             fun = self.__call_children
-            i_ret = fun(self.interactors, "start")
             g_ret = fun(self.guis, "start")
             h_ret = fun(self.handlers, "start")
-            if h_ret and g_ret and i_ret:
+            if h_ret and g_ret:
                 self.log_info("App started")
                 return True
         self.log_warning("Some app services did not start")
@@ -369,6 +373,14 @@ class IApp(Core.IService, Core.ILoggable,
     def resume_readers(self):
         for reader in self.readers:
             reader.resume()
+
+    def pause_interactors(self):
+        for interactor in self.interactors:
+            interactor.pause()
+
+    def resume_interactors(self):
+        for interactor in self.interactors:
+            interactor.resume()
 
     def remove_reader(self, reader):
         if reader.is_active():

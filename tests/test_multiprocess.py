@@ -207,14 +207,14 @@ class TestMultiprocess(unittest.TestCase):
         self.assertTrue(handler.pause())
         consumed = self.__get_total(handler)
         time.sleep(self.sleep / 2)
-        self.assertTrue(self.__get_total(handler, False) == 0)
+        self.assertEqual(self.__get_total(handler, False), 0)
         self.assertTrue(handler.resume())
         time.sleep(self.sleep / 2)
 
         consumed = self.__get_total(handler)
         self.assertTrue(reader.stop())
         self.assertTrue(handler.stop())
-        self.assertTrue(self.__get_total(handler) == None)
+        self.assertEqual(self.__get_total(handler), None)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -4,6 +4,7 @@
 """ System """
 import sys
 import logging
+import time
 
 curses = None
 locale = None
@@ -27,8 +28,19 @@ class ICursesGui(IGui):
         self.__windows = {}
         self.__panels = {}
         self.__movable = {}
+        self.__ready = False
 
     # Core
+
+    def win_add_str(self, win, y, x, s):
+        ret = False
+        try:
+            win.addstr(y, x, s)
+            ret = True
+        except curses.error as e:
+            self.log_error("{} (on y={}, x={}, s='{}')".format(
+                             e, y, x, s))
+        return ret
 
     def is_curses_on(self):
         return self.__curses_on
@@ -70,6 +82,10 @@ class ICursesGui(IGui):
     def clear_windows(self):
         for _, win in self.__windows.items():
             win.clear()
+
+    def erase_windows(self):
+        for _, win in self.__windows.items():
+            win.erase()
 
     def update_panels(self, full=False):
         if full:
@@ -132,11 +148,13 @@ class ICursesGui(IGui):
 
     # Setup
 
+    def _remove_stream_logger(self):
+        Core.ILoggable.remove_stream_handlers()
+
     def _set_win_log(self, win):
         # Create a logger in curses and removes stream logger
         win.scrollok(True)
         win.leaveok(True)
-        Core.ILoggable.remove_stream_handlers()
         log_handler = CursesHandler(win)
         log_handler.setFormatter(Core.ILoggable.get_formatter())
         Core.ILoggable.logger.addHandler(log_handler)
@@ -159,6 +177,7 @@ class ICursesGui(IGui):
         if self.__curses_on is True:
             return
         self.log_info("Adding curses")
+        self._remove_stream_logger()
         stdscr = curses.initscr()
         self.stdscr = stdscr
         curses.noecho()
@@ -172,6 +191,10 @@ class ICursesGui(IGui):
     def remove_curses(self):
         if self.__curses_on is False:
             return
+        if self._log_handler is not None:
+            Core.ILoggable.logger.removeHandler(self._log_handler)
+            self._log_handler = None
+            Core.ILoggable.add_stream_handler()
         curses.nocbreak()
         self.stdscr.keypad(0)
         curses.curs_set(1)
@@ -219,16 +242,29 @@ class ICursesGui(IGui):
 
     def gui_loop(self):
         self.init_curses()
+        time.sleep(0.5)
         stdscr = self.stdscr
         stdscr.clear()
         stdscr.refresh()
         self.setup_windows()
+        self.refresh_windows(True)
+        self.update_panels(True)
         stdscr.nodelay(True)
-        while self.is_curses_on() and self.loop() is True:
-            pass
+        self.__ready = True
+        error = None
+        try:
+            while self.is_curses_on() and self.loop() is True:
+                pass
+        except Exception as e:
+            error = e
         self.stop()
+        if error:
+            self.log_error(error)
 
     # Services
+
+    def is_active(self):
+        return super().is_active() and self.__curses_on and self.__ready
 
     def _pause_impl(self):
         self.pause_thread()
@@ -244,10 +280,7 @@ class ICursesGui(IGui):
         return True
 
     def _stop_impl(self):
-        if self._log_handler is not None:
-            Core.ILoggable.logger.removeHandler(self._log_handler)
-            self._log_handler = None
-            Core.ILoggable.add_stream_handler()
+        self.__ready = False
         self.remove_curses()
         self.stop_thread()
         return True

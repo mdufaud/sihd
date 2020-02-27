@@ -9,6 +9,10 @@ Queue = None
 class IProducer(INamedObject):
 
     def __init__(self, name="IProducer"):
+        super(IProducer, self).__init__(name)
+        self.__out_queue = None
+
+    def create_producing_queue(self):
         global Queue
         try:
             if Queue is None:
@@ -16,12 +20,14 @@ class IProducer(INamedObject):
             self.__out_queue = Queue()
         except ImportError:
             self.__out_queue = None
-        super(IProducer, self).__init__(name)
+        return self.__out_queue is not None
 
-    def set_out_queue(self, queue):
+    def set_producing_queue(self, queue):
         self.__out_queue = queue
 
     def get_producing_queue(self):
+        if self.__out_queue is None:
+            self.create_producing_queue()
         return self.__out_queue
 
     def produce(self, *datas):

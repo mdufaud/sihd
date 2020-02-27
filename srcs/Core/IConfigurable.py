@@ -146,7 +146,9 @@ class IConfigurable(INamedObject):
 
     def __write_dict_conf(self, dic):
         """ Writes dictionnary in configparser """
-        if not self.get_conf_obj() or not dic:
+        if not dic:
+            return True
+        if not self.get_conf_obj():
             return False
         if not self.__has_section:
             self.__setup_section()

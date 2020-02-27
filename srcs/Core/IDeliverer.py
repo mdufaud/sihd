@@ -14,9 +14,11 @@ class IDeliverer(IProducer, IObservable):
 
     def set_service_multiprocess(self):
         self.deliver = self.__deliver_mp
+        return self.create_producing_queue()
 
     def set_observable(self):
         self.deliver = self.__deliver_obs
+        return True
 
     def __deliver_mp(self, *data):
         return self.produce(*data)
