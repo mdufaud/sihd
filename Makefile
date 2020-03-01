@@ -11,6 +11,11 @@ endif
 PYTHON=$(shell command -v python)
 PYTHON3=$(shell command -v python3)
 
+all:
+	@echo "make lt (=list tests)"
+	@echo "make tests (=run all tests)"
+	@echo "make tests T=app (=run app test only)"
+
 lt:
 	@ls -1 tests | grep test | cut -d '.' -f1 | cut -d '_' -f2 | sed -r '/^\s*$$/d'
 
