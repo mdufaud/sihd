@@ -19,9 +19,9 @@ logging.basicConfig(level=logging.DEBUG)
 import socket
 import unittest
 
-from sihd.srcs.Handlers.IHandler import IHandler
+from sihd.Handlers.IHandler import IHandler
 
-from sihd.srcs.Tools.pcap import PcapWriter
+from sihd.Tools.pcap import PcapWriter
 
 class StdinHandler(IHandler):
 

@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 import unittest
 
-from sihd.srcs.GUI.Cmd.ICmdGui import ICmdGui
+from sihd.GUI.Cmd.ICmdGui import ICmdGui
 
 class SimpleCmd(ICmdGui):
 

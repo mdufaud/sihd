@@ -31,11 +31,11 @@ import logging
 logger = logging.getLogger()
 logging.basicConfig(level=logging.DEBUG)
 
-from sihd.srcs.Readers.IReader import IReader
-from sihd.srcs.Handlers.IHandler import IHandler
-from sihd.srcs.Core.IThreadedService import IThreadedService
-from sihd.srcs.Core.IConsumer import IConsumer
-from sihd.srcs.Core.IProcessedService import IProcessedService
+from sihd.Readers.IReader import IReader
+from sihd.Handlers.IHandler import IHandler
+from sihd.Core.IThreadedService import IThreadedService
+from sihd.Core.IConsumer import IConsumer
+from sihd.Core.IProcessedService import IProcessedService
 
 def do_process():
     time.sleep(0.01)

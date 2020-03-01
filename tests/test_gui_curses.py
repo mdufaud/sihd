@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 import unittest
 
-from sihd.srcs.GUI.Curses.ICursesGui import ICursesGui
+from sihd.GUI.Curses.ICursesGui import ICursesGui
 
 class SimpleCurses(ICursesGui):
 

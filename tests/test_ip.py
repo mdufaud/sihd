@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 import socket
 
-from sihd.srcs.Handlers.IHandler import IHandler
+from sihd.Handlers.IHandler import IHandler
 
 class TestHandler(IHandler):
 
