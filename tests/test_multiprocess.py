@@ -17,6 +17,14 @@ except ImportError:
     multiprocessing = None
     queue = None
 
+try:
+    if multiprocessing is not None:
+        #checks for /dev/shm
+        val = multiprocessing.Value('i', 0)
+except FileNotFoundError:
+    multiprocessing = None
+
+
 """ Setting up basic logging """
 
 import logging
