@@ -6,3 +6,5 @@ from .Interactors import *
 from .App import *
 from .API import *
 from .Tools import *
+
+__version__ = "0.0.1"
