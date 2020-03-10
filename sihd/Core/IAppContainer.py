@@ -1,9 +1,6 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
-
-
 class IAppContainer(object):
 
     def __init__(self, *args, **kwargs):

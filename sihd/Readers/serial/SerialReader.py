@@ -23,7 +23,7 @@ class SerialReader(IReader):
             "baudrate": 9600,
             "timeout": 1,
         })
-        self.set_step_method(self._read_serial)
+        self.set_step_method(self.read_serial)
 
     """ IConfigurable """
 
@@ -63,16 +63,21 @@ class SerialReader(IReader):
     def get_serial(self):
         return self._serial
 
-    def _read_serial(self):
+    def read_serial(self):
         try:
             line = self._serial.readline()
         except EOFError as e:
             line = None
+        if line is not None:
+            self._lines += 1
+        return line
+
+    def diffuse_serial(self):
+        line = self.read_serial()
         if line is None:
             self.stop()
             return False
         self.deliver(line)
-        self._lines += 1
         return True
 
     """ IService """

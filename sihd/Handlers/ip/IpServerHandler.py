@@ -63,7 +63,7 @@ class IpServerHandler(IHandler):
         if data:
             client["msg"] += 1
             self._reader = reader
-            self.notify_observers(data.decode(), co)
+            self.deliver(data.decode(), co)
             self._reader = None
         else:
             self._remove_client(reader, co)
@@ -72,7 +72,7 @@ class IpServerHandler(IHandler):
         data, server = co.recvfrom(self._rcv_buf)
         if data:
             self._reader = reader
-            self.notify_observers(data.decode(), co)
+            self.deliver(data.decode(), co)
             self._reader = None
         else:
             self._remove_client(reader, co)

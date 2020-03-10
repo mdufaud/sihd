@@ -23,13 +23,13 @@ class LineReader(IReader):
     """ IConfigurable """
 
     def _setup_impl(self):
-        super(LineReader, self)._setup_impl()
+        ret = super(LineReader, self)._setup_impl()
         path = self.get_conf("path", default=False)
         if path:
             self.set_source(path)
         if not self._reader:
-            return False
-        return True
+            ret = False
+        return ret
 
     """ Reader """
 
