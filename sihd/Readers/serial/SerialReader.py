@@ -23,7 +23,7 @@ class SerialReader(IReader):
             "baudrate": 9600,
             "timeout": 1,
         })
-        self.set_step_method(self.read_serial)
+        self.set_step_method(self.diffuse_serial)
 
     """ IConfigurable """
 
