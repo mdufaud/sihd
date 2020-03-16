@@ -6,8 +6,7 @@
 from sihd import Core
 
 class IGui(Core.IService, Core.IAppContainer,
-            Core.IObserver, Core.ILoggable,
-            Core.IRunnable):
+            Core.ILoggable, Core.IRunnable):
 
     def __init__(self, app=None, name="IGui"):
         super(IGui, self).__init__(name)

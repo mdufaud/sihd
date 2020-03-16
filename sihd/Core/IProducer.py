@@ -4,31 +4,34 @@
 """ System """
 from .INamedObject import INamedObject
 
-Queue = None
+queue = None
+multiprocessing = None
 
 class IProducer(INamedObject):
 
-    def __init__(self, name="IProducer"):
+    def __init__(self, name="IProducer", size=0):
         super(IProducer, self).__init__(name)
-        self.__out_queue = None
-
-    def create_producing_queue(self):
-        global Queue
-        try:
-            if Queue is None:
-                from multiprocessing import Queue
-            self.__out_queue = Queue()
-        except ImportError:
-            self.__out_queue = None
-        return self.__out_queue is not None
+        global multiprocessing
+        if multiprocessing is None:
+            import multiprocessing
+        global queue
+        if queue is None:
+            import queue
+        self.__out_queue = multiprocessing.Queue(maxsize=size)
 
     def set_producing_queue(self, queue):
         self.__out_queue = queue
 
     def get_producing_queue(self):
-        if self.__out_queue is None:
-            self.create_producing_queue()
         return self.__out_queue
 
-    def produce(self, *datas):
-        self.__out_queue.put(*datas)
+    def is_queue_empty(self):
+        return self.__out_queue.empty()
+
+    def produce(self, data, block=False, timeout=None):
+        q = self.__out_queue
+        try:
+            q.put(data, block=block, timeout=timeout)
+        except queue.Full:
+            return False
+        return True

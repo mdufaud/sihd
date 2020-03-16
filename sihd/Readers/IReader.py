@@ -5,19 +5,21 @@
 from sihd import Core
 import time
 
-class IReader(Core.IPolyService, Core.IAppContainer):
+class IReader(Core.IPolyService, Core.IAppContainer, Core.IObserver):
 
     def __init__(self, app=None, name="IReader"):
         super(IReader, self).__init__(name)
+        self._set_default_conf({
+            "service_type": "thread",
+        })
         self.__saving_data = False
         self.__data_saved = []
-        self.set_service_threading()
         if (app):
             self.set_app(app)
 
     """ IProcessedService """
 
-    def do_work(self, i, queue, data, producer):
+    def do_work(self, i):
         return self.step_method()
 
     """ IDumpable """
@@ -43,10 +45,13 @@ class IReader(Core.IPolyService, Core.IAppContainer):
 
     def save_data(self, active):
         self.__saving_data = active
+        #TODO
+        """
         if active:
             self.deliver = self.__save_decorator(self.deliver)
         else:
             self.deliver = self.__default_deliver
+        """
 
     def get_data_saved(self):
         return self.__data_saved

@@ -13,32 +13,17 @@ class IConsumer(INamedObject):
         global queue
         if queue is None:
             import queue
-        self.__conso = {}
+        self.__consuming_queue = None
 
-    def get_producers(self):
-        return self.__conso
+    def consume_queue(self, queue):
+        self.__consuming_queue = queue
 
-    def add_to_consume(self, producer):
-        queue = producer.get_producing_queue()
-        self.__conso[producer] = queue
-
-    def remove_all_consumation(self):
-        self.__conso = {}
-
-    def remove_consumation(self, name):
-        return self.__conso.pop(name, None)
-
-    def consume(self):
-        dic = self.__conso
-        i = 0
-        for producer, queue in dic.items():
+    def consume(self, block=False, timeout=None):
+        data = None
+        q = self.__consuming_queue
+        if q is not None:
             try:
-                data = queue.get()
+                data = q.get(block=block, timeout=timeout)
             except queue.Empty:
-                continue
-            i += 1
-            self.consumed(producer, data)
-        return i
-
-    def consumed(self, producer, data):
-        raise NotImplementedError("consumed not implemented")
+                pass
+        return data

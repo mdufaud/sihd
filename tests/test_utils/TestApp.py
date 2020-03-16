@@ -26,22 +26,26 @@ class TestApp(sihd.App.IApp):
             self.set_timed_loop(args.time)
         #Setting up LineReader
         reader = sihd.Readers.sys.LineReader(self, "LineReader" + self._test)
-        reader.set_conf("path", args.file)
         #Set configuration for this reader
-        self._configure_reader(reader)
+        self._configure_reader(reader, args)
         #Will be notified of state change
-        reader.add_state_observer(self)
         #Setting up WordHandler
         handler = sihd.Handlers.sys.WordHandler(self, "WordHandler" + self._test)
         #Set configuration for this handler
         self._configure_handler(handler)
-        reader.add_observer(handler)
         #Remember for further access those services
         self._word_handler = handler
         self._line_reader = reader
         return True
 
-    def define_args(self, parser):
+    def _link_children(self):
+        self._line_reader.add_state_observer(self)
+        reader_output = self._line_reader.output
+        handler_input = self._word_handler.input
+        reader_output.add_observer(handler_input)
+        return True
+
+    def _define_args(self, parser):
         """ Add arguments """
         parser.add_argument("-f", "--file",
                 type=str,
@@ -75,7 +79,8 @@ class TestApp(sihd.App.IApp):
         if self.args.stats:
             handler.handle = sihd.Core.Stats.stat_it(handler.handle)
 
-    def _configure_reader(self, reader):
+    def _configure_reader(self, reader, args):
+        reader.set_conf("path", args.file)
         #Decorate with stats
         if self.args.stats:
             method = sihd.Core.Stats.stat_it(reader.get_step_method())

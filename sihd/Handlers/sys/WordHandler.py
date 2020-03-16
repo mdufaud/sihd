@@ -17,7 +17,8 @@ class WordHandler(IHandler):
 
     """ IConfigurable """
 
-    def _setup_impl(self):
+    def do_setup(self):
+        ret = super().do_setup()
         delimiter = self.get_conf("delimiter")
         if isinstance(delimiter, str) and len(delimiter) >= 1:
             self._delimiter = delimiter
@@ -26,11 +27,20 @@ class WordHandler(IHandler):
         toskip = self.get_conf("skip")
         if isinstance(toskip, str):
             self._toskip = toskip.split(";")
-        return True
+        return ret
+
+    def do_channels(self):
+        ret = super().do_channels()
+        ret = ret and self.create_input('input') is not None
+        ret = ret and self.create_output('output') is not None
+        return ret
 
     """ IObservable """
 
-    def handle(self, observable, line):
+    def handle(self, channel):
+        if channel != self.input:
+            return True
+        line = channel.read()
         if not isinstance(line, str):
             return True
         toskip = self._toskip

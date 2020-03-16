@@ -40,20 +40,36 @@ class IApp(Core.IService, Core.ILoggable,
         self.__args_setted = None
 
     def setup_app(self, *args, **kwargs):
-        ret = False
         self.log_debug("Starting application setup")
-        self.load_app_conf()
+        #App service setup
+        ret = self.load_app_conf()
+        #App internal setup
         ret = self._setup_app_impl(*args, **kwargs)
-        if ret is False:
-            self.log_error("Application setup has failed")
-        else:
-            self.save_children_conf()
+        #Save app children's configuration
+        ret = ret and self.save_children_conf()
+        #Call children's service setup
+        ret = ret and self.load_children_conf()
+        #Link children's channels after 
+        ret = ret and self._link_children()
+        if ret is True:
             self.log_debug("Application successfully setup")
+        else:
+            self.log_error("Application setup has failed")
         return ret
 
+    def _link_children(self):
+        """
+            To be implemented by children app
+            -> Subscribe services to services channels
+        """
+        return True
+
     def _setup_app_impl(self):
-        """ To be implemented by children """
-        return False
+        """
+            To be implemented by children app
+            -> Create app's services
+        """
+        return True
 
     """
     ###############
@@ -61,10 +77,10 @@ class IApp(Core.IService, Core.ILoggable,
     ###############
     """
 
-    def define_args(self, parser):
+    def _define_args(self, parser):
         """
             To be implemented by children
-            Should add args to ArgumentParser
+            -> Add args to ArgumentParser
         """
         return None
 
@@ -89,9 +105,10 @@ class IApp(Core.IService, Core.ILoggable,
         self.__args_setted = lst
 
     def parse_args(self):
+        """ To be called by children - Useful at setup implementation """
         parser = argparse.ArgumentParser(prog=self.get_name(),
                                             conflict_handler='resolve')
-        self.define_args(parser)
+        self._define_args(parser)
         if self.__args_setted is not None:
             self.args, unknown = parser.parse_known_args(args=self.__args_setted)
         else:
@@ -305,14 +322,12 @@ class IApp(Core.IService, Core.ILoggable,
     def _start_impl(self):
         """ Services must be configured before start """
         self.log_info("App starting")
-        ret = self.load_children_conf()
-        if ret:
-            fun = self.__call_children
-            g_ret = fun(self.guis, "start")
-            h_ret = fun(self.handlers, "start")
-            if h_ret and g_ret:
-                self.log_info("App started")
-                return True
+        fun = self.__call_children
+        g_ret = fun(self.guis, "start")
+        h_ret = fun(self.handlers, "start")
+        if h_ret and g_ret:
+            self.log_info("App started")
+            return True
         self.log_warning("Some app services did not start")
         return False
 

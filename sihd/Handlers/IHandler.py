@@ -5,7 +5,7 @@
 
 from sihd import Core
 
-class IHandler(Core.IPolyService, Core.IAppContainer, Core.IObserver):
+class IHandler(Core.IPolyService, Core.IAppContainer):
 
     def __init__(self, app=None, name="IHandler"):
         super(IHandler, self).__init__(name)
@@ -14,18 +14,18 @@ class IHandler(Core.IPolyService, Core.IAppContainer, Core.IObserver):
 
     """ IProcessedService """
 
-    def do_work(self, i, queue, data, producer):
-        return self.handle(producer, data)
+    def do_work(self, i):
+        return self.step_method()
 
     """ IObserver """
 
-    def on_notify(self, observable, *args):
+    def on_notify(self, channel):
         if self.is_active():
-            self.handle(observable, *args)
+            self.handle(channel)
 
     """ IHandler """
 
-    def handle(self, observable, *args):
+    def handle(self, channel):
         raise NotImplementedError("handle not implemented")
 
     """ IAppContainer """

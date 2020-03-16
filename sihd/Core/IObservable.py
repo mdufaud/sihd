@@ -11,16 +11,25 @@ class IObservable(INamedObject):
         self.__observers = set()
 
     def add_observer(self, observer):
+        if not getattr(observer, "get_name"):
+            raise NotImplementedError("Observer does not implement 'get_name'")
+        if not getattr(observer, "on_notify"):
+            raise NotImplementedError("Observer {} does not implement 'on_notify'"\
+                                        .format(observer.get_name()))
         self.__observers.add(observer)
 
-    def notify_observers(self, *datas):
+    def notify_observers(self):
         for observer in self.__observers:
-            observer.on_notify(self, *datas)
+            observer.on_notify(self)
 
-    def notify_error(self, err):
-        for observer in self.__observers:
-            observer.on_error(self, err)
+    def remove_observer(self, observer):
+        ret = False
+        try:
+            self.__observers.remove(observer)
+            ret = True
+        except KeyError:
+            pass
+        return ret
 
-    def notify_info(self, info):
-        for observer in self.__observers:
-            observer.on_info(self, info)
+    def clear_observers(self):
+        self.__observers = set()

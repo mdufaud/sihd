@@ -17,4 +17,3 @@ from .IPolyService import IPolyService
 from .SihdWorker import SihdWorker
 from .IConsumer import IConsumer
 from .IProducer import IProducer
-from .IDeliverer import IDeliverer

@@ -22,14 +22,18 @@ class LineReader(IReader):
 
     """ IConfigurable """
 
-    def _setup_impl(self):
-        ret = super(LineReader, self)._setup_impl()
+    def do_setup(self):
+        ret = super().do_setup()
         path = self.get_conf("path", default=False)
         if path:
             self.set_source(path)
         if not self._reader:
             ret = False
         return ret
+
+    def do_channels(self):
+        ret = super().do_channels()
+        return ret and self.create_output('output') is not None
 
     """ Reader """
 
@@ -42,8 +46,7 @@ class LineReader(IReader):
             self.log_info(s)
             return
         self._to_recover = tupl[0]
-        s = "To recover {}".format(self._to_recover)
-        self.log_debug(s)
+        self.log_debug("To recover {}".format(self._to_recover))
 
     def _recover(self):
         while self.is_active() and self._to_recover > 0:
@@ -53,8 +56,7 @@ class LineReader(IReader):
             self._to_recover -= 1
         if self._to_recover > 0:
             return True
-        s = "Recovered {}".format(self._path)
-        self.log_info(s)
+        self.log_info("Recovered {}".format(self._path))
 
     def set_source(self, path):
         self._lines = 0
@@ -67,7 +69,6 @@ class LineReader(IReader):
             self._reader = fp
             self._path = path
         except IOError as err:
-            self.notify_error(err)
             self.log_error("Cannot open: {}".format(err))
             return False
         self._can_recover()
@@ -92,7 +93,7 @@ class LineReader(IReader):
             return False
         line = line.strip()
         if line != "":
-            self.deliver(line)
+            self.output.write(line)
             self._lines += 1
         return True
 

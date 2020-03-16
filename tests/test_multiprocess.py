@@ -44,10 +44,16 @@ class TestHandler(IHandler):
 
     def __init__(self, app=None, name="TestHandler"):
         super(TestHandler, self).__init__(app=app, name=name)
-        self.set_step_method(self.consume)
+        self.set_step_method(self.read_channels_input)
         self.n = 0
 
-    def handle(self, service, line):
+    def do_channels(self):
+        super().do_channels()
+        self.create_input("input")
+        return True
+
+    def handle(self, channel):
+        line = channel.read()
         do_process()
         self.n += 1
         #self.log_info("{}: {}".format(service, line))
@@ -57,11 +63,25 @@ class ProcessHandler(IHandler):
 
     def __init__(self, name="ProcessHandler"):
         super(ProcessHandler, self).__init__(name=name)
+        self.set_step_method(self.read_channels_input)
+        self.once = False
 
-    def handle(self, service, line):
+    def do_channels(self):
+        super().do_channels()
+        self.create_input("input", type="queue")
+        self.create_output("output", type="queue")
+        return True
+
+    def handle(self, channel):
+        line = channel.read()
+        if line is None:
+            return True
         do_process()
-        self.deliver(line)
-        #self.log_info("{}: {}".format(service, line))
+        self.output.write(line)
+        if self.once == False:
+            self.log_warning("Handle: PID={}".format(os.getpid()))
+            self.once = True
+            self.log_info("{}: {}".format(channel.get_name(), line))
         return True
 
 class InfiniteReader(IReader):
@@ -71,8 +91,13 @@ class InfiniteReader(IReader):
         self._set_default_conf({"thread_frequency": 200})
         self.data = data 
 
+    def do_channels(self):
+        super().do_channels()
+        self.create_output("output")
+        return True
+
     def step_method(self):
-        self.deliver(self.data)
+        self.output.write(self.data)
         return True
 
 class TestMultiprocess(unittest.TestCase):
@@ -84,15 +109,16 @@ class TestMultiprocess(unittest.TestCase):
         pass
 
     def __get_total(self, handler, check=True):
-        q = handler.get_producing_queue()
+        q = handler.output
         i = 0
         while True:
-            try:
-                d = q.get(False)
-            except queue.Empty:
+            d = q.read()
+            if d is None:
                 break
+            """
             except OSError:
                 return None
+            """
             i += 1
         if check is not False:
             self.assertTrue(i > 0)
@@ -104,23 +130,23 @@ class TestMultiprocess(unittest.TestCase):
         logger.info("Starting multiple readers and multiprocess 1 worker 4 processes")
         reader1 = InfiniteReader("hello", "InfiniteReader1")
         reader2 = InfiniteReader("world", "InfiniteReader2")
-        reader1.set_service_multiprocess()
-        reader2.set_service_multiprocess()
+        reader1.set_conf("service_type", "process")
+        reader2.set_conf("service_type", "process")
         handler = ProcessHandler()
-        handler.set_service_multiprocess()
+        handler.set_conf("service_type", "process")
         handler.set_conf("process_workers", 4)
-        handler.add_to_consume(reader1)
-        handler.add_to_consume(reader2)
         self.assertTrue(handler.setup())
         self.assertTrue(reader1.setup())
         self.assertTrue(reader2.setup())
+        reader1.output.add_observer(handler.input)
+        reader2.output.add_observer(handler.input)
         self.assertTrue(handler.start())
         self.assertTrue(reader1.start())
         self.assertTrue(reader2.start())
         time.sleep(self.sleep)
         self.assertTrue(reader1.stop())
         self.assertTrue(reader2.stop())
-        logger.info("Total processed: {}".format(self.__get_total(handler)))
+        logger.info("======> Total processed: {}".format(self.__get_total(handler)))
         self.assertTrue(handler.stop())
 
     @unittest.skipIf(multiprocessing is None, "No support for multiprocess")
@@ -128,23 +154,23 @@ class TestMultiprocess(unittest.TestCase):
         print()
         logger.info("Starting multiprocess 3 workers 1 process")
         reader = InfiniteReader()
-        reader.set_service_multiprocess()
+        reader.set_conf("service_type", "process")
         handler1 = ProcessHandler(name="Handler1")
         handler2 = ProcessHandler(name="Handler2")
         handler3 = ProcessHandler(name="Handler3")
 
-        handler1.set_service_multiprocess()
-        handler2.set_service_multiprocess()
-        handler3.set_service_multiprocess()
-
-        handler1.add_to_consume(reader)
-        handler2.add_to_consume(reader)
-        handler3.add_to_consume(reader)
+        handler1.set_conf("service_type", "process")
+        handler2.set_conf("service_type", "process")
+        handler3.set_conf("service_type", "process")
 
         self.assertTrue(handler1.setup())
         self.assertTrue(handler2.setup())
         self.assertTrue(handler3.setup())
         self.assertTrue(reader.setup())
+
+        reader.output.add_observer(handler1.input)
+        reader.output.add_observer(handler2.input)
+        reader.output.add_observer(handler3.input)
 
         self.assertTrue(handler1.start())
         self.assertTrue(handler2.start())
@@ -152,7 +178,7 @@ class TestMultiprocess(unittest.TestCase):
         self.assertTrue(reader.start())
         time.sleep(self.sleep)
         self.assertTrue(reader.stop())
-        logger.info("Total processed: {}".format(
+        logger.info("======> Total processed: {}".format(
             self.__get_total(handler1)
             + self.__get_total(handler2)
             + self.__get_total(handler3)))
@@ -165,18 +191,18 @@ class TestMultiprocess(unittest.TestCase):
         print()
         logger.info("Starting multiprocess 1 worker 3 processes")
         reader = InfiniteReader()
-        reader.set_service_multiprocess()
+        reader.set_conf("service_type", "process")
         handler = ProcessHandler()
-        handler.set_service_multiprocess()
+        handler.set_conf("service_type", "process")
         handler.set_conf("process_workers", 3)
-        handler.add_to_consume(reader)
         self.assertTrue(handler.setup())
         self.assertTrue(reader.setup())
+        reader.output.add_observer(handler.input)
         self.assertTrue(handler.start())
         self.assertTrue(reader.start())
         time.sleep(self.sleep)
         self.assertTrue(reader.stop())
-        logger.info("Total processed: {}".format(self.__get_total(handler)))
+        logger.info("======> Total processed: {}".format(self.__get_total(handler)))
         self.assertTrue(handler.stop())
 
     @unittest.skipIf(multiprocessing is None, "No support for multiprocess")
@@ -185,44 +211,48 @@ class TestMultiprocess(unittest.TestCase):
         logger.info("Starting no multiprocess")
         reader = InfiniteReader()
         handler = TestHandler()
-        handler.set_service_threading()
-        reader.add_observer(handler)
+        handler.set_conf("service_type", "thread")
         self.assertTrue(reader.setup())
+        self.assertTrue(handler.setup())
+        reader.output.add_observer(handler.input)
         self.assertTrue(handler.start())
         self.assertTrue(reader.start())
         time.sleep(self.sleep)
         self.assertTrue(reader.stop())
         self.assertTrue(handler.stop())
-        logger.info("Total processed: {}".format(handler.n))
+        logger.info("======> Total processed: {}".format(handler.n))
 
     @unittest.skipIf(multiprocessing is None, "No support for multiprocess")
     def test_workers_life_cycle(self):
         print()
         logger.info("Starting multiprocess 1 worker 3 processes")
         reader = InfiniteReader()
-        reader.set_service_multiprocess()
+        reader.set_conf("service_type", "process")
         handler = ProcessHandler()
-        handler.set_service_multiprocess()
+        handler.set_conf("service_type", "process")
         handler.set_conf("process_workers", 3)
-        handler.add_to_consume(reader)
         self.assertTrue(handler.setup())
         self.assertTrue(reader.setup())
+
+        reader.output.add_observer(handler.input)
 
         self.assertTrue(handler.start())
         self.assertTrue(reader.start())
         time.sleep(self.sleep / 2)
 
         self.assertTrue(handler.pause())
+        do_process()
         consumed = self.__get_total(handler)
         time.sleep(self.sleep / 2)
         self.assertEqual(self.__get_total(handler, False), 0)
         self.assertTrue(handler.resume())
         time.sleep(self.sleep / 2)
 
-        consumed = self.__get_total(handler)
-        self.assertTrue(reader.stop())
         self.assertTrue(handler.stop())
-        self.assertEqual(self.__get_total(handler), None)
+        consumed = self.__get_total(handler)
+        do_process()
+        self.assertTrue(reader.stop())
+        self.assertEqual(self.__get_total(handler, False), 0)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
