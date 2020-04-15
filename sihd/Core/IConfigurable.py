@@ -36,7 +36,7 @@ class IConfigurable(INamedObject):
         """ Returns true if obj is setup """
         return self.__is_configured
 
-    def get_conf(self, key, default=True):
+    def get_conf(self, key, ret=None, default=True):
         """
             Get value from conf - Either from file or dict
 
@@ -54,14 +54,14 @@ class IConfigurable(INamedObject):
             val = self.__conf.get(key, None)
         if default is False:
             #Checks if val is equal to default
-            val_default = self.get_default_conf(key)
+            val_default = self.get_default_conf(key, None)
             if val_default == val:
                 val = self.__conf.get(key, None)
                 if val_default == val:
-                    val = None
+                    val = ret
         elif val is None:
             #If config has not been found elsewhere
-            val = self.get_default_conf(key)
+            val = self.get_default_conf(key, ret)
         return val
 
     def set_conf(self, key, value=None, force=False):
@@ -97,9 +97,9 @@ class IConfigurable(INamedObject):
     def get_default_conf_dict(self):
         return self.__default_conf
 
-    def get_default_conf(self, key):
+    def get_default_conf(self, key, ret=None):
         """ Get the value from default dict """
-        return self.__default_conf.get(key, None)
+        return self.__default_conf.get(key, ret)
 
     def set_conf_obj(self, config_obj):
         """ Set the configparser obj """

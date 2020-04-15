@@ -45,6 +45,23 @@ class IPolyService(IThreadedService, IProcessedService, IDumpable):
                 self.__service_types_fun[val]()
         return ret
 
+    """ Channels """
+
+    def create_channel_int(self, name, **kwargs):
+        if kwargs.get('mp', False) is True:
+            return IProcessedService.create_channel_int(self, name, **kwargs)
+        return IService.create_channel_int(self, name=name, **kwargs)
+
+    def create_channel_double(self, name, **kwargs):
+        if kwargs.get('mp', False) is True:
+            return IProcessedService.create_channel_double(self, name, **kwargs)
+        return IService.create_channel_double(self, name=name, **kwargs)
+
+    def create_channel(self, name, **kwargs):
+        if self.is_service_multiprocess():
+            kwargs['mp'] = True
+        return super().create_channel(name, **kwargs)
+
     """ IProcessedService """
 
     def on_worker_start(self, number):

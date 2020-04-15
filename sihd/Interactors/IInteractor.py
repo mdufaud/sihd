@@ -5,27 +5,54 @@
 
 from sihd import Core
 
-class IInteractor(Core.IThreadedService, Core.ILoggable,
-                    Core.IAppContainer):
+class IInteractor(Core.IPolyService, Core.IAppContainer):
 
     def __init__(self, app=None, name="IInteractor"):
         super(IInteractor, self).__init__(name)
         if (app):
             self.set_app(app)
-        self.set_step_method(self.interact)
-        self._interaction = None
+        self.__interaction = None
+        self.add_channel_input("interaction", type="queue")
+
+    """ To change """
+
+    def on_new_interaction(self, action):
+        return action
+
+    def interact(self, action=None, *args, **kwargs):
+        if action is None:
+            action = self.get_interaction()
+        return self.on_interaction(action, *args, **kwargs)
+
+    def on_interaction(self, action, *args, **kwargs):
+        raise NotImplementedError("Interact not implemented")
+
+    """ IInteractor """
 
     def set_app(self, app):
         super(IInteractor, self).set_app(app)
         app.add_interactor(self)
 
     def set_interaction(self, action):
-        self._interaction = action
+        self.__interaction = self.on_new_interaction(action)
 
-    def interact(self, action=None, *args, **kwargs):
-        if action is None:
-            action = self._interaction
-        return self._interact_impl(action, *args, **kwargs)
+    def get_interaction(self):
+        return self.__interaction
 
-    def _interact_impl(self, action):
-        raise NotImplementedError("Interact not implemented");
+    """ IObserver """
+
+    def on_notify(self, channel):
+        if channel == self.interaction:
+            action = channel.read()
+            if action is not None:
+                self.set_interaction(action)
+
+    """ IProcessedService """
+
+    def do_work(self, i):
+        return self.do_step()
+
+    """ Step method """
+
+    def do_step(self):
+        return self.interact()

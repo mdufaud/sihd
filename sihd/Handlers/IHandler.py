@@ -15,7 +15,7 @@ class IHandler(Core.IPolyService, Core.IAppContainer):
     """ IProcessedService """
 
     def do_work(self, i):
-        return self.step_method()
+        return self.do_step()
 
     """ IObserver """
 

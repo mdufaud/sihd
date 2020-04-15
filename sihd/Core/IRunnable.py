@@ -10,9 +10,10 @@ class IRunnable(INamedObject):
     def __init__(self, name="IRunnable"):
         super(IRunnable, self).__init__(name)
         self._thread = None
+        self._step_method = self.step
 
-    def step_method(self):
-        raise NotImplementedError("step_method is not implemented")
+    def step(self):
+        raise NotImplementedError("step method is not implemented")
 
     def get_step_method(self):
         if self._thread:
@@ -26,7 +27,7 @@ class IRunnable(INamedObject):
             self._step_method = SihdThread.find_method_by_str(self, method)
         else:
             self._step_method = method
-        self.step_method = method
+        self.step = method
         if self._thread is not None:
             self._thread.set_step_method(method)
 
@@ -67,4 +68,4 @@ class IRunnable(INamedObject):
             self.stop_thread()
         self._thread = SihdThread(self, **kwargs)
         self._thread.daemon = True
-        self.set_step_method(self.step_method)
+        self.set_step_method(self.step)

@@ -30,6 +30,7 @@ class HttpInteractor(IInteractor):
         if urllib_parse is None:
             import urllib.parse as urllib_parse
         self._set_default_conf({
+            "thread_frequency": 1,
             "url": "",
             "query": "",
             "json_post_file": "/path/to/json/post",
@@ -41,31 +42,30 @@ class HttpInteractor(IInteractor):
         self._query = None
         self._req = None
         self._post_file_path = None
+        self.add_channel_output("output")
 
     """ IConfigurable """
 
-    def _setup_impl(self):
-        super(HttpInteractor, self)._setup_impl()
-        url = self.get_conf("url")
-        if url:
-            self._url = url
+    def do_setup(self):
+        ret = super().do_setup()
+        self._url = self.get_conf("url")
         path_post = self.get_conf("json_post_file", default=False)
         if path_post:
             post = self.get_json_from_file(path_post)
-            self.set_post(post)
+            ret = ret and self.set_post(post)
         path_header = self.get_conf("json_header_file", default=False)
         if path_header:
             headers = self.get_json_from_file(path_header)
-            self.set_headers(headers)
+            ret = ret and self.set_headers(headers)
         query = self.get_conf("query")
         if query:
-            self.set_query(query)
+            ret = ret and self.set_query(query)
         self.make_request()
-        return True
+        return ret
 
     """ IInteractor """
 
-    def _interact_impl(self, data, *args, **kwargs):
+    def on_interaction(self, data, *args, **kwargs):
         resp = self.send(*args, **kwargs)
         return resp is not None
 

@@ -148,7 +148,7 @@ class IpReader(IReader):
         if do_time:
             stop_time = time.time()
             self.log_info("Server was up for {0:.3f} seconds"\
-                    .format(stop_time - self.get_thread_start_time()))
+                    .format(stop_time - self.get_service_start_time()))
 
     """ Select """
 

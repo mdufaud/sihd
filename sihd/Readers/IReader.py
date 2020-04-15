@@ -2,10 +2,11 @@
 #coding: utf-8
 
 """ System """
-from sihd import Core
 import time
 
-class IReader(Core.IPolyService, Core.IAppContainer, Core.IObserver):
+from sihd import Core
+
+class IReader(Core.IPolyService, Core.IAppContainer):
 
     def __init__(self, app=None, name="IReader"):
         super(IReader, self).__init__(name)
@@ -20,7 +21,7 @@ class IReader(Core.IPolyService, Core.IAppContainer, Core.IObserver):
     """ IProcessedService """
 
     def do_work(self, i):
-        return self.step_method()
+        return self.do_step()
 
     """ IDumpable """
 
@@ -44,14 +45,8 @@ class IReader(Core.IPolyService, Core.IAppContainer, Core.IObserver):
         return self.__saving_data
 
     def save_data(self, active):
-        self.__saving_data = active
         #TODO
-        """
-        if active:
-            self.deliver = self.__save_decorator(self.deliver)
-        else:
-            self.deliver = self.__default_deliver
-        """
+        self.__saving_data = active
 
     def get_data_saved(self):
         return self.__data_saved

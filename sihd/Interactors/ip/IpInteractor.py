@@ -23,26 +23,19 @@ class IpInteractor(IInteractor):
 
     """ IConfigurable """
 
-    def _setup_impl(self):
-        super(IpInteractor, self)._setup_impl()
-        port = self.get_conf("port")
-        if port:
-            self._port = int(port)
-        host = self.get_conf("host")
-        if host:
-            self._host = host
-        t = self.get_conf("type")
-        if type:
-            self._type = t
-        return True
+    def do_setup(self):
+        ret = super().do_setup()
+        self._port = int(self.get_conf("port"))
+        self._host = str(self.get_conf("host"))
+        self._type = str(self.get_conf("type"))
+        return ret
 
     """ IInteractor """
 
-    #Override
-    def set_interaction(self, action):
-        self._interaction = action.encode()
+    def on_new_interaction(self, action):
+        return action.encode()
 
-    def _interact_impl(self, data, *args, **kwargs):
+    def on_interaction(self, data, *args, **kwargs):
         t = self._type
         if t == "tcp":
             return self.send_tcp_once(data, *args, **kwargs)

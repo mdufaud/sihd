@@ -2,13 +2,14 @@
 #coding: utf-8
 
 """ System """
-
 import os
 import sys
 
 import test_utils
 import sihd
 import unittest
+
+from sihd.Tools.sys import memory
 
 class TestApp(unittest.TestCase):
 
@@ -23,7 +24,7 @@ class TestApp(unittest.TestCase):
                     check_words, prt=False):
         reader = app._line_reader
         handler = app._word_handler 
-        words_dict = handler._stats
+        words_dict = handler.output.get_data()
 
         for key, value in words_dict.items():
             if prt:
@@ -32,9 +33,9 @@ class TestApp(unittest.TestCase):
             if expected is not None:
                 self.assertEqual(expected, value), "{}: {} != {}".format(key, value, expected)
 
-        self.assertEqual(handler._skipped, skipped), "{} != {}".format(handler._skipped, skipped)
-        self.assertEqual(reader._lines, lines), "{} != {}".format(reader._lines, lines)
-        self.assertTrue(reader._fully_read)
+        self.assertEqual(handler.skipped.read(), skipped), "{} != {}".format(handler.skipped.read(), skipped)
+        self.assertEqual(reader.lines.read(), lines), "{} != {}".format(reader.lines.read(), lines)
+        self.assertTrue(reader.eof.read())
 
         if not app.args.stats:
             return

@@ -27,8 +27,10 @@ class TestHandler(IHandler):
 
     def __init__(self, app=None, name="TestHandler"):
         super(TestHandler, self).__init__(app=app, name=name)
+        self.add_channel_input("input")
 
-    def handle(self, reader, data):
+    def handle(self, channel):
+        data = channel.read()
         self.out = data.decode()
         print("Received: ", self.out)
         return True
@@ -89,7 +91,7 @@ class TestHttp(unittest.TestCase):
         reader.set_conf({
             "url": url,
         })
-        reader.add_observer(handler)
+        reader.output.add_observer(handler.input)
         self.assertTrue(reader.setup())
         self.assertTrue(handler.start())
         self.assertTrue(reader.start())

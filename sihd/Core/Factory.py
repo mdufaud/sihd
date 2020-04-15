@@ -2,9 +2,8 @@
 #coding: utf-8
 
 """ System """
-
-
 import sys
+
 from .INamedObject import INamedObject
 
 class Factory(object):
@@ -33,7 +32,7 @@ class Factory(object):
                 return ret
 
     @staticmethod
-    def get(name, depth=0, max_depth=5, *args, **kwargs):
+    def get(name, depth=0, max_depth=7, *args, **kwargs):
         return Factory.__rget(name, INamedObject, depth, max_depth,
                                 [], *args, **kwargs)
 
@@ -61,7 +60,7 @@ class Factory(object):
                             visited, results, debug=debug)
 
     @staticmethod
-    def find(name, depth=0, max_depth=5, *args, **kwargs):
+    def find(name, depth=0, max_depth=7, *args, **kwargs):
         lst = []
         Factory.__rfind(name, INamedObject, depth, max_depth,
                         visited=[], results=lst, *args, **kwargs)

@@ -19,10 +19,12 @@ from sihd import Core, Readers, Handlers, GUI, Interactors
 
 class IApp(Core.IService, Core.ILoggable,
             Core.IConfigurable, Core.IDumpable,
-            Core.IServiceStateObserver):
+            Core.IServiceStateObserver, Core.IObserver):
 
     def __init__(self, name="IApp", *args, **kwargs):
         super(IApp, self).__init__(name, *args, **kwargs)
+        #Log
+        self._default_log_level = "info"
         #Path
         self._path = None
         self._path = IApp.get_sihd_path()
@@ -38,6 +40,10 @@ class IApp(Core.IService, Core.ILoggable,
         #Args
         self.args = None
         self.__args_setted = None
+        self.__main_pid = os.getpid()
+
+    def get_main_pid(self):
+        return self.__main_pid
 
     def setup_app(self, *args, **kwargs):
         self.log_debug("Starting application setup")
@@ -50,14 +56,14 @@ class IApp(Core.IService, Core.ILoggable,
         #Call children's service setup
         ret = ret and self.load_children_conf()
         #Link children's channels after 
-        ret = ret and self._link_children()
+        ret = ret and self._link_channels()
         if ret is True:
             self.log_debug("Application successfully setup")
         else:
             self.log_error("Application setup has failed")
         return ret
 
-    def _link_children(self):
+    def _link_channels(self):
         """
             To be implemented by children app
             -> Subscribe services to services channels
@@ -137,7 +143,7 @@ class IApp(Core.IService, Core.ILoggable,
             self.error("No path set for app")
             return
         config.add_section("Logger")
-        config.set("Logger", "level", "info")
+        config.set("Logger", "level", self._default_log_level)
         config.set("Logger", "directory", os.path.join(self._path, "logs"))
 
     def __apply_conf(self, path):

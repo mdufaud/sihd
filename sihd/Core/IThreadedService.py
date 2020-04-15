@@ -20,10 +20,13 @@ class IThreadedService(IService, IRunnable):
         self.__thread_freq = None
         self.__thread_timeout = None
         self.__thread_max_iter = None
-        self.__thread_start_time = None
 
-    def get_thread_start_time(self):
-        return self.__thread_start_time
+    def do_step(self):
+        pass
+
+    def step(self):
+        self.read_channels_input()
+        return self.do_step()
 
     """ IConfigurable """
 
@@ -42,7 +45,6 @@ class IThreadedService(IService, IRunnable):
                             max_iter=self.__thread_max_iter)
         if self.is_paused():
             self.pause_thread()
-        self.__thread_start_time = time.time()
         self.start_thread()
         return True
 

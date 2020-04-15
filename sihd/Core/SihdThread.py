@@ -9,17 +9,17 @@ class SihdThread(threading.Thread):
  
     def __init__(self, parent=None, frequency=50, timeout=None, max_iter=None):
         threading.Thread.__init__(self)
-        self._stopped = True
-        self._paused = False
-        self.step_method = None
-        self._iter = 0
+        self.__stopped = True
+        self.__paused = False
+        self.__iter = 0
+        self.step = None
         self._parent = parent
         if not self.set_max_iter(max_iter):
-            self._max_iter = None
+            self.__max_iter = None
         if not self.set_timeout(timeout):
             self._timeout = None
         if not self.set_frequency(frequency):
-            self._sleep = 0.05
+            self.__sleep = 0.05
 
     @staticmethod
     def is_main_thread():
@@ -38,13 +38,13 @@ class SihdThread(threading.Thread):
     def set_max_iter(self, max_iter):
         if not isinstance(max_iter, int) or max_iter <= 0:
             return False
-        self._max_iter = max_iter
+        self.__max_iter = max_iter
         return True
 
     def set_frequency(self, frequency):
         if not isinstance(frequency, int) or frequency <= 0:
             return False
-        self._sleep = float(1. / int(frequency))
+        self.__sleep = float(1. / int(frequency))
         return True
 
     def set_timeout(self, timeout):
@@ -54,34 +54,37 @@ class SihdThread(threading.Thread):
         return True
 
     def stop(self):
-        self._stopped = True
+        self.__stopped = True
 
     def pause(self):
-        self._paused = True
+        self.__paused = True
 
     def resume(self):
-        self._paused = False
+        self.__paused = False
 
     def get_step_method(self):
-        return self.step_method
+        return self.step
 
     def set_step_method(self, method):
-        self.step_method = method
+        self.step = method
 
     def run(self):
-        if self.step_method is None:
+        if self.step is None:
             raise RuntimeError("No function to execute")
-        self._stopped = False
+        #state
+        self.__stopped = False
+        #time
         get_now = time.time
         sleep = time.sleep
         start = get_now()
-        sleep_time = self._sleep
+        sleep_time = self.__sleep
         timeout = self._timeout
-        step = self.step_method
-        max_iter = self._max_iter
+        #step
+        step = self.step
+        max_iter = self.__max_iter
         ret = None
-        while not self._stopped:
-            while self._paused:
+        while not self.__stopped:
+            while self.__paused:
                 sleep(0.05)
             now = get_now()
             # Check timeout
@@ -94,11 +97,11 @@ class SihdThread(threading.Thread):
             except Exception as e:
                 self.stop()
                 raise
-            if ret is None or ret is False:
+            if ret is False:
                 return
             # Iterations
-            self._iter += 1
-            if max_iter is not None and self._iter >= max_iter:
+            self.__iter += 1
+            if max_iter is not None and self.__iter >= max_iter:
                 return
             # Pause
             end = get_now()
@@ -107,4 +110,4 @@ class SihdThread(threading.Thread):
                 sleep(pause)
 
     def is_running(self):
-        return self._stopped == False
+        return self.__stopped == False

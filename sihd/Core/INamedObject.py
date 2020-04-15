@@ -51,9 +51,9 @@ class INamedObject(object):
 
     def __str__(self):
         desc = self.get_description()
-        s = "{0}(name={1}".format(self.__class__.__name__, self.get_name())
+        s = "{}(name={}".format(self.__class__.__name__, self.get_name())
         if desc:
-            s += "{0}, {1})".format(s, desc)
+            s = "{}, {})".format(s, desc)
         else:
             s += ")"
         return s

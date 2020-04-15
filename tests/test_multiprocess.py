@@ -37,6 +37,8 @@ from sihd.Core.IThreadedService import IThreadedService
 from sihd.Core.IConsumer import IConsumer
 from sihd.Core.IProcessedService import IProcessedService
 
+sihd.set_log_color(True)
+
 def do_process():
     time.sleep(0.01)
 
@@ -44,32 +46,16 @@ class TestHandler(IHandler):
 
     def __init__(self, app=None, name="TestHandler"):
         super(TestHandler, self).__init__(app=app, name=name)
-        self.set_step_method(self.read_channels_input)
         self.n = 0
-
-    def do_channels(self):
-        super().do_channels()
-        self.create_input("input")
-        return True
-
-    def handle(self, channel):
-        line = channel.read()
-        do_process()
-        self.n += 1
-        #self.log_info("{}: {}".format(service, line))
-        return True
-
-class ProcessHandler(IHandler):
-
-    def __init__(self, name="ProcessHandler"):
-        super(ProcessHandler, self).__init__(name=name)
-        self.set_step_method(self.read_channels_input)
         self.once = False
+        self._set_default_conf({"thread_frequency": 200})
+        self._set_default_conf({"process_frequency": 200})
+        self.add_channel_input('input', type='queue')
+        self.add_channel_output('output', type='queue')
 
-    def do_channels(self):
-        super().do_channels()
-        self.create_input("input", type="queue")
-        self.create_output("output", type="queue")
+    def on_setup(self):
+        s = "processed" if self.is_service_multiprocess() else "threaded"
+        self.log_info("Has setup as " + s)
         return True
 
     def handle(self, channel):
@@ -78,10 +64,13 @@ class ProcessHandler(IHandler):
             return True
         do_process()
         self.output.write(line)
+        self.n += 1
+        """
         if self.once == False:
             self.log_warning("Handle: PID={}".format(os.getpid()))
             self.once = True
             self.log_info("{}: {}".format(channel.get_name(), line))
+        """
         return True
 
 class InfiniteReader(IReader):
@@ -89,14 +78,11 @@ class InfiniteReader(IReader):
     def __init__(self, data="-- Infinite Data ! --", name="InfiniteReader"):
         super(InfiniteReader, self).__init__(name=name)
         self._set_default_conf({"thread_frequency": 200})
+        self._set_default_conf({"process_frequency": 200})
+        self.add_channel_output('output', type='queue')
         self.data = data 
 
-    def do_channels(self):
-        super().do_channels()
-        self.create_output("output")
-        return True
-
-    def step_method(self):
+    def do_step(self):
         self.output.write(self.data)
         return True
 
@@ -132,17 +118,20 @@ class TestMultiprocess(unittest.TestCase):
         reader2 = InfiniteReader("world", "InfiniteReader2")
         reader1.set_conf("service_type", "process")
         reader2.set_conf("service_type", "process")
-        handler = ProcessHandler()
+        handler = TestHandler()
         handler.set_conf("service_type", "process")
         handler.set_conf("process_workers", 4)
         self.assertTrue(handler.setup())
         self.assertTrue(reader1.setup())
         self.assertTrue(reader2.setup())
+
         reader1.output.add_observer(handler.input)
         reader2.output.add_observer(handler.input)
+
         self.assertTrue(handler.start())
         self.assertTrue(reader1.start())
         self.assertTrue(reader2.start())
+
         time.sleep(self.sleep)
         self.assertTrue(reader1.stop())
         self.assertTrue(reader2.stop())
@@ -155,9 +144,9 @@ class TestMultiprocess(unittest.TestCase):
         logger.info("Starting multiprocess 3 workers 1 process")
         reader = InfiniteReader()
         reader.set_conf("service_type", "process")
-        handler1 = ProcessHandler(name="Handler1")
-        handler2 = ProcessHandler(name="Handler2")
-        handler3 = ProcessHandler(name="Handler3")
+        handler1 = TestHandler(name="Handler1")
+        handler2 = TestHandler(name="Handler2")
+        handler3 = TestHandler(name="Handler3")
 
         handler1.set_conf("service_type", "process")
         handler2.set_conf("service_type", "process")
@@ -192,7 +181,7 @@ class TestMultiprocess(unittest.TestCase):
         logger.info("Starting multiprocess 1 worker 3 processes")
         reader = InfiniteReader()
         reader.set_conf("service_type", "process")
-        handler = ProcessHandler()
+        handler = TestHandler()
         handler.set_conf("service_type", "process")
         handler.set_conf("process_workers", 3)
         self.assertTrue(handler.setup())
@@ -221,6 +210,7 @@ class TestMultiprocess(unittest.TestCase):
         self.assertTrue(reader.stop())
         self.assertTrue(handler.stop())
         logger.info("======> Total processed: {}".format(handler.n))
+        self.assertTrue(handler.n > 0)
 
     @unittest.skipIf(multiprocessing is None, "No support for multiprocess")
     def test_workers_life_cycle(self):
@@ -228,7 +218,7 @@ class TestMultiprocess(unittest.TestCase):
         logger.info("Starting multiprocess 1 worker 3 processes")
         reader = InfiniteReader()
         reader.set_conf("service_type", "process")
-        handler = ProcessHandler()
+        handler = TestHandler()
         handler.set_conf("service_type", "process")
         handler.set_conf("process_workers", 3)
         self.assertTrue(handler.setup())
@@ -256,3 +246,6 @@ class TestMultiprocess(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+
+for l in sihd.find("Reader", max_depth=10):
+    print(l)

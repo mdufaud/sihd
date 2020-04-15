@@ -20,6 +20,7 @@ class HttpReader(IReader):
         })
         self.__interactor = HttpInteractor(name="{}_interactor".format(name))
         self.set_step_method(self.diffuse_request)
+        self.add_channel_output("output")
 
     """ IConfigurable """
 
@@ -44,7 +45,7 @@ class HttpReader(IReader):
         if not ret:
             self.stop()
             return False
-        self.deliver(ret)
+        self.output.write(ret)
         return True
 
     """ IService """

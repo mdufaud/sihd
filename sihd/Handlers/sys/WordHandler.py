@@ -11,9 +11,13 @@ class WordHandler(IHandler):
             "delimiter": "",
             "skip": "#;//",
         })
-        self._stats = {}
-        self._toskip = None
-        self._skipped = 0
+        #self._stats = {}
+        self.__toskip = None
+        self.__delimiter = None
+        self.__skipped = 0
+        self.add_channel_input('input', type='queue')
+        self.add_channel_output('output', type='dict')
+        self.add_channel_output('skipped', type='int', default=0)
 
     """ IConfigurable """
 
@@ -21,18 +25,10 @@ class WordHandler(IHandler):
         ret = super().do_setup()
         delimiter = self.get_conf("delimiter")
         if isinstance(delimiter, str) and len(delimiter) >= 1:
-            self._delimiter = delimiter
-        else:
-            self._delimiter = None
+            self.__delimiter = delimiter
         toskip = self.get_conf("skip")
-        if isinstance(toskip, str):
-            self._toskip = toskip.split(";")
-        return ret
-
-    def do_channels(self):
-        ret = super().do_channels()
-        ret = ret and self.create_input('input') is not None
-        ret = ret and self.create_output('output') is not None
+        if isinstance(toskip, str) and len(toskip) >= 1:
+            self.__toskip = toskip.split(";")
         return ret
 
     """ IObservable """
@@ -43,24 +39,27 @@ class WordHandler(IHandler):
         line = channel.read()
         if not isinstance(line, str):
             return True
-        toskip = self._toskip
+        #Skip lines
+        toskip = self.__toskip
         if toskip:
             for skip in toskip:
                 if line.find(skip) == 0:
-                    self._skipped += 1
+                    self.__skipped += 1
+                    self.skipped.write(self.__skipped)
                     return True
+        #Stat words in line
         line = line.strip()
-        lst = line.split(self._delimiter)
-        d = self._stats
-        get = d.get
+        lst = line.split(self.__delimiter)
+        write = self.output.write
+        read = self.output.read
         for word in lst:
             if word == "":
                 continue
-            d[word] = get(word, 0) + 1
+            write(word, read(word, 0) + 1)
         return True
 
     """ IService """
 
     def _start_impl(self):
-        self._skipped = 0
+        self.__skipped = 0
         return super()._start_impl()

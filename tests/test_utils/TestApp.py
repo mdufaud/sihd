@@ -17,6 +17,11 @@ class TestApp(sihd.App.IApp):
         super(TestApp, self).__init__("TestApp" + self._test)
         self.set_path(os.path.dirname(os.path.dirname((__file__))))
         sihd.Core.ILoggable.set_color(True)
+        #self._default_log_level = "debug"
+
+    def do_setup(self):
+        ret = super().do_setup()
+        return ret
 
     def _setup_app_impl(self):
         #Get args for app
@@ -38,11 +43,13 @@ class TestApp(sihd.App.IApp):
         self._line_reader = reader
         return True
 
-    def _link_children(self):
+    def _link_channels(self):
         self._line_reader.add_state_observer(self)
         reader_output = self._line_reader.output
+        reader_eof = self._line_reader.eof
         handler_input = self._word_handler.input
         reader_output.add_observer(handler_input)
+        #reader_eof.add_observer(self)
         return True
 
     def _define_args(self, parser):
@@ -74,13 +81,24 @@ class TestApp(sihd.App.IApp):
             self.log_info("Reader {} ended and stopped".format(service.get_name()))
             self.stop()
 
+    """
+    def on_notify(self, channel):
+        if channel == self._line_reader.eof:
+            end = channel.read()
+            if end is True:
+                self.log_info("Reader {} ended and stopped".format(channel.get_parent().get_name()))
+                self.stop()
+    """
+
     def _configure_handler(self, handler):
         #Decorate with stats
+        #handler.set_conf("service_type", "process")
         if self.args.stats:
             handler.handle = sihd.Core.Stats.stat_it(handler.handle)
 
     def _configure_reader(self, reader, args):
         reader.set_conf("path", args.file)
+        #reader.set_conf("service_type", "process")
         #Decorate with stats
         if self.args.stats:
             method = sihd.Core.Stats.stat_it(reader.get_step_method())

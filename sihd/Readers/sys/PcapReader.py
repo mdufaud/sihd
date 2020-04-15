@@ -109,7 +109,7 @@ class PcapReader(IReader):
         stop_time = time.time()
         self.log_info("File {0:s} read - {1:d} packets".format(self._path, self._pkts))
         self.log_debug("took {0:.3f} seconds to read and process {1:d} lines"\
-                .format(stop_time - self.get_thread_start_time(), self._pkts))
+                .format(stop_time - self.get_service_start_time(), self._pkts))
         self._fully_read = True
         PcapReader.files_read[self._path] = (self._bytes, False)
         self.stop()
