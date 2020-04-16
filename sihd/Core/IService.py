@@ -7,7 +7,7 @@ from .ILoggable import ILoggable
 from .IConfigurable import IConfigurable
 from .IObserver import IObserver
 from .Channel import Channel, ChannelQueue, ChannelDict, ChannelList, \
-                        ChannelCondition, ChannelEvent
+                        ChannelCondition, ChannelBool
 
 class IService(ILoggable, IConfigurable, IObserver):
 
@@ -24,13 +24,26 @@ class IService(ILoggable, IConfigurable, IObserver):
         self.__start_time = None
         self.__stop_time = None
 
+    """ IObserver """
+
+    def handle(self, channel):
+        pass
+
+    def _pre_handle(self, channel):
+        return False
+
+    def on_notify(self, channel):
+        if self.is_active():
+            if not self._pre_handle(channel):
+                self.handle(channel)
+
     """ Channel creation """
 
     def create_channel_condition(self, name, **kwargs):
         return ChannelCondition(name=name, **kwargs)
 
-    def create_channel_event(self, name, **kwargs):
-        return ChannelEvent(name=name, **kwargs)
+    def create_channel_bool(self, name, **kwargs):
+        return ChannelBool(name=name, **kwargs)
 
     def create_channel_list(self, name, **kwargs):
         return ChannelList(name=name, **kwargs)
@@ -65,16 +78,46 @@ class IService(ILoggable, IConfigurable, IObserver):
             self.log_error("No such type for channel {}".format(type))
             return None
         kwargs['parent'] = self
-        return method(name, **kwargs)
+        channel = method(name, **kwargs)
+        self.log_debug("--> {}".format(channel))
+        return channel
 
     """ Channels Input/Output """
 
+    """     Reading """
+
     def read_channels_input(self):
         for name, channel in self.get_channels_input().items():
-            if channel.pollable() and channel.readable():
+            if channel.is_pollable() and channel.is_readable():
                 channel.notify()
                 channel.clear()
         return True
+
+    """     Locking """
+
+    def __lock_channels(self, channels):
+        for channel in channels:
+            if not channel.is_locked():
+                channel.lock()
+
+    def __unlock_channels(self, channels):
+        for channel in channels:
+            if not channel.is_locked():
+                channel.lock()
+
+    def lock_channels_output(self):
+        self.__lock_channels(self.get_channels_output().values())
+
+    def unlock_channels_output(self):
+        self.__lock_channels(self.get_channels_output().values())
+
+    def lock_channels_input(self):
+        self.__lock_channels(self.get_channels_input().values())
+
+    def unlock_channels_input(self):
+        self.__lock_channels(self.get_channels_input().values())
+
+    """     Making """
 
     def _make_channels(self):
         for name, dic in self.__todo_ichan:
@@ -100,6 +143,8 @@ class IService(ILoggable, IConfigurable, IObserver):
         if channel:
             self.set_channel_output(channel)
         return channel
+
+    """     Getter/Setter """
 
     def get_channels_input(self):
         return self.__channels_input

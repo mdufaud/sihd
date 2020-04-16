@@ -6,20 +6,13 @@
 import os
 import sys
 import time
-
-import sihd
 import unittest
-
-""" Setting up basic logging """
-
-import logging
-logger = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG)
-
 import json
 
+import sihd
+sihd.set_log()
+
 from sihd.Interactors.ip.HttpInteractor import HttpInteractor
-from sihd.Readers.ip.HttpReader import HttpReader
 
 from sihd.Handlers.IHandler import IHandler
 
@@ -31,8 +24,9 @@ class TestHandler(IHandler):
 
     def handle(self, channel):
         data = channel.read()
-        self.out = data.decode()
-        print("Received: ", self.out)
+        if data:
+            self.out = data.decode()
+            print("Received: ", self.out)
         return True
 
 class TestHttp(unittest.TestCase):
@@ -78,28 +72,27 @@ class TestHttp(unittest.TestCase):
         interactor = HttpInteractor()
         interactor.set_conf({
             "url": url,
+            'service_type': 'thread'
         })
         self.assertTrue(interactor.setup())
         self.assertTrue(interactor.start())
-        time.sleep(0.2)
+        time.sleep(1)
+        self.assertTrue(interactor.c_result.read() is not None)
         self.assertTrue(interactor.stop())
 
-    def test_reader(self):
-        url = "http://httpbin.org/get"
-        reader = HttpReader()
-        handler = TestHandler()
-        reader.set_conf({
-            "url": url,
-        })
-        reader.output.add_observer(handler.input)
-        self.assertTrue(reader.setup())
-        self.assertTrue(handler.start())
-        self.assertTrue(reader.start())
-        time.sleep(0.3)
-        self.assertTrue(reader.stop())
-        self.assertTrue(handler.stop())
-        dic = json.loads(handler.out)
-        self.assertEqual(dic["url"], url)
+    def test_channels(self):
+        url = "https://www.google.com"
+        interactor = HttpInteractor()
+        interactor.set_conf('service_type', 'process')
+        self.assertTrue(interactor.setup())
+        channel_test = sihd.Core.Channel.ChannelQueue(name='test', mp=True, simple=True)
+        interactor.c_result.add_observer(channel_test)
+        self.assertTrue(interactor.start())
+        time.sleep(0.1)
+        interactor.c_interaction.write(url)
+        time.sleep(2)
+        self.assertTrue(channel_test.read() is not None)
+        self.assertTrue(interactor.stop())
 
 if __name__ == '__main__':
     unittest.main()

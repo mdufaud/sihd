@@ -18,41 +18,53 @@ class LineReader(IReader):
         })
         self.__fully_read = False
         self.__reader = None
+        self.add_channel_input('path', type='queue', simple=True)
         self.add_channel_output('output')
         self.add_channel_output('lines', type='int', default=0)
-        self.add_channel_output('eof', type='event', timeout=0.1)
+        self.add_channel_output('eof', type='bool', timeout=0.1)
 
     """ IConfigurable """
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        """ After setup to have eof channel created """
+        ret = super().on_setup()
         path = self.get_conf("path", default=False)
         if path:
             ret = self.set_source(path)
-        else:
-            ret = False
         return ret
+
+    def handle(self, channel):
+        path = channel.read()
+        if path:
+            self.set_source(path)
 
     """ Reader """
 
     def __can_recover(self):
         if self.__path not in LineReader.files_read:
-            return
+            return False
         tupl = LineReader.files_read[self.__path]
         if tupl[1] == False:
             s = "File {} already read".format(self.__path)
             self.log_info(s)
-            return
+            return True
         self.__to_recover = tupl[0]
         self.log_debug("To recover {}".format(self.__to_recover))
+        return True
 
     def __recover(self):
-        while self.is_active() and self.__to_recover > 0:
-            l = self.__reader.readline()
+        reader = self.__reader
+        if not reader:
+            return False
+        rdline = reader.readline
+        recover = self.__to_recover
+        while self.is_active() and recover > 0:
+            l = rdline()
             if l is None:
                 return False
-            self.__to_recover -= 1
-        if self.__to_recover > 0:
+            recover -= 1
+        self.__to_recover = recover
+        if recover > 0:
             return True
         self.log_info("Recovered {}".format(self.__path))
 
@@ -70,6 +82,7 @@ class LineReader(IReader):
             self.log_error("Cannot open: {}".format(err))
             return False
         self.__can_recover()
+        self.eof.write(0)
         return True
 
     def read_line(self):
@@ -108,10 +121,6 @@ class LineReader(IReader):
     """ IService """
 
     def _start_impl(self):
-        if self.__reader is None:
-            self.log_error("No reader has been set")
-            return False
-        self.eof.write(0)
         s = "Reading file {name}".format(name=self.__path)
         self.log_info(s)
         return super(LineReader, self)._start_impl()

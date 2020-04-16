@@ -2,6 +2,7 @@
 #coding: utf-8
 
 """ System """
+import time
 try:
     import Queue
 except ImportError:
@@ -10,132 +11,112 @@ except ImportError:
 
 from sihd.Handlers.IHandler import IHandler
 
+from sihd.Readers.ip.IpReader import IpReader
+
 class IpServerHandler(IHandler):
 
     def __init__(self, app=None, name="IpServerHandler"):
         super(IpServerHandler, self).__init__(app=app, name=name)
-        self._reader = None
         self._clients = {}
         self._set_default_conf({
-            "rcv_buf": 4096,
+            "service_type": "thread",
+            "server_protocol": "tcp",
         })
-
-    """ IConfigurable """
-
-    def _setup_impl(self):
-        rcv_buf = self.get_conf("rcv_buf")
-        if rcv_buf:
-            self._rcv_buf = int(rcv_buf)
-        return True
-
-    """ IObservable """
-
-    def handle(self, reader, readable, writable):
-        ret = self.__do_read(reader, readable)
-        ret = ret and self.__do_write(reader, writable)
-        return ret
-
-    """ Read part """
-
-    def _accept_client(self, reader):
-        co, addr = reader.get_server().accept()
-        self.log_debug("New connexion from {}:{}".format(addr[0], addr[1]))
-        co.setblocking(0)
-        reader.add_input(co)
-        self._clients[co] = {
-            "addr": addr,
-            "socket": co,
-            "msg": 0,
-            "queue": Queue.Queue(),
+        self.__server_action = {
+            "co": self._set_client_connected,
+            "addr": self._set_client_addr,
         }
+        self.add_channel_input("c_packet_data", type='queue')
+        self.add_channel_input("c_client_info", type='queue')
+        self.add_channel_input("c_server_msg", type='queue')
+        self.add_channel_output("c_packet_send")
+        self.add_channel_output("c_server_action")
+        self.__udp = False
+        self.__tcp = False
+        self.__raw = False
 
-    def _remove_client(self, reader, co):
-        reader.remove_input(co)
-        reader.remove_output(co)
-        client = self._clients[co]
-        self.log_debug("Client {} has left".format(client["addr"]))
-        self._clients[co] = {}
-        co.close()
-
-    def _read_tcp_client(self, reader, co):
-        client = self._clients[co]
-        data = co.recv(self._rcv_buf)
-        if data:
-            client["msg"] += 1
-            self._reader = reader
-            self.deliver(data.decode(), co)
-            self._reader = None
-        else:
-            self._remove_client(reader, co)
-
-    def _read_client(self, reader, co):
-        data, server = co.recvfrom(self._rcv_buf)
-        if data:
-            self._reader = reader
-            self.deliver(data.decode(), co)
-            self._reader = None
-        else:
-            self._remove_client(reader, co)
-
-    def __do_read(self, reader, readable):
-        ret = True
-        server = reader.get_server()
-        for sock in readable:
-            if sock is server:
-                if reader.is_tcp():
-                    ret = self._accept_client(reader)
-                elif reader.is_udp():
-                    ret = self._read_client(reader, sock)
-            else:
-                ret = self._read_tcp_client(reader, sock)
-            if ret == False:
-                break
+    def do_setup(self):
+        ret = super().do_setup()
+        self.set_server_protocol(self.get_conf("server_protocol"))
         return ret
 
-    """ Sender part """
+    def set_server_protocol(self, proto):
+        if proto == 'raw':
+            self.__raw = True
+        elif proto == 'udp':
+            self.__udp = True
+        elif proto == "tcp":
+            self.__tcp = True
 
-    def send(self, co, msg):
+    def handle_service(self, service):
+        if isinstance(service, IpReader):
+            #Observe service output
+            service.c_packet_data.add_observer(self.c_packet_data)
+            service.c_client_info.add_observer(self.c_client_info)
+            service.c_server_msg.add_observer(self.c_server_msg)
+            #Add service inputs to our outputs
+            self.c_packet_send.add_observer(service.c_packet_send)
+            self.c_server_action.add_observer(service.c_server_action)
+            self.__tcp = service.is_tcp()
+            self.__udp = service.is_udp()
+            self.__raw = service.is_raw()
+            return True
+        return False
+
+    def handle(self, channel):
+        if channel == self.c_packet_data:
+            msg, infos = channel.read()
+            if self.__tcp:
+                self.on_client_input(msg, infos)
+            else:
+                self.on_packet_data(msg, *infos)
+        elif channel == self.c_server_msg:
+            pass
+        elif self.__tcp and channel == self.c_client_info:
+            co, action, value = channel.read()
+            self._parse_client_info(co, action, value)
+
+    """ Utilities """
+
+    def send_client(self, msg, co):
+        self.c_packet_send.write((msg + "\n", co))
+
+    """ Packet data  """
+
+    def on_packet_data(self, msg, host=None, port=0):
+        self.log_info("Packet from {}:{} said : {}".format(host, port, msg))
+
+    """ Client input """
+
+    def on_client_input(self, msg, co):
+        self.log_info("Client {} said : {}".format(co, msg))
+
+    """ Client info """
+
+    def get_client(self, co):
+        return self._clients.get(co, None)
+
+    def _parse_client_info(self, co, action, value):
+        method = self.__server_action.get(action, None)
+        if method is None:
+            self.log_error("Client info action {} not recognized".format(action))
+        else:
+            method(co, value)
+
+    def _set_client_addr(self, co, addr):
         client = self._clients.get(co, None)
-        if client is None:
+        if client:
+            client['addr'] = addr
+        else:
             self.log_error("No such client {}".format(co))
-            return False
-        client.queue.put(msg)
-        if co not in self._outputs:
-            self._reader.add_output(co)
-        return True
 
-    def __do_write(self, reader, writable):
-        server = self._socket
-        for sock in writable:
-            client = self._clients.get(co, None)
-            if client is None:
-                continue
-            try:
-                next_msg = client.queue.get_nowait()
-            except Queue.Empty:
-                outputs.remove(co)
-                continue
-            try:
-                server.sendall(next_msg.encode())
-            except Exception as e:
-                err = "Error sending to client {}".format(client.addr)
-                self.log_error(err)
-                self.notify_error(err)
-                continue
-        return True
-
-    """ IService """
-
-    def _start_impl(self):
-        self._clients = {}
-        return True
-
-    def _stop_impl(self):
-        self._clients = {}
-        return True
-
-    def _pause_impl(self):
-        return True
-
-    def _resume_imp(self):
-        return True
+    def _set_client_connected(self, co, active):
+        if active:
+            self._clients[co] = {
+                "name": "Client_" + str(co),
+                "addr": "",
+                "time_co": time.time(),
+                "socket": co,
+            }
+        else:
+            self._clients[co] = None

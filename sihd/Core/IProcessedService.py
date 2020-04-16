@@ -10,7 +10,7 @@ from .IConfigurable import IConfigurable
 
 from .SihdWorker import SihdWorker
 
-from .Channel import ChannelPipe, ChannelArray, ChannelValue
+from .Channel import ChannelArray, ChannelValue
 
 class IProcessedService(IService):
 
@@ -31,30 +31,28 @@ class IProcessedService(IService):
 
     """ Channels creation methods """
 
+    def create_channel_list(self, name, **kwargs):
+        if kwargs.get('size', None) is not None \
+            and kwargs.get('var_type', None) is not None:
+            return ChannelArray(name=name, **kwargs)
+        return ChannelList(name=name, **kwargs)
+
     def create_channel_int(self, name, **kwargs):
-        return ChannelValue(name=name, type='i', **kwargs)
+        return ChannelValue(name=name, var_type='i', **kwargs)
 
     def create_channel_double(self, name, **kwargs):
-        return ChannelValue(name=name, type='d', **kwargs)
+        return ChannelValue(name=name, var_type='d', **kwargs)
+
+    def create_channel_default(self, name, **kwargs):
+        if kwargs.get('var_type', None):
+            return ChannelValue(name=name, **kwargs)
+        return super().create_channel_default(name, **kwargs)
 
     def create_channel_value(self, name, **kwargs):
         return ChannelValue(name=name, **kwargs)
 
     def create_channel_array(self, name, **kwargs):
         return ChannelArray(name=name, **kwargs)
-
-    @staticmethod
-    def create_channel_pipe(name, **kwargs):
-        """ Args: block=True/False ; timeout=float """
-        global multiprocessing
-        if multiprocessing is None:
-            import multiprocessing
-        parent, child = multiprocessing.Pipe()
-        parent_chan = ChannelPipe(name=name + "_parent",
-                                    child=False, pipe=parent, **kwargs)
-        child_chan = ChannelPipe(name=name + "_child",
-                                    child=True, pipe=child, **kwargs)
-        return parent_chan, child_chan
 
     """ IConfigurable """
 

@@ -23,13 +23,11 @@ class IObservable(INamedObject):
             observer.on_notify(self)
 
     def remove_observer(self, observer):
-        ret = False
         try:
             self.__observers.remove(observer)
-            ret = True
         except KeyError:
-            pass
-        return ret
+            return False
+        return True
 
     def clear_observers(self):
         self.__observers = set()

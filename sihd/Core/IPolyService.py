@@ -25,13 +25,22 @@ class IPolyService(IThreadedService, IProcessedService, IDumpable):
         super(IPolyService, self).__init__(name)
         self._set_default_conf({
             "service_type": "default",
+            "channels_mp": 0,
         })
+        self.__channels_mp = False
         self.set_service_default()
         self.__service_types_fun = {
             1: self.set_service_default,
             2: self.set_service_threading,
             3: self.set_service_multiprocess
         }
+
+    def get_description(self):
+        ret = super().get_description()
+        if ret:
+            ret += ", "
+        ret += "type=" + self.__service_type_str
+        return ret
 
     def do_setup(self):
         ret = super().do_setup()
@@ -43,6 +52,7 @@ class IPolyService(IThreadedService, IProcessedService, IDumpable):
                 ret = False
             else:
                 self.__service_types_fun[val]()
+            self.__channels_mp = bool(int(self.get_conf("channels_mp")))
         return ret
 
     """ Channels """
@@ -58,7 +68,7 @@ class IPolyService(IThreadedService, IProcessedService, IDumpable):
         return IService.create_channel_double(self, name=name, **kwargs)
 
     def create_channel(self, name, **kwargs):
-        if self.is_service_multiprocess():
+        if self.is_service_multiprocess() or self.__channels_mp is True:
             kwargs['mp'] = True
         return super().create_channel(name, **kwargs)
 
@@ -70,6 +80,7 @@ class IPolyService(IThreadedService, IProcessedService, IDumpable):
     """ Thread """
 
     def set_service_threading(self):
+        self.__service_type_str = "threading"
         self.__service_type = self.__service_types.thread
 
     def is_service_threading(self):
@@ -78,6 +89,7 @@ class IPolyService(IThreadedService, IProcessedService, IDumpable):
     """ Process """
 
     def set_service_multiprocess(self):
+        self.__service_type_str = "process"
         self.__service_type = self.__service_types.process
 
     def is_service_multiprocess(self):
@@ -86,6 +98,7 @@ class IPolyService(IThreadedService, IProcessedService, IDumpable):
     """ Service """
 
     def set_service_default(self):
+        self.__service_type_str = "default"
         self.__service_type = self.__service_types.default
 
     """ IDumpable """

@@ -25,8 +25,8 @@ class CmdReader(IReader, IObserver):
             "stderr_to_out": False,
             "handle_process": True,
             'thread_frequency': 10,
+            'process_frequency': 10,
         })
-        self.set_step_method(self.diffuse_execution)
         self._handle_proc = True
         self._cmd = ""
         self._last_proc = None
@@ -34,8 +34,8 @@ class CmdReader(IReader, IObserver):
 
     """ IConfigurable """
 
-    def _setup_impl(self):
-        super(CmdReader, self)._setup_impl()
+    def do_setup(self):
+        ret = super().do_setup()
         cmd = self.get_conf("cmd", default=False)
         if cmd:
             self.set_cmd(cmd)
@@ -58,7 +58,7 @@ class CmdReader(IReader, IObserver):
         handle = self.get_conf("handle_process")
         if handle:
             self.set_handle_process(handle)
-        return True
+        return ret
 
     def set_handle_process(self, active):
         self._handle_proc = active
@@ -161,7 +161,7 @@ class CmdReader(IReader, IObserver):
             self._last_proc = proc
         return ret
 
-    def diffuse_execution(self):
+    def do_step(self):
         self.__clear_last_proc()
         proc = self._interactor.execute()
         if proc:

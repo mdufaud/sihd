@@ -5,9 +5,7 @@
 import time
 import os
 import sys
-
 import test_utils
-import sihd
 import unittest
 
 try:
@@ -24,12 +22,8 @@ try:
 except FileNotFoundError:
     multiprocessing = None
 
-
-""" Setting up basic logging """
-
-import logging
-logger = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG)
+import sihd
+logger = sihd.set_log()
 
 from sihd.Readers.IReader import IReader
 from sihd.Handlers.IHandler import IHandler
@@ -246,6 +240,3 @@ class TestMultiprocess(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-
-for l in sihd.find("Reader", max_depth=10):
-    print(l)

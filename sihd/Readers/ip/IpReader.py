@@ -2,11 +2,16 @@
 #coding: utf-8
 
 """ System """
-
 import time
 import os
 import socket
 import select
+
+try:
+    import Queue
+except ImportError:
+    import queue
+    Queue = queue
 
 from sihd.Readers.IReader import IReader
 
@@ -14,6 +19,7 @@ class IpReader(IReader):
     
     def __init__(self, app=None, name="IpReader"):
         super(IpReader, self).__init__(app=app, name=name)
+        self._clients = {}
         self._socket = None
         self._inputs = []
         self._outputs = []
@@ -21,29 +27,37 @@ class IpReader(IReader):
         self._set_default_conf({
             "port": 42042,
             "max_connexions": 5,
-            "type": "tcp",
-            "protocol": "ipv4",
+            "protocol": "tcp",
+            "sock_type": "ipv4",
+            "rcv_buf": 4096,
+            "poll_timeout": 0.1,
         })
-        self.set_step_method(self._do_select)
+        self.add_channel_input("c_server_action", type='queue')
+        self.add_channel_input("c_packet_send", type='queue')
+        self.add_channel_output("c_packet_data")
+        self.add_channel_output("c_client_info")
+        self.add_channel_output("c_server_msg")
 
     """ IConfigurable """
 
-    def _setup_impl(self):
-        super(IpReader, self)._setup_impl()
-        max_co = self.get_conf("max_connexions")
-        if max_co:
-            self._max_co = int(max_co)
-        socket = self.get_conf("type")
-        if socket:
-            self._socket_type = IpReader.get_socket_type(socket)
-        protocol = self.get_conf("protocol")
-        if protocol:
-            self._protocol = IpReader.get_protocol(protocol)
-        if self._socket is None:
-            port = self.get_conf("port")
-            if port:
-                self.set_source(port)
+    def do_setup(self):
+        ret = super().do_setup()
+        self._max_co = int(self.get_conf("max_connexions"))
+        self._protocol = self.get_socket_type(self.get_conf("protocol"))
+        self._sock_type = self.get_protocol(self.get_conf("sock_type"))
+        self._rcv_buf = int(self.get_conf("rcv_buf"))
+        self._to = float(self.get_conf("poll_timeout"))
+        self.set_source(int(self.get_conf("port")))
         return True
+
+    def handle(self, channel):
+        if self.is_tcp() and channel == self.c_packet_send:
+            i = 0
+            max_iter = 10
+            while channel.is_readable() or i >= max_iter:
+                msg, co = channel.read()
+                self.buff_send(msg, co)
+                i += 1
 
     """ Getters """
 
@@ -68,13 +82,13 @@ class IpReader(IReader):
         return None
 
     def is_raw(self):
-        return self._socket_type == socket.SOCK_RAW
+        return self._protocol == socket.SOCK_RAW
 
     def is_tcp(self):
-        return self._socket_type == socket.SOCK_STREAM
+        return self._protocol == socket.SOCK_STREAM
 
     def is_udp(self):
-        return self._socket_type == socket.SOCK_DGRAM
+        return self._protocol == socket.SOCK_DGRAM
 
     def get_serv_addr(self):
         return ("localhost", self._port)
@@ -84,16 +98,16 @@ class IpReader(IReader):
 
     """ Select utilities """
 
-    def add_input(self, co):
+    def add_server_input(self, co):
         self._inputs.append(co)
 
-    def add_output(self, co):
+    def add_server_output(self, co):
         self._outputs.append(co)
 
-    def remove_input(self, co):
+    def remove_server_input(self, co):
         self._inputs.remove(co)
 
-    def remove_output(self, co):
+    def remove_server_output(self, co):
         if co in self._outputs:
             self._outputs.remove(co)
 
@@ -106,7 +120,7 @@ class IpReader(IReader):
         if self.is_up():
             return True
         self._port = int(port)
-        sock = socket.socket(self._protocol, self._socket_type)
+        sock = socket.socket(self._sock_type, self._protocol)
         if not sock:
             self.log_error("Could not open socket")
             return False
@@ -126,7 +140,7 @@ class IpReader(IReader):
             self.stop_server(False)
             return False
         self._listening = False
-        if self._socket_type == socket.SOCK_STREAM:
+        if self._protocol == socket.SOCK_STREAM:
             try:
                 sock.listen(self._max_co)
                 self._listening = True
@@ -141,6 +155,7 @@ class IpReader(IReader):
 
     def stop_server(self, do_time=False):
         if self.is_up():
+            self._clients = {}
             self._inputs = []
             self._outputs = []
             self._socket.close()
@@ -152,25 +167,113 @@ class IpReader(IReader):
 
     """ Select """
 
-    def _do_select(self):
-        server = self._socket
-        outputs = self._outputs
+    def do_step(self):
+        server = self.get_server()
         inputs = self._inputs
-        readable, writable, exceptional = select.select(inputs,
-                                                        outputs,
-                                                        inputs,
-                                                        1)
-        if exceptional:
-            err = "Select exceptional: {}".format(exceptional)
-            self.log_error(err)
-            self.notify_error(err)
+        # readable, writable, exceptionnal
+        r, w, ex = select.select(inputs, self._outputs,
+                                inputs, self._to)
+        if ex:
+            self.log_error("Select exceptional: {}".format(ex))
             return False
-        if self.is_active() and (readable or writable):
+        if self.is_active():
+            if r:
+                self._do_read(r)
+            if w:
+                self._do_write(w)
+        return True
+
+    """ Read part """
+
+    def get_client(self, co):
+        if isinstance(co, int):
+            return self._clients.get(co, None)
+        return self._clients.get(co.fileno(), None)
+
+    def _accept_client(self):
+        co, addr = self.get_server().accept()
+        self.log_debug("New connexion from {}:{}".format(addr[0], addr[1]))
+        co.setblocking(0)
+        fileno = co.fileno()
+        self.add_server_input(co)
+        self._clients[fileno] = {
+            "addr": addr,
+            "socket": co,
+            "msg": 0,
+            "queue": Queue.Queue(),
+        }
+        self.c_client_info.write((fileno, "co", True))
+        self.c_client_info.write((fileno, "addr", True))
+
+    def _remove_client(self, co):
+        self.remove_server_input(co)
+        self.remove_server_output(co)
+        client = self.get_client(co)
+        self.log_debug("Client {} has left".format(client["addr"]))
+        self._clients[co.fileno()] = None
+        co.close()
+        self.c_client_info.write((co.fileno(), "co", False))
+
+    def _read_tcp_client(self, co):
+        client = self.get_client(co)
+        data = co.recv(self._rcv_buf)
+        if data:
+            client["msg"] += 1
+            self.c_packet_data.write((data.decode(), co.fileno()))
+        else:
+            self._remove_client(co)
+
+    def _read_udp_packet(self, co):
+        data, server = co.recvfrom(self._rcv_buf)
+        if data:
+            self.c_packet_data.write((data.decode(), server))
+
+    def _do_read(self, readable):
+        ret = True
+        server = self.get_server()
+        for sock in readable:
+            if sock is server:
+                if self.is_tcp():
+                    ret = self._accept_client()
+                elif self.is_udp():
+                    ret = self._read_udp_packet(sock)
+            else:
+                ret = self._read_tcp_client(sock)
+            if ret == False:
+                break
+
+    """ Sender part """
+
+    def buff_send(self, msg, co):
+        client = self.get_client(co)
+        if client is None:
+            self.log_debug("No such client {} to send to".format(co))
+            return False
+        #TODO set actions like kick
+        client['queue'].put(msg)
+        if isinstance(co, int):
+            co = client['socket']
+        if co not in self._outputs:
+            self.add_server_output(co)
+        return True
+
+    def _do_write(self, writable):
+        server = self.get_server()
+        for sock in writable:
+            client = self.get_client(sock)
+            if client is None:
+                continue
             try:
-                self.notify_observers(readable, writable)
+                next_msg = client['queue'].get_nowait()
+            except Queue.Empty:
+                self.remove_server_output(sock)
+                continue
+            #TODO execute actions like kick
+            try:
+                sock.sendall(next_msg.encode())
             except Exception as e:
-                self.stop()
-                raise
+                self.log_error("Error sending to client {}".format(client['addr']))
+                continue
         return True
 
     """ IService """
@@ -180,6 +283,7 @@ class IpReader(IReader):
             self.log_error("Server is not up")
             return False
         if self._listening is True:
+            self._clients = {}
             s = "Accepting connections ({} max)".format(self._max_co)
             self.log_info(s)
         return super(IpReader, self)._start_impl()

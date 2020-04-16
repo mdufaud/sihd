@@ -12,20 +12,22 @@ class IInteractor(Core.IPolyService, Core.IAppContainer):
         if (app):
             self.set_app(app)
         self.__interaction = None
-        self.add_channel_input("interaction", type="queue")
+        self.add_channel_input("c_interaction", type="queue")
+        self.add_channel_output("c_result")
 
-    """ To change """
+    """ To implement """
 
-    def on_new_interaction(self, action):
+    def on_new_interaction(self, action: "data from c_interaction")\
+            -> "parsed interaction to use":
         return action
 
-    def interact(self, action=None, *args, **kwargs):
+    def interact(self, action=None, *args, **kwargs) -> bool:
         if action is None:
             action = self.get_interaction()
-        return self.on_interaction(action, *args, **kwargs)
+        return self.do_interaction(action, *args, **kwargs)
 
-    def on_interaction(self, action, *args, **kwargs):
-        raise NotImplementedError("Interact not implemented")
+    def do_interaction(self, action, *args, **kwargs) -> bool:
+        raise NotImplementedError("do_interaction not implemented")
 
     """ IInteractor """
 
@@ -39,13 +41,18 @@ class IInteractor(Core.IPolyService, Core.IAppContainer):
     def get_interaction(self):
         return self.__interaction
 
-    """ IObserver """
+    def set_result(self, res):
+        self.c_result.write(res)
 
-    def on_notify(self, channel):
-        if channel == self.interaction:
+    """ IService """
+
+    def _pre_handle(self, channel):
+        if channel == self.c_interaction:
             action = channel.read()
             if action is not None:
                 self.set_interaction(action)
+            return True
+        return False
 
     """ IProcessedService """
 

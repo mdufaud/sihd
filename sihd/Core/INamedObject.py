@@ -16,7 +16,7 @@ class INamedObject(object):
         return self.__name
 
     def get_description(self):
-        return None
+        return ""
 
     def say(self, s, prefix="", **kwargs):
         print("{0}: {1}{2}".format(self.get_name(), prefix, s), **kwargs)

@@ -15,7 +15,7 @@ class WordHandler(IHandler):
         self.__toskip = None
         self.__delimiter = None
         self.__skipped = 0
-        self.add_channel_input('input', type='queue')
+        self.add_channel_input('input', type='queue', simple=True)
         self.add_channel_output('output', type='dict')
         self.add_channel_output('skipped', type='int', default=0)
 

@@ -35,8 +35,8 @@ class CmdInteractor(IInteractor):
 
     """ IConfigurable """
 
-    def _setup_impl(self):
-        super(CmdInteractor, self)._setup_impl()
+    def do_setup(self):
+        ret = super().do_setup()
         cmd = self.get_conf("cmd", default=False)
         if cmd:
             self.set_cmd(cmd)
@@ -72,7 +72,7 @@ class CmdInteractor(IInteractor):
 
     """ IInteractor """
 
-    def _interact_impl(self, cmd, *args, **kwargs):
+    def do_interaction(self, cmd, *args, **kwargs):
         return self.exe(cmd)
 
     """ Cmd """

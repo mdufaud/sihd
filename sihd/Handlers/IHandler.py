@@ -12,18 +12,15 @@ class IHandler(Core.IPolyService, Core.IAppContainer):
         if (app):
             self.set_app(app)
 
+    def handle_service(self, service) -> bool:
+        return False
+
     """ IProcessedService """
 
-    def do_work(self, i):
+    def do_work(self, i: int) -> bool:
         return self.do_step()
 
-    """ IObserver """
-
-    def on_notify(self, channel):
-        if self.is_active():
-            self.handle(channel)
-
-    """ IHandler """
+    """ IService """
 
     def handle(self, channel):
         raise NotImplementedError("handle not implemented")

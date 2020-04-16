@@ -2,8 +2,6 @@
 #coding: utf-8
 
 """ System """
-
-
 import socket
 
 from sihd.Interactors.IInteractor import IInteractor
@@ -15,32 +13,54 @@ class IpInteractor(IInteractor):
         self._set_default_conf({
             "port": 42042,
             "host": "localhost",
-            "type": "tcp",
+            "protocol": "tcp",
         })
-        self._tcp_socket = None
-        self._host = ""
-        self._port = 0
+        self.__tcp_socket = None
+        self.__host = ""
+        self.__port = 0
+        self.add_channel_input("c_port", type='int')
+        self.add_channel_input("c_host", type='queue')
+        self.add_channel_input("c_protocol", type='queue')
 
     """ IConfigurable """
 
     def do_setup(self):
         ret = super().do_setup()
-        self._port = int(self.get_conf("port"))
-        self._host = str(self.get_conf("host"))
-        self._type = str(self.get_conf("type"))
+        self.__port = int(self.get_conf("port"))
+        self.__host = str(self.get_conf("host"))
+        self.__protocol = str(self.get_conf("protocol"))
         return ret
 
     """ IInteractor """
 
+    def handle(self, channel):
+        if channel == self.c_port:
+            port = channel.read()
+            if port:
+                self.__port = p
+                self.close_tcp()
+        elif channel == self.c_host:
+            host = channel.read()
+            if host:
+                self.__host = host
+                self.close_tcp()
+        elif channel == self.c_type:
+            t = channel.read()
+            if t:
+                self.__protocol = t
+                self.close_tcp()
+
     def on_new_interaction(self, action):
         return action.encode()
 
-    def on_interaction(self, data, *args, **kwargs):
-        t = self._type
-        if t == "tcp":
+    def do_interaction(self, data, *args, **kwargs):
+        p = self.__protocol
+        if p == "tcp":
             return self.send_tcp_once(data, *args, **kwargs)
-        elif t == "udp":
-            return self.send_udp(self._host, self._port, data, *args, **kwargs)
+        elif p == "udp":
+            return self.send_udp(self.__host, self.__port, data, *args, **kwargs)
+        else:
+            self.log_error("Protocol {} not recognized".format(p))
         return False
 
     """ UDP """
@@ -48,7 +68,7 @@ class IpInteractor(IInteractor):
     def send_udp(self, host, port, data):
         sent = False
         s = None
-        for res in socket.getaddrinfo(self._host, self._port,
+        for res in socket.getaddrinfo(self.__host, self.__port,
                                         socket.AF_UNSPEC,
                                         socket.SOCK_DGRAM):
             af, socktype, proto, canonname, sa = res
@@ -60,10 +80,10 @@ class IpInteractor(IInteractor):
             break
         if s is None:
             self.log_error("Could not open socket for '{}:{}'".format(
-                            self._host, self._port))
+                            self.__host, self.__port))
             return False
         try:
-            s.sendto(data, (self._host, self._port))
+            s.sendto(data, (self.__host, self.__port))
             sent = True
         except Exception as e:
             self.log_error("Could not send data: {}".format(e))
@@ -74,14 +94,14 @@ class IpInteractor(IInteractor):
 
     def close_tcp(self):
         if self.is_tcp_connected():
-            self._tcp_socket.close()
-            self._tcp_socket = None
+            self.__tcp_socket.close()
+            self.__tcp_socket = None
 
     def is_tcp_connected(self):
-        return self._tcp_socket is not None
+        return self.__tcp_socket is not None
 
     def connect_tcp(self, host, port):
-        s = self._tcp_socket
+        s = self.__tcp_socket
         if s:
             return s
         for res in socket.getaddrinfo(host, port,
@@ -101,16 +121,16 @@ class IpInteractor(IInteractor):
                 continue
             break
         if s:
-            self._host = host
-            self._port = port
-            self._tcp_socket = s
+            self.__host = host
+            self.__port = port
+            self.__tcp_socket = s
         else:
             self.log_error("Could not open socket for '{}:{}'".format(host, port))
         return s
 
     def send_tcp(self, data, *args, **kwargs):
         sent = False
-        s = self._tcp_socket
+        s = self.__tcp_socket
         if not s:
             self.log_error("No socket opened")
             return False
@@ -124,7 +144,7 @@ class IpInteractor(IInteractor):
     def send_tcp_once(self, data, *args, **kwargs):
         ret = False
         self.close_tcp()
-        if self.connect_tcp(self._host, self._port) is not None:
+        if self.connect_tcp(self.__host, self.__port) is not None:
             ret = self.send_tcp(data, *args, **kwargs)
             self.close_tcp()
             return ret

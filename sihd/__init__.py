@@ -9,11 +9,19 @@ from .Tools import *
 
 __version__ = "0.0.1"
 
+def set_log(level='info', stream=None):
+    Core.ILoggable.add_stream_handler(level=level, stream=stream)
+    Core.ILoggable.set_color(True)
+    return Core.ILoggable.logger
+
 def set_log_color(activate):
     Core.ILoggable.set_color(activate)
 
-def get(name, **kwargs):
+def get_cls(name, **kwargs):
     return Core.Factory.get(name, **kwargs)
 
-def find(name, **kwargs):
+def find_cls(name, **kwargs):
     return Core.Factory.find(name, **kwargs)
+
+def get_mem():
+    return Tools.sys.memory.get_current_mem()

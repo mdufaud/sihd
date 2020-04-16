@@ -2,8 +2,6 @@
 #coding: utf-8
 
 """ System """
-
-
 import socket
 
 json = None
@@ -31,6 +29,7 @@ class HttpInteractor(IInteractor):
             import urllib.parse as urllib_parse
         self._set_default_conf({
             "thread_frequency": 1,
+            "process_frequency": 1,
             "url": "",
             "query": "",
             "json_post_file": "/path/to/json/post",
@@ -42,13 +41,14 @@ class HttpInteractor(IInteractor):
         self._query = None
         self._req = None
         self._post_file_path = None
-        self.add_channel_output("output")
+        self.add_channel_input("c_query", type='queue')
+        self.add_channel_input("c_headers", type='queue')
+        self.add_channel_input("c_post", type='queue')
 
     """ IConfigurable """
 
     def do_setup(self):
         ret = super().do_setup()
-        self._url = self.get_conf("url")
         path_post = self.get_conf("json_post_file", default=False)
         if path_post:
             post = self.get_json_from_file(path_post)
@@ -60,13 +60,39 @@ class HttpInteractor(IInteractor):
         query = self.get_conf("query")
         if query:
             ret = ret and self.set_query(query)
-        self.make_request()
+        self._url = self.get_conf("url")
+        if self._url:
+            self.make_request()
         return ret
 
     """ IInteractor """
 
-    def on_interaction(self, data, *args, **kwargs):
+    def handle(self, channel):
+        if channel == self.c_query:
+            query = channel.read()
+            if query:
+                self.set_query(query)
+        elif channel == self.c_headers:
+            hdr_json = channel.read()
+            if hdr_json:
+                hdr = json.loads(hdr_json)
+                self.set_headers(hdr)
+        elif channel == self.c_post:
+            post_json = channel.read()
+            if post_json:
+                post = json.loads(post_json)
+                self.set_post(post)
+
+    def on_new_interaction(self, url):
+        self.make_request(url)
+        return url
+
+    def do_interaction(self, url, *args, **kwargs):
+        if self._req is None:
+            #Waiting for interaction
+            return True
         resp = self.send(*args, **kwargs)
+        self.set_result(resp)
         return resp is not None
 
     """ Request """

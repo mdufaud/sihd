@@ -23,7 +23,10 @@ class TestApp(unittest.TestCase):
     def file_expect(self, app, lines, skipped,
                     check_words, prt=False):
         reader = app._line_reader
-        handler = app._word_handler 
+        handler = app._word_handler
+        print(reader)
+        print(handler)
+        print(handler.output)
         words_dict = handler.output.get_data()
 
         for key, value in words_dict.items():
@@ -31,7 +34,7 @@ class TestApp(unittest.TestCase):
                 print("{}: {}".format(key, value))
             expected = check_words.get(key, None)
             if expected is not None:
-                self.assertEqual(expected, value), "{}: {} != {}".format(key, value, expected)
+                self.assertEqual(expected, value)
 
         self.assertEqual(handler.skipped.read(), skipped), "{} != {}".format(handler.skipped.read(), skipped)
         self.assertEqual(reader.lines.read(), lines), "{} != {}".format(reader.lines.read(), lines)
@@ -64,7 +67,11 @@ class TestApp(unittest.TestCase):
     def test_file_reader(self):
         dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
         self.do_file(os.path.join(dir_path, "5_lines.txt"), 5, 0, {"world": 2})
+
+    def test_file_reader_2(self):
+        dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
         self.do_file(os.path.join(dir_path, "comments_and_empty_lines.txt"), 10, 6, {"A": 2})
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
