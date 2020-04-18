@@ -7,8 +7,7 @@ from .ILoggable import ILoggable
 from .IConfigurable import IConfigurable
 from .IObserver import IObserver
 from .IDumpable import IDumpable
-from .Channel import Channel, ChannelQueue, ChannelDict, ChannelList, \
-                        ChannelCondition, ChannelBool
+from .Channel import *
 
 class IService(ILoggable, IConfigurable, IObserver, IDumpable):
 
