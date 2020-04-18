@@ -16,6 +16,7 @@ from .ILoggable import ILoggable
 
 multiprocessing = None
 mp_manager = None
+BaseManager = None
 mp_base_manager = None
 array = None
 RawArray = None
@@ -42,9 +43,13 @@ def _setup_mp_manager():
 def register_channel_object(name, cls):
     global BaseManager
     if BaseManager is None:
-        _setup_mp()
-        from multiprocessing.managers import BaseManager
-    BaseManager.register(name, cls)
+        try:
+            _setup_mp()
+            from multiprocessing.managers import BaseManager
+        except (ImportError, FileNotFoundError):
+            pass
+    if BaseManager is not None:
+        BaseManager.register(name, cls)
     ChannelObject.register_class(name, cls)
 
 class Channel(IObservable, IObserver, ILoggable):
@@ -374,33 +379,36 @@ class ChannelObject(PollableChannel):
 
     __classes = {}
 
-    def __init__(self, obj_args, mp=False, name="ChannelObject", **kwargs):
-        ident = obj_args.pop("ident")
-        args = obj_args.pop("args", ())
-        kwargs = obj_args.pop("kwargs", {})
+    def __init__(self, conf: dict, mp=False, name="ChannelObject", **kwargs):
+        ident = conf.pop("ident")
+        obj_args = conf.pop("args", ())
+        obj_kwargs = conf.pop("kwargs", {})
         if mp is True:
             _setup_mp_base_manager()
             create_obj = getattr(mp_base_manager, ident)
-            self.__obj = create_obj(*args, **kwargs)
+            self.__obj = create_obj(*obj_args, **obj_kwargs)
         else:
-            self.__obj = self.__classes[ident](*args, **kwargs)
+            self.__obj = self.__classes[ident](*obj_args, **obj_kwargs)
         super(ChannelObject, self).__init__(mp=mp, name=name, **kwargs)
 
     @staticmethod
     def register_class(ident, cls):
-        self.__classes[ident] = cls
+        ChannelObject.__classes[ident] = cls
 
-    def write(self, key, value):
-        return super().write((key, value))
+    def write(self, key, value=None):
+        if isinstance(key, (list, tuple, set)) and value is None:
+            data = key
+        else:
+            data = (key, value)
+        return super().write(data)
 
     def _write(self, data):
         key, value = data
         try:
-            item = getattr(self.__obj, key)
+            item = setattr(self.__obj, key, value)
         except AttributeError:
             self.log_error("No such attribute {}".format(key))
             return False
-        item = value
         return True
 
     def read(self, key, ret=None):

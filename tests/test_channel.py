@@ -34,6 +34,14 @@ def write_into_channel(channel, value, value2):
     else:
         channel.write(value)
 
+class TestClassPoint(object):
+
+    def __init__(self, x, y, threeD=False):
+        self.x = 0
+        self.y = 0
+        if threeD:
+            self.z = 0
+
 class TestChannel(unittest.TestCase):
 
     def setUp(self):
@@ -57,6 +65,40 @@ class TestChannel(unittest.TestCase):
                 self.assertTrue(channel.write(value, value2) == expect)
             else:
                 self.assertTrue(channel.write(value) == expect)
+
+    """ Channel Obj """
+
+    def do_object(self, channel, default):
+        logger.info("Testing " + str(channel))
+        self.assertTrue(channel.is_readable())
+        self.assertEqual(channel.read(default[0]), default[1])
+        channel.task_done()
+        self.assertFalse(channel.is_readable())
+        self.do_write(channel, 'x', 42)
+        self.assertEqual(channel.read('x'), 42)
+        self.assertEqual(channel.read('fake'), None)
+
+    def test_channel_object(self):
+        from sihd.Core.Channel import register_channel_object
+        register_channel_object("test_id", TestClassPoint)
+        print()
+        default = ('x', 4)
+        channel = ChannelObject({
+            "ident": "test_id",
+            "args": [1, 2],
+            "kwargs": {"threeD": True}
+        }, default=default)
+        self.do_object(channel, default)
+        
+        if multiprocessing:
+            print()
+            default = ('x', 4)
+            channel = ChannelObject({
+                "ident": "test_id",
+                "args": [1, 2],
+                "kwargs": {"threeD": True}
+            }, default=default, mp=True)
+            self.do_object(channel, default)
 
     """ Channel Bool """
 
