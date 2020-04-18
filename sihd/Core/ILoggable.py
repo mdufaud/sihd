@@ -25,28 +25,41 @@ class ILoggable(INamedObject):
 
     def __init__(self, name="ILoggable"):
         super(ILoggable, self).__init__(name)
-        self._log = ILoggable.logger
+        l = ILoggable.logger
+        self.__debug = l.debug
+        self.__info = l.info
+        self.__warning = l.warning
+        self.__error = l.error
+        self.__crit = l.critical
+        self.__can = True
 
-    def __log(self, fun_name, msg):
-        fun = getattr(self._log, fun_name)
-        fun("{0}: {1}".format(self.get_name(), msg))
+    def _set_log(self, activate):
+        self.__can = activate
+
+    def _log_format(self, msg):
+        return "{0}: {1}".format(self.get_name(), msg)
 
     def log_debug(self, msg):
-        self.__log("debug", msg)
+        if self.__can:
+            self.__debug(self._log_format(msg))
 
     def log_info(self, msg):
-        self.__log("info", msg)
+        if self.__can:
+            self.__info(self._log_format(msg))
 
     def log_warning(self, msg):
-        self.__log("warning", msg)
+        if self.__can:
+            self.__warning(self._log_format(msg))
         ILoggable.__warning_count += 1
 
     def log_error(self, msg):
-        self.__log("error", msg)
+        if self.__can:
+            self.__error(self._log_format(msg))
         ILoggable.__error_count += 1
 
     def log_critical(self, msg):
-        self.__log("critical", msg)
+        if self.__can:
+            self.__crit(self._log_format(msg))
         ILoggable.__critical_count += 1
 
     @staticmethod

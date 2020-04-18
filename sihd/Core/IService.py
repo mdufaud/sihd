@@ -123,7 +123,7 @@ class IService(ILoggable, IConfigurable, IObserver, IDumpable):
         for channel in self.get_channels_input():
             if channel.is_pollable() and channel.is_readable():
                 channel.notify()
-                channel.clear()
+                channel.task_done()
         return True
 
     """     Locking """

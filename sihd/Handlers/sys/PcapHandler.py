@@ -7,31 +7,37 @@ from sihd.Core.IDumpable import IDumpable
 from sihd.Tools.pcap import PcapWriter
 from sihd.Tools.pcap import PcapReader
 
-class PcapSaverHandler(IHandler):
+class PcapHandler(IHandler):
 
-    def __init__(self, app=None, name="PcapSaverHandler"):
-        super(PcapSaverHandler, self).__init__(app=app, name=name)
+    def __init__(self, app=None, name="PcapHandler"):
+        super(PcapHandler, self).__init__(app=app, name=name)
         self._set_default_conf({
             "service_type": "thread",
             "activate": 0,
             "save_raw": 0,
             "save_type": 'queue',
+            "endianness": 'big',
         })
         self.__save = False
-        self.__writer = PcapWriter()
         self.add_channel_input("activate", type='bool')
         self.add_channel_input("save", type='queue')
         self.add_channel_input("dump_path", type='queue')
 
+    """ IConfigurable """
+
     def do_setup(self):
         ret = super().do_setup()
-        self.__active = bool(int(self.get_conf("activate")))
         self.__save = bool(int(self.get_conf("save_raw")))
         if self.__save:
             self.add_channel_output("saved", type=self.get_conf('save_type'))
+        self.__writer = PcapWriter(self.get_conf("endianness"))
         return True
 
-    """ IObservable """
+    def on_setup(self):
+        self.set_saving(bool(int(self.get_conf("activate"))))
+        return True
+
+    """ IService """
 
     def handle(self, channel):
         if channel == self.save:
@@ -47,7 +53,11 @@ class PcapSaverHandler(IHandler):
             self.set_saving(channel.read())
         return True
 
-    """ PcapSaverHandler """
+    def on_stop(self):
+        #Unlock channels
+        self.set_saving(True)
+
+    """ PcapHandler """
 
     def set_saving(self, activate):
         if activate:
