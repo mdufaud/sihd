@@ -32,10 +32,11 @@ class IProcessedService(IService):
     """ Channels creation methods """
 
     def create_channel_list(self, name, **kwargs):
-        if kwargs.get('size', None) is not None \
-            and kwargs.get('var_type', None) is not None:
-            return ChannelArray(name=name, **kwargs)
-        return ChannelList(name=name, **kwargs)
+        size = kwargs.pop('size', None)
+        var_type = kwargs.pop('var_type', None)
+        if size is not None and var_type is not None:
+            return ChannelArray(name=name, size=size, var_type=var_type, **kwargs)
+        return super().create_channel_list(name=name, **kwargs)
 
     def create_channel_int(self, name, **kwargs):
         return ChannelValue(name=name, var_type='i', **kwargs)
@@ -95,18 +96,22 @@ class IProcessedService(IService):
         self.__worker = worker
         input_channels = self.get_channels_input()
         output_channels = self.get_channels_output()
-        for _, channel in input_channels.items():
-            channel.clear_observers()
         if worker.make_workers(input_channels, output_channels):
             if self.is_paused():
                 self.__worker.pause_workers()
             if worker.start_workers():
+                """ After workers started their processes
+                    Channels must be cleared of observers in the main process
+                    Or this process will be notified of inputs
+                """
+                for channel in input_channels:
+                    channel.clear_observers()
                 return True
             else:
                 self.log_error("Could not start workers")
         else:
             self.log_error("Could not make workers")
-        return False 
+        return False
 
     def _stop_impl(self):
         if os.getpid() == self.__main_pid:

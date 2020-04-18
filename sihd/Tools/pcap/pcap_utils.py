@@ -180,8 +180,12 @@ class PcapWriter:
         pkt = data
         return hdr, pkt
 
-    def add_pkt(self, data, sec=None, usec=None, caplen=None, wirelen=None):
+    def add_data(self, data, sec=None, usec=None, caplen=None, wirelen=None):
         hdr, pkt = self.make_pkt(data, sec, usec, caplen, wirelen)
+        self.add_cap(hdr, pkt)
+        return hdr, pkt
+
+    def add_cap(self, hdr, pkt):
         self.pkt_lst.append((hdr, pkt))
 
     def get_header(self):

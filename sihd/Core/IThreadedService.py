@@ -25,6 +25,10 @@ class IThreadedService(IService, IRunnable):
         pass
 
     def step(self):
+        """ Not necessarily useful since we have observer/observable
+            But in some cases when service is stopped you may want
+                to check your inputs
+        """
         self.read_channels_input()
         return self.do_step()
 
@@ -45,8 +49,10 @@ class IThreadedService(IService, IRunnable):
                             max_iter=self.__thread_max_iter)
         if self.is_paused():
             self.pause_thread()
-        self.start_thread()
         return True
+
+    def on_start(self):
+        self.start_thread()
 
     def _stop_impl(self):
         self.stop_thread()

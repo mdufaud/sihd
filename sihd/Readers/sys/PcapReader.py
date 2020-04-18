@@ -15,54 +15,65 @@ class PcapReader(IReader):
 
     def __init__(self, app=None, name="PcapReader"):
         super(PcapReader, self).__init__(app=app, name=name)
-        self.set_step_method(self.diffuse_pkt)
         self._set_default_conf({
             "path": "/path/to/file",
         })
-        self._fully_read = False
-        self._pcap_reader = None
-        self._bytes = 0
-        self.__last_pkt_info = None
+        self.__to_recover = 0
+        self.__pcap_reader = None
+        self.add_channel_input("path", type='queue', simple=True)
+        self.add_channel_output("pcap_header")
+        self.add_channel_output("packet")
+        self.add_channel_output("packet_info")
+        self.add_channel_output('packets', type='int', default=0)
+        self.add_channel_output('eof', type='bool',
+                                default=True, timeout=0.1)
 
     """ IConfigurable """
 
-    def _setup_impl(self):
-        super(PcapReader, self)._setup_impl()
-        path = self.get_conf("path", default=False)
-        if path:
-            self.set_source(path)
-        if not self._pcap_reader:
-            return False
-        return True
+    def on_setup(self):
+        ret = super().on_setup()
+        if ret:
+            path = self.get_conf("path", default=False)
+            if path:
+                self.set_source(path)
+        return ret
+
+    """ IService """
+
+    def handle(self, channel):
+        if channel == self.path:
+            path = channel.read()
+            if path:
+                self.set_source(path)
 
     """ Reader """
 
-    def _can_recover(self):
-        if self._path not in PcapReader.files_read:
-            return
-        tupl = PcapReader.files_read[self._path]
-        if tupl[1] == False:
-            s = "File {} already read".format(self._path)
-            self.log_info(s)
-            return
-        self._to_recover = tupl[0]
-        s = "To recover {}".format(self._to_recover)
-        self.log_debug(s)
-
-    def _recover(self):
-        while self.is_active() and self._to_recover > 0:
-            bytes_read = self._pcap_reader.fd(self._to_recover)
-            self._to_recover -= bytes_read
-        if self._to_recover > 0:
+    def __can_recover(self):
+        if self.__path not in PcapReader.files_read:
             return False
-        s = "Recovered {}".format(self._path)
-        self.log_info(s)
+        tupl = PcapReader.files_read[self.__path]
+        if tupl[1] == False:
+            s = "File {} already read".format(self.__path)
+            self.log_info(s)
+            return True
+        self.__to_recover = tupl[0]
+        self.log_debug("To recover {}".format(self.__to_recover))
+        return True
+
+    def __recover(self):
+        reader = self.__pcap_reader
+        recover = self.__to_recover
+        while self.is_active() and recover > 0:
+            info, pkt = self.__pcap_reader.read_pkt()
+            recover -= 1
+        self.__to_recover = recover
+        if recover > 0:
+            return False
+        self.log_info("Recovered {}".format(self.__path))
         return True
 
     def set_source(self, path):
-        self._path = os.path.abspath(path) if path else None
-        self._pkts = 0
-        self._to_recover = 0
+        path = os.path.abspath(path) if path else None
         reader = PcapReaderTool()
         try:
             reader.open(path)
@@ -70,11 +81,18 @@ class PcapReader(IReader):
             self.log_error("Cannot open: {}".format(err))
         if reader.check_magic() is True:
             if reader.check_header() is True:
-                self.__last_pkt_info = None
-                if self._pcap_reader:
-                    self._pcap_reader.close()
-                self._pcap_reader = reader
-                self._can_recover()
+                if self.__pcap_reader:
+                    self.__pcap_reader.close()
+                self.__path = path
+                self.__pkts = 0
+                self.__to_recover = 0
+                self.__pcap_reader = reader
+                #Channel update
+                self.pcap_header.write(reader.get_header())
+                self.packets.write(0)
+                self.eof.write(0)
+                self.log_info("Reading file {name}".format(name=self.__path))
+                self.__can_recover()
             else:
                 self.log_error("Invalid pcap file {}".format(path))
         else:
@@ -82,51 +100,51 @@ class PcapReader(IReader):
         return reader.is_open()
 
     def get_pcap_header(self):
-        rd = self._pcap_reader
+        rd = self.__pcap_reader
         if rd:
             return rd.get_header()
         return None
 
-    def get_pkt_info(self):
-        return self.__last_pkt_info
-
-    def diffuse_pkt(self):
-        if self._to_recover > 0 and self._recover() == False:
-            return True
+    def read_packet(self):
+        info = None
+        pkt = None
         try:
-            info, pkt = self._pcap_reader.read_pkt()
+            info, pkt = self.__pcap_reader.read_pkt()
         except EOFError as e:
-            pkt = None
+            pass
+        return info, pkt
+
+    def do_step(self):
+        if not self.__pcap_reader:
+            return True
+        if self.__to_recover > 0 and self.__recover() == False:
+            return True
+        info, pkt = self.read_packet()
         if pkt is None:
             self._read_end()
             return False
-        self.__last_pkt_info = info
-        self.deliver(pkt)
-        self._pkts += 1
+        self.packet_info.write(info)
+        self.packet.write(pkt)
+        self.__pkts += 1
+        self.packets.write(self.__pkts)
         return True
 
     def _read_end(self):
         stop_time = time.time()
-        self.log_info("File {0:s} read - {1:d} packets".format(self._path, self._pkts))
+        self.log_info("File {0:s} read - {1:d} packets".format(self.__path, self.__pkts))
         self.log_debug("took {0:.3f} seconds to read and process {1:d} lines"\
-                .format(stop_time - self.get_service_start_time(), self._pkts))
-        self._fully_read = True
-        PcapReader.files_read[self._path] = (self._bytes, False)
-        self.stop()
+                .format(stop_time - self.get_service_start_time(), self.__pkts))
+        self.eof.write(1)
+        self.close()
+
+    def close(self):
+        if self.__pcap_reader:
+            self.__pcap_reader.close()
+            self.__pcap_reader = None
+            PcapReader.files_read[self.__path] = (self.__pkts, self.eof.read() == False)
+            self.log_debug("File {} closed".format(self.__path))
 
     """ IService """
 
-    def _start_impl(self):
-        if self._pcap_reader is None:
-            self.log_error("No reader has been set")
-            return False
-        s = "Reading file {name}".format(name=self._path)
-        self.log_info(s)
-        return super(PcapReader, self)._start_impl()
-
-    def _stop_impl(self):
-        if self._pcap_reader:
-            self._pcap_reader.close()
-            self._pcap_reader = None
-        PcapReader.files_read[self._path] = (self._pkts, self._fully_read == False)
-        return super(PcapReader, self)._stop_impl()
+    def on_stop(self):
+        self.close()

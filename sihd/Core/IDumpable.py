@@ -13,10 +13,11 @@ class IDumpable(INamedObject):
         super(IDumpable, self).__init__(name)
         self.__file_magic = None
 
-    def _dump(self):
+    def on_dump(self) -> dict:
+        """ You can add or remove stuff from dumping """
         return {}
 
-    def _load(self, dic):
+    def on_load(self, dic: dict):
         """ You can change here to do specific stuff on loading """
         pass
 

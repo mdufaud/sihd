@@ -6,10 +6,11 @@ import time
 from .ILoggable import ILoggable
 from .IConfigurable import IConfigurable
 from .IObserver import IObserver
+from .IDumpable import IDumpable
 from .Channel import Channel, ChannelQueue, ChannelDict, ChannelList, \
                         ChannelCondition, ChannelBool
 
-class IService(ILoggable, IConfigurable, IObserver):
+class IService(ILoggable, IConfigurable, IObserver, IDumpable):
 
     def __init__(self, name="IService"):
         super(IService, self).__init__(name)
@@ -17,19 +18,34 @@ class IService(ILoggable, IConfigurable, IObserver):
         self.__paused = False
         self._state_observers = set()
         self.__channels = dict()
-        self.__channels_input = dict()
-        self.__channels_output = dict()
+        self.__channels_input = list()
+        self.__channels_output = list()
         self.__todo_ichan = list()
         self.__todo_ochan = list()
         self.__start_time = None
         self.__stop_time = None
 
+    """ IDumpable """
+
+    def on_dump(self) -> dict:
+        if self.is_active():
+            raise RuntimeError("Cannot dump a running service")
+        dic = super().on_dump()
+        return dic
+
+    def on_load(self, dic: dict):
+        if self.is_active():
+            raise RuntimeError("Cannot load a running service")
+        super().on_load(dic)
+
     """ IObserver """
 
     def handle(self, channel):
+        """ Handle service's input """
         pass
 
-    def _pre_handle(self, channel):
+    def _pre_handle(self, channel) -> bool:
+        """ Used for services that want to handle stuff before user parsing """
         return False
 
     def on_notify(self, channel):
@@ -64,10 +80,26 @@ class IService(ILoggable, IConfigurable, IObserver):
         return Channel(name=name, **kwargs)
 
     def create_channel(self, name, **kwargs):
-        """ Args:
-                type = channel_type
-                block = bool
-                timeout = float
+        """
+            Gets a create_channel_TYPE from service methods
+            and make a channel from it. TYPE is contained as a key argument in
+            'type', if not, make a default channel.
+
+            :param name: str channel name
+            :param type: str channel type
+            :param block: bool permits blocking on certain locks in channels
+                            on read/write before returning result
+            :param timeout: float when blocking is enabled, set the timeout before
+                            returning
+            :param poll: bool enable polling from channel when a write is done on
+                                the channel in any thread/process
+            :param mp: bool change in some channels internal variable from
+                            threading to multiprocessing or Manager based
+
+            :param var_type: char in some channel you have to set the variable
+                                type to be used in the internal variable
+            :return: A Channel if the creation method was found else None
+            :rtype: Channel
         """
         type = kwargs.pop('type', None)
         if type is None:
@@ -79,15 +111,16 @@ class IService(ILoggable, IConfigurable, IObserver):
             return None
         kwargs['parent'] = self
         channel = method(name, **kwargs)
-        self.log_debug("--> {}".format(channel))
+        if channel:
+            self.log_debug("--> {}".format(channel))
         return channel
 
     """ Channels Input/Output """
 
     """     Reading """
 
-    def read_channels_input(self):
-        for name, channel in self.get_channels_input().items():
+    def read_channels_input(self) -> bool:
+        for channel in self.get_channels_input():
             if channel.is_pollable() and channel.is_readable():
                 channel.notify()
                 channel.clear()
@@ -106,24 +139,38 @@ class IService(ILoggable, IConfigurable, IObserver):
                 channel.lock()
 
     def lock_channels_output(self):
-        self.__lock_channels(self.get_channels_output().values())
+        self.__lock_channels(self.get_channels_output())
 
     def unlock_channels_output(self):
-        self.__lock_channels(self.get_channels_output().values())
+        self.__lock_channels(self.get_channels_output())
 
     def lock_channels_input(self):
-        self.__lock_channels(self.get_channels_input().values())
+        self.__lock_channels(self.get_channels_input())
 
     def unlock_channels_input(self):
-        self.__lock_channels(self.get_channels_input().values())
+        self.__lock_channels(self.get_channels_input())
+
+    def clear_channels(self):
+        for channel in self.get_channels_input():
+            name = channel.get_name()
+            attr = getattr(self, name)
+            attr = None
+        self.__channels_input = []
+        for channel in self.get_channels_output():
+            name = channel.get_name()
+            attr = getattr(self, name)
+            attr = None
+        self.__channels_output = []
 
     """     Making """
 
     def _make_channels(self):
         for name, dic in self.__todo_ichan:
             self.create_input_channel(name, **dic)
+        self.__todo_ichan = []
         for name, dic in self.__todo_ochan:
             self.create_output_channel(name, **dic)
+        self.__todo_ochan = []
         return True
 
     def add_channel_input(self, name, **kwargs):
@@ -146,6 +193,15 @@ class IService(ILoggable, IConfigurable, IObserver):
 
     """     Getter/Setter """
 
+    def get_channel(self, name):
+        try:
+            channel = getattr(self, name)
+        except AttributeError:
+            channel = None
+        if channel and not isinstance(channel, Channel):
+            channel = None
+        return channel
+
     def get_channels_input(self):
         return self.__channels_input
 
@@ -155,19 +211,24 @@ class IService(ILoggable, IConfigurable, IObserver):
     def set_channel_input(self, channel, name=None):
         if name is None:
             name = channel.get_name()
-        if self.__channels_input.get(name, None) is not None:
-            self.log_debug("Channel {} already exists".format(channel.get_name()))
-        self.__channels_input[name] = channel
-        setattr(self, name, channel)
-        channel.add_observer(self)
+        input_lst = self.__channels_input
+        if any((name == c.get_name() for c in input_lst)):
+            self.log_warning("Channel {} already exist".format(name))
+        else:
+            input_lst.append(channel)
+            setattr(self, name, channel)
+            channel.add_observer(self)
         return True
 
-    def set_channel_output(self, channel):
-        name = channel.get_name()
-        if self.__channels_output.get(name, None) is not None:
-            self.log_debug("Channel {} already exists".format(channel.get_name()))
-        self.__channels_output[name] = channel
-        setattr(self, name, channel)
+    def set_channel_output(self, channel, name=None):
+        if name is None:
+            name = channel.get_name()
+        output_lst = self.__channels_output
+        if any((name == c.get_name() for c in output_lst)):
+            self.log_warning("Channel {} already exist".format(name))
+        else:
+            output_lst.append(channel)
+            setattr(self, name, channel)
         return True
 
     """ IConfigurable """
@@ -217,12 +278,12 @@ class IService(ILoggable, IConfigurable, IObserver):
                 return False
         self.__start_time = time.time()
         if self._start_impl() is True:
-            if self.on_start() is not False:
-                self.__stopped = False
-                self.__notify_state_change()
+            self.__stopped = False
+            self.__notify_state_change()
+            self.on_start()
         if self.__stopped is True:
             self.__start_time = None
-        self.log_debug("%s" %
+        self.log_info("%s" %
                 ("is started" if not self.__stopped else "did not start"))
         return self.is_running()
 
@@ -244,9 +305,10 @@ class IService(ILoggable, IConfigurable, IObserver):
                 return True
         self.__stop_time = time.time()
         if self._stop_impl() is True:
-            if self.on_stop() is not False:
-                self.__stopped = True
-                self.__notify_state_change()
+            self.__stopped = True
+            self.__notify_state_change()
+            self.on_stop()
+            self._set_unconfigured()
         if self.__stopped is False:
             self.__stop_time = None
         self.log_debug("%s" %
@@ -267,9 +329,9 @@ class IService(ILoggable, IConfigurable, IObserver):
             if force is False:
                 return True
         if self._pause_impl() is True:
-            if self.on_pause() is not False:
-                self.__paused = True
-                self.__notify_state_change()
+            self.__paused = True
+            self.__notify_state_change()
+            self.on_pause()
         self.log_debug("%s" %
             ("is paused" if self.__paused else "did not pause"))
         return self.is_paused()
@@ -288,9 +350,9 @@ class IService(ILoggable, IConfigurable, IObserver):
             if force is False:
                 return True
         if self._resume_impl() is True:
-            if self.on_resume() is not False:
-                self.__paused = False
-                self.__notify_state_change()
+            self.__paused = False
+            self.__notify_state_change()
+            self.on_resume()
         self.log_debug("%s" %
                 ("is resumed" if not self.__paused else "did not resume"))
         return self.is_paused() == False
@@ -305,10 +367,12 @@ class IService(ILoggable, IConfigurable, IObserver):
 
     def reset(self):
         if self._reset_impl() is True:
-            if self.on_reset() is not False:
-                self.__stopped = True
-                self.__paused = False
-                self.__notify_state_change()
+            self.clear_channels()
+            self.on_reset()
+            self.__stopped = True
+            self.__paused = False
+            self.__notify_state_change()
+            self._set_unconfigured()
         return self.__stopped and not self.__paused
 
     def _reset_impl(self):

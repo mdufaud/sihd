@@ -10,7 +10,7 @@ import unittest
 import json
 
 import sihd
-sihd.set_log()
+logger = sihd.set_log()
 
 from sihd.Interactors.ip.HttpInteractor import HttpInteractor
 
@@ -38,18 +38,21 @@ class TestHttp(unittest.TestCase):
         pass
 
     def test_wrong_url(self):
+        logger.info("Testing wrong url")
         url = "http://www.a@E2e2esasfzzzzzzzzzzz.com"
         interactor = HttpInteractor()
         html = interactor.make_request(url).send()
         self.assertTrue(html is None)
 
     def test_error_404(self):
+        logger.info("Testing error 404")
         url = "http://httpbin.org/status/404"
         interactor = HttpInteractor()
         html = interactor.make_request(url).send()
         self.assertTrue(html is None)
 
     def test_get(self):
+        logger.info("Testing GET")
         url = "http://httpbin.org/get"
         interactor = HttpInteractor()
         json_data = interactor.make_request(url, query={"get": "cookies"}).send().decode()
@@ -60,6 +63,7 @@ class TestHttp(unittest.TestCase):
         self.assertEqual(dic["args"]['get'], 'cookies')
 
     def test_post(self):
+        logger.info("Testing POST")
         url = "http://httpbin.org/post"
         interactor = HttpInteractor()
         json_data = interactor.make_request(url, post={'hello': 'world'}).send().decode()
@@ -68,6 +72,7 @@ class TestHttp(unittest.TestCase):
         self.assertEqual(dic["form"]['hello'], 'world')
 
     def test_service(self):
+        logger.info("Testing service life cycle")
         url = "https://www.google.com"
         interactor = HttpInteractor()
         interactor.set_conf({
@@ -81,6 +86,7 @@ class TestHttp(unittest.TestCase):
         self.assertTrue(interactor.stop())
 
     def test_channels(self):
+        logger.info("Testing channels well being")
         url = "https://www.google.com"
         interactor = HttpInteractor()
         interactor.set_conf('service_type', 'process')

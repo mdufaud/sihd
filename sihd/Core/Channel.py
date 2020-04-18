@@ -125,14 +125,22 @@ class Channel(IObservable, IObserver):
         """ Check if channel is locked """
         return self.__locked
 
+    def write(self, data):
+        """ 
+            Write a data to a channel
+            which trigger an observation to all observers
+        """
+        if self.is_locked():
+            return False
+        if self._write(data):
+            self.save_time()
+            self.__last_data = data
+            self.notify()
+        return True
+
     """ Methods to change while inheriting """
 
-    def write(self, data):
-        """ Write a data to a channel
-            which trigger an observation to all observers """
-        self.save_time()
-        self.__last_data = data
-        self.notify_observers()
+    def _write(self, data):
         return True
 
     def read(self):
@@ -184,7 +192,7 @@ class ChannelQueue(Channel):
                 self.__queue = mp_manager.Queue(maxsize=size)
             elif simple is True:
                 self.__queue = multiprocessing.SimpleQueue()
-                self.write = self.__simple_write
+                self._write = self.__simple_write
                 self.read = self.__simple_read
             else:
                 self.__queue = multiprocessing.Queue(maxsize=size)
@@ -203,12 +211,11 @@ class ChannelQueue(Channel):
     def __simple_read(self):
         return self.__get()
 
-    def write(self, data):
+    def _write(self, data):
         try:
             self.__put(data, block=self.is_block(), timeout=self.get_timeout())
         except queue.Full:
             return False
-        super().write(data)
         return True
 
     def read(self):
@@ -219,7 +226,7 @@ class ChannelQueue(Channel):
         return data
 
     def is_readable(self):
-        return self.is_locked() is False and self.__empty() is False
+        return super().is_readable() and self.__empty() is False
 
     def is_pollable(self):
         return True
@@ -229,7 +236,7 @@ class ChannelQueue(Channel):
 
 class PollableChannel(Channel):
 
-    def __init__(self, poll=False, mp=False, name="PollableChannel", **kwargs):
+    def __init__(self, poll=True, mp=False, name="PollableChannel", **kwargs):
         self.__poll = poll
         if poll is True:
             if mp is True:
@@ -243,9 +250,9 @@ class PollableChannel(Channel):
         super(PollableChannel, self).__init__(mp=mp, name=name, **kwargs)
 
     def notify(self):
-        super().notify()
         if self.__poll is True:
             self.__set()
+        super().notify()
 
     def clear(self):
         if self.__poll is True:
@@ -255,7 +262,7 @@ class PollableChannel(Channel):
         return self.__poll is True
 
     def is_readable(self):
-        return not self.is_locked() and (self._poll is False or self.__is())
+        return super().is_readable() and (self.__poll is False or self.__is())
 
 class ChannelObject(PollableChannel):
 
@@ -272,12 +279,16 @@ class ChannelObject(PollableChannel):
         super(ChannelObject, self).__init__(mp=mp, name=name, **kwargs)
 
     def write(self, key, value):
+        return super().write((key, value))
+
+    def _write(self, data):
+        key, value = data
         try:
             item = getattr(self.__obj, key)
         except AttributeError:
             return False
         item = value
-        return super().write((key, value))
+        return True
 
     def read(self, key, ret=None):
         try:
@@ -300,6 +311,10 @@ class ChannelDict(PollableChannel):
         super(ChannelDict, self).__init__(mp=mp, name=name, **kwargs)
 
     def write(self, key, value=None):
+        return super().write((key, value))
+
+    def _write(self, data):
+        key, value = data
         if key is None:
             self.__dict.clear()
         elif isinstance(key, dict):
@@ -308,7 +323,7 @@ class ChannelDict(PollableChannel):
             d.update(key)
         else:
             self.__dict[key] = value
-        return super().write((key, value))
+        return True
 
     def read(self, key, ret=None):
         return self.__dict.get(key, ret)
@@ -325,22 +340,25 @@ class ChannelList(PollableChannel):
         else:
             self.__list = list()
         self.__append = self.__list.append
-        self.__clear = self.__list.clear
         super(ChannelList, self).__init__(mp=mp, name=name, **kwargs)
 
     def write(self, value, i=None):
+        return super().write((value, i))
+
+    def _write(self, data):
+        value, i = data
         l = self.__list
         if isinstance(value, list):
-            self.__clear()
+            l[:] = []
             for v in value:
                 self.__append(v)
         elif i is None:
-            self.__append(v)
+            self.__append(value)
         elif i < len(l):
             l[i] = value
         else:
             return False
-        return super().write((value, i))
+        return True
 
     def read(self, i):
         l = self.__list
@@ -361,14 +379,13 @@ class ChannelCondition(Channel):
             self.__condition = threading.Condition(lock=lock)
         super(ChannelCondition, self).__init__(name=name, mp=mp, **kwargs)
 
-    def write(self, data):
+    def _write(self, data):
         cd = self.__condition
         try:
             ret = cd.wait(timeout=self.get_timeout())
         except RuntimeError:
             return False
         if ret:
-            ret = super().write(data)
             cd.notify_all()
         return ret
 
@@ -396,12 +413,12 @@ class ChannelBool(PollableChannel):
         self.__wait = self.__event.wait
         super(ChannelBool, self).__init__(name=name, mp=mp, **kwargs)
 
-    def write(self, data):
+    def _write(self, data):
         if data:
             self.__set()
         else:
             self.__clear()
-        return super().write(bool(data))
+        return True
 
     def read(self):
         if self.__wait(timeout=self.get_timeout()):
@@ -437,11 +454,11 @@ class ChannelValue(PollableChannel):
         self.__rlock = self.__value.get_lock().release
         super(ChannelValue, self).__init__(mp=True, name=name, **kwargs)
 
-    def write(self, data):
+    def _write(self, data):
         ret = False
         if self.__alock(block=self.is_block(), timeout=self.get_timeout()):
+            ret = True
             self.__value.value = data
-            ret = super().write(data)
             self.__rlock()
         return ret
 
@@ -483,6 +500,10 @@ class ChannelArray(PollableChannel):
         super(ChannelArray, self).__init__(mp=True, name=name, **kwargs)
 
     def write(self, data, i=None):
+        return super().write((data, i))
+
+    def _write(self, tupl):
+        data, i = tupl
         l = self.__array
         if isinstance(value, list):
             for i, v in enumerate(value):

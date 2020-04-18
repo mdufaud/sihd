@@ -16,12 +16,12 @@ class LineReader(IReader):
         self._set_default_conf({
             "path": "/path/to/file",
         })
-        self.__fully_read = False
         self.__reader = None
         self.add_channel_input('path', type='queue', simple=True)
         self.add_channel_output('output')
         self.add_channel_output('lines', type='int', default=0)
-        self.add_channel_output('eof', type='bool', timeout=0.1)
+        self.add_channel_output('eof', type='bool',
+                                default=True, timeout=0.1)
 
     """ IConfigurable """
 
@@ -33,10 +33,13 @@ class LineReader(IReader):
             ret = self.set_source(path)
         return ret
 
+    """ IService """
+
     def handle(self, channel):
-        path = channel.read()
-        if path:
-            self.set_source(path)
+        if channel == self.path:
+            path = channel.read()
+            if path:
+                self.set_source(path)
 
     """ Reader """
 
@@ -54,8 +57,6 @@ class LineReader(IReader):
 
     def __recover(self):
         reader = self.__reader
-        if not reader:
-            return False
         rdline = reader.readline
         recover = self.__to_recover
         while self.is_active() and recover > 0:
@@ -81,14 +82,12 @@ class LineReader(IReader):
         except IOError as err:
             self.log_error("Cannot open: {}".format(err))
             return False
+        self.log_info("Reading file {name}".format(name=self.__path))
         self.__can_recover()
         self.eof.write(0)
         return True
 
     def read_line(self):
-        reader = self.__reader
-        if not reader:
-            return None
         try:
             line = self.__reader.readline()
         except EOFError as e:
@@ -96,6 +95,8 @@ class LineReader(IReader):
         return line
 
     def do_step(self):
+        if not self.__reader:
+            return True
         if self.__to_recover > 0 and self.__recover() == True:
             return True
         line = self.read_line()
@@ -114,20 +115,17 @@ class LineReader(IReader):
         self.log_info("File {0:s} read - {1:d} packets".format(self.__path, self.__lines))
         self.log_debug("took {0:.3f} seconds to read and process {1:d} lines"\
                 .format(stop_time - self.get_service_start_time(), self.__lines))
-        self.__fully_read = True
-        LineReader.files_read[self.__path] = (self.__lines, False)
         self.eof.write(1)
+        self.close()
 
-    """ IService """
-
-    def _start_impl(self):
-        s = "Reading file {name}".format(name=self.__path)
-        self.log_info(s)
-        return super(LineReader, self)._start_impl()
-
-    def _stop_impl(self):
+    def close(self):
         if self.__reader:
             self.__reader.close()
             self.__reader = None
-        LineReader.files_read[self.__path] = (self.__lines, self.__fully_read == False)
-        return super(LineReader, self)._stop_impl()
+            LineReader.files_read[self.__path] = (self.__lines, self.eof.read() == False)
+            self.log_debug("File {} closed".format(self.__path))
+
+    """ IService """
+
+    def on_stop(self):
+        self.close()

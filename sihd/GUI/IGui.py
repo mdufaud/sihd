@@ -12,6 +12,8 @@ class IGui(Core.IPolyService, Core.IAppContainer):
         if (app):
             self.set_app(app)
 
+    #TODO add thread to read_channels_input for a gui update once in its loop
+
     """ IGui """
 
     def gui_loop(self, *args, **kwargs):

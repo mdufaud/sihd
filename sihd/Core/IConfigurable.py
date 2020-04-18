@@ -32,6 +32,10 @@ class IConfigurable(INamedObject):
             self.__is_configured = True
         return self.__is_configured
 
+    def _set_unconfigured(self):
+        """ Be sure to know what you are doing """
+        self.__is_configured = False
+
     def is_configured(self):
         """ Returns true if obj is setup """
         return self.__is_configured

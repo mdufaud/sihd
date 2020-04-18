@@ -51,7 +51,7 @@ class TestHandler(IHandler):
         s = "processed" if self.is_service_multiprocess() else "threaded"
         self.log_info("Has setup as " + s)
         return True
-
+    
     def handle(self, channel):
         line = channel.read()
         if line is None:

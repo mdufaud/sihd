@@ -17,9 +17,7 @@ except ImportError:
 import sihd
 from sihd import Core, Readers, Handlers, GUI, Interactors
 
-class IApp(Core.IService, Core.ILoggable,
-            Core.IConfigurable, Core.IDumpable,
-            Core.IServiceStateObserver, Core.IObserver):
+class IApp(Core.IService, Core.IServiceStateObserver):
 
     def __init__(self, name="IApp", *args, **kwargs):
         super(IApp, self).__init__(name, *args, **kwargs)

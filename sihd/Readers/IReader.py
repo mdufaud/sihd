@@ -26,68 +26,65 @@ class IReader(Core.IPolyService, Core.IAppContainer):
 
     def _pre_handle(self, channel) -> bool:
         if self.__can_save:
-            if channel == self.c_save:
+            if channel == self.save_data:
                 self.set_saving_data(channel.read())
                 return True
         return False
 
-    """ IDumpable """
-
-    def _dump(self):
-        dic = super()._dump()
-        if self.__can_save:
-            saved_data = self.get_data_saved()
-            dic.update({"data_saved": self.__data_saved})
-        return dic
-
-    def _load(self, dic):
-        super()._load(dic)
-        if self.__can_save:
-            data_saved = dic.get("data_saved", None)
-            if data_saved is not None:
-                self.c_saved.write(data_saved)
-
     """ Reader """
-
-    def set_reader_saving(self, active=True, size=None, var_type=None):
-        """ Init a reader capability to save data """
-        if active:
-            self.__saving_data = False
-            self.__channel_to_save = None
-            self.add_channel_input("c_save", type="bool", poll=True)
-            self.add_channel_output("c_saved", type="list",
-                                    size=size, var_type=var_type)
-        self.__can_save = active
 
     def set_source(self, source):
         raise NotImplementedError("set_source not implemented")
 
+    def close(self):
+        return True
+
+    """
+    def set_reader_saving(self, active=True, size=None, var_type=None):
+        if active:
+            if self.is_configured():
+                raise RuntimeError("Must configure reader saving capability before setup")
+            self.__channel_to_save = None
+            self.add_channel_input("save_data", type="bool",
+                                    block=True, timeout=0.5,
+                                    default=False, poll=True)
+            self.add_channel_output("saved_data", type="list",
+                                    size=size, var_type=var_type)
+        self.__can_save = active
+
+
     def set_channel_saving(self, channel: "str or Channel"):
-        """ Chooses a channel to save data from"""
         if self.__can_save:
             self.__channel_to_save = channel
 
     def is_saving_data(self):
-        return self.__can_save and self.__saving_data
+        return self.__can_save and self.save_data.read()
 
     def set_saving_data(self, active: bool):
-        """ Activate a reader capability to save data """
         if self.__can_save is False:
             return
         chan_save = self.__channel_to_save
+        if isinstance(chan_save, str):
+            chan_save = self.get_channel(chan_save)
         if chan_save is not None:
+            self.log_error("SAVING {}".format(chan_save))
             if active:
-                chan_save.add_observer(self.c_saved)
+                chan_save.add_observer(self.saved_data)
             else:
-                chan_save.remove_observer(self.c_saved)
-            self.__saving_data = active
+                chan_save.remove_observer(self.saved_data)
+            return True
+        else:
+            self.log_error("Cannot find channel to save data")
+        return False
 
     def get_data_saved(self):
-        return [] if self.__can_save is False else self.c_saved.get_data()
+        return [] if self.__can_save is False else self.saved_data.get_data()
 
     def clear_data_saved(self):
         if self.__can_save:
-            self.c_saved.clear()
+            self.saved_data.write([])
+        return self.__can_save
+    """
 
     """ IAppContainer """
 

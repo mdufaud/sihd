@@ -156,18 +156,11 @@ class SihdWorker(ILoggable, IObserver):
 
     """ Loop """
 
-    def __worker_set_channels(self, input_channels, output_channels):
-        parent = self.__parent
-        for name, channel in input_channels.items():
-            channel.add_observer(parent)
-
     def __worker_loop(self, worker_number, stop_evt, work_evt,
                         input_channels, output_channels):
         # Iterations
         self.__iter = 0
         max_iter = self.__max_iter
-        # Channels
-        self.__worker_set_channels(input_channels, output_channels)
         # State
         number = 0
         # Time

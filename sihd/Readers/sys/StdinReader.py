@@ -14,22 +14,28 @@ class StdinReader(IReader):
 
     def __init__(self, app=None, name="StdinReader"):
         super(StdinReader, self).__init__(app=app, name=name)
-        self._set_default_conf({
-            "question": "",
-        })
+        self._set_default_conf({"question": ""})
         self._question = ""
         self._asked = False
-        self.set_step_method(self.diffuse_input)
         self._inputs = [sys.stdin.fileno()]
         self._buffer = 4096
+        self.add_channel_input("question", type='queue')
+        self.add_channel_output("answer")
+
+    def handle(self, channel):
+        if self._asked is False and channel == self.question:
+            question = channel.read()
+            if question:
+                self.set_question(question)
+
+    def set_question(self, question):
+        self._question = str(question)
 
     """ IConfigurable """
 
-    def _setup_impl(self):
-        super(StdinReader, self)._setup_impl()
-        q = self.get_conf("question")
-        if q is not None:
-            self._question = str(q)
+    def do_setup(self):
+        super().do_setup()
+        self._question = str(self.get_conf("question"))
         return True
 
     """ Reader """
@@ -37,8 +43,10 @@ class StdinReader(IReader):
     def __ask(self):
         if self._asked is True:
             return
-        print(self._question, end="", flush=True)
-        self._asked = True
+        q = self._question
+        if q:
+            print(q, end="", flush=True)
+            self._asked = True
 
     def get_input(self, timeout=0):
         inputs = self._inputs
@@ -52,10 +60,10 @@ class StdinReader(IReader):
             line = os.read(r[0], buf)
         return line
 
-    def diffuse_input(self):
+    def do_step(self):
         self.__ask()
         try:
-            line = self.get_input(timeout=1.0)
+            line = self.get_input(timeout=0.1)
         except Exception as e:
             self.stop()
             raise
@@ -65,9 +73,6 @@ class StdinReader(IReader):
         if line == b'':
             self.stop()
             return False
-        self.deliver(line)
+        self.answer.write(line)
         self._asked = False
         return True
-
-    def set_question(self, question):
-        self._question = str(question)

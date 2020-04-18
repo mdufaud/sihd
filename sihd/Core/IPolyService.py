@@ -6,13 +6,12 @@
 from .IService import IService
 from .IThreadedService import IThreadedService
 from .IProcessedService import IProcessedService
-from .IDumpable import IDumpable
 
 class ServiceType:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-class IPolyService(IThreadedService, IProcessedService, IDumpable):
+class IPolyService(IThreadedService, IProcessedService):
 
     __service_types = ServiceType(default=1, thread=2, process=3)
     __service_types_str = {
@@ -80,6 +79,8 @@ class IPolyService(IThreadedService, IProcessedService, IDumpable):
     """ Thread """
 
     def set_service_threading(self):
+        if self.is_configured():
+            raise RuntimeError("Cannot set process type after setup")
         self.__service_type_str = "threading"
         self.__service_type = self.__service_types.thread
 
@@ -89,6 +90,8 @@ class IPolyService(IThreadedService, IProcessedService, IDumpable):
     """ Process """
 
     def set_service_multiprocess(self):
+        if self.is_configured():
+            raise RuntimeError("Cannot set process type after setup")
         self.__service_type_str = "process"
         self.__service_type = self.__service_types.process
 
@@ -98,18 +101,20 @@ class IPolyService(IThreadedService, IProcessedService, IDumpable):
     """ Service """
 
     def set_service_default(self):
+        if self.is_configured():
+            raise RuntimeError("Cannot set process type after setup")
         self.__service_type_str = "default"
         self.__service_type = self.__service_types.default
 
     """ IDumpable """
 
-    def _dump(self):
-        dic = super()._dump()
+    def on_dump(self):
+        dic = super().on_dump()
         dic.update({"service_type": self.__service_type})
         return dic
 
-    def _load(self, dic):
-        super()._load(dic)
+    def on_load(self, dic):
+        super().on_load(dic)
         service_type = dic.get("service_type", None)
         if service_type:
             fun = self.__service_types_fun.get(service_type, None)
