@@ -29,32 +29,6 @@ class IProcessedService(IService):
         self.__workers_timeout = None
         self.__main_pid = os.getpid()
 
-    """ Channels creation methods """
-
-    def create_channel_list(self, name, **kwargs):
-        size = kwargs.pop('size', None)
-        var_type = kwargs.pop('var_type', None)
-        if size is not None and var_type is not None:
-            return ChannelArray(name=name, size=size, var_type=var_type, **kwargs)
-        return super().create_channel_list(name=name, **kwargs)
-
-    def create_channel_int(self, name, **kwargs):
-        return ChannelValue(name=name, var_type='i', **kwargs)
-
-    def create_channel_double(self, name, **kwargs):
-        return ChannelValue(name=name, var_type='d', **kwargs)
-
-    def create_channel_default(self, name, **kwargs):
-        if kwargs.get('var_type', None):
-            return ChannelValue(name=name, **kwargs)
-        return super().create_channel_default(name, **kwargs)
-
-    def create_channel_value(self, name, **kwargs):
-        return ChannelValue(name=name, **kwargs)
-
-    def create_channel_array(self, name, **kwargs):
-        return ChannelArray(name=name, **kwargs)
-
     """ IConfigurable """
 
     def do_setup(self):

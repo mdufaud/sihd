@@ -603,6 +603,18 @@ class ChannelValue(PollableChannel):
 
 ###############################################################################
 
+class ChannelByte(ChannelValue):
+
+    def __init__(self, unsigned=False, name="ChannelByte", **kwargs):
+        t = 'b' if unsigned is False else 'B'
+        super(ChannelByte, self).__init__(name=name, var_type=t, **kwargs)
+
+class ChannelChar(ChannelValue):
+
+    def __init__(self, unicode=False, name="ChannelChar", **kwargs):
+        t = 'c' if unicode is False else 'u'
+        super(ChannelChar, self).__init__(name=name, var_type=t, **kwargs)
+
 class ChannelShort(ChannelValue):
 
     def __init__(self, unsigned=False, name="ChannelShort", **kwargs):
@@ -615,29 +627,17 @@ class ChannelInt(ChannelValue):
         t = 'i' if unsigned is False else 'I'
         super(ChannelInt, self).__init__(name=name, var_type=t, **kwargs)
 
-class ChannelByte(ChannelValue):
+class ChannelLong(ChannelValue):
 
-    def __init__(self, unsigned=False, name="ChannelByte", **kwargs):
-        t = 'b' if unsigned is False else 'B'
-        super(ChannelByte, self).__init__(name=name, var_type=t, **kwargs)
+    def __init__(self, unsigned=False, name="ChannelLong", **kwargs):
+        t = 'l' if unsigned is False else 'L'
+        super(ChannelLong, self).__init__(name=name, var_type=t, **kwargs)
 
 class ChannelDouble(ChannelValue):
 
     def __init__(self, float=False, name="ChannelDouble", **kwargs):
         t = 'd' if float is False else 'f'
         super(ChannelDouble, self).__init__(name=name, var_type=t, **kwargs)
-
-class ChannelChar(ChannelValue):
-
-    def __init__(self, unicode=False, name="ChannelChar", **kwargs):
-        t = 'c' if unicode is False else 'u'
-        super(ChannelChar, self).__init__(name=name, var_type=t, **kwargs)
-
-class ChannelLong(ChannelValue):
-
-    def __init__(self, unsigned=False, name="ChannelLong", **kwargs):
-        t = 'l' if unsigned is False else 'L'
-        super(ChannelLong, self).__init__(name=name, var_type=t, **kwargs)
 
 ###############################################################################
 
