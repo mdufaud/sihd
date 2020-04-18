@@ -12,6 +12,8 @@ class IHandler(Core.IPolyService, Core.IAppContainer):
         if (app):
             self.set_app(app)
 
+    """ IHandler """
+
     def handle_service(self, service) -> bool:
         return False
 

@@ -13,7 +13,6 @@ class IReader(Core.IPolyService, Core.IAppContainer):
         self._set_default_conf({
             "service_type": "thread",
         })
-        self.__can_save = False
         if (app):
             self.set_app(app)
 
@@ -31,7 +30,7 @@ class IReader(Core.IPolyService, Core.IAppContainer):
                 return True
         return False
 
-    """ Reader """
+    """ IReader """
 
     def set_source(self, source) -> bool:
         raise NotImplementedError("set_source not implemented")

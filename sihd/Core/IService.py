@@ -141,7 +141,7 @@ class IService(ILoggable, IConfigurable, IObserver, IDumpable):
         kwargs['parent'] = self
         channel = method(name, **kwargs)
         if channel:
-            self.log_debug("--> {}".format(channel))
+            self.log_debug(" -> {}".format(channel))
         return channel
 
     """ Channels Input/Output """
