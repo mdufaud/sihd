@@ -41,24 +41,38 @@ class IProcessedService(IService):
 
     """ Worker method """
 
-    def work(self, i):
+    def work(self):
         self.read_channels_input()
-        return self.do_work(i)
+        return self.do_work()
 
-    def do_work(self, i):
+    def do_work(self):
         pass
 
-    def on_worker_start(self, number):
-        self.log_debug("Worker[{}]: started (pid={})".format(number, os.getpid()))
+    def on_worker_start(self, worker, *args):
+        #little trick to have the service started for channel notification
+        self._set_stopped(False)
+        self.log_debug("Worker[{}]: started (pid={})"\
+                .format(worker.get_number(), os.getpid()))
 
-    def on_worker_stop(self, number, total):
-        self.log_debug("Worker[{}]: stopped".format(number))
+    def on_worker_error(self, worker, total_iter, error):
+        self.log_debug("Worker[{}]: {}"\
+                .format(worker.get_number(), error))
+
+    def on_worker_stop(self, worker, total_iter):
+        self.log_debug("Worker[{}]: stopped after {} iterations"\
+                .format(worker.get_number(), total_iter))
 
     """ IService """
 
     def _start_impl(self):
-        worker = SihdWorker(self)
-        worker.set_work_method(self.work)
+        worker = SihdWorker(
+            work=self.work,
+            on_start=self.on_worker_start,
+            on_stop=self.on_worker_stop,
+            on_err=self.on_worker_error,
+            daemon=True
+        )
+        #Check user input
         if worker.set_worker_number(self.__workers_nbr) is False:
             return False
         if worker.set_worker_frequency(self.__workers_freq) is False:
@@ -70,7 +84,7 @@ class IProcessedService(IService):
         self.__worker = worker
         input_channels = self.get_channels_input()
         output_channels = self.get_channels_output()
-        if worker.make_workers(input_channels, output_channels):
+        if worker.make_workers(args=(input_channels, output_channels,)):
             if self.is_paused():
                 self.__worker.pause_workers()
             if worker.start_workers():

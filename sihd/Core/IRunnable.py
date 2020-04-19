@@ -9,63 +9,76 @@ class IRunnable(INamedObject):
 
     def __init__(self, name="IRunnable"):
         super(IRunnable, self).__init__(name)
-        self._thread = None
-        self._step_method = self.step
+        self.__thread = None
+        self.__step_method = self.step
 
     def step(self):
         raise NotImplementedError("step method is not implemented")
 
+    def on_thread_start(self, thread):
+        pass
+
+    def on_thread_stop(self, thread, iteration):
+        pass
+
+    def on_thread_error(self, thread, iteration):
+        pass
+
     def get_step_method(self):
-        if self._thread:
-            return self._thread.get_step_method()
+        if self.__thread:
+            return self.__thread.get_step_method()
         else:
-            return self._step_method
+            return self.__step_method
         return None
 
     def set_step_method(self, method):
         if isinstance(method, str):
-            self._step_method = SihdThread.find_method_by_str(self, method)
+            self.__step_method = SihdThread.find_method_by_str(self, method)
         else:
-            self._step_method = method
+            self.__step_method = method
         self.step = method
-        if self._thread is not None:
-            self._thread.set_step_method(method)
+        if self.__thread is not None:
+            self.__thread.set_step_method(method)
 
     def get_thread(self):
-        return self._thread
+        return self.__thread
 
     def pause_thread(self):
-        if self._thread is not None:
-            self._thread.pause()
+        if self.__thread is not None:
+            self.__thread.pause()
 
     def resume_thread(self):
-        if self._thread is not None:
-            self._thread.resume()
+        if self.__thread is not None:
+            self.__thread.resume()
 
     def start_thread(self):
-        if self._thread is not None:
-            self._thread.start()
+        if self.__thread is not None:
+            self.__thread.start()
 
     def stop_thread(self):
-        if self._thread is None:
+        if self.__thread is None:
             return
-        self._thread.stop()
-        if self._thread.is_alive() is False:
-            self._thread = None
+        self.__thread.stop()
+        if self.__thread.is_alive() is False:
+            self.__thread = None
             return
         if SihdThread.is_main_thread():
-            self._thread.join(0.5)
-        self._thread = None
+            self.__thread.join(0.5)
+        self.__thread = None
 
     def is_thread_alive(self):
-        if self._thread is None:
+        if self.__thread is None:
             return False
-        return self._thread.is_alive()
+        return self.__thread.is_alive()
 
-    def setup_thread(self, **kwargs):
+    def setup_thread(self, *args, **kwargs):
         """ Method to call before anything else """
-        if self._thread is not None:
+        if self.__thread is not None:
             self.stop_thread()
-        self._thread = SihdThread(self, **kwargs)
-        self._thread.daemon = True
+        self.__thread = SihdThread(
+            step=self.step,
+            on_start=self.on_thread_start,
+            on_stop=self.on_thread_stop,
+            on_err=self.on_thread_error,
+            *args, **kwargs)
         self.set_step_method(self.step)

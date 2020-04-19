@@ -89,29 +89,27 @@ class TestMultiprocess(unittest.TestCase):
         pass
 
     def __get_total(self, handler, check=True):
-        q = handler.output
+        r = handler.output.read
         i = 0
         while True:
-            d = q.read()
+            d = r()
             if d is None:
                 break
-            """
-            except OSError:
-                return None
-            """
             i += 1
         if check is not False:
             self.assertTrue(i > 0)
         return i
 
     @unittest.skipIf(multiprocessing is None, "No support for multiprocess")
-    def test_reader_workers(self):
+    def test_worker_spam_reader(self):
         print()
         logger.info("Starting multiple readers and multiprocess 1 worker 4 processes")
         reader1 = InfiniteReader("hello", "InfiniteReader1")
         reader2 = InfiniteReader("world", "InfiniteReader2")
         reader1.set_conf("service_type", "process")
+        reader1.set_conf("process_workers", 2)
         reader2.set_conf("service_type", "process")
+        reader2.set_conf("process_workers", 2)
         handler = TestHandler()
         handler.set_conf("service_type", "process")
         handler.set_conf("process_workers", 4)
@@ -133,7 +131,7 @@ class TestMultiprocess(unittest.TestCase):
         self.assertTrue(handler.stop())
 
     @unittest.skipIf(multiprocessing is None, "No support for multiprocess")
-    def test_workers(self):
+    def test_mult_sihdworkers(self):
         print()
         logger.info("Starting multiprocess 3 workers 1 process")
         reader = InfiniteReader()
@@ -170,11 +168,11 @@ class TestMultiprocess(unittest.TestCase):
         self.assertTrue(handler3.stop())
 
     @unittest.skipIf(multiprocessing is None, "No support for multiprocess")
-    def test_worker(self):
+    def test_one_sihdworker(self):
         print()
         logger.info("Starting multiprocess 1 worker 3 processes")
         reader = InfiniteReader()
-        reader.set_conf("service_type", "process")
+        reader.set_conf("service_type", "thread")
         handler = TestHandler()
         handler.set_conf("service_type", "process")
         handler.set_conf("process_workers", 3)
@@ -211,7 +209,7 @@ class TestMultiprocess(unittest.TestCase):
         print()
         logger.info("Starting multiprocess 1 worker 3 processes")
         reader = InfiniteReader()
-        reader.set_conf("service_type", "process")
+        reader.set_conf("service_type", "thread")
         handler = TestHandler()
         handler.set_conf("service_type", "process")
         handler.set_conf("process_workers", 3)

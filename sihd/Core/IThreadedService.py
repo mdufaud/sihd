@@ -44,9 +44,10 @@ class IThreadedService(IService, IRunnable):
     """ IService """
 
     def _start_impl(self):
-        self.setup_thread(frequency=self.__thread_freq,
-                            timeout=self.__thread_timeout,
-                            max_iter=self.__thread_max_iter)
+        self.setup_thread(
+            frequency=self.__thread_freq,
+            timeout=self.__thread_timeout,
+            max_iter=self.__thread_max_iter)
         if self.is_paused():
             self.pause_thread()
         return True

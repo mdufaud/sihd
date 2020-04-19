@@ -19,7 +19,7 @@ class IHandler(Core.IPolyService, Core.IAppContainer):
 
     """ IProcessedService """
 
-    def do_work(self, i: int) -> bool:
+    def do_work(self) -> bool:
         return self.do_step()
 
     """ IService """

@@ -71,11 +71,6 @@ class IPolyService(IThreadedService, IProcessedService):
             kwargs['mp'] = True
         return super().create_channel(name, **kwargs)
 
-    """ IProcessedService """
-
-    def on_worker_start(self, number):
-        super().on_worker_start(number)
-
     """ Thread """
 
     def set_service_threading(self):

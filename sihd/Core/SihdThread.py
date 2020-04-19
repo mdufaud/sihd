@@ -7,13 +7,19 @@ import time
 
 class SihdThread(threading.Thread):
  
-    def __init__(self, parent=None, frequency=50, timeout=None, max_iter=None):
-        threading.Thread.__init__(self)
+    def __init__(self, name="SihdThread", step=None,
+                    frequency=50, timeout=None, max_iter=None,
+                    on_start=None, on_stop=None, on_err=None,
+                    daemon=True, args=(), *targs, **kwtargs):
+        super().__init__(daemon=daemon, name=name, *targs, **kwtargs)
         self.__stopped = True
         self.__paused = False
-        self.__iter = 0
-        self.step = None
-        self._parent = parent
+        self.daemon = daemon
+        self.__args = args
+        """ Callables """
+        self.set_callbacks(on_start, on_stop, on_err)
+        self.set_step_method(step)
+        """ Step properties """
         if not self.set_max_iter(max_iter):
             self.__max_iter = None
         if not self.set_timeout(timeout):
@@ -23,10 +29,12 @@ class SihdThread(threading.Thread):
 
     @staticmethod
     def is_main_thread():
-        return isinstance(threading.current_thread(), threading._MainThread)
+        return isinstance(threading.current_thread(),
+                            threading._MainThread)
 
     @staticmethod
     def find_method_by_str(instance, fun_name):
+        """ Setting step method by string """
         try:
             method = getattr(instance, fun_name)
             return method
@@ -35,23 +43,52 @@ class SihdThread(threading.Thread):
                     .format(instance.__class__.__name__, fun_name))
         return None
 
+    """ Getter/Setter """
+
+    def set_callbacks(self, on_start, on_stop, on_err):
+        if on_start and not callable(on_start):
+            raise ValueError("Start method is not callable")
+        if on_stop and not callable(on_stop):
+            raise ValueError("Stop method is not callable")
+        if on_err and not callable(on_err):
+            raise ValueError("Error method is not callable")
+        self.__on_start = on_start
+        self.__on_stop = on_stop
+        self.__on_err = on_err
+
+    def is_running(self):
+        return self.__stopped == False
+
+    def get_step_method(self):
+        return self.step
+
+    def set_step_method(self, method):
+        if not callable(method):
+            raise ValueError("Not a callable")
+        self.step = method
+
     def set_max_iter(self, max_iter):
+        """ Setting max step before exiting """
         if not isinstance(max_iter, int) or max_iter <= 0:
             return False
         self.__max_iter = max_iter
         return True
 
     def set_frequency(self, frequency):
+        """ Setting frequency in Hz for step execution """
         if not isinstance(frequency, int) or frequency <= 0:
             return False
         self.__sleep = float(1. / int(frequency))
         return True
 
     def set_timeout(self, timeout):
+        """ Set a timeout for exiting after certain time """
         if not isinstance(timeout, (int, float)) or timeout <= 0.0:
             return False
         self._timeout = timeout
         return True
+
+    """ Life cycle """
 
     def stop(self):
         self.__stopped = True
@@ -62,11 +99,7 @@ class SihdThread(threading.Thread):
     def resume(self):
         self.__paused = False
 
-    def get_step_method(self):
-        return self.step
-
-    def set_step_method(self, method):
-        self.step = method
+    """ Loop """
 
     def run(self):
         if self.step is None:
@@ -81,10 +114,14 @@ class SihdThread(threading.Thread):
         timeout = self._timeout
         #step
         step = self.step
+        i = 0
         max_iter = self.__max_iter
         ret = None
+        if self.__on_start:
+            self.__on_start(self, *self.__args)
         while not self.__stopped:
             while self.__paused:
+                #TODO change to condition/event
                 sleep(0.05)
             now = get_now()
             # Check timeout
@@ -96,18 +133,20 @@ class SihdThread(threading.Thread):
                 ret = step()
             except Exception as e:
                 self.stop()
-                raise
+                if self.__on_error:
+                    self.__on_error(self, i, e)
+                else:
+                    raise
             if ret is False:
-                return
+                break
             # Iterations
-            self.__iter += 1
-            if max_iter is not None and self.__iter >= max_iter:
-                return
+            i += 1
+            if max_iter is not None and i >= max_iter:
+                break
             # Pause
             end = get_now()
             pause = sleep_time - (end - now)
             if pause > 0.0:
                 sleep(pause)
-
-    def is_running(self):
-        return self.__stopped == False
+        if self.__on_stop:
+            self.__on_stop(self, i)

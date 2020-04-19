@@ -56,7 +56,7 @@ class IInteractor(Core.IPolyService, Core.IAppContainer):
 
     """ IProcessedService """
 
-    def do_work(self, i):
+    def do_work(self):
         return self.do_step()
 
     """ Step method """

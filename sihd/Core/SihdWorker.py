@@ -20,15 +20,19 @@ class SihdWorker(ILoggable, IObserver):
 
     _states = ProcessStates(work=1, pause=2, stop=3)
 
-    def __init__(self, parent, frequency=50, timeout=0,
-                    max_iter=0, name="SihdWorker"):
+    def __init__(self, name="SihdWorker", work=None,
+                    frequency=60, timeout=0, max_iter=0, 
+                    args=(), daemon=True, worker_number=1,
+                    on_start=None, on_stop=None, on_err=None):
         super(SihdWorker, self).__init__(name)
+        """ Importing """
         global multiprocessing
         if multiprocessing is None:
             import multiprocessing
         global queue
         if queue is None:
             import queue
+        """ Life cycle controller """
         try:
             self.__worker_stop = multiprocessing.Event()
             self.__worker_work = multiprocessing.Event()
@@ -36,9 +40,16 @@ class SihdWorker(ILoggable, IObserver):
         except FileNotFoundError:
             self.__worker_stop = None
             self.__worker_work = None
-        self.__parent = parent
-        self.__proc = []
-        self.__n_workers = 2
+        self.__proc_lst = []
+        self.__n_workers = worker_number
+        """ Callable """
+        self.set_work_method(work)
+        self.set_work_callbacks(on_start, on_stop, on_err)
+        """ Worker properties """
+        self.__args = args
+        self.__nproc = None
+        self.__proc = None
+        """ Work properties """
         if not self.set_worker_timeout(timeout):
             self.__timeout = None
         if not self.set_worker_frequency(frequency):
@@ -47,7 +58,18 @@ class SihdWorker(ILoggable, IObserver):
             self.__max_iter = None
         self.__pause_time = 0.5
 
-    """ Setup """
+    """ Getters """
+
+    def get_worker_number(self):
+        return self.__n_workers
+
+    def get_process(self):
+        return self.__proc
+
+    def get_number(self):
+        return self.__nproc
+
+    """ Setters """
 
     def set_max_worker(self):
         return self.set_worker_number(multiprocessing.cpu_count())
@@ -72,7 +94,20 @@ class SihdWorker(ILoggable, IObserver):
             self.__max_iter = iterations
         return True
 
+    def set_work_callbacks(self, on_start, on_stop, on_err):
+        if on_start and not callable(on_start):
+            raise ValueError("Start method is not callable")
+        if on_stop and not callable(on_stop):
+            raise ValueError("Stop method is not callable")
+        if on_err and not callable(on_err):
+            raise ValueError("Error method is not callable")
+        self.__on_start = on_start
+        self.__on_stop = on_stop
+        self.__on_err = on_err
+
     def set_work_method(self, method):
+        if not callable(method):
+            raise ValueError("Not a callable")
         self.do_work = method
 
     def set_worker_number(self, num):
@@ -93,7 +128,12 @@ class SihdWorker(ILoggable, IObserver):
         self.__sleep = float(1. / int(freq))
         return True
 
-    def make_workers(self, input_channels, output_channels, number=None):
+    """ Life cycle """
+
+    def make_workers(self, args=(), number=None):
+        if self.get_process() is not None:
+            self.log_error("You cannot make workers inside a children process")
+            return False
         if multiprocessing is None:
             self.log_error("Multiprocessing is not supported on your system")
             return False
@@ -102,17 +142,20 @@ class SihdWorker(ILoggable, IObserver):
             return False
         if number is None:
             number = self.__n_workers
+        if args:
+            self.__args = args
+        else:
+            args = self.__args
         stop = self.__worker_stop
         work = self.__worker_work
         fun = self.__worker_loop
-        proc_lst = self.__proc
+        proc_lst = self.__proc_lst
         for i in range(number):
-            args = (i + 1, stop, work, input_channels, output_channels,)
-            proc = multiprocessing.Process(target=fun, daemon=True, args=args)
+            worker_args = (i + 1, stop, work, *args,)
+            proc = multiprocessing.Process(target=fun,
+                    daemon=True, args=worker_args)
             proc_lst.append(proc)
         return True
-
-    """ States """
 
     def pause_workers(self):
         self.__worker_work.clear()
@@ -130,9 +173,12 @@ class SihdWorker(ILoggable, IObserver):
         return stop_evt.is_set()
 
     def clear_workers(self):
+        if self.get_process() is not None:
+            self.log_error("You cannot clear workers inside a children process")
+            return False
         if self.stop_workers() is False:
             return False
-        proc_lst = self.__proc
+        proc_lst = self.__proc_lst
         for i, proc in enumerate(proc_lst):
             s = "Worker[{}]: "
             if proc.is_alive():
@@ -142,42 +188,45 @@ class SihdWorker(ILoggable, IObserver):
                 s += "had stopped"
             proc.join(timeout=1.0)
             self.log_debug(s.format(i + 1))
-        self.__proc = []
+        self.__proc_lst = []
         return True
 
     def start_workers(self):
-        proc_lst = self.__proc
-        if not proc_lst:
-            self.log_error("You have to make workers before you start")
+        if self.get_process() is not None:
+            self.log_error("You cannot start workers inside a children process")
             return False
-        for proc in proc_lst:
-            proc.start()
-        return True
+        ret = True
+        if not self.__proc_lst:
+            ret = self.make_workers(self.__args)
+        if ret:
+            proc_lst = self.__proc_lst
+            for proc in proc_lst:
+                proc.start()
+        return ret
 
     """ Loop """
 
-    def __worker_loop(self, worker_number, stop_evt, work_evt,
-                        input_channels, output_channels):
+    def __worker_loop(self, n_proc, stop_evt, work_evt, *args):
+        self.__nproc = n_proc
+        self.__proc = multiprocessing.current_process()
         # Iterations
-        self.__iter = 0
+        i = 0
         max_iter = self.__max_iter
-        # State
-        number = 0
         # Time
         get_now = time.time
         sleep = time.sleep
-        start = get_now()
         timeout = self.__timeout
         pause_time = self.__pause_time
         sleep_time = self.__sleep
-        # Parent
-        parent = self.__parent
-        parent._set_stopped(False)
-        work = self.do_work
         sleep = time.sleep
-        parent.on_worker_start(worker_number)
+        start = get_now()
+        # Work
+        work = self.do_work
+        if self.__on_start:
+            self.__on_start(self, *args)
         while not stop_evt.is_set():
             while not work_evt.is_set():
+                #TODO maybe condition -> notify all
                 work_evt.wait(timeout=pause_time)
             now = get_now()
             # Check timeout
@@ -187,19 +236,23 @@ class SihdWorker(ILoggable, IObserver):
             # Execution
             ret = False
             try:
-                ret = work(worker_number)
+                ret = work()
             except Exception as e:
-                self.log_error("Worker {} of {} exception: {}".format(worker_number, parent, e))
+                self.log_error("Worker {} exception: {}"\
+                        .format(n_proc, e))
                 traceback.print_exc()
+                if self.__on_err:
+                    self.__on_err(self, i, e)
             if ret is False:
                 break
             # Iterations
-            self.__iter += 1
-            if max_iter is not None and self.__iter >= max_iter:
+            i += 1
+            if max_iter is not None and i >= max_iter:
                 break
             # Pause
             end = get_now()
             pause = sleep_time - (end - now)
             if pause > 0.0:
                 sleep(pause)
-        parent.on_worker_stop(worker_number, number)
+        if self.__on_stop:
+            self.__on_stop(self, i)

@@ -24,12 +24,6 @@ class TestHandler(IHandler):
         if channel == self.input_msg:
             data = channel.read()
             self.log_info("Received msg: {}".format(msg))
-        """
-        if observable._reader.is_tcp():
-            self.log_info("Received: {} from {}".format(msg, co.getpeername()))
-        else:
-            self.log_info("Received: {}".format(msg))
-        """
         return True
 
 def get_udp_sender():
