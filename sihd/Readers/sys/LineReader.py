@@ -20,8 +20,7 @@ class LineReader(IReader):
         self.add_channel_input('path', type='queue', simple=True)
         self.add_channel_output('output')
         self.add_channel_output('lines', type='int', default=0)
-        self.add_channel_output('eof', type='bool',
-                                default=True, timeout=0.1)
+        self.add_channel_output('eof', type='bool', default=True)
 
     """ IConfigurable """
 

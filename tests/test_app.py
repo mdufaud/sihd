@@ -24,9 +24,6 @@ class TestApp(unittest.TestCase):
                     check_words, prt=False):
         reader = app._line_reader
         handler = app._word_handler
-        print(reader)
-        print(handler)
-        print(handler.output)
         words_dict = handler.output.get_data()
 
         for key, value in words_dict.items():

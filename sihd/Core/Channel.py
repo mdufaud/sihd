@@ -192,7 +192,7 @@ class Channel(IObservable, IObserver, ILoggable):
             return False
         if self._write(*args) is not False:
             self.do_timestamp()
-            self._last_data = args
+            self._last_data = args[0] if len(args) == 1 else args
             self.notify()
             return True
         return False

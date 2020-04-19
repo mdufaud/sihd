@@ -103,7 +103,7 @@ class TestChannelCondition(unittest.TestCase):
         worker1.start_workers() 
         worker2.start_workers() 
         worker3.start_workers()
-        time.sleep(3)
+        time.sleep(1)
         self.assertFalse(bool1.read())
         self.assertFalse(bool2.read())
         self.assertFalse(bool3.read())
@@ -113,7 +113,6 @@ class TestChannelCondition(unittest.TestCase):
         self.assertEqual(bool1.read(), timeout is False)
         self.assertEqual(bool2.read(), timeout is False)
         self.assertEqual(bool3.read(), timeout is False)
-        time.sleep(2)
         worker1.clear_workers()
         worker2.clear_workers()
         worker3.clear_workers()
@@ -148,7 +147,7 @@ class TestChannelCondition(unittest.TestCase):
         thread1.start()
         thread2.start() 
         thread3.start()
-        time.sleep(3)
+        time.sleep(1)
         for key, value in self.passed.items():
             self.assertFalse(value)
         if timeout is False:
@@ -156,7 +155,6 @@ class TestChannelCondition(unittest.TestCase):
             time.sleep(0.01)
         for key, value in self.passed.items():
             self.assertEqual(value, timeout is False)
-        time.sleep(2)
         thread1.stop()
         thread2.stop()
         thread3.stop()
@@ -165,14 +163,14 @@ class TestChannelCondition(unittest.TestCase):
         print()
         channel = ChannelCondition()
         self.do_condition(channel)
-        channel = ChannelCondition(timeout=2.)
+        channel = ChannelCondition(timeout=0.5)
         self.do_condition(channel, timeout=True)
         
         if multiprocessing:
             print()
             channel = ChannelCondition(mp=True)
             self.do_condition(channel)
-            channel = ChannelCondition(mp=True, timeout=2.)
+            channel = ChannelCondition(mp=True, timeout=0.5)
             self.do_condition(channel, timeout=True)
 
 if __name__ == '__main__':
