@@ -15,6 +15,14 @@ logger = sihd.set_log('debug')
 from sihd.Handlers.IHandler import IHandler
 from sihd.Tools.pcap import PcapWriter
 
+try:
+    import multiprocessing
+    if multiprocessing is not None:
+        #checks for /dev/shm
+        val = multiprocessing.Value('i', 0)
+except (ImportError, FileNotFoundError):
+    multiprocessing = None
+
 class PcapTestHandler(IHandler):
 
     def __init__(self, reader, app=None, name="PcapTestHandler"):
@@ -82,7 +90,8 @@ class TestPcap(unittest.TestCase):
             self.assertEqual(el, lst[i])
 
     def test_pcap_saver(self):
-        pcap_path = os.path.join(os.path.dirname(__file__), "resources", "Pcap", "test.pcap")
+        pcap_path = os.path.join(os.path.dirname(__file__),
+                                "resources", "Pcap", "test.pcap")
         lst = ['hello', 'world', 'are', 'you', 'alive']
         self.make_pcap(pcap_path, lst)
 
@@ -90,80 +99,58 @@ class TestPcap(unittest.TestCase):
         reader = sihd.Readers.PcapReader()
         handler = PcapTestHandler(reader)
 
+        saver.set_conf({
+            "save_raw": True,
+            "save_type": 'list',
+            "activate": False,
+            "endianness": "big",
+            "service_type": "process"
+        })
         reader.set_conf("service_type", "process")
         reader.set_conf("path", pcap_path)
 
-        """
-        reader.set_reader_saving(True)
-        reader.set_channel_saving('packet')
-        """
-        
         self.assertTrue(saver.setup())
         self.assertTrue(reader.setup())
 
         reader.packet.add_observer(saver.save)
         saver.activate.write(True)
 
-        """
-        print(reader)
-        print(reader.save_data)
-        reader.save_data.write(True)
-        print(reader.save_data)
-        """
-
         logger.info("###### Setup done. Starting ######")
         self.assertTrue(handler.start())
+        self.assertTrue(saver.start())
         self.assertTrue(reader.start())
         time.sleep(1)
         self.assertTrue(reader.stop())
+        self.assertTrue(saver.pause())
         self.assertTrue(handler.stop())
 
-        """
-        logger.info("###### Dumping reader ######")
-        #We dump then load from dump and check if saved data are the same
-        saved = reader.get_data_saved()
-        data_saved = [d.decode() for d in saved]
+        logger.info("Testing saved data")
+        data = saver.saved.get_data()
+        data_saved = [el.decode() for el in data]
         self.assertEqual(data_saved, lst)
-        reader.set_dump_magic("--TEST--")
-        path = os.path.join(os.path.dirname(__file__), "resources", "Dump", "test.dump")
-        reader.dump_to(path)
-        reader.clear_data_saved()
-        reader.load_from(path)
-        loaded = reader.get_data_saved()
-        print(data_saved, loaded)
-        data_loaded = [d.decode() for d in loaded]
-        self.assertEqual(data_saved, data_loaded)
 
-        logger.info("###### Dumping handler ######")
-        #Testing a dump on the handler too
-        path = os.path.join(os.path.dirname(__file__), "resources", "Dump", "test_handler.dump")
-        handler.dump_to(path)
-        rcv = handler.received
-        handler.load_from(path)
-        rcv2 = handler.received
-        self.assertEqual(rcv, rcv2)
-        handler.received = []
-
-        logger.info("###### Reading a new file ######")
-        #We then test the reader to see if it still works from being pickled loaded
-        pcap_path2 = os.path.join(os.path.dirname(__file__), "resources", "Pcap", "test2.pcap")
-        lst = ['dont', 'forget', 'your', 'nems']
-        self.make_pcap(pcap_path2, lst)
-        reader.set_conf('path', pcap_path2)
-        self.assertTrue(reader.clear_data_saved())
-        logger.info("###### Starting ######")
-        self.assertTrue(handler.start())
-        self.assertTrue(reader.start())
-        time.sleep(1)
-        self.assertTrue(reader.stop())
-        self.assertTrue(handler.stop())
-
-        saved = reader.get_data_saved()
-        data_saved = [d.decode() for d in saved]
+        path = os.path.join(os.path.dirname(__file__),
+                            "outputs", "pcap_test.dump")
+        logger.info("Dumping to {}".format(path))
+        saver.dump_path.write(path)
+        self.assertTrue(saver.resume())
+        time.sleep(0.01)
+        self.assertTrue(saver.stop())
+        
+        logger.info("Reading dump with another handler")
+        saver = sihd.Handlers.PcapHandler()
+        saver.set_conf({
+            "save_raw": True,
+            "save_type": 'list',
+            "activate": True,
+            "endianness": "big",
+        })
+        self.assertTrue(saver.setup())
+        self.assertTrue(saver.load_from(path))
+        logger.info("Testing reload")
+        loaded = saver.saved.get_data()
+        data_saved = [el.decode() for el in loaded]
         self.assertEqual(data_saved, lst)
-        for i, el in enumerate(handler.received):
-            self.assertEqual(el, lst[i])
-        """
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

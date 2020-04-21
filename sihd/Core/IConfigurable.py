@@ -52,9 +52,11 @@ class IConfigurable(INamedObject):
         conf = self.get_conf_obj()
         #Gets conf from either obj or setted configuration
         if conf:
+            #From obj
             if conf.has_option(self.get_name(), key):
                 val = conf.get(self.get_name(), key)
         else:
+            #From manual set/default
             val = self.__conf.get(key, None)
         if default is False:
             #Checks if val is equal to default
@@ -112,6 +114,9 @@ class IConfigurable(INamedObject):
     def get_conf_obj(self):
         """ Returns the configparser obj """
         return self.__conf_obj
+
+    def get_conf_dict(self):
+        return self.__conf
 
     def save_conf(self):
         """ Writes configured obj to file """

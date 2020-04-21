@@ -66,6 +66,7 @@ class IProcessedService(IService):
 
     def _start_impl(self):
         worker = SihdWorker(
+            name="{}.Worker".format(self.get_name()),
             work=self.work,
             on_start=self.on_worker_start,
             on_stop=self.on_worker_stop,

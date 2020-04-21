@@ -2,17 +2,23 @@
 #coding: utf-8
 
 """ System """
-
 import os
 import sys
 import time
-import socket
 import unittest
 
 import sihd
-sihd.set_log()
+logger = sihd.set_log()
 
 from sihd.Handlers.IHandler import IHandler
+
+try:
+    import multiprocessing
+    if multiprocessing is not None:
+        #checks for /dev/shm
+        val = multiprocessing.Value('i', 0)
+except (ImportError, FileNotFoundError):
+    multiprocessing = None
 
 class TestHandler(IHandler):
 

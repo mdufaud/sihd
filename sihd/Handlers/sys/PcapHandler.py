@@ -42,9 +42,8 @@ class PcapHandler(IHandler):
     def handle(self, channel):
         if channel == self.save:
             data = channel.read()
-            if self.__decode:
-                data = self.decode_data(data)
-            self.store_data(data)
+            if data is not None:
+                self.store_data(data)
         elif channel == self.dump_path:
             path = channel.read()
             if path:
@@ -78,23 +77,27 @@ class PcapHandler(IHandler):
         else:
             capinfo, data = writer.add_data(data)
         if self.__save:
-            self.saved.write((capinfo, data))
+            self.saved.write(data)
 
     """ IDumpable """
 
     def dump_to(self, filename, perm="wb+"):
         try:
             self.__writer.write_pcap(filename, mode=perm)
-            return True
         except IOError as e:
-            self.log_error(e)
-        return False
+            self.log_error("Pcap error {}".format(e))
+            return False
+        return True
 
     def load_from(self, filename, perm='rb'):
         reader = PcapReader()
         writer = self.__writer
-        lst = reader.read_all(filename, perm)
+        try:
+            lst = reader.read_all(filename, mode=perm)
+        except (IOError, ValueError) as e:
+            self.log_error("Pcap error {}".format(e))
+            return False
         store = self.store_data
         for capinfo, pkt in lst:
             store(pkt, capinfo)
-        return len(lst) > 0
+        return True

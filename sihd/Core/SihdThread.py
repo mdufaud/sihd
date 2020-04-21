@@ -26,6 +26,7 @@ class SihdThread(threading.Thread):
             self._timeout = None
         if not self.set_frequency(frequency):
             self.__sleep = 0.05
+        self.__pause_cdt = threading.Condition(lock=None)
 
     @staticmethod
     def is_main_thread():
@@ -54,7 +55,7 @@ class SihdThread(threading.Thread):
             raise ValueError("Error method is not callable")
         self.__on_start = on_start
         self.__on_stop = on_stop
-        self.__on_err = on_err
+        self.__on_error = on_err
 
     def is_running(self):
         return self.__stopped == False
@@ -91,12 +92,16 @@ class SihdThread(threading.Thread):
     """ Life cycle """
 
     def stop(self):
+        self.resume()
         self.__stopped = True
 
     def pause(self):
         self.__paused = True
 
     def resume(self):
+        cdt = self.__pause_cdt
+        with cdt:
+            cdt.notify(1)
         self.__paused = False
 
     """ Loop """
@@ -117,12 +122,16 @@ class SihdThread(threading.Thread):
         i = 0
         max_iter = self.__max_iter
         ret = None
+        condition = self.__pause_cdt
         if self.__on_start:
             self.__on_start(self, *self.__args)
         while not self.__stopped:
             while self.__paused:
-                #TODO change to condition/event
-                sleep(0.05)
+                #Pause wait
+                with condition:
+                    condition.wait(timeout=1)
+                if self.__stopped:
+                    break
             now = get_now()
             # Check timeout
             if timeout is not None:

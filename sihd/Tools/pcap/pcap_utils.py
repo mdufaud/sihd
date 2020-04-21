@@ -38,27 +38,30 @@ class CapFileInfo:
 
 class PcapReader:
     def __init__(self):
-        self.endian = None
-        self.nano = None
-        self.fd = None
-        self.capinfo = None
+        self.__endian = None
+        self.__nano = None
+        self.__fd = None
+        self.__capinfo = None
 
     def is_open(self):
-        return self.fd is not None
+        return self.__fd is not None
 
     def open(self, filename, mode='rb'):
-        self.fd = open(filename, mode)
-        self.capinfo = None
+        self.__fd = open(filename, mode)
+        self.__capinfo = None
         self.__header = False
         self.__magic = False
 
     def check_magic(self):
-        if self.fd is None:
+        if self.__fd is None:
             return False
         if self.__magic:
             return True
-        magic = self.fd.read(4)
-        if magic == b"\xa1\xb2\xc3\xd4":  # big endian
+        magic = self.__fd.read(4)
+        if len(magic) != 4:
+            self.close()
+            raise ValueError("Malformated magic: {} != 4".format(len(magic)))
+        elif magic == b"\xa1\xb2\xc3\xd4":  # big endian
             endian = ">"
             nano = False
         elif magic == b"\xd4\xc3\xb2\xa1":  # little endian
@@ -72,14 +75,14 @@ class PcapReader:
             nano = True
         else:
             self.close()
-            return False
-        self.endian = endian
-        self.nano = nano
+            raise ValueError("Magic unrecognized: {}".format(magic))
+        self.__endian = endian
+        self.__nano = nano
         self.__magic = True
         return True
 
     def check_header(self):
-        fd = self.fd
+        fd = self.__fd
         if fd is None or not self.__magic:
             return False
         if self.__header:
@@ -87,33 +90,35 @@ class PcapReader:
         hdr = fd.read(20)
         if len(hdr) < 20:
             self.close()
-            return False
-        major, minor, tz, sig, max_len, link_type = struct.unpack(self.endian + "HHIIII", hdr)
-        self.capinfo = CapFileInfo(ver_maj=major, ver_min=minor, gmt=tz,
+            raise ValueError("Header size: {} < 20".format(len(hdr)))
+        major, minor, tz, sig, max_len, link_type = struct.unpack(self.__endian + "HHIIII", hdr)
+        self.__capinfo = CapFileInfo(ver_maj=major, ver_min=minor, gmt=tz,
                             sigfigs=sig, snaplen=max_len, network=link_type)
         self.__header = True
         return True
 
     def read_pkt(self):
-        fd = self.fd
+        fd = self.__fd
         pkt = None
         cap_info = None
         if fd and self.__header:
             hdr = fd.read(16)
             if len(hdr) == 16:
-                sec, usec, cap_len, wire_len = struct.unpack(self.endian + "IIII", hdr)
+                sec, usec, cap_len, wire_len = struct.unpack(self.__endian + "IIII", hdr)
                 cap_info = CapInfo(sec=sec, usec=usec, cap_len=cap_len, orig_len=wire_len)
                 try:
                     pkt = fd.read(cap_len)
                 except EOFError:
                     pkt = None
+            #else:
+            #    raise ValueError("Malformated header: {} != 16".format(len(hdr)))
         return cap_info, pkt
 
     def close(self):
-        fd = self.fd
+        fd = self.__fd
         if fd:
             fd.close()
-        self.fd = None
+        self.__fd = None
 
     def read_all(self, filename, mode='rb'):
         lst = None
@@ -126,12 +131,12 @@ class PcapReader:
                 cap_info, pkt = self.read_pkt()
                 if pkt is None:
                     break
-                lst.apppend((cap_info, pkt))
+                lst.append((cap_info, pkt))
         self.close()
         return lst
 
     def get_header(self):
-        return self.capinfo
+        return self.__capinfo
 
 class PcapWriter:
     def __init__(self, endian, linktype=DLT_EN10MB, nano=False):
@@ -143,16 +148,16 @@ class PcapWriter:
         else:
             raise ValueError("Endianness is either 'big' or 'little' not '{}'"\
                                 .format(endian))
-        self.endian = endian
-        self.nano = bool(nano)
-        self.linktype = linktype
-        self.pkt_lst = []
+        self.__endian = endian
+        self.__nano = bool(nano)
+        self.__linktype = linktype
+        self.__pkt_lst = []
 
     def get_pkts(self):
-        return self.pkt_lst
+        return self.__pkt_lst
 
     def reset(self):
-        self.pkt_lst = []
+        self.__pkt_lst = []
 
     @staticmethod
     def encode_data(data, base64=False, encoding='utf-8'):
@@ -167,7 +172,7 @@ class PcapWriter:
             t = time.time()
             if sec is None:
                 sec = int(t)
-                usec = int(round(t - sec) * (1e9 if self.nano else 1e6))
+                usec = int(round(t - sec) * (1e9 if self.__nano else 1e6))
             elif usec is None:
                 usec = 0
         if not isinstance(data, bytes):
@@ -176,7 +181,7 @@ class PcapWriter:
             caplen = len(data)
         if wirelen is None:
             wirelen = caplen
-        hdr = struct.pack(self.endian + "IIII", sec, usec, caplen, wirelen)
+        hdr = struct.pack(self.__endian + "IIII", sec, usec, caplen, wirelen)
         pkt = data
         return hdr, pkt
 
@@ -186,22 +191,40 @@ class PcapWriter:
         return hdr, pkt
 
     def add_cap(self, hdr, pkt):
-        self.pkt_lst.append((hdr, pkt))
+        self.__pkt_lst.append((hdr, pkt))
 
     def get_header(self):
         #E501 ver 2.4
-        hdr = struct.pack(self.endian + "IHHIIII",
-                        0xa1b23c4d if self.nano else 0xa1b2c3d4,
-                        2, 4, 0, 0, 0xffff, self.linktype)
+        """
+        hdr = struct.pack(self.__endian + "IHHIIII",
+                        0xa1b23c4d if self.__nano else 0xa1b2c3d4,
+                        2, 4, 0, 0, 0xffff, self.__linktype)
+        """
+        hdr = struct.pack(self.__endian + "HHIIII", 2, 4, 0, 0, 0xffff, self.__linktype)
         return hdr
+
+    def get_magic(self):
+        #noqa: E501
+        if self.__nano is True:
+            if self.__endian == ">":
+                return b"\xa1\xb2\x3c\x4d"
+            else:
+                return b"\x4d\x3c\xb2\xa1"
+        else:
+            if self.__endian == ">":
+                return b"\xa1\xb2\xc3\xd4"
+            else:
+                return b"\xd4\xc3\xb2\xa1"
 
     def write_pcap(self, filename, mode='wb'):
         with open(filename, mode) as fd:
             if mode[0] == 'w':
                 hdr = self.get_header()
+                magic = self.get_magic()
+                fd.write(magic)
                 fd.write(hdr)
                 fd.flush()
-            for pktinfo in self.pkt_lst:
+            for pktinfo in self.__pkt_lst:
                 hdr, pkt = pktinfo
                 fd.write(hdr)
                 fd.write(pkt)

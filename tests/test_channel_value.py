@@ -19,14 +19,9 @@ from sihd.Core.Channel import *
 try:
     import multiprocessing
     from multiprocessing import Process, Manager
-except ImportError:
-    pass
-
-try:
-    if multiprocessing is not None:
-        #checks for /dev/shm
-        val = multiprocessing.Value('i', 0)
-except FileNotFoundError:
+    #checks for /dev/shm
+    val = multiprocessing.Value('i', 0)
+except (ImportError, FileNotFoundError):
     multiprocessing = None
 
 def write_into_channel(channel, value, value2):

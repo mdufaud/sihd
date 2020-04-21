@@ -56,7 +56,6 @@ class SihdWorker(ILoggable, IObserver):
             self.__sleep = 0.0
         if not self.set_worker_max_iterations(max_iter):
             self.__max_iter = None
-        self.__pause_time = 0.5
 
     """ Getters """
 
@@ -166,6 +165,7 @@ class SihdWorker(ILoggable, IObserver):
         return True
 
     def stop_workers(self):
+        self.resume_workers()
         stop_evt = self.__worker_stop
         if stop_evt.is_set():
             return True
@@ -186,7 +186,7 @@ class SihdWorker(ILoggable, IObserver):
                 s += "terminated"
             else:
                 s += "had stopped"
-            proc.join(timeout=1.0)
+            proc.join(timeout=2.0)
             self.log_debug(s.format(i + 1))
         self.__proc_lst = []
         return True
@@ -216,7 +216,6 @@ class SihdWorker(ILoggable, IObserver):
         get_now = time.time
         sleep = time.sleep
         timeout = self.__timeout
-        pause_time = self.__pause_time
         sleep_time = self.__sleep
         sleep = time.sleep
         start = get_now()
@@ -226,8 +225,10 @@ class SihdWorker(ILoggable, IObserver):
             self.__on_start(self, *args)
         while not stop_evt.is_set():
             while not work_evt.is_set():
-                #TODO maybe condition -> notify all
-                work_evt.wait(timeout=pause_time)
+                #Pause wait
+                work_evt.wait(timeout=1)
+                if stop_evt.is_set():
+                    break 
             now = get_now()
             # Check timeout
             if timeout is not None:

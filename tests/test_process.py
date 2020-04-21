@@ -10,16 +10,10 @@ import unittest
 
 try:
     import multiprocessing
-    import queue
-except ImportError:
-    multiprocessing = None
-    queue = None
-
-try:
     if multiprocessing is not None:
         #checks for /dev/shm
         val = multiprocessing.Value('i', 0)
-except FileNotFoundError:
+except (ImportError, FileNotFoundError):
     multiprocessing = None
 
 import sihd

@@ -45,6 +45,7 @@ class IThreadedService(IService, IRunnable):
 
     def _start_impl(self):
         self.setup_thread(
+            name="{}.Thread".format(self.get_name()),
             frequency=self.__thread_freq,
             timeout=self.__thread_timeout,
             max_iter=self.__thread_max_iter)

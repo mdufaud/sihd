@@ -21,15 +21,6 @@ class IReader(Core.IPolyService, Core.IAppContainer):
     def do_work(self) -> bool:
         return self.do_step()
 
-    """ IService """
-
-    def _pre_handle(self, channel) -> bool:
-        if self.__can_save:
-            if channel == self.save_data:
-                self.set_saving_data(channel.read())
-                return True
-        return False
-
     """ IReader """
 
     def set_source(self, source) -> bool:

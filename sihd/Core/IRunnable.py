@@ -21,7 +21,7 @@ class IRunnable(INamedObject):
     def on_thread_stop(self, thread, iteration):
         pass
 
-    def on_thread_error(self, thread, iteration):
+    def on_thread_error(self, thread, iteration, error):
         pass
 
     def get_step_method(self):

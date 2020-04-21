@@ -4,6 +4,8 @@
 """ System """
 import socket
 
+from typing import Union, Tuple
+
 subprocess = None
 shlex = None
 
@@ -20,111 +22,151 @@ class CmdInteractor(IInteractor):
         if shlex is None:
             import shlex
         self._set_default_conf({
-            "cmd": "/your/cmd --your=args",
+            "cmd": "/your/cmd --arg",
             "pipe": "ex: stdin;stdout",
             "devnull": "ex: stderr;stdin",
             "timeout": 0.1,
             "input_data": "",
             "stderr_to_out": False,
         })
-        self._exec = []
-        self._args = {}
-        self._timeout = None
-        self._input = None
-        self._proc = None
+        self.__exec = None
+        self.__input = None
+        self.__args = {}
+        self.__timeout = None
+        self.__proc = None
+        #self.add_channel_input("set_stdout", type='byte')
+        #self.add_channel_input("set_stderr", type='byte')
+        self.add_channel_input("stdin", type='queue')
+        self.add_channel_output("stdout")
+        self.add_channel_output("stderr")
+        self.add_channel_output("returncode", type='int', default=-1)
 
     """ IConfigurable """
 
     def do_setup(self):
         ret = super().do_setup()
         cmd = self.get_conf("cmd", default=False)
+        pipe = self.get_conf("pipe", default=False)
+        stderr = self.get_conf("stderr_to_out")
+        devnull = self.get_conf("devnull", default=False)
+        input_data = self.get_conf("input_data")
+        self.set_timeout(self.get_conf("timeout"))
         if cmd:
             self.set_cmd(cmd)
-        pipe = self.get_conf("pipe", default=False)
         if pipe:
             self.set_pipe(pipe.split(';'))
-        stderr = self.get_conf("stderr_to_out")
         if stderr:
             self.set_stderr_out()
-        devnull = self.get_conf("devnull", default=False)
         if devnull:
             self.set_devnull(devnull.split(';'))
-        timeout = self.get_conf("timeout")
-        if timeout:
-            self.set_timeout(timeout)
-        input_data = self.get_conf("input_data")
         if input_data:
-            self.set_stdin_pipe()
             self.set_input(input_data)
         return True
 
     def set_stdin(self, std):
-        self._args['stdin'] = std
+        self.__args['stdin'] = std
 
     def set_stdout(self, fd):
-        self._args['stdout'] = fd
+        self.__args['stdout'] = fd
 
     def set_stderr(self, fd):
-        self._args['stderr'] = fd
+        self.__args['stderr'] = fd
 
     def set_timeout(self, timeout):
-        self._timeout = timeout
+        self.__timeout = timeout
+
+    def set_input(self, data):
+        if isinstance(data, bool) and not data:
+            self.set_stdin(None)
+            self.__input = None
+            return
+        if isinstance(data, str):
+            data = data.encode()
+        if isinstance(data, bytes):
+            self.set_stdin_pipe()
+            self.__input = data
+        else:
+            raise ValueError("Stdin data is not bytes: {}".format(data))
 
     """ IInteractor """
 
+    def handle(self, channel):
+        if channel == self.stdin:
+            data = channel.read()
+            if data is not None:
+                self.set_input(data)
+
+    def on_new_interaction(self, cmd: Union[str, list]) -> list:
+        return self.set_cmd(cmd)
+
     def do_interaction(self, cmd, *args, **kwargs):
-        return self.exe(cmd)
+        """ Executes command and close children """
+        child = self.execute(cmd)
+        if child is None:
+            return False
+        out, err = self.communicate()
+        self.stdout.write(out)
+        if err:
+            self.stderr.write(err)
+        self.returncode.write(child.returncode)
+        return child.returncode == 0
 
     """ Cmd """
 
-    def set_cmd(self, cmd):
-        """ @param cmd either a string or a list """
+    def set_cmd(self, cmd: Union[str, list]) -> list:
         if isinstance(cmd, str):
-            self._get_cmd_from_str(cmd)
-        elif isinstance(cmd, list):
-            self._exec = cmd
+            cmd = self._get_cmd_from_str(cmd)
+        elif not isinstance(cmd, (list, tuple, set)):
+            raise ValueError("Command unrecognized: {}".format(cmd))
+        self.__exec = cmd
+        return cmd
 
-    def _get_cmd_from_str(self, cmd):
-        lst = shlex.split(cmd)
-        self._exec = lst
+    def _get_cmd_from_str(self, cmd: str):
+        """ Get an argument list from string (shell parsing) """
+        return shlex.split(cmd)
 
-    def exe(self, cmd=None):
-        """ Executes command and close children """
-        child = self.execute(cmd)
+    def exe(self, cmd: str) -> bool:
+        """ For a fast single line execution """
+        self.set_cmd(cmd)
+        child = self.execute()
         if child is None:
             return False
         child.communicate()
         return child.returncode == 0
 
-    def execute(self, cmd=None):
-        """ Wrapper around Popen builder
-            @return Popen object or None if failed
+    def execute(self, cmd: list = None) -> subprocess:
         """
-        if cmd is not None:
-            self.set_cmd(cmd)
+            Wrapper around Popen builder.
+
+            :return: Popen object or None if failed
+        """
+        if cmd is None:
+            cmd = self.__exec
         ret = None
         try:
-            ret = subprocess.Popen(self._exec, **self._args)
+            ret = subprocess.Popen(cmd, **self.__args)
         except OSError as e:
             self.log_error("OSError executing: {} "
-                            "(cmd: {})".format(e, " ".join(self._exec)))
+                            "(cmd: {})".format(e, " ".join(cmd)))
         except ValueError as e:
             self.log_error("ValueError executing: {} "
-                            "(cmd: {})".format(e, " ".join(self._exec)))
+                            "(cmd: {})".format(e, " ".join(cmd)))
         if ret:
-            self._proc = ret
+            self.__proc = ret
         return ret
 
-    def communicate(self, input=None, timeout=None):
-        """ Use a Popen proc object and applies communicate on it
-            @return stdout and stderr (None if not failed) as binary
+    def communicate(self, input=None, timeout=None) -> Tuple[bytes, bytes]:
+        """
+            Use a Popen proc object and applies communicate on it
+
+            :return: stdout and stderr as bytes
         """
         if timeout is None:
-            timeout = self._timeout
+            timeout = self.__timeout
         if input is None:
-            input = self._input
+            input = self.__input
         try:
-            out, errs = self._proc.communicate(timeout=timeout,
+            out, errs = self.__proc.communicate(timeout=timeout,
                                                 input=input)
         except subprocess.TimeoutExpired:
             self.log_error("Timed out communication ({})".format(timeout))
@@ -136,13 +178,16 @@ class CmdInteractor(IInteractor):
     def end_process(self, kill=False):
         """ Kill the children process by applying communicate on it """
         if kill:
-            self._proc.kill()
-        out, errs = self._proc.communicate()
-        self._proc = None
+            self.__proc.kill()
+        out, errs = self.__proc.communicate()
+        self.__proc = None
         return out, errs
 
     def get_proc(self):
-        return self._proc
+        return self.__proc
+
+    def get_args(self):
+        return self.__exec
 
     """ DEVNULL """
 
@@ -159,13 +204,13 @@ class CmdInteractor(IInteractor):
                 self.log_warning("No such std {} for devnull".format(std))
 
     def set_stdin_devnull(self):
-        self._args['stdin'] = subprocess.DEVNULL
+        self.__args['stdin'] = subprocess.DEVNULL
 
     def set_stdout_devnull(self):
-        self._args['stdout'] = subprocess.DEVNULL
+        self.__args['stdout'] = subprocess.DEVNULL
 
     def set_stderr_devnull(self):
-        self._args['stderr'] = subprocess.DEVNULL
+        self.__args['stderr'] = subprocess.DEVNULL
 
     """ PIPE """
 
@@ -182,16 +227,16 @@ class CmdInteractor(IInteractor):
                 self.log_warning("No such std {} for pipe".format(std))
 
     def set_stdin_pipe(self):
-        self._args['stdin'] = subprocess.PIPE
+        self.__args['stdin'] = subprocess.PIPE
 
     def set_stdout_pipe(self):
-        self._args['stdout'] = subprocess.PIPE
+        self.__args['stdout'] = subprocess.PIPE
 
     def set_stderr_pipe(self):
-        self._args['stderr'] = subprocess.PIPE
+        self.__args['stderr'] = subprocess.PIPE
 
     """ STDERR """
 
     def set_stderr_out(self):
         """ Routes stderr to stdout """
-        self._args['stderr'] = subprocess.STDOUT
+        self.__args['stderr'] = subprocess.STDOUT

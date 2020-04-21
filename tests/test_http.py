@@ -90,7 +90,12 @@ class TestHttp(unittest.TestCase):
         url = "https://www.google.com"
         interactor = HttpInteractor()
         interactor.set_conf('service_type', 'process')
-        self.assertTrue(interactor.setup())
+        try:
+            self.assertTrue(interactor.setup())
+        except FileNotFoundError:
+            #/dev/shm
+            logger.warning("Test cannot continue as your device has no shared memory capabilities")
+            return
         channel_test = sihd.Core.Channel.ChannelQueue(name='test', mp=True, simple=True)
         interactor.c_result.add_observer(channel_test)
         self.assertTrue(interactor.start())

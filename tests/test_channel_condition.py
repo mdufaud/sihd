@@ -2,13 +2,8 @@
 #coding: utf-8
 
 """ System """
-import os
-import sys
 import time
-import test_utils
-import socket
 import unittest
-import threading
 
 import sihd
 logger = sihd.set_log('debug')
@@ -20,22 +15,10 @@ from sihd.Core import SihdWorker
 
 try:
     import multiprocessing
-    from multiprocessing import Process, Manager
-except ImportError:
-    pass
-
-try:
-    if multiprocessing is not None:
-        #checks for /dev/shm
-        val = multiprocessing.Value('i', 0)
-except FileNotFoundError:
+    #checks for /dev/shm
+    val = multiprocessing.Value('i', 0)
+except (ImportError, FileNotFoundError):
     multiprocessing = None
-
-def write_into_channel(channel, value, value2):
-    if value2 is not None:
-        channel.write(value, value2)
-    else:
-        channel.write(value)
 
 class TestChannelCondition(unittest.TestCase):
 
@@ -44,22 +27,6 @@ class TestChannelCondition(unittest.TestCase):
 
     def tearDown(self):
         pass
-
-    def write_mp(self, channel, value, value2=None):
-        p = Process(target=write_into_channel, args=[channel, value, value2])
-        p.start()
-        p.join()
-
-    def do_write(self, channel, value, value2=None, expect=True):
-        logger.info("Writing -> {}{}".format(value,
-            " - " + str(value2) if value2 is not None else ""))
-        if channel.is_multiprocess():
-            self.write_mp(channel, value, value2)
-        else:
-            if value2 is not None:
-                self.assertTrue(channel.write(value, value2) == expect)
-            else:
-                self.assertTrue(channel.write(value) == expect)
 
     """ Channel Condition """
 
@@ -120,7 +87,7 @@ class TestChannelCondition(unittest.TestCase):
     """ Thread """
 
     def condition_thread_step(self):
-        ident = threading.current_thread().ident
+        ident = self.thread.ident
         self.passed[ident] = False
         logger.info("Thread {} reading condition".format(ident))
         ret = self.cond.read()
@@ -128,6 +95,7 @@ class TestChannelCondition(unittest.TestCase):
         logger.info("Thread {} passed condition -> {}".format(ident, ret))
 
     def thread_started(self, thread, *args):
+        self.thread = thread
         self.cond = args[0]
 
     def do_thread(self, channel, timeout=False):
