@@ -9,12 +9,12 @@ class IInteractor(Core.IPolyService, Core.IAppContainer):
 
     def __init__(self, app=None, name="IInteractor"):
         Core.IAppContainer.__init__(self)
-        if app:
-            self.set_app(app)
         super().__init__(name)
         self.__interaction = None
         self.add_channel_input("new_interaction", type="queue")
         self.add_channel_output("result")
+        if app:
+            self.set_app(app)
 
     """ To implement """
 

@@ -211,7 +211,7 @@ class ICmdGui(cmd.Cmd, IGui):
 
     # Entry point
 
-    def on_step(self, **kwargs):
+    def loop(self, **kwargs):
         time.sleep(0.1)
         self.read_channels_input()
         self.cmdloop()

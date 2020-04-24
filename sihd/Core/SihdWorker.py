@@ -4,7 +4,8 @@
 """ System """
 import time
 import os
-import traceback
+
+import sihd
 
 from .ILoggable import ILoggable
 from .IObserver import IObserver
@@ -247,13 +248,13 @@ class SihdWorker(ILoggable, IObserver):
             except Exception as e:
                 self.log_error("Worker {} exception: {}"\
                         .format(n_proc, e))
-                traceback.print_exc()
+                self.log_error(sihd.get_traceback())
                 if self.__on_err:
                     self.__on_err(self, i, e)
+            i += 1
             if ret is False:
                 break
             # Iterations
-            i += 1
             if max_iter is not None and i >= max_iter:
                 break
             # Pause

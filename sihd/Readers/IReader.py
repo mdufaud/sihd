@@ -10,9 +10,9 @@ class IReader(Core.IPolyService, Core.IAppContainer):
 
     def __init__(self, app=None, name="IReader"):
         Core.IAppContainer.__init__(self)
+        super().__init__(name)
         if app:
             self.set_app(app)
-        super().__init__(name)
         self._set_default_conf({
             "service_type": "thread",
         })

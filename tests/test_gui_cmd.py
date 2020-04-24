@@ -9,7 +9,7 @@ import unittest
 
 import utils
 import sihd
-logger = sihd.set_log()
+logger = sihd.set_log('debug')
 
 from sihd.GUI.Cmd.ICmdGui import ICmdGui
 from sihd.App.IApp import IApp
@@ -55,6 +55,7 @@ class SimpleApp(IApp):
 
     def __init__(self, name):
         super(SimpleApp, self).__init__(name)
+        self.set_path(os.path.dirname((__file__)))
 
     def service_state_changed(self, service, stopped, paused):
         if self.is_gui(service) is False:
@@ -65,26 +66,19 @@ class SimpleApp(IApp):
             self.log_info("Stopping too")
             self.stop()
 
+    def post_setup(self):
+        self.gui = SimpleCmd(app=self)
+        self.gui.add_state_observer(self)
+        self.gui.set_intro("Welcome in cmd gui inApp test")
+        return True
+
 class TestGui(unittest.TestCase):
 
     def setUp(self):
-        pass
+        print()
 
     def tearDown(self):
         pass
-
-    @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
-    def test_cmd_gui_app(self):
-        print()
-        app = SimpleApp("SomeApp")
-        gui = SimpleCmd(app=app)
-        gui.add_state_observer(app)
-        gui.set_intro("Welcome in cmd gui inApp test")
-        if app.setup_app() is False:
-            return
-        app.start()
-        app.loop(timeout=20)
-        app.stop()
 
     @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
     def test_simple_cmd_gui(self):
@@ -98,6 +92,16 @@ class TestGui(unittest.TestCase):
         except KeyboardInterrupt:
             pass
         self.assertTrue(gui.stop())
+
+    @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
+    def test_cmd_gui_app(self):
+        print()
+        app = SimpleApp("SomeApp")
+        if app.setup_app() is False:
+            return
+        app.start()
+        app.loop(timeout=20)
+        app.stop()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

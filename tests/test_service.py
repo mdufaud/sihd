@@ -33,6 +33,26 @@ class TestServices(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def step(self):
+        logger.info("Step")
+
+    def on_thread_stop(self, thread, iteration):
+        self.__iter = iteration
+
+    def test_runnable(self):
+        self.__iter = 0
+        runnable = sihd.Core.IRunnable()
+        runnable.setup_thread(
+            step=self.step,
+            frequency=50,
+            timeout=5,
+            max_iter=10,
+            on_stop=self.on_thread_stop,
+        )
+        runnable.start_thread()
+        time.sleep(1)
+        self.assertEqual(self.__iter, 10)
+    
     def do_life_cycle(self, service):
         self.assertTrue(service.setup())
         self.assertTrue(service.start())

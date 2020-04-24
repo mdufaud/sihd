@@ -46,9 +46,10 @@ class IApp(Core.IService, Core.IServiceStateObserver):
     def setup_app(self, *args, **kwargs):
         self.log_debug("Starting application setup")
         #App service setup
-        ret = self.load_app_conf()
+        conf_path = kwargs.get("conf_path", None)
+        ret = self.load_app_conf(conf_path)
         #App internal setup
-        ret = self._setup_app_impl(*args, **kwargs)
+        ret = ret and self._setup_app_impl(*args, **kwargs)
         #Save app children's configuration
         ret = ret and self.save_children_conf()
         #Call children's service setup
@@ -131,9 +132,9 @@ class IApp(Core.IService, Core.IServiceStateObserver):
         """ Load conf from path or <APP_PATH>/config/<APP_NAME>.ini """
         if path is None:
             filename = self.get_name() + ".ini"
+            #conf = os.path.join(os.getcwd(), "config", filename)
             conf = os.path.join("config", filename)
-            to_read = os.path.join(self._path, conf)
-            path = to_read
+            path = os.path.join(self._path, conf)
         return self.__apply_conf(path)
 
     def __setup_logger_conf(self, config):
@@ -211,6 +212,7 @@ class IApp(Core.IService, Core.IServiceStateObserver):
 
     def save_children_conf(self):
         fun = self.__call_children
+        conf = self.get_conf_obj()
         fun(self.interactors, "save_conf")
         fun(self.guis, "save_conf")
         fun(self.handlers, "save_conf")
@@ -234,7 +236,7 @@ class IApp(Core.IService, Core.IServiceStateObserver):
 
     @staticmethod
     def get_sihd_path():
-        return os.path.dirname(sihd.__file__)
+        return os.path.dirname(os.path.dirname(sihd.__file__))
 
     def set_path(self, path):
         self._path = path

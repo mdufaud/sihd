@@ -247,15 +247,6 @@ class ICursesGui(IGui):
 
     # Entry point
 
-    def on_thread_start(self, thread):
-        try:
-            self.loop()
-        except Exception as e:
-            import traceback
-            s = traceback.format_exc()
-            self.stop()
-            self.log_error(s)
-
     def loop(self, timeout=None):
         #TODO timeout ?
         self.init_curses()

@@ -81,24 +81,28 @@ class IConfigurable(INamedObject):
             self.__conf.update(key)
             if force is True:
                 for k, v in key.items():
-                    self.set_conf_file(k, v)
-            return
+                    self.set_conf_file(k, v, force=force)
+            return True
         self.__conf[key] = value
         if force is True:
-            self.set_conf_file(key, value)
+            return self.set_conf_file(key, value, force=force)
+        return True
 
-    def set_conf_file(self, key, value, force=False):
+    def set_conf_file(self, key, value, force=False, obj=None):
         """ Set a value in the obj configuration """
-        obj = self.get_conf_obj()
+        if obj is None:
+            obj = self.get_conf_obj()
         name = self.get_name()
-        if obj:
-            if not self.__has_section:
-                self.__setup_section()
-            elif obj.has_option(name, key):
-                base_val = obj.get(name, key)
-                if not force and base_val != value:
-                    return
-            obj.set(name, key, value)
+        if not obj:
+            return False
+        if not self.__has_section:
+            self.__setup_section(obj)
+        elif obj.has_option(name, key):
+            base_val = obj.get(name, key)
+            if not force and base_val != value:
+                return False
+        obj.set(name, key, value)
+        return True
 
     def get_default_conf_dict(self):
         return self.__default_conf
@@ -118,11 +122,14 @@ class IConfigurable(INamedObject):
     def get_conf_dict(self):
         return self.__conf
 
-    def save_conf(self):
+    def save_conf(self, obj=None):
         """ Writes configured obj to file """
         dic = dict(self.__default_conf)
         dic.update(self.__conf)
-        return self.__write_dict_conf(dic)
+        obj = obj if obj is not None else self.get_conf_obj()
+        if obj:
+            return self.__write_dict_conf(dic, obj)
+        return False
 
     """ To be called by children """
 
@@ -143,9 +150,9 @@ class IConfigurable(INamedObject):
 
     """ Private """
 
-    def __setup_section(self):
+    def __setup_section(self, obj=None):
         """ Sets section for obj in configparser """
-        conf = self.get_conf_obj()
+        conf = obj if obj is not None else self.get_conf_obj()
         added = False
         if conf and conf.has_section(self.get_name()) is False:
             conf.add_section(self.get_name())
@@ -153,19 +160,18 @@ class IConfigurable(INamedObject):
         self.__has_section = True
         return added
 
-    def __write_dict_conf(self, dic):
+    def __write_dict_conf(self, dic, obj=None):
         """ Writes dictionnary in configparser """
-        if not dic:
-            return True
-        if not self.get_conf_obj():
+        if obj is None:
             return False
         if not self.__has_section:
-            self.__setup_section()
+            self.__setup_section(obj)
         fun = self.set_conf_file
         for key, value in dic.items():
-            fun(key, str(value))
+            fun(key, str(value), force=False, obj=obj)
         return True
 
-    def __write_default_conf(self):
+    def __write_default_conf(self, obj=None):
         """ Called when no section exists for obj in file """
-        return self.__write_dict_conf(self.__default_conf)
+        obj = obj if obj is not None else self.get_conf_obj()
+        return self.__write_dict_conf(self.__default_conf, obj)

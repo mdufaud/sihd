@@ -20,17 +20,36 @@ class IThreadedService(IService, IRunnable):
         self.__thread_freq = None
         self.__thread_timeout = None
         self.__thread_max_iter = None
+        self.__thread_args = []
 
-    def on_step(self):
-        pass
+    """ IRunnable """
+
+    def on_thread_start(self, thread, *args):
+        self.log_debug("Thread started")
+
+    def on_thread_stop(self, thread, iteration):
+        self.log_debug("Thread stopped after {} iterations"\
+                .format(iteration))
+
+    def on_thread_error(self, thread, iteration, error):
+        self.log_error("Thread error: {}".format(error))
 
     def step(self):
-        """ Not necessarily useful since we have observer/observable
+        """
+            Not necessarily useful since we have observer/observable
             But in some cases when service is stopped you may want
                 to check your inputs
         """
         self.read_channels_input()
         return self.on_step()
+
+    """ IThreadedService """
+
+    def on_step(self):
+        pass
+
+    def set_thread_args(self, args):
+        self.__thread_args = args
 
     """ IConfigurable """
 
@@ -45,10 +64,11 @@ class IThreadedService(IService, IRunnable):
 
     def _start_impl(self):
         self.setup_thread(
-            name="{}.Thread".format(self.get_name()),
+            name="{}.MainThread".format(self.get_name()),
             frequency=self.__thread_freq,
             timeout=self.__thread_timeout,
-            max_iter=self.__thread_max_iter)
+            max_iter=self.__thread_max_iter,
+            args=self.__thread_args)
         if self.is_paused():
             self.pause_thread()
         return True

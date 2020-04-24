@@ -17,7 +17,7 @@ class TestApp(sihd.App.IApp):
         super(TestApp, self).__init__("TestApp" + self._test)
         self.set_path(os.path.dirname(os.path.dirname((__file__))))
         sihd.Core.ILoggable.set_color(True)
-        #self._default_log_level = "debug"
+        self._default_log_level = "debug"
 
     def on_setup(self):
         ret = super().on_setup()
@@ -88,7 +88,7 @@ class TestApp(sihd.App.IApp):
             handler.handle = sihd.Core.Stats.stat_it(handler.handle)
 
     def _configure_reader(self, reader, args):
-        reader.set_conf("path", args.file)
+        reader.set_conf("path", args.file, force=True)
         #reader.set_conf("service_type", "process")
         #Decorate with stats
         if self.args.stats:

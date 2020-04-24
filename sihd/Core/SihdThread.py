@@ -18,7 +18,8 @@ class SihdThread(threading.Thread):
         self.__args = args
         """ Callables """
         self.set_callbacks(on_start, on_stop, on_err)
-        self.set_step_method(step)
+        if step:
+            self.set_step_method(step)
         """ Step properties """
         if not self.set_max_iter(max_iter):
             self.__max_iter = None
@@ -146,10 +147,10 @@ class SihdThread(threading.Thread):
                     self.__on_error(self, i, e)
                 else:
                     raise
+            i += 1
             if ret is False:
                 break
             # Iterations
-            i += 1
             if max_iter is not None and i >= max_iter:
                 break
             # Pause

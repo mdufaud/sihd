@@ -14,8 +14,7 @@ from sihd.Tools.sys import memory
 class TestApp(unittest.TestCase):
 
     def setUp(self):
-        self.x = 0
-        pass
+        print()
 
     def tearDown(self):
         pass
@@ -46,9 +45,9 @@ class TestApp(unittest.TestCase):
         sihd.Core.Stats.reset()
 
     def do_file(self, path, lines, skipped, check_words={}):
-        print("Test-{} with file '{}' with {} lines and {} comments".format(self.x, path, lines, skipped))
-        app = utils.TestApp(self.x)
-        self.x += 1
+        print("Test with file '{}' with {} lines and {} comments"\
+                .format(path, lines, skipped))
+        app = utils.TestApp(0)
         app.set_args([
             "-f", path,
             "-s",
@@ -58,7 +57,7 @@ class TestApp(unittest.TestCase):
         app.start_all()
         app.loop(timeout=1)
         app.stop()
-        os.remove(app.get_conf_path())
+        #os.remove(app.get_conf_path())
         self.file_expect(app, lines, skipped, check_words, prt=False)
 
     def test_file_reader(self):

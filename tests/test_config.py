@@ -16,11 +16,7 @@ except ImportError:
     import configparser
     ConfigParser = configparser
 
-""" Setting up basic logging """
-
-import logging
-logger = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG)
+logger = sihd.set_log('debug')
 
 import unittest
 
@@ -28,9 +24,10 @@ class TestConfig(unittest.TestCase):
 
     def setUp(self):
         self.config = ConfigParser.ConfigParser()
+        print()
 
     def tearDown(self):
-        pass
+        time.sleep(0.01)
 
     def get_conf_path(self):
         dir_path = os.path.join(os.path.dirname(__file__), "config")
@@ -77,8 +74,10 @@ class TestConfig(unittest.TestCase):
     def test_app_config_changed(self):
         app = utils.TestApp("ConfigTest")
 
+        #Check if config is here and good
         obj = ConfigParser.ConfigParser()
-        path_config = os.path.join(self.get_conf_path(), "{}.ini".format(app.get_name()))
+        path_config = os.path.join(self.get_conf_path(),
+                "{}.ini".format(app.get_name()))
         obj.read(path_config)
         self.assertTrue(obj.has_section(app.get_name()))
         reader_name = "LineReaderConfigTest"
@@ -95,17 +94,19 @@ class TestConfig(unittest.TestCase):
         if app.setup_app() is False:
             sys.exit(1)
         self.assertTrue(app.start())
+        app.stop()
+
+        #Check if reader is set to path
         obj = ConfigParser.ConfigParser()
         obj.read(path_config)
         self.assertTrue(obj.has_section(app.get_name()))
         reader = app._line_reader
         self.assertTrue(obj.has_section(reader.get_name()))
         self.assertTrue(obj.has_option(reader.get_name(), "path"))
-
         file_to_read = obj.get(reader.get_name(), "path")
-        logger.info("File setted: {} (== {})".format(file_to_read, __file__))
-        self.assertTrue(file_to_read == __file__)
-        app.stop()
+        logger.info("File setted: {} (== {})"\
+                .format(file_to_read, __file__))
+        self.assertEqual(file_to_read, __file__)
         os.remove(path_config)
 
     def test_app_config(self):
@@ -118,14 +119,18 @@ class TestConfig(unittest.TestCase):
         if app.setup_app() is False:
             sys.exit(1)
         self.assertTrue(app.start())
+        self.assertTrue(app.stop())
+
         obj = ConfigParser.ConfigParser()
-        obj.read(os.path.join(self.get_conf_path(), "{}.ini".format(app.get_name())))
+        path_config = os.path.join(self.get_conf_path(),
+                    "{}.ini".format(app.get_name()))
+        logger.info("Reading {}".format(path_config))
+        obj.read(path_config)
         self.assertTrue(obj.has_section(app.get_name()))
         reader = app._line_reader
         self.assertTrue(obj.has_section(reader.get_name()))
         self.assertTrue(obj.has_option(reader.get_name(), "path"))
-        self.assertTrue(obj.get(reader.get_name(), "path") == path)
-        app.stop()
+        self.assertEqual(obj.get(reader.get_name(), "path"), path)
 
 
 if __name__ == '__main__':

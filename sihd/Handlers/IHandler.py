@@ -9,9 +9,9 @@ class IHandler(Core.IPolyService, Core.IAppContainer):
 
     def __init__(self, app=None, name="IHandler"):
         Core.IAppContainer.__init__(self)
+        super().__init__(name)
         if app:
             self.set_app(app)
-        super().__init__(name)
 
     """ IHandler """
 
