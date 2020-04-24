@@ -31,8 +31,8 @@ class IProcessedService(IService):
 
     """ IConfigurable """
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        ret = super().on_setup()
         self.__workers_nbr = int(self.get_conf("process_workers"))
         self.__workers_freq = int(self.get_conf("process_frequency"))
         self.__workers_timeout = int(self.get_conf("process_timeout"))
@@ -41,11 +41,23 @@ class IProcessedService(IService):
 
     """ Worker method """
 
+    def is_paused(self):
+        worker = self.__worker
+        if worker:
+            return worker.are_workers_paused()
+        return super().is_paused()
+
+    def is_running(self):
+        worker = self.__worker
+        if worker:
+            return worker.are_workers_running()
+        return super().is_running()
+
     def work(self):
         self.read_channels_input()
-        return self.do_work()
+        return self.on_work()
 
-    def do_work(self):
+    def on_work(self):
         pass
 
     def on_worker_start(self, worker, *args):
@@ -55,7 +67,7 @@ class IProcessedService(IService):
                 .format(worker.get_number(), os.getpid()))
 
     def on_worker_error(self, worker, total_iter, error):
-        self.log_debug("Worker[{}]: {}"\
+        self.log_error("Worker[{}]: {}"\
                 .format(worker.get_number(), error))
 
     def on_worker_stop(self, worker, total_iter):
@@ -103,19 +115,19 @@ class IProcessedService(IService):
         return False
 
     def _stop_impl(self):
+        ret = False
         if os.getpid() == self.__main_pid:
             self.log_debug("Stopping from main process")
-            self.__worker.clear_workers()
-            self.__worker = None
+            ret = self.__worker.clear_workers()
+            if ret:
+                self.__worker = None
         else:
             self.log_debug("Stopping from child process")
-            self.__worker.stop_workers()
-        return True
+            ret = self.__worker.stop_workers()
+        return ret
 
     def _pause_impl(self):
-        self.__worker.pause_workers()
-        return True
+        return self.__worker.pause_workers()
 
     def _resume_impl(self):
-        self.__worker.resume_workers()
-        return True
+        return self.__worker.resume_workers()

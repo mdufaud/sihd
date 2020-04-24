@@ -21,7 +21,7 @@ class IThreadedService(IService, IRunnable):
         self.__thread_timeout = None
         self.__thread_max_iter = None
 
-    def do_step(self):
+    def on_step(self):
         pass
 
     def step(self):
@@ -30,12 +30,12 @@ class IThreadedService(IService, IRunnable):
                 to check your inputs
         """
         self.read_channels_input()
-        return self.do_step()
+        return self.on_step()
 
     """ IConfigurable """
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        ret = super().on_setup()
         self.__thread_freq = int(self.get_conf("thread_frequency"))
         self.__thread_timeout = float(self.get_conf("thread_timeout"))
         self.__thread_max_iter = int(self.get_conf("thread_max_iterations"))

@@ -8,9 +8,10 @@ from sihd import Core
 class IHandler(Core.IPolyService, Core.IAppContainer):
 
     def __init__(self, app=None, name="IHandler"):
-        super(IHandler, self).__init__(name)
-        if (app):
+        Core.IAppContainer.__init__(self)
+        if app:
             self.set_app(app)
+        super().__init__(name)
 
     """ IHandler """
 
@@ -19,8 +20,8 @@ class IHandler(Core.IPolyService, Core.IAppContainer):
 
     """ IProcessedService """
 
-    def do_work(self) -> bool:
-        return self.do_step()
+    def on_work(self) -> bool:
+        return self.on_step()
 
     """ IService """
 
@@ -30,5 +31,5 @@ class IHandler(Core.IPolyService, Core.IAppContainer):
     """ IAppContainer """
 
     def set_app(self, app):
-        super(IHandler, self).set_app(app)
+        super().set_app(app)
         app.add_handler(self)

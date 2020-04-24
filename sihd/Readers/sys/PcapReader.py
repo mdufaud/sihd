@@ -30,8 +30,8 @@ class PcapReader(IReader):
 
     """ IConfigurable """
 
-    def on_setup(self):
-        ret = super().on_setup()
+    def post_setup(self):
+        ret = super().post_setup()
         if ret:
             path = self.get_conf("path", default=False)
             if path:
@@ -114,7 +114,7 @@ class PcapReader(IReader):
             pass
         return info, pkt
 
-    def do_step(self):
+    def on_step(self):
         if not self.__pcap_reader:
             return True
         if self.__to_recover > 0 and self.__recover() == False:

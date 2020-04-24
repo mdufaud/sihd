@@ -621,6 +621,7 @@ class ChannelValue(PollableChannel):
     def _read_mp(self):
         if self.__alock(block=self.is_block(), timeout=self.get_timeout()):
             ret = self.__value.value
+            self.__rlock()
             return ret
         return None
 

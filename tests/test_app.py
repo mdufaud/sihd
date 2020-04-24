@@ -5,7 +5,7 @@
 import os
 import sys
 
-import test_utils
+import utils
 import sihd
 import unittest
 
@@ -47,7 +47,7 @@ class TestApp(unittest.TestCase):
 
     def do_file(self, path, lines, skipped, check_words={}):
         print("Test-{} with file '{}' with {} lines and {} comments".format(self.x, path, lines, skipped))
-        app = test_utils.TestApp(self.x)
+        app = utils.TestApp(self.x)
         self.x += 1
         app.set_args([
             "-f", path,

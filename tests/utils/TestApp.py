@@ -19,8 +19,8 @@ class TestApp(sihd.App.IApp):
         sihd.Core.ILoggable.set_color(True)
         #self._default_log_level = "debug"
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        ret = super().on_setup()
         return ret
 
     def _setup_app_impl(self):
@@ -80,15 +80,6 @@ class TestApp(sihd.App.IApp):
         if stopped:
             self.log_info("Reader {} ended and stopped".format(service.get_name()))
             self.stop()
-
-    """
-    def on_notify(self, channel):
-        if channel == self._line_reader.eof:
-            end = channel.read()
-            if end is True:
-                self.log_info("Reader {} ended and stopped".format(channel.get_parent().get_name()))
-                self.stop()
-    """
 
     def _configure_handler(self, handler):
         #Decorate with stats

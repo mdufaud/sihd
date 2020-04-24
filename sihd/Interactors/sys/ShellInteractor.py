@@ -11,10 +11,10 @@ shlex = None
 
 from sihd.Interactors.IInteractor import IInteractor
 
-class CmdInteractor(IInteractor):
+class ShellInteractor(IInteractor):
 
-    def __init__(self, app=None, name="CmdInteractor"):
-        super(CmdInteractor, self).__init__(app=app, name=name)
+    def __init__(self, app=None, name="ShellInteractor"):
+        super(ShellInteractor, self).__init__(app=app, name=name)
         global subprocess
         if subprocess is None:
             import subprocess
@@ -43,8 +43,8 @@ class CmdInteractor(IInteractor):
 
     """ IConfigurable """
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        ret = super().on_setup()
         cmd = self.get_conf("cmd", default=False)
         pipe = self.get_conf("pipe", default=False)
         stderr = self.get_conf("stderr_to_out")

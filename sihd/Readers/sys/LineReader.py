@@ -24,9 +24,9 @@ class LineReader(IReader):
 
     """ IConfigurable """
 
-    def on_setup(self):
+    def post_setup(self):
         """ After setup to have eof channel created """
-        ret = super().on_setup()
+        ret = super().post_setup()
         path = self.get_conf("path", default=False)
         if path:
             ret = self.set_source(path)
@@ -93,7 +93,7 @@ class LineReader(IReader):
             line = None
         return line
 
-    def do_step(self):
+    def on_step(self):
         if not self.__reader:
             return True
         if self.__to_recover > 0 and self.__recover() == True:

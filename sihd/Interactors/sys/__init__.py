@@ -1,2 +1,2 @@
-from .CmdInteractor import CmdInteractor
+from .ShellInteractor import ShellInteractor
 from .PipeInteractor import PipeInteractor

@@ -8,9 +8,10 @@ from sihd import Core
 class IInteractor(Core.IPolyService, Core.IAppContainer):
 
     def __init__(self, app=None, name="IInteractor"):
-        super(IInteractor, self).__init__(name)
-        if (app):
+        Core.IAppContainer.__init__(self)
+        if app:
             self.set_app(app)
+        super().__init__(name)
         self.__interaction = None
         self.add_channel_input("new_interaction", type="queue")
         self.add_channel_output("result")
@@ -31,10 +32,6 @@ class IInteractor(Core.IPolyService, Core.IAppContainer):
             action = self.get_interaction()
         return self.do_interaction(action, *args, **kwargs)
 
-    def set_app(self, app):
-        super(IInteractor, self).set_app(app)
-        app.add_interactor(self)
-
     def set_interaction(self, action):
         self.__interaction = self.on_new_interaction(action)
 
@@ -43,6 +40,12 @@ class IInteractor(Core.IPolyService, Core.IAppContainer):
 
     def set_result(self, res):
         self.result.write(res)
+
+    """ IAppContainer """
+
+    def set_app(self, app):
+        super().set_app(app)
+        app.add_interactor(self)
 
     """ IService """
 
@@ -56,10 +59,10 @@ class IInteractor(Core.IPolyService, Core.IAppContainer):
 
     """ IProcessedService """
 
-    def do_work(self):
-        return self.do_step()
+    def on_work(self):
+        return self.on_step()
 
     """ Step method """
 
-    def do_step(self):
+    def on_step(self):
         return self.interact()

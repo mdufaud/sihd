@@ -16,13 +16,14 @@ class IRunnable(INamedObject):
         raise NotImplementedError("step method is not implemented")
 
     def on_thread_start(self, thread):
-        pass
+        self.log_debug("Thread started")
 
     def on_thread_stop(self, thread, iteration):
-        pass
+        self.log_debug("Thread stopped after {} iterations"\
+                .format(iteration))
 
     def on_thread_error(self, thread, iteration, error):
-        pass
+        self.log_error("Thread error: {}".format(error))
 
     def get_step_method(self):
         if self.__thread:
@@ -75,8 +76,11 @@ class IRunnable(INamedObject):
         """ Method to call before anything else """
         if self.__thread is not None:
             self.stop_thread()
+        step = kwargs.pop('step', None)
+        if step is None:
+            step = self.step
         self.__thread = SihdThread(
-            step=self.step,
+            step=step,
             on_start=self.on_thread_start,
             on_stop=self.on_thread_stop,
             on_err=self.on_thread_error,

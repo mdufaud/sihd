@@ -2,12 +2,10 @@
 #coding: utf-8
 
 """ System """
-
 import os
 import sys
 import time
-
-import test_utils
+import utils
 import sihd
 
 """ Setting up basic logging """
@@ -19,6 +17,7 @@ logging.basicConfig(level=logging.DEBUG)
 import unittest
 
 from sihd.GUI.Curses.ICursesGui import ICursesGui
+from sihd.Core.ILoggable import ILoggable
 
 class SimpleCurses(ICursesGui):
 
@@ -29,7 +28,6 @@ class SimpleCurses(ICursesGui):
         super().setup_windows()
         self.main = self.get_window("main")
         self.main.box()
-        self.log_info("Curses rolling")
         self.__set_str("Hello")
 
         win1, panel1 = self.create_panel(10, 12, 5, 5)
@@ -47,6 +45,7 @@ class SimpleCurses(ICursesGui):
         self.panel2 = panel2
         self.refresh_windows()
         self.update_panels(True)
+        self.log_info("Curses rolling")
 
     def __set_str(self, s):
         win = self.main
@@ -100,11 +99,16 @@ class TestGui(unittest.TestCase):
 
     @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
     def test_simple_curses_gui(self):
+        #ILoggable.setup_log("curses", "info", "tests/logs")
         gui = SimpleCurses()
         self.assertTrue(gui.setup())
-        self.assertTrue(gui.start())
+        ret = gui.start()
+        if not ret:
+            gui.stop()
+            self.assertTrue(ret)
         try:
-            time.sleep(200)
+            while gui.is_running():
+                time.sleep(1)
         except KeyboardInterrupt:
             pass
         self.assertTrue(gui.stop())

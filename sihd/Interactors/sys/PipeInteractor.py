@@ -8,7 +8,7 @@ subprocess = None
 shlex = None
 
 from sihd.Interactors.IInteractor import IInteractor
-from .CmdInteractor import CmdInteractor
+from .ShellInteractor import ShellInteractor
 
 class PipeInteractor(IInteractor):
 
@@ -33,8 +33,8 @@ class PipeInteractor(IInteractor):
 
     """ IConfigurable """
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        ret = super().on_setup()
         i = 1
         while True:
             cmd = self.get_conf("cmd" + str(i), default=False)
@@ -49,7 +49,7 @@ class PipeInteractor(IInteractor):
 
     def add_pipe(self, cmd):
         self.__idx += 1
-        interactor = CmdInteractor(name="{}.cmd{}".format(self.get_name(),
+        interactor = ShellInteractor(name="{}.cmd{}".format(self.get_name(),
                                                             self.__idx))
         interactor.set_cmd(cmd)
         interactor.set_stdout_pipe()

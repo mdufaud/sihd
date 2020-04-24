@@ -24,8 +24,8 @@ class IpInteractor(IInteractor):
 
     """ IConfigurable """
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        ret = super().on_setup()
         self.__port = int(self.get_conf("port"))
         self.__host = str(self.get_conf("host"))
         self.__protocol = str(self.get_conf("protocol"))

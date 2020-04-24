@@ -3,9 +3,9 @@
 
 class IAppContainer(object):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        super().__init__()
         self.__wm_app = None
-        super(IAppContainer, self).__init__(*args, **kwargs)
 
     def set_app(self, app):
         self.__wm_app = app

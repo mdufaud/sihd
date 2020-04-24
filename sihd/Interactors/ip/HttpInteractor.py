@@ -41,14 +41,14 @@ class HttpInteractor(IInteractor):
         self._query = None
         self._req = None
         self._post_file_path = None
-        self.add_channel_input("c_query", type='queue')
-        self.add_channel_input("c_headers", type='queue')
-        self.add_channel_input("c_post", type='queue')
+        self.add_channel_input("query", type='queue')
+        self.add_channel_input("headers", type='queue')
+        self.add_channel_input("post", type='queue')
 
     """ IConfigurable """
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        ret = super().on_setup()
         path_post = self.get_conf("json_post_file", default=False)
         if path_post:
             post = self.get_json_from_file(path_post)
@@ -68,16 +68,16 @@ class HttpInteractor(IInteractor):
     """ IInteractor """
 
     def handle(self, channel):
-        if channel == self.c_query:
+        if channel == self.query:
             query = channel.read()
             if query:
                 self.set_query(query)
-        elif channel == self.c_headers:
+        elif channel == self.headers:
             hdr_json = channel.read()
             if hdr_json:
                 hdr = json.loads(hdr_json)
                 self.set_headers(hdr)
-        elif channel == self.c_post:
+        elif channel == self.post:
             post_json = channel.read()
             if post_json:
                 post = json.loads(post_json)

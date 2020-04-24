@@ -107,7 +107,7 @@ class SihdWorker(ILoggable, IObserver):
     def set_work_method(self, method):
         if not callable(method):
             raise ValueError("Not a callable")
-        self.do_work = method
+        self.on_work = method
 
     def set_worker_number(self, num):
         if num == 'max':
@@ -155,6 +155,12 @@ class SihdWorker(ILoggable, IObserver):
                     daemon=True, args=worker_args)
             proc_lst.append(proc)
         return True
+
+    def are_workers_running(self):
+        return (not self.__worker_stop.is_set())
+
+    def are_workers_paused(self):
+        return (not self.__worker_work.is_set())
 
     def pause_workers(self):
         self.__worker_work.clear()
@@ -220,7 +226,7 @@ class SihdWorker(ILoggable, IObserver):
         sleep = time.sleep
         start = get_now()
         # Work
-        work = self.do_work
+        work = self.on_work
         if self.__on_start:
             self.__on_start(self, *args)
         while not stop_evt.is_set():

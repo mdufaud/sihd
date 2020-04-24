@@ -29,15 +29,16 @@ class ICmdGui(cmd.Cmd, IGui):
 
     """ IConfigurable """
 
-    def _setup_impl(self):
-        super(ICmdGui, self)._setup_impl()
+    def on_setup(self):
+        ret = super().on_setup()
+        self.set_channel_notification(True)
         prompt = self.get_conf("prompt")
         intro = self.get_conf("intro")
         if prompt:
             self.set_prompt(prompt)
         if intro:
             self.set_intro(intro)
-        return True
+        return ret
 
     @staticmethod
     def set_prompt(prompt):
@@ -158,6 +159,7 @@ class ICmdGui(cmd.Cmd, IGui):
         app = self.get_app()
         if not app:
             print("No application for services")
+            return
         split = args.split()
         if len(split) != 2:
             self.help_service()
@@ -172,7 +174,11 @@ class ICmdGui(cmd.Cmd, IGui):
         if not service:
             print("No service named: {}".format(args))
             return
-        attr = getattr(service, cmd)
+        try:
+            attr = getattr(service, cmd)
+        except AttributeError:
+            print("No method {} for service {}".format(cmd, service))
+            return
         attr()
 
     def help_service(self):
@@ -205,27 +211,12 @@ class ICmdGui(cmd.Cmd, IGui):
 
     # Entry point
 
-    def gui_loop(self):
+    def on_step(self, **kwargs):
         time.sleep(0.1)
+        self.read_channels_input()
         self.cmdloop()
 
     # Services
 
-    def _pause_impl(self):
-        self.pause_thread()
+    def on_pause(self):
         print()
-        return True
-
-    def _resume_impl(self):
-        print()
-        self.resume_thread()
-        return True
-
-    def _start_impl(self):
-        self.setup_thread()
-        self.start_thread()
-        return True
-
-    def _stop_impl(self):
-        self.stop_thread()
-        return True

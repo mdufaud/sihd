@@ -40,8 +40,8 @@ class IpReader(IReader):
 
     """ IConfigurable """
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        ret = super().on_setup()
         self._max_co = int(self.get_conf("max_connexions"))
         self._protocol = self.get_socket_type(self.get_conf("protocol"))
         self._sock_type = self.get_protocol(self.get_conf("sock_type"))
@@ -167,7 +167,7 @@ class IpReader(IReader):
 
     """ Select """
 
-    def do_step(self):
+    def on_step(self):
         server = self.get_server()
         inputs = self._inputs
         # readable, writable, exceptionnal

@@ -25,15 +25,15 @@ class PcapHandler(IHandler):
 
     """ IConfigurable """
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        ret = super().on_setup()
         self.__save = bool(int(self.get_conf("save_raw")))
         if self.__save:
             self.add_channel_output("saved", type=self.get_conf('save_type'))
         self.__writer = PcapWriter(self.get_conf("endianness"))
         return True
 
-    def on_setup(self):
+    def post_setup(self):
         self.set_saving(bool(int(self.get_conf("activate"))))
         return True
 

@@ -17,7 +17,7 @@ all:
 	@echo "make tests T=app (=run app test only)"
 
 lt:
-	@ls -1 tests | grep test | cut -d '.' -f1 | cut -d '_' -f2 | sed -r '/^\s*$$/d'
+	@ls -1 tests | grep test | cut -d '.' -f1 | cut -d '_' -f2,3,4 | sed -r '/^\s*$$/d'
 
 tests:
 	@if [ ! -z ${T} ] ; then \
@@ -70,8 +70,8 @@ fitests:
 
 clean: testsclean
 	#Clean .pyc and pycache
-	@find . -name "*.pyc" -type f | xargs -0 -r rm
-	@find . -name "__pycache__" -type d | xargs -0 -r rmdir
+	@find . -name "*.pyc" -type f | xargs -r rm
+	@find . -name "__pycache__" -type d | xargs -r rmdir
 	@echo "Cleaned python's compiled files"
 
 testsclean:

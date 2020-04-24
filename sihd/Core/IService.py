@@ -23,6 +23,7 @@ class IService(ILoggable, IConfigurable, IObserver, IDumpable):
         self.__todo_ochan = list()
         self.__start_time = None
         self.__stop_time = None
+        self.__channel_notif = True
 
     """ IDumpable """
 
@@ -39,6 +40,9 @@ class IService(ILoggable, IConfigurable, IObserver, IDumpable):
 
     """ IObserver """
 
+    def set_channel_notification(self, active):
+        self.__channel_notif = active
+
     def handle(self, channel):
         """ Handle service's input """
         pass
@@ -48,7 +52,7 @@ class IService(ILoggable, IConfigurable, IObserver, IDumpable):
         return False
 
     def on_notify(self, channel):
-        if self.is_active():
+        if self.is_active() and self.__channel_notif:
             if not self._pre_handle(channel):
                 self.handle(channel)
 
@@ -149,6 +153,8 @@ class IService(ILoggable, IConfigurable, IObserver, IDumpable):
     """     Reading """
 
     def read_channels_input(self) -> bool:
+        if self.__channel_notif is False:
+            return False
         for channel in self.get_channels_input():
             if channel.is_pollable() and channel.is_readable():
                 channel.notify()
@@ -264,13 +270,13 @@ class IService(ILoggable, IConfigurable, IObserver, IDumpable):
 
     def _setup_impl(self):
         if super()._setup_impl():
-            return self.do_setup() and self._make_channels() and self.on_setup()
+            return self.on_setup() and self._make_channels() and self.post_setup()
         return False
 
-    def do_setup(self):
+    def on_setup(self):
         return True
 
-    def on_setup(self):
+    def post_setup(self):
         return True
 
     """ Life cycle """
@@ -282,7 +288,7 @@ class IService(ILoggable, IConfigurable, IObserver, IDumpable):
         return (not self.__stopped)
 
     def is_active(self):
-        return (not self.__paused and not self.__stopped)
+        return (not self.is_paused() and self.is_running())
 
     def get_service_state(self):
         if self.is_running():

@@ -5,7 +5,7 @@
 import os
 import sys
 import time
-import test_utils
+import utils
 import socket
 import unittest
 

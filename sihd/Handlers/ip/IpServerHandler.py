@@ -35,8 +35,8 @@ class IpServerHandler(IHandler):
         self.__tcp = False
         self.__raw = False
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        ret = super().on_setup()
         self.set_server_protocol(self.get_conf("server_protocol"))
         return ret
 

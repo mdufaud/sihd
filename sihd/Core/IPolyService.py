@@ -41,8 +41,8 @@ class IPolyService(IThreadedService, IProcessedService):
         ret += "type=" + self.__service_type_str
         return ret
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        ret = super().on_setup()
         if ret:
             service_type = self.get_conf("service_type")
             val = self.__service_types_str.get(service_type, None)

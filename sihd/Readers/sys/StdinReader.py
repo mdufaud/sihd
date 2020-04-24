@@ -33,8 +33,8 @@ class StdinReader(IReader):
 
     """ IConfigurable """
 
-    def do_setup(self):
-        super().do_setup()
+    def on_setup(self):
+        super().on_setup()
         self._question = str(self.get_conf("question"))
         return True
 
@@ -60,7 +60,7 @@ class StdinReader(IReader):
             line = os.read(r[0], buf)
         return line
 
-    def do_step(self):
+    def on_step(self):
         self.__ask()
         try:
             line = self.get_input(timeout=0.1)

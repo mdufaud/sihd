@@ -7,7 +7,7 @@ import os
 import sys
 import time
 
-import test_utils
+import utils
 import sihd
 
 try:
@@ -75,7 +75,7 @@ class TestConfig(unittest.TestCase):
         os.remove(path)
 
     def test_app_config_changed(self):
-        app = test_utils.TestApp("ConfigTest")
+        app = utils.TestApp("ConfigTest")
 
         obj = ConfigParser.ConfigParser()
         path_config = os.path.join(self.get_conf_path(), "{}.ini".format(app.get_name()))
@@ -110,7 +110,7 @@ class TestConfig(unittest.TestCase):
 
     def test_app_config(self):
         path = __file__
-        app = test_utils.TestApp("ConfigTest")
+        app = utils.TestApp("ConfigTest")
         app.set_args([
             "-f", path,
             "-s",

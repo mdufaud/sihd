@@ -5,7 +5,7 @@
 import os
 import sys
 import time
-import test_utils
+import utils
 import socket
 import unittest
 
@@ -33,7 +33,7 @@ class PcapTestHandler(IHandler):
         self.add_channel_input("infos", type='queue')
         self.add_channel_input("pkt", type='queue')
 
-    def on_setup(self):
+    def post_setup(self):
         #When channels are done
         self.reader.pcap_header.add_observer(self.hdr)
         self.reader.packet.add_observer(self.pkt)

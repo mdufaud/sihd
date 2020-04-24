@@ -5,22 +5,27 @@
 
 from sihd import Core
 
-class IGui(Core.IPolyService, Core.IAppContainer):
+class IGui(Core.IThreadedService, Core.IAppContainer):
 
     def __init__(self, app=None, name="IGui"):
-        super(IGui, self).__init__(name)
-        if (app):
+        Core.IAppContainer.__init__(self)
+        if app:
             self.set_app(app)
-
-    #TODO add thread to read_channels_input for a gui update once in its loop
+        super().__init__(name)
+        self._set_default_conf({
+            "service_type": "thread",
+            "thread_frequency": 1,
+            "thread_max_iterations": 1,
+        })
+        self.set_channel_notification(False)
 
     """ IGui """
 
-    def gui_loop(self, *args, **kwargs):
-        raise NotImplementedError("gui_loop not implemented")
+    def loop(self, *args, **kwargs):
+        raise NotImplementedError("No gui to loop onto")
 
     """ IAppContainer """
 
     def set_app(self, app):
-        super(IGui, self).set_app(app)
+        super().set_app(app)
         app.add_gui(self)

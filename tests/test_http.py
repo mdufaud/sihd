@@ -2,7 +2,6 @@
 #coding: utf-8
 
 """ System """
-
 import os
 import sys
 import time
@@ -82,7 +81,7 @@ class TestHttp(unittest.TestCase):
         self.assertTrue(interactor.setup())
         self.assertTrue(interactor.start())
         time.sleep(1)
-        self.assertTrue(interactor.c_result.read() is not None)
+        self.assertTrue(interactor.result.read() is not None)
         self.assertTrue(interactor.stop())
 
     def test_channels(self):
@@ -97,10 +96,10 @@ class TestHttp(unittest.TestCase):
             logger.warning("Test cannot continue as your device has no shared memory capabilities")
             return
         channel_test = sihd.Core.Channel.ChannelQueue(name='test', mp=True, simple=True)
-        interactor.c_result.add_observer(channel_test)
+        interactor.result.add_observer(channel_test)
         self.assertTrue(interactor.start())
         time.sleep(0.1)
-        interactor.c_interaction.write(url)
+        interactor.new_interaction.write(url)
         time.sleep(2)
         self.assertTrue(channel_test.read() is not None)
         self.assertTrue(interactor.stop())

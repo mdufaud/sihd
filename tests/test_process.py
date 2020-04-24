@@ -5,7 +5,7 @@
 import time
 import os
 import sys
-import test_utils
+import utils
 import unittest
 
 try:
@@ -41,7 +41,7 @@ class TestHandler(IHandler):
         self.add_channel_input('input', type='queue')
         self.add_channel_output('output', type='queue')
 
-    def on_setup(self):
+    def post_setup(self):
         s = "processed" if self.is_service_multiprocess() else "threaded"
         self.log_info("Has setup as " + s)
         return True
@@ -70,7 +70,7 @@ class InfiniteReader(IReader):
         self.add_channel_output('output', type='queue')
         self.data = data 
 
-    def do_step(self):
+    def on_step(self):
         self.output.write(self.data)
         return True
 

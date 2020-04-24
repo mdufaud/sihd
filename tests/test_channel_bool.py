@@ -5,7 +5,7 @@
 import os
 import sys
 import time
-import test_utils
+import utils
 import socket
 import unittest
 
@@ -16,20 +16,6 @@ from sihd.Handlers.IHandler import IHandler
 from sihd.Core.Channel import *
 from sihd.Core import SihdThread
 
-try:
-    import multiprocessing
-    from multiprocessing import Process, Manager
-    #checks for /dev/shm
-    val = multiprocessing.Value('i', 0)
-except (ImportError, FileNotFoundError):
-    multiprocessing = None
-
-def write_into_channel(channel, value, value2):
-    if value2 is not None:
-        channel.write(value, value2)
-    else:
-        channel.write(value)
-
 class TestChannelDict(unittest.TestCase):
 
     def setUp(self):
@@ -37,22 +23,6 @@ class TestChannelDict(unittest.TestCase):
 
     def tearDown(self):
         pass
-
-    def write_mp(self, channel, value, value2=None):
-        p = Process(target=write_into_channel, args=[channel, value, value2])
-        p.start()
-        p.join()
-
-    def do_write(self, channel, value, value2=None, expect=True):
-        logger.info("Writing -> {}{}".format(value,
-            " - " + str(value2) if value2 is not None else ""))
-        if channel.is_multiprocess():
-            self.write_mp(channel, value, value2)
-        else:
-            if value2 is not None:
-                self.assertTrue(channel.write(value, value2) == expect)
-            else:
-                self.assertTrue(channel.write(value) == expect)
 
     """ Channel Bool """
 
@@ -62,10 +32,10 @@ class TestChannelDict(unittest.TestCase):
         self.assertEqual(channel.read(), default)
         channel.task_done()
         self.assertFalse(channel.is_readable())
-        self.do_write(channel, not default)
+        self.assertTrue(utils.write_channel(channel, not default))
         self.assertEqual(channel.read(), not default)
         self.assertEqual(channel.read(), not default)
-        self.do_write(channel, default)
+        self.assertTrue(utils.write_channel(channel, default))
         self.assertEqual(channel.read(), default)
 
     def test_channel_bool(self):
@@ -74,7 +44,7 @@ class TestChannelDict(unittest.TestCase):
         channel = ChannelBool(default=default)
         self.do_bool(channel, default)
         
-        if multiprocessing:
+        if utils.is_multiprocessing():
             print()
             default = True
             channel = ChannelBool(default=default, mp=True)

@@ -4,6 +4,7 @@
 """ System """
 import time
 import unittest
+import utils
 
 import sihd
 logger = sihd.set_log('debug')
@@ -12,13 +13,6 @@ from sihd.Handlers.IHandler import IHandler
 from sihd.Core.Channel import *
 from sihd.Core import SihdThread
 from sihd.Core import SihdWorker
-
-try:
-    import multiprocessing
-    #checks for /dev/shm
-    val = multiprocessing.Value('i', 0)
-except (ImportError, FileNotFoundError):
-    multiprocessing = None
 
 class TestChannelCondition(unittest.TestCase):
 

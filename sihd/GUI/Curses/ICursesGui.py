@@ -22,7 +22,7 @@ class ICursesGui(IGui):
         global curses
         if curses is None:
             import curses, curses.panel
-        super(ICursesGui, self).__init__(app=app, name=name)
+        super().__init__(app=app, name=name)
         self._log_handler = None
         self.__curses_on = False
         self.__windows = {}
@@ -41,9 +41,6 @@ class ICursesGui(IGui):
             self.log_error("{} (on y={}, x={}, s='{}')".format(
                              e, y, x, s))
         return ret
-
-    def is_curses_on(self):
-        return self.__curses_on
 
     def add_window(self, window, name, warning=True):
         win = self.get_window(name)
@@ -146,7 +143,7 @@ class ICursesGui(IGui):
             ret = False
         return ret
 
-    # Setup
+    # Log
 
     def _remove_stream_logger(self):
         Core.ILoggable.remove_stream_handlers()
@@ -160,6 +157,8 @@ class ICursesGui(IGui):
         Core.ILoggable.logger.addHandler(log_handler)
         self._log_handler = log_handler
 
+    # Create window / panel
+
     def create_window(self, height, width, begin_y, begin_x):
         win = curses.newwin(int(height), int(width),
                             int(begin_y), int(begin_x))
@@ -172,6 +171,22 @@ class ICursesGui(IGui):
         panel = curses.panel.new_panel(win)
         self.__add_movable(panel, height, width, begin_y, begin_x)
         return win, panel
+
+    # Default window creation
+
+    def __default_windows(self):
+        """ Creates one log and one main """
+        main_win = self.create_window((curses.LINES / 2) - 1,
+                                    curses.COLS - 1,
+                                    0, 0)
+        self.add_window(main_win, "main")
+        log_win = self.create_window((curses.LINES / 2) - 1,
+                                    curses.COLS - 1,
+                                    (curses.LINES / 2), 0)
+        self.add_window(log_win, "log")
+        self._set_win_log(log_win)
+
+    # Curses init/remove
 
     def init_curses(self):
         if self.__curses_on is True:
@@ -194,7 +209,7 @@ class ICursesGui(IGui):
         if self._log_handler is not None:
             Core.ILoggable.logger.removeHandler(self._log_handler)
             self._log_handler = None
-            Core.ILoggable.add_stream_handler()
+        Core.ILoggable.add_stream_handler()
         curses.nocbreak()
         self.stdscr.keypad(0)
         curses.curs_set(1)
@@ -203,29 +218,21 @@ class ICursesGui(IGui):
         self.stdscr = None
         self.__curses_on = False
         self.log_info("Removed curses")
+        time.sleep(1)
 
-    def __default_windows(self):
-        main_win = self.create_window((curses.LINES / 2) - 1,
-                                    curses.COLS - 1,
-                                    0, 0)
-        self.add_window(main_win, "main")
-        log_win = self.create_window((curses.LINES / 2) - 1,
-                                    curses.COLS - 1,
-                                    (curses.LINES / 2), 0)
-        self.add_window(log_win, "log")
-        self._set_win_log(log_win)
+    def is_curses(self):
+        return super().is_running() and self.__curses_on and self.__ready
 
     # Children implementations
 
     def setup_windows(self):
         self.__default_windows()
-        return False
 
     def resize(self):
         self.stdscr.clear()
         self.stdscr.refresh()
 
-    def loop(self):
+    def getch_loop(self):
         """ Default loop implementation """
         stdscr = self.stdscr
         c = stdscr.getch()
@@ -240,7 +247,17 @@ class ICursesGui(IGui):
 
     # Entry point
 
-    def gui_loop(self):
+    def on_thread_start(self, thread):
+        try:
+            self.loop()
+        except Exception as e:
+            import traceback
+            s = traceback.format_exc()
+            self.stop()
+            self.log_error(s)
+
+    def loop(self, timeout=None):
+        #TODO timeout ?
         self.init_curses()
         time.sleep(0.5)
         stdscr = self.stdscr
@@ -253,8 +270,10 @@ class ICursesGui(IGui):
         self.__ready = True
         error = None
         try:
-            while self.is_curses_on() and self.loop() is True:
-                pass
+            while self.is_curses():
+                self.read_channels_input()
+                if self.getch_loop() is False:
+                    break
         except Exception as e:
             error = e
         self.stop()
@@ -263,27 +282,9 @@ class ICursesGui(IGui):
 
     # Services
 
-    def is_active(self):
-        return super().is_active() and self.__curses_on and self.__ready
-
-    def _pause_impl(self):
-        self.pause_thread()
-        return True
-
-    def _resume_impl(self):
-        self.resume_thread()
-        return True
-
-    def _start_impl(self):
-        self.setup_thread()
-        self.start_thread()
-        return True
-
-    def _stop_impl(self):
+    def on_stop(self):
         self.__ready = False
         self.remove_curses()
-        self.stop_thread()
-        return True
 
 # Logging handler
 

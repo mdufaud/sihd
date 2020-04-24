@@ -5,7 +5,7 @@
 import os
 import sys
 import time
-import test_utils
+import utils
 import socket
 import unittest
 
@@ -16,20 +16,6 @@ from sihd.Handlers.IHandler import IHandler
 from sihd.Core.Channel import *
 from sihd.Core import SihdThread
 
-try:
-    import multiprocessing
-    from multiprocessing import Process, Manager
-    #checks for /dev/shm
-    val = multiprocessing.Value('i', 0)
-except (ImportError, FileNotFoundError):
-    multiprocessing = None
-
-def write_into_channel(channel, value, value2):
-    if value2 is not None:
-        channel.write(value, value2)
-    else:
-        channel.write(value)
-
 class TestChannelList(unittest.TestCase):
 
     def setUp(self):
@@ -37,22 +23,6 @@ class TestChannelList(unittest.TestCase):
 
     def tearDown(self):
         pass
-
-    def write_mp(self, channel, value, value2=None):
-        p = Process(target=write_into_channel, args=[channel, value, value2])
-        p.start()
-        p.join()
-
-    def do_write(self, channel, value, value2=None, expect=True):
-        logger.info("Writing -> {}{}".format(value,
-            " - " + str(value2) if value2 is not None else ""))
-        if channel.is_multiprocess():
-            self.write_mp(channel, value, value2)
-        else:
-            if value2 is not None:
-                self.assertTrue(channel.write(value, value2) == expect)
-            else:
-                self.assertTrue(channel.write(value) == expect)
 
     """ Channel List """
 
@@ -66,21 +36,21 @@ class TestChannelList(unittest.TestCase):
         self.assertFalse(channel.is_readable())
         channel.clear()
         self.assertEqual(channel.read(0), None)
-        self.do_write(channel, 10)
+        self.assertTrue(utils.write_channel(channel, 10))
         self.assertTrue(channel.is_readable())
         self.assertEqual(channel.read(0), 10)
         self.assertEqual(channel.read(-1), 10)
-        self.do_write(channel, 13)
-        self.do_write(channel, 37)
+        self.assertTrue(utils.write_channel(channel, 13))
+        self.assertTrue(utils.write_channel(channel, 37))
         self.assertEqual(channel.read(1), 13)
         self.assertEqual(channel.read(2), 37)
         self.assertEqual(channel.read(-1), 37)
         channel.task_done()
         self.assertFalse(channel.is_readable())
-        self.do_write(channel, 42, -1)
+        self.assertTrue(utils.write_channel(channel, 42, -1))
         self.assertEqual(channel.read(-1), 42)
         channel.clear()
-        self.do_write(channel, [1, 1, 2, 3, 5, 7])
+        self.assertTrue(utils.write_channel(channel, [1, 1, 2, 3, 5, 7]))
         self.assertEqual(channel.read(0), 1)
         self.assertEqual(channel.read(-1), 7)
         channel.clear()
@@ -92,7 +62,7 @@ class TestChannelList(unittest.TestCase):
         channel = ChannelList(default=default)
         self.do_list(channel, default)
 
-        if multiprocessing:
+        if utils.is_multiprocessing():
             print()
             default = [4, 5, 6]
             channel = ChannelList(default=default, mp=True)

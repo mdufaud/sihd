@@ -21,8 +21,8 @@ class WordHandler(IHandler):
 
     """ IConfigurable """
 
-    def do_setup(self):
-        ret = super().do_setup()
+    def on_setup(self):
+        ret = super().on_setup()
         delimiter = self.get_conf("delimiter")
         if isinstance(delimiter, str) and len(delimiter) >= 1:
             self.__delimiter = delimiter

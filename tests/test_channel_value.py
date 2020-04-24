@@ -5,7 +5,7 @@
 import os
 import sys
 import time
-import test_utils
+import utils
 import socket
 import unittest
 
@@ -16,20 +16,6 @@ from sihd.Handlers.IHandler import IHandler
 
 from sihd.Core.Channel import *
 
-try:
-    import multiprocessing
-    from multiprocessing import Process, Manager
-    #checks for /dev/shm
-    val = multiprocessing.Value('i', 0)
-except (ImportError, FileNotFoundError):
-    multiprocessing = None
-
-def write_into_channel(channel, value, value2):
-    if value2 is not None:
-        channel.write(value, value2)
-    else:
-        channel.write(value)
-
 class TestChannelValue(unittest.TestCase):
 
     def setUp(self):
@@ -38,37 +24,21 @@ class TestChannelValue(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def write_mp(self, channel, value, value2=None):
-        p = Process(target=write_into_channel, args=[channel, value, value2])
-        p.start()
-        p.join()
-
-    def do_write(self, channel, value, value2=None, expect=True):
-        logger.info("Writing -> {}{}".format(value,
-            " - " + str(value2) if value2 is not None else ""))
-        if channel.is_multiprocess():
-            self.write_mp(channel, value, value2)
-        else:
-            if value2 is not None:
-                self.assertTrue(channel.write(value, value2) == expect)
-            else:
-                self.assertTrue(channel.write(value) == expect)
-
     """ Channel Value """
 
     def chan_limit(self, cls, **kwargs):
         print()
         channel = cls(default=0, unsigned=True, **kwargs)
         logger.info("Testing limit of " + str(channel))
-        self.do_write(channel, -1)
+        self.assertTrue(utils.write_channel(channel, -1))
         logger.info("Wrote -1 -> {}".format(channel.read()))
         self.assertFalse(channel.read() == -1)
 
-        if multiprocessing:
+        if utils.is_multiprocessing():
             print()
             channel = cls(default=0, unsigned=True, mp=True, **kwargs)
             logger.info("Testing MP limit of " + str(channel))
-            self.do_write(channel, -1)
+            self.assertTrue(utils.write_channel(channel, -1))
             logger.info("Wrote -1 -> {}".format(channel.read()))
             self.assertFalse(channel.read() == -1)
 
@@ -83,11 +53,10 @@ class TestChannelValue(unittest.TestCase):
         self.assertEqual(channel.read(), default)
         channel.task_done()
         self.assertTrue(channel.is_readable() == False)
-        self.assertTrue(channel.write(write))
-        self.do_write(channel, write)
+        self.assertTrue(utils.write_channel(channel, write))
         self.assertTrue(channel.is_readable())
         logger.info("Testing read -> {} ?= {}".format(channel.read(), write))
-        self.do_write(channel, write)
+        self.assertEqual(channel.read(), write)
         self.assertTrue(channel.is_readable())
 
         logger.info("Test lock")
@@ -120,7 +89,7 @@ class TestChannelValue(unittest.TestCase):
         logger.info("read -> {} ?= {}".format(channel.read(), write))
         self.assertEqual(channel.read(), write)
 
-        if multiprocessing:
+        if utils.is_multiprocessing():
             print()
             channel = ChannelDouble(default=default, mp=True)
             logger.info("Testing " + str(channel))
@@ -138,26 +107,26 @@ class TestChannelValue(unittest.TestCase):
     def test_channel_value(self):
         #Int
         self.chan_value(ChannelInt, default=1, write=101)
-        if multiprocessing:
+        if utils.is_multiprocessing():
             self.chan_value(ChannelInt, default=42, write=1337, mp=True)
         self.chan_limit(ChannelInt)
         #Short
         self.chan_value(ChannelShort, default=-20, write=1)
-        if multiprocessing:
+        if utils.is_multiprocessing():
             self.chan_value(ChannelShort, default=42, write=1337, mp=True)
         self.chan_limit(ChannelShort)
         #Byte
         self.chan_value(ChannelByte, default=127, write=-128)
-        if multiprocessing:
+        if utils.is_multiprocessing():
             self.chan_value(ChannelByte, default=1, write=255, mp=True, unsigned=True)
         self.chan_limit(ChannelByte)
         #Char
         self.chan_value(ChannelChar, default='m', write='d')
-        if multiprocessing:
+        if utils.is_multiprocessing():
             self.chan_value(ChannelChar, default='é', write='à', mp=True, unicode=True)
         #Long
         self.chan_value(ChannelLong, default=123456789, write=9876543211)
-        if multiprocessing:
+        if utils.is_multiprocessing():
             self.chan_value(ChannelLong, default=123456789, write=9876543211, mp=True, unsigned=True)
         self.chan_limit(ChannelLong)
 

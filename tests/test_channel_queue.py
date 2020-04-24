@@ -5,7 +5,7 @@
 import os
 import sys
 import time
-import test_utils
+import utils
 import socket
 import unittest
 
@@ -15,20 +15,6 @@ logger = sihd.set_log('debug')
 from sihd.Handlers.IHandler import IHandler
 from sihd.Core.Channel import *
 from sihd.Core import SihdThread
-
-try:
-    import multiprocessing
-    from multiprocessing import Process, Manager
-    #checks for /dev/shm
-    val = multiprocessing.Value('i', 0)
-except (ImportError, FileNotFoundError):
-    multiprocessing = None
-
-def write_into_channel(channel, value, value2):
-    if value2 is not None:
-        channel.write(value, value2)
-    else:
-        channel.write(value)
 
 class TestChannelQueue(unittest.TestCase):
 
@@ -58,7 +44,7 @@ class TestChannelQueue(unittest.TestCase):
 
     def queue_do_list(self, channel, lst):
         for el in lst:
-            self.do_write(channel, el)
+            self.assertTrue(utils.write_channel(channel, el))
         for el in lst:
             self.assertEqual(el, channel.read())
 
@@ -70,7 +56,7 @@ class TestChannelQueue(unittest.TestCase):
         self.assertTrue(channel.read() == None)
         self.queue_do_list(channel, ['one', 'two', 'yeeeeeee'])
         self.assertFalse(channel.is_readable())
-        self.do_write(channel, 'smth')
+        self.assertTrue(utils.write_channel(channel, 'smth'))
         self.assertTrue(channel.is_readable())
         channel.clear()
         self.assertFalse(channel.is_readable())
@@ -81,7 +67,7 @@ class TestChannelQueue(unittest.TestCase):
         channel = ChannelQueue(default=default)
         self.do_queue(channel, default)
 
-        if multiprocessing:
+        if utils.is_multiprocessing():
             print()
             default = ['my', 'bad']
             channel = ChannelQueue(default=default, mp=True, simple=True)
