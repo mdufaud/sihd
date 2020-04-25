@@ -7,6 +7,7 @@ import os
 
 import sihd
 
+from .Stats import PerfStat
 from .ILoggable import ILoggable
 from .IObserver import IObserver
 
@@ -43,6 +44,7 @@ class SihdWorker(ILoggable, IObserver):
             self.__worker_work = None
         self.__proc_lst = []
         self.__n_workers = worker_number
+        self.stats = PerfStat()
         """ Callable """
         self.set_work_method(work)
         self.set_work_callbacks(on_start, on_stop, on_err)
@@ -122,10 +124,10 @@ class SihdWorker(ILoggable, IObserver):
         return False
 
     def set_worker_frequency(self, freq):
-        if freq <= 0:
+        if freq <= 0.0:
             self.log_error("Worker frequency {} not a strict positive int".format(freq))
             return False
-        self.__sleep = float(1. / int(freq))
+        self.__sleep = float(1. / float(freq))
         return True
 
     """ Life cycle """
@@ -223,9 +225,16 @@ class SihdWorker(ILoggable, IObserver):
         get_now = time.time
         sleep = time.sleep
         timeout = self.__timeout
-        sleep_time = self.__sleep
+        sleeptime = self.__sleep
         sleep = time.sleep
         start = get_now()
+        steptime = 0.0
+        uptime = 0.0
+        downtime = 0.0
+        maxtime = 0.0
+        mintime = 100000000.0
+        beg = 0.0
+        end = 0.0
         # Work
         work = self.on_work
         if self.__on_start:
@@ -236,21 +245,29 @@ class SihdWorker(ILoggable, IObserver):
                 work_evt.wait(timeout=1)
                 if stop_evt.is_set():
                     break 
-            now = get_now()
+            beg = get_now()
             # Check timeout
             if timeout is not None:
-                if ((start + timeout) <= now):
+                if ((start + timeout) <= beg):
                     break
             # Execution
             ret = False
             try:
                 ret = work()
             except Exception as e:
-                self.log_error("Worker {} exception: {}"\
-                        .format(n_proc, e))
-                self.log_error(sihd.get_traceback())
                 if self.__on_err:
                     self.__on_err(self, i, e)
+                else:
+                    raise
+            #Stats
+            end = get_now()
+            steptime = end - beg
+            uptime += steptime
+            if steptime > maxtime:
+                maxtime = steptime
+            if steptime < mintime:
+                mintime = steptime
+            pause = sleeptime - steptime
             i += 1
             if ret is False:
                 break
@@ -258,9 +275,13 @@ class SihdWorker(ILoggable, IObserver):
             if max_iter is not None and i >= max_iter:
                 break
             # Pause
-            end = get_now()
-            pause = sleep_time - (end - now)
             if pause > 0.0:
                 sleep(pause)
+                downtime += pause
+        self.__do_stat(uptime, downtime, maxtime, mintime, i)
         if self.__on_stop:
             self.__on_stop(self, i)
+
+    def __do_stat(self, uptime, downtime, maxtime, mintime, i):
+        self.stats = PerfStat(uptime, downtime,
+                                maxtime, mintime, i)

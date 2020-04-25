@@ -4,6 +4,8 @@
 """ System """
 import time
 
+import sihd
+
 from .IService import IService
 from .IConfigurable import IConfigurable
 from .IRunnable import IRunnable
@@ -33,6 +35,7 @@ class IThreadedService(IService, IRunnable):
 
     def on_thread_error(self, thread, iteration, error):
         self.log_error("Thread error: {}".format(error))
+        self.log_error(sihd.get_traceback())
 
     def step(self):
         """
@@ -55,7 +58,7 @@ class IThreadedService(IService, IRunnable):
 
     def on_setup(self):
         ret = super().on_setup()
-        self.__thread_freq = int(self.get_conf("thread_frequency"))
+        self.__thread_freq = float(self.get_conf("thread_frequency"))
         self.__thread_timeout = float(self.get_conf("thread_timeout"))
         self.__thread_max_iter = int(self.get_conf("thread_max_iterations"))
         return ret

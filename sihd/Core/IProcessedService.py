@@ -5,11 +5,11 @@
 import time
 import os
 
+import sihd
+
 from .IService import IService
 from .IConfigurable import IConfigurable
-
 from .SihdWorker import SihdWorker
-
 from .Channel import ChannelArray, ChannelValue
 
 class IProcessedService(IService):
@@ -34,8 +34,8 @@ class IProcessedService(IService):
     def on_setup(self):
         ret = super().on_setup()
         self.__workers_nbr = int(self.get_conf("process_workers"))
-        self.__workers_freq = int(self.get_conf("process_frequency"))
-        self.__workers_timeout = int(self.get_conf("process_timeout"))
+        self.__workers_freq = float(self.get_conf("process_frequency"))
+        self.__workers_timeout = float(self.get_conf("process_timeout"))
         self.__workers_iter = int(self.get_conf("process_max_iterations"))
         return ret
 
@@ -67,8 +67,9 @@ class IProcessedService(IService):
                 .format(worker.get_number(), os.getpid()))
 
     def on_worker_error(self, worker, total_iter, error):
-        self.log_error("Worker[{}]: {}"\
+        self.log_error("Worker[{}] exception: {}"\
                 .format(worker.get_number(), error))
+        self.log_error(sihd.get_traceback())
 
     def on_worker_stop(self, worker, total_iter):
         self.log_debug("Worker[{}]: stopped after {} iterations"\

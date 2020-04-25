@@ -247,23 +247,27 @@ class IService(ILoggable, IConfigurable, IObserver, IDumpable):
         if name is None:
             name = channel.get_name()
         input_lst = self.__channels_input
+        """
         if any((name == c.get_name() for c in input_lst)):
             self.log_warning("Channel {} already exist".format(name))
         else:
-            input_lst.append(channel)
-            setattr(self, name, channel)
-            channel.add_observer(self)
+        """
+        input_lst.append(channel)
+        setattr(self, name, channel)
+        channel.add_observer(self)
         return True
 
     def set_channel_output(self, channel, name=None):
         if name is None:
             name = channel.get_name()
         output_lst = self.__channels_output
+        """
         if any((name == c.get_name() for c in output_lst)):
             self.log_warning("Channel {} already exist".format(name))
         else:
-            output_lst.append(channel)
-            setattr(self, name, channel)
+        """
+        output_lst.append(channel)
+        setattr(self, name, channel)
         return True
 
     """ IConfigurable """

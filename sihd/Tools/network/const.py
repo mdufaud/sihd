@@ -5,6 +5,78 @@ from sihd.Tools.sys.const import OPENBSD, FREEBSD, NETBSD
 
 """ Link types """
 
+_str_to_link = {
+    "NULL": 0,
+    "EN10MB": 1,
+    "EN3MB": 2,
+    "AX25": 3,
+    "PRONET": 4,
+    "CHAOS": 5,
+    "IEEE802": 6,
+    "ARCNET": 7,
+    "SLIP": 8,
+    "PPP": 9,
+    "FDDI": 10,
+    "RAW": 12, #
+    "RAW_ALT": 101,  # At least in Argus
+    "SLIP_BSDOS": 15, #
+    "PPP_BSDOS": 16, #
+    "PFSYNC": 18, #
+    "HHDLC": 121,
+    "ATM_CLIP": 19,
+    "PPP_SERIAL": 50,
+    "PPP_ETHER": 51,
+    "SYMANTEC_FIREWALL": 99,
+    "C_HDLC": 104,
+    "IEEE802_11": 105,
+    "FRELAY": 107,
+    "LOOP": 108, #
+    "ENC": 109, #
+    "LINUX_SLL": 113,
+    "LTALK": 114,
+    "PFLOG": 117,
+    "PRISM_HEADER": 119,
+    "AIRONET_HEADER": 120,
+    "IP_OVER_FC": 122,
+    "IEEE802_11_RADIO": 127,
+    "ARCNET_LINUX": 129,
+    "LINUX_IRDA": 144,
+    "IEEE802_11_RADIO_AVS": 163,
+    "LINUX_LAPD": 177,
+    "BLUETOOTH_HCI_H4": 187,
+    "USB_LINUX": 189,
+    "PPI": 192,
+    "IEEE802_15_4_WITHFCS": 195,
+    "BLUETOOTH_HCI_H4_WITH_PHDR": 201,
+    "AX25_KISS": 202,
+    "PPP_WITH_DIR": 204,
+    "FC_2": 224,
+    "CAN_SOCKETCAN": 227,
+    "IPV4": 228,
+    "IPV6": 229,
+    "IEEE802_15_4_NOFCS": 230,
+    "USBPCAP": 249,
+    "NETLINK": 253,
+    "USB_DARWIN": 266,
+    "BLUETOOTH_LE_LL": 251,
+    "BLUETOOTH_LE_LL_WITH_PHDR": 256,
+    "VSOCK": 271,
+    "ETHERNET_MPACKET": 274,
+}
+if OPENBSD:
+    _str_lo_link["RAW"] = 14
+if FREEBSD or NETBSD:
+    _str_lo_link["SLIP_BSDOS"] = 13
+    _str_lo_link["PPP_BSDOS"] = 14
+if FREEBSD:
+    _str_lo_link["PFSYNC"] = 121
+if OPENBSD:
+    _str_lo_link["LOOP"] = 12
+    _str_lo_link["ENC"] = 13
+
+def str_to_link(linktype):
+    return _str_to_link.get(linktype, 0)
+
 DLT_NULL = 0
 DLT_EN10MB = 1
 DLT_EN3MB = 2

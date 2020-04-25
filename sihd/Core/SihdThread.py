@@ -5,6 +5,8 @@
 import threading
 import time
 
+from .Stats import PerfStat
+
 class SihdThread(threading.Thread):
  
     def __init__(self, name="SihdThread", step=None,
@@ -16,6 +18,7 @@ class SihdThread(threading.Thread):
         self.__paused = False
         self.daemon = daemon
         self.__args = args
+        self.stats = PerfStat()
         """ Callables """
         self.set_callbacks(on_start, on_stop, on_err)
         if step:
@@ -78,9 +81,9 @@ class SihdThread(threading.Thread):
 
     def set_frequency(self, frequency):
         """ Setting frequency in Hz for step execution """
-        if not isinstance(frequency, int) or frequency <= 0:
+        if frequency <= 0.0:
             return False
-        self.__sleep = float(1. / int(frequency))
+        self.__sleep = float(1. / float(frequency))
         return True
 
     def set_timeout(self, timeout):
@@ -116,8 +119,15 @@ class SihdThread(threading.Thread):
         get_now = time.time
         sleep = time.sleep
         start = get_now()
-        sleep_time = self.__sleep
+        sleeptime = self.__sleep
         timeout = self._timeout
+        steptime = 0.0
+        uptime = 0.0
+        downtime = 0.0
+        maxtime = 0.0
+        mintime = 100000000.0
+        beg = 0.0
+        end = 0.0
         #step
         step = self.step
         i = 0
@@ -133,10 +143,10 @@ class SihdThread(threading.Thread):
                     condition.wait(timeout=1)
                 if self.__stopped:
                     break
-            now = get_now()
+            beg = get_now()
             # Check timeout
             if timeout is not None:
-                if ((start + timeout) <= now):
+                if ((start + timeout) <= beg):
                     return
             # Execution
             try:
@@ -147,6 +157,15 @@ class SihdThread(threading.Thread):
                     self.__on_error(self, i, e)
                 else:
                     raise
+            #Stats
+            end = get_now()
+            steptime = end - beg
+            uptime += steptime
+            if steptime > maxtime:
+                maxtime = steptime
+            if steptime < mintime:
+                mintime = steptime
+            pause = sleeptime - steptime
             i += 1
             if ret is False:
                 break
@@ -154,9 +173,13 @@ class SihdThread(threading.Thread):
             if max_iter is not None and i >= max_iter:
                 break
             # Pause
-            end = get_now()
-            pause = sleep_time - (end - now)
             if pause > 0.0:
                 sleep(pause)
+                downtime += pause
+        self.__do_stat(uptime, downtime, maxtime, mintime, i)
         if self.__on_stop:
             self.__on_stop(self, i)
+
+    def __do_stat(self, uptime, downtime, maxtime, mintime, i):
+        self.stats = PerfStat(uptime, downtime,
+                                maxtime, mintime, i)

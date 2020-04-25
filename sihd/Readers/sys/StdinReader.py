@@ -63,7 +63,7 @@ class StdinReader(IReader):
     def on_step(self):
         self.__ask()
         try:
-            line = self.get_input(timeout=0.1)
+            line = self.get_input(timeout=0.3)
         except Exception as e:
             self.stop()
             raise

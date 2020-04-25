@@ -29,16 +29,17 @@ class LineReader(IReader):
         ret = super().post_setup()
         path = self.get_conf("path", default=False)
         if path:
-            ret = self.set_source(path)
+            self.path.write(path)
         return ret
 
     """ IService """
 
     def handle(self, channel):
         if channel == self.path:
-            path = channel.read()
-            if path:
-                self.set_source(path)
+            if self.__reader is None:
+                path = channel.read()
+                if path:
+                    self.set_source(path)
 
     """ Reader """
 

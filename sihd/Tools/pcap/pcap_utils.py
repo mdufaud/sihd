@@ -195,11 +195,6 @@ class PcapWriter:
 
     def get_header(self):
         #E501 ver 2.4
-        """
-        hdr = struct.pack(self.__endian + "IHHIIII",
-                        0xa1b23c4d if self.__nano else 0xa1b2c3d4,
-                        2, 4, 0, 0, 0xffff, self.__linktype)
-        """
         hdr = struct.pack(self.__endian + "HHIIII", 2, 4, 0, 0, 0xffff, self.__linktype)
         return hdr
 

@@ -68,16 +68,16 @@ fitests:
 		echo "==== End of test $$TEST ====\n"; echo "" ;\
 	done && cd ..
 
+testsclean:
+	@cd tests && rm -f logs/* && rm -f config/* && rm -rf outputs/* && cd ..
+	@echo "Cleaned test files"
+
 clean: testsclean
 	#Clean .pyc and pycache
 	@find . -name "*.pyc" -type f | xargs -r rm
 	@find . -name "__pycache__" -type d | xargs -r rmdir
 	@echo "Cleaned python's compiled files"
 	@rm -rf config
-
-testsclean:
-	@cd tests && rm -f logs/* && rm -f config/* && rm -rf outputs/* && cd ..
-	@echo "Cleaned test files"
 
 fclean: clean
 	rm -rf logs/*

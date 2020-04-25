@@ -2,12 +2,39 @@
 #coding: utf-8
 
 """ System """
-
-
 import time
 import collections
 
-class Stat(object):
+class PerfStat(object):
+    def __init__(self, uptime=0.0, downtime=0.0,
+                        maxtime=0.0, mintime=0.0,
+                        calls=0):
+        self.uptime = uptime
+        self.downtime = downtime
+        self.maxtime = maxtime
+        self.mintime = mintime
+        self.avgtime = uptime / calls if calls > 0 else 0.0
+        self.calls = calls
+
+    def add_time(self, time):
+        if time > self.maxtime:
+            self.maxtime = time
+        if time < self.mintime:
+            self.mintime = time
+        self.calls += 1
+        self.avgtime += (time - self.avg_time) / self.calls
+
+    def __str__(self):
+        string = ("Performances:\n\t"
+                "Thread: uptime: {:.3f} s - downtime: {:.3f} s\n\t"
+                "For {:d} steps: avg: {:.3f} ms (max: {:.3f} ms - min: {:.3f} ms)"\
+                .format(self.uptime, self.downtime, self.calls,
+                        self.avgtime * 1e3, self.maxtime * 1e3, self.mintime * 1e3))
+        return string
+
+#TODO kind of deprecated
+
+class MethodStat(object):
     def __init__(self, method):
         self.name = method.__name__
         self.mod = method.__module__
@@ -64,7 +91,7 @@ def __get_stat(method):
     global _stat_dic
     obj = _stat_dic.get(method, None)
     if obj is None:
-        obj = Stat(method)
+        obj = MethodStat(method)
         _stat_dic[method] = obj
     return obj
 

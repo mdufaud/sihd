@@ -47,15 +47,15 @@ class IApp(Core.IService, Core.IServiceStateObserver):
         self.log_debug("Starting application setup")
         #App service setup
         conf_path = kwargs.get("conf_path", None)
-        ret = self.load_app_conf(conf_path)
+        ret = self.load_app_conf(conf_path) is not False
         #App internal setup
-        ret = ret and self._setup_app_impl(*args, **kwargs)
+        ret = ret and self._setup_app_impl(*args, **kwargs) is not False
         #Save app children's configuration
         ret = ret and self.save_children_conf()
         #Call children's service setup
         ret = ret and self.load_children_conf()
         #Link children's channels after 
-        ret = ret and self._link_channels()
+        ret = ret and self._link_channels() is not False
         if ret is True:
             self.log_debug("Application successfully setup")
         else:
@@ -231,8 +231,11 @@ class IApp(Core.IService, Core.IServiceStateObserver):
     def set_cwd_path(self):
         self.set_path(os.getcwd())
 
-    def set_module_path(self, module):
-        self.set_path(os.path.dirname(module.__file__))
+    def set_module_path(self, module, parent=False):
+        path = os.path.dirname(module.__file__)
+        if parent is True:
+            path = os.path.dirname(path)
+        self.set_path(path)
 
     @staticmethod
     def get_sihd_path():
