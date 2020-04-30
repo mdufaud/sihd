@@ -5,10 +5,10 @@
 import os
 import sys
 import time
-import utils
 import socket
 import unittest
 
+import utils
 import sihd
 logger = sihd.set_log('debug')
 
@@ -19,7 +19,8 @@ class StdinHandler(IHandler):
     def __init__(self, reader, app=None, name="StdinHandler"):
         super(StdinHandler, self).__init__(app=app, name=name)
         self._step = 0
-        self.add_channel_input("input", type='queue')
+        #self.add_channel_input("input", type='queue')
+        self.add_channel_input("input")
         self.reader = reader
 
     def handle(self, channel):
@@ -60,7 +61,8 @@ class TestReader(unittest.TestCase):
         handler = StdinHandler(reader)
         self.assertTrue(reader.setup())
         self.assertTrue(handler.setup())
-        reader.answer.add_observer(handler.input)
+        handler.link_channel("input", reader.answer)
+        #reader.answer.add_observer(handler.input)
         reader.question.write("How are you ? ")
         self.assertTrue(handler.start())
         self.assertTrue(reader.start())

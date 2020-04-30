@@ -5,10 +5,10 @@
 import os
 import sys
 import time
-import utils
 import socket
 import unittest
 
+import utils
 import sihd
 logger = sihd.set_log('debug')
 
@@ -37,6 +37,8 @@ class TestChannelString(unittest.TestCase):
         #too long
         self.assertFalse(channel.write("hello world"))
         self.assertEqual(channel.read(), "world")
+        channel.clear()
+        self.assertEqual(channel.read(), "")
 
     def test_channel_string(self):
         print()

@@ -50,12 +50,14 @@ class IInteractor(Core.IPolyService, Core.IAppContainer):
     """ IService """
 
     def _pre_handle(self, channel):
-        if channel == self.new_interaction:
-            action = channel.read()
-            if action is not None:
-                self.set_interaction(action)
-            return True
-        return False
+        ret = super()._pre_handle(channel)
+        if not ret:
+            if channel == self.new_interaction:
+                action = channel.read()
+                if action is not None:
+                    self.set_interaction(action)
+                ret = True
+        return ret
 
     """ IProcessedService """
 

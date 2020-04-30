@@ -7,6 +7,7 @@ import sys
 import time
 import unittest
 
+import utils
 import sihd
 logger = sihd.set_log()
 
@@ -30,9 +31,10 @@ class TestShell(unittest.TestCase):
         })
         self.assertTrue(itrc.setup())
         self.assertTrue(itrc.interact())
-        self.assertEqual(itrc.stderr.read(), None)
-        self.assertEqual(itrc.stdout.read().decode(), "Test\nHello\n")
-        self.assertEqual(itrc.returncode.read(), 0)
+        code, out, err, to = itrc.result.read()
+        self.assertEqual(err, None)
+        self.assertEqual(out.decode(), "Test\nHello\n")
+        self.assertEqual(code, 0)
 
     def test_pipe_interactor(self):
         itrc = sihd.Interactors.sys.PipeInteractor()
@@ -42,9 +44,10 @@ class TestShell(unittest.TestCase):
         })
         self.assertTrue(itrc.setup())
         self.assertTrue(itrc.interact())
-        self.assertEqual(itrc.stderr.read(), None)
-        self.assertEqual(itrc.stdout.read().decode(), "12\n")
-        self.assertEqual(itrc.returncode.read(), 0)
+        code, out, err, to = itrc.result.read()
+        self.assertEqual(err, None)
+        self.assertEqual(out.decode(), "12\n")
+        self.assertEqual(code, 0)
 
     def test_interactor_service(self):
         cmd = "ls -l"
@@ -58,7 +61,7 @@ class TestShell(unittest.TestCase):
         self.assertTrue(interactor.start())
         time.sleep(0.1)
         self.assertTrue(interactor.stop())
-        self.assertEqual(interactor.returncode.read(), 0)
+        self.assertEqual(interactor.result.read()[0], 0)
 
     def test_cmd(self):
         cmd = "echo Hello World"
@@ -71,7 +74,7 @@ class TestShell(unittest.TestCase):
         self.assertTrue(interactor.exe(cmd) is False)
 
     def test_channel(self):
-        res = "Hello World"
+        inpt = "Hello World"
         cmd = "wc -c"
         # Second cmd
         itrc = sihd.Interactors.sys.ShellInteractor()
@@ -82,21 +85,26 @@ class TestShell(unittest.TestCase):
         })
         itrc.setup()
         #Set stdin input
-        itrc.stdin.write(res)
+        itrc.stdin.write(inpt)
         itrc.start()
         time.sleep(0.5)
         itrc.pause()
-        self.assertEqual(itrc.stderr.read(), None)
-        self.assertEqual(itrc.stdout.read().decode(), "11\n")
-        self.assertEqual(itrc.returncode.read(), 0)
+        code, out, err, to = itrc.result.read()
+        print(code, out, err, to)
+        self.assertEqual(err, None)
+        self.assertEqual(out.decode(), "11\n")
+        self.assertEqual(code, 0)
+        itrc.stdin.write(False)
         itrc.resume()
         #Reset input - Should be an error
-        itrc.stdin.write(False)
         time.sleep(0.5)
         itrc.stop()
-        self.assertTrue(itrc.stderr.read() is not None)
-        self.assertEqual(itrc.stdout.read().decode(), "0\n")
-        self.assertEqual(itrc.returncode.read(), 1)
+        code, out, err, timedout = itrc.result.read()
+        print(code, out, err, timedout)
+        self.assertTrue(timedout is False)
+        self.assertTrue(err is not None)
+        self.assertEqual(out.decode(), "0\n")
+        self.assertNotEqual(code, 0)
 
     def test_pipe(self):
         cmd1 = "echo Hello World"
@@ -124,7 +132,7 @@ class TestShell(unittest.TestCase):
         proc2 = itrc2.execute()
         self.assertTrue(proc2)
         # Comm proc2
-        out, errs = itrc2.communicate()
+        out, errs, to = itrc2.communicate()
         # End proc1
         itrc1.end_process()
         self.assertTrue(errs is None)
@@ -138,7 +146,7 @@ class TestShell(unittest.TestCase):
         interactor = sihd.Interactors.sys.ShellInteractor()
         interactor.set_stderr_pipe()
         interactor.execute(args)
-        out, errs = interactor.communicate()
+        out, errs, to = interactor.communicate()
         self.assertTrue(errs is not None)
         self.assertTrue(errs.decode('ascii').find('no_folder') > 0)
         self.assertTrue(len(errs.decode('ascii')) > 10)
@@ -178,12 +186,12 @@ class TestShell(unittest.TestCase):
         itrc.set_stderr_out()
         # Test should success
         proc = itrc.execute()
-        out, errs = itrc.communicate(timeout=2, input=data.encode())
+        out, errs, to = itrc.communicate(timeout=2, input=data.encode())
         self.assertTrue(errs is None)
         self.assertTrue(out.decode() == "{}\n".format(len(data)))
         # Test should fail as no input comes
         proc = itrc.execute()
-        out, errs = itrc.communicate(timeout=1)
+        out, errs, to = itrc.communicate(timeout=1)
         self.assertTrue(errs is None)
         self.assertTrue(out.decode() == "0\n")
 

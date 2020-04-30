@@ -30,6 +30,11 @@ class IReader(Core.IPolyService, Core.IAppContainer):
     def close(self) -> bool:
         return True
 
+    """ IService """
+
+    def on_stop(self):
+        self.close()
+
     """ IAppContainer """
 
     def set_app(self, app):

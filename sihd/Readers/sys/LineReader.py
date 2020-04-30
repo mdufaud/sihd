@@ -18,7 +18,7 @@ class LineReader(IReader):
         })
         self.__reader = None
         self.add_channel_input('path', type='queue', simple=True)
-        self.add_channel_output('output')
+        self.add_channel_output('output', type='queue')
         self.add_channel_output('lines', type='int', default=0)
         self.add_channel_output('eof', type='bool', default=True)
 
@@ -124,8 +124,3 @@ class LineReader(IReader):
             self.__reader = None
             LineReader.files_read[self.__path] = (self.__lines, self.eof.read() == False)
             self.log_debug("File {} closed".format(self.__path))
-
-    """ IService """
-
-    def on_stop(self):
-        self.close()

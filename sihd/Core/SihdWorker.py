@@ -37,6 +37,7 @@ class SihdWorker(ILoggable, IObserver):
         """ Life cycle controller """
         try:
             self.__worker_stop = multiprocessing.Event()
+            self.__worker_stop.clear()
             self.__worker_work = multiprocessing.Event()
             self.__worker_work.set()
         except FileNotFoundError:
@@ -174,11 +175,12 @@ class SihdWorker(ILoggable, IObserver):
         return True
 
     def stop_workers(self):
-        self.resume_workers()
         stop_evt = self.__worker_stop
         if stop_evt.is_set():
+            self.resume_workers()
             return True
         stop_evt.set()
+        self.resume_workers()
         return stop_evt.is_set()
 
     def clear_workers(self):
@@ -189,14 +191,21 @@ class SihdWorker(ILoggable, IObserver):
             return False
         proc_lst = self.__proc_lst
         for i, proc in enumerate(proc_lst):
-            s = "Worker[{}]: "
-            if proc.is_alive():
+            s = "Worker[{}]: ".format(i + 1)
+            tries = 3
+            while tries > 0:
+                alive = proc.is_alive()
+                if not alive:
+                    break
+                time.sleep(0.05)
+                tries -= 1
+            if alive:
                 proc.terminate()
-                s += "terminated"
+                s += "has been terminated (timeout)"
             else:
-                s += "had stopped"
-            proc.join(timeout=2.0)
-            self.log_debug(s.format(i + 1))
+                s += "has stopped"
+            proc.join(timeout=1.0)
+            self.log_debug(s)
         self.__proc_lst = []
         return True
 
@@ -276,7 +285,8 @@ class SihdWorker(ILoggable, IObserver):
                 break
             # Pause
             if pause > 0.0:
-                sleep(pause)
+                stop_evt.wait(timeout=pause)
+                #sleep(pause)
                 downtime += pause
         self.__do_stat(uptime, downtime, maxtime, mintime, i)
         if self.__on_stop:

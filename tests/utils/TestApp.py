@@ -44,12 +44,11 @@ class TestApp(sihd.App.IApp):
         return True
 
     def _link_channels(self):
-        self._line_reader.add_state_observer(self)
-        reader_output = self._line_reader.output
-        reader_eof = self._line_reader.eof
-        handler_input = self._word_handler.input
-        reader_output.add_observer(handler_input)
-        #reader_eof.add_observer(self)
+        reader = self._line_reader
+        handler = self._word_handler
+        reader.add_state_observer(self)
+        handler.link_channel("input", reader.output)
+        #reader.link_channel("output", handler.input)
         return True
 
     def _define_args(self, parser):
@@ -76,7 +75,7 @@ class TestApp(sihd.App.IApp):
                 return
         elif self.is_reader(service) is False:
             return
-        self.log_info("{}: {}".format(service.get_name(), service.get_service_state()))
+        self.log_info("{}: {}".format(service.get_name(), service.get_service_state_str()))
         if stopped:
             self.log_info("Reader {} ended and stopped".format(service.get_name()))
             self.stop()

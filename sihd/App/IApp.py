@@ -17,7 +17,7 @@ except ImportError:
 import sihd
 from sihd import Core, Readers, Handlers, GUI, Interactors
 
-class IApp(Core.IService, Core.IServiceStateObserver):
+class IApp(Core.IService):
 
     def __init__(self, name="IApp", *args, **kwargs):
         super(IApp, self).__init__(name, *args, **kwargs)
@@ -165,6 +165,7 @@ class IApp(Core.IService, Core.IServiceStateObserver):
             ret = self.setup(obj)
         except Exception as e:
             self.log_error(e)
+            self.log_error(sihd.get_traceback())
         return ret
 
     def get_conf_path(self):
@@ -190,6 +191,7 @@ class IApp(Core.IService, Core.IServiceStateObserver):
                 self.log_debug("Conf file {} is written".format(path))
         except IOError as e:
             self.log_error("Could not write app configuration: {}".format(e))
+            self.log_error(sihd.get_traceback())
             return False
         return True
 
@@ -280,8 +282,8 @@ class IApp(Core.IService, Core.IServiceStateObserver):
                         .format(child.__class__.__name__, fun_name))
             ret = ret and self.__call_child(child, fun, arg)
             if not ret and fail:
-                self.log_error("Could not {} for service {}".format(fun_name,
-                                                            child.get_name()))
+                self.log_error("Call {} failed for service {}"\
+                        .format(fun_name, child.get_name()))
         return ret
 
     """
@@ -302,13 +304,13 @@ class IApp(Core.IService, Core.IServiceStateObserver):
             "interactors": st_interactors,
         }
         for reader in self.readers:
-            st_readers[reader.get_name()] = reader.get_service_state()
+            st_readers[reader.get_name()] = reader.get_service_state_str()
         for handler in self.handlers:
-            st_handlers[handler.get_name()] = handler.get_service_state()
+            st_handlers[handler.get_name()] = handler.get_service_state_str()
         for gui in self.guis:
-            st_guis[gui.get_name()] = gui.get_service_state()
+            st_guis[gui.get_name()] = gui.get_service_state_str()
         for interactor in self.interactors:
-            st_interactors[interactor.get_name()] = interactor.get_service_state()
+            st_interactors[interactor.get_name()] = interactor.get_service_state_str()
         return status
 
     def start_readers(self):
@@ -335,7 +337,6 @@ class IApp(Core.IService, Core.IServiceStateObserver):
         g_ret = fun(self.guis, "start")
         h_ret = fun(self.handlers, "start")
         if h_ret and g_ret:
-            self.log_info("App started")
             return True
         self.log_warning("Some app services did not start")
         return False
@@ -349,7 +350,6 @@ class IApp(Core.IService, Core.IServiceStateObserver):
         i_ret = fun(self.interactors, "stop")
         self._write_conf()
         if r_ret and h_ret and g_ret and i_ret:
-            self.log_info("App stopped")
             return True
         self.log_warning("Some app services did not stop")
         return False
@@ -442,9 +442,6 @@ class IApp(Core.IService, Core.IServiceStateObserver):
         self.interactors.add(interactor)
         interactor.set_conf_obj(self.get_conf_obj())
 
-    def service_state_changed(self, service, stopped, paused):
-        return
-
     def emergency_backup(self, err):
         return
 
@@ -478,6 +475,22 @@ class IApp(Core.IService, Core.IServiceStateObserver):
 
     """
     ###############
+    Channels
+    ###############
+    """
+
+    def _pre_handle(self, channel):
+        if channel.get_name() == "channel_state":
+            service = channel.get_parent()
+            stopped, paused = service.get_service_state()
+            self.service_state_changed(service, stopped, paused)
+            return True
+        
+    def service_state_changed(self, service, stopped, paused):
+        pass
+
+    """
+    ###############
     Loop
     ###############
     """
@@ -500,6 +513,7 @@ class IApp(Core.IService, Core.IServiceStateObserver):
         try:
             i = 0
             while i < max_sec and self.is_running():
+                self.read_channels_input()
                 time.sleep(1)
                 i += 1
         except KeyboardInterrupt:
@@ -511,6 +525,7 @@ class IApp(Core.IService, Core.IServiceStateObserver):
         now = start
         try:
             while self.is_running():
+                self.read_channels_input()
                 time.sleep(1)
                 now += 1
                 if timeout is not None and now >= (start + timeout):

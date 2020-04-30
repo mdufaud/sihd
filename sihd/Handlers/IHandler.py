@@ -12,11 +12,21 @@ class IHandler(Core.IPolyService, Core.IAppContainer):
         super().__init__(name)
         if app:
             self.set_app(app)
+        self._set_default_conf({
+            "service_type": "thread",
+        })
 
     """ IHandler """
 
     def handle_service(self, service) -> bool:
-        return False
+        cls = service.__class__.__name__.lower()
+        try:
+            method = getattr(self, "handle_service_{}".format(cls))
+        except AttributeError:
+            self.log_error("Cannot handle service {}".format(cls))
+            return False
+        method(service)
+        return True
 
     """ IProcessedService """
 

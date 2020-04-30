@@ -21,9 +21,9 @@ class PcapReader(IReader):
         self.__to_recover = 0
         self.__pcap_reader = None
         self.add_channel_input("path", type='queue', simple=True)
-        self.add_channel_output("pcap_header")
-        self.add_channel_output("packet")
-        self.add_channel_output("packet_info")
+        self.add_channel_output("pcap_header", type='pickle', size=200)
+        self.add_channel_output("packet", type='queue')
+        self.add_channel_output("packet_info", type='queue')
         self.add_channel_output('packets', type='int', default=0)
         self.add_channel_output('eof', type='bool',
                                 default=True, timeout=0.1)
@@ -145,8 +145,3 @@ class PcapReader(IReader):
             self.__pcap_reader = None
             PcapReader.files_read[self.__path] = (self.__pkts, self.eof.read() == False)
             self.log_debug("File {} closed".format(self.__path))
-
-    """ IService """
-
-    def on_stop(self):
-        self.close()

@@ -7,18 +7,11 @@ import sys
 import time
 import unittest
 
+import utils
 import sihd
 logger = sihd.set_log()
 
 from sihd.Handlers.IHandler import IHandler
-
-try:
-    import multiprocessing
-    if multiprocessing is not None:
-        #checks for /dev/shm
-        val = multiprocessing.Value('i', 0)
-except (ImportError, FileNotFoundError):
-    multiprocessing = None
 
 class TestHandler(IHandler):
 
@@ -70,8 +63,9 @@ class TestIpServer(unittest.TestCase):
     def run_sender(self, get_interactor, type):
         reader = sihd.Readers.IpReader()
         ip_handler = sihd.Handlers.IpServerHandler()
-        reader.set_conf("service_type", "process")
-        ip_handler.set_conf("channels_mp", True)
+        if utils.is_multiprocessing():
+            reader.set_conf("service_type", "process")
+            ip_handler.set_conf("channels_mp", True)
         reader.set_conf("port", 4200)
         reader.set_conf("protocol", type)
         self.assertTrue(reader.setup())

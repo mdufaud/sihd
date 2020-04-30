@@ -2,7 +2,6 @@
 #coding: utf-8
 
 """ System """
-
 import time
 import os
 
@@ -17,28 +16,28 @@ class SerialReader(IReader):
         if serial is None:
             import serial
         super(SerialReader, self).__init__(app=app, name=name)
-        self._serial = None
+        self.__serial = None
         self._set_default_conf({
             "port": "/dev/some_device",
             "baudrate": 9600,
             "timeout": 1,
         })
-        self.set_step_method(self.read_serial)
 
     """ IConfigurable """
 
-    def _setup_impl(self):
-        super(SerialReader, self)._setup_impl()
+    def on_setup(self):
+        ret = super().on_setup()
         baudrate = self.get_conf("baudrate")
         if baudrate:
-            self._baudrate = int(baudrate)
+            self.__baudrate = int(baudrate)
         timeout = self.get_conf("timeout")
         if timeout:
-            self._timeout = int(timeout)
+            self.__timeout = int(timeout)
         port = self.get_conf("port", default=False)
         if port:
             self.set_source(port)
-        if not self._serial:
+        if not self.__serial:
+            self.log_error("Bad configuration: no port or could not open")
             return False
         return True
 
@@ -46,50 +45,45 @@ class SerialReader(IReader):
 
     def set_source(self, port):
         self._lines = 0
-        if self._serial:
-            self._serial.close()
-            self._serial = None
+        self.close()
         try:
-            ser = serial.Serial(port, baudrate=self._baudrate, timeout=self._timeout)
-            self._serial = ser
+            ser = serial.Serial(port, baudrate=self.__baudrate,
+                                timeout=self.__timeout)
+            self.__serial = ser
         except IOError as err:
             self.log_error("Cannot open: {}".format(err))
             return False
-        self._path = port
-        s = "Reading on port: {}".format(port)
-        self.log_info(s)
+        self.__path = port
+        self.log_info("Reading on port: {}".format(port))
         return True
 
     def get_serial(self):
-        return self._serial
+        return self.__serial
 
     def read_serial(self):
+        serial = self.__serial
+        if not serial:
+            return None
         try:
-            line = self._serial.readline()
+            line = serial.readline()
         except EOFError as e:
+            self.log_info("Serial EOF")
+            self.stop()
             line = None
         if line is not None:
             self._lines += 1
         return line
 
-    def diffuse_serial(self):
+    def on_step(self):
         line = self.read_serial()
-        if line is None:
-            self.stop()
-            return False
-        self.deliver(line)
+        if line is not None:
+            self.output.write(line)
         return True
 
     """ IService """
 
-    def _start_impl(self):
-        if self._serial is None:
-            self.log_error("No serial reader has been set")
-            return False
-        return super(SerialReader, self)._start_impl()
-
-    def _stop_impl(self):
-        if self._serial:
-            self._serial.close()
-            self._serial = None
-        return super(SerialReader, self)._stop_impl()
+    def close():
+        serial = self.__serial
+        if serial:
+            serial.close()
+            self.__serial = None

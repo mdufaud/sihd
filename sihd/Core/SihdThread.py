@@ -174,7 +174,9 @@ class SihdThread(threading.Thread):
                 break
             # Pause
             if pause > 0.0:
-                sleep(pause)
+                with condition:
+                    condition.wait(timeout=pause)
+                #sleep(pause)
                 downtime += pause
         self.__do_stat(uptime, downtime, maxtime, mintime, i)
         if self.__on_stop:

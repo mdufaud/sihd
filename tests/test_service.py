@@ -5,6 +5,7 @@
 import time
 import unittest
 
+import utils
 import sihd
 logger = sihd.set_log('debug')
 

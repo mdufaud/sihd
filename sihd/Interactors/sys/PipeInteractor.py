@@ -27,9 +27,11 @@ class PipeInteractor(IInteractor):
         self.__interactor_lst = []
         self.__idx = 0
         self.add_channel_input("stdin", type='queue')
-        self.add_channel_output("stdout")
-        self.add_channel_output("stderr")
+        """
+        self.add_channel_output("stdout", type='queue')
+        self.add_channel_output("stderr", type='queue')
         self.add_channel_output("returncode", type='int', default=-1)
+        """
 
     """ IConfigurable """
 
@@ -101,11 +103,8 @@ class PipeInteractor(IInteractor):
             last_child = child
             idx += 1
         if last_itrc:
-            out, err = last_itrc.communicate()
-            self.stdout.write(out)
-            if err:
-                self.stderr.write(err)
-            self.returncode.write(child.returncode)
+            out, err, to = last_itrc.communicate()
+            self.set_result((child.returncode, out, err, to))
             self.__end_proc(idx)
         return child.returncode == 0
 

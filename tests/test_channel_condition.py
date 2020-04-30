@@ -4,8 +4,8 @@
 """ System """
 import time
 import unittest
-import utils
 
+import utils
 import sihd
 logger = sihd.set_log('debug')
 
@@ -123,7 +123,7 @@ class TestChannelCondition(unittest.TestCase):
 
     def test_channel_condition(self):
         print()
-        channel = ChannelCondition()
+        channel = ChannelCondition(timeout=None, block=False)
         self.do_condition(channel)
         channel = ChannelCondition(timeout=0.5)
         self.do_condition(channel, timeout=True)

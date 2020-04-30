@@ -15,7 +15,7 @@ class WordHandler(IHandler):
         self.__toskip = None
         self.__delimiter = None
         self.__skipped = 0
-        self.add_channel_input('input', type='queue', simple=True)
+        self.add_channel_input('input')
         self.add_channel_output('output', type='dict')
         self.add_channel_output('skipped', type='int', default=0)
 
@@ -60,6 +60,6 @@ class WordHandler(IHandler):
 
     """ IService """
 
-    def _start_impl(self):
+    def on_start(self):
+        super().on_start()
         self.__skipped = 0
-        return super()._start_impl()

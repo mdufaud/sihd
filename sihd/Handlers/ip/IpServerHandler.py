@@ -26,11 +26,11 @@ class IpServerHandler(IHandler):
             "co": self._set_client_connected,
             "addr": self._set_client_addr,
         }
-        self.add_channel_input("c_packet_data", type='queue')
-        self.add_channel_input("c_client_info", type='queue')
-        self.add_channel_input("c_server_msg", type='queue')
-        self.add_channel_output("c_packet_send")
-        self.add_channel_output("c_server_action")
+        self.add_channel_input("packet_data", type='queue')
+        self.add_channel_input("client_info", type='queue')
+        self.add_channel_input("server_msg", type='queue')
+        self.add_channel_output("packet_send", type='queue')
+        self.add_channel_output("server_action", type='queue')
         self.__udp = False
         self.__tcp = False
         self.__raw = False
@@ -48,38 +48,37 @@ class IpServerHandler(IHandler):
         elif proto == "tcp":
             self.__tcp = True
 
-    def handle_service(self, service):
-        if isinstance(service, IpReader):
-            #Observe service output
-            service.c_packet_data.add_observer(self.c_packet_data)
-            service.c_client_info.add_observer(self.c_client_info)
-            service.c_server_msg.add_observer(self.c_server_msg)
-            #Add service inputs to our outputs
-            self.c_packet_send.add_observer(service.c_packet_send)
-            self.c_server_action.add_observer(service.c_server_action)
-            self.__tcp = service.is_tcp()
-            self.__udp = service.is_udp()
-            self.__raw = service.is_raw()
-            return True
+    def handle_service_ipreader(self, service):
+        #IpReader outputs: Read directly from outputs
+        self.link_channel("packet_data", service.packet_data)
+        self.link_channel("client_info", service.client_info)
+        self.link_channel("server_msg", service.server_msg)
+        #IpReader inputs: Post directly to inputs
+        self.link_channel("server_action", service.server_action)
+        self.link_channel("packet_send", service.packet_send)
+
+        self.__tcp = service.is_tcp()
+        self.__udp = service.is_udp()
+        self.__raw = service.is_raw()
         return False
 
     def handle(self, channel):
-        if channel == self.c_packet_data:
+        if channel == self.packet_data:
             msg, infos = channel.read()
             if self.__tcp:
                 self.on_client_input(msg, infos)
             else:
                 self.on_packet_data(msg, *infos)
-        elif channel == self.c_server_msg:
+        elif channel == self.server_msg:
             pass
-        elif self.__tcp and channel == self.c_client_info:
+        elif self.__tcp and channel == self.client_info:
             co, action, value = channel.read()
             self._parse_client_info(co, action, value)
 
     """ Utilities """
 
     def send_client(self, msg, co):
-        self.c_packet_send.write((msg + "\n", co))
+        self.packet_send.write((msg + "\n", co))
 
     """ Packet data  """
 

@@ -8,6 +8,7 @@ import time
 import unittest
 import json
 
+import utils
 import sihd
 logger = sihd.set_log()
 
@@ -84,6 +85,7 @@ class TestHttp(unittest.TestCase):
         self.assertTrue(interactor.result.read() is not None)
         self.assertTrue(interactor.stop())
 
+    @unittest.skipIf(utils.is_multiprocessing() is False, "No support for multiprocess")
     def test_channels(self):
         logger.info("Testing channels well being")
         url = "https://www.google.com"
@@ -96,7 +98,8 @@ class TestHttp(unittest.TestCase):
             logger.warning("Test cannot continue as your device has no shared memory capabilities")
             return
         channel_test = sihd.Core.Channel.ChannelQueue(name='test', mp=True, simple=True)
-        interactor.result.add_observer(channel_test)
+        #interactor.result.add_observer(channel_test)
+        interactor.link_channel("result", channel_test)
         self.assertTrue(interactor.start())
         time.sleep(0.1)
         interactor.new_interaction.write(url)

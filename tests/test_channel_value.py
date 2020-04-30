@@ -5,10 +5,10 @@
 import os
 import sys
 import time
-import utils
 import socket
 import unittest
 
+import utils
 import sihd
 logger = sihd.set_log('debug')
 

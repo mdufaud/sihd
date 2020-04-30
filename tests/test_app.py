@@ -4,10 +4,10 @@
 """ System """
 import os
 import sys
+import unittest
 
 import utils
 import sihd
-import unittest
 
 from sihd.Tools.sys import memory
 
@@ -25,6 +25,7 @@ class TestApp(unittest.TestCase):
         handler = app._word_handler
         words_dict = handler.output.get_data()
 
+        self.assertTrue(words_dict)
         for key, value in words_dict.items():
             if prt:
                 print("{}: {}".format(key, value))

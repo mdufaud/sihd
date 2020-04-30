@@ -10,7 +10,6 @@ import sihd
 from .IService import IService
 from .IConfigurable import IConfigurable
 from .SihdWorker import SihdWorker
-from .Channel import ChannelArray, ChannelValue
 
 class IProcessedService(IService):
 
@@ -18,7 +17,7 @@ class IProcessedService(IService):
         super(IProcessedService, self).__init__(name)
         self._set_default_conf({
             "process_workers": 1,
-            "process_frequency": 100,
+            "process_frequency": 50,
             "process_timeout": 0,
             "process_max_iterations": 0,
         })
@@ -61,8 +60,6 @@ class IProcessedService(IService):
         pass
 
     def on_worker_start(self, worker, *args):
-        #little trick to have the service started for channel notification
-        self._set_stopped(False)
         self.log_debug("Worker[{}]: started (pid={})"\
                 .format(worker.get_number(), os.getpid()))
 
@@ -76,6 +73,12 @@ class IProcessedService(IService):
                 .format(worker.get_number(), total_iter))
 
     """ IService """
+
+    def link_channel(self, name, new_channel):
+        if new_channel.is_multiprocess() is False:
+            self.log_warning("Trying to link a non multiprocessed channel to"
+                    " a processed service ({})".format(new_channel))
+        return super().link_channel(name, new_channel)
 
     def _start_impl(self):
         worker = SihdWorker(
@@ -101,19 +104,24 @@ class IProcessedService(IService):
         if worker.make_workers(args=(input_channels, output_channels,)):
             if self.is_paused():
                 self.__worker.pause_workers()
-            if worker.start_workers():
-                """ After workers started their processes
-                    Channels must be cleared of observers in the main process
-                    Or this process will be notified of inputs
-                """
-                for channel in input_channels:
-                    channel.clear_observers()
-                return True
-            else:
-                self.log_error("Could not start workers")
+            return True
         else:
             self.log_error("Could not make workers")
         return False
+
+    def on_start(self):
+        worker = self.__worker
+        if worker.start_workers():
+            """ After workers started their processes
+                Channels must be cleared of observers in the main process
+                Or this process will be notified of inputs
+            """
+            input_channels = self.get_channels_input()
+            for channel in input_channels:
+                channel.clear_observers()
+            return True
+        else:
+            self.log_error("Could not start workers")
 
     def _stop_impl(self):
         ret = False

@@ -119,8 +119,13 @@ class IConfigurable(INamedObject):
         """ Returns the configparser obj """
         return self.__conf_obj
 
-    def get_conf_dict(self):
-        return self.__conf
+    def get_conf_dict(self, defaults=True):
+        if not defaults:
+            return self.__conf
+        dic = {}
+        for key in self.__default_conf.keys():
+            dic[key] = self.get_conf(key)
+        return dic
 
     def save_conf(self, obj=None):
         """ Writes configured obj to file """

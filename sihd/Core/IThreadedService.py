@@ -44,7 +44,10 @@ class IThreadedService(IService, IRunnable):
                 to check your inputs
         """
         self.read_channels_input()
-        return self.on_step()
+        ret = self.is_running()
+        if ret:
+            ret = self.on_step()
+        return ret
 
     """ IThreadedService """
 

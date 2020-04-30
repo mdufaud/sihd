@@ -5,23 +5,15 @@
 import os
 import sys
 import time
-import utils
 import socket
 import unittest
 
+import utils
 import sihd
 logger = sihd.set_log('debug')
 
 from sihd.Handlers.IHandler import IHandler
 from sihd.Tools.pcap import PcapWriter
-
-try:
-    import multiprocessing
-    if multiprocessing is not None:
-        #checks for /dev/shm
-        val = multiprocessing.Value('i', 0)
-except (ImportError, FileNotFoundError):
-    multiprocessing = None
 
 class PcapTestHandler(IHandler):
 
@@ -89,6 +81,7 @@ class TestPcap(unittest.TestCase):
         for i, el in enumerate(handler.received):
             self.assertEqual(el, lst[i])
 
+    @unittest.skipIf(utils.is_multiprocessing() is False, "No support for multiprocess")
     def test_pcap_saver(self):
         pcap_path = os.path.join(os.path.dirname(__file__),
                                 "resources", "Pcap", "test.pcap")
@@ -112,7 +105,8 @@ class TestPcap(unittest.TestCase):
         self.assertTrue(saver.setup())
         self.assertTrue(reader.setup())
 
-        reader.packet.add_observer(saver.save)
+        #reader.packet.add_observer(saver.save)
+        saver.link_channel("save", reader.packet)
         saver.activate.write(True)
 
         logger.info("###### Setup done. Starting ######")

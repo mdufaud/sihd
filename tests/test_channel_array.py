@@ -5,16 +5,18 @@
 import os
 import sys
 import time
-import utils
 import socket
 import unittest
 
+import utils
 import sihd
 logger = sihd.set_log('debug')
 
 from sihd.Handlers.IHandler import IHandler
 from sihd.Core.Channel import *
 from sihd.Core import SihdThread
+
+from array import array
 
 class TestChannelArray(unittest.TestCase):
 
@@ -29,6 +31,7 @@ class TestChannelArray(unittest.TestCase):
     def do_array(self, channel, default):
         logger.info("Testing " + str(channel))
         self.assertTrue(channel.is_readable())
+        print(channel.read(0, 3))
         self.assertEqual(channel.read(0), default[0])
         self.assertEqual(channel.read(-1), default[-1])
         self.assertEqual(channel.read(len(default)), None)
@@ -56,15 +59,10 @@ class TestChannelArray(unittest.TestCase):
         self.assertEqual(channel.read(0), 0)
         self.assertEqual(channel.read(-1), 0)
 
-    def test_channel_array(self):
+    def test_channel_int(self):
         print()
         default = [1, 2, 3]
         channel = ChannelArray(default=default, ctype='i', size=len(default))
-        self.do_array(channel, default)
-
-        print()
-        default = [1.2, 2.3, 3.4]
-        channel = ChannelArray(default=default, ctype='d', size=len(default))
         self.do_array(channel, default)
 
         if utils.is_multiprocessing():
@@ -73,10 +71,51 @@ class TestChannelArray(unittest.TestCase):
             channel = ChannelArray(default=default, ctype='i', size=len(default), mp=True)
             self.do_array(channel, default)
 
+    def test_channel_double(self):
+        print()
+        default = [1.2, 2.3, 3.4]
+        channel = ChannelArray(default=default, ctype='d', size=len(default))
+        self.do_array(channel, default)
+
+        if utils.is_multiprocessing():
             print()
             default = [1.2, 2.3, 3.4]
             channel = ChannelArray(default=default, ctype='d', size=len(default), mp=True)
             self.do_array(channel, default)
+
+    def do_byte(self, channel, default):
+        logger.info("Testing " + str(channel))
+        self.assertTrue(channel.is_readable())
+        self.assertEqual(channel.read(0), default[0])
+        self.assertEqual(channel.read(-1), 0)
+        self.assertEqual(channel.get_stripped(), default.decode())
+        channel.task_done()
+        self.assertFalse(channel.is_readable())
+        self.assertTrue(utils.write_channel(channel, b"world"))
+        self.assertEqual(channel.read(0, 5), b"world")
+        self.assertTrue(utils.write_channel(channel, b"AB", 3))
+        self.assertEqual(channel.read(0, 5), b"worAB")
+        self.assertTrue(utils.write_channel(channel, b"A", 0))
+        self.assertEqual(channel.read(0, 5), b"AorAB")
+        channel.clear()
+        self.assertTrue(utils.write_channel(channel, b"world"))
+        #too long
+        self.assertFalse(channel.write(b"hello world"))
+        self.assertEqual(channel.read(0, 5), b"world")
+        self.assertEqual(channel.get_stripped(), "world")
+        channel.clear()
+        self.assertEqual(channel.get_stripped(), "")
+
+    def test_channel_byte_array(self):
+        print()
+        default = b'hello 1!!'
+        channel = ChannelArray(ctype='b', default=default, size=10)
+        self.do_byte(channel, default)
+
+        if utils.is_multiprocessing():
+            print()
+            channel = ChannelArray(ctype='b', default=default, size=10, mp=True)
+            self.do_byte(channel, default)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

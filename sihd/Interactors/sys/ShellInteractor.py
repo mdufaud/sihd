@@ -25,7 +25,7 @@ class ShellInteractor(IInteractor):
             "cmd": "/your/cmd --arg",
             "pipe": "ex: stdin;stdout",
             "devnull": "ex: stderr;stdin",
-            "timeout": 0.1,
+            "timeout_communication": 0.5,
             "input_data": "",
             "stderr_to_out": False,
         })
@@ -34,12 +34,7 @@ class ShellInteractor(IInteractor):
         self.__args = {}
         self.__timeout = None
         self.__proc = None
-        #self.add_channel_input("set_stdout", type='byte')
-        #self.add_channel_input("set_stderr", type='byte')
         self.add_channel_input("stdin", type='queue')
-        self.add_channel_output("stdout")
-        self.add_channel_output("stderr")
-        self.add_channel_output("returncode", type='int', default=-1)
 
     """ IConfigurable """
 
@@ -50,7 +45,7 @@ class ShellInteractor(IInteractor):
         stderr = self.get_conf("stderr_to_out")
         devnull = self.get_conf("devnull", default=False)
         input_data = self.get_conf("input_data")
-        self.set_timeout(self.get_conf("timeout"))
+        self.set_timeout(self.get_conf("timeout_communication"))
         if cmd:
             self.set_cmd(cmd)
         if pipe:
@@ -76,9 +71,10 @@ class ShellInteractor(IInteractor):
         self.__timeout = timeout
 
     def set_input(self, data):
-        if isinstance(data, bool) and not data:
-            self.set_stdin(None)
-            self.__input = None
+        if isinstance(data, bool):
+            if data is False:
+                self.set_stdin(None)
+                self.__input = None
             return
         if isinstance(data, str):
             data = data.encode()
@@ -104,11 +100,8 @@ class ShellInteractor(IInteractor):
         child = self.execute(cmd)
         if child is None:
             return False
-        out, err = self.communicate()
-        self.stdout.write(out)
-        if err:
-            self.stderr.write(err)
-        self.returncode.write(child.returncode)
+        out, err, timedout = self.communicate()
+        self.set_result((child.returncode, out, err, timedout))
         return child.returncode == 0
 
     """ Cmd """
@@ -165,15 +158,17 @@ class ShellInteractor(IInteractor):
             timeout = self.__timeout
         if input is None:
             input = self.__input
+        timedout = False
         try:
             out, errs = self.__proc.communicate(timeout=timeout,
                                                 input=input)
         except subprocess.TimeoutExpired:
+            timedout = True
             self.log_error("Timed out communication ({})".format(timeout))
             out, errs = self.end_process(kill=True)
         if errs == b"":
             errs = None
-        return out, errs
+        return out, errs, timedout
 
     def end_process(self, kill=False):
         """ Kill the children process by applying communicate on it """

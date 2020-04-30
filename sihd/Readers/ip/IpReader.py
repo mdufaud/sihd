@@ -32,11 +32,11 @@ class IpReader(IReader):
             "rcv_buf": 4096,
             "poll_timeout": 0.1,
         })
-        self.add_channel_input("c_server_action", type='queue')
-        self.add_channel_input("c_packet_send", type='queue')
-        self.add_channel_output("c_packet_data")
-        self.add_channel_output("c_client_info")
-        self.add_channel_output("c_server_msg")
+        self.add_channel_input("server_action", type='queue')
+        self.add_channel_input("packet_send", type='queue')
+        self.add_channel_output("packet_data", type='queue')
+        self.add_channel_output("client_info", type='queue')
+        self.add_channel_output("server_msg", type='queue')
 
     """ IConfigurable """
 
@@ -51,7 +51,7 @@ class IpReader(IReader):
         return True
 
     def handle(self, channel):
-        if self.is_tcp() and channel == self.c_packet_send:
+        if self.is_tcp() and channel == self.packet_send:
             i = 0
             max_iter = 10
             while channel.is_readable() or i >= max_iter:
@@ -202,8 +202,8 @@ class IpReader(IReader):
             "msg": 0,
             "queue": Queue.Queue(),
         }
-        self.c_client_info.write((fileno, "co", True))
-        self.c_client_info.write((fileno, "addr", True))
+        self.client_info.write((fileno, "co", True))
+        self.client_info.write((fileno, "addr", True))
 
     def _remove_client(self, co):
         self.remove_server_input(co)
@@ -212,21 +212,21 @@ class IpReader(IReader):
         self.log_debug("Client {} has left".format(client["addr"]))
         self._clients[co.fileno()] = None
         co.close()
-        self.c_client_info.write((co.fileno(), "co", False))
+        self.client_info.write((co.fileno(), "co", False))
 
     def _read_tcp_client(self, co):
         client = self.get_client(co)
         data = co.recv(self._rcv_buf)
         if data:
             client["msg"] += 1
-            self.c_packet_data.write((data.decode(), co.fileno()))
+            self.packet_data.write((data.decode(), co.fileno()))
         else:
             self._remove_client(co)
 
     def _read_udp_packet(self, co):
         data, server = co.recvfrom(self._rcv_buf)
         if data:
-            self.c_packet_data.write((data.decode(), server))
+            self.packet_data.write((data.decode(), server))
 
     def _do_read(self, readable):
         ret = True

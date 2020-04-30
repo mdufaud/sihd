@@ -24,9 +24,7 @@ class IPolyService(IThreadedService, IProcessedService):
         super(IPolyService, self).__init__(name)
         self._set_default_conf({
             "service_type": "default",
-            "channels_mp": 0,
         })
-        self.__channels_mp = False
         self.set_service_default()
         self.__service_types_fun = {
             1: self.set_service_default,
@@ -51,23 +49,12 @@ class IPolyService(IThreadedService, IProcessedService):
                 ret = False
             else:
                 self.__service_types_fun[val]()
-            self.__channels_mp = bool(int(self.get_conf("channels_mp")))
         return ret
 
     """ Channels """
 
-    def create_channel_int(self, name, **kwargs):
-        if kwargs.get('mp', False) is True:
-            return IProcessedService.create_channel_int(self, name, **kwargs)
-        return IService.create_channel_int(self, name=name, **kwargs)
-
-    def create_channel_double(self, name, **kwargs):
-        if kwargs.get('mp', False) is True:
-            return IProcessedService.create_channel_double(self, name, **kwargs)
-        return IService.create_channel_double(self, name=name, **kwargs)
-
     def create_channel(self, name, **kwargs):
-        if self.is_service_multiprocess() or self.__channels_mp is True:
+        if self.is_service_multiprocess():
             kwargs['mp'] = True
         return super().create_channel(name, **kwargs)
 
@@ -117,6 +104,20 @@ class IPolyService(IThreadedService, IProcessedService):
                 fun()
 
     """ IService """
+
+    def link_channel(self, name, new_channel):
+        if self.__service_type == self.__service_types.process:
+            return IProcessedService.link_channel(self, name, new_channel)
+        return IService.link_channel(self, name, new_channel)
+
+    def on_start(self):
+        if self.__service_type == self.__service_types.default:
+            return IService.on_start(self)
+        elif self.__service_type == self.__service_types.thread:
+            return IThreadedService.on_start(self)
+        elif self.__service_type == self.__service_types.process:
+            return IProcessedService.on_start(self)
+        return False
 
     def _start_impl(self):
         if self.__service_type == self.__service_types.default:
