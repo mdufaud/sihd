@@ -12,7 +12,7 @@ class PcapHandler(IHandler):
     def __init__(self, app=None, name="PcapHandler"):
         super(PcapHandler, self).__init__(app=app, name=name)
         self._set_default_conf({
-            "service_type": "thread",
+            "runnable_type": "thread",
             "activate": 0,
             "save_raw": 0,
             "save_type": 'queue',
@@ -37,7 +37,7 @@ class PcapHandler(IHandler):
         self.set_saving(bool(int(self.get_conf("activate"))))
         return True
 
-    """ IService """
+    """ SihdService """
 
     def handle(self, channel):
         if channel == self.save:

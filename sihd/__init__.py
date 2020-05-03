@@ -7,7 +7,7 @@ from .App import *
 from .API import *
 from .Tools import *
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 _traceback = None
 

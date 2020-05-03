@@ -6,14 +6,14 @@ import time
 
 import sihd
 
-from .IService import IService
+from .SihdService import SihdService
 from .IConfigurable import IConfigurable
 from .IRunnable import IRunnable
 
-class IThreadedService(IService, IRunnable):
+class IThreadedService(SihdService, IRunnable):
 
-    def __init__(self, name="IThreadedService"):
-        super(IThreadedService, self).__init__(name)
+    def __init__(self, name="IThreadedService", **kwargs):
+        super(IThreadedService, self).__init__(name, **kwargs)
         self._set_default_conf({
             "thread_frequency": 50, 
             "thread_timeout": 0,
@@ -66,7 +66,7 @@ class IThreadedService(IService, IRunnable):
         self.__thread_max_iter = int(self.get_conf("thread_max_iterations"))
         return ret
 
-    """ IService """
+    """ SihdService """
 
     def _start_impl(self):
         self.setup_thread(

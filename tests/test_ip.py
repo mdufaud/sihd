@@ -28,12 +28,12 @@ class TestHandler(IHandler):
 def get_udp_sender():
     interactor = sihd.Interactors.IpInteractor()
     interactor.set_conf({
-        "service_type": "thread",
+        "runnable_type": "thread",
         "host": "localhost",
         "port": 4200,
         "protocol": "udp",
-        "thread_frequency": 10,
-        "thread_timeout": 0.5,
+        "runnable_frequency": 10,
+        "runnable_timeout": 0.5,
     })
     interactor.setup()
     interactor.set_interaction("Some udp message")
@@ -42,11 +42,11 @@ def get_udp_sender():
 def get_tcp_sender():
     interactor = sihd.Interactors.IpInteractor()
     interactor.set_conf({
-        "service_type": "thread",
+        "runnable_type": "thread",
         "host": "localhost",
         "port": 4200,
-        "thread_frequency": 100,
-        "thread_max_iterations": 5
+        "runnable_frequency": 100,
+        "runnable_steps": 5
     })
     interactor.setup()
     interactor.set_interaction("Some tcp message")
@@ -64,7 +64,7 @@ class TestIpServer(unittest.TestCase):
         reader = sihd.Readers.IpReader()
         ip_handler = sihd.Handlers.IpServerHandler()
         if utils.is_multiprocessing():
-            reader.set_conf("service_type", "process")
+            reader.set_conf("runnable_type", "process")
             ip_handler.set_conf("channels_mp", True)
         reader.set_conf("port", 4200)
         reader.set_conf("protocol", type)
@@ -100,7 +100,7 @@ class TestIpServer(unittest.TestCase):
     def test_with_net_cat(self):
         reader = sihd.Readers.IpReader()
         ip_handler = sihd.Handlers.IpServerHandler()
-        reader.set_conf("service_type", "process")
+        reader.set_conf("runnable_type", "process")
         ip_handler.set_conf("channels_mp", True)
         reader.set_conf("port", 4200)
         reader.set_conf("protocol", "tcp")
@@ -124,7 +124,7 @@ class TestIpServer(unittest.TestCase):
         handler = sihd.Handlers.IpServerHandler()
         gui = sihd.GUI.WxPython.ip.WxPythonIpGui()
 
-        reader.set_conf("service_type", "process")
+        reader.set_conf("runnable_type", "process")
         ip_handler.set_conf("channels_mp", True)
         reader.set_conf("port", 4200)
         reader.set_conf("protocol", type)

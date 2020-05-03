@@ -1,19 +1,18 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+from sihd.Core.SihdRunnableService import SihdRunnableService
+from sihd.Core.IAppContainer import IAppContainer
 
-from sihd import Core
+class IHandler(SihdRunnableService, IAppContainer):
 
-class IHandler(Core.IPolyService, Core.IAppContainer):
-
-    def __init__(self, app=None, name="IHandler"):
-        Core.IAppContainer.__init__(self)
-        super().__init__(name)
+    def __init__(self, app=None, name="IHandler", **kwargs):
+        IAppContainer.__init__(self)
+        super().__init__(name, **kwargs)
         if app:
             self.set_app(app)
         self._set_default_conf({
-            "service_type": "thread",
+            "runnable_type": "thread",
         })
 
     """ IHandler """
@@ -28,12 +27,7 @@ class IHandler(Core.IPolyService, Core.IAppContainer):
         method(service)
         return True
 
-    """ IProcessedService """
-
-    def on_work(self) -> bool:
-        return self.on_step()
-
-    """ IService """
+    """ SihdService """
 
     def handle(self, channel):
         raise NotImplementedError("handle not implemented")
@@ -42,4 +36,5 @@ class IHandler(Core.IPolyService, Core.IAppContainer):
 
     def set_app(self, app):
         super().set_app(app)
+        self.set_namedobject_parent(app)
         app.add_handler(self)

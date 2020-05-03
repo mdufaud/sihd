@@ -286,7 +286,6 @@ class SihdWorker(ILoggable, IObserver):
             # Pause
             if pause > 0.0:
                 stop_evt.wait(timeout=pause)
-                #sleep(pause)
                 downtime += pause
         self.__do_stat(uptime, downtime, maxtime, mintime, i)
         if self.__on_stop:

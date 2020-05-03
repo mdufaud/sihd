@@ -6,8 +6,8 @@ from .INamedObject import INamedObject
 
 class IObservable(INamedObject):
 
-    def __init__(self, name="IObservable"):
-        super(IObservable, self).__init__(name)
+    def __init__(self, name="IObservable", **kwargs):
+        super(IObservable, self).__init__(name, **kwargs)
         self.__observers = set()
 
     def add_observer(self, observer):

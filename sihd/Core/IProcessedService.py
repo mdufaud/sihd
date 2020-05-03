@@ -7,14 +7,14 @@ import os
 
 import sihd
 
-from .IService import IService
+from .SihdService import SihdService
 from .IConfigurable import IConfigurable
 from .SihdWorker import SihdWorker
 
-class IProcessedService(IService):
+class IProcessedService(SihdService):
 
-    def __init__(self, name="IProcessedService"):
-        super(IProcessedService, self).__init__(name)
+    def __init__(self, name="IProcessedService", **kwargs):
+        super(IProcessedService, self).__init__(name, **kwargs)
         self._set_default_conf({
             "process_workers": 1,
             "process_frequency": 50,
@@ -54,7 +54,10 @@ class IProcessedService(IService):
 
     def work(self):
         self.read_channels_input()
-        return self.on_work()
+        ret = self.is_running()
+        if ret:
+            ret = self.on_work()
+        return ret
 
     def on_work(self):
         pass
@@ -72,7 +75,11 @@ class IProcessedService(IService):
         self.log_debug("Worker[{}]: stopped after {} iterations"\
                 .format(worker.get_number(), total_iter))
 
-    """ IService """
+    """ SihdService """
+
+    def create_channel(self, name, **kwargs):
+        kwargs['mp'] = True
+        return super().create_channel(name, **kwargs)
 
     def link_channel(self, name, new_channel):
         if new_channel.is_multiprocess() is False:

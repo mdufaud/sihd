@@ -17,7 +17,13 @@ except ImportError:
 import sihd
 from sihd import Core, Readers, Handlers, GUI, Interactors
 
-class IApp(Core.IService):
+from sihd.Readers.IReader import IReader
+from sihd.Handlers.IHandler import IHandler
+from sihd.GUI.IGui import IGui
+from sihd.Interactors.IInteractor import IInteractor
+from sihd.Core.SihdService import SihdService
+
+class IApp(SihdService):
 
     def __init__(self, name="IApp", *args, **kwargs):
         super(IApp, self).__init__(name, *args, **kwargs)
@@ -292,6 +298,39 @@ class IApp(Core.IService):
     ###############
     """
 
+    def add_state_observer(self, service):
+        state = service.get_channel("service_state")
+        if not state:
+            self.log_error("Could not find service {} "
+                    "state channel to observe".format(service))
+            return False
+        input_lst = self.get_channels_input()
+        if state not in input_lst:
+            input_lst.append(state)
+        self.log_debug("Started service {} state observation"\
+                        .format(service))
+        return True
+
+    def remove_state_observer(self, service):
+        state = service.get_channel("service_state")
+        if not state:
+            self.log_error("Could not find service {} "
+                    "state channel to remove observation".format(service))
+            return False
+        input_lst = self.get_channels_input()
+        to_remove = -1
+        for i, channel in enumerate(input_lst):
+            if channel == state:
+                to_remove = i
+                break
+        if to_remove == -1:
+            self.log_error("Could not find service {} "
+                    "state channel in observations for removal")
+        else:
+            input_lst.pop(to_remove)
+            self.log_debug("Stopped service {} state observation"\
+                            .format(service))
+
     def get_services_status(self):
         st_readers = {}
         st_handlers = {}
@@ -459,19 +498,19 @@ class IApp(Core.IService):
 
     @staticmethod
     def is_reader(service):
-        return isinstance(service, Readers.IReader)
+        return isinstance(service, IReader)
 
     @staticmethod
     def is_handler(service):
-        return isinstance(service, Handlers.IHandler)
+        return isinstance(service, IHandler)
 
     @staticmethod
     def is_gui(service):
-        return isinstance(service, GUI.IGui)
+        return isinstance(service, IGui)
 
     @staticmethod
     def is_interactor(service):
-        return isinstance(service, Interactors.IInteractor)
+        return isinstance(service, IInteractor)
 
     """
     ###############
@@ -480,11 +519,12 @@ class IApp(Core.IService):
     """
 
     def _pre_handle(self, channel):
-        if channel.get_name() == "channel_state":
-            service = channel.get_parent()
+        if channel.get_name() == "service_state":
+            service = channel.get_namedobject_parent()
             stopped, paused = service.get_service_state()
             self.service_state_changed(service, stopped, paused)
             return True
+        return False
         
     def service_state_changed(self, service, stopped, paused):
         pass
@@ -510,12 +550,13 @@ class IApp(Core.IService):
 
     def _timed_loop(self, timeout=None):
         max_sec = timeout or self._max_sec_timed_loop
+        sleeptime = 0.1
         try:
             i = 0
             while i < max_sec and self.is_running():
                 self.read_channels_input()
-                time.sleep(1)
-                i += 1
+                time.sleep(sleeptime)
+                i += sleeptime
         except KeyboardInterrupt:
             pass
 
@@ -523,11 +564,12 @@ class IApp(Core.IService):
         ret = True
         start = time.time()
         now = start
+        sleeptime = 0.1
         try:
             while self.is_running():
                 self.read_channels_input()
-                time.sleep(1)
-                now += 1
+                time.sleep(sleeptime)
+                now += sleeptime
                 if timeout is not None and now >= (start + timeout):
                     break
         except KeyboardInterrupt:

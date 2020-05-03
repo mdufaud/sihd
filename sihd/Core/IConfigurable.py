@@ -11,8 +11,8 @@ from .INamedObject import INamedObject
 
 class IConfigurable(INamedObject):
 
-    def __init__(self, name="IConfigurable"):
-        super(IConfigurable, self).__init__(name)
+    def __init__(self, name="IConfigurable", **kwargs):
+        super(IConfigurable, self).__init__(name, **kwargs)
         self.__default_conf = {}
         self.__conf = {}
         self.__conf_obj = None
@@ -172,8 +172,9 @@ class IConfigurable(INamedObject):
         if not self.__has_section:
             self.__setup_section(obj)
         fun = self.set_conf_file
-        for key, value in dic.items():
-            fun(key, str(value), force=False, obj=obj)
+        keys = sorted(dic.keys())
+        for key in keys:
+            fun(key, str(dic[key]), force=False, obj=obj)
         return True
 
     def __write_default_conf(self, obj=None):

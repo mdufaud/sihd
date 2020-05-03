@@ -17,9 +17,9 @@ class DuplicatorHandler(IHandler):
             for channel in channels:
                 lst.add(channel)
         else:
-            lst.add(channel)
+            lst.add(channels)
 
-    """ IService """
+    """ SihdService """
 
     def handle(self, channel):
         data = channel.read()

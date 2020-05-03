@@ -57,7 +57,7 @@ class Channel(IObservable, IObserver, ILoggable):
     def __init__(self, mp=False, parent=None, name="Channel",
                     block=True, timeout=0.01, log=True,
                     default=None, timestamp=False):
-        super(Channel, self).__init__(name)
+        super().__init__(name, parent=parent)
         #Timestamping and lock
         self.__ts = False
         if log is False:
@@ -77,8 +77,6 @@ class Channel(IObservable, IObserver, ILoggable):
         self.__locked = False
         #Stored last data
         self._last_data = None
-        #Channel's parent
-        self.__parent = parent
         #Multiprocessing
         self.__mp = mp
         self.set_timeout(timeout)
@@ -143,10 +141,6 @@ class Channel(IObservable, IObserver, ILoggable):
         if channel.is_readable():
             data = channel.read()
             self.write(data, notify = not self.is_multiprocess())
-
-    def get_parent(self):
-        """ Get channel's parent """
-        return self.__parent
 
     """ Lock """
 
@@ -237,8 +231,10 @@ class Channel(IObservable, IObserver, ILoggable):
         """ Get the data object """
         return self._last_data
 
-    def get_description(self):
-        l = []
+    """ INamedObject """
+
+    def _get_attributes(self):
+        l = super()._get_attributes()
         if self.is_block():
             l.append("block")
         timeout = self.get_timeout()
@@ -252,10 +248,12 @@ class Channel(IObservable, IObserver, ILoggable):
             l.append("multiprocessed")
         if self.is_locked():
             l.append("locked")
-        return ", ".join(l)
+        return l
+
+    """ ILoggable """
 
     def _log_format(self, msg):
-        parent = self.get_parent() or ""
+        parent = self.get_namedobject_parent() or ""
         if parent:
             parent = "{}.".format(parent.get_name())
         return "Channel {0}{1}: {2}".format(parent, self.get_name(), msg)
@@ -813,9 +811,7 @@ class ChannelDict(PollableChannel):
 
     def _write(self, key, value=None):
         if isinstance(key, dict):
-            d = self.__dict
-            d.clear()
-            d.update(key)
+            self.__dict.update(key)
         else:
             self.__dict[key] = value
         return True
@@ -823,9 +819,7 @@ class ChannelDict(PollableChannel):
     def __write_mp(self, key, value=None):
         try:
             if isinstance(key, dict):
-                d = self.__dict
-                d.clear()
-                d.update(key)
+                self.__dict.update(key)
             else:
                 self.__dict[key] = value
         except (RuntimeError, TypeError) as e:

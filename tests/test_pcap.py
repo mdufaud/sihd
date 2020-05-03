@@ -17,20 +17,17 @@ from sihd.Tools.pcap import PcapWriter
 
 class PcapTestHandler(IHandler):
 
-    def __init__(self, reader, app=None, name="PcapTestHandler"):
+    def __init__(self, app=None, name="PcapTestHandler"):
         super(PcapTestHandler, self).__init__(app=app, name=name)
         self.received = []
-        self.reader = reader
         self.add_channel_input("hdr", type='queue', simple=True)
         self.add_channel_input("infos", type='queue')
         self.add_channel_input("pkt", type='queue')
 
-    def post_setup(self):
-        #When channels are done
-        self.reader.pcap_header.add_observer(self.hdr)
-        self.reader.packet.add_observer(self.pkt)
-        self.reader.packet_info.add_observer(self.infos)
-        return True
+    def handle_service_pcapreader(self, service):
+        service.pcap_header.add_observer(self.hdr)
+        service.packet.add_observer(self.pkt)
+        service.packet_info.add_observer(self.infos)
 
     def handle(self, channel):
         if channel == self.infos:
@@ -70,7 +67,10 @@ class TestPcap(unittest.TestCase):
         #reader.set_conf("path", pcap_path)
         self.assertTrue(reader.setup())
         reader.path.write(pcap_path)
-        handler = PcapTestHandler(reader)
+        handler = PcapTestHandler()
+        reader.setup()
+        handler.setup()
+        handler.handle_service(reader)
         logger.info("###### Setup done. Starting ######")
         self.assertTrue(handler.start())
         self.assertTrue(reader.start())
@@ -90,26 +90,35 @@ class TestPcap(unittest.TestCase):
 
         saver = sihd.Handlers.PcapHandler()
         reader = sihd.Readers.PcapReader()
-        handler = PcapTestHandler(reader)
+        handler = PcapTestHandler()
+        duplicator = sihd.Handlers.DuplicatorHandler()
 
         saver.set_conf({
             "save_raw": True,
             "save_type": 'list',
             "activate": False,
             "endianness": "big",
-            "service_type": "process"
+            "runnable_type": "process"
         })
-        reader.set_conf("service_type", "process")
+        reader.set_conf("runnable_type", "process")
         reader.set_conf("path", pcap_path)
 
         self.assertTrue(saver.setup())
         self.assertTrue(reader.setup())
+        self.assertTrue(handler.setup())
+        self.assertTrue(duplicator.setup())
 
-        #reader.packet.add_observer(saver.save)
-        saver.link_channel("save", reader.packet)
+        handler.link_channel('hdr', reader.pcap_header)
+        handler.link_channel('infos', reader.packet_info)
+
+        duplicator.link_channel("input", reader.packet)
+        duplicator.duplicate_to(saver.save)
+        duplicator.duplicate_to(handler.pkt)
+
         saver.activate.write(True)
 
         logger.info("###### Setup done. Starting ######")
+        self.assertTrue(duplicator.start())
         self.assertTrue(handler.start())
         self.assertTrue(saver.start())
         self.assertTrue(reader.start())

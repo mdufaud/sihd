@@ -56,7 +56,7 @@ class TestApp(unittest.TestCase):
         if app.setup_app() is False:
             sys.exit(1)
         app.start_all()
-        app.loop(timeout=1)
+        app.loop(timeout=5)
         app.stop()
         #os.remove(app.get_conf_path())
         self.file_expect(app, lines, skipped, check_words, prt=False)

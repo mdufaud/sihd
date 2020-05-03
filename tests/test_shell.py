@@ -55,7 +55,7 @@ class TestShell(unittest.TestCase):
         interactor.set_conf({
             "cmd": cmd,
             "devnull": "stdout",
-            "service_type": "thread",
+            "runnable_type": "thread",
         })
         self.assertTrue(interactor.setup())
         self.assertTrue(interactor.start())
@@ -81,7 +81,7 @@ class TestShell(unittest.TestCase):
         itrc.set_conf({
             "cmd": cmd,
             "pipe": "stdout;stderr",
-            "service_type": "thread"
+            "runnable_type": "thread"
         })
         itrc.setup()
         #Set stdin input

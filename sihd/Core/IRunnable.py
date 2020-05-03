@@ -7,8 +7,8 @@ from .SihdThread import SihdThread
 
 class IRunnable(INamedObject):
 
-    def __init__(self, name="IRunnable"):
-        super(IRunnable, self).__init__(name)
+    def __init__(self, name="IRunnable", **kwargs):
+        super(IRunnable, self).__init__(name, **kwargs)
         self.__thread = None
         self.__step_method = self.step
 

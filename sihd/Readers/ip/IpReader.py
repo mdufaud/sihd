@@ -276,7 +276,7 @@ class IpReader(IReader):
                 continue
         return True
 
-    """ IService """
+    """ SihdService """
 
     def _start_impl(self):
         if self._socket is None:

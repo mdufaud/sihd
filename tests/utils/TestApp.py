@@ -46,7 +46,8 @@ class TestApp(sihd.App.IApp):
     def _link_channels(self):
         reader = self._line_reader
         handler = self._word_handler
-        reader.add_state_observer(self)
+        self.add_state_observer(reader)
+        reader.eof.add_observer(self)
         handler.link_channel("input", reader.output)
         #reader.link_channel("output", handler.input)
         return True
@@ -66,6 +67,12 @@ class TestApp(sihd.App.IApp):
                 default=None,
                 help="Timer until stop")
 
+    def handle(self, channel):
+        if channel.get_name() == "eof":
+            ended = channel.read()
+            if ended:
+                channel.get_namedobject_parent().stop()
+
     def service_state_changed(self, service, stopped, paused):
         #Exit only if no gui attached
         self.is_handler(service)
@@ -75,21 +82,20 @@ class TestApp(sihd.App.IApp):
                 return
         elif self.is_reader(service) is False:
             return
-        self.log_info("{}: {}".format(service.get_name(), service.get_service_state_str()))
+        self.log_info("{} ---- > {}".format(service.get_name(), service.get_service_state_str()))
         if stopped:
-            self.log_info("Reader {} ended and stopped".format(service.get_name()))
+            self.log_info("Reader {} ----> ended and stopped !".format(service.get_name()))
             self.stop()
 
     def _configure_handler(self, handler):
         #Decorate with stats
         #handler.set_conf("service_type", "process")
         if self.args.stats:
-            handler.handle = sihd.Core.Stats.stat_it(handler.handle)
+            handler.step = sihd.Core.Stats.stat_it(handler.step)
 
     def _configure_reader(self, reader, args):
         reader.set_conf("path", args.file, force=True)
         #reader.set_conf("service_type", "process")
         #Decorate with stats
         if self.args.stats:
-            method = sihd.Core.Stats.stat_it(reader.get_step_method())
-            reader.set_step_method(method)
+            reader.step = sihd.Core.Stats.stat_it(reader.step)

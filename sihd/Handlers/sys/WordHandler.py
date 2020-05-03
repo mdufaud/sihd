@@ -58,7 +58,7 @@ class WordHandler(IHandler):
             write(word, read(word, 0) + 1)
         return True
 
-    """ IService """
+    """ SihdService """
 
     def on_start(self):
         super().on_start()

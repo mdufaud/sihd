@@ -15,8 +15,7 @@ class StdinReader(IReader):
         super(StdinReader, self).__init__(app=app, name=name)
         self._set_default_conf({
             "question": "",
-            "thread_frequency": 5, 
-            "process_frequency": 5, 
+            "runnable_frequency": 5, 
         })
         self.__question = ""
         self.__asked = False

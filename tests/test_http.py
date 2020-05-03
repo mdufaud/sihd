@@ -10,7 +10,7 @@ import json
 
 import utils
 import sihd
-logger = sihd.set_log()
+logger = sihd.set_log('debug')
 
 from sihd.Interactors.ip.HttpInteractor import HttpInteractor
 
@@ -77,7 +77,7 @@ class TestHttp(unittest.TestCase):
         interactor = HttpInteractor()
         interactor.set_conf({
             "url": url,
-            'service_type': 'thread'
+            'runnable_type': 'thread'
         })
         self.assertTrue(interactor.setup())
         self.assertTrue(interactor.start())
@@ -90,22 +90,21 @@ class TestHttp(unittest.TestCase):
         logger.info("Testing channels well being")
         url = "https://www.google.com"
         interactor = HttpInteractor()
-        interactor.set_conf('service_type', 'process')
+        interactor.set_conf('runnable_type', 'process')
         try:
             self.assertTrue(interactor.setup())
         except FileNotFoundError:
             #/dev/shm
             logger.warning("Test cannot continue as your device has no shared memory capabilities")
             return
-        channel_test = sihd.Core.Channel.ChannelQueue(name='test', mp=True, simple=True)
-        #interactor.result.add_observer(channel_test)
+        channel_test = sihd.ChannelQueue(name='test', mp=True)
         interactor.link_channel("result", channel_test)
         self.assertTrue(interactor.start())
         time.sleep(0.1)
         interactor.new_interaction.write(url)
         time.sleep(2)
-        self.assertTrue(channel_test.read() is not None)
         self.assertTrue(interactor.stop())
+        self.assertTrue(channel_test.read() is not None)
 
 if __name__ == '__main__':
     unittest.main()

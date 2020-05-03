@@ -11,8 +11,10 @@ logger = sihd.set_log('debug')
 
 from sihd.Handlers.IHandler import IHandler
 from sihd.Core.Channel import *
-from sihd.Core import SihdThread
-from sihd.Core import SihdWorker
+from sihd.Core import RunnableThread
+from sihd.Core import RunnableProcess
+from sihd.Core import SihdService
+from sihd.Core import SihdRunnableService
 
 try:
     import multiprocessing
@@ -25,6 +27,30 @@ try:
         val = multiprocessing.Value('i', 0)
 except FileNotFoundError:
     multiprocessing = None
+
+class IncService(SihdRunnableService):
+
+    def __init__(self, name="IncService"):
+        super(IncService, self).__init__(name=name)
+        self.i = 0
+        self.add_channel_output("output", type='int', default=0)
+
+    def on_step(self):
+        self.i += 1
+        self.output.write(self.i)
+        return True
+
+class PollingService(SihdRunnableService):
+
+    def __init__(self, name="PollingService"):
+        super(PollingService, self).__init__(name=name)
+        self.add_channel_input("input", type='int')
+        self.add_channel_output("output", type='int')
+
+    def handle(self, channel):
+        val = channel.read()
+        self.output.write(val)
+        return True
 
 class TestServices(unittest.TestCase):
 
@@ -42,17 +68,20 @@ class TestServices(unittest.TestCase):
 
     def test_runnable(self):
         self.__iter = 0
-        runnable = sihd.Core.IRunnable()
-        runnable.setup_thread(
+        runnable = RunnableThread(
             step=self.step,
             frequency=50,
             timeout=5,
             max_iter=10,
             on_stop=self.on_thread_stop,
+            daemon=True,
         )
-        runnable.start_thread()
+        runnable.start()
         time.sleep(1)
         self.assertEqual(self.__iter, 10)
+        runnable.pause()
+        runnable.resume()
+        runnable.stop()
     
     def do_life_cycle(self, service):
         self.assertTrue(service.setup())
@@ -64,15 +93,47 @@ class TestServices(unittest.TestCase):
         self.assertTrue(service.reset())
 
     def test_iservice(self):
-        service = sihd.Core.IService()
+        service = sihd.Core.SihdService()
         self.do_life_cycle(service)
-        service = sihd.Core.IThreadedService()
+        service = sihd.Core.SihdRunnableService()
         self.do_life_cycle(service)
         if multiprocessing:
-            service = sihd.Core.IProcessedService()
+            service = sihd.Core.SihdRunnableService()
+            service.set_conf("runnable_type", "process")
             self.do_life_cycle(service)
-        service = sihd.Core.IPolyService()
-        self.do_life_cycle(service)
+
+    def test_thread_in_process(self):
+        #Thread 1
+        inc = IncService()
+        #Thread 2
+        inc2 = IncService()
+        #Proc 1
+        poll = PollingService()
+        self.assertTrue(inc.setup())
+        self.assertTrue(inc2.setup())
+        self.assertTrue(poll.setup())
+        #linking thread output to process input
+        inc.link_channel("output", poll.input)
+        #Start thread 1
+        self.assertTrue(inc.start())
+        time.sleep(0.1)
+        #Start new proc
+        self.assertTrue(poll.start())
+        #Stop thread 1
+        self.assertTrue(inc.stop())
+        #Start thread 2
+        self.assertTrue(inc2.start())
+        time.sleep(0.4)
+        #Stop proc
+        self.assertTrue(poll.stop())
+        #Stop thread 2
+        self.assertTrue(inc2.stop())
+        poll_val = poll.output.read()
+        inc_val = inc.output.read()
+        inc2_val = inc2.output.read()
+        logger.info("Poll: {} - Inc: {} - Inc2: {}".format(poll_val, inc_val, inc2_val))
+        self.assertEqual(inc_val, poll_val)
+        self.assertTrue(inc2_val > 0)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

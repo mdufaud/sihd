@@ -80,7 +80,7 @@ class SerialReader(IReader):
             self.output.write(line)
         return True
 
-    """ IService """
+    """ SihdService """
 
     def close():
         serial = self.__serial

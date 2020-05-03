@@ -36,10 +36,9 @@ class PcapReader(IReader):
             path = self.get_conf("path", default=False)
             if path:
                 self.path.write(path)
-                #self.set_source(path)
         return ret
 
-    """ IService """
+    """ SihdService """
 
     def handle(self, channel):
         if channel == self.path:

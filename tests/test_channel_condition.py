@@ -11,8 +11,8 @@ logger = sihd.set_log('debug')
 
 from sihd.Handlers.IHandler import IHandler
 from sihd.Core.Channel import *
-from sihd.Core import SihdThread
-from sihd.Core import SihdWorker
+from sihd.Core import RunnableThread
+from sihd.Core import RunnableProcess
 
 class TestChannelCondition(unittest.TestCase):
 
@@ -40,9 +40,9 @@ class TestChannelCondition(unittest.TestCase):
         else:
             self.do_thread(channel, timeout)
 
-    def worker_started(self, worker, *args):
+    def worker_started(self, worker):
         self.worker = worker
-        self.cond, self.bool = args
+        self.cond, self.bool = worker.get_args()
 
     def do_multiprocess(self, channel, timeout=False):
         kwargs = {
@@ -50,7 +50,8 @@ class TestChannelCondition(unittest.TestCase):
             "timeout": 5,
             "max_iter": 1,
             "worker_number": 2,
-            "work": self.condition_worker_step,
+            "daemon": True,
+            "step": self.condition_worker_step,
             "on_start": self.worker_started,
         }
         self.passed = {}
@@ -58,12 +59,12 @@ class TestChannelCondition(unittest.TestCase):
         bool1 = ChannelBool(mp=True, default=False)
         bool2 = ChannelBool(mp=True, default=False)
         bool3 = ChannelBool(mp=True, default=False)
-        worker1 = SihdWorker(args=(channel, bool1,), **kwargs)
-        worker2 = SihdWorker(args=(channel, bool2,), **kwargs)
-        worker3 = SihdWorker(args=(channel, bool3,), **kwargs)
-        worker1.start_workers() 
-        worker2.start_workers() 
-        worker3.start_workers()
+        worker1 = RunnableProcess(args=(channel, bool1,), **kwargs)
+        worker2 = RunnableProcess(args=(channel, bool2,), **kwargs)
+        worker3 = RunnableProcess(args=(channel, bool3,), **kwargs)
+        worker1.start() 
+        worker2.start() 
+        worker3.start()
         time.sleep(1)
         self.assertFalse(bool1.read())
         self.assertFalse(bool2.read())
@@ -74,23 +75,23 @@ class TestChannelCondition(unittest.TestCase):
         self.assertEqual(bool1.read(), timeout is False)
         self.assertEqual(bool2.read(), timeout is False)
         self.assertEqual(bool3.read(), timeout is False)
-        worker1.clear_workers()
-        worker2.clear_workers()
-        worker3.clear_workers()
+        worker1.stop()
+        worker2.stop()
+        worker3.stop()
 
     """ Thread """
 
     def condition_thread_step(self):
-        ident = self.thread.ident
+        ident = self.thread.get_id()
         self.passed[ident] = False
         logger.info("Thread {} reading condition".format(ident))
         ret = self.cond.read()
         self.passed[ident] = ret
         logger.info("Thread {} passed condition -> {}".format(ident, ret))
 
-    def thread_started(self, thread, *args):
+    def thread_started(self, thread):
         self.thread = thread
-        self.cond = args[0]
+        self.cond = thread.get_args()[0]
 
     def do_thread(self, channel, timeout=False):
         kwargs = {
@@ -103,9 +104,9 @@ class TestChannelCondition(unittest.TestCase):
             "args": (channel,)
         }
         self.passed = {}
-        thread1 = SihdThread(self, **kwargs)
-        thread2 = SihdThread(self, **kwargs)
-        thread3 = SihdThread(self, **kwargs)
+        thread1 = RunnableThread(self, **kwargs)
+        thread2 = RunnableThread(self, **kwargs)
+        thread3 = RunnableThread(self, **kwargs)
         thread1.start()
         thread2.start() 
         thread3.start()
@@ -128,9 +129,9 @@ class TestChannelCondition(unittest.TestCase):
         channel = ChannelCondition(timeout=0.5)
         self.do_condition(channel, timeout=True)
         
-        if multiprocessing:
+        if utils.is_multiprocessing():
             print()
-            channel = ChannelCondition(mp=True)
+            channel = ChannelCondition(mp=True, timeout=None, block=False)
             self.do_condition(channel)
             channel = ChannelCondition(mp=True, timeout=0.5)
             self.do_condition(channel, timeout=True)

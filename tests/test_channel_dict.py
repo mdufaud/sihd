@@ -16,6 +16,15 @@ from sihd.Handlers.IHandler import IHandler
 from sihd.Core.Channel import *
 from sihd.Core import SihdThread
 
+class LittleObject(object):
+
+    def __init__(self):
+        self.a = 1
+        self.b = 2
+
+    def __str__(self):
+        return "self.a=" + str(self.a)
+
 class TestChannelDict(unittest.TestCase):
 
     def setUp(self):
@@ -49,6 +58,17 @@ class TestChannelDict(unittest.TestCase):
         self.assertEqual(channel.read('hello'), None)
         self.assertEqual(channel.read(1), None)
         self.assertEqual(channel.read((2)), None)
+
+        channel.clear()
+        self.assertTrue(channel.write({"key": "value", "key2": "value2"}))
+        self.assertEqual(channel.read("key"), "value")
+        self.assertEqual(channel.read("key2"), "value2")
+
+        channel.clear()
+        self.assertTrue(channel.write("obj", LittleObject()))
+        print(channel.read("obj"))
+        self.assertEqual(channel.read("obj").a, 1)
+        self.assertEqual(channel.read("obj").b, 2)
 
     def test_channel_dict(self):
         print()

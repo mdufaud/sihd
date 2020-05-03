@@ -3,7 +3,7 @@
 
 """ System """
 
-from .IService import IService
+from .SihdService import SihdService
 from .IThreadedService import IThreadedService
 from .IProcessedService import IProcessedService
 
@@ -20,8 +20,8 @@ class IPolyService(IThreadedService, IProcessedService):
         "process": 3,
     }
 
-    def __init__(self, name="IPolyService"):
-        super(IPolyService, self).__init__(name)
+    def __init__(self, name="IPolyService", **kwargs):
+        super(IPolyService, self).__init__(name, **kwargs)
         self._set_default_conf({
             "service_type": "default",
         })
@@ -32,12 +32,12 @@ class IPolyService(IThreadedService, IProcessedService):
             3: self.set_service_multiprocess
         }
 
-    def get_description(self):
-        ret = super().get_description()
-        if ret:
-            ret += ", "
-        ret += "type=" + self.__service_type_str
-        return ret
+    """ INamedObject """
+
+    def _get_attributes(self):
+        lst = super()._get_attributes()
+        lst.append("type=" + self.__service_type_str)
+        return lst
 
     def on_setup(self):
         ret = super().on_setup()
@@ -54,9 +54,13 @@ class IPolyService(IThreadedService, IProcessedService):
     """ Channels """
 
     def create_channel(self, name, **kwargs):
-        if self.is_service_multiprocess():
-            kwargs['mp'] = True
-        return super().create_channel(name, **kwargs)
+        if self.__service_type == self.__service_types.default:
+            return SihdService.create_channel(self, name, **kwargs)
+        elif self.__service_type == self.__service_types.thread:
+            return IThreadedService.create_channel(self, name, **kwargs)
+        elif self.__service_type == self.__service_types.process:
+            return IProcessedService.create_channel(self, name, **kwargs)
+        return None
 
     """ Thread """
 
@@ -103,16 +107,16 @@ class IPolyService(IThreadedService, IProcessedService):
             if fun:
                 fun()
 
-    """ IService """
+    """ SihdService """
 
     def link_channel(self, name, new_channel):
         if self.__service_type == self.__service_types.process:
             return IProcessedService.link_channel(self, name, new_channel)
-        return IService.link_channel(self, name, new_channel)
+        return SihdService.link_channel(self, name, new_channel)
 
     def on_start(self):
         if self.__service_type == self.__service_types.default:
-            return IService.on_start(self)
+            return SihdService.on_start(self)
         elif self.__service_type == self.__service_types.thread:
             return IThreadedService.on_start(self)
         elif self.__service_type == self.__service_types.process:
@@ -121,7 +125,7 @@ class IPolyService(IThreadedService, IProcessedService):
 
     def _start_impl(self):
         if self.__service_type == self.__service_types.default:
-            return IService._start_impl(self)
+            return SihdService._start_impl(self)
         elif self.__service_type == self.__service_types.thread:
             return IThreadedService._start_impl(self)
         elif self.__service_type == self.__service_types.process:
@@ -130,7 +134,7 @@ class IPolyService(IThreadedService, IProcessedService):
 
     def _stop_impl(self):
         if self.__service_type == self.__service_types.default:
-            return IService._stop_impl(self)
+            return SihdService._stop_impl(self)
         elif self.__service_type == self.__service_types.thread:
             return IThreadedService._stop_impl(self)
         elif self.__service_type == self.__service_types.process:
@@ -139,7 +143,7 @@ class IPolyService(IThreadedService, IProcessedService):
 
     def _pause_impl(self):
         if self.__service_type == self.__service_types.default:
-            return IService._pause_impl(self)
+            return SihdService._pause_impl(self)
         elif self.__service_type == self.__service_types.thread:
             return IThreadedService._pause_impl(self)
         elif self.__service_type == self.__service_types.process:
@@ -148,7 +152,7 @@ class IPolyService(IThreadedService, IProcessedService):
 
     def _resume_impl(self):
         if self.__service_type == self.__service_types.default:
-            return IService._resume_impl(self)
+            return SihdService._resume_impl(self)
         elif self.__service_type == self.__service_types.thread:
             return IThreadedService._resume_impl(self)
         elif self.__service_type == self.__service_types.process:

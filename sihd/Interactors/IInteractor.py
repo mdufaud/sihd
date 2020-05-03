@@ -1,15 +1,14 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+from sihd.Core.SihdRunnableService import SihdRunnableService
+from sihd.Core.IAppContainer import IAppContainer
 
-from sihd import Core
+class IInteractor(SihdRunnableService, IAppContainer):
 
-class IInteractor(Core.IPolyService, Core.IAppContainer):
-
-    def __init__(self, app=None, name="IInteractor"):
-        Core.IAppContainer.__init__(self)
-        super().__init__(name)
+    def __init__(self, app=None, name="IInteractor", **kwargs):
+        IAppContainer.__init__(self)
+        super().__init__(name, **kwargs)
         self.__interaction = None
         self.add_channel_input("new_interaction", type="queue")
         self.add_channel_output("result")
@@ -45,9 +44,10 @@ class IInteractor(Core.IPolyService, Core.IAppContainer):
 
     def set_app(self, app):
         super().set_app(app)
+        self.set_namedobject_parent(app)
         app.add_interactor(self)
 
-    """ IService """
+    """ SihdService """
 
     def _pre_handle(self, channel):
         ret = super()._pre_handle(channel)
@@ -58,11 +58,6 @@ class IInteractor(Core.IPolyService, Core.IAppContainer):
                     self.set_interaction(action)
                 ret = True
         return ret
-
-    """ IProcessedService """
-
-    def on_work(self):
-        return self.on_step()
 
     """ Step method """
 

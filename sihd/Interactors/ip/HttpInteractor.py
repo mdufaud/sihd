@@ -28,8 +28,7 @@ class HttpInteractor(IInteractor):
         if urllib_parse is None:
             import urllib.parse as urllib_parse
         self._set_default_conf({
-            "thread_frequency": 1,
-            "process_frequency": 1,
+            "runnable_frequency": 1,
             "url": "",
             "query": "",
             "json_post_file": "/path/to/json/post",

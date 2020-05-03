@@ -2,7 +2,6 @@
 #coding: utf-8
 
 """ System """
-
 import os
 import sys
 import datetime
@@ -23,14 +22,8 @@ class ILoggable(INamedObject):
     __error_count = 0
     __critical_count = 0
 
-    def __init__(self, name="ILoggable"):
-        super(ILoggable, self).__init__(name)
-        l = ILoggable.logger
-        self.__debug = l.debug
-        self.__info = l.info
-        self.__warning = l.warning
-        self.__error = l.error
-        self.__crit = l.critical
+    def __init__(self, name="ILoggable", **kwargs):
+        super(ILoggable, self).__init__(name, **kwargs)
         self.__can = True
 
     def _set_log(self, activate):
@@ -41,25 +34,25 @@ class ILoggable(INamedObject):
 
     def log_debug(self, msg):
         if self.__can:
-            self.__debug(self._log_format(msg))
+            self.logger.debug(self._log_format(msg))
 
     def log_info(self, msg):
         if self.__can:
-            self.__info(self._log_format(msg))
+            self.logger.info(self._log_format(msg))
 
     def log_warning(self, msg):
         if self.__can:
-            self.__warning(self._log_format(msg))
+            self.logger.warning(self._log_format(msg))
         ILoggable.__warning_count += 1
 
     def log_error(self, msg):
         if self.__can:
-            self.__error(self._log_format(msg))
+            self.logger.error(self._log_format(msg))
         ILoggable.__error_count += 1
 
     def log_critical(self, msg):
         if self.__can:
-            self.__crit(self._log_format(msg))
+            self.logger.critical(self._log_format(msg))
         ILoggable.__critical_count += 1
 
     @staticmethod

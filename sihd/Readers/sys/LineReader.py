@@ -32,7 +32,7 @@ class LineReader(IReader):
             self.path.write(path)
         return ret
 
-    """ IService """
+    """ SihdService """
 
     def handle(self, channel):
         if channel == self.path:
