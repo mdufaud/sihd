@@ -9,9 +9,9 @@ urllib_request = None
 urllib_error = None
 urllib_parse = None
 
-from sihd.Interactors.IInteractor import IInteractor
+from sihd.Interactors.AInteractor import AInteractor
 
-class HttpInteractor(IInteractor):
+class HttpInteractor(AInteractor):
 
     def __init__(self, app=None, name="HttpInteractor"):
         super(HttpInteractor, self).__init__(app=app, name=name)
@@ -44,7 +44,7 @@ class HttpInteractor(IInteractor):
         self.add_channel_input("headers", type='queue')
         self.add_channel_input("post", type='queue')
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def on_setup(self):
         ret = super().on_setup()
@@ -64,7 +64,7 @@ class HttpInteractor(IInteractor):
             self.make_request()
         return ret
 
-    """ IInteractor """
+    """ AInteractor """
 
     def handle(self, channel):
         if channel == self.query:

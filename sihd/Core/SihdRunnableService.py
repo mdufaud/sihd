@@ -37,7 +37,7 @@ class SihdRunnableService(SihdService):
     def is_service_default(self):
         return not self.is_service_threading() and not self.is_service_multiprocessing()
 
-    """ INamedObject """
+    """ ANamedObject """
 
     def _get_attributes(self):
         lst = super()._get_attributes()
@@ -112,7 +112,7 @@ class SihdRunnableService(SihdService):
     def on_step(self):
         pass
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def on_setup(self):
         ret = super().on_setup()
@@ -138,23 +138,39 @@ class SihdRunnableService(SihdService):
 
     def on_start(self):
         r = self.__runnable
-        if r:
-            r.start()
+        if not r:
+            return
+        r.start()
 
     def _stop_impl(self):
         r = self.__runnable
-        if r:
+        if not r:
+            return
+        try:
             r.stop()
+        except RuntimeError as e:
+            self.log_error(e)
+            return False
         return True
 
     def _pause_impl(self):
         r = self.__runnable
-        if r:
+        if not r:
+            return
+        try:
             r.pause()
+        except RuntimeError as e:
+            self.log_error(e)
+            return False
         return True
 
     def _resume_impl(self):
         r = self.__runnable
-        if r:
+        if not r:
+            return
+        try:
             r.resume()
+        except RuntimeError as e:
+            self.log_error(e)
+            return False
         return True

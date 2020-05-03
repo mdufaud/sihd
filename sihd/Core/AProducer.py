@@ -2,15 +2,15 @@
 #coding: utf-8
 
 """ System """
-from .INamedObject import INamedObject
+from .ANamedObject import ANamedObject
 
 queue = None
 multiprocessing = None
 
-class IProducer(INamedObject):
+class AProducer(ANamedObject):
 
-    def __init__(self, name="IProducer", size=0):
-        super(IProducer, self).__init__(name)
+    def __init__(self, name="AProducer", size=0):
+        super(AProducer, self).__init__(name)
         global multiprocessing
         if multiprocessing is None:
             import multiprocessing

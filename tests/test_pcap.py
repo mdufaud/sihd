@@ -12,17 +12,18 @@ import utils
 import sihd
 logger = sihd.set_log('debug')
 
-from sihd.Handlers.IHandler import IHandler
+from sihd.Handlers.AHandler import AHandler
 from sihd.Tools.pcap import PcapWriter
 
-class PcapTestHandler(IHandler):
+class PcapTestHandler(AHandler):
 
-    def __init__(self, app=None, name="PcapTestHandler"):
+    def __init__(self, test, app=None, name="PcapTestHandler"):
         super(PcapTestHandler, self).__init__(app=app, name=name)
         self.received = []
         self.add_channel_input("hdr", type='queue', simple=True)
         self.add_channel_input("infos", type='queue')
         self.add_channel_input("pkt", type='queue')
+        self.test = test
 
     def handle_service_pcapreader(self, service):
         service.pcap_header.add_observer(self.hdr)
@@ -39,7 +40,7 @@ class PcapTestHandler(IHandler):
             if info.cap_len > 10:
                 s += "..."
             print(info, s)
-            assert(len(pkt) == info.cap_len)
+            self.test.assertEqual(len(pkt), info.cap_len)
             self.received.append(pkt.decode())
         elif channel == self.hdr:
             print("Pcap Header:", channel.read())
@@ -67,7 +68,7 @@ class TestPcap(unittest.TestCase):
         #reader.set_conf("path", pcap_path)
         self.assertTrue(reader.setup())
         reader.path.write(pcap_path)
-        handler = PcapTestHandler()
+        handler = PcapTestHandler(self)
         reader.setup()
         handler.setup()
         handler.handle_service(reader)
@@ -90,7 +91,7 @@ class TestPcap(unittest.TestCase):
 
         saver = sihd.Handlers.PcapHandler()
         reader = sihd.Readers.PcapReader()
-        handler = PcapTestHandler()
+        handler = PcapTestHandler(self)
         duplicator = sihd.Handlers.DuplicatorHandler()
 
         saver.set_conf({

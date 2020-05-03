@@ -5,12 +5,12 @@
 import os
 import pickle
 
-from .INamedObject import INamedObject
+from .ANamedObject import ANamedObject
 
-class IDumpable(INamedObject):
+class ADumpable(ANamedObject):
 
-    def __init__(self, name="IDumpable"):
-        super(IDumpable, self).__init__(name)
+    def __init__(self, name="ADumpable"):
+        super(ADumpable, self).__init__(name)
         self.__file_magic = None
 
     def on_dump(self) -> dict:

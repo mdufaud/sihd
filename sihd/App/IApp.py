@@ -17,10 +17,10 @@ except ImportError:
 import sihd
 from sihd import Core, Readers, Handlers, GUI, Interactors
 
-from sihd.Readers.IReader import IReader
-from sihd.Handlers.IHandler import IHandler
-from sihd.GUI.IGui import IGui
-from sihd.Interactors.IInteractor import IInteractor
+from sihd.Readers.AReader import AReader
+from sihd.Handlers.AHandler import AHandler
+from sihd.GUI.AGui import AGui
+from sihd.Interactors.AInteractor import AInteractor
 from sihd.Core.SihdService import SihdService
 
 class IApp(SihdService):
@@ -162,7 +162,7 @@ class IApp(SihdService):
             obj.read(path)
             if not obj.has_section("Logger"):
                 self.__setup_logger_conf(obj)
-        Core.ILoggable.setup_log(self.get_name(),
+        Core.ALoggable.setup_log(self.get_name(),
                                     obj.get("Logger", "level"),
                                     obj.get("Logger", "directory"))
         self.log_debug("Logger is setup")
@@ -498,19 +498,19 @@ class IApp(SihdService):
 
     @staticmethod
     def is_reader(service):
-        return isinstance(service, IReader)
+        return isinstance(service, AReader)
 
     @staticmethod
     def is_handler(service):
-        return isinstance(service, IHandler)
+        return isinstance(service, AHandler)
 
     @staticmethod
     def is_gui(service):
-        return isinstance(service, IGui)
+        return isinstance(service, AGui)
 
     @staticmethod
     def is_interactor(service):
-        return isinstance(service, IInteractor)
+        return isinstance(service, AInteractor)
 
     """
     ###############

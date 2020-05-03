@@ -33,12 +33,12 @@ class WxPythonIpGui(IWxPythonGui):
         self.frame = MainIpWindow(None, title="Demo")
         self.frame.Show()
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def _setup_impl(self):
         return True
 
-    """ IObservable """
+    """ AObservable """
 
     def handle(self, reader, message, co):
         if self.frame and self.frame.logframe:

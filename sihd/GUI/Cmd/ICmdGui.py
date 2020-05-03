@@ -8,17 +8,17 @@ import re
 import cmd
 import time
 
-from sihd.GUI.IGui import IGui
+from sihd.GUI.AGui import AGui
 from sihd import Core
 
-class ICmdGui(cmd.Cmd, IGui):
+class ICmdGui(cmd.Cmd, AGui):
 
     prompt = '?> '
     intro = None
 
     def __init__(self, app=None, name="ICmdGui"):
         cmd.Cmd.__init__(self)
-        IGui.__init__(self, app=app, name=name)
+        AGui.__init__(self, app=app, name=name)
         self.__completion = {}
         self._set_default_conf({
             "prompt": "$> ",
@@ -27,7 +27,7 @@ class ICmdGui(cmd.Cmd, IGui):
         self.__services_fun = ["start", "stop", "resume", "pause", "setup"]
         self.set_completion("service_any", self.__services_fun)
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def on_setup(self):
         ret = super().on_setup()

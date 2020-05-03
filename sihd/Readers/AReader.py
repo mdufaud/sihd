@@ -4,9 +4,9 @@
 from sihd.Core.SihdRunnableService import SihdRunnableService
 from sihd.Core.IAppContainer import IAppContainer
 
-class IReader(SihdRunnableService, IAppContainer):
+class AReader(SihdRunnableService, IAppContainer):
 
-    def __init__(self, app=None, name="IReader", **kwargs):
+    def __init__(self, app=None, name="AReader", **kwargs):
         IAppContainer.__init__(self)
         super().__init__(name, **kwargs)
         if app:
@@ -15,7 +15,7 @@ class IReader(SihdRunnableService, IAppContainer):
             "runnable_type": "thread",
         })
 
-    """ IReader """
+    """ AReader """
 
     def set_source(self, source) -> bool:
         raise NotImplementedError("set_source not implemented")

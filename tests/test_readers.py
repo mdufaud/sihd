@@ -12,9 +12,9 @@ import utils
 import sihd
 logger = sihd.set_log('debug')
 
-from sihd.Handlers.IHandler import IHandler
+from sihd.Handlers.AHandler import AHandler
 
-class StdinHandler(IHandler):
+class StdinHandler(AHandler):
 
     def __init__(self, reader, app=None, name="StdinHandler"):
         super(StdinHandler, self).__init__(app=app, name=name)

@@ -4,9 +4,9 @@
 """ System """
 import socket
 
-from sihd.Interactors.IInteractor import IInteractor
+from sihd.Interactors.AInteractor import AInteractor
 
-class IpInteractor(IInteractor):
+class IpInteractor(AInteractor):
 
     def __init__(self, app=None, name="IpInteractor"):
         super(IpInteractor, self).__init__(app=app, name=name)
@@ -22,7 +22,7 @@ class IpInteractor(IInteractor):
         self.add_channel_input("c_host", type='queue')
         self.add_channel_input("c_protocol", type='queue')
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def on_setup(self):
         ret = super().on_setup()
@@ -31,7 +31,7 @@ class IpInteractor(IInteractor):
         self.__protocol = str(self.get_conf("protocol"))
         return ret
 
-    """ IInteractor """
+    """ AInteractor """
 
     def handle(self, channel):
         if channel == self.c_port:

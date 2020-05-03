@@ -12,7 +12,7 @@ import utils
 import sihd
 logger = sihd.set_log('debug')
 
-from sihd.Handlers.IHandler import IHandler
+from sihd.Handlers.AHandler import AHandler
 
 from sihd.Core.Channel import *
 

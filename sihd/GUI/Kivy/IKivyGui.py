@@ -4,9 +4,9 @@
 """ System """
 
 
-from ..IGui import IGui
+from ..AGui import AGui
 
-class IKivyGui(IGui):
+class IKivyGui(AGui):
 
     def __init__(self, app=None, name="IKivyGui"):
         super(IKivyGui, self).__init__(app=app, name=name)

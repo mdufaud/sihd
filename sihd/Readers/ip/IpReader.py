@@ -13,9 +13,9 @@ except ImportError:
     import queue
     Queue = queue
 
-from sihd.Readers.IReader import IReader
+from sihd.Readers.AReader import AReader
 
-class IpReader(IReader):
+class IpReader(AReader):
     
     def __init__(self, app=None, name="IpReader"):
         super(IpReader, self).__init__(app=app, name=name)
@@ -38,7 +38,7 @@ class IpReader(IReader):
         self.add_channel_output("client_info", type='queue')
         self.add_channel_output("server_msg", type='queue')
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def on_setup(self):
         ret = super().on_setup()

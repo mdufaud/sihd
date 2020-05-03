@@ -1,4 +1,4 @@
-from .ILoggable import ILoggable
+from .ALoggable import ALoggable
 from .SihdService import SihdService
 from .SihdRunnableService import SihdRunnableService
 from .RunnableThread import RunnableThread

@@ -14,15 +14,15 @@ _traceback = None
 """ Log fast setup """
 
 def set_log(level='info', stream=None):
-    Core.ILoggable.add_stream_handler(level=level, stream=stream)
-    Core.ILoggable.set_color(True)
-    return Core.ILoggable.logger
+    Core.ALoggable.add_stream_handler(level=level, stream=stream)
+    Core.ALoggable.set_color(True)
+    return Core.ALoggable.logger
 
 def set_log_color(activate):
-    Core.ILoggable.set_color(activate)
+    Core.ALoggable.set_color(activate)
 
 def get_log():
-    return Core.ILoggable.logger
+    return Core.ALoggable.logger
 
 def get_traceback():
     global _traceback

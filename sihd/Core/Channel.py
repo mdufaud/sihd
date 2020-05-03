@@ -10,9 +10,9 @@ import ctypes
 import logging
 logger = logging.getLogger()
 
-from .IObservable import IObservable
+from .AObservable import AObservable
 from .IObserver import IObserver
-from .ILoggable import ILoggable
+from .ALoggable import ALoggable
 
 array = None
 RawArray = None
@@ -52,7 +52,7 @@ def register_channel_object(name, cls):
         BaseManager.register(name, cls)
     ChannelObject.register_class(name, cls)
 
-class Channel(IObservable, IObserver, ILoggable):
+class Channel(AObservable, IObserver, ALoggable):
 
     def __init__(self, mp=False, parent=None, name="Channel",
                     block=True, timeout=0.01, log=True,
@@ -231,7 +231,7 @@ class Channel(IObservable, IObserver, ILoggable):
         """ Get the data object """
         return self._last_data
 
-    """ INamedObject """
+    """ ANamedObject """
 
     def _get_attributes(self):
         l = super()._get_attributes()
@@ -250,7 +250,7 @@ class Channel(IObservable, IObserver, ILoggable):
             l.append("locked")
         return l
 
-    """ ILoggable """
+    """ ALoggable """
 
     def _log_format(self, msg):
         parent = self.get_namedobject_parent() or ""

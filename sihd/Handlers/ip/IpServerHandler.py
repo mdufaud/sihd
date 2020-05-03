@@ -9,11 +9,11 @@ except ImportError:
     import queue
     Queue = queue
 
-from sihd.Handlers.IHandler import IHandler
+from sihd.Handlers.AHandler import AHandler
 
 from sihd.Readers.ip.IpReader import IpReader
 
-class IpServerHandler(IHandler):
+class IpServerHandler(AHandler):
 
     def __init__(self, app=None, name="IpServerHandler"):
         super(IpServerHandler, self).__init__(app=app, name=name)

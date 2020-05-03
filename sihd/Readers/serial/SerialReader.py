@@ -7,9 +7,9 @@ import os
 
 serial = None
 
-from sihd.Readers.IReader import IReader
+from sihd.Readers.AReader import AReader
 
-class SerialReader(IReader):
+class SerialReader(AReader):
     
     def __init__(self, app=None, name="SerialReader"):
         global serial
@@ -23,7 +23,7 @@ class SerialReader(IReader):
             "timeout": 1,
         })
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def on_setup(self):
         ret = super().on_setup()

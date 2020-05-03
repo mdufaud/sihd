@@ -6,10 +6,10 @@ import struct
 import time
 import os
 
-from sihd.Readers.IReader import IReader
+from sihd.Readers.AReader import AReader
 from sihd.Tools.pcap import PcapReader as PcapReaderTool
 
-class PcapReader(IReader):
+class PcapReader(AReader):
     
     files_read = {}  
 
@@ -28,7 +28,7 @@ class PcapReader(IReader):
         self.add_channel_output('eof', type='bool',
                                 default=True, timeout=0.1)
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def post_setup(self):
         ret = super().post_setup()

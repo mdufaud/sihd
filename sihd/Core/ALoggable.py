@@ -9,9 +9,9 @@ import logging
 from logging.handlers import RotatingFileHandler
 from logging import StreamHandler
 
-from .INamedObject import INamedObject
+from .ANamedObject import ANamedObject
 
-class ILoggable(INamedObject):
+class ALoggable(ANamedObject):
 
     logger = logging.getLogger()
     __file_handler = None
@@ -22,8 +22,8 @@ class ILoggable(INamedObject):
     __error_count = 0
     __critical_count = 0
 
-    def __init__(self, name="ILoggable", **kwargs):
-        super(ILoggable, self).__init__(name, **kwargs)
+    def __init__(self, name="ALoggable", **kwargs):
+        super(ALoggable, self).__init__(name, **kwargs)
         self.__can = True
 
     def _set_log(self, activate):
@@ -43,17 +43,17 @@ class ILoggable(INamedObject):
     def log_warning(self, msg):
         if self.__can:
             self.logger.warning(self._log_format(msg))
-        ILoggable.__warning_count += 1
+        ALoggable.__warning_count += 1
 
     def log_error(self, msg):
         if self.__can:
             self.logger.error(self._log_format(msg))
-        ILoggable.__error_count += 1
+        ALoggable.__error_count += 1
 
     def log_critical(self, msg):
         if self.__can:
             self.logger.critical(self._log_format(msg))
-        ILoggable.__critical_count += 1
+        ALoggable.__critical_count += 1
 
     @staticmethod
     def _get_level(level):
@@ -87,7 +87,7 @@ class ILoggable(INamedObject):
 
     @staticmethod
     def get_formatter():
-        return logging.Formatter(ILoggable.get_format(), ILoggable.get_date_fmt())
+        return logging.Formatter(ALoggable.get_format(), ALoggable.get_date_fmt())
 
     @staticmethod
     def remove_stream_handlers():
@@ -97,55 +97,55 @@ class ILoggable(INamedObject):
 
     @staticmethod
     def add_stream_handler(level="info", stream=sys.stderr):
-        ILoggable.remove_stream_handlers()
+        ALoggable.remove_stream_handlers()
         handler = StreamHandler(stream)
-        level = ILoggable.__level if ILoggable.__level is not None else level
-        if ILoggable.__level is None:
-            ILoggable.__level = level
-        log_level = ILoggable._get_level(level)
-        ILoggable.logger.setLevel(log_level)
+        level = ALoggable.__level if ALoggable.__level is not None else level
+        if ALoggable.__level is None:
+            ALoggable.__level = level
+        log_level = ALoggable._get_level(level)
+        ALoggable.logger.setLevel(log_level)
         handler.setLevel(log_level)
-        handler.setFormatter(ILoggable.get_formatter())
-        ILoggable.logger.addHandler(handler)
+        handler.setFormatter(ALoggable.get_formatter())
+        ALoggable.logger.addHandler(handler)
         
     @staticmethod
     def remove_handlers():
-        file_handler = ILoggable.__file_handler
+        file_handler = ALoggable.__file_handler
         if file_handler:
             file_handler.close()
-            ILoggable.__file_handler = None
+            ALoggable.__file_handler = None
         logging.root.handlers = []
 
     # Setup global logger
     @staticmethod
     def setup_log(app_name, level="info", directory=None):
-        ILoggable.remove_handlers()
-        ILoggable.__level = level
-        log_level = ILoggable._get_level(level)
-        ILoggable.logger.setLevel(log_level)
-        ILoggable.add_stream_handler()
+        ALoggable.remove_handlers()
+        ALoggable.__level = level
+        log_level = ALoggable._get_level(level)
+        ALoggable.logger.setLevel(log_level)
+        ALoggable.add_stream_handler()
         if directory is None:
             return
         if not os.path.exists(directory):
             try:
                 os.makedirs(directory)
             except Exception as e:
-                ILoggable.logger.error("Could not make directories"
+                ALoggable.logger.error("Could not make directories"
                                         " for log directory: {}".format(e))
                 return
-        file_handler = RotatingFileHandler(ILoggable._get_filename(directory, app_name),
+        file_handler = RotatingFileHandler(ALoggable._get_filename(directory, app_name),
                                             'a+', 1e6, 1, encoding='utf-8')
         file_handler.setLevel(log_level)
-        file_handler.setFormatter(ILoggable.get_formatter())
-        ILoggable.logger.addHandler(file_handler)
-        ILoggable.__file_handler = file_handler
-        ILoggable.logger.debug("Logger is setup")
+        file_handler.setFormatter(ALoggable.get_formatter())
+        ALoggable.logger.addHandler(file_handler)
+        ALoggable.__file_handler = file_handler
+        ALoggable.logger.debug("Logger is setup")
 
     @staticmethod
     def set_color(activate):
-        if activate and ILoggable.__is_color:
+        if activate and ALoggable.__is_color:
             return
-        if not activate and not ILoggable.__is_color:
+        if not activate and not ALoggable.__is_color:
             return
         if activate:
             if platform.system() == 'Windows':
@@ -154,10 +154,10 @@ class ILoggable(INamedObject):
             else:
                 # all non-Windows platforms are supporting ANSI escapes so we use them
                 logging.StreamHandler.emit = add_coloring_to_emit_ansi(logging.StreamHandler.emit)
-            logging.handlers.RotatingFileHandler.emit = ILoggable.__original_emit
+            logging.handlers.RotatingFileHandler.emit = ALoggable.__original_emit
         else:
-            logging.StreamHandler.emit = ILoggable.__original_emit
-        ILoggable.__is_color = activate
+            logging.StreamHandler.emit = ALoggable.__original_emit
+        ALoggable.__is_color = activate
 
 import ctypes
 import platform

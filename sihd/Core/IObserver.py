@@ -2,15 +2,12 @@
 #coding: utf-8
 
 """ System """
-from .INamedObject import INamedObject
+from .ANamedObject import ANamedObject
 
-class IObserver(INamedObject):
+class IObserver(ANamedObject):
 
     def __init__(self, name="IObserver", **kwargs):
         super(IObserver, self).__init__(name, **kwargs)
 
     def on_notify(self, observable):
         raise NotImplementedError("on_notify not implemented")
-
-    def get(self):
-        return None

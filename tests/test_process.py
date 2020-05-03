@@ -11,18 +11,16 @@ import utils
 import sihd
 logger = sihd.set_log('debug')
 
-from sihd.Readers.IReader import IReader
-from sihd.Handlers.IHandler import IHandler
-from sihd.Core.IThreadedService import IThreadedService
-from sihd.Core.IConsumer import IConsumer
-from sihd.Core.IProcessedService import IProcessedService
+from sihd.Readers.AReader import AReader
+from sihd.Handlers.AHandler import AHandler
+from sihd.Core.AConsumer import AConsumer
 
 sihd.set_log_color(True)
 
 def do_process():
     time.sleep(0.01)
 
-class TestHandler(IHandler):
+class TestHandler(AHandler):
 
     def __init__(self, app=None, name="TestHandler"):
         super(TestHandler, self).__init__(app=app, name=name)
@@ -52,7 +50,7 @@ class TestHandler(IHandler):
         """
         return True
 
-class InfiniteReader(IReader):
+class InfiniteReader(AReader):
 
     def __init__(self, data="-- Infinite Data ! --", name="InfiniteReader"):
         super(InfiniteReader, self).__init__(name=name)

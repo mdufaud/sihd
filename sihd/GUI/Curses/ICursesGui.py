@@ -9,10 +9,10 @@ import time
 curses = None
 locale = None
 
-from sihd.GUI.IGui import IGui
+from sihd.GUI.AGui import AGui
 from sihd import Core
 
-class ICursesGui(IGui):
+class ICursesGui(AGui):
 
     def __init__(self, app=None, name="ICursesGui"):
         global locale
@@ -146,15 +146,15 @@ class ICursesGui(IGui):
     # Log
 
     def _remove_stream_logger(self):
-        Core.ILoggable.remove_stream_handlers()
+        Core.ALoggable.remove_stream_handlers()
 
     def _set_win_log(self, win):
         # Create a logger in curses and removes stream logger
         win.scrollok(True)
         win.leaveok(True)
         log_handler = CursesHandler(win)
-        log_handler.setFormatter(Core.ILoggable.get_formatter())
-        Core.ILoggable.logger.addHandler(log_handler)
+        log_handler.setFormatter(Core.ALoggable.get_formatter())
+        Core.ALoggable.logger.addHandler(log_handler)
         self._log_handler = log_handler
 
     # Create window / panel
@@ -207,9 +207,9 @@ class ICursesGui(IGui):
         if self.__curses_on is False:
             return
         if self._log_handler is not None:
-            Core.ILoggable.logger.removeHandler(self._log_handler)
+            Core.ALoggable.logger.removeHandler(self._log_handler)
             self._log_handler = None
-        Core.ILoggable.add_stream_handler()
+        Core.ALoggable.add_stream_handler()
         curses.nocbreak()
         self.stdscr.keypad(0)
         curses.curs_set(1)

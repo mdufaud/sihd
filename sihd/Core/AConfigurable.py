@@ -7,12 +7,12 @@ import datetime
 import logging
 from logging.handlers import RotatingFileHandler
 
-from .INamedObject import INamedObject
+from .ANamedObject import ANamedObject
 
-class IConfigurable(INamedObject):
+class AConfigurable(ANamedObject):
 
-    def __init__(self, name="IConfigurable", **kwargs):
-        super(IConfigurable, self).__init__(name, **kwargs)
+    def __init__(self, name="AConfigurable", **kwargs):
+        super(AConfigurable, self).__init__(name, **kwargs)
         self.__default_conf = {}
         self.__conf = {}
         self.__conf_obj = None

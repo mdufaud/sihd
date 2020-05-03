@@ -2,12 +2,12 @@
 #coding: utf-8
 
 """ System """
-from .INamedObject import INamedObject
+from .ANamedObject import ANamedObject
 
-class IObservable(INamedObject):
+class AObservable(ANamedObject):
 
-    def __init__(self, name="IObservable", **kwargs):
-        super(IObservable, self).__init__(name, **kwargs)
+    def __init__(self, name="AObservable", **kwargs):
+        super(AObservable, self).__init__(name, **kwargs)
         self.__observers = set()
 
     def add_observer(self, observer):

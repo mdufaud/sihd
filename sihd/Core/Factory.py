@@ -1,10 +1,12 @@
 #!/usr/bin/python
 #coding: utf-8
 
+#TODO or erase
+
 """ System """
 import sys
 
-from .INamedObject import INamedObject
+from .ANamedObject import ANamedObject
 
 class Factory(object):
 
@@ -33,7 +35,7 @@ class Factory(object):
 
     @staticmethod
     def get(name, depth=0, max_depth=7, *args, **kwargs):
-        return Factory.__rget(name, INamedObject, depth, max_depth,
+        return Factory.__rget(name, ANamedObject, depth, max_depth,
                                 [], *args, **kwargs)
 
     @staticmethod
@@ -62,6 +64,6 @@ class Factory(object):
     @staticmethod
     def find(name, depth=0, max_depth=7, *args, **kwargs):
         lst = []
-        Factory.__rfind(name, INamedObject, depth, max_depth,
+        Factory.__rfind(name, ANamedObject, depth, max_depth,
                         visited=[], results=lst, *args, **kwargs)
         return lst

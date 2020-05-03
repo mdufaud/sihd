@@ -7,10 +7,10 @@ import socket
 subprocess = None
 shlex = None
 
-from sihd.Interactors.IInteractor import IInteractor
+from sihd.Interactors.AInteractor import AInteractor
 from .ShellInteractor import ShellInteractor
 
-class PipeInteractor(IInteractor):
+class PipeInteractor(AInteractor):
 
     def __init__(self, app=None, name="PipeInteractor"):
         super(PipeInteractor, self).__init__(app=app, name=name)
@@ -33,7 +33,7 @@ class PipeInteractor(IInteractor):
         self.add_channel_output("returncode", type='int', default=-1)
         """
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def on_setup(self):
         ret = super().on_setup()
@@ -75,7 +75,7 @@ class PipeInteractor(IInteractor):
             interactor.end_process(kill=kill)
             idx -= 1
 
-    """ IInteractor """
+    """ AInteractor """
 
     def handle(self, channel):
         if channel == self.stdin:

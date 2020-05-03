@@ -9,9 +9,9 @@ from typing import Union, Tuple
 subprocess = None
 shlex = None
 
-from sihd.Interactors.IInteractor import IInteractor
+from sihd.Interactors.AInteractor import AInteractor
 
-class ShellInteractor(IInteractor):
+class ShellInteractor(AInteractor):
 
     def __init__(self, app=None, name="ShellInteractor"):
         super(ShellInteractor, self).__init__(app=app, name=name)
@@ -36,7 +36,7 @@ class ShellInteractor(IInteractor):
         self.__proc = None
         self.add_channel_input("stdin", type='queue')
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def on_setup(self):
         ret = super().on_setup()
@@ -84,7 +84,7 @@ class ShellInteractor(IInteractor):
         else:
             raise ValueError("Stdin data is not bytes: {}".format(data))
 
-    """ IInteractor """
+    """ AInteractor """
 
     def handle(self, channel):
         if channel == self.stdin:

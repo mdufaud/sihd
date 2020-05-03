@@ -11,9 +11,9 @@ import utils
 import sihd
 logger = sihd.set_log()
 
-from sihd.Handlers.IHandler import IHandler
+from sihd.Handlers.AHandler import AHandler
 
-class TestHandler(IHandler):
+class TestHandler(AHandler):
 
     def __init__(self, app=None, name="TestHandler"):
         super(TestHandler, self).__init__(app=app, name=name)

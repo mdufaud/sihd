@@ -4,9 +4,9 @@
 from sihd.Core.SihdRunnableService import SihdRunnableService
 from sihd.Core.IAppContainer import IAppContainer
 
-class IHandler(SihdRunnableService, IAppContainer):
+class AHandler(SihdRunnableService, IAppContainer):
 
-    def __init__(self, app=None, name="IHandler", **kwargs):
+    def __init__(self, app=None, name="AHandler", **kwargs):
         IAppContainer.__init__(self)
         super().__init__(name, **kwargs)
         if app:
@@ -15,7 +15,7 @@ class IHandler(SihdRunnableService, IAppContainer):
             "runnable_type": "thread",
         })
 
-    """ IHandler """
+    """ AHandler """
 
     def handle_service(self, service) -> bool:
         cls = service.__class__.__name__.lower()

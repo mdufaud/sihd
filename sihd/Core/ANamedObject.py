@@ -4,7 +4,7 @@
 """ System """
 import sys
 
-class INamedObject(object):
+class ANamedObject(object):
 
     __namedobjects = {}
 
@@ -21,7 +21,7 @@ class INamedObject(object):
     @staticmethod
     def find_namedobject(path):
         split = path.split('.')
-        get_nobj = INamedObject.__namedobjects.get
+        get_nobj = ANamedObject.__namedobjects.get
         obj = get_nobj(split[0], None)
         for child in split[1:]:
             if obj is None:

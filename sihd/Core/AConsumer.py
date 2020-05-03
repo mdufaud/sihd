@@ -2,14 +2,14 @@
 #coding: utf-8
 
 """ System """
-from .INamedObject import INamedObject
+from .ANamedObject import ANamedObject
 
 queue = None
 
-class IConsumer(INamedObject):
+class AConsumer(ANamedObject):
 
-    def __init__(self, name="IConsumer"):
-        super(IConsumer, self).__init__(name)
+    def __init__(self, name="AConsumer"):
+        super(AConsumer, self).__init__(name)
         global queue
         if queue is None:
             import queue

@@ -8,12 +8,12 @@ import os.path
 import sys
 import logging
 
-from sihd.GUI.IGui import IGui
+from sihd.GUI.AGui import AGui
 from sihd import Core
 
 wx = None
 
-class IWxPythonGui(IGui):
+class IWxPythonGui(AGui):
 
     def __init__(self, app=None, name="IWxPythonGui"):
         global wx

@@ -14,9 +14,9 @@ logger = sihd.set_log('debug')
 
 from sihd.Interactors.ip.HttpInteractor import HttpInteractor
 
-from sihd.Handlers.IHandler import IHandler
+from sihd.Handlers.AHandler import AHandler
 
-class TestHandler(IHandler):
+class TestHandler(AHandler):
 
     def __init__(self, app=None, name="TestHandler"):
         super(TestHandler, self).__init__(app=app, name=name)

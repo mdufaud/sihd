@@ -4,9 +4,9 @@
 from sihd.Core.SihdRunnableService import SihdRunnableService
 from sihd.Core.IAppContainer import IAppContainer
 
-class IInteractor(SihdRunnableService, IAppContainer):
+class AInteractor(SihdRunnableService, IAppContainer):
 
-    def __init__(self, app=None, name="IInteractor", **kwargs):
+    def __init__(self, app=None, name="AInteractor", **kwargs):
         IAppContainer.__init__(self)
         super().__init__(name, **kwargs)
         self.__interaction = None
@@ -24,7 +24,7 @@ class IInteractor(SihdRunnableService, IAppContainer):
     def do_interaction(self, action, *args, **kwargs) -> bool:
         raise NotImplementedError("do_interaction not implemented")
 
-    """ IInteractor """
+    """ AInteractor """
 
     def interact(self, action=None, *args, **kwargs) -> bool:
         if action is None:

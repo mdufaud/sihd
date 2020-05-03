@@ -1,9 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-from sihd.Handlers.IHandler import IHandler
+from sihd.Handlers.AHandler import AHandler
 
-class DuplicatorHandler(IHandler):
+class DuplicatorHandler(AHandler):
 
     def __init__(self, app=None, name="DuplicatorHandler"):
         super(DuplicatorHandler, self).__init__(app=app, name=name)

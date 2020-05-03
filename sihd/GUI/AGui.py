@@ -5,14 +5,14 @@ from sihd.Core import RunnableThread
 from sihd.Core.SihdRunnableService import SihdRunnableService
 from sihd.Core.IAppContainer import IAppContainer
 
-class IGui(SihdRunnableService, IAppContainer):
+class AGui(SihdRunnableService, IAppContainer):
     """
         Graphical user interface should be thread and not processes.
         If you want to be notified of channels input you have to call
         read_channels_input() by yourself.
     """
 
-    def __init__(self, app=None, name="IGui", **kwargs):
+    def __init__(self, app=None, name="AGui", **kwargs):
         self.__runnable = None
         IAppContainer.__init__(self)
         super().__init__(name, **kwargs)
@@ -36,7 +36,7 @@ class IGui(SihdRunnableService, IAppContainer):
         else:
             r.pause()
 
-    """ IGui """
+    """ AGui """
 
     def get_input_runnable(self):
         return self.__runnable

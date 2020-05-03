@@ -1,9 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-from sihd.Handlers.IHandler import IHandler
+from sihd.Handlers.AHandler import AHandler
 
-class WordHandler(IHandler):
+class WordHandler(AHandler):
 
     def __init__(self, app=None, name="WordHandler"):
         super(WordHandler, self).__init__(app=app, name=name)
@@ -19,7 +19,7 @@ class WordHandler(IHandler):
         self.add_channel_output('output', type='dict')
         self.add_channel_output('skipped', type='int', default=0)
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def on_setup(self):
         ret = super().on_setup()
@@ -31,7 +31,7 @@ class WordHandler(IHandler):
             self.__toskip = toskip.split(";")
         return ret
 
-    """ IObservable """
+    """ AObservable """
 
     def handle(self, channel):
         if channel != self.input:

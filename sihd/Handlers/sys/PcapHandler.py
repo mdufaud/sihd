@@ -1,13 +1,13 @@
 #!/usr/bin/python
 #coding: utf-8
 
-from sihd.Handlers.IHandler import IHandler
-from sihd.Core.IDumpable import IDumpable
+from sihd.Handlers.AHandler import AHandler
+from sihd.Core.ADumpable import ADumpable
 
 from sihd.Tools.pcap import PcapWriter
 from sihd.Tools.pcap import PcapReader
 
-class PcapHandler(IHandler):
+class PcapHandler(AHandler):
 
     def __init__(self, app=None, name="PcapHandler"):
         super(PcapHandler, self).__init__(app=app, name=name)
@@ -23,7 +23,7 @@ class PcapHandler(IHandler):
         self.add_channel_input("save", type='queue')
         self.add_channel_input("dump_path", type='queue')
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def on_setup(self):
         ret = super().on_setup()
@@ -79,7 +79,7 @@ class PcapHandler(IHandler):
         if self.__save:
             self.saved.write(data)
 
-    """ IDumpable """
+    """ ADumpable """
 
     def dump_to(self, filename, perm="wb+"):
         try:

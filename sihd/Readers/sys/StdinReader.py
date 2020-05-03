@@ -7,9 +7,9 @@ import os
 import sys
 import select
 
-from sihd.Readers.IReader import IReader
+from sihd.Readers.AReader import AReader
 
-class StdinReader(IReader):
+class StdinReader(AReader):
 
     def __init__(self, app=None, name="StdinReader"):
         super(StdinReader, self).__init__(app=app, name=name)
@@ -35,7 +35,7 @@ class StdinReader(IReader):
         self.__question = str(question)
         self.__has_new_question = True
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def on_setup(self):
         super().on_setup()

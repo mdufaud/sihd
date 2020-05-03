@@ -11,7 +11,7 @@ import utils
 import sihd
 logger = sihd.set_log()
 
-from sihd.Handlers.IHandler import IHandler
+from sihd.Handlers.AHandler import AHandler
 
 class TestShell(unittest.TestCase):
 

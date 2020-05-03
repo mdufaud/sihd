@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.DEBUG)
 import unittest
 
 from sihd.GUI.Curses.ICursesGui import ICursesGui
-from sihd.Core.ILoggable import ILoggable
+from sihd.Core.ALoggable import ALoggable
 
 class SimpleCurses(ICursesGui):
 
@@ -100,7 +100,7 @@ class TestGui(unittest.TestCase):
 
     @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
     def test_simple_curses_gui(self):
-        #ILoggable.setup_log("curses", "info", "tests/logs")
+        #ALoggable.setup_log("curses", "info", "tests/logs")
         gui = SimpleCurses()
         self.assertTrue(gui.setup())
         ret = gui.start()

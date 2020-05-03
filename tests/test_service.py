@@ -9,7 +9,7 @@ import utils
 import sihd
 logger = sihd.set_log('debug')
 
-from sihd.Handlers.IHandler import IHandler
+from sihd.Handlers.AHandler import AHandler
 from sihd.Core.Channel import *
 from sihd.Core import RunnableThread
 from sihd.Core import RunnableProcess
@@ -83,8 +83,11 @@ class TestServices(unittest.TestCase):
         runnable.resume()
         runnable.stop()
     
-    def do_life_cycle(self, service):
+    def do_life_cycle(self, service, thread=False, process=False):
         self.assertTrue(service.setup())
+        if thread or process:
+            self.assertEqual(service.is_service_threading(), thread)
+            self.assertEqual(service.is_service_multiprocessing(), process)
         self.assertTrue(service.start())
         self.assertTrue(service.pause())
         time.sleep(0.3)
@@ -96,11 +99,11 @@ class TestServices(unittest.TestCase):
         service = sihd.Core.SihdService()
         self.do_life_cycle(service)
         service = sihd.Core.SihdRunnableService()
-        self.do_life_cycle(service)
+        self.do_life_cycle(service, thread=True)
         if multiprocessing:
             service = sihd.Core.SihdRunnableService()
             service.set_conf("runnable_type", "process")
-            self.do_life_cycle(service)
+            self.do_life_cycle(service, process=True)
 
     def test_thread_in_process(self):
         #Thread 1

@@ -3,15 +3,15 @@
 """ System """
 import time
 
-from .ILoggable import ILoggable
-from .IConfigurable import IConfigurable
+from .ALoggable import ALoggable
+from .AConfigurable import AConfigurable
 from .IObserver import IObserver
-from .IDumpable import IDumpable
+from .ADumpable import ADumpable
 from .IService import IService
 from .Channel import *
 
-class SihdService(ILoggable, IConfigurable, IObserver,
-                    IDumpable, IService):
+class SihdService(ALoggable, AConfigurable, IObserver,
+                    ADumpable, IService):
 
     STOP = 0b0001
     START = 0b0010
@@ -35,7 +35,7 @@ class SihdService(ILoggable, IConfigurable, IObserver,
         self.__stop_time = None
         self.__channel_notif = True
 
-    """ IDumpable """
+    """ ADumpable """
 
     def on_dump(self) -> dict:
         if self.is_active():
@@ -112,7 +112,7 @@ class SihdService(ILoggable, IConfigurable, IObserver,
         if not self._pre_handle(channel):
             self.handle(channel)
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def _setup_impl(self):
         ret = super()._setup_impl()

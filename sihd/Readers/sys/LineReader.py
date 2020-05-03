@@ -5,9 +5,9 @@
 import time
 import os
 
-from sihd.Readers.IReader import IReader
+from sihd.Readers.AReader import AReader
 
-class LineReader(IReader):
+class LineReader(AReader):
     
     files_read = {}  
 
@@ -22,7 +22,7 @@ class LineReader(IReader):
         self.add_channel_output('lines', type='int', default=0)
         self.add_channel_output('eof', type='bool', default=True)
 
-    """ IConfigurable """
+    """ AConfigurable """
 
     def post_setup(self):
         """ After setup to have eof channel created """

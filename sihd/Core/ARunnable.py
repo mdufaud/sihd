@@ -4,11 +4,11 @@
 """ System """
 import time
 
-from .INamedObject import INamedObject
+from .ANamedObject import ANamedObject
 from .IService import IService
 from .Stats import PerfStat
 
-class ARunnable(INamedObject, IService):
+class ARunnable(ANamedObject, IService):
 
     def __init__(self, name="ARunnable", step=None,
                     frequency=50, timeout=None, max_iter=None,

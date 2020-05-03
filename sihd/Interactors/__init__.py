@@ -1,3 +1,3 @@
-from .IInteractor import IInteractor
+from .AInteractor import AInteractor
 from .ip import *
 from .sys import *
