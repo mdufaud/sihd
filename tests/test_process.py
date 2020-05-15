@@ -26,7 +26,7 @@ class TestHandler(AHandler):
         super(TestHandler, self).__init__(app=app, name=name)
         self.n = 0
         self.once = False
-        self._set_default_conf({"runnable_frequency": 200})
+        self.set_default_conf({"runnable_frequency": 200})
         self.add_channel_input('input', type='queue')
         self.add_channel_output('output', type='queue')
 
@@ -54,7 +54,7 @@ class InfiniteReader(AReader):
 
     def __init__(self, data="-- Infinite Data ! --", name="InfiniteReader"):
         super(InfiniteReader, self).__init__(name=name)
-        self._set_default_conf({"runnable_frequency": 200})
+        self.set_default_conf({"runnable_frequency": 200})
         self.add_channel_output('output', type='queue')
         self.data = data 
 

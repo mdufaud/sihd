@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
 from .ANamedObject import ANamedObject
 
 queue = None

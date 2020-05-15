@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+#
+# System
+#
 import time
 
 from .ANamedObject import ANamedObject
@@ -19,11 +21,11 @@ class ARunnable(ANamedObject, IService):
         self.__stats = PerfStat()
         self.__runnable = None
         self.__step_method = self.step
-        """ Callables """
+        # Callables
         self.set_callbacks(on_start, on_stop, on_err)
         if step:
             self.set_step_method(step)
-        """ Step properties """
+        # Step properties
         self.__max_iter = None
         self.__timeout = None
         self.__sleep = 0.05
@@ -175,9 +177,8 @@ class ARunnable(ANamedObject, IService):
                     break
             beg = get_now()
             # Check timeout
-            if timeout is not None:
-                if ((start + timeout) <= beg):
-                    return
+            if timeout is not None and (start + timeout) <= beg:
+                break
             # Execution
             try:
                 ret = step()
@@ -187,6 +188,9 @@ class ARunnable(ANamedObject, IService):
                     self.__on_error(self, i, e)
                 else:
                     raise
+            except KeyboardInterrupt:
+                self.stop()
+                ret = False
             #Stats
             end = get_now()
             steptime = end - beg
@@ -195,7 +199,6 @@ class ARunnable(ANamedObject, IService):
                 maxtime = steptime
             if steptime < mintime:
                 mintime = steptime
-            pause = sleeptime - steptime
             i += 1
             if ret is False:
                 break
@@ -203,6 +206,7 @@ class ARunnable(ANamedObject, IService):
             if max_iter is not None and i >= max_iter:
                 break
             # Pause
+            pause = sleeptime - steptime
             if pause > 0.0:
                 do_pause(pause)
                 downtime += pause

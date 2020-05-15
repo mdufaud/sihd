@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+#
+# System
+#
 import time
 try:
     import Queue
@@ -18,7 +20,7 @@ class IpServerHandler(AHandler):
     def __init__(self, app=None, name="IpServerHandler"):
         super(IpServerHandler, self).__init__(app=app, name=name)
         self._clients = {}
-        self._set_default_conf({
+        self.set_default_conf({
             "service_type": "thread",
             "server_protocol": "tcp",
         })
@@ -34,6 +36,10 @@ class IpServerHandler(AHandler):
         self.__udp = False
         self.__tcp = False
         self.__raw = False
+
+    #
+    # Configuration
+    #
 
     def on_setup(self):
         ret = super().on_setup()
@@ -62,6 +68,10 @@ class IpServerHandler(AHandler):
         self.__raw = service.is_raw()
         return False
 
+    #
+    # Channels
+    #
+
     def handle(self, channel):
         if channel == self.packet_data:
             msg, infos = channel.read()
@@ -75,22 +85,30 @@ class IpServerHandler(AHandler):
             co, action, value = channel.read()
             self._parse_client_info(co, action, value)
 
-    """ Utilities """
+    #
+    # Utilities
+    #
 
     def send_client(self, msg, co):
         self.packet_send.write((msg + "\n", co))
 
-    """ Packet data  """
+    #
+    # Packet data
+    #
 
     def on_packet_data(self, msg, host=None, port=0):
         self.log_info("Packet from {}:{} said : {}".format(host, port, msg))
 
-    """ Client input """
+    #
+    # Client input
+    #
 
     def on_client_input(self, msg, co):
         self.log_info("Client {} said : {}".format(co, msg))
 
-    """ Client info """
+    #
+    # Client info
+    #
 
     def get_client(self, co):
         return self._clients.get(co, None)

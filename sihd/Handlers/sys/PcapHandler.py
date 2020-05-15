@@ -11,7 +11,7 @@ class PcapHandler(AHandler):
 
     def __init__(self, app=None, name="PcapHandler"):
         super(PcapHandler, self).__init__(app=app, name=name)
-        self._set_default_conf({
+        self.set_default_conf({
             "runnable_type": "thread",
             "activate": 0,
             "save_raw": 0,
@@ -23,7 +23,9 @@ class PcapHandler(AHandler):
         self.add_channel_input("save", type='queue')
         self.add_channel_input("dump_path", type='queue')
 
-    """ AConfigurable """
+    #
+    # Configuration
+    #
 
     def on_setup(self):
         ret = super().on_setup()
@@ -37,7 +39,9 @@ class PcapHandler(AHandler):
         self.set_saving(bool(int(self.get_conf("activate"))))
         return True
 
-    """ SihdService """
+    #
+    # Channels
+    #
 
     def handle(self, channel):
         if channel == self.save:
@@ -53,10 +57,13 @@ class PcapHandler(AHandler):
         return True
 
     def on_stop(self):
+        super().on_stop()
         #Unlock channels
         self.set_saving(True)
 
-    """ PcapHandler """
+    #
+    # Handler
+    #
 
     def set_saving(self, activate):
         if activate:
@@ -79,7 +86,9 @@ class PcapHandler(AHandler):
         if self.__save:
             self.saved.write(data)
 
-    """ ADumpable """
+    #
+    # ADumpable
+    #
 
     def dump_to(self, filename, perm="wb+"):
         try:

@@ -1,1 +1,1 @@
-from .IApp import IApp
+from .SihdApp import SihdApp

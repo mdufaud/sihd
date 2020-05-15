@@ -7,7 +7,7 @@ class WordHandler(AHandler):
 
     def __init__(self, app=None, name="WordHandler"):
         super(WordHandler, self).__init__(app=app, name=name)
-        self._set_default_conf({
+        self.set_default_conf({
             "delimiter": "",
             "skip": "#;//",
         })
@@ -19,7 +19,9 @@ class WordHandler(AHandler):
         self.add_channel_output('output', type='dict')
         self.add_channel_output('skipped', type='int', default=0)
 
-    """ AConfigurable """
+    #
+    # Configuration
+    #
 
     def on_setup(self):
         ret = super().on_setup()
@@ -31,7 +33,9 @@ class WordHandler(AHandler):
             self.__toskip = toskip.split(";")
         return ret
 
-    """ AObservable """
+    #
+    # Channels
+    #
 
     def handle(self, channel):
         if channel != self.input:
@@ -58,7 +62,9 @@ class WordHandler(AHandler):
             write(word, read(word, 0) + 1)
         return True
 
-    """ SihdService """
+    #
+    # SihdService
+    #
 
     def on_start(self):
         super().on_start()

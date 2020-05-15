@@ -1,9 +1,6 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
-import socket
-
 json = None
 urllib_request = None
 urllib_error = None
@@ -27,7 +24,7 @@ class HttpInteractor(AInteractor):
         global urllib_parse
         if urllib_parse is None:
             import urllib.parse as urllib_parse
-        self._set_default_conf({
+        self.set_default_conf({
             "runnable_frequency": 1,
             "url": "",
             "query": "",
@@ -44,7 +41,9 @@ class HttpInteractor(AInteractor):
         self.add_channel_input("headers", type='queue')
         self.add_channel_input("post", type='queue')
 
-    """ AConfigurable """
+    #
+    # Configuration
+    #
 
     def on_setup(self):
         ret = super().on_setup()
@@ -64,7 +63,9 @@ class HttpInteractor(AInteractor):
             self.make_request()
         return ret
 
-    """ AInteractor """
+    #
+    # Channels
+    #
 
     def handle(self, channel):
         if channel == self.query:
@@ -82,6 +83,10 @@ class HttpInteractor(AInteractor):
                 post = json.loads(post_json)
                 self.set_post(post)
 
+    #
+    # Interactor
+    #
+
     def on_new_interaction(self, url):
         self.make_request(url)
         return url
@@ -94,7 +99,9 @@ class HttpInteractor(AInteractor):
         self.set_result(resp)
         return resp is not None
 
-    """ Request """
+    #
+    # Request
+    #
 
     def make_request(self, url=None, *args, query=None, headers=None, post=None):
         if url is None:
@@ -140,7 +147,9 @@ class HttpInteractor(AInteractor):
             self.log_error("No request built")
         return ret
 
-    """ Json """
+    #
+    # JSON
+    #
 
     def set_json_file(self, dic, path):
         """

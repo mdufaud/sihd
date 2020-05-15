@@ -5,7 +5,7 @@
 import time
 
 import logging
-logger = logging.getLogger()
+logger = logging.getLogger("sihd")
 
 try:
     import multiprocessing

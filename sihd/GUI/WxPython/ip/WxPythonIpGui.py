@@ -1,14 +1,14 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
-
-
+#
+# System
+#
 import os
 import sys
 import logging
 
-from sihd.GUI.WxPython.IWxPythonGui import IWxPythonGui
+from sihd.GUI.WxPython.AWxPythonGui import AWxPythonGui
 
 try:
     import wx
@@ -19,51 +19,46 @@ except ImportError:
     Panel = object
     Frame = object
 
-class WxPythonIpGui(IWxPythonGui):
+class WxPythonIpGui(AWxPythonGui):
 
     def __init__(self, app=None, name="WxPythonIpGui"):
         global wx
         if wx is None:
             import wx
         super(WxPythonIpGui, self).__init__(app=app, name=name)
-        self._set_default_conf({
+        self.set_default_conf({
         })
+        self.add_channel_input("message", type='queue')
 
-    def _make_frames(self, app):
+    def build_wx_frames(self, app):
         self.frame = MainIpWindow(None, title="Demo")
         self.frame.Show()
 
-    """ AConfigurable """
+    #
+    # Configuration
+    #
 
-    def _setup_impl(self):
+    def on_setup(self):
         return True
 
-    """ AObservable """
+    #
+    # Channel
+    #
 
-    def handle(self, reader, message, co):
+    def handle(self, channel):
+        message, co = channel.read()
         if self.frame and self.frame.logframe:
-            message = message.strip()
+            message = message.decode().strip()
             if message != "":
                 self.frame.logframe.log(message)
             if message == "stop":
                 self.stop(True)
         return True
 
-    def on_info(self, reader, info):
-        info = info.strip()
-        if info != "":
-            self.frame.logframe.log(info)
-
-    def on_error(self, reader, err):
-        err = err.strip()
-        if err != "":
-            self.frame.logframe.log(err)
-        self.stop(True)
-
-    def _stop_impl(self):
+    def on_stop(self):
+        super().on_stop()
         if self.frame:
             self.frame.Close()
-        return True
 
 class LogFrame(Panel):
 
@@ -114,8 +109,10 @@ class MainIpWindow(Frame):
         self.SetClientSize(notebook.GetBestSize())
 
     def CreateExteriorWindowComponents(self):
-        ''' Create "exterior" window components, such as menu and status
-            bar. '''
+        '''
+            Create "exterior" window components, such as menu and status
+            bar.
+        '''
         self.CreateMenu()
         self.CreateStatusBar()
         self.SetTitle()

@@ -1,6 +1,8 @@
 #!/usr/bin/python
 #coding: utf-8
-""" System """
+#
+# System
+#
 import time
 
 from .ALoggable import ALoggable
@@ -20,13 +22,12 @@ class SihdService(ALoggable, AConfigurable, IObserver,
 
     def __init__(self, name="SihdService", **kwargs):
         super(SihdService, self).__init__(name, **kwargs)
-        self._set_default_conf({
+        self.set_default_conf({
             "channels_mp": 0,
         })
         self.__channels_mp = False
         self.__stopped = True
         self.__paused = False
-        self.__channels = dict()
         self.__channels_input = list()
         self.__channels_output = list()
         self.__todo_ichan = list()
@@ -35,7 +36,9 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         self.__stop_time = None
         self.__channel_notif = True
 
-    """ ADumpable """
+    #
+    # ADumpable
+    #
 
     def on_dump(self) -> dict:
         if self.is_active():
@@ -48,7 +51,9 @@ class SihdService(ALoggable, AConfigurable, IObserver,
             raise RuntimeError("Cannot load a running service")
         super().on_load(dic)
 
-    """ State Observation """
+    #
+    # State Observation
+    #
 
     def get_service_state(self):
         stopped = self.__stopped
@@ -95,24 +100,9 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         elif (state & SihdService.PAUSE):
             self.pause()
 
-    """ IObserver """
-
-    def set_channel_notification(self, active):
-        self.__channel_notif = active
-
-    def handle(self, channel):
-        """ Handle service's input """
-        pass
-
-    def _pre_handle(self, channel) -> bool:
-        """ Used for services that want to handle stuff before user parsing """
-        return False
-
-    def on_notify(self, channel):
-        if not self._pre_handle(channel):
-            self.handle(channel)
-
-    """ AConfigurable """
+    #
+    # AConfigurable
+    #
 
     def _setup_impl(self):
         ret = super()._setup_impl()
@@ -149,7 +139,9 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def is_active(self):
         return (not self.is_paused() and self.is_running())
 
-    """ Start """
+    #
+    # Start
+    #
 
     def get_service_start_time(self):
         return self.__start_time
@@ -180,7 +172,9 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def on_start(self):
         return True
 
-    """ Stop """
+    #
+    # Stop
+    #
 
     def get_service_stop_time(self):
         return self.__stop_time
@@ -210,7 +204,9 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def on_stop(self):
         return True
 
-    """ Pause """
+    #
+    # Pause
+    #
 
     def pause(self, silent=False):
         if self.__paused is True:
@@ -232,7 +228,9 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def on_pause(self):
         return True
 
-    """ Resume """
+    #
+    # Resume
+    #
 
     def resume(self, silent=False):
         if not self.__paused:
@@ -253,7 +251,9 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def on_resume(self):
         return True
 
-    """ Reset """
+    #
+    # Reset
+    #
 
     def reset(self):
         if not self.__stopped and not self.stop():
@@ -274,197 +274,19 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def on_reset(self):
         return True
 
+    #
+    # Channels Input/Output
+    #
 
-    """ Channel creation """
-
-    def create_channel_condition(self, name, **kwargs):
-        return ChannelCondition(name=name, **kwargs)
-
-    def create_channel_bool(self, name, **kwargs):
-        return ChannelBool(name=name, **kwargs)
-
-    """     Data struct """
-
-    def create_channel_list(self, name, **kwargs):
-        return ChannelList(name=name, **kwargs)
-
-    def create_channel_dict(self, name, **kwargs):
-        return ChannelDict(name=name, **kwargs)
-
-    def create_channel_array(self, name, **kwargs):
-        return ChannelArray(name=name, **kwargs)
-
-    def create_channel_dict(self, name, **kwargs):
-        return ChannelDict(name=name, **kwargs)
-
-    def create_channel_object(self, name, **kwargs):
-        return ChannelObject(name=name, **kwargs)
-
-    def create_channel_queue(self, name, **kwargs):
-        return ChannelQueue(name=name, **kwargs)
-
-    def create_channel_string(self, name, **kwargs):
-        return ChannelString(name=name, **kwargs)
-
-    def create_channel_pickle(self, name, **kwargs):
-        return ChannelPickle(name=name, **kwargs)
-
-    """     Values """
-
-    def create_channel_byte(self, name, **kwargs):
-        return ChannelByte(name=name, **kwargs)
-
-    def create_channel_char(self, name, **kwargs):
-        return ChannelChar(name=name, **kwargs)
-
-    def create_channel_short(self, name, **kwargs):
-        return ChannelShort(name=name, **kwargs)
-
-    def create_channel_int(self, name, **kwargs):
-        return ChannelInt(name=name, **kwargs)
-
-    def create_channel_long(self, name, **kwargs):
-        return ChannelLong(name=name, **kwargs)
-
-    def create_channel_double(self, name, **kwargs):
-        return ChannelDouble(name=name, **kwargs)
-
-    """     Default """
-
-    def create_channel_default(self, name, **kwargs):
-        return Channel(name=name, **kwargs)
-
-    def create_channel(self, name, **kwargs):
-        """
-            Gets a create_channel_TYPE from service methods
-            and make a channel from it. TYPE is contained as a key argument in
-            'type', if not, make a default channel.
-
-            :param name: str channel name
-            :param type: str channel type
-            :param block: bool permits blocking on certain locks in channels
-                            on read/write before returning result
-            :param timeout: float when blocking is enabled, set the timeout before
-                            returning
-            :param poll: bool enable polling from channel when a write is done on
-                                the channel in any thread/process
-            :param mp: bool change in some channels internal variable from
-                            threading to multiprocessing or Manager based
-
-            :param var_type: char in some channel you have to set the variable
-                                type to be used in the internal variable
-            :return: A Channel if the creation method was found else None
-            :rtype: Channel
-        """
-        type = kwargs.pop('type', None)
-        if type is None:
-            type = "default"
-        try:
-            method = getattr(self, "create_channel_{}".format(type))
-        except AttributeError:
-            self.log_error("No such type for channel {}".format(type))
-            return None
-        if self.__channels_mp is True:
-            kwargs['mp'] = True
-        kwargs['parent'] = self
-        channel = method(name, **kwargs)
-        if channel:
-            #self.log_debug("<- {}".format(channel))
-            pass
-        return channel
-
-    """ Channels Input/Output """
-
-    def link_channel(self, name, new_channel):
-        old_channel = self.get_channel(name)
-        if not old_channel:
-            self.log_error("No channel {} to link".format(name))
-            return False
-        if old_channel.is_multiprocess() and not new_channel.is_multiprocess():
-            self.log_warning("Replacing channel {} with a not multiprocessed one {}"\
-                                .format(old_channel, new_channel))
-        if old_channel in self.__channels_input:
-            if not self.set_channel_input(new_channel, name, replace=True):
-                self.log_error("Cannot link channel {} to {}".format(name, new_channel))
-                return False
-        elif old_channel in self.__channels_output:
-            if not self.set_channel_output(new_channel, name, replace=True):
-                self.log_error("Cannot link channel {} to {}".format(name, new_channel))
-                return False
-        else:
-            setattr(self, name, new_channel)
-        self.log_debug("Channel {} linked to {}".format(name, new_channel))
-        return True
-
-    """     Reading """
-
-    def read_channels_input(self) -> bool:
-        if self.__channel_notif is False:
-            return False
-        for channel in self.get_channels_input():
-            if channel.is_pollable() and channel.is_readable():
-                self.on_notify(channel)
-                channel.task_done()
-        return True
-
-    """     Locking """
-
-    def __lock_channels(self, channels):
-        for channel in channels:
-            if not channel.is_locked():
-                channel.lock()
-
-    def __unlock_channels(self, channels):
-        for channel in channels:
-            if not channel.is_locked():
-                channel.lock()
-
-    def lock_channels_output(self):
-        self.__lock_channels(self.get_channels_output())
-
-    def unlock_channels_output(self):
-        self.__lock_channels(self.get_channels_output())
-
-    def lock_channels_input(self):
-        self.__lock_channels(self.get_channels_input())
-
-    def unlock_channels_input(self):
-        self.__lock_channels(self.get_channels_input())
-
-    def clear_channels(self):
-        for channel in self.get_channels_input():
-            name = channel.get_name()
-            attr = getattr(self, name)
-            attr = None
-        self.__channels_input = []
-        for channel in self.get_channels_output():
-            name = channel.get_name()
-            attr = getattr(self, name)
-            attr = None
-        self.__channels_output = []
-
-    """     Making """
-
-    def _make_channels(self):
-        for name, dic in self.__todo_ichan:
-            self.create_input_channel(name, **dic)
-        self.__todo_ichan = []
-        for name, dic in self.__todo_ochan:
-            self.create_output_channel(name, **dic)
-        self.__todo_ochan = []
-        return True
-
+    def on_new_channel(self, channel):
+        setattr(self, channel.get_name(), channel)
+        super().on_new_channel(channel)
+    
     def add_channel_input(self, name, **kwargs):
         self.__todo_ichan.append((name, kwargs))
 
     def add_channel_output(self, name, **kwargs):
         self.__todo_ochan.append((name, kwargs))
-
-    def create_input_channel(self, name, **kwargs):
-        channel = self.create_channel(name, **kwargs)
-        if channel and self.set_channel_input(channel):
-            return channel
-        return None
 
     def create_output_channel(self, name, **kwargs):
         channel = self.create_channel(name, **kwargs)
@@ -472,16 +294,11 @@ class SihdService(ALoggable, AConfigurable, IObserver,
             return channel
         return None
 
-    """     Getter/Setter """
-
-    def get_channel(self, name):
-        try:
-            channel = getattr(self, name)
-        except AttributeError:
-            channel = None
-        if channel and not isinstance(channel, Channel):
-            channel = None
-        return channel
+    def create_input_channel(self, name, **kwargs):
+        channel = self.create_channel(name, **kwargs)
+        if channel and self.set_channel_input(channel):
+            return channel
+        return None
 
     def get_channels_input(self):
         return self.__channels_input
@@ -510,7 +327,6 @@ class SihdService(ALoggable, AConfigurable, IObserver,
                 return False
             input_lst.append(channel)
         setattr(self, name, channel)
-        #channel.add_observer(self)
         return True
 
     def set_channel_output(self, channel, name=None, replace=False):
@@ -536,22 +352,67 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         setattr(self, name, channel)
         return True
 
+    #override
+    def create_channel(self, name, **kwargs):
+        if self.__channels_mp is True:
+            kwargs['mp'] = True
+        return super().create_channel(name, **kwargs)
+
+    def _make_channels(self):
+        for name, dic in self.__todo_ichan:
+            self.create_input_channel(name, **dic)
+        self.__todo_ichan = []
+        for name, dic in self.__todo_ochan:
+            self.create_output_channel(name, **dic)
+        self.__todo_ochan = []
+        return True
+
+    def link_channel(self, name, new_channel):
+        old_channel = self.get_channel(name)
+        if not old_channel:
+            self.log_error("No channel {} to link".format(name))
+            return False
+        if old_channel.is_multiprocess() and not new_channel.is_multiprocess():
+            self.log_warning("Replacing channel {} with a not multiprocessed one {}"\
+                                .format(old_channel, new_channel))
+        if old_channel in self.__channels_input:
+            if not self.set_channel_input(new_channel, name, replace=True):
+                self.log_error("Cannot link channel {} to {}".format(name, new_channel))
+                return False
+        elif old_channel in self.__channels_output:
+            if not self.set_channel_output(new_channel, name, replace=True):
+                self.log_error("Cannot link channel {} to {}".format(name, new_channel))
+                return False
+        else:
+            setattr(self, name, new_channel)
+        self.log_debug("Channel {} linked to {}".format(name, new_channel))
+        return True
+
+    #   Reading
+
+    def set_channel_notification(self, active):
+        self.__channel_notif = active
+
+    def handle(self, channel):
+        """ Handle service's input """
+        pass
+
+    def _pre_handle(self, channel) -> bool:
+        """ Used for services that want to handle stuff before user parsing """
+        return False
+
+    def read_channels_input(self) -> bool:
+        if self.__channel_notif is False:
+            return False
+        for channel in self.get_channels_input():
+            if channel.is_pollable() and channel.is_readable():
+                if not self._pre_handle(channel):
+                    self.handle(channel)
+                channel.task_done()
+        return True
+
     def __create_channel_state(self):
         name = "service_state"
-        """
-        self.add_channel_input(name, type='int', block=True,
-                                timeout=0.03, default=1)
-        """
         channel = self.create_channel(name, type='int', block=True,
                                         timeout=0.03, default=1)
         setattr(self, name, channel)
-
-    """ Careful """
-
-    def _set_stopped(self, stopped):
-        """ Do not call if you do not know what you are doing """
-        self.__stopped = stopped
-
-    def _set_paused(self, paused):
-        """ Do not call if you do not know what you are doing """
-        self.__paused = paused

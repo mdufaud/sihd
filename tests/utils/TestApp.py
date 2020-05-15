@@ -10,7 +10,7 @@ import time
 """ Our Stuff """
 import sihd
 
-class TestApp(sihd.App.IApp):
+class TestApp(sihd.App.SihdApp):
 
     def __init__(self, test_number):
         self._test = str(test_number)
@@ -23,7 +23,7 @@ class TestApp(sihd.App.IApp):
         ret = super().on_setup()
         return ret
 
-    def _setup_app_impl(self):
+    def on_app_setup(self):
         #Get args for app
         args = self.parse_args()
         #If time args has been set, will set a limited app loop
@@ -43,7 +43,7 @@ class TestApp(sihd.App.IApp):
         self._line_reader = reader
         return True
 
-    def _link_channels(self):
+    def link_channels(self):
         reader = self._line_reader
         handler = self._word_handler
         self.add_state_observer(reader)
@@ -52,7 +52,7 @@ class TestApp(sihd.App.IApp):
         #reader.link_channel("output", handler.input)
         return True
 
-    def _define_args(self, parser):
+    def build_args(self, parser):
         """ Add arguments """
         parser.add_argument("-f", "--file",
                 type=str,
@@ -67,7 +67,7 @@ class TestApp(sihd.App.IApp):
                 default=None,
                 help="Timer until stop")
 
-    def handle(self, channel):
+    def on_notify(self, channel):
         if channel.get_name() == "eof":
             ended = channel.read()
             if ended:

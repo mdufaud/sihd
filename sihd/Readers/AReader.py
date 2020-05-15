@@ -11,11 +11,13 @@ class AReader(SihdRunnableService, IAppContainer):
         super().__init__(name, **kwargs)
         if app:
             self.set_app(app)
-        self._set_default_conf({
+        self.set_default_conf({
             "runnable_type": "thread",
         })
 
-    """ AReader """
+    #
+    # AReader
+    #
 
     def set_source(self, source) -> bool:
         raise NotImplementedError("set_source not implemented")
@@ -23,12 +25,16 @@ class AReader(SihdRunnableService, IAppContainer):
     def close(self) -> bool:
         return True
 
-    """ SihdService """
+    #
+    # SihdService
+    #
 
     def on_stop(self):
         self.close()
 
-    """ IAppContainer """
+    #
+    # IAppContainer
+    #
 
     def set_app(self, app):
         super().set_app(app)

@@ -11,9 +11,8 @@ import sihd
 
 """ Setting up basic logging """
 
-import logging
-logger = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG)
+logger = sihd.set_log()
+sihd.set_log_color(False)
 
 import unittest
 

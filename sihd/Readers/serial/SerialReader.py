@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+#
+# System
+#
 import time
 import os
 
@@ -17,13 +19,15 @@ class SerialReader(AReader):
             import serial
         super(SerialReader, self).__init__(app=app, name=name)
         self.__serial = None
-        self._set_default_conf({
+        self.set_default_conf({
             "port": "/dev/some_device",
             "baudrate": 9600,
             "timeout": 1,
         })
 
-    """ AConfigurable """
+    #
+    # Configuration
+    #
 
     def on_setup(self):
         ret = super().on_setup()
@@ -41,7 +45,9 @@ class SerialReader(AReader):
             return False
         return True
 
-    """ Reader """
+    #
+    # Reader
+    #
 
     def set_source(self, port):
         self._lines = 0
@@ -80,7 +86,9 @@ class SerialReader(AReader):
             self.output.write(line)
         return True
 
-    """ SihdService """
+    #
+    # SihdService
+    #
 
     def close():
         serial = self.__serial

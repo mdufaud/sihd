@@ -15,16 +15,9 @@ class AInteractor(SihdRunnableService, IAppContainer):
         if app:
             self.set_app(app)
 
-    """ To implement """
-
-    def on_new_interaction(self, action: any) -> any:
-        """ Returns parsed interacton from interaction channel """
-        return action
-
-    def do_interaction(self, action, *args, **kwargs) -> bool:
-        raise NotImplementedError("do_interaction not implemented")
-
-    """ AInteractor """
+    #
+    # AInteractor
+    #
 
     def interact(self, action=None, *args, **kwargs) -> bool:
         if action is None:
@@ -40,14 +33,29 @@ class AInteractor(SihdRunnableService, IAppContainer):
     def set_result(self, res):
         self.result.write(res)
 
-    """ IAppContainer """
+    #
+    # To implement
+    #
+
+    def on_new_interaction(self, action: any) -> any:
+        """ Returns parsed interacton from interaction channel """
+        return action
+
+    def do_interaction(self, action, *args, **kwargs) -> bool:
+        raise NotImplementedError("do_interaction not implemented")
+
+    #
+    # IAppContainer
+    #
 
     def set_app(self, app):
         super().set_app(app)
         self.set_namedobject_parent(app)
         app.add_interactor(self)
 
-    """ SihdService """
+    #
+    # SihdService
+    #
 
     def _pre_handle(self, channel):
         ret = super()._pre_handle(channel)
@@ -59,7 +67,9 @@ class AInteractor(SihdRunnableService, IAppContainer):
                 ret = True
         return ret
 
-    """ Step method """
+    #
+    # Step method
+    #
 
     def on_step(self):
         return self.interact()

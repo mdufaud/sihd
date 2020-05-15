@@ -30,10 +30,13 @@ class RunnableThread(ARunnable):
     def _is_stopped(self):
         return self.__stopped
 
-    def do_pause(self, time):
+    def do_pause(self, sleeptime):
+        time.sleep(sleeptime)
+        """
         cdt = self.__pause_cdt
         with cdt:
             cdt.wait(timeout=time)
+        """
 
     def get_id(self):
         thread = self.get_runnable()

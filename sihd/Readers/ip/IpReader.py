@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+#
+# System
+#
 import time
 import os
 import socket
@@ -24,7 +26,7 @@ class IpReader(AReader):
         self._inputs = []
         self._outputs = []
         self._listening = False
-        self._set_default_conf({
+        self.set_default_conf({
             "port": 42042,
             "max_connexions": 5,
             "protocol": "tcp",
@@ -38,7 +40,9 @@ class IpReader(AReader):
         self.add_channel_output("client_info", type='queue')
         self.add_channel_output("server_msg", type='queue')
 
-    """ AConfigurable """
+    #
+    # Configuration
+    #
 
     def on_setup(self):
         ret = super().on_setup()
@@ -50,6 +54,10 @@ class IpReader(AReader):
         self.set_source(int(self.get_conf("port")))
         return True
 
+    #
+    # Channels
+    #
+
     def handle(self, channel):
         if self.is_tcp() and channel == self.packet_send:
             i = 0
@@ -59,7 +67,9 @@ class IpReader(AReader):
                 self.buff_send(msg, co)
                 i += 1
 
-    """ Getters """
+    #
+    # Getters
+    #
 
     @staticmethod
     def get_protocol(type):
@@ -96,7 +106,9 @@ class IpReader(AReader):
     def get_server(self):
         return self._socket
 
-    """ Select utilities """
+    #
+    # Select utilities
+    #
 
     def add_server_input(self, co):
         self._inputs.append(co)
@@ -111,7 +123,9 @@ class IpReader(AReader):
         if co in self._outputs:
             self._outputs.remove(co)
 
-    """ Reader """
+    #
+    # Reader
+    #
 
     def is_up(self):
         return self._socket is not None
@@ -165,7 +179,9 @@ class IpReader(AReader):
             self.log_info("Server was up for {0:.3f} seconds"\
                     .format(stop_time - self.get_service_start_time()))
 
-    """ Select """
+    #
+    # Select
+    #
 
     def on_step(self):
         server = self.get_server()
@@ -183,7 +199,9 @@ class IpReader(AReader):
                 self._do_write(w)
         return True
 
-    """ Read part """
+    #
+    # Read part
+    #
 
     def get_client(self, co):
         if isinstance(co, int):
@@ -242,7 +260,9 @@ class IpReader(AReader):
             if ret == False:
                 break
 
-    """ Sender part """
+    #
+    # Sender part
+    #
 
     def buff_send(self, msg, co):
         client = self.get_client(co)
@@ -276,9 +296,12 @@ class IpReader(AReader):
                 continue
         return True
 
-    """ SihdService """
+    #
+    # SihdService
+    #
 
-    def _start_impl(self):
+    def on_start(self):
+        super().on_start()
         if self._socket is None:
             self.log_error("Server is not up")
             return False
@@ -286,8 +309,6 @@ class IpReader(AReader):
             self._clients = {}
             s = "Accepting connections ({} max)".format(self._max_co)
             self.log_info(s)
-        return super(IpReader, self)._start_impl()
 
-    def _stop_impl(self):
+    def close(self):
         self.stop_server(True)
-        return super(IpReader, self)._stop_impl()

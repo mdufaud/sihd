@@ -1,11 +1,10 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
-import socket
-
+#
+# System
+#
 from typing import Union, Tuple
-
 subprocess = None
 shlex = None
 
@@ -21,7 +20,7 @@ class ShellInteractor(AInteractor):
         global shlex
         if shlex is None:
             import shlex
-        self._set_default_conf({
+        self.set_default_conf({
             "cmd": "/your/cmd --arg",
             "pipe": "ex: stdin;stdout",
             "devnull": "ex: stderr;stdin",
@@ -36,7 +35,9 @@ class ShellInteractor(AInteractor):
         self.__proc = None
         self.add_channel_input("stdin", type='queue')
 
-    """ AConfigurable """
+    #
+    # Configuration
+    #
 
     def on_setup(self):
         ret = super().on_setup()
@@ -84,13 +85,19 @@ class ShellInteractor(AInteractor):
         else:
             raise ValueError("Stdin data is not bytes: {}".format(data))
 
-    """ AInteractor """
+    #
+    # Channels
+    #
 
     def handle(self, channel):
         if channel == self.stdin:
             data = channel.read()
             if data is not None:
                 self.set_input(data)
+
+    #
+    # Interactor
+    #
 
     def on_new_interaction(self, cmd: Union[str, list]) -> list:
         return self.set_cmd(cmd)
@@ -104,7 +111,9 @@ class ShellInteractor(AInteractor):
         self.set_result((child.returncode, out, err, timedout))
         return child.returncode == 0
 
-    """ Cmd """
+    #
+    # Cmd execution
+    #
 
     def set_cmd(self, cmd: Union[str, list]) -> list:
         if isinstance(cmd, str):
@@ -184,7 +193,9 @@ class ShellInteractor(AInteractor):
     def get_args(self):
         return self.__exec
 
-    """ DEVNULL """
+    #
+    # /dev/null
+    #
 
     def set_devnull(self, lst):
         """ @param lst accepts 'stdin, 'stdout' or 'stderr' """
@@ -207,7 +218,9 @@ class ShellInteractor(AInteractor):
     def set_stderr_devnull(self):
         self.__args['stderr'] = subprocess.DEVNULL
 
-    """ PIPE """
+    #
+    # Pipe
+    #
 
     def set_pipe(self, lst):
         """ @param lst accepts 'stdin, 'stdout' or 'stderr' """
@@ -230,7 +243,9 @@ class ShellInteractor(AInteractor):
     def set_stderr_pipe(self):
         self.__args['stderr'] = subprocess.PIPE
 
-    """ STDERR """
+    #
+    # Stderr
+    #
 
     def set_stderr_out(self):
         """ Routes stderr to stdout """

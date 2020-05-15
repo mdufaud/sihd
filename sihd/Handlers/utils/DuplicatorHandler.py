@@ -7,7 +7,7 @@ class DuplicatorHandler(AHandler):
 
     def __init__(self, app=None, name="DuplicatorHandler"):
         super(DuplicatorHandler, self).__init__(app=app, name=name)
-        self._set_default_conf({})
+        self.set_default_conf({})
         self.__channel_lst = set()
         self.add_channel_input('input')
 
@@ -19,7 +19,9 @@ class DuplicatorHandler(AHandler):
         else:
             lst.add(channels)
 
-    """ SihdService """
+    #
+    # Channels
+    #
 
     def handle(self, channel):
         data = channel.read()

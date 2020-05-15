@@ -12,7 +12,7 @@ import sihd
 logger = sihd.set_log('debug')
 
 from sihd.GUI.Cmd.ICmdGui import ICmdGui
-from sihd.App.IApp import IApp
+from sihd.App.SihdApp import SihdApp
 
 class SimpleCmd(ICmdGui):
 
@@ -51,7 +51,7 @@ class SimpleCmd(ICmdGui):
         else:
             print("Well you have to use autocomplete on this one")
 
-class SimpleApp(IApp):
+class SimpleApp(SihdApp):
 
     def __init__(self, name):
         super(SimpleApp, self).__init__(name)
@@ -68,9 +68,11 @@ class SimpleApp(IApp):
 
     def post_setup(self):
         self.gui = SimpleCmd(app=self)
-        self.gui.add_state_observer(self)
         self.gui.set_intro("Welcome in cmd gui inApp test")
         return True
+
+    def _link_channels(self):
+        self.add_state_observer(self.gui)
 
 class TestGui(unittest.TestCase):
 

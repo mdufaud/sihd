@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+#
+# System
+#
 import socket
 
 from sihd.Interactors.AInteractor import AInteractor
@@ -10,7 +12,7 @@ class IpInteractor(AInteractor):
 
     def __init__(self, app=None, name="IpInteractor"):
         super(IpInteractor, self).__init__(app=app, name=name)
-        self._set_default_conf({
+        self.set_default_conf({
             "port": 42042,
             "host": "localhost",
             "protocol": "tcp",
@@ -22,7 +24,9 @@ class IpInteractor(AInteractor):
         self.add_channel_input("c_host", type='queue')
         self.add_channel_input("c_protocol", type='queue')
 
-    """ AConfigurable """
+    #
+    # Configuration
+    #
 
     def on_setup(self):
         ret = super().on_setup()
@@ -31,7 +35,9 @@ class IpInteractor(AInteractor):
         self.__protocol = str(self.get_conf("protocol"))
         return ret
 
-    """ AInteractor """
+    #
+    # Channels
+    #
 
     def handle(self, channel):
         if channel == self.c_port:
@@ -50,6 +56,10 @@ class IpInteractor(AInteractor):
                 self.__protocol = t
                 self.close_tcp()
 
+    #
+    # Interactor
+    #
+
     def on_new_interaction(self, action):
         return action.encode()
 
@@ -63,7 +73,9 @@ class IpInteractor(AInteractor):
             self.log_error("Protocol {} not recognized".format(p))
         return False
 
-    """ UDP """
+    #
+    # UDP
+    #
 
     def send_udp(self, host, port, data):
         sent = False
@@ -90,7 +102,9 @@ class IpInteractor(AInteractor):
         s.close()
         return sent
 
-    """ TCP """
+    #
+    # TCP
+    #
 
     def close_tcp(self):
         if self.is_tcp_connected():

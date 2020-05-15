@@ -13,7 +13,7 @@ from .ANamedObject import ANamedObject
 
 class ALoggable(ANamedObject):
 
-    logger = logging.getLogger()
+    logger = logging.getLogger("sihd")
     __file_handler = None
     __level = None
     __original_emit = logging.StreamHandler.emit
@@ -91,9 +91,9 @@ class ALoggable(ANamedObject):
 
     @staticmethod
     def remove_stream_handlers():
-        for handler in logging.root.handlers:
+        for handler in ALoggable.logger.handlers:
             if isinstance(handler, logging.StreamHandler):
-                logging.root.removeHandler(handler)
+                ALoggable.logger.removeHandler(handler)
 
     @staticmethod
     def add_stream_handler(level="info", stream=sys.stderr):
@@ -114,7 +114,7 @@ class ALoggable(ANamedObject):
         if file_handler:
             file_handler.close()
             ALoggable.__file_handler = None
-        logging.root.handlers = []
+        ALoggable.logger.handlers = []
 
     # Setup global logger
     @staticmethod

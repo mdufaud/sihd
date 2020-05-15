@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+#
+# System
+#
 import time
 import os
 
@@ -13,7 +15,7 @@ class LineReader(AReader):
 
     def __init__(self, app=None, name="LineReader"):
         super(LineReader, self).__init__(app=app, name=name)
-        self._set_default_conf({
+        self.set_default_conf({
             "path": "/path/to/file",
         })
         self.__reader = None
@@ -22,7 +24,9 @@ class LineReader(AReader):
         self.add_channel_output('lines', type='int', default=0)
         self.add_channel_output('eof', type='bool', default=True)
 
-    """ AConfigurable """
+    #
+    # Configuration
+    #
 
     def post_setup(self):
         """ After setup to have eof channel created """
@@ -32,7 +36,9 @@ class LineReader(AReader):
             self.path.write(path)
         return ret
 
-    """ SihdService """
+    #
+    # Channels
+    #
 
     def handle(self, channel):
         if channel == self.path:
@@ -41,7 +47,9 @@ class LineReader(AReader):
                 if path:
                     self.set_source(path)
 
-    """ Reader """
+    #
+    # Reader
+    #
 
     def __can_recover(self):
         if self.__path not in LineReader.files_read:

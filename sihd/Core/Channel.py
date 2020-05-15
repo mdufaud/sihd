@@ -1,14 +1,16 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+#
+# System
+#
 import time
 import queue
 import threading
 import ctypes
 
 import logging
-logger = logging.getLogger()
+logger = logging.getLogger("sihd")
 
 from .AObservable import AObservable
 from .IObserver import IObserver
@@ -140,9 +142,11 @@ class Channel(AObservable, IObserver, ALoggable):
         """
         if channel.is_readable():
             data = channel.read()
-            self.write(data, notify = not self.is_multiprocess())
+            self.write(data)
 
-    """ Lock """
+    #
+    # Lock
+    #
 
     def __lock_mp(self, block=True, timeout=0.01) -> bool:
         """
@@ -202,7 +206,9 @@ class Channel(AObservable, IObserver, ALoggable):
             return True
         return False
 
-    """ Methods to change while inheriting """
+    #
+    # Inheritance
+    #
 
     def task_done(self):
         """ Can be called after channel is read """
@@ -231,7 +237,9 @@ class Channel(AObservable, IObserver, ALoggable):
         """ Get the data object """
         return self._last_data
 
-    """ ANamedObject """
+    #
+    # ANamedObject
+    #
 
     def _get_attributes(self):
         l = super()._get_attributes()
@@ -250,7 +258,9 @@ class Channel(AObservable, IObserver, ALoggable):
             l.append("locked")
         return l
 
-    """ ALoggable """
+    #
+    # ALoggable
+    #
 
     def _log_format(self, msg):
         parent = self.get_namedobject_parent() or ""
@@ -329,7 +339,9 @@ class ChannelQueue(Channel):
         with q.mutex:
             q.queue.clear()
 
-    """ Multiprocessing simple """
+    #
+    # Multiprocessing simple
+    #
 
     def __simple_write(self, data):
         self.__put(data)
@@ -528,7 +540,9 @@ class ChannelString(PollableChannel):
     def get_data(self):
         return self.__string
 
-    """ Multiprocess """
+    #
+    # Multiprocessing
+    #
 
     def _write_mp(self, data):
         if not isinstance(data, bytes):

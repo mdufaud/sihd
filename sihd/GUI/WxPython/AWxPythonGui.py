@@ -1,8 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
-
+#
+# System
+#
 import os
 import os.path
 import sys
@@ -13,19 +14,20 @@ from sihd import Core
 
 wx = None
 
-class IWxPythonGui(AGui):
+class AWxPythonGui(AGui):
 
-    def __init__(self, app=None, name="IWxPythonGui"):
+    def __init__(self, name="AWxPythonGui", *args, **kwargs):
         global wx
         if wx is None:
             import wx
-        super(IWxPythonGui, self).__init__(app=app, name=name)
+        self.__wx_app = None
+        super().__init__(name=name, *args, **kwargs)
 
     def loop(self, **kwargs):
         app = wx.App(False)
-        self._app = app
-        self._make_frames(app)
+        self.__wx_app = app
+        self.build_wx_frames(app)
         app.MainLoop()
 
-    def _make_frames(self, app):
+    def build_wx_frames(self, app):
         raise NotImplemented

@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+#
+# System
+#
 import sys
 import logging
 import time
@@ -30,7 +32,9 @@ class ICursesGui(AGui):
         self.__movable = {}
         self.__ready = False
 
+    #
     # Core
+    #
 
     def win_add_str(self, win, y, x, s):
         ret = False

@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+#
+# System
+#
 import time
 import os
 import sys
@@ -13,7 +15,7 @@ class StdinReader(AReader):
 
     def __init__(self, app=None, name="StdinReader"):
         super(StdinReader, self).__init__(app=app, name=name)
-        self._set_default_conf({
+        self.set_default_conf({
             "question": "",
             "runnable_frequency": 5, 
         })
@@ -25,6 +27,10 @@ class StdinReader(AReader):
         self.add_channel_input("question", type='queue')
         self.add_channel_output("answer", type='queue')
 
+    #
+    # Channels
+    #
+
     def handle(self, channel):
         if self.__asked is False and channel == self.question:
             question = channel.read()
@@ -35,14 +41,18 @@ class StdinReader(AReader):
         self.__question = str(question)
         self.__has_new_question = True
 
-    """ AConfigurable """
+    #
+    # Configuration
+    #
 
     def on_setup(self):
         super().on_setup()
         self.set_question(str(self.get_conf("question")))
         return True
 
-    """ Reader """
+    #
+    # Reader
+    #
 
     def __ask(self):
         if self.__asked is True:

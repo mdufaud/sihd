@@ -3,7 +3,9 @@
 
 #TODO or erase
 
-""" System """
+#
+# System
+#
 import sys
 
 from .ANamedObject import ANamedObject

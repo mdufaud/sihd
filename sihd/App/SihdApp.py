@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+#
+# System
+#
 
 import os
 import sys
@@ -23,15 +25,15 @@ from sihd.GUI.AGui import AGui
 from sihd.Interactors.AInteractor import AInteractor
 from sihd.Core.SihdService import SihdService
 
-class IApp(SihdService):
+class SihdApp(SihdService):
 
-    def __init__(self, name="IApp", *args, **kwargs):
-        super(IApp, self).__init__(name, *args, **kwargs)
+    def __init__(self, name="SihdApp", *args, **kwargs):
+        super(SihdApp, self).__init__(name, *args, **kwargs)
         #Log
         self._default_log_level = "info"
         #Path
         self._path = None
-        self._path = IApp.get_sihd_path()
+        self._path = SihdApp.get_sihd_path()
         self._conf_path = None
         #Services
         self.readers = set()
@@ -55,40 +57,38 @@ class IApp(SihdService):
         conf_path = kwargs.get("conf_path", None)
         ret = self.load_app_conf(conf_path) is not False
         #App internal setup
-        ret = ret and self._setup_app_impl(*args, **kwargs) is not False
+        ret = ret and self.on_app_setup(*args, **kwargs) is not False
         #Save app children's configuration
         ret = ret and self.save_children_conf()
         #Call children's service setup
         ret = ret and self.load_children_conf()
         #Link children's channels after 
-        ret = ret and self._link_channels() is not False
+        ret = ret and self.link_channels() is not False
         if ret is True:
             self.log_debug("Application successfully setup")
         else:
             self.log_error("Application setup has failed")
         return ret
 
-    def _link_channels(self):
+    def link_channels(self):
         """
             To be implemented by children app
             -> Subscribe services to services channels
         """
         return True
 
-    def _setup_app_impl(self):
+    def on_app_setup(self):
         """
             To be implemented by children app
             -> Create app's services
         """
         return True
 
-    """
-    ###############
-    ARGS MANAGEMENT
-    ###############
-    """
+    #
+    # Argvs
+    #
 
-    def _define_args(self, parser):
+    def build_args(self, parser):
         """
             To be implemented by children
             -> Add args to ArgumentParser
@@ -119,7 +119,7 @@ class IApp(SihdService):
         """ To be called by children - Useful at setup implementation """
         parser = argparse.ArgumentParser(prog=self.get_name(),
                                             conflict_handler='resolve')
-        self._define_args(parser)
+        self.build_args(parser)
         if self.__args_setted is not None:
             self.args, unknown = parser.parse_known_args(args=self.__args_setted)
         else:
@@ -128,11 +128,9 @@ class IApp(SihdService):
             self.log_debug("Unknown args: {}".format(unknown))
         return self.args
 
-    """
-    ###############
-    Configurations
-    ###############
-    """
+    #
+    # Configurations
+    #
 
     def load_app_conf(self, path=None):
         """ Load conf from path or <APP_PATH>/config/<APP_NAME>.ini """
@@ -230,11 +228,9 @@ class IApp(SihdService):
         self._write_conf(conf)
         return True
 
-    """
-    ###############
-    Utils
-    ###############
-    """
+    #
+    # Utils
+    #
 
     def set_cwd_path(self):
         self.set_path(os.getcwd())
@@ -292,11 +288,9 @@ class IApp(SihdService):
                         .format(fun_name, child.get_name()))
         return ret
 
-    """
-    ###############
-    Service
-    ###############
-    """
+    #
+    # Services
+    #
 
     def add_state_observer(self, service):
         state = service.get_channel("service_state")
@@ -512,11 +506,9 @@ class IApp(SihdService):
     def is_interactor(service):
         return isinstance(service, AInteractor)
 
-    """
-    ###############
-    Channels
-    ###############
-    """
+    #
+    # Channels
+    #
 
     def _pre_handle(self, channel):
         if channel.get_name() == "service_state":
@@ -529,11 +521,9 @@ class IApp(SihdService):
     def service_state_changed(self, service, stopped, paused):
         pass
 
-    """
-    ###############
-    Loop
-    ###############
-    """
+    #
+    # Loop
+    #
 
     def set_loop(self, fun):
         if self.is_running():

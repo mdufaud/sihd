@@ -20,14 +20,16 @@ class ICmdGui(cmd.Cmd, AGui):
         cmd.Cmd.__init__(self)
         AGui.__init__(self, app=app, name=name)
         self.__completion = {}
-        self._set_default_conf({
+        self.set_default_conf({
             "prompt": "$> ",
             "intro": "",
         })
         self.__services_fun = ["start", "stop", "resume", "pause", "setup"]
         self.set_completion("service_any", self.__services_fun)
 
-    """ AConfigurable """
+    #
+    # AConfigurable
+    #
 
     def on_setup(self):
         ret = super().on_setup()
@@ -48,7 +50,9 @@ class ICmdGui(cmd.Cmd, AGui):
     def set_intro(intro):
         ICmdGui.intro = intro
 
+    #
     # Core
+    #
 
     def emptyline(self):
         pass
@@ -58,7 +62,9 @@ class ICmdGui(cmd.Cmd, AGui):
             stop = True
         return stop
 
+    #
     # Completion
+    #
 
     @staticmethod
     def __replace_sub(string, char):
@@ -137,7 +143,9 @@ class ICmdGui(cmd.Cmd, AGui):
         if line.startswith("service"):
             self.__set_services_completion()
 
+    #
     # Basic commands
+    #
 
     def do_status(self, args):
         """ Get application's service status """
@@ -192,7 +200,9 @@ class ICmdGui(cmd.Cmd, AGui):
     def help_exit(self):
         print("Exit the application")
 
+    #
     # Handle ctrl + d
+    #
 
     def do_EOF(self, args):
         print()
@@ -203,20 +213,27 @@ class ICmdGui(cmd.Cmd, AGui):
     def postloop(self):
         self.stop()
 
+    #
     # Children implementations
+    #
 
     def default(self, args):
         """ When no do_* is found """
         pass
 
-    # Entry point
+    #
+    # AGui
+    #
 
     def loop(self, **kwargs):
         time.sleep(0.1)
         self.read_channels_input()
         self.cmdloop()
 
-    # Services
+    #
+    # SihdService
+    #
 
     def on_pause(self):
         print()
+        super().on_pause()

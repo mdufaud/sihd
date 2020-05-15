@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+#
+# System
+#
 import sys
 
 class ANamedObject(object):
@@ -29,7 +31,19 @@ class ANamedObject(object):
             obj = obj.get_namedobject_children(child)
         return obj
 
-    """ Parent """
+    @staticmethod
+    def get_namedobject_path(no):
+        lst = [no.get_name()]
+        parent = no.get_namedobject_parent()
+        while parent is not None:
+            lst.append(parent)
+            parent = parent.get_namedobject_parent()
+        lst.reverse()
+        return '.'.join(lst)
+
+    #
+    # Parent
+    #
 
     def get_namedobject_root(self):
         parent = self.get_namedobject_parent()
@@ -45,37 +59,41 @@ class ANamedObject(object):
             oldparent.remove_namedobject_children(self)
         self.__parent = parent
         if parent:
-            parent.add_namedobject_children(self)
+            parent.set_namedobject_children(self)
 
     def get_namedobject_parent(self):
         return self.__parent
-
-    """ Children """
+    
+    #
+    # Children
+    #
 
     def get_namedobject_children(self, children_name):
         return self.__children.get(children_name, None)
 
-    def add_namedobject_children(self, children):
+    def set_namedobject_children(self, children):
         self.__children[children.get_name()] = children
 
     def remove_namedobject_children(self, children):
         self.__children.pop(children.get_name())
 
-    """ Name """
+    #
+    # Name
+    #
 
     def set_name(self, name):
         #Cleanup links
         parent = self.get_namedobject_parent()
-        no = self.__namedobjects
-        no.pop(self.get_name(), None)
-        if parent:
-            parent.remove_namedobject_children(self)
+        nos = self.__namedobjects
+        if parent and parent.get_namedobject_children(name) is not None\
+            or parent is None and nos.get(name, None) is not None:
+                raise ValueError("Namedobject {} already exists".format(name))
         #Set
         self.__name = name
-        #Relink
-        no[name] = self
+        #Link
+        nos[name] = self
         if parent:
-            parent.add_namedobject_children(self)
+            parent.set_namedobject_children(self)
 
     def get_name(self):
         return self.__name
@@ -94,40 +112,3 @@ class ANamedObject(object):
         if parent:
             s = "{}.{}".format(parent, s)
         return s
-
-    """ Utils """
-
-    def say(self, s, prefix="", **kwargs):
-        print("{0}: {1}{2}".format(self.get_name(), prefix, s), **kwargs)
-
-    def error(self, err, **kwargs):
-        self.say(err, prefix="Error: ", file=sys.stderr)
-        return False
-
-    """
-
-    def get_namedobject_parent_classes(self):
-        kls = self.__class__
-        lst = [[kls.__name__]]
-        while kls is not None:
-            kls = kls.__bases__
-            if len(kls) > 0:
-                lst.append([el.__name__ for el in kls])
-                kls = kls[0]
-            else:
-                kls = None
-        return lst
-
-    def get_namedobject_parent_classes_str(self):
-        lst = self.get_namedobject_parent_classes()
-        s = ""
-        for kls in reversed(lst[:-1]):
-            if s != "":
-                s += "."
-            if len(kls) > 1:
-                s += "(" + " | ".join(kls) + ")"
-            else:
-                s += "".join(kls)
-        return s
-
-    """

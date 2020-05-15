@@ -11,11 +11,13 @@ class AHandler(SihdRunnableService, IAppContainer):
         super().__init__(name, **kwargs)
         if app:
             self.set_app(app)
-        self._set_default_conf({
+        self.set_default_conf({
             "runnable_type": "thread",
         })
 
-    """ AHandler """
+    #
+    # AHandler
+    #
 
     def handle_service(self, service) -> bool:
         cls = service.__class__.__name__.lower()
@@ -27,12 +29,16 @@ class AHandler(SihdRunnableService, IAppContainer):
         method(service)
         return True
 
-    """ SihdService """
+    #
+    # SihdService
+    #
 
     def handle(self, channel):
         raise NotImplementedError("handle not implemented")
 
-    """ IAppContainer """
+    #
+    # IAppContainer
+    #
 
     def set_app(self, app):
         super().set_app(app)

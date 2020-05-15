@@ -16,7 +16,7 @@ class AGui(SihdRunnableService, IAppContainer):
         self.__runnable = None
         IAppContainer.__init__(self)
         super().__init__(name, **kwargs)
-        self._set_default_conf({
+        self.set_default_conf({
             "runnable_type": "thread",
             "runnable_frequency": 5,
             "runnable_steps": 1,
@@ -25,7 +25,9 @@ class AGui(SihdRunnableService, IAppContainer):
         if app:
             self.set_app(app)
 
-    """ SihdService """
+    #
+    # SihdService
+    #
 
     def set_channel_notification(self, active):
         r = self.get_input_runnable()
@@ -36,7 +38,9 @@ class AGui(SihdRunnableService, IAppContainer):
         else:
             r.pause()
 
-    """ AGui """
+    #
+    # AGui
+    #
 
     def get_input_runnable(self):
         return self.__runnable
@@ -92,7 +96,9 @@ class AGui(SihdRunnableService, IAppContainer):
         self.loop()
         self.stop()
 
-    """ To implement """
+    #
+    # To implement
+    #
 
     def loop(self, *args, **kwargs):
         """
@@ -100,7 +106,9 @@ class AGui(SihdRunnableService, IAppContainer):
         """
         raise NotImplementedError("No gui to loop onto")
 
-    """ IAppContainer """
+    #
+    # IAppContainer
+    #
 
     def set_app(self, app):
         super().set_app(app)

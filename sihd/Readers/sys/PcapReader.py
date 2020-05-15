@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #coding: utf-8
 
-""" System """
+#
+# System
+#
 import struct
 import time
 import os
@@ -15,7 +17,7 @@ class PcapReader(AReader):
 
     def __init__(self, app=None, name="PcapReader"):
         super(PcapReader, self).__init__(app=app, name=name)
-        self._set_default_conf({
+        self.set_default_conf({
             "path": "/path/to/file",
         })
         self.__to_recover = 0
@@ -28,7 +30,9 @@ class PcapReader(AReader):
         self.add_channel_output('eof', type='bool',
                                 default=True, timeout=0.1)
 
-    """ AConfigurable """
+    #
+    # Configuration
+    #
 
     def post_setup(self):
         ret = super().post_setup()
@@ -38,7 +42,9 @@ class PcapReader(AReader):
                 self.path.write(path)
         return ret
 
-    """ SihdService """
+    #
+    # Channels
+    #
 
     def handle(self, channel):
         if channel == self.path:
@@ -47,7 +53,9 @@ class PcapReader(AReader):
                 if path:
                     self.set_source(path)
 
-    """ Reader """
+    #
+    # Reader
+    #
 
     def __can_recover(self):
         if self.__path not in PcapReader.files_read:

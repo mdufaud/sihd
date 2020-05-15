@@ -3,9 +3,9 @@
 
 """ System """
 import time
+import os
 
 from .ARunnable import ARunnable
-import os
 import sihd
 from .Stats import PerfStat
 
@@ -19,6 +19,7 @@ class RunnableProcess(ARunnable):
         self.__nproc = None
         self.__proc = None
         self.__proc_status = []
+        self.__parent_pid = os.getpid()
         """ Importing """
         global multiprocessing
         if multiprocessing is None:
@@ -49,8 +50,9 @@ class RunnableProcess(ARunnable):
         self.__nproc = n_proc
         self._set_runnable(self.__proc)
 
-    def do_pause(self, time):
-        self.__worker_work.wait(timeout=time)
+    def do_pause(self, sleeptime):
+        time.sleep(sleeptime)
+        #self.__worker_work.wait(timeout=sleeptime)
 
     def _setup_runnable(self, *pargs, **pkwargs):
         if self.get_process() is not None:
@@ -107,9 +109,8 @@ class RunnableProcess(ARunnable):
             return True
         stop_evt.set()
         self.resume()
-        if self.get_process() is not None:
-            return
-        self.__clear_workers()
+        if self.get_process() is None and self.__parent_pid == os.getpid():
+            self.__clear_workers()
 
     def pause(self):
         self.__worker_work.clear()
