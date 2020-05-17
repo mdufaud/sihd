@@ -10,10 +10,11 @@ from .AConfigurable import AConfigurable
 from .IObserver import IObserver
 from .ADumpable import ADumpable
 from .IService import IService
+from .AChannelObject import AChannelObject
 from .Channel import *
 
 class SihdService(ALoggable, AConfigurable, IObserver,
-                    ADumpable, IService):
+                    AChannelObject, ADumpable, IService):
 
     STOP = 0b0001
     START = 0b0010
@@ -21,20 +22,24 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     RESUME = 0b1000
 
     def __init__(self, name="SihdService", **kwargs):
-        super(SihdService, self).__init__(name, **kwargs)
+        super().__init__(name, **kwargs)
         self.set_default_conf({
             "channels_mp": 0,
         })
-        self.__channels_mp = False
+        # States
         self.__stopped = True
         self.__paused = False
+        self.__init = False
+        # Channels
         self.__channels_input = list()
         self.__channels_output = list()
         self.__todo_ichan = list()
         self.__todo_ochan = list()
+        self.__channel_notif = True
+        self.__channels_mp = False
+        # Time
         self.__start_time = None
         self.__stop_time = None
-        self.__channel_notif = True
 
     #
     # ADumpable
@@ -139,6 +144,33 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def is_active(self):
         return (not self.is_paused() and self.is_running())
 
+    def is_init(self):
+        return self.__init
+
+    #
+    # Init
+    #
+
+    def init(self):
+        if self.__init is True:
+            self.log_debug("Service is already initialised")
+            return True
+        if self.is_configured() is False and self.setup() is False:
+            return False
+        self.process_links()
+        if self._init_impl() is True:
+            self.__init = True
+            self.on_init()
+        self.log_debug("%s" %
+            ("is initialised" if self.__init else "did not initialise"))
+        return self.__init
+
+    def _init_impl(self):
+        return True
+
+    def on_init(self):
+        pass
+
     #
     # Start
     #
@@ -146,12 +178,11 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def get_service_start_time(self):
         return self.__start_time
 
-    def start(self, silent=False):
+    def start(self):
         if self.__stopped is False:
-            if not silent:
-                self.log_debug("Starting an already started service")
+            self.log_debug("Starting an already started service")
             return False
-        if self.is_configured() is False and self.setup() is False:
+        if self.__init is False and self.init() is False:
             return False
         self.__start_time = time.time()
         if self._start_impl() is True:
@@ -161,16 +192,15 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         running = not self.__stopped
         if running is not True:
             self.__start_time = None
-        if not silent:
-            self.log_info("%s" %
-                    ("is started" if running else "did not start"))
+        self.log_info("%s" %
+                ("is started" if running else "did not start"))
         return running
 
     def _start_impl(self):
         return True
 
     def on_start(self):
-        return True
+        pass
 
     #
     # Stop
@@ -179,63 +209,59 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def get_service_stop_time(self):
         return self.__stop_time
 
-    def stop(self, silent=False):
+    def stop(self):
         if self.__stopped is True:
-            if not silent:
-                self.log_debug("Stopping an already stopped service")
+            self.log_debug("Stopping an already stopped service")
             return True
         self.__stop_time = time.time()
         if self._stop_impl() is True:
             self.__stopped = True
+            self.__init = False
             self._service_state_changed()
             self.on_stop()
             self._set_unconfigured()
         running = not self.__stopped
         if running is True:
             self.__stop_time = None
-        if not silent:
-            self.log_debug("%s" %
-                    ("is stopped" if not running else "did not stop"))
+        self.log_debug("%s" %
+                ("is stopped" if not running else "did not stop"))
         return running is False
 
     def _stop_impl(self):
         return True
 
     def on_stop(self):
-        return True
+        pass
 
     #
     # Pause
     #
 
-    def pause(self, silent=False):
+    def pause(self):
         if self.__paused is True:
-            if not silent:
-                self.log_debug("Pausing an already paused service")
+            self.log_debug("Pausing an already paused service")
             return True
         if self._pause_impl() is True:
             self.__paused = True
             self._service_state_changed()
             self.on_pause()
-        if not silent:
-            self.log_debug("%s" %
-                ("is paused" if self.__paused else "did not pause"))
+        self.log_debug("%s" %
+            ("is paused" if self.__paused else "did not pause"))
         return self.__paused
 
     def _pause_impl(self):
         return True
 
     def on_pause(self):
-        return True
+        pass
 
     #
     # Resume
     #
 
-    def resume(self, silent=False):
+    def resume(self):
         if not self.__paused:
-            if not silent:
-                self.log_debug("Resuming a non paused service")
+            self.log_debug("Resuming a non paused service")
             return True
         if self._resume_impl() is True:
             self.__paused = False
@@ -249,7 +275,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         return True
 
     def on_resume(self):
-        return True
+        pass
 
     #
     # Reset
@@ -272,15 +298,31 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         return False
 
     def on_reset(self):
-        return True
+        pass
 
     #
     # Channels Input/Output
     #
 
-    def on_new_channel(self, channel):
-        setattr(self, channel.get_name(), channel)
-        super().on_new_channel(channel)
+    def __replace_channel(self, old, new):
+        ci = self.__channels_input
+        co = self.__channels_output
+        if old in ci:
+            for i, channel in enumerate(ci):
+                if channel == old:
+                    break
+            ci[i] = new
+        elif old in co:
+            for i, channel in enumerate(co):
+                if channel == old:
+                    break
+            co[i] = new
+
+    def on_new_channel(self, name, channel):
+        old_channel = self.get_channel(name)
+        if old_channel:
+            self.__replace_channel(old_channel, channel)
+        setattr(self, name, channel)
     
     def add_channel_input(self, name, **kwargs):
         self.__todo_ichan.append((name, kwargs))
@@ -300,6 +342,15 @@ class SihdService(ALoggable, AConfigurable, IObserver,
             return channel
         return None
 
+    def _make_channels(self):
+        for name, dic in self.__todo_ichan:
+            self.create_input_channel(name, **dic)
+        self.__todo_ichan = []
+        for name, dic in self.__todo_ochan:
+            self.create_output_channel(name, **dic)
+        self.__todo_ochan = []
+        return True
+
     def get_channels_input(self):
         return self.__channels_input
 
@@ -310,46 +361,18 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         if name is None:
             name = channel.get_name()
         input_lst = self.__channels_input
-        has_to_replace = False
-        for i, c in enumerate(input_lst):
-            if c.get_name() == name:
-                has_to_replace = True
-                break
-        if has_to_replace:
-            if replace is False:
-                self.log_warning("Input channel: '{}' already exist".format(name))
-                return False
-            input_lst[i] = channel
-        else:
-            if replace is True:
-                self.log_warning("Input channel: '{}' cannot be replaced "
-                    "as it does not exist".format(name))
-                return False
-            input_lst.append(channel)
-        setattr(self, name, channel)
+        if channel in input_lst:
+            raise RuntimeError("Channel {} already in inputs".format(channel))
+        input_lst.append(channel)
         return True
 
     def set_channel_output(self, channel, name=None, replace=False):
         if name is None:
             name = channel.get_name()
-        output_lst = self.__channels_output
-        has_to_replace = False
-        for i, c in enumerate(output_lst):
-            if c.get_name() == name:
-                has_to_replace = True
-                break
-        if has_to_replace:
-            if replace is False:
-                self.log_warning("Output channel: '{}' already exist".format(name))
-                return False
-            output_lst[i] = channel
-        else:
-            if replace is True:
-                self.log_warning("Output channel: '{}' cannot be replaced "
-                    "as it does not exist".format(name))
-                return False
-            output_lst.append(channel)
-        setattr(self, name, channel)
+        input_lst = self.__channels_input
+        if channel in input_lst:
+            raise RuntimeError("Channel {} already in inputs".format(channel))
+        input_lst.append(channel)
         return True
 
     #override
@@ -357,36 +380,6 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         if self.__channels_mp is True:
             kwargs['mp'] = True
         return super().create_channel(name, **kwargs)
-
-    def _make_channels(self):
-        for name, dic in self.__todo_ichan:
-            self.create_input_channel(name, **dic)
-        self.__todo_ichan = []
-        for name, dic in self.__todo_ochan:
-            self.create_output_channel(name, **dic)
-        self.__todo_ochan = []
-        return True
-
-    def link_channel(self, name, new_channel):
-        old_channel = self.get_channel(name)
-        if not old_channel:
-            self.log_error("No channel {} to link".format(name))
-            return False
-        if old_channel.is_multiprocess() and not new_channel.is_multiprocess():
-            self.log_warning("Replacing channel {} with a not multiprocessed one {}"\
-                                .format(old_channel, new_channel))
-        if old_channel in self.__channels_input:
-            if not self.set_channel_input(new_channel, name, replace=True):
-                self.log_error("Cannot link channel {} to {}".format(name, new_channel))
-                return False
-        elif old_channel in self.__channels_output:
-            if not self.set_channel_output(new_channel, name, replace=True):
-                self.log_error("Cannot link channel {} to {}".format(name, new_channel))
-                return False
-        else:
-            setattr(self, name, new_channel)
-        self.log_debug("Channel {} linked to {}".format(name, new_channel))
-        return True
 
     #   Reading
 

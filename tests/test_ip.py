@@ -55,7 +55,8 @@ def get_tcp_sender():
 class TestIpServer(unittest.TestCase):
 
     def setUp(self):
-        pass
+        print()
+        sihd.clear_tree()
 
     def tearDown(self):
         pass

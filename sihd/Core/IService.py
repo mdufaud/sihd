@@ -6,6 +6,9 @@ class IService(object):
     def __init__(self):
         super().__init__()
 
+    def init(self):
+        raise NotImplementedError("init")
+
     def start(self):
         raise NotImplementedError("start")
 

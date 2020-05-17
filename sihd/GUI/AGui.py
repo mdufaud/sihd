@@ -112,5 +112,5 @@ class AGui(SihdRunnableService, IAppContainer):
 
     def set_app(self, app):
         super().set_app(app)
-        self.set_namedobject_parent(app)
+        self.set_parent(app)
         app.add_gui(self)

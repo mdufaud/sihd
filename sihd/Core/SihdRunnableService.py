@@ -8,6 +8,7 @@ import sihd
 from .SihdService import SihdService
 from .RunnableThread import RunnableThread
 from .RunnableProcess import RunnableProcess
+from .Channel import Channel
 
 class SihdRunnableService(SihdService):
 
@@ -51,11 +52,12 @@ class SihdRunnableService(SihdService):
             kwargs['mp'] = True
         return super().create_channel(name, **kwargs)
 
-    def link_channel(self, name, new_channel):
-        if self.is_service_multiprocessing() and new_channel.is_multiprocess() is False:
-            self.log_warning("Trying to link a non multiprocessed channel to"
-                    " a processed service ({})".format(new_channel))
-        return super().link_channel(name, new_channel)
+    def on_link(self, name, new_channel):
+        if isinstance(new_channel, Channel) and self.is_service_multiprocessing()\
+            and new_channel.is_multiprocess() is False:
+            raise ValueError("Trying to link a non multiprocessed channel to"
+                                " a processed service ({})".format(new_channel))
+        return super().on_link(name, new_channel)
 
     """ Runnable """
 
@@ -129,48 +131,45 @@ class SihdRunnableService(SihdService):
 
     """ SihdService """
 
-    def _start_impl(self):
+    def _init_impl(self):
         self.__make_runnable()
-        r = self.__runnable
-        if self.is_paused() and r:
-            r.pause()
         return True
 
     def on_start(self):
+        """ Done after start because you want service to be 'running' """
         r = self.__runnable
-        if not r:
-            return
-        r.start()
+        if r:
+            r.start()
 
     def _stop_impl(self):
+        ret = super()._stop_impl()
         r = self.__runnable
-        if not r:
-            return
-        try:
-            r.stop()
-        except RuntimeError as e:
-            self.log_error(e)
-            return False
-        return True
+        if r:
+            try:
+                r.stop()
+            except RuntimeError as e:
+                self.log_error(e)
+                ret = False
+        return ret
 
     def _pause_impl(self):
+        ret = super()._pause_impl()
         r = self.__runnable
-        if not r:
-            return
-        try:
-            r.pause()
-        except RuntimeError as e:
-            self.log_error(e)
-            return False
-        return True
+        if r:
+            try:
+                r.pause()
+            except RuntimeError as e:
+                self.log_error(e)
+                ret = False
+        return ret
 
     def _resume_impl(self):
+        ret = super()._resume_impl()
         r = self.__runnable
-        if not r:
-            return
-        try:
-            r.resume()
-        except RuntimeError as e:
-            self.log_error(e)
-            return False
-        return True
+        if r:
+            try:
+                r.resume()
+            except RuntimeError as e:
+                self.log_error(e)
+                ret = False
+        return ret

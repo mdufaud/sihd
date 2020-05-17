@@ -7,6 +7,8 @@ from .App import *
 from .API import *
 from .Tools import *
 
+from .Core.ANamedObject import ANamedObject
+
 __version__ = "0.0.2"
 
 _traceback = None
@@ -42,3 +44,8 @@ def find_cls(name, **kwargs):
 
 def get_mem():
     return Tools.sys.memory.get_current_mem()
+
+""" Named objects """
+
+def clear_tree():
+    ANamedObject.clear_tree()

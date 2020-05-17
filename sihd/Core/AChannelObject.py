@@ -13,7 +13,6 @@ class AChannelObject(ANamedObject):
 
     def __init__(self, name="AChannelObject", **kwargs):
         super().__init__(name=name, **kwargs)
-        self.__channels = dict()
         self.__channel_links = dict()
 
     #
@@ -22,78 +21,55 @@ class AChannelObject(ANamedObject):
 
     def unlock_channels(self, channels=None):
         if channels is None:
-            channels = self.get_channels_list()
+            channels = self.get_channels()
         for channel in channels:
             if channel.is_locked():
                 channel.unlock()
 
     def lock_channels(self, channels=None):
         if channels is None:
-            channels = self.get_channels_list()
+            channels = self.get_channels()
         for channel in channels:
             if not channel.is_locked():
                 channel.lock()
-
-    def clear_channels(self):
-        self.__channels.clear()
 
     #
     # Getters
     #
 
-    def get_channels_list(self):
-        return [chan for name, chan in self.__channels.items()]
+    def get_channels(self):
+        children = self.get_children()
+        channels = [c for n, c in children.items()\
+                    if isinstance(c, Channel)]
+        return channels
 
     def get_channel(self, name):
-        return self.__channels.get(name, None)
+        child = self.get_child(name)
+        child = child if isinstance(child, Channel) else None
+        return child
 
     #
     # Links
     #
 
-    def on_channel_link(self, name, channel):
+    # override
+    def on_link(self, name, channel):
         """ Callback """
-        old_channel = self.get_channel(name)
-        if old_channel is not None:
-            if old_channel.is_multiprocess() and not channel.is_multiprocess():
+        if isinstance(channel, Channel):
+            old_channel = self.get_channel(name)
+            if old_channel is not None and old_channel.is_multiprocess()\
+                and not channel.is_multiprocess():
                 raise ValueError("Link is downgrading multiprocess "
                                     "channel to none for: " + name)
-        self.on_new_channel(item)
-
-    def link_channel(self, name: name, path_or_channel: Channel or str):
-        """ Add a channel link """
-        if isinstance(path_or_channel, str):
-            self.__channel_links[name] = path_or_channel
-        elif isinstance(path_or_channel, Channel):
-            self.on_channel_link(name, path_or_channel)
-
-    def process_channels_links(self):
-        """ Process all links """
-        for name, path in self.__channels_links.items():
-            item = self.get_channel_link(name)
-            if isinstance(item, Channel):
-                self.on_channel_link(name, item)
-            elif item is not None:
-                raise ValueError("Linked object is not a channel: {}"\
-                                    .format(item))
-            else:
-                raise ValueError("Linked object does not exists: {}"\
-                                    .format(path))
-
-    def _get_channel_link(self, name):
-        link = self.__channels_links.get(name, None)
-        if link is not None:
-            item = self.find_namedobject(link)
-            if item is not None:
-                return item
-        return None
+            self.on_new_channel(name, channel)
+        super().on_link(name, channel)
 
     #
     # Creation
     #
 
-    def on_new_channel(self, channel):
-        self.__channels[name] = channel 
+    def on_new_channel(self, name, channel):
+        pass
 
     def create_channel(self, name, **kwargs):
         """
@@ -119,9 +95,11 @@ class AChannelObject(ANamedObject):
         """
         if self.get_channel(name) is not None:
             raise ValueError("Already a channel named " + name);
-        link = self._get_channel_link(name)
-        if link is not None and isinstance(link, Channel):
-            return link
+        if self.is_linked(name):
+            link = self._get_link(name)
+            if link is not None and isinstance(link, Channel):
+                return link
+            return None
         type = kwargs.pop('type', None)
         if type is None:
             type = "default"
@@ -131,7 +109,7 @@ class AChannelObject(ANamedObject):
             raise ValueError("No such type for channel {}".format(type))
         kwargs['parent'] = self
         channel = method(name, **kwargs)
-        self.on_new_channel(channel)
+        self.on_new_channel(name, channel)
         return channel
 
     #

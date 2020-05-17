@@ -263,7 +263,7 @@ class Channel(AObservable, IObserver, ALoggable):
     #
 
     def _log_format(self, msg):
-        parent = self.get_namedobject_parent() or ""
+        parent = self.get_parent() or ""
         if parent:
             parent = "{}.".format(parent.get_name())
         return "Channel {0}{1}: {2}".format(parent, self.get_name(), msg)

@@ -71,7 +71,7 @@ class TestApp(sihd.App.SihdApp):
         if channel.get_name() == "eof":
             ended = channel.read()
             if ended:
-                channel.get_namedobject_parent().stop()
+                channel.get_parent().stop()
 
     def service_state_changed(self, service, stopped, paused):
         #Exit only if no gui attached

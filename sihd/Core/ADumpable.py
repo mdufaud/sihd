@@ -11,8 +11,8 @@ from .ANamedObject import ANamedObject
 
 class ADumpable(ANamedObject):
 
-    def __init__(self, name="ADumpable"):
-        super(ADumpable, self).__init__(name)
+    def __init__(self, name="ADumpable", **kwargs):
+        super().__init__(name, **kwargs)
         self.__file_magic = None
 
     def on_dump(self) -> dict:

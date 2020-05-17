@@ -512,7 +512,7 @@ class SihdApp(SihdService):
 
     def _pre_handle(self, channel):
         if channel.get_name() == "service_state":
-            service = channel.get_namedobject_parent()
+            service = channel.get_parent()
             stopped, paused = service.get_service_state()
             self.service_state_changed(service, stopped, paused)
             return True

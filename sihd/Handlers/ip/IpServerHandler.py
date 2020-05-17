@@ -56,12 +56,12 @@ class IpServerHandler(AHandler):
 
     def handle_service_ipreader(self, service):
         #IpReader outputs: Read directly from outputs
-        self.link_channel("packet_data", service.packet_data)
-        self.link_channel("client_info", service.client_info)
-        self.link_channel("server_msg", service.server_msg)
+        self.link("packet_data", service.packet_data)
+        self.link("client_info", service.client_info)
+        self.link("server_msg", service.server_msg)
         #IpReader inputs: Post directly to inputs
-        self.link_channel("server_action", service.server_action)
-        self.link_channel("packet_send", service.packet_send)
+        self.link("server_action", service.server_action)
+        self.link("packet_send", service.packet_send)
 
         self.__tcp = service.is_tcp()
         self.__udp = service.is_udp()
