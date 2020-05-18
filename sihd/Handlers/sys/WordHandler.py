@@ -5,7 +5,7 @@ from sihd.Handlers.AHandler import AHandler
 
 class WordHandler(AHandler):
 
-    def __init__(self, app=None, name="WordHandler"):
+    def __init__(self, name="WordHandler", app=None):
         super(WordHandler, self).__init__(app=app, name=name)
         self.set_default_conf({
             "delimiter": "",

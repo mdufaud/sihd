@@ -30,6 +30,8 @@ class AConfigurable(ANamedObject):
             Load configuration from either file or default/setted conf
             Calls setup implementation from children (_setup_impl)
         """
+        if self.__is_configured is True:
+            return True
         if config_obj is not None:
             self.set_conf_obj(config_obj)
         if self.__setup_section():

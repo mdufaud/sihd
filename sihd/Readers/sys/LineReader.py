@@ -13,7 +13,7 @@ class LineReader(AReader):
     
     files_read = {}  
 
-    def __init__(self, app=None, name="LineReader"):
+    def __init__(self, name="LineReader", app=None):
         super(LineReader, self).__init__(app=app, name=name)
         self.set_default_conf({
             "path": "/path/to/file",

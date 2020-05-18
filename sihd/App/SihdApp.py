@@ -25,6 +25,8 @@ from sihd.GUI.AGui import AGui
 from sihd.Interactors.AInteractor import AInteractor
 from sihd.Core.SihdService import SihdService
 
+from sihd.Core.ALoggable import ALoggable
+
 class SihdApp(SihdService):
 
     def __init__(self, name="SihdApp", *args, **kwargs):
@@ -154,7 +156,7 @@ class SihdApp(SihdService):
         self._conf_path = path
         obj = ConfigParser.ConfigParser()
         if not os.path.isfile(path):
-            self.say("Making conf file {}".format(self.get_conf_path()))
+            ALoggable.logger.info("Making conf file {}".format(self.get_conf_path()))
             self.__setup_logger_conf(obj)
         else:
             obj.read(path)

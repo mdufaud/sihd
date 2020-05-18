@@ -9,7 +9,7 @@ from sihd.Tools.pcap import PcapReader
 
 class PcapHandler(AHandler):
 
-    def __init__(self, app=None, name="PcapHandler"):
+    def __init__(self, name="PcapHandler", app=None):
         super(PcapHandler, self).__init__(app=app, name=name)
         self.set_default_conf({
             "runnable_type": "thread",

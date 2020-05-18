@@ -12,7 +12,7 @@ from .ShellInteractor import ShellInteractor
 
 class PipeInteractor(AInteractor):
 
-    def __init__(self, app=None, name="PipeInteractor"):
+    def __init__(self, name="PipeInteractor", app=None):
         super(PipeInteractor, self).__init__(app=app, name=name)
         global subprocess
         if subprocess is None:

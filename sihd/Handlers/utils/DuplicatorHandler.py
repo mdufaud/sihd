@@ -5,7 +5,7 @@ from sihd.Handlers.AHandler import AHandler
 
 class DuplicatorHandler(AHandler):
 
-    def __init__(self, app=None, name="DuplicatorHandler"):
+    def __init__(self, name="DuplicatorHandler", app=None):
         super(DuplicatorHandler, self).__init__(app=app, name=name)
         self.set_default_conf({})
         self.__channel_lst = set()

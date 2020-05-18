@@ -6,7 +6,7 @@ from sihd.Core.IAppContainer import IAppContainer
 
 class AHandler(SihdRunnableService, IAppContainer):
 
-    def __init__(self, app=None, name="AHandler", **kwargs):
+    def __init__(self, name="AHandler", app=None, **kwargs):
         IAppContainer.__init__(self)
         super().__init__(name, **kwargs)
         if app:

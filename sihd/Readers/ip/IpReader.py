@@ -19,7 +19,7 @@ from sihd.Readers.AReader import AReader
 
 class IpReader(AReader):
     
-    def __init__(self, app=None, name="IpReader"):
+    def __init__(self, name="IpReader", app=None):
         super(IpReader, self).__init__(app=app, name=name)
         self._clients = {}
         self._socket = None

@@ -48,7 +48,8 @@ class PcapTestHandler(AHandler):
 class TestPcap(unittest.TestCase):
 
     def setUp(self):
-        pass
+        print()
+        sihd.clear_tree()
 
     def tearDown(self):
         pass
@@ -109,10 +110,10 @@ class TestPcap(unittest.TestCase):
         self.assertTrue(handler.setup())
         self.assertTrue(duplicator.setup())
 
-        handler.link_channel('hdr', reader.pcap_header)
-        handler.link_channel('infos', reader.packet_info)
+        handler.link('hdr', reader.pcap_header)
+        handler.link('infos', reader.packet_info)
 
-        duplicator.link_channel("input", reader.packet)
+        duplicator.link("input", reader.packet)
         duplicator.duplicate_to(saver.save)
         duplicator.duplicate_to(handler.pkt)
 
@@ -142,7 +143,7 @@ class TestPcap(unittest.TestCase):
         self.assertTrue(saver.stop())
         
         logger.info("Reading dump with another handler")
-        saver = sihd.Handlers.PcapHandler()
+        saver = sihd.Handlers.PcapHandler('PcapHandler2')
         saver.set_conf({
             "save_raw": True,
             "save_type": 'list',

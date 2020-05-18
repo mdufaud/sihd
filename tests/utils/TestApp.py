@@ -30,12 +30,12 @@ class TestApp(sihd.App.SihdApp):
         if args.time:
             self.set_timed_loop(args.time)
         #Setting up LineReader
-        reader = sihd.Readers.sys.LineReader(self, "LineReader" + self._test)
+        reader = sihd.Readers.sys.LineReader("LineReader" + self._test, self)
         #Set configuration for this reader
         self._configure_reader(reader, args)
         #Will be notified of state change
         #Setting up WordHandler
-        handler = sihd.Handlers.sys.WordHandler(self, "WordHandler" + self._test)
+        handler = sihd.Handlers.sys.WordHandler("WordHandler" + self._test, self)
         #Set configuration for this handler
         self._configure_handler(handler)
         #Remember for further access those services
@@ -48,8 +48,7 @@ class TestApp(sihd.App.SihdApp):
         handler = self._word_handler
         self.add_state_observer(reader)
         reader.eof.add_observer(self)
-        handler.link_channel("input", reader.output)
-        #reader.link_channel("output", handler.input)
+        handler.link("input", reader.output)
         return True
 
     def build_args(self, parser):

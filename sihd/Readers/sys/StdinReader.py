@@ -13,7 +13,7 @@ from sihd.Readers.AReader import AReader
 
 class StdinReader(AReader):
 
-    def __init__(self, app=None, name="StdinReader"):
+    def __init__(self, name="StdinReader", app=None):
         super(StdinReader, self).__init__(app=app, name=name)
         self.set_default_conf({
             "question": "",

@@ -12,7 +12,7 @@ from sihd.Interactors.AInteractor import AInteractor
 
 class ShellInteractor(AInteractor):
 
-    def __init__(self, app=None, name="ShellInteractor"):
+    def __init__(self, name="ShellInteractor", app=None):
         super(ShellInteractor, self).__init__(app=app, name=name)
         global subprocess
         if subprocess is None:

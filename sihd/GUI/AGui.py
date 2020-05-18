@@ -12,7 +12,7 @@ class AGui(SihdRunnableService, IAppContainer):
         read_channels_input() by yourself.
     """
 
-    def __init__(self, app=None, name="AGui", **kwargs):
+    def __init__(self, name="AGui", app=None, **kwargs):
         self.__runnable = None
         IAppContainer.__init__(self)
         super().__init__(name, **kwargs)

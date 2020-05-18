@@ -17,7 +17,7 @@ from sihd.Readers.ip.IpReader import IpReader
 
 class IpServerHandler(AHandler):
 
-    def __init__(self, app=None, name="IpServerHandler"):
+    def __init__(self, name="IpServerHandler", app=None):
         super(IpServerHandler, self).__init__(app=app, name=name)
         self._clients = {}
         self.set_default_conf({

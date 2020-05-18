@@ -16,7 +16,7 @@ from sihd import Core
 
 class ICursesGui(AGui):
 
-    def __init__(self, app=None, name="ICursesGui"):
+    def __init__(self, name="ICursesGui", app=None):
         global locale
         if locale is None:
             import locale

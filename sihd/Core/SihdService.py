@@ -112,9 +112,11 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def _setup_impl(self):
         ret = super()._setup_impl()
         ret = ret and self.on_setup()
-        self.__create_channel_state()
+        if ret:
+            self.__create_channel_state()
         ret = ret and self._make_channels()
-        self.service_state.task_done()
+        if ret:
+            self.service_state.task_done()
         ret = ret and self.post_setup()
         return ret
 

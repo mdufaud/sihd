@@ -17,6 +17,7 @@ class TestShell(unittest.TestCase):
 
     def setUp(self):
         print()
+        sihd.clear_tree()
 
     def tearDown(self):
         pass
@@ -110,14 +111,14 @@ class TestShell(unittest.TestCase):
         cmd1 = "echo Hello World"
         cmd2 = "wc -c"
         # First cmd - Piping result
-        itrc1 = sihd.Interactors.sys.ShellInteractor()
+        itrc1 = sihd.Interactors.sys.ShellInteractor("itrc1")
         itrc1.set_conf({
             "cmd": cmd1,
             "pipe": "stdout"
         })
         itrc1.setup()
         # Second cmd
-        itrc2 = sihd.Interactors.sys.ShellInteractor()
+        itrc2 = sihd.Interactors.sys.ShellInteractor("itrc2")
         itrc2.set_conf({
             "cmd": cmd2,
             "pipe": "stdout",
@@ -156,14 +157,14 @@ class TestShell(unittest.TestCase):
         cmd1 = "ls -l"
         cmd2 = "/no_file"
         # First cmd - Piping result
-        itrc1 = sihd.Interactors.sys.ShellInteractor()
+        itrc1 = sihd.Interactors.sys.ShellInteractor("itrc1")
         itrc1.set_conf({
             "cmd": cmd1,
             "pipe": "stdout"
         })
         itrc1.setup()
         # Second cmd
-        itrc2 = sihd.Interactors.sys.ShellInteractor()
+        itrc2 = sihd.Interactors.sys.ShellInteractor("itrc2")
         itrc2.set_conf({
             "cmd": cmd2,
         })

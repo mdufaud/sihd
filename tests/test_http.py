@@ -32,6 +32,7 @@ class TestHandler(AHandler):
 class TestHttp(unittest.TestCase):
 
     def setUp(self):
+        print()
         sihd.clear_tree()
 
     def tearDown(self):
@@ -89,9 +90,7 @@ class TestHttp(unittest.TestCase):
     def test_channels(self):
         logger.info("Testing channels well being")
         url = "https://www.google.com"
-        channel_test = sihd.ChannelQueue(name='test', mp=True)
         interactor = HttpInteractor()
-        interactor.link("result", channel_test.get_path())
         interactor.set_conf('runnable_type', 'process')
         try:
             self.assertTrue(interactor.setup())
@@ -99,6 +98,8 @@ class TestHttp(unittest.TestCase):
             #/dev/shm
             logger.warning("Test cannot continue as your device has no shared memory capabilities")
             return
+        channel_test = sihd.ChannelQueue(name='test', mp=True)
+        interactor.link("result", channel_test)
         self.assertTrue(interactor.start())
         time.sleep(0.1)
         interactor.new_interaction.write(url)

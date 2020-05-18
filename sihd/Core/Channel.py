@@ -56,7 +56,7 @@ def register_channel_object(name, cls):
 
 class Channel(AObservable, IObserver, ALoggable):
 
-    def __init__(self, mp=False, parent=None, name="Channel",
+    def __init__(self, name="Channel", mp=False, parent=None,
                     block=True, timeout=0.01, log=True,
                     default=None, timestamp=False):
         super().__init__(name, parent=parent)

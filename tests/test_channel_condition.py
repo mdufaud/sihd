@@ -17,7 +17,8 @@ from sihd.Core import RunnableProcess
 class TestChannelCondition(unittest.TestCase):
 
     def setUp(self):
-        pass
+        print()
+        sihd.clear_tree()
 
     def tearDown(self):
         pass

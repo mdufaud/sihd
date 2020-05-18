@@ -6,7 +6,7 @@ from sihd.Core.IAppContainer import IAppContainer
 
 class AInteractor(SihdRunnableService, IAppContainer):
 
-    def __init__(self, app=None, name="AInteractor", **kwargs):
+    def __init__(self, name="AInteractor", app=None, **kwargs):
         IAppContainer.__init__(self)
         super().__init__(name, **kwargs)
         self.__interaction = None

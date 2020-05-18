@@ -52,7 +52,8 @@ class TestClassPoint(object):
 class TestChannelObject(unittest.TestCase):
 
     def setUp(self):
-        pass
+        print()
+        sihd.clear_tree()
 
     def tearDown(self):
         pass

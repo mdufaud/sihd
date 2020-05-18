@@ -20,7 +20,8 @@ from array import array
 class TestChannelArray(unittest.TestCase):
 
     def setUp(self):
-        pass
+        print()
+        sihd.clear_tree()
 
     def tearDown(self):
         pass
@@ -61,25 +62,29 @@ class TestChannelArray(unittest.TestCase):
     def test_channel_int(self):
         print()
         default = [1, 2, 3]
-        channel = ChannelArray(default=default, ctype='i', size=len(default))
+        channel = ChannelArray(name="chan", default=default, ctype='i',
+                                size=len(default))
         self.do_array(channel, default)
 
         if utils.is_multiprocessing():
             print()
             default = [1, 2, 3]
-            channel = ChannelArray(default=default, ctype='i', size=len(default), mp=True)
+            channel = ChannelArray(name="mpchan", default=default, ctype='i',
+                                    size=len(default), mp=True)
             self.do_array(channel, default)
 
     def test_channel_double(self):
         print()
         default = [1.2, 2.3, 3.4]
-        channel = ChannelArray(default=default, ctype='d', size=len(default))
+        channel = ChannelArray(name="chan", default=default, ctype='d',
+                                size=len(default))
         self.do_array(channel, default)
 
         if utils.is_multiprocessing():
             print()
             default = [1.2, 2.3, 3.4]
-            channel = ChannelArray(default=default, ctype='d', size=len(default), mp=True)
+            channel = ChannelArray(name="mpchan", default=default,
+                                    ctype='d', size=len(default), mp=True)
             self.do_array(channel, default)
 
     def do_byte(self, channel, default):
@@ -108,12 +113,13 @@ class TestChannelArray(unittest.TestCase):
     def test_channel_byte_array(self):
         print()
         default = b'hello 1!!'
-        channel = ChannelArray(ctype='b', default=default, size=10)
+        channel = ChannelArray(name="chan", ctype='b', default=default, size=10)
         self.do_byte(channel, default)
 
         if utils.is_multiprocessing():
             print()
-            channel = ChannelArray(ctype='b', default=default, size=10, mp=True)
+            channel = ChannelArray(name="mpchan", ctype='b', default=default,
+                                    size=10, mp=True)
             self.do_byte(channel, default)
 
 if __name__ == '__main__':

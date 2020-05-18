@@ -15,7 +15,7 @@ class PcapReader(AReader):
     
     files_read = {}  
 
-    def __init__(self, app=None, name="PcapReader"):
+    def __init__(self, name="PcapReader", app=None):
         super(PcapReader, self).__init__(app=app, name=name)
         self.set_default_conf({
             "path": "/path/to/file",

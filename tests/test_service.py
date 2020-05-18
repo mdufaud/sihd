@@ -55,6 +55,7 @@ class PollingService(SihdRunnableService):
 class TestServices(unittest.TestCase):
 
     def setUp(self):
+        sihd.clear_tree()
         print()
 
     def tearDown(self):
@@ -96,27 +97,27 @@ class TestServices(unittest.TestCase):
         self.assertTrue(service.reset())
 
     def test_iservice(self):
-        service = sihd.Core.SihdService()
+        service = sihd.Core.SihdService("service")
         self.do_life_cycle(service)
-        service = sihd.Core.SihdRunnableService()
+        service = sihd.Core.SihdRunnableService("runnable_service")
         self.do_life_cycle(service, thread=True)
         if multiprocessing:
-            service = sihd.Core.SihdRunnableService()
+            service = sihd.Core.SihdRunnableService("mp_runnable_service")
             service.set_conf("runnable_type", "process")
             self.do_life_cycle(service, process=True)
 
     def test_thread_in_process(self):
         #Thread 1
-        inc = IncService()
+        inc = IncService("inc1")
         #Thread 2
-        inc2 = IncService()
+        inc2 = IncService("inc2")
         #Proc 1
-        poll = PollingService()
+        poll = PollingService("poll")
         self.assertTrue(inc.setup())
         self.assertTrue(inc2.setup())
         self.assertTrue(poll.setup())
         #linking thread output to process input
-        inc.link_channel("output", poll.input)
+        inc.link("output", poll.input)
         #Start thread 1
         self.assertTrue(inc.start())
         time.sleep(0.1)

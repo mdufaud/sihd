@@ -10,7 +10,7 @@ from sihd.Interactors.AInteractor import AInteractor
 
 class HttpInteractor(AInteractor):
 
-    def __init__(self, app=None, name="HttpInteractor"):
+    def __init__(self, name="HttpInteractor", app=None):
         super(HttpInteractor, self).__init__(app=app, name=name)
         global json
         if json is None:

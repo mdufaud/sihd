@@ -67,6 +67,8 @@ class TestMultiprocess(unittest.TestCase):
     def setUp(self):
         self.__beg = time.time()
         self.sleep = 2
+        print()
+        sihd.clear_tree()
 
     def tearDown(self):
         logger.info("Test took {:.3f} s to complete".format(time.time() - self.__beg))
@@ -100,8 +102,8 @@ class TestMultiprocess(unittest.TestCase):
         self.assertTrue(reader1.setup())
         self.assertTrue(reader2.setup())
 
-        reader1.link_channel("output", handler.input)
-        reader2.link_channel("output", handler.input)
+        reader1.link("output", handler.input)
+        reader2.link("output", handler.input)
         #reader1.output.add_observer(handler.input)
         #reader2.output.add_observer(handler.input)
 
@@ -134,9 +136,9 @@ class TestMultiprocess(unittest.TestCase):
         self.assertTrue(handler3.setup())
         self.assertTrue(reader.setup())
 
-        handler1.link_channel("input", reader.output)
-        handler2.link_channel("input", reader.output)
-        handler3.link_channel("input", reader.output)
+        handler1.link("input", reader.output)
+        handler2.link("input", reader.output)
+        handler3.link("input", reader.output)
         #reader.output.add_observer(handler1.input)
         #reader.output.add_observer(handler2.input)
         #reader.output.add_observer(handler3.input)
@@ -167,7 +169,7 @@ class TestMultiprocess(unittest.TestCase):
         self.assertTrue(handler.setup())
         self.assertTrue(reader.setup())
 
-        handler.link_channel("input", reader.output)
+        handler.link("input", reader.output)
         #reader.output.add_observer(handler.input)
 
         self.assertTrue(handler.start())
@@ -187,7 +189,7 @@ class TestMultiprocess(unittest.TestCase):
         self.assertTrue(reader.setup())
         self.assertTrue(handler.setup())
 
-        handler.link_channel("input", reader.output)
+        handler.link("input", reader.output)
         #reader.output.add_observer(handler.input)
 
         self.assertTrue(handler.start())
@@ -211,7 +213,7 @@ class TestMultiprocess(unittest.TestCase):
         self.assertTrue(handler.setup())
         self.assertTrue(reader.setup())
 
-        handler.link_channel("input", reader.output)
+        handler.link("input", reader.output)
         #reader.output.add_observer(handler.input)
 
         self.assertTrue(handler.start())

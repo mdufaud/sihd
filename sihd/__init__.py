@@ -7,24 +7,28 @@ from .App import *
 from .API import *
 from .Tools import *
 
-from .Core.ANamedObject import ANamedObject
+from .Core.ANamedObjectContainer import ANamedObjectContainer
+from .Core.ALoggable import ALoggable
+from .Core.Factory import Factory
 
 __version__ = "0.0.2"
 
 _traceback = None
 
+logger = ALoggable.logger
+
 """ Log fast setup """
 
 def set_log(level='info', stream=None):
-    Core.ALoggable.add_stream_handler(level=level, stream=stream)
-    Core.ALoggable.set_color(True)
-    return Core.ALoggable.logger
+    ALoggable.add_stream_handler(level=level, stream=stream)
+    ALoggable.set_color(True)
+    return ALoggable.logger
 
 def set_log_color(activate):
-    Core.ALoggable.set_color(activate)
+    ALoggable.set_color(activate)
 
 def get_log():
-    return Core.ALoggable.logger
+    return ALoggable.logger
 
 def get_traceback():
     global _traceback
@@ -32,13 +36,13 @@ def get_traceback():
         import traceback as _traceback
     return _traceback.format_exc()
 
-""" Factory fast usage """
+""" Factory """
 
 def get_cls(name, **kwargs):
-    return Core.Factory.get(name, **kwargs)
+    return Factory.get(name, **kwargs)
 
 def find_cls(name, **kwargs):
-    return Core.Factory.find(name, **kwargs)
+    return Factory.find(name, **kwargs)
 
 """ Resources """
 
@@ -47,5 +51,14 @@ def get_mem():
 
 """ Named objects """
 
+def add_container(name, parent=None):
+    return ANamedObjectContainer(name, parent)
+
+def find(path):
+    return ANamedObjectContainer.root_find(path)
+
 def clear_tree():
-    ANamedObject.clear_tree()
+    ANamedObjectContainer.clear_tree()
+
+def delete_from_tree(self, path):
+    ANamedObjectContainer.delete_from_tree(path)

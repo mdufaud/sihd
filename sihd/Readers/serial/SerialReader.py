@@ -13,7 +13,7 @@ from sihd.Readers.AReader import AReader
 
 class SerialReader(AReader):
     
-    def __init__(self, app=None, name="SerialReader"):
+    def __init__(self, name="SerialReader", app=None):
         global serial
         if serial is None:
             import serial

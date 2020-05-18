@@ -25,6 +25,7 @@ class TestConfig(unittest.TestCase):
     def setUp(self):
         self.config = ConfigParser.ConfigParser()
         print()
+        sihd.clear_tree()
 
     def tearDown(self):
         time.sleep(0.01)

@@ -6,10 +6,10 @@
 #
 import time
 
-from .ANamedObject import ANamedObject
+from .ANamedObjectContainer import ANamedObjectContainer
 from .Channel import *
 
-class AChannelObject(ANamedObject):
+class AChannelObject(ANamedObjectContainer):
 
     def __init__(self, name="AChannelObject", **kwargs):
         super().__init__(name=name, **kwargs)

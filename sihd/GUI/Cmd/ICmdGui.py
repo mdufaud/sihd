@@ -16,7 +16,7 @@ class ICmdGui(cmd.Cmd, AGui):
     prompt = '?> '
     intro = None
 
-    def __init__(self, app=None, name="ICmdGui"):
+    def __init__(self, name="ICmdGui", app=None):
         cmd.Cmd.__init__(self)
         AGui.__init__(self, app=app, name=name)
         self.__completion = {}

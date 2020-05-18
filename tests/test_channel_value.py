@@ -19,7 +19,8 @@ from sihd.Core.Channel import *
 class TestChannelValue(unittest.TestCase):
 
     def setUp(self):
-        pass
+        print()
+        sihd.clear_tree()
 
     def tearDown(self):
         pass

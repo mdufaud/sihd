@@ -10,7 +10,7 @@ from sihd.Interactors.AInteractor import AInteractor
 
 class IpInteractor(AInteractor):
 
-    def __init__(self, app=None, name="IpInteractor"):
+    def __init__(self, name="IpInteractor", app=None):
         super(IpInteractor, self).__init__(app=app, name=name)
         self.set_default_conf({
             "port": 42042,
