@@ -6,9 +6,11 @@ from sihd.Core.IAppContainer import IAppContainer
 
 class AHandler(SihdRunnableService, IAppContainer):
 
-    def __init__(self, name="AHandler", app=None, **kwargs):
+    def __init__(self, name="AHandler", app=None, parent=None, **kwargs):
         IAppContainer.__init__(self)
-        super().__init__(name, **kwargs)
+        if app and not parent:
+            parent = app
+        super().__init__(name, parent=parent, **kwargs)
         if app:
             self.set_app(app)
         self.set_default_conf({
@@ -33,8 +35,10 @@ class AHandler(SihdRunnableService, IAppContainer):
     # SihdService
     #
 
+    """
     def handle(self, channel):
         raise NotImplementedError("handle not implemented")
+    """
 
     #
     # IAppContainer
@@ -42,5 +46,4 @@ class AHandler(SihdRunnableService, IAppContainer):
 
     def set_app(self, app):
         super().set_app(app)
-        self.set_parent(app)
         app.add_handler(self)

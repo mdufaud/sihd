@@ -78,11 +78,11 @@ class TestIpServer(unittest.TestCase):
         self.assertTrue(ip_handler.start())
         interactor = get_interactor()
         try:
-            time.sleep(1)
+            time.sleep(0.1)
             interactor.start()
-            time.sleep(2)
+            time.sleep(1.5)
             interactor.stop()
-            time.sleep(1)
+            time.sleep(0.1)
         except Exception as e:
             interactor.stop()
             logger.error("{}".format(e))

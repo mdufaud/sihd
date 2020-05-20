@@ -39,7 +39,7 @@ class AChannelObject(ANamedObjectContainer):
 
     def get_channels(self):
         children = self.get_children()
-        channels = [c for n, c in children.items()\
+        channels = [c for c in children.values()\
                     if isinstance(c, Channel)]
         return channels
 

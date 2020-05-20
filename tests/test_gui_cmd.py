@@ -16,7 +16,7 @@ from sihd.App.SihdApp import SihdApp
 
 class SimpleCmd(ICmdGui):
 
-    def __init__(self, app=None, name="SimpleCmd"):
+    def __init__(self, name="SimpleCmd", app=None):
         super(SimpleCmd, self).__init__(app=app, name=name)
         self.set_intro("Welcome to SimpleCmd")
         self.__complete1 = ["say", 'yell', 'tell']

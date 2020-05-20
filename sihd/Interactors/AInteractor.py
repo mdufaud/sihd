@@ -6,9 +6,11 @@ from sihd.Core.IAppContainer import IAppContainer
 
 class AInteractor(SihdRunnableService, IAppContainer):
 
-    def __init__(self, name="AInteractor", app=None, **kwargs):
+    def __init__(self, name="AInteractor", app=None, parent=None, **kwargs):
         IAppContainer.__init__(self)
-        super().__init__(name, **kwargs)
+        if app and not parent:
+            parent = app
+        super().__init__(name, parent=parent, **kwargs)
         self.__interaction = None
         self.add_channel_input("new_interaction", type="queue")
         self.add_channel_output("result")
@@ -50,7 +52,6 @@ class AInteractor(SihdRunnableService, IAppContainer):
 
     def set_app(self, app):
         super().set_app(app)
-        self.set_parent(app)
         app.add_interactor(self)
 
     #

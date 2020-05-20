@@ -16,7 +16,7 @@ from sihd.Handlers.AHandler import AHandler
 
 class StdinHandler(AHandler):
 
-    def __init__(self, reader, app=None, name="StdinHandler"):
+    def __init__(self, reader, name="StdinHandler", app=None):
         super(StdinHandler, self).__init__(app=app, name=name)
         self._step = 0
         #self.add_channel_input("input", type='queue')

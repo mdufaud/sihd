@@ -29,30 +29,30 @@ class ALoggable(ANamedObject):
     def _set_log(self, activate):
         self.__can = activate
 
-    def _log_format(self, msg):
-        return "{0}: {1}".format(self.get_name(), msg)
+    def _log_format(self, *msg):
+        return "{0}: {1}".format(self.get_name(), ' '.join(msg))
 
-    def log_debug(self, msg):
+    def log_debug(self, *msg):
         if self.__can:
-            self.logger.debug(self._log_format(msg))
+            self.logger.debug(self._log_format(*msg))
 
-    def log_info(self, msg):
+    def log_info(self, *msg):
         if self.__can:
-            self.logger.info(self._log_format(msg))
+            self.logger.info(self._log_format(*msg))
 
-    def log_warning(self, msg):
+    def log_warning(self, *msg):
         if self.__can:
-            self.logger.warning(self._log_format(msg))
+            self.logger.warning(self._log_format(*msg))
         ALoggable.__warning_count += 1
 
-    def log_error(self, msg):
+    def log_error(self, *msg):
         if self.__can:
-            self.logger.error(self._log_format(msg))
+            self.logger.error(self._log_format(*msg))
         ALoggable.__error_count += 1
 
-    def log_critical(self, msg):
+    def log_critical(self, *msg):
         if self.__can:
-            self.logger.critical(self._log_format(msg))
+            self.logger.critical(self._log_format(*msg))
         ALoggable.__critical_count += 1
 
     @staticmethod

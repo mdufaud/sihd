@@ -18,7 +18,7 @@ from sihd.Handlers.AHandler import AHandler
 
 class TestHandler(AHandler):
 
-    def __init__(self, app=None, name="TestHandler"):
+    def __init__(self, name="TestHandler", app=None):
         super(TestHandler, self).__init__(app=app, name=name)
         self.add_channel_input("input")
 
@@ -82,9 +82,13 @@ class TestHttp(unittest.TestCase):
         })
         self.assertTrue(interactor.setup())
         self.assertTrue(interactor.start())
-        time.sleep(1)
-        self.assertTrue(interactor.result.read() is not None)
+        time.sleep(0.5)
+        req_http = interactor.result.read()
+        if req_http is None:
+            time.sleep(0.5)
+            req_http = interactor.result.read()
         self.assertTrue(interactor.stop())
+        self.assertTrue(req_http is not None)
 
     @unittest.skipIf(utils.is_multiprocessing() is False, "No support for multiprocess")
     def test_channels(self):
@@ -103,9 +107,13 @@ class TestHttp(unittest.TestCase):
         self.assertTrue(interactor.start())
         time.sleep(0.1)
         interactor.new_interaction.write(url)
-        time.sleep(2)
+        time.sleep(1)
+        req_http = channel_test.read()
+        if req_http is None:
+            time.sleep(1)
+            req_http = channel_test.read()
         self.assertTrue(interactor.stop())
-        self.assertTrue(channel_test.read() is not None)
+        self.assertTrue(req_http is not None)
 
 if __name__ == '__main__':
     unittest.main()

@@ -24,6 +24,7 @@ class PipeInteractor(AInteractor):
             "cmd1": "/your/cmd --arg",
             "cmd2": "/your/cmd --arg",
         })
+        self.allow_dynamic_conf(True)
         self.__interactor_lst = []
         self.__idx = 0
         self.add_channel_input("stdin", type='queue')

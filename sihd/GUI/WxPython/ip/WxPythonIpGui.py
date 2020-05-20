@@ -21,7 +21,7 @@ except ImportError:
 
 class WxPythonIpGui(AWxPythonGui):
 
-    def __init__(self, app=None, name="WxPythonIpGui"):
+    def __init__(self, name="WxPythonIpGui", app=None):
         global wx
         if wx is None:
             import wx

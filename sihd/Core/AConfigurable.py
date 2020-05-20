@@ -20,6 +20,7 @@ class AConfigurable(ANamedObject):
         self.__conf_obj = None
         self.__has_section = False
         self.__is_configured = False
+        self.__dynamic_conf = False
 
     #
     # Entry point for object configuration
@@ -80,9 +81,24 @@ class AConfigurable(ANamedObject):
             val = self.get_default_conf(key)
         return val
 
+    def allow_dynamic_conf(self, active):
+        self.__dynamic_conf = active
+
     #
     # Main setters
     #
+
+    def set_conf_from_dict(self, dic, force=False):
+        if not self.__dynamic_conf:
+            bad_keys = [k for k in dic.keys() if k not in self.__default_conf]
+            if bad_keys:
+                raise KeyError("{} keys not in configuration: {}"\
+                                .format(self.get_name(), bad_keys))
+        self.__conf.update(dic)
+        if force is True:
+            for k, v in dic.items():
+                self.set_conf_file(k, v, force=force)
+        return True
 
     def set_conf(self, key, value=None, force=False):
         """
@@ -92,11 +108,11 @@ class AConfigurable(ANamedObject):
             @param value can be anything - default: None
         """
         if isinstance(key, dict):
-            self.__conf.update(key)
-            if force is True:
-                for k, v in key.items():
-                    self.set_conf_file(k, v, force=force)
-            return True
+            return self.set_conf_from_dict(key, force=force)
+        if not self.__dynamic_conf:
+            if key not in self.__default_conf:
+                raise KeyError("{} key not in configuration: {}"\
+                                .format(self.get_name(), key))
         self.__conf[key] = value
         if force is True:
             return self.set_conf_file(key, value, force=force)

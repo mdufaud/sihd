@@ -56,7 +56,7 @@ class TestApp(unittest.TestCase):
         ])
         if app.setup_app() is False:
             sys.exit(1)
-        app.start_all()
+        app.start()
         app.loop(timeout=5)
         app.stop()
         #os.remove(app.get_conf_path())

@@ -23,7 +23,7 @@ class TestApp(sihd.App.SihdApp):
         ret = super().on_setup()
         return ret
 
-    def on_app_setup(self):
+    def build_services(self):
         #Get args for app
         args = self.parse_args()
         #If time args has been set, will set a limited app loop
@@ -43,7 +43,7 @@ class TestApp(sihd.App.SihdApp):
         self._line_reader = reader
         return True
 
-    def link_channels(self):
+    def on_init(self):
         reader = self._line_reader
         handler = self._word_handler
         self.add_state_observer(reader)

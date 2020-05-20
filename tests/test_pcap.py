@@ -24,26 +24,28 @@ class PcapTestHandler(AHandler):
         self.add_channel_input("infos", type='queue')
         self.add_channel_input("pkt", type='queue')
         self.test = test
+        self.once = False
 
     def handle_service_pcapreader(self, service):
+        # Fill our channels
         service.pcap_header.add_observer(self.hdr)
-        service.packet.add_observer(self.pkt)
         service.packet_info.add_observer(self.infos)
+        # Callback when packet is read on us
+        service.packet.add_observer(self)
 
-    def handle(self, channel):
-        if channel == self.infos:
-            self.last_pkt_info = channel.read()
-        elif channel == self.pkt:
-            pkt = channel.read()
-            s = "data: " + str(pkt[:10])
-            info = self.last_pkt_info
-            if info.cap_len > 10:
-                s += "..."
-            print(info, s)
-            self.test.assertEqual(len(pkt), info.cap_len)
-            self.received.append(pkt.decode())
-        elif channel == self.hdr:
-            print("Pcap Header:", channel.read())
+    def on_notify(self, channel):
+        if not self.once:
+            print("Pcap Header:", self.hdr.read())
+            self.once = True
+        self.last_pkt_info = self.infos.read()
+        pkt = channel.read()
+        s = "data: " + str(pkt[:10])
+        info = self.last_pkt_info
+        if info.cap_len > 10:
+            s += "..."
+        print(info, s)
+        self.test.assertEqual(len(pkt), info.cap_len)
+        self.received.append(pkt.decode())
 
 class TestPcap(unittest.TestCase):
 
@@ -66,17 +68,16 @@ class TestPcap(unittest.TestCase):
         lst = ['hello', 'world', 'are', 'you', 'alive']
         self.make_pcap(pcap_path, lst)
         reader = sihd.Readers.PcapReader()
-        #reader.set_conf("path", pcap_path)
         self.assertTrue(reader.setup())
         reader.path.write(pcap_path)
         handler = PcapTestHandler(self)
-        reader.setup()
+        handler.set_conf('runnable_type', 'none')
         handler.setup()
         handler.handle_service(reader)
         logger.info("###### Setup done. Starting ######")
         self.assertTrue(handler.start())
         self.assertTrue(reader.start())
-        time.sleep(1)
+        time.sleep(0.5)
         self.assertTrue(reader.stop())
         self.assertTrue(handler.stop())
         self.assertTrue(len(handler.received) > 0)
@@ -124,7 +125,7 @@ class TestPcap(unittest.TestCase):
         self.assertTrue(handler.start())
         self.assertTrue(saver.start())
         self.assertTrue(reader.start())
-        time.sleep(1)
+        time.sleep(0.5)
         self.assertTrue(reader.stop())
         self.assertTrue(saver.pause())
         self.assertTrue(handler.stop())

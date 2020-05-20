@@ -19,7 +19,6 @@ class TestChannelString(unittest.TestCase):
 
     def setUp(self):
         print()
-        sihd.clear_tree()
 
     def tearDown(self):
         pass

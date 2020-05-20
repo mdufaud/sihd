@@ -6,9 +6,11 @@ from sihd.Core.IAppContainer import IAppContainer
 
 class AReader(SihdRunnableService, IAppContainer):
 
-    def __init__(self, name="AReader", app=None, **kwargs):
+    def __init__(self, name="AReader", app=None, parent=None, **kwargs):
         IAppContainer.__init__(self)
-        super().__init__(name, **kwargs)
+        if app and not parent:
+            parent = app
+        super().__init__(name, parent=parent, **kwargs)
         if app:
             self.set_app(app)
         self.set_default_conf({
@@ -38,5 +40,4 @@ class AReader(SihdRunnableService, IAppContainer):
 
     def set_app(self, app):
         super().set_app(app)
-        self.set_parent(app)
         app.add_reader(self)

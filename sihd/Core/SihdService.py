@@ -35,6 +35,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         self.__channels_output = list()
         self.__todo_ichan = list()
         self.__todo_ochan = list()
+        self.__todo_chan = list()
         self.__channel_notif = True
         self.__channels_mp = False
         # Time
@@ -112,11 +113,9 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def _setup_impl(self):
         ret = super()._setup_impl()
         ret = ret and self.on_setup()
-        if ret:
-            self.__create_channel_state()
+        self.__create_channel_state()
         ret = ret and self._make_channels()
-        if ret:
-            self.service_state.task_done()
+        self.service_state.task_done()
         ret = ret and self.post_setup()
         return ret
 
@@ -287,17 +286,17 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         if not self.__stopped and not self.stop():
             return False
         if self._reset_impl() is True:
-            self.clear_channels()
-            self.on_reset()
+            self.remove_children()
+            self.__init = False
             self.__stopped = True
             self.__paused = False
             self._service_state_changed()
+            self.on_reset()
             self._set_unconfigured()
         return self.__stopped and not self.__paused
 
     def _reset_impl(self):
-        self.log_debug("Called a non implemented function: reset")
-        return False
+        return True
 
     def on_reset(self):
         pass
@@ -332,6 +331,9 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def add_channel_output(self, name, **kwargs):
         self.__todo_ochan.append((name, kwargs))
 
+    def add_channel(self, name, **kwargs):
+        self.__todo_chan.append((name, kwargs))
+
     def create_output_channel(self, name, **kwargs):
         channel = self.create_channel(name, **kwargs)
         if channel and self.set_channel_output(channel):
@@ -347,10 +349,13 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def _make_channels(self):
         for name, dic in self.__todo_ichan:
             self.create_input_channel(name, **dic)
-        self.__todo_ichan = []
+        #self.__todo_ichan = []
         for name, dic in self.__todo_ochan:
             self.create_output_channel(name, **dic)
-        self.__todo_ochan = []
+        #self.__todo_ochan = []
+        for name, dic in self.__todo_chan:
+            self.create_channel(name, **dic)
+        #self.__todo_chan = []
         return True
 
     def get_channels_input(self):
@@ -371,10 +376,10 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def set_channel_output(self, channel, name=None, replace=False):
         if name is None:
             name = channel.get_name()
-        input_lst = self.__channels_input
-        if channel in input_lst:
-            raise RuntimeError("Channel {} already in inputs".format(channel))
-        input_lst.append(channel)
+        output_lst = self.__channels_output
+        if channel in output_lst:
+            raise RuntimeError("Channel {} already in outputs".format(channel))
+        output_lst.append(channel)
         return True
 
     #override
@@ -410,4 +415,3 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         name = "service_state"
         channel = self.create_channel(name, type='int', block=True,
                                         timeout=0.03, default=1)
-        setattr(self, name, channel)

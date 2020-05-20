@@ -12,10 +12,12 @@ class AGui(SihdRunnableService, IAppContainer):
         read_channels_input() by yourself.
     """
 
-    def __init__(self, name="AGui", app=None, **kwargs):
+    def __init__(self, name="AGui", app=None, parent=None, **kwargs):
         self.__runnable = None
         IAppContainer.__init__(self)
-        super().__init__(name, **kwargs)
+        if app and not parent:
+            parent = app
+        super().__init__(name, parent=parent, **kwargs)
         self.set_default_conf({
             "runnable_type": "thread",
             "runnable_frequency": 5,
@@ -112,5 +114,4 @@ class AGui(SihdRunnableService, IAppContainer):
 
     def set_app(self, app):
         super().set_app(app)
-        self.set_parent(app)
         app.add_gui(self)

@@ -57,7 +57,7 @@ def register_channel_object(name, cls):
 class Channel(AObservable, IObserver, ALoggable):
 
     def __init__(self, name="Channel", mp=False, parent=None,
-                    block=True, timeout=0.01, log=True,
+                    block=True, timeout=0.001, log=True,
                     default=None, timestamp=False):
         super().__init__(name, parent=parent)
         #Timestamping and lock
@@ -133,12 +133,7 @@ class Channel(AObservable, IObserver, ALoggable):
         """
             Called when notified by a channel.
             Write channel's value in its own.
-            Do not chain notify if multiprocessed.
-            We want a chain like:
-                Thread:
-                channel wrote -> obs notified -> writing value -> notified
-                Mp:
-                channel wrote -> obs notified -> writing value <- polled
+                channel wrote -> obs notified -> writing value -> notifies
         """
         if channel.is_readable():
             data = channel.read()
@@ -191,14 +186,12 @@ class Channel(AObservable, IObserver, ALoggable):
             Write a data to a channel
             which trigger an observation to all observers
         """
-        #if self.is_locked():
         if self.lock() is False:
             self.log_debug("Trying to write in locked channel")
             return False
         ret = self._write(*args)
         self.unlock()
         if ret is not False:
-        #if self._write(*args) is not False:
             self.do_timestamp()
             self._last_data = args[0] if len(args) == 1 else args
             if notify:
@@ -262,11 +255,11 @@ class Channel(AObservable, IObserver, ALoggable):
     # ALoggable
     #
 
-    def _log_format(self, msg):
+    def _log_format(self, *msg):
         parent = self.get_parent() or ""
         if parent:
             parent = "{}.".format(parent.get_name())
-        return "Channel {0}{1}: {2}".format(parent, self.get_name(), msg)
+        return "Channel {0}{1}: {2}".format(parent, self.get_name(), ' '.join(msg))
 
 ###############################################################################
 
@@ -295,18 +288,21 @@ class ChannelQueue(Channel):
         self.__get = self.__queue.get
         self.__empty = self.__queue.empty
         self.__size = size
-        super(ChannelQueue, self).__init__(mp=mp, name=name, **kwargs)
+        super().__init__(mp=mp, name=name, **kwargs)
 
     def _write(self, data):
         try:
-            self.__put(data, block=self.is_block(), timeout=self.get_timeout())
+            #self.__put(data, block=self.is_block(), timeout=self.get_timeout())
+            self.__put(data, False)
         except queue.Full:
             return False
         return True
 
-    def read(self):
+    def read(self, timeout=None):
+        timeout = timeout or self.get_timeout()
         try:
-            data = self.__get(block=self.is_block(), timeout=self.get_timeout())
+            #data = self.__get(block=self.is_block(), timeout=timeout)
+            data = self.__get(False)
         except queue.Empty:
             data = None
         return data
@@ -359,8 +355,8 @@ class PollableChannel(Channel):
     """ Enable any children to be pollable when data is written in channel """
 
     def __init__(self, poll=True, name="PollableChannel", mp=False, **kwargs):
-        self.__poll = poll
-        if poll is True:
+        self.__poll = bool(poll)
+        if poll:
             if mp is True:
                 _setup_mp()
                 self.__event = multiprocessing.Event()
@@ -372,22 +368,22 @@ class PollableChannel(Channel):
         super(PollableChannel, self).__init__(mp=mp, name=name, **kwargs)
 
     def notify(self):
-        if self.__poll is True:
+        if self.__poll:
             self.__set()
         super().notify()
 
     def task_done(self):
-        if self.__poll is True:
+        """ Clear event """
+        if self.__poll:
             self.__clear()
 
     def is_pollable(self):
-        return self.__poll is True
+        return self.__poll
 
     def is_readable(self):
         return super().is_readable() and (self.__poll is False or self.__is())
 
-    def wait_poll(self, timeout=None):
-        timeout = timeout or self.get_timeout()
+    def wait(self, timeout):
         return self.__event.wait(timeout=timeout)
 
 ###############################################################################

@@ -4,7 +4,6 @@
 #
 # System
 #
-
 import os
 import sys
 import time
@@ -16,16 +15,20 @@ except ImportError:
     import configparser
     ConfigParser = configparser
 
+#
+# Sihd
+#
+
 import sihd
-from sihd import Core, Readers, Handlers, GUI, Interactors
 
 from sihd.Readers.AReader import AReader
 from sihd.Handlers.AHandler import AHandler
 from sihd.GUI.AGui import AGui
 from sihd.Interactors.AInteractor import AInteractor
 from sihd.Core.SihdService import SihdService
-
+from sihd.Core.IService import IService
 from sihd.Core.ALoggable import ALoggable
+from sihd.Core.AConfigurable import AConfigurable
 
 class SihdApp(SihdService):
 
@@ -50,41 +53,30 @@ class SihdApp(SihdService):
         self.__args_setted = None
         self.__main_pid = os.getpid()
 
-    def get_main_pid(self):
-        return self.__main_pid
-
     def setup_app(self, *args, **kwargs):
         self.log_debug("Starting application setup")
         #App service setup
         conf_path = kwargs.get("conf_path", None)
         ret = self.load_app_conf(conf_path) is not False
         #App internal setup
-        ret = ret and self.on_app_setup(*args, **kwargs) is not False
+        ret = ret and self.build_services(*args, **kwargs) is not False
         #Save app children's configuration
         ret = ret and self.save_children_conf()
         #Call children's service setup
         ret = ret and self.load_children_conf()
         #Link children's channels after 
-        ret = ret and self.link_channels() is not False
         if ret is True:
             self.log_debug("Application successfully setup")
         else:
             self.log_error("Application setup has failed")
         return ret
 
-    def link_channels(self):
-        """
-            To be implemented by children app
-            -> Subscribe services to services channels
-        """
-        return True
-
-    def on_app_setup(self):
+    def build_services(self):
         """
             To be implemented by children app
             -> Create app's services
         """
-        return True
+        pass
 
     #
     # Argvs
@@ -162,9 +154,9 @@ class SihdApp(SihdService):
             obj.read(path)
             if not obj.has_section("Logger"):
                 self.__setup_logger_conf(obj)
-        Core.ALoggable.setup_log(self.get_name(),
-                                    obj.get("Logger", "level"),
-                                    obj.get("Logger", "directory"))
+        ALoggable.setup_log(self.get_name(),
+                            obj.get("Logger", "level"),
+                            obj.get("Logger", "directory"))
         self.log_debug("Logger is setup")
         ret = False
         try:
@@ -207,24 +199,16 @@ class SihdApp(SihdService):
             return False
         self._children_configured = True
         conf = self.get_conf_obj()
-        fun = self.__call_children
-        ret_i = fun(self.interactors, "setup", conf)
-        ret_g = fun(self.guis, "setup", conf)
-        ret_h = fun(self.handlers, "setup", conf)
-        ret_r = fun(self.readers, "setup", conf)
-        if ret_i and ret_g and ret_h and ret_r:
+        ret = self.__call_children('setup', AConfigurable, arg=conf)
+        if ret:
             self.log_info("Services are configured")
-            return True
-        self.log_warning("Some services could not be configured")
-        return False
+        else:
+            self.log_warning("Some services could not be configured")
+        return ret
 
     def save_children_conf(self):
-        fun = self.__call_children
         conf = self.get_conf_obj()
-        fun(self.interactors, "save_conf")
-        fun(self.guis, "save_conf")
-        fun(self.handlers, "save_conf")
-        fun(self.readers, "save_conf")
+        ret = self.__call_children('save_conf', AConfigurable)
         self.log_info("Services configurations are saved")
         conf = self.get_conf_obj()
         self._write_conf(conf)
@@ -233,6 +217,9 @@ class SihdApp(SihdService):
     #
     # Utils
     #
+
+    def get_main_pid(self):
+        return self.__main_pid
 
     def set_cwd_path(self):
         self.set_path(os.getcwd())
@@ -254,18 +241,15 @@ class SihdApp(SihdService):
         return self._path
 
     def get_service(self, name):
-        for reader in self.readers:
-            if reader.get_name() == name:
-                return reader
-        for handler in self.handlers:
-            if handler.get_name() == name:
-                return handler
-        for gui in self.guis:
-            if gui.get_name() == name:
-                return gui
-        for interactor in self.interactors:
-            if interactor.get_name() == name:
-                return interactor
+        child = self.get_child(name)
+        if isinstance(child, IService):
+            return child
+        return None
+
+    def get_sihd_service(self, name):
+        child = self.get_child(name)
+        if isinstance(child, SihdService):
+            return child
         return None
 
     def __call_child(self, child, fun, arg=None):
@@ -276,34 +260,38 @@ class SihdApp(SihdService):
             ret = fun(arg)
         return ret
 
-    def __call_children(self, children_lst, fun_name, arg=None, fail=True):
+    def __call_children(self, fun_name, cls, arg=None, fail=True):
         ret = True
+        children_lst = self.get_children().values()
         for child in children_lst:
+            if not isinstance(child, cls):
+                continue
             try:
                 fun = getattr(child, fun_name)
             except AttributeError as e:
                 raise NotImplementedError("Class `{}` does not implement `{}`"\
                         .format(child.__class__.__name__, fun_name))
-            ret = ret and self.__call_child(child, fun, arg)
+            if self.__call_child(child, fun, arg) is False:
+                ret = False
             if not ret and fail:
-                self.log_error("Call {} failed for service {}"\
-                        .format(fun_name, child.get_name()))
+                self.log_error("Call {} failed for child {}"\
+                                .format(fun_name, child))
         return ret
 
     #
-    # Services
+    # Service
     #
 
     def add_state_observer(self, service):
         state = service.get_channel("service_state")
         if not state:
-            self.log_error("Could not find service {} "
-                    "state channel to observe".format(service))
+            self.log_error("Service {}: could not find "
+                    "service_state channel to observe".format(service))
             return False
         input_lst = self.get_channels_input()
         if state not in input_lst:
             input_lst.append(state)
-        self.log_debug("Started service {} state observation"\
+        self.log_debug("Service {}: added state observation"\
                         .format(service))
         return True
 
@@ -348,98 +336,121 @@ class SihdApp(SihdService):
             st_interactors[interactor.get_name()] = interactor.get_service_state_str()
         return status
 
+    #
+    # Init
+    #
+
+    def _init_impl(self):
+        """ Services must be configured before start """
+        self.log_info("App initialising")
+        ret = self.__call_children('init', IService)
+        if not ret:
+            self.log_warning("Some app services did not init")
+        return ret
+
+    #
+    # Start
+    #
+
     def start_readers(self):
-        if self.__call_children(self.readers, "start"):
+        ret = self.__call_children("start", AReader)
+        if ret:
             self.log_info("App readers started")
-            return True
-        self.log_warning("Some app readers did not start")
-        return False
+        else:
+            self.log_warning("Some app readers did not start")
+        return ret
 
     def start_interactors(self):
-        if self.__call_children(self.interactors, "start"):
+        ret = self.__call_children("start", AInteractor)
+        if ret:
             self.log_info("App interactors started")
-            return True
-        self.log_warning("Some app interactors did not start")
-        return False
+        else:
+            self.log_warning("Some app interactors did not start")
+        return ret
+
+    def start_handlers(self):
+        ret = self.__call_children("start", AHandler)
+        if ret:
+            self.log_info("App handlers started")
+        else:
+            self.log_warning("Some app handlers did not start")
+        return ret
 
     def start_all(self):
-        return self.start() and self.start_readers() and self.start_interactors()
+        return self.__call_children('start', IService)
+
+    def start_order(self):
+        return self.start_all()
 
     def _start_impl(self):
-        """ Services must be configured before start """
         self.log_info("App starting")
-        fun = self.__call_children
-        g_ret = fun(self.guis, "start")
-        h_ret = fun(self.handlers, "start")
-        if h_ret and g_ret:
-            return True
-        self.log_warning("Some app services did not start")
-        return False
+        if self.start_order() is False:
+            self.log_error("starting services")
+        return True
+
+    #
+    # Stop
+    #
 
     def _stop_impl(self):
         self.log_info("App stopping")
-        fun = self.__call_children
-        r_ret = fun(self.readers, "stop")
-        h_ret = fun(self.handlers, "stop")
-        g_ret = fun(self.guis, "stop")
-        i_ret = fun(self.interactors, "stop")
+        ret = self.__call_children('stop', IService)
         self._write_conf()
-        if r_ret and h_ret and g_ret and i_ret:
-            return True
-        self.log_warning("Some app services did not stop")
-        return False
+        if not ret:
+            self.log_warning("Some app services did not stop")
+        return ret
+
+    #
+    # Pause
+    #
 
     def _pause_impl(self):
-        fun = self.__call_children
-        r_ret = fun(self.readers, "pause")
-        h_ret = fun(self.handlers, "pause")
-        g_ret = fun(self.guis, "pause")
-        i_ret = fun(self.interactors, "pause")
-        if r_ret and h_ret and g_ret and i_ret:
+        ret = self.__call_children('pause', IService)
+        if ret:
             self.log_info("App paused")
-            return True
-        self.log_warning("Some app services did not pause")
-        return False
+        else:
+            self.log_warning("Some app services did not pause")
+        return ret
+
+    #
+    # Resume
+    #
 
     def _resume_impl(self):
-        fun = self.__call_children
-        i_ret = fun(self.interactors, "resume")
-        g_ret = fun(self.guis, "resume")
-        r_ret = fun(self.readers, "resume")
-        h_ret = fun(self.handlers, "resume")
-        if r_ret and h_ret and g_ret and i_ret:
+        ret = self.__call_children('resume', IService)
+        if ret:
             self.log_info("App resumed")
-            return True
-        self.log_warning("Some app services did not resume")
-        return False
+        else:
+            self.log_warning("Some app services did not resume")
+        return ret
+    
+    #
+    # Reset
+    #
 
     def _reset_impl(self):
-        fun = self.__call_children
-        i_ret = fun(self.interactors, "reset")
-        g_ret = fun(self.guis, "reset")
-        r_ret = fun(self.readers, "reset")
-        h_ret = fun(self.handlers, "reset")
-        if r_ret and h_ret and g_ret and i_ret:
+        ret = self.__call_children('reset', IService)
+        if ret:
             self.log_info("App is reset")
-            return True
-        self.log_warning("Some app services did not reset")
-        return False
+        else:
+            self.log_warning("Some app services did not reset")
+        return ret
+
+    #
+    # Actions on services
+    #
 
     def pause_readers(self):
-        for reader in self.readers:
-            reader.pause()
+        return self.__call_children('pause', AReader)
 
     def resume_readers(self):
-        for reader in self.readers:
-            reader.resume()
+        return self.__call_children('resume', AReader)
 
     def pause_interactors(self):
-        for interactor in self.interactors:
-            interactor.pause()
+        return self.__call_children('pause', AInteractor)
 
     def resume_interactors(self):
-        for interactor in self.interactors:
-            interactor.resume()
+        return self.__call_children('pause', AInteractor)
 
     def remove_reader(self, reader):
         if reader.is_active():
@@ -461,6 +472,10 @@ class SihdApp(SihdService):
             interactor.stop()
         self.interactors.remove(interactor)
 
+    #
+    # Adding services
+    #
+
     def add_reader(self, reader):
         self.readers.add(reader)
         reader.set_conf_obj(self.get_conf_obj())
@@ -477,8 +492,9 @@ class SihdApp(SihdService):
         self.interactors.add(interactor)
         interactor.set_conf_obj(self.get_conf_obj())
 
-    def emergency_backup(self, err):
-        return
+    #
+    # SihdServices getters
+    #
 
     def get_readers(self):
         return self.readers
@@ -491,6 +507,18 @@ class SihdApp(SihdService):
 
     def get_interactors(self):
         return self.interactors
+
+    #
+    # Checks
+    #
+
+    @staticmethod
+    def is_service(service):
+        return isinstance(service, IService)
+
+    @staticmethod
+    def is_sihd_service(service):
+        return isinstance(service, SihdService)
 
     @staticmethod
     def is_reader(service):
@@ -507,6 +535,13 @@ class SihdApp(SihdService):
     @staticmethod
     def is_interactor(service):
         return isinstance(service, AInteractor)
+
+    #
+    # Backup
+    #
+    
+    def emergency_backup(self, err):
+        return
 
     #
     # Channels

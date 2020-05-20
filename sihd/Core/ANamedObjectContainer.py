@@ -10,21 +10,21 @@ from .ANamedObject import ANamedObject
 
 class ANamedObjectContainer(ANamedObject):
 
-    __namedobjects = {}
+    __nocs = {}
 
     def __init__(self, name, parent=None, **kwargs):
         self.__children = dict()
         self.__links = dict()
         super().__init__(name, parent=parent, **kwargs)
         if parent is None:
-            nos = self.__namedobjects
+            nos = self.__nocs
             name = self.get_name()
             if name in nos:
                 raise KeyError("Container '{}' key already used".format(name))
             nos[name] = self
 
     def __del__(self):
-        if self.__namedobjects.pop(self.get_name(), None) is None:
+        if self.__nocs.pop(self.get_name(), None) is None:
             return
         parent = self.get_parent()
         if parent:
@@ -41,13 +41,13 @@ class ANamedObjectContainer(ANamedObject):
         if no is None:
             raise KeyError("No child in path: {}".format(path))
         if no.get_parent() is None:
-            ANamedObjectContainer.__namedobjects.pop(no.get_name())
+            ANamedObjectContainer.__nocs.pop(no.get_name())
         else:
             no.set_parent(None)
 
     @staticmethod
     def clear_tree():
-        ANamedObjectContainer.__namedobjects.clear()
+        ANamedObjectContainer.__nocs.clear()
 
     #
     # Links
@@ -100,7 +100,7 @@ class ANamedObjectContainer(ANamedObject):
     @staticmethod
     def root_find(path):
         split = path.split('.')
-        get_nobj = ANamedObjectContainer.__namedobjects.get
+        get_nobj = ANamedObjectContainer.__nocs.get
         obj = get_nobj(split[0], None)
         for child in split[1:]:
             if obj is None:
@@ -156,7 +156,7 @@ class ANamedObjectContainer(ANamedObject):
         s += self.get_tree_children(ident=ident)
         return s
 
-    def dump_tree(self):
+    def print_tree(self):
         print(self.get_tree())
 
     #
@@ -192,7 +192,7 @@ class ANamedObjectContainer(ANamedObject):
 
     def set_parent(self, parent, remove=True):
         super().set_parent(parent, remove=remove)
-        nos = self.__namedobjects
+        nos = self.__nocs
         name = self.get_name()
         if parent and name in nos:
             nos.pop(name)

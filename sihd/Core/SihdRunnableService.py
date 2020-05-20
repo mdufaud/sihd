@@ -127,6 +127,9 @@ class SihdRunnableService(SihdService):
             self.__is_thread = True
         elif type == 'process':
             self.__is_process = True
+        elif type != 'none':
+            self.log_error("No such runnable type " + str(type))
+            ret = False
         return ret
 
     """ SihdService """

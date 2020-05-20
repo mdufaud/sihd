@@ -21,7 +21,7 @@ from sihd.Core.ALoggable import ALoggable
 
 class SimpleCurses(ICursesGui):
 
-    def __init__(self, app=None, name="SimpleCurses"):
+    def __init__(self, name="SimpleCurses", app=None):
         super(SimpleCurses, self).__init__(app=app, name=name)
 
     def setup_windows(self):
