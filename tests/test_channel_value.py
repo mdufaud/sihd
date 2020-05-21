@@ -51,7 +51,7 @@ class TestChannelValue(unittest.TestCase):
         self.assertTrue(channel.is_readable())
         logger.info("Testing read -> {} ?= {}".format(channel.read(), default))
         self.assertEqual(channel.read(), default)
-        channel.task_done()
+        channel.consumed_data()
         self.assertTrue(channel.is_readable() == False)
         self.assertTrue(utils.write_channel(channel, write))
         self.assertTrue(channel.is_readable())
@@ -63,7 +63,6 @@ class TestChannelValue(unittest.TestCase):
         self.assertFalse(channel.is_locked())
         self.assertTrue(channel.lock())
         self.assertTrue(channel.is_locked())
-        self.assertFalse(channel.is_readable())
         self.assertFalse(channel.write(default))
         self.assertFalse(channel.write(write))
         self.assertTrue(channel.unlock())
@@ -82,7 +81,7 @@ class TestChannelValue(unittest.TestCase):
         self.assertTrue(channel.is_readable())
         logger.info("read -> {} ?= {}".format(channel.read(), default))
         self.assertEqual(channel.read(), default)
-        channel.task_done()
+        channel.consumed_data()
         self.assertTrue(channel.is_readable() == False)
         self.assertTrue(channel.write(write))
         self.assertTrue(channel.is_readable())
@@ -97,7 +96,7 @@ class TestChannelValue(unittest.TestCase):
             self.assertTrue(channel.is_readable())
             logger.info("read -> {} ?= {}".format(channel.read(), default))
             self.assertEqual(channel.read(), default)
-            channel.task_done()
+            channel.consumed_data()
             self.assertTrue(channel.is_readable() == False)
             self.assertTrue(channel.write(write))
             self.assertTrue(channel.is_readable())
@@ -129,6 +128,28 @@ class TestChannelValue(unittest.TestCase):
         if utils.is_multiprocessing():
             self.chan_value(ChannelLong, default=123456789, write=9876543211, mp=True, unsigned=True)
         self.chan_limit(ChannelLong)
+
+    def do_channel_counter(self, channel, default=0):
+        logger.info("Testing " + str(channel))
+        self.assertEqual(channel.read(), default)
+        self.assertEqual(channel.write(), True)
+        self.assertEqual(channel.write(), True)
+        self.assertEqual(channel.write(), True)
+        self.assertEqual(channel.read(), default + 3)
+        channel.clear()
+        self.assertEqual(channel.read(), default)
+        self.assertEqual(channel.is_readable(), True)
+        channel.consumed_data()
+        self.assertEqual(channel.is_readable(), False)
+
+    def test_channel_counter(self):
+        default = 4
+        channel = ChannelCounter(default=default)
+        self.do_channel_counter(channel, default)
+
+        if utils.is_multiprocessing():
+            channel = ChannelCounter(default=default, mp=True)
+            self.do_channel_counter(channel, default)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

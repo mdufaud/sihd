@@ -103,72 +103,10 @@ class AChannelObject(ANamedObjectContainer):
         type = kwargs.pop('type', None)
         if type is None:
             type = "default"
-        try:
-            method = getattr(self, "create_channel_{}".format(type))
-        except AttributeError:
+        cls = channel_factory.get(type, None)
+        if cls is None:
             raise ValueError("No such type for channel {}".format(type))
         kwargs['parent'] = self
-        channel = method(name, **kwargs)
+        channel = cls(name=name, **kwargs)
         self.on_new_channel(name, channel)
         return channel
-
-    #
-    # Channel types
-    #
-
-    def create_channel_condition(self, name, **kwargs):
-        return ChannelCondition(name=name, **kwargs)
-
-    def create_channel_bool(self, name, **kwargs):
-        return ChannelBool(name=name, **kwargs)
-
-    #   Data struct
-
-    def create_channel_list(self, name, **kwargs):
-        return ChannelList(name=name, **kwargs)
-
-    def create_channel_dict(self, name, **kwargs):
-        return ChannelDict(name=name, **kwargs)
-
-    def create_channel_array(self, name, **kwargs):
-        return ChannelArray(name=name, **kwargs)
-
-    def create_channel_dict(self, name, **kwargs):
-        return ChannelDict(name=name, **kwargs)
-
-    def create_channel_object(self, name, **kwargs):
-        return ChannelObject(name=name, **kwargs)
-
-    def create_channel_queue(self, name, **kwargs):
-        return ChannelQueue(name=name, **kwargs)
-
-    def create_channel_string(self, name, **kwargs):
-        return ChannelString(name=name, **kwargs)
-
-    def create_channel_pickle(self, name, **kwargs):
-        return ChannelPickle(name=name, **kwargs)
-
-    #   Values
-
-    def create_channel_byte(self, name, **kwargs):
-        return ChannelByte(name=name, **kwargs)
-
-    def create_channel_char(self, name, **kwargs):
-        return ChannelChar(name=name, **kwargs)
-
-    def create_channel_short(self, name, **kwargs):
-        return ChannelShort(name=name, **kwargs)
-
-    def create_channel_int(self, name, **kwargs):
-        return ChannelInt(name=name, **kwargs)
-
-    def create_channel_long(self, name, **kwargs):
-        return ChannelLong(name=name, **kwargs)
-
-    def create_channel_double(self, name, **kwargs):
-        return ChannelDouble(name=name, **kwargs)
-
-    #   Default
-
-    def create_channel_default(self, name, **kwargs):
-        return Channel(name=name, **kwargs)

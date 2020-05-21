@@ -115,7 +115,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         ret = ret and self.on_setup()
         self.__create_channel_state()
         ret = ret and self._make_channels()
-        self.service_state.task_done()
+        self.service_state.consumed_data()
         ret = ret and self.post_setup()
         return ret
 
@@ -405,10 +405,11 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         if self.__channel_notif is False:
             return False
         for channel in self.get_channels_input():
-            if channel.is_pollable() and channel.is_readable():
-                if not self._pre_handle(channel):
-                    self.handle(channel)
-                channel.task_done()
+            if channel.pollable and channel.is_readable():
+                with channel:
+                    if not self._pre_handle(channel):
+                        self.handle(channel)
+                    channel.consumed_data()
         return True
 
     def __create_channel_state(self):

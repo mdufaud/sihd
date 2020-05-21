@@ -41,7 +41,7 @@ class TestChannelDict(unittest.TestCase):
         self.assertEqual(channel.get_data()['key'], default['key'])
         channel.clear('key')
         self.assertEqual(channel.read("key"), None)
-        channel.task_done()
+        channel.consumed_data()
         self.assertFalse(channel.is_readable())
 
         self.assertTrue(utils.write_channel(channel, "hello", 'world'))

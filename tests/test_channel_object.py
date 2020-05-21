@@ -67,7 +67,7 @@ class TestChannelObject(unittest.TestCase):
         self.assertEqual(channel.read('get_x'), 1)
         self.assertEqual(channel.read('get_y'), 2)
 
-        channel.task_done()
+        channel.consumed_data()
         self.assertFalse(channel.is_readable())
 
         self.assertTrue(utils.write_channel(channel, 'set', (13, 42)))

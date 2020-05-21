@@ -21,7 +21,7 @@ class LineReader(AReader):
         self.__reader = None
         self.add_channel_input('path', type='queue', simple=True)
         self.add_channel_output('output', type='queue')
-        self.add_channel_output('lines', type='int', default=0)
+        self.add_channel_output('lines', type='counter')
         self.add_channel_output('eof', type='bool', default=True)
 
     #
@@ -78,7 +78,7 @@ class LineReader(AReader):
         self.log_info("Recovered {}".format(self.__path))
 
     def set_source(self, path):
-        self.__lines = 0
+        self.lines.clear()
         self.__to_recover = 0
         if self.__reader:
             self.__reader.close()
@@ -114,15 +114,14 @@ class LineReader(AReader):
         line = line.strip()
         if line != "":
             self.output.write(line)
-            self.__lines += 1
-            self.lines.write(self.__lines)
+            self.lines.write()
         return True
 
     def __read_end(self):
         stop_time = time.time()
-        self.log_info("File {0:s} read - {1:d} packets".format(self.__path, self.__lines))
+        self.log_info("File {0:s} read - {1:d} packets".format(self.__path, self.lines.read()))
         self.log_debug("took {0:.3f} seconds to read and process {1:d} lines"\
-                .format(stop_time - self.get_service_start_time(), self.__lines))
+                .format(stop_time - self.get_service_start_time(), self.lines.read()))
         self.eof.write(1)
         self.close()
 
@@ -130,5 +129,5 @@ class LineReader(AReader):
         if self.__reader:
             self.__reader.close()
             self.__reader = None
-            LineReader.files_read[self.__path] = (self.__lines, self.eof.read() == False)
+            LineReader.files_read[self.__path] = (self.lines.read(), self.eof.read() == False)
             self.log_debug("File {} closed".format(self.__path))

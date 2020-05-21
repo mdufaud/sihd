@@ -46,9 +46,12 @@ class TestApp(sihd.App.SihdApp):
     def on_init(self):
         reader = self._line_reader
         handler = self._word_handler
-        self.add_state_observer(reader)
-        reader.eof.add_observer(self)
+        #reader.eof.add_observer(self)
+        counter = self.create_channel("counter", type='counter')
+        self.set_channel_input(counter)
+        handler.output.add_observer(counter)
         handler.link("input", reader.output)
+        self.add_state_observer(reader)
         return True
 
     def build_args(self, parser):
@@ -66,11 +69,10 @@ class TestApp(sihd.App.SihdApp):
                 default=None,
                 help="Timer until stop")
 
-    def on_notify(self, channel):
-        if channel.get_name() == "eof":
-            ended = channel.read()
-            if ended:
-                channel.get_parent().stop()
+    def handle(self, channel):
+        if channel == self.counter:
+            if channel.read() == self._line_reader.lines.read():
+                self._line_reader.stop()
 
     def service_state_changed(self, service, stopped, paused):
         #Exit only if no gui attached

@@ -22,9 +22,7 @@ class ANamedObject(object):
         return super().__lt__(other)
 
     def __del__(self):
-        parent = self.get_parent()
-        if parent:
-            parent.remove_child(self)
+        self.set_parent(None)
 
     #
     # Browse hierarchy
@@ -61,7 +59,7 @@ class ANamedObject(object):
             if remove:
                 oldparent.remove_child(self)
         if parent:
-            parent.set_child(self)
+            parent.add_child(self)
         self.__parent = parent
 
     def get_parent(self):
@@ -77,7 +75,7 @@ class ANamedObject(object):
             parent.remove_child(self)
         self.__name = name
         if parent:
-            parent.set_child(self)
+            parent.add_child(self)
 
     def get_name(self):
         return self.__name

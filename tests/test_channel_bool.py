@@ -29,7 +29,7 @@ class TestChannelDict(unittest.TestCase):
         logger.info("Testing " + str(channel))
         self.assertTrue(channel.is_readable())
         self.assertEqual(channel.read(), default)
-        channel.task_done()
+        channel.consumed_data()
         self.assertFalse(channel.is_readable())
         self.assertTrue(utils.write_channel(channel, not default))
         self.assertEqual(channel.read(), not default)

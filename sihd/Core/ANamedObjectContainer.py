@@ -15,6 +15,7 @@ class ANamedObjectContainer(ANamedObject):
     def __init__(self, name, parent=None, **kwargs):
         self.__children = dict()
         self.__links = dict()
+        self.__alias = dict()
         super().__init__(name, parent=parent, **kwargs)
         if parent is None:
             nos = self.__nocs
@@ -26,9 +27,7 @@ class ANamedObjectContainer(ANamedObject):
     def __del__(self):
         if self.__nocs.pop(self.get_name(), None) is None:
             return
-        parent = self.get_parent()
-        if parent:
-            parent.remove_child(self)
+        self.set_parent(None)
         self.remove_children()
 
     #
@@ -53,8 +52,15 @@ class ANamedObjectContainer(ANamedObject):
     # Links
     #
 
+    def get_alias(self, obj):
+        return self.__alias.get(obj.get_name(), None)
+
+    def remove_alias(self, obj):
+        return self.__alias.pop(obj.get_name())
+
     def on_link(self, name, obj):
-        self.set_child(obj, name=name, force=True)
+        self.add_child(obj, name=name, replace=True)
+        self.__alias[obj.get_name()] = name
 
     def link(self, name, path_or_no):
         """ Add a link """
@@ -68,7 +74,7 @@ class ANamedObjectContainer(ANamedObject):
     def process_links(self):
         """ Process all links """
         for name, path in self.__links.items():
-            item = self._get_link(name)
+            item = self.root_find(path)
             if isinstance(item, ANamedObject):
                 self.on_link(name, item)
             elif item is not None:
@@ -169,17 +175,26 @@ class ANamedObjectContainer(ANamedObject):
     def get_child(self, name):
         return self.__children.get(name, None)
 
-    def set_child(self, child, name=None, force=False):
+    def add_child(self, child, name=None, replace=False):
         """ No parent replacement because of links """
         if name is None:
             name = child.get_name()
         children = self.__children
-        if force is False and name in children:
-            raise KeyError("Child '{}' key already used".format(name))
+        if replace is False and name in children:
+            raise KeyError("{}: child '{}' key already used".format(self, name))
+        elif replace is True:
+            old_child = children.get(name, None)
+            if old_child is None:
+                raise KeyError("{}: no such child {}".format(self, name))
+            old_child.set_parent(None)
         children[name] = child
 
-    def remove_child(self, children):
-        child = self.__children.pop(children.get_name())
+    def remove_child(self, child):
+        alias = self.get_alias(child)
+        name = child.get_name() if alias is None else alias
+        self.__children.pop(name)
+        if alias:
+            self.remove_alias(child)
 
     def remove_children(self):
         for children in self.__children.values():

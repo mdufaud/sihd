@@ -35,7 +35,7 @@ class TestChannelArray(unittest.TestCase):
         self.assertEqual(channel.read(-1), default[-1])
         self.assertEqual(channel.read(len(default)), None)
         self.assertEqual(channel.read(len(default) + 1), None)
-        channel.task_done()
+        channel.consumed_data()
         self.assertFalse(channel.is_readable())
 
         self.assertFalse(utils.write_channel(channel, default[0], len(default)))
@@ -92,7 +92,7 @@ class TestChannelArray(unittest.TestCase):
         self.assertEqual(channel.read(0), default[0])
         self.assertEqual(channel.read(-1), 0)
         self.assertEqual(channel.get_stripped(), default.decode())
-        channel.task_done()
+        channel.consumed_data()
         self.assertFalse(channel.is_readable())
         self.assertTrue(utils.write_channel(channel, b"world"))
         self.assertEqual(channel.read(0, 5), b"world")
