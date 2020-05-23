@@ -30,6 +30,8 @@ def _setup_mp_base_manager():
     global mp_base_manager
     if mp_base_manager is None:
         from multiprocessing.managers import BaseManager
+        BaseManager.register('LifoQueue', queue.LifoQueue)
+        BaseManager.register('PriorityQueue', queue.PriorityQueue)
         mp_base_manager = BaseManager()
         mp_base_manager.start()
 
@@ -57,17 +59,17 @@ def register_channel_object(name, cls):
 class Channel(AObservable, IObserver, ALoggable):
 
     def __init__(self, name="Channel", mp=False, parent=None,
-                    block=True, timeout=0.001, log=True,
-                    default=None, timestamp=False, poll=True):
+                    block=True, timeout=0.3, log=True,
+                    default=None, timestamp=False, pollable=True):
         super().__init__(name, parent=parent)
         #Timestamping and lock
         self.__ts = False
         if log is False:
             self._set_log(False)
-        self.pollable = bool(poll)
         if mp is True:
             _setup_mp()
-        if poll:
+        self.pollable = bool(pollable)
+        if pollable:
             if mp is True:
                 self.__event = multiprocessing.Event()
             else:
@@ -98,6 +100,7 @@ class Channel(AObservable, IObserver, ALoggable):
         self.default_value = default
         if default is not None:
             self.write(default)
+            self.consumed_data()
 
     def __enter__(self):
         return self.lock()
@@ -165,22 +168,28 @@ class Channel(AObservable, IObserver, ALoggable):
     def get_lock(self):
         return self.__lock
 
-    def __lock_mp(self, block=True, timeout=0.01) -> bool:
+    def __lock_mp(self, timeout=None) -> bool:
         """
             Lock read/write for a channel in multiprocess
             :return: True if channel is locked
         """
+        timeout = self.timeout if timeout is None else timeout
+        block = timeout is not None
         ret = self.__alock(block=block, timeout=timeout)
         self.__locked = ret
+        if not ret:
+            self.log_error("LOCKING FAILED", timeout, block)
         return ret
 
-    def lock(self, block=True, timeout=0.01) -> bool:
+    def lock(self, timeout=None) -> bool:
         """
             Lock read/write for a channel - For thread timeout None is -1
             :return: True if channel is locked
         """
-        timeout = -1 if timeout is None else timeout
-        ret = self.__alock(blocking=block, timeout=timeout)
+        to = self.timeout if timeout is None else timeout
+        to = -1 if to is None else to
+        block = to != -1
+        ret = self.__alock(blocking=block, timeout=to)
         self.__locked = ret
         return ret
 
@@ -191,14 +200,14 @@ class Channel(AObservable, IObserver, ALoggable):
         """
         try:
             self.__rlock()
-        except (ValueError, threading.ThreadError):
+        except (RuntimeError, ValueError, threading.ThreadError):
             return False
         self.__locked = False
         return True
 
     def is_locked(self) -> bool:
         """ Check if channel is locked """
-        locked = self.lock(False, None)
+        locked = self.lock(None)
         if locked:
             self.unlock()
         return locked is False
@@ -213,17 +222,18 @@ class Channel(AObservable, IObserver, ALoggable):
             which trigger an observation to all observers
         """
         if self.lock() is False:
-            self.log_debug("Trying to write in locked channel")
+            self.log_warning("Trying to write in locked channel")
             return False
         ret = self._write(*args)
         self.unlock()
+        if ret is False:
+            self.log_warning("Could not write into channel")
         if ret is not False:
             self.set_new_data()
             self.do_timestamp()
             if notify:
                 self.notify()
-            return True
-        return False
+        return ret
 
     def _write(self, val):
         self._last_data = val
@@ -267,7 +277,7 @@ class Channel(AObservable, IObserver, ALoggable):
 
     def wait(self, timeout=None):
         """ Wait on a new value """
-        pass
+        return False
 
     def get_size(self):
         try:
@@ -283,12 +293,12 @@ class Channel(AObservable, IObserver, ALoggable):
     def _get_attributes(self):
         l = super()._get_attributes()
         if self.block:
-            l.append("block")
+            l.append("blocked")
         timeout = self.timeout
         if timeout is not None and timeout != -1:
-            l.append("timeout={}".format(timeout))
-        if self.pollable:
-            l.append("pollable")
+            l.append("timeout=" + str(timeout))
+        if not self.pollable:
+            l.append("not pollable")
         if self.is_readable():
             l.append("readable")
         if self.is_multiprocess():
@@ -305,7 +315,9 @@ class Channel(AObservable, IObserver, ALoggable):
         parent = self.get_parent() or ""
         if parent:
             parent = "{}.".format(parent.get_name())
-        return "Channel {0}{1}: {2}".format(parent, self.get_name(), ' '.join(msg))
+        return "Channel {0}{1}: {2}"\
+                .format(parent, self.get_name(),
+                        ' '.join((str(m) for m in msg)))
 
 ###############################################################################
 
@@ -315,15 +327,17 @@ class ChannelQueue(Channel):
     """
 
     def __init__(self, size=0, name="ChannelQueue", mp=False,
-                    from_manager=False, lifo=False, simple=False,
-                    priority=False, **kwargs):
-        kwargs['poll'] = True
+                    lifo=False, simple=False, priority=False, **kwargs):
         if mp is True:
+            #Multiprocessing
             _setup_mp()
-            if from_manager is True:
-                _setup_mp_manager()
-                self.__queue = mp_manager.Queue(maxsize=size)
-            elif simple is True:
+            if lifo:
+                _setup_mp_base_manager()
+                self.__queue = mp_base_manager.LifoQueue(maxsize=size)
+            elif priority:
+                _setup_mp_base_manager()
+                self.__queue = mp_base_manager.PriorityQueue(maxsize=size)
+            elif simple:
                 self.__queue = multiprocessing.SimpleQueue()
                 self._write = self.__simple_write
                 self.read = self.__simple_read
@@ -331,11 +345,18 @@ class ChannelQueue(Channel):
                 self.__queue = multiprocessing.Queue(maxsize=size)
             self.clear = self.__clear_get
         else:
-            self.__queue = queue.Queue(maxsize=size)
+            #Threading
+            if lifo:
+                self.__queue = queue.LifoQueue(maxsize=size)
+            elif priority:
+                self.__queue = queue.PriorityQueue(maxsize=size)
+            else:
+                self.__queue = queue.Queue(maxsize=size)
         self.__put = self.__queue.put
         self.__get = self.__queue.get
         self.__empty = self.__queue.empty
         self.__size = size
+        kwargs['pollable'] = True
         super().__init__(mp=mp, name=name, **kwargs)
 
     #
@@ -344,23 +365,22 @@ class ChannelQueue(Channel):
 
     def _write(self, data):
         try:
-            #self.__put(data, block=self.block, timeout=self.timeout)
             self.__put(data, False)
         except queue.Full:
             return False
         return True
 
     def read(self, timeout=None):
-        timeout = timeout or self.timeout
+        timeout = timeout
+        block = timeout is not None
         try:
-            #data = self.__get(block=self.block, timeout=timeout)
-            data = self.__get(False)
+            data = self.__get(block=block, timeout=timeout)
         except queue.Empty:
             data = None
         return data
 
     def is_readable(self):
-        return self.__empty() is False
+        return not self.__empty()
 
     def get_data(self):
         return self.__queue
@@ -488,7 +508,7 @@ class ChannelBool(Channel):
     """ Pollable trigger/activation channel """
 
     def __init__(self, name="ChannelBool", default=False,
-                        timeout=0.01, mp=False, **kwargs):
+                    mp=False, **kwargs):
         if mp is True:
             _setup_mp()
             self.__event = multiprocessing.Event()
@@ -502,8 +522,7 @@ class ChannelBool(Channel):
         self.__clear = self.__event.clear
         self.__is = self.__event.is_set
         self.__wait = self.__event.wait
-        super().__init__(name=name, mp=mp, default=default,
-                                            timeout=timeout, **kwargs)
+        super().__init__(name=name, mp=mp, default=default, **kwargs)
 
     def _write(self, data):
         if data:
@@ -747,6 +766,7 @@ class ChannelCType(Channel):
 
     def _write(self, data):
         self.__value.value = data
+        return True
 
     def read(self):
         return self.__value.value
@@ -833,10 +853,10 @@ class ChannelCounter(ChannelInt):
             super()._write(default)
 
     def _write(self, *args):
-        super()._write(self.read() + 1)
+        return super()._write(self.read() + 1)
 
     def _write_mp(self, *args):
-        super()._write_mp(self.read() + 1)
+        return super()._write_mp(self.read() + 1)
 
     def clear(self):
         super()._write(self.default_value or 0)
@@ -941,12 +961,12 @@ class ChannelList(Channel):
 class ChannelCondition(Channel):
 
     def __init__(self, name="ChannelCondition", lock=None, mp=False, **kwargs):
-        kwargs['poll'] = False
         if mp is True:
             _setup_mp()
             self.__condition = multiprocessing.Condition(lock=lock)
         else:
             self.__condition = threading.Condition(lock=lock)
+        kwargs['pollable'] = False
         super().__init__(name=name, mp=mp, **kwargs)
 
     def _write(self, n=0):

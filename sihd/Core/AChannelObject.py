@@ -53,16 +53,19 @@ class AChannelObject(ANamedObjectContainer):
     #
 
     # override
-    def on_link(self, name, channel):
+    def on_link(self, name, obj):
         """ Callback """
-        if isinstance(channel, Channel):
+        if isinstance(obj, Channel):
             old_channel = self.get_channel(name)
-            if old_channel is not None and old_channel.is_multiprocess()\
-                and not channel.is_multiprocess():
-                raise ValueError("Link is downgrading multiprocess "
-                                    "channel to none for: " + name)
-            self.on_new_channel(name, channel)
-        super().on_link(name, channel)
+            if old_channel is not None\
+                    and old_channel.is_multiprocess()\
+                    and not obj.is_multiprocess():
+                raise ValueError("{}: link is downgrading multiprocess "
+                                    "channel to none for: {}".format(
+                                    self, name))
+        super().on_link(name, obj)
+        if isinstance(obj, Channel):
+            self.on_new_channel(name, obj)
 
     #
     # Creation
@@ -100,12 +103,12 @@ class AChannelObject(ANamedObjectContainer):
             if link is not None and isinstance(link, Channel):
                 return link
             return None
-        type = kwargs.pop('type', None)
-        if type is None:
-            type = "default"
-        cls = channel_factory.get(type, None)
+        chan_type = kwargs.pop('type', None)
+        if chan_type is None:
+            chan_type = "default"
+        cls = channel_factory.get(chan_type, None)
         if cls is None:
-            raise ValueError("No such type for channel {}".format(type))
+            raise ValueError("No such type for channel {}".format(chan_type))
         kwargs['parent'] = self
         channel = cls(name=name, **kwargs)
         self.on_new_channel(name, channel)

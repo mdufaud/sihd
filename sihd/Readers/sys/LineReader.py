@@ -41,11 +41,10 @@ class LineReader(AReader):
     #
 
     def handle(self, channel):
-        if channel == self.path:
-            if self.__reader is None:
-                path = channel.read()
-                if path:
-                    self.set_source(path)
+        if channel == self.path and self.__reader is None:
+            path = channel.read()
+            if path:
+                self.set_source(path)
 
     #
     # Reader
@@ -119,7 +118,7 @@ class LineReader(AReader):
 
     def __read_end(self):
         stop_time = time.time()
-        self.log_info("File {0:s} read - {1:d} packets".format(self.__path, self.lines.read()))
+        self.log_info("File {0:s} read - {1:d} lines".format(self.__path, self.lines.read()))
         self.log_debug("took {0:.3f} seconds to read and process {1:d} lines"\
                 .format(stop_time - self.get_service_start_time(), self.lines.read()))
         self.eof.write(1)

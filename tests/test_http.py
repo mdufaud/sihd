@@ -10,7 +10,7 @@ import json
 
 import utils
 import sihd
-logger = sihd.set_log('debug')
+logger = sihd.set_log('info')
 
 from sihd.Interactors.ip.HttpInteractor import HttpInteractor
 

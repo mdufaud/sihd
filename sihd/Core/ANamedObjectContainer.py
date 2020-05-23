@@ -8,6 +8,11 @@ import sys
 
 from .ANamedObject import ANamedObject
 
+try:
+    from sihd.Tools.shell.term_colors import bcolors
+except ImportError:
+    bcolors = None
+
 class ANamedObjectContainer(ANamedObject):
 
     __nocs = {}
@@ -38,7 +43,7 @@ class ANamedObjectContainer(ANamedObject):
     def delete_from_tree(path):
         no = ANamedObjectContainer.root_find(path)
         if no is None:
-            raise KeyError("No child in path: {}".format(path))
+            raise KeyError("No container in path: {}".format(path))
         if no.get_parent() is None:
             ANamedObjectContainer.__nocs.pop(no.get_name())
         else:
@@ -52,15 +57,19 @@ class ANamedObjectContainer(ANamedObject):
     # Links
     #
 
+    def get_base_child_name(self, obj):
+        return self.__alias.get(obj.get_path(), None) or obj.get_name()
+
     def get_alias(self, obj):
-        return self.__alias.get(obj.get_name(), None)
+        return self.__alias.get(obj.get_path(), None)
 
     def remove_alias(self, obj):
-        return self.__alias.pop(obj.get_name())
+        return self.__alias.pop(obj.get_path())
 
     def on_link(self, name, obj):
+        """ Callback when link resolution is done """
         self.add_child(obj, name=name, replace=True)
-        self.__alias[obj.get_name()] = name
+        self.__alias[obj.get_path()] = name
 
     def link(self, name, path_or_no):
         """ Add a link """
@@ -74,7 +83,7 @@ class ANamedObjectContainer(ANamedObject):
     def process_links(self):
         """ Process all links """
         for name, path in self.__links.items():
-            item = self.root_find(path)
+            item = self.find(path)
             if isinstance(item, ANamedObject):
                 self.on_link(name, item)
             elif item is not None:
@@ -115,14 +124,18 @@ class ANamedObjectContainer(ANamedObject):
         return obj
 
     def find(self, path):
+        if path and path[0] != '.':
+            return self.root_find(path)
         split = path.split('.')
         obj = self
         if split[0] == '':
             # For case of starting on dots
             split = split[1:]
-        if split[-1] == '':
+        if split and split[-1] == '':
             # For case of finishing on dots
             split = split[:-1]
+        if not split:
+            return None
         for name in split:
             if obj is None:
                 break
@@ -130,40 +143,92 @@ class ANamedObjectContainer(ANamedObject):
                 obj = obj.get_parent()
             else:
                 obj = obj.get_child(name)
-        if obj == self:
-            return None
         return obj
 
     #
     # Parent
     #
 
-    def get_tree_children(self, ident=1):
+    def __sort_child(self, child):
+        return (child.__class__.__name__, self.get_base_child_name(child))
+
+    def get_tree_children(self, lst, desc=False, ident=1, max_rec=0):
+        if max_rec > 0 and max_rec == ident:
+            return
         children = self.get_children()
-        children_lst = list(children.keys())
-        children_lst.sort()
-        s = ""
-        for child_name in children_lst:
-            child = children[child_name]
-            s += "{}{}: {}".format("  " * ident,
-                                    child_name,
-                                    child.__class__.__name__)
-            if child.get_name() != child_name:
-                s += " -> {}".format(child.get_path())
-            s += "\n"
+        children_lst = sorted(children.values(),
+                        key=self.__sort_child)
+        for child in children_lst:
+            alias = self.get_alias(child)
+            child_name = alias if alias else child.get_name()
+            child_dict = {
+                'name': child_name,
+                'class': child.__class__,
+                'alias': child.get_path() if alias else None,
+                'children': []
+            }
+            if desc:
+                child_dict['attributes'] = child._get_attributes()
+            lst.append(child_dict)
             if isinstance(child, ANamedObjectContainer):
-                s += child.get_tree_children(ident=ident+1)
+                child.get_tree_children(child_dict['children'],
+                                        desc=desc,
+                                        ident=ident+1,
+                                        max_rec=max_rec)
+
+    def get_tree(self, desc=False, ident=1, max_rec=0):
+        dic = {
+            'name': self.get_name(),
+            'class': self.__class__,
+            'children': []
+        }
+        if desc:
+            dic['attributes'] = self._get_attributes()
+        self.get_tree_children(dic['children'],
+                                desc=desc,
+                                ident=ident,
+                                max_rec=max_rec)
+        return dic
+
+    def __build_tree_children(self, lst, desc=False, colored=True, ident=1):
+        if not bcolors:
+            colored = False
+        s = ""
+        for child in lst:
+            children = child['children']
+            name = child['name']
+            cls = child['class'].__name__
+            attr = child.get('attributes', None)
+            attributes = "\n\t({})".format(', '.join(attr)) \
+                    if attr and desc else ""
+            if colored:
+                if children:
+                    name = bcolors.gold(name)
+                    cls = bcolors.gold(cls)
+                else:
+                    name = bcolors.blue(name)
+            alias = child['alias']
+            link = " --> " + str(alias) if alias else ""
+            if link and colored:
+                link = bcolors.red(link)
+            s += "{}{}: {}{}{}\n".format("  " * ident, name, cls, link, attributes)
+            s += self.__build_tree_children(children,
+                                            desc=desc,
+                                            colored=colored,
+                                            ident=ident+1)
         return s
 
-
-    def get_tree(self, ident=1):
-        s = "{}: {}\n".format(self.get_name(),
-                            self.__class__.__name__)
-        s += self.get_tree_children(ident=ident)
-        return s
-
-    def print_tree(self):
-        print(self.get_tree())
+    def print_tree(self, desc=False, colored=True, ident=1, max_rec=0):
+        dic = self.get_tree(desc=desc, ident=ident, max_rec=max_rec)
+        if not bcolors:
+            colored = False
+        s = "{}: {}\n".format(dic['name'], dic['class'].__name__)
+        children = dic['children']
+        if colored and children:
+            s = bcolors.gold(s)
+        s += self.__build_tree_children(dic['children'], desc=desc,
+                                        colored=colored, ident=ident)
+        print(s)
 
     #
     # Children
@@ -184,9 +249,8 @@ class ANamedObjectContainer(ANamedObject):
             raise KeyError("{}: child '{}' key already used".format(self, name))
         elif replace is True:
             old_child = children.get(name, None)
-            if old_child is None:
-                raise KeyError("{}: no such child {}".format(self, name))
-            old_child.set_parent(None)
+            if old_child is not None:
+                old_child.set_parent(None)
         children[name] = child
 
     def remove_child(self, child):

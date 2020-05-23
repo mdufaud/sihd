@@ -13,7 +13,7 @@ from sihd.Core.Channel import *
 from sihd.Core import RunnableThread
 from sihd.Core import RunnableProcess
 
-class TestChannelCondition(unittest.TestCase):
+class TestChannelDefault(unittest.TestCase):
 
     def setUp(self):
         print()
@@ -25,25 +25,26 @@ class TestChannelCondition(unittest.TestCase):
 
     """ Process """
 
-    def condition_worker_step(self):
+    def worker_step(self):
         n = self.worker.get_number()
         logger.info("Worker {} reading condition".format(n))
-        ret = self.cond.read()
+        ret = self.chan.wait(5)
         logger.info("Worker {} passed condition -> {}".format(n, ret))
         self.bool.write(ret)
 
     def worker_started(self, worker):
         self.worker = worker
-        self.cond, self.bool = worker.get_args()
+        self.chan, self.bool = worker.get_args()
 
-    def do_multiprocess(self, channel, timeout=False):
+    def do_mp(self, channel, timeout=False):
+        logger.info("Testing " + str(channel))
         kwargs = {
             "frequency": 10,
             "timeout": 5,
             "max_iter": 1,
             "worker_number": 2,
             "daemon": True,
-            "step": self.condition_worker_step,
+            "step": self.worker_step,
             "on_start": self.worker_started,
         }
         self.passed = {}
@@ -62,7 +63,7 @@ class TestChannelCondition(unittest.TestCase):
         self.assertFalse(bool2.read())
         self.assertFalse(bool3.read())
         if timeout is False:
-            channel.write()
+            channel.write(1)
             time.sleep(0.01)
         self.assertEqual(bool1.read(), timeout is False)
         self.assertEqual(bool2.read(), timeout is False)
@@ -73,25 +74,26 @@ class TestChannelCondition(unittest.TestCase):
 
     """ Thread """
 
-    def condition_thread_step(self):
+    def thread_step(self):
         ident = self.thread.get_id()
         self.passed[ident] = False
         logger.info("Thread {} reading condition".format(ident))
-        ret = self.cond.read()
+        ret = self.chan.wait(5)
         self.passed[ident] = ret
         logger.info("Thread {} passed condition -> {}".format(ident, ret))
 
     def thread_started(self, thread):
         self.thread = thread
-        self.cond = thread.get_args()[0]
+        self.chan = thread.get_args()[0]
 
     def do_thread(self, channel, timeout=False):
+        logger.info("Testing " + str(channel))
         kwargs = {
             "frequency": 10,
             "timeout": 5,
             "max_iter": 1,
             "daemon": True,
-            "step": self.condition_thread_step,
+            "step": self.thread_step,
             "on_start": self.thread_started,
             "args": (channel,)
         }
@@ -106,7 +108,7 @@ class TestChannelCondition(unittest.TestCase):
         for key, value in self.passed.items():
             self.assertFalse(value)
         if timeout is False:
-            channel.write()
+            channel.write(1)
             time.sleep(0.01)
         for key, value in self.passed.items():
             self.assertEqual(value, timeout is False)
@@ -114,26 +116,36 @@ class TestChannelCondition(unittest.TestCase):
         thread2.stop()
         thread3.stop()
 
-    def do_condition(self, channel, timeout=False):
-        logger.info("Testing " + str(channel))
-        if channel.is_multiprocess():
-            self.do_multiprocess(channel, timeout)
-        else:
-            self.do_thread(channel, timeout)
-
-    def test_channel_condition(self):
+    def test_channel_wait(self):
         print()
-        channel = ChannelCondition(timeout=None, block=False)
-        self.do_condition(channel)
-        channel = ChannelCondition(timeout=0.5)
-        self.do_condition(channel, timeout=True)
+        channel = Channel()
+        self.do_thread(channel)
         
         if utils.is_multiprocessing():
             print()
-            channel = ChannelCondition(mp=True, timeout=None, block=False)
-            self.do_condition(channel)
-            channel = ChannelCondition(mp=True, timeout=0.5)
-            self.do_condition(channel, timeout=True)
+            channel = Channel(mp=True)
+            self.do_mp(channel)
+
+    def test_channel_notify(self):
+        c1 = Channel(default='slt')
+        c2 = Channel(default=0)
+        self.assertEqual(c1.read(), 'slt')
+        self.assertEqual(c2.read(), 0)
+        c1.add_observer(c2)
+        self.assertTrue(c1.write('somedata'))
+        self.assertEqual(c2.read(), 'somedata')
+
+    def test_channel_lock(self):
+        channel = Channel(default=4, timeout=0.001)
+        self.assertTrue(channel.read(), 4)
+        self.assertTrue(channel.lock())
+        self.assertFalse(channel.write('pls'))
+        self.assertFalse(channel.write({'d': 'dd'}))
+        self.assertFalse(channel.write(888))
+        self.assertTrue(channel.unlock())
+        self.assertEqual(channel.read(), 4)
+        self.assertTrue(channel.write(5))
+        self.assertEqual(channel.read(), 5)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -12,33 +12,32 @@ import sihd
 
 class TestApp(sihd.App.SihdApp):
 
-    def __init__(self, test_number):
-        self._test = str(test_number)
-        super(TestApp, self).__init__("TestApp" + self._test)
+    def __init__(self):
+        super(TestApp, self).__init__("TestApp")
+        self._default_log_level = "info"
         self.set_path(os.path.dirname(os.path.dirname((__file__))))
         sihd.Core.ALoggable.set_color(True)
-        self._default_log_level = "debug"
 
     def on_setup(self):
         ret = super().on_setup()
         return ret
 
     def build_services(self):
-        #Get args for app
+        # Get args for app
         args = self.parse_args()
-        #If time args has been set, will set a limited app loop
+        # If time args has been set, will set a limited app loop
         if args.time:
             self.set_timed_loop(args.time)
-        #Setting up LineReader
-        reader = sihd.Readers.sys.LineReader("LineReader" + self._test, self)
-        #Set configuration for this reader
+        # Setting up LineReader
+        reader = sihd.Readers.sys.LineReader("LineReader", self)
+        # Set configuration for this reader
         self._configure_reader(reader, args)
-        #Will be notified of state change
-        #Setting up WordHandler
-        handler = sihd.Handlers.sys.WordHandler("WordHandler" + self._test, self)
-        #Set configuration for this handler
+        # Setting up WordHandler
+        handler = sihd.Handlers.sys.WordHandler("WordHandler", self)
+        handler.link('input', '..LineReader.output')
+        # Set configuration for this handler
         self._configure_handler(handler)
-        #Remember for further access those services
+        # Remember for further access those services
         self._word_handler = handler
         self._line_reader = reader
         return True
@@ -46,12 +45,12 @@ class TestApp(sihd.App.SihdApp):
     def on_init(self):
         reader = self._line_reader
         handler = self._word_handler
-        #reader.eof.add_observer(self)
-        counter = self.create_channel("counter", type='counter')
-        self.set_channel_input(counter)
-        handler.output.add_observer(counter)
-        handler.link("input", reader.output)
+        # Counter
+        handler.processed.add_observer(self)
+        reader.eof.add_observer(self)
+        # Check reader state
         self.add_state_observer(reader)
+        self.print_tree()
         return True
 
     def build_args(self, parser):
@@ -69,10 +68,19 @@ class TestApp(sihd.App.SihdApp):
                 default=None,
                 help="Timer until stop")
 
+    def on_notify(self, channel):
+        self.handle(channel)
+
     def handle(self, channel):
-        if channel == self.counter:
-            if channel.read() == self._line_reader.lines.read():
-                self._line_reader.stop()
+        eof = self._line_reader.eof
+        lines = self._line_reader.lines
+        processed = self._word_handler.processed
+        if channel == processed and channel.read() == lines.read()\
+                and eof.read():
+            self._line_reader.stop()
+        elif channel == eof and channel.read()\
+                and lines.read() == processed.read():
+            self._line_reader.stop()
 
     def service_state_changed(self, service, stopped, paused):
         #Exit only if no gui attached
@@ -83,20 +91,19 @@ class TestApp(sihd.App.SihdApp):
                 return
         elif self.is_reader(service) is False:
             return
-        self.log_info("{} ---- > {}".format(service.get_name(), service.get_service_state_str()))
+        self.log_info("Service state changed {} --to-- > {}".\
+                format(service.get_name(), service.get_service_state_str()))
         if stopped:
-            self.log_info("Reader {} ----> ended and stopped !".format(service.get_name()))
+            self.log_info("=== {} has stopped ===".format(service.get_name()))
             self.stop()
 
     def _configure_handler(self, handler):
         #Decorate with stats
-        #handler.set_conf("service_type", "process")
         if self.args.stats:
             handler.step = sihd.Core.Stats.stat_it(handler.step)
 
     def _configure_reader(self, reader, args):
         reader.set_conf("path", args.file, force=True)
-        #reader.set_conf("service_type", "process")
         #Decorate with stats
         if self.args.stats:
             reader.step = sihd.Core.Stats.stat_it(reader.step)

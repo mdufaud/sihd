@@ -10,7 +10,7 @@ import unittest
 
 import utils
 import sihd
-logger = sihd.set_log('debug')
+logger = sihd.set_log('info')
 
 from sihd.Handlers.AHandler import AHandler
 
@@ -48,7 +48,6 @@ class TestChannelValue(unittest.TestCase):
         logger.info("Testing " + str(channel))
 
         logger.info("Test polling/read/write")
-        self.assertTrue(channel.is_readable())
         logger.info("Testing read -> {} ?= {}".format(channel.read(), default))
         self.assertEqual(channel.read(), default)
         channel.consumed_data()
@@ -59,17 +58,6 @@ class TestChannelValue(unittest.TestCase):
         self.assertEqual(channel.read(), write)
         self.assertTrue(channel.is_readable())
 
-        logger.info("Test lock")
-        self.assertFalse(channel.is_locked())
-        self.assertTrue(channel.lock())
-        self.assertTrue(channel.is_locked())
-        self.assertFalse(channel.write(default))
-        self.assertFalse(channel.write(write))
-        self.assertTrue(channel.unlock())
-        self.assertTrue(channel.is_readable())
-        self.assertTrue(channel.write(default))
-        self.assertTrue(channel.write(write))
-
     def test_channel_double(self):
         print()
         default = 0.222
@@ -78,13 +66,12 @@ class TestChannelValue(unittest.TestCase):
         channel = ChannelDouble(default=default)
         logger.info("Testing " + str(channel))
         logger.info("Test polling/read/write")
-        self.assertTrue(channel.is_readable())
         logger.info("read -> {} ?= {}".format(channel.read(), default))
         self.assertEqual(channel.read(), default)
-        channel.consumed_data()
-        self.assertTrue(channel.is_readable() == False)
         self.assertTrue(channel.write(write))
         self.assertTrue(channel.is_readable())
+        channel.consumed_data()
+        self.assertTrue(channel.is_readable() == False)
         logger.info("read -> {} ?= {}".format(channel.read(), write))
         self.assertEqual(channel.read(), write)
 
@@ -93,7 +80,6 @@ class TestChannelValue(unittest.TestCase):
             channel = ChannelDouble(default=default, mp=True)
             logger.info("Testing " + str(channel))
             logger.info("Test polling/read/write")
-            self.assertTrue(channel.is_readable())
             logger.info("read -> {} ?= {}".format(channel.read(), default))
             self.assertEqual(channel.read(), default)
             channel.consumed_data()

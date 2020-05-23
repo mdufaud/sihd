@@ -91,6 +91,7 @@ class PcapHandler(AHandler):
     #
 
     def dump_to(self, filename, perm="wb+"):
+        self.log_info("Dumping to " + str(filename))
         try:
             self.__writer.write_pcap(filename, mode=perm)
         except IOError as e:

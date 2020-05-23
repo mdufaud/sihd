@@ -34,8 +34,8 @@ class TestApp(unittest.TestCase):
             if expected is not None:
                 self.assertEqual(expected, value)
 
-        self.assertEqual(handler.skipped.read(), skipped), "{} != {}".format(handler.skipped.read(), skipped)
-        self.assertEqual(reader.lines.read(), lines), "{} != {}".format(reader.lines.read(), lines)
+        self.assertEqual(handler.skipped.read(), skipped)
+        self.assertEqual(reader.lines.read(), lines)
         self.assertTrue(reader.eof.read())
 
         if not app.args.stats:
@@ -49,7 +49,7 @@ class TestApp(unittest.TestCase):
     def do_file(self, path, lines, skipped, check_words={}):
         print("Test with file '{}' with {} lines and {} comments"\
                 .format(path, lines, skipped))
-        app = utils.TestApp(0)
+        app = utils.TestApp()
         app.set_args([
             "-f", path,
             "-s",
@@ -57,7 +57,7 @@ class TestApp(unittest.TestCase):
         if app.setup_app() is False:
             sys.exit(1)
         app.start()
-        app.loop(timeout=5)
+        app.loop(timeout=10)
         app.stop()
         #os.remove(app.get_conf_path())
         self.file_expect(app, lines, skipped, check_words, prt=False)

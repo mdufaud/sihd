@@ -6,7 +6,7 @@ import unittest
 import sys
 
 import sihd
-logger = sihd.set_log('debug')
+logger = sihd.set_log('info')
 
 from sihd.Core.ANamedObject import ANamedObject
 from sihd.Core.ANamedObjectContainer import ANamedObjectContainer
@@ -69,6 +69,23 @@ class TestNamedObject(unittest.TestCase):
         self.assertEqual(subchild.find('..child1'), child1)
 
     def test_tree(self):
+        """
+            Expected hierarchy
+
+            root: ANamedObjectContainer
+              object2: ANamedObject
+              object: ANamedObjectContainer
+                list: ANamedObjectContainer
+                  item1: ANamedObject
+                  item2: ANamedObject
+                  item3: ANamedObject
+                  item4: ANamedObject
+                  sub_lst: ANamedObjectContainer
+                    item1: ANamedObject
+                    item2: ANamedObject
+                    item3: ANamedObject
+                    item4: ANamedObject
+        """
         root = ANamedObjectContainer(name='root')
         obj = ANamedObjectContainer(name='object', parent=root)
         lst = ANamedObjectContainer(name='list', parent=obj)
@@ -83,9 +100,48 @@ class TestNamedObject(unittest.TestCase):
         ANamedObject(name='item4', parent=sub_lst)
         ANamedObject(name='object2', parent=root)
         root.print_tree()
+        #testing tree
+        dic = root.get_tree()
+        self.assertEqual(dic['name'], 'root')
+        #check hierarchy
+        self.assertEqual(dic['children'][0]['name'], 'object2')
+        self.assertEqual(dic['children'][1]['name'], 'object')
+        self.assertEqual(dic['children'][1]\
+                            ['children'][0]['name'], 'list')
+        self.assertEqual(dic['children'][1]\
+                            ['children'][0]\
+                            ['children'][0]['name'], 'item1')
+        self.assertEqual(dic['children'][1]\
+                            ['children'][0]\
+                            ['children'][4]['name'], 'sub_lst')
+        self.assertEqual(dic['children'][1]\
+                            ['children'][0]\
+                            ['children'][4]\
+                            ['children'][0]['name'], 'item1')
+        #try finding stuff
+        self.assertEqual(obj.find(''), None)
+        self.assertEqual(obj.find('.'), None)
+        self.assertEqual(obj.find('.list'), lst)
+        self.assertEqual(lst.find('..'), obj)
+        self.assertEqual(lst.find('...'), root)
+        self.assertEqual(lst.find('...object'), obj)
+        self.assertEqual(lst.find('...object.list'), lst)
+        self.assertEqual(lst.find('...object.list.sub_lst'), sub_lst)
+        self.assertNotEqual(lst.find('.item1'), None)
+        self.assertNotEqual(lst.find('.item2'), None)
+        self.assertNotEqual(lst.find('.item3'), None)
+        self.assertNotEqual(lst.find('.item4'), None)
+        self.assertEqual(lst.find('.item5'), None)
+        self.assertNotEqual(lst.find('.sub_lst.item1'), None)
+        #deleting main object
         ANamedObjectContainer.delete_from_tree('root.object')
         self.assertEqual(lst.get_parent(), obj)
         root.print_tree()
+        dic = root.get_tree()
+        self.assertEqual(dic['name'], 'root')
+        self.assertEqual(len(dic['children']), 1)
+        self.assertEqual(dic['children'][0]['name'], 'object2')
+
 
     def test_errors(self):
         parent = ANamedObjectContainer(name='parent')
@@ -149,9 +205,9 @@ class TestNamedObject(unittest.TestCase):
         refcount_parent = sys.getrefcount(parent)
         child3.set_parent(None)
         self.assertEqual(refcount_parent, sys.getrefcount(parent) + 1)
-        ANamedObjectContainer.delete_from_tree("parent")
         self.assertEqual(child3.get_parent(), None)
         del child3
+        ANamedObjectContainer.delete_from_tree("parent")
         self.assertEqual(refcount_parent, sys.getrefcount(parent) + 2)
         del parent
         self.assertEqual(ANamedObjectContainer.root_find('parent'), None)

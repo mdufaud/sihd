@@ -10,7 +10,7 @@ import unittest
 
 import utils
 import sihd
-logger = sihd.set_log('debug')
+logger = sihd.set_log('info')
 
 from sihd.Handlers.AHandler import AHandler
 from sihd.Tools.pcap import PcapWriter
@@ -137,10 +137,10 @@ class TestPcap(unittest.TestCase):
 
         path = os.path.join(os.path.dirname(__file__),
                             "outputs", "pcap_test.dump")
-        logger.info("Dumping to {}".format(path))
+        logger.info("Asking to dump to {}".format(path))
         saver.dump_path.write(path)
         self.assertTrue(saver.resume())
-        time.sleep(0.01)
+        time.sleep(0.3)
         self.assertTrue(saver.stop())
         
         logger.info("Reading dump with another handler")

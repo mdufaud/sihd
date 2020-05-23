@@ -42,7 +42,12 @@ class SihdRunnableService(SihdService):
 
     def _get_attributes(self):
         lst = super()._get_attributes()
-        lst.append("runnable=" + str(self.__run_proc))
+        if self.__is_process:
+            lst.append("runnable=process")
+        elif self.__is_thread:
+            lst.append("runnable=thread")
+        else:
+            lst.append("runnable=none")
         return lst
 
     """ SihdService """
@@ -75,6 +80,7 @@ class SihdRunnableService(SihdService):
     def __make_runnable(self):
         runnable = None
         kwargs = {
+            'name': 'runnable',
             'step': self.step,
             'on_start': self.on_runnable_start,
             'on_stop': self.on_runnable_stop,
@@ -85,7 +91,6 @@ class SihdRunnableService(SihdService):
             'parent': self,
             'daemon': True,
         }
-        name = self.get_name()
         if self.__is_thread:
             runnable = RunnableThread(**kwargs)
             self.log_debug("Service is a threaded runnable")

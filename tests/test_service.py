@@ -7,7 +7,7 @@ import unittest
 
 import utils
 import sihd
-logger = sihd.set_log('debug')
+logger = sihd.set_log('info')
 
 from sihd.Handlers.AHandler import AHandler
 from sihd.Core.Channel import *

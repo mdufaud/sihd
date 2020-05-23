@@ -17,7 +17,8 @@ class WordHandler(AHandler):
         self.__skipped = 0
         self.add_channel_input('input')
         self.add_channel_output('output', type='dict')
-        self.add_channel_output('skipped', type='int', default=0)
+        self.add_channel_output('skipped', type='counter')
+        self.add_channel_output('processed', type='counter')
 
     #
     # Configuration
@@ -45,21 +46,25 @@ class WordHandler(AHandler):
             return True
         #Skip lines
         toskip = self.__toskip
+        willskip = False
         if toskip:
             for skip in toskip:
                 if line.find(skip) == 0:
-                    self.__skipped += 1
-                    self.skipped.write(self.__skipped)
-                    return True
-        #Stat words in line
-        line = line.strip()
-        lst = line.split(self.__delimiter)
-        write = self.output.write
-        read = self.output.read
-        for word in lst:
-            if word == "":
-                continue
-            write(word, read(word, 0) + 1)
+                    willskip = True
+                    break
+        if willskip is False:
+            #Stat words in line
+            line = line.strip()
+            lst = line.split(self.__delimiter)
+            write = self.output.write
+            read = self.output.read
+            for word in lst:
+                if word == "":
+                    continue
+                write(word, read(word, 0) + 1)
+        else:
+            self.skipped.write()
+        self.processed.write()
         return True
 
     #
@@ -68,4 +73,5 @@ class WordHandler(AHandler):
 
     def on_start(self):
         super().on_start()
-        self.__skipped = 0
+        self.skipped.clear()
+        self.processed.clear()

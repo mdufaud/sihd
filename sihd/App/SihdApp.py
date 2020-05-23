@@ -18,7 +18,6 @@ except ImportError:
 #
 # Sihd
 #
-
 import sihd
 
 from sihd.Readers.AReader import AReader
@@ -286,13 +285,13 @@ class SihdApp(SihdService):
         state = service.get_channel("service_state")
         if not state:
             self.log_error("Service {}: could not find "
-                    "service_state channel to observe".format(service))
+                    "service_state channel to observe".format(service.get_name()))
             return False
         input_lst = self.get_channels_input()
         if state not in input_lst:
             input_lst.append(state)
         self.log_debug("Service {}: added state observation"\
-                        .format(service))
+                        .format(service.get_name()))
         return True
 
     def remove_state_observer(self, service):
@@ -562,6 +561,9 @@ class SihdApp(SihdService):
     # Loop
     #
 
+    def step(self):
+        pass
+
     def set_loop(self, fun):
         if self.is_running():
             return False
@@ -582,6 +584,7 @@ class SihdApp(SihdService):
             i = 0
             while i < max_sec and self.is_running():
                 self.read_channels_input()
+                self.step()
                 time.sleep(sleeptime)
                 i += sleeptime
         except KeyboardInterrupt:
@@ -595,6 +598,7 @@ class SihdApp(SihdService):
         try:
             while self.is_running():
                 self.read_channels_input()
+                self.step()
                 time.sleep(sleeptime)
                 now += sleeptime
                 if timeout is not None and now >= (start + timeout):

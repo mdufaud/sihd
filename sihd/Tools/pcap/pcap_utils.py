@@ -36,6 +36,20 @@ class CapFileInfo:
             self.network)
         return s
 
+def is_pcap_magic(magic):
+    ret = False
+    if len(magic) != 4:
+        ret = False
+    elif magic == b"\xa1\xb2\xc3\xd4":  # big endian
+        ret = True
+    elif magic == b"\xd4\xc3\xb2\xa1":  # little endian
+        ret = True
+    elif magic == b"\xa1\xb2\x3c\x4d":  # big endian, nanosecond-precision
+        ret = True
+    elif magic == b"\x4d\x3c\xb2\xa1":  # little endian, nanosecond-precision  # noqa: E501
+        ret = True
+    return ret
+
 class PcapReader:
     def __init__(self):
         self.__endian = None
@@ -214,10 +228,9 @@ class PcapWriter:
     def write_pcap(self, filename, mode='wb'):
         with open(filename, mode) as fd:
             if mode[0] == 'w':
-                hdr = self.get_header()
-                magic = self.get_magic()
-                fd.write(magic)
-                fd.write(hdr)
+                #Write header + magic if not appending
+                fd.write(self.get_magic())
+                fd.write(self.get_header())
                 fd.flush()
             for pktinfo in self.__pkt_lst:
                 hdr, pkt = pktinfo

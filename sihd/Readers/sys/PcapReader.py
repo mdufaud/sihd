@@ -15,8 +15,8 @@ class PcapReader(AReader):
     
     files_read = {}  
 
-    def __init__(self, name="PcapReader", app=None):
-        super(PcapReader, self).__init__(app=app, name=name)
+    def __init__(self, name="PcapReader", app=None, **kwargs):
+        super().__init__(app=app, name=name, **kwargs)
         self.set_default_conf({
             "path": "/path/to/file",
         })
@@ -26,9 +26,8 @@ class PcapReader(AReader):
         self.add_channel_output("pcap_header", type='pickle', size=200)
         self.add_channel_output("packet", type='queue')
         self.add_channel_output("packet_info", type='queue')
-        self.add_channel_output('packets', type='int', default=0)
-        self.add_channel_output('eof', type='bool',
-                                default=True, timeout=0.1)
+        self.add_channel_output('packets', type='counter')
+        self.add_channel_output('eof', type='bool', default=True)
 
     #
     # Configuration
@@ -98,7 +97,7 @@ class PcapReader(AReader):
                 self.__pcap_reader = reader
                 #Channel update
                 self.pcap_header.write(reader.get_header())
-                self.packets.write(0)
+                self.packets.clear()
                 self.eof.write(0)
                 self.log_info("Reading file {name}".format(name=self.__path))
                 self.__can_recover()
@@ -134,13 +133,12 @@ class PcapReader(AReader):
             return False
         self.packet_info.write(info)
         self.packet.write(pkt)
-        self.__pkts += 1
-        self.packets.write(self.__pkts)
+        self.packets.write()
         return True
 
     def _read_end(self):
         stop_time = time.time()
-        self.log_info("File {0:s} read - {1:d} packets".format(self.__path, self.__pkts))
+        self.log_info("File {0:s} read - {1:d} packets".format(self.__path, self.packets.read()))
         self.log_debug("took {0:.3f} seconds to read and process {1:d} lines"\
                 .format(stop_time - self.get_service_start_time(), self.__pkts))
         self.eof.write(1)

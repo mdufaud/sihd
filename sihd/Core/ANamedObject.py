@@ -16,11 +16,6 @@ class ANamedObject(object):
         self.set_name(name)
         self.set_parent(parent)
 
-    def __lt__(self, other):
-        if isinstance(other, ANamedObject):
-            return self.get_name() < other.get_name()
-        return super().__lt__(other)
-
     def __del__(self):
         self.set_parent(None)
 
@@ -81,7 +76,7 @@ class ANamedObject(object):
         return self.__name
 
     def _get_attributes(self):
-        attr_lst = ['name=' + self.get_name()]
+        attr_lst = []
         return attr_lst
 
     def get_description(self):

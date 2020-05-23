@@ -30,7 +30,7 @@ class ALoggable(ANamedObject):
         self.__can = activate
 
     def _log_format(self, *msg):
-        return "{0}: {1}".format(self.get_name(), ' '.join(msg))
+        return "{0}: {1}".format(self.get_name(), '\t'.join((str(m) for m in msg)))
 
     def log_debug(self, *msg):
         if self.__can:

@@ -16,7 +16,7 @@ except ImportError:
     import configparser
     ConfigParser = configparser
 
-logger = sihd.set_log('debug')
+logger = sihd.set_log('info')
 
 import unittest
 
@@ -73,7 +73,7 @@ class TestConfig(unittest.TestCase):
         os.remove(path)
 
     def test_app_config_changed(self):
-        app = utils.TestApp("ConfigTest")
+        app = utils.TestApp()
 
         #Check if config is here and good
         obj = ConfigParser.ConfigParser()
@@ -81,7 +81,7 @@ class TestConfig(unittest.TestCase):
                 "{}.ini".format(app.get_name()))
         obj.read(path_config)
         self.assertTrue(obj.has_section(app.get_name()))
-        reader_name = "LineReaderConfigTest"
+        reader_name = "LineReader"
         self.assertTrue(obj.has_section(reader_name))
         self.assertTrue(obj.has_option(reader_name, "path"))
         obj.set(reader_name, "path", __file__)
@@ -112,7 +112,7 @@ class TestConfig(unittest.TestCase):
 
     def test_app_config(self):
         path = __file__
-        app = utils.TestApp("ConfigTest")
+        app = utils.TestApp()
         app.set_args([
             "-f", path,
             "-s",

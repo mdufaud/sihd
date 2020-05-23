@@ -10,7 +10,7 @@ import unittest
 
 import utils
 import sihd
-logger = sihd.set_log('debug')
+logger = sihd.set_log('info')
 
 from sihd.Handlers.AHandler import AHandler
 from sihd.Core.Channel import *
@@ -29,7 +29,6 @@ class TestChannelArray(unittest.TestCase):
 
     def do_array(self, channel, default):
         logger.info("Testing " + str(channel))
-        self.assertTrue(channel.is_readable())
         print(channel.read(0, 3))
         self.assertEqual(channel.read(0), default[0])
         self.assertEqual(channel.read(-1), default[-1])
@@ -88,7 +87,6 @@ class TestChannelArray(unittest.TestCase):
 
     def do_byte(self, channel, default):
         logger.info("Testing " + str(channel))
-        self.assertTrue(channel.is_readable())
         self.assertEqual(channel.read(0), default[0])
         self.assertEqual(channel.read(-1), 0)
         self.assertEqual(channel.get_stripped(), default.decode())

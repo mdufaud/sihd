@@ -9,7 +9,7 @@ import unittest
 
 import utils
 import sihd
-logger = sihd.set_log('debug')
+logger = sihd.set_log('info')
 
 from sihd.GUI.Cmd.ICmdGui import ICmdGui
 from sihd.App.SihdApp import SihdApp

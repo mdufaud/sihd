@@ -10,7 +10,7 @@ import unittest
 
 import utils
 import sihd
-logger = sihd.set_log('debug')
+logger = sihd.set_log('info')
 
 from sihd.Handlers.AHandler import AHandler
 from sihd.Core.Channel import *
@@ -36,7 +36,6 @@ class TestChannelDict(unittest.TestCase):
 
     def do_dict(self, channel, default):
         logger.info("Testing " + str(channel))
-        self.assertTrue(channel.is_readable())
         self.assertEqual(channel.read("key"), default['key'])
         self.assertEqual(channel.get_data()['key'], default['key'])
         channel.clear('key')
