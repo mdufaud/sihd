@@ -33,6 +33,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         # Channels
         self.__channels_input = list()
         self.__channels_output = list()
+        self.__channels_made = False
         self.__todo_ichan = list()
         self.__todo_ochan = list()
         self.__todo_chan = list()
@@ -109,6 +110,11 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     #
     # AConfigurable
     #
+
+    def __create_channel_state(self):
+        name = "service_state"
+        channel = self.create_channel(name, type='int', block=True,
+                                        timeout=1, default=1)
 
     def _setup_impl(self):
         ret = super()._setup_impl()
@@ -287,6 +293,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
             return False
         if self._reset_impl() is True:
             self.remove_children()
+            self.__channels_made = False
             self.__init = False
             self.__stopped = True
             self.__paused = False
@@ -337,6 +344,10 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def on_new_channel(self, name, channel):
         setattr(self, name, channel)
     
+    #
+    #   Adders
+    #
+
     def add_channel_input(self, name, **kwargs):
         self.__todo_ichan.append((name, kwargs))
 
@@ -358,6 +369,10 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def add_channel(self, name, **kwargs):
         self.__todo_chan.append((name, kwargs))
 
+    #
+    #   Create
+    #
+
     def create_output_channel(self, name, **kwargs):
         channel = self.create_channel(name, **kwargs)
         if channel and self.set_channel_output(channel):
@@ -371,6 +386,10 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         return None
 
     def _make_channels(self):
+        """ Entry point of channel creation """
+        if self.__channels_made:
+            self.log_warning("Trying to make channels but already done")
+            return False
         for name, dic in self.__todo_ichan:
             self.create_input_channel(name, **dic)
         #self.__todo_ichan = []
@@ -380,7 +399,39 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         for name, dic in self.__todo_chan:
             self.create_channel(name, **dic)
         #self.__todo_chan = []
+        self.__channels_made = True
         return True
+
+    #
+    #   Getters/Setters
+    #
+
+    def __set_channel_conf_lst(self, lst, conf_name, dic):
+        for i, el in enumerate(lst):
+            if el[0] == conf_name:
+                break
+        if i + 1 != len(lst):
+            lst[i][1].update(dic)
+            return True
+        return False
+
+    def set_channel_conf(self, name, **kwargs):
+        if not kwargs:
+            self.log_warning("No conf changes for channel " + str(name))
+            return False
+        if self.__channels_made:
+            self.log_warning("Trying to change channel %s configuration "
+                                "when channels are already made" % name)
+            return False
+        set_conf = self.__set_channel_conf_lst
+        ret = set_conf(self.__todo_ichan, name, kwargs)\
+            or set_conf(self.__todo_ochan, name, kwargs)\
+            or set_conf(self.__todo_chan, name, kwargs)
+        if not ret:
+            raise RuntimeError("{}: Could not change conf for channel {}"\
+                                .format(self, name))
+        self.log_debug("Changed channel {} conf to {}".format(name, kwargs))
+        return ret
 
     def get_channels_input(self):
         return self.__channels_input
@@ -413,7 +464,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         return super().create_channel(name, **kwargs)
 
     #
-    # Reading
+    # Reading channels
     #
 
     def set_channel_notification(self, active):
@@ -427,23 +478,22 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         """ Used for services that want to handle stuff before user parsing """
         return False
 
+    def _read_channel(self, channel):
+        if not channel.pollable or not channel.is_readable():
+            return
+        if channel.lock(0.01):
+            ret = self._pre_handle(channel)
+            ret = ret or self.handle(channel) is not False
+            if not channel.unlock():
+                self.log_warning("Could not unlock channel "
+                                    + str(channel))
+            if ret:
+                channel.consumed_data()
+
     def read_channels_input(self) -> bool:
         if self.__channel_notif is False:
             return False
+        rd = self._read_channel
         for channel in self.get_channels_input():
-            if channel.pollable and channel.is_readable():
-                ret = False
-                if channel.lock(0.01):
-                    ret = self._pre_handle(channel)
-                    ret = ret or self.handle(channel) is not False
-                    if not channel.unlock():
-                        self.log_warning("Could not unlock channel "
-                                            + str(channel))
-                if ret:
-                    channel.consumed_data()
+            rd(channel)
         return True
-
-    def __create_channel_state(self):
-        name = "service_state"
-        channel = self.create_channel(name, type='int', block=True,
-                                        timeout=1, default=1)

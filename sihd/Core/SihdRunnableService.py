@@ -15,7 +15,7 @@ class SihdRunnableService(SihdService):
     def __init__(self, name="SihdRunnableService", **kwargs):
         super().__init__(name, **kwargs)
         self.set_default_conf({
-            "runnable_frequency": 50, 
+            "runnable_frequency": 30, 
             "runnable_timeout": 0,
             "runnable_steps": 0,
             "runnable_type": "thread",

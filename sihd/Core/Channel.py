@@ -59,7 +59,7 @@ def register_channel_object(name, cls):
 class Channel(AObservable, IObserver, ALoggable):
 
     def __init__(self, name="Channel", mp=False, parent=None,
-                    block=True, timeout=0.3, log=True,
+                    block=True, timeout=10, log=True,
                     default=None, timestamp=False, pollable=True):
         super().__init__(name, parent=parent)
         #Timestamping and lock
@@ -102,12 +102,6 @@ class Channel(AObservable, IObserver, ALoggable):
             self.write(default)
             self.consumed_data()
 
-    def __enter__(self):
-        return self.lock()
-
-    def __exit__(self, type, value, traceback):
-        self.__rlock()
-
     def is_multiprocess(self):
         return self.__mp
 
@@ -149,12 +143,13 @@ class Channel(AObservable, IObserver, ALoggable):
         """
         if channel.is_readable():
             data = None
-            with channel:
+            if channel.lock(0.01):
                 try:
                     #Some channels need keys to read
                     data = channel.read()
                 except TypeError:
                     data = None
+                channel.unlock()
             if data is not None:
                 self.write(data)
             else:
@@ -177,8 +172,6 @@ class Channel(AObservable, IObserver, ALoggable):
         block = timeout is not None
         ret = self.__alock(block=block, timeout=timeout)
         self.__locked = ret
-        if not ret:
-            self.log_error("LOCKING FAILED", timeout, block)
         return ret
 
     def lock(self, timeout=None) -> bool:
@@ -386,7 +379,7 @@ class ChannelQueue(Channel):
         return self.__queue
 
     def get_size(self):
-        return self.__size
+        return self.__queue.qsize()
 
     #
     # Queue only
@@ -532,7 +525,7 @@ class ChannelBool(Channel):
         return True
 
     def read(self):
-        if self.__wait(self.timeout):
+        if self.__wait(0.001):
             return True
         return False
 

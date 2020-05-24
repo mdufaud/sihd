@@ -17,13 +17,14 @@ class SerialReader(AReader):
         global serial
         if serial is None:
             import serial
-        super(SerialReader, self).__init__(app=app, name=name)
+        super().__init__(app=app, name=name)
         self.__serial = None
         self.set_default_conf({
             "port": "/dev/some_device",
             "baudrate": 9600,
             "timeout": 1,
         })
+        self.add_channel_output('output')
 
     #
     # Configuration
@@ -68,8 +69,6 @@ class SerialReader(AReader):
 
     def read_serial(self):
         serial = self.__serial
-        if not serial:
-            return None
         try:
             line = serial.readline()
         except EOFError as e:
@@ -84,7 +83,6 @@ class SerialReader(AReader):
         line = self.read_serial()
         if line is not None:
             self.output.write(line)
-        return True
 
     #
     # SihdService

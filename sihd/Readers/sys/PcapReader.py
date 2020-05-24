@@ -23,9 +23,9 @@ class PcapReader(AReader):
         self.__to_recover = 0
         self.__pcap_reader = None
         self.add_channel_input("path", type='queue', simple=True)
-        self.add_channel_output("pcap_header", type='pickle', size=200)
-        self.add_channel_output("packet", type='queue')
-        self.add_channel_output("packet_info", type='queue')
+        self.add_channel_output("pcap_header")
+        self.add_channel_output("packet")
+        self.add_channel_output("packet_info")
         self.add_channel_output('packets', type='counter')
         self.add_channel_output('eof', type='bool', default=True)
 
@@ -130,10 +130,11 @@ class PcapReader(AReader):
         info, pkt = self.read_packet()
         if pkt is None:
             self._read_end()
-            return False
-        self.packet_info.write(info)
-        self.packet.write(pkt)
-        self.packets.write()
+            return True
+        if self.packet_info.write(info) and self.packet.write(pkt):
+            self.packets.write()
+        else:
+            self.log_error("Could not write packet")
         return True
 
     def _read_end(self):
@@ -143,10 +144,11 @@ class PcapReader(AReader):
                 .format(stop_time - self.get_service_start_time(), self.__pkts))
         self.eof.write(1)
         self.close()
+        self.pause()
 
     def close(self):
         if self.__pcap_reader:
             self.__pcap_reader.close()
             self.__pcap_reader = None
-            PcapReader.files_read[self.__path] = (self.__pkts, self.eof.read() == False)
+            PcapReader.files_read[self.__path] = (self.packets.read(), self.eof.read() == False)
             self.log_debug("File {} closed".format(self.__path))

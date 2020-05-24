@@ -1,8 +1,8 @@
 # proj
 *.log
-*.pcap
 *.ini
 *.dump
+*.pcap
 
 # vim
 *.swp

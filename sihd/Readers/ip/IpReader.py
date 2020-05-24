@@ -197,7 +197,6 @@ class IpReader(AReader):
                 self._do_read(r)
             if w:
                 self._do_write(w)
-        return True
 
     #
     # Read part

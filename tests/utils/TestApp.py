@@ -30,6 +30,7 @@ class TestApp(sihd.App.SihdApp):
             self.set_timed_loop(args.time)
         # Setting up LineReader
         reader = sihd.Readers.sys.LineReader("LineReader", self)
+        reader.set_channel_conf("output", type='queue')
         # Set configuration for this reader
         self._configure_reader(reader, args)
         # Setting up WordHandler
@@ -77,10 +78,13 @@ class TestApp(sihd.App.SihdApp):
         processed = self._word_handler.processed
         if channel == processed and channel.read() == lines.read()\
                 and eof.read():
+            self.log_info("Reader stop")
             self._line_reader.stop()
-        elif channel == eof and channel.read()\
-                and lines.read() == processed.read():
-            self._line_reader.stop()
+        elif channel == eof and channel.read():
+            self.log_info("EOF")
+            if lines.read() == processed.read():
+                self.log_info("Reader stop")
+                self._line_reader.stop()
 
     def service_state_changed(self, service, stopped, paused):
         #Exit only if no gui attached

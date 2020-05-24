@@ -40,10 +40,10 @@ class WordHandler(AHandler):
 
     def handle(self, channel):
         if channel != self.input:
-            return True
+            return False
         line = channel.read()
         if not isinstance(line, str):
-            return True
+            return
         #Skip lines
         toskip = self.__toskip
         willskip = False
@@ -65,7 +65,9 @@ class WordHandler(AHandler):
         else:
             self.skipped.write()
         self.processed.write()
-        return True
+
+    def on_step(self):
+        self.input.wait(0.1)
 
     #
     # SihdService

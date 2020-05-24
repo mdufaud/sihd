@@ -15,11 +15,13 @@ class ARunnable(ANamedObject, IService):
     def __init__(self, name="ARunnable", step=None,
                     frequency=50, timeout=None, max_iter=None,
                     on_start=None, on_stop=None, on_err=None,
-                    args=(), *otherargs, **otherkwargs):
+                    do_sleep=None, args=(),
+                    *otherargs, **otherkwargs):
         parent = otherkwargs.pop('parent', None)
         super().__init__(name=name, parent=parent)
         self.__stats = PerfStat()
         self.__runnable = None
+        self.__do_sleep = do_sleep
         self.__step_method = self.step
         # Callables
         self.set_callbacks(on_start, on_stop, on_err)
@@ -128,10 +130,6 @@ class ARunnable(ANamedObject, IService):
     def get_step_method(self):
         return self.__step_method
 
-    def do_pause(self, time):
-        #Should be a wait with timeout condition here
-        time.sleep(time)
-
     def _is_paused(self):
         raise NotImplementedError("_is_paused")
 
@@ -141,6 +139,9 @@ class ARunnable(ANamedObject, IService):
     def step(self):
         raise NotImplementedError("step")
 
+    def do_pause(self, t):
+        time.sleep(t)
+
     def _on_runnable_args(self, *args):
         #Process args passed on to runnable 
         pass
@@ -149,6 +150,7 @@ class ARunnable(ANamedObject, IService):
         self._on_runnable_args(*args)
         #time
         get_now = time.time
+        do_sleep = self.__do_sleep or time.sleep
         start = get_now()
         sleeptime = self.__sleep
         timeout = self.__timeout
@@ -208,7 +210,7 @@ class ARunnable(ANamedObject, IService):
             # Pause
             pause = sleeptime - steptime
             if pause > 0.0:
-                do_pause(pause)
+                do_sleep(pause)
                 downtime += pause
         self.__do_stat(uptime, downtime, maxtime, mintime, i)
         if self.__on_stop:

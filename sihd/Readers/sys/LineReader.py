@@ -20,7 +20,7 @@ class LineReader(AReader):
         })
         self.__reader = None
         self.add_channel_input('path', type='queue', simple=True)
-        self.add_channel_output('output', type='queue')
+        self.add_channel_output('output')
         self.add_channel_output('lines', type='counter')
         self.add_channel_output('eof', type='bool', default=True)
 
@@ -78,10 +78,8 @@ class LineReader(AReader):
 
     def set_source(self, path):
         self.lines.clear()
+        self.close()
         self.__to_recover = 0
-        if self.__reader:
-            self.__reader.close()
-            self.__reader = None
         try:
             fp = open(path, 'r')
             self.__reader = fp
@@ -103,18 +101,17 @@ class LineReader(AReader):
 
     def on_step(self):
         if not self.__reader:
-            return True
+            return
         if self.__to_recover > 0 and self.__recover() == True:
-            return True
+            return
         line = self.read_line()
         if line is None or line == "":
             self.__read_end()
-            return False
+            return
         line = line.strip()
         if line != "":
             self.output.write(line)
             self.lines.write()
-        return True
 
     def __read_end(self):
         stop_time = time.time()
@@ -123,6 +120,7 @@ class LineReader(AReader):
                 .format(stop_time - self.get_service_start_time(), self.lines.read()))
         self.eof.write(1)
         self.close()
+        self.pause()
 
     def close(self):
         if self.__reader:

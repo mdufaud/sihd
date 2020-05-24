@@ -79,20 +79,16 @@ class StdinReader(AReader):
 
     def on_step(self):
         if self.__has_new_question is False:
-            return True
+            return
         self.__ask()
-        try:
-            line = self.get_input(timeout=0.3)
-        except Exception as e:
-            self.stop()
-            raise
-        #Timeout
+        line = self.get_input(timeout=0.3)
         if line is None:
-            return True
+            #Timeout
+            return
         if line == b'':
+            #Ctrl+d
             self.stop()
             return False
         self.answer.write(line)
         self.__has_new_question = False
         self.__asked = False
-        return True

@@ -50,9 +50,8 @@ class RunnableProcess(ARunnable):
         self.__nproc = n_proc
         self._set_runnable(self.__proc)
 
-    def do_pause(self, sleeptime):
-        time.sleep(sleeptime)
-        #self.__worker_work.wait(timeout=sleeptime)
+    def do_pause(self, t):
+        self.__worker_work.wait(timeout=t)
 
     def _setup_runnable(self, *pargs, **pkwargs):
         if self.get_process() is not None:
