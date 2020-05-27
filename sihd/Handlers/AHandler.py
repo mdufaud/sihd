@@ -32,15 +32,6 @@ class AHandler(SihdRunnableService, IAppContainer):
         return True
 
     #
-    # SihdService
-    #
-
-    """
-    def handle(self, channel):
-        raise NotImplementedError("handle not implemented")
-    """
-
-    #
     # IAppContainer
     #
 

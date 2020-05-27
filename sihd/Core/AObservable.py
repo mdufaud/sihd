@@ -1,20 +1,16 @@
 #!/usr/bin/python
 #coding: utf-8
 
-from .ANamedObject import ANamedObject
+class AObservable(object):
 
-class AObservable(ANamedObject):
-
-    def __init__(self, name="AObservable", **kwargs):
-        super(AObservable, self).__init__(name, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.__observers = set()
 
     def add_observer(self, observer):
-        if not getattr(observer, "get_name"):
-            raise NotImplementedError("Observer does not implement 'get_name'")
         if not getattr(observer, "on_notify"):
-            raise NotImplementedError("Observer {} does not implement 'on_notify'"\
-                                        .format(observer.get_name()))
+            raise NotImplementedError(str(observer) +
+                    " does not implement 'on_notify'")
         self.__observers.add(observer)
 
     def notify_observers(self):

@@ -33,8 +33,10 @@ def get_udp_sender():
         "port": 4200,
         "protocol": "udp",
         "runnable_frequency": 10,
-        "runnable_timeout": 0.5,
     })
+    interactor.set_conf({
+        "runnable_timeout": 0.5
+    }, dynamic=True)
     interactor.setup()
     interactor.set_interaction("Some udp message")
     return interactor
@@ -46,8 +48,10 @@ def get_tcp_sender():
         "host": "localhost",
         "port": 4200,
         "runnable_frequency": 100,
-        "runnable_steps": 5
     })
+    interactor.set_conf({
+        "runnable_steps": 5
+    }, dynamic=True)
     interactor.setup()
     interactor.set_interaction("Some tcp message")
     return interactor
@@ -66,7 +70,7 @@ class TestIpServer(unittest.TestCase):
         ip_handler = sihd.Handlers.IpServerHandler()
         if utils.is_multiprocessing():
             reader.set_conf("runnable_type", "process")
-            ip_handler.set_conf("channels_mp", True)
+            ip_handler.set_conf("channels_mp", True, dynamic=True)
         reader.set_conf("port", 4200)
         reader.set_conf("protocol", type)
         self.assertTrue(reader.setup())

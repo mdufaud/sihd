@@ -171,47 +171,47 @@ class ARunnable(ANamedObject, IService):
         check_paused = self._is_paused
         if self.__on_start:
             self.__on_start(self)
-        while not check_stopped():
-            while check_paused():
-                #Pause wait
-                do_pause(1)
-                if check_stopped():
+        try:
+            while not check_stopped():
+                while check_paused():
+                    #Pause wait
+                    do_pause(1)
+                    if check_stopped():
+                        break
+                beg = get_now()
+                # Check timeout
+                if timeout is not None and (start + timeout) <= beg:
                     break
-            beg = get_now()
-            # Check timeout
-            if timeout is not None and (start + timeout) <= beg:
-                break
-            # Execution
-            try:
-                ret = step()
-            except Exception as e:
-                self.stop()
-                if self.__on_error:
-                    self.__on_error(self, i, e)
-                else:
-                    raise
-            except KeyboardInterrupt:
-                self.stop()
-                ret = False
-            #Stats
-            end = get_now()
-            steptime = end - beg
-            uptime += steptime
-            if steptime > maxtime:
-                maxtime = steptime
-            if steptime < mintime:
-                mintime = steptime
-            i += 1
-            if ret is False:
-                break
-            # Iterations
-            if max_iter is not None and i >= max_iter:
-                break
-            # Pause
-            pause = sleeptime - steptime
-            if pause > 0.0:
-                do_sleep(pause)
-                downtime += pause
+                # Execution
+                try:
+                    ret = step()
+                except Exception as e:
+                    self.stop()
+                    if self.__on_error:
+                        self.__on_error(self, i, e)
+                    else:
+                        raise
+                #Stats
+                end = get_now()
+                steptime = end - beg
+                uptime += steptime
+                if steptime > maxtime:
+                    maxtime = steptime
+                if steptime < mintime:
+                    mintime = steptime
+                i += 1
+                if ret is False:
+                    break
+                # Iterations
+                if max_iter is not None and i >= max_iter:
+                    break
+                # Pause
+                pause = sleeptime - steptime
+                if pause > 0.0:
+                    do_sleep(pause)
+                    downtime += pause
+        except KeyboardInterrupt:
+            pass
         self.__do_stat(uptime, downtime, maxtime, mintime, i)
         if self.__on_stop:
             self.__on_stop(self, i)

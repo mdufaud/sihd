@@ -16,18 +16,15 @@ class SihdRunnableService(SihdService):
         super().__init__(name, **kwargs)
         self.set_default_conf({
             "runnable_frequency": 30, 
-            "runnable_timeout": 0,
-            "runnable_steps": 0,
             "runnable_type": "thread",
-            "runnable_processes": 1,
         })
         self.__runnable = None
         self.__run_freq = None
-        self.__run_timeout = None
-        self.__run_steps = None
         self.__is_thread = False
         self.__is_process = False
-        self.__run_proc = None
+        self.__run_timeout = 0
+        self.__run_steps = 0
+        self.__run_proc = 1
 
     def is_service_multiprocessing(self):
         return self.__is_process
@@ -123,10 +120,16 @@ class SihdRunnableService(SihdService):
 
     def on_setup(self):
         ret = super().on_setup()
+        timeout = self.get_conf("runnable_timeout", dynamic=True)
+        if timeout:
+            self.__run_timeout = float(timeout)
+        steps = self.get_conf("runnable_steps", dynamic=True)
+        if steps:
+            self.__run_steps = int(steps)
+        procs = self.get_conf("runnable_processes", dynamic=True)
+        if procs:
+            self.__run_proc = int(procs)
         self.__run_freq = float(self.get_conf("runnable_frequency"))
-        self.__run_timeout = float(self.get_conf("runnable_timeout"))
-        self.__run_steps = int(self.get_conf("runnable_steps"))
-        self.__run_proc = int(self.get_conf("runnable_processes"))
         type = self.get_conf("runnable_type")
         if type == 'thread':
             self.__is_thread = True

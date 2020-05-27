@@ -29,7 +29,7 @@ class TestShell(unittest.TestCase):
             "cmd2": "grep 'e'",
             "cmd3": "awk '{print $1}'",
             "cmd4": "sort -r",
-        })
+        }, dynamic=True)
         self.assertTrue(itrc.setup())
         self.assertTrue(itrc.interact())
         code, out, err, to = itrc.result.read()
@@ -42,7 +42,7 @@ class TestShell(unittest.TestCase):
         itrc.set_conf({
             "cmd1": "echo Hello World",
             "cmd2": "wc -c"
-        })
+        }, dynamic=True)
         self.assertTrue(itrc.setup())
         self.assertTrue(itrc.interact())
         code, out, err, to = itrc.result.read()

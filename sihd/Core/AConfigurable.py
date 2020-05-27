@@ -49,13 +49,14 @@ class AConfigurable(ANamedObject):
     # Main getter
     #
 
-    def get_conf(self, key, default=True):
+    def get_conf(self, key, dynamic=False, default=True):
         """
             Get value from conf - Either from file or dict
 
-            @param key configuration key
-            @param not_default returns None if value is still default
-            @return value or None if not found
+            :param key: configuration key
+            :param default: returns None if value is still default
+            :param dynamic: do not raise key error if config key not found
+            :return: value or None if not found
         """
         val = None
         conf = self.get_conf_obj()
@@ -64,43 +65,42 @@ class AConfigurable(ANamedObject):
             #From obj
             if conf.has_option(self.get_name(), key):
                 val = conf.get(self.get_name(), key)
-            else:
-                raise ValueError("Key {} not found".format(key))
+            elif not dynamic:
+                raise KeyError("{}: key {} not found".format(self, key))
         else:
             #From manual set/default
             val = self.__conf.get(key, None)
-        if default is False:
-            #Checks if val is equal to default
-            val_default = self.get_default_conf(key)
-            if val_default == val:
-                val = self.__conf.get(key, None)
+        if not dynamic:
+            if default is False:
+                #Checks if val == default
+                #Also if dynamic -> not in default
+                val_default = self.get_default_conf(key)
                 if val_default == val:
-                    val = None
-        elif val is None:
-            #If config has not been found elsewhere
-            val = self.get_default_conf(key)
+                    val = self.__conf.get(key, None)
+                    if val_default == val:
+                        val = None
+            elif val is None:
+                #If config has not been found elsewhere
+                val = self.get_default_conf(key)
         return val
-
-    def allow_dynamic_conf(self, active):
-        self.__dynamic_conf = active
 
     #
     # Main setters
     #
 
-    def set_conf_from_dict(self, dic, force=False):
-        if not self.__dynamic_conf:
+    def set_conf_from_dict(self, dic, dynamic=False, force=False):
+        if not dynamic:
             bad_keys = [k for k in dic.keys() if k not in self.__default_conf]
             if bad_keys:
                 raise KeyError("{} keys not in configuration: {}"\
-                                .format(self.get_name(), bad_keys))
+                                .format(self, bad_keys))
         self.__conf.update(dic)
         if force is True:
             for k, v in dic.items():
                 self.set_conf_file(k, v, force=force)
         return True
 
-    def set_conf(self, key, value=None, force=False):
+    def set_conf(self, key, value=None, dynamic=False, force=False):
         """
             Set value in dic
             @param dic dictionnary to complete
@@ -108,11 +108,11 @@ class AConfigurable(ANamedObject):
             @param value can be anything - default: None
         """
         if isinstance(key, dict):
-            return self.set_conf_from_dict(key, force=force)
-        if not self.__dynamic_conf:
+            return self.set_conf_from_dict(key, force=force, dynamic=dynamic)
+        if not dynamic:
             if key not in self.__default_conf:
                 raise KeyError("{} key not in configuration: {}"\
-                                .format(self.get_name(), key))
+                                .format(self, key))
         self.__conf[key] = value
         if force is True:
             return self.set_conf_file(key, value, force=force)

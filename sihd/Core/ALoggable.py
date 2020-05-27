@@ -82,8 +82,16 @@ class ALoggable(ANamedObject):
         return '%(asctime)s :: %(levelname)s :: %(message)s'
 
     @staticmethod
-    def get_date_fmt():
+    def get_file_date_fmt():
         return '%Y-%m-%d %H:%M:%S'
+
+    @staticmethod
+    def get_date_fmt():
+        return '%H:%M:%S'
+
+    @staticmethod
+    def get_file_formatter():
+        return logging.Formatter(ALoggable.get_format(), ALoggable.get_file_date_fmt())
 
     @staticmethod
     def get_formatter():
@@ -136,7 +144,7 @@ class ALoggable(ANamedObject):
         file_handler = RotatingFileHandler(ALoggable._get_filename(directory, app_name),
                                             'a+', 1e6, 1, encoding='utf-8')
         file_handler.setLevel(log_level)
-        file_handler.setFormatter(ALoggable.get_formatter())
+        file_handler.setFormatter(ALoggable.get_file_formatter())
         ALoggable.logger.addHandler(file_handler)
         ALoggable.__file_handler = file_handler
         ALoggable.logger.debug("Logger is setup")

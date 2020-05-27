@@ -23,6 +23,7 @@ class PcapReader(AReader):
         self.__to_recover = 0
         self.__pcap_reader = None
         self.add_channel_input("path", type='queue', simple=True)
+        self.add_channel_output("linktype", type='int')
         self.add_channel_output("pcap_header")
         self.add_channel_output("packet")
         self.add_channel_output("packet_info")
@@ -96,7 +97,9 @@ class PcapReader(AReader):
                 self.__to_recover = 0
                 self.__pcap_reader = reader
                 #Channel update
-                self.pcap_header.write(reader.get_header())
+                hdr = reader.get_header()
+                self.pcap_header.write(hdr)
+                self.linktype.write(hdr.network)
                 self.packets.clear()
                 self.eof.write(0)
                 self.log_info("Reading file {name}".format(name=self.__path))

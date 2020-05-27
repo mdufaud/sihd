@@ -47,14 +47,14 @@ class AGui(SihdRunnableService, IAppContainer):
     def get_input_runnable(self):
         return self.__runnable
 
-    def _thread_input_step(self):
+    def on_input_step(self):
         self.read_channels_input()
 
     def _thread_input_start(self, thread):
         pass
 
     def _thread_input_error(self, thread, iteration, error):
-        self.log_error("{}: {}".format(thread.get_name(), error))
+        self.log_error("{}: {}".format(thread, error))
         self.log_error(sihd.get_traceback())
 
     def _thread_input_stop(self, thread, iteration):
@@ -69,7 +69,7 @@ class AGui(SihdRunnableService, IAppContainer):
             frequency=int(self.get_conf("runnable_frequency")),
             timeout=0,
             max_iter=0,
-            step=self._thread_input_step,
+            step=self.on_input_step,
             on_start=self._thread_input_start,
             on_stop=self._thread_input_stop,
             on_err=self._thread_input_error)

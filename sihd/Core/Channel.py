@@ -351,6 +351,7 @@ class ChannelQueue(Channel):
         self.__size = size
         kwargs['pollable'] = True
         super().__init__(mp=mp, name=name, **kwargs)
+        self.wait = self._qwait
 
     #
     # Override
@@ -380,6 +381,11 @@ class ChannelQueue(Channel):
 
     def get_size(self):
         return self.__queue.qsize()
+
+    def _qwait(self, timeout=None):
+        if not self.__empty():
+            return True
+        return super().wait(timeout)
 
     #
     # Queue only
@@ -517,15 +523,16 @@ class ChannelBool(Channel):
         self.__wait = self.__event.wait
         super().__init__(name=name, mp=mp, default=default, **kwargs)
 
-    def _write(self, data):
-        if data:
+    def _write(self, flag):
+        if flag:
             self.__set()
         else:
             self.__clear()
         return True
 
-    def read(self):
-        if self.__wait(0.001):
+    def read(self, timeout=None):
+        timeout = timeout or 0.001
+        if self.__wait(timeout):
             return True
         return False
 
@@ -977,6 +984,8 @@ class ChannelCondition(Channel):
         with cd:
             ret = cd.wait(timeout=self.timeout)
         return ret
+
+###############################################################################
 
 channel_factory = {
     'counter': ChannelCounter,
