@@ -12,17 +12,23 @@ import sihd
 
 class TestApp(sihd.App.SihdApp):
 
-    def __init__(self):
-        super(TestApp, self).__init__("TestApp")
+    def __init__(self, *args, **kwargs):
+        super().__init__(name="TestApp", *args, **kwargs)
         self._default_log_level = "info"
-        self.set_path(os.path.dirname(os.path.dirname((__file__))))
+        self.set_app_path(os.path.dirname(os.path.dirname((__file__))))
         sihd.Core.ALoggable.set_color(True)
+        self.file_read = False
+        self.handle_done = False
 
-    def on_setup(self):
-        ret = super().on_setup()
-        return ret
+    def on_reset(self):
+        """ Remove references """
+        self._word_handler = None
+        self._line_reader = None
+        self.file_read = False
+        self.handle_done = False
 
     def build_services(self):
+        """ Define services """
         # Get args for app
         args = self.parse_args()
         # If time args has been set, will set a limited app loop
@@ -44,6 +50,7 @@ class TestApp(sihd.App.SihdApp):
         return True
 
     def on_init(self):
+        """ Services's channels are done and linked """
         reader = self._line_reader
         handler = self._word_handler
         # Counter
@@ -54,37 +61,14 @@ class TestApp(sihd.App.SihdApp):
         self.print_tree()
         return True
 
-    def build_args(self, parser):
-        """ Add arguments """
-        parser.add_argument("-f", "--file",
-                type=str,
-                default=None,
-                help="Read specified file")
-        parser.add_argument("-s", "--stats",
-                action='store_true',
-                default=False,
-                help="Print stats when printing results")
-        parser.add_argument("-t", "--time",
-                type=int,
-                default=None,
-                help="Timer until stop")
-
     def on_notify(self, channel):
-        self.handle(channel)
-
-    def handle(self, channel):
+        """ Called when channel's write is called (in thread only) """
         eof = self._line_reader.eof
-        lines = self._line_reader.lines
         processed = self._word_handler.processed
-        if channel == processed and channel.read() == lines.read()\
-                and eof.read():
+        lines = self._line_reader.lines
+        if eof.read() and processed.read() == lines.read():
             self.log_info("Reader stop")
             self._line_reader.stop()
-        elif channel == eof and channel.read():
-            self.log_info("EOF")
-            if lines.read() == processed.read():
-                self.log_info("Reader stop")
-                self._line_reader.stop()
 
     def service_state_changed(self, service, stopped, paused):
         #Exit only if no gui attached
@@ -111,3 +95,18 @@ class TestApp(sihd.App.SihdApp):
         #Decorate with stats
         if self.args.stats:
             reader.step = sihd.Core.Stats.stat_it(reader.step)
+
+    def build_args(self, parser):
+        """ Add arguments """
+        parser.add_argument("-f", "--file",
+                type=str,
+                default=None,
+                help="Read specified file")
+        parser.add_argument("-s", "--stats",
+                action='store_true',
+                default=False,
+                help="Print stats when printing results")
+        parser.add_argument("-t", "--time",
+                type=int,
+                default=None,
+                help="Timer until stop")

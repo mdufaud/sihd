@@ -78,7 +78,8 @@ class ANamedObjectContainer(ANamedObject):
         elif isinstance(path_or_no, ANamedObject):
             self.on_link(name, path_or_no)
         else:
-            raise ValueError("Unrecognized link type: " + str(path_or_no))
+            raise ValueError("{}: Unrecognized link type: {}"\
+                                .format(self, path_or_no))
 
     def process_links(self):
         """ Process all links """
@@ -87,11 +88,11 @@ class ANamedObjectContainer(ANamedObject):
             if isinstance(item, ANamedObject):
                 self.on_link(name, item)
             elif item is not None:
-                raise ValueError("Linked object is not a ANamedObject: {}"\
-                                    .format(item))
+                raise ValueError("{}: Linked object is not a ANamedObject: {}"\
+                                    .format(self, item))
             else:
-                raise ValueError("Linked object does not exists: {}"\
-                                    .format(path))
+                raise ValueError("{}: Linked object does not exists: {}"\
+                                    .format(self, path))
         self.__links.clear()
 
     def _get_links(self) -> dict:
@@ -259,11 +260,13 @@ class ANamedObjectContainer(ANamedObject):
         self.__children.pop(name)
         if alias:
             self.remove_alias(child)
+        child.set_parent(None, remove=False)
 
     def remove_children(self):
         for children in self.__children.values():
             children.set_parent(None, remove=False)
         self.__children.clear()
+        self.__alias.clear()
 
     #
     # Name

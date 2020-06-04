@@ -5,6 +5,7 @@
 import time
 
 import sihd
+from .IService import IService
 from .SihdService import SihdService
 from .RunnableThread import RunnableThread
 from .RunnableProcess import RunnableProcess
@@ -63,17 +64,6 @@ class SihdRunnableService(SihdService):
 
     """ Runnable """
 
-    def on_runnable_start(self, runnable):
-        self.log_debug("{} started".format(runnable.get_name()))
-
-    def on_runnable_stop(self, runnable, iteration):
-        self.log_debug("{} stopped after {} iterations"\
-                        .format(runnable.get_name(), iteration))
-
-    def on_runnable_error(self, runnable, iteration, error):
-        self.log_error("{} error: {}".format(runnable.get_name(), error))
-        self.log_error(sihd.get_traceback())
-
     def __make_runnable(self):
         runnable = None
         kwargs = {
@@ -85,6 +75,7 @@ class SihdRunnableService(SihdService):
             'frequency': self.__run_freq,
             'timeout': self.__run_timeout,
             'max_iter': self.__run_steps,
+            'worker_number': self.__run_proc,
             'parent': self,
             'daemon': True,
         }
@@ -92,7 +83,7 @@ class SihdRunnableService(SihdService):
             runnable = RunnableThread(**kwargs)
             self.log_debug("Service is a threaded runnable")
         elif self.__is_process:
-            kwargs['worker_number'] = self.__run_proc
+            kwargs['on_start'] = self.__start_children
             runnable = RunnableProcess(**kwargs)
             self.log_debug("Service is a processed runnable")
         else:
@@ -126,7 +117,7 @@ class SihdRunnableService(SihdService):
         steps = self.get_conf("runnable_steps", dynamic=True)
         if steps:
             self.__run_steps = int(steps)
-        procs = self.get_conf("runnable_processes", dynamic=True)
+        procs = self.get_conf("runnable_workers", dynamic=True)
         if procs:
             self.__run_proc = int(procs)
         self.__run_freq = float(self.get_conf("runnable_frequency"))
@@ -142,9 +133,29 @@ class SihdRunnableService(SihdService):
 
     """ SihdService """
 
+    def __start_children(self, runnable):
+        """ Start child services here in thread/process """
+        ret = self.call_children('start', IService, nochild=[runnable])
+        if ret:
+            self.on_runnable_start(runnable)
+        else:
+            self.stop()
+
+    def on_runnable_start(self, runnable):
+        self.log_debug("{} started".format(runnable.get_name()))
+
+    def on_runnable_stop(self, runnable, iteration):
+        self.log_debug("{} stopped after {} iterations"\
+                        .format(runnable.get_name(), iteration))
+
+    def on_runnable_error(self, runnable, iteration, error):
+        self.log_error("{} error: {}".format(runnable.get_name(), error))
+        self.log_error(sihd.get_traceback())
+
     def _init_impl(self):
+        """ Create runnable """
         self.__make_runnable()
-        return True
+        return super()._init_impl()
 
     def on_start(self):
         """ Done after start because you want service to be 'running' """
@@ -152,35 +163,9 @@ class SihdRunnableService(SihdService):
         if r:
             r.start()
 
-    def _stop_impl(self):
-        ret = super()._stop_impl()
+    def _start_impl(self):
+        """ If runnable then start it in on_start """
         r = self.__runnable
         if r:
-            try:
-                r.stop()
-            except RuntimeError as e:
-                self.log_error(e)
-                ret = False
-        return ret
-
-    def _pause_impl(self):
-        ret = super()._pause_impl()
-        r = self.__runnable
-        if r:
-            try:
-                r.pause()
-            except RuntimeError as e:
-                self.log_error(e)
-                ret = False
-        return ret
-
-    def _resume_impl(self):
-        ret = super()._resume_impl()
-        r = self.__runnable
-        if r:
-            try:
-                r.resume()
-            except RuntimeError as e:
-                self.log_error(e)
-                ret = False
-        return ret
+            return True
+        return super()._start_impl()

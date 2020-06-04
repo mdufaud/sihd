@@ -16,9 +16,9 @@ class WordHandler(AHandler):
         self.__delimiter = None
         self.__skipped = 0
         self.add_channel_input('input')
-        self.add_channel_output('output', type='dict')
-        self.add_channel_output('skipped', type='counter')
-        self.add_channel_output('processed', type='counter')
+        self.add_channel('output', type='dict')
+        self.add_channel('skipped', type='counter')
+        self.add_channel('processed', type='counter')
 
     #
     # Configuration

@@ -5,6 +5,7 @@
 #
 import time
 
+import sihd
 from .ALoggable import ALoggable
 from .AConfigurable import AConfigurable
 from .IObserver import IObserver
@@ -29,7 +30,6 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         self.__init = False
         # Channels
         self.__channels_input = list()
-        self.__channels_output = list()
         self.__channels_made = False
         self.__channel_notif = True
         self.__channels_mp = False
@@ -149,6 +149,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
 
     def _setup_impl(self):
         ret = super()._setup_impl()
+        ret = ret and self.call_children('setup', AConfigurable)
         ret = ret and self.on_setup()
         self.__create_channel_state()
         ret = ret and self._make_channels()
@@ -172,6 +173,9 @@ class SihdService(ALoggable, AConfigurable, IObserver,
 
     def is_running(self):
         return not self.__stopped
+
+    def is_stopped(self):
+        return self.__stopped
 
     def is_active(self):
         return (not self.is_paused() and self.is_running())
@@ -198,7 +202,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         return self.__init
 
     def _init_impl(self):
-        return True
+        return self.call_children('init', IService)
 
     def on_init(self):
         pass
@@ -229,7 +233,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         return running
 
     def _start_impl(self):
-        return True
+        return self.call_children('start', IService)
 
     def on_start(self):
         pass
@@ -260,7 +264,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         return running is False
 
     def _stop_impl(self):
-        return True
+        return self.call_children('stop', IService)
 
     def on_stop(self):
         pass
@@ -282,7 +286,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         return self.__paused
 
     def _pause_impl(self):
-        return True
+        return self.call_children('pause', IService)
 
     def on_pause(self):
         pass
@@ -304,7 +308,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         return not self.__paused
 
     def _resume_impl(self):
-        return True
+        return self.call_children('resume', IService)
 
     def on_resume(self):
         pass
@@ -317,39 +321,65 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         if not self.__stopped and not self.stop():
             return False
         if self._reset_impl() is True:
-            self.remove_children()
-            self.__channels_made = False
+            self.on_reset()
             self.__init = False
             self.__stopped = True
             self.__paused = False
-            self._service_state_changed()
-            self.on_reset()
             self._set_unconfigured()
+            self._service_state_changed()
+            self.__remove_channels()
+            self.remove_children()
+            self.__channels_made = False
         return self.__stopped and not self.__paused
 
     def _reset_impl(self):
-        return True
+        return self.call_children('reset', IService)
 
     def on_reset(self):
         pass
 
     #
+    # Children
+    #
+
+    def call_children(self, method, cls, noret=False, nochild=[],
+                        args=[], kwargs={}):
+        retval = True
+        children_lst = self.get_children().values()
+        for child in children_lst:
+            if not isinstance(child, cls):
+                continue
+            if child in nochild:
+                continue
+            try:
+                fun = getattr(child, method)
+            except AttributeError as e:
+                raise NotImplementedError("{}: class `{}` "
+                    "does not implement `{}`".format(self,
+                        child.__class__.__name__, method))
+            if not callable(fun):
+                raise ValueError("{}: not a callable {}".format(self, method))
+            try:
+                ret = fun(*args, **kwargs)
+                if ret == noret:
+                    self.log_warning("Child `{}` call `{}` failed"\
+                        .format(child.get_name(), method))
+                    retval = False
+            except Exception as e:
+                self.log_error(e)
+                self.log_error(sihd.get_traceback())
+                retval = False
+        return retval
+
+    #
     # Channels
     #
 
-    #override
-    def on_link(self, name, obj):
-        old_channel = self.get_channel(name)
-        super().on_link(name, obj)
-        if old_channel:
-            if isinstance(obj, Channel) and old_channel != obj:
-                self.__replace_channel(old_channel, obj)
-        elif old_channel is None:
-            if self._is_channel_input(name):
-                self.set_channel_input(obj)
-            elif self._is_channel_output(name):
-                self.set_channel_output(obj)
-        self.log_debug("Linked {} --> {}".format(name, obj.get_path()))
+    def __remove_channels(self):
+        for channel in self.get_channels():
+            name = channel.get_name()
+            setattr(self, name, None)
+        self.__channels_input.clear()
 
     #override
     def on_new_channel(self, name, channel):
@@ -362,25 +392,31 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         return super().create_channel(name, **kwargs)
 
     #
-    # Channels Input/Output
+    # Channels Input
     #
 
     def __replace_channel(self, old, new):
         ci = self.__channels_input
-        co = self.__channels_output
         if old in ci:
             for i, channel in enumerate(ci):
                 if channel == old:
                     break
             ci[i] = new
-        elif old in co:
-            for i, channel in enumerate(co):
-                if channel == old:
-                    break
-            co[i] = new
+
+    #override
+    def on_link(self, name, obj):
+        old_channel = self.get_channel(name)
+        super().on_link(name, obj)
+        if old_channel:
+            if isinstance(obj, Channel) and old_channel != obj:
+                self.__replace_channel(old_channel, obj)
+        elif old_channel is None:
+            if self._is_channel_input_to_add(name):
+                self.set_channel_input(obj)
+        self.log_debug("Linked {} --> {}".format(name, obj.get_path()))
     
     #
-    #   Adders
+    #   Add
     #
 
     def __add_channel_type(self, type, name, conf):
@@ -390,9 +426,6 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def add_channel_input(self, name, **kwargs):
         self.__add_channel_type(1, name, kwargs)
 
-    def add_channel_output(self, name, **kwargs):
-        self.__add_channel_type(0, name, kwargs)
-
     def add_channel(self, name, **kwargs):
         self.__add_channel_type(None, name, kwargs)
 
@@ -400,28 +433,21 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     #   Checkers
     #
 
-    def __is_channel_todo(self, chan_name, chan_t):
+    def __is_channel_to_add(self, chan_name, chan_t):
         for name, category in self.__chan_todo:
             if name == chan_name and chan_t == category:
                 return True
         return False
 
-    def _is_channel_input(self, chan_name):
-        return self.__is_channel_todo(chan_name, 1)
+    def _is_channel_input_to_add(self, chan_name):
+        return self.__is_channel_to_add(chan_name, 1)
 
-    def _is_channel_output(self, chan_name):
-        return self.__is_channel_todo(chan_name, 0)
-
+    def is_channel_input(self, channel):
+        return channel in self.__channels_input
 
     #
     #   Create
     #
-
-    def create_output_channel(self, name, **kwargs):
-        channel = self.create_channel(name, **kwargs)
-        if channel and self.set_channel_output(channel):
-            return channel
-        return None
 
     def create_input_channel(self, name, **kwargs):
         channel = self.create_channel(name, **kwargs)
@@ -438,8 +464,6 @@ class SihdService(ALoggable, AConfigurable, IObserver,
             conf = self.__chan_conf.get(name, {})
             if type == 1:
                 self.create_input_channel(name, **conf)
-            elif type == 0:
-                self.create_output_channel(name, **conf)
             else:
                 self.create_channel(name, **conf)
         self.__channels_made = True
@@ -468,23 +492,11 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def get_channels_input(self):
         return self.__channels_input
 
-    def get_channels_output(self):
-        return self.__channels_output
-
-    def set_channel_input(self, channel, name=None, replace=False):
-        if name is None:
-            name = channel.get_name()
+    def set_channel_input(self, channel):
         input_lst = self.__channels_input
         if channel in input_lst:
             raise RuntimeError("Channel {} already in inputs".format(channel))
         input_lst.append(channel)
-        return True
 
-    def set_channel_output(self, channel, name=None, replace=False):
-        if name is None:
-            name = channel.get_name()
-        output_lst = self.__channels_output
-        if channel in output_lst:
-            raise RuntimeError("Channel {} already in outputs".format(channel))
-        output_lst.append(channel)
-        return True
+    def remove_channel_input(self, channel):
+        self.__channels_input.remove(channel)

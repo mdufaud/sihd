@@ -54,13 +54,13 @@ class TestApp(unittest.TestCase):
             "-f", path,
             "-s",
         ])
-        if app.setup_app() is False:
-            sys.exit(1)
-        app.start()
+        self.assertTrue(app.setup_app())
+        self.assertTrue(app.start())
         app.loop(timeout=10)
-        app.stop()
+        self.assertTrue(app.stop())
         #os.remove(app.get_conf_path())
         self.file_expect(app, lines, skipped, check_words, prt=False)
+        self.assertTrue(app.reset())
 
     def test_file_reader(self):
         dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
@@ -70,6 +70,28 @@ class TestApp(unittest.TestCase):
         dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
         self.do_file(os.path.join(dir_path, "comments_and_empty_lines.txt"), 10, 6, {"A": 2})
 
+    def test_life_cycle(self):
+        app = utils.TestApp()
+        dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
+        path = os.path.join(dir_path, "5_lines.txt") 
+        app.set_args([
+            "-f", path,
+            "-s",
+        ])
+        self.assertTrue(app.setup_app())
+        self.assertTrue(app.start())
+        app.loop(timeout=0.1)
+        self.assertTrue(app.stop())
+        app.print_tree()
+        self.assertTrue(app.reset())
+        app.print_tree()
+        self.assertTrue(app.setup_app())
+        self.assertTrue(app.start())
+        app.loop(timeout=0.1)
+        self.assertTrue(app.stop())
+        app.print_tree()
+        self.assertTrue(app.reset())
+        app.print_tree()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

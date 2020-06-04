@@ -4,7 +4,7 @@ import os
 import sys
 import subprocess
 
-def find_iface():
+def find_first_interface():
     """ Find internet interface and returns it """
     wireless, dev = list_interfaces()
     for iface in wireless:

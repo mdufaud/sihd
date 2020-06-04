@@ -67,9 +67,9 @@ class TestConfig(unittest.TestCase):
 
         obj = ConfigParser.ConfigParser()
         obj.read(path)
-        self.assertTrue(obj.has_section(reader.get_name()))
-        self.assertTrue(obj.has_option(reader.get_name(), "path"))
-        self.assertTrue(obj.get(reader.get_name(), "path") == __file__)
+        self.assertTrue(obj.has_section(reader.get_path()))
+        self.assertTrue(obj.has_option(reader.get_path(), "path"))
+        self.assertTrue(obj.get(reader.get_path(), "path") == __file__)
         os.remove(path)
 
     def test_app_config_changed(self):
@@ -80,8 +80,8 @@ class TestConfig(unittest.TestCase):
         path_config = os.path.join(self.get_conf_path(),
                 "{}.ini".format(app.get_name()))
         obj.read(path_config)
-        self.assertTrue(obj.has_section(app.get_name()))
-        reader_name = "LineReader"
+        self.assertTrue(obj.has_section(app.get_path()))
+        reader_name = "TestApp.LineReader"
         self.assertTrue(obj.has_section(reader_name))
         self.assertTrue(obj.has_option(reader_name, "path"))
         obj.set(reader_name, "path", __file__)
@@ -100,11 +100,11 @@ class TestConfig(unittest.TestCase):
         #Check if reader is set to path
         obj = ConfigParser.ConfigParser()
         obj.read(path_config)
-        self.assertTrue(obj.has_section(app.get_name()))
+        self.assertTrue(obj.has_section(app.get_path()))
         reader = app._line_reader
-        self.assertTrue(obj.has_section(reader.get_name()))
-        self.assertTrue(obj.has_option(reader.get_name(), "path"))
-        file_to_read = obj.get(reader.get_name(), "path")
+        self.assertTrue(obj.has_section(reader.get_path()))
+        self.assertTrue(obj.has_option(reader.get_path(), "path"))
+        file_to_read = obj.get(reader.get_path(), "path")
         logger.info("File setted: {} (== {})"\
                 .format(file_to_read, __file__))
         self.assertEqual(file_to_read, __file__)
@@ -127,11 +127,11 @@ class TestConfig(unittest.TestCase):
                     "{}.ini".format(app.get_name()))
         logger.info("Reading {}".format(path_config))
         obj.read(path_config)
-        self.assertTrue(obj.has_section(app.get_name()))
+        self.assertTrue(obj.has_section(app.get_path()))
         reader = app._line_reader
-        self.assertTrue(obj.has_section(reader.get_name()))
-        self.assertTrue(obj.has_option(reader.get_name(), "path"))
-        self.assertEqual(obj.get(reader.get_name(), "path"), path)
+        self.assertTrue(obj.has_section(reader.get_path()))
+        self.assertTrue(obj.has_option(reader.get_path(), "path"))
+        self.assertEqual(obj.get(reader.get_path(), "path"), path)
 
 
 if __name__ == '__main__':

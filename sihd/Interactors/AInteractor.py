@@ -13,7 +13,7 @@ class AInteractor(SihdRunnableService, IAppContainer):
         super().__init__(name, parent=parent, **kwargs)
         self.__interaction = None
         self.add_channel_input("new_interaction", type="queue")
-        self.add_channel_output("result")
+        self.add_channel("result")
         if app:
             self.set_app(app)
 

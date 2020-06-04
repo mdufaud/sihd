@@ -189,6 +189,7 @@ class ARunnable(ANamedObject, IService):
                     self.stop()
                     if self.__on_error:
                         self.__on_error(self, i, e)
+                        break
                     else:
                         raise
                 #Stats

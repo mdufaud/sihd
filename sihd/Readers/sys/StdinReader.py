@@ -25,7 +25,7 @@ class StdinReader(AReader):
         self.__buffer = 4096
         self.__has_new_question = False
         self.add_channel_input("question", type='queue')
-        self.add_channel_output("answer", type='queue')
+        self.add_channel("answer", type='queue')
 
     #
     # Channels

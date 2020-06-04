@@ -36,9 +36,9 @@ class IpReader(AReader):
         })
         self.add_channel_input("server_action", type='queue')
         self.add_channel_input("packet_send", type='queue')
-        self.add_channel_output("packet_data", type='queue')
-        self.add_channel_output("client_info", type='queue')
-        self.add_channel_output("server_msg", type='queue')
+        self.add_channel("packet_data", type='queue')
+        self.add_channel("client_info", type='queue')
+        self.add_channel("server_msg", type='queue')
 
     #
     # Configuration

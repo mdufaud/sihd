@@ -31,8 +31,8 @@ class IpServerHandler(AHandler):
         self.add_channel_input("packet_data", type='queue')
         self.add_channel_input("client_info", type='queue')
         self.add_channel_input("server_msg", type='queue')
-        self.add_channel_output("packet_send", type='queue')
-        self.add_channel_output("server_action", type='queue')
+        self.add_channel("packet_send", type='queue')
+        self.add_channel("server_action", type='queue')
         self.__udp = False
         self.__tcp = False
         self.__raw = False

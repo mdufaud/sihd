@@ -10,8 +10,7 @@ setuptools.setup(
     author_email="maxence_dufaud@hotmail.fr",
     description="A Simple Input Handler and Displayer",
     long_description=long_description,
-    long_description_content_type="text/markdown",
-    licence="GPLv3+",
+    license="GPLv3+",
     url="https://github.com/mdufaud/sihd",
     packages=setuptools.find_packages(),
     classifiers=[
@@ -22,5 +21,4 @@ setuptools.setup(
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: Mostly Unix",
     ],
-    python_requires='>=3.5',
 )

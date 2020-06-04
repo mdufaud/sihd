@@ -13,7 +13,6 @@ class AChannelObject(ANamedObjectContainer):
 
     def __init__(self, name="AChannelObject", **kwargs):
         super().__init__(name=name, **kwargs)
-        self.__channel_links = dict()
 
     #
     # Lock

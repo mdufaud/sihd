@@ -60,8 +60,12 @@ class Channel(AObservable, IObserver, ALoggable):
 
     def __init__(self, name="Channel", mp=False, parent=None,
                     block=True, timeout=10, log=True,
-                    default=None, timestamp=False, pollable=True):
+                    default=None, timestamp=False, pollable=True,
+                    lfilter=None):
         super().__init__(name, parent=parent)
+        if lfilter and not callable(lfilter):
+            raise RuntimeError(str(self) + ": Filter is not a callable")
+        self.filter = lfilter
         #Timestamping and lock
         self.__ts = False
         if log is False:
@@ -214,6 +218,9 @@ class Channel(AObservable, IObserver, ALoggable):
             Write a data to a channel
             which trigger an observation to all observers
         """
+        lfilter = self.filter
+        if lfilter and lfilter(*args) is False:
+            return True
         if self.lock() is False:
             self.log_warning("Trying to write in locked channel")
             return False

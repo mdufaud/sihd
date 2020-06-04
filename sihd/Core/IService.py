@@ -4,19 +4,25 @@
 class IService(object):
 
     def init(self):
-        raise NotImplementedError("init")
+        pass
+        #raise NotImplementedError("init")
 
     def start(self):
-        raise NotImplementedError("start")
+        pass
+        #raise NotImplementedError("start")
 
     def stop(self):
-        raise NotImplementedError("stop")
+        pass
+        #raise NotImplementedError("stop")
 
     def pause(self):
-        raise NotImplementedError("pause")
+        pass
+        #raise NotImplementedError("pause")
 
     def resume(self):
-        raise NotImplementedError("resume")
+        pass
+        #raise NotImplementedError("resume")
 
     def reset(self):
-        raise NotImplementedError("reset")
+        pass
+        #raise NotImplementedError("reset")

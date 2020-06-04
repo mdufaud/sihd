@@ -24,7 +24,7 @@ class SerialReader(AReader):
             "baudrate": 9600,
             "timeout": 1,
         })
-        self.add_channel_output('output')
+        self.add_channel('output')
 
     #
     # Configuration

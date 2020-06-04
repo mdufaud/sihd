@@ -49,6 +49,9 @@ class AConfigurable(ANamedObject):
     # Main getter
     #
 
+    def get_dyn_conf(self, key, default=True):
+        return self.get_conf(key, dynamic=True, default=default)
+
     def get_conf(self, key, dynamic=False, default=True):
         """
             Get value from conf - Either from file or dict
@@ -63,8 +66,9 @@ class AConfigurable(ANamedObject):
         #Gets conf from either obj or setted configuration
         if conf:
             #From obj
-            if conf.has_option(self.get_name(), key):
-                val = conf.get(self.get_name(), key)
+            path = self.get_path()
+            if conf.has_option(path, key):
+                val = conf.get(path, key)
             elif not dynamic:
                 raise KeyError("{}: key {} not found".format(self, key))
         else:
@@ -100,6 +104,9 @@ class AConfigurable(ANamedObject):
                 self.set_conf_file(k, v, force=force)
         return True
 
+    def set_dyn_conf(self, key, value=None, force=False):
+        return self.set_conf(key, value, dynamic=True, force=force)
+
     def set_conf(self, key, value=None, dynamic=False, force=False):
         """
             Set value in dic
@@ -109,9 +116,12 @@ class AConfigurable(ANamedObject):
         """
         if isinstance(key, dict):
             return self.set_conf_from_dict(key, force=force, dynamic=dynamic)
+        if value is None:
+            raise RuntimeError("{}: cannot configure None (key: {})"\
+                                .format(self, key))
         if not dynamic:
             if key not in self.__default_conf:
-                raise KeyError("{} key not in configuration: {}"\
+                raise KeyError("{}: key not in configuration: {}"\
                                 .format(self, key))
         self.__conf[key] = value
         if force is True:
@@ -122,16 +132,16 @@ class AConfigurable(ANamedObject):
         """ Set a value in the obj configuration directly """
         if obj is None:
             obj = self.get_conf_obj()
-        name = self.get_name()
+        path = self.get_path()
         if not obj:
             return False
         if not self.__has_section:
             self.__setup_section(obj)
-        elif obj.has_option(name, key):
-            base_val = obj.get(name, key)
+        elif obj.has_option(path, key):
+            base_val = obj.get(path, key)
             if not force and base_val != value:
                 return False
-        obj.set(name, key, value)
+        obj.set(path, key, value)
         return True
 
     #
@@ -200,8 +210,9 @@ class AConfigurable(ANamedObject):
         """ Sets section for obj in configparser """
         conf = obj if obj is not None else self.get_conf_obj()
         added = False
-        if conf and conf.has_section(self.get_name()) is False:
-            conf.add_section(self.get_name())
+        path = self.get_path()
+        if conf and conf.has_section(self.get_path()) is False:
+            conf.add_section(self.get_path())
             added = True
         self.__has_section = True
         return added

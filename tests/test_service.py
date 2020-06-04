@@ -33,7 +33,7 @@ class IncService(SihdRunnableService):
     def __init__(self, name="IncService"):
         super(IncService, self).__init__(name=name)
         self.i = 0
-        self.add_channel_output("output", type='int', default=0)
+        self.add_channel("output", type='int', default=0)
 
     def on_step(self):
         self.i += 1
@@ -45,7 +45,7 @@ class PollingService(SihdRunnableService):
     def __init__(self, name="PollingService"):
         super(PollingService, self).__init__(name=name)
         self.add_channel_input("input", type='int')
-        self.add_channel_output("output", type='int')
+        self.add_channel("output", type='int')
 
     def handle(self, channel):
         val = channel.read()

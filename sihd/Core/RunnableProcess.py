@@ -15,10 +15,17 @@ class RunnableProcess(ARunnable):
 
     def __init__(self, name="RunnableProcess",
                     worker_number=1, *args, **kwargs):
+        if isinstance(worker_number, int) and worker_number > 0:
+            self.__nworkers = worker_number
+        else:
+            raise ValueError("Worker number: {} is either not an integer"
+                                " or negative".format(worker_number))
         """ Worker properties """
         self.__nproc = None
         self.__proc = None
+        self.__proc_lst = []
         self.__proc_status = []
+        self.__nproc = 0
         self.__parent_pid = os.getpid()
         """ Importing """
         global multiprocessing
@@ -33,12 +40,6 @@ class RunnableProcess(ARunnable):
         except FileNotFoundError:
             self.__worker_stop = None
             self.__worker_work = None
-        self.__proc_lst = []
-        if isinstance(worker_number, int) and worker_number > 0:
-            self.__n_workers = worker_number
-        else:
-            raise ValueError("Worker number: {} is either not an integer"
-                                " or negative".format(worker_number))
         super().__init__(name, *args, **kwargs)
 
     #
@@ -60,21 +61,19 @@ class RunnableProcess(ARunnable):
             raise RuntimeError("Multiprocessing is not supported on your system")
         if self.__worker_stop is None:
             raise RuntimeError("Shared memory not found on your system")
-        if self.__proc_lst:
+        proc_lst = self.__proc_lst
+        if proc_lst:
             raise RuntimeError("Process are made but not cleared")
         args = self.get_args()
         stop = self.__worker_stop
         work = self.__worker_work
         self.__proc_status = []
-        self.__proc_lst = []
-        proc_lst = self.__proc_lst
-        for i in range(self.__n_workers):
+        for i in range(self.__nworkers):
             worker_args = (i + 1, stop, work, *args,)
             proc = multiprocessing.Process(target=self.run,
                                             args=worker_args,
                                             *pargs, **pkwargs)
             proc_lst.append(proc)
-        #self._set_runnable(proc_lst)
 
     def get_id(self):
         proc = self.get_runnable()
@@ -141,7 +140,7 @@ class RunnableProcess(ARunnable):
             pstatus.append(s)
             proc.join(timeout=1.0)
         self._set_runnable(None)
-        self.__proc_lst = []
+        self.__proc_lst.clear()
 
     def get_worker_status(self, n=-1):
         pstatus = self.__proc_status
@@ -150,7 +149,7 @@ class RunnableProcess(ARunnable):
         return pstatus
 
     def get_worker_number(self):
-        return self.__n_workers
+        return self.__nworkers
 
     def get_process(self):
         return self.__proc

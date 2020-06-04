@@ -28,37 +28,38 @@ from sihd.Core.SihdService import SihdService
 from sihd.Core.IService import IService
 from sihd.Core.ALoggable import ALoggable
 from sihd.Core.AConfigurable import AConfigurable
+from sihd.Core.Runnable import Runnable
 
 class SihdApp(SihdService):
 
-    def __init__(self, name="SihdApp", *args, **kwargs):
-        super(SihdApp, self).__init__(name, *args, **kwargs)
+    def __init__(self, name="SihdApp", args=None,
+                    path=None, conf_path=None,
+                    *pargs, **pkwargs):
+        super().__init__(name, *pargs, **pkwargs)
         #Log
         self._default_log_level = "info"
         #Path
-        self._path = None
-        self._path = SihdApp.get_sihd_path()
-        self._conf_path = None
+        self._path = path or SihdApp.get_sihd_path()
+        self._conf_path = conf_path
         #Services
         self.readers = set()
         self.handlers = set()
         self.guis = set()
         self.interactors = set()
-        self._children_configured = False
-        #App
-        self._loop_impl = self._infinite_loop
         #Args
         self.args = None
         self.__args_setted = None
-        self.__main_pid = os.getpid()
+        self.__children_configured = False
+        self.__services_conf = ([], {})
+        if args:
+            self.set_args(args)
+        self.pid = os.getpid()
 
-    def setup_app(self, *args, **kwargs):
+    def setup_app(self, *args, conf_path=None, **kwargs):
         self.log_debug("Starting application setup")
+        self.__services_conf = (args, kwargs)
         #App service setup
-        conf_path = kwargs.get("conf_path", None)
         ret = self.load_app_conf(conf_path) is not False
-        #App internal setup
-        ret = ret and self.build_services(*args, **kwargs) is not False
         #Save app children's configuration
         ret = ret and self.save_children_conf()
         #Call children's service setup
@@ -69,6 +70,12 @@ class SihdApp(SihdService):
         else:
             self.log_error("Application setup has failed")
         return ret
+
+    def post_setup(self):
+        #App internal services setup
+        ret = super().post_setup()
+        args, kwargs = self.__services_conf
+        return ret and self.build_services(*args, **kwargs) is not False
 
     def build_services(self):
         """
@@ -97,7 +104,7 @@ class SihdApp(SihdService):
         args = self.args
         if args:
             return vars(args).get(name, None)
-        return self.get_conf(name)
+        return None
 
     def set_args(self, args):
         """ args = ['--foo', 'BAR'] - Bypass command line args """
@@ -110,6 +117,8 @@ class SihdApp(SihdService):
 
     def parse_args(self):
         """ To be called by children - Useful at setup implementation """
+        if self.args is not None:
+            return self.args
         parser = argparse.ArgumentParser(prog=self.get_name(),
                                             conflict_handler='resolve')
         self.build_args(parser)
@@ -125,18 +134,9 @@ class SihdApp(SihdService):
     # Configurations
     #
 
-    def load_app_conf(self, path=None):
-        """ Load conf from path or <APP_PATH>/config/<APP_NAME>.ini """
-        if path is None:
-            filename = self.get_name() + ".ini"
-            #conf = os.path.join(os.getcwd(), "config", filename)
-            conf = os.path.join("config", filename)
-            path = os.path.join(self._path, conf)
-        return self.__apply_conf(path)
-
     def __setup_logger_conf(self, config):
         if self._path is None:
-            self.error("No path set for app")
+            ALoggable.logger.error("No path set for app")
             return
         config.add_section("Logger")
         config.set("Logger", "level", self._default_log_level)
@@ -157,6 +157,7 @@ class SihdApp(SihdService):
                             obj.get("Logger", "level"),
                             obj.get("Logger", "directory"))
         self.log_debug("Logger is setup")
+        #Setup
         ret = False
         try:
             ret = self.setup(obj)
@@ -164,6 +165,15 @@ class SihdApp(SihdService):
             self.log_error(e)
             self.log_error(sihd.get_traceback())
         return ret
+
+    def load_app_conf(self, path=None):
+        """ Load conf from path or <APP_PATH>/config/<APP_NAME>.ini """
+        if path is None:
+            filename = self.get_name() + ".ini"
+            #conf = os.path.join(os.getcwd(), "config", filename)
+            conf = os.path.join("config", filename)
+            path = os.path.join(self._path, conf)
+        return self.__apply_conf(path)
 
     def get_conf_path(self):
         return self._conf_path
@@ -193,12 +203,12 @@ class SihdApp(SihdService):
         return True
 
     def load_children_conf(self):
-        if self._children_configured:
-            self.log_debug("Services already configured")
+        if self.__children_configured:
+            self.log_warning("Services already configured")
             return False
-        self._children_configured = True
+        self.__children_configured = True
         conf = self.get_conf_obj()
-        ret = self.__call_children('setup', AConfigurable, arg=conf)
+        ret = self.call_children('setup', AConfigurable, args=[conf])
         if ret:
             self.log_info("Services are configured")
         else:
@@ -206,37 +216,32 @@ class SihdApp(SihdService):
         return ret
 
     def save_children_conf(self):
-        conf = self.get_conf_obj()
-        ret = self.__call_children('save_conf', AConfigurable)
+        ret = self.call_children('save_conf', AConfigurable)
         self.log_info("Services configurations are saved")
         conf = self.get_conf_obj()
-        self._write_conf(conf)
-        return True
+        return self._write_conf(conf)
 
     #
     # Utils
     #
 
-    def get_main_pid(self):
-        return self.__main_pid
-
     def set_cwd_path(self):
-        self.set_path(os.getcwd())
+        self.set_app_path(os.getcwd())
 
     def set_module_path(self, module, parent=False):
         path = os.path.dirname(module.__file__)
         if parent is True:
             path = os.path.dirname(path)
-        self.set_path(path)
+        self.set_app_path(path)
 
     @staticmethod
     def get_sihd_path():
         return os.path.dirname(os.path.dirname(sihd.__file__))
 
-    def set_path(self, path):
+    def set_app_path(self, path):
         self._path = path
 
-    def get_path(self):
+    def get_app_path(self):
         return self._path
 
     def get_service(self, name):
@@ -250,32 +255,6 @@ class SihdApp(SihdService):
         if isinstance(child, SihdService):
             return child
         return None
-
-    def __call_child(self, child, fun, arg=None):
-        ret = False
-        if arg is None:
-            ret = fun()
-        else:
-            ret = fun(arg)
-        return ret
-
-    def __call_children(self, fun_name, cls, arg=None, fail=True):
-        ret = True
-        children_lst = self.get_children().values()
-        for child in children_lst:
-            if not isinstance(child, cls):
-                continue
-            try:
-                fun = getattr(child, fun_name)
-            except AttributeError as e:
-                raise NotImplementedError("Class `{}` does not implement `{}`"\
-                        .format(child.__class__.__name__, fun_name))
-            if self.__call_child(child, fun, arg) is False:
-                ret = False
-            if not ret and fail:
-                self.log_error("Call {} failed for child {}"\
-                                .format(fun_name, child))
-        return ret
 
     #
     # Service
@@ -342,7 +321,7 @@ class SihdApp(SihdService):
     def _init_impl(self):
         """ Services must be configured before start """
         self.log_info("App initialising")
-        ret = self.__call_children('init', IService)
+        ret = self.call_children('init', IService)
         if not ret:
             self.log_warning("Some app services did not init")
         return ret
@@ -352,7 +331,7 @@ class SihdApp(SihdService):
     #
 
     def start_readers(self):
-        ret = self.__call_children("start", AReader)
+        ret = self.call_children("start", AReader)
         if ret:
             self.log_info("App readers started")
         else:
@@ -360,7 +339,7 @@ class SihdApp(SihdService):
         return ret
 
     def start_interactors(self):
-        ret = self.__call_children("start", AInteractor)
+        ret = self.call_children("start", AInteractor)
         if ret:
             self.log_info("App interactors started")
         else:
@@ -368,7 +347,7 @@ class SihdApp(SihdService):
         return ret
 
     def start_handlers(self):
-        ret = self.__call_children("start", AHandler)
+        ret = self.call_children("start", AHandler)
         if ret:
             self.log_info("App handlers started")
         else:
@@ -376,15 +355,17 @@ class SihdApp(SihdService):
         return ret
 
     def start_all(self):
-        return self.__call_children('start', IService)
+        """ Default start option """
+        return self.call_children('start', IService)
 
     def start_order(self):
+        """ Application's services start entry point """
         return self.start_all()
 
     def _start_impl(self):
         self.log_info("App starting")
         if self.start_order() is False:
-            self.log_error("starting services")
+            self.log_error("failed to start services")
         return True
 
     #
@@ -393,46 +374,20 @@ class SihdApp(SihdService):
 
     def _stop_impl(self):
         self.log_info("App stopping")
-        ret = self.__call_children('stop', IService)
+        ret = super()._stop_impl()
         self._write_conf()
         if not ret:
             self.log_warning("Some app services did not stop")
         return ret
 
     #
-    # Pause
-    #
-
-    def _pause_impl(self):
-        ret = self.__call_children('pause', IService)
-        if ret:
-            self.log_info("App paused")
-        else:
-            self.log_warning("Some app services did not pause")
-        return ret
-
-    #
-    # Resume
-    #
-
-    def _resume_impl(self):
-        ret = self.__call_children('resume', IService)
-        if ret:
-            self.log_info("App resumed")
-        else:
-            self.log_warning("Some app services did not resume")
-        return ret
-    
-    #
     # Reset
     #
 
     def _reset_impl(self):
-        ret = self.__call_children('reset', IService)
+        ret = super()._reset_impl()
         if ret:
-            self.log_info("App is reset")
-        else:
-            self.log_warning("Some app services did not reset")
+            self.__children_configured = False
         return ret
 
     #
@@ -440,16 +395,16 @@ class SihdApp(SihdService):
     #
 
     def pause_readers(self):
-        return self.__call_children('pause', AReader)
+        return self.call_children('pause', AReader)
 
     def resume_readers(self):
-        return self.__call_children('resume', AReader)
+        return self.call_children('resume', AReader)
 
     def pause_interactors(self):
-        return self.__call_children('pause', AInteractor)
+        return self.call_children('pause', AInteractor)
 
     def resume_interactors(self):
-        return self.__call_children('pause', AInteractor)
+        return self.call_children('pause', AInteractor)
 
     def remove_reader(self, reader):
         if reader.is_active():
@@ -561,50 +516,35 @@ class SihdApp(SihdService):
     # Loop
     #
 
-    def step(self):
+    def on_loop_start(self, runnable):
+        self.log_debug("App loop started")
+
+    def on_loop_stop(self, runnable, i):
+        self.log_debug("App loop stopped after {} iterations".format(i))
+
+    def on_loop_error(self, runnable, i, err):
+        self.log_error(err)
+        self.log_error(sihd.get_traceback())
+
+    def _loop_impl(self, timeout=None, frequency=None, steps=None):
+        runnable = Runnable(name='loop',
+                            step=self.step,
+                            on_start=self.on_loop_start,
+                            on_stop=self.on_loop_stop,
+                            on_err=self.on_loop_error,
+                            frequency=frequency or 10,
+                            timeout=timeout or 0,
+                            max_iter=steps or 0,
+                            parent=self)
+        runnable.run()
+        self.remove_child(runnable)
+
+    def on_step(self):
         pass
 
-    def set_loop(self, fun):
-        if self.is_running():
-            return False
-        self._loop_impl = fun
-        return True
+    def step(self):
+        self.read_channels_input()
+        return self.on_step()
 
-    def set_timed_loop(self, sec):
-        if self.is_running():
-            return False
-        self._max_sec_timed_loop = sec
-        self._loop_impl = self._timed_loop
-        return True
-
-    def _timed_loop(self, timeout=None):
-        max_sec = timeout or self._max_sec_timed_loop
-        sleeptime = 0.1
-        try:
-            i = 0
-            while i < max_sec and self.is_running():
-                self.read_channels_input()
-                self.step()
-                time.sleep(sleeptime)
-                i += sleeptime
-        except KeyboardInterrupt:
-            pass
-
-    def _infinite_loop(self, timeout=None):
-        ret = True
-        start = time.time()
-        now = start
-        sleeptime = 0.1
-        try:
-            while self.is_running():
-                self.read_channels_input()
-                self.step()
-                time.sleep(sleeptime)
-                now += sleeptime
-                if timeout is not None and now >= (start + timeout):
-                    break
-        except KeyboardInterrupt:
-            pass
-
-    def loop(self, timeout=None):
-        return self._loop_impl(timeout=timeout)
+    def loop(self, *args, **kwargs):
+        return self._loop_impl(*args, **kwargs)

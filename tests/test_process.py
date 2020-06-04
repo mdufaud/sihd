@@ -29,7 +29,7 @@ class TestHandler(AHandler):
         self.once = False
         self.set_default_conf({"runnable_frequency": 2000})
         self.add_channel_input('input', type='queue')
-        self.add_channel_output('output', type='queue')
+        self.add_channel('output', type='queue')
 
     def post_setup(self):
         s = "processed" if self.is_service_multiprocessing() else "threaded"
@@ -50,7 +50,7 @@ class InfiniteReader(AReader):
     def __init__(self, data="-- Infinite Data ! --", name="InfiniteReader"):
         super(InfiniteReader, self).__init__(name=name)
         self.set_default_conf({"runnable_frequency": 8000})
-        self.add_channel_output('output', type='queue')
+        self.add_channel('output', type='queue')
         self.data = data 
 
     def on_step(self):
@@ -86,10 +86,10 @@ class TestMultiprocess(unittest.TestCase):
         logger.info("Starting multiprocess 1 worker 4 processes")
         reader1 = InfiniteReader("hello", "InfiniteReader1")
         reader1.set_conf("runnable_type", "process")
-        reader1.set_conf("runnable_processes", 1, dynamic=True)
+        reader1.set_conf("runnable_workers", 1, dynamic=True)
         handler = TestHandler()
         handler.set_conf("runnable_type", "process")
-        handler.set_conf("runnable_processes", 4, dynamic=True)
+        handler.set_conf("runnable_workers", 4, dynamic=True)
         self.assertTrue(handler.setup())
         self.assertTrue(reader1.setup())
 
@@ -147,7 +147,7 @@ class TestMultiprocess(unittest.TestCase):
         reader.set_conf("runnable_type", "process")
         handler = TestHandler()
         handler.set_conf("runnable_type", "process")
-        handler.set_conf("runnable_processes", 3, dynamic=True)
+        handler.set_conf("runnable_workers", 3, dynamic=True)
         self.assertTrue(handler.setup())
         self.assertTrue(reader.setup())
 
@@ -202,7 +202,7 @@ class TestMultiprocess(unittest.TestCase):
         reader.set_conf("channels_mp", True, dynamic=True)
         handler = TestHandler()
         handler.set_conf("runnable_type", "process")
-        handler.set_conf("runnable_processes", 3, dynamic=True)
+        handler.set_conf("runnable_workers", 3, dynamic=True)
         self.assertTrue(handler.setup())
         self.assertTrue(reader.setup())
 
