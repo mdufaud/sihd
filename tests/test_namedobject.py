@@ -20,6 +20,23 @@ class TestNamedObject(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def test_link_waterfall(self):
+        root = ANamedObjectContainer(name='root')
+        c1 = ANamedObjectContainer(name='container1', parent=root)
+        c2 = ANamedObjectContainer(name='container2', parent=root)
+        c3 = ANamedObjectContainer(name='container3', parent=root)
+        c4 = ANamedObjectContainer(name='container4', parent=root)
+        c4_item = ANamedObject('item', parent=c4)
+        c1.link('item', '..container2.item')
+        c2.link('item', '..container3.item')
+        c3.link('item', '..container4.item')
+        c1.process_links()
+        root.print_tree()
+        self.assertEqual(c1.get_child('item'), c4_item)
+        self.assertEqual(c2.get_child('item'), c4_item)
+        self.assertEqual(c3.get_child('item'), c4_item)
+        self.assertEqual(c4.get_child('item'), c4_item)
+
     def test_links(self):
         struct = ANamedObjectContainer(name='struct')
         item1 = ANamedObject(name='item1', parent=struct)

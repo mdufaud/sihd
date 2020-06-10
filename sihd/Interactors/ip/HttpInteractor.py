@@ -10,8 +10,8 @@ from sihd.Interactors.AInteractor import AInteractor
 
 class HttpInteractor(AInteractor):
 
-    def __init__(self, name="HttpInteractor", app=None):
-        super(HttpInteractor, self).__init__(app=app, name=name)
+    def __init__(self, name="HttpInteractor", **kwargs):
+        super().__init__(name=name, **kwargs)
         global json
         if json is None:
             import json
@@ -37,9 +37,9 @@ class HttpInteractor(AInteractor):
         self._query = None
         self._req = None
         self._post_file_path = None
-        self.add_channel_input("query", type='queue')
-        self.add_channel_input("headers", type='queue')
-        self.add_channel_input("post", type='queue')
+        self.add_channel_input("query")
+        self.add_channel_input("headers")
+        self.add_channel_input("post")
 
     #
     # Configuration
@@ -91,7 +91,7 @@ class HttpInteractor(AInteractor):
         self.make_request(url)
         return url
 
-    def do_interaction(self, url, *args, **kwargs):
+    def on_interaction(self, url, *args, **kwargs):
         if self._req is None:
             #Waiting for interaction
             return True

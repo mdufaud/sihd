@@ -111,9 +111,6 @@ class ARunnable(ANamedObject, IService):
     def _setup_runnable(self, *args, **kwargs):
         raise NotImplementedError("setup_runnable")
 
-    def is_runnable_alive(self):
-        raise NotImplementedError("is_alive")
-
     def get_id(self):
         raise NotImplementedError("get_id")
 
@@ -135,6 +132,18 @@ class ARunnable(ANamedObject, IService):
 
     def _is_stopped(self):
         raise NotImplementedError("_is_stopped")
+
+    def is_active(self):
+        return not self._is_paused() and not self._is_stopped()
+
+    def is_running(self):
+        return not self._is_stopped()
+
+    def is_stopped(self):
+        return self._is_stopped()
+
+    def is_paused(self):
+        return self._is_paused()
 
     def step(self):
         raise NotImplementedError("step")
@@ -158,7 +167,7 @@ class ARunnable(ANamedObject, IService):
         uptime = 0.0
         downtime = 0.0
         maxtime = 0.0
-        mintime = 100000000.0
+        mintime = 100000.0
         beg = 0.0
         end = 0.0
         #step
@@ -186,6 +195,7 @@ class ARunnable(ANamedObject, IService):
                 try:
                     ret = step()
                 except Exception as e:
+                    print(e)
                     self.stop()
                     if self.__on_error:
                         self.__on_error(self, i, e)

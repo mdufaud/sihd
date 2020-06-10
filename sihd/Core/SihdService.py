@@ -24,6 +24,8 @@ class SihdService(ALoggable, AConfigurable, IObserver,
 
     def __init__(self, name="SihdService", **kwargs):
         super().__init__(name, **kwargs)
+        # Children
+        self.__nostart_service = set()
         # States
         self.__stopped = True
         self.__paused = False
@@ -342,28 +344,66 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     # Children
     #
 
+    def prevent_service_start(self, child):
+        """ Prevent start/stop waterfall """
+        if not isinstance(child, IService):
+            raise TypeError("{}: not a service: {}".format(self, child))
+        if not self.is_child(child):
+            raise TypeError("{}: not a child: {}".format(self, child))
+        name = child.get_name()
+        self.__nostart_service.add(name)
+
+    def allow_service_start(self, child):
+        """ Allow back start/stop waterfall """
+        if not isinstance(child, IService):
+            raise TypeError("{}: not a service: {}".format(self, child))
+        if not self.is_child(child):
+            raise TypeError("{}: not a child: {}".format(self, child))
+        name = child.get_name()
+        self.__nostart_service.remove(name)
+
     def call_children(self, method, cls, noret=False, nochild=[],
-                        args=[], kwargs={}):
+                        args=[], kwargs={}) -> bool:
+        """
+            :param method: string method to call on children
+            :param cls: class to match on children
+            :param noret: value that children should not return
+            :param nochild: list of children not concerned
+            :param args: list of arguments for method
+            :param kwargs: dict of keywords for method
+
+            :return: True if every call successed
+        """
         retval = True
         children_lst = self.get_children().values()
+        nochild_name = None
+        if method in ('start', 'stop'):
+            nochild_name = self.__nostart_service
         for child in children_lst:
+            #Call on specific class
             if not isinstance(child, cls):
                 continue
+            #Prevent child from being called
             if child in nochild:
                 continue
+            #Prevent child from being started/stopped by name
+            if nochild_name and child.get_name() in nochild_name:
+                continue
+            #Get callable
             try:
                 fun = getattr(child, method)
             except AttributeError as e:
-                raise NotImplementedError("{}: class `{}` "
-                    "does not implement `{}`".format(self,
+                raise NotImplementedError("{}: class '{}' "
+                    "does not implement '{}'".format(self,
                         child.__class__.__name__, method))
             if not callable(fun):
                 raise ValueError("{}: not a callable {}".format(self, method))
+            #Execute
             try:
                 ret = fun(*args, **kwargs)
                 if ret == noret:
                     self.log_warning("Child `{}` call `{}` failed"\
-                        .format(child.get_name(), method))
+                                        .format(child.get_name(), method))
                     retval = False
             except Exception as e:
                 self.log_error(e)
@@ -411,7 +451,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
             if isinstance(obj, Channel) and old_channel != obj:
                 self.__replace_channel(old_channel, obj)
         elif old_channel is None:
-            if self._is_channel_input_to_add(name):
+            if self._is_channel_to_add(name, input=True):
                 self.set_channel_input(obj)
         self.log_debug("Linked {} --> {}".format(name, obj.get_path()))
     
@@ -429,18 +469,20 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def add_channel(self, name, **kwargs):
         self.__add_channel_type(None, name, kwargs)
 
+    def _get_channels_to_add(self):
+        return [name for name, type in self.__chan_todo]
+
     #
     #   Checkers
     #
 
-    def __is_channel_to_add(self, chan_name, chan_t):
+    def _is_channel_to_add(self, chan_name, input=False):
         for name, category in self.__chan_todo:
-            if name == chan_name and chan_t == category:
+            if input is True and category != 1:
+                continue
+            if name == chan_name:
                 return True
         return False
-
-    def _is_channel_input_to_add(self, chan_name):
-        return self.__is_channel_to_add(chan_name, 1)
 
     def is_channel_input(self, channel):
         return channel in self.__channels_input

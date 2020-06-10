@@ -19,7 +19,7 @@ class LineReader(AReader):
             "path": "/path/to/file",
         })
         self.__reader = None
-        self.add_channel_input('path', type='queue', simple=True)
+        self.add_channel_input('path')
         self.add_channel('output')
         self.add_channel('lines', type='counter')
         self.add_channel('eof', type='bool', default=True)

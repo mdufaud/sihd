@@ -11,8 +11,8 @@ class PcapHandler(AHandler):
 
     def __init__(self, name="PcapHandler", app=None):
         super(PcapHandler, self).__init__(app=app, name=name)
+        self.set_conf("runnable_type", "thread")
         self.set_default_conf({
-            "runnable_type": "thread",
             "activate": 0,
             "save_raw": 0,
             "save_type": 'queue',
@@ -20,8 +20,8 @@ class PcapHandler(AHandler):
         })
         self.__save = False
         self.add_channel_input("activate", type='bool')
-        self.add_channel_input("save", type='queue')
-        self.add_channel_input("dump_path", type='queue')
+        self.add_channel_input("save")
+        self.add_channel_input("dump_path", type='string', size=200)
 
     #
     # Configuration

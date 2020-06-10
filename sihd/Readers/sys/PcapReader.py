@@ -22,7 +22,7 @@ class PcapReader(AReader):
         })
         self.__to_recover = 0
         self.__pcap_reader = None
-        self.add_channel_input("path", type='queue', simple=True)
+        self.add_channel_input("path")
         self.add_channel("linktype", type='int')
         self.add_channel("pcap_header")
         self.add_channel("packet")

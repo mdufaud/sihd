@@ -24,8 +24,8 @@ class StdinReader(AReader):
         self.__inputs = [sys.stdin.fileno()]
         self.__buffer = 4096
         self.__has_new_question = False
-        self.add_channel_input("question", type='queue')
-        self.add_channel("answer", type='queue')
+        self.add_channel_input("question")
+        self.add_channel("answer")
 
     #
     # Channels

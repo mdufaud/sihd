@@ -36,7 +36,9 @@ class SihdRunnableService(SihdService):
     def is_service_default(self):
         return not self.is_service_threading() and not self.is_service_multiprocessing()
 
-    """ ANamedObject """
+    #
+    # NamedObject description
+    #
 
     def _get_attributes(self):
         lst = super()._get_attributes()
@@ -48,21 +50,84 @@ class SihdRunnableService(SihdService):
             lst.append("runnable=none")
         return lst
 
-    """ SihdService """
+    #
+    # Iterations
+    #
 
-    def create_channel(self, name, **kwargs):
-        if self.is_service_multiprocessing():
-            kwargs['mp'] = True
-        return super().create_channel(name, **kwargs)
+    def step(self):
+        """
+            Not necessarily useful since we have observer/observable
+            But in some cases when service is stopped you may want
+                to check your inputs
+        """
+        self.read_channels_input()
+        ret = self.is_running()
+        if ret:
+            ret = self.on_step()
+        return ret
 
-    def on_link(self, name, new_channel):
-        if isinstance(new_channel, Channel) and self.is_service_multiprocessing()\
-            and new_channel.is_multiprocess() is False:
-            raise ValueError("Trying to link a non multiprocessed channel to"
-                                " a processed service ({})".format(new_channel))
-        return super().on_link(name, new_channel)
 
-    """ Runnable """
+    def on_step(self):
+        pass
+
+    #
+    # Configuration
+    #
+
+    def on_setup(self):
+        ret = super().on_setup()
+        timeout = self.get_conf("runnable_timeout", dynamic=True)
+        if timeout:
+            self.__run_timeout = float(timeout)
+        steps = self.get_conf("runnable_steps", dynamic=True)
+        if steps:
+            self.__run_steps = int(steps)
+        procs = self.get_conf("runnable_workers", dynamic=True)
+        if procs:
+            self.__run_proc = int(procs)
+        self.__run_freq = float(self.get_conf("runnable_frequency"))
+        type = self.get_conf("runnable_type")
+        if type == 'thread':
+            self.__is_thread = True
+        elif type == 'process':
+            self.__is_process = True
+        elif type != 'none':
+            self.log_error("No such runnable type " + str(type))
+            ret = False
+        return ret
+
+    #
+    # Runnable
+    #
+
+    def __start_children(self, runnable):
+        """ Start child services here in thread/process """
+        ret = self.call_children('start', IService, nochild=[runnable])
+        if ret:
+            self.on_runnable_start(runnable)
+        else:
+            self.stop()
+
+    def on_runnable_start(self, runnable):
+        self.log_debug("{} started".format(runnable.get_name()))
+
+    def on_runnable_stop(self, runnable, iteration):
+        self.log_debug("{} stopped after {} iterations"\
+                        .format(runnable.get_name(), iteration))
+
+    def on_runnable_error(self, runnable, iteration, error):
+        self.log_error("{} error: {}".format(runnable.get_name(), error))
+        self.log_error(sihd.get_traceback())
+
+    def is_runnable_active(self):
+        r = self.__runnable
+        if r:
+            return r.is_active()
+        return False
+
+    #
+    # Runnable creation
+    #
 
     def __make_runnable(self):
         runnable = None
@@ -90,67 +155,37 @@ class SihdRunnableService(SihdService):
             return
         self.__runnable = runnable
 
-    def step(self):
-        """
-            Not necessarily useful since we have observer/observable
-            But in some cases when service is stopped you may want
-                to check your inputs
-        """
-        self.read_channels_input()
-        ret = self.is_running()
-        if ret:
-            ret = self.on_step()
-        return ret
 
-    """ IThreadedService """
+    #
+    # SihdService
+    #
 
-    def on_step(self):
-        pass
+    def is_runnable_active(self):
+        r = self.__runnable
+        return r and r.is_active() or False
 
-    """ AConfigurable """
+    def is_runnable_paused(self):
+        r = self.__runnable
+        return r and r.is_paused() or False
 
-    def on_setup(self):
-        ret = super().on_setup()
-        timeout = self.get_conf("runnable_timeout", dynamic=True)
-        if timeout:
-            self.__run_timeout = float(timeout)
-        steps = self.get_conf("runnable_steps", dynamic=True)
-        if steps:
-            self.__run_steps = int(steps)
-        procs = self.get_conf("runnable_workers", dynamic=True)
-        if procs:
-            self.__run_proc = int(procs)
-        self.__run_freq = float(self.get_conf("runnable_frequency"))
-        type = self.get_conf("runnable_type")
-        if type == 'thread':
-            self.__is_thread = True
-        elif type == 'process':
-            self.__is_process = True
-        elif type != 'none':
-            self.log_error("No such runnable type " + str(type))
-            ret = False
-        return ret
+    def is_runnable_running(self):
+        r = self.__runnable
+        return r and r.is_running() or False
 
-    """ SihdService """
+    #override
+    def create_channel(self, name, **kwargs):
+        if self.is_service_multiprocessing():
+            kwargs['mp'] = True
+        return super().create_channel(name, **kwargs)
 
-    def __start_children(self, runnable):
-        """ Start child services here in thread/process """
-        ret = self.call_children('start', IService, nochild=[runnable])
-        if ret:
-            self.on_runnable_start(runnable)
-        else:
-            self.stop()
+    #override
+    def on_link(self, name, new_channel):
+        if isinstance(new_channel, Channel) and self.is_service_multiprocessing()\
+            and new_channel.is_multiprocess() is False:
+            raise ValueError("Trying to link a non multiprocessed channel to"
+                                " a processed service ({})".format(new_channel))
+        return super().on_link(name, new_channel)
 
-    def on_runnable_start(self, runnable):
-        self.log_debug("{} started".format(runnable.get_name()))
-
-    def on_runnable_stop(self, runnable, iteration):
-        self.log_debug("{} stopped after {} iterations"\
-                        .format(runnable.get_name(), iteration))
-
-    def on_runnable_error(self, runnable, iteration, error):
-        self.log_error("{} error: {}".format(runnable.get_name(), error))
-        self.log_error(sihd.get_traceback())
 
     def _init_impl(self):
         """ Create runnable """

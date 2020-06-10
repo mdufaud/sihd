@@ -24,7 +24,7 @@ class AInteractor(SihdRunnableService, IAppContainer):
     def interact(self, action=None, *args, **kwargs) -> bool:
         if action is None:
             action = self.get_interaction()
-        return self.do_interaction(action, *args, **kwargs)
+        return self.on_interaction(action, *args, **kwargs) is not False
 
     def set_interaction(self, action):
         self.__interaction = self.on_new_interaction(action)
@@ -43,8 +43,8 @@ class AInteractor(SihdRunnableService, IAppContainer):
         """ Returns parsed interacton from interaction channel """
         return action
 
-    def do_interaction(self, action, *args, **kwargs) -> bool:
-        raise NotImplementedError("do_interaction not implemented")
+    def on_interaction(self, action, *args, **kwargs) -> bool:
+        raise NotImplementedError("on_interaction not implemented")
 
     #
     # IAppContainer

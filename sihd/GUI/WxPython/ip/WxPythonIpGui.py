@@ -28,7 +28,7 @@ class WxPythonIpGui(AWxPythonGui):
         super(WxPythonIpGui, self).__init__(app=app, name=name)
         self.set_default_conf({
         })
-        self.add_channel_input("message", type='queue')
+        self.add_channel_input("message")
 
     def build_wx_frames(self, app):
         self.frame = MainIpWindow(None, title="Demo")

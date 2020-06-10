@@ -10,8 +10,8 @@ from sihd.Interactors.AInteractor import AInteractor
 
 class IpInteractor(AInteractor):
 
-    def __init__(self, name="IpInteractor", app=None):
-        super(IpInteractor, self).__init__(app=app, name=name)
+    def __init__(self, name="IpInteractor", **kwargs):
+        super().__init__(name=name, **kwargs)
         self.set_default_conf({
             "port": 42042,
             "host": "localhost",
@@ -21,8 +21,8 @@ class IpInteractor(AInteractor):
         self.__host = ""
         self.__port = 0
         self.add_channel_input("c_port", type='int')
-        self.add_channel_input("c_host", type='queue')
-        self.add_channel_input("c_protocol", type='queue')
+        self.add_channel_input("c_host")
+        self.add_channel_input("c_protocol")
 
     #
     # Configuration
@@ -63,7 +63,7 @@ class IpInteractor(AInteractor):
     def on_new_interaction(self, action):
         return action.encode()
 
-    def do_interaction(self, data, *args, **kwargs):
+    def on_interaction(self, data, *args, **kwargs):
         p = self.__protocol
         if p == "tcp":
             return self.send_tcp_once(data, *args, **kwargs)

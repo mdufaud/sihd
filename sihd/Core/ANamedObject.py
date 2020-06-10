@@ -11,8 +11,6 @@ class ANamedObject(object):
     def __init__(self, name, parent=None):
         self.__name = None
         self.__parent = None
-        if parent and not isinstance(parent, ANamedObjectContainer):
-            raise TypeError("For object {}: parent {} is not a NamedObjectContainer".format(name, parent))
         self.set_name(name)
         self.set_parent(parent)
 
@@ -20,7 +18,7 @@ class ANamedObject(object):
         self.set_parent(None)
 
     #
-    # Browse hierarchy
+    # Path
     #
 
     @staticmethod
@@ -47,6 +45,9 @@ class ANamedObject(object):
         return parent
 
     def set_parent(self, parent, remove=True):
+        if parent and not isinstance(parent, ANamedObjectContainer):
+            raise TypeError("{}: Parent not a NamedObjectContainer: {}"\
+                                .format(self, parent))
         oldparent = self.get_parent()
         if oldparent is not None:
             if parent == oldparent:

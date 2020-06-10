@@ -34,11 +34,11 @@ class IpReader(AReader):
             "rcv_buf": 4096,
             "poll_timeout": 0.1,
         })
-        self.add_channel_input("server_action", type='queue')
-        self.add_channel_input("packet_send", type='queue')
-        self.add_channel("packet_data", type='queue')
-        self.add_channel("client_info", type='queue')
-        self.add_channel("server_msg", type='queue')
+        self.add_channel_input("server_action")
+        self.add_channel_input("packet_send")
+        self.add_channel("packet_data")
+        self.add_channel("client_info")
+        self.add_channel("server_msg")
 
     #
     # Configuration

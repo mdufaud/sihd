@@ -137,7 +137,7 @@ class TestChannelDefault(unittest.TestCase):
 
     def test_channel_lock(self):
         channel = Channel(default=4, timeout=0.001)
-        self.assertTrue(channel.read(), 4)
+        self.assertEqual(channel.read(), 4)
         self.assertTrue(channel.lock())
         self.assertFalse(channel.write('pls'))
         self.assertFalse(channel.write({'d': 'dd'}))
@@ -146,6 +146,17 @@ class TestChannelDefault(unittest.TestCase):
         self.assertEqual(channel.read(), 4)
         self.assertTrue(channel.write(5))
         self.assertEqual(channel.read(), 5)
+
+    def test_channel_filter(self):
+        channel = Channel(lfilter=lambda x: x < 40)
+        self.assertTrue(channel.write(10))
+        self.assertEqual(channel.read(), 10)
+        self.assertTrue(channel.write(40))
+        self.assertEqual(channel.read(), 10)
+        self.assertTrue(channel.write(1000))
+        self.assertEqual(channel.read(), 10)
+        self.assertTrue(channel.write(-41234))
+        self.assertEqual(channel.read(), -41234)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

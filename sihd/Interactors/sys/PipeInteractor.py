@@ -12,8 +12,8 @@ from .ShellInteractor import ShellInteractor
 
 class PipeInteractor(AInteractor):
 
-    def __init__(self, name="PipeInteractor", app=None):
-        super(PipeInteractor, self).__init__(app=app, name=name)
+    def __init__(self, name="PipeInteractor", **kwargs):
+        super().__init__(name=name)
         global subprocess
         if subprocess is None:
             import subprocess
@@ -26,7 +26,7 @@ class PipeInteractor(AInteractor):
         })
         self.__interactor_lst = []
         self.__idx = 0
-        self.add_channel_input("stdin", type='queue')
+        self.add_channel_input("stdin")
 
     #
     # Configuration
@@ -60,8 +60,7 @@ class PipeInteractor(AInteractor):
 
     def add_pipe(self, cmd):
         self.__idx += 1
-        interactor = ShellInteractor(name="{}.cmd{}".format(self.get_name(),
-                                                            self.__idx))
+        interactor = ShellInteractor(name="cmd_" + str(self.__idx))
         interactor.set_cmd(cmd)
         interactor.set_stdout_pipe()
         interactor.set_stderr_pipe()
@@ -87,7 +86,7 @@ class PipeInteractor(AInteractor):
     def on_new_interaction(self, action):
         return action
 
-    def do_interaction(self, cmd, *args, **kwargs):
+    def on_interaction(self, cmd, *args, **kwargs):
         ret = False
         child = None
         idx = 0

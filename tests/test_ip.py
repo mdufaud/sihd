@@ -65,12 +65,17 @@ class TestIpServer(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def set_reader_queues(self, r):
+        for name in r._get_channels_to_add(): 
+            r.set_channel_conf(name, type='queue')
+
     def run_sender(self, get_interactor, type):
         reader = sihd.Readers.IpReader()
         ip_handler = sihd.Handlers.IpServerHandler()
         if utils.is_multiprocessing():
             reader.set_conf("runnable_type", "process")
-            ip_handler.set_conf("channels_mp", True, dynamic=True)
+            self.set_reader_queues(reader)
+            ip_handler.set_dyn_conf("channels_mp", True)
         reader.set_conf("port", 4200)
         reader.set_conf("protocol", type)
         self.assertTrue(reader.setup())
@@ -106,6 +111,7 @@ class TestIpServer(unittest.TestCase):
         reader = sihd.Readers.IpReader()
         ip_handler = sihd.Handlers.IpServerHandler()
         reader.set_conf("runnable_type", "process")
+        self.set_reader_queues(reader)
         ip_handler.set_conf("channels_mp", True)
         reader.set_conf("port", 4200)
         reader.set_conf("protocol", "tcp")
@@ -130,6 +136,7 @@ class TestIpServer(unittest.TestCase):
         gui = sihd.GUI.WxPython.ip.WxPythonIpGui()
 
         reader.set_conf("runnable_type", "process")
+        self.set_reader_queues(reader)
         ip_handler.set_conf("channels_mp", True)
         reader.set_conf("port", 4200)
         reader.set_conf("protocol", type)

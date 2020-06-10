@@ -18,11 +18,11 @@ class AGui(SihdRunnableService, IAppContainer):
         if app and not parent:
             parent = app
         super().__init__(name, parent=parent, **kwargs)
-        self.set_default_conf({
+        self.set_conf({
             "runnable_type": "thread",
             "runnable_frequency": 5,
             "runnable_steps": 1,
-        })
+        }, dynamic=True)
         self.set_channel_notification(False)
         if app:
             self.set_app(app)

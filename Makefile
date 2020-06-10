@@ -19,19 +19,19 @@ all:
 lt:
 	@ls -1 tests | grep test | cut -d '.' -f1 | cut -d '_' -f2,3,4 | sed -r '/^\s*$$/d'
 
-tests:
+test:
 	@if [ ! -z ${T} ] ; then \
 		$(eval ARGS := $(shell echo "-p '*${T}*'")) true; \
 	fi
 	@$(PYTHON3) -m unittest discover -v -s tests $(ARGS) 0>&-
 
-itests:
+itest:
 	@if [ ! -z ${T} ] ; then \
 		$(eval ARGS := $(shell echo "-p '*${T}*'")) true; \
 	fi
 	@$(PYTHON3) -m unittest discover -v -s tests $(ARGS)
 
-ftests:
+ftest:
 	@set -e && cd tests && rm -f logs/* && for TEST in `/bin/ls [^_]*.py`; \
 	do \
 		echo "==== Starting test $$TEST ===="; \
@@ -50,7 +50,7 @@ ftests:
 	done && cd ..
 
 
-fitests:
+fitest:
 	@set -e && cd tests && rm -f logs/* && for TEST in `/bin/ls [^_]*.py`; \
 	do \
 		echo "==== Starting test $$TEST ===="; \
@@ -68,11 +68,11 @@ fitests:
 		echo "==== End of test $$TEST ====\n"; echo "" ;\
 	done && cd ..
 
-testsclean:
+testclean:
 	@cd tests && rm -f logs/* && rm -f config/* && rm -rf outputs/* && cd ..
 	@echo "Cleaned test files"
 
-clean: testsclean
+clean: testclean
 	#Clean .pyc and pycache
 	@find . -name "*.pyc" -type f | xargs -r rm
 	@find . -name "__pycache__" -type d | xargs -r rmdir

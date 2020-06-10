@@ -12,8 +12,8 @@ from sihd.Interactors.AInteractor import AInteractor
 
 class ShellInteractor(AInteractor):
 
-    def __init__(self, name="ShellInteractor", app=None):
-        super(ShellInteractor, self).__init__(app=app, name=name)
+    def __init__(self, name="ShellInteractor", **kwargs):
+        super().__init__(name=name, **kwargs)
         global subprocess
         if subprocess is None:
             import subprocess
@@ -33,7 +33,7 @@ class ShellInteractor(AInteractor):
         self.__args = {}
         self.__timeout = None
         self.__proc = None
-        self.add_channel_input("stdin", type='queue')
+        self.add_channel_input("stdin")
 
     #
     # Configuration
@@ -85,6 +85,18 @@ class ShellInteractor(AInteractor):
         else:
             raise ValueError("Stdin data is not bytes: {}".format(data))
 
+    def set_cmd(self, cmd: Union[str, list]) -> list:
+        if isinstance(cmd, str):
+            cmd = self._get_cmd_from_str(cmd)
+        elif not isinstance(cmd, (list, tuple, set)):
+            raise ValueError("Command unrecognized: {}".format(cmd))
+        self.__exec = cmd
+        return cmd
+
+    def _get_cmd_from_str(self, cmd: str):
+        """ Get an argument list from string (shell parsing) """
+        return shlex.split(cmd)
+
     #
     # Channels
     #
@@ -102,7 +114,7 @@ class ShellInteractor(AInteractor):
     def on_new_interaction(self, cmd: Union[str, list]) -> list:
         return self.set_cmd(cmd)
 
-    def do_interaction(self, cmd, *args, **kwargs):
+    def on_interaction(self, cmd, *args, **kwargs):
         """ Executes command and close children """
         child = self.execute(cmd)
         if child is None:
@@ -115,25 +127,13 @@ class ShellInteractor(AInteractor):
     # Cmd execution
     #
 
-    def set_cmd(self, cmd: Union[str, list]) -> list:
-        if isinstance(cmd, str):
-            cmd = self._get_cmd_from_str(cmd)
-        elif not isinstance(cmd, (list, tuple, set)):
-            raise ValueError("Command unrecognized: {}".format(cmd))
-        self.__exec = cmd
-        return cmd
-
-    def _get_cmd_from_str(self, cmd: str):
-        """ Get an argument list from string (shell parsing) """
-        return shlex.split(cmd)
-
     def exe(self, cmd: str) -> bool:
         """ For a fast single line execution """
         self.set_cmd(cmd)
         child = self.execute()
         if child is None:
             return False
-        child.communicate()
+        self.communicate()
         return child.returncode == 0
 
     def execute(self, cmd: list = None) -> subprocess:
@@ -177,6 +177,7 @@ class ShellInteractor(AInteractor):
             out, errs = self.end_process(kill=True)
         if errs == b"":
             errs = None
+        self.__proc = None
         return out, errs, timedout
 
     def end_process(self, kill=False):

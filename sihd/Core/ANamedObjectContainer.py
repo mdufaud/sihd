@@ -5,6 +5,7 @@
 # System
 #
 import sys
+from typing import Union, Tuple
 
 from .ANamedObject import ANamedObject
 
@@ -40,10 +41,10 @@ class ANamedObjectContainer(ANamedObject):
     #
 
     @staticmethod
-    def delete_from_tree(path):
+    def delete_from_tree(path: str):
         no = ANamedObjectContainer.root_find(path)
         if no is None:
-            raise KeyError("No container in path: {}".format(path))
+            raise KeyError("No container in tree for path: {}".format(path))
         if no.get_parent() is None:
             ANamedObjectContainer.__nocs.pop(no.get_name())
         else:
@@ -57,21 +58,28 @@ class ANamedObjectContainer(ANamedObject):
     # Links
     #
 
-    def get_base_child_name(self, obj):
+    def get_base_child_name(self, obj: object):
         return self.__alias.get(obj.get_path(), None) or obj.get_name()
 
-    def get_alias(self, obj):
+    def get_alias(self, obj: object):
         return self.__alias.get(obj.get_path(), None)
 
-    def remove_alias(self, obj):
+    def remove_alias(self, obj: object):
         return self.__alias.pop(obj.get_path())
 
-    def on_link(self, name, obj):
+    def on_link(self, name: str, obj: object):
         """ Callback when link resolution is done """
         self.add_child(obj, name=name, replace=True)
-        self.__alias[obj.get_path()] = name
+        path = obj.get_path()
+        alias = self.__alias
+        if path not in alias:
+            alias[path] = name
+        else:
+            name = alias[path]
+            raise KeyError("{}: Alias '{}' already in path for: {}"\
+                            .format(self, path, name))
 
-    def link(self, name, path_or_no):
+    def link(self, name: str, path_or_no: Union[str, object]):
         """ Add a link """
         if isinstance(path_or_no, str):
             self.__links[name] = path_or_no
@@ -81,24 +89,52 @@ class ANamedObjectContainer(ANamedObject):
             raise ValueError("{}: Unrecognized link type: {}"\
                                 .format(self, path_or_no))
 
+    def __resolve_parent_link(self, name: str, path: str):
+        """ Get parent of link and resolve it """
+        idx = path.rfind('.')
+        if idx == -1:
+            raise ValueError("{}: For '{}' link does not exist: {}"\
+                                .format(self, name, path))
+        parent_path = path[0:idx]
+        child_name = path[idx + 1:]
+        parent = self.find(parent_path)
+        if parent is None:
+            raise ValueError("{}: For '{}' link parent not found: {}"\
+                                .format(self, name, parent_path))
+        err_str = ""
+        try:
+            return parent._resolve_link(child_name)
+        except (KeyError, ValueError) as err:
+            err_str = str(err)
+        raise ValueError("{}: For '{}' link resolution failed: {} -> {} ({})"\
+                            .format(self, name, parent_path, child_name, err_str))
+
+    def _resolve_link(self, name: str, path: str = None):
+        """ Process a link and removes it """
+        path = path or self.__links.pop(name, None)
+        if path is None:
+            raise KeyError("{}: For '{}' link does not exist".format(self, name))
+        item = self.find(path)
+        if isinstance(item, ANamedObject):
+            self.on_link(name, item)
+        elif item is not None:
+            raise ValueError("{}: For '{}' link is not ANamedObject: {}"\
+                                .format(self, name, path))
+        else:
+            self.__resolve_parent_link(name, path)
+            self._resolve_link(name, path)
+
     def process_links(self):
         """ Process all links """
-        for name, path in self.__links.items():
-            item = self.find(path)
-            if isinstance(item, ANamedObject):
-                self.on_link(name, item)
-            elif item is not None:
-                raise ValueError("{}: Linked object is not a ANamedObject: {}"\
-                                    .format(self, item))
-            else:
-                raise ValueError("{}: Linked object does not exists: {}"\
-                                    .format(self, path))
-        self.__links.clear()
+        links = list(self.__links.keys())
+        for name in links:
+            self._resolve_link(name)
 
     def _get_links(self) -> dict:
         return self.__links
 
-    def _get_link(self, name):
+    def _get_link(self, name: str) -> str:
+        """ Returns linked item """
         path = self.__links.get(name, None)
         if path is not None:
             item = self.root_find(path)
@@ -107,14 +143,16 @@ class ANamedObjectContainer(ANamedObject):
         return None
 
     def is_linked(self, name):
+        """ Check if link exist """
         return name in self.__links
 
     #
-    # Browse hierarchy
+    # Browse tree
     #
 
     @staticmethod
     def root_find(path):
+        """ Returns object in path from root """
         split = path.split('.')
         get_nobj = ANamedObjectContainer.__nocs.get
         obj = get_nobj(split[0], None)
@@ -125,6 +163,36 @@ class ANamedObjectContainer(ANamedObject):
         return obj
 
     def find(self, path):
+        """
+            Returns object in path from root or relatively
+            
+            For hierarchy:
+                root:
+                    container1:
+                        item1
+                        item2
+                        item3
+                    container2:
+                        item1
+                root2:
+                    item
+
+            Absolute:
+                Must start from any root container
+                :examples:
+                    item3.find('root.container2.item1)
+                    item3.find('root2.item)
+
+            Relative:
+                Starts with a '.', every next '.' means getting parent
+                :examples:
+                    root.find('.container1.item1')
+                    container1.find('..container2')
+                    container2.find('.item1')
+                    item3.find('..') -> container1
+                    item3.find('...') -> root
+
+        """
         if path and path[0] != '.':
             return self.root_find(path)
         split = path.split('.')
@@ -147,13 +215,14 @@ class ANamedObjectContainer(ANamedObject):
         return obj
 
     #
-    # Parent
+    # Tree information
     #
 
-    def __sort_child(self, child):
+    def __sort_child(self, child: object) -> tuple:
         return (child.__class__.__name__, self.get_base_child_name(child))
 
-    def get_tree_children(self, lst, desc=False, ident=1, max_rec=0):
+    def get_tree_children(self, lst, desc=False, ident=1, max_rec=0) -> dict:
+        """ Returns a dictionnary containing the actual children hierarchy """
         if max_rec > 0 and max_rec == ident:
             return
         children = self.get_children()
@@ -177,7 +246,11 @@ class ANamedObjectContainer(ANamedObject):
                                         ident=ident+1,
                                         max_rec=max_rec)
 
-    def get_tree(self, desc=False, ident=1, max_rec=0):
+    def get_tree(self, desc=False, ident=1, max_rec=0) -> dict:
+        """
+            Returns a dictionnary containing the actual
+                hierarchy from this container
+        """
         dic = {
             'name': self.get_name(),
             'class': self.__class__,
@@ -185,13 +258,15 @@ class ANamedObjectContainer(ANamedObject):
         }
         if desc:
             dic['attributes'] = self._get_attributes()
-        self.get_tree_children(dic['children'],
-                                desc=desc,
-                                ident=ident,
-                                max_rec=max_rec)
+        self.get_tree_children(dic['children'], desc=desc,
+                                ident=ident, max_rec=max_rec)
         return dic
 
-    def __build_tree_children(self, lst, desc=False, colored=True, ident=1):
+    #
+    # Tree printing
+    #
+
+    def __build_tree_children(self, lst, desc=False, colored=True, ident=1) -> str:
         if not bcolors:
             colored = False
         s = ""
@@ -212,9 +287,9 @@ class ANamedObjectContainer(ANamedObject):
             link = " --> " + str(alias) if alias else ""
             if link and colored:
                 link = bcolors.red(link)
-            s += "{}{}: {}{}{}\n".format("  " * ident, name, cls, link, attributes)
-            s += self.__build_tree_children(children,
-                                            desc=desc,
+            s += "{}{}: {}{}{}\n".format("  " * ident, name, cls,
+                                        link, attributes)
+            s += self.__build_tree_children(children, desc=desc,
                                             colored=colored,
                                             ident=ident+1)
         return s
@@ -232,17 +307,17 @@ class ANamedObjectContainer(ANamedObject):
         print(s)
 
     #
-    # Children
+    # Children management
     #
 
-    def get_children(self):
+    def get_children(self) -> dict:
         return self.__children
 
-    def get_child(self, name):
+    def get_child(self, name: str) -> object:
         return self.__children.get(name, None)
 
-    def add_child(self, child, name=None, replace=False):
-        """ No parent replacement because of links """
+    def add_child(self, child: object, name=None, replace=False):
+        """ Add a child to container's hierarchy - Name must be unique """
         if name is None:
             name = child.get_name()
         children = self.__children
@@ -254,7 +329,12 @@ class ANamedObjectContainer(ANamedObject):
                 old_child.set_parent(None)
         children[name] = child
 
-    def remove_child(self, child):
+    def remove_child(self, child: object):
+        """
+            Remove a child from container hierarchy
+            Having an alias mean we can't rely on child's name
+                an alias might have a different name
+        """
         alias = self.get_alias(child)
         name = child.get_name() if alias is None else alias
         self.__children.pop(name)
@@ -267,6 +347,11 @@ class ANamedObjectContainer(ANamedObject):
             children.set_parent(None, remove=False)
         self.__children.clear()
         self.__alias.clear()
+
+    def is_child(self, child):
+        alias = self.get_alias(child)
+        name = child.get_name() if alias is None else alias
+        return name in self.__children
 
     #
     # Name

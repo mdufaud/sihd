@@ -28,11 +28,11 @@ class IpServerHandler(AHandler):
             "co": self._set_client_connected,
             "addr": self._set_client_addr,
         }
-        self.add_channel_input("packet_data", type='queue')
-        self.add_channel_input("client_info", type='queue')
-        self.add_channel_input("server_msg", type='queue')
-        self.add_channel("packet_send", type='queue')
-        self.add_channel("server_action", type='queue')
+        self.add_channel_input("packet_data")
+        self.add_channel_input("client_info")
+        self.add_channel_input("server_msg")
+        self.add_channel("packet_send")
+        self.add_channel("server_action")
         self.__udp = False
         self.__tcp = False
         self.__raw = False
@@ -74,16 +74,20 @@ class IpServerHandler(AHandler):
 
     def handle(self, channel):
         if channel == self.packet_data:
-            msg, infos = channel.read()
-            if self.__tcp:
-                self.on_client_input(msg, infos)
-            else:
-                self.on_packet_data(msg, *infos)
+            val = channel.read()
+            if val is not None:
+                msg, infos = val
+                if self.__tcp:
+                    self.on_client_input(msg, infos)
+                else:
+                    self.on_packet_data(msg, *infos)
         elif channel == self.server_msg:
             pass
         elif self.__tcp and channel == self.client_info:
-            co, action, value = channel.read()
-            self._parse_client_info(co, action, value)
+            val = channel.read()
+            if val is not None:
+                co, action, value = val
+                self._parse_client_info(co, action, value)
 
     #
     # Utilities

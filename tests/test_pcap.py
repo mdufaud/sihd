@@ -92,11 +92,11 @@ class TestPcap(unittest.TestCase):
         self.make_pcap(pcap_path, lst)
 
         saver = sihd.Handlers.PcapHandler()
+        saver.set_channel_conf('save', type='queue')
         reader = sihd.Readers.PcapReader()
         reader.set_channel_conf("packet", type='queue')
         handler = PcapTestHandler(self)
         duplicator = sihd.Handlers.DuplicatorHandler()
-
         saver.set_conf({
             "save_raw": True,
             "save_type": 'list',
