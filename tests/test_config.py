@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 """ System """
 
@@ -16,7 +16,7 @@ except ImportError:
     import configparser
     ConfigParser = configparser
 
-logger = sihd.set_log('info')
+logger = sihd.log.setup('info')
 
 import unittest
 
@@ -25,7 +25,7 @@ class TestConfig(unittest.TestCase):
     def setUp(self):
         self.config = ConfigParser.ConfigParser()
         print()
-        sihd.clear_tree()
+        sihd.tree.clear()
 
     def tearDown(self):
         time.sleep(0.01)

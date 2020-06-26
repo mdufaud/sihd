@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 """ System """
 import time
@@ -101,11 +101,7 @@ class RunnableProcess(ARunnable):
             proc.start()
 
     def stop(self):
-        stop_evt = self.__worker_stop
-        if stop_evt.is_set():
-            self.resume()
-            return True
-        stop_evt.set()
+        self.__worker_stop.set()
         self.resume()
         if self.get_process() is None and self.__parent_pid == os.getpid():
             self.__clear_workers()

@@ -1,6 +1,7 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
+import sihd
 from sihd.Core import RunnableThread
 from sihd.Core.SihdRunnableService import SihdRunnableService
 from sihd.Core.IAppContainer import IAppContainer
@@ -60,8 +61,10 @@ class AGui(SihdRunnableService, IAppContainer):
     def _thread_input_stop(self, thread, iteration):
         pass
 
-    def on_thread_start(self, thread, *args):
+    def start_gui_input_thread(self):
         """ Set up a channel notification thread """
+        if self.__runnable is not None:
+            return
         runnable = RunnableThread(
             daemon=True,
             name="GuiInputThread",
@@ -76,11 +79,15 @@ class AGui(SihdRunnableService, IAppContainer):
         runnable.start()
         self.__runnable = runnable
 
+    def on_runnable_start(self, thread, *args):
+        self.start_gui_input_thread()
+
     def on_stop(self):
         r = self.get_input_runnable()
         if not r:
             return
         r.stop()
+        self.__runnable = None
 
     def on_resume(self):
         r = self.get_input_runnable()

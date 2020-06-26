@@ -1,8 +1,11 @@
 # proj
+tags
 *.log
 *.ini
 *.dump
 *.pcap
+
+.idea/*
 
 # vim
 *.swp

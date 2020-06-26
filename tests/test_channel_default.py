@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 """ System """
 import time
@@ -7,7 +7,7 @@ import unittest
 
 import utils
 import sihd
-logger = sihd.set_log('info')
+logger = sihd.log.setup('info')
 
 from sihd.Core.Channel import *
 from sihd.Core import RunnableThread
@@ -98,9 +98,9 @@ class TestChannelDefault(unittest.TestCase):
             "args": (channel,)
         }
         self.passed = {}
-        thread1 = RunnableThread(self, **kwargs)
-        thread2 = RunnableThread(self, **kwargs)
-        thread3 = RunnableThread(self, **kwargs)
+        thread1 = RunnableThread(**kwargs)
+        thread2 = RunnableThread(**kwargs)
+        thread3 = RunnableThread(**kwargs)
         thread1.start()
         thread2.start() 
         thread3.start()

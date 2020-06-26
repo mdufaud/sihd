@@ -1,12 +1,12 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 """ System """
 import unittest
 import sys
 
 import sihd
-logger = sihd.set_log('info')
+logger = sihd.log.setup('info')
 
 from sihd.Core.ANamedObject import ANamedObject
 from sihd.Core.ANamedObjectContainer import ANamedObjectContainer
@@ -15,7 +15,7 @@ class TestNamedObject(unittest.TestCase):
 
     def setUp(self):
         print()
-        sihd.clear_tree()
+        sihd.tree.clear()
 
     def tearDown(self):
         pass

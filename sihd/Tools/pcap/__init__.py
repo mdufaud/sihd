@@ -1,1 +1,1 @@
-from .pcap_utils import PcapReader, PcapWriter, CapInfo, CapFileInfo
+from .pcap_utils import PcapReader, PcapWriter

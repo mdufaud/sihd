@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 #
 # System
@@ -26,7 +26,6 @@ from sihd.GUI.AGui import AGui
 from sihd.Interactors.AInteractor import AInteractor
 from sihd.Core.SihdService import SihdService
 from sihd.Core.IService import IService
-from sihd.Core.ALoggable import ALoggable
 from sihd.Core.AConfigurable import AConfigurable
 from sihd.Core.Runnable import Runnable
 
@@ -54,6 +53,7 @@ class SihdApp(SihdService):
         if args:
             self.set_args(args)
         self.pid = os.getpid()
+        sihd.log.setup(self._default_log_level)
 
     def setup_app(self, *args, conf_path=None, **kwargs):
         self.log_debug("Starting application setup")
@@ -136,7 +136,7 @@ class SihdApp(SihdService):
 
     def __setup_logger_conf(self, config):
         if self._path is None:
-            ALoggable.logger.error("No path set for app")
+            sihd.log.error("No path set for app")
             return
         config.add_section("Logger")
         config.set("Logger", "level", self._default_log_level)
@@ -147,15 +147,15 @@ class SihdApp(SihdService):
         self._conf_path = path
         obj = ConfigParser.ConfigParser()
         if not os.path.isfile(path):
-            ALoggable.logger.info("Making conf file {}".format(self.get_conf_path()))
+            sihd.log.info("Making conf file {}".format(self.get_conf_path()))
             self.__setup_logger_conf(obj)
         else:
             obj.read(path)
             if not obj.has_section("Logger"):
                 self.__setup_logger_conf(obj)
-        ALoggable.setup_log(self.get_name(),
-                            obj.get("Logger", "level"),
-                            obj.get("Logger", "directory"))
+        sihd.log.add_file_handler(self.get_name(),
+                                    directory=obj.get("Logger", "directory"),
+                                    level=obj.get("Logger", "level"))
         self.log_debug("Logger is setup")
         #Setup
         ret = False

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 """ System """
 
@@ -9,14 +9,18 @@ import time
 
 """ Our Stuff """
 import sihd
+from sihd.Core.Stats import stat_it
+from sihd.App.SihdApp import SihdApp
+from sihd.Readers.sys.LineReader import LineReader
+from sihd.Handlers.sys.WordHandler import WordHandler
 
-class TestApp(sihd.App.SihdApp):
+class TestApp(SihdApp):
 
     def __init__(self, *args, **kwargs):
         super().__init__(name="TestApp", *args, **kwargs)
         self._default_log_level = "info"
         self.set_app_path(os.path.dirname(os.path.dirname((__file__))))
-        sihd.Core.ALoggable.set_color(True)
+        sihd.log.set_color(True)
         self.file_read = False
         self.handle_done = False
 
@@ -35,12 +39,12 @@ class TestApp(sihd.App.SihdApp):
         if args.time:
             self.set_timed_loop(args.time)
         # Setting up LineReader
-        reader = sihd.Readers.sys.LineReader("LineReader", self)
+        reader = LineReader("LineReader", self)
         reader.set_channel_conf("output", type='queue')
         # Set configuration for this reader
         self._configure_reader(reader, args)
         # Setting up WordHandler
-        handler = sihd.Handlers.sys.WordHandler("WordHandler", self)
+        handler = WordHandler("WordHandler", self)
         handler.link('input', '..LineReader.output')
         # Set configuration for this handler
         self._configure_handler(handler)
@@ -88,13 +92,13 @@ class TestApp(sihd.App.SihdApp):
     def _configure_handler(self, handler):
         #Decorate with stats
         if self.args.stats:
-            handler.step = sihd.Core.Stats.stat_it(handler.step)
+            handler.step = stat_it(handler.step)
 
     def _configure_reader(self, reader, args):
         reader.set_conf("path", args.file, force=True)
         #Decorate with stats
         if self.args.stats:
-            reader.step = sihd.Core.Stats.stat_it(reader.step)
+            reader.step = stat_it(reader.step)
 
     def build_args(self, parser):
         """ Add arguments """

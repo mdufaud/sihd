@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 """ System """
 import time
@@ -9,13 +9,13 @@ import unittest
 
 import utils
 import sihd
-logger = sihd.set_log()
+logger = sihd.log.setup()
 
 from sihd.Readers.AReader import AReader
 from sihd.Handlers.AHandler import AHandler
 from sihd.Core.AConsumer import AConsumer
 
-sihd.set_log_color(True)
+sihd.log.set_color(True)
 
 def do_process():
     #time.sleep(0.001)
@@ -63,7 +63,7 @@ class TestMultiprocess(unittest.TestCase):
         self.__beg = time.time()
         self.sleep = 2
         print()
-        sihd.clear_tree()
+        sihd.tree.clear()
 
     def tearDown(self):
         logger.info("Test took {:.3f} s to complete".format(time.time() - self.__beg))

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 """ System """
 import os
@@ -10,7 +10,7 @@ import json
 
 import utils
 import sihd
-logger = sihd.set_log('info')
+logger = sihd.log.setup('info')
 
 from sihd.Interactors.ip.HttpInteractor import HttpInteractor
 
@@ -33,7 +33,7 @@ class TestHttp(unittest.TestCase):
 
     def setUp(self):
         print()
-        sihd.clear_tree()
+        sihd.tree.clear()
 
     def tearDown(self):
         pass
@@ -102,7 +102,8 @@ class TestHttp(unittest.TestCase):
             #/dev/shm
             logger.warning("Test cannot continue as your device has no shared memory capabilities")
             return
-        channel_test = sihd.ChannelQueue(name='test', mp=True)
+        from sihd.Core.Channel import ChannelQueue
+        channel_test = ChannelQueue(name='test', mp=True)
         interactor.link("result", channel_test)
         self.assertTrue(interactor.start())
         time.sleep(0.1)

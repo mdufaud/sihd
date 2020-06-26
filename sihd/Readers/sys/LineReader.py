@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 #
 # System
@@ -50,36 +50,9 @@ class LineReader(AReader):
     # Reader
     #
 
-    def __can_recover(self):
-        if self.__path not in LineReader.files_read:
-            return False
-        tupl = LineReader.files_read[self.__path]
-        if tupl[1] == False:
-            s = "File {} already read".format(self.__path)
-            self.log_info(s)
-            return True
-        self.__to_recover = tupl[0]
-        self.log_debug("To recover {}".format(self.__to_recover))
-        return True
-
-    def __recover(self):
-        reader = self.__reader
-        rdline = reader.readline
-        recover = self.__to_recover
-        while self.is_active() and recover > 0:
-            l = rdline()
-            if l is None:
-                return False
-            recover -= 1
-        self.__to_recover = recover
-        if recover > 0:
-            return True
-        self.log_info("Recovered {}".format(self.__path))
-
     def set_source(self, path):
         self.lines.clear()
         self.close()
-        self.__to_recover = 0
         try:
             fp = open(path, 'r')
             self.__reader = fp
@@ -88,7 +61,6 @@ class LineReader(AReader):
             self.log_error("Cannot open: {}".format(err))
             return False
         self.log_info("Reading file {name}".format(name=self.__path))
-        self.__can_recover()
         self.eof.write(0)
         return True
 
@@ -101,8 +73,6 @@ class LineReader(AReader):
 
     def on_step(self):
         if not self.__reader:
-            return
-        if self.__to_recover > 0 and self.__recover() == True:
             return
         line = self.read_line()
         if line is None or line == "":

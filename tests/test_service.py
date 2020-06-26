@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 """ System """
 import time
@@ -7,7 +7,7 @@ import unittest
 
 import utils
 import sihd
-logger = sihd.set_log('info')
+logger = sihd.log.setup('info')
 
 from sihd.Handlers.AHandler import AHandler
 from sihd.Core.Channel import *
@@ -55,7 +55,7 @@ class PollingService(SihdRunnableService):
 class TestServices(unittest.TestCase):
 
     def setUp(self):
-        sihd.clear_tree()
+        sihd.tree.clear()
         print()
 
     def tearDown(self):

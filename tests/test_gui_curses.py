@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 """ System """
 import os
@@ -11,8 +11,8 @@ import sihd
 
 """ Setting up basic logging """
 
-logger = sihd.set_log()
-sihd.set_log_color(False)
+logger = sihd.log.setup()
+sihd.log.set_color(False)
 
 import unittest
 

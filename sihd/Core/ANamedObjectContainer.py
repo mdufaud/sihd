@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 #
 # System
@@ -9,10 +9,14 @@ from typing import Union, Tuple
 
 from .ANamedObject import ANamedObject
 
+"""
 try:
     from sihd.Tools.shell.term_colors import bcolors
 except ImportError:
     bcolors = None
+"""
+import sihd
+bcolors = sihd.term.colors
 
 class ANamedObjectContainer(ANamedObject):
 
@@ -53,6 +57,10 @@ class ANamedObjectContainer(ANamedObject):
     @staticmethod
     def clear_tree():
         ANamedObjectContainer.__nocs.clear()
+
+    @staticmethod
+    def get_root_containers():
+        return ANamedObjectContainer.__nocs.keys()
 
     #
     # Links

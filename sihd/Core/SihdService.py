@@ -1,5 +1,6 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
+
 #
 # System
 #
@@ -261,7 +262,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         running = not self.__stopped
         if running is True:
             self.__stop_time = None
-        self.log_debug("%s" %
+        self.log_info("%s" %
                 ("is stopped" if not running else "did not stop"))
         return running is False
 
@@ -345,21 +346,21 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     #
 
     def prevent_service_start(self, child):
-        """ Prevent start/stop waterfall """
+        """ Prevent service state (start, stop, resume, pause) waterfall """
         if not isinstance(child, IService):
             raise TypeError("{}: not a service: {}".format(self, child))
         if not self.is_child(child):
             raise TypeError("{}: not a child: {}".format(self, child))
-        name = child.get_name()
+        name = str(child)
         self.__nostart_service.add(name)
 
     def allow_service_start(self, child):
-        """ Allow back start/stop waterfall """
+        """ Allow back service state (start, stop, resume, pause) waterfall """
         if not isinstance(child, IService):
             raise TypeError("{}: not a service: {}".format(self, child))
         if not self.is_child(child):
             raise TypeError("{}: not a child: {}".format(self, child))
-        name = child.get_name()
+        name = str(child)
         self.__nostart_service.remove(name)
 
     def call_children(self, method, cls, noret=False, nochild=[],
@@ -377,7 +378,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         retval = True
         children_lst = self.get_children().values()
         nochild_name = None
-        if method in ('start', 'stop'):
+        if method in ('start', 'stop', 'resume', 'pause'):
             nochild_name = self.__nostart_service
         for child in children_lst:
             #Call on specific class
@@ -387,7 +388,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
             if child in nochild:
                 continue
             #Prevent child from being started/stopped by name
-            if nochild_name and child.get_name() in nochild_name:
+            if nochild_name and str(child) in nochild_name:
                 continue
             #Get callable
             try:
@@ -421,11 +422,11 @@ class SihdService(ALoggable, AConfigurable, IObserver,
             setattr(self, name, None)
         self.__channels_input.clear()
 
-    #override
+    # override
     def on_new_channel(self, name, channel):
         setattr(self, name, channel)
 
-    #override
+    # override
     def create_channel(self, name, **kwargs):
         if self.__channels_mp is True:
             kwargs['mp'] = True

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 """ System """
 import os
@@ -10,7 +10,7 @@ import unittest
 
 import utils
 import sihd
-logger = sihd.set_log('info')
+logger = sihd.log.setup('info')
 
 from sihd.Handlers.AHandler import AHandler
 from sihd.Core.Channel import *

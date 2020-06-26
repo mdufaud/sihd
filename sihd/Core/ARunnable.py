@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 #
 # System
@@ -38,7 +38,7 @@ class ARunnable(ANamedObject, IService):
         if frequency:
             self.set_frequency(frequency)
         self.set_args(args)
-        otherkwargs['name'] = '{}.runnable'.format(self.get_name())
+        otherkwargs['name'] = str(self)
         self._setup_runnable(*otherargs, **otherkwargs)
 
     #

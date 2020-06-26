@@ -1,9 +1,7 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
-
-
-class bcolors:
+class TermColors:
 
     UNDERLINE = '\033[4m'
 
@@ -55,42 +53,47 @@ class bcolors:
 
     @staticmethod
     def violet(s):
-        return bcolors.color(s, bcolors.VIOLET2)
+        return TermColors.color(s, TermColors.VIOLET2)
 
     @staticmethod
     def gold(s):
-        return bcolors.color(s, bcolors.YELLOW)
+        return TermColors.color(s, TermColors.YELLOW)
 
     @staticmethod
     def blue(s):
-        return bcolors.color(s, bcolors.BLUE2)
+        return TermColors.color(s, TermColors.BLUE2)
 
     @staticmethod
     def green(s):
-        return bcolors.color(s, bcolors.GREEN2)
+        return TermColors.color(s, TermColors.GREEN2)
 
     @staticmethod
     def bold(s):
-        return bcolors.color(s, bcolors.BOLD)
+        return TermColors.color(s, TermColors.BOLD)
 
     @staticmethod
     def underline(s):
-        return bcolors.color(s, bcolors.UNDERLINE)
+        return TermColors.color(s, TermColors.UNDERLINE)
 
     @staticmethod
     def red(s):
-        return bcolors.color(s, bcolors.RED2)
+        return TermColors.color(s, TermColors.RED2)
 
     @staticmethod
     def yellow(s):
-        return bcolors.color(s, bcolors.YELLOW2)
+        return TermColors.color(s, TermColors.YELLOW2)
 
     @staticmethod
     def color(s, color):
-        return color + s + bcolors.ENDC
+        return color + s + TermColors.ENDC
 
     @staticmethod
     def test():
-        for key, value in bcolors.__dict__.items():
+        for key, value in TermColors.__dict__.items():
             if isinstance(value, basestring):
-                print("{color}{name}{end}".format(color=value, name=key, end=bcolors.ENDC))
+                print("{color}{name}{end}".format(color=value, name=key, end=TermColors.ENDC))
+
+class Term(object):
+    colors = TermColors
+
+term = Term()

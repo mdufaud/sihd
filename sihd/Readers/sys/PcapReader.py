@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding: utf-8
+# coding: utf-8
 
 #
 # System
@@ -20,7 +20,6 @@ class PcapReader(AReader):
         self.set_default_conf({
             "path": "/path/to/file",
         })
-        self.__to_recover = 0
         self.__pcap_reader = None
         self.add_channel_input("path")
         self.add_channel("linktype", type='int')
@@ -57,30 +56,6 @@ class PcapReader(AReader):
     # Reader
     #
 
-    def __can_recover(self):
-        if self.__path not in PcapReader.files_read:
-            return False
-        tupl = PcapReader.files_read[self.__path]
-        if tupl[1] == False:
-            s = "File {} already read".format(self.__path)
-            self.log_info(s)
-            return True
-        self.__to_recover = tupl[0]
-        self.log_debug("To recover {}".format(self.__to_recover))
-        return True
-
-    def __recover(self):
-        reader = self.__pcap_reader
-        recover = self.__to_recover
-        while self.is_active() and recover > 0:
-            info, pkt = self.__pcap_reader.read_pkt()
-            recover -= 1
-        self.__to_recover = recover
-        if recover > 0:
-            return False
-        self.log_info("Recovered {}".format(self.__path))
-        return True
-
     def set_source(self, path):
         path = os.path.abspath(path) if path else None
         reader = PcapReaderTool()
@@ -94,7 +69,6 @@ class PcapReader(AReader):
                     self.__pcap_reader.close()
                 self.__path = path
                 self.__pkts = 0
-                self.__to_recover = 0
                 self.__pcap_reader = reader
                 #Channel update
                 hdr = reader.get_header()
@@ -103,7 +77,6 @@ class PcapReader(AReader):
                 self.packets.clear()
                 self.eof.write(0)
                 self.log_info("Reading file {name}".format(name=self.__path))
-                self.__can_recover()
             else:
                 self.log_error("Invalid pcap file {}".format(path))
         else:
@@ -127,8 +100,6 @@ class PcapReader(AReader):
 
     def on_step(self):
         if not self.__pcap_reader:
-            return True
-        if self.__to_recover > 0 and self.__recover() == False:
             return True
         info, pkt = self.read_packet()
         if pkt is None:
