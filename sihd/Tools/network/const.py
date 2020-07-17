@@ -3,7 +3,9 @@
 
 from sihd.Tools.sys.const import OPENBSD, FREEBSD, NETBSD
 
-""" Link types """
+#
+# Link types
+#
 
 _str_to_link = {
     "NULL": 0,
@@ -73,9 +75,6 @@ if FREEBSD:
 if OPENBSD:
     _str_lo_link["LOOP"] = 12
     _str_lo_link["ENC"] = 13
-
-def str_to_link(linktype):
-    return _str_to_link.get(linktype, 0)
 
 DLT_NULL = 0
 DLT_EN10MB = 1
@@ -147,3 +146,11 @@ DLT_BLUETOOTH_LE_LL = 251
 DLT_BLUETOOTH_LE_LL_WITH_PHDR = 256
 DLT_VSOCK = 271
 DLT_ETHERNET_MPACKET = 274
+
+def str_to_link(linktype):
+    return _str_to_link.get(linktype, 0)
+
+def link_to_str(linktype):
+    for k, v in _str_to_link.items():
+        if linktype == v:
+            return k

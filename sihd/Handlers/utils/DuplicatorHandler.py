@@ -7,7 +7,7 @@ class DuplicatorHandler(AHandler):
 
     def __init__(self, name="DuplicatorHandler", app=None):
         super(DuplicatorHandler, self).__init__(app=app, name=name)
-        self.set_default_conf({})
+        self.configuration.add_defaults({})
         self.__channel_lst = set()
         self.add_channel_input('input')
 

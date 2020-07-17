@@ -20,7 +20,7 @@ class ICmdGui(cmd.Cmd, AGui):
         cmd.Cmd.__init__(self)
         AGui.__init__(self, app=app, name=name)
         self.__completion = {}
-        self.set_default_conf({
+        self.configuration.add_defaults({
             "prompt": "$> ",
             "intro": "",
         })
@@ -31,11 +31,11 @@ class ICmdGui(cmd.Cmd, AGui):
     # AConfigurable
     #
 
-    def on_setup(self):
-        ret = super().on_setup()
+    def on_setup(self, conf):
+        ret = super().on_setup(conf)
         self.set_channel_notification(True)
-        prompt = self.get_conf("prompt")
-        intro = self.get_conf("intro")
+        prompt = conf.get("prompt")
+        intro = conf.get("intro")
         if prompt:
             self.set_prompt(prompt)
         if intro:

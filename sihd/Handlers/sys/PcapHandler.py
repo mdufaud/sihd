@@ -11,8 +11,8 @@ class PcapHandler(AHandler):
 
     def __init__(self, name="PcapHandler", app=None):
         super(PcapHandler, self).__init__(app=app, name=name)
-        self.set_conf("runnable_type", "thread")
-        self.set_default_conf({
+        self.configuration.set_force("runnable_type", "thread")
+        self.configuration.add_defaults({
             "activate": 0,
             "save_raw": 0,
             "save_type": 'queue',
@@ -27,16 +27,16 @@ class PcapHandler(AHandler):
     # Configuration
     #
 
-    def on_setup(self):
-        ret = super().on_setup()
-        self.__save = bool(int(self.get_conf("save_raw")))
+    def on_setup(self, conf):
+        ret = super().on_setup(conf)
+        self.__save = bool(int(conf.get("save_raw")))
         if self.__save:
-            self.add_channel("saved", type=self.get_conf('save_type'))
-        self.__writer = PcapWriter(self.get_conf("endianness"))
+            self.add_channel("saved", type=conf.get('save_type'))
+        self.__writer = PcapWriter(conf.get("endianness"))
         return True
 
     def post_setup(self):
-        self.set_saving(bool(int(self.get_conf("activate"))))
+        self.set_saving(bool(int(self.configuration.get("activate"))))
         return True
 
     #

@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" System """
 import os
 import time
 import logging
@@ -32,11 +31,3 @@ def c_lib(name):
         logger.error("Could not compile file %s: %s" % (name, e.message))
         return False
     return True
-
-class CompileFile(object):
-
-    def __init__(self):
-        self.c_file = c_file
-        self.c_lib = c_lib
-
-compiler = CompileFile()

@@ -65,6 +65,9 @@ class ANamedObject(object):
     # Name
     #
 
+    def on_new_name(self, name):
+        pass
+
     def set_name(self, name):
         parent = self.get_parent()
         if parent:

@@ -11,12 +11,11 @@ from .RunnableThread import RunnableThread
 from .RunnableProcess import RunnableProcess
 from .Channel import Channel
 
-
 class SihdRunnableService(SihdService):
 
     def __init__(self, name="SihdRunnableService", **kwargs):
         super().__init__(name, **kwargs)
-        self.set_default_conf({
+        self.configuration.add_defaults({
             "runnable_frequency": 30,
             "runnable_type": "thread",
         })
@@ -83,19 +82,19 @@ class SihdRunnableService(SihdService):
     # Configuration
     #
 
-    def on_setup(self):
-        ret = super().on_setup()
-        timeout = self.get_conf("runnable_timeout", dynamic=True)
+    def on_setup(self, conf):
+        ret = super().on_setup(conf)
+        timeout = conf.get("runnable_timeout", dynamic=True)
         if timeout:
             self.__run_timeout = float(timeout)
-        steps = self.get_conf("runnable_steps", dynamic=True)
+        steps = conf.get("runnable_steps", dynamic=True)
         if steps:
             self.__run_steps = int(steps)
-        procs = self.get_conf("runnable_workers", dynamic=True)
+        procs = conf.get("runnable_workers", dynamic=True)
         if procs:
             self.__run_proc = int(procs)
-        self.__run_freq = float(self.get_conf("runnable_frequency"))
-        type = self.get_conf("runnable_type")
+        self.__run_freq = float(conf.get("runnable_frequency"))
+        type = conf.get("runnable_type")
         if type == 'thread':
             self.__is_thread = True
         elif type == 'process':
@@ -120,7 +119,8 @@ class SihdRunnableService(SihdService):
             self.stop()
 
     def on_runnable_start(self, runnable):
-        self.set_log_name(self.get_runnable_type())
+        self.set_log_name("{}.{}".format(self.get_runnable_type(),
+                                        self.get_name()))
         self.log_debug("{} started".format(runnable.get_name()))
 
     def on_runnable_stop(self, runnable, iteration):

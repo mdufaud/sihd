@@ -1,29 +1,33 @@
-""" System """
+#!/usr/bin/python
+# coding: utf-8
 
 import os
 import sys
 import subprocess
 
-def find_first_interface():
+def find_first_monitoring():
     """ Find internet interface and returns it """
-    wireless, dev = list_interfaces()
+    wireless = list_wifi()
     for iface in wireless:
         if is_interface_monitoring(iface):
-            return [iface]
-    return None
+            return iface
 
-def list_interfaces():
+def list():
     lst = []
+    if os.name == 'posix':
+        for dirname in os.listdir('/sys/class/net'):
+            lst.append(dirname)
+    return lst
+
+def list_wifi():
     wireless_lst = []
     if os.name == 'posix':
-        for dir in os.listdir('/sys/class/net'):
-            lst.append(dir)
-        for iface in lst:
-            if os.path.isdir('/sys/class/net/%s/wireless' % iface):
-                wireless_lst.append(iface)
-    return wireless_lst, lst
+        for dirname in os.listdir('/sys/class/net'):
+            if os.path.isdir('/sys/class/net/%s/wireless' % dirname):
+                wireless_lst.append(dirname)
+    return wireless_lst
 
-def is_interface_monitoring(iface):
+def is_monitoring(iface):
     """
         http://lxr.free-electrons.com/source/include/uapi/linux/if_arp.h
 

@@ -27,14 +27,14 @@ class TestHandler(AHandler):
 
 def get_udp_sender():
     interactor = sihd.Interactors.IpInteractor()
-    interactor.set_conf({
+    interactor.configuration.setall({
         "runnable_type": "thread",
         "host": "localhost",
         "port": 4200,
         "protocol": "udp",
         "runnable_frequency": 10,
     })
-    interactor.set_conf({
+    interactor.configuration.setall({
         "runnable_timeout": 0.5
     }, dynamic=True)
     interactor.setup()
@@ -43,13 +43,13 @@ def get_udp_sender():
 
 def get_tcp_sender():
     interactor = sihd.Interactors.IpInteractor()
-    interactor.set_conf({
+    interactor.configuration.setall({
         "runnable_type": "thread",
         "host": "localhost",
         "port": 4200,
         "runnable_frequency": 100,
     })
-    interactor.set_conf({
+    interactor.configuration.setall({
         "runnable_steps": 5
     }, dynamic=True)
     interactor.setup()
@@ -66,18 +66,18 @@ class TestIpServer(unittest.TestCase):
         pass
 
     def set_reader_queues(self, r):
-        for name in r._get_channels_to_add(): 
+        for name in r._get_channels_to_add():
             r.set_channel_conf(name, type='queue')
 
     def run_sender(self, get_interactor, type):
         reader = sihd.Readers.IpReader()
         ip_handler = sihd.Handlers.IpServerHandler()
         if utils.is_multiprocessing():
-            reader.set_conf("runnable_type", "process")
+            reader.configuration.set("runnable_type", "process")
             self.set_reader_queues(reader)
-            ip_handler.set_dyn_conf("channels_mp", True)
-        reader.set_conf("port", 4200)
-        reader.set_conf("protocol", type)
+            ip_handler.configuration.set_dynamic("channels_mp", 1)
+        reader.configuration.set("port", 4200)
+        reader.configuration.set("protocol", type)
         self.assertTrue(reader.setup())
         self.assertTrue(ip_handler.setup())
 
@@ -110,11 +110,11 @@ class TestIpServer(unittest.TestCase):
     def test_with_net_cat(self):
         reader = sihd.Readers.IpReader()
         ip_handler = sihd.Handlers.IpServerHandler()
-        reader.set_conf("runnable_type", "process")
+        reader.configuration.set("runnable_type", "process")
         self.set_reader_queues(reader)
-        ip_handler.set_conf("channels_mp", True)
-        reader.set_conf("port", 4200)
-        reader.set_conf("protocol", "tcp")
+        ip_handler.configuration.set("channels_mp", 1)
+        reader.configuration.set("port", 4200)
+        reader.configuration.set("protocol", "tcp")
         self.assertTrue(reader.setup())
         self.assertTrue(ip_handler.setup())
 
@@ -135,11 +135,11 @@ class TestIpServer(unittest.TestCase):
         handler = sihd.Handlers.IpServerHandler()
         gui = sihd.GUI.WxPython.ip.WxPythonIpGui()
 
-        reader.set_conf("runnable_type", "process")
+        reader.configuration.set("runnable_type", "process")
         self.set_reader_queues(reader)
-        ip_handler.set_conf("channels_mp", True)
-        reader.set_conf("port", 4200)
-        reader.set_conf("protocol", type)
+        ip_handler.configuration.set("channels_mp", 1)
+        reader.configuration.set("port", 4200)
+        reader.configuration.set("protocol", type)
 
         self.assertTrue(reader.setup())
         self.assertTrue(handler.setup())

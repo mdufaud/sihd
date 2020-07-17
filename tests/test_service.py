@@ -83,7 +83,7 @@ class TestServices(unittest.TestCase):
         runnable.pause()
         runnable.resume()
         runnable.stop()
-    
+
     def do_life_cycle(self, service, thread=False, process=False):
         self.assertTrue(service.setup())
         if thread or process:
@@ -103,7 +103,7 @@ class TestServices(unittest.TestCase):
         self.do_life_cycle(service, thread=True)
         if multiprocessing:
             service = sihd.Core.SihdRunnableService("mp_runnable_service")
-            service.set_conf("runnable_type", "process")
+            service.configuration.set("runnable_type", "process")
             self.do_life_cycle(service, process=True)
 
     def test_thread_in_process(self):

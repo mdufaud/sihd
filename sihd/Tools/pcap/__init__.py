@@ -1,1 +1,1 @@
-from .pcap_utils import PcapReader, PcapWriter
+from .utils import PcapReader, PcapWriter

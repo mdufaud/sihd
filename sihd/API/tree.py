@@ -1,10 +1,13 @@
+#!/usr/bin/python
+# coding: utf-8
+
 from sihd.Core.ANamedObject import ANamedObject
 from sihd.Core.ANamedObjectContainer import ANamedObjectContainer
 
-def leaf(name, parent=None):
+def add_leaf(name, parent=None):
     return ANamedObject(name, parent)
 
-def node(name, parent=None):
+def add_node(name, parent=None):
     return ANamedObjectContainer(name, parent)
 
 def find(path):
@@ -13,7 +16,7 @@ def find(path):
 def clear():
     ANamedObjectContainer.clear_tree()
 
-def delete(path):
+def remove(path):
     ANamedObjectContainer.delete_from_tree(path)
 
 def dump(*args, **kwargs):

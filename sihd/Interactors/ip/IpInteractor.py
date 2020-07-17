@@ -12,7 +12,7 @@ class IpInteractor(AInteractor):
 
     def __init__(self, name="IpInteractor", **kwargs):
         super().__init__(name=name, **kwargs)
-        self.set_default_conf({
+        self.configuration.add_defaults({
             "port": 42042,
             "host": "localhost",
             "protocol": "tcp",
@@ -28,11 +28,11 @@ class IpInteractor(AInteractor):
     # Configuration
     #
 
-    def on_setup(self):
-        ret = super().on_setup()
-        self.__port = int(self.get_conf("port"))
-        self.__host = str(self.get_conf("host"))
-        self.__protocol = str(self.get_conf("protocol"))
+    def on_setup(self, conf):
+        ret = super().on_setup(conf)
+        self.__port = int(conf.get("port"))
+        self.__host = str(conf.get("host"))
+        self.__protocol = str(conf.get("protocol"))
         return ret
 
     #

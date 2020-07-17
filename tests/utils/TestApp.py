@@ -95,7 +95,7 @@ class TestApp(SihdApp):
             handler.step = stat_it(handler.step)
 
     def _configure_reader(self, reader, args):
-        reader.set_conf("path", args.file, force=True)
+        reader.configuration.set("path", args.file, force=True)
         #Decorate with stats
         if self.args.stats:
             reader.step = stat_it(reader.step)

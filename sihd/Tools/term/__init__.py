@@ -1,1 +1,1 @@
-from .term import term
+from . import colors

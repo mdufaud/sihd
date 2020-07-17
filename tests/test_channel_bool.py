@@ -41,7 +41,7 @@ class TestChannelDict(unittest.TestCase):
         default = True
         channel = ChannelBool(default=default)
         self.do_bool(channel, default)
-        
+
         if utils.is_multiprocessing():
             print()
             default = True

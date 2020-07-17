@@ -15,7 +15,7 @@ class LineReader(AReader):
 
     def __init__(self, name="LineReader", app=None):
         super(LineReader, self).__init__(app=app, name=name)
-        self.set_default_conf({
+        self.configuration.add_defaults({
             "path": "/path/to/file",
         })
         self.__reader = None
@@ -28,13 +28,12 @@ class LineReader(AReader):
     # Configuration
     #
 
-    def post_setup(self):
+    def on_init(self):
         """ After setup to have eof channel created """
-        ret = super().post_setup()
-        path = self.get_conf("path", default=False)
+        path = self.configuration.get('path', default=False)
         if path:
             self.path.write(path)
-        return ret
+        return super().on_init()
 
     #
     # Channels

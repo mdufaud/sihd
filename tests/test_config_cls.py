@@ -1,8 +1,6 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" System """
-
 import os
 import sys
 import time
@@ -20,7 +18,7 @@ logger = sihd.log.setup('info')
 
 import unittest
 
-class TestConfig(unittest.TestCase):
+class TestClassConfig(unittest.TestCase):
 
     def setUp(self):
         self.config = ConfigParser.ConfigParser()
@@ -34,7 +32,7 @@ class TestConfig(unittest.TestCase):
         dir_path = os.path.join(os.path.dirname(__file__), "config")
         return dir_path
 
-    def get_conf(self, path):
+    def read_configuration(self, path):
         self.config.read(path)
 
     def write_conf(self, path, obj=None):
@@ -45,23 +43,23 @@ class TestConfig(unittest.TestCase):
 
     def test_simple_config(self):
         reader = sihd.Readers.sys.LineReader(name="LineReader")
-        default = reader.get_conf("path")
+        default = reader.configuration.get("path")
         self.assertTrue(default == "/path/to/file")
-        not_default = reader.get_conf("path", default=False)
+        not_default = reader.configuration.get("path", default=False)
         self.assertTrue(not_default is None)
 
-        reader.set_conf("path", __file__)
+        reader.configuration.set("path", __file__)
 
-        my_conf = reader.get_conf("path")
+        my_conf = reader.configuration.get("path")
         self.assertTrue(my_conf == __file__)
-        self.assertTrue(default == reader.get_default_conf("path"))
+        self.assertTrue(default == reader.configuration.get_default("path"))
         self.assertTrue(reader.setup())
 
     def test_config_file(self):
         path = os.path.join(self.get_conf_path(), "test_config.ini")
         reader = sihd.Readers.sys.LineReader(name="LineReader")
-        reader.set_conf_obj(self.config)
-        reader.set_conf("path", __file__)
+        reader.configuration.obj = self.config
+        reader.configuration.set("path", __file__)
         reader.save_conf()
         self.write_conf(path)
 
@@ -92,8 +90,7 @@ class TestConfig(unittest.TestCase):
             "-f", path,
             "-s",
         ])
-        if app.setup_app() is False:
-            sys.exit(1)
+        self.assertTrue(app.setup_app())
         self.assertTrue(app.start())
         app.stop()
 
@@ -117,8 +114,7 @@ class TestConfig(unittest.TestCase):
             "-f", path,
             "-s",
         ])
-        if app.setup_app() is False:
-            sys.exit(1)
+        self.assertTrue(app.setup_app())
         self.assertTrue(app.start())
         self.assertTrue(app.stop())
 

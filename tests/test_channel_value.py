@@ -88,7 +88,7 @@ class TestChannelValue(unittest.TestCase):
             self.assertTrue(channel.is_readable())
             logger.info("read -> {} ?= {}".format(channel.read(), write))
             self.assertEqual(channel.read(), write)
-    
+
     def test_channel_value(self):
         #Int
         self.chan_value(ChannelInt, default=1, write=101)

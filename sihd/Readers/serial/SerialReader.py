@@ -19,10 +19,10 @@ class SerialReader(AReader):
             import serial
         super().__init__(app=app, name=name)
         self.__serial = None
-        self.set_default_conf({
+        self.configuration.add_defaults({
             "port": "/dev/some_device",
             "baudrate": 9600,
-            "timeout": 1,
+            "timeout": (1, {'infile': False}),
         })
         self.add_channel('output')
 
@@ -30,15 +30,15 @@ class SerialReader(AReader):
     # Configuration
     #
 
-    def on_setup(self):
+    def on_setup(self, conf):
         ret = super().on_setup()
-        baudrate = self.get_conf("baudrate")
+        baudrate = conf.get("baudrate")
         if baudrate:
             self.__baudrate = int(baudrate)
-        timeout = self.get_conf("timeout")
+        timeout = conf.get("timeout")
         if timeout:
             self.__timeout = int(timeout)
-        port = self.get_conf("port", default=False)
+        port = conf.get("port", default=False)
         if port:
             self.set_source(port)
         if not self.__serial:

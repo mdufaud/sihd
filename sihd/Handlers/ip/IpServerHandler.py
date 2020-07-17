@@ -20,7 +20,7 @@ class IpServerHandler(AHandler):
     def __init__(self, name="IpServerHandler", app=None):
         super(IpServerHandler, self).__init__(app=app, name=name)
         self._clients = {}
-        self.set_default_conf({
+        self.configuration.add_defaults({
             "service_type": "thread",
             "server_protocol": "tcp",
         })
@@ -41,9 +41,9 @@ class IpServerHandler(AHandler):
     # Configuration
     #
 
-    def on_setup(self):
-        ret = super().on_setup()
-        self.set_server_protocol(self.get_conf("server_protocol"))
+    def on_setup(self, conf):
+        ret = super().on_setup(conf)
+        self.set_server_protocol(conf.get("server_protocol"))
         return ret
 
     def set_server_protocol(self, proto):

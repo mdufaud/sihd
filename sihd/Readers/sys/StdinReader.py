@@ -15,7 +15,7 @@ class StdinReader(AReader):
 
     def __init__(self, name="StdinReader", app=None):
         super(StdinReader, self).__init__(app=app, name=name)
-        self.set_default_conf({
+        self.configuration.add_defaults({
             "question": "",
             "runnable_frequency": 5, 
         })
@@ -47,7 +47,7 @@ class StdinReader(AReader):
 
     def on_setup(self):
         super().on_setup()
-        self.set_question(str(self.get_conf("question")))
+        self.set_question(str(conf.get("question")))
         return True
 
     #

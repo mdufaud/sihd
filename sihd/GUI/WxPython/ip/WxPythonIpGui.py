@@ -26,7 +26,7 @@ class WxPythonIpGui(AWxPythonGui):
         if wx is None:
             import wx
         super(WxPythonIpGui, self).__init__(app=app, name=name)
-        self.set_default_conf({
+        self.configuration.add_defaults({
         })
         self.add_channel_input("message")
 
@@ -38,8 +38,8 @@ class WxPythonIpGui(AWxPythonGui):
     # Configuration
     #
 
-    def on_setup(self):
-        return True
+    def on_setup(self, conf):
+        return super().on_setup(conf)
 
     #
     # Channel

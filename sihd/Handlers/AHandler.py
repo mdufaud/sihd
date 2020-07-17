@@ -13,7 +13,7 @@ class AHandler(SihdRunnableService, IAppContainer):
         super().__init__(name, parent=parent, **kwargs)
         if app:
             self.set_app(app)
-        self.set_conf("runnable_type", "thread")
+        self.configuration.set("runnable_type", "thread")
 
     #
     # AHandler

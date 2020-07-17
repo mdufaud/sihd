@@ -7,7 +7,7 @@ class WordHandler(AHandler):
 
     def __init__(self, name="WordHandler", app=None):
         super(WordHandler, self).__init__(app=app, name=name)
-        self.set_default_conf({
+        self.configuration.add_defaults({
             "delimiter": "",
             "skip": "#;//",
         })
@@ -24,12 +24,12 @@ class WordHandler(AHandler):
     # Configuration
     #
 
-    def on_setup(self):
-        ret = super().on_setup()
-        delimiter = self.get_conf("delimiter")
+    def on_setup(self, conf):
+        ret = super().on_setup(conf)
+        delimiter = conf.get("delimiter")
         if isinstance(delimiter, str) and len(delimiter) >= 1:
             self.__delimiter = delimiter
-        toskip = self.get_conf("skip")
+        toskip = conf.get("skip")
         if isinstance(toskip, str) and len(toskip) >= 1:
             self.__toskip = toskip.split(";")
         return ret

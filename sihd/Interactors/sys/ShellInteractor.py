@@ -20,15 +20,15 @@ class ShellInteractor(AInteractor):
         global shlex
         if shlex is None:
             import shlex
-        self.set_default_conf({
+        self.configuration.add_defaults({
             "cmd": "/your/cmd --arg",
             "pipe": "ex: stdin;stdout",
             "devnull": "ex: stderr;stdin",
-            "timeout_communication": 0.5,
+            "timeout_communication": (0.5, {'infile': False}),
             "input_data": "",
-            "stderr_to_out": False,
+            "stderr_to_out": 0,
         })
-        self.__exec = None
+        self.__cmd = None
         self.__input = None
         self.__args = {}
         self.__timeout = None
@@ -39,14 +39,14 @@ class ShellInteractor(AInteractor):
     # Configuration
     #
 
-    def on_setup(self):
-        ret = super().on_setup()
-        cmd = self.get_conf("cmd", default=False)
-        pipe = self.get_conf("pipe", default=False)
-        stderr = self.get_conf("stderr_to_out")
-        devnull = self.get_conf("devnull", default=False)
-        input_data = self.get_conf("input_data")
-        self.set_timeout(self.get_conf("timeout_communication"))
+    def on_setup(self, conf):
+        ret = super().on_setup(conf)
+        cmd = conf.get("cmd", default=False)
+        pipe = conf.get("pipe", default=False)
+        stderr = bool(conf.get("stderr_to_out"))
+        devnull = conf.get("devnull", default=False)
+        input_data = conf.get("input_data")
+        self.set_timeout(conf.get("timeout_communication"))
         if cmd:
             self.set_cmd(cmd)
         if pipe:
@@ -69,7 +69,7 @@ class ShellInteractor(AInteractor):
         self.__args['stderr'] = fd
 
     def set_timeout(self, timeout):
-        self.__timeout = timeout
+        self.__timeout = float(timeout)
 
     def set_input(self, data):
         if isinstance(data, bool):
@@ -90,7 +90,7 @@ class ShellInteractor(AInteractor):
             cmd = self._get_cmd_from_str(cmd)
         elif not isinstance(cmd, (list, tuple, set)):
             raise ValueError("Command unrecognized: {}".format(cmd))
-        self.__exec = cmd
+        self.__cmd = cmd
         return cmd
 
     def _get_cmd_from_str(self, cmd: str):
@@ -143,7 +143,7 @@ class ShellInteractor(AInteractor):
             :return: Popen object or None if failed
         """
         if cmd is None:
-            cmd = self.__exec
+            cmd = self.__cmd
         ret = None
         try:
             ret = subprocess.Popen(cmd, **self.__args)
@@ -157,7 +157,7 @@ class ShellInteractor(AInteractor):
             self.__proc = ret
         return ret
 
-    def communicate(self, input=None, timeout=None) -> Tuple[bytes, bytes]:
+    def communicate(self, input=None, timeout=None) -> Tuple[bytes, bytes, bool]:
         """
             Use a Popen proc object and applies communicate on it
 
@@ -180,7 +180,7 @@ class ShellInteractor(AInteractor):
         self.__proc = None
         return out, errs, timedout
 
-    def end_process(self, kill=False):
+    def end_process(self, kill=False) -> Tuple[bytes, bytes]:
         """ Kill the children process by applying communicate on it """
         if kill:
             self.__proc.kill()
@@ -191,8 +191,8 @@ class ShellInteractor(AInteractor):
     def get_proc(self):
         return self.__proc
 
-    def get_args(self):
-        return self.__exec
+    def get_cmd(self):
+        return self.__cmd
 
     #
     # /dev/null

@@ -1,20 +1,13 @@
 #!/usr/bin/python
 # coding: utf-8
 
-#
-# System
-#
+__all__ = ('ANamedObjectContainer')
+
 import sys
 from typing import Union, Tuple
 
 from .ANamedObject import ANamedObject
 
-"""
-try:
-    from sihd.Tools.shell.term_colors import bcolors
-except ImportError:
-    bcolors = None
-"""
 import sihd
 bcolors = sihd.term.colors
 

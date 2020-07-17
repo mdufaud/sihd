@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # coding: utf-8
 
+__all__ = ('SihdApp')
+
 #
 # System
 #
@@ -35,6 +37,9 @@ class SihdApp(SihdService):
                     path=None, conf_path=None,
                     *pargs, **pkwargs):
         super().__init__(name, *pargs, **pkwargs)
+        self.configuration.add_defaults({
+            'loglevel': 'info',
+        })
         #Log
         self._default_log_level = "info"
         #Path
@@ -69,6 +74,11 @@ class SihdApp(SihdService):
             self.log_debug("Application successfully setup")
         else:
             self.log_error("Application setup has failed")
+        return ret
+
+    def on_setup(self, conf):
+        ret = super().on_setup(conf)
+        sihd.log.set_level(conf.get('loglevel'))
         return ret
 
     def post_setup(self):
@@ -179,7 +189,7 @@ class SihdApp(SihdService):
         return self._conf_path
 
     def _write_conf(self, obj=None):
-        obj = self.get_conf_obj() if obj is None else obj
+        obj = self.configuration.obj if obj is None else obj
         if obj is None:
             self.log_error("No object to write configuration to")
             return False
@@ -207,7 +217,7 @@ class SihdApp(SihdService):
             self.log_warning("Services already configured")
             return False
         self.__children_configured = True
-        conf = self.get_conf_obj()
+        conf = self.configuration.obj
         ret = self.call_children('setup', AConfigurable, args=[conf])
         if ret:
             self.log_info("Services are configured")
@@ -218,7 +228,7 @@ class SihdApp(SihdService):
     def save_children_conf(self):
         ret = self.call_children('save_conf', AConfigurable)
         self.log_info("Services configurations are saved")
-        conf = self.get_conf_obj()
+        conf = self.configuration.obj
         return self._write_conf(conf)
 
     #
@@ -432,19 +442,19 @@ class SihdApp(SihdService):
 
     def add_reader(self, reader):
         self.readers.add(reader)
-        reader.set_conf_obj(self.get_conf_obj())
+        reader.configuration.set_configuration_object(self.configuration.obj)
 
     def add_handler(self, handler):
         self.handlers.add(handler)
-        handler.set_conf_obj(self.get_conf_obj())
+        handler.configuration.set_configuration_object(self.configuration.obj)
 
     def add_gui(self, gui):
         self.guis.add(gui)
-        gui.set_conf_obj(self.get_conf_obj())
+        gui.configuration.set_configuration_object(self.configuration.obj)
 
     def add_interactor(self, interactor):
         self.interactors.add(interactor)
-        interactor.set_conf_obj(self.get_conf_obj())
+        interactor.configuration.set_configuration_object(self.configuration.obj)
 
     #
     # SihdServices getters
@@ -493,7 +503,7 @@ class SihdApp(SihdService):
     #
     # Backup
     #
-    
+
     def emergency_backup(self, err):
         return
 
@@ -508,7 +518,7 @@ class SihdApp(SihdService):
             self.service_state_changed(service, stopped, paused)
             return True
         return False
-        
+
     def service_state_changed(self, service, stopped, paused):
         pass
 

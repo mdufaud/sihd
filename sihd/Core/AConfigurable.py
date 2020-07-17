@@ -1,20 +1,48 @@
 #!/usr/bin/python
 # coding: utf-8
 
-#
-# System
-#
-import os
-import datetime
-import logging
-from logging.handlers import RotatingFileHandler
-
+from sihd.API.config import ConfigApi
 from .ANamedObject import ANamedObject
 
 class AConfigurable(ANamedObject):
 
     def __init__(self, name="AConfigurable", **kwargs):
-        super(AConfigurable, self).__init__(name, **kwargs)
+        super().__init__(name, **kwargs)
+        self.__is_configured = False
+        self.configuration = ConfigApi(self.get_path())
+        self.save_conf = self.configuration.save
+
+    def get_conf(self):
+        return self.__conf
+
+    def setup(self, obj=None):
+        ret = True
+        conf = self.configuration
+        if obj is not None:
+            conf.set_configuration_object(obj)
+        if conf.obj and conf.has_section() is False:
+            ret = conf.save()
+        if ret and self._setup_impl(conf) is True:
+            self.__is_configured = True
+            ret = True
+        return ret
+
+    def _setup_impl(self, conf):
+        # MUST be implemented to use configuration
+        return True
+
+    def is_configured(self):
+        return self.__is_configured
+
+    def _set_unconfigured(self):
+        """ Be sure to know what you are doing """
+        self.__is_configured = False
+
+"""
+class AConfigurable(ANamedObject):
+
+    def __init__(self, name="AConfigurable", **kwargs):
+        super().__init__(name, **kwargs)
         self.__default_conf = {}
         self.__conf = {}
         self.__conf_obj = None
@@ -27,10 +55,6 @@ class AConfigurable(ANamedObject):
     #
 
     def setup(self, config_obj=None):
-        """
-            Load configuration from either file or default/setted conf
-            Calls setup implementation from children (_setup_impl)
-        """
         if self.__is_configured is True:
             return True
         if config_obj is not None:
@@ -42,7 +66,6 @@ class AConfigurable(ANamedObject):
         return self.__is_configured
 
     def is_configured(self):
-        """ Returns true if obj is setup """
         return self.__is_configured
 
     #
@@ -53,14 +76,6 @@ class AConfigurable(ANamedObject):
         return self.get_conf(key, dynamic=True, default=default)
 
     def get_conf(self, key, dynamic=False, default=True):
-        """
-            Get value from conf - Either from file or dict
-
-            :param key: configuration key
-            :param default: returns None if value is still default
-            :param dynamic: do not raise key error if config key not found
-            :return: value or None if not found
-        """
         val = None
         conf = self.get_conf_obj()
         #Gets conf from either obj or setted configuration
@@ -108,12 +123,6 @@ class AConfigurable(ANamedObject):
         return self.set_conf(key, value, dynamic=True, force=force)
 
     def set_conf(self, key, value=None, dynamic=False, force=False):
-        """
-            Set value in dic
-            @param dic dictionnary to complete
-            @param key can be a string or a dictionnary
-            @param value can be anything - default: None
-        """
         if isinstance(key, dict):
             return self.set_conf_from_dict(key, force=force, dynamic=dynamic)
         if value is None:
@@ -129,7 +138,6 @@ class AConfigurable(ANamedObject):
         return True
 
     def set_conf_file(self, key, value, force=False, obj=None):
-        """ Set a value in the obj configuration directly """
         if obj is None:
             obj = self.get_conf_obj()
         path = self.get_path()
@@ -152,15 +160,12 @@ class AConfigurable(ANamedObject):
         return self.__default_conf
 
     def get_default_conf(self, key):
-        """ Get the value from default dict """
         return self.__default_conf.get(key)
 
     def set_conf_obj(self, config_obj):
-        """ Set the configparser obj """
         self.__conf_obj = config_obj
 
     def get_conf_obj(self):
-        """ Returns the configparser obj """
         return self.__conf_obj
 
     def get_conf_dict(self, defaults=True):
@@ -176,7 +181,6 @@ class AConfigurable(ANamedObject):
     #
 
     def save_conf(self, obj=None):
-        """ Writes configured obj to file """
         dic = dict(self.__default_conf)
         dic.update(self.__conf)
         obj = obj if obj is not None else self.get_conf_obj()
@@ -189,17 +193,10 @@ class AConfigurable(ANamedObject):
     #
 
     def set_default_conf(self, dic):
-        """
-            MUST be used before setup
-            Set a default object configuration
-        """
         if isinstance(dic, dict):
             self.__default_conf.update(dic)
 
     def _setup_impl(self):
-        """
-            MUST be implemented to use configuration
-        """
         return True
 
     #
@@ -207,7 +204,6 @@ class AConfigurable(ANamedObject):
     #
 
     def __setup_section(self, obj=None):
-        """ Sets section for obj in configparser """
         conf = obj if obj is not None else self.get_conf_obj()
         added = False
         path = self.get_path()
@@ -218,7 +214,6 @@ class AConfigurable(ANamedObject):
         return added
 
     def __write_dict_conf(self, dic, obj=None):
-        """ Writes dictionnary in configparser """
         if obj is None:
             return False
         if not self.__has_section:
@@ -230,10 +225,9 @@ class AConfigurable(ANamedObject):
         return True
 
     def __write_default_conf(self, obj=None):
-        """ Called when no section exists for obj in file """
         obj = obj if obj is not None else self.get_conf_obj()
         return self.__write_dict_conf(self.__default_conf, obj)
 
     def _set_unconfigured(self):
-        """ Be sure to know what you are doing """
         self.__is_configured = False
+"""

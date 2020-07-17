@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # coding: utf-8
 
+__all__ = ('CapInfo', 'CapHeaderInfo', 'is_pcap_magic', 'PcapReader', 'PcapWriter')
+
 import base64 as b64
 import time
 import struct
@@ -19,7 +21,7 @@ class CapInfo:
                 .format(self.sec, self.usec, self.cap_len, self.orig_len)
         return s
 
-class CapFileInfo:
+class CapHeaderInfo:
     def __init__(self, ver_maj=2, ver_min=4, gmt=0,
                     sigfigs=0, snaplen=65535, network=None):
         self.ver_maj = ver_maj
@@ -55,14 +57,14 @@ class PcapReader:
         self.__endian = None
         self.__nano = None
         self.__fd = None
-        self.__capinfo = None
+        self.__hdr = None
 
     def is_open(self):
         return self.__fd is not None
 
     def open(self, filename, mode='rb'):
         self.__fd = open(filename, mode)
-        self.__capinfo = None
+        self.__hdr = None
         self.__header = False
         self.__magic = False
 
@@ -106,8 +108,8 @@ class PcapReader:
             self.close()
             raise ValueError("Header size: {} < 20".format(len(hdr)))
         major, minor, tz, sig, max_len, link_type = struct.unpack(self.__endian + "HHIIII", hdr)
-        self.__capinfo = CapFileInfo(ver_maj=major, ver_min=minor, gmt=tz,
-                            sigfigs=sig, snaplen=max_len, network=link_type)
+        self.__hdr = CapHeaderInfo(ver_maj=major, ver_min=minor, gmt=tz,
+                                    sigfigs=sig, snaplen=max_len, network=link_type)
         self.__header = True
         return True
 
@@ -150,7 +152,7 @@ class PcapReader:
         return lst
 
     def get_header(self):
-        return self.__capinfo
+        return self.__hdr
 
 class PcapWriter:
     def __init__(self, endian, linktype=DLT_EN10MB, nano=False):

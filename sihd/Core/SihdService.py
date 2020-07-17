@@ -150,18 +150,18 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         channel = self.create_channel(name, type='int', block=True,
                                         timeout=1, default=1)
 
-    def _setup_impl(self):
-        ret = super()._setup_impl()
+    def _setup_impl(self, conf):
+        ret = super()._setup_impl(conf)
         ret = ret and self.call_children('setup', AConfigurable)
-        ret = ret and self.on_setup()
+        ret = ret and self.on_setup(conf)
         self.__create_channel_state()
         ret = ret and self._make_channels()
         self.service_state.consumed_data()
         ret = ret and self.post_setup()
         return ret
 
-    def on_setup(self):
-        chmp = self.get_conf("channels_mp", dynamic=True)
+    def on_setup(self, conf):
+        chmp = conf.get("channels_mp", dynamic=True)
         if chmp is not None:
             self.__channels_mp = bool(int(chmp))
         return True

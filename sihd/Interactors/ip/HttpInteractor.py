@@ -6,6 +6,7 @@ urllib_request = None
 urllib_error = None
 urllib_parse = None
 
+import sihd
 from sihd.Interactors.AInteractor import AInteractor
 
 class HttpInteractor(AInteractor):
@@ -24,19 +25,19 @@ class HttpInteractor(AInteractor):
         global urllib_parse
         if urllib_parse is None:
             import urllib.parse as urllib_parse
-        self.set_default_conf({
-            "runnable_frequency": 1,
+        self.configuration.add_defaults({
             "url": "",
             "query": "",
             "json_post_file": "/path/to/json/post",
             "json_header_file": "/path/to/json/header",
         })
-        self._url = ""
-        self._args = {}
-        self._post = None
-        self._query = None
-        self._req = None
-        self._post_file_path = None
+        self.configuration.set('runnable_frequency', 1)
+        self.__url = ""
+        self.__args = {}
+        self.__post = None
+        self.__query = None
+        self.__req = None
+        self.__post_file_path = None
         self.add_channel_input("query")
         self.add_channel_input("headers")
         self.add_channel_input("post")
@@ -45,21 +46,21 @@ class HttpInteractor(AInteractor):
     # Configuration
     #
 
-    def on_setup(self):
-        ret = super().on_setup()
-        path_post = self.get_conf("json_post_file", default=False)
+    def on_setup(self, conf):
+        ret = super().on_setup(conf)
+        path_post = sihd.resources.get(conf.get("json_post_file", default=False))
         if path_post:
             post = self.get_json_from_file(path_post)
             ret = ret and self.set_post(post)
-        path_header = self.get_conf("json_header_file", default=False)
+        path_header = sihd.resources.get(conf.get("json_header_file", default=False))
         if path_header:
             headers = self.get_json_from_file(path_header)
             ret = ret and self.set_headers(headers)
-        query = self.get_conf("query")
+        query = conf.get("query")
         if query:
             ret = ret and self.set_query(query)
-        self._url = self.get_conf("url")
-        if self._url:
+        self.__url = conf.get("url")
+        if self.__url:
             self.make_request()
         return ret
 
@@ -92,7 +93,7 @@ class HttpInteractor(AInteractor):
         return url
 
     def on_interaction(self, url, *args, **kwargs):
-        if self._req is None:
+        if self.__req is None:
             #Waiting for interaction
             return True
         resp = self.send(*args, **kwargs)
@@ -105,17 +106,17 @@ class HttpInteractor(AInteractor):
 
     def make_request(self, url=None, *args, query=None, headers=None, post=None):
         if url is None:
-            url = self._url
+            url = self.__url
         else:
-            self._url = url
+            self.__url = url
         if post is not None:
             self.set_post(post)
         if query is not None:
             self.set_query(query)
         if headers is not None:
             self.set_headers(headers)
-        url = self._get_url(url, self._query)
-        self._req = urllib_request.Request(url, *self._args)
+        url = self._get_url(url, self.__query)
+        self.__req = urllib_request.Request(url, *self.__args)
         return self
 
     def _get_url(self, url, query):
@@ -127,18 +128,18 @@ class HttpInteractor(AInteractor):
     def add_header(self, dic):
         """ @params dic dictionnary """
         for key, value in dic.items():
-            self._req.add_header(key, value)
+            self.__req.add_header(key, value)
 
     def send(self):
-        req = self._req
         ret = None
+        req = self.__req
         if req:
             try:
-                ret = urllib_request.urlopen(req, self._post)
+                ret = urllib_request.urlopen(req, self.__post)
             except urllib_error.URLError as e:
-                url = self._get_url(self._url, self._query)
+                url = self._get_url(self.__url, self.__query)
                 self.log_error("URL error: {}\n"
-                                "(url={},args={})".format(e.reason, url, self._args))
+                                "(url={},args={})".format(e.reason, url, self.__args))
             except TypeError as e:
                 self.log_error("Type error: {}".format(e))
             if ret:
@@ -162,9 +163,9 @@ class HttpInteractor(AInteractor):
     def set_query(self, data):
         """ @param data python dictionnary or str """
         if isinstance(data, dict):
-            self._query = urllib_parse.urlencode(data)
+            self.__query = urllib_parse.urlencode(data)
         elif isinstance(data, str):
-            self._query = data
+            self.__query = data
         else:
             self.log_error("Type error for query: {}".format(data))
         return False
@@ -172,10 +173,10 @@ class HttpInteractor(AInteractor):
     def set_post(self, data):
         """ @param dic python dictionnary """
         if isinstance(data, dict):
-            self._post = urllib_parse.urlencode(data).encode()
+            self.__post = urllib_parse.urlencode(data).encode()
         else:
             try:
-                self._post = data.encode()
+                self.__post = data.encode()
             except AttributeError:
                 self.log_error("Type error for post: {}".format(data))
                 return False
@@ -184,7 +185,7 @@ class HttpInteractor(AInteractor):
     def set_headers(self, dic):
         """ @parm dic python dictionnary """
         if isinstance(dic, dict):
-            self._args['headers'] = dic
+            self.__args['headers'] = dic
             return True
         else:
             self.log_error("Not a dictionnary for headers: {}".format(dic))

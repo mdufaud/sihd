@@ -17,7 +17,7 @@ class PcapReader(AReader):
 
     def __init__(self, name="PcapReader", app=None, **kwargs):
         super().__init__(app=app, name=name, **kwargs)
-        self.set_default_conf({
+        self.configuration.add_defaults({
             "path": "/path/to/file",
         })
         self.__pcap_reader = None
@@ -33,13 +33,12 @@ class PcapReader(AReader):
     # Configuration
     #
 
-    def post_setup(self):
-        ret = super().post_setup()
-        if ret:
-            path = self.get_conf("path", default=False)
-            if path:
-                self.path.write(path)
-        return ret
+    def on_init(self):
+        """ After setup to have eof channel created """
+        path = self.configuration.get('path', default=False)
+        if path:
+            self.path.write(path)
+        return super().on_init()
 
     #
     # Channels

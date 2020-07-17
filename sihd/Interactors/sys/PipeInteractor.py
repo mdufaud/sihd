@@ -20,7 +20,7 @@ class PipeInteractor(AInteractor):
         global shlex
         if shlex is None:
             import shlex
-        self.set_default_conf({
+        self.configuration.add_defaults({
             "cmd1": "/your/cmd --arg",
             "cmd2": "/your/cmd --arg",
         })
@@ -32,11 +32,11 @@ class PipeInteractor(AInteractor):
     # Configuration
     #
 
-    def on_setup(self):
-        ret = super().on_setup()
+    def on_setup(self, conf):
+        ret = super().on_setup(conf)
         i = 1
         while True:
-            cmd = self.get_conf("cmd" + str(i), default=False, dynamic=True)
+            cmd = conf.get("cmd" + str(i), default=False, dynamic=True)
             if cmd is not None:
                 self.add_pipe(cmd)
             else:

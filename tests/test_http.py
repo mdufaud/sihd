@@ -76,7 +76,7 @@ class TestHttp(unittest.TestCase):
         logger.info("Testing service life cycle")
         url = "https://www.google.com"
         interactor = HttpInteractor()
-        interactor.set_conf({
+        interactor.configuration.setall({
             "url": url,
             'runnable_type': 'thread'
         })
@@ -95,7 +95,7 @@ class TestHttp(unittest.TestCase):
         logger.info("Testing channels well being")
         url = "https://www.google.com"
         interactor = HttpInteractor()
-        interactor.set_conf('runnable_type', 'process')
+        interactor.configuration.set('runnable_type', 'process')
         try:
             self.assertTrue(interactor.setup())
         except FileNotFoundError:

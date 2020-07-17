@@ -71,7 +71,7 @@ class TestPcap(unittest.TestCase):
         self.assertTrue(reader.setup())
         reader.path.write(pcap_path)
         handler = PcapTestHandler(self)
-        handler.set_conf('runnable_type', 'none')
+        handler.configuration.set('runnable_type', 'none')
         handler.setup()
         handler.handle_service(reader)
         logger.info("###### Setup done. Starting ######")
@@ -97,15 +97,15 @@ class TestPcap(unittest.TestCase):
         reader.set_channel_conf("packet", type='queue')
         handler = PcapTestHandler(self)
         duplicator = sihd.Handlers.DuplicatorHandler()
-        saver.set_conf({
-            "save_raw": True,
+        saver.configuration.setall({
+            "save_raw": 1,
             "save_type": 'list',
-            "activate": False,
+            "activate": 0,
             "endianness": "big",
             "runnable_type": "process"
         })
-        reader.set_conf("runnable_type", "process")
-        reader.set_conf("path", pcap_path)
+        reader.configuration.set("runnable_type", "process")
+        reader.configuration.set("path", pcap_path)
 
         self.assertTrue(saver.setup())
         self.assertTrue(reader.setup())
@@ -143,13 +143,13 @@ class TestPcap(unittest.TestCase):
         self.assertTrue(saver.resume())
         time.sleep(0.3)
         self.assertTrue(saver.stop())
-        
+
         logger.info("Reading dump with another handler")
         saver = sihd.Handlers.PcapHandler('PcapHandler2')
-        saver.set_conf({
-            "save_raw": True,
+        saver.configuration.setall({
+            "save_raw": 1,
             "save_type": 'list',
-            "activate": True,
+            "activate": 1,
             "endianness": "big",
         })
         self.assertTrue(saver.setup())
