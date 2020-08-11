@@ -33,17 +33,14 @@ from sihd.Core.Runnable import Runnable
 
 class SihdApp(SihdService):
 
-    def __init__(self, name="SihdApp", args=None,
-                    path=None, conf_path=None,
-                    *pargs, **pkwargs):
+    def __init__(self, name="SihdApp", args=None, path=None, conf_path=None,
+                                                            *pargs, **pkwargs):
         super().__init__(name, *pargs, **pkwargs)
         self.configuration.add_defaults({
             'loglevel': 'info',
         })
-        #Log
-        self._default_log_level = "info"
         #Path
-        self._path = path or SihdApp.get_sihd_path()
+        self._path = path or self.get_sihd_path()
         self._conf_path = conf_path
         #Services
         self.readers = set()
@@ -58,23 +55,34 @@ class SihdApp(SihdService):
         if args:
             self.set_args(args)
         self.pid = os.getpid()
-        sihd.log.setup(self._default_log_level)
+        sihd.log.setup("info")
 
-    def setup_app(self, *args, conf_path=None, **kwargs):
-        self.log_debug("Starting application setup")
-        self.__services_conf = (args, kwargs)
-        #App service setup
-        ret = self.load_app_conf(conf_path) is not False
-        #Save app children's configuration
+    def setup(self, obj=None):
+        """ If object is not provided for conf, makes it """
+        if obj is None:
+            obj = self.load_app_conf(self._conf_path)
+        self.__setup_logger_conf(obj)
+        return super().setup(obj)
+
+    def _setup_impl(self, obj):
+        """ Load children configurations from file """
+        ret = super()._setup_impl(obj)
+        # Save app children's configuration
         ret = ret and self.save_children_conf()
-        #Call children's service setup
+        # Call children's service setup
         ret = ret and self.load_children_conf()
-        #Link children's channels after 
         if ret is True:
             self.log_debug("Application successfully setup")
         else:
             self.log_error("Application setup has failed")
         return ret
+
+    def setup_app(self, *args, conf_path=None, **kwargs):
+        self.log_debug("Application setup")
+        self.__services_conf = (args, kwargs)
+        if conf_path is not None:
+            self._conf_path = conf_path
+        return self.setup()
 
     def on_setup(self, conf):
         ret = super().on_setup(conf)
@@ -145,45 +153,30 @@ class SihdApp(SihdService):
     #
 
     def __setup_logger_conf(self, config):
-        if self._path is None:
-            sihd.log.error("No path set for app")
-            return
-        config.add_section("Logger")
-        config.set("Logger", "level", self._default_log_level)
-        config.set("Logger", "directory", os.path.join(self._path, "logs"))
-
-    def __apply_conf(self, path):
-        """ Load and apply conf from path and setup itself """
-        self._conf_path = path
-        obj = ConfigParser.ConfigParser()
-        if not os.path.isfile(path):
-            sihd.log.info("Making conf file {}".format(self.get_conf_path()))
-            self.__setup_logger_conf(obj)
-        else:
-            obj.read(path)
-            if not obj.has_section("Logger"):
-                self.__setup_logger_conf(obj)
-        sihd.log.add_file_handler(self.get_name(),
-                                    directory=obj.get("Logger", "directory"),
-                                    level=obj.get("Logger", "level"))
-        self.log_debug("Logger is setup")
-        #Setup
-        ret = False
-        try:
-            ret = self.setup(obj)
-        except Exception as e:
-            self.log_error(e)
-            self.log_error(sihd.get_traceback())
-        return ret
+        if not config.has_section("FileLogger"):
+            if self._path is None:
+                sihd.log.error("No path set for app")
+                return False
+            config.add_section("FileLogger")
+            config.set("FileLogger", "level", "info")
+            config.set("FileLogger", "directory", os.path.join(self._path, "logs"))
+        sihd.log.add_file_handler(self.get_name(), directory=config.get("FileLogger", "directory"),
+                                    level=config.get("FileLogger", "level"))
+        self.log_debug("File logger is setup")
+        return True
 
     def load_app_conf(self, path=None):
         """ Load conf from path or <APP_PATH>/config/<APP_NAME>.ini """
         if path is None:
             filename = self.get_name() + ".ini"
-            #conf = os.path.join(os.getcwd(), "config", filename)
             conf = os.path.join("config", filename)
             path = os.path.join(self._path, conf)
-        return self.__apply_conf(path)
+        self._conf_path = path
+        obj = ConfigParser.ConfigParser()
+        sihd.log.info("Configuration file: {}".format(path))
+        if os.path.isfile(path):
+            obj.read(path)
+        return obj
 
     def get_conf_path(self):
         return self._conf_path

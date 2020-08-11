@@ -22,7 +22,7 @@ class AGui(SihdRunnableService, IAppContainer):
         self.configuration.setall({
             "runnable_type": "thread",
             "runnable_frequency": 1,
-        }, force=True)
+        })
         self.configuration.set_dynamic('runnable_steps', 1)
         self.set_channel_notification(False)
         if app:
@@ -69,7 +69,7 @@ class AGui(SihdRunnableService, IAppContainer):
             daemon=True,
             name="GuiInputThread",
             parent=self,
-            frequency=int(self.get_conf("runnable_frequency")),
+            frequency=int(self.configuration.get("runnable_frequency")),
             timeout=0,
             max_iter=0,
             step=self.on_input_step,

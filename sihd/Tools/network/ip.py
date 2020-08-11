@@ -5,20 +5,72 @@ import socket
 import select
 
 #
-# ICMP
+# Utils
 #
 
-import os
-import sys
-import random
-import struct
-import time
-import array
+def get_family(family):
+    if family == "ipv4":
+        return socket.AF_INET
+    elif family == "ipv6":
+        return socket.AF_INET6
+    elif family == "unix":
+        return socket.AF_UNIX
+    elif family == "unspec":
+        return socket.AF_UNSPEC
+    elif isinstance(family, str):
+        raise ValueError("Socket family '%s' unknown" % family)
+    return family
+
+def get_socket_type(type):
+    if type == "datagram":
+        return socket.SOCK_DGRAM
+    elif type == "stream":
+        return socket.SOCK_STREAM
+    elif type == "raw":
+        return socket.SOCK_RAW
+    elif isinstance(type, str):
+        raise ValueError("Socket type '%s' unknown" % type)
+    return type
+
+def get_proto(proto):
+    return socket.getprotobyname(proto)
+
+def is_internet(host='google.com'):
+    try:
+        socket.gethostbyname(host)
+        return True
+    except socket.gaierror as err:
+        pass
+    return False
+
+def get_host(host):
+    try:
+        host = socket.gethostbyname(host)
+    except socket.gaierror as err:
+        pass
+    return host
+
+#
+# Socket
+#
+
+def make_simple_socket(socktype="datagram", proto="udp", family=socket.AF_INET):
+    family = get_family(family)
+    socktype = get_socktype(socktype)
+    proto = get_proto(proto)
+    sock = None
+    try:
+        sock = socket.socket(family, socktype, proto)
+    except OSError as e:
+        pass
+    return sock
 
 def make_socket(host, port, socket_type, family=socket.AF_UNSPEC, connect=False):
     if host is None or port is None or socket_type is None:
         return
-    host = socket.gethostbyname(host)
+    family = get_family(family)
+    socket_type = get_socket_type(socket_type)
+    host = get_host(host)
     s = None
     for res in socket.getaddrinfo(host, port, family, socket_type):
         af, socktype, proto, canonname, sa = res
@@ -36,6 +88,17 @@ def make_socket(host, port, socket_type, family=socket.AF_UNSPEC, connect=False)
                 continue
         break
     return sock
+
+#
+# ICMP
+#
+
+import os
+import sys
+import random
+import struct
+import time
+import array
 
 # From https://github.com/secdev/scapy/blob/master/scapy/utils.py - modified
 if sys.byteorder == "little":
@@ -65,7 +128,7 @@ def ping(host, timeout=1, packet_id=None, seq_id=None):
 
 def send_icmp(host, type, code, timeout=1, packet_id=None, seq_id=None, data=None):
     # From https://gist.github.com/pklaus/ping.py - modified
-    host = socket.gethostbyname(host)
+    host = get_host(host)
     sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname('icmp'))
     packet_id = packet_id or os.getpid() & 0xFFFF
     seq_id = seq_id or 1
@@ -109,9 +172,12 @@ def rcv_icmp(sock, timeout, packet_id=None, time_sent=None, check_pkt=None):
 # UDP
 #
 
+def make_udp_socket(host, port):
+    return make_socket(host, port, socket.SOCK_DGRAM, socket.AF_UNSPEC)
+
 def send_udp(host, port, data):
-    host = socket.gethostbyname(host)
-    sock = make_socket(host, port, socket.SOCK_DGRAM, socket.AF_UNSPEC)
+    host = get_host(host)
+    sock = make_udp_socket(host, port)
     if sock is None:
         return False
     if not isinstance(data, bytes):
@@ -129,8 +195,8 @@ def send_udp(host, port, data):
 def make_tcp_socket(host, port):
     return make_socket(host, port, socket.SOCK_STREAM, socket.AF_UNSPEC, connect=True)
 
-def send_tcp(data, sock=None, host=None, port=None):
-    sock = sock or make_tcp_socket(host, port)
+def send_tcp(host,port, data):
+    sock = make_tcp_socket(host, port)
     if sock is None:
         return False
     if not isinstance(data, bytes):
@@ -143,31 +209,11 @@ def send_tcp(data, sock=None, host=None, port=None):
 # Server
 #
 
-def get_protocol(type):
-    if type == "ipv4":
-        return socket.AF_INET
-    elif type == "ipv6":
-        return socket.AF_INET6
-    elif type == "unix":
-        return socket.AF_UNIX
-    elif type == "unspec":
-        return socket.AF_UNSPEC
-    return None
-
-def make_socket_type(type):
-    if type == "udp":
-        return socket.SOCK_DGRAM
-    elif type == "tcp":
-        return socket.SOCK_STREAM
-    elif type == "raw":
-        return socket.SOCK_RAW
-    return None
-
-def build_server(port, socktype="udp", protocol="ipv4", host=None, max_co=5):
+def build_server(port, socktype="datagram", family="ipv4", host=None, max_co=5):
     host = host or 'localhost'
-    socktype = make_socket_type(socktype)
-    protocol = get_protocol(protocol)
-    sock = socket.socket(protocol, socktype)
+    socktype = get_socket_type(socktype)
+    family = get_family(family)
+    sock = socket.socket(family, socktype)
     try:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.setblocking(0)
@@ -212,7 +258,7 @@ class Server(object):
         if sock:
             sock.close()
 
-    def select(self, timeout=None, loop=1, on_read=None, on_write=None, on_exceptional=None):
+    def select(self, timeout=None, loop=1, on_read=None, on_write=None, on_exceptional=None, stop=None):
         on_read = on_read or self.on_read
         on_write = on_write or self.on_write
         on_exceptional = on_exceptional or self.on_exceptional
@@ -226,6 +272,8 @@ class Server(object):
                 on_write(wr)
             if ex:
                 on_exceptional(ex)
+            if stop is not None and stop() is True:
+                break
             if timeout is not None:
                 remaining -= start_time - time.time()
                 if remaining <= 0:

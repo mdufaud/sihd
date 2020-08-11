@@ -25,6 +25,11 @@ class SihdService(ALoggable, AConfigurable, IObserver,
 
     def __init__(self, name="SihdService", **kwargs):
         super().__init__(name, **kwargs)
+        # Configuration
+        self.configuration.add_defaults({
+            "channels_mp": 0,
+            "channels_input": 'poll',
+        }, infile=False)
         # Children
         self.__nostart_service = set()
         # States
@@ -32,6 +37,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         self.__paused = False
         self.__init = False
         # Channels
+        self.__observe_inputs = False
         self.__channels_input = list()
         self.__channels_made = False
         self.__channel_notif = True
@@ -46,8 +52,15 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     # Reading channels
     #
 
+    def on_notify(self, obj):
+        if isinstance(obj, Channel):
+            if self.__channel_notif is True:
+                self.handle(obj)
+            return True
+        return False
+
     def set_channel_notification(self, active):
-        self.__channel_notif = active
+        self.__channel_notif = bool(active)
 
     def handle(self, channel):
         """ Handle service's input """
@@ -62,15 +75,14 @@ class SihdService(ALoggable, AConfigurable, IObserver,
             ret = self._pre_handle(channel)
             ret = ret or self.handle(channel) is not False
             if not channel.unlock():
-                self.log_warning("Could not unlock channel "
-                                    + str(channel))
+                self.log_warning("Could not unlock channel " + str(channel))
             if ret:
                 channel.consumed_data()
             return ret
         return False
 
     def read_channels_input(self) -> bool:
-        if self.__channel_notif is False:
+        if self.__channel_notif is False or self.__observe_inputs is True:
             return False
         rd = self._read_channel
         for channel in self.get_channels_input():
@@ -132,14 +144,14 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         self.service_state.write(state)
 
     def set_service_state(self, state):
-        if (state & SihdService.STOP):
-            self.stop()
-        elif (state & SihdService.START):
-            self.start()
         if (state & SihdService.RESUME):
             self.resume()
         elif (state & SihdService.PAUSE):
             self.pause()
+        if (state & SihdService.STOP):
+            self.stop()
+        elif (state & SihdService.START):
+            self.start()
 
     #
     # AConfigurable
@@ -161,9 +173,15 @@ class SihdService(ALoggable, AConfigurable, IObserver,
         return ret
 
     def on_setup(self, conf):
-        chmp = conf.get("channels_mp", dynamic=True)
+        chmp = conf.get("channels_mp")
         if chmp is not None:
             self.__channels_mp = bool(int(chmp))
+        chinpt = conf.get("channels_input")
+        if chinpt is not None:
+            if chinpt == "observe":
+                self.observe_channels_input()
+            elif chinpt == "poll":
+                self.poll_channels_input()
         return True
 
     def post_setup(self):
@@ -416,14 +434,31 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     # Channels
     #
 
+    def poll_channels_input(self):
+        if self.__init is True:
+            raise RuntimeError("{}: Cannot set polling on channels after init".format(self))
+        self.__observe_inputs = False
+
+    def observe_channels_input(self):
+        if self.__init is True:
+            raise RuntimeError("{}: Cannot set observation on channels after init".format(self))
+        self.__observe_inputs = True
+
+    def on_del_channel(self, channel):
+        if self.__observe_inputs is True:
+            channel.remove_observer(self)
+        name = channel.get_name()
+        setattr(self, name, None)
+
     def __remove_channels(self):
         for channel in self.get_channels():
-            name = channel.get_name()
-            setattr(self, name, None)
+            self.on_del_channel(channel)
         self.__channels_input.clear()
 
     # override
     def on_new_channel(self, name, channel):
+        if self.__observe_inputs is True:
+            channel.add_observer(self)
         setattr(self, name, channel)
 
     # override
@@ -444,7 +479,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
                     break
             ci[i] = new
 
-    #override
+    # override
     def on_link(self, name, obj):
         old_channel = self.get_channel(name)
         super().on_link(name, obj)
@@ -455,7 +490,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
             if self._is_channel_to_add(name, input=True):
                 self.set_channel_input(obj)
         self.log_debug("Linked {} --> {}".format(name, obj.get_path()))
-    
+
     #
     #   Add
     #
@@ -538,7 +573,7 @@ class SihdService(ALoggable, AConfigurable, IObserver,
     def set_channel_input(self, channel):
         input_lst = self.__channels_input
         if channel in input_lst:
-            raise RuntimeError("Channel {} already in inputs".format(channel))
+            raise RuntimeError("{}: Channel {} already in inputs".format(self, channel))
         input_lst.append(channel)
 
     def remove_channel_input(self, channel):

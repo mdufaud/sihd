@@ -10,6 +10,8 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
+is_internet = sihd.network.ip.is_internet()
+
 class TestSihdApi(unittest.TestCase):
 
     def setUp(self):
@@ -109,7 +111,7 @@ class TestSihdApi(unittest.TestCase):
     def test_ip_udp(self):
         logger.info("Testing UDP")
         self.data = ""
-        self.serv = sihd.network.ip.Server(4200, 'udp', 'ipv4', on_read=self.udp_read)
+        self.serv = sihd.network.ip.Server(4200, 'datagram', 'ipv4', on_read=self.udp_read)
         self.assertTrue(sihd.network.ip.send_udp('localhost', 4200, "1234"))
         self.serv.select(timeout=1)
         self.serv.close()
@@ -134,11 +136,12 @@ class TestSihdApi(unittest.TestCase):
     def test_ip_tcp(self):
         logger.info("Testing TCP")
         self.data = ""
-        self.serv = sihd.network.ip.Server(4200, 'tcp', 'ipv4', on_read=self.tcp_read)
+        self.serv = sihd.network.ip.Server(4200, 'stream', 'ipv4', on_read=self.tcp_read)
         self.socket = sihd.network.ip.make_tcp_socket('localhost', 4200)
-        self.serv.select(timeout=1)
         self.assertTrue(self.socket is not None)
-        self.assertTrue(sihd.network.ip.send_tcp('test', self.socket))
+        self.serv.select(timeout=1)
+        self.socket.sendall(b'test')
+        self.socket.close()
         self.serv.select(timeout=1)
         self.serv.close()
         self.assertEqual(self.data, 'test')
@@ -146,8 +149,8 @@ class TestSihdApi(unittest.TestCase):
     def test_ip_tcp2(self):
         logger.info("Testing TCP2")
         self.data = ""
-        self.serv = sihd.network.ip.Server(4200, 'tcp', 'ipv4', on_read=self.tcp_read)
-        self.assertTrue(sihd.network.ip.send_tcp('test2', host='localhost', port=4200))
+        self.serv = sihd.network.ip.Server(4200, 'stream', 'ipv4', on_read=self.tcp_read)
+        self.assertTrue(sihd.network.ip.send_tcp('localhost', 4200, 'test2'))
         self.serv.select(timeout=1, loop=2)
         self.serv.close()
         self.assertEqual(self.data, 'test2')
@@ -168,6 +171,7 @@ class TestSihdApi(unittest.TestCase):
         self.assertTrue(html.find('setup.py') > 0)
         serv.stop()
 
+    @unittest.skipIf(is_internet is False, "Need internet")
     def test_http_wrong_url(self):
         logger.info("Testing wrong url")
         url = "http://www.a@E2e2esasfzzzzzzzzzzz.com"
@@ -177,6 +181,7 @@ class TestSihdApi(unittest.TestCase):
             html = None
         self.assertTrue(html is None)
 
+    @unittest.skipIf(is_internet is False, "Need internet")
     def test_http_error_404(self):
         logger.info("Testing error 404")
         url = "http://httpbin.org/status/404"
@@ -186,6 +191,7 @@ class TestSihdApi(unittest.TestCase):
             html = None
         self.assertTrue(html is None)
 
+    @unittest.skipIf(is_internet is False, "Need internet")
     def test_http_get(self):
         logger.info("Testing GET")
         url = "http://httpbin.org/get"
@@ -196,6 +202,7 @@ class TestSihdApi(unittest.TestCase):
         self.assertEqual(dic["url"], "{}?get=cookies".format(url))
         self.assertEqual(dic["args"]['get'], 'cookies')
 
+    @unittest.skipIf(is_internet is False, "Need internet")
     def test_http_post(self):
         logger.info("Testing POST")
         url = "http://httpbin.org/post"

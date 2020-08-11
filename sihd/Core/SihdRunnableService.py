@@ -119,18 +119,13 @@ class SihdRunnableService(SihdService):
             self.stop()
 
     def on_runnable_start(self, runnable):
-        self.set_log_name("{}.{}".format(self.get_runnable_type(),
-                                        self.get_name()))
-        self.log_debug("{} started".format(runnable.get_name()))
+        self.log_info("runnable {} started".format(self.get_runnable_type()))
 
     def on_runnable_stop(self, runnable, iteration):
-        self.set_log_name("")
-        self.log_debug("{} stopped after {} iterations" \
-                       .format(runnable.get_name(), iteration))
+        self.log_debug("runnable stopped after {} iterations".format(iteration))
 
     def on_runnable_error(self, runnable, iteration, error):
-        self.set_log_name("")
-        self.log_error("{} error: {}".format(runnable.get_name(), error))
+        self.log_error("runnable error: {}".format(error))
         self.log_error(sihd.get_traceback())
 
     def is_runnable_active(self):
@@ -146,6 +141,7 @@ class SihdRunnableService(SihdService):
     def __make_runnable(self):
         runnable = None
         kwargs = {
+            'name': self.get_name(),
             'step': self.step,
             'on_start': self.on_runnable_start,
             'on_stop': self.on_runnable_stop,
@@ -158,16 +154,13 @@ class SihdRunnableService(SihdService):
             'daemon': True,
         }
         if self.__is_thread:
-            kwargs['name'] = "{}.thread".format(self)
             runnable = RunnableThread(**kwargs)
             self.log_debug("Service is a threaded runnable")
         elif self.__is_process:
-            kwargs['name'] = "{}.process".format(self)
             kwargs['on_start'] = self.__start_children
             runnable = RunnableProcess(**kwargs)
             self.log_debug("Service is a processed runnable")
         elif self.__is_default:
-            kwargs['name'] = "{}.runnable".format(self)
             runnable = Runnable(**kwargs)
             self.log_debug("Service is a main thread runnable")
         else:

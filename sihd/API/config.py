@@ -28,7 +28,7 @@ class ConfigObject(object):
         self.setted = True
 
     def __str__(self):
-        return "{}: {} - default={} forced={} infile={}".format(
+        return "{}: {} (default={}, forced={}, infile={})".format(
                 self.key, self.value, self.default, self.forced, self.infile)
 
 class ConfigApi(object):

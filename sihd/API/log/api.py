@@ -27,8 +27,8 @@ class LoggerApi(object):
         self.logger = logger
         self.date_fmt = '%H:%M:%S'
         self.file_date_fmt = '%Y-%m-%d %H:%M:%S'
-        self.log_fmt = '%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s'
-        self.file_log_fmt = '%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s'
+        self.log_fmt = '%(asctime)s :: %(name)s :: %(threadName)s :: %(levelname)s :: %(message)s'
+        self.file_log_fmt = '%(asctime)s :: %(name)s :: %(threadName)s :: %(levelname)s :: %(message)s'
         self.filename_fmt = "%Y-%m-%d_{}.log"
         self.directory = ""
         self.set_level('info')

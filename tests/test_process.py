@@ -18,7 +18,7 @@ from sihd.Core.AConsumer import AConsumer
 sihd.log.set_color(True)
 
 def do_process():
-    #time.sleep(0.001)
+    time.sleep(0.001)
     pass
 
 class TestHandler(AHandler):
@@ -60,13 +60,19 @@ class InfiniteReader(AReader):
 class TestMultiprocess(unittest.TestCase):
 
     def setUp(self):
-        self.__beg = time.time()
-        self.sleep = 2
+        self.begin = time.time()
+        self.sleep = 0.5
         print()
         sihd.tree.clear()
 
     def tearDown(self):
-        logger.info("Test took {:.3f} s to complete".format(time.time() - self.__beg))
+        pass
+
+    def end(self, processed):
+        end = time.time()
+        total = end - self.begin
+        logger.info("Test took {:.3f} s to complete".format(total))
+        logger.info("======> Total processed: {} ({} per sec)".format(processed, int(processed/total)))
 
     def __get_total(self, handler, check=True):
         read = handler.output.read
@@ -100,7 +106,7 @@ class TestMultiprocess(unittest.TestCase):
         time.sleep(self.sleep)
         self.assertTrue(handler.stop())
         self.assertTrue(reader1.stop())
-        logger.info("======> Total processed: {}".format(self.__get_total(handler)))
+        self.end(self.__get_total(handler))
 
     @unittest.skipIf(utils.is_multiprocessing() is False, "No support for multiprocess")
     def test_mult_sihdworkers(self):
@@ -134,10 +140,9 @@ class TestMultiprocess(unittest.TestCase):
         self.assertTrue(handler2.stop())
         self.assertTrue(handler3.stop())
         self.assertTrue(reader.stop())
-        logger.info("======> Total processed: {}".format(
-            self.__get_total(handler1)
-            + self.__get_total(handler2)
-            + self.__get_total(handler3)))
+        self.end(self.__get_total(handler1)
+                    + self.__get_total(handler2)
+                    + self.__get_total(handler3))
 
     @unittest.skipIf(utils.is_multiprocessing() is False, "No support for multiprocess")
     def test_one_sihdworker(self):
@@ -158,7 +163,7 @@ class TestMultiprocess(unittest.TestCase):
         time.sleep(self.sleep)
         self.assertTrue(handler.stop())
         self.assertTrue(reader.stop())
-        logger.info("======> Total processed: {}".format(self.__get_total(handler)))
+        self.end(self.__get_total(handler))
 
     def test_base(self):
         print()
@@ -188,10 +193,9 @@ class TestMultiprocess(unittest.TestCase):
         self.assertTrue(handler2.stop())
         self.assertTrue(handler3.stop())
         self.assertTrue(reader.stop())
-        logger.info("======> Total processed: {}".format(
-            self.__get_total(handler1)
-            + self.__get_total(handler2)
-            + self.__get_total(handler3)))
+        self.end(self.__get_total(handler1)
+                    + self.__get_total(handler2)
+                    + self.__get_total(handler3))
 
     @unittest.skipIf(utils.is_multiprocessing() is False, "No support for multiprocess")
     def test_workers_life_cycle(self):

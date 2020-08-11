@@ -38,7 +38,7 @@ class ARunnable(ANamedObject, IService):
         if frequency:
             self.set_frequency(frequency)
         self.set_args(args)
-        otherkwargs['name'] = str(self)
+        otherkwargs['name'] = self.get_name()
         self._setup_runnable(*otherargs, **otherkwargs)
 
     #

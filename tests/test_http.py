@@ -13,13 +13,14 @@ import sihd
 logger = sihd.log.setup('info')
 
 from sihd.Interactors.ip.HttpInteractor import HttpInteractor
-
 from sihd.Handlers.AHandler import AHandler
+
+is_internet = sihd.network.ip.is_internet()
 
 class TestHandler(AHandler):
 
     def __init__(self, name="TestHandler", app=None):
-        super(TestHandler, self).__init__(app=app, name=name)
+        super().__init__(app=app, name=name)
         self.add_channel_input("input")
 
     def handle(self, channel):
@@ -38,6 +39,7 @@ class TestHttp(unittest.TestCase):
     def tearDown(self):
         pass
 
+    @unittest.skipIf(is_internet is False, "Need internet")
     def test_wrong_url(self):
         logger.info("Testing wrong url")
         url = "http://www.a@E2e2esasfzzzzzzzzzzz.com"
@@ -45,6 +47,7 @@ class TestHttp(unittest.TestCase):
         html = interactor.make_request(url).send()
         self.assertTrue(html is None)
 
+    @unittest.skipIf(is_internet is False, "Need internet")
     def test_error_404(self):
         logger.info("Testing error 404")
         url = "http://httpbin.org/status/404"
@@ -52,6 +55,7 @@ class TestHttp(unittest.TestCase):
         html = interactor.make_request(url).send()
         self.assertTrue(html is None)
 
+    @unittest.skipIf(is_internet is False, "Need internet")
     def test_get(self):
         logger.info("Testing GET")
         url = "http://httpbin.org/get"
@@ -63,6 +67,7 @@ class TestHttp(unittest.TestCase):
         self.assertEqual(dic["url"], "{}?get=cookies".format(url))
         self.assertEqual(dic["args"]['get'], 'cookies')
 
+    @unittest.skipIf(is_internet is False, "Need internet")
     def test_post(self):
         logger.info("Testing POST")
         url = "http://httpbin.org/post"
@@ -72,6 +77,7 @@ class TestHttp(unittest.TestCase):
         dic = json.loads(json_data)
         self.assertEqual(dic["form"]['hello'], 'world')
 
+    @unittest.skipIf(is_internet is False, "Need internet")
     def test_service(self):
         logger.info("Testing service life cycle")
         url = "https://www.google.com"
@@ -90,7 +96,8 @@ class TestHttp(unittest.TestCase):
         self.assertTrue(interactor.stop())
         self.assertTrue(req_http is not None)
 
-    @unittest.skipIf(utils.is_multiprocessing() is False, "No support for multiprocess")
+    @unittest.skipIf(utils.is_multiprocessing() is False or is_internet is False,
+                     "No support for multiprocess or no internet")
     def test_channels(self):
         logger.info("Testing channels well being")
         url = "https://www.google.com"

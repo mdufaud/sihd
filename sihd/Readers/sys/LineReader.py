@@ -10,8 +10,8 @@ import os
 from sihd.Readers.AReader import AReader
 
 class LineReader(AReader):
-    
-    files_read = {}  
+
+    files_read = {}
 
     def __init__(self, name="LineReader", app=None):
         super(LineReader, self).__init__(app=app, name=name)

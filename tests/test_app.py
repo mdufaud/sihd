@@ -49,6 +49,7 @@ class TestApp(unittest.TestCase):
     def do_file(self, path, lines, skipped, check_words={}):
         print("Test with file '{}' with {} lines and {} comments"\
                 .format(path, lines, skipped))
+        byte_before = sihd.sys.memory.usage_bytes()
         app = utils.TestApp()
         app.set_args([
             "-f", path,
@@ -60,7 +61,9 @@ class TestApp(unittest.TestCase):
         self.assertTrue(app.stop())
         #os.remove(app.get_conf_path())
         self.file_expect(app, lines, skipped, check_words, prt=False)
+        byte_after = sihd.sys.memory.usage_bytes()
         self.assertTrue(app.reset())
+        app.log_info(sihd.sys.memory.usage_format(byte_after - byte_before))
 
     def test_file_reader(self):
         dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
@@ -73,7 +76,7 @@ class TestApp(unittest.TestCase):
     def test_life_cycle(self):
         app = utils.TestApp()
         dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
-        path = os.path.join(dir_path, "5_lines.txt") 
+        path = os.path.join(dir_path, "5_lines.txt")
         app.set_args([
             "-f", path,
             "-s",

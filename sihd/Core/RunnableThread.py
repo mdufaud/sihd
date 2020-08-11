@@ -9,8 +9,7 @@ from .ARunnable import ARunnable
 
 class RunnableThread(ARunnable):
 
-    def __init__(self, name="RunnableThread",
-                    worker_number=1, *args, **kwargs):
+    def __init__(self, name="RunnableThread", worker_number=1, *args, **kwargs):
         if isinstance(worker_number, int) and worker_number > 0:
             self.__nworkers = worker_number
         else:
