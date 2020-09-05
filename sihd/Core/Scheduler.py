@@ -6,7 +6,39 @@ import threading
 from .ANamedObject import ANamedObject
 from .IService import IService
 
-class Event(object):
+class Calendar(object):
+
+    def __init__(self):
+        self.reset()
+
+    def _decal(self, sec):
+        self.time += sec
+        return self
+
+    def reset(self):
+        self.time = 0
+        return self
+
+    def at(self, t):
+        self.time = t
+        return self
+
+    def day(self, day):
+        return self.hour(day * 24)
+
+    def hour(self, hour):
+        return self.minute(hour * 60)
+
+    def minute(self, minute):
+        return self._decal(minute * 60)
+
+    def second(self, sec):
+        return self._decal(sec)
+
+    def ms(self, ms):
+        return self._decal(ms / 1E3)
+
+class Model(object):
 
     def __init__(self, step, sleeptime, args=(), kwargs={}):
         self.step = step
@@ -30,11 +62,16 @@ class Event(object):
 class Scheduler(ANamedObject, IService):
 
     def __init__(self, name="Scheduler", get_time=time.time, **kwargs):
+        # Objects
+        self.sched = Calendar()
+        self.daemon = None
+        # Settings
+        self.timer = False
         self.thread = False
         self.timeout = None
         self.maxsteps = 0
         self.pausetime = 1E9
-        self.daemon = None
+        # Internal
         self.get_time = get_time
         self._scheduled = []
         self.__event = threading.Event()
@@ -46,7 +83,11 @@ class Scheduler(ANamedObject, IService):
     #
 
     def start(self):
-        if self.thread is True:
+        threaded = self.thread == True
+        if self.sched.time > 0:
+            threaded = True
+            self.timer = True
+        if threaded:
             self.__run_thread()
         else:
             self.__run()
@@ -56,8 +97,11 @@ class Scheduler(ANamedObject, IService):
             return
         self.__stop = True
         self.__event.set()
-        if self.daemon:
-            self.daemon.join()
+        if self.daemon is not None:
+            if self.timer is True:
+                self.daemon.cancel()
+            else:
+                self.daemon.join()
             self.daemon = None
 
     #
@@ -69,6 +113,9 @@ class Scheduler(ANamedObject, IService):
         if not frequency > 0.0:
             raise ValueError("Frequency is not a positive float")
         return float(1. / float(frequency))
+
+    def calendar(self):
+        return Calendar()
 
     def set(self, timeout, maxsteps=0):
         self.timeout = timeout
@@ -88,7 +135,7 @@ class Scheduler(ANamedObject, IService):
             raise ValueError("Not scheduling a function")
         if steptime < self.pausetime:
             self.pausetime = steptime
-        evt = Event(step, steptime, args, kwargs)
+        evt = Model(step, steptime, args, kwargs)
         self._scheduled.append(evt)
         return self
 
@@ -97,10 +144,20 @@ class Scheduler(ANamedObject, IService):
     #
 
     def __run_thread(self):
-        daemon = threading.Thread(name=self.get_name(), target=self.__run)
-        daemon.setDaemon(True)
-        daemon.start()
-        self.daemon = daemon
+        if self.timer is True:
+            self.daemon = threading.Thread(name=self.get_name(),
+                                            target=self.__start_thread)
+        else:
+            self.daemon = threading.Timer(self.sched.time, self.__start_timer)
+        self.daemon.setDaemon(True)
+        self.daemon.start()
+
+    def __start_thread(self):
+        self.__run()
+
+    def __start_timer(self):
+        self.timer = False
+        self.__run()
 
     def __run(self):
         self.__stop = False
