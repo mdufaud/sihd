@@ -11,7 +11,7 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.gui.Cmd.ICmdGui import ICmdGui
+from sihd.gui.cmd.ICmdGui import ICmdGui
 from sihd.app.SihdApp import SihdApp
 
 class SimpleCmd(ICmdGui):
@@ -22,6 +22,7 @@ class SimpleCmd(ICmdGui):
         self.__complete1 = ["say", 'yell', 'tell']
         self.__complete2 = ["magics", 'stories', 'shit']
         self.set_completion("complete", self.__complete1)
+        self.set_completion("complete_yell", ['stuff'])
         self.set_completion("complete_any", self.__complete2)
 
     def help_test(self):
@@ -44,7 +45,7 @@ class SimpleCmd(ICmdGui):
                 if split[1] in self.__complete2:
                     s += split[1]
                 else:
-                    s += "clearly not something interesting"
+                    s += "something uninteresting"
             else:
                 s += "nothing"
             print(s)
@@ -55,23 +56,22 @@ class SimpleApp(SihdApp):
 
     def __init__(self, name):
         super(SimpleApp, self).__init__(name)
-        self.set_path(os.path.dirname((__file__)))
+        dirname = os.path.dirname
+        join = os.path.join
+        self.set_app_path(join(dirname(dirname((__file__))), 'output'))
 
     def service_state_changed(self, service, stopped, paused):
         if self.is_gui(service) is False:
             return
-        self.log_info("{}: {}".format(service.get_name(),
-                            service.get_service_state()))
         if stopped:
-            self.log_info("Stopping too")
             self.stop()
 
-    def post_setup(self):
+    def build_services(self):
         self.gui = SimpleCmd(app=self)
         self.gui.set_intro("Welcome in cmd gui inApp test")
         return True
 
-    def _link_channels(self):
+    def on_init(self):
         self.add_state_observer(self.gui)
 
 class TestGui(unittest.TestCase):

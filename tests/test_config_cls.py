@@ -29,7 +29,7 @@ class TestClassConfig(unittest.TestCase):
         time.sleep(0.01)
 
     def get_conf_path(self):
-        dir_path = os.path.join(os.path.dirname(__file__), "config")
+        dir_path = os.path.join(os.path.dirname(__file__), "output")
         return dir_path
 
     def read_configuration(self, path):

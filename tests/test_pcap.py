@@ -64,7 +64,7 @@ class TestPcap(unittest.TestCase):
         writer.write_pcap(path)
 
     def test_pcap_reader(self):
-        pcap_path = os.path.join(os.path.dirname(__file__), "resources", "Pcap", "test_simple.pcap")
+        pcap_path = os.path.join(os.path.dirname(__file__), "output", "test_simple.pcap")
         lst = ['hello', 'world', 'are', 'you', 'alive']
         self.make_pcap(pcap_path, lst)
         reader = sihd.readers.PcapReader()
@@ -87,7 +87,7 @@ class TestPcap(unittest.TestCase):
     @unittest.skipIf(utils.is_multiprocessing() is False, "No support for multiprocess")
     def test_pcap_saver(self):
         pcap_path = os.path.join(os.path.dirname(__file__),
-                                "resources", "Pcap", "test.pcap")
+                                "output", "test.pcap")
         lst = ['hello', 'world', 'are', 'you', 'alive']
         self.make_pcap(pcap_path, lst)
 
@@ -137,7 +137,7 @@ class TestPcap(unittest.TestCase):
         self.assertEqual(data_saved, lst)
 
         path = os.path.join(os.path.dirname(__file__),
-                            "outputs", "pcap_test.dump")
+                            "output", "pcap_test.dump")
         logger.info("Asking to dump to {}".format(path))
         saver.dump_path.write(path)
         self.assertTrue(saver.resume())

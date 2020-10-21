@@ -133,7 +133,7 @@ class TestIpServer(unittest.TestCase):
     def test_gui(self):
         reader = sihd.readers.IpReader()
         handler = sihd.handlers.IpServerHandler()
-        gui = sihd.gui.WxPython.ip.WxPythonIpGui()
+        gui = sihd.gui.wxpython.ip.WxPythonIpGui()
 
         reader.configuration.set("runnable_type", "process")
         self.set_reader_queues(reader)

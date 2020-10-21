@@ -8,7 +8,7 @@ import os
 import sys
 import logging
 
-from sihd.gui.WxPython.AWxPythonGui import AWxPythonGui
+from sihd.gui.wxpython.AWxPythonGui import AWxPythonGui
 
 try:
     import wx

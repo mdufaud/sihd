@@ -69,7 +69,7 @@ fitest:
 	done && cd ..
 
 testclean:
-	@cd tests && rm -f logs/* && rm -f config/* && rm -rf outputs/* && cd ..
+	@rm -f tests/logs/* && rm -rf tests/output/*
 	@echo "Cleaned test files"
 
 clean: testclean

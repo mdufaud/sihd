@@ -1,4 +1,4 @@
 from .AGui import AGui
-from .Curses import *
-from .Kivy import *
-from .WxPython import *
+from .curses import *
+from .kivy import *
+from .wxpython import *

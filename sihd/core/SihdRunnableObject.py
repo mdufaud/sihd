@@ -112,7 +112,8 @@ class SihdRunnableObject(SihdObject):
 
     def __start_children(self, runnable):
         """ Start child services here in thread/process """
-        ret = self.call_children('start', IService, nochild=[runnable])
+        ret = self.call_children('start', cls=IService,
+                                 pass_children=[runnable])
         if ret:
             self.on_runnable_start(runnable)
         else:

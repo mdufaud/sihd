@@ -3,7 +3,6 @@
 
 """ System """
 import sys
-import logging
 import re
 import cmd
 import time

@@ -164,7 +164,7 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
 
     def _setup_impl(self, conf):
         ret = super()._setup_impl(conf)
-        ret = ret and self.call_children('setup', AConfigurable)
+        ret = ret and self.call_children('setup', cls=AConfigurable)
         ret = ret and self.on_setup(conf)
         self.__create_channel_state()
         ret = ret and self._make_channels()
@@ -223,7 +223,7 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
         return self.__init
 
     def _init_impl(self):
-        return self.call_children('init', IService)
+        return self.call_children('init', cls=IService)
 
     def on_init(self):
         pass
@@ -254,7 +254,7 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
         return running
 
     def _start_impl(self):
-        return self.call_children('start', IService)
+        return self.call_children('start', cls=IService)
 
     def on_start(self):
         pass
@@ -285,7 +285,7 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
         return running is False
 
     def _stop_impl(self):
-        return self.call_children('stop', IService)
+        return self.call_children('stop', cls=IService)
 
     def on_stop(self):
         pass
@@ -307,7 +307,7 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
         return self.__paused
 
     def _pause_impl(self):
-        return self.call_children('pause', IService)
+        return self.call_children('pause', cls=IService)
 
     def on_pause(self):
         pass
@@ -329,7 +329,7 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
         return not self.__paused
 
     def _resume_impl(self):
-        return self.call_children('resume', IService)
+        return self.call_children('resume', cls=IService)
 
     def on_resume(self):
         pass
@@ -354,7 +354,7 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
         return self.__stopped and not self.__paused
 
     def _reset_impl(self):
-        return self.call_children('reset', IService)
+        return self.call_children('reset', cls=IService)
 
     def on_reset(self):
         pass
@@ -381,13 +381,13 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
         name = str(child)
         self.__nostart_service.remove(name)
 
-    def call_children(self, method, cls, noret=False, nochild=[],
-                        args=[], kwargs={}) -> bool:
+    def call_children(self, method, cls=None, fail_ret=False,
+                      pass_children=[], args=[], kwargs={}) -> bool:
         """
             :param method: string method to call on children
             :param cls: class to match on children
-            :param noret: value that children should not return
-            :param nochild: list of children not concerned
+            :param fail_ret: value that children should not return
+            :param pass_children: list of children not concerned
             :param args: list of arguments for method
             :param kwargs: dict of keywords for method
 
@@ -395,18 +395,18 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
         """
         retval = True
         children_lst = self.get_children().values()
-        nochild_name = None
+        prevent_start_children = None
         if method in ('start', 'stop', 'resume', 'pause'):
-            nochild_name = self.__nostart_service
+            prevent_start_children = self.__nostart_service
         for child in children_lst:
             #Call on specific class
             if not isinstance(child, cls):
                 continue
             #Prevent child from being called
-            if child in nochild:
+            if child in pass_children:
                 continue
             #Prevent child from being started/stopped by name
-            if nochild_name and str(child) in nochild_name:
+            if prevent_start_children and str(child) in prevent_start_children:
                 continue
             #Get callable
             try:
@@ -420,7 +420,7 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
             #Execute
             try:
                 ret = fun(*args, **kwargs)
-                if ret == noret:
+                if ret == fail_ret:
                     self.log_warning("Child `{}` call `{}` failed"\
                                         .format(child.get_name(), method))
                     retval = False

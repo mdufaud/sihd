@@ -19,7 +19,9 @@ class TestApp(SihdApp):
     def __init__(self, *args, **kwargs):
         super().__init__(name="TestApp", *args, **kwargs)
         self._default_log_level = "info"
-        self.set_app_path(os.path.dirname(os.path.dirname((__file__))))
+        dirname = os.path.dirname
+        join = os.path.join
+        self.set_app_path(join(dirname(dirname((__file__))), 'output'))
         sihd.log.set_color(True)
         self.file_read = False
         self.handle_done = False

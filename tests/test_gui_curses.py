@@ -16,7 +16,7 @@ sihd.log.set_color(False)
 
 import unittest
 
-from sihd.gui.Curses.ICursesGui import ICursesGui
+from sihd.gui.curses.ICursesGui import ICursesGui
 from sihd.core.ALoggable import ALoggable
 
 class SimpleCurses(ICursesGui):

@@ -11,6 +11,7 @@ import time
 curses = None
 locale = None
 
+import sihd
 from sihd.gui.AGui import AGui
 from sihd import core
 

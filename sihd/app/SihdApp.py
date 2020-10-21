@@ -211,7 +211,7 @@ class SihdApp(SihdObject):
             return False
         self.__children_configured = True
         conf = self.configuration.obj
-        ret = self.call_children('setup', AConfigurable, args=[conf])
+        ret = self.call_children('setup', cls=AConfigurable, args=[conf])
         if ret:
             self.log_info("Services are configured")
         else:
@@ -219,7 +219,7 @@ class SihdApp(SihdObject):
         return ret
 
     def save_children_conf(self):
-        ret = self.call_children('save_conf', AConfigurable)
+        ret = self.call_children('save_conf', cls=AConfigurable)
         self.log_info("Services configurations are saved")
         conf = self.configuration.obj
         return self._write_conf(conf)
@@ -324,7 +324,7 @@ class SihdApp(SihdObject):
     def _init_impl(self):
         """ Services must be configured before start """
         self.log_info("App initialising")
-        ret = self.call_children('init', IService)
+        ret = self.call_children('init', cls=IService)
         if not ret:
             self.log_warning("Some app services did not init")
         return ret
@@ -334,7 +334,7 @@ class SihdApp(SihdObject):
     #
 
     def start_readers(self):
-        ret = self.call_children("start", AReader)
+        ret = self.call_children("start", cls=AReader)
         if ret:
             self.log_info("App readers started")
         else:
@@ -342,7 +342,7 @@ class SihdApp(SihdObject):
         return ret
 
     def start_interactors(self):
-        ret = self.call_children("start", AInteractor)
+        ret = self.call_children("start", cls=AInteractor)
         if ret:
             self.log_info("App interactors started")
         else:
@@ -350,7 +350,7 @@ class SihdApp(SihdObject):
         return ret
 
     def start_handlers(self):
-        ret = self.call_children("start", AHandler)
+        ret = self.call_children("start", cls=AHandler)
         if ret:
             self.log_info("App handlers started")
         else:
@@ -359,7 +359,7 @@ class SihdApp(SihdObject):
 
     def start_all(self):
         """ Default start option """
-        return self.call_children('start', IService)
+        return self.call_children('start', cls=IService)
 
     def start_order(self):
         """ Application's services start entry point """
@@ -398,16 +398,16 @@ class SihdApp(SihdObject):
     #
 
     def pause_readers(self):
-        return self.call_children('pause', AReader)
+        return self.call_children('pause', cls=AReader)
 
     def resume_readers(self):
-        return self.call_children('resume', AReader)
+        return self.call_children('resume', cls=AReader)
 
     def pause_interactors(self):
-        return self.call_children('pause', AInteractor)
+        return self.call_children('pause', cls=AInteractor)
 
     def resume_interactors(self):
-        return self.call_children('pause', AInteractor)
+        return self.call_children('pause', cls=AInteractor)
 
     def remove_reader(self, reader):
         if reader.is_active():
