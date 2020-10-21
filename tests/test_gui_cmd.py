@@ -11,8 +11,8 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.GUI.Cmd.ICmdGui import ICmdGui
-from sihd.App.SihdApp import SihdApp
+from sihd.gui.Cmd.ICmdGui import ICmdGui
+from sihd.app.SihdApp import SihdApp
 
 class SimpleCmd(ICmdGui):
 

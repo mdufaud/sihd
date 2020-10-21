@@ -12,7 +12,7 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.Core import Scheduler
+from sihd.core import Scheduler
 
 class TestReader(unittest.TestCase):
 

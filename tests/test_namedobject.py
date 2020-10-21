@@ -8,8 +8,8 @@ import sys
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.Core.ANamedObject import ANamedObject
-from sihd.Core.ANamedObjectContainer import ANamedObjectContainer
+from sihd.core.ANamedObject import ANamedObject
+from sihd.core.ANamedObjectContainer import ANamedObjectContainer
 
 class TestNamedObject(unittest.TestCase):
 

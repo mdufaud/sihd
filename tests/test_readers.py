@@ -12,7 +12,7 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.Handlers.AHandler import AHandler
+from sihd.handlers.AHandler import AHandler
 
 class StdinHandler(AHandler):
 
@@ -58,7 +58,7 @@ class TestReader(unittest.TestCase):
 
     @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
     def test_stdin_reader(self):
-        reader = sihd.Readers.StdinReader()
+        reader = sihd.readers.StdinReader()
         handler = StdinHandler(reader)
         self.assertTrue(reader.setup())
         self.assertTrue(handler.setup())

@@ -12,9 +12,9 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.Handlers.AHandler import AHandler
+from sihd.handlers.AHandler import AHandler
 
-from sihd.Core.Channel import *
+from sihd.core.Channel import *
 
 class TestChannelValue(unittest.TestCase):
 

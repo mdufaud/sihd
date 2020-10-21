@@ -12,8 +12,8 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.Handlers.AHandler import AHandler
-from sihd.Core.Channel import *
+from sihd.handlers.AHandler import AHandler
+from sihd.core.Channel import *
 
 class TestChannelDict(unittest.TestCase):
 

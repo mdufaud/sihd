@@ -9,9 +9,9 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.Core.Channel import *
-from sihd.Core import RunnableThread
-from sihd.Core import RunnableProcess
+from sihd.core.Channel import *
+from sihd.core import RunnableThread
+from sihd.core import RunnableProcess
 
 class TestChannelCondition(unittest.TestCase):
 

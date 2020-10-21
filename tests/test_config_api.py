@@ -7,7 +7,7 @@ import time
 
 import utils
 import sihd
-from sihd.API.config import ConfigApi
+from sihd.utils.config import ConfigApi
 
 try:
     import ConfigParser

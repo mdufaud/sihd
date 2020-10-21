@@ -12,8 +12,8 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.Interactors.ip.HttpInteractor import HttpInteractor
-from sihd.Handlers.AHandler import AHandler
+from sihd.interactors.ip.HttpInteractor import HttpInteractor
+from sihd.handlers.AHandler import AHandler
 
 is_internet = sihd.network.ip.is_internet()
 
@@ -109,7 +109,7 @@ class TestHttp(unittest.TestCase):
             #/dev/shm
             logger.warning("Test cannot continue as your device has no shared memory capabilities")
             return
-        from sihd.Core.Channel import ChannelQueue
+        from sihd.core.Channel import ChannelQueue
         channel_test = ChannelQueue(name='test', mp=True)
         interactor.link("result", channel_test)
         self.assertTrue(interactor.start())

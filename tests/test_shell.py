@@ -11,7 +11,7 @@ import utils
 import sihd
 logger = sihd.log.setup()
 
-from sihd.Handlers.AHandler import AHandler
+from sihd.handlers.AHandler import AHandler
 
 class TestShell(unittest.TestCase):
 
@@ -23,7 +23,7 @@ class TestShell(unittest.TestCase):
         pass
 
     def test_complex_pipe_interactor(self):
-        itrc = sihd.Interactors.sys.PipeInteractor()
+        itrc = sihd.interactors.sys.PipeInteractor()
         itrc.configuration.setall({
             "cmd1": "echo 'Hello World\nTest'",
             "cmd2": "grep 'e'",
@@ -38,7 +38,7 @@ class TestShell(unittest.TestCase):
         self.assertEqual(code, 0)
 
     def test_pipe_interactor(self):
-        itrc = sihd.Interactors.sys.PipeInteractor()
+        itrc = sihd.interactors.sys.PipeInteractor()
         itrc.configuration.setall({
             "cmd1": "echo Hello World",
             "cmd2": "wc -c"
@@ -52,7 +52,7 @@ class TestShell(unittest.TestCase):
 
     def test_interactor_service(self):
         cmd = "ls -l"
-        interactor = sihd.Interactors.sys.ShellInteractor()
+        interactor = sihd.interactors.sys.ShellInteractor()
         interactor.configuration.setall({
             "cmd": cmd,
             "devnull": "stdout",
@@ -66,19 +66,19 @@ class TestShell(unittest.TestCase):
 
     def test_cmd(self):
         cmd = "echo Hello World"
-        itrc = sihd.Interactors.sys.ShellInteractor()
+        itrc = sihd.interactors.sys.ShellInteractor()
         self.assertTrue(itrc.exe(cmd))
 
     def test_err(self):
         cmd = "/no_file"
-        interactor = sihd.Interactors.sys.ShellInteractor()
+        interactor = sihd.interactors.sys.ShellInteractor()
         self.assertTrue(interactor.exe(cmd) is False)
 
     def test_channel(self):
         inpt = "Hello World"
         cmd = "wc -c"
         # Second cmd
-        itrc = sihd.Interactors.sys.ShellInteractor()
+        itrc = sihd.interactors.sys.ShellInteractor()
         itrc.configuration.setall({
             "cmd": cmd,
             "pipe": "stdout;stderr",
@@ -111,14 +111,14 @@ class TestShell(unittest.TestCase):
         cmd1 = "echo Hello World"
         cmd2 = "wc -c"
         # First cmd - Piping result
-        itrc1 = sihd.Interactors.sys.ShellInteractor("itrc1")
+        itrc1 = sihd.interactors.sys.ShellInteractor("itrc1")
         itrc1.configuration.setall({
             "cmd": cmd1,
             "pipe": "stdout"
         })
         itrc1.setup()
         # Second cmd
-        itrc2 = sihd.Interactors.sys.ShellInteractor("itrc2")
+        itrc2 = sihd.interactors.sys.ShellInteractor("itrc2")
         itrc2.configuration.setall({
             "cmd": cmd2,
             "pipe": "stdout",
@@ -144,7 +144,7 @@ class TestShell(unittest.TestCase):
     def test_err_str(self):
         #Goal is to test communication when error
         args = ["ls", "no_folder"]
-        interactor = sihd.Interactors.sys.ShellInteractor()
+        interactor = sihd.interactors.sys.ShellInteractor()
         interactor.set_stderr_pipe()
         interactor.execute(args)
         out, errs, to = interactor.communicate()
@@ -157,14 +157,14 @@ class TestShell(unittest.TestCase):
         cmd1 = "ls -l"
         cmd2 = "/no_file"
         # First cmd - Piping result
-        itrc1 = sihd.Interactors.sys.ShellInteractor("itrc1")
+        itrc1 = sihd.interactors.sys.ShellInteractor("itrc1")
         itrc1.configuration.setall({
             "cmd": cmd1,
             "pipe": "stdout"
         })
         itrc1.setup()
         # Second cmd
-        itrc2 = sihd.Interactors.sys.ShellInteractor("itrc2")
+        itrc2 = sihd.interactors.sys.ShellInteractor("itrc2")
         itrc2.configuration.setall({
             "cmd": cmd2,
         })
@@ -180,7 +180,7 @@ class TestShell(unittest.TestCase):
     def test_communication(self):
         cmd = "wc -c"
         data = "Hello World"
-        itrc = sihd.Interactors.sys.ShellInteractor()
+        itrc = sihd.interactors.sys.ShellInteractor()
         itrc.set_cmd(cmd)
         itrc.set_stdin_pipe()
         itrc.set_stdout_pipe()

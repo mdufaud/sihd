@@ -9,7 +9,7 @@ import unittest
 import utils
 import sihd
 
-from sihd.Tools.sys import memory
+from sihd.utils.sys import memory
 
 class TestApp(unittest.TestCase):
 
@@ -41,10 +41,10 @@ class TestApp(unittest.TestCase):
         if not app.args.stats:
             return
         print()
-        for key, obj in sihd.Core.Stats.get_stats().items():
+        for key, obj in sihd.core.Stats.get_stats().items():
             print(obj)
         print()
-        sihd.Core.Stats.reset()
+        sihd.core.Stats.reset()
 
     def do_file(self, path, lines, skipped, check_words={}):
         print("Test with file '{}' with {} lines and {} comments"\

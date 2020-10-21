@@ -11,9 +11,9 @@ import utils
 import sihd
 logger = sihd.log.setup()
 
-from sihd.Readers.AReader import AReader
-from sihd.Handlers.AHandler import AHandler
-from sihd.Core.AConsumer import AConsumer
+from sihd.readers.AReader import AReader
+from sihd.handlers.AHandler import AHandler
+from sihd.core.AConsumer import AConsumer
 
 sihd.log.set_color(True)
 

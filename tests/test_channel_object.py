@@ -12,8 +12,8 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.Handlers.AHandler import AHandler
-from sihd.Core.Channel import *
+from sihd.handlers.AHandler import AHandler
+from sihd.core.Channel import *
 
 class TestNestedObject(object):
 
@@ -85,7 +85,7 @@ class TestChannelObject(unittest.TestCase):
 
 
     def test_channel_object(self):
-        from sihd.Core.Channel import register_channel_object
+        from sihd.core.Channel import register_channel_object
         register_channel_object("test_id", TestClassPoint)
         print()
         values = (3, 4)

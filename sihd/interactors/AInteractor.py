@@ -1,0 +1,76 @@
+#!/usr/bin/python
+# coding: utf-8
+
+from sihd.core.SihdRunnableObject import SihdRunnableObject
+from sihd.core.IAppContainer import IAppContainer
+
+class AInteractor(SihdRunnableObject, IAppContainer):
+
+    def __init__(self, name="AInteractor", app=None, parent=None, **kwargs):
+        IAppContainer.__init__(self)
+        if app and not parent:
+            parent = app
+        super().__init__(name, parent=parent, **kwargs)
+        self.__interaction = None
+        self.add_channel_input("new_interaction", type="queue")
+        self.add_channel("result")
+        if app:
+            self.set_app(app)
+
+    #
+    # AInteractor
+    #
+
+    def interact(self, action=None, *args, **kwargs) -> bool:
+        if action is None:
+            action = self.get_interaction()
+        return self.on_interaction(action, *args, **kwargs) is not False
+
+    def set_interaction(self, action):
+        self.__interaction = self.on_new_interaction(action)
+
+    def get_interaction(self):
+        return self.__interaction
+
+    def set_result(self, res):
+        self.result.write(res)
+
+    #
+    # To implement
+    #
+
+    def on_new_interaction(self, action: any) -> any:
+        """ Returns parsed interacton from interaction channel """
+        return action
+
+    def on_interaction(self, action, *args, **kwargs) -> bool:
+        raise NotImplementedError("on_interaction not implemented")
+
+    #
+    # IAppContainer
+    #
+
+    def set_app(self, app):
+        super().set_app(app)
+        app.add_interactor(self)
+
+    #
+    # SihdObject
+    #
+
+    def _pre_handle(self, channel):
+        ret = super()._pre_handle(channel)
+        if not ret:
+            if channel == self.new_interaction:
+                action = channel.read()
+                if action is not None:
+                    self.set_interaction(action)
+                ret = True
+        return ret
+
+    #
+    # Step method
+    #
+
+    def on_step(self):
+        return self.interact()

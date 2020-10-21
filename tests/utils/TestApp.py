@@ -9,10 +9,10 @@ import time
 
 """ Our Stuff """
 import sihd
-from sihd.Core.Stats import stat_it
-from sihd.App.SihdApp import SihdApp
-from sihd.Readers.sys.LineReader import LineReader
-from sihd.Handlers.sys.WordHandler import WordHandler
+from sihd.core.Stats import stat_it
+from sihd.app.SihdApp import SihdApp
+from sihd.readers.sys.LineReader import LineReader
+from sihd.handlers.sys.WordHandler import WordHandler
 
 class TestApp(SihdApp):
 

@@ -9,12 +9,12 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.Handlers.AHandler import AHandler
-from sihd.Core.Channel import *
-from sihd.Core import RunnableThread
-from sihd.Core import RunnableProcess
-from sihd.Core import SihdService
-from sihd.Core import SihdRunnableService
+from sihd.handlers.AHandler import AHandler
+from sihd.core.Channel import *
+from sihd.core import RunnableThread
+from sihd.core import RunnableProcess
+from sihd.core import SihdObject
+from sihd.core import SihdRunnableObject
 
 try:
     import multiprocessing
@@ -28,7 +28,7 @@ try:
 except FileNotFoundError:
     multiprocessing = None
 
-class IncService(SihdRunnableService):
+class IncService(SihdRunnableObject):
 
     def __init__(self, name="IncService"):
         super(IncService, self).__init__(name=name)
@@ -40,7 +40,7 @@ class IncService(SihdRunnableService):
         self.output.write(self.i)
         return True
 
-class PollingService(SihdRunnableService):
+class PollingService(SihdRunnableObject):
 
     def __init__(self, name="PollingService"):
         super(PollingService, self).__init__(name=name)
@@ -97,12 +97,12 @@ class TestServices(unittest.TestCase):
         self.assertTrue(service.reset())
 
     def test_iservice(self):
-        service = sihd.Core.SihdService("service")
+        service = sihd.core.SihdObject("service")
         self.do_life_cycle(service)
-        service = sihd.Core.SihdRunnableService("runnable_service")
+        service = sihd.core.SihdRunnableObject("runnable_service")
         self.do_life_cycle(service, thread=True)
         if multiprocessing:
-            service = sihd.Core.SihdRunnableService("mp_runnable_service")
+            service = sihd.core.SihdRunnableObject("mp_runnable_service")
             service.configuration.set("runnable_type", "process")
             self.do_life_cycle(service, process=True)
 

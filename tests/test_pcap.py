@@ -12,8 +12,8 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.Handlers.AHandler import AHandler
-from sihd.Tools.pcap import PcapWriter
+from sihd.handlers.AHandler import AHandler
+from sihd.utils.pcap import PcapWriter
 
 class PcapTestHandler(AHandler):
 
@@ -67,7 +67,7 @@ class TestPcap(unittest.TestCase):
         pcap_path = os.path.join(os.path.dirname(__file__), "resources", "Pcap", "test_simple.pcap")
         lst = ['hello', 'world', 'are', 'you', 'alive']
         self.make_pcap(pcap_path, lst)
-        reader = sihd.Readers.PcapReader()
+        reader = sihd.readers.PcapReader()
         self.assertTrue(reader.setup())
         reader.path.write(pcap_path)
         handler = PcapTestHandler(self)
@@ -91,12 +91,12 @@ class TestPcap(unittest.TestCase):
         lst = ['hello', 'world', 'are', 'you', 'alive']
         self.make_pcap(pcap_path, lst)
 
-        saver = sihd.Handlers.PcapHandler()
+        saver = sihd.handlers.PcapHandler()
         saver.set_channel_conf('save', type='queue')
-        reader = sihd.Readers.PcapReader()
+        reader = sihd.readers.PcapReader()
         reader.set_channel_conf("packet", type='queue')
         handler = PcapTestHandler(self)
-        duplicator = sihd.Handlers.DuplicatorHandler()
+        duplicator = sihd.handlers.DuplicatorHandler()
         saver.configuration.setall({
             "save_raw": 1,
             "save_type": 'list',
@@ -145,7 +145,7 @@ class TestPcap(unittest.TestCase):
         self.assertTrue(saver.stop())
 
         logger.info("Reading dump with another handler")
-        saver = sihd.Handlers.PcapHandler('PcapHandler2')
+        saver = sihd.handlers.PcapHandler('PcapHandler2')
         saver.configuration.setall({
             "save_raw": 1,
             "save_type": 'list',

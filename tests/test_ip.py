@@ -11,7 +11,7 @@ import utils
 import sihd
 logger = sihd.log.setup()
 
-from sihd.Handlers.AHandler import AHandler
+from sihd.handlers.AHandler import AHandler
 
 class TestHandler(AHandler):
 
@@ -26,7 +26,7 @@ class TestHandler(AHandler):
         return True
 
 def get_udp_sender():
-    interactor = sihd.Interactors.IpInteractor()
+    interactor = sihd.interactors.IpInteractor()
     interactor.configuration.setall({
         "runnable_type": "thread",
         "host": "localhost",
@@ -42,7 +42,7 @@ def get_udp_sender():
     return interactor
 
 def get_tcp_sender():
-    interactor = sihd.Interactors.IpInteractor()
+    interactor = sihd.interactors.IpInteractor()
     interactor.configuration.setall({
         "runnable_type": "thread",
         "host": "localhost",
@@ -70,8 +70,8 @@ class TestIpServer(unittest.TestCase):
             r.set_channel_conf(name, type='queue')
 
     def run_sender(self, get_interactor, type):
-        reader = sihd.Readers.IpReader()
-        ip_handler = sihd.Handlers.IpServerHandler()
+        reader = sihd.readers.IpReader()
+        ip_handler = sihd.handlers.IpServerHandler()
         if utils.is_multiprocessing():
             reader.configuration.set("runnable_type", "process")
             self.set_reader_queues(reader)
@@ -108,8 +108,8 @@ class TestIpServer(unittest.TestCase):
 
     @unittest.skipIf(os.getenv("IP_NC") is None, "No env var IP_NC")
     def test_with_net_cat(self):
-        reader = sihd.Readers.IpReader()
-        ip_handler = sihd.Handlers.IpServerHandler()
+        reader = sihd.readers.IpReader()
+        ip_handler = sihd.handlers.IpServerHandler()
         reader.configuration.set("runnable_type", "process")
         self.set_reader_queues(reader)
         ip_handler.configuration.set("channels_mp", 1)
@@ -131,9 +131,9 @@ class TestIpServer(unittest.TestCase):
 
     @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
     def test_gui(self):
-        reader = sihd.Readers.IpReader()
-        handler = sihd.Handlers.IpServerHandler()
-        gui = sihd.GUI.WxPython.ip.WxPythonIpGui()
+        reader = sihd.readers.IpReader()
+        handler = sihd.handlers.IpServerHandler()
+        gui = sihd.gui.WxPython.ip.WxPythonIpGui()
 
         reader.configuration.set("runnable_type", "process")
         self.set_reader_queues(reader)

@@ -42,7 +42,7 @@ class TestClassConfig(unittest.TestCase):
             obj.write(configfile)
 
     def test_simple_config(self):
-        reader = sihd.Readers.sys.LineReader(name="LineReader")
+        reader = sihd.readers.sys.LineReader(name="LineReader")
         default = reader.configuration.get("path")
         self.assertTrue(default == "/path/to/file")
         not_default = reader.configuration.get("path", default=False)
@@ -57,7 +57,7 @@ class TestClassConfig(unittest.TestCase):
 
     def test_config_file(self):
         path = os.path.join(self.get_conf_path(), "test_config.ini")
-        reader = sihd.Readers.sys.LineReader(name="LineReader")
+        reader = sihd.readers.sys.LineReader(name="LineReader")
         reader.configuration.obj = self.config
         reader.configuration.set("path", __file__)
         reader.save_conf()
