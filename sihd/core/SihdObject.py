@@ -29,7 +29,9 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
         self.configuration.add_defaults({
             "channels_mp": 0,
             "channels_input": 'poll',
-        }, infile=False)
+            "children": None,
+            "links": None,
+        }, expose=False)
         # Children
         self.__nostart_service = set()
         # States
@@ -157,6 +159,48 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
     # AConfigurable
     #
 
+    # override
+    def load_conf(self, conf, **kwargs):
+        ret = super().load_conf(conf, **kwargs)
+        if ret:
+            self.log_info("Service is configured")
+        else:
+            self.log_warning("Service failed to configure")
+        return ret
+
+    def _load_children_conf(self):
+        ret = True
+        children_conf = self.configuration.get_dynamic('children')
+        if children_conf is not None:
+            children_lst = self.get_children().values()
+            for child in children_lst:
+                if not isinstance(child, AConfigurable):
+                    continue
+                child_conf = children_conf.get(child.get_name(), None)
+                if child_conf is None:
+                    continue
+                if not child.load_conf(child_conf, dynamic=True):
+                    self.log_error("Could not load conf from child "
+                                    + child.get_name())
+                    ret = False
+        return ret
+
+    # override
+    def get_conf(self):
+        conf = super().get_conf()
+        children_conf = {}
+        children_lst = self.get_children().values()
+        for child in children_lst:
+            if not isinstance(child, AConfigurable):
+                continue
+            child_conf = child.get_conf()
+            children_conf[child.get_name()] = child_conf
+        if children_conf:
+            if 'children' in conf:
+                self.log_warning("Configuration 'children' is erased")
+            conf['children'] = children_conf
+        return conf
+
     def __create_channel_state(self):
         name = "service_state"
         channel = self.create_channel(name, type='int', block=True,
@@ -164,12 +208,17 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
 
     def _setup_impl(self, conf):
         ret = super()._setup_impl(conf)
-        ret = ret and self.call_children('setup', cls=AConfigurable)
-        ret = ret and self.on_setup(conf)
+        ret = ret and self.on_setup(conf) is not False
         self.__create_channel_state()
         ret = ret and self._make_channels()
         self.service_state.consumed_data()
-        ret = ret and self.post_setup()
+        ret = ret and self.post_setup() is not False
+        ret = ret and self._load_children_conf()
+        ret = ret and self.call_children('setup', cls=IService)
+        if ret:
+            self.log_debug("Service is configured")
+        else:
+            self.log_error("Service failed to configure")
         return ret
 
     def on_setup(self, conf):
@@ -463,6 +512,7 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
 
     # override
     def create_channel(self, name, **kwargs):
+        self.log_debug("Creating channel: {}".format(name))
         if self.__channels_mp is True:
             kwargs['mp'] = True
         return super().create_channel(name, **kwargs)
@@ -480,7 +530,13 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
             ci[i] = new
 
     # override
+    def link(self, name, path_or_no):
+        self.log_debug("Link request: {} -> {}".format(name, path_or_no))
+        return super().link(name, path_or_no)
+
+    # override
     def on_link(self, name, obj):
+        self.log_debug("Link: {}.{} -> {}".format(self, name, obj))
         old_channel = self.get_channel(name)
         super().on_link(name, obj)
         if old_channel:
@@ -489,7 +545,6 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
         elif old_channel is None:
             if self._is_channel_to_add(name, input=True):
                 self.set_channel_input(obj)
-        self.log_debug("Linked {} --> {}".format(name, obj.get_path()))
 
     #
     #   Add

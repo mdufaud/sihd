@@ -34,7 +34,7 @@ class SerialReader(AReader):
             "inter_byte_timeout": 1.0,
             "write_timeout": 1.0,
             "timeout": 1.0,
-        }, infile=False)
+        }, expose=False)
         self.__conf = {}
         self.add_channel_input('input')
         self.add_channel('output')

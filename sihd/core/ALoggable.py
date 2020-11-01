@@ -22,7 +22,7 @@ class ALoggable(ANamedObject):
         self.logger = sihd.log.get_logger()
         self.__can = True
 
-    def _set_log(self, activate):
+    def set_log_active(self, activate):
         self.__can = activate
 
     def _log_format(self, *msg):
@@ -50,6 +50,3 @@ class ALoggable(ANamedObject):
         if self.__can:
             self.logger.critical(self._log_format(*msg))
         ALoggable.__critical_count += 1
-
-    def set_log_name(self, name):
-        self.logger = sihd.log.get_logger(name)

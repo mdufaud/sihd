@@ -19,7 +19,7 @@ class AGui(SihdRunnableObject, IAppContainer):
         if app and not parent:
             parent = app
         super().__init__(name, parent=parent, **kwargs)
-        self.configuration.setall({
+        self.configuration.load({
             "runnable_type": "thread",
             "runnable_frequency": 1,
         })

@@ -24,7 +24,7 @@ class ShellInteractor(AInteractor):
             "cmd": "/your/cmd --arg",
             "pipe": "ex: stdin;stdout",
             "devnull": "ex: stderr;stdin",
-            "timeout_communication": (0.5, {'infile': False}),
+            "timeout_communication": (0.5, {'expose': False}),
             "input_data": "",
             "stderr_to_out": 0,
         })

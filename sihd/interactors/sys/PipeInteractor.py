@@ -20,10 +20,6 @@ class PipeInteractor(AInteractor):
         global shlex
         if shlex is None:
             import shlex
-        self.configuration.add_defaults({
-            "cmd1": "/your/cmd --arg",
-            "cmd2": "/your/cmd --arg",
-        })
         self.__interactor_lst = []
         self.__idx = 0
         self.add_channel_input("stdin")
@@ -36,7 +32,7 @@ class PipeInteractor(AInteractor):
         ret = super().on_setup(conf)
         i = 1
         while True:
-            cmd = conf.get("cmd" + str(i), default=False, dynamic=True)
+            cmd = conf.get("cmd" + str(i), dynamic=True)
             if cmd is not None:
                 self.add_pipe(cmd)
             else:
@@ -60,6 +56,7 @@ class PipeInteractor(AInteractor):
 
     def add_pipe(self, cmd):
         self.__idx += 1
+        self.log_debug("Adding pipe command {}: {}".format(self.__idx, cmd))
         interactor = ShellInteractor(name="cmd_" + str(self.__idx))
         interactor.set_cmd(cmd)
         interactor.set_stdout_pipe()

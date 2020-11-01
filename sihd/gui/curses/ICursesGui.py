@@ -158,7 +158,7 @@ class ICursesGui(AGui):
         win.scrollok(True)
         win.leaveok(True)
         log_handler = CursesHandler(win)
-        log_handler.setFormatter(sihd.log.get_formatter())
+        log_handler.setFormatter(sihd.log.get_stream_formatter())
         sihd.log.logger.addHandler(log_handler)
         self._log_handler = log_handler
 

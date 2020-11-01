@@ -69,7 +69,7 @@ class Channel(AObservable, IObserver, ALoggable):
         #Timestamping and lock
         self.__ts = False
         if log is False:
-            self._set_log(False)
+            self.set_log_active(False)
         if mp is True:
             _setup_mp()
         self.pollable = bool(pollable)

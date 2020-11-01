@@ -10,12 +10,7 @@ import os
 import sys
 import time
 import argparse
-
-try:
-    import ConfigParser
-except ImportError:
-    import configparser
-    ConfigParser = configparser
+import json
 
 #
 # Sihd
@@ -33,14 +28,18 @@ from sihd.core.Runnable import Runnable
 
 class SihdApp(SihdObject):
 
-    def __init__(self, name="SihdApp", args=None, path=None, conf_path=None,
-                                                            *pargs, **pkwargs):
+    def __init__(self, name="SihdApp", args=None, path=None,
+                    conf_path=None, *pargs, **pkwargs):
         super().__init__(name, *pargs, **pkwargs)
         self.configuration.add_defaults({
-            'loglevel': 'info',
+            'log': {
+                'level': 'info',
+                'file_level': 'debug',
+                'dir': None
+            }
         })
         #Path
-        self._path = path or self.get_sihd_path()
+        self._path = path or sihd.get_path()
         self._conf_path = conf_path
         #Services
         self.readers = set()
@@ -50,55 +49,51 @@ class SihdApp(SihdObject):
         #Args
         self.args = None
         self.__args_setted = None
-        self.__children_configured = False
         self.__services_conf = ([], {})
         if args:
             self.set_args(args)
         self.pid = os.getpid()
         sihd.log.setup("info")
 
-    def setup(self, obj=None):
-        """ If object is not provided for conf, makes it """
-        if obj is None:
-            obj = self.load_app_conf(self._conf_path)
-        self.__setup_logger_conf(obj)
-        return super().setup(obj)
+    def setup(self, conf=None):
+        """ If no conf is provided, load default conf """
+        if conf is None:
+            conf = self.read_app_conf(self._conf_path)
+        ret = self.__setup_file_logger(conf)
+        return ret and super().setup(conf)
 
-    def _setup_impl(self, obj):
-        """ Load children configurations from file """
-        ret = super()._setup_impl(obj)
-        # Save app children's configuration
-        ret = ret and self.save_children_conf()
-        # Call children's service setup
-        ret = ret and self.load_children_conf()
-        if ret is True:
-            self.log_debug("Application successfully setup")
-        else:
-            self.log_error("Application setup has failed")
+    def post_setup(self):
+        ret = super().post_setup()
+        args, kwargs = self.__services_conf
+        self.log_debug("Building services")
+        ret = ret and self.build_services(*args, **kwargs) is not False
+        if not ret:
+            self.log_error("Error building services")
         return ret
 
-    def setup_app(self, *args, conf_path=None, **kwargs):
-        self.log_debug("Application setup")
+    def setup_app(self, *args, conf_path=None, conf=None, **kwargs):
+        """
+            Any args provided to this method will be relayed in
+                build_services method
+
+            Args not relayed:
+                :param conf_path: Path to app's configuration
+                :param conf: Dictionnary of app's configuration
+        """
+        self.log_debug("Entering application's setup")
         self.__services_conf = (args, kwargs)
         if conf_path is not None:
             self._conf_path = conf_path
-        return self.setup()
+        return self.setup(conf)
 
     def on_setup(self, conf):
-        ret = super().on_setup(conf)
-        sihd.log.set_level(conf.get('loglevel'))
-        return ret
+        sihd.log.set_level(conf.get('log')['level'])
+        return super().on_setup(conf)
 
-    def post_setup(self):
-        #App internal services setup
-        ret = super().post_setup()
-        args, kwargs = self.__services_conf
-        return ret and self.build_services(*args, **kwargs) is not False
-
-    def build_services(self):
+    def build_services(self, *args, **kwargs):
         """
-            To be implemented by children app
-            -> Create app's services
+            Create and configure app's services
+            To be implemented by applications
         """
         pass
 
@@ -152,41 +147,58 @@ class SihdApp(SihdObject):
     # Configurations
     #
 
-    def __setup_logger_conf(self, config):
-        if not config.has_section("FileLogger"):
-            if self._path is None:
-                sihd.log.error("No path set for app")
-                return False
-            config.add_section("FileLogger")
-            config.set("FileLogger", "level", "info")
-            config.set("FileLogger", "directory", os.path.join(self._path, "logs"))
-        sihd.log.add_file_handler(self.get_name(), directory=config.get("FileLogger", "directory"),
-                                    level=config.get("FileLogger", "level"))
-        self.log_debug("File logger is setup")
+    def __setup_file_logger(self, conf=None):
+        directory = os.path.join(self.get_app_path(), "logs")
+        level = self.configuration.get('log')['file_level']
+        if conf is not None:
+            log_conf = conf.get('log', None)
+            if log_conf is not None:
+                if 'dir' in log_conf:
+                    directory = log_conf['dir']
+                else:
+                    log_conf['dir'] = directory
+                if 'file_level' in log_conf:
+                    level = log_conf['file_level']
+                else:
+                    log_conf['file_level'] = level
+        sihd.log.add_file_handler(self.get_name(),
+                                    directory=directory,
+                                    level=level)
+        self.log_debug("File logger is setup: {}".format(directory))
         return True
 
-    def load_app_conf(self, path=None):
+    def read_app_conf(self, path=None):
         """ Load conf from path or <APP_PATH>/config/<APP_NAME>.ini """
-        if path is None:
-            filename = self.get_name() + ".ini"
-            conf = os.path.join("config", filename)
-            path = os.path.join(self._path, conf)
+        conf = None
+        if self._conf_path is None:
+            self._conf_path = self.get_default_conf_path()
+        path = path or self._conf_path
+        sihd.log.info("Reading configuration file: {}".format(path))
+        if not os.path.isfile(path):
+            # Write initial conf
+            conf = self.get_conf()
+            self.write_conf(conf, path)
+        else:
+            # Read conf
+            try:
+                with open(path, 'r') as configfile:
+                    conf = json.load(configfile)
+            except IOError as e:
+                self.log_error("Could not read app configuration: {}".format(e))
+                self.log_error(sihd.sys.get_traceback())
         self._conf_path = path
-        obj = ConfigParser.ConfigParser()
-        sihd.log.info("Configuration file: {}".format(path))
-        if os.path.isfile(path):
-            obj.read(path)
-        return obj
+        return conf
+
+    def get_default_conf_path(self):
+        filename = self.get_name() + ".ini"
+        config_dir = os.path.join("config", filename)
+        return os.path.join(self.get_app_path(), config_dir)
 
     def get_conf_path(self):
         return self._conf_path
 
-    def _write_conf(self, obj=None):
-        obj = self.configuration.obj if obj is None else obj
-        if obj is None:
-            self.log_error("No object to write configuration to")
-            return False
-        path = self.get_conf_path()
+    def write_conf(self, conf, path=None):
+        path = path or self.get_conf_path()
         directory = os.path.dirname(path)
         if not os.path.exists(directory):
             try:
@@ -194,35 +206,16 @@ class SihdApp(SihdObject):
             except Exception as e:
                 self.log_error("Could not make directories"
                                 " for app configuration directory: {}".format(e))
-                return
+                return False
+        self.log_info("Writing configuration file: {}".format(path))
         try:
             with open(path, 'w+') as configfile:
-                obj.write(configfile)
-                self.log_debug("Conf file {} is written".format(path))
+                json.dump(conf, configfile)
         except IOError as e:
             self.log_error("Could not write app configuration: {}".format(e))
             self.log_error(sihd.sys.get_traceback())
             return False
         return True
-
-    def load_children_conf(self):
-        if self.__children_configured:
-            self.log_warning("Services already configured")
-            return False
-        self.__children_configured = True
-        conf = self.configuration.obj
-        ret = self.call_children('setup', cls=AConfigurable, args=[conf])
-        if ret:
-            self.log_info("Services are configured")
-        else:
-            self.log_warning("Some services could not be configured")
-        return ret
-
-    def save_children_conf(self):
-        ret = self.call_children('save_conf', cls=AConfigurable)
-        self.log_info("Services configurations are saved")
-        conf = self.configuration.obj
-        return self._write_conf(conf)
 
     #
     # Utils
@@ -236,10 +229,6 @@ class SihdApp(SihdObject):
         if parent is True:
             path = os.path.dirname(path)
         self.set_app_path(path)
-
-    @staticmethod
-    def get_sihd_path():
-        return os.path.dirname(os.path.dirname(sihd.__file__))
 
     def set_app_path(self, path):
         self._path = path
@@ -323,7 +312,7 @@ class SihdApp(SihdObject):
 
     def _init_impl(self):
         """ Services must be configured before start """
-        self.log_info("App initialising")
+        self.log_info("App initializing")
         ret = self.call_children('init', cls=IService)
         if not ret:
             self.log_warning("Some app services did not init")
@@ -378,7 +367,7 @@ class SihdApp(SihdObject):
     def _stop_impl(self):
         self.log_info("App stopping")
         ret = super()._stop_impl()
-        self._write_conf()
+        self.write_conf(self.get_conf())
         if not ret:
             self.log_warning("Some app services did not stop")
         return ret
@@ -389,8 +378,6 @@ class SihdApp(SihdObject):
 
     def _reset_impl(self):
         ret = super()._reset_impl()
-        if ret:
-            self.__children_configured = False
         return ret
 
     #
@@ -435,19 +422,15 @@ class SihdApp(SihdObject):
 
     def add_reader(self, reader):
         self.readers.add(reader)
-        reader.configuration.set_configuration_object(self.configuration.obj)
 
     def add_handler(self, handler):
         self.handlers.add(handler)
-        handler.configuration.set_configuration_object(self.configuration.obj)
 
     def add_gui(self, gui):
         self.guis.add(gui)
-        gui.configuration.set_configuration_object(self.configuration.obj)
 
     def add_interactor(self, interactor):
         self.interactors.add(interactor)
-        interactor.configuration.set_configuration_object(self.configuration.obj)
 
     #
     # SihdObjects getters

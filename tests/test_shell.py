@@ -24,7 +24,7 @@ class TestShell(unittest.TestCase):
 
     def test_complex_pipe_interactor(self):
         itrc = sihd.interactors.sys.PipeInteractor()
-        itrc.configuration.setall({
+        itrc.configuration.load({
             "cmd1": "echo 'Hello World\nTest'",
             "cmd2": "grep 'e'",
             "cmd3": "awk '{print $1}'",
@@ -39,7 +39,7 @@ class TestShell(unittest.TestCase):
 
     def test_pipe_interactor(self):
         itrc = sihd.interactors.sys.PipeInteractor()
-        itrc.configuration.setall({
+        itrc.configuration.load({
             "cmd1": "echo Hello World",
             "cmd2": "wc -c"
         }, dynamic=True)
@@ -53,7 +53,7 @@ class TestShell(unittest.TestCase):
     def test_interactor_service(self):
         cmd = "ls -l"
         interactor = sihd.interactors.sys.ShellInteractor()
-        interactor.configuration.setall({
+        interactor.configuration.load({
             "cmd": cmd,
             "devnull": "stdout",
             "runnable_type": "thread",
@@ -79,19 +79,20 @@ class TestShell(unittest.TestCase):
         cmd = "wc -c"
         # Second cmd
         itrc = sihd.interactors.sys.ShellInteractor()
-        itrc.configuration.setall({
+        itrc.configuration.load({
             "cmd": cmd,
             "pipe": "stdout;stderr",
             "runnable_type": "thread"
         })
-        itrc.setup()
+        itrc.init()
         #Set stdin input
         itrc.stdin.write(inpt)
         itrc.start()
         time.sleep(0.5)
         itrc.pause()
-        code, out, err, to = itrc.result.read()
-        print(code, out, err, to)
+        code, out, err, timedout = itrc.result.read()
+        print("Code = {}\nout = {}\nerr = {}\ntimedout = {}"\
+                .format(code, out, err, timedout))
         self.assertEqual(err, None)
         self.assertEqual(out.decode(), "11\n")
         self.assertEqual(code, 0)
@@ -101,10 +102,11 @@ class TestShell(unittest.TestCase):
         time.sleep(0.5)
         itrc.stop()
         code, out, err, timedout = itrc.result.read()
-        print(code, out, err, timedout)
+        print("Code = {}\nout = {}\nerr = {}\ntimedout = {}"\
+                .format(code, out, err, timedout))
         self.assertTrue(timedout is False)
         self.assertNotEqual(code, 0)
-        self.assertTrue(err is None)
+        self.assertTrue(err)
         self.assertTrue(out.decode())
 
     def test_pipe(self):
@@ -112,14 +114,14 @@ class TestShell(unittest.TestCase):
         cmd2 = "wc -c"
         # First cmd - Piping result
         itrc1 = sihd.interactors.sys.ShellInteractor("itrc1")
-        itrc1.configuration.setall({
+        itrc1.configuration.load({
             "cmd": cmd1,
             "pipe": "stdout"
         })
         itrc1.setup()
         # Second cmd
         itrc2 = sihd.interactors.sys.ShellInteractor("itrc2")
-        itrc2.configuration.setall({
+        itrc2.configuration.load({
             "cmd": cmd2,
             "pipe": "stdout",
         })
@@ -158,14 +160,14 @@ class TestShell(unittest.TestCase):
         cmd2 = "/no_file"
         # First cmd - Piping result
         itrc1 = sihd.interactors.sys.ShellInteractor("itrc1")
-        itrc1.configuration.setall({
+        itrc1.configuration.load({
             "cmd": cmd1,
             "pipe": "stdout"
         })
         itrc1.setup()
         # Second cmd
         itrc2 = sihd.interactors.sys.ShellInteractor("itrc2")
-        itrc2.configuration.setall({
+        itrc2.configuration.load({
             "cmd": cmd2,
         })
         itrc2.setup()

@@ -82,7 +82,7 @@ class TestHttp(unittest.TestCase):
         logger.info("Testing service life cycle")
         url = "https://www.google.com"
         interactor = HttpInteractor()
-        interactor.configuration.setall({
+        interactor.configuration.load({
             "url": url,
             'runnable_type': 'thread'
         })

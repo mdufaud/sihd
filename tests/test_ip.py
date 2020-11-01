@@ -27,14 +27,14 @@ class TestHandler(AHandler):
 
 def get_udp_sender():
     interactor = sihd.interactors.IpInteractor()
-    interactor.configuration.setall({
+    interactor.configuration.load({
         "runnable_type": "thread",
         "host": "localhost",
         "port": 4200,
         "protocol": "udp",
         "runnable_frequency": 10,
     })
-    interactor.configuration.setall({
+    interactor.configuration.load({
         "runnable_timeout": 0.5
     }, dynamic=True)
     interactor.setup()
@@ -43,13 +43,13 @@ def get_udp_sender():
 
 def get_tcp_sender():
     interactor = sihd.interactors.IpInteractor()
-    interactor.configuration.setall({
+    interactor.configuration.load({
         "runnable_type": "thread",
         "host": "localhost",
         "port": 4200,
         "runnable_frequency": 100,
     })
-    interactor.configuration.setall({
+    interactor.configuration.load({
         "runnable_steps": 5
     }, dynamic=True)
     interactor.setup()

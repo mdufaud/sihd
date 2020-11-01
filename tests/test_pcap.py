@@ -97,7 +97,7 @@ class TestPcap(unittest.TestCase):
         reader.set_channel_conf("packet", type='queue')
         handler = PcapTestHandler(self)
         duplicator = sihd.handlers.DuplicatorHandler()
-        saver.configuration.setall({
+        saver.configuration.load({
             "save_raw": 1,
             "save_type": 'list',
             "activate": 0,
@@ -146,7 +146,7 @@ class TestPcap(unittest.TestCase):
 
         logger.info("Reading dump with another handler")
         saver = sihd.handlers.PcapHandler('PcapHandler2')
-        saver.configuration.setall({
+        saver.configuration.load({
             "save_raw": 1,
             "save_type": 'list',
             "activate": 1,

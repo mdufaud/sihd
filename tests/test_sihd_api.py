@@ -67,12 +67,12 @@ class TestSihdApi(unittest.TestCase):
         self.assertTrue(sihd.resources.get('logs') is None)
         sihd.resources.add(sihd.resources.get('tests'))
         filename = sihd.resources.get('test_sihd_api.py')
-        dirname = sihd.resources.get('logs')
+        dirname = sihd.resources.get('output')
         logger.info(filename)
         logger.info(dirname)
         self.assertTrue(filename)
         self.assertTrue(dirname)
-        self.assertTrue(sihd.resources.get('logs', fileonly=True) is None)
+        self.assertTrue(sihd.resources.get('output', fileonly=True) is None)
 
     #
     # Memory

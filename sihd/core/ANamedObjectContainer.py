@@ -94,32 +94,32 @@ class ANamedObjectContainer(ANamedObject):
         """ Get parent of link and resolve it """
         idx = path.rfind('.')
         if idx == -1:
-            raise ValueError("{}: For '{}' link does not exist: {}"\
+            raise ValueError("{}.{} link does not exist: {}"\
                                 .format(self, name, path))
         parent_path = path[0:idx]
         child_name = path[idx + 1:]
         parent = self.find(parent_path)
         if parent is None:
-            raise ValueError("{}: For '{}' link parent not found: {}"\
+            raise ValueError("{}.{} link parent not found: {}"\
                                 .format(self, name, parent_path))
         err_str = ""
         try:
             return parent._resolve_link(child_name)
         except (KeyError, ValueError) as err:
             err_str = str(err)
-        raise ValueError("{}: For '{}' link resolution failed: {} -> {} ({})"\
+        raise ValueError("{}.{} link resolution failed -> {}.{} (reason: {})"\
                             .format(self, name, parent_path, child_name, err_str))
 
     def _resolve_link(self, name: str, path: str = None):
         """ Process a link and removes it """
         path = path or self.__links.pop(name, None)
         if path is None:
-            raise KeyError("{}: For '{}' link does not exist".format(self, name))
+            raise KeyError("{}.{} link does not exist".format(self, name))
         item = self.find(path)
         if isinstance(item, ANamedObject):
             self.on_link(name, item)
         elif item is not None:
-            raise ValueError("{}: For '{}' link is not ANamedObject: {}"\
+            raise ValueError("{}.{} link is not ANamedObject: {}"\
                                 .format(self, name, path))
         else:
             self.__resolve_parent_link(name, path)

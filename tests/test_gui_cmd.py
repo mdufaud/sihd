@@ -58,7 +58,7 @@ class SimpleApp(SihdApp):
         super(SimpleApp, self).__init__(name)
         dirname = os.path.dirname
         join = os.path.join
-        self.set_app_path(join(dirname(dirname((__file__))), 'output'))
+        self.set_app_path(join(dirname(__file__)), 'output')
 
     def service_state_changed(self, service, stopped, paused):
         if self.is_gui(service) is False:
