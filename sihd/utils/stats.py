@@ -2,7 +2,7 @@
 # coding: utf-8
 
 """ System """
-import time
+from time import time, perf_counter
 import collections
 
 class PerfStat(object):
@@ -32,8 +32,6 @@ class PerfStat(object):
                         self.avgtime * 1e3, self.maxtime * 1e3, self.mintime * 1e3))
         return string
 
-#TODO kind of deprecated
-
 class MethodStat(object):
     def __init__(self, method):
         self.name = method.__name__
@@ -46,6 +44,7 @@ class MethodStat(object):
 
     def add_return(self, ret):
         self.ret_values.append(ret)
+        return self
 
     def get_return_stat(self):
         vals = collections.defaultdict(int)
@@ -62,7 +61,6 @@ class MethodStat(object):
             s += "{:s}: {:d}".format(str(key), value)
         return s
 
-
     def add_time(self, time):
         if time > self.worst_time:
             self.worst_time = time
@@ -70,15 +68,19 @@ class MethodStat(object):
             self.best_time = time
         self.calls += 1
         self.avg_time = self.avg_time + ((time - self.avg_time) / self.calls)
+        return self
 
     def add_count(self):
         self.calls += 1
+        return self
 
     def __str__(self):
-        string = ("Method '{:s}.{:s}': {:d} calls\n\t"
-                "Time: {:.3f} ms avg (worst: {:.3f} ms - best: {:.3f} ms)")\
-                        .format(self.mod, self.name, self.calls,
-                                self.avg_time * 1e3, self.worst_time * 1e3,
+        string = "Method '{:s}.{:s}': {:d} calls"\
+                    .format(self.mod, self.name, self.calls)
+        if self.avg_time != 0.0:
+            string += "\n\tTime: {:.3f} ms avg (worst: {:.3f} ms - best: {:.3f} ms)"\
+                        .format(self.avg_time * 1e3,
+                                self.worst_time * 1e3,
                                 self.best_time * 1e3)
         if self.ret_values:
             string += "\n\tReturned: [{}]".format(self.format_return_stat())
@@ -95,27 +97,32 @@ def __get_stat(method):
         _stat_dic[method] = obj
     return obj
 
-def stat_it(method):
+def perf(method, now=perf_counter):
     def wrapper(*args, **kwargs):
-        begin = time.time()
+        begin = now()
         ret = method(*args, **kwargs)
-        end = time.time()
-        obj = __get_stat(method)
-        obj.add_time(end - begin)
-        obj.add_return(ret)
+        end = now()
+        __get_stat(method).add_time(end - begin).add_return(ret)
         return ret
     return wrapper
 
-def count_it(method):
+def returns(method):
+    def wrapper(*args, **kwars):
+        ret = method(*args, **kwargs)
+        __get_stat(method).add_count().add_return(ret)
+        return ret
+    return wrapper
+
+def count(method):
     def wrapper(*args, **kwars):
         ret = method(*args, **kwargs)
         __get_stat(method).add_count()
         return ret
     return wrapper
 
-def get_stats():
+def get():
     return _stat_dic
 
 def reset():
     global _stat_dic
-    _stat_dic = dict()
+    _stat_dic.clear()

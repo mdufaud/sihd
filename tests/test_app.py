@@ -11,13 +11,16 @@ import sihd
 
 from sihd.utils.sys import memory
 
-class TestApp(unittest.TestCase):
+
+class TestAppApi(unittest.TestCase):
 
     def setUp(self):
+        sihd.resources.add("tests", "resources", "txt")
         print()
         sihd.tree.clear()
 
     def tearDown(self):
+        sihd.resources.remove("tests", "resources", "txt")
         pass
 
     def file_expect(self, app, lines, skipped,
@@ -41,10 +44,10 @@ class TestApp(unittest.TestCase):
         if not app.args.stats:
             return
         print()
-        for key, obj in sihd.core.Stats.get_stats().items():
+        for key, obj in sihd.stats.get().items():
             print(obj)
         print()
-        sihd.core.Stats.reset()
+        sihd.stats.reset()
 
     def do_file(self, path, lines, skipped, check_words={}):
         print("Test with file '{}' with {} lines and {} comments"\
@@ -66,19 +69,15 @@ class TestApp(unittest.TestCase):
         app.log_info(sihd.sys.memory.usage_format(byte_after - byte_before))
 
     def test_file_reader(self):
-        dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
-        self.do_file(os.path.join(dir_path, "5_lines.txt"), 5, 0, {"world": 2})
+        self.do_file(sihd.resources.get("5_lines.txt"), 5, 0, {"world": 2})
 
     def test_file_reader_2(self):
-        dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
-        self.do_file(os.path.join(dir_path, "comments_and_empty_lines.txt"), 10, 6, {"A": 2})
+        self.do_file(sihd.resources.get("comments_and_empty_lines.txt"), 10, 6, {"A": 2})
 
     def test_life_cycle(self):
         app = utils.TestApp()
-        dir_path = os.path.join(os.path.dirname(__file__), "resources", "Txt")
-        path = os.path.join(dir_path, "5_lines.txt")
         app.set_args([
-            "-f", path,
+            "-f", sihd.resources.get_file("5_lines.txt"),
             "-s",
         ])
         self.assertTrue(app.setup_app())

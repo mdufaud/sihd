@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}Index{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<ul>
+    <li>
+        <a href="/hello">Say hello</a>
+    </li>
+    <li>
+        <a href="/user/some_name">Show username</a>
+    </li>
+    <li>
+        <a href="/post/1337">Show post number</a>
+    </li>
+    <li>
+        <a href="/path/some/sub//path/for/thee">Show path</a>
+    </li>
+    <li>
+        <a href="/template">Show template</a>
+    </li>
+</ul>
+{% endblock %}

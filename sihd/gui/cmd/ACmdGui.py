@@ -10,12 +10,12 @@ import time
 from sihd.gui.AGui import AGui
 from sihd import core
 
-class ICmdGui(cmd.Cmd, AGui):
+class ACmdGui(cmd.Cmd, AGui):
 
     prompt = '?> '
     intro = None
 
-    def __init__(self, name="ICmdGui", app=None):
+    def __init__(self, name="ACmdGui", app=None):
         cmd.Cmd.__init__(self)
         AGui.__init__(self, app=app, name=name)
         self.__completion = {}
@@ -43,11 +43,11 @@ class ICmdGui(cmd.Cmd, AGui):
 
     @staticmethod
     def set_prompt(prompt):
-        ICmdGui.prompt = prompt
+        ACmdGui.prompt = prompt
 
     @staticmethod
     def set_intro(intro):
-        ICmdGui.intro = intro
+        ACmdGui.intro = intro
 
     #
     # core
@@ -77,7 +77,7 @@ class ICmdGui(cmd.Cmd, AGui):
         """ From "cmd   arg    som" -> returns "cmd_arg" """
         path = line[:beg_idx].strip().replace(' ', '_')
         path = path.strip("_")
-        path = ICmdGui.__replace_sub(path, "_")
+        path = ACmdGui.__replace_sub(path, "_")
         return path
 
     @staticmethod

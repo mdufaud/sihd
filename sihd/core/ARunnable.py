@@ -5,10 +5,9 @@
 # System
 #
 import time
-
+import sihd
 from .ANamedObject import ANamedObject
 from .IService import IService
-from .Stats import PerfStat
 
 class ARunnable(ANamedObject, IService):
 
@@ -19,7 +18,7 @@ class ARunnable(ANamedObject, IService):
                     *otherargs, **otherkwargs):
         parent = otherkwargs.pop('parent', None)
         super().__init__(name=name, parent=parent)
-        self.__stats = PerfStat()
+        self.__stats = sihd.stats.PerfStat()
         self.__runnable = None
         self.__do_sleep = do_sleep
         self.__step_method = self.step
@@ -228,5 +227,5 @@ class ARunnable(ANamedObject, IService):
             self.__on_stop(self, i)
 
     def __do_stat(self, uptime, downtime, maxtime, mintime, i):
-        self.__stats = PerfStat(uptime, downtime,
-                                maxtime, mintime, i)
+        self.__stats = sihd.stats.PerfStat(uptime, downtime,
+                                            maxtime, mintime, i)

@@ -6,10 +6,13 @@ import threading
 from .ANamedObject import ANamedObject
 from .IService import IService
 
+from .SihdRunnableObject import SihdRunnableObject
+
 class Calendar(object):
 
-    def __init__(self):
-        self.reset()
+    def __init__(self, get_time=time.time):
+        self.time = 0
+        self.get_time = get_time
 
     def _decal(self, sec):
         self.time += sec
@@ -19,15 +22,19 @@ class Calendar(object):
         self.time = 0
         return self
 
+    def now(self):
+        self.time = self.get_time()
+        return self
+
     def at(self, t):
         self.time = t
         return self
 
     def day(self, day):
-        return self.hour(day * 24)
+        return self._decal(day * 24 * 60 * 60)
 
     def hour(self, hour):
-        return self.minute(hour * 60)
+        return self._decal(hour * 60 * 60)
 
     def minute(self, minute):
         return self._decal(minute * 60)
@@ -38,18 +45,22 @@ class Calendar(object):
     def ms(self, ms):
         return self._decal(ms / 1E3)
 
-class Model(object):
+class Task(object):
 
-    def __init__(self, step, sleeptime, args=(), kwargs={}):
-        self.step = step
-        self.sleeptime = sleeptime
+    def __init__(self, fun, at=0, period=0, end=None, args=(), kwargs={}):
+        self.fun = fun
+        self.on_end = end
         self.args = args
         self.kwargs = kwargs
-        self.attime = 0
+        self.period = period
+        self.at = at
         self.min = 1E9
         self.max = 0
         self.uptime = 0
         self.n = 0
+
+    def step(self):
+        self.fun(*self.args, **self.kwargs)
 
     def add_stat(self, exe_time):
         if exe_time < self.min:
@@ -59,21 +70,32 @@ class Model(object):
         self.uptime += exe_time
         self.n += 1
 
+    def end(self):
+        callback = self.on_end
+        if callback is not None:
+            callback(self)
+
+    def __str__(self):
+        return "Task: period={} at={}".format(self.period, self.at)
+
 class Scheduler(ANamedObject, IService):
 
-    def __init__(self, name="Scheduler", get_time=time.time, **kwargs):
+    def __init__(self, name="Scheduler", timeout=None,
+                    thread=False, daemon=None,
+                    get_time=time.time, **kwargs):
         # Objects
-        self.sched = Calendar()
-        self.daemon = None
+        self.plan = Calendar(get_time)
         # Settings
-        self.timer = False
-        self.thread = False
-        self.timeout = None
-        self.maxsteps = 0
-        self.pausetime = 1E9
+        self.daemon = daemon
+        self.thread = thread
+        self.timeout = timeout
+        # Other
+        self.timedout = False
+        self.overruns = 0
         # Internal
-        self.get_time = get_time
         self._scheduled = []
+        self.__timer = False
+        self.__get_time = get_time
         self.__event = threading.Event()
         self.__stop = False
         super().__init__(name, **kwargs)
@@ -83,10 +105,13 @@ class Scheduler(ANamedObject, IService):
     #
 
     def start(self):
+        #self._scheduled.sort(key=lambda task: (task.at, task.period))
+        self.overruns = 0
+        self.timedout = False
         threaded = self.thread == True
-        if self.sched.time > 0:
+        if self.plan.time > 0:
             threaded = True
-            self.timer = True
+            self.__timer = True
         if threaded:
             self.__run_thread()
         else:
@@ -98,7 +123,7 @@ class Scheduler(ANamedObject, IService):
         self.__stop = True
         self.__event.set()
         if self.daemon is not None:
-            if self.timer is True:
+            if self.__timer is True:
                 self.daemon.cancel()
             else:
                 self.daemon.join()
@@ -109,7 +134,7 @@ class Scheduler(ANamedObject, IService):
     #
 
     def freq2time(self, freq):
-        frequency = float(frequency)
+        frequency = float(freq)
         if not frequency > 0.0:
             raise ValueError("Frequency is not a positive float")
         return float(1. / float(frequency))
@@ -117,26 +142,37 @@ class Scheduler(ANamedObject, IService):
     def calendar(self):
         return Calendar()
 
-    def set(self, timeout, maxsteps=0):
-        self.timeout = timeout
-        self.maxsteps = maxsteps
-        return self
-
     #
     # Step settings
     #
 
-    def remove(self, evt):
-        self._scheduled.remove(evt)
+    def remove(self, task):
+        self._scheduled.remove(task)
         return self
 
-    def add(self, step, steptime, *args, **kwargs):
+    def schedule_sihd_obj(self, obj):
+        if not isinstance(obj, SihdRunnableObject):
+            raise ValueError("{} -> Not a SihdRunnableObject"\
+                                .format(obj.__class__.__name__))
+        frequency = obj.configuration.get("runnable_frequency")
+        obj.configuration.set("runnable_type", "none")
+        return self.schedule_frequency(obj.step, frequency)
+
+    def schedule_frequency(self, step, freq, *args, **kwargs):
+        return self.schedule_period(step, self.freq2time(freq), *args, **kwargs)
+
+    def schedule_period(self, step, period, *args, **kwargs):
         if not callable(step):
             raise ValueError("Not scheduling a function")
-        if steptime < self.pausetime:
-            self.pausetime = steptime
-        evt = Model(step, steptime, args, kwargs)
-        self._scheduled.append(evt)
+        task = Task(step, period=period, args=args, kwargs=kwargs)
+        self._scheduled.append(task)
+        return self
+
+    def schedule_once(self, step, time, *args, **kwargs):
+        if not callable(step):
+            raise ValueError("Not scheduling a function")
+        task = Task(step, at=time, args=args, kwargs=kwargs)
+        self._scheduled.append(task)
         return self
 
     #
@@ -144,11 +180,11 @@ class Scheduler(ANamedObject, IService):
     #
 
     def __run_thread(self):
-        if self.timer is True:
+        if self.__timer is False:
             self.daemon = threading.Thread(name=self.get_name(),
                                             target=self.__start_thread)
         else:
-            self.daemon = threading.Timer(self.sched.time, self.__start_timer)
+            self.daemon = threading.Timer(self.plan.time, self.__start_timer)
         self.daemon.setDaemon(True)
         self.daemon.start()
 
@@ -156,47 +192,72 @@ class Scheduler(ANamedObject, IService):
         self.__run()
 
     def __start_timer(self):
-        self.timer = False
+        self.__timer = False
         self.__run()
 
     def __run(self):
         self.__stop = False
         lock = self.__event
         lock.clear()
+        sched = self._scheduled.copy()
+        period = None
         timeout = self.timeout
-        maxsteps = self.maxsteps
-        get_time = self.get_time
-        pausetime = self.pausetime
-        sched = self._scheduled
-        sched.sort(key=lambda evt: evt.sleeptime)
+        get_time = self.__get_time
         steps = 0
+        todelete = []
+        overruns = 0
         start = get_time()
-        for evt in sched:
-            evt.attime = start + evt.sleeptime
+        for task in sched:
+            if task.period != 0:
+                task.at = start + task.period
         while not self.__stop:
             now = get_time()
+            after = now
+            # Timeout
             if timeout is not None and now - start >= timeout:
                 break
-            sleeptime = pausetime
-            for evt in sched:
-                nexttime = evt.attime
-                if now >= nexttime:
-                    evt.step(*evt.args, **evt.kwargs)
+            lowest = -1
+            for task in sched:
+                next_time = task.at
+                # Check overruns
+                if next_time != 0 and now >= next_time + 0.001:
+                    overruns += 1
+                if now >= next_time:
+                    # Run task
+                    proceed = task.step() is not False
+                    # Stat
                     after = get_time()
-                    evt.add_stat(after - now)
-                    evt.attime = now + evt.sleeptime
-                    steps += 1
-                    if steps == maxsteps:
-                        break
-                else:
-                    diff = nexttime - now
-                    if diff < sleeptime:
-                        sleeptime = diff
-                    break
-            after = get_time()
-            timespent = after - now
-            diff = sleeptime - timespent
-            sleeptime = diff if diff > 0.0 else 0
-            if timeout is not None and ((after + sleeptime) - start) > timeout:
+                    task.add_stat(after - now)
+                    period = task.period
+                    if proceed and period != 0:
+                        # Reschedule
+                        t = now + period
+                        task.at = t
+                        if t <= lowest or lowest == -1:
+                            lowest = t
+                    else:
+                        proceed = False
+                    if not proceed:
+                        todelete.append(task)
+                elif next_time <= lowest or lowest == -1:
+                    lowest = next_time
+            # Delete tasks
+            for task in todelete:
+                task.end()
+                sched.remove(task)
+            todelete.clear()
+            # Leave if no more tasks
+            if len(sched) == 0:
                 break
-            lock.wait(timeout=sleeptime)
+            after = get_time()
+            towait = lowest - after
+            # Timeout
+            if timeout is not None and ((after + towait) - start) > timeout:
+                self.timedout = True
+                break
+            # Wait
+            if towait >= 0.0:
+                lock.wait(timeout=towait)
+        for task in sched:
+            task.end()
+        self.overruns = overruns

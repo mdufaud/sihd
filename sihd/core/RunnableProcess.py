@@ -7,7 +7,6 @@ import os
 
 from .ARunnable import ARunnable
 import sihd
-from .Stats import PerfStat
 
 multiprocessing = None
 

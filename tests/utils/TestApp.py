@@ -9,10 +9,10 @@ import time
 
 """ Our Stuff """
 import sihd
-from sihd.core.Stats import stat_it
 from sihd.app.SihdApp import SihdApp
 from sihd.readers.sys.LineReader import LineReader
-from sihd.handlers.sys.WordHandler import WordHandler
+
+from .WordHandler import WordHandler
 
 class TestApp(SihdApp):
 
@@ -21,18 +21,28 @@ class TestApp(SihdApp):
         self._default_log_level = "info"
         dirname = os.path.dirname
         join = os.path.join
-        self.set_app_path(join(dirname(dirname((__file__))), 'output'))
+        self.set_app_path(sihd.resources.get_dir('tests', 'output'))
         sihd.log.set_color(True)
         self.file_read = False
         self.handle_done = False
 
-    def on_reset(self):
-        """ Remove references """
-        self._word_handler = None
-        self._line_reader = None
-        self.file_read = False
-        self.handle_done = False
+    #override
+    def build_args(self, parser):
+        """ Add arguments """
+        parser.add_argument("-f", "--file",
+                type=str,
+                default=None,
+                help="Read specified file")
+        parser.add_argument("-s", "--stats",
+                action='store_true',
+                default=False,
+                help="Print stats when printing results")
+        parser.add_argument("-t", "--time",
+                type=int,
+                default=None,
+                help="Timer until stop")
 
+    #override
     def build_services(self):
         """ Define services """
         # Get args for app
@@ -55,6 +65,7 @@ class TestApp(SihdApp):
         self._line_reader = reader
         return True
 
+    #override
     def on_init(self):
         """ Services's channels are done and linked """
         reader = self._line_reader
@@ -67,6 +78,20 @@ class TestApp(SihdApp):
         self.print_tree()
         return True
 
+    #override
+    def start_services(self):
+        self._word_handler.start()
+        self._line_reader.start()
+
+    #override
+    def on_reset(self):
+        """ Remove references """
+        self._word_handler = None
+        self._line_reader = None
+        self.file_read = False
+        self.handle_done = False
+
+    #override
     def on_notify(self, channel):
         """ Called when channel's write is called (in thread only) """
         eof = self._line_reader.eof
@@ -76,6 +101,7 @@ class TestApp(SihdApp):
             self.log_info("Reader stop")
             self._line_reader.stop()
 
+    #override
     def service_state_changed(self, service, stopped, paused):
         #Exit only if no gui attached
         self.is_handler(service)
@@ -94,25 +120,10 @@ class TestApp(SihdApp):
     def _configure_handler(self, handler):
         #Decorate with stats
         if self.args.stats:
-            handler.step = stat_it(handler.step)
+            handler.step = sihd.stats.perf(handler.step)
 
     def _configure_reader(self, reader, args):
         reader.configuration.set("path", args.file, force=True)
         #Decorate with stats
         if self.args.stats:
-            reader.step = stat_it(reader.step)
-
-    def build_args(self, parser):
-        """ Add arguments """
-        parser.add_argument("-f", "--file",
-                type=str,
-                default=None,
-                help="Read specified file")
-        parser.add_argument("-s", "--stats",
-                action='store_true',
-                default=False,
-                help="Print stats when printing results")
-        parser.add_argument("-t", "--time",
-                type=int,
-                default=None,
-                help="Timer until stop")
+            reader.step = sihd.stats.perf(reader.step)

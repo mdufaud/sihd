@@ -15,9 +15,9 @@ import sihd
 from sihd.gui.AGui import AGui
 from sihd import core
 
-class ICursesGui(AGui):
+class ACursesGui(AGui):
 
-    def __init__(self, name="ICursesGui", app=None):
+    def __init__(self, name="ACursesGui", app=None):
         global locale
         if locale is None:
             import locale
@@ -253,7 +253,6 @@ class ICursesGui(AGui):
     # Entry point
 
     def loop(self, timeout=None):
-        #TODO timeout ?
         self.init_curses()
         time.sleep(0.5)
         stdscr = self.stdscr

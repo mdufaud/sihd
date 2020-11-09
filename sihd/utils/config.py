@@ -72,12 +72,7 @@ class ConfigApi(object):
 
     def add_defaults(self, dic, **kwargs):
         for key, conf in dic.items():
-            if isinstance(conf, (list, tuple)):
-                default, dic = conf
-                dic.update(kwargs)
-                self.add_default(key, default, **dic)
-            else:
-                self.add_default(key, conf, **kwargs)
+            self.add_default(key, conf, **kwargs)
 
     #
     # Set

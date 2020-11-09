@@ -31,8 +31,12 @@ class TestApiConfig(unittest.TestCase):
         api = ConfigApi('test.config2')
         api.add_defaults({
             'key': 42,
-            'akey': (1337, {'expose': False}),
+            'lst': ["toto", "titi"],
+            'dic': {"hello": "world"},
         })
+        api.add_defaults({
+            'akey': 1337,
+        }, expose=False)
         self.assertEqual(api.is_set('key'), False)
         self.assertEqual(api.is_set('akey'), False)
         api.load('{"key": 24,"akey": 1}')
@@ -53,8 +57,12 @@ class TestApiConfig(unittest.TestCase):
         api = ConfigApi('test.config')
         api.add_defaults({
             'key': 42,
-            'akey': (1337, {'expose': False}),
+            'lst': ["toto", "titi"],
+            'dic': {"hello": "world"},
         })
+        api.add_defaults({
+            'akey': 1337,
+        }, expose=False)
         api.dump()
         dic = api.to_dict()
         self.assertEqual(dic.get('key'), 42)
@@ -76,6 +84,12 @@ class TestApiConfig(unittest.TestCase):
         api.set('akey', 1001)
         self.assertEqual(api.get_default('akey'), 1337)
         self.assertEqual(api.get('akey'), 7331)
+
+        self.assertTrue(dic.get('lst'))
+        self.assertEqual(dic.get('lst')[0], "toto")
+        self.assertEqual(dic.get('lst')[1], "titi")
+        self.assertTrue(dic.get('dic'))
+        self.assertEqual(dic.get('dic')["hello"], "world")
         api.dump()
 
 if __name__ == '__main__':

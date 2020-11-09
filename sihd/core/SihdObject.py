@@ -608,7 +608,7 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
 
     def set_channel_conf(self, name, **kwargs):
         if not kwargs:
-            self.log_warning("No conf changes for channel " + str(name))
+            self.log_warning("No conf changes for channel: " + str(name))
             return False
         if self.__channels_made:
             self.log_warning("Trying to change channel %s configuration "
@@ -628,7 +628,7 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
     def set_channel_input(self, channel):
         input_lst = self.__channels_input
         if channel in input_lst:
-            raise RuntimeError("{}: Channel {} already in inputs".format(self, channel))
+            raise RuntimeError("{}: Channel already in inputs: {}".format(self, channel))
         input_lst.append(channel)
 
     def remove_channel_input(self, channel):

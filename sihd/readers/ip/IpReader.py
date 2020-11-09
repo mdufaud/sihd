@@ -31,9 +31,11 @@ class IpReader(AReader):
             "max_connexions": 5,
             "protocol": "tcp",
             "sock_type": "ipv4",
-            "rcv_buf": (4096, {'expose': False}),
-            "poll_timeout": (0.1, {'expose': False}),
         })
+        self.configuration.add_defaults({
+            "rcv_buf": 4096,
+            "poll_timeout": 0.1,
+        }, expose=False)
         self.add_channel_input("server_action")
         self.add_channel_input("packet_send")
         self.add_channel("packet_data")

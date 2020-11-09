@@ -16,10 +16,10 @@ sihd.log.set_color(False)
 
 import unittest
 
-from sihd.gui.curses.ICursesGui import ICursesGui
+from sihd.gui.curses.ACursesGui import ACursesGui
 from sihd.core.ALoggable import ALoggable
 
-class SimpleCurses(ICursesGui):
+class SimpleCurses(ACursesGui):
 
     def __init__(self, name="SimpleCurses", app=None):
         super(SimpleCurses, self).__init__(app=app, name=name)

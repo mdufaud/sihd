@@ -11,10 +11,10 @@ import utils
 import sihd
 logger = sihd.log.setup('info')
 
-from sihd.gui.cmd.ICmdGui import ICmdGui
+from sihd.gui.cmd.ACmdGui import ACmdGui
 from sihd.app.SihdApp import SihdApp
 
-class SimpleCmd(ICmdGui):
+class SimpleCmd(ACmdGui):
 
     def __init__(self, name="SimpleCmd", app=None):
         super(SimpleCmd, self).__init__(app=app, name=name)
@@ -58,7 +58,7 @@ class SimpleApp(SihdApp):
         super(SimpleApp, self).__init__(name)
         dirname = os.path.dirname
         join = os.path.join
-        self.set_app_path(join(dirname(__file__)), 'output')
+        self.set_app_path(join(dirname(__file__), 'output'))
 
     def service_state_changed(self, service, stopped, paused):
         if self.is_gui(service) is False:
@@ -74,7 +74,7 @@ class SimpleApp(SihdApp):
     def on_init(self):
         self.add_state_observer(self.gui)
 
-class TestGui(unittest.TestCase):
+class TestCmdGui(unittest.TestCase):
 
     def setUp(self):
         print()

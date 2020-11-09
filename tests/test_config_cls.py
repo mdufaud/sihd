@@ -81,28 +81,5 @@ class TestClassConfig(unittest.TestCase):
         self.assertEqual(file_to_read, __file__)
         os.remove(path_config)
 
-    def test_app_config(self):
-        app = utils.TestApp()
-        """
-        app.set_args([
-            "-f", __file__,
-            "-s",
-        ])
-        self.assertTrue(app.setup_app())
-        self.assertTrue(app.start())
-        self.assertTrue(app.stop())
-
-        path_config = os.path.join(self.get_conf_path(),
-                    "{}.ini".format(app.get_name()))
-        logger.info("Reading {}".format(path_config))
-        obj.read(path_config)
-        self.assertTrue(obj.has_section(app.get_path()))
-        reader = app._line_reader
-        self.assertTrue(obj.has_section(reader.get_path()))
-        self.assertTrue(obj.has_option(reader.get_path(), "path"))
-        self.assertEqual(obj.get(reader.get_path(), "path"), path)
-        """
-
-
 if __name__ == '__main__':
     unittest.main(verbosity=2)

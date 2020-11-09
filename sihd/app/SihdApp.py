@@ -39,7 +39,7 @@ class SihdApp(SihdObject):
             }
         })
         #Path
-        self._path = path or sihd.get_path()
+        self._path = path or ""
         self._conf_path = conf_path
         #Services
         self.readers = set()
@@ -153,8 +153,9 @@ class SihdApp(SihdObject):
         if conf is not None:
             log_conf = conf.get('log', None)
             if log_conf is not None:
-                if 'dir' in log_conf:
-                    directory = log_conf['dir']
+                conf_dir = log_conf.get('dir', None)
+                if conf_dir is not None:
+                    directory = conf_dir
                 else:
                     log_conf['dir'] = directory
                 if 'file_level' in log_conf:
@@ -231,7 +232,12 @@ class SihdApp(SihdObject):
         self.set_app_path(path)
 
     def set_app_path(self, path):
-        self._path = path
+        if not path:
+            self.log_error("App path is empty")
+        elif os.path.exists(path):
+            self._path = path
+        else:
+            self.log_error("App path does not exist: {}".format(path))
 
     def get_app_path(self):
         return self._path
@@ -350,15 +356,16 @@ class SihdApp(SihdObject):
         """ Default start option """
         return self.call_children('start', cls=IService)
 
-    def start_order(self):
+    def start_services(self):
         """ Application's services start entry point """
         return self.start_all()
 
     def _start_impl(self):
         self.log_info("App starting")
-        if self.start_order() is False:
+        ret = self.start_services() is not False
+        if not ret:
             self.log_error("failed to start services")
-        return True
+        return ret
 
     #
     # Stop

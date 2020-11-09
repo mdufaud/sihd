@@ -5,11 +5,11 @@ __version__ = "0.0.2"
 
 # Before because of term color usage in other modules
 from .utils import term
-from .utils import tree, network, sys, pcap, shell, resources, strings
+from .utils import tree, network, sys, pcap, shell, resources, strings, stats
 
 from .utils.log import api as __loggerapi
 log = __loggerapi.LoggerApi("")
 
 def get_path():
     dirname = resources.dirname
-    dirname(dirname(__file__))
+    return dirname(dirname(__file__))

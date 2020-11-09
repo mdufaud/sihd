@@ -24,10 +24,12 @@ class ShellInteractor(AInteractor):
             "cmd": "/your/cmd --arg",
             "pipe": "ex: stdin;stdout",
             "devnull": "ex: stderr;stdin",
-            "timeout_communication": (0.5, {'expose': False}),
             "input_data": "",
             "stderr_to_out": 0,
         })
+        self.configuration.add_defaults({
+            "timeout_communication": 0.5,
+        }, expose = False)
         self.__cmd = None
         self.__input = None
         self.__args = {}

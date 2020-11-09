@@ -72,7 +72,14 @@ class TestSihdApi(unittest.TestCase):
         logger.info(dirname)
         self.assertTrue(filename)
         self.assertTrue(dirname)
-        self.assertTrue(sihd.resources.get('output', fileonly=True) is None)
+        self.assertTrue(sihd.resources.get_path('tests'))
+        self.assertTrue(sihd.resources.get_path('output') is None)
+        self.assertTrue(sihd.resources.get_dir('tests', 'output'))
+        self.assertTrue(sihd.resources.get_file('tests', 'test_sihd_api.py'))
+        self.assertTrue(sihd.resources.get_file('output') is None)
+        self.assertTrue(sihd.resources.add('wrong', 'path', 'sorry') is False)
+        self.assertTrue(sihd.resources.remove("nothing") is False)
+        self.assertTrue(sihd.resources.remove("tests"))
 
     #
     # Memory

@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+
+<title>{% block title %}{% endblock %} - Flaskr</title>
+
+<link rel="stylesheet"
+    href="{{ url_for('static', filename='main.css') }}">
+
+<nav>
+    <h1>App name: {{ sihd_gui.get_name() }}</h1>
+    <ul>
+        {% if g.user %}
+            <li>
+                <span>LOGGED AS: {{ g.user['username'] }}</span>
+            </li>
+            <li>
+                <a href="{{ url_for('auth.logout') }}">Log Out</a>
+            </li>
+        {% else %}
+            <li>
+                <a href="{{ url_for('auth.register') }}">Register</a>
+            </li>
+            <li>
+                <a href="{{ url_for('auth.login') }}">Log In</a>
+            </li>
+        {% endif %}
+        <li>
+            <a href="{{ url_for('notebook.index') }}">Notebook</a>
+        </li>
+    </ul>
+    <h4>Channels list</h4>
+    <ul>
+        {% for name, value in channels.items() %}
+            <div>{{ name }} = {{ value }}</div>
+        {% endfor %}
+    </ul>
+</nav>
+
+<section class="content">
+    <header>
+        {% block header %}{% endblock %}
+    </header>
+    <h4>Flash messages</h4>
+    {% for message in get_flashed_messages() %}
+        <div class="flash">{{ message }}</div>
+    {% endfor %}
+    <h4>Content</h4>
+    {% block content %}{% endblock %}
+</section>
+
+</html>

@@ -214,7 +214,7 @@ class Channel(AObservable, IObserver, ALoggable):
     #
 
     def write(self, *args, notify=True):
-        """ 
+        """
             Write a data to a channel
             which trigger an observation to all observers
         """
@@ -251,7 +251,7 @@ class Channel(AObservable, IObserver, ALoggable):
 
     def is_new_data(self):
         return False
-    
+
     #
     # Read method
     #
