@@ -29,10 +29,22 @@ class TestSihdApi(unittest.TestCase):
         current_lang = sihd.strings.get_lang()
         logger.info("Current language: " + current_lang)
         self.assertTrue(sihd.strings.is_lang(current_lang))
+        # Basic set get
+        sihd.strings.set('some.key', "Fascinating")
+        sihd.strings.default('some.key', "Yikes")
+        sihd.strings.default('default.key', "Yikes")
+        self.assertEqual(sihd.strings.get('fake.key'), None)
+        self.assertEqual(sihd.strings.get('fake.key', 'Nope'), 'Nope')
+        self.assertEqual(sihd.strings.get('some.key', 'Nope'), 'Fascinating')
+        self.assertEqual(sihd.strings.get('default.key'), 'Yikes')
+        # Format
+        sihd.strings.set("setted.key", "Some{}")
+        self.assertEqual(sihd.strings.get_format('setted.key', 'things'), "Somethings")
+        self.assertEqual(sihd.strings.get_format('false.key', 'things'), None)
+        # Loading in current language
         self.assertFalse(sihd.strings.is_lang("fake"))
         self.assertFalse(sihd.strings.is_key('error'))
         self.assertFalse(sihd.strings.is_key('info'))
-        # Loading in current language
         dic = {
             "error": "This is an error code",
             "info": "This is an info",
@@ -49,7 +61,7 @@ class TestSihdApi(unittest.TestCase):
         # Setting current language as fake
         sihd.strings.set_lang('fake')
         # Adding for current language
-        sihd.strings.add("warning", "This is a warning code")
+        sihd.strings.set("warning", "This is a warning code")
         # Should not be in old language
         self.assertFalse(sihd.strings.is_key('warning', lang=current_lang))
         self.assertTrue(sihd.strings.is_key('warning'))

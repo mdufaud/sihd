@@ -157,7 +157,7 @@ class ACursesGui(AGui):
         # Create a logger in curses and removes stream logger
         win.scrollok(True)
         win.leaveok(True)
-        log_handler = CursesHandler(win)
+        log_handler = CursesLogHandler(win)
         log_handler.setFormatter(sihd.log.get_stream_formatter())
         sihd.log.logger.addHandler(log_handler)
         self._log_handler = log_handler
@@ -289,7 +289,7 @@ try:
 except NameError:
     _unicode = False
 
-class CursesHandler(logging.Handler):
+class CursesLogHandler(logging.Handler):
 
     def __init__(self, screen):
         logging.Handler.__init__(self)

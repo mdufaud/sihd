@@ -147,6 +147,10 @@ class ANamedObjectContainer(ANamedObject):
         """ Check if link exist """
         return name in self.__links
 
+    def unlink(self, name):
+        """ Removes link """
+        self.__links.pop(name, None)
+
     #
     # Browse tree
     #

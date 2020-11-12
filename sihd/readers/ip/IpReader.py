@@ -48,12 +48,12 @@ class IpReader(AReader):
 
     def on_setup(self, conf):
         ret = super().on_setup(conf)
-        self._max_co = int(conf.get("max_connexions"))
-        self.__socktype = self.get_socket_type(conf.get("protocol"))
-        self.__protocol = self.get_protocol(conf.get("sock_type"))
-        self._rcv_buf = int(conf.get("rcv_buf"))
-        self.__timeout = float(conf.get("poll_timeout"))
-        self.set_source(int(conf.get("port")))
+        self._max_co = conf.get("max_connexions")
+        self.__socktype = self.get_socket_type(conf.get("sock_type"))
+        self.__protocol = self.get_protocol(conf.get("protocol"))
+        self._rcv_buf = conf.get("rcv_buf")
+        self.__timeout = conf.get("poll_timeout")
+        self.set_source(conf.get("port"))
         return True
 
     #
@@ -74,33 +74,35 @@ class IpReader(AReader):
     #
 
     @staticmethod
-    def get_protocol(type):
-        if type == "ipv4":
+    def get_socket_type(socktype):
+        socktype = socktype.lower()
+        if socktype == "ipv4":
             return socket.AF_INET
-        elif type == "ipv6":
+        elif socktype == "ipv6":
             return socket.AF_INET6
-        elif type == "unix":
+        elif socktype == "unix":
             return socket.AF_UNIX
         return None
 
     @staticmethod
-    def get_socket_type(type):
-        if type == "udp":
+    def get_protocol(proto):
+        proto = proto.lower()
+        if proto == "udp":
             return socket.SOCK_DGRAM
-        elif type == "tcp":
+        elif proto == "tcp":
             return socket.SOCK_STREAM
-        elif type == "raw":
+        elif proto == "raw":
             return socket.SOCK_RAW
         return None
 
     def is_raw(self):
-        return self.__socktype == socket.SOCK_RAW
+        return self.__protocol == socket.SOCK_RAW
 
     def is_tcp(self):
-        return self.__socktype == socket.SOCK_STREAM
+        return self.__protocol == socket.SOCK_STREAM
 
     def is_udp(self):
-        return self.__socktype == socket.SOCK_DGRAM
+        return self.__protocol == socket.SOCK_DGRAM
 
     def get_serv_addr(self):
         return ("localhost", self._port)
@@ -135,8 +137,10 @@ class IpReader(AReader):
     def set_source(self, port):
         if self.is_up():
             return True
+        self.log_info("Creating server on port:{} - proto:{} - socktype:{}"\
+                      .format(port, self.__protocol, self.__socktype))
         self._port = int(port)
-        sock = socket.socket(self.__protocol, self.__socktype)
+        sock = socket.socket(self.__socktype, self.__protocol)
         if not sock:
             self.log_error("Could not open socket")
             return False
@@ -156,7 +160,7 @@ class IpReader(AReader):
             self.stop_server(False)
             return False
         self.__listening = False
-        if self.__socktype == socket.SOCK_STREAM:
+        if self.is_tcp():
             try:
                 sock.listen(self._max_co)
                 self.__listening = True
@@ -238,14 +242,14 @@ class IpReader(AReader):
         data = co.recv(self._rcv_buf)
         if data:
             client["msg"] += 1
-            self.packet_data.write((data.decode(), co.fileno()))
+            self.packet_data.write((data, co.fileno()))
         else:
             self._remove_client(co)
 
     def _read_udp_packet(self, co):
         data, server = co.recvfrom(self._rcv_buf)
         if data:
-            self.packet_data.write((data.decode(), server))
+            self.packet_data.write((data, server))
 
     def _do_read(self, readable):
         ret = True

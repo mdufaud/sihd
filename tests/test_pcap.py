@@ -13,7 +13,10 @@ import sihd
 logger = sihd.log.setup('info')
 
 from sihd.handlers.AHandler import AHandler
-from sihd.utils.pcap import PcapWriter
+
+from sihd.readers.sys import PcapReader
+from sihd.handlers.sys import PcapHandler
+from sihd.handlers.utils import DuplicatorHandler
 
 class PcapTestHandler(AHandler):
 
@@ -58,7 +61,7 @@ class TestPcap(unittest.TestCase):
 
     @staticmethod
     def make_pcap(path, lst):
-        writer = PcapWriter(endian="little")
+        writer = sihd.utils.pcap.PcapWriter(endian="little")
         for el in lst:
             writer.add_data(el)
         writer.write_pcap(path)
@@ -67,7 +70,7 @@ class TestPcap(unittest.TestCase):
         pcap_path = os.path.join(os.path.dirname(__file__), "output", "test_simple.pcap")
         lst = ['hello', 'world', 'are', 'you', 'alive']
         self.make_pcap(pcap_path, lst)
-        reader = sihd.readers.PcapReader()
+        reader = PcapReader()
         self.assertTrue(reader.setup())
         reader.path.write(pcap_path)
         handler = PcapTestHandler(self)
@@ -91,12 +94,12 @@ class TestPcap(unittest.TestCase):
         lst = ['hello', 'world', 'are', 'you', 'alive']
         self.make_pcap(pcap_path, lst)
 
-        saver = sihd.handlers.PcapHandler()
+        saver = PcapHandler()
         saver.set_channel_conf('save', type='queue')
-        reader = sihd.readers.PcapReader()
+        reader = PcapReader()
         reader.set_channel_conf("packet", type='queue')
         handler = PcapTestHandler(self)
-        duplicator = sihd.handlers.DuplicatorHandler()
+        duplicator = DuplicatorHandler()
         saver.configuration.load({
             "save_raw": 1,
             "save_type": 'list',
@@ -145,7 +148,7 @@ class TestPcap(unittest.TestCase):
         self.assertTrue(saver.stop())
 
         logger.info("Reading dump with another handler")
-        saver = sihd.handlers.PcapHandler('PcapHandler2')
+        saver = PcapHandler('PcapHandler2')
         saver.configuration.load({
             "save_raw": 1,
             "save_type": 'list',

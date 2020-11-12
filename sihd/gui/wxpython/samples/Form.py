@@ -1,13 +1,8 @@
-try:
-    import wx
-    Panel = wx.Panel
-except ImportError:
-    wx = None
-    Panel = object
+import wx
 
-class Form(Panel):
-    ''' The Form class is a wx.Panel that creates a bunch of controls
-        and handlers for callbacks. Doing the layout of the controls is 
+class Form(wx.Panel):
+    ''' The Form class is a wx.wx.Panel that creates a bunch of controls
+        and handlers for callbacks. Doing the layout of the controls is
         the responsibility of subclasses (by means of the doLayout()
         method). '''
 
@@ -25,14 +20,14 @@ class Form(Panel):
         self.saveButton = wx.Button(self, label="Save")
         self.nameLabel = wx.StaticText(self, label="Your name:")
         self.nameTextCtrl = wx.TextCtrl(self, value="Enter here your name")
-        self.referrerLabel = wx.StaticText(self, 
+        self.referrerLabel = wx.StaticText(self,
             label="How did you hear from us?")
-        self.referrerComboBox = wx.ComboBox(self, choices=self.referrers, 
+        self.referrerComboBox = wx.ComboBox(self, choices=self.referrers,
             style=wx.CB_DROPDOWN)
-        self.insuranceCheckBox = wx.CheckBox(self, 
+        self.insuranceCheckBox = wx.CheckBox(self,
             label="Do you want Insured Shipment?")
-        self.colorRadioBox = wx.RadioBox(self, 
-            label="What color would you like?", 
+        self.colorRadioBox = wx.RadioBox(self,
+            label="What color would you like?",
             choices=self.colors, majorDimension=3, style=wx.RA_SPECIFY_COLS)
 
     def bindEvents(self):
@@ -47,10 +42,10 @@ class Form(Panel):
             control.Bind(event, handler)
 
     def doLayout(self):
-        ''' Layout the controls that were created by createControls(). 
-            Form.doLayout() will raise a NotImplementedError because it 
+        ''' Layout the controls that were created by createControls().
+            Form.doLayout() will raise a NotImplementedError because it
             is the responsibility of subclasses to layout the controls. '''
-        raise NotImplementedError 
+        raise NotImplementedError
 
     # Callback methods:
 
@@ -110,7 +105,7 @@ class FormWithSizer(Form):
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
-    
+
         # Add the controls to the sizers:
         for control, options in \
                 [(self.nameLabel, noOptions),
@@ -121,13 +116,13 @@ class FormWithSizer(Form):
                  (self.insuranceCheckBox, noOptions),
                   emptySpace,
                  (self.colorRadioBox, noOptions),
-                  emptySpace, 
+                  emptySpace,
                  (self.saveButton, dict(flag=wx.ALIGN_CENTER))]:
             gridSizer.Add(control, **options)
 
         for control, options in \
                 [(gridSizer, dict(border=5, flag=wx.ALL)),
-                 (self.logger, dict(border=5, flag=wx.ALL|wx.EXPAND, 
+                 (self.logger, dict(border=5, flag=wx.ALL|wx.EXPAND,
                     proportion=1))]:
             boxSizer.Add(control, **options)
 

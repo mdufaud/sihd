@@ -23,10 +23,17 @@ class AWxPythonGui(AGui):
         self.__wx_app = None
         super().__init__(name=name, *args, **kwargs)
 
-    def loop(self, **kwargs):
+    #override
+    def on_init(self):
+        ret = super().on_init()
         app = wx.App(False)
         self.__wx_app = app
         self.build_wx_frames(app)
+        return ret
+
+    #override
+    def loop(self, **kwargs):
+        app = self.__wx_app
         app.MainLoop()
 
     def build_wx_frames(self, app):

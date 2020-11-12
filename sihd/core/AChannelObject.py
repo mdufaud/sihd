@@ -98,9 +98,7 @@ class AChannelObject(ANamedObjectContainer):
         if self.get_channel(name) is not None:
             raise ValueError("Already a channel named " + name);
         if self.is_linked(name):
-            link = self._get_link(name)
-            if link is not None and isinstance(link, Channel):
-                return link
+            self.log_debug("Channel is linked: " + name)
             return None
         chan_type = kwargs.pop('type', None)
         if chan_type is None:

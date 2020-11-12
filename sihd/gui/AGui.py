@@ -80,7 +80,8 @@ class AGui(SihdRunnableObject, IAppContainer):
         self.__runnable = runnable
 
     def on_runnable_start(self, thread, *args):
-        self.start_gui_input_thread()
+        if self.is_polling_channels_input:
+            self.start_gui_input_thread()
 
     def on_stop(self):
         r = self.get_input_runnable()

@@ -7,6 +7,7 @@ import time
 import sihd
 from .IService import IService
 from .SihdObject import SihdObject
+from .Runnable import Runnable
 from .RunnableThread import RunnableThread
 from .RunnableProcess import RunnableProcess
 from .Channel import Channel

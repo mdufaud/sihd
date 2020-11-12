@@ -30,6 +30,59 @@ class ConfigObject(object):
         self.setted = False
         self.value = None
 
+    def __path_assign(self, val, key, value):
+        if isinstance(val, dict):
+            try:
+                val[key] = value
+            except KeyError as exc:
+                raise KeyError("Conf '{}': Key not found: {}"\
+                               .format(self.key, key)) from exc
+        elif isinstance(val, (list, tuple)):
+            try:
+                val[int(key)] = value
+            except IndexError as exc:
+                raise KeyError("Conf '{}': Index not found: {}"\
+                               .format(self.key, key)) from exc
+        else:
+            raise KeyError("Conf '{}': For key '{}' cannot assign type: {}"
+                           .format(self.key, key, type(val)))
+
+    def __path_browse(self, val, key):
+        if isinstance(val, dict):
+            try:
+                return val[key]
+            except KeyError as exc:
+                raise KeyError("Conf '{}': Key not found: {}".format(self.key, key)) from exc
+        elif isinstance(val, (list, tuple)):
+            try:
+                return val[int(key)]
+            except IndexError as exc:
+                raise KeyError("Conf '{}': Index not found: {}".format(self.key, key)) from exc
+        else:
+            raise KeyError("Conf '{}': Cannot go further with key: {}".format(self.key, key))
+
+    def deep_set(self, keylst, value, default=True):
+        if not keylst:
+            return
+        val = self.value
+        if val is None and default is True:
+            val = self.default
+        for key in keylst[:-1]:
+            val = self.__path_browse(val, key)
+        self.__path_assign(val, keylst[-1], value)
+        return val
+
+
+    def find(self, keylst, default=True):
+        if not keylst:
+            return
+        val = self.value
+        if val is None and default is True:
+            val = self.default
+        for key in keylst:
+            val = self.__path_browse(val, key)
+        return val
+
     def __str__(self):
         return "{}: {} (default={}, forced={}, expose={})".format(
                 self.key, self.value, self.default, self.forced, self.expose)
@@ -86,13 +139,24 @@ class ConfigApi(object):
         kwargs['dynamic'] = True
         self.set(key, value, **kwargs)
 
-    def set(self, key, value, dynamic=False, force=False):
+    def set(self, path, value, dynamic=False, force=False):
+        split = path.split('.')
+        if split:
+            key = split[0]
+            split = split[1:]
+        else:
+            key = path
         conf = self.dict.get(key, None)
         if conf is None:
-            if not dynamic:
-                raise KeyError("{}: key not in configuration: {}".format(self.name, key))
+            if dynamic is False:
+                raise KeyError("{}: key not in configuration: {}".format(self.name, path))
+            if split:
+                return
             conf = self.add_default(key, value, expose=False)
-        conf.set(value, force)
+        if split:
+            conf.deep_set(split, value, force)
+        else:
+            conf.set(value, force)
 
     def is_set(self, key):
         return self.dict[key].setted
@@ -111,27 +175,40 @@ class ConfigApi(object):
         conf = self.dict.get(key, None, **kwargs)
         return conf and conf.default or None
 
-    def get(self, key, ret=None, dynamic=False, default=True):
+    def get(self, path, ret=None, dynamic=False, default=True):
         """
             Get value from conf
 
-            :param key: configuration key
+            :param path: configuration path key
             :param ret: returned value when failed to find desired value
             :param default: returns None if value is still default
             :param dynamic: do not raise key error if config key not found
             :return: value or None if not found
         """
+        split = path.split('.')
+        if split:
+            key = split[0]
+            split = split[1:]
+        else:
+            key = path
         if key not in self.dict:
             if dynamic is True:
                 return ret
             else:
-                raise KeyError("{}: key {} not found".format(self.name, key))
+                raise KeyError("{}: key {} not found".format(self.name, path))
         conf = self.dict[key]
-        val = conf.value
-        if default is False and conf.default == val:
-            val = ret
-        elif val is None:
-            val = conf.default
+        if split:
+            exceptions = (KeyError) if dynamic is True else ()
+            try:
+                val = conf.find(split)
+            except exceptions:
+                val = None
+        else:
+            val = conf.value
+            if default is False and conf.default == val:
+                val = ret
+            elif val is None:
+                val = conf.default
         return val
 
     #

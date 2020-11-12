@@ -483,6 +483,12 @@ class SihdObject(ALoggable, AConfigurable, IObserver,
     # Channels
     #
 
+    def is_polling_channels_input(self):
+        return self.__observe_inputs == False
+
+    def is_observing_channels_input(self):
+        return self.__observe_inputs == True
+
     def poll_channels_input(self):
         if self.__init is True:
             raise RuntimeError("{}: Cannot set polling on channels after init".format(self))

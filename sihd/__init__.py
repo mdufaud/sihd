@@ -13,3 +13,8 @@ log = __loggerapi.LoggerApi("")
 def get_path():
     dirname = resources.dirname
     return dirname(dirname(__file__))
+
+from os import getenv
+debug = getenv("SIHD_DEBUG") == "1"
+if debug:
+    log.set_level("debug")

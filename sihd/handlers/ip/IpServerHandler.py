@@ -101,14 +101,14 @@ class IpServerHandler(AHandler):
     #
 
     def on_packet_data(self, msg, host=None, port=0):
-        self.log_info("Packet from {}:{} said : {}".format(host, port, msg))
+        self.log_info("Packet from {}:{} said : {}".format(host, port, msg.decode()))
 
     #
     # Client input
     #
 
     def on_client_input(self, msg, co):
-        self.log_info("Client {} said : {}".format(co, msg))
+        self.log_info("Client {} said : {}".format(co, msg.decode()))
 
     #
     # Client info
