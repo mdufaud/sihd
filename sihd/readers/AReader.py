@@ -19,8 +19,8 @@ class AReader(SihdRunnableObject, IAppContainer):
     # AReader
     #
 
-    def set_source(self, source) -> bool:
-        raise NotImplementedError("set_source not implemented")
+    def open(self, source) -> bool:
+        raise NotImplementedError("open")
 
     def close(self) -> bool:
         return True
@@ -31,6 +31,7 @@ class AReader(SihdRunnableObject, IAppContainer):
 
     def on_stop(self):
         self.close()
+        return super().on_stop()
 
     #
     # IAppContainer

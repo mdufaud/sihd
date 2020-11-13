@@ -10,6 +10,8 @@ import sihd
 
 import json
 
+from sihd.readers.file import LineReader
+
 logger = sihd.log.setup('info')
 
 import unittest
@@ -28,7 +30,7 @@ class TestClassConfig(unittest.TestCase):
         return dir_path
 
     def test_simple_config(self):
-        reader = sihd.readers.sys.LineReader(name="LineReader")
+        reader = LineReader(name="LineReader")
         default = reader.configuration.get_default("path")
         value = reader.configuration.get("path")
         self.assertTrue(default == value)

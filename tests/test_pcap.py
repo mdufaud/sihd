@@ -14,7 +14,7 @@ logger = sihd.log.setup('info')
 
 from sihd.handlers.AHandler import AHandler
 
-from sihd.readers.sys import PcapReader
+from sihd.readers.file import PcapReader
 from sihd.handlers.sys import PcapHandler
 from sihd.handlers.utils import DuplicatorHandler
 

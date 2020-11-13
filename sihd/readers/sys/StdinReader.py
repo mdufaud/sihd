@@ -14,11 +14,11 @@ from sihd.readers.AReader import AReader
 class StdinReader(AReader):
 
     def __init__(self, name="StdinReader", app=None):
-        super(StdinReader, self).__init__(app=app, name=name)
+        super().__init__(app=app, name=name)
         self.configuration.add_defaults({
             "question": "",
-            "runnable_frequency": 5, 
         })
+        self.configuration.set('runnable_frequency', 5)
         self.__question = ""
         self.__asked = False
         self.__inputs = [sys.stdin.fileno()]

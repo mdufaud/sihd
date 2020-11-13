@@ -38,7 +38,7 @@ class TestAppApi(unittest.TestCase):
                 self.assertEqual(expected, value)
 
         self.assertEqual(handler.skipped.read(), skipped)
-        self.assertEqual(reader.lines.read(), lines)
+        self.assertEqual(reader.count.read(), lines)
         self.assertTrue(reader.eof.read())
 
         if not app.args.stats:

@@ -53,7 +53,7 @@ class IpReader(AReader):
         self.__protocol = self.get_protocol(conf.get("protocol"))
         self._rcv_buf = conf.get("rcv_buf")
         self.__timeout = conf.get("poll_timeout")
-        self.set_source(conf.get("port"))
+        self.open(conf.get("port"))
         return True
 
     #
@@ -134,7 +134,7 @@ class IpReader(AReader):
     def is_up(self):
         return self.__socket is not None
 
-    def set_source(self, port):
+    def open(self, port):
         if self.is_up():
             return True
         self.log_info("Creating server on port:{} - proto:{} - socktype:{}"\

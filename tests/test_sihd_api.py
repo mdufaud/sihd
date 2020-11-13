@@ -76,7 +76,7 @@ class TestSihdApi(unittest.TestCase):
     def test_resources(self):
         logger.info("Test resources")
         self.assertTrue(sihd.resources.get('test_sihd_api.py') is None)
-        self.assertTrue(sihd.resources.get('logs') is None)
+        self.assertTrue(sihd.resources.get('output') is None)
         sihd.resources.add(sihd.resources.get('tests'))
         filename = sihd.resources.get('test_sihd_api.py')
         dirname = sihd.resources.get('output')

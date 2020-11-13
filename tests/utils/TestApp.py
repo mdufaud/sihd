@@ -10,7 +10,7 @@ import time
 """ Our Stuff """
 import sihd
 from sihd.app.SihdApp import SihdApp
-from sihd.readers.sys.LineReader import LineReader
+from sihd.readers.file.LineReader import LineReader
 
 from .WordHandler import WordHandler
 
@@ -96,8 +96,8 @@ class TestApp(SihdApp):
         """ Called when channel's write is called (in thread only) """
         eof = self._line_reader.eof
         processed = self._word_handler.processed
-        lines = self._line_reader.lines
-        if eof.read() and processed.read() == lines.read():
+        count = self._line_reader.count
+        if eof.read() and processed.read() == count.read():
             self.log_info("Reader stop")
             self._line_reader.stop()
 

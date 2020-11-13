@@ -55,7 +55,7 @@ class SerialReader(AReader):
             self.__conf['timeout'] = float(timeout)
         port = conf.get("port", default=False)
         if port:
-            self.set_source(port)
+            self.open(port)
         if not self.__serial:
             self.log_error("Bad configuration: no port or could not open")
             return False
@@ -79,7 +79,7 @@ class SerialReader(AReader):
     # Reader
     #
 
-    def set_source(self, port):
+    def open(self, port):
         self.lines.clear()
         self.wrote.clear()
         self.close()
