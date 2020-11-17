@@ -46,6 +46,7 @@ class Runnable(ARunnable):
 
     def start(self):
         self.__stopped = False
+        self.run()
 
     def stop(self):
         self.__stopped = True

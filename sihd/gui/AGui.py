@@ -114,7 +114,7 @@ class AGui(SihdRunnableObject, IAppContainer):
         """
             To implement so it can be started without services
         """
-        raise NotImplementedError("No gui to loop onto")
+        raise NotImplementedError("loop")
 
     #
     # IAppContainer

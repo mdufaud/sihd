@@ -26,7 +26,6 @@ try:
 except ImportError as imprt:
     pass
 
-
 class SimpleFlask(AFlaskGui):
 
     def __init__(self, name="SimpleFlask", app=None):
@@ -187,7 +186,7 @@ class TestFlaskGui(unittest.TestCase):
         pass
 
     @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
-    def test_simple_flask_gui(self):
+    def test_gui(self):
         print()
         provider = InfiniteReader(name='provider')
         gui = SimpleFlask()
@@ -212,7 +211,7 @@ class TestFlaskGui(unittest.TestCase):
         self.assertTrue(provider.stop())
 
     @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
-    def test_simple_flask_gui_app(self):
+    def test_gui_app(self):
         print()
         app = SimpleApp("SomeApp")
         if app.setup_app() is False:
@@ -228,4 +227,4 @@ if __name__ == '__main__':
     if imprt is None:
         unittest.main(verbosity=2)
     else:
-        logger.error("No Flask installed: {}".format(imprt))
+        logger.error("Requirements not installed: {}".format(imprt))

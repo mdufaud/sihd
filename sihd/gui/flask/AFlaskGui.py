@@ -29,27 +29,28 @@ class AFlaskGui(AGui):
             from werkzeug.serving import make_server
         super().__init__(name=name, *args, **kwargs)
         self.configuration.add_defaults({
+            'host': "127.0.0.1",
             'port': 5000,
             'flask': {
                 'TESTING': False,
             },
             'secret_key': 'random',
             'web_path': "",
-            'web_resources_path': [],
+            'resources_path': [],
         })
-        self.configuration.set('runnable_type', 'thread', force=True)
-        self.srv = None
+        self.configuration.set('runnable_type', 'thread')
+        self.server = None
         self.render_ctx = {}
         self.__base_methods = {}
 
     def on_reset(self):
-        self.__load_base_methods()
+        self._load_base_methods()
         return super().on_reset()
 
-    def __add_base_method(self, name, func):
+    def _add_base_method(self, name, func):
         self.__base_methods[name] = func
 
-    def __load_base_methods(self):
+    def _load_base_methods(self):
         for name, func in self.__base_methods.items():
             setattr(self, name, func)
         self.__base_methods.clear()
@@ -71,18 +72,18 @@ class AFlaskGui(AGui):
     def create_flask_app(self, path):
         self.log_info("Flask app directory: {}".format(path))
         app = flask.Flask(self.get_name(), root_path=path)
-        self.flask_app = app
         self.configure_flask_app(app, self.configuration)
         self.add_context_processor(app)
-        self.build_routes(app)
         return app
 
     def create_server(self, app):
-        self.srv = make_server('127.0.0.1', self.configuration.get('port'), app)
-        """
-        self.ctx = app.app_context()
-        self.ctx.push()
-        """
+        return make_server('127.0.0.1', self.configuration.get('port'), app)
+
+    def stop_server(self):
+        self.server.shutdown()
+
+    def run_server(self):
+        self.server.serve_forever()
 
     def build_routes(self, app):
         pass
@@ -90,23 +91,23 @@ class AFlaskGui(AGui):
     #override
     def on_setup(self, config):
         ret = super().on_setup(config)
-        res_paths = config.get('web_resources_path')
+        res_paths = config.get('resources_path')
         for path in res_paths:
             sihd.resources.add(path)
         path = self.configuration.get("web_path")
-        self.create_flask_app(path)
-        self.create_server(self.flask_app)
+        self.flask_app = self.create_flask_app(path)
+        self.server = self.create_server(self.flask_app)
+        self.build_routes(self.flask_app)
         return ret
 
     #override
     def loop(self, **kwargs):
-        app = self.flask_app
         self.log_info("Starting server")
-        self.srv.serve_forever()
+        self.run_server()
 
     def on_stop(self):
-        self.srv.shutdown()
-        self.srv = None
+        self.stop_server()
+        self.server = None
         self.flask_app = None
         return super().on_stop()
 
@@ -131,7 +132,7 @@ class AFlaskGui(AGui):
         if not callable(method):
             self.log_error("Tried to wrap a non callable: {}".format(methodname))
             return False
-        self.__add_base_method(methodname, method)
+        self._add_base_method(methodname, method)
         setattr(self, methodname, wrapper(*args, **kwargs)(method))
         return True
 
