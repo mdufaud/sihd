@@ -63,6 +63,9 @@ class RunnableProcess(ARunnable):
         proc_lst = self.__proc_lst
         if proc_lst:
             raise RuntimeError("Process are made but not cleared")
+        name = pkwargs.pop('runnable_name', None)
+        if name is not None:
+            pkwargs['name'] = name
         args = self.get_args()
         stop = self.__worker_stop
         work = self.__worker_work

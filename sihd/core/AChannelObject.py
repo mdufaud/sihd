@@ -5,7 +5,8 @@
 # System
 #
 import time
-
+import sihd
+import weakref
 from .ANamedObjectContainer import ANamedObjectContainer
 from .Channel import *
 
@@ -71,7 +72,7 @@ class AChannelObject(ANamedObjectContainer):
     #
 
     def on_new_channel(self, name, channel):
-        pass
+        setattr(self, name, channel)
 
     def create_channel(self, name, **kwargs):
         """
@@ -81,24 +82,26 @@ class AChannelObject(ANamedObjectContainer):
 
             :param name: str channel name
             :param type: str channel type
-            :param block: bool permits blocking on certain locks in channels
+            :param block: bool permits blocking with certain locks in channels
                             on read/write before returning result
             :param timeout: float when blocking is enabled, set the timeout before
                             returning
-            :param poll: bool enable polling from channel when a write is done on
+            :param pollable: bool enable polling from channel when a write is done on
                                 the channel in any thread/process
             :param mp: bool change in some channels internal variable from
                             threading to multiprocessing or Manager based
-
-            :param var_type: char in some channel you have to set the variable
-                                type to be used in the internal variable
+            :param timestamp: bool timestamp every write
+            :param default: default value in channel
+            :param lfilter: method to filter value when channel is writing
             :return: A Channel if the creation method was found else None
             :rtype: Channel
         """
+        strconf = kwargs.pop('strconf', None)
+        if strconf is not None:
+            kwargs.update(sihd.var.tokenize(strconf))
         if self.get_channel(name) is not None:
-            raise ValueError("Already a channel named " + name);
+            raise ValueError("Already a channel named {}".format(name));
         if self.is_linked(name):
-            self.log_debug("Channel is linked: " + name)
             return None
         chan_type = kwargs.pop('type', None)
         if chan_type is None:
@@ -110,3 +113,16 @@ class AChannelObject(ANamedObjectContainer):
         channel = cls(name=name, **kwargs)
         self.on_new_channel(name, channel)
         return channel
+
+    #
+    # Removal
+    #
+
+    def remove_channel(self, ch):
+        if isinstance(ch, Channel):
+            name = ch.get_name()
+        else:
+            name = ch
+        if self.get_channel(name) is None:
+            raise ValueError("No such channel: {}".format(name))
+        setattr(self, name, None)

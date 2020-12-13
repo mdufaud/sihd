@@ -7,7 +7,7 @@ class MainWindow(wx.Frame):
         super().__init__(*args, **kwargs)
         self._filemenu = [
             (wx.ID_ABOUT, '&About',
-             sihd.string.get('wx.info_about', 'Information about this program'),
+             sihd.strings.get('wx.info_about', 'Information about this program'),
              self.on_about),
             (wx.ID_EXIT, '&Exit',
              sihd.strings.get('wx.info_exit', 'Terminate the program'),

@@ -37,6 +37,9 @@ class RunnableThread(ARunnable):
         thread_lst = self.__thread_lst
         if thread_lst:
             raise RuntimeError("Thread are made but not cleared")
+        name = tkwargs.pop('runnable_name', None)
+        if name is not None:
+            tkwargs['name'] = name
         for i in range(self.__nworkers):
             worker_args = (i + 1, *args,)
             thread = threading.Thread(target=self.run,

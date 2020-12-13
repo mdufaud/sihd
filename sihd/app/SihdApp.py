@@ -31,6 +31,7 @@ class SihdApp(SihdObject):
     def __init__(self, name="SihdApp", args=None, path=None,
                     conf_path=None, *pargs, **pkwargs):
         super().__init__(name, *pargs, **pkwargs)
+        sihd.log.setup("info")
         self.configuration.add_defaults({
             'log': {
                 'level': 'info',
@@ -46,14 +47,20 @@ class SihdApp(SihdObject):
         self.handlers = set()
         self.guis = set()
         self.interactors = set()
+        self.state_observers = dict()
         #Args
         self.args = None
         self.__args_setted = None
         self.__services_conf = ([], {})
         if args:
             self.set_args(args)
-        self.pid = os.getpid()
-        sihd.log.setup("info")
+
+    def on_reset(self):
+        self.readers.clear()
+        self.handlers.clear()
+        self.guis.clear()
+        self.interactors.clear()
+        super().on_reset()
 
     def setup(self, conf=None):
         """ If no conf is provided, load default conf """
@@ -162,10 +169,10 @@ class SihdApp(SihdObject):
                     level = log_conf['file_level']
                 else:
                     log_conf['file_level'] = level
-        sihd.log.add_file_handler(self.get_name(),
-                                    directory=directory,
-                                    level=level)
-        self.log_debug("File logger is setup: {}".format(directory))
+        handler = sihd.log.add_file_handler(self.get_name(),
+                                            directory=directory,
+                                            level=level)
+        self.log_info("Logging file: {}".format(handler.baseFilename))
         return True
 
     def read_app_conf(self, path=None):
@@ -174,13 +181,14 @@ class SihdApp(SihdObject):
         if self._conf_path is None:
             self._conf_path = self.get_default_conf_path()
         path = path or self._conf_path
-        sihd.log.info("Reading configuration file: {}".format(path))
         if not os.path.isfile(path):
+            sihd.log.info("Creating configuration file: {}".format(path))
             # Write initial conf
             conf = self.get_conf()
             self.write_conf(conf, path)
         else:
             # Read conf
+            sihd.log.info("Reading configuration file: {}".format(path))
             try:
                 with open(path, 'r') as configfile:
                     conf = json.load(configfile)
@@ -259,37 +267,32 @@ class SihdApp(SihdObject):
     #
 
     def add_state_observer(self, service):
-        state = service.get_channel("service_state")
-        if not state:
+        channel = service.get_channel("service_state")
+        if not channel:
             self.log_error("Service {}: could not find "
-                    "service_state channel to observe".format(service.get_name()))
+                    "service state channel to observe".format(service.get_name()))
             return False
-        input_lst = self.get_channels_input()
-        if state not in input_lst:
-            input_lst.append(state)
+        try:
+            self.set_channel_input(channel)
+        except RuntimeError as e:
+            self.log_error(e)
+            return False
+        self.state_observers[channel] = service
         self.log_debug("Service {}: added state observation"\
                         .format(service.get_name()))
         return True
 
     def remove_state_observer(self, service):
-        state = service.get_channel("service_state")
-        if not state:
+        channel = service.get_channel("service_state")
+        if not channel:
             self.log_error("Could not find service {} "
                     "state channel to remove observation".format(service))
             return False
-        input_lst = self.get_channels_input()
-        to_remove = -1
-        for i, channel in enumerate(input_lst):
-            if channel == state:
-                to_remove = i
-                break
-        if to_remove == -1:
-            self.log_error("Could not find service {} "
-                    "state channel in observations for removal")
-        else:
-            input_lst.pop(to_remove)
-            self.log_debug("Stopped service {} state observation"\
-                            .format(service))
+        self.remove_channel_input(channel)
+        del self.state_observers[channel]
+        self.log_debug("Stopped service {} state observation"\
+                        .format(service))
+        return True
 
     def get_services_status(self):
         st_readers = {}
@@ -386,6 +389,13 @@ class SihdApp(SihdObject):
     def _reset_impl(self):
         ret = super()._reset_impl()
         return ret
+
+    def on_reset(self):
+        self.readers.clear()
+        self.handlers.clear()
+        self.interactors.clear()
+        self.guis.clear()
+        self.state_observers.clear()
 
     #
     # Actions on services
@@ -495,8 +505,8 @@ class SihdApp(SihdObject):
     #
 
     def _pre_handle(self, channel):
-        if channel.get_name() == "service_state":
-            service = channel.get_parent()
+        service = self.state_observers.get(channel, None)
+        if service is not None:
             stopped, paused = service.get_service_state()
             self.service_state_changed(service, stopped, paused)
             return True
@@ -536,7 +546,7 @@ class SihdApp(SihdObject):
         pass
 
     def step(self):
-        self.read_channels_input()
+        self.poll_channels_input()
         return self.on_step()
 
     def loop(self, *args, **kwargs):

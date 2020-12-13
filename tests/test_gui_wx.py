@@ -18,7 +18,7 @@ try:
     from sihd.gui.wxpython.AWxPythonGui import AWxPythonGui
     from sihd.gui.wxpython.utils import MainWindow, LogFrame
 
-    class MainIpWindow(MainWindow.MainWindow):
+    class MainWindow(MainWindow.MainWindow):
 
         def __init__(self, *a, **kw):
             super().__init__(*a, **kw)
@@ -38,9 +38,9 @@ try:
             self.logframe.remove_handler()
             super().on_exit(event)
 
-    class WxPythonIpGui(AWxPythonGui):
+    class WxPythonGui(AWxPythonGui):
 
-        def __init__(self, name="WxPythonIpGui", app=None):
+        def __init__(self, name="WxPythonGui", app=None):
             global wx
             if wx is None:
                 import wx
@@ -48,7 +48,7 @@ try:
             self.configuration.add_defaults({})
 
         def build_wx_frames(self, app):
-            self.main_window = MainIpWindow(None, title="Demo")
+            self.main_window = MainWindow(None, title="Demo")
             self.main_window.Show()
 
         def handle(self, channel):
@@ -95,7 +95,7 @@ class TestWxGui(unittest.TestCase):
         sihd.strings.set('wx.about_hdr', 'About test GUI')
         sihd.strings.set('wx.about_txt', 'Testing GUI')
         reader = TestReader()
-        gui = WxPythonIpGui()
+        gui = WxPythonGui()
         gui.configuration.set('channels_input', 'observe')
         self.assertTrue(reader.init())
         reader.output1.add_observer(gui)

@@ -45,10 +45,10 @@ class StdinReader(AReader):
     # Configuration
     #
 
-    def on_setup(self):
-        super().on_setup()
-        self.set_question(str(conf.get("question")))
-        return True
+    def on_setup(self, config):
+        ret = super().on_setup(config)
+        self.set_question(str(config.get("question")))
+        return ret
 
     #
     # Reader
@@ -73,9 +73,9 @@ class StdinReader(AReader):
             line = os.read(r[0], self.__buffer)
         return line
 
-    def on_thread_start(self, thread):
-        super().on_thread_start(thread)
-        time.sleep(0.5)
+    def on_runnable_start(self, thread):
+        super().on_runnable_start(thread)
+        time.sleep(0.2)
 
     def on_step(self):
         if self.__has_new_question is False:

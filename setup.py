@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="sihd",
-    version="0.0.1",
+    version="0.2.0",
     author="Maxence Dufaud",
     author_email="maxence_dufaud@hotmail.fr",
     description="A Simple Input Handler and Displayer",

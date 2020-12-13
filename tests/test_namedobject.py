@@ -67,6 +67,7 @@ class TestNamedObject(unittest.TestCase):
         parent1 = ANamedObjectContainer(name='parent1')
         child1 = ANamedObject(name='child1', parent=parent1)
         child2 = ANamedObject(name='child2', parent=parent1)
+        self.assertEqual(parent1.find('.child1'), child1)
 
         parent2 = ANamedObjectContainer(name='parent2')
         evil_child = ANamedObject(name='child1', parent=parent2)

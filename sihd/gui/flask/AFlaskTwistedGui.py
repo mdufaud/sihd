@@ -30,7 +30,20 @@ class AFlaskTwistedGui(AFlaskGui):
         self.configuration.add_defaults({
             'static_resources_path': {},
         })
-        self.configuration.set('runnable_type', 'default')
+        self.protocol = None
+        self.configuration.set('runnable_type', 'thread')
+
+    def ws_connect(self, protocol, request):
+        pass
+
+    def ws_open(self, protocol):
+        pass
+
+    def ws_message(self, protocol, payload, is_binary):
+        pass
+
+    def ws_close(self, protocol, was_clean, code, reason):
+        pass
 
     #
     # Create twisted server
@@ -41,22 +54,25 @@ class AFlaskTwistedGui(AFlaskGui):
         port = self.configuration.get('port')
         host = self.configuration.get('host')
         ws_factory = WebSocketServerFactory("ws://%s:%d" % (host, port))
-        gui = self
+        protocol = self.protocol
+        if protocol is None:
+            gui = self
 
-        class EchoServerProtocol(WebSocketServerProtocol):
-            def onConnect(self, request):
-                gui.log_info("On Connect !")
+            class EchoServerProtocol(WebSocketServerProtocol):
+                def onConnect(self, request):
+                    gui.ws_connect(self, request)
 
-            def onOpen(self):
-                gui.log_info("On Open !")
+                def onOpen(self):
+                    gui.ws_open(self)
 
-            def onMessage(self, payload, isBinary):
-                gui.log_info("On Message !")
+                def onMessage(self, payload, is_binary):
+                    gui.ws_message(self, payload, is_binary)
 
-            def onClose(self, wasClean, code, reason):
-                gui.log_info("On Close !")
+                def onClose(self, was_clean, code, reason):
+                    gui.ws_close(self, was_clean, code, reason)
 
-        ws_factory.protocol = EchoServerProtocol
+            protocol = EchoServerProtocol
+        ws_factory.protocol = protocol
         ws_resource = WebSocketResource(ws_factory)
         root.putChild(b'ws', ws_resource)
 

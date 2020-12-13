@@ -13,6 +13,7 @@ import sihd
 logger = sihd.log.setup('info')
 
 from sihd.handlers.AHandler import AHandler
+import sihd.readers.sys
 
 class StdinHandler(AHandler):
 
@@ -58,11 +59,11 @@ class TestReader(unittest.TestCase):
 
     @unittest.skipIf(not sys.stdin or not sys.stdin.isatty(), "Not interactive test")
     def test_stdin_reader(self):
-        reader = sihd.readers.StdinReader()
+        reader = sihd.readers.sys.StdinReader("reader")
         handler = StdinHandler(reader)
         self.assertTrue(reader.setup())
+        handler.link("input", "reader.answer")
         self.assertTrue(handler.setup())
-        handler.link_channel("input", reader.answer)
         #reader.answer.add_observer(handler.input)
         reader.question.write("How are you ? ")
         self.assertTrue(handler.start())

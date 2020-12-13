@@ -170,7 +170,6 @@ class ANamedObjectContainer(ANamedObject):
     def find(self, path):
         """
             Returns object in path from root or relatively
-            
             For hierarchy:
                 root:
                     container1:
@@ -285,7 +284,6 @@ class ANamedObjectContainer(ANamedObject):
             if colored:
                 if children:
                     name = bcolors.gold(name)
-                    cls = bcolors.gold(cls)
                 else:
                     name = bcolors.blue(name)
             alias = child['alias']
@@ -303,11 +301,16 @@ class ANamedObjectContainer(ANamedObject):
         dic = self.get_tree(desc=desc, ident=ident, max_rec=max_rec)
         if not bcolors:
             colored = False
-        s = "{}: {}\n".format(dic['name'], dic['class'].__name__)
+        name = dic['name']
+        classname = dic['class'].__name__
         children = dic['children']
-        if colored and children:
-            s = bcolors.gold(s)
-        s += self.__build_tree_children(dic['children'], desc=desc,
+        if colored:
+            if children:
+                name = bcolors.gold(name)
+            else:
+                name = bcolors.blue(name)
+        s = "{}: {}\n".format(name, classname)\
+            + self.__build_tree_children(dic['children'], desc=desc,
                                         colored=colored, ident=ident)
         print(s)
 

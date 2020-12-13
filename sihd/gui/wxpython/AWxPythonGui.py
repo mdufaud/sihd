@@ -37,4 +37,4 @@ class AWxPythonGui(AGui):
         app.MainLoop()
 
     def build_wx_frames(self, app):
-        raise NotImplemented
+        raise NotImplementedError("build_wx_frames")

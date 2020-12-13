@@ -226,7 +226,7 @@ class ACmdGui(cmd.Cmd, AGui):
 
     def loop(self, **kwargs):
         time.sleep(0.1)
-        self.read_channels_input()
+        self.poll_channels_input()
         self.cmdloop()
 
     #

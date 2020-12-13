@@ -19,14 +19,14 @@ class ALoggable(ANamedObject):
 
     def __init__(self, name="ALoggable", **kwargs):
         super().__init__(name, **kwargs)
-        self.logger = sihd.log.get_logger()
+        self.logger = sihd.log.get_logger(self.get_path())
         self.__can = True
 
     def set_log_active(self, activate):
         self.__can = activate
 
     def _log_format(self, *msg):
-        return "{0}: {1}".format(self.get_name(), '\t'.join((str(m) for m in msg)))
+        return '\t'.join((str(m) for m in msg))
 
     def log_debug(self, *msg):
         if self.__can:

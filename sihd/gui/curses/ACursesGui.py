@@ -26,7 +26,7 @@ class ACursesGui(AGui):
         if curses is None:
             import curses, curses.panel
         super().__init__(app=app, name=name)
-        self._log_handler = None
+        self.log_handler = None
         self.__curses_on = False
         self.__windows = {}
         self.__panels = {}
@@ -153,14 +153,21 @@ class ACursesGui(AGui):
     def _remove_stream_logger(self):
         sihd.log.remove_stream_handlers()
 
+    def _do_log(self, to_print):
+        screen = self.logwin
+        if screen:
+            screen.addstr(to_print)
+            screen.refresh()
+
     def _set_win_log(self, win):
         # Create a logger in curses and removes stream logger
         win.scrollok(True)
         win.leaveok(True)
-        log_handler = CursesLogHandler(win)
+        self.logwin = win
+        log_handler = sihd.logger.LoggerHandler(self._do_log)
         log_handler.setFormatter(sihd.log.get_stream_formatter())
         sihd.log.logger.addHandler(log_handler)
-        self._log_handler = log_handler
+        self.log_handler = log_handler
 
     # Create window / panel
 
@@ -211,9 +218,10 @@ class ACursesGui(AGui):
     def remove_curses(self):
         if self.__curses_on is False:
             return
-        if self._log_handler is not None:
-            sihd.log.logger.removeHandler(self._log_handler)
-            self._log_handler = None
+        if self.log_handler is not None:
+            self.logwin = None
+            sihd.log.logger.removeHandler(self.log_handler)
+            self.log_handler = None
         sihd.log.add_stream_handler()
         curses.nocbreak()
         self.stdscr.keypad(0)
@@ -266,7 +274,7 @@ class ACursesGui(AGui):
         error = None
         try:
             while self.is_curses():
-                self.read_channels_input()
+                self.poll_channels_input()
                 if self.getch_loop() is False:
                     break
         except Exception as e:
@@ -280,45 +288,3 @@ class ACursesGui(AGui):
     def on_stop(self):
         self.__ready = False
         self.remove_curses()
-
-# Logging handler
-
-try:
-    unicode
-    _unicode = True
-except NameError:
-    _unicode = False
-
-class CursesLogHandler(logging.Handler):
-
-    def __init__(self, screen):
-        logging.Handler.__init__(self)
-        self.screen = screen
-        self.code = locale.getpreferredencoding()
-
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            screen = self.screen
-            fs = "\n%s"
-            to_print = None
-            if not _unicode: #if no unicode support...
-                to_print = fs % msg
-            else:
-                try:
-                    if (isinstance(msg, unicode)):
-                        ufs = u'\n%s'
-                        try:
-                            to_print = ufs % msg
-                        except UnicodeEncodeError:
-                            to_print = (ufs % msg).encode(self.code)
-                    else:
-                        to_print = fs % msg
-                except UnicodeError:
-                    to_print = fs % msg.encode("UTF-8")
-            screen.addstr(to_print)
-            screen.refresh()
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except:
-            self.handleError(record)

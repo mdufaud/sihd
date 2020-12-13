@@ -10,23 +10,26 @@ class AGui(SihdRunnableObject, IAppContainer):
     """
         Graphical user interface should be thread and not processes.
         If you want to be notified of channels input you have to call
-        read_channels_input() by yourself.
+        poll_channels_input() by yourself.
     """
 
     def __init__(self, name="AGui", app=None, parent=None, **kwargs):
-        self.__runnable = None
         IAppContainer.__init__(self)
         if app and not parent:
             parent = app
         super().__init__(name, parent=parent, **kwargs)
-        self.configuration.load({
+        config = self.configuration
+        config.add_defaults({
+            "gui_side_thread": True,
+        })
+        config.load({
             "runnable_type": "thread",
             "runnable_frequency": 1,
         })
-        self.configuration.set_dynamic('runnable_steps', 1)
-        self.set_channel_notification(False)
+        config.set_dynamic('runnable_steps', 1)
         if app:
             self.set_app(app)
+        self.__runnable = None
 
     #
     # SihdObject
@@ -48,34 +51,36 @@ class AGui(SihdRunnableObject, IAppContainer):
     def get_input_runnable(self):
         return self.__runnable
 
-    def on_input_step(self):
-        self.read_channels_input()
+    def _input_thread_step(self):
+        self.poll_channels_input()
 
-    def _thread_input_start(self, thread):
+    def _input_thread_start(self, thread):
         pass
 
-    def _thread_input_error(self, thread, iteration, error):
+    def _input_thread_error(self, thread, iteration, error):
         self.log_error("{}: {}".format(thread, error))
         self.log_error(sihd.sys.get_traceback())
 
-    def _thread_input_stop(self, thread, iteration):
+    def _input_thread_stop(self, thread, iteration):
         pass
 
     def start_gui_input_thread(self):
-        """ Set up a channel notification thread """
-        if self.__runnable is not None:
+        config = self.configuration
+        """ Set up a channel input polling thread """
+        if self.__runnable is not None \
+                and config.get("gui_input_thread") is True:
             return
         runnable = RunnableThread(
-            daemon=True,
-            name="GuiInputThread",
-            parent=self,
-            frequency=int(self.configuration.get("runnable_frequency")),
-            timeout=0,
-            max_iter=0,
-            step=self.on_input_step,
-            on_start=self._thread_input_start,
-            on_stop=self._thread_input_stop,
-            on_err=self._thread_input_error)
+            daemon = True,
+            name = "input_thread",
+            parent = self,
+            frequency = int(config.get("runnable_frequency")),
+            timeout = 0,
+            max_iter = 0,
+            step = self._input_thread_step,
+            on_start = self._input_thread_start,
+            on_stop = self._input_thread_stop,
+            on_err = self._input_thread_error)
         runnable.start()
         self.__runnable = runnable
 

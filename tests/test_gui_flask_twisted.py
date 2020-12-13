@@ -31,10 +31,40 @@ class SimpleFlask(AFlaskTwistedGui):
         super(SimpleFlask, self).__init__(app=app, name=name)
         self.render_ctx['sihd_gui'] = self
         self.render_ctx['channels'] = {}
+        self.clients = {}
+        self.idx = 1
 
     def on_setup(self, config):
         self.render_ctx['ws_port'] = self.configuration.get('port')
         return super().on_setup(config)
+
+    # Websocket handling
+
+    def ws_connect(self, handler, request):
+        self.log_info("Client connecting: {0}".format(request.peer))
+
+    def ws_open(self, handler):
+        self.clients[handler] = self.idx
+        self.log_info("Client[{0}]: Websocket opened".format(self.idx))
+        self.idx += 1
+
+    def ws_message(self, handler, msg, is_bin):
+        client = self.clients[handler]
+        if is_bin:
+            self.log_info("Client[{0}]: Binary message received: {1} bytes"\
+                          .format(client, len(msg)))
+        else:
+            self.log_info("Client[{0}]: Text message received: {1}"\
+                          .format(client, msg.decode('utf-8')))
+        # Echo
+        handler.sendMessage(msg, is_bin)
+
+    def ws_close(self, handler, was_clean, code, reason):
+        client = self.clients[handler]
+        del self.clients[handler]
+        self.log_info(("Client[{0}]: Websocket closed (clean: {1} - "
+                        "code: {2} - reason: {3})").format(client, was_clean,
+                                                            code, reason))
 
     # Sihd
 

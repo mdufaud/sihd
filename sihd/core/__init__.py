@@ -4,4 +4,5 @@ from .SihdObject import SihdObject
 from .SihdRunnableObject import SihdRunnableObject
 from .RunnableThread import RunnableThread
 from .RunnableProcess import RunnableProcess
+from .ChannelContainer import ChannelContainer
 from .Channel import *

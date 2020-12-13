@@ -70,6 +70,69 @@ class TestSihdApi(unittest.TestCase):
 
 
     #
+    # Vars
+    #
+
+    def test_tokenize(self):
+        ret = sihd.var.tokenize(None)
+        self.assertEqual(ret, {})
+        ret = sihd.var.tokenize("")
+        self.assertEqual(ret, {})
+        ret = sihd.var.tokenize("s=testin;int=40;boolT=true;boolF=False;"
+                                "float=4.44;noint='11';nofloat='9.4';nobool='true'")
+        self.assertEqual(ret['int'], 40)
+        self.assertEqual(ret['boolT'], True)
+        self.assertEqual(ret['boolF'], False)
+        self.assertEqual(ret['float'], 4.44)
+        self.assertEqual(ret['s'], 'testin')
+        self.assertEqual(ret['noint'], '11')
+        self.assertEqual(ret['nofloat'], '9.4')
+        self.assertEqual(ret['nobool'], 'true')
+        ret = sihd.var.tokenize("key='a token with ; in it';key2='another token;'")
+        self.assertEqual(ret['key'], "a token with ; in it")
+        self.assertEqual(ret['key2'], "another token;")
+        #Error
+        with self.assertRaises(ValueError):
+            sihd.var.tokenize(";key=value;anotherkey=1=3")
+        with self.assertRaises(ValueError):
+            sihd.var.tokenize("key=value;anotherkey=1=3;")
+        with self.assertRaises(ValueError):
+            sihd.var.tokenize("key;key2=bla")
+
+    def test_vars(self):
+        dic = {
+            'key': 42,
+            'subdic': {
+                'key': 24
+            },
+            'lst': [1],
+        }
+        lst = [1, 2, [3, 4], {'key': 5}]
+        # Lst
+        self.assertEqual(sihd.var.deep_find(lst, '0'), lst[0])
+        self.assertEqual(sihd.var.deep_find(lst, '2.1'), lst[2][1])
+        self.assertEqual(sihd.var.deep_find(lst, '3.key'), lst[3]['key'])
+        # Dic
+        self.assertEqual(sihd.var.deep_find(dic, 'key'), dic['key'])
+        self.assertEqual(sihd.var.deep_find(dic, 'subdic.key'), dic['subdic']['key'])
+        self.assertEqual(sihd.var.deep_find(dic, 'lst.0'), dic['lst'][0])
+        # Set
+        sihd.var.deep_set(lst, '2.1', 1337)
+        sihd.var.deep_set(dic, 'lst.0', 10)
+        sihd.var.deep_set(dic, 'subdic.key', 1000)
+        sihd.var.deep_set(dic, 'subdic.newkey', 1001)
+        self.assertEqual(sihd.var.deep_find(lst, '2.1'), 1337)
+        self.assertEqual(sihd.var.deep_find(dic, 'lst.0'), 10)
+        self.assertEqual(sihd.var.deep_find(dic, 'subdic.key'), 1000)
+        self.assertEqual(sihd.var.deep_find(dic, 'subdic.newkey'), 1001)
+        # Protected set
+        self.assertFalse(sihd.var.deep_pset(dic, 'key.notadict', 0))
+        self.assertFalse(sihd.var.deep_pset(dic, 'lst.1', 0))
+        self.assertFalse(sihd.var.deep_pset(dic, 'subdic.notakey.1', 0))
+        # Protected find
+        self.assertEqual(sihd.var.deep_pfind(dic, 'lst.111111'), None)
+        self.assertEqual(sihd.var.deep_pfind(dic, 'lst.111111', False), False)
+    #
     # Resources
     #
 

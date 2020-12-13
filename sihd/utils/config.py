@@ -3,6 +3,7 @@
 
 import json
 from collections import OrderedDict
+from . import var as sihd_var
 
 class ConfigObject(object):
 
@@ -30,58 +31,17 @@ class ConfigObject(object):
         self.setted = False
         self.value = None
 
-    def __path_assign(self, val, key, value):
-        if isinstance(val, dict):
-            try:
-                val[key] = value
-            except KeyError as exc:
-                raise KeyError("Conf '{}': Key not found: {}"\
-                               .format(self.key, key)) from exc
-        elif isinstance(val, (list, tuple)):
-            try:
-                val[int(key)] = value
-            except IndexError as exc:
-                raise KeyError("Conf '{}': Index not found: {}"\
-                               .format(self.key, key)) from exc
-        else:
-            raise KeyError("Conf '{}': For key '{}' cannot assign type: {}"
-                           .format(self.key, key, type(val)))
-
-    def __path_browse(self, val, key):
-        if isinstance(val, dict):
-            try:
-                return val[key]
-            except KeyError as exc:
-                raise KeyError("Conf '{}': Key not found: {}".format(self.key, key)) from exc
-        elif isinstance(val, (list, tuple)):
-            try:
-                return val[int(key)]
-            except IndexError as exc:
-                raise KeyError("Conf '{}': Index not found: {}".format(self.key, key)) from exc
-        else:
-            raise KeyError("Conf '{}': Cannot go further with key: {}".format(self.key, key))
-
     def deep_set(self, keylst, value, default=True):
-        if not keylst:
-            return
         val = self.value
         if val is None and default is True:
             val = self.default
-        for key in keylst[:-1]:
-            val = self.__path_browse(val, key)
-        self.__path_assign(val, keylst[-1], value)
-        return val
+        return sihd_var.deep_set(val, keylst, value)
 
-
-    def find(self, keylst, default=True):
-        if not keylst:
-            return
+    def deep_find(self, keylst, default=True):
         val = self.value
         if val is None and default is True:
             val = self.default
-        for key in keylst:
-            val = self.__path_browse(val, key)
-        return val
+        return sihd_var.deep_find(val, keylst)
 
     def __str__(self):
         return "{}: {} (default={}, forced={}, expose={})".format(
@@ -92,7 +52,7 @@ class ConfigApi(object):
     def __init__(self, section_name):
         self.name = section_name
         self.dict = OrderedDict()
-        self.configured = False
+        self.loaded = False
 
     def dump(self):
         print(self.name + ": ")
@@ -140,6 +100,7 @@ class ConfigApi(object):
         self.set(key, value, **kwargs)
 
     def set(self, path, value, dynamic=False, force=False):
+        # Check if path is dot separated
         split = path.split('.')
         if split:
             key = split[0]
@@ -164,6 +125,11 @@ class ConfigApi(object):
     def reset(self, key):
         self.dict[key].reset()
 
+    def reset_default(self):
+        for key, config in self.dict.items():
+            config.reset()
+        self.loaded = False
+
     #
     # Get
     #
@@ -185,12 +151,14 @@ class ConfigApi(object):
             :param dynamic: do not raise key error if config key not found
             :return: value or None if not found
         """
+        # Check if path is dot separated
         split = path.split('.')
         if split:
             key = split[0]
             split = split[1:]
         else:
             key = path
+        # If key is not in configuration
         if key not in self.dict:
             if dynamic is True:
                 return ret
@@ -198,12 +166,15 @@ class ConfigApi(object):
                 raise KeyError("{}: key {} not found".format(self.name, path))
         conf = self.dict[key]
         if split:
-            exceptions = (KeyError) if dynamic is True else ()
+            # Find value from dot separated path
             try:
-                val = conf.find(split)
-            except exceptions:
+                val = conf.deep_find(split)
+            except (KeyError, IndexError) as exc:
+                if dynamic is not True:
+                    raise KeyError("{}: path error {}".format(self.name, path)) from exc
                 val = None
         else:
+            # Gets value from conf
             val = conf.value
             if default is False and conf.default == val:
                 val = ret
@@ -226,7 +197,7 @@ class ConfigApi(object):
     def load_dict(self, dic, **kwargs):
         for key, value in dic.items():
             self.set(key, value, **kwargs)
-        self.configured = True
+        self.loaded = True
 
     def load(self, conf, **kwargs):
         ret = True

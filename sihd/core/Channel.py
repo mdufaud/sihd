@@ -61,8 +61,13 @@ class Channel(AObservable, IObserver, ALoggable):
     def __init__(self, name="Channel", mp=False, parent=None,
                     block=True, timeout=10, log=True,
                     default=None, timestamp=False, pollable=True,
-                    lfilter=None):
+                    lfilter=None, time_method=time.time):
         super().__init__(name, parent=parent)
+        self.args = None
+        self.write_args = None
+        self.read_args = 0
+        self.type = None
+        self.now = time_method
         if lfilter and not callable(lfilter):
             raise RuntimeError(str(self) + ": Filter is not a callable")
         self.filter = lfilter
@@ -72,7 +77,7 @@ class Channel(AObservable, IObserver, ALoggable):
             self.set_log_active(False)
         if mp is True:
             _setup_mp()
-        self.pollable = bool(pollable)
+        self.pollable = pollable
         if pollable:
             if mp is True:
                 self.__event = multiprocessing.Event()
@@ -83,12 +88,14 @@ class Channel(AObservable, IObserver, ALoggable):
             self.is_new_data = self.__event.is_set
             self.wait = self.__event.wait
         if mp is True:
+            # Multiprocessing
             self.__last_ts = multiprocessing.Value('i', 0)
             self.do_timestamp = self.__do_timestamp_mp
             self.get_timestamp = self.__get_timestamp_mp
             self.__lock = multiprocessing.Lock()
             self.lock = self.__lock_mp
         else:
+            # Threading
             self.__last_ts = 0
             self.__lock = threading.Lock()
         self.__alock = self.__lock.acquire
@@ -119,11 +126,11 @@ class Channel(AObservable, IObserver, ALoggable):
 
     def do_timestamp(self):
         if self.__ts:
-            self.__last_ts = time.time()
+            self.__last_ts = self.now()
 
     def __do_timestamp_mp(self):
         if self.__ts:
-            self.__last_ts.value = time.time()
+            self.__last_ts.value = self.now()
 
     def get_timestamp(self):
         return self.__last_ts
@@ -358,6 +365,8 @@ class ChannelQueue(Channel):
         self.__size = size
         kwargs['pollable'] = True
         super().__init__(mp=mp, name=name, **kwargs)
+        self.write_args = 1
+        self.read_args = 0
         self.wait = self._qwait
 
     #
@@ -468,6 +477,9 @@ class ChannelObject(Channel):
         else:
             self.__obj = self.__classes[ident](*obj_args, **obj_kwargs)
         super().__init__(mp=mp, name=name, **kwargs)
+        self.type = object
+        self.write_args = 2
+        self.read_args = 1
 
     #
     # Channel Object only
@@ -508,6 +520,9 @@ class ChannelObject(Channel):
     def get_data(self):
         return self.__obj
 
+    def get_size(self):
+        return 1
+
 ###############################################################################
 
 class ChannelBool(Channel):
@@ -529,6 +544,11 @@ class ChannelBool(Channel):
         self.__is = self.__event.is_set
         self.__wait = self.__event.wait
         super().__init__(name=name, mp=mp, default=default, **kwargs)
+        self.write_args = 1
+        self.type = bool
+
+    def get_size(self):
+        return 1
 
     def _write(self, flag):
         if flag:
@@ -564,6 +584,8 @@ class ChannelString(Channel):
             self.__string = "" * size
         self.__size = size
         super().__init__(mp=mp, name=name, **kwargs)
+        self.write_args = 1
+        self.type = str
 
     def _write(self, data):
         if not isinstance(data, str):
@@ -646,6 +668,9 @@ class ChannelArray(Channel):
         self.__cast = get_ctype(ctype)
         self.__size = size
         super().__init__(mp=mp, name=name, **kwargs)
+        self.write_args = 2
+        self.read_args = 2
+        self.type = list
 
     def get_size(self):
         return self.__size
@@ -737,12 +762,15 @@ class ChannelArray(Channel):
 
 import pickle
 
-class ChannelPickle(ChannelArray):
+class ChannelBytes(ChannelArray):
 
-    def __init__(self, size=200, name="ChannelPickle", **kwargs):
+    def __init__(self, size=200, name="ChannelBytes", **kwargs):
         self.__loads = pickle.loads
         self.__dumps = pickle.dumps
         super().__init__(ctype='B', size=size, name=name, **kwargs)
+        self.write_args = 1
+        self.read_args = 0
+        self.type = bytes
 
     def read(self):
         b = self.get_bytes()
@@ -770,6 +798,11 @@ class ChannelCType(Channel):
         else:
             self.__value = get_ctype(ctype)()
         super().__init__(mp=mp, name=name, **kwargs)
+        self.write_args = 1
+        self.type = int
+
+    def get_size(self):
+        return 1
 
     def _write(self, data):
         self.__value.value = data
@@ -845,9 +878,10 @@ class ChannelLong(ChannelCType):
 
 class ChannelDouble(ChannelCType):
 
-    def __init__(self, name="ChannelDouble", float=False, **kwargs):
-        t = 'd' if float is False else 'f'
+    def __init__(self, name="ChannelDouble", type_float=False, **kwargs):
+        t = 'd' if type_float is False else 'f'
         super().__init__(name=name, ctype=t, **kwargs)
+        self.type = float
 
 ###############################################################################
 
@@ -858,6 +892,7 @@ class ChannelCounter(ChannelInt):
         super().__init__(name=name, unsigned=False, default=default, **kwargs)
         if default:
             super()._write(default)
+        self.write_args = 0
 
     def _write(self, *args):
         return super()._write(self.read() + 1)
@@ -886,6 +921,9 @@ class ChannelDict(Channel):
         else:
             self.__dict = dict()
         super().__init__(mp=mp, name=name, **kwargs)
+        self.write_args = 2
+        self.read_args = 2
+        self.type = dict
 
     def _write(self, key, value=None):
         if isinstance(key, dict):
@@ -936,6 +974,9 @@ class ChannelList(Channel):
             self.__list = list()
         self.__append = self.__list.append
         super().__init__(mp=mp, name=name, **kwargs)
+        self.type = list
+        self.write_args = 2
+        self.read_args = 1
 
     def _write(self, value, i=None):
         l = self.__list
@@ -957,6 +998,9 @@ class ChannelList(Channel):
             return l[i]
         return None
 
+    def get_size(self):
+        return len(self.__list)
+
     def get_data(self):
         return self.__list
 
@@ -975,6 +1019,12 @@ class ChannelCondition(Channel):
             self.__condition = threading.Condition(lock=lock)
         kwargs['pollable'] = False
         super().__init__(name=name, mp=mp, **kwargs)
+        self.type = bool
+        self.write_args = 1
+        self.read_args = 0
+
+    def get_size(self):
+        return 1
 
     def _write(self, n=0):
         cd = self.__condition
@@ -994,6 +1044,43 @@ class ChannelCondition(Channel):
 
 ###############################################################################
 
+class ChannelFunction(Channel):
+
+    def __init__(self, name="ChannelFunction", read=None, write=None, **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.type = object
+        self.write_args = None
+        self.read_args = None
+        if read is not None and not callable(read):
+            raise RuntimeError("Read function not callable")
+        if write is not None and not callable(write):
+            raise RuntimeError("Write function not callable")
+        self.read_method = read
+        self.write_method = write
+
+    def get_size(self):
+        return 0
+
+    def get_data(self):
+        return None
+
+    def is_readable(self):
+        return self.read_method is not None and super().is_readable()
+
+    def _write(self, *args, **kwargs):
+        f = self.write_method
+        if f is not None:
+            return f(*args, **kwargs)
+        return False
+
+    def read(self, *args, **kwargs):
+        f = self.read_method
+        if f is not None:
+            return f(*args, **kwargs)
+        return None
+
+###############################################################################
+
 channel_factory = {
     'counter': ChannelCounter,
     'condition': ChannelCondition,
@@ -1004,12 +1091,13 @@ channel_factory = {
     'object': ChannelObject,
     'queue': ChannelQueue,
     'string': ChannelString,
-    'pickle': ChannelPickle,
+    'bytes': ChannelBytes,
     'byte': ChannelByte,
     'char': ChannelChar,
     'short': ChannelShort,
     'int': ChannelInt,
     'long': ChannelLong,
     'double': ChannelDouble,
+    'function': ChannelFunction,
     'default': Channel
 }

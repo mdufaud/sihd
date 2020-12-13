@@ -65,12 +65,8 @@ class SihdRunnableObject(SihdObject):
     #
 
     def step(self):
-        """
-            Not necessarily useful since we have observer/observable
-            But in some cases when service is stopped you may want
-                to check your inputs
-        """
-        self.read_channels_input()
+        """ Poll channels input then run on_step """
+        self.poll_channels_input()
         ret = self.is_running()
         if ret:
             ret = self.on_step()
@@ -84,7 +80,7 @@ class SihdRunnableObject(SihdObject):
     #
 
     def on_setup(self, conf):
-        ret = super().on_setup(conf)
+        ret = True
         timeout = conf.get("runnable_timeout", dynamic=True)
         if timeout:
             self.__run_timeout = float(timeout)
@@ -105,6 +101,12 @@ class SihdRunnableObject(SihdObject):
         elif type != 'none':
             self.log_error("No such runnable type " + str(type))
             ret = False
+        if conf.get('channels_input') == 'observe' and self.is_service_multiprocessing():
+            self.log_warning("Configured to observe channels and multiprocess, "
+                             "in an detached process the service must poll "
+                             "its input channels - Switching to 'poll'")
+            conf.set('channels_input', 'poll')
+        ret = ret and super().on_setup(conf)
         return ret
 
     #
@@ -121,6 +123,8 @@ class SihdRunnableObject(SihdObject):
             self.stop()
 
     def on_runnable_start(self, runnable):
+        name = "{}.{}".format(self.get_path(), self.get_runnable_type())
+        self.logger = sihd.log.get_logger(name)
         self.log_info("runnable {} started".format(self.get_runnable_type()))
 
     def on_runnable_stop(self, runnable, iteration):
@@ -141,7 +145,7 @@ class SihdRunnableObject(SihdObject):
     def __make_runnable(self):
         runnable = None
         kwargs = {
-            'name': self.get_name(),
+            'name': "runnable",
             'step': self.step,
             'on_start': self.on_runnable_start,
             'on_stop': self.on_runnable_stop,
@@ -155,9 +159,11 @@ class SihdRunnableObject(SihdObject):
         }
         if self.__is_thread:
             runnable = RunnableThread(**kwargs)
+            kwargs['runnable_name'] = self.get_path() + ".thread"
             self.log_debug("service is a threaded runnable")
         elif self.__is_process:
             kwargs['on_start'] = self.__start_children
+            kwargs['runnable_name'] = self.get_path() + ".process"
             runnable = RunnableProcess(**kwargs)
             self.log_debug("service is a processed runnable")
         elif self.__is_default:
@@ -203,15 +209,15 @@ class SihdRunnableObject(SihdObject):
         self.__make_runnable()
         return super()._init_impl()
 
-    def on_start(self):
-        """ Done after start because you want service to be 'running' """
-        r = self.__runnable
-        if r:
-            r.start()
-
     def _start_impl(self):
         """ If runnable then start it in on_start """
         r = self.__runnable
         if r:
             return True
         return super()._start_impl()
+
+    def on_start(self):
+        """ Done after start because you want service to be 'running' """
+        r = self.__runnable
+        if r:
+            r.start()

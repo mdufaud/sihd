@@ -72,7 +72,7 @@ class TestApiConfig(unittest.TestCase):
             api.set('dic.smth.else', -1)
         api.set('lst.1.2', [15, 51])
         self.assertEqual(api.get('lst.1.2'), [15, 51])
-        with self.assertRaises(KeyError):
+        with self.assertRaises(IndexError):
             api.set('lst.1.3', -1)
         api.set('lst.1.-1', 'last')
         self.assertEqual(api.get('lst.1.-1'), 'last')
