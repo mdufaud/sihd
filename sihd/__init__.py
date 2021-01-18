@@ -5,7 +5,7 @@ __version__ = "0.0.2"
 
 # Before because of term color usage in other modules
 from .utils import term
-from .utils import tree, network, sys, pcap, shell, resources, strings, stats, var, logger
+from .utils import tree, network, sys, pcap, shell, resources, strings, stats, var, logger, path
 
 log = logger.LoggerApi("")
 

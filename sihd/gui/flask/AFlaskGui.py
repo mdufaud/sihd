@@ -93,7 +93,7 @@ class AFlaskGui(AGui):
         ret = super().on_setup(config)
         res_paths = config.get('resources_path')
         for path in res_paths:
-            sihd.resources.add(path)
+            sihd.path.add(path)
         path = self.configuration.get("web_path")
         self.flask_app = self.create_flask_app(path)
         self.server = self.create_server(self.flask_app)

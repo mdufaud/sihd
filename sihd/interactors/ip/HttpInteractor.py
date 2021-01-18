@@ -48,11 +48,11 @@ class HttpInteractor(AInteractor):
 
     def on_setup(self, conf):
         ret = super().on_setup(conf)
-        path_post = sihd.resources.get(conf.get("json_post_file", default=False))
+        path_post = sihd.path.get(conf.get("json_post_file", default=False))
         if path_post:
             post = self.get_json_from_file(path_post)
             ret = ret and self.set_post(post)
-        path_header = sihd.resources.get(conf.get("json_header_file", default=False))
+        path_header = sihd.path.get(conf.get("json_header_file", default=False))
         if path_header:
             headers = self.get_json_from_file(path_header)
             ret = ret and self.set_headers(headers)

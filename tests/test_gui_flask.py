@@ -144,7 +144,7 @@ class SimpleApp(SihdApp):
         super(SimpleApp, self).__init__(name)
         dirname = os.path.dirname
         join = os.path.join
-        self.set_app_path(sihd.resources.get('tests', 'output'))
+        self.set_app_path(sihd.path.get('tests', 'output'))
 
     def service_state_changed(self, service, stopped, paused):
         if self.is_gui(service) is False:
@@ -155,7 +155,7 @@ class SimpleApp(SihdApp):
     def build_services(self):
         self.gui = SimpleFlask(app=self)
         self.gui.configuration.load({
-            "web_path": sihd.resources.get("www"),
+            "web_path": sihd.path.get("www"),
             "flask": {
                 "TESTING": True,
             },
@@ -179,7 +179,7 @@ class InfiniteReader(AReader):
 class TestFlaskGui(unittest.TestCase):
 
     def setUp(self):
-        sihd.resources.add("tests", "resources", "gui", "flask")
+        sihd.path.add("tests", "resources", "gui", "flask")
         print()
 
     def tearDown(self):
@@ -191,7 +191,7 @@ class TestFlaskGui(unittest.TestCase):
         provider = InfiniteReader(name='provider')
         gui = SimpleFlask()
         gui.configuration.load({
-            "web_path": sihd.resources.get("www"),
+            "web_path": sihd.path.get("www"),
             "flask": {
                 "TESTING": True,
             },

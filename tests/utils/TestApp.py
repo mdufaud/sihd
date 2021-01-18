@@ -21,7 +21,7 @@ class TestApp(SihdApp):
         self._default_log_level = "info"
         dirname = os.path.dirname
         join = os.path.join
-        self.set_app_path(sihd.resources.get_dir('tests', 'output'))
+        self.set_app_path(sihd.path.get_dir('tests', 'output'))
         sihd.log.set_color(True)
         self.file_read = False
         self.handle_done = False

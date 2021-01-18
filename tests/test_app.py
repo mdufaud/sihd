@@ -15,12 +15,12 @@ from sihd.utils.sys import memory
 class TestAppApi(unittest.TestCase):
 
     def setUp(self):
-        sihd.resources.add("tests", "resources", "txt")
+        sihd.path.add("tests", "resources", "txt")
         print()
         sihd.tree.clear()
 
     def tearDown(self):
-        sihd.resources.remove("tests", "resources", "txt")
+        sihd.path.remove("tests", "resources", "txt")
         pass
 
     def file_expect(self, app, lines, skipped,
@@ -69,15 +69,15 @@ class TestAppApi(unittest.TestCase):
         app.log_info(sihd.sys.memory.usage_format(byte_after - byte_before))
 
     def test_file_reader(self):
-        self.do_file(sihd.resources.get("5_lines.txt"), 5, 0, {"world": 2})
+        self.do_file(sihd.path.get("5_lines.txt"), 5, 0, {"world": 2})
 
     def test_file_reader_2(self):
-        self.do_file(sihd.resources.get("comments_and_empty_lines.txt"), 10, 6, {"A": 2})
+        self.do_file(sihd.path.get("comments_and_empty_lines.txt"), 10, 6, {"A": 2})
 
     def test_life_cycle(self):
         app = utils.TestApp()
         app.set_args([
-            "-f", sihd.resources.get_file("5_lines.txt"),
+            "-f", sihd.path.get_file("5_lines.txt"),
             "-s",
         ])
         self.assertTrue(app.setup_app())

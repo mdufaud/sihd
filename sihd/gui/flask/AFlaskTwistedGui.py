@@ -79,7 +79,7 @@ class AFlaskTwistedGui(AFlaskGui):
     def put_static_resources(self, root):
         dic = self.configuration.get('static_resources_path')
         for route, path in dic.items():
-            static_resource = File(sihd.resources.get(path))
+            static_resource = File(sihd.path.get(path))
             root.putChild(route.encode(), static_resource)
 
     def create_root_resource(self, app):

@@ -89,7 +89,7 @@ class InfiniteReader(AReader):
 class TestFlaskSocketioGui(unittest.TestCase):
 
     def setUp(self):
-        sihd.resources.add("tests", "resources", "gui", "flask")
+        sihd.path.add("tests", "resources", "gui", "flask")
         print()
 
     def tearDown(self):
@@ -101,7 +101,7 @@ class TestFlaskSocketioGui(unittest.TestCase):
         provider = InfiniteReader(name='provider')
         gui = SimpleFlask()
         gui.configuration.load({
-            "web_path": sihd.resources.get("www"),
+            "web_path": sihd.path.get("www"),
             "flask": {
                 "TESTING": True,
             },

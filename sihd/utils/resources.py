@@ -1,145 +1,41 @@
 #!/usr/bin/python
 # coding: utf-8
 
-import sys
-from os import getcwd, listdir
-from os.path import join, exists, dirname, abspath, isfile, isdir, basename
-glob = None
+import atexit
+import os
+from weakref import WeakSet
 
-#
-# Paths
-#
+pid = os.getpid()
+services = WeakSet()
+threads = WeakSet()
+processes = WeakSet()
 
-resource_paths = []
+def register_service(service):
+    services.add(service)
 
-def add(*path, verify=True):
-    """ Adds a directory to resources path """
-    if not path or None in path:
-        return False
-    path = abspath(join(*path))
-    if verify is True and not isdir(path) or path in resource_paths:
-        return False
-    resource_paths.append(path)
-    return True
+def register_thread(thread):
+    threads.add(thread)
 
-def remove(*path):
-    """ Remove a directory from resources path """
-    if not path or None in path:
-        return False
-    path = abspath(join(*path))
-    if path not in resource_paths:
-        return False
-    resource_paths.remove(path)
-    return True
+def register_process(proc):
+    processes.add(proc)
 
-import sihd
-sihd_path = dirname(sihd.__file__)
-exe_path = dirname(sys.argv[0])
-initial_wd = getcwd()
-add(exe_path)
-add(initial_wd)
-add(sihd_path)
+def stop_services():
+    for service in services:
+        if service.is_running():
+            try:
+                service.stop()
+            except:
+                pass
 
-#
-# Get
-#
+def end_threads():
+    pass
 
-def get_path(dirname, reverse=False):
-    """
-        Get the path of a directory from resources path
+def end_processes():
+    pass
 
-        resources_path:
-            /path/to/directory
-            /second/path/to/another
+def end_program():
+    stop_services()
+    end_threads()
+    end_processes()
 
-        get_path("another") -> /second/path/to/another
-    """
-    if not dirname:
-        return
-    path = abspath(dirname)
-    if exists(path) and isdir(path):
-        return path
-    for path in resource_paths[::-1 if reverse else 1]:
-        if isdir(path) and basename(path) == dirname:
-            return path
-    return None
-
-def get(*filename, reverse=False, file=True, dir=True):
-    """
-        Get a file or a directory from resources path
-
-        filesystem:
-            /path/to/directory/file1
-            /path/to/directory/file2
-            /path/to/directory/dir/file
-
-        resoures_path:
-            /path/to/directory
-
-        get("file1") -> /path/to/directory/file1
-        get("dir", "file") -> /path/to/directory/dir/file
-    """
-    if not filename or None in filename:
-        return
-    output = abspath(join(*filename))
-    if exists(output)\
-        and ((file is True and isfile(output))\
-            or (dir is True and isdir(output))):
-        return output
-    for path in resource_paths[::-1 if reverse else 1]:
-        output = abspath(join(path, *filename))
-        if exists(output)\
-            and ((file is True and isfile(output))\
-                or (dir is True and isdir(output))):
-            return output
-    return None
-
-def get_dir(*filename):
-    return get(*filename, dir=True, file=False)
-
-def get_file(*filename):
-    return get(*filename, file=True, dir=False)
-
-#
-# Find
-#
-
-def _find_recursive(filename, directory):
-    ret = None
-    for dirname in listdir(directory):
-        path = abspath(join(directory, dirname))
-        output = abspath(join(path, filename))
-        if exists(output) and isfile(output):
-            ret = output
-        elif isdir(path):
-            ret = _find_recursive(filename, path)
-        if ret is not None:
-            break
-    return ret
-
-def find(filename, reverse=False):
-    if not filename:
-        return
-    if exists(abspath(filename)):
-        return abspath(filename)
-    ret = None
-    for dirname in resource_paths[::-1 if reverse else 1]:
-        output = abspath(join(dirname, filename))
-        if exists(output) and isfile(output):
-            ret = output
-        else:
-            ret = _find_recursive(filename, dirname)
-        if ret is not None:
-            break
-    return ret
-
-def glob_find(expr, reverse=False, *args, **kwargs):
-    global glob
-    if glob is None:
-        import glob
-    ret = []
-    for name in resource_paths[::-1 if reverse else 1]:
-        lst = glob.glob(join(name, expr), *args, **kwargs)
-        if lst:
-            ret.extend(lst)
-    return ret
+atexit.register(stop_services)
