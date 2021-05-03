@@ -90,7 +90,9 @@ cleaninstall:
 	echo "Removing $(NAME) dependencies"
 	rm -rf $(CONAN_PATH) $(EXTLIB_PATH) && echo "Done" || echo "Failed"
 
-fclean: clean cleaninstall
+fclean:
+	echo "Removing build"
+	rm -rf $(BUILD_PATH)
 
 ### Makefile
 .PHONY: install build buildv test dist fclean clean cleaninstall
