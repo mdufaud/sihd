@@ -1,0 +1,18 @@
+#ifndef __PROJ_NAME_UPPER_MODULE_NAME_UPPER_CLASS_NAME_UPPER__
+# define __PROJ_NAME_UPPER_MODULE_NAME_UPPER_CLASS_NAME_UPPER__
+
+namespace PROJ_NAME::MODULE_NAME
+{
+
+class CLASS_NAME
+{
+    public:
+        CLASS_NAME();
+        ~CLASS_NAME();
+
+    private:
+};
+
+}
+
+#endif

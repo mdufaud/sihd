@@ -1,0 +1,5 @@
+*.so
+*.o
+*.os
+.vscode
+.sconsign.dblite

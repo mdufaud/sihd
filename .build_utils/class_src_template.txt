@@ -1,0 +1,14 @@
+#include <PROJ_NAME/MODULE_NAME/CLASS_NAME.hpp>
+
+namespace PROJ_NAME::MODULE_NAME
+{
+
+CLASS_NAME::CLASS_NAME()
+{   
+}
+
+CLASS_NAME::~CLASS_NAME()
+{
+}
+
+}
