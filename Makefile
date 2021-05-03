@@ -1,5 +1,3 @@
-ARGS = $(foreach a,$($(subst -,_,$1)_args),$(if $(value $a),$a="$($a)"))
-
 OS := $(shell uname)
 
 ifeq ($(OS),Linux)
@@ -45,24 +43,35 @@ $(EXTLIB_PATH):
 ### Scons (builder) ###
 
 build: install
-	$(BUILD_CMD) verbose=$(verbose) module=$(module)
+	$(BUILD_CMD) verbose=$(verbose) module=$(module) test=$(test) dist=$(dist)
 
 ### Test ###
 
 test: $(TEST_PATH)
-	./$(TEST_PATH)/*
+ifeq ($(m), )
+	./$(TEST_PATH)/* --gtest_filter="*$(t)*"
+else
+	./$(TEST_PATH)/$(NAME)_$(m) --gtest_filter="*$(t)*"
+endif
 
-$(TEST_PATH): build
+testls: $(TEST_PATH)
+ifeq ($(m), )
+	./$(TEST_PATH)/* --gtest_list_tests
+else
+	./$(TEST_PATH)/$(NAME)_$(m) --gtest_list_tests
+endif
+
+$(TEST_PATH):
+	$(MAKE) test=1 build
 
 ### Distribution ###
 
-dist: install
-	BUILD_ARGS="dist=1" $(BUILD_CMD)
+dist:
+	$(MAKE) dist=1 build
 
 ### Builder ###
 
 newmod:
-	echo $(ARGS)
 	bash $(BUILD_UTILS)/make_module.sh $(NAME) $(m)
 
 newtest:

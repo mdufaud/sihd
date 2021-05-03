@@ -20,18 +20,19 @@ modules = {
 }
 
 #
-# Env
+# Main shared environment
 #
 
 globalenv = Environment(
     CC = "c++",
     CCFLAGS = '-Wall -Wextra -Werror',
-    CPPFLAGS = "-std=c++0x -pthread",
+    CPPFLAGS = [],
     CPPDEFINES = [],
     CPPPATH = [],
     LIBS = [],
 )
-if ARGUMENTS.get("verbose", "") != "1":
+verbose = ARGUMENTS.get("verbose", "") == "1"
+if verbose == False:
     globalenv["SHCXXCOMSTR"] = "Compiling shared C++: $SOURCE"
     globalenv["SHLINKCOMSTR"] = "Linking shared library: $TARGET"
     globalenv["CXXCOMSTR"] = "Compiling C++: $SOURCE"
@@ -56,49 +57,64 @@ globalenv["RPATH"] = [
     abspath(str(globalenv["SIHD_BUILD_LIB"])),
     abspath(str(globalenv["SIHD_EXTLIB_LIB"]))
 ]
+
 #globalenv.ParseConfig("pkg-config x11 --cflags --libs")
+
+Decider('timestamp-newer')
 
 #
 # Args
 #
 
 def rec_get_single_module_dependencies(module_name, modlist: dict):
-    conf = modules[module_name]
+    """ Gets a single module dependency tree """
+    conf = modules.get(module_name, None)
+    if conf is None:
+        print("No such module: {}".format(module_name))
+        Exit(1)
     modlist[module_name] = conf
     for dep in conf.get('depends', []):
         rec_get_single_module_dependencies(dep, modlist)
 
+single_module = ARGUMENTS.get('module', "")
+if single_module:
+    # If a single module build is asked, build its dependencies
+    build_modules = {}
+    rec_get_single_module_dependencies(single_module, build_modules)
+else:
+    build_modules = modules
+
+distribution = ARGUMENTS.get('dist', "") == "1"
+make_tests = ARGUMENTS.get('test', "") == "1"
+
+#
+# Build
+#
+
 def rec_get_module_real_depends(module_name, modlist: dict):
-    conf = modules[module_name]
+    """ Makes a map [modulename] = trashvalue
+        to have a single module real dependencies """
+    conf = modules.get(module_name, None)
+    if conf is None:
+        print("No such module: {}".format(module_name))
+        Exit(1)
     depends = conf.get('depends', [])
     for depend in depends:
         modlist[depend] = True
         rec_get_module_real_depends(depend, modlist)
 
 def fill_module_real_depends(modules: dict):
+    """ Fill all modules real dependency tree """
     for name, conf in modules.items():
         depends = {}
         rec_get_module_real_depends(name, depends)
         conf['depends'] = list(depends.keys())
 
-single_module = ARGUMENTS.get('module', None)
-if single_module:
-    build_modules = {}
-    rec_get_single_module_dependencies(single_module, build_modules)
-else:
-    build_modules = modules
-
 fill_module_real_depends(build_modules)
 
-Decider('timestamp-newer')
-
-#
-# Build
-#
-
 targets = []
-
 def add_targets(src):
+    """ Remember every source file used to build """
     global targets
     if isinstance(src, str):
         targets.append(File(src))
@@ -106,12 +122,16 @@ def add_targets(src):
         targets += src
 
 def build_test(self, src=None):
+    """ Environment method to build unit test binary for a module """
+    if make_tests == False:
+        return None
     src = src or Glob('test/*.cpp')
     add_targets(src)
     test_path = join("$SIHD_BUILD_TEST", self["SIHD_MODULE"])
     return self.Program(test_path, src)
 
 def build_lib(self, src=None):
+    """ Environment method to build a shared library for a module """
     src = src or Glob('src/*.cpp')
     add_targets(src)
     module_name = self["SIHD_MODULE"]
@@ -121,17 +141,21 @@ def build_lib(self, src=None):
     return lib
 
 def build_bin(self, src):
+    """ Environment method to build a binary for a module """
     add_targets(src)
     bin_path = join("$SIHD_BUILD_BIN", self["SIHD_MODULE"])
     return env.Program(bin_path, src)
 
 def get_modules_headers(*args):
+    """ Returns modules headers path """
     return [join("#", m, "include") for m in args]
 
 def get_modules_libname(*args):
+    """ Returns modules lib names """
     return ["{}_{}".format(projname, m) for m in args]
 
 def get_extlib_headers(*args):
+    """ Grab external libs headers path """
     ret = []
     for m in args:
         ret += Glob(join(extlib_include_path, "*{}*".format(m)))
@@ -141,6 +165,7 @@ built = {}
 build_obj_path = str(globalenv["SIHD_BUILD_OBJ"])
 for name, conf in build_modules.items():
     module_format = "{}_{}".format(projname, name)
+    # Create an environment for every module
     env = globalenv.Clone()
     depends = conf.get("depends", [])
     libs = conf.get("libs", [])
@@ -158,9 +183,7 @@ for name, conf in build_modules.items():
     env.AddMethod(build_lib, "build_lib")
     env.AddMethod(build_bin, "build_bin")
     env.AddMethod(build_test, "build_test")
-
     print("Building {} module: {}".format(projname, name))
-
     built[name] = SConscript(Dir(name).File("scons.py"),
                             variant_dir = join(build_obj_path, name),
                             duplicate = 0,
