@@ -8,7 +8,7 @@ else
 	GREP := /usr/bin/grep
 endif
 
-NAME = sihd
+APPNAME = sihd
 
 # Build
 BUILD_PATH = build
@@ -33,61 +33,149 @@ CONAN_INSTALL = conan install . --profile .conan_profile -if $(CONAN_PATH)
 
 all: build
 
-### Conan (external libraries dependencies retrieval) ###
+#
+# Conan (external libraries dependencies retrieval)
+#
 
 install: $(EXTLIB_PATH)
 
 $(EXTLIB_PATH):
 	$(CONAN_INSTALL)
 
-### Scons (builder) ###
+#
+# Scons (builder)
+#
 
 build: install
 	$(BUILD_CMD) verbose=$(verbose) module=$(module) test=$(test) dist=$(dist)
 
-### Test ###
+verbose:
+	$(MAKE) verbose=1 build
 
+ifeq ($(word 1, $(MAKECMDGOALS)), module)
+MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
+
+module:
+	$(MAKE) module=$(MODULE_NAME) build
+
+# for no 'no rules to make...'
+$(MODULE_NAME):
+
+endif
+
+#
+# Test
+#
+
+# handles:
+#	make test
+#	make test MODULE FILTER
+#	make test MODULE ls
+#	make test ls
+#	make test t=FILTER
+ifeq ($(word 1, $(MAKECMDGOALS)), test)
+MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
+TEST_NAME=$(word 3, $(MAKECMDGOALS))$(t)
+
+ifeq ($(MODULE_NAME), )
+	TEST_EXEC=./$(TEST_PATH)/*
+else
+	TEST_EXEC=./$(TEST_PATH)/$(APPNAME)_$(MODULE_NAME)
+endif
+
+# case: make test ls
+ifeq ($(MODULE_NAME),ls)
+ifeq ($(TEST_NAME), )
+	TEST_EXEC=./$(TEST_PATH)/*
+	TEST_NAME=ls
+endif
+endif
+
+# ls to list tests, else filter it
+ifeq ($(TEST_NAME),ls)
+	TEST_ARGS=--gtest_list_tests
+else
+	TEST_ARGS=--gtest_filter="*$(TEST_NAME)*"
+endif
+
+.PHONY: test
 test: $(TEST_PATH)
-ifeq ($(m), )
-	./$(TEST_PATH)/* --gtest_filter="*$(t)*"
-else
-	./$(TEST_PATH)/$(NAME)_$(m) --gtest_filter="*$(t)*"
-endif
-
-testls: $(TEST_PATH)
-ifeq ($(m), )
-	./$(TEST_PATH)/* --gtest_list_tests
-else
-	./$(TEST_PATH)/$(NAME)_$(m) --gtest_list_tests
-endif
+	$(TEST_EXEC) $(TEST_ARGS)
 
 $(TEST_PATH):
 	$(MAKE) test=1 build
 
-### Distribution ###
+# for no 'no rules to make...'
+$(MODULE_NAME):
+
+# for no 'no rules to make...'
+$(TEST_NAME):
+
+endif
+
+#
+# Distribution
+#
 
 dist:
 	$(MAKE) dist=1 build
 
-### Builder ###
+#
+# Builder
+#
+
+ifeq ($(word 1, $(MAKECMDGOALS)), newmod)
+MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
 
 newmod:
-	bash $(BUILD_UTILS)/make_module.sh $(NAME) $(m)
+	bash $(BUILD_UTILS)/make_module.sh $(APPNAME) $(MODULE_NAME)
+
+# for no 'no rules to make...'
+$(MODULE_NAME):
+
+endif
+
+ifeq ($(word 1, $(MAKECMDGOALS)), newtest)
+MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
+TEST_NAME=$(word 3, $(MAKECMDGOALS))$(t)
 
 newtest:
-	bash $(BUILD_UTILS)/make_test.sh $(NAME) $(m) $(t)
+	bash $(BUILD_UTILS)/make_test.sh $(APPNAME) $(MODULE_NAME) $(TEST_NAME)
+
+# for no 'no rules to make...'
+$(MODULE_NAME):
+
+# for no 'no rules to make...'
+$(TEST_NAME):
+
+endif
+
+
+ifeq ($(word 1, $(MAKECMDGOALS)), newclass)
+MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
+CLASS_NAME=$(word 3, $(MAKECMDGOALS))$(c)
 
 newclass:
-	bash $(BUILD_UTILS)/make_class.sh $(NAME) $(m) $(c)
+	bash $(BUILD_UTILS)/make_class.sh $(APPNAME) $(MODULE_NAME) $(CLASS_NAME)
 
-### Cleanup ###
+# for no 'no rules to make...'
+$(MODULE_NAME):
+
+# for no 'no rules to make...'
+$(CLASS_NAME):
+
+endif
+
+#
+# Cleanup
+#
 
 clean:
-	echo "Removing $(NAME) compilation build"
+	echo "Removing $(APPNAME) compilation build"
 	rm -rf $(LIB_PATH) $(INCLUDE_PATH) $(TEST_PATH) $(OBJ_PATH) $(BIN_PATH) && echo "Done" || echo "Failed"
 
 cleaninstall:
-	echo "Removing $(NAME) dependencies"
+	echo "Removing $(APPNAME) dependencies"
 	rm -rf $(CONAN_PATH) $(EXTLIB_PATH) && echo "Done" || echo "Failed"
 
 fclean:

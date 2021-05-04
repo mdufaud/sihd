@@ -1,6 +1,12 @@
 # SIHD
 
-## Scons
+Simple Input Handler Displayer
+
+Aimed to be a simple C++ library with some python and/or LUA bindings that gets, parse and display data
+
+## How to compile
+
+### Scons
 
 Scons version v4.1.0
 
@@ -8,7 +14,7 @@ Scons version v4.1.0
 pip install scons
 ```
 
-## Conan
+### Conan
 
 Conan version 1.35.0
 
@@ -18,15 +24,15 @@ modify: ~/.conan/profiles/default
 
 compiler.libcxx=libstdc++11
 
-## C++
+### C++
 
 version 20
 
-## Compiler
+### Compiler
 
 g++ (GCC) 10.2.0
 
-## Installation
+### Build instructions
 
 To pull every dependencies then build binaries and compile shared libraries
 
@@ -44,20 +50,36 @@ To compile a single module
 
 ```shell
 make module=MODULE
+# or
+make module MODULE
 ```
 
 Activate verbose by adding verbose=1
 
-## Run tests
+## Tests
 
-To compile and run all modules tests
+To compile and run tests
 
 ```shell
+# Run all tests
 make test
+# Run all module's tests
+make test MODULE
 ```
 
-For a single test
+List tests
 
 ```shell
-make test m=MODULE t=TESTNAME
+# For all
+make test ls
+# For a single module
+make test MODULE ls
+```
+
+Filter tests
+
+```shell
+make test m=MODULE t=FILTER
+# or
+make test MODULE FILTER
 ```
