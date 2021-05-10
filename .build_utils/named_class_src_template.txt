@@ -3,7 +3,8 @@
 namespace APP_NAME::MODULE_NAME
 {
 
-CLASS_NAME::CLASS_NAME()
+CLASS_NAME::CLASS_NAME(const std::string & name, NamedContainer *parent):
+    Named(name, parent)
 {   
 }
 

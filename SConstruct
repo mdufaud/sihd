@@ -1,12 +1,11 @@
 from os.path import join, abspath
 
-projname = "sihd"
+app_name = "sihd"
 
 base_extlib_hdr = []
 base_extlib_lib = ['gtest', 'pthread']
 modules = {
-    "core": {
-    },
+    "core": {},
     "net": {
         "depends": ['core'],
         "libs": ['websockets']
@@ -26,7 +25,7 @@ modules = {
 globalenv = Environment(
     CC = "c++",
     CCFLAGS = '-Wall -Wextra -Werror',
-    CPPFLAGS = [],
+    CPPFLAGS = ["-std=c++20"],
     CPPDEFINES = [],
     CPPPATH = [],
     LIBS = [],
@@ -39,23 +38,23 @@ if verbose == False:
     globalenv["LINKCOMSTR"] = "Linking object files into executable: $TARGET"
 
 build_dir = Dir('build')
-globalenv["SIHD_BUILD"] = build_dir
+globalenv["APP_BUILD"] = build_dir
 for entry in ['bin', 'lib', 'include', 'obj', 'test']:
     entry_dir = build_dir.Dir(entry)
-    globalenv["SIHD_BUILD_" + entry.upper()] = entry_dir
+    globalenv["APP_BUILD_" + entry.upper()] = entry_dir
 
 extlib_dir = build_dir.Dir("extlib")
-globalenv["SIHD_EXTLIB"] = extlib_dir
+globalenv["APP_EXTLIB"] = extlib_dir
 for entry in ['bin', 'lib', 'include']:
     entry_dir = extlib_dir.Dir(entry)
-    globalenv["SIHD_EXTLIB_" + entry.upper()] = entry_dir
-extlib_include_path = str(globalenv["SIHD_EXTLIB_INCLUDE"])
+    globalenv["APP_EXTLIB_" + entry.upper()] = entry_dir
+extlib_include_path = str(globalenv["APP_EXTLIB_INCLUDE"])
 
-globalenv["LIBPATH"] = [globalenv["SIHD_BUILD_LIB"], globalenv["SIHD_EXTLIB_LIB"]]
-globalenv["CPPPATH"] = [globalenv["SIHD_EXTLIB_INCLUDE"]]
+globalenv["LIBPATH"] = [globalenv["APP_BUILD_LIB"], globalenv["APP_EXTLIB_LIB"]]
+globalenv["CPPPATH"] = [globalenv["APP_EXTLIB_INCLUDE"]]
 globalenv["RPATH"] = [
-    abspath(str(globalenv["SIHD_BUILD_LIB"])),
-    abspath(str(globalenv["SIHD_EXTLIB_LIB"]))
+    abspath(str(globalenv["APP_BUILD_LIB"])),
+    abspath(str(globalenv["APP_EXTLIB_LIB"]))
 ]
 
 #globalenv.ParseConfig("pkg-config x11 --cflags --libs")
@@ -127,15 +126,15 @@ def build_test(self, src=None):
         return None
     src = src or Glob('test/*.cpp')
     add_targets(src)
-    test_path = join("$SIHD_BUILD_TEST", self["SIHD_MODULE"])
+    test_path = join("$APP_BUILD_TEST", self["APP_MODULE"])
     return self.Program(test_path, src)
 
 def build_lib(self, src=None):
     """ Environment method to build a shared library for a module """
     src = src or Glob('src/*.cpp')
     add_targets(src)
-    module_name = self["SIHD_MODULE"]
-    lib_path = join("$SIHD_BUILD_LIB", module_name)
+    module_name = self["APP_MODULE"]
+    lib_path = join("$APP_BUILD_LIB", module_name)
     lib = self.SharedLibrary(lib_path, src)
     self.Append(LIBS = [module_name])
     return lib
@@ -143,7 +142,7 @@ def build_lib(self, src=None):
 def build_bin(self, src):
     """ Environment method to build a binary for a module """
     add_targets(src)
-    bin_path = join("$SIHD_BUILD_BIN", self["SIHD_MODULE"])
+    bin_path = join("$APP_BUILD_BIN", self["APP_MODULE"])
     return env.Program(bin_path, src)
 
 def get_modules_headers(*args):
@@ -152,7 +151,7 @@ def get_modules_headers(*args):
 
 def get_modules_libname(*args):
     """ Returns modules lib names """
-    return ["{}_{}".format(projname, m) for m in args]
+    return ["{}_{}".format(app_name, m) for m in args]
 
 def get_extlib_headers(*args):
     """ Grab external libs headers path """
@@ -162,9 +161,9 @@ def get_extlib_headers(*args):
     return ret
 
 built = {}
-build_obj_path = str(globalenv["SIHD_BUILD_OBJ"])
+build_obj_path = str(globalenv["APP_BUILD_OBJ"])
 for name, conf in build_modules.items():
-    module_format = "{}_{}".format(projname, name)
+    module_format = "{}_{}".format(app_name, name)
     # Create an environment for every module
     env = globalenv.Clone()
     depends = conf.get("depends", [])
@@ -176,14 +175,14 @@ for name, conf in build_modules.items():
         LIBS = get_modules_libname(*depends)
                     + libs + base_extlib_lib,
     )
-    env["SIHD_MODULE"] = module_format
-    env["SIHD_MODULE_NAME"] = name
-    env["SIHD_MODULE_DEPENDS"] = depends
-    env["SIHD_MODULE_LIBS"] = depends
+    env["APP_MODULE"] = module_format
+    env["APP_MODULE_NAME"] = name
+    env["APP_MODULE_DEPENDS"] = depends
+    env["APP_MODULE_LIBS"] = depends
     env.AddMethod(build_lib, "build_lib")
     env.AddMethod(build_bin, "build_bin")
     env.AddMethod(build_test, "build_test")
-    print("Building {} module: {}".format(projname, name))
+    print("Building {} module: {}".format(app_name, name))
     built[name] = SConscript(Dir(name).File("scons.py"),
                             variant_dir = join(build_obj_path, name),
                             duplicate = 0,
@@ -208,3 +207,52 @@ def progress_function(node):
         screen.write('\r[%3d%%] ' % (node_count * 100 / node_count_max))
 
 Progress(progress_function, interval = 1)
+
+#
+# Fail
+#
+
+import atexit
+import sys
+
+def bf_to_str(bf):
+    """Convert an element of GetBuildFailures() to a string
+    in a useful way."""
+    import SCons.Errors
+    if bf is None: # unknown targets product None in list
+        return '(unknown tgt)'
+    elif isinstance(bf, SCons.Errors.StopError):
+        return str(bf)
+    elif bf.node:
+        return str(bf.node) + ': ' + bf.errstr
+    elif bf.filename:
+        return bf.filename + ': ' + bf.errstr
+    return 'unknown failure: ' + bf.errstr
+
+def build_status():
+    """Convert the build status to a 2-tuple, (status, msg)."""
+    from SCons.Script import GetBuildFailures
+    bf = GetBuildFailures()
+    if bf:
+        # bf is normally a list of build failures; if an element is None,
+        # it's because of a target that scons doesn't know anything about.
+        status = 'failed'
+        failures_message = "\n".join(["Failed building %s" % bf_to_str(x)
+                            for x in bf if x is not None])
+    else:
+        # if bf is None, the build completed successfully.
+        status = 'ok'
+        failures_message = ''
+    return (status, failures_message)
+
+def display_build_status():
+    status, failures_message = build_status()
+    if status == 'failed':
+        print("==============================================================")
+        print("= BUILD FAILED =")
+        print(failures_message)
+        print("==============================================================")
+    elif status == 'ok':
+        print("Build succeeded.")
+
+atexit.register(display_build_status)

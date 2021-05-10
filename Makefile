@@ -20,7 +20,7 @@ OBJ_PATH = $(BUILD_PATH)/obj
 BUILD_UTILS = .build_utils
 
 # Scons
-BUILD_CMD = scons -Q -j4
+SCONS_BUILD_CMD = scons -Q -j4
 
 # Conan
 EXTLIB_PATH = $(BUILD_PATH)/extlib
@@ -37,6 +37,10 @@ all: build
 # Conan (external libraries dependencies retrieval)
 #
 
+define build_app
+	$(SCONS_BUILD_CMD) verbose=$(verbose) module=$(module) test=$(test) dist=$(dist)
+endef 
+
 install: $(EXTLIB_PATH)
 
 $(EXTLIB_PATH):
@@ -47,16 +51,16 @@ $(EXTLIB_PATH):
 #
 
 build: install
-	$(BUILD_CMD) verbose=$(verbose) module=$(module) test=$(test) dist=$(dist)
+	$(call build_app)
 
-verbose:
-	$(MAKE) verbose=1 build
+verbose: install
+	$(call build_app) verbose=1
 
 ifeq ($(word 1, $(MAKECMDGOALS)), module)
 MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
 
-module:
-	$(MAKE) module=$(MODULE_NAME) build
+module: install
+	$(call build_app) module=$(MODULE_NAME)
 
 # for no 'no rules to make...'
 $(MODULE_NAME):
@@ -76,7 +80,7 @@ endif
 ifeq ($(word 1, $(MAKECMDGOALS)), test)
 MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
 TEST_NAME=$(word 3, $(MAKECMDGOALS))$(t)
-
+TEST_ARGS=--gtest_break_on_failure
 ifeq ($(MODULE_NAME), )
 	TEST_EXEC=./$(TEST_PATH)/*
 else
@@ -93,17 +97,21 @@ endif
 
 # ls to list tests, else filter it
 ifeq ($(TEST_NAME),ls)
-	TEST_ARGS=--gtest_list_tests
+	TEST_ARGS+=--gtest_list_tests
 else
-	TEST_ARGS=--gtest_filter="*$(TEST_NAME)*"
+	TEST_ARGS+=--gtest_filter="*$(TEST_NAME)*"
 endif
 
 .PHONY: test
-test: $(TEST_PATH)
-	$(TEST_EXEC) $(TEST_ARGS)
+test: $(TEST_PATH) $(TEST_PATH)/$(APP_NAME)_$(MODULE_NAME)
+
+$(TEST_PATH)/$(APP_NAME)_$(MODULE_NAME):
+	$(call build_app) test=1 module=$(MODULE_NAME) \
+	&& $(TEST_EXEC) $(TEST_ARGS)
 
 $(TEST_PATH):
-	$(MAKE) test=1 build
+	$(call build_app) test=1 module=$(MODULE_NAME) \
+	&& $(TEST_EXEC) $(TEST_ARGS)
 
 # for no 'no rules to make...'
 $(MODULE_NAME):
@@ -118,7 +126,7 @@ endif
 #
 
 dist:
-	$(MAKE) dist=1 build
+	$(call build_app) dist=1
 
 #
 # Builder
@@ -157,6 +165,21 @@ CLASS_NAME=$(word 3, $(MAKECMDGOALS))$(c)
 
 newclass:
 	bash $(BUILD_UTILS)/make_class.sh $(APPNAME) $(MODULE_NAME) $(CLASS_NAME)
+
+# for no 'no rules to make...'
+$(MODULE_NAME):
+
+# for no 'no rules to make...'
+$(CLASS_NAME):
+
+endif
+
+ifeq ($(word 1, $(MAKECMDGOALS)), newnamedclass)
+MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
+CLASS_NAME=$(word 3, $(MAKECMDGOALS))$(c)
+
+newnamedclass:
+	bash $(BUILD_UTILS)/make_named_class.sh $(APPNAME) $(MODULE_NAME) $(CLASS_NAME)
 
 # for no 'no rules to make...'
 $(MODULE_NAME):
