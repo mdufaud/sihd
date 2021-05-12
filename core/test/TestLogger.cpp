@@ -31,6 +31,19 @@ namespace test
 
     TEST_F(TestLogger, test_logging)
     {
+        Logger  log("test");
+
+        LoggerManager::add(new BasicLogger());
+        log.log(sihd::core::LogLevel::info, "Basic log");
+        log.debug("debug");
+        log.info("info");
+        log.warning("warning");
+        log.error("error");
+        log.critical("critical");
+    }
+
+    TEST_F(TestLogger, test_logging_macros)
+    {
         auto logger = new BasicLogger();
         LoggerManager::add(logger);
         LOG(debug, "DEBUG");

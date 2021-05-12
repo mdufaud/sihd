@@ -22,7 +22,7 @@ class LoggerManager:    public ALogFilterer
         bool    remove_logger(ALogger *logger);
         void    delete_loggers();
 
-        void    log(const char *src, LogLevel level, const char *message, ...);
+        void    log(const char *src, LogLevel level, const char *message);
 
         static LoggerManager    _g_singleton;
         static LoggerManager    *get();
