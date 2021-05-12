@@ -1,16 +1,16 @@
 #include <gtest/gtest.h>
-#include <sihd/core/String.hpp>
+#include <sihd/core/str.hpp>
 
 namespace test
 {
     using namespace sihd::core;
 
-    class TestString:   public ::testing::Test
+    class TestStr:   public ::testing::Test
     {
         protected:
-            TestString()
+            TestStr()
             {}
-            virtual ~TestString()
+            virtual ~TestStr()
             {}
             virtual void SetUp()
             {}
@@ -18,7 +18,7 @@ namespace test
             {}
     };
 
-    TEST_F(TestString, testSplit)
+    TEST_F(TestStr, test_split)
     {
         std::vector<std::string> split1 = str::split("hello world", " ");
         EXPECT_EQ(split1.size(), 2u);

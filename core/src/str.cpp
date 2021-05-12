@@ -1,10 +1,16 @@
-#include <sihd/core/String.hpp>
+#include <sihd/core/str.hpp>
 #include <string.h>
 #include <cxxabi.h>
 #include <sstream>
+#include <cstdarg>
+#include <mutex>
 
 namespace sihd::core::str
 {
+
+std::mutex _mutex;
+const size_t _buffer_size = 20480;
+char _buffer[_buffer_size];
 
 static int   _split_size(const char *s, const char *delimiter, size_t len)
 {
@@ -77,6 +83,21 @@ std::string     demangle(const char *name)
         return ret;
     }
     return name;
+}
+
+std::string     format(const char *format ...)
+{
+    std::string ret;
+    va_list args;
+    
+    va_start(args, format);
+    {
+        std::lock_guard<std::mutex> l(_mutex);
+        vsnprintf(_buffer, _buffer_size, format, args);
+        ret.assign(_buffer, strlen(_buffer));
+    }
+    va_end(args);
+    return ret;
 }
 
 }

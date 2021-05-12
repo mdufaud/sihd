@@ -1,5 +1,5 @@
 #include <sihd/core/Node.hpp>
-#include <sihd/core/String.hpp>
+#include <sihd/core/str.hpp>
 
 namespace sihd::core
 {

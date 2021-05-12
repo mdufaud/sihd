@@ -1,0 +1,39 @@
+#ifndef __SIHD_CORE_LOGINFO_HPP__
+# define __SIHD_CORE_LOGINFO_HPP__
+
+# include <time.h>
+# include <string>
+# include <sihd/core/thread.hpp>
+
+namespace sihd::core
+{
+
+enum LogLevel
+{
+    debug = 0,
+    info,
+    warning,
+    error,
+    critical,
+};
+
+class LogInfo
+{
+    public:
+        LogInfo(const std::string & source, LogLevel level);
+        virtual ~LogInfo();
+
+        std::string     source;
+        LogLevel        level;
+        std::string     level_str;
+        std::thread::id thread_id;
+        std::string     thread_id_str;
+        std::string     thread_name;
+        struct timespec timestamp;
+
+        const std::string & get_level() const;
+};
+
+}
+
+#endif 
