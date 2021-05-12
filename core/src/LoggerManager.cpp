@@ -12,19 +12,19 @@ LoggerManager::~LoggerManager()
     this->delete_loggers();
 }
 
-bool    LoggerManager::has_logger(ILogger *logger)
+bool    LoggerManager::has_logger(ALogger *logger)
 {
     if (std::find(_loggers.begin(), _loggers.end(), logger) != _loggers.end())
         return true;
     return false;
 }
 
-std::list<ILogger *>::iterator  LoggerManager::_find(ILogger *logger)
+std::list<ALogger *>::iterator  LoggerManager::_find(ALogger *logger)
 {
     return std::find(_loggers.begin(), _loggers.end(), logger);
 }
 
-bool    LoggerManager::add_logger(ILogger *logger)
+bool    LoggerManager::add_logger(ALogger *logger)
 {
     std::lock_guard<std::mutex> l(_mutex);
     bool has = this->has_logger(logger);
@@ -33,7 +33,7 @@ bool    LoggerManager::add_logger(ILogger *logger)
     return !has;
 }
 
-bool    LoggerManager::remove_logger(ILogger *logger)
+bool    LoggerManager::remove_logger(ALogger *logger)
 {
     std::lock_guard<std::mutex> l(_mutex);
     auto it = this->_find(logger);
@@ -48,7 +48,7 @@ bool    LoggerManager::remove_logger(ILogger *logger)
 void    LoggerManager::delete_loggers()
 {
     std::lock_guard<std::mutex> l(_mutex);
-    for (ILogger *logger : _loggers)
+    for (ALogger *logger : _loggers)
     {
         delete logger;
     }
@@ -59,9 +59,12 @@ void    LoggerManager::log(const char *src, LogLevel level, const char *msg, ...
 {
     std::lock_guard<std::mutex> l(_mutex);
     LogInfo info(src, level);
-    for (ILogger *logger : _loggers)
+    if (this->should_filter(info, msg))
+        return ;
+    for (ALogger *logger : _loggers)
     {
-        logger->log(info, msg);
+        if (logger->should_filter(info, msg) == false)
+            logger->log(info, msg);
     }
 }
 
@@ -71,19 +74,34 @@ LoggerManager   *LoggerManager::get()
     return &_g_singleton;
 }
 
-bool    LoggerManager::add(ILogger *logger)
+bool    LoggerManager::add(ALogger *logger)
 {
     return get()->add_logger(logger);
 }
 
-bool    LoggerManager::rm(ILogger *logger)
+bool    LoggerManager::rm(ALogger *logger)
 {
     return get()->remove_logger(logger);
 }
 
-void    LoggerManager::clear()
+bool    LoggerManager::filter(ILoggerFilter *filter)
+{
+    return get()->add_filter(filter);
+}
+
+bool    LoggerManager::unfilter(ILoggerFilter *filter)
+{
+    return get()->remove_filter(filter);
+}
+
+void    LoggerManager::clear_loggers()
 {
     get()->delete_loggers();
+}
+
+void    LoggerManager::clear_filters()
+{
+    get()->delete_filters();
 }
 
 }

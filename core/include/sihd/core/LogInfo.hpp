@@ -10,7 +10,8 @@ namespace sihd::core
 
 enum LogLevel
 {
-    debug = 0,
+    none = 0,
+    debug,
     info,
     warning,
     error,
@@ -32,6 +33,9 @@ class LogInfo
         struct timespec timestamp;
 
         const std::string & get_level() const;
+
+        static const std::string & get_level(LogLevel level); 
+        static LogLevel  string_to_level(const std::string & level);
 };
 
 }

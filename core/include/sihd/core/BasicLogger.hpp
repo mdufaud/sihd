@@ -1,12 +1,12 @@
 #ifndef __SIHD_CORE_BASICLOGGER_HPP__
 # define __SIHD_CORE_BASICLOGGER_HPP__
 
-# include <sihd/core/ILogger.hpp>
+# include <sihd/core/ALogger.hpp>
 
 namespace sihd::core
 {
 
-class BasicLogger: public ILogger
+class BasicLogger: public ALogger
 {
     public:
         BasicLogger(FILE *output = stderr, bool print_thread_id = false);
