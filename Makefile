@@ -149,7 +149,7 @@ include $(BUILD_UTILS)/rules.mk
 
 clean:
 	@echo "Removing $(APP_NAME) compilation build"
-	@rm -rf $(LIB_PATH) $(INCLUDE_PATH) $(TEST_PATH) $(OBJ_PATH) $(BIN_PATH) && echo "Done" || echo "Failed"
+	@rm -rf $(LIB_PATH) $(INCLUDE_PATH) $(TEST_PATH) $(OBJ_PATH) $(BIN_PATH) $(RES_PATH) && echo "Done" || echo "Failed"
 
 cleaninstall:
 	@echo "Removing $(APP_NAME) dependencies"

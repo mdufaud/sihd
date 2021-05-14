@@ -211,6 +211,7 @@ for name, conf in build_modules.items():
 # Extra
 #
 
+build_path = str(globalenv["APP_BUILD"])
 build_etc_path = str(globalenv["APP_BUILD_ETC"])
 
 def sed_replace(file, replace_dic):
@@ -222,17 +223,23 @@ def fileinput_replace(file, replace_dic):
         for key, value in replace_dic.items():
             print(line.replace(key, value), end='')
 
-def replace_res_in_build(module_name, replace_dic):
-    dirname = join(build_etc_path, app.name, module_name)
-    files = [ file for child in walk(dirname) for file in glob(join(child[0], '*')) if isfile(file) ]
+def replace_res_in_build(to_replace, replace_dic):
+    true_replace = []
+    for pattern in to_replace:
+        ret = glob(join(build_path, pattern), recursive = True)
+        if ret:
+            true_replace += ret
+        else:
+            true_replace.append(pattern)
     if verbose:
-        print("Replacing values in build files of module: " + module_name)
-    for file in files:
+        print("Replacing values in build files - {} files to replace".format(len(true_replace)))
+    for file in true_replace:
+        if isfile(file) == False:
+            print("-> file to replace '{}' doest not exist".format(file))
+            continue
         if verbose:
-            print(" -> replacing file: " + file)
-        #fileinput_replace(file, replace_dic)
+            print("-> replacing file: " + file)
         sed_replace(file, replace_dic)
-
 
 def copy_module_res_to_build(module_name):
     dirname = join(module_name, "etc")
@@ -244,8 +251,9 @@ def copy_module_res_to_build(module_name):
     return True
 
 for name, conf in build_modules.items():
-    if copy_module_res_to_build(name):
-        replace_res_in_build(name, app.replace)
+    copy_module_res_to_build(name)
+
+replace_res_in_build(app.replace_files, app.replace_vars)
 
 #
 # Progress

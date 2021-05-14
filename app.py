@@ -12,6 +12,9 @@ modules = {
         "depends": ['lua']
     }
 }
-replace = {
+replace_files = [
+    "etc/sihd/core/test.txt"
+]
+replace_vars = {
     "VERSION": "0.1"
 }
