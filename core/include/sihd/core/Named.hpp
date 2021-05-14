@@ -18,7 +18,7 @@ class Named
         const std::string & get_name() const;
         Node  *get_parent() const;
 
-        std::string     get_path_name() const;
+        std::string     get_full_name() const;
         std::string     get_class_name() const;
         std::string     get_description() const
         {
@@ -29,14 +29,15 @@ class Named
         bool    set_parent(Node *parent);
 
         Node    *get_root();
-        Named   *find(Node *parent, const std::string & path);
+        Named   *find(Named *from, const std::string & path);
         Named   *find(const std::string & path);
+        Node    *find_node(const std::string & path);
         template<class C>
         C   *find(const std::string & path)
         {
             Named *obj = this->find(path);
             if (obj != nullptr)
-                return dynamic_cast<C>(obj);
+                return dynamic_cast<C *>(obj);
             return nullptr;
         }
 

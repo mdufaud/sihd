@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <iostream>
 #include <sihd/core/str.hpp>
 
 namespace test
@@ -10,15 +11,20 @@ namespace test
         protected:
             TestStr()
             {}
+
             virtual ~TestStr()
             {}
+
             virtual void SetUp()
-            {}
+            {
+            }
+
             virtual void TearDown()
-            {}
+            {
+            }
     };
 
-    TEST_F(TestStr, test_split)
+    TEST_F(TestStr, test_str_split)
     {
         std::vector<std::string> split1 = str::split("hello world", " ");
         EXPECT_EQ(split1.size(), 2u);
@@ -39,5 +45,23 @@ namespace test
         std::vector<std::string> split6 = str::split("hello", "");
         EXPECT_EQ(split6.size(), 1u);
         EXPECT_EQ(split6[0], "hello");
+    }
+
+    TEST_F(TestStr, test_str_join)
+    {
+        std::string res;
+        res = str::join({"hello", "world"}, ",");
+        EXPECT_EQ(res, "hello,world");
+        res = str::join({"hello", "good", "world"}, " . ");
+        EXPECT_EQ(res, "hello . good . world");
+        res = str::join({"", "", "sup"}, ",");
+        EXPECT_EQ(res, ",,sup");
+    }
+
+    TEST_F(TestStr, test_str_format)
+    {
+        std::string res;
+        res = str::format("%s -> %d", "hello", 1337);
+        EXPECT_EQ(res, "hello -> 1337");
     }
 }

@@ -85,11 +85,10 @@ std::string     demangle(const char *name)
     return name;
 }
 
-std::string     format(const char *format ...)
+std::string     format(const char *format, ...)
 {
     std::string ret;
     va_list args;
-    
     va_start(args, format);
     {
         std::lock_guard<std::mutex> l(_mutex);

@@ -104,4 +104,9 @@ void    LoggerManager::clear_filters()
     get()->delete_filters();
 }
 
+void    LoggerManager::basic()
+{
+    get()->add_logger(new BasicLogger);
+}
+
 }

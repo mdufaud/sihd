@@ -16,7 +16,15 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 APP_NAME=$1
 MODULE_NAME=$2
 echo "Building module $MODULE_NAME"
-mkdir -p $MODULE_NAME/src $MODULE_NAME/include/$APP_NAME/$MODULE_NAME $MODULE_NAME/test
-cp $SCRIPT_DIR/scons_template.txt $MODULE_NAME/scons.py
-cp $SCRIPT_DIR/test_main_template.txt $MODULE_NAME/test/main.cpp
+mkdir -p $MODULE_NAME/src \
+    $MODULE_NAME/test \
+    $MODULE_NAME/include/$APP_NAME/$MODULE_NAME \
+    $MODULE_NAME/etc/$APP_NAME/$MODULE_NAME
+
+if [ ! -f $MODULE_NAME/scons.py ]; then
+    cp $SCRIPT_DIR/scons_template.txt $MODULE_NAME/scons.py
+fi
+if [ ! -f $MODULE_NAME/test/main.cpp ]; then
+    cp $SCRIPT_DIR/test_main_template.txt $MODULE_NAME/test/main.cpp
+fi
 echo "Module built"

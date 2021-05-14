@@ -1,22 +1,13 @@
-from os.path import join, abspath
-
-app_name = "sihd"
-
-base_extlib_hdr = []
-base_extlib_lib = ['gtest', 'pthread']
-modules = {
-    "core": {},
-    "net": {
-        "depends": ['core'],
-        "libs": ['websockets']
-    },
-    "lua": {
-        "depends": ['core']
-    },
-    "luabin": {
-        "depends": ['lua']
-    }
-}
+from os import walk
+from glob import glob
+import fileinput
+from os.path import join, abspath, isdir, isfile
+from distutils.dir_util import copy_tree
+from subprocess import call as subprocess_call
+import sys
+sys.dont_write_bytecode = True
+import app
+sys.dont_write_bytecode = False
 
 #
 # Main shared environment
@@ -37,12 +28,14 @@ if verbose == False:
     globalenv["CXXCOMSTR"] = "Compiling C++: $SOURCE"
     globalenv["LINKCOMSTR"] = "Linking object files into executable: $TARGET"
 
+# Path for build directories
 build_dir = Dir('build')
 globalenv["APP_BUILD"] = build_dir
-for entry in ['bin', 'lib', 'include', 'obj', 'test']:
+for entry in ['bin', 'lib', 'include', 'obj', 'test', 'etc']:
     entry_dir = build_dir.Dir(entry)
     globalenv["APP_BUILD_" + entry.upper()] = entry_dir
 
+# Path for extlibs bin, lib and include directories
 extlib_dir = build_dir.Dir("extlib")
 globalenv["APP_EXTLIB"] = extlib_dir
 for entry in ['bin', 'lib', 'include']:
@@ -50,6 +43,7 @@ for entry in ['bin', 'lib', 'include']:
     globalenv["APP_EXTLIB_" + entry.upper()] = entry_dir
 extlib_include_path = str(globalenv["APP_EXTLIB_INCLUDE"])
 
+# Setting those path for the compiler
 globalenv["LIBPATH"] = [globalenv["APP_BUILD_LIB"], globalenv["APP_EXTLIB_LIB"]]
 globalenv["CPPPATH"] = [globalenv["APP_EXTLIB_INCLUDE"]]
 globalenv["RPATH"] = [
@@ -67,7 +61,7 @@ Decider('timestamp-newer')
 
 def rec_get_single_module_dependencies(module_name, modlist: dict):
     """ Gets a single module dependency tree """
-    conf = modules.get(module_name, None)
+    conf = app.modules.get(module_name, None)
     if conf is None:
         print("No such module: {}".format(module_name))
         Exit(1)
@@ -81,10 +75,13 @@ if single_module:
     build_modules = {}
     rec_get_single_module_dependencies(single_module, build_modules)
 else:
-    build_modules = modules
+    build_modules = app.modules
 
 distribution = ARGUMENTS.get('dist', "") == "1"
 make_tests = ARGUMENTS.get('test', "") == "1"
+
+if make_tests == True:
+    app.libs += app.test_libs
 
 #
 # Build
@@ -93,7 +90,7 @@ make_tests = ARGUMENTS.get('test', "") == "1"
 def rec_get_module_real_depends(module_name, modlist: dict):
     """ Makes a map [modulename] = trashvalue
         to have a single module real dependencies """
-    conf = modules.get(module_name, None)
+    conf = app.modules.get(module_name, None)
     if conf is None:
         print("No such module: {}".format(module_name))
         Exit(1)
@@ -110,6 +107,28 @@ def fill_module_real_depends(modules: dict):
         conf['depends'] = list(depends.keys())
 
 fill_module_real_depends(build_modules)
+
+scons_conf = Configure(globalenv,
+    log_file = "#/.scons_config.log",
+    conf_dir = "#/.scons_config.d"
+)
+def check_libs(modules):
+    ret = True
+    for lib in app.libs:
+        if not scons_conf.CheckLib(lib):
+            print("For app {}: needed lib {} not found".format(app.name, lib))
+            ret = False
+    for name, conf in modules.items():
+        for lib in conf.get('libs', []):
+            if not scons_conf.CheckLib(lib):
+                print("For module {}: needed lib {} not found".format(name, lib))
+                ret = False
+    return ret
+
+if check_libs(build_modules) == False:
+    Exit(1)
+
+globalenv = scons_conf.Finish()
 
 targets = []
 def add_targets(src):
@@ -151,7 +170,7 @@ def get_modules_headers(*args):
 
 def get_modules_libname(*args):
     """ Returns modules lib names """
-    return ["{}_{}".format(app_name, m) for m in args]
+    return ["{}_{}".format(app.name, m) for m in args]
 
 def get_extlib_headers(*args):
     """ Grab external libs headers path """
@@ -163,7 +182,7 @@ def get_extlib_headers(*args):
 built = {}
 build_obj_path = str(globalenv["APP_BUILD_OBJ"])
 for name, conf in build_modules.items():
-    module_format = "{}_{}".format(app_name, name)
+    module_format = "{}_{}".format(app.name, name)
     # Create an environment for every module
     env = globalenv.Clone()
     depends = conf.get("depends", [])
@@ -171,9 +190,9 @@ for name, conf in build_modules.items():
     env.Append(
         CPPPATH = get_modules_headers(name)
                     + get_modules_headers(*depends)
-                    + get_extlib_headers(*libs, *base_extlib_lib, *base_extlib_hdr),
+                    + get_extlib_headers(*libs, *app.libs, *app.headers),
         LIBS = get_modules_libname(*depends)
-                    + libs + base_extlib_lib,
+                    + libs + app.libs,
     )
     env["APP_MODULE"] = module_format
     env["APP_MODULE_NAME"] = name
@@ -182,11 +201,51 @@ for name, conf in build_modules.items():
     env.AddMethod(build_lib, "build_lib")
     env.AddMethod(build_bin, "build_bin")
     env.AddMethod(build_test, "build_test")
-    print("Building {} module: {}".format(app_name, name))
+    print("Building {} module: {}".format(app.name, name))
     built[name] = SConscript(Dir(name).File("scons.py"),
                             variant_dir = join(build_obj_path, name),
                             duplicate = 0,
                             exports = ['env'])
+
+#
+# Extra
+#
+
+build_etc_path = str(globalenv["APP_BUILD_ETC"])
+
+def sed_replace(file, replace_dic):
+    for key, value in replace_dic.items():
+        subprocess_call(['sed', '-i', 's/{}/{}/g'.format(key, value), file])
+
+def fileinput_replace(file, replace_dic):
+    for line in fileinput.input(file, inplace=True):
+        for key, value in replace_dic.items():
+            print(line.replace(key, value), end='')
+
+def replace_res_in_build(module_name, replace_dic):
+    dirname = join(build_etc_path, app.name, module_name)
+    files = [ file for child in walk(dirname) for file in glob(join(child[0], '*')) if isfile(file) ]
+    if verbose:
+        print("Replacing values in build files of module: " + module_name)
+    for file in files:
+        if verbose:
+            print(" -> replacing file: " + file)
+        #fileinput_replace(file, replace_dic)
+        sed_replace(file, replace_dic)
+
+
+def copy_module_res_to_build(module_name):
+    dirname = join(module_name, "etc")
+    if not isdir(dirname):
+        return False
+    if verbose:
+        print("Copying resources of module: " + module_name)
+    copy_tree(dirname, build_etc_path)
+    return True
+
+for name, conf in build_modules.items():
+    if copy_module_res_to_build(name):
+        replace_res_in_build(name, app.replace)
 
 #
 # Progress
@@ -209,11 +268,10 @@ def progress_function(node):
 Progress(progress_function, interval = 1)
 
 #
-# Fail
+# Status
 #
 
 import atexit
-import sys
 
 def bf_to_str(bf):
     """Convert an element of GetBuildFailures() to a string

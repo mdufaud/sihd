@@ -18,7 +18,7 @@ LogInfo::~LogInfo()
 }
 
 std::array<std::string, (int)LogLevel::critical + 1> _levels_to_str_array = {
-    "NOLEVEL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITIC"
+    "NOLEVEL", "DEBUG", "INFO", "WARNING", "ERROR", "CRIT"
 };
 
 std::map<std::string, LogLevel> _str_to_levels_map = {

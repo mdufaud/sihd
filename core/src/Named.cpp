@@ -10,7 +10,7 @@ Named::Named(const std::string & named, Node *parent)
     _name = named;
     _parent_ptr = nullptr;
     if (parent)
-        parent->add_child(this);
+        parent->add_child_unsafe(this);
 }
 
 Named::~Named()
@@ -36,7 +36,7 @@ const std::string & Named::get_name() const
     return _name;
 }
 
-std::string     Named::get_path_name() const
+std::string     Named::get_full_name() const
 {
     std::string ret = this->get_name();
     Node *parent = this->get_parent();
@@ -73,18 +73,17 @@ Node   *Named::get_root()
     return obj;
 }
 
-Named   *Named::find(Node *parent, const std::string & path)
+Named   *Named::find(Named *from, const std::string & path)
 {
     auto tokens = str::split(path, ".");
-    Named *child = parent;
+    Named *child = from;
+    Node *parent = nullptr;
     for (const std::string & name : tokens)
     {
         if (child != nullptr)
-        {
             parent = Node::to_node(child);
-            if (parent == nullptr)
-                return nullptr;
-        }
+        if (parent == nullptr)
+            return nullptr;
         child = parent->get_child(name);
         if (child == nullptr)
             return nullptr;
@@ -107,7 +106,14 @@ Named   *Named::find(const std::string & path)
     }
     if (i == 0)
         current = this->get_root();
-    return this->find(Node::to_node(current), path);
+    return this->find(current, path);
 }
+
+Node    *Named::find_node(const std::string & path)
+{
+    return this->find<Node>(path);
+}
+
+
 
 }

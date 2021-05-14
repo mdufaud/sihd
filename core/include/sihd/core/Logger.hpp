@@ -21,7 +21,7 @@
 
 #  define LOG_DEBUG(message, ...) LOG_FORMAT(sihd::core::LogLevel::debug, message, ##__VA_ARGS__);
 #  define LOG_INFO(message, ...) LOG_FORMAT(sihd::core::LogLevel::info, message, ##__VA_ARGS__);
-#  define LOG_WARNING(message, ...) LOG_FORMAT(sihd::core::LogLevel::warning, message, ##__VA_ARGS__);
+#  define LOG_WARN(message, ...) LOG_FORMAT(sihd::core::LogLevel::warning, message, ##__VA_ARGS__);
 #  define LOG_ERROR(message, ...) LOG_FORMAT(sihd::core::LogLevel::error, message, ##__VA_ARGS__);
 #  define LOG_CRITICAL(message, ...) LOG_FORMAT(sihd::core::LogLevel::critical, message, ##__VA_ARGS__);
 

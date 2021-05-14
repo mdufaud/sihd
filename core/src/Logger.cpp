@@ -1,7 +1,10 @@
 #include <sihd/core/Logger.hpp>
+#include <cstdarg>
 
 namespace sihd::core
 {
+
+NEW_LOGGER("sihd::core");
 
 Logger::Logger(const std::string & name): name(name)
 {

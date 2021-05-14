@@ -9,13 +9,14 @@ namespace sihd::core
 class LevelFilterLogger:    public ILoggerFilter
 {
     public:
-        LevelFilterLogger(LogLevel min);
-        LevelFilterLogger(const std::string & level);
+        LevelFilterLogger(LogLevel min, bool match = false);
+        LevelFilterLogger(const std::string & level, bool match = false);
         virtual ~LevelFilterLogger();
 
         virtual bool    filter(const LogInfo & info, const char *msg);
 
-        LogLevel    min_level;
+        LogLevel    level;
+        bool    match;
     private:
 };
 

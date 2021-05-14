@@ -2,7 +2,9 @@
 # define __SIHD_CORE_NODE_HPP__
 
 # include <sihd/core/Named.hpp>
+# include <sihd/core/str.hpp>
 # include <map>
+# include <exception>
 
 namespace sihd::core
 {
@@ -10,6 +12,30 @@ namespace sihd::core
 class Node:   public Named
 {
     public:
+
+        class AlreadyHasChild:   public std::exception
+        {
+            public:
+                AlreadyHasChild(std::string name)
+                {
+                    this->name = name;
+                };
+                virtual const char *what() const throw()
+                {
+                    return str::format("Child %s already exists", this->name.c_str()).c_str();
+                }
+                std::string name;
+        };
+
+        class MaximumLinkRecursion:   public std::exception
+        {
+            public:
+                virtual const char *what() const throw()
+                {
+                    return "Maximum link recursion";
+                }
+        };
+
         struct   TreeOpts
         {
             size_t  indent = 0;
@@ -25,6 +51,7 @@ class Node:   public Named
         // Children
         bool    add_child(const std::string & name, Named *child);
         bool    add_child(Named *child);
+        void    add_child_unsafe(Named *child);
         bool    delete_child(const Named *child);
         bool    delete_child(const std::string & name);
         void    delete_children();
@@ -34,6 +61,7 @@ class Node:   public Named
         static std::pair<std::string, std::string>     get_parent_path(const std::string & path);
 
         // Find
+        Node    *find_node(const std::string & path);
         Named   *get_child(const std::string & name);
         template<class C>
         C   *get_child(const std::string & name)
@@ -48,15 +76,15 @@ class Node:   public Named
         bool    is_link(const std::string & link);
         bool    add_link(const std::string & link, const std::string & path);
         bool    remove_link(const std::string & link);
-        Named   *get_link(const std::string & path);
-        bool    resolve_links();
+        Named   *get_link(const std::string & path, size_t recursion = 0);
+        bool    resolve_links(size_t recursion = 0);
 
         std::string     get_tree_str();
         std::string     get_tree_str(TreeOpts opts);
         void            print_tree();
 
     protected:
-        void    _get_tree_children(std::stringstream & ss, TreeOpts & opts);
+        void    _get_tree_children(std::stringstream & ss, TreeOpts opts);
 
     private:
         std::map<std::string, Named *>   _children_map;

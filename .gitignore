@@ -2,5 +2,5 @@
 *.o
 *.os
 .vscode
-.sconsign.dblite
+.scon*
 build/*

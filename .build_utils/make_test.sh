@@ -23,8 +23,13 @@ TEST_NAME=$3
 TEST_FILENAME=$MODULE_NAME/test/Test$3.cpp
 
 echo "Making new test $TEST_NAME for module $MODULE_NAME"
-cp $SCRIPT_DIR/test_template.txt $TEST_FILENAME
-sed -i "s/APP_NAME/$APP_NAME/g" $TEST_FILENAME
-sed -i "s/MODULE_NAME/$MODULE_NAME/g" $TEST_FILENAME
-sed -i "s/CLASS_NAME/$TEST_NAME/g" $TEST_FILENAME
-echo "Done"
+if [ -f TEST_FILENAME ]; then
+    echo "Test already exist"
+    exit 1
+else
+    cp $SCRIPT_DIR/test_template.txt $TEST_FILENAME
+    sed -i "s/APP_NAME/$APP_NAME/g" $TEST_FILENAME
+    sed -i "s/MODULE_NAME/$MODULE_NAME/g" $TEST_FILENAME
+    sed -i "s/CLASS_NAME/$TEST_NAME/g" $TEST_FILENAME
+    echo "Test file done"
+fi
