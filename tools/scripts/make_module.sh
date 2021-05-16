@@ -22,9 +22,9 @@ mkdir -p $MODULE_NAME/src \
     $MODULE_NAME/etc/$APP_NAME/$MODULE_NAME
 
 if [ ! -f $MODULE_NAME/scons.py ]; then
-    cp $SCRIPT_DIR/scons_template.txt $MODULE_NAME/scons.py
+    cp $SCRIPT_DIR/../templates/scons_template.txt $MODULE_NAME/scons.py
 fi
 if [ ! -f $MODULE_NAME/test/main.cpp ]; then
-    cp $SCRIPT_DIR/test_main_template.txt $MODULE_NAME/test/main.cpp
+    cp $SCRIPT_DIR/../templates/test_main_template.txt $MODULE_NAME/test/main.cpp
 fi
 echo "Module built"

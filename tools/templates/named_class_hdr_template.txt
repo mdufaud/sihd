@@ -1,15 +1,16 @@
 #ifndef __APP_NAME_UPPER_MODULE_NAME_UPPER_CLASS_NAME_UPPER_HPP__
 # define __APP_NAME_UPPER_MODULE_NAME_UPPER_CLASS_NAME_UPPER_HPP__
 
-# include <sihd/core/NamedContainer.hpp>
+# include <sihd/core/Node.hpp>
+# include <sihd/core/Logger.hpp>
 
 namespace APP_NAME::MODULE_NAME
 {
 
-class CLASS_NAME:   public Named
+class CLASS_NAME:   public sihd::core::Named
 {
     public:
-        CLASS_NAME(const std::string & name, NamedContainer *parent = nullptr);
+        CLASS_NAME(const std::string & name, sihd::core::Node *parent = nullptr);
         virtual ~CLASS_NAME();
 
     private:

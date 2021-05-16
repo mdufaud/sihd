@@ -20,7 +20,7 @@ TEST_PATH = $(BUILD_PATH)/test
 BIN_PATH = $(BUILD_PATH)/bin
 OBJ_PATH = $(BUILD_PATH)/obj
 RES_PATH = $(BUILD_PATH)/etc
-BUILD_UTILS = $(HERE)/.build_utils
+BUILD_TOOLS = $(HERE)/tools
 
 # Scons
 SCONS_BUILD_CMD = scons -Q -j4
@@ -28,7 +28,9 @@ SCONS_BUILD_CMD = scons -Q -j4
 # Conan
 EXTLIB_PATH = $(BUILD_PATH)/extlib
 CONAN_PATH = $(BUILD_PATH)/conan
-CONAN_INSTALL = conan install . --profile .conan_profile -if $(CONAN_PATH)
+CONAN_INSTALL = conan install .
+CONAN_INSTALL_PROFILE = --profile .conan_profile
+CONAN_INSTALL_PATH = -if $(CONAN_PATH) 
 
 #########
 # RULES #
@@ -47,7 +49,23 @@ all: build
 #
 
 install:
-	$(CONAN_INSTALL)
+	@env test=$(test) module=$(module) $(CONAN_INSTALL) $(CONAN_INSTALL_PROFILE) $(CONAN_INSTALL_PATH)
+
+
+install_test: test = 1
+install_test: install
+
+
+ifeq ($(word 1, $(MAKECMDGOALS)), install_module)
+MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
+
+install_module: module = $(MODULE_NAME)
+install_module: install
+
+# for no 'no rules to make...'
+$(MODULE_NAME):
+
+endif
 
 #
 # Scons (builder)
@@ -141,7 +159,7 @@ dist: build
 # Builder
 #
 
-include $(BUILD_UTILS)/rules.mk
+include $(BUILD_TOOLS)/rules.mk
 
 #
 # Cleanup
@@ -155,7 +173,11 @@ cleaninstall:
 	@echo "Removing $(APP_NAME) dependencies"
 	@rm -rf $(CONAN_PATH) $(EXTLIB_PATH) && echo "Done" || echo "Failed"
 
-fclean:
+cleanscons:
+	@echo "Removing scons config files"
+	@rm -rf .scons_config.d .scons_config.log
+
+fclean: cleanscons
 	@echo "Removing build"
 	@rm -rf $(BUILD_PATH)
 

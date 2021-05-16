@@ -34,16 +34,21 @@ g++ (GCC) 10.2.0
 
 ### Build instructions
 
-To pull every dependencies then build binaries and compile shared libraries
-
-```shell
-make
-```
-
 To pull every dependencies
 
 ```shell
+# For building only
 make install
+# For running tests
+make install_test
+# For building a single module (and its module dependencies)
+make install_module MODULE
+```
+
+To build binaries and compile shared libraries
+
+```shell
+make
 ```
 
 To compile a single module

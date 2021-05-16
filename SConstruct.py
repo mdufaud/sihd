@@ -1,12 +1,14 @@
-from os import walk
 from glob import glob
 import fileinput
 from os.path import join, abspath, isdir, isfile
 from distutils.dir_util import copy_tree
 from subprocess import call as subprocess_call
+from pprint import PrettyPrinter
+pp = PrettyPrinter(indent=2)
 import sys
 sys.dont_write_bytecode = True
 import app
+import tools.modules
 sys.dont_write_bytecode = False
 
 #
@@ -59,62 +61,35 @@ Decider('timestamp-newer')
 # Args
 #
 
-def rec_get_single_module_dependencies(module_name, modlist: dict):
-    """ Gets a single module dependency tree """
-    conf = app.modules.get(module_name, None)
-    if conf is None:
-        print("No such module: {}".format(module_name))
-        Exit(1)
-    modlist[module_name] = conf
-    for dep in conf.get('depends', []):
-        rec_get_single_module_dependencies(dep, modlist)
-
 single_module = ARGUMENTS.get('module', "")
-if single_module:
-    # If a single module build is asked, build its dependencies
-    build_modules = {}
-    rec_get_single_module_dependencies(single_module, build_modules)
-else:
-    build_modules = app.modules
-
 distribution = ARGUMENTS.get('dist', "") == "1"
 make_tests = ARGUMENTS.get('test', "") == "1"
 
-if make_tests == True:
-    app.libs += app.test_libs
+build_modules = tools.modules.build_modules(app, single_module=single_module, test=make_tests)
+extlibs = tools.modules.build_libs(app, test=make_tests)
+extheaders = tools.modules.build_headers(app, test=make_tests)
+
+if verbose:
+    print("{}: modules configuration".format(app.name))
+    pp.pprint(build_modules)
+    print("{}: external libs".format(app.name))
+    pp.pprint(extlibs)
+    print("{}: external headers".format(app.name))
+    pp.pprint(extheaders)
+    print()
 
 #
 # Build
 #
 
-def rec_get_module_real_depends(module_name, modlist: dict):
-    """ Makes a map [modulename] = trashvalue
-        to have a single module real dependencies """
-    conf = app.modules.get(module_name, None)
-    if conf is None:
-        print("No such module: {}".format(module_name))
-        Exit(1)
-    depends = conf.get('depends', [])
-    for depend in depends:
-        modlist[depend] = True
-        rec_get_module_real_depends(depend, modlist)
-
-def fill_module_real_depends(modules: dict):
-    """ Fill all modules real dependency tree """
-    for name, conf in modules.items():
-        depends = {}
-        rec_get_module_real_depends(name, depends)
-        conf['depends'] = list(depends.keys())
-
-fill_module_real_depends(build_modules)
-
+"""
 scons_conf = Configure(globalenv,
     log_file = "#/.scons_config.log",
     conf_dir = "#/.scons_config.d"
 )
 def check_libs(modules):
     ret = True
-    for lib in app.libs:
+    for lib in extlibs:
         if not scons_conf.CheckLib(lib):
             print("For app {}: needed lib {} not found".format(app.name, lib))
             ret = False
@@ -125,10 +100,9 @@ def check_libs(modules):
                 ret = False
     return ret
 
-if check_libs(build_modules) == False:
-    Exit(1)
-
+check_libs(build_modules)
 globalenv = scons_conf.Finish()
+"""
 
 targets = []
 def add_targets(src):
@@ -144,6 +118,7 @@ def build_test(self, src=None):
     if make_tests == False:
         return None
     src = src or Glob('test/*.cpp')
+    # Not only main.cpp
     add_targets(src)
     test_path = join("$APP_BUILD_TEST", self["APP_MODULE"])
     return self.Program(test_path, src)
@@ -176,7 +151,12 @@ def get_extlib_headers(*args):
     """ Grab external libs headers path """
     ret = []
     for m in args:
-        ret += Glob(join(extlib_include_path, "*{}*".format(m)))
+        path = join(extlib_include_path, m)
+        path_with_lib = join(extlib_include_path, "lib" + m)
+        if path not in ret and isdir(path):
+            ret.append(path)
+        if path_with_lib not in ret and isdir(path_with_lib):
+            ret.append(path_with_lib)
     return ret
 
 built = {}
@@ -187,13 +167,20 @@ for name, conf in build_modules.items():
     env = globalenv.Clone()
     depends = conf.get("depends", [])
     libs = conf.get("libs", [])
+    headers = conf.get("headers", [])
     env.Append(
         CPPPATH = get_modules_headers(name)
                     + get_modules_headers(*depends)
-                    + get_extlib_headers(*libs, *app.libs, *app.headers),
-        LIBS = get_modules_libname(*depends)
-                    + libs + app.libs,
+                    + get_extlib_headers(*libs, *headers, *extlibs, *extheaders),
+        LIBS = get_modules_libname(*depends) + libs + extlibs,
     )
+    print("Building {}'s module: {}".format(app.name, name))
+    if verbose:
+        print("  - needed libraries")
+        pp.pprint(env['LIBS'])
+        print("  - needed headers")
+        pp.pprint([ str(s) for s in env['CPPPATH'] ])
+        print()
     env["APP_MODULE"] = module_format
     env["APP_MODULE_NAME"] = name
     env["APP_MODULE_DEPENDS"] = depends
@@ -201,7 +188,6 @@ for name, conf in build_modules.items():
     env.AddMethod(build_lib, "build_lib")
     env.AddMethod(build_bin, "build_bin")
     env.AddMethod(build_test, "build_test")
-    print("Building {} module: {}".format(app.name, name))
     built[name] = SConscript(Dir(name).File("scons.py"),
                             variant_dir = join(build_obj_path, name),
                             duplicate = 0,

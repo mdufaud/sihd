@@ -34,11 +34,6 @@ namespace test
         Named named("obj");
         EXPECT_EQ(named.get_name(), "obj");
         EXPECT_EQ(named.get_parent(), nullptr);
-
-        LOG(info, getenv("APP_NAME"));
-        LOG(info, getenv("TEST_PATH"));
-        LOG(info, getenv("EXTLIB_PATH"));
-        LOG(info, getenv("RES_PATH"));
     }
     
     TEST_F(TestNode, test_named_find)
