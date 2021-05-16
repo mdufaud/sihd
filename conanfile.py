@@ -7,7 +7,7 @@ pp = PrettyPrinter(indent=2)
 import sys
 sys.dont_write_bytecode = True
 import app
-import build_utils.modules_util
+import tools.modules
 
 print("Getting {} app libs".format(app.name))
 
@@ -19,12 +19,12 @@ if single_module:
 if tests_active:
     print("{}: test mode".format(app.name))
 
-modules = build_utils.modules_util.build_modules(app, single_module=single_module, test=tests_active)
+modules = tools.modules.build_modules(app, single_module=single_module, test=tests_active)
 print("{}: modules configuration".format(app.name))
 pp.pprint(modules)
 print()
 
-libs = build_utils.modules_util.build_libs_versions(app, modules, test=tests_active)
+libs = tools.modules.build_libs_versions(app, modules, test=tests_active)
 print("{}: modules libs".format(app.name))
 pp.pprint(libs)
 print()
