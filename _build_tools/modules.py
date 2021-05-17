@@ -35,18 +35,20 @@ def fill_all_modules_dependencies(modules: dict):
         conf['headers'] = list(set(conf['headers']))
 
 def build_libs(app, test=False):
-    libs = app.libs
-    if test:
+    libs = hasattr(app, "libs") and app.libs or []
+    if test and hasattr(app, "test_libs"):
         libs += app.test_libs
     return libs
 
 def build_headers(app, test=False):
-    headers = app.headers
-    if test:
+    headers = hasattr(app, "headers") and app.headers or []
+    if test and hasattr(app, "test_headers"):
         headers += app.test_headers
     return headers
 
 def build_libs_versions(app: dict, modules: dict, test=False):
+    if not hasattr(app, "libs_versions"):
+        return []
     libs_versions = app.libs_versions
     modules_extlibs = set()
     for _, module in modules.items():
@@ -66,6 +68,8 @@ def build_libs_versions(app: dict, modules: dict, test=False):
     return ret
 
 def build_modules(app, single_module="", test=False):
+    if not hasattr(app, "modules"):
+        raise RuntimeError("App's configuration file should have modules")
     modules = {}
     if single_module:
         fill_modlist_from_single_module(app.modules, single_module, modules)

@@ -50,7 +50,7 @@ if verbose:
 # Main shared environment
 #
 
-globalenv = Environment(
+base_env = Environment(
     CC = "c++",
     CCFLAGS = '-Wall -Wextra -Werror ' + (hasattr(app, 'flags') and app.flags or ""),
     CPPFLAGS = ["-std=c++20", ],
@@ -59,32 +59,32 @@ globalenv = Environment(
     LIBS = [],
 )
 if not verbose:
-    globalenv["SHCXXCOMSTR"] = "Compiling shared C++: $SOURCE"
-    globalenv["SHLINKCOMSTR"] = "Linking shared library: $TARGET"
-    globalenv["CXXCOMSTR"] = "Compiling C++: $SOURCE"
-    globalenv["LINKCOMSTR"] = "Linking object files into executable: $TARGET"
+    base_env["SHCXXCOMSTR"] = "Compiling shared C++: $SOURCE"
+    base_env["SHLINKCOMSTR"] = "Linking shared library: $TARGET"
+    base_env["CXXCOMSTR"] = "Compiling C++: $SOURCE"
+    base_env["LINKCOMSTR"] = "Linking object files into executable: $TARGET"
 
 # Path for build directories
 build_dir = Dir('build')
-globalenv["APP_BUILD"] = build_dir
+base_env["APP_BUILD"] = build_dir
 for entry in ['bin', 'lib', 'include', 'obj', 'test', 'etc']:
     entry_dir = build_dir.Dir(entry)
-    globalenv["APP_BUILD_" + entry.upper()] = entry_dir
+    base_env["APP_BUILD_" + entry.upper()] = entry_dir
 
 # Path for extlibs bin, lib and include directories
 extlib_dir = build_dir.Dir("extlib")
-globalenv["APP_EXTLIB"] = extlib_dir
+base_env["APP_EXTLIB"] = extlib_dir
 for entry in ['bin', 'lib', 'include']:
     entry_dir = extlib_dir.Dir(entry)
-    globalenv["APP_EXTLIB_" + entry.upper()] = entry_dir
-extlib_include_path = str(globalenv["APP_EXTLIB_INCLUDE"])
+    base_env["APP_EXTLIB_" + entry.upper()] = entry_dir
+extlib_include_path = str(base_env["APP_EXTLIB_INCLUDE"])
 
 # Setting those path for the compiler
-globalenv["LIBPATH"] = [globalenv["APP_BUILD_LIB"], globalenv["APP_EXTLIB_LIB"]]
-globalenv["CPPPATH"] = [globalenv["APP_EXTLIB_INCLUDE"]]
-globalenv["RPATH"] = [
-    abspath(str(globalenv["APP_BUILD_LIB"])),
-    abspath(str(globalenv["APP_EXTLIB_LIB"]))
+base_env["LIBPATH"] = [base_env["APP_BUILD_LIB"], base_env["APP_EXTLIB_LIB"]]
+base_env["CPPPATH"] = [base_env["APP_EXTLIB_INCLUDE"]]
+base_env["RPATH"] = [
+    abspath(str(base_env["APP_BUILD_LIB"])),
+    abspath(str(base_env["APP_EXTLIB_LIB"]))
 ]
 
 Decider('timestamp-newer')
@@ -94,7 +94,7 @@ Decider('timestamp-newer')
 #
 
 """
-scons_conf = Configure(globalenv,
+scons_conf = Configure(base_env,
     log_file = "#/.scons_config.log",
     conf_dir = "#/.scons_config.d"
 )
@@ -112,7 +112,7 @@ def check_libs(modules):
     return ret
 
 check_libs(build_modules)
-globalenv = scons_conf.Finish()
+base_env = scons_conf.Finish()
 """
 
 targets = []
@@ -158,18 +158,6 @@ def get_modules_libname(*args):
     """ Returns modules lib names """
     return ["{}_{}".format(app.name, m) for m in args]
 
-def get_extlib_headers(*args):
-    """ Grab external libs headers path """
-    ret = []
-    for m in args:
-        path = join(extlib_include_path, m)
-        path_with_lib = join(extlib_include_path, "lib" + m)
-        if path not in ret and isdir(path):
-            ret.append(path)
-        if path_with_lib not in ret and isdir(path_with_lib):
-            ret.append(path_with_lib)
-    return ret
-
 def load_env_packages_config(env, *configs):
     return load_env_packages_specific_config(env, [
         "pkg-config {} --cflags --libs".format(config)
@@ -185,21 +173,29 @@ def load_env_packages_specific_config(env, *configs):
             Exit(1)
 
 built = {}
-build_obj_path = str(globalenv["APP_BUILD_OBJ"])
+build_obj_path = str(base_env["APP_BUILD_OBJ"])
 for name, conf in build_modules.items():
     print("scons: building {}'s module: {}".format(app.name, name))
     module_format = "{}_{}".format(app.name, name)
-    # Create an environment for every module
-    env = globalenv.Clone()
+    # Getting module's configurations
     depends = conf.get("depends", [])
     libs = conf.get("libs", [])
     headers = conf.get("headers", [])
     flags = conf.get("flags", "")
+    # Create an environment for every module
+    env = base_env.Clone()
     env.Append(
         CPPPATH = get_modules_headers(name, *depends),
         LIBS = get_modules_libname(*depends) + libs + extlibs,
         CCFLAGS = flags,
+        APP_MODULE = module_format,
+        APP_MODULE_NAME = name,
+        APP_MODULE_DEPENDS = depends,
+        APP_MODULE_LIBS = depends,
     )
+    env.AddMethod(build_lib, "build_lib")
+    env.AddMethod(build_bin, "build_bin")
+    env.AddMethod(build_test, "build_test")
     package_configs = conf.get("pkg-configs", [])
     load_env_packages_config(env, *package_configs)
     parse_configs = conf.get("parse-configs", [])
@@ -216,13 +212,6 @@ for name, conf in build_modules.items():
             print("- needed specific packages configs")
             pp.pprint(parse_configs)
         print()
-    env["APP_MODULE"] = module_format
-    env["APP_MODULE_NAME"] = name
-    env["APP_MODULE_DEPENDS"] = depends
-    env["APP_MODULE_LIBS"] = depends
-    env.AddMethod(build_lib, "build_lib")
-    env.AddMethod(build_bin, "build_bin")
-    env.AddMethod(build_test, "build_test")
     built[name] = SConscript(Dir(name).File("scons.py"),
                             variant_dir = join(build_obj_path, name),
                             duplicate = 0,
@@ -232,8 +221,8 @@ for name, conf in build_modules.items():
 # Extra
 #
 
-build_path = str(globalenv["APP_BUILD"])
-build_etc_path = str(globalenv["APP_BUILD_ETC"])
+build_path = str(base_env["APP_BUILD"])
+build_etc_path = str(base_env["APP_BUILD_ETC"])
 
 def sed_replace(file, replace_dic):
     for key, value in replace_dic.items():
