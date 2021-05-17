@@ -33,7 +33,7 @@ bool    Node::add_child(const std::string & name, Named *child)
 {
     if (this->get_child(name) != nullptr)
     {
-        LOG_ERROR("Node: '%s' child '%s' already exists",
+        LOG_WARN("Node: '%s' child '%s' already exists",
                     this->get_full_name().c_str(), name.c_str());
         return false;
     }
@@ -104,7 +104,7 @@ bool    Node::add_link(const std::string & link, const std::string & path)
 {
     if (_link_map.contains(link))
     {
-        LOG_ERROR("Node: '%s' link '%s' already exists",
+        LOG_WARN("Node: '%s' link '%s' already exists",
                     this->get_full_name().c_str(), link.c_str());
         return false;
     }

@@ -1,19 +1,26 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/core/str.hpp>
+#include <sihd/core/Logger.hpp>
 
 namespace test
 {
     using namespace sihd::core;
 
+    LOGGER;
+
     class TestStr:   public ::testing::Test
     {
         protected:
             TestStr()
-            {}
+            {
+                sihd::core::LoggerManager::basic();
+            }
 
             virtual ~TestStr()
-            {}
+            {
+                sihd::core::LoggerManager::clear_loggers();
+            }
 
             virtual void SetUp()
             {
@@ -63,5 +70,38 @@ namespace test
         std::string res;
         res = str::format("%s -> %d", "hello", 1337);
         EXPECT_EQ(res, "hello -> 1337");
+    }
+
+    TEST_F(TestStr, test_str_demangle)
+    {
+        std::string res = str::demangle(typeid(*this).name());
+        LOG(info, "Demangled: " << res);
+        EXPECT_EQ(res, "test::TestStr_test_str_demangle_Test");
+    }
+
+    TEST_F(TestStr, test_str_trim)
+    {
+        EXPECT_EQ(str::trim(""), "");
+        EXPECT_EQ(str::trim("h"), "h");
+        EXPECT_EQ(str::trim("h "), "h");
+        EXPECT_EQ(str::trim(" h"), "h");
+        EXPECT_EQ(str::trim(" \t hello  world      \t "), "hello  world");
+    }
+
+    TEST_F(TestStr, test_str_lowerupper)
+    {
+        std::string s = "Hello World @123";
+        EXPECT_EQ(str::to_lower(s), "hello world @123");
+        EXPECT_EQ(str::to_upper(s), "HELLO WORLD @123");
+    }
+
+    TEST_F(TestStr, test_str_replace)
+    {
+        EXPECT_EQ(str::replace("hello wurld", "wurld", "world"), "hello world");
+        EXPECT_EQ(str::replace("its nope", "something", "other"), "its nope");
+        EXPECT_EQ(str::replace("wibbly wobbly timy wimey stuff", "i", "iii"),
+                    "wiiibbly wobbly tiiimy wiiimey stuff");
+        EXPECT_EQ(str::replace("heh ih", "h", "hhh"), "hhhehhh ihhh");
+        EXPECT_EQ(str::replace("hello", "", ""), "hello");
     }
 }

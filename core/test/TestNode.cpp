@@ -13,6 +13,7 @@ namespace test
             TestNode()
             {
                 sihd::core::LoggerManager::basic();
+                LOG(info, "LOL")
             }
 
             virtual ~TestNode()

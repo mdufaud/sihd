@@ -1,15 +1,50 @@
-from glob import glob
-import fileinput
+# Time
+import time
+build_start_time = time.time()
+
+# General utilities
+import sys
 from os.path import join, abspath, isdir, isfile
+# Utils for copying resources to build
+from glob import glob
 from distutils.dir_util import copy_tree
+import fileinput
 from subprocess import call as subprocess_call
+# Pretty utility for verbosis
 from pprint import PrettyPrinter
 pp = PrettyPrinter(indent=2)
-import sys
+
+# Loading app configuration and build tools, no bytecode for this
 sys.dont_write_bytecode = True
 import app
-import tools.modules
+import _build_tools.modules
 sys.dont_write_bytecode = False
+
+#
+# Args
+#
+
+verbose = ARGUMENTS.get("verbose", "") == "1"
+single_module = ARGUMENTS.get('module', "")
+distribution = ARGUMENTS.get('dist', "") == "1"
+make_tests = ARGUMENTS.get('test', "") == "1"
+
+try:
+    build_modules = _build_tools.modules.build_modules(app, single_module=single_module, test=make_tests)
+    extlibs = _build_tools.modules.build_libs(app, test=make_tests)
+    extheaders = _build_tools.modules.build_headers(app, test=make_tests)
+except RuntimeError as e:
+    print("scons build error: " + str(e), file=sys.stderr)
+    Exit(1)
+
+if verbose:
+    print("{}: modules configuration".format(app.name))
+    pp.pprint(build_modules)
+    print("{}: external libs".format(app.name))
+    pp.pprint(extlibs)
+    print("{}: external headers".format(app.name))
+    pp.pprint(extheaders)
+    print()
 
 #
 # Main shared environment
@@ -17,14 +52,13 @@ sys.dont_write_bytecode = False
 
 globalenv = Environment(
     CC = "c++",
-    CCFLAGS = '-Wall -Wextra -Werror',
-    CPPFLAGS = ["-std=c++20"],
+    CCFLAGS = '-Wall -Wextra -Werror ' + (hasattr(app, 'flags') and app.flags or ""),
+    CPPFLAGS = ["-std=c++20", ],
     CPPDEFINES = [],
     CPPPATH = [],
     LIBS = [],
 )
-verbose = ARGUMENTS.get("verbose", "") == "1"
-if verbose == False:
+if not verbose:
     globalenv["SHCXXCOMSTR"] = "Compiling shared C++: $SOURCE"
     globalenv["SHLINKCOMSTR"] = "Linking shared library: $TARGET"
     globalenv["CXXCOMSTR"] = "Compiling C++: $SOURCE"
@@ -53,30 +87,7 @@ globalenv["RPATH"] = [
     abspath(str(globalenv["APP_EXTLIB_LIB"]))
 ]
 
-#globalenv.ParseConfig("pkg-config x11 --cflags --libs")
-
 Decider('timestamp-newer')
-
-#
-# Args
-#
-
-single_module = ARGUMENTS.get('module', "")
-distribution = ARGUMENTS.get('dist', "") == "1"
-make_tests = ARGUMENTS.get('test', "") == "1"
-
-build_modules = tools.modules.build_modules(app, single_module=single_module, test=make_tests)
-extlibs = tools.modules.build_libs(app, test=make_tests)
-extheaders = tools.modules.build_headers(app, test=make_tests)
-
-if verbose:
-    print("{}: modules configuration".format(app.name))
-    pp.pprint(build_modules)
-    print("{}: external libs".format(app.name))
-    pp.pprint(extlibs)
-    print("{}: external headers".format(app.name))
-    pp.pprint(extheaders)
-    print()
 
 #
 # Build
@@ -159,27 +170,51 @@ def get_extlib_headers(*args):
             ret.append(path_with_lib)
     return ret
 
+def load_env_packages_config(env, *configs):
+    return load_env_packages_specific_config(env, [
+        "pkg-config {} --cflags --libs".format(config)
+        for config in configs
+    ])
+
+def load_env_packages_specific_config(env, *configs):
+    for config in configs:
+        try:
+            env.ParseConfig(config)
+        except OSError as e:
+            print("scons: build error: package {} not found".format(config), file=sys.stderr)
+            Exit(1)
+
 built = {}
 build_obj_path = str(globalenv["APP_BUILD_OBJ"])
 for name, conf in build_modules.items():
+    print("scons: building {}'s module: {}".format(app.name, name))
     module_format = "{}_{}".format(app.name, name)
     # Create an environment for every module
     env = globalenv.Clone()
     depends = conf.get("depends", [])
     libs = conf.get("libs", [])
     headers = conf.get("headers", [])
+    flags = conf.get("flags", "")
     env.Append(
-        CPPPATH = get_modules_headers(name)
-                    + get_modules_headers(*depends)
-                    + get_extlib_headers(*libs, *headers, *extlibs, *extheaders),
+        CPPPATH = get_modules_headers(name, *depends),
         LIBS = get_modules_libname(*depends) + libs + extlibs,
+        CCFLAGS = flags,
     )
-    print("Building {}'s module: {}".format(app.name, name))
+    package_configs = conf.get("pkg-configs", [])
+    load_env_packages_config(env, *package_configs)
+    parse_configs = conf.get("parse-configs", [])
+    load_env_packages_specific_config(env, *parse_configs)
     if verbose:
-        print("  - needed libraries")
-        pp.pprint(env['LIBS'])
-        print("  - needed headers")
+        print("- needed libraries")
+        pp.pprint([ str(s) for s in env['LIBS'] ])
+        print("- needed headers")
         pp.pprint([ str(s) for s in env['CPPPATH'] ])
+        if package_configs:
+            print("- needed packages configs")
+            pp.pprint(package_configs)
+        if parse_configs:
+            print("- needed specific packages configs")
+            pp.pprint(parse_configs)
         print()
     env["APP_MODULE"] = module_format
     env["APP_MODULE_NAME"] = name
@@ -239,27 +274,31 @@ def copy_module_res_to_build(module_name):
 for name, conf in build_modules.items():
     copy_module_res_to_build(name)
 
-replace_res_in_build(app.replace_files, app.replace_vars)
+if hasattr(app, "replace_files") and hasattr(app, "replace_vars"):
+    replace_res_in_build(app.replace_files, app.replace_vars)
 
 #
 # Progress
 #
 
-screen = open('/dev/tty', 'w')
-node_count = 0
-node_count_max = len(targets)
-node_count_interval = 1
-node_count_fname = str(env.Dir('#')) + '/.scons_node_count'
+try:
+    screen = open('/dev/tty', 'w')
+    node_count = 0
+    node_count_max = len(targets)
+    node_count_interval = 1
+    node_count_fname = str(env.Dir('#')) + '/.scons_node_count'
 
-def progress_function(node):
-    if node not in targets:
-        return
-    global node_count
-    node_count += 1
-    if node_count_max > 0 :
-        screen.write('\r[%3d%%] ' % (node_count * 100 / node_count_max))
+    def progress_function(node):
+        if node not in targets:
+            return
+        global node_count
+        node_count += 1
+        if node_count_max > 0 :
+            screen.write('\r[%3d%%] ' % (node_count * 100 / node_count_max))
 
-Progress(progress_function, interval = 1)
+    Progress(progress_function, interval = 1)
+except (OSError, IOError) as e:
+    print("scons build error: won't display progress - reason: " + str(e), file=sys.stderr)
 
 #
 # Status
@@ -300,11 +339,11 @@ def build_status():
 def display_build_status():
     status, failures_message = build_status()
     if status == 'failed':
-        print("==============================================================")
-        print("= BUILD FAILED =")
-        print(failures_message)
-        print("==============================================================")
+        print("==============================================================", file=sys.stderr)
+        print("scons: BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time), file=sys.stderr)
+        print(failures_message, file=sys.stderr)
+        print("==============================================================", file=sys.stderr)
     elif status == 'ok':
-        print("Build succeeded.")
+        print("scons: build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
 
 atexit.register(display_build_status)

@@ -20,7 +20,7 @@ TEST_PATH = $(BUILD_PATH)/test
 BIN_PATH = $(BUILD_PATH)/bin
 OBJ_PATH = $(BUILD_PATH)/obj
 RES_PATH = $(BUILD_PATH)/etc
-BUILD_TOOLS = $(HERE)/tools
+BUILD_TOOLS = $(HERE)/_build_tools
 
 # Scons
 SCONS_BUILD_CMD = scons -Q -j4
@@ -74,6 +74,9 @@ endif
 build:
 	@$(SCONS_BUILD_CMD) verbose=$(verbose) module=$(module) test=$(test) dist=$(dist)
 
+build_debug: SCONS_BUILD_CMD = time scons --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
+build_debug: build
+
 verbose: verbose = 1
 verbose: build
 
@@ -92,7 +95,7 @@ endif
 # Test
 #
 
-TEST_EXEC=./$(TEST_PATH)/*
+TEST_EXEC=$(TEST_PATH)/*
 TEST_ARGS=--gtest_break_on_failure
 
 # find string 'test' in target
@@ -139,8 +142,11 @@ endif
 
 test: test = 1
 test: build
-	@echo "Running test: $(TEST_EXEC) $(TEST_ARGS)"
-	@env $(DEBUGGER) $(TEST_EXEC) $(TEST_ARGS)
+	@for test_bin in $(TEST_EXEC); do \
+		echo "Running test: $$test_bin $(TEST_ARGS)" ; \
+		env $(DEBUGGER) $$test_bin $(TEST_ARGS) ; \
+	done
+
 
 valgrindtest: DEBUGGER = valgrind --leak-check=full
 valgrindtest: test

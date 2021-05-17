@@ -61,6 +61,10 @@ make module MODULE
 
 Activate verbose by adding verbose=1
 
+### Python bindings build
+
+Its time consumming
+
 ## Tests
 
 To compile and run tests

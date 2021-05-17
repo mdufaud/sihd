@@ -5,11 +5,13 @@
 #include <cstdarg>
 #include <mutex>
 
+#define SIHD_CORE_STR_BUFFER 20480
+
 namespace sihd::core::str
 {
 
 std::mutex _mutex;
-const size_t _buffer_size = 20480;
+const size_t _buffer_size = SIHD_CORE_STR_BUFFER;
 char _buffer[_buffer_size];
 
 static int   _split_size(const char *s, const char *delimiter, size_t len)
@@ -96,6 +98,57 @@ std::string     format(const char *format, ...)
         ret.assign(_buffer, strlen(_buffer));
     }
     va_end(args);
+    return ret;
+}
+
+std::string     trim(const std::string & s)
+{
+    size_t i = 0;
+    while (std::isspace(s[i]))
+        ++i;
+    size_t j = s.length();
+    while (j > 0 && std::isspace(s[--j]))
+        ;
+    return s.substr(i, j - i + 1);
+}
+
+std::string &   to_upper(std::string & s)
+{
+    size_t i = 0;
+    std::locale loc;
+    while (s[i])
+    {
+        s[i] = std::toupper(s[i], loc);
+        ++i;
+    }
+    return s;
+}
+
+std::string &   to_lower(std::string & s)
+{
+    size_t i = 0;
+    std::locale loc;
+    while (s[i])
+    {
+        s[i] = std::tolower(s[i], loc);
+        ++i;
+    }
+    return s;
+}
+
+std::string     replace(const std::string & s, const std::string & from, const std::string & to)
+{
+    std::string ret;
+    size_t i = s.find(from);
+    size_t last = 0;
+    while (i != std::string::npos)
+    {
+        ret += s.substr(last, i - last) + to;
+        i += from.size();
+        last = i;
+        i = s.find(from, i + 1);
+    }
+    ret += s.substr(last);
     return ret;
 }
 

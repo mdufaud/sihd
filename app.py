@@ -1,7 +1,7 @@
 name = 'sihd'
 headers = []
 test_headers = []
-libs = ['pthread']
+libs = ['pthread', 'dl']
 test_libs = ['gtest']
 libs_versions = {
     "libwebsockets": "4.1.6",
@@ -27,7 +27,9 @@ modules = {
     },
     "lua": {
         "depends": ['core'],
-        "headers": ['sol2'],
+        "headers": ['sol'],
+        "libs": ['lua'],
+        "flags": "-Wno-unused-parameter"
     },
     "luabin": {
         "depends": ['lua'],
@@ -35,6 +37,7 @@ modules = {
     "py": {
         "depends": ['core'],
         "headers": ['pybind11'],
+        "parse-configs": ['/usr/bin/python3-config --cflags --ldflags --embed'],
     }
 }
 replace_files = [

@@ -7,7 +7,7 @@ pp = PrettyPrinter(indent=2)
 import sys
 sys.dont_write_bytecode = True
 import app
-import tools.modules
+import _build_tools.modules
 
 print("Getting {} app libs".format(app.name))
 
@@ -19,12 +19,12 @@ if single_module:
 if tests_active:
     print("{}: test mode".format(app.name))
 
-modules = tools.modules.build_modules(app, single_module=single_module, test=tests_active)
+modules = _build_tools.modules.build_modules(app, single_module=single_module, test=tests_active)
 print("{}: modules configuration".format(app.name))
 pp.pprint(modules)
 print()
 
-libs = tools.modules.build_libs_versions(app, modules, test=tests_active)
+libs = _build_tools.modules.build_libs_versions(app, modules, test=tests_active)
 print("{}: modules libs".format(app.name))
 pp.pprint(libs)
 print()
@@ -34,11 +34,11 @@ destination = join("..", "extlib")
 class ConanAppDependencies(ConanFile):
    settings = "os", "compiler", "build_type", "arch"
    requires = libs
-   generators = "gcc", "txt"
+   generators = "gcc", "txt", "cmake"
    #default_options = {"poco:shared": True, "openssl:shared": True}
    default_options = {}
 
    def imports(self):
-      self.copy("*.h", dst=join(destination, "include"), src="include") # From bin to bin
+      self.copy("*.h*", dst=join(destination, "include"), src="include") # From bin to bin
       self.copy("*.dll", dst=join(destination, "lib"), src="bin") # From lib to bin
       self.copy("*", dst=join(destination, "lib"), src="lib") # From lib to bin
