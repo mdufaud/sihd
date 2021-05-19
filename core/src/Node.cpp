@@ -125,6 +125,7 @@ Named   *Node::get_link(const std::string & path, size_t recursion)
     if (recursion == MAX_LINK_RECURSION)
         throw Node::MaximumLinkRecursion();
     auto [parent_path, child_name] = this->get_parent_path(path);
+    (void)child_name;
     Node *parent = this->to_node(this->find(parent_path));
     if (parent != nullptr)
     {

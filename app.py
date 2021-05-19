@@ -3,6 +3,7 @@ headers = []
 test_headers = []
 libs = ['pthread', 'dl']
 test_libs = ['gtest']
+flags = ["-fPIC"]
 libs_versions = {
     #"jsoncpp": "1.9.4",
     "gtest": "cci.20210126",
@@ -29,15 +30,16 @@ modules = {
     "lua": {
         "depends": ['core'],
         "libs": ['lua'],
-        "flags": "-Wno-unused-parameter"
+        "headers": ['sol'],
+        "flags": ["-Wno-unused-parameter"],
     },
     "luabin": {
         "depends": ['lua'],
-        "flags": "-Wno-unused-parameter"
+        "flags": ["-Wno-unused-parameter"]
     },
     "py": {
         "depends": ['core'],
-        "libs": ['crypt', 'util', 'm'],
+        "headers": ['pybind11'],
         "parse-configs": [
             'python-config --cflags --ldflags --embed',
             'python3-config --cflags --ldflags',

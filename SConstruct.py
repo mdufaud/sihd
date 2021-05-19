@@ -52,9 +52,9 @@ if verbose:
 
 base_env = Environment(
     CC = "c++",
-    CCFLAGS = '-Wall -Wextra -Werror ' + (hasattr(app, 'flags') and app.flags or ""),
+    CCFLAGS = ['-Wall', '-Wextra', '-Werror'] + (hasattr(app, 'flags') and app.flags or []),
     CPPFLAGS = ["-std=c++17"],
-    CPPDEFINES = [],
+    CPPDEFINES = [] + (hasattr(app, 'defines') and app.defines or []),
     CPPPATH = [],
     LIBS = [],
 )
@@ -92,28 +92,6 @@ Decider('timestamp-newer')
 #
 # Build
 #
-
-"""
-scons_conf = Configure(base_env,
-    log_file = "#/.scons_config.log",
-    conf_dir = "#/.scons_config.d"
-)
-def check_libs(modules):
-    ret = True
-    for lib in extlibs:
-        if not scons_conf.CheckLib(lib):
-            print("For app {}: needed lib {} not found".format(app.name, lib))
-            ret = False
-    for name, conf in modules.items():
-        for lib in conf.get('libs', []):
-            if not scons_conf.CheckLib(lib):
-                print("For module {}: needed lib {} not found".format(name, lib))
-                ret = False
-    return ret
-
-check_libs(build_modules)
-base_env = scons_conf.Finish()
-"""
 
 targets = []
 def add_targets(src):
@@ -191,7 +169,6 @@ for name, conf in build_modules.items():
         APP_MODULE = module_format,
         APP_MODULE_NAME = name,
         APP_MODULE_DEPENDS = depends,
-        APP_MODULE_LIBS = depends,
     )
     env.AddMethod(build_lib, "build_lib")
     env.AddMethod(build_bin, "build_bin")
