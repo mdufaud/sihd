@@ -143,7 +143,6 @@ def build_lib(self, src=None):
     module_name = self["APP_MODULE"]
     lib_path = join("$APP_BUILD_LIB", module_name)
     lib = self.SharedLibrary(lib_path, src)
-    #self.Append(LIBS = [module_name])
     return lib
 
 def build_bin(self, src):
@@ -187,7 +186,7 @@ for name, conf in build_modules.items():
     # Create an environment for every module
     env = base_env.Clone()
     env.Append(
-        CPPPATH = get_modules_headers(name, *depends),
+        CPPPATH = get_modules_headers(name, *depends) + headers,
         LIBS = get_modules_libname(*depends) + libs + extlibs,
         CCFLAGS = flags,
         APP_MODULE = module_format,

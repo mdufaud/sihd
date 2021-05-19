@@ -1,3 +1,6 @@
+import sys
+python_version = "python{}.{}".format(sys.version_info.major, sys.version_info.minor)
+
 name = 'sihd'
 headers = []
 test_headers = []
@@ -28,7 +31,6 @@ modules = {
     },
     "lua": {
         "depends": ['core'],
-        "headers": ['sol'],
         "libs": ['lua'],
         "flags": "-Wno-unused-parameter"
     },
@@ -38,8 +40,9 @@ modules = {
     },
     "py": {
         "depends": ['core'],
-        "headers": ['pybind11'],
-        "parse-configs": ['python3-config --cflags --ldflags --embed'],
+        "headers": ['/usr/include/' + python_version],
+        "libs": [python_version, 'crypt', 'util', 'm'],
+        #"flags": "-Wno-unused-result -Wsign-compare -march=x86-64 -mtune=generic -O3 -pipe -fno-plt -fno-semantic-interposition -DNDEBUG -g -fwrapv -O3 -Wall"
     }
 }
 replace_files = [
