@@ -1,6 +1,3 @@
-import sys
-python_version = "python{}.{}".format(sys.version_info.major, sys.version_info.minor)
-
 name = 'sihd'
 headers = []
 test_headers = []
@@ -40,9 +37,11 @@ modules = {
     },
     "py": {
         "depends": ['core'],
-        "headers": ['/usr/include/' + python_version],
-        "libs": [python_version, 'crypt', 'util', 'm'],
-        #"flags": "-Wno-unused-result -Wsign-compare -march=x86-64 -mtune=generic -O3 -pipe -fno-plt -fno-semantic-interposition -DNDEBUG -g -fwrapv -O3 -Wall"
+        "libs": ['crypt', 'util', 'm'],
+        "parse-configs": [
+            'python-config --cflags --ldflags --embed',
+            'python3-config --cflags --ldflags',
+        ],
     }
 }
 replace_files = [

@@ -170,8 +170,7 @@ def load_env_packages_specific_config(env, *configs):
         try:
             env.ParseConfig(config)
         except OSError as e:
-            print("scons: build error: package {} not found".format(config), file=sys.stderr)
-            Exit(1)
+            print("scons: build warning: package {} not found".format(config), file=sys.stderr)
 
 built = {}
 build_obj_path = str(base_env["APP_BUILD_OBJ"])
