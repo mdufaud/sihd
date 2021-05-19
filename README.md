@@ -6,9 +6,9 @@ Aimed to be a simple C++ library with some python and/or LUA bindings that gets,
 
 ## How to compile
 
-### Scons
+### SCons
 
-Scons version v4.1.0
+SCons version v4.1.0
 
 ```shell
 pip install scons
@@ -20,13 +20,23 @@ Conan version 1.35.0
 
 [Conan install doc](https://docs.conan.io/en/latest/installation.html)
 
-modify: ~/.conan/profiles/default
+```shell
+pip install conan
+```
 
-compiler.libcxx=libstdc++11
+### python-pip
+
+Don't forget to add to your bashrc:
+
+```shell
+export PATH=$PATH:$HOME/.local/bin
+```
+
+To be able to find conan and scons from pip.
 
 ### C++
 
-version 20
+version 17
 
 ### Compiler
 
@@ -34,18 +44,18 @@ g++ (GCC) 10.2.0
 
 ### Build instructions
 
-To pull every dependencies
+To dependencies from conan.io center
 
 ```shell
-# For building only
+# To get all dependencies for every modules
 make install
-# For running tests
+# To be able to run unit tests
 make install_test
-# For building a single module (and its module dependencies)
+# To get dependencies for a single module
 make install_module MODULE
 ```
 
-To build binaries and compile shared libraries
+To build binaries and compile shared libraries with scons
 
 ```shell
 make
