@@ -27,12 +27,13 @@ modules = {
     },
     "lua": {
         "depends": ['core'],
-        "headers": ['sol'],
+        # "headers": ['sol'],
         "libs": ['lua'],
         "flags": "-Wno-unused-parameter"
     },
     "luabin": {
         "depends": ['lua'],
+        "flags": "-Wno-unused-parameter"
     },
     "py": {
         "depends": ['core'],

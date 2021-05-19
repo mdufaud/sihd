@@ -1,5 +1,5 @@
 def fill_modlist_from_single_module(modules, module_name, modlist: dict):
-    """ Gets a single module dependency tree """
+    """ Gets all modules to build from a single module to build """
     conf = modules.get(module_name, None)
     if conf is None:
         raise RuntimeError("No such module: {}".format(module_name))
@@ -8,8 +8,7 @@ def fill_modlist_from_single_module(modules, module_name, modlist: dict):
         fill_modlist_from_single_module(modules, dep, modlist)
 
 def __rec_fill_module_real_depends(modules, module_name, modconf: dict):
-    """ Makes a map [modulename] = trashvalue
-        to have a single module real dependencies """
+    """ Fill a single module real dependency tree into modconf """
     conf = modules.get(module_name, None)
     if conf is None:
         raise RuntimeError("No such module: {}".format(module_name))
@@ -17,22 +16,33 @@ def __rec_fill_module_real_depends(modules, module_name, modconf: dict):
     modconf['depends'] += depends
     modconf['libs'] += conf.get('libs', [])
     modconf['headers'] += conf.get('headers', [])
+    modconf['parse-configs'] += conf.get('parse-configs', [])
+    modconf['pkg-configs'] += conf.get('pkg-configs', [])
     for depend in depends:
         __rec_fill_module_real_depends(modules, depend, modconf)
 
 def fill_all_modules_dependencies(modules: dict):
     """ Fill all modules real dependency tree """
     for name, conf in modules.items():
+        # Add configurations if not declared
         if 'depends' not in conf:
             conf['depends'] = []
         if 'libs' not in conf:
             conf['libs'] = []
         if 'headers' not in conf:
             conf['headers'] = []
+        if 'parse-configs' not in conf:
+            conf['parse-configs'] = []
+        if 'pkg-configs' not in conf:
+            conf['pkg-configs'] = []
+        # Get dependency tree
         __rec_fill_module_real_depends(modules, name, conf)
+        # Remove duplicates
         conf['depends'] = list(set(conf['depends']))
         conf['libs'] = list(set(conf['libs']))
         conf['headers'] = list(set(conf['headers']))
+        conf['parse-configs'] = list(set(conf['parse-configs']))
+        conf['pkg-configs'] = list(set(conf['pkg-configs']))
 
 def build_libs(app, test=False):
     libs = hasattr(app, "libs") and app.libs or []
@@ -47,8 +57,9 @@ def build_headers(app, test=False):
     return headers
 
 def build_libs_versions(app: dict, modules: dict, test=False):
+    """ Gets all libs versions needed by selected modules """
     if not hasattr(app, "libs_versions"):
-        return []
+        return {}
     libs_versions = app.libs_versions
     modules_extlibs = set()
     for _, module in modules.items():
@@ -60,11 +71,11 @@ def build_libs_versions(app: dict, modules: dict, test=False):
             modules_extlibs.add(header)
     for extlib in build_libs(app, test=test):
         modules_extlibs.add(extlib)
-    ret = []
+    ret = {}
     for extlib in modules_extlibs:
         for libname, version in libs_versions.items():
             if libname.find(extlib) >= 0:
-                ret.append("{}/{}".format(libname, version))
+                ret[libname] = version
     return ret
 
 def build_modules(app, single_module="", test=False):

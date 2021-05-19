@@ -33,9 +33,8 @@ destination = join("..", "extlib")
 
 class ConanAppDependencies(ConanFile):
    settings = "os", "compiler", "build_type", "arch"
-   requires = libs
+   requires = ["{}/{}".format(name, version) for name, version in libs.items()]
    generators = "gcc", "txt", "cmake"
-   #default_options = {"poco:shared": True, "openssl:shared": True}
    default_options = {}
 
    def imports(self):
