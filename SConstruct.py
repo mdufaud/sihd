@@ -132,7 +132,9 @@ def build_test(self, src=None):
     # Not only main.cpp
     add_targets(src)
     test_path = join("$APP_BUILD_TEST", self["APP_MODULE"])
-    return self.Program(test_path, src)
+    env = self.Clone()
+    env.Append(LIBS = [self["APP_MODULE"]])
+    return env.Program(test_path, src)
 
 def build_lib(self, src=None):
     """ Environment method to build a shared library for a module """
@@ -141,7 +143,7 @@ def build_lib(self, src=None):
     module_name = self["APP_MODULE"]
     lib_path = join("$APP_BUILD_LIB", module_name)
     lib = self.SharedLibrary(lib_path, src)
-    self.Append(LIBS = [module_name])
+    #self.Append(LIBS = [module_name])
     return lib
 
 def build_bin(self, src):

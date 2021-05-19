@@ -4,16 +4,17 @@ test_headers = []
 libs = ['pthread', 'dl']
 test_libs = ['gtest']
 libs_versions = {
-    "libwebsockets": "4.1.6",
-    "jsoncpp": "1.9.4",
+    #"jsoncpp": "1.9.4",
+    "gtest": "cci.20210126",
+    "rapidjson": "cci.20200410",
     "libcurl": "7.75.0",
     "libpcap": "1.10.0",
     "libssh2": "1.9.0",
     "libzip": "1.7.3",
     "openssl": "1.1.1i",
-    "gtest": "cci.20210126",
     "pybind11" : "2.6.2",
     "sol2" : "3.2.3",
+    "libwebsockets": "4.1.6",
 }
 modules = {
     "core": {
