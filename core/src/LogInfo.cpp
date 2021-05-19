@@ -41,7 +41,7 @@ const std::string & LogInfo::get_level(LogLevel level)
 
 LogLevel    LogInfo::string_to_level(const std::string & level)
 {
-    if (_str_to_levels_map.contains(level))
+    if (_str_to_levels_map.find(level) != _str_to_levels_map.end())
         return _str_to_levels_map[level];
     return LogLevel::none;
 }

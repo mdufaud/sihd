@@ -53,7 +53,7 @@ if verbose:
 base_env = Environment(
     CC = "c++",
     CCFLAGS = '-Wall -Wextra -Werror ' + (hasattr(app, 'flags') and app.flags or ""),
-    CPPFLAGS = ["-std=c++20", ],
+    CPPFLAGS = ["-std=c++17"],
     CPPDEFINES = [],
     CPPPATH = [],
     LIBS = [],

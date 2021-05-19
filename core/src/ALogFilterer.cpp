@@ -1,4 +1,5 @@
 #include <sihd/core/ALogFilterer.hpp>
+#include <algorithm>
 
 namespace sihd::core
 {

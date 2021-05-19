@@ -102,7 +102,7 @@ bool    Node::is_link(const std::string & name)
 
 bool    Node::add_link(const std::string & link, const std::string & path)
 {
-    if (_link_map.contains(link))
+    if (_link_map.find(link) != _link_map.end())
     {
         LOG_WARN("Node: '%s' link '%s' already exists",
                     this->get_full_name().c_str(), link.c_str());

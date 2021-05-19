@@ -1,4 +1,5 @@
 #include <sihd/core/LoggerManager.hpp>
+#include <algorithm>
 
 namespace sihd::core
 {

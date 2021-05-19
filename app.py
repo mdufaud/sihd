@@ -27,7 +27,7 @@ modules = {
     },
     "lua": {
         "depends": ['core'],
-        # "headers": ['sol'],
+        "headers": ['sol'],
         "libs": ['lua'],
         "flags": "-Wno-unused-parameter"
     },
@@ -38,7 +38,7 @@ modules = {
     "py": {
         "depends": ['core'],
         "headers": ['pybind11'],
-        "parse-configs": ['/usr/bin/python3-config --cflags --ldflags --embed'],
+        "parse-configs": ['python3-config --cflags --ldflags --embed'],
     }
 }
 replace_files = [
