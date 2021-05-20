@@ -32,6 +32,7 @@ CONAN_DEP = conan install .
 CONAN_PROFILE_LIBSTDC = $(shell conan profile get settings.compiler.libcxx default)
 CONAN_DEP_PROFILE = --profile default
 CONAN_DEP_PATH = -if $(CONAN_PATH) 
+CONAN_ARGS =
 
 #########
 # Rules 
@@ -57,7 +58,7 @@ ifneq ($(CONAN_PROFILE_LIBSTDC), libstdc++11)
 	@echo "Updating default profile to libstdc++11"
 	@conan profile update settings.compiler.libcxx="libstdc++11" default
 endif
-	@env test=$(test) module=$(module) $(CONAN_DEP) $(CONAN_DEP_PROFILE) $(CONAN_DEP_PATH)
+	@env test=$(test) module=$(module) $(CONAN_DEP) $(CONAN_DEP_PROFILE) $(CONAN_DEP_PATH) $(CONAN_ARGS)
 
 # make dep module MODULE
 ifeq ($(word 2, $(MAKECMDGOALS)), module)
@@ -71,6 +72,12 @@ endif
 ifeq ($(word 2, $(MAKECMDGOALS)), test)
 dep: test = 1
 test:
+endif
+
+# make dep build
+ifeq ($(word 2, $(MAKECMDGOALS)), build)
+dep: CONAN_ARGS = --build
+build:
 endif
 
 endif # dep
