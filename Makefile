@@ -28,12 +28,13 @@ SCONS_BUILD_CMD = scons -Q -j4
 # Conan
 EXTLIB_PATH = $(BUILD_PATH)/extlib
 CONAN_PATH = $(BUILD_PATH)/conan
-CONAN_INSTALL = conan install .
-CONAN_INSTALL_PROFILE = --profile .conan_profile
-CONAN_INSTALL_PATH = -if $(CONAN_PATH) 
+CONAN_DEP = conan install .
+CONAN_PROFILE_LIBSTDC = $(shell conan profile get settings.compiler.libcxx default)
+CONAN_DEP_PROFILE = --profile default
+CONAN_DEP_PATH = -if $(CONAN_PATH) 
 
 #########
-# RULES #
+# Rules 
 #########
 
 export APP_NAME
@@ -44,32 +45,45 @@ export RES_PATH
 
 all: build
 
-#
+#########
 # Conan (external libraries dependencies retrieval)
-#
+#########
 
-install:
-	@env test=$(test) module=$(module) $(CONAN_INSTALL) $(CONAN_INSTALL_PROFILE) $(CONAN_INSTALL_PATH)
+ifeq ($(word 1, $(MAKECMDGOALS)), dep)
+.PHONY: dep
+dep:
+ifneq ($(CONAN_PROFILE_LIBSTDC), libstdc++11)
+	@echo "Conan profile compiler.libcxx is not libstdc++11 (is $(CONAN_PROFILE_LIBSTDC))"
+	@echo "Updating default profile to libstdc++11"
+	@conan profile update settings.compiler.libcxx="libstdc++11" default
+endif
+	@env test=$(test) module=$(module) $(CONAN_DEP) $(CONAN_DEP_PROFILE) $(CONAN_DEP_PATH)
 
-
-install_test: test = 1
-install_test: install
-
-
-ifeq ($(word 1, $(MAKECMDGOALS)), install_module)
-MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
-
-install_module: module = $(MODULE_NAME)
-install_module: install
-
-# for no 'no rules to make...'
+# make dep module MODULE
+ifeq ($(word 2, $(MAKECMDGOALS)), module)
+MODULE_NAME=$(word 3, $(MAKECMDGOALS))$(m)
+dep: module = $(MODULE_NAME)
+module:
 $(MODULE_NAME):
-
 endif
 
-#
+# make dep test
+ifeq ($(word 2, $(MAKECMDGOALS)), test)
+dep: test = 1
+test:
+endif
+
+endif # dep
+
+checkdep_html:
+	@conan info . --graph=$(CONAN_PATH)/dep_tree.html
+
+checkdep:
+	@conan info . --graph=$(CONAN_PATH)/dep_tree.txt && cat $(CONAN_PATH)/dep_tree.txt
+
+########
 # Scons (builder)
-#
+########
 
 build:
 	@$(SCONS_BUILD_CMD) verbose=$(verbose) module=$(module) test=$(test) dist=$(dist)
@@ -80,26 +94,40 @@ build_debug: build
 verbose: verbose = 1
 verbose: build
 
+# make module MODULE
 ifeq ($(word 1, $(MAKECMDGOALS)), module)
+.PHONY: module
 MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
-
 module: module = $(MODULE_NAME)
 module: build
-
-# for no 'no rules to make...'
 $(MODULE_NAME):
+endif # module
 
-endif
-
-#
+########
 # Test
-#
+########
 
 TEST_EXEC=$(TEST_PATH)/*
 TEST_ARGS=--gtest_break_on_failure
 
 # find string 'test' in target
 ifneq ($(findstring test,$(word 1, $(MAKECMDGOALS))), )
+
+test: test = 1
+test: build
+	@for test_bin in $(TEST_EXEC); do \
+		echo "Running test: $$test_bin $(TEST_ARGS)" ; \
+		env $(DEBUGGER) $$test_bin $(TEST_ARGS) ; \
+	done
+
+valgrindtest: DEBUGGER = valgrind --leak-check=full
+valgrindtest: test
+
+gdbtest: DEBUGGER = gdb
+gdbtest: test
+
+.PHONY: test valgrindtest gdbtest
+
 # handles:
 #	make test
 #	make test MODULE FILTER
@@ -132,44 +160,26 @@ ifneq ($(MODULE_NAME), )
 test: module = $(MODULE_NAME)
 endif
 
-# for no 'no rules to make...'
 $(MODULE_NAME):
-
-# for no 'no rules to make...'
 $(TEST_NAME):
+endif #test
 
-endif
-
-test: test = 1
-test: build
-	@for test_bin in $(TEST_EXEC); do \
-		echo "Running test: $$test_bin $(TEST_ARGS)" ; \
-		env $(DEBUGGER) $$test_bin $(TEST_ARGS) ; \
-	done
-
-
-valgrindtest: DEBUGGER = valgrind --leak-check=full
-valgrindtest: test
-
-gdbtest: DEBUGGER = gdb
-gdbtest: test
-
-#
+##############
 # Distribution
-#
+##############
 
 dist: dist = 1
 dist: build
 
-#
+##########
 # Builder
-#
+##########
 
 include $(BUILD_TOOLS)/rules.mk
 
-#
+##########
 # Cleanup
-#
+##########
 
 clean:
 	@echo "Removing $(APP_NAME) compilation build"
@@ -179,13 +189,9 @@ cleaninstall:
 	@echo "Removing $(APP_NAME) dependencies"
 	@rm -rf $(CONAN_PATH) $(EXTLIB_PATH) && echo "Done" || echo "Failed"
 
-cleanscons:
-	@echo "Removing scons config files"
-	@rm -rf .scons_config.d .scons_config.log
-
-fclean: cleanscons
+fclean:
 	@echo "Removing build"
 	@rm -rf $(BUILD_PATH)
 
 ### Makefile
-.PHONY: install build verbose test valgrindtest gdbtest dist fclean clean cleaninstall
+.PHONY: install build verbose dist fclean clean cleaninstall

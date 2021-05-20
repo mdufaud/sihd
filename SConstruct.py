@@ -4,7 +4,8 @@ build_start_time = time.time()
 
 # General utilities
 import sys
-from os.path import join, abspath, isdir, isfile
+from os import getenv
+from os.path import join, abspath, isdir, isfile, relpath
 # Utils for copying resources to build
 from glob import glob
 from distutils.dir_util import copy_tree
@@ -51,6 +52,9 @@ if verbose:
 #
 
 base_env = Environment(
+    ENV = {
+        'PATH': getenv("PATH"),
+    },
     CC = "c++",
     CCFLAGS = ['-Wall', '-Wextra', '-Werror'] + (hasattr(app, 'flags') and app.flags or []),
     CPPFLAGS = ["-std=c++17"],
@@ -82,10 +86,17 @@ extlib_include_path = str(base_env["APP_EXTLIB_INCLUDE"])
 # Setting those path for the compiler
 base_env["LIBPATH"] = [base_env["APP_BUILD_LIB"], base_env["APP_EXTLIB_LIB"]]
 base_env["CPPPATH"] = [base_env["APP_EXTLIB_INCLUDE"]]
-base_env["RPATH"] = [
-    abspath(str(base_env["APP_BUILD_LIB"])),
-    abspath(str(base_env["APP_EXTLIB_LIB"]))
-]
+
+if distribution:
+    base_env.Append(RPATH = [
+        relpath(str(base_env["APP_BUILD_LIB"]), str(base_env["APP_BUILD_BIN"])),
+        relpath(str(base_env["APP_EXTLIB_LIB"]), str(base_env["APP_BUILD_BIN"])),
+    ])
+else:
+    base_env.Append(RPATH = [
+        abspath(str(base_env["APP_BUILD_LIB"])),
+        abspath(str(base_env["APP_EXTLIB_LIB"]))
+    ])
 
 Decider('timestamp-newer')
 

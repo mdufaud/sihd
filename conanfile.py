@@ -35,7 +35,7 @@ class ConanAppDependencies(ConanFile):
    settings = "os", "compiler", "build_type", "arch"
    requires = ["{}/{}".format(name, version) for name, version in libs.items()]
    generators = "gcc", "txt", "cmake"
-   default_options = {}
+   default_options = {'*:shared': True}
 
    def imports(self):
       self.copy("*.h*", dst=join(destination, "include"), src="include") # From bin to bin

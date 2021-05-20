@@ -48,11 +48,11 @@ To dependencies from conan.io center
 
 ```shell
 # To get all dependencies for every modules
-make install
+make dep
 # To be able to run unit tests
-make install_test
+make dep test
 # To get dependencies for a single module
-make install_module MODULE
+make dep module MODULE
 ```
 
 To build binaries and compile shared libraries with scons
