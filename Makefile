@@ -58,14 +58,14 @@ ifneq ($(CONAN_PROFILE_LIBSTDC), libstdc++11)
 	@echo "Updating default profile to libstdc++11"
 	@conan profile update settings.compiler.libcxx="libstdc++11" default
 endif
-	@env test=$(test) module=$(module) $(CONAN_DEP) $(CONAN_DEP_PROFILE) $(CONAN_DEP_PATH) $(CONAN_ARGS)
+	@env test=$(test) modules=$(modules) lua=$(lua) py=$(py) $(CONAN_DEP) $(CONAN_DEP_PROFILE) $(CONAN_DEP_PATH) $(CONAN_ARGS)
 
-# make dep module MODULE
-ifeq ($(word 2, $(MAKECMDGOALS)), module)
-MODULE_NAME=$(word 3, $(MAKECMDGOALS))$(m)
-dep: module = $(MODULE_NAME)
-module:
-$(MODULE_NAME):
+# make dep mod MODULE
+ifeq ($(word 2, $(MAKECMDGOALS)), mod)
+MODULES_NAME = $(word 3, $(MAKECMDGOALS))$(m)
+dep: modules = $(MODULES_NAME)
+mod:
+$(MODULES_NAME):
 endif
 
 # make dep test
@@ -93,7 +93,7 @@ checkdep:
 ########
 
 build:
-	@$(SCONS_BUILD_CMD) verbose=$(verbose) module=$(module) test=$(test) dist=$(dist)
+	@$(SCONS_BUILD_CMD) verbose=$(verbose) modules=$(modules) test=$(test) dist=$(dist) py=$(py) lua=$(lua)
 
 build_debug: SCONS_BUILD_CMD = time scons --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
 build_debug: build
@@ -101,28 +101,28 @@ build_debug: build
 verbose: verbose = 1
 verbose: build
 
-# make module MODULE
-ifeq ($(word 1, $(MAKECMDGOALS)), module)
-.PHONY: module
-MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
-module: module = $(MODULE_NAME)
-module: build
-$(MODULE_NAME):
+# make mod MODULE
+ifeq ($(word 1, $(MAKECMDGOALS)), mod)
+.PHONY: modules
+MODULES_NAME = $(word 2, $(MAKECMDGOALS))$(m)
+mod: modules = $(MODULES_NAME)
+mod: build
+$(MODULES_NAME):
 endif # module
 
 ########
 # Test
 ########
 
-TEST_EXEC=$(TEST_PATH)/*
-TEST_ARGS=--gtest_break_on_failure
+TEST_EXEC = $(TEST_PATH)/*
+TEST_ARGS = --gtest_break_on_failure
 
 # find string 'test' in target
 ifneq ($(findstring test,$(word 1, $(MAKECMDGOALS))), )
 
 test: test = 1
 test: build
-	@for test_bin in $(TEST_EXEC); do \
+	for test_bin in $(TEST_EXEC); do \
 		echo "Running test: $$test_bin $(TEST_ARGS)" ; \
 		env $(DEBUGGER) $$test_bin $(TEST_ARGS) ; \
 	done
@@ -141,33 +141,35 @@ gdbtest: test
 #	make test MODULE ls
 #	make test ls
 #	make test t=FILTER
-MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
-TEST_NAME=$(word 3, $(MAKECMDGOALS))$(t)
+COMMA = ,
+MODULES_NAME = $(word 2, $(MAKECMDGOALS))$(m)
+MODULES_NAME_SPLIT = $(subst $(COMMA), ,$(MODULES_NAME))
+TEST_NAME = $(word 3, $(MAKECMDGOALS))$(t)
 
-ifneq ($(MODULE_NAME), )
-	TEST_EXEC=$(TEST_PATH)/$(APP_NAME)_$(MODULE_NAME)
+ifneq ($(MODULES_NAME), )
+	TEST_EXEC = $(foreach var, $(MODULES_NAME_SPLIT), $(TEST_PATH)/$(APP_NAME)_$(var))
 endif
 
 # case: make test ls
-ifeq ($(MODULE_NAME),ls)
+ifeq ($(MODULES_NAME),ls)
 ifeq ($(TEST_NAME), )
-	TEST_EXEC=$(TEST_PATH)/*
-	TEST_NAME=ls
+	TEST_EXEC = $(TEST_PATH)/*
+	TEST_NAME = ls
 endif
 endif
 
 # ls to list tests, else filter tests
 ifeq ($(TEST_NAME),ls)
-	TEST_ARGS+=--gtest_list_tests
+	TEST_ARGS += --gtest_list_tests
 else
-	TEST_ARGS+=--gtest_filter="*$(TEST_NAME)*"
+	TEST_ARGS += --gtest_filter="*$(TEST_NAME)*"
 endif
 
-ifneq ($(MODULE_NAME), )
-test: module = $(MODULE_NAME)
+ifneq ($(MODULES_NAME), )
+test: modules = $(MODULES_NAME)
 endif
 
-$(MODULE_NAME):
+$(MODULES_NAME):
 $(TEST_NAME):
 endif #test
 

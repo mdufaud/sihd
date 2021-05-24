@@ -18,13 +18,15 @@ class Node:   public Named
             public:
                 AlreadyHasChild(std::string name)
                 {
-                    this->name = name;
+                    this->ex = str::format("Child %s already exists", name.c_str());
                 };
+
                 virtual const char *what() const throw()
                 {
-                    return str::format("Child %s already exists", this->name.c_str()).c_str();
-                }
-                std::string name;
+                    return ex.c_str();
+                };
+
+                std::string ex;
         };
 
         class MaximumLinkRecursion:   public std::exception

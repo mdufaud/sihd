@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/core/Logger.hpp>
-#include <sihd/lua/LuaApi.hpp>
+#include <sihd/lua/LuaCoreApi.hpp>
 #include <sol/sol.hpp>
 
 namespace test

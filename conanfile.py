@@ -11,15 +11,28 @@ import _build_tools.modules
 
 print("Getting {} app libs".format(app.name))
 
-single_module = getenv("module")
+install_modules = getenv("modules")
 tests_active = bool(getenv("test"))
 
-if single_module:
-    print("{}: single module -> {}".format(app.name, single_module))
+# specific
+build_lua = getenv("lua")
+build_py = getenv("py")
+conditionnals = []
+if build_lua:
+    conditionnals.append("lua")
+    conditionnals.append("luabin")
+if build_py:
+    conditionnals.append("py")
+
+if install_modules:
+    print("{}: modules -> {}".format(app.name, install_modules))
 if tests_active:
     print("{}: test mode".format(app.name))
 
-modules = _build_tools.modules.build_modules(app, single_module=single_module, test=tests_active)
+modules = _build_tools.modules.build_modules(app,
+    specific_modules=install_modules,
+    test=tests_active,
+    conditionnals=conditionnals)
 print("{}: modules configuration".format(app.name))
 pp.pprint(modules)
 print()

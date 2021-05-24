@@ -26,12 +26,25 @@ sys.dont_write_bytecode = False
 #
 
 verbose = ARGUMENTS.get("verbose", "") == "1"
-single_module = ARGUMENTS.get('module', "")
+modules_to_build = ARGUMENTS.get('modules', "")
 distribution = ARGUMENTS.get('dist', "") == "1"
 make_tests = ARGUMENTS.get('test', "") == "1"
 
+# Specific
+build_lua = ARGUMENTS.get('lua', "") == "1"
+build_py = ARGUMENTS.get('py', "") == "1"
+conditionnals = []
+if build_lua:
+    conditionnals.append("lua")
+    conditionnals.append("luabin")
+if build_py:
+    conditionnals.append("py")
+
 try:
-    build_modules = _build_tools.modules.build_modules(app, single_module=single_module, test=make_tests)
+    build_modules = _build_tools.modules.build_modules(app,
+        specific_modules=modules_to_build,
+        test=make_tests,
+        conditionnals=conditionnals)
     extlibs = _build_tools.modules.build_libs(app, test=make_tests)
     extheaders = _build_tools.modules.build_headers(app, test=make_tests)
 except RuntimeError as e:
@@ -61,6 +74,7 @@ base_env = Environment(
     CPPDEFINES = [] + (hasattr(app, 'defines') and app.defines or []),
     CPPPATH = [],
     LIBS = [],
+    APP_MODULES_BUILD = build_modules.keys(),
 )
 if not verbose:
     base_env["SHCXXCOMSTR"] = "Compiling shared C++: $SOURCE"
@@ -178,8 +192,9 @@ for name, conf in build_modules.items():
         LIBS = get_modules_libname(*depends) + libs + extlibs,
         CCFLAGS = flags,
         APP_MODULE = module_format,
-        APP_MODULE_NAME = name,
-        APP_MODULE_DEPENDS = depends,
+        APP_MODULE_CONF = conf,
+        # APP_MODULE_NAME = name,
+        # APP_MODULE_DEPENDS = depends,
     )
     env.AddMethod(build_lib, "build_lib")
     env.AddMethod(build_bin, "build_bin")
@@ -263,7 +278,7 @@ try:
     node_count = 0
     node_count_max = len(targets)
     node_count_interval = 1
-    node_count_fname = str(env.Dir('#')) + '/.scons_node_count'
+    node_count_fname = str(base_env.Dir('#')) + '/.scons_node_count'
 
     def progress_function(node):
         if node not in targets:
