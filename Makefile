@@ -115,14 +115,14 @@ endif # module
 ########
 
 TEST_EXEC = $(TEST_PATH)/*
-TEST_ARGS = --gtest_break_on_failure
+TEST_ARGS =
 
 # find string 'test' in target
 ifneq ($(findstring test,$(word 1, $(MAKECMDGOALS))), )
 
 test: test = 1
 test: build
-	for test_bin in $(TEST_EXEC); do \
+	@for test_bin in $(TEST_EXEC); do \
 		echo "Running test: $$test_bin $(TEST_ARGS)" ; \
 		env $(DEBUGGER) $$test_bin $(TEST_ARGS) ; \
 	done
@@ -155,6 +155,7 @@ ifeq ($(MODULES_NAME),ls)
 ifeq ($(TEST_NAME), )
 	TEST_EXEC = $(TEST_PATH)/*
 	TEST_NAME = ls
+	MODULES_NAME = 
 endif
 endif
 

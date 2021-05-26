@@ -52,7 +52,7 @@ make dep
 # To be able to run unit tests
 make dep test
 # To get dependencies for a single module
-make dep module MODULE
+make dep mod COMMA_SEPARATED_MODULES
 ```
 
 To build binaries and compile shared libraries with scons
@@ -61,19 +61,35 @@ To build binaries and compile shared libraries with scons
 make
 ```
 
-To compile a single module
+To compile specific or single module
 
 ```shell
-make module=MODULE
+make modules=COMMA_SEPARATED_MODULES
 # or
-make module MODULE
+make mod COMMA_SEPARATED_MODULES
 ```
 
 Activate verbose by adding verbose=1
 
 ### Python bindings build
 
-Its time consumming
+Add to your command line "py=1"
+
+```shell
+make mod core py=1
+# or
+make mod core,py
+```
+
+### Lua bindings build
+
+Add to your command line "lua=1"
+
+```shell
+make mod core lua=1
+# or
+make mod core,lua
+```
 
 ## Tests
 
@@ -83,7 +99,7 @@ To compile and run tests
 # Run all tests
 make test
 # Run all module's tests
-make test MODULE
+make test COMMA_SEPARATED_MODULES
 ```
 
 List tests
@@ -92,13 +108,13 @@ List tests
 # For all
 make test ls
 # For a single module
-make test MODULE ls
+make test COMMA_SEPARATED_MODULES ls
 ```
 
 Filter tests
 
 ```shell
-make test m=MODULE t=FILTER
+make test m=COMMA_SEPARATED_MODULES t=FILTER
 # or
-make test MODULE FILTER
+make test COMMA_SEPARATED_MODULES FILTER
 ```
