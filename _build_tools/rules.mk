@@ -57,3 +57,18 @@ $(MODULE_NAME):
 $(CLASS_NAME):
 
 endif
+
+ifeq ($(word 1, $(MAKECMDGOALS)), newinterface)
+MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
+CLASS_NAME=$(word 3, $(MAKECMDGOALS))$(c)
+
+newinterface:
+	@bash $(BUILD_TOOLS_SCRIPTS)/make_interface_file.sh $(APP_NAME) $(MODULE_NAME) $(CLASS_NAME)
+
+# for no 'no rules to make...'
+$(MODULE_NAME):
+
+# for no 'no rules to make...'
+$(CLASS_NAME):
+
+endif

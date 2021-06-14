@@ -18,8 +18,11 @@ libs_versions = {
     "libwebsockets": "4.1.6",
 }
 modules = {
-    "core": {
+    "util": {
     },
+	"core": {
+        "depends": ['util'],
+	},
     "net": {
         "depends": ['core'],
     },

@@ -3,8 +3,8 @@
 namespace APP_NAME::MODULE_NAME
 {
 
-CLASS_NAME::CLASS_NAME(const std::string & name, sihd::core::Node *parent):
-    sihd::core::Named(name, parent)
+CLASS_NAME::CLASS_NAME(const std::string & name, sihd::util::Node *parent):
+    sihd::util::Named(name, parent)
 {   
 }
 
