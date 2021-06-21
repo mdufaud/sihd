@@ -6,6 +6,7 @@ namespace sihd::util::path
 
 using namespace std::experimental;
 
+std::string _uri_delimiter = "://";
 std::mutex  _path_mutex;
 std::map<std::string, std::string> _uri_to_path;
 
@@ -29,7 +30,7 @@ void    set(const std::string & uri, const std::string & path)
 
 std::string get(const std::string & req)
 {
-    std::vector<std::string> split = sihd::util::str::split(req, "://");
+    std::vector<std::string> split = str::split(req, _uri_delimiter.c_str());
     if (split.size() <= 1)
         return get_from("", req);
     return get(split[0], split[1]);

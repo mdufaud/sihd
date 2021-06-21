@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_LOGGER_HPP__
 # define __SIHD_UTIL_LOGGER_HPP__
 
+# include <iostream>
 # include <sihd/util/str.hpp>
 # include <sihd/util/LoggerManager.hpp>
 

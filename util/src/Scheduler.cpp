@@ -72,7 +72,6 @@ bool    Scheduler::is_running()
 
 bool    Scheduler::_wait_for(std::time_t wait_time)
 {
-    //TRACE("WAITING FOR " << time::to_milli(wait_time) << " ms");
     std::unique_lock lock(_mutex_wait);
     while (_task_map.empty() && _running)
     {

@@ -103,7 +103,9 @@ namespace test
         }, now + time::sec(1)));
         seq.start();
         TRACE("Before sleep");
-        std::this_thread::sleep_for(std::chrono::milliseconds(11));
+        std::this_thread::sleep_for(std::chrono::milliseconds(9));
+        EXPECT_EQ(ran, 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
         EXPECT_EQ(ran, 1);
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         TRACE("After sleep");
