@@ -12,17 +12,17 @@ class ObserverCallback: virtual public IObserver<T>
 {
     public:
         ObserverCallback(std::function<void(T *)> fun)
-		{
-			callback = fun;
-		};
+        {
+            callback = fun;
+        };
         virtual ~ObserverCallback() {};
 
-		virtual void	observable_changed(T *obs)
-		{
-			this->callback(obs);
-		}
+        virtual void    observable_changed(T *obs)
+        {
+            this->callback(obs);
+        }
 
-		std::function<void(T *)> callback;
+        std::function<void(T *)> callback;
 };
 
 }

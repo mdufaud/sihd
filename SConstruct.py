@@ -134,7 +134,7 @@ def build_test(self, src=None):
     src = src or Glob('test/*.cpp')
     # Not only main.cpp
     add_targets(src)
-    test_path = join("$APP_BUILD_TEST", self["APP_MODULE"])
+    test_path = join("$APP_BUILD_TEST", "bin", self["APP_MODULE"])
     env = self.Clone()
     env.Append(LIBS = [self["APP_MODULE"]])
     return env.Program(test_path, src)

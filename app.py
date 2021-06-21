@@ -19,10 +19,11 @@ libs_versions = {
 }
 modules = {
     "util": {
+        "libs": ['stdc++fs'],
     },
-	"core": {
+    "core": {
         "depends": ['util'],
-	},
+    },
     "net": {
         "depends": ['core'],
     },

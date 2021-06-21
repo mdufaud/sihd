@@ -41,14 +41,14 @@ class Observable:   virtual public IObservable<T>
 
         void    notify_observers(T *sender)
         {
-			{
-				std::lock_guard<std::mutex> rm_lock(_mutex_remove);
-				for (const auto & obs: _observers_to_remove)
-				{
-					_observers.remove(obs);
-				}
-				_observers_to_remove.clear();
-			}
+            {
+                std::lock_guard<std::mutex> rm_lock(_mutex_remove);
+                for (const auto & obs: _observers_to_remove)
+                {
+                    _observers.remove(obs);
+                }
+                _observers_to_remove.clear();
+            }
             std::lock_guard<std::mutex> lock(_mutex);
             for (const auto & obs: _observers)
             {

@@ -10,19 +10,19 @@ namespace test
     LOGGER;
     using namespace sihd::util;
 
-	class SomeObservable:	public Observable<SomeObservable>
-	{
-		public:
-			SomeObservable() {};
-			~SomeObservable() {};
+    class SomeObservable:    public Observable<SomeObservable>
+    {
+        public:
+            SomeObservable() {};
+            ~SomeObservable() {};
 
-			int	get_val()
-			{
-				return val;
-			}
+            int    get_val()
+            {
+                return val;
+            }
 
-			int val = 0;
-	};
+            int val = 0;
+    };
 
     class TestObservable:   public ::testing::Test, virtual public IObserver<SomeObservable>
     {
@@ -45,45 +45,45 @@ namespace test
             {
             }
 
-			void observable_changed(SomeObservable *obs)
-			{
-				this->val = obs->get_val();
-				obs->remove_observer(this);
-			}
+            void observable_changed(SomeObservable *obs)
+            {
+                this->val = obs->get_val();
+                obs->remove_observer(this);
+            }
 
-			int	val = 0;
+            int    val = 0;
     };
 
     TEST_F(TestObservable, test_obs_inheritance)
     {
-		SomeObservable obj;
-		obj.val = 1337;
-		obj.add_observer(this);
-		EXPECT_EQ(this->val, 0);
-		obj.notify_observers(&obj);
-		EXPECT_EQ(this->val, obj.val);
+        SomeObservable obj;
+        obj.val = 1337;
+        obj.add_observer(this);
+        EXPECT_EQ(this->val, 0);
+        obj.notify_observers(&obj);
+        EXPECT_EQ(this->val, obj.val);
 
-		obj.val = 424242;
-		obj.notify_observers(&obj);
-		EXPECT_EQ(this->val, 1337);
+        obj.val = 424242;
+        obj.notify_observers(&obj);
+        EXPECT_EQ(this->val, 1337);
     }
 
     TEST_F(TestObservable, test_obs_lambda)
     {
-		SomeObservable obj;
-		obj.val = 1337;
-		int val = 0;
-		ObserverCallback<SomeObservable> cb([&] (SomeObservable *obs) -> void
-		{
-			val = obs->get_val();
-		});
-		EXPECT_EQ(val, 0);
-		obj.add_observer(&cb);
-		obj.notify_observers(&obj);
-		EXPECT_EQ(val, 1337);
-		obj.val = 4242;
-		obj.remove_observer(&cb);
-		obj.notify_observers(&obj);
-		EXPECT_EQ(val, 1337);
+        SomeObservable obj;
+        obj.val = 1337;
+        int val = 0;
+        ObserverCallback<SomeObservable> cb([&] (SomeObservable *obs) -> void
+        {
+            val = obs->get_val();
+        });
+        EXPECT_EQ(val, 0);
+        obj.add_observer(&cb);
+        obj.notify_observers(&obj);
+        EXPECT_EQ(val, 1337);
+        obj.val = 4242;
+        obj.remove_observer(&cb);
+        obj.notify_observers(&obj);
+        EXPECT_EQ(val, 1337);
     }
 }

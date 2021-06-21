@@ -17,6 +17,7 @@ BUILD_PATH = $(HERE)/build
 LIB_PATH = $(BUILD_PATH)/lib
 INCLUDE_PATH = $(BUILD_PATH)/include
 TEST_PATH = $(BUILD_PATH)/test
+TEST_BIN_PATH = $(TEST_PATH)/bin
 BIN_PATH = $(BUILD_PATH)/bin
 OBJ_PATH = $(BUILD_PATH)/obj
 RES_PATH = $(BUILD_PATH)/etc
@@ -114,18 +115,28 @@ endif # module
 # Test
 ########
 
-TEST_EXEC = $(TEST_PATH)/*
+get-module-name = $(word 2, $(subst _, , $(basename $1)))
+
+TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
 TEST_ARGS =
 
 # find string 'test' in target
 ifneq ($(findstring test,$(word 1, $(MAKECMDGOALS))), )
 
+
 test: test = 1
 test: build
-	@for test_bin in $(TEST_EXEC); do \
-		echo "Running test: $$test_bin $(TEST_ARGS)" ; \
-		env $(DEBUGGER) $$test_bin $(TEST_ARGS) ; \
-	done
+	@- $(foreach TEST_BIN, $(TEST_EXEC), \
+		$(eval TEST_CMD_LINE = \
+			env $(DEBUGGER) $(TEST_BIN) $(TEST_ARGS)\
+		) \
+		$(eval TEST_MODULE_NAME = $(call get-module-name, $(TEST_BIN))) \
+		$(eval TEST_MODULE_PATH = $(HERE)/$(TEST_MODULE_NAME)/test) \
+		$(eval export TEST_MODULE_PATH) \
+		echo "Tested module: $(TEST_MODULE_NAME)" ; \
+		echo "Running command: $(TEST_CMD_LINE)" ; \
+		$(TEST_CMD_LINE); \
+	)
 
 valgrindtest: DEBUGGER = valgrind --leak-check=full
 valgrindtest: test
@@ -147,13 +158,13 @@ MODULES_NAME_SPLIT = $(subst $(COMMA), ,$(MODULES_NAME))
 TEST_NAME = $(word 3, $(MAKECMDGOALS))$(t)
 
 ifneq ($(MODULES_NAME), )
-	TEST_EXEC = $(foreach var, $(MODULES_NAME_SPLIT), $(TEST_PATH)/$(APP_NAME)_$(var))
+	TEST_EXEC = $(foreach var, $(MODULES_NAME_SPLIT), $(TEST_BIN_PATH)/$(APP_NAME)_$(var))
 endif
 
 # case: make test ls
 ifeq ($(MODULES_NAME),ls)
 ifeq ($(TEST_NAME), )
-	TEST_EXEC = $(TEST_PATH)/*
+	TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
 	TEST_NAME = ls
 	MODULES_NAME = 
 endif
