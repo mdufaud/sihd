@@ -56,7 +56,7 @@ namespace test
             steady_clock _clock;
     };
 
-    TEST_F(TestScheduler, test_seq_perf)
+    TEST_F(TestScheduler, test_sched_perf)
     {
         Scheduler seq("seq");
         SystemClock clock;
@@ -80,7 +80,7 @@ namespace test
         EXPECT_EQ(seq.overruns, 2u);
     }
 
-    TEST_F(TestScheduler, test_seq_stop)
+    TEST_F(TestScheduler, test_sched_stop)
     {
         Scheduler seq("seq");
         SystemClock clock;

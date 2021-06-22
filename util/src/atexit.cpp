@@ -1,9 +1,7 @@
 #include <sihd/util/atexit.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/Logger.hpp>
 #include <algorithm>
-
-#include <signal.h>
-#include <string.h>
 
 namespace sihd::util::atexit
 {
@@ -40,25 +38,25 @@ void    clear_handlers()
     _runnables.clear();
 }
 
+// logger's fprintf not called because stream are flushed clean after exit
 void    exit_callback()
 {
-    LOG(debug, "Running exit callbacks");
-    std::lock_guard lock(_runnable_mutex);
+    os::clear_signal_handlers();
     for (IRunnable *runnable : _runnables)
     {
         try
         {
             runnable->run();
-            delete runnable;
         }
         catch (const std::exception & e)
         {
-            LOG(error, "Error while running exit handler: " << e.what());
+            std::cerr << "Error while running exit handler: " << e.what() << std::endl;
         }
         catch (...)
         {
-            LOG(error, "Error while running exit handler - non standard exception");
+            std::cerr << "Error while running exit handler - non standard exception" << std::endl;
         }
+        delete runnable;
     }
     _runnables.clear();
 }
@@ -70,49 +68,13 @@ bool    install()
         int ret = std::atexit(exit_callback);
         if (ret != 0)
         {
-            LOG_ERROR("Cannot install atexit handler");
+            LOG(error, "Cannot install atexit handler");
             return false;
         }
+        LOG(info, "Exit handler installed");
         installed = true;
     }
     return installed;
-}
-
-std::string get_signal_name(int sig)
-{
-    char *signame = strsignal(sig);
-    if (signame == nullptr)
-        return std::to_string(sig);
-    return signame;
-}
-
-void    signal_callback(int sig)
-{
-    LOG(debug, "Signal caught: " << get_signal_name(sig));
-    exit_callback();
-}
-
-bool    handle_signal(int sig)
-{
-    sighandler_t handler = signal(sig, signal_callback);
-    if (handler == SIG_ERR)
-    {
-        LOG(error, "Error handling signal: " << get_signal_name(sig));
-        return false;
-    }
-    return true;
-}
-
-bool    remove_signal(int sig)
-{
-    sighandler_t handler = signal(sig, SIG_DFL);
-    if (handler == SIG_ERR)
-    {
-        LOG(error, "Error removing signal: " << get_signal_name(sig));
-        return false;
-    }
-    return true;
-
 }
 
 }

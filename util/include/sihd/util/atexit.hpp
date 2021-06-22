@@ -9,16 +9,17 @@
 namespace sihd::util::atexit
 {
 
+// adds handler to be run post-exit
 void    add_handler(IRunnable *ptr);
+// remove handler and does NOT delete it
 void    remove_handler(IRunnable *ptr);
+// remove all handlers and deletes them
 void    clear_handlers();
+// actual goodbye callback - calls handlers post-exit and deletes them
 void    exit_callback();
+// permits exit callback post-exit
 bool    install();
 
-std::string get_signal_name(int sig);
-void    signal_callback(int sig);
-bool    handle_signal(int sig);
-bool    remove_signal(int sig);
 }
 
 #endif 

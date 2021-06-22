@@ -12,10 +12,10 @@ class Task:    virtual public IRunnable
 {
     public:
         Task(IRunnable *to_run,
-                std::time_t timestamp_to_run,
+                std::time_t timestamp_to_run = 0,
                 std::time_t reschedule_every = 0);
         Task(std::function<bool(void)> fun,
-                std::time_t timestamp_to_run,
+                std::time_t timestamp_to_run = 0,
                 std::time_t reschedule_every = 0);
         virtual ~Task();
 
