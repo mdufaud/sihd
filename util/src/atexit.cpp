@@ -1,5 +1,4 @@
 #include <sihd/util/atexit.hpp>
-#include <sihd/util/os.hpp>
 #include <sihd/util/Logger.hpp>
 #include <algorithm>
 
@@ -41,7 +40,8 @@ void    clear_handlers()
 // logger's fprintf not called because stream are flushed clean after exit
 void    exit_callback()
 {
-    os::clear_signal_handlers();
+    if (installed == false)
+        return ;
     for (IRunnable *runnable : _runnables)
     {
         try
@@ -71,7 +71,6 @@ bool    install()
             LOG(error, "Cannot install atexit handler");
             return false;
         }
-        LOG(info, "Exit handler installed");
         installed = true;
     }
     return installed;

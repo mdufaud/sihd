@@ -1,5 +1,6 @@
 #include <sihd/util/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/atexit.hpp>
 
 #include <vector>
 #include <unistd.h>
@@ -95,6 +96,7 @@ ssize_t    backtrace(int fd)
     return size;
 }
 
+bool _signal_used = false;
 std::mutex _signal_mutex;
 std::map<int, std::list<IRunnable *>>  _map_signals_handlers;
 
@@ -129,13 +131,14 @@ bool    clear_signal_handlers()
 bool    clear_signal_handler(int sig, IRunnable *runnable)
 {
     std::lock_guard lock(_signal_mutex);
-    auto lst = _map_signals_handlers[sig];
+    auto & lst = _map_signals_handlers[sig];
     auto it = std::find(lst.begin(), lst.end(), runnable);
     if (it != lst.end())
     {
         lst.erase(it);
         if (lst.empty())
             return _unhandle_signal(sig);
+        return true;
     }
     return false;
 }
@@ -160,6 +163,16 @@ bool    add_signal_handler(int sig, IRunnable *runnable)
     }
     std::lock_guard lock(_signal_mutex);
     _map_signals_handlers[sig].push_back(runnable);
+    if (_signal_used == false)
+    {
+        atexit::add_handler(new Task([] () -> bool
+        {
+            clear_signal_handlers();
+            return true;
+        }));
+        atexit::install();
+        _signal_used = true;
+    }
     return true;
 }
 

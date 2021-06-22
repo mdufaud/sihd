@@ -32,9 +32,11 @@ namespace test
 
     TEST_F(TestAtExit, test_atexit)
     {
+        TRACE("Message 'hello world' should be at the end of this test");
         atexit::install();
-        atexit::add_handler(new Task([] () -> bool {
-            std::cout << std::endl << "Called after exit" << std::endl << std::endl;
+        atexit::add_handler(new Task([] () -> bool
+        {
+            std::cout << std::endl << "hello world" << std::endl << std::endl;
             return true;
         }));
     }

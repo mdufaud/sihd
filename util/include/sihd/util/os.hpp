@@ -3,7 +3,7 @@
 
 # include <string>
 # include <dlfcn.h>
-# include <sihd/util/IRunnable.hpp>
+# include <sihd/util/Task.hpp>
 
 namespace sihd::util::os
 {
