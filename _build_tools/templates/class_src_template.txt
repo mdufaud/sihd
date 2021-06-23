@@ -4,7 +4,7 @@ namespace APP_NAME::MODULE_NAME
 {
 
 CLASS_NAME::CLASS_NAME()
-{   
+{
 }
 
 CLASS_NAME::~CLASS_NAME()

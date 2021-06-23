@@ -1,8 +1,6 @@
 #ifndef __SIHD_UTIL_SCHEDULER_HPP__
 # define __SIHD_UTIL_SCHEDULER_HPP__
 
-# include <mutex>
-# include <condition_variable>
 # include <list>
 # include <map>
 # include <thread>
@@ -12,6 +10,7 @@
 # include <sihd/util/Logger.hpp>
 # include <sihd/util/time.hpp>
 # include <sihd/util/thread.hpp>
+# include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
 {
@@ -35,10 +34,12 @@ class Scheduler:    public Named,
 
         virtual bool    run();
 
-        // Number of overruns
+        // number of overruns that occured after started
         uint32_t    overruns;
-        // Time after not running a task is considered an overrun
+        // time after not running a task is considered an overrun
         uint32_t    overrun_at;
+        // nanoseconds acceptable before a task may be run
+        uint32_t    acceptable_nano;
 
     protected:
         void    _delete_tasks();
@@ -48,17 +49,16 @@ class Scheduler:    public Named,
         void    _play_task(Task *task, std::time_t time);
 
         bool    _running;
+        IClock  *_clock_ptr;
+        std::thread _thread;
         std::time_t _next_run;
         std::time_t _begin_run;
-        std::thread _thread;
         std::mutex  _mutex_task;
         std::mutex  _mutex_run;
-        std::mutex  _mutex_wait;
-        std::condition_variable _cond;
-        std::multimap<std::time_t, Task *>   _task_map;
-        std::list<Task *>   _task_rm_list;
-        IClock   *_clock_ptr;
+        Waitable    _waitable;
         SteadyClock _steady_clock;
+        std::list<Task *>   _task_rm_list;
+        std::multimap<std::time_t, Task *>  _task_map;
 };
 
 }

@@ -8,6 +8,7 @@ LOGGER;
 Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent) 
 {
     overrun_at = time::micro(300);
+    acceptable_nano = 100;
     _next_run = 0;
     _running = false;
     _clock_ptr = new SystemClock();
@@ -15,6 +16,7 @@ Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent
 
 Scheduler::~Scheduler()
 {
+    this->stop();
     this->set_clock(nullptr);
     this->_delete_tasks();
     for (auto & pair : _task_map)
@@ -58,9 +60,10 @@ bool    Scheduler::stop()
             return false;
         _running = false;
     }
-    _cond.notify_one();
+    _waitable.notify();
     bool ret = _clock_ptr != nullptr && _clock_ptr->stop();
-    _thread.join();
+    if (_thread.joinable())
+        _thread.join();
     LOG_DEBUG("Scheduler: stopped");
     return ret;
 }
@@ -72,26 +75,24 @@ bool    Scheduler::is_running()
 
 bool    Scheduler::_wait_for(std::time_t wait_time)
 {
-    std::unique_lock lock(_mutex_wait);
     while (_task_map.empty() && _running)
-    {
-        _cond.wait(lock);
-    }
-    _cond.wait_for(lock, std::chrono::nanoseconds(wait_time));
-    return true;
+        _waitable.wait();
+    if (_running)
+        return _waitable.wait_for(wait_time);
+    return false;
 }
 
 Task    *Scheduler::_get_next_task(std::time_t time)
 {
     std::lock_guard l(_mutex_task);
     Task *task = _task_map.begin()->second;
-    std::time_t diff = task->run_at - time;
+
+    std::time_t diff = task->run_at - (time + this->acceptable_nano);
     if (-diff > this->overrun_at)
         this->overruns += 1;
+
     if (task != nullptr && diff <= 0)
-    {
         _task_map.erase(_task_map.begin());
-    }
     else
         task = nullptr;
     return task;
@@ -140,7 +141,7 @@ void    Scheduler::add_task(Task *task)
     std::lock_guard l(_mutex_task);
     _task_map.insert(std::pair<std::time_t, Task *>(task->run_at, task));
     _next_run = _task_map.begin()->first;
-    _cond.notify_one();
+    _waitable.notify();
 }
 
 void    Scheduler::remove_task(Task *task)
@@ -151,9 +152,11 @@ void    Scheduler::remove_task(Task *task)
         if (it->second != nullptr && it->second == task)
         {
             _task_map.erase(it);
-            return ;
+            break ;
         }
     }
+    _next_run = _task_map.begin()->first;
+    _waitable.notify();
 }
 
 void    Scheduler::_add_to_delete_task(Task *task)

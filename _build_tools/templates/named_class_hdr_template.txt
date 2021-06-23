@@ -13,7 +13,7 @@ class CLASS_NAME:   public sihd::util::Named
         CLASS_NAME(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~CLASS_NAME();
 
-    private:
+    protected:
 };
 
 }
