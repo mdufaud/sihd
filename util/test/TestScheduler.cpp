@@ -44,7 +44,7 @@ namespace test
                     if (micro > (us + delta)
                         || micro < (us - delta))
                         good_freq = false;
-                    TRACE("Time since last call: " << us << " us");
+                    //TRACE("Time since last call: " << us << " us");
                     _last = now;
                 }
                 ran += 1;
@@ -71,14 +71,15 @@ namespace test
             return true;
         }, 0));
 
-        this->should_run_every_us = 100;
+        this->should_run_every_us = 60;
         seq.add_task(new Task(this, 0, time::micro(this->should_run_every_us)));
         seq.start();
         std::time_t sleep_time = 100;
         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
         seq.stop();
         EXPECT_EQ(lambda_ran, 1);
-        EXPECT_EQ(this->ran, time::micro(sleep_time) / this->should_run_every_us);
+        int expected_ran = time::micro(sleep_time) / this->should_run_every_us;
+        EXPECT_NEAR(this->ran, expected_ran, 1);
         EXPECT_EQ(seq.overruns, 2u);
         EXPECT_EQ(this->good_freq, true);
     }
