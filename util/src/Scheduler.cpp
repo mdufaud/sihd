@@ -104,7 +104,7 @@ void    Scheduler::_play_task(Task *task, std::time_t now)
     {
         if (task->run_at == 0)
             task->run_at = now;
-        task->run_at = now + task->resched_time;
+        task->run_at += task->resched_time;
         this->add_task(task);
     }
     else

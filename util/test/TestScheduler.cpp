@@ -35,23 +35,26 @@ namespace test
             virtual bool run()
             {
                 time_point<steady_clock, nanoseconds> now = _clock.now();
-                std::time_t ms = duration_cast<milliseconds>(now - _last).count();
+                std::time_t us = duration_cast<microseconds>(now - _last).count();
                 if (_last.time_since_epoch().count() == 0)
                     _last = now;
                 else
                 {
-                    if (should_run_every_ms != ms)
+                    std::time_t micro = time::to_micro(should_run_every_us);
+                    if (micro > (us + delta)
+                        || micro < (us - delta))
                         good_freq = false;
-                    TRACE("Time since last call: " << ms << " ms");
+                    TRACE("Time since last call: " << us << " us");
                     _last = now;
                 }
                 ran += 1;
                 return true;
             }
 
+            std::time_t delta = time::micro(100);
             bool good_freq = true;
             int ran = 0;
-            int should_run_every_ms = 2;
+            int should_run_every_us = 2000;
             time_point<steady_clock, nanoseconds> _last;
             steady_clock _clock;
     };
@@ -68,16 +71,16 @@ namespace test
             return true;
         }, 0));
 
-        this->should_run_every_ms = 3;
-        seq.add_task(new Task(this, 0, time::milli(this->should_run_every_ms)));
+        this->should_run_every_us = 100;
+        seq.add_task(new Task(this, 0, time::micro(this->should_run_every_us)));
         seq.start();
         std::time_t sleep_time = 100;
         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
         seq.stop();
         EXPECT_EQ(lambda_ran, 1);
-        EXPECT_EQ(this->ran, sleep_time / this->should_run_every_ms);
-        EXPECT_EQ(this->good_freq, true);
+        EXPECT_EQ(this->ran, time::micro(sleep_time) / this->should_run_every_us);
         EXPECT_EQ(seq.overruns, 2u);
+        EXPECT_EQ(this->good_freq, true);
     }
 
     TEST_F(TestScheduler, test_sched_stop)
