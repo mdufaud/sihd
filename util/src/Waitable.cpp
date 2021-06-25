@@ -1,7 +1,10 @@
 #include <sihd/util/Waitable.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::util
 {
+
+LOGGER;
 
 using namespace std::chrono;
 
@@ -54,18 +57,20 @@ bool    Waitable::wait_loop(std::time_t nano_duration, uint32_t times)
 {
     SteadyClock clock;
     std::time_t now = clock.now();
-    std::time_t begin = now;
+    std::time_t last = now;
     std::time_t until = now + nano_duration;
-    bool ret = false;
+    bool timedout = false;
 
     uint32_t i = 0;
     while (i < times && now < until && _stop_waiting == false)
     {
-        ret = this->wait_for(nano_duration);
+        timedout = this->wait_for(nano_duration);
         now = clock.now();
-        nano_duration -= (now - begin);
+        nano_duration -= (now - last);
+        last = now;
+        ++i;
     }
-    return ret;
+    return timedout;
 }
 
 std::time_t Waitable::wait_elapsed(std::time_t nano_duration)

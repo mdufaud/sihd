@@ -1,0 +1,91 @@
+#include <gtest/gtest.h>
+#include <iostream>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Waitable.hpp>
+#include <sihd/util/time.hpp>
+
+namespace test
+{
+    LOGGER;
+    using namespace sihd::util;
+    class TestWaitable:   public ::testing::Test
+    {
+        protected:
+            TestWaitable()
+            {
+                sihd::util::LoggerManager::basic();
+            }
+
+            virtual ~TestWaitable()
+            {
+                sihd::util::LoggerManager::clear_loggers();
+            }
+
+            virtual void SetUp()
+            {
+            }
+
+            virtual void TearDown()
+            {
+            }
+    };
+
+    TEST_F(TestWaitable, test_waitable_elapsed)
+    {
+        Waitable waitable;
+
+        std::thread t([&] ()
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            waitable.notify(1);
+        });
+        time_t elapsed = waitable.wait_elapsed(time::milli(5));
+        t.join();
+        EXPECT_EQ(time::to_milli(elapsed), 2);
+    }
+
+    TEST_F(TestWaitable, test_waitable_loop)
+    {
+        Waitable waitable;
+        SteadyClock clock;
+
+        std::time_t now = clock.now();
+        std::thread t([&] ()
+        {
+            int i = 0;
+            while (i < 3)
+            {
+                std::this_thread::sleep_for(std::chrono::microseconds(330));
+                waitable.notify(1);
+                ++i;
+            }
+        });
+        bool timeout = waitable.wait_loop(time::milli(5), 3);
+        t.join();
+        EXPECT_EQ(timeout, false);
+        EXPECT_EQ(time::to_milli(clock.now() - now), 1);
+    }
+
+    TEST_F(TestWaitable, test_waitable_loop_fail)
+    {
+        Waitable waitable;
+        SteadyClock clock;
+
+        std::time_t now = clock.now();
+        std::thread t([&] ()
+        {
+            int i = 0;
+            while (i < 3)
+            {
+                std::this_thread::sleep_for(std::chrono::microseconds(330));
+                waitable.notify(1);
+                ++i;
+            }
+        });
+        bool timeout = waitable.wait_loop(time::milli(5), 4);
+        t.join();
+        EXPECT_EQ(timeout, true);
+        EXPECT_EQ(time::to_milli(clock.now() - now), 5);
+    }
+
+}
