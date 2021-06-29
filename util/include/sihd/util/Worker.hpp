@@ -9,7 +9,6 @@
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Clocks.hpp>
 # include <sihd/util/time.hpp>
-# include <sihd/util/Node.hpp>
 # include <sihd/util/thread.hpp>
 
 namespace sihd::util
@@ -21,19 +20,16 @@ namespace sihd::util
  * 
  */
 class Worker:   virtual public IRunnable,
-                virtual public ISteppable,
-                public Node,
                 public Configurable
 {
     public:
-        Worker(const std::string & name, Node *parent = nullptr);
+        Worker();
         virtual ~Worker();
 
-        bool    set_frequency(double freq);
-        bool    set_method(std::function<bool(time_t)> method);
+        bool    set_method(std::function<bool()> method);
 
-        bool    start_thread();
-        bool    stop_thread();
+        bool    start_worker(const std::string & name);
+        bool    stop_worker();
 
         bool    is_running()
         {
@@ -41,16 +37,18 @@ class Worker:   virtual public IRunnable,
         }
 
         virtual bool    run();
-        virtual bool    step(std::time_t delta);
+
+    protected:
+        virtual bool    on_worker_start();
+        virtual bool    on_worker_stop();
+
+        std::function<bool()> _worker_run_method;
+        std::string _worker_thread_name;
 
     private:
         bool        _running;
-        Waitable    _waitable;
-        SteadyClock _clock;
         std::mutex  _worker_mutex;
         std::thread _worker_thread;
-        std::time_t _sleep_time;
-        std::function<bool(time_t)> _step_method;
 };
 
 }

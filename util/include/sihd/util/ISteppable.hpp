@@ -8,7 +8,7 @@ class ISteppable
 {
     public:
         virtual ~ISteppable() {};
-        virtual bool    step(std::time_t delta = 0) = 0;
+        virtual bool    step() = 0;
 };
 
 }

@@ -1,9 +1,12 @@
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Node.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
 namespace sihd::util
 {
+
+LOGGER;
 
 Named::Named(const std::string & named, Node *parent)
 {

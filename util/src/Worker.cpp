@@ -6,60 +6,28 @@ namespace sihd::util
 
 LOGGER;
 
-Worker::Worker(const std::string & name, Node *parent):
-    Node(name, parent), _running(false)
+Worker::Worker(): _running(false)
 {
-    this->add_conf("frequency", &Worker::set_frequency);
 }
 
 Worker::~Worker()
 {
-    this->stop_thread();
+    this->stop_worker();
 }
 
-bool    Worker::set_frequency(double frequency)
+bool    Worker::set_method(std::function<bool()> method)
 {
-    if (frequency <= 0.0)
-    {
-        LOG(error, "Worker: frequency " << frequency << " ");
-        return false;
-    }
-    _sleep_time = time::freq(frequency);
-    return true;
-}
-
-bool    Worker::set_method(std::function<bool(time_t)> method)
-{
-    _step_method = std::move(method);
+    _worker_run_method = std::move(method);
     return true;
 }
 
 bool    Worker::run()
 {
-    thread::set_name(this->get_name());
-    std::time_t delta = 0;
-    std::time_t now = 0;
-    std::time_t after = 0;
-    bool ret = true;
-    while (_running)
-    {
-        now = _clock.now();
-        // branchless
-        delta = (now - after) * (after != 0);
-        if ((ret = this->step(delta)) == false)
-            break ;
-        after = _clock.now();
-        _waitable.wait_for(_sleep_time - (after - now));
-    }
-    return ret;
+    thread::set_name(_worker_thread_name);
+    return _worker_run_method();
 }
 
-bool    Worker::step(std::time_t delta)
-{
-    return _step_method(delta);
-}
-
-bool    Worker::start_thread()
+bool    Worker::start_worker(const std::string & name)
 {
     {
         std::lock_guard lock(_worker_mutex);
@@ -67,11 +35,19 @@ bool    Worker::start_thread()
             return false;
         _running = true;
     }
-    _worker_thread = std::thread(&Worker::run, this);
-    return true;
+    _worker_thread_name = name;
+    bool ret = this->on_worker_start();
+    if (ret)
+        _worker_thread = std::thread(&Worker::run, this);
+    else
+    {
+        std::lock_guard lock(_worker_mutex);
+        _running = false;
+    }
+    return ret;
 }
 
-bool    Worker::stop_thread()
+bool    Worker::stop_worker()
 {
     {
         std::lock_guard lock(_worker_mutex);
@@ -79,9 +55,22 @@ bool    Worker::stop_thread()
             return false;
         _running = false;
     }
-    _waitable.notify();
     if (_worker_thread.joinable())
+    {
+        bool ret = this->on_worker_stop();
         _worker_thread.join();
+        return ret;
+    }
+    return true;
+}
+
+bool    Worker::on_worker_start()
+{
+    return true;
+}
+
+bool    Worker::on_worker_stop()
+{
     return true;
 }
 
