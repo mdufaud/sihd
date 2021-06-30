@@ -1,7 +1,6 @@
 #ifndef __SIHD_UTIL_CONFIGURABLE_HPP__
 # define __SIHD_UTIL_CONFIGURABLE_HPP__
 
-# include <sihd/util/datatype.hpp>
 # include <sihd/util/Callback.hpp> 
 # include <functional>
 

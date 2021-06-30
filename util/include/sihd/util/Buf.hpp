@@ -5,9 +5,9 @@
 # include <string.h>
 # include <stdexcept>
 # include <memory>
-# include <sihd/util/endian.hpp>
+# include <sihd/util/Endian.hpp>
 # include <sihd/util/ICloneable.hpp>
-# include <sihd/util/datatype.hpp>
+# include <sihd/util/Datatype.hpp>
 
 namespace sihd::util
 {
@@ -41,7 +41,7 @@ class Buf:  public ICloneable<Buf<T>>
             if (_buf_p != nullptr && clear_mem)
                 bzero(_buf_p, _capacity * sizeof(T));
             _size = 0;
-            endianness = endian::get_endian();
+            endianness = Endian::get_endian();
             return _buf_p != nullptr;
         }
 
@@ -72,7 +72,7 @@ class Buf:  public ICloneable<Buf<T>>
             return this->from(buf.data(), buf.capacity(), buf.endianness);
         }
 
-        bool    from(const T *buf, size_t size, endian::Endianness endian = endian::get_endian())
+        bool    from(const T *buf, size_t size, Endian::Endianness endian = Endian::get_endian())
         {
             if (buf == nullptr)
                 return false;
@@ -187,12 +187,12 @@ class Buf:  public ICloneable<Buf<T>>
 
         void    data_type()
         {
-            return datatype::type_to_datatype<T>();
+            return Datatype::type_to_datatype<T>();
         }
 
         std::string     data_type_to_string()
         {
-            return datatype::datatype_to_string(this->data_type());
+            return Datatype::datatype_to_string(this->data_type());
         }
 
         uint8_t *buf() const { return (uint8_t *)_buf_p; }
@@ -201,7 +201,7 @@ class Buf:  public ICloneable<Buf<T>>
         size_t  capacity() const { return _capacity; }
         size_t  data_size() const { return sizeof(T); }
 
-        endian::Endianness  endianness;
+        Endian::Endianness  endianness;
 
     private:
         void    _init()
@@ -210,7 +210,7 @@ class Buf:  public ICloneable<Buf<T>>
             _size = 0;
             _capacity = 0;
             _has_responsability = false;
-            endianness = endian::get_endian();
+            endianness = Endian::get_endian();
         }
 
         T       *_buf_p;
