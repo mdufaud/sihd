@@ -12,7 +12,7 @@ class ICloneable
     public:
         virtual ~ICloneable() {};
 
-        virtual std::unique_ptr<T>    clone() const = 0;
+        virtual std::unique_ptr<T>    clone() = 0;
 };
 
 }
