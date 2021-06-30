@@ -40,7 +40,7 @@ class Datatype
 
     public:
         static std::string  datatype_to_string(Datatypes type);
-        static Datatypes   string_to_datatype(const std::string & type);
+        static Datatypes    string_to_datatype(const std::string & type);
 
         template <typename T>
         static Datatypes   type_to_datatype()

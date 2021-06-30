@@ -71,8 +71,12 @@ class Buffer:   virtual public IBuffer,
         virtual size_t  capacity() { return _buffer.capacity(); }
         virtual bool    assign(uint8_t *buf, size_t size)
         {
-            _buffer = std::vector<T>(buf, buf + size);
-            return _buffer.data() != nullptr;
+            if (size % this->data_size() != 0)
+                return false;
+            _buffer.clear();
+            _buffer.resize(size / this->data_size());
+            memcpy(_buffer.data(), buf, size);
+            return true;
         };
         virtual bool    from(IBuffer & obj)
         {
@@ -80,7 +84,7 @@ class Buffer:   virtual public IBuffer,
                 return false;
             this->endianness = obj.get_endianness();
             _buffer = std::vector<T>(obj.capacity());
-            memcpy(_buffer.data(), obj.data(), obj.size() * obj.data_size());
+            memcpy(this->data(), obj.data(), obj.size() * obj.data_size());
             return _buffer.size() == obj.size();
         }
 

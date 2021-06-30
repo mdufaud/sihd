@@ -143,4 +143,14 @@ namespace test
         EXPECT_EQ(buffer_clone.get()->at(1), 37);
     }
 
+    TEST_F(TestBuffer, test_buffer_assign)
+    {
+        int ptr_int[2];
+        ptr_int[0] = 123;
+        ptr_int[1] = 456;
+        sihd::util::Int buffer;
+        buffer.assign((unsigned char *)ptr_int, 2 * sizeof(int));
+        EXPECT_EQ(buffer[0], 123);
+        EXPECT_EQ(buffer[1], 456);
+    }
 }
