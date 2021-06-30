@@ -3,7 +3,7 @@
 
 # include <time.h>
 # include <string>
-# include <sihd/util/thread.hpp>
+# include <sihd/util/Thread.hpp>
 
 namespace sihd::util
 {

@@ -7,8 +7,8 @@ namespace sihd::util
 LogInfo::LogInfo(const std::string & src, LogLevel lvl): source(src.c_str()), level(lvl)
 {
     thread_id = std::this_thread::get_id();
-    thread_id_str = sihd::util::thread::id_str(thread_id);
-    thread_name = sihd::util::thread::get_name();
+    thread_id_str = sihd::util::Thread::id_str(thread_id);
+    thread_name = sihd::util::Thread::get_name();
     level_str = this->get_level();
     ::clock_gettime(CLOCK_REALTIME, &timestamp);
 }

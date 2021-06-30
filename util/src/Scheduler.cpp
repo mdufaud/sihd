@@ -114,7 +114,7 @@ void    Scheduler::_play_task(Task *task, std::time_t now)
 
 bool    Scheduler::run()
 {
-    sihd::util::thread::set_name(this->get_name());
+    sihd::util::Thread::set_name(this->get_name());
     if (_clock_ptr == nullptr || _clock_ptr->start() == false)
         return false;
     _begin_run = _clock_ptr->now() - _steady_clock.now();

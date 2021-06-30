@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/OS.hpp>
 #include <sihd/util/Task.hpp>
 
 namespace test
@@ -24,7 +24,7 @@ namespace test
 
             virtual void SetUp()
             {
-                os::clear_signal_handlers();
+                OS::clear_signal_handlers();
             }
 
             virtual void TearDown()
@@ -42,7 +42,7 @@ namespace test
 
     TEST_F(TestOs, test_os_backtrace)
     {
-        ssize_t size = os::backtrace(1);
+        ssize_t size = OS::backtrace(1);
         EXPECT_GE(size, 1);
     }
 
@@ -51,13 +51,13 @@ namespace test
         this->ran = 0;
         int sig = SIGINT;
         auto task = new Task(this);
-        EXPECT_TRUE(os::add_signal_handler(sig, task));
+        EXPECT_TRUE(OS::add_signal_handler(sig, task));
         EXPECT_EQ(this->ran, 0);
         raise(sig);
         EXPECT_EQ(this->ran, 1);
         raise(sig);
         EXPECT_EQ(this->ran, 2);
-        EXPECT_TRUE(os::clear_signal_handler(sig, task));
+        EXPECT_TRUE(OS::clear_signal_handler(sig, task));
         delete task;
     }
 }

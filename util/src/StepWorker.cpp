@@ -30,7 +30,7 @@ bool    StepWorker::set_frequency(double frequency)
 
 bool    StepWorker::run()
 {
-    thread::set_name(_worker_thread_name);
+    Thread::set_name(_worker_thread_name);
     std::time_t now = 0;
     std::time_t after = 0;
     bool ret = true;

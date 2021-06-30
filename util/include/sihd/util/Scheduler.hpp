@@ -9,7 +9,7 @@
 # include <sihd/util/Task.hpp>
 # include <sihd/util/Logger.hpp>
 # include <sihd/util/time.hpp>
-# include <sihd/util/thread.hpp>
+# include <sihd/util/Thread.hpp>
 # include <sihd/util/Waitable.hpp>
 
 namespace sihd::util

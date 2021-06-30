@@ -9,7 +9,7 @@
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Clocks.hpp>
 # include <sihd/util/time.hpp>
-# include <sihd/util/thread.hpp>
+# include <sihd/util/Thread.hpp>
 
 namespace sihd::util
 {

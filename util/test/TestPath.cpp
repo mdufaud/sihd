@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/path.hpp>
+#include <sihd/util/Path.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -26,7 +26,7 @@ namespace test
 
             virtual void SetUp()
             {
-                path::clear_all();
+                Path::clear_all();
             }
 
             virtual void TearDown()
@@ -45,17 +45,17 @@ namespace test
         file << "hello" << std::endl;
         file.close();
 
-        path::set("", "");
-        path::set("false-dir", "/does/not/exists");
-        path::set("sihd-test", test_dir);
-        EXPECT_EQ(path::get("sihd-test", "file.txt"), test_dir / "file.txt");
-        EXPECT_EQ(path::get("sihd-test://file.txt"), test_dir / "file.txt");
-        EXPECT_EQ(path::find("file.txt"), test_dir / "file.txt");
+        Path::set("", "");
+        Path::set("false-dir", "/does/not/exists");
+        Path::set("sihd-test", test_dir);
+        EXPECT_EQ(Path::get("sihd-test", "file.txt"), test_dir / "file.txt");
+        EXPECT_EQ(Path::get("sihd-test://file.txt"), test_dir / "file.txt");
+        EXPECT_EQ(Path::find("file.txt"), test_dir / "file.txt");
 
-        path::clear("sihd-test");
-        EXPECT_EQ(path::get("sihd-test", "file.txt"), "");
+        Path::clear("sihd-test");
+        EXPECT_EQ(Path::get("sihd-test", "file.txt"), "");
 
-        path::set("current-module", getenv("TEST_MODULE_PATH"));
-        TRACE(path::find("TestPath.cpp"));
+        Path::set("current-module", getenv("TEST_MODULE_PATH"));
+        TRACE(Path::find("TestPath.cpp"));
     }
 }

@@ -1,7 +1,7 @@
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/str.hpp>
+#include <sihd/util/Str.hpp>
 
 namespace sihd::util
 {
@@ -58,7 +58,7 @@ Node  *Named::get_parent() const
 
 std::string     Named::get_class_name() const
 {
-    return sihd::util::str::demangle(typeid(*this).name());
+    return sihd::util::Str::demangle(typeid(*this).name());
 }
 
 Node   *Named::get_root()
@@ -78,7 +78,7 @@ Node   *Named::get_root()
 
 Named   *Named::find(Named *from, const std::string & path)
 {
-    auto tokens = str::split(path, ".");
+    auto tokens = Str::split(path, ".");
     Named *child = from;
     Node *parent = nullptr;
     for (const std::string & name : tokens)

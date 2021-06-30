@@ -1,4 +1,4 @@
-#include <sihd/util/str.hpp>
+#include <sihd/util/Str.hpp>
 #include <string.h>
 #include <cxxabi.h>
 #include <sstream>
@@ -7,12 +7,12 @@
 
 #define SIHD_UTIL_STR_BUFFER 20480
 
-namespace sihd::util::str
+namespace sihd::util
 {
 
-std::mutex _mutex;
-const size_t _buffer_size = SIHD_UTIL_STR_BUFFER;
-char _buffer[_buffer_size];
+std::mutex      Str::buffer_mutex;
+const size_t    Str::buffer_size = SIHD_UTIL_STR_BUFFER;
+char            Str::buffer[SIHD_UTIL_STR_BUFFER];
 
 static int   _split_size(const char *s, const char *delimiter, size_t len)
 {
@@ -43,7 +43,7 @@ static std::string  _split_get_token(const char *s, int *idx, const char *delimi
     return std::string(s + x, y - x);
 }
 
-std::vector<std::string>    split(const std::string & str, const char *delimiter)
+std::vector<std::string>    Str::split(const std::string & str, const char *delimiter)
 {
     if (delimiter == nullptr || delimiter[0] == 0)
         return {str};
@@ -59,7 +59,7 @@ std::vector<std::string>    split(const std::string & str, const char *delimiter
     return ret;
 }
 
-std::string     join(const std::vector<std::string> & join_lst, const std::string & join_with)
+std::string     Str::join(const std::vector<std::string> & join_lst, const std::string & join_with)
 {
     std::stringstream ss;
     bool first = true;
@@ -74,7 +74,7 @@ std::string     join(const std::vector<std::string> & join_lst, const std::strin
     return ss.str();
 }
 
-std::string     demangle(const char *name)
+std::string     Str::demangle(const char *name)
 {
     int status = -1;
     char *ptr = abi::__cxa_demangle(name, NULL, NULL, &status);
@@ -87,21 +87,21 @@ std::string     demangle(const char *name)
     return name;
 }
 
-std::string     format(const char *format, ...)
+std::string     Str::format(const char *format, ...)
 {
     std::string ret;
     va_list args;
     va_start(args, format);
     {
-        std::lock_guard<std::mutex> l(_mutex);
-        vsnprintf(_buffer, _buffer_size, format, args);
-        ret.assign(_buffer, strlen(_buffer));
+        std::lock_guard<std::mutex> l(buffer_mutex);
+        vsnprintf(buffer, buffer_size, format, args);
+        ret.assign(buffer, strlen(buffer));
     }
     va_end(args);
     return ret;
 }
 
-std::string     trim(const std::string & s)
+std::string     Str::trim(const std::string & s)
 {
     size_t i = 0;
     while (std::isspace(s[i]))
@@ -112,7 +112,7 @@ std::string     trim(const std::string & s)
     return s.substr(i, j - i + 1);
 }
 
-std::string &   to_upper(std::string & s)
+std::string &   Str::to_upper(std::string & s)
 {
     size_t i = 0;
     std::locale loc;
@@ -124,7 +124,7 @@ std::string &   to_upper(std::string & s)
     return s;
 }
 
-std::string &   to_lower(std::string & s)
+std::string &   Str::to_lower(std::string & s)
 {
     size_t i = 0;
     std::locale loc;
@@ -136,7 +136,7 @@ std::string &   to_lower(std::string & s)
     return s;
 }
 
-std::string     replace(const std::string & s, const std::string & from, const std::string & to)
+std::string     Str::replace(const std::string & s, const std::string & from, const std::string & to)
 {
     std::string ret;
     size_t i = s.find(from);

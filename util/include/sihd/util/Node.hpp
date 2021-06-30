@@ -2,7 +2,7 @@
 # define __SIHD_UTIL_NODE_HPP__
 
 # include <sihd/util/Named.hpp>
-# include <sihd/util/str.hpp>
+# include <sihd/util/Str.hpp>
 # include <map>
 # include <exception>
 
@@ -18,7 +18,7 @@ class Node:   public Named
             public:
                 AlreadyHasChild(std::string name)
                 {
-                    this->ex = str::format("Child %s already exists", name.c_str());
+                    this->ex = Str::format("Child %s already exists", name.c_str());
                 };
 
                 virtual const char *what() const throw()

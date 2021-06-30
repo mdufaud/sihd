@@ -1,0 +1,59 @@
+#ifndef __SIHD_UTIL_OS_HPP__
+# define __SIHD_UTIL_OS_HPP__
+
+# include <string>
+# include <dlfcn.h>
+# include <map>
+# include <list>
+# include <mutex>
+# include <sihd/util/Task.hpp>
+
+namespace sihd::util
+{
+
+class OS
+{
+    public:
+        static const int   backtrace_size;
+
+        static void    *load_lib(std::string lib_name);
+
+        // emergency calls for when memory fails
+        static ssize_t  write(int fd, const char *s);
+        // emergency calls for when memory fails
+        static ssize_t  write_endl(int fd, const char *s);
+        // emergency calls for when memory fails
+        static void    write_number(int fd, int number);
+
+        // prints formatted backtrace into file descriptor
+        static ssize_t backtrace(int fd);
+
+        static std::string get_signal_name(int sig);
+
+        // called when signal is caught
+        static void    signal_callback(int sig);
+        // adds a handler to be run when signal is catched
+        static bool    add_signal_handler(int sig, IRunnable *runnable);
+        // remove and deletes all handlers attached to this signal
+        static bool    clear_signal_handlers(int sig);
+        // remove and deletes all handlers
+        static bool    clear_signal_handlers();
+        // remove a single handler - if you have the ptr to remove the handler, means you can delete it
+        static bool    clear_signal_handler(int sig, IRunnable *runnable);
+
+        // set signal handling to default - already taken care of, do not call
+        static bool    unhandle_signal(int sig);
+
+    private:
+        OS() {};
+        ~OS() {};
+
+        static void    *backtrace_buffer[];
+        static bool    signal_used;
+        static std::mutex   signal_mutex;
+        static std::map<int, std::list<IRunnable *>>  map_signals_handlers;
+};
+
+}
+
+#endif 

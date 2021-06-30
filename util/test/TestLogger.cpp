@@ -7,8 +7,6 @@
 #include <sihd/util/LevelFilterLogger.hpp>
 #include <sihd/util/SourceFilterLogger.hpp>
 
-#include <sihd/util/thread.hpp>
-
 namespace test
 {
     NEW_LOGGER("test");

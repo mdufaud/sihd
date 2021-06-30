@@ -2,7 +2,7 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Task.hpp>
-#include <sihd/util/atexit.hpp>
+#include <sihd/util/AtExit.hpp>
 
 namespace test
 {
@@ -33,8 +33,8 @@ namespace test
     TEST_F(TestAtExit, test_atexit)
     {
         TRACE("Message 'hello world' should be at the end of this test");
-        atexit::install();
-        atexit::add_handler(new Task([] () -> bool
+        AtExit::install();
+        AtExit::add_handler(new Task([] () -> bool
         {
             std::cout << std::endl << "hello world" << std::endl << std::endl;
             return true;

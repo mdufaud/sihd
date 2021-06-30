@@ -2,7 +2,7 @@
 # define __SIHD_UTIL_LOGGER_HPP__
 
 # include <iostream>
-# include <sihd/util/str.hpp>
+# include <sihd/util/Str.hpp>
 # include <sihd/util/LoggerManager.hpp>
 
 # ifdef SIHD_LOGGING_OFF
@@ -18,7 +18,7 @@
     logger->log(sihd::util::LogLevel::level, __loss.str().c_str()); \
 }
 #  define LOG(level, msg) LOG_LEVEL(__logger__, level, msg);
-#  define LOG_FORMAT(level, message, ...) __logger__->log(level, sihd::util::str::format(message, ##__VA_ARGS__).c_str());
+#  define LOG_FORMAT(level, message, ...) __logger__->log(level, sihd::util::Str::format(message, ##__VA_ARGS__).c_str());
 
 #  define LOG_DEBUG(message, ...) LOG_FORMAT(sihd::util::LogLevel::debug, message, ##__VA_ARGS__);
 #  define LOG_INFO(message, ...) LOG_FORMAT(sihd::util::LogLevel::info, message, ##__VA_ARGS__);

@@ -23,7 +23,7 @@ bool    Worker::set_method(std::function<bool()> method)
 
 bool    Worker::run()
 {
-    thread::set_name(_worker_thread_name);
+    Thread::set_name(_worker_thread_name);
     return _worker_run_method();
 }
 

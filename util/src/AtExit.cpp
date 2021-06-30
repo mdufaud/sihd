@@ -1,48 +1,48 @@
-#include <sihd/util/atexit.hpp>
+#include <sihd/util/AtExit.hpp>
 #include <sihd/util/Logger.hpp>
 #include <algorithm>
 
-namespace sihd::util::atexit
+namespace sihd::util
 {
 
-NEW_LOGGER("sihd::util::atexit");
+LOGGER;
 
-bool installed = false;
-std::mutex _runnable_mutex;
-std::list<IRunnable *> _runnables;
+bool AtExit::installed = false;
+std::mutex AtExit::runnable_mutex;
+std::list<IRunnable *> AtExit::runnables;
 
-void    add_handler(IRunnable *ptr)
+void    AtExit::add_handler(IRunnable *ptr)
 {
-    std::lock_guard lock(_runnable_mutex);
-    auto it = std::find(_runnables.begin(), _runnables.end(), ptr);
-    if (it == _runnables.end())
-        _runnables.push_back(ptr);
+    std::lock_guard lock(runnable_mutex);
+    auto it = std::find(runnables.begin(), runnables.end(), ptr);
+    if (it == runnables.end())
+        runnables.push_back(ptr);
 }
 
-void    remove_handler(IRunnable *ptr)
+void    AtExit::remove_handler(IRunnable *ptr)
 {
-    std::lock_guard lock(_runnable_mutex);
-    auto it = std::find(_runnables.begin(), _runnables.end(), ptr);
-    if (it != _runnables.end())
-        _runnables.erase(it);
+    std::lock_guard lock(runnable_mutex);
+    auto it = std::find(runnables.begin(), runnables.end(), ptr);
+    if (it != runnables.end())
+        runnables.erase(it);
 }
 
-void    clear_handlers()
+void    AtExit::clear_handlers()
 {
-    std::lock_guard lock(_runnable_mutex);
-    for (IRunnable *runnable : _runnables)
+    std::lock_guard lock(runnable_mutex);
+    for (IRunnable *runnable : runnables)
     {
         delete runnable;
     }
-    _runnables.clear();
+    runnables.clear();
 }
 
 // logger's fprintf not called because stream are flushed clean after exit
-void    exit_callback()
+void    AtExit::exit_callback()
 {
     if (installed == false)
         return ;
-    for (IRunnable *runnable : _runnables)
+    for (IRunnable *runnable : runnables)
     {
         try
         {
@@ -58,10 +58,10 @@ void    exit_callback()
         }
         delete runnable;
     }
-    _runnables.clear();
+    runnables.clear();
 }
 
-bool    install()
+bool    AtExit::install()
 {
     if (installed == false)
     {
