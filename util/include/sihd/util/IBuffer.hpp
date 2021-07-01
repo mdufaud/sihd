@@ -1,11 +1,10 @@
-#ifndef __SIHD_UTIL_BUFFER_HPP__
-# define __SIHD_UTIL_BUFFER_HPP__
+#ifndef __SIHD_UTIL_IBUFFER_HPP__
+# define __SIHD_UTIL_IBUFFER_HPP__
 
 # include <cstdint>
 # include <string.h>
 # include <stdexcept>
 # include <memory>
-# include <vector>
 # include <sihd/util/Endian.hpp>
 # include <sihd/util/ICloneable.hpp>
 # include <sihd/util/Datatype.hpp>
@@ -21,11 +20,11 @@ class IBuffer
     public:
         virtual ~IBuffer() {};
 
-        virtual uint8_t *data() = 0;
+        virtual uint8_t *buf() = 0;
         virtual size_t  data_size() = 0;
         virtual size_t  size() = 0;
         virtual size_t  capacity() = 0;
-        virtual bool    assign(uint8_t *buf, size_t size) = 0;
+        virtual void    assign(uint8_t *buf, size_t size) = 0;
         virtual bool    from(IBuffer & buf) = 0;
 
         virtual Datatypes    data_type() = 0;
@@ -34,6 +33,7 @@ class IBuffer
         virtual Endian::Endianness  get_endianness() = 0;
 };
 
+/*
 template <typename T>
 class Buffer:   virtual public IBuffer,
                 virtual public ICloneable<Buffer<T>>
@@ -42,19 +42,19 @@ class Buffer:   virtual public IBuffer,
         Buffer()
         {
             endianness = Endian::get_endian();
-            _buffer.resize(1);
+            _array.resize(1);
         }
 
         Buffer(size_t elements)
         {
             endianness = Endian::get_endian();
-            _buffer.resize(elements);
+            _array.resize(elements);
         }
 
         Buffer(size_t elements, Endian::Endianness endian)
         {
             endianness = endian;
-            _buffer.resize(elements);
+            _array.resize(elements);
         }
 
         virtual ~Buffer()
@@ -65,28 +65,12 @@ class Buffer:   virtual public IBuffer,
 
         // IBuffer
 
-        virtual uint8_t *data() { return (uint8_t *)_buffer.data(); }
+        virtual uint8_t *data() { return (uint8_t *)_array.data(); }
         virtual size_t  data_size() { return sizeof(T); }
-        virtual size_t  size() { return _buffer.size(); }
-        virtual size_t  capacity() { return _buffer.capacity(); }
-        virtual bool    assign(uint8_t *buf, size_t size)
-        {
-            if (size % this->data_size() != 0)
-                return false;
-            _buffer.clear();
-            _buffer.resize(size / this->data_size());
-            memcpy(_buffer.data(), buf, size);
-            return true;
-        };
-        virtual bool    from(IBuffer & obj)
-        {
-            if (obj.data_type() != this->data_type())
-                return false;
-            this->endianness = obj.get_endianness();
-            _buffer = std::vector<T>(obj.capacity());
-            memcpy(this->data(), obj.data(), obj.size() * obj.data_size());
-            return _buffer.size() == obj.size();
-        }
+        virtual size_t  size() { return _array.size(); }
+        virtual size_t  capacity() { return _array.capacity(); }
+        virtual bool    assign(uint8_t *buf, size_t size) { return _array.assign(buf, size); };
+        virtual bool    from(IBuffer & obj) { return _array.from(obj.data(), obj.size()); }
 
         virtual Endian::Endianness  get_endianness() { return this->endianness; }
         virtual Datatypes    data_type() { return Datatype::type_to_datatype<T>(); }
@@ -105,32 +89,26 @@ class Buffer:   virtual public IBuffer,
 
         inline T    operator[](size_t idx) const
         {
-            if (idx >= _buffer.size())
-                throw std::out_of_range("Buffer read[] out of range");
-            return _buffer[idx];
+            return _array[idx];
         }
 
         inline T &  operator[](size_t idx)
         {
-            if (idx >= _buffer.size())
-                throw std::out_of_range("Buffer assign[] out of range");
-            return _buffer[idx];
+            return _array[idx];
         }
 
         inline T &  at(size_t idx)
         {
-            if (idx >= _buffer.size())
-                throw std::out_of_range("Buffer assign[] out of range");
-            return _buffer[idx];
+            return _array.at(idx);
         }
 
-        std::vector<T>  *buffer()
+        Array<T>  *array()
         {
-            return &_buffer;
+            return &_array;
         }
 
     private:
-        std::vector<T>  _buffer;
+        sihd::util::Array<T>   _array;
 };
 
 typedef Buffer<bool>       Bool;
@@ -146,7 +124,7 @@ typedef Buffer<float>      Float;
 typedef Buffer<double>     Double;
 // TODO
 //typedef Buffer<std::string>    String;
-
+*/
 }
 
 #endif 
