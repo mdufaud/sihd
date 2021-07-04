@@ -215,13 +215,13 @@ namespace test
         delete[] arr8;
     }
 
-    // Test storing in IBuffer
+    // Test storing in IArray
     TEST_F(TestArray, test_array_store)
     {
         sihd::util::Byte buffer_byte(200);
         buffer_byte[0] = 127;
         buffer_byte[1] = 25;
-        IBuffer *buffer = &buffer_byte;
+        IArray *buffer = &buffer_byte;
         EXPECT_EQ(buffer->buf()[0], 127);
         EXPECT_EQ(buffer->buf()[1], 25u);
 
@@ -310,16 +310,17 @@ namespace test
         EXPECT_EQ(buffer[1], 37);
 
         sihd::util::Int buffer_copied;
-        EXPECT_EQ(buffer_copied.from(buffer), true);
+        EXPECT_EQ(buffer_copied.from(&buffer), true);
         EXPECT_EQ(buffer_copied[0], 13);
         EXPECT_EQ(buffer_copied[1], 37);
 
         sihd::util::Float buffer_impossible_copy;
-        EXPECT_EQ(buffer_impossible_copy.from(buffer), false);
+        EXPECT_EQ(buffer_impossible_copy.from(&buffer), false);
 
-        std::unique_ptr<Int> buffer_clone = buffer.clone();
-        EXPECT_EQ(buffer_clone.get()->at(0), 13);
-        EXPECT_EQ(buffer_clone.get()->at(1), 37);
+        Int *buffer_clone = buffer.clone();
+        EXPECT_EQ(buffer_clone->at(0), 13);
+        EXPECT_EQ(buffer_clone->at(1), 37);
+        delete buffer_clone;
     }
 
 }

@@ -84,7 +84,7 @@ Node  *Node::to_node(Named *child)
 std::pair<std::string, std::string>     Node::get_parent_path(const std::string & path)
 {
     std::pair<std::string, std::string> ret;
-    size_t idx = path.find_last_of('.');
+    size_t idx = path.find_last_of(Named::separator);
     if (idx == std::string::npos)
     {
         ret.first = path;
@@ -155,9 +155,65 @@ bool    Node::resolve_links(size_t recursion)
     return true;
 }
 
+std::map<std::string, Named *> &    Node::get_children()
+{
+    return _children_map;
+}
+
+std::vector<std::string>    Node::get_children_keys()
+{
+    std::vector<std::string> ret;
+    ret.reserve(_children_map.size());
+    for (const auto & [name, child]: _children_map)
+    {
+        (void)child;
+        ret.push_back(name);
+    }
+    return ret;
+}
+
+// TREE
+
 void    Node::print_tree()
 {
-    std::cout << this->get_tree_str() << std::endl;
+    std::cout << this->get_tree_str({}) << std::endl;
+}
+
+void    Node::print_tree_desc()
+{
+    std::cout << this->get_tree_desc_str() << std::endl;
+}
+
+void    Node::print_tree(TreeOpts opts)
+{
+    std::cout << this->get_tree_str(opts) << std::endl;
+}
+
+void    Node::_get_tree_child_desc(std::stringstream & ss,
+                                    const TreeOpts & opts,
+                                    const std::string & indent,
+                                    const std::string & name,
+                                    Named *child)
+{
+    ss << indent << name;
+    Node *parent = child->get_parent();
+    if (name != child->get_name())
+        ss << " => " << child->get_full_name();
+    else if (parent != this)
+        ss << " -> " << child->get_full_name();
+
+    ss << ": " << child->get_class_name();
+    this->_add_tree_desc(ss, opts, child);
+    ss << std::endl;
+    Node *node = this->to_node(child);
+    if (node != nullptr)
+        node->_get_tree_children(ss, opts);
+}
+
+void    Node::_iterate_tree_children(std::stringstream & ss, TreeOpts & opts, const std::string & indent)
+{
+    for (const auto & [name, child]: _children_map)
+        this->_get_tree_child_desc(ss, opts, indent, name, child);
 }
 
 void    Node::_get_tree_children(std::stringstream & ss, TreeOpts opts)
@@ -169,31 +225,29 @@ void    Node::_get_tree_children(std::stringstream & ss, TreeOpts opts)
         return ;
     std::string indent(opts.indent, ' ');
     opts.indent += opts.indent_by_iter;
-    for (const auto & [name, child]: _children_map)
-    {
-        ss << indent << name;
-        Node *parent = child->get_parent();
-        if (name != child->get_name())
-            ss << " => " << child->get_full_name();
-        else if (parent != this)
-            ss << " -> " << child->get_full_name();
+    this->_iterate_tree_children(ss, opts, indent);
+}
 
-        ss << ": " << child->get_class_name() << std::endl;
-        if (opts.description)
-        {
-            std::string desc = child->get_description();
-            if (desc.empty() == false)
-                ss << " - " << desc;
-        }
-        Node *node = this->to_node(child);
-        if (node != nullptr)
-            node->_get_tree_children(ss, opts);
+void    Node::_add_tree_desc(std::stringstream & ss, const TreeOpts & opts, Named *child)
+{
+    if (opts.description)
+    {
+        std::string desc = child->get_description();
+        if (desc.empty() == false)
+            ss << " - " << desc;
     }
 }
 
 std::string     Node::get_tree_str()
 {
     return this->get_tree_str({});
+}
+
+std::string     Node::get_tree_desc_str()
+{
+    TreeOpts opts;
+    opts.description = true;
+    return this->get_tree_str(opts);
 }
 
 std::string     Node::get_tree_str(TreeOpts opts)
@@ -203,7 +257,9 @@ std::string     Node::get_tree_str(TreeOpts opts)
     opts.current_recursion = 0;
     std::stringstream ss;
 
-    ss << indent << this->get_name() << ": " << this->get_class_name() << std::endl;
+    ss << indent << this->get_name() << ": " << this->get_class_name();
+    this->_add_tree_desc(ss, opts, this);
+    ss << std::endl;
     this->_get_tree_children(ss, opts);
     return ss.str();
 }

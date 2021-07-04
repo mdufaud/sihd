@@ -5,9 +5,8 @@ libs = ['pthread', 'dl']
 test_libs = ['gtest']
 flags = ["-fPIC"]
 libs_versions = {
-    #"jsoncpp": "1.9.4",
     "gtest": "cci.20210126",
-    "rapidjson": "cci.20200410",
+    "nlohmann_json": "3.9.1",
     "libcurl": "7.75.0",
     "libpcap": "1.10.0",
     "libssh2": "1.9.0",
@@ -20,6 +19,7 @@ libs_versions = {
 modules = {
     "util": {
         "libs": ['stdc++fs'],
+        "headers": ['nlohmann_json']
     },
     "core": {
         "depends": ['util'],

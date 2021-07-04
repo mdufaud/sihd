@@ -9,11 +9,13 @@
 namespace sihd::util
 {
 
-typedef std::variant<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t,
-int64_t, uint64_t, float, double, bool, std::string>    variant_datatype;
+typedef std::variant<bool, char, int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t,
+int64_t, uint64_t, float, double, std::string>    variant_datatype;
 
 enum Datatypes {
     NONE,
+    BOOL,
+    CHAR,
     BYTE,
     UBYTE,
     SHORT,
@@ -24,7 +26,6 @@ enum Datatypes {
     ULONG,
     FLOAT,
     DOUBLE,
-    BOOL,
     STRING,
     OBJECT,
 };
@@ -39,6 +40,7 @@ class Datatype
         static std::map<std::string, Datatypes>    m_datatype_from_string;
 
     public:
+        static size_t       datatype_size(Datatypes type);
         static std::string  datatype_to_string(Datatypes type);
         static Datatypes    string_to_datatype(const std::string & type);
 
@@ -49,6 +51,10 @@ class Datatype
         }   
 };
 
+template <>
+Datatypes    Datatype::type_to_datatype<bool>();
+template <>
+Datatypes    Datatype::type_to_datatype<char>();
 template <>
 Datatypes    Datatype::type_to_datatype<int8_t>();
 template <>
@@ -69,8 +75,6 @@ template <>
 Datatypes    Datatype::type_to_datatype<float>();
 template <>
 Datatypes    Datatype::type_to_datatype<double>();
-template <>
-Datatypes    Datatype::type_to_datatype<bool>();
 template <>
 Datatypes    Datatype::type_to_datatype<std::string>();
 

@@ -30,6 +30,8 @@ namespace test
                 this->add_conf("double", &ConfigurableObj::set_double);
                 this->add_conf("str", &ConfigurableObj::set_str);
                 this->add_conf("cstr", &ConfigurableObj::set_cstr);
+                this->add_conf("list", &ConfigurableObj::set_list);
+                this->add_conf("json", &ConfigurableObj::set_json);
                 // Multiple args
                 this->add_conf<bool, int>("dual", [&] (bool b, int i) { TRACE(b << " " << i); return true; });
             }
@@ -108,24 +110,38 @@ namespace test
                 return true;
             }
 
-            bool    set_str(std::string str)
+            bool    set_str(const std::string & str)
             {
                 str_val = str;
                 return true;
             }
 
+            bool    set_list(int val)
+            {
+                list_val.push_back(val);
+                return true;
+            }
+
+            bool    set_json(const nlohmann::json & json)
+            {
+                inside_json_val = json["str"];
+                return true;
+            }
+
             bool        bool_val = false;
-            int8_t        char_val = 0;
-            uint8_t        uchar_val = 0;
-            int16_t        short_val = 0;
+            int8_t      char_val = 0;
+            uint8_t     uchar_val = 0;
+            int16_t     short_val = 0;
             uint16_t    ushort_val = 0;
-            int32_t        int_val = 0;
+            int32_t     int_val = 0;
             uint32_t    uint_val = 0;
             int64_t     long_val = 0;
             uint64_t    ulong_val = 0;
-            float        float_val = 0.0; 
-            double        double_val = 0.0;
+            float       float_val = 0.0; 
+            double      double_val = 0.0;
             std::string str_val = "";
+            std::vector<int>    list_val;
+            std::string inside_json_val = "";
     };
 
     class TestConfigurable:   public ::testing::Test
@@ -149,6 +165,48 @@ namespace test
             {
             }
     };
+
+    TEST_F(TestConfigurable, test_configurable_json)
+    {
+        nlohmann::json json = {
+            {"bool", true},
+            {"int", 1234},
+            {"ushort", -1},
+            {"float", 4.13},
+            {"double", 3.14},
+            {"str", "hello world"},
+            {"cstr", "hello world"},
+            {"list", {1, 0, 2}},
+        };
+        ConfigurableObj obj;
+        EXPECT_EQ(obj.set_conf(json), true);
+
+        EXPECT_EQ(obj.bool_val, true);
+        EXPECT_EQ(obj.int_val, 1234);
+        EXPECT_EQ(obj.ushort_val, 65535u);
+        EXPECT_FLOAT_EQ(obj.float_val, 4.13f);
+        EXPECT_FLOAT_EQ(obj.double_val, 3.14);
+        EXPECT_EQ(obj.str_val, "hello world");
+        EXPECT_EQ(obj.list_val.size(), 3u);
+        EXPECT_EQ(obj.list_val.at(0), 1);
+        EXPECT_EQ(obj.list_val.at(1), 0);
+        EXPECT_EQ(obj.list_val.at(2), 2);
+
+        EXPECT_EQ(obj.set_conf("list", json["list"]), true);
+        EXPECT_EQ(obj.list_val.size(), 6u);
+        EXPECT_EQ(obj.list_val.at(3), 1);
+        EXPECT_EQ(obj.list_val.at(4), 0);
+        EXPECT_EQ(obj.list_val.at(5), 2);
+
+        nlohmann::json null;
+        null["nothing"] = nullptr;
+        EXPECT_EQ(obj.set_conf(null), false);
+        EXPECT_EQ(obj.set_conf("json-null", null["nothing"]), false);
+
+        nlohmann::json json_conf = { {"str", "hello world"} };
+        EXPECT_EQ(obj.set_conf("json", json_conf), true);
+        EXPECT_EQ(obj.inside_json_val, "hello world");
+    }
 
     TEST_F(TestConfigurable, test_configurable_callback)
     {
@@ -237,8 +295,9 @@ namespace test
         EXPECT_EQ(obj.str_val, "");
         obj.set_conf("cstr", "hello");
         EXPECT_EQ(obj.str_val, "hello");
-        obj.set_conf<std::string>("str", "world");
+        obj.set_conf<const std::string &>("str", "world");
         EXPECT_EQ(obj.str_val, "world");
+
         obj.set_conf_str("str", "hello world");
         EXPECT_EQ(obj.str_val, "hello world");
         obj.set_conf_str("cstr", "hello world sup");

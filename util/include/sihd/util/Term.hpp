@@ -34,6 +34,7 @@ class Term
             static const char *VIOLET;
             static const char *BEIGE;
             static const char *WHITE;
+            static const char *GREY;
             static const char *BLACKBG;
             static const char *REDBG;
             static const char *GREENBG;
@@ -42,7 +43,7 @@ class Term
             static const char *VIOLETBG;
             static const char *BEIGEBG;
             static const char *WHITEBG;
-            static const char *GREY;
+            static const char *GREYBG;
             static const char *RED2;
             static const char *GREEN2;
             static const char *YELLOW2;
@@ -50,7 +51,6 @@ class Term
             static const char *VIOLET2;
             static const char *BEIGE2;
             static const char *WHITE2;
-            static const char *GREYBG;
             static const char *REDBG2;
             static const char *GREENBG2;
             static const char *YELLOWBG2;

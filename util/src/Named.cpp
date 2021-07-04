@@ -8,6 +8,8 @@ namespace sihd::util
 
 LOGGER;
 
+char Named::separator = '.';
+
 Named::Named(const std::string & named, Node *parent)
 {
     _name = named;
@@ -45,7 +47,7 @@ std::string     Named::get_full_name() const
     Node *parent = this->get_parent();
     while (parent != nullptr)
     {
-        ret = parent->get_name() + "." + ret;
+        ret = parent->get_name() + Named::separator + ret;
         parent = parent->get_parent();
     }
     return ret;
@@ -78,7 +80,7 @@ Node   *Named::get_root()
 
 Named   *Named::find(Named *from, const std::string & path)
 {
-    auto tokens = Str::split(path, ".");
+    auto tokens = Str::split(path, &Named::separator);
     Named *child = from;
     Node *parent = nullptr;
     for (const std::string & name : tokens)
@@ -99,7 +101,7 @@ Named   *Named::find(const std::string & path)
     Named *current = nullptr;
 
     int i = 0;
-    while (path[i] == '.')
+    while (path[i] == Named::separator)
     {
         if (current == nullptr)
             current = this;
@@ -108,7 +110,16 @@ Named   *Named::find(const std::string & path)
         ++i;
     }
     if (i == 0)
-        current = this->get_root();
+    {
+        if (path[0] == '/')
+        {
+            std::string search_path = path.substr(1, path.size() - 1);
+            current = this->get_root();
+            return this->find(current, search_path);
+        }
+        else
+            current = this;
+    }
     return this->find(current, path);
 }
 

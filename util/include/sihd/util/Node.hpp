@@ -51,12 +51,26 @@ class Node:   public Named
         virtual ~Node();
 
         // Children
-        bool    add_child(const std::string & name, Named *child);
-        bool    add_child(Named *child);
+        virtual bool    add_child(const std::string & name, Named *child);
+        virtual bool    add_child(Named *child);
+        
+        template <typename T>
+        T   *add_child(const std::string & name)
+        {
+            T *child = new T(name);
+            if (this->add_child(child) == false)
+            {
+                delete child;
+                child = nullptr;
+            }
+            return child;
+        }
+
+        // Unsafe -> throws
         void    add_child_unsafe(Named *child);
         bool    delete_child(const Named *child);
-        bool    delete_child(const std::string & name);
-        void    delete_children();
+        virtual bool    delete_child(const std::string & name);
+        virtual void    delete_children();
 
         // Static
         static Node    *to_node(Named *child);
@@ -82,11 +96,26 @@ class Node:   public Named
         bool    resolve_links(size_t recursion = 0);
 
         std::string     get_tree_str();
+        std::string     get_tree_desc_str();
         std::string     get_tree_str(TreeOpts opts);
         void            print_tree();
+        void            print_tree_desc();
+        void            print_tree(TreeOpts opts);
 
+        std::map<std::string, Named *> &    get_children();
+        virtual std::vector<std::string>    get_children_keys();
+        
     protected:
-        void    _get_tree_children(std::stringstream & ss, TreeOpts opts);
+        virtual void    _get_tree_children(std::stringstream & ss, TreeOpts opts);
+        virtual void    _iterate_tree_children(std::stringstream & ss,
+                                                TreeOpts & opts,
+                                                const std::string & indent);
+        virtual void    _get_tree_child_desc(std::stringstream & ss,
+                                                const TreeOpts & opts,
+                                                const std::string & indent,
+                                                const std::string & name,
+                                                Named *child);
+        virtual void    _add_tree_desc(std::stringstream & ss, const TreeOpts & opts, Named *child);
 
     private:
         std::map<std::string, Named *>   _children_map;

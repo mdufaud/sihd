@@ -20,13 +20,13 @@ class Named
 
         std::string     get_full_name() const;
         std::string     get_class_name() const;
-        std::string     get_description() const
+        virtual std::string     get_description() const
         {
             return "";
         };
 
-        bool    add_parent(Node *parent);
-        bool    set_parent(Node *parent);
+        virtual bool    add_parent(Node *parent);
+        virtual bool    set_parent(Node *parent);
 
         Node    *get_root();
         Named   *find(Named *from, const std::string & path);
@@ -40,6 +40,8 @@ class Named
                 return dynamic_cast<C *>(obj);
             return nullptr;
         }
+
+        static char separator;
 
     protected:
 

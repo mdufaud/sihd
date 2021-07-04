@@ -74,8 +74,9 @@ namespace test
         Named *found = root.find("parent.cousin1");
         EXPECT_NE(found, nullptr);
         EXPECT_EQ(found->get_name(), "cousin1");
-        EXPECT_EQ(found, root.find(".parent.cousin1"));
+        EXPECT_EQ(found, parent->find("cousin1"));
         EXPECT_EQ(found, parent->find(".cousin1"));
+        EXPECT_EQ(found, root.find(".parent.cousin1"));
         EXPECT_EQ(found, parent->find("..parent.cousin1"));
         EXPECT_EQ(&root, child3->find(".."));
         EXPECT_EQ(&root, child3->find_node(".."));
@@ -83,7 +84,7 @@ namespace test
         // Root
         EXPECT_EQ(parent->get_root(), &root);
         // From root
-        EXPECT_EQ(cousin3, parent->find("parent.cousin3"));
+        EXPECT_EQ(cousin3, parent->find("/parent.cousin3"));
         EXPECT_EQ(cousin3, root.find("parent.cousin3"));
     }
 
@@ -106,7 +107,7 @@ namespace test
         uncle_node->add_link("mycousin1", "...parent.mychild1");
         uncle_node->add_link("mycousin2", "...origin.child2");
         gp_node->add_link("mygrandchild1", "...other_family.uncle.mycousin1");
-        gp_node->add_link("mygrandchild2", "other_family.uncle.mycousin2");
+        gp_node->add_link("mygrandchild2", "/other_family.uncle.mycousin2");
 
         EXPECT_TRUE(gp_node->resolve_links());
 

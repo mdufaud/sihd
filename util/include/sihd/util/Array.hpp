@@ -8,13 +8,13 @@
 # include <sihd/util/ICloneable.hpp>
 # include <sihd/util/Datatype.hpp>
 # include <sihd/util/Logger.hpp>
-# include <sihd/util/IBuffer.hpp>
+# include <sihd/util/IArray.hpp>
 
 namespace sihd::util
 {
 
 template <typename T>
-class Array:    virtual public IBuffer,
+class Array:    virtual public IArray,
                 virtual public ICloneable<Array<T>>
 {
     public:
@@ -26,7 +26,8 @@ class Array:    virtual public IBuffer,
         Array(size_t capacity)
         {
             _init();
-            this->reserve(capacity);
+            if (capacity > 0)
+                this->reserve(capacity);
         }
 
         virtual ~Array()
@@ -36,47 +37,99 @@ class Array:    virtual public IBuffer,
 
         Endian::Endianness  endianness;
 
-        // IBuffer
+        // IArray
         virtual uint8_t *buf() { return (uint8_t *)_buf_ptr; }
-        virtual size_t  data_size() { return sizeof(T); }
-        virtual size_t  size() { return _size; }
-        virtual size_t  capacity() { return _capacity; }
-
-        virtual void    assign(uint8_t *buf, size_t size) { this->assign(buf, size, size); }
-
-        virtual bool    from(IBuffer & obj)
+        virtual size_t  data_size() const { return sizeof(T); }
+        virtual size_t  size() const { return _size; }
+        virtual size_t  byte_size() const { return _size * sizeof(T); }
+        virtual size_t  capacity() const { return _capacity; }
+        virtual size_t  byte_capacity() const { return _capacity * sizeof(T); }
+        virtual bool    copy_from(IArray *obj, size_t from = 0)
+        {
+            if (obj->data_type() != this->data_type())
+                return false;
+            return this->copy_from_bytes(obj->buf(), obj->byte_size(), from); 
+        }
+        virtual bool    copy_from_bytes(const uint8_t *buf, size_t size, size_t from = 0)
+        {
+            if (size + from > this->byte_capacity())
+                return false;
+            memcpy(this->buf() + from, buf, size);
+            return true;
+        }
+        virtual bool    copy_to(uint8_t *buf, size_t size) const
+        {
+            if (size > this->byte_capacity())
+                return false;
+            memcpy(buf, (void *)_buf_ptr, size);
+            return true;
+        }
+        virtual bool    from(IArray *obj)
         {
             //TODO endianness
-            if (obj.data_type() != this->data_type())
+            if (obj->data_type() != this->data_type())
                 return false;
-            return this->from(obj.buf(), obj.capacity());
+            return this->from(obj->buf(), obj->capacity());
+        }
+        virtual bool    assign_bytes(uint8_t *buf, size_t size)
+        {
+            return this->assign_bytes(buf, size, size);
         }
 
-        virtual Datatypes    data_type() { return Datatype::type_to_datatype<T>(); }
-        virtual std::string   data_type_to_string() { return Datatype::datatype_to_string(this->data_type()); } 
+        virtual Datatypes   data_type() const { return Datatype::type_to_datatype<T>(); }
+        virtual std::string data_type_to_string() const { return Datatype::datatype_to_string(this->data_type()); } 
 
-        virtual Endian::Endianness  get_endianness() { return this->endianness; }
+        virtual Endian::Endianness  get_endianness() const { return this->endianness; }
 
         // ICloneable
 
-        virtual std::unique_ptr<Array<T>>    clone()
+        virtual Array<T>    *clone()
         {
-            std::unique_ptr<Array<T>> ret = std::make_unique<Array<T>>();
-            ret.get()->from(*this);
-            return ret;
+            Array<T> *cloned = new Array<T>();
+            if (cloned != nullptr)
+                cloned->from(this);
+            return cloned;
         }
 
         // Class methods
 
-        T       *data() const { return _buf_ptr; }
+        T       *data() { return _buf_ptr; }
 
-        void    assign(void *buf, size_t size, size_t capacity)
+        bool    copy_from(const T *buf, size_t size, size_t from = 0)
+        {
+            return this->copy_from_bytes((uint8_t *)buf, size * this->data_size(), from * this->data_size());
+        }
+
+        bool    assign_bytes(void *buf, size_t size, size_t capacity)
+        {
+            if (size % this->data_size() != 0)
+            {
+                LOG_ERROR("Array: cannot assign buffer - size %lu not divisible by %lu",
+                            size, this->data_size());
+                return false;
+            }
+            if (capacity % this->data_size() != 0)
+            {
+                LOG_ERROR("Array: cannot assign buffer - capacity %lu not divisible by %lu",
+                            capacity, this->data_size());
+                return false;
+            }
+            return this->assign((T *)buf, size / this->data_size(), capacity / this->data_size());
+        }
+
+        bool    assign(T *buf, size_t size)
+        {
+            return this->assign(buf, size, size);            
+        }
+
+        bool    assign(T *buf, size_t size, size_t capacity)
         {
             this->delete_buffer();
-            _buf_ptr = (T *)buf;
+            _buf_ptr = buf;
             _size = size;
             _capacity = capacity;
             _has_responsability = false;
+            return true;
         }
 
         bool    new_buffer(size_t capacity, bool clear_mem = false)
@@ -138,15 +191,6 @@ class Array:    virtual public IBuffer,
                 _size = size;
             }
             return _buf_ptr != nullptr;
-        }
-
-        bool    copy(const void *buf, size_t size, size_t at = 0)
-        {
-            if (size + at > _capacity)
-                return false;
-            memcpy(this->buf() + at, buf, size);
-            _size = size + at;
-            return true;
         }
 
         bool    push_back(const T *buf, size_t size)
@@ -256,6 +300,7 @@ template <typename T>
 size_t Array<T>::added_resize_capacity = 1;
 
 typedef Array<bool>       Bool;
+typedef Array<char>       Char;
 typedef Array<int8_t>     Byte;
 typedef Array<uint8_t>    UByte;
 typedef Array<int16_t>    Short;
@@ -266,6 +311,75 @@ typedef Array<int64_t>    Long;
 typedef Array<uint64_t>   ULong;
 typedef Array<float>      Float;
 typedef Array<double>     Double;
+
+class ArrayUtil
+{
+    public:
+        static IArray  *create_from_type(Datatypes dt, size_t size = 0)
+        {
+            switch (dt)
+            {
+                case BOOL:
+                    return new Bool(size);
+                case CHAR:
+                    return new Char(size);
+                case BYTE:
+                    return new Byte(size);
+                case UBYTE:
+                    return new UByte(size);
+                case SHORT:
+                    return new Short(size);
+                case USHORT:
+                    return new UShort(size);
+                case INT:
+                    return new Int(size);
+                case UINT:
+                    return new UInt(size);
+                case LONG:
+                    return new Long(size);
+                case ULONG:
+                    return new ULong(size);
+                case FLOAT:
+                    return new Float(size);
+                case DOUBLE:
+                    return new Double(size);
+                default:
+                    break ;
+            }
+            return nullptr;
+        }
+
+        template <typename T>
+        static Array<T> *cast_array(IArray *ptr)
+        {
+            return dynamic_cast<Array<T> *>(ptr);
+        }
+
+        template <typename T>
+        static T    read_array(IArray *ptr, size_t idx)
+        {
+            Array<T> *arr = ArrayUtil::cast_array<T>(ptr);
+            if (arr == nullptr)
+                throw std::invalid_argument("array wrong type - invalid cast");
+            return arr->at(idx);
+        }
+
+        template <typename T>
+        static bool    write_array(IArray *ptr, size_t idx, T value)
+        {
+            if (idx >= ptr->capacity())
+                return false;
+            Array<T> *arr = ArrayUtil::cast_array<T>(ptr);
+            if (arr == nullptr)
+                throw std::invalid_argument("array wrong type - invalid cast");
+            arr[idx] = value;
+            return true;
+        }
+
+    private:
+        ArrayUtil() {};
+        ~ArrayUtil() {};
+};
 
 }
 
