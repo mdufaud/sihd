@@ -5,6 +5,7 @@
 # include <sihd/util/IObserver.hpp>
 # include <list>
 # include <mutex>
+# include <algorithm>
 
 namespace sihd::util
 {
