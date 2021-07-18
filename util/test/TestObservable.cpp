@@ -21,6 +21,8 @@ namespace test
                 return val;
             }
 
+            void    notify() { this->notify_observers(this); }
+
             int val = 0;
     };
 
@@ -60,11 +62,11 @@ namespace test
         obj.val = 1337;
         obj.add_observer(this);
         EXPECT_EQ(this->val, 0);
-        obj.notify_observers(&obj);
+        obj.notify();
         EXPECT_EQ(this->val, obj.val);
 
         obj.val = 424242;
-        obj.notify_observers(&obj);
+        obj.notify();
         EXPECT_EQ(this->val, 1337);
     }
 
@@ -79,11 +81,11 @@ namespace test
         });
         EXPECT_EQ(val, 0);
         obj.add_observer(&cb);
-        obj.notify_observers(&obj);
+        obj.notify();
         EXPECT_EQ(val, 1337);
         obj.val = 4242;
         obj.remove_observer(&cb);
-        obj.notify_observers(&obj);
+        obj.notify();
         EXPECT_EQ(val, 1337);
     }
 }

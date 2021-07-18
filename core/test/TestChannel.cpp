@@ -1,0 +1,106 @@
+#include <gtest/gtest.h>
+#include <iostream>
+#include <sihd/util/Logger.hpp>
+#include <sihd/core/Channel.hpp>
+
+namespace test
+{
+    NEW_LOGGER("sihd::test");
+
+    using namespace sihd::core;
+    class TestChannel:   public ::testing::Test, public IObserver<Channel>
+    {
+        protected:
+            TestChannel()
+            {
+                sihd::util::LoggerManager::basic();
+            }
+
+            virtual ~TestChannel()
+            {
+                sihd::util::LoggerManager::clear_loggers();
+            }
+
+            virtual void SetUp()
+            {
+            }
+
+            virtual void TearDown()
+            {
+            }
+
+            void observable_changed(Channel *c)
+            {
+                TRACE(c->arr()->data_type_to_string());
+                if (c->arr()->data_type() == INT)
+                {
+                    Array<int> *arr_int = ArrayUtil::cast_array<int>(c->arr());
+                    int *c_arr_int = arr_int->data();
+                    _at_val = arr_int->at(0);
+                    _c_arr_val = c_arr_int[0];
+                    _read_val = c->read<int>(0);
+                }
+                _notified[c] += 1;
+            }
+
+            std::map<Channel *, int> _notified;
+            int _at_val = 0;
+            int _c_arr_val = 0;
+            int _read_val = 0;
+    };
+
+    TEST_F(TestChannel, test_channel_notification)
+    {
+        Channel c("chan", "float", 4);
+
+        EXPECT_EQ(c.arr()->byte_size(), 4 * sizeof(float));
+        EXPECT_EQ(c.arr()->data_size(), 4u);
+        EXPECT_EQ(c.arr()->data_type_to_string(), "float");
+        EXPECT_EQ(c.arr()->capacity(), 4u);
+        EXPECT_EQ(c.arr()->data_type(), FLOAT);
+        EXPECT_EQ(_notified[&c], 0);
+        c.notify();
+        EXPECT_EQ(_notified[&c], 0);
+        c.add_observer(this);
+        c.notify();
+        EXPECT_EQ(_notified[&c], 1);
+    }
+
+    TEST_F(TestChannel, test_channel_read_write)
+    {
+        Channel c("chan", "int");
+
+        c.add_observer(this);
+        EXPECT_EQ(_notified[&c], 0);
+        EXPECT_EQ(c.read<int>(0), 0);
+        EXPECT_TRUE(c.write<int>(0, 20));
+        EXPECT_EQ(_notified[&c], 1);
+        EXPECT_EQ(c.read<int>(0), 20);
+
+        EXPECT_EQ(_at_val, 20);
+        EXPECT_EQ(_c_arr_val, 20);
+        EXPECT_EQ(_read_val, 20);
+    }
+
+    TEST_F(TestChannel, test_channel_write_array)
+    {
+        Channel c("chan", "double", 6);
+
+        c.add_observer(this);
+        Double arr = {1.0, 1.1, 1.2, 1.3, 1.4, 1.5};
+        EXPECT_EQ(_notified[&c], 0);
+        c.write(&arr);
+        EXPECT_EQ(_notified[&c], 1);
+        EXPECT_DOUBLE_EQ(c.read<double>(0), 1.0);
+        EXPECT_DOUBLE_EQ(c.read<double>(1), 1.1);
+        EXPECT_DOUBLE_EQ(c.read<double>(2), 1.2);
+        EXPECT_DOUBLE_EQ(c.read<double>(3), 1.3);
+        EXPECT_DOUBLE_EQ(c.read<double>(4), 1.4);
+        EXPECT_DOUBLE_EQ(c.read<double>(5), 1.5);
+        c.write(&arr);
+        EXPECT_EQ(_notified[&c], 1);
+        c.set_write_on_change(false);
+        c.write(&arr);
+        EXPECT_EQ(_notified[&c], 2);
+    }
+}

@@ -2,7 +2,7 @@
 # define __SIHD_UTIL_ARRAY_HPP__
 
 # include <cstdint>
-# include <string.h>
+# include <strings.h>
 # include <stdexcept>
 # include <memory>
 # include <sihd/util/ICloneable.hpp>
@@ -12,6 +12,8 @@
 
 namespace sihd::util
 {
+
+LOGGER;
 
 template <typename T>
 class Array:    virtual public IArray,
@@ -30,12 +32,20 @@ class Array:    virtual public IArray,
                 this->reserve(capacity);
         }
 
+        Array(std::initializer_list<T> list)
+        {
+            _init();
+            this->reserve(list.size());
+            for (const T & value: list)
+            {
+                this->push_back(value);
+            }
+        }
+
         virtual ~Array()
         {
             this->delete_buffer();
         };
-
-        Endian::Endianness  endianness;
 
         // IArray
         virtual uint8_t *buf() { return (uint8_t *)_buf_ptr; }
@@ -46,7 +56,7 @@ class Array:    virtual public IArray,
         virtual size_t  byte_capacity() const { return _capacity * sizeof(T); }
         virtual bool    copy_from(IArray *obj, size_t from = 0)
         {
-            if (obj->data_type() != this->data_type())
+            if (this->is_same_type(obj) == false)
                 return false;
             return this->copy_from_bytes(obj->buf(), obj->byte_size(), from); 
         }
@@ -66,8 +76,7 @@ class Array:    virtual public IArray,
         }
         virtual bool    from(IArray *obj)
         {
-            //TODO endianness
-            if (obj->data_type() != this->data_type())
+            if (this->is_same_type(obj) == false)
                 return false;
             return this->from(obj->buf(), obj->capacity());
         }
@@ -79,7 +88,47 @@ class Array:    virtual public IArray,
         virtual Datatypes   data_type() const { return Datatype::type_to_datatype<T>(); }
         virtual std::string data_type_to_string() const { return Datatype::datatype_to_string(this->data_type()); } 
 
-        virtual Endian::Endianness  get_endianness() const { return this->endianness; }
+        virtual bool    resize(size_t size)
+        {
+            if (_buf_ptr != nullptr && size <= _capacity)
+            {
+                _size = size;
+                return true;
+            }
+            return this->reserve(size) && this->resize(size);
+        }
+
+        virtual bool    reserve(size_t capacity)
+        {
+            if (_buf_ptr != nullptr)
+            {
+                T *newbuf = new T[capacity]();
+                if (newbuf == nullptr)
+                    return false;
+                size_t min = std::min(capacity, _size);
+                memcpy((void *)newbuf, (void *)_buf_ptr, min * this->data_size());
+                this->delete_buffer();
+                _buf_ptr = newbuf;
+                _size = min;
+                _capacity = capacity;
+                _has_responsability = true;
+            }
+            else
+                this->new_buffer(capacity, true);
+            return _buf_ptr != nullptr;
+        }
+
+        virtual bool    is_same_type(IArray *arr)
+        {
+            return this->data_type() == arr->data_type();
+        }
+
+        virtual bool    is_equal(IArray *arr)
+        {
+            if (this->size() != arr->size() || this->is_same_type(arr) == false)
+                return false;
+            return memcmp(_buf_ptr, arr->buf(), this->byte_size()) == 0;
+        }
 
         // ICloneable
 
@@ -104,13 +153,13 @@ class Array:    virtual public IArray,
         {
             if (size % this->data_size() != 0)
             {
-                LOG_ERROR("Array: cannot assign buffer - size %lu not divisible by %lu",
+                LOG_ERROR("Array::assign_bytes cannot assign buffer - size %lu not divisible by %lu",
                             size, this->data_size());
                 return false;
             }
             if (capacity % this->data_size() != 0)
             {
-                LOG_ERROR("Array: cannot assign buffer - capacity %lu not divisible by %lu",
+                LOG_ERROR("Array::assign_bytes cannot assign buffer - capacity %lu not divisible by %lu",
                             capacity, this->data_size());
                 return false;
             }
@@ -141,36 +190,6 @@ class Array:    virtual public IArray,
             if (_buf_ptr != nullptr && clear_mem)
                 bzero(_buf_ptr, _capacity * this->data_size());
             _size = 0;
-            return _buf_ptr != nullptr;
-        }
-
-        bool    resize(size_t size)
-        {
-            if (_buf_ptr != nullptr && size <= _capacity)
-            {
-                _size = size;
-                return true;
-            }
-            return this->reserve(size) && this->resize(size);
-        }
-
-        bool    reserve(size_t capacity)
-        {
-            if (_buf_ptr != nullptr)
-            {
-                T *newbuf = new T[capacity]();
-                if (newbuf == nullptr)
-                    return false;
-                size_t min = std::min(capacity, _size);
-                memcpy((void *)newbuf, (void *)_buf_ptr, min * this->data_size());
-                this->delete_buffer();
-                _buf_ptr = newbuf;
-                _size = min;
-                _capacity = capacity;
-                _has_responsability = true;
-            }
-            else
-                this->new_buffer(capacity, true);
             return _buf_ptr != nullptr;
         }
 
@@ -242,8 +261,15 @@ class Array:    virtual public IArray,
         T   at(size_t idx) const
         {
             if (idx >= _size)
-                throw std::out_of_range("index exceeds size");
+                throw std::out_of_range("Array::at: index exceeds size");
             return _buf_ptr[idx];
+        }
+
+        void    set(size_t idx, T value)
+        {
+            if (idx >= _size)
+                throw std::out_of_range("Array::set: index exceeds size");
+            _buf_ptr[idx] = value;
         }
 
         inline T    operator[](size_t idx) const
@@ -281,7 +307,6 @@ class Array:    virtual public IArray,
     private:
         void    _init()
         {
-            endianness = Endian::get_endian();
             _buf_ptr = nullptr;
             _size = 0;
             _capacity = 0;
@@ -360,7 +385,13 @@ class ArrayUtil
         {
             Array<T> *arr = ArrayUtil::cast_array<T>(ptr);
             if (arr == nullptr)
-                throw std::invalid_argument("array wrong type - invalid cast");
+            {
+                throw std::invalid_argument(
+                    Str::format("ArrayUtil::read_array wrong type - invalid cast: %s != %s",
+                                ptr->data_type_to_string().c_str(),
+                                Datatype::datatype_to_string(Datatype::type_to_datatype<T>()).c_str())
+                );
+            }
             return arr->at(idx);
         }
 
@@ -371,8 +402,14 @@ class ArrayUtil
                 return false;
             Array<T> *arr = ArrayUtil::cast_array<T>(ptr);
             if (arr == nullptr)
-                throw std::invalid_argument("array wrong type - invalid cast");
-            arr[idx] = value;
+            {
+                throw std::invalid_argument(
+                    Str::format("ArrayUtil::write_array wrong type - invalid cast: %s != %s",
+                                ptr->data_type_to_string().c_str(),
+                                Datatype::datatype_to_string(Datatype::type_to_datatype<T>()).c_str())
+                );
+            }
+            arr->set(idx, value);
             return true;
         }
 

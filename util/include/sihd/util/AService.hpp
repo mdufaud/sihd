@@ -22,13 +22,13 @@ class AService: public Observable<AService>
             ERROR = 255,
         };
 
-        class IController
+        class IServiceController
         {
             public:
                 virtual bool    op_start(Operation op) = 0;
                 virtual bool    op_end(Operation op, bool status) = 0;
         };
-        virtual IController *get_ctrl() { return nullptr; };
+        virtual IServiceController *get_service_ctrl() { return nullptr; };
 
         virtual bool    setup();
         virtual bool    init();

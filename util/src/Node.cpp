@@ -135,10 +135,18 @@ Named   *Node::get_link(const std::string & path, size_t recursion)
     return child;
 }
 
+bool    Node::_check_link(const std::string & name, Named *child)
+{
+    (void)name;
+    (void)child;
+    return true;
+}
+
 bool    Node::resolve_links(size_t recursion)
 {
     Named *child;
 
+    bool ret = true;
     for (auto & [link, path]: _link_map)
     {
         child = this->get_link(path, recursion);
@@ -150,9 +158,12 @@ bool    Node::resolve_links(size_t recursion)
                         path.c_str());
             return false;
         }
-        this->add_child(link, child);
+        if (this->_check_link(link, child))
+            this->add_child(link, child);
+        else
+            ret = false;
     }
-    return true;
+    return ret;
 }
 
 std::map<std::string, Named *> &    Node::get_children()

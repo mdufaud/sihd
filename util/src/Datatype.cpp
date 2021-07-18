@@ -4,16 +4,16 @@ namespace sihd::util
 {
 
 std::vector<std::string>     Datatype::v_datatype_to_string = {
-    "NONE", "BOOL", "CHAR", "BYTE", "UBYTE", "SHORT", "USHORT",
-    "INT", "UINT", "LONG", "ULONG", "FLOAT", "DOUBLE",
-    "STRING", "OBJECT"
+    "none", "bool", "char", "byte", "ubyte", "short", "ushort",
+    "int", "uint", "long", "ulong", "float", "double",
+    "string", "object"
 };
 
 std::map<std::string, Datatypes>   Datatype::m_datatype_from_string = {
-    {"NONE", NONE}, {"BOOL", BOOL}, {"CHAR", CHAR}, {"BYTE", BYTE}, {"UBYTE", UBYTE},
-    {"SHORT", SHORT}, {"USHORT", USHORT}, {"INT", INT}, {"UINT", UINT}, 
-    {"LONG", LONG}, {"ULONG", ULONG}, {"FLOAT", FLOAT}, {"DOUBLE", DOUBLE},
-    {"STRING", STRING}, {"OBJECT", OBJECT}
+    {"none", NONE}, {"bool", BOOL}, {"char", CHAR}, {"byte", BYTE}, {"ubyte", UBYTE},
+    {"short", SHORT}, {"ushort", USHORT}, {"int", INT}, {"uint", UINT}, 
+    {"long", LONG}, {"ulong", ULONG}, {"float", FLOAT}, {"double", DOUBLE},
+    {"string", STRING}, {"object", OBJECT}
 };
 
 std::string  Datatype::datatype_to_string(Datatypes type)

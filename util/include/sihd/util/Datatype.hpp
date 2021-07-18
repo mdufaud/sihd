@@ -48,7 +48,13 @@ class Datatype
         static Datatypes   type_to_datatype()
         {
             return OBJECT;
-        }   
+        }
+
+        template <typename T>
+        static std::string  type_to_string()
+        {
+            return datatype_to_string(type_to_datatype<T>());
+        }
 };
 
 template <>

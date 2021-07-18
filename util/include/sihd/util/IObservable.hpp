@@ -9,6 +9,8 @@ class IObservable
 {
     public:
         virtual ~IObservable() {};
+
+    protected:
         virtual void    notify_observers(T *sender) = 0;
 
 };

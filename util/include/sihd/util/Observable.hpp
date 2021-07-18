@@ -40,7 +40,8 @@ class Observable:   virtual public IObservable<T>
             return std::find(_observers.begin(), _observers.end(), obs) != _observers.end();
         }
 
-        void    notify_observers(T *sender)
+    protected:
+        virtual void    notify_observers(T *sender)
         {
             {
                 std::lock_guard<std::mutex> rm_lock(_mutex_remove);

@@ -104,4 +104,33 @@ namespace test
         EXPECT_EQ(Str::replace("heh ih", "h", "hhh"), "hhhehhh ihhh");
         EXPECT_EQ(Str::replace("hello", "", ""), "hello");
     }
+
+    TEST_F(TestStr, test_str_hexdump)
+    {
+        std::string s = "hello world - how are you";
+        TRACE(Str::addr_to_string(s.data()));
+        EXPECT_EQ(Str::addr_to_string(0x0, 5), "0x00000");
+        EXPECT_EQ(Str::num_to_string(312, 10), "312");
+        EXPECT_EQ(Str::num_to_string(16, 16), "10");
+        EXPECT_EQ(Str::num_to_string(15, 16), "f");
+        EXPECT_EQ(Str::num_to_string(255, 16), "ff");
+        std::cout << Str::hexdump(s.data(), s.length(), ',') << std::endl;
+        std::cout << Str::full_hexdump(s.data(), s.length()) << std::endl;
+    }
+
+    TEST_F(TestStr, test_str_with)
+    {
+        EXPECT_TRUE(Str::starts_with("hello world", "hello"));
+        EXPECT_TRUE(Str::starts_with("hello world", "h"));
+        EXPECT_FALSE(Str::starts_with("hello world", "ello"));
+        EXPECT_FALSE(Str::starts_with("hello world", "world"));
+
+        EXPECT_TRUE(Str::ends_with("hello world", "world"));
+        EXPECT_TRUE(Str::ends_with("hello world", "d"));
+        EXPECT_FALSE(Str::ends_with("hello world", "worl"));
+        EXPECT_FALSE(Str::ends_with("hello world", "hello"));
+
+        EXPECT_FALSE(Str::starts_with("h", "he"));
+        EXPECT_FALSE(Str::ends_with("h", "hello"));
+    }
 }

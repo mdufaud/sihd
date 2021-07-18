@@ -10,6 +10,8 @@
 namespace sihd::util
 {
 
+size_t   Str::hexdump_cols = 8;
+
 std::mutex      Str::buffer_mutex;
 const size_t    Str::buffer_size = SIHD_UTIL_STR_BUFFER;
 char            Str::buffer[SIHD_UTIL_STR_BUFFER];
@@ -150,6 +152,124 @@ std::string     Str::replace(const std::string & s, const std::string & from, co
     }
     ret += s.substr(last);
     return ret;
+}
+
+char    Str::num_to_char(size_t num)
+{
+    if (num >= 10)
+        return 'a' + (num - 10);
+    else
+        return '0' + num;
+}
+
+std::string     Str::num_to_string(size_t num, size_t base)
+{
+    size_t i = 0;
+    size_t size = Num::get_size(num, base);
+    std::string ret;
+    while (i < size)
+    {
+        if (num < base)
+            ret = num_to_char(num) + ret;
+        else
+        {
+            ret = num_to_char(num % base) + ret;
+            num = num / base;
+        }
+        ++i;
+    }
+    return ret;
+}
+
+std::string     Str::addr_to_string(void *addr, size_t padding)
+{
+    size_t numsize = Num::get_size((size_t)addr, 16);
+    ssize_t i = 0;
+    ssize_t total_zero = padding - numsize;
+    std::string ret = "0x";
+    while (i < total_zero)
+    {
+        ret += "0";
+        ++i;
+    }
+    ret += num_to_string((size_t)addr, 16);
+    return ret;
+}
+
+bool    Str::is_printable(int c)
+{
+    return c >= 32 && c <= 126;
+}
+
+std::string     Str::hexdump(void *mem, size_t size, char delim)
+{
+    std::string ret;
+    size_t i = 0;
+    while (i < size)
+    {
+        uint16_t hex = 0xFF & ((char *)mem)[i];
+        if (hex < 16)
+            ret += "0";
+        if (ret.empty() == false)
+            ret += delim;
+        ret += num_to_string(hex, 16);
+        ++i;
+    }
+    return ret;
+}
+
+std::string     Str::full_hexdump(void *mem, size_t size)
+{
+    size_t i = 0;
+    size_t cols = Str::hexdump_cols;
+    size_t suppl = size % cols == 0 ? 0 : (cols - (size % cols));
+    std::string ret;
+
+    while (i < size + suppl)
+    {
+        if ((i % cols) == 0)
+            ret += addr_to_string((void *)i) + ":\t";
+        if (i < size)
+        {
+            uint16_t hex = 0xFF & ((char *)mem)[i];
+            if (hex < 16)
+                ret += "0";
+            ret += num_to_string(hex, 16) + " ";
+        }
+        else
+            ret += "   ";
+        if ((i % cols) == cols - 1)
+        {
+            ret += "  ";
+            size_t begin = i - (cols - 1);
+            while (begin <= i)
+            {
+                if (begin >= size)
+                    ret += " ";
+                else if (is_printable(((char *)mem)[begin]))
+                    ret += ((char *)mem)[begin];
+                else
+                    ret += ".";
+                ++begin;
+            }
+            ret += "\n";
+        }
+        ++i;
+    }
+    return ret;
+}
+
+bool    Str::starts_with(const std::string & s, const std::string & start)
+{
+    return strncmp(s.c_str(), start.c_str(), start.length()) == 0;
+}
+
+bool    Str::ends_with(const std::string & s, const std::string & end)
+{
+    ssize_t ending = s.length() - end.length();
+    if (ending < 0)
+        return false;
+    return strncmp(s.c_str() + ending, end.c_str(), end.length()) == 0;
 }
 
 }

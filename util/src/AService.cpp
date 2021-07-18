@@ -10,7 +10,7 @@ LOGGER;
 # define CREATE_SERVICE_OPERATION(OP, ID)\
 bool    AService::OP()\
 {\
-    AService::IController *ctrl = this->get_ctrl();\
+    AService::IServiceController *ctrl = this->get_service_ctrl();\
     bool ret = false;\
     if (ctrl == nullptr)\
         ret = this->on_##OP();\

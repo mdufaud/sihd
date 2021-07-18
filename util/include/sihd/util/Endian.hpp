@@ -2,10 +2,7 @@
 # define __SIHD_UTIL_ENDIAN_HPP__
 
 # include <string>
-extern "C" {
-# include <stdint.h>
-# include <byteswap.h>
-};
+# include <sihd/util/portable_endian.h>
 
 namespace sihd::util
 {

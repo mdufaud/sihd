@@ -38,6 +38,8 @@ namespace test
                     ++i;
                 }
             }
+
+            IArray *_array_ptr = nullptr;
     };
 
     /*
@@ -323,4 +325,14 @@ namespace test
         delete buffer_clone;
     }
 
+    TEST_F(TestArray, test_array_instanciate)
+    {
+        _array_ptr = ArrayUtil::create_from_type(INT, 1);
+        EXPECT_NE(_array_ptr, nullptr);
+        _array_ptr->resize(1);
+        EXPECT_EQ(ArrayUtil::read_array<int>(_array_ptr, 0), 0);
+        EXPECT_TRUE(ArrayUtil::write_array<int>(_array_ptr, 0, 20));
+        EXPECT_EQ(ArrayUtil::read_array<int>(_array_ptr, 0), 20);
+        delete _array_ptr;
+    }
 }

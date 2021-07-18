@@ -14,7 +14,10 @@ libs_versions = {
     "openssl": "1.1.1i",
     "pybind11" : "2.6.2",
     "sol2" : "3.2.3",
-    "libwebsockets": "4.1.6",
+    "uwebsockets": "19.2.0",
+    "imgui": "1.83",
+    "libjpeg": "9d",
+    "readline": "8.0",
 }
 modules = {
     "util": {

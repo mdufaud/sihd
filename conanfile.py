@@ -11,7 +11,7 @@ import _build_tools.modules
 
 print("Getting {} app libs".format(app.name))
 
-install_modules = getenv("modules")
+install_modules = getenv("modules") or ""
 tests_active = bool(getenv("test"))
 
 # specific

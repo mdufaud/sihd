@@ -4,7 +4,7 @@
 #include <sihd/util/AService.hpp>
 #include <sihd/util/ServiceController.hpp>
 
-#include <sihd/util/Perf.hpp>
+#include <sihd/util/Profiling.hpp>
 
 namespace test
 {
@@ -54,7 +54,7 @@ namespace test
     {
         public:
             ServiceController   ctrl;
-            virtual IController *get_ctrl() override { return &ctrl; };
+            virtual IServiceController *get_service_ctrl() override { return &ctrl; };
     };
 
     class TestService:  public ::testing::Test,
@@ -101,7 +101,7 @@ namespace test
     TEST_F(TestService, test_service_ctrl)
     {
         FakeServiceWithController service;
-        EXPECT_NE(service.get_ctrl(), nullptr);
+        EXPECT_NE(service.get_service_ctrl(), nullptr);
         service.ctrl.add_observer(this);
 
         // cannot do anything else than setup (except reset)
@@ -117,7 +117,7 @@ namespace test
         // setup
         EXPECT_TRUE(service.setup());
         EXPECT_EQ(service.n_setup, 1);
-        // none -> setuping -> setuped
+        // none -> CONFIGURING -> CONFIGURED
         EXPECT_EQ(obs_changed, 2);
 
         // cannot do anything else than init (except reset)
@@ -133,7 +133,7 @@ namespace test
         EXPECT_TRUE(service.init());
         EXPECT_EQ(service.n_setup, 1);
         EXPECT_EQ(service.n_init, 1);
-        // setuped -> initializing -> stopped
+        // CONFIGURED -> initializing -> stopped
         EXPECT_EQ(obs_changed, 4);
 
         // cannot do anything else than start (except reset)
@@ -219,7 +219,7 @@ namespace test
         EXPECT_TRUE(service.start());
         EXPECT_EQ(service.n_start, 2);
 
-        EXPECT_EQ(service.get_ctrl(), nullptr);
+        EXPECT_EQ(service.get_service_ctrl(), nullptr);
 
         EXPECT_EQ(obs_changed, 6);
     }

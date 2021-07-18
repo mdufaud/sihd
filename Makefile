@@ -10,7 +10,7 @@ endif
 
 APP_NAME = sihd
 
-HERE = $(shell pwd)
+HERE = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 # Build
 BUILD_PATH = $(HERE)/build
@@ -29,7 +29,7 @@ SCONS_BUILD_CMD = scons -Q -j4
 # Conan
 EXTLIB_PATH = $(BUILD_PATH)/extlib
 CONAN_PATH = $(BUILD_PATH)/conan
-CONAN_DEP = conan install .
+CONAN_DEP = conan install $(HERE)
 CONAN_PROFILE_LIBSTDC = $(shell conan profile get settings.compiler.libcxx default)
 CONAN_DEP_PROFILE = --profile default
 CONAN_DEP_PATH = -if $(CONAN_PATH) 
@@ -94,7 +94,7 @@ checkdep:
 ########
 
 build:
-	@$(SCONS_BUILD_CMD) verbose=$(verbose) modules=$(modules) test=$(test) dist=$(dist) py=$(py) lua=$(lua)
+	@cd $(HERE) && $(SCONS_BUILD_CMD) verbose=$(verbose) modules=$(modules) test=$(test) dist=$(dist) py=$(py) lua=$(lua)
 
 build_debug: SCONS_BUILD_CMD = time scons --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
 build_debug: build

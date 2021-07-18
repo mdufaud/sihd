@@ -106,6 +106,7 @@ class Node:   public Named
         virtual std::vector<std::string>    get_children_keys();
         
     protected:
+        virtual bool    _check_link(const std::string & name, Named *child);
         virtual void    _get_tree_children(std::stringstream & ss, TreeOpts opts);
         virtual void    _iterate_tree_children(std::stringstream & ss,
                                                 TreeOpts & opts,

@@ -31,40 +31,40 @@ namespace test
 
     TEST_F(TestDatatype, test_datatype_from_str)
     {
-        EXPECT_EQ(Datatype::string_to_datatype("NONE"), NONE); 
-        EXPECT_EQ(Datatype::string_to_datatype("BOOL"), BOOL); 
-        EXPECT_EQ(Datatype::string_to_datatype("CHAR"), CHAR);
-        EXPECT_EQ(Datatype::string_to_datatype("BYTE"), BYTE);
-        EXPECT_EQ(Datatype::string_to_datatype("UBYTE"), UBYTE);
-        EXPECT_EQ(Datatype::string_to_datatype("SHORT"), SHORT);
-        EXPECT_EQ(Datatype::string_to_datatype("USHORT"), USHORT);
-        EXPECT_EQ(Datatype::string_to_datatype("INT"), INT);
-        EXPECT_EQ(Datatype::string_to_datatype("UINT"), UINT);
-        EXPECT_EQ(Datatype::string_to_datatype("LONG"), LONG);
-        EXPECT_EQ(Datatype::string_to_datatype("ULONG"), ULONG);
-        EXPECT_EQ(Datatype::string_to_datatype("FLOAT"), FLOAT);
-        EXPECT_EQ(Datatype::string_to_datatype("DOUBLE"), DOUBLE);
-        EXPECT_EQ(Datatype::string_to_datatype("STRING"), STRING); 
-        EXPECT_EQ(Datatype::string_to_datatype("OBJECT"), OBJECT); 
+        EXPECT_EQ(Datatype::string_to_datatype("none"), NONE); 
+        EXPECT_EQ(Datatype::string_to_datatype("bool"), BOOL); 
+        EXPECT_EQ(Datatype::string_to_datatype("char"), CHAR);
+        EXPECT_EQ(Datatype::string_to_datatype("byte"), BYTE);
+        EXPECT_EQ(Datatype::string_to_datatype("ubyte"), UBYTE);
+        EXPECT_EQ(Datatype::string_to_datatype("short"), SHORT);
+        EXPECT_EQ(Datatype::string_to_datatype("ushort"), USHORT);
+        EXPECT_EQ(Datatype::string_to_datatype("int"), INT);
+        EXPECT_EQ(Datatype::string_to_datatype("uint"), UINT);
+        EXPECT_EQ(Datatype::string_to_datatype("long"), LONG);
+        EXPECT_EQ(Datatype::string_to_datatype("ulong"), ULONG);
+        EXPECT_EQ(Datatype::string_to_datatype("float"), FLOAT);
+        EXPECT_EQ(Datatype::string_to_datatype("double"), DOUBLE);
+        EXPECT_EQ(Datatype::string_to_datatype("string"), STRING); 
+        EXPECT_EQ(Datatype::string_to_datatype("object"), OBJECT); 
     }
 
     TEST_F(TestDatatype, test_datatype_str)
     {
-        EXPECT_EQ(Datatype::datatype_to_string(NONE), "NONE"); 
-        EXPECT_EQ(Datatype::datatype_to_string(BOOL), "BOOL"); 
-        EXPECT_EQ(Datatype::datatype_to_string(CHAR), "CHAR");
-        EXPECT_EQ(Datatype::datatype_to_string(BYTE), "BYTE");
-        EXPECT_EQ(Datatype::datatype_to_string(UBYTE), "UBYTE");
-        EXPECT_EQ(Datatype::datatype_to_string(SHORT), "SHORT");
-        EXPECT_EQ(Datatype::datatype_to_string(USHORT), "USHORT");
-        EXPECT_EQ(Datatype::datatype_to_string(INT), "INT");
-        EXPECT_EQ(Datatype::datatype_to_string(UINT), "UINT");
-        EXPECT_EQ(Datatype::datatype_to_string(LONG), "LONG");
-        EXPECT_EQ(Datatype::datatype_to_string(ULONG), "ULONG");
-        EXPECT_EQ(Datatype::datatype_to_string(FLOAT), "FLOAT");
-        EXPECT_EQ(Datatype::datatype_to_string(DOUBLE), "DOUBLE");
-        EXPECT_EQ(Datatype::datatype_to_string(STRING), "STRING"); 
-        EXPECT_EQ(Datatype::datatype_to_string(OBJECT), "OBJECT"); 
+        EXPECT_EQ(Datatype::datatype_to_string(NONE), "none"); 
+        EXPECT_EQ(Datatype::datatype_to_string(BOOL), "bool"); 
+        EXPECT_EQ(Datatype::datatype_to_string(CHAR), "char");
+        EXPECT_EQ(Datatype::datatype_to_string(BYTE), "byte");
+        EXPECT_EQ(Datatype::datatype_to_string(UBYTE), "ubyte");
+        EXPECT_EQ(Datatype::datatype_to_string(SHORT), "short");
+        EXPECT_EQ(Datatype::datatype_to_string(USHORT), "ushort");
+        EXPECT_EQ(Datatype::datatype_to_string(INT), "int");
+        EXPECT_EQ(Datatype::datatype_to_string(UINT), "uint");
+        EXPECT_EQ(Datatype::datatype_to_string(LONG), "long");
+        EXPECT_EQ(Datatype::datatype_to_string(ULONG), "ulong");
+        EXPECT_EQ(Datatype::datatype_to_string(FLOAT), "float");
+        EXPECT_EQ(Datatype::datatype_to_string(DOUBLE), "double");
+        EXPECT_EQ(Datatype::datatype_to_string(STRING), "string"); 
+        EXPECT_EQ(Datatype::datatype_to_string(OBJECT), "object"); 
     }
 
     TEST_F(TestDatatype, test_datatype_template)

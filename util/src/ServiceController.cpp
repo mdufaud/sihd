@@ -8,13 +8,13 @@ namespace sihd::util
 
 ServiceController::ServiceController(): statemachine(NONE)
 {
-    // none -> setup -> setuped
-    statemachine.add_transition(NONE, AService::SETUP, SETUPING);
-    statemachine.add_transition(SETUPING, AService::ERROR, ERROR);
-    statemachine.add_transition(SETUPING, AService::SUCCESS, SETUPED);
+    // none -> setup -> configured
+    statemachine.add_transition(NONE, AService::SETUP, CONFIGURING);
+    statemachine.add_transition(CONFIGURING, AService::ERROR, ERROR);
+    statemachine.add_transition(CONFIGURING, AService::SUCCESS, CONFIGURED);
 
-    // setuped -> init -> stopped
-    statemachine.add_transition(SETUPED, AService::INIT, INITIALIZING);
+    // configured -> init -> stopped
+    statemachine.add_transition(CONFIGURED, AService::INIT, INITIALIZING);
     statemachine.add_transition(INITIALIZING, AService::ERROR, ERROR);
     statemachine.add_transition(INITIALIZING, AService::SUCCESS, STOPPED);
 
@@ -28,31 +28,36 @@ ServiceController::ServiceController(): statemachine(NONE)
     statemachine.add_transition(STOPPING, AService::ERROR, ERROR);
     statemachine.add_transition(STOPPING, AService::SUCCESS, STOPPED);
 
-    // setuped -> reset -> none
-    statemachine.add_transition(SETUPED, AService::RESET, RESETTING);
+    // configured -> reset -> none
+    statemachine.add_transition(CONFIGURED, AService::RESET, RESETTING);
 
     // stopped -> reset -> none
     statemachine.add_transition(STOPPED, AService::RESET, RESETTING);
     statemachine.add_transition(RESETTING, AService::ERROR, ERROR);
     statemachine.add_transition(RESETTING, AService::SUCCESS, NONE);
 
-    SET_STATE_NAME(NONE);
-    SET_STATE_NAME(SETUPING);
-    SET_STATE_NAME(SETUPED);
-    SET_STATE_NAME(INITIALIZING);
-    SET_STATE_NAME(STARTING);
-    SET_STATE_NAME(RUNNING);
-    SET_STATE_NAME(STOPPING);
-    SET_STATE_NAME(STOPPED);
-    SET_STATE_NAME(RESETTING);
+    statemachine.set_state_name(NONE, "none");
+    statemachine.set_state_name(CONFIGURING, "configuring");
+    statemachine.set_state_name(CONFIGURED, "configured");
+    statemachine.set_state_name(INITIALIZING, "initializing");
+    statemachine.set_state_name(STARTING, "starting");
+    statemachine.set_state_name(RUNNING, "running");
+    statemachine.set_state_name(STOPPING, "stopping");
+    statemachine.set_state_name(STOPPED, "stopped");
+    statemachine.set_state_name(RESETTING, "resetting");
 
-    SET_EVENT_NAME(SETUP);
-    SET_EVENT_NAME(INIT);
-    SET_EVENT_NAME(START);
-    SET_EVENT_NAME(STOP);
-    SET_EVENT_NAME(RESET);
-    SET_EVENT_NAME(SUCCESS);
-    SET_EVENT_NAME(ERROR);
+    statemachine.set_event_name(AService::SETUP, "setup");
+    statemachine.set_event_name(AService::INIT, "init");
+    statemachine.set_event_name(AService::START, "start");
+    statemachine.set_event_name(AService::STOP, "stop");
+    statemachine.set_event_name(AService::RESET, "reset");
+    statemachine.set_event_name(AService::SUCCESS, "success");
+    statemachine.set_event_name(AService::ERROR, "error");
+}
+
+void    ServiceController::optionnal_setup()
+{
+    statemachine.add_transition(NONE, AService::INIT, INITIALIZING);
 }
 
 bool    ServiceController::op_start(AService::Operation op)

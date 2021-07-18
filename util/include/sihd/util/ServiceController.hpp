@@ -7,7 +7,7 @@
 namespace sihd::util
 {
 
-class ServiceController:    virtual public AService::IController,
+class ServiceController:    virtual public AService::IServiceController,
                             public Observable<ServiceController>
 {
     public:
@@ -17,8 +17,8 @@ class ServiceController:    virtual public AService::IController,
         enum State
         {
             NONE = 0,
-            SETUPING,
-            SETUPED,
+            CONFIGURING,
+            CONFIGURED,
             INITIALIZING,
             STARTING,
             RUNNING,
@@ -30,6 +30,13 @@ class ServiceController:    virtual public AService::IController,
 
         virtual bool    op_start(AService::Operation op);
         virtual bool    op_end(AService::Operation op, bool status);
+
+        State   get_state()
+        {
+            return statemachine.get_state();
+        }
+
+        void    optionnal_setup();
 
         StateMachine<State, AService::Operation>    statemachine;
 

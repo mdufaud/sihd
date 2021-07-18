@@ -1,5 +1,5 @@
-#ifndef __SIHD_UTIL_PERF_HPP__
-# define __SIHD_UTIL_PERF_HPP__
+#ifndef __SIHD_UTIL_PROFILING_HPP__
+# define __SIHD_UTIL_PROFILING_HPP__
 
 # include <sihd/util/Clocks.hpp>
 # include <sihd/util/time.hpp>
@@ -8,11 +8,11 @@
 namespace sihd::util
 {
 
-class Perf
+class Timeit
 {
     public:
-        Perf(const std::string & fun_name = "");
-        virtual ~Perf();
+        Timeit(const std::string & fun_name = "");
+        virtual ~Timeit();
 
     protected:
     
