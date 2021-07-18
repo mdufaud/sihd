@@ -29,10 +29,15 @@ SCONS_BUILD_CMD = scons -Q -j4
 # Conan
 EXTLIB_PATH = $(BUILD_PATH)/extlib
 CONAN_PATH = $(BUILD_PATH)/conan
+<<<<<<< HEAD
 CONAN_DEP = conan install $(HERE)
 CONAN_PROFILE_LIBSTDC = $(shell conan profile get settings.compiler.libcxx default)
 CONAN_DEP_PROFILE = --profile default
 CONAN_DEP_PATH = -if $(CONAN_PATH) 
+=======
+CONAN_INSTALL = conan install $(HERE) -s compiler=gcc -s compiler.libcxx=libstdc++11 -s compiler.version=9
+CONAN_INSTALL_PATH = -if $(CONAN_PATH) 
+>>>>>>> 4e22c4e58aa492970a2139c396013f6a0cbc8c60
 CONAN_ARGS =
 
 #########
@@ -54,12 +59,7 @@ all: build
 ifeq ($(word 1, $(MAKECMDGOALS)), dep)
 .PHONY: dep
 dep:
-ifneq ($(CONAN_PROFILE_LIBSTDC), libstdc++11)
-	@echo "Conan profile compiler.libcxx is not libstdc++11 (is $(CONAN_PROFILE_LIBSTDC))"
-	@echo "Updating default profile to libstdc++11"
-	@conan profile update settings.compiler.libcxx="libstdc++11" default
-endif
-	@env test=$(test) modules=$(modules) lua=$(lua) py=$(py) $(CONAN_DEP) $(CONAN_DEP_PROFILE) $(CONAN_DEP_PATH) $(CONAN_ARGS)
+	@env test=$(test) modules=$(modules) lua=$(lua) py=$(py) $(CONAN_INSTALL) $(CONAN_INSTALL_PATH) $(CONAN_ARGS)
 
 # make dep mod MODULE
 ifeq ($(word 2, $(MAKECMDGOALS)), mod)
