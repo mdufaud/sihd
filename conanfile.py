@@ -31,7 +31,6 @@ if tests_active:
 
 modules = _build_tools.modules.build_modules(app,
     specific_modules=install_modules,
-    test=tests_active,
     conditionnals=conditionnals)
 print("{}: modules configuration".format(app.name))
 pp.pprint(modules)

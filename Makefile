@@ -24,21 +24,13 @@ RES_PATH = $(BUILD_PATH)/etc
 BUILD_TOOLS = $(HERE)/_build_tools
 
 # Scons
-SCONS_BUILD_CMD = scons -Q -j4
+SCONS_BUILD_CMD = scons -Q -j$(UTILS_LOGICAL_CORE_NUMBER)
 
 # Conan
 EXTLIB_PATH = $(BUILD_PATH)/extlib
 CONAN_PATH = $(BUILD_PATH)/conan
-<<<<<<< HEAD
-CONAN_DEP = conan install $(HERE)
-CONAN_PROFILE_LIBSTDC = $(shell conan profile get settings.compiler.libcxx default)
-CONAN_DEP_PROFILE = --profile default
-CONAN_DEP_PATH = -if $(CONAN_PATH) 
-=======
-CONAN_INSTALL = conan install $(HERE) -s compiler=gcc -s compiler.libcxx=libstdc++11 -s compiler.version=9
+CONAN_INSTALL = conan install $(HERE) -s compiler=gcc -s compiler.libcxx=libstdc++11 -s compiler.version=7 -s build_type=Release
 CONAN_INSTALL_PATH = -if $(CONAN_PATH) 
->>>>>>> 4e22c4e58aa492970a2139c396013f6a0cbc8c60
-CONAN_ARGS =
 
 #########
 # Rules 
@@ -52,6 +44,14 @@ export RES_PATH
 
 all: build
 
+##########
+# Includes
+##########
+
+include $(BUILD_TOOLS)/logger.mk
+include $(BUILD_TOOLS)/utils.mk
+include $(BUILD_TOOLS)/rules.mk
+
 #########
 # Conan (external libraries dependencies retrieval)
 #########
@@ -59,7 +59,7 @@ all: build
 ifeq ($(word 1, $(MAKECMDGOALS)), dep)
 .PHONY: dep
 dep:
-	@env test=$(test) modules=$(modules) lua=$(lua) py=$(py) $(CONAN_INSTALL) $(CONAN_INSTALL_PATH) $(CONAN_ARGS)
+	@env test=$(test) modules=$(modules) lua=$(lua) py=$(py) $(CONAN_INSTALL) $(CONAN_INSTALL_PATH) $(args)
 
 # make dep mod MODULE
 ifeq ($(word 2, $(MAKECMDGOALS)), mod)
@@ -94,7 +94,7 @@ checkdep:
 ########
 
 build:
-	@cd $(HERE) && $(SCONS_BUILD_CMD) verbose=$(verbose) modules=$(modules) test=$(test) dist=$(dist) py=$(py) lua=$(lua)
+	@cd $(HERE) && $(SCONS_BUILD_CMD) $(args) verbose=$(verbose) modules=$(modules) test=$(test) dist=$(dist) py=$(py) lua=$(lua)
 
 build_debug: SCONS_BUILD_CMD = time scons --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
 build_debug: build
@@ -104,7 +104,7 @@ verbose: build
 
 # make mod MODULE
 ifeq ($(word 1, $(MAKECMDGOALS)), mod)
-.PHONY: modules
+.PHONY: mod
 MODULES_NAME = $(word 2, $(MAKECMDGOALS))$(m)
 mod: modules = $(MODULES_NAME)
 mod: build
@@ -191,12 +191,6 @@ endif #test
 
 dist: dist = 1
 dist: build
-
-##########
-# Builder
-##########
-
-include $(BUILD_TOOLS)/rules.mk
 
 ##########
 # Cleanup

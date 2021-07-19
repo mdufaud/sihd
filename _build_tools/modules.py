@@ -84,7 +84,13 @@ def build_libs_versions(app: dict, modules: dict, test=False):
                 ret[libname] = version
     return ret
 
-def build_modules(app, specific_modules="", test=False, conditionnals=[]):
+def build_modules(app, specific_modules="", conditionnals=[]):
+    """ @brief build modules from application configuration
+        @param app the application configuration module
+        @param specific_modules build specific modules instead of all
+        @param conditionnals list of conditionnal modules to be added to the build
+        @return list
+    """
     if not hasattr(app, "modules"):
         raise RuntimeError("App's configuration file should have modules")
     modules = {}
@@ -93,7 +99,7 @@ def build_modules(app, specific_modules="", test=False, conditionnals=[]):
         fill_modlist_from_modules(app.modules, specific_modules_list, modules)
     else:
         modules = app.modules
-    # Delete conditionnal build modules from modules list
+    # Delete conditionnal build modules from modules list if they are not mentionned
     del_lst = []
     for name, conf in modules.items():
         if conf.get('conditionnal', False) == True \

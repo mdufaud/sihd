@@ -43,7 +43,6 @@ if build_py:
 try:
     build_modules = _build_tools.modules.build_modules(app,
         specific_modules=modules_to_build,
-        test=make_tests,
         conditionnals=conditionnals)
     extlibs = _build_tools.modules.build_libs(app, test=make_tests)
     extheaders = _build_tools.modules.build_headers(app, test=make_tests)

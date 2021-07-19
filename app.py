@@ -32,12 +32,12 @@ modules = {
     },
     "http": {
         "depends": ['net'],
-        "libs": ['websockets'],
+        "headers": ['uwebsockets'],
     },
     # Conditionnals - Only if activated
     "lua": {
         "conditionnal": True,
-        "conditionnal_depends": ['core', 'net', 'http'],
+        "conditionnal_depends": ['util', 'core', 'net', 'http'],
         "libs": ['lua'],
         "headers": ['sol'],
         "flags": ["-Wno-unused-parameter"],
@@ -49,7 +49,7 @@ modules = {
     },
     "py": {
         "conditionnal": True,
-        "conditionnal_depends": ['core', 'net', 'http'],
+        "conditionnal_depends": ['util', 'core', 'net', 'http'],
         "headers": ['pybind11'],
         "parse-configs": [
             'python-config --cflags --ldflags --embed',
