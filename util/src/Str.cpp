@@ -162,7 +162,7 @@ char    Str::num_to_char(size_t num)
         return '0' + num;
 }
 
-std::string     Str::num_to_string(size_t num, size_t base)
+std::string     Str::num_to_string(size_t num, uint16_t base)
 {
     size_t i = 0;
     size_t size = Num::get_size(num, base);
@@ -196,11 +196,6 @@ std::string     Str::addr_to_string(void *addr, size_t padding)
     return ret;
 }
 
-bool    Str::is_printable(int c)
-{
-    return c >= 32 && c <= 126;
-}
-
 std::string     Str::hexdump(void *mem, size_t size, char delim)
 {
     std::string ret;
@@ -218,7 +213,7 @@ std::string     Str::hexdump(void *mem, size_t size, char delim)
     return ret;
 }
 
-std::string     Str::full_hexdump(void *mem, size_t size)
+std::string     Str::hexdump_fmt(void *mem, size_t size)
 {
     size_t i = 0;
     size_t cols = Str::hexdump_cols;
@@ -246,7 +241,7 @@ std::string     Str::full_hexdump(void *mem, size_t size)
             {
                 if (begin >= size)
                     ret += " ";
-                else if (is_printable(((char *)mem)[begin]))
+                else if (isprint(((char *)mem)[begin]))
                     ret += ((char *)mem)[begin];
                 else
                     ret += ".";
@@ -270,6 +265,33 @@ bool    Str::ends_with(const std::string & s, const std::string & end)
     if (ending < 0)
         return false;
     return strncmp(s.c_str() + ending, end.c_str(), end.length()) == 0;
+}
+
+bool    Str::is_digit(int c, uint16_t base)
+{
+    if (base <= 10)
+        return base != 0 && c >= '0' && c <= '0' + (base - 1);
+    base = base - 10;
+    return (c >= '0' && c <= '9')
+        || (c >= 'a' && c <= 'a' + (base - 1))
+        || (c >= 'A' && c <= 'A' + (base - 1));
+}
+
+bool    Str::is_number(const std::string & s, uint16_t base)
+{
+    size_t i = 0;
+    const char *c_str = s.c_str();
+    size_t len = s.length();
+    while (i < len)
+    {
+        if (isspace(c_str[i]) == 0
+            && c_str[i] != '-'
+            && c_str[i] != '+'
+            && is_digit(c_str[i], base) == false)
+            return false;
+        ++i;
+    }
+    return true;
 }
 
 }

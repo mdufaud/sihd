@@ -19,7 +19,6 @@ bool    Device::on_##OP()\
 {\
     for (auto & [name, child]: this->get_children())\
     {\
-        (void)name;\
         AService *service = dynamic_cast<AService *>(child);\
         if (service != nullptr && service->OP() == false)\
         {\
@@ -31,24 +30,38 @@ bool    Device::on_##OP()\
 }
 
 WATERFALL_SERVICE_OPERATION(setup);
-//WATERFALL_SERVICE_OPERATION(init);
-WATERFALL_SERVICE_OPERATION(start);
+WATERFALL_SERVICE_OPERATION(init);
 WATERFALL_SERVICE_OPERATION(stop);
 WATERFALL_SERVICE_OPERATION(reset);
 
-bool    Device::on_init()
+bool    Device::on_start()
 {
+    bool ret = true;
+    std::list<AService *> started_services;
     for (auto & [name, child]: this->get_children())
     {
-        (void)name;
         AService *service = dynamic_cast<AService *>(child);
-        if (service != nullptr && service->init() == false)
+        if (service != nullptr)
         {
-            LOG(error, "Device: " << this->get_name() << " << could not init service: " << name);
-            return false;
+            if (service->start() == false)
+            {
+                LOG(error, "Device: " << this->get_name() << " << could not start service: " << name);
+                ret = false;
+                break ;
+            }
+            started_services.push_back(service);
         }
     }
-    return this->resolve_links();
+    ret = this->resolve_links();
+    if (ret == false)
+    {
+        // return started service to stop state if failed
+        for (AService *service: started_services)
+        {
+            service->stop();
+        }
+    }
+    return ret;
 }
 
 }

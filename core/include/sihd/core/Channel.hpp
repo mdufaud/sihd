@@ -5,6 +5,8 @@
 # include <sihd/util/Named.hpp>
 # include <sihd/util/Observable.hpp>
 # include <sihd/util/Logger.hpp>
+# include <sihd/util/time.hpp>
+# include <sihd/util/Clocks.hpp>
 # include <mutex>
 
 namespace sihd::core
@@ -27,6 +29,17 @@ class Channel:  public Named,
         virtual ~Channel();
 
         IArray  *arr() { return _array_ptr; }
+
+        std::time_t timestamp();
+
+        void    set_clock(sihd::util::IClock *clock);
+
+        void    notify();
+
+        static IClock *get_default_clock() { return _default_channel_clock_ptr; }
+
+        // write and notify only if a change happened
+        void    set_write_on_change(bool activate) { _write_change_only = activate; }
 
         template <typename T>
         Array<T>    *arr()
@@ -64,24 +77,26 @@ class Channel:  public Named,
                         << Datatype::type_to_string<T>())
             }
             if (ret)
+            {
+                _timestamp = _clock_ptr->now();
                 this->notify();
+            }
             return ret;
         }
 
-        void    notify();
-
-        // write and notify only if a change happened
-        void    set_write_on_change(bool activate) { _write_change_only = activate; }
-
     protected:
         virtual void    _init(const std::string & type, size_t size);
+
+        static IClock  *_default_channel_clock_ptr;
     
     private:
+        IClock  *_clock_ptr;
+        std::time_t _timestamp;
         IArray  *_array_ptr;
-        bool    _notifying;
-        bool    _write_change_only;
         std::mutex  _arr_mutex;
+        bool    _notifying;
         std::mutex  _notify_mutex;
+        bool    _write_change_only;
 };
 
 }

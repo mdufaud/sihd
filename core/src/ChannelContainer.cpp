@@ -82,4 +82,35 @@ bool    ChannelContainer::_check_link(const std::string & name, Named *child)
     return ret;
 }
 
+bool    ChannelContainer::observe_channel(const std::string & channel_name)
+{
+    Channel *c = this->get_channel(channel_name);
+    if (c != nullptr)
+        return this->observe_channel(c);
+    LOG_ERROR("ChannelContainer: '%s' cannot find channel '%s' to observe",
+            this->get_full_name().c_str(), channel_name.c_str());
+    return false;
+}
+
+bool    ChannelContainer::observe_channel(Channel *c)
+{
+    if (c != nullptr)
+    {
+        // false if already added
+        if (c->add_observer(this))
+            _observed_channels.push_back(c);
+        return true;
+    }
+    return false;
+}
+
+void    ChannelContainer::remove_channels_observation()
+{
+    for (Channel *c: _observed_channels)
+    {
+        c->remove_observer(this);
+    }
+    _observed_channels.clear();
+}
+
 }

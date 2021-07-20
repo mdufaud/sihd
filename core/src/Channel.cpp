@@ -5,6 +5,8 @@ namespace sihd::core
 
 LOGGER;
 
+IClock *Channel::_default_channel_clock_ptr = new sihd::util::SystemClock();
+
 Channel::Channel(const std::string & name, const std::string & type,
                 size_t size, Node *parent):
                 Named(name, parent)
@@ -26,6 +28,7 @@ Channel::~Channel()
 
 void    Channel::_init(const std::string & type, size_t size)
 {
+    std::lock_guard lock(_arr_mutex);
     _array_ptr = ArrayUtil::create_from_type(Datatype::string_to_datatype(type), size);
     if (_array_ptr == nullptr)
     {
@@ -35,6 +38,14 @@ void    Channel::_init(const std::string & type, size_t size)
     _array_ptr->resize(size);
     _notifying = false;
     _write_change_only = true;
+    _timestamp = 0;
+    _clock_ptr = Channel::get_default_clock();
+}
+
+std::time_t     Channel::timestamp()
+{
+    std::lock_guard lock(_arr_mutex);
+    return _timestamp;
 }
 
 bool    Channel::copy_to(IArray *arr)
@@ -58,7 +69,10 @@ bool    Channel::write(IArray *arr)
         ret = _array_ptr->copy_from(arr);
     }
     if (ret)
+    {
+        _timestamp = _clock_ptr->now();
         this->notify();
+    }
     else
     {
         if (_array_ptr->is_same_type(arr) == false)

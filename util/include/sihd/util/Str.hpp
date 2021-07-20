@@ -34,13 +34,14 @@ class Str
         static std::string      replace(const std::string & s, const std::string & from, const std::string & to);
 
         static std::string      addr_to_string(void *addr, size_t padding = 0);
-        static std::string      num_to_string(size_t num, size_t base);
+        static std::string      num_to_string(size_t num, uint16_t base);
         static char             num_to_char(size_t num);
         static std::string      hexdump(void *mem, size_t size, char delim = ' ');
         // formatted hexdump
-        static std::string      full_hexdump(void *mem, size_t size);
+        static std::string      hexdump_fmt(void *mem, size_t size);
 
-        static bool is_printable(int c);
+        static bool is_digit(int c, uint16_t base = 10);
+        static bool is_number(const std::string & s, uint16_t base = 10);
         static bool starts_with(const std::string & s, const std::string & start);
         static bool ends_with(const std::string & s, const std::string & end);
 };
