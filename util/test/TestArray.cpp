@@ -220,14 +220,14 @@ namespace test
     // Test storing in IArray
     TEST_F(TestArray, test_array_store)
     {
-        sihd::util::Byte buffer_byte(200);
+        sihd::util::ArrByte buffer_byte(200);
         buffer_byte[0] = 127;
         buffer_byte[1] = 25;
         IArray *buffer = &buffer_byte;
         EXPECT_EQ(buffer->buf()[0], 127);
         EXPECT_EQ(buffer->buf()[1], 25u);
 
-        sihd::util::Int buffer_int(2);
+        sihd::util::ArrInt buffer_int(2);
         buffer_int[0] = 123;
         buffer_int[1] = 456;
         buffer = &buffer_int;
@@ -238,88 +238,88 @@ namespace test
     // Test all types
     TEST_F(TestArray, test_array_all)
     {
-        sihd::util::Byte buffer_byte(1);
+        sihd::util::ArrByte buffer_byte(1);
         buffer_byte[0] = 127;
         EXPECT_EQ(buffer_byte[0], 127);
-        sihd::util::UByte buffer_ubyte(1);
+        sihd::util::ArrUByte buffer_ubyte(1);
         buffer_ubyte[0] = 255;
         EXPECT_EQ(buffer_ubyte[0], 255);
 
         EXPECT_EQ(buffer_byte.data_size(), sizeof(char));
-        EXPECT_EQ(buffer_byte.data_type(), Datatypes::BYTE);
+        EXPECT_EQ(buffer_byte.data_type(), Datatypes::DBYTE);
         EXPECT_EQ(buffer_ubyte.data_size(), sizeof(char));
-        EXPECT_EQ(buffer_ubyte.data_type(), Datatypes::UBYTE);
+        EXPECT_EQ(buffer_ubyte.data_type(), Datatypes::DUBYTE);
 
-        sihd::util::Short buffer_short(1);
+        sihd::util::ArrShort buffer_short(1);
         buffer_short[0] = 2;
         EXPECT_EQ(buffer_short[0], 2);
-        sihd::util::UShort buffer_ushort(1);
+        sihd::util::ArrUShort buffer_ushort(1);
         buffer_ushort[0] = 2;
         EXPECT_EQ(buffer_ushort[0], 2u);
 
         EXPECT_EQ(buffer_short.data_size(), sizeof(short));
-        EXPECT_EQ(buffer_short.data_type(), Datatypes::SHORT);
+        EXPECT_EQ(buffer_short.data_type(), Datatypes::DSHORT);
         EXPECT_EQ(buffer_ushort.data_size(), sizeof(short));
-        EXPECT_EQ(buffer_ushort.data_type(), Datatypes::USHORT);
+        EXPECT_EQ(buffer_ushort.data_type(), Datatypes::DUSHORT);
 
-        sihd::util::Int buffer_int(1);
+        sihd::util::ArrInt buffer_int(1);
         buffer_int[0] = 2;
         EXPECT_EQ(buffer_int[0], 2);
-        sihd::util::UInt buffer_uint(1);
+        sihd::util::ArrUInt buffer_uint(1);
         buffer_uint[0] = -1;
         EXPECT_EQ(buffer_uint[0], -1u);
 
         EXPECT_EQ(buffer_int.data_size(), sizeof(int));
-        EXPECT_EQ(buffer_int.data_type(), Datatypes::INT);
+        EXPECT_EQ(buffer_int.data_type(), Datatypes::DINT);
         EXPECT_EQ(buffer_uint.data_size(), sizeof(int));
-        EXPECT_EQ(buffer_uint.data_type(), Datatypes::UINT);
+        EXPECT_EQ(buffer_uint.data_type(), Datatypes::DUINT);
 
-        sihd::util::Long buffer_long(1);
+        sihd::util::ArrLong buffer_long(1);
         buffer_long[0] = 1;
         EXPECT_EQ(buffer_long[0], 1l);
-        sihd::util::ULong buffer_ulong(1);
+        sihd::util::ArrULong buffer_ulong(1);
         buffer_ulong[0] = -1;
         EXPECT_EQ(buffer_ulong[0], -1ul);
 
         EXPECT_EQ(buffer_long.data_size(), sizeof(long));
-        EXPECT_EQ(buffer_long.data_type(), Datatypes::LONG);
+        EXPECT_EQ(buffer_long.data_type(), Datatypes::DLONG);
         EXPECT_EQ(buffer_ulong.data_size(), sizeof(long));
-        EXPECT_EQ(buffer_ulong.data_type(), Datatypes::ULONG);
+        EXPECT_EQ(buffer_ulong.data_type(), Datatypes::DULONG);
 
-        sihd::util::Float buffer_float(1);
+        sihd::util::ArrFloat buffer_float(1);
         buffer_float[0] = 133.7;
         EXPECT_FLOAT_EQ(buffer_float[0], 133.7f);
 
         EXPECT_EQ(buffer_float.data_size(), sizeof(float));
-        EXPECT_EQ(buffer_float.data_type(), Datatypes::FLOAT);
+        EXPECT_EQ(buffer_float.data_type(), Datatypes::DFLOAT);
 
-        sihd::util::Double buffer_dbl(1);
+        sihd::util::ArrDouble buffer_dbl(1);
         buffer_dbl[0] = 123.4;
         EXPECT_FLOAT_EQ(buffer_dbl[0], 123.4);
 
         EXPECT_EQ(buffer_dbl.data_size(), sizeof(double));
-        EXPECT_EQ(buffer_dbl.data_type(), Datatypes::DOUBLE);
+        EXPECT_EQ(buffer_dbl.data_type(), Datatypes::DDOUBLE);
     }
 
     // Test from method
     TEST_F(TestArray, test_array_from)
     {
-        sihd::util::Int buffer(2);
+        sihd::util::ArrInt buffer(2);
 
         buffer[0] = 13;
         buffer[1] = 37;
         EXPECT_EQ(buffer[0], 13);
         EXPECT_EQ(buffer[1], 37);
 
-        sihd::util::Int buffer_copied;
+        sihd::util::ArrInt buffer_copied;
         EXPECT_EQ(buffer_copied.from(&buffer), true);
         EXPECT_EQ(buffer_copied[0], 13);
         EXPECT_EQ(buffer_copied[1], 37);
 
-        sihd::util::Float buffer_impossible_copy;
+        sihd::util::ArrFloat buffer_impossible_copy;
         EXPECT_EQ(buffer_impossible_copy.from(&buffer), false);
 
-        Int *buffer_clone = buffer.clone();
+        ArrInt *buffer_clone = buffer.clone();
         EXPECT_EQ(buffer_clone->at(0), 13);
         EXPECT_EQ(buffer_clone->at(1), 37);
         delete buffer_clone;
@@ -327,7 +327,7 @@ namespace test
 
     TEST_F(TestArray, test_array_instanciate)
     {
-        _array_ptr = ArrayUtil::create_from_type(INT, 1);
+        _array_ptr = ArrayUtil::create_from_type(DINT, 1);
         EXPECT_NE(_array_ptr, nullptr);
         _array_ptr->resize(1);
         EXPECT_EQ(ArrayUtil::read_array<int>(_array_ptr, 0), 0);

@@ -1,8 +1,12 @@
 #ifndef __SIHD_UTIL_OS_HPP__
 # define __SIHD_UTIL_OS_HPP__
 
+# include <sihd/util/platform.hpp>
+
 # include <string>
-# include <dlfcn.h>
+# if !defined(__SIHD_WINDOWS__)
+#  include <dlfcn.h>
+# endif
 # include <map>
 # include <list>
 # include <mutex>

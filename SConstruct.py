@@ -1,3 +1,4 @@
+import platform
 # Time
 import time
 build_start_time = time.time()
@@ -29,6 +30,8 @@ verbose = ARGUMENTS.get("verbose", "") == "1"
 modules_to_build = ARGUMENTS.get('modules', "")
 distribution = ARGUMENTS.get('dist', "") == "1"
 make_tests = ARGUMENTS.get('test', "") == "1"
+build_platform = ARGUMENTS.get('platform', "")
+clang = ARGUMENTS.get('clang', "") == "1"
 
 # Specific
 build_lua = ARGUMENTS.get('lua', "") == "1"
@@ -39,6 +42,9 @@ if build_lua:
     conditionnals.append("luabin")
 if build_py:
     conditionnals.append("py")
+
+if build_platform == "windows" and platform.system() == "Linux":
+    app.libs.remove('dl')
 
 try:
     build_modules = _build_tools.modules.build_modules(app,
@@ -67,14 +73,26 @@ base_env = Environment(
     ENV = {
         'PATH': getenv("PATH"),
     },
-    CC = "c++",
-    CCFLAGS = ['-Wall', '-Wextra', '-Werror'] + (hasattr(app, 'flags') and app.flags or []),
+    CXX = "c++",
+    #CCFLAGS = ['-Wall', '-Wextra', '-Werror'] + (hasattr(app, 'flags') and app.flags or []),
     CPPFLAGS = ["-std=c++17"],
     CPPDEFINES = [] + (hasattr(app, 'defines') and app.defines or []),
     CPPPATH = [],
     LIBS = [],
     APP_MODULES_BUILD = build_modules.keys(),
 )
+
+if clang:
+    base_env["CXX"] = "clang++"
+    base_env["CPPFLAGS"].append(["-stdlib=libc++", '-fcxx-exceptions'])
+    #base_env["LINKFLAGS"].append(['-undefined dynamic_lookup'])
+    base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
+
+if build_platform.lower() == "windows" and platform.system() == "Linux":
+    base_env.Append(tools = ['mingw'])
+    base_env["CXX"] = "x86_64-w64-mingw32-g++"
+    base_env["CPPDEFINES"].append("_WIN64")
+
 if not verbose:
     base_env["SHCXXCOMSTR"] = "Compiling shared C++: $SOURCE"
     base_env["SHLINKCOMSTR"] = "Linking shared library: $TARGET"
@@ -192,8 +210,6 @@ for name, conf in build_modules.items():
         CCFLAGS = flags,
         APP_MODULE = module_format,
         APP_MODULE_CONF = conf,
-        # APP_MODULE_NAME = name,
-        # APP_MODULE_DEPENDS = depends,
     )
     env.AddMethod(build_lib, "build_lib")
     env.AddMethod(build_bin, "build_bin")

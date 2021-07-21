@@ -22,7 +22,7 @@ libs_versions = {
 modules = {
     "util": {
         "libs": ['stdc++fs'],
-        "headers": ['nlohmann_json']
+        "headers": ['nlohmann_json'],
     },
     "core": {
         "depends": ['util'],
@@ -57,6 +57,7 @@ modules = {
         ],
     }
 }
+#TODO remove because it should be module oriented
 replace_files = [
     "etc/sihd/core/test.txt"
 ]

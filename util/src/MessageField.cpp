@@ -5,7 +5,7 @@ namespace sihd::util
 
 MessageField::MessageField(const std::string & name, Node *parent): Named(name, parent)
 {
-    _dt = NONE;
+    _dt = DNONE;
     _size = 0;
     _array_ptr = nullptr;
 }
@@ -35,7 +35,7 @@ IMessageField   *MessageField::clone()
 
 bool    MessageField::assign_field_buffer(uint8_t *buffer)
 {
-    if (_size == 0 || _dt == NONE || _array_ptr == nullptr)
+    if (_size == 0 || _dt == DNONE || _array_ptr == nullptr)
     {
         LOG_ERROR("MessageField: for %s cannot assign array before it is built",
                     this->get_name().c_str());

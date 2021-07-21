@@ -32,7 +32,7 @@ bool    Endian::switch_buffer_endianness(void *buf, uint8_t size, size_t buf_siz
             buf2 = static_cast<int16_t *>(buf);
             while (i < buf_size)
             {
-                buf2[i] = __bswap_16(buf2[i]);
+                buf2[i] = bswap_16(buf2[i]);
                 ++i;
             }
             break ;
@@ -40,7 +40,7 @@ bool    Endian::switch_buffer_endianness(void *buf, uint8_t size, size_t buf_siz
             buf4 = static_cast<int32_t *>(buf);
             while (i < buf_size)
             {
-                buf4[i] = __bswap_32(buf4[i]);
+                buf4[i] = bswap_32(buf4[i]);
                 ++i;
             }
             break ;
@@ -48,7 +48,7 @@ bool    Endian::switch_buffer_endianness(void *buf, uint8_t size, size_t buf_siz
             buf8 = static_cast<int64_t *>(buf);
             while (i < buf_size)
             {
-                buf8[i] = __bswap_64(buf8[i]);
+                buf8[i] = bswap_64(buf8[i]);
                 ++i;
             }
             break ;
@@ -59,24 +59,24 @@ bool    Endian::switch_buffer_endianness(void *buf, uint8_t size, size_t buf_siz
 }
 
 template <>
-uint16_t    Endian::swap<uint16_t>(uint16_t ret) { return __bswap_16(ret); };
+uint16_t    Endian::swap<uint16_t>(uint16_t ret) { return bswap_16(ret); };
 template <>
-int16_t     Endian::swap<int16_t>(int16_t ret) { return __bswap_16(ret); };
+int16_t     Endian::swap<int16_t>(int16_t ret) { return bswap_16(ret); };
 template <>
-uint32_t    Endian::swap<uint32_t>(uint32_t ret) { return __bswap_32(ret); };
+uint32_t    Endian::swap<uint32_t>(uint32_t ret) { return bswap_32(ret); };
 template <>
-int32_t     Endian::swap<int32_t>(int32_t ret) { return __bswap_32(ret); };
+int32_t     Endian::swap<int32_t>(int32_t ret) { return bswap_32(ret); };
 template <>
-uint64_t    Endian::swap<uint64_t>(uint64_t ret) { return __bswap_64(ret); };
+uint64_t    Endian::swap<uint64_t>(uint64_t ret) { return bswap_64(ret); };
 template <>
-int64_t     Endian::swap<int64_t>(int64_t ret) { return __bswap_64(ret); };
+int64_t     Endian::swap<int64_t>(int64_t ret) { return bswap_64(ret); };
 
 template <>
 float   Endian::swap<float>(float ret)
 {
     float *ret_p = &ret;
     uint32_t *tmp = reinterpret_cast<uint32_t *>(ret_p);
-    uint32_t swapped = __bswap_32(*tmp);
+    uint32_t swapped = bswap_32(*tmp);
     tmp = &swapped;
     return *(reinterpret_cast<float *>(tmp));
 }
@@ -86,7 +86,7 @@ double   Endian::swap<double>(double ret)
 {
     double *ret_p = &ret;
     uint64_t *tmp = reinterpret_cast<uint64_t *>(ret_p);
-    uint64_t swapped = __bswap_64(*tmp);
+    uint64_t swapped = bswap_64(*tmp);
     tmp = &swapped;
     return *(reinterpret_cast<double *>(tmp));
 }

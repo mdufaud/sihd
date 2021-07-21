@@ -16,7 +16,7 @@ class StepWorker: public Worker, virtual public ISteppable
         bool    set_frequency(double freq);
 
         virtual bool    run() override;
-        virtual bool    step();
+        virtual bool    step() override;
 
     protected:
         virtual bool    on_worker_start() override;

@@ -13,21 +13,21 @@ typedef std::variant<bool, char, int8_t, uint8_t, int16_t, uint16_t, int32_t, ui
 int64_t, uint64_t, float, double, std::string>    variant_datatype;
 
 enum Datatypes {
-    NONE,
-    BOOL,
-    CHAR,
-    BYTE,
-    UBYTE,
-    SHORT,
-    USHORT,
-    INT,
-    UINT,
-    LONG,
-    ULONG,
-    FLOAT,
-    DOUBLE,
-    STRING,
-    OBJECT,
+    DNONE,
+    DBOOL,
+    DCHAR,
+    DBYTE,
+    DUBYTE,
+    DSHORT,
+    DUSHORT,
+    DINT,
+    DUINT,
+    DLONG,
+    DULONG,
+    DFLOAT,
+    DDOUBLE,
+    DSTRING,
+    DOBJECT,
 };
 
 class Datatype
@@ -47,7 +47,7 @@ class Datatype
         template <typename T>
         static Datatypes   type_to_datatype()
         {
-            return OBJECT;
+            return DOBJECT;
         }
 
         template <typename T>

@@ -144,7 +144,7 @@ class Array:    virtual public IArray,
 
         T       *data() { return _buf_ptr; }
 
-        bool    copy_from(const T *buf, size_t size, size_t from = 0)
+        bool    copy_from(T *buf, size_t size, size_t from = 0)
         {
             return this->copy_from_bytes((uint8_t *)buf, size * this->data_size(), from * this->data_size());
         }
@@ -188,7 +188,7 @@ class Array:    virtual public IArray,
             _has_responsability = true;
             _capacity = _buf_ptr == nullptr ? 0 : capacity;
             if (_buf_ptr != nullptr && clear_mem)
-                bzero(_buf_ptr, _capacity * this->data_size());
+                memset(_buf_ptr, 0, _capacity * this->data_size());
             _size = 0;
             return _buf_ptr != nullptr;
         }
@@ -324,18 +324,18 @@ class Array:    virtual public IArray,
 template <typename T>
 size_t Array<T>::added_resize_capacity = 1;
 
-typedef Array<bool>       Bool;
-typedef Array<char>       Char;
-typedef Array<int8_t>     Byte;
-typedef Array<uint8_t>    UByte;
-typedef Array<int16_t>    Short;
-typedef Array<uint16_t>   UShort;
-typedef Array<int32_t>    Int;
-typedef Array<uint32_t>   UInt;
-typedef Array<int64_t>    Long;
-typedef Array<uint64_t>   ULong;
-typedef Array<float>      Float;
-typedef Array<double>     Double;
+typedef Array<bool>       ArrBool;
+typedef Array<char>       ArrChar;
+typedef Array<int8_t>     ArrByte;
+typedef Array<uint8_t>    ArrUByte;
+typedef Array<int16_t>    ArrShort;
+typedef Array<uint16_t>   ArrUShort;
+typedef Array<int32_t>    ArrInt;
+typedef Array<uint32_t>   ArrUInt;
+typedef Array<int64_t>    ArrLong;
+typedef Array<uint64_t>   ArrULong;
+typedef Array<float>      ArrFloat;
+typedef Array<double>     ArrDouble;
 
 class ArrayUtil
 {
@@ -344,30 +344,30 @@ class ArrayUtil
         {
             switch (dt)
             {
-                case BOOL:
-                    return new Bool(size);
-                case CHAR:
-                    return new Char(size);
-                case BYTE:
-                    return new Byte(size);
-                case UBYTE:
-                    return new UByte(size);
-                case SHORT:
-                    return new Short(size);
-                case USHORT:
-                    return new UShort(size);
-                case INT:
-                    return new Int(size);
-                case UINT:
-                    return new UInt(size);
-                case LONG:
-                    return new Long(size);
-                case ULONG:
-                    return new ULong(size);
-                case FLOAT:
-                    return new Float(size);
-                case DOUBLE:
-                    return new Double(size);
+                case DBOOL:
+                    return new ArrBool(size);
+                case DCHAR:
+                    return new ArrChar(size);
+                case DBYTE:
+                    return new ArrByte(size);
+                case DUBYTE:
+                    return new ArrUByte(size);
+                case DSHORT:
+                    return new ArrShort(size);
+                case DUSHORT:
+                    return new ArrUShort(size);
+                case DINT:
+                    return new ArrInt(size);
+                case DUINT:
+                    return new ArrUInt(size);
+                case DLONG:
+                    return new ArrLong(size);
+                case DULONG:
+                    return new ArrULong(size);
+                case DFLOAT:
+                    return new ArrFloat(size);
+                case DDOUBLE:
+                    return new ArrDouble(size);
                 default:
                     break ;
             }

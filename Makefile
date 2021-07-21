@@ -29,7 +29,7 @@ SCONS_BUILD_CMD = scons -Q -j$(UTILS_LOGICAL_CORE_NUMBER)
 # Conan
 EXTLIB_PATH = $(BUILD_PATH)/extlib
 CONAN_PATH = $(BUILD_PATH)/conan
-CONAN_INSTALL = conan install $(HERE) -s compiler=gcc -s compiler.libcxx=libstdc++11 -s compiler.version=7 -s build_type=Release
+CONAN_INSTALL = conan install $(HERE)
 CONAN_INSTALL_PATH = -if $(CONAN_PATH) 
 
 #########
@@ -94,7 +94,7 @@ checkdep:
 ########
 
 build:
-	@cd $(HERE) && $(SCONS_BUILD_CMD) $(args) verbose=$(verbose) modules=$(modules) test=$(test) dist=$(dist) py=$(py) lua=$(lua)
+	@cd $(HERE) && env verbose=$(verbose) modules=$(modules) test=$(test) dist=$(dist) py=$(py) lua=$(lua) $(SCONS_BUILD_CMD)
 
 build_debug: SCONS_BUILD_CMD = time scons --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
 build_debug: build

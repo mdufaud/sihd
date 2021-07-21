@@ -18,12 +18,12 @@ class MessageField: public sihd::util::Named,
         ~MessageField();
 
         // IMessageField
-        virtual size_t  get_field_byte_size() { return _size * Datatype::datatype_size(_dt); }
-        virtual bool    assign_field_buffer(uint8_t *buffer);
-        virtual bool    field_read_from(uint8_t *buffer, size_t size);
-        virtual bool    field_write_to(uint8_t *buffer, size_t size);
-        virtual bool    is_finished() const { return _array_ptr != nullptr; }
-        virtual bool    finish() { return this->is_finished(); }
+        virtual size_t  get_field_byte_size() override { return _size * Datatype::datatype_size(_dt); }
+        virtual bool    assign_field_buffer(uint8_t *buffer) override;
+        virtual bool    field_read_from(uint8_t *buffer, size_t size) override;
+        virtual bool    field_write_to(uint8_t *buffer, size_t size) override;
+        virtual bool    is_finished() const override { return _array_ptr != nullptr; }
+        virtual bool    finish() override { return this->is_finished(); }
 
         // Named
         virtual std::string     get_description() const override
@@ -32,7 +32,7 @@ class MessageField: public sihd::util::Named,
         }
 
         // ICloneable
-        virtual IMessageField *clone();
+        virtual IMessageField *clone() override;
 
         template <typename T>
         T   read_value(size_t idx)

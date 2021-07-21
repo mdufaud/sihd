@@ -51,7 +51,7 @@ std::string     Path::get_from(const std::string & from, const std::string & pat
     filesystem::path fs_path(from);
     fs_path.append(path);
     if (filesystem::exists(fs_path))
-        return fs_path.c_str();
+        return fs_path.generic_string();
     return "";
 }
 

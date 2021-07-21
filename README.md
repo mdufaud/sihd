@@ -32,26 +32,40 @@ Don't forget to add to your bashrc:
 export PATH=$PATH:$HOME/.local/bin
 ```
 
-To be able to find conan and scons from pip.
+To find conan and scons from python-pip binaries folder.
 
 ### C++
 
 version 17
 
-### Compiler
+### Compilers
 
 g++ (GCC) 10.2.0
+
+clang++ 8
+
+```shell
+# to install
+sudo apt install libc++-dev libc++abi-dev
+```
+
+x86_64-w64-mingw32-g++ 7.3-posix
+
+```shell
+# configure mingw32 to posix
+sudo update-alternatives --config x86_64-w64-mingw32-g++
+```
 
 ### Build instructions
 
 To dependencies from conan.io center
 
 ```shell
-# To get all dependencies for every modules
+# to get all dependencies for every modules
 make dep
-# To be able to run unit tests
+# to be able to run unit tests
 make dep test
-# To get dependencies for a single module
+# to get dependencies for a single module
 make dep mod COMMA_SEPARATED_MODULES
 ```
 

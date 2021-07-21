@@ -21,15 +21,15 @@ class Message:  public sihd::util::OrderedNode,
         virtual ~Message();
 
         // IMessageField
-        virtual size_t  get_field_byte_size() { return _total_size; }
-        virtual bool    assign_field_buffer(uint8_t *buffer);
-        virtual bool    field_read_from(uint8_t *buffer, size_t size);
-        virtual bool    field_write_to(uint8_t *buffer, size_t size);
-        virtual bool    is_finished() const { return _finished; }
-        virtual bool    finish();
+        virtual size_t  get_field_byte_size() override { return _total_size; }
+        virtual bool    assign_field_buffer(uint8_t *buffer) override;
+        virtual bool    field_read_from(uint8_t *buffer, size_t size) override;
+        virtual bool    field_write_to(uint8_t *buffer, size_t size) override;
+        virtual bool    is_finished() const override { return _finished; }
+        virtual bool    finish() override;
 
         // ICloneable
-        virtual IMessageField *clone();
+        virtual IMessageField *clone() override;
 
         template <typename T>
         bool    add_field(const std::string & name, size_t size = 1)
@@ -60,7 +60,7 @@ class Message:  public sihd::util::OrderedNode,
         virtual bool    _assign_field_array(IMessageField *field);
 
     private:
-        Byte    _arr;
+        ArrByte    _arr;
         size_t  _total_size;
         bool    _finished;
         size_t  __assign_arr_at;

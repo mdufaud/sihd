@@ -10,10 +10,10 @@ std::vector<std::string>     Datatype::v_datatype_to_string = {
 };
 
 std::map<std::string, Datatypes>   Datatype::m_datatype_from_string = {
-    {"none", NONE}, {"bool", BOOL}, {"char", CHAR}, {"byte", BYTE}, {"ubyte", UBYTE},
-    {"short", SHORT}, {"ushort", USHORT}, {"int", INT}, {"uint", UINT}, 
-    {"long", LONG}, {"ulong", ULONG}, {"float", FLOAT}, {"double", DOUBLE},
-    {"string", STRING}, {"object", OBJECT}
+    {"none", DNONE}, {"bool", DBOOL}, {"char", DCHAR}, {"byte", DBYTE}, {"ubyte", DUBYTE},
+    {"short", DSHORT}, {"ushort", DUSHORT}, {"int", DINT}, {"uint", DUINT}, 
+    {"long", DLONG}, {"ulong", DULONG}, {"float", DFLOAT}, {"double", DDOUBLE},
+    {"string", DSTRING}, {"object", DOBJECT}
 };
 
 std::string  Datatype::datatype_to_string(Datatypes type)
@@ -30,29 +30,29 @@ size_t  Datatype::datatype_size(Datatypes type)
 {
     switch (type)
     {
-        case BOOL:
+        case DBOOL:
             return sizeof(bool);
-        case CHAR:
+        case DCHAR:
             return sizeof(char);
-        case BYTE:
+        case DBYTE:
             return sizeof(int8_t);
-        case UBYTE:
+        case DUBYTE:
             return sizeof(uint8_t);
-        case SHORT:
+        case DSHORT:
             return sizeof(int16_t);
-        case USHORT:
+        case DUSHORT:
             return sizeof(uint16_t);
-        case INT:
+        case DINT:
             return sizeof(int32_t);
-        case UINT:
+        case DUINT:
             return sizeof(uint32_t);
-        case LONG:
+        case DLONG:
             return sizeof(int64_t);
-        case ULONG:
+        case DULONG:
             return sizeof(uint64_t);
-        case FLOAT:
+        case DFLOAT:
             return sizeof(float);
-        case DOUBLE:
+        case DDOUBLE:
             return sizeof(double);
         default:
             break ;
@@ -61,30 +61,30 @@ size_t  Datatype::datatype_size(Datatypes type)
 }
 
 template <>
-Datatypes    Datatype::type_to_datatype<bool>() { return BOOL; };
+Datatypes    Datatype::type_to_datatype<bool>() { return DBOOL; };
 template <>
-Datatypes    Datatype::type_to_datatype<char>() { return CHAR; };
+Datatypes    Datatype::type_to_datatype<char>() { return DCHAR; };
 template <>
-Datatypes    Datatype::type_to_datatype<int8_t>() { return BYTE; };
+Datatypes    Datatype::type_to_datatype<int8_t>() { return DBYTE; };
 template <>
-Datatypes    Datatype::type_to_datatype<uint8_t>() { return UBYTE; };
+Datatypes    Datatype::type_to_datatype<uint8_t>() { return DUBYTE; };
 template <>
-Datatypes    Datatype::type_to_datatype<int16_t>() { return SHORT; };
+Datatypes    Datatype::type_to_datatype<int16_t>() { return DSHORT; };
 template <>
-Datatypes    Datatype::type_to_datatype<uint16_t>() { return USHORT; };
+Datatypes    Datatype::type_to_datatype<uint16_t>() { return DUSHORT; };
 template <>
-Datatypes    Datatype::type_to_datatype<int32_t>() { return INT; };
+Datatypes    Datatype::type_to_datatype<int32_t>() { return DINT; };
 template <>
-Datatypes    Datatype::type_to_datatype<uint32_t>() { return UINT; };
+Datatypes    Datatype::type_to_datatype<uint32_t>() { return DUINT; };
 template <>
-Datatypes    Datatype::type_to_datatype<int64_t>() { return LONG; };
+Datatypes    Datatype::type_to_datatype<int64_t>() { return DLONG; };
 template <>
-Datatypes    Datatype::type_to_datatype<uint64_t>() { return ULONG; };
+Datatypes    Datatype::type_to_datatype<uint64_t>() { return DULONG; };
 template <>
-Datatypes    Datatype::type_to_datatype<float>() { return FLOAT; };
+Datatypes    Datatype::type_to_datatype<float>() { return DFLOAT; };
 template <>
-Datatypes    Datatype::type_to_datatype<double>() { return DOUBLE; };
+Datatypes    Datatype::type_to_datatype<double>() { return DDOUBLE; };
 template <>
-Datatypes    Datatype::type_to_datatype<std::string>() { return STRING; };
+Datatypes    Datatype::type_to_datatype<std::string>() { return DSTRING; };
 
 }

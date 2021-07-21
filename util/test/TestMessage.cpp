@@ -73,10 +73,10 @@ namespace test
             sizeof(bool) + sizeof(uint32_t) * 4 + sizeof(float) * 8);
 
         // Making a fake buffer to fill the message
-        Byte    buf;
-        Bool    barr;
-        UInt    iarr;
-        Float   farr;
+        ArrByte    buf;
+        ArrBool    barr;
+        ArrUInt    iarr;
+        ArrFloat   farr;
 
         buf.resize(1 + 4 * sizeof(int) + 8 * sizeof(float));
         barr.assign_bytes(buf.buf(), sizeof(bool));

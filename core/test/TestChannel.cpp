@@ -32,7 +32,7 @@ namespace test
             void observable_changed(Channel *c)
             {
                 TRACE(c->arr()->data_type_to_string());
-                if (c->arr()->data_type() == INT)
+                if (c->arr()->data_type() == DINT)
                 {
                     Array<int> *arr_int = ArrayUtil::cast_array<int>(c->arr());
                     int *c_arr_int = arr_int->data();
@@ -57,7 +57,7 @@ namespace test
         EXPECT_EQ(c.arr()->data_size(), 4u);
         EXPECT_EQ(c.arr()->data_type_to_string(), "float");
         EXPECT_EQ(c.arr()->capacity(), 4u);
-        EXPECT_EQ(c.arr()->data_type(), FLOAT);
+        EXPECT_EQ(c.arr()->data_type(), DFLOAT);
         EXPECT_EQ(_notified[&c], 0);
         c.notify();
         EXPECT_EQ(_notified[&c], 0);
@@ -87,7 +87,7 @@ namespace test
         Channel c("chan", "double", 6);
 
         c.add_observer(this);
-        Double arr = {1.0, 1.1, 1.2, 1.3, 1.4, 1.5};
+        ArrDouble arr = {1.0, 1.1, 1.2, 1.3, 1.4, 1.5};
         EXPECT_EQ(_notified[&c], 0);
         c.write(&arr);
         EXPECT_EQ(_notified[&c], 1);
