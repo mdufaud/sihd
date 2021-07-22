@@ -26,16 +26,16 @@ sys.dont_write_bytecode = False
 # Args
 #
 
-verbose = ARGUMENTS.get("verbose", "") == "1"
-modules_to_build = ARGUMENTS.get('modules', "")
-distribution = ARGUMENTS.get('dist', "") == "1"
-make_tests = ARGUMENTS.get('test', "") == "1"
-build_platform = ARGUMENTS.get('platform', "")
-clang = ARGUMENTS.get('clang', "") == "1"
+verbose = getenv("verbose", "") == "1"
+modules_to_build = getenv('modules', "")
+distribution = getenv('dist', "") == "1"
+make_tests = getenv('test', "") == "1"
+build_platform = getenv('platform', "")
+clang = getenv('clang', "") == "1"
 
 # Specific
-build_lua = ARGUMENTS.get('lua', "") == "1"
-build_py = ARGUMENTS.get('py', "") == "1"
+build_lua = getenv('lua', "") == "1"
+build_py = getenv('py', "") == "1"
 conditionnals = []
 if build_lua:
     conditionnals.append("lua")
