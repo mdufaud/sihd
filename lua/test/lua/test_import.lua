@@ -1,1 +1,6 @@
-print("hello world")
+local root = Node.new("root", nil)
+local named = Named.new("child", root)
+print(named:get_name())
+assert(named:get_name() == "child")
+assert(root:get_name() == "root")
+assert(root:get_child("child") == child)

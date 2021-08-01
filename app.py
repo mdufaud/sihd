@@ -36,8 +36,10 @@ modules = {
     },
     # Conditionnals - Only if activated
     "lua": {
-        "conditionnal": True,
-        "conditionnal_depends": ['util', 'core', 'net', 'http'],
+        "depends": ['util'],
+        # TODO make test lua does not work
+        #"conditionnal": True,
+        #"conditionnal_depends": ['util', 'core', 'net', 'http'],
         "libs": ['lua'],
         "headers": ['sol'],
         "flags": ["-Wno-unused-parameter"],

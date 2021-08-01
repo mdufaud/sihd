@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
-#include <sihd/core/Logger.hpp>
-#include <sihd/lua/LuaCoreApi.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/lua/LuaUtilApi.hpp>
 #include <sol/sol.hpp>
 
 namespace test
@@ -13,12 +13,12 @@ namespace test
         protected:
             TestLuaApi()
             {
-                sihd::core::LoggerManager::basic();
+                sihd::util::LoggerManager::basic();
             }
 
             virtual ~TestLuaApi()
             {
-                sihd::core::LoggerManager::clear_loggers();
+                sihd::util::LoggerManager::clear_loggers();
             }
 
             virtual void SetUp()
@@ -35,6 +35,7 @@ namespace test
         sol::state lua;
         // For print etc...
         lua.open_libraries(sol::lib::base);
+        LuaUtilApi::load(lua);
         lua.script_file("lua/test/lua/test_import.lua");
     }
 }

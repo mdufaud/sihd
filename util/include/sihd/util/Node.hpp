@@ -84,7 +84,7 @@ class Node:   public Named
         {
             Named *obj = this->get_child(name);
             if (obj != nullptr)
-                return dynamic_cast<C>(obj);
+                return dynamic_cast<C *>(obj);
             return nullptr;
         }
 
