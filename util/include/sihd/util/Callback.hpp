@@ -24,6 +24,7 @@ class ACallback: public ACallbackBase
         virtual R    call(T... arg) = 0;
 };
 
+/*
 template <class C, typename R, typename ...T>
 class CallbackObj: public ACallback<R, T...>
 {
@@ -45,6 +46,7 @@ class CallbackObj: public ACallback<R, T...>
         R (C::*_fun_ptr)(T...);
         C *_obj_ptr;
 };
+*/
 
 template <typename R, typename ... T>
 class CallbackFun: public ACallback<R, T...>
@@ -66,15 +68,6 @@ class CallbackFun: public ACallback<R, T...>
         std::function<R(T...)>    _fun;
 };
 
-# define SIHD_MACRO_UNPACK(...) __VA_ARGS__
-
-# define SIHD_MACRO_CB_MANAGER_SET(types, subtypes) \
-template <typename R, types> \
-void    set(const std::string & name, std::function<R(subtypes)> fun) \
-{ \
-    _callbacks[name] = new CallbackFun<R, subtypes>(fun); \
-}
-
 class CallbackManager
 {
     public:
@@ -91,13 +84,19 @@ class CallbackManager
         template <class C>
         void    set(const std::string & name, C *obj, void (C::*fun)())
         {
-            _callbacks[name] = new CallbackObj<C, void>(obj, fun);
+            _callbacks[name] = new CallbackFun<void>([obj, fun] () -> void
+            {
+                (obj->*fun)();
+            });
         }
 
         template <class C, typename R, typename ...T>
         void    set(const std::string & name, C *obj, R (C::*fun)(T...))
         {
-            _callbacks[name] = new CallbackObj<C, R, T...>(obj, fun);
+            _callbacks[name] = new CallbackFun<R, T...>([obj, fun] (T... args) -> R
+            {
+                return (obj->*fun)(args...);
+            });
         }
 
         void    set(const std::string & name, std::function<void()> fun)
@@ -105,15 +104,11 @@ class CallbackManager
             _callbacks[name] = new CallbackFun<void>(fun);
         } 
 
-        template <typename R>
-        void    set(const std::string & name, std::function<R()> fun)
+        template <typename R, typename ...T>
+        void    set(const std::string & name, std::function<R(T...)> fun)
         {
-            _callbacks[name] = new CallbackFun<R>(fun);
+            _callbacks[name] = new CallbackFun<R, T...>(fun);
         }
-        
-        SIHD_MACRO_CB_MANAGER_SET(SIHD_MACRO_UNPACK(typename T), SIHD_MACRO_UNPACK(T));
-        SIHD_MACRO_CB_MANAGER_SET(SIHD_MACRO_UNPACK(typename T1, typename T2), SIHD_MACRO_UNPACK(T1, T2));
-        SIHD_MACRO_CB_MANAGER_SET(SIHD_MACRO_UNPACK(typename T1, typename T2, typename T3), SIHD_MACRO_UNPACK(T1, T2, T3));
 
         void    del(const std::string & name)
         {
@@ -131,7 +126,7 @@ class CallbackManager
             ACallback<void> *cb = dynamic_cast<ACallback<void> *>(acb);
             if (cb == nullptr)
                 throw std::invalid_argument("Dynamic cast type error for callback: " + name);
-            return cb->call();
+            cb->call();
         }
 
         template <typename R, typename ...T>

@@ -208,24 +208,6 @@ namespace test
         EXPECT_EQ(obj.inside_json_val, "hello world");
     }
 
-    TEST_F(TestConfigurable, test_configurable_callback)
-    {
-        CallbackManager cbm;
-
-        cbm.set("test_noret", [] () { TRACE("TEST") });
-        cbm.call("test_noret");
-
-        cbm.set<bool>("test_noarg", [] () -> bool { return true; });
-        EXPECT_EQ(cbm.call<bool>("test_noarg"), true);
-
-        cbm.set<bool, int>("test_1arg", [] (int i) -> bool { return i % 2 == 0; });
-        EXPECT_EQ(cbm.call<bool>("test_1arg", 2), true);
-
-        // gtest derping
-        bool ret = cbm.call<bool, int>("test_1arg", 3);
-        EXPECT_EQ(ret, false);
-    }
-
     TEST_F(TestConfigurable, test_configurable_class)
     {
         ConfigurableObj obj;
