@@ -13,7 +13,7 @@ PyUtilApi::~PyUtilApi()
 {
 }
 
-PYBIND11_MODULE(sihd_util, m)
+PYBIND11_MODULE(sihd_py, m)
 {
     m.doc() = "hello";
 

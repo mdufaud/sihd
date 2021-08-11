@@ -38,6 +38,7 @@ CONAN_INSTALL_PATH = -if $(CONAN_PATH)
 
 export APP_NAME
 export TEST_PATH
+export LIB_PATH
 export EXTLIB_PATH
 export BIN_PATH
 export RES_PATH

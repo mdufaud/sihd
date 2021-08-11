@@ -17,14 +17,11 @@ make_tests = getenv("test", "") == "1"
 verbose = getenv("verbose", "") == "1"
 use_clang = getenv("clang", "") == "1"
 
-# specific
-build_lua = getenv("lua")
-build_py = getenv("py")
+# Specific
 conditionnals = []
-if build_lua:
-    conditionnals.append("lua")
-    conditionnals.append("luabin")
-if build_py:
+if getenv('lua', "") == "1":
+    conditionnals.extend(["lua", "luabin"])
+if getenv('py', "") == "1":
     conditionnals.append("py")
 
 if verbose:

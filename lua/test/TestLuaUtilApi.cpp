@@ -8,15 +8,15 @@ namespace test
 {
     NEW_LOGGER("test");
     using namespace sihd::lua;
-    class TestLuaApi:   public ::testing::Test
+    class TestLuaUtilApi:   public ::testing::Test
     {
         protected:
-            TestLuaApi()
+            TestLuaUtilApi()
             {
                 sihd::util::LoggerManager::basic();
             }
 
-            virtual ~TestLuaApi()
+            virtual ~TestLuaUtilApi()
             {
                 sihd::util::LoggerManager::clear_loggers();
             }
@@ -30,12 +30,13 @@ namespace test
             }
     };
 
-    TEST_F(TestLuaApi, test_lua)
+    TEST_F(TestLuaUtilApi, test_lua_util)
     {
         sol::state lua;
         // For print etc...
         lua.open_libraries(sol::lib::base);
         LuaUtilApi::load(lua);
         lua.script_file("lua/test/lua/test_import.lua");
+        LuaUtilApi::unload();
     }
 }

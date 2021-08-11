@@ -2,6 +2,7 @@
 # define __SIHD_LUA_LUACOREAPI_HPP__
 
 # include <sol/sol.hpp>
+# include <sihd/util/Node.hpp>
 
 namespace sihd::lua
 {
@@ -13,6 +14,9 @@ class LuaUtilApi
         virtual ~LuaUtilApi();
 
         static void load(sol::state & state);
+        static void unload();
+
+        static sihd::util::Node *root;
 
     private:
 };

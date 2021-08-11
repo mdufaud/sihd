@@ -8,6 +8,7 @@ def fill_modlist_from_modules(modules, specific_modules, modlist: dict):
             raise RuntimeError("No such module: {}".format(module_name))
         modlist[module_name] = conf
         fill_modlist_from_modules(modules, conf.get('depends', []), modlist)
+        #fill_modlist_from_modules(modules, conf.get('conditionnal-depends', []), modlist)
 
 def __rec_fill_module_real_depends(modules, module_name, to_fill_module_conf: dict):
     """ Fill a single module real dependency tree into modconf """
@@ -23,7 +24,7 @@ def __rec_fill_module_real_depends(modules, module_name, to_fill_module_conf: di
     for module in depends:
         __rec_fill_module_real_depends(modules, module, to_fill_module_conf)
 
-def fill_all_modules_dependencies(modules: dict):
+def resolve_modules_dependencies(modules: dict):
     """ Fill all modules real dependency tree """
     for name, conf in modules.items():
         # Add configurations if not declared
@@ -37,8 +38,8 @@ def fill_all_modules_dependencies(modules: dict):
             conf['parse-configs'] = []
         if 'pkg-configs' not in conf:
             conf['pkg-configs'] = []
-        # Adds conditionnal dependencies if they are built
-        conditionnal_depends = conf.get("conditionnal_depends", [])
+        # Adds conditionnal dependencies if they are in the current build
+        conditionnal_depends = conf.get("conditionnal-depends", [])
         if conditionnal_depends:
             conf['depends'] += [cond_mod for cond_mod in conditionnal_depends if cond_mod in modules]
         # Get dependency tree
@@ -63,7 +64,9 @@ def build_headers(app, test=False):
     return headers
 
 def build_libs_versions(app: dict, modules: dict, test=False):
-    """ Gets all libs versions needed by selected modules """
+    """ Gets all libs versions needed by selected modules
+        @return dict[libname] = version
+    """
     if not hasattr(app, "libs_versions"):
         return {}
     libs_versions = app.libs_versions
@@ -84,33 +87,60 @@ def build_libs_versions(app: dict, modules: dict, test=False):
                 ret[libname] = version
     return ret
 
+def add_conditionnal_module(conditionnal_modules, modules, modname):
+    conditionnal_module = conditionnal_modules.get(modname, None)
+    if conditionnal_module is None:
+        raise RuntimeError("App does not have conditionnal module named: " + modname)
+    modules[modname] = conditionnal_module
+
+def has_conditionnal_in_modules_list(app_conditionnal_modules, modules):
+    ret = False
+    for modname in modules:
+        if modname in app_conditionnal_modules:
+            ret = True
+            break
+    return ret
+ 
+def check_conditionnal_modules(app):
+    has_conditionnals = hasattr(app, "conditionnal_modules")
+    if has_conditionnals is True:
+        for modname, _ in app.conditionnal_modules.items():
+            if modname in app.modules:
+                raise RuntimeError("App's conditionnal module share a name with a module: " + modname)
+    return has_conditionnals
+
+def build_conditionnal_modules(app):
+    ret = {}
+    for key, value in app.modules.items():
+        ret[key] = value
+    for key, value in app.conditionnal_modules.items():
+        ret[key] = value
+    return ret
+
 def build_modules(app, specific_modules="", conditionnals=[]):
     """ @brief build modules from application configuration
         @param app the application configuration module
-        @param specific_modules build specific modules instead of all
+        @param specific_modules build specific comma separated modules instead of all
         @param conditionnals list of conditionnal modules to be added to the build
         @return list
     """
     if not hasattr(app, "modules"):
         raise RuntimeError("App's configuration file should have modules")
+    has_conditionnals = check_conditionnal_modules(app)
+    if conditionnals and not has_conditionnals:
+        raise RuntimeError("App's configuration does not have conditionnal modules")
     modules = {}
     specific_modules_list = specific_modules.split(',')
     if specific_modules:
-        fill_modlist_from_modules(app.modules, specific_modules_list, modules)
+        app_modules = app.modules
+        if has_conditionnals and has_conditionnal_in_modules_list(app.conditionnal_modules, specific_modules_list):
+            app_modules = build_conditionnal_modules(app)
+        fill_modlist_from_modules(app_modules, specific_modules_list, modules)
     else:
         modules = app.modules
-    # Delete conditionnal build modules from modules list if they are not mentionned
-    del_lst = []
-    for name, conf in modules.items():
-        if conf.get('conditionnal', False) == True \
-            and name not in conditionnals \
-            and name not in specific_modules_list:
-            del_lst.append(name)
-    for del_item in del_lst:
-        del modules[del_item]
     # Add specific conditionnal modules
-    for conditionnal in conditionnals:
-        modules[conditionnal] = app.modules[conditionnal]
+    for modname in conditionnals:
+        add_conditionnal_module(app.conditionnal_modules, modules, modname)
     # Get every dependencies configuration for modules
-    fill_all_modules_dependencies(modules)
+    resolve_modules_dependencies(modules)
     return modules

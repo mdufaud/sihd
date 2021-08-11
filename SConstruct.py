@@ -1,3 +1,4 @@
+from genericpath import exists
 import platform
 # Time
 import time
@@ -34,13 +35,10 @@ build_platform = getenv('platform', "")
 clang = getenv('clang', "") == "1"
 
 # Specific
-build_lua = getenv('lua', "") == "1"
-build_py = getenv('py', "") == "1"
 conditionnals = []
-if build_lua:
-    conditionnals.append("lua")
-    conditionnals.append("luabin")
-if build_py:
+if getenv('lua', "") == "1":
+    conditionnals.extend(["lua", "luabin"])
+if getenv('py', "") == "1":
     conditionnals.append("py")
 
 if build_platform == "windows" and platform.system() == "Linux":
@@ -74,7 +72,7 @@ base_env = Environment(
         'PATH': getenv("PATH"),
     },
     CXX = "c++",
-    #CCFLAGS = ['-Wall', '-Wextra', '-Werror'] + (hasattr(app, 'flags') and app.flags or []),
+    CCFLAGS = ['-Wall', '-Wextra', '-Werror'] + (hasattr(app, 'flags') and app.flags or []),
     CPPFLAGS = ["-std=c++17"],
     CPPDEFINES = [] + (hasattr(app, 'defines') and app.defines or []),
     CPPPATH = [],
@@ -144,7 +142,7 @@ def add_targets(src):
     else:
         targets += src
 
-def build_test(self, src=None):
+def build_test(self, src=None, libs=[]):
     """ Environment method to build unit test binary for a module """
     if make_tests == False:
         return None
@@ -153,15 +151,19 @@ def build_test(self, src=None):
     add_targets(src)
     test_path = join("$APP_BUILD_TEST", "bin", self["APP_MODULE"])
     env = self.Clone()
-    env.Append(LIBS = [self["APP_MODULE"]])
+    if not libs:
+        libs = [self['APP_MODULE']]
+    env.Append(LIBS = libs)
     return env.Program(test_path, src)
 
-def build_lib(self, src=None):
+def build_lib(self, src=None, libname=None):
     """ Environment method to build a shared library for a module """
     src = src or Glob('src/*.cpp')
     add_targets(src)
     module_name = self["APP_MODULE"]
-    lib_path = join("$APP_BUILD_LIB", module_name)
+    if libname is None:
+        libname = module_name
+    lib_path = join("$APP_BUILD_LIB", libname)
     lib = self.SharedLibrary(lib_path, src)
     return lib
 
@@ -194,6 +196,9 @@ def load_env_packages_specific_config(env, *configs):
 
 built = {}
 build_obj_path = str(base_env["APP_BUILD_OBJ"])
+build_path = str(base_env["APP_BUILD"])
+build_etc_path = str(base_env["APP_BUILD_ETC"])
+
 for name, conf in build_modules.items():
     print("scons: building {}'s module: {}".format(app.name, name))
     module_format = "{}_{}".format(app.name, name)
@@ -230,17 +235,22 @@ for name, conf in build_modules.items():
             print("- needed specific packages configs")
             pp.pprint(parse_configs)
         print()
-    built[name] = SConscript(Dir(name).File("scons.py"),
+    # read module's scons script file
+    module_dir = Dir(name)
+    built[name] = SConscript(module_dir.File("scons.py"),
                             variant_dir = join(build_obj_path, name),
                             duplicate = 0,
                             exports = ['env'])
+    # copy module/etc content to build/etc
+    etc_dir = str(module_dir.Dir("etc"))
+    if isdir(etc_dir):
+        if verbose:
+            print("Copying resources of module: " + name)
+        copy_tree(etc_dir, build_etc_path)
 
 #
 # Extra
 #
-
-build_path = str(base_env["APP_BUILD"])
-build_etc_path = str(base_env["APP_BUILD_ETC"])
 
 def sed_replace(file, replace_dic):
     for key, value in replace_dic.items():
@@ -263,23 +273,11 @@ def replace_res_in_build(to_replace, replace_dic):
         print("Replacing values in build files - {} files to replace".format(len(true_replace)))
     for file in true_replace:
         if isfile(file) == False:
-            print("-> file to replace '{}' doest not exist".format(file))
+            print("-> file to replace '{}' does not exists".format(file))
             continue
         if verbose:
             print("-> replacing file: " + file)
         sed_replace(file, replace_dic)
-
-def copy_module_res_to_build(module_name):
-    dirname = join(module_name, "etc")
-    if not isdir(dirname):
-        return False
-    if verbose:
-        print("Copying resources of module: " + module_name)
-    copy_tree(dirname, build_etc_path)
-    return True
-
-for name, conf in build_modules.items():
-    copy_module_res_to_build(name)
 
 if hasattr(app, "replace_files") and hasattr(app, "replace_vars"):
     replace_res_in_build(app.replace_files, app.replace_vars)
@@ -350,7 +348,11 @@ def display_build_status():
         print("scons: BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time), file=sys.stderr)
         print(failures_message, file=sys.stderr)
         print("==============================================================", file=sys.stderr)
+        if hasattr(app, "on_build_fail"):
+            app.on_build_fail(build_modules.keys())
     elif status == 'ok':
         print("scons: build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
+        if hasattr(app, "on_build_success"):
+            app.on_build_success(build_modules.keys(), str(build_dir))
 
 atexit.register(display_build_status)
