@@ -11,7 +11,22 @@ namespace sihd::util
 class CallbackManager {
     public:
         CallbackManager() {}
-        ~CallbackManager() {}
+        ~CallbackManager()
+        {
+            for (auto & [name, callback]: _callbacks)
+            {
+                delete callback;
+            }
+        }
+
+        void    remove(const std::string & name)
+        {
+            if (_callbacks.find(name) != _callbacks.end())
+            {
+                delete _callbacks[name];
+                _callbacks.erase(name);
+            }
+        }
 
         // Non-member functions binding
         template<typename R, typename ... Targs>

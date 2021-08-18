@@ -37,6 +37,5 @@ namespace test
         lua.open_libraries(sol::lib::base);
         LuaUtilApi::load(lua);
         lua.script_file("lua/test/lua/test_import.lua");
-        LuaUtilApi::unload();
     }
 }

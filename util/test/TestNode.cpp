@@ -48,14 +48,15 @@ namespace test
     TEST_F(TestNode, test_node_tree)
     {
         Node root("root");
-        root.add_child(new Named("child1"));
-        root.add_child(new Named("child2"));
+        root.add_child(new Named("child1"), true);
+        root.add_child(new Named("child2"), true);
         Named *child3 = new Named("child3", &root);
+        root.set_child_ownership("child3", true);
         Node *parent = new Node("parent");
-        root.add_child(parent);
-        parent->add_child(new Named("cousin1"));
-        parent->add_child(new Named("cousin2"));
-        Named *cousin3 = new Named("cousin3", parent);
+        root.add_child(parent, true);
+        parent->add_child(new Named("cousin1"), true);
+        parent->add_child(new Named("cousin2"), true);
+        Named *cousin3 = parent->add_child<Named>("cousin3");
 
         root.print_tree();
 
@@ -91,15 +92,15 @@ namespace test
     TEST_F(TestNode, test_node_links)
     {
         Node root("root");
-        Node *origin = new Node("origin", &root);
-        Named *child1 = new Named("child1", origin);
-        Named *child2 = new Named("child2", origin);
-        Node *other_family = new Node("other_family", &root);
-        Node *older = new Node("older", &root);
+        Node *origin = root.add_child<Node>("origin");
+        Named *child1 = origin->add_child<Named>("child1");
+        Named *child2 = origin->add_child<Named>("child2");
+        Node *other_family = root.add_child<Node>("other_family");
+        Node *older = root.add_child<Node>("older");
 
-        Node *parent_node = new Node("parent", &root);
-        Node *uncle_node = new Node("uncle", other_family);
-        Node *gp_node = new Node("grandparent", older);
+        Node *parent_node = root.add_child<Node>("parent");
+        Node *uncle_node = other_family->add_child<Node>("uncle");
+        Node *gp_node = older->add_child<Node>("grandparent");
 
         root.print_tree();
 
@@ -124,10 +125,11 @@ namespace test
     {
         Node root("root");
         new Node("parent", &root);
-        EXPECT_THROW(new Node("parent", &root), Node::AlreadyHasChild);
+        root.set_child_ownership("parent", true);
+        EXPECT_THROW(Node("parent", &root), Node::AlreadyHasChild);
         Named *n1 = new Named("test");
         Named *n2 = new Named("test");
-        EXPECT_TRUE(root.add_child(n1));
+        EXPECT_TRUE(root.add_child(n1, true));
         EXPECT_FALSE(root.add_child(n2));
         EXPECT_TRUE(root.add_link("name", "..some.path"));
         EXPECT_FALSE(root.add_link("name", "..some.other.path"));

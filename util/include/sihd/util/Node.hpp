@@ -47,18 +47,24 @@ class Node:   public Named
             bool    description = false;
         };
 
+        struct  ChildEntry
+        {
+            Named   *obj;
+            bool    ownership;
+        };
+
         Node(const std::string & name, Node *parent = nullptr);
         virtual ~Node();
 
         // Children
-        virtual bool    add_child(const std::string & name, Named *child);
-        virtual bool    add_child(Named *child);
+        virtual bool    add_child(const std::string & name, Named *child, bool ownership = false);
+        virtual bool    add_child(Named *child, bool ownership = false);
         
         template <typename T>
         T   *add_child(const std::string & name)
         {
             T *child = new T(name);
-            if (this->add_child(child) == false)
+            if (this->add_child(child, true) == false)
             {
                 delete child;
                 child = nullptr;
@@ -67,7 +73,9 @@ class Node:   public Named
         }
 
         // Unsafe -> throws
-        void    add_child_unsafe(Named *child);
+        void    add_child_unsafe(Named *child, bool ownership = false);
+
+        bool    delete_child_entry(ChildEntry *entry);
         bool    delete_child(const Named *child);
         virtual bool    delete_child(const std::string & name);
         virtual void    delete_children();
@@ -76,7 +84,12 @@ class Node:   public Named
         static Node    *to_node(Named *child);
         static std::pair<std::string, std::string>     get_parent_path(const std::string & path);
 
+        // Ownership
+        bool    has_ownership(const std::string & name);
+        bool    set_child_ownership(const std::string & name, bool ownership);
+
         // Find
+        ChildEntry  *get_child_entry(const std::string & name);
         Node    *find_node(const std::string & path);
         Named   *get_child(const std::string & name);
         template<class C>
@@ -102,7 +115,8 @@ class Node:   public Named
         void            print_tree_desc();
         void            print_tree(TreeOpts opts);
 
-        std::map<std::string, Named *> &    get_children();
+        std::map<std::string, ChildEntry *> &   get_children();
+        //std::map<std::string, Named *> &    get_children();
         virtual std::vector<std::string>    get_children_keys();
         
     protected:
@@ -119,7 +133,8 @@ class Node:   public Named
         virtual void    _add_tree_desc(std::stringstream & ss, const TreeOpts & opts, Named *child);
 
     private:
-        std::map<std::string, Named *>   _children_map;
+        std::map<std::string, ChildEntry *> _children_map;
+        //std::map<std::string, Named *>   _children_map;
         std::map<std::string, std::string>   _link_map;
 };
 

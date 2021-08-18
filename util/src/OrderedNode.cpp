@@ -25,9 +25,9 @@ void    OrderedNode::_iterate_tree_children(std::stringstream & ss, TreeOpts & o
     }
 }
 
-bool    OrderedNode::add_child(const std::string & name, Named *child)
+bool    OrderedNode::add_child(const std::string & name, Named *child, bool ownership)
 {
-    bool ret = Node::add_child(name, child);
+    bool ret = Node::add_child(name, child, ownership);
     if (ret)
         _children_order.push_back(name);
     return ret;

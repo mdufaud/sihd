@@ -20,6 +20,10 @@ Named::Named(const std::string & named, Node *parent)
 
 Named::~Named()
 {
+    if (_parent_ptr != nullptr)
+    {
+        _parent_ptr->delete_child(this->get_name());
+    }
 }
 
 bool    Named::add_parent(Node *parent)
@@ -86,7 +90,7 @@ Named   *Named::find(Named *from, const std::string & path)
     for (const std::string & name : tokens)
     {
         if (child != nullptr)
-            parent = Node::to_node(child);
+            parent = Node::to_node(child);  
         if (parent == nullptr)
             return nullptr;
         child = parent->get_child(name);
@@ -127,7 +131,5 @@ Node    *Named::find_node(const std::string & path)
 {
     return this->find<Node>(path);
 }
-
-
 
 }

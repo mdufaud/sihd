@@ -17,9 +17,9 @@ Device::~Device()
 #define WATERFALL_SERVICE_OPERATION(OP) \
 bool    Device::on_##OP()\
 {\
-    for (auto & [name, child]: this->get_children())\
+    for (auto & [name, entry]: this->get_children())\
     {\
-        AService *service = dynamic_cast<AService *>(child);\
+        AService *service = dynamic_cast<AService *>(entry->obj);\
         if (service != nullptr && service->OP() == false)\
         {\
             LOG(error, "Device: " << this->get_name() << " << could not " #OP " service: " << name);\
@@ -38,9 +38,9 @@ bool    Device::on_start()
 {
     bool ret = true;
     std::list<AService *> started_services;
-    for (auto & [name, child]: this->get_children())
+    for (auto & [name, entry]: this->get_children())
     {
-        AService *service = dynamic_cast<AService *>(child);
+        AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr)
         {
             if (service->start() == false)

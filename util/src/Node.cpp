@@ -18,18 +18,18 @@ Node::~Node()
     this->delete_children();
 }
 
-void    Node::add_child_unsafe(Named *child)
+void    Node::add_child_unsafe(Named *child, bool ownership)
 {
-    if (this->add_child(child->get_name(), child) == false)
+    if (this->add_child(child->get_name(), child, ownership) == false)
         throw Node::AlreadyHasChild(child->get_name());
 }
 
-bool    Node::add_child(Named *child)
+bool    Node::add_child(Named *child, bool ownership)
 {
-    return this->add_child(child->get_name(), child);
+    return this->add_child(child->get_name(), child, ownership);
 }
 
-bool    Node::add_child(const std::string & name, Named *child)
+bool    Node::add_child(const std::string & name, Named *child, bool ownership)
 {
     if (this->get_child(name) != nullptr)
     {
@@ -39,13 +39,30 @@ bool    Node::add_child(const std::string & name, Named *child)
     }
     if (child->get_parent() == nullptr)
         child->set_parent(this);
-    _children_map[name] = child;
+    ChildEntry *entry = new ChildEntry();
+    entry->obj = child;
+    entry->ownership = ownership;
+    _children_map[name] = entry;
     return true;
+}
+
+Node::ChildEntry  *Node::get_child_entry(const std::string & name)
+{
+    return _children_map[name];
+}
+
+bool    Node::set_child_ownership(const std::string & name, bool ownership)
+{
+    ChildEntry *entry = this->get_child_entry(name);
+    if (entry != nullptr)
+        entry->ownership = ownership;
+    return entry != nullptr;
 }
 
 Named   *Node::get_child(const std::string & name)
 {
-    return _children_map[name];
+    Node::ChildEntry *entry = this->get_child_entry(name);
+    return entry != nullptr ? entry->obj : nullptr;
 }
 
 bool    Node::delete_child(const Named *child)
@@ -55,23 +72,37 @@ bool    Node::delete_child(const Named *child)
 
 bool    Node::delete_child(const std::string & name)
 {
-    Named *child = this->get_child(name);
-    if (child == nullptr)
+    ChildEntry *entry = this->get_child_entry(name);
+    if (entry != nullptr)
+        _children_map.erase(name);
+    return this->delete_child_entry(entry);
+}
+
+bool    Node::delete_child_entry(Node::ChildEntry *entry)
+{
+    if (entry == nullptr)
         return false;
-    if (this->is_link(name) == false)
-        delete child;
-    _children_map.erase(name);
+    if (entry->ownership && entry->obj != nullptr)
+        delete entry->obj;
+    delete entry;
     return true;
 }
 
 void    Node::delete_children()
 {
-    for (auto & [name, child]: _children_map)
+    /*
+    for (auto & [name, entry]: _children_map)
     {
-        if (this->is_link(name) == false)
-            delete child;
+        this->delete_child_entry(entry);
     }
     _children_map.clear();
+    */
+    for (auto it = _children_map.begin(); it != _children_map.end(); )
+    {
+        ChildEntry *entry = it->second;
+        it = _children_map.erase(it);
+        this->delete_child_entry(entry);
+    }
 }
 
 Node  *Node::to_node(Named *child)
@@ -166,7 +197,7 @@ bool    Node::resolve_links(size_t recursion)
     return ret;
 }
 
-std::map<std::string, Named *> &    Node::get_children()
+std::map<std::string, Node::ChildEntry *> &    Node::get_children()
 {
     return _children_map;
 }
@@ -175,9 +206,9 @@ std::vector<std::string>    Node::get_children_keys()
 {
     std::vector<std::string> ret;
     ret.reserve(_children_map.size());
-    for (const auto & [name, child]: _children_map)
+    for (const auto & [name, entry]: _children_map)
     {
-        (void)child;
+        (void)entry;
         ret.push_back(name);
     }
     return ret;
@@ -223,8 +254,8 @@ void    Node::_get_tree_child_desc(std::stringstream & ss,
 
 void    Node::_iterate_tree_children(std::stringstream & ss, TreeOpts & opts, const std::string & indent)
 {
-    for (const auto & [name, child]: _children_map)
-        this->_get_tree_child_desc(ss, opts, indent, name, child);
+    for (const auto & [name, entry]: _children_map)
+        this->_get_tree_child_desc(ss, opts, indent, name, entry->obj);
 }
 
 void    Node::_get_tree_children(std::stringstream & ss, TreeOpts opts)

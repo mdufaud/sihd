@@ -14,9 +14,6 @@ class LuaUtilApi
         virtual ~LuaUtilApi();
 
         static void load(sol::state & state);
-        static void unload();
-
-        static sihd::util::Node *root;
 
     private:
 };
