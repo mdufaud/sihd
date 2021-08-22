@@ -11,13 +11,13 @@ namespace sihd::core
 
 using namespace sihd::util;
 
-class ChannelContainer: public Node,
+class AChannelContainer: public Node,
                         public Configurable,
                         virtual public IObserver<Channel>
 {
     public:
-        ChannelContainer(const std::string & name, Node *parent = nullptr);
-        virtual ~ChannelContainer();
+        AChannelContainer(const std::string & name, Node *parent = nullptr);
+        virtual ~AChannelContainer();
 
         Channel *get_channel(const std::string & name);
         bool    get_channel(const std::string & name, Channel **to_fill);

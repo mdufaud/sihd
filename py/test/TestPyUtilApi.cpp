@@ -36,8 +36,13 @@ namespace test
         if (libpath.empty() == false)
             chdir(libpath.c_str());
         pybind11::scoped_interpreter guard{};
-        EXPECT_NO_THROW(pybind11::module_::import("sihd_py"));
+        //EXPECT_NO_THROW(pybind11::module_::import("sihd_py"));
         pybind11::exec(R"(
+            import sihd_py
+            root = sihd_py.Node("root", None)
+            named = sihd_py.Named("child", None)
+            print(root.name())
+            print(named.name())
             print('hello world')
         )");
     }

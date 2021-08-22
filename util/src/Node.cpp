@@ -48,7 +48,9 @@ bool    Node::add_child(const std::string & name, Named *child, bool ownership)
 
 Node::ChildEntry  *Node::get_child_entry(const std::string & name)
 {
-    return _children_map[name];
+    if (_children_map.find(name) != _children_map.end())
+        return _children_map[name];
+    return nullptr;
 }
 
 bool    Node::set_child_ownership(const std::string & name, bool ownership)

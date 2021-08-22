@@ -5,7 +5,7 @@ namespace sihd::core
 
 LOGGER;
 
-Device::Device(const std::string & name, Node *parent): ChannelContainer(name, parent)
+Device::Device(const std::string & name, Node *parent): AChannelContainer(name, parent)
 {
     _service_controller.optionnal_setup();
 }
@@ -31,8 +31,22 @@ bool    Device::on_##OP()\
 
 WATERFALL_SERVICE_OPERATION(setup);
 WATERFALL_SERVICE_OPERATION(init);
-WATERFALL_SERVICE_OPERATION(stop);
 WATERFALL_SERVICE_OPERATION(reset);
+
+bool    Device::on_stop()
+{
+    this->remove_channels_observation();
+    for (auto & [name, entry]: this->get_children())
+    {
+        AService *service = dynamic_cast<AService *>(entry->obj);
+        if (service != nullptr && service->stop() == false)
+        {
+            LOG(error, "Device: " << this->get_name() << " << could not stop service: " << name);
+            return false;
+        }
+    }
+    return true;
+}
 
 bool    Device::on_start()
 {

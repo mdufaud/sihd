@@ -1,17 +1,17 @@
-#include <sihd/core/ChannelContainer.hpp>
+#include <sihd/core/AChannelContainer.hpp>
 
 namespace sihd::core
 {
 
-ChannelContainer::ChannelContainer(const std::string & name, Node *parent): Node(name, parent)
+AChannelContainer::AChannelContainer(const std::string & name, Node *parent): Node(name, parent)
 {
 }
 
-ChannelContainer::~ChannelContainer()
+AChannelContainer::~AChannelContainer()
 {
 }
 
-Channel     *ChannelContainer::get_channel(const std::string & name)
+Channel     *AChannelContainer::get_channel(const std::string & name)
 {
     Named *child = this->get_child(name);
     if (child)
@@ -19,7 +19,7 @@ Channel     *ChannelContainer::get_channel(const std::string & name)
     return nullptr;
 }
 
-bool    ChannelContainer::get_channel(const std::string & name, Channel **to_fill)
+bool    AChannelContainer::get_channel(const std::string & name, Channel **to_fill)
 {
     Channel *c = this->get_channel(name);
     if (c == nullptr)
@@ -31,10 +31,15 @@ bool    ChannelContainer::get_channel(const std::string & name, Channel **to_fil
     return true;
 }
 
-Channel *ChannelContainer::add_channel(const std::string & name, const std::string & type, size_t size)
+Channel *AChannelContainer::add_channel(const std::string & name, const std::string & type, size_t size)
 {
     Channel *c = new Channel(name, type, size);
-    if (c->set_parent(this) == false)
+    if (c == nullptr)
+    {
+        LOG_ERROR("ChannelContainer: '%s' memory error for channel '%s'", this->get_full_name().c_str(), name.c_str());
+        return nullptr;
+    }
+    if (this->add_child(c, true) == false)
     {
         LOG_ERROR("ChannelContainer: '%s' cannot add channel '%s'", this->get_full_name().c_str(), name.c_str());
         delete c;
@@ -43,7 +48,7 @@ Channel *ChannelContainer::add_channel(const std::string & name, const std::stri
     return c;
 }
 
-Channel *ChannelContainer::add_unlinked_channel(const std::string & name, const std::string & type, size_t size)
+Channel *AChannelContainer::add_unlinked_channel(const std::string & name, const std::string & type, size_t size)
 {
     if (this->is_link(name))
     {
@@ -53,7 +58,7 @@ Channel *ChannelContainer::add_unlinked_channel(const std::string & name, const 
     return this->add_channel(name, type, size);
 }
 
-bool    ChannelContainer::_check_link(const std::string & name, Named *child)
+bool    AChannelContainer::_check_link(const std::string & name, Named *child)
 {
     Channel *chan = dynamic_cast<Channel *>(child);
     if (chan == nullptr)
@@ -82,7 +87,7 @@ bool    ChannelContainer::_check_link(const std::string & name, Named *child)
     return ret;
 }
 
-bool    ChannelContainer::observe_channel(const std::string & channel_name)
+bool    AChannelContainer::observe_channel(const std::string & channel_name)
 {
     Channel *c = this->get_channel(channel_name);
     if (c != nullptr)
@@ -92,7 +97,7 @@ bool    ChannelContainer::observe_channel(const std::string & channel_name)
     return false;
 }
 
-bool    ChannelContainer::observe_channel(Channel *c)
+bool    AChannelContainer::observe_channel(Channel *c)
 {
     if (c != nullptr)
     {
@@ -104,7 +109,7 @@ bool    ChannelContainer::observe_channel(Channel *c)
     return false;
 }
 
-void    ChannelContainer::remove_channels_observation()
+void    AChannelContainer::remove_channels_observation()
 {
     for (Channel *c: _observed_channels)
     {
