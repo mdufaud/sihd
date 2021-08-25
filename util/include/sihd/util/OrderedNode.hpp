@@ -16,7 +16,7 @@ class OrderedNode: public Node
         using Node::add_child;
         using Node::delete_child;
 
-        virtual bool    add_child(const std::string & name, Named *child, bool ownership = false) override;
+        virtual bool    add_child(const std::string & name, Named *child, bool ownership = true) override;
         virtual bool    delete_child(const std::string & name) override;
         virtual void    delete_children() override;
 

@@ -28,6 +28,9 @@ class Named
         virtual bool    add_parent(Node *parent);
         virtual bool    set_parent(Node *parent);
 
+        bool            is_owned_by_parent() const;
+        virtual bool    set_parent_ownership(bool ownership);
+
         Node    *get_root();
         Named   *find(Named *from, const std::string & path);
         Named   *find(const std::string & path);

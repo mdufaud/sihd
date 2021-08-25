@@ -53,6 +53,14 @@ Node::ChildEntry  *Node::get_child_entry(const std::string & name)
     return nullptr;
 }
 
+bool    Node::has_ownership(const std::string & name)
+{
+    ChildEntry *entry = this->get_child_entry(name);
+    if (entry != nullptr)
+        return entry->ownership;
+    return entry != nullptr;
+}
+
 bool    Node::set_child_ownership(const std::string & name, bool ownership)
 {
     ChildEntry *entry = this->get_child_entry(name);
@@ -92,13 +100,6 @@ bool    Node::delete_child_entry(Node::ChildEntry *entry)
 
 void    Node::delete_children()
 {
-    /*
-    for (auto & [name, entry]: _children_map)
-    {
-        this->delete_child_entry(entry);
-    }
-    _children_map.clear();
-    */
     for (auto it = _children_map.begin(); it != _children_map.end(); )
     {
         ChildEntry *entry = it->second;
@@ -192,7 +193,7 @@ bool    Node::resolve_links(size_t recursion)
             return false;
         }
         if (this->_check_link(link, child))
-            this->add_child(link, child);
+            this->add_child(link, child, false);
         else
             ret = false;
     }

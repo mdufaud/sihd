@@ -1,4 +1,4 @@
-local root = Node.new("root", nil)
+local root = Node.new("root")
 local named = Named.new("child", root)
 assert(named:get_name() == "child")
 assert(root:get_name() == "root")

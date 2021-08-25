@@ -1,8 +1,10 @@
-#ifndef __SIHD_PY_PYCOREAPI_HPP__
-# define __SIHD_PY_PYCOREAPI_HPP__
+#ifndef __SIHD_PY_PYUTILAPI_HPP__
+# define __SIHD_PY_PYUTILAPI_HPP__
 
-# include <sihd/util/Node.hpp>
 # include <pybind11/pybind11.h>
+# include <sihd/util/SmartNodePtr.hpp>
+
+PYBIND11_DECLARE_HOLDER_TYPE(T, sihd::util::SmartNodePtr<T>);
 
 namespace sihd::py
 {

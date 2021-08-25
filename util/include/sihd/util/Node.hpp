@@ -57,8 +57,8 @@ class Node:   public Named
         virtual ~Node();
 
         // Children
-        virtual bool    add_child(const std::string & name, Named *child, bool ownership = false);
-        virtual bool    add_child(Named *child, bool ownership = false);
+        virtual bool    add_child(const std::string & name, Named *child, bool ownership = true);
+        virtual bool    add_child(Named *child, bool ownership = true);
         
         template <typename T>
         T   *add_child(const std::string & name)
@@ -73,7 +73,7 @@ class Node:   public Named
         }
 
         // Unsafe -> throws
-        void    add_child_unsafe(Named *child, bool ownership = false);
+        void    add_child_unsafe(Named *child, bool ownership = true);
 
         bool    delete_child_entry(ChildEntry *entry);
         bool    delete_child(const Named *child);

@@ -1,4 +1,5 @@
 #include <sihd/py/PyCoreApi.hpp>
+#include <sihd/py/PyUtilApi.hpp>
 
 namespace sihd::py
 {
@@ -12,7 +13,7 @@ PYBIND11_MODULE(sihd_core, m)
 
     pybind11::object named = (pybind11::object) pybind11::module_::import("sihd_util").attr("Named");
 
-    pybind11::class_<Channel> channel(m, "Channel", named);
+    pybind11::class_<Channel, SmartNodePtr<Channel> > channel(m, "Channel", named);
     channel.def(pybind11::init<const std::string &, const std::string &, size_t, Node *>());
     channel.def(pybind11::init<const std::string &, const std::string &, Node *>());
     channel.def(pybind11::init<const std::string &, const std::string &, size_t>());

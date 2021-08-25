@@ -20,10 +20,21 @@ Named::Named(const std::string & named, Node *parent)
 
 Named::~Named()
 {
-    if (_parent_ptr != nullptr)
-    {
-        _parent_ptr->delete_child(this->get_name());
-    }
+}
+
+bool    Named::set_parent_ownership(bool ownership)
+{
+    Node *parent = this->get_parent();
+    if (parent != nullptr)
+        return parent->set_child_ownership(this->get_name(), ownership);
+    return false;
+}
+
+bool    Named::is_owned_by_parent() const
+{
+    return this->get_parent() != nullptr
+        ? this->get_parent()->has_ownership(this->get_name())
+        : false;
 }
 
 bool    Named::add_parent(Node *parent)

@@ -10,12 +10,12 @@ namespace sihd::lua
 class LuaUtilApi
 {
     public:
-        LuaUtilApi();
-        virtual ~LuaUtilApi();
-
         static void load(sol::state & state);
+        static sihd::util::Node    *root;
 
     private:
+        LuaUtilApi() {};
+        virtual ~LuaUtilApi() {};
 };
 
 }

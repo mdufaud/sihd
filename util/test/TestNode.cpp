@@ -29,29 +29,12 @@ namespace test
             }
     };
 
-    TEST_F(TestNode, test_named_util)
-    {
-        Named named("obj");
-        EXPECT_EQ(named.get_name(), "obj");
-        EXPECT_EQ(named.get_parent(), nullptr);
-    }
-    
-    TEST_F(TestNode, test_named_find)
-    {
-        Named named("obj");
-        EXPECT_EQ(named.find("."), &named);
-        EXPECT_EQ(named.find_node("."), nullptr);
-        EXPECT_EQ(named.find(".."), nullptr);
-        EXPECT_EQ(named.find("/"), nullptr);
-    }
-
     TEST_F(TestNode, test_node_tree)
     {
         Node root("root");
         root.add_child(new Named("child1"), true);
         root.add_child(new Named("child2"), true);
         Named *child3 = new Named("child3", &root);
-        root.set_child_ownership("child3", true);
         Node *parent = new Node("parent");
         root.add_child(parent, true);
         parent->add_child(new Named("cousin1"), true);
@@ -125,12 +108,11 @@ namespace test
     {
         Node root("root");
         new Node("parent", &root);
-        root.set_child_ownership("parent", true);
         EXPECT_THROW(Node("parent", &root), Node::AlreadyHasChild);
         Named *n1 = new Named("test");
         Named *n2 = new Named("test");
         EXPECT_TRUE(root.add_child(n1, true));
-        EXPECT_FALSE(root.add_child(n2));
+        EXPECT_FALSE(root.add_child(n2, false));
         EXPECT_TRUE(root.add_link("name", "..some.path"));
         EXPECT_FALSE(root.add_link("name", "..some.other.path"));
         delete n2;

@@ -39,7 +39,7 @@ namespace test
         EXPECT_NO_THROW(pybind11::exec(R"(
             import sihd_util
             root = sihd_util.Node("root", None)
-            named = sihd_util.Named("child", None)
+            named = sihd_util.Named("child", root)
             print(root.get_name())
             print(named.get_name())
         )"));
