@@ -15,6 +15,7 @@ class CallbackManager {
         {
             for (auto & [name, callback]: _callbacks)
             {
+                (void)name;
                 delete callback;
             }
         }

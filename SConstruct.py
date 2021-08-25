@@ -142,28 +142,30 @@ def add_targets(src):
     else:
         targets += src
 
-def build_test(self, src=None, libs=[]):
+def build_test(self, src=None, libs=[], test_name=None):
     """ Environment method to build unit test binary for a module """
     if make_tests == False:
         return None
     src = src or Glob('test/*.cpp')
     # Not only main.cpp
     add_targets(src)
-    test_path = join("$APP_BUILD_TEST", "bin", self["APP_MODULE"])
+    if test_name is None:
+        test_name = self["APP_MODULE"]
+    test_path = join("$APP_BUILD_TEST", "bin", test_name)
     env = self.Clone()
     if not libs:
         libs = [self['APP_MODULE']]
     env.Append(LIBS = libs)
     return env.Program(test_path, src)
 
-def build_lib(self, src=None, libname=None):
+def build_lib(self, src=None, lib_name=None):
     """ Environment method to build a shared library for a module """
     src = src or Glob('src/*.cpp')
     add_targets(src)
     module_name = self["APP_MODULE"]
-    if libname is None:
-        libname = module_name
-    lib_path = join("$APP_BUILD_LIB", libname)
+    if lib_name is None:
+        lib_name = module_name
+    lib_path = join("$APP_BUILD_LIB", lib_name)
     lib = self.SharedLibrary(lib_path, src)
     return lib
 

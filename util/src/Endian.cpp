@@ -7,8 +7,6 @@ std::string Endian::endian_type_to_str[3] = {
     "unknown", "little", "big"
 };
 
-
-
 Endian::Endianness  Endian::get_endian()
 {
 # if __BYTE_ORDER == __LITTLE_ENDIAN
