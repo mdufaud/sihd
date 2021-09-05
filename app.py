@@ -24,7 +24,6 @@ modules = {
         "libs": ['stdc++fs'],
         "headers": ['nlohmann_json'],
     },
-    "wintest": { "depends": ['util'] },
     "core": {
         "depends": ['util'],
     },
