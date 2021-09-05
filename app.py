@@ -22,7 +22,6 @@ libs_versions = {
 modules = {
     "util": {
         "libs": ['stdc++fs'],
-        "headers": ['nlohmann_json'],
     },
     "core": {
         "depends": ['util'],
@@ -32,7 +31,6 @@ modules = {
     },
     "http": {
         "depends": ['net'],
-        "headers": ['uwebsockets'],
     },
 }
 # Conditionnals - Only if activated
@@ -41,7 +39,6 @@ conditionnal_modules = {
         "depends": ['util'],
         "conditionnal-depends": ['core', 'net', 'http'],
         "libs": ['lua'],
-        "headers": ['sol'],
         "flags": ["-Wno-unused-parameter"],
     },
     "luabin": {

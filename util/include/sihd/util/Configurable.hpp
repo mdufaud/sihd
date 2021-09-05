@@ -119,9 +119,9 @@ class Configurable
             if (j.is_object() == false || j.is_null())
                 return false;
             bool ret = true;
-            for (const auto & el: j.items())
+            for (auto it = j.begin(); it != j.end(); ++it)
             {
-                if (this->set_conf(el.key(), el.value()) == false)
+                if (this->set_conf(it.key(), it.value()) == false)
                     ret = false;
             }
             return ret;

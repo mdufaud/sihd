@@ -122,9 +122,9 @@ namespace test
                 return true;
             }
 
-            bool    set_json(const nlohmann::json & json)
+            bool    set_json(nlohmann::json & json)
             {
-                inside_json_val = json["str"];
+                inside_json_val = json["str"].get<std::string>();
                 return true;
             }
 

@@ -100,23 +100,6 @@ base_env = Environment(
     APP_MODULES_BUILD = build_modules.keys(),
 )
 
-# Clang build
-if clang:
-    base_env["CXX"] = "clang++"
-    base_env["CPPFLAGS"].append(["-stdlib=libc++", '-fcxx-exceptions'])
-    #base_env["LINKFLAGS"].append(['-undefined dynamic_lookup'])
-    base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
-
-# Windows build
-#if build_platform == "windows" and platform.system() == "Linux":
-if build_platform == "windows":
-    base_env.Append(tools = ['mingw'])
-    base_env["CXX"] = "x86_64-w64-mingw32-g++"
-    base_env["CPPDEFINES"].append("_WIN64")
-    base_env["SHLIBPREFIX"] = ""
-    base_env["SHLIBSUFFIX"] = ".dll"
-    base_env["LIBPREFIX"] = ""
-
 # Build output
 if not verbose:
     base_env["SHCXXCOMSTR"] = "Compiling shared C++: $SOURCE"
@@ -148,6 +131,25 @@ if mode != "release":
     base_env.Append(RPATH = [
         abspath(str(base_env["APP_BUILD_LIB"])),
         abspath(str(base_env["APP_EXTLIB_LIB"]))
+    ])
+    
+# Clang build
+if clang:
+    base_env["CXX"] = "clang++"
+    base_env["CPPFLAGS"].append(["-stdlib=libstdc++", '-fcxx-exceptions'])
+    #base_env["LINKFLAGS"].append(['-undefined dynamic_lookup'])
+    base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
+
+# Windows build
+if build_platform == "windows":
+    base_env.Append(tools = ['mingw'])
+    base_env["CXX"] = "x86_64-w64-mingw32-g++"
+    base_env["CPPDEFINES"].append("_WIN64")
+    base_env["SHLIBPREFIX"] = ""
+    base_env["SHLIBSUFFIX"] = ".dll"
+    base_env["LIBPREFIX"] = ""
+    base_env["CPPPATH"].append([
+        # "/usr/include/",
     ])
 
 # Decides when to recompile - removing slow md5 in favor of timestamps

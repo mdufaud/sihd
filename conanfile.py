@@ -64,15 +64,6 @@ class ConanAppDependencies(ConanFile):
         self.settings.build_type = "Release"
         if build_platform == "":
             return
-        """
-        if build_platform == "windows":
-            self.settings.os = "Windows"
-            self.settings.compiler = "Visual Studio"
-            self.settings.compiler.version = '11'
-            del self.settings.compiler.runtime
-        else:
-            raise RuntimeError("Platform unsupported: " + build_platform)
-        """
 
     def imports(self):
         self.copy("*.h*", dst=join(destination, "include"), src="include") # From bin to bin
