@@ -102,29 +102,33 @@ base_env = Environment(
 
 # Build output
 if not verbose:
-    base_env["SHCXXCOMSTR"] = "Compiling shared C++: $SOURCE"
-    base_env["SHLINKCOMSTR"] = "Linking shared library: $TARGET"
-    base_env["CXXCOMSTR"] = "Compiling C++: $SOURCE"
-    base_env["LINKCOMSTR"] = "Linking object files into executable: $TARGET"
+    base_env.Replace(
+        SHCXXCOMSTR = "Compiling shared C++: $SOURCE",
+        SHLINKCOMSTR = "Linking shared library: $TARGET",
+        CXXCOMSTR = "Compiling C++: $SOURCE",
+        LINKCOMSTR = "Linking object files into executable: $TARGET",
+    )
 
 # Setting path for build directories in shared env
 build_dir = Dir('build')
 base_env["APP_BUILD"] = build_dir
-for entry in ['bin', 'lib', 'include', 'obj', 'test', 'etc']:
+for entry in ('bin', 'lib', 'include', 'obj', 'test', 'etc'):
     entry_dir = build_dir.Dir(entry)
     base_env["APP_BUILD_" + entry.upper()] = entry_dir
 
 # Setting path for extlibs bin, lib and include directories in shared env
 extlib_dir = build_dir.Dir("extlib")
 base_env["APP_EXTLIB"] = extlib_dir
-for entry in ['bin', 'lib', 'include']:
+for entry in ('bin', 'lib', 'include'):
     entry_dir = extlib_dir.Dir(entry)
     base_env["APP_EXTLIB_" + entry.upper()] = entry_dir
 extlib_include_path = str(base_env["APP_EXTLIB_INCLUDE"])
 
 # Setting those path for the compiler
-base_env["LIBPATH"] = [base_env["APP_BUILD_LIB"], base_env["APP_EXTLIB_LIB"]]
-base_env["CPPPATH"] = [base_env["APP_EXTLIB_INCLUDE"]]
+base_env.Append(
+    LIBPATH = [base_env["APP_BUILD_LIB"], base_env["APP_EXTLIB_LIB"]],
+    CPPPATH = base_env["APP_EXTLIB_INCLUDE"]
+)
 
 if mode != "release":
     # absolute path to find libs
@@ -135,20 +139,23 @@ if mode != "release":
     
 # Clang build
 if clang:
-    base_env["CXX"] = "clang++"
-    base_env["CPPFLAGS"].append(["-stdlib=libstdc++", '-fcxx-exceptions'])
-    #base_env["LINKFLAGS"].append(['-undefined dynamic_lookup'])
+    base_env.Replace(
+        CXX = "clang++",
+        CC = "clang"
+    )
+    base_env["CPPFLAGS"].extend(["-stdlib=libstdc++", '-fcxx-exceptions'])
     base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
 
 # Windows build
 if build_platform == "windows":
-    base_env.Append(tools = ['mingw'])
-    base_env["CXX"] = "x86_64-w64-mingw32-g++"
+    base_env.Replace(
+        CXX = "x86_64-w64-mingw32-g++",
+        CC = "x86_64-w64-mingw32-gcc",
+        SHLIBSUFFIX = ".dll",
+        LIBPREFIX = "",
+    )
     base_env["CPPDEFINES"].append("_WIN64")
-    base_env["SHLIBPREFIX"] = ""
-    base_env["SHLIBSUFFIX"] = ".dll"
-    base_env["LIBPREFIX"] = ""
-    base_env["CPPPATH"].append([
+    base_env["CPPPATH"].extend([
         # "/usr/include/",
     ])
 
@@ -203,6 +210,8 @@ def build_bin(self, src, bin_name=None):
         if build_platform == "windows":
             bin_name += ".exe"
     bin_path = join("$APP_BUILD_BIN", bin_name)
+    env = self.Clone()
+    env.Append(LIBS = [self['APP_MODULE']])
     return env.Program(bin_path, src)
 
 def get_modules_headers(*args):
@@ -243,14 +252,6 @@ build_obj_path = str(base_env["APP_BUILD_OBJ"])
 build_path = str(base_env["APP_BUILD"])
 build_etc_path = str(base_env["APP_BUILD_ETC"])
 
-"""
-build_order = _build_tools.modules.get_build_order(build_modules)
-build_order = ['wintest', 'util']
-if verbose:
-    print("scons: build order -> {}".format(build_order))
-for modname in build_order:
-    conf = build_modules[modname]
-"""
 for modname, conf in build_modules.items():
     print("scons: building {}'s module: {}".format(app.name, modname))
     module_format = "{}_{}".format(app.name, modname)
@@ -289,16 +290,17 @@ for modname, conf in build_modules.items():
         if parse_configs:
             print("- needed specific packages configs")
             pp.pprint(parse_configs)
-        print()
     # read module's scons script file
     module_dir = Dir(modname)
     built[modname] = SConscript(module_dir.File("scons.py"),
-                            variant_dir = join(build_obj_path, modname),
-                            duplicate = 0,
-                            exports = ['env'])
+                                variant_dir = join(build_obj_path, modname),
+                                duplicate = 0,
+                                exports = ['env'])
     # copy module/etc content to build/etc
     copy_module_dir(modname, "etc")
     copy_module_dir(modname, "include")
+    if verbose:
+        print("")
 
 #
 # Extra

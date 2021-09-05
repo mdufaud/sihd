@@ -24,8 +24,8 @@ class Device:   public AChannelContainer,
 
         virtual IServiceController *get_service_ctrl() override { return &_service_controller; }
 
-        virtual void    observable_changed([[maybe_unused]] Channel *c) {}
-        virtual void    observable_changed([[maybe_unused]] ServiceController *ctrl) {}
+        virtual void    observable_changed([[maybe_unused]] Channel *c) override {}
+        virtual void    observable_changed([[maybe_unused]] ServiceController *ctrl) override {}
 
     protected:
         virtual bool    do_setup() override;
