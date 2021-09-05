@@ -11,9 +11,9 @@
 # if defined(__SIHD_WINDOWS__)
 #  include <experimental/filesystem> // backup windows
 #  include <direct.h> // _mkdir _stat
-#  define _stat stat
-#  define _mkdir mkdir
-#  define _rmdir rmdir
+#  define stat _stat
+#  define mkdir _mkdir
+#  define rmdir _rmdir
 // std::filesystem or std::experimental::filesystem is filesystem::
 using namespace std::experimental;
 using namespace std;
@@ -99,7 +99,12 @@ bool    Files::make_directory(const std::string & path, mode_t mode)
 {
     if (Files::is_dir(path))
         return true;
+# if defined(__SIHD_WINDOWS__)
+    (void)mode;
+    return _mkdir(path.c_str()) == 0;
+# else
     return mkdir(path.c_str(), mode) == 0;
+# endif
 }
 
 bool    Files::make_directories(const std::string & path, mode_t mode)
@@ -125,21 +130,27 @@ bool    Files::make_directories(const std::string & path, mode_t mode)
 
 #if defined(__SIHD_WINDOWS__)
 
-bool    Files::_get_recursive_children(const std::string & path, std::vector<std::string> & children) { (void)path; (void)children; return false; }
+// TODO cannot link filesystem with mingw for the life of me
 
 std::vector<std::string>    Files::get_children(const std::string & path)
 {
     std::vector<std::string> ret;
+    (void)path;
+    /*
     for (const auto & dir_entry: filesystem::directory_iterator{path})
-        ret.push_back(dir_entry.path().c_str());
+        ret.push_back(dir_entry.path().generic_string());
+    */
     return ret;
 }
 
 std::vector<std::string>    Files::get_recursive_children(const std::string & path)
 {
     std::vector<std::string> ret;
+    (void)path;
+    /*
     for (const auto & dir_entry: filesystem::recursive_directory_iterator{path})
-        ret.push_back(dir_entry.path().c_str());
+        ret.push_back(dir_entry.path().generic_string());
+    */
     return ret;
 }
 

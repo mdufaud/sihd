@@ -58,7 +58,9 @@ class Files
         Files() {};
         virtual ~Files() {};
 
+# if !defined(__SIHD_WINDOWS__)
         static void _get_recursive_children(const std::string & path, std::vector<std::string> & children);
+# endif
 };
 
 }

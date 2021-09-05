@@ -106,7 +106,7 @@ namespace test
         EXPECT_TRUE(this->test_long("0x2a"));
         EXPECT_EQ(_val, 0x2a);
         EXPECT_TRUE(this->test_long("0XDEADCAFE"));
-        EXPECT_EQ(_val, 0xDEADCAFE);
+        EXPECT_EQ(_val, (long)0xDEADCAFE);
 
         // unsigned long
         EXPECT_TRUE(this->test_ulong("1234"));

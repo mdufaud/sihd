@@ -117,6 +117,25 @@ def build_conditionnal_modules(app):
         ret[key] = value
     return ret
 
+def get_build_order(modules):
+    order = []
+    keys = modules.keys()
+    lenkeys = len(keys)
+    while len(order) != lenkeys:
+        for modname, conf in modules.items():
+            if modname in order:
+                continue
+            depends = conf.get('depends', None)
+            if depends is not None:
+                depends = conf['depends']
+                # check if all dependencies are in keys and check if all dependencies already are in order
+                if all(depend in keys for depend in depends) \
+                    and all(depend in order for depend in depends):
+                    order.append(modname)
+            else:
+                order.append(modname)
+    return order
+
 def build_modules(app, specific_modules="", conditionnals=[]):
     """ @brief build modules from application configuration
         @param app the application configuration module

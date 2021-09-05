@@ -31,19 +31,29 @@ verbose = getenv("verbose", "") == "1"
 modules_to_build = getenv('modules', "")
 distribution = getenv('dist', "") == "1"
 make_tests = getenv('test', "") == "1"
-build_platform = getenv('platform', "")
 clang = getenv('clang', "") == "1"
+build_platform = getenv('platform', "").lower()
+mode = getenv("mode", "").lower()
 
-# Specific
+# Specific modules
 conditionnals = []
 if getenv('lua', "") == "1":
     conditionnals.extend(["lua", "luabin"])
 if getenv('py', "") == "1":
     conditionnals.append("py")
 
-if build_platform == "windows" and platform.system() == "Linux":
+# Platform
+if build_platform != "" and build_platform not in ("win", "windows", "linux", "mac", "android", "ios"):
+    raise RuntimeError("Platform " + build_platform + " is not supported")
+
+if build_platform == "win":
+    build_platform = "windows"
+
+#if build_platform == "windows" and platform.system() == "Linux":
+if build_platform == "windows":
     app.libs.remove('dl')
 
+# Get modules configuration for this build
 try:
     build_modules = _build_tools.modules.build_modules(app,
         specific_modules=modules_to_build,
@@ -68,43 +78,60 @@ if verbose:
 #
 
 base_env = Environment(
+    # binaries path
     ENV = {
         'PATH': getenv("PATH"),
     },
+    # compiler for c++
     CXX = "c++",
+    # compile flags
     CCFLAGS = ['-Wall', '-Wextra', '-Werror'] + (hasattr(app, 'flags') and app.flags or []),
+    # c++ flags
     CPPFLAGS = ["-std=c++17"],
+    # extra #define for inside the code
     CPPDEFINES = [] + (hasattr(app, 'defines') and app.defines or []),
+    # headers path
     CPPPATH = [],
+    # libraries path
+    LIBPATH = [],
+    # libraries name
     LIBS = [],
+    # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
 )
 
+# Clang build
 if clang:
     base_env["CXX"] = "clang++"
     base_env["CPPFLAGS"].append(["-stdlib=libc++", '-fcxx-exceptions'])
     #base_env["LINKFLAGS"].append(['-undefined dynamic_lookup'])
     base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
 
-if build_platform.lower() == "windows" and platform.system() == "Linux":
+# Windows build
+#if build_platform == "windows" and platform.system() == "Linux":
+if build_platform == "windows":
     base_env.Append(tools = ['mingw'])
     base_env["CXX"] = "x86_64-w64-mingw32-g++"
     base_env["CPPDEFINES"].append("_WIN64")
+    base_env["SHLIBPREFIX"] = ""
+    base_env["SHLIBSUFFIX"] = ".dll"
+    base_env["LIBPREFIX"] = ""
 
+# Build output
 if not verbose:
     base_env["SHCXXCOMSTR"] = "Compiling shared C++: $SOURCE"
     base_env["SHLINKCOMSTR"] = "Linking shared library: $TARGET"
     base_env["CXXCOMSTR"] = "Compiling C++: $SOURCE"
     base_env["LINKCOMSTR"] = "Linking object files into executable: $TARGET"
 
-# Path for build directories
+# Setting path for build directories in shared env
 build_dir = Dir('build')
 base_env["APP_BUILD"] = build_dir
 for entry in ['bin', 'lib', 'include', 'obj', 'test', 'etc']:
     entry_dir = build_dir.Dir(entry)
     base_env["APP_BUILD_" + entry.upper()] = entry_dir
 
-# Path for extlibs bin, lib and include directories
+# Setting path for extlibs bin, lib and include directories in shared env
 extlib_dir = build_dir.Dir("extlib")
 base_env["APP_EXTLIB"] = extlib_dir
 for entry in ['bin', 'lib', 'include']:
@@ -116,17 +143,14 @@ extlib_include_path = str(base_env["APP_EXTLIB_INCLUDE"])
 base_env["LIBPATH"] = [base_env["APP_BUILD_LIB"], base_env["APP_EXTLIB_LIB"]]
 base_env["CPPPATH"] = [base_env["APP_EXTLIB_INCLUDE"]]
 
-if distribution:
-    base_env.Append(RPATH = [
-        relpath(str(base_env["APP_BUILD_LIB"]), str(base_env["APP_BUILD_BIN"])),
-        relpath(str(base_env["APP_EXTLIB_LIB"]), str(base_env["APP_BUILD_BIN"])),
-    ])
-else:
+if mode != "release":
+    # absolute path to find libs
     base_env.Append(RPATH = [
         abspath(str(base_env["APP_BUILD_LIB"])),
         abspath(str(base_env["APP_EXTLIB_LIB"]))
     ])
 
+# Decides when to recompile - removing slow md5 in favor of timestamps
 Decider('timestamp-newer')
 
 #
@@ -169,10 +193,14 @@ def build_lib(self, src=None, lib_name=None):
     lib = self.SharedLibrary(lib_path, src)
     return lib
 
-def build_bin(self, src):
+def build_bin(self, src, bin_name=None):
     """ Environment method to build a binary for a module """
     add_targets(src)
-    bin_path = join("$APP_BUILD_BIN", self["APP_MODULE"])
+    if bin_name is None:
+        bin_name = self['APP_MODULE']
+        if build_platform == "windows":
+            bin_name += ".exe"
+    bin_path = join("$APP_BUILD_BIN", bin_name)
     return env.Program(bin_path, src)
 
 def get_modules_headers(*args):
@@ -180,39 +208,59 @@ def get_modules_headers(*args):
     return [join("#", m, "include") for m in args]
 
 def get_modules_libname(*args):
-    """ Returns modules lib names """
+    """ Returns modules shared library names """
     return ["{}_{}".format(app.name, m) for m in args]
 
 def load_env_packages_config(env, *configs):
+    """ Parse multiple pkg-configs: libraries/includes utilities """
     return load_env_packages_specific_config(env, [
         "pkg-config {} --cflags --libs".format(config)
         for config in configs
     ])
 
 def load_env_packages_specific_config(env, *configs):
+    """ Parse configs from binaries outputs """
     for config in configs:
         try:
             env.ParseConfig(config)
         except OSError as e:
             print("scons: build warning: package {} not found".format(config), file=sys.stderr)
 
+def copy_module_dir(module_name, dirname_to_copy):
+    module_dir_input = Dir(module_name).Dir(dirname_to_copy)
+    build_dir_output = build_dir.Dir(dirname_to_copy)
+    if isdir(str(module_dir_input)):
+        if verbose:
+            print("Copying resources '{}' of module: {}".format(dirname_to_copy, module_name))
+        copy_tree(str(module_dir_input), str(build_dir_output))
+
+# Configure env and call scons.py from every configured modules
+
 built = {}
 build_obj_path = str(base_env["APP_BUILD_OBJ"])
 build_path = str(base_env["APP_BUILD"])
 build_etc_path = str(base_env["APP_BUILD_ETC"])
 
-for name, conf in build_modules.items():
-    print("scons: building {}'s module: {}".format(app.name, name))
-    module_format = "{}_{}".format(app.name, name)
-    # Getting module's configurations
+"""
+build_order = _build_tools.modules.get_build_order(build_modules)
+build_order = ['wintest', 'util']
+if verbose:
+    print("scons: build order -> {}".format(build_order))
+for modname in build_order:
+    conf = build_modules[modname]
+"""
+for modname, conf in build_modules.items():
+    print("scons: building {}'s module: {}".format(app.name, modname))
+    module_format = "{}_{}".format(app.name, modname)
+    # Getting module's build configuration
     depends = conf.get("depends", [])
     libs = conf.get("libs", [])
     headers = conf.get("headers", [])
     flags = conf.get("flags", "")
-    # Create an environment for every module
+    # Create a specific environment for the module
     env = base_env.Clone()
     env.Append(
-        CPPPATH = get_modules_headers(name, *depends) + headers,
+        CPPPATH = get_modules_headers(modname, *depends) + headers,
         LIBS = get_modules_libname(*depends) + libs + extlibs,
         CCFLAGS = flags,
         APP_MODULE = module_format,
@@ -221,10 +269,13 @@ for name, conf in build_modules.items():
     env.AddMethod(build_lib, "build_lib")
     env.AddMethod(build_bin, "build_bin")
     env.AddMethod(build_test, "build_test")
+    # use multiple pkg-config output to add libraries/includes path
     package_configs = conf.get("pkg-configs", [])
     load_env_packages_config(env, *package_configs)
+    # use multiple binaries output to add libraries/includes path
     parse_configs = conf.get("parse-configs", [])
     load_env_packages_specific_config(env, *parse_configs)
+    # some helpful debug when building
     if verbose:
         print("- needed libraries")
         pp.pprint([ str(s) for s in env['LIBS'] ])
@@ -238,17 +289,14 @@ for name, conf in build_modules.items():
             pp.pprint(parse_configs)
         print()
     # read module's scons script file
-    module_dir = Dir(name)
-    built[name] = SConscript(module_dir.File("scons.py"),
-                            variant_dir = join(build_obj_path, name),
+    module_dir = Dir(modname)
+    built[modname] = SConscript(module_dir.File("scons.py"),
+                            variant_dir = join(build_obj_path, modname),
                             duplicate = 0,
                             exports = ['env'])
     # copy module/etc content to build/etc
-    etc_dir = str(module_dir.Dir("etc"))
-    if isdir(etc_dir):
-        if verbose:
-            print("Copying resources of module: " + name)
-        copy_tree(etc_dir, build_etc_path)
+    copy_module_dir(modname, "etc")
+    copy_module_dir(modname, "include")
 
 #
 # Extra
@@ -281,11 +329,12 @@ def replace_res_in_build(to_replace, replace_dic):
             print("-> replacing file: " + file)
         sed_replace(file, replace_dic)
 
+# Replace every strings in specified files
 if hasattr(app, "replace_files") and hasattr(app, "replace_vars"):
     replace_res_in_build(app.replace_files, app.replace_vars)
 
 #
-# Progress
+# Scons progress build output
 #
 
 try:
@@ -308,7 +357,7 @@ except (OSError, IOError) as e:
     print("scons build error: won't display progress - reason: " + str(e), file=sys.stderr)
 
 #
-# Status
+# Scons final build status
 #
 
 import atexit
@@ -343,13 +392,16 @@ def build_status():
         failures_message = ''
     return (status, failures_message)
 
+def print_err(*args):
+    print(*args, file=sys.stderr)
+
 def display_build_status():
     status, failures_message = build_status()
     if status == 'failed':
-        print("==============================================================", file=sys.stderr)
-        print("scons: BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time), file=sys.stderr)
-        print(failures_message, file=sys.stderr)
-        print("==============================================================", file=sys.stderr)
+        print_err("==============================================================")
+        print_err("scons: BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
+        print_err(failures_message)
+        print_err("==============================================================")
         if hasattr(app, "on_build_fail"):
             app.on_build_fail(build_modules.keys())
     elif status == 'ok':

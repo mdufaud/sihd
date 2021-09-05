@@ -30,7 +30,7 @@ SCONS_BUILD_CMD = scons -Q -j$(UTILS_LOGICAL_CORE_NUMBER)
 EXTLIB_PATH = $(BUILD_PATH)/extlib
 CONAN_PATH = $(BUILD_PATH)/conan
 CONAN_INSTALL = conan install $(HERE)
-CONAN_INSTALL_PATH = -if $(CONAN_PATH) 
+CONAN_INSTALL_PATH = -if $(CONAN_PATH)
 
 #########
 # Rules 
@@ -60,7 +60,7 @@ include $(BUILD_TOOLS)/rules.mk
 ifeq ($(word 1, $(MAKECMDGOALS)), dep)
 .PHONY: dep
 dep:
-	@env test=$(test) modules=$(modules) lua=$(lua) py=$(py) $(CONAN_INSTALL) $(CONAN_INSTALL_PATH) $(args)
+	@env test=$(test) verbose=$(verbose) modules=$(modules) lua=$(lua) py=$(py) $(CONAN_INSTALL) $(CONAN_INSTALL_PATH) $(args)
 
 # make dep mod MODULE
 ifeq ($(word 2, $(MAKECMDGOALS)), mod)

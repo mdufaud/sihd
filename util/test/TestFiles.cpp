@@ -18,7 +18,8 @@ namespace test
             {
                 sihd::util::LoggerManager::basic();
                 _test_path = getenv("TEST_PATH");
-                _base_test_dir = filesystem::path(_test_path) / "util_files";
+                auto path = filesystem::path(_test_path) / "util_files";
+                _base_test_dir = path.generic_string();
             }
 
             virtual ~TestFiles()

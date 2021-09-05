@@ -41,13 +41,14 @@ namespace test
         filesystem::path test_dir = test_path / "1/2";
         filesystem::remove_all(test_dir);
         filesystem::create_directories(test_dir);
-        std::ofstream file(test_dir / "file.txt");
+        auto test_file = test_dir / "file.txt";
+        std::ofstream file(test_file.generic_string());
         file << "hello" << std::endl;
         file.close();
 
         Path::set("", "");
         Path::set("false-dir", "/does/not/exists");
-        Path::set("sihd-test", test_dir);
+        Path::set("sihd-test", test_dir.generic_string());
         EXPECT_EQ(Path::get("sihd-test", "file.txt"), test_dir / "file.txt");
         EXPECT_EQ(Path::get("sihd-test://file.txt"), test_dir / "file.txt");
         EXPECT_EQ(Path::find("file.txt"), test_dir / "file.txt");

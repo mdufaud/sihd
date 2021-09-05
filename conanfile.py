@@ -12,10 +12,15 @@ import _build_tools.modules
 print("Getting {} app libs".format(app.name))
 
 modules_to_build = getenv("modules", "")
-build_platform = getenv("platform", "")
+build_platform = getenv("platform", "").lower()
 make_tests = getenv("test", "") == "1"
 verbose = getenv("verbose", "") == "1"
 use_clang = getenv("clang", "") == "1"
+
+if build_platform != "" and build_platform not in ("win", "windows", "linux", "mac", "android", "ios"):
+    raise RuntimeError("Platform " + build_platform + " is not supported")
+if build_platform == "win":
+    build_platform = "windows"
 
 # Specific
 conditionnals = []
@@ -59,13 +64,15 @@ class ConanAppDependencies(ConanFile):
         self.settings.build_type = "Release"
         if build_platform == "":
             return
-        if build_platform == "windows" and platform.system() == "Linux":
+        """
+        if build_platform == "windows":
             self.settings.os = "Windows"
             self.settings.compiler = "Visual Studio"
             self.settings.compiler.version = '11'
             del self.settings.compiler.runtime
         else:
             raise RuntimeError("Platform unsupported: " + build_platform)
+        """
 
     def imports(self):
         self.copy("*.h*", dst=join(destination, "include"), src="include") # From bin to bin
