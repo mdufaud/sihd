@@ -15,7 +15,7 @@ Device::~Device()
 }
 
 #define WATERFALL_SERVICE_OPERATION(OP) \
-bool    Device::on_##OP()\
+bool    Device::do_##OP()\
 {\
     for (auto & [name, entry]: this->get_children())\
     {\
@@ -26,29 +26,13 @@ bool    Device::on_##OP()\
             return false;\
         }\
     }\
-    return true;\
+    return this->on_##OP();\
 }
 
 WATERFALL_SERVICE_OPERATION(setup);
 WATERFALL_SERVICE_OPERATION(init);
-WATERFALL_SERVICE_OPERATION(reset);
 
-bool    Device::on_stop()
-{
-    this->remove_channels_observation();
-    for (auto & [name, entry]: this->get_children())
-    {
-        AService *service = dynamic_cast<AService *>(entry->obj);
-        if (service != nullptr && service->stop() == false)
-        {
-            LOG(error, "Device: " << this->get_name() << " << could not stop service: " << name);
-            return false;
-        }
-    }
-    return true;
-}
-
-bool    Device::on_start()
+bool    Device::do_start()
 {
     bool ret = true;
     std::list<AService *> started_services;
@@ -75,7 +59,37 @@ bool    Device::on_start()
             service->stop();
         }
     }
-    return ret;
+    return ret && this->on_start();
+}
+
+bool    Device::do_stop()
+{
+    this->remove_channels_observation();
+    for (auto & [name, entry]: this->get_children())
+    {
+        AService *service = dynamic_cast<AService *>(entry->obj);
+        if (service != nullptr && service->stop() == false)
+        {
+            LOG(error, "Device: " << this->get_name() << " << could not stop service: " << name);
+            return false;
+        }
+    }
+    return this->on_stop();
+}
+
+bool    Device::do_reset()
+{
+    for (auto & [name, entry]: this->get_children())
+    {
+        AService *service = dynamic_cast<AService *>(entry->obj);
+        if (service != nullptr && service->reset() == false)
+        {
+            LOG(error, "Device: " << this->get_name() << " << could not reset service: " << name);
+            return false;
+        }
+    }
+    this->delete_children();
+    return this->on_reset();
 }
 
 }

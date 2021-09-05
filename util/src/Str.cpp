@@ -1,9 +1,14 @@
 #include <sihd/util/Str.hpp>
-#include <string.h>
-#include <cxxabi.h>
+
 #include <sstream>
 #include <cstdarg>
 #include <mutex>
+
+#include <cxxabi.h> // demangle
+#include <string.h>
+#include <errno.h>
+#include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
+#include <math.h> // HUGE_VAL
 
 #define SIHD_UTIL_STR_BUFFER 20480
 
@@ -43,6 +48,11 @@ static std::string  _split_get_token(const char *s, int *idx, const char *delimi
         ++y;
     *idx = y;
     return std::string(s + x, y - x);
+}
+
+std::vector<std::string> split(const std::string & s, const std::string & delimiter)
+{
+    return Str::split(s, delimiter.c_str());
 }
 
 std::vector<std::string>    Str::split(const std::string & str, const char *delimiter)
@@ -292,6 +302,65 @@ bool    Str::is_number(const std::string & s, uint16_t base)
         ++i;
     }
     return true;
+}
+
+std::map<std::string, std::string>  Str::parse_configuration(const std::string & conf)
+{
+    std::map<std::string, std::string> ret;
+    auto split_pairs = Str::split(conf, ";");
+    for (const auto & pair: split_pairs)
+    {
+        size_t idx = pair.find_first_of('=');
+        if (idx != std::string::npos)
+        {
+            std::string key = pair.substr(0, idx);
+            std::string value = pair.substr(idx + 1, pair.size());
+            ret[key] = value;
+        }
+    }
+    return ret;
+}
+
+std::optional<long> Str::to_long(const std::string & str, uint16_t base)
+{
+    errno = 0;
+    char *endptr = NULL;
+    long value = strtol(str.c_str(), &endptr, base);
+    if (str.c_str() == endptr)
+        return {};
+    if (value == 0L && errno == EINVAL)
+        return {};
+    if ((value == LONG_MIN || value == LONG_MAX) && errno == ERANGE)
+        return {};
+    return value;
+}
+
+std::optional<unsigned long>    Str::to_ulong(const std::string & str, uint16_t base)
+{
+    errno = 0;
+    char *endptr = NULL;
+    unsigned long value = strtoul(str.c_str(), &endptr, base);
+    if (str.c_str() == endptr)
+        return {};
+    if (value == 0UL && errno == EINVAL)
+        return {};
+    if (value == ULONG_MAX && errno == ERANGE)
+        return {};
+    return value;
+}
+
+std::optional<double>   Str::to_double(const std::string & str)
+{
+    errno = 0;
+    char *endptr = NULL;
+    double value = strtod(str.c_str(), &endptr);
+    if (str.c_str() == endptr)
+        return {};
+    if (value == 0 && errno == EINVAL)
+        return {};
+    if ((value == HUGE_VAL || value == -HUGE_VAL) && errno == ERANGE)
+        return {};
+    return value;
 }
 
 }

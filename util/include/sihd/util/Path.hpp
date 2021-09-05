@@ -4,7 +4,6 @@
 # include <sihd/util/Str.hpp>
 # include <map>
 # include <mutex>
-# include <experimental/filesystem>
 
 namespace sihd::util
 {
@@ -15,20 +14,19 @@ class Path
         Path() {};
         ~Path() {};
 
-        static std::mutex  path_mutex;
+        static std::mutex path_mutex;
         static std::map<std::string, std::string> url_to_path;
 
     public:
-        static void    clear_all();
-        static void    clear(const std::string & url);
-        static void    set(const std::string & url, const std::string & path);
+        static void clear_all();
+        static void clear(const std::string & url);
+        static void set(const std::string & url, const std::string & path);
         static std::string get(const std::string & path);
         static std::string get(const std::string & url, const std::string & path);
         static std::string get_from(const std::string & from, const std::string & path);
         static std::string find(const std::string & path);
 
         static std::string url_delimiter;
-
 };
 
 }

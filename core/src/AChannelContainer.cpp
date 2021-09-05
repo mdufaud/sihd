@@ -77,11 +77,11 @@ bool    AChannelContainer::_check_link(const std::string & name, Named *child)
                     chan->arr()->data_type_to_string().c_str());
         ret = false;
     }
-    if (conf.size != chan->arr()->data_size())
+    if (conf.size != chan->arr()->size())
     {
         LOG_ERROR("ChannelContainer: '%s' channel link size not equal '%s': '%lu' != '%lu'",
                     this->get_full_name().c_str(), name.c_str(),
-                    conf.size, chan->arr()->data_size());
+                    conf.size, chan->arr()->size());
         ret = false;
     }
     return ret;

@@ -103,4 +103,21 @@ namespace test
         c.write(&arr);
         EXPECT_EQ(_notified[&c], 2);
     }
+
+    TEST_F(TestChannel, test_channel_conf)
+    {
+        EXPECT_EQ(Channel::build(""), nullptr);
+        EXPECT_EQ(Channel::build("name=test"), nullptr);
+        EXPECT_EQ(Channel::build("name=test;type=int"), nullptr);
+        EXPECT_EQ(Channel::build("name=test;type=int;size=toto"), nullptr);
+        EXPECT_THROW(Channel::build("name=test;type=inttt;size=2"), std::invalid_argument);
+        Channel *c = nullptr;
+        EXPECT_NO_THROW(c = Channel::build("name=chan;type=float;size=2"));
+        EXPECT_NE(c, nullptr);
+        EXPECT_EQ(c->get_name(), "chan");
+        EXPECT_EQ(c->arr()->data_type_to_string(), "float");
+        EXPECT_EQ(c->arr()->size(), 2u);
+        delete c;
+    }
+
 }

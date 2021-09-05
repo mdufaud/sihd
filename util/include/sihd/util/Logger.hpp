@@ -9,16 +9,15 @@
 #  define LOG_FORMAT(level, message, ...)
 #  define LOG_LEVEL(logger, level, msg)
 #  define NEW_LOGGER(name)
-#  define DEL_LOGGER
 #  define LOGGER
 # else
 #  define LOG_LEVEL(logger, level, msg) { \
     std::ostringstream __loss; \
     __loss << msg; \
-    logger->log(sihd::util::LogLevel::level, __loss.str().c_str()); \
+    logger.log(sihd::util::LogLevel::level, __loss.str().c_str()); \
 }
 #  define LOG(level, msg) LOG_LEVEL(__logger__, level, msg);
-#  define LOG_FORMAT(level, message, ...) __logger__->log(level, sihd::util::Str::format(message, ##__VA_ARGS__).c_str());
+#  define LOG_FORMAT(level, message, ...) __logger__.log(level, sihd::util::Str::format(message, ##__VA_ARGS__).c_str());
 
 #  define LOG_DEBUG(message, ...) LOG_FORMAT(sihd::util::LogLevel::debug, message, ##__VA_ARGS__);
 #  define LOG_INFO(message, ...) LOG_FORMAT(sihd::util::LogLevel::info, message, ##__VA_ARGS__);
@@ -26,12 +25,8 @@
 #  define LOG_ERROR(message, ...) LOG_FORMAT(sihd::util::LogLevel::error, message, ##__VA_ARGS__);
 #  define LOG_CRITICAL(message, ...) LOG_FORMAT(sihd::util::LogLevel::critical, message, ##__VA_ARGS__);
 
-#  define LOGGER extern sihd::util::Logger *__logger__;
-#  define NEW_LOGGER(name) sihd::util::Logger *__logger__ = new sihd::util::Logger(name);
-#  define DEL_LOGGER { \
-    delete __logger__; \
-    __logger__ = nullptr; \
-}
+#  define LOGGER extern sihd::util::Logger __logger__;
+#  define NEW_LOGGER(name) sihd::util::Logger __logger__(name);
 # endif
 
 # ifdef SIHD_TRACE_OFF

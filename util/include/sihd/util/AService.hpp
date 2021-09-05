@@ -39,11 +39,11 @@ class AService: public Observable<AService>
         virtual bool    is_running() const = 0;
 
     protected:
-        virtual bool    on_setup();
-        virtual bool    on_init();
-        virtual bool    on_start();
-        virtual bool    on_stop();
-        virtual bool    on_reset();
+        virtual bool    do_setup();
+        virtual bool    do_init();
+        virtual bool    do_start();
+        virtual bool    do_stop();
+        virtual bool    do_reset();
  
     private:
 

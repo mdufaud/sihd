@@ -28,11 +28,17 @@ class Device:   public AChannelContainer,
         virtual void    observable_changed([[maybe_unused]] ServiceController *ctrl) {}
 
     protected:
-        virtual bool    on_setup() override;
-        virtual bool    on_init() override;
-        virtual bool    on_start() override;
-        virtual bool    on_stop() override;
-        virtual bool    on_reset() override;
+        virtual bool    do_setup() override;
+        virtual bool    do_init() override;
+        virtual bool    do_start() override;
+        virtual bool    do_stop() override;
+        virtual bool    do_reset() override;
+
+        virtual bool    on_setup() { return true; };
+        virtual bool    on_init() { return true; };
+        virtual bool    on_start() { return true; };
+        virtual bool    on_stop() { return true; };
+        virtual bool    on_reset() { return true; };
 
     private:
         ServiceController   _service_controller;

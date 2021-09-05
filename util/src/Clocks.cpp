@@ -3,6 +3,8 @@
 namespace sihd::util
 {
 
+SystemClock Clock::default_clock;
+
 SteadyClock::SteadyClock()
 {   
 }

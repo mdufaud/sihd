@@ -46,6 +46,16 @@ class SystemClock:  public IClock
         std::chrono::system_clock   _clock;
 };
 
+class Clock
+{
+    private:
+        Clock();
+        ~Clock();
+
+    public:
+        static SystemClock default_clock;
+};
+
 }
 
 #endif 

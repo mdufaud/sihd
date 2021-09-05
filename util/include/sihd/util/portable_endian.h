@@ -4,10 +4,11 @@
 // be "dual licensed" under the BSD, MIT and Apache licenses, if you want to. This code is trivial anyway. Consider it
 // an example on how to get the endian conversion functions on different platforms.
 
-# include <sihd/util/platform.hpp>
-
 #ifndef PORTABLE_ENDIAN_H__
 # define PORTABLE_ENDIAN_H__
+
+# include <sihd/util/platform.hpp>
+
 
 # if defined (__SIHD_LINUX__)
 

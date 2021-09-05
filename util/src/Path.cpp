@@ -1,10 +1,9 @@
 #include <sihd/util/Path.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Files.hpp>
 
 namespace sihd::util
 {
-
-using namespace std::experimental;
 
 std::string Path::url_delimiter = "://";
 std::mutex  Path::path_mutex;
@@ -48,10 +47,9 @@ std::string     Path::get(const std::string & url, const std::string & path)
 
 std::string     Path::get_from(const std::string & from, const std::string & path)
 {
-    filesystem::path fs_path(from);
-    fs_path.append(path);
-    if (filesystem::exists(fs_path))
-        return fs_path.generic_string();
+    std::string ret = Files::combine(from, path);
+    if (Files::exists(ret))
+        return ret;
     return "";
 }
 

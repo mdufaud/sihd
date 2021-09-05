@@ -28,26 +28,27 @@ class Channel:  public Named,
                 Node *parent = nullptr);
         virtual ~Channel();
 
-        IArray  *arr() { return _array_ptr; }
+        // "name=CHANNEL_NAME;type=CHANNEL_type;size=CHANNEL_SIZE"
+        static Channel *build(const std::string & configuration);
+
+        IArray *arr() { return _array_ptr; }
 
         std::time_t timestamp();
-
-        void    set_clock(sihd::util::IClock *clock);
-
-        void    notify();
+        void set_clock(sihd::util::IClock *clock);
+        void notify();
 
         static IClock *get_default_clock() { return _default_channel_clock_ptr; }
 
         // write and notify only if a change happened
-        void    set_write_on_change(bool activate) { _write_change_only = activate; }
+        void set_write_on_change(bool activate) { _write_change_only = activate; }
 
         template <typename T>
-        Array<T>    *arr()
+        Array<T> *arr()
         {
             return ArrayUtil::cast_array<T>(_array_ptr);
         }
 
-        bool    copy_to(IArray *arr);
+        bool copy_to(IArray *arr);
 
         template <typename T>
         T   read(size_t idx)
@@ -56,10 +57,10 @@ class Channel:  public Named,
             return ArrayUtil::read_array<T>(_array_ptr, idx);
         }
 
-        bool    write(IArray *arr);
+        bool write(IArray *arr);
 
         template <typename T>
-        bool    write(size_t idx, T value)
+        bool write(size_t idx, T value)
         {
             Array<T> *arr = ArrayUtil::cast_array<T>(_array_ptr);
             bool ret = arr != nullptr;
@@ -85,18 +86,21 @@ class Channel:  public Named,
         }
 
     protected:
-        virtual void    _init(const std::string & type, size_t size);
+        virtual void _init(Datatypes type, size_t size);
 
-        static IClock  *_default_channel_clock_ptr;
+        static IClock *_default_channel_clock_ptr;
     
     private:
-        IClock  *_clock_ptr;
+        IClock *_clock_ptr;
         std::time_t _timestamp;
-        IArray  *_array_ptr;
-        std::mutex  _arr_mutex;
-        bool    _notifying;
-        std::mutex  _notify_mutex;
-        bool    _write_change_only;
+
+        IArray *_array_ptr;
+        std::mutex _arr_mutex;
+
+        bool _notifying;
+        std::mutex _notify_mutex;
+
+        bool _write_change_only;
 };
 
 }

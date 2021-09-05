@@ -22,27 +22,27 @@ namespace test
     
             virtual bool    is_running() const { return n_start > 0; }
 
-            virtual bool    on_setup()
+            virtual bool    do_setup()
             {
                 ++n_setup;
                 return true;
             }
-            virtual bool    on_init()
+            virtual bool    do_init()
             {
                 ++n_init;
                 return true;
             }
-            virtual bool    on_start()
+            virtual bool    do_start()
             {
                 ++n_start;
                 return true;
             }
-            virtual bool    on_stop()
+            virtual bool    do_stop()
             {
                 ++n_stop;
                 return true;
             }
-            virtual bool    on_reset()
+            virtual bool    do_reset()
             {
                 ++n_reset;
                 return true;

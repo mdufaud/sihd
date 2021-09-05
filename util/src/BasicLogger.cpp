@@ -15,6 +15,7 @@ BasicLogger::~BasicLogger()
 
 void    BasicLogger::log(const LogInfo & info, const char *msg)
 {
+//SEC.NANO [THREAD] LEVEL SRC MSG
 #if defined(__SIHD_WINDOWS__)
     fprintf(output, "%lld.%09ld\t%s[%s]\t%s\t%s\t%s\n",
 # else

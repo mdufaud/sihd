@@ -2,6 +2,9 @@
 #include <iostream>
 #include <sihd/util/Str.hpp>
 #include <sihd/util/Logger.hpp>
+#include <errno.h>
+
+#include <climits>
 
 namespace test
 {
@@ -29,7 +32,127 @@ namespace test
             virtual void TearDown()
             {
             }
+
+            bool    test_long(const std::string & str, int base = 0)
+            {
+                auto val = Str::to_long(str, base);
+                LOG(debug, "Test signed long (errno = " << errno << ") -> " << str);
+                if (val)
+                {
+                    LOG(debug, "Value found: " << val.value());
+                    _val = val.value();
+                    return true;
+                }
+                LOG(debug, "Failed to find a signed long");
+                return val.has_value();
+            }
+
+            bool    test_ulong(const std::string & str, int base = 0)
+            {
+                auto val = Str::to_ulong(str, base);
+                LOG(debug, "Test unsigned long (errno = " << errno << ") -> " << str);
+                if (val)
+                {
+                    LOG(debug, "Value found: " << val.value());
+                    _uval = val.value();
+                    return true;
+                }
+                LOG(debug, "Failed to find an unsigned long");
+                return val.has_value();
+            }
+
+            bool    test_double(const std::string & str)
+            {
+                auto val = Str::to_double(str);
+                LOG(debug, "Test double (errno = " << errno << ") -> " << str);
+                if (val)
+                {
+                    LOG(debug, "Value found: " << val.value());
+                    _dval = val.value();
+                    return true;
+                }
+                LOG(debug, "Failed to find a double");
+                return val.has_value();
+            }
+
+            long _val;
+            unsigned long _uval;
+            double _dval;
     };
+
+    TEST_F(TestStr, test_str_tonumber)
+    {
+        // long
+        EXPECT_TRUE(this->test_long("1234"));
+        EXPECT_EQ(_val, 1234);
+        EXPECT_TRUE(this->test_long("-1234"));
+        EXPECT_EQ(_val, -1234);
+        EXPECT_TRUE(this->test_long("-1234totototootot"));
+        EXPECT_EQ(_val, -1234);
+
+        EXPECT_FALSE(this->test_long("toto"));
+        EXPECT_FALSE(this->test_long("toto123"));
+        EXPECT_FALSE(this->test_long("toto -1234"));
+        // overflow
+        EXPECT_FALSE(this->test_long("151615165151561132133554654"));
+        EXPECT_EQ(errno, ERANGE);
+
+        EXPECT_TRUE(this->test_long("0x2a", 10));
+        EXPECT_EQ(_val, 0);
+        EXPECT_EQ(errno, 0);
+        EXPECT_TRUE(this->test_long("0x2a", 16));
+        EXPECT_EQ(_val, 0x2a);
+        // auto detect base
+        EXPECT_TRUE(this->test_long("0x2a"));
+        EXPECT_EQ(_val, 0x2a);
+        EXPECT_TRUE(this->test_long("0XDEADCAFE"));
+        EXPECT_EQ(_val, 0xDEADCAFE);
+
+        // unsigned long
+        EXPECT_TRUE(this->test_ulong("1234"));
+        EXPECT_EQ(_uval, 1234u);
+        EXPECT_TRUE(this->test_ulong("-1"));
+        EXPECT_EQ(_uval, ULONG_MAX);
+
+        EXPECT_FALSE(this->test_ulong("toto"));
+        EXPECT_FALSE(this->test_ulong("toto1234"));
+        // overflow
+        EXPECT_EQ(errno, 0);
+        EXPECT_FALSE(this->test_ulong("15151651651651515113132132132132132"));
+        EXPECT_EQ(errno, ERANGE);
+
+        // double
+        EXPECT_TRUE(this->test_double("1234"));
+        EXPECT_DOUBLE_EQ(_dval, 1234);
+        EXPECT_TRUE(this->test_double("1234.456"));
+        EXPECT_DOUBLE_EQ(_dval, 1234.456);
+        EXPECT_TRUE(this->test_double("-1234.456"));
+        EXPECT_DOUBLE_EQ(_dval, -1234.456);
+
+        EXPECT_FALSE(this->test_double("toto"));
+        EXPECT_FALSE(this->test_double("toto-1234.456"));
+    }
+
+    TEST_F(TestStr, test_str_conf)
+    {
+        std::map<std::string, std::string> conf = Str::parse_configuration("key=value;key2=value2");
+        EXPECT_TRUE(conf.find("key") != conf.end());
+        EXPECT_TRUE(conf.find("key2") != conf.end());
+        EXPECT_EQ(conf["key"], "value");
+        EXPECT_EQ(conf["key2"], "value2");
+
+        conf = Str::parse_configuration("a=1;b=;c;");
+        EXPECT_TRUE(conf.find("a") != conf.end());
+        EXPECT_TRUE(conf.find("b") != conf.end());
+        EXPECT_TRUE(conf.find("c") == conf.end());
+        EXPECT_EQ(conf["a"], "1");
+        EXPECT_EQ(conf["b"], "");
+
+        conf = Str::parse_configuration("");
+        EXPECT_EQ(conf.size(), 0u);
+        conf = Str::parse_configuration("a");
+        EXPECT_EQ(conf.size(), 0u);
+    }
 
     TEST_F(TestStr, test_str_split)
     {
@@ -52,6 +175,9 @@ namespace test
         std::vector<std::string> split6 = Str::split("hello", "");
         EXPECT_EQ(split6.size(), 1u);
         EXPECT_EQ(split6[0], "hello");
+        std::vector<std::string> split7 = Str::split("key=", "=");
+        EXPECT_EQ(split7.size(), 1u);
+        EXPECT_EQ(split7[0], "key");
     }
 
     TEST_F(TestStr, test_str_join)

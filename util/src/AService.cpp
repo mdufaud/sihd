@@ -13,12 +13,12 @@ bool    AService::OP()\
     AService::IServiceController *ctrl = this->get_service_ctrl();\
     bool ret = false;\
     if (ctrl == nullptr)\
-        ret = this->on_##OP();\
+        ret = this->do_##OP();\
     else\
     {\
         if (ctrl->op_start(ID))\
         {\
-            ret = this->on_##OP();\
+            ret = this->do_##OP();\
             ctrl->op_end(ID, ret);\
         }\
         else\
@@ -34,7 +34,7 @@ bool    AService::OP()\
         this->notify_observers(this);\
     return ret;\
 }\
-bool    AService::on_##OP()\
+bool    AService::do_##OP()\
 {\
     return true;\
 }

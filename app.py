@@ -78,7 +78,7 @@ def get_python_libname():
     return proc.stdout.read().decode().strip()
 
 def on_build_success(modlist, build_path):
-    from os.path import join, exists
+    from os.path import join
     libpath = join(build_path, "lib")
     if "py" in modlist:
         from shutil import copyfile

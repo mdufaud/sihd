@@ -50,41 +50,62 @@ namespace test
             }
 
         protected:
-            bool    on_init() override
+            bool    on_init()
             {
-                bool ret = Device::on_init();
-                this->add_channel("c1", "int");
-                return ret;
+                // returns nullptr if channel is linked
+                this->add_channel("c1", "byte");
+                this->add_unlinked_channel("c2", "int");
+                return true;
             }
 
             bool    on_start()
             {
-                bool ret = Device::on_start();
-                _running = ret;
-                return ret;
+                _running = true;
+                return true;
             }
 
             bool    on_stop()
             {
-                bool ret = Device::on_stop();
                 _running = false;
-                return ret;
+                return true;
             }
 
         private:
             bool _running;
     };
 
-    TEST_F(TestDevice, test_device)
+    TEST_F(TestDevice, test_device_service)
     {
-        SomeDevice dev("device");
+        Node root("root");
+        new Channel("declared_channel", "int", &root);
+        new Channel("extra_channel", "double", &root);
 
-        EXPECT_EQ(dev.get_channel("c1"), nullptr);
-        EXPECT_TRUE(dev.init());
-        EXPECT_NE(dev.get_channel("c1"), nullptr);
-        EXPECT_TRUE(dev.start());
-        EXPECT_NE(dev.get_channel("c1"), nullptr);
-        EXPECT_TRUE(dev.stop());
-        EXPECT_NE(dev.get_channel("c1"), nullptr);
+        SomeDevice *dev = root.add_child<SomeDevice>("device");
+        dev->add_link("c2", "..declared_channel");
+        dev->add_link("c3", "..extra_channel");
+
+        EXPECT_EQ(dev->get_channel("c1"), nullptr);
+        EXPECT_EQ(dev->get_channel("c2"), nullptr);
+        EXPECT_EQ(dev->get_channel("c3"), nullptr);
+        // device init the channel
+        EXPECT_TRUE(dev->init());
+        EXPECT_NE(dev->get_channel("c1"), nullptr);
+        EXPECT_EQ(dev->get_channel("c2"), nullptr);
+        EXPECT_EQ(dev->get_channel("c3"), nullptr);
+        // links are done
+        EXPECT_TRUE(dev->start());
+        EXPECT_NE(dev->get_channel("c1"), nullptr);
+        EXPECT_NE(dev->get_channel("c2"), nullptr);
+        EXPECT_NE(dev->get_channel("c3"), nullptr);
+        // remove observations
+        EXPECT_TRUE(dev->stop());
+        EXPECT_NE(dev->get_channel("c1"), nullptr);
+        EXPECT_NE(dev->get_channel("c2"), nullptr);
+        EXPECT_NE(dev->get_channel("c3"), nullptr);
+        // delete_children
+        EXPECT_TRUE(dev->reset());
+        EXPECT_EQ(dev->get_channel("c1"), nullptr);
+        EXPECT_EQ(dev->get_channel("c2"), nullptr);
+        EXPECT_EQ(dev->get_channel("c3"), nullptr);
     }
 }

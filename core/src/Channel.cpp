@@ -5,19 +5,19 @@ namespace sihd::core
 
 LOGGER;
 
-IClock *Channel::_default_channel_clock_ptr = new sihd::util::SystemClock();
+sihd::util::IClock *Channel::_default_channel_clock_ptr = &sihd::util::Clock::default_clock;
 
 Channel::Channel(const std::string & name, const std::string & type,
                 size_t size, Node *parent):
                 Named(name, parent)
 {
-    this->_init(type, size);
+    this->_init(Datatype::string_to_datatype(type), size);
 }
 
 Channel::Channel(const std::string & name, const std::string & type,
                 Node *parent): Named(name, parent)
 {
-    this->_init(type, 1);
+    this->_init(Datatype::string_to_datatype(type), 1);
 }
 
 Channel::~Channel()
@@ -26,14 +26,43 @@ Channel::~Channel()
         delete _array_ptr;
 }
 
-void    Channel::_init(const std::string & type, size_t size)
+Channel     *Channel::build(const std::string & configuration)
+{
+    auto map = Str::parse_configuration(configuration);
+    if (map.find("name") == map.end())
+    {
+        LOG(error, "Channel: cannot build from configuration '" << configuration << "' no name");
+        return nullptr;
+    }
+    if (map.find("type") == map.end())
+    {
+        LOG(error, "Channel: cannot build from configuration '" << configuration << "' no type");
+        return nullptr;
+    }
+    if (map.find("size") == map.end())
+    {
+        LOG(error, "Channel: cannot build from configuration '" << configuration << "' no size");
+        return nullptr;
+    }
+    auto value = Str::to_ulong(map["size"]);
+    if (value.has_value() == false)
+    {
+        LOG(error, "Channel: cannot build from configuration '" << configuration
+                    << "' size is either overflow or invalid");
+        return nullptr;
+    }
+    return new Channel(map["name"], map["type"], value.value());
+}
+
+void    Channel::_init(Datatypes type, size_t size)
 {
     std::lock_guard lock(_arr_mutex);
-    _array_ptr = ArrayUtil::create_from_type(Datatype::string_to_datatype(type), size);
+    _array_ptr = ArrayUtil::create_from_type(type, size);
     if (_array_ptr == nullptr)
     {
         throw std::invalid_argument(Str::format("Channel: no such type %s for channel %s",
-                                                    type.c_str(), this->get_name().c_str()));
+                                                    Datatype::datatype_to_string(type).c_str(),
+                                                    this->get_name().c_str()));
     }
     _array_ptr->resize(size);
     _notifying = false;

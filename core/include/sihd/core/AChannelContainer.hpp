@@ -4,6 +4,7 @@
 # include <sihd/util/Node.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/IObserver.hpp>
+# include <sihd/util/Str.hpp>
 # include <sihd/core/Channel.hpp>
 
 namespace sihd::core
@@ -11,9 +12,9 @@ namespace sihd::core
 
 using namespace sihd::util;
 
-class AChannelContainer: public Node,
-                        public Configurable,
-                        virtual public IObserver<Channel>
+class AChannelContainer:    public Node,
+                            public Configurable,
+                            virtual public IObserver<Channel>
 {
     public:
         AChannelContainer(const std::string & name, Node *parent = nullptr);

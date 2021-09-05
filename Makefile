@@ -134,18 +134,22 @@ test: build
 		$(eval TEST_MODULE_NAME = $(call get-module-name, $(TEST_BIN))) \
 		$(eval TEST_MODULE_PATH = $(HERE)/$(TEST_MODULE_NAME)/test) \
 		$(eval export TEST_MODULE_PATH) \
+		cd $(HERE)/$(TEST_MODULE_NAME); \
 		echo "Tested module: $(TEST_MODULE_NAME)" ; \
 		echo "Running command: $(TEST_CMD_LINE)" ; \
 		$(TEST_CMD_LINE); \
+		cd - > /dev/null ;\
 	)
 
-valgrindtest: DEBUGGER = valgrind --leak-check=full
+valgrindtest: DEBUGGER = valgrind --leak-check=full --show-leak-kinds=all
 valgrindtest: test
+vtest: DEBUGGER = valgrind --leak-check=full --show-leak-kinds=all
+vtest: test
 
 gdbtest: DEBUGGER = gdb
 gdbtest: test
 
-.PHONY: test valgrindtest gdbtest
+.PHONY: test vtest valgrindtest gdbtest
 
 # handles:
 #	make test
@@ -157,6 +161,7 @@ COMMA = ,
 MODULES_NAME = $(word 2, $(MAKECMDGOALS))$(m)
 MODULES_NAME_SPLIT = $(subst $(COMMA), ,$(MODULES_NAME))
 TEST_NAME = $(word 3, $(MAKECMDGOALS))$(t)
+TEST_ARGS = --gtest_death_test_style=threadsafe --gtest_shuffle
 
 ifneq ($(MODULES_NAME), )
 	TEST_EXEC = $(foreach var, $(MODULES_NAME_SPLIT), $(TEST_BIN_PATH)/$(APP_NAME)_$(var))
