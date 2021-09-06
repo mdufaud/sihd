@@ -63,41 +63,38 @@ ssize_t  OS::write_endl(int fd, const char *s)
     return ret + ::write(fd, "\n", 1);
 }
 
-void    OS::write_number(int fd, int number)
+ssize_t   OS::write_number(int fd, int number)
 {
     char c;
     if (number < 10)
     {
         c = (char)number + '0';
-        ::write(fd, &c, 1);
+        return ::write(fd, &c, 1);
     }
-    else
-    {
-        write_number(fd, number / 10);
-        c = (char)(number % 10) + '0';
-        ::write(fd, &c, 1);
-    }
+    ssize_t ret = write_number(fd, number / 10);
+    c = (char)(number % 10) + '0';
+    return ret + ::write(fd, &c, 1);
 }
 
 ssize_t    OS::backtrace(int fd)
 {
     size_t size = ::backtrace(OS::backtrace_buffer, OS::backtrace_size);
     char **strings = (char **)backtrace_symbols(OS::backtrace_buffer, size);
-    write(fd, "sihd::util::OS::backtrace (");
-    write_number(fd, size);
-    write_endl(fd, " calls)");
+    bool ret = write(fd, "sihd::util::OS::backtrace (") > 0;
+    ret = ret && write_number(fd, size) > 0;
+    ret = ret && write_endl(fd, " calls)") > 0;
     if (strings == nullptr)
     {
-        write_endl(fd, "Error while getting backtrace symbols");
+        ret = ret && write_endl(fd, "Error while getting backtrace symbols");
         return -1;
     }
     uint32_t i = 0;
-    while (i < size)
+    while (ret && i < size)
     {
-        write(fd, "[");
-        write_number(fd, i);
-        write(fd, "]\t--> ");
-        write_endl(fd, strings[i]);
+        ret = ret && write(fd, "[") > 0;
+        ret = ret && write_number(fd, i) > 0;
+        ret = ret && write(fd, "]\t--> ") > 0;
+        ret = ret && write_endl(fd, strings[i]) > 0;
         ++i;
     }
     free(strings);
@@ -206,7 +203,7 @@ std::string OS::get_signal_name(int sig)
 void        *OS::load_lib([[maybe_unused]] std::string lib_name) { return nullptr; }
 ssize_t     OS::write([[maybe_unused]] int fd, [[maybe_unused]] const char *s) { return 0; }
 ssize_t     OS::write_endl([[maybe_unused]] int fd, [[maybe_unused]] const char *s) { return 0; }
-void        OS::write_number([[maybe_unused]] int fd, [[maybe_unused]] int number) {}
+ssize_t     OS::write_number([[maybe_unused]] int fd, [[maybe_unused]] int number) { return 0; }
 ssize_t     OS::backtrace([[maybe_unused]] int fd) { return 0; }
 bool        OS::clear_signal_handlers([[maybe_unused]] int sig) { return true; }
 bool        OS::clear_signal_handlers() { return true; }

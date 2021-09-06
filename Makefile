@@ -29,11 +29,13 @@ SCONS_BUILD_CMD = scons -Q -j$(UTILS_LOGICAL_CORE_NUMBER)
 # Conan
 EXTLIB_PATH = $(BUILD_PATH)/extlib
 CONAN_PATH = $(BUILD_PATH)/conan
+CONAN_PROFILE_PATH = $(BUILD_TOOLS)/conan
+CONAN_PROFILE = linux_gcc_profile.txt
 CONAN_INSTALL = conan install $(HERE)
 CONAN_INSTALL_PATH = -if $(CONAN_PATH)
 
 #########
-# Rules 
+# Exports
 #########
 
 export APP_NAME
@@ -59,8 +61,23 @@ include $(BUILD_TOOLS)/rules.mk
 
 ifeq ($(word 1, $(MAKECMDGOALS)), dep)
 .PHONY: dep
+
+# Get conf from builder
+PLATFORM = $(shell platform=$(platform) compiler=$(compiler) python3 $(BUILD_TOOLS)/builder.py platform)
+COMPILER = $(shell platform=$(platform) compiler=$(compiler) python3 $(BUILD_TOOLS)/builder.py compiler)
+
+# checking platform env to select a conan profile
+ifeq ($(COMPILER),mingw)
+	CONAN_PROFILE = windows_mingw_profile.txt
+else ifeq ($(COMPILER),clang)
+	CONAN_PROFILE = linux_clang_profile.txt
+else
+	CONAN_PROFILE = linux_gcc_profile.txt
+endif
+
 dep:
-	@env test=$(test) verbose=$(verbose) modules=$(modules) lua=$(lua) py=$(py) $(CONAN_INSTALL) $(CONAN_INSTALL_PATH) $(args)
+	@env test=$(test) verbose=$(verbose) modules=$(modules) lua=$(lua) py=$(py)\
+		$(CONAN_INSTALL) $(CONAN_INSTALL_PATH) --profile $(CONAN_PROFILE_PATH)/$(CONAN_PROFILE) $(args)
 
 # make dep mod MODULE
 ifeq ($(word 2, $(MAKECMDGOALS)), mod)

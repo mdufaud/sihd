@@ -27,7 +27,7 @@ class OS
         // emergency calls for when memory fails
         static ssize_t  write_endl(int fd, const char *s);
         // emergency calls for when memory fails
-        static void    write_number(int fd, int number);
+        static ssize_t  write_number(int fd, int number);
 
         // prints formatted backtrace into file descriptor
         static ssize_t backtrace(int fd);

@@ -1,3 +1,7 @@
+import os
+
+expected_configurations_lists = ['depends', 'libs', 'parse-configs', 'pkg-configs']
+
 def fill_modlist_from_modules(modules, specific_modules, modlist: dict):
     """ Gets all modules to build from a single module to build """
     if not specific_modules:
@@ -16,11 +20,8 @@ def __rec_fill_module_real_depends(modules, module_name, to_fill_module_conf: di
     if conf is None:
         raise RuntimeError("Error in module's configuration, not a module: {}".format(module_name))
     depends = conf.get('depends', [])
-    to_fill_module_conf['depends'] += depends
-    to_fill_module_conf['libs'] += conf.get('libs', [])
-    to_fill_module_conf['headers'] += conf.get('headers', [])
-    to_fill_module_conf['parse-configs'] += conf.get('parse-configs', [])
-    to_fill_module_conf['pkg-configs'] += conf.get('pkg-configs', [])
+    for expected_conf in expected_configurations_lists:
+        to_fill_module_conf[expected_conf].extend(conf.get(expected_conf, []))
     for module in depends:
         __rec_fill_module_real_depends(modules, module, to_fill_module_conf)
 
@@ -28,62 +29,46 @@ def resolve_modules_dependencies(modules: dict):
     """ Fill all modules real dependency tree """
     for name, conf in modules.items():
         # Add configurations if not declared
-        if 'depends' not in conf:
-            conf['depends'] = []
-        if 'libs' not in conf:
-            conf['libs'] = []
-        if 'headers' not in conf:
-            conf['headers'] = []
-        if 'parse-configs' not in conf:
-            conf['parse-configs'] = []
-        if 'pkg-configs' not in conf:
-            conf['pkg-configs'] = []
+        for expected_conf in expected_configurations_lists:
+            if expected_conf not in conf:
+                conf[expected_conf] = []
         # Adds conditionnal dependencies if they are in the current build
         conditionnal_depends = conf.get("conditionnal-depends", [])
         if conditionnal_depends:
-            conf['depends'] += [cond_mod for cond_mod in conditionnal_depends if cond_mod in modules]
+            conf['depends'].extend([cond_mod for cond_mod in conditionnal_depends if cond_mod in modules])
         # Get dependency tree
         __rec_fill_module_real_depends(modules, name, conf)
         # Remove duplicates
-        conf['depends'] = list(set(conf['depends']))
-        conf['libs'] = list(set(conf['libs']))
-        conf['headers'] = list(set(conf['headers']))
-        conf['parse-configs'] = list(set(conf['parse-configs']))
-        conf['pkg-configs'] = list(set(conf['pkg-configs']))
+        for expected_conf in expected_configurations_lists:
+            conf[expected_conf] = list(set(conf[expected_conf]))
 
-def build_libs(app, test=False):
+def get_global_extlibs(app, test=False):
     libs = hasattr(app, "libs") and app.libs or []
     if test and hasattr(app, "test_libs"):
         libs += app.test_libs
     return libs
 
-def build_headers(app, test=False):
-    headers = hasattr(app, "headers") and app.headers or []
-    if test and hasattr(app, "test_headers"):
-        headers += app.test_headers
-    return headers
-
-def build_libs_versions(app: dict, modules: dict, test=False):
+def get_modules_extlibs(app: dict, modules: dict, test=False):
     """ Gets all libs versions needed by selected modules
         @return dict[libname] = version
     """
-    if not hasattr(app, "libs_versions"):
+    if not hasattr(app, "extlibs"):
         return {}
-    libs_versions = app.libs_versions
+    extlibs = app.extlibs
     modules_extlibs = set()
+    # getting used libs for every modules
     for _, module in modules.items():
-        libs = module.get('libs', [])
+        libs = module.get('uselibs', [])
         for lib in libs:
             modules_extlibs.add(lib)
-        headers = module.get('headers', [])
-        for header in headers:
-            modules_extlibs.add(header)
-    for extlib in build_libs(app, test=test):
+    # adding global libs + test_libs
+    for extlib in get_global_extlibs(app, test=test):
         modules_extlibs.add(extlib)
     ret = {}
+    # matching with extlibs
     for extlib in modules_extlibs:
-        for libname, version in libs_versions.items():
-            if libname.find(extlib) >= 0:
+        for libname, version in extlibs.items():
+            if libname == extlib:
                 ret[libname] = version
     return ret
 
@@ -109,12 +94,20 @@ def check_conditionnal_modules(app):
                 raise RuntimeError("App's conditionnal module share a name with a module: " + modname)
     return has_conditionnals
 
-def build_conditionnal_modules(app):
+def remove_module(app, modname):
+    if hasattr(app, "modules") and modname in app.modules:
+        del app.modules[modname]
+    if hasattr(app, "conditionnal_modules") and modname in app.conditionnal_modules:
+        del app.conditionnal_modules[modname]
+
+def get_module_merged_with_conditionnals(app):
     ret = {}
-    for key, value in app.modules.items():
-        ret[key] = value
-    for key, value in app.conditionnal_modules.items():
-        ret[key] = value
+    if hasattr(app, "modules"):
+        for key, value in app.modules.items():
+            ret[key] = value
+    if hasattr(app, "conditionnal_modules"):
+        for key, value in app.conditionnal_modules.items():
+            ret[key] = value
     return ret
 
 def get_build_order(modules):
@@ -136,7 +129,15 @@ def get_build_order(modules):
                 order.append(modname)
     return order
 
-def build_modules(app, specific_modules="", conditionnals=[]):
+def get_conditionnals_from_env(app):
+    ret = []
+    for key, conf in app.conditionnal_modules.items():
+        cond_env = conf.get("conditionnal-env", None)
+        if cond_env is not None and os.getenv(cond_env, None):
+            ret.append(key)
+    return ret
+
+def get_modules(app, specific_modules="", conditionnals=[]):
     """ @brief build modules from application configuration
         @param app the application configuration module
         @param specific_modules build specific comma separated modules instead of all
@@ -145,15 +146,14 @@ def build_modules(app, specific_modules="", conditionnals=[]):
     """
     if not hasattr(app, "modules"):
         raise RuntimeError("App's configuration file should have modules")
-    has_conditionnals = check_conditionnal_modules(app)
-    if conditionnals and not has_conditionnals:
-        raise RuntimeError("App's configuration does not have conditionnal modules")
+    conditionnals.extend(get_conditionnals_from_env(app))
     modules = {}
     specific_modules_list = specific_modules.split(',')
     if specific_modules:
         app_modules = app.modules
-        if has_conditionnals and has_conditionnal_in_modules_list(app.conditionnal_modules, specific_modules_list):
-            app_modules = build_conditionnal_modules(app)
+        # if a conditionnal is in specific module list, add conditionnals to list of modules
+        if has_conditionnal_in_modules_list(app.conditionnal_modules, specific_modules_list):
+            app_modules = get_module_merged_with_conditionnals(app)
         fill_modlist_from_modules(app_modules, specific_modules_list, modules)
     else:
         modules = app.modules

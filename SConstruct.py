@@ -21,73 +21,84 @@ pp = PrettyPrinter(indent=2)
 sys.dont_write_bytecode = True
 import app
 import _build_tools.modules
+import _build_tools.builder
+from _build_tools.builder import debug, info, warning, error
 sys.dont_write_bytecode = False
 
-#
-# Args
-#
+info("building {}".format(app.name))
 
-verbose = getenv("verbose", "") == "1"
-modules_to_build = getenv('modules', "")
-distribution = getenv('dist', "") == "1"
-make_tests = getenv('test', "") == "1"
-clang = getenv('clang', "") == "1"
-build_platform = getenv('platform', "").lower()
-mode = getenv("mode", "").lower()
+_build_tools.builder.sanitize_app(app)
 
-# Specific modules
-conditionnals = []
-if getenv('lua', "") == "1":
-    conditionnals.extend(["lua", "luabin"])
-if getenv('py', "") == "1":
-    conditionnals.append("py")
+###############################################################################
+# Env parsing
+###############################################################################
 
-# Platform
-if build_platform != "" and build_platform not in ("win", "windows", "linux", "mac", "android", "ios"):
-    raise RuntimeError("Platform " + build_platform + " is not supported")
+modules_to_build = _build_tools.builder.get_modules()
+has_test = _build_tools.builder.has_test()
+verbose = _build_tools.builder.has_verbose()
+compiler = _build_tools.builder.get_compiler()
+build_platform = _build_tools.builder.get_platform()
+compile_mode = _build_tools.builder.get_compile_mode()
+processor = _build_tools.builder.get_processor()
 
-if build_platform == "win":
-    build_platform = "windows"
+distribution = getenv("distribution", None) != None
 
-#if build_platform == "windows" and platform.system() == "Linux":
-if build_platform == "windows":
-    app.libs.remove('dl')
+if build_platform not in ("windows", "linux"):
+    error("platform {} is not supported".format(build_platform))
+    exit(1)
+if compiler not in ("gcc", "clang", "mingw"):
+    error("compiler {} is not supported".format(compiler))
+    exit(1)
+if compile_mode not in ("debug", "release"):
+    error("mode {} unknown".format(compile_mode))
+    exit(1)
+
+info("platform: " + build_platform)
+info("compiler: " + compiler)
+info("processor: " + processor)
+info("mode: " + compile_mode)
+info("tests: " + (has_test and "yes" or "no"))
 
 # Get modules configuration for this build
 try:
-    build_modules = _build_tools.modules.build_modules(app,
-        specific_modules=modules_to_build,
-        conditionnals=conditionnals)
-    extlibs = _build_tools.modules.build_libs(app, test=make_tests)
-    extheaders = _build_tools.modules.build_headers(app, test=make_tests)
+    build_modules = _build_tools.modules.get_modules(app,
+        specific_modules=modules_to_build)
+    global_extlibs = _build_tools.modules.get_global_extlibs(app, test=has_test)
+    extlibs = _build_tools.modules.get_modules_extlibs(app, build_modules, test=has_test)
 except RuntimeError as e:
-    print("scons build error: " + str(e), file=sys.stderr)
+    error(str(e))
     Exit(1)
 
 if verbose:
-    print("{}: modules configuration".format(app.name))
+    debug("modules configuration:")
     pp.pprint(build_modules)
-    print("{}: external libs".format(app.name))
-    pp.pprint(extlibs)
-    print("{}: external headers".format(app.name))
-    pp.pprint(extheaders)
+    debug("external libs:")
+    pp.pprint(global_extlibs)
     print()
 
-#
+###############################################################################
 # Main shared environment
-#
+###############################################################################
 
 base_env = Environment(
     # binaries path
     ENV = {
         'PATH': getenv("PATH"),
     },
+    # compiler for c
+    CC = "gcc",
     # compiler for c++
     CXX = "c++",
-    # compile flags
-    CCFLAGS = ['-Wall', '-Wextra', '-Werror'] + (hasattr(app, 'flags') and app.flags or []),
-    # c++ flags
-    CPPFLAGS = ["-std=c++17"],
+    # c++ compile flags
+    CXXFLAGS = ["-std=c++17"],
+    # c and c++ compile flags
+    CPPFLAGS = [
+        "-march={}".format(processor),
+        '-Wall', '-Wextra', '-Werror',
+        '-m64', '-pipe'
+    ] + (hasattr(app, 'flags') and app.flags or []),
+    # link flags
+    LINKFLAGS = [],
     # extra #define for inside the code
     CPPDEFINES = [] + (hasattr(app, 'defines') and app.defines or []),
     # headers path
@@ -103,10 +114,10 @@ base_env = Environment(
 # Build output
 if not verbose:
     base_env.Replace(
-        SHCXXCOMSTR = "Compiling shared C++: $SOURCE",
-        SHLINKCOMSTR = "Linking shared library: $TARGET",
-        CXXCOMSTR = "Compiling C++: $SOURCE",
-        LINKCOMSTR = "Linking object files into executable: $TARGET",
+        SHCXXCOMSTR = "compiling shared C++: $SOURCE",
+        SHLINKCOMSTR = "linking shared library: $TARGET",
+        CXXCOMSTR = "compiling C++: $SOURCE",
+        LINKCOMSTR = "linking object files into executable: $TARGET",
     )
 
 # Setting path for build directories in shared env
@@ -130,24 +141,40 @@ base_env.Append(
     CPPPATH = base_env["APP_EXTLIB_INCLUDE"]
 )
 
-if mode != "release":
-    # absolute path to find libs
-    base_env.Append(RPATH = [
-        abspath(str(base_env["APP_BUILD_LIB"])),
-        abspath(str(base_env["APP_EXTLIB_LIB"]))
-    ])
+if not distribution:
+    base_env.Append(
+        RPATH = [
+            abspath(str(base_env["APP_BUILD_LIB"])),
+            abspath(str(base_env["APP_EXTLIB_LIB"]))
+        ],
+    )
+
+if compile_mode == "debug":
+    base_env.Append(
+        CPPFLAGS = [
+            "-g",
+            "-O2"
+        ]
+    )
+elif compile_mode == "release":
+    base_env.Append(
+        CPPFLAGS = [
+            "-O3",
+        ]
+    )
     
 # Clang build
-if clang:
+if compiler == "clang":
     base_env.Replace(
         CXX = "clang++",
         CC = "clang"
     )
-    base_env["CPPFLAGS"].extend(["-stdlib=libstdc++", '-fcxx-exceptions'])
+    base_env["CPPFLAGS"].extend([
+        "-stdlib=libc++",
+    ])
     base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
-
 # Windows build
-if build_platform == "windows":
+elif compiler == "mingw":
     base_env.Replace(
         CXX = "x86_64-w64-mingw32-g++",
         CC = "x86_64-w64-mingw32-gcc",
@@ -155,16 +182,28 @@ if build_platform == "windows":
         LIBPREFIX = "",
     )
     base_env["CPPDEFINES"].append("_WIN64")
-    base_env["CPPPATH"].extend([
-        # "/usr/include/",
-    ])
+elif compiler == "gcc":
+    base_env.Append(
+        CPPFLAGS = [
+            "-D_FORTIFY_SOURCE=2",
+            "-D_GLIBCXX_ASSERTIONS",
+            "-fasynchronous-unwind-tables",
+            "-fexceptions",
+            "-Wl,-pie",
+            "-fstack-protector",
+            "-fstack-protector-strong",
+            "-Wl,-z,defs",
+            "-Wl,-z,now",
+            "-Wl,-z,relro",
+        ]
+    )
 
 # Decides when to recompile - removing slow md5 in favor of timestamps
 Decider('timestamp-newer')
 
-#
+###############################################################################
 # Build
-#
+###############################################################################
 
 targets = []
 def add_targets(src):
@@ -177,7 +216,7 @@ def add_targets(src):
 
 def build_test(self, src=None, libs=[], test_name=None):
     """ Environment method to build unit test binary for a module """
-    if make_tests == False:
+    if has_test == False:
         return None
     src = src or Glob('test/*.cpp')
     # Not only main.cpp
@@ -207,12 +246,10 @@ def build_bin(self, src, bin_name=None):
     add_targets(src)
     if bin_name is None:
         bin_name = self['APP_MODULE']
-        if build_platform == "windows":
+        if compiler == "mingw":
             bin_name += ".exe"
     bin_path = join("$APP_BUILD_BIN", bin_name)
-    env = self.Clone()
-    env.Append(LIBS = [self['APP_MODULE']])
-    return env.Program(bin_path, src)
+    return self.Program(bin_path, src)
 
 def get_modules_headers(*args):
     """ Returns modules headers path """
@@ -235,14 +272,15 @@ def load_env_packages_specific_config(env, *configs):
         try:
             env.ParseConfig(config)
         except OSError as e:
-            print("scons: build warning: package {} not found".format(config), file=sys.stderr)
+            warning("package {} not found".format(config))
 
 def copy_module_dir(module_name, dirname_to_copy):
+    """ recursive copy of MODNAME/DIRNAME to build/DIRNAME """
     module_dir_input = Dir(module_name).Dir(dirname_to_copy)
     build_dir_output = build_dir.Dir(dirname_to_copy)
     if isdir(str(module_dir_input)):
         if verbose:
-            print("Copying resources '{}' of module: {}".format(dirname_to_copy, module_name))
+            info("copying resources '{}' of module: {}".format(dirname_to_copy, module_name))
         copy_tree(str(module_dir_input), str(build_dir_output))
 
 # Configure env and call scons.py from every configured modules
@@ -253,22 +291,27 @@ build_path = str(base_env["APP_BUILD"])
 build_etc_path = str(base_env["APP_BUILD_ETC"])
 
 for modname, conf in build_modules.items():
-    print("scons: building {}'s module: {}".format(app.name, modname))
+    info("building module: {}".format(modname))
     module_format = "{}_{}".format(app.name, modname)
     # Getting module's build configuration
     depends = conf.get("depends", [])
     libs = conf.get("libs", [])
-    headers = conf.get("headers", [])
     flags = conf.get("flags", "")
     # Create a specific environment for the module
     env = base_env.Clone()
     env.Append(
-        CPPPATH = get_modules_headers(modname, *depends) + headers,
-        LIBS = get_modules_libname(*depends) + libs + extlibs,
+        # adding headers of depending modules and self
+        CPPPATH = get_modules_headers(modname, *depends),
+        # adding libraries
+        LIBS = get_modules_libname(*depends) + libs + global_extlibs,
+        # adding specified flags
         CCFLAGS = flags,
+        # formatted module name PROJNAME_MODULENAME
         APP_MODULE = module_format,
+        # configuration of module for scons.py
         APP_MODULE_CONF = conf,
     )
+    # methods to build either test shared_lib or executable
     env.AddMethod(build_lib, "build_lib")
     env.AddMethod(build_bin, "build_bin")
     env.AddMethod(build_test, "build_test")
@@ -302,9 +345,9 @@ for modname, conf in build_modules.items():
     if verbose:
         print("")
 
-#
-# Extra
-#
+###############################################################################
+# Replace vars
+###############################################################################
 
 def sed_replace(file, replace_dic):
     for key, value in replace_dic.items():
@@ -324,22 +367,22 @@ def replace_res_in_build(to_replace, replace_dic):
         else:
             true_replace.append(pattern)
     if verbose:
-        print("Replacing values in build files - {} files to replace".format(len(true_replace)))
+        debug("replacing values in build files - {} files to replace".format(len(true_replace)))
     for file in true_replace:
         if isfile(file) == False:
-            print("-> file to replace '{}' does not exists".format(file))
+            warning("file to replace '{}' does not exists".format(file))
             continue
         if verbose:
-            print("-> replacing file: " + file)
+            debug("replacing file: " + file)
         sed_replace(file, replace_dic)
 
 # Replace every strings in specified files
 if hasattr(app, "replace_files") and hasattr(app, "replace_vars"):
     replace_res_in_build(app.replace_files, app.replace_vars)
 
-#
+###############################################################################
 # Scons progress build output
-#
+###############################################################################
 
 try:
     screen = open('/dev/tty', 'w')
@@ -358,17 +401,16 @@ try:
 
     Progress(progress_function, interval = 1)
 except (OSError, IOError) as e:
-    print("scons build error: won't display progress - reason: " + str(e), file=sys.stderr)
+    error("won't display progress - reason: " + str(e), file=sys.stderr)
 
-#
+###############################################################################
 # Scons final build status
-#
+###############################################################################
 
 import atexit
 
 def bf_to_str(bf):
-    """Convert an element of GetBuildFailures() to a string
-    in a useful way."""
+    """ Convert an element of GetBuildFailures() to a string in a useful way """
     import SCons.Errors
     if bf is None: # unknown targets product None in list
         return '(unknown tgt)'
@@ -381,7 +423,7 @@ def bf_to_str(bf):
     return 'unknown failure: ' + bf.errstr
 
 def build_status():
-    """Convert the build status to a 2-tuple, (status, msg)."""
+    """ Convert the build status to a 2-tuple, (status, msg) """
     from SCons.Script import GetBuildFailures
     bf = GetBuildFailures()
     if bf:
@@ -409,7 +451,7 @@ def display_build_status():
         if hasattr(app, "on_build_fail"):
             app.on_build_fail(build_modules.keys())
     elif status == 'ok':
-        print("scons: build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
+        info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
         if hasattr(app, "on_build_success"):
             app.on_build_success(build_modules.keys(), str(build_dir))
 

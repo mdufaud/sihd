@@ -8,7 +8,7 @@ Aimed to be a simple C++ library with some python and/or LUA bindings that gets,
 
 ### SCons
 
-SCons version v4.1.0
+SCons version v4.1.0 (builder)
 
 ```shell
 pip install scons
@@ -16,7 +16,7 @@ pip install scons
 
 ### Conan
 
-Conan version 1.35.0
+Conan version 1.35.0 (manages dependencies)
 
 [Conan install doc](https://docs.conan.io/en/latest/installation.html)
 
@@ -49,25 +49,31 @@ clang++ 8
 sudo apt install libc++-dev libc++abi-dev
 ```
 
-x86_64-w64-mingw32-g++ 7.3-posix
+Windows: x86_64-w64-mingw32-g++ 7.3-posix
 
 ```shell
 # configure mingw32 to posix
 sudo update-alternatives --config x86_64-w64-mingw32-g++
 ```
 
-### Build instructions
+### Dependencies
 
-To dependencies from conan.io center
+Get dependencies from conan.io center if not installed on your system
 
 ```shell
 # to get all dependencies for every modules
 make dep
 # to be able to run unit tests
-make dep test
+make dep test=1
+# to get depencencies compiled with clang
+make dep compiler=clang
 # to get dependencies for a single module
 make dep mod COMMA_SEPARATED_MODULES
+# to get windows dependencies
+make dep platform=win
 ```
+
+### Build instructions
 
 To build binaries and compile shared libraries with scons
 
@@ -83,9 +89,11 @@ make modules=COMMA_SEPARATED_MODULES
 make mod COMMA_SEPARATED_MODULES
 ```
 
-Activate verbose by adding verbose=1
+To compile with clang, add to your command line: "compiler=clang"
+To compile with mingw, add to your command line: "compiler=mingw"
+To activate verbose, add to your command line: "verbose=1"
 
-### Python bindings build
+#### Python bindings build
 
 Add to your command line "py=1"
 
@@ -95,7 +103,7 @@ make mod core py=1
 make mod core,py
 ```
 
-### Lua bindings build
+#### Lua bindings build
 
 Add to your command line "lua=1"
 
