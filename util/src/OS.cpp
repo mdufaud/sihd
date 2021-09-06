@@ -5,23 +5,22 @@
 #include <vector>
 #include <unistd.h>
 
-#if !defined(__SIHD_WINDOWS__)
-# include <execinfo.h>
-#endif
 
 #include <string.h>
 
 #include <signal.h>
 #include <algorithm>
 
-#define SIHD_BACKTRACE_SIZE 15
+
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__)
+
+# include <execinfo.h>
+# define SIHD_BACKTRACE_SIZE 15
 
 namespace sihd::util
 {
 
 LOGGER;
-
-#if !defined(__SIHD_WINDOWS__)
 
 void        *OS::backtrace_buffer[SIHD_BACKTRACE_SIZE];
 const int   OS::backtrace_size = SIHD_BACKTRACE_SIZE;
@@ -198,8 +197,12 @@ std::string OS::get_signal_name(int sig)
     return signame;
 }
 
+}
+
 #else
 
+namespace sihd::util
+{
 void        *OS::load_lib([[maybe_unused]] std::string lib_name) { return nullptr; }
 ssize_t     OS::write([[maybe_unused]] int fd, [[maybe_unused]] const char *s) { return 0; }
 ssize_t     OS::write_endl([[maybe_unused]] int fd, [[maybe_unused]] const char *s) { return 0; }
@@ -212,7 +215,5 @@ void        OS::signal_callback([[maybe_unused]] int sig) {}
 bool        OS::add_signal_handler([[maybe_unused]] int sig, [[maybe_unused]] IRunnable *runnable) { return true; }
 bool        OS::unhandle_signal([[maybe_unused]] int sig) { return true; }
 std::string OS::get_signal_name([[maybe_unused]] int sig) { return ""; }
-
-#endif
-
 }
+#endif

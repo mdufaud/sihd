@@ -1,6 +1,10 @@
 #ifndef PLATFORM_H__
 # define PLATFORM_H__
 
+# if defined(__ANDROID__)
+#  define __SIHD_ANDROID__
+# endif
+
 # if defined(__linux__) || defined(__CYGWIN__)
 
 #  define __SIHD_UNIX__
