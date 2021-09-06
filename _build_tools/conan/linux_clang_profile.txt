@@ -7,6 +7,3 @@ compiler = clang
 compiler.version = 6.0
 compiler.libcxx = libstdc++
 build_type = Release
-[options]
-[build_requires]
-[env]

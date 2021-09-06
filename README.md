@@ -49,7 +49,7 @@ clang++ 8
 sudo apt install libc++-dev libc++abi-dev
 ```
 
-Windows: x86_64-w64-mingw32-g++ 7.3-posix
+mingw 7.3-posix
 
 ```shell
 # configure mingw32 to posix
@@ -98,17 +98,19 @@ To activate verbose, add to your command line: "verbose=1"
 Add to your command line "py=1"
 
 ```shell
-make mod core py=1
+make py=1
 # or
 make mod core,py
 ```
+
+/!\ not available with mingw /!\
 
 #### Lua bindings build
 
 Add to your command line "lua=1"
 
 ```shell
-make mod core lua=1
+make lua=1
 # or
 make mod core,lua
 ```

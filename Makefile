@@ -67,9 +67,9 @@ PLATFORM = $(shell platform=$(platform) compiler=$(compiler) python3 $(BUILD_TOO
 COMPILER = $(shell platform=$(platform) compiler=$(compiler) python3 $(BUILD_TOOLS)/builder.py compiler)
 
 # checking platform env to select a conan profile
-ifeq ($(COMPILER),mingw)
+ifeq ($(COMPILER), mingw)
 	CONAN_PROFILE = windows_mingw_profile.txt
-else ifeq ($(COMPILER),clang)
+else ifeq ($(COMPILER), clang)
 	CONAN_PROFILE = linux_clang_profile.txt
 else
 	CONAN_PROFILE = linux_gcc_profile.txt

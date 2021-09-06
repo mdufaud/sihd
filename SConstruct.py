@@ -30,7 +30,7 @@ info("building {}".format(app.name))
 _build_tools.builder.sanitize_app(app)
 
 ###############################################################################
-# Env parsing
+# Build settings
 ###############################################################################
 
 modules_to_build = _build_tools.builder.get_modules()
@@ -77,7 +77,7 @@ if verbose:
     print()
 
 ###############################################################################
-# Main shared environment
+# Build compiling options
 ###############################################################################
 
 base_env = Environment(
@@ -93,7 +93,6 @@ base_env = Environment(
     CXXFLAGS = ["-std=c++17"],
     # c and c++ compile flags
     CPPFLAGS = [
-        "-march={}".format(processor),
         '-Wall', '-Wextra', '-Werror',
         '-m64', '-pipe'
     ] + (hasattr(app, 'flags') and app.flags or []),
@@ -185,6 +184,7 @@ elif compiler == "mingw":
 elif compiler == "gcc":
     base_env.Append(
         CPPFLAGS = [
+            "-march={}".format(processor),
             "-D_FORTIFY_SOURCE=2",
             "-D_GLIBCXX_ASSERTIONS",
             "-fasynchronous-unwind-tables",
@@ -346,7 +346,7 @@ for modname, conf in build_modules.items():
         print("")
 
 ###############################################################################
-# Replace vars
+# Replace vars in files
 ###############################################################################
 
 def sed_replace(file, replace_dic):

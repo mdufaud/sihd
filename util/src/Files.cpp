@@ -251,7 +251,7 @@ void    Files::trim_in_path(std::vector<std::string> & list, const std::string &
 std::string    Files::trim_path(std::string && path, const std::string & to_remove)
 {
     Files::trim_in_path(path, to_remove);
-    return path;
+    return std::move(path);
 }
 
 std::string    Files::trim_path(const std::string & path, const std::string & to_remove)
