@@ -38,7 +38,7 @@ modules = {
         "uselibs": ['uwebsockets'],
     },
 }
-# Conditionnals - Only if activated
+# conditionnals - only if activated
 conditionnal_modules = {
     "lua": {
         "depends": ['util'],
@@ -64,7 +64,6 @@ conditionnal_modules = {
         ],
     }
 }
-#TODO remove because it should be module oriented ?
 replace_files = [
     "etc/sihd/core/test.txt"
 ]
@@ -73,7 +72,7 @@ replace_vars = {
 }
 
 #############
-# After build
+# after build
 # -> copy python library to another name in build so we can use it
 #############
 

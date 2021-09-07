@@ -43,7 +43,7 @@ To find conan and scons from python-pip binaries folder.
 g++ (GCC) 10.2.0
 
 ```shell
-sudo apt install gcc
+sudo apt install g++
 ```
 
 clang++ 8
@@ -62,7 +62,7 @@ sudo update-alternatives --config x86_64-w64-mingw32-g++
 
 ### External libraries
 
-All dependencies are listed in app.py, only few are needed for each modules
+All dependencies are listed in [app.py file](app.py), only few are needed for each modules
 
 Get dependencies from conan.io center if not installed on your system
 
@@ -80,6 +80,7 @@ make dep platform=win
 ```
 
 To get libraries compiled with clang, add to your command line: "compiler=clang"
+
 To get libraries compiled for windows (dll), add to your command line: "platform=win"
 
 ## Build
@@ -99,6 +100,7 @@ make mod COMMA_SEPARATED_MODULES
 ```
 
 To compile with clang, add to your command line: "compiler=clang"
+
 To compile with mingw, add to your command line: "compiler=mingw"
 
 ### Python bindings build
