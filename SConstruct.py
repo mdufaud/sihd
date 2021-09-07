@@ -53,11 +53,12 @@ if compile_mode not in ("debug", "release"):
     error("mode {} unknown".format(compile_mode))
     exit(1)
 
-info("platform: " + build_platform)
-info("compiler: " + compiler)
-info("processor: " + processor)
-info("mode: " + compile_mode)
-info("tests: " + (has_test and "yes" or "no"))
+if verbose:
+    info("platform: " + build_platform)
+    info("compiler: " + compiler)
+    info("processor: " + processor)
+    info("mode: " + compile_mode)
+    info("tests: " + (has_test and "yes" or "no"))
 
 # Get modules configuration for this build
 try:

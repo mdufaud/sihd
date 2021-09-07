@@ -4,7 +4,11 @@ Simple Input Handler Displayer
 
 Aimed to be a simple C++ library with some python and/or LUA bindings that gets, parse and display data
 
-## How to compile
+## Dependencies
+
+### C++
+
+version 17
 
 ### SCons
 
@@ -24,7 +28,7 @@ Conan version 1.35.0 (manages dependencies)
 pip install conan
 ```
 
-### python-pip
+### Python-pip
 
 Don't forget to add to your bashrc:
 
@@ -34,13 +38,13 @@ export PATH=$PATH:$HOME/.local/bin
 
 To find conan and scons from python-pip binaries folder.
 
-### C++
-
-version 17
-
 ### Compilers
 
 g++ (GCC) 10.2.0
+
+```shell
+sudo apt install gcc
+```
 
 clang++ 8
 
@@ -56,7 +60,9 @@ mingw 7.3-posix
 sudo update-alternatives --config x86_64-w64-mingw32-g++
 ```
 
-### Dependencies
+### External libraries
+
+All dependencies are listed in app.py, only few are needed for each modules
 
 Get dependencies from conan.io center if not installed on your system
 
@@ -73,7 +79,10 @@ make dep mod COMMA_SEPARATED_MODULES
 make dep platform=win
 ```
 
-### Build instructions
+To get libraries compiled with clang, add to your command line: "compiler=clang"
+To get libraries compiled for windows (dll), add to your command line: "platform=win"
+
+## Build
 
 To build binaries and compile shared libraries with scons
 
@@ -91,9 +100,8 @@ make mod COMMA_SEPARATED_MODULES
 
 To compile with clang, add to your command line: "compiler=clang"
 To compile with mingw, add to your command line: "compiler=mingw"
-To activate verbose, add to your command line: "verbose=1"
 
-#### Python bindings build
+### Python bindings build
 
 Add to your command line "py=1"
 
@@ -105,7 +113,7 @@ make mod core,py
 
 /!\ not available with mingw /!\
 
-#### Lua bindings build
+### Lua bindings build
 
 Add to your command line "lua=1"
 

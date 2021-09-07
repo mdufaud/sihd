@@ -38,8 +38,8 @@ namespace test
     {
         filesystem::path test_path(getenv("TEST_PATH"));
         test_path.append("test_path");
-        filesystem::path test_dir = test_path / "1/2";
-        filesystem::remove_all(test_dir);
+        filesystem::remove_all(test_path);
+        filesystem::path test_dir = test_path / "1" / "2";
         filesystem::create_directories(test_dir);
         auto test_file = test_dir / "file.txt";
         std::ofstream file(test_file.generic_string());
@@ -56,7 +56,7 @@ namespace test
         Path::clear("sihd-test");
         EXPECT_EQ(Path::get("sihd-test", "file.txt"), "");
 
-        Path::set("current-module", getenv("TEST_MODULE_PATH"));
-        TRACE(Path::find("TestPath.cpp"));
+        TRACE(Path::find("test/TestPath.cpp"));
+        filesystem::remove_all(test_path);
     }
 }

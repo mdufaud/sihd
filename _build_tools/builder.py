@@ -1,4 +1,4 @@
-from os import getenv
+from os import getenv, environ
 import platform
 import sys
 sys.path.append(".")
@@ -16,21 +16,29 @@ specific_platform_compilers = {
 }
 
 def get_platform():
-    build_platform = getenv('platform', platform.system()).lower()
+    env = getenv('platform', "")
+    build_platform = (env or platform.system()).lower()
     if build_platform == "win":
         build_platform = "windows"
     return build_platform
 
 def get_compiler():
     build_platform = get_platform()
-    compiler = getenv('compiler', default_compiler).lower()
+    env = getenv('compiler', "")
+    compiler = (env or default_compiler).lower()
     return specific_platform_compilers.get(build_platform, compiler)
 
+def get_arch():
+    return getenv('arch', "") or platform.machine()
+
 def get_processor():
-    return getenv('proc', "native")
+    return getenv('proc', "") or "native"
 
 def get_compile_mode():
-    return getenv("mode", "debug").lower()
+    return (getenv("mode", "") or "debug").lower()
+
+def is_android():
+    return "ANDROID_ARGUMENT" in environ
 
 def has_verbose():
     return bool(getenv("verbose", None))
@@ -101,3 +109,11 @@ if __name__ == '__main__':
         print(get_compiler())
     elif sys.argv[1] == "platform":
         print(get_platform())
+    elif sys.argv[1] == "arch":
+        print(get_arch())
+    elif sys.argv[1] == "proc":
+        print(get_processor())
+    elif sys.argv[1] == "mode":
+        print(get_compile_mode())
+    elif sys.argv[1] == "android":
+        print(is_android() and "true" or "false")

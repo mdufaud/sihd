@@ -1,18 +1,18 @@
 OS := $(shell uname)
 
 ifeq ($(OS),Linux)
-	SHELL := /bin/bash
-	GREP := /bin/grep
+SHELL := /bin/bash
+GREP := /bin/grep
 else
-	SHELL := /bin/sh
-	GREP := /usr/bin/grep
+SHELL := /bin/sh
+GREP := /usr/bin/grep
 endif
 
 APP_NAME = sihd
 
 HERE = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-# Build
+# Build path
 BUILD_PATH = $(HERE)/build
 LIB_PATH = $(BUILD_PATH)/lib
 INCLUDE_PATH = $(BUILD_PATH)/include
@@ -21,18 +21,38 @@ TEST_BIN_PATH = $(TEST_PATH)/bin
 BIN_PATH = $(BUILD_PATH)/bin
 OBJ_PATH = $(BUILD_PATH)/obj
 RES_PATH = $(BUILD_PATH)/etc
+EXTLIB_PATH = $(BUILD_PATH)/extlib
 BUILD_TOOLS = $(HERE)/_build_tools
+BUILDER = $(BUILD_TOOLS)/builder.py
+
+# Builder + env conf
+ARCH = $(shell arch=$(arch) python3 $(BUILDER) arch)
+PLATFORM = $(shell platform=$(platform) compiler=$(compiler) python3 $(BUILDER) platform)
+COMPILER = $(shell platform=$(platform) compiler=$(compiler) python3 $(BUILDER) compiler)
+COMPILE_MODE = $(shell mode=$(mode) python3 $(BUILDER) mode)
+ANDROID = $(shell python3 $(BUILDER) android)
+
+##########
+# Includes
+##########
+
+include $(BUILD_TOOLS)/logger.mk
+include $(BUILD_TOOLS)/utils.mk
+include $(BUILD_TOOLS)/rules.mk
 
 # Scons
-SCONS_BUILD_CMD = scons -Q -j$(UTILS_LOGICAL_CORE_NUMBER)
+SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(UTILS_LOGICAL_CORE_NUMBER) $(SCONS_ARGS)
 
 # Conan
-EXTLIB_PATH = $(BUILD_PATH)/extlib
 CONAN_PATH = $(BUILD_PATH)/conan
-CONAN_PROFILE_PATH = $(BUILD_TOOLS)/conan
-CONAN_PROFILE = linux_gcc_profile.txt
-CONAN_INSTALL = conan install $(HERE)
-CONAN_INSTALL_PATH = -if $(CONAN_PATH)
+CONAN_PROFILES_PATH = $(BUILD_TOOLS)/conan_profiles
+CONAN_PROFILE = $(CONAN_PROFILES_PATH)/$(ARCH)/$(COMPILER).txt
+CONAN_PROFILE_ARG = 
+CONAN_INSTALL = conan install $(HERE) -if $(CONAN_PATH) $(CONAN_INSTALL_PATH) $(CONAN_PROFILE_ARG) $(CONAN_ARGS)
+# checking platform env to select a conan profile
+ifneq ("$(wildcard $(CONAN_PROFILE))", "")
+	CONAN_PROFILE_ARG = --profile $(CONAN_PROFILE)
+endif
 
 #########
 # Exports
@@ -45,76 +65,33 @@ export EXTLIB_PATH
 export BIN_PATH
 export RES_PATH
 
+#########
+# Targets
+#########
+
 all: build
 
-##########
-# Includes
-##########
-
-include $(BUILD_TOOLS)/logger.mk
-include $(BUILD_TOOLS)/utils.mk
-include $(BUILD_TOOLS)/rules.mk
-
-#########
-# Conan (external libraries dependencies retrieval)
-#########
-
-ifeq ($(word 1, $(MAKECMDGOALS)), dep)
-.PHONY: dep
-
-# Get conf from builder
-PLATFORM = $(shell platform=$(platform) compiler=$(compiler) python3 $(BUILD_TOOLS)/builder.py platform)
-COMPILER = $(shell platform=$(platform) compiler=$(compiler) python3 $(BUILD_TOOLS)/builder.py compiler)
-
-# checking platform env to select a conan profile
-ifeq ($(COMPILER), mingw)
-	CONAN_PROFILE = windows_mingw_profile.txt
-else ifeq ($(COMPILER), clang)
-	CONAN_PROFILE = linux_clang_profile.txt
-else
-	CONAN_PROFILE = linux_gcc_profile.txt
+intro:
+	$(call log_info,makefile,project: $(APP_NAME))
+	$(call log_info,makefile,platform = $(PLATFORM))
+	$(call log_info,makefile,compiler = $(COMPILER))
+	$(call log_info,makefile,arch = $(ARCH))
+	$(call log_info,makefile,mode = $(COMPILE_MODE))
+	$(call log_info,makefile,logical cores = $(UTILS_LOGICAL_CORE_NUMBER))
+ifeq ($(ANDROID), true)
+	$(call log_warning,makefile,android detected)
 endif
-
-dep:
-	@env test=$(test) verbose=$(verbose) modules=$(modules) lua=$(lua) py=$(py)\
-		$(CONAN_INSTALL) $(CONAN_INSTALL_PATH) --profile $(CONAN_PROFILE_PATH)/$(CONAN_PROFILE) $(args)
-
-# make dep mod MODULE
-ifeq ($(word 2, $(MAKECMDGOALS)), mod)
-MODULES_NAME = $(word 3, $(MAKECMDGOALS))$(m)
-dep: modules = $(MODULES_NAME)
-mod:
-$(MODULES_NAME):
-endif
-
-# make dep test
-ifeq ($(word 2, $(MAKECMDGOALS)), test)
-dep: test = 1
-test:
-endif
-
-# make dep build
-ifeq ($(word 2, $(MAKECMDGOALS)), build)
-dep: CONAN_ARGS = --build
-build:
-endif
-
-endif # dep
-
-checkdep_html:
-	@conan info . --graph=$(CONAN_PATH)/dep_tree.html
-
-checkdep:
-	@conan info . --graph=$(CONAN_PATH)/dep_tree.txt && cat $(CONAN_PATH)/dep_tree.txt
 
 ########
 # Scons (builder)
 ########
 
-build:
+build: intro
+	$(call log_info,makefile,starting build with command: $(SCONS_BUILD_CMD))
 	@cd $(HERE) && env verbose=$(verbose) modules=$(modules) test=$(test) dist=$(dist) py=$(py) lua=$(lua) $(SCONS_BUILD_CMD)
 
-build_debug: SCONS_BUILD_CMD = time scons --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
+build_debug: SCONS_ARGS = --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
+build_debug: SCONS_PREFIX = time
 build_debug: build
 
 verbose: verbose = 1
@@ -141,21 +118,19 @@ TEST_ARGS =
 # find string 'test' in target
 ifneq ($(findstring test,$(word 1, $(MAKECMDGOALS))), )
 
-
 test: test = 1
 test: build
+	$(call log_info,makefile,starting tests in build: $(TEST_PATH))
 	@- $(foreach TEST_BIN, $(TEST_EXEC), \
 		$(eval TEST_CMD_LINE = \
 			env $(DEBUGGER) $(TEST_BIN) $(TEST_ARGS)\
 		) \
 		$(eval TEST_MODULE_NAME = $(call get-module-name, $(TEST_BIN))) \
-		$(eval TEST_MODULE_PATH = $(HERE)/$(TEST_MODULE_NAME)/test) \
-		$(eval export TEST_MODULE_PATH) \
 		cd $(HERE)/$(TEST_MODULE_NAME); \
-		echo "Tested module: $(TEST_MODULE_NAME)" ; \
-		echo "Running command: $(TEST_CMD_LINE)" ; \
+		echo testing module: $(TEST_MODULE_NAME); \
+		echo test command: $(TEST_CMD_LINE); \
 		$(TEST_CMD_LINE); \
-		cd - > /dev/null ;\
+		cd - > /dev/null; \
 	)
 
 valgrindtest: DEBUGGER = valgrind --leak-check=full --show-leak-kinds=all
@@ -208,6 +183,45 @@ $(MODULES_NAME):
 $(TEST_NAME):
 endif #test
 
+#########
+# Conan (extlibs)
+#########
+
+ifeq ($(word 1, $(MAKECMDGOALS)), dep)
+.PHONY: dep
+
+dep: intro
+	$(call log_info,makefile,starting conan with command: $(CONAN_INSTALL))
+	@env test=$(test) verbose=$(verbose) modules=$(modules) lua=$(lua) py=$(py) $(CONAN_INSTALL)
+
+# make dep mod MODULE
+ifeq ($(word 2, $(MAKECMDGOALS)), mod)
+MODULES_NAME = $(word 3, $(MAKECMDGOALS))$(m)
+dep: modules = $(MODULES_NAME)
+mod:
+$(MODULES_NAME):
+endif
+
+# make dep test
+ifeq ($(word 2, $(MAKECMDGOALS)), test)
+dep: test = 1
+test:
+endif
+
+# make dep build
+ifeq ($(word 2, $(MAKECMDGOALS)), build)
+dep: CONAN_ARGS = --build
+build:
+endif
+
+endif # dep
+
+checkdep_html:
+	@conan info . --graph=$(CONAN_PATH)/dep_tree.html
+
+checkdep:
+	@conan info . --graph=$(CONAN_PATH)/dep_tree.txt && cat $(CONAN_PATH)/dep_tree.txt
+
 ##############
 # Distribution
 ##############
@@ -220,15 +234,15 @@ dist: build
 ##########
 
 clean:
-	@echo "Removing $(APP_NAME) compilation build"
-	@rm -rf $(LIB_PATH) $(INCLUDE_PATH) $(TEST_PATH) $(OBJ_PATH) $(BIN_PATH) $(RES_PATH) && echo "Done" || echo "Failed"
+	@$(call log_info,makefile,removing compilation build)
+	@rm -rf $(LIB_PATH) $(INCLUDE_PATH) $(TEST_PATH) $(OBJ_PATH) $(BIN_PATH) $(RES_PATH)
 
 cleaninstall:
-	@echo "Removing $(APP_NAME) dependencies"
-	@rm -rf $(CONAN_PATH) $(EXTLIB_PATH) && echo "Done" || echo "Failed"
+	@$(call log_info,makefile,removing dependencies)
+	@rm -rf $(CONAN_PATH) $(EXTLIB_PATH)
 
 fclean:
-	@echo "Removing build"
+	@$(call log_info,makefile,removing build)
 	@rm -rf $(BUILD_PATH)
 
 ### Makefile
