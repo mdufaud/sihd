@@ -11,13 +11,13 @@ except ImportError:
 linux_libs = ['dl']
 linux_extlibs = ['libpcap', 'readline', 'pybind11']
 
-def is_android():
-    return "ANDROID_ARGUMENT" in environ
-
-default_compiler = is_android() and "clang" or "gcc"
+default_compiler = "gcc"
 specific_platform_compilers = {
     "windows": "mingw"
 }
+
+def is_android():
+    return "ANDROID_ARGUMENT" in environ
 
 def get_platform():
     env = getenv('platform', "")
@@ -27,10 +27,14 @@ def get_platform():
     return build_platform
 
 def get_compiler():
+    arch = get_arch()
     build_platform = get_platform()
+    backup_compiler = default_compiler
+    if "arm" in arch:
+        backup_compiler = "clang"
     env = getenv('compiler', "")
-    compiler = (env or default_compiler).lower()
-    return specific_platform_compilers.get(build_platform, compiler)
+    backup_compiler = (env or backup_compiler).lower()
+    return specific_platform_compilers.get(build_platform, backup_compiler)
 
 def get_compile_mode():
     return (getenv("mode", "") or "debug").lower()
