@@ -9,14 +9,10 @@
 #include <stdio.h> // remove
 
 # if defined(__SIHD_WINDOWS__)
-#  include <experimental/filesystem> // backup windows
 #  include <direct.h> // _mkdir _stat
 #  define stat _stat
 #  define mkdir _mkdir
 #  define rmdir _rmdir
-// std::filesystem or std::experimental::filesystem is filesystem::
-using namespace std::experimental;
-using namespace std;
 # else
 #  include <unistd.h>
 # endif

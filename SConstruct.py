@@ -39,7 +39,7 @@ verbose = _build_tools.builder.has_verbose()
 compiler = _build_tools.builder.get_compiler()
 build_platform = _build_tools.builder.get_platform()
 compile_mode = _build_tools.builder.get_compile_mode()
-processor = _build_tools.builder.get_processor()
+arch = _build_tools.builder.get_arch()
 
 distribution = getenv("distribution", None) != None
 
@@ -56,7 +56,7 @@ if compile_mode not in ("debug", "release"):
 if verbose:
     info("platform: " + build_platform)
     info("compiler: " + compiler)
-    info("processor: " + processor)
+    info("arch: " + arch)
     info("mode: " + compile_mode)
     info("tests: " + (has_test and "yes" or "no"))
 
@@ -185,7 +185,6 @@ elif compiler == "mingw":
 elif compiler == "gcc":
     base_env.Append(
         CPPFLAGS = [
-            "-march={}".format(processor),
             "-D_FORTIFY_SOURCE=2",
             "-D_GLIBCXX_ASSERTIONS",
             "-fasynchronous-unwind-tables",
@@ -410,7 +409,7 @@ except (OSError, IOError) as e:
 
 import atexit
 
-def bf_to_str(bf):
+def build_failure_to_str(bf):
     """ Convert an element of GetBuildFailures() to a string in a useful way """
     import SCons.Errors
     if bf is None: # unknown targets product None in list
@@ -426,32 +425,32 @@ def bf_to_str(bf):
 def build_status():
     """ Convert the build status to a 2-tuple, (status, msg) """
     from SCons.Script import GetBuildFailures
-    bf = GetBuildFailures()
-    if bf:
+    build_failures = GetBuildFailures()
+    if build_failures:
         # bf is normally a list of build failures; if an element is None,
         # it's because of a target that scons doesn't know anything about.
-        status = 'failed'
-        failures_message = "\n".join(["Failed building %s" % bf_to_str(x)
-                            for x in bf if x is not None])
+        success = False
+        failures_message = "\n".join(["Failed building %s" % build_failure_to_str(x)
+                                        for x in build_failures if x is not None])
     else:
         # if bf is None, the build completed successfully.
-        status = 'ok'
+        success = True
         failures_message = ''
-    return (status, failures_message)
+    return (success, failures_message)
 
 def print_err(*args):
     print(*args, file=sys.stderr)
 
 def display_build_status():
-    status, failures_message = build_status()
-    if status == 'failed':
+    success, failures_message = build_status()
+    if not success:
         print_err("==============================================================")
         print_err("scons: BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
         print_err(failures_message)
         print_err("==============================================================")
         if hasattr(app, "on_build_fail"):
             app.on_build_fail(build_modules.keys())
-    elif status == 'ok':
+    else:
         info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
         if hasattr(app, "on_build_success"):
             app.on_build_success(build_modules.keys(), str(build_dir))

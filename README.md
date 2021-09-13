@@ -40,13 +40,13 @@ To find conan and scons from python-pip binaries folder.
 
 ### Compilers
 
-g++ (GCC) 10.2.0
+g++ (GCC) 7.5.0
 
 ```shell
 sudo apt install g++
 ```
 
-clang++ 8
+clang++ 6.0.0
 
 ```shell
 # to install
@@ -105,6 +105,8 @@ To compile with mingw, add to your command line: "compiler=mingw"
 
 ### Python bindings build
 
+python-3.6.9
+
 Add to your command line "py=1"
 
 ```shell
@@ -116,6 +118,8 @@ make mod core,py
 /!\ not available with mingw /!\
 
 ### Lua bindings build
+
+lua-5.3.5
 
 Add to your command line "lua=1"
 

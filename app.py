@@ -1,7 +1,7 @@
 name = 'sihd'
 libs = ['pthread', 'dl']
 defines = []
-test_libs = ['gtest']
+test_libs = ['gtest', 'stdc++fs']
 flags = ["-fPIC"]
 extlibs = {
     "gtest": "cci.20210126",
@@ -19,12 +19,11 @@ extlibs = {
     "readline": "8.0",
     # bindings
     "pybind11": "2.6.2",
-    "lua": "5.4.1",
     "sol2": "3.2.3",
+    "lua": "5.3.5",
 }
 modules = {
     "util": {
-        "libs": ['stdc++fs'],
         "uselibs": ['nlohmann_json'],
     },
     "core": {
@@ -45,6 +44,10 @@ conditionnal_modules = {
         "conditionnal-env": "lua",
         "conditionnal-depends": ['core', 'net', 'http'],
         "libs": ['lua'],
+        "parse-configs": [
+            "pkg-config --cflags --libs lua-5.3",
+            "pkg-config --cflags --libs lua53",
+        ],
         "uselibs": ['sol2'],
         "flags": ["-Wno-unused-parameter"],
     },
@@ -78,6 +81,7 @@ replace_vars = {
 
 # linux extension is -> cpython-36m-x86_64-linux-gnu.so
 # windows extension is -> cp37-win_amd64.pyd
+# though python cannot be used with mingw so...
 def get_python_libname():
     import subprocess
     proc = subprocess.Popen("python3-config --extension-suffix",
@@ -85,16 +89,15 @@ def get_python_libname():
     return proc.stdout.read().decode().strip()
 
 def on_build_success(modlist, build_path):
-    from os.path import join
-    libpath = join(build_path, "lib")
+    import os
+    libpath = os.path.join(build_path, "lib")
     if "py" in modlist:
-        from shutil import copyfile
         import glob
         python_libname = get_python_libname()
         if python_libname:
-            lib_pattern = join(libpath, "libsihd_py*.so")
+            lib_pattern = os.path.join(libpath, "libsihd_py*.so")
             libs = glob.glob(lib_pattern)
             for lib in libs:
                 pybind11_compliant = lib.replace("libsihd_py", "sihd")
                 pybind11_compliant = pybind11_compliant.replace(".so", python_libname)
-                copyfile(lib, pybind11_compliant)
+                os.symlink(lib, pybind11_compliant)
