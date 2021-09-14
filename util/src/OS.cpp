@@ -4,101 +4,29 @@
 
 #include <vector>
 #include <unistd.h>
-
-
 #include <string.h>
-
+#include <stdlib.h>
 #include <signal.h>
 #include <algorithm>
 
-
+// backtrace not available in windows / android
 #if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__)
-
 # include <execinfo.h>
-# define SIHD_BACKTRACE_SIZE 15
+#endif
+
+// for usage of sighandler_t in windows
+#if defined(__SIHD_WINDOWS__)
+typedef void (*sighandler_t)(int);
+#endif
 
 namespace sihd::util
 {
 
 LOGGER;
 
-void        *OS::backtrace_buffer[SIHD_BACKTRACE_SIZE];
-const int   OS::backtrace_size = SIHD_BACKTRACE_SIZE;
-
 bool        OS::signal_used = false;
 std::mutex  OS::signal_mutex;
 std::map<int, std::list<IRunnable *>>  OS::map_signals_handlers;
-
-void    *OS::load_lib(std::string lib_name)
-{
-    std::vector<std::string>    to_try = {
-        "lib" + lib_name + ".so",
-        lib_name + ".so",
-        lib_name,
-        lib_name + ".dll"
-    };
-    void *handle = nullptr;
-    for (const std::string & lib : to_try)
-    {
-        handle = dlopen(lib.c_str(), RTLD_NOW);
-        if (handle != nullptr)
-            break ;
-    }
-    return handle;
-}
-
-
-ssize_t  OS::write(int fd, const char *s)
-{
-    int i = 0;
-    while (s[i])
-        ++i;
-    return ::write(fd, s, i);
-}
-
-ssize_t  OS::write_endl(int fd, const char *s)
-{
-    ssize_t ret = write(fd, s);
-    return ret + ::write(fd, "\n", 1);
-}
-
-ssize_t   OS::write_number(int fd, int number)
-{
-    char c;
-    if (number < 10)
-    {
-        c = (char)number + '0';
-        return ::write(fd, &c, 1);
-    }
-    ssize_t ret = write_number(fd, number / 10);
-    c = (char)(number % 10) + '0';
-    return ret + ::write(fd, &c, 1);
-}
-
-ssize_t    OS::backtrace(int fd)
-{
-    size_t size = ::backtrace(OS::backtrace_buffer, OS::backtrace_size);
-    char **strings = (char **)backtrace_symbols(OS::backtrace_buffer, size);
-    bool ret = write(fd, "sihd::util::OS::backtrace (") > 0;
-    ret = ret && write_number(fd, size) > 0;
-    ret = ret && write_endl(fd, " calls)") > 0;
-    if (strings == nullptr)
-    {
-        ret = ret && write_endl(fd, "Error while getting backtrace symbols");
-        return -1;
-    }
-    uint32_t i = 0;
-    while (ret && i < size)
-    {
-        ret = ret && write(fd, "[") > 0;
-        ret = ret && write_number(fd, i) > 0;
-        ret = ret && write(fd, "]\t--> ") > 0;
-        ret = ret && write_endl(fd, strings[i]) > 0;
-        ++i;
-    }
-    free(strings);
-    return size;
-}
 
 bool    OS::clear_signal_handlers(int sig)
 {
@@ -189,6 +117,9 @@ bool    OS::unhandle_signal(int sig)
 
 }
 
+// strsignal does not exists in windows
+#if !defined(__SIHD_WINDOWS__)
+
 std::string OS::get_signal_name(int sig)
 {
     char *signame = strsignal(sig);
@@ -197,23 +128,98 @@ std::string OS::get_signal_name(int sig)
     return signame;
 }
 
-}
-
 #else
 
-namespace sihd::util
+std::string OS::get_signal_name(int sig)
 {
-void        *OS::load_lib([[maybe_unused]] std::string lib_name) { return nullptr; }
-ssize_t     OS::write([[maybe_unused]] int fd, [[maybe_unused]] const char *s) { return 0; }
-ssize_t     OS::write_endl([[maybe_unused]] int fd, [[maybe_unused]] const char *s) { return 0; }
-ssize_t     OS::write_number([[maybe_unused]] int fd, [[maybe_unused]] int number) { return 0; }
-ssize_t     OS::backtrace([[maybe_unused]] int fd) { return 0; }
-bool        OS::clear_signal_handlers([[maybe_unused]] int sig) { return true; }
-bool        OS::clear_signal_handlers() { return true; }
-bool        OS::clear_signal_handler([[maybe_unused]] int sig, [[maybe_unused]] IRunnable *runnable) { return true; }
-void        OS::signal_callback([[maybe_unused]] int sig) {}
-bool        OS::add_signal_handler([[maybe_unused]] int sig, [[maybe_unused]] IRunnable *runnable) { return true; }
-bool        OS::unhandle_signal([[maybe_unused]] int sig) { return true; }
-std::string OS::get_signal_name([[maybe_unused]] int sig) { return ""; }
+    return std::to_string(sig);
 }
+
 #endif
+
+// backtrace not available in windows / android
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__)
+
+# define SIHD_BACKTRACE_SIZE 15
+
+void        *OS::backtrace_buffer[SIHD_BACKTRACE_SIZE];
+const int   OS::backtrace_size = SIHD_BACKTRACE_SIZE;
+
+ssize_t  OS::write(int fd, const char *s)
+{
+    int i = 0;
+    while (s[i])
+        ++i;
+    return ::write(fd, s, i);
+}
+
+ssize_t  OS::write_endl(int fd, const char *s)
+{
+    ssize_t ret = write(fd, s);
+    return ret + ::write(fd, "\n", 1);
+}
+
+ssize_t   OS::write_number(int fd, int number)
+{
+    char c;
+    if (number < 10)
+    {
+        c = (char)number + '0';
+        return ::write(fd, &c, 1);
+    }
+    ssize_t ret = write_number(fd, number / 10);
+    c = (char)(number % 10) + '0';
+    return ret + ::write(fd, &c, 1);
+}
+
+ssize_t    OS::backtrace(int fd)
+{
+    size_t size = ::backtrace(OS::backtrace_buffer, OS::backtrace_size);
+    char **strings = (char **)backtrace_symbols(OS::backtrace_buffer, size);
+    bool ret = write(fd, "sihd::util::OS::backtrace (") > 0;
+    ret = ret && write_number(fd, size) > 0;
+    ret = ret && write_endl(fd, " calls)") > 0;
+    if (strings == nullptr)
+    {
+        ret = ret && write_endl(fd, "Error while getting backtrace symbols");
+        return -1;
+    }
+    uint32_t i = 0;
+    while (ret && i < size)
+    {
+        ret = ret && write(fd, "[") > 0;
+        ret = ret && write_number(fd, i) > 0;
+        ret = ret && write(fd, "]\t--> ") > 0;
+        ret = ret && write_endl(fd, strings[i]) > 0;
+        ++i;
+    }
+    free(strings);
+    return size;
+}
+
+#endif // end of backtrace
+
+
+// dlopen not available in windows
+#if !defined(__SIHD_WINDOWS__)
+
+void    *OS::load_lib(std::string lib_name)
+{
+    std::vector<std::string>    to_try = {
+        "lib" + lib_name + ".so",
+        lib_name + ".so",
+        lib_name,
+    };
+    void *handle = nullptr;
+    for (const std::string & lib : to_try)
+    {
+        handle = dlopen(lib.c_str(), RTLD_NOW);
+        if (handle != nullptr)
+            break ;
+    }
+    return handle;
+}
+
+#endif // end of shared lib
+
+}

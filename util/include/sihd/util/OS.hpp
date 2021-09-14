@@ -18,20 +18,6 @@ namespace sihd::util
 class OS
 {
     public:
-        static const int   backtrace_size;
-
-        static void    *load_lib(std::string lib_name);
-
-        // emergency calls for when memory fails
-        static ssize_t  write(int fd, const char *s);
-        // emergency calls for when memory fails
-        static ssize_t  write_endl(int fd, const char *s);
-        // emergency calls for when memory fails
-        static ssize_t  write_number(int fd, int number);
-
-        // prints formatted backtrace into file descriptor
-        static ssize_t backtrace(int fd);
-
         static std::string get_signal_name(int sig);
 
         // called when signal is caught
@@ -48,11 +34,30 @@ class OS
         // set signal handling to default - already taken care of, do not call
         static bool    unhandle_signal(int sig);
 
+# if !defined(__SIHD_WINDOWS__)
+        static const int   backtrace_size;
+
+        static void    *load_lib(std::string lib_name);
+
+        // emergency calls for when memory fails
+        static ssize_t  write(int fd, const char *s);
+        // emergency calls for when memory fails
+        static ssize_t  write_endl(int fd, const char *s);
+        // emergency calls for when memory fails
+        static ssize_t  write_number(int fd, int number);
+
+        // prints formatted backtrace into file descriptor
+        static ssize_t backtrace(int fd);
+# endif
+
     private:
         OS() {};
         ~OS() {};
 
+# if !defined(__SIHD_WINDOWS__)
         static void    *backtrace_buffer[];
+# endif
+
         static bool    signal_used;
         static std::mutex   signal_mutex;
         static std::map<int, std::list<IRunnable *>>  map_signals_handlers;
