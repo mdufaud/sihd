@@ -140,7 +140,9 @@ std::string OS::get_signal_name(int sig)
 // backtrace not available in windows / android
 #if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__)
 
-# define SIHD_BACKTRACE_SIZE 15
+# ifndef SIHD_BACKTRACE_SIZE
+#  define SIHD_BACKTRACE_SIZE 15
+# endif
 
 void        *OS::backtrace_buffer[SIHD_BACKTRACE_SIZE];
 const int   OS::backtrace_size = SIHD_BACKTRACE_SIZE;

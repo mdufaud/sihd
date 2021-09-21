@@ -10,7 +10,9 @@
 #include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
 #include <math.h> // HUGE_VAL
 
-#define SIHD_UTIL_STR_BUFFER 20480
+#ifndef SIHD_UTIL_STR_BUFFER
+# define SIHD_UTIL_STR_BUFFER 20480
+#endif
 
 namespace sihd::util
 {
@@ -327,11 +329,11 @@ std::optional<long> Str::to_long(const std::string & str, uint16_t base)
     char *endptr = NULL;
     long value = strtol(str.c_str(), &endptr, base);
     if (str.c_str() == endptr)
-        return {};
+        return std::nullopt;
     if (value == 0L && errno == EINVAL)
-        return {};
+        return std::nullopt;
     if ((value == LONG_MIN || value == LONG_MAX) && errno == ERANGE)
-        return {};
+        return std::nullopt;
     return value;
 }
 
@@ -341,11 +343,11 @@ std::optional<unsigned long>    Str::to_ulong(const std::string & str, uint16_t 
     char *endptr = NULL;
     unsigned long value = strtoul(str.c_str(), &endptr, base);
     if (str.c_str() == endptr)
-        return {};
+        return std::nullopt;
     if (value == 0UL && errno == EINVAL)
-        return {};
+        return std::nullopt;
     if (value == ULONG_MAX && errno == ERANGE)
-        return {};
+        return std::nullopt;
     return value;
 }
 
@@ -355,11 +357,11 @@ std::optional<double>   Str::to_double(const std::string & str)
     char *endptr = NULL;
     double value = strtod(str.c_str(), &endptr);
     if (str.c_str() == endptr)
-        return {};
+        return std::nullopt;
     if (value == 0 && errno == EINVAL)
-        return {};
+        return std::nullopt;
     if ((value == HUGE_VAL || value == -HUGE_VAL) && errno == ERANGE)
-        return {};
+        return std::nullopt;
     return value;
 }
 

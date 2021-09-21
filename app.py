@@ -90,9 +90,10 @@ def get_python_libname():
 
 def on_build_success(modlist, build_path):
     import os
+    import glob
+    import shutil
     libpath = os.path.join(build_path, "lib")
     if "py" in modlist:
-        import glob
         python_libname = get_python_libname()
         if python_libname:
             lib_pattern = os.path.join(libpath, "libsihd_py*.so")
@@ -100,4 +101,4 @@ def on_build_success(modlist, build_path):
             for lib in libs:
                 pybind11_compliant = lib.replace("libsihd_py", "sihd")
                 pybind11_compliant = pybind11_compliant.replace(".so", python_libname)
-                os.symlink(lib, pybind11_compliant)
+                shutil.copyfile(lib, pybind11_compliant)

@@ -34,7 +34,10 @@ namespace test
     {
         std::string libpath = getenv("LIB_PATH");
         if (libpath.empty() == false)
+        {
+            TRACE("Changing directory to: " << libpath);
             chdir(libpath.c_str());
+        }
         pybind11::scoped_interpreter guard{};
         EXPECT_NO_THROW(pybind11::exec(R"(
             import sihd_core
