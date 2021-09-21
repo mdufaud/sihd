@@ -136,6 +136,14 @@ Process &   Process::stdout_to(int fd)
     return *this;
 }
 
+Process &   Process::stdout_to(Process & proc)
+{
+    this->_add_pipe(_stdout);
+    proc.stdin_from(_stdout.fd_read);
+    _stdout.fd_read = -1;
+    return *this;
+}
+
 bool   Process::stdout_to_file(const std::string & path, bool append)
 {
     return this->_fdw_to_file(_stdout, path, append);
@@ -161,10 +169,19 @@ Process &   Process::stderr_to(int fd)
     return *this;
 }
 
+Process &   Process::stderr_to(Process & proc)
+{
+    this->_add_pipe(_stderr);
+    proc.stdin_from(_stderr.fd_read);
+    _stderr.fd_read = -1;
+    return *this;
+}
+
 bool   Process::stderr_to_file(const std::string & path, bool append)
 {
     return this->_fdw_to_file(_stderr, path, append);
 }
+
 
 // Private fdw setters
 
@@ -349,6 +366,18 @@ bool    Process::end()
     return ret;
 }
 
+bool    Process::kill(int sig)
+{
+    bool ret = this->has_run();
+    if (ret)
+    {
+        ret = ::kill(this->pid(), sig) >= 0;
+        if (!ret)
+            LOG(error, "Process: could not kill: " << strerror(errno));
+    }
+    return ret;
+}
+
 // Check process
 
 bool    Process::has_run()
@@ -356,21 +385,16 @@ bool    Process::has_run()
     return _pid >= 0;
 }
 
-std::optional<int>  Process::wait()
+std::optional<int>  Process::wait(int options)
 {
     if (this->has_run())
     {
         int st;
-        waitpid(_pid, &st, 0);
+        waitpid(_pid, &st, options);
         _status = st;
         return st;
     }
     return std::nullopt;
-}
-
-std::optional<bool>    Process::has_stopped()
-{
-    return _status ? std::optional<bool>{WIFSTOPPED(_status.value())} : std::nullopt;
 }
 
 std::optional<bool>    Process::has_exited()
@@ -383,9 +407,19 @@ std::optional<bool>    Process::has_core_dumped()
     return _status ? std::optional<bool>{WCOREDUMP(_status.value())} : std::nullopt;
 }
 
+std::optional<bool>    Process::has_stopped_by_signal()
+{
+    return _status ? std::optional<bool>{WIFSTOPPED(_status.value())} : std::nullopt;
+}
+
 std::optional<bool>    Process::has_exited_by_signal()
 {
     return _status ? std::optional<bool>{WIFSIGNALED(_status.value())} : std::nullopt;
+}
+
+std::optional<bool>  Process::has_continued()
+{
+    return _status ? std::optional<bool>{WIFCONTINUED(_status.value())} : std::nullopt;
 }
 
 std::optional<int>  Process::signal_exit_number()

@@ -42,11 +42,10 @@ namespace test
         EXPECT_EQ(proc.return_code(), std::nullopt);
         
         EXPECT_TRUE(proc.run());
-        status = proc.wait();
+        status = proc.wait(WUNTRACED | WCONTINUED);
         EXPECT_TRUE(status.has_value());
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 0);
-
         EXPECT_TRUE(proc.end());
     }
 
@@ -132,6 +131,86 @@ namespace test
         EXPECT_EQ(Files::read_all(test_file).value(), "hello world\n");
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 0);
+    }
+
+    TEST_F(TestProcess, test_process_chain)
+    {
+        std::string output;
+        Process echo{"echo", "hello world"};
+        Process wc{"wc", "-c"};
+        Process cat{"cat", "-e"};
+
+        echo.stdout_to(wc);
+        wc.stdout_to(cat);
+        cat.stdout_to(output);
+
+        EXPECT_TRUE(echo.run());
+        EXPECT_TRUE(wc.run());
+        EXPECT_TRUE(cat.run());
+
+        EXPECT_TRUE(echo.end());
+        EXPECT_TRUE(wc.end());
+        EXPECT_TRUE(cat.end());
+
+        echo.wait();
+        wc.wait();
+        cat.wait();
+
+        EXPECT_EQ(output, "12$\n");
+
+        EXPECT_TRUE(echo.has_exited());
+        EXPECT_EQ(echo.return_code(), 0);
+
+        EXPECT_TRUE(wc.has_exited());
+        EXPECT_EQ(wc.return_code(), 0);
+
+        EXPECT_TRUE(cat.has_exited());
+        EXPECT_EQ(cat.return_code(), 0);
+    }
+
+    TEST_F(TestProcess, test_process_stderr)
+    {
+        std::string output;
+        Process ls{"ls", "/bli/blah/blouh"};
+
+        ls.stderr_to(output);
+        EXPECT_TRUE(ls.run());
+        EXPECT_TRUE(ls.end());
+        ls.wait();
+        EXPECT_EQ(output, "ls: cannot access '/bli/blah/blouh': No such file or directory\n");
+        EXPECT_TRUE(ls.has_exited());
+        EXPECT_EQ(ls.return_code(), 2);
+    }
+
+    TEST_F(TestProcess, test_process_signal_kill)
+    {
+        Process cat{"cat"};
+
+        EXPECT_TRUE(cat.run());
+        EXPECT_TRUE(cat.kill(SIGTERM));
+        cat.wait(WUNTRACED | WCONTINUED);
+        EXPECT_TRUE(cat.has_exited());
+        EXPECT_TRUE(cat.has_exited_by_signal());
+        TRACE("Signal exit number: " << cat.signal_exit_number().value());
+        EXPECT_EQ(cat.signal_exit_number().value(), SIGTERM);
+    }
+
+        TEST_F(TestProcess, test_process_signal_stop)
+    {
+        Process cat{"cat"};
+
+        EXPECT_TRUE(cat.run());
+        EXPECT_TRUE(cat.kill(SIGSTOP));
+        cat.wait(WUNTRACED | WCONTINUED);
+        EXPECT_TRUE(cat.has_stopped_by_signal());
+        TRACE("Signal stop number: " << cat.signal_stop_number().value());
+        EXPECT_EQ(cat.signal_stop_number().value(), SIGSTOP);
+
+        EXPECT_TRUE(cat.kill(SIGCONT));
+        cat.wait(WUNTRACED | WCONTINUED);
+
+        EXPECT_TRUE(cat.kill());
+        cat.wait();
     }
 
 }

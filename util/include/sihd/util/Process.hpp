@@ -6,6 +6,7 @@
 # include <sihd/util/platform.hpp>
 # include <functional>
 # include <optional>
+# include <signal.h>
 
 namespace sihd::util
 {
@@ -29,29 +30,34 @@ class Process: virtual public IRunnable
         Process & stdout_to(std::function<void(const char *, ssize_t)> fun);
         Process & stdout_to(std::string & output);
         Process & stdout_to(int fd);
+        Process & stdout_to(Process & proc);
         bool stdout_to_file(const std::string & path, bool append = false);
 
         Process & stderr_to(std::function<void(const char *, ssize_t)> fun);
         Process & stderr_to(std::string & output);
         Process & stderr_to(int fd);
+        Process & stderr_to(Process & proc);
         bool stderr_to_file(const std::string & path, bool append = false);
 
         void clear_argv();
         Process & add_argv(const std::string & arg);
         Process & add_argv(const std::vector<std::string> & args);
 
-        std::optional<bool> has_stopped();
         std::optional<bool> has_exited();
         std::optional<bool> has_core_dumped();
+        std::optional<bool> has_stopped_by_signal();
         std::optional<bool> has_exited_by_signal();
+        std::optional<bool> has_continued();
         std::optional<int>  signal_exit_number();
         std::optional<int>  signal_stop_number();
         std::optional<int>  return_code();
 
-        std::optional<int> wait();
+        std::optional<int> wait(int options = 0);
         bool process();
         bool end();
         bool has_run();
+        bool kill(int sig = SIGTERM);
+        pid_t pid() { return _pid; };
 
     private:
         struct FileDescWrapper {
@@ -78,7 +84,7 @@ class Process: virtual public IRunnable
         void _fdw_to(FileDescWrapper & fdw, int fd);
         bool _fdw_to_file(FileDescWrapper & fdw, const std::string & path, bool append);
 
-        int _pid;
+        pid_t _pid;
         FileDescWrapper _stdin;
         FileDescWrapper _stdout;
         FileDescWrapper _stderr;

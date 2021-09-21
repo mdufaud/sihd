@@ -364,7 +364,7 @@ std::optional<std::string>     Files::read_all(const std::string & path)
         is.close();
         return buffer.str();
     }
-    return {};
+    return std::nullopt;
 }
 
 }
