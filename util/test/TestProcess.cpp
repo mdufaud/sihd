@@ -46,7 +46,6 @@ namespace test
         EXPECT_TRUE(status.has_value());
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 0);
-        EXPECT_TRUE(proc.end());
     }
 
     TEST_F(TestProcess, test_process_out)
@@ -60,7 +59,6 @@ namespace test
         EXPECT_EQ(output, "");
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(output, "hello world\n");
-        proc.wait();
 
         output.clear();
         proc.clear();
@@ -68,7 +66,6 @@ namespace test
         EXPECT_TRUE(proc.run());
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(output, "hello world\n");
-        proc.wait();
 
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 0);
@@ -87,7 +84,6 @@ namespace test
         proc.stdin_from("3");
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(output, "hello world123");
-        proc.wait();
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 0);
     }
@@ -110,7 +106,6 @@ namespace test
         EXPECT_TRUE(proc.run());
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(output, "hello world");
-        proc.wait();
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 0);
     }
@@ -127,7 +122,6 @@ namespace test
         EXPECT_EQ(Files::read_all(test_file).value(), "");
         EXPECT_TRUE(proc.run());
         EXPECT_TRUE(proc.end());
-        proc.wait();
         EXPECT_EQ(Files::read_all(test_file).value(), "hello world\n");
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 0);
@@ -152,10 +146,6 @@ namespace test
         EXPECT_TRUE(wc.end());
         EXPECT_TRUE(cat.end());
 
-        echo.wait();
-        wc.wait();
-        cat.wait();
-
         EXPECT_EQ(output, "12$\n");
 
         EXPECT_TRUE(echo.has_exited());
@@ -176,7 +166,6 @@ namespace test
         ls.stderr_to(output);
         EXPECT_TRUE(ls.run());
         EXPECT_TRUE(ls.end());
-        ls.wait();
         EXPECT_EQ(output, "ls: cannot access '/bli/blah/blouh': No such file or directory\n");
         EXPECT_TRUE(ls.has_exited());
         EXPECT_EQ(ls.return_code(), 2);
@@ -195,7 +184,7 @@ namespace test
         EXPECT_EQ(cat.signal_exit_number().value(), SIGTERM);
     }
 
-        TEST_F(TestProcess, test_process_signal_stop)
+    TEST_F(TestProcess, test_process_signal_stop)
     {
         Process cat{"cat"};
 
@@ -211,6 +200,73 @@ namespace test
 
         EXPECT_TRUE(cat.kill());
         cat.wait();
+    }
+
+    TEST_F(TestProcess, test_process_fun)
+    {
+        Process proc([]() -> int {
+            std::cout << "hello world";
+            std::cerr << "nope";
+            return 1;
+        });
+
+        std::string out;
+        std::string err;
+        proc.stdout_to(out);
+        proc.stderr_to(err);
+
+        EXPECT_TRUE(proc.run());
+        EXPECT_TRUE(proc.end());
+
+        EXPECT_TRUE(proc.has_exited());
+        EXPECT_EQ(proc.return_code(), 1);
+
+        EXPECT_EQ(out, "hello world");
+        EXPECT_EQ(err, "nope");
+    }
+
+    TEST_F(TestProcess, test_process_file)
+    {
+        std::string test_path = getenv("TEST_PATH");
+        filesystem::path path = filesystem::path(test_path) / "util_process";
+        filesystem::remove_all(path);
+        filesystem::create_directories(path);
+        filesystem::path stdout_path = path / "stdout.txt";
+        filesystem::path stderr_path = path / "stderr.txt";
+
+        Process proc([]() -> int {
+            std::cout << "hello world";
+            std::cerr << "nope";
+            return 1;
+        });
+
+        std::string out;
+        std::string err;
+        EXPECT_TRUE(proc.stdout_to_file(stdout_path.generic_string()));
+        EXPECT_TRUE(proc.stderr_to_file(stderr_path.generic_string()));
+
+        TRACE("Redirecting stdout to: " << stdout_path);
+        TRACE("Redirecting stderr to: " << stderr_path);
+
+        EXPECT_TRUE(proc.run());
+        EXPECT_TRUE(proc.end());
+
+        EXPECT_TRUE(proc.has_exited());
+        EXPECT_EQ(proc.return_code(), 1);
+
+        EXPECT_EQ(Files::read_all(stdout_path.generic_string()).value(), "hello world");
+        EXPECT_EQ(Files::read_all(stderr_path.generic_string()).value(), "nope");
+    }
+
+    TEST_F(TestProcess, test_process_bad_cmd)
+    {
+        Process proc{"ellesse", "-la"};
+
+        EXPECT_FALSE(proc.run());
+        auto status = proc.wait();
+        EXPECT_FALSE(status.has_value());
+        EXPECT_FALSE(proc.has_exited());
+        EXPECT_EQ(proc.return_code(), std::nullopt);
     }
 
 }

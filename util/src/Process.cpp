@@ -26,9 +26,25 @@ namespace sihd::util
 
 LOGGER;
 
+Process::Process()
+{
+    _pid = -1;
+    this->open_mode = SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE;
+    this->clear();
+}
+
+Process::Process(std::function<int()> fun)
+{
+    _pid = -1;
+    this->open_mode = SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE;
+    this->clear();
+    _fun_to_execute = fun;
+}
+
 Process::Process(const std::vector<std::string> & args)
 {
     _pid = -1;
+    this->open_mode = SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE;
     this->clear();
     _argv.reserve(args.size() + 1);
     for (const std::string & arg: args)
@@ -38,6 +54,7 @@ Process::Process(const std::vector<std::string> & args)
 Process::Process(std::initializer_list<const char *> args)
 {
     _pid = -1;
+    this->open_mode = SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE;
     this->clear();
     _argv.reserve(args.size() + 1);
     std::copy(args.begin(), args.end(), std::back_inserter(_argv));
@@ -62,13 +79,25 @@ void    Process::clear()
 
 void    Process::_clear(FileDescWrapper & fdw)
 {
-    fdw.do_fun = false;
     fdw.append_to_file = false;
     fdw.from_file = false;
+    fdw.fun = nullptr;
     fdw.str_out.reset();
 }
 
 // Argv
+
+Process &   Process::set_function(std::nullptr_t)
+{
+    _fun_to_execute = nullptr;
+    return *this;
+}
+
+Process &   Process::set_function(std::function<int()> fun)
+{
+    _fun_to_execute = std::move(fun);
+    return *this;
+}
 
 void    Process::clear_argv()
 {
@@ -77,7 +106,7 @@ void    Process::clear_argv()
 
 Process &   Process::add_argv(const std::string & arg)
 {
-    if (_argv.back() == NULL)
+    if (_argv.size() > 0 && _argv.back() == NULL)
         _argv.pop_back();
     _argv.push_back(arg.c_str());
     return *this;
@@ -85,7 +114,7 @@ Process &   Process::add_argv(const std::string & arg)
 
 Process &   Process::add_argv(const std::vector<std::string> & args)
 {
-    if (_argv.back() == NULL)
+    if (_argv.size() > 0 && _argv.back() == NULL)
         _argv.pop_back();
     _argv.reserve(_argv.size() + args.size() + 1);
     for (const std::string & arg: args)
@@ -120,7 +149,7 @@ bool   Process::stdin_from_file(const std::string & path)
 
 Process &   Process::stdout_to(std::function<void(const char *, ssize_t)> fun)
 {
-    this->_fdw_to(_stdout, fun);
+    this->_fdw_to(_stdout, std::move(fun));
     return *this;
 }
 
@@ -153,7 +182,7 @@ bool   Process::stdout_to_file(const std::string & path, bool append)
 
 Process &   Process::stderr_to(std::function<void(const char *, ssize_t)> fun)
 {
-    this->_fdw_to(_stderr, fun);
+    this->_fdw_to(_stderr, std::move(fun));
     return *this;
 }
 
@@ -185,11 +214,10 @@ bool   Process::stderr_to_file(const std::string & path, bool append)
 
 // Private fdw setters
 
-void    Process::_fdw_to(FileDescWrapper & fdw, std::function<void(const char *, ssize_t)> & fun)
+void    Process::_fdw_to(FileDescWrapper & fdw, std::function<void(const char *, ssize_t)> && fun)
 {
     this->_add_pipe(fdw);
-    fdw.do_fun = true;
-    fdw.fun = fun;
+    fdw.fun = std::move(fun);
 }
 
 void    Process::_fdw_to(FileDescWrapper & fdw, std::string & output)
@@ -207,8 +235,10 @@ bool    Process::_fdw_to_file(FileDescWrapper & fdw, const std::string & path, b
 {
     fdw.fd_write = open(path.c_str(),
                         O_WRONLY | O_CREAT | (append ? O_APPEND : 0),
-                        SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE);
-    if (fdw.fd_write < 0)
+                        this->open_mode);
+    if (fdw.fd_write >= 0)
+        fdw.append_to_file = append;
+    else
         LOG(error, "Process: could not open output file: " << path);
     return fdw.fd_write >= 0;
 }
@@ -244,6 +274,7 @@ void    Process::_close(int fd)
 std::pair<int, int> Process::_pipe()
 {
     int fd[2];
+
     if (pipe(fd) < 0)
         throw std::runtime_error("Cannot make pipe");
     // read - write;
@@ -263,14 +294,11 @@ void    Process::_add_pipe(FileDescWrapper & fdw)
 
 // Execution
 
-bool    Process::run()
+void    Process::_do_fork()
 {
-    int pid;
-
-    if (_argv.back() != NULL)
-        _argv.push_back(NULL);
+    pid_t pid;
     if ((pid = fork()) < 0)
-        return false;
+        throw std::runtime_error("Fork failed");
     if (pid == 0)
     {
         this->_dup_close(_stdin.fd_read, STDIN_FILENO);
@@ -279,7 +307,66 @@ bool    Process::run()
         this->_close(_stdout.fd_read);
         this->_dup_close(_stderr.fd_write, STDERR_FILENO);
         this->_close(_stderr.fd_read);
-        exit(execvp(_argv[0], const_cast<char * const *>(&(_argv[0]))));
+        exit(_fun_to_execute());
+    }
+    _pid = pid;
+}
+
+void    Process::_add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_to)
+{
+    if (dup_from >= 0 && dup_to >= 0)
+    {
+        posix_spawn_file_actions_adddup2(actions, dup_from, dup_to);
+        posix_spawn_file_actions_addclose(actions, dup_from);
+    }
+}
+
+void    Process::_add_close_action(posix_spawn_file_actions_t *actions, int fd)
+{
+    if (fd >= 0)
+        posix_spawn_file_actions_addclose(actions, fd);
+}
+
+bool    Process::_do_spawn()
+{
+    pid_t pid;
+    posix_spawn_file_actions_t actions;
+
+    posix_spawn_file_actions_init(&actions);
+    this->_add_dup_action(&actions, _stdin.fd_read, STDIN_FILENO);
+    this->_add_dup_action(&actions, _stdout.fd_write, STDOUT_FILENO);
+    this->_add_dup_action(&actions, _stderr.fd_write, STDERR_FILENO);
+    this->_add_close_action(&actions, _stdin.fd_write);
+    this->_add_close_action(&actions, _stdout.fd_read);
+    this->_add_close_action(&actions, _stderr.fd_read);
+    int err = posix_spawnp(&pid, _argv[0], &actions, nullptr,
+                            const_cast<char * const *>(&(_argv[0])),
+                            nullptr);
+    posix_spawn_file_actions_destroy(&actions);
+    if (err != 0)
+    {
+        LOG(error, "Process: " << strerror(errno));
+        return false;
+    }
+    _pid = pid;
+    return true;
+}
+
+bool    Process::run()
+{
+    if (_fun_to_execute)
+        this->_do_fork();
+    else
+    {
+        if (_argv.size() == 0)
+        {
+            LOG(error, "Process: Could not run process, no argv");
+            return false;
+        }
+        if (_argv.back() != NULL)
+            _argv.push_back(NULL);
+        if (this->_do_spawn() == false)
+            return false;
     }
     this->_close(_stdin.fd_read);
     this->_close(_stdout.fd_write);
@@ -287,7 +374,6 @@ bool    Process::run()
     _stdin.fd_read = -1;
     _stdout.fd_write = -1;
     _stderr.fd_write = -1;
-    _pid = pid;
     return true;
 }
 
@@ -328,7 +414,7 @@ bool    Process::_process_fd_out(FileDescWrapper & fdw)
         std::string & out = fdw.str_out.value().get();
         return this->_read_fd(fdw.fd_read, [&out] (const char *buffer, [[maybe_unused]] ssize_t ret) { out.append(buffer); });
     }
-    else if (fdw.do_fun)
+    else if (fdw.fun)
         return this->_read_fd(fdw.fd_read, fdw.fun);
     return true;
 }
@@ -362,6 +448,7 @@ bool    Process::end()
         this->_close(_stderr.fd_read);
         _stdout.fd_read = -1;
         _stderr.fd_read = -1;
+        this->wait();
     }
     return ret;
 }

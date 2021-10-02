@@ -6,21 +6,24 @@
 namespace sihd::util::time
 {
 
-std::time_t     to_micro(std::time_t nano);
-std::time_t     to_milli(std::time_t nano);
-std::time_t     to_sec(std::time_t nano);
-std::time_t     to_min(std::time_t nano);
-std::time_t     to_hour(std::time_t nano);
-std::time_t     to_day(std::time_t nano);
+double to_double(time_t sec, time_t usec);
+struct timeval from_double(double time);
 
-std::time_t     micro(std::time_t micro);
-std::time_t     milli(std::time_t milli);
-std::time_t     sec(std::time_t sec);
-std::time_t     min(std::time_t min);
-std::time_t     hour(std::time_t hour);
-std::time_t     day(std::time_t day);
+time_t to_micro(time_t nano);
+time_t to_milli(time_t nano);
+time_t to_sec(time_t nano);
+time_t to_min(time_t nano);
+time_t to_hour(time_t nano);
+time_t to_day(time_t nano);
 
-std::time_t     freq(double freq);
+time_t micro(time_t micro);
+time_t milli(time_t milli);
+time_t sec(time_t sec);
+time_t min(time_t min);
+time_t hour(time_t hour);
+time_t day(time_t day);
+
+time_t freq(double freq);
 
 };
 

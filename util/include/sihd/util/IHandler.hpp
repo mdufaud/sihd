@@ -4,12 +4,12 @@
 namespace sihd::util
 {
 
-template <typename T>
+template <typename ...T>
 class IHandler
 {
     public:
         virtual ~IHandler() {};
-        virtual bool    handle(T *obj) = 0;
+        virtual void handle(T... args) = 0;
 };
 
 }

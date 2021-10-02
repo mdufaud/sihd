@@ -13,7 +13,7 @@ class ObserverCallback: virtual public IObserver<T>
     public:
         ObserverCallback(std::function<void(T *)> fun)
         {
-            callback = fun;
+            callback = std::move(fun);
         };
         virtual ~ObserverCallback() {};
 
