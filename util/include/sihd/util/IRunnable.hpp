@@ -8,7 +8,7 @@ class IRunnable
 {
     public:
         virtual ~IRunnable() {};
-        virtual bool    run() = 0;
+        virtual bool run() = 0;
 };
 
 }

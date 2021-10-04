@@ -4,10 +4,13 @@
 namespace sihd::util
 {
 
+template <typename T>
 class IReader
 {
     public:
         virtual ~IReader() {};
+
+        virtual T read() = 0;
 };
 
 }

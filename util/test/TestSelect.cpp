@@ -1,22 +1,22 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Poll.hpp>
+#include <sihd/util/Select.hpp>
 #include <sihd/util/Handler.hpp>
 
 namespace test
 {
     LOGGER;
     using namespace sihd::util;
-    class TestPoll:   public ::testing::Test
+    class TestSelect:   public ::testing::Test
     {
         protected:
-            TestPoll()
+            TestSelect()
             {
                 sihd::util::LoggerManager::basic();
             }
 
-            virtual ~TestPoll()
+            virtual ~TestSelect()
             {
                 sihd::util::LoggerManager::clear_loggers();
             }
@@ -43,17 +43,17 @@ namespace test
             std::vector<int> _to_close;
     };
 
-    TEST_F(TestPoll, test_poll)
+    TEST_F(TestSelect, test_select)
     {
-        Poll poll;
-        poll.set_max_fds(2);
+        Select select;
+        select.set_max_fds(5);
 
         int fd[2];
         EXPECT_TRUE(pipe(fd) >= 0);
         _to_close.push_back(fd[0]);
         _to_close.push_back(fd[1]);
-        poll.set_read_fd(fd[0]);
-        poll.set_write_fd(fd[1]);
+        select.set_read_fd(fd[0]);
+        select.set_write_fd(fd[1]);
 
         auto write_handler = new Handler<int>([this] (int fd)
         {
@@ -74,17 +74,17 @@ namespace test
         });
         auto timeout_handler = new Handler<time_t, bool>([this] (time_t timespent, bool timedout)
         {
-            TRACE("Time spent in poll: " << time::to_micro(timespent) << " microsec (timed out ? " << timedout << ")");
+            TRACE("Time spent in select: " << time::to_micro(timespent) << " microsec (timed out ? " << timedout << ")");
             _timedout += (int)timedout;
         });
-        poll.set_handlers(read_handler, write_handler, timeout_handler);
+        select.set_handlers(read_handler, write_handler, timeout_handler);
 
         // first write from writing end of pipe
-        int res = poll.poll(10);
+        int res = select.select(10);
         // expect the write fd
         EXPECT_EQ(res, 1);
         // clearing the write fd so it does not write again
-        poll.clear_fd(fd[1]);
+        select.clear_fd(fd[1]);
 
         // nothing read yet
         EXPECT_EQ(strlen(buffer), 0u);
@@ -93,7 +93,7 @@ namespace test
         EXPECT_EQ(_timedout, 0);
 
         // read from reading end of pipe
-        res = poll.poll(10);
+        res = select.select(10);
         // expect the read fd
         EXPECT_EQ(res, 1);
 
@@ -104,7 +104,7 @@ namespace test
         EXPECT_EQ(_timedout, 0);
 
         // expect timeout
-        res = poll.poll(10);
+        res = select.select(10);
         EXPECT_EQ(res, 0);
 
         EXPECT_EQ(_write_count, 1);

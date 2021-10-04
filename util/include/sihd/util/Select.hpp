@@ -1,36 +1,38 @@
-#ifndef __SIHD_UTIL_POLL_HPP__
-# define __SIHD_UTIL_POLL_HPP__
+#ifndef __SIHD_UTIL_SELECT_HPP__
+# define __SIHD_UTIL_SELECT_HPP__
 
 # include <sihd/util/platform.hpp>
+
+# if !defined(__SIHD_WINDOWS__)
+#  include <sys/select.h>
+#  include <sys/resource.h> //rlim_t
+#  include <sys/time.h>
+# else
+typedef unsigned long rlim_t;
+#  include <stdint.h>
+#  include <winsock2.h>
+#  include <winsock.h>
+
+# endif
+
+# include <list>
+# include <mutex>
 # include <sihd/util/Observable.hpp>
 # include <sihd/util/IRunnable.hpp>
 # include <sihd/util/IHandler.hpp>
 # include <sihd/util/Clocks.hpp>
 # include <sihd/util/time.hpp>
-# include <vector>
-# include <mutex>
-
-# if !defined(__SIHD_WINDOWS__)
-#  include <sys/resource.h> //rlim_t
-#  include <poll.h> //pollfd
-# else
-typedef unsigned long rlim_t;
-#  include <winsock2.h>
-# endif
 
 namespace sihd::util
 {
 
-class Poll: virtual public IRunnable
+class Select
 {
     public:
-        Poll();
-        Poll(int limit);
-        virtual ~Poll();
+        Select();
+        virtual ~Select();
 
-        // can size the poll array in advance
-        void resize(int nfds);
-        // if limit is negative, look for the soft curr rlimit for RLIMIT_NOFILE
+        // if limit is negative, look for the soft curr rlimit for RLIMIT_NOFILE on linux or set to 512 in windows
         bool set_max_fds(int limit);
         int max_fds() { return _max_fds; };
 
@@ -47,24 +49,28 @@ class Poll: virtual public IRunnable
         bool run();
         void stop();
 
-        int poll(int milliseconds_timeout = -1);
+        int select(int milliseconds = -1);
 
     protected:
     
     private:
-        int _get_fd_index(int fd);
-        int _set_or_add_fd(int fd, short ev);
         void _init();
-        void _process(int poll_return, time_t nano_timespent);
+        void _setup_select();
+        int _do_select(int milliseconds);
+        void _process_select(int select_return, time_t nano_timespent);
 
         std::mutex _run_mutex;
-        int _timeout_milliseconds;
+        int _timeout;
         IHandler<int> *_read_handler_ptr;
         IHandler<int> *_write_handler_ptr;
         IHandler<time_t, bool> *_timeout_handler_ptr;
         bool _running;
+        int _highest_fd;
         rlim_t _max_fds;
-        std::vector<struct pollfd> _lst_fds;
+        std::list<int> _lst_read_fds;
+        std::list<int> _lst_write_fds;
+        fd_set _fds_read;
+        fd_set _fds_write;
         SystemClock _clock;
 };
 

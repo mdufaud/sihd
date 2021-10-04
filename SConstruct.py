@@ -181,7 +181,12 @@ elif compiler == "mingw":
         SHLIBSUFFIX = ".dll",
         LIBPREFIX = "",
     )
+    # for macro utilities in project
     base_env["CPPDEFINES"].append("_WIN64")
+    # to activate higher version of WIN functionnalities
+    base_env["CPPDEFINES"].append("_WIN32_WINNT=0x0600")
+    # for winsock2.h
+    base_env["LIBS"].append("ws2_32")
 elif compiler == "gcc":
     base_env.Append(
         CPPFLAGS = [

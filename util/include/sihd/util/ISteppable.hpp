@@ -8,7 +8,7 @@ class ISteppable
 {
     public:
         virtual ~ISteppable() {};
-        virtual bool    step() = 0;
+        virtual bool step() = 0;
 };
 
 }

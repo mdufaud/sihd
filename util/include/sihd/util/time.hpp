@@ -7,7 +7,8 @@ namespace sihd::util::time
 {
 
 double to_double(time_t sec, time_t usec);
-struct timeval from_double(double time);
+struct timeval tv_from_double(double time);
+struct timeval tv_from_milli(time_t milliseconds);
 
 time_t to_micro(time_t nano);
 time_t to_milli(time_t nano);

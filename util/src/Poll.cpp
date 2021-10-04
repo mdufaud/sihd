@@ -1,14 +1,15 @@
 #include <sihd/util/Poll.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/time.hpp>
 
 // sterror errno
 #include <string.h>
 #include <errno.h>
 
+#if !defined(__SIHD_WINDOWS__)
 // getrlimit
-#include <sys/time.h>
-#include <sys/resource.h>
+# include <sys/time.h>
+# include <sys/resource.h>
+#endif
 
 namespace sihd::util
 {
@@ -44,34 +45,37 @@ void    Poll::_init()
     _timeout_handler_ptr = nullptr;
     _read_handler_ptr = nullptr;
     _write_handler_ptr = nullptr;
-    _last_poll_time = 0;
     _timeout_milliseconds = -1; // infinite block
     _max_fds = 0;
 }
 
 int     Poll::_set_or_add_fd(int fd, short evt)
 {
-    if (fd < 0 || (size_t)fd >= _lst_fds.size())
+    if (fd < 0)
         return -1;
     int idx = -1;
     size_t i = 0;
     while (i < _lst_fds.size())
     {
         // take existing fd
-        if ( _lst_fds[i].fd == fd)
+        if ((int)_lst_fds[i].fd == fd)
         {
             idx = i;
             break ;
         }
         // take first free fd
-        if (idx < 0 && _lst_fds[i].fd == -1)
+        if (idx < 0 && (int)_lst_fds[i].fd == -1)
             idx = i;
         ++i;
     }
     if (idx < 0 && i < _max_fds)
     {
         // add new entry
-        _lst_fds.push_back({fd, evt, 0});
+        struct pollfd p;
+        p.fd = fd;
+        p.events = evt;
+        p.revents = 0;
+        _lst_fds.push_back(p);
         idx = i;
     }
     else if (idx >= 0)
@@ -85,22 +89,38 @@ int     Poll::_set_or_add_fd(int fd, short evt)
 
 int    Poll::_get_fd_index(int fd)
 {
-    if (fd < 0 || (size_t)fd >= _lst_fds.size())
+    if (fd < 0)
         return -1;
     size_t i = 0;
     while (i < _lst_fds.size())
     {
-        if (_lst_fds[i].fd == fd)
+        if ((int)_lst_fds[i].fd == fd)
             return i;
         ++i;
     }
     return -1;
 }
 
+void    Poll::resize(int nfds)
+{
+    if (nfds < 0)
+        return ;
+    _lst_fds.resize(nfds);
+    int i = 0;
+    while (i < nfds)
+    {
+        _lst_fds[i].events = 0;
+        _lst_fds[i].revents = 0;
+        _lst_fds[i].fd = -1;
+        ++i;
+    }
+}
+
 bool    Poll::set_max_fds(int limit)
 {
     if (limit < 0)
     {
+#if !defined(__SIHD_WINDOWS__)
         struct rlimit r;
         if (getrlimit(RLIMIT_NOFILE, &r) == -1)
         {
@@ -108,19 +128,13 @@ bool    Poll::set_max_fds(int limit)
             return false;
         }
         _max_fds = r.rlim_cur;
+# else
+        _max_fds = 512;
+# endif
     }
     else
         _max_fds = limit;
     LOG(debug, "Poll: setting file descriptors limit to " << _max_fds);
-    _lst_fds.resize(_max_fds);
-    rlim_t i = 0;
-    while (i < _max_fds)
-    {
-        _lst_fds[i].events = 0;
-        _lst_fds[i].revents = 0;
-        _lst_fds[i].fd = -1;
-        ++i;
-    }
     return true;
 }
 
@@ -153,7 +167,7 @@ void    Poll::set_timeout(int milliseconds)
 
 void    Poll::set_handlers(IHandler<int> *read_handler,
                             IHandler<int> *write_handler,
-                            IHandler<int> *timeout_handler)
+                            IHandler<time_t, bool> *timeout_handler)
 {
     this->set_read_handler(read_handler);
     this->set_write_handler(write_handler);
@@ -184,7 +198,11 @@ bool    Poll::run()
 int     Poll::poll(int milliseconds_timeout)
 {
     time_t before = _clock.now();
+#if !defined(__SIHD_WINDOWS__)
     int ret = ::poll(_lst_fds.data(), _lst_fds.size(), milliseconds_timeout);
+#else
+    int ret = ::WSAPoll(_lst_fds.data(), _lst_fds.size(), milliseconds_timeout);
+#endif
     time_t spent = _clock.now() - before;
     this->_process(ret, spent);
     return ret;
@@ -192,12 +210,17 @@ int     Poll::poll(int milliseconds_timeout)
 
 void    Poll::_process(int poll_return, time_t nano_timespent)
 {
-    if (poll_return == 0 && _timeout_handler_ptr != nullptr)
-        _timeout_handler_ptr->handle(time::to_milli(nano_timespent));
-    else if (poll_return < 0)
+    if (poll_return < 0)
+    {
         LOG(error, "Poll: " << strerror(errno));
+        return ;
+    }
+    else if (_timeout_handler_ptr != nullptr)
+        _timeout_handler_ptr->handle(nano_timespent, poll_return == 0);
+    if (poll_return <= 0)
+        return ;
     size_t i = 0;
-    while (poll_return > 0 && i < _lst_fds.size())
+    while (i < _lst_fds.size())
     {
         short revt = _lst_fds[i].revents;
         int fd = _lst_fds[i].fd;

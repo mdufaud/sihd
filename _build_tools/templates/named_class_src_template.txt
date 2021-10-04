@@ -8,7 +8,7 @@ LOGGER;
 
 CLASS_NAME::CLASS_NAME(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent)
-{   
+{
 }
 
 CLASS_NAME::~CLASS_NAME()
