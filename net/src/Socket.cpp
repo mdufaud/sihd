@@ -125,7 +125,8 @@ bool    Socket::open(const std::string & domain, const std::string & type, const
 
 bool    Socket::open(int domain, int type, int protocol)
 {
-    this->close();
+    if (this->is_open())
+        return false;
     _socket = ::socket(domain, type, protocol);
     if (_socket < 0)
         LOG(error, "Socket: " << strerror(errno));
@@ -249,53 +250,92 @@ bool    Socket::connect(sockaddr *addr, socklen_t addr_len)
     return true;
 }
 
-// TODO get_ip -> get_sockaddr_in
 ssize_t     Socket::send_to(const IpAddr & addr, void *data, size_t size)
 {
-    std::string ip = addr.get_ip(_type, _protocol, false);
-    if (ip.empty())
-        ip = addr.get_first_ipv4();
-    return this->send_to(ip, data, size);
+    sockaddr_in addr_in;
+
+    if (addr.get_sockaddr_in(&addr_in, _type, _protocol) == false
+        && addr.get_first_sockaddr_in(&addr_in) == false)
+        return false;
+    return this->send_to((sockaddr *)&addr_in, sizeof(sockaddr_in), data, size);
 }
 
 ssize_t     Socket::receive_from(const IpAddr & addr, void *data, size_t size)
 {
-    std::string ip = addr.get_ip(_type, _protocol, false);
-    if (ip.empty())
-        ip = addr.get_first_ipv4();
-    return this->receive_from(ip, data, size);
+    sockaddr_in addr_in;
+    
+    if (addr.get_sockaddr_in(&addr_in, _type, _protocol) == false
+        && addr.get_first_sockaddr_in(&addr_in) == false)
+        return false;
+    return this->receive_from((sockaddr *)&addr_in, sizeof(sockaddr_in), data, size);
+}
+
+bool    Socket::bind(const IpAddr & addr)
+{
+    sockaddr_in addr_in;
+    
+    if (addr.get_sockaddr_in(&addr_in, _type, _protocol) == false
+        && addr.get_first_sockaddr_in(&addr_in) == false)
+        return false;
+    return this->bind((sockaddr *)&addr_in, sizeof(sockaddr_in));
+}
+
+bool    Socket::connect(const IpAddr & addr)
+{
+    sockaddr_in addr_in;
+    
+    if (addr.get_sockaddr_in(&addr_in, _type, _protocol) == false
+        && addr.get_first_sockaddr_in(&addr_in) == false)
+        return false;
+    return this->connect((sockaddr *)&addr_in, sizeof(sockaddr_in));
+}
+
+bool    Socket::bind(const std::string & ip, int port)
+{
+    IpAddr::IpSockAddr ipsockaddr;
+
+    if (IpAddr::fill_sockaddr(ip, &ipsockaddr, port) == false)
+    {
+        LOG(error, "Socket: could not convert ip '" << ip << "' to sockaddr");
+        return -1;
+    }
+    return this->bind(ipsockaddr.addr, ipsockaddr.addr_len);
+}
+
+bool    Socket::connect(const std::string & ip, int port)
+{
+    IpAddr::IpSockAddr ipsockaddr;
+
+    if (IpAddr::fill_sockaddr(ip, &ipsockaddr, port) == false)
+    {
+        LOG(error, "Socket: could not convert ip '" << ip << "' to sockaddr");
+        return -1;
+    }
+    return this->connect(ipsockaddr.addr, ipsockaddr.addr_len);
 }
 
 ssize_t     Socket::send_to(const std::string & ip, void *data, size_t size)
 {
-    sockaddr_in addr_in;
-    sockaddr_in6 addr_in6;
-    sockaddr *addr = nullptr;
-    socklen_t addr_len = 0;
-    int type;
+    IpAddr::IpSockAddr ipsockaddr;
 
-    if (IpAddr::fill_sockaddr(ip, &addr, &addr_len, &type, &addr_in, &addr_in6) == false)
+    if (IpAddr::fill_sockaddr(ip, &ipsockaddr) == false)
     {
         LOG(error, "Socket: could not convert ip '" << ip << "' to sockaddr");
         return -1;
     }
-    return this->send_to(addr, (size_t)addr_len, data, size);
+    return this->send_to(ipsockaddr.addr, ipsockaddr.addr_len, data, size);
 }
 
 ssize_t     Socket::receive_from(const std::string & ip, void *data, size_t size)
 {
-    sockaddr_in addr_in;
-    sockaddr_in6 addr_in6;
-    sockaddr *addr = nullptr;
-    socklen_t addr_len = 0;
-    int type;
+    IpAddr::IpSockAddr ipsockaddr;
 
-    if (IpAddr::fill_sockaddr(ip, &addr, &addr_len, &type, &addr_in, &addr_in6) == false)
+    if (IpAddr::fill_sockaddr(ip, &ipsockaddr) == false)
     {
         LOG(error, "Socket: could not convert ip '" << ip << "' to sockaddr");
         return -1;
     }
-    return this->receive_from(addr, (size_t)addr_len, data, size);
+    return this->receive_from(ipsockaddr.addr, ipsockaddr.addr_len, data, size);
 }
 
 ssize_t     Socket::send(void *data, size_t size)

@@ -23,7 +23,7 @@ IpAddr::IpAddr(const std::string & host, int port, bool dns_lookup): _host(host)
 IpAddr::IpAddr(const sockaddr_in & addr, bool dns_lookup)
 {
     _host = IpAddr::ip_to_string(addr);
-    _port = addr.sin_port;
+    _port = ntohs(addr.sin_port);
     if (dns_lookup)
         this->do_lookup_dns(true);
     else
@@ -33,7 +33,7 @@ IpAddr::IpAddr(const sockaddr_in & addr, bool dns_lookup)
 IpAddr::IpAddr(const sockaddr_in6 & addr, bool dns_lookup)
 {
     _host = IpAddr::ip_to_string(addr);
-    _port = addr.sin6_port;
+    _port = ntohs(addr.sin6_port);
     if (dns_lookup)
         this->do_lookup_dns(true);
     else
@@ -53,9 +53,6 @@ void    IpAddr::_fill_dns_lookup_hints(struct addrinfo *hints)
 	hints->ai_socktype = 0;
 	hints->ai_protocol = 0;
 	hints->ai_flags = AI_CANONNAME;
-	hints->ai_canonname = NULL;
-	hints->ai_addr = NULL;
-	hints->ai_next = NULL;
 }
 
 IpAddr::IpInfo     IpAddr::_from_sockaddr(const sockaddr_in *addr_in, int socktype, int protocol)
@@ -99,14 +96,11 @@ std::optional<IpAddr::IpInfo> IpAddr::_from_addrinfo(addrinfo *info, bool ipv6)
 
 std::string IpAddr::fetch_ip_name(const std::string & ip)
 {
-    sockaddr_in addr_in;
-    sockaddr_in6 addr_in6;
-    sockaddr *addr = nullptr;
-    socklen_t addr_len = 0;
-    int type;
-    if (IpAddr::fill_sockaddr(ip, &addr, &addr_len, &type, &addr_in, &addr_in6) == false)
+    IpSockAddr ipsockaddr;
+
+    if (IpAddr::fill_sockaddr(ip, &ipsockaddr) == false)
         return "";
-    return IpAddr::fetch_ip_name(addr, addr_len);
+    return IpAddr::fetch_ip_name(ipsockaddr.addr, ipsockaddr.addr_len);
 }
 
 std::string IpAddr::fetch_ip_name(sockaddr *addr, socklen_t addr_len)
@@ -153,71 +147,53 @@ std::optional<IpAddr::DnsInfo> IpAddr::dns_lookup(const std::string & host, bool
     return dns;
 }
 
-bool    IpAddr::fill_sockaddr(const std::string & ip, sockaddr **addr, socklen_t *addrlen, int *type,
-                                sockaddr_in *addr_in, sockaddr_in6 *addr_in6, int port)
+bool    IpAddr::fill_sockaddr(const std::string & ip, IpSockAddr *ipsockaddr, int port)
 {
-    *addr = nullptr;
-    *addrlen = 0;
-    *type = 0;
-    if (IpAddr::is_valid_ipv4(ip))
+    if (IpAddr::to_sockaddr_in(&ipsockaddr->addr_in, ip, port))
     {
-        auto opt_sockaddr_in = IpAddr::to_sockaddr_in(ip, port);
-        if (!opt_sockaddr_in)
-            return false;
-        memcpy(addr_in, &opt_sockaddr_in.value(), sizeof(sockaddr_in));
-        *addr = (sockaddr *)addr_in;
-        *addrlen = sizeof(sockaddr_in);
-        *type = AF_INET;
+        ipsockaddr->addr = (sockaddr *)&ipsockaddr->addr_in;
+        ipsockaddr->addr_len = sizeof(sockaddr_in);
+        ipsockaddr->type = AF_INET;
     }
-    else if (IpAddr::is_valid_ipv6(ip))
+    else if (IpAddr::to_sockaddr_in6(&ipsockaddr->addr_in6, ip, port))
     {
-        auto opt_sockaddr_in6 = IpAddr::to_sockaddr_in6(ip, port);
-        if (!opt_sockaddr_in6)
-            return false;
-        memcpy(addr_in6, &opt_sockaddr_in6.value(), sizeof(sockaddr_in6));
-        *addr = (sockaddr *)addr_in6;
-        *addrlen = sizeof(sockaddr_in6);
-        *type = AF_INET6;
+        ipsockaddr->addr = (sockaddr *)&ipsockaddr->addr_in6;
+        ipsockaddr->addr_len = sizeof(sockaddr_in6);
+        ipsockaddr->type = AF_INET6;
     }
-    else
-        return false;
-    return true;
+    return ipsockaddr->addr != nullptr;
 }
 
-std::optional<sockaddr_in>   IpAddr::to_sockaddr_in(const std::string & ip, int port)
+bool   IpAddr::to_sockaddr_in(sockaddr_in *addr, const std::string & ip, int port)
 {
-    sockaddr_in addr;
-
-    memset(&addr, 0, sizeof(sockaddr_in));
-    int ret = inet_pton(AF_INET, ip.c_str(), &(addr.sin_addr));
+    // memset(addr, 0, sizeof(sockaddr_in));
+    int ret = inet_pton(AF_INET, ip.c_str(), &addr->sin_addr);
     if (ret <= 0)
     {
         // 0 is returned if src does not contain a character string representing a valid network address in the specified address family
         if (ret == -1)
             LOG(error, "IpAddr: to_sockaddr_in error for ip '" << ip << "': " << strerror(errno));
-        return std::nullopt;
+        return false;
     }
-    addr.sin_family = AF_INET;
-    addr.sin_port = port;
-    return addr;
+    addr->sin_family = AF_INET;
+    addr->sin_port = htons(port);
+    return true;
 }
 
-std::optional<sockaddr_in6>  IpAddr::to_sockaddr_in6(const std::string & ip, int port)
+bool  IpAddr::to_sockaddr_in6(sockaddr_in6 *addr, const std::string & ip, int port)
 {
-    sockaddr_in6 addr;
-
-    memset(&addr, 0, sizeof(sockaddr_in6));
-    int ret = inet_pton(AF_INET6, ip.c_str(), &(addr.sin6_addr));
+    // memset(addr, 0, sizeof(sockaddr_in6));
+    int ret = inet_pton(AF_INET6, ip.c_str(), &addr->sin6_addr);
     if (ret <= 0)
     {
         // 0 is returned if src does not contain a character string representing a valid network address in the specified address family
         if (ret == -1)
             LOG(error, "IpAddr: to_sockaddr_in6 error for ip '" << ip << "': " << strerror(errno));
-        return std::nullopt;
+        return false;
     }
-    addr.sin6_family = AF_INET6;
-    addr.sin6_port = port;
-    return addr;
+    addr->sin6_family = AF_INET6;
+    addr->sin6_port = htons(port);
+    return true;
 }
 
 bool    IpAddr::is_valid_ipv4(const std::string & ip)
@@ -249,32 +225,30 @@ std::string     IpAddr::ip_to_string(const sockaddr_in6 & addr_in)
 
 // Instance methods
 
-std::optional<sockaddr_in>  IpAddr::get_sockaddr_in(int socktype, int protocol) const
+bool  IpAddr::get_sockaddr_in(sockaddr_in *addr, int socktype, int protocol) const
 {
     const IpInfo *info = this->_get_ip_info(socktype, protocol, false);
     if (info != nullptr)
     {
-        sockaddr_in addr;
-        addr.sin_family = AF_INET;
-        addr.sin_port = _port;
-        memcpy(&addr.sin_addr, &info->addr, sizeof(in_addr));
-        return addr;
+        memset(addr, 0, sizeof(sockaddr_in));
+        addr->sin_family = AF_INET;
+        addr->sin_port = _port;
+        memcpy(&addr->sin_addr, &info->addr, sizeof(in_addr));
     }
-    return std::nullopt;
+    return info != nullptr;
 }
 
-std::optional<sockaddr_in6>  IpAddr::get_sockaddr_in6(int socktype, int protocol) const
+bool  IpAddr::get_sockaddr_in6(sockaddr_in6 *addr, int socktype, int protocol) const
 {
     const IpInfo *info = this->_get_ip_info(socktype, protocol, true);
     if (info != nullptr)
     {
-        sockaddr_in6 addr;
-        addr.sin6_family = AF_INET6;
-        addr.sin6_port = _port;
-        memcpy(&addr.sin6_addr, &info->addr6, sizeof(in6_addr));
-        return addr;
+        memset(addr, 0, sizeof(sockaddr_in6));
+        addr->sin6_family = AF_INET6;
+        addr->sin6_port = _port;
+        memcpy(&addr->sin6_addr, &info->addr6, sizeof(in6_addr));
     }
-    return std::nullopt;
+    return info != nullptr;
 }
 
 std::string IpAddr::get_ip(int socktype, int protocol, bool ipv6) const
@@ -291,6 +265,7 @@ bool    IpAddr::do_lookup_dns(bool ipv6)
     if (opt_dns)
     {
         _dns = opt_dns.value();
+        // if dns returned an IP as hostname
         if (IpAddr::is_valid_ip(_dns.hostname))
             _dns.hostname = IpAddr::fetch_ip_name(_dns.hostname);
         _dns.resolved = true;
@@ -321,23 +296,17 @@ void    IpAddr::_add_ip(const std::string & ip, int socktype, int protocol)
         if (info.ip == ip && info.socktype == socktype && info.protocol == protocol)
             return ;
     }
-    if (this->is_valid_ipv6(ip))
+    sockaddr_in addr_in;
+    sockaddr_in6 addr_in6;
+    if (IpAddr::to_sockaddr_in6(&addr_in6, ip))
     {
-        auto opt_addr_in6 = IpAddr::to_sockaddr_in6(ip);
-        if (opt_addr_in6)
-        {
-            IpInfo ipinfo = IpAddr::_from_sockaddr(&opt_addr_in6.value(), socktype, protocol);
-            _dns.lst_ip.push_back(ipinfo);
-        }
+        IpInfo ipinfo = IpAddr::_from_sockaddr(&addr_in6, socktype, protocol);
+        _dns.lst_ip.push_back(ipinfo);
     }
-    else if (this->is_valid_ipv4(ip))
+    else if (IpAddr::to_sockaddr_in(&addr_in, ip))
     {
-        auto opt_addr_in = IpAddr::to_sockaddr_in(ip);
-        if (opt_addr_in)
-        {
-            IpInfo ipinfo = IpAddr::_from_sockaddr(&opt_addr_in.value(), socktype, protocol);
-            _dns.lst_ip.push_back(ipinfo);
-        }
+        IpInfo ipinfo = IpAddr::_from_sockaddr(&addr_in, socktype, protocol);
+        _dns.lst_ip.push_back(ipinfo);
     }
 }
 

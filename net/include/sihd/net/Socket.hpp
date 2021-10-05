@@ -11,6 +11,10 @@
 # if !defined(__SIHD_WINDOWS__)
 #  include <sys/un.h>
 #  include <netinet/tcp.h>
+# else
+#  define SHUT_RD SD_RECEIVE
+#  define SHUT_WR SD_SEND
+#  define SHUT_RDWR SD_BOTH
 # endif
 
 namespace sihd::net
@@ -24,7 +28,7 @@ class Socket:   virtual public ISender,
         Socket();
         virtual ~Socket();
 
-        // Static utilities for socket manipulation //
+        // Class utilities for socket manipulation //
 
         // returns true if getpeername worked and the provided addr_len is still the same
         static bool   get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len);
@@ -40,7 +44,7 @@ class Socket:   virtual public ISender,
         // Operations on internal socket //
 
         bool open(const std::string & domain, const std::string & type, const std::string & protocol);
-        bool open(int domain, int type, int protocol);
+        bool open(int domain, int socket_type, int protocol);
         bool close();
         bool shutdown();
         bool is_open() { return _socket >= 0; }
@@ -93,8 +97,8 @@ class Socket:   virtual public ISender,
         ssize_t receive_from(const sockaddr_in6 & addr, void *data, size_t size)
             { return this->receive_from((sockaddr *)&addr, sizeof(sockaddr_in6), data, size); }
         
-        bool bind(const std::string & ip);
-        bool connect(const std::string & ip);
+        bool bind(const std::string & ip, int port);
+        bool connect(const std::string & ip, int port);
         ssize_t send_to(const std::string & ip, void *data, size_t size);
         ssize_t receive_from(const std::string & ip, void *data, size_t size);
 

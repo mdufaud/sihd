@@ -16,7 +16,7 @@ struct SmartNodeDeleter
             Named *n = dynamic_cast<Named *>(ptr);
             if (n != nullptr)
             {
-                if (n->get_parent() == nullptr)
+                if (n->is_owned_by_parent() == false)
                     delete n;
             }
             else

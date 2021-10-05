@@ -42,15 +42,13 @@ bool    Waitable::wait(std::time_t nano_timestamp)
         _condition.wait(lock);
         return true;
     }
-    return _condition.wait_until(lock, system_clock::from_time_t(nano_timestamp))
-            == std::cv_status::timeout;
+    return _condition.wait_until(lock, system_clock::from_time_t(nano_timestamp)) == std::cv_status::timeout;
 }
 
 bool    Waitable::wait_for(std::time_t nano_duration)
 {
     std::unique_lock lock(_mutex);
-    return _condition.wait_for(lock, std::chrono::nanoseconds(nano_duration))
-            == std::cv_status::timeout;
+    return _condition.wait_for(lock, std::chrono::nanoseconds(nano_duration)) == std::cv_status::timeout;
 }
 
 bool    Waitable::wait_loop(std::time_t nano_duration, uint32_t times)

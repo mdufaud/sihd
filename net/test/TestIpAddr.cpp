@@ -58,6 +58,7 @@ namespace test
         EXPECT_EQ(addr_local.get_first_ipv4(), "127.0.0.1");
         EXPECT_EQ(addr_local.get_protocol_ip(Ip::protocol("ip")), "127.0.0.1");
 
+        // does not require internet
         TRACE("localhost with dns lookup");
         IpAddr addr_dns("localhost");
         EXPECT_EQ(addr_dns.hostname(), "localhost");
