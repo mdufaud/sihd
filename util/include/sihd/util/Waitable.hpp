@@ -14,11 +14,11 @@ class Waitable
         Waitable();
         virtual ~Waitable();
 
-        // notify condition x times - when < 0 notifies all
-        void    notify(int times = -1);
+        void    notify(int times);
+        void    notify_all();
 
-        // wait until timeout - when < 0 infinite wait -- returns true if timed out
-        bool    wait(std::time_t nano_timestamp = -1);
+        void    infinite_wait();
+        bool    wait(std::time_t nano_timestamp);
         // wait for x nanoseconds -- returns true if timed out
         bool    wait_for(std::time_t nano_duration);
         // wait X notifications for a duration

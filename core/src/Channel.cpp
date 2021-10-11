@@ -77,13 +77,13 @@ std::time_t     Channel::timestamp()
     return _timestamp;
 }
 
-bool    Channel::copy_to(IArray *arr)
+bool    Channel::copy_to(IArray & arr)
 {
     std::lock_guard lock(_arr_mutex);
-    return arr->copy_from(_array_ptr);
+    return arr.copy_from(*_array_ptr);
 }
 
-bool    Channel::write(IArray *arr)
+bool    Channel::write(const IArray & arr)
 {
     if (_notifying)
     {
@@ -107,12 +107,12 @@ bool    Channel::write(IArray *arr)
         if (_array_ptr->is_same_type(arr) == false)
         {
             LOG(error, "Channel: cannot write an array from different type: "
-                << arr->data_type_to_string() << " != " << _array_ptr->data_type_to_string());
+                << arr.data_type_to_string() << " != " << _array_ptr->data_type_to_string());
         }
-        else if (_array_ptr->byte_capacity() <= arr->byte_size())
+        else if (_array_ptr->byte_capacity() <= arr.byte_size())
         {
             LOG(error, "Channel: cannot write an array with too many bytes: "
-                    << arr->byte_size() << " > " << _array_ptr->byte_capacity());
+                    << arr.byte_size() << " > " << _array_ptr->byte_capacity());
         }
     }
     return ret;

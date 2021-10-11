@@ -48,7 +48,7 @@ class Channel:  public Named,
             return ArrayUtil::cast_array<T>(_array_ptr);
         }
 
-        bool copy_to(IArray *arr);
+        bool copy_to(IArray & arr);
 
         template <typename T>
         T   read(size_t idx)
@@ -57,7 +57,7 @@ class Channel:  public Named,
             return ArrayUtil::read_array<T>(_array_ptr, idx);
         }
 
-        bool write(IArray *arr);
+        bool write(const IArray & arr);
 
         template <typename T>
         bool write(size_t idx, T value)

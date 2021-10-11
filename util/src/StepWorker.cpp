@@ -62,7 +62,7 @@ bool    StepWorker::on_worker_start()
 
 bool    StepWorker::on_worker_stop()
 {
-    _waitable.notify();
+    _waitable.notify_all();
     return true;
 }
 

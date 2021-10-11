@@ -155,6 +155,11 @@ MODULES_NAME_SPLIT = $(subst $(COMMA), ,$(MODULES_NAME))
 TEST_NAME = $(word 3, $(MAKECMDGOALS))$(t)
 TEST_ARGS = --gtest_death_test_style=threadsafe --gtest_shuffle
 
+ifeq ($(MODULES_NAME),all)
+	TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
+	MODULES_NAME = 
+endif
+
 ifneq ($(MODULES_NAME), )
 	TEST_EXEC = $(foreach var, $(MODULES_NAME_SPLIT), $(TEST_BIN_PATH)/$(APP_NAME)_$(var))
 endif

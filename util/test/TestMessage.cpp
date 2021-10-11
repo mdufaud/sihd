@@ -65,12 +65,11 @@ namespace test
         Message msg("message");
 
         EXPECT_TRUE(msg.add_field<bool>("bool"));
-        EXPECT_TRUE(msg.add_field<uint32_t>("uint", 4));
-        EXPECT_TRUE(msg.add_field<float>("float", 8));
+        EXPECT_TRUE(msg.add_field<uint32_t>("uint", 2));
+        EXPECT_TRUE(msg.add_field<float>("float", 5));
         EXPECT_TRUE(msg.finish());
         msg.print_tree();
-        EXPECT_EQ(msg.get_field_byte_size(),
-            sizeof(bool) + sizeof(uint32_t) * 4 + sizeof(float) * 8);
+        EXPECT_EQ(msg.get_field_byte_size(), sizeof(bool) + sizeof(uint32_t) * 2 + sizeof(float) * 5);
 
         // Making a fake buffer to fill the message
         ArrByte    buf;
@@ -78,11 +77,8 @@ namespace test
         ArrUInt    iarr;
         ArrFloat   farr;
 
-        buf.resize(1 + 4 * sizeof(int) + 8 * sizeof(float));
-        barr.assign_bytes(buf.buf(), sizeof(bool));
-        iarr.assign_bytes(barr.buf() + barr.byte_size(), 4 * sizeof(int));
-        farr.assign_bytes(iarr.buf() + iarr.byte_size(), 8 * sizeof(float));
-        
+        buf.resize(1 + 2 * sizeof(int) + 5 * sizeof(float));
+        EXPECT_TRUE(ArrayUtil::distribute_array(buf, { {&barr, 1}, {&iarr, 2}, {&farr, 5} }));
         barr[0] = true;
         for (size_t i = 0; i < iarr.size(); ++i)
             iarr[i] = 10 * i;
@@ -103,7 +99,7 @@ namespace test
         EXPECT_NE(ffield, nullptr);
         EXPECT_EQ(bfield->array()->buf(), msg.array()->buf());
         EXPECT_EQ(ifield->array()->buf(), msg.array()->buf() + 1);
-        EXPECT_EQ(ffield->array()->buf(), msg.array()->buf() + 1 + (4 * sizeof(int)));
+        EXPECT_EQ(ffield->array()->buf(), msg.array()->buf() + 1 + (2 * sizeof(int)));
 
         // Test if values are correct
         EXPECT_EQ(bfield->read_value<bool>(0), true);

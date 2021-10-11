@@ -60,7 +60,7 @@ bool    Scheduler::stop()
             return false;
         _running = false;
     }
-    _waitable.notify();
+    _waitable.notify_all();
     bool ret = _clock_ptr != nullptr && _clock_ptr->stop();
     if (_thread.joinable())
         _thread.join();
@@ -76,7 +76,7 @@ bool    Scheduler::is_running()
 bool    Scheduler::_wait_for(std::time_t wait_time)
 {
     while (_task_map.empty() && _running)
-        _waitable.wait();
+        _waitable.infinite_wait();
     if (_running)
         return _waitable.wait_for(wait_time);
     return false;
@@ -141,7 +141,7 @@ void    Scheduler::add_task(Task *task)
     std::lock_guard l(_mutex_task);
     _task_map.insert(std::pair<std::time_t, Task *>(task->run_at, task));
     _next_run = _task_map.begin()->first;
-    _waitable.notify();
+    _waitable.notify_all();
 }
 
 void    Scheduler::remove_task(Task *task)
@@ -156,7 +156,7 @@ void    Scheduler::remove_task(Task *task)
         }
     }
     _next_run = _task_map.begin()->first;
-    _waitable.notify();
+    _waitable.notify_all();
 }
 
 void    Scheduler::_add_to_delete_task(Task *task)

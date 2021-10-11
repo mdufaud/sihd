@@ -11,7 +11,7 @@ class ISender
     public:
         virtual ~ISender() {};
 
-        virtual ssize_t send(void *buf, size_t size) = 0;
+        virtual ssize_t send(const void *buf, size_t size) = 0;
 };
 
 }

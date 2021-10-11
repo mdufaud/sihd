@@ -6,6 +6,9 @@
 # include <string>
 # if !defined(__SIHD_WINDOWS__)
 #  include <dlfcn.h>
+#  include <sys/ioctl.h>
+# else
+#  include <winsock.h>
 # endif
 # include <map>
 # include <list>
@@ -21,30 +24,32 @@ class OS
         static std::string get_signal_name(int sig);
 
         // called when signal is caught
-        static void    signal_callback(int sig);
+        static void signal_callback(int sig);
         // adds a handler to be run when signal is catched
-        static bool    add_signal_handler(int sig, IRunnable *runnable);
+        static bool add_signal_handler(int sig, IRunnable *runnable);
         // remove and deletes all handlers attached to this signal
-        static bool    clear_signal_handlers(int sig);
+        static bool clear_signal_handlers(int sig);
         // remove and deletes all handlers
-        static bool    clear_signal_handlers();
+        static bool clear_signal_handlers();
         // remove a single handler - if you have the ptr to remove the handler, means you can delete it
-        static bool    clear_signal_handler(int sig, IRunnable *runnable);
+        static bool clear_signal_handler(int sig, IRunnable *runnable);
 
         // set signal handling to default - already taken care of, do not call
-        static bool    unhandle_signal(int sig);
+        static bool unhandle_signal(int sig);
+
+        static int ioctl(int fd, unsigned long request, unsigned long *arg_ptr);
 
 # if !defined(__SIHD_WINDOWS__)
-        static const int   backtrace_size;
+        static const int backtrace_size;
 
-        static void    *load_lib(std::string lib_name);
+        static void *load_lib(std::string lib_name);
 
         // emergency calls for when memory fails
-        static ssize_t  write(int fd, const char *s);
+        static ssize_t write(int fd, const char *s);
         // emergency calls for when memory fails
-        static ssize_t  write_endl(int fd, const char *s);
+        static ssize_t write_endl(int fd, const char *s);
         // emergency calls for when memory fails
-        static ssize_t  write_number(int fd, int number);
+        static ssize_t write_number(int fd, int number);
 
         // prints formatted backtrace into file descriptor
         static ssize_t backtrace(int fd);

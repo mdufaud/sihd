@@ -26,7 +26,7 @@ class MessageField: public sihd::util::Named,
         virtual bool    finish() override { return this->is_finished(); }
 
         // Named
-        virtual std::string     get_description() const override
+        virtual std::string get_description() const override
         {
             return Str::format("%s[%lu]", Datatype::datatype_to_string(_dt).c_str(), _size);
         }
@@ -39,10 +39,10 @@ class MessageField: public sihd::util::Named,
         {
             if (_array_ptr == nullptr)
                 throw std::logic_error("array is not built yet");
-            return ArrayUtil::read_array<T>(_array_ptr, idx);
+            return ArrayUtil::read_array<T>(*_array_ptr, idx);
         }
-        virtual bool    build_array(Datatypes dt, size_t size);
-        IArray  *array() { return _array_ptr; };
+        virtual bool build_array(Datatypes dt, size_t size);
+        IArray *array() { return _array_ptr; };
 
     protected:
 

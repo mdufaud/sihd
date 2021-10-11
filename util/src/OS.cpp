@@ -114,7 +114,15 @@ bool    OS::unhandle_signal(int sig)
         return false;
     }
     return true;
+}
 
+int     OS::ioctl(int fd, unsigned long request, unsigned long *arg_ptr)
+{
+#if !defined(__SIHD_WINDOWS__)
+    return ::ioctl(fd, request, arg_ptr);
+#else
+    return ::ioctlsocket(fd, request, arg_ptr);
+#endif
 }
 
 // strsignal does not exists in windows

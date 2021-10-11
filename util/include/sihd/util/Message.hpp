@@ -53,14 +53,14 @@ class Message:  public sihd::util::OrderedNode,
             return Str::format("%lu bytes", _total_size);
         }
 
-        IArray  *array() { return &_arr; };
+        IArray *array() { return &_arr; };
 
     protected:
         virtual bool    _add_field_size(IMessageField *field);
         virtual bool    _assign_field_array(IMessageField *field);
 
     private:
-        ArrByte    _arr;
+        ArrByte _arr;
         size_t  _total_size;
         bool    _finished;
         size_t  __assign_arr_at;

@@ -16,32 +16,33 @@ Waitable::Waitable()
 Waitable::~Waitable()
 {
     _stop_waiting = true;
-    this->notify();
+    this->notify_all();
+}
+
+void    Waitable::notify_all()
+{
+    _condition.notify_all();
 }
 
 void    Waitable::notify(int times)
 {
-    if (times >= 0)
+    int i = 0;
+    while (i < times)
     {
-        int i = 0;
-        while (i < times)
-        {
-            _condition.notify_one();
-            ++i;
-        }
+        _condition.notify_one();
+        ++i;
     }
-    else
-        _condition.notify_all();
+}
+
+void    Waitable::infinite_wait()
+{
+    std::unique_lock lock(_mutex);
+    _condition.wait(lock);
 }
 
 bool    Waitable::wait(std::time_t nano_timestamp)
 {
     std::unique_lock lock(_mutex);
-    if (nano_timestamp < 0)
-    {
-        _condition.wait(lock);
-        return true;
-    }
     return _condition.wait_until(lock, system_clock::from_time_t(nano_timestamp)) == std::cv_status::timeout;
 }
 

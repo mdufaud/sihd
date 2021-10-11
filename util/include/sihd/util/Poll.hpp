@@ -35,10 +35,11 @@ class Poll: virtual public IRunnable
         int max_fds() { return _max_fds; };
 
         void set_handlers(IHandler<int> *read_handler, IHandler<int> *write_handler, IHandler<time_t, bool> *timeout_handler);
-        void set_read_handler(IHandler<int> *handler) { _read_handler_ptr = handler; };
-        void set_write_handler(IHandler<int> *handler) { _write_handler_ptr = handler; };
+        void set_read_handler(IHandler<int> *handler);
+        void set_write_handler(IHandler<int> *handler);
         // called after every poll if poll did not fail with nanoseconds spent in poll and 
-        void set_timeout_handler(IHandler<time_t, bool> *handler) { _timeout_handler_ptr = handler; };
+        void set_timeout_handler(IHandler<time_t, bool> *handler);
+        void clear_fds();
         bool clear_fd(int fd);
         bool set_read_fd(int fd);
         bool set_write_fd(int fd);
@@ -49,6 +50,11 @@ class Poll: virtual public IRunnable
 
         int poll(int milliseconds_timeout = -1);
 
+        bool is_running() const { return _running; }
+        IHandler<int> *get_read_handler() const { return _read_handler_ptr; }
+        IHandler<int> *get_write_handler() const { return _write_handler_ptr; }
+        IHandler<time_t, bool> *get_timeout_handler() const { return _timeout_handler_ptr; }
+
     protected:
     
     private:
@@ -57,6 +63,8 @@ class Poll: virtual public IRunnable
         void _init();
         void _process(int poll_return, time_t nano_timespent);
 
+        std::mutex _handlers_mutex;
+        std::mutex _fds_mutex;
         std::mutex _run_mutex;
         int _timeout_milliseconds;
         IHandler<int> *_read_handler_ptr;

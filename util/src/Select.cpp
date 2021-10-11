@@ -62,24 +62,32 @@ bool    Select::set_max_fds(int limit)
     return true;
 }
 
+void    Select::clear_fds()
+{
+    std::lock_guard lock(_fds_mutex);
+    _lst_read_fds.clear();
+    _lst_write_fds.clear();
+}
+
 bool    Select::clear_fd(int fd)
 {
     if (fd < 0 || (rlim_t)fd >= _max_fds)
         return false;
+    std::lock_guard lock(_fds_mutex);
     auto it_read = std::find(_lst_read_fds.begin(), _lst_read_fds.end(), fd);
     auto it_write = std::find(_lst_write_fds.begin(), _lst_write_fds.end(), fd);
-    bool ret = it_read != _lst_read_fds.end() || it_write != _lst_write_fds.end();
     if (it_read != _lst_read_fds.end())
         _lst_read_fds.erase(it_read);
     if (it_write != _lst_write_fds.end())
-        _lst_read_fds.erase(it_write);
-    return ret;
+        _lst_write_fds.erase(it_write);
+    return it_read != _lst_read_fds.end() || it_write != _lst_write_fds.end();
 }
 
 bool    Select::set_read_fd(int fd)
 {
     if (fd < 0 || (rlim_t)fd >= _max_fds)
         return false;
+    std::lock_guard lock(_fds_mutex);
     bool ret = std::find(_lst_read_fds.begin(), _lst_read_fds.end(), fd) == _lst_read_fds.end();
     if (ret)
         _lst_read_fds.push_back(fd);
@@ -90,6 +98,7 @@ bool    Select::set_write_fd(int fd)
 {
     if (fd < 0 || (rlim_t)fd >= _max_fds)
         return false;
+    std::lock_guard lock(_fds_mutex);
     bool ret = std::find(_lst_write_fds.begin(), _lst_write_fds.end(), fd) == _lst_write_fds.end();
     if (ret)
         _lst_write_fds.push_back(fd);
@@ -108,6 +117,30 @@ void    Select::set_handlers(IHandler<int> *read_handler,
     this->set_read_handler(read_handler);
     this->set_write_handler(write_handler);
     this->set_timeout_handler(timeout_handler);
+}
+
+void    Select::set_read_handler(IHandler<int> *handler)
+{
+    std::lock_guard lock(_handlers_mutex);
+    if (_read_handler_ptr != nullptr)
+        delete _read_handler_ptr;
+    _read_handler_ptr = handler;
+}
+
+void    Select::set_write_handler(IHandler<int> *handler)
+{
+    std::lock_guard lock(_handlers_mutex);
+    if (_write_handler_ptr != nullptr)
+        delete _write_handler_ptr;
+    _write_handler_ptr = handler;
+}
+
+void    Select::set_timeout_handler(IHandler<time_t, bool> *handler)
+{
+    std::lock_guard lock(_handlers_mutex);
+    if (_timeout_handler_ptr != nullptr)
+        delete _timeout_handler_ptr;
+    _timeout_handler_ptr = handler;
 }
 
 void    Select::stop()
@@ -135,6 +168,7 @@ void    Select::_setup_select()
 {
     FD_ZERO(&_fds_read);
     FD_ZERO(&_fds_write);
+    std::lock_guard lock(_fds_mutex);
     for (const int & fd: _lst_read_fds)
     {
         FD_SET(fd, &_fds_read);
@@ -149,6 +183,7 @@ void    Select::_setup_select()
 
 void    Select::_process_select(int select_return, time_t nano_timespent)
 {
+    std::lock_guard lock_handlers(_handlers_mutex);
     if (select_return < 0)
     {
         LOG(error, "Select: " << strerror(errno));
@@ -158,6 +193,7 @@ void    Select::_process_select(int select_return, time_t nano_timespent)
         _timeout_handler_ptr->handle(nano_timespent, select_return == 0);
     if (select_return <= 0)
         return ;
+    std::lock_guard lock_fds(_fds_mutex);
     for (const int & fd: _lst_read_fds)
     {
         if (FD_ISSET(fd, &_fds_read))
@@ -180,7 +216,11 @@ int    Select::_do_select(int milliseconds)
         timeout_struct = &tv;
         tv = time::tv_from_milli(milliseconds);
     }
-    int ret = ::select(_highest_fd + 1, &_fds_read, &_fds_write, nullptr, timeout_struct);
+    int ret;
+    {
+        std::lock_guard lock(_fds_mutex);
+        ret = ::select(_highest_fd + 1, &_fds_read, &_fds_write, nullptr, timeout_struct);
+    }
     return ret;
 }
 

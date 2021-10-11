@@ -12,10 +12,24 @@
 #  include <sys/socket.h>
 #  include <netdb.h>
 #  include <arpa/inet.h>
+#  include <net/if.h>
+#  include <sys/un.h>
+#  include <netinet/tcp.h>
+#  include <fcntl.h>
 # else
+// shutdown function corresponding values unix -> windows
+#  define SHUT_RD SD_RECEIVE
+#  define SHUT_WR SD_SEND
+#  define SHUT_RDWR SD_BOTH
+// missing mingw getsockopt action
+#  ifndef SO_BSP_STATE
+#   define SO_BSP_STATE 0x1009
+#  endif
+// missing socket types
 #  define SOCK_SEQPACKET 5
 #  define SOCK_PACKET 10
 #  include <winsock2.h>
+#  include <ws2def.h>
 #  include <winsock.h>
 #  include <ws2tcpip.h>
 # endif

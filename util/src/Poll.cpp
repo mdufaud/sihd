@@ -53,6 +53,9 @@ int     Poll::_set_or_add_fd(int fd, short evt)
 {
     if (fd < 0)
         return -1;
+    if (_max_fds <= 0)
+        LOG(warning, "Poll: no max file descriptors limit was set");
+    std::lock_guard lock(_fds_mutex);
     int idx = -1;
     size_t i = 0;
     while (i < _lst_fds.size())
@@ -105,6 +108,7 @@ void    Poll::resize(int nfds)
 {
     if (nfds < 0)
         return ;
+    std::lock_guard lock(_fds_mutex);
     _lst_fds.resize(nfds);
     int i = 0;
     while (i < nfds)
@@ -138,8 +142,15 @@ bool    Poll::set_max_fds(int limit)
     return true;
 }
 
+void    Poll::clear_fds()
+{
+    std::lock_guard lock(_fds_mutex);
+    _lst_fds.clear();
+}
+
 bool    Poll::clear_fd(int fd)
 {
+    std::lock_guard lock(_fds_mutex);
     int idx = this->_get_fd_index(fd);
     if (idx >= 0)
     {
@@ -174,6 +185,30 @@ void    Poll::set_handlers(IHandler<int> *read_handler,
     this->set_timeout_handler(timeout_handler);
 }
 
+void    Poll::set_read_handler(IHandler<int> *handler)
+{
+    std::lock_guard lock(_handlers_mutex);
+    if (_read_handler_ptr != nullptr)
+        delete _read_handler_ptr;
+    _read_handler_ptr = handler;
+}
+
+void    Poll::set_write_handler(IHandler<int> *handler)
+{
+    std::lock_guard lock(_handlers_mutex);
+    if (_write_handler_ptr != nullptr)
+        delete _write_handler_ptr;
+    _write_handler_ptr = handler;
+}
+
+void    Poll::set_timeout_handler(IHandler<time_t, bool> *handler)
+{
+    std::lock_guard lock(_handlers_mutex);
+    if (_timeout_handler_ptr != nullptr)
+        delete _timeout_handler_ptr;
+    _timeout_handler_ptr = handler;
+}
+
 void    Poll::stop()
 {
     _running = false;
@@ -198,11 +233,15 @@ bool    Poll::run()
 int     Poll::poll(int milliseconds_timeout)
 {
     time_t before = _clock.now();
+    int ret;
+    {
+        std::lock_guard lock(_fds_mutex);
 #if !defined(__SIHD_WINDOWS__)
-    int ret = ::poll(_lst_fds.data(), _lst_fds.size(), milliseconds_timeout);
+        ret = ::poll(_lst_fds.data(), _lst_fds.size(), milliseconds_timeout);
 #else
-    int ret = ::WSAPoll(_lst_fds.data(), _lst_fds.size(), milliseconds_timeout);
+        ret = ::WSAPoll(_lst_fds.data(), _lst_fds.size(), milliseconds_timeout);
 #endif
+    }
     time_t spent = _clock.now() - before;
     this->_process(ret, spent);
     return ret;
@@ -210,6 +249,7 @@ int     Poll::poll(int milliseconds_timeout)
 
 void    Poll::_process(int poll_return, time_t nano_timespent)
 {
+    std::lock_guard lock_handler(_handlers_mutex);
     if (poll_return < 0)
     {
         LOG(error, "Poll: " << strerror(errno));
@@ -220,6 +260,7 @@ void    Poll::_process(int poll_return, time_t nano_timespent)
     if (poll_return <= 0)
         return ;
     size_t i = 0;
+    std::lock_guard lock_fds(_fds_mutex);
     while (i < _lst_fds.size())
     {
         short revt = _lst_fds[i].revents;

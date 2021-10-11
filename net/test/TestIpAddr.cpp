@@ -32,7 +32,7 @@ namespace test
             void dump_dns(const IpAddr::DnsInfo & dns)
             {
                 LOG(info, "hostname: " << dns.hostname);
-                for (const IpAddr::IpInfo & info: dns.lst_ip)
+                for (const IpAddr::DnsEntry & info: dns.lst_ip)
                 {
                     LOG(info, "ip: " << info.ip
                                 << " - socket " << Ip::socktype_to_string(info.socktype)

@@ -312,12 +312,12 @@ namespace test
         EXPECT_EQ(buffer[1], 37);
 
         sihd::util::ArrInt buffer_copied;
-        EXPECT_EQ(buffer_copied.from(&buffer), true);
+        EXPECT_EQ(buffer_copied.from(buffer), true);
         EXPECT_EQ(buffer_copied[0], 13);
         EXPECT_EQ(buffer_copied[1], 37);
 
         sihd::util::ArrFloat buffer_impossible_copy;
-        EXPECT_EQ(buffer_impossible_copy.from(&buffer), false);
+        EXPECT_EQ(buffer_impossible_copy.from(buffer), false);
 
         ArrInt *buffer_clone = buffer.clone();
         EXPECT_EQ(buffer_clone->at(0), 13);
