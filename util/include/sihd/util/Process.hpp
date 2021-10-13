@@ -8,7 +8,7 @@
 # include <optional>
 # include <signal.h>
 
-# if !defined(__SIHD_WINDOWS__)
+# if !defined(__SIHD_WINDOWS__) && !defined(__ANDROID__)
 #  include <spawn.h>
 # endif
 
@@ -110,11 +110,14 @@ class Process: virtual public IRunnable
 
         // spawn but for a function
         void _do_fork();
+        int _exec_child();
 
+#if !defined(__SIHD_ANDROID__)
         // spawn
         void _add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_to);
         void _add_close_action(posix_spawn_file_actions_t *actions, int fd);
         bool _do_spawn();
+#endif
 
         // fd redirections setting
         void _fdw_to(FileDescWrapper & fdw, std::function<void(const char *, ssize_t)> && fun);

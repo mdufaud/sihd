@@ -294,6 +294,13 @@ void    Process::_add_pipe(FileDescWrapper & fdw)
 
 // Execution
 
+int    Process::_exec_child()
+{
+    if (_fun_to_execute)
+        return _fun_to_execute();
+    return execvp(_argv[0], const_cast<char * const *>(&(_argv[0])));
+}
+
 void    Process::_do_fork()
 {
     pid_t pid;
@@ -307,11 +314,12 @@ void    Process::_do_fork()
         this->_close(_stdout.fd_read);
         this->_dup_close(_stderr.fd_write, STDERR_FILENO);
         this->_close(_stderr.fd_read);
-        exit(_fun_to_execute());
+        exit(this->_exec_child());
     }
     _pid = pid;
 }
 
+#if !defined(__SIHD_ANDROID__)
 void    Process::_add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_to)
 {
     if (dup_from >= 0 && dup_to >= 0)
@@ -351,12 +359,11 @@ bool    Process::_do_spawn()
     _pid = pid;
     return true;
 }
+#endif
 
 bool    Process::run()
 {
-    if (_fun_to_execute)
-        this->_do_fork();
-    else
+    if (!_fun_to_execute)
     {
         if (_argv.size() == 0)
         {
@@ -365,9 +372,15 @@ bool    Process::run()
         }
         if (_argv.back() != NULL)
             _argv.push_back(NULL);
+#if !defined(__SIHD_ANDROID__)
         if (this->_do_spawn() == false)
             return false;
+#else
+        this->_do_fork();
+#endif
     }
+    else
+        this->_do_fork();
     this->_close(_stdin.fd_read);
     this->_close(_stdout.fd_write);
     this->_close(_stderr.fd_write);
