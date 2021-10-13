@@ -517,6 +517,13 @@ ssize_t     Socket::receive_from(sockaddr *addr, socklen_t *addr_len, void *data
     return rcv;
 }
 
+ssize_t     Socket::_adapt_array_size(sihd::util::IArray & arr, ssize_t sent)
+{
+    if (sent >= 0 && (size_t)sent <= arr.byte_capacity() && (size_t)sent != arr.byte_size())
+       arr.byte_resize((size_t)sent);
+    return sent;
+}
+
 #if !defined(__SIHD_WINDOWS__)
 
 bool        Socket::bind_unix(const std::string & path)
@@ -581,13 +588,6 @@ std::string   Socket::get_unix_socket_peername(int socket)
     if (Socket::get_socket_peername(socket, (sockaddr *)&addr_un, &len))
         return addr_un.sun_path;
     return "";
-}
-
-ssize_t     Socket::_adapt_array_size(sihd::util::IArray & arr, ssize_t sent)
-{
-    if (sent >= 0 && (size_t)sent <= arr.byte_capacity() && (size_t)sent != arr.byte_size())
-       arr.byte_resize((size_t)sent);
-    return sent;
 }
 
 bool    Socket::set_socket_blocking(int socket, bool active)

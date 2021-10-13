@@ -39,7 +39,6 @@ class UdpSender:    public virtual ISender
         ssize_t send_to(const IpAddr & addr, const sihd::util::IArray & arr) { return _socket.send_to(addr, arr); }
         bool send_to_all(const IpAddr & addr, const sihd::util::IArray & arr) { return _socket.send_all_to(addr, arr); }
 
-
         const Socket & socket() const { return _socket; }
 
     protected:
