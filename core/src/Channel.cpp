@@ -7,17 +7,28 @@ LOGGER;
 
 sihd::util::IClock *Channel::_default_channel_clock_ptr = &sihd::util::Clock::default_clock;
 
-Channel::Channel(const std::string & name, const std::string & type,
-                size_t size, Node *parent):
-                Named(name, parent)
+Channel::Channel(const std::string & name, const std::string & type, size_t size, Node *parent):
+    Named(name, parent)
 {
     this->_init(Datatype::string_to_datatype(type), size);
 }
 
-Channel::Channel(const std::string & name, const std::string & type,
-                Node *parent): Named(name, parent)
+Channel::Channel(const std::string & name, const std::string & type, Node *parent):
+    Named(name, parent)
 {
     this->_init(Datatype::string_to_datatype(type), 1);
+}
+
+Channel::Channel(const std::string & name, Type type, size_t size, Node *parent):
+    Named(name, parent)
+{
+    this->_init(type, size);
+}
+
+Channel::Channel(const std::string & name, Type type, Node *parent):
+    Named(name, parent)
+{
+    this->_init(type, 1);
 }
 
 Channel::~Channel()
@@ -44,17 +55,17 @@ Channel     *Channel::build(const std::string & configuration)
         LOG(error, "Channel: cannot build from configuration '" << configuration << "' no size");
         return nullptr;
     }
-    auto value = Str::to_ulong(map["size"]);
-    if (value.has_value() == false)
+    auto opt_value = Str::to_ulong(map["size"]);
+    if (opt_value.has_value() == false)
     {
         LOG(error, "Channel: cannot build from configuration '" << configuration
                     << "' size is either overflow or invalid");
         return nullptr;
     }
-    return new Channel(map["name"], map["type"], value.value());
+    return new Channel(map["name"], map["type"], opt_value.value());
 }
 
-void    Channel::_init(Datatypes type, size_t size)
+void    Channel::_init(Type type, size_t size)
 {
     std::lock_guard lock(_arr_mutex);
     _array_ptr = ArrayUtil::create_from_type(type, size);

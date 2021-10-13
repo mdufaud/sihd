@@ -60,12 +60,12 @@ class OS
         ~OS() {};
 
 # if !defined(__SIHD_WINDOWS__)
-        static void    *backtrace_buffer[];
+        static void *backtrace_buffer[];
 # endif
 
-        static bool    signal_used;
-        static std::mutex   signal_mutex;
-        static std::map<int, std::list<IRunnable *>>  map_signals_handlers;
+        static bool signal_used;
+        static std::mutex signal_mutex;
+        static std::map<int, std::list<IRunnable *>> map_signals_handlers;
 };
 
 }

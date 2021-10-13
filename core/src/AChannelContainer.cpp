@@ -31,7 +31,22 @@ bool    AChannelContainer::get_channel(const std::string & name, Channel **to_fi
     return true;
 }
 
-Channel *AChannelContainer::add_channel(const std::string & name, const std::string & type, size_t size)
+Channel *AChannelContainer::add_unlinked_channel(const std::string & name, sihd::util::Type type, size_t size)
+{
+    if (this->is_link(name))
+    {
+        _channels_link[name] = {type, size};
+        return nullptr;
+    }
+    return this->add_channel(name, type, size);
+}
+
+Channel *AChannelContainer::add_unlinked_channel(const std::string & name, const std::string & type, size_t size)
+{
+    return this->add_unlinked_channel(name, sihd::util::Datatype::string_to_datatype(type), size);
+}
+
+Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Type type, size_t size)
 {
     Channel *c = new Channel(name, type, size);
     if (c == nullptr)
@@ -48,14 +63,9 @@ Channel *AChannelContainer::add_channel(const std::string & name, const std::str
     return c;
 }
 
-Channel *AChannelContainer::add_unlinked_channel(const std::string & name, const std::string & type, size_t size)
+Channel *AChannelContainer::add_channel(const std::string & name, const std::string & type, size_t size)
 {
-    if (this->is_link(name))
-    {
-        _channels_link[name] = {sihd::util::Datatype::string_to_datatype(type), size};
-        return nullptr;
-    }
-    return this->add_channel(name, type, size);
+    return this->add_channel(name, sihd::util::Datatype::string_to_datatype(type), size);
 }
 
 bool    AChannelContainer::_check_link(const std::string & name, Named *child)

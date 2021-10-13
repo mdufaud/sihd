@@ -28,17 +28,17 @@ class ServiceController:    virtual public AService::IServiceController,
             ERROR = 255,
         };
 
-        virtual bool    op_start(AService::Operation op);
-        virtual bool    op_end(AService::Operation op, bool status);
+        virtual bool op_start(AService::Operation op);
+        virtual bool op_end(AService::Operation op, bool status);
 
-        State   get_state()
+        State get_state()
         {
             return statemachine.get_state();
         }
 
-        void    optionnal_setup();
+        void optionnal_setup();
 
-        StateMachine<State, AService::Operation>    statemachine;
+        StateMachine<State, AService::Operation> statemachine;
 
     protected:
     

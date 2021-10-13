@@ -14,23 +14,33 @@ Device::~Device()
 {
 }
 
-#define WATERFALL_SERVICE_OPERATION(OP) \
-bool    Device::do_##OP()\
-{\
-    for (auto & [name, entry]: this->get_children())\
-    {\
-        AService *service = dynamic_cast<AService *>(entry->obj);\
-        if (service != nullptr && service->OP() == false)\
-        {\
-            LOG(error, "Device: " << this->get_name() << " << could not " #OP " service: " << name);\
-            return false;\
-        }\
-    }\
-    return this->on_##OP();\
+bool    Device::do_setup()
+{
+    for (auto & [name, entry]: this->get_children())
+    {
+        AService *service = dynamic_cast<AService *>(entry->obj);
+        if (service != nullptr && service->setup() == false)
+        {
+            LOG(error, "Device: " << this->get_name() << " << could not setup service: " << name);
+            return false;
+        }
+    }
+    return this->on_setup();
 }
 
-WATERFALL_SERVICE_OPERATION(setup);
-WATERFALL_SERVICE_OPERATION(init);
+bool    Device::do_init()
+{
+    for (auto & [name, entry]: this->get_children())
+    {
+        AService *service = dynamic_cast<AService *>(entry->obj);
+        if (service != nullptr && service->init() == false)
+        {
+            LOG(error, "Device: " << this->get_name() << " << could not init service: " << name);
+            return false;
+        }
+    }
+    return this->on_init();
+}
 
 bool    Device::do_start()
 {

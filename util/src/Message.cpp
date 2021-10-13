@@ -79,7 +79,7 @@ bool    Message::add_field(const std::string & name, IMessageField *msg)
     return this->add_child(name, named, true) && this->_add_field_size(msg);
 }
 
-bool    Message::add_field(const std::string & name, Datatypes dt, size_t size)
+bool    Message::add_field(const std::string & name, Type dt, size_t size)
 {
     MessageField *field = this->add_child<MessageField>(name);
     bool ret = field != nullptr;

@@ -6,29 +6,30 @@ namespace sihd::util
 
 LOGGER;
 
-Worker::Worker(): _running(false)
+Worker::Worker(IRunnable *runnable): _runnable_ptr(runnable), _running(false)
 {
 }
 
 Worker::~Worker()
 {
     this->stop_worker();
-}
-
-bool    Worker::set_method(std::function<bool()> method)
-{
-    _worker_run_method = std::move(method);
-    return true;
+    if (_runnable_ptr != nullptr)
+        delete _runnable_ptr;
 }
 
 bool    Worker::run()
 {
     Thread::set_name(_worker_thread_name);
-    return _worker_run_method();
+    return _runnable_ptr->run();
 }
 
 bool    Worker::start_worker(const std::string & name)
 {
+    if (_runnable_ptr == nullptr)
+    {
+        LOG_ERROR("Worker: cannot start worker '%s': nothing to run", name.c_str());
+        return false;
+    }
     {
         std::lock_guard lock(_worker_mutex);
         if (_running == true)

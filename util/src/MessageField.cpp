@@ -15,7 +15,7 @@ MessageField::~MessageField()
     this->_delete_array();
 }
 
-bool    MessageField::build_array(Datatypes dt, size_t size)
+bool    MessageField::build_array(Type dt, size_t size)
 {
     this->_delete_array();
     _array_ptr = ArrayUtil::create_from_type(dt);

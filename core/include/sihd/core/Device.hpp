@@ -24,21 +24,21 @@ class Device:   public AChannelContainer,
 
         virtual IServiceController *get_service_ctrl() override { return &_service_controller; }
 
-        virtual void    observable_changed([[maybe_unused]] Channel *c) override {}
-        virtual void    observable_changed([[maybe_unused]] ServiceController *ctrl) override {}
+        virtual void observable_changed([[maybe_unused]] Channel *c) override {}
+        virtual void observable_changed([[maybe_unused]] ServiceController *ctrl) override {}
 
     protected:
-        virtual bool    do_setup() override;
-        virtual bool    do_init() override;
-        virtual bool    do_start() override;
-        virtual bool    do_stop() override;
-        virtual bool    do_reset() override;
+        virtual bool do_setup() override;
+        virtual bool do_init() override;
+        virtual bool do_start() override;
+        virtual bool do_stop() override;
+        virtual bool do_reset() override;
 
-        virtual bool    on_setup() { return true; };
-        virtual bool    on_init() { return true; };
-        virtual bool    on_start() { return true; };
-        virtual bool    on_stop() { return true; };
-        virtual bool    on_reset() { return true; };
+        virtual bool on_setup() { return true; };
+        virtual bool on_init() { return true; };
+        virtual bool on_start() { return true; };
+        virtual bool on_stop() { return true; };
+        virtual bool on_reset() { return true; };
 
     private:
         ServiceController   _service_controller;

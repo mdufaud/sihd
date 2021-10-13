@@ -22,10 +22,13 @@ namespace test
 
             virtual void SetUp()
             {
+                _array_ptr = nullptr;
             }
 
             virtual void TearDown()
             {
+                if (_array_ptr != nullptr)
+                    delete _array_ptr;
             }
 
             void    test_array(Array<uint8_t> & arr)
@@ -39,23 +42,16 @@ namespace test
                 }
             }
 
-            IArray *_array_ptr = nullptr;
+            IArray *_array_ptr;
     };
 
-    /*
-    Not fully functionnal, anything that reallocate and memcpy will fail
     TEST_F(TestArray, test_array_str)
     {
-        Array<std::string> arr;
-        arr.resize(2);
-        arr[0] = "hello world";
-        arr[1] = "how do you do ?";
-        EXPECT_EQ(arr[0], "hello world");
-        EXPECT_EQ(arr.at(1), "how do you do ?");
-        arr.data()->append(" !");
-        EXPECT_EQ(arr[0], "hello world !");
+        const char hw[] = "hello world";
+        ArrChar arr(hw, sizeof(hw) - 1);
+        EXPECT_EQ(arr.hexdump(','), "68,65,6c,6c,6f,20,77,6f,72,6c,64");
+        EXPECT_EQ(arr.to_string(), "hello world");
     }
-    */
 
     TEST_F(TestArray, test_array_pop)
     {
@@ -201,6 +197,10 @@ namespace test
         EXPECT_EQ(arr.size(), 4ul);
         EXPECT_EQ(arr.capacity(), 4ul);
 
+        EXPECT_EQ(arr[0], 1);
+        EXPECT_EQ(arr[1], 2);
+        EXPECT_EQ(arr[2], 3);
+        EXPECT_EQ(arr[3], 4);
         arr8[0] = 10;
         arr8[1] = 20;
         arr8[2] = 30;
@@ -246,9 +246,9 @@ namespace test
         EXPECT_EQ(buffer_ubyte[0], 255);
 
         EXPECT_EQ(buffer_byte.data_size(), sizeof(char));
-        EXPECT_EQ(buffer_byte.data_type(), Datatypes::DBYTE);
+        EXPECT_EQ(buffer_byte.data_type(), Type::DBYTE);
         EXPECT_EQ(buffer_ubyte.data_size(), sizeof(char));
-        EXPECT_EQ(buffer_ubyte.data_type(), Datatypes::DUBYTE);
+        EXPECT_EQ(buffer_ubyte.data_type(), Type::DUBYTE);
 
         sihd::util::ArrShort buffer_short(1);
         buffer_short[0] = 2;
@@ -258,9 +258,9 @@ namespace test
         EXPECT_EQ(buffer_ushort[0], 2u);
 
         EXPECT_EQ(buffer_short.data_size(), sizeof(short));
-        EXPECT_EQ(buffer_short.data_type(), Datatypes::DSHORT);
+        EXPECT_EQ(buffer_short.data_type(), Type::DSHORT);
         EXPECT_EQ(buffer_ushort.data_size(), sizeof(short));
-        EXPECT_EQ(buffer_ushort.data_type(), Datatypes::DUSHORT);
+        EXPECT_EQ(buffer_ushort.data_type(), Type::DUSHORT);
 
         sihd::util::ArrInt buffer_int(1);
         buffer_int[0] = 2;
@@ -270,9 +270,9 @@ namespace test
         EXPECT_EQ(buffer_uint[0], -1u);
 
         EXPECT_EQ(buffer_int.data_size(), sizeof(int));
-        EXPECT_EQ(buffer_int.data_type(), Datatypes::DINT);
+        EXPECT_EQ(buffer_int.data_type(), Type::DINT);
         EXPECT_EQ(buffer_uint.data_size(), sizeof(int));
-        EXPECT_EQ(buffer_uint.data_type(), Datatypes::DUINT);
+        EXPECT_EQ(buffer_uint.data_type(), Type::DUINT);
 
         sihd::util::ArrLong buffer_long(1);
         buffer_long[0] = 1;
@@ -282,23 +282,23 @@ namespace test
         EXPECT_EQ(buffer_ulong[0], -1ul);
 
         EXPECT_EQ(buffer_long.data_size(), sizeof(long));
-        EXPECT_EQ(buffer_long.data_type(), Datatypes::DLONG);
+        EXPECT_EQ(buffer_long.data_type(), Type::DLONG);
         EXPECT_EQ(buffer_ulong.data_size(), sizeof(long));
-        EXPECT_EQ(buffer_ulong.data_type(), Datatypes::DULONG);
+        EXPECT_EQ(buffer_ulong.data_type(), Type::DULONG);
 
         sihd::util::ArrFloat buffer_float(1);
         buffer_float[0] = 133.7;
         EXPECT_FLOAT_EQ(buffer_float[0], 133.7f);
 
         EXPECT_EQ(buffer_float.data_size(), sizeof(float));
-        EXPECT_EQ(buffer_float.data_type(), Datatypes::DFLOAT);
+        EXPECT_EQ(buffer_float.data_type(), Type::DFLOAT);
 
         sihd::util::ArrDouble buffer_dbl(1);
         buffer_dbl[0] = 123.4;
         EXPECT_FLOAT_EQ(buffer_dbl[0], 123.4);
 
         EXPECT_EQ(buffer_dbl.data_size(), sizeof(double));
-        EXPECT_EQ(buffer_dbl.data_type(), Datatypes::DDOUBLE);
+        EXPECT_EQ(buffer_dbl.data_type(), Type::DDOUBLE);
     }
 
     // Test from method
@@ -333,6 +333,5 @@ namespace test
         EXPECT_EQ(ArrayUtil::read_array<int>(_array_ptr, 0), 0);
         EXPECT_TRUE(ArrayUtil::write_array<int>(_array_ptr, 0, 20));
         EXPECT_EQ(ArrayUtil::read_array<int>(_array_ptr, 0), 20);
-        delete _array_ptr;
     }
 }

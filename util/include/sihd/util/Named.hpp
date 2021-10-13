@@ -18,25 +18,25 @@ class Named
         const std::string & get_name() const;
         Node  *get_parent() const;
 
-        std::string     get_full_name() const;
-        std::string     get_class_name() const;
-        virtual std::string     get_description() const
+        std::string get_full_name() const;
+        std::string get_class_name() const;
+        virtual std::string get_description() const
         {
             return "";
         };
 
-        virtual bool    add_parent(Node *parent);
-        virtual bool    set_parent(Node *parent);
+        virtual bool add_parent(Node *parent);
+        virtual bool set_parent(Node *parent);
 
-        bool            is_owned_by_parent() const;
-        virtual bool    set_parent_ownership(bool ownership);
+        bool is_owned_by_parent() const;
+        virtual bool set_parent_ownership(bool ownership);
 
-        Node    *get_root();
-        Named   *find(Named *from, const std::string & path);
-        Named   *find(const std::string & path);
-        Node    *find_node(const std::string & path);
+        Node *get_root();
+        Named *find(Named *from, const std::string & path);
+        Named *find(const std::string & path);
+        Node *find_node(const std::string & path);
         template<class C>
-        C   *find(const std::string & path)
+        C *find(const std::string & path)
         {
             Named *obj = this->find(path);
             if (obj != nullptr)
@@ -49,8 +49,8 @@ class Named
     protected:
 
     private:
-        Node  *_parent_ptr;
-        std::string     _name;
+        Node *_parent_ptr;
+        std::string _name;
 
 };
 

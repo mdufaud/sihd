@@ -26,9 +26,16 @@ class Channel:  public Named,
         Channel(const std::string & name,
                 const std::string & type,
                 Node *parent = nullptr);
+        Channel(const std::string & name,
+                sihd::util::Type type,
+                size_t size,
+                Node *parent = nullptr);
+        Channel(const std::string & name,
+                sihd::util::Type type,
+                Node *parent = nullptr);
         virtual ~Channel();
 
-        // "name=CHANNEL_NAME;type=CHANNEL_type;size=CHANNEL_SIZE"
+        // "name=CHANNEL_NAME;type=CHANNEL_TYPE;size=CHANNEL_SIZE"
         static Channel *build(const std::string & configuration);
 
         IArray *arr() { return _array_ptr; }
@@ -86,7 +93,7 @@ class Channel:  public Named,
         }
 
     protected:
-        virtual void _init(Datatypes type, size_t size);
+        virtual void _init(Type type, size_t size);
 
         static IClock *_default_channel_clock_ptr;
     

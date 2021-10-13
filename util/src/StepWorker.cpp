@@ -6,7 +6,7 @@ namespace sihd::util
 
 LOGGER;
 
-StepWorker::StepWorker()
+StepWorker::StepWorker(IRunnable *runnable): Worker(runnable)
 {
     _sleep_time = 0;
     this->add_conf("frequency", &StepWorker::set_frequency);
@@ -15,7 +15,6 @@ StepWorker::StepWorker()
 StepWorker::~StepWorker()
 {
 }
-
 
 bool    StepWorker::set_frequency(double frequency)
 {
@@ -47,7 +46,7 @@ bool    StepWorker::run()
 
 bool    StepWorker::step()
 {
-    return _worker_run_method();
+    return _runnable_ptr->run();
 }
 
 bool    StepWorker::on_worker_start()

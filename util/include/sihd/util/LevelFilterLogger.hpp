@@ -13,11 +13,10 @@ class LevelFilterLogger:    public ILoggerFilter
         LevelFilterLogger(const std::string & level, bool match = false);
         virtual ~LevelFilterLogger();
 
-        virtual bool    filter(const LogInfo & info, const char *msg);
+        virtual bool filter(const LogInfo & info, const char *msg);
 
-        LogLevel    level;
-        bool    match;
-    private:
+        LogLevel level;
+        bool match;
 };
 
 }

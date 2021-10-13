@@ -3,30 +3,30 @@
 namespace sihd::util
 {
 
-std::vector<std::string>     Datatype::v_datatype_to_string = {
+std::vector<std::string>     Datatype::dt_to_str = {
     "none", "bool", "char", "byte", "ubyte", "short", "ushort",
     "int", "uint", "long", "ulong", "float", "double",
     "string", "object"
 };
 
-std::map<std::string, Datatypes>   Datatype::m_datatype_from_string = {
+std::map<std::string, Type>   Datatype::dt_from_str = {
     {"none", DNONE}, {"bool", DBOOL}, {"char", DCHAR}, {"byte", DBYTE}, {"ubyte", DUBYTE},
     {"short", DSHORT}, {"ushort", DUSHORT}, {"int", DINT}, {"uint", DUINT}, 
     {"long", DLONG}, {"ulong", DULONG}, {"float", DFLOAT}, {"double", DDOUBLE},
     {"string", DSTRING}, {"object", DOBJECT}
 };
 
-std::string  Datatype::datatype_to_string(Datatypes type)
+std::string  Datatype::datatype_to_string(Type type)
 {
-    return v_datatype_to_string[type];
+    return dt_to_str[type];
 }
 
-Datatypes  Datatype::string_to_datatype(const std::string & type)
+Type  Datatype::string_to_datatype(const std::string & type)
 {
-    return m_datatype_from_string[type];
+    return dt_from_str[type];
 }
 
-size_t  Datatype::datatype_size(Datatypes type)
+size_t  Datatype::datatype_size(Type type)
 {
     switch (type)
     {
@@ -61,30 +61,30 @@ size_t  Datatype::datatype_size(Datatypes type)
 }
 
 template <>
-Datatypes    Datatype::type_to_datatype<bool>() { return DBOOL; };
+Type    Datatype::type_to_datatype<bool>() { return DBOOL; };
 template <>
-Datatypes    Datatype::type_to_datatype<char>() { return DCHAR; };
+Type    Datatype::type_to_datatype<char>() { return DCHAR; };
 template <>
-Datatypes    Datatype::type_to_datatype<int8_t>() { return DBYTE; };
+Type    Datatype::type_to_datatype<int8_t>() { return DBYTE; };
 template <>
-Datatypes    Datatype::type_to_datatype<uint8_t>() { return DUBYTE; };
+Type    Datatype::type_to_datatype<uint8_t>() { return DUBYTE; };
 template <>
-Datatypes    Datatype::type_to_datatype<int16_t>() { return DSHORT; };
+Type    Datatype::type_to_datatype<int16_t>() { return DSHORT; };
 template <>
-Datatypes    Datatype::type_to_datatype<uint16_t>() { return DUSHORT; };
+Type    Datatype::type_to_datatype<uint16_t>() { return DUSHORT; };
 template <>
-Datatypes    Datatype::type_to_datatype<int32_t>() { return DINT; };
+Type    Datatype::type_to_datatype<int32_t>() { return DINT; };
 template <>
-Datatypes    Datatype::type_to_datatype<uint32_t>() { return DUINT; };
+Type    Datatype::type_to_datatype<uint32_t>() { return DUINT; };
 template <>
-Datatypes    Datatype::type_to_datatype<int64_t>() { return DLONG; };
+Type    Datatype::type_to_datatype<int64_t>() { return DLONG; };
 template <>
-Datatypes    Datatype::type_to_datatype<uint64_t>() { return DULONG; };
+Type    Datatype::type_to_datatype<uint64_t>() { return DULONG; };
 template <>
-Datatypes    Datatype::type_to_datatype<float>() { return DFLOAT; };
+Type    Datatype::type_to_datatype<float>() { return DFLOAT; };
 template <>
-Datatypes    Datatype::type_to_datatype<double>() { return DDOUBLE; };
+Type    Datatype::type_to_datatype<double>() { return DDOUBLE; };
 template <>
-Datatypes    Datatype::type_to_datatype<std::string>() { return DSTRING; };
+Type    Datatype::type_to_datatype<std::string>() { return DSTRING; };
 
 }

@@ -12,11 +12,12 @@ class BasicLogger: public ALogger
         BasicLogger(FILE *output = stderr, bool print_thread_id = false);
         virtual ~BasicLogger();
 
-        virtual void    log(const LogInfo & info, const char *msg) override;
+        virtual void log(const LogInfo & info, const char *msg) override;
 
-        FILE    *output;
-        bool    print_thread_id;
+        bool print_thread_id;
+        
     private:
+        FILE *_output;
 };
 
 }

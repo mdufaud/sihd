@@ -44,15 +44,15 @@ class Logger
         Logger(const std::string & name);
         virtual ~Logger();
 
-        void    debug(const char *msg);
-        void    info(const char *msg);
-        void    warning(const char *msg);
-        void    error(const char *msg);
-        void    critical(const char *msg);
+        void debug(const char *msg);
+        void info(const char *msg);
+        void warning(const char *msg);
+        void error(const char *msg);
+        void critical(const char *msg);
 
-        void    log(LogLevel level, const char *msg);
+        void log(LogLevel level, const char *msg);
 
-        std::string     name;
+        std::string name;
 };
 
 }

@@ -12,10 +12,10 @@ class SourceFilterLogger:   public ILoggerFilter
         SourceFilterLogger(const std::string & source, bool match_only = false);
         virtual ~SourceFilterLogger();
 
-        virtual bool    filter(const LogInfo & info, const char *msg);
+        virtual bool filter(const LogInfo & info, const char *msg);
 
         std::string source;
-        bool    match_only;
+        bool match_only;
 };
 
 }

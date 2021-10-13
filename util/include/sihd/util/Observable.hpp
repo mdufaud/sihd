@@ -17,7 +17,7 @@ class Observable:   virtual public IObservable<T>
         Observable() {};
         virtual ~Observable() {};
 
-        bool    add_observer(IObserver<T> *obs)
+        bool add_observer(IObserver<T> *obs)
         {
             if (this->is_observer(obs))
                 return false;
@@ -26,7 +26,7 @@ class Observable:   virtual public IObservable<T>
             return true;
         }
 
-        bool    remove_observer(IObserver<T> *obs)
+        bool remove_observer(IObserver<T> *obs)
         {
             if (this->is_observer(obs) == false)
                 return false;
@@ -35,13 +35,13 @@ class Observable:   virtual public IObservable<T>
             return true;
         }
 
-        bool    is_observer(IObserver<T> *obs)
+        bool is_observer(IObserver<T> *obs)
         {
             return std::find(_observers.begin(), _observers.end(), obs) != _observers.end();
         }
 
     protected:
-        virtual void    notify_observers(T *sender)
+        virtual void notify_observers(T *sender)
         {
             {
                 std::lock_guard<std::mutex> rm_lock(_mutex_remove);
@@ -59,10 +59,10 @@ class Observable:   virtual public IObservable<T>
         }
 
     private:
-        std::mutex  _mutex;
-        std::mutex  _mutex_remove;
-        std::list<IObserver<T> *>    _observers;
-        std::list<IObserver<T> *>    _observers_to_remove;
+        std::mutex _mutex;
+        std::mutex _mutex_remove;
+        std::list<IObserver<T> *> _observers;
+        std::list<IObserver<T> *> _observers_to_remove;
 };
 
 }

@@ -215,10 +215,10 @@ std::string     Str::hexdump(void *mem, size_t size, char delim)
     while (i < size)
     {
         uint16_t hex = 0xFF & ((char *)mem)[i];
+        if (delim != '\0' && ret.empty() == false)
+            ret += delim;
         if (hex < 16)
             ret += "0";
-        if (ret.empty() == false)
-            ret += delim;
         ret += num_to_string(hex, 16);
         ++i;
     }

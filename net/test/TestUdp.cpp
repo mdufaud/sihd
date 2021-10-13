@@ -31,11 +31,39 @@ namespace test
             }
     };
 
-
-
-    TEST_F(TestUdp, test_udp_sender_receiver_connexion)
+    TEST_F(TestUdp, test_udp_receiver_run)
     {
-        const char helloworld[] = "hello world";
+        sihd::util::ArrInt array_send = {1, 2, 3, 4, 5, 6};
+        sihd::util::ArrInt array_rcv(array_send.size());
+        IpAddr localhost("127.0.0.1", 4242);
+        UdpSender sender(localhost);
+        UdpReceiver receiver(localhost);
+
+        receiver.set_buffer(&array_rcv);
+        receiver.set_poll_timeout(1);
+        receiver.set_handler(new sihd::util::Handler<const void *, size_t>(
+        [&] (const void *data, size_t size)
+        {
+            LOG(debug, "Data received: " << data << " - " << size << " bytes");
+        }));
+        sihd::util::Worker worker(new sihd::util::Task(&receiver));
+        LOG(debug, "Starting receiver");
+        EXPECT_TRUE(worker.start_worker("receiver"));
+
+        LOG(debug, "Sending: " << array_send.to_string(',') << " (" << array_send.byte_size() << " bytes)");
+        EXPECT_EQ(sender.send(array_send), (ssize_t)array_send.byte_size());
+        LOG(debug, "Sent & wait");
+        EXPECT_FALSE(receiver.waitable().wait_for(sihd::util::time::milli(1)));
+        LOG(debug, "Waited");
+
+        EXPECT_TRUE(array_rcv.is_equal(array_send));
+
+        receiver.stop();
+        EXPECT_TRUE(worker.stop_worker());
+    }
+
+    TEST_F(TestUdp, test_udp_senrcv_connexion)
+    {
         sihd::util::ArrChar array_rcv(40);
 
         UdpSender sender("127.0.0.1", 4242);
@@ -47,19 +75,22 @@ namespace test
 
         receiver.set_buffer(&array_rcv);
 
+        const char helloworld[] = "hello world";
         EXPECT_EQ(sender.send(helloworld, sizeof(helloworld)), (ssize_t)sizeof(helloworld));
         EXPECT_EQ(receiver.receive(array_rcv), (ssize_t)sizeof(helloworld));
+
         EXPECT_TRUE(array_rcv.is_equal(helloworld, sizeof(helloworld) - 1));
         EXPECT_EQ(array_rcv.size(), sizeof(helloworld));
         
         const char hello[] = "hello";
         EXPECT_EQ(sender.send(hello, sizeof(hello)), (ssize_t)sizeof(hello));
         EXPECT_TRUE(receiver.poll(10));
+
         EXPECT_TRUE(array_rcv.is_equal(hello, sizeof(hello) - 1));
         EXPECT_EQ(array_rcv.size(), sizeof(hello));
     }
 
-    TEST_F(TestUdp, test_udp_sender_receiver_broadcast)
+    TEST_F(TestUdp, test_udp_senrcv_broadcast)
     {
         const char helloworld[] = "hello world";
         sihd::util::ArrChar array_rcv(40);

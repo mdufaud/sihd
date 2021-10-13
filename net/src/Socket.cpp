@@ -586,7 +586,7 @@ std::string   Socket::get_unix_socket_peername(int socket)
 ssize_t     Socket::_adapt_array_size(sihd::util::IArray & arr, ssize_t sent)
 {
     if (sent >= 0 && (size_t)sent <= arr.byte_capacity() && (size_t)sent != arr.byte_size())
-       arr.resize((size_t)sent);
+       arr.byte_resize((size_t)sent);
     return sent;
 }
 

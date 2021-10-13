@@ -10,7 +10,7 @@ class ILoggerFilter
 {
     public:
         virtual ~ILoggerFilter() {};
-        virtual bool    filter(const LogInfo & info, const char *msg) = 0;
+        virtual bool filter(const LogInfo & info, const char *msg) = 0;
 };
 
 }

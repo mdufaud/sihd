@@ -10,7 +10,7 @@ class IObserver
     public:
         virtual ~IObserver() {};
 
-        virtual void    observable_changed(T *obs) = 0;
+        virtual void observable_changed(T *obs) = 0;
 };
 
 }

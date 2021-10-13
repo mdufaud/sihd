@@ -11,7 +11,7 @@ class IObservable
         virtual ~IObservable() {};
 
     protected:
-        virtual void    notify_observers(T *sender) = 0;
+        virtual void notify_observers(T *sender) = 0;
 
 };
 

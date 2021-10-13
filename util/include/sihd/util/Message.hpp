@@ -36,7 +36,7 @@ class Message:  public sihd::util::OrderedNode,
         {
             return this->add_field(name, Datatype::type_to_datatype<T>(), size);
         }
-        virtual bool    add_field(const std::string & name, Datatypes dt, size_t size = 1);
+        virtual bool    add_field(const std::string & name, Type dt, size_t size = 1);
         /**
          * @brief 
          * 

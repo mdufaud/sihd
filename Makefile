@@ -1,4 +1,14 @@
+ifeq (, $(shell which python3))
+$(error "Makefile: no python3 detected - it is needed to build the project.")
+endif
+
+ifeq (, $(shell which scons))
+$(error "Makefile: no python-scons detected - it is needed to build the project.")
+endif
+
+APP_NAME = sihd
 OS := $(shell uname)
+HERE = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 ifeq ($(OS),Linux)
 SHELL := /bin/bash
@@ -7,10 +17,6 @@ else
 SHELL := /bin/sh
 GREP := /usr/bin/grep
 endif
-
-APP_NAME = sihd
-
-HERE = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 # Build path
 BUILD_PATH = $(HERE)/build

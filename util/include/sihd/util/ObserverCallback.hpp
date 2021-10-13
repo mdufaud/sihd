@@ -17,7 +17,7 @@ class ObserverCallback: virtual public IObserver<T>
         };
         virtual ~ObserverCallback() {};
 
-        virtual void    observable_changed(T *obs)
+        virtual void observable_changed(T *obs)
         {
             this->callback(obs);
         }

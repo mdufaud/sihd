@@ -41,7 +41,7 @@ class MessageField: public sihd::util::Named,
                 throw std::logic_error("array is not built yet");
             return ArrayUtil::read_array<T>(*_array_ptr, idx);
         }
-        virtual bool build_array(Datatypes dt, size_t size);
+        virtual bool build_array(Type dt, size_t size);
         IArray *array() { return _array_ptr; };
 
     protected:
@@ -49,7 +49,7 @@ class MessageField: public sihd::util::Named,
     private:
         void    _delete_array();
 
-        Datatypes   _dt;
+        Type   _dt;
         size_t      _size;
         IArray      *_array_ptr;
 };

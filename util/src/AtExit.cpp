@@ -50,11 +50,11 @@ void    AtExit::exit_callback()
         }
         catch (const std::exception & e)
         {
-            std::cerr << "Error while running exit handler: " << e.what() << std::endl;
+            std::cerr << "AtExit: error while running exit handler: " << e.what() << std::endl;
         }
         catch (...)
         {
-            std::cerr << "Error while running exit handler - non standard exception" << std::endl;
+            std::cerr << "AtExit: error while running exit handler - non standard exception" << std::endl;
         }
         delete runnable;
     }
@@ -68,7 +68,7 @@ bool    AtExit::install()
         int ret = std::atexit(exit_callback);
         if (ret != 0)
         {
-            LOG(error, "Cannot install atexit handler");
+            LOG(error, "AtExit: cannot install atexit handler");
             return false;
         }
         installed = true;

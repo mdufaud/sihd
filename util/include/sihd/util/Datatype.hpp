@@ -10,9 +10,9 @@ namespace sihd::util
 {
 
 typedef std::variant<bool, char, int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t,
-int64_t, uint64_t, float, double, std::string>    variant_datatype;
+int64_t, uint64_t, float, double, std::string> variant_datatype;
 
-enum Datatypes {
+enum Type {
     DNONE,
     DBOOL,
     DCHAR,
@@ -36,53 +36,53 @@ class Datatype
         Datatype() {};
         ~Datatype() {};
 
-        static std::vector<std::string>            v_datatype_to_string;
-        static std::map<std::string, Datatypes>    m_datatype_from_string;
+        static std::vector<std::string> dt_to_str;
+        static std::map<std::string, Type> dt_from_str;
 
     public:
-        static size_t       datatype_size(Datatypes type);
-        static std::string  datatype_to_string(Datatypes type);
-        static Datatypes    string_to_datatype(const std::string & type);
+        static size_t datatype_size(Type type);
+        static std::string datatype_to_string(Type type);
+        static Type string_to_datatype(const std::string & type);
 
         template <typename T>
-        static Datatypes   type_to_datatype()
+        static Type type_to_datatype()
         {
             return DOBJECT;
         }
 
         template <typename T>
-        static std::string  type_to_string()
+        static std::string type_to_string()
         {
             return datatype_to_string(type_to_datatype<T>());
         }
 };
 
 template <>
-Datatypes    Datatype::type_to_datatype<bool>();
+Type    Datatype::type_to_datatype<bool>();
 template <>
-Datatypes    Datatype::type_to_datatype<char>();
+Type    Datatype::type_to_datatype<char>();
 template <>
-Datatypes    Datatype::type_to_datatype<int8_t>();
+Type    Datatype::type_to_datatype<int8_t>();
 template <>
-Datatypes    Datatype::type_to_datatype<uint8_t>();
+Type    Datatype::type_to_datatype<uint8_t>();
 template <>
-Datatypes    Datatype::type_to_datatype<int16_t>();
+Type    Datatype::type_to_datatype<int16_t>();
 template <>
-Datatypes    Datatype::type_to_datatype<uint16_t>();
+Type    Datatype::type_to_datatype<uint16_t>();
 template <>
-Datatypes    Datatype::type_to_datatype<int32_t>();
+Type    Datatype::type_to_datatype<int32_t>();
 template <>
-Datatypes    Datatype::type_to_datatype<uint32_t>();
+Type    Datatype::type_to_datatype<uint32_t>();
 template <>
-Datatypes    Datatype::type_to_datatype<int64_t>();
+Type    Datatype::type_to_datatype<int64_t>();
 template <>
-Datatypes    Datatype::type_to_datatype<uint64_t>();
+Type    Datatype::type_to_datatype<uint64_t>();
 template <>
-Datatypes    Datatype::type_to_datatype<float>();
+Type    Datatype::type_to_datatype<float>();
 template <>
-Datatypes    Datatype::type_to_datatype<double>();
+Type    Datatype::type_to_datatype<double>();
 template <>
-Datatypes    Datatype::type_to_datatype<std::string>();
+Type    Datatype::type_to_datatype<std::string>();
 
 }
 

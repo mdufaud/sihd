@@ -21,26 +21,28 @@ class AChannelContainer:    public Node,
         virtual ~AChannelContainer();
 
         Channel *get_channel(const std::string & name);
-        bool    get_channel(const std::string & name, Channel **to_fill);
+        bool get_channel(const std::string & name, Channel **to_fill);
 
+        Channel *add_unlinked_channel(const std::string & name, sihd::util::Type type, size_t size = 1);
         Channel *add_unlinked_channel(const std::string & name, const std::string & type, size_t size = 1);
+        Channel *add_channel(const std::string & name, sihd::util::Type type, size_t size = 1);
         Channel *add_channel(const std::string & name, const std::string & type, size_t size = 1);
 
-        bool    observe_channel(const std::string & channel_name);
-        bool    observe_channel(Channel *c);
-        void    remove_channels_observation();
+        bool observe_channel(const std::string & channel_name);
+        bool observe_channel(Channel *c);
+        void remove_channels_observation();
 
     protected:
-        virtual bool    _check_link(const std::string & name, Named *child) override;
+        virtual bool _check_link(const std::string & name, Named *child) override;
     
     private:
         struct ChannelConfiguration
         {
-            sihd::util::Datatypes type;
+            sihd::util::Type type;
             size_t size;
         };
         std::map<std::string, ChannelConfiguration> _channels_link;
-        std::list<Channel *>    _observed_channels;
+        std::list<Channel *> _observed_channels;
 };
 
 }

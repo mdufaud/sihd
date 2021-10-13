@@ -19,30 +19,28 @@ namespace sihd::util
  *          though as a backup, can set a method to run
  * 
  */
-class Worker:   virtual public IRunnable, public Configurable
+class Worker: virtual public IRunnable, public Configurable
 {
     public:
-        Worker();
+        Worker(IRunnable *runnable);
         virtual ~Worker();
 
-        bool    set_method(std::function<bool()> method);
+        bool start_worker(const std::string & name);
+        bool stop_worker();
 
-        bool    start_worker(const std::string & name);
-        bool    stop_worker();
-
-        bool    is_running()
+        bool is_running()
         {
             return _running;
         }
 
-        virtual bool    run();
+        virtual bool run();
 
     protected:
-        virtual bool    on_worker_start();
-        virtual bool    on_worker_stop();
+        virtual bool on_worker_start();
+        virtual bool on_worker_stop();
 
-        std::function<bool()> _worker_run_method;
         std::string _worker_thread_name;
+        IRunnable *_runnable_ptr;
 
     private:
         bool        _running;

@@ -1,7 +1,14 @@
+ifneq (, $(shell which tput))
 red = $(shell tput setaf 1)
 green = $(shell tput setaf 2)
 yellow = $(shell tput setaf 3)
 reset = $(shell tput sgr0)
+else
+red =
+green =
+yellow =
+reset =
+endif
 
 log = $(shell date "+[%Y-%m-%d %H:%M:%S] [$1] [$2]: $3")
 

@@ -24,18 +24,18 @@ class LogInfo
         LogInfo(const std::string & source, LogLevel level);
         virtual ~LogInfo();
 
-        std::string     source;
-        LogLevel        level;
-        std::string     level_str;
+        std::string source;
+        LogLevel level;
+        std::string level_str;
         std::thread::id thread_id;
-        std::string     thread_id_str;
-        std::string     thread_name;
+        std::string thread_id_str;
+        std::string thread_name;
         struct timespec timestamp;
 
         const std::string & get_level() const;
 
         static const std::string & get_level(LogLevel level); 
-        static LogLevel  string_to_level(const std::string & level);
+        static LogLevel string_to_level(const std::string & level);
 };
 
 }

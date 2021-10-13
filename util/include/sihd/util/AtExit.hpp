@@ -21,15 +21,15 @@ class AtExit
 
     public:
         // adds handler to be run post-exit
-        static void    add_handler(IRunnable *ptr);
+        static void add_handler(IRunnable *ptr);
         // remove handler and does NOT delete it
-        static void    remove_handler(IRunnable *ptr);
+        static void remove_handler(IRunnable *ptr);
         // remove all handlers and deletes them
-        static void    clear_handlers();
+        static void clear_handlers();
         // actual goodbye callback - calls handlers post-exit and deletes them
-        static void    exit_callback();
+        static void exit_callback();
         // permits exit callback post-exit
-        static bool    install();
+        static bool install();
 };
 
 }

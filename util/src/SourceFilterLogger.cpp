@@ -16,9 +16,7 @@ bool    SourceFilterLogger::filter(const LogInfo & info, const char *msg)
 {
     (void)msg;
     return this->match_only
-        // Filter if not found
         ? info.source.find(this->source) == std::string::npos
-        // Filter if found
         : info.source.find(this->source) != std::string::npos;
 }
 

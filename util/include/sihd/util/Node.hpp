@@ -13,7 +13,7 @@ class Node:   public Named
 {
     public:
 
-        class AlreadyHasChild:   public std::exception
+        class AlreadyHasChild: public std::exception
         {
             public:
                 AlreadyHasChild(std::string name)
@@ -29,7 +29,7 @@ class Node:   public Named
                 std::string ex;
         };
 
-        class MaximumLinkRecursion:   public std::exception
+        class MaximumLinkRecursion: public std::exception
         {
             public:
                 virtual const char *what() const throw()
@@ -49,19 +49,19 @@ class Node:   public Named
 
         struct  ChildEntry
         {
-            Named   *obj;
-            bool    ownership;
+            Named *obj;
+            bool ownership;
         };
 
         Node(const std::string & name, Node *parent = nullptr);
         virtual ~Node();
 
         // Children
-        virtual bool    add_child(const std::string & name, Named *child, bool ownership = true);
-        virtual bool    add_child(Named *child, bool ownership = true);
+        virtual bool add_child(const std::string & name, Named *child, bool ownership = true);
+        virtual bool add_child(Named *child, bool ownership = true);
         
         template <typename T>
-        T   *add_child(const std::string & name)
+        T *add_child(const std::string & name)
         {
             T *child = new T(name);
             if (this->add_child(child, true) == false)
@@ -73,27 +73,27 @@ class Node:   public Named
         }
 
         // Unsafe -> throws
-        void    add_child_unsafe(Named *child, bool ownership = true);
+        void add_child_unsafe(Named *child, bool ownership = true);
 
-        bool    delete_child_entry(ChildEntry *entry);
-        bool    delete_child(const Named *child);
-        virtual bool    delete_child(const std::string & name);
-        virtual void    delete_children();
+        bool delete_child_entry(ChildEntry *entry);
+        bool delete_child(const Named *child);
+        virtual bool delete_child(const std::string & name);
+        virtual void delete_children();
 
         // Static
-        static Node    *to_node(Named *child);
-        static std::pair<std::string, std::string>     get_parent_path(const std::string & path);
+        static Node *to_node(Named *child);
+        static std::pair<std::string, std::string> get_parent_path(const std::string & path);
 
         // Ownership
-        bool    has_ownership(const std::string & name);
-        bool    set_child_ownership(const std::string & name, bool ownership);
+        bool has_ownership(const std::string & name);
+        bool set_child_ownership(const std::string & name, bool ownership);
 
         // Find
-        ChildEntry  *get_child_entry(const std::string & name);
-        Node    *find_node(const std::string & path);
-        Named   *get_child(const std::string & name);
+        ChildEntry *get_child_entry(const std::string & name);
+        Node *find_node(const std::string & path);
+        Named *get_child(const std::string & name);
         template<class C>
-        C   *get_child(const std::string & name)
+        C *get_child(const std::string & name)
         {
             Named *obj = this->get_child(name);
             if (obj != nullptr)
@@ -102,40 +102,38 @@ class Node:   public Named
         }
 
         // Links
-        bool    is_link(const std::string & link);
-        bool    add_link(const std::string & link, const std::string & path);
-        bool    remove_link(const std::string & link);
-        Named   *get_link(const std::string & path, size_t recursion = 0);
-        bool    resolve_links(size_t recursion = 0);
+        bool is_link(const std::string & link);
+        bool add_link(const std::string & link, const std::string & path);
+        bool remove_link(const std::string & link);
+        Named *get_link(const std::string & path, size_t recursion = 0);
+        bool resolve_links(size_t recursion = 0);
 
-        std::string     get_tree_str();
-        std::string     get_tree_desc_str();
-        std::string     get_tree_str(TreeOpts opts);
-        void            print_tree();
-        void            print_tree_desc();
-        void            print_tree(TreeOpts opts);
+        std::string get_tree_str();
+        std::string get_tree_desc_str();
+        std::string get_tree_str(TreeOpts opts);
+        void print_tree();
+        void print_tree_desc();
+        void print_tree(TreeOpts opts);
 
-        std::map<std::string, ChildEntry *> &   get_children();
-        //std::map<std::string, Named *> &    get_children();
-        virtual std::vector<std::string>    get_children_keys();
+        std::map<std::string, ChildEntry *> & get_children();
+        virtual std::vector<std::string> get_children_keys();
         
     protected:
-        virtual bool    _check_link(const std::string & name, Named *child);
-        virtual void    _get_tree_children(std::stringstream & ss, TreeOpts opts);
-        virtual void    _iterate_tree_children(std::stringstream & ss,
+        virtual bool _check_link(const std::string & name, Named *child);
+        virtual void _get_tree_children(std::stringstream & ss, TreeOpts opts);
+        virtual void _iterate_tree_children(std::stringstream & ss,
                                                 TreeOpts & opts,
                                                 const std::string & indent);
-        virtual void    _get_tree_child_desc(std::stringstream & ss,
+        virtual void _get_tree_child_desc(std::stringstream & ss,
                                                 const TreeOpts & opts,
                                                 const std::string & indent,
                                                 const std::string & name,
                                                 Named *child);
-        virtual void    _add_tree_desc(std::stringstream & ss, const TreeOpts & opts, Named *child);
+        virtual void _add_tree_desc(std::stringstream & ss, const TreeOpts & opts, Named *child);
 
     private:
         std::map<std::string, ChildEntry *> _children_map;
-        //std::map<std::string, Named *>   _children_map;
-        std::map<std::string, std::string>   _link_map;
+        std::map<std::string, std::string> _link_map;
 };
 
 }

@@ -21,6 +21,7 @@ LevelFilterLogger::~LevelFilterLogger()
 bool    LevelFilterLogger::filter(const LogInfo & info, const char *msg)
 {
     (void)msg;
+    // filter exact loglevel or lower loglevels
     return this->match
         ? info.level == this->level
         : info.level < this->level;

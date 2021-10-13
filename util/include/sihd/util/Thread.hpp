@@ -13,10 +13,10 @@ class Thread
 {
     public:
         static std::thread::id id();
-        static std::string     id_str();
-        static std::string     id_str(std::thread::id id);
-        static void    set_name(const std::string & name);
-        static void    del_name();
+        static std::string id_str();
+        static std::string id_str(std::thread::id id);
+        static void set_name(const std::string & name);
+        static void del_name();
         static const std::string & get_name();
 
         static std::thread::id main;
@@ -25,8 +25,8 @@ class Thread
         Thread() {};
         ~Thread() {};
 
-        static std::mutex   thread_mutex;
-        static std::map<std::thread::id, std::string>  thread_map;
+        static std::mutex thread_mutex;
+        static std::map<std::thread::id, std::string> thread_map;
 
 };
 
