@@ -22,10 +22,9 @@ class StateMachine: public IStateMachine
         }
         virtual ~StateMachine() {};
 
-        bool add_transition(STATE from, EVENT event, STATE into)
+        void add_transition(STATE from, EVENT event, STATE into)
         {
             _transitions[from][event] = into;
-            return true;
         }
 
         bool transition(EVENT event)
@@ -50,6 +49,14 @@ class StateMachine: public IStateMachine
         std::string get_event_name(EVENT evt) { return _events_name[evt]; }
         void set_state_name(STATE st, const std::string & name) { _states_name[st] = name; }
         void set_event_name(EVENT evt, const std::string & name) { _events_name[evt] = name; }
+
+        void set_map_transitions(const std::map<STATE, std::map<EVENT, STATE>> & transitions) { _transitions = transitions; }
+        void set_map_states_names(const std::map<STATE, std::string> & states) { _states_name = states; }
+        void set_map_events_names(const std::map<EVENT, std::string> & events) { _events_name = events; }
+
+        const std::map<STATE, std::map<EVENT, STATE>> & get_map_transitions() const { return _transitions; }
+        const std::map<STATE, std::string> & get_map_states_names() const { return _states_name; }
+        const std::map<EVENT, std::string> & get_map_events_names() const { return _events_name; }
 
     protected:
     

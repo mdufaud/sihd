@@ -3,7 +3,9 @@
 namespace sihd::core
 {
 
-LOGGER;
+using namespace sihd::util;
+
+NEW_LOGGER("sihd::core");
 
 sihd::util::IClock *Channel::_default_channel_clock_ptr = &sihd::util::Clock::default_clock;
 

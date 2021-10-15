@@ -3,9 +3,16 @@
 namespace sihd::core
 {
 
+using namespace sihd::util;
+
 LOGGER;
 
-Device::Device(const std::string & name, Node *parent): AChannelContainer(name, parent)
+// permits copying of existent maps instead of instanciating every time the same maps
+sihd::util::ServiceController Device::_default_service_controller;
+
+Device::Device(const std::string & name, Node *parent):
+    AChannelContainer(name, parent),
+    _service_controller(_default_service_controller.statemachine)
 {
     _service_controller.optionnal_setup();
 }

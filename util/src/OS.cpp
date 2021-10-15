@@ -184,7 +184,8 @@ ssize_t   OS::write_number(int fd, int number)
 
 ssize_t    OS::backtrace(int fd)
 {
-    size_t size = ::backtrace(OS::backtrace_buffer, OS::backtrace_size);
+    size_t wanted_size = std::min(OS::backtrace_size, SIHD_BACKTRACE_SIZE);
+    size_t size = ::backtrace(OS::backtrace_buffer, wanted_size);
     char **strings = (char **)backtrace_symbols(OS::backtrace_buffer, size);
     bool ret = write(fd, "sihd::util::OS::backtrace (") > 0;
     ret = ret && write_number(fd, size) > 0;
@@ -213,9 +214,9 @@ ssize_t    OS::backtrace(int fd)
 // dlopen not available in windows
 #if !defined(__SIHD_WINDOWS__)
 
-void    *OS::load_lib(std::string lib_name)
+void *OS::load_lib(const std::string & lib_name)
 {
-    std::vector<std::string>    to_try = {
+    std::vector<std::string> to_try = {
         "lib" + lib_name + ".so",
         lib_name + ".so",
         lib_name,
@@ -228,6 +229,44 @@ void    *OS::load_lib(std::string lib_name)
             break ;
     }
     return handle;
+}
+
+void *OS::get_symbol_lib(void *handle, const std::string & sym_name)
+{
+    if (handle == nullptr)
+        return nullptr;
+    return dlsym(handle, sym_name.c_str());
+}
+
+std::string OS::get_error_lib()
+{
+    return dlerror();
+}
+
+bool OS::close_lib(void *handle)
+{
+    if (handle == nullptr)
+        return false;
+    return dlclose(handle) == 0;
+}
+
+void *OS::load_symbol_unload_lib(const std::string & lib_name, const std::string & sym_name)
+{
+    void *handle = OS::load_lib(lib_name);
+    if (handle == nullptr)
+    {
+        LOG(error, "OS: could not load library: " << OS::get_error_lib());
+        return nullptr;
+    }
+    void *sym_ptr = OS::get_symbol_lib(handle, sym_name);
+    if (sym_ptr == nullptr)
+    {
+        LOG(error, "OS: could not load symbol: " << OS::get_error_lib());
+        return nullptr;
+    }
+    if (dlclose(handle) != 0)
+        LOG(warning, "OS: could not close lib handle: " << OS::get_error_lib());
+    return sym_ptr;
 }
 
 #endif // end of shared lib

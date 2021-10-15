@@ -2,7 +2,7 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-HDR_TEMPLATE="${HDR_TEMPLATE:=$SCRIPT_DIR/../templates/class_hdr_template.txt}"
+HDR_TEMPLATE="${HDR_TEMPLATE:=$SCRIPT_DIR/../templates/class/hdr_template.txt}"
 
 if [ -z "$1" ]; then
     echo "App name is not set"

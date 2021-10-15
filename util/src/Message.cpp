@@ -3,6 +3,8 @@
 namespace sihd::util
 {
 
+SIHD_UTIL_REGISTER_FACTORY(Message);
+
 LOGGER;
 
 Message::Message(const std::string & name, Node *parent): OrderedNode(name, parent) 

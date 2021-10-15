@@ -10,14 +10,12 @@
 namespace sihd::core
 {
 
-using namespace sihd::util;
-
-class AChannelContainer:    public Node,
-                            public Configurable,
-                            virtual public IObserver<Channel>
+class AChannelContainer:    public sihd::util::Node,
+                            public sihd::util::Configurable,
+                            virtual public sihd::util::IObserver<Channel>
 {
     public:
-        AChannelContainer(const std::string & name, Node *parent = nullptr);
+        AChannelContainer(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~AChannelContainer();
 
         Channel *get_channel(const std::string & name);
@@ -33,7 +31,7 @@ class AChannelContainer:    public Node,
         void remove_channels_observation();
 
     protected:
-        virtual bool _check_link(const std::string & name, Named *child) override;
+        virtual bool _check_link(const std::string & name, sihd::util::Named *child) override;
     
     private:
         struct ChannelConfiguration

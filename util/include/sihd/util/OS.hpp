@@ -40,9 +40,17 @@ class OS
         static int ioctl(int fd, unsigned long request, unsigned long *arg_ptr);
 
 # if !defined(__SIHD_WINDOWS__)
-        static const int backtrace_size;
+        static std::string get_error_lib();
+        static void *load_lib(const std::string & lib_name);
+        static void *get_symbol_lib(void *handle, const std::string & sym_name);
+        static bool close_lib(void *handle);
 
-        static void *load_lib(std::string lib_name);
+        static void *load_symbol_unload_lib(const std::string & lib_name, const std::string & sym_name);
+# endif
+
+
+# if !defined(__SIHD_WINDOWS__)
+        static const int backtrace_size;
 
         // emergency calls for when memory fails
         static ssize_t write(int fd, const char *s);

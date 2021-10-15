@@ -2,7 +2,7 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-SRC_TEMPLATE="${SRC_TEMPLATE:=$SCRIPT_DIR/../templates/class_src_template.txt}"
+SRC_TEMPLATE="${SRC_TEMPLATE:=$SCRIPT_DIR/../templates/class/src_template.txt}"
 
 if [ -z "$1" ]; then
     echo "App name is not set"

@@ -15,6 +15,11 @@ Waitable::Waitable()
 
 Waitable::~Waitable()
 {
+    this->cancel_loop();
+}
+
+void    Waitable::cancel_loop()
+{
     _stop_waiting = true;
     this->notify_all();
 }
@@ -40,7 +45,7 @@ void    Waitable::infinite_wait()
     _condition.wait(lock);
 }
 
-bool    Waitable::wait(std::time_t nano_timestamp)
+bool    Waitable::wait_until(std::time_t nano_timestamp)
 {
     std::unique_lock lock(_mutex);
     return _condition.wait_until(lock, system_clock::from_time_t(nano_timestamp)) == std::cv_status::timeout;
@@ -69,6 +74,7 @@ bool    Waitable::wait_loop(std::time_t nano_duration, uint32_t times)
         last = now;
         ++i;
     }
+    _stop_waiting = false;
     return timedout;
 }
 

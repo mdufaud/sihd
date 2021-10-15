@@ -11,9 +11,6 @@ class ServiceController:    virtual public AService::IServiceController,
                             public Observable<ServiceController>
 {
     public:
-        ServiceController();
-        virtual ~ServiceController() {};
-
         enum State
         {
             NONE = 0,
@@ -27,6 +24,10 @@ class ServiceController:    virtual public AService::IServiceController,
             RESETTING,
             ERROR = 255,
         };
+
+        ServiceController();
+        ServiceController(const StateMachine<State, AService::Operation> & to_copy_statemachine);
+        virtual ~ServiceController() {};
 
         virtual bool op_start(AService::Operation op);
         virtual bool op_end(AService::Operation op, bool status);

@@ -105,9 +105,9 @@ void    LoggerManager::clear_filters()
     get()->delete_filters();
 }
 
-void    LoggerManager::basic()
+void    LoggerManager::basic(FILE *output, bool print_thread_id)
 {
-    get()->add_logger(new BasicLogger);
+    get()->add_logger(new BasicLogger(output, print_thread_id));
 }
 
 }

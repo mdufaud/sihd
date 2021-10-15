@@ -6,7 +6,7 @@
 namespace test
 {
     NEW_LOGGER("sihd::test");
-
+    using namespace sihd::util;
     using namespace sihd::core;
     class TestChannel:   public ::testing::Test, public IObserver<Channel>
     {

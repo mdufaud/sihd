@@ -13,63 +13,62 @@ namespace sihd::core
 {
 
 LOGGER;
-using namespace sihd::util;
 
-class Channel:  public Named,
-                public Observable<Channel>
+class Channel:  public sihd::util::Named,
+                public sihd::util::Observable<Channel>
 {
     public:
         Channel(const std::string & name,
                 const std::string & type,
                 size_t size,
-                Node *parent = nullptr);
+                sihd::util::Node *parent = nullptr);
         Channel(const std::string & name,
                 const std::string & type,
-                Node *parent = nullptr);
+                sihd::util::Node *parent = nullptr);
         Channel(const std::string & name,
                 sihd::util::Type type,
                 size_t size,
-                Node *parent = nullptr);
+                sihd::util::Node *parent = nullptr);
         Channel(const std::string & name,
                 sihd::util::Type type,
-                Node *parent = nullptr);
+                sihd::util::Node *parent = nullptr);
         virtual ~Channel();
 
         // "name=CHANNEL_NAME;type=CHANNEL_TYPE;size=CHANNEL_SIZE"
         static Channel *build(const std::string & configuration);
 
-        IArray *arr() { return _array_ptr; }
+        sihd::util::IArray *arr() { return _array_ptr; }
 
         std::time_t timestamp();
         void set_clock(sihd::util::IClock *clock);
         void notify();
 
-        static IClock *get_default_clock() { return _default_channel_clock_ptr; }
+        static sihd::util::IClock *get_default_clock() { return _default_channel_clock_ptr; }
 
         // write and notify only if a change happened
         void set_write_on_change(bool activate) { _write_change_only = activate; }
 
         template <typename T>
-        Array<T> *arr()
+        sihd::util::Array<T> *arr()
         {
-            return ArrayUtil::cast_array<T>(_array_ptr);
+            return sihd::util::ArrayUtil::cast_array<T>(_array_ptr);
         }
 
-        bool copy_to(IArray & arr);
+        bool copy_to(sihd::util::IArray & arr);
 
         template <typename T>
         T   read(size_t idx)
         {
             std::lock_guard lock(_arr_mutex);
-            return ArrayUtil::read_array<T>(_array_ptr, idx);
+            return sihd::util::ArrayUtil::read_array<T>(_array_ptr, idx);
         }
 
-        bool write(const IArray & arr);
+        bool write(const sihd::util::IArray & arr);
 
         template <typename T>
         bool write(size_t idx, T value)
         {
-            Array<T> *arr = ArrayUtil::cast_array<T>(_array_ptr);
+            sihd::util::Array<T> *arr = sihd::util::ArrayUtil::cast_array<T>(_array_ptr);
             bool ret = arr != nullptr;
             if (ret)
             {
@@ -82,7 +81,7 @@ class Channel:  public Named,
             {
                 LOG(error, "Channel: wrong type for writing "
                         << _array_ptr->data_type_to_string() << " != "
-                        << Datatype::type_to_string<T>())
+                        << sihd::util::Datatype::type_to_string<T>())
             }
             if (ret)
             {
@@ -93,15 +92,15 @@ class Channel:  public Named,
         }
 
     protected:
-        virtual void _init(Type type, size_t size);
+        virtual void _init(sihd::util::Type type, size_t size);
 
-        static IClock *_default_channel_clock_ptr;
+        static sihd::util::IClock *_default_channel_clock_ptr;
     
     private:
-        IClock *_clock_ptr;
+        sihd::util::IClock *_clock_ptr;
         std::time_t _timestamp;
 
-        IArray *_array_ptr;
+        sihd::util::IArray *_array_ptr;
         std::mutex _arr_mutex;
 
         bool _notifying;

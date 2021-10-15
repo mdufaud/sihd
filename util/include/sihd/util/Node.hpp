@@ -2,6 +2,7 @@
 # define __SIHD_UTIL_NODE_HPP__
 
 # include <sihd/util/Named.hpp>
+# include <sihd/util/NamedFactory.hpp>
 # include <sihd/util/Str.hpp>
 # include <map>
 # include <exception>

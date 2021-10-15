@@ -2,6 +2,8 @@
 
 namespace sihd::core
 {
+    
+using namespace sihd::util;
 
 AChannelContainer::AChannelContainer(const std::string & name, Node *parent): Node(name, parent)
 {

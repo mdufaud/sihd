@@ -3,8 +3,12 @@
 namespace sihd::util
 {
 
-#define SET_STATE_NAME(name) statemachine.set_state_name(name, #name);
-#define SET_EVENT_NAME(name) statemachine.set_event_name(AService::name, #name);
+ServiceController::ServiceController(const StateMachine<State, AService::Operation> & to_copy_statemachine): statemachine(NONE)
+{
+    statemachine.set_map_transitions(to_copy_statemachine.get_map_transitions());
+    statemachine.set_map_states_names(to_copy_statemachine.get_map_states_names());
+    statemachine.set_map_events_names(to_copy_statemachine.get_map_events_names());
+}
 
 ServiceController::ServiceController(): statemachine(NONE)
 {

@@ -3,8 +3,11 @@
 
 #define MAX_LINK_RECURSION 20
 
+
 namespace sihd::util
 {
+
+SIHD_UTIL_REGISTER_FACTORY(Node);
 
 LOGGER;
 

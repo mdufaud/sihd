@@ -10,24 +10,20 @@
 namespace sihd::core
 {
 
-NEW_LOGGER("sihd::core");
-
-using namespace sihd::util;
-
 class Device:   public AChannelContainer,
-                virtual public AService,
-                virtual public IObserver<ServiceController>
+                virtual public sihd::util::AService,
+                virtual public sihd::util::IObserver<sihd::util::ServiceController>
 {
     public:
         Device(const std::string & name, Node *parent = nullptr);
         virtual ~Device();
 
-        virtual IServiceController *get_service_ctrl() override { return &_service_controller; }
-
-        virtual void observable_changed([[maybe_unused]] Channel *c) override {}
-        virtual void observable_changed([[maybe_unused]] ServiceController *ctrl) override {}
+        virtual sihd::util::AService::IServiceController *get_service_ctrl() override { return &_service_controller; }
 
     protected:
+        virtual void observable_changed([[maybe_unused]] Channel *c) override {}
+        virtual void observable_changed([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
+
         virtual bool do_setup() override;
         virtual bool do_init() override;
         virtual bool do_start() override;
@@ -41,7 +37,8 @@ class Device:   public AChannelContainer,
         virtual bool on_reset() { return true; };
 
     private:
-        ServiceController   _service_controller;
+        sihd::util::ServiceController _service_controller;
+        static sihd::util::ServiceController _default_service_controller;
 };
 
 }

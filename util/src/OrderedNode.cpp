@@ -5,6 +5,8 @@
 namespace sihd::util
 {
 
+SIHD_UTIL_REGISTER_FACTORY(OrderedNode);
+
 LOGGER;
 
 OrderedNode::OrderedNode(const std::string & name, Node *parent): Node(name, parent)

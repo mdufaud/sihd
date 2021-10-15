@@ -1,8 +1,11 @@
 #include <APP_NAME/MODULE_NAME/CLASS_NAME.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace APP_NAME::MODULE_NAME
 {
+
+SIHD_UTIL_REGISTER_FACTORY(CLASS_NAME)
 
 LOGGER;
 

@@ -1,7 +1,10 @@
 #include <sihd/util/Scheduler.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::util
 {
+
+SIHD_UTIL_REGISTER_FACTORY(Scheduler);
 
 LOGGER;
 

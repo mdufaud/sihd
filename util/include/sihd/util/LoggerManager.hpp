@@ -28,7 +28,7 @@ class LoggerManager:    public ALogFilterer
         static LoggerManager _g_singleton;
         static LoggerManager *get();
 
-        static void basic();
+        static void basic(FILE *output = stderr, bool print_thread_id = false);
         static bool add(ALogger *logger);
         static bool rm(ALogger *logger);
         static bool filter(ILoggerFilter *filter);
