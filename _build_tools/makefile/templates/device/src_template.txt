@@ -10,12 +10,17 @@ SIHD_UTIL_REGISTER_FACTORY(CLASS_NAME)
 LOGGER;
 
 CLASS_NAME::CLASS_NAME(const std::string & name, sihd::util::Node *parent):
-    sihd::core::Device(name, parent)
+    sihd::core::Device(name, parent), _running(false)
 {
 }
 
 CLASS_NAME::~CLASS_NAME()
 {
+}
+
+bool    CLASS_NAME::is_running() const
+{
+    return _running;
 }
 
 void    CLASS_NAME::observable_changed([[maybe_unused]] sihd::core::Channel *c)
@@ -38,11 +43,13 @@ bool    CLASS_NAME::on_init()
 
 bool    CLASS_NAME::on_start()
 {
+    _running = true;
     return true;
 }
 
 bool    CLASS_NAME::on_stop()
 {
+    _running = false;
     return true;
 }
 
