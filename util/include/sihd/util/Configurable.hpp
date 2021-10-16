@@ -3,11 +3,12 @@
 
 # include <nlohmann/json.hpp>
 # include <sihd/util/Callback.hpp> 
+# include <sihd/util/Logger.hpp> 
 # include <functional>
 
 namespace sihd::util
 {
-
+LOGGER;
 class Configurable
 {
     public:
@@ -96,9 +97,9 @@ class Configurable
             if (val.is_array())
             {
                 bool ret = true;
-                for (auto & it: val)
+                for (auto it = val.begin(); it != val.end(); ++it)
                 {
-                    if (this->set_conf(key, it) == false)
+                    if (this->set_conf(key, it.value()) == false)
                         ret = false;
                 }
                 return ret;
@@ -114,12 +115,17 @@ class Configurable
             return false;
         }
 
-        bool    set_conf(nlohmann::json & j)
+        bool    set_conf(nlohmann::json && json)
         {
-            if (j.is_object() == false || j.is_null())
+            return this->set_conf(json);
+        }
+
+        bool    set_conf(nlohmann::json & json)
+        {
+            if (json.is_object() == false || json.is_null())
                 return false;
             bool ret = true;
-            for (auto it = j.begin(); it != j.end(); ++it)
+            for (auto it = json.begin(); it != json.end(); ++it)
             {
                 if (this->set_conf(it.key(), it.value()) == false)
                     ret = false;

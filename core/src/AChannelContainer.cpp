@@ -81,19 +81,19 @@ bool    AChannelContainer::_check_link(const std::string & name, Named *child)
     }
     bool ret = true;
     ChannelConfiguration conf = _channels_link[name];
-    if (conf.type != chan->arr()->data_type())
+    if (conf.type != chan->array()->data_type())
     {
         LOG_ERROR("ChannelContainer: '%s' channel link size not same type '%s': '%s' != '%s'",
                     this->get_full_name().c_str(), name.c_str(),
                     sihd::util::Datatype::datatype_to_string(conf.type).c_str(),
-                    chan->arr()->data_type_to_string().c_str());
+                    chan->array()->data_type_to_string().c_str());
         ret = false;
     }
-    if (conf.size != chan->arr()->size())
+    if (conf.size != chan->array()->size())
     {
         LOG_ERROR("ChannelContainer: '%s' channel link size not equal '%s': '%lu' != '%lu'",
                     this->get_full_name().c_str(), name.c_str(),
-                    conf.size, chan->arr()->size());
+                    conf.size, chan->array()->size());
         ret = false;
     }
     return ret;

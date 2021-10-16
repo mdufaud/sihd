@@ -31,10 +31,10 @@ namespace test
 
             void observable_changed(Channel *c)
             {
-                TRACE(c->arr()->data_type_to_string());
-                if (c->arr()->data_type() == DINT)
+                TRACE(c->array()->data_type_to_string());
+                if (c->array()->data_type() == DINT)
                 {
-                    Array<int> *arr_int = ArrayUtil::cast_array<int>(c->arr());
+                    Array<int> *arr_int = ArrayUtil::cast_array<int>(c->array());
                     int *c_arr_int = arr_int->data();
                     _at_val = arr_int->at(0);
                     _c_arr_val = c_arr_int[0];
@@ -53,11 +53,11 @@ namespace test
     {
         Channel c("chan", "float", 4);
 
-        EXPECT_EQ(c.arr()->byte_size(), 4 * sizeof(float));
-        EXPECT_EQ(c.arr()->data_size(), 4u);
-        EXPECT_EQ(c.arr()->data_type_to_string(), "float");
-        EXPECT_EQ(c.arr()->capacity(), 4u);
-        EXPECT_EQ(c.arr()->data_type(), DFLOAT);
+        EXPECT_EQ(c.array()->byte_size(), 4 * sizeof(float));
+        EXPECT_EQ(c.array()->data_size(), 4u);
+        EXPECT_EQ(c.array()->data_type_to_string(), "float");
+        EXPECT_EQ(c.array()->capacity(), 4u);
+        EXPECT_EQ(c.array()->data_type(), DFLOAT);
         EXPECT_EQ(_notified[&c], 0);
         c.notify();
         EXPECT_EQ(_notified[&c], 0);
@@ -115,8 +115,8 @@ namespace test
         EXPECT_NO_THROW(c = Channel::build("name=chan;type=float;size=2"));
         EXPECT_NE(c, nullptr);
         EXPECT_EQ(c->get_name(), "chan");
-        EXPECT_EQ(c->arr()->data_type_to_string(), "float");
-        EXPECT_EQ(c->arr()->size(), 2u);
+        EXPECT_EQ(c->array()->data_type_to_string(), "float");
+        EXPECT_EQ(c->array()->size(), 2u);
         delete c;
     }
 

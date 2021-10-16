@@ -45,6 +45,8 @@ bool    ChannelWaiter::set_channel(Channel *channel)
 
 bool    ChannelWaiter::wait_for(time_t nano, uint32_t notifications)
 {
+    if (_channel == nullptr)
+        return true;
     return _waitable.wait_loop(nano, notifications);
 }
 

@@ -64,7 +64,8 @@ bool    Device::do_start()
                 ret = false;
                 break ;
             }
-            started_services.push_back(service);
+            else
+                started_services.push_back(service);
         }
     }
     ret = this->resolve_links();

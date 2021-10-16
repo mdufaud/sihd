@@ -121,6 +121,7 @@ get-module-name = $(word 2, $(subst _, , $(basename $1)))
 
 TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
 TEST_ARGS =
+DEBUGGER_ARGS = 
 
 # find string 'test' in target
 ifneq ($(findstring test,$(word 1, $(MAKECMDGOALS))), )
@@ -130,7 +131,7 @@ test: build
 	$(call log_info,makefile,starting tests in build: $(TEST_PATH))
 	@- $(foreach TEST_BIN, $(TEST_EXEC), \
 		$(eval TEST_CMD_LINE = \
-			env $(DEBUGGER) $(TEST_BIN) $(TEST_ARGS)\
+			env $(DEBUGGER) $(DEBUGGER_ARGS) $(TEST_BIN) $(TEST_ARGS)\
 		) \
 		$(eval TEST_MODULE_NAME = $(call get-module-name, $(TEST_BIN))) \
 		cd $(HERE)/$(TEST_MODULE_NAME); \
@@ -140,13 +141,17 @@ test: build
 		cd - > /dev/null; \
 	)
 
-valgrindtest: DEBUGGER = valgrind --leak-check=full --show-leak-kinds=all
+valgrindtest: DEBUGGER_ARGS = --leak-check=full --show-leak-kinds=all
+valgrindtest: DEBUGGER = valgrind 
 valgrindtest: test
-vtest: DEBUGGER = valgrind --leak-check=full --show-leak-kinds=all
-vtest: test
 
+vtest: valgrindtest
+
+gdbtest: DEBUGGER_ARGS = -ex=r --args
 gdbtest: DEBUGGER = gdb
 gdbtest: test
+
+gtest: gdbtest
 
 .PHONY: test vtest valgrindtest gdbtest
 

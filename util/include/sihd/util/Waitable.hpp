@@ -18,6 +18,7 @@ class Waitable
         void notify_all();
 
         void infinite_wait();
+        std::time_t infinite_wait_elapsed();
         bool wait_until(std::time_t nano_timestamp);
         // wait for x nanoseconds -- returns true if timed out
         bool wait_for(std::time_t nano_duration);
@@ -25,6 +26,7 @@ class Waitable
         bool wait_loop(std::time_t nano_duration, uint32_t times);
         // wait for x nanoseconds -- returns time elapsed
         std::time_t wait_elapsed(std::time_t nano_duration);
+
 
         void cancel_loop();
 

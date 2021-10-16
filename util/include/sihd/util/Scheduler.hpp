@@ -25,8 +25,13 @@ class Scheduler:    public Named,
         bool start();
         bool stop();
 
+        void pause();
+        void resume();
+
         void add_task(Task *t);
         void remove_task(Task *t);
+
+        void clear_tasks();
 
         IClock *get_clock();
         void set_clock(IClock *clock);
@@ -44,7 +49,7 @@ class Scheduler:    public Named,
     protected:
         void _delete_tasks();
         void _add_to_delete_task(Task *t);
-        bool _wait_for(std::time_t nano);
+        bool _wait_for_next_task(std::time_t steady_time);
         Task *_get_next_task(std::time_t time);
         void _play_task(Task *task, std::time_t time);
 
@@ -59,6 +64,9 @@ class Scheduler:    public Named,
         SteadyClock _steady_clock;
         std::list<Task *> _task_rm_list;
         std::multimap<std::time_t, Task *> _task_map;
+
+        bool _paused;
+        std::time_t _paused_time;
 };
 
 }

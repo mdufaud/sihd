@@ -10,7 +10,7 @@ namespace sihd::util
 class StepWorker: public Worker, virtual public ISteppable
 {
     public:
-        StepWorker(IRunnable *runnable);
+        StepWorker(IRunnable *runnable = nullptr);
         virtual ~StepWorker();
 
         bool set_frequency(double freq);
@@ -18,13 +18,17 @@ class StepWorker: public Worker, virtual public ISteppable
         virtual bool run() override;
         virtual bool step() override;
 
+        virtual void pause_worker();
+        virtual void resume_worker();
+
     protected:
         virtual bool on_worker_start() override;
         virtual bool on_worker_stop() override;
 
+        bool _pause;
         std::time_t _sleep_time;
         SteadyClock _clock;
-        Waitable    _waitable;
+        Waitable _waitable;
 };
 
 }

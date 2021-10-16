@@ -9,6 +9,16 @@
 #include <signal.h>
 #include <algorithm>
 
+#if !defined(__SIHD_WINDOWS__)
+# include <sys/types.h>
+# include <sys/stat.h>
+# include <fcntl.h>
+# include <sys/ptrace.h>
+# include <sys/wait.h>
+#else
+# include <debugapi.h>
+#endif
+
 // backtrace not available in windows / android
 #if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__)
 # include <execinfo.h>
@@ -211,6 +221,68 @@ ssize_t    OS::backtrace(int fd)
 #endif // end of backtrace
 
 
+bool    OS::is_run_by_valgrind()
+{
+    char *ldpreload = getenv("LD_PRELOAD");
+    return ldpreload != nullptr
+            && (strstr(ldpreload, "/valgrind/") != nullptr
+                || strstr(ldpreload, "/vgpreload") != nullptr);
+}
+
+#if !defined(__SIHD_WINDOWS__)
+
+bool    OS::is_run_by_debugger()
+{
+    // gdb check
+    int pid = fork();
+    int status;
+    int res = -1;
+
+    if (pid == -1)
+    {
+        LOG(error, "OS: fork error: " << strerror(errno));
+        return false;
+    }
+    if (pid == 0)
+    {
+        int ppid = getppid();
+        /* Child */
+        if (ptrace(PTRACE_ATTACH, ppid, NULL, NULL) == 0)
+        {
+            /* Wait for the parent to stop and continue it */
+            waitpid(ppid, NULL, 0);
+            ptrace(PTRACE_CONT, NULL, NULL);
+
+            /* Detach */
+            ptrace(PTRACE_DETACH, getppid(), NULL, NULL);
+
+            /* We were the tracers, so gdb is not present */
+            res = 0;
+        }
+        else
+        {
+            /* Trace failed so gdb is present */
+            res = 1;
+        }
+        exit(res);
+    }
+    else
+    {
+        waitpid(pid, &status, 0);
+        res = WEXITSTATUS(status);
+    }
+    return res == 1;
+}
+
+#else
+
+bool    OS::is_run_by_debugger()
+{
+    return IsDebuggerPresent();
+}
+
+#endif
+
 // dlopen not available in windows
 #if !defined(__SIHD_WINDOWS__)
 
@@ -267,6 +339,15 @@ void *OS::load_symbol_unload_lib(const std::string & lib_name, const std::string
     if (dlclose(handle) != 0)
         LOG(warning, "OS: could not close lib handle: " << OS::get_error_lib());
     return sym_ptr;
+}
+
+#else
+
+void *OS::load_symbol_unload_lib(const std::string & lib_name, const std::string & sym_name)
+{
+    (void)lib_name;
+    (void)sym_name;
+    return nullptr;
 }
 
 #endif // end of shared lib

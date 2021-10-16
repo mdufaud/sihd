@@ -22,13 +22,14 @@ namespace sihd::util
 class Worker: virtual public IRunnable, public Configurable
 {
     public:
-        Worker(IRunnable *runnable);
+        Worker(IRunnable *runnable = nullptr);
         virtual ~Worker();
 
+        void set_runnable(IRunnable *runnable);
         bool start_worker(const std::string & name);
         bool stop_worker();
 
-        bool is_running()
+        bool is_worker_running()
         {
             return _running;
         }

@@ -48,7 +48,7 @@ class IArray
         virtual Type data_type() const = 0;
         virtual std::string data_type_to_string() const = 0;
 
-        virtual std::string hexdump(char delimiter) const = 0;
+        virtual std::string hexdump(char delimiter = ' ') const = 0;
 
 };
 

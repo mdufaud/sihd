@@ -466,6 +466,14 @@ class ArrayUtil
             return true;
         }
 
+        static IArray *clone_array(const IArray & to_clone)
+        {
+            IArray *ret = ArrayUtil::create_from_type(to_clone.data_type());
+            ret->resize(to_clone.size());
+            ret->copy_from_bytes(to_clone.cbuf(), to_clone.byte_size());
+            return ret;
+        }
+
         static IArray *create_from_type(Type dt, size_t size = 0)
         {
             switch (dt)
@@ -501,7 +509,7 @@ class ArrayUtil
         }
 
         template <typename T>
-        static Array<T> *cast_array(IArray *ptr)
+        static inline Array<T> *cast_array(IArray *ptr)
         {
             return dynamic_cast<Array<T> *>(ptr);
         }

@@ -6,8 +6,9 @@ namespace sihd::util
 
 LOGGER;
 
-Worker::Worker(IRunnable *runnable): _runnable_ptr(runnable), _running(false)
+Worker::Worker(IRunnable *runnable): _runnable_ptr(nullptr), _running(false)
 {
+    this->set_runnable(runnable);
 }
 
 Worker::~Worker()
@@ -15,6 +16,13 @@ Worker::~Worker()
     this->stop_worker();
     if (_runnable_ptr != nullptr)
         delete _runnable_ptr;
+}
+
+void    Worker::set_runnable(IRunnable *runnable)
+{
+    if (_runnable_ptr != nullptr)
+        delete _runnable_ptr;
+    _runnable_ptr = runnable;
 }
 
 bool    Worker::run()

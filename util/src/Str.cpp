@@ -52,7 +52,7 @@ static std::string  _split_get_token(const char *s, int *idx, const char *delimi
     return std::string(s + x, y - x);
 }
 
-std::vector<std::string> split(const std::string & s, const std::string & delimiter)
+std::vector<std::string>    Str::split(const std::string & s, const std::string & delimiter)
 {
     return Str::split(s, delimiter.c_str());
 }

@@ -3,6 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/time.hpp>
+#include <sihd/util/OS.hpp>
 
 namespace test
 {
@@ -65,7 +66,7 @@ namespace test
         SystemClock clock;
 
         int lambda_ran = 0;
-        seq.add_task(new Task([&] () -> bool
+        seq.add_task(new Task([&lambda_ran] () -> bool
         {
             ++lambda_ran;
             return true;
@@ -79,7 +80,7 @@ namespace test
         seq.stop();
         EXPECT_EQ(lambda_ran, 1);
         int expected_ran = time::micro(sleep_time) / this->should_run_every_us;
-        EXPECT_NEAR(this->ran, expected_ran, 1);
+        EXPECT_NEAR(this->ran, expected_ran, 3);
         EXPECT_EQ(seq.overruns, 2u);
         EXPECT_EQ(this->good_freq, true);
     }
@@ -119,4 +120,56 @@ namespace test
         std::time_t diff_ms = duration_cast<milliseconds>(after - before).count();
         EXPECT_LE(diff_ms, 65);
     }
+
+    TEST_F(TestScheduler, test_sched_pause)
+    {
+        if (OS::is_run_by_valgrind())
+            GTEST_SKIP() << "Test is buggy under valgrind debugger";
+            
+        Scheduler seq("seq");
+        SystemClock clock;
+
+        int lambda_ran = 0;
+        // 1 ms
+        time_t should_run_every_us = 1000;
+        seq.add_task(new Task([&lambda_ran] () -> bool
+        {
+            ++lambda_ran;
+            return true;
+        }, clock.now() + 100, time::micro(should_run_every_us)));
+        std::time_t sleep_time = 10;
+        seq.start();
+        LOG(debug, "Started scheduler");
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+        LOG(debug, "Pausing scheduler");
+        seq.pause();
+        LOG(debug, "Paused scheduler");
+        EXPECT_NEAR(lambda_ran, 11, 1);
+        EXPECT_EQ(seq.overruns, 0u);
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+        EXPECT_NEAR(lambda_ran, 11, 1);
+        EXPECT_EQ(seq.overruns, 0u);
+        LOG(debug, "Resuming scheduler");
+        seq.resume();
+        LOG(debug, "Resumed scheduler");
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+        LOG(debug, "Pausing scheduler");
+        seq.pause();
+        LOG(debug, "Paused scheduler");
+        EXPECT_NEAR(lambda_ran, 21, 1);
+        EXPECT_EQ(seq.overruns, 0u);
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+        EXPECT_NEAR(lambda_ran, 21, 1);
+        EXPECT_EQ(seq.overruns, 0u);
+        LOG(debug, "Resuming scheduler");
+        seq.resume();
+        LOG(debug, "Resumed scheduler");
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+        LOG(debug, "Stopping scheduler");
+        seq.stop();
+        LOG(debug, "Stopped scheduler");
+        EXPECT_NEAR(lambda_ran, 31, 1);
+        EXPECT_EQ(seq.overruns, 0u);
+    }
+
 }

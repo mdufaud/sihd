@@ -109,12 +109,10 @@ bool    Channel::write(const IArray & arr)
         if (_write_change_only && _array_ptr->is_equal(arr) == true)
             return true;
         ret = _array_ptr->copy_from(arr);
+        _timestamp = _clock_ptr->now();
     }
     if (ret)
-    {
-        _timestamp = _clock_ptr->now();
         this->notify();
-    }
     else
     {
         if (_array_ptr->is_same_type(arr) == false)

@@ -14,24 +14,22 @@ Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent
     acceptable_nano = 100;
     _next_run = 0;
     _running = false;
+    _paused = false;
+    _paused_time = 0;
     _clock_ptr = new SystemClock();
 }
 
 Scheduler::~Scheduler()
 {
     this->stop();
-    this->set_clock(nullptr);
-    this->_delete_tasks();
-    for (auto & pair : _task_map)
-    {
-        if (pair.second != nullptr)
-            delete pair.second;
-    }
+    this->clear_tasks();
+    if (_clock_ptr != nullptr)
+        delete _clock_ptr;
 }
 
 void    Scheduler::set_clock(IClock *ptr)
 {
-    if (_clock_ptr)
+    if (_clock_ptr != nullptr)
         delete _clock_ptr;
     _clock_ptr = ptr;
 }
@@ -50,6 +48,7 @@ bool    Scheduler::start()
         _running = true;
     }
     overruns = 0;
+    _paused_time = 0;
     _thread = std::thread(&Scheduler::run, this);
     LOG_DEBUG("Scheduler: started");
     return true;
@@ -62,6 +61,7 @@ bool    Scheduler::stop()
         if (_running == false)
             return false;
         _running = false;
+        _paused = false;
     }
     _waitable.notify_all();
     bool ret = _clock_ptr != nullptr && _clock_ptr->stop();
@@ -76,12 +76,18 @@ bool    Scheduler::is_running()
     return _running;
 }
 
-bool    Scheduler::_wait_for(std::time_t wait_time)
+bool    Scheduler::_wait_for_next_task(std::time_t steady_time)
 {
+    if (_paused)
+    {
+        time_t elapsed = _waitable.infinite_wait_elapsed();
+        steady_time += elapsed;
+        _paused_time += elapsed;
+    }
     while (_task_map.empty() && _running)
         _waitable.infinite_wait();
     if (_running)
-        return _waitable.wait_for(wait_time);
+        return _waitable.wait_for(_next_run - steady_time);
     return false;
 }
 
@@ -90,7 +96,7 @@ Task    *Scheduler::_get_next_task(std::time_t time)
     std::lock_guard l(_mutex_task);
     Task *task = _task_map.begin()->second;
 
-    std::time_t diff = task->run_at - (time + this->acceptable_nano);
+    std::time_t diff = task->run_at - (time + this->acceptable_nano) + _paused_time;
     if (-diff > this->overrun_at)
         this->overruns += 1;
 
@@ -125,18 +131,32 @@ bool    Scheduler::run()
     Task *task = nullptr;
     while (_running)
     {
-        this->_wait_for(_next_run - steady_time);
-        if (_running)
+        this->_wait_for_next_task(steady_time);
+        if (_running && _paused == false)
         {
             steady_time = _steady_clock.now() + _begin_run;
+            // returns most urgent task to play
             task = this->_get_next_task(steady_time);
+            // run and reschedule or add to delete list
             if (task != nullptr)
                 this->_play_task(task, steady_time);
+            // delete tasks in delete list
             this->_delete_tasks();
             steady_time = _steady_clock.now() + _begin_run;
         }
     }
     return true;
+}
+
+void    Scheduler::pause()
+{
+    _paused = true;
+}
+
+void    Scheduler::resume()
+{
+    _paused = false;
+    _waitable.notify_all();
 }
 
 void    Scheduler::add_task(Task *task)
@@ -159,6 +179,18 @@ void    Scheduler::remove_task(Task *task)
         }
     }
     _next_run = _task_map.begin()->first;
+    _waitable.notify_all();
+}
+
+void    Scheduler::clear_tasks()
+{
+    this->_delete_tasks();
+    std::lock_guard l(_mutex_task);
+    for (auto & pair : _task_map)
+    {
+        if (pair.second != nullptr)
+            delete pair.second;
+    }
     _waitable.notify_all();
 }
 

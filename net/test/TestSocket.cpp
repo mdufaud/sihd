@@ -54,8 +54,8 @@ namespace test
         IpAddr addr;
         int accepted_socket = socket_server.accept(addr);
         EXPECT_TRUE(accepted_socket >= 0);
-        TRACE(addr.get_first_ipv4());
-        TRACE(addr.get_first_ipv6());
+        EXPECT_EQ(addr.get_first_ipv4(), "");
+        EXPECT_EQ(addr.get_first_ipv6(), "::1");
 
         Socket connected_socket(accepted_socket);
         EXPECT_EQ(connected_socket.domain(), AF_INET6);
