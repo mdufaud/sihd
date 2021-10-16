@@ -43,7 +43,6 @@ conditionnal_modules = {
         "depends": ['util'],
         "conditionnal-env": "lua",
         "conditionnal-depends": ['core', 'net', 'http'],
-        "libs": ['lua'],
         "parse-configs": [
             "pkg-config --cflags --libs lua-5.3",
             "pkg-config --cflags --libs lua53",
