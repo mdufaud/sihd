@@ -1,10 +1,10 @@
 #include <sihd/core/DevReplayer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/Files.hpp>
 #include <sihd/util/Task.hpp>
 
 #define CHANNEL_PLAY "play"
+#define CHANNEL_END "end"
 
 namespace sihd::core
 {
@@ -16,16 +16,18 @@ LOGGER;
 DevReplayer::DevReplayer(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
     _running(false),
+    _provider_ptr(nullptr),
     _channel_play_ptr(nullptr),
-    _scheduler("scheduler", this)
+    _channel_end_ptr(nullptr)
 {
-    _idx_playing_records = 0;
-    _records_to_play = 0;
     _records_queue_limit = 20;
     _worker.set_runnable(new sihd::util::Task([this] () -> bool
     {
-        return this->_loop();
+        return this->_worker_loop();
     }));
+    this->add_conf("provider", &DevReplayer::set_provider);
+    this->add_conf("queue_size", &DevReplayer::set_scheduler_queue_size);
+    this->add_conf("alias", &DevReplayer::add_alias);
 }
 
 DevReplayer::~DevReplayer()
@@ -35,6 +37,18 @@ DevReplayer::~DevReplayer()
 bool    DevReplayer::is_running() const
 {
     return _running;
+}
+
+bool    DevReplayer::set_scheduler_queue_size(size_t limit)
+{
+    _records_queue_limit = limit;
+    return true;
+}
+
+bool    DevReplayer::set_provider(const std::string & path)
+{
+    _provider_path = path;
+    return true;
 }
 
 bool    DevReplayer::add_alias(const std::string & alias_conf)
@@ -53,53 +67,62 @@ bool    DevReplayer::add_alias(const std::string & alias_conf)
     return true;
 }
 
-bool    DevReplayer::set_csv(const std::string & path)
-{
-    if (!sihd::util::Files::exists(path))
-    {
-        LOG(error, "DevReplayer: csv configuration path does not exists: " << path);
-        return false;
-    }
-    _csv_path = path;
-    return true;
-}
-
 void    DevReplayer::observable_changed(sihd::core::Channel *c)
 {
     if (c == _channel_play_ptr)
     {
         if (_channel_play_ptr->read<bool>(0) == false)
-            _scheduler.pause();
+            _scheduler_ptr->pause();
         else
-            _scheduler.resume();
+            _scheduler_ptr->resume();
     }
 }
 
 bool    DevReplayer::on_init()
 {
+    _provider_ptr = this->find<sihd::util::IProvider<PlayableRecord &>>(_provider_path);
+    if (_provider_ptr == nullptr)
+    {
+        LOG(error, "DevReplayer: could not find provider: " << _provider_path);
+        return false;
+    }
     this->add_unlinked_channel(CHANNEL_PLAY, sihd::util::DBOOL, 1);
+    this->add_unlinked_channel(CHANNEL_END, sihd::util::DBOOL, 1);
+    _scheduler_ptr = this->add_child<sihd::util::Scheduler>("scheduler");
     return true;
 }
 
 bool    DevReplayer::on_start()
 {
-    _idx_playing_records = 0;
-    _records_to_play = 0;
     if (this->get_channel(CHANNEL_PLAY, &_channel_play_ptr) == false)
         return false;
     this->observe_channel(_channel_play_ptr);
+    if (this->get_channel(CHANNEL_END, &_channel_end_ptr) == false)
+        return false;
 
-    _started_nano = _clock.now();
+    Channel *channel_ptr;
+    for (const auto & pair: _map_channels_alias)
+    {
+        channel_ptr = this->find<Channel>(pair.second);
+        if (channel_ptr == nullptr)
+        {
+            LOG(error, "DevRecorder: channel to record '"
+                        << pair.first << "' not found: " << pair.second);
+            return false;
+        }
+        _map_channels[pair.first] = channel_ptr;
+    }
+
     if (_channel_play_ptr->read<bool>(0) == false)
-        _scheduler.pause();
-    if (_scheduler.start() == false)
+        _scheduler_ptr->pause();
+    if (_scheduler_ptr->start() == false)
     {
         LOG(error, "DevReplayer: could not start scheduler");
         return false;
     }
     if (_worker.start_worker(this->get_name()) == false)
     {
-        _scheduler.stop();
+        _scheduler_ptr->stop();
         LOG(error, "DevReplayer: could not start worker");
         return false;
     }
@@ -109,50 +132,66 @@ bool    DevReplayer::on_start()
 
 bool    DevReplayer::run()
 {
-    PlayableRecord & record = _playable_records[_idx_playing_records];
-    Channel *c = _map_channels[record.channel];
+    {
+        std::lock_guard l(_run_mutex);
+        if (_running == false)
+            return false;
+    }
+    PlayableRecord & record = _queue.front();
+    _queue.pop();
+    Channel *c = _map_channels[record.name];
     if (c != nullptr)
         c->write(*record.value);
-    ++_idx_playing_records;
-    --_records_to_play;
     _waitable.notify(1);
+    if (_last_record && _queue.empty())
+        _channel_end_ptr->notify();
     return true;
 }
 
-bool    DevReplayer::_loop()
+bool    DevReplayer::_worker_loop()
 {
-    time_t begin = _scheduler.get_clock()->now();
-    time_t first = _playable_records[0].timestamp;
+    PlayableRecord record;
+    time_t begin = _scheduler_ptr->get_clock()->now();
+    time_t first = -1;
     time_t execute_at;
-    for (const PlayableRecord & record: _playable_records)
+    _last_record = false;
+    while (_provider_ptr->provide(record) != false)
     {
-        execute_at = begin + (first - record.timestamp);
-        while (_running && (_records_to_play >= _records_queue_limit))
+        _queue.push(record);
+        if (first < 0)
+            first = record.timestamp;
+        execute_at = begin + (record.timestamp - first);
+        while (_running && (_queue.size() > _records_queue_limit))
             _waitable.infinite_wait();
         if (_running == false)
             return false;
-        _scheduler.add_task(new sihd::util::Task(this, execute_at));
-        ++_records_to_play;
+        _scheduler_ptr->add_task(new sihd::util::Task(this, execute_at));
     }
+    _last_record = true;
     return true;
 }
 
 bool    DevReplayer::on_stop()
 {
-    _running = false;
+    {
+        std::lock_guard l(_run_mutex);
+        _running = false;
+    }
     _waitable.notify_all();
     if (_worker.stop_worker() == false)
         LOG(error, "DevReplayer: could not stop worker");
-    if (_scheduler.stop() == false)
+    if (_scheduler_ptr->stop() == false)
         LOG(error, "DevReplayer: could not stop scheduler");
+    _channel_play_ptr = nullptr;
+    _channel_end_ptr = nullptr;
     _map_channels.clear();
     return true;
 }
 
 bool    DevReplayer::on_reset()
 {
+    _queue = std::queue<PlayableRecord>();
     _map_channels_alias.clear();
-    _playable_records.clear(); // TODO
     return true;
 }
 

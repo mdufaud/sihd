@@ -32,6 +32,12 @@ class Array:    virtual public IArray,
             this->push_back(data, size);
         }
 
+        Array(const Array<T> & array)
+        {
+            _init();
+            this->from(array);
+        }
+
         Array(size_t capacity)
         {
             _init();
@@ -48,6 +54,8 @@ class Array:    virtual public IArray,
                 this->push_back(value);
             }
         }
+
+        Array & operator=(const Array<T> &) = delete;
 
         virtual ~Array()
         {
@@ -144,7 +152,7 @@ class Array:    virtual public IArray,
                 _buf_ptr = newbuf;
                 _size = min;
                 _capacity = capacity;
-                _has_responsability = true;
+                _has_ownership = true;
             }
             else
                 this->new_buffer(capacity, true);
@@ -238,7 +246,7 @@ class Array:    virtual public IArray,
             _buf_ptr = buf;
             _size = size;
             _capacity = capacity;
-            _has_responsability = false;
+            _has_ownership = false;
             return true;
         }
 
@@ -246,7 +254,7 @@ class Array:    virtual public IArray,
         {
             this->delete_buffer();
             _buf_ptr = new T[capacity]();
-            _has_responsability = true;
+            _has_ownership = true;
             _capacity = _buf_ptr == nullptr ? 0 : capacity;
             if (_buf_ptr != nullptr && clear_mem)
                 memset(_buf_ptr, 0, _capacity * this->data_size());
@@ -359,11 +367,113 @@ class Array:    virtual public IArray,
 
         void delete_buffer()
         {
-            if (_buf_ptr != nullptr && _has_responsability)
+            if (_buf_ptr != nullptr && _has_ownership)
                 delete[] _buf_ptr;
             _buf_ptr = nullptr;
-            _has_responsability = false;
+            _has_ownership = false;
         }
+
+        // iterator
+        template <typename ITERATOR_TYPE, typename ITERATOR_VALUE>
+        class ArrayIterator
+        {
+            public:
+                ITERATOR_TYPE *array_ptr;
+                size_t idx;
+
+                explicit ArrayIterator(ITERATOR_TYPE *ptr = nullptr, size_t i = 0): array_ptr(ptr), idx(i) {}
+
+                ArrayIterator & operator++()
+                {
+                    if (idx <= array_ptr->size())
+                        ++idx;
+                    return *this;
+                }
+
+                ArrayIterator operator++(int)
+                {
+                    ArrayIterator retval(array_ptr, idx);
+                    ++(*this);
+                    return retval;
+                }
+
+                bool operator==(ArrayIterator other) const
+                {
+                    return other.array_ptr == array_ptr
+                            && other.idx == idx;
+                }
+
+                bool operator!=(ArrayIterator other) const { return !(*this == other); }
+
+                ArrayIterator & operator=(ArrayIterator other)
+                {
+                    array_ptr = other.array_ptr;
+                    idx = other.idx;
+                    return *this;
+                }
+
+                ITERATOR_VALUE operator*() { return (*array_ptr)[idx]; }
+        };
+
+        typedef ArrayIterator<Array<T>, T &> iterator;
+        typedef ArrayIterator<const Array<T>, const T> const_iterator;
+
+        iterator begin() { return iterator(this); }
+        iterator end() { return iterator(this, this->size()); }
+
+        const_iterator cbegin() { return const_iterator(this); }
+        const_iterator cend() { return const_iterator(this, this->size()); }
+
+        // reverse iterator
+        template <typename ITERATOR_TYPE, typename ITERATOR_VALUE>
+        class ArrayReverseIterator
+        {
+            public:
+                ITERATOR_TYPE *array_ptr;
+                size_t idx;
+
+                explicit ArrayReverseIterator(ITERATOR_TYPE *ptr = nullptr, size_t i = 0): array_ptr(ptr), idx(i) {}
+
+                ArrayReverseIterator & operator++()
+                {
+                    if (idx >= 0)
+                        --idx;
+                    return *this;
+                }
+
+                ArrayReverseIterator operator++(int)
+                {
+                    ArrayReverseIterator retval(array_ptr, idx);
+                    ++(*this);
+                    return retval;
+                }
+
+                bool operator==(ArrayReverseIterator other) const
+                {
+                    return other.array_ptr == array_ptr
+                            && other.idx == idx;
+                }
+
+                bool operator!=(ArrayReverseIterator other) const { return !(*this == other); }
+
+                ArrayReverseIterator & operator=(ArrayReverseIterator other)
+                {
+                    array_ptr = other.array_ptr;
+                    idx = other.idx;
+                    return *this;
+                }
+
+                ITERATOR_VALUE operator*() { return (*array_ptr)[idx]; }
+        };
+
+        typedef ArrayReverseIterator<Array<T>, T &> reverse_iterator;
+        typedef ArrayReverseIterator<const Array<T>, const T> const_reverse_iterator;
+
+        reverse_iterator rbegin() { return reverse_iterator(this, this->size() - 1); }
+        reverse_iterator rend() { return reverse_iterator(this, -1); }
+
+        const_reverse_iterator crbegin() { return const_reverse_iterator(this, this->size() - 1); }
+        const_reverse_iterator crend() { return const_reverse_iterator(this, -1); }
 
     private:
         void _init()
@@ -371,13 +481,14 @@ class Array:    virtual public IArray,
             _buf_ptr = nullptr;
             _size = 0;
             _capacity = 0;
-            _has_responsability = false;
+            _has_ownership = false;
         }
 
         T       *_buf_ptr;
         size_t  _size;
         size_t  _capacity;
-        bool    _has_responsability;
+        // ownership of pointer
+        bool    _has_ownership;
 
         static size_t   added_resize_capacity;
 };

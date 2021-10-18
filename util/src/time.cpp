@@ -88,7 +88,7 @@ time_t day(time_t t)
 
 time_t freq(double freq)
 {
-    if (freq == 0.0)
+    if (freq < 0.0)
         return 0;
     return (double)(1. / freq) * 1E9;
 }

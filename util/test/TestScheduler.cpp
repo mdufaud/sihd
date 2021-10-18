@@ -63,7 +63,6 @@ namespace test
     TEST_F(TestScheduler, test_sched_perf)
     {
         Scheduler seq("seq");
-        SystemClock clock;
 
         int lambda_ran = 0;
         seq.add_task(new Task([&lambda_ran] () -> bool

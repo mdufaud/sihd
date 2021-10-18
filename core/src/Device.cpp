@@ -11,8 +11,7 @@ LOGGER;
 sihd::util::ServiceController Device::_default_service_controller;
 
 Device::Device(const std::string & name, Node *parent):
-    AChannelContainer(name, parent),
-    _service_controller(_default_service_controller.statemachine)
+    AChannelContainer(name, parent), _service_controller(_default_service_controller.statemachine)
 {
     _service_controller.optionnal_setup();
 }
@@ -28,7 +27,7 @@ bool    Device::do_setup()
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->setup() == false)
         {
-            LOG(error, "Device: " << this->get_name() << " << could not setup service: " << name);
+            LOG(error, "Device: " << this->get_name() << " could not setup service: " << name);
             return false;
         }
     }
@@ -42,7 +41,7 @@ bool    Device::do_init()
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->init() == false)
         {
-            LOG(error, "Device: " << this->get_name() << " << could not init service: " << name);
+            LOG(error, "Device: " << this->get_name() << " could not init service: " << name);
             return false;
         }
     }
@@ -60,7 +59,7 @@ bool    Device::do_start()
         {
             if (service->start() == false)
             {
-                LOG(error, "Device: " << this->get_name() << " << could not start service: " << name);
+                LOG(error, "Device: " << this->get_name() << " could not start service: " << name);
                 ret = false;
                 break ;
             }
@@ -68,7 +67,7 @@ bool    Device::do_start()
                 started_services.push_back(service);
         }
     }
-    ret = this->resolve_links();
+    ret = ret && this->resolve_links();
     if (ret == false)
     {
         // return started service to stop state if failed
@@ -88,7 +87,7 @@ bool    Device::do_stop()
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->stop() == false)
         {
-            LOG(error, "Device: " << this->get_name() << " << could not stop service: " << name);
+            LOG(error, "Device: " << this->get_name() << " could not stop service: " << name);
             return false;
         }
     }
@@ -102,7 +101,7 @@ bool    Device::do_reset()
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->reset() == false)
         {
-            LOG(error, "Device: " << this->get_name() << " << could not reset service: " << name);
+            LOG(error, "Device: " << this->get_name() << " could not reset service: " << name);
             return false;
         }
     }

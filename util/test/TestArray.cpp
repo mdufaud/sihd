@@ -45,6 +45,28 @@ namespace test
             IArray *_array_ptr;
     };
 
+    TEST_F(TestArray, test_array_range_loop)
+    {
+        ArrInt arr = {10, 20, 30, 40};
+
+        int val;
+        int idx = 0;
+        for (const int & i: arr)
+        {
+            val = i;
+            ++idx;
+        }
+        EXPECT_EQ(val, 40);
+        EXPECT_EQ(idx, 4);
+        for (auto it = arr.crbegin(); it != arr.crend(); ++it)
+        {
+            val = *it;
+            ++idx;
+        }
+        EXPECT_EQ(val, 10);
+        EXPECT_EQ(idx, 8);
+    }
+
     TEST_F(TestArray, test_array_str)
     {
         const char hw[] = "hello world";

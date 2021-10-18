@@ -35,44 +35,47 @@ namespace test
 
             bool    test_long(const std::string & str, int base = 0)
             {
-                auto val = Str::to_long(str, base);
+                long val;
+                bool ret = Str::to_long(str, &val, base);
                 LOG(debug, "Test signed long (errno = " << errno << ") -> " << str);
-                if (val)
+                if (ret)
                 {
-                    LOG(debug, "Value found: " << val.value());
-                    _val = val.value();
+                    LOG(debug, "Value found: " << val);
+                    _val = val;
                     return true;
                 }
                 LOG(debug, "Failed to find a signed long");
-                return val.has_value();
+                return ret;
             }
 
             bool    test_ulong(const std::string & str, int base = 0)
             {
-                auto val = Str::to_ulong(str, base);
+                unsigned long val;
+                bool ret = Str::to_ulong(str, &val, base);
                 LOG(debug, "Test unsigned long (errno = " << errno << ") -> " << str);
-                if (val)
+                if (ret)
                 {
-                    LOG(debug, "Value found: " << val.value());
-                    _uval = val.value();
+                    LOG(debug, "Value found: " << val);
+                    _uval = val;
                     return true;
                 }
                 LOG(debug, "Failed to find an unsigned long");
-                return val.has_value();
+                return ret;
             }
 
             bool    test_double(const std::string & str)
             {
-                auto val = Str::to_double(str);
+                double val;
+                bool ret = Str::to_double(str, &val);
                 LOG(debug, "Test double (errno = " << errno << ") -> " << str);
-                if (val)
+                if (ret)
                 {
-                    LOG(debug, "Value found: " << val.value());
-                    _dval = val.value();
+                    LOG(debug, "Value found: " << val);
+                    _dval = val;
                     return true;
                 }
                 LOG(debug, "Failed to find a double");
-                return val.has_value();
+                return ret;
             }
 
             long _val;

@@ -1,21 +1,26 @@
 #ifndef __SIHD_CORE_CHANNELWAITER_HPP__
 # define __SIHD_CORE_CHANNELWAITER_HPP__
 
-# include <sihd/core/Channel.hpp>
 # include <sihd/util/Waitable.hpp>
+
+# include <sihd/core/Channel.hpp>
+# include <sihd/core/ACoreObject.hpp>
 
 namespace sihd::core
 {
 
-class ChannelWaiter: public sihd::util::IObserver<Channel>
+class ChannelWaiter: public ACoreObject
 {
     public:
+        ChannelWaiter(const std::string & name, sihd::util::Node *parent = nullptr);
         ChannelWaiter(Channel *c = nullptr);
         virtual ~ChannelWaiter();
 
         bool set_channel(Channel *c);
         void clear_channel();
         bool wait_for(time_t nano, uint32_t notifications = 1);
+
+        bool do_stop();
 
     protected:
     

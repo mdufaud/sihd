@@ -50,9 +50,9 @@ class Str
 
         static std::map<std::string, std::string> parse_configuration(const std::string & conf);
 
-        static std::optional<long> to_long(const std::string & str, uint16_t base = 0);
-        static std::optional<unsigned long> to_ulong(const std::string & str, uint16_t base = 0);
-        static std::optional<double> to_double(const std::string & str);
+        static bool to_long(const std::string & str, long *ret, uint16_t base = 0);
+        static bool to_ulong(const std::string & str, unsigned long *ret, uint16_t base = 0);
+        static bool to_double(const std::string & str, double *ret);
 };
 
 }

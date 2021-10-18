@@ -38,6 +38,7 @@ class ServiceController:    virtual public AService::IServiceController,
         }
 
         void optionnal_setup();
+        void optionnal_init();
 
         StateMachine<State, AService::Operation> statemachine;
 

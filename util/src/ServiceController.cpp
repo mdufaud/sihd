@@ -64,6 +64,11 @@ void    ServiceController::optionnal_setup()
     statemachine.add_transition(NONE, AService::INIT, INITIALIZING);
 }
 
+void    ServiceController::optionnal_init()
+{
+    statemachine.add_transition(NONE, AService::START, STARTING);
+}
+
 bool    ServiceController::op_start(AService::Operation op)
 {
     bool ret = statemachine.transition(op);

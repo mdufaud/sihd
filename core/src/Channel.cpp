@@ -57,14 +57,14 @@ Channel     *Channel::build(const std::string & configuration)
         LOG(error, "Channel: cannot build from configuration '" << configuration << "' no size");
         return nullptr;
     }
-    auto opt_value = Str::to_ulong(map["size"]);
-    if (opt_value.has_value() == false)
+    unsigned long val;
+    if (Str::to_ulong(map["size"], &val) == false)
     {
         LOG(error, "Channel: cannot build from configuration '" << configuration
                     << "' size is either overflow or invalid");
         return nullptr;
     }
-    return new Channel(map["name"], map["type"], opt_value.value());
+    return new Channel(map["name"], map["type"], val);
 }
 
 void    Channel::_init(Type type, size_t size)

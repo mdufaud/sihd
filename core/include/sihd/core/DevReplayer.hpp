@@ -3,8 +3,12 @@
 
 # include <sihd/core/Device.hpp>
 # include <sihd/core/DevRecorder.hpp>
+# include <sihd/core/Records.hpp>
 # include <sihd/util/Scheduler.hpp>
 # include <sihd/util/Worker.hpp>
+# include <sihd/util/IProvider.hpp>
+
+# include <queue>
 
 namespace sihd::core
 {
@@ -13,22 +17,15 @@ class DevReplayer:  public sihd::core::Device,
                     public sihd::util::IRunnable
 {
     public:
-        struct PlayableRecord
-        {
-            std::string channel;
-            time_t timestamp = 0;
-            sihd::util::IArray *value = nullptr;
-        };
-        typedef std::vector<PlayableRecord> replay_list;
-
         DevReplayer(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~DevReplayer();
 
         bool run() override;
         bool is_running() const override;
 
+        bool set_provider(const std::string & path);
         bool add_alias(const std::string & alias_conf);
-        bool set_csv(const std::string & path);
+        bool set_scheduler_queue_size(size_t limit);
 
     protected:
         void observable_changed([[maybe_unused]] sihd::core::Channel *c) override;
@@ -39,23 +36,24 @@ class DevReplayer:  public sihd::core::Device,
         bool on_reset() override;
 
     private:
-        bool _loop();
+        bool _worker_loop();
 
         bool _running;
+        bool _last_record;
 
-        sihd::util::SteadyClock _clock;
-        time_t _started_nano;
-        size_t _idx_playing_records;
-        size_t _records_to_play;
+        std::mutex _run_mutex;
         size_t _records_queue_limit;
-        std::string _csv_path;
-        replay_list _playable_records;
+
+        std::string _provider_path;
+        sihd::util::IProvider<PlayableRecord &> *_provider_ptr;
+        std::queue<PlayableRecord> _queue;
 
         std::map<std::string, Channel *> _map_channels;
         std::map<std::string, std::string> _map_channels_alias;
         Channel *_channel_play_ptr;
+        Channel *_channel_end_ptr;
 
-        sihd::util::Scheduler _scheduler;
+        sihd::util::Scheduler *_scheduler_ptr;
         sihd::util::Worker _worker;
         sihd::util::Waitable _waitable;
 };

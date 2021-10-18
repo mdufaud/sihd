@@ -35,7 +35,7 @@ class Named
         Named *find(Named *from, const std::string & path);
         Named *find(const std::string & path);
         Node *find_node(const std::string & path);
-        template<class C>
+        template <class C>
         C *find(const std::string & path)
         {
             Named *obj = this->find(path);

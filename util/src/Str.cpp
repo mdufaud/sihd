@@ -323,46 +323,46 @@ std::map<std::string, std::string>  Str::parse_configuration(const std::string &
     return ret;
 }
 
-std::optional<long> Str::to_long(const std::string & str, uint16_t base)
+bool    Str::to_long(const std::string & str, long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
-    long value = strtol(str.c_str(), &endptr, base);
+    *ret = strtol(str.c_str(), &endptr, base);
     if (str.c_str() == endptr)
-        return std::nullopt;
-    if (value == 0L && errno == EINVAL)
-        return std::nullopt;
-    if ((value == LONG_MIN || value == LONG_MAX) && errno == ERANGE)
-        return std::nullopt;
-    return value;
+        return false;
+    if (*ret == 0L && errno == EINVAL)
+        return false;
+    if ((*ret == LONG_MIN || *ret == LONG_MAX) && errno == ERANGE)
+        return false;
+    return true;
 }
 
-std::optional<unsigned long>    Str::to_ulong(const std::string & str, uint16_t base)
+bool   Str::to_ulong(const std::string & str, unsigned long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
-    unsigned long value = strtoul(str.c_str(), &endptr, base);
+    *ret = strtoul(str.c_str(), &endptr, base);
     if (str.c_str() == endptr)
-        return std::nullopt;
-    if (value == 0UL && errno == EINVAL)
-        return std::nullopt;
-    if (value == ULONG_MAX && errno == ERANGE)
-        return std::nullopt;
-    return value;
+        return false;
+    if (*ret == 0UL && errno == EINVAL)
+        return false;
+    if (*ret == ULONG_MAX && errno == ERANGE)
+        return false;
+    return true;
 }
 
-std::optional<double>   Str::to_double(const std::string & str)
+bool    Str::to_double(const std::string & str, double *ret)
 {
     errno = 0;
     char *endptr = NULL;
-    double value = strtod(str.c_str(), &endptr);
+    *ret = strtod(str.c_str(), &endptr);
     if (str.c_str() == endptr)
-        return std::nullopt;
-    if (value == 0 && errno == EINVAL)
-        return std::nullopt;
-    if ((value == HUGE_VAL || value == -HUGE_VAL) && errno == ERANGE)
-        return std::nullopt;
-    return value;
+        return false;
+    if (*ret == 0 && errno == EINVAL)
+        return false;
+    if ((*ret == HUGE_VAL || *ret == -HUGE_VAL) && errno == ERANGE)
+        return false;
+    return true;
 }
 
 }

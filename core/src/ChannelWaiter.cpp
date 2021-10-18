@@ -6,10 +6,15 @@ namespace sihd::core
 
 LOGGER;
 
-ChannelWaiter::ChannelWaiter(Channel *c): _channel(nullptr)
+ChannelWaiter::ChannelWaiter(Channel *c): ACoreObject("channel_waiter", nullptr), _channel(nullptr)
 {
     if (c != nullptr)
         this->set_channel(c);
+}
+
+ChannelWaiter::ChannelWaiter(const std::string & name, sihd::util::Node *parent):
+    ACoreObject(name, parent), _channel(nullptr)
+{
 }
 
 ChannelWaiter::~ChannelWaiter()
@@ -17,8 +22,15 @@ ChannelWaiter::~ChannelWaiter()
     this->clear_channel();
 }
 
+bool    ChannelWaiter::do_stop()
+{
+    this->clear_channel();
+    return true;
+}
+
 void    ChannelWaiter::clear_channel()
 {
+    _waitable.notify_all();
     if (_channel != nullptr)
         _channel->remove_observer(this);
     _channel = nullptr;

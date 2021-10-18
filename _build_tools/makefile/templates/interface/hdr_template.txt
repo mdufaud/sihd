@@ -8,7 +8,7 @@ class CLASS_NAME
 {
     public:
         virtual ~CLASS_NAME() {};
-		virtual void	method() = 0;
+		virtual void method() = 0;
 };
 
 }

@@ -40,7 +40,10 @@ class Channel:  public sihd::util::Named,
         static Channel *build(const std::string & configuration);
 
         void set_clock(sihd::util::IClock *clock);
+        // get last write timestamp (thread safe)
         std::time_t timestamp();
+        // get last write timestamp (not thread safe)
+        std::time_t ctimestamp() const { return _timestamp; };
 
         // notifies all observers and prevent writing inside notification thread
         void notify();
@@ -49,6 +52,7 @@ class Channel:  public sihd::util::Named,
         void set_write_on_change(bool activate) { _write_change_only = activate; }
 
         sihd::util::IArray *array() { return _array_ptr; }
+        const sihd::util::IArray *carray() const { return _array_ptr; }
 
         template <typename T>
         sihd::util::Array<T> *array()
