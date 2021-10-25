@@ -105,7 +105,9 @@ To compile with mingw, add to your command line: "compiler=mingw"
 
 ### Python bindings build
 
-python-3.6.9
+python-3.6.7
+
+It is recommended to install it on your system with a packet manager: python3-dev
 
 Add to your command line "py=1"
 
@@ -120,6 +122,8 @@ make mod core,py
 ### Lua bindings build
 
 lua-5.3.5
+
+It is recommended to install it on your system with a packet manager: lua5.3-dev
 
 Add to your command line "lua=1"
 

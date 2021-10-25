@@ -1,4 +1,4 @@
-#include <sihd/core/DevReplayer.hpp>
+#include <sihd/core/DevPlayer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Task.hpp>
@@ -9,11 +9,11 @@
 namespace sihd::core
 {
 
-SIHD_UTIL_REGISTER_FACTORY(DevReplayer)
+SIHD_UTIL_REGISTER_FACTORY(DevPlayer)
 
 LOGGER;
 
-DevReplayer::DevReplayer(const std::string & name, sihd::util::Node *parent):
+DevPlayer::DevPlayer(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
     _running(false),
     _provider_ptr(nullptr),
@@ -25,33 +25,33 @@ DevReplayer::DevReplayer(const std::string & name, sihd::util::Node *parent):
     {
         return this->_worker_loop();
     }));
-    this->add_conf("provider", &DevReplayer::set_provider);
-    this->add_conf("queue_size", &DevReplayer::set_scheduler_queue_size);
-    this->add_conf("alias", &DevReplayer::add_alias);
+    this->add_conf("provider", &DevPlayer::set_provider);
+    this->add_conf("queue_size", &DevPlayer::set_scheduler_queue_size);
+    this->add_conf("alias", &DevPlayer::add_alias);
 }
 
-DevReplayer::~DevReplayer()
+DevPlayer::~DevPlayer()
 {
 }
 
-bool    DevReplayer::is_running() const
+bool    DevPlayer::is_running() const
 {
     return _running;
 }
 
-bool    DevReplayer::set_scheduler_queue_size(size_t limit)
+bool    DevPlayer::set_scheduler_queue_size(size_t limit)
 {
     _records_queue_limit = limit;
     return true;
 }
 
-bool    DevReplayer::set_provider(const std::string & path)
+bool    DevPlayer::set_provider(const std::string & path)
 {
     _provider_path = path;
     return true;
 }
 
-bool    DevReplayer::add_alias(const std::string & alias_conf)
+bool    DevPlayer::add_alias(const std::string & alias_conf)
 {
     std::vector<std::string> conf = sihd::util::Str::split(alias_conf, "=");
 
@@ -67,7 +67,7 @@ bool    DevReplayer::add_alias(const std::string & alias_conf)
     return true;
 }
 
-void    DevReplayer::observable_changed(sihd::core::Channel *c)
+void    DevPlayer::observable_changed(sihd::core::Channel *c)
 {
     if (c == _channel_play_ptr)
     {
@@ -78,7 +78,7 @@ void    DevReplayer::observable_changed(sihd::core::Channel *c)
     }
 }
 
-bool    DevReplayer::on_init()
+bool    DevPlayer::on_init()
 {
     _provider_ptr = this->find<sihd::util::IProvider<PlayableRecord &>>(_provider_path);
     if (_provider_ptr == nullptr)
@@ -92,7 +92,7 @@ bool    DevReplayer::on_init()
     return true;
 }
 
-bool    DevReplayer::on_start()
+bool    DevPlayer::on_start()
 {
     if (this->get_channel(CHANNEL_PLAY, &_channel_play_ptr) == false)
         return false;
@@ -130,7 +130,7 @@ bool    DevReplayer::on_start()
     return true;
 }
 
-bool    DevReplayer::run()
+bool    DevPlayer::run()
 {
     {
         std::lock_guard l(_run_mutex);
@@ -148,7 +148,7 @@ bool    DevReplayer::run()
     return true;
 }
 
-bool    DevReplayer::_worker_loop()
+bool    DevPlayer::_worker_loop()
 {
     PlayableRecord record;
     time_t begin = _scheduler_ptr->get_clock()->now();
@@ -171,7 +171,7 @@ bool    DevReplayer::_worker_loop()
     return true;
 }
 
-bool    DevReplayer::on_stop()
+bool    DevPlayer::on_stop()
 {
     {
         std::lock_guard l(_run_mutex);
@@ -188,7 +188,7 @@ bool    DevReplayer::on_stop()
     return true;
 }
 
-bool    DevReplayer::on_reset()
+bool    DevPlayer::on_reset()
 {
     _queue = std::queue<PlayableRecord>();
     _map_channels_alias.clear();

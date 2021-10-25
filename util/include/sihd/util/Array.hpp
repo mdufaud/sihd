@@ -29,6 +29,7 @@ class Array:    virtual public IArray,
         Array(const T *data, size_t size)
         {
             _init();
+            this->reserve(size);
             this->push_back(data, size);
         }
 
@@ -188,6 +189,9 @@ class Array:    virtual public IArray,
 
         // Class methods
 
+        T *data() { return _buf_ptr; }
+        const T *cdata() const { return _buf_ptr; }
+
         std::string to_string(char delimiter = '\0') const
         {
             std::stringstream ss;
@@ -197,27 +201,27 @@ class Array:    virtual public IArray,
             {
                 if (i != 0 && delimiter != '\0')
                     ss << delimiter;
-                ss << this->at(i);
+                ss << std::to_string(this->at(i));
                 ++i;
             }
             return ss.str();
         }
 
+        // compares memory from internal buffer and array of size
         bool is_equal(const T *arr, size_t size) const
         {
-            if (size >= this->size())
+            if (size > this->capacity())
                 return false;
             return memcmp(_buf_ptr, arr, size) == 0;
         }
 
-        T *data() { return _buf_ptr; }
-        const T *cdata() const { return _buf_ptr; }
-
-        bool copy_from(const T *buf, size_t size, size_t from = 0)
+        // copies values from array
+        bool copy_from(const T *arr, size_t size, size_t from = 0)
         {
-            return this->copy_from_bytes((uint8_t *)buf, size * this->data_size(), from * this->data_size());
+            return this->copy_from_bytes((uint8_t *)arr, size * this->data_size(), from * this->data_size());
         }
 
+        // delete internal buffer if exists then sets it to bytes buffer buf - does not take ownership
         bool assign_bytes(void *buf, size_t size, size_t capacity)
         {
             if (size % this->data_size() != 0)
@@ -235,21 +239,24 @@ class Array:    virtual public IArray,
             return this->assign((T *)buf, size / this->data_size(), capacity / this->data_size());
         }
 
-        bool assign(T *buf, size_t size)
+        // delete internal buffer if exists then sets it to array buf - does not take ownership
+        bool assign(T *arr, size_t size)
         {
-            return this->assign(buf, size, size);            
+            return this->assign(arr, size, size);            
         }
 
-        bool assign(T *buf, size_t size, size_t capacity)
+        // delete internal buffer if exists then sets it to array buf - does not take ownership
+        bool assign(T *arr, size_t size, size_t capacity)
         {
             this->delete_buffer();
-            _buf_ptr = buf;
+            _buf_ptr = arr;
             _size = size;
             _capacity = capacity;
             _has_ownership = false;
             return true;
         }
 
+        // delete internal buffer if exists then allocates new one
         bool new_buffer(size_t capacity, bool clear_mem = false)
         {
             this->delete_buffer();
@@ -267,7 +274,8 @@ class Array:    virtual public IArray,
          * 
          * @param buf Array to copy from
          * @param size The size of bytes to copy from buffer
-         * @return true if correctly allocated 
+         * @return true buffer allocated
+         * @return false buffer not allocated
          */
         bool from(const uint8_t *buf, size_t size)
         {
@@ -281,6 +289,7 @@ class Array:    virtual public IArray,
             return _buf_ptr != nullptr;
         }
 
+        // push whole array buf of size at the end of the internal buffer
         bool push_back(const T *buf, size_t size)
         {
             if (_size + size > _capacity)
@@ -293,6 +302,7 @@ class Array:    virtual public IArray,
             return _buf_ptr != nullptr;
         }
 
+        // push a single value at the end of the array
         bool push_back(const T & value)
         {
             if (_size + 1 > _capacity)
@@ -305,6 +315,7 @@ class Array:    virtual public IArray,
             return _buf_ptr != nullptr;
         }
 
+        // remove value at idx and returns it
         T pop(size_t idx)
         {
             T ret = this->at(idx);
@@ -317,16 +328,13 @@ class Array:    virtual public IArray,
             return ret;
         }
 
-        T front() const
-        {
-            return _buf_ptr[0];
-        }
+        // data first value
+        inline T front() const { return _buf_ptr[0]; }
 
-        T back() const
-        {
-            return _buf_ptr[_size - 1];
-        }
+        // access last value
+        inline T back() const { return _buf_ptr[_size - 1]; }
 
+        // access value at idx - throws out_of_range
         T at(size_t idx) const
         {
             if (idx >= _size)
@@ -334,6 +342,7 @@ class Array:    virtual public IArray,
             return _buf_ptr[idx];
         }
 
+        // set value at idx - throws out_of_range
         void set(size_t idx, T value)
         {
             if (idx >= _size)
@@ -341,30 +350,13 @@ class Array:    virtual public IArray,
             _buf_ptr[idx] = value;
         }
 
-        inline T operator[](size_t idx) const
-        {
-            return _buf_ptr[idx];
-        }
+        // access value arr[idx]
+        inline T operator[](size_t idx) const { return _buf_ptr[idx]; }
 
-        inline T & operator[](size_t idx)
-        {
-            return _buf_ptr[idx];
-        }
+        // set value arr[idx] = value
+        inline T & operator[](size_t idx) { return _buf_ptr[idx]; }
 
-        bool fill(T value, size_t from = 0)
-        {
-            if (_buf_ptr != nullptr)
-            {
-                size_t i = from;
-                while (i < _capacity)
-                {
-                    _buf_ptr[i] = value;
-                    ++i;
-                }
-            }
-            return _buf_ptr != nullptr;
-        }
-
+        // delete internal buffer if it has ownership - set internal buffer to nullptr
         void delete_buffer()
         {
             if (_buf_ptr != nullptr && _has_ownership)
@@ -373,109 +365,214 @@ class Array:    virtual public IArray,
             _has_ownership = false;
         }
 
-        // iterator
-        template <typename ITERATOR_TYPE, typename ITERATOR_VALUE>
+        // Array<T> iterator
+
+        template <typename ITERATOR_TYPE>
         class ArrayIterator
         {
             public:
-                ITERATOR_TYPE *array_ptr;
-                size_t idx;
+                // Iterator traits - typedefs and types required to be STL compliant
+                using iterator_category = std::random_access_iterator_tag;
+                using difference_type = std::ptrdiff_t;
+                using value_type = ITERATOR_TYPE;
+                using pointer = ITERATOR_TYPE *;
+                using reference = ITERATOR_TYPE &;
 
-                explicit ArrayIterator(ITERATOR_TYPE *ptr = nullptr, size_t i = 0): array_ptr(ptr), idx(i) {}
+                pointer array_beg;
+                pointer array_curr;
+                pointer array_end;
+
+                ArrayIterator(pointer ptr_begin = nullptr, pointer ptr_curr = nullptr, pointer ptr_end = nullptr):
+                    array_beg(ptr_begin), array_curr(ptr_curr), array_end(ptr_end) {}
+
+                ArrayIterator(const ArrayIterator & other):
+                    array_beg(other.array_beg), array_curr(other.array_curr), array_end(other.array_end) {}
+
+                ArrayIterator & operator=(const ArrayIterator & other)
+                {
+                    this->array_beg = other.array_beg;
+                    this->array_curr = other.array_curr;
+                    this->array_end = other.array_end;
+                    return *this;
+                }
 
                 ArrayIterator & operator++()
                 {
-                    if (idx <= array_ptr->size())
-                        ++idx;
+                    ++this->array_curr;
+                    return *this;
+                }
+
+                ArrayIterator & operator--()
+                {
+                    --this->array_curr;
                     return *this;
                 }
 
                 ArrayIterator operator++(int)
                 {
-                    ArrayIterator retval(array_ptr, idx);
+                    ArrayIterator ret(this);
                     ++(*this);
-                    return retval;
+                    return ret;
                 }
 
-                bool operator==(ArrayIterator other) const
+                ArrayIterator operator--(int)
                 {
-                    return other.array_ptr == array_ptr
-                            && other.idx == idx;
+                    ArrayIterator ret(this);
+                    --(*this);
+                    return ret;
                 }
 
-                bool operator!=(ArrayIterator other) const { return !(*this == other); }
+                difference_type operator-(const ArrayIterator & rhs) const { return this->array_curr - rhs.array_curr; }
 
-                ArrayIterator & operator=(ArrayIterator other)
+                ArrayIterator operator-(ssize_t i)
                 {
-                    array_ptr = other.array_ptr;
-                    idx = other.idx;
-                    return *this;
+                    return ArrayIterator(this->array_beg, this->array_curr - i, this->array_end);
                 }
 
-                ITERATOR_VALUE operator*() { return (*array_ptr)[idx]; }
+                ArrayIterator operator+(ssize_t i)
+                {
+                    return ArrayIterator(this->array_beg, this->array_curr + i, this->array_end);
+                }
+
+                bool operator==(const ArrayIterator & rhs) const { return this->array_curr == rhs.array_curr; }
+                bool operator!=(const ArrayIterator & rhs) const { return !(*this == rhs); }
+
+                bool operator<(const ArrayIterator & rhs) const { return this->array_curr < rhs.array_curr; }
+                bool operator<=(const ArrayIterator & rhs) const { return this->array_curr <= rhs.array_curr; }
+                bool operator>(const ArrayIterator & rhs) const { return !(*this <= rhs); }
+                bool operator>=(const ArrayIterator & rhs) const { return !(*this < rhs); }
+
+                reference operator*()
+                {
+                    this->_check_pos(this->array_curr);
+                    return *this->array_curr;
+                }
+
+            private:
+                void _check_range(ssize_t movement) const { return this->_check_pos(this->array_curr + movement); }
+                void _check_pos(pointer pos) const
+                {
+                    if (pos < this->array_beg && pos > this->array_end)
+                        throw std::out_of_range("Array::iterator: iterator out of range");
+                }
         };
 
-        typedef ArrayIterator<Array<T>, T &> iterator;
-        typedef ArrayIterator<const Array<T>, const T> const_iterator;
+        typedef ArrayIterator<T> iterator;
+        typedef ArrayIterator<const T> const_iterator;
 
-        iterator begin() { return iterator(this); }
-        iterator end() { return iterator(this, this->size()); }
+        iterator begin() { return iterator(this->data(), this->data(), this->data() + this->size()); }
+        iterator end() { return iterator(this->data(), this->data() + this->size(), this->data() + this->size()); }
 
-        const_iterator cbegin() { return const_iterator(this); }
-        const_iterator cend() { return const_iterator(this, this->size()); }
+        const_iterator cbegin() { return const_iterator(this->data(), this->data(), this->data() + this->size()); }
+        const_iterator cend() { return const_iterator(this->data(), this->data() + this->size(), this->data() + this->size()); }
 
-        // reverse iterator
-        template <typename ITERATOR_TYPE, typename ITERATOR_VALUE>
-        class ArrayReverseIterator
+        // end of Array<T> iterator
+
+        // Array<T> reverse iterator
+
+        template <typename ITERATOR_TYPE>
+        class ReverseArrayIterator
         {
             public:
-                ITERATOR_TYPE *array_ptr;
-                size_t idx;
+                // Iterator traits - typedefs and types required to be STL compliant
+                using iterator_category = std::random_access_iterator_tag;
+                using difference_type = std::ptrdiff_t;
+                using value_type = ITERATOR_TYPE;
+                using pointer = ITERATOR_TYPE *;
+                using reference = ITERATOR_TYPE &;
 
-                explicit ArrayReverseIterator(ITERATOR_TYPE *ptr = nullptr, size_t i = 0): array_ptr(ptr), idx(i) {}
+                pointer array_beg;
+                pointer array_curr;
+                pointer array_end;
 
-                ArrayReverseIterator & operator++()
+                ReverseArrayIterator(pointer ptr_begin = nullptr, pointer ptr_curr = nullptr, pointer ptr_end = nullptr):
+                    array_beg(ptr_begin), array_curr(ptr_curr), array_end(ptr_end) {}
+
+                ReverseArrayIterator(const ReverseArrayIterator & other):
+                    array_beg(other.array_beg), array_curr(other.array_curr), array_end(other.array_end) {}
+
+                ReverseArrayIterator & operator=(const ReverseArrayIterator & other)
                 {
-                    if (idx >= 0)
-                        --idx;
+                    this->array_beg = other.array_beg;
+                    this->array_curr = other.array_curr;
+                    this->array_end = other.array_end;
                     return *this;
                 }
 
-                ArrayReverseIterator operator++(int)
+                ReverseArrayIterator & operator++()
                 {
-                    ArrayReverseIterator retval(array_ptr, idx);
+                    --this->array_curr;
+                    return *this;
+                }
+
+                ReverseArrayIterator & operator--()
+                {
+                    ++this->array_curr;
+                    return *this;
+                }
+
+                ReverseArrayIterator operator++(int)
+                {
+                    ReverseArrayIterator ret(this);
                     ++(*this);
-                    return retval;
+                    return ret;
                 }
 
-                bool operator==(ArrayReverseIterator other) const
+                ReverseArrayIterator operator--(int)
                 {
-                    return other.array_ptr == array_ptr
-                            && other.idx == idx;
+                    ReverseArrayIterator ret(this);
+                    --(*this);
+                    return ret;
                 }
 
-                bool operator!=(ArrayReverseIterator other) const { return !(*this == other); }
+                difference_type operator-(const ReverseArrayIterator & rhs) const { return this->array_curr - rhs.array_curr; }
 
-                ArrayReverseIterator & operator=(ArrayReverseIterator other)
+                ReverseArrayIterator operator-(ssize_t i)
                 {
-                    array_ptr = other.array_ptr;
-                    idx = other.idx;
-                    return *this;
+                    return ReverseArrayIterator(this->array_beg, this->array_curr + i, this->array_end);
                 }
 
-                ITERATOR_VALUE operator*() { return (*array_ptr)[idx]; }
+                ReverseArrayIterator operator+(ssize_t i)
+                {
+                    return ReverseArrayIterator(this->array_beg, this->array_curr - i, this->array_end);
+                }
+
+                bool operator==(const ReverseArrayIterator & rhs) const { return this->array_curr == rhs.array_curr; }
+                bool operator!=(const ReverseArrayIterator & rhs) const { return !(*this == rhs); }
+
+                bool operator<(const ReverseArrayIterator & rhs) const { return this->array_curr > rhs.array_curr; }
+                bool operator<=(const ReverseArrayIterator & rhs) const { return this->array_curr >= rhs.array_curr; }
+                bool operator>(const ReverseArrayIterator & rhs) const { return !(*this <= rhs); }
+                bool operator>=(const ReverseArrayIterator & rhs) const { return !(*this < rhs); }
+
+                reference operator*()
+                {
+                    this->_check_pos(this->array_curr);
+                    return *this->array_curr;
+                }
+
+            private:
+                void _check_range(ssize_t movement) const { return this->_check_pos(this->array_curr + movement); }
+                void _check_pos(pointer pos) const
+                {
+                    if (pos < this->array_beg && pos > this->array_end)
+                        throw std::out_of_range("Array::reverse_iterator: iterator out of range");
+                }
         };
 
-        typedef ArrayReverseIterator<Array<T>, T &> reverse_iterator;
-        typedef ArrayReverseIterator<const Array<T>, const T> const_reverse_iterator;
+        typedef ReverseArrayIterator<T> reverse_iterator;
+        typedef ReverseArrayIterator<const T> const_reverse_iterator;
 
-        reverse_iterator rbegin() { return reverse_iterator(this, this->size() - 1); }
-        reverse_iterator rend() { return reverse_iterator(this, -1); }
+        reverse_iterator rbegin() { return reverse_iterator(this->data(), this->data() + this->size() - 1, this->data() + this->size()); }
+        reverse_iterator rend() { return reverse_iterator(this->data(), this->data() - 1, this->data() + this->size()); }
 
-        const_reverse_iterator crbegin() { return const_reverse_iterator(this, this->size() - 1); }
-        const_reverse_iterator crend() { return const_reverse_iterator(this, -1); }
+        const_reverse_iterator crbegin() { return const_reverse_iterator(this->data(), this->data() + this->size() - 1, this->data() + this->size()); }
+        const_reverse_iterator crend() { return const_reverse_iterator(this->data(), this->data() - 1, this->data() + this->size()); }
 
-    private:
+        // end of Array<T> reverse iterator
+
+    protected:
+        // should be called before anything else
         void _init()
         {
             _buf_ptr = nullptr;
@@ -484,18 +581,21 @@ class Array:    virtual public IArray,
             _has_ownership = false;
         }
 
-        T       *_buf_ptr;
-        size_t  _size;
-        size_t  _capacity;
+        T *_buf_ptr;
+        size_t _size;
+        size_t _capacity;
         // ownership of pointer
-        bool    _has_ownership;
+        bool _has_ownership;
 
-        static size_t   added_resize_capacity;
+        static size_t added_resize_capacity;
 };
+// end of class Array<T>
 
+// added capacity when resizing for less resizes
 template <typename T>
 size_t Array<T>::added_resize_capacity = 1;
 
+// typedef for types
 typedef Array<bool>       ArrBool;
 typedef Array<char>       ArrChar;
 typedef Array<int8_t>     ArrByte;
@@ -509,6 +609,63 @@ typedef Array<uint64_t>   ArrULong;
 typedef Array<float>      ArrFloat;
 typedef Array<double>     ArrDouble;
 
+// specialization of char array -> char * can be strlen
+class ArrStr: public ArrChar
+{
+    public:
+        using ArrChar::is_equal;
+        using ArrChar::copy_from;
+        using ArrChar::assign;
+        using ArrChar::push_back;
+        using ArrChar::from;
+
+        ArrStr(const char *str)
+        {
+            this->_init();
+            this->push_back(str);
+        }
+
+        std::string to_string() const
+        {
+            return std::string(this->cdata(), this->size());
+        }
+
+        bool is_equal(const char *str) const
+        {
+            return this->is_equal(str, strlen(str));
+        }
+
+        bool copy_from(const char *str, size_t from = 0)
+        {
+            return this->copy_from(str, strlen(str), from);
+        }
+
+        bool assign(char *str)
+        {
+            size_t len = strlen(str);
+            return this->assign(str, len, len);
+        }
+
+        bool assign(char *str, size_t capacity)
+        {
+            size_t len = strlen(str);
+            return this->assign(str, len, capacity);            
+        }
+
+        bool push_back(const char *str)
+        {
+            return this->push_back(str, strlen(str));
+        }
+
+        bool from(const char *str)
+        {
+            return this->from(reinterpret_cast<const uint8_t *>(str), strlen(str));
+        }
+
+};
+// end of class ArrStr
+
+// array utils for array manipulation
 class ArrayUtil
 {
     public:
@@ -522,6 +679,7 @@ class ArrayUtil
             return ArrayUtil::merge_to_array<uint8_t>(arrays);
         }
 
+        // returns a single allocated Array<T> containing contiguous memory of every arrays of vector
         template <typename T>
         static Array<T> *merge_to_array(const std::vector<const IArray *> & arrays)
         {
@@ -547,8 +705,25 @@ class ArrayUtil
             return ret;
         }
 
+        /**
+         * @brief assign pointers of a distributing array to a list of arrays
+         *  distributing_array: size 11 bytes [0x00 ... 0x0b]
+         *  assigned_arrays: [ [float_array, 2], [short_array, 1] ]
+         *  starting_offset = 1
+         * 
+         * outputs:
+         *  float_array (4 bytes): size 2 [0x01 ... 0x09]
+         *  short_array (2 bytes): size 1 [0x09 ... 0x0b]
+         * 
+         * @param distributing_array the array containing the buffer to distribute to other arrays
+         * @param assigned_arrays a vector of array-size pairs that will hold sequentially distributed pointer
+         * @param starting_offset the starting byte offset of distributing_array starting byte distribution
+         * @return true distribution is done
+         * @return false either starting_offset is too high or distributing_array has not enough
+         *  capacity to fill assigned_arrays
+         */
         static bool distribute_array(IArray & distributing_array,
-                                        const std::vector<std::pair<IArray *, size_t>> pair_lst, 
+                                        const std::vector<std::pair<IArray *, size_t>> assigned_arrays, 
                                         size_t starting_offset = 0)
         {
             if (starting_offset > distributing_array.byte_capacity())
@@ -558,7 +733,7 @@ class ArrayUtil
                 return false;
             }
             size_t total = 0;
-            for (const auto & pair: pair_lst)
+            for (const auto & pair: assigned_arrays)
                 total += pair.second * pair.first->data_size();
             if ((total + starting_offset) > distributing_array.byte_capacity())
             {
@@ -568,7 +743,7 @@ class ArrayUtil
             }
             size_t distributed_byte_size;
             size_t offset_idx = starting_offset;
-            for (const auto & pair: pair_lst)
+            for (const auto & pair: assigned_arrays)
             {
                 distributed_byte_size = pair.second * pair.first->data_size();
                 pair.first->assign_bytes(distributing_array.buf() + offset_idx, distributed_byte_size);
@@ -626,7 +801,7 @@ class ArrayUtil
         }
 
         template <typename T>
-        static T    read_array(IArray & uncasted_array, size_t idx)
+        static T read_array(IArray & uncasted_array, size_t idx)
         {
             Array<T> *arr = ArrayUtil::cast_array<T>(&uncasted_array);
             if (arr == nullptr)
@@ -641,13 +816,13 @@ class ArrayUtil
         }
 
         template <typename T>
-        static T    read_array(IArray *uncasted_array, size_t idx)
+        static T read_array(IArray *uncasted_array, size_t idx)
         {
             return ArrayUtil::read_array<T>(*uncasted_array, idx);
         }
 
         template <typename T>
-        static bool    write_array(IArray & uncasted_array, size_t idx, T value)
+        static bool write_array(IArray & uncasted_array, size_t idx, T value)
         {
             if (idx >= uncasted_array.capacity())
                 return false;
@@ -665,7 +840,7 @@ class ArrayUtil
         }
 
         template <typename T>
-        static bool    write_array(IArray *uncasted_array, size_t idx, T value)
+        static bool write_array(IArray *uncasted_array, size_t idx, T value)
         {
             return ArrayUtil::write_array<T>(*uncasted_array, idx, value);
         }
@@ -675,6 +850,7 @@ class ArrayUtil
         ArrayUtil() {};
         ~ArrayUtil() {};
 };
+// end of class ArrayUtil
 
 }
 

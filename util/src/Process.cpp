@@ -79,8 +79,7 @@ void    Process::clear()
 
 void    Process::_clear(FileDescWrapper & fdw)
 {
-    fdw.append_to_file = false;
-    fdw.from_file = false;
+    fdw.action = NONE;
     fdw.fun = nullptr;
     fdw.str_out.reset();
 }
@@ -237,7 +236,7 @@ bool    Process::_fdw_to_file(FileDescWrapper & fdw, const std::string & path, b
                         O_WRONLY | O_CREAT | (append ? O_APPEND : 0),
                         this->open_mode);
     if (fdw.fd_write >= 0)
-        fdw.append_to_file = append;
+        fdw.action = append ? FILE_APPEND : FILE;
     else
         LOG(error, "Process: could not open output file: " << path);
     return fdw.fd_write >= 0;
@@ -420,8 +419,8 @@ bool    Process::_process_fd_out(FileDescWrapper & fdw)
 {
     if (fdw.fd_read < 0)
         return true;
-    if (fdw.from_file)
-        return this->_write_into_file(fdw.fd_read, fdw.str_out.value().get(), fdw.append_to_file);
+    if (fdw.action == FILE || fdw.action == FILE_APPEND)
+        return this->_write_into_file(fdw.fd_read, fdw.str_out.value().get(), fdw.action == FILE_APPEND);
     else if (fdw.str_out.has_value())
     {
         std::string & out = fdw.str_out.value().get();

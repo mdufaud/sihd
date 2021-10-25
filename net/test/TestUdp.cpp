@@ -62,7 +62,7 @@ namespace test
         EXPECT_TRUE(worker.stop_worker());
     }
 
-    TEST_F(TestUdp, test_udp_senrcv_connexion)
+    TEST_F(TestUdp, test_udp_sendrcv_connexion)
     {
         sihd::util::ArrChar array_rcv(40);
 
@@ -90,7 +90,7 @@ namespace test
         EXPECT_EQ(array_rcv.size(), sizeof(hello));
     }
 
-    TEST_F(TestUdp, test_udp_senrcv_broadcast)
+    TEST_F(TestUdp, test_udp_sendrcv_broadcast)
     {
         const char helloworld[] = "hello world";
         sihd::util::ArrChar array_rcv(40);

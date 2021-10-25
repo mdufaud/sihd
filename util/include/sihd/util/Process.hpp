@@ -31,6 +31,7 @@ class Process: virtual public IRunnable
         // execute binary / function
         bool run();
 
+        Process & stdin_close();
         Process & stdin_from(const std::string & input);
         Process & stdin_from(int fd);
         bool stdin_from_file(const std::string & path);
@@ -86,11 +87,18 @@ class Process: virtual public IRunnable
         mode_t open_mode;
 
     private:
+        enum FileDescAction
+        {
+            NONE,
+            FILE,
+            FILE_APPEND,
+            CLOSE,
+        };
+
         struct FileDescWrapper {
             int fd_read = -1;
             int fd_write = -1;
-            bool from_file = false;
-            bool append_to_file = false;
+            FileDescAction action = NONE;
             std::function<void(const char *, ssize_t)> fun;
             std::optional<std::reference_wrapper<std::string>> str_out;
         };

@@ -3,7 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/core/MemRecorder.hpp>
 #include <sihd/core/DevRecorder.hpp>
-#include <sihd/core/DevReplayer.hpp>
+#include <sihd/core/DevPlayer.hpp>
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>
 
@@ -45,7 +45,7 @@ namespace test
         EXPECT_TRUE(mem_recorder.set_conf("provider", true));
         mem_recorder.set_parent_ownership(false);
 
-        DevReplayer dev_replayer("dev_replayer", &core);
+        DevPlayer dev_replayer("dev_replayer", &core);
         dev_replayer.set_parent_ownership(false);
         EXPECT_TRUE(dev_replayer.set_conf_str("provider", "..mem_recorder"));
         EXPECT_TRUE(dev_replayer.set_conf({

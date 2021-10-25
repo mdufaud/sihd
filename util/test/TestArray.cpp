@@ -45,7 +45,7 @@ namespace test
             IArray *_array_ptr;
     };
 
-    TEST_F(TestArray, test_array_range_loop)
+    TEST_F(TestArray, test_array_iterator_for)
     {
         ArrInt arr = {10, 20, 30, 40};
 
@@ -67,12 +67,83 @@ namespace test
         EXPECT_EQ(idx, 8);
     }
 
+    TEST_F(TestArray, test_array_iterator_algo)
+    {
+        ArrInt arr_int = {10, 20, 30, 40};
+
+        ArrInt::iterator it_found = std::find(arr_int.begin(), arr_int.end(), 20);
+        ArrInt::iterator it_not_found = std::find(arr_int.begin(), arr_int.end(), 50);
+
+        EXPECT_NE(it_found, arr_int.end());
+        EXPECT_EQ(*it_found, 20);
+        EXPECT_EQ(it_not_found, arr_int.end());
+
+        ArrStr arr_char("edcba");
+
+        LOG(debug, "Sort before: " << arr_char.to_string());
+        std::sort(arr_char.begin(), arr_char.end());
+        LOG(debug, "Sort after: " << arr_char.to_string());
+        EXPECT_TRUE(arr_char.is_equal("abcde"));
+
+        LOG(debug, "Reverse before: " << arr_char.to_string());
+        std::reverse(arr_char.begin(), arr_char.end());
+        LOG(debug, "Reverse before: " << arr_char.to_string());
+        EXPECT_TRUE(arr_char.is_equal("edcba"));
+
+        LOG(debug, "Fill before: " << arr_char.to_string());
+        std::fill(arr_char.begin(), arr_char.end(), 'a');
+        LOG(debug, "Fill after: " << arr_char.to_string());
+
+        size_t i = 0;
+        while (i < arr_char.size())
+        {
+            EXPECT_EQ(arr_char[i], 'a');
+            ++i;
+        }
+
+        // empty iterator
+        ArrDouble arr_dbl;
+        ArrDouble::const_reverse_iterator it_dbl;
+        it_dbl = arr_dbl.crbegin();
+        it_dbl = std::find(arr_dbl.crbegin(), arr_dbl.crend(), 50.0);
+        EXPECT_EQ(it_dbl, arr_dbl.crend());
+
+        // reverse iterator
+        const int8_t bytes[] = {1, 2, 3, 4};
+        const int8_t reversed_bytes[] = {4, 3, 2, 1};
+        ArrByte arr_byte(bytes, 4);
+
+        TRACE(arr_byte.hexdump());
+        std::reverse(arr_byte.rbegin(), arr_byte.rend());
+        TRACE(arr_byte.to_string());
+        EXPECT_TRUE(arr_byte.is_equal(reversed_bytes, 4));
+    }
+
     TEST_F(TestArray, test_array_str)
     {
         const char hw[] = "hello world";
-        ArrChar arr(hw, sizeof(hw) - 1);
+        ArrStr arr(hw);
         EXPECT_EQ(arr.hexdump(','), "68,65,6c,6c,6f,20,77,6f,72,6c,64");
         EXPECT_EQ(arr.to_string(), "hello world");
+        EXPECT_TRUE(arr.is_equal("hello world"));
+
+        arr.push_back(" !");
+        EXPECT_EQ(arr.to_string(), "hello world !");
+        EXPECT_TRUE(arr.is_equal("hello world !"));
+
+        char *str = strdup("test");
+        EXPECT_TRUE(arr.assign(str));
+        EXPECT_EQ(arr.to_string(), "test");
+        EXPECT_TRUE(arr.is_equal("test"));
+        free(str);
+
+        EXPECT_TRUE(arr.from("derp"));
+        EXPECT_EQ(arr.to_string(), "derp");
+        EXPECT_TRUE(arr.is_equal("derp"));
+
+        EXPECT_TRUE(arr.copy_from("aaaa"));
+        EXPECT_EQ(arr.to_string(), "aaaa");
+        EXPECT_TRUE(arr.is_equal("aaaa"));
     }
 
     TEST_F(TestArray, test_array_pop)
@@ -347,7 +418,7 @@ namespace test
         delete buffer_clone;
     }
 
-    TEST_F(TestArray, test_array_instanciate)
+    TEST_F(TestArray, test_array_util_create)
     {
         _array_ptr = ArrayUtil::create_from_type(DINT, 1);
         EXPECT_NE(_array_ptr, nullptr);

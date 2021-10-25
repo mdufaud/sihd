@@ -1,5 +1,5 @@
-#ifndef __SIHD_CORE_DEVREPLAYER_HPP__
-# define __SIHD_CORE_DEVREPLAYER_HPP__
+#ifndef __SIHD_CORE_DEVPLAYER_HPP__
+# define __SIHD_CORE_DEVPLAYER_HPP__
 
 # include <sihd/core/Device.hpp>
 # include <sihd/core/DevRecorder.hpp>
@@ -13,12 +13,12 @@
 namespace sihd::core
 {
 
-class DevReplayer:  public sihd::core::Device,
+class DevPlayer:  public sihd::core::Device,
                     public sihd::util::IRunnable
 {
     public:
-        DevReplayer(const std::string & name, sihd::util::Node *parent = nullptr);
-        virtual ~DevReplayer();
+        DevPlayer(const std::string & name, sihd::util::Node *parent = nullptr);
+        virtual ~DevPlayer();
 
         bool run() override;
         bool is_running() const override;

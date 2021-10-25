@@ -15,6 +15,7 @@ extlibs = {
     "libpcap": "1.10.0",
     # ui
     "imgui": "1.83",
+    "ncurses": "6.2",
     # command line parser
     "readline": "8.0",
     # bindings

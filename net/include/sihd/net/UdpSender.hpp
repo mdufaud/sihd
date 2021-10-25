@@ -8,7 +8,7 @@
 namespace sihd::net
 {
 
-class UdpSender:    public virtual ISender
+class UdpSender: public virtual ISender
 {
     public:
         UdpSender(bool ipv6 = false);
@@ -22,7 +22,6 @@ class UdpSender:    public virtual ISender
         bool socket_opened() { return _socket.is_open(); }
 
         bool connect(const IpAddr & addr);
-        bool connect(const std::string & ip, int port);
         bool connect(const std::string & path) { return _socket.connect(path); }
 
         bool close();
