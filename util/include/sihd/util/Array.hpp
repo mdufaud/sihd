@@ -21,10 +21,7 @@ class Array:    virtual public IArray,
                 virtual public ICloneable<Array<T>>
 {
     public:
-        Array()
-        {
-            _init();
-        };
+        Array() { _init(); };
 
         Array(const T *data, size_t size)
         {
@@ -51,9 +48,7 @@ class Array:    virtual public IArray,
             _init();
             this->reserve(list.size());
             for (const T & value: list)
-            {
                 this->push_back(value);
-            }
         }
 
         Array & operator=(const Array<T> &) = delete;
@@ -422,16 +417,28 @@ class Array:    virtual public IArray,
                     return ret;
                 }
 
-                difference_type operator-(const ArrayIterator & rhs) const { return this->array_curr - rhs.array_curr; }
-
-                ArrayIterator operator-(ssize_t i)
+                ArrayIterator & operator+=(const std::ptrdiff_t ptr_diff)
                 {
-                    return ArrayIterator(this->array_beg, this->array_curr - i, this->array_end);
+                    this->array_curr += ptr_diff;
+                    return *this;
                 }
+
+                ArrayIterator & operator-=(const std::ptrdiff_t ptr_diff)
+                {
+                    this->array_curr -= ptr_diff;
+                    return *this;
+                }
+
+                difference_type operator-(const ArrayIterator & rhs) const { return this->array_curr - rhs.array_curr; }
 
                 ArrayIterator operator+(ssize_t i)
                 {
                     return ArrayIterator(this->array_beg, this->array_curr + i, this->array_end);
+                }
+
+                ArrayIterator operator-(ssize_t i)
+                {
+                    return ArrayIterator(this->array_beg, this->array_curr - i, this->array_end);
                 }
 
                 bool operator==(const ArrayIterator & rhs) const { return this->array_curr == rhs.array_curr; }
@@ -527,14 +534,26 @@ class Array:    virtual public IArray,
 
                 difference_type operator-(const ReverseArrayIterator & rhs) const { return this->array_curr - rhs.array_curr; }
 
+                ReverseArrayIterator operator+(ssize_t i)
+                {
+                    return ReverseArrayIterator(this->array_beg, this->array_curr - i, this->array_end);
+                }
+
                 ReverseArrayIterator operator-(ssize_t i)
                 {
                     return ReverseArrayIterator(this->array_beg, this->array_curr + i, this->array_end);
                 }
 
-                ReverseArrayIterator operator+(ssize_t i)
+                ReverseArrayIterator & operator+=(const std::ptrdiff_t ptr_diff)
                 {
-                    return ReverseArrayIterator(this->array_beg, this->array_curr - i, this->array_end);
+                    this->array_curr -= ptr_diff;
+                    return *this;
+                }
+
+                ReverseArrayIterator & operator-=(const std::ptrdiff_t ptr_diff)
+                {
+                    this->array_curr += ptr_diff;
+                    return *this;
                 }
 
                 bool operator==(const ReverseArrayIterator & rhs) const { return this->array_curr == rhs.array_curr; }
@@ -563,11 +582,32 @@ class Array:    virtual public IArray,
         typedef ReverseArrayIterator<T> reverse_iterator;
         typedef ReverseArrayIterator<const T> const_reverse_iterator;
 
-        reverse_iterator rbegin() { return reverse_iterator(this->data(), this->data() + this->size() - 1, this->data() + this->size()); }
-        reverse_iterator rend() { return reverse_iterator(this->data(), this->data() - 1, this->data() + this->size()); }
+        reverse_iterator rbegin()
+        {
+            return reverse_iterator(this->data(),
+                                    this->data() + this->size() - 1,
+                                    this->data() + this->size());
+        }
+        reverse_iterator rend()
+        {
+            return reverse_iterator(this->data(),
+                                    this->data() - 1,
+                                    this->data() + this->size());
+        }
 
-        const_reverse_iterator crbegin() { return const_reverse_iterator(this->data(), this->data() + this->size() - 1, this->data() + this->size()); }
-        const_reverse_iterator crend() { return const_reverse_iterator(this->data(), this->data() - 1, this->data() + this->size()); }
+        const_reverse_iterator crbegin()
+        {
+            return const_reverse_iterator(this->data(),
+                                            this->data() + this->size() - 1,
+                                            this->data() + this->size());
+        }
+
+        const_reverse_iterator crend()
+        {
+            return const_reverse_iterator(this->data(),
+                                            this->data() - 1,
+                                            this->data() + this->size());
+        }
 
         // end of Array<T> reverse iterator
 
@@ -630,6 +670,8 @@ class ArrStr: public ArrChar
             return std::string(this->cdata(), this->size());
         }
 
+        // char *
+
         bool is_equal(const char *str) const
         {
             return this->is_equal(str, strlen(str));
@@ -660,6 +702,38 @@ class ArrStr: public ArrChar
         bool from(const char *str)
         {
             return this->from(reinterpret_cast<const uint8_t *>(str), strlen(str));
+        }
+
+        // std::string
+
+        bool is_equal(const std::string & str) const
+        {
+            return this->is_equal(str.c_str(), str.size());
+        }
+
+        bool copy_from(const std::string & str, size_t from = 0)
+        {
+            return this->copy_from(str.c_str(), str.size(), from);
+        }
+
+        bool assign(std::string & str)
+        {
+            return this->assign(str, str.capacity());
+        }
+
+        bool assign(std::string & str, size_t capacity)
+        {
+            return this->assign(str.data(), str.size(), capacity);            
+        }
+
+        bool push_back(const std::string & str)
+        {
+            return this->push_back(str.c_str(), str.size());
+        }
+
+        bool from(const std::string & str)
+        {
+            return this->from(reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
         }
 
 };

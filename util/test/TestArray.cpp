@@ -49,17 +49,22 @@ namespace test
     {
         ArrInt arr = {10, 20, 30, 40};
 
+        LOG(debug, "Array to iter: " << arr.to_string(' '));
         int val;
         int idx = 0;
+        LOG(debug, "Forward range loop");
         for (const int & i: arr)
         {
+            LOG(debug, i);
             val = i;
             ++idx;
         }
         EXPECT_EQ(val, 40);
         EXPECT_EQ(idx, 4);
+        LOG(debug, "Reverse range loop");
         for (auto it = arr.crbegin(); it != arr.crend(); ++it)
         {
+            LOG(debug, *it);
             val = *it;
             ++idx;
         }
@@ -69,6 +74,8 @@ namespace test
 
     TEST_F(TestArray, test_array_iterator_algo)
     {
+        LOG(debug, "Testing iterator find");
+
         ArrInt arr_int = {10, 20, 30, 40};
 
         ArrInt::iterator it_found = std::find(arr_int.begin(), arr_int.end(), 20);
@@ -78,44 +85,47 @@ namespace test
         EXPECT_EQ(*it_found, 20);
         EXPECT_EQ(it_not_found, arr_int.end());
 
-        ArrStr arr_char("edcba");
+        LOG(debug, "Testing iterator algorithm");
 
-        LOG(debug, "Sort before: " << arr_char.to_string());
-        std::sort(arr_char.begin(), arr_char.end());
-        LOG(debug, "Sort after: " << arr_char.to_string());
-        EXPECT_TRUE(arr_char.is_equal("abcde"));
+        EXPECT_FALSE(std::binary_search(arr_int.cbegin(), arr_int.cend(), 31));
+        std::for_each(arr_int.begin(), arr_int.end(), [] (int & i) { ++i; });
+        EXPECT_TRUE(std::binary_search(arr_int.cbegin(), arr_int.cend(), 31));
+        
+        EXPECT_EQ(std::count(arr_int.crbegin(), arr_int.crend(), 41), 1);
+        EXPECT_EQ(*std::min_element(arr_int.crbegin(), arr_int.crend()), 11);
+        EXPECT_EQ(*std::max_element(arr_int.crbegin(), arr_int.crend()), 41);
 
-        LOG(debug, "Reverse before: " << arr_char.to_string());
-        std::reverse(arr_char.begin(), arr_char.end());
-        LOG(debug, "Reverse before: " << arr_char.to_string());
-        EXPECT_TRUE(arr_char.is_equal("edcba"));
+        ArrStr arr_str("edcba");
+        LOG(debug, "Sort before: " << arr_str.to_string());
+        std::sort(arr_str.begin(), arr_str.end());
+        LOG(debug, "Sort after: " << arr_str.to_string());
+        EXPECT_TRUE(arr_str.is_equal("abcde"));
 
-        LOG(debug, "Fill before: " << arr_char.to_string());
-        std::fill(arr_char.begin(), arr_char.end(), 'a');
-        LOG(debug, "Fill after: " << arr_char.to_string());
+        LOG(debug, "Reverse before: " << arr_str.to_string());
+        std::reverse(arr_str.begin(), arr_str.end());
+        LOG(debug, "Reverse before: " << arr_str.to_string());
+        EXPECT_TRUE(arr_str.is_equal("edcba"));
 
-        size_t i = 0;
-        while (i < arr_char.size())
-        {
-            EXPECT_EQ(arr_char[i], 'a');
-            ++i;
-        }
+        LOG(debug, "Fill before: " << arr_str.to_string());
+        std::fill(arr_str.begin(), arr_str.end(), 'a');
+        LOG(debug, "Fill after: " << arr_str.to_string());
+        EXPECT_TRUE(arr_str.is_equal("aaaaa"));
 
-        // empty iterator
+        LOG(debug, "Testing empty iterator");
         ArrDouble arr_dbl;
         ArrDouble::const_reverse_iterator it_dbl;
         it_dbl = arr_dbl.crbegin();
         it_dbl = std::find(arr_dbl.crbegin(), arr_dbl.crend(), 50.0);
         EXPECT_EQ(it_dbl, arr_dbl.crend());
 
-        // reverse iterator
+        LOG(debug, "Testing reverse iterator");
         const int8_t bytes[] = {1, 2, 3, 4};
-        const int8_t reversed_bytes[] = {4, 3, 2, 1};
+        const int8_t reversed_bytes[] = {4, 3,  2, 1};
         ArrByte arr_byte(bytes, 4);
 
-        TRACE(arr_byte.hexdump());
+        LOG(debug, "Reverse before: " << arr_byte.to_string(' '));
         std::reverse(arr_byte.rbegin(), arr_byte.rend());
-        TRACE(arr_byte.to_string());
+        LOG(debug, "Reverse after: " << arr_byte.to_string(' '));
         EXPECT_TRUE(arr_byte.is_equal(reversed_bytes, 4));
     }
 
