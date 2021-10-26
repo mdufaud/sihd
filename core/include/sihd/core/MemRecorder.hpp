@@ -11,13 +11,15 @@ namespace sihd::core
 {
 
 class MemRecorder:  public ACoreObject,
-                    public sihd::util::IProvider<PlayableRecord &>,
+                    public sihd::util::AProvider<PlayableRecord &>,
                     public sihd::util::IHandler<const std::string &, const Channel *>
 {
     public:
         MemRecorder(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~MemRecorder();
 
+        bool do_start() override;
+        bool do_stop() override;
         bool do_reset() override;
 
         bool set_provider(bool active);
@@ -28,8 +30,10 @@ class MemRecorder:  public ACoreObject,
         void add_records(const std::vector<PlayableRecord> & records);
         void add_records(const std::list<PlayableRecord> & records);
 
-        bool provide(PlayableRecord & value);
-        void handle(const std::string & name, const Channel *array);
+        bool can_provide() const override;
+        bool providing() const override;
+        bool provide(PlayableRecord & value) override;
+        void handle(const std::string & name, const Channel *array) override;
 
         std::string hexdump_records();
         std::string hexdump_timeline(const std::string & separation_cols = "\t", char separation_data = ' ');
@@ -41,6 +45,8 @@ class MemRecorder:  public ACoreObject,
     private:
         bool _provides;
         bool _records;
+
+        bool _running;
 
         MapListRecordedValues _map_record;
         SortedRecordedValues _map_sorted_records;

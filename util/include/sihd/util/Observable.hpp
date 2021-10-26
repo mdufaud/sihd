@@ -11,7 +11,7 @@ namespace sihd::util
 {
 
 template <typename T>
-class Observable:   virtual public IObservable<T>
+class Observable:   public IObservable<T>
 {
     public:
         Observable() {};

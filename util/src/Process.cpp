@@ -123,6 +123,12 @@ Process &   Process::add_argv(const std::vector<std::string> & args)
 
 // Pipe stdin
 
+Process &   Process::stdin_close()
+{
+    this->_fdw_close(_stdin);
+    return *this;
+}
+
 Process &   Process::stdin_from(const std::string & input)
 {
     this->_add_pipe(_stdin);
@@ -145,6 +151,12 @@ bool   Process::stdin_from_file(const std::string & path)
 }
 
 // Pipe stdout
+
+Process &   Process::stdout_close()
+{
+    this->_fdw_close(_stdout);
+    return *this;
+}
 
 Process &   Process::stdout_to(std::function<void(const char *, ssize_t)> fun)
 {
@@ -179,6 +191,12 @@ bool   Process::stdout_to_file(const std::string & path, bool append)
 
 // Pipe stderr
 
+Process &   Process::stderr_close()
+{
+    this->_fdw_close(_stderr);
+    return *this;
+}
+
 Process &   Process::stderr_to(std::function<void(const char *, ssize_t)> fun)
 {
     this->_fdw_to(_stderr, std::move(fun));
@@ -212,6 +230,15 @@ bool   Process::stderr_to_file(const std::string & path, bool append)
 
 
 // Private fdw setters
+
+void    Process::_fdw_close(FileDescWrapper & fdw)
+{
+    fdw.action = CLOSE;
+    this->_close(fdw.fd_read);
+    this->_close(fdw.fd_write);
+    fdw.fd_read = -1;
+    fdw.fd_write = -1;
+}
 
 void    Process::_fdw_to(FileDescWrapper & fdw, std::function<void(const char *, ssize_t)> && fun)
 {
@@ -307,12 +334,27 @@ void    Process::_do_fork()
         throw std::runtime_error("Fork failed");
     if (pid == 0)
     {
-        this->_dup_close(_stdin.fd_read, STDIN_FILENO);
-        this->_close(_stdin.fd_write);
-        this->_dup_close(_stdout.fd_write, STDOUT_FILENO);
-        this->_close(_stdout.fd_read);
-        this->_dup_close(_stderr.fd_write, STDERR_FILENO);
-        this->_close(_stderr.fd_read);
+        if (_stdin.action == CLOSE)
+            this->_close(STDIN_FILENO);
+        else
+        {
+            this->_dup_close(_stdin.fd_read, STDIN_FILENO);
+            this->_close(_stdin.fd_write);
+        }
+        if (_stdout.action == CLOSE)
+            this->_close(STDOUT_FILENO);
+        else
+        {
+            this->_dup_close(_stdout.fd_write, STDOUT_FILENO);
+            this->_close(_stdout.fd_read);
+        }
+        if (_stderr.action == CLOSE)
+            this->_close(STDERR_FILENO);
+        else
+        {
+            this->_dup_close(_stderr.fd_write, STDERR_FILENO);
+            this->_close(_stderr.fd_read);
+        }
         exit(this->_exec_child());
     }
     _pid = pid;
@@ -340,12 +382,27 @@ bool    Process::_do_spawn()
     posix_spawn_file_actions_t actions;
 
     posix_spawn_file_actions_init(&actions);
-    this->_add_dup_action(&actions, _stdin.fd_read, STDIN_FILENO);
-    this->_add_dup_action(&actions, _stdout.fd_write, STDOUT_FILENO);
-    this->_add_dup_action(&actions, _stderr.fd_write, STDERR_FILENO);
-    this->_add_close_action(&actions, _stdin.fd_write);
-    this->_add_close_action(&actions, _stdout.fd_read);
-    this->_add_close_action(&actions, _stderr.fd_read);
+    if (_stdin.action == CLOSE)
+        this->_add_close_action(&actions, STDIN_FILENO);
+    else
+    {
+        this->_add_dup_action(&actions, _stdin.fd_read, STDIN_FILENO);
+        this->_add_close_action(&actions, _stdin.fd_write);
+    }
+    if (_stdout.action == CLOSE)
+        this->_add_close_action(&actions, STDOUT_FILENO);
+    else
+    {
+        this->_add_dup_action(&actions, _stdout.fd_write, STDOUT_FILENO);
+        this->_add_close_action(&actions, _stdout.fd_read);
+    }
+    if (_stderr.action == CLOSE)
+        this->_add_close_action(&actions, STDERR_FILENO);
+    else
+    {
+        this->_add_dup_action(&actions, _stderr.fd_write, STDERR_FILENO);
+        this->_add_close_action(&actions, _stderr.fd_read);
+    }
     int err = posix_spawnp(&pid, _argv[0], &actions, nullptr,
                             const_cast<char * const *>(&(_argv[0])),
                             nullptr);

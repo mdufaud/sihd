@@ -141,8 +141,8 @@ test: build
 		cd - > /dev/null; \
 	)
 
-valgrindtest: DEBUGGER_ARGS = --leak-check=full --show-leak-kinds=all
-valgrindtest: DEBUGGER = valgrind 
+valgrindtest: DEBUGGER_ARGS = --leak-check=summary --show-leak-kinds=all --trace-children=no --track-origins=yes
+valgrindtest: DEBUGGER = valgrind
 valgrindtest: test
 
 vtest: valgrindtest

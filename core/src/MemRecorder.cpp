@@ -12,6 +12,7 @@ LOGGER;
 MemRecorder::MemRecorder(const std::string & name, sihd::util::Node *parent):
     ACoreObject(name, parent)
 {
+    _running = false;
     _records = true;
     _provides = false;
     this->add_conf("provider", &MemRecorder::set_provider);
@@ -56,9 +57,13 @@ void    MemRecorder::add_record(const std::string & name, time_t timestamp, cons
         _map_record[name].push_back({timestamp, arr});
     if (_provides)
     {
-        _map_sorted_records.insert(std::pair<time_t, PlayableRecord>(
-            timestamp, {name, timestamp, arr}
-        ));
+        {
+            this->lock_guard_provider();
+            _map_sorted_records.insert(std::pair<time_t, PlayableRecord>(
+                timestamp, {name, timestamp, arr}
+            ));
+        }
+        this->_provider_notify();
     }
 }
 
@@ -67,9 +72,19 @@ void    MemRecorder::add_record(const PlayableRecord & record)
     this->add_record(record.name, record.timestamp, record.value);
 }
 
+bool    MemRecorder::can_provide() const
+{
+    return _map_sorted_records.empty() == false;
+}
+
+bool    MemRecorder::providing() const
+{
+    return _running;
+}
+
 bool    MemRecorder::provide(PlayableRecord & value)
 {
-    if (_map_sorted_records.empty())
+    if (this->can_provide() == false)
         return false;
     value = _map_sorted_records.begin()->second;
     _map_sorted_records.erase(_map_sorted_records.begin());
@@ -108,6 +123,20 @@ std::string     MemRecorder::hexdump_timeline(const std::string & separation_col
     return ss.str();
 }
 
+bool    MemRecorder::do_start()
+{
+    _running = true;
+    this->_provider_notify_all();
+    return true;
+}
+
+bool    MemRecorder::do_stop()
+{
+    _running = false;
+    this->_provider_notify_all();
+    return true;
+}
+
 bool    MemRecorder::do_reset()
 {
     this->clear();
@@ -116,7 +145,11 @@ bool    MemRecorder::do_reset()
 
 void    MemRecorder::clear()
 {
-    _map_sorted_records.clear();
+    {
+        this->lock_guard_provider();
+        _map_sorted_records.clear();
+    }
+    this->_provider_notify_all();
     for (const auto & pair: _map_record)
     {
         for (const RecordedValue & value: pair.second)

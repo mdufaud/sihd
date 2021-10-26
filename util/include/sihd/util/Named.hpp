@@ -17,6 +17,7 @@ class Named
 
         const std::string & get_name() const;
         Node  *get_parent() const;
+        const Node  *cget_parent() const;
 
         std::string get_full_name() const;
         std::string get_class_name() const;
@@ -32,6 +33,20 @@ class Named
         virtual bool set_parent_ownership(bool ownership);
 
         Node *get_root();
+        const Node *cget_root() const;
+
+        const Named *cfind(const Named *from, const std::string & path) const;
+        const Named *cfind(const std::string & path) const;
+        const Node *cfind_node(const std::string & path) const;
+        template <class C>
+        const C *cfind(const std::string & path) const
+        {
+            const Named *obj = this->cfind(path);
+            if (obj != nullptr)
+                return dynamic_cast<const C *>(obj);
+            return nullptr;
+        }
+
         Named *find(Named *from, const std::string & path);
         Named *find(const std::string & path);
         Node *find_node(const std::string & path);

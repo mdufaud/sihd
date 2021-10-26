@@ -20,12 +20,12 @@ class ChannelWaiter: public ACoreObject
         void clear_channel();
         bool wait_for(time_t nano, uint32_t notifications = 1);
 
-        bool do_stop();
+        bool do_stop() override;
 
     protected:
     
     private:
-        void observable_changed(Channel *channel);
+        void observable_changed(Channel *channel) override;
 
         Channel *_channel;
         sihd::util::Waitable _waitable;

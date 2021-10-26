@@ -51,9 +51,9 @@ namespace test
         {
             activate->write(0, true);
             LOG(debug, "Activated pulsation");
-            // wait for 4 pulsation in 5 ms
+            // wait for 4 pulsation in 6 ms
             ChannelWaiter waiter(beat);
-            EXPECT_FALSE(waiter.wait_for(sihd::util::time::milli(5), 4));
+            EXPECT_FALSE(waiter.wait_for(sihd::util::time::milli(6), 4));
         }
         EXPECT_TRUE(core.stop());
         EXPECT_TRUE(core.reset());

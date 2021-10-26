@@ -33,9 +33,9 @@ namespace test
     {
         if (Term::is_interactive() == false)
             GTEST_SKIP();
-        TRACE(Term::red("Hello world"));
-        TRACE(Term::bold("bold"));
-        TRACE(Term::white_bg(" White bg "));
-        TRACE(Term::fmt2(" White bg - red text ", Term::Attr::WHITEBG, Term::Attr::RED2));
+        LOG(debug, Term::red("Hello world"));
+        LOG(debug, Term::bold("bold"));
+        LOG(debug, Term::white_bg(" White bg "));
+        LOG(debug, Term::fmt2(" White bg - red text ", Term::Attr::WHITEBG, Term::Attr::RED2));
     }
 }

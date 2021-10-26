@@ -15,8 +15,7 @@
 namespace sihd::util
 {
 
-class Scheduler:    public Named,
-                    virtual public IRunnable
+class Scheduler: public Named, public IRunnable
 {
     public:
         Scheduler(const std::string & name, Node *parent = nullptr);

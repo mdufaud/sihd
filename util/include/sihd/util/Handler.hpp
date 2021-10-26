@@ -8,7 +8,7 @@ namespace sihd::util
 {
 
 template <typename ...T>
-class Handler: virtual public IHandler<T...>
+class Handler: public IHandler<T...>
 {
     public:
         Handler(std::function<void(T...)> fun)

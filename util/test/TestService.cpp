@@ -11,7 +11,7 @@ namespace test
     LOGGER;
     using namespace sihd::util;
 
-    class FakeService:  virtual public AService
+    class FakeService:  public AService
     {
         public:
             int n_setup = 0;

@@ -1,14 +1,8 @@
 #ifndef __SIHD_UTIL_IARRAY_HPP__
 # define __SIHD_UTIL_IARRAY_HPP__
 
-# include <cstdint>
-# include <string.h>
-# include <stdexcept>
-# include <memory>
-# include <sihd/util/Endian.hpp>
 # include <sihd/util/ICloneable.hpp>
 # include <sihd/util/Datatype.hpp>
-# include <sihd/util/Logger.hpp>
 
 namespace sihd::util
 {

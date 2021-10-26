@@ -6,6 +6,7 @@
 # include <sihd/util/Str.hpp>
 # include <map>
 # include <exception>
+# include <memory>
 
 namespace sihd::util
 {
@@ -60,7 +61,12 @@ class Node:   public Named
         // Children
         virtual bool add_child(const std::string & name, Named *child, bool ownership = true);
         virtual bool add_child(Named *child, bool ownership = true);
-        
+
+        // release internal pointer and takes ownership
+        virtual bool add_child(std::unique_ptr<Named> & unique);
+        // takes internal pointer and use it with no ownership - careful about pointer lifetimes
+        virtual bool add_child(std::shared_ptr<Named> & shared);
+
         template <typename T>
         T *add_child(const std::string & name)
         {
@@ -83,6 +89,7 @@ class Node:   public Named
 
         // Static
         static Node *to_node(Named *child);
+        static const Node *to_cnode(const Named *child);
         static std::pair<std::string, std::string> get_parent_path(const std::string & path);
 
         // Ownership
@@ -90,47 +97,46 @@ class Node:   public Named
         bool set_child_ownership(const std::string & name, bool ownership);
 
         // Find
-        ChildEntry *get_child_entry(const std::string & name);
-        Node *find_node(const std::string & path);
-        Named *get_child(const std::string & name);
         template<class C>
-        C *get_child(const std::string & name)
+        C *get_child(const std::string & name) const
         {
             Named *obj = this->get_child(name);
             if (obj != nullptr)
                 return dynamic_cast<C *>(obj);
             return nullptr;
         }
+        Named *get_child(const std::string & name) const;
+        ChildEntry *get_child_entry(const std::string & name) const;
 
         // Links
-        bool is_link(const std::string & link);
+        bool is_link(const std::string & link) const;
         bool add_link(const std::string & link, const std::string & path);
         bool remove_link(const std::string & link);
         Named *get_link(const std::string & path, size_t recursion = 0);
         bool resolve_links(size_t recursion = 0);
 
-        std::string get_tree_str();
-        std::string get_tree_desc_str();
-        std::string get_tree_str(TreeOpts opts);
-        void print_tree();
-        void print_tree_desc();
-        void print_tree(TreeOpts opts);
+        std::string get_tree_str() const;
+        std::string get_tree_desc_str() const;
+        std::string get_tree_str(TreeOpts opts) const;
+        void print_tree() const;
+        void print_tree_desc() const;
+        void print_tree(TreeOpts opts) const;
 
-        std::map<std::string, ChildEntry *> & get_children();
-        virtual std::vector<std::string> get_children_keys();
+        const std::map<std::string, ChildEntry *> & get_children() const;
+        virtual std::vector<std::string> get_children_keys() const;
         
     protected:
         virtual bool _check_link(const std::string & name, Named *child);
-        virtual void _get_tree_children(std::stringstream & ss, TreeOpts opts);
+        virtual void _get_tree_children(std::stringstream & ss, TreeOpts opts) const;
         virtual void _iterate_tree_children(std::stringstream & ss,
                                                 TreeOpts & opts,
-                                                const std::string & indent);
+                                                const std::string & indent) const;
         virtual void _get_tree_child_desc(std::stringstream & ss,
                                                 const TreeOpts & opts,
                                                 const std::string & indent,
                                                 const std::string & name,
-                                                Named *child);
-        virtual void _add_tree_desc(std::stringstream & ss, const TreeOpts & opts, Named *child);
+                                                const Named *child) const;
+        virtual void _add_tree_desc(std::stringstream & ss, const TreeOpts & opts, const Named *child) const;
 
     private:
         std::map<std::string, ChildEntry *> _children_map;

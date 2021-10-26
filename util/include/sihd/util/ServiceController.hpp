@@ -7,7 +7,7 @@
 namespace sihd::util
 {
 
-class ServiceController:    virtual public AService::IServiceController,
+class ServiceController:    public AService::IServiceController,
                             public Observable<ServiceController>
 {
     public:

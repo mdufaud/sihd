@@ -17,7 +17,7 @@ OrderedNode::~OrderedNode()
 {
 }
 
-void    OrderedNode::_iterate_tree_children(std::stringstream & ss, TreeOpts & opts, const std::string & indent)
+void    OrderedNode::_iterate_tree_children(std::stringstream & ss, TreeOpts & opts, const std::string & indent) const
 {
     for (const std::string & name: _children_order)
     {
@@ -53,7 +53,7 @@ void    OrderedNode::delete_children()
     _children_order.clear();
 }
 
-std::vector<std::string>    OrderedNode::get_children_keys()
+std::vector<std::string>    OrderedNode::get_children_keys() const
 {
     return _children_order;
 }

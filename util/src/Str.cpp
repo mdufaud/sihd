@@ -3,25 +3,25 @@
 #include <sstream>
 #include <cstdarg>
 #include <mutex>
+#include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
 
 #include <cxxabi.h> // demangle
 #include <string.h>
 #include <errno.h>
-#include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
 #include <math.h> // HUGE_VAL
 
 #ifndef SIHD_UTIL_STR_BUFFER
-# define SIHD_UTIL_STR_BUFFER 20480
+# define SIHD_UTIL_STR_BUFFER 4096
 #endif
 
 namespace sihd::util
 {
 
-size_t   Str::hexdump_cols = 8;
+size_t  Str::hexdump_cols = 8;
 
 std::mutex      Str::buffer_mutex;
-const size_t    Str::buffer_size = SIHD_UTIL_STR_BUFFER;
 char            Str::buffer[SIHD_UTIL_STR_BUFFER];
+const size_t    Str::buffer_size = SIHD_UTIL_STR_BUFFER;
 
 static int   _split_size(const char *s, const char *delimiter, size_t len)
 {
@@ -103,16 +103,17 @@ std::string     Str::demangle(const char *name)
 
 std::string     Str::format(const char *format, ...)
 {
-    std::string ret;
+    std::string str;
     va_list args;
     va_start(args, format);
     {
         std::lock_guard<std::mutex> l(buffer_mutex);
-        vsnprintf(buffer, buffer_size, format, args);
-        ret.assign(buffer, strlen(buffer));
+        size_t ret = vsnprintf(buffer, buffer_size, format, args);
+        ret = ret > buffer_size ? buffer_size : ret;
+        str.assign(buffer, ret);
     }
     va_end(args);
-    return ret;
+    return str;
 }
 
 std::string     Str::trim(const std::string & s)

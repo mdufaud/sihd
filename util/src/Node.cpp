@@ -27,6 +27,18 @@ void    Node::add_child_unsafe(Named *child, bool ownership)
         throw Node::AlreadyHasChild(child->get_name());
 }
 
+bool    Node::add_child(std::unique_ptr<Named> & unique)
+{
+    Named *internal_ptr = unique.release();
+    return this->add_child(internal_ptr, true);
+}
+
+bool    Node::add_child(std::shared_ptr<Named> & shared)
+{
+    Named *internal_ptr = shared.get();
+    return this->add_child(internal_ptr, false);
+}
+
 bool    Node::add_child(Named *child, bool ownership)
 {
     return this->add_child(child->get_name(), child, ownership);
@@ -49,13 +61,6 @@ bool    Node::add_child(const std::string & name, Named *child, bool ownership)
     return true;
 }
 
-Node::ChildEntry  *Node::get_child_entry(const std::string & name)
-{
-    if (_children_map.find(name) != _children_map.end())
-        return _children_map[name];
-    return nullptr;
-}
-
 bool    Node::has_ownership(const std::string & name)
 {
     ChildEntry *entry = this->get_child_entry(name);
@@ -72,11 +77,19 @@ bool    Node::set_child_ownership(const std::string & name, bool ownership)
     return entry != nullptr;
 }
 
-Named   *Node::get_child(const std::string & name)
+Node::ChildEntry  *Node::get_child_entry(const std::string & name) const
+{
+    if (_children_map.find(name) != _children_map.end())
+        return _children_map.at(name);
+    return nullptr;
+}
+
+Named   *Node::get_child(const std::string & name) const
 {
     Node::ChildEntry *entry = this->get_child_entry(name);
     return entry != nullptr ? entry->obj : nullptr;
 }
+
 
 bool    Node::delete_child(const Named *child)
 {
@@ -118,6 +131,13 @@ Node  *Node::to_node(Named *child)
     return dynamic_cast<Node *>(child);
 }
 
+const Node  *Node::to_cnode(const Named *child)
+{
+    if (child == nullptr)
+        return nullptr;
+    return dynamic_cast<const Node *>(child);
+}
+
 std::pair<std::string, std::string>     Node::get_parent_path(const std::string & path)
 {
     std::pair<std::string, std::string> ret;
@@ -132,7 +152,7 @@ std::pair<std::string, std::string>     Node::get_parent_path(const std::string 
     return ret;
 }
 
-bool    Node::is_link(const std::string & name)
+bool    Node::is_link(const std::string & name) const
 {
     return _link_map.count(name) > 0;
 }
@@ -203,12 +223,12 @@ bool    Node::resolve_links(size_t recursion)
     return ret;
 }
 
-std::map<std::string, Node::ChildEntry *> &    Node::get_children()
+const std::map<std::string, Node::ChildEntry *> &    Node::get_children() const
 {
     return _children_map;
 }
 
-std::vector<std::string>    Node::get_children_keys()
+std::vector<std::string>    Node::get_children_keys() const
 {
     std::vector<std::string> ret;
     ret.reserve(_children_map.size());
@@ -222,17 +242,17 @@ std::vector<std::string>    Node::get_children_keys()
 
 // TREE
 
-void    Node::print_tree()
+void    Node::print_tree() const
 {
     std::cout << this->get_tree_str({}) << std::endl;
 }
 
-void    Node::print_tree_desc()
+void    Node::print_tree_desc() const
 {
     std::cout << this->get_tree_desc_str() << std::endl;
 }
 
-void    Node::print_tree(TreeOpts opts)
+void    Node::print_tree(TreeOpts opts) const
 {
     std::cout << this->get_tree_str(opts) << std::endl;
 }
@@ -241,7 +261,7 @@ void    Node::_get_tree_child_desc(std::stringstream & ss,
                                     const TreeOpts & opts,
                                     const std::string & indent,
                                     const std::string & name,
-                                    Named *child)
+                                    const Named *child) const
 {
     ss << indent << name;
     Node *parent = child->get_parent();
@@ -253,18 +273,18 @@ void    Node::_get_tree_child_desc(std::stringstream & ss,
     ss << ": " << child->get_class_name();
     this->_add_tree_desc(ss, opts, child);
     ss << std::endl;
-    Node *node = this->to_node(child);
+    const Node *node = dynamic_cast<const Node *>(child);
     if (node != nullptr)
         node->_get_tree_children(ss, opts);
 }
 
-void    Node::_iterate_tree_children(std::stringstream & ss, TreeOpts & opts, const std::string & indent)
+void    Node::_iterate_tree_children(std::stringstream & ss, TreeOpts & opts, const std::string & indent) const
 {
     for (const auto & [name, entry]: _children_map)
         this->_get_tree_child_desc(ss, opts, indent, name, entry->obj);
 }
 
-void    Node::_get_tree_children(std::stringstream & ss, TreeOpts opts)
+void    Node::_get_tree_children(std::stringstream & ss, TreeOpts opts) const
 {
     opts.current_recursion += 1;
     if (opts.max_recursion != 0 && opts.max_recursion == opts.current_recursion)
@@ -276,7 +296,7 @@ void    Node::_get_tree_children(std::stringstream & ss, TreeOpts opts)
     this->_iterate_tree_children(ss, opts, indent);
 }
 
-void    Node::_add_tree_desc(std::stringstream & ss, const TreeOpts & opts, Named *child)
+void    Node::_add_tree_desc(std::stringstream & ss, const TreeOpts & opts, const Named *child) const
 {
     if (opts.description)
     {
@@ -286,19 +306,19 @@ void    Node::_add_tree_desc(std::stringstream & ss, const TreeOpts & opts, Name
     }
 }
 
-std::string     Node::get_tree_str()
+std::string     Node::get_tree_str() const
 {
     return this->get_tree_str({});
 }
 
-std::string     Node::get_tree_desc_str()
+std::string     Node::get_tree_desc_str() const
 {
     TreeOpts opts;
     opts.description = true;
     return this->get_tree_str(opts);
 }
 
-std::string     Node::get_tree_str(TreeOpts opts)
+std::string     Node::get_tree_str(TreeOpts opts) const
 {
     std::string indent(opts.indent, ' ');
     opts.indent += opts.indent_by_iter;

@@ -34,7 +34,7 @@ namespace test
     };
 
 
-    TEST_F(TestRecords, test_records_dev_replayer)
+    TEST_F(TestRecords, test_records_dev_player)
     {
         Core core;
 
@@ -50,6 +50,7 @@ namespace test
         EXPECT_TRUE(dev_replayer.set_conf_str("provider", "..mem_recorder"));
         EXPECT_TRUE(dev_replayer.set_conf({
             {"provider", "..mem_recorder"},
+            {"provider_wait_time", 1},
             {"alias", {
                 "int=..int_channel",
                 "bool=..bool_channel",
@@ -84,7 +85,13 @@ namespace test
 
         if (play != nullptr && end != nullptr)
         {
+            LOG(debug, "Playing");
             play->write(0, true);
+            LOG(debug, "Sleeping");
+            sihd::util::time::msleep(5);
+            LOG(debug, "Stopping recorder");
+            mem_recorder.stop();
+            LOG(debug, "Waiting the end");
             ChannelWaiter waiter(end);
             EXPECT_FALSE(waiter.wait_for(sihd::util::time::milli(60)));
         }

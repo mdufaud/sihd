@@ -44,9 +44,6 @@ class AService: public Observable<AService>
         virtual bool    do_start();
         virtual bool    do_stop();
         virtual bool    do_reset();
- 
-    private:
-
 };
 
 }

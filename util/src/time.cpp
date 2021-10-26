@@ -1,7 +1,28 @@
 #include <sihd/util/time.hpp>
+#include <thread>
 
 namespace sihd::util::time
 {
+
+void nsleep(time_t nano)
+{
+    std::this_thread::sleep_for(std::chrono::nanoseconds(nano));
+}
+
+void usleep(time_t micro)
+{
+    std::this_thread::sleep_for(std::chrono::microseconds(micro));
+}
+
+void msleep(time_t milli)
+{
+    std::this_thread::sleep_for(std::chrono::milliseconds(milli));
+}
+
+void sleep(time_t sec)
+{
+    std::this_thread::sleep_for(std::chrono::seconds(sec));
+}
 
 double  to_double(time_t sec, time_t usec)
 {

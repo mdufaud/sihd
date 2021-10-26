@@ -7,7 +7,7 @@
 namespace sihd::util
 {
 
-class StepWorker: public Worker, virtual public ISteppable
+class StepWorker: public Worker, public ISteppable
 {
     public:
         StepWorker(IRunnable *runnable = nullptr);

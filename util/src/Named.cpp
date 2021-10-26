@@ -73,6 +73,11 @@ Node  *Named::get_parent() const
     return _parent_ptr;
 }
 
+const Node  *Named::cget_parent() const
+{
+    return _parent_ptr;
+}
+
 std::string     Named::get_class_name() const
 {
     return sihd::util::Str::demangle(typeid(*this).name());
@@ -80,8 +85,13 @@ std::string     Named::get_class_name() const
 
 Node   *Named::get_root()
 {
+    return const_cast<Node *>(const_cast<Named *>(this)->cget_root());
+}
+
+const Node   *Named::cget_root() const
+{
     Node *tmp;
-    Node *obj = Node::to_node(this);
+    const Node *obj = Node::to_cnode(this);
 
     while (obj != nullptr)
     {
@@ -95,13 +105,28 @@ Node   *Named::get_root()
 
 Named   *Named::find(Named *from, const std::string & path)
 {
+    return const_cast<Named *>(const_cast<Named *>(this)->cfind(const_cast<Named *>(from), path));
+}
+
+Named   *Named::find(const std::string & path)
+{
+    return const_cast<Named *>(const_cast<Named *>(this)->cfind(path));
+}
+
+Node    *Named::find_node(const std::string & path)
+{
+    return const_cast<Node *>(const_cast<Named *>(this)->cfind_node(path));
+}
+
+const Named   *Named::cfind(const Named *from, const std::string & path) const
+{
     auto tokens = Str::split(path, &Named::separator);
-    Named *child = from;
-    Node *parent = nullptr;
+    const Named *child = from;
+    const Node *parent = nullptr;
     for (const std::string & name : tokens)
     {
         if (child != nullptr)
-            parent = Node::to_node(child);  
+            parent = Node::to_cnode(child);  
         if (parent == nullptr)
             return nullptr;
         child = parent->get_child(name);
@@ -111,9 +136,9 @@ Named   *Named::find(Named *from, const std::string & path)
     return child;
 }
 
-Named   *Named::find(const std::string & path)
+const Named   *Named::cfind(const std::string & path) const
 {
-    Named *current = nullptr;
+    const Named *current = nullptr;
 
     int i = 0;
     while (path[i] == Named::separator)
@@ -129,18 +154,18 @@ Named   *Named::find(const std::string & path)
         if (path[0] == '/')
         {
             std::string search_path = path.substr(1, path.size() - 1);
-            current = this->get_root();
-            return this->find(current, search_path);
+            current = this->cget_root();
+            return this->cfind(current, search_path);
         }
         else
             current = this;
     }
-    return this->find(current, path);
+    return this->cfind(current, path);
 }
 
-Node    *Named::find_node(const std::string & path)
+const Node    *Named::cfind_node(const std::string & path) const
 {
-    return this->find<Node>(path);
+    return this->cfind<Node>(path);
 }
 
 }

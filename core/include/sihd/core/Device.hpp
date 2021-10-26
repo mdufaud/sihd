@@ -17,6 +17,7 @@ class Device:   public AChannelContainer,
 
     protected:
         virtual void observable_changed([[maybe_unused]] Channel *c) override {}
+        virtual void observable_changed([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
 
         bool do_setup() override;
         bool do_init() override;
@@ -30,9 +31,7 @@ class Device:   public AChannelContainer,
         virtual bool on_stop() { return true; };
         virtual bool on_reset() { return true; };
 
-    virtual sihd::util::AService::IServiceController *get_service_ctrl() override { return &_service_controller; }
-
-    protected:
+        virtual sihd::util::AService::IServiceController *get_service_ctrl() override { return &_service_controller; }
         sihd::util::ServiceController _service_controller;
 
     private:

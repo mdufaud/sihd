@@ -14,7 +14,7 @@ class Core:   public sihd::core::Device
         Core(const std::string & name = "core", sihd::util::Node *parent = nullptr);
         virtual ~Core();
 
-        bool is_running() const { return _running; }
+        bool is_running() const override { return _running; }
 
         bool on_init() override;
         bool on_start() override;

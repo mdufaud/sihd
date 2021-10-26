@@ -12,7 +12,7 @@ namespace sihd::core
 
 class AChannelContainer:    public sihd::util::Node,
                             public sihd::util::Configurable,
-                            virtual public sihd::util::IObserver<Channel>
+                            public sihd::util::IObserver<Channel>
 {
     public:
         AChannelContainer(const std::string & name, sihd::util::Node *parent = nullptr);

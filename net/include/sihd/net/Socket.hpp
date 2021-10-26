@@ -21,8 +21,8 @@
 namespace sihd::net
 {
 
-class Socket:   virtual public ISender,
-                virtual public IReceiver,
+class Socket:   public ISender,
+                public IReceiver,
                 public sihd::util::Configurable
 {
     public:

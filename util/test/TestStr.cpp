@@ -196,9 +196,11 @@ namespace test
 
     TEST_F(TestStr, test_str_format)
     {
-        std::string res;
-        res = Str::format("%s -> %d", "hello", 1337);
+        std::string res = Str::format("%s -> %d", "hello", 1337);
         EXPECT_EQ(res, "hello -> 1337");
+        std::string res2 = Str::format("%s: %d", "hello world", 10);
+        EXPECT_EQ(res, "hello -> 1337");
+        EXPECT_EQ(res2, "hello world: 10");
     }
 
     TEST_F(TestStr, test_str_demangle)

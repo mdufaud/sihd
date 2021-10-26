@@ -19,7 +19,7 @@ class DevPulsation: public sihd::core::Device,
 
         bool set_frequency(double freq);
 
-        bool run();
+        bool run() override;
 
     protected:
         void observable_changed([[maybe_unused]] sihd::core::Channel *c) override;

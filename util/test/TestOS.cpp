@@ -9,7 +9,7 @@ namespace test
     LOGGER;
     using namespace sihd::util;
     class TestOs:   public ::testing::Test,
-                    virtual public IRunnable
+                    public IRunnable
     {
         protected:
             TestOs()

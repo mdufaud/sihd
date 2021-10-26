@@ -20,12 +20,14 @@ DevPlayer::DevPlayer(const std::string & name, sihd::util::Node *parent):
     _channel_play_ptr(nullptr),
     _channel_end_ptr(nullptr)
 {
+    this->set_provider_wait_time(10);
     _records_queue_limit = 20;
     _worker.set_runnable(new sihd::util::Task([this] () -> bool
     {
         return this->_worker_loop();
     }));
     this->add_conf("provider", &DevPlayer::set_provider);
+    this->add_conf("provider_wait_time", &DevPlayer::set_provider_wait_time);
     this->add_conf("queue_size", &DevPlayer::set_scheduler_queue_size);
     this->add_conf("alias", &DevPlayer::add_alias);
 }
@@ -48,6 +50,17 @@ bool    DevPlayer::set_scheduler_queue_size(size_t limit)
 bool    DevPlayer::set_provider(const std::string & path)
 {
     _provider_path = path;
+    return true;
+}
+
+bool    DevPlayer::set_provider_wait_time(time_t milliseconds)
+{
+    if (milliseconds <= 0)
+    {
+        LOG(error, "DevPlayer: cannot wait for " << milliseconds << " milliseconds");
+        return false;
+    }
+    _provider_wait_milliseconds = sihd::util::time::milli(milliseconds);
     return true;
 }
 
@@ -132,17 +145,18 @@ bool    DevPlayer::on_start()
 
 bool    DevPlayer::run()
 {
-    {
-        std::lock_guard l(_run_mutex);
-        if (_running == false)
-            return false;
-    }
+    std::lock_guard l(_run_mutex);
+    if (_running == false)
+        return false;
+    // get first record in queue and write record in channel 
     PlayableRecord & record = _queue.front();
     _queue.pop();
     Channel *c = _map_channels[record.name];
     if (c != nullptr)
         c->write(*record.value);
+    // notify worker loop that a record has been played
     _waitable.notify(1);
+    // if no next record to be played - notify the end of player
     if (_last_record && _queue.empty())
         _channel_end_ptr->notify();
     return true;
@@ -155,19 +169,36 @@ bool    DevPlayer::_worker_loop()
     time_t first = -1;
     time_t execute_at;
     _last_record = false;
-    while (_provider_ptr->provide(record) != false)
+    while (_running)
     {
+        // wait for a data
+        while (_running && _provider_ptr->providing() && _provider_ptr->can_provide() == false)
+            _provider_ptr->wait_for_provider_data(_provider_wait_milliseconds);
+        if (_running == false || _provider_ptr->providing() == false)
+            break ;
+        // lock and get data
+        {
+            _provider_ptr->lock_guard_provider();
+            if (_provider_ptr->provide(record) == false)
+                continue ;
+        }
+        // push new record to be played by the scheduler thread in this->run
         _queue.push(record);
         if (first < 0)
             first = record.timestamp;
         execute_at = begin + (record.timestamp - first);
+        // wait tasks to be played as not to overflow the scheduler
         while (_running && (_queue.size() > _records_queue_limit))
             _waitable.infinite_wait();
         if (_running == false)
-            return false;
+            break ;
         _scheduler_ptr->add_task(new sihd::util::Task(this, execute_at));
     }
+    // last record to be played in scheduler thread can have no next record
     _last_record = true;
+    // if no task in queue - notify end of player
+    if (_queue.empty())
+        _channel_end_ptr->notify();
     return true;
 }
 

@@ -14,7 +14,7 @@ namespace sihd::util
 {
 
 class Message:  public sihd::util::OrderedNode,
-                virtual public IMessageField
+                public IMessageField
 {
     public:
         Message(const std::string & name, Node *parent = nullptr);

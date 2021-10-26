@@ -17,7 +17,7 @@ namespace sihd::util
 
 # if !defined(__SIHD_WINDOWS__)
 
-class Process: virtual public IRunnable
+class Process: public IRunnable
 {
     public:
         Process();
@@ -36,12 +36,14 @@ class Process: virtual public IRunnable
         Process & stdin_from(int fd);
         bool stdin_from_file(const std::string & path);
 
+        Process & stdout_close();
         Process & stdout_to(std::function<void(const char *, ssize_t)> fun);
         Process & stdout_to(std::string & output);
         Process & stdout_to(int fd);
         Process & stdout_to(Process & proc);
         bool stdout_to_file(const std::string & path, bool append = false);
 
+        Process & stderr_close();
         Process & stderr_to(std::function<void(const char *, ssize_t)> fun);
         Process & stderr_to(std::string & output);
         Process & stderr_to(int fd);
@@ -128,6 +130,7 @@ class Process: virtual public IRunnable
 #endif
 
         // fd redirections setting
+        void _fdw_close(FileDescWrapper & fdw);
         void _fdw_to(FileDescWrapper & fdw, std::function<void(const char *, ssize_t)> && fun);
         void _fdw_to(FileDescWrapper & fdw, std::string & output);
         void _fdw_to(FileDescWrapper & fdw, int fd);

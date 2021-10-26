@@ -3,6 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Process.hpp>
 #include <sihd/util/Files.hpp>
+#include <sihd/util/OS.hpp>
 #include <experimental/filesystem>
 
 namespace test
@@ -127,6 +128,57 @@ namespace test
         EXPECT_EQ(proc.return_code(), 0);
     }
 
+    TEST_F(TestProcess, test_process_file_out_err)
+    {
+        std::string path = Files::combine(_base_test_dir, "file_out_err");
+        filesystem::remove_all(path);
+        filesystem::create_directories(path);
+        std::string stdout_path = Files::combine(path, "stdout.txt");
+        std::string stderr_path = Files::combine(path, "stderr.txt");
+
+        Process proc([]() -> int {
+            std::cout << "hello world";
+            std::cerr << "nope";
+            return 1;
+        });
+
+        std::string out;
+        std::string err;
+        EXPECT_TRUE(proc.stdout_to_file(stdout_path));
+        EXPECT_TRUE(proc.stderr_to_file(stderr_path));
+
+        TRACE("Redirecting stdout to: " << stdout_path);
+        TRACE("Redirecting stderr to: " << stderr_path);
+
+        EXPECT_TRUE(proc.run());
+        EXPECT_TRUE(proc.end());
+
+        EXPECT_TRUE(proc.has_exited());
+        EXPECT_EQ(proc.return_code(), 1);
+
+        EXPECT_EQ(Files::read_all(stdout_path).value(), "hello world");
+        EXPECT_EQ(Files::read_all(stderr_path).value(), "nope");
+    }
+
+    TEST_F(TestProcess, test_process_close)
+    {
+        Process ls{"ls", "-la"};
+        ls.stdout_close().stderr_close();
+        EXPECT_TRUE(ls.run());
+        EXPECT_TRUE(ls.end());
+        EXPECT_TRUE(ls.has_exited());
+        // bad file descriptor
+        EXPECT_EQ(ls.return_code(), 2);
+
+        Process cat{"cat"};
+        cat.stdin_close().stderr_close();
+        EXPECT_TRUE(cat.run());
+        EXPECT_TRUE(cat.end());
+        EXPECT_TRUE(cat.has_exited());
+        // bad file descriptor
+        EXPECT_EQ(cat.return_code(), 1);
+    }
+
     TEST_F(TestProcess, test_process_chain)
     {
         std::string output;
@@ -225,41 +277,10 @@ namespace test
         EXPECT_EQ(err, "nope");
     }
 
-    TEST_F(TestProcess, test_process_file)
-    {
-        std::string test_path = getenv("TEST_PATH");
-        filesystem::path path = filesystem::path(test_path) / "util_process";
-        filesystem::remove_all(path);
-        filesystem::create_directories(path);
-        filesystem::path stdout_path = path / "stdout.txt";
-        filesystem::path stderr_path = path / "stderr.txt";
-
-        Process proc([]() -> int {
-            std::cout << "hello world";
-            std::cerr << "nope";
-            return 1;
-        });
-
-        std::string out;
-        std::string err;
-        EXPECT_TRUE(proc.stdout_to_file(stdout_path.generic_string()));
-        EXPECT_TRUE(proc.stderr_to_file(stderr_path.generic_string()));
-
-        TRACE("Redirecting stdout to: " << stdout_path);
-        TRACE("Redirecting stderr to: " << stderr_path);
-
-        EXPECT_TRUE(proc.run());
-        EXPECT_TRUE(proc.end());
-
-        EXPECT_TRUE(proc.has_exited());
-        EXPECT_EQ(proc.return_code(), 1);
-
-        EXPECT_EQ(Files::read_all(stdout_path.generic_string()).value(), "hello world");
-        EXPECT_EQ(Files::read_all(stderr_path.generic_string()).value(), "nope");
-    }
-
     TEST_F(TestProcess, test_process_bad_cmd)
     {
+        if (OS::is_run_by_valgrind())
+            GTEST_SKIP() << "Buggy under valgrind";
         Process proc{"ellesse", "-la"};
 
         EXPECT_FALSE(proc.run());

@@ -3,11 +3,10 @@
 
 # include <utility>
 # include <cstdint>
-# include <strings.h>
 # include <stdexcept>
 # include <memory>
-# include <sihd/util/ICloneable.hpp>
-# include <sihd/util/Datatype.hpp>
+# include <string.h>
+# include <strings.h>
 # include <sihd/util/Logger.hpp>
 # include <sihd/util/IArray.hpp>
 
@@ -17,8 +16,7 @@ namespace sihd::util
 LOGGER;
 
 template <typename T>
-class Array:    virtual public IArray,
-                virtual public ICloneable<Array<T>>
+class Array: public IArray, public ICloneable<Array<T>>
 {
     public:
         Array() { _init(); };
@@ -659,18 +657,18 @@ class ArrStr: public ArrChar
         using ArrChar::push_back;
         using ArrChar::from;
 
-        ArrStr(const char *str)
-        {
-            this->_init();
-            this->push_back(str);
-        }
-
         std::string to_string() const
         {
             return std::string(this->cdata(), this->size());
         }
 
         // char *
+
+        ArrStr(const char *str)
+        {
+            this->_init();
+            this->push_back(str);
+        }
 
         bool is_equal(const char *str) const
         {
@@ -705,6 +703,12 @@ class ArrStr: public ArrChar
         }
 
         // std::string
+        
+        ArrStr(const std::string & str)
+        {
+            this->_init();
+            this->push_back(str);
+        }
 
         bool is_equal(const std::string & str) const
         {

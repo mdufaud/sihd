@@ -20,10 +20,10 @@ class OrderedNode: public Node
         virtual bool delete_child(const std::string & name) override;
         virtual void delete_children() override;
 
-        virtual std::vector<std::string> get_children_keys() override;
+        virtual std::vector<std::string> get_children_keys() const override;
 
     protected:
-        virtual void _iterate_tree_children(std::stringstream & ss, TreeOpts & opts, const std::string & indent) override;
+        virtual void _iterate_tree_children(std::stringstream & ss, TreeOpts & opts, const std::string & indent) const override;
     
     private:
         std::vector<std::string>  _children_order;

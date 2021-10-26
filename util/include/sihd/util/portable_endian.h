@@ -9,7 +9,6 @@
 
 # include <sihd/util/platform.hpp>
 
-
 # if defined (__SIHD_LINUX__)
 
 #  include <endian.h>

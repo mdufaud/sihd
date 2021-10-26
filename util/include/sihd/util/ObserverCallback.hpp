@@ -8,7 +8,7 @@ namespace sihd::util
 {
 
 template <typename T>
-class ObserverCallback: virtual public IObserver<T>
+class ObserverCallback: public IObserver<T>
 {
     public:
         ObserverCallback(std::function<void(T *)> fun)

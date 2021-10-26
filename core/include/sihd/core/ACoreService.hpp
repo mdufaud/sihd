@@ -8,12 +8,13 @@
 namespace sihd::core
 {
 
-class ACoreService: virtual public sihd::util::AService,
-                    virtual public sihd::util::IObserver<sihd::util::ServiceController>
+class ACoreService: public sihd::util::AService,
+                    public sihd::util::IObserver<sihd::util::ServiceController>
 {
     public:
         virtual ~ACoreService() {};
 
+    protected:
         virtual void observable_changed([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
 };
 

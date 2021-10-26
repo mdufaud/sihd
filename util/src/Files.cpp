@@ -327,7 +327,12 @@ std::string Files::combine(const std::string & path1, const std::string & path2)
         return path2;
     if (path1[path1.size() - 1] == Files::sep)
         return path1 + path2;
-    return path1 + Files::sep + path2;
+    std::string ret;
+    ret.reserve(path1.size() + 1 + path2.size());
+    ret.append(path1);
+    ret.push_back(Files::sep);
+    ret.append(path2);
+    return ret;
 }
 
 // files

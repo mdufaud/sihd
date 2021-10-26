@@ -19,7 +19,7 @@ namespace sihd::util
  *          though as a backup, can set a method to run
  * 
  */
-class Worker: virtual public IRunnable, public Configurable
+class Worker: public IRunnable, public Configurable
 {
     public:
         Worker(IRunnable *runnable = nullptr);

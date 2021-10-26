@@ -6,7 +6,7 @@
 namespace sihd::util
 {
 
-class IMessageField:    virtual public ICloneable<IMessageField>
+class IMessageField:    public ICloneable<IMessageField>
 {
     public:
         virtual ~IMessageField() {};

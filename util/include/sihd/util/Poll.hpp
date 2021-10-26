@@ -21,7 +21,7 @@ typedef unsigned long rlim_t;
 namespace sihd::util
 {
 
-class Poll: virtual public IRunnable
+class Poll: public IRunnable
 {
     public:
         Poll();

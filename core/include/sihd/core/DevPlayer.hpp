@@ -13,7 +13,7 @@
 namespace sihd::core
 {
 
-class DevPlayer:  public sihd::core::Device,
+class DevPlayer:    public sihd::core::Device,
                     public sihd::util::IRunnable
 {
     public:
@@ -24,6 +24,7 @@ class DevPlayer:  public sihd::core::Device,
         bool is_running() const override;
 
         bool set_provider(const std::string & path);
+        bool set_provider_wait_time(time_t milliseconds);
         bool add_alias(const std::string & alias_conf);
         bool set_scheduler_queue_size(size_t limit);
 
@@ -43,6 +44,7 @@ class DevPlayer:  public sihd::core::Device,
 
         std::mutex _run_mutex;
         size_t _records_queue_limit;
+        time_t _provider_wait_milliseconds;
 
         std::string _provider_path;
         sihd::util::IProvider<PlayableRecord &> *_provider_ptr;

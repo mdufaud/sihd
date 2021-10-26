@@ -8,10 +8,11 @@
 # include <functional>
 # include <sihd/util/IProvider.hpp>
 # include <sihd/util/Array.hpp>
+# include <sihd/util/Waitable.hpp>
 
 # define __SIHD_ADD_ITERATOR_PROVIDER__(CLASSNAME, CONTAINER) \
 template <typename TYPE> \
-class CLASSNAME: public sihd::util::IProvider<TYPE &> \
+class CLASSNAME: public sihd::util::AProvider<TYPE &> \
 { \
     public: \
         CLASSNAME(CONTAINER<TYPE> *iterator = nullptr) { this->set_iterator(iterator); } \
@@ -27,6 +28,9 @@ class CLASSNAME: public sihd::util::IProvider<TYPE &> \
             } \
             return false; \
         } \
+ \
+        virtual bool providing() const  { return _iterator != _iterable_ptr->end(); } \
+        virtual bool can_provide() const  { return _iterator != _iterable_ptr->end(); } \
  \
         void set_iterator(CONTAINER<TYPE> *iterator) \
         { \
@@ -47,6 +51,34 @@ class CLASSNAME: public sihd::util::IProvider<TYPE &> \
 
 namespace sihd::util
 {
+
+template <typename ...TYPE>
+class AProvider: public sihd::util::IProvider<TYPE...>
+{
+    public:
+        virtual ~AProvider() {}
+
+        virtual bool wait_for_provider_data(time_t nano_duration)
+        {
+            return _waitable.wait_for(nano_duration) == false;
+        }
+
+        virtual void wait_new_provider_data()
+        {
+            _waitable.infinite_wait();
+        }
+
+        std::lock_guard<std::mutex> lock_guard_provider() { return std::lock_guard(_mutex); }
+
+    protected:
+        void _provider_notify() { _waitable.notify(1); }
+        void _provider_notify_all() { _waitable.notify_all(); }
+
+    private:
+        Waitable _waitable;
+        std::mutex _mutex;
+};
+
 __SIHD_ADD_ITERATOR_PROVIDER__(VectorProvider, std::vector);
 __SIHD_ADD_ITERATOR_PROVIDER__(ListProvider, std::list);
 __SIHD_ADD_ITERATOR_PROVIDER__(SetProvider, std::set);
@@ -54,22 +86,41 @@ __SIHD_ADD_ITERATOR_PROVIDER__(DequeProvider, std::deque);
 __SIHD_ADD_ITERATOR_PROVIDER__(ArrayProvider, sihd::util::Array);
 
 template <typename ...TYPE>
-class FunctionProvider: public sihd::util::IProvider<TYPE...>
+class FunctionProvider: public sihd::util::AProvider<TYPE...>
 {
     public:
         FunctionProvider() {}
-        FunctionProvider(std::function<bool(TYPE...)> fun) { this->set_function(fun); }
+
+        FunctionProvider(std::function<bool(TYPE...)> provider)
+        {
+            this->set_provider_function(provider);
+        }
+
         virtual ~FunctionProvider() {}
 
         bool provide(TYPE ...value)
         {
-            return _method(value...);
+            return _provide_method(value...);
+        }
+        
+        bool can_provide() const
+        {
+            return _can_provide_method ? _can_provide_method() : true;
         }
 
-        void set_function(std::function<bool(TYPE...)> & fun) { _method = fun; }
+        bool providing() const
+        {
+            return _providing_method ? _providing_method() : true;
+        }
+
+        void set_provider_function(std::function<bool(TYPE...)> & fun) { _provide_method = std::move(fun); }
+        void set_can_provide_function(std::function<bool()> & fun) { _can_provide_method = std::move(fun); }
+        void set_providing_function(std::function<bool()> & fun) { _providing_method = std::move(fun); }
 
     private:
-        std::function<bool(TYPE...)> _method;
+        std::function<bool(TYPE...)> _provide_method;
+        std::function<bool()> _can_provide_method;
+        std::function<bool()> _providing_method;
 };
 
 

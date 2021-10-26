@@ -26,7 +26,7 @@ namespace test
             int val = 0;
     };
 
-    class TestObservable:   public ::testing::Test, virtual public IObserver<SomeObservable>
+    class TestObservable:   public ::testing::Test, public IObserver<SomeObservable>
     {
         protected:
             TestObservable()

@@ -8,7 +8,7 @@
 namespace sihd::util
 {
 
-class Task:    virtual public IRunnable
+class Task: public IRunnable
 {
     public:
         Task(IRunnable *to_run,

@@ -17,10 +17,11 @@ class ACoreObject:  public sihd::util::Named,
         ACoreObject(const std::string & name, sihd::util::Node *parent = nullptr): sihd::util::Named(name, parent) {}
         virtual ~ACoreObject() {}
 
-        bool is_running() const { return false; }
+        bool is_running() const override { return false; }
 
     protected:
-        void observable_changed([[maybe_unused]] Channel *channel) {};
+        virtual void observable_changed([[maybe_unused]] Channel *channel) override {};
+        virtual void observable_changed([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
 };
 
 }
