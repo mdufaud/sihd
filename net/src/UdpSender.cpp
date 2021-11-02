@@ -13,14 +13,14 @@ UdpSender::UdpSender(bool ipv6)
 
 UdpSender::UdpSender(const IpAddr & addr)
 {
-    if (this->open_socket(addr.prefer_ipv6()))
+    if (this->open_socket(addr.prefers_ipv6()))
         this->connect(addr);
 }
 
 UdpSender::UdpSender(const std::string & ip, int port)
 {
     IpAddr addr(ip, port, true);
-    if (this->open_socket(addr.prefer_ipv6()))
+    if (this->open_socket(addr.prefers_ipv6()))
         this->connect(addr);
 }
 

@@ -143,9 +143,15 @@ void    Select::set_timeout_handler(IHandler<time_t, bool> *handler)
     _timeout_handler_ptr = handler;
 }
 
-void    Select::stop()
+bool    Select::stop()
 {
-    _running = false;
+    if (_running)
+    {
+        _running = false;
+        std::lock_guard lock(_run_mutex);
+        return true;
+    }
+    return false;
 }
 
 bool    Select::run()

@@ -85,49 +85,49 @@ void    Socket::_init()
 bool    Socket::set_socket_reuseaddr(int socket, bool active)
 {
     int opt = active ? 1 : 0;
-    return Socket::set_socket_opt(socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
+    return sihd::util::OS::setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
 }
 
 bool    Socket::set_socket_broadcast(int socket, bool active)
 {
     int opt = active ? 1 : 0;
-    return Socket::set_socket_opt(socket, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(int));
+    return sihd::util::OS::setsockopt(socket, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(int));
 }
 
 bool    Socket::set_socket_tcp_nodelay(int socket, bool active)
 {
     int opt = (active ? 1 : 0);
-    return Socket::set_socket_opt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt), true);
+    return sihd::util::OS::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt), true);
 }
 
 bool    Socket::is_socket_tcp_nodelay(int socket)
 {
     int opt;
     socklen_t len = sizeof(opt);
-    return Socket::get_socket_opt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, &len, true) && opt != 0;
+    return sihd::util::OS::getsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, &len, true) && opt != 0;
 }
 
 bool    Socket::is_socket_broadcast(int socket)
 {
     int res;
     socklen_t length = sizeof(int);
-    return Socket::get_socket_opt(socket, SOL_SOCKET, SO_BROADCAST, &res, &length, true) && res != 0;
+    return sihd::util::OS::getsockopt(socket, SOL_SOCKET, SO_BROADCAST, &res, &length, true) && res != 0;
 }
 
 bool    Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
 {
 #if !defined (__SIHD_WINDOWS__)
     socklen_t length = sizeof(int);
-    bool found = Socket::get_socket_opt(socket, SOL_SOCKET, SO_DOMAIN, domain, &length);
+    bool found = sihd::util::OS::getsockopt(socket, SOL_SOCKET, SO_DOMAIN, domain, &length);
     length = sizeof(int);
-    found = found && Socket::get_socket_opt(socket, SOL_SOCKET, SO_TYPE, type, &length);
+    found = found && sihd::util::OS::getsockopt(socket, SOL_SOCKET, SO_TYPE, type, &length);
     length = sizeof(int);
-    found = found && Socket::get_socket_opt(socket, SOL_SOCKET, SO_PROTOCOL, protocol, &length);
+    found = found && sihd::util::OS::getsockopt(socket, SOL_SOCKET, SO_PROTOCOL, protocol, &length);
     return found;
 #else
     CSADDR_INFO addrinfo;
     socklen_t length = sizeof(addrinfo);
-    bool found = Socket::get_socket_opt(socket, SOL_SOCKET, SO_BSP_STATE, &addrinfo, &length);
+    bool found = sihd::util::OS::getsockopt(socket, SOL_SOCKET, SO_BSP_STATE, &addrinfo, &length);
     if (found)
     {
         *protocol = addrinfo.iProtocol;
@@ -136,34 +136,6 @@ bool    Socket::get_socket_infos(int socket, int *domain, int *type, int *protoc
     }
     return found;
 #endif
-}
-
-bool    Socket::set_socket_opt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror)
-{
-    if (socket < 0)
-        throw std::runtime_error("Socket: cannot set tcp nodelay on a negative socket");
-#if !defined(__SIHD_WINDOWS__)
-    bool ret = ::setsockopt(socket, level, optname, optval, optlen) >= 0;
-#else
-    bool ret = ::setsockopt(socket, level, optname, (const char *)optval, optlen) >= 0;
-#endif
-    if (!ret && logerror)
-        LOG(error, "Socket: getsockopt error: " << strerror(errno));
-    return ret;
-}
-
-bool    Socket::get_socket_opt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror)
-{
-    if (socket < 0)
-        throw std::runtime_error("Socket: cannot set tcp nodelay on a closed socket");
-#if !defined(__SIHD_WINDOWS__)
-    bool ret = ::getsockopt(socket, level, optname, optval, optlen) >= 0;
-#else
-    bool ret = ::getsockopt(socket, level, optname, (char *)optval, optlen) >= 0;
-#endif
-    if (!ret && logerror)
-        LOG(error, "Socket: getsockopt error: " << strerror(errno));
-    return ret;
 }
 
 bool    Socket::get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len)

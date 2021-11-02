@@ -64,8 +64,8 @@ if verbose:
 try:
     build_modules = _build_tools.modules.get_modules(app,
         specific_modules=modules_to_build)
-    global_extlibs = _build_tools.modules.get_global_extlibs(app, test=has_test)
-    extlibs = _build_tools.modules.get_modules_extlibs(app, build_modules, test=has_test)
+    global_extlibs = _build_tools.modules.get_global_extlibs(app)
+    #extlibs = _build_tools.modules.get_modules_extlibs(app, build_modules)
 except RuntimeError as e:
     error(str(e))
     Exit(1)
@@ -81,6 +81,17 @@ if verbose:
 # Build compiling options
 ###############################################################################
 
+def add_env_app_conf(env, key):
+    env_to_key = {
+        "LIBS": "_libs",
+        "CPPFLAGS": "_flags",
+        "CPPDEFINES": "_defines"
+    }
+    for envkey, to_concat in env_to_key.items():
+        concat = key + to_concat
+        if hasattr(app, concat):
+            env[envkey].extend(getattr(app, concat))
+
 base_env = Environment(
     # binaries path
     ENV = {
@@ -93,10 +104,7 @@ base_env = Environment(
     # c++ compile flags
     CXXFLAGS = ["-std=c++17"],
     # c and c++ compile flags
-    CPPFLAGS = [
-        '-Wall', '-Wextra', '-Werror',
-        '-m64', '-pipe'
-    ] + (hasattr(app, 'flags') and app.flags or []),
+    CPPFLAGS = [] + (hasattr(app, 'flags') and app.flags or []),
     # link flags
     LINKFLAGS = [],
     # extra #define for inside the code
@@ -150,30 +158,19 @@ if not distribution:
     )
 
 if compile_mode == "debug":
-    base_env.Append(
-        CPPFLAGS = [
-            "-g",
-            "-O2"
-        ]
-    )
+    add_env_app_conf(base_env, "debug")
 elif compile_mode == "release":
-    base_env.Append(
-        CPPFLAGS = [
-            "-O3",
-        ]
-    )
-    
+    add_env_app_conf(base_env, "release")
+
 # Clang build
 if compiler == "clang":
     base_env.Replace(
         CXX = "clang++",
         CC = "clang"
     )
-    base_env["CPPFLAGS"].extend([
-        "-stdlib=libc++",
-    ])
     base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
-# Windows build
+    add_env_app_conf(base_env, "clang")
+# Mingw build
 elif compiler == "mingw":
     base_env.Replace(
         CXX = "x86_64-w64-mingw32-g++",
@@ -181,12 +178,8 @@ elif compiler == "mingw":
         SHLIBSUFFIX = ".dll",
         LIBPREFIX = "",
     )
-    # for macro utilities in project
-    base_env["CPPDEFINES"].append("_WIN64")
-    # to activate higher version of WIN functionnalities
-    base_env["CPPDEFINES"].append("_WIN32_WINNT=0x0600")
-    # for winsock2.h
-    base_env["LIBS"].append("ws2_32")
+    add_env_app_conf(base_env, "mingw")
+# GCC build
 elif compiler == "gcc":
     base_env.Append(
         CPPFLAGS = [
@@ -202,6 +195,7 @@ elif compiler == "gcc":
             "-Wl,-z,relro",
         ]
     )
+    add_env_app_conf(base_env, "gcc")
 
 # Decides when to recompile - removing slow md5 in favor of timestamps
 Decider('timestamp-newer')
@@ -233,6 +227,13 @@ def build_test(self, src=None, libs=[], test_name=None):
     if not libs:
         libs = [self['APP_MODULE']]
     env.Append(LIBS = libs)
+    add_env_app_conf(env, "test")
+    if compiler == "clang":
+        add_env_app_conf(env, "clang_test")
+    elif compiler == "mingw":
+        add_env_app_conf(env, "mingw_test")
+    elif compiler == "gcc":
+        add_env_app_conf(env, "gcc_test")
     return env.Program(test_path, src)
 
 def build_lib(self, src=None, lib_name=None):

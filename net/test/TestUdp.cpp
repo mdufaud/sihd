@@ -3,7 +3,9 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/net/UdpSender.hpp>
 #include <sihd/net/UdpReceiver.hpp>
+#include <sihd/net/INetReceiver.hpp>
 #include <sihd/util/Worker.hpp>
+#include <sihd/util/Task.hpp>
 
 namespace test
 {
@@ -41,10 +43,11 @@ namespace test
 
         receiver.set_buffer(&array_rcv);
         receiver.set_poll_timeout(1);
-        receiver.set_handler(new sihd::util::Handler<const void *, size_t>(
-        [&] (const void *data, size_t size)
+        ssize_t receive_ret = -1;
+        receiver.set_handler(new sihd::util::Handler<INetReceiver *>([&] (INetReceiver *receiver)
         {
-            LOG(debug, "Data received: " << data << " - " << size << " bytes");
+            receive_ret = receiver->receive(array_rcv);
+            LOG(debug, "Data received: " << array_rcv.to_string() << " - " << array_rcv.byte_size() << " bytes");
         }));
         sihd::util::Worker worker(new sihd::util::Task(&receiver));
         LOG(debug, "Starting receiver");
@@ -62,7 +65,7 @@ namespace test
         EXPECT_TRUE(worker.stop_worker());
     }
 
-    TEST_F(TestUdp, test_udp_sendrcv_connexion)
+    TEST_F(TestUdp, test_udp_sendrcv_connect)
     {
         sihd::util::ArrChar array_rcv(40);
 

@@ -1,8 +1,4 @@
 name = 'sihd'
-libs = ['pthread', 'dl']
-defines = []
-test_libs = ['gtest', 'stdc++fs']
-flags = ["-fPIC"]
 extlibs = {
     "gtest": "cci.20210126",
     "nlohmann_json": "3.9.1",
@@ -16,6 +12,7 @@ extlibs = {
     # ui
     "imgui": "1.83",
     "ncurses": "6.2",
+    "replxx": "0.0.4",
     # command line parser
     "readline": "8.0",
     # bindings
@@ -73,6 +70,37 @@ replace_files = [
 replace_vars = {
     "VERSION": "0.1"
 }
+libs = ['pthread', 'dl']
+flags = ['-Wall', '-Wextra', '-Werror', '-m64', '-pipe', '-fPIC']
+defines = []
+debug_flags = ["-g", "-O2"]
+release_flags = ["-O3"]
+# gcc specifics
+gcc_flags = [
+    "-D_FORTIFY_SOURCE=2",
+    "-D_GLIBCXX_ASSERTIONS",
+    "-fasynchronous-unwind-tables",
+    "-fexceptions",
+    "-Wl,-pie",
+    "-fstack-protector",
+    "-fstack-protector-strong",
+    "-Wl,-z,defs",
+    "-Wl,-z,now",
+    "-Wl,-z,relro",    
+]
+# clang specifics
+clang_libs = ['stdc++', "libc++"]
+clang_defines = [
+    'LLVM_ENABLE_EH=YES',
+    'LLVM_ENABLE_RTTI=ON',
+]
+# mingw specifics
+mingw_libs = ['ws2_32', 'psapi']
+# _WIN64 -> activates sihd functionnalities
+# _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
+mingw_defines = ["_WIN64", "_WIN32_WINNT=0x0600"]
+# compiles tests with these libs
+test_libs = ['gtest', 'stdc++fs']
 
 #############
 # after build
@@ -82,7 +110,7 @@ replace_vars = {
 # linux extension is -> cpython-36m-x86_64-linux-gnu.so
 # windows extension is -> cp37-win_amd64.pyd
 # though python cannot be used with mingw so...
-def get_python_libname():
+def __get_python_libname():
     import subprocess
     proc = subprocess.Popen("python3-config --extension-suffix",
                             shell = True, stdout = subprocess.PIPE)
@@ -94,7 +122,7 @@ def on_build_success(modlist, build_path):
     import shutil
     libpath = os.path.join(build_path, "lib")
     if "py" in modlist:
-        python_libname = get_python_libname()
+        python_libname = __get_python_libname()
         if python_libname:
             lib_pattern = os.path.join(libpath, "libsihd_py*.so")
             libs = glob.glob(lib_pattern)

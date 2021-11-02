@@ -58,7 +58,7 @@ void    MemRecorder::add_record(const std::string & name, time_t timestamp, cons
     if (_provides)
     {
         {
-            this->lock_guard_provider();
+            this->provider_lock_guard();
             _map_sorted_records.insert(std::pair<time_t, PlayableRecord>(
                 timestamp, {name, timestamp, arr}
             ));
@@ -72,9 +72,9 @@ void    MemRecorder::add_record(const PlayableRecord & record)
     this->add_record(record.name, record.timestamp, record.value);
 }
 
-bool    MemRecorder::can_provide() const
+bool    MemRecorder::provider_empty() const
 {
-    return _map_sorted_records.empty() == false;
+    return _map_sorted_records.empty();
 }
 
 bool    MemRecorder::providing() const
@@ -84,7 +84,7 @@ bool    MemRecorder::providing() const
 
 bool    MemRecorder::provide(PlayableRecord & value)
 {
-    if (this->can_provide() == false)
+    if (this->provider_empty())
         return false;
     value = _map_sorted_records.begin()->second;
     _map_sorted_records.erase(_map_sorted_records.begin());
@@ -146,7 +146,7 @@ bool    MemRecorder::do_reset()
 void    MemRecorder::clear()
 {
     {
-        this->lock_guard_provider();
+        this->provider_lock_guard();
         _map_sorted_records.clear();
     }
     this->_provider_notify_all();

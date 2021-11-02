@@ -31,8 +31,10 @@ Poll::~Poll()
 {
     this->stop();
     std::lock_guard lock(_run_mutex);
-    if (_timeout_handler_ptr != nullptr)
-        delete _timeout_handler_ptr;
+    if (_prepoll_runnable_ptr != nullptr)
+        delete _prepoll_runnable_ptr;
+    if (_postpoll_handler_ptr != nullptr)
+        delete _postpoll_handler_ptr;
     if (_read_handler_ptr != nullptr)
         delete _read_handler_ptr;
     if (_write_handler_ptr != nullptr)
@@ -42,7 +44,8 @@ Poll::~Poll()
 void    Poll::_init()
 {
     _running = false;
-    _timeout_handler_ptr = nullptr;
+    _prepoll_runnable_ptr = nullptr;
+    _postpoll_handler_ptr = nullptr;
     _read_handler_ptr = nullptr;
     _write_handler_ptr = nullptr;
     _timeout_milliseconds = -1; // infinite block
@@ -176,42 +179,51 @@ void    Poll::set_timeout(int milliseconds)
     _timeout_milliseconds = milliseconds;
 }
 
-void    Poll::set_handlers(IHandler<int> *read_handler,
-                            IHandler<int> *write_handler,
-                            IHandler<time_t, bool> *timeout_handler)
-{
-    this->set_read_handler(read_handler);
-    this->set_write_handler(write_handler);
-    this->set_timeout_handler(timeout_handler);
-}
-
-void    Poll::set_read_handler(IHandler<int> *handler)
+Poll &  Poll::set_read_handler(IHandler<int> *handler)
 {
     std::lock_guard lock(_handlers_mutex);
     if (_read_handler_ptr != nullptr)
         delete _read_handler_ptr;
     _read_handler_ptr = handler;
+    return *this;
 }
 
-void    Poll::set_write_handler(IHandler<int> *handler)
+Poll &  Poll::set_write_handler(IHandler<int> *handler)
 {
     std::lock_guard lock(_handlers_mutex);
     if (_write_handler_ptr != nullptr)
         delete _write_handler_ptr;
     _write_handler_ptr = handler;
+    return *this;
 }
 
-void    Poll::set_timeout_handler(IHandler<time_t, bool> *handler)
+Poll &  Poll::set_prepoll_runnable(IRunnable *runnable)
 {
     std::lock_guard lock(_handlers_mutex);
-    if (_timeout_handler_ptr != nullptr)
-        delete _timeout_handler_ptr;
-    _timeout_handler_ptr = handler;
+    if (_prepoll_runnable_ptr != nullptr)
+        delete _prepoll_runnable_ptr;
+    _prepoll_runnable_ptr = runnable;
+    return *this;
 }
 
-void    Poll::stop()
+Poll &  Poll::set_postpoll_handler(IHandler<time_t, bool> *handler)
 {
-    _running = false;
+    std::lock_guard lock(_handlers_mutex);
+    if (_postpoll_handler_ptr != nullptr)
+        delete _postpoll_handler_ptr;
+    _postpoll_handler_ptr = handler;
+    return *this;
+}
+
+bool    Poll::stop()
+{
+    if (_running)
+    {
+        _running = false;
+        std::lock_guard lock(_run_mutex);
+        return true;
+    }
+    return false;
 }
 
 bool    Poll::run()
@@ -232,6 +244,8 @@ bool    Poll::run()
 
 int     Poll::poll(int milliseconds_timeout)
 {
+    if (_prepoll_runnable_ptr != nullptr && _prepoll_runnable_ptr->run() == false)
+        return -2;
     time_t before = _clock.now();
     int ret;
     {
@@ -255,8 +269,8 @@ void    Poll::_process(int poll_return, time_t nano_timespent)
         LOG(error, "Poll: " << strerror(errno));
         return ;
     }
-    else if (_timeout_handler_ptr != nullptr)
-        _timeout_handler_ptr->handle(nano_timespent, poll_return == 0);
+    else if (_postpoll_handler_ptr != nullptr)
+        _postpoll_handler_ptr->handle(nano_timespent, poll_return == 0);
     if (poll_return <= 0)
         return ;
     size_t i = 0;

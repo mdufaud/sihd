@@ -18,7 +18,7 @@ typedef unsigned long rlim_t;
 # include <list>
 # include <mutex>
 # include <sihd/util/Observable.hpp>
-# include <sihd/util/IRunnable.hpp>
+# include <sihd/util/IStoppableRunnable.hpp>
 # include <sihd/util/IHandler.hpp>
 # include <sihd/util/Clocks.hpp>
 # include <sihd/util/time.hpp>
@@ -26,7 +26,7 @@ typedef unsigned long rlim_t;
 namespace sihd::util
 {
 
-class Select
+class Select: public IStoppableRunnable
 {
     public:
         Select();
@@ -48,11 +48,11 @@ class Select
         void set_timeout(int milliseconds);
 
         bool run();
-        void stop();
+        bool stop();
+        bool is_running() const { return _running; }
 
         int select(int milliseconds = -1);
 
-        bool is_running() const { return _running; }
         IHandler<int> *get_read_handler() const { return _read_handler_ptr; }
         IHandler<int> *get_write_handler() const { return _write_handler_ptr; }
         IHandler<time_t, bool> *get_timeout_handler() const { return _timeout_handler_ptr; }

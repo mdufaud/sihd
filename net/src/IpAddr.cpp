@@ -131,7 +131,7 @@ void    IpAddr::clear()
 {
     _host.clear();
     _port = -1;
-    _prefer_ipv6 = false;
+    _prefers_ipv6 = false;
     _dns.hostname = "";
     _dns.resolved = false;
     _dns.lst_ip.clear();
@@ -161,7 +161,6 @@ IpAddr::DnsEntry     IpAddr::_from_sockaddr(const sockaddr_in *addr_in, int sock
     ipinfo.protocol = protocol;
     memcpy(&ipinfo.addr, &addr_in->sin_addr, sizeof(in_addr));
     memset(&ipinfo.addr6, 0, sizeof(in6_addr));
-    ipinfo.ip = IpAddr::ip_to_string(*addr_in);
     return ipinfo;
 }
 
@@ -173,7 +172,6 @@ IpAddr::DnsEntry     IpAddr::_from_sockaddr(const sockaddr_in6 *addr_in, int soc
     ipinfo.protocol = protocol;
     memset(&ipinfo.addr, 0, sizeof(in_addr));
     memcpy(&ipinfo.addr6, &addr_in->sin6_addr, sizeof(in6_addr));
-    ipinfo.ip = IpAddr::ip_to_string(*addr_in);
     return ipinfo;
 }
 
@@ -346,12 +344,22 @@ bool    IpAddr::is_valid_ip(const std::string & ip)
 
 std::string     IpAddr::ip_to_string(const sockaddr_in & addr_in)
 {
-    return inet_ntop(AF_INET, (void *)&(addr_in.sin_addr), _ip_buffer, INET_ADDRSTRLEN);
+    return IpAddr::ip_to_string(addr_in.sin_addr);
 }
 
 std::string     IpAddr::ip_to_string(const sockaddr_in6 & addr_in)
 {
-    return inet_ntop(AF_INET6, (void *)&(addr_in.sin6_addr), _ip_buffer, INET6_ADDRSTRLEN);
+    return IpAddr::ip_to_string(addr_in.sin6_addr);
+}
+
+std::string     IpAddr::ip_to_string(const in_addr & addr_in)
+{
+    return inet_ntop(AF_INET, (void *)(&addr_in), _ip_buffer, INET_ADDRSTRLEN);
+}
+
+std::string     IpAddr::ip_to_string(const in6_addr & addr_in)
+{
+    return inet_ntop(AF_INET6, (void *)(&addr_in), _ip_buffer, INET6_ADDRSTRLEN);
 }
 
 // Instance methods
@@ -359,7 +367,7 @@ std::string     IpAddr::ip_to_string(const sockaddr_in6 & addr_in)
 bool    IpAddr::get_sockaddr(IpSockAddr & ipsockaddr, int socktype, int protocol) const
 {
     IpAddr::_purge_ipsockaddr(ipsockaddr);
-    if (_prefer_ipv6 && this->get_sockaddr_in6(&ipsockaddr.addr_in6, socktype, protocol))
+    if (_prefers_ipv6 && this->get_sockaddr_in6(&ipsockaddr.addr_in6, socktype, protocol))
     {
         ipsockaddr.type = AF_INET6;
         ipsockaddr.addr = (sockaddr *)&ipsockaddr.addr_in6;
@@ -405,13 +413,13 @@ std::string IpAddr::get_ip(int socktype, int protocol, bool ipv6) const
 {
     const DnsEntry *info = this->_get_ip_info(socktype, protocol, ipv6);
     if (info != nullptr)
-        return info->ip;
+        return info->ip();
     return "";
 }
 
 bool    IpAddr::do_lookup_dns()
 {
-    auto opt_dns = IpAddr::dns_lookup(_host, _prefer_ipv6);
+    auto opt_dns = IpAddr::dns_lookup(_host, _prefers_ipv6);
     if (opt_dns.has_value())
     {
         _dns = opt_dns.value();
@@ -433,7 +441,7 @@ IpAddr::DnsEntry *IpAddr::_get_ip_info(int socktype, int protocol, bool ipv6) co
             continue ;
         if ((socktype < 0 || info.socktype == socktype)
             && (protocol < 0 || info.protocol == protocol)
-            && info.ip.empty() == false)
+            && info.ip().empty() == false)
             return const_cast<DnsEntry *>(&info);
     }
     return nullptr;
@@ -443,7 +451,7 @@ void    IpAddr::_add_ip(const std::string & ip, int socktype, int protocol)
 {
     for (const auto & info: _dns.lst_ip)
     {
-        if (info.ip == ip && info.socktype == socktype && info.protocol == protocol)
+        if (info.socktype == socktype && info.protocol == protocol && info.ip() == ip)
             return ;
     }
     sockaddr_in addr_in;

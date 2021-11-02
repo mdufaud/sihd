@@ -3,6 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Poll.hpp>
 #include <sihd/util/Handler.hpp>
+#include <sihd/util/Task.hpp>
 
 namespace test
 {
@@ -55,6 +56,16 @@ namespace test
         poll.set_read_fd(fd[0]);
         poll.set_write_fd(fd[1]);
 
+        auto prepoll_runnable = new Task([] () -> bool
+        {
+            TRACE("Polling");
+            return true;
+        });
+        auto postpoll_handler = new Handler<time_t, bool>([this] (time_t timespent, bool timedout)
+        {
+            TRACE("Time spent in poll: " << time::to_micro(timespent) << " microsec (timed out ? " << timedout << ")");
+            _timedout += (int)timedout;
+        });
         auto write_handler = new Handler<int>([this] (int fd)
         {
             TRACE("Writing in fd: " << fd);
@@ -72,12 +83,10 @@ namespace test
             TRACE("Read " << ret << " bytes: '" << buffer << "'");
             _read_count += 1;
         });
-        auto timeout_handler = new Handler<time_t, bool>([this] (time_t timespent, bool timedout)
-        {
-            TRACE("Time spent in poll: " << time::to_micro(timespent) << " microsec (timed out ? " << timedout << ")");
-            _timedout += (int)timedout;
-        });
-        poll.set_handlers(read_handler, write_handler, timeout_handler);
+        poll.set_read_handler(read_handler)
+            .set_write_handler(write_handler)
+            .set_prepoll_runnable(prepoll_runnable)
+            .set_postpoll_handler(postpoll_handler);
 
         // first write from writing end of pipe
         int res = poll.poll(10);

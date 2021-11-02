@@ -34,7 +34,7 @@ namespace test
                 LOG(info, "hostname: " << dns.hostname);
                 for (const IpAddr::DnsEntry & info: dns.lst_ip)
                 {
-                    LOG(info, "ip: " << info.ip
+                    LOG(info, "ip: " << info.ip()
                                 << " - socket " << Ip::socktype_to_string(info.socktype)
                                 << " - proto " << Ip::protocol_to_string(info.protocol)
                                 << " - " << (info.ipv6 ? "ipv6" : "ipv4"));
@@ -117,7 +117,7 @@ namespace test
         IpAddr::DnsInfo & info = dns.value();
         EXPECT_EQ(info.hostname, "localhost");
         EXPECT_TRUE(info.lst_ip.size() > 0);
-        EXPECT_EQ(info.lst_ip[0].ip, "127.0.0.1");
+        EXPECT_EQ(info.lst_ip[0].ip(), "127.0.0.1");
         EXPECT_EQ(info.lst_ip[0].ipv6, false);
 
         dns = IpAddr::dns_lookup("127.0.0.1", true);
@@ -126,7 +126,7 @@ namespace test
         info = dns.value();
         EXPECT_EQ(info.hostname, "127.0.0.1");
         EXPECT_TRUE(info.lst_ip.size() > 0);
-        EXPECT_EQ(info.lst_ip[0].ip, "127.0.0.1");
+        EXPECT_EQ(info.lst_ip[0].ip(), "127.0.0.1");
         EXPECT_EQ(info.lst_ip[0].ipv6, false);
     }
 }

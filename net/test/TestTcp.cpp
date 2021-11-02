@@ -2,20 +2,21 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/net/TcpClient.hpp>
+#include <sihd/net/TcpServer.hpp>
 
 namespace test
 {
     LOGGER;
     using namespace sihd::net;
-    class TestTcpClient:   public ::testing::Test
+    class TestTcp:  public ::testing::Test
     {
         protected:
-            TestTcpClient()
+            TestTcp()
             {
                 sihd::util::LoggerManager::basic();
             }
 
-            virtual ~TestTcpClient()
+            virtual ~TestTcp()
             {
                 sihd::util::LoggerManager::clear_loggers();
             }
@@ -29,7 +30,16 @@ namespace test
             }
     };
 
-    TEST_F(TestTcpClient, test_tcp_client)
+    TEST_F(TestTcp, test_tcp_server)
+    {
+        IpAddr localhost = IpAddr::get_localhost(4242);
+        TcpServer server(localhost);
+        EXPECT_TRUE(server.serve(20));
+        sihd::util::time::msleep(5);
+        EXPECT_TRUE(server.stop_serving());
+    }
+
+    TEST_F(TestTcp, test_tcp_client)
     {
         sihd::util::ArrChar hello("hello world", sizeof("hello world"));
         sihd::util::ArrChar bye("bye", sizeof("bye"));

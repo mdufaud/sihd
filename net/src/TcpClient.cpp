@@ -8,24 +8,28 @@ LOGGER;
 
 TcpClient::TcpClient(bool ipv6)
 {
+    this->_init();
     this->open_socket(ipv6);
 }
 
 TcpClient::TcpClient(const IpAddr & addr)
 {
-    if (this->open_socket(addr.prefer_ipv6()))
+    this->_init();
+    if (this->open_socket(addr.prefers_ipv6()))
         this->connect(addr);
 }
 
 TcpClient::TcpClient(const std::string & ip, int port)
 {
+    this->_init();
     IpAddr addr(ip, port, true);
-    if (this->open_socket(addr.prefer_ipv6()))
+    if (this->open_socket(addr.prefers_ipv6()))
         this->connect(addr);
 }
 
 TcpClient::TcpClient(const std::string & path)
 {
+    this->_init();
     if (this->open_socket_unix())
         this->connect(path);
 }
@@ -62,6 +66,8 @@ bool    TcpClient::open_socket(bool ipv6)
 
 void    TcpClient::_init()
 {
+    this->add_conf("buffer_size", &TcpClient::set_buffer_size);
+    this->add_conf("poll_timeout", &TcpClient::set_poll_timeout);
     _array_owned = false;
     _array_ptr = nullptr;
     _poll_timeout_milliseconds = -1;
@@ -146,15 +152,15 @@ void    TcpClient::handle(int socket)
 {
     if (socket == _socket.socket())
     {
-        if (this->receive(*_array_ptr) <= 0)
-            this->stop();
-        else if (_handler_ptr != nullptr)
-            _handler_ptr->handle(_array_ptr->cbuf(), _array_ptr->byte_size());
+        if (_handler_ptr != nullptr)
+            _handler_ptr->handle(this);
+        else
+            this->receive(_client_addr, *_array_ptr);
         _waitable.notify(1);
     }
 }
 
-void    TcpClient::set_handler(sihd::util::IHandler<const void *, size_t> *handler)
+void    TcpClient::set_handler(sihd::util::IHandler<INetReceiver *> *handler)
 {
     std::lock_guard lock(_poll_mutex);
     if (_handler_ptr != nullptr)

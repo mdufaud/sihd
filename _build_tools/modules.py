@@ -42,28 +42,14 @@ def resolve_modules_dependencies(modules: dict):
         for expected_conf in expected_configurations_lists:
             conf[expected_conf] = list(set(conf[expected_conf]))
 
-def get_global_extlibs(app, test=False):
+def get_global_extlibs(app):
     libs = hasattr(app, "libs") and app.libs or []
-    if test and hasattr(app, "test_libs"):
-        libs += app.test_libs
     return libs
 
-def get_modules_extlibs(app: dict, modules: dict, test=False):
-    """ Gets all libs versions needed by selected modules
-        @return dict[libname] = version
-    """
+def get_extlibs_versions(app, modules_extlibs):
     if not hasattr(app, "extlibs"):
         return {}
     extlibs = app.extlibs
-    modules_extlibs = set()
-    # getting used libs for every modules
-    for _, module in modules.items():
-        libs = module.get('uselibs', [])
-        for lib in libs:
-            modules_extlibs.add(lib)
-    # adding global libs + test_libs
-    for extlib in get_global_extlibs(app, test=test):
-        modules_extlibs.add(extlib)
     ret = {}
     # matching with extlibs
     for extlib in modules_extlibs:
@@ -71,6 +57,21 @@ def get_modules_extlibs(app: dict, modules: dict, test=False):
             if libname == extlib:
                 ret[libname] = version
     return ret
+    
+def get_modules_extlibs(app: dict, modules: dict):
+    """ Gets all libs versions needed by selected modules
+        @return dict[libname] = version
+    """
+    modules_extlibs = set()
+    # getting used libs for every modules
+    for _, module in modules.items():
+        libs = module.get('uselibs', [])
+        for lib in libs:
+            modules_extlibs.add(lib)
+    # adding global libs + test_libs
+    for extlib in get_global_extlibs(app):
+        modules_extlibs.add(extlib)
+    return get_extlibs_versions(app, modules_extlibs)
 
 def add_conditionnal_module(conditionnal_modules, modules, modname):
     conditionnal_module = conditionnal_modules.get(modname, None)

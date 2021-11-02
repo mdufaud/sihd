@@ -30,7 +30,7 @@ class MemRecorder:  public ACoreObject,
         void add_records(const std::vector<PlayableRecord> & records);
         void add_records(const std::list<PlayableRecord> & records);
 
-        bool can_provide() const override;
+        bool provider_empty() const override;
         bool providing() const override;
         bool provide(PlayableRecord & value) override;
         void handle(const std::string & name, const Channel *array) override;

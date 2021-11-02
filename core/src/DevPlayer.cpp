@@ -172,13 +172,13 @@ bool    DevPlayer::_worker_loop()
     while (_running)
     {
         // wait for a data
-        while (_running && _provider_ptr->providing() && _provider_ptr->can_provide() == false)
-            _provider_ptr->wait_for_provider_data(_provider_wait_milliseconds);
+        while (_running && _provider_ptr->providing() && _provider_ptr->provider_empty())
+            _provider_ptr->provider_wait_for_data(_provider_wait_milliseconds);
         if (_running == false || _provider_ptr->providing() == false)
             break ;
         // lock and get data
         {
-            _provider_ptr->lock_guard_provider();
+            _provider_ptr->provider_lock_guard();
             if (_provider_ptr->provide(record) == false)
                 continue ;
         }

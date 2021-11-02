@@ -39,7 +39,11 @@ class IpAddr
             int protocol;
             in_addr addr;
             in6_addr addr6;
-            std::string ip;
+
+            std::string ip() const
+            {
+                return ipv6 ? IpAddr::ip_to_string(this->addr6) : IpAddr::ip_to_string(this->addr);
+            }
         };
 
         // represents info from dns lookup
@@ -61,6 +65,9 @@ class IpAddr
         static bool is_valid_ipv6(const std::string & ip);
         static std::string ip_to_string(const sockaddr_in & addr_in);
         static std::string ip_to_string(const sockaddr_in6 & addr_in);
+        static std::string ip_to_string(const in_addr & addr_in);
+        static std::string ip_to_string(const in6_addr & addr_in);
+
         /*
             depending on ip, fills ipsockaddr addr, addr_len and type with corresponding ipv4 or ipv6 struct
             port is optionnal and setted in addr_in or addr_in6
@@ -87,8 +94,8 @@ class IpAddr
         bool from(const sockaddr_in & addr_in);
         bool from(const sockaddr_in6 & addr_in6);
 
-        void set_ipv6_preferance(bool active) { _prefer_ipv6 = active; }
-        bool prefer_ipv6() const { return _prefer_ipv6; }
+        void set_ipv6_preferance(bool active) { _prefers_ipv6 = active; }
+        bool prefers_ipv6() const { return _prefers_ipv6; }
 
         // do a dns_lookup and fill internal object
         bool do_lookup_dns();
@@ -136,7 +143,7 @@ class IpAddr
 
         std::string _host;
         int _port;
-        bool _prefer_ipv6;
+        bool _prefers_ipv6;
         DnsInfo _dns;
 };
 

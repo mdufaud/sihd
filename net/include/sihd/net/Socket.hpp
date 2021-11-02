@@ -3,8 +3,6 @@
 
 # include <sihd/net/Ip.hpp>
 # include <sihd/net/IpAddr.hpp>
-# include <sihd/net/ISender.hpp>
-# include <sihd/net/IReceiver.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/Array.hpp>
 # include <sihd/util/OS.hpp>
@@ -21,9 +19,7 @@
 namespace sihd::net
 {
 
-class Socket:   public ISender,
-                public IReceiver,
-                public sihd::util::Configurable
+class Socket: public sihd::util::Configurable
 {
     public:
         Socket();
@@ -46,8 +42,6 @@ class Socket:   public ISender,
         static std::optional<IpAddr> get_socket_ip(int socket, bool ipv6 = false);
         static bool get_socket_infos(int socket, int *domain, int *type, int *protocol);
 
-        static bool set_socket_opt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror = false);
-        static bool get_socket_opt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror = false);
         static bool set_socket_blocking(int socket, bool active);
         static bool set_socket_reuseaddr(int socket, bool active);
         static bool set_socket_broadcast(int socket, bool active);
@@ -74,7 +68,7 @@ class Socket:   public ISender,
             { return Socket::_adapt_array_size(arr, this->receive(arr.buf(), arr.byte_capacity())); }
 
         bool listen(uint16_t queue_size);
-        // fill addr and addr_len based on incoming connexion
+        // fill addr and addr_len based on incoming connections
         int accept(sockaddr *addr, socklen_t *addr_len);
         int accept() { return this->accept(nullptr, nullptr); }
         int accept(IpAddr & ipaddr);

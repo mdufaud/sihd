@@ -2,9 +2,10 @@
 # define __SIHD_NET_TCPCLIENT_HPP__
 
 # include <sihd/net/Socket.hpp>
-# include <sihd/net/IReceiver.hpp>
-# include <sihd/net/ISender.hpp>
+# include <sihd/net/INetReceiver.hpp>
+# include <sihd/net/INetSender.hpp>
 # include <sihd/util/IRunnable.hpp>
+# include <sihd/util/Configurable.hpp>
 # include <sihd/util/Handler.hpp>
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Poll.hpp>
@@ -12,10 +13,11 @@
 namespace sihd::net
 {
 
-class TcpClient:    public virtual IReceiver,
-                    public virtual ISender,
-                    public virtual sihd::util::IRunnable,
-                    public virtual sihd::util::IHandler<int>
+class TcpClient:    public INetReceiver,
+                    public INetSender,
+                    public sihd::util::Configurable,
+                    public sihd::util::IRunnable,
+                    public sihd::util::IHandler<int>
 {
     public:
         TcpClient(bool ipv6 = false);
@@ -48,10 +50,12 @@ class TcpClient:    public virtual IReceiver,
         bool is_running() const { return _poll.is_running(); }
 
         // called anytime poll can read the socket
-        void set_handler(sihd::util::IHandler<const void *, size_t> *handler);
+        void set_handler(sihd::util::IHandler<INetReceiver *> *handler);
+
+        ssize_t receive(IpAddr & addr, sihd::util::IArray & arr) { return _socket.receive_from(addr, arr); }
+        ssize_t receive(sihd::util::IArray & arr) { return _socket.receive(arr); }
 
         ssize_t receive(void *buf, size_t len) { return _socket.receive(buf, len); }
-        ssize_t receive(sihd::util::IArray & arr) { return _socket.receive(arr); }
         ssize_t receive();
 
         ssize_t send(const void *data, size_t len) { return _socket.send(data, len); }
@@ -65,7 +69,9 @@ class TcpClient:    public virtual IReceiver,
         // waitable is notified when a packet comes
         sihd::util::Waitable & waitable() { return _waitable; }
         // internal buffer
-        const sihd::util::IArray *buffer() { return _array_ptr; };
+        const sihd::util::IArray *array() const { return _array_ptr; };
+
+        const IpAddr & client_addr() const { return _client_addr; }
 
     protected:
     
@@ -76,13 +82,14 @@ class TcpClient:    public virtual IReceiver,
         void _delete_buffer();
 
         Socket _socket;
+        IpAddr _client_addr;
         bool _array_owned;
         int _poll_timeout_milliseconds;
         std::mutex _poll_mutex;
         sihd::util::Poll _poll;
         sihd::util::Waitable _waitable;
         sihd::util::IArray *_array_ptr;
-        sihd::util::IHandler<const void *, size_t> *_handler_ptr;
+        sihd::util::IHandler<INetReceiver *> *_handler_ptr;
 };
 
 }

@@ -36,7 +36,9 @@ if verbose:
     pp.pprint(modules)
     print()
 
-extlibs = _build_tools.modules.get_modules_extlibs(app, modules, test=has_test)
+extlibs = _build_tools.modules.get_modules_extlibs(app, modules)
+if has_test and hasattr(app, "test_libs"):
+    extlibs += _build_tools.modules.get_extlibs_versions(app, app.test_libs)
 if verbose:
     debug("modules external libs:")
     pp.pprint(extlibs)

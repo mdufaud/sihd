@@ -2,13 +2,13 @@
 # define __SIHD_NET_UDPSENDER_HPP__
 
 # include <sihd/net/Socket.hpp>
-# include <sihd/net/ISender.hpp>
-# include <sihd/net/IReceiver.hpp>
+# include <sihd/net/INetSender.hpp>
+# include <sihd/util/Configurable.hpp>
 
 namespace sihd::net
 {
 
-class UdpSender: public virtual ISender
+class UdpSender: public INetSender, public sihd::util::Configurable
 {
     public:
         UdpSender(bool ipv6 = false);

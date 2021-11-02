@@ -15,14 +15,15 @@ UdpReceiver::UdpReceiver(bool ipv6)
 UdpReceiver::UdpReceiver(const IpAddr & addr)
 {
     this->_init();
-    if (this->open_socket(addr.prefer_ipv6()))
+    if (this->open_socket(addr.prefers_ipv6()))
         this->bind(addr);
 }
 
 UdpReceiver::UdpReceiver(const std::string & ip, int port)
 {
+    this->_init();
     IpAddr addr(ip, port, true);
-    if (this->open_socket(addr.prefer_ipv6()))
+    if (this->open_socket(addr.prefers_ipv6()))
         this->bind(addr);
 }
 
@@ -42,6 +43,8 @@ UdpReceiver::~UdpReceiver()
 
 void    UdpReceiver::_init()
 {
+    this->add_conf("buffer_size", &UdpReceiver::set_buffer_size);
+    this->add_conf("poll_timeout", &UdpReceiver::set_poll_timeout);
     _array_owned = false;
     _array_ptr = nullptr;
     _poll_timeout_milliseconds = -1;
@@ -122,10 +125,13 @@ ssize_t     UdpReceiver::receive_from(IpAddr & addr)
     return _socket.receive_from(addr, *_array_ptr);
 }
 
-void    UdpReceiver::stop()
+bool    UdpReceiver::stop()
 {
-    _poll.stop();
+    bool ret = _poll.is_running();
+    if (ret)
+        _poll.stop();
     _waitable.notify_all();
+    return ret;
 }
 
 void    UdpReceiver::_setup_poll()
@@ -158,19 +164,20 @@ bool    UdpReceiver::poll()
     return _poll.poll(_poll_timeout_milliseconds) > 0;
 }
 
+// called by poll when socket is readable
 void    UdpReceiver::handle(int socket)
 {
     if (socket == _socket.socket())
     {
-        if (this->receive(*_array_ptr) <= 0)
-            this->stop();
-        else if (_handler_ptr != nullptr)
-            _handler_ptr->handle(_array_ptr->cbuf(), _array_ptr->byte_size());
+        if (_handler_ptr != nullptr)
+            _handler_ptr->handle(this);
+        else
+            this->receive(_client_addr, *_array_ptr);
         _waitable.notify(1);
     }
 }
 
-void    UdpReceiver::set_handler(sihd::util::IHandler<const void *, size_t> *handler)
+void    UdpReceiver::set_handler(sihd::util::IHandler<INetReceiver *> *handler)
 {
     std::lock_guard lock(_poll_mutex);
     if (_handler_ptr != nullptr)

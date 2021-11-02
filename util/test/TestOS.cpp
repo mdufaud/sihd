@@ -60,4 +60,20 @@ namespace test
         EXPECT_TRUE(OS::clear_signal_handler(sig, task));
         delete task;
     }
+
+    TEST_F(TestOs, test_os_resources)
+    {
+        size_t max_fds = OS::get_max_fds();
+        // in bytes
+        size_t peak = OS::get_peak_rss();
+        size_t current = OS::get_current_rss();
+
+        LOG(info, "Peak rss: " << peak / (1024 * 1024) << " mb");
+        LOG(info, "Current rss: " << current / (1024 * 1024) << " mb");
+        LOG(info, "Max file descriptors: " << max_fds);
+
+        EXPECT_TRUE(peak > 0);
+        EXPECT_TRUE(current > 0);
+        EXPECT_TRUE(max_fds > 2);
+    }
 }

@@ -1,18 +1,14 @@
 #include <sihd/util/Files.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/platform.hpp>
+#include <sihd/util/OS.hpp>
 
-#include <sys/types.h>
-#include <sys/stat.h> // stat
 #include <string.h> // strcmp
 #include <dirent.h> // DIR...
 #include <stdio.h> // remove
 
 # if defined(__SIHD_WINDOWS__)
 #  include <direct.h> // _mkdir _stat
-#  define stat _stat
-#  define mkdir _mkdir
-#  define rmdir _rmdir
 # else
 #  include <unistd.h>
 # endif
@@ -33,13 +29,13 @@ char Files::sep = '/';
 bool    Files::exists(const std::string & path)
 {
     struct stat s;
-    return stat(path.c_str(), &s) == 0;
+    return OS::stat(path.c_str(), &s) == 0;
 }
 
 bool    Files::is_file(const std::string & path)
 {
     struct stat s;
-    if (stat(path.c_str(), &s) == 0)
+    if (OS::stat(path.c_str(), &s) == 0)
         return s.st_mode & S_IFREG;
     return false;
 }
@@ -47,7 +43,7 @@ bool    Files::is_file(const std::string & path)
 bool    Files::is_dir(const std::string & path)
 {
     struct stat s;
-    if (stat(path.c_str(), &s) == 0)
+    if (OS::stat(path.c_str(), &s) == 0)
         return s.st_mode & S_IFDIR;
     return false;
 }
@@ -55,7 +51,7 @@ bool    Files::is_dir(const std::string & path)
 size_t    Files::get_filesize(const std::string & path)
 {
     struct stat s;
-    if (stat(path.c_str(), &s) == 0)
+    if (OS::stat(path.c_str(), &s) == 0)
         return s.st_size;
     return 0;
 }
