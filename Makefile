@@ -69,6 +69,7 @@ export APP_NAME
 export TEST_PATH
 export LIB_PATH
 export EXTLIB_PATH
+export BUILD_PATH
 export BIN_PATH
 export RES_PATH
 

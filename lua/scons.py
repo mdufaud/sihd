@@ -7,7 +7,7 @@ modules = env['APP_MODULES_BUILD']
 test_dir = Dir("test")
 src_dir = Dir("src")
 
-srcs = []
+srcs = [src_dir.File("LuaApi.cpp")]
 tests = [test_dir.File("main.cpp")]
 for module in modules:
     modcap = module.capitalize()

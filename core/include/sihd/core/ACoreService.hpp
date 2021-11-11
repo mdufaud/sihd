@@ -3,19 +3,19 @@
 
 # include <sihd/util/AService.hpp>
 # include <sihd/util/ServiceController.hpp>
-# include <sihd/util/IObserver.hpp>
+# include <sihd/util/IHandler.hpp>
 
 namespace sihd::core
 {
 
 class ACoreService: public sihd::util::AService,
-                    public sihd::util::IObserver<sihd::util::ServiceController>
+                    public sihd::util::IHandler<sihd::util::ServiceController *>
 {
     public:
         virtual ~ACoreService() {};
 
     protected:
-        virtual void observable_changed([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
+        virtual void handle([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
 };
 
 }

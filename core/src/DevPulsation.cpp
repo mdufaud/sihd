@@ -38,7 +38,7 @@ bool    DevPulsation::set_frequency(double freq)
     return true;
 }
 
-void    DevPulsation::observable_changed(sihd::core::Channel *c)
+void    DevPulsation::handle(sihd::core::Channel *c)
 {
     if (c == _channel_activate_ptr)
     {

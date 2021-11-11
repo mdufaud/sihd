@@ -43,7 +43,7 @@ namespace test
     {
         sihd::util::ArrChar hello("hello world", sizeof("hello world"));
         sihd::util::ArrChar bye("bye", sizeof("bye"));
-        sihd::util::ArrChar recv(20);
+        sihd::util::ArrStr recv(20);
         Socket server;
         IpAddr localhost = IpAddr::get_localhost(4242);
 
@@ -66,9 +66,14 @@ namespace test
         EXPECT_TRUE(hello.is_equal(recv));
 
         // client receive bye
-        client.set_buffer(&recv);
+        sihd::util::Handler<INetReceiver *> handler([&recv] (INetReceiver *rcv)
+        {
+            rcv->receive(recv);
+            LOG(debug, "Data received: " << recv.to_string() << " - " << recv.byte_size() << " bytes");
+        });
+        client.add_observer(&handler);
         EXPECT_EQ(accepted.send(bye), (ssize_t)bye.size());
-        EXPECT_EQ(client.receive(), (ssize_t)bye.size());
+        EXPECT_TRUE(client.poll(1));
         EXPECT_TRUE(bye.is_equal(recv));
 
         // shutdown and close

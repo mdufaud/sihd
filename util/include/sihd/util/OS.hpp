@@ -16,7 +16,7 @@
 #  include <ws2def.h>
 #  include <winsock.h>
 #  include <ws2tcpip.h>
-#  define rlim_t unsigned long
+typedef unsigned long rlim_t;
 # endif
 
 # include <string>
@@ -47,7 +47,7 @@ class OS
         static bool unhandle_signal(int sig);
 
         // syscalls linux - windows
-        static bool ioctl(int fd, unsigned long request, char *arg_ptr = nullptr, bool logerror = false);
+        static bool ioctl(int fd, unsigned long request, void *arg_ptr = nullptr, bool logerror = false);
         static bool stat(const char *pathname, struct stat *statbuf, bool logerror = false);
         static bool fstat(int fd, struct stat *statbuf, bool logerror = false);
 
@@ -55,6 +55,8 @@ class OS
         static bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror = false);
 
         static rlim_t get_max_fds();
+
+        static std::string get_executable_path();
 
         // debuggers
         static bool is_run_by_debugger();

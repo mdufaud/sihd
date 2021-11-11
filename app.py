@@ -12,9 +12,8 @@ extlibs = {
     # ui
     "imgui": "1.83",
     "ncurses": "6.2",
-    "replxx": "0.0.4",
     # command line parser
-    "readline": "8.0",
+    "replxx": "0.0.4",
     # bindings
     "pybind11": "2.6.2",
     "sol2": "3.2.3",
@@ -33,6 +32,9 @@ modules = {
     "http": {
         "depends": ['net'],
         "uselibs": ['uwebsockets'],
+    },
+    "_module_test": {
+        "depends": ['util'],
     },
 }
 # conditionnals - only if activated

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Observable.hpp>
-#include <sihd/util/ObserverCallback.hpp>
+#include <sihd/util/Handler.hpp>
 #include <utility>
 
 namespace test
@@ -10,7 +10,7 @@ namespace test
     LOGGER;
     using namespace sihd::util;
 
-    class SomeObservable:    public Observable<SomeObservable>
+    class SomeObservable: public Observable<SomeObservable>
     {
         public:
             SomeObservable() {};
@@ -26,7 +26,7 @@ namespace test
             int val = 0;
     };
 
-    class TestObservable:   public ::testing::Test, public IObserver<SomeObservable>
+    class TestObservable: public ::testing::Test, public IHandler<SomeObservable *>
     {
         protected:
             TestObservable()
@@ -47,7 +47,7 @@ namespace test
             {
             }
 
-            void observable_changed(SomeObservable *obs)
+            void handle(SomeObservable *obs)
             {
                 this->val = obs->get_val();
                 obs->remove_observer(this);
@@ -75,16 +75,16 @@ namespace test
         SomeObservable obj;
         obj.val = 1337;
         int val = 0;
-        ObserverCallback<SomeObservable> cb([&] (SomeObservable *obs) -> void
+        Handler<SomeObservable *> handler([&] (SomeObservable *obs) -> void
         {
             val = obs->get_val();
         });
         EXPECT_EQ(val, 0);
-        obj.add_observer(&cb);
+        obj.add_observer(&handler);
         obj.notify();
         EXPECT_EQ(val, 1337);
         obj.val = 4242;
-        obj.remove_observer(&cb);
+        obj.remove_observer(&handler);
         obj.notify();
         EXPECT_EQ(val, 1337);
     }

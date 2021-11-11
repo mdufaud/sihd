@@ -2,7 +2,7 @@
 # define __SIHD_UTIL_OBSERVABLE_HPP__
 
 # include <sihd/util/IObservable.hpp>
-# include <sihd/util/IObserver.hpp>
+# include <sihd/util/IHandler.hpp>
 # include <list>
 # include <mutex>
 # include <algorithm>
@@ -11,13 +11,13 @@ namespace sihd::util
 {
 
 template <typename T>
-class Observable:   public IObservable<T>
+class Observable: public IObservable<T>
 {
     public:
         Observable() {};
         virtual ~Observable() {};
 
-        bool add_observer(IObserver<T> *obs)
+        bool add_observer(IHandler<T *> *obs)
         {
             if (this->is_observer(obs))
                 return false;
@@ -26,7 +26,7 @@ class Observable:   public IObservable<T>
             return true;
         }
 
-        bool remove_observer(IObserver<T> *obs)
+        bool remove_observer(IHandler<T *> *obs)
         {
             if (this->is_observer(obs) == false)
                 return false;
@@ -35,7 +35,7 @@ class Observable:   public IObservable<T>
             return true;
         }
 
-        bool is_observer(IObserver<T> *obs)
+        bool is_observer(IHandler<T *> *obs)
         {
             return std::find(_observers.begin(), _observers.end(), obs) != _observers.end();
         }
@@ -54,15 +54,15 @@ class Observable:   public IObservable<T>
             std::lock_guard<std::mutex> lock(_mutex);
             for (const auto & obs: _observers)
             {
-                obs->observable_changed(sender);
+                obs->handle(sender);
             }
         }
 
     private:
         std::mutex _mutex;
         std::mutex _mutex_remove;
-        std::list<IObserver<T> *> _observers;
-        std::list<IObserver<T> *> _observers_to_remove;
+        std::list<IHandler<T *> *> _observers;
+        std::list<IHandler<T *> *> _observers_to_remove;
 };
 
 }

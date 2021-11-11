@@ -56,7 +56,7 @@ bool    DevRecorder::is_running() const
     return _running;
 }
 
-void    DevRecorder::observable_changed([[maybe_unused]] sihd::core::Channel *channel)
+void    DevRecorder::handle([[maybe_unused]] sihd::core::Channel *channel)
 {
     std::string & alias = _map_channels[channel];
     _handler_ptr->handle(alias, channel);

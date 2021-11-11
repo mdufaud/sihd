@@ -4,7 +4,11 @@
 #include <sihd/util/Process.hpp>
 #include <sihd/util/Files.hpp>
 #include <sihd/util/OS.hpp>
+#include <sihd/util/Term.hpp>
 #include <experimental/filesystem>
+
+#include <sihd/util/Worker.hpp>
+#include <sihd/util/Task.hpp>
 
 namespace test
 {
@@ -34,17 +38,78 @@ namespace test
             std::string _base_test_dir = Files::combine({getenv("TEST_PATH"), "util_process"});
     };
 
+    TEST_F(TestProcess, test_process_interactive)
+    {
+        if (Term::is_interactive())
+            GTEST_SKIP() << "Is an interactive test";
+        std::string output;
+        Process proc{"cat"};
+
+        proc.stdout_to([] (const char *buf, [[maybe_unused]] size_t size)
+        {
+            LOG(debug, buf);
+        })
+        .stderr_close();
+
+        Worker worker(new Task([&proc]()
+        {
+            proc.run();
+            return true;
+        }));
+        EXPECT_TRUE(worker.start_worker("proc"));
+        usleep(1000);
+        LOG(debug, "Kill cat process with ctrl + d")
+        EXPECT_TRUE(proc.wait_process_end(time::sec(10)));
+        proc.stop();
+        worker.stop_worker();
+    }
+
     TEST_F(TestProcess, test_process_run)
+    {
+        std::vector<std::string> res;
+        std::string output;
+        Process proc{"cat"};
+
+        proc.stdin_from("hello")
+        .stdout_to([&res] (const char *buf, [[maybe_unused]] size_t size)
+        {
+            LOG(debug, buf);
+            res.push_back(buf);
+        })
+        .stderr_close();
+
+        Worker worker(new Task([&proc]()
+        {
+            proc.run();
+            return true;
+        }));
+        worker.start_worker("proc");
+
+        usleep(1000);
+        EXPECT_EQ(res.back(), "hello");
+        proc.stdin_from("world");
+        usleep(1000);
+        EXPECT_EQ(res.back(), "world");
+        proc.stdin_from("how");
+        usleep(1000);
+        EXPECT_EQ(res.back(), "how");
+        proc.stdin_from("are");
+        usleep(1000);
+        EXPECT_EQ(res.back(), "are");
+        proc.stdin_from("you");
+        usleep(1000);
+        proc.stop();
+        worker.stop_worker();
+        EXPECT_EQ(res.back(), "you");
+    }
+
+    TEST_F(TestProcess, test_process_simple)
     {
         Process proc{"ls", "-la"};
 
-        auto status = proc.wait();
-        EXPECT_FALSE(status.has_value());
-        EXPECT_EQ(proc.return_code(), std::nullopt);
-        
-        EXPECT_TRUE(proc.run());
-        status = proc.wait(WUNTRACED | WCONTINUED);
-        EXPECT_TRUE(status.has_value());
+        EXPECT_FALSE(proc.wait_any());
+        EXPECT_TRUE(proc.start());
+        EXPECT_TRUE(proc.wait_any());
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 0);
     }
@@ -56,7 +121,7 @@ namespace test
 
         proc.stdout_to([&] (const char *buffer, [[maybe_unused]] ssize_t size) { output = buffer; });
         EXPECT_EQ(output, "");
-        EXPECT_TRUE(proc.run());
+        EXPECT_TRUE(proc.start());
         EXPECT_EQ(output, "");
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(output, "hello world\n");
@@ -64,7 +129,7 @@ namespace test
         output.clear();
         proc.clear();
         proc.stdout_to(output);
-        EXPECT_TRUE(proc.run());
+        EXPECT_TRUE(proc.start());
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(output, "hello world\n");
 
@@ -79,9 +144,11 @@ namespace test
 
         proc.stdin_from("hello world");
         proc.stdout_to(output);
-        EXPECT_TRUE(proc.run());
+        EXPECT_TRUE(proc.start());
         proc.stdin_from("1");
         proc.stdin_from("2");
+        proc.read_pipes();
+        EXPECT_EQ(output, "hello world12");
         proc.stdin_from("3");
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(output, "hello world123");
@@ -89,7 +156,7 @@ namespace test
         EXPECT_EQ(proc.return_code(), 0);
     }
 
-    TEST_F(TestProcess, test_process_in_file)
+    TEST_F(TestProcess, test_process_file_in)
     {
         std::string test_dir = Files::combine(_base_test_dir, "in_file");
         filesystem::remove_all(test_dir);
@@ -104,14 +171,14 @@ namespace test
         std::string output;
         EXPECT_TRUE(proc.stdin_from_file(test_file));
         proc.stdout_to(output);
-        EXPECT_TRUE(proc.run());
+        EXPECT_TRUE(proc.start());
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(output, "hello world");
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 0);
     }
 
-    TEST_F(TestProcess, test_process_out_file)
+    TEST_F(TestProcess, test_process_file_out)
     {
         std::string test_dir = Files::combine(_base_test_dir, "to_file");
         filesystem::remove_all(test_dir);
@@ -121,7 +188,7 @@ namespace test
 
         EXPECT_TRUE(proc.stdout_to_file(test_file));
         EXPECT_EQ(Files::read_all(test_file).value(), "");
-        EXPECT_TRUE(proc.run());
+        EXPECT_TRUE(proc.start());
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(Files::read_all(test_file).value(), "hello world\n");
         EXPECT_TRUE(proc.has_exited());
@@ -150,7 +217,7 @@ namespace test
         TRACE("Redirecting stdout to: " << stdout_path);
         TRACE("Redirecting stderr to: " << stderr_path);
 
-        EXPECT_TRUE(proc.run());
+        EXPECT_TRUE(proc.start());
         EXPECT_TRUE(proc.end());
 
         EXPECT_TRUE(proc.has_exited());
@@ -164,7 +231,7 @@ namespace test
     {
         Process ls{"ls", "-la"};
         ls.stdout_close().stderr_close();
-        EXPECT_TRUE(ls.run());
+        EXPECT_TRUE(ls.start());
         EXPECT_TRUE(ls.end());
         EXPECT_TRUE(ls.has_exited());
         // bad file descriptor
@@ -172,7 +239,7 @@ namespace test
 
         Process cat{"cat"};
         cat.stdin_close().stderr_close();
-        EXPECT_TRUE(cat.run());
+        EXPECT_TRUE(cat.start());
         EXPECT_TRUE(cat.end());
         EXPECT_TRUE(cat.has_exited());
         // bad file descriptor
@@ -190,9 +257,9 @@ namespace test
         wc.stdout_to(cat);
         cat.stdout_to(output);
 
-        EXPECT_TRUE(echo.run());
-        EXPECT_TRUE(wc.run());
-        EXPECT_TRUE(cat.run());
+        EXPECT_TRUE(echo.start());
+        EXPECT_TRUE(wc.start());
+        EXPECT_TRUE(cat.start());
 
         EXPECT_TRUE(echo.end());
         EXPECT_TRUE(wc.end());
@@ -216,7 +283,10 @@ namespace test
         Process ls{"ls", "/bli/blah/blouh"};
 
         ls.stderr_to(output);
-        EXPECT_TRUE(ls.run());
+        EXPECT_TRUE(ls.start());
+        ls.wait_exit();
+        EXPECT_TRUE(ls.end());
+        EXPECT_TRUE(ls.end());
         EXPECT_TRUE(ls.end());
         EXPECT_EQ(output, "ls: cannot access '/bli/blah/blouh': No such file or directory\n");
         EXPECT_TRUE(ls.has_exited());
@@ -227,31 +297,35 @@ namespace test
     {
         Process cat{"cat"};
 
-        EXPECT_TRUE(cat.run());
+        EXPECT_TRUE(cat.start());
+        usleep(1000);
         EXPECT_TRUE(cat.kill(SIGTERM));
-        cat.wait(WUNTRACED | WCONTINUED);
-        EXPECT_TRUE(cat.has_exited());
+        cat.wait_exit();
+        EXPECT_FALSE(cat.has_exited());
         EXPECT_TRUE(cat.has_exited_by_signal());
-        TRACE("Signal exit number: " << cat.signal_exit_number().value());
-        EXPECT_EQ(cat.signal_exit_number().value(), SIGTERM);
+        TRACE("Signal exit number: " << cat.signal_exit_number());
+        EXPECT_EQ(cat.signal_exit_number(), SIGTERM);
     }
 
     TEST_F(TestProcess, test_process_signal_stop)
     {
         Process cat{"cat"};
 
-        EXPECT_TRUE(cat.run());
+        EXPECT_TRUE(cat.start());
+        usleep(1000);
         EXPECT_TRUE(cat.kill(SIGSTOP));
-        cat.wait(WUNTRACED | WCONTINUED);
+        cat.wait_stop();
         EXPECT_TRUE(cat.has_stopped_by_signal());
-        TRACE("Signal stop number: " << cat.signal_stop_number().value());
-        EXPECT_EQ(cat.signal_stop_number().value(), SIGSTOP);
+        TRACE("Signal stop number: " << cat.signal_stop_number());
+        EXPECT_EQ(cat.signal_stop_number(), SIGSTOP);
 
         EXPECT_TRUE(cat.kill(SIGCONT));
-        cat.wait(WUNTRACED | WCONTINUED);
+        cat.wait_continue();
 
-        EXPECT_TRUE(cat.kill());
-        cat.wait();
+        EXPECT_TRUE(cat.kill(SIGTERM));
+        cat.wait_exit();
+        EXPECT_TRUE(cat.has_exited_by_signal());
+        EXPECT_EQ(cat.signal_exit_number(), SIGTERM);
     }
 
     TEST_F(TestProcess, test_process_fun)
@@ -267,7 +341,7 @@ namespace test
         proc.stdout_to(out);
         proc.stderr_to(err);
 
-        EXPECT_TRUE(proc.run());
+        EXPECT_TRUE(proc.start());
         EXPECT_TRUE(proc.end());
 
         EXPECT_TRUE(proc.has_exited());
@@ -283,11 +357,8 @@ namespace test
             GTEST_SKIP() << "Buggy under valgrind";
         Process proc{"ellesse", "-la"};
 
-        EXPECT_FALSE(proc.run());
-        auto status = proc.wait();
-        EXPECT_FALSE(status.has_value());
-        EXPECT_FALSE(proc.has_exited());
-        EXPECT_EQ(proc.return_code(), std::nullopt);
+        EXPECT_FALSE(proc.start());
+        EXPECT_FALSE(proc.wait_any());
     }
 
 }

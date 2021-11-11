@@ -8,6 +8,7 @@
 # include <sihd/util/Handler.hpp>
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Poll.hpp>
+# include <sihd/util/Observable.hpp>
 
 namespace sihd::net
 {
@@ -15,7 +16,8 @@ namespace sihd::net
 class UdpReceiver:  public INetReceiver,
                     public sihd::util::Configurable,
                     public sihd::util::IStoppableRunnable,
-                    public sihd::util::IHandler<int>
+                    public sihd::util::Observable<INetReceiver>,
+                    public sihd::util::IHandler<sihd::util::Poll *>
 {
     public:
         UdpReceiver(bool ipv6 = false);
@@ -35,14 +37,11 @@ class UdpReceiver:  public INetReceiver,
 
         ssize_t receive(void *buf, size_t len) { return _socket.receive(buf, len); }
         ssize_t receive(sihd::util::IArray & arr) { return _socket.receive(arr); }
-        ssize_t receive();
 
+        // INetReceiver
         ssize_t receive(IpAddr & addr, void *buf, size_t len) { return _socket.receive_from(addr, buf, len); }
         ssize_t receive(IpAddr & addr, sihd::util::IArray & arr) { return _socket.receive_from(addr, arr); }
-        ssize_t receive_from(IpAddr & addr);
 
-        void set_buffer(sihd::util::IArray *buffer);
-        bool set_buffer_size(size_t size);
         bool set_poll_timeout(int milliseconds) { _poll_timeout_milliseconds = milliseconds; return true;}
         // poll for x milliseconds - returns true if socket is read
         bool poll(int milliseconds);
@@ -60,20 +59,15 @@ class UdpReceiver:  public INetReceiver,
 
         // to set blocking/broadcast
         const Socket & socket() const { return _socket; }
-        // waitable is notified when a packet comes
-        sihd::util::Waitable & waitable() { return _waitable; }
-        // internal buffer
-        const sihd::util::IArray *array() const { return _array_ptr; };
 
         const IpAddr & client_addr() const { return _client_addr; }
 
     protected:
     
     private:
-        void handle(int socket);
+        void handle(sihd::util::Poll *poll);
         void _init();
         void _setup_poll();
-        void _delete_buffer();
 
         Socket _socket;
         IpAddr _client_addr;
@@ -81,9 +75,6 @@ class UdpReceiver:  public INetReceiver,
         int _poll_timeout_milliseconds;
         std::mutex _poll_mutex;
         sihd::util::Poll _poll;
-        sihd::util::Waitable _waitable;
-        sihd::util::IArray *_array_ptr;
-        sihd::util::IHandler<INetReceiver *> *_handler_ptr;
 };
 
 }

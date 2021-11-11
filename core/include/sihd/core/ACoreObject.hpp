@@ -10,7 +10,7 @@ namespace sihd::core
 
 class ACoreObject:  public sihd::util::Named,
                     public sihd::util::Configurable,
-                    public sihd::util::IObserver<Channel>,
+                    public sihd::util::IHandler<Channel *>,
                     public ACoreService
 {
     public:
@@ -20,8 +20,8 @@ class ACoreObject:  public sihd::util::Named,
         bool is_running() const override { return false; }
 
     protected:
-        virtual void observable_changed([[maybe_unused]] Channel *channel) override {};
-        virtual void observable_changed([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
+        virtual void handle([[maybe_unused]] Channel *channel) override {};
+        virtual void handle([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
 };
 
 }

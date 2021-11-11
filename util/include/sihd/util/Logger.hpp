@@ -16,8 +16,8 @@
     __loss << msg; \
     logger.log(sihd::util::LogLevel::level, __loss.str().c_str()); \
 }
-#  define LOG(level, msg) LOG_LEVEL(__logger__, level, msg);
-#  define LOG_FORMAT(level, message, ...) __logger__.log(level, sihd::util::Str::format(message, ##__VA_ARGS__).c_str());
+#  define LOG(level, msg) LOG_LEVEL(__sihd_logger__, level, msg);
+#  define LOG_FORMAT(level, message, ...) __sihd_logger__.log(level, sihd::util::Str::format(message, ##__VA_ARGS__).c_str());
 
 #  define LOG_DEBUG(message, ...) LOG_FORMAT(sihd::util::LogLevel::debug, message, ##__VA_ARGS__);
 #  define LOG_INFO(message, ...) LOG_FORMAT(sihd::util::LogLevel::info, message, ##__VA_ARGS__);
@@ -25,11 +25,11 @@
 #  define LOG_ERROR(message, ...) LOG_FORMAT(sihd::util::LogLevel::error, message, ##__VA_ARGS__);
 #  define LOG_CRITICAL(message, ...) LOG_FORMAT(sihd::util::LogLevel::critical, message, ##__VA_ARGS__);
 
-#  define LOGGER extern sihd::util::Logger __logger__;
-#  define NEW_LOGGER(name) sihd::util::Logger __logger__(name);
+#  define LOGGER extern sihd::util::Logger __sihd_logger__;
+#  define NEW_LOGGER(name) sihd::util::Logger __sihd_logger__(name);
 # endif
 
-# ifdef SIHD_TRACE_OFF
+# if defined(SIHD_TRACE_OFF) || defined(SIHD_LOGGING_OFF)
 #  define TRACE(msg)
 # else
 #  define TRACE(msg) LOG(debug, "TRACE[" << __FILE__ << ":" << __LINE__ << "] " << msg);

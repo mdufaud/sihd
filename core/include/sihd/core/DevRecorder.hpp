@@ -25,7 +25,7 @@ class DevRecorder:   public sihd::core::Device
         bool remove_recorded_channel(const std::string & alias);
 
     protected:
-        void observable_changed([[maybe_unused]] sihd::core::Channel *c) override;
+        void handle([[maybe_unused]] sihd::core::Channel *c) override;
 
         bool on_init() override;
         bool on_start() override;

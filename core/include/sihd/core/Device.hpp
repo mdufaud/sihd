@@ -16,8 +16,8 @@ class Device:   public AChannelContainer,
         virtual ~Device();
 
     protected:
-        virtual void observable_changed([[maybe_unused]] Channel *c) override {}
-        virtual void observable_changed([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
+        virtual void handle([[maybe_unused]] Channel *c) override {}
+        virtual void handle([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
 
         bool do_setup() override;
         bool do_init() override;

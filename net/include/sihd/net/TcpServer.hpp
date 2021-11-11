@@ -5,14 +5,16 @@
 # include <sihd/net/INetServer.hpp>
 # include <sihd/net/INetServerHandler.hpp>
 # include <sihd/util/Configurable.hpp>
-# include <sihd/util/Handler.hpp>
+# include <sihd/util/IHandler.hpp>
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Poll.hpp>
 
 namespace sihd::net
 {
 
-class TcpServer: public INetServer, public sihd::util::Configurable
+class TcpServer:    public INetServer,
+                    public sihd::util::Configurable,
+                    public sihd::util::IHandler<sihd::util::Poll *>
 {
     public:
         TcpServer(bool ipv6 = false);
@@ -59,10 +61,7 @@ class TcpServer: public INetServer, public sihd::util::Configurable
     protected:
     
     private:
-        void _handle_read(int socket);
-        void _handle_write(int socket);
-        bool _handle_prepoll();
-        void _handle_postpoll(time_t nano, bool timed_out);
+        void handle(sihd::util::Poll *poll);
         void _init();
         void _setup_poll(size_t maxco);
 

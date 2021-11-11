@@ -8,7 +8,7 @@ namespace test
     NEW_LOGGER("sihd::test");
     using namespace sihd::util;
     using namespace sihd::core;
-    class TestChannel:   public ::testing::Test, public IObserver<Channel>
+    class TestChannel:   public ::testing::Test, public IHandler<Channel *>
     {
         protected:
             TestChannel()
@@ -29,7 +29,7 @@ namespace test
             {
             }
 
-            void observable_changed(Channel *c)
+            void handle(Channel *c)
             {
                 TRACE(c->array()->data_type_to_string());
                 if (c->array()->data_type() == DINT)

@@ -59,10 +59,11 @@ bool    ChannelWaiter::wait_for(time_t nano, uint32_t notifications)
 {
     if (_channel == nullptr)
         return true;
-    return _waitable.wait_loop(nano, notifications);
+    // waitable returns true when timed out
+    return _waitable.wait_loop(nano, notifications) == false;
 }
 
-void    ChannelWaiter::observable_changed(Channel *channel)
+void    ChannelWaiter::handle(Channel *channel)
 {
     (void)channel;
     _waitable.notify(1);

@@ -1,16 +1,43 @@
 #include <iostream>
-#include <sihd/util/Named.hpp>
 #include <sol/sol.hpp>
 #include <sihd/lua/LuaUtilApi.hpp>
 
+using namespace sihd::util;
+using namespace sihd::lua;
+
+#define PROMPT "$> "
+
 int     main(void)
 {
-    sihd::util::Named obj("test");
+    LoggerManager::basic();
+
     sol::state lua;
     // For print etc...
-    lua.open_libraries(sol::lib::base);
+    lua.open_libraries(
+        sol::lib::base,
+        sol::lib::package,
+        sol::lib::os,
+        sol::lib::string
+    );
     sihd::lua::LuaUtilApi::load(lua);
-    lua.script("print('" + obj.get_name() + "')");
-    lua.script("local named = Named.new('hello', nil); print(named:get_name())");
+
+    lua.script("package.path = sihd.dir .. '/etc/sihd/lua/?.lua;' .. package.path");
+    lua.script("require 'luabin.preload'");
+
+    std::string line;
+    std::cout << PROMPT;
+    while (std::getline(std::cin, line))
+    {
+        try
+        {
+            lua.script(line);
+        }
+        catch(const std::exception& e)
+        {
+            LuaUtilApi::logger.log(error, e.what());
+        }
+        std::cout << PROMPT;
+    }
+    std::cout << std::endl;
     return 0;
 }

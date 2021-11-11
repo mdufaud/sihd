@@ -29,7 +29,7 @@ class DevPlayer:    public sihd::core::Device,
         bool set_scheduler_queue_size(size_t limit);
 
     protected:
-        void observable_changed([[maybe_unused]] sihd::core::Channel *c) override;
+        void handle([[maybe_unused]] sihd::core::Channel *c) override;
 
         bool on_init() override;
         bool on_start() override;

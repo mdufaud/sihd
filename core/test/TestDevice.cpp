@@ -40,18 +40,18 @@ namespace test
 
             ~SomeDevice() {}
 
-            bool    is_running() const
+            bool is_running() const
             {
                 return _running;
             }
 
-            void    observable_changed(Channel *c)
+            void handle(Channel *c)
             {
                 (void)c;
             }
 
         protected:
-            bool    on_init()
+            bool on_init()
             {
                 // returns nullptr if channel is linked
                 this->add_channel("c1", "byte");
@@ -59,13 +59,13 @@ namespace test
                 return true;
             }
 
-            bool    on_start()
+            bool on_start()
             {
                 _running = true;
                 return true;
             }
 
-            bool    on_stop()
+            bool on_stop()
             {
                 _running = false;
                 return true;

@@ -31,25 +31,16 @@ Poll::~Poll()
 {
     this->stop();
     std::lock_guard lock(_run_mutex);
-    if (_prepoll_runnable_ptr != nullptr)
-        delete _prepoll_runnable_ptr;
-    if (_postpoll_handler_ptr != nullptr)
-        delete _postpoll_handler_ptr;
-    if (_read_handler_ptr != nullptr)
-        delete _read_handler_ptr;
-    if (_write_handler_ptr != nullptr)
-        delete _write_handler_ptr;
 }
 
 void    Poll::_init()
 {
     _running = false;
-    _prepoll_runnable_ptr = nullptr;
-    _postpoll_handler_ptr = nullptr;
-    _read_handler_ptr = nullptr;
-    _write_handler_ptr = nullptr;
     _timeout_milliseconds = -1; // infinite block
     _max_fds = 0;
+    _last_poll_time = 0;
+    _timedout = false;
+    _error = false;
 }
 
 int     Poll::_set_or_add_fd(int fd, short evt)
@@ -113,6 +104,7 @@ void    Poll::resize(int nfds)
         return ;
     std::lock_guard lock(_fds_mutex);
     _lst_fds.resize(nfds);
+    _lst_events.reserve(nfds);
     int i = 0;
     while (i < nfds)
     {
@@ -141,7 +133,6 @@ bool    Poll::set_max_fds(int limit)
     }
     else
         _max_fds = limit;
-    LOG(debug, "Poll: setting file descriptors limit to " << _max_fds);
     return true;
 }
 
@@ -164,14 +155,40 @@ bool    Poll::clear_fd(int fd)
     return idx >= 0;
 }
 
+size_t  Poll::read_fds_size()
+{
+    std::lock_guard lock(_fds_mutex);
+    size_t ret = 0;
+    size_t i = 0;
+    while (i < _lst_fds.size())
+    {
+        ret += 1 * (_lst_fds[i].events & (POLLIN | POLLPRI));
+        ++i;
+    }
+    return ret;
+}
+
+size_t  Poll::write_fds_size()
+{
+    std::lock_guard lock(_fds_mutex);
+    size_t ret = 0;
+    size_t i = 0;
+    while (i < _lst_fds.size())
+    {
+        ret += 1 * (_lst_fds[i].events == POLLOUT);
+        ++i;
+    }
+    return ret;
+}
+
 bool    Poll::set_read_fd(int fd)
 {
-    return this->_set_or_add_fd(fd, POLLIN);
+    return this->_set_or_add_fd(fd, POLLIN) >= 0;
 }
 
 bool    Poll::set_write_fd(int fd)
 {
-    return this->_set_or_add_fd(fd, POLLOUT);
+    return this->_set_or_add_fd(fd, POLLOUT) >= 0;
 }
 
 void    Poll::set_timeout(int milliseconds)
@@ -179,55 +196,22 @@ void    Poll::set_timeout(int milliseconds)
     _timeout_milliseconds = milliseconds;
 }
 
-Poll &  Poll::set_read_handler(IHandler<int> *handler)
+void    Poll::wait_stop()
 {
-    std::lock_guard lock(_handlers_mutex);
-    if (_read_handler_ptr != nullptr)
-        delete _read_handler_ptr;
-    _read_handler_ptr = handler;
-    return *this;
-}
-
-Poll &  Poll::set_write_handler(IHandler<int> *handler)
-{
-    std::lock_guard lock(_handlers_mutex);
-    if (_write_handler_ptr != nullptr)
-        delete _write_handler_ptr;
-    _write_handler_ptr = handler;
-    return *this;
-}
-
-Poll &  Poll::set_prepoll_runnable(IRunnable *runnable)
-{
-    std::lock_guard lock(_handlers_mutex);
-    if (_prepoll_runnable_ptr != nullptr)
-        delete _prepoll_runnable_ptr;
-    _prepoll_runnable_ptr = runnable;
-    return *this;
-}
-
-Poll &  Poll::set_postpoll_handler(IHandler<time_t, bool> *handler)
-{
-    std::lock_guard lock(_handlers_mutex);
-    if (_postpoll_handler_ptr != nullptr)
-        delete _postpoll_handler_ptr;
-    _postpoll_handler_ptr = handler;
-    return *this;
+    _running = false;
+    std::lock_guard lock(_run_mutex);
 }
 
 bool    Poll::stop()
 {
-    if (_running)
-    {
-        _running = false;
-        std::lock_guard lock(_run_mutex);
-        return true;
-    }
-    return false;
+    _running = false;
+    return true;
 }
 
 bool    Poll::run()
 {
+    if (_running)
+        return false;
     if (_timeout_milliseconds < 0)
     {
         LOG(error, "Poll: cannot run polling without a timeout");
@@ -238,14 +222,11 @@ bool    Poll::run()
     int ret = 0;
     while (ret >= 0 && _running)
         ret = this->poll(_timeout_milliseconds);
-    _running = false;
     return ret >= 0;
 }
 
 int     Poll::poll(int milliseconds_timeout)
 {
-    if (_prepoll_runnable_ptr != nullptr && _prepoll_runnable_ptr->run() == false)
-        return -2;
     time_t before = _clock.now();
     int ret;
     {
@@ -257,45 +238,46 @@ int     Poll::poll(int milliseconds_timeout)
 #endif
     }
     time_t spent = _clock.now() - before;
-    this->_process(ret, spent);
+    _last_poll_time = spent;
+    this->_process(ret);
     return ret;
 }
 
-void    Poll::_process(int poll_return, time_t nano_timespent)
+void    Poll::_process(int poll_return)
 {
-    std::lock_guard lock_handler(_handlers_mutex);
+    _lst_events.clear();
+    _timedout = poll_return == 0;
+    _error = poll_return < 0;
     if (poll_return < 0)
-    {
         LOG(error, "Poll: " << strerror(errno));
-        return ;
-    }
-    else if (_postpoll_handler_ptr != nullptr)
-        _postpoll_handler_ptr->handle(nano_timespent, poll_return == 0);
-    if (poll_return <= 0)
-        return ;
-    size_t i = 0;
-    std::lock_guard lock_fds(_fds_mutex);
-    while (i < _lst_fds.size())
+    if (poll_return > 0)
     {
-        short revt = _lst_fds[i].revents;
-        int fd = _lst_fds[i].fd;
-        if (revt != 0)
+        size_t i = 0;
+        std::lock_guard lock_fds(_fds_mutex);
+        while (poll_return > 0 && i < _lst_fds.size())
         {
-            if (revt == POLLIN)
+            short revt = _lst_fds[i].revents;
+            int fd = _lst_fds[i].fd;
+            if (revt != 0)
             {
-                if (_read_handler_ptr != nullptr)
-                    _read_handler_ptr->handle(fd);
+                PollEvent evt;
+
+                evt.fd = fd;
+                if (revt & POLLHUP)
+                    evt.closed = true;
+                if (revt & (POLLNVAL | POLLERR))
+                    evt.error = true;
+                if (revt & (POLLIN | POLLPRI))
+                    evt.readable = true;
+                if (revt & POLLOUT)
+                    evt.writable = true;
                 --poll_return;
+                _lst_events.push_back(evt);
             }
-            else if (revt == POLLOUT)
-            {
-                if (_write_handler_ptr != nullptr)
-                    _write_handler_ptr->handle(fd);
-                --poll_return;
-            }
+            ++i;
         }
-        ++i;
     }
+    this->notify_observers(this);
 }
 
 }

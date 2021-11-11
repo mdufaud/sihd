@@ -37,49 +37,15 @@ UdpReceiver::UdpReceiver(const std::string & path)
 UdpReceiver::~UdpReceiver()
 {
     this->stop();
-    if (_handler_ptr != nullptr)
-        delete _handler_ptr;
 }
 
 void    UdpReceiver::_init()
 {
-    this->add_conf("buffer_size", &UdpReceiver::set_buffer_size);
     this->add_conf("poll_timeout", &UdpReceiver::set_poll_timeout);
     _array_owned = false;
-    _array_ptr = nullptr;
     _poll_timeout_milliseconds = -1;
-    _handler_ptr = nullptr;
     _poll.set_max_fds(1);
-}
-
-void    UdpReceiver::_delete_buffer()
-{
-    if (_array_ptr != nullptr && _array_owned == true)
-    {
-        delete _array_ptr;
-        _array_ptr = nullptr;
-        _array_owned = false;
-    }
-}
-
-void    UdpReceiver::set_buffer(sihd::util::IArray *buffer)
-{
-    std::lock_guard lock(_poll_mutex);
-    this->_delete_buffer();
-    _array_owned = false;
-    _array_ptr = buffer;
-}
-
-bool    UdpReceiver::set_buffer_size(size_t size)
-{
-    std::lock_guard lock(_poll_mutex);
-    if (_array_ptr == nullptr)
-    {
-        _array_owned = true;
-        _array_ptr = new sihd::util::ArrByte(size);
-        return _array_ptr != nullptr;
-    }
-    return _array_ptr->reserve(size);
+    _poll.add_observer(this);
 }
 
 bool    UdpReceiver::bind(const IpAddr & addr)
@@ -111,35 +77,15 @@ bool    UdpReceiver::open_socket(bool ipv6)
     return ret;
 }
 
-ssize_t     UdpReceiver::receive()
-{
-    if (_array_ptr == nullptr)
-        throw std::runtime_error("UdpReceiver: no buffer set");
-    return _socket.receive(*_array_ptr);
-}
-
-ssize_t     UdpReceiver::receive_from(IpAddr & addr)
-{
-    if (_array_ptr == nullptr)
-        throw std::runtime_error("UdpReceiver: no buffer set");
-    return _socket.receive_from(addr, *_array_ptr);
-}
-
 bool    UdpReceiver::stop()
 {
-    bool ret = _poll.is_running();
-    if (ret)
-        _poll.stop();
-    _waitable.notify_all();
-    return ret;
+    _poll.stop();
+    _poll.wait_stop();
+    return true;
 }
 
 void    UdpReceiver::_setup_poll()
 {
-    if (_array_ptr == nullptr)
-        throw std::runtime_error("UdpReceiver: cannot poll with no buffer set");
-    if (_poll.get_read_handler() == nullptr)
-        _poll.set_read_handler(new sihd::util::Handler(this));
     _poll.clear_fds();
     _poll.set_read_fd(_socket.socket());
 }
@@ -164,25 +110,24 @@ bool    UdpReceiver::poll()
     return _poll.poll(_poll_timeout_milliseconds) > 0;
 }
 
-// called by poll when socket is readable
-void    UdpReceiver::handle(int socket)
+void    UdpReceiver::handle(sihd::util::Poll *poll)
 {
-    if (socket == _socket.socket())
+    auto events = poll->get_events();
+    if (events.size() > 0)
     {
-        if (_handler_ptr != nullptr)
-            _handler_ptr->handle(this);
-        else
-            this->receive(_client_addr, *_array_ptr);
-        _waitable.notify(1);
+        auto event = events[0];
+        if (event.fd == _socket.socket())
+        {
+            if (event.readable || event.closed)
+            {
+                this->notify_observers(this);
+            }
+            else if (event.error)
+            {
+                this->close();
+            }
+        }
     }
-}
-
-void    UdpReceiver::set_handler(sihd::util::IHandler<INetReceiver *> *handler)
-{
-    std::lock_guard lock(_poll_mutex);
-    if (_handler_ptr != nullptr)
-        delete _handler_ptr;
-    _handler_ptr = handler;
 }
 
 }

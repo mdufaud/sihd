@@ -2,6 +2,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Task.hpp>
 #include <sihd/util/AtExit.hpp>
+#include <sihd/util/Files.hpp>
 
 #include <vector>
 #include <unistd.h>
@@ -177,7 +178,7 @@ rlim_t  OS::get_max_fds()
 #endif
 }
 
-bool    OS::ioctl(int fd, unsigned long request, char *arg_ptr, bool logerror)
+bool    OS::ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
 {
 #if !defined(__SIHD_WINDOWS__)
     bool ret = ::ioctl(fd, request, arg_ptr) == 0;
@@ -239,6 +240,29 @@ bool    OS::getsockopt(int socket, int level, int optname, void *optval, socklen
     if (!ret && logerror)
         LOG(error, "OS: getsockopt error: " << strerror(errno));
     return ret;
+}
+
+std::string OS::get_executable_path()
+{
+#if defined(__SIHD_WINDOWS__)
+    char path[MAX_PATH];
+    if (GetModuleFileName(NULL, path, MAX_PATH) != 0)
+        return path;
+#else
+    std::ifstream mapf("/proc/self/maps");
+    std::string line;
+    std::string path;
+    if (std::getline(mapf, line))
+    {
+        size_t idx = line.find("/");
+        if (idx != std::string::npos)
+        {
+            path = line.substr(idx);
+            return path;
+        }
+    }
+#endif
+    return ".";
 }
 
 // backtrace not available in windows / android

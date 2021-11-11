@@ -25,7 +25,7 @@ class ChannelWaiter: public ACoreObject
     protected:
     
     private:
-        void observable_changed(Channel *channel) override;
+        void handle(Channel *channel) override;
 
         Channel *_channel;
         sihd::util::Waitable _waitable;

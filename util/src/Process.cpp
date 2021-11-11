@@ -1,5 +1,7 @@
 #include <sihd/util/Process.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/OS.hpp>
+#include <sihd/util/Task.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <string.h> // strerror
@@ -28,24 +30,18 @@ LOGGER;
 
 Process::Process()
 {
-    _pid = -1;
-    this->open_mode = SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE;
-    this->clear();
+    this->_init();
 }
 
 Process::Process(std::function<int()> fun)
 {
-    _pid = -1;
-    this->open_mode = SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE;
-    this->clear();
+    this->_init();
     _fun_to_execute = fun;
 }
 
 Process::Process(const std::vector<std::string> & args)
 {
-    _pid = -1;
-    this->open_mode = SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE;
-    this->clear();
+    this->_init();
     _argv.reserve(args.size() + 1);
     for (const std::string & arg: args)
         _argv.push_back(arg.c_str());
@@ -53,9 +49,7 @@ Process::Process(const std::vector<std::string> & args)
 
 Process::Process(std::initializer_list<const char *> args)
 {
-    _pid = -1;
-    this->open_mode = SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE;
-    this->clear();
+    this->_init();
     _argv.reserve(args.size() + 1);
     std::copy(args.begin(), args.end(), std::back_inserter(_argv));
 }
@@ -63,25 +57,38 @@ Process::Process(std::initializer_list<const char *> args)
 Process::~Process()
 {
     this->end();
-    this->wait();
+}
+
+void    Process::_init()
+{
+    _pid = -1;
+    _poll.set_timeout(1);
+    _poll.add_observer(this);
+    this->open_mode = SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE;
+    this->clear();
 }
 
 void    Process::clear()
 {
-    this->end();
-    this->wait();
-    _pid = -1;
-    _status.reset();
-    this->_clear(_stdin);
-    this->_clear(_stdout);
-    this->_clear(_stderr);
+    this->reset();
+    this->_clear_fdw(_stdin);
+    this->_clear_fdw(_stdout);
+    this->_clear_fdw(_stderr);
 }
 
-void    Process::_clear(FileDescWrapper & fdw)
+void    Process::reset()
+{
+    this->end();
+    _pid = -1;
+    memset(&_info, 0, sizeof(siginfo_t));
+}
+
+void    Process::_clear_fdw(FileDescWrapper & fdw)
 {
     fdw.action = NONE;
     fdw.fun = nullptr;
-    fdw.str_out.reset();
+    //fdw.str_out.reset();
+    fdw.path.clear();
 }
 
 // Argv
@@ -236,8 +243,7 @@ void    Process::_fdw_close(FileDescWrapper & fdw)
     fdw.action = CLOSE;
     this->_close(fdw.fd_read);
     this->_close(fdw.fd_write);
-    fdw.fd_read = -1;
-    fdw.fd_write = -1;
+    fdw.fun = nullptr;
 }
 
 void    Process::_fdw_to(FileDescWrapper & fdw, std::function<void(const char *, ssize_t)> && fun)
@@ -249,16 +255,18 @@ void    Process::_fdw_to(FileDescWrapper & fdw, std::function<void(const char *,
 void    Process::_fdw_to(FileDescWrapper & fdw, std::string & output)
 {
     this->_add_pipe(fdw);
-    fdw.str_out = output;
+    fdw.fun = [&output] (const char *buffer, [[maybe_unused]] ssize_t ret) { output.append(buffer); };
 }
 
 void    Process::_fdw_to(FileDescWrapper & fdw, int fd)
 {
+    fdw.fun = nullptr;
     fdw.fd_write = fd;
 }
 
 bool    Process::_fdw_to_file(FileDescWrapper & fdw, const std::string & path, bool append)
 {
+    fdw.fun = nullptr;
     fdw.fd_write = open(path.c_str(),
                         O_WRONLY | O_CREAT | (append ? O_APPEND : 0),
                         this->open_mode);
@@ -289,12 +297,16 @@ void    Process::_dup_close(int fd_from, int fd_to)
     }
 }
 
-void    Process::_close(int fd)
+void    Process::_close(int & fd)
 {
     if (fd == -1)
         return ;
     if (close(fd) == -1)
+    {
         LOG(error, "Process: could not close fd: " << strerror(errno));
+    }
+    else
+        fd = -1;
 }
 
 std::pair<int, int> Process::_pipe()
@@ -335,21 +347,21 @@ void    Process::_do_fork()
     if (pid == 0)
     {
         if (_stdin.action == CLOSE)
-            this->_close(STDIN_FILENO);
+            close(STDIN_FILENO);
         else
         {
             this->_dup_close(_stdin.fd_read, STDIN_FILENO);
             this->_close(_stdin.fd_write);
         }
         if (_stdout.action == CLOSE)
-            this->_close(STDOUT_FILENO);
+            close(STDOUT_FILENO);
         else
         {
             this->_dup_close(_stdout.fd_write, STDOUT_FILENO);
             this->_close(_stdout.fd_read);
         }
         if (_stderr.action == CLOSE)
-            this->_close(STDERR_FILENO);
+            close(STDERR_FILENO);
         else
         {
             this->_dup_close(_stderr.fd_write, STDERR_FILENO);
@@ -417,32 +429,53 @@ bool    Process::_do_spawn()
 }
 #endif
 
-bool    Process::run()
+void    Process::_init_poll()
 {
-    if (!_fun_to_execute)
+    _poll.stop();
+    _poll.clear_fds();
+    int fds = (int)(_stdout.fd_read >= 0) + (int)(_stderr.fd_read >= 0);
+    _poll.set_max_fds(fds);
+    if (fds > 0)
     {
-        if (_argv.size() == 0)
-        {
-            LOG(error, "Process: Could not run process, no argv");
-            return false;
-        }
+        _poll.set_read_fd(_stdout.fd_read);
+        _poll.set_read_fd(_stderr.fd_read);
+    }
+}
+
+bool    Process::start()
+{
+    if (this->is_running())
+        return false;
+    if (!_fun_to_execute && _argv.size() == 0)
+    {
+        LOG(error, "Process: Could not run process, no argv");
+        return false;
+    }
+    this->_init_poll();
+    if (_fun_to_execute)
+        this->_do_fork();
+    else
+    {
         if (_argv.back() != NULL)
             _argv.push_back(NULL);
 #if !defined(__SIHD_ANDROID__)
         if (this->_do_spawn() == false)
             return false;
 #else
+    TRACE("FORK")
         this->_do_fork();
 #endif
     }
-    else
-        this->_do_fork();
     this->_close(_stdin.fd_read);
     this->_close(_stdout.fd_write);
     this->_close(_stderr.fd_write);
-    _stdin.fd_read = -1;
-    _stdout.fd_write = -1;
-    _stderr.fd_write = -1;
+    return true;
+}
+
+bool    Process::wait_process_end(time_t nano_duration)
+{
+    if (this->is_running())
+        return _waitable.wait_for(nano_duration) == false;
     return true;
 }
 
@@ -451,12 +484,13 @@ bool    Process::_read_fd(int fd, std::function<void(const char *, ssize_t)> fun
     char buffer[SIHD_PROCESS_READ_BUFFER_SIZE];
     ssize_t ret;
 
-    while ((ret = read(fd, &buffer, SIHD_PROCESS_READ_BUFFER_SIZE)) > 0)
+    ret = read(fd, &buffer, SIHD_PROCESS_READ_BUFFER_SIZE);
+    if (ret > 0)
     {
         buffer[ret] = 0;
         fun(buffer, ret);
     }
-    return ret != -1;
+    return ret > 0;
 }
 
 bool    Process::_write_into_file(int fd, std::string & path, bool append)
@@ -477,54 +511,46 @@ bool    Process::_process_fd_out(FileDescWrapper & fdw)
     if (fdw.fd_read < 0)
         return true;
     if (fdw.action == FILE || fdw.action == FILE_APPEND)
-        return this->_write_into_file(fdw.fd_read, fdw.str_out.value().get(), fdw.action == FILE_APPEND);
-    else if (fdw.str_out.has_value())
-    {
-        std::string & out = fdw.str_out.value().get();
-        return this->_read_fd(fdw.fd_read, [&out] (const char *buffer, [[maybe_unused]] ssize_t ret) { out.append(buffer); });
-    }
+        return this->_write_into_file(fdw.fd_read, fdw.path, fdw.action == FILE_APPEND);
     else if (fdw.fun)
         return this->_read_fd(fdw.fd_read, fdw.fun);
     return true;
 }
 
-bool    Process::process()
+bool    Process::read_pipes()
 {
-    // may be stuck if stdin is still open
-    if (_stdin.fd_write >= 0)
-    {
-        LOG(warning, "Process: trying to process stdout/stderr with stdin still open");
-        return false;
-    }
-    bool ret = this->has_run();
-    if (ret)
-    {
-        ret = ret && this->_process_fd_out(_stdout);
-        ret = ret && this->_process_fd_out(_stderr);
-    }
-    return ret;
+    return _poll.is_running() == false && _poll.fds_size() > 0 && _poll.poll(1) > 0;
 }
 
 bool    Process::end()
 {
-    bool ret = this->has_run();
-    if (ret)
+    this->read_pipes();
+    this->_close(_stdin.fd_write);
+    this->_close(_stdout.fd_read);
+    this->_close(_stderr.fd_read);
+    bool running = this->is_running();
+    int tries = 3;
+    while (running && tries > 0)
     {
-        this->_close(_stdin.fd_write);
-        _stdin.fd_write = -1;
-        ret = this->process();
-        this->_close(_stdout.fd_read);
-        this->_close(_stderr.fd_read);
-        _stdout.fd_read = -1;
-        _stderr.fd_read = -1;
-        this->wait();
+        this->wait_any(WNOHANG);
+        running = this->is_running();
+        if (running == false)
+            break ;
+        --tries;
+        usleep(1000);
     }
-    return ret;
+    if (running)
+    {
+        this->kill(SIGKILL);
+        this->wait_exit();
+        running = this->is_running();
+    }
+    return running == false;
 }
 
 bool    Process::kill(int sig)
 {
-    bool ret = this->has_run();
+    bool ret = this->is_running();
     if (ret)
     {
         ret = ::kill(this->pid(), sig) >= 0;
@@ -534,65 +560,146 @@ bool    Process::kill(int sig)
     return ret;
 }
 
+// Run
+
+void    Process::handle(Poll *poll)
+{
+    auto events = poll->get_events();
+    for (auto & event: events)
+    {
+        int fd = event.fd;
+        if (fd == _stdout.fd_read)
+        {
+            if (!event.readable || this->_process_fd_out(_stdout) == false)
+            {
+                poll->clear_fd(fd);
+                this->_close(_stdout.fd_read);
+            }
+        }
+        else if (fd == _stderr.fd_read)
+        {
+            if (!event.readable || this->_process_fd_out(_stderr) == false)
+            {
+                poll->clear_fd(fd);
+                this->_close(_stderr.fd_read);
+            }
+        }
+    }
+    if (poll->polling_timeout())
+    {
+        if (this->is_running())
+            this->wait_any(WNOHANG);
+        else
+            poll->stop();
+    }
+}
+
+bool    Process::run()
+{
+    std::lock_guard l(_mutex);
+    bool ret = this->start();
+    if (ret && _poll.max_fds() > 0)
+        _poll.run();
+    return ret;
+}
+
+bool    Process::stop()
+{
+    bool ret = this->is_running();
+    if (ret)
+    {
+        _poll.stop();
+        this->end();
+        std::lock_guard l(_mutex);
+        this->reset();
+    }
+    return ret;
+}
+
 // Check process
 
-bool    Process::has_run()
+bool    Process::is_running() const
 {
     return _pid >= 0;
 }
 
-std::optional<int>  Process::wait(int options)
+bool    Process::wait_exit(int options)
 {
-    if (this->has_run())
+    return this->wait(WEXITED | options);
+}
+
+bool    Process::wait_stop(int options)
+{
+    return this->wait(WSTOPPED | options);
+}
+
+bool    Process::wait_continue(int options)
+{
+    return this->wait(WCONTINUED | options);
+}
+
+bool    Process::wait_any(int options)
+{
+    return this->wait(WEXITED | WSTOPPED | WCONTINUED | options);
+}
+
+bool    Process::wait(int options)
+{
+    if (this->is_running())
     {
-        int st;
-        waitpid(_pid, &st, options);
-        _status = st;
-        return st;
+        if (waitid(P_PID, _pid, &_info, options) >= 0)
+        {
+            if (this->has_exited() || this->has_exited_by_signal())
+            {
+                _pid = -1;
+                _waitable.notify_all();
+            }
+            return true;
+        }
+        return false;
     }
-    return std::nullopt;
+    return false;
 }
 
-std::optional<bool>    Process::has_exited()
+bool    Process::has_exited() const
 {
-    return _status ? std::optional<bool>{WIFEXITED(_status.value())} : std::nullopt;
+    return _info.si_code == CLD_EXITED;
 }
 
-std::optional<bool>    Process::has_core_dumped()
+bool    Process::has_core_dumped() const
 {
-    return _status ? std::optional<bool>{WCOREDUMP(_status.value())} : std::nullopt;
+    return _info.si_code == CLD_DUMPED;
 }
 
-std::optional<bool>    Process::has_stopped_by_signal()
+bool    Process::has_stopped_by_signal() const
 {
-    return _status ? std::optional<bool>{WIFSTOPPED(_status.value())} : std::nullopt;
+    return _info.si_code == CLD_STOPPED;
 }
 
-std::optional<bool>    Process::has_exited_by_signal()
+bool    Process::has_exited_by_signal() const
 {
-    return _status ? std::optional<bool>{WIFSIGNALED(_status.value())} : std::nullopt;
+    return _info.si_code == CLD_KILLED;
 }
 
-std::optional<bool>  Process::has_continued()
+bool  Process::has_continued() const
 {
-    return _status ? std::optional<bool>{WIFCONTINUED(_status.value())} : std::nullopt;
+    return _info.si_code == CLD_CONTINUED;
 }
 
-std::optional<int>  Process::signal_exit_number()
+int     Process::signal_exit_number() const
 {
-    return _status ? std::optional<int>{WTERMSIG(_status.value())} : std::nullopt;
+    return this->has_exited_by_signal() ? _info.si_status : -1;
 }
 
-std::optional<int>  Process::signal_stop_number()
+int     Process::signal_stop_number() const
 {
-    return _status ? std::optional<int>{WSTOPSIG(_status.value())} : std::nullopt;
+    return this->has_stopped_by_signal() ? _info.si_status : -1;
 }
 
-std::optional<int>  Process::return_code()
+int     Process::return_code() const
 {
-    return _status ? std::optional<int>{WEXITSTATUS(_status.value())} : std::nullopt;
+    return this->has_exited() ? _info.si_status : -1;
 }
-
 
 }
 #endif

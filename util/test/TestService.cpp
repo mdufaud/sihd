@@ -58,8 +58,8 @@ namespace test
     };
 
     class TestService:  public ::testing::Test,
-                        public IObserver<AService>,
-                        public IObserver<ServiceController>
+                        public IHandler<AService *>,
+                        public IHandler<ServiceController *>
     {
         protected:
             TestService()
@@ -81,14 +81,14 @@ namespace test
             {
             }
 
-            virtual void    observable_changed(AService *service)
+            virtual void handle(AService *service)
             {
                 ++obs_changed;
                 (void)service;
                 TRACE("Service changed state");
             }
 
-            virtual void    observable_changed(ServiceController *ctrl)
+            virtual void handle(ServiceController *ctrl)
             {
                 ++obs_changed;
                 auto machine = ctrl->statemachine;

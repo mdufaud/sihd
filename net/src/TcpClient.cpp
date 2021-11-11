@@ -66,64 +66,22 @@ bool    TcpClient::open_socket(bool ipv6)
 
 void    TcpClient::_init()
 {
-    this->add_conf("buffer_size", &TcpClient::set_buffer_size);
     this->add_conf("poll_timeout", &TcpClient::set_poll_timeout);
     _array_owned = false;
-    _array_ptr = nullptr;
     _poll_timeout_milliseconds = -1;
-    _handler_ptr = nullptr;
     _poll.set_max_fds(1);
+    _poll.add_observer(this);
 }
 
-void    TcpClient::_delete_buffer()
-{
-    if (_array_ptr != nullptr && _array_owned == true)
-    {
-        delete _array_ptr;
-        _array_ptr = nullptr;
-        _array_owned = false;
-    }
-}
-
-void    TcpClient::set_buffer(sihd::util::IArray *buffer)
-{
-    std::lock_guard lock(_poll_mutex);
-    this->_delete_buffer();
-    _array_owned = false;
-    _array_ptr = buffer;
-}
-
-bool    TcpClient::set_buffer_size(size_t size)
-{
-    std::lock_guard lock(_poll_mutex);
-    if (_array_ptr == nullptr)
-    {
-        _array_owned = true;
-        _array_ptr = new sihd::util::ArrByte(size);
-        return _array_ptr != nullptr;
-    }
-    return _array_ptr->reserve(size);
-}
-
-ssize_t     TcpClient::receive()
-{
-    if (_array_ptr == nullptr)
-        throw std::runtime_error("TcpClient: no buffer set");
-    return _socket.receive(*_array_ptr);
-}
-
-void    TcpClient::stop()
+bool    TcpClient::stop()
 {
     _poll.stop();
-    _waitable.notify_all();
+    _poll.wait_stop();
+    return true;
 }
 
 void    TcpClient::_setup_poll()
 {
-    if (_array_ptr == nullptr)
-        throw std::runtime_error("TcpClient: cannot poll with no buffer set");
-    if (_poll.get_read_handler() == nullptr)
-        _poll.set_read_handler(new sihd::util::Handler(this));
     _poll.clear_fds();
     _poll.set_read_fd(_socket.socket());
 }
@@ -148,24 +106,25 @@ bool    TcpClient::poll()
     return _poll.poll(_poll_timeout_milliseconds) > 0;
 }
 
-void    TcpClient::handle(int socket)
+void    TcpClient::handle(sihd::util::Poll *poll)
 {
-    if (socket == _socket.socket())
+    auto events = poll->get_events();
+    if (events.size() > 0)
     {
-        if (_handler_ptr != nullptr)
-            _handler_ptr->handle(this);
-        else
-            this->receive(_client_addr, *_array_ptr);
-        _waitable.notify(1);
+        auto event = events[0];
+        if (event.fd == _socket.socket())
+        {
+            if (event.readable || event.closed)
+            {
+                this->notify_observers(this);
+            }
+            else if (event.error)
+            {
+                this->close();
+            }
+        }
     }
 }
 
-void    TcpClient::set_handler(sihd::util::IHandler<INetReceiver *> *handler)
-{
-    std::lock_guard lock(_poll_mutex);
-    if (_handler_ptr != nullptr)
-        delete _handler_ptr;
-    _handler_ptr = handler;
-}
 
 }

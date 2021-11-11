@@ -3,7 +3,7 @@
 
 # include <sihd/util/Node.hpp>
 # include <sihd/util/Configurable.hpp>
-# include <sihd/util/IObserver.hpp>
+# include <sihd/util/IHandler.hpp>
 # include <sihd/util/Str.hpp>
 # include <sihd/core/Channel.hpp>
 
@@ -12,7 +12,7 @@ namespace sihd::core
 
 class AChannelContainer:    public sihd::util::Node,
                             public sihd::util::Configurable,
-                            public sihd::util::IObserver<Channel>
+                            public sihd::util::IHandler<Channel *>
 {
     public:
         AChannelContainer(const std::string & name, sihd::util::Node *parent = nullptr);

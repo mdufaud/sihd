@@ -80,7 +80,7 @@ bool    DevPlayer::add_alias(const std::string & alias_conf)
     return true;
 }
 
-void    DevPlayer::observable_changed(sihd::core::Channel *c)
+void    DevPlayer::handle(sihd::core::Channel *c)
 {
     if (c == _channel_play_ptr)
     {

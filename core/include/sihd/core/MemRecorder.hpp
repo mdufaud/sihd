@@ -15,6 +15,8 @@ class MemRecorder:  public ACoreObject,
                     public sihd::util::IHandler<const std::string &, const Channel *>
 {
     public:
+        using ACoreObject::handle;
+
         MemRecorder(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~MemRecorder();
 

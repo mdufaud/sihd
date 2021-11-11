@@ -651,6 +651,7 @@ typedef Array<double>     ArrDouble;
 class ArrStr: public ArrChar
 {
     public:
+        using ArrChar::ArrChar;
         using ArrChar::is_equal;
         using ArrChar::copy_from;
         using ArrChar::assign;
@@ -659,6 +660,8 @@ class ArrStr: public ArrChar
 
         std::string to_string() const
         {
+            if (this->size() > 0 && this->cdata()[this->size() - 1] == '\0')
+                return std::string(this->cdata(), this->size() - 1);
             return std::string(this->cdata(), this->size());
         }
 

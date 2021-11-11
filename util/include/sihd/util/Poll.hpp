@@ -21,9 +21,18 @@ typedef unsigned long rlim_t;
 namespace sihd::util
 {
 
-class Poll: public IStoppableRunnable
+class Poll: public IStoppableRunnable, public Observable<Poll>
 {
     public:
+        struct PollEvent
+        {
+            int fd = -1;
+            bool readable = false;
+            bool writable = false;
+            bool error = false;
+            bool closed = false;
+        };
+
         Poll();
         Poll(int limit);
         virtual ~Poll();
@@ -34,11 +43,6 @@ class Poll: public IStoppableRunnable
         bool set_max_fds(int limit);
         int max_fds() { return _max_fds; };
 
-        Poll & set_read_handler(IHandler<int> *handler);
-        Poll & set_write_handler(IHandler<int> *handler);
-        // called after every poll if poll did not fail with nanoseconds spent in poll and bool if no activity
-        Poll & set_prepoll_runnable(IRunnable *runnable);
-        Poll & set_postpoll_handler(IHandler<time_t, bool> *handler);
         void clear_fds();
         bool clear_fd(int fd);
         bool set_read_fd(int fd);
@@ -47,13 +51,19 @@ class Poll: public IStoppableRunnable
 
         bool run();
         bool stop();
+        void wait_stop();
         bool is_running() const { return _running; }
 
         int poll(int milliseconds_timeout = -1);
 
-        IHandler<int> *get_read_handler() const { return _read_handler_ptr; }
-        IHandler<int> *get_write_handler() const { return _write_handler_ptr; }
-        IHandler<time_t, bool> *get_timeout_handler() const { return _postpoll_handler_ptr; }
+        const std::vector<PollEvent> & get_events() const { return _lst_events; };
+        time_t polling_time() const { return _last_poll_time; }
+        bool polling_timeout() const { return _timedout; }
+        bool polling_error() const { return _error; }
+
+        size_t read_fds_size();
+        size_t write_fds_size();
+        size_t fds_size() const { return _lst_fds.size(); }
 
     protected:
     
@@ -61,20 +71,21 @@ class Poll: public IStoppableRunnable
         int _get_fd_index(int fd);
         int _set_or_add_fd(int fd, short ev);
         void _init();
-        void _process(int poll_return, time_t nano_timespent);
+        void _process(int poll_return);
 
-        std::mutex _handlers_mutex;
         std::mutex _fds_mutex;
         std::mutex _run_mutex;
         int _timeout_milliseconds;
-        IHandler<int> *_read_handler_ptr;
-        IHandler<int> *_write_handler_ptr;
-        IRunnable *_prepoll_runnable_ptr;
-        IHandler<time_t, bool> *_postpoll_handler_ptr;
+
         bool _running;
         rlim_t _max_fds;
         std::vector<struct pollfd> _lst_fds;
         SystemClock _clock;
+
+        std::vector<PollEvent> _lst_events;
+        time_t _last_poll_time;
+        bool _timedout;
+        bool _error;
 };
 
 }

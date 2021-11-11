@@ -111,13 +111,6 @@ void    TcpServer::set_server_handler(INetServerHandler *handler)
 
 void    TcpServer::_setup_poll(size_t maxco)
 {
-    if (_poll.get_read_handler() == nullptr)
-    {
-        _poll.set_read_handler(new Handler<int>(std::bind(&TcpServer::_handle_read, this, _1)))
-            .set_write_handler(new Handler<int>(std::bind(&TcpServer::_handle_write, this, _1)))
-            .set_prepoll_runnable(new Task(std::bind(&TcpServer::_handle_prepoll, this)))
-            .set_postpoll_handler(new Handler<time_t, bool>(std::bind(&TcpServer::_handle_postpoll, this, _1, _2)));
-    }
     _max_connections = maxco;
     _poll.set_max_fds(maxco + 1);
     _poll.clear_fds();
@@ -145,6 +138,7 @@ bool    TcpServer::stop_serving()
     if (running)
     {
         running = _poll.stop() == false;
+        _poll.wait_stop();
         _socket.shutdown();
     }
     _waitable.notify_all();
@@ -188,33 +182,35 @@ bool    TcpServer::stop()
     return this->stop_serving();
 }
 
-bool    TcpServer::_handle_prepoll()
+void    TcpServer::handle(sihd::util::Poll *poll)
 {
-    return _server_handler_ptr->handle_before_activity(this);
-}
-
-void    TcpServer::_handle_postpoll(time_t nano, bool timed_out)
-{
-    if (timed_out == false)
+    if (poll->polling_timeout())
+        _server_handler_ptr->handle_no_activity(this, poll->polling_time());
+    else
+        _server_handler_ptr->handle_activity(this, poll->polling_time());
+    auto events = poll->get_events();
+    for (const auto & event: events)
     {
-        _server_handler_ptr->handle_activity(this, nano);
-        _waitable.notify(1);
+        if (event.fd == _socket.socket())
+        {
+            if (event.readable)
+                _server_handler_ptr->handle_new_client(this);
+            else if (event.closed || event.error)
+            {
+                this->stop();
+                break ;
+            }
+        }
+        else if (event.readable)
+        {
+            _server_handler_ptr->handle_client_read(this, event.fd);
+        }
+        else if (event.writable)
+        {
+            _server_handler_ptr->handle_client_write(this, event.fd);
+        }
     }
-    else
-        _server_handler_ptr->handle_no_activity(this, nano);
-}
-
-void    TcpServer::_handle_read(int socket)
-{
-    if (socket == _socket.socket())
-        _server_handler_ptr->handle_new_client(this);
-    else
-        _server_handler_ptr->handle_client_read(this, socket);
-}
-
-void    TcpServer::_handle_write(int socket)
-{
-    _server_handler_ptr->handle_client_write(this, socket);
+    _server_handler_ptr->handle_after_activity(this);
 }
 
 }

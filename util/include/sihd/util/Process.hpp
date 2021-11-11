@@ -1,9 +1,12 @@
 #ifndef __SIHD_UTIL_PROCESS_HPP__
 # define __SIHD_UTIL_PROCESS_HPP__
 
-# include <sihd/util/Str.hpp>
-# include <sihd/util/IRunnable.hpp>
 # include <sihd/util/platform.hpp>
+# include <sihd/util/Str.hpp>
+# include <sihd/util/IStoppableRunnable.hpp>
+# include <sihd/util/Waitable.hpp>
+# include <sihd/util/Poll.hpp>
+# include <sihd/util/Handler.hpp>
 # include <functional>
 # include <optional>
 # include <signal.h>
@@ -17,7 +20,7 @@ namespace sihd::util
 
 # if !defined(__SIHD_WINDOWS__)
 
-class Process: public IRunnable
+class Process: public IStoppableRunnable, public IHandler<Poll *>
 {
     public:
         Process();
@@ -27,9 +30,34 @@ class Process: public IRunnable
         virtual ~Process();
 
         // reset so you can run again
+        void reset();
+        // reset and clear file descriptors
         void clear();
         // execute binary / function
+        bool start();
+
+        // start process then if stdout or stderr is piped, polls them until stopped
         bool run();
+        bool is_running() const;
+        bool stop();
+        bool wait_process_end(time_t nano_duration = 0);
+
+        // wait for process
+        bool wait(int options);
+        // wait for process
+        bool wait_exit(int options = 0);
+        // wait for process
+        bool wait_stop(int options = 0);
+        // wait for process
+        bool wait_continue(int options = 0);
+        // wait for process
+        bool wait_any(int options = 0);
+        // read pipes
+        bool read_pipes();
+        // you have to call end when you piped (calls wait())
+        bool end();
+        // send signal to process
+        bool kill(int sig = SIGTERM);
 
         Process & stdin_close();
         Process & stdin_from(const std::string & input);
@@ -56,34 +84,25 @@ class Process: public IRunnable
         Process & set_function(std::nullptr_t);
         Process & set_function(std::function<int()> fun);
 
-        std::optional<bool> has_exited();
-        std::optional<bool> has_core_dumped();
-        std::optional<bool> has_stopped_by_signal();
-        std::optional<bool> has_exited_by_signal();
-        std::optional<bool> has_continued();
-        std::optional<int>  signal_exit_number();
-        std::optional<int>  signal_stop_number();
-        std::optional<int>  return_code();
+        bool has_exited() const;
+        bool has_core_dumped() const;
+        bool has_stopped_by_signal() const;
+        bool has_exited_by_signal() const;
+        bool has_continued() const;
+        int signal_exit_number() const;
+        int signal_stop_number() const;
+        int return_code() const;
 
-        // wait for process to end
-        std::optional<int> wait(int options = 0);
-        // read pipes
-        bool process();
-        // you have to call end when you piped (calls wait())
-        bool end();
-        // check if run has been called
-        bool has_run();
-        // send signal to process
-        bool kill(int sig = SIGTERM);
+        // const std::optional<int> & status() const { return _status; }
 
         // get running process id
-        pid_t pid() { return _pid; };
+        pid_t pid() const { return _pid; };
 
         // get setted argv
-        const std::vector<const char *> & argv() { return _argv; }
+        const std::vector<const char *> & argv() const { return _argv; }
 
         // check if process will execute fork + exit(fun())
-        bool runs_function() { return _fun_to_execute ? true : false; }
+        bool runs_function() const { return _fun_to_execute ? true : false; }
 
         // default file opening mode
         mode_t open_mode;
@@ -102,15 +121,16 @@ class Process: public IRunnable
             int fd_write = -1;
             FileDescAction action = NONE;
             std::function<void(const char *, ssize_t)> fun;
-            std::optional<std::reference_wrapper<std::string>> str_out;
+            //std::optional<std::reference_wrapper<std::string>> str_out;
+            std::string path;
         };
 
         // fd utilities
         std::pair<int, int> _pipe();
-        void _clear(FileDescWrapper & fdw);
+        void _clear_fdw(FileDescWrapper & fdw);
         void _add_pipe(FileDescWrapper & fdw);
         void _dup_close(int fd_from, int fd_to);
-        void _close(int fd);
+        void _close(int & fd);
 
         // process fds once child process executed
         bool _read_fd(int fd, std::function<void(const char *, ssize_t)> fun);
@@ -128,7 +148,8 @@ class Process: public IRunnable
         void _add_close_action(posix_spawn_file_actions_t *actions, int fd);
         bool _do_spawn();
 #endif
-
+        void _init();
+        void _init_poll();
         // fd redirections setting
         void _fdw_close(FileDescWrapper & fdw);
         void _fdw_to(FileDescWrapper & fdw, std::function<void(const char *, ssize_t)> && fun);
@@ -136,13 +157,18 @@ class Process: public IRunnable
         void _fdw_to(FileDescWrapper & fdw, int fd);
         bool _fdw_to_file(FileDescWrapper & fdw, const std::string & path, bool append);
 
+        void handle(Poll *poll);
+
         pid_t _pid;
         FileDescWrapper _stdin;
         FileDescWrapper _stdout;
         FileDescWrapper _stderr;
-        std::optional<int> _status;
         std::vector<const char *> _argv;
         std::function<int()> _fun_to_execute;
+        std::mutex _mutex;
+        Waitable _waitable;
+        Poll _poll;
+        siginfo_t _info;
 };
 
 # else

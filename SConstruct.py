@@ -287,7 +287,7 @@ def copy_module_dir(module_name, dirname_to_copy):
     if isdir(str(module_dir_input)):
         if verbose:
             info("copying resources '{}' of module: {}".format(dirname_to_copy, module_name))
-        copy_tree(str(module_dir_input), str(build_dir_output))
+        copy_tree(module_dir_input.get_abspath(), build_dir_output.get_abspath())
 
 # Configure env and call scons.py from every configured modules
 
