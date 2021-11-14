@@ -12,17 +12,17 @@
 
 # define __SIHD_ADD_ITERATOR_PROVIDER__(CLASSNAME, CONTAINER) \
 template <typename TYPE> \
-class CLASSNAME: public sihd::util::AProvider<TYPE &> \
+class CLASSNAME: public sihd::util::AProvider<TYPE> \
 { \
     public: \
         CLASSNAME(CONTAINER<TYPE> *iterator = nullptr) { this->set_iterator(iterator); } \
         virtual ~CLASSNAME() {} \
  \
-        bool provide(TYPE & value) \
+        bool provide(TYPE *value) \
         { \
             if (_iterator != _iterable_ptr->end()) \
             { \
-                value = *_iterator; \
+                *value = *_iterator; \
                 ++_iterator; \
                 return true; \
             } \
@@ -52,8 +52,8 @@ class CLASSNAME: public sihd::util::AProvider<TYPE &> \
 namespace sihd::util
 {
 
-template <typename ...TYPE>
-class AProvider: public sihd::util::IProvider<TYPE...>
+template <typename TYPE>
+class AProvider: public sihd::util::IProvider<TYPE>
 {
     public:
         virtual ~AProvider() {}
@@ -85,22 +85,22 @@ __SIHD_ADD_ITERATOR_PROVIDER__(SetProvider, std::set);
 __SIHD_ADD_ITERATOR_PROVIDER__(DequeProvider, std::deque);
 __SIHD_ADD_ITERATOR_PROVIDER__(ArrayProvider, sihd::util::Array);
 
-template <typename ...TYPE>
-class FunctionProvider: public sihd::util::AProvider<TYPE...>
+template <typename TYPE>
+class FunctionProvider: public sihd::util::AProvider<TYPE>
 {
     public:
         FunctionProvider() {}
 
-        FunctionProvider(std::function<bool(TYPE...)> provider)
+        FunctionProvider(std::function<bool(TYPE *)> provider)
         {
             this->set_provider_function(provider);
         }
 
         virtual ~FunctionProvider() {}
 
-        bool provide(TYPE ...value)
+        bool provide(TYPE *value)
         {
-            return _provide_method(value...);
+            return _provide_method(value);
         }
         
         bool provider_empty() const
@@ -113,12 +113,12 @@ class FunctionProvider: public sihd::util::AProvider<TYPE...>
             return _providing_method ? _providing_method() : true;
         }
 
-        void set_provider_function(std::function<bool(TYPE...)> & fun) { _provide_method = std::move(fun); }
+        void set_provider_function(std::function<bool(TYPE *)> & fun) { _provide_method = std::move(fun); }
         void set_provider_empty_function(std::function<bool()> & fun) { _provider_empty_method = std::move(fun); }
         void set_providing_function(std::function<bool()> & fun) { _providing_method = std::move(fun); }
 
     private:
-        std::function<bool(TYPE...)> _provide_method;
+        std::function<bool(TYPE *)> _provide_method;
         std::function<bool()> _provider_empty_method;
         std::function<bool()> _providing_method;
 };

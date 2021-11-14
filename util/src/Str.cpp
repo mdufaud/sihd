@@ -366,4 +366,144 @@ bool    Str::to_double(const std::string & str, double *ret)
     return true;
 }
 
+template <>
+bool Str::convert_from_string<bool>(const std::string & str, bool & value, [[maybe_unused]] uint16_t base)
+{
+    bool ret = false;
+    if (str == "1")
+    {
+        value = true;
+        ret = true;
+    }
+    else if (str == "0")
+    {
+        value = false;
+        ret = true;
+    }
+    if (!ret)
+    {
+        std::string lower = str;
+        Str::to_lower(lower);
+        if (str == "true")
+        {
+            value = true;
+            ret = true;
+        }
+        else if (str == "false")
+        {
+            value = false;
+            ret = true;
+        }
+    }
+    return ret;
+}
+
+template <>
+bool Str::convert_from_string<char>(const std::string & str, char & value, [[maybe_unused]] uint16_t base)
+{
+    if (str.size() == 1)
+        value = str[0];
+    return str.size() == 1;
+}
+
+template <>
+bool Str::convert_from_string<int8_t>(const std::string & str, int8_t & value, uint16_t base)
+{
+    long longval;
+    bool ret = Str::to_long(str, &longval, base);
+    if (ret)
+        value = longval;
+    return ret;
+}
+
+template <>
+bool Str::convert_from_string<int16_t>(const std::string & str, int16_t & value, uint16_t base)
+{
+    long longval;
+    bool ret = Str::to_long(str, &longval, base);
+    if (ret)
+        value = longval;
+    return ret;
+}
+
+template <>
+bool Str::convert_from_string<int32_t>(const std::string & str, int32_t & value, uint16_t base)
+{
+    long longval;
+    bool ret = Str::to_long(str, &longval, base);
+    if (ret)
+        value = longval;
+    return ret;
+}
+
+template <>
+bool Str::convert_from_string<int64_t>(const std::string & str, int64_t & value, uint16_t base)
+{
+    long longval;
+    bool ret = Str::to_long(str, &longval, base);
+    if (ret)
+        value = longval;
+    return ret;
+}
+
+template <>
+bool Str::convert_from_string<uint8_t>(const std::string & str, uint8_t & value, uint16_t base)
+{
+    unsigned long longval;
+    bool ret = Str::to_ulong(str, &longval, base);
+    if (ret)
+        value = longval;
+    return ret;
+}
+
+template <>
+bool Str::convert_from_string<uint16_t>(const std::string & str, uint16_t & value, uint16_t base)
+{
+    unsigned long longval;
+    bool ret = Str::to_ulong(str, &longval, base);
+    if (ret)
+        value = longval;
+    return ret;
+}
+
+template <>
+bool Str::convert_from_string<uint32_t>(const std::string & str, uint32_t & value, uint16_t base)
+{
+    unsigned long longval;
+    bool ret = Str::to_ulong(str, &longval, base);
+    if (ret)
+        value = longval;
+    return ret;
+}
+
+template <>
+bool Str::convert_from_string<uint64_t>(const std::string & str, uint64_t & value, uint16_t base)
+{
+    unsigned long longval;
+    bool ret = Str::to_ulong(str, &longval, base);
+    if (ret)
+        value = longval;
+    return ret;
+}
+
+template <>
+bool Str::convert_from_string<float>(const std::string & str, float & value, [[maybe_unused]] uint16_t base)
+{
+    double doubleval;
+    bool ret = Str::to_double(str, &doubleval);
+    if (ret)
+        value = doubleval;
+    return ret;
+}
+
+template <>
+bool Str::convert_from_string<double>(const std::string & str, double & value, [[maybe_unused]] uint16_t base)
+{
+    double doubleval;
+    bool ret = Str::to_double(str, &doubleval);
+    if (ret)
+        value = doubleval;
+    return ret;
+}
+
 }

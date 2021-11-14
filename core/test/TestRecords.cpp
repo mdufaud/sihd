@@ -11,6 +11,7 @@ namespace test
 {
     LOGGER;
     using namespace sihd::core;
+    using namespace sihd::util;
     class TestRecords:  public ::testing::Test
     {
         protected:
@@ -57,6 +58,7 @@ namespace test
             }}
         }));
 
+        /*
         sihd::util::ArrInt arr_int = {10, 0};
         sihd::util::ArrBool arr_bool = {false, false, false, false};
 
@@ -71,6 +73,16 @@ namespace test
 
         arr_bool[2] = true;
         mem_recorder.add_record("bool", sihd::util::time::milli(50), &arr_bool);
+        */
+
+        nlohmann::json json = R"([
+            {"name": "int", "time": 10000000, "type": "int", "data": "10,0"},
+            {"name": "bool", "time": 20000000, "type": "bool", "data": "0,0,0,0"},
+            {"name": "int", "time": 30000000, "type": "int", "data": "10,20"},
+            {"name": "bool", "time": 40000000, "type": "bool", "data": "1,0,0,0"},
+            {"name": "bool", "time": 50000000, "type": "bool", "data": "1,0,1,0"}
+        ])"_json;
+        EXPECT_TRUE(mem_recorder.add_json_records(json));
 
         std::cout << core.get_tree_desc_str() << std::endl;
         EXPECT_TRUE(core.init());
@@ -93,7 +105,7 @@ namespace test
             mem_recorder.stop();
             LOG(debug, "Waiting the end");
             ChannelWaiter waiter(end);
-            EXPECT_FALSE(waiter.wait_for(sihd::util::time::milli(60)));
+            EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(60)));
         }
 
         EXPECT_TRUE(core.stop());

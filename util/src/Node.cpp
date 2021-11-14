@@ -1,5 +1,6 @@
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Logger.hpp>
+#include <algorithm>
 
 #define MAX_LINK_RECURSION 20
 
@@ -55,9 +56,11 @@ bool    Node::add_child(const std::string & name, Named *child, bool ownership)
     if (child->get_parent() == nullptr)
         child->set_parent(this);
     ChildEntry *entry = new ChildEntry();
+    entry->name = name;
     entry->obj = child;
     entry->ownership = ownership;
     _children_map[name] = entry;
+    _children_keys.push_back(name);
     return true;
 }
 
@@ -90,7 +93,6 @@ Named   *Node::get_child(const std::string & name) const
     return entry != nullptr ? entry->obj : nullptr;
 }
 
-
 bool    Node::delete_child(const Named *child)
 {
     return this->delete_child(child->get_name());
@@ -98,10 +100,7 @@ bool    Node::delete_child(const Named *child)
 
 bool    Node::delete_child(const std::string & name)
 {
-    ChildEntry *entry = this->get_child_entry(name);
-    if (entry != nullptr)
-        _children_map.erase(name);
-    return this->delete_child_entry(entry);
+    return this->delete_child_entry(this->get_child_entry(name));
 }
 
 bool    Node::delete_child_entry(Node::ChildEntry *entry)
@@ -110,6 +109,10 @@ bool    Node::delete_child_entry(Node::ChildEntry *entry)
         return false;
     if (entry->ownership && entry->obj != nullptr)
         delete entry->obj;
+    auto it = std::find(_children_keys.begin(), _children_keys.end(), entry->name);
+    if (it != _children_keys.end())
+        _children_keys.erase(it);
+    _children_map.erase(entry->name);
     delete entry;
     return true;
 }
@@ -122,6 +125,8 @@ void    Node::delete_children()
         it = _children_map.erase(it);
         this->delete_child_entry(entry);
     }
+    _children_map.clear();
+    _children_keys.clear();
 }
 
 Node  *Node::to_node(Named *child)
@@ -223,21 +228,14 @@ bool    Node::resolve_links(size_t recursion)
     return ret;
 }
 
-const std::map<std::string, Node::ChildEntry *> &    Node::get_children() const
+const std::map<std::string, Node::ChildEntry *> &   Node::get_children() const
 {
     return _children_map;
 }
 
-std::vector<std::string>    Node::get_children_keys() const
+const std::vector<std::string> &    Node::get_children_keys() const
 {
-    std::vector<std::string> ret;
-    ret.reserve(_children_map.size());
-    for (const auto & [name, entry]: _children_map)
-    {
-        (void)entry;
-        ret.push_back(name);
-    }
-    return ret;
+    return _children_keys;
 }
 
 // TREE
@@ -280,8 +278,12 @@ void    Node::_get_tree_child_desc(std::stringstream & ss,
 
 void    Node::_iterate_tree_children(std::stringstream & ss, TreeOpts & opts, const std::string & indent) const
 {
-    for (const auto & [name, entry]: _children_map)
-        this->_get_tree_child_desc(ss, opts, indent, name, entry->obj);
+    for (const std::string & name: _children_keys)
+    {
+        Named *child = this->get_child(name);
+        if (child != nullptr)
+            this->_get_tree_child_desc(ss, opts, indent, name, child);
+    }
 }
 
 void    Node::_get_tree_children(std::stringstream & ss, TreeOpts opts) const

@@ -24,7 +24,7 @@ MODULE_NAME=$2
 CLASS_NAME=$3
 CLASS_SRC_FILENAME=$MODULE_NAME/src/$3.cpp
 
-echo "Making new class $CLASS_NAME for module $MODULE_NAME"
+echo "Making new class $CLASS_NAME for module $MODULE_NAME: $CLASS_SRC_FILENAME"
 if [ -f $CLASS_SRC_FILENAME ]; then
     echo "Class source file already exist"
 else

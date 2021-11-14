@@ -97,6 +97,26 @@ class Array: public IArray, public ICloneable<Array<T>>
             return this->from(arr.cbuf(), arr.capacity());
         }
 
+        bool from_string(const std::string & data, const char *delimiters)
+        {
+            bool ret = true;
+            const std::vector<std::string> splits = Str::split(data, delimiters);
+            this->reserve(splits.size());
+            this->resize(0);
+            for (const std::string & split: splits)
+            {
+                T value;
+                if (Str::convert_from_string<T>(split, value))
+                    this->push_back(value);
+                else
+                {
+                    ret = false;
+                    break ;
+                }
+            }
+            return ret;
+        }
+
         bool assign_bytes(uint8_t *buf, size_t size)
         {
             return this->assign_bytes(buf, size, size);
@@ -168,6 +188,11 @@ class Array: public IArray, public ICloneable<Array<T>>
         std::string hexdump(char delimiter = ' ') const
         {
             return Str::hexdump(_buf_ptr, this->byte_size(), delimiter);
+        }
+
+        void clear()
+        {
+            this->resize(0);
         }
 
         // ICloneable
@@ -354,6 +379,8 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (_buf_ptr != nullptr && _has_ownership)
                 delete[] _buf_ptr;
+            _size = 0;
+            _capacity = 0;
             _buf_ptr = nullptr;
             _has_ownership = false;
         }
@@ -657,6 +684,7 @@ class ArrStr: public ArrChar
         using ArrChar::assign;
         using ArrChar::push_back;
         using ArrChar::from;
+        using ArrChar::from_string;
 
         std::string to_string() const
         {
@@ -742,6 +770,14 @@ class ArrStr: public ArrChar
         {
             return this->from(reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
         }
+
+        bool from_string(const std::string & data, [[maybe_unused]] const char *delimiters = "")
+        {
+            this->delete_buffer();
+            this->push_back(data);
+            return true;
+        }
+
 
 };
 // end of class ArrStr
@@ -925,7 +961,6 @@ class ArrayUtil
         {
             return ArrayUtil::write_array<T>(*uncasted_array, idx, value);
         }
-
 
     private:
         ArrayUtil() {};

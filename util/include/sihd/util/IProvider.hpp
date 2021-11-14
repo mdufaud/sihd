@@ -6,13 +6,13 @@
 namespace sihd::util
 {
 
-template <typename ...T>
+template <typename T>
 class IProvider
 {
     public:
         virtual ~IProvider() {};
         // provides a data
-		virtual bool provide(T... args) = 0;
+		virtual bool provide(T *data) = 0;
         // checks if a data can be provided
         virtual bool provider_empty() const = 0;
         // checks if the provider is still providing

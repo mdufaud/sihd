@@ -53,7 +53,46 @@ class Str
         static bool to_long(const std::string & str, long *ret, uint16_t base = 0);
         static bool to_ulong(const std::string & str, unsigned long *ret, uint16_t base = 0);
         static bool to_double(const std::string & str, double *ret);
+
+        template <typename T>
+        static bool convert_from_string(const std::string & str, T & value, uint16_t base = 0);
 };
+
+template <>
+bool Str::convert_from_string<bool>(const std::string & str, bool & value, uint16_t base);
+
+template <>
+bool Str::convert_from_string<char>(const std::string & str, char & value, uint16_t base);
+
+template <>
+bool Str::convert_from_string<int8_t>(const std::string & str, int8_t & value, uint16_t base);
+
+template <>
+bool Str::convert_from_string<uint8_t>(const std::string & str, uint8_t & value, uint16_t base);
+
+template <>
+bool Str::convert_from_string<int16_t>(const std::string & str, int16_t & value, uint16_t base);
+
+template <>
+bool Str::convert_from_string<uint16_t>(const std::string & str, uint16_t & value, uint16_t base);
+
+template <>
+bool Str::convert_from_string<int32_t>(const std::string & str, int32_t & value, uint16_t base);
+
+template <>
+bool Str::convert_from_string<uint32_t>(const std::string & str, uint32_t & value, uint16_t base);
+
+template <>
+bool Str::convert_from_string<int64_t>(const std::string & str, int64_t & value, uint16_t base);
+
+template <>
+bool Str::convert_from_string<uint64_t>(const std::string & str, uint64_t & value, uint16_t base);
+
+template <>
+bool Str::convert_from_string<float>(const std::string & str, float & value, uint16_t base);
+
+template <>
+bool Str::convert_from_string<double>(const std::string & str, double & value, uint16_t base);
 
 }
 

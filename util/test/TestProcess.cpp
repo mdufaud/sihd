@@ -51,11 +51,12 @@ namespace test
         })
         .stderr_close();
 
-        Worker worker(new Task([&proc]()
+        Task task([&proc] ()
         {
             proc.run();
             return true;
-        }));
+        });
+        Worker worker(&task);
         EXPECT_TRUE(worker.start_worker("proc"));
         usleep(1000);
         LOG(debug, "Kill cat process with ctrl + d")
@@ -78,29 +79,33 @@ namespace test
         })
         .stderr_close();
 
-        Worker worker(new Task([&proc]()
+        Task task([&proc] ()
         {
             proc.run();
             return true;
-        }));
+        });
+        Worker worker(&task);
         worker.start_worker("proc");
-
         usleep(1000);
-        EXPECT_EQ(res.back(), "hello");
-        proc.stdin_from("world");
-        usleep(1000);
-        EXPECT_EQ(res.back(), "world");
-        proc.stdin_from("how");
-        usleep(1000);
-        EXPECT_EQ(res.back(), "how");
-        proc.stdin_from("are");
-        usleep(1000);
-        EXPECT_EQ(res.back(), "are");
-        proc.stdin_from("you");
-        usleep(1000);
-        proc.stop();
-        worker.stop_worker();
-        EXPECT_EQ(res.back(), "you");
+        EXPECT_FALSE(res.empty());
+        if (!res.empty())
+        {
+            EXPECT_EQ(res.back(), "hello");
+            proc.stdin_from("world");
+            usleep(1000);
+            EXPECT_EQ(res.back(), "world");
+            proc.stdin_from("how");
+            usleep(1000);
+            EXPECT_EQ(res.back(), "how");
+            proc.stdin_from("are");
+            usleep(1000);
+            EXPECT_EQ(res.back(), "are");
+            proc.stdin_from("you");
+            usleep(1000);
+            proc.stop();
+            worker.stop_worker();
+            EXPECT_EQ(res.back(), "you");
+        }
     }
 
     TEST_F(TestProcess, test_process_simple)
@@ -232,6 +237,7 @@ namespace test
         Process ls{"ls", "-la"};
         ls.stdout_close().stderr_close();
         EXPECT_TRUE(ls.start());
+        ls.wait_exit();
         EXPECT_TRUE(ls.end());
         EXPECT_TRUE(ls.has_exited());
         // bad file descriptor

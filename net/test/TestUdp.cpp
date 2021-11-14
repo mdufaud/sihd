@@ -50,7 +50,7 @@ namespace test
         });
         receiver.add_observer(&handler);
         receiver.set_poll_timeout(1);
-        sihd::util::Worker worker(new sihd::util::Task(&receiver));
+        sihd::util::Worker worker(&receiver);
         LOG(debug, "Starting receiver");
         EXPECT_TRUE(worker.start_worker("receiver"));
 

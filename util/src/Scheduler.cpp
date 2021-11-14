@@ -50,7 +50,6 @@ bool    Scheduler::start()
     overruns = 0;
     _paused_time = 0;
     _thread = std::thread(&Scheduler::run, this);
-    LOG_DEBUG("Scheduler: started");
     return true;
 }
 
@@ -67,7 +66,6 @@ bool    Scheduler::stop()
     bool ret = _clock_ptr != nullptr && _clock_ptr->stop();
     if (_thread.joinable())
         _thread.join();
-    LOG_DEBUG("Scheduler: stopped");
     return ret;
 }
 
@@ -191,6 +189,7 @@ void    Scheduler::clear_tasks()
         if (pair.second != nullptr)
             delete pair.second;
     }
+    _task_map.clear();
     _waitable.notify_all();
 }
 
@@ -202,6 +201,7 @@ void    Scheduler::_add_to_delete_task(Task *task)
 
 void    Scheduler::_delete_tasks()
 {
+    std::lock_guard l(_mutex_task);
     for (Task *to_remove : _task_rm_list)
     {
         if (to_remove == nullptr)

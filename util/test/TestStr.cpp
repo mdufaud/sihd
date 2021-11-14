@@ -83,6 +83,71 @@ namespace test
             double _dval;
     };
 
+    TEST_F(TestStr, test_str_from_string)
+    {
+        bool b = false;
+        char c;
+        int16_t i16;
+        uint32_t ui32;
+        int64_t i64;
+        float f;
+        double d;
+
+        EXPECT_FALSE(Str::convert_from_string<bool>("", b));
+        EXPECT_FALSE(Str::convert_from_string("", i16));
+        EXPECT_FALSE(Str::convert_from_string("", ui32));
+        EXPECT_FALSE(Str::convert_from_string("", i64));
+        EXPECT_FALSE(Str::convert_from_string("", f));
+        EXPECT_FALSE(Str::convert_from_string("", d));
+
+        EXPECT_TRUE(Str::convert_from_string<bool>("1", b));
+        EXPECT_EQ(b, true);
+        EXPECT_TRUE(Str::convert_from_string<bool>("0", b));
+        EXPECT_EQ(b, false);
+        EXPECT_TRUE(Str::convert_from_string<bool>("true", b));
+        EXPECT_EQ(b, true);
+        EXPECT_TRUE(Str::convert_from_string<bool>("false", b));
+        EXPECT_EQ(b, false);
+        EXPECT_FALSE(Str::convert_from_string<bool>("nope", b));
+        EXPECT_FALSE(Str::convert_from_string<bool>("T", b));
+
+        EXPECT_TRUE(Str::convert_from_string("c", c));
+        EXPECT_EQ(c, 'c');
+        EXPECT_TRUE(Str::convert_from_string("A", c));
+        EXPECT_EQ(c, 'A');
+        EXPECT_FALSE(Str::convert_from_string("Abc", c));
+
+        EXPECT_TRUE(Str::convert_from_string("123", i16));
+        EXPECT_EQ(i16, 123);
+        EXPECT_TRUE(Str::convert_from_string("-321", i16));
+        EXPECT_EQ(i16, -321);
+        // test overflow
+        EXPECT_TRUE(Str::convert_from_string("32768", i16));
+        EXPECT_EQ(i16, -32768);
+
+        EXPECT_TRUE(Str::convert_from_string("1000", ui32));
+        EXPECT_EQ(ui32, 1000u);
+        // test overflow
+        EXPECT_TRUE(Str::convert_from_string("-1", ui32));
+        EXPECT_EQ(ui32, 4294967295u);
+
+        EXPECT_TRUE(Str::convert_from_string("100", i64));
+        EXPECT_EQ(i64, 100);
+        EXPECT_TRUE(Str::convert_from_string("-1", i64));
+        EXPECT_EQ(i64, -1);
+
+        EXPECT_TRUE(Str::convert_from_string("0.1", f));
+        EXPECT_FLOAT_EQ(f, 0.1);
+        EXPECT_TRUE(Str::convert_from_string("123.456", f));
+        EXPECT_FLOAT_EQ(f, 123.456);
+
+        EXPECT_TRUE(Str::convert_from_string("0.01", d));
+        EXPECT_FLOAT_EQ(d, 0.01);
+        EXPECT_TRUE(Str::convert_from_string("123.456", d));
+        EXPECT_FLOAT_EQ(d, 123.456);
+
+    }
+
     TEST_F(TestStr, test_str_tonumber)
     {
         // long

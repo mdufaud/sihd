@@ -14,14 +14,10 @@ Worker::Worker(IRunnable *runnable): _runnable_ptr(nullptr), _running(false)
 Worker::~Worker()
 {
     this->stop_worker();
-    if (_runnable_ptr != nullptr)
-        delete _runnable_ptr;
 }
 
 void    Worker::set_runnable(IRunnable *runnable)
 {
-    if (_runnable_ptr != nullptr)
-        delete _runnable_ptr;
     _runnable_ptr = runnable;
 }
 

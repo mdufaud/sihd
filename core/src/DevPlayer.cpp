@@ -13,19 +13,22 @@ SIHD_UTIL_REGISTER_FACTORY(DevPlayer)
 
 LOGGER;
 
+using namespace sihd::util;
+
 DevPlayer::DevPlayer(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
     _running(false),
-    _provider_ptr(nullptr),
     _channel_play_ptr(nullptr),
     _channel_end_ptr(nullptr)
 {
-    this->set_provider_wait_time(10);
-    _records_queue_limit = 20;
-    _worker.set_runnable(new sihd::util::Task([this] () -> bool
+    _task.set_method([this] () -> bool
     {
         return this->_worker_loop();
-    }));
+    });
+    _worker.set_runnable(&_task);
+    _collector.add_observer(this);
+    this->set_provider_wait_time(10);
+    this->set_scheduler_queue_size(20);
     this->add_conf("provider", &DevPlayer::set_provider);
     this->add_conf("provider_wait_time", &DevPlayer::set_provider_wait_time);
     this->add_conf("queue_size", &DevPlayer::set_scheduler_queue_size);
@@ -60,13 +63,13 @@ bool    DevPlayer::set_provider_wait_time(time_t milliseconds)
         LOG(error, "DevPlayer: cannot wait for " << milliseconds << " milliseconds");
         return false;
     }
-    _provider_wait_milliseconds = sihd::util::time::milli(milliseconds);
+    _collector.set_timeout_milliseconds(milliseconds);
     return true;
 }
 
 bool    DevPlayer::add_alias(const std::string & alias_conf)
 {
-    std::vector<std::string> conf = sihd::util::Str::split(alias_conf, "=");
+    std::vector<std::string> conf = Str::split(alias_conf, "=");
 
     if (conf.size() != 2)
     {
@@ -93,26 +96,30 @@ void    DevPlayer::handle(sihd::core::Channel *c)
 
 bool    DevPlayer::on_init()
 {
-    _provider_ptr = this->find<sihd::util::IProvider<PlayableRecord &>>(_provider_path);
-    if (_provider_ptr == nullptr)
-    {
-        LOG(error, "DevReplayer: could not find provider: " << _provider_path);
-        return false;
-    }
-    this->add_unlinked_channel(CHANNEL_PLAY, sihd::util::DBOOL, 1);
-    this->add_unlinked_channel(CHANNEL_END, sihd::util::DBOOL, 1);
-    _scheduler_ptr = this->add_child<sihd::util::Scheduler>("scheduler");
+    this->add_unlinked_channel(CHANNEL_PLAY, DBOOL, 1);
+    this->add_unlinked_channel(CHANNEL_END, DBOOL, 1);
+    _scheduler_ptr = this->add_child<Scheduler>("scheduler");
     return true;
 }
 
 bool    DevPlayer::on_start()
 {
+    // provider
+    IProvider<PlayableRecord> *provider = this->find<IProvider<PlayableRecord>>(_provider_path);
+    if (provider == nullptr)
+    {
+        LOG(error, "DevReplayer: could not find provider: " << _provider_path);
+        return false;
+    }
+    _collector.set_provider(provider);
+    // channel.play
     if (this->get_channel(CHANNEL_PLAY, &_channel_play_ptr) == false)
         return false;
     this->observe_channel(_channel_play_ptr);
+    // channel end
     if (this->get_channel(CHANNEL_END, &_channel_end_ptr) == false)
         return false;
-
+    // channels to play to
     Channel *channel_ptr;
     for (const auto & pair: _map_channels_alias)
     {
@@ -125,7 +132,7 @@ bool    DevPlayer::on_start()
         }
         _map_channels[pair.first] = channel_ptr;
     }
-
+    // check if must play
     if (_channel_play_ptr->read<bool>(0) == false)
         _scheduler_ptr->pause();
     if (_scheduler_ptr->start() == false)
@@ -133,6 +140,7 @@ bool    DevPlayer::on_start()
         LOG(error, "DevReplayer: could not start scheduler");
         return false;
     }
+    // start thread
     if (_worker.start_worker(this->get_name()) == false)
     {
         _scheduler_ptr->stop();
@@ -154,6 +162,8 @@ bool    DevPlayer::run()
     Channel *c = _map_channels[record.name];
     if (c != nullptr)
         c->write(*record.value);
+    else
+        LOG(error, "DevPlayer: channel '" << record.name << "' not found");
     // notify worker loop that a record has been played
     _waitable.notify(1);
     // if no next record to be played - notify the end of player
@@ -162,44 +172,31 @@ bool    DevPlayer::run()
     return true;
 }
 
+void    DevPlayer::handle(Collector<PlayableRecord> *collector)
+{
+    PlayableRecord record = collector->data();
+    _queue.push(record);
+    _first_timestamp = record.timestamp * (1 * _first_timestamp < 0);
+    time_t execute_at = _time_begin + (record.timestamp - _first_timestamp);
+    // wait tasks to be played as not to overflow the scheduler
+    while (_running && (_queue.size() > _records_queue_limit))
+        _waitable.infinite_wait();
+    if (_running)
+        _scheduler_ptr->add_task(new Task(this, execute_at));
+}
+
 bool    DevPlayer::_worker_loop()
 {
-    PlayableRecord record;
-    time_t begin = _scheduler_ptr->get_clock()->now();
-    time_t first = -1;
-    time_t execute_at;
+    _time_begin = _scheduler_ptr->get_clock()->now();
+    _first_timestamp = -1;
     _last_record = false;
-    while (_running)
-    {
-        // wait for a data
-        while (_running && _provider_ptr->providing() && _provider_ptr->provider_empty())
-            _provider_ptr->provider_wait_for_data(_provider_wait_milliseconds);
-        if (_running == false || _provider_ptr->providing() == false)
-            break ;
-        // lock and get data
-        {
-            _provider_ptr->provider_lock_guard();
-            if (_provider_ptr->provide(record) == false)
-                continue ;
-        }
-        // push new record to be played by the scheduler thread in this->run
-        _queue.push(record);
-        if (first < 0)
-            first = record.timestamp;
-        execute_at = begin + (record.timestamp - first);
-        // wait tasks to be played as not to overflow the scheduler
-        while (_running && (_queue.size() > _records_queue_limit))
-            _waitable.infinite_wait();
-        if (_running == false)
-            break ;
-        _scheduler_ptr->add_task(new sihd::util::Task(this, execute_at));
-    }
+    bool ret = _collector.run();
     // last record to be played in scheduler thread can have no next record
     _last_record = true;
     // if no task in queue - notify end of player
     if (_queue.empty())
         _channel_end_ptr->notify();
-    return true;
+    return ret;
 }
 
 bool    DevPlayer::on_stop()
@@ -215,6 +212,8 @@ bool    DevPlayer::on_stop()
         LOG(error, "DevReplayer: could not stop scheduler");
     _channel_play_ptr = nullptr;
     _channel_end_ptr = nullptr;
+    _collector.wait_stop();
+    _collector.set_provider(nullptr);
     _map_channels.clear();
     return true;
 }

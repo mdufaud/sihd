@@ -1,5 +1,6 @@
 #include <sihd/util/Poll.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/OS.hpp>
 
 // sterror errno
 #include <string.h>
@@ -118,19 +119,7 @@ void    Poll::resize(int nfds)
 bool    Poll::set_max_fds(int limit)
 {
     if (limit < 0)
-    {
-#if !defined(__SIHD_WINDOWS__)
-        struct rlimit r;
-        if (getrlimit(RLIMIT_NOFILE, &r) == -1)
-        {
-            LOG(error, "Poll: " << strerror(errno));
-            return false;
-        }
-        _max_fds = r.rlim_cur;
-# else
-        _max_fds = 512;
-# endif
-    }
+        _max_fds = OS::get_max_fds();
     else
         _max_fds = limit;
     return true;

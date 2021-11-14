@@ -45,6 +45,22 @@ namespace test
             IArray *_array_ptr;
     };
 
+    TEST_F(TestArray, test_array_from_string)
+    {
+        ArrInt arr_int;
+        EXPECT_TRUE(arr_int.from_string("10,20,30", ","));
+        EXPECT_EQ(arr_int.size(), 3u);
+        EXPECT_EQ(arr_int[0], 10);
+        EXPECT_EQ(arr_int[1], 20);
+        EXPECT_EQ(arr_int[2], 30);
+        EXPECT_FALSE(arr_int.from_string("a,b,c", ","));
+        EXPECT_EQ(arr_int.size(), 0u);
+
+        ArrStr arr_str;
+        arr_str.from_string("hello world");
+        EXPECT_EQ(arr_str.to_string(), "hello world");
+    }
+
     TEST_F(TestArray, test_array_iterator_for)
     {
         ArrInt arr = {10, 20, 30, 40};

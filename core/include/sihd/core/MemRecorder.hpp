@@ -6,12 +6,13 @@
 # include <sihd/core/Channel.hpp>
 # include <sihd/core/Records.hpp>
 # include <sihd/core/ACoreObject.hpp>
+# include <nlohmann/json.hpp>
 
 namespace sihd::core
 {
 
 class MemRecorder:  public ACoreObject,
-                    public sihd::util::AProvider<PlayableRecord &>,
+                    public sihd::util::AProvider<PlayableRecord>,
                     public sihd::util::IHandler<const std::string &, const Channel *>
 {
     public:
@@ -31,10 +32,11 @@ class MemRecorder:  public ACoreObject,
         void add_record(const std::string & name, time_t timestamp, const sihd::util::IArray *array);
         void add_records(const std::vector<PlayableRecord> & records);
         void add_records(const std::list<PlayableRecord> & records);
+        bool add_json_records(const nlohmann::json & json);
 
         bool provider_empty() const override;
         bool providing() const override;
-        bool provide(PlayableRecord & value) override;
+        bool provide(PlayableRecord *value) override;
         void handle(const std::string & name, const Channel *array) override;
 
         std::string hexdump_records();
@@ -45,6 +47,9 @@ class MemRecorder:  public ACoreObject,
         const SortedRecordedValues get_sorted_recorded_values() const { return _map_sorted_records; }
 
     private:
+        bool _check_json_string(const nlohmann::json & json, const std::string & key);
+        bool _check_json_integer(const nlohmann::json & json, const std::string & key);
+
         bool _provides;
         bool _records;
 

@@ -11,6 +11,7 @@ namespace sihd::util
 class Task: public IRunnable
 {
     public:
+        Task();
         Task(IRunnable *to_run,
                 std::time_t timestamp_to_run = 0,
                 std::time_t reschedule_every = 0);
@@ -19,14 +20,16 @@ class Task: public IRunnable
                 std::time_t reschedule_every = 0);
         virtual ~Task();
 
+        bool run();
+        void set_method(std::function<bool(void)> fun);
+        void set_runnable(IRunnable *to_run);
+
         std::time_t run_at;
         std::time_t resched_time;
 
-        virtual bool    run();
-
     private:
-        IRunnable   *_runnable_ptr;
-        std::function<bool(void)>   _run_method;
+        IRunnable *_runnable_ptr;
+        std::function<bool(void)> _run_method;
 };
 
 }

@@ -5,7 +5,7 @@
 # include <stdexcept>
 # include <sihd/util/Datatype.hpp>
 # include <sihd/util/Array.hpp>
-# include <sihd/util/OrderedNode.hpp>
+# include <sihd/util/Node.hpp>
 # include <sihd/util/Logger.hpp>
 # include <sihd/util/IMessageField.hpp>
 # include <sihd/util/MessageField.hpp>
@@ -13,7 +13,7 @@
 namespace sihd::util
 {
 
-class Message:  public sihd::util::OrderedNode,
+class Message:  public sihd::util::Node,
                 public IMessageField
 {
     public:

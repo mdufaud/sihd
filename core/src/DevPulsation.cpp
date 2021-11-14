@@ -13,13 +13,20 @@ SIHD_UTIL_REGISTER_FACTORY(DevPulsation)
 LOGGER;
 
 DevPulsation::DevPulsation(const std::string & name, sihd::util::Node *parent):
-    sihd::core::Device(name, parent), _running(false), _channel_heartbeat_ptr(nullptr)
+    sihd::core::Device(name, parent),
+    _running(false),
+    _frequency(0.0),
+    _scheduler("scheduler", this),
+    _channel_heartbeat_ptr(nullptr),
+    _channel_activate_ptr(nullptr)
 {
+    _scheduler.set_parent_ownership(false);
     this->add_conf("frequency", &DevPulsation::set_frequency);
 }
 
 DevPulsation::~DevPulsation()
 {
+    _scheduler.stop();
 }
 
 bool    DevPulsation::is_running() const
@@ -43,9 +50,9 @@ void    DevPulsation::handle(sihd::core::Channel *c)
     if (c == _channel_activate_ptr)
     {
         if (c->read<bool>(0) == true)
-            _scheduler_ptr->resume();
+            _scheduler.resume();
         else
-            _scheduler_ptr->pause();
+            _scheduler.pause();
     }
 }
 
@@ -63,7 +70,6 @@ bool    DevPulsation::run()
 
 bool    DevPulsation::on_init()
 {
-    _scheduler_ptr = new sihd::util::Scheduler("scheduler", this);
     this->add_unlinked_channel(CHANNEL_HEART, sihd::util::DUINT, 1);
     this->add_unlinked_channel(CHANNEL_ACTIVATE, sihd::util::DBOOL, 1);
     return true;
@@ -83,13 +89,13 @@ bool    DevPulsation::on_start()
         return false;
     this->observe_channel(_channel_activate_ptr);
     if (_channel_activate_ptr->read<bool>(0) == false)
-        _scheduler_ptr->pause();
-    if (_scheduler_ptr->start() == false)
+        _scheduler.pause();
+    if (_scheduler.start() == false)
     {
         LOG(error, "DevPulsation: could not start scheduler");
         return false;
     }
-    _scheduler_ptr->add_task(new sihd::util::Task(this, 0, sihd::util::time::freq(_frequency)));
+    _scheduler.add_task(new sihd::util::Task(this, 0, sihd::util::time::freq(_frequency)));
     _running = true;
     return true;
 }
@@ -100,7 +106,7 @@ bool    DevPulsation::on_stop()
         std::lock_guard l(_mutex);
         _running = false;
     }
-    if (_scheduler_ptr->stop() == false)
+    if (_scheduler.stop() == false)
     {
         LOG(error, "DevPulsation: could not stop scheduler");
         return false;
@@ -110,7 +116,7 @@ bool    DevPulsation::on_stop()
 
 bool    DevPulsation::on_reset()
 {
-    _scheduler_ptr = nullptr;
+    _scheduler.clear_tasks();
     return true;
 }
 

@@ -30,7 +30,7 @@ void    AtExit::remove_handler(IRunnable *ptr)
 void    AtExit::clear_handlers()
 {
     std::lock_guard lock(runnable_mutex);
-    for (IRunnable *runnable : runnables)
+    for (IRunnable *runnable: runnables)
     {
         delete runnable;
     }
@@ -42,7 +42,7 @@ void    AtExit::exit_callback()
 {
     if (installed == false)
         return ;
-    for (IRunnable *runnable : runnables)
+    for (IRunnable *runnable: runnables)
     {
         try
         {

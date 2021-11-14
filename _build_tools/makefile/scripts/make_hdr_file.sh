@@ -24,7 +24,7 @@ MODULE_NAME=$2
 CLASS_NAME=$3
 CLASS_HDR_FILENAME=$MODULE_NAME/include/$APP_NAME/$MODULE_NAME/$3.hpp
 
-echo "Making new class $CLASS_NAME for module $MODULE_NAME"
+echo "Making new class $CLASS_NAME for module $MODULE_NAME: $CLASS_HDR_FILENAME"
 
 if [ -f $CLASS_HDR_FILENAME ]; then
     echo "Class header file already exist"

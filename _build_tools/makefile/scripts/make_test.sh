@@ -22,7 +22,7 @@ MODULE_NAME=$2
 TEST_NAME=$3
 TEST_FILENAME=$MODULE_NAME/test/Test$3.cpp
 
-echo "Making new test $TEST_NAME for module $MODULE_NAME"
+echo "Making new test $TEST_NAME for module $MODULE_NAME: $TEST_FILENAME"
 if [ -f TEST_FILENAME ]; then
     echo "Test already exist"
     exit 1

@@ -51,6 +51,7 @@ class Node:   public Named
 
         struct  ChildEntry
         {
+            std::string name;
             Named *obj;
             bool ownership;
         };
@@ -123,7 +124,7 @@ class Node:   public Named
         void print_tree(TreeOpts opts) const;
 
         const std::map<std::string, ChildEntry *> & get_children() const;
-        virtual std::vector<std::string> get_children_keys() const;
+        const std::vector<std::string> & get_children_keys() const;
         
     protected:
         virtual bool _check_link(const std::string & name, Named *child);
@@ -139,6 +140,7 @@ class Node:   public Named
         virtual void _add_tree_desc(std::stringstream & ss, const TreeOpts & opts, const Named *child) const;
 
     private:
+        std::vector<std::string> _children_keys;
         std::map<std::string, ChildEntry *> _children_map;
         std::map<std::string, std::string> _link_map;
 };

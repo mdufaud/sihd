@@ -41,30 +41,27 @@ namespace test
         ArrInt array = {1, 2, 3};
 
         ArrayProvider provider(&array);
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, array.at(0));
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, array.at(1));
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, array.at(2));
-        EXPECT_FALSE(provider.provide(value));
+        EXPECT_FALSE(provider.provide(&value));
         EXPECT_EQ(value, array.at(2));
     }
 
     TEST_F(TestProviders, test_provider_fun)
     {
-        FunctionProvider<int &, int *> provider([] (int & a, int *b) -> bool
+        FunctionProvider<int> provider([] (int *a) -> bool
         {
-            a = 10;
-            *b = 20;
+            *a = 10;
             return true;
         });
 
-        int a;
-        int b;
-        EXPECT_TRUE(provider.provide(a, &b));
+        int a = 0;
+        EXPECT_TRUE(provider.provide(&a));
         EXPECT_EQ(a, 10);
-        EXPECT_EQ(b, 20);
     }
 
     TEST_F(TestProviders, test_provider_struct)
@@ -76,10 +73,10 @@ namespace test
         };
 
         VectorProvider<TestStruct> provider(&lst);
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value.size, lst[0].size);
         EXPECT_EQ(value.str, lst[0].str);
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value.size, lst[1].size);
         EXPECT_EQ(value.str, lst[1].str);
     }
@@ -91,15 +88,15 @@ namespace test
         std::list<int>::iterator it = lst.begin();
 
         ListProvider<int> provider(&lst);
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, *it);
         ++it;
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, *it);
         ++it;
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, *it);
-        EXPECT_FALSE(provider.provide(value));
+        EXPECT_FALSE(provider.provide(&value));
         EXPECT_EQ(value, *it);
     }
 
@@ -109,30 +106,30 @@ namespace test
         std::vector<int> lst = {1, 2, 3, 4};
 
         VectorProvider<int> provider(&lst);
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, lst.at(0));
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, lst.at(1));
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, lst.at(2));
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, lst.at(3));
 
-        EXPECT_FALSE(provider.provide(value));
+        EXPECT_FALSE(provider.provide(&value));
         EXPECT_EQ(value, lst.at(3));
-        EXPECT_FALSE(provider.provide(value));
+        EXPECT_FALSE(provider.provide(&value));
         EXPECT_EQ(value, lst.at(3));
 
         std::vector<int> lst2 = {10, 20};
         provider.set_iterator(&lst2);
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, lst2.at(0));
-        EXPECT_TRUE(provider.provide(value));
+        EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, lst2.at(1));
 
-        EXPECT_FALSE(provider.provide(value));
+        EXPECT_FALSE(provider.provide(&value));
         EXPECT_EQ(value, lst2.at(1));
-        EXPECT_FALSE(provider.provide(value));
+        EXPECT_FALSE(provider.provide(&value));
         EXPECT_EQ(value, lst2.at(1));
     }
 }

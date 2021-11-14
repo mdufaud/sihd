@@ -7,6 +7,8 @@
 # include <sihd/util/Scheduler.hpp>
 # include <sihd/util/Worker.hpp>
 # include <sihd/util/IProvider.hpp>
+# include <sihd/util/Collector.hpp>
+# include <sihd/util/IHandler.hpp>
 
 # include <queue>
 
@@ -14,6 +16,7 @@ namespace sihd::core
 {
 
 class DevPlayer:    public sihd::core::Device,
+                    public sihd::util::IHandler<sihd::util::Collector<PlayableRecord> *>,
                     public sihd::util::IRunnable
 {
     public:
@@ -30,6 +33,7 @@ class DevPlayer:    public sihd::core::Device,
 
     protected:
         void handle([[maybe_unused]] sihd::core::Channel *c) override;
+        void handle(sihd::util::Collector<PlayableRecord> *collector);
 
         bool on_init() override;
         bool on_start() override;
@@ -41,23 +45,33 @@ class DevPlayer:    public sihd::core::Device,
 
         bool _running;
         bool _last_record;
+        size_t _records_queue_limit;
+        std::string _provider_path;
 
         std::mutex _run_mutex;
-        size_t _records_queue_limit;
-        time_t _provider_wait_milliseconds;
 
-        std::string _provider_path;
-        sihd::util::IProvider<PlayableRecord &> *_provider_ptr;
-        std::queue<PlayableRecord> _queue;
-
-        std::map<std::string, Channel *> _map_channels;
-        std::map<std::string, std::string> _map_channels_alias;
         Channel *_channel_play_ptr;
         Channel *_channel_end_ptr;
-
         sihd::util::Scheduler *_scheduler_ptr;
-        sihd::util::Worker _worker;
+
+        // channels to write records to
+        std::map<std::string, Channel *> _map_channels;
+        // channels to write configuration
+        std::map<std::string, std::string> _map_channels_alias;
+
+        time_t _time_begin;
+        time_t _first_timestamp;
+
+        // queue to pass data between scheduler thread and worker thread
+        std::queue<PlayableRecord> _queue;
+        // notifies scheduler task has played
         sihd::util::Waitable _waitable;
+        // provider reading thread
+        sihd::util::Worker _worker;
+        // collects records from provider
+        sihd::util::Collector<PlayableRecord> _collector;
+
+        sihd::util::Task _task;
 };
 
 }

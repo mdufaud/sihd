@@ -33,9 +33,9 @@ class DevPulsation: public sihd::core::Device,
         bool _running;
         double _frequency;
         uint32_t _beats;
+        sihd::util::Scheduler _scheduler;
         Channel *_channel_heartbeat_ptr;
         Channel *_channel_activate_ptr;
-        sihd::util::Scheduler *_scheduler_ptr;
         std::mutex _mutex;
 };
 

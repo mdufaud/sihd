@@ -53,7 +53,29 @@ namespace test
             LOG(debug, "Activated pulsation");
             // wait for 4 pulsation in 6 ms
             ChannelWaiter waiter(beat);
-            EXPECT_FALSE(waiter.wait_for(sihd::util::time::milli(6), 4));
+            EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(6), 4));
+        }
+        EXPECT_TRUE(core.stop());
+        EXPECT_TRUE(core.reset());
+
+        // try reset
+        DevPulsation dev2("pulsation", &core);
+        dev2.set_parent_ownership(false);
+        EXPECT_TRUE(dev2.set_conf("frequency", 1000.0));
+        EXPECT_TRUE(core.init());
+        EXPECT_TRUE(core.start());
+
+        activate = dev2.get_channel("activate");
+        beat = dev2.get_channel("heartbeat");
+        EXPECT_NE(activate, nullptr);
+        EXPECT_NE(beat, nullptr);
+        if (activate != nullptr && beat != nullptr)
+        {
+            activate->write(0, true);
+            LOG(debug, "Activated pulsation");
+            // wait for 4 pulsation in 6 ms
+            ChannelWaiter waiter(beat);
+            EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(6), 4));
         }
         EXPECT_TRUE(core.stop());
         EXPECT_TRUE(core.reset());
