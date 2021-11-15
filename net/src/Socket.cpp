@@ -66,20 +66,20 @@ Socket::~Socket()
     this->close();
 }
 
-void    Socket::_clear_socket_info()
-{
-    _domain = -1;
-    _type = -1;
-    _protocol = -1;
-    _socket = -1;
-}
-
 void    Socket::_init()
 {
     this->_clear_socket_info();
     _rcv_flags = 0;
     _send_flags = 0;
     _verbose = false;
+}
+
+void    Socket::_clear_socket_info()
+{
+    _domain = -1;
+    _type = -1;
+    _protocol = -1;
+    _socket = -1;
 }
 
 bool    Socket::set_socket_reuseaddr(int socket, bool active)
@@ -422,7 +422,7 @@ bool    Socket::send_all(const void *data, size_t size)
     ssize_t ret;
     size_t sent = 0;
 
-    while (sent <= size)
+    while (sent < size)
     {
         ret = this->send((char *)data + sent, size - sent);
         if (ret <= 0)
@@ -465,7 +465,7 @@ bool    Socket::send_all_to(const sockaddr *addr, socklen_t addr_len, const void
     ssize_t ret;
     size_t sent = 0;
 
-    while (sent <= size)
+    while (sent < size)
     {
         ret = this->send_to(addr, addr_len, (char *)data + sent, size - sent);
         if (ret <= 0)
@@ -531,7 +531,7 @@ bool    Socket::send_all_to_unix(const std::string & path, const void *data, siz
     strcpy(addr.sun_path, path.c_str());
     size_t sun_len = SUN_LEN(&addr);
 
-    while (sent <= size)
+    while (sent < size)
     {
         ret = this->send_to((sockaddr *)&addr, sun_len, (char *)data + sent, size - sent);
         if (ret <= 0)

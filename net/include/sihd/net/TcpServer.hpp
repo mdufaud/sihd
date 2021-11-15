@@ -33,7 +33,7 @@ class TcpServer:    public INetServer,
         bool close();
 
         // inetserver
-        bool serve(size_t max_co);
+        bool serve();
         bool stop_serving();
         int accept_client(IpAddr *client_ip = nullptr);
 		bool add_client_read(int socket);
@@ -47,8 +47,9 @@ class TcpServer:    public INetServer,
         bool stop();
         bool is_running() const { return _poll.is_running(); }
 
-        bool set_max_connections(size_t maxco);
+        bool set_queue_size(size_t size);
         bool set_poll_timeout(int milliseconds);
+        bool set_poll_limit(int limit);
 
         void set_server_handler(INetServerHandler *handler);
 
@@ -56,17 +57,17 @@ class TcpServer:    public INetServer,
         const Socket & socket() const { return _socket; }
         // waitable is notified when a packet comes
         sihd::util::Waitable & waitable() { return _waitable; }
-        size_t max_connections() const { return _max_connections; }
+        size_t queue_size() const { return _queue_size; }
 
     protected:
-    
-    private:
         void handle(sihd::util::Poll *poll);
+        
+    private:
         void _init();
-        void _setup_poll(size_t maxco);
+        void _setup_poll();
 
         Socket _socket;
-        size_t _max_connections;
+        size_t _queue_size;
         std::mutex _poll_mutex;
         sihd::util::Poll _poll;
         sihd::util::Waitable _waitable;

@@ -14,6 +14,7 @@ class ObserverWaiter: public IHandler<T *>
     public:
         ObserverWaiter(Observable<T> *obs): _obs_ptr(obs)
         {
+            notifications = 0;
             obs->add_observer(this);
         }
         virtual ~ObserverWaiter()
@@ -23,6 +24,7 @@ class ObserverWaiter: public IHandler<T *>
 
         void handle([[maybe_unused]] T *obj)
         {
+            ++notifications;
             _waitable.notify(1);
         }
 
@@ -36,6 +38,8 @@ class ObserverWaiter: public IHandler<T *>
             // waitable returns true when timed out
             return _waitable.wait_loop(nano, notifications) == false;
         }
+
+        time_t notifications;
 
     protected:
     

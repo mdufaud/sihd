@@ -6,6 +6,11 @@ namespace sihd::net
 
 LOGGER;
 
+TcpClient::TcpClient()
+{
+    this->_init();
+}
+
 TcpClient::TcpClient(bool ipv6)
 {
     this->_init();
@@ -43,6 +48,17 @@ bool    TcpClient::connect(const IpAddr & addr)
     return _socket.connect(addr);
 }
 
+bool    TcpClient::connect(const std::string & ip, int port)
+{
+    IpAddr addr(ip, port, true);
+    return this->connect(addr);
+}
+
+bool    TcpClient::connect(const std::string & path)
+{
+    return _socket.connect_unix(path); 
+}
+
 bool    TcpClient::close()
 {
     _poll.clear_fds();
@@ -66,11 +82,11 @@ bool    TcpClient::open_socket(bool ipv6)
 
 void    TcpClient::_init()
 {
-    this->add_conf("poll_timeout", &TcpClient::set_poll_timeout);
     _array_owned = false;
     _poll_timeout_milliseconds = -1;
-    _poll.set_max_fds(1);
+    _poll.set_limit(1);
     _poll.add_observer(this);
+    this->add_conf("poll_timeout", &TcpClient::set_poll_timeout);
 }
 
 bool    TcpClient::stop()

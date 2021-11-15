@@ -25,7 +25,7 @@ Poll::Poll()
 Poll::Poll(int limit)
 {
     this->_init();
-    this->set_max_fds(limit);
+    this->set_limit(limit);
 }
 
 Poll::~Poll()
@@ -44,7 +44,7 @@ void    Poll::_init()
     _error = false;
 }
 
-int     Poll::_set_or_add_fd(int fd, short evt)
+int     Poll::_get_or_add_fd(int fd)
 {
     if (fd < 0)
         return -1;
@@ -70,17 +70,11 @@ int     Poll::_set_or_add_fd(int fd, short evt)
     {
         // add new entry
         struct pollfd p;
-        p.fd = fd;
-        p.events = evt;
+        p.fd = -1;
+        p.events = 0;
         p.revents = 0;
         _lst_fds.push_back(p);
         idx = i;
-    }
-    else if (idx >= 0)
-    {
-        // set entry
-        _lst_fds[idx].fd = fd;
-        _lst_fds[idx].events = evt;
     }
     return idx;
 }
@@ -116,7 +110,7 @@ void    Poll::resize(int nfds)
     }
 }
 
-bool    Poll::set_max_fds(int limit)
+bool    Poll::set_limit(int limit)
 {
     if (limit < 0)
         _max_fds = OS::get_max_fds();
@@ -164,7 +158,7 @@ size_t  Poll::write_fds_size()
     size_t i = 0;
     while (i < _lst_fds.size())
     {
-        ret += 1 * (_lst_fds[i].events == POLLOUT);
+        ret += 1 * (_lst_fds[i].events & POLLOUT);
         ++i;
     }
     return ret;
@@ -172,12 +166,44 @@ size_t  Poll::write_fds_size()
 
 bool    Poll::set_read_fd(int fd)
 {
-    return this->_set_or_add_fd(fd, POLLIN) >= 0;
+    int idx = this->_get_or_add_fd(fd);
+    if (idx >= 0)
+    {
+        _lst_fds[idx].fd = fd;
+        _lst_fds[idx].events |= POLLIN;
+    }
+    return idx >= 0;
 }
 
 bool    Poll::set_write_fd(int fd)
 {
-    return this->_set_or_add_fd(fd, POLLOUT) >= 0;
+    int idx = this->_get_or_add_fd(fd);
+    if (idx >= 0)
+    {
+        _lst_fds[idx].fd = fd;
+        _lst_fds[idx].events |= POLLOUT;
+    }
+    return idx >= 0;
+}
+
+bool    Poll::remove_read_fd(int fd)
+{
+    int idx = this->_get_or_add_fd(fd);
+    if (idx >= 0)
+    {
+        _lst_fds[idx].events = (_lst_fds[idx].events & ~(POLLIN));
+    }
+    return idx >= 0;
+}
+
+bool    Poll::remove_write_fd(int fd)
+{
+    int idx = this->_get_or_add_fd(fd);
+    if (idx >= 0)
+    {
+        _lst_fds[idx].events = (_lst_fds[idx].events & ~(POLLOUT));
+    }
+    return idx >= 0;
 }
 
 void    Poll::set_timeout(int milliseconds)
@@ -250,16 +276,11 @@ void    Poll::_process(int poll_return)
             if (revt != 0)
             {
                 PollEvent evt;
-
                 evt.fd = fd;
-                if (revt & POLLHUP)
-                    evt.closed = true;
-                if (revt & (POLLNVAL | POLLERR))
-                    evt.error = true;
-                if (revt & (POLLIN | POLLPRI))
-                    evt.readable = true;
-                if (revt & POLLOUT)
-                    evt.writable = true;
+                evt.closed = revt & POLLHUP;
+                evt.error = revt & (POLLNVAL | POLLERR);
+                evt.readable = revt & (POLLIN | POLLPRI);
+                evt.writable = revt & POLLOUT;
                 --poll_return;
                 _lst_events.push_back(evt);
             }

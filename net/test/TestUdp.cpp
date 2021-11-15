@@ -41,6 +41,7 @@ namespace test
         IpAddr localhost("127.0.0.1", 4242);
         UdpSender sender(localhost);
         UdpReceiver receiver(localhost);
+        sihd::util::ObserverWaiter obs(&receiver);
 
         ssize_t receive_ret = -1;
         sihd::util::Handler<INetReceiver *> handler([&receive_ret, &array_rcv] (INetReceiver *rcv)
@@ -54,13 +55,13 @@ namespace test
         LOG(debug, "Starting receiver");
         EXPECT_TRUE(worker.start_worker("receiver"));
 
-        sihd::util::ObserverWaiter obs(&receiver);
+        usleep(1000);
+
         LOG(debug, "Sending: " << array_send.to_string(',') << " (" << array_send.byte_size() << " bytes)");
         EXPECT_EQ(sender.send(array_send), (ssize_t)array_send.byte_size());
-        LOG(debug, "Sent & wait");
-        EXPECT_TRUE(obs.wait_for(sihd::util::time::sec(1)));
-        LOG(debug, "Waited");
 
+        usleep(1000);
+        
         EXPECT_TRUE(array_rcv.is_equal(array_send));
 
         receiver.stop();

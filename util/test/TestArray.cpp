@@ -53,12 +53,29 @@ namespace test
         EXPECT_EQ(arr_int[0], 10);
         EXPECT_EQ(arr_int[1], 20);
         EXPECT_EQ(arr_int[2], 30);
+        LOG(debug, arr_int.to_string(','));
+
+        ArrInt arr2;
+        EXPECT_TRUE(arr2.from_string(arr_int.to_string(','), ","));
+        EXPECT_TRUE(arr2.is_equal(arr_int));
+        LOG(debug, arr2.to_string(','));
+
         EXPECT_FALSE(arr_int.from_string("a,b,c", ","));
         EXPECT_EQ(arr_int.size(), 0u);
+
+        ArrFloat arr_float;
+        EXPECT_TRUE(arr_float.from_string("123.456,22.1,33.2,44.3", ","));
+        EXPECT_EQ(arr_float.size(), 4u);
+        EXPECT_FLOAT_EQ(arr_float[0], 123.456);
+        EXPECT_FLOAT_EQ(arr_float[1], 22.1);
+        EXPECT_FLOAT_EQ(arr_float[2], 33.2);
+        EXPECT_FLOAT_EQ(arr_float[3], 44.3);
+        LOG(debug, arr_float.to_string(','));
 
         ArrStr arr_str;
         arr_str.from_string("hello world");
         EXPECT_EQ(arr_str.to_string(), "hello world");
+        LOG(debug, arr_str.to_string());
     }
 
     TEST_F(TestArray, test_array_iterator_for)

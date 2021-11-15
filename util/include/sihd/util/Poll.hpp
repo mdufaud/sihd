@@ -40,13 +40,15 @@ class Poll: public IStoppableRunnable, public Observable<Poll>
         // can size the poll array in advance
         void resize(int nfds);
         // if limit is negative, look for the soft curr rlimit for RLIMIT_NOFILE
-        bool set_max_fds(int limit);
+        bool set_limit(int limit);
         int max_fds() { return _max_fds; };
 
         void clear_fds();
         bool clear_fd(int fd);
         bool set_read_fd(int fd);
         bool set_write_fd(int fd);
+        bool remove_write_fd(int fd);
+        bool remove_read_fd(int fd);
         void set_timeout(int milliseconds);
 
         bool run();
@@ -69,7 +71,7 @@ class Poll: public IStoppableRunnable, public Observable<Poll>
     
     private:
         int _get_fd_index(int fd);
-        int _set_or_add_fd(int fd, short ev);
+        int _get_or_add_fd(int fd);
         void _init();
         void _process(int poll_return);
 

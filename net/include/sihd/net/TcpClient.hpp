@@ -22,6 +22,7 @@ class TcpClient:    public INetReceiver,
                     public sihd::util::IHandler<sihd::util::Poll *>
 {
     public:
+        TcpClient();
         TcpClient(bool ipv6 = false);
         TcpClient(const IpAddr & ip);
         TcpClient(const std::string & ip, int port);
@@ -30,7 +31,7 @@ class TcpClient:    public INetReceiver,
 
         bool connect(const IpAddr & addr);
         bool connect(const std::string & ip, int port);
-        bool connect(const std::string & path) { return _socket.connect(path); }
+        bool connect(const std::string & path);
 
         bool open_socket(bool ipv6 = false);
         bool open_socket_unix();

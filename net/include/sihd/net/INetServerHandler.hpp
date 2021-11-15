@@ -16,7 +16,7 @@ class INetServerHandler
 		virtual void handle_new_client(INetServer *server) = 0;
 		virtual void handle_client_read(INetServer *server, int socket) = 0;
 		virtual void handle_client_write(INetServer *server, int socket) = 0;
-        virtual bool handle_after_activity(INetServer *server) = 0;
+        virtual void handle_after_activity(INetServer *server) = 0;
 };
 
 }

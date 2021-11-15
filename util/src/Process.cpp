@@ -434,7 +434,7 @@ void    Process::_init_poll()
     _poll.stop();
     _poll.clear_fds();
     int fds = (int)(_stdout.fd_read >= 0) + (int)(_stderr.fd_read >= 0);
-    _poll.set_max_fds(fds);
+    _poll.set_limit(fds);
     if (fds > 0)
     {
         _poll.set_read_fd(_stdout.fd_read);

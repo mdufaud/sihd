@@ -19,7 +19,7 @@
 namespace sihd::net
 {
 
-class Socket: public sihd::util::Configurable
+class Socket
 {
     public:
         Socket();

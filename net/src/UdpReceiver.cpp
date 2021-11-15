@@ -44,7 +44,7 @@ void    UdpReceiver::_init()
     this->add_conf("poll_timeout", &UdpReceiver::set_poll_timeout);
     _array_owned = false;
     _poll_timeout_milliseconds = -1;
-    _poll.set_max_fds(1);
+    _poll.set_limit(1);
     _poll.add_observer(this);
 }
 

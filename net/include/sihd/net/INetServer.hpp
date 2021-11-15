@@ -11,7 +11,7 @@ class INetServer: public sihd::util::IStoppableRunnable
 {
     public:
         virtual ~INetServer() {};
-        virtual bool serve(size_t max_co) = 0;
+        virtual bool serve() = 0;
         virtual int accept_client(IpAddr *client_ip = nullptr) = 0;
 		virtual bool add_client_read(int socket) = 0;
 		virtual bool add_client_write(int socket) = 0;

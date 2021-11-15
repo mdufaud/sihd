@@ -2,14 +2,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Task.hpp>
 
-#if !defined(SIHD_DEFAULT_TCP_CONNECTIONS)
-# define SIHD_DEFAULT_TCP_CONNECTIONS 50
-#endif
-
-#if !defined(SIHD_DEFAULT_TCP_POLL_TIMEOUT)
-# define SIHD_DEFAULT_TCP_POLL_TIMEOUT 10
-#endif
-
 namespace sihd::net
 {
 
@@ -49,14 +41,17 @@ TcpServer::TcpServer(const std::string & path)
 TcpServer::~TcpServer()
 {
     this->stop_serving();
-    if (_server_handler_ptr != nullptr)
-        delete _server_handler_ptr;
 }
 
-bool    TcpServer::set_max_connections(size_t maxco)
+bool    TcpServer::set_queue_size(size_t size)
 {
-    _max_connections = maxco;
+    _queue_size = size;
     return true;
+}
+
+bool    TcpServer::set_poll_limit(int limit)
+{
+    return _poll.set_limit(limit);
 }
 
 bool    TcpServer::set_poll_timeout(int milliseconds)
@@ -68,10 +63,13 @@ bool    TcpServer::set_poll_timeout(int milliseconds)
 void    TcpServer::_init()
 {
     _server_handler_ptr = nullptr;
-    _max_connections = SIHD_DEFAULT_TCP_CONNECTIONS;
-    _poll.set_timeout(SIHD_DEFAULT_TCP_POLL_TIMEOUT);
-    this->add_conf("max_connections", &TcpServer::set_max_connections);
+    _poll.add_observer(this);
+    this->set_queue_size(50);
+    this->set_poll_timeout(10);
+    this->set_poll_limit(10);
+    this->add_conf("queue_size", &TcpServer::set_queue_size);
     this->add_conf("poll_timeout", &TcpServer::set_poll_timeout);
+    this->add_conf("poll_limit", &TcpServer::set_poll_limit);
 }
 
 bool    TcpServer::bind(const IpAddr & addr)
@@ -109,24 +107,22 @@ void    TcpServer::set_server_handler(INetServerHandler *handler)
     _server_handler_ptr = handler;
 }
 
-void    TcpServer::_setup_poll(size_t maxco)
+void    TcpServer::_setup_poll()
 {
-    _max_connections = maxco;
-    _poll.set_max_fds(maxco + 1);
     _poll.clear_fds();
     _poll.set_read_fd(_socket.socket());
 }
 
-bool    TcpServer::serve(size_t nbco)
+bool    TcpServer::serve()
 {
-    bool ret = this->is_running();
+    bool ret = _poll.is_running();
     if (ret == false)
     {
-        this->_setup_poll(nbco);
+        this->_setup_poll();
         ret = _server_handler_ptr != nullptr;
         if (!ret)
             LOG(error, "TcpServer: cannot serve without a server handler");
-        ret = ret && _socket.listen(nbco);
+        ret = ret && _socket.listen(this->queue_size());
         ret = ret && _poll.run();
     }
     return ret;
@@ -134,15 +130,14 @@ bool    TcpServer::serve(size_t nbco)
 
 bool    TcpServer::stop_serving()
 {
-    bool running = this->is_running();
+    bool running = _poll.is_running();
     if (running)
     {
-        running = _poll.stop() == false;
         _poll.wait_stop();
         _socket.shutdown();
     }
     _waitable.notify_all();
-    return running == false;
+    return _poll.is_running() == false;
 }
 
 int     TcpServer::accept_client(IpAddr *client_ip)
@@ -164,17 +159,17 @@ bool    TcpServer::add_client_write(int socket)
 
 bool    TcpServer::remove_client_read(int socket)
 {
-    return _poll.clear_fd(socket);
+    return _poll.remove_read_fd(socket);
 }
 
 bool    TcpServer::remove_client_write(int socket)
 {
-    return _poll.clear_fd(socket);
+    return _poll.remove_write_fd(socket);
 }
 
 bool    TcpServer::run()
 {
-    return this->serve(_max_connections);
+    return this->serve();
 }
 
 bool    TcpServer::stop()

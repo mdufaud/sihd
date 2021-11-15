@@ -47,7 +47,7 @@ namespace test
     TEST_F(TestPoll, test_poll)
     {
         Poll poll;
-        poll.set_max_fds(2);
+        poll.set_limit(2);
 
         int fd[2];
         EXPECT_TRUE(pipe(fd) >= 0);
@@ -74,7 +74,7 @@ namespace test
                     LOG(debug, "Read " << ret << " bytes: '" << buffer << "'");
                     _read_count += 1;
                 }
-                else if (event.writable)
+                if (event.writable)
                 {
                     LOG(debug, "Writing in fd: " << fd);
                     int ret = write(fd, "hello world", 11);

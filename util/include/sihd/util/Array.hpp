@@ -69,8 +69,6 @@ class Array: public IArray, public ICloneable<Array<T>>
         
         bool copy_from(const IArray & arr, size_t from = 0)
         {
-            if (this->is_same_type(arr) == false)
-                return false;
             return this->copy_from_bytes(arr.cbuf(), arr.byte_size(), from); 
         }
 
@@ -180,7 +178,7 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         bool is_equal(const IArray & arr) const
         {
-            if (this->size() != arr.size() || this->is_same_type(arr) == false)
+            if (arr.byte_size() != this->byte_size())
                 return false;
             return memcmp(_buf_ptr, arr.cbuf(), this->byte_size()) == 0;
         }
@@ -188,6 +186,21 @@ class Array: public IArray, public ICloneable<Array<T>>
         std::string hexdump(char delimiter = ' ') const
         {
             return Str::hexdump(_buf_ptr, this->byte_size(), delimiter);
+        }
+
+        std::string to_string(char delimiter = '\0') const
+        {
+            std::stringstream ss;
+
+            size_t i = 0;
+            while (i < _size)
+            {
+                if (i != 0 && delimiter != '\0')
+                    ss << delimiter;
+                ss << std::to_string(this->at(i));
+                ++i;
+            }
+            return ss.str();
         }
 
         void clear()
@@ -209,21 +222,6 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         T *data() { return _buf_ptr; }
         const T *cdata() const { return _buf_ptr; }
-
-        std::string to_string(char delimiter = '\0') const
-        {
-            std::stringstream ss;
-
-            size_t i = 0;
-            while (i < _size)
-            {
-                if (i != 0 && delimiter != '\0')
-                    ss << delimiter;
-                ss << std::to_string(this->at(i));
-                ++i;
-            }
-            return ss.str();
-        }
 
         // compares memory from internal buffer and array of size
         bool is_equal(const T *arr, size_t size) const
@@ -685,8 +683,9 @@ class ArrStr: public ArrChar
         using ArrChar::push_back;
         using ArrChar::from;
         using ArrChar::from_string;
+        using ArrChar::to_string;
 
-        std::string to_string() const
+        std::string to_string([[maybe_unused]] char delimiter = '\0') const
         {
             if (this->size() > 0 && this->cdata()[this->size() - 1] == '\0')
                 return std::string(this->cdata(), this->size() - 1);

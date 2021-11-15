@@ -58,7 +58,7 @@ namespace test
         EXPECT_TRUE(core.stop());
         EXPECT_TRUE(core.reset());
 
-        // try reset
+        // reset
         DevPulsation dev2("pulsation", &core);
         dev2.set_parent_ownership(false);
         EXPECT_TRUE(dev2.set_conf("frequency", 1000.0));
