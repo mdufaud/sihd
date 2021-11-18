@@ -38,10 +38,12 @@ modules = {
     },
     "zip": {
         "uselibs": ['libzip'],
+        "libs": ['zip'],
         "depends": ['util'],
     },
     "ssh": {
         "uselibs": ['libssh2'],
+        "libs": ['ssh2'],
         "depends": ['net'],
     },
     "http": {

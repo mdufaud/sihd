@@ -20,8 +20,9 @@ class ACoreObject:  public sihd::util::Named,
         bool is_running() const override { return false; }
 
     protected:
+        using ACoreService::handle;
+
         virtual void handle([[maybe_unused]] Channel *channel) override {};
-        virtual void handle([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
 };
 
 }

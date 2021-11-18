@@ -597,15 +597,12 @@ bool    Socket::is_socket_blocking(int socket)
 
 #else
 
-std::string get_unix_socket_peername([[maybe_unused]] int socket) { return ""; }
-bool bind_unix([[maybe_unused]] const std::string & path) { return false; }
-bool connect_unix([[maybe_unused]] const std::string & path) { return false; }
-ssize_t send_to_unix([[maybe_unused]] const std::string & path, [[maybe_unused]] const void *data, [[maybe_unused]] size_t size) { return -1; }
-ssize_t send_all_to_unix([[maybe_unused]] const std::string & path, [[maybe_unused]] const void *data, [[maybe_unused]] size_t size) { return -1; }
-ssize_t receive_from_unix([[maybe_unused]] const std::string & path, [[maybe_unused]] void *data, [[maybe_unused]] size_t size) { return -1; }
-ssize_t send_to_unix([[maybe_unused]] const std::string & path, [[maybe_unused]] const sihd::util::IArray *arr) { return -1; }
-ssize_t send_all_to_unix([[maybe_unused]] const std::string & path, [[maybe_unused]] const sihd::util::IArray *arr) { return -1; }
-ssize_t receive_from_unix([[maybe_unused]] const std::string & path, [[maybe_unused]] sihd::util::IArray *arr) { return -1; }
+std::string Socket::get_unix_socket_peername([[maybe_unused]] int socket) { return ""; }
+bool Socket::bind_unix([[maybe_unused]] const std::string & path) { return false; }
+bool Socket::connect_unix([[maybe_unused]] const std::string & path) { return false; }
+ssize_t Socket::send_to_unix([[maybe_unused]] const std::string & path, [[maybe_unused]] const void *data, [[maybe_unused]] size_t size) { return -1; }
+bool Socket::send_all_to_unix([[maybe_unused]] const std::string & path, [[maybe_unused]] const void *data, [[maybe_unused]] size_t size) { return false; }
+ssize_t Socket::receive_from_unix([[maybe_unused]] std::string & path, [[maybe_unused]] void *data, [[maybe_unused]] size_t size) { return -1; }
 
 bool    Socket::set_socket_blocking(int socket, bool active)
 {

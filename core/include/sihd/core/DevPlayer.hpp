@@ -33,8 +33,10 @@ class DevPlayer:    public sihd::core::Device,
         bool set_scheduler_queue_size(size_t limit);
 
     protected:
+        using Device::handle;
+
         void handle([[maybe_unused]] sihd::core::Channel *c) override;
-        void handle(sihd::util::Collector<PlayableRecord> *collector);
+        void handle(sihd::util::Collector<PlayableRecord> *collector) override;
 
         bool on_init() override;
         bool on_start() override;

@@ -13,10 +13,12 @@ NEW_LOGGER("sihd::ssh");
 SSHClient::SSHClient(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent)
 {
+    libssh2_init(0);
 }
 
 SSHClient::~SSHClient()
 {
+    libssh2_exit();
 }
 
 }
