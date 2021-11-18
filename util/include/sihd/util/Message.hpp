@@ -13,7 +13,7 @@
 namespace sihd::util
 {
 
-class Message:  public sihd::util::Node,
+class Message:  public Node,
                 public IMessageField
 {
     public:
@@ -22,21 +22,23 @@ class Message:  public sihd::util::Node,
 
         // IMessageField
         virtual size_t  get_field_byte_size() override { return _total_size; }
-        virtual bool    assign_field_buffer(uint8_t *buffer) override;
-        virtual bool    field_read_from(uint8_t *buffer, size_t size) override;
-        virtual bool    field_write_to(uint8_t *buffer, size_t size) override;
-        virtual bool    is_finished() const override { return _finished; }
-        virtual bool    finish() override;
+        virtual bool assign_field_buffer(uint8_t *buffer) override;
+        virtual bool field_read_from(const uint8_t *buffer, size_t size) override;
+        virtual bool field_write_to(uint8_t *buffer, size_t size) override;
+        virtual bool is_finished() const override { return _finished; }
+        virtual bool finish() override;
 
         // ICloneable
         virtual IMessageField *clone() override;
 
         template <typename T>
-        bool    add_field(const std::string & name, size_t size = 1)
+        bool add_field(const std::string & name, size_t size = 1)
         {
             return this->add_field(name, Datatype::type_to_datatype<T>(), size);
         }
-        virtual bool    add_field(const std::string & name, Type dt, size_t size = 1);
+
+        virtual bool add_field(const std::string & name, Type dt, size_t size = 1);
+
         /**
          * @brief 
          * 
@@ -45,10 +47,10 @@ class Message:  public sihd::util::Node,
          * @return true if added
          * @return false if not a Named
          */
-        virtual bool    add_field(const std::string & name, IMessageField *field);
+        virtual bool add_field(const std::string & name, IMessageField *field);
 
         // Named
-        virtual std::string     get_description() const override
+        virtual std::string get_description() const override
         {
             return Str::format("%lu bytes", _total_size);
         }
@@ -56,14 +58,14 @@ class Message:  public sihd::util::Node,
         IArray *array() { return &_arr; };
 
     protected:
-        virtual bool    _add_field_size(IMessageField *field);
-        virtual bool    _assign_field_array(IMessageField *field);
+        virtual bool _add_field_size(IMessageField *field);
+        virtual bool _assign_field_array(IMessageField *field);
 
     private:
         ArrByte _arr;
-        size_t  _total_size;
-        bool    _finished;
-        size_t  __assign_arr_at;
+        size_t _total_size;
+        bool _finished;
+        size_t __assign_arr_at;
 };
 
 }

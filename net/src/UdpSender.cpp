@@ -59,4 +59,45 @@ bool    UdpSender::open_socket(bool ipv6)
     return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 }
 
+ssize_t UdpSender::send(const void *data, size_t len)
+{
+    return _socket.send(data, len);
+}
+
+bool    UdpSender::send_all(const void *data, size_t len)
+{
+    return _socket.send_all(data, len);
+}
+
+ssize_t UdpSender::send(const sihd::util::IArray & arr)
+{
+    return _socket.send(arr);
+}
+
+bool    UdpSender::send_all(const sihd::util::IArray & arr)
+{
+    return _socket.send_all(arr);
+}
+
+ssize_t UdpSender::send_to(const IpAddr & addr, const void *data, size_t len)
+{
+    return _socket.send_to(addr, data, len);
+}
+
+bool    UdpSender::send_to_all(const IpAddr & addr, const void *data, size_t len)
+{
+    return _socket.send_all_to(addr, data, len);
+}
+
+ssize_t UdpSender::send_to(const IpAddr & addr, const sihd::util::IArray & arr)
+{
+    return _socket.send_to(addr, arr);
+}
+
+bool    UdpSender::send_to_all(const IpAddr & addr, const sihd::util::IArray & arr)
+{
+    return _socket.send_all_to(addr, arr);
+}
+
+
 }

@@ -69,6 +69,13 @@ class Array: public IArray, public ICloneable<Array<T>>
         
         bool copy_from(const IArray & arr, size_t from = 0)
         {
+            if (this->is_same_type(arr))
+                return this->copy_from_bytes(arr.cbuf(), arr.byte_size(), from);
+            return false;
+        }
+
+        bool copy_from_bytes(const IArray & arr, size_t from = 0)
+        {
             return this->copy_from_bytes(arr.cbuf(), arr.byte_size(), from); 
         }
 
@@ -904,6 +911,8 @@ class ArrayUtil
                     return new ArrFloat(size);
                 case DDOUBLE:
                     return new ArrDouble(size);
+                case DSTRING:
+                    return new ArrStr(size);
                 default:
                     break ;
             }

@@ -1,13 +1,18 @@
 name = 'sihd'
 extlibs = {
+    # unit test
     "gtest": "cci.20210126",
+    # json parsing
     "nlohmann_json": "3.9.1",
+    # crypt
     "openssl": "1.1.1i",
+    "libjpeg": "9d",
+    # http
     "uwebsockets": "19.2.0",
     "libcurl": "7.75.0",
+    # ssh
     "libssh2": "1.9.0",
-    "libzip": "1.7.3",
-    "libjpeg": "9d",
+    # sniffing
     "libpcap": "1.10.0",
     # ui
     "imgui": "1.83",
@@ -16,8 +21,10 @@ extlibs = {
     "replxx": "0.0.4",
     # bindings
     "pybind11": "2.6.2",
-    "sol2": "3.2.3",
     "lua": "5.3.5",
+    "sol2": "3.2.3",
+    # compressing utility
+    "libzip": "1.7.3",
 }
 modules = {
     "util": {
@@ -27,11 +34,25 @@ modules = {
         "depends": ['util'],
     },
     "net": {
-        "depends": ['core'],
+        "depends": ['util'],
+    },
+    "zip": {
+        "uselibs": ['libzip'],
+        "depends": ['util'],
+    },
+    "ssh": {
+        "uselibs": ['libssh2'],
+        "depends": ['net'],
     },
     "http": {
         "depends": ['net'],
-        "uselibs": ['uwebsockets'],
+        "uselibs": ['uwebsockets', 'libcurl'],
+    },
+    "pcap": {
+        "depends": ['util'],
+    },
+    "csv": {
+        "depends": ['util'],
     },
     "_module_test": {
         "depends": ['util'],

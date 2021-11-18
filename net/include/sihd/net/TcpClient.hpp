@@ -39,7 +39,7 @@ class TcpClient:    public INetReceiver,
 
         bool close();
 
-        bool set_poll_timeout(int milliseconds) { _poll_timeout_milliseconds = milliseconds; return true;}
+        bool set_poll_timeout(int milliseconds);
         // poll for x milliseconds - returns true if socket is read
         bool poll(int milliseconds);
         // poll once with configured timeout
@@ -53,20 +53,20 @@ class TcpClient:    public INetReceiver,
         // called anytime poll can read the socket
         void set_handler(sihd::util::IHandler<INetReceiver *> *handler);
 
-        ssize_t receive(IpAddr & addr, sihd::util::IArray & arr) { return _socket.receive_from(addr, arr); }
-        ssize_t receive(sihd::util::IArray & arr) { return _socket.receive(arr); }
+        ssize_t receive(IpAddr & addr, sihd::util::IArray & arr);
+        ssize_t receive(sihd::util::IArray & arr);
 
-        ssize_t receive(void *buf, size_t len) { return _socket.receive(buf, len); }
+        ssize_t receive(void *buf, size_t len);
 
-        ssize_t send(const void *data, size_t len) { return _socket.send(data, len); }
-        bool send_all(const void *data, size_t len) { return _socket.send_all(data, len); }
+        ssize_t send(const void *data, size_t len);
+        bool send_all(const void *data, size_t len);
 
-        ssize_t send(const sihd::util::IArray & arr) { return _socket.send(arr); }
-        bool send_all(const sihd::util::IArray & arr) { return _socket.send_all(arr); }
+        ssize_t send(const sihd::util::IArray & arr);
+        bool send_all(const sihd::util::IArray & arr);
 
         // to set blocking/broadcast
         const Socket & socket() const { return _socket; }
-
+        bool connected() const { return _connected; }
         const IpAddr & client_addr() const { return _client_addr; }
 
     protected:
@@ -78,8 +78,7 @@ class TcpClient:    public INetReceiver,
 
         Socket _socket;
         IpAddr _client_addr;
-        bool _array_owned;
-        int _poll_timeout_milliseconds;
+        bool _connected;
         std::mutex _poll_mutex;
         sihd::util::Poll _poll;
 };

@@ -26,17 +26,17 @@ class UdpSender: public INetSender, public sihd::util::Configurable
 
         bool close();
 
-        ssize_t send(const void *data, size_t len) { return _socket.send(data, len); }
-        bool send_all(const void *data, size_t len) { return _socket.send_all(data, len); }
+        ssize_t send(const void *data, size_t len);
+        bool send_all(const void *data, size_t len);
 
-        ssize_t send(const sihd::util::IArray & arr) { return _socket.send(arr); }
-        bool send_all(const sihd::util::IArray & arr) { return _socket.send_all(arr); }
+        ssize_t send(const sihd::util::IArray & arr);
+        bool send_all(const sihd::util::IArray & arr);
 
-        ssize_t send_to(const IpAddr & addr, const void *data, size_t len) { return _socket.send_to(addr, data, len); }
-        bool send_to_all(const IpAddr & addr, const void *data, size_t len) { return _socket.send_all_to(addr, data, len); }
+        ssize_t send_to(const IpAddr & addr, const void *data, size_t len);
+        bool send_to_all(const IpAddr & addr, const void *data, size_t len);
 
-        ssize_t send_to(const IpAddr & addr, const sihd::util::IArray & arr) { return _socket.send_to(addr, arr); }
-        bool send_to_all(const IpAddr & addr, const sihd::util::IArray & arr) { return _socket.send_all_to(addr, arr); }
+        ssize_t send_to(const IpAddr & addr, const sihd::util::IArray & arr);
+        bool send_to_all(const IpAddr & addr, const sihd::util::IArray & arr);
 
         const Socket & socket() const { return _socket; }
 

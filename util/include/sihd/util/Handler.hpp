@@ -13,28 +13,44 @@ class Handler: public IHandler<T...>
     public:
         Handler(std::function<void(T...)> fun)
         {
-            _handler_ptr = nullptr;
             _handle_fun = std::move(fun);
         }
-        Handler(IHandler<T...> *handler)
+
+        Handler()
         {
-            _handler_ptr = handler;
         }
+
         virtual ~Handler() {};
+
+        void set_method(std::function<void(T...)> fun)
+        {
+            _handle_fun = std::move(fun);
+        }
+
+        template <typename C>
+        void set_method(C* obj, void (C::*fun)(T...))
+        {
+            _handle_fun = [obj, fun] (T... args)
+            {
+                (obj->*fun)(args...);
+            };
+        }
 
         void handle(T... args)
         {
-            if (_handler_ptr != nullptr)
-                _handler_ptr->handle(args...);
-            else if (_handle_fun)
+            if (_handle_fun)
                 _handle_fun(args...);
+        }
+
+        bool has_method()
+        {
+            return _handle_fun ? true : false;
         }
 
     protected:
     
     private:
         std::function<void(T...)> _handle_fun;
-        IHandler<T...> *_handler_ptr;
 };
 
 }

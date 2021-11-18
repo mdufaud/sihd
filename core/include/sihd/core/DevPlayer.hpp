@@ -9,6 +9,7 @@
 # include <sihd/util/IProvider.hpp>
 # include <sihd/util/Collector.hpp>
 # include <sihd/util/IHandler.hpp>
+# include <sihd/util/Runnable.hpp>
 
 # include <queue>
 
@@ -71,7 +72,7 @@ class DevPlayer:    public sihd::core::Device,
         // collects records from provider
         sihd::util::Collector<PlayableRecord> _collector;
 
-        sihd::util::Task _task;
+        sihd::util::Runnable _runnable;
 };
 
 }

@@ -66,6 +66,7 @@ class Poll: public IStoppableRunnable, public Observable<Poll>
         size_t read_fds_size();
         size_t write_fds_size();
         size_t fds_size() const { return _lst_fds.size(); }
+        time_t timeout() const { return _timeout_milliseconds; }
 
     protected:
     

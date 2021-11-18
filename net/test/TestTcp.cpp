@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Task.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/net/TcpClient.hpp>
 #include <sihd/net/TcpServer.hpp>
@@ -52,8 +51,8 @@ namespace test
         {
             for (BasicServerHandler::Client *client: bsh->new_clients())
             {
-                LOG(info, "Server new client: " << client->socket());
-                bsh->send_to_client(client->socket(), welcome_arr);
+                LOG(info, "Server new client: " << client->fd());
+                bsh->send_to_client(client, welcome_arr);
             }
             for (BasicServerHandler::Client *client: bsh->read_activity())
             {
@@ -66,11 +65,7 @@ namespace test
         });
         server_handler.add_observer(&handler);
 
-        Task task([&server] ()
-        {
-            return server.serve();
-        });
-        Worker worker(&task);
+        Worker worker(&server);
         EXPECT_TRUE(worker.start_worker("tcp-server"));
 
         usleep(1000);
@@ -137,6 +132,7 @@ namespace test
         // client connect
         TcpClient client(localhost);
         EXPECT_TRUE(client.socket_opened());
+        EXPECT_TRUE(client.connected());
 
         // server accept
         int accepted_socket = server.accept();
@@ -161,6 +157,7 @@ namespace test
         // shutdown and close
         accepted.shutdown();
         EXPECT_EQ(client.receive(recv), 0);
+        EXPECT_FALSE(client.connected());
         EXPECT_TRUE(client.close());
         EXPECT_TRUE(accepted.close());
         EXPECT_TRUE(server.close());

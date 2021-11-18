@@ -10,7 +10,7 @@
 namespace sihd::util
 {
 
-class MessageField: public sihd::util::Named,
+class MessageField: public Named,
                     public IMessageField
 {
     public:
@@ -18,12 +18,12 @@ class MessageField: public sihd::util::Named,
         ~MessageField();
 
         // IMessageField
-        virtual size_t  get_field_byte_size() override { return _size * Datatype::datatype_size(_dt); }
-        virtual bool    assign_field_buffer(uint8_t *buffer) override;
-        virtual bool    field_read_from(uint8_t *buffer, size_t size) override;
-        virtual bool    field_write_to(uint8_t *buffer, size_t size) override;
-        virtual bool    is_finished() const override { return _array_ptr != nullptr; }
-        virtual bool    finish() override { return this->is_finished(); }
+        virtual size_t get_field_byte_size() override { return _size * Datatype::datatype_size(_dt); }
+        virtual bool assign_field_buffer(uint8_t *buffer) override;
+        virtual bool field_read_from(const uint8_t *buffer, size_t size) override;
+        virtual bool field_write_to(uint8_t *buffer, size_t size) override;
+        virtual bool is_finished() const override { return _array_ptr != nullptr; }
+        virtual bool finish() override { return this->is_finished(); }
 
         // Named
         virtual std::string get_description() const override

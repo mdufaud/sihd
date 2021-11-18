@@ -59,7 +59,7 @@ bool    Message::assign_field_buffer(uint8_t *buffer)
     return true;
 }
 
-bool    Message::field_read_from(uint8_t *buffer, size_t size)
+bool    Message::field_read_from(const uint8_t *buffer, size_t size)
 {
     return _arr.copy_from_bytes(buffer, size);
 }

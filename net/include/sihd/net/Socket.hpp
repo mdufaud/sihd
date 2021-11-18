@@ -52,6 +52,15 @@ class Socket
 
         // Operations on internal socket //
 
+        bool set_tcp_nodelay(bool active) const { return Socket::set_socket_tcp_nodelay(_socket, active); }
+        bool set_blocking(bool active) const { return Socket::set_socket_blocking(_socket, active); }
+        bool set_reuseaddr(bool active) const { return Socket::set_socket_reuseaddr(_socket, active); }
+        bool set_broadcast(bool active) const { return Socket::set_socket_broadcast(_socket, active); }
+
+        bool is_tcp_nodelay() const { return Socket::is_socket_tcp_nodelay(_socket); }
+        bool is_blocking() const { return Socket::is_socket_blocking(_socket); }
+        bool is_broadcast() const { return Socket::is_socket_broadcast(_socket); }
+
         bool open(const std::string & domain, const std::string & type, const std::string & protocol);
         bool open(int domain, int socket_type, int protocol);
         bool close();
@@ -81,14 +90,6 @@ class Socket
             auto opt_ip = this->get_peername(true);
             return opt_ip ? opt_ip.value().port() : -1;
         }
-        bool set_tcp_nodelay(bool active) const { return Socket::set_socket_tcp_nodelay(_socket, active); }
-        bool set_blocking(bool active) const { return Socket::set_socket_blocking(_socket, active); }
-        bool set_reuseaddr(bool active) const { return Socket::set_socket_reuseaddr(_socket, active); }
-        bool set_broadcast(bool active) const { return Socket::set_socket_broadcast(_socket, active); }
-
-        bool is_tcp_nodelay() const { return Socket::is_socket_tcp_nodelay(_socket); }
-        bool is_blocking() const { return Socket::is_socket_blocking(_socket); }
-        bool is_broadcast() const { return Socket::is_socket_broadcast(_socket); }
 
         // Operations on IP adresses //
 

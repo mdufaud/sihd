@@ -93,7 +93,7 @@ std::time_t     Channel::timestamp()
 bool    Channel::copy_to(IArray & arr)
 {
     std::lock_guard lock(_arr_mutex);
-    return arr.copy_from(*_array_ptr);
+    return arr.copy_from_bytes(*_array_ptr);
 }
 
 bool    Channel::write(const IArray & arr)
@@ -108,7 +108,7 @@ bool    Channel::write(const IArray & arr)
         std::lock_guard lock(_arr_mutex);
         if (_write_change_only && _array_ptr->is_equal(arr) == true)
             return true;
-        ret = _array_ptr->copy_from(arr);
+        ret = _array_ptr->copy_from_bytes(arr);
         _timestamp = _clock_ptr->now();
     }
     if (ret)

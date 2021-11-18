@@ -21,7 +21,7 @@ class BasicServerHandler:   public INetServerHandler,
         {
             public:
                 Client(int sock):
-                    _socket(sock),
+                    socket(sock),
                     read_array(nullptr),
                     write_array(nullptr),
                     time_connected(0),
@@ -32,9 +32,9 @@ class BasicServerHandler:   public INetServerHandler,
                 }
                 ~Client() {}
 
-                int socket() { return _socket.socket(); }
+                int fd() { return socket.socket(); }
 
-                Socket _socket;
+                Socket socket;
                 sihd::util::ArrByte *read_array;
                 sihd::util::ArrByte *write_array;
                 IpAddr addr;
@@ -57,6 +57,8 @@ class BasicServerHandler:   public INetServerHandler,
 
         bool set_max_clients(size_t max);
 
+        bool send_to_client(Client *client, const sihd::util::IArray & arr);
+        bool remove_client(Client *client);
         bool send_to_client(int socket, const sihd::util::IArray & arr);
         bool remove_client(int socket);
 

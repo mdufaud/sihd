@@ -31,7 +31,7 @@ IMessageField   *MessageField::clone()
 {
     MessageField *cloned = new MessageField(this->get_name());
     IArray *arr = this->array();
-    if (arr != nullptr)
+    if (arr != nullptr && cloned != nullptr)
         cloned->build_array(arr->data_type(), arr->size());
     return cloned;
 }
@@ -47,7 +47,7 @@ bool    MessageField::assign_field_buffer(uint8_t *buffer)
     return _array_ptr->assign_bytes(buffer, this->get_field_byte_size());
 }
 
-bool    MessageField::field_read_from(uint8_t *buffer, size_t size)
+bool    MessageField::field_read_from(const uint8_t *buffer, size_t size)
 {
     return _array_ptr != nullptr && _array_ptr->copy_from_bytes(buffer, size);
 }

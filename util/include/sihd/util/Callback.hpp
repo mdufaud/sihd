@@ -32,50 +32,50 @@ class CallbackManager
 
         // Non-member functions binding
         template<typename R, typename ...Targs>
-        void set(const std::string & name, R (*func)(Targs...))
+        void set(const std::string & name, R (*fun)(Targs...))
         {
-            _callbacks[name] = new Callback<R, Targs...>([func](Targs... args)
+            _callbacks[name] = new Callback<R, Targs...>([fun](Targs... args)
             {
-                return (*func)(args ...);
+                return (*fun)(args...);
             });
         }
 
         // Member functions binding
         template<typename C, typename R, typename ...Targs>
-        void set(const std::string & name, C* obj, R (C::*func)(Targs...))
+        void set(const std::string & name, C* obj, R (C::*fun)(Targs...))
         {
-            _callbacks[name] = new Callback<R, Targs...>([func, obj](Targs... args)
+            _callbacks[name] = new Callback<R, Targs...>([fun, obj](Targs... args)
             {
-                return (obj->*func)(args ...);
+                return (obj->*fun)(args...);
             });
         }
 
         // std::function binding
         template<typename R, typename ...Targs>
-        void set(const std::string & name, std::function<R (Targs...)> func)
+        void set(const std::string & name, std::function<R (Targs...)> fun)
         {
-            _callbacks[name] = new Callback<R, Targs...>(std::move(func));
+            _callbacks[name] = new Callback<R, Targs...>(std::move(fun));
         }
 
         // The entire signature of the lambda must be passed to this overload.
         template<typename R, typename ...Targs, typename Callable>
         void set(const std::string & name, Callable callable)
         {
-            std::function<R (Targs...)> func(callable);
-            _callbacks[name] = new Callback<R, Targs...>(std::move(func));
+            std::function<R (Targs...)> fun(callable);
+            _callbacks[name] = new Callback<R, Targs...>(std::move(fun));
         }
 
         // Calling
         template<typename ...Targs>
         void call(const std::string & name, Targs... args)
         {
-            this->call_base<void, Targs...>(name, args ...);
+            this->call_base<void, Targs...>(name, args...);
         }
 
         template<typename R, typename ...Targs>
         R call(const std::string & name, Targs... args)
         {
-            return this->call_base<R, Targs...>(name, args ...);
+            return this->call_base<R, Targs...>(name, args...);
         }
 
     private:
@@ -91,20 +91,20 @@ class CallbackManager
         class Callback: public CallbackBase
         {
             public:
-                Callback(std::function<R (Targs...)> && func)
+                Callback(std::function<R (Targs...)> && fun)
                 {
-                    _func = std::move(func);
+                    _fun = std::move(fun);
                 }
 
                 ~Callback() {}
 
                 R call(Targs... args)
                 {
-                    return _func(args ...);
+                    return _fun(args...);
                 }
 
             private:
-                std::function<R (Targs...)> _func;
+                std::function<R (Targs...)> _fun;
         };
 
         template<typename R, typename ...Targs>
@@ -118,7 +118,7 @@ class CallbackManager
             if (cb == nullptr)
                 throw std::invalid_argument("Cast error for callback '" + name + "', check signature.");
 
-            return cb->call(args ...);
+            return cb->call(args...);
         }
 
         std::map<std::string, CallbackBase*> _callbacks;

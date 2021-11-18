@@ -57,7 +57,7 @@ namespace test
         msg2.print_tree_desc();
         EXPECT_EQ(msg2.get_field_byte_size(), msg1.get_field_byte_size() * 2
             + sizeof(bool) + sizeof(short) * 2 + sizeof(double) * 2);
- 
+        //TODO
     }
 
     TEST_F(TestMessage, test_message_simple)

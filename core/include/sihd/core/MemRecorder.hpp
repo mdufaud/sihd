@@ -32,7 +32,6 @@ class MemRecorder:  public ACoreObject,
         void add_record(const std::string & name, time_t timestamp, const sihd::util::IArray *array);
         void add_records(const std::vector<PlayableRecord> & records);
         void add_records(const std::list<PlayableRecord> & records);
-        bool add_json_records(const nlohmann::json & json);
 
         bool provider_empty() const override;
         bool providing() const override;
@@ -47,8 +46,6 @@ class MemRecorder:  public ACoreObject,
         const SortedRecordedValues get_sorted_recorded_values() const { return _map_sorted_records; }
 
     private:
-        bool _check_json_string(const nlohmann::json & json, const std::string & key);
-        bool _check_json_integer(const nlohmann::json & json, const std::string & key);
 
         bool _provides;
         bool _records;

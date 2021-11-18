@@ -43,9 +43,25 @@ TcpClient::~TcpClient()
 {
 }
 
+void    TcpClient::_init()
+{
+    _connected = false;
+    _poll.set_timeout(1);
+    _poll.set_limit(1);
+    _poll.add_observer(this);
+    this->add_conf("poll_timeout", &TcpClient::set_poll_timeout);
+}
+
+bool    TcpClient::set_poll_timeout(int milliseconds)
+{
+    _poll.set_timeout(milliseconds);
+    return true;
+}
+
 bool    TcpClient::connect(const IpAddr & addr)
 {
-    return _socket.connect(addr);
+    _connected = _socket.connect(addr);
+    return _connected;
 }
 
 bool    TcpClient::connect(const std::string & ip, int port)
@@ -56,13 +72,16 @@ bool    TcpClient::connect(const std::string & ip, int port)
 
 bool    TcpClient::connect(const std::string & path)
 {
-    return _socket.connect_unix(path); 
+    _connected = _socket.connect_unix(path);
+    return _connected;
 }
 
 bool    TcpClient::close()
 {
+    this->stop();
     _poll.clear_fds();
     _socket.shutdown();
+    _connected = false;
     return _socket.close();
 }
 
@@ -78,15 +97,6 @@ bool    TcpClient::open_socket(bool ipv6)
     if (_socket.is_open())
         return false;
     return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
-}
-
-void    TcpClient::_init()
-{
-    _array_owned = false;
-    _poll_timeout_milliseconds = -1;
-    _poll.set_limit(1);
-    _poll.add_observer(this);
-    this->add_conf("poll_timeout", &TcpClient::set_poll_timeout);
 }
 
 bool    TcpClient::stop()
@@ -105,7 +115,6 @@ void    TcpClient::_setup_poll()
 bool    TcpClient::run()
 {
     this->_setup_poll();
-    _poll.set_timeout(_poll_timeout_milliseconds);
     std::lock_guard lock(_poll_mutex);
     return _poll.run();
 }
@@ -119,7 +128,51 @@ bool    TcpClient::poll(int milliseconds)
 bool    TcpClient::poll()
 {
     this->_setup_poll();
-    return _poll.poll(_poll_timeout_milliseconds) > 0;
+    return _poll.poll(_poll.timeout()) > 0;
+}
+
+ssize_t TcpClient::receive(IpAddr & addr, sihd::util::IArray & arr)
+{
+    ssize_t ret = _socket.receive_from(addr, arr);
+    if (_connected)
+        _connected = ret != 0;
+    return ret;
+}
+
+ssize_t TcpClient::receive(sihd::util::IArray & arr)
+{
+    ssize_t ret = _socket.receive(arr);
+    if (_connected)
+        _connected = ret != 0;
+    return ret;
+}
+
+ssize_t TcpClient::receive(void *buf, size_t len)
+{
+    ssize_t ret = _socket.receive(buf, len);
+    if (_connected)
+        _connected = ret != 0;
+    return ret;
+}
+
+ssize_t TcpClient::send(const void *data, size_t len)
+{
+    return _socket.send(data, len);
+}
+
+bool    TcpClient::send_all(const void *data, size_t len)
+{
+    return _socket.send_all(data, len);
+}
+
+ssize_t TcpClient::send(const sihd::util::IArray & arr)
+{
+    return _socket.send(arr);
+}
+
+bool    TcpClient::send_all(const sihd::util::IArray & arr)
+{
+    return _socket.send_all(arr);
 }
 
 void    TcpClient::handle(sihd::util::Poll *poll)
@@ -132,6 +185,8 @@ void    TcpClient::handle(sihd::util::Poll *poll)
         {
             if (event.readable || event.closed)
             {
+                if (event.closed)
+                    _connected = false;
                 this->notify_observers(this);
             }
             else if (event.error)

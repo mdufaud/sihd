@@ -41,16 +41,26 @@ UdpReceiver::~UdpReceiver()
 
 void    UdpReceiver::_init()
 {
-    this->add_conf("poll_timeout", &UdpReceiver::set_poll_timeout);
-    _array_owned = false;
-    _poll_timeout_milliseconds = -1;
+    _poll.set_timeout(1);
     _poll.set_limit(1);
     _poll.add_observer(this);
+    this->add_conf("poll_timeout", &UdpReceiver::set_poll_timeout);
+}
+
+bool    UdpReceiver::set_poll_timeout(int milliseconds)
+{
+    _poll.set_timeout(milliseconds);
+    return true;
 }
 
 bool    UdpReceiver::bind(const IpAddr & addr)
 {
     return _socket.bind(addr);
+}
+
+bool    UdpReceiver::bind(const std::string & path)
+{
+    return _socket.bind(path);
 }
 
 bool    UdpReceiver::close()
@@ -93,7 +103,6 @@ void    UdpReceiver::_setup_poll()
 bool    UdpReceiver::run()
 {
     this->_setup_poll();
-    _poll.set_timeout(_poll_timeout_milliseconds);
     std::lock_guard lock(_poll_mutex);
     return _poll.run();
 }
@@ -107,7 +116,7 @@ bool    UdpReceiver::poll(int milliseconds)
 bool    UdpReceiver::poll()
 {
     this->_setup_poll();
-    return _poll.poll(_poll_timeout_milliseconds) > 0;
+    return _poll.poll(_poll.timeout()) > 0;
 }
 
 void    UdpReceiver::handle(sihd::util::Poll *poll)
@@ -129,5 +138,26 @@ void    UdpReceiver::handle(sihd::util::Poll *poll)
         }
     }
 }
+
+ssize_t UdpReceiver::receive(void *buf, size_t len)
+{
+    return _socket.receive(buf, len);
+}
+
+ssize_t UdpReceiver::receive(sihd::util::IArray & arr)
+{
+    return _socket.receive(arr);
+}
+
+ssize_t UdpReceiver::receive(IpAddr & addr, void *buf, size_t len)
+{
+    return _socket.receive_from(addr, buf, len);
+}
+
+ssize_t UdpReceiver::receive(IpAddr & addr, sihd::util::IArray & arr)
+{
+    return _socket.receive_from(addr, arr);
+}
+
 
 }

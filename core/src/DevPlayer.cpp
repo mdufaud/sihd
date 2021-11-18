@@ -1,7 +1,6 @@
 #include <sihd/core/DevPlayer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/Task.hpp>
 
 #define CHANNEL_PLAY "play"
 #define CHANNEL_END "end"
@@ -21,11 +20,8 @@ DevPlayer::DevPlayer(const std::string & name, sihd::util::Node *parent):
     _channel_play_ptr(nullptr),
     _channel_end_ptr(nullptr)
 {
-    _task.set_method([this] () -> bool
-    {
-        return this->_worker_loop();
-    });
-    _worker.set_runnable(&_task);
+    _runnable.set_method(this, &DevPlayer::_worker_loop);
+    _worker.set_runnable(&_runnable);
     _collector.add_observer(this);
     this->set_provider_wait_time(10);
     this->set_scheduler_queue_size(20);

@@ -28,6 +28,7 @@ class IArray
         virtual bool from(const IArray & arr) = 0;
         virtual bool from_string(const std::string & data, const char *delimiters) = 0;
         virtual bool copy_from(const IArray & arr, size_t from = 0) = 0;
+        virtual bool copy_from_bytes(const IArray & arr, size_t from = 0) = 0;
         virtual bool copy_from_bytes(const uint8_t *buf, size_t size, size_t from = 0) = 0;
         virtual bool copy_to(uint8_t *buf, size_t size) const = 0;
         virtual bool assign_bytes(uint8_t *buf, size_t size) = 0;
