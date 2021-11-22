@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Files.hpp>
+#include <sihd/util/Array.hpp>
 #include <experimental/filesystem>
 
 using namespace std;
@@ -191,10 +192,62 @@ namespace test
         EXPECT_TRUE(this->log_make_dirs(Files::get_parent(path)));
         LOG(info, "Writing file to: " << path);
         EXPECT_TRUE(Files::write_all(path, file_content));
-        EXPECT_EQ(file_content, Files::read_all(path));
+        EXPECT_EQ(Files::read_all(path), file_content);
+        EXPECT_EQ(Files::read(path, 5), "hello");
+        char data[10];
+        EXPECT_EQ(Files::read_binary(path, data, 5), 5);
+        data[5] = 0;
+        EXPECT_STREQ(data, "hello");
 
         EXPECT_EQ(Files::read_all("/there/is/no/path.txt"), std::nullopt);
         EXPECT_FALSE(Files::write_all("/there/is/no/path.txt", "none"));
         EXPECT_EQ(Files::read_all("/there/is/no/path.txt"), std::nullopt);
+    }
+
+    TEST_F(TestFiles, test_files_array)
+    {
+        std::string path = Files::combine({_base_test_dir, "array", "test.txt"});
+
+        EXPECT_TRUE(this->log_make_dirs(Files::get_parent(path)));
+
+        ArrStr array_write("hello");
+        ArrStr array_read(20);
+
+        LOG(info, "Writing file to: " << path);
+        EXPECT_EQ(Files::write_from_array(path, array_write), (ssize_t)array_write.size());
+
+        LOG(info, "Reading file");
+        EXPECT_EQ(Files::read_into_array(path, array_read), (ssize_t)array_write.size());
+        EXPECT_TRUE(array_read.is_equal(array_write));
+
+        LOG(info, "Appending file");
+        array_write.from(" world");
+        EXPECT_EQ(Files::write_from_array(path, array_write, true), (ssize_t)array_write.size());
+
+        LOG(info, "Reading file");
+        EXPECT_EQ(Files::read_into_array(path, array_read), 11);
+        EXPECT_EQ(array_read.to_string(), "hello world");
+
+        LOG(info, "Rewriting file");
+        array_write.from("hello world");
+        EXPECT_EQ(Files::write_from_array(path, array_write), (ssize_t)array_write.size());
+        // hello world -> hello
+        array_write.resize(5);
+        // writing hello from byte 1 -> ello
+        EXPECT_EQ(Files::write_from_array(path, array_write, true, 1), 4);
+
+        LOG(info, "Reading file");
+        // read 4 bytes from byte 11 -> hello world + ello
+        EXPECT_EQ(Files::read_into_array(path, array_read), 15);
+        EXPECT_EQ(array_read.size(), 15u);
+        EXPECT_EQ(array_read.to_string(), "hello worldello");
+
+        LOG(info, "Rewriting file");
+        array_write.from("nevermind");
+        EXPECT_EQ(Files::write_from_array(path, array_write), (ssize_t)array_write.size());
+        EXPECT_EQ(Files::read_into_array(path, array_read, 0, 6), (ssize_t)array_write.size());
+        EXPECT_EQ(array_read.size(), 15u);
+        EXPECT_EQ(array_read.to_string(), "hello nevermind");
+
     }
 }

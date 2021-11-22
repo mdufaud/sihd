@@ -1,9 +1,10 @@
 #ifndef __SIHD_UTIL_FILES_HPP__
 # define __SIHD_UTIL_FILES_HPP__
 
+# include <sihd/util/Str.hpp> // Str utils, vector, sstream, string
+# include <sihd/util/IArray.hpp>
 # include <optional>
 # include <fstream>
-# include <sihd/util/Str.hpp> // Str utils, vector, sstream, string
 
 namespace sihd::util
 {
@@ -41,11 +42,17 @@ class Files
 
         // files
         static bool remove_file(const std::string & path);
+        static bool are_equals(const std::string & path1, const std::string & path2);
 
         // read
+        static ssize_t read_binary(const std::string & path, char *buf, size_t size);
+        static ssize_t read_into_array(const std::string & path, IArray & array, size_t byte_size = 0, size_t byte_offset = 0);
+        static std::optional<std::string> read(const std::string & path, size_t size);
         static std::optional<std::string> read_all(const std::string & path);
 
         // write
+        static ssize_t write_from_array(const std::string & path, const IArray & array, bool append = false, size_t byte_offset = 0);
+        static ssize_t write_binary(const std::string & path, const char *data, size_t size, bool append = false);
         static bool write_all(const std::string & path, const std::string & content, bool append = false);
 
         inline static std::string sep_str() { return std::string(1, Files::sep); };

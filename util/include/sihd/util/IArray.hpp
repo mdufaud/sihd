@@ -7,8 +7,6 @@
 namespace sihd::util
 {
 
-LOGGER;
-
 class IArray
 {
     public:

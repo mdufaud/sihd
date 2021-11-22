@@ -128,6 +128,7 @@ namespace test
         EXPECT_EQ(output, "");
         EXPECT_TRUE(proc.start());
         EXPECT_EQ(output, "");
+        EXPECT_TRUE(proc.wait_any());
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(output, "hello world\n");
 
@@ -135,6 +136,7 @@ namespace test
         proc.clear();
         proc.stdout_to(output);
         EXPECT_TRUE(proc.start());
+        EXPECT_TRUE(proc.wait_any());
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(output, "hello world\n");
 
@@ -194,6 +196,7 @@ namespace test
         EXPECT_TRUE(proc.stdout_to_file(test_file));
         EXPECT_EQ(Files::read_all(test_file).value(), "");
         EXPECT_TRUE(proc.start());
+        EXPECT_TRUE(proc.wait_any());
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(Files::read_all(test_file).value(), "hello world\n");
         EXPECT_TRUE(proc.has_exited());
@@ -223,6 +226,7 @@ namespace test
         TRACE("Redirecting stderr to: " << stderr_path);
 
         EXPECT_TRUE(proc.start());
+        EXPECT_TRUE(proc.wait_any());
         EXPECT_TRUE(proc.end());
 
         EXPECT_TRUE(proc.has_exited());
@@ -267,7 +271,9 @@ namespace test
         EXPECT_TRUE(wc.start());
         EXPECT_TRUE(cat.start());
 
+        EXPECT_TRUE(echo.wait_any());
         EXPECT_TRUE(echo.end());
+        EXPECT_TRUE(wc.wait_any());
         EXPECT_TRUE(wc.end());
         EXPECT_TRUE(cat.end());
 
