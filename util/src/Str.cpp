@@ -647,12 +647,12 @@ std::vector<std::string>    Str::split_escape(const std::string & str, const cha
 }
 
 /*
-std::string  Str::remove_escapes(const std::string & str)
+std::string  Str::remove_escape_char(const std::string & str)
 {
 
 }
 
-std::string  Str::remove_escapes_sequences(const std::string & str, const char *authorized_open_escape_sequences)
+std::string  Str::remove_escape_sequences(const std::string & str, const char *authorized_open_escape_sequences)
 {
 
 }

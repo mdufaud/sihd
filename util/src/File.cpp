@@ -166,7 +166,7 @@ bool    File::open_tmp(const std::string & tmp_name_template, const char *mode)
 #endif
     if (fd < 0)
     {
-        LOG(error, "File: could not open temporary file - no name available");
+        LOG(error, "File: could not open temporary file: " << strerror(errno));
         return false;
     }
     if (this->open_fd(fd, mode))
@@ -180,7 +180,7 @@ bool    File::open(const std::string & path, const char *mode)
     _file_ptr = fopen(path.c_str(), mode);
     if (_file_ptr == nullptr)
     {
-        LOG(error, "File: could not open file: " << path);
+        LOG(error, "File: could not open file: " << strerror(errno));
     }
     else
     {

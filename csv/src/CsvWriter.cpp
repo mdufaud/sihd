@@ -10,21 +10,22 @@ SIHD_UTIL_REGISTER_FACTORY(CsvWriter)
 LOGGER;
 
 CsvWriter::CsvWriter(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent), _file_ptr(nullptr)
+    sihd::util::Named(name, parent)
 {
-    _delimiter = 'c';
+    _delimiter = ';';
     _comment = '#';
     _line_feed = '\n';
     _col = 0;
     _row = 0;
     _max_col = 0;
+    _file.buffering_line();
+    _file.set_bufsize(1024);
     this->add_conf("delimiter", &CsvWriter::set_delimiter);
     this->add_conf("comment", &CsvWriter::set_commentary);
 }
 
 CsvWriter::~CsvWriter()
 {
-    this->close();
 }
 
 bool    CsvWriter::set_delimiter(int c)
@@ -51,33 +52,22 @@ bool    CsvWriter::set_commentary(int c)
 
 bool    CsvWriter::open(const std::string & path, bool append)
 {
-    this->close();
     _col = 0;
     _row = 0;
     _max_col = 0;
-    _file_ptr = fopen(path.c_str(), append ? "a" : "w");
-    if (_file_ptr == nullptr)
-        LOG(error, "CsvWriter: could not open file: " << path);
-    return _file_ptr != nullptr;
+    if (_file.open(path, append ? "a" : "w"))
+        return _file.buff_stream();
+    return false;
 }
 
 bool    CsvWriter::is_open() const
 {
-    return _file_ptr != nullptr;
+    return _file.is_open();
 }
 
 bool    CsvWriter::close()
 {
-    if (_file_ptr != nullptr)
-    {
-        if (fclose(_file_ptr) != 0)
-        {
-            LOG(error, "CsvWriter: could not close file: " << strerror(errno));
-            return false;
-        }
-        _file_ptr = nullptr;
-    }
-    return true;
+    return _file.close();
 }
 
 bool    CsvWriter::write_commentary(const std::string & value)
@@ -85,8 +75,8 @@ bool    CsvWriter::write_commentary(const std::string & value)
     bool ret = true;
     if (_col > 0)
         ret = this->new_row();
-    ret = ret && fputc(_comment, _file_ptr) == _comment;
-    ret = ret && fputs(value.c_str(), _file_ptr) == (int)value.size();
+    ret = ret && _file.write_char(_comment);
+    ret = ret && _file.write_str(value);
     ret = ret && this->new_row();
     if (!ret)
         LOG(error, "CsvWriter: failed to write commentary");
@@ -95,7 +85,7 @@ bool    CsvWriter::write_commentary(const std::string & value)
 
 bool    CsvWriter::new_row()
 {
-    if (fputc(_line_feed, _file_ptr) != _line_feed)
+    if (_file.write_char(_line_feed) == false)
     {
         LOG(error, "CsvWriter: failed to write new line");
         return false;
@@ -109,8 +99,8 @@ bool    CsvWriter::write(const std::string & value)
 {
     bool ret = true;
     if (_col > 0)
-        ret = fputc(_delimiter, _file_ptr) == _delimiter;
-    ret = ret && fputs(value.c_str(), _file_ptr) == (int)value.size();        
+        ret = _file.write_char(_delimiter);
+    ret = ret && _file.write_str(value);
     _col += (int)ret;
     _max_col = std::max(_max_col, _col);
     if (!ret)

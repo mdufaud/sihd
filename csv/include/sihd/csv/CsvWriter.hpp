@@ -3,6 +3,7 @@
 
 # include <sihd/util/Node.hpp>
 # include <sihd/util/Configurable.hpp>
+# include <sihd/util/File.hpp>
 # include <cstdio>
 
 namespace sihd::csv
@@ -33,6 +34,8 @@ class CsvWriter: public sihd::util::Named, public sihd::util::Configurable
         size_t current_col() const { return _col; }
         size_t max_col() const { return _max_col; }
 
+        const sihd::util::File & file() { return _file; };
+
     protected:
 
     private:
@@ -42,7 +45,7 @@ class CsvWriter: public sihd::util::Named, public sihd::util::Configurable
         int _delimiter;
         int _comment;
         int _line_feed;
-        FILE *_file_ptr;
+        sihd::util::File _file;
 };
 
 }
