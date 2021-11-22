@@ -34,6 +34,12 @@ class Configurable
         };
 
         template <typename T>
+        bool    set_conf(const std::string & name)
+        {
+            return _callbackManager.call<bool, T>(name);
+        }
+
+        template <typename T>
         bool    set_conf(const std::string & name, T param)
         {
             return _callbackManager.call<bool, T>(name, param);

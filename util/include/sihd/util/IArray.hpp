@@ -23,22 +23,24 @@ class IArray
         virtual bool is_same_type(const IArray & arr) const = 0;
         virtual bool is_equal(const IArray & arr) const = 0;
 
+        // should create new buffer from data
         virtual bool from(const IArray & arr) = 0;
         virtual bool from_string(const std::string & data, const char *delimiters) = 0;
-        virtual bool copy_from(const IArray & arr, size_t from = 0) = 0;
-        virtual bool copy_from_bytes(const IArray & arr, size_t from = 0) = 0;
-        virtual bool copy_from_bytes(const uint8_t *buf, size_t size, size_t from = 0) = 0;
+        // copy data to internal buffer
+        virtual bool copy_from(const IArray & arr, size_t byte_offset = 0) = 0;
+        virtual bool copy_from_bytes(const IArray & arr, size_t byte_offset = 0) = 0;
+        virtual bool copy_from_bytes(const uint8_t *buf, size_t size, size_t byte_offset = 0) = 0;
         virtual bool copy_to(uint8_t *buf, size_t size) const = 0;
+        // assign buffer to internal buffer
         virtual bool assign_bytes(uint8_t *buf, size_t size) = 0;
 
         virtual bool byte_resize(size_t size) = 0;
         virtual bool byte_reserve(size_t capacity) = 0;
-
         // no byte size
         virtual bool resize(size_t size) = 0;
         // no byte size
         virtual bool reserve(size_t capacity) = 0;
-
+        // should resize to 0
         virtual void clear() = 0;
 
         virtual Type data_type() const = 0;

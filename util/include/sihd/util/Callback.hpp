@@ -78,6 +78,12 @@ class CallbackManager
             return this->call_base<R, Targs...>(name, args...);
         }
 
+        template<typename R>
+        R call(const std::string & name)
+        {
+            return this->call_base<R>(name);
+        }
+
     private:
         // Class stored in CallbackManager's map 
         class CallbackBase

@@ -2,6 +2,7 @@
 # define __SIHD_UTIL_LOGGER_HPP__
 
 # include <iostream>
+# include <string>
 # include <sihd/util/Str.hpp>
 # include <sihd/util/LoggerManager.hpp>
 

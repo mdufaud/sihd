@@ -83,6 +83,95 @@ namespace test
             double _dval;
     };
 
+    TEST_F(TestStr, test_str_escapes)
+    {
+        EXPECT_TRUE(Str::is_escape_sequence_open('"'));
+        EXPECT_TRUE(Str::is_escape_sequence_open('\''));
+        EXPECT_TRUE(Str::is_escape_sequence_open('{'));
+        EXPECT_TRUE(Str::is_escape_sequence_open('('));
+        EXPECT_TRUE(Str::is_escape_sequence_open('['));
+        EXPECT_TRUE(Str::is_escape_sequence_open('<'));
+
+        EXPECT_TRUE(Str::is_escape_sequence_close('"'));
+        EXPECT_TRUE(Str::is_escape_sequence_close('\''));
+        EXPECT_TRUE(Str::is_escape_sequence_close('}'));
+        EXPECT_TRUE(Str::is_escape_sequence_close(')'));
+        EXPECT_TRUE(Str::is_escape_sequence_close(']'));
+        EXPECT_TRUE(Str::is_escape_sequence_close('>'));
+
+        EXPECT_EQ(Str::closing_escape_of('"'), '"');
+        EXPECT_EQ(Str::closing_escape_of('\''), '\'');
+        EXPECT_EQ(Str::closing_escape_of('{'), '}');
+        EXPECT_EQ(Str::closing_escape_of('('), ')');
+        EXPECT_EQ(Str::closing_escape_of('['), ']');
+        EXPECT_EQ(Str::closing_escape_of('<'), '>');
+
+        // \[hello  index[1] is '[' and escaped
+        EXPECT_TRUE(Str::is_escaped_char("\\[hello", 1));
+        EXPECT_FALSE(Str::is_escaped_char("\\[hello", 0));
+        EXPECT_FALSE(Str::is_escaped_char("\\[hello", 2));
+        // \\[hello  index[1] is '\' and escaped but '[' is not escaped
+        EXPECT_TRUE(Str::is_escaped_char("\\\\[hello", 1));
+        EXPECT_FALSE(Str::is_escaped_char("\\\\[hello", 0));
+        EXPECT_FALSE(Str::is_escaped_char("\\\\[hello", 2));
+        EXPECT_FALSE(Str::is_escaped_char("\\\\[hello", 3));
+    }
+
+    TEST_F(TestStr, test_str_split_escapes)
+    {
+        const char *cmd = "cmd (do 'something')   or don\\'t but[hurry up  mate]";
+
+        LOG(info, "Splitting command: '" << cmd << "'");
+        std::vector<std::string> splits = Str::split_escape(cmd, " ");
+        for (const auto & split: splits)
+        {
+            LOG(debug, split);
+        }
+        EXPECT_EQ(splits.size(), 5u);
+        if (splits.size() == 5)
+        {
+            EXPECT_EQ(splits[0], "cmd");
+            EXPECT_EQ(splits[1], "(do 'something')");
+            EXPECT_EQ(splits[2], "or");
+            EXPECT_EQ(splits[3], "don\\'t");
+            EXPECT_EQ(splits[4], "but[hurry up  mate]");
+        }
+        std::cout << std::endl;
+
+        LOG(info, "Same string but with restriction on (")
+        std::vector<std::string> splits_with_restriction = Str::split_escape(cmd, " ", "(");
+        for (const auto & split: splits_with_restriction)
+        {
+            LOG(debug, split);
+        }
+        EXPECT_EQ(splits_with_restriction.size(), 7u);
+        if (splits_with_restriction.size() == 7)
+        {
+            EXPECT_EQ(splits_with_restriction[0], "cmd");
+            EXPECT_EQ(splits_with_restriction[1], "(do 'something')");
+            EXPECT_EQ(splits_with_restriction[2], "or");
+            EXPECT_EQ(splits_with_restriction[3], "don\\'t");
+            EXPECT_EQ(splits_with_restriction[4], "but[hurry");
+            EXPECT_EQ(splits_with_restriction[5], "up");
+            EXPECT_EQ(splits_with_restriction[6], "mate]");
+        }
+
+        std::cout << std::endl;
+
+        const char *fullcmd = "'hello world  !'";
+        LOG(info, "Splitting command: '" << fullcmd << "'");
+        std::vector<std::string> full_split = Str::split_escape(fullcmd, " ");
+        for (const auto & split: full_split)
+        {
+            LOG(debug, split);
+        }
+        EXPECT_EQ(full_split.size(), 1u);
+        if (full_split.size() == 1)
+        {
+            EXPECT_EQ(full_split[0], "'hello world  !'");
+        }
+    }
+
     TEST_F(TestStr, test_str_from_string)
     {
         bool b = false;

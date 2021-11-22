@@ -17,11 +17,17 @@
 namespace sihd::util
 {
 
-size_t  Str::hexdump_cols = 8;
+size_t Str::hexdump_cols = 8;
 
-std::mutex      Str::buffer_mutex;
-char            Str::buffer[SIHD_UTIL_STR_BUFFER];
-const size_t    Str::buffer_size = SIHD_UTIL_STR_BUFFER;
+// format
+std::mutex Str::g_buffer_mutex;
+const size_t Str::g_buffer_size = SIHD_UTIL_STR_BUFFER;
+char Str::g_buffer[SIHD_UTIL_STR_BUFFER];
+
+// escapes sequences - must match
+const char Str::g_escapes_open[] = "\"'[({<";
+const char Str::g_escapes_close[] = "\"'])}>";
+char Str::g_escape_char = '\\';
 
 static int   _split_size(const char *s, const char *delimiter, size_t len)
 {
@@ -52,11 +58,6 @@ static std::string  _split_get_token(const char *s, int *idx, const char *delimi
     return std::string(s + x, y - x);
 }
 
-std::vector<std::string>    Str::split(const std::string & s, const std::string & delimiter)
-{
-    return Str::split(s, delimiter.c_str());
-}
-
 std::vector<std::string>    Str::split(const std::string & str, const char *delimiter)
 {
     if (delimiter == nullptr || delimiter[0] == 0)
@@ -71,6 +72,11 @@ std::vector<std::string>    Str::split(const std::string & str, const char *deli
     while (tokens-- > 0)
         ret[i++] = _split_get_token(s, &j, delimiter, dlen);
     return ret;
+}
+
+std::vector<std::string>    Str::split(const std::string & s, const std::string & delimiter)
+{
+    return Str::split(s, delimiter.c_str());
 }
 
 std::string     Str::join(const std::vector<std::string> & join_lst, const std::string & join_with)
@@ -107,10 +113,10 @@ std::string     Str::format(const char *format, ...)
     va_list args;
     va_start(args, format);
     {
-        std::lock_guard<std::mutex> l(buffer_mutex);
-        size_t ret = vsnprintf(buffer, buffer_size, format, args);
-        ret = ret > buffer_size ? buffer_size : ret;
-        str.assign(buffer, ret);
+        std::lock_guard<std::mutex> l(g_buffer_mutex);
+        size_t ret = vsnprintf(g_buffer, g_buffer_size, format, args);
+        ret = ret > g_buffer_size ? g_buffer_size : ret;
+        str.assign(g_buffer, ret);
     }
     va_end(args);
     return str;
@@ -505,5 +511,151 @@ bool Str::convert_from_string<double>(const std::string & str, double & value, [
         value = doubleval;
     return ret;
 }
+
+bool    Str::is_escape_sequence_open(int c)
+{
+    return c > 0 && strchr(g_escapes_open, c) != nullptr;
+}
+
+bool    Str::is_escape_sequence_close(int c)
+{
+    return c > 0 && strchr(g_escapes_close, c) != nullptr;
+}
+
+int     Str::closing_escape_of(int c)
+{
+    const char *open_esc = strchr(g_escapes_open, c);
+    if (open_esc != nullptr)
+    {
+        size_t idx = open_esc - g_escapes_open;
+        return g_escapes_close[idx];
+    }
+    return -1;
+}
+
+bool    Str::is_escaped_char(const char *str, int index)
+{
+    if (index > 0 && str[index - 1] == Str::g_escape_char)
+    {
+        // if escaped - the escape should not be escaped itself
+        if ((index - 2) < 0 || str[index - 2] != Str::g_escape_char)
+            return true;
+    }
+    return false;
+}
+
+int     Str::get_closing_escape_index(const char *str, int index, const char *authorized_open_escape_sequences)
+{
+    int open_esc = str[index];
+    if (authorized_open_escape_sequences != nullptr
+        && strchr(authorized_open_escape_sequences, open_esc) == nullptr)
+        return -1;
+    int close_esc = Str::closing_escape_of(open_esc);
+    if (close_esc < 0)
+        return -1;
+    if (Str::is_escaped_char(str, index))
+        return -1;
+    int i = index + 1;
+    while (str[i])
+    {
+        if (str[i] == close_esc && Str::is_escaped_char(str, i) == false)
+            return i + 1;
+        ++i;
+    }
+    return -2;
+}
+
+static int   _split_escape_size(const char *s, const char *delimiter,
+                                size_t len, const char *authorized_open_escape_sequences)
+{
+    int count = 0;
+
+    int i = 0;
+    while (i >= 0 && s[i])
+    {
+        while (s[i] && strncmp(s + i, delimiter, len) == 0)
+            i = i + len;
+        if (s[i] && s[i] != delimiter[0])
+            ++count;
+        while (s[i])
+        {
+            int closed_at = Str::get_closing_escape_index(s, i, authorized_open_escape_sequences);
+            // matched closure
+            if (closed_at > 0)
+                i = closed_at;
+            // never ends
+            else if (closed_at == -2)
+            {
+                i = -1;
+                break ;
+            }
+            // not a closing escape
+            else
+            {
+                if (strncmp(s + i, delimiter, len) == 0)
+                    break ;
+                ++i;
+            }
+        }
+    }
+    return count;
+}
+
+static std::string  _split_escape_get_token(const char *s, int *idx, const char *delimiter,
+                                            size_t len, const char *authorized_open_escape_sequences)
+{
+    int x = *idx;
+    while (s[x] && strncmp(s + x, delimiter, len) == 0)
+        x = x + len;
+    int y = x;
+    while (s[y])
+    {
+        int closed_at = Str::get_closing_escape_index(s, y, authorized_open_escape_sequences);
+        // matched closure
+        if (closed_at > 0)
+            y = closed_at;
+        // never ends
+        else if (closed_at == -2)
+            break ;
+        // not a closing escape
+        else
+        {
+            if (strncmp(s + y, delimiter, len) == 0)
+                break ;
+            ++y;
+        }
+    }
+    *idx = y;
+    return std::string(s + x, y - x);
+}
+
+std::vector<std::string>    Str::split_escape(const std::string & str, const char *delimiter,
+                                                const char *authorized_open_escape_sequences)
+{
+   if (delimiter == nullptr || delimiter[0] == 0)
+        return {str};
+    size_t dlen = strlen(delimiter);
+    const char *s = str.c_str();
+    int tokens = _split_escape_size(s, delimiter, dlen, authorized_open_escape_sequences);
+    std::vector<std::string> ret(tokens);
+
+    int i = 0;
+    int j = 0;
+    while (tokens-- > 0)
+        ret[i++] = _split_escape_get_token(s, &j, delimiter, dlen, authorized_open_escape_sequences);
+    return ret;
+}
+
+/*
+std::string  Str::remove_escapes(const std::string & str)
+{
+
+}
+
+std::string  Str::remove_escapes_sequences(const std::string & str, const char *authorized_open_escape_sequences)
+{
+
+}
+*/
 
 }

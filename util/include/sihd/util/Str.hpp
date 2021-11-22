@@ -19,17 +19,45 @@ class Str
         Str() {};
         ~Str() {};
 
-        static const size_t buffer_size;
-        static std::mutex   buffer_mutex;
-        static char         buffer[];
+        static const char g_escapes_open[];
+        static const char g_escapes_close[];
+
+        static const size_t g_buffer_size;
+        static std::mutex g_buffer_mutex;
+        static char g_buffer[];
 
     public:
         static size_t hexdump_cols;
+        static char g_escape_char;
 
         static std::vector<std::string> split(const std::string & s, const std::string & delimiter);
         static std::vector<std::string> split(const std::string & s, const char *delimiter);
-        static std::string demangle(const char *name);
+
+        static bool is_escape_sequence_open(int c);
+        static bool is_escape_sequence_close(int c);
+        /**
+         * @brief check if a char is escaped by calculating an impair number of escape '\' before the char
+         *  must give the beginning pointer of string and the index of the actual char
+         * 
+         *  example:
+         * str = "\[hello";
+         * is_escaped_char(str, 1) == true
+         * str = "\\[hello";
+         * is_escaped_char(str, 1) == true
+         * is_escaped_char(str, 2) == false
+         */
+        static bool is_escaped_char(const char *str, int index);
+        static int closing_escape_of(int sequence);
+        // [hello] -> 7
+        static int get_closing_escape_index(const char *s, int index, const char *authorized_open_escape_sequences = nullptr);
+        static std::vector<std::string> split_escape(const std::string & s, const char *delimiter,
+                                                        const char *authorized_open_escape_sequences = nullptr);
+
+        // static std::string remove_escapes(const std::string & str);
+        // static std::string remove_escapes_sequences(const std::string & str, const char *authorized_open_escape_sequences = nullptr);
+
         static std::string join(const std::vector<std::string> & join_lst, const std::string & join_with = "");
+        static std::string demangle(const char *name);
         static std::string format(const char *format, ...);
         static std::string trim(const std::string & s);
         static std::string & to_upper(std::string & s);
