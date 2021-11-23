@@ -21,8 +21,8 @@ class Files
         // directories
         static bool remove_directory(const std::string & path);
         static bool remove_directories(const std::string & path);
-        static bool make_directory(const std::string & path, mode_t mode = 0740);
-        static bool make_directories(const std::string & path, mode_t mode = 0740);
+        static bool make_directory(const std::string & path, mode_t mode = 0750);
+        static bool make_directories(const std::string & path, mode_t mode = 0750);
         static std::vector<std::string> get_children(const std::string & path);
         static std::vector<std::string> get_recursive_children(const std::string & path);
 
@@ -44,21 +44,21 @@ class Files
         static bool remove_file(const std::string & path);
         static bool are_equals(const std::string & path1, const std::string & path2);
 
-        // read
+        // fast read from file
         static ssize_t read_binary(const std::string & path, char *buf, size_t size);
-        static ssize_t read_into_array(const std::string & path, IArray & array, size_t byte_size = 0, size_t byte_offset = 0);
+        // fast string read from file
         static std::optional<std::string> read(const std::string & path, size_t size);
+        // fast all file read
         static std::optional<std::string> read_all(const std::string & path);
 
-        // write
-        static ssize_t write_from_array(const std::string & path, const IArray & array, bool append = false, size_t byte_offset = 0);
-        static ssize_t write_binary(const std::string & path, const char *data, size_t size, bool append = false);
-        static bool write_all(const std::string & path, const std::string & content, bool append = false);
+        // fast binary write into file
+        static bool write_binary(const std::string & path, const char *data, size_t size, bool append = false);
+        // fast write into file
+        static bool write(const std::string & path, const std::string & content, bool append = false);
 
         inline static std::string sep_str() { return std::string(1, Files::sep); };
-
         static char sep;
-
+        
     protected:
     
     private:

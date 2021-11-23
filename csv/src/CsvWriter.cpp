@@ -76,7 +76,7 @@ bool    CsvWriter::write_commentary(const std::string & value)
     if (_col > 0)
         ret = this->new_row();
     ret = ret && _file.write_char(_comment);
-    ret = ret && _file.write_str(value);
+    ret = ret && _file.write(value) == (ssize_t)value.size();
     ret = ret && this->new_row();
     if (!ret)
         LOG(error, "CsvWriter: failed to write commentary");
@@ -100,7 +100,7 @@ bool    CsvWriter::write(const std::string & value)
     bool ret = true;
     if (_col > 0)
         ret = _file.write_char(_delimiter);
-    ret = ret && _file.write_str(value);
+    ret = ret && _file.write(value) == (ssize_t)value.size();
     _col += (int)ret;
     _max_col = std::max(_max_col, _col);
     if (!ret)

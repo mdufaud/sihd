@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/csv/CsvWriter.hpp>
+#include <sihd/csv/CsvReader.hpp>
 #include <sihd/util/Files.hpp>
 
 namespace test
@@ -37,14 +38,62 @@ namespace test
 
     TEST_F(TestCsv, test_csv_writer)
     {
+        std::string path = Files::combine(_base_test_dir, "test_write.csv");
         CsvWriter writer("csv-writer");
 
-        std::string path = Files::combine(_base_test_dir, "test_write.csv");
         LOG(info, "Writing csv: " << path);
         EXPECT_TRUE(writer.open(path));
+        EXPECT_TRUE(writer.write_commentary(""));
         EXPECT_TRUE(writer.write_commentary("hello world"));
         EXPECT_TRUE(writer.write_row({"1", "2", "3"}));
-        EXPECT_TRUE(writer.write_row({"1", "2", "3", "4"}));
-        EXPECT_TRUE(writer.write_row({"1", "2", "3", "4", "5"}));
+        EXPECT_TRUE(writer.write("1"));
+        EXPECT_TRUE(writer.write("2"));
+        EXPECT_TRUE(writer.write("3"));
+        EXPECT_TRUE(writer.write("4"));
+        EXPECT_TRUE(writer.new_row());
+        EXPECT_TRUE(writer.write({"1", "2", "3"}));
+        EXPECT_TRUE(writer.write_row({"4", "5"}));
+        EXPECT_TRUE(writer.new_row());
+        EXPECT_TRUE(writer.write_commentary("bye"));
+        EXPECT_TRUE(writer.close());
+
+        EXPECT_TRUE(sihd::util::Files::are_equals(path, "test/resources/expected.csv"));
+    }
+
+    TEST_F(TestCsv, test_csv_reader)
+    {
+        std::string path = "test/resources/to_read.csv";
+        CsvReader reader("csv-reader");
+        std::vector<std::string> values;
+
+        LOG(info, "Reading csv: " << path);
+        EXPECT_TRUE(reader.open(path));
+        // must skip the two comments
+        EXPECT_TRUE(reader.read_next());
+        EXPECT_TRUE(reader.get_values(values));
+
+        EXPECT_EQ(values.size(), 3u);
+        if (values.size() == 3)
+        {
+            EXPECT_EQ(values[0], "hello");
+            EXPECT_EQ(values[1], "world");
+            EXPECT_EQ(values[2], "(this ; is trap)");
+        }
+
+        EXPECT_TRUE(reader.read_next());
+        // last value line
+        EXPECT_TRUE(reader.read_next());
+        EXPECT_TRUE(reader.get_values(values));
+
+        EXPECT_EQ(values.size(), 4u);
+        if (values.size() == 4)
+        {
+            EXPECT_EQ(values[0], "the");
+            EXPECT_EQ(values[1], "fox");
+            EXPECT_EQ(values[2], "' is; here'");
+            EXPECT_EQ(values[3], "[;crap;]");
+        }
+        EXPECT_FALSE(reader.read_next());
+        EXPECT_TRUE(reader.close());
     }
 }

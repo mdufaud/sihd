@@ -171,7 +171,7 @@ namespace test
         filesystem::create_directories(Files::get_parent(test_file));
 
         LOG(info, "Writing file for 'cat' input: " << test_file)
-        EXPECT_TRUE(Files::write_all(test_file, "hello world"));
+        EXPECT_TRUE(Files::write(test_file, "hello world"));
 
         Process proc{"cat"};
 

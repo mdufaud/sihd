@@ -119,7 +119,7 @@ bool    File::open_fd(int fd, const char *mode)
     _file_ptr = fdopen(fd, mode);
     if (_file_ptr == nullptr)
     {
-        LOG(error, "File: could not open file descriptor: " << fd);
+        LOG(error, "File: " << strerror(errno) << ": for file descriptor " << fd);
     }
     else
         _stream_ownership = true;
@@ -180,7 +180,7 @@ bool    File::open(const std::string & path, const char *mode)
     _file_ptr = fopen(path.c_str(), mode);
     if (_file_ptr == nullptr)
     {
-        LOG(error, "File: could not open file: " << strerror(errno));
+        LOG(error, "File: " << strerror(errno) << ": " << path);
     }
     else
     {
@@ -274,8 +274,18 @@ int     File::_seek(long offset, int origin)
 ssize_t File::read(char *buf, size_t size)
 {
     size_t ret = fread(buf, sizeof(char), size, _file_ptr);
+    if (this->eof())
+        return 0;
     if (this->error())
         return -1;
+    return (ssize_t)ret;
+}
+
+ssize_t File::read(IArray & array)
+{
+    ssize_t ret = this->read(reinterpret_cast<char *>(array.buf()), array.byte_capacity());
+    if (ret >= 0)
+        array.byte_resize((size_t)ret);
     return ret;
 }
 
@@ -287,14 +297,19 @@ ssize_t File::write(const char *str, size_t size)
     return ret;
 }
 
-ssize_t File::write_str(const char *str)
+ssize_t File::write(const IArray & array, size_t byte_offset)
 {
-    return fputs(str, _file_ptr);
+    byte_offset = std::min(byte_offset, array.byte_size());
+    return this->write(reinterpret_cast<const char *>(array.cbuf() + byte_offset), array.byte_size() - byte_offset);
 }
 
-ssize_t File::write_str(const std::string & str)
+ssize_t File::write(const std::string & str, size_t size_limit)
 {
-    return this->write_str(str.c_str());
+    if (size_limit == 0)
+        size_limit = str.size();
+    else
+        size_limit = std::min(size_limit, str.size());
+    return this->write(str.c_str(), size_limit);
 }
 
 bool    File::write_char(int c)

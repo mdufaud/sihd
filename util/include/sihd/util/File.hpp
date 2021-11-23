@@ -3,6 +3,7 @@
 
 # include <sihd/util/platform.hpp>
 # include <sihd/util/OS.hpp>
+# include <sihd/util/IArray.hpp>
 # include <cstdio>
 # include <string>
 # include <optional>
@@ -53,11 +54,13 @@ class File
         virtual ssize_t write(const char *str, size_t size);
         virtual ssize_t read(char *buf, size_t size);
 
+        ssize_t read(IArray & array);
         ssize_t read_line(char **line, size_t *size);
         ssize_t read_line_delim(char **line, size_t *size, int delim);
 
-        ssize_t write_str(const std::string & str);
-        ssize_t write_str(const char *str);
+        ssize_t write(const IArray & array, size_t byte_offset = 0);
+        // can set a limit to the string length
+        ssize_t write(const std::string & str, size_t size_limit = 0);
         bool write_char(int c);
 
         int seek(long offset);

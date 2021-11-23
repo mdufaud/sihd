@@ -2,6 +2,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/OS.hpp>
+#include <sihd/util/File.hpp>
 
 #include <string.h> // strcmp
 #include <dirent.h> // DIR...
@@ -337,32 +338,23 @@ std::string Files::combine(const std::string & path1, const std::string & path2)
 
 bool    Files::are_equals(const std::string & path1, const std::string & path2)
 {
-    std::ifstream file1(path1, std::ifstream::in);
-    std::ifstream file2(path2, std::ifstream::in);
+    File file1(path1, "rb");
+    File file2(path2, "rb");
 
-    bool ret = false;
-    if (file1.is_open() == false)
-        LOG(error, "Files: could not open file: " << path1);
-    if (file2.is_open() == false)
-        LOG(error, "Files: could not open file: " << path2);
-    if (file1.is_open() && file2.is_open())
+    if (!file1.is_open() || !file2.is_open())
+        return false;
+    ssize_t read_count;
+    size_t buffer_size = 4096;
+    char buffer1[buffer_size];
+    char buffer2[buffer_size];
+    while ((read_count = file1.read(buffer1, buffer_size)) > 0)
     {
-        ret = true;
-        ssize_t read_count = 1;
-        size_t buffer_size = 4096;
-        char buffer1[buffer_size];
-        char buffer2[buffer_size];
-        while (ret && read_count > 0)
-        {
-            file1.read(buffer1, buffer_size);
-            file2.read(buffer2, buffer_size);
-            read_count = file1.gcount();
-            ret = read_count == file2.gcount();
-            ret = ret && ::memcmp(buffer1, buffer2, read_count) == 0;
-            ret = ret && file1.good() && file2.good();
-        }
+        if (file2.read(buffer2, buffer_size) != read_count)
+            return false;
+        if (::memcmp(buffer1, buffer2, read_count) != 0)
+            return false;
     }
-    return ret;
+    return true;
 }
 
 bool    Files::remove_file(const std::string & path)
@@ -370,59 +362,36 @@ bool    Files::remove_file(const std::string & path)
     return remove(path.c_str()) == 0;
 }
 
-bool    Files::write_all(const std::string & path, const std::string & content, bool append)
+bool    Files::write(const std::string & path, const std::string & content, bool append)
 {
-    std::ofstream file;
-    std::ios_base::openmode flags = std::ofstream::out;
-    if (append)
-        flags |= std::fstream::app;
-    file.open(path, flags);
-    if (file.is_open() && file.good())
-    {
-        file << content;
-        file.close();
-        return file.good();
-    }
+    File file(path, append ? "a" : "w");
+
+    if (file.is_open())
+        return file.write(content) == (ssize_t)content.size();
     return false;
 }
 
-ssize_t    Files::write_binary(const std::string & path, const char *data, size_t size, bool append)
+bool    Files::write_binary(const std::string & path, const char *data, size_t size, bool append)
 {
-    ssize_t ret = -1;
-    std::ofstream file;
-    std::ios_base::openmode flags = std::ofstream::out | std::ofstream::binary;
-    if (append)
-        flags |= std::fstream::app;
-    file.open(path, flags);
-    if (file.is_open() && file.good())
-    {
-        ssize_t pos = file.tellp();
-        if (!file.write(data, size))
-            LOG_ERROR("Files: write failed (%ld != %lu) into: %s", file.tellp() - pos, size, path.c_str());
-        ret = file.tellp() - pos;
-    }
-    return ret;
-}
+    File file(path, append ? "ab" : "wb");
 
-ssize_t    Files::write_from_array(const std::string & path, const IArray & array, bool append, size_t byte_offset)
-{
-    if (byte_offset > 0)
-        byte_offset = std::min(byte_offset, array.byte_size());
-    return Files::write_binary(path, reinterpret_cast<const char *>(array.cbuf() + byte_offset),
-                                array.byte_size() - byte_offset, append);
+    if (file.is_open())
+        return file.write(data, size) == (ssize_t)size;
+    return -1;
 }
 
 std::optional<std::string>  Files::read(const std::string & path, size_t size)
 {
-    std::ifstream file(path, std::ifstream::in);
-    if (file.is_open() && file.good())
+    File file(path, "r");
+
+    if (file.is_open())
     {
         char buf[size];
-        file.read(buf, size);
-        if (file.gcount() >= 0)
+        ssize_t ret;
+        if ((ret = file.read(buf, size)) > 0)
         {
-            buf[file.gcount()] = 0;
-            return std::string(buf, file.gcount());
+            buf[ret] = 0;
+            return std::string(buf, ret);
         }
     }
     return std::nullopt;
@@ -443,37 +412,12 @@ std::optional<std::string>  Files::read_all(const std::string & path)
 
 ssize_t Files::read_binary(const std::string & path, char *buf, size_t size)
 {
-    ssize_t ret = -1;
-    std::ifstream file(path, std::ifstream::in | std::ifstream::binary);
-    if (file.is_open())
-    {
-        ret = 0;
-        ssize_t read_count = 1;
-        while (file.good() && read_count > 0 && ret < (ssize_t)size)
-        {
-            file.read(buf, size - ret);
-            read_count = file.gcount();
-            ret += read_count;
-        }
-    }
-    return ret;
-}
+    File file(path, "rb");
 
-ssize_t Files::read_into_array(const std::string & path, IArray & array, size_t byte_size, size_t byte_offset)
-{
-    if (byte_offset > 0)
-        byte_offset = std::min(byte_offset, array.byte_capacity());
-    // if no size set, takes maximum capacity, removing offset
-    if (byte_size == 0)
-        byte_size = array.byte_capacity() - byte_offset;
-    else
-        byte_size = std::min(byte_size, array.byte_capacity());
-    if (byte_offset + byte_size > array.byte_capacity())
-        return -1;
-    ssize_t read_count = Files::read_binary(path, reinterpret_cast<char *>(array.buf() + byte_offset), byte_size);
-    if (read_count > -1)
-        array.byte_resize(read_count + byte_offset);
-    return read_count;
+    ssize_t ret = -1;
+    if (file.is_open())
+        return file.read(buf, size);
+    return ret;
 }
 
 }
