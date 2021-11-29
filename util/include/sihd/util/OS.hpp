@@ -71,6 +71,12 @@ class OS
         static bool close_lib(void *handle);
 # endif
 
+# if !defined(__SIHD_WINDOWS__)
+        static int get_interface_idx(const std::string & name);
+        static std::string get_interface_mac_addr(const std::string & name);
+        static std::string get_interface_ip_addr(const std::string & name);
+# endif
+
         // backtrace
 # if !defined(__SIHD_WINDOWS__)
         static const int backtrace_size;

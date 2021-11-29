@@ -9,7 +9,7 @@ except ImportError:
     from . import modules as build_tools_modules
 
 linux_libs = ['dl']
-linux_extlibs = ['libpcap', 'readline', 'pybind11']
+linux_extlibs = ['readline', 'pybind11']
 
 default_compiler = "gcc"
 specific_platform_compilers = {

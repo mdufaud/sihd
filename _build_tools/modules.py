@@ -2,7 +2,7 @@ import os
 
 expected_configurations_lists = ['depends', 'libs', 'parse-configs', 'pkg-configs']
 
-def fill_modlist_from_modules(modules, specific_modules, modlist: dict):
+def fill_modlist_from_modules(modules, specific_modules, modlist):
     """ Gets all modules to build from a single module to build """
     if not specific_modules:
         return
@@ -14,7 +14,7 @@ def fill_modlist_from_modules(modules, specific_modules, modlist: dict):
         fill_modlist_from_modules(modules, conf.get('depends', []), modlist)
         #fill_modlist_from_modules(modules, conf.get('conditionnal-depends', []), modlist)
 
-def __rec_fill_module_real_depends(modules, module_name, to_fill_module_conf: dict):
+def __rec_fill_module_real_depends(modules, module_name, to_fill_module_conf):
     """ Fill a single module real dependency tree into modconf """
     conf = modules.get(module_name, None)
     if conf is None:
@@ -25,7 +25,7 @@ def __rec_fill_module_real_depends(modules, module_name, to_fill_module_conf: di
     for module in depends:
         __rec_fill_module_real_depends(modules, module, to_fill_module_conf)
 
-def resolve_modules_dependencies(modules: dict):
+def resolve_modules_dependencies(modules):
     """ Fill all modules real dependency tree """
     for name, conf in modules.items():
         # Add configurations if not declared
@@ -58,7 +58,7 @@ def get_extlibs_versions(app, modules_extlibs):
                 ret[libname] = version
     return ret
     
-def get_modules_extlibs(app: dict, modules: dict):
+def get_modules_extlibs(app, modules):
     """ Gets all libs versions needed by selected modules
         @return dict[libname] = version
     """

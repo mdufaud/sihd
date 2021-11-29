@@ -47,6 +47,25 @@ struct timeval  tv_from_milli(time_t milliseconds)
     return ret;
 }
 
+struct timeval  to_tv(time_t nano)
+{
+    struct timeval ret;
+
+    ret.tv_sec = nano / 1E9;
+    ret.tv_usec = nano % 1000000;
+    return ret;
+}
+
+time_t tv_to_nano(const struct timeval & tv)
+{
+    return (tv.tv_sec * 1E9) + (tv.tv_usec * 1E3);
+}
+
+time_t nano_tv_to_nano(const struct timeval & tv)
+{
+    return (tv.tv_sec * 1E9) + tv.tv_usec;
+}
+
 time_t to_micro(time_t nano)
 {
     return nano / 1E3;

@@ -40,7 +40,7 @@ File::~File()
 void    File::_init()
 {
     _file_ptr = nullptr;
-    _buf = nullptr;
+    _buf_ptr = nullptr;
     _buf_size = 0;
     // default is new line buffering
     _buf_mode = _IOLBF;
@@ -84,16 +84,16 @@ void    File::set_buffering_full()
 
 bool    File::_allocate_buffer_if_not_exists()
 {
-    if (_buf == nullptr)
-        _buf = new char[_buf_size];
-    return _buf != nullptr;
+    if (_buf_ptr == nullptr)
+        _buf_ptr = new char[_buf_size];
+    return _buf_ptr != nullptr;
 }
 
 bool    File::buff_stream()
 {
     if (_file_ptr != nullptr)
     {
-        int ret = setvbuf(_file_ptr, _buf, _buf_mode, _buf_size);
+        int ret = setvbuf(_file_ptr, _buf_ptr, _buf_mode, _buf_size);
         if (ret < 0)
         {
             LOG(error, "File: could not set stream buffer: " << strerror(errno));
@@ -105,10 +105,10 @@ bool    File::buff_stream()
 
 void    File::_delete_buffer()
 {
-    if (_buf != nullptr)
+    if (_buf_ptr != nullptr)
     {
-        delete[] _buf;
-        _buf = nullptr;
+        delete[] _buf_ptr;
+        _buf_ptr = nullptr;
         _buf_size = 0;
     }
 }

@@ -15,7 +15,7 @@ CsvReader::CsvReader(const std::string & name, sihd::util::Node *parent):
 {
     _line_size = 0;
     _line_ptr = nullptr;
-    _delimiter = ';';
+    _delimiter = ',';
     _comment = '#';
     _file.buffering_none();
     this->add_conf("delimiter", &CsvReader::set_delimiter);

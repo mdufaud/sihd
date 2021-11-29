@@ -12,7 +12,7 @@ LOGGER;
 CsvWriter::CsvWriter(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent)
 {
-    _delimiter = ';';
+    _delimiter = ',';
     _comment = '#';
     _line_feed = '\n';
     _col = 0;

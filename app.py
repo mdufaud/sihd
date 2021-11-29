@@ -12,8 +12,10 @@ extlibs = {
     "libcurl": "7.75.0",
     # ssh
     "libssh2": "1.9.0",
-    # sniffing
-    "libpcap": "1.10.0",
+    # pcap
+    "libpcap": "1.10.1",
+    # usb
+    "libusb": "1.0.24",
     # ui
     "imgui": "1.83",
     "ncurses": "6.2",
@@ -47,10 +49,23 @@ modules = {
         "depends": ['net'],
     },
     "http": {
-        "depends": ['net'],
         "uselibs": ['uwebsockets', 'libcurl'],
+        #"libs": ['uwebsockets', 'curl'],
+        "depends": ['net'],
     },
     "pcap": {
+        "uselibs": ['libpcap'],
+        "libs": ['pcap'],
+        "depends": ['net'],
+    },
+    "usb": {
+        "uselibs": ['libusb'],
+        "libs": ['usb-1.0'],
+        "depends": ['util'],
+    },
+    "bt": {
+        # libbluetooth-dev
+        "libs": ['bluetooth'],
         "depends": ['util'],
     },
     "csv": {

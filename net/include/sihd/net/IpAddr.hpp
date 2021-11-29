@@ -26,6 +26,7 @@ class IpAddr
         IpAddr(int port, bool ipv6 = false);
         IpAddr(const std::string & host, int port = 0, bool dns_lookup = true);
         IpAddr(const sockaddr & addr, size_t addr_len, bool dns_lookup = false);
+        IpAddr(const sockaddr & addr, bool dns_lookup = false);
         IpAddr(const sockaddr_in & addr, bool dns_lookup = false);
         IpAddr(const sockaddr_in6 & addr, bool dns_lookup = false);
 
@@ -117,9 +118,12 @@ class IpAddr
 
         std::string get_first_ipv4() const { return this->get_ip(-1, -1, false); }
         std::string get_first_ipv6() const { return this->get_ip(-1, -1, true); }
+        std::string get_first_ip() const { return this->prefers_ipv6() ? this->get_first_ipv6() : this->get_first_ipv4(); }
 
         int port() const { return _port; }
         bool dns_resolved() const { return _dns.resolved; }
+        bool empty() const { return _dns.lst_ip.empty(); }
+        size_t addresses() const { return _dns.lst_ip.size(); }
         const std::string & host() const { return _host; }
 
         const DnsInfo & dns() const { return _dns; }

@@ -73,7 +73,7 @@ class File
 
         std::optional<struct stat> stat();
 
-        const char *buf() const { return _buf; }
+        const char *buf() const { return _buf_ptr; }
         size_t buf_size() const { return _buf_size; }
         bool buffering_line() const { return _buf_mode == _IOLBF; }
         bool buffering_full() const { return _buf_mode == _IOFBF; }
@@ -90,7 +90,7 @@ class File
 
         FILE *_file_ptr;
         std::string _path;
-        char *_buf;
+        char *_buf_ptr;
         size_t _buf_size;
         int _buf_mode;
         bool _stream_ownership;

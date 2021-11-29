@@ -5,6 +5,9 @@
 #include <string.h>
 #include <errno.h>
 
+#if !defined(__SIHD_WINDOWS__)
+#endif
+
 namespace sihd::net
 {
 

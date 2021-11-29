@@ -11,10 +11,13 @@ void usleep(time_t micro);
 void msleep(time_t milli);
 void sleep(time_t sec);
 
+time_t tv_to_nano(const struct timeval & tv);
+time_t nano_tv_to_nano(const struct timeval & tv);
 double to_double(time_t sec, time_t usec);
 struct timeval tv_from_double(double time);
 struct timeval tv_from_milli(time_t milliseconds);
 
+struct timeval to_tv(time_t nano);
 time_t to_micro(time_t nano);
 time_t to_milli(time_t nano);
 time_t to_sec(time_t nano);

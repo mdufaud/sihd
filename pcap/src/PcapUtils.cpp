@@ -4,14 +4,79 @@
 namespace sihd::pcap
 {
 
-LOGGER;
+NEW_LOGGER("sihd::pcap");
 
-PcapUtils::PcapUtils()
+bool PcapUtils::_is_init = false;
+
+std::string PcapUtils::get_status(int code)
 {
+    return pcap_statustostr(code);
 }
 
-PcapUtils::~PcapUtils()
+std::string PcapUtils::version()
 {
+    return pcap_lib_version();
+}
+
+bool    PcapUtils::init(unsigned int opts)
+{
+    if (PcapUtils::_is_init)
+        return true;
+    char errbuf[PCAP_ERRBUF_SIZE];
+    PcapUtils::_is_init = pcap_init(opts, errbuf) == 0;
+    if (PcapUtils::_is_init == false)
+        LOG(error, "PcapUtils: " << errbuf);
+    return PcapUtils::_is_init;
+}
+
+bool    PcapUtils::lookupnet(const std::string & dev, bpf_u_int32 *ip, bpf_u_int32 *mask)
+{
+    char errbuf[PCAP_ERRBUF_SIZE];
+
+    int ret = pcap_lookupnet(dev.c_str(), ip, mask, errbuf);
+    if (ret != 0)
+        LOG(error, "PcapUtils: " << errbuf);
+    return ret;
+}
+
+bool    PcapUtils::is_datalink(int dtl)
+{
+    return pcap_datalink_val_to_name(dtl) != nullptr;
+}
+
+std::string PcapUtils::datalink_to_string(int dtl)
+{
+    return pcap_datalink_val_to_name(dtl);
+}
+
+std::string PcapUtils::datalink_to_desc(int dtl)
+{
+    return pcap_datalink_val_to_description(dtl);
+}
+
+int     PcapUtils::string_to_datalink(const std::string & dtl)
+{
+    return pcap_datalink_name_to_val(dtl.c_str());
+}
+
+bool    PcapUtils::is_timestamp_type(int ts)
+{
+    return pcap_tstamp_type_val_to_name(ts) != nullptr;
+}
+
+std::string PcapUtils::timestamp_type_to_string(int ts)
+{
+    return pcap_tstamp_type_val_to_name(ts);
+}
+
+std::string PcapUtils::timestamp_type_to_desc(int ts)
+{
+    return pcap_tstamp_type_val_to_description(ts);
+}
+
+int     PcapUtils::string_to_timestamp_type(const std::string & ts)
+{
+    return pcap_tstamp_type_name_to_val(ts.c_str());
 }
 
 }
