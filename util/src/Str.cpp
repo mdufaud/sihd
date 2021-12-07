@@ -215,7 +215,7 @@ std::string     Str::addr_to_string(void *addr, size_t padding)
     return ret;
 }
 
-std::string     Str::hexdump(void *mem, size_t size, char delim)
+std::string     Str::hexdump(const void *mem, size_t size, char delim)
 {
     std::string ret;
     size_t i = 0;
@@ -232,7 +232,7 @@ std::string     Str::hexdump(void *mem, size_t size, char delim)
     return ret;
 }
 
-std::string     Str::hexdump_fmt(void *mem, size_t size)
+std::string     Str::hexdump_fmt(const void *mem, size_t size)
 {
     size_t i = 0;
     size_t cols = Str::hexdump_cols;

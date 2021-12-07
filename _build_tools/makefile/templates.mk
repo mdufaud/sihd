@@ -43,42 +43,12 @@ $(CLASS_NAME):
 
 endif
 
-ifeq ($(word 1, $(MAKECMDGOALS)), newnamedclass)
-MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
-CLASS_NAME=$(word 3, $(MAKECMDGOALS))$(c)
-
-newnamedclass:
-	@bash $(MAKEFILE_TOOLS_SCRIPTS)/make_named_class.sh $(APP_NAME) $(MODULE_NAME) $(CLASS_NAME)
-
-# for no 'no rules to make...'
-$(MODULE_NAME):
-
-# for no 'no rules to make...'
-$(CLASS_NAME):
-
-endif
-
 ifeq ($(word 1, $(MAKECMDGOALS)), newinterface)
 MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
 CLASS_NAME=$(word 3, $(MAKECMDGOALS))$(c)
 
 newinterface:
 	@bash $(MAKEFILE_TOOLS_SCRIPTS)/make_interface_file.sh $(APP_NAME) $(MODULE_NAME) $(CLASS_NAME)
-
-# for no 'no rules to make...'
-$(MODULE_NAME):
-
-# for no 'no rules to make...'
-$(CLASS_NAME):
-
-endif
-
-ifeq ($(word 1, $(MAKECMDGOALS)), newdevice)
-MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
-CLASS_NAME=$(word 3, $(MAKECMDGOALS))$(c)
-
-newdevice:
-	@bash $(MAKEFILE_TOOLS_SCRIPTS)/make_device_class.sh $(APP_NAME) $(MODULE_NAME) $(CLASS_NAME)
 
 # for no 'no rules to make...'
 $(MODULE_NAME):

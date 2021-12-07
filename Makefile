@@ -28,8 +28,13 @@ BIN_PATH = $(BUILD_PATH)/bin
 OBJ_PATH = $(BUILD_PATH)/obj
 RES_PATH = $(BUILD_PATH)/etc
 EXTLIB_PATH = $(BUILD_PATH)/extlib
+
 BUILD_TOOLS = $(HERE)/_build_tools
 MAKEFILE_TOOLS = $(BUILD_TOOLS)/makefile
+
+BUILD_EXTRA = $(HERE)/_build_extra
+MAKEFILE_EXTRA = $(BUILD_EXTRA)/makefile
+
 BUILDER = $(BUILD_TOOLS)/builder.py
 
 # Builder + env conf
@@ -46,6 +51,8 @@ ANDROID = $(shell python3 $(BUILDER) android)
 include $(MAKEFILE_TOOLS)/logger.mk
 include $(MAKEFILE_TOOLS)/utils.mk
 include $(MAKEFILE_TOOLS)/templates.mk
+
+include $(MAKEFILE_EXTRA)/extra.mk
 
 # Scons
 SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(UTILS_LOGICAL_CORE_NUMBER) $(SCONS_ARGS)

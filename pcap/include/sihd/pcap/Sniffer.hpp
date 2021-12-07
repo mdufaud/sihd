@@ -62,6 +62,8 @@ class Sniffer:  public sihd::util::Named,
         // in / out / both
         bool set_direction(const std::string & direction);
 
+        bool set_filter(const std::string & filter);
+
         std::vector<int> datalinks();
         std::vector<int> timestamp_types();
 
@@ -78,7 +80,9 @@ class Sniffer:  public sihd::util::Named,
         const struct pcap_stat *stats();
 
         std::string error();
+        
         pcap_t *pcap() { return _pcap_ptr; }
+        const sihd::util::ArrByte & array() const { return _array; }
 
     protected:
         static void _callback(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes);
@@ -91,6 +95,7 @@ class Sniffer:  public sihd::util::Named,
         int _max_sniff;
         int _timestamp_type;
         bool _nano_precision;
+        
         pcap_t *_pcap_ptr;
         struct pcap_stat _pcap_stats;
 

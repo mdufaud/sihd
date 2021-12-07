@@ -50,8 +50,10 @@ modules = {
     },
     "http": {
         "uselibs": ['uwebsockets', 'libcurl'],
-        #"libs": ['uwebsockets', 'curl'],
+        "libs": ['uv', 'curl'],
         "depends": ['net'],
+        # uWebSockets has unused variables
+        "flags": ["-Wno-unused-variable"]
     },
     "pcap": {
         "uselibs": ['libpcap'],
@@ -59,6 +61,7 @@ modules = {
         "depends": ['net'],
     },
     "usb": {
+        # libusb-dev
         "uselibs": ['libusb'],
         "libs": ['usb-1.0'],
         "depends": ['util'],
@@ -72,7 +75,7 @@ modules = {
         "depends": ['util'],
     },
     "_module_test": {
-        "depends": ['util'],
+        "depends": ['pcap'],
     },
 }
 # conditionnals - only if activated

@@ -29,6 +29,7 @@ Sniffer::Sniffer(const std::string & name, sihd::util::Node *parent):
     this->add_conf("snaplen", &Sniffer::set_snaplen);
     this->add_conf("timeout", &Sniffer::set_timeout);
     this->add_conf("direction", &Sniffer::set_direction);
+    this->add_conf("filter", &Sniffer::set_filter);
 }
 
 Sniffer::~Sniffer()
@@ -142,7 +143,7 @@ bool    Sniffer::sniff_one()
     {
         LOG(error, "Sniffer: " << this->error());
     }
-    else if (ret == 0)
+    else if (ret >= 0)
         this->new_packet(hdr, data);
     return ret == 0;
 }
@@ -316,6 +317,19 @@ int     Sniffer::datalink()
 }
 
 // settings
+
+bool    Sniffer::set_filter(const std::string & filter)
+{
+    // bpf_u_int32 netmask = PCAP_NETMASK_UNKNOWN
+    bpf_u_int32 netmask = 0;
+    bool optimize = true;
+    struct bpf_program pcap_filter;
+    int ret = pcap_compile(_pcap_ptr, &pcap_filter, filter.c_str(), (int)optimize, netmask);
+    if (ret == 0)
+        ret = pcap_setfilter(_pcap_ptr, &pcap_filter);
+    this->_log_if_error(ret);
+    return ret == 0;
+}
 
 bool    Sniffer::set_direction(const std::string & direction)
 {

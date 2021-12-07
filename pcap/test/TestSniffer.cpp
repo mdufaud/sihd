@@ -4,11 +4,15 @@
 #include <sihd/pcap/PcapInterfaces.hpp>
 #include <sihd/pcap/Sniffer.hpp>
 #include <sihd/net/IpAddr.hpp>
+#include <sihd/util/Handler.hpp>
+
+#include <sihd/util/.hpp>
 
 namespace test
 {
     NEW_LOGGER("test");
     using namespace sihd::pcap;
+    using namespace sihd::util;
     class TestSniffer:   public ::testing::Test
     {
         protected:
@@ -57,22 +61,6 @@ namespace test
                     dump_ip("    netmask: ", addr->netmask);
             }
         }
-    }
-
-    TEST_F(TestSniffer, test_sniffer_lo)
-    {
-        Sniffer pcap("pcap-sniffer");
-
-        EXPECT_TRUE(pcap.open("lo"));
-        pcap.activate();
-        if (pcap.is_active())
-        {
-            EXPECT_TRUE(pcap.sniff_one());
-            usleep(10E3);
-            EXPECT_TRUE(pcap.close());
-        }
-        else
-            EXPECT_FALSE(pcap.is_open());
     }
 
 }
