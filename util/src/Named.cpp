@@ -121,7 +121,7 @@ Node    *Named::find_node(const std::string & path)
 
 const Named   *Named::cfind(const Named *from, const std::string & path) const
 {
-    Splitter splitter(&Named::separator);
+    Splitter splitter(Named::separator);
     auto tokens = splitter.split(path);
     const Named *child = from;
     const Node *parent = nullptr;
@@ -141,9 +141,9 @@ const Named   *Named::cfind(const Named *from, const std::string & path) const
 const Named   *Named::cfind(const std::string & path) const
 {
     const Named *current = nullptr;
-
-    int i = 0;
-    while (path[i] == Named::separator)
+    size_t i = 0;
+    size_t len = path.size();
+    while (i < len && path[i] == Named::separator)
     {
         if (current == nullptr)
             current = this;
@@ -153,9 +153,9 @@ const Named   *Named::cfind(const std::string & path) const
     }
     if (i == 0)
     {
-        if (path[0] == '/')
+        if (path.size() > 0 && path[0] == '/')
         {
-            std::string search_path = path.substr(1, path.size() - 1);
+            std::string search_path = path.substr(1);
             current = this->cget_root();
             return this->cfind(current, search_path);
         }

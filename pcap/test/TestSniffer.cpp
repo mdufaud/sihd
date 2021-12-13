@@ -6,8 +6,6 @@
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/util/Handler.hpp>
 
-#include <sihd/util/.hpp>
-
 namespace test
 {
     NEW_LOGGER("test");

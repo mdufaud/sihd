@@ -103,7 +103,14 @@ endif
 
 build: intro
 	$(call log_info,makefile,starting build with command: $(SCONS_BUILD_CMD))
-	@cd $(HERE) && env verbose=$(verbose) modules=$(modules) test=$(test) dist=$(dist) py=$(py) lua=$(lua) $(SCONS_BUILD_CMD)
+	@cd $(HERE) && env verbose=$(verbose) \
+						modules=$(modules) \
+						test=$(test) \
+						dist=$(dist) \
+						py=$(py) \
+						lua=$(lua) \
+						sanitize=$(sanitize) \
+						$(SCONS_BUILD_CMD)
 
 build_debug: SCONS_ARGS = --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
 build_debug: SCONS_PREFIX = time
@@ -149,7 +156,7 @@ test: build
 		cd - > /dev/null; \
 	)
 
-valgrindtest: DEBUGGER_ARGS = --leak-check=summary --show-leak-kinds=all --trace-children=no --track-origins=yes
+valgrindtest: DEBUGGER_ARGS = --leak-check=full --show-leak-kinds=all --trace-children=no --track-origins=yes
 valgrindtest: DEBUGGER = valgrind
 valgrindtest: test
 
@@ -161,7 +168,12 @@ gdbtest: test
 
 gtest: gdbtest
 
-.PHONY: test vtest valgrindtest gdbtest
+santest: sanitize=1
+santest: test
+
+stest: santest
+
+.PHONY: test vtest gtest stest valgrindtest gdbtest santest
 
 # handles:
 #	make test

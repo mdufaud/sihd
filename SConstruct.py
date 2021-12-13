@@ -40,6 +40,7 @@ compiler = _build_tools.builder.get_compiler()
 build_platform = _build_tools.builder.get_platform()
 compile_mode = _build_tools.builder.get_compile_mode()
 arch = _build_tools.builder.get_arch()
+sanitize = _build_tools.builder.do_sanitize()
 
 distribution = getenv("distribution", None) != None
 
@@ -168,8 +169,15 @@ if compiler == "clang":
         CXX = "clang++",
         CC = "clang"
     )
+    if sanitize:
+        # Needs to be first
+        base_env.Append(
+            LIBS = ["asan"],
+            CPPFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"],
+        )
     base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
     add_env_app_conf(base_env, "clang")
+
 # Mingw build
 elif compiler == "mingw":
     base_env.Replace(
@@ -181,6 +189,12 @@ elif compiler == "mingw":
     add_env_app_conf(base_env, "mingw")
 # GCC build
 elif compiler == "gcc":
+    if sanitize:
+        # Needs to be first
+        base_env.Append(
+            LIBS = ["asan"],
+            CPPFLAGS  = ["-fsanitize=address", "-fno-omit-frame-pointer"],
+        )
     base_env.Append(
         CPPFLAGS = [
             "-D_FORTIFY_SOURCE=2",

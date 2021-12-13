@@ -12,6 +12,13 @@ Splitter::Splitter(): _empty_delimitations(false), _compare_method(nullptr)
 {
 }
 
+Splitter::Splitter(int delimiter, const std::string & authorized_open_escape_sequences):
+    _empty_delimitations(false), _delimiter(1, delimiter),
+    _authorized_open_escape_sequences(authorized_open_escape_sequences),
+    _compare_method(nullptr)
+{
+}
+
 Splitter::Splitter(const std::string & delimiter, const std::string & authorized_open_escape_sequences):
     _empty_delimitations(false), _delimiter(delimiter),
     _authorized_open_escape_sequences(authorized_open_escape_sequences),

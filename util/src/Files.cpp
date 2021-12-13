@@ -389,7 +389,7 @@ std::optional<std::string>  Files::read(const std::string & path, size_t size)
 
     if (file.is_open())
     {
-        char buf[size];
+        char buf[size + 1];
         ssize_t ret;
         if ((ret = file.read(buf, size)) > 0)
         {

@@ -10,6 +10,7 @@ class Splitter
 {
     public:
         Splitter();
+        Splitter(int delimiter, const std::string & authorized_open_escape_sequences = "");
         Splitter(const std::string & delimiter, const std::string & authorized_open_escape_sequences = "");
         virtual ~Splitter();
 

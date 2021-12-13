@@ -16,6 +16,9 @@ class LineReader: public sihd::util::Named, public sihd::util::IReader
         virtual ~LineReader();
 
         bool set_read_buffsize(size_t buff);
+        bool set_line_buffsize(size_t buff);
+        bool set_delimiter_in_line(bool active);
+        bool set_delimiter(int c);
 
         bool open(const std::string & path);
         bool is_open() const;
@@ -30,40 +33,26 @@ class LineReader: public sihd::util::Named, public sihd::util::IReader
     protected:
 
     private:
-        bool _reallocate_line();
-
-        bool _find_in_last_read();
-        bool _find_in_read();
-        ssize_t _add_new_read();
-        ssize_t _search_line_feed(const char *str);
-
-        bool _build_line();
-        void _concat_read_queue();
-        void _process_last_read_queue();
-
-        void _clear_read_data();
-        void _clear_line();
-        void _reset();
-
         sihd::util::File _file;
+
+        bool _allocate_read_buffer();
+        bool _allocate_line();
+        bool _reallocate_line();
+        void _reset();
+        void _delete_buffers();
+
         size_t _read_buff_size;
+        char *_read_ptr;
+
         size_t _line_buff_size;
         size_t _line_buff_step;
-
-        struct ReadSave
-        {
-            ssize_t remaining;
-            ssize_t total;
-            size_t line_feed_pos;
-            size_t last_index;
-        };
-        ReadSave _back_read;
-        ReadSave _front_read;
-
-        std::queue<char *> _read_queue;
         char *_line_ptr;
-        ssize_t _total_read_size;
-        ssize_t _total_line_size;
+
+        size_t _last_read_index;
+        ssize_t _read_size;
+
+        bool _put_delimiter_in_line;
+        int _delimiter;
 };
 
 }

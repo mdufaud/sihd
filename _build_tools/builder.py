@@ -45,6 +45,9 @@ def has_verbose():
 def has_test():
     return bool(getenv("test", None))
 
+def do_sanitize():
+    return bool(getenv("sanitize", None))
+
 def get_modules():
     return getenv('modules', "")
 

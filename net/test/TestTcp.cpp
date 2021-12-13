@@ -47,7 +47,7 @@ namespace test
         server.set_poll_timeout(1);
         server.set_queue_size(3);
         server_handler.set_max_clients(4);
-        sihd::util::Handler<BasicServerHandler *> handler([this, &welcome_arr] (BasicServerHandler *bsh)
+        sihd::util::Handler<BasicServerHandler *> handler([&welcome_arr] (BasicServerHandler *bsh)
         {
             for (BasicServerHandler::Client *client: bsh->new_clients())
             {
