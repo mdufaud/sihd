@@ -3,6 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Files.hpp>
 #include <sihd/util/LineReader.hpp>
+#include <sihd/util/Profiling.hpp>
 
 namespace test
 {
@@ -238,5 +239,7 @@ namespace test
         EXPECT_FALSE(reader.read_next());
         EXPECT_TRUE(reader.close());
     }
+
+
 
 }

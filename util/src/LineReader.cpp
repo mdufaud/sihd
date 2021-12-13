@@ -16,6 +16,9 @@ LineReader::LineReader(const std::string & name, sihd::util::Node *parent):
 {
     _read_buff_size = 4096;
     _line_ptr = nullptr;
+    _line_buff_step = 512;
+    _line_buff_size = 0;
+    this->_reallocate_line();
     this->_reset();
 }
 
@@ -59,7 +62,7 @@ bool    LineReader::close()
 
 bool    LineReader::read_next()
 {
-    this->_clear_line();
+    //this->_clear_line();
     // check if linefeed in buffer
     if (this->_find_in_last_read())
         return true;
@@ -67,13 +70,15 @@ bool    LineReader::read_next()
     if (_file.eof())
     {
         // if there is no remaining buffer - quit
-        if (_last_read.remaining == 0)
+        if (_back_read.remaining == 0)
             return false;
         // get the last of the remaining buffer with no line feed
-        _total_line_size = _last_read.total - _last_read.last_index;
-        _last_read.line_feed_pos = _total_line_size;
-        this->_build_line();
-        return true;
+
+        //_total_line_size = _last_read.total - _last_read.last_index;
+
+        _back_read.line_feed_pos = _back_read.total - _back_read.last_index;
+        // TRACE("IN END");
+        return this->_build_line();
     }
     // search in read
     return this->_find_in_read();
@@ -92,37 +97,51 @@ bool    LineReader::_find_in_last_read()
         return false;
     // get only element in queue (should be)
     char *data = _read_queue.front();
-    ssize_t line_feed_at = this->_search_line_feed(data + _last_read.last_index);
+    ssize_t line_feed_at = this->_search_line_feed(data + _back_read.last_index);
     if (line_feed_at < 0)
         return false;
     // line is from '_last_read.last_index' and size 'line_feed_at'
-    _last_read.line_feed_pos = line_feed_at;
-    _total_line_size = line_feed_at;
-    this->_build_line();
-    return true;
+    _back_read.line_feed_pos = line_feed_at;
+    // TRACE("IN LAST READ");
+    return this->_build_line();
 }
 
-void    LineReader::_build_line()
+bool    LineReader::_build_line()
 {
-    if (_total_line_size < 0)
-        return ;
-    // allocate returned line
-    _line_ptr = new char[_total_line_size + 1];
+    _total_line_size = _total_read_size - _back_read.total + _back_read.line_feed_pos
+                        - (_front_read.last_index);
+    if ((ssize_t)_line_buff_size <= _total_line_size)
+    {
+        if (this->_reallocate_line() == false)
+            return false;
+    }
     _line_ptr[0] = 0;
     _line_ptr[_total_line_size] = 0;
     this->_concat_read_queue();
     this->_process_last_read_queue();
+    return true;
 }
 
 void    LineReader::_concat_read_queue()
 {
     char *data;
+    if (_front_read.last_index > 0)
+    {
+        data = _read_queue.front();
+        strcat(_line_ptr, data + _front_read.last_index);
+        delete[] data;
+        _read_queue.pop();
+        _total_read_size -= _front_read.total;
+        memset(&_front_read, 0, sizeof(LineReader::ReadSave));
+    }
+    // size_t tot = 0;
     while (_read_queue.size() > 1)
     {
         data = _read_queue.front();
         strcat(_line_ptr, data);
         delete[] data;
         _read_queue.pop();
+        _total_read_size -= _read_buff_size;
     }
 }
 
@@ -133,20 +152,21 @@ void    LineReader::_process_last_read_queue()
     if (data == nullptr)
         return ;
     // concat char until line feed pos
-    strncat(_line_ptr, data + _last_read.last_index, _last_read.line_feed_pos);
+    strncat(_line_ptr, data + _back_read.last_index, _back_read.line_feed_pos);
     // prepare next read
-    _last_read.remaining -= _last_read.line_feed_pos + 1;
-    if (_last_read.remaining > 0)
-        _last_read.last_index += _last_read.line_feed_pos + 1;
+    _back_read.remaining -= _back_read.line_feed_pos + 1;
+    if (_back_read.remaining > 0)
+        _back_read.last_index += _back_read.line_feed_pos + 1;
     else
     {
         // line is all used up - free and pop last queue element
         delete[] data;
         _read_queue.pop();
-        _last_read.remaining = 0;
-        _last_read.last_index = 0;
+        _back_read.remaining = 0;
+        _back_read.last_index = 0;
+        _total_read_size = 0;
     }
-    _last_read.line_feed_pos = 0;
+    _back_read.line_feed_pos = 0;
 }
 
 ssize_t LineReader::_add_new_read()
@@ -171,8 +191,13 @@ ssize_t LineReader::_add_new_read()
     else
     {
         data[read_ret] = 0;
-        _last_read.remaining = read_ret;
-        _last_read.total = read_ret;
+        if (_back_read.remaining > 0)
+        {
+            _front_read = _back_read;
+        }
+        _back_read.remaining = read_ret;
+        _back_read.total = read_ret;
+        _back_read.last_index = 0;
         _read_queue.push(data);
 
     }
@@ -188,27 +213,25 @@ bool    LineReader::_find_in_read()
     {
         // analyse last read
         data = _read_queue.back();
+        _total_read_size += size;
         // search line feed
         ssize_t line_feed_at = this->_search_line_feed(data);
         if (line_feed_at >= 0)
         {
             // if found break loop and make line
-            _total_line_size += line_feed_at;
-            _last_read.line_feed_pos = line_feed_at;
+            _back_read.line_feed_pos = line_feed_at;
             break ;
         }
         else
         {
-            // add size to the total
-            _total_line_size += size;
             // set line feed pos to the end of string in case of no new line feed
-            _last_read.line_feed_pos = size;
+            _back_read.line_feed_pos = size;
         }
     }
     // if read yielded a line_feed or if read got to the end with no line feed
-    if (size > 0 || _total_line_size > 0)
-        this->_build_line();
-    return size > 0 || _total_line_size > 0;
+    if (size > 0 || _total_read_size > 0)
+        return this->_build_line();
+    return false;
 }
 
 ssize_t LineReader::_search_line_feed(const char *data)
@@ -241,10 +264,24 @@ void    LineReader::_clear_read_data()
 
 void    LineReader::_reset()
 {
-    this->_clear_line();
+    // this->_clear_line();
     this->_clear_read_data();
-    memset(&_last_read, 0, sizeof(LineReader::LastRead));
+    memset(&_back_read, 0, sizeof(LineReader::ReadSave));
+    memset(&_front_read, 0, sizeof(LineReader::ReadSave));
     _total_line_size = 0;
+    _total_read_size = 0;
+}
+
+bool    LineReader::_reallocate_line()
+{
+    _line_buff_size += _line_buff_step;
+    if (_line_ptr == nullptr)
+        _line_ptr = (char *)malloc(_line_buff_size);
+    else
+        _line_ptr = (char *)realloc(_line_ptr, _line_buff_size);
+    if (_line_ptr == nullptr)
+        LOG(error, "LineReader: error allocating line");
+    return _line_ptr != nullptr;
 }
 
 }

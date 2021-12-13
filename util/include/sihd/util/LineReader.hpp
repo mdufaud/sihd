@@ -30,12 +30,14 @@ class LineReader: public sihd::util::Named, public sihd::util::IReader
     protected:
 
     private:
+        bool _reallocate_line();
+
         bool _find_in_last_read();
         bool _find_in_read();
         ssize_t _add_new_read();
         ssize_t _search_line_feed(const char *str);
 
-        void _build_line();
+        bool _build_line();
         void _concat_read_queue();
         void _process_last_read_queue();
 
@@ -45,20 +47,23 @@ class LineReader: public sihd::util::Named, public sihd::util::IReader
 
         sihd::util::File _file;
         size_t _read_buff_size;
+        size_t _line_buff_size;
+        size_t _line_buff_step;
 
-        struct LastRead
+        struct ReadSave
         {
             ssize_t remaining;
             ssize_t total;
             size_t line_feed_pos;
             size_t last_index;
         };
-        LastRead _last_read;
+        ReadSave _back_read;
+        ReadSave _front_read;
 
         std::queue<char *> _read_queue;
         char *_line_ptr;
+        ssize_t _total_read_size;
         ssize_t _total_line_size;
-
 };
 
 }
