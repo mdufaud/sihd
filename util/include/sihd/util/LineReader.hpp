@@ -32,7 +32,6 @@ class LineReader: public sihd::util::Named, public sihd::util::IReader
     private:
         bool _find_in_last_read();
         bool _find_in_read();
-        bool _check_eof();
         ssize_t _add_new_read();
         ssize_t _search_line_feed(const char *str);
 
