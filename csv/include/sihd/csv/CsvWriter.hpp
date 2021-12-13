@@ -4,17 +4,21 @@
 # include <sihd/util/Node.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/File.hpp>
+# include <sihd/util/IWriter.hpp>
 # include <cstdio>
 
 namespace sihd::csv
 {
 
-class CsvWriter: public sihd::util::Named, public sihd::util::Configurable
+class CsvWriter:    public sihd::util::Named,
+                    public sihd::util::Configurable,
+                    public sihd::util::IWriter
 {
     public:
         CsvWriter(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~CsvWriter();
 
+        bool set_quote_value(int c);
         bool set_delimiter(int c);
         bool set_commentary(int c);
 
@@ -23,10 +27,17 @@ class CsvWriter: public sihd::util::Named, public sihd::util::Configurable
         bool close();
 
         bool new_row();
-        bool write_commentary(const std::string & commentary);
-        bool write(const std::string & value);
-        bool write(const std::vector<std::string> & values);
-        bool write_row(const std::vector<std::string> & values);
+        ssize_t write_commentary(const std::string & commentary);
+
+        // IWriterTimestamp
+		ssize_t write(const char *data, size_t size);
+		ssize_t write(const char *data, size_t size, time_t nano_timestamp);
+
+        ssize_t write(const std::string & value);
+        ssize_t write(const std::vector<std::string> & values);
+
+        ssize_t write_row(const std::vector<std::string> & values);
+        ssize_t write_row(const std::vector<std::string> & values, time_t nano_timestamp);
 
         int delimiter() const { return _delimiter; }
         int comment() const { return _comment; }
@@ -42,9 +53,14 @@ class CsvWriter: public sihd::util::Named, public sihd::util::Configurable
         size_t _max_col;
         size_t _col;
         size_t _row;
+        
         int _delimiter;
         int _comment;
         int _line_feed;
+
+        char _begin_quote_c;
+        char _end_quote_c;
+
         sihd::util::File _file;
 };
 

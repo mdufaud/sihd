@@ -38,7 +38,7 @@ class Sniffer:  public sihd::util::Named,
         // get datas
         time_t timestamp() const;
         const sihd::util::ArrByte & data() const;
-        bool get_data(char **data, size_t *size) const;
+        bool get_read_data(char **data, size_t *size) const;
 
         // maximum pkts to sniff before stopping
         bool set_max_sniff(size_t n);

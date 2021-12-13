@@ -31,12 +31,12 @@ $(CLASS_NAME):
 
 endif
 
-ifeq ($(word 1, $(MAKECMDGOALS)), newlogtest)
+ifeq ($(word 1, $(MAKECMDGOALS)), newsihdtest)
 MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
 TEST_NAME=$(word 3, $(MAKECMDGOALS))$(t)
 
-newlogtest:
-	@bash $(MAKEFILE_EXTRA_SCRIPTS)/make_log_test.sh $(APP_NAME) $(MODULE_NAME) $(TEST_NAME)
+newsihdtest:
+	@bash $(MAKEFILE_EXTRA_SCRIPTS)/make_sihd_test.sh $(APP_NAME) $(MODULE_NAME) $(TEST_NAME)
 
 # for no 'no rules to make...'
 $(MODULE_NAME):

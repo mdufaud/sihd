@@ -1,6 +1,7 @@
 #include <sihd/util/Path.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Files.hpp>
+#include <sihd/util/Splitter.hpp>
 
 namespace sihd::util
 {
@@ -29,7 +30,8 @@ void    Path::set(const std::string & url, const std::string & path)
 
 std::string     Path::get(const std::string & req)
 {
-    std::vector<std::string> split = Str::split(req, url_delimiter.c_str());
+    Splitter splitter(url_delimiter);
+    std::vector<std::string> split = splitter.split(req);
     if (split.size() <= 1)
         return get_from("", req);
     return get(split[0], split[1]);

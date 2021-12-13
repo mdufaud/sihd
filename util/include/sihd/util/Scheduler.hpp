@@ -11,11 +11,12 @@
 # include <sihd/util/time.hpp>
 # include <sihd/util/Thread.hpp>
 # include <sihd/util/Waitable.hpp>
+# include <sihd/util/Configurable.hpp>
 
 namespace sihd::util
 {
 
-class Scheduler: public Named, public IRunnable
+class Scheduler: public Named, public IRunnable, public Configurable
 {
     public:
         Scheduler(const std::string & name, Node *parent = nullptr);
@@ -35,6 +36,8 @@ class Scheduler: public Named, public IRunnable
         IClock *get_clock();
         void set_clock(IClock *clock);
         bool is_running();
+
+        bool set_as_fast_as_possible(bool active);
 
         virtual bool run();
 
@@ -64,7 +67,9 @@ class Scheduler: public Named, public IRunnable
         std::list<Task *> _task_rm_list;
         std::multimap<std::time_t, Task *> _task_map;
 
+        SystemClock _default_clock;
         bool _paused;
+        bool _no_delay;
         std::time_t _paused_time;
 };
 

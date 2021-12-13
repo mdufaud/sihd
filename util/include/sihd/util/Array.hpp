@@ -1,14 +1,17 @@
 #ifndef __SIHD_UTIL_ARRAY_HPP__
 # define __SIHD_UTIL_ARRAY_HPP__
 
+# include <sihd/util/Logger.hpp>
+# include <sihd/util/IArray.hpp>
+# include <sihd/util/Splitter.hpp>
+
 # include <utility>
 # include <cstdint>
 # include <stdexcept>
 # include <memory>
+
 # include <string.h>
 # include <strings.h>
-# include <sihd/util/Logger.hpp>
-# include <sihd/util/IArray.hpp>
 
 namespace sihd::util
 {
@@ -105,7 +108,8 @@ class Array: public IArray, public ICloneable<Array<T>>
         bool from_string(const std::string & data, const char *delimiters)
         {
             bool ret = true;
-            const std::vector<std::string> splits = Str::split(data, delimiters);
+            Splitter splitter(delimiters);
+            const std::vector<std::string> splits = splitter.split(data);
             this->reserve(splits.size());
             this->resize(0);
             for (const std::string & split: splits)

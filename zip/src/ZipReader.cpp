@@ -145,7 +145,7 @@ bool    ZipReader::get_entries(std::vector<struct zip_stat> & entries)
     if (_zip_ptr == nullptr)
         return false;
     struct zip_stat stat;
-    size_t total_entries =  zip_get_num_entries(_zip_ptr, 0);
+    size_t total_entries = zip_get_num_entries(_zip_ptr, 0);
     size_t i = 0;
     while (i < total_entries)
     {

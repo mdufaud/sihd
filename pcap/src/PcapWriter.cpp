@@ -104,27 +104,27 @@ FILE    *PcapWriter::file()
     return pcap_dump_file(_pcap_dumper_ptr);
 }
 
-bool    PcapWriter::write(const char *data, size_t size)
+ssize_t PcapWriter::write(const char *data, size_t size)
 {
     pcap_pkthdr hdr;
     hdr.caplen = size;
     hdr.len = size;
     hdr.ts = sihd::util::time::to_tv(_clock_ptr->now());
     pcap_dump((u_char *)_pcap_dumper_ptr, &hdr, (const u_char *)data);
-    return true;
+    return size;
 }
 
-bool    PcapWriter::write(const char *data, size_t size, time_t nano)
+ssize_t PcapWriter::write(const char *data, size_t size, time_t nano)
 {
     pcap_pkthdr hdr;
     hdr.caplen = size;
     hdr.len = size;
     hdr.ts = sihd::util::time::to_tv(nano);
     pcap_dump((u_char *)_pcap_dumper_ptr, &hdr, (const u_char *)data);
-    return true;
+    return size;
 }
 
-bool    PcapWriter::write(const char *data, size_t size, time_t sec, time_t usec)
+ssize_t PcapWriter::write(const char *data, size_t size, time_t sec, time_t usec)
 {
     pcap_pkthdr hdr;
     hdr.caplen = size;
@@ -132,7 +132,7 @@ bool    PcapWriter::write(const char *data, size_t size, time_t sec, time_t usec
     hdr.ts.tv_sec = sec;
     hdr.ts.tv_usec = usec;
     pcap_dump((u_char *)_pcap_dumper_ptr, &hdr, (const u_char *)data);
-    return true;
+    return size;
 }
 
 int64_t PcapWriter::pos()

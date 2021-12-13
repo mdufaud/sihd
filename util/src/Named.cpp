@@ -2,6 +2,7 @@
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Str.hpp>
+#include <sihd/util/Splitter.hpp>
 
 namespace sihd::util
 {
@@ -120,7 +121,8 @@ Node    *Named::find_node(const std::string & path)
 
 const Named   *Named::cfind(const Named *from, const std::string & path) const
 {
-    auto tokens = Str::split(path, &Named::separator);
+    Splitter splitter(&Named::separator);
+    auto tokens = splitter.split(path);
     const Named *child = from;
     const Node *parent = nullptr;
     for (const std::string & name : tokens)

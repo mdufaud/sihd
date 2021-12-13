@@ -3,6 +3,7 @@
 #include <sihd/util/platform.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/File.hpp>
+#include <sihd/util/Splitter.hpp>
 
 #include <string.h> // strcmp
 #include <dirent.h> // DIR...
@@ -106,7 +107,8 @@ bool    Files::make_directories(const std::string & path, mode_t mode)
     if (!path.empty())
     {
         std::string sep(1, Files::sep);
-        std::vector<std::string> dirnames = Str::split(path, sep.c_str());
+        Splitter splitter(sep);
+        std::vector<std::string> dirnames = splitter.split(path);
         std::string current_path = path[0] == Files::sep ? sep : "";
         for (const auto & dirname: dirnames)
         {
@@ -209,8 +211,9 @@ std::vector<std::string>    Files::get_children(const std::string & path)
 std::string Files::normalize(const std::string & path)
 {
     std::string sep(1, Files::sep);
+    Splitter splitter(sep);
     std::vector<std::string> lst;
-    std::vector<std::string> splits = Str::split(path, sep.c_str());
+    std::vector<std::string> splits = splitter.split(path);
 
     for (const std::string & split: splits)
     {

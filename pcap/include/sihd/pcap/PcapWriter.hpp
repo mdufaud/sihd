@@ -25,9 +25,9 @@ class PcapWriter: public sihd::util::Named, public sihd::util::Configurable
         bool set_snaplen(int len);
         bool set_datalink(int dtl);
 
-        bool write(const char *data, size_t size);
-        bool write(const char *data, size_t size, time_t nano);
-        bool write(const char *data, size_t size, time_t sec, time_t usec);
+        ssize_t write(const char *data, size_t size);
+        ssize_t write(const char *data, size_t size, time_t nano);
+        ssize_t write(const char *data, size_t size, time_t sec, time_t usec);
 
         FILE *file();
         int64_t pos();

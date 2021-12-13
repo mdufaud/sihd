@@ -15,9 +15,11 @@ CsvReader::CsvReader(const std::string & name, sihd::util::Node *parent):
 {
     _line_size = 0;
     _line_ptr = nullptr;
-    _delimiter = ',';
     _comment = '#';
-    _file.buffering_none();
+    _splitter.set_delimiter(",");
+    _splitter.set_empty_delimitations(true);
+    _file.set_no_buffering();
+    this->add_conf("quote", &CsvReader::set_quote_value);
     this->add_conf("delimiter", &CsvReader::set_delimiter);
     this->add_conf("comment", &CsvReader::set_commentary);
 }
@@ -27,15 +29,27 @@ CsvReader::~CsvReader()
     this->_free_line();
 }
 
+bool    CsvReader::set_quote_value(int c)
+{
+    if (sihd::util::Str::closing_escape_of(c) < 0)
+    {
+        LOG(error, "CsvReader: quote character '" << c << "' is not supported");
+        return false;
+    }
+    _quote = c;
+    _splitter.set_escape_sequences((char *)&c);
+    return true;
+}
+
 bool    CsvReader::set_delimiter(int c)
 {
-    if (std::isprint(c))
+    if (std::isprint(c) == 0)
     {
-        _delimiter = c;
-        return true;
+        LOG(error, "CsvReader: delimiter is not a printable character");
+        return false;
     }
-    LOG(error, "CsvReader: delimiter is not a printable character");
-    return false;
+    _splitter.set_delimiter((char *)&c);
+    return true;
 }
 
 bool    CsvReader::set_commentary(int c)
@@ -93,12 +107,31 @@ bool    CsvReader::read_next()
     return ret >= 0;
 }
 
-bool    CsvReader::get_values(std::vector<std::string> & values)
+bool    CsvReader::get_read_data(char **data, size_t *size) const
 {
     if (_line_ptr == nullptr)
         return false;
-    values = sihd::util::Str::split_escape(_line_ptr, (char *)(&_delimiter));
+    *data = _line_ptr;
+    *size = _line_size;
     return true;
 }
+
+bool    CsvReader::get_read_timestamp(time_t *nano_timestamp) const
+{
+    if (_line_ptr == nullptr)
+        return false;
+    int offset = _line_size > 0 && _quote > 0 && _line_ptr[0] == _quote ? 1 : 0;
+    return sihd::util::Str::to_long(_line_ptr + offset, nano_timestamp);
+}
+
+bool    CsvReader::get_read_data(std::vector<std::string> & values) const
+{
+    if (_line_ptr == nullptr)
+        return false;
+    values = _splitter.split(_line_ptr);
+    return true;
+}
+
+
 
 }

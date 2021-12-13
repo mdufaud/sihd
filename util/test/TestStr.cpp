@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Str.hpp>
 #include <sihd/util/Logger.hpp>
-#include <errno.h>
+#include <sihd/util/Splitter.hpp>
 
+#include <iostream>
 #include <climits>
+
+#include <errno.h>
 
 namespace test
 {
@@ -117,61 +119,6 @@ namespace test
         EXPECT_FALSE(Str::is_escaped_char("\\\\[hello", 3));
     }
 
-    TEST_F(TestStr, test_str_split_escapes)
-    {
-        const char *cmd = "cmd (do 'something')   or don\\'t but[hurry up  mate]";
-
-        LOG(info, "Splitting command: '" << cmd << "'");
-        std::vector<std::string> splits = Str::split_escape(cmd, " ");
-        for (const auto & split: splits)
-        {
-            LOG(debug, split);
-        }
-        EXPECT_EQ(splits.size(), 5u);
-        if (splits.size() == 5)
-        {
-            EXPECT_EQ(splits[0], "cmd");
-            EXPECT_EQ(splits[1], "(do 'something')");
-            EXPECT_EQ(splits[2], "or");
-            EXPECT_EQ(splits[3], "don\\'t");
-            EXPECT_EQ(splits[4], "but[hurry up  mate]");
-        }
-        std::cout << std::endl;
-
-        LOG(info, "Same string but with restriction on (")
-        std::vector<std::string> splits_with_restriction = Str::split_escape(cmd, " ", "(");
-        for (const auto & split: splits_with_restriction)
-        {
-            LOG(debug, split);
-        }
-        EXPECT_EQ(splits_with_restriction.size(), 7u);
-        if (splits_with_restriction.size() == 7)
-        {
-            EXPECT_EQ(splits_with_restriction[0], "cmd");
-            EXPECT_EQ(splits_with_restriction[1], "(do 'something')");
-            EXPECT_EQ(splits_with_restriction[2], "or");
-            EXPECT_EQ(splits_with_restriction[3], "don\\'t");
-            EXPECT_EQ(splits_with_restriction[4], "but[hurry");
-            EXPECT_EQ(splits_with_restriction[5], "up");
-            EXPECT_EQ(splits_with_restriction[6], "mate]");
-        }
-
-        std::cout << std::endl;
-
-        const char *fullcmd = "'hello world  !'";
-        LOG(info, "Splitting command: '" << fullcmd << "'");
-        std::vector<std::string> full_split = Str::split_escape(fullcmd, " ");
-        for (const auto & split: full_split)
-        {
-            LOG(debug, split);
-        }
-        EXPECT_EQ(full_split.size(), 1u);
-        if (full_split.size() == 1)
-        {
-            EXPECT_EQ(full_split[0], "'hello world  !'");
-        }
-    }
-
     TEST_F(TestStr, test_str_from_string)
     {
         bool b = false;
@@ -215,6 +162,8 @@ namespace test
         EXPECT_EQ(i16, -32768);
 
         EXPECT_TRUE(Str::convert_from_string("1000", ui32));
+        EXPECT_EQ(ui32, 1000u);
+        EXPECT_TRUE(Str::convert_from_string("1000,hello world", ui32));
         EXPECT_EQ(ui32, 1000u);
         // test overflow
         EXPECT_TRUE(Str::convert_from_string("-1", ui32));
@@ -311,32 +260,6 @@ namespace test
         EXPECT_EQ(conf.size(), 0u);
     }
 
-    TEST_F(TestStr, test_str_split)
-    {
-        std::vector<std::string> split1 = Str::split("hello world", " ");
-        EXPECT_EQ(split1.size(), 2u);
-        EXPECT_EQ(split1[0], "hello");
-        EXPECT_EQ(split1[1], "world");
-        std::vector<std::string> split2 = Str::split(" hello  world ", " ");
-        EXPECT_EQ(split2.size(), 2u);
-        EXPECT_EQ(split2[0], "hello");
-        EXPECT_EQ(split2[1], "world");
-        std::vector<std::string> split3 = Str::split("hell", "lo");
-        EXPECT_EQ(split3.size(), 1u);
-        EXPECT_EQ(split3[0], "hell");
-        std::vector<std::string> split4 = Str::split("hell", "hell");
-        EXPECT_EQ(split4.size(), 0u);
-        std::vector<std::string> split5 = Str::split("", "");
-        EXPECT_EQ(split5.size(), 1u);
-        EXPECT_EQ(split5[0], "");
-        std::vector<std::string> split6 = Str::split("hello", "");
-        EXPECT_EQ(split6.size(), 1u);
-        EXPECT_EQ(split6[0], "hello");
-        std::vector<std::string> split7 = Str::split("key=", "=");
-        EXPECT_EQ(split7.size(), 1u);
-        EXPECT_EQ(split7[0], "key");
-    }
-
     TEST_F(TestStr, test_str_join)
     {
         std::string res;
@@ -402,7 +325,8 @@ namespace test
         EXPECT_EQ(Str::hexdump(s.data(), s.length(), ','), "68,65,6c,6c,6f,20,77,6f,72,6c,64,20,2d,20,68,6f,77,20,61,72,65,20,79,6f,75");
         std::string dump = Str::hexdump_fmt(s.data(), s.length());
         std::cout << dump << std::endl;
-        auto splits = Str::split(dump, "\n");
+        Splitter splitter("\n");
+        auto splits = splitter.split(dump);
         EXPECT_EQ(splits.size(), 4u);
         EXPECT_EQ(splits[0], "0x0:\t68 65 6c 6c 6f 20 77 6f   hello wo");
         EXPECT_EQ(splits[1], "0x8:\t72 6c 64 20 2d 20 68 6f   rld - ho");

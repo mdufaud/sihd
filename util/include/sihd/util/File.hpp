@@ -38,7 +38,7 @@ class File
         // line buffering (flush when newline)
         void set_buffering_full();
 
-        // set buffer to stream
+        // apply buff mode to stream
         bool buff_stream();
         // write changes to disk
         bool flush();

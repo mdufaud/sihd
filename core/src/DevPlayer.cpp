@@ -1,6 +1,7 @@
 #include <sihd/core/DevPlayer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Splitter.hpp>
 
 #define CHANNEL_PLAY "play"
 #define CHANNEL_END "end"
@@ -65,7 +66,8 @@ bool    DevPlayer::set_provider_wait_time(time_t milliseconds)
 
 bool    DevPlayer::add_alias(const std::string & alias_conf)
 {
-    std::vector<std::string> conf = Str::split(alias_conf, "=");
+    sihd::util::Splitter splitter("=");
+    std::vector<std::string> conf = splitter.split(alias_conf);
 
     if (conf.size() != 2)
     {

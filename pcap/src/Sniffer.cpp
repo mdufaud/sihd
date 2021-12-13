@@ -171,7 +171,7 @@ time_t  Sniffer::timestamp() const
     return _pkt_nano_timestamp;
 }
 
-bool    Sniffer::get_data(char **data, size_t *size) const
+bool    Sniffer::get_read_data(char **data, size_t *size) const
 {
     *data = (char *)_array.cbuf();
     *size = _array.byte_size();

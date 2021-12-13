@@ -18,14 +18,30 @@ CsvWriter::CsvWriter(const std::string & name, sihd::util::Node *parent):
     _col = 0;
     _row = 0;
     _max_col = 0;
-    _file.buffering_line();
-    _file.set_bufsize(1024);
+    _begin_quote_c = -1;
+    _end_quote_c = -1;
+    _file.set_buffering_line();
+    _file.set_bufsize(4096);
+    this->add_conf("quote", &CsvWriter::set_quote_value);
     this->add_conf("delimiter", &CsvWriter::set_delimiter);
     this->add_conf("comment", &CsvWriter::set_commentary);
 }
 
 CsvWriter::~CsvWriter()
 {
+}
+
+bool    CsvWriter::set_quote_value(int c)
+{
+    _end_quote_c = sihd::util::Str::closing_escape_of(c);
+    if (_end_quote_c < 0)
+    {
+        _begin_quote_c = -1;
+        LOG(error, "CsvWriter: quote character '" << c << "' is not supported");
+        return false;
+    }
+    _begin_quote_c = c;
+    return true;
 }
 
 bool    CsvWriter::set_delimiter(int c)
@@ -70,19 +86,6 @@ bool    CsvWriter::close()
     return _file.close();
 }
 
-bool    CsvWriter::write_commentary(const std::string & value)
-{
-    bool ret = true;
-    if (_col > 0)
-        ret = this->new_row();
-    ret = ret && _file.write_char(_comment);
-    ret = ret && _file.write(value) == (ssize_t)value.size();
-    ret = ret && this->new_row();
-    if (!ret)
-        LOG(error, "CsvWriter: failed to write commentary");
-    return ret;
-}
-
 bool    CsvWriter::new_row()
 {
     if (_file.write_char(_line_feed) == false)
@@ -95,32 +98,83 @@ bool    CsvWriter::new_row()
     return true;
 }
 
-bool    CsvWriter::write(const std::string & value)
+ssize_t CsvWriter::write_commentary(const std::string & value)
 {
-    bool ret = true;
+    ssize_t ret = 0;
     if (_col > 0)
-        ret = _file.write_char(_delimiter);
-    ret = ret && _file.write(value) == (ssize_t)value.size();
-    _col += (int)ret;
-    _max_col = std::max(_max_col, _col);
-    if (!ret)
-        LOG(error, "CsvWriter: failed to write value");
+        ret = (ssize_t)this->new_row();
+    ret += (ssize_t)_file.write_char(_comment);
+    ret += _file.write(value);
+    ret += (ssize_t)this->new_row();
+    if (ret < (ssize_t)(value.size() + 2))
+        LOG(error, "CsvWriter: failed to write commentary");
     return ret;
 }
 
-bool    CsvWriter::write(const std::vector<std::string> & values)
+ssize_t CsvWriter::write(const char *data, size_t size)
 {
-    for (const std::string & value: values)
+    ssize_t ret = 0;
+    //,
+    if (_col > 0)
+        ret = (ssize_t)_file.write_char(_delimiter);
+    //"
+    if (_begin_quote_c > 0)
     {
-        if (this->write(value) == false)
-            return false;
+        ret += _file.write_char(_begin_quote_c);
+        ret += _file.write(data, size);
+        ret += _file.write_char(_end_quote_c);
     }
-    return true;
+    else
+        ret += _file.write(data, size);
+    if (ret < (ssize_t)size)
+        LOG_ERROR("CsvWriter: write failed '%ld' < '%lu'", ret, size);
+    _col += ret;
+    _max_col = std::max(_max_col, _col);
+    return ret;
 }
 
-bool    CsvWriter::write_row(const std::vector<std::string> & values)
+ssize_t CsvWriter::write(const char *data, size_t size, time_t nano_timestamp)
 {
-    return this->write(values) && this->new_row();
+    ssize_t ret = 0;
+    if (_col == 0)
+        ret += (ssize_t)this->new_row();
+    ret += this->write(std::to_string(nano_timestamp));
+    ret += this->write(data, size);
+    ret += this->new_row();
+    return ret;
+}
+
+ssize_t CsvWriter::write(const std::string & value)
+{
+    return this->write(value.c_str(), value.size());
+}
+
+ssize_t CsvWriter::write(const std::vector<std::string> & values)
+{
+    ssize_t ret = 0;
+    ssize_t wrote;
+    for (const std::string & value: values)
+    {
+        wrote = this->write(value);
+        if (wrote < 0)
+            break ;
+        ret += wrote;
+    }
+    return ret;
+}
+
+ssize_t CsvWriter::write_row(const std::vector<std::string> & values)
+{
+    return this->write(values) + (ssize_t)this->new_row();
+}
+
+ssize_t CsvWriter::write_row(const std::vector<std::string> & values, time_t nano_timestamp)
+{
+    ssize_t ret = 0;
+    if (_col == 0)
+        ret += (ssize_t)this->new_row();
+    ret += this->write(std::to_string(nano_timestamp)) + this->write_row(values);
+    return ret;
 }
 
 }

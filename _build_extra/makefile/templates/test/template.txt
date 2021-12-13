@@ -30,7 +30,7 @@ namespace test
             {
             }
 
-            std::string _base_test_dir = sihd::util::Files::combine({getenv("TEST_PATH"), "MODULE_NAME"});
+            std::string _base_test_dir = sihd::util::Files::combine({getenv("TEST_PATH"), "MODULE_NAME", "CLASS_NAME"});
     };
 
     TEST_F(TestCLASS_NAME, test_CLASS_NAME)

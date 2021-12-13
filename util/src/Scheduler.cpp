@@ -10,33 +10,37 @@ LOGGER;
 
 Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent) 
 {
+    _clock_ptr = &_default_clock;
     overrun_at = time::micro(300);
     acceptable_nano = 100;
     _next_run = 0;
     _running = false;
     _paused = false;
+    _no_delay = false;
     _paused_time = 0;
-    _clock_ptr = new SystemClock();
+    this->add_conf("as_fast_as_possible", &Scheduler::set_as_fast_as_possible);
 }
 
 Scheduler::~Scheduler()
 {
     this->stop();
     this->clear_tasks();
-    if (_clock_ptr != nullptr)
-        delete _clock_ptr;
 }
 
 void    Scheduler::set_clock(IClock *ptr)
 {
-    if (_clock_ptr != nullptr)
-        delete _clock_ptr;
     _clock_ptr = ptr;
 }
 
 IClock  *Scheduler::get_clock()
 {
     return _clock_ptr;
+}
+
+bool    Scheduler::set_as_fast_as_possible(bool active)
+{
+    _no_delay = active;
+    return true;
 }
 
 bool    Scheduler::start()
@@ -85,7 +89,7 @@ bool    Scheduler::_wait_for_next_task(std::time_t steady_time)
     while (_task_map.empty() && _running)
         _waitable.infinite_wait();
     if (_running)
-        return _waitable.wait_for(_next_run - steady_time);
+        return _no_delay ? true : _waitable.wait_for(_next_run - steady_time);
     return false;
 }
 

@@ -120,7 +120,7 @@ bool    PcapReader::read_next()
     return ret >= 0;
 }
 
-bool    PcapReader::get_data(char **data, size_t *size) const
+bool    PcapReader::get_read_data(char **data, size_t *size) const
 {
     if (_pkt_data_ptr == nullptr || _pkt_hdr_ptr == nullptr)
         return false;

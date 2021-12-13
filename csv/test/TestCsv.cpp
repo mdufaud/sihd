@@ -47,12 +47,17 @@ namespace test
         EXPECT_TRUE(writer.write_commentary("hello world"));
         EXPECT_TRUE(writer.write_row({"1", "2", "3"}));
         EXPECT_TRUE(writer.write("1"));
-        EXPECT_TRUE(writer.write("2"));
+        EXPECT_TRUE(writer.write("2", 2));
         EXPECT_TRUE(writer.write("3"));
         EXPECT_TRUE(writer.write("4"));
         EXPECT_TRUE(writer.new_row());
         EXPECT_TRUE(writer.write({"1", "2", "3"}));
         EXPECT_TRUE(writer.write_row({"4", "5"}));
+        EXPECT_TRUE(writer.write("hello world", sizeof("hello world"), 1234));
+        EXPECT_TRUE(writer.set_quote_value('"'));
+        EXPECT_TRUE(writer.write("hello world", sizeof("hello world"), 1234));
+        EXPECT_TRUE(writer.set_quote_value('('));
+        EXPECT_TRUE(writer.write("hello world", sizeof("hello world"), 1234));
         EXPECT_TRUE(writer.new_row());
         EXPECT_TRUE(writer.write_commentary("bye"));
         EXPECT_TRUE(writer.close());
@@ -70,28 +75,41 @@ namespace test
         EXPECT_TRUE(reader.open(path));
         // must skip the two comments
         EXPECT_TRUE(reader.read_next());
-        EXPECT_TRUE(reader.get_values(values));
+        EXPECT_TRUE(reader.get_read_data(values));
 
-        EXPECT_EQ(values.size(), 3u);
-        if (values.size() == 3)
+        EXPECT_EQ(values.size(), 5u);
+        if (values.size() == 5)
         {
             EXPECT_EQ(values[0], "hello");
             EXPECT_EQ(values[1], "world");
-            EXPECT_EQ(values[2], "(this ; is trap)");
+            EXPECT_EQ(values[2], "");
+            EXPECT_EQ(values[3], "!");
+            // EXPECT_EQ(values[4], "");
         }
 
         EXPECT_TRUE(reader.read_next());
-        // last value line
-        EXPECT_TRUE(reader.read_next());
-        EXPECT_TRUE(reader.get_values(values));
+        EXPECT_TRUE(reader.get_read_data(values));
 
         EXPECT_EQ(values.size(), 4u);
         if (values.size() == 4)
         {
-            EXPECT_EQ(values[0], "the");
-            EXPECT_EQ(values[1], "fox");
-            EXPECT_EQ(values[2], "' is; here'");
-            EXPECT_EQ(values[3], "[;crap;]");
+            EXPECT_EQ(values[0], "1");
+            EXPECT_EQ(values[1], "2");
+            EXPECT_EQ(values[2], "3");
+            EXPECT_EQ(values[3], "4");
+        }
+
+        EXPECT_TRUE(reader.read_next());
+        EXPECT_TRUE(reader.set_quote_value('['));
+        EXPECT_TRUE(reader.get_read_data(values));
+
+        EXPECT_EQ(values.size(), 4u);
+        if (values.size() == 4)
+        {
+            EXPECT_EQ(values[0], "[the]");
+            EXPECT_EQ(values[1], "[fox,' is, here]");
+            EXPECT_EQ(values[2], "[,crap,]");
+            EXPECT_EQ(values[3], "");
         }
         EXPECT_FALSE(reader.read_next());
         EXPECT_TRUE(reader.close());

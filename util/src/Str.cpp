@@ -1,4 +1,5 @@
 #include <sihd/util/Str.hpp>
+#include <sihd/util/Splitter.hpp>
 
 #include <sstream>
 #include <cstdarg>
@@ -29,54 +30,23 @@ const char Str::g_escapes_open[] = "\"'[({<";
 const char Str::g_escapes_close[] = "\"'])}>";
 char Str::g_escape_char = '\\';
 
-static int   _split_size(const char *s, const char *delimiter, size_t len)
+char    *Str::csub(const char *str, size_t from_idx, ssize_t size)
 {
-    int count = 0;
-
-    int i = 0;
-    while (s[i])
+    if (size == 0)
+        size = strlen(str) - from_idx;
+    if (size < 0)
+        return nullptr;
+    char *ret = new char[size + 1];
+    size_t idx_src = from_idx;
+    size_t idx_dst = 0;
+    while (str[idx_src])
     {
-        while (s[i] && strncmp(s + i, delimiter, len) == 0)
-            i = i + len;
-        if (s[i] && s[i] != delimiter[0])
-            ++count;
-        while (s[i] && strncmp(s + i, delimiter, len) != 0)
-            ++i;
+        ret[idx_dst] = str[idx_src];
+        ++idx_dst;
+        ++idx_src;
     }
-    return count;
-}
-
-static std::string  _split_get_token(const char *s, int *idx, const char *delimiter, size_t len)
-{
-    int x = *idx;
-    while (s[x] && strncmp(s + x, delimiter, len) == 0)
-        x = x + len;
-    int y = x;
-    while (s[y] && strncmp(s + y, delimiter, len) != 0)
-        ++y;
-    *idx = y;
-    return std::string(s + x, y - x);
-}
-
-std::vector<std::string>    Str::split(const std::string & str, const char *delimiter)
-{
-    if (delimiter == nullptr || delimiter[0] == 0)
-        return {str};
-    size_t dlen = strlen(delimiter);
-    const char *s = str.c_str();
-    int tokens = _split_size(s, delimiter, dlen);
-    std::vector<std::string> ret(tokens);
-
-    int i = 0;
-    int j = 0;
-    while (tokens-- > 0)
-        ret[i++] = _split_get_token(s, &j, delimiter, dlen);
+    ret[idx_dst] = 0;
     return ret;
-}
-
-std::vector<std::string>    Str::split(const std::string & s, const std::string & delimiter)
-{
-    return Str::split(s, delimiter.c_str());
 }
 
 std::string     Str::join(const std::vector<std::string> & join_lst, const std::string & join_with)
@@ -316,7 +286,8 @@ bool    Str::is_number(const std::string & s, uint16_t base)
 std::map<std::string, std::string>  Str::parse_configuration(const std::string & conf)
 {
     std::map<std::string, std::string> ret;
-    auto split_pairs = Str::split(conf, ";");
+    Splitter splitter(";");
+    auto split_pairs = splitter.split(conf);
     for (const auto & pair: split_pairs)
     {
         size_t idx = pair.find_first_of('=');
@@ -563,87 +534,6 @@ int     Str::get_closing_escape_index(const char *str, int index, const char *au
         ++i;
     }
     return -2;
-}
-
-static int   _split_escape_size(const char *s, const char *delimiter,
-                                size_t len, const char *authorized_open_escape_sequences)
-{
-    int count = 0;
-
-    int i = 0;
-    while (i >= 0 && s[i])
-    {
-        while (s[i] && strncmp(s + i, delimiter, len) == 0)
-            i = i + len;
-        if (s[i] && s[i] != delimiter[0])
-            ++count;
-        while (s[i])
-        {
-            int closed_at = Str::get_closing_escape_index(s, i, authorized_open_escape_sequences);
-            // matched closure
-            if (closed_at > 0)
-                i = closed_at;
-            // never ends
-            else if (closed_at == -2)
-            {
-                i = -1;
-                break ;
-            }
-            // not a closing escape
-            else
-            {
-                if (strncmp(s + i, delimiter, len) == 0)
-                    break ;
-                ++i;
-            }
-        }
-    }
-    return count;
-}
-
-static std::string  _split_escape_get_token(const char *s, int *idx, const char *delimiter,
-                                            size_t len, const char *authorized_open_escape_sequences)
-{
-    int x = *idx;
-    while (s[x] && strncmp(s + x, delimiter, len) == 0)
-        x = x + len;
-    int y = x;
-    while (s[y])
-    {
-        int closed_at = Str::get_closing_escape_index(s, y, authorized_open_escape_sequences);
-        // matched closure
-        if (closed_at > 0)
-            y = closed_at;
-        // never ends
-        else if (closed_at == -2)
-            break ;
-        // not a closing escape
-        else
-        {
-            if (strncmp(s + y, delimiter, len) == 0)
-                break ;
-            ++y;
-        }
-    }
-    *idx = y;
-    return std::string(s + x, y - x);
-}
-
-std::vector<std::string>    Str::split_escape(const std::string & str, const char *delimiter,
-                                                const char *authorized_open_escape_sequences)
-{
-   if (delimiter == nullptr || delimiter[0] == 0)
-        return {str};
-    size_t dlen = strlen(delimiter);
-    const char *s = str.c_str();
-    int tokens = _split_escape_size(s, delimiter, dlen, authorized_open_escape_sequences);
-    std::vector<std::string> ret(tokens);
-
-    int i = 0;
-    int j = 0;
-    while (tokens-- > 0)
-        ret[i++] = _split_escape_get_token(s, &j, delimiter, dlen, authorized_open_escape_sequences);
-    return ret;
 }
 
 /*

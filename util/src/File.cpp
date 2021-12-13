@@ -273,9 +273,9 @@ int     File::_seek(long offset, int origin)
 
 ssize_t File::read(char *buf, size_t size)
 {
-    size_t ret = fread(buf, sizeof(char), size, _file_ptr);
     if (this->eof())
         return 0;
+    size_t ret = fread(buf, sizeof(char), size, _file_ptr);
     if (this->error())
         return -1;
     return (ssize_t)ret;

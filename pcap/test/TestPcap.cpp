@@ -55,7 +55,7 @@ namespace test
         while (reader.read_next())
         {
             const struct pcap_pkthdr *hdr = reader.packet_header();
-            EXPECT_TRUE(reader.get_data(&data, &size));
+            EXPECT_TRUE(reader.get_read_data(&data, &size));
             EXPECT_EQ(hdr->len, size);
             ++n;
         }

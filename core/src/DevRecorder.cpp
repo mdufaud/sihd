@@ -2,6 +2,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Str.hpp>
+#include <sihd/util/Splitter.hpp>
 
 #define CHANNEL_RECORDS "records"
 
@@ -33,7 +34,8 @@ bool    DevRecorder::set_handler(const std::string & path)
 
 bool    DevRecorder::add_record_channel(const std::string & conf)
 {
-    std::vector<std::string> split = sihd::util::Str::split(conf, "=");
+    sihd::util::Splitter splitter("=");
+    std::vector<std::string> split = splitter.split(conf);
     if (split.size() != 2)
     {
         LOG(error, "DevRecorder: record channel configuration got '"

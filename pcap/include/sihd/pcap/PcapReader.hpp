@@ -29,7 +29,7 @@ class PcapReader:   public sihd::util::Named
         // should check if file is_open before calling theses
 
         bool read_next();
-        bool get_data(char **data, size_t *size) const;
+        bool get_read_data(char **data, size_t *size) const;
         const struct pcap_pkthdr *packet_header() const;
 
         FILE *file();

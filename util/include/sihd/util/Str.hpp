@@ -19,19 +19,16 @@ class Str
         Str() {};
         ~Str() {};
 
-        static const char g_escapes_open[];
-        static const char g_escapes_close[];
-
         static const size_t g_buffer_size;
         static std::mutex g_buffer_mutex;
         static char g_buffer[];
 
     public:
-        static size_t hexdump_cols;
+        static const char g_escapes_open[];
+        static const char g_escapes_close[];
         static char g_escape_char;
 
-        static std::vector<std::string> split(const std::string & s, const std::string & delimiter);
-        static std::vector<std::string> split(const std::string & s, const char *delimiter);
+        static size_t hexdump_cols;
 
         static bool is_escape_sequence_open(int c);
         static bool is_escape_sequence_close(int c);
@@ -50,12 +47,12 @@ class Str
         static int closing_escape_of(int sequence);
         // [hello] -> 7
         static int get_closing_escape_index(const char *s, int index, const char *authorized_open_escape_sequences = nullptr);
-        static std::vector<std::string> split_escape(const std::string & s, const char *delimiter,
-                                                        const char *authorized_open_escape_sequences = nullptr);
 
         // static std::string remove_escape_char(const std::string & str);
         // static std::string remove_escape_sequences(const std::string & str, const char *authorized_open_escape_sequences = nullptr);
 
+        // clone str from_idx to size (or all the remaining str)
+        static char *csub(const char *str, size_t from_idx, ssize_t size = 0);
         static std::string join(const std::vector<std::string> & join_lst, const std::string & join_with = "");
         static std::string demangle(const char *name);
         static std::string format(const char *format, ...);
