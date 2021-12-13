@@ -121,7 +121,8 @@ bool    CsvReader::get_read_timestamp(time_t *nano_timestamp) const
     if (_line_ptr == nullptr)
         return false;
     int offset = _line_size > 0 && _quote > 0 && _line_ptr[0] == _quote ? 1 : 0;
-    return sihd::util::Str::to_long(_line_ptr + offset, nano_timestamp);
+    std::string str = _line_ptr + offset;
+    return sihd::util::Str::to_long(str, (long *)nano_timestamp);
 }
 
 bool    CsvReader::get_read_data(std::vector<std::string> & values) const

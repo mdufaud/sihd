@@ -135,10 +135,7 @@ ssize_t CsvWriter::write(const char *data, size_t size)
 
 ssize_t CsvWriter::write(const char *data, size_t size, time_t nano_timestamp)
 {
-    ssize_t ret = 0;
-    if (_col == 0)
-        ret += (ssize_t)this->new_row();
-    ret += this->write(std::to_string(nano_timestamp));
+    ssize_t ret = this->write(std::to_string(nano_timestamp));
     ret += this->write(data, size);
     ret += this->new_row();
     return ret;
@@ -170,11 +167,7 @@ ssize_t CsvWriter::write_row(const std::vector<std::string> & values)
 
 ssize_t CsvWriter::write_row(const std::vector<std::string> & values, time_t nano_timestamp)
 {
-    ssize_t ret = 0;
-    if (_col == 0)
-        ret += (ssize_t)this->new_row();
-    ret += this->write(std::to_string(nano_timestamp)) + this->write_row(values);
-    return ret;
+    return this->write(std::to_string(nano_timestamp)) + this->write_row(values);
 }
 
 }
