@@ -171,4 +171,34 @@ namespace test
         EXPECT_EQ(seq.overruns, 0u);
     }
 
+    TEST_F(TestScheduler, test_sched_as_fast)
+    {
+        if (OS::is_run_by_valgrind())
+        {
+            GTEST_SKIP() << "Test is buggy under valgrind debugger";
+        }
+        Scheduler seq("seq");
+        SystemClock clock;
+        int lambda_ran = 0;
+        std::function<bool()> fun = [&lambda_ran] () -> bool
+        {
+            TRACE("PLAY")
+            ++lambda_ran;
+            return true;
+        };
+        time_t now = clock.now();
+        seq.add_task(new Task(fun, now + time::milli(1)));
+        seq.add_task(new Task(fun, now + time::milli(5)));
+        seq.add_task(new Task(fun, now + time::milli(10)));
+        seq.add_task(new Task(fun, now + time::milli(15)));
+        seq.add_task(new Task(fun, now + time::milli(20)));
+        seq.set_as_fast_as_possible(true);
+        std::time_t milli_sleep = 7;
+        seq.start();
+        LOG(debug, "Started scheduler");
+        std::this_thread::sleep_for(std::chrono::milliseconds(milli_sleep));
+        seq.stop();
+        LOG(debug, "Stopped scheduler");
+        EXPECT_EQ(lambda_ran, 5);
+    }
 }

@@ -102,7 +102,7 @@ Task    *Scheduler::_get_next_task(std::time_t time)
     if (-diff > this->overrun_at)
         this->overruns += 1;
 
-    if (task != nullptr && diff <= 0)
+    if (diff <= 0 || _no_delay)
         _task_map.erase(_task_map.begin());
     else
         task = nullptr;
