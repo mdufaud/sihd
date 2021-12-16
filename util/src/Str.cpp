@@ -1,5 +1,6 @@
 #include <sihd/util/Str.hpp>
 #include <sihd/util/Splitter.hpp>
+#include <sihd/util/time.hpp>
 
 #include <sstream>
 #include <cstdarg>
@@ -483,14 +484,16 @@ bool Str::convert_from_string<double>(const std::string & str, double & value, [
     return ret;
 }
 
-bool    Str::is_escape_sequence_open(int c)
+bool    Str::is_escape_sequence_open(int c, const char *authorized_open_escape_sequences)
 {
-    return c > 0 && strchr(g_escapes_open, c) != nullptr;
+    const char *search_in = authorized_open_escape_sequences == nullptr ? g_escapes_open : authorized_open_escape_sequences;
+    return c > 0 && strchr(search_in, c) != nullptr;
 }
 
-bool    Str::is_escape_sequence_close(int c)
+bool    Str::is_escape_sequence_close(int c, const char *authorized_close_escape_sequences)
 {
-    return c > 0 && strchr(g_escapes_close, c) != nullptr;
+    const char *search_in = authorized_close_escape_sequences == nullptr ? g_escapes_close : authorized_close_escape_sequences;
+    return c > 0 && strchr(search_in, c) != nullptr;
 }
 
 int     Str::closing_escape_of(int c)
@@ -536,16 +539,140 @@ int     Str::get_closing_escape_index(const char *str, int index, const char *au
     return -2;
 }
 
-/*
 std::string  Str::remove_escape_char(const std::string & str)
 {
+    const char *cstr = str.c_str();
+    std::string ret;
+    size_t len = str.size();
+    size_t count_escapes = 0;
+    size_t i = 0;
+    size_t j = 0;
 
+    while (i < len)
+    {
+        if (cstr[i] == '\\')
+        {
+            ++count_escapes;
+            ++i;
+        }
+        ++i;
+    }
+    ret.resize(len - count_escapes);
+    i = 0;
+    while (i < len)
+    {
+        if (cstr[i] == '\\')
+            ++i;
+        if (i < len)
+        {
+            ret[j] = cstr[i];
+            ++i;
+            ++j;
+        }
+    }
+    return ret;
 }
 
 std::string  Str::remove_escape_sequences(const std::string & str, const char *authorized_open_escape_sequences)
 {
+    const char *cstr = str.c_str();
+    std::string ret;
+    size_t len = str.size();
+    size_t count_sequences = 0;
+    size_t j = 0;
+    size_t i = 0;
+    int current_seq;
+    bool in_seq = false;
 
+    while (i < len)
+    {
+        if (!in_seq
+            && Str::is_escape_sequence_open(cstr[i], authorized_open_escape_sequences)
+            && Str::is_escaped_char(cstr, i) == false)
+        {
+            current_seq = Str::closing_escape_of(cstr[i]);
+            ++count_sequences;
+            in_seq = true;
+        }
+        else if (in_seq && cstr[i] == current_seq)
+        {
+            ++count_sequences;
+            in_seq = false;
+        }
+        ++i;
+    }
+    ret.resize(len - count_sequences);
+    i = 0;
+    in_seq = false;
+    while (i < len)
+    {
+        if (!in_seq
+            && Str::is_escape_sequence_open(cstr[i], authorized_open_escape_sequences)
+            && Str::is_escaped_char(cstr, i) == false)
+        {
+            current_seq = Str::closing_escape_of(cstr[i]);
+            ++i;
+            in_seq = true;
+        }
+        else if (in_seq && cstr[i] == current_seq)
+        {
+            ++i;
+            in_seq = false;
+        }
+        else
+        {
+            ret[j] = cstr[i];
+            ++j;
+            ++i;
+        }
+    }
+    return ret;
 }
-*/
+
+std::string Str::gmtime_to_string(time_t nano, bool total_parenthesis, bool nano_resolution)
+{
+    return Str::_time_to_string(nano, total_parenthesis, nano_resolution, false);
+}
+
+std::string Str::localtime_to_string(time_t nano, bool total_parenthesis, bool nano_resolution)
+{
+    return Str::_time_to_string(nano, total_parenthesis, nano_resolution, true);
+}
+
+std::string Str::_time_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime)
+{
+    std::stringstream ss;
+    struct tm *tm = time::to_tm(std::abs(nano), localtime);
+    if (tm)
+    {
+        bool next_step;
+        ss << (nano > 0 ? "+" : "-");
+        if ((next_step = tm->tm_year > 70))
+            ss << tm->tm_year - 70 << "y:";
+        if ((next_step = next_step || tm->tm_mon > 0))
+            ss << tm->tm_mon << "m:";
+        if ((next_step = next_step || (tm->tm_mday - 1) > 0))
+            ss << tm->tm_mday - 1 << "d::";
+        if ((next_step = next_step || tm->tm_hour > 0))
+            ss << tm->tm_hour << "h:";
+        if ((next_step = next_step || tm->tm_min > 0))
+            ss << tm->tm_min << "m:";
+        if ((next_step = next_step || tm->tm_sec > 0))
+            ss << tm->tm_sec << "s:";
+        time_t ms = time::to_milli(nano) % (int)1E3;
+        if ((next_step = next_step || ms > 0))
+            ss << ms << "ms:";
+        time_t us = time::to_micro(nano) % (int)1E3;
+        ss << us << "us";
+        if (nano_resolution)
+        {
+            time_t ns = std::abs(nano) % (int)1E3;
+            ss << ":" << ns << "ns";
+        }
+        if (total_parenthesis)
+            ss << " (" << nano << ")";
+    }
+    return ss.str();
+}
 
 }

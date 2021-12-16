@@ -2,6 +2,7 @@
 #include <sihd/util/Str.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
+#include <sihd/util/time.hpp>
 
 #include <iostream>
 #include <climits>
@@ -84,6 +85,65 @@ namespace test
             unsigned long _uval;
             double _dval;
     };
+
+    TEST_F(TestStr, test_str_remove_escape_char)
+    {
+        std::string escaped = Str::remove_escape_char("\\hello\\ world");
+        EXPECT_EQ(escaped, "hello world");
+        EXPECT_EQ(escaped.size(), strlen("hello world"));
+
+        escaped = Str::remove_escape_char("\\\\hello\\\\ world");
+        EXPECT_EQ(escaped, "\\hello\\ world");
+
+        escaped = Str::remove_escape_char("");
+        EXPECT_EQ(escaped, "");
+    }
+
+    TEST_F(TestStr, test_str_remove_escape_sequences)
+    {
+        std::string escaped = Str::remove_escape_sequences("'hello world'");
+        EXPECT_EQ(escaped, "hello world");
+        EXPECT_EQ(escaped.size(), strlen("hello world"));
+
+        escaped = Str::remove_escape_sequences("'hello '(world)'");
+        EXPECT_EQ(escaped, "hello world");
+        escaped = Str::remove_escape_sequences("hello ''([world])");
+        EXPECT_EQ(escaped, "hello [world]");
+        escaped = Str::remove_escape_sequences("\\'hello \\'world");
+        EXPECT_EQ(escaped, "\\'hello \\'world");
+        escaped = Str::remove_escape_sequences("");
+        EXPECT_EQ(escaped, "");
+    }
+
+    TEST_F(TestStr, test_str_time2str)
+    {
+        std::string time_str = Str::gmtime_to_string(time::micro(123));
+        EXPECT_EQ(time_str, "+123us");
+        time_str = Str::gmtime_to_string(time::milli(1));
+        EXPECT_EQ(time_str, "+1ms:0us");
+        time_str = Str::gmtime_to_string(time::sec(12) + time::micro(12));
+        EXPECT_EQ(time_str, "+12s:0ms:12us");
+        time_str = Str::gmtime_to_string(time::hour(12));
+        EXPECT_EQ(time_str, "+12h:0m:0s:0ms:0us");
+        time_str = Str::gmtime_to_string(time::hour(24));
+        EXPECT_EQ(time_str, "+1d::0h:0m:0s:0ms:0us");
+        time_str = Str::gmtime_to_string(time::day(24));
+        EXPECT_EQ(time_str, "+24d::0h:0m:0s:0ms:0us");
+        time_str = Str::gmtime_to_string(time::day(31));
+        EXPECT_EQ(time_str, "+1m:0d::0h:0m:0s:0ms:0us");
+        time_str = Str::gmtime_to_string(time::day(365));
+        EXPECT_EQ(time_str, "+1y:0m:0d::0h:0m:0s:0ms:0us");
+        time_str = Str::gmtime_to_string(time::day(365) * 2);
+        EXPECT_EQ(time_str, "+2y:0m:0d::0h:0m:0s:0ms:0us");
+
+        time_str = Str::gmtime_to_string(-time::sec(42));
+        EXPECT_EQ(time_str, "-42s:0ms:0us");
+
+        std::string nano_time_str = Str::gmtime_to_string(123, false, true);
+        EXPECT_EQ(nano_time_str, "+0us:123ns");
+        nano_time_str = Str::gmtime_to_string(-123, true, true);
+        EXPECT_EQ(nano_time_str, "-0us:123ns (-123)");
+    }
 
     TEST_F(TestStr, test_str_escapes)
     {

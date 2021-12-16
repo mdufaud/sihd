@@ -9,7 +9,7 @@ except ImportError:
     from . import modules as build_tools_modules
 
 linux_libs = ['dl']
-linux_extlibs = ['readline', 'pybind11']
+linux_extlibs = ['readline', 'pybind11', 'bluetooth']
 
 default_compiler = "gcc"
 specific_platform_compilers = {
@@ -92,6 +92,11 @@ def sanitize_app(app):
         for modname, conf in modules.items():
             uselibs = conf.get("uselibs", [])
             matches = [lib for lib in uselibs if lib in linux_extlibs]
+            if matches:
+                warning("module '{}' use linux libs: {}".format(modname, ', '.join(matches)))
+                to_remove.add(modname)
+            libs = conf.get("libs", [])
+            matches = [lib for lib in libs if lib in linux_extlibs]
             if matches:
                 warning("module '{}' use linux libs: {}".format(modname, ', '.join(matches)))
                 to_remove.add(modname)

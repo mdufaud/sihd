@@ -354,6 +354,7 @@ namespace test
         proc.stderr_to(err);
 
         EXPECT_TRUE(proc.start());
+        EXPECT_TRUE(proc.wait_any());
         EXPECT_TRUE(proc.end());
 
         EXPECT_TRUE(proc.has_exited());

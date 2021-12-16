@@ -23,6 +23,8 @@ class Str
         static std::mutex g_buffer_mutex;
         static char g_buffer[];
 
+        static std::string _time_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime);
+
     public:
         static const char g_escapes_open[];
         static const char g_escapes_close[];
@@ -30,8 +32,11 @@ class Str
 
         static size_t hexdump_cols;
 
-        static bool is_escape_sequence_open(int c);
-        static bool is_escape_sequence_close(int c);
+        static std::string gmtime_to_string(time_t nano, bool total_parenthesis = false, bool nano_resolution = false);
+        static std::string localtime_to_string(time_t nano, bool total_parenthesis = false, bool nano_resolution = false);
+
+        static bool is_escape_sequence_open(int c, const char *authorized_open_escape_sequences = nullptr);
+        static bool is_escape_sequence_close(int c, const char *authorized_close_escape_sequences = nullptr);
         /**
          * @brief check if a char is escaped by calculating an impair number of escape '\' before the char
          *  must give the beginning pointer of string and the index of the actual char
@@ -48,8 +53,8 @@ class Str
         // [hello] -> 7
         static int get_closing_escape_index(const char *s, int index, const char *authorized_open_escape_sequences = nullptr);
 
-        // static std::string remove_escape_char(const std::string & str);
-        // static std::string remove_escape_sequences(const std::string & str, const char *authorized_open_escape_sequences = nullptr);
+        static std::string remove_escape_char(const std::string & str);
+        static std::string remove_escape_sequences(const std::string & str, const char *authorized_open_escape_sequences = nullptr);
 
         // clone str from_idx to size (or all the remaining str)
         static char *csub(const char *str, size_t from_idx, ssize_t size = 0);
