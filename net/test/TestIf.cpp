@@ -3,6 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/net/If.hpp>
 #include <sihd/net/NetInterfaces.hpp>
+#include <sihd/net/IpAddr.hpp>
 
 namespace test
 {
@@ -41,7 +42,41 @@ namespace test
         {
             if (iface->name() == "lo")
                 lo = iface;
-            LOG(debug, iface->name() << " -> " << (iface->up() ? "up" : "down"));
+            LOG(debug, "Interface: " << iface->name() << " -> " << (iface->up() ? "up" : "down"));
+            LOG(debug, "Total addresses: " << iface->addresses().size());
+            LOG(debug, "--- IPV4 ---");
+            const struct ifaddrs *ifaddr4 = iface->get_addr(AF_INET);
+            if (ifaddr4)
+            {
+                in_addr mask;
+                EXPECT_TRUE(iface->get_netmask(ifaddr4, &mask));
+                struct sockaddr_in *base = (struct sockaddr_in *)(ifaddr4->ifa_addr);
+                struct sockaddr_in netid;
+                struct sockaddr_in broadcast;
+                IpAddr::get_network_id(netid, *base, mask);
+                IpAddr::get_broadcast(broadcast, *base, mask);
+                LOG(debug, "Base ip: " << IpAddr::ip_to_string(*base));
+                LOG(debug, "Netmask: " << IpAddr::ip_to_string(mask));
+                LOG(debug, "Netid: " << IpAddr::ip_to_string(netid));
+                LOG(debug, "Broadcast: " << IpAddr::ip_to_string(broadcast));
+            }
+            LOG(debug, "--- IPV6 ---");
+            const struct ifaddrs *ifaddr6 = iface->get_addr(AF_INET6);
+            if (ifaddr6)
+            {
+                in6_addr mask;
+                EXPECT_TRUE(iface->get_netmask(ifaddr6, &mask));
+                struct sockaddr_in6 *base = (struct sockaddr_in6 *)(ifaddr6->ifa_addr);
+                struct sockaddr_in6 netid;
+                struct sockaddr_in6 broadcast;
+                IpAddr::get_network_id(netid, *base, mask);
+                IpAddr::get_broadcast(broadcast, *base, mask);
+                LOG(debug, "Base ip: " << IpAddr::ip_to_string(*base));
+                LOG(debug, "Netmask: " << IpAddr::ip_to_string(mask));
+                LOG(debug, "Netid: " << IpAddr::ip_to_string(netid));
+                LOG(debug, "Broadcast: " << IpAddr::ip_to_string(broadcast));
+            }
+            std::cout << std::endl;
         }
         EXPECT_TRUE(ifaces.size() > 0);
         EXPECT_NE(lo, nullptr);

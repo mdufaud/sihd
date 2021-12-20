@@ -1,6 +1,7 @@
 #include <sihd/pcap/PcapReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/time.hpp>
 
 namespace sihd::pcap
 {
@@ -8,6 +9,8 @@ namespace sihd::pcap
 SIHD_UTIL_REGISTER_FACTORY(PcapReader)
 
 LOGGER;
+
+using namespace sihd::util;
 
 PcapReader::PcapReader(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent), _ownership(true),
@@ -34,8 +37,12 @@ bool    PcapReader::open(const std::string & path)
     char errbuf[PCAP_ERRBUF_SIZE];
     _pcap_ptr = pcap_open_offline(path.c_str(), errbuf);
     if (_pcap_ptr == nullptr)
+    {
         LOG(error, "PcapReader: " << errbuf << ": " << path);
-    return _pcap_ptr != nullptr;
+        return false;
+    }
+    _precision = pcap_get_tstamp_precision(_pcap_ptr);
+    return true;
 }
 
 bool    PcapReader::open_micro_precision(const std::string & path)
@@ -54,8 +61,12 @@ bool    PcapReader::_open_precision(const char *path, u_int precision)
     char errbuf[PCAP_ERRBUF_SIZE];
     _pcap_ptr = pcap_open_offline_with_tstamp_precision(path, precision, errbuf);
     if (_pcap_ptr == nullptr)
+    {
         LOG(error, "PcapReader: " << errbuf << ": " << path);
-    return _pcap_ptr != nullptr;
+        return false;
+    }
+    _precision = pcap_get_tstamp_precision(_pcap_ptr);
+    return true;
 }
 
 bool    PcapReader::open(FILE *file)
@@ -64,8 +75,12 @@ bool    PcapReader::open(FILE *file)
     char errbuf[PCAP_ERRBUF_SIZE];
     _pcap_ptr = pcap_fopen_offline(file, errbuf);
     if (_pcap_ptr == nullptr)
+    {
         LOG(error, "PcapReader: " << errbuf);
-    return _pcap_ptr != nullptr;
+        return false;
+    }
+    _precision = pcap_get_tstamp_precision(_pcap_ptr);
+    return true;
 }
 
 bool    PcapReader::open_micro_precision(FILE *file)
@@ -84,8 +99,12 @@ bool    PcapReader::_open_precision(FILE *file, u_int precision)
     char errbuf[PCAP_ERRBUF_SIZE];
     _pcap_ptr = pcap_fopen_offline_with_tstamp_precision(file, precision, errbuf);
     if (_pcap_ptr == nullptr)
+    {
         LOG(error, "PcapReader: " << errbuf);
-    return _pcap_ptr != nullptr;
+        return false;
+    }
+    _precision = pcap_get_tstamp_precision(_pcap_ptr);
+    return true;
 }
 
 bool    PcapReader::is_open() const
@@ -126,6 +145,17 @@ bool    PcapReader::get_read_data(char **data, size_t *size) const
         return false;
     *data = reinterpret_cast<char *>(_pkt_data_ptr);
     *size = _pkt_hdr_ptr->len;
+    return true;
+}
+
+bool    PcapReader::get_read_timestamp(time_t *nano_timestamp) const
+{
+    if (_pkt_hdr_ptr == nullptr)
+        return false;
+    if (_precision == PCAP_TSTAMP_PRECISION_MICRO)
+        *nano_timestamp = time::tv(_pkt_hdr_ptr->ts);
+    else if (_precision == PCAP_TSTAMP_PRECISION_NANO)
+        *nano_timestamp = time::nano_tv(_pkt_hdr_ptr->ts);
     return true;
 }
 

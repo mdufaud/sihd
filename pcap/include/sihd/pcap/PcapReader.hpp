@@ -3,12 +3,13 @@
 
 # include <sihd/util/Node.hpp>
 # include <sihd/util/File.hpp>
+# include <sihd/util/IReader.hpp>
 # include <sihd/pcap/PcapUtils.hpp>
 
 namespace sihd::pcap
 {
 
-class PcapReader:   public sihd::util::Named
+class PcapReader:   public sihd::util::Named, public sihd::util::IReaderTimestamp
 {
     public:
         PcapReader(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -30,6 +31,8 @@ class PcapReader:   public sihd::util::Named
 
         bool read_next();
         bool get_read_data(char **data, size_t *size) const;
+		bool get_read_timestamp(time_t *nano_timestamp) const;
+
         const struct pcap_pkthdr *packet_header() const;
 
         FILE *file();
@@ -52,6 +55,7 @@ class PcapReader:   public sihd::util::Named
         pcap_t *_pcap_ptr;
         u_char *_pkt_data_ptr;
         struct pcap_pkthdr *_pkt_hdr_ptr;
+        u_int _precision;
 };
 
 }

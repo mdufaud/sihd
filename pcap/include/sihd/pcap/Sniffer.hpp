@@ -6,6 +6,7 @@
 # include <sihd/util/IStoppableRunnable.hpp>
 # include <sihd/util/Observable.hpp>
 # include <sihd/util/Array.hpp>
+# include <sihd/util/IReader.hpp>
 # include <sihd/pcap/PcapUtils.hpp>
 
 namespace sihd::pcap
@@ -13,6 +14,7 @@ namespace sihd::pcap
 
 class Sniffer:  public sihd::util::Named,
                 public sihd::util::Configurable,
+                public sihd::util::IReaderTimestamp,
                 public sihd::util::IStoppableRunnable,
                 public sihd::util::Observable<Sniffer>
 {
@@ -33,12 +35,14 @@ class Sniffer:  public sihd::util::Named,
 
         // sniff bufferful of packets from a pcap_t open for a live capture then leave
         bool sniff();
-        bool sniff_one();
+        // sniff one packet
+        bool read_next();
+        // callback when packet is sniffed
         void new_packet(const struct pcap_pkthdr *h, const u_char *bytes);
         // get datas
-        time_t timestamp() const;
-        const sihd::util::ArrByte & data() const;
         bool get_read_data(char **data, size_t *size) const;
+		bool get_read_timestamp(time_t *nano_timestamp) const;
+        const sihd::util::ArrByte & data() const;
 
         // maximum pkts to sniff before stopping
         bool set_max_sniff(size_t n);
@@ -56,7 +60,7 @@ class Sniffer:  public sihd::util::Named,
         bool set_nonblock(bool block);
         bool set_datalink(int datalink);
         bool set_timestamp_type(int ts_type);
-        bool set_buffersize(int size);
+        bool set_buffer_size(int size);
         bool set_snaplen(int len);
         bool set_timeout(int ms);
         // in / out / both

@@ -41,7 +41,6 @@ namespace test
 
     TEST_F(TestZip, test_zip_writer)
     {
-
         std::string zip_path = Files::combine(_base_test_dir, "to_zip.zip");
         Files::remove_file(zip_path);
 
@@ -61,66 +60,89 @@ namespace test
         // Adding array entry
         sihd::util::ArrStr arr_entry("hello test world");
         EXPECT_TRUE(writer.add_file("toto_entry", arr_entry.cbuf(), arr_entry.byte_size()));
+        EXPECT_TRUE(writer.add_file("toto_entry2", arr_entry.cbuf(), arr_entry.byte_size()));
 
-        EXPECT_TRUE(writer.encrypt_all("toto"));
+        const char *password = "toto";
+
+        EXPECT_TRUE(writer.encrypt_all(password));
         EXPECT_TRUE(writer.close());
 
         // Test reading
         ZipReader reader("zip-reader");
 
-        EXPECT_FALSE(reader.set_conf("password", "toto"));
+        EXPECT_FALSE(reader.set_conf("password", password));
 
         EXPECT_TRUE(reader.open(zip_path));
-        EXPECT_EQ(reader.count_entries(), 15u);
+        EXPECT_EQ(reader.count_entries(), 16u);
 
-        EXPECT_TRUE(reader.set_conf("password", "toto"));
+
+        char *data;
+        size_t size;
+        std::string entry_name = "toto_entry";
+        EXPECT_TRUE(reader.load_entry(entry_name));
+        LOG(info, "Trying to read entry without password");
+        EXPECT_TRUE(reader.read_entry() == -1);
+        LOG(info, "Trying to read entry with password");
+        EXPECT_TRUE(reader.read_entry(password) > 0);
+        EXPECT_TRUE(reader.get_read_data(&data, &size));
+        EXPECT_STREQ(data, arr_entry.to_string().c_str());
+
+        LOG(info, "Setting global password");
+        EXPECT_TRUE(reader.set_conf("password", password));
+        entry_name = "toto_entry2";
+        EXPECT_TRUE(reader.load_entry(entry_name));
+        EXPECT_TRUE(reader.read_entry() > 0);
+        EXPECT_TRUE(reader.get_read_data(&data, &size));
+        EXPECT_STREQ(data, arr_entry.to_string().c_str());
+
+        entry_name = "to_zip/file.txt";
+        EXPECT_TRUE(reader.load_entry(entry_name));
+        EXPECT_TRUE(reader.read_entry() > 0);
+        EXPECT_TRUE(reader.get_read_data(&data, &size));
+        EXPECT_STREQ(data, "hello\n");
         
-        // Testing fs directory entry
-        std::string entry_name = "to_zip/file.txt";
-        zip_stat_t zip_entry;
-        EXPECT_TRUE(reader.get_entry(entry_name, &zip_entry));
-        EXPECT_EQ(zip_entry.name, entry_name);
-
-        std::string entry_text;
-        EXPECT_TRUE(reader.read_entry_into(&zip_entry, entry_text));
-
-        EXPECT_EQ(entry_text, "hello\n");
-
-        // Testing array entry
-        entry_name = "toto_entry";
-        EXPECT_TRUE(reader.get_entry(entry_name, &zip_entry));
-        EXPECT_EQ(zip_entry.name, entry_name);
-        entry_text.clear();
-        EXPECT_TRUE(reader.read_entry_into(&zip_entry, entry_text));
-        EXPECT_EQ(entry_text, arr_entry.to_string());
-
         EXPECT_TRUE(reader.close());
     }
 
     TEST_F(TestZip, test_zip_reader)
     {
         std::string zip_path = "test/resources/to_read/to_zip.zip";
+        char *data;
+        size_t size;
         ZipReader reader("zip-reader");
 
         EXPECT_TRUE(reader.open(zip_path));
         EXPECT_EQ(reader.count_entries(), 14u);
 
         std::string entry_name = "to_zip/file.txt";
-        zip_stat_t zip_entry;
-        EXPECT_TRUE(reader.get_entry(entry_name, &zip_entry));
-        EXPECT_EQ(zip_entry.name, entry_name);
+        EXPECT_TRUE(reader.load_entry(entry_name));
+        EXPECT_TRUE(reader.read_entry());
+        EXPECT_TRUE(reader.get_read_data(&data, &size));
+        EXPECT_STREQ(data, "hello\n");
 
-        std::vector<zip_stat_t> entries;
-        EXPECT_TRUE(reader.get_entries(entries));
-        for (const auto & entry: entries)
+        reader.set_read_entry_names(true);
+        while (reader.read_next())
         {
-            LOG(debug, entry.name);
+            EXPECT_TRUE(reader.get_read_data(&data, &size));
+            LOG(info, "Zip entry: " << data);
+            if (reader.is_entry_directory())
+            {
+                LOG(info, "-> directory");
+            }
+            else
+            {
+                EXPECT_TRUE(reader.read_entry() >= 0);
+                EXPECT_TRUE(reader.get_read_data(&data, &size));
+                if (size > 0)
+                {
+                    // removing linefeed from text
+                    data[size - 1] = 0;
+                    LOG(info, "-> content: " << data);
+                }
+                else
+                    LOG(info, "-> empty");
+            }
         }
-
-        std::string entry_text;
-        EXPECT_TRUE(reader.read_entry_into(&zip_entry, entry_text));
-
-        EXPECT_EQ(entry_text, "hello\n");
 
         EXPECT_TRUE(reader.close());
     }

@@ -16,8 +16,15 @@ class NetIFace
         unsigned int flags() const { return _flags; }
 
 # if !defined(__SIHD_WINDOWS__)
-        void add(struct ifaddrs *addr);        
+        void add(struct ifaddrs *addr);
+
         const struct ifaddrs *get_addr(int family) const;
+
+        const struct ifaddrs *find(sockaddr_in addr_in) const;
+        const struct ifaddrs *find(sockaddr_in6 addr_in6) const;
+
+        bool get_netmask(const struct ifaddrs *addr, in_addr *ret) const;
+        bool get_netmask(const struct ifaddrs *addr, in6_addr *ret) const;
 
         const std::vector<struct ifaddrs *> & addresses() const { return _addrs; }
 
@@ -60,7 +67,7 @@ class NetInterfaces
         NetInterfaces();
         virtual ~NetInterfaces();
 
-        bool find();
+        bool load();
         bool error();
 
         std::vector<std::string> names();

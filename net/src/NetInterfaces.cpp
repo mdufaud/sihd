@@ -12,7 +12,7 @@ NetInterfaces::NetInterfaces()
 #if !defined(__SIHD_WINDOWS__)
     _addrs_ptr = nullptr;
 #endif
-    this->find();
+    this->load();
 }
 
 NetInterfaces::~NetInterfaces()
@@ -38,7 +38,7 @@ bool    NetInterfaces::error()
     return _error;
 }
 
-bool    NetInterfaces::find()
+bool    NetInterfaces::load()
 {
 #if !defined(__SIHD_WINDOWS__)
     struct ifaddrs *current;
@@ -107,6 +107,59 @@ const struct ifaddrs    *NetIFace::get_addr(int family) const
     }
     return nullptr;
 }
+
+const struct ifaddrs    *NetIFace::find(sockaddr_in addr_in) const
+{
+    struct sockaddr_in *cast;
+    for (const struct ifaddrs *addr: _addrs)
+    {
+        if (addr->ifa_addr->sa_family == AF_INET)
+        {
+            cast = (struct sockaddr_in *)(addr->ifa_addr);
+            if (addr_in.sin_addr.s_addr == cast->sin_addr.s_addr)
+                return addr;
+        }
+    }
+    return nullptr;
+}
+
+const struct ifaddrs    *NetIFace::find(sockaddr_in6 addr_in6) const
+{
+    struct sockaddr_in6 *cast;
+    for (const struct ifaddrs *addr: _addrs)
+    {
+        if (addr->ifa_addr->sa_family == AF_INET6)
+        {
+            cast = (struct sockaddr_in6 *)(addr->ifa_addr);
+            if (addr_in6.sin6_addr.s6_addr32 == cast->sin6_addr.s6_addr32)
+                return addr;
+        }
+    }
+    return nullptr;
+}
+
+bool    NetIFace::get_netmask(const struct ifaddrs *addr, in_addr *ret) const
+{
+    if (addr->ifa_addr->sa_family == AF_INET)
+    {
+        ret->s_addr = (((struct sockaddr_in *)addr->ifa_netmask)->sin_addr.s_addr);
+        return true;
+    }
+    return false;
+}
+
+bool    NetIFace::get_netmask(const struct ifaddrs *addr, in6_addr *ret) const
+{
+    if (addr->ifa_addr->sa_family == AF_INET6)
+    {
+        struct in6_addr *to_copy = &(((struct sockaddr_in6 *)addr->ifa_netmask)->sin6_addr);
+        memcpy(ret, to_copy, sizeof(struct in6_addr));
+        return true;
+    }
+    return false;
+}
+
+
 #endif
 
 }

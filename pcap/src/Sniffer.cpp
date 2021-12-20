@@ -25,7 +25,7 @@ Sniffer::Sniffer(const std::string & name, sihd::util::Node *parent):
     this->add_conf("nonblock", &Sniffer::set_nonblock);
     this->add_conf("datalink", &Sniffer::set_datalink);
     this->add_conf("timestamp_type", &Sniffer::set_timestamp_type);
-    this->add_conf("buffer_size", &Sniffer::set_buffersize);
+    this->add_conf("buffer_size", &Sniffer::set_buffer_size);
     this->add_conf("snaplen", &Sniffer::set_snaplen);
     this->add_conf("timeout", &Sniffer::set_timeout);
     this->add_conf("direction", &Sniffer::set_direction);
@@ -134,7 +134,7 @@ bool    Sniffer::sniff()
     return ret == 0;
 }
 
-bool    Sniffer::sniff_one()
+bool    Sniffer::read_next()
 {
     struct pcap_pkthdr *hdr;
     u_char *data;
@@ -153,9 +153,9 @@ bool    Sniffer::sniff_one()
 void    Sniffer::new_packet(const struct pcap_pkthdr *h, const u_char *bytes)
 {
     if (_nano_precision)
-        _pkt_nano_timestamp = sihd::util::time::nano_tv_to_nano(h->ts);
+        _pkt_nano_timestamp = sihd::util::time::nano_tv(h->ts);
     else
-        _pkt_nano_timestamp = sihd::util::time::tv_to_nano(h->ts);
+        _pkt_nano_timestamp = sihd::util::time::tv(h->ts);
     _array.resize(h->len);
     _array.copy_from_bytes(bytes, h->len);
     this->notify_observers(this);
@@ -166,15 +166,16 @@ const sihd::util::ArrByte & Sniffer::data() const
     return _array;
 }
 
-time_t  Sniffer::timestamp() const
-{
-    return _pkt_nano_timestamp;
-}
-
 bool    Sniffer::get_read_data(char **data, size_t *size) const
 {
     *data = (char *)_array.cbuf();
     *size = _array.byte_size();
+    return true;
+}
+
+bool    Sniffer::get_read_timestamp(time_t *nano_timestamp) const
+{
+    *nano_timestamp = _pkt_nano_timestamp;
     return true;
 }
 
@@ -394,7 +395,7 @@ bool    Sniffer::set_immediate(bool active)
     return ret == 0;
 }
 
-bool    Sniffer::set_buffersize(int size)
+bool    Sniffer::set_buffer_size(int size)
 {
     int ret = pcap_set_buffer_size(_pcap_ptr, size);
     if (ret != 0)

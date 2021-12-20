@@ -3,66 +3,76 @@
 
 # include <sihd/util/Node.hpp>
 # include <sihd/util/Configurable.hpp>
+# include <sihd/util/IReader.hpp>
 # include <sihd/zip/ZipUtils.hpp>
 # include <sihd/util/Array.hpp>
 
 namespace sihd::zip
 {
 
-class ZipReader: public sihd::util::Named, public sihd::util::Configurable
+class ZipReader:    public sihd::util::Named,
+                    public sihd::util::Configurable,
+                    public sihd::util::IReaderTimestamp
 {
     public:
         ZipReader(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~ZipReader();
 
         // set internal reading buff size
-        bool set_buff_size(size_t size);
+        bool set_buffer_size(size_t size);
         // set general password for encrypted content
         bool set_password(const char *password);
+        // when looping on read_next, get_read_data returns only entries names
+        bool set_read_entry_names(bool active);
 
         bool open(const std::string & path, bool do_strict_checks = false);
+        bool is_open() const { return _zip_ptr != nullptr; }
         // close and save
         bool close();
         // close and discard changes
         void discard();
 
+        bool read_next();
+		bool get_read_data(char **data, size_t *size) const;
+		bool get_read_timestamp(time_t *nano_timestamp) const;
+
         // modify zip entries
         bool remove(size_t index);
         bool rename(size_t index, const char *name);
 
-        // browse zip entries
-        bool get_entries(std::vector<struct zip_stat> & entries);
-        bool get_entry(const std::string & name, struct zip_stat *entry);
-        bool is_entry(const std::string & name);
-        size_t count_entries();
+        size_t count_entries() const { return _total_entries; }
+        bool load_entry(size_t index);
+        bool load_entry(const std::string & name);
 
-        // read zip entry content from
-        ssize_t read_entry(const struct zip_stat *entry, void *buf, size_t size, const char *password = nullptr);
-        ssize_t read_entry(const struct zip_stat *entry, const char *password = nullptr);
-        bool read_entry_into(const struct zip_stat *entry, std::string & into, const char *password = nullptr);
+        const struct zip_stat *get_entry() const;
+        bool is_entry_directory() const;
 
-        // read archive and writes it on filesystem
-        bool fs_write_entry(const struct zip_stat *entry, const std::string & output_path, const char *password = nullptr);
-        bool fs_write_entry(const std::string & name, const std::string & output_path, const char *password = nullptr);
-        bool fs_write_all(const std::string & output_path);
-
-        ssize_t read_entry(const std::string & name, void *buf, size_t size, const char *password = nullptr);
-        ssize_t read_entry(const std::string & name, const char *password = nullptr);
-        bool read_entry_into(const std::string & name, std::string & into, const char *password = nullptr);
-
-        // access internal reading buffer
-        char *buf() { return _buf_ptr; }
-        ssize_t buf_size() const { return _buf_size; }
+        ssize_t read_entry(const char *password = nullptr);
+        bool write_entry(const std::string & path, const char *password = nullptr);
 
     protected:
 
     private:
+        void _init();
         void _delete_buffer();
+        void _close_file();
         bool _allocate_buffer_if_null();
 
         zip_t *_zip_ptr;
-        size_t _buf_size;
+        bool _only_load_entries;
+
+        // read buffer
         char *_buf_ptr;
+        size_t _buf_total_size;
+        ssize_t _read_buf_size;
+        // information on current zip
+        size_t _total_entries;
+        size_t _current_idx;
+        bool _entry_error;
+        struct zip_stat _current_zip_entry;
+        // zip file entry
+        bool _zip_reading_file;
+        struct zip_file *_current_zip_file_ptr;
 };
 
 }

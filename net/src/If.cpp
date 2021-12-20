@@ -12,7 +12,6 @@ namespace sihd::net
 
 LOGGER;
 
-
 #if !defined(__SIHD_WINDOWS__)
 
 int     If::get_interface_idx(int sock, const std::string & name)

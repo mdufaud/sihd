@@ -21,7 +21,7 @@ CsvWriter::CsvWriter(const std::string & name, sihd::util::Node *parent):
     _begin_quote_c = -1;
     _end_quote_c = -1;
     _file.set_buffering_line();
-    _file.set_bufsize(4096);
+    _file.set_buffer_size(4096);
     this->add_conf("quote", &CsvWriter::set_quote_value);
     this->add_conf("delimiter", &CsvWriter::set_delimiter);
     this->add_conf("comment", &CsvWriter::set_commentary);

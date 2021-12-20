@@ -41,7 +41,7 @@ void    File::_init()
 {
     _file_ptr = nullptr;
     _buf_ptr = nullptr;
-    _buf_size = 0;
+    _buf_size = 4096;
     // default is new line buffering
     _buf_mode = _IOLBF;
     _stream_ownership = true;
@@ -58,13 +58,15 @@ std::optional<struct stat>  File::stat()
     return std::nullopt;
 }
 
-bool    File::set_bufsize(size_t size)
+bool    File::set_buffer_size(size_t size)
 {
     if (_buf_size == size)
         return true;
+    if (size == 0)
+        return false;
     this->_delete_buffer();
     _buf_size = size;
-    return size == 0 || this->_allocate_buffer_if_not_exists();
+    return this->_allocate_buffer_if_not_exists();
 }
 
 void    File::set_no_buffering()
@@ -85,7 +87,18 @@ void    File::set_buffering_full()
 bool    File::_allocate_buffer_if_not_exists()
 {
     if (_buf_ptr == nullptr)
+    {
         _buf_ptr = new char[_buf_size];
+        if (_buf_ptr == nullptr)
+        {
+            LOG(error, "File: could not allocate buffer: " << _buf_size);
+        }
+        else
+        {
+            _buf_ptr[0] = 0;
+            _buf_ptr[_buf_size - 1] = 0;
+        }
+    }
     return _buf_ptr != nullptr;
 }
 
@@ -123,7 +136,7 @@ bool    File::open_fd(int fd, const char *mode)
     }
     else
         _stream_ownership = true;
-    return _file_ptr != nullptr;
+    return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
 }
 
 bool    File::set_stream(FILE *stream, bool ownership)
@@ -143,7 +156,7 @@ bool    File::open_tmpfile()
     }
     else
         _stream_ownership = true;
-    return _file_ptr != nullptr;
+    return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
 }
 
 bool    File::open_tmp(const std::string & tmp_name_template, const char *mode)
@@ -187,7 +200,7 @@ bool    File::open(const std::string & path, const char *mode)
         _path = path;
         _stream_ownership = true;
     }
-    return _file_ptr != nullptr;
+    return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
 }
 
 bool    File::is_open() const

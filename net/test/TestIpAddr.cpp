@@ -32,7 +32,12 @@ namespace test
             void dump_dns(const IpAddr::DnsInfo & dns)
             {
                 LOG(info, "hostname: " << dns.hostname);
-                for (const IpAddr::DnsEntry & info: dns.lst_ip)
+                this->dump_ip_lst(dns.lst_ip);
+            }
+
+            void dump_ip_lst(const std::vector<IpAddr::IpEntry> & lst_ip)
+            {
+                for (const IpAddr::IpEntry & info: lst_ip)
                 {
                     LOG(info, "ip: " << info.ip()
                                 << " - socket " << Ip::socktype_to_string(info.socktype)
@@ -54,22 +59,22 @@ namespace test
         TRACE("127.0.0.1 with no dns lookup");
         IpAddr addr_local("127.0.0.1", 0, false);
         EXPECT_EQ(addr_local.hostname(), "");
-        this->dump_dns(addr_local.dns());
+        this->dump_ip_lst(addr_local.lst_ip());
         EXPECT_EQ(addr_local.get_first_ipv4(), "127.0.0.1");
         EXPECT_EQ(addr_local.get_protocol_ip(Ip::protocol("ip")), "127.0.0.1");
 
         // does not require internet
         TRACE("localhost with dns lookup");
-        IpAddr addr_dns("localhost");
+        IpAddr addr_dns("localhost", true);
         EXPECT_EQ(addr_dns.hostname(), "localhost");
-        this->dump_dns(addr_dns.dns());
+        this->dump_ip_lst(addr_dns.lst_ip());
         EXPECT_EQ(addr_dns.get_first_ipv4(), "127.0.0.1");
         EXPECT_EQ(addr_dns.get_protocol_ip(Ip::protocol("tcp")), "127.0.0.1");
 
         TRACE("127.0.0.1 with dns lookup");
-        IpAddr addr_dns_ip("127.0.0.1");
+        IpAddr addr_dns_ip("127.0.0.1", true);
         EXPECT_EQ(addr_dns.hostname(), "localhost");
-        this->dump_dns(addr_dns.dns());
+        this->dump_ip_lst(addr_dns.lst_ip());
         EXPECT_EQ(addr_dns.get_first_ipv4(), "127.0.0.1");
         EXPECT_EQ(addr_dns.get_protocol_ip(Ip::protocol("tcp")), "127.0.0.1");
     }
@@ -88,10 +93,9 @@ namespace test
         // requires internet
         IpAddr google("google.com");
 
-        this->dump_dns(google.dns());
-        const IpAddr::DnsInfo & info = google.dns();
-        TRACE("Nb IPs: " << info.lst_ip.size());
-        TRACE("Hostname: " << info.hostname);
+        this->dump_ip_lst(google.lst_ip());
+        TRACE("Nb IPs: " << google.count_ip());
+        TRACE("Hostname: " << google.hostname());
         std::string google_proto_udp = google.get_protocol_ip(Ip::protocol("udp"));
         TRACE("Google first IPV4: " << google.get_first_ipv4());
         TRACE("Google first IPV6: " << google.get_first_ipv6());
@@ -129,4 +133,52 @@ namespace test
         EXPECT_EQ(info.lst_ip[0].ip(), "127.0.0.1");
         EXPECT_EQ(info.lst_ip[0].ipv6, false);
     }
+
+    TEST_F(TestIpAddr, test_ipaddr_subnet)
+    {
+        IpAddr addr("192.168.10.0/24");
+        EXPECT_EQ(addr.subnet_value(), 24u);
+
+        IpAddr test1("192.168.10.3");
+        IpAddr test2("100.168.10.3");
+
+        EXPECT_TRUE(addr.is_same_subnet(test1));
+        EXPECT_FALSE(addr.is_same_subnet(test2));
+
+        IpAddr same_addr("192.168.10.0");
+        same_addr.set_subnet_mask("255.255.255.0");
+        EXPECT_EQ(same_addr.subnet_value(), 24u);
+
+        EXPECT_TRUE(same_addr.is_same_subnet(test1));
+        EXPECT_FALSE(same_addr.is_same_subnet(test2));
+
+        LOG(info, addr.dump_subnet());
+
+        EXPECT_TRUE(memcmp(&addr.subnet(), &same_addr.subnet(), sizeof(IpAddr::Subnet)) == 0);
+
+        EXPECT_EQ(IpAddr::ip_to_string(addr.subnet().netid), "192.168.10.0");
+        EXPECT_EQ(IpAddr::ip_to_string(addr.subnet().wildcard), "0.0.0.255");
+        EXPECT_EQ(IpAddr::ip_to_string(addr.subnet().netmask), "255.255.255.0");
+        EXPECT_EQ(IpAddr::ip_to_string(addr.subnet().hostmin), "192.168.10.1");
+        EXPECT_EQ(IpAddr::ip_to_string(addr.subnet().hostmax), "192.168.10.254");
+        EXPECT_EQ(IpAddr::ip_to_string(addr.subnet().broadcast), "192.168.10.255");
+        EXPECT_EQ(addr.subnet().hosts, 254u);
+
+        IpAddr localhost("localhost", true);
+        EXPECT_TRUE(localhost.set_subnet_mask(IpAddr::value_to_mask(12)));
+        EXPECT_EQ(localhost.subnet_value(), 12u);
+        EXPECT_TRUE(localhost.set_subnet_mask(IpAddr::value_to_mask(8)));
+        EXPECT_EQ(localhost.subnet_value(), 8u);
+        // invalid subnet mask 0
+        EXPECT_FALSE(localhost.set_subnet_mask(0));
+        // invalid subnet mask - should be at least 255.255.255.128
+        EXPECT_FALSE(localhost.set_subnet_mask("255.255.255.64"));
+    }
+
+    TEST_F(TestIpAddr, test_ipaddr_v6)
+    {
+        IpAddr addr("2001:db8:abcd:0012:0000:0000:0000:0000");
+        EXPECT_EQ(addr.get_first_ipv6(), "2001:db8:abcd:12::");
+    }
+
 }

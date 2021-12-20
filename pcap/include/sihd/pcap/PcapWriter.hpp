@@ -4,13 +4,16 @@
 # include <sihd/util/Node.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/Clocks.hpp>
+# include <sihd/util/IWriter.hpp>
 # include <sihd/util/time.hpp>
 # include <sihd/pcap/PcapUtils.hpp>
 
 namespace sihd::pcap
 {
 
-class PcapWriter: public sihd::util::Named, public sihd::util::Configurable
+class PcapWriter:   public sihd::util::Named,
+                    public sihd::util::Configurable,
+                    public sihd::util::IWriterTimestamp
 {
     public:
         PcapWriter(const std::string & name, sihd::util::Node *parent = nullptr);

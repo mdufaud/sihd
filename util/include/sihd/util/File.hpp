@@ -30,7 +30,7 @@ class File
         virtual bool close();
 
         // if size == 0 -> buffer is null
-        bool set_bufsize(size_t size);
+        bool set_buffer_size(size_t size);
         // no buffering, immediately write change to disk
         void set_no_buffering();
         // full buffering (until flush)
