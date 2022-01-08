@@ -322,6 +322,11 @@ std::string SshSession::get_banner()
     return ret;
 }
 
+SshShell  SshSession::make_shell()
+{
+    return SshShell(_ssh_session_ptr);
+}
+
 SshCommand  SshSession::make_command()
 {
     return SshCommand(_ssh_session_ptr);
@@ -330,6 +335,11 @@ SshCommand  SshSession::make_command()
 SshScp  SshSession::make_scp()
 {
     return SshScp(_ssh_session_ptr);
+}
+
+Sftp  SshSession::make_sftp()
+{
+    return Sftp(_ssh_session_ptr);
 }
 
 bool    SshSession::make_channel(SshChannel & channel)

@@ -38,7 +38,7 @@ namespace test
             std::string _base_test_dir = sihd::util::Files::combine({getenv("TEST_PATH"), "ssh", "sshcommand"});
     };
 
-    TEST_F(TestSshCommand, test_sshcommand_signal)
+    TEST_F(TestSshCommand, test_sshcommand_simple)
     {
         std::string user = getenv("USER");
         SshSession session;
@@ -49,9 +49,23 @@ namespace test
         LOG(info, "Auth status: " << auth.to_string());
         EXPECT_TRUE(auth.success());
 
+        std::string stdout_str;
+        std::string stderr_str;
+        sihd::util::Handler<char *, size_t, bool> test_output_handler(
+        [&stdout_str, &stderr_str] (char *buf, size_t size, bool is_stderr)
+        {
+            buf[size] = 0;
+            if (is_stderr)
+                stderr_str += buf;
+            else
+                stdout_str += buf;
+        });
         SshCommand cmd = session.make_command();
-        EXPECT_TRUE(cmd.execute("sleep 1", true));
-
+        cmd.output_handler = &test_output_handler;
+        EXPECT_TRUE(cmd.execute("echo 'hello world'"));
+        EXPECT_TRUE(cmd.wait());
+        EXPECT_EQ(stderr_str, "");
+        EXPECT_EQ(stdout_str, "hello world\n");
         EXPECT_EQ(cmd.exit_status(), 0);
     }
 

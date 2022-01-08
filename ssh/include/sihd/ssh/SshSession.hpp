@@ -7,7 +7,8 @@
 # include <sihd/ssh/SshChannel.hpp>
 # include <sihd/ssh/SshScp.hpp>
 # include <sihd/ssh/SshCommand.hpp>
-# include <sihd/ssh/SshFtp.hpp>
+# include <sihd/ssh/SshShell.hpp>
+# include <sihd/ssh/Sftp.hpp>
 
 namespace sihd::ssh
 {
@@ -99,6 +100,8 @@ class SshSession
 
         SshScp make_scp();
         SshCommand make_command();
+        SshShell make_shell();
+        Sftp make_sftp();
 
         std::string get_banner();
 

@@ -25,15 +25,15 @@ class SshChannel
         bool open_forward(const std::string & remotehost, int remoteport,
                             const std::string & sourcehost, int localport);
 #if LIBSSH_VERSION_MINOR > 7
+        /*
         bool open_reverse_forward(const std::string & remotehost, int remoteport,
                                     const std::string & sourcehost, int localport);
+        */
         bool open_forward_unix(const std::string & remotepath,
                                 const std::string & sourcehost, int localport);
 #endif
         bool is_open();
-
         bool close();
-        bool closed();
 
         bool request_subsystem(const std::string & subsys);
         bool request_sftp();

@@ -61,9 +61,18 @@ namespace test
         EXPECT_TRUE(scp.push_file("test/resources/file.txt", "pushed_file_not_in_dir.txt"));
 
         scp.close();
-        EXPECT_FALSE(scp.push_file("test/resources/file.txt", "pushed_file.txt"));
-        EXPECT_FALSE(scp.push_dir("pushed_dir"));
+        EXPECT_FALSE(scp.push_file("test/resources/file.txt", "pushed_file2.txt"));
+        EXPECT_FALSE(scp.push_dir("pushed_dir2"));
         EXPECT_FALSE(scp.leave_dir());
+
+        EXPECT_TRUE(Files::is_file(Files::combine(test_dir, "pushed_file.txt")));
+        EXPECT_TRUE(Files::is_file(Files::combine(test_dir, "pushed_dir/pushed_file_in_dir.txt")));
+        EXPECT_TRUE(Files::is_file(Files::combine(test_dir, "pushed_file_not_in_dir.txt")));
+
+        EXPECT_EQ(Files::get_filesize(Files::combine(test_dir, "pushed_file.txt")), 12u);
+
+        EXPECT_FALSE(Files::is_file(Files::combine(test_dir, "pushed_file2.txt")));
+        EXPECT_FALSE(Files::is_dir(Files::combine(test_dir, "pushed_dir2")));
     }
 
     TEST_F(TestSshScp, test_sshscp_pull)

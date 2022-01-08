@@ -5,7 +5,6 @@
 #include <sihd/util/Array.hpp>
 #include <experimental/filesystem>
 
-using namespace std;
 using namespace std::experimental;
 
 namespace test

@@ -71,6 +71,8 @@ bool    SshChannel::open_forward(const std::string & remotehost, int remoteport,
 }
 
 #if LIBSSH_VERSION_MINOR > 7
+
+/*
 bool    SshChannel::open_reverse_forward(const std::string & remotehost, int remoteport,
                                             const std::string & sourcehost, int localport)
 {
@@ -80,15 +82,17 @@ bool    SshChannel::open_reverse_forward(const std::string & remotehost, int rem
                                                                 remotehost.c_str(), remoteport,
                                                                 sourcehost.c_str(), localport));
 }
+*/
 
 bool    SshChannel::open_forward_unix(const std::string & remotepath,
-                                            const std::string & sourcehost, int localport)
+                                        const std::string & sourcehost, int localport)
 {
     if (_ssh_channel_ptr == nullptr)
         return false;
     WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_forward_unix(_ssh_channel_ptr, remotepath.c_str(),
                                                                 sourcehost.c_str(), localport));
 }
+
 #endif
 
 bool    SshChannel::close()
@@ -202,7 +206,7 @@ bool    SshChannel::send_eof()
 
 bool    SshChannel::is_eof()
 {
-    return ssh_channel_is_eof(_ssh_channel_ptr) == 0;
+    return ssh_channel_is_eof(_ssh_channel_ptr) != 0;
 }
 
 int     SshChannel::read(char *buffer, size_t size)

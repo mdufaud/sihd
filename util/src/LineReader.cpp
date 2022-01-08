@@ -131,6 +131,7 @@ bool    LineReader::read_next()
             // return if delimiter found
             if (match != nullptr)
             {
+                _line_size = fill_idx;
                 _line_ptr[fill_idx] = 0;
                 return true;
             }
@@ -141,13 +142,14 @@ bool    LineReader::read_next()
         // exit if read error ofc
         if (_read_size == -1)
         {
-            LOG(error, "LineReader: error while reading");
+            _error = true;
             return false;
         }
         _read_ptr[_read_buff_size] = 0;
         // end
         if (_read_size == 0)
         {
+            _line_size = fill_idx;
             // prepare next call
             // fill_idx == 0 means no more to read
             _line_ptr[fill_idx] = 0;
@@ -162,14 +164,16 @@ bool    LineReader::get_read_data(char **data, size_t *size) const
 {
     *data = _line_ptr;
     if (size != nullptr)
-        *size = _line_buff_size;
+        *size = _line_size;
     return _line_ptr != nullptr;
 }
 
 void    LineReader::_reset()
 {
+    _error = false;
     _last_read_index = 0;
     _read_size = 0;
+    _line_size = 0;
     if (_read_ptr != nullptr)
         _read_ptr[0] = 0;
     if (_line_ptr != nullptr)

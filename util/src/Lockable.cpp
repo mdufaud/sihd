@@ -24,8 +24,9 @@ bool    Lockable::infinite_lock()
     {
         _unique_lock.lock();
     }
-    catch (std::system_error)
+    catch (std::system_error & err)
     {
+        (void)err;
         return false;
     }
     return true;
@@ -37,8 +38,9 @@ bool    Lockable::lock()
     {
         return _unique_lock.try_lock();
     }
-    catch (std::system_error)
+    catch (std::system_error & err)
     {
+        (void)err;
     }
     return false;
 }
@@ -67,8 +69,9 @@ bool    Lockable::unlock()
     {
         _unique_lock.unlock();
     }
-    catch (std::system_error)
+    catch (std::system_error & err)
     {
+        (void)err;
         return false;
     }
     return true;

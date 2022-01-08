@@ -10,7 +10,7 @@ namespace sihd::ssh
 class SshScp
 {
     public:
-        SshScp(ssh_session session = nullptr);
+        SshScp(ssh_session session);
         virtual ~SshScp();
 
         bool remote_opened();

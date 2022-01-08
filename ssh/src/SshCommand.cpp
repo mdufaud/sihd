@@ -118,15 +118,22 @@ bool    SshCommand::execute(const std::string & cmd, bool async)
 bool    SshCommand::wait(time_t timeout_nano)
 {
     if (_channel.is_open() == false)
-        return false;
-    while (_stop == false && _channel.exit_status() == -1)
+        return true;
+    int r;
+    while ((r = _channel.exit_status()) == -1 && _stop == false)
     {
-        if (timeout_nano)
-            return _waitable.wait_for(timeout_nano) != true;
-        _waitable.wait_for(sihd::util::time::sec(1));
+        if (timeout_nano > 0)
+        {
+            _waitable.wait_for(timeout_nano);
+            r = _channel.exit_status();
+            break ;
+        }
+        else
+            _waitable.wait_for(sihd::util::time::sec(1));
     }
-    _channel.clear_channel();
-    return true;
+    if (r != -1)
+        _channel.clear_channel();
+    return r != -1;
 }
 
 bool    SshCommand::input(const char *buf, size_t size)

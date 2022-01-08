@@ -34,9 +34,10 @@ class LineReader:   public sihd::util::Named,
         bool read_next();
         bool get_read_data(char **data, size_t *size) const;
 
+        bool error() const { return _error; }
         size_t buffsize() const { return _read_buff_size; }
         const sihd::util::File & file() const { return _file; }
-
+        size_t line_buffsize() const { return _line_buff_size; }
 
     protected:
 
@@ -56,10 +57,12 @@ class LineReader:   public sihd::util::Named,
 
         size_t _line_buff_size;
         size_t _line_buff_step;
+        size_t _line_size;
         char *_line_ptr;
 
         size_t _last_read_index;
         ssize_t _read_size;
+        bool _error;
 
         bool _put_delimiter_in_line;
         int _delimiter;
