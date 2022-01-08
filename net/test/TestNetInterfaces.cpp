@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/net/If.hpp>
 #include <sihd/net/NetInterfaces.hpp>
 #include <sihd/net/IpAddr.hpp>
 
@@ -9,15 +8,15 @@ namespace test
 {
     LOGGER;
     using namespace sihd::net;
-    class TestIf:   public ::testing::Test
+    class TestNetInterfaces:   public ::testing::Test
     {
         protected:
-            TestIf()
+            TestNetInterfaces()
             {
                 sihd::util::LoggerManager::basic();
             }
 
-            virtual ~TestIf()
+            virtual ~TestNetInterfaces()
             {
                 sihd::util::LoggerManager::clear_loggers();
             }
@@ -31,7 +30,7 @@ namespace test
             }
     };
 
-    TEST_F(TestIf, test_if)
+    TEST_F(TestNetInterfaces, test_netinterfaces)
     {
         NetInterfaces ifs;
         NetIFace *lo = nullptr;
@@ -53,8 +52,8 @@ namespace test
                 struct sockaddr_in *base = (struct sockaddr_in *)(ifaddr4->ifa_addr);
                 struct sockaddr_in netid;
                 struct sockaddr_in broadcast;
-                IpAddr::get_network_id(netid, *base, mask);
-                IpAddr::get_broadcast(broadcast, *base, mask);
+                IpAddr::fill_sockaddr_network_id(netid, *base, mask);
+                IpAddr::fill_sockaddr_broadcast(broadcast, *base, mask);
                 LOG(debug, "Base ip: " << IpAddr::ip_to_string(*base));
                 LOG(debug, "Netmask: " << IpAddr::ip_to_string(mask));
                 LOG(debug, "Netid: " << IpAddr::ip_to_string(netid));
@@ -69,8 +68,8 @@ namespace test
                 struct sockaddr_in6 *base = (struct sockaddr_in6 *)(ifaddr6->ifa_addr);
                 struct sockaddr_in6 netid;
                 struct sockaddr_in6 broadcast;
-                IpAddr::get_network_id(netid, *base, mask);
-                IpAddr::get_broadcast(broadcast, *base, mask);
+                IpAddr::fill_sockaddr_network_id(netid, *base, mask);
+                IpAddr::fill_sockaddr_broadcast(broadcast, *base, mask);
                 LOG(debug, "Base ip: " << IpAddr::ip_to_string(*base));
                 LOG(debug, "Netmask: " << IpAddr::ip_to_string(mask));
                 LOG(debug, "Netid: " << IpAddr::ip_to_string(netid));

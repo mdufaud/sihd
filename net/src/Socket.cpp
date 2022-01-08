@@ -461,52 +461,28 @@ int     Socket::accept(IpAddr & ipaddr)
 /* Socket ip strings operations */
 /* ************************************************************************* */
 
-bool    Socket::bind(const std::string & ip, int port)
+bool    Socket::bind(const std::string & host, int port)
 {
-    IpSockAddr ipsockaddr;
-
-    if (IpAddr::fill_sockaddr(ip, ipsockaddr, port) == false)
-    {
-        LOG(error, "Socket: could not convert ip '" << ip << "' to sockaddr");
-        return -1;
-    }
-    return this->bind(ipsockaddr.addr, ipsockaddr.addr_len);
+    IpAddr addr(host, port, true);
+    return this->bind(addr);
 }
 
-bool    Socket::connect(const std::string & ip, int port)
+bool    Socket::connect(const std::string & host, int port)
 {
-    IpSockAddr ipsockaddr;
-
-    if (IpAddr::fill_sockaddr(ip, ipsockaddr, port) == false)
-    {
-        LOG(error, "Socket: could not convert ip '" << ip << "' to sockaddr");
-        return -1;
-    }
-    return this->connect(ipsockaddr.addr, ipsockaddr.addr_len);
+    IpAddr addr(host, port, true);
+    return this->connect(addr);
 }
 
-ssize_t     Socket::send_to(const std::string & ip, int port, const void *data, size_t size)
+ssize_t     Socket::send_to(const std::string & host, int port, const void *data, size_t size)
 {
-    IpSockAddr ipsockaddr;
-
-    if (IpAddr::fill_sockaddr(ip, ipsockaddr, port) == false)
-    {
-        LOG(error, "Socket: could not convert ip '" << ip << "' to sockaddr");
-        return -1;
-    }
-    return this->send_to(ipsockaddr.addr, ipsockaddr.addr_len, data, size);
+    IpAddr addr(host, port, true);
+    return this->send_to(addr, data, size);
 }
 
-bool    Socket::send_all_to(const std::string & ip, int port, const void *data, size_t size)
+bool    Socket::send_all_to(const std::string & host, int port, const void *data, size_t size)
 {
-    IpSockAddr ipsockaddr;
-
-    if (IpAddr::fill_sockaddr(ip, ipsockaddr, port) == false)
-    {
-        LOG(error, "Socket: could not convert ip '" << ip << "' to sockaddr");
-        return -1;
-    }
-    return this->send_all_to(ipsockaddr.addr, ipsockaddr.addr_len, data, size);
+    IpAddr addr(host, port, true);
+    return this->send_all_to(addr, data, size);
 }
 
 /* ************************************************************************* */

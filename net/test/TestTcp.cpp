@@ -36,13 +36,22 @@ namespace test
 
     TEST_F(TestTcp, test_tcp_server)
     {
+        IpAddr localhost = IpAddr::get_localhost(4242);
+
         sihd::util::ArrStr hello_world_arr("hello world");
         sihd::util::ArrStr welcome_arr("welcome");
-        IpAddr localhost = IpAddr::get_localhost(4242);
-        TcpServer server(localhost);
+
+        TcpServer server("tcp-server");
+        TcpClient client1("tcp-client-1");
+        TcpClient client2("tcp-client-2");
+        TcpClient client3("tcp-client-3");
+        TcpClient client4("tcp-client-4");
+        TcpClient client5("tcp-client-5");
+
         BasicServerHandler server_handler;
         ObserverWaiter handler_waiter(&server_handler);
 
+        server.open_and_bind(localhost);
         server.set_server_handler(&server_handler);
         server.set_poll_timeout(1);
         server.set_queue_size(3);
@@ -71,12 +80,12 @@ namespace test
         usleep(1000);
 
         LOG(debug, "Simulating a new connection");
-        TcpClient client(localhost);
+        client1.open_and_connect(localhost);
 
         usleep(1000);
 
         LOG(debug, "Simulating a send from client: " << hello_world_arr.to_string());
-        EXPECT_TRUE(client.send_all(hello_world_arr));
+        EXPECT_TRUE(client1.send_all(hello_world_arr));
 
         usleep(1000);
 
@@ -88,14 +97,15 @@ namespace test
         }
 
         LOG(debug, "Simulating 3 new connections");
-        TcpClient client2(localhost);
-        TcpClient client3(localhost);
-        TcpClient client4(localhost);
+
+        client2.open_and_connect(localhost);
+        client3.open_and_connect(localhost);
+        client4.open_and_connect(localhost);
 
         usleep(2000);
 
         LOG(debug, "Simulating a new unacceptable connection");
-        TcpClient client5(localhost);
+        client5.open_and_connect(localhost);
 
         usleep(1000);
 
@@ -118,11 +128,12 @@ namespace test
 
     TEST_F(TestTcp, test_tcp_client)
     {
+        IpAddr localhost = IpAddr::get_localhost(4242);
         sihd::util::ArrChar hello("hello world", sizeof("hello world"));
         sihd::util::ArrChar bye("bye", sizeof("bye"));
         sihd::util::ArrStr recv(20);
+        TcpClient client("tcp-client");
         Socket server;
-        IpAddr localhost = IpAddr::get_localhost(4242);
 
         EXPECT_TRUE(server.open(AF_INET, SOCK_STREAM, 0));
         EXPECT_TRUE(server.set_reuseaddr(true));
@@ -130,7 +141,7 @@ namespace test
         EXPECT_TRUE(server.listen(2));
 
         // client connect
-        TcpClient client(localhost);
+        EXPECT_TRUE(client.open_and_connect(localhost));
         EXPECT_TRUE(client.socket_opened());
         EXPECT_TRUE(client.connected());
 

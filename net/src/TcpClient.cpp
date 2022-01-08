@@ -1,49 +1,16 @@
 #include <sihd/net/TcpClient.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::net
 {
 
+SIHD_UTIL_REGISTER_FACTORY(TcpClient)
+
 LOGGER;
 
-TcpClient::TcpClient()
-{
-    this->_init();
-}
-
-TcpClient::TcpClient(bool ipv6)
-{
-    this->_init();
-    this->open_socket(ipv6);
-}
-
-TcpClient::TcpClient(const IpAddr & addr)
-{
-    this->_init();
-    if (this->open_socket(addr.prefers_ipv6()))
-        this->connect(addr);
-}
-
-TcpClient::TcpClient(const std::string & ip, int port)
-{
-    this->_init();
-    IpAddr addr(ip, port, true);
-    if (this->open_socket(addr.prefers_ipv6()))
-        this->connect(addr);
-}
-
-TcpClient::TcpClient(const std::string & path)
-{
-    this->_init();
-    if (this->open_socket_unix())
-        this->connect(path);
-}
-
-TcpClient::~TcpClient()
-{
-}
-
-void    TcpClient::_init()
+TcpClient::TcpClient(const std::string & name, sihd::util::Node *parent):
+    sihd::util::Named(name, parent)
 {
     _connected = false;
     _poll.set_timeout(1);
@@ -52,10 +19,28 @@ void    TcpClient::_init()
     this->add_conf("poll_timeout", &TcpClient::set_poll_timeout);
 }
 
+TcpClient::~TcpClient()
+{
+}
+
 bool    TcpClient::set_poll_timeout(int milliseconds)
 {
     _poll.set_timeout(milliseconds);
     return true;
+}
+
+bool    TcpClient::open_socket_unix()
+{
+    if (_socket.is_open())
+        return false;
+    return _socket.open(AF_UNIX, SOCK_STREAM, IPPROTO_TCP);
+}
+
+bool    TcpClient::open_socket(bool ipv6)
+{
+    if (_socket.is_open())
+        return false;
+    return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
 }
 
 bool    TcpClient::connect(const IpAddr & addr)
@@ -76,6 +61,22 @@ bool    TcpClient::connect(const std::string & path)
     return _connected;
 }
 
+bool    TcpClient::open_and_connect(const IpAddr & ip)
+{
+    return this->open_socket(ip.prefers_ipv6()) && this->connect(ip);
+}
+
+bool    TcpClient::open_and_connect(const std::string & ip, int port)
+{
+    IpAddr addr(ip, port, true);
+    return this->open_socket(addr.prefers_ipv6()) && this->connect(addr);
+}
+
+bool    TcpClient::open_unix_and_connect(const std::string & path)
+{
+    return this->open_socket_unix() && this->connect(path);
+}
+
 bool    TcpClient::close()
 {
     this->stop();
@@ -83,20 +84,6 @@ bool    TcpClient::close()
     _socket.shutdown();
     _connected = false;
     return _socket.close();
-}
-
-bool    TcpClient::open_socket_unix()
-{
-    if (_socket.is_open())
-        return false;
-    return _socket.open(AF_UNIX, SOCK_STREAM, IPPROTO_TCP);
-}
-
-bool    TcpClient::open_socket(bool ipv6)
-{
-    if (_socket.is_open())
-        return false;
-    return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
 }
 
 bool    TcpClient::stop()

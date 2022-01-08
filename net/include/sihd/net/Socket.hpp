@@ -139,15 +139,15 @@ class Socket
 
         
         // IP from std::string
-        bool bind(const std::string & ip, int port);
-        bool connect(const std::string & ip, int port);
-        ssize_t send_to(const std::string & ip, int port, const void *data, size_t size);
-        bool send_all_to(const std::string & ip, int port, const void *data, size_t size);
+        bool bind(const std::string & host, int port);
+        bool connect(const std::string & host, int port);
+        ssize_t send_to(const std::string & host, int port, const void *data, size_t size);
+        bool send_all_to(const std::string & host, int port, const void *data, size_t size);
         // sihd::util::IArray
-        ssize_t send_to(const std::string & ip, int port, const sihd::util::IArray & arr)
-            { return this->send_to(ip, port, arr.cbuf(), arr.byte_size()); }
-        ssize_t send_all_to(const std::string & ip, int port, const sihd::util::IArray & arr)
-            { return this->send_all_to(ip, port, arr.cbuf(), arr.byte_size()); }
+        ssize_t send_to(const std::string & host, int port, const sihd::util::IArray & arr)
+            { return this->send_to(host, port, arr.cbuf(), arr.byte_size()); }
+        ssize_t send_all_to(const std::string & host, int port, const sihd::util::IArray & arr)
+            { return this->send_all_to(host, port, arr.cbuf(), arr.byte_size()); }
 
         /*
             sihd::net::IpAddr

@@ -4,30 +4,30 @@
 #include <sihd/util/Files.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
-#include <APP_NAME/MODULE_NAME/CLASS_NAME.hpp>
+#include <sihd/ssh/SshFtp.hpp>
 
 namespace test
 {
     LOGGER;
-    using namespace APP_NAME::MODULE_NAME;
+    using namespace sihd::ssh;
     using namespace sihd::util;
-    class TestCLASS_NAME: public ::testing::Test
+    class TestSshFtp: public ::testing::Test
     {
         protected:
-            TestCLASS_NAME()
+            TestSshFtp()
             {
                 char *test_path = getenv("TEST_PATH");
                 _base_test_dir = sihd::util::Files::combine({
                     test_path == nullptr ? "unit_test" : test_path,
-                    "MODULE_NAME",
-                    "LOWER_CLASS_NAME"
+                    "ssh",
+                    "SshFtp"
                 });
                 _cwd = sihd::util::OS::get_cwd();
                 sihd::util::LoggerManager::basic();
                 sihd::util::Files::make_directories(_base_test_dir);
             }
 
-            virtual ~TestCLASS_NAME()
+            virtual ~TestSshFtp()
             {
                 sihd::util::LoggerManager::clear_loggers();
             }
@@ -44,18 +44,18 @@ namespace test
             std::string _base_test_dir;
     };
 
-    TEST_F(TestCLASS_NAME, test_LOWER_CLASS_NAME)
+    TEST_F(TestSshFtp, test_sshftp)
     {
         EXPECT_EQ(true, true);
     }
 
-    TEST_F(TestCLASS_NAME, test_LOWER_CLASS_NAME_interactive)
+    TEST_F(TestSshFtp, test_sshftp_interactive)
     {
         if (sihd::util::Term::is_interactive() == false)
             GTEST_SKIP_("requires interaction");
     }
 
-    TEST_F(TestCLASS_NAME, test_LOWER_CLASS_NAME_file)
+    TEST_F(TestSshFtp, test_sshftp_file)
     {
         std::string test_dir = sihd::util::Files::combine(_base_test_dir, "file");
         sihd::util::Files::remove_directories(test_dir);

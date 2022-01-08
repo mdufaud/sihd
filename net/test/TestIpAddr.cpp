@@ -91,7 +91,7 @@ namespace test
     TEST_F(TestIpAddr, test_ipaddr_dns_lookup_google)
     {
         // requires internet
-        IpAddr google("google.com");
+        IpAddr google("google.com", true);
 
         this->dump_ip_lst(google.lst_ip());
         TRACE("Nb IPs: " << google.count_ip());
@@ -165,9 +165,9 @@ namespace test
         EXPECT_EQ(addr.subnet().hosts, 254u);
 
         IpAddr localhost("localhost", true);
-        EXPECT_TRUE(localhost.set_subnet_mask(IpAddr::value_to_mask(12)));
+        EXPECT_TRUE(localhost.set_subnet_mask(IpAddr::value_to_netmask(12)));
         EXPECT_EQ(localhost.subnet_value(), 12u);
-        EXPECT_TRUE(localhost.set_subnet_mask(IpAddr::value_to_mask(8)));
+        EXPECT_TRUE(localhost.set_subnet_mask(IpAddr::value_to_netmask(8)));
         EXPECT_EQ(localhost.subnet_value(), 8u);
         // invalid subnet mask 0
         EXPECT_FALSE(localhost.set_subnet_mask(0));

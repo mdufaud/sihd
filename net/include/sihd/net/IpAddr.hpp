@@ -87,7 +87,7 @@ class IpAddr
             depending on ip, fills ipsockaddr addr, addr_len and type with corresponding ipv4 or ipv6 struct
             port is optionnal and setted in addr_in or addr_in6
         */
-        static bool fill_sockaddr(const std::string & ip, IpSockAddr & ipsockaddr, int port = 0);
+        static bool fill_ipsockaddr(IpSockAddr & ipsockaddr, const std::string & ip, int port = 0);
         // fills sockaddr_in from ip/port
         static bool to_sockaddr_in(sockaddr_in *filled, const std::string & ip, int port = 0);
         // fills sockaddr_in6 from ip(v6)/port
@@ -101,15 +101,15 @@ class IpAddr
         static IpAddr get_localhost(int port, bool ipv6 = false);
 
         // apply mask on src to dst to get netid addr
-        static void get_network_id(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask);
-        static void get_network_id(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask);
+        static void fill_sockaddr_network_id(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask);
+        static void fill_sockaddr_network_id(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask);
         // apply mask on src to dst to get broadcast addr
-        static void get_broadcast(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask);
-        static void get_broadcast(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask);
+        static void fill_sockaddr_broadcast(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask);
+        static void fill_sockaddr_broadcast(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask);
         // transform value to network mask
-        static uint32_t value_to_mask(uint32_t value);
+        static uint32_t value_to_netmask(uint32_t value);
         // check for valid netmask
-        static bool is_valid_mask(uint32_t mask);
+        static bool is_valid_netmask(uint32_t mask);
 
         // remove any ip info
         void clear();

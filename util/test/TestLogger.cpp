@@ -130,8 +130,8 @@ namespace test
         ASSERT_EQ(log_counter->info, 0);
         LOG(debug, "Should not print");
         ASSERT_EQ(log_counter->debug, 0);
-        logger->delete_filters();
-        log_counter->delete_filters();
+        logger->remove_filters();
+        log_counter->remove_filters();
 
         LoggerManager::filter(new LevelFilterLogger("CRITICAL"));
         LOG(critical, "Should print");

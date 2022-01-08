@@ -5,12 +5,14 @@
 #include <sihd/util/Files.hpp>
 
 #include <vector>
+#include <algorithm>
+
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
-#include <algorithm>
+#include <limits.h>
 
 // for get_max_rss / get_peak_rss
 #if defined(__SIHD_WINDOWS__)
@@ -240,6 +242,15 @@ bool    OS::getsockopt(int socket, int level, int optname, void *optval, socklen
     if (!ret && logerror)
         LOG(error, "OS: getsockopt error: " << strerror(errno));
     return ret;
+}
+
+std::string OS::get_cwd()
+{
+    char cwd[PATH_MAX];
+
+    if (getcwd(cwd, sizeof(cwd)) != nullptr)
+        return std::string(cwd);
+    return "";
 }
 
 std::string OS::get_executable_path()

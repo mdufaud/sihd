@@ -30,6 +30,7 @@ else
     cp $SCRIPT_DIR/../templates/test/template.txt $TEST_FILENAME
     sed -i "s/APP_NAME/$APP_NAME/g" $TEST_FILENAME
     sed -i "s/MODULE_NAME/$MODULE_NAME/g" $TEST_FILENAME
+    sed -i "s/LOWER_CLASS_NAME/${TEST_NAME,,}/g" $TEST_FILENAME
     sed -i "s/CLASS_NAME/$TEST_NAME/g" $TEST_FILENAME
     echo "Test file done"
 fi

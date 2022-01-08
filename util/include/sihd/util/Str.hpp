@@ -32,6 +32,8 @@ class Str
 
         static size_t hexdump_cols;
 
+        static void append_sep(std::string & str, const std::string & append, const std::string & sep = ",");
+
         static std::string gmtime_to_string(time_t nano, bool total_parenthesis = false, bool nano_resolution = false);
         static std::string localtime_to_string(time_t nano, bool total_parenthesis = false, bool nano_resolution = false);
 

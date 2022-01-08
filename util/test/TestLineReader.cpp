@@ -41,7 +41,7 @@ namespace test
                 s[size] = 0;
             }
 
-            std::string _base_test_dir = sihd::util::Files::combine({getenv("TEST_PATH"), "util", "LineReader"});
+            std::string _base_test_dir = sihd::util::Files::combine({getenv("TEST_PATH"), "util", "linereader"});
     };
 
     TEST_F(TestLineReader, test_linereader_one_line)

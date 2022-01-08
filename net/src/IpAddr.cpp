@@ -216,8 +216,8 @@ bool    IpAddr::_netmask_from_str(const std::string & mask_value_str)
         LOG(error, "IpAddr: not a subnet mask: " << mask_value_str);
         return false;
     }
-    uint32_t actual_mask = IpAddr::value_to_mask(mask_value);
-    if (IpAddr::is_valid_mask(htonl(actual_mask)) == false)
+    uint32_t actual_mask = IpAddr::value_to_netmask(mask_value);
+    if (IpAddr::is_valid_netmask(htonl(actual_mask)) == false)
     {
         LOG(error, "IpAddr: not a valid mask: " << mask_value_str);
         return false;
@@ -232,7 +232,7 @@ bool    IpAddr::set_subnet_mask(const std::string & mask)
     struct sockaddr_in sockaddr_mask;
     if (IpAddr::to_sockaddr_in(&sockaddr_mask, mask) == false)
         return false;
-    if (IpAddr::is_valid_mask(htonl(sockaddr_mask.sin_addr.s_addr)) == false)
+    if (IpAddr::is_valid_netmask(htonl(sockaddr_mask.sin_addr.s_addr)) == false)
     {
         LOG(error, "IpAddr: not a valid mask: " << mask);
         return false;
@@ -245,7 +245,7 @@ bool    IpAddr::set_subnet_mask(const std::string & mask)
 
 bool    IpAddr::set_subnet_mask(uint32_t mask)
 {
-    if (IpAddr::is_valid_mask(htonl(mask)) == false)
+    if (IpAddr::is_valid_netmask(htonl(mask)) == false)
     {
         LOG(error, "IpAddr: not a valid mask: " << mask);
         return false;
@@ -277,7 +277,7 @@ bool    IpAddr::is_same_subnet(const sockaddr_in & addr) const
 /* Static class utilities */
 /* ************************************************************************* */
 
-bool    IpAddr::fill_sockaddr(const std::string & ip, IpSockAddr & ipsockaddr, int port)
+bool    IpAddr::fill_ipsockaddr(IpSockAddr & ipsockaddr, const std::string & ip, int port)
 {
     IpAddr::_purge_ipsockaddr(ipsockaddr);
     if (IpAddr::to_sockaddr_in(&ipsockaddr.addr_in, ip, port))
@@ -355,7 +355,7 @@ std::string IpAddr::fetch_ip_name(const std::string & ip)
 {
     IpSockAddr ipsockaddr;
 
-    if (IpAddr::fill_sockaddr(ip, ipsockaddr) == false)
+    if (IpAddr::fill_ipsockaddr(ipsockaddr, ip) == false)
         return "";
     return IpAddr::fetch_ip_name(ipsockaddr.addr, ipsockaddr.addr_len);
 }
@@ -411,13 +411,13 @@ std::string     IpAddr::ip_to_string(const in6_addr & addr_in)
     return inet_ntop(AF_INET6, (void *)(&addr_in), _ip_buffer, INET6_ADDRSTRLEN);
 }
 
-void    IpAddr::get_network_id(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask)
+void    IpAddr::fill_sockaddr_network_id(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask)
 {
     memcpy(&dst, &src, sizeof(struct sockaddr_in));
     dst.sin_addr.s_addr = src.sin_addr.s_addr & mask.s_addr;
 }
 
-void    IpAddr::get_network_id(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask)
+void    IpAddr::fill_sockaddr_network_id(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask)
 {
     memcpy(&dst, &src, sizeof(struct sockaddr_in6));
     for (int i = 0; i < 16; ++i)
@@ -426,13 +426,13 @@ void    IpAddr::get_network_id(struct sockaddr_in6 & dst, struct sockaddr_in6 & 
     }
 }
 
-void    IpAddr::get_broadcast(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask)
+void    IpAddr::fill_sockaddr_broadcast(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask)
 {
     memcpy(&dst, &src, sizeof(struct sockaddr_in));
     dst.sin_addr.s_addr = src.sin_addr.s_addr | ~(mask.s_addr);
 }
 
-void    IpAddr::get_broadcast(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask)
+void    IpAddr::fill_sockaddr_broadcast(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask)
 {
     memcpy(&dst, &src, sizeof(struct sockaddr_in6));
     for (int i = 0; i < 16; ++i)
@@ -441,14 +441,14 @@ void    IpAddr::get_broadcast(struct sockaddr_in6 & dst, struct sockaddr_in6 & s
     }
 }
 
-uint32_t    IpAddr::value_to_mask(uint32_t value)
+uint32_t    IpAddr::value_to_netmask(uint32_t value)
 {
     return ntohl(0xffffffff << (32 - value));
 }
 
 // A valid netmask cannot have a zero with a one to the right of it. All zeros must have another zero to the right of it or be bit 0.
 // must apply htonl if mask is in host byte order
-bool    IpAddr::is_valid_mask(uint32_t mask)
+bool    IpAddr::is_valid_netmask(uint32_t mask)
 {
     if (mask == 0)
         return false;

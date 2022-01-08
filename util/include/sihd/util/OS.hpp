@@ -57,6 +57,7 @@ class OS
         static rlim_t get_max_fds();
 
         static std::string get_executable_path();
+        static std::string get_cwd();
 
         // debuggers
         static bool is_run_by_debugger();

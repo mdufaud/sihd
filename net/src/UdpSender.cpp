@@ -1,37 +1,31 @@
 #include <sihd/net/UdpSender.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::net
 {
 
+SIHD_UTIL_REGISTER_FACTORY(UdpSender)
+
 LOGGER;
 
-UdpSender::UdpSender(bool ipv6)
+UdpSender::UdpSender(const std::string & name, sihd::util::Node *parent):
+    sihd::util::Named(name, parent)
 {
-    this->open_socket(ipv6);
-}
-
-UdpSender::UdpSender(const IpAddr & addr)
-{
-    if (this->open_socket(addr.prefers_ipv6()))
-        this->connect(addr);
-}
-
-UdpSender::UdpSender(const std::string & ip, int port)
-{
-    IpAddr addr(ip, port, true);
-    if (this->open_socket(addr.prefers_ipv6()))
-        this->connect(addr);
-}
-
-UdpSender::UdpSender(const std::string & path)
-{
-    if (this->open_socket_unix())
-        this->connect(path);
 }
 
 UdpSender::~UdpSender()
 {
+}
+
+bool    UdpSender::open_socket_unix()
+{
+    return _socket.is_open() || _socket.open(AF_UNIX, SOCK_DGRAM, IPPROTO_UDP);
+}
+
+bool    UdpSender::open_socket(bool ipv6)
+{
+    return _socket.is_open() || _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 }
 
 bool    UdpSender::connect(const IpAddr & addr)
@@ -39,24 +33,26 @@ bool    UdpSender::connect(const IpAddr & addr)
     return _socket.connect(addr);
 }
 
+bool    UdpSender::open_and_connect(const IpAddr & ip)
+{
+    return this->open_socket(ip.prefers_ipv6()) && this->connect(ip);
+}
+
+bool    UdpSender::open_and_connect(const std::string & ip, int port)
+{
+    IpAddr addr(ip, port, true);
+    return this->open_socket(addr.prefers_ipv6()) && this->connect(addr);
+}
+
+bool    UdpSender::open_unix_and_connect(const std::string & path)
+{
+    return this->open_socket_unix() && this->connect(path);
+}
+
 bool    UdpSender::close()
 {
     _socket.shutdown();
     return _socket.close();
-}
-
-bool    UdpSender::open_socket_unix()
-{
-    if (_socket.is_open())
-        return false;
-    return _socket.open(AF_UNIX, SOCK_DGRAM, IPPROTO_UDP);
-}
-
-bool    UdpSender::open_socket(bool ipv6)
-{
-    if (_socket.is_open())
-        return false;
-    return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 }
 
 ssize_t UdpSender::send(const void *data, size_t len)

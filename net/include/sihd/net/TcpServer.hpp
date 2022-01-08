@@ -4,6 +4,7 @@
 # include <sihd/net/Socket.hpp>
 # include <sihd/net/INetServer.hpp>
 # include <sihd/net/INetServerHandler.hpp>
+# include <sihd/util/Named.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/IHandler.hpp>
 # include <sihd/util/Waitable.hpp>
@@ -13,14 +14,12 @@ namespace sihd::net
 {
 
 class TcpServer:    public INetServer,
+                    public sihd::util::Named,
                     public sihd::util::Configurable,
                     public sihd::util::IHandler<sihd::util::Poll *>
 {
     public:
-        TcpServer(bool ipv6 = false);
-        TcpServer(const IpAddr & addr);
-        TcpServer(const std::string & ip, int port);
-        TcpServer(const std::string & path);
+        TcpServer(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~TcpServer();
 
         bool open_socket(bool ipv6 = false);
@@ -29,6 +28,10 @@ class TcpServer:    public INetServer,
 
         bool bind(const IpAddr & addr);
         bool bind(const std::string & path) { return _socket.bind(path); }
+
+        bool open_and_bind(const IpAddr & ip);
+        bool open_and_bind(const std::string & ip, int port);
+        bool open_unix_and_bind(const std::string & path);
 
         bool close();
 
@@ -63,7 +66,6 @@ class TcpServer:    public INetServer,
         void handle(sihd::util::Poll *poll);
         
     private:
-        void _init();
         void _setup_poll();
 
         Socket _socket;

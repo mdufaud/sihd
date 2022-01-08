@@ -5,6 +5,7 @@
 # include <sihd/net/INetReceiver.hpp>
 # include <sihd/net/INetSender.hpp>
 # include <sihd/util/IRunnable.hpp>
+# include <sihd/util/Named.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/Handler.hpp>
 # include <sihd/util/Waitable.hpp>
@@ -16,26 +17,27 @@ namespace sihd::net
 
 class TcpClient:    public INetReceiver,
                     public INetSender,
+                    public sihd::util::Named,
                     public sihd::util::Configurable,
                     public sihd::util::IStoppableRunnable,
                     public sihd::util::Observable<INetReceiver>,
                     public sihd::util::IHandler<sihd::util::Poll *>
 {
     public:
-        TcpClient();
-        TcpClient(bool ipv6 = false);
-        TcpClient(const IpAddr & ip);
-        TcpClient(const std::string & ip, int port);
-        TcpClient(const std::string & path);
+        TcpClient(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~TcpClient();
+
+        bool open_socket(bool ipv6 = false);
+        bool open_socket_unix();
+        bool socket_opened() { return _socket.is_open(); }
 
         bool connect(const IpAddr & addr);
         bool connect(const std::string & ip, int port);
         bool connect(const std::string & path);
 
-        bool open_socket(bool ipv6 = false);
-        bool open_socket_unix();
-        bool socket_opened() { return _socket.is_open(); }
+        bool open_and_connect(const IpAddr & ip);
+        bool open_and_connect(const std::string & ip, int port);
+        bool open_unix_and_connect(const std::string & path);
 
         bool close();
 
@@ -73,7 +75,6 @@ class TcpClient:    public INetReceiver,
     
     private:
         void handle(sihd::util::Poll *poll);
-        void _init();
         void _setup_poll();
 
         Socket _socket;

@@ -10,45 +10,45 @@ ALogFilterer::ALogFilterer()
 
 ALogFilterer::~ALogFilterer()
 {
-    this->delete_filters();
+    this->remove_filters();
 }
 
 bool    ALogFilterer::has_filter(ILoggerFilter *filter)
 {
-    return std::find(_filters.begin(), _filters.end(), filter) != _filters.end();
+    return std::find(_filters_lst.begin(), _filters_lst.end(), filter) != _filters_lst.end();
 }
 
 bool    ALogFilterer::add_filter(ILoggerFilter *filter)
 {
     bool has = this->has_filter(filter);
     if (!has)
-        _filters.push_back(filter);
+        _filters_lst.push_back(filter);
     return !has;
 }
 
 bool    ALogFilterer::remove_filter(ILoggerFilter *filter)
 {
     auto it = this->_find(filter);
-    if (it != _filters.end())
+    if (it != _filters_lst.end())
     {
-        _filters.erase(it);
+        _filters_lst.erase(it);
         delete *it;
     }
-    return it != _filters.end();
+    return it != _filters_lst.end();
 }
 
-void    ALogFilterer::delete_filters()
+void    ALogFilterer::remove_filters()
 {
-    for (ILoggerFilter *filter : _filters)
+    for (ILoggerFilter *filter : _filters_lst)
     {
         delete filter;
     }
-    _filters.clear();
+    _filters_lst.clear();
 }
 
 bool    ALogFilterer::should_filter(const LogInfo & info, const char *msg)
 {
-    for (ILoggerFilter *filter : _filters)
+    for (ILoggerFilter *filter : _filters_lst)
     {
         if (filter->filter(info, msg))
             return true;
@@ -58,7 +58,7 @@ bool    ALogFilterer::should_filter(const LogInfo & info, const char *msg)
 
 std::list<ILoggerFilter *>::iterator  ALogFilterer::_find(ILoggerFilter *filter)
 {
-    return std::find(_filters.begin(), _filters.end(), filter);
+    return std::find(_filters_lst.begin(), _filters_lst.end(), filter);
 }
 
 }

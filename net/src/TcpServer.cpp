@@ -1,6 +1,7 @@
 #include <sihd/net/TcpServer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Task.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::net
 {
@@ -8,34 +9,21 @@ namespace sihd::net
 using namespace std::placeholders;
 using namespace sihd::util;
 
+SIHD_UTIL_REGISTER_FACTORY(TcpServer)
+
 LOGGER;
 
-TcpServer::TcpServer(bool ipv6)
+TcpServer::TcpServer(const std::string & name, sihd::util::Node *parent):
+    sihd::util::Named(name, parent)
 {
-    this->_init();
-    this->open_socket(ipv6);
-}
-
-TcpServer::TcpServer(const IpAddr & addr)
-{
-    this->_init();
-    if (this->open_socket(addr.prefers_ipv6()))
-        this->bind(addr);
-}
-
-TcpServer::TcpServer(const std::string & ip, int port)
-{
-    this->_init();
-    IpAddr addr(ip, port, true);
-    if (this->open_socket(addr.prefers_ipv6()))
-        this->bind(addr);
-}
-
-TcpServer::TcpServer(const std::string & path)
-{
-    this->_init();
-    if (this->open_socket_unix())
-        this->bind(path);
+    _server_handler_ptr = nullptr;
+    _poll.add_observer(this);
+    this->set_queue_size(50);
+    this->set_poll_timeout(10);
+    this->set_poll_limit(10);
+    this->add_conf("queue_size", &TcpServer::set_queue_size);
+    this->add_conf("poll_timeout", &TcpServer::set_poll_timeout);
+    this->add_conf("poll_limit", &TcpServer::set_poll_limit);
 }
 
 TcpServer::~TcpServer()
@@ -60,29 +48,6 @@ bool    TcpServer::set_poll_timeout(int milliseconds)
     return true;
 }
 
-void    TcpServer::_init()
-{
-    _server_handler_ptr = nullptr;
-    _poll.add_observer(this);
-    this->set_queue_size(50);
-    this->set_poll_timeout(10);
-    this->set_poll_limit(10);
-    this->add_conf("queue_size", &TcpServer::set_queue_size);
-    this->add_conf("poll_timeout", &TcpServer::set_poll_timeout);
-    this->add_conf("poll_limit", &TcpServer::set_poll_limit);
-}
-
-bool    TcpServer::bind(const IpAddr & addr)
-{
-    return _socket.bind(addr);
-}
-
-bool    TcpServer::close()
-{
-    this->stop_serving();
-    return _socket.close();
-}
-
 bool    TcpServer::open_socket_unix()
 {
     if (_socket.is_open())
@@ -98,6 +63,33 @@ bool    TcpServer::open_socket(bool ipv6)
     if (ret)
         _socket.set_reuseaddr(true);
     return ret;
+}
+
+bool    TcpServer::bind(const IpAddr & addr)
+{
+    return _socket.bind(addr);
+}
+
+bool    TcpServer::open_and_bind(const IpAddr & ip)
+{
+    return this->open_socket(ip.prefers_ipv6()) && this->bind(ip);
+}
+
+bool    TcpServer::open_and_bind(const std::string & ip, int port)
+{
+    IpAddr addr(ip, port, true);
+    return this->open_socket(addr.prefers_ipv6()) && this->bind(addr);
+}
+
+bool    TcpServer::open_unix_and_bind(const std::string & path)
+{
+    return this->open_socket_unix() && this->bind(path);
+}
+
+bool    TcpServer::close()
+{
+    this->stop_serving();
+    return _socket.close();
 }
 
 void    TcpServer::set_server_handler(INetServerHandler *handler)

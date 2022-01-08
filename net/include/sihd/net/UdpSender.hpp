@@ -1,28 +1,33 @@
 #ifndef __SIHD_NET_UDPSENDER_HPP__
 # define __SIHD_NET_UDPSENDER_HPP__
 
+# include <sihd/util/Named.hpp>
+# include <sihd/util/Configurable.hpp>
 # include <sihd/net/Socket.hpp>
 # include <sihd/net/INetSender.hpp>
-# include <sihd/util/Configurable.hpp>
 
 namespace sihd::net
 {
 
-class UdpSender: public INetSender, public sihd::util::Configurable
+class UdpSender:    public INetSender,
+                    public sihd::util::Named,
+                    public sihd::util::Configurable
 {
     public:
-        UdpSender(bool ipv6 = false);
-        UdpSender(const IpAddr & ip);
-        UdpSender(const std::string & ip, int port);
-        UdpSender(const std::string & path);
+        UdpSender(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~UdpSender();
 
         bool open_socket(bool ipv6 = false);
         bool open_socket_unix();
+
         bool socket_opened() { return _socket.is_open(); }
 
         bool connect(const IpAddr & addr);
-        bool connect(const std::string & path) { return _socket.connect(path); }
+        bool connect_unix(const std::string & path) { return _socket.connect_unix(path); }
+
+        bool open_and_connect(const IpAddr & ip);
+        bool open_and_connect(const std::string & ip, int port);
+        bool open_unix_and_connect(const std::string & path);
 
         bool close();
 

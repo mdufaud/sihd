@@ -44,9 +44,10 @@ modules = {
         "depends": ['util'],
     },
     "ssh": {
-        "uselibs": ['libssh2'],
-        "libs": ['ssh2'],
-        "depends": ['net'],
+        # libssh-dev
+        "libs": ['ssh'],
+        #"depends": ['net'],
+        "depends": ['util'],
     },
     "http": {
         "uselibs": ['uwebsockets', 'libcurl'],

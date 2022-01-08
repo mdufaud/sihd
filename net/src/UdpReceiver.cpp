@@ -1,45 +1,16 @@
 #include <sihd/net/UdpReceiver.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::net
 {
 
+SIHD_UTIL_REGISTER_FACTORY(UdpReceiver)
+
 LOGGER;
 
-UdpReceiver::UdpReceiver(bool ipv6)
-{
-    this->_init();
-    this->open_socket(ipv6);
-}
-
-UdpReceiver::UdpReceiver(const IpAddr & addr)
-{
-    this->_init();
-    if (this->open_socket(addr.prefers_ipv6()))
-        this->bind(addr);
-}
-
-UdpReceiver::UdpReceiver(const std::string & ip, int port)
-{
-    this->_init();
-    IpAddr addr(ip, port, true);
-    if (this->open_socket(addr.prefers_ipv6()))
-        this->bind(addr);
-}
-
-UdpReceiver::UdpReceiver(const std::string & path)
-{
-    this->_init();
-    if (this->open_socket_unix())
-        this->bind(path);
-}
-
-UdpReceiver::~UdpReceiver()
-{
-    this->stop();
-}
-
-void    UdpReceiver::_init()
+UdpReceiver::UdpReceiver(const std::string & name, sihd::util::Node *parent):
+    sihd::util::Named(name, parent)
 {
     _poll.set_timeout(1);
     _poll.set_limit(1);
@@ -47,27 +18,15 @@ void    UdpReceiver::_init()
     this->add_conf("poll_timeout", &UdpReceiver::set_poll_timeout);
 }
 
+UdpReceiver::~UdpReceiver()
+{
+    this->stop();
+}
+
 bool    UdpReceiver::set_poll_timeout(int milliseconds)
 {
     _poll.set_timeout(milliseconds);
     return true;
-}
-
-bool    UdpReceiver::bind(const IpAddr & addr)
-{
-    return _socket.bind(addr);
-}
-
-bool    UdpReceiver::bind(const std::string & path)
-{
-    return _socket.bind(path);
-}
-
-bool    UdpReceiver::close()
-{
-    _poll.clear_fds();
-    _socket.shutdown();
-    return _socket.close();
 }
 
 bool    UdpReceiver::open_socket_unix()
@@ -85,6 +44,39 @@ bool    UdpReceiver::open_socket(bool ipv6)
     if (ret)
         _socket.set_reuseaddr(true);
     return ret;
+}
+
+bool    UdpReceiver::bind(const IpAddr & addr)
+{
+    return _socket.bind(addr);
+}
+
+bool    UdpReceiver::bind_unix(const std::string & path)
+{
+    return _socket.bind_unix(path);
+}
+
+bool    UdpReceiver::open_and_bind(const IpAddr & ip)
+{
+    return this->open_socket(ip.prefers_ipv6()) && this->bind(ip);
+}
+
+bool    UdpReceiver::open_and_bind(const std::string & ip, int port)
+{
+    IpAddr addr(ip, port, true);
+    return this->open_socket(addr.prefers_ipv6()) && this->bind(addr);
+}
+
+bool    UdpReceiver::open_unix_and_bind(const std::string & path)
+{
+    return this->open_socket_unix() && this->bind(path);
+}
+
+bool    UdpReceiver::close()
+{
+    _poll.clear_fds();
+    _socket.shutdown();
+    return _socket.close();
 }
 
 bool    UdpReceiver::stop()

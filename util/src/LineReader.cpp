@@ -18,18 +18,27 @@ LineReader::LineReader(const std::string & name, sihd::util::Node *parent):
     _read_buff_size = 4096;
     _line_ptr = nullptr;
     _line_buff_step = 512;
-    _line_buff_size = 0;
+    _line_buff_size = _line_buff_step;
     _put_delimiter_in_line = false;
     _delimiter = '\n';
-    this->_reallocate_line();
-    this->_allocate_read_buffer();
-    this->_reset();
-    memset(_read_ptr, 0, _read_buff_size);
+    this->add_conf("delimiter_in_line", &LineReader::set_delimiter_in_line);
+    this->add_conf("delimiter", &LineReader::set_delimiter);
+    this->add_conf("read_size", &LineReader::set_read_buffsize);
+    this->add_conf("line_size", &LineReader::set_line_buffsize);
 }
 
 LineReader::~LineReader()
 {
     this->_delete_buffers();
+}
+
+bool    LineReader::_init()
+{
+    bool ret = _line_ptr != nullptr || this->_allocate_line();
+    ret = ret && (_read_ptr != nullptr || this->_allocate_read_buffer());
+    if (ret)
+        this->_reset();
+    return ret;
 }
 
 bool    LineReader::set_delimiter_in_line(bool active)
@@ -46,6 +55,8 @@ bool    LineReader::set_delimiter(int c)
 
 bool    LineReader::set_read_buffsize(size_t buff)
 {
+    if (_read_buff_size == buff)
+        return true;
     if (buff == 0)
     {
         LOG(error, "LineReader: cannot set read buffer size to 0");
@@ -57,6 +68,8 @@ bool    LineReader::set_read_buffsize(size_t buff)
 
 bool    LineReader::set_line_buffsize(size_t buff)
 {
+    if (_line_buff_size == buff)
+        return true;
     if (buff == 0)
     {
         LOG(error, "LineReader: cannot set line buffer size to 0");
@@ -68,7 +81,12 @@ bool    LineReader::set_line_buffsize(size_t buff)
 
 bool    LineReader::open(const std::string & path)
 {
-    return _file.open(path, "r");
+    return this->_init() && _file.open(path, "r");
+}
+
+bool    LineReader::set_stream(FILE *stream, bool ownership)
+{
+    return this->_init() && _file.set_stream(stream, ownership);
 }
 
 bool    LineReader::is_open() const
@@ -143,7 +161,8 @@ bool    LineReader::read_next()
 bool    LineReader::get_read_data(char **data, size_t *size) const
 {
     *data = _line_ptr;
-    *size = _line_buff_size;
+    if (size != nullptr)
+        *size = _line_buff_size;
     return _line_ptr != nullptr;
 }
 
@@ -187,6 +206,27 @@ void    LineReader::_delete_buffers()
         free(_read_ptr);
     _line_ptr = nullptr;
     _read_ptr = nullptr;
+}
+
+bool    LineReader::fast_read_line(std::string & line, FILE *stream, size_t buffsize)
+{
+    LineReader reader("reader");
+    char *line_ptr;
+    size_t size;
+
+    reader.set_read_buffsize(buffsize);
+    if (reader.set_stream(stream, false))
+    {
+        if (reader.read_next())
+        {
+            if (reader.get_read_data(&line_ptr, &size))
+            {
+                line = line_ptr;
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 }

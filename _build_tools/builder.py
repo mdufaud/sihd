@@ -8,7 +8,7 @@ try:
 except ImportError:
     from . import modules as build_tools_modules
 
-linux_libs = ['dl']
+linux_libs = ['dl', 'ssh']
 linux_extlibs = ['readline', 'pybind11', 'bluetooth']
 
 default_compiler = "gcc"

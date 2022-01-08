@@ -39,8 +39,12 @@ namespace test
         sihd::util::ArrInt array_send = {1, 2, 3, 4, 5, 6};
         sihd::util::ArrInt array_rcv(array_send.size());
         IpAddr localhost("127.0.0.1", 4242);
-        UdpSender sender(localhost);
-        UdpReceiver receiver(localhost);
+        UdpSender sender("udp-sender");
+        UdpReceiver receiver("udp-receiver");
+
+        EXPECT_TRUE(sender.open_and_connect(localhost));
+        EXPECT_TRUE(receiver.open_and_bind(localhost));
+
         sihd::util::ObserverWaiter obs(&receiver);
 
         ssize_t receive_ret = -1;
@@ -72,8 +76,11 @@ namespace test
     {
         sihd::util::ArrStr array_rcv(40);
 
-        UdpSender sender("127.0.0.1", 4242);
-        UdpReceiver receiver(IpAddr::get_localhost(4242));
+        UdpSender sender("udp-sender");
+        UdpReceiver receiver("udp-receiver");
+
+        EXPECT_TRUE(sender.open_and_connect("127.0.0.1", 4242));
+        EXPECT_TRUE(receiver.open_and_bind(IpAddr::get_localhost(4242)));
 
         EXPECT_TRUE(receiver.socket_opened());
         EXPECT_TRUE(receiver.socket().set_blocking(false));
@@ -106,12 +113,14 @@ namespace test
         const char helloworld[] = "hello world";
         sihd::util::ArrStr array_rcv(40);
 
-        UdpSender sender;
+        UdpSender sender("udp-sender");
+        EXPECT_TRUE(sender.open_socket());
         EXPECT_TRUE(sender.socket_opened());
         EXPECT_TRUE(sender.socket().set_broadcast(true));
 
         IpAddr any_ip(4242);
-        UdpReceiver receiver(any_ip);
+        UdpReceiver receiver("udp-receiver");
+        EXPECT_TRUE(receiver.open_and_bind(any_ip));
         EXPECT_TRUE(receiver.socket_opened());
 
         IpAddr broadcast_ip("127.255.255.255", 4242, false);

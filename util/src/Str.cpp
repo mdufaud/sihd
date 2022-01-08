@@ -31,6 +31,14 @@ const char Str::g_escapes_open[] = "\"'[({<";
 const char Str::g_escapes_close[] = "\"'])}>";
 char Str::g_escape_char = '\\';
 
+void    Str::append_sep(std::string & str, const std::string & append, const std::string & sep)
+{
+    if (str.empty())
+        str += append;
+    else
+        str += sep + append;
+}
+
 char    *Str::csub(const char *str, size_t from_idx, ssize_t size)
 {
     if (size == 0)

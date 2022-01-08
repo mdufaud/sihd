@@ -1,0 +1,266 @@
+#include <sihd/ssh/SshChannel.hpp>
+#include <sihd/util/Logger.hpp>
+
+# define WHILE_SSH_AGAIN_AND_RETURN(method) {\
+    int r;\
+    while ((r = method) == SSH_AGAIN)\
+        ;\
+    return r == SSH_OK;\
+}
+
+namespace sihd::ssh
+{
+
+LOGGER;
+
+SshChannel::SshChannel(ssh_channel channel): _ssh_channel_ptr(channel)
+{
+}
+
+SshChannel::~SshChannel()
+{
+    this->clear_channel();
+}
+
+void    SshChannel::clear_channel()
+{
+    if (_ssh_channel_ptr != nullptr)
+    {
+        this->close();
+        this->send_eof();
+        ssh_channel_free(_ssh_channel_ptr);
+        _ssh_channel_ptr = nullptr;
+    }
+}
+
+void    SshChannel::set_channel(ssh_channel channel)
+{
+    this->clear_channel();
+    _ssh_channel_ptr = channel;
+}
+
+bool    SshChannel::open_session()
+{
+    if (_ssh_channel_ptr == nullptr)
+        return false;
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_session(_ssh_channel_ptr));
+}
+
+bool    SshChannel::open_agent()
+{
+    if (_ssh_channel_ptr == nullptr)
+        return false;
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_auth_agent(_ssh_channel_ptr));
+}
+
+bool    SshChannel::open_x11(const std::string & addr, int port)
+{
+    if (_ssh_channel_ptr == nullptr)
+        return false;
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_x11(_ssh_channel_ptr, addr.c_str(), port));
+}
+
+bool    SshChannel::open_forward(const std::string & remotehost, int remoteport,
+                                            const std::string & sourcehost, int localport)
+{
+    if (_ssh_channel_ptr == nullptr)
+        return false;
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_forward(_ssh_channel_ptr,
+                                            remotehost.c_str(), remoteport,
+                                            sourcehost.c_str(), localport));
+}
+
+#if LIBSSH_VERSION_MINOR > 7
+bool    SshChannel::open_reverse_forward(const std::string & remotehost, int remoteport,
+                                            const std::string & sourcehost, int localport)
+{
+    if (_ssh_channel_ptr == nullptr)
+        return false;
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_reverse_forward(_ssh_channel_ptr,
+                                                                remotehost.c_str(), remoteport,
+                                                                sourcehost.c_str(), localport));
+}
+
+bool    SshChannel::open_forward_unix(const std::string & remotepath,
+                                            const std::string & sourcehost, int localport)
+{
+    if (_ssh_channel_ptr == nullptr)
+        return false;
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_forward_unix(_ssh_channel_ptr, remotepath.c_str(),
+                                                                sourcehost.c_str(), localport));
+}
+#endif
+
+bool    SshChannel::close()
+{
+    return ssh_channel_close(_ssh_channel_ptr) == SSH_OK;
+}
+
+bool    SshChannel::is_open()
+{
+    return ssh_channel_is_open(_ssh_channel_ptr) != 0;
+}
+
+bool    SshChannel::request_sftp()
+{
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_sftp(_ssh_channel_ptr));
+}
+
+bool    SshChannel::request_x11(const std::string & protocol, const std::string & cookie,
+                                    int screen_number, bool single_connection)
+{
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_x11(_ssh_channel_ptr, (int)single_connection,
+                                                        protocol.c_str(), cookie.c_str(), screen_number));
+}
+
+bool    SshChannel::request_subsystem(const std::string & subsys)
+{
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_subsystem(_ssh_channel_ptr, subsys.c_str()));
+}
+
+bool    SshChannel::request_pty()
+{
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_pty(_ssh_channel_ptr));
+}
+
+bool    SshChannel::change_pty_size(int cols, int rows)
+{
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_change_pty_size(_ssh_channel_ptr, cols, rows));
+}
+
+bool    SshChannel::request_shell()
+{
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_shell(_ssh_channel_ptr));
+}
+
+bool    SshChannel::request_exec(const std::string & cmd)
+{
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_exec(_ssh_channel_ptr, cmd.c_str()));
+}
+
+/* ************************************************************************* */
+/* utils */
+/* ************************************************************************* */
+
+bool    SshChannel::set_env(const std::string & name, const std::string & value)
+{
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_env(_ssh_channel_ptr, name.c_str(), value.c_str()));
+}
+
+int     SshChannel::exit_status()
+{
+    return ssh_channel_get_exit_status(_ssh_channel_ptr);
+}
+
+void    SshChannel::set_blocking(bool active)
+{
+    ssh_channel_set_blocking(_ssh_channel_ptr, (int)active);
+}
+
+ssh_session     SshChannel::session() const
+{
+    return ssh_channel_get_session(_ssh_channel_ptr);
+}
+
+/* ************************************************************************* */
+/* poll */
+/* ************************************************************************* */
+
+int     SshChannel::poll()
+{
+    return ssh_channel_poll(_ssh_channel_ptr, 0);
+}
+
+int     SshChannel::poll_stderr()
+{
+    return ssh_channel_poll(_ssh_channel_ptr, 1);
+}
+
+int     SshChannel::poll_timeout(int timeout_ms)
+{
+    return ssh_channel_poll_timeout(_ssh_channel_ptr, timeout_ms, 0);
+}
+
+int     SshChannel::poll_timeout_stderr(int timeout_ms)
+{
+    return ssh_channel_poll_timeout(_ssh_channel_ptr, timeout_ms, 1);
+}
+
+/* ************************************************************************* */
+/* read - write */
+/* ************************************************************************* */
+
+bool    SshChannel::send_signal(const std::string & sig)
+{
+    return ssh_channel_request_send_signal(_ssh_channel_ptr, sig.c_str());
+}
+
+bool    SshChannel::send_eof()
+{
+    return ssh_channel_send_eof(_ssh_channel_ptr) == SSH_OK;
+}
+
+bool    SshChannel::is_eof()
+{
+    return ssh_channel_is_eof(_ssh_channel_ptr) == 0;
+}
+
+int     SshChannel::read(char *buffer, size_t size)
+{
+    int ret = ssh_channel_read(_ssh_channel_ptr, buffer, size, 0);
+    if (ret >= 0)
+        buffer[ret] = 0;
+    return ret;
+}
+
+int     SshChannel::read_stderr(char *buffer, size_t size)
+{
+    int ret = ssh_channel_read(_ssh_channel_ptr, buffer, size, 1);
+    if (ret >= 0)
+        buffer[ret] = 0;
+    return ret;
+}
+
+int     SshChannel::read_timeout(char *buffer, size_t size, int timeout_ms)
+{
+    int ret = ssh_channel_read_timeout(_ssh_channel_ptr, buffer, size, 0, timeout_ms);
+    if (ret >= 0)
+        buffer[ret] = 0;
+    return ret;
+}
+
+int     SshChannel::read_timeout_stderr(char *buffer, size_t size, int timeout_ms)
+{
+    int ret = ssh_channel_read_timeout(_ssh_channel_ptr, buffer, size, 1, timeout_ms);
+    if (ret >= 0)
+        buffer[ret] = 0;
+    return ret;
+}
+
+int     SshChannel::read_nonblock(char *buffer, size_t size)
+{
+    int ret = ssh_channel_read_nonblocking(_ssh_channel_ptr, buffer, size, 0);
+    if (ret >= 0)
+        buffer[ret] = 0;
+    return ret;
+}
+
+int     SshChannel::read_nonblock_stderr(char *buffer, size_t size)
+{
+    int ret = ssh_channel_read_nonblocking(_ssh_channel_ptr, buffer, size, 1);
+    if (ret >= 0)
+        buffer[ret] = 0;
+    return ret;
+}
+
+int     SshChannel::write(const char *buffer, size_t size)
+{
+    return ssh_channel_write(_ssh_channel_ptr, buffer, size);
+}
+
+int     SshChannel::write_stderr(const char *buffer, size_t size)
+{
+    return ssh_channel_write_stderr(_ssh_channel_ptr, buffer, size);
+}
+
+}
