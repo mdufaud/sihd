@@ -49,6 +49,8 @@ namespace test
     {
         if (sihd::util::Term::is_interactive() == false)
             GTEST_SKIP_("requires interaction");
+        if (sihd::util::OS::is_run_by_valgrind())
+            GTEST_SKIP_("no valgrind");
 
         std::string user = getenv("USER");
         SshSession session;

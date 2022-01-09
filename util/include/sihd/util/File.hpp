@@ -63,10 +63,11 @@ class File
         ssize_t write(const std::string & str, size_t size_limit = 0);
         bool write_char(int c);
 
-        int seek(long offset);
-        int seek_begin(long offset);
-        int seek_end(long offset);
+        bool seek(long offset);
+        bool seek_begin(long offset);
+        bool seek_end(long offset);
         long tell();
+        long filesize();
 
         FILE *file() { return _file_ptr; }
         const std::string & path() const { return _path; }
@@ -83,7 +84,7 @@ class File
         virtual void _init();
 
     private:
-        int _seek(long offset, int origin);
+        bool _seek(long offset, int origin);
         void _delete_buffer();
         bool _allocate_buffer_if_not_exists();
         bool _set_buffer_to_stream();

@@ -253,6 +253,21 @@ bool    File::close()
     return true;
 }
 
+long    File::filesize()
+{
+    long ret = -1;
+    long current_offset = this->tell();
+    if (current_offset >= 0)
+    {
+        if (this->seek_end(0))
+        {
+            ret = this->tell();
+            this->seek(current_offset);
+        }
+    }
+    return ret;
+}
+
 long    File::tell()
 {
     long ret = ftell(_file_ptr);
@@ -261,27 +276,27 @@ long    File::tell()
     return ret;
 }
 
-int     File::seek(long offset)
+bool    File::seek(long offset)
 {
     return this->_seek(offset, SEEK_CUR);
 }
 
-int     File::seek_begin(long offset)
+bool    File::seek_begin(long offset)
 {
     return this->_seek(offset, SEEK_SET);
 }
 
-int     File::seek_end(long offset)
+bool    File::seek_end(long offset)
 {
     return this->_seek(offset, SEEK_END);
 }
 
-int     File::_seek(long offset, int origin)
+bool    File::_seek(long offset, int origin)
 {
     int ret = fseek(_file_ptr, offset, origin);
     if (ret < 0)
         LOG(error, "File: seek: " << strerror(errno));
-    return ret;
+    return ret == 0;
 }
 
 ssize_t File::read(char *buf, size_t size)

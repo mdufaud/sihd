@@ -62,6 +62,13 @@ namespace test
         EXPECT_TRUE(sftp.open());
         EXPECT_TRUE(sftp.mkdir(Files::combine(test_dir, "new_dir")));
 
+        std::vector<std::string> list;
+        EXPECT_TRUE(sftp.list_dir_filenames(".", list));
+        for (const auto & name: list)
+        {
+            TRACE(name);
+        }
+
         EXPECT_TRUE(Files::is_dir(Files::combine(test_dir, "new_dir")));
     }
 }
