@@ -8,7 +8,7 @@ namespace test
     LOGGER;
     using namespace sihd::util;
 
-    int non_member_counter = 0;
+    int non_member_counter;
 
     void void_no_args()
     {
@@ -45,6 +45,7 @@ namespace test
 
             virtual void SetUp()
             {
+                non_member_counter = 0;
             }
 
             virtual void TearDown()

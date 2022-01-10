@@ -45,13 +45,14 @@ namespace test
             std::string _base_test_dir;
     };
 
-    TEST_F(TestSftp, test_sftp_mkdir)
+    TEST_F(TestSftp, test_sftp)
     {
         std::string test_dir = sihd::util::Files::combine(_base_test_dir, "mkdir");
         sihd::util::Files::remove_directories(test_dir);
         sihd::util::Files::make_directories(test_dir);
 
         std::string user = getenv("USER");
+        std::string cwd = OS::get_cwd();
         SshSession session;
 
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
@@ -60,15 +61,44 @@ namespace test
 
         Sftp sftp = session.make_sftp();
         EXPECT_TRUE(sftp.open());
-        EXPECT_TRUE(sftp.mkdir(Files::combine(test_dir, "new_dir")));
+        EXPECT_TRUE(sftp.mkdir(test_dir + "/new_dir"));
+        EXPECT_TRUE(Files::is_dir(test_dir + "/new_dir"));
+
+        EXPECT_TRUE(sftp.send_file("test/resources/file.txt", test_dir + "/sent_file.txt"));
+        EXPECT_TRUE(sftp.get_file(cwd + "/test/resources/file.txt", test_dir + "/recv_file.txt"));
+        EXPECT_TRUE(Files::is_file(test_dir + "/sent_file.txt"));
+        EXPECT_TRUE(Files::is_file(test_dir + "/recv_file.txt"));
+        EXPECT_EQ(Files::get_filesize(test_dir + "/sent_file.txt"), Files::get_filesize("test/resources/file.txt"));
 
         std::vector<std::string> list;
-        EXPECT_TRUE(sftp.list_dir_filenames(".", list));
-        for (const auto & name: list)
+        EXPECT_TRUE(sftp.list_dir_filenames(test_dir, list));
+        EXPECT_EQ(list.size(), 3u);
+        EXPECT_TRUE(std::find(list.begin(), list.end(), "recv_file.txt") != list.end());
+        EXPECT_TRUE(std::find(list.begin(), list.end(), "sent_file.txt") != list.end());
+        EXPECT_TRUE(std::find(list.begin(), list.end(), "new_dir/") != list.end());
+        for (const std::string & name: list)
         {
-            TRACE(name);
+            LOG(debug, name);
         }
 
-        EXPECT_TRUE(Files::is_dir(Files::combine(test_dir, "new_dir")));
+        std::vector<SftpAttribute> attrs;
+        EXPECT_TRUE(sftp.list_dir(test_dir, attrs));
+        EXPECT_EQ(list.size(), 3u);
+        int nlink = 0;
+        int nregular = 0;
+        int ndir = 0;
+        for (const SftpAttribute & attr: attrs)
+        {
+            if (attr.is_file())
+            {
+                EXPECT_EQ(attr.size(), Files::get_filesize("test/resources/file.txt"));
+            }
+            nlink += (int)attr.is_link();
+            nregular += (int)attr.is_file();
+            ndir += (int)attr.is_dir();
+        }
+        EXPECT_EQ(nlink, 0);
+        EXPECT_EQ(nregular, 2);
+        EXPECT_EQ(ndir, 1);
     }
 }

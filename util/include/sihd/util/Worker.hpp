@@ -10,6 +10,7 @@
 # include <sihd/util/Clocks.hpp>
 # include <sihd/util/time.hpp>
 # include <sihd/util/Thread.hpp>
+# include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
 {
@@ -28,10 +29,14 @@ class Worker: public IRunnable, public Configurable
         void set_runnable(IRunnable *runnable);
         bool start_worker(const std::string & name);
         bool stop_worker();
-
+        bool wait_worker(time_t nano_timeout = -1);
         bool is_worker_running()
         {
             return _running;
+        }
+        bool is_worker_started()
+        {
+            return _started;
         }
 
         virtual bool run();
@@ -39,12 +44,17 @@ class Worker: public IRunnable, public Configurable
     protected:
         virtual bool on_worker_start();
         virtual bool on_worker_stop();
+        std::string & _worker_get_name();
+        IRunnable *_worker_get_runnable();
+        void _worker_set_running(bool active);
 
+    private:
         std::string _worker_thread_name;
         IRunnable *_runnable_ptr;
 
-    private:
-        bool        _running;
+        bool _started;
+        bool _running;
+        Waitable _running_waitable;
         std::mutex  _worker_mutex;
         std::thread _worker_thread;
 };

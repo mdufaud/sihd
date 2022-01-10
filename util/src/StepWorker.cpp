@@ -14,7 +14,6 @@ StepWorker::StepWorker(IRunnable *runnable): Worker(runnable), _pause(false), _s
 StepWorker::~StepWorker()
 {
     this->stop_worker();
-    _waitable.notify_all();
 }
 
 bool    StepWorker::set_frequency(double frequency)
@@ -30,29 +29,31 @@ bool    StepWorker::set_frequency(double frequency)
 
 bool    StepWorker::run()
 {
-    Thread::set_name(_worker_thread_name);
+    Thread::set_name(this->_worker_get_name());
+    this->_worker_set_running(true);
+    bool ret = true;
     std::time_t now = 0;
     std::time_t after = 0;
-    bool ret = true;
     if (_pause)
-        _waitable.infinite_wait();
-    while (this->is_worker_running())
+        _pause_waitable.infinite_wait();
+    while (this->is_worker_started())
     {
         now = _clock.now();
         if ((ret = this->step()) == false)
             break ;
         after = _clock.now();
-        _waitable.wait_for(_sleep_time - (after - now));
+        _pause_waitable.wait_for(_sleep_time - (after - now));
         if (_pause)
-            _waitable.infinite_wait();
+            _pause_waitable.infinite_wait();
     }
+    this->_worker_set_running(false);
     return ret;
 }
 
 void    StepWorker::resume_worker()
 {
     _pause = false;
-    _waitable.notify_all();
+    _pause_waitable.notify_all();
 }
 
 void    StepWorker::pause_worker()
@@ -62,7 +63,7 @@ void    StepWorker::pause_worker()
 
 bool    StepWorker::step()
 {
-    return _runnable_ptr->run();
+    return this->_worker_get_runnable()->run();
 }
 
 bool    StepWorker::on_worker_start()
@@ -77,7 +78,7 @@ bool    StepWorker::on_worker_start()
 
 bool    StepWorker::on_worker_stop()
 {
-    _waitable.notify_all();
+    _pause_waitable.notify_all();
     return true;
 }
 

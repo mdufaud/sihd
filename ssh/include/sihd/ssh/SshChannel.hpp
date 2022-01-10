@@ -4,6 +4,7 @@
 # include <sihd/util/platform.hpp>
 # include <libssh/libssh.h>
 # include <string>
+# include <string_view>
 
 namespace sihd::ssh
 {

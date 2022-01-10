@@ -73,8 +73,7 @@ namespace test
         EXPECT_FALSE(reader.set_conf("password", password));
 
         EXPECT_TRUE(reader.open(zip_path));
-        EXPECT_EQ(reader.count_entries(), 16u);
-
+        EXPECT_EQ(reader.count_entries(), 13u);
 
         char *data;
         size_t size;

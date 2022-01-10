@@ -31,24 +31,25 @@ const char Str::g_escapes_open[] = "\"'[({<";
 const char Str::g_escapes_close[] = "\"'])}>";
 char Str::g_escape_char = '\\';
 
-void    Str::append_sep(std::string & str, const std::string & append, const std::string & sep)
+void    Str::append_sep(std::string & str, const std::string_view append, const std::string_view sep)
 {
     if (str.empty())
         str += append;
     else
-        str += sep + append;
+    {
+        str += sep;
+        str += append;
+    }
 }
 
 char    *Str::csub(const char *str, size_t from_idx, ssize_t size)
 {
-    if (size == 0)
-        size = strlen(str) - from_idx;
     if (size < 0)
         return nullptr;
     char *ret = new char[size + 1];
     size_t idx_src = from_idx;
     size_t idx_dst = 0;
-    while (str[idx_src])
+    while (idx_dst < (size_t)size && str[idx_src])
     {
         ret[idx_dst] = str[idx_src];
         ++idx_dst;
@@ -58,7 +59,7 @@ char    *Str::csub(const char *str, size_t from_idx, ssize_t size)
     return ret;
 }
 
-std::string     Str::join(const std::vector<std::string> & join_lst, const std::string & join_with)
+std::string     Str::join(const std::vector<std::string> & join_lst, const std::string_view join_with)
 {
     std::stringstream ss;
     bool first = true;
@@ -101,24 +102,24 @@ std::string     Str::format(const char *format, ...)
     return str;
 }
 
-std::string     Str::trim(const std::string & s)
+std::string     Str::trim(const std::string_view s)
 {
+    size_t len = s.size();
     size_t i = 0;
-    while (std::isspace(s[i]))
+    while (i < len && std::isspace(s[i]))
         ++i;
-    size_t j = s.length();
+    size_t j = len;
     while (j > 0 && std::isspace(s[--j]))
         ;
-    return s.substr(i, j - i + 1);
+    return std::string(s.substr(i, j - i + 1));
 }
 
 std::string &   Str::to_upper(std::string & s)
 {
     size_t i = 0;
-    std::locale loc;
     while (s[i])
     {
-        s[i] = std::toupper(s[i], loc);
+        s[i] = ::toupper(s[i]);
         ++i;
     }
     return s;
@@ -127,23 +128,23 @@ std::string &   Str::to_upper(std::string & s)
 std::string &   Str::to_lower(std::string & s)
 {
     size_t i = 0;
-    std::locale loc;
     while (s[i])
     {
-        s[i] = std::tolower(s[i], loc);
+        s[i] = ::tolower(s[i]);
         ++i;
     }
     return s;
 }
 
-std::string     Str::replace(const std::string & s, const std::string & from, const std::string & to)
+std::string     Str::replace(const std::string_view s, const std::string_view from, const std::string_view to)
 {
     std::string ret;
     size_t i = s.find(from);
     size_t last = 0;
     while (i != std::string::npos)
     {
-        ret += s.substr(last, i - last) + to;
+        ret += s.substr(last, i - last);
+        ret += to;
         i += from.size();
         last = i;
         i = s.find(from, i + 1);
@@ -252,17 +253,17 @@ std::string     Str::hexdump_fmt(const void *mem, size_t size)
     return ret;
 }
 
-bool    Str::starts_with(const std::string & s, const std::string & start)
+bool    Str::starts_with(const std::string_view s, const std::string_view start)
 {
-    return strncmp(s.c_str(), start.c_str(), start.length()) == 0;
+    return strncmp(s.data(), start.data(), start.length()) == 0;
 }
 
-bool    Str::ends_with(const std::string & s, const std::string & end)
+bool    Str::ends_with(const std::string_view s, const std::string_view end)
 {
     ssize_t ending = s.length() - end.length();
     if (ending < 0)
         return false;
-    return strncmp(s.c_str() + ending, end.c_str(), end.length()) == 0;
+    return strncmp(s.data() + ending, end.data(), end.length()) == 0;
 }
 
 bool    Str::is_digit(int c, uint16_t base)
@@ -275,17 +276,17 @@ bool    Str::is_digit(int c, uint16_t base)
         || (c >= 'A' && c <= 'A' + (base - 1));
 }
 
-bool    Str::is_number(const std::string & s, uint16_t base)
+bool    Str::is_number(const std::string_view s, uint16_t base)
 {
     size_t i = 0;
-    const char *c_str = s.c_str();
+    const char *data = s.data();
     size_t len = s.length();
     while (i < len)
     {
-        if (isspace(c_str[i]) == 0
-            && c_str[i] != '-'
-            && c_str[i] != '+'
-            && is_digit(c_str[i], base) == false)
+        if (isspace(data[i]) == 0
+            && data[i] != '-'
+            && data[i] != '+'
+            && is_digit(data[i], base) == false)
             return false;
         ++i;
     }
@@ -368,7 +369,7 @@ bool Str::convert_from_string<bool>(const std::string & str, bool & value, [[may
     }
     if (!ret)
     {
-        std::string lower = str;
+        std::string lower(str);
         Str::to_lower(lower);
         if (str == "true")
         {
@@ -547,10 +548,10 @@ int     Str::get_closing_escape_index(const char *str, int index, const char *au
     return -2;
 }
 
-std::string  Str::remove_escape_char(const std::string & str)
+std::string  Str::remove_escape_char(const std::string_view str)
 {
-    const char *cstr = str.c_str();
     std::string ret;
+    const char *cstr = str.data();
     size_t len = str.size();
     size_t count_escapes = 0;
     size_t i = 0;
@@ -581,9 +582,9 @@ std::string  Str::remove_escape_char(const std::string & str)
     return ret;
 }
 
-std::string  Str::remove_escape_sequences(const std::string & str, const char *authorized_open_escape_sequences)
+std::string  Str::remove_escape_sequences(const std::string_view str, const char *authorized_open_escape_sequences)
 {
-    const char *cstr = str.c_str();
+    const char *cstr = str.data();
     std::string ret;
     size_t len = str.size();
     size_t count_sequences = 0;

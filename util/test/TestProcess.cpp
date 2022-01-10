@@ -58,7 +58,7 @@ namespace test
         });
         Worker worker(&task);
         EXPECT_TRUE(worker.start_worker("proc"));
-        usleep(1000);
+        worker.wait_worker(time::milli(100));
         LOG(debug, "Kill cat process with ctrl + d")
         EXPECT_TRUE(proc.wait_process_end(time::sec(10)));
         proc.stop();
@@ -86,6 +86,7 @@ namespace test
         });
         Worker worker(&task);
         worker.start_worker("proc");
+        worker.wait_worker(time::milli(100));
         usleep(1000);
         EXPECT_FALSE(res.empty());
         if (!res.empty())
@@ -310,7 +311,7 @@ namespace test
         Process cat{"cat"};
 
         EXPECT_TRUE(cat.start());
-        usleep(1000);
+        usleep(3000);
         EXPECT_TRUE(cat.kill(SIGTERM));
         cat.wait_exit();
         EXPECT_FALSE(cat.has_exited());
@@ -324,7 +325,7 @@ namespace test
         Process cat{"cat"};
 
         EXPECT_TRUE(cat.start());
-        usleep(1000);
+        usleep(3000);
         EXPECT_TRUE(cat.kill(SIGSTOP));
         cat.wait_stop();
         EXPECT_TRUE(cat.has_stopped_by_signal());

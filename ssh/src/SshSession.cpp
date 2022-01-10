@@ -18,12 +18,13 @@ SshSession::~SshSession()
     ssh_finalize();
 }
 
-bool    SshSession::fast_connect(const std::string & user, const std::string & host, int port)
+bool    SshSession::fast_connect(const std::string & user, const std::string & host, int port, int verbosity)
 {
     this->delete_session();
     if (this->new_session() == false)
         return false;
-    bool ret = this->set_user(user);
+    bool ret = this->set_verbosity(verbosity);
+    ret = ret && this->set_user(user);
     ret = ret && this->set_host(host);
     ret = ret && this->set_port(port);
     ret = ret && this->connect();

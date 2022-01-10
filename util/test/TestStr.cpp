@@ -409,4 +409,5 @@ namespace test
         EXPECT_FALSE(Str::starts_with("h", "he"));
         EXPECT_FALSE(Str::ends_with("h", "hello"));
     }
+
 }

@@ -28,7 +28,7 @@ class StepWorker: public Worker, public ISteppable
         bool _pause;
         std::time_t _sleep_time;
         SteadyClock _clock;
-        Waitable _waitable;
+        Waitable _pause_waitable;
 };
 
 }

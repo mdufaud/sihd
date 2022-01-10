@@ -212,6 +212,10 @@ else
 	TEST_ARGS += --gtest_filter="*$(TEST_NAME)*"
 endif
 
+ifneq ($(repeat), )
+	TEST_ARGS += --gtest_repeat="$(repeat)"
+endif
+
 ifneq ($(MODULES_NAME), )
 test: modules = $(MODULES_NAME)
 endif

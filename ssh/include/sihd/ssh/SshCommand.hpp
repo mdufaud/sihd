@@ -5,6 +5,7 @@
 # include <sihd/util/IHandler.hpp>
 # include <sihd/util/Waitable.hpp>
 # include <libssh/callbacks.h>
+# include <string_view>
 
 namespace sihd::ssh
 {

@@ -69,7 +69,7 @@ namespace test
         EXPECT_TRUE(Files::is_file(Files::combine(test_dir, "pushed_dir/pushed_file_in_dir.txt")));
         EXPECT_TRUE(Files::is_file(Files::combine(test_dir, "pushed_file_not_in_dir.txt")));
 
-        EXPECT_EQ(Files::get_filesize(Files::combine(test_dir, "pushed_file.txt")), 12u);
+        EXPECT_EQ(Files::get_filesize(test_dir + "/pushed_file.txt"), Files::get_filesize("test/resources/file.txt"));
 
         EXPECT_FALSE(Files::is_file(Files::combine(test_dir, "pushed_file2.txt")));
         EXPECT_FALSE(Files::is_dir(Files::combine(test_dir, "pushed_dir2")));

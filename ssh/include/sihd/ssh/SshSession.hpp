@@ -41,7 +41,7 @@ class SshSession
 
         bool connect();
         bool connected();
-        bool fast_connect(const std::string & user, const std::string & host, int port = 22);
+        bool fast_connect(const std::string & user, const std::string & host, int port = 22, int verbosity = SSH_LOG_NOLOG);
 
         bool check_hostkey();
 

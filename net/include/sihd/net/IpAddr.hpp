@@ -9,9 +9,9 @@ namespace sihd::net
 // permits easy ipv4 / ipv6 manipulation
 struct IpSockAddr
 {
-    int type = 0;
-    socklen_t addr_len = 0;
-    sockaddr *addr = nullptr;
+    int type;
+    socklen_t addr_len;
+    sockaddr *addr;
     sockaddr_in addr_in;
     sockaddr_in6 addr_in6;
 };
