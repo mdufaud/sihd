@@ -1,21 +1,400 @@
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Files.hpp>
+
+#ifndef SIHD_HTTP_URI_BUFSIZE
+# define SIHD_HTTP_URI_BUFSIZE 256
+#endif
+
+#ifndef SIHD_HTTP_HEADERS_BUFSIZE
+# define SIHD_HTTP_HEADERS_BUFSIZE 4096
+#endif
 
 namespace sihd::http
 {
 
 SIHD_UTIL_REGISTER_FACTORY(HttpServer)
 
-LOGGER;
+NEW_LOGGER("sihd::http");
+
+using namespace sihd::util;
 
 HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent)
+    sihd::util::Named(name, parent),
+    _running(false), _port(0),
+    _lws_mount_ptr(nullptr), _lws_context_ptr(nullptr), _lws_protocols_ptr(nullptr),
+    _lws_current_wsi_ptr(nullptr), _polling_scheduler(this)
 {
+    _ip_buf[0] = 0;
+    _worker.set_runnable(&_polling_scheduler);
+    _worker.set_frequency(50);
+
+    _404_content = "<html><body><h1>404 file not found !</h1></body></html>";
+    _http_header.set_servername(this->get_name());
+    _http_header.set_by_name("Access-Control-Allow-Origin:", "*");
+    this->set_encoding("utf-8");
+
+    _protocols_count = 0;
+    this->_add_protocol("http-server", HttpServer::_global_http_lws_callback, sizeof(HttpSession), 0);
 }
 
 HttpServer::~HttpServer()
 {
+    this->stop();
+    {
+        std::lock_guard l(_mutex);
+        if (_lws_protocols_ptr != nullptr)
+        {
+            free(_lws_protocols_ptr);
+            _lws_protocols_ptr = nullptr;
+        }
+        if (_lws_context_ptr != nullptr)
+        {
+            lws_context_destroy(_lws_context_ptr);
+            _lws_context_ptr = nullptr;
+        }
+    }
+}
+
+bool    HttpServer::set_encoding(const std::string & encoding)
+{
+    _http_header.set_charset(encoding);
+    _encoding = encoding;
+    return true;
+}
+
+bool    HttpServer::set_port(int port)
+{
+    _port = port;
+    return true;
+}
+
+bool    HttpServer::set_root_dir(const std::string & root_dir)
+{
+    bool ret = Files::is_dir(root_dir);
+    if (ret)
+        _root_dir = root_dir;
+    else
+        LOG(error, "HttpServer: root dir does not exists: " << root_dir);
+    return ret;
+}
+
+bool    HttpServer::set_poll_frequency(double freq)
+{
+    return _worker.set_frequency(freq);
+}
+
+bool    HttpServer::set_ssl_cert_path(const std::string & path)
+{
+    bool ret = Files::is_file(path);
+    if (ret)
+        _ssl_cert_path = path;
+    else
+        LOG(error, "HttpServer: ssl cert path does not exists: " << path);
+    return ret;
+}
+
+bool    HttpServer::set_ssl_cert_key(const std::string & path)
+{
+    bool ret = Files::is_file(path);
+    if (ret)
+        _ssl_cert_key = path;
+    else
+        LOG(error, "HttpServer: ssl cert key does not exists: " << path);
+    return ret;
+}
+
+bool    HttpServer::add_resource_path(const std::string & path)
+{
+    _resources_path.insert(path);
+    return true;
+}
+
+bool    HttpServer::remove_resource_path(const std::string & path)
+{
+    auto it = _resources_path.find(path);
+    if (it != _resources_path.end())
+        _resources_path.erase(it);
+    return true;
+}
+
+bool    HttpServer::stop()
+{
+    {
+        std::lock_guard l(_mutex);
+        if (_running == false)
+            return true;
+        _running = false;
+    }
+    return true;
+}
+
+bool    HttpServer::run()
+{
+    if (_running)
+        return true;
+    struct lws_context_creation_info lws_info;
+    memset(&lws_info, 0, sizeof(lws_context_creation_info));
+    lws_info.port = _port;
+    lws_info.iface = nullptr;
+    lws_info.protocols = _lws_protocols_ptr;
+    lws_info.gid = -1;
+    lws_info.uid = -1;
+    lws_info.user = this;
+    if (_lws_mount_ptr != nullptr)
+        lws_info.mounts = _lws_mount_ptr;
+    if (_ssl_cert_path.empty() == false && _ssl_cert_key.empty() == false)
+    {
+        lws_info.ssl_cert_filepath = _ssl_cert_path.c_str();
+        lws_info.ssl_private_key_filepath = _ssl_cert_key.c_str();
+        lws_info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+    }
+    _lws_context_ptr = lws_create_context(&lws_info);
+    if (_lws_context_ptr == nullptr)
+    {
+        LOG(error, "HttpServer: failed to create context");
+        return false;
+    }
+    // update port if _port set to 0
+    _port = lws_info.port;
+    int n = 0;
+    {
+        std::lock_guard l(_mutex);
+        _running = true;
+    }
+    _worker.start_worker(this->get_name() + "-callback");
+    while (_running == true && n >= 0)
+        n = lws_service(_lws_context_ptr, 0);
+    _worker.stop_worker();
+    {
+        std::lock_guard l(_mutex);
+        if (_lws_context_ptr != nullptr)
+        {
+            lws_context_destroy(_lws_context_ptr);
+            _lws_context_ptr = nullptr;
+        }
+    }
+    _waitable.notify_all();
+    return true;
+}
+
+bool    HttpServer::get_resource_path(const std::string & path, std::string & res)
+{
+    std::string tmp_path = _root_dir + path;
+    bool ret = Files::is_file(tmp_path);
+    if (!ret && (ret = Files::is_dir(path)))
+        tmp_path += "/index.html";
+    if (!ret)
+    {
+        for (const std::string & resource_path: _resources_path)
+        {
+            tmp_path = resource_path + path;
+            if ((ret = Files::exists(tmp_path)))
+                break ;
+        }
+    }
+    if (ret)
+        res = tmp_path;
+    return ret;
+}
+
+bool    HttpServer::_check_all_protocols()
+{
+    size_t i = 0;
+    while (i < _protocols_count)
+    {
+        lws_callback_on_writable_all_protocol(_lws_context_ptr, &_lws_protocols_ptr[i]);
+        ++i;
+    }
+    return i != 0;
+}
+
+int     HttpServer::_global_http_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
+{
+    HttpServer *server = (HttpServer *)lws_context_user(lws_get_context(wsi));
+    return server->_lws_http_callback(wsi, reason, user, in, len);
+}
+
+int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason,
+                                        void *user, void *in, size_t len)
+{
+    int rc = 0;
+    _lws_current_wsi_ptr = wsi;
+    HttpSession *session = (HttpSession *)user;
+    switch (reason)
+    {
+        // an http request has come from a client that is not asking to upgrade the connection to a websocket one.
+        // this is a chance to serve http content
+        case LWS_CALLBACK_HTTP:
+        {
+            LOG(debug, "Callback HTTP: client ip addr: " << this->_get_client_ip(wsi));
+            auto uri_args = this->_get_uri_args(wsi);
+            for (const auto & arg: uri_args)
+            {
+                TRACE(arg);
+            }
+            if (len < 1)
+            {
+                lws_return_http_status(wsi, HTTP_STATUS_BAD_REQUEST, nullptr);
+                if (lws_http_transaction_completed(wsi))
+                    rc = -1;
+                break ;
+            }
+            std::string path((char *)in);
+            TRACE("path = " << path)
+            std::string resource_path;
+            if (this->get_resource_path(path, resource_path))
+            {
+                std::string type = HttpHeader::build_content_type(_mime.get(Files::get_extension(resource_path)), _encoding);
+                lws_serve_http_file(wsi, resource_path.c_str(), type.c_str(), nullptr, 0);
+                break ;
+            }
+            this->_send_404(wsi);
+            break ;
+        }
+        // the next `len` bytes data from the http request body HTTP connection is now available in `in`
+        case LWS_CALLBACK_HTTP_BODY:
+        {
+            LOG(debug, "Callback http body");
+            break ;
+        }
+        // the expected amount of http request body has been delivered 
+        case LWS_CALLBACK_HTTP_BODY_COMPLETION:
+        {
+            LOG(debug, "Callback http body completion");
+            lws_return_http_status(wsi, HTTP_STATUS_OK, nullptr);
+            if (lws_http_transaction_completed(wsi))
+                rc = -1;
+            break ;
+        }
+        // a file requested to be sent down http link has completed
+        case LWS_CALLBACK_HTTP_FILE_COMPLETION:
+        {
+            LOG(debug, "Callback http file completion");
+            if (lws_http_transaction_completed(wsi))
+                rc = -1;
+            break ;
+        }
+        // when a HTTP (non-websocket) session ends
+        case LWS_CALLBACK_CLOSED_HTTP:
+        {
+            LOG(debug, "Callback http closed");
+            break ;
+        }
+        // This gives the user code a chance to forbid an http access
+        case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
+        {
+            LOG(debug, "Callback check access rights");
+            struct lws_process_html_args *args = (struct lws_process_html_args *)in;
+            TRACE(args->p);
+            break ;
+        }
+        // This gives your user code a chance to mangle outgoing HTML
+        case LWS_CALLBACK_PROCESS_HTML:
+        {
+             LOG(debug, "Callback check process HTML");
+            struct lws_process_html_args *args = (struct lws_process_html_args *)in;
+            TRACE(args->p);
+            break ;           
+        }
+        case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+        {
+            LOG(debug, "Callback connection error HTML");
+            const char *error = (const char *)in;
+            if (error != nullptr)
+                LOG(warning, "HttpServer: client connection error: " << error);
+            break ;
+        }
+        // Called before a socketfd is about to connect()
+        case LWS_CALLBACK_CONNECTING:
+        {
+            lws_sockfd_type *fd = (lws_sockfd_type *)in;
+            LOG(debug, "Callback connecting HTML: " << fd);
+            break ;
+        }
+        default:
+            break ;
+    }
+    _lws_current_wsi_ptr = nullptr;
+    return rc;
+}
+
+const char *HttpServer::_get_client_ip(struct lws *wsi)
+{
+    return lws_get_peer_simple(wsi, _ip_buf, INET6_ADDRSTRLEN);
+}
+
+bool    HttpServer::_send_404(struct lws *wsi)
+{
+    _http_header.set_common(HTTP_STATUS_NOT_FOUND, _mime.get("html"), _404_content.size());
+    this->_send_http_headers(wsi, _http_header);
+    return lws_write(wsi, (u_char *)_404_content.c_str(), _404_content.size(), LWS_WRITE_HTTP)
+            == (int)_404_content.size();
+}
+
+std::vector<std::string>   HttpServer::_get_uri_args(struct lws *wsi)
+{
+    if (wsi == nullptr)
+        return {};
+    std::vector<std::string> ret;
+    char buf[SIHD_HTTP_URI_BUFSIZE + 1];
+    int i = 0;
+    while (lws_hdr_copy_fragment(wsi, buf, SIHD_HTTP_URI_BUFSIZE, WSI_TOKEN_HTTP_URI_ARGS, i) > 0)
+    {
+        ret.push_back(buf);
+        ++i;
+    }
+    return ret;
+}
+
+bool    HttpServer::_send_http_headers(struct lws *wsi, HttpHeader & header)
+{
+    if (header.finalize(wsi) == false)
+        return false;
+    if (lws_write(wsi, header.buf(), header.size(), LWS_WRITE_HTTP_HEADERS) != (int)header.size())
+    {
+        LOG(error, "HttpServer: failed to write HTTP headers");
+        return false;
+    }
+    return true;
+}
+
+bool    HttpServer::_add_protocol(const std::string & name, lws_callback_function *callback,
+                                     size_t struct_size, size_t tx_packet_size)
+{
+    ++_protocols_count;
+    _lws_protocols_ptr = (lws_protocols *)realloc(_lws_protocols_ptr, sizeof(lws_protocols) * (_protocols_count + 1));
+    if (_lws_protocols_ptr != nullptr)
+    {
+        lws_protocols *proto = &_lws_protocols_ptr[_protocols_count - 1];
+        memset(proto, 0, sizeof(lws_protocols));
+        memset(proto + 1, 0, sizeof(lws_protocols));
+        proto->name = name.c_str();
+        proto->callback = callback;
+        proto->per_session_data_size = struct_size;
+        proto->tx_packet_size = tx_packet_size;
+    }
+    else
+    {
+        LOG(error, "HttpServer: failed to add protocol: " << name);
+        --_protocols_count;
+    }
+    return _lws_protocols_ptr != nullptr;
+}
+
+HttpServer::LwsPollingScheduler::LwsPollingScheduler(HttpServer *srv): server(srv)
+{
+}
+
+HttpServer::LwsPollingScheduler::~LwsPollingScheduler()
+{
+}
+
+bool    HttpServer::LwsPollingScheduler::run()
+{
+    this->server->_check_all_protocols();
+    return true;
 }
 
 }

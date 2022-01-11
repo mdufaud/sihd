@@ -28,8 +28,8 @@ class Worker: public IRunnable, public Configurable
 
         void set_runnable(IRunnable *runnable);
         bool start_worker(const std::string & name);
+        bool start_sync_worker(const std::string & name);
         bool stop_worker();
-        bool wait_worker(time_t nano_timeout = -1);
         bool is_worker_running()
         {
             return _running;

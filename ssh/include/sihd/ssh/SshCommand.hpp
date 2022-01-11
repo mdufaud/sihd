@@ -16,7 +16,8 @@ class SshCommand
         SshCommand(ssh_session session);
         virtual ~SshCommand();
 
-        bool execute(const std::string & cmd, bool async = false);
+        bool execute(const std::string & cmd);
+        bool execute_async(const std::string & cmd);
         bool input(const char *buf, size_t size);
         bool wait(time_t timeout_nano = 0);
 
@@ -36,6 +37,7 @@ class SshCommand
     protected:
     
     private:
+        bool _execute(const std::string & cmd, bool async);
         void _reset_command_status();
 
         struct CommandStatus

@@ -75,9 +75,7 @@ namespace test
         server_handler.add_observer(&handler);
 
         Worker worker(&server);
-        EXPECT_TRUE(worker.start_worker("tcp-server"));
-
-        usleep(1000);
+        EXPECT_TRUE(worker.start_sync_worker("tcp-server"));
 
         LOG(debug, "Simulating a new connection");
         client1.open_and_connect(localhost);

@@ -32,8 +32,6 @@ class OS
     public:
         static std::string get_signal_name(int sig);
 
-        // called when signal is caught
-        static void signal_callback(int sig);
         // adds a handler to be run when signal is catched
         static bool add_signal_handler(int sig, IRunnable *runnable);
         // remove and deletes all handlers attached to this signal
@@ -95,6 +93,11 @@ class OS
 
         static size_t  get_peak_rss();
         static size_t  get_current_rss();
+
+    protected:
+        // called when signal is caught
+        static void _signal_callback(int sig);
+
     private:
         OS() {};
         ~OS() {};

@@ -66,6 +66,7 @@ class ConanAppDependencies(ConanFile):
         extlib_path = os.path.join("..", "extlib")
         extlib_lib_path = os.path.join(extlib_path, "lib")
         self.copy("*.so*", dst = extlib_lib_path, src = "lib")
+        self.copy("*.a*", dst = extlib_lib_path, src = "lib")
         self.copy("*.dylib*", dst = extlib_lib_path, src = "lib")
         self.copy("*.dll*", dst = extlib_lib_path, src = "bin") # transfert DLL to lib
         self.copy("*.h*", dst = os.path.join(extlib_path, "include"), src = "include")

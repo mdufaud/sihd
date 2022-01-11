@@ -57,8 +57,7 @@ namespace test
             return true;
         });
         Worker worker(&task);
-        EXPECT_TRUE(worker.start_worker("proc"));
-        worker.wait_worker(time::milli(100));
+        EXPECT_TRUE(worker.start_sync_worker("proc"));
         LOG(debug, "Kill cat process with ctrl + d")
         EXPECT_TRUE(proc.wait_process_end(time::sec(10)));
         proc.stop();
@@ -85,8 +84,7 @@ namespace test
             return true;
         });
         Worker worker(&task);
-        worker.start_worker("proc");
-        worker.wait_worker(time::milli(100));
+        worker.start_sync_worker("proc");
         usleep(1000);
         EXPECT_FALSE(res.empty());
         if (!res.empty())

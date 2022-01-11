@@ -41,8 +41,7 @@ namespace test
             return true;
         });
         Worker worker(&task);
-        EXPECT_TRUE(worker.start_worker("worker-thread"));
-        EXPECT_TRUE(worker.wait_worker(time::milli(500)));
+        EXPECT_TRUE(worker.start_sync_worker("worker-thread"));
         EXPECT_TRUE(worker.stop_worker());
         EXPECT_EQ(ran, 1);
     }
@@ -58,8 +57,7 @@ namespace test
         StepWorker worker(&task);
         // 1 / ms
         EXPECT_TRUE(worker.set_frequency(1000));
-        EXPECT_TRUE(worker.start_worker("stepworker-thread"));
-        EXPECT_TRUE(worker.wait_worker(time::milli(500)));
+        EXPECT_TRUE(worker.start_sync_worker("stepworker-thread"));
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         EXPECT_TRUE(worker.stop_worker());
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
@@ -77,8 +75,7 @@ namespace test
         StepWorker worker(&task);
         // 10 hz
         EXPECT_TRUE(worker.set_frequency(0.1));
-        EXPECT_TRUE(worker.start_worker("stepworker-thread"));
-        EXPECT_TRUE(worker.wait_worker(time::milli(500)));
+        EXPECT_TRUE(worker.start_sync_worker("stepworker-thread"));
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         EXPECT_TRUE(worker.stop_worker());
         EXPECT_EQ(ran, 1);

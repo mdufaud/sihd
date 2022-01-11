@@ -6,17 +6,18 @@ extlibs = {
     "nlohmann_json": "3.9.1",
     # crypt
     "openssl": "1.1.1i",
-    "libjpeg": "9d",
     # http
+    "libwebsockets": "4.3.0",
     "uwebsockets": "19.2.0",
     "libcurl": "7.75.0",
+    "openssl": "1.1.1l",
     # ssh
     "libssh2": "1.9.0",
     # pcap
     "libpcap": "1.10.1",
     # usb
     "libusb": "1.0.24",
-    # ui
+    # gui
     "imgui": "1.83",
     "ncurses": "6.2",
     # command line parser
@@ -27,6 +28,8 @@ extlibs = {
     "sol2": "3.2.3",
     # compressing utility
     "libzip": "1.7.3",
+    # other
+    "libjpeg": "9d",
 }
 modules = {
     "util": {
@@ -50,8 +53,10 @@ modules = {
         "depends": ['util'],
     },
     "http": {
-        "uselibs": ['uwebsockets', 'libcurl'],
-        "libs": ['uv', 'curl'],
+        #"uselibs": ['openssl', 'libcurl', 'uwebsockets', 'libwebsockets'],
+        #"libs": ['curl', 'uSockets', 'z'],
+        "uselibs": ['openssl', 'libcurl', 'libwebsockets'],
+        "libs": ['curl', 'websockets'],
         "depends": ['net'],
         # uWebSockets has unused variables
         "flags": ["-Wno-unused-variable"]

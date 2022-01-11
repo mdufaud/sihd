@@ -31,18 +31,18 @@ bool    Worker::run()
     return ret;
 }
 
-bool    Worker::wait_worker(time_t nano_timeout)
+bool    Worker::start_sync_worker(const std::string & name)
 {
-    std::lock_guard lock(_worker_mutex);
+    bool ret = this->start_worker(name);
+    bool wait = ret;
+    if (ret)
     {
-        if (_started == false || _running)
-            return _running;
+        std::lock_guard lock(_worker_mutex);
+        wait = _running == false;
     }
-    if (nano_timeout >= 0)
-        _running_waitable.wait_for(nano_timeout);
-    else
+    if (wait)
         _running_waitable.infinite_wait();
-    return _running;
+    return ret;
 }
 
 bool    Worker::start_worker(const std::string & name)
@@ -50,16 +50,12 @@ bool    Worker::start_worker(const std::string & name)
     if (_runnable_ptr == nullptr)
     {
         LOG_ERROR("Worker: cannot start worker '%s': nothing to run", name.c_str());
-        _running_waitable.notify_all();
         return false;
     }
     {
         std::lock_guard lock(_worker_mutex);
         if (_started == true)
-        {
-            _running_waitable.notify_all();
             return false;
-        }
         _started = true;
     }
     bool ret = this->on_worker_start();
@@ -68,8 +64,6 @@ bool    Worker::start_worker(const std::string & name)
         _worker_thread_name = name;
         _worker_thread = std::thread(&Worker::run, this);
     }
-    else
-        _running_waitable.notify_all();
     return ret;
 }
 
@@ -102,8 +96,11 @@ bool    Worker::on_worker_stop()
 
 void    Worker::_worker_set_running(bool active)
 {
-    _running = active;
-    _running_waitable.notify_all();
+    {
+        std::lock_guard lock(_worker_mutex);
+        _running = active;
+        _running_waitable.notify_all();
+    }
 }
 
 std::string &   Worker::_worker_get_name()    

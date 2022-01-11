@@ -75,7 +75,17 @@ void    SshCommand::_callback_exit_signal(const char *signal, int core, const ch
     _waitable.notify_all();
 }
 
-bool    SshCommand::execute(const std::string & cmd, bool async)
+bool    SshCommand::execute(const std::string & cmd)
+{
+    return this->_execute(cmd, false);
+}
+
+bool    SshCommand::execute_async(const std::string & cmd)
+{
+    return this->_execute(cmd, true);
+}
+
+bool    SshCommand::_execute(const std::string & cmd, bool async)
 {
     ssh_channel channel_ptr = ssh_channel_new(_ssh_session_ptr);
     if (channel_ptr == nullptr)

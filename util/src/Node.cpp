@@ -82,8 +82,9 @@ bool    Node::set_child_ownership(const std::string & name, bool ownership)
 
 Node::ChildEntry  *Node::get_child_entry(const std::string & name) const
 {
-    if (_children_map.find(name) != _children_map.end())
-        return _children_map.at(name);
+    auto it = _children_map.find(name);
+    if (it != _children_map.end())
+        return it->second;
     return nullptr;
 }
 

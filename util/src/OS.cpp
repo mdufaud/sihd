@@ -1,6 +1,6 @@
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Task.hpp>
+#include <sihd/util/Runnable.hpp>
 #include <sihd/util/AtExit.hpp>
 #include <sihd/util/Files.hpp>
 
@@ -107,7 +107,7 @@ bool    OS::clear_signal_handler(int sig, IRunnable *runnable)
     return false;
 }
 
-void    OS::signal_callback(int sig)
+void    OS::_signal_callback(int sig)
 {
     LOG(debug, "Signal caught: " << OS::get_signal_name(sig));
     std::lock_guard lock(OS::signal_mutex);
@@ -119,7 +119,7 @@ void    OS::signal_callback(int sig)
 
 bool    OS::add_signal_handler(int sig, IRunnable *runnable)
 {
-    sighandler_t handler = signal(sig, signal_callback);
+    sighandler_t handler = signal(sig, OS::_signal_callback);
     if (handler == SIG_ERR)
     {
         LOG(error, "Error handling signal: " << OS::get_signal_name(sig));
@@ -129,7 +129,7 @@ bool    OS::add_signal_handler(int sig, IRunnable *runnable)
     OS::map_signals_handlers[sig].push_back(runnable);
     if (OS::signal_used == false)
     {
-        AtExit::add_handler(new Task([] () -> bool
+        AtExit::add_handler(new Runnable([] () -> bool
         {
             OS::clear_signal_handlers();
             return true;

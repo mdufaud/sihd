@@ -57,9 +57,7 @@ namespace test
         receiver.set_poll_timeout(1);
         sihd::util::Worker worker(&receiver);
         LOG(debug, "Starting receiver");
-        EXPECT_TRUE(worker.start_worker("receiver"));
-
-        usleep(1000);
+        EXPECT_TRUE(worker.start_sync_worker("receiver"));
 
         LOG(debug, "Sending: " << array_send.to_string(',') << " (" << array_send.byte_size() << " bytes)");
         EXPECT_EQ(sender.send(array_send), (ssize_t)array_send.byte_size());

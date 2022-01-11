@@ -52,7 +52,6 @@ namespace test
         sihd::util::Files::make_directories(test_dir);
 
         std::string user = getenv("USER");
-        std::string cwd = OS::get_cwd();
         SshSession session;
 
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
@@ -65,7 +64,7 @@ namespace test
         EXPECT_TRUE(Files::is_dir(test_dir + "/new_dir"));
 
         EXPECT_TRUE(sftp.send_file("test/resources/file.txt", test_dir + "/sent_file.txt"));
-        EXPECT_TRUE(sftp.get_file(cwd + "/test/resources/file.txt", test_dir + "/recv_file.txt"));
+        EXPECT_TRUE(sftp.get_file(_cwd + "/test/resources/file.txt", test_dir + "/recv_file.txt"));
         EXPECT_TRUE(Files::is_file(test_dir + "/sent_file.txt"));
         EXPECT_TRUE(Files::is_file(test_dir + "/recv_file.txt"));
         EXPECT_EQ(Files::get_filesize(test_dir + "/sent_file.txt"), Files::get_filesize("test/resources/file.txt"));
