@@ -34,10 +34,10 @@ class LogInfo
 
         const std::string & get_level() const;
 
-        static const std::string & get_level(LogLevel level); 
+        static const std::string & get_level(LogLevel level);
         static LogLevel string_to_level(const std::string & level);
 };
 
 }
 
-#endif 
+#endif

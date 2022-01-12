@@ -297,7 +297,6 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
         // when a HTTP (non-websocket) session ends
         case LWS_CALLBACK_CLOSED_HTTP:
         {
-            LOG(debug, "Callback http closed");
             break ;
         }
         // This gives the user code a chance to forbid an http access
@@ -305,6 +304,7 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
         {
             LOG(debug, "Callback check access rights");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
+            (void)args;
             //TRACE(args->p);
             break ;
         }
@@ -313,6 +313,7 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
         {
              LOG(debug, "Callback check process HTML");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
+            (void)args;
             //TRACE(args->p);
             break ;
         }
@@ -348,7 +349,7 @@ HttpRequest::RequestType    HttpServer::_get_request_type(struct lws *wsi)
     else if (lws_hdr_total_length(wsi, WSI_TOKEN_PUT_URI))
         return HttpRequest::PUT;
     else if (lws_hdr_total_length(wsi, WSI_TOKEN_DELETE_URI))
-        return HttpRequest::DELETE;
+        return HttpRequest::REQ_DELETE;
     return HttpRequest::NONE;
 }
 

@@ -44,7 +44,6 @@ class HttpHeader
     protected:
 
     private:
-        size_t _buffer_size;
         sihd::util::ArrUByte _array;
         u_char *_ptr;
 

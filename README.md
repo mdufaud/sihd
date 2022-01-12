@@ -50,12 +50,13 @@ clang++ 6.0.0
 
 ```shell
 # to install
-sudo apt install libc++-dev libc++abi-dev
+sudo apt install clang libc++-dev libc++abi-dev llvm
 ```
 
 mingw 7.3-posix
 
 ```shell
+sudo apt install g++-mingw-w64-x86-64
 # configure mingw32 to posix
 sudo update-alternatives --config x86_64-w64-mingw32-g++
 ```

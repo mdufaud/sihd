@@ -20,7 +20,7 @@ class HttpRequest
             POST = 0,
             GET = 1,
             PUT = 2,
-            DELETE = 3
+            REQ_DELETE = 3,
         };
 
         HttpRequest(const std::string & path, RequestType request_type = GET);

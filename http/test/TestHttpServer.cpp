@@ -96,7 +96,7 @@ namespace test
                     resp.set_content({"hello", "world"});
                     ++_ndelete;
                 },
-                HttpRequest::DELETE);
+                HttpRequest::REQ_DELETE);
 
                 _webservice->set_entry_point("some_put", [this] (const HttpRequest & req, HttpResponse & resp)
                 {

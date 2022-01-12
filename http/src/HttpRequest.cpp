@@ -47,7 +47,7 @@ std::string HttpRequest::request_to_string(HttpRequest::RequestType type)
             return "POST";
         case PUT:
             return "PUT";
-        case DELETE:
+        case REQ_DELETE:
             return "DELETE";
         default:
             return "NONE";
@@ -64,7 +64,7 @@ HttpRequest::RequestType    HttpRequest::request_from_string(std::string type)
     else if (type == "put")
         return PUT;
     else if (type == "delete")
-        return DELETE;
+        return REQ_DELETE;
     return NONE;
 }
 
