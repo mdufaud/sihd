@@ -23,13 +23,18 @@ class HttpHeader
 
         void set_common(uint32_t status, const std::string & content_type, size_t content_len);
 
-        void set_by_token(enum lws_token_indexes token, const std::string & value);
-        void set_by_name(const std::string & name, const std::string & value);
+        void set_header_by_token(enum lws_token_indexes token, const std::string & value);
+        void set_header(const std::string & name, const std::string & value);
 
         void remove_by_token(enum lws_token_indexes token);
         void remove_by_name(const std::string & name);
 
         bool finalize(struct lws *wsi);
+
+        uint32_t status() const { return _status; }
+        size_t content_size() const { return _content_size; }
+        const std::string & encoding() const { return _encoding; }
+        const std::string & content_type() const { return _content_type; }
 
         u_char *buf() const { return (u_char *)_array.cbuf(); }
         size_t size() const;
@@ -37,7 +42,7 @@ class HttpHeader
         static std::string build_content_type(const std::string & type, const std::string & encoding);
 
     protected:
-    
+
     private:
         size_t _buffer_size;
         sihd::util::ArrUByte _array;

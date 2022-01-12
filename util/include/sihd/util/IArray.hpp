@@ -3,6 +3,7 @@
 
 # include <sihd/util/ICloneable.hpp>
 # include <sihd/util/Datatype.hpp>
+# include <string_view>
 
 namespace sihd::util
 {
@@ -49,8 +50,10 @@ class IArray
         virtual std::string hexdump(char delimiter = ' ') const = 0;
         virtual std::string to_string(char delimiter = '\0') const = 0;
 
+        virtual std::string cpp_str() const = 0;
+        virtual std::string_view cpp_str_view() const = 0;
 };
 
 }
 
-#endif 
+#endif

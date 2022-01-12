@@ -22,31 +22,33 @@ template <typename T>
 class Array: public IArray, public ICloneable<Array<T>>
 {
     public:
-        Array() { _init(); };
-
-        Array(const T *data, size_t size)
+        Array()
         {
-            _init();
+            _buf_ptr = nullptr;
+            _size = 0;
+            _capacity = 0;
+            _has_ownership = false;
+        };
+
+        Array(const T *data, size_t size): Array()
+        {
             this->reserve(size);
             this->push_back(data, size);
         }
 
-        Array(const Array<T> & array)
+        Array(const Array<T> & array): Array()
         {
-            _init();
             this->from(array);
         }
 
-        Array(size_t capacity)
+        Array(size_t capacity): Array()
         {
-            _init();
             if (capacity > 0)
                 this->reserve(capacity);
         }
 
-        Array(std::initializer_list<T> list)
+        Array(std::initializer_list<T> list): Array()
         {
-            _init();
             this->reserve(list.size());
             for (const T & value: list)
                 this->push_back(value);
@@ -69,7 +71,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         size_t byte_capacity() const { return _capacity * sizeof(T); }
         Type data_type() const { return Datatype::type_to_datatype<T>(); }
         std::string data_type_to_string() const { return Datatype::datatype_to_string(this->data_type()); }
-        
+
         bool copy_from(const IArray & arr, size_t from = 0)
         {
             if (this->is_same_type(arr))
@@ -79,7 +81,7 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         bool copy_from_bytes(const IArray & arr, size_t from = 0)
         {
-            return this->copy_from_bytes(arr.cbuf(), arr.byte_size(), from); 
+            return this->copy_from_bytes(arr.cbuf(), arr.byte_size(), from);
         }
 
         bool copy_from_bytes(const uint8_t *buf, size_t size, size_t from = 0)
@@ -201,23 +203,39 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         std::string to_string(char delimiter = '\0') const
         {
-            std::stringstream ss;
+            std::string s;
 
+            // trying to reserve at least 1 char by element + delimiters (if there are)
+            if (delimiter == 0)
+                s.reserve(_size);
+            else
+                s.reserve(_size + std::max(0, int(_size - 2)));
             size_t i = 0;
             while (i < _size)
             {
-                if (i != 0 && delimiter != '\0')
-                    ss << delimiter;
-                ss << std::to_string(this->at(i));
+                if (i > 0 && delimiter != 0)
+                    s += delimiter;
+                s += std::to_string(_buf_ptr[i]);
                 ++i;
             }
-            return ss.str();
+            return s;
         }
 
         void clear()
         {
             this->resize(0);
         }
+
+        std::string cpp_str() const
+        {
+            return _buf_ptr != nullptr ? std::string((char *)_buf_ptr, this->byte_size()) : "";
+        }
+
+        std::string_view cpp_str_view() const
+        {
+            return _buf_ptr != nullptr ? std::string_view((char *)_buf_ptr, this->byte_size()) : "";
+        }
+
 
         // ICloneable
 
@@ -234,6 +252,22 @@ class Array: public IArray, public ICloneable<Array<T>>
         T *data() { return _buf_ptr; }
         const T *cdata() const { return _buf_ptr; }
 
+        std::vector<T> cpp_vector() const
+        {
+            return _buf_ptr != nullptr
+                ? std::vector<T>(_buf_ptr, _buf_ptr + _size)
+                : std::vector<T>();
+        }
+
+        template <size_t ARRAY_SIZE>
+        std::array<T, ARRAY_SIZE> cpp_array() const
+        {
+            std::array<T, ARRAY_SIZE> arr;
+            if (_buf_ptr != nullptr && _size >= ARRAY_SIZE)
+                memcpy(arr.data(), _buf_ptr, ARRAY_SIZE * this->data_size());
+            return arr;
+        }
+
         // compares memory from internal buffer and array of size
         bool is_equal(const T *arr, size_t size) const
         {
@@ -249,27 +283,27 @@ class Array: public IArray, public ICloneable<Array<T>>
         }
 
         // delete internal buffer if exists then sets it to bytes buffer buf - does not take ownership
-        bool assign_bytes(void *buf, size_t size, size_t capacity)
+        bool assign_bytes(void *buf, size_t byte_size, size_t byte_capacity)
         {
-            if (size % this->data_size() != 0)
+            if (byte_size % this->data_size() != 0)
             {
                 LOG_ERROR("Array::assign_bytes cannot assign buffer - size %lu not divisible by %lu",
-                            size, this->data_size());
+                            byte_size, this->data_size());
                 return false;
             }
-            if (capacity % this->data_size() != 0)
+            if (byte_capacity % this->data_size() != 0)
             {
                 LOG_ERROR("Array::assign_bytes cannot assign buffer - capacity %lu not divisible by %lu",
-                            capacity, this->data_size());
+                            byte_capacity, this->data_size());
                 return false;
             }
-            return this->assign((T *)buf, size / this->data_size(), capacity / this->data_size());
+            return this->assign((T *)buf, byte_size / this->data_size(), byte_capacity / this->data_size());
         }
 
         // delete internal buffer if exists then sets it to array buf - does not take ownership
         bool assign(T *arr, size_t size)
         {
-            return this->assign(arr, size, size);            
+            return this->assign(arr, size, size);
         }
 
         // delete internal buffer if exists then sets it to array buf - does not take ownership
@@ -298,7 +332,7 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         /**
          * @brief Creates a new array from a source
-         * 
+         *
          * @param buf Array to copy from
          * @param size The size of bytes to copy from buffer
          * @return true buffer allocated
@@ -646,15 +680,6 @@ class Array: public IArray, public ICloneable<Array<T>>
         // end of Array<T> reverse iterator
 
     protected:
-        // should be called before anything else
-        void _init()
-        {
-            _buf_ptr = nullptr;
-            _size = 0;
-            _capacity = 0;
-            _has_ownership = false;
-        }
-
         T *_buf_ptr;
         size_t _size;
         size_t _capacity;
@@ -705,9 +730,8 @@ class ArrStr: public ArrChar
 
         // char *
 
-        ArrStr(const char *str)
+        ArrStr(const char *str): ArrChar()
         {
-            this->_init();
             this->push_back(str);
         }
 
@@ -730,7 +754,7 @@ class ArrStr: public ArrChar
         bool assign(char *str, size_t capacity)
         {
             size_t len = strlen(str);
-            return this->assign(str, len, capacity);            
+            return this->assign(str, len, capacity);
         }
 
         bool push_back(const char *str)
@@ -744,10 +768,9 @@ class ArrStr: public ArrChar
         }
 
         // std::string
-        
-        ArrStr(const std::string & str)
+
+        ArrStr(const std::string & str): ArrChar()
         {
-            this->_init();
             this->push_back(str);
         }
 
@@ -768,7 +791,7 @@ class ArrStr: public ArrChar
 
         bool assign(std::string & str, size_t capacity)
         {
-            return this->assign(str.data(), str.size(), capacity);            
+            return this->assign(str.data(), str.size(), capacity);
         }
 
         bool push_back(const std::string & str)
@@ -787,8 +810,6 @@ class ArrStr: public ArrChar
             this->push_back(data);
             return true;
         }
-
-
 };
 // end of class ArrStr
 
@@ -837,11 +858,11 @@ class ArrayUtil
          *  distributing_array: size 11 bytes [0x00 ... 0x0b]
          *  assigned_arrays: [ [float_array, 2], [short_array, 1] ]
          *  starting_offset = 1
-         * 
+         *
          * outputs:
          *  float_array (4 bytes): size 2 [0x01 ... 0x09]
          *  short_array (2 bytes): size 1 [0x09 ... 0x0b]
-         * 
+         *
          * @param distributing_array the array containing the buffer to distribute to other arrays
          * @param assigned_arrays a vector of array-size pairs that will hold sequentially distributed pointer
          * @param starting_offset the starting byte offset of distributing_array starting byte distribution
@@ -850,7 +871,7 @@ class ArrayUtil
          *  capacity to fill assigned_arrays
          */
         static bool distribute_array(IArray & distributing_array,
-                                        const std::vector<std::pair<IArray *, size_t>> assigned_arrays, 
+                                        const std::vector<std::pair<IArray *, size_t>> assigned_arrays,
                                         size_t starting_offset = 0)
         {
             if (starting_offset > distributing_array.byte_capacity())
@@ -982,4 +1003,4 @@ class ArrayUtil
 
 }
 
-#endif 
+#endif

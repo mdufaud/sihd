@@ -21,6 +21,11 @@ class CallbackManager
             }
         }
 
+        bool exists(const std::string & name)
+        {
+            return _callbacks.find(name) != _callbacks.end();
+        }
+
         void remove(const std::string & name)
         {
             if (_callbacks.find(name) != _callbacks.end())
@@ -85,7 +90,7 @@ class CallbackManager
         }
 
     private:
-        // Class stored in CallbackManager's map 
+        // Class stored in CallbackManager's map
         class CallbackBase
         {
             public:
@@ -132,4 +137,4 @@ class CallbackManager
 
 }
 
-#endif 
+#endif

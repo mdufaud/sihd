@@ -11,6 +11,10 @@
 # define SIHD_HTTP_HEADERS_BUFSIZE 4096
 #endif
 
+#ifndef SIHD_HTTP_CONTENT_HEADER_BUFSIZE
+# define SIHD_HTTP_CONTENT_HEADER_BUFSIZE 256
+#endif
+
 namespace sihd::http
 {
 
@@ -28,11 +32,11 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
 {
     _ip_buf[0] = 0;
     _worker.set_runnable(&_polling_scheduler);
-    _worker.set_frequency(50);
+    _worker.set_frequency(30);
 
     _404_content = "<html><body><h1>404 file not found !</h1></body></html>";
     _http_header.set_servername(this->get_name());
-    _http_header.set_by_name("Access-Control-Allow-Origin:", "*");
+    _http_header.set_header("Access-Control-Allow-Origin:", "*");
     this->set_encoding("utf-8");
 
     _protocols_count = 0;
@@ -236,26 +240,49 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
         {
             if (session->len < 1)
             {
-                lws_return_http_status(session->wsi, HTTP_STATUS_BAD_REQUEST, nullptr);
-                if (lws_http_transaction_completed(session->wsi))
+                lws_return_http_status(wsi, HTTP_STATUS_BAD_REQUEST, nullptr);
+                if (lws_http_transaction_completed(wsi))
                     rc = -1;
                 break ;
             }
+            session->new_request();
+            session->request_type = this->_get_request_type(wsi);
             std::string path((char *)session->in);
             rc = this->_on_http_request(session, path);
+            if (session->should_complete_transaction)
+            {
+                if (lws_http_transaction_completed(wsi))
+                    rc = -1;
+            }
             break ;
         }
         // the next `len` bytes data from the http request body HTTP connection is now available in `in`
         case LWS_CALLBACK_HTTP_BODY:
         {
-            LOG(debug, "Callback http body");
+            if (session->content != nullptr)
+            {
+                // expected a body from a request
+                size_t current_offset = session->content_size;
+                session->content->copy_from((const uint8_t *)in, (size_t)len, current_offset);
+                session->content_size += len;
+            }
             break ;
         }
-        // the expected amount of http request body has been delivered 
         case LWS_CALLBACK_HTTP_BODY_COMPLETION:
         {
-            LOG(debug, "Callback http body completion");
-            lws_return_http_status(wsi, HTTP_STATUS_OK, nullptr);
+            if (session->request != nullptr)
+            {
+                // end of expected body
+                HttpRequest *request = session->request;
+                ArrUByte *content = session->content;
+                request->set_content(content);
+                WebService *webservice = this->_get_webservice_from_path(request->path());
+                if (webservice != nullptr)
+                    rc = this->_serve_webservice(session, webservice, *request);
+                session->clear_request();
+            }
+            else
+                lws_return_http_status(wsi, HTTP_STATUS_OK, nullptr);
             if (lws_http_transaction_completed(wsi))
                 rc = -1;
             break ;
@@ -263,7 +290,6 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
         // a file requested to be sent down http link has completed
         case LWS_CALLBACK_HTTP_FILE_COMPLETION:
         {
-            LOG(debug, "Callback http file completion");
             if (lws_http_transaction_completed(wsi))
                 rc = -1;
             break ;
@@ -279,7 +305,7 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
         {
             LOG(debug, "Callback check access rights");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
-            TRACE(args->p);
+            //TRACE(args->p);
             break ;
         }
         // This gives your user code a chance to mangle outgoing HTML
@@ -287,8 +313,8 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
         {
              LOG(debug, "Callback check process HTML");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
-            TRACE(args->p);
-            break ;           
+            //TRACE(args->p);
+            break ;
         }
         // This gives your user code a chance to add headers to a server transaction bound to your protocol
         case LWS_CALLBACK_ADD_HEADERS:
@@ -313,19 +339,137 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
     return rc;
 }
 
+HttpRequest::RequestType    HttpServer::_get_request_type(struct lws *wsi)
+{
+    if (lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI))
+        return HttpRequest::GET;
+    if (lws_hdr_total_length(wsi, WSI_TOKEN_POST_URI))
+        return HttpRequest::POST;
+    else if (lws_hdr_total_length(wsi, WSI_TOKEN_PUT_URI))
+        return HttpRequest::PUT;
+    else if (lws_hdr_total_length(wsi, WSI_TOKEN_DELETE_URI))
+        return HttpRequest::DELETE;
+    return HttpRequest::NONE;
+}
+
 int     HttpServer::_on_http_request(HttpSession *session, const std::string & path)
 {
+    LOG(debug, "HttpServer: " << HttpRequest::request_to_string(session->request_type) << " request: " << path);
+    int rc = 0;
     std::string resource_path;
     if (this->get_resource_path(path, resource_path))
     {
         std::string type = HttpHeader::build_content_type(_mime.get(Files::get_extension(resource_path)), _encoding);
-        return lws_serve_http_file(session->wsi, resource_path.c_str(), type.c_str(), nullptr, 0);
+        if (lws_serve_http_file(session->wsi, resource_path.c_str(), type.c_str(), nullptr, 0) < 0)
+            rc = -1;
+        session->should_complete_transaction = false;
+        return rc;
     }
-    this->_send_404(session->wsi);
-    return 0;
+    if (this->_check_webservices(session, path))
+        return session->rc;
+    return this->_send_404(session->wsi) ? 0 : -1;
 }
 
+WebService  *HttpServer::_get_webservice_from_path(const std::string & path, std::string *webservice_name)
+{
+    std::string_view path_view(path);
 
+    if (path_view[0] == '/')
+        path_view.remove_prefix(1);
+    size_t first_slash_idx = path_view.find('/');
+    if (first_slash_idx == std::string_view::npos)
+        return nullptr;
+    std::string name = std::string(path_view.substr(0, first_slash_idx));
+    if (webservice_name != nullptr)
+        *webservice_name = name;
+    return this->get_child<WebService>(name);
+}
+
+bool    HttpServer::_check_webservices(HttpSession *session, const std::string & path)
+{
+    std::string webservice_name;
+    WebService *webservice = this->_get_webservice_from_path(path, &webservice_name);
+    if (webservice == nullptr)
+        return false;
+    bool ret = false;
+    if (session->request_type == HttpRequest::POST || session->request_type == HttpRequest::PUT)
+    {
+        // check if there will be only header or request body
+        char content_header[SIHD_HTTP_CONTENT_HEADER_BUFSIZE + 1];
+        ssize_t hdr_len = lws_hdr_copy(session->wsi, content_header, SIHD_HTTP_CONTENT_HEADER_BUFSIZE, WSI_TOKEN_HTTP_CONTENT_LENGTH);
+        ret = hdr_len >= 0;
+        if (hdr_len >= 0)
+            content_header[hdr_len] = 0;
+        else
+            LOG(error, "HttpServer: failed to copy header serving webservice: " << webservice_name);
+        if (ret && content_header[0] != 0)
+        {
+            size_t content_length_header_size = std::strtoul(content_header, nullptr, 10);
+            if (content_length_header_size == 0)
+            {
+                // no 'body' coming - call webservice now
+                this->_serve_webservice(session, webservice,
+                                        HttpRequest(path, this->_get_uri_args(session->wsi),
+                                        session->request_type));
+            }
+            else
+            {
+                // must wait for http body callback completion - setuping it
+                session->content_size = 0;
+                session->content = new ArrUByte();
+                session->request = new HttpRequest(path, this->_get_uri_args(session->wsi), session->request_type);
+                if (session->content == nullptr || session->request == nullptr)
+                {
+                    LOG(error, "HttpServer: handling POST or PUT request serving webservice: " << webservice_name);
+                    ret = false;
+                    session->clear_request();
+                }
+                else
+                {
+                    session->content->resize(content_length_header_size);
+                    // do not complete transaction - we are waiting for the request's body
+                    session->should_complete_transaction = false;
+                }
+            }
+        }
+    }
+    else
+    {
+        // HttpRequest is GET or DELETE
+        this->_serve_webservice(session, webservice,
+                                HttpRequest(path, this->_get_uri_args(session->wsi),
+                                session->request_type));
+    }
+    return ret;
+}
+
+bool    HttpServer::_serve_webservice(HttpSession *session, WebService *webservice, const HttpRequest & request)
+{
+    std::string_view path_view = request.path();
+    if (path_view[0] == '/')
+        path_view.remove_prefix(1);
+    size_t first_slash_idx = path_view.find('/');
+    if (first_slash_idx == std::string_view::npos)
+        return false;
+    std::string rest_of_path(path_view.substr(first_slash_idx + 1));
+    HttpResponse response(&_mime);
+    if (webservice->call(rest_of_path, request, response))
+    {
+        // webservice called
+        const ArrByte & data = response.content();
+        HttpHeader & http_header_response = response.http_header();
+        http_header_response.set_content_size(data.size());
+        this->_send_http_headers(session->wsi, http_header_response);
+        if (data.size() > 0)
+        {
+            // write body if there is
+            if (lws_write_http(session->wsi, data.cbuf(), data.size()) < 0)
+                session->rc = -1;
+        }
+        return true;
+    }
+    return false;
+}
 
 int     HttpServer::_global_websocket_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
 {
@@ -370,7 +514,6 @@ int     HttpServer::_lws_websocket_callback(struct lws *wsi, enum lws_callback_r
         }
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
-            LOG(debug, "Callback connection error HTML");
             const char *error = (const char *)in;
             if (error != nullptr)
                 LOG(warning, "HttpServer: client connection error: " << error);
@@ -380,7 +523,7 @@ int     HttpServer::_lws_websocket_callback(struct lws *wsi, enum lws_callback_r
         case LWS_CALLBACK_CONNECTING:
         {
             lws_sockfd_type *fd = (lws_sockfd_type *)in;
-            LOG(debug, "Callback connecting HTML: " << fd);
+            LOG(debug, "Callback connecting file descriptor: " << fd);
             break ;
         }
         default:
@@ -463,8 +606,7 @@ bool    HttpServer::_send_404(struct lws *wsi)
 {
     _http_header.set_common(HTTP_STATUS_NOT_FOUND, _mime.get("html"), _404_content.size());
     this->_send_http_headers(wsi, _http_header);
-    return lws_write(wsi, (u_char *)_404_content.c_str(), _404_content.size(), LWS_WRITE_HTTP)
-            == (int)_404_content.size();
+    return lws_write_http(wsi, _404_content.c_str(), _404_content.size()) == (int)_404_content.size();
 }
 
 bool    HttpServer::_add_protocol(const char *name, lws_callback_function *callback,

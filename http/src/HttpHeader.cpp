@@ -86,12 +86,12 @@ void    HttpHeader::remove_by_name(const std::string & name)
         _headers_name.erase(it);
 }
 
-void    HttpHeader::set_by_token(enum lws_token_indexes token, const std::string & value)
+void    HttpHeader::set_header_by_token(enum lws_token_indexes token, const std::string & value)
 {
     _headers_token[token] = value;
 }
 
-void    HttpHeader::set_by_name(const std::string & name, const std::string & value)
+void    HttpHeader::set_header(const std::string & name, const std::string & value)
 {
     _headers_name[name] = value;
 }

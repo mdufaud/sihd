@@ -26,6 +26,10 @@ class Mime
         void add(const std::string & ext, const std::string & content_type);
 
         /**
+         * text/plain
+         */
+        static const char *MIME_TEXT_PLAIN;
+        /**
          * text/html
          */
         static const char *MIME_TEXT_HTML;
@@ -34,17 +38,25 @@ class Mime
          */
         static const char *MIME_TEXT_JAVASCRIPT;
         /**
-         * text/json
-         */
-        static const char *MIME_TEXT_JSON;
-        /**
          * text/css
          */
         static const char *MIME_TEXT_CSS;
         /**
+         * text/css
+         */
+        static const char *MIME_TEXT_CSV;
+        /**
+         * application/octet-stream
+         */
+        static const char *MIME_APPLICATION_OCTET;
+        /**
          * application/javascript
          */
         static const char *MIME_APPLICATION_JAVASCRIPT;
+        /**
+         * application/x-tar
+         */
+        static const char *MIME_APPLICATION_TAR;
         /**
          * application/javascript
          */
@@ -63,7 +75,7 @@ class Mime
         static const char *MIME_IMAGE_GIF;
 
     protected:
-    
+
     private:
         std::map<std::string, std::string> _types;
 };

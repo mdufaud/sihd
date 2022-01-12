@@ -11,7 +11,7 @@ class CLASS_NAME
         virtual ~CLASS_NAME();
 
     protected:
-    
+
     private:
 };
 

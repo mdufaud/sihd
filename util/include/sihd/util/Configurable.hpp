@@ -2,8 +2,8 @@
 # define __SIHD_UTIL_CONFIGURABLE_HPP__
 
 # include <nlohmann/json.hpp>
-# include <sihd/util/Callback.hpp> 
-# include <sihd/util/Logger.hpp> 
+# include <sihd/util/Callback.hpp>
+# include <sihd/util/Logger.hpp>
 # include <functional>
 
 namespace sihd::util
@@ -54,7 +54,7 @@ class Configurable
         bool    set_conf_float(const std::string & name, double param)
         {
             try
-            {    
+            {
                 return _callbackManager.call<bool, double>(name, param);
             }
             catch (const std::invalid_argument & e)
@@ -154,4 +154,4 @@ class Configurable
 
 }
 
-#endif 
+#endif

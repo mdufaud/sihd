@@ -4,12 +4,15 @@
 namespace sihd::http
 {
 
+const char *Mime::MIME_TEXT_PLAIN = "text/plain";
 const char *Mime::MIME_TEXT_HTML = "text/html";
 const char *Mime::MIME_TEXT_JAVASCRIPT = "text/javascript";
-const char *Mime::MIME_TEXT_JSON = "text/json";
 const char *Mime::MIME_TEXT_CSS = "text/css";
+const char *Mime::MIME_TEXT_CSV = "text/csv";
+const char *Mime::MIME_APPLICATION_OCTET = "application/octet-stream";
 const char *Mime::MIME_APPLICATION_JAVASCRIPT = "application/javascript";
 const char *Mime::MIME_APPLICATION_JSON = "application/json";
+const char *Mime::MIME_APPLICATION_TAR = "application/x-tar";
 const char *Mime::MIME_IMAGE_JPEG = "image/jpeg";
 const char *Mime::MIME_IMAGE_PNG = "image/png";
 const char *Mime::MIME_IMAGE_GIF = "image/gif";
@@ -21,8 +24,10 @@ Mime::Mime()
     _types["png"] = MIME_IMAGE_PNG;
     _types["gif"] = MIME_IMAGE_GIF;
     _types["js"] = MIME_APPLICATION_JAVASCRIPT;
-    _types["json"] = MIME_TEXT_JSON;
+    _types["json"] = MIME_APPLICATION_JSON;
+    _types["tar"] = MIME_APPLICATION_TAR;
     _types["css"] = MIME_TEXT_CSS;
+    _types["csv"] = MIME_TEXT_CSV;
     _types["htm"] = MIME_TEXT_HTML;
     _types["html"] = MIME_TEXT_HTML;
     _types["svg"] = "image/svg+xml";

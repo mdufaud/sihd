@@ -10,7 +10,7 @@
 
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/WebsocketHandler.hpp>
-
+#include <sihd/http/WebService.hpp>
 
 namespace test
 {
@@ -57,24 +57,76 @@ namespace test
             {
                 // HttpServer protected call
                 this->_add_websocket(_name, this);
+                _webservice = this->add_child<WebService>("web");
+                this->setup_webservice_entry_points();
             }
 
             ~SimpleHttpServer()
             {
             }
 
+            void setup_webservice_entry_points()
+            {
+                _webservice->set_entry_point("some_get", [this] (const HttpRequest & req, HttpResponse & resp)
+                {
+                    LOG(info, req.request_to_string(req.request_type()) << " request received");
+                    resp.set_content("hello get world");
+                    ++_nget;
+                });
+
+                _webservice->set_entry_point("some_post", [this] (const HttpRequest & req, HttpResponse & resp)
+                {
+                    LOG(info, req.request_to_string(req.request_type()) << " request received");
+                    if (req.content())
+                    {
+                        _post_content = req.content()->cpp_str();
+                        LOG(info, "Received POST body: " << _post_content);
+                        resp.http_header().set_status(HTTP_STATUS_OK);
+                        ++_npost;
+                    }
+                    else
+                        resp.http_header().set_status(HTTP_STATUS_BAD_REQUEST);
+                },
+                HttpRequest::POST);
+
+                _webservice->set_entry_point("some_delete", [this] (const HttpRequest & req, HttpResponse & resp)
+                {
+                    LOG(info, req.request_to_string(req.request_type()) << " request received");
+                    resp.http_header().set_status(HTTP_STATUS_OK);
+                    resp.set_content({"hello", "world"});
+                    ++_ndelete;
+                },
+                HttpRequest::DELETE);
+
+                _webservice->set_entry_point("some_put", [this] (const HttpRequest & req, HttpResponse & resp)
+                {
+                    LOG(info, req.request_to_string(req.request_type()) << " request received");
+                    if (req.content())
+                    {
+                        _post_content = req.content()->cpp_str();
+                        LOG(info, "Received PUT body: " << _post_content);
+                        resp.http_header().set_status(HTTP_STATUS_OK);
+                        ++_nput;
+                    }
+                    else
+                        resp.http_header().set_status(HTTP_STATUS_BAD_REQUEST);
+                },
+                HttpRequest::PUT);
+            }
+
             // IWebsocketHandler
 
             void on_open(const char *protocol_name)
             {
-                TRACE(protocol_name);
+                LOG(debug, "Opened websocket of protocol: " << protocol_name);
                 ++_nopen;
             };
 
             bool on_read(const sihd::util::ArrStr & array)
             {
-                TRACE(array.to_string());
+                LOG(debug, "Read from client websocket: " << array.to_string());
                 _client_wrote = true;
+                ++_nread;
                 return true;
             };
 
@@ -86,20 +138,33 @@ namespace test
                     const char hw[] = "hello world";
                     protocol->write_protocol = LWS_WRITE_TEXT;
                     array.from(hw);
+                    LOG(debug, "Wrote back to client websocket: " << hw);
+                    ++_nwrite;
                 }
                 return true;
             }
 
             void on_close()
             {
+                LOG(debug, "Closed websocket");
                 ++_nclosed;
             }
 
+            // websocket
             const char *_name = "proto-two";
             int _nopen = 0;
+            int _nread = 0;
+            int _nwrite = 0;
             int _nclosed = 0;
             bool _client_wrote = false;
             WebsocketHandler _websocket_handler;
+            // webservice
+            int _npost = 0;
+            int _nput = 0;
+            int _ndelete = 0;
+            int _nget = 0;
+            WebService *_webservice;
+            std::string _post_content;
     };
 
     TEST_F(TestHttpServer, test_httpserver)
@@ -115,6 +180,18 @@ namespace test
         }));
         server.set_root_dir("test/resources/mount_point");
         server.set_port(3000);
+        LOG(info, "=========================================================");
+        LOG(info, "Open web browser at localhost:3000");
+        LOG(info, "=========================================================");
         server.run();
+        EXPECT_GT(server._nopen, 0);
+        EXPECT_GT(server._nread, 0);
+        EXPECT_GT(server._nwrite, 0);
+        EXPECT_GT(server._nclosed, 0);
+        //
+        EXPECT_GT(server._nget, 0);
+        EXPECT_GT(server._npost, 0);
+        EXPECT_GT(server._nput, 0);
+        EXPECT_GT(server._ndelete, 0);
     }
 }

@@ -51,9 +51,40 @@ class HttpServer:   public sihd::util::Node,
     protected:
         struct HttpSession
         {
+            void clear_request()
+            {
+                if (request != nullptr)
+                {
+                    delete request;
+                    request = nullptr;
+                }
+                if (content != nullptr)
+                {
+                    delete content;
+                    content = nullptr;
+                }
+                content_size = 0;
+            }
+
+            void new_request()
+            {
+                request = nullptr;
+                content = nullptr;
+                content_size = 0;
+                should_complete_transaction = true;
+            }
+
+            // forward lws callback args
             struct lws *wsi;
             void *in;
             size_t len;
+            int rc;
+            // http request
+            HttpRequest::RequestType request_type;
+            size_t content_size;
+            sihd::util::ArrUByte *content;
+            HttpRequest *request;
+            bool should_complete_transaction;
         };
 
         struct WebsocketSession
@@ -69,6 +100,10 @@ class HttpServer:   public sihd::util::Node,
         int _lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
 
         virtual int _on_http_request(HttpSession *session, const std::string & path);
+        virtual bool _check_webservices(HttpSession *session, const std::string & path);
+        virtual bool _serve_webservice(HttpSession *session, WebService *webservice, const HttpRequest & request);
+
+        HttpRequest::RequestType _get_request_type(struct lws *wsi);
 
         // websocket protocol callbacks
         static int _global_websocket_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
@@ -93,6 +128,8 @@ class HttpServer:   public sihd::util::Node,
         std::vector<std::string> _get_uri_args(struct lws *wsi);
 
     private:
+        WebService *_get_webservice_from_path(const std::string & path, std::string *webservice_name = nullptr);
+
         struct LwsPollingScheduler: public sihd::util::IRunnable
         {
             LwsPollingScheduler(HttpServer *server);

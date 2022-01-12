@@ -137,7 +137,7 @@ namespace test
             uint32_t    uint_val = 0;
             int64_t     long_val = 0;
             uint64_t    ulong_val = 0;
-            float       float_val = 0.0; 
+            float       float_val = 0.0;
             double      double_val = 0.0;
             std::string str_val = "";
             std::vector<int>    list_val;
