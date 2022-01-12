@@ -18,10 +18,10 @@ class IWebsocketHandler
 {
     public:
         virtual ~IWebsocketHandler() {};
-		virtual void on_open(size_t protocol_number) = 0;
-		virtual bool on_read(const sihd::util::ArrByte & array) = 0;
-		virtual bool on_write(sihd::util::ArrByte & array, LwsWriteProtocol *protocol) = 0;
-		virtual void on_close(size_t protocol_number) = 0;
+		virtual void on_open(const char *protocol_name) = 0;
+		virtual bool on_read(const sihd::util::ArrStr & array) = 0;
+		virtual bool on_write(sihd::util::ArrStr & array, LwsWriteProtocol *protocol) = 0;
+		virtual void on_close() = 0;
 };
 
 }

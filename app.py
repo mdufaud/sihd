@@ -8,7 +8,6 @@ extlibs = {
     "openssl": "1.1.1i",
     # http
     "libwebsockets": "4.3.0",
-    "uwebsockets": "19.2.0",
     "libcurl": "7.75.0",
     "openssl": "1.1.1l",
     # ssh
@@ -53,13 +52,9 @@ modules = {
         "depends": ['util'],
     },
     "http": {
-        #"uselibs": ['openssl', 'libcurl', 'uwebsockets', 'libwebsockets'],
-        #"libs": ['curl', 'uSockets', 'z'],
         "uselibs": ['openssl', 'libcurl', 'libwebsockets'],
         "libs": ['curl', 'websockets'],
         "depends": ['net'],
-        # uWebSockets has unused variables
-        "flags": ["-Wno-unused-variable"]
     },
     "pcap": {
         "uselibs": ['libpcap'],

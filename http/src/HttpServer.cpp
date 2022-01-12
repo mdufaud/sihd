@@ -21,7 +21,7 @@ NEW_LOGGER("sihd::http");
 using namespace sihd::util;
 
 HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent),
+    sihd::util::Node(name, parent),
     _running(false), _port(0),
     _lws_mount_ptr(nullptr), _lws_context_ptr(nullptr), _lws_protocols_ptr(nullptr),
     _lws_current_wsi_ptr(nullptr), _polling_scheduler(this)
@@ -222,35 +222,27 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
     int rc = 0;
     _lws_current_wsi_ptr = wsi;
     HttpSession *session = (HttpSession *)user;
+    if (session != nullptr)
+    {
+        session->wsi = wsi;
+        session->in = in;
+        session->len = len;
+    }
     switch (reason)
     {
         // an http request has come from a client that is not asking to upgrade the connection to a websocket one.
         // this is a chance to serve http content
         case LWS_CALLBACK_HTTP:
         {
-            LOG(debug, "Callback HTTP: client ip addr: " << this->_get_client_ip(wsi));
-            auto uri_args = this->_get_uri_args(wsi);
-            for (const auto & arg: uri_args)
+            if (session->len < 1)
             {
-                TRACE(arg);
-            }
-            if (len < 1)
-            {
-                lws_return_http_status(wsi, HTTP_STATUS_BAD_REQUEST, nullptr);
-                if (lws_http_transaction_completed(wsi))
+                lws_return_http_status(session->wsi, HTTP_STATUS_BAD_REQUEST, nullptr);
+                if (lws_http_transaction_completed(session->wsi))
                     rc = -1;
                 break ;
             }
-            std::string path((char *)in);
-            TRACE("path = " << path)
-            std::string resource_path;
-            if (this->get_resource_path(path, resource_path))
-            {
-                std::string type = HttpHeader::build_content_type(_mime.get(Files::get_extension(resource_path)), _encoding);
-                lws_serve_http_file(wsi, resource_path.c_str(), type.c_str(), nullptr, 0);
-                break ;
-            }
-            this->_send_404(wsi);
+            std::string path((char *)session->in);
+            rc = this->_on_http_request(session, path);
             break ;
         }
         // the next `len` bytes data from the http request body HTTP connection is now available in `in`
@@ -298,6 +290,84 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
             TRACE(args->p);
             break ;           
         }
+        // This gives your user code a chance to add headers to a server transaction bound to your protocol
+        case LWS_CALLBACK_ADD_HEADERS:
+        {
+            LOG(debug, "Callback add header callback");
+            struct lws_process_html_args *args = (struct lws_process_html_args *)in;
+            (void)args;
+            /*
+            if (lws_add_http_header_by_name(wsi,
+                    (unsigned char *)"set-cookie:",
+                    (unsigned char *)cookie, cookie_len,
+                    (unsigned char **)&args->p,
+                    (unsigned char *)args->p + args->max_len))
+                rc = 1;
+            */
+            break;
+        }
+        default:
+            break ;
+    }
+    _lws_current_wsi_ptr = nullptr;
+    return rc;
+}
+
+int     HttpServer::_on_http_request(HttpSession *session, const std::string & path)
+{
+    std::string resource_path;
+    if (this->get_resource_path(path, resource_path))
+    {
+        std::string type = HttpHeader::build_content_type(_mime.get(Files::get_extension(resource_path)), _encoding);
+        return lws_serve_http_file(session->wsi, resource_path.c_str(), type.c_str(), nullptr, 0);
+    }
+    this->_send_404(session->wsi);
+    return 0;
+}
+
+
+
+int     HttpServer::_global_websocket_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
+{
+    HttpServer *server = (HttpServer *)lws_context_user(lws_get_context(wsi));
+    return server->_lws_websocket_callback(wsi, reason, user, in, len);
+}
+
+int     HttpServer::_lws_websocket_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
+{
+    int rc = 0;
+    IWebsocketHandler *handler = nullptr;
+    WebsocketSession *session = (WebsocketSession *)user;
+    if (session != nullptr)
+    {
+        session->protocol = lws_get_protocol(wsi);
+        session->wsi = wsi;
+        session->in = in;
+        session->len = len;
+        handler = _websocket_handler_lst[session->protocol->id];
+    }
+    switch (reason)
+    {
+        case LWS_CALLBACK_ESTABLISHED:
+        {
+            rc = this->_on_websocket_open(handler, session);
+            break ;
+        }
+        case LWS_CALLBACK_SERVER_WRITEABLE:
+        {
+            rc = this->_on_websocket_write(handler, session);
+            break ;
+        }
+        case LWS_CALLBACK_RECEIVE:
+        {
+            rc = this->_on_websocket_read(handler, session);
+            break ;
+        }
+        case LWS_CALLBACK_CLOSED:
+        {
+            rc = this->_on_websocket_close(handler, session);
+            break ;
+        }
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
             LOG(debug, "Callback connection error HTML");
@@ -316,21 +386,50 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
         default:
             break ;
     }
-    _lws_current_wsi_ptr = nullptr;
     return rc;
+}
+
+int     HttpServer::_on_websocket_open(IWebsocketHandler *handler, WebsocketSession *session)
+{
+    handler->on_open(session->protocol->name);
+    return 0;
+}
+
+int     HttpServer::_on_websocket_read(IWebsocketHandler *handler, WebsocketSession *session)
+{
+    sihd::util::ArrStr arr;
+    arr.assign_bytes((uint8_t *)session->in, session->len);
+    return handler->on_read(arr) ? 0 : -1;
+}
+
+int     HttpServer::_on_websocket_write(IWebsocketHandler *handler, WebsocketSession *session)
+{
+    sihd::util::ArrStr arr_to_write;
+    LwsWriteProtocol lws_proto;
+    lws_proto.write_protocol = LWS_WRITE_TEXT;
+    bool ret = handler->on_write(arr_to_write, &lws_proto);
+    if (ret && arr_to_write.size() > 0)
+    {
+        sihd::util::ArrByte buffer;
+        buffer.resize(arr_to_write.size() + LWS_PRE);
+        memcpy(buffer.data() + LWS_PRE, arr_to_write.data(), arr_to_write.size());
+        int wrote = lws_write(session->wsi, (u_char *)(buffer.data() + LWS_PRE), arr_to_write.size(), lws_proto.write_protocol);
+        if (wrote < (int)arr_to_write.size())
+            ret = false;
+    }
+    return ret ? 0 : -1;
+}
+
+int     HttpServer::_on_websocket_close(IWebsocketHandler *handler, WebsocketSession *session)
+{
+    (void)session;
+    handler->on_close();
+    return 0;
 }
 
 const char *HttpServer::_get_client_ip(struct lws *wsi)
 {
     return lws_get_peer_simple(wsi, _ip_buf, INET6_ADDRSTRLEN);
-}
-
-bool    HttpServer::_send_404(struct lws *wsi)
-{
-    _http_header.set_common(HTTP_STATUS_NOT_FOUND, _mime.get("html"), _404_content.size());
-    this->_send_http_headers(wsi, _http_header);
-    return lws_write(wsi, (u_char *)_404_content.c_str(), _404_content.size(), LWS_WRITE_HTTP)
-            == (int)_404_content.size();
 }
 
 std::vector<std::string>   HttpServer::_get_uri_args(struct lws *wsi)
@@ -360,7 +459,15 @@ bool    HttpServer::_send_http_headers(struct lws *wsi, HttpHeader & header)
     return true;
 }
 
-bool    HttpServer::_add_protocol(const std::string & name, lws_callback_function *callback,
+bool    HttpServer::_send_404(struct lws *wsi)
+{
+    _http_header.set_common(HTTP_STATUS_NOT_FOUND, _mime.get("html"), _404_content.size());
+    this->_send_http_headers(wsi, _http_header);
+    return lws_write(wsi, (u_char *)_404_content.c_str(), _404_content.size(), LWS_WRITE_HTTP)
+            == (int)_404_content.size();
+}
+
+bool    HttpServer::_add_protocol(const char *name, lws_callback_function *callback,
                                      size_t struct_size, size_t tx_packet_size)
 {
     ++_protocols_count;
@@ -370,10 +477,12 @@ bool    HttpServer::_add_protocol(const std::string & name, lws_callback_functio
         lws_protocols *proto = &_lws_protocols_ptr[_protocols_count - 1];
         memset(proto, 0, sizeof(lws_protocols));
         memset(proto + 1, 0, sizeof(lws_protocols));
-        proto->name = name.c_str();
+        proto->name = name;
         proto->callback = callback;
         proto->per_session_data_size = struct_size;
         proto->tx_packet_size = tx_packet_size;
+        proto->id = _protocols_count - 1;
+        proto->user = this;
     }
     else
     {
@@ -381,6 +490,18 @@ bool    HttpServer::_add_protocol(const std::string & name, lws_callback_functio
         --_protocols_count;
     }
     return _lws_protocols_ptr != nullptr;
+}
+
+bool    HttpServer::_add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size)
+{
+    bool ret = this->_add_protocol(name, HttpServer::_global_websocket_lws_callback,
+                                    sizeof(WebsocketSession), tx_packet_size);
+    if (ret)
+    {
+        _websocket_handler_lst.resize(_protocols_count);
+        _websocket_handler_lst[_protocols_count - 1] = handler;
+    }
+    return ret;
 }
 
 HttpServer::LwsPollingScheduler::LwsPollingScheduler(HttpServer *srv): server(srv)
