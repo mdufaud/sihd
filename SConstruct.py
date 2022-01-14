@@ -23,6 +23,7 @@ from _build_tools import builder as builder_helper
 sys.dont_write_bytecode = False
 
 builder_helper.info("building {}".format(app.name))
+builder_helper.info("building to: {}".format(builder_helper.build_path))
 builder_helper.sanitize_app(app)
 
 ###############################################################################
@@ -32,13 +33,14 @@ builder_helper.sanitize_app(app)
 modules_to_build = builder_helper.get_modules()
 has_test = builder_helper.has_test()
 verbose = builder_helper.has_verbose()
-compiler = builder_helper.get_compiler()
-build_platform = builder_helper.get_platform()
-compile_mode = builder_helper.get_compile_mode()
-arch = builder_helper.get_arch()
 sanitize = builder_helper.do_sanitize()
 
-distribution = os.getenv("distribution", None) != None
+compiler = builder_helper.build_compiler
+build_platform = builder_helper.build_platform
+compile_mode = builder_helper.build_mode
+arch = builder_helper.build_architecture
+
+distribution = builder_helper.do_distribution()
 
 if build_platform not in ("windows", "linux"):
     builder_helper.error("platform {} is not supported".format(build_platform))
@@ -125,11 +127,11 @@ if not verbose:
         LINKCOMSTR = "linking object files into executable: $TARGET",
     )
 
-bin_dir = Dir(os.getenv("BIN_PATH"))
-lib_dir = Dir(os.getenv("LIB_PATH"))
-extlib_dir = Dir(os.getenv("EXTLIB_PATH"))
-extlib_lib_dir = Dir(os.getenv("EXTLIB_LIB_PATH"))
-build_dir = Dir(os.getenv("BUILD_PATH"))
+build_dir = Dir(builder_helper.build_path)
+bin_dir = Dir(builder_helper.build_bin_path)
+lib_dir = Dir(builder_helper.build_lib_path)
+extlib_dir = Dir(builder_helper.build_extlib_path)
+extlib_lib_dir = Dir(builder_helper.build_extlib_lib_path)
 
 # Setting path for extlibs bin, lib and include directories in shared env
 base_env["APP_EXTLIB"] = extlib_dir
@@ -485,12 +487,14 @@ def display_build_status(success, failures_message):
         builder_helper.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
 
 def after_build():
-    windows_copy_libs_to_bin()
     success, failures_message = build_status()
     display_build_status(success, failures_message)
     if success and hasattr(app, "on_build_success"):
-        app.on_build_success(build_modules.keys(), str(build_dir))
+        app.on_build_success(build_modules.keys(), str(build_dir), str(lib_dir))
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules.keys())
+    windows_copy_libs_to_bin()
+    if success and distribution:
+        builder_helper.distribute_app(app)
 
 atexit.register(after_build)

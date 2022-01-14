@@ -37,11 +37,10 @@ ANDROID = $(word 5, $(BUILDER_RESP))
 
 # Build path
 
-# BUILD_PATH = $(HERE)/build
 BUILD_ENTRY_PATH = $(HERE)/build
-EXTLIB_PATH = $(BUILD_ENTRY_PATH)/extlib
-EXTLIB_LIB_PATH = $(EXTLIB_PATH)/lib
 BUILD_PATH = $(BUILD_ENTRY_PATH)/$(PLATFORM)_$(ARCH)/$(COMPILE_MODE)
+EXTLIB_PATH = $(BUILD_PATH)/extlib
+EXTLIB_LIB_PATH = $(EXTLIB_PATH)/lib
 LIB_PATH = $(BUILD_PATH)/lib
 INCLUDE_PATH = $(BUILD_PATH)/include
 TEST_PATH = $(BUILD_PATH)/test
@@ -80,12 +79,12 @@ endif
 
 export APP_NAME
 export TEST_PATH
-export LIB_PATH
-export EXTLIB_PATH
-export EXTLIB_LIB_PATH
 export BUILD_PATH
+export LIB_PATH
 export BIN_PATH
 export RES_PATH
+export EXTLIB_PATH
+export EXTLIB_LIB_PATH
 
 #########
 # Targets
@@ -139,7 +138,7 @@ endif # module
 # Test
 ########
 
-get-module-name = $(word 2, $(subst _, , $(basename $1)))
+get-module-name = $(word 2, $(subst _, , $(notdir $1)))
 
 TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
 TEST_ARGS =

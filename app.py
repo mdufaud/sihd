@@ -1,4 +1,12 @@
+# distribution informations
 name = 'sihd'
+version = "0.1"
+maintainer = "mdufaud <maxence_dufaud@hotmail.fr>"
+uploaders = "azouiten <alexandre.zouiten1@gmail.com>"
+section = "libdevel"
+description = "Simple Input Handler Displayer"
+
+# modules and libs descriptions
 extlibs = {
     # unit test
     "gtest": "cci.20210126",
@@ -62,9 +70,9 @@ modules = {
         "depends": ['net'],
     },
     "usb": {
-        # libusb-dev
+        # libusb-dev libusb-1.0-0
         "uselibs": ['libusb'],
-        "libs": ['usb-1.0'],
+        "libs": ['usb'],
         "depends": ['util'],
     },
     "bt": {
@@ -108,17 +116,24 @@ conditionnal_modules = {
         ],
     }
 }
+
+# build changes
 replace_files = [
     "etc/sihd/core/test.txt"
 ]
 replace_vars = {
     "VERSION": "0.1"
 }
+
+# general compilation parameters
 libs = ['pthread', 'dl']
 flags = ['-Wall', '-Wextra', '-Werror', '-m64', '-pipe', '-fPIC']
 defines = []
+
+# mode specifics
 debug_flags = ["-g", "-O2"]
 release_flags = ["-O3"]
+
 # gcc specifics
 gcc_flags = [
     "-D_FORTIFY_SOURCE=2",
@@ -130,20 +145,23 @@ gcc_flags = [
     "-fstack-protector-strong",
     "-Wl,-z,defs",
     "-Wl,-z,now",
-    "-Wl,-z,relro",    
+    "-Wl,-z,relro",
 ]
+
 # clang specifics
 clang_libs = ['stdc++', "libc++"]
 clang_defines = [
     'LLVM_ENABLE_EH=YES',
     'LLVM_ENABLE_RTTI=ON',
 ]
+
 # mingw specifics
 mingw_libs = ['ws2_32', 'psapi']
 # _WIN64 -> activates sihd functionnalities
 # _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
 mingw_defines = ["_WIN64", "_WIN32_WINNT=0x0600"]
-# compiles tests with these libs
+
+# test specifics
 test_libs = ['gtest', 'stdc++fs']
 
 #############
@@ -160,17 +178,16 @@ def __get_python_libname():
                             shell = True, stdout = subprocess.PIPE)
     return proc.stdout.read().decode().strip()
 
-def on_build_success(modlist, build_path):
-    import os
-    import glob
-    import shutil
-    libpath = os.path.join(build_path, "lib")
-    if "py" in modlist:
-        python_libname = __get_python_libname()
-        if python_libname:
-            lib_pattern = os.path.join(libpath, "libsihd_py*.so")
-            libs = glob.glob(lib_pattern)
-            for lib in libs:
-                pybind11_compliant = lib.replace("libsihd_py", "sihd")
-                pybind11_compliant = pybind11_compliant.replace(".so", python_libname)
-                shutil.copyfile(lib, pybind11_compliant)
+def on_build_success(modlist, build_path, build_lib_path):
+    if "py" not in modlist:
+        return
+    python_libname = __get_python_libname()
+    if python_libname:
+        import os
+        import glob
+        import shutil
+        lib_pattern = os.path.join(build_lib_path, "libsihd_py*.so")
+        for lib in glob.glob(lib_pattern):
+            pybind11_compliant = lib.replace("libsihd_py", "sihd")
+            pybind11_compliant = pybind11_compliant.replace(".so", python_libname)
+            shutil.copyfile(lib, pybind11_compliant)

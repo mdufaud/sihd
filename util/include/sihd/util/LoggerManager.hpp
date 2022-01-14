@@ -63,4 +63,4 @@ class LoggerManager: public ALogFilterer
 
 }
 
-#endif 
+#endif

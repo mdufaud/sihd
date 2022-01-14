@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/OS.hpp>
 #include <sihd/lua/LuaUtilApi.hpp>
 #include <sol/sol.hpp>
 
@@ -32,6 +33,7 @@ namespace test
 
     TEST_F(TestLuaUtilApi, test_lua_util)
     {
+        TRACE(sihd::util::OS::get_cwd());
         sol::state lua;
         // For print etc...
         lua.open_libraries(sol::lib::base);

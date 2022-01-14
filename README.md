@@ -118,7 +118,7 @@ make py=1
 make mod core,py
 ```
 
-/!\ not available with mingw /!\
+/!\ not available with mingw windows cross compilation /!\
 
 ### Lua bindings build
 

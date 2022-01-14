@@ -1,6 +1,7 @@
-from os import getenv, environ
 import platform
 import sys
+import os
+from os.path import join, dirname, abspath
 sys.path.append(".")
 sys.dont_write_bytecode = True
 try:
@@ -18,10 +19,10 @@ specific_platform_compilers = {
 specific_compilers_platform = {v: k for k, v in specific_platform_compilers.items()}
 
 def is_android():
-    return "ANDROID_ARGUMENT" in environ
+    return "ANDROID_ARGUMENT" in os.environ
 
 def __get_platform():
-    env = getenv('platform', "")
+    env = os.getenv('platform', "")
     build_platform = (env or platform.system()).lower()
     if build_platform == "win":
         build_platform = "windows"
@@ -33,7 +34,7 @@ def get_compiler():
     backup_compiler = default_compiler
     if "arm" in arch:
         backup_compiler = "clang"
-    env = getenv('compiler', "")
+    env = os.getenv('compiler', "")
     backup_compiler = (env or backup_compiler).lower()
     return specific_platform_compilers.get(build_platform, backup_compiler)
 
@@ -43,19 +44,22 @@ def get_platform():
     return specific_compilers_platform.get(compiler, build_platform)
 
 def get_compile_mode():
-    return (getenv("mode", "") or "debug").lower()
+    return (os.getenv("mode", "") or "debug").lower()
 
 def has_verbose():
-    return bool(getenv("verbose", None))
+    return bool(os.getenv("verbose", None))
 
 def has_test():
-    return bool(getenv("test", None))
+    return bool(os.getenv("test", None))
 
 def do_sanitize():
-    return bool(getenv("sanitize", None))
+    return bool(os.getenv("sanitize", None))
+
+def do_distribution():
+    return bool(os.getenv("dist", None))
 
 def get_modules():
-    return getenv('modules', "")
+    return os.getenv('modules', "")
 
 def debug(*msg):
     print("builder [debug]:", *msg)
@@ -161,21 +165,88 @@ def get_arch():
             arch = ek2_architectures[arch]
         elif arch in architectures:
             arch = architectures[arch]
-    return getenv('arch', "") or arch
+    return os.getenv('arch', arch)
+
+build_compiler = get_compiler()
+build_platform = get_platform()
+build_architecture = get_arch()
+build_mode = get_compile_mode()
+build_on_android = is_android()
+
+build_root_path = abspath(dirname(dirname(__file__)))
+
+build_dist_path = join(build_root_path, "dist")
+
+build_entry_path = join(build_root_path, "build")
+build_extlib_path = join(build_entry_path, "extlib")
+build_extlib_lib_path = join(build_extlib_path, "lib")
+build_extlib_hdr_path = join(build_extlib_path, "include")
+build_extlib_bin_path = join(build_extlib_path, "bin")
+build_path = join(build_entry_path, "{}_{}".format(build_platform, build_architecture), build_mode)
+build_bin_path = join(build_path, "bin")
+build_hdr_path = join(build_path, "include")
+build_etc_path = join(build_path, "etc")
+build_lib_path = join(build_path, "lib")
+build_test_path = join(build_path, "test")
+
+def create_tar_package(app):
+    import tarfile
+    os.makedirs(build_dist_path, exist_ok = True)
+    tar_path = join(build_dist_path, "{}-{}.tar.gz".format(app.name, app.version))
+    info("compressing build to: " + tar_path)
+    with tarfile.open(tar_path, "w:gz") as tar:
+        tar.add(build_hdr_path, arcname = os.path.basename(build_hdr_path))
+        tar.add(build_lib_path, arcname = os.path.basename(build_lib_path))
+        tar.add(build_bin_path, arcname = os.path.basename(build_bin_path))
+        tar.add(build_etc_path, arcname = os.path.basename(build_etc_path))
+        # extlibs
+        tar.add(build_extlib_hdr_path, arcname = os.path.basename(build_hdr_path))
+        tar.add(build_extlib_lib_path, arcname = os.path.basename(build_lib_path))
+        tar.add(build_extlib_bin_path, arcname = os.path.basename(build_bin_path))
+
+# package dh-make
+def create_apt_package(app):
+    apt_path = join(build_dist_path, "apt", "{}-{}".format(app.name, app.version))
+    control_path = join(apt_path, "control")
+    copyright_path = join(apt_path, "copyright")
+    info("creating apt package: " + apt_path)
+    os.makedirs(apt_path, exist_ok = True)
+    with open(control_path, "w") as fd:
+        fd.write("Source: {}\n".format(app.name))
+        fd.write("Section: {}\n".format("libdevel"))
+        fd.write("Priority: {}\n".format("optional"))
+        fd.write("Maintainer: {}\n".format(app.maintainer))
+        fd.write("Build-Depends: {}\n".format("debhelper (>= 7)"))
+        fd.write("\n")
+        fd.write("Package: {}\n".format(app.name))
+        fd.write("Architecture: {}\n".format("any"))
+        fd.write("Depends: {}\n".format("${shlibs:Depends}"))
+        fd.write("Description: {}\n".format(app.description))
+
+def create_pacman_package(app):
+    pacman_path = join(build_dist_path, "pacman", "{}-{}".format(app.name, app.version))
+    info("creating pacman package: " + pacman_path)
+    os.makedirs(pacman_path, exist_ok = True)
+
+def distribute_app(app):
+    info("distributing app " + app.name)
+    create_tar_package(app)
+    create_apt_package(app)
+    create_pacman_package(app)
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         sys.exit(0)
     if sys.argv[1] == "compiler":
-        print(get_compiler())
+        print(build_compiler)
     elif sys.argv[1] == "platform":
-        print(get_platform())
+        print(build_platform)
     elif sys.argv[1] == "arch":
-        print(get_arch())
+        print(build_architecture)
     elif sys.argv[1] == "mode":
-        print(get_compile_mode())
+        print(build_mode)
     elif sys.argv[1] == "android":
-        print(is_android() and "true" or "false")
+        print(build_on_android and "true" or "false")
     elif sys.argv[1] == "all":
-        lst = [get_arch(), get_platform(), get_compiler(), get_compile_mode(), is_android() and "true" or "false"]
+        lst = [build_architecture, build_platform, build_compiler, build_mode, build_on_android and "true" or "false"]
         print(" ".join(lst))

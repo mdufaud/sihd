@@ -9,38 +9,37 @@ pp = PrettyPrinter(indent=2)
 
 sys.dont_write_bytecode = True
 import app
-import _build_tools.modules
-import _build_tools.builder
-from _build_tools.builder import debug, info, warning
+from _build_tools import modules as modules_helper
+from _build_tools import builder as builder_helper
 
-info("fetching {} external libraries".format(app.name))
+builder_helper.info("fetching {} external libraries".format(app.name))
 
-_build_tools.builder.sanitize_app(app)
+builder_helper.sanitize_app(app)
 
-modules_to_build = _build_tools.builder.get_modules()
-verbose = _build_tools.builder.has_verbose()
-has_test = _build_tools.builder.has_test()
-compiler = _build_tools.builder.get_compiler()
-build_platform = _build_tools.builder.get_platform()
-compile_mode = _build_tools.builder.get_compile_mode()
+modules_to_build = builder_helper.get_modules()
+verbose = builder_helper.has_verbose()
+has_test = builder_helper.has_test()
+compiler = builder_helper.build_compiler
+build_platform = builder_helper.build_platform
+compile_mode = builder_helper.build_mode
 
 if verbose:
     if modules_to_build:
-        debug("getting libs from modules -> {}".format(modules_to_build))
+        builder_helper.debug("getting libs from modules -> {}".format(modules_to_build))
     if has_test:
-        debug("including test libs")
+        builder_helper.debug("including test libs")
 
-modules = _build_tools.modules.get_modules(app, specific_modules=modules_to_build)
+modules = modules_helper.get_modules(app, specific_modules=modules_to_build)
 if verbose:
-    debug("modules configuration: ")
+    builder_helper.debug("modules configuration: ")
     pp.pprint(modules)
     print()
 
-extlibs = _build_tools.modules.get_modules_extlibs(app, modules)
+extlibs = modules_helper.get_modules_extlibs(app, modules)
 if has_test and hasattr(app, "test_libs"):
-    extlibs.update(_build_tools.modules.get_extlibs_versions(app, app.test_libs))
+    extlibs.update(modules_helper.get_extlibs_versions(app, app.test_libs))
 if verbose:
-    debug("modules external libs:")
+    builder_helper.debug("modules external libs:")
     pp.pprint(extlibs)
     print()
 
@@ -48,8 +47,8 @@ post_treatment_libs = {
     "*lua.*": {"from": "lua.", "to": "lua5.3."}
 }
 current_filename = inspect.getframeinfo(inspect.currentframe()).filename
-extlib_path = os.getenv("EXTLIB_PATH")
-extlib_lib_path =  os.getenv("EXTLIB_LIB_PATH")
+extlib_path = builder_helper.build_extlib_path
+extlib_lib_path =  builder_helper.build_extlib_lib_path
 
 class ConanAppDependencies(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
@@ -59,7 +58,7 @@ class ConanAppDependencies(ConanFile):
     def requirements(self):
         for name, version in extlibs.items():
             lib = "{}/{}".format(name, version)
-            info("external lib to fetch: " + lib)
+            builder_helper.info("external lib to fetch: " + lib)
             self.requires(lib)
         print("")
 
@@ -76,14 +75,14 @@ def post_process():
     for match, opt in post_treatment_libs.items():
         pattern = os.path.join(extlib_lib_path, match)
         results = glob.glob(pattern)
-        info(pattern)
-        info(*results)
+        builder_helper.info(pattern)
+        builder_helper.info(*results)
         for result in results:
             link_path = result.replace(opt["from"], opt["to"])
             if os.path.exists(link_path):
-                warning("removing symlink " + link_path)
+                builder_helper.warning("removing symlink " + link_path)
                 os.remove(link_path)
-            info("adding symlink: {} -> {}".format(result, link_path))
+            builder_helper.info("adding symlink: {} -> {}".format(result, link_path))
             os.symlink(result, link_path)
 
 atexit.register(post_process)

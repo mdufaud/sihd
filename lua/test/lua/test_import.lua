@@ -1,5 +1,5 @@
-local root = Node.new("root")
-local named = Named.new("child", root)
+local root = sihd.util.Node.new("root")
+local named = sihd.util.Named.new("child", root)
 assert(named:get_name() == "child")
 assert(root:get_name() == "root")
 assert(root:get_child("child") == named)
