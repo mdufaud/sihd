@@ -286,15 +286,24 @@ dist: build
 
 clean:
 	@$(call log_info,makefile,removing compilation build)
-	@rm -rf $(LIB_PATH) $(INCLUDE_PATH) $(TEST_PATH) $(OBJ_PATH) $(BIN_PATH) $(RES_PATH)
+	rm -rf $(LIB_PATH)
+	rm -rf $(INCLUDE_PATH)
+	rm -rf $(TEST_PATH)
+	rm -rf $(OBJ_PATH)
+	rm -rf $(BIN_PATH)
+	rm -rf $(RES_PATH)
 
-cleaninstall:
+clean_install:
 	@$(call log_info,makefile,removing dependencies)
-	@rm -rf $(CONAN_PATH) $(EXTLIB_PATH)
+	rm -rf $(CONAN_PATH) $(EXTLIB_PATH)
+
+clean_dist:
+	@$(call log_info,makefile,removing distribution)
+	rm -rf $(DIST_PATH)
 
 fclean:
 	@$(call log_info,makefile,removing build)
-	@rm -rf $(BUILD_ENTRY_PATH) $(DIST_PATH)
+	rm -rf $(BUILD_ENTRY_PATH) $(DIST_PATH)
 
 ### Makefile
-.PHONY: install build verbose dist fclean clean cleaninstall
+.PHONY: install build verbose dist fclean clean clean_dist clean_install
