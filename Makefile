@@ -293,7 +293,7 @@ clean:
 	rm -rf $(BIN_PATH)
 	rm -rf $(RES_PATH)
 
-clean_install:
+clean_dep:
 	@$(call log_info,makefile,removing dependencies)
 	rm -rf $(CONAN_PATH) $(EXTLIB_PATH)
 
@@ -306,4 +306,4 @@ fclean:
 	rm -rf $(BUILD_ENTRY_PATH) $(DIST_PATH)
 
 ### Makefile
-.PHONY: install build verbose dist fclean clean clean_dist clean_install
+.PHONY: install build verbose dist fclean clean clean_dist clean_dep
