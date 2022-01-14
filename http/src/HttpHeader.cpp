@@ -72,14 +72,14 @@ void    HttpHeader::set_common(uint32_t status, const std::string & content_type
     this->set_content_size(content_len);
 }
 
-void    HttpHeader::remove_by_token(enum lws_token_indexes token)
+void    HttpHeader::remove_header_by_token(enum lws_token_indexes token)
 {
     auto it = _headers_token.find(token);
     if (it != _headers_token.end())
         _headers_token.erase(it);
 }
 
-void    HttpHeader::remove_by_name(const std::string & name)
+void    HttpHeader::remove_header(const std::string & name)
 {
     auto it = _headers_name.find(name);
     if (it != _headers_name.end())

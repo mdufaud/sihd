@@ -28,7 +28,7 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
     sihd::util::Node(name, parent),
     _running(false), _port(0),
     _lws_mount_ptr(nullptr), _lws_context_ptr(nullptr), _lws_protocols_ptr(nullptr),
-    _lws_current_wsi_ptr(nullptr), _polling_scheduler(this)
+    _polling_scheduler(this)
 {
     _ip_buf[0] = 0;
     _worker.set_runnable(&_polling_scheduler);
@@ -224,7 +224,6 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
                                         void *user, void *in, size_t len)
 {
     int rc = 0;
-    _lws_current_wsi_ptr = wsi;
     HttpSession *session = (HttpSession *)user;
     if (session != nullptr)
     {
@@ -256,70 +255,55 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
             }
             break ;
         }
-        // the next `len` bytes data from the http request body HTTP connection is now available in `in`
         case LWS_CALLBACK_HTTP_BODY:
         {
-            if (session->content != nullptr)
-            {
-                // expected a body from a request
-                size_t current_offset = session->content_size;
-                session->content->copy_from((const uint8_t *)in, (size_t)len, current_offset);
-                session->content_size += len;
-            }
+            // the next `len` bytes data from the http request body HTTP connection is now available in `in`
+            rc = this->_on_http_body(session, (const uint8_t *)in, (size_t)len);
             break ;
         }
         case LWS_CALLBACK_HTTP_BODY_COMPLETION:
         {
-            if (session->request != nullptr)
-            {
-                // end of expected body
-                HttpRequest *request = session->request;
-                ArrUByte *content = session->content;
-                request->set_content(content);
-                WebService *webservice = this->_get_webservice_from_path(request->path());
-                if (webservice != nullptr)
-                    rc = this->_serve_webservice(session, webservice, *request);
-                session->clear_request();
-            }
-            else
-                lws_return_http_status(wsi, HTTP_STATUS_OK, nullptr);
+            // the expected amount of http request body has been delivered
+            this->_on_http_body_end(session);
             if (lws_http_transaction_completed(wsi))
                 rc = -1;
             break ;
         }
-        // a file requested to be sent down http link has completed
         case LWS_CALLBACK_HTTP_FILE_COMPLETION:
         {
+            // a file requested to be sent down http link has completed
+            rc = this->_on_http_file_completion_end();
             if (lws_http_transaction_completed(wsi))
                 rc = -1;
             break ;
         }
-        // when a HTTP (non-websocket) session ends
         case LWS_CALLBACK_CLOSED_HTTP:
         {
+            // when a HTTP (non-websocket) session ends
+            rc = this->_on_http_request_end();
             break ;
         }
-        // This gives the user code a chance to forbid an http access
         case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
         {
+            // This gives the user code a chance to forbid an http access
             LOG(debug, "Callback check access rights");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
             //TRACE(args->p);
             break ;
         }
-        // This gives your user code a chance to mangle outgoing HTML
         case LWS_CALLBACK_PROCESS_HTML:
         {
+            // This gives your user code a chance to mangle outgoing HTML
              LOG(debug, "Callback check process HTML");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
             //TRACE(args->p);
             break ;
         }
-        // This gives your user code a chance to add headers to a server transaction bound to your protocol
         case LWS_CALLBACK_ADD_HEADERS:
         {
+            // This gives your user code a chance to add headers to a server transaction bound to your protocol
             LOG(debug, "Callback add header callback");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
@@ -336,7 +320,6 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
         default:
             break ;
     }
-    _lws_current_wsi_ptr = nullptr;
     return rc;
 }
 
@@ -369,6 +352,45 @@ int     HttpServer::_on_http_request(HttpSession *session, const std::string & p
     if (this->_check_webservices(session, path))
         return session->rc;
     return this->_send_404(session->wsi) ? 0 : -1;
+}
+
+int     HttpServer::_on_http_body(HttpSession *session, const uint8_t *buf, size_t size)
+{
+    if (session->content != nullptr)
+    {
+        // expected a body from a request
+        size_t current_offset = session->content_size;
+        session->content->copy_from(buf, size, current_offset);
+        session->content_size += size;
+    }
+    return 0;
+}
+
+int     HttpServer::_on_http_body_end(HttpSession *session)
+{
+    int rc = 0;
+    if (session->request != nullptr && session->content != nullptr)
+    {
+        // end of expected body
+        session->request->set_content(session->content);
+        WebService *webservice = this->_get_webservice_from_path(session->request->path());
+        if (webservice != nullptr)
+            rc = this->_serve_webservice(session, webservice, *session->request);
+        session->clear_request();
+    }
+    else
+        lws_return_http_status(session->wsi, HTTP_STATUS_OK, nullptr);
+    return rc;
+}
+
+int     HttpServer::_on_http_request_end()
+{
+    return 0;
+}
+
+int     HttpServer::_on_http_file_completion_end()
+{
+    return 0;
 }
 
 WebService  *HttpServer::_get_webservice_from_path(const std::string & path, std::string *webservice_name)

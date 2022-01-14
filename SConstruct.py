@@ -1,18 +1,16 @@
-from genericpath import exists
 import platform
 # Time
 import time
 build_start_time = time.time()
-
 # General utilities
 import sys
-from os import getenv
-from os.path import join, abspath, isdir, isfile, relpath
-# Utils for copying resources to build
-from glob import glob
-from distutils.dir_util import copy_tree
+import glob
+import os
 import fileinput
-from subprocess import call as subprocess_call
+import subprocess
+# Utils for copying resources to build
+import shutil
+import distutils.dir_util
 # Pretty utility for verbosis
 from pprint import PrettyPrinter
 pp = PrettyPrinter(indent=2)
@@ -20,61 +18,59 @@ pp = PrettyPrinter(indent=2)
 # Loading app configuration and build tools, no bytecode for this
 sys.dont_write_bytecode = True
 import app
-import _build_tools.modules
-import _build_tools.builder
-from _build_tools.builder import debug, info, warning, error
+from _build_tools import modules as modules_helper
+from _build_tools import builder as builder_helper
 sys.dont_write_bytecode = False
 
-info("building {}".format(app.name))
-
-_build_tools.builder.sanitize_app(app)
+builder_helper.info("building {}".format(app.name))
+builder_helper.sanitize_app(app)
 
 ###############################################################################
 # Build settings
 ###############################################################################
 
-modules_to_build = _build_tools.builder.get_modules()
-has_test = _build_tools.builder.has_test()
-verbose = _build_tools.builder.has_verbose()
-compiler = _build_tools.builder.get_compiler()
-build_platform = _build_tools.builder.get_platform()
-compile_mode = _build_tools.builder.get_compile_mode()
-arch = _build_tools.builder.get_arch()
-sanitize = _build_tools.builder.do_sanitize()
+modules_to_build = builder_helper.get_modules()
+has_test = builder_helper.has_test()
+verbose = builder_helper.has_verbose()
+compiler = builder_helper.get_compiler()
+build_platform = builder_helper.get_platform()
+compile_mode = builder_helper.get_compile_mode()
+arch = builder_helper.get_arch()
+sanitize = builder_helper.do_sanitize()
 
-distribution = getenv("distribution", None) != None
+distribution = os.getenv("distribution", None) != None
 
 if build_platform not in ("windows", "linux"):
-    error("platform {} is not supported".format(build_platform))
+    builder_helper.error("platform {} is not supported".format(build_platform))
     exit(1)
 if compiler not in ("gcc", "clang", "mingw"):
-    error("compiler {} is not supported".format(compiler))
+    builder_helper.error("compiler {} is not supported".format(compiler))
     exit(1)
 if compile_mode not in ("debug", "release"):
-    error("mode {} unknown".format(compile_mode))
+    builder_helper.error("mode {} unknown".format(compile_mode))
     exit(1)
 
 if verbose:
-    info("platform: " + build_platform)
-    info("compiler: " + compiler)
-    info("arch: " + arch)
-    info("mode: " + compile_mode)
-    info("tests: " + (has_test and "yes" or "no"))
+    builder_helper.info("platform: " + build_platform)
+    builder_helper.info("compiler: " + compiler)
+    builder_helper.info("arch: " + arch)
+    builder_helper.info("mode: " + compile_mode)
+    builder_helper.info("tests: " + (has_test and "yes" or "no"))
 
 # Get modules configuration for this build
 try:
-    build_modules = _build_tools.modules.get_modules(app,
+    build_modules = modules_helper.get_modules(app,
         specific_modules=modules_to_build)
-    global_extlibs = _build_tools.modules.get_global_extlibs(app)
-    #extlibs = _build_tools.modules.get_modules_extlibs(app, build_modules)
+    global_extlibs = modules_helper.get_global_extlibs(app)
+    #extlibs = modules_helper.get_modules_extlibs(app, build_modules)
 except RuntimeError as e:
-    error(str(e))
+    builder_helper.error(str(e))
     Exit(1)
 
 if verbose:
-    debug("modules configuration:")
+    builder_helper.debug("modules configuration:")
     pp.pprint(build_modules)
-    debug("external libs:")
+    builder_helper.debug("external libs:")
     pp.pprint(global_extlibs)
     print()
 
@@ -96,7 +92,7 @@ def add_env_app_conf(env, key):
 base_env = Environment(
     # binaries path
     ENV = {
-        'PATH': getenv("PATH"),
+        'PATH': os.getenv("PATH"),
     },
     # compiler for c
     CC = "gcc",
@@ -129,20 +125,24 @@ if not verbose:
         LINKCOMSTR = "linking object files into executable: $TARGET",
     )
 
-# Setting path for build directories in shared env
-build_dir = Dir('build')
-base_env["APP_BUILD"] = build_dir
-for entry in ('bin', 'lib', 'include', 'obj', 'test', 'etc'):
-    entry_dir = build_dir.Dir(entry)
-    base_env["APP_BUILD_" + entry.upper()] = entry_dir
+bin_dir = Dir(os.getenv("BIN_PATH"))
+lib_dir = Dir(os.getenv("LIB_PATH"))
+extlib_dir = Dir(os.getenv("EXTLIB_PATH"))
+extlib_lib_dir = Dir(os.getenv("EXTLIB_LIB_PATH"))
+build_dir = Dir(os.getenv("BUILD_PATH"))
 
 # Setting path for extlibs bin, lib and include directories in shared env
-extlib_dir = build_dir.Dir("extlib")
 base_env["APP_EXTLIB"] = extlib_dir
 for entry in ('bin', 'lib', 'include'):
     entry_dir = extlib_dir.Dir(entry)
     base_env["APP_EXTLIB_" + entry.upper()] = entry_dir
 extlib_include_path = str(base_env["APP_EXTLIB_INCLUDE"])
+
+# Setting path for build directories in shared env
+base_env["APP_BUILD"] = build_dir
+for entry in ('bin', 'lib', 'include', 'obj', 'test', 'etc'):
+    entry_dir = build_dir.Dir(entry)
+    base_env["APP_BUILD_" + entry.upper()] = entry_dir
 
 # Setting those path for the compiler
 base_env.Append(
@@ -153,8 +153,8 @@ base_env.Append(
 if not distribution:
     base_env.Append(
         RPATH = [
-            abspath(str(base_env["APP_BUILD_LIB"])),
-            abspath(str(base_env["APP_EXTLIB_LIB"]))
+            os.path.abspath(str(base_env["APP_BUILD_LIB"])),
+            os.path.abspath(str(base_env["APP_EXTLIB_LIB"]))
         ],
     )
 
@@ -236,7 +236,7 @@ def build_test(self, src=None, libs=[], test_name=None):
     add_targets(src)
     if test_name is None:
         test_name = self["APP_MODULE"]
-    test_path = join("$APP_BUILD_TEST", "bin", test_name)
+    test_path = os.path.join("$APP_BUILD_TEST", "bin", test_name)
     env = self.Clone()
     if not libs:
         libs = [self['APP_MODULE']]
@@ -257,7 +257,7 @@ def build_lib(self, src=None, lib_name=None):
     module_name = self["APP_MODULE"]
     if lib_name is None:
         lib_name = module_name
-    lib_path = join("$APP_BUILD_LIB", lib_name)
+    lib_path = os.path.join("$APP_BUILD_LIB", lib_name)
     lib = self.SharedLibrary(lib_path, src)
     return lib
 
@@ -268,12 +268,12 @@ def build_bin(self, src, bin_name=None):
         bin_name = self['APP_MODULE']
         if compiler == "mingw":
             bin_name += ".exe"
-    bin_path = join("$APP_BUILD_BIN", bin_name)
+    bin_path = os.path.join("$APP_BUILD_BIN", bin_name)
     return self.Program(bin_path, src)
 
 def get_modules_headers(*args):
     """ Returns modules headers path """
-    return [join("#", m, "include") for m in args]
+    return [os.path.join("#", m, "include") for m in args]
 
 def get_modules_libname(*args):
     """ Returns modules shared library names """
@@ -292,16 +292,16 @@ def load_env_packages_specific_config(env, *configs):
         try:
             env.ParseConfig(config)
         except OSError as e:
-            warning("package {} not found".format(config))
+            builder_helper.warning("package {} not found".format(config))
 
 def copy_module_dir(module_name, dirname_to_copy):
     """ recursive copy of MODNAME/DIRNAME to build/DIRNAME """
     module_dir_input = Dir(module_name).Dir(dirname_to_copy)
     build_dir_output = build_dir.Dir(dirname_to_copy)
-    if isdir(str(module_dir_input)):
+    if os.path.isdir(str(module_dir_input)):
         if verbose:
-            info("copying resources '{}' of module: {}".format(dirname_to_copy, module_name))
-        copy_tree(module_dir_input.get_abspath(), build_dir_output.get_abspath())
+            builder_helper.info("copying resources '{}' of module: {}".format(dirname_to_copy, module_name))
+        distutils.dir_util.copy_tree(module_dir_input.get_abspath(), build_dir_output.get_abspath())
 
 # Configure env and call scons.py from every configured modules
 
@@ -311,7 +311,7 @@ build_path = str(base_env["APP_BUILD"])
 build_etc_path = str(base_env["APP_BUILD_ETC"])
 
 for modname, conf in build_modules.items():
-    info("building module: {}".format(modname))
+    builder_helper.info("building module: {}".format(modname))
     module_format = "{}_{}".format(app.name, modname)
     # Getting module's build configuration
     depends = conf.get("depends", [])
@@ -356,7 +356,7 @@ for modname, conf in build_modules.items():
     # read module's scons script file
     module_dir = Dir(modname)
     built[modname] = SConscript(module_dir.File("scons.py"),
-                                variant_dir = join(build_obj_path, modname),
+                                variant_dir = os.path.join(build_obj_path, modname),
                                 duplicate = 0,
                                 exports = ['env'])
     # copy module/etc content to build/etc
@@ -371,7 +371,7 @@ for modname, conf in build_modules.items():
 
 def sed_replace(file, replace_dic):
     for key, value in replace_dic.items():
-        subprocess_call(['sed', '-i', 's/{}/{}/g'.format(key, value), file])
+        subprocess.call(['sed', '-i', 's/{}/{}/g'.format(key, value), file])
 
 def fileinput_replace(file, replace_dic):
     for line in fileinput.input(file, inplace=True):
@@ -381,19 +381,19 @@ def fileinput_replace(file, replace_dic):
 def replace_res_in_build(to_replace, replace_dic):
     true_replace = []
     for pattern in to_replace:
-        ret = glob(join(build_path, pattern), recursive = True)
+        ret = glob.glob(os.path.join(build_path, pattern), recursive = True)
         if ret:
             true_replace += ret
         else:
             true_replace.append(pattern)
     if verbose:
-        debug("replacing values in build files - {} files to replace".format(len(true_replace)))
+        builder_helper.debug("replacing values in build files - {} files to replace".format(len(true_replace)))
     for file in true_replace:
-        if isfile(file) == False:
-            warning("file to replace '{}' does not exists".format(file))
+        if os.path.isfile(file) == False:
+            builder_helper.warning("file to replace '{}' does not exists".format(file))
             continue
         if verbose:
-            debug("replacing file: " + file)
+            builder_helper.debug("replacing file: " + file)
         sed_replace(file, replace_dic)
 
 # Replace every strings in specified files
@@ -421,7 +421,7 @@ try:
 
     Progress(progress_function, interval = 1)
 except (OSError, IOError) as e:
-    error("won't display progress - reason: " + str(e), file=sys.stderr)
+    builder_helper.error("won't display progress - reason: " + str(e), file=sys.stderr)
 
 ###############################################################################
 # Scons final build status
@@ -461,18 +461,36 @@ def build_status():
 def print_err(*args):
     print(*args, file=sys.stderr)
 
-def display_build_status():
-    success, failures_message = build_status()
+def windows_copy_libs_to_bin():
+    if build_platform != "windows":
+        return
+    if not os.path.isdir(str(bin_dir)):
+        return
+    libs_path = []
+    if os.path.isdir(str(extlib_lib_dir)):
+        libs_path.extend(glob.glob(os.path.join(str(extlib_lib_dir), "*.dll")))
+    if os.path.isdir(str(lib_dir)):
+        libs_path.extend(glob.glob(os.path.join(str(lib_dir), "*.dll")))
+    for lib_path in libs_path:
+        builder_helper.info("Copying '" + lib_path + "' to bin")
+        shutil.copyfile(lib_path, os.path.join(str(bin_dir), os.path.basename(lib_path)))
+
+def display_build_status(success, failures_message):
     if not success:
         print_err("==============================================================")
         print_err("scons: BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
         print_err(failures_message)
         print_err("==============================================================")
-        if hasattr(app, "on_build_fail"):
-            app.on_build_fail(build_modules.keys())
     else:
-        info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
-        if hasattr(app, "on_build_success"):
-            app.on_build_success(build_modules.keys(), str(build_dir))
+        builder_helper.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
 
-atexit.register(display_build_status)
+def after_build():
+    windows_copy_libs_to_bin()
+    success, failures_message = build_status()
+    display_build_status(success, failures_message)
+    if success and hasattr(app, "on_build_success"):
+        app.on_build_success(build_modules.keys(), str(build_dir))
+    elif hasattr(app, "on_build_fail"):
+        app.on_build_fail(build_modules.keys())
+
+atexit.register(after_build)

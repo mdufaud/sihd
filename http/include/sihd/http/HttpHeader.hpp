@@ -26,8 +26,8 @@ class HttpHeader
         void set_header_by_token(enum lws_token_indexes token, const std::string & value);
         void set_header(const std::string & name, const std::string & value);
 
-        void remove_by_token(enum lws_token_indexes token);
-        void remove_by_name(const std::string & name);
+        void remove_header_by_token(enum lws_token_indexes token);
+        void remove_header(const std::string & name);
 
         bool finalize(struct lws *wsi);
 

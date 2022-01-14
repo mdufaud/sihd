@@ -15,11 +15,12 @@ default_compiler = "gcc"
 specific_platform_compilers = {
     "windows": "mingw"
 }
+specific_compilers_platform = {v: k for k, v in specific_platform_compilers.items()}
 
 def is_android():
     return "ANDROID_ARGUMENT" in environ
 
-def get_platform():
+def __get_platform():
     env = getenv('platform', "")
     build_platform = (env or platform.system()).lower()
     if build_platform == "win":
@@ -28,13 +29,18 @@ def get_platform():
 
 def get_compiler():
     arch = get_arch()
-    build_platform = get_platform()
+    build_platform = __get_platform()
     backup_compiler = default_compiler
     if "arm" in arch:
         backup_compiler = "clang"
     env = getenv('compiler', "")
     backup_compiler = (env or backup_compiler).lower()
     return specific_platform_compilers.get(build_platform, backup_compiler)
+
+def get_platform():
+    compiler = get_compiler()
+    build_platform = __get_platform()
+    return specific_compilers_platform.get(compiler, build_platform)
 
 def get_compile_mode():
     return (getenv("mode", "") or "debug").lower()
@@ -146,7 +152,7 @@ def get_solaris_arch():
         return "x86_64" if kernel_bitness == "64bit" else "x86"
 
 def get_arch():
-    plat = get_platform()
+    plat = __get_platform()
     if plat == "sunos":
         arch = get_solaris_arch()
     else:
@@ -170,3 +176,6 @@ if __name__ == '__main__':
         print(get_compile_mode())
     elif sys.argv[1] == "android":
         print(is_android() and "true" or "false")
+    elif sys.argv[1] == "all":
+        lst = [get_arch(), get_platform(), get_compiler(), get_compile_mode(), is_android() and "true" or "false"]
+        print(" ".join(lst))

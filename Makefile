@@ -18,17 +18,6 @@ SHELL := /bin/sh
 GREP := /usr/bin/grep
 endif
 
-# Build path
-BUILD_PATH = $(HERE)/build
-LIB_PATH = $(BUILD_PATH)/lib
-INCLUDE_PATH = $(BUILD_PATH)/include
-TEST_PATH = $(BUILD_PATH)/test
-TEST_BIN_PATH = $(TEST_PATH)/bin
-BIN_PATH = $(BUILD_PATH)/bin
-OBJ_PATH = $(BUILD_PATH)/obj
-RES_PATH = $(BUILD_PATH)/etc
-EXTLIB_PATH = $(BUILD_PATH)/extlib
-
 BUILD_TOOLS = $(HERE)/_build_tools
 MAKEFILE_TOOLS = $(BUILD_TOOLS)/makefile
 
@@ -38,11 +27,28 @@ MAKEFILE_EXTRA = $(BUILD_EXTRA)/makefile
 BUILDER = $(BUILD_TOOLS)/builder.py
 
 # Builder + env conf
-ARCH = $(shell arch=$(arch) python3 $(BUILDER) arch)
-PLATFORM = $(shell platform=$(platform) compiler=$(compiler) python3 $(BUILDER) platform)
-COMPILER = $(shell platform=$(platform) compiler=$(compiler) python3 $(BUILDER) compiler)
-COMPILE_MODE = $(shell mode=$(mode) python3 $(BUILDER) mode)
-ANDROID = $(shell python3 $(BUILDER) android)
+
+BUILDER_RESP = $(shell arch=$(arch) mode=$(mode) platform=$(platform) compiler=$(compiler) python3 $(BUILDER) all)
+ARCH = $(word 1, $(BUILDER_RESP))
+PLATFORM = $(word 2, $(BUILDER_RESP))
+COMPILER = $(word 3, $(BUILDER_RESP))
+COMPILE_MODE = $(word 4, $(BUILDER_RESP))
+ANDROID = $(word 5, $(BUILDER_RESP))
+
+# Build path
+
+# BUILD_PATH = $(HERE)/build
+BUILD_ENTRY_PATH = $(HERE)/build
+EXTLIB_PATH = $(BUILD_ENTRY_PATH)/extlib
+EXTLIB_LIB_PATH = $(EXTLIB_PATH)/lib
+BUILD_PATH = $(BUILD_ENTRY_PATH)/$(PLATFORM)_$(ARCH)/$(COMPILE_MODE)
+LIB_PATH = $(BUILD_PATH)/lib
+INCLUDE_PATH = $(BUILD_PATH)/include
+TEST_PATH = $(BUILD_PATH)/test
+TEST_BIN_PATH = $(TEST_PATH)/bin
+BIN_PATH = $(BUILD_PATH)/bin
+OBJ_PATH = $(BUILD_PATH)/obj
+RES_PATH = $(BUILD_PATH)/etc
 
 ##########
 # Includes
@@ -61,7 +67,7 @@ SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(UTILS_LOGICAL_CORE_NUMBER) $(SCON
 CONAN_PATH = $(BUILD_PATH)/conan
 CONAN_PROFILES_PATH = $(BUILD_TOOLS)/conan_profiles
 CONAN_PROFILE = $(CONAN_PROFILES_PATH)/$(ARCH)/$(COMPILER).txt
-CONAN_PROFILE_ARG = 
+CONAN_PROFILE_ARG =
 CONAN_INSTALL = conan install $(HERE) -if $(CONAN_PATH) $(CONAN_INSTALL_PATH) $(CONAN_PROFILE_ARG) $(CONAN_ARGS)
 # checking platform env to select a conan profile
 ifneq ("$(wildcard $(CONAN_PROFILE))", "")
@@ -76,6 +82,7 @@ export APP_NAME
 export TEST_PATH
 export LIB_PATH
 export EXTLIB_PATH
+export EXTLIB_LIB_PATH
 export BUILD_PATH
 export BIN_PATH
 export RES_PATH
@@ -136,7 +143,7 @@ get-module-name = $(word 2, $(subst _, , $(basename $1)))
 
 TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
 TEST_ARGS =
-DEBUGGER_ARGS = 
+DEBUGGER_ARGS =
 
 # find string 'test' in target
 ifneq ($(findstring test,$(word 1, $(MAKECMDGOALS))), )
@@ -189,7 +196,7 @@ TEST_ARGS = --gtest_death_test_style=threadsafe --gtest_shuffle
 
 ifeq ($(MODULES_NAME),all)
 	TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
-	MODULES_NAME = 
+	MODULES_NAME =
 endif
 
 ifneq ($(MODULES_NAME), )
@@ -201,7 +208,7 @@ ifeq ($(MODULES_NAME),ls)
 ifeq ($(TEST_NAME), )
 	TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
 	TEST_NAME = ls
-	MODULES_NAME = 
+	MODULES_NAME =
 endif
 endif
 

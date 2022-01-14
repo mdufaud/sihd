@@ -46,8 +46,6 @@ class HttpServer:   public sihd::util::Node,
 
         virtual bool get_resource_path(const std::string & path, std::string & res);
 
-        const struct lws *current_lws() const { return _lws_current_wsi_ptr; }
-
     protected:
         struct HttpSession
         {
@@ -79,11 +77,15 @@ class HttpServer:   public sihd::util::Node,
             void *in;
             size_t len;
             int rc;
-            // http request
+            // current http request type
             HttpRequest::RequestType request_type;
-            size_t content_size;
+            // current http body content
             sihd::util::ArrUByte *content;
+            // current http body size
+            size_t content_size;
+            // current HttpRequest with uri args
             HttpRequest *request;
+            // if true lws_http_transaction_completed will be called
             bool should_complete_transaction;
         };
 
@@ -99,11 +101,16 @@ class HttpServer:   public sihd::util::Node,
         static int _global_http_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
         int _lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
 
+        HttpRequest::RequestType _get_request_type(struct lws *wsi);
+
         virtual int _on_http_request(HttpSession *session, const std::string & path);
+        virtual int _on_http_body(HttpSession *session, const uint8_t *buf, size_t size);
+        virtual int _on_http_body_end(HttpSession *session);
+        virtual int _on_http_request_end();
+        virtual int _on_http_file_completion_end();
+
         virtual bool _check_webservices(HttpSession *session, const std::string & path);
         virtual bool _serve_webservice(HttpSession *session, WebService *webservice, const HttpRequest & request);
-
-        HttpRequest::RequestType _get_request_type(struct lws *wsi);
 
         // websocket protocol callbacks
         static int _global_websocket_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
@@ -114,7 +121,7 @@ class HttpServer:   public sihd::util::Node,
         virtual int _on_websocket_write(IWebsocketHandler *handler, WebsocketSession *session);
         virtual int _on_websocket_close(IWebsocketHandler *handler, WebsocketSession *session);
 
-        // add protocols
+        // protocols
         virtual bool _add_protocol(const char *name, lws_callback_function *callback, size_t struct_size, size_t tx_packet_size = 0);
         virtual bool _add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size = 0);
 
@@ -153,7 +160,6 @@ class HttpServer:   public sihd::util::Node,
         lws_context *_lws_context_ptr;
         size_t _protocols_count;
         lws_protocols *_lws_protocols_ptr;
-        struct lws *_lws_current_wsi_ptr;
 
         std::vector<IWebsocketHandler *> _websocket_handler_lst;
         std::string _encoding;

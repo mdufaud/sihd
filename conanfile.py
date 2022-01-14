@@ -48,7 +48,8 @@ post_treatment_libs = {
     "*lua.*": {"from": "lua.", "to": "lua5.3."}
 }
 current_filename = inspect.getframeinfo(inspect.currentframe()).filename
-current_dir = os.path.dirname(os.path.abspath(current_filename))
+extlib_path = os.getenv("EXTLIB_PATH")
+extlib_lib_path =  os.getenv("EXTLIB_LIB_PATH")
 
 class ConanAppDependencies(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
@@ -63,8 +64,6 @@ class ConanAppDependencies(ConanFile):
         print("")
 
     def imports(self):
-        extlib_path = os.path.join("..", "extlib")
-        extlib_lib_path = os.path.join(extlib_path, "lib")
         self.copy("*.so*", dst = extlib_lib_path, src = "lib")
         self.copy("*.a*", dst = extlib_lib_path, src = "lib")
         self.copy("*.dylib*", dst = extlib_lib_path, src = "lib")
@@ -74,8 +73,6 @@ class ConanAppDependencies(ConanFile):
 
 def post_process():
     import glob
-    extlib_path = os.path.join(current_dir, "build", "extlib")
-    extlib_lib_path = os.path.join(extlib_path, "lib")
     for match, opt in post_treatment_libs.items():
         pattern = os.path.join(extlib_lib_path, match)
         results = glob.glob(pattern)
