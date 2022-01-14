@@ -29,16 +29,16 @@ BUILDER = $(BUILD_TOOLS)/builder.py
 # Builder + env conf
 
 BUILDER_RESP = $(shell arch=$(arch) mode=$(mode) platform=$(platform) compiler=$(compiler) python3 $(BUILDER) all)
-ARCH = $(word 1, $(BUILDER_RESP))
-PLATFORM = $(word 2, $(BUILDER_RESP))
-COMPILER = $(word 3, $(BUILDER_RESP))
-COMPILE_MODE = $(word 4, $(BUILDER_RESP))
+PLATFORM = $(word 1, $(BUILDER_RESP))
+ARCH = $(word 2, $(BUILDER_RESP))
+COMPILE_MODE = $(word 3, $(BUILDER_RESP))
+COMPILER = $(word 4, $(BUILDER_RESP))
 ANDROID = $(word 5, $(BUILDER_RESP))
 
 # Build path
 
 BUILD_ENTRY_PATH = $(HERE)/build
-BUILD_PATH = $(BUILD_ENTRY_PATH)/$(PLATFORM)_$(ARCH)/$(COMPILE_MODE)
+BUILD_PATH = $(BUILD_ENTRY_PATH)/$(PLATFORM)-$(ARCH)/$(COMPILE_MODE)
 EXTLIB_PATH = $(BUILD_PATH)/extlib
 EXTLIB_LIB_PATH = $(EXTLIB_PATH)/lib
 LIB_PATH = $(BUILD_PATH)/lib
@@ -49,15 +49,9 @@ BIN_PATH = $(BUILD_PATH)/bin
 OBJ_PATH = $(BUILD_PATH)/obj
 RES_PATH = $(BUILD_PATH)/etc
 
-##########
-# Includes
-##########
+# Dist path
 
-include $(MAKEFILE_TOOLS)/logger.mk
-include $(MAKEFILE_TOOLS)/utils.mk
-include $(MAKEFILE_TOOLS)/templates.mk
-
-include $(MAKEFILE_EXTRA)/extra.mk
+DIST_PATH = $(HERE)/dist
 
 # Scons
 SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(UTILS_LOGICAL_CORE_NUMBER) $(SCONS_ARGS)
@@ -72,6 +66,16 @@ CONAN_INSTALL = conan install $(HERE) -if $(CONAN_PATH) $(CONAN_INSTALL_PATH) $(
 ifneq ("$(wildcard $(CONAN_PROFILE))", "")
 	CONAN_PROFILE_ARG = --profile $(CONAN_PROFILE)
 endif
+
+##########
+# Includes
+##########
+
+include $(MAKEFILE_TOOLS)/logger.mk
+include $(MAKEFILE_TOOLS)/utils.mk
+include $(MAKEFILE_TOOLS)/templates.mk
+
+include $(MAKEFILE_EXTRA)/extra.mk
 
 #########
 # Exports
@@ -290,7 +294,7 @@ cleaninstall:
 
 fclean:
 	@$(call log_info,makefile,removing build)
-	@rm -rf $(BUILD_PATH)
+	@rm -rf $(BUILD_ENTRY_PATH) $(DIST_PATH)
 
 ### Makefile
 .PHONY: install build verbose dist fclean clean cleaninstall

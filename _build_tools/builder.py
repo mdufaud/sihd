@@ -165,7 +165,7 @@ def get_arch():
             arch = ek2_architectures[arch]
         elif arch in architectures:
             arch = architectures[arch]
-    return os.getenv('arch', arch)
+    return os.getenv('arch', "") or arch
 
 build_compiler = get_compiler()
 build_platform = get_platform()
@@ -178,11 +178,13 @@ build_root_path = abspath(dirname(dirname(__file__)))
 build_dist_path = join(build_root_path, "dist")
 
 build_entry_path = join(build_root_path, "build")
-build_extlib_path = join(build_entry_path, "extlib")
+build_path = join(build_entry_path, "{}-{}".format(build_platform, build_architecture), build_mode)
+
+build_extlib_path = join(build_path, "extlib")
 build_extlib_lib_path = join(build_extlib_path, "lib")
 build_extlib_hdr_path = join(build_extlib_path, "include")
 build_extlib_bin_path = join(build_extlib_path, "bin")
-build_path = join(build_entry_path, "{}_{}".format(build_platform, build_architecture), build_mode)
+
 build_bin_path = join(build_path, "bin")
 build_hdr_path = join(build_path, "include")
 build_etc_path = join(build_path, "etc")
@@ -248,5 +250,5 @@ if __name__ == '__main__':
     elif sys.argv[1] == "android":
         print(build_on_android and "true" or "false")
     elif sys.argv[1] == "all":
-        lst = [build_architecture, build_platform, build_compiler, build_mode, build_on_android and "true" or "false"]
+        lst = [build_platform, build_architecture, build_mode, build_compiler, build_on_android and "true" or "false"]
         print(" ".join(lst))
