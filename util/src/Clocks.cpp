@@ -6,7 +6,7 @@ namespace sihd::util
 SystemClock Clock::default_clock;
 
 SteadyClock::SteadyClock()
-{   
+{
 }
 
 SteadyClock::~SteadyClock()
@@ -24,7 +24,7 @@ bool    SteadyClock::is_steady()
 }
 
 SystemClock::SystemClock()
-{   
+{
 }
 
 SystemClock::~SystemClock()

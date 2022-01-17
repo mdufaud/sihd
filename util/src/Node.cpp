@@ -109,7 +109,9 @@ bool    Node::delete_child_entry(Node::ChildEntry *entry)
     if (entry == nullptr)
         return false;
     if (entry->ownership && entry->obj != nullptr)
+    {
         delete entry->obj;
+    }
     auto it = std::find(_children_keys.begin(), _children_keys.end(), entry->name);
     if (it != _children_keys.end())
         _children_keys.erase(it);

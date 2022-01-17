@@ -5,7 +5,7 @@ namespace sihd::util
 {
 
 LoggerManager::LoggerManager()
-{   
+{
 }
 
 LoggerManager::~LoggerManager()

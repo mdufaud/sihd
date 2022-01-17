@@ -7,7 +7,7 @@ SIHD_UTIL_REGISTER_FACTORY(Message);
 
 LOGGER;
 
-Message::Message(const std::string & name, Node *parent): Node(name, parent) 
+Message::Message(const std::string & name, Node *parent): Node(name, parent)
 {
     _total_size = 0;
     _finished = false;

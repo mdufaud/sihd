@@ -41,10 +41,16 @@ namespace test
         pybind11::scoped_interpreter guard{};
         EXPECT_NO_THROW(pybind11::exec(R"(
             import sihd_util
-            root = sihd_util.Node("root", None)
-            named = sihd_util.Named("child", root)
+            root = sihd_util.Node("root")
+            parent1 = sihd_util.Node("parent1", root)
+            parent2 = sihd_util.Node("parent2", root)
+            sub_parent1 = sihd_util.Node("sub_parent", parent1)
+            sub_parent2 = sihd_util.Node("sub_parent", parent2)
+            named1 = sihd_util.Named("child", sub_parent1)
+            named2 = sihd_util.Named("child", sub_parent2)
+            named_parentless = sihd_util.Named("orphan")
             print(root.get_name())
-            print(named.get_name())
+            print(named1.get_name())
         )"));
     }
 }

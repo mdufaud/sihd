@@ -11,7 +11,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <signal.h>
 #include <limits.h>
 
 // for get_max_rss / get_peak_rss

@@ -1,6 +1,9 @@
 import platform
 import sys
 import os
+import glob
+import shutil
+import tarfile
 from os.path import join, dirname, abspath
 sys.path.append(".")
 sys.dont_write_bytecode = True
@@ -171,7 +174,10 @@ build_compiler = get_compiler()
 build_platform = get_platform()
 build_architecture = get_arch()
 build_mode = get_compile_mode()
+
 build_on_android = is_android()
+build_for_windows = build_platform == "windows"
+build_for_linux = build_platform == "linux"
 
 build_root_path = abspath(dirname(dirname(__file__)))
 
@@ -191,20 +197,38 @@ build_etc_path = join(build_path, "etc")
 build_lib_path = join(build_path, "lib")
 build_test_path = join(build_path, "test")
 
+def copy_dll_to_bin():
+    if not os.path.isdir(build_bin_path):
+        return
+    libs_path = []
+    if os.path.isdir(build_extlib_lib_path):
+        libs_path.extend(glob.glob(os.path.join(build_extlib_lib_path, "*.dll")))
+    if os.path.isdir(build_lib_path):
+        libs_path.extend(glob.glob(os.path.join(build_lib_path, "*.dll")))
+    for lib_path in libs_path:
+        info("Copying '" + lib_path + "' to bin")
+        shutil.copyfile(lib_path, os.path.join(build_bin_path, os.path.basename(lib_path)))
+
 def create_tar_package(app):
-    import tarfile
     os.makedirs(build_dist_path, exist_ok = True)
     tar_path = join(build_dist_path, "{}-{}.tar.gz".format(app.name, app.version))
     info("compressing build to: " + tar_path)
     with tarfile.open(tar_path, "w:gz") as tar:
-        tar.add(build_hdr_path, arcname = os.path.basename(build_hdr_path))
-        tar.add(build_lib_path, arcname = os.path.basename(build_lib_path))
-        tar.add(build_bin_path, arcname = os.path.basename(build_bin_path))
-        tar.add(build_etc_path, arcname = os.path.basename(build_etc_path))
+        if os.path.isdir(build_hdr_path):
+            tar.add(build_hdr_path, arcname = os.path.basename(build_hdr_path))
+        if os.path.isdir(build_lib_path):
+            tar.add(build_lib_path, arcname = os.path.basename(build_lib_path))
+        if os.path.isdir(build_bin_path):
+            tar.add(build_bin_path, arcname = os.path.basename(build_bin_path))
+        if os.path.isdir(build_etc_path):
+            tar.add(build_etc_path, arcname = os.path.basename(build_etc_path))
         # extlibs
-        tar.add(build_extlib_hdr_path, arcname = os.path.basename(build_hdr_path))
-        tar.add(build_extlib_lib_path, arcname = os.path.basename(build_lib_path))
-        tar.add(build_extlib_bin_path, arcname = os.path.basename(build_bin_path))
+        if os.path.isdir(build_extlib_hdr_path):
+            tar.add(build_extlib_hdr_path, arcname = os.path.basename(build_hdr_path))
+        if not build_for_windows and os.path.isdir(build_extlib_lib_path):
+            tar.add(build_extlib_lib_path, arcname = os.path.basename(build_lib_path))
+        if os.path.isdir(build_extlib_bin_path):
+            tar.add(build_extlib_bin_path, arcname = os.path.basename(build_bin_path))
 
 # package dh-make
 def create_apt_package(app):

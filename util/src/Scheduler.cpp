@@ -8,7 +8,7 @@ SIHD_UTIL_REGISTER_FACTORY(Scheduler);
 
 LOGGER;
 
-Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent) 
+Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent)
 {
     _clock_ptr = &_default_clock;
     overrun_at = time::micro(300);

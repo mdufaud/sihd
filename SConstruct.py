@@ -9,7 +9,6 @@ import os
 import fileinput
 import subprocess
 # Utils for copying resources to build
-import shutil
 import distutils.dir_util
 # Pretty utility for verbosis
 from pprint import PrettyPrinter
@@ -58,6 +57,7 @@ if verbose:
     builder_helper.info("arch: " + arch)
     builder_helper.info("mode: " + compile_mode)
     builder_helper.info("tests: " + (has_test and "yes" or "no"))
+    builder_helper.info("sanitizer: " + (sanitize and "yes" or "no"))
 
 # Get modules configuration for this build
 try:
@@ -179,7 +179,6 @@ if compiler == "clang":
         )
     base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
     add_env_app_conf(base_env, "clang")
-
 # Mingw build
 elif compiler == "mingw":
     base_env.Replace(
@@ -188,6 +187,9 @@ elif compiler == "mingw":
         SHLIBSUFFIX = ".dll",
         LIBPREFIX = "",
     )
+    if sanitize:
+        builder_helper.error("cannot use address sanitizer with mingw")
+        Exit(1)
     add_env_app_conf(base_env, "mingw")
 # GCC build
 elif compiler == "gcc":
@@ -463,20 +465,6 @@ def build_status():
 def print_err(*args):
     print(*args, file=sys.stderr)
 
-def windows_copy_libs_to_bin():
-    if build_platform != "windows":
-        return
-    if not os.path.isdir(str(bin_dir)):
-        return
-    libs_path = []
-    if os.path.isdir(str(extlib_lib_dir)):
-        libs_path.extend(glob.glob(os.path.join(str(extlib_lib_dir), "*.dll")))
-    if os.path.isdir(str(lib_dir)):
-        libs_path.extend(glob.glob(os.path.join(str(lib_dir), "*.dll")))
-    for lib_path in libs_path:
-        builder_helper.info("Copying '" + lib_path + "' to bin")
-        shutil.copyfile(lib_path, os.path.join(str(bin_dir), os.path.basename(lib_path)))
-
 def display_build_status(success, failures_message):
     if not success:
         print_err("==============================================================")
@@ -493,7 +481,8 @@ def after_build():
         app.on_build_success(build_modules.keys(), str(build_dir), str(lib_dir))
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules.keys())
-    windows_copy_libs_to_bin()
+    if builder_helper.build_for_windows:
+        builder_helper.copy_dll_to_bin()
     if success and distribution:
         builder_helper.distribute_app(app)
 

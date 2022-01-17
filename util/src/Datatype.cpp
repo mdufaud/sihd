@@ -11,7 +11,7 @@ std::vector<std::string>     Datatype::dt_to_str = {
 
 std::map<std::string, Type>   Datatype::dt_from_str = {
     {"none", DNONE}, {"bool", DBOOL}, {"char", DCHAR}, {"byte", DBYTE}, {"ubyte", DUBYTE},
-    {"short", DSHORT}, {"ushort", DUSHORT}, {"int", DINT}, {"uint", DUINT}, 
+    {"short", DSHORT}, {"ushort", DUSHORT}, {"int", DINT}, {"uint", DUINT},
     {"long", DLONG}, {"ulong", DULONG}, {"float", DFLOAT}, {"double", DDOUBLE},
     {"string", DSTRING}, {"object", DOBJECT}
 };

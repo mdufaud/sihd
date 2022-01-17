@@ -239,6 +239,11 @@ endif #test
 #########
 
 ifeq ($(word 1, $(MAKECMDGOALS)), dep)
+
+ifeq (, $(shell which conan))
+$(error "Makefile: no python-conan detected - it is needed to get dependencies for the project.")
+endif
+
 .PHONY: dep
 
 dep: intro

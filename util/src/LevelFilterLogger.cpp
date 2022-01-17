@@ -5,7 +5,7 @@ namespace sihd::util
 
 LevelFilterLogger::LevelFilterLogger(LogLevel lvl, bool match):
     level(lvl), match(match)
-{   
+{
 }
 
 LevelFilterLogger::LevelFilterLogger(const std::string & lvl, bool match):

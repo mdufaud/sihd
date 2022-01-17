@@ -2,6 +2,7 @@
 # define __SIHD_UTIL_SMARTNODEPTR_HPP__
 
 # include <sihd/util/Named.hpp>
+# include <memory>
 
 namespace sihd::util
 {
@@ -14,12 +15,7 @@ struct SmartNodeDeleter
         if (ptr != nullptr)
         {
             Named *n = dynamic_cast<Named *>(ptr);
-            if (n != nullptr)
-            {
-                if (n->is_owned_by_parent() == false)
-                    delete n;
-            }
-            else
+            if (n == nullptr || n->is_owned_by_parent() == false)
                 delete ptr;
         }
     }
@@ -30,4 +26,4 @@ using SmartNodePtr = std::unique_ptr<T, SmartNodeDeleter<T>>;
 
 }
 
-#endif 
+#endif

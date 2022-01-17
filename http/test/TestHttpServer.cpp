@@ -56,7 +56,7 @@ namespace test
             SimpleHttpServer(): HttpServer("http-server-test")
             {
                 // HttpServer protected call
-                this->_add_websocket(_name, this);
+                this->_add_websocket(_protoname, this);
                 _webservice = this->add_child<WebService>("web");
                 this->setup_webservice_entry_points();
             }
@@ -93,7 +93,7 @@ namespace test
                 {
                     LOG(info, req.request_to_string(req.request_type()) << " request received");
                     resp.http_header().set_status(HTTP_STATUS_OK);
-                    resp.set_content({"hello", "world"});
+                    resp.set_json_content({"hello", "world"});
                     ++_ndelete;
                 },
                 HttpRequest::REQ_DELETE);
@@ -151,7 +151,7 @@ namespace test
             }
 
             // websocket
-            const char *_name = "proto-two";
+            const char *_protoname = "proto-two";
             int _nopen = 0;
             int _nread = 0;
             int _nwrite = 0;

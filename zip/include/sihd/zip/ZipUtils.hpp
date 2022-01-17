@@ -14,7 +14,7 @@ class ZipUtils
         static std::string get_error(zip_t *ptr);
 
     protected:
-    
+
     private:
         ZipUtils() {};
         ~ZipUtils() {};

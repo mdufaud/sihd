@@ -2,6 +2,7 @@
 # define __SIHD_UTIL_NAMEDFACTORY_HPP__
 
 # include <sihd/util/Named.hpp>
+# include <sihd/util/SmartNodePtr.hpp>
 
 // creating a new known symbol to go around C++ class name mangling
 # define SIHD_UTIL_REGISTER_FACTORY(class) \
@@ -26,7 +27,7 @@ class NamedFactory
                             Node *parent = nullptr);
 
     protected:
-    
+
     private:
         NamedFactory() {};
         virtual ~NamedFactory() {};

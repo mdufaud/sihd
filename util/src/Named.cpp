@@ -128,7 +128,7 @@ const Named   *Named::cfind(const Named *from, const std::string & path) const
     for (const std::string & name : tokens)
     {
         if (child != nullptr)
-            parent = Node::to_cnode(child);  
+            parent = Node::to_cnode(child);
         if (parent == nullptr)
             return nullptr;
         child = parent->get_child(name);

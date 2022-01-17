@@ -56,7 +56,6 @@ modules = {
     "ssh": {
         # libssh-dev
         "libs": ['ssh'],
-        #"depends": ['net'],
         "depends": ['util'],
     },
     "http": {
@@ -84,21 +83,21 @@ modules = {
         "depends": ['util'],
     },
     "_module_test": {
-        "depends": ['pcap'],
+        "depends": ['pcap', 'http'],
     },
 }
 # conditionnals - only if activated
 conditionnal_modules = {
     "lua": {
         "depends": ['util'],
+        "uselibs": ['sol2'],
         "conditionnal-env": "lua",
         "conditionnal-depends": ['core', 'net', 'http'],
+        "flags": ["-Wno-unused-parameter"],
         "parse-configs": [
             "pkg-config --cflags --libs lua-5.3",
             "pkg-config --cflags --libs lua53",
         ],
-        "uselibs": ['sol2'],
-        "flags": ["-Wno-unused-parameter"],
     },
     "luabin": {
         "depends": ['lua'],
@@ -107,12 +106,13 @@ conditionnal_modules = {
     },
     "py": {
         "depends": ['util'],
+        "uselibs": ['pybind11'],
         "conditionnal-env": "py",
         "conditionnal-depends": ['core', 'net', 'http'],
-        "uselibs": ['pybind11'],
+        # pip install python-config
         "parse-configs": [
             'python-config --cflags --ldflags --embed',
-            'python3-config --cflags --ldflags',
+            'python3-config --cflags --ldflags --embed',
         ],
     }
 }

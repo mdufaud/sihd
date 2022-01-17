@@ -4,6 +4,7 @@
 # include <sihd/util/platform.hpp>
 # include <sihd/util/IRunnable.hpp>
 
+# include <signal.h>
 # include <sys/stat.h> // stat
 
 # if !defined(__SIHD_WINDOWS__)

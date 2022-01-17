@@ -38,6 +38,8 @@ class HttpServer:   public sihd::util::Node,
         bool set_poll_frequency(double freq);
         bool set_ssl_cert_path(const std::string & path);
         bool set_ssl_cert_key(const std::string & path);
+        bool set_404_path(const std::string & path);
+        bool set_servername(const std::string & path);
         bool add_resource_path(const std::string & path);
         bool remove_resource_path(const std::string & path);
 
@@ -129,7 +131,12 @@ class HttpServer:   public sihd::util::Node,
         virtual bool _check_all_protocols();
 
         virtual bool _send_http_headers(struct lws *wsi, HttpHeader & header);
-        virtual bool _send_404(struct lws *wsi);
+        virtual bool _send_http_no_content(struct lws *wsi, int code);
+        /*
+            code = HTTP_STATUS_MOVED_PERMANENTLY || HTTP_STATUS_FOUND || HTTP_STATUS_SEE_OTHER || HTTP_STATUS_NOT_MODIFIED
+        */
+        virtual bool _send_http_redirect(struct lws *wsi, const std::string & redirect_path, int code = HTTP_STATUS_MOVED_PERMANENTLY);
+        virtual bool _send_404(struct lws *wsi, const std::string & html_404);
 
         virtual const char *_get_client_ip(struct lws *wsi);
         std::vector<std::string> _get_uri_args(struct lws *wsi);
@@ -164,7 +171,8 @@ class HttpServer:   public sihd::util::Node,
         std::vector<IWebsocketHandler *> _websocket_handler_lst;
         std::string _encoding;
         HttpHeader _http_header;
-        std::string _404_content;
+
+        std::string _404_page_path;
 
         // mimetype database
         Mime _mime;

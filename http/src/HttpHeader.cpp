@@ -2,7 +2,7 @@
 #include <sihd/util/Logger.hpp>
 
 #ifndef SIHD_HTTP_HEADERS_BUFSIZE
-# define SIHD_HTTP_HEADERS_BUFSIZE 4096
+# define SIHD_HTTP_HEADERS_BUFSIZE (LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE)
 #endif
 
 namespace sihd::http

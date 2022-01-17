@@ -103,7 +103,7 @@ void    Worker::_worker_set_running(bool active)
     }
 }
 
-std::string &   Worker::_worker_get_name()    
+std::string &   Worker::_worker_get_name()
 {
     return _worker_thread_name;
 }

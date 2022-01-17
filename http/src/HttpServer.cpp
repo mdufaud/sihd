@@ -34,7 +34,6 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
     _worker.set_runnable(&_polling_scheduler);
     _worker.set_frequency(30);
 
-    _404_content = "<html><body><h1>404 file not found !</h1></body></html>";
     _http_header.set_servername(this->get_name());
     _http_header.set_header("Access-Control-Allow-Origin:", "*");
     this->set_encoding("utf-8");
@@ -123,6 +122,19 @@ bool    HttpServer::remove_resource_path(const std::string & path)
     return true;
 }
 
+bool    HttpServer::set_404_path(const std::string & path)
+{
+    _404_page_path = path;
+    return true;
+}
+
+bool    HttpServer::set_servername(const std::string & name)
+{
+    _http_header.set_servername(name);
+    return true;
+}
+
+
 bool    HttpServer::stop()
 {
     {
@@ -146,6 +158,8 @@ bool    HttpServer::run()
     lws_info.gid = -1;
     lws_info.uid = -1;
     lws_info.user = this;
+    if (_404_page_path.empty() == false)
+        lws_info.error_document_404 = _404_page_path.c_str();
     if (_lws_mount_ptr != nullptr)
         lws_info.mounts = _lws_mount_ptr;
     if (_ssl_cert_path.empty() == false && _ssl_cert_key.empty() == false)
@@ -351,7 +365,9 @@ int     HttpServer::_on_http_request(HttpSession *session, const std::string & p
     }
     if (this->_check_webservices(session, path))
         return session->rc;
-    return this->_send_404(session->wsi) ? 0 : -1;
+    if (_404_page_path.empty())
+        return this->_send_404(session->wsi, "<html><body><h1>404 file not found</h1></body></html>") ? 0 : -1;
+    return rc;
 }
 
 int     HttpServer::_on_http_body(HttpSession *session, const uint8_t *buf, size_t size)
@@ -476,6 +492,7 @@ bool    HttpServer::_serve_webservice(HttpSession *session, WebService *webservi
         return false;
     std::string rest_of_path(path_view.substr(first_slash_idx + 1));
     HttpResponse response(&_mime);
+    response.http_header().set_servername(_http_header.servername());
     if (webservice->call(rest_of_path, request, response))
     {
         // webservice called
@@ -613,6 +630,28 @@ std::vector<std::string>   HttpServer::_get_uri_args(struct lws *wsi)
     return ret;
 }
 
+bool    HttpServer::_send_404(struct lws *wsi, const std::string & html_404)
+{
+    _http_header.set_common(HTTP_STATUS_NOT_FOUND, _mime.get("html"), html_404.size());
+    this->_send_http_headers(wsi, _http_header);
+    return lws_write_http(wsi, html_404.c_str(), html_404.size()) == (int)html_404.size();
+}
+
+bool    HttpServer::_send_http_no_content(struct lws *wsi, int code)
+{
+    _http_header.set_common(code, _mime.get("html"), 0);
+    return this->_send_http_headers(wsi, _http_header);
+}
+
+bool    HttpServer::_send_http_redirect(struct lws *wsi, const std::string & redirect_path, int code)
+{
+    _http_header.set_common(code, _mime.get("html"), 0);
+    _http_header.set_header_by_token(WSI_TOKEN_HTTP_LOCATION, redirect_path);
+    bool ret = this->_send_http_headers(wsi, _http_header);
+    _http_header.remove_header_by_token(WSI_TOKEN_HTTP_LOCATION);
+    return ret;
+}
+
 bool    HttpServer::_send_http_headers(struct lws *wsi, HttpHeader & header)
 {
     if (header.finalize(wsi) == false)
@@ -623,13 +662,6 @@ bool    HttpServer::_send_http_headers(struct lws *wsi, HttpHeader & header)
         return false;
     }
     return true;
-}
-
-bool    HttpServer::_send_404(struct lws *wsi)
-{
-    _http_header.set_common(HTTP_STATUS_NOT_FOUND, _mime.get("html"), _404_content.size());
-    this->_send_http_headers(wsi, _http_header);
-    return lws_write_http(wsi, _404_content.c_str(), _404_content.size()) == (int)_404_content.size();
 }
 
 bool    HttpServer::_add_protocol(const char *name, lws_callback_function *callback,
