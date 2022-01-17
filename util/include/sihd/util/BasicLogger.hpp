@@ -15,11 +15,11 @@ class BasicLogger: public ALogger
         virtual void log(const LogInfo & info, const char *msg) override;
 
         bool print_thread_id;
-        
+
     private:
         FILE *_output;
 };
 
 }
 
-#endif 
+#endif

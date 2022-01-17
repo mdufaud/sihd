@@ -13,7 +13,7 @@ class Num
         static size_t get_size(ssize_t number, uint16_t base);
 
     protected:
-    
+
     private:
         Num() {};
         virtual ~Num() {};
@@ -21,4 +21,4 @@ class Num
 
 }
 
-#endif 
+#endif

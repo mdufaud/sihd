@@ -24,7 +24,7 @@ class Lockable
         std::lock_guard<std::timed_mutex> lock_guard() { return std::lock_guard(_mutex); }
 
     protected:
-    
+
     private:
         std::timed_mutex _mutex;
         std::unique_lock<std::timed_mutex> _unique_lock;

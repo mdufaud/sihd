@@ -20,4 +20,4 @@ class IMessageField: public ICloneable<IMessageField>
 };
 }
 
-#endif 
+#endif

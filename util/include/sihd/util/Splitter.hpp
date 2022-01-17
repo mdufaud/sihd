@@ -30,7 +30,7 @@ class Splitter
         std::string get_next_token(const char *s, int *idx) const;
 
     protected:
-    
+
     private:
         // return the size of the delimiter matching the string c or -1
         int _get_delimiter_offset(const char *c) const;

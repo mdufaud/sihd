@@ -19,7 +19,7 @@ namespace test
             int n_start = 0;
             int n_stop = 0;
             int n_reset = 0;
-    
+
             virtual bool    is_running() const { return n_start > 0; }
 
             virtual bool    do_setup()
@@ -158,7 +158,7 @@ namespace test
         // cannot do previous states
         EXPECT_FALSE(service.setup());
         EXPECT_FALSE(service.init());
-        
+
         // stop
         EXPECT_TRUE(service.stop());
         EXPECT_EQ(service.n_stop, 1);
@@ -189,7 +189,7 @@ namespace test
         EXPECT_FALSE(service.reset());
         EXPECT_EQ(service.n_reset, 1);
 
-        // setup -> rest 
+        // setup -> rest
         EXPECT_TRUE(service.setup());
         EXPECT_TRUE(service.reset());
 

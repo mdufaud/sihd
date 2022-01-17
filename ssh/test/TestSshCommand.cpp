@@ -96,7 +96,7 @@ namespace test
         cmd.output_handler = &test_output_handler;
 
         EXPECT_TRUE(cmd.execute_async("echo hello; sleep 1; echo world;"));
-        
+
         time_t before = clock.now();
         EXPECT_TRUE(cmd.wait());
         time_t after = clock.now();

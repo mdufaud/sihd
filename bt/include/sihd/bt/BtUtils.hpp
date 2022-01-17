@@ -11,7 +11,7 @@ class BtUtils
         virtual ~BtUtils();
 
     protected:
-    
+
     private:
 };
 

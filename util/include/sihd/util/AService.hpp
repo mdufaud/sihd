@@ -48,4 +48,4 @@ class AService: public Observable<AService>
 
 }
 
-#endif 
+#endif

@@ -11,7 +11,7 @@ class UsbUtils
         virtual ~UsbUtils();
 
     protected:
-    
+
     private:
 };
 

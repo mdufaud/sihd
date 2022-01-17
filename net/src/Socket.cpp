@@ -503,7 +503,7 @@ bool        Socket::connect_unix(const std::string & path)
 {
     sockaddr_un addr;
     addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, path.c_str());  
+    strcpy(addr.sun_path, path.c_str());
     return this->connect((sockaddr *)&addr, SUN_LEN(&addr));
 }
 

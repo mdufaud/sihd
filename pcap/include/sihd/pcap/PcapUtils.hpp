@@ -30,7 +30,7 @@ class PcapUtils
         static int string_to_datalink(const std::string & dtl);
 
     protected:
-    
+
     private:
         static bool _is_init;
 

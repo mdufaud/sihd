@@ -259,7 +259,7 @@ bool    IpAddr::set_subnet_mask(uint32_t mask)
 bool    IpAddr::is_same_subnet(const std::string & ip) const
 {
     IpAddr addr(ip);
-    return this->is_same_subnet(addr); 
+    return this->is_same_subnet(addr);
 }
 
 bool    IpAddr::is_same_subnet(const IpAddr & addr) const

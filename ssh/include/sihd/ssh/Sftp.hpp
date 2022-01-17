@@ -47,7 +47,7 @@ class SftpAttribute
         bool is_file() const;
         bool is_link() const;
         uint64_t size() const;
-        
+
         sftp_attributes attr;
 };
 
@@ -81,7 +81,7 @@ class Sftp
         const char *error();
 
     protected:
-    
+
     private:
         ssh_session _ssh_session_ptr;
         sftp_session _sftp_session_ptr;

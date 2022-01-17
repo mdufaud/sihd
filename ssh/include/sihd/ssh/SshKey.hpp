@@ -45,7 +45,7 @@ class SshKey
         void clear_key();
 
     protected:
-    
+
     private:
         void _new_key();
 

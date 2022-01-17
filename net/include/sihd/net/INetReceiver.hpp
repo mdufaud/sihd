@@ -20,4 +20,4 @@ class INetReceiver
 
 }
 
-#endif 
+#endif

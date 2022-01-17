@@ -31,8 +31,8 @@ namespace test
 
     TEST_F(TestDatatype, test_datatype_from_str)
     {
-        EXPECT_EQ(Datatype::string_to_datatype("none"), DNONE); 
-        EXPECT_EQ(Datatype::string_to_datatype("bool"), DBOOL); 
+        EXPECT_EQ(Datatype::string_to_datatype("none"), DNONE);
+        EXPECT_EQ(Datatype::string_to_datatype("bool"), DBOOL);
         EXPECT_EQ(Datatype::string_to_datatype("char"), DCHAR);
         EXPECT_EQ(Datatype::string_to_datatype("byte"), DBYTE);
         EXPECT_EQ(Datatype::string_to_datatype("ubyte"), DUBYTE);
@@ -44,14 +44,14 @@ namespace test
         EXPECT_EQ(Datatype::string_to_datatype("ulong"), DULONG);
         EXPECT_EQ(Datatype::string_to_datatype("float"), DFLOAT);
         EXPECT_EQ(Datatype::string_to_datatype("double"), DDOUBLE);
-        EXPECT_EQ(Datatype::string_to_datatype("string"), DSTRING); 
-        EXPECT_EQ(Datatype::string_to_datatype("object"), DOBJECT); 
+        EXPECT_EQ(Datatype::string_to_datatype("string"), DSTRING);
+        EXPECT_EQ(Datatype::string_to_datatype("object"), DOBJECT);
     }
 
     TEST_F(TestDatatype, test_datatype_str)
     {
-        EXPECT_EQ(Datatype::datatype_to_string(DNONE), "none"); 
-        EXPECT_EQ(Datatype::datatype_to_string(DBOOL), "bool"); 
+        EXPECT_EQ(Datatype::datatype_to_string(DNONE), "none");
+        EXPECT_EQ(Datatype::datatype_to_string(DBOOL), "bool");
         EXPECT_EQ(Datatype::datatype_to_string(DCHAR), "char");
         EXPECT_EQ(Datatype::datatype_to_string(DBYTE), "byte");
         EXPECT_EQ(Datatype::datatype_to_string(DUBYTE), "ubyte");
@@ -63,8 +63,8 @@ namespace test
         EXPECT_EQ(Datatype::datatype_to_string(DULONG), "ulong");
         EXPECT_EQ(Datatype::datatype_to_string(DFLOAT), "float");
         EXPECT_EQ(Datatype::datatype_to_string(DDOUBLE), "double");
-        EXPECT_EQ(Datatype::datatype_to_string(DSTRING), "string"); 
-        EXPECT_EQ(Datatype::datatype_to_string(DOBJECT), "object"); 
+        EXPECT_EQ(Datatype::datatype_to_string(DSTRING), "string");
+        EXPECT_EQ(Datatype::datatype_to_string(DOBJECT), "object");
     }
 
     TEST_F(TestDatatype, test_datatype_template)

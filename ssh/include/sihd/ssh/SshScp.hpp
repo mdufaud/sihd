@@ -32,10 +32,10 @@ class SshScp
         ssh_session session() const { return _ssh_session_ptr; }
 
     protected:
-    
+
     private:
         bool _open(int flags, const std::string & location);
-        
+
         bool _remote_opened;
         ssh_scp _ssh_scp_ptr;
         ssh_session _ssh_session_ptr;

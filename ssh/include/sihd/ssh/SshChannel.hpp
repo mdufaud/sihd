@@ -65,7 +65,7 @@ class SshChannel
 
         bool send_eof();
         bool is_eof();
-        
+
         // ABRT - ALRM - FPE - HUP - ILL - INT - KILL - PIPE - QUIT - SEGV - TERM - USR1 - USR2
         bool send_signal(const std::string & sig);
 
@@ -75,7 +75,7 @@ class SshChannel
         ssh_session session() const;
 
     protected:
-    
+
     private:
         void _init_channel_if_none();
 

@@ -29,7 +29,7 @@ class Runnable: public IRunnable
         bool run();
 
     protected:
-    
+
     private:
         std::function<bool()> _run_fun;
 };

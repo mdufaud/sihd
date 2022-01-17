@@ -58,9 +58,9 @@ class Files
 
         inline static std::string sep_str() { return std::string(1, Files::sep); };
         static char sep;
-        
+
     protected:
-    
+
     private:
         Files() {};
         virtual ~Files() {};
@@ -72,4 +72,4 @@ class Files
 
 }
 
-#endif 
+#endif

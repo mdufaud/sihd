@@ -47,4 +47,4 @@ class ALogFilterer
 
 }
 
-#endif 
+#endif

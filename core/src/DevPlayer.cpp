@@ -154,7 +154,7 @@ bool    DevPlayer::run()
     std::lock_guard l(_run_mutex);
     if (_running == false)
         return false;
-    // get first record in queue and write record in channel 
+    // get first record in queue and write record in channel
     PlayableRecord & record = _queue.front();
     _queue.pop();
     Channel *c = _map_channels[record.name];

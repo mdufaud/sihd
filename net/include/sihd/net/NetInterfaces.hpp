@@ -78,7 +78,7 @@ class NetInterfaces
 # endif
 
     protected:
-    
+
     private:
         void _free();
         bool _error;

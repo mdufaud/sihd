@@ -40,9 +40,9 @@ class Message:  public Node,
         virtual bool add_field(const std::string & name, Type dt, size_t size = 1);
 
         /**
-         * @brief 
-         * 
-         * @param name 
+         * @brief
+         *
+         * @param name
          * @param field must be a sihd::util::Named to be added as a composite
          * @return true if added
          * @return false if not a Named
@@ -70,4 +70,4 @@ class Message:  public Node,
 
 }
 
-#endif 
+#endif

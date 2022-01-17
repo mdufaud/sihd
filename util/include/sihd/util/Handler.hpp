@@ -48,11 +48,11 @@ class Handler: public IHandler<T...>
         }
 
     protected:
-    
+
     private:
         std::function<void(T...)> _handle_fun;
 };
 
 }
 
-#endif 
+#endif

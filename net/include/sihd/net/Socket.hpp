@@ -137,7 +137,7 @@ class Socket
         bool send_all_to(const sockaddr_in & addr, const sihd::util::IArray & arr)
             { return this->send_all_to((sockaddr *)&addr, sizeof(sockaddr_in), arr); }
 
-        
+
         // IP from std::string
         bool bind(const std::string & host, int port);
         bool connect(const std::string & host, int port);
@@ -201,7 +201,7 @@ class Socket
         bool is_ipv6() const { return _domain == AF_INET6; }
 
     protected:
-    
+
     private:
         void _init();
         void _clear_socket_info();
@@ -220,4 +220,4 @@ class Socket
 
 }
 
-#endif 
+#endif

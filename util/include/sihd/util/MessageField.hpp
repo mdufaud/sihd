@@ -56,4 +56,4 @@ class MessageField: public Named,
 
 }
 
-#endif 
+#endif

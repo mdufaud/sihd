@@ -43,10 +43,10 @@ class ServiceController:    public AService::IServiceController,
         StateMachine<State, AService::Operation> statemachine;
 
     protected:
-    
+
     private:
 };
 
 }
 
-#endif 
+#endif

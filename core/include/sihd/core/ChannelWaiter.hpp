@@ -23,7 +23,7 @@ class ChannelWaiter: public ACoreObject
         bool do_stop() override;
 
     protected:
-    
+
     private:
         void handle(Channel *channel) override;
 

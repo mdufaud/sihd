@@ -17,4 +17,4 @@ class ICloneable
 
 }
 
-#endif 
+#endif

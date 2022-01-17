@@ -18,7 +18,7 @@ namespace sihd::util
 /**
  * @brief Kinda meant to be inherited and change step method
  *          though as a backup, can set a method to run
- * 
+ *
  */
 class Worker: public IRunnable, public Configurable
 {
@@ -61,4 +61,4 @@ class Worker: public IRunnable, public Configurable
 
 }
 
-#endif 
+#endif

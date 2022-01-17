@@ -43,7 +43,7 @@ class Str
         /**
          * @brief check if a char is escaped by calculating an impair number of escape '\' before the char
          *  must give the beginning pointer of string and the index of the actual char
-         * 
+         *
          *  example:
          * str = "\[hello";
          * is_escaped_char(str, 1) == true
@@ -129,4 +129,4 @@ bool Str::convert_from_string<double>(const std::string & str, double & value, u
 
 }
 
-#endif 
+#endif

@@ -171,7 +171,7 @@ bool    ZipWriter::_add_source(const std::string & name, zip_source_t *source)
     {
         LOG(error, "ZipWriter: could not add file to zip '" << ZipUtils::get_error(_zip_ptr) << "' for: " << name);
         zip_source_free(source);
-    }  
+    }
     return ret >= 0;
 }
 

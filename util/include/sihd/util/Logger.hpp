@@ -58,4 +58,4 @@ class Logger
 
 }
 
-#endif 
+#endif

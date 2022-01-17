@@ -53,7 +53,7 @@ class CsvWriter:    public sihd::util::Named,
         size_t _max_col;
         size_t _col;
         size_t _row;
-        
+
         int _delimiter;
         int _comment;
         int _line_feed;

@@ -69,7 +69,7 @@ class Poll: public IStoppableRunnable, public Observable<Poll>
         time_t timeout() const { return _timeout_milliseconds; }
 
     protected:
-    
+
     private:
         int _get_fd_index(int fd);
         int _get_or_add_fd(int fd);

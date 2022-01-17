@@ -46,11 +46,11 @@ class UdpSender:    public INetSender,
         const Socket & socket() const { return _socket; }
 
     protected:
-    
+
     private:
         Socket  _socket;
 };
 
 }
 
-#endif 
+#endif

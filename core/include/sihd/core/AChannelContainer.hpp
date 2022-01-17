@@ -32,7 +32,7 @@ class AChannelContainer:    public sihd::util::Node,
 
     protected:
         virtual bool _check_link(const std::string & name, sihd::util::Named *child) override;
-    
+
     private:
         struct ChannelConfiguration
         {
@@ -45,4 +45,4 @@ class AChannelContainer:    public sihd::util::Node,
 
 }
 
-#endif 
+#endif

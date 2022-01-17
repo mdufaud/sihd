@@ -99,7 +99,7 @@ namespace test
         EXPECT_TRUE(reader.read_entry() > 0);
         EXPECT_TRUE(reader.get_read_data(&data, &size));
         EXPECT_STREQ(data, "hello\n");
-        
+
         EXPECT_TRUE(reader.close());
     }
 

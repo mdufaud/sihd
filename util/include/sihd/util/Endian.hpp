@@ -70,7 +70,7 @@ class Endian
             else if (endian == big)
                 return convert_from<T, big>(value);
             return value;
-        } 
+        }
 };
 
 template <>
@@ -148,4 +148,4 @@ int64_t Endian::convert_from<int64_t, Endian::big>(int64_t value);
 
 }
 
-#endif 
+#endif

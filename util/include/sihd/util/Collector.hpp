@@ -58,7 +58,7 @@ class Collector:    public IStoppableRunnable,
             _running = false;
             return true;
         }
-        
+
         void wait_stop()
         {
             _running = false;
@@ -87,7 +87,7 @@ class Collector:    public IStoppableRunnable,
         void set_timeout_milliseconds(time_t milli) { _provider_wait_milliseconds = milli; }
 
     protected:
-    
+
     private:
         T _data;
         IProvider<T> *_provider_ptr;

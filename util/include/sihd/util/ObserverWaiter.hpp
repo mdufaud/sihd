@@ -42,7 +42,7 @@ class ObserverWaiter: public IHandler<T *>
         time_t notifications;
 
     protected:
-    
+
     private:
         Observable<T> *_obs_ptr;
         Waitable _waitable;

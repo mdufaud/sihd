@@ -14,7 +14,7 @@ class IWriter
 class IWriterTimestamp: public IWriter
 {
     using IWriter::write;
-    
+
     public:
         virtual ~IWriterTimestamp() {};
 		virtual ssize_t write(const char *data, size_t size, time_t nano_timestamp) = 0;

@@ -21,4 +21,4 @@ class LevelFilterLogger:    public ILoggerFilter
 
 }
 
-#endif 
+#endif

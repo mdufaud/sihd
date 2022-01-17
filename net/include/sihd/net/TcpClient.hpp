@@ -72,7 +72,7 @@ class TcpClient:    public INetReceiver,
         const IpAddr & client_addr() const { return _client_addr; }
 
     protected:
-    
+
     private:
         void handle(sihd::util::Poll *poll);
         void _setup_poll();
@@ -86,4 +86,4 @@ class TcpClient:    public INetReceiver,
 
 }
 
-#endif 
+#endif

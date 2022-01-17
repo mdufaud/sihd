@@ -49,7 +49,7 @@ class If
         static bool get_interface_netmask(int sock, const std::string & name, struct sockaddr *to_fill);
 
     protected:
-    
+
     private:
         If() {};
         ~If() {};

@@ -33,4 +33,4 @@ class StepWorker: public Worker, public ISteppable
 
 }
 
-#endif 
+#endif

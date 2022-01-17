@@ -106,7 +106,7 @@ namespace test
         TRACE("Google sock datagram IPV4: " << google.get_socktype_ip(Ip::socktype("datagram")));
         TRACE("Google sock raw IPV6: " << google.get_socktype_ip(Ip::socktype("raw"), true));
     }
-    
+
     TEST_F(TestIpAddr, test_ipaddr_dns_lookup_error)
     {
         auto dns = IpAddr::dns_lookup("notgoogleatall.dot.com", true);

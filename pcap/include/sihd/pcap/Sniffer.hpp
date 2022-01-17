@@ -84,7 +84,7 @@ class Sniffer:  public sihd::util::Named,
         const struct pcap_stat *stats();
 
         std::string error();
-        
+
         pcap_t *pcap() { return _pcap_ptr; }
         const sihd::util::ArrByte & array() const { return _array; }
 
@@ -99,7 +99,7 @@ class Sniffer:  public sihd::util::Named,
         int _max_sniff;
         int _timestamp_type;
         bool _nano_precision;
-        
+
         pcap_t *_pcap_ptr;
         struct pcap_stat _pcap_stats;
 

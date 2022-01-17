@@ -20,4 +20,4 @@ class SourceFilterLogger:   public ILoggerFilter
 
 }
 
-#endif 
+#endif

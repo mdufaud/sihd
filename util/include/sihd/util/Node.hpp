@@ -125,7 +125,7 @@ class Node:   public Named
 
         const std::map<std::string, ChildEntry *> & get_children() const;
         const std::vector<std::string> & get_children_keys() const;
-        
+
     protected:
         virtual bool _check_link(const std::string & name, Named *child);
         virtual void _get_tree_children(std::stringstream & ss, TreeOpts opts) const;

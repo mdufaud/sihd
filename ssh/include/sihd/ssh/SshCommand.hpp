@@ -35,7 +35,7 @@ class SshCommand
         const std::string & exit_signal_error();
 
     protected:
-    
+
     private:
         bool _execute(const std::string & cmd, bool async);
         void _reset_command_status();

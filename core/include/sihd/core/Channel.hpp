@@ -108,7 +108,7 @@ class Channel:  public sihd::util::Named,
         virtual void _init(sihd::util::Type type, size_t size);
 
         static sihd::util::IClock *_default_channel_clock_ptr;
-    
+
     private:
         sihd::util::IClock *_clock_ptr;
         std::time_t _timestamp;
@@ -124,4 +124,4 @@ class Channel:  public sihd::util::Named,
 
 }
 
-#endif 
+#endif

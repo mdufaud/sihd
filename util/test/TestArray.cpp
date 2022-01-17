@@ -123,7 +123,7 @@ namespace test
         EXPECT_FALSE(std::binary_search(arr_int.cbegin(), arr_int.cend(), 31));
         std::for_each(arr_int.begin(), arr_int.end(), [] (int & i) { ++i; });
         EXPECT_TRUE(std::binary_search(arr_int.cbegin(), arr_int.cend(), 31));
-        
+
         EXPECT_EQ(std::count(arr_int.crbegin(), arr_int.crend(), 41), 1);
         EXPECT_EQ(*std::min_element(arr_int.crbegin(), arr_int.crend()), 11);
         EXPECT_EQ(*std::max_element(arr_int.crbegin(), arr_int.crend()), 41);

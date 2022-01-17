@@ -16,9 +16,9 @@ double tv_to_double(const struct timeval & tv);
 // tv (nano resolution) -> seconds,milliseconds
 double nano_tv_to_double(const struct timeval & tv);
 
-// seconds,milliseconds -> timeval 
+// seconds,milliseconds -> timeval
 struct timeval double_to_tv(double time);
-// seconds,milliseconds -> timeval 
+// seconds,milliseconds -> timeval
 struct timeval double_to_nano_tv(double time);
 // milliseconds -> timeval (micro resolution)
 struct timeval milli_to_tv(time_t milliseconds);
@@ -30,7 +30,7 @@ struct timeval to_nano_tv(time_t nano);
 /*
 * nano -> statically allocated nano, other call to localtime/gmtime erase previous result
 * may be nullptr if year cannot be contained
-*/ 
+*/
 struct tm *to_tm(time_t nano, bool localtime = false);
 
 // nano -> micro
@@ -72,4 +72,4 @@ time_t nano_tv(const struct timeval & tv);
 
 };
 
-#endif 
+#endif

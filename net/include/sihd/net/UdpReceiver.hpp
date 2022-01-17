@@ -67,7 +67,7 @@ class UdpReceiver:  public INetReceiver,
         const IpAddr & client_addr() const { return _client_addr; }
 
     protected:
-    
+
     private:
         void handle(sihd::util::Poll *poll);
         void _setup_poll();
@@ -80,4 +80,4 @@ class UdpReceiver:  public INetReceiver,
 
 }
 
-#endif 
+#endif

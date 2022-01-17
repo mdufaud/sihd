@@ -24,7 +24,7 @@ class WebsocketHandler: public sihd::http::IWebsocketHandler
         std::function<void()> callback_close;
 
     protected:
-    
+
     private:
 };
 

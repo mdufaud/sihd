@@ -22,4 +22,4 @@ class ALogger:  public ALogFilterer
 
 }
 
-#endif 
+#endif

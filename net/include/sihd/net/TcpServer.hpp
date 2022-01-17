@@ -64,7 +64,7 @@ class TcpServer:    public INetServer,
 
     protected:
         void handle(sihd::util::Poll *poll);
-        
+
     private:
         void _setup_poll();
 
@@ -78,4 +78,4 @@ class TcpServer:    public INetServer,
 
 }
 
-#endif 
+#endif

@@ -59,17 +59,17 @@ class StateMachine: public IStateMachine
         const std::map<EVENT, std::string> & get_map_events_names() const { return _events_name; }
 
     protected:
-    
+
     private:
         STATE _state;
         std::map<STATE, std::string> _states_name;
 
         EVENT _last_event;
         std::map<EVENT, std::string> _events_name;
-        
+
         std::map<STATE, std::map<EVENT, STATE>> _transitions;
 };
 
 }
 
-#endif 
+#endif

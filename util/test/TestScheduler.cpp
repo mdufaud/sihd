@@ -124,7 +124,7 @@ namespace test
     {
         if (OS::is_run_by_valgrind())
             GTEST_SKIP() << "Test is buggy under valgrind debugger";
-            
+
         Scheduler seq("seq");
         SystemClock clock;
 

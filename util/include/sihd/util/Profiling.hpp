@@ -15,7 +15,7 @@ class Timeit
         virtual ~Timeit();
 
     protected:
-    
+
     private:
         std::string _fun_name;
         std::time_t _begin;
@@ -24,4 +24,4 @@ class Timeit
 
 }
 
-#endif 
+#endif

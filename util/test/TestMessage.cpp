@@ -46,7 +46,7 @@ namespace test
         EXPECT_EQ(msg1.get_field_byte_size(), sizeof(int) + 200 * sizeof(char));
 
         Message msg2("msg2");
-        
+
         EXPECT_TRUE(msg2.add_field<bool>("bool"));
         EXPECT_TRUE(msg2.add_field<short>("short", 2));
         EXPECT_TRUE(msg2.add_field<double>("double", 2));

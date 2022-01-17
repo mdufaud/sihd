@@ -12,7 +12,7 @@ class PyCoreApi
     public:
 
     protected:
-    
+
     private:
         PyCoreApi() {};
         ~PyCoreApi() {};
@@ -20,4 +20,4 @@ class PyCoreApi
 
 }
 
-#endif 
+#endif

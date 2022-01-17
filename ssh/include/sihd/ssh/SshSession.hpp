@@ -110,7 +110,7 @@ class SshSession
         int error_code() const;
 
     protected:
-    
+
     private:
         bool _set(const char *from, ssh_options_e option, const void *value);
         bool _init_scp(SshScp & scp);

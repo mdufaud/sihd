@@ -118,7 +118,7 @@ class IpAddr
         bool is_same_subnet(const std::string & ip) const;
         bool is_same_subnet(const sockaddr_in & addr) const;
         bool is_same_subnet(const IpAddr & addr) const;
-        
+
         bool set_subnet_mask(const std::string & mask);
         bool set_subnet_mask(uint32_t mask);
         bool has_subnet() const { return _has_subnet; }
@@ -170,7 +170,7 @@ class IpAddr
         const std::vector<IpEntry> lst_ip() const { return _lst_ip; }
 
     protected:
-    
+
     private:
         // fill entry from source infos
         static void _from_sockaddr(IpEntry *entry, const sockaddr_in *addr_in, int socktype, int protocol);
@@ -210,4 +210,4 @@ class IpAddr
 
 }
 
-#endif 
+#endif

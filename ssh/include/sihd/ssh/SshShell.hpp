@@ -21,7 +21,7 @@ class SshShell
         SshChannel & channel() { return _channel; }
 
     protected:
-    
+
     private:
         ssh_session _ssh_session_ptr;
         SshChannel _channel;

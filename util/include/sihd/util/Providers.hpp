@@ -102,7 +102,7 @@ class FunctionProvider: public sihd::util::AProvider<TYPE>
         {
             return _provide_method(value);
         }
-        
+
         bool provider_empty() const
         {
             return _provider_empty_method ? _provider_empty_method() : true;

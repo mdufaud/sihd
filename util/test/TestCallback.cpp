@@ -97,7 +97,7 @@ namespace test
         // because all the types in the signature are the same.
         int res = cbm.call<int, int, int>("test_ret_args", 3, 4);
         EXPECT_EQ(res, 7);
-    
+
         EXPECT_THROW(cbm.call("no_such_key"), std::out_of_range);
         EXPECT_THROW(cbm.call("test_void_args", 2.2, "test"), std::invalid_argument);
     }

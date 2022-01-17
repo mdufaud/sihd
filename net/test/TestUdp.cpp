@@ -63,7 +63,7 @@ namespace test
         EXPECT_EQ(sender.send(array_send), (ssize_t)array_send.byte_size());
 
         usleep(1000);
-        
+
         EXPECT_TRUE(array_rcv.is_equal(array_send));
 
         receiver.stop();
@@ -97,7 +97,7 @@ namespace test
 
         EXPECT_TRUE(array_rcv.is_equal(helloworld, sizeof(helloworld) - 1));
         EXPECT_EQ(array_rcv.size(), sizeof(helloworld));
-        
+
         const char hello[] = "hello";
         EXPECT_EQ(sender.send(hello, sizeof(hello)), (ssize_t)sizeof(hello));
         EXPECT_TRUE(receiver.poll(10));

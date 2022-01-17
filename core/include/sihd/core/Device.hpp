@@ -41,4 +41,4 @@ class Device:   public AChannelContainer,
 
 }
 
-#endif 
+#endif
