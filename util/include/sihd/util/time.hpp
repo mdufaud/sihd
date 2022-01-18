@@ -2,6 +2,8 @@
 # define __SIHD_UTIL_TIME_HPP__
 
 # include <chrono>
+# include <time.h>
+# include <sys/time.h>
 
 namespace sihd::util::time
 {

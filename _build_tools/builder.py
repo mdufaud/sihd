@@ -55,14 +55,17 @@ def has_verbose():
 def has_test():
     return bool(os.getenv("test", None))
 
-def do_sanitize():
-    return bool(os.getenv("sanitize", None))
+def is_address_sanatizer():
+    return bool(os.getenv("asan", None))
 
 def do_distribution():
     return bool(os.getenv("dist", None))
 
 def get_modules():
     return os.getenv('modules', "")
+
+def is_static_libs():
+    return os.getenv("libs", "dynamic") == "static"
 
 def debug(*msg):
     print("builder [debug]:", *msg)

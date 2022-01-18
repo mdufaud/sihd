@@ -19,6 +19,7 @@ builder_helper.sanitize_app(app)
 modules_to_build = builder_helper.get_modules()
 verbose = builder_helper.has_verbose()
 has_test = builder_helper.has_test()
+static_libs = builder_helper.is_static_libs()
 compiler = builder_helper.build_compiler
 build_platform = builder_helper.build_platform
 compile_mode = builder_helper.build_mode
@@ -54,7 +55,7 @@ extlib_bin_path = builder_helper.build_extlib_bin_path
 extlib_etc_path = builder_helper.build_extlib_etc_path
 extlib_res_path = builder_helper.build_extlib_res_path
 
-conan_options = {'*:shared': True}
+conan_options = {'*:shared': static_libs == False}
 if hasattr(app, "conan_options"):
     conan_options.update(app.conan_options)
 

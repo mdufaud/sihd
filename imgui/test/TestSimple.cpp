@@ -6,8 +6,8 @@
 #include <sihd/util/Term.hpp>
 
 #include <imgui.h>
-#include <sihd/imgui/linux/imgui_impl_opengl3.h>
-#include <sihd/imgui/linux/imgui_impl_glfw.h>
+#include <sihd/imgui/imgui_impl_opengl3.h>
+#include <sihd/imgui/imgui_impl_glfw.h>
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 # include <GLES2/gl2.h>
 #endif

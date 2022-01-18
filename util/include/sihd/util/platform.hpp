@@ -1,7 +1,12 @@
 #ifndef PLATFORM_H__
 # define PLATFORM_H__
 
-# if defined(__linux__) || defined(__CYGWIN__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)
+# if (defined(_WIN16) || defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__) || defined(__MINGW32__))
+
+#  define __SIHD_WINDOWS__
+#  define __SIHD_PLATFORM__ "windows"
+
+# elif defined(__linux__) || defined(__CYGWIN__) || defined(__linux) || defined(linux) || defined(__gnu_linux__) || defined(__EMSCRIPTEN__)
 
 #  define __SIHD_UNIX__
 #  define __SIHD_LINUX__
@@ -13,12 +18,11 @@
 #  define __SIHD_PLATFORM__ "linux"
 # endif
 
-# elif (defined(_WIN16) || defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__) || defined(__MINGW32__))
+# if defined(__EMSCRIPTEN__)
+#  define __SIHD_EMSCRIPTEN__
+# endif
 
-#  define __SIHD_WINDOWS__
-#  define __SIHD_PLATFORM__ "windows"
-
-# elif defined(_AIX) || defined(__TOS__AIX__))
+# elif defined(_AIX) || defined(__TOS__AIX__)
 
 # define __SIHD_UNIX__
 # define __SIHD_AIX__

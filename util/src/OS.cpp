@@ -39,7 +39,7 @@
 #endif
 
 // backtrace not available in windows / android
-#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__)
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 # include <execinfo.h>
 #endif
 
@@ -277,7 +277,7 @@ std::string OS::get_executable_path()
 
 // backtrace not available in windows / android
 
-#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__)
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 
 # ifndef SIHD_BACKTRACE_SIZE
 #  define SIHD_BACKTRACE_SIZE 15

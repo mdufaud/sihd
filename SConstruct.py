@@ -32,7 +32,8 @@ builder_helper.sanitize_app(app)
 modules_to_build = builder_helper.get_modules()
 has_test = builder_helper.has_test()
 verbose = builder_helper.has_verbose()
-sanitize = builder_helper.do_sanitize()
+asan = builder_helper.is_address_sanatizer()
+build_static_libs = builder_helper.is_static_libs()
 
 compiler = builder_helper.build_compiler
 build_platform = builder_helper.build_platform
@@ -44,7 +45,7 @@ distribution = builder_helper.do_distribution()
 if build_platform not in ("windows", "linux"):
     builder_helper.error("platform {} is not supported".format(build_platform))
     exit(1)
-if compiler not in ("gcc", "clang", "mingw"):
+if compiler not in ("gcc", "clang", "mingw", "em"):
     builder_helper.error("compiler {} is not supported".format(compiler))
     exit(1)
 if compile_mode not in ("debug", "release"):
@@ -57,7 +58,7 @@ if verbose:
     builder_helper.info("arch: " + arch)
     builder_helper.info("mode: " + compile_mode)
     builder_helper.info("tests: " + (has_test and "yes" or "no"))
-    builder_helper.info("sanitizer: " + (sanitize and "yes" or "no"))
+    builder_helper.info("address sanatizer: " + (asan and "yes" or "no"))
 
 # Get modules configuration for this build
 try:
@@ -84,7 +85,8 @@ def add_env_app_conf(env, key):
     env_to_key = {
         "LIBS": "_libs",
         "CPPFLAGS": "_flags",
-        "CPPDEFINES": "_defines"
+        "CPPDEFINES": "_defines",
+        "LINKFLAGS": "_link",
     }
     for envkey, to_concat in env_to_key.items():
         concat = key + to_concat
@@ -173,7 +175,7 @@ if compiler == "clang":
         CXX = "clang++",
         CC = "clang"
     )
-    if sanitize:
+    if asan:
         # Needs to be first
         base_env.Append(
             LIBS = ["asan"],
@@ -189,19 +191,25 @@ elif compiler == "mingw":
         SHLIBSUFFIX = ".dll",
         LIBPREFIX = "",
     )
-    if sanitize:
+    if asan:
         builder_helper.error("cannot use address sanitizer with mingw")
         Exit(1)
     add_env_app_conf(base_env, "mingw")
 # GCC build
 elif compiler == "gcc":
-    if sanitize:
+    if asan:
         # Needs to be first
         base_env.Append(
             LIBS = ["asan"],
             CPPFLAGS  = ["-fsanitize=address", "-fno-omit-frame-pointer"],
         )
     add_env_app_conf(base_env, "gcc")
+elif compiler == "em":
+    base_env.Replace(
+        CC = "emcc",
+        CXX = "em++",
+    )
+    add_env_app_conf(base_env, "em")
 
 # Decides when to recompile - removing slow md5 in favor of timestamps
 Decider('timestamp-newer')
@@ -242,7 +250,7 @@ def build_test(self, src=None, libs=[], test_name=None, **kwargs):
         add_env_app_conf(env, "gcc_test")
     return env.Program(test_path, src, **kwargs)
 
-def build_lib(self, src=None, lib_name=None, static=False, **kwargs):
+def build_lib(self, src=None, lib_name=None, static=None, **kwargs):
     """ Environment method to build a shared library for a module """
     src = src or Glob('src/*.cpp')
     add_targets(src)
@@ -250,7 +258,7 @@ def build_lib(self, src=None, lib_name=None, static=False, **kwargs):
     if lib_name is None:
         lib_name = module_name
     lib_path = os.path.join("$APP_BUILD_LIB", lib_name)
-    if static:
+    if (static is not None and static) or build_static_libs:
         lib = self.StaticLibrary(lib_path, src, **kwargs)
     else:
         lib = self.SharedLibrary(lib_path, src, **kwargs)

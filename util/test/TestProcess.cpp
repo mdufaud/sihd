@@ -5,7 +5,7 @@
 #include <sihd/util/Files.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
-#include <experimental/filesystem>
+#include <filesystem>
 
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/Task.hpp>
@@ -14,7 +14,6 @@ namespace test
 {
     LOGGER;
     using namespace sihd::util;
-    using namespace std::experimental;
     class TestProcess:   public ::testing::Test
     {
         protected:
@@ -165,9 +164,9 @@ namespace test
     TEST_F(TestProcess, test_process_file_in)
     {
         std::string test_dir = Files::combine(_base_test_dir, "in_file");
-        filesystem::remove_all(test_dir);
+        std::filesystem::remove_all(test_dir);
         std::string test_file = Files::combine(test_dir, "hello.txt");
-        filesystem::create_directories(Files::get_parent(test_file));
+        std::filesystem::create_directories(Files::get_parent(test_file));
 
         LOG(info, "Writing file for 'cat' input: " << test_file)
         EXPECT_TRUE(Files::write(test_file, "hello world"));
@@ -187,9 +186,9 @@ namespace test
     TEST_F(TestProcess, test_process_file_out)
     {
         std::string test_dir = Files::combine(_base_test_dir, "to_file");
-        filesystem::remove_all(test_dir);
+        std::filesystem::remove_all(test_dir);
         std::string test_file = Files::combine(test_dir, "output.txt");
-        filesystem::create_directories(Files::get_parent(test_file));
+        std::filesystem::create_directories(Files::get_parent(test_file));
         Process proc{"echo", "hello", "world"};
 
         EXPECT_TRUE(proc.stdout_to_file(test_file));
@@ -205,8 +204,8 @@ namespace test
     TEST_F(TestProcess, test_process_file_out_err)
     {
         std::string path = Files::combine(_base_test_dir, "file_out_err");
-        filesystem::remove_all(path);
-        filesystem::create_directories(path);
+        std::filesystem::remove_all(path);
+        std::filesystem::create_directories(path);
         std::string stdout_path = Files::combine(path, "stdout.txt");
         std::string stderr_path = Files::combine(path, "stderr.txt");
 

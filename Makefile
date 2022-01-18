@@ -119,7 +119,8 @@ build: intro
 						dist=$(dist) \
 						py=$(py) \
 						lua=$(lua) \
-						sanitize=$(sanitize) \
+						asan=$(asan) \
+						libs=$(libs) \
 						$(SCONS_BUILD_CMD)
 
 build_debug: SCONS_ARGS = --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
@@ -178,7 +179,7 @@ gdbtest: test
 
 gtest: gdbtest
 
-santest: sanitize=1
+santest: asan=1
 santest: test
 
 stest: santest
