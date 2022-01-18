@@ -8,34 +8,37 @@ description = "Simple Input Handler Displayer"
 
 # modules and libs descriptions
 extlibs = {
-    # unit test
+    ## unit test
     "gtest": "cci.20210126",
-    # json parsing
+    ## json parsing
     "nlohmann_json": "3.9.1",
-    # crypt
+    ## crypt
     "openssl": "1.1.1i",
-    # http
+    ## http
     "libwebsockets": "4.3.0",
     "libcurl": "7.75.0",
     "openssl": "1.1.1l",
-    # ssh
+    ## ssh
     "libssh2": "1.9.0",
-    # pcap
+    ## pcap
     "libpcap": "1.10.1",
-    # usb
+    ## usb
     "libusb": "1.0.24",
-    # gui
-    "imgui": "1.83",
+    ## gui
+    "glew": "2.2.0",
+    "glfw": "3.3.6",
+    #"sdl": "2.0.18",
+    "imgui": "1.86",
     "ncurses": "6.2",
-    # command line parser
+    ## command line parser
     "replxx": "0.0.4",
-    # bindings
+    ## bindings
     "pybind11": "2.6.2",
     "lua": "5.3.5",
     "sol2": "3.2.3",
-    # compressing utility
+    ## compressing utility
     "libzip": "1.7.3",
-    # other
+    ## other
     "libjpeg": "9d",
 }
 modules = {
@@ -54,7 +57,7 @@ modules = {
         "depends": ['util'],
     },
     "ssh": {
-        # libssh-dev
+        ## libssh-dev
         "libs": ['ssh'],
         "depends": ['util'],
     },
@@ -69,24 +72,31 @@ modules = {
         "depends": ['net'],
     },
     "usb": {
-        # libusb-dev libusb-1.0-0
+        ## libusb-dev libusb-1.0-0
         "uselibs": ['libusb'],
         "libs": ['usb'],
         "depends": ['util'],
     },
     "bt": {
-        # libbluetooth-dev
+        ## libbluetooth-dev
         "libs": ['bluetooth'],
         "depends": ['util'],
     },
     "csv": {
         "depends": ['util'],
     },
+    "imgui": {
+        "uselibs": ['imgui', 'glfw', 'glew'],
+        "libs": ['imgui', 'glfw', 'GLEW', 'GL'],
+        #"libs": ['imgui', "d3d11", "d3dcompiler", "dxgi"],
+        "flags": ["-Wno-cast-function-type"],
+        "depends": ['util'],
+    },
     "_module_test": {
         "depends": ['pcap', 'http'],
     },
 }
-# conditionnals - only if activated
+## conditionnals - only if activated
 conditionnal_modules = {
     "lua": {
         "depends": ['util'],
@@ -109,7 +119,7 @@ conditionnal_modules = {
         "uselibs": ['pybind11'],
         "conditionnal-env": "py",
         "conditionnal-depends": ['core', 'net', 'http'],
-        # pip install python-config
+        ## pip install python-config
         "parse-configs": [
             'python-config --cflags --ldflags --embed',
             'python3-config --cflags --ldflags --embed',
@@ -117,7 +127,7 @@ conditionnal_modules = {
     }
 }
 
-# build changes
+## build changes
 replace_files = [
     "etc/sihd/core/test.txt"
 ]
@@ -125,16 +135,16 @@ replace_vars = {
     "VERSION": "0.1"
 }
 
-# general compilation parameters
+## general compilation parameters
 libs = ['pthread', 'dl']
 flags = ['-Wall', '-Wextra', '-Werror', '-m64', '-pipe', '-fPIC']
 defines = []
 
-# mode specifics
+## mode specifics
 debug_flags = ["-g", "-O2"]
 release_flags = ["-O3"]
 
-# gcc specifics
+## gcc specifics
 gcc_flags = [
     "-D_FORTIFY_SOURCE=2",
     "-D_GLIBCXX_ASSERTIONS",
@@ -148,20 +158,20 @@ gcc_flags = [
     "-Wl,-z,relro",
 ]
 
-# clang specifics
+## clang specifics
 clang_libs = ['stdc++', "libc++"]
 clang_defines = [
     'LLVM_ENABLE_EH=YES',
     'LLVM_ENABLE_RTTI=ON',
 ]
 
-# mingw specifics
+## mingw specifics
 mingw_libs = ['ws2_32', 'psapi']
 # _WIN64 -> activates sihd functionnalities
 # _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
 mingw_defines = ["_WIN64", "_WIN32_WINNT=0x0600"]
 
-# test specifics
+## test specifics
 test_libs = ['gtest', 'stdc++fs']
 
 #############

@@ -116,7 +116,9 @@ base_env = Environment(
     LIBS = [],
     # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
+    BUILD_PLATFORM = builder_helper.build_platform,
 )
+
 
 # Build output
 if not verbose:
@@ -231,7 +233,7 @@ def add_targets(src):
     else:
         targets += src
 
-def build_test(self, src=None, libs=[], test_name=None):
+def build_test(self, src=None, libs=[], test_name=None, **kwargs):
     """ Environment method to build unit test binary for a module """
     if has_test == False:
         return None
@@ -252,9 +254,9 @@ def build_test(self, src=None, libs=[], test_name=None):
         add_env_app_conf(env, "mingw_test")
     elif compiler == "gcc":
         add_env_app_conf(env, "gcc_test")
-    return env.Program(test_path, src)
+    return env.Program(test_path, src, **kwargs)
 
-def build_lib(self, src=None, lib_name=None):
+def build_lib(self, src=None, lib_name=None, **kwargs):
     """ Environment method to build a shared library for a module """
     src = src or Glob('src/*.cpp')
     add_targets(src)
@@ -262,10 +264,10 @@ def build_lib(self, src=None, lib_name=None):
     if lib_name is None:
         lib_name = module_name
     lib_path = os.path.join("$APP_BUILD_LIB", lib_name)
-    lib = self.SharedLibrary(lib_path, src)
+    lib = self.SharedLibrary(lib_path, src, **kwargs)
     return lib
 
-def build_bin(self, src, bin_name=None):
+def build_bin(self, src, bin_name=None, **kwargs):
     """ Environment method to build a binary for a module """
     add_targets(src)
     if bin_name is None:
@@ -273,7 +275,7 @@ def build_bin(self, src, bin_name=None):
         if compiler == "mingw":
             bin_name += ".exe"
     bin_path = os.path.join("$APP_BUILD_BIN", bin_name)
-    return self.Program(bin_path, src)
+    return self.Program(bin_path, src, **kwargs)
 
 def get_modules_headers(*args):
     """ Returns modules headers path """

@@ -190,6 +190,8 @@ build_extlib_path = join(build_path, "extlib")
 build_extlib_lib_path = join(build_extlib_path, "lib")
 build_extlib_hdr_path = join(build_extlib_path, "include")
 build_extlib_bin_path = join(build_extlib_path, "bin")
+build_extlib_etc_path = join(build_extlib_path, "etc")
+build_extlib_res_path = join(build_extlib_path, "res")
 
 build_bin_path = join(build_path, "bin")
 build_hdr_path = join(build_path, "include")

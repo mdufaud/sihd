@@ -48,9 +48,11 @@ post_treatment_libs = {
 }
 current_filename = inspect.getframeinfo(inspect.currentframe()).filename
 extlib_path = builder_helper.build_extlib_path
-extlib_lib_path =  builder_helper.build_extlib_lib_path
-extlib_hdr_path =  builder_helper.build_extlib_hdr_path
-extlib_bin_path =  builder_helper.build_extlib_bin_path
+extlib_lib_path = builder_helper.build_extlib_lib_path
+extlib_hdr_path = builder_helper.build_extlib_hdr_path
+extlib_bin_path = builder_helper.build_extlib_bin_path
+extlib_etc_path = builder_helper.build_extlib_etc_path
+extlib_res_path = builder_helper.build_extlib_res_path
 
 class ConanAppDependencies(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
@@ -71,6 +73,8 @@ class ConanAppDependencies(ConanFile):
         self.copy("*.dll*", dst = extlib_lib_path, src = "bin") # transfert DLL to lib
         self.copy("*.h*", dst = extlib_hdr_path, src = "include")
         self.copy("*", dst = extlib_bin_path, src = "bin")
+        self.copy("*", dst = extlib_etc_path, src = "etc")
+        self.copy("*", dst = extlib_res_path, src = "res")
 
 def post_process():
     import glob
