@@ -28,6 +28,7 @@ def __rec_fill_module_real_depends(modules, module_name, to_fill_module_conf):
 def resolve_modules_dependencies(modules):
     """ Fill all modules real dependency tree """
     for name, conf in modules.items():
+        conf["modname"] = name
         # Add configurations if not declared
         for expected_conf in expected_configurations_lists:
             if expected_conf not in conf:

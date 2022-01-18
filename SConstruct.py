@@ -116,7 +116,7 @@ base_env = Environment(
     LIBS = [],
     # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
-    BUILD_PLATFORM = builder_helper.build_platform,
+    BUILDER_HELPER = builder_helper,
 )
 
 
@@ -201,20 +201,6 @@ elif compiler == "gcc":
             LIBS = ["asan"],
             CPPFLAGS  = ["-fsanitize=address", "-fno-omit-frame-pointer"],
         )
-    base_env.Append(
-        CPPFLAGS = [
-            "-D_FORTIFY_SOURCE=2",
-            "-D_GLIBCXX_ASSERTIONS",
-            "-fasynchronous-unwind-tables",
-            "-fexceptions",
-            "-Wl,-pie",
-            "-fstack-protector",
-            "-fstack-protector-strong",
-            "-Wl,-z,defs",
-            "-Wl,-z,now",
-            "-Wl,-z,relro",
-        ]
-    )
     add_env_app_conf(base_env, "gcc")
 
 # Decides when to recompile - removing slow md5 in favor of timestamps
@@ -256,7 +242,7 @@ def build_test(self, src=None, libs=[], test_name=None, **kwargs):
         add_env_app_conf(env, "gcc_test")
     return env.Program(test_path, src, **kwargs)
 
-def build_lib(self, src=None, lib_name=None, **kwargs):
+def build_lib(self, src=None, lib_name=None, static=False, **kwargs):
     """ Environment method to build a shared library for a module """
     src = src or Glob('src/*.cpp')
     add_targets(src)
@@ -264,7 +250,10 @@ def build_lib(self, src=None, lib_name=None, **kwargs):
     if lib_name is None:
         lib_name = module_name
     lib_path = os.path.join("$APP_BUILD_LIB", lib_name)
-    lib = self.SharedLibrary(lib_path, src, **kwargs)
+    if static:
+        lib = self.StaticLibrary(lib_path, src, **kwargs)
+    else:
+        lib = self.SharedLibrary(lib_path, src, **kwargs)
     return lib
 
 def build_bin(self, src, bin_name=None, **kwargs):
@@ -316,7 +305,11 @@ build_obj_path = str(base_env["APP_BUILD_OBJ"])
 build_path = str(base_env["APP_BUILD"])
 build_etc_path = str(base_env["APP_BUILD_ETC"])
 
-for modname, conf in build_modules.items():
+build_order = list(build_modules.values())
+build_order.sort(key = lambda obj: len(obj["depends"]))
+
+for conf in build_order:
+    modname = conf["modname"]
     builder_helper.info("building module: {}".format(modname))
     module_format = "{}_{}".format(app.name, modname)
     # Getting module's build configuration

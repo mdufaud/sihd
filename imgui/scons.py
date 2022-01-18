@@ -1,6 +1,6 @@
 Import('env')
 
-platform = env["BUILD_PLATFORM"]
+platform = env["BUILDER_HELPER"].build_platform
 include_dir = Dir("include").Dir("sihd").Dir("imgui").Dir(platform)
 env.Append(CPPPATH = str(include_dir))
 
