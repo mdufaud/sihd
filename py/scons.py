@@ -7,28 +7,9 @@ modules = env['APP_MODULES_BUILD']
 test_dir = Dir("test")
 src_dir = Dir("src")
 
-"""
-srcs = []
-tests = [test_dir.File("main.cpp")]
-for module in modules:
-    modcap = module.capitalize()
-    src_file = src_dir.File("Py{}Api.cpp".format(modcap))
-    test_file = test_dir.File("TestPy{}Api.cpp".format(modcap))
-    if exists(str(src_file)):
-        srcs.append(src_file)
-    if exists(str(test_file)):
-        tests.append(test_file)
-
-lib = env.build_lib(srcs)
-test = env.build_test(tests)
-
-Return('lib')
-
-"""
-
 modname = env["APP_MODULE"]
 libs = []
-test_srcs = [test_dir.File("main.cpp")]  
+test_srcs = [test_dir.File("main.cpp")]
 test_libs = []
 for module in modules:
     srcs = []
@@ -45,5 +26,5 @@ for module in modules:
         lib = env.build_lib(srcs, lib_name = modname + "_" + module)
         libs.append(lib)
 
-test = env.build_test(test_srcs, libs = test_libs)
+test = env.build_test(test_srcs, add_libs = test_libs)
 Return("libs")

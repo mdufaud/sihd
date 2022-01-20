@@ -78,7 +78,7 @@ bool    Scheduler::is_running()
     return _running;
 }
 
-bool    Scheduler::_wait_for_next_task(std::time_t steady_time)
+bool    Scheduler::_wait_for_next_task(time_t steady_time)
 {
     if (_paused)
     {
@@ -93,13 +93,13 @@ bool    Scheduler::_wait_for_next_task(std::time_t steady_time)
     return false;
 }
 
-Task    *Scheduler::_get_next_task(std::time_t time)
+Task    *Scheduler::_get_next_task(time_t time)
 {
     std::lock_guard l(_mutex_task);
     Task *task = _task_map.begin()->second;
 
-    std::time_t diff = task->run_at - (time + this->acceptable_nano) + _paused_time;
-    if (-diff > this->overrun_at)
+    time_t diff = task->run_at - (time + this->acceptable_nano) + _paused_time;
+    if (-diff > (time_t)this->overrun_at)
         this->overruns += 1;
 
     if (diff <= 0 || _no_delay)
@@ -109,7 +109,7 @@ Task    *Scheduler::_get_next_task(std::time_t time)
     return task;
 }
 
-void    Scheduler::_play_task(Task *task, std::time_t now)
+void    Scheduler::_play_task(Task *task, time_t now)
 {
     task->run();
     if (task->resched_time > 0)
@@ -129,7 +129,7 @@ bool    Scheduler::run()
     if (_clock_ptr == nullptr || _clock_ptr->start() == false)
         return false;
     _begin_run = _clock_ptr->now() - _steady_clock.now();
-    std::time_t steady_time = _steady_clock.now() + _begin_run;
+    time_t steady_time = _steady_clock.now() + _begin_run;
     Task *task = nullptr;
     while (_running)
     {
@@ -164,7 +164,7 @@ void    Scheduler::resume()
 void    Scheduler::add_task(Task *task)
 {
     std::lock_guard l(_mutex_task);
-    _task_map.insert(std::pair<std::time_t, Task *>(task->run_at, task));
+    _task_map.insert(std::pair<time_t, Task *>(task->run_at, task));
     _next_run = _task_map.begin()->first;
     _waitable.notify_all();
 }

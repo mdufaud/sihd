@@ -64,17 +64,15 @@ if verbose:
 try:
     build_modules = modules_helper.get_modules(app,
         specific_modules=modules_to_build)
-    global_extlibs = modules_helper.get_global_extlibs(app)
-    #extlibs = modules_helper.get_modules_extlibs(app, build_modules)
 except RuntimeError as e:
     builder_helper.error(str(e))
     Exit(1)
-
+global_libs = hasattr(app, "libs") and app.libs or []
 if verbose:
     builder_helper.debug("modules configuration:")
     pp.pprint(build_modules)
-    builder_helper.debug("external libs:")
-    pp.pprint(global_extlibs)
+    builder_helper.debug("libs:")
+    pp.pprint(global_libs)
     print()
 
 ###############################################################################
@@ -91,7 +89,8 @@ def add_env_app_conf(env, key):
     for envkey, to_concat in env_to_key.items():
         concat = key + to_concat
         if hasattr(app, concat):
-            env[envkey].extend(getattr(app, concat))
+            #prepends
+            env[envkey][:0] = getattr(app, concat)
 
 base_env = Environment(
     # binaries path
@@ -115,7 +114,7 @@ base_env = Environment(
     # libraries path
     LIBPATH = [],
     # libraries name
-    LIBS = [],
+    LIBS = global_libs,
     # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
     BUILDER_HELPER = builder_helper,
@@ -153,7 +152,7 @@ for entry in ('bin', 'lib', 'include', 'obj', 'test', 'etc'):
 # Setting those path for the compiler
 base_env.Append(
     LIBPATH = [base_env["APP_BUILD_LIB"], base_env["APP_EXTLIB_LIB"]],
-    CPPPATH = base_env["APP_EXTLIB_INCLUDE"]
+    CPPPATH = [base_env["APP_BUILD_INCLUDE"], base_env["APP_EXTLIB_INCLUDE"]]
 )
 
 if not distribution:
@@ -188,9 +187,12 @@ elif compiler == "mingw":
     base_env.Replace(
         CXX = "x86_64-w64-mingw32-g++",
         CC = "x86_64-w64-mingw32-gcc",
-        SHLIBSUFFIX = ".dll",
-        LIBPREFIX = "",
     )
+    if not build_static_libs:
+        base_env.Replace(
+            SHLIBSUFFIX = ".dll",
+            LIBPREFIX = "",
+        )
     if asan:
         builder_helper.error("cannot use address sanitizer with mingw")
         Exit(1)
@@ -224,10 +226,12 @@ def add_targets(src):
     global targets
     if isinstance(src, str):
         targets.append(File(src))
+    elif isinstance(src, list):
+        targets.extend(src)
     else:
-        targets += src
+        targets.append(src)
 
-def build_test(self, src=None, libs=[], test_name=None, **kwargs):
+def build_test(self, src=None, add_libs=[], test_name=None, **kwargs):
     """ Environment method to build unit test binary for a module """
     if has_test == False:
         return None
@@ -236,19 +240,20 @@ def build_test(self, src=None, libs=[], test_name=None, **kwargs):
     add_targets(src)
     if test_name is None:
         test_name = self["APP_MODULE"]
-    test_path = os.path.join("$APP_BUILD_TEST", "bin", test_name)
-    env = self.Clone()
-    if not libs:
-        libs = [self['APP_MODULE']]
-    env.Append(LIBS = libs)
-    add_env_app_conf(env, "test")
+    test_env = self.Clone()
+    if add_libs is not None:
+        if not add_libs:
+            add_libs = [self['APP_MODULE']]
+        test_env.Prepend(LIBS = add_libs)
+    add_env_app_conf(test_env, "test")
     if compiler == "clang":
-        add_env_app_conf(env, "clang_test")
+        add_env_app_conf(test_env, "clang_test")
     elif compiler == "mingw":
-        add_env_app_conf(env, "mingw_test")
+        add_env_app_conf(test_env, "mingw_test")
     elif compiler == "gcc":
-        add_env_app_conf(env, "gcc_test")
-    return env.Program(test_path, src, **kwargs)
+        add_env_app_conf(test_env, "gcc_test")
+    test_path = os.path.join("$APP_BUILD_TEST", "bin", test_name)
+    return test_env.Program(test_path, src, **kwargs)
 
 def build_lib(self, src=None, lib_name=None, static=None, **kwargs):
     """ Environment method to build a shared library for a module """
@@ -323,16 +328,18 @@ for conf in build_order:
     # Getting module's build configuration
     depends = conf.get("depends", [])
     libs = conf.get("libs", [])
-    flags = conf.get("flags", "")
+    platform_libs = conf.get("{}_libs".format(build_platform), [])
+    flags = conf.get("flags", [])
+    platform_flags = conf.get("{}_flags".format(build_platform), [])
     # Create a specific environment for the module
     env = base_env.Clone()
-    env.Append(
+    env.Prepend(
         # adding headers of depending modules and self
         CPPPATH = get_modules_headers(modname, *depends),
         # adding libraries
-        LIBS = get_modules_libname(*depends) + libs + global_extlibs,
+        LIBS = get_modules_libname(*depends) + libs + platform_libs,
         # adding specified flags
-        CCFLAGS = flags,
+        CCFLAGS = flags + platform_flags,
         # formatted module name PROJNAME_MODULENAME
         APP_MODULE = module_format,
         # configuration of module for scons.py

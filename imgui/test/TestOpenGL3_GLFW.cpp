@@ -5,7 +5,7 @@
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
 
-#include <imgui.h>
+#include <sihd/imgui/imgui.h>
 #include <sihd/imgui/imgui_impl_opengl3.h>
 #include <sihd/imgui/imgui_impl_glfw.h>
 #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -22,23 +22,23 @@ namespace test
 {
     LOGGER;
     using namespace sihd::util;
-    class TestSimple: public ::testing::Test
+    class TestOpenGL3_GLFW: public ::testing::Test
     {
         protected:
-            TestSimple()
+            TestOpenGL3_GLFW()
             {
                 char *test_path = getenv("TEST_PATH");
                 _base_test_dir = sihd::util::Files::combine({
                     test_path == nullptr ? "unit_test" : test_path,
                     "imgui",
-                    "simple"
+                    "opengl3_glfw"
                 });
                 _cwd = sihd::util::OS::get_cwd();
                 sihd::util::LoggerManager::basic();
                 sihd::util::Files::make_directories(_base_test_dir);
             }
 
-            virtual ~TestSimple()
+            virtual ~TestOpenGL3_GLFW()
             {
                 sihd::util::LoggerManager::clear_loggers();
             }
@@ -55,7 +55,7 @@ namespace test
             std::string _base_test_dir;
     };
 
-    TEST_F(TestSimple, test_simple_interactive)
+    TEST_F(TestOpenGL3_GLFW, test_simple_interactive)
     {
         if (sihd::util::Term::is_interactive() == false)
             GTEST_SKIP_("requires interaction");

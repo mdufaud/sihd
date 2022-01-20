@@ -28,8 +28,6 @@ extlibs = {
     "sdl": "2.0.18",
     "glew": "2.2.0",
     "glfw": "3.3.6",
-    #"sdl": "2.0.18",
-    "imgui": "1.86",
     "ncurses": "6.2",
     ## command line parser
     "replxx": "0.0.4",
@@ -64,7 +62,7 @@ modules = {
     },
     "http": {
         "uselibs": ['openssl', 'libcurl', 'libwebsockets'],
-        "libs": ['curl', 'websockets'],
+        "libs": ['curl', 'websockets', 'ssl', 'crypto'],
         "depends": ['net'],
     },
     "pcap": {
@@ -86,11 +84,14 @@ modules = {
     "csv": {
         "depends": ['util'],
     },
+    "emscripten": {
+        "depends": ['util'],
+    },
     "imgui": {
-        "uselibs": ['imgui', 'glfw', 'glew'],
-        "libs": ['imgui', 'glfw', 'GLEW', 'GL'],
-        #"libs": ['imgui', "d3d11", "d3dcompiler", "dxgi"],
-        "flags": ["-Wno-cast-function-type"],
+        "uselibs": ['glfw', 'glew'],
+        "linux_libs": ['glfw', 'GLEW', 'GL'],
+        "windows_libs": ["dwmapi", "d3d11", "d3dcompiler", "dxgi", "gdi32"],
+        "windows_flags": ["-Wno-cast-function-type"],
         "depends": ['util'],
     },
     "_module_test": {
@@ -138,7 +139,7 @@ replace_vars = {
 
 ## general compilation parameters
 libs = ['pthread', 'dl']
-flags = ['-Wall', '-Wextra', '-Werror', '-m64', '-pipe', '-fPIC']
+flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
 defines = []
 
 ## mode specifics
@@ -147,6 +148,7 @@ release_flags = ["-O3"]
 
 ## gcc specifics
 gcc_flags = [
+    "-Werror",
     "-D_FORTIFY_SOURCE=2",
     "-D_GLIBCXX_ASSERTIONS",
     "-fasynchronous-unwind-tables",
@@ -160,6 +162,7 @@ gcc_flags = [
 ]
 
 ## clang specifics
+clang_flags = ["-Werror"]
 clang_libs = ['stdc++', "libc++"]
 clang_defines = [
     'LLVM_ENABLE_EH=YES',
@@ -167,6 +170,7 @@ clang_defines = [
 ]
 
 ## mingw specifics
+mingw_flags = ["-Werror"]
 mingw_libs = ['ws2_32', 'psapi']
 # _WIN64 -> activates sihd functionnalities
 # _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)

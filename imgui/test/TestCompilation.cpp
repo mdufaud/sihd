@@ -12,23 +12,23 @@ namespace test
     LOGGER;
     // using namespace sihd::imgui;
     using namespace sihd::util;
-    class TestDemo: public ::testing::Test
+    class TestCompilation: public ::testing::Test
     {
         protected:
-            TestDemo()
+            TestCompilation()
             {
                 char *test_path = getenv("TEST_PATH");
                 _base_test_dir = sihd::util::Files::combine({
                     test_path == nullptr ? "unit_test" : test_path,
                     "imgui",
-                    "demo"
+                    "compilation"
                 });
                 _cwd = sihd::util::OS::get_cwd();
                 sihd::util::LoggerManager::basic();
                 sihd::util::Files::make_directories(_base_test_dir);
             }
 
-            virtual ~TestDemo()
+            virtual ~TestCompilation()
             {
                 sihd::util::LoggerManager::clear_loggers();
             }
@@ -45,17 +45,16 @@ namespace test
             std::string _base_test_dir;
     };
 
-    TEST_F(TestDemo, test_imgui_demo)
+    TEST_F(TestCompilation, test_imgui_demo)
     {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO();
+        ImGuiIO & io = ImGui::GetIO();
 
         // Build atlas
         unsigned char* tex_pixels = NULL;
         int tex_w, tex_h;
         io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_w, &tex_h);
-
         for (int n = 0; n < 20; n++)
         {
             printf("NewFrame() %d\n", n);
@@ -71,7 +70,6 @@ namespace test
 
             ImGui::Render();
         }
-
         printf("DestroyContext()\n");
         ImGui::DestroyContext();
     }

@@ -58,7 +58,7 @@ def get_extlibs_versions(app, modules_extlibs):
             if libname == extlib:
                 ret[libname] = version
     return ret
-    
+
 def get_modules_extlibs(app, modules):
     """ Gets all libs versions needed by selected modules
         @return dict[libname] = version
@@ -87,7 +87,7 @@ def has_conditionnal_in_modules_list(app_conditionnal_modules, modules):
             ret = True
             break
     return ret
- 
+
 def check_conditionnal_modules(app):
     has_conditionnals = hasattr(app, "conditionnal_modules")
     if has_conditionnals is True:

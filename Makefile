@@ -50,11 +50,11 @@ OBJ_PATH = $(BUILD_PATH)/obj
 RES_PATH = $(BUILD_PATH)/etc
 
 # Dist path
-
 DIST_PATH = $(HERE)/dist
 
 # Scons
-SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(UTILS_LOGICAL_CORE_NUMBER) $(SCONS_ARGS)
+j = $(UTILS_LOGICAL_CORE_NUMBER)
+SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(j) $(SCONS_ARGS)
 
 # Conan
 CONAN_PATH = $(BUILD_PATH)/conan
@@ -121,6 +121,7 @@ build: intro
 						lua=$(lua) \
 						asan=$(asan) \
 						libs=$(libs) \
+						j=$(j) \
 						$(SCONS_BUILD_CMD)
 
 build_debug: SCONS_ARGS = --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
@@ -285,6 +286,13 @@ checkdep:
 
 dist: dist = 1
 dist: build
+
+##########
+# Serve
+##########
+
+serve:
+	python3 -m http.server -d $(BIN_PATH) 3000
 
 ##########
 # Cleanup

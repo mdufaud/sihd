@@ -72,11 +72,9 @@ class ConanAppDependencies(ConanFile):
         print("")
 
     def imports(self):
-        self.copy("*.so*", dst = extlib_lib_path, src = "lib")
-        self.copy("*.a*", dst = extlib_lib_path, src = "lib")
-        self.copy("*.dylib*", dst = extlib_lib_path, src = "lib")
+        self.copy("*.*", dst = extlib_lib_path, src = "lib")
         self.copy("*.dll*", dst = extlib_lib_path, src = "bin") # transfert DLL to lib
-        self.copy("*.h*", dst = extlib_hdr_path, src = "include")
+        self.copy("*.*", dst = extlib_hdr_path, src = "include")
         self.copy("*", dst = extlib_bin_path, src = "bin")
         self.copy("*", dst = extlib_etc_path, src = "etc")
         self.copy("*", dst = extlib_res_path, src = "res")
