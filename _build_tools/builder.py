@@ -106,8 +106,8 @@ def sanitize_app(app):
         to_remove = set()
         # check if module depends on a linux lib
         for modname, conf in modules.items():
-            uselibs = conf.get("uselibs", [])
-            matches = [lib for lib in uselibs if lib in linux_extlibs]
+            use_extlibs = conf.get("use-extlibs", [])
+            matches = [lib for lib in use_extlibs if lib in linux_extlibs]
             if matches:
                 warning("module '{}' use linux libs: {}".format(modname, ', '.join(matches)))
                 to_remove.add(modname)
@@ -201,6 +201,7 @@ build_hdr_path = join(build_path, "include")
 build_etc_path = join(build_path, "etc")
 build_lib_path = join(build_path, "lib")
 build_test_path = join(build_path, "test")
+build_obj_path = join(build_path, "obj")
 
 def copy_dll_to_bin():
     if not os.path.isdir(build_bin_path):

@@ -42,7 +42,7 @@ extlibs = {
 }
 modules = {
     "util": {
-        "uselibs": ['nlohmann_json'],
+        "use-extlibs": ['nlohmann_json'],
     },
     "core": {
         "depends": ['util'],
@@ -52,7 +52,7 @@ modules = {
     },
     "zip": {
         "depends": ['util'],
-        "uselibs": ['libzip'],
+        "use-extlibs": ['libzip'],
         "libs": ['zip'],
     },
     "ssh": {
@@ -62,24 +62,24 @@ modules = {
     },
     "http": {
         "depends": ['net'],
-        "uselibs": ['openssl', 'libcurl', 'libwebsockets'],
+        "use-extlibs": ['openssl', 'libcurl', 'libwebsockets'],
         "libs": ['curl', 'websockets', 'ssl', 'crypto'],
     },
     "pcap": {
         "depends": ['net'],
-        "uselibs": ['libpcap'],
+        "use-extlibs": ['libpcap'],
         "libs": ['pcap'],
     },
     "usb": {
         "depends": ['util'],
         ## libusb-dev libusb-1.0-0
-        "uselibs": ['libusb'],
+        "use-extlibs": ['libusb'],
         "libs": ['usb'],
     },
     "bt": {
+        "depends": ['util'],
         ## libbluetooth-dev
         "libs": ['bluetooth'],
-        "depends": ['util'],
     },
     "csv": {
         "depends": ['util'],
@@ -89,10 +89,10 @@ modules = {
     },
     "imgui": {
         "depends": ['util'],
-        "uselibs": ['glfw', 'glew'],
-        "linux_libs": ['glfw', 'GLEW', 'GL'],
-        "windows_libs": ["dwmapi", "d3d11", "d3dcompiler", "dxgi", "gdi32"],
-        "windows_flags": ["-Wno-cast-function-type"],
+        "use-extlibs": ['glfw', 'glew'],
+        "linux-libs": ['glfw', 'GLEW', 'GL'],
+        "windows-libs": ["dwmapi", "d3d11", "d3dcompiler", "dxgi", "gdi32"],
+        "windows-flags": ["-Wno-cast-function-type"],
         "git-url": "https://github.com/ocornut/imgui.git",
         "git-branch": "v1.86",
     },
@@ -104,7 +104,7 @@ modules = {
 conditionnal_modules = {
     "lua": {
         "depends": ['util'],
-        "uselibs": ['sol2'],
+        "use-extlibs": ['sol2'],
         "conditionnal-env": "lua",
         "conditionnal-depends": ['core', 'net', 'http'],
         "flags": ["-Wno-unused-parameter"],
@@ -120,7 +120,7 @@ conditionnal_modules = {
     },
     "py": {
         "depends": ['util'],
-        "uselibs": ['pybind11'],
+        "use-extlibs": ['pybind11'],
         "conditionnal-env": "py",
         "conditionnal-depends": ['core', 'net', 'http'],
         ## pip install python-config

@@ -5,8 +5,8 @@ if env["CXX"] != "em++":
     builder_helper.error("emscripten: must be built using emscripten compiler (add compiler=em)")
     Exit(1)
 
-# adding directly to final command line because CPPFLAGS wont work
-env["CXXCOM"] += " -s WASM=1"
+# adding flags for shared c++
+env.Append(SHCXXFLAGS = ["-s WASM=1"])
 
 bin = env.build_bin(["src/main.cpp"], bin_name = "hello.html")
 

@@ -66,7 +66,7 @@ def get_modules_extlibs(app, modules):
     modules_extlibs = set()
     # getting used libs for every modules
     for _, module in modules.items():
-        libs = module.get('uselibs', [])
+        libs = module.get('use-extlibs', [])
         for lib in libs:
             modules_extlibs.add(lib)
     # adding global libs + test_libs

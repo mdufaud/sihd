@@ -7,7 +7,7 @@ modules = env['APP_MODULES_BUILD']
 test_dir = Dir("test")
 src_dir = Dir("src")
 
-modname = env["APP_MODULE"]
+modname = env["APP_MODULE_NAME"]
 libs = []
 test_srcs = [test_dir.File("main.cpp")]
 test_libs = []

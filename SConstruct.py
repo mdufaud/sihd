@@ -91,6 +91,12 @@ def add_env_app_conf(env, key):
             #prepends
             env[envkey][:0] = getattr(app, concat)
 
+build_dir = Dir(builder_helper.build_path)
+bin_dir = Dir(builder_helper.build_bin_path)
+lib_dir = Dir(builder_helper.build_lib_path)
+extlib_dir = Dir(builder_helper.build_extlib_path)
+extlib_lib_dir = Dir(builder_helper.build_extlib_lib_path)
+
 base_env = Environment(
     # binaries path
     ENV = {
@@ -100,6 +106,10 @@ base_env = Environment(
     CC = "gcc",
     # compiler for c++
     CXX = "c++",
+    # static library archiver
+    AR = "ar",
+    # static library indexer
+    RANLIB = "ranlib",
     # c++ compile flags
     CXXFLAGS = ["-std=c++17"],
     # c and c++ compile flags
@@ -109,9 +119,9 @@ base_env = Environment(
     # link flags
     LINKFLAGS = [],
     # headers path
-    CPPPATH = [],
+    CPPPATH = [builder_helper.build_hdr_path, builder_helper.build_extlib_hdr_path],
     # libraries path
-    LIBPATH = [],
+    LIBPATH = [builder_helper.build_lib_path, builder_helper.build_extlib_lib_path],
     # libraries name
     LIBS = global_libs,
     # extra key for modules to build
@@ -127,15 +137,10 @@ if not verbose:
         SHLINKCOMSTR = "linking shared library: $TARGET",
         CCCOMSTR = "compiling C: $SOURCE",
         CXXCOMSTR = "compiling C++: $SOURCE",
-        LINKCOMSTR = "linking object files into executable: $TARGET",
+        ARCOMSTR = "generating static lib: $TARGET",
         RANLIBCOMSTR = "indexing static lib: $TARGET",
+        LINKCOMSTR = "linking object files into executable: $TARGET",
     )
-
-build_dir = Dir(builder_helper.build_path)
-bin_dir = Dir(builder_helper.build_bin_path)
-lib_dir = Dir(builder_helper.build_lib_path)
-extlib_dir = Dir(builder_helper.build_extlib_path)
-extlib_lib_dir = Dir(builder_helper.build_extlib_lib_path)
 
 # Setting path for extlibs bin, lib and include directories in shared env
 base_env["APP_EXTLIB"] = extlib_dir
@@ -150,17 +155,11 @@ for entry in ('bin', 'lib', 'include', 'obj', 'test', 'etc'):
     entry_dir = build_dir.Dir(entry)
     base_env["APP_BUILD_" + entry.upper()] = entry_dir
 
-# Setting those path for the compiler
-base_env.Append(
-    LIBPATH = [base_env["APP_BUILD_LIB"], base_env["APP_EXTLIB_LIB"]],
-    CPPPATH = [base_env["APP_BUILD_INCLUDE"], base_env["APP_EXTLIB_INCLUDE"]]
-)
-
 if not distribution:
     base_env.Append(
         RPATH = [
-            os.path.abspath(str(base_env["APP_BUILD_LIB"])),
-            os.path.abspath(str(base_env["APP_EXTLIB_LIB"]))
+            os.path.abspath(builder_helper.build_lib_path),
+            os.path.abspath(builder_helper.build_extlib_lib_path)
         ],
     )
 
@@ -169,11 +168,13 @@ if compile_mode == "debug":
 elif compile_mode == "release":
     add_env_app_conf(base_env, "release")
 
-# Clang build
+# CLANG build
 if compiler == "clang":
     base_env.Replace(
         CC = "clang",
         CXX = "clang++",
+        AR = "ar",
+        RANLIB = "ranlib",
     )
     if asan:
         # Needs to be first
@@ -183,20 +184,22 @@ if compiler == "clang":
         )
     base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
     add_env_app_conf(base_env, "clang")
-# Mingw build
+# MINGW build
 elif compiler == "mingw":
+    if asan:
+        builder_helper.error("cannot use address sanitizer with mingw")
+        Exit(1)
     base_env.Replace(
         CC = "x86_64-w64-mingw32-gcc",
         CXX = "x86_64-w64-mingw32-g++",
+        AR = "x86_64-w64-mingw32-ar",
+        RANLIB = "x86_64-w64-mingw32-ranlib",
     )
     if not build_static_libs:
         base_env.Replace(
             SHLIBSUFFIX = ".dll",
             LIBPREFIX = "",
         )
-    if asan:
-        builder_helper.error("cannot use address sanitizer with mingw")
-        Exit(1)
     add_env_app_conf(base_env, "mingw")
 # GCC build
 elif compiler == "gcc":
@@ -207,10 +210,13 @@ elif compiler == "gcc":
             CPPFLAGS  = ["-fsanitize=address", "-fno-omit-frame-pointer"],
         )
     add_env_app_conf(base_env, "gcc")
+# EMSCRIPTEN build
 elif compiler == "em":
     base_env.Replace(
         CC = "emcc",
         CXX = "em++",
+        AR = "emar",
+        RANLIB = "emranlib",
     )
     add_env_app_conf(base_env, "em")
 
@@ -220,6 +226,8 @@ Decider('timestamp-newer')
 ###############################################################################
 # Build
 ###############################################################################
+
+## modules environnement methods
 
 targets = []
 def add_targets(src):
@@ -240,11 +248,11 @@ def build_test(self, src=None, add_libs=[], test_name=None, **kwargs):
     # Not only main.cpp
     add_targets(src)
     if test_name is None:
-        test_name = self["APP_MODULE"]
+        test_name = self["APP_MODULE_NAME"]
     test_env = self.Clone()
     if add_libs is not None:
         if not add_libs:
-            add_libs = [self['APP_MODULE']]
+            add_libs = [self['APP_MODULE_NAME']]
         test_env.Prepend(LIBS = add_libs)
     add_env_app_conf(test_env, "test")
     if compiler == "clang":
@@ -253,17 +261,17 @@ def build_test(self, src=None, add_libs=[], test_name=None, **kwargs):
         add_env_app_conf(test_env, "mingw_test")
     elif compiler == "gcc":
         add_env_app_conf(test_env, "gcc_test")
-    test_path = os.path.join("$APP_BUILD_TEST", "bin", test_name)
+    test_path = os.path.join(builder_helper.build_test_path, "bin", test_name)
     return test_env.Program(test_path, src, **kwargs)
 
 def build_lib(self, src=None, lib_name=None, static=None, **kwargs):
     """ Environment method to build a shared library for a module """
     src = src or Glob('src/*.cpp')
     add_targets(src)
-    module_name = self["APP_MODULE"]
+    module_name = self["APP_MODULE_NAME"]
     if lib_name is None:
         lib_name = module_name
-    lib_path = os.path.join("$APP_BUILD_LIB", lib_name)
+    lib_path = os.path.join(builder_helper.build_lib_path, lib_name)
     if (static is not None and static) or build_static_libs:
         lib = self.StaticLibrary(lib_path, src, **kwargs)
     else:
@@ -274,11 +282,18 @@ def build_bin(self, src, bin_name=None, **kwargs):
     """ Environment method to build a binary for a module """
     add_targets(src)
     if bin_name is None:
-        bin_name = self['APP_MODULE']
+        bin_name = self['APP_MODULE_NAME']
         if compiler == "mingw":
             bin_name += ".exe"
-    bin_path = os.path.join("$APP_BUILD_BIN", bin_name)
+    bin_path = os.path.join(builder_helper.build_bin_path, bin_name)
     return self.Program(bin_path, src, **kwargs)
+
+# methods to build either test, lib or executable
+base_env.AddMethod(build_lib, "build_lib")
+base_env.AddMethod(build_bin, "build_bin")
+base_env.AddMethod(build_test, "build_test")
+
+## build utilities
 
 def get_modules_headers(*args):
     """ Returns modules headers path """
@@ -312,16 +327,11 @@ def copy_module_dir(module_name, dirname_to_copy):
             builder_helper.info("copying resources '{}' of module: {}".format(dirname_to_copy, module_name))
         shutil.copytree(module_dir_input.get_abspath(), build_dir_output.get_abspath(), dirs_exist_ok = True)
 
-# Configure env and call scons.py from every configured modules
-
-built = {}
-build_obj_path = str(base_env["APP_BUILD_OBJ"])
-build_path = str(base_env["APP_BUILD"])
-build_etc_path = str(base_env["APP_BUILD_ETC"])
-
+## sorting build order by module dependencies size
 build_order = list(build_modules.values())
 build_order.sort(key = lambda obj: len(obj["depends"]))
-
+# Configure env and call scons.py from every configured modules
+built = {}
 for conf in build_order:
     modname = conf["modname"]
     builder_helper.info("building module: {}".format(modname))
@@ -329,9 +339,9 @@ for conf in build_order:
     # Getting module's build configuration
     depends = conf.get("depends", [])
     libs = conf.get("libs", [])
-    platform_libs = conf.get("{}_libs".format(build_platform), [])
+    platform_libs = conf.get("{}-libs".format(build_platform), [])
     flags = conf.get("flags", [])
-    platform_flags = conf.get("{}_flags".format(build_platform), [])
+    platform_flags = conf.get("{}-flags".format(build_platform), [])
     # Create a specific environment for the module
     env = base_env.Clone()
     env.Prepend(
@@ -342,14 +352,10 @@ for conf in build_order:
         # adding specified flags
         CCFLAGS = flags + platform_flags,
         # formatted module name PROJNAME_MODULENAME
-        APP_MODULE = module_format,
+        APP_MODULE_NAME = module_format,
         # configuration of module for scons.py
         APP_MODULE_CONF = conf,
     )
-    # methods to build either test shared_lib or executable
-    env.AddMethod(build_lib, "build_lib")
-    env.AddMethod(build_bin, "build_bin")
-    env.AddMethod(build_test, "build_test")
     # use multiple pkg-config output to add libraries/includes path
     package_configs = conf.get("pkg-configs", [])
     load_env_packages_config(env, *package_configs)
@@ -371,7 +377,7 @@ for conf in build_order:
     # read module's scons script file
     module_dir = Dir(modname)
     built[modname] = SConscript(module_dir.File("scons.py"),
-                                variant_dir = os.path.join(build_obj_path, modname),
+                                variant_dir = os.path.join(builder_helper.build_obj_path, modname),
                                 duplicate = 0,
                                 exports = ['env'])
     # copy module/etc content to build/etc
@@ -396,7 +402,7 @@ def fileinput_replace(file, replace_dic):
 def replace_res_in_build(to_replace, replace_dic):
     true_replace = []
     for pattern in to_replace:
-        ret = glob.glob(os.path.join(build_path, pattern), recursive = True)
+        ret = glob.glob(os.path.join(str(build_dir), pattern), recursive = True)
         if ret:
             true_replace += ret
         else:
