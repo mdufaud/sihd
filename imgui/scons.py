@@ -43,7 +43,7 @@ else:
 
 # copy headers into build
 import shutil
-build_include_dir = env["APP_BUILD_INCLUDE"]
+build_include_dir = builder_helper.build_hdr_path
 imgui_include_dir = os.path.join(str(build_include_dir), "sihd", "imgui")
 builder_helper.info("imgui: copying headers to: " + imgui_include_dir)
 os.makedirs(imgui_include_dir, exist_ok = True)

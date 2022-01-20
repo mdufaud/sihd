@@ -142,19 +142,6 @@ if not verbose:
         LINKCOMSTR = "linking object files into executable: $TARGET",
     )
 
-# Setting path for extlibs bin, lib and include directories in shared env
-base_env["APP_EXTLIB"] = extlib_dir
-for entry in ('bin', 'lib', 'include'):
-    entry_dir = extlib_dir.Dir(entry)
-    base_env["APP_EXTLIB_" + entry.upper()] = entry_dir
-extlib_include_path = str(base_env["APP_EXTLIB_INCLUDE"])
-
-# Setting path for build directories in shared env
-base_env["APP_BUILD"] = build_dir
-for entry in ('bin', 'lib', 'include', 'obj', 'test', 'etc'):
-    entry_dir = build_dir.Dir(entry)
-    base_env["APP_BUILD_" + entry.upper()] = entry_dir
-
 if not distribution:
     base_env.Append(
         RPATH = [
