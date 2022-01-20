@@ -8,8 +8,7 @@ import glob
 import os
 import fileinput
 import subprocess
-# Utils for copying resources to build
-import distutils.dir_util
+import shutil
 # Pretty utility for verbosis
 from pprint import PrettyPrinter
 pp = PrettyPrinter(indent=2)
@@ -105,10 +104,10 @@ base_env = Environment(
     CXXFLAGS = ["-std=c++17"],
     # c and c++ compile flags
     CPPFLAGS = [] + (hasattr(app, 'flags') and app.flags or []),
-    # link flags
-    LINKFLAGS = [],
     # extra #define for inside the code
     CPPDEFINES = [] + (hasattr(app, 'defines') and app.defines or []),
+    # link flags
+    LINKFLAGS = [],
     # headers path
     CPPPATH = [],
     # libraries path
@@ -120,14 +119,16 @@ base_env = Environment(
     BUILDER_HELPER = builder_helper,
 )
 
-
 # Build output
 if not verbose:
     base_env.Replace(
+        SHCCCOMSTR = "compiling shared C: $SOURCE",
         SHCXXCOMSTR = "compiling shared C++: $SOURCE",
         SHLINKCOMSTR = "linking shared library: $TARGET",
+        CCCOMSTR = "compiling C: $SOURCE",
         CXXCOMSTR = "compiling C++: $SOURCE",
         LINKCOMSTR = "linking object files into executable: $TARGET",
+        RANLIBCOMSTR = "indexing static lib: $TARGET",
     )
 
 build_dir = Dir(builder_helper.build_path)
@@ -171,8 +172,8 @@ elif compile_mode == "release":
 # Clang build
 if compiler == "clang":
     base_env.Replace(
+        CC = "clang",
         CXX = "clang++",
-        CC = "clang"
     )
     if asan:
         # Needs to be first
@@ -185,8 +186,8 @@ if compiler == "clang":
 # Mingw build
 elif compiler == "mingw":
     base_env.Replace(
-        CXX = "x86_64-w64-mingw32-g++",
         CC = "x86_64-w64-mingw32-gcc",
+        CXX = "x86_64-w64-mingw32-g++",
     )
     if not build_static_libs:
         base_env.Replace(
@@ -309,7 +310,7 @@ def copy_module_dir(module_name, dirname_to_copy):
     if os.path.isdir(str(module_dir_input)):
         if verbose:
             builder_helper.info("copying resources '{}' of module: {}".format(dirname_to_copy, module_name))
-        distutils.dir_util.copy_tree(module_dir_input.get_abspath(), build_dir_output.get_abspath())
+        shutil.copytree(module_dir_input.get_abspath(), build_dir_output.get_abspath(), dirs_exist_ok = True)
 
 # Configure env and call scons.py from every configured modules
 

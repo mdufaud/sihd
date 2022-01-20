@@ -1,6 +1,7 @@
 Import('env')
 
 builder_helper = env["BUILDER_HELPER"]
+conf = env["APP_MODULE_CONF"]
 
 # clone imgui if not already done
 import os
@@ -8,9 +9,9 @@ imgui_dir = Dir("imgui")
 if not os.path.isdir(str(imgui_dir)):
     builder_helper.info("imgui: cloning repository")
     import subprocess
-    subprocess.call(['git', 'clone', '--branch', 'v1.86', 'https://github.com/ocornut/imgui.git', str(imgui_dir)])
+    subprocess.call(['git', 'clone', '--branch', conf["git-branch"], conf["git-url"], str(imgui_dir)])
 else:
-    builder_helper.info("imgui: already cloned")
+    builder_helper.info("imgui: repository already cloned")
 
 # append path
 imgui_backends_dir = imgui_dir.Dir("backends")

@@ -51,30 +51,30 @@ modules = {
         "depends": ['util'],
     },
     "zip": {
+        "depends": ['util'],
         "uselibs": ['libzip'],
         "libs": ['zip'],
-        "depends": ['util'],
     },
     "ssh": {
+        "depends": ['util'],
         ## libssh-dev
         "libs": ['ssh'],
-        "depends": ['util'],
     },
     "http": {
+        "depends": ['net'],
         "uselibs": ['openssl', 'libcurl', 'libwebsockets'],
         "libs": ['curl', 'websockets', 'ssl', 'crypto'],
-        "depends": ['net'],
     },
     "pcap": {
+        "depends": ['net'],
         "uselibs": ['libpcap'],
         "libs": ['pcap'],
-        "depends": ['net'],
     },
     "usb": {
+        "depends": ['util'],
         ## libusb-dev libusb-1.0-0
         "uselibs": ['libusb'],
         "libs": ['usb'],
-        "depends": ['util'],
     },
     "bt": {
         ## libbluetooth-dev
@@ -88,11 +88,13 @@ modules = {
         "depends": ['util'],
     },
     "imgui": {
+        "depends": ['util'],
         "uselibs": ['glfw', 'glew'],
         "linux_libs": ['glfw', 'GLEW', 'GL'],
         "windows_libs": ["dwmapi", "d3d11", "d3dcompiler", "dxgi", "gdi32"],
         "windows_flags": ["-Wno-cast-function-type"],
-        "depends": ['util'],
+        "git-url": "https://github.com/ocornut/imgui.git",
+        "git-branch": "v1.86",
     },
     "_module_test": {
         "depends": ['pcap', 'http'],
