@@ -1,6 +1,7 @@
 import os
 
-expected_configurations_lists = ['depends', 'libs', 'parse-configs', 'pkg-configs']
+static_depends_duplication_parameters = ['depends', 'libs']
+matching_depends_duplication_parameters = ['-configs']
 
 def fill_modlist_from_modules(modules, specific_modules, modlist):
     """ Gets all modules to build from a single module to build """
@@ -15,24 +16,32 @@ def fill_modlist_from_modules(modules, specific_modules, modlist):
         #fill_modlist_from_modules(modules, conf.get('conditionnal-depends', []), modlist)
 
 def __rec_fill_module_real_depends(modules, module_name, to_fill_module_conf):
-    """ Fill a single module real dependency tree into modconf """
+    """ Fill a single module real dependency tree into modules """
     conf = modules.get(module_name, None)
     if conf is None:
         raise RuntimeError("Error in module's configuration, not a module: {}".format(module_name))
+    parameters_to_duplicate = list(
+        filter(
+            lambda key: any(param in key for param in matching_depends_duplication_parameters),
+            conf.keys()
+        )
+    )
+    parameters_to_duplicate.extend(static_depends_duplication_parameters)
+    for param in parameters_to_duplicate:
+        if not param in to_fill_module_conf:
+            to_fill_module_conf[param] = []
+        to_fill_module_conf[param].extend(conf.get(param, []))
     depends = conf.get('depends', [])
-    for expected_conf in expected_configurations_lists:
-        to_fill_module_conf[expected_conf].extend(conf.get(expected_conf, []))
-    for module in depends:
-        __rec_fill_module_real_depends(modules, module, to_fill_module_conf)
+    for depending_module_name in depends:
+        __rec_fill_module_real_depends(modules, depending_module_name, to_fill_module_conf)
 
 def resolve_modules_dependencies(modules):
     """ Fill all modules real dependency tree """
     for name, conf in modules.items():
         conf["modname"] = name
-        # Add configurations if not declared
-        for expected_conf in expected_configurations_lists:
-            if expected_conf not in conf:
-                conf[expected_conf] = []
+        # Adds depends config if not here
+        if "depends" not in conf:
+            conf["depends"] = []
         # Adds conditionnal dependencies if they are in the current build
         conditionnal_depends = conf.get("conditionnal-depends", [])
         if conditionnal_depends:
@@ -40,8 +49,10 @@ def resolve_modules_dependencies(modules):
         # Get dependency tree
         __rec_fill_module_real_depends(modules, name, conf)
         # Remove duplicates
-        for expected_conf in expected_configurations_lists:
-            conf[expected_conf] = list(set(conf[expected_conf]))
+        for key in conf.keys():
+            if any(param in key for param in matching_depends_duplication_parameters) \
+                    or key in static_depends_duplication_parameters:
+                conf[key] = list(set(conf[key]))
 
 def get_global_extlibs(app):
     libs = hasattr(app, "libs") and app.libs or []

@@ -1,10 +1,18 @@
+import os
+
 Import('env')
+
+has_sdl2 = False
+scons_log_file = File(".scons_conf.log")
+scons_conf_dir = Dir(".scons_conf.d")
+scons_conf = env.Configure(log_file = scons_log_file, conf_dir = scons_conf_dir)
+if scons_conf.CheckLib('SDL2'):
+    has_sdl2 = True
 
 builder_helper = env["BUILDER_HELPER"]
 conf = env["APP_MODULE_CONF"]
 
 # clone imgui if not already done
-import os
 imgui_dir = Dir("imgui")
 if not os.path.isdir(str(imgui_dir)):
     builder_helper.info("imgui: cloning repository")
@@ -13,7 +21,7 @@ if not os.path.isdir(str(imgui_dir)):
 else:
     builder_helper.info("imgui: repository already cloned")
 
-# append path
+# append path "imgui" and "imgui/backends"
 imgui_backends_dir = imgui_dir.Dir("backends")
 env.Append(CPPPATH = [str(imgui_dir), str(imgui_backends_dir)])
 
@@ -21,8 +29,7 @@ env.Append(CPPPATH = [str(imgui_dir), str(imgui_backends_dir)])
 imgui_srcs = Glob(str(imgui_dir) + "/*.cpp")
 imgui_headers = Glob(str(imgui_dir) + "/*.h")
 # platform dependent srcs/headers
-platform = env["BUILDER_HELPER"].build_platform
-if platform == "windows":
+if builder_helper.build_platform == "windows":
     imgui_srcs.extend([
         imgui_backends_dir.File("imgui_impl_dx11.cpp"),
         imgui_backends_dir.File("imgui_impl_win32.cpp"),
@@ -40,6 +47,9 @@ else:
         imgui_backends_dir.File("imgui_impl_glfw.h"),
         imgui_backends_dir.File("imgui_impl_opengl3.h"),
     ])
+    if has_sdl2:
+        imgui_srcs.append(imgui_backends_dir.File("imgui_impl_sdl.cpp"))
+        imgui_headers.append(imgui_backends_dir.File("imgui_impl_sdl.h"))
 
 # copy headers into build
 import shutil
@@ -51,12 +61,10 @@ for header in imgui_headers:
     shutil.copy(str(header), imgui_include_dir)
 
 # build
-lib = env.build_lib(imgui_srcs, lib_name = "imgui")
+imgui_lib = env.build_lib(imgui_srcs, lib_name = "imgui")
 env.Prepend(LIBS = "imgui")
 
-test = env.build_test(add_libs = None)
+lib = env.build_lib()
+test = env.build_test()
 
-if platform == "windows":
-    env.build_bin(["bin/win_d11_demo.cpp"], bin_name = "imgui_win_d11_demo")
-
-Return()
+Return('lib')

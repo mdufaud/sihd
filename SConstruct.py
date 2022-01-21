@@ -101,6 +101,7 @@ base_env = Environment(
     # binaries path
     ENV = {
         'PATH': os.getenv("PATH"),
+        'LIBPATH': os.getenv("LIBPATH")
     },
     # compiler for c
     CC = "gcc",
@@ -329,6 +330,8 @@ for conf in build_order:
     platform_libs = conf.get("{}-libs".format(build_platform), [])
     flags = conf.get("flags", [])
     platform_flags = conf.get("{}-flags".format(build_platform), [])
+    link = conf.get("link", [])
+    platform_link = conf.get("{}-link".format(build_platform), [])
     # Create a specific environment for the module
     env = base_env.Clone()
     env.Prepend(
@@ -338,6 +341,8 @@ for conf in build_order:
         LIBS = get_modules_libname(*depends) + libs + platform_libs,
         # adding specified flags
         CCFLAGS = flags + platform_flags,
+        # adding specified link flags
+        LINKFLAGS = link + platform_link,
         # formatted module name PROJNAME_MODULENAME
         APP_MODULE_NAME = module_format,
         # configuration of module for scons.py

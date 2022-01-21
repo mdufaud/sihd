@@ -87,21 +87,27 @@ modules = {
     "emscripten": {
         "depends": ['util'],
     },
+    "ncurses": {
+
+    },
     "imgui": {
         "depends": ['util'],
         "use-extlibs": ['glfw', 'glew'],
         "linux-libs": ['glfw', 'GLEW', 'GL'],
         "windows-libs": ["dwmapi", "d3d11", "d3dcompiler", "dxgi", "gdi32"],
         "windows-flags": ["-Wno-cast-function-type"],
+        "parse-configs": [
+            "pkg-config --cflags --libs sdl2"
+        ],
         "git-url": "https://github.com/ocornut/imgui.git",
-        "git-branch": "v1.86",
-    },
-    "_module_test": {
-        "depends": ['pcap', 'http'],
+        "git-branch": "v1.81",
     },
 }
 ## conditionnals - only if activated
 conditionnal_modules = {
+    "demo": {
+        "depends": ['pcap', 'http', 'imgui'],
+    },
     "lua": {
         "depends": ['util'],
         "use-extlibs": ['sol2'],

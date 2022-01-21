@@ -10,16 +10,6 @@
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/Handler.hpp>
 
-#include <sihd/pcap/Sniffer.hpp>
-#include <sihd/pcap/PcapInterfaces.hpp>
-
-#if defined(__SIHD_WINDOWS__)
-// prevents error: previous declaration as 'typedef long int suseconds_t'
-// windows libwebsockets - contrary to libpcap
-// have a way to not typedef based on this define
-# define LWS_HAVE_SUSECONDS_T
-#endif
-
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/WebsocketHandler.hpp>
 #include <sihd/http/WebService.hpp>
@@ -30,69 +20,9 @@ namespace test::module
 {
 
 using namespace sihd::util;
-using namespace sihd::pcap;
 using namespace sihd::http;
 
 NEW_LOGGER("test::module");
-
-static void node_test()
-{
-    Node node("root");
-    LOG(info, "Node root name: " << node.get_name());
-    LOG(info, "Executable path: " << OS::get_executable_path());
-    std::cout << std::endl;
-}
-
-static std::string interfaces_test()
-{
-    LOG(info, "Net interfaces");
-    std::string interface_to_sniff;
-    PcapInterfaces ifaces;
-    for (const auto & iface: ifaces.ifaces())
-    {
-        LOG(info, iface.dump());
-        if (iface.up() && !iface.loopback())
-        {
-            interface_to_sniff = iface.name();
-        }
-    }
-    std::cout << std::endl;
-    return interface_to_sniff;
-}
-
-static void sniffer_test(const std::string & interface_to_sniff)
-{
-    LOG(info, "Sniffing on eth0");
-    Sniffer pcap("pcap-sniffer");
-    Handler<Sniffer *> obs([] (Sniffer *obj)
-    {
-        // TRACE(obj->array().hexdump());
-        LOG(info, obj->array().size());
-        std::cout << Str::hexdump_fmt(obj->array().cbuf(), obj->array().byte_size()) << std::endl;
-    });
-    pcap.add_observer(&obs);
-    pcap.open(interface_to_sniff);
-    if (pcap.is_open() == true)
-    {
-        // pcap.set_monitor(true);
-        // pcap.set_immediate(true);
-        pcap.set_promiscuous(false);
-        pcap.set_snaplen(2048);
-        pcap.set_timeout(512);
-        LOG(info, "Activating packet capture");
-        pcap.activate();
-        if (pcap.is_active())
-        {
-            pcap.set_filter("portrange 0-2000");
-            // sniff once
-            pcap.sniff();
-            usleep(10E3);
-            pcap.close();
-        }
-    }
-    LOG(info, "Ending packet capture");
-    std::cout << std::endl;
-}
 
 class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebsocketHandler
 {
@@ -201,7 +131,7 @@ static void http_test()
             return true;
         }));
         std::string root_path = Files::get_parent(Files::get_parent(OS::get_executable_path()));
-        std::string res_path = Files::combine({root_path, "etc", "sihd", "_module_test"});
+        std::string res_path = Files::combine({root_path, "etc", "sihd", "demo", "http_demo"});
         LOG(info, "Root dir: " << res_path);
         server.set_root_dir(res_path);
         server.set_port(3000);
@@ -217,9 +147,8 @@ int main()
 {
     sihd::util::Str::hexdump_cols = 20;
     sihd::util::LoggerManager::basic();
-    test::module::node_test();
-    std::string interface_to_sniff = test::module::interfaces_test();
-    test::module::sniffer_test(interface_to_sniff);
     test::module::http_test();
     return 0;
 }
+
+
