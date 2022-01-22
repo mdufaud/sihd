@@ -14,15 +14,14 @@ from _build_tools import builder as builder_helper
 
 builder_helper.info("fetching {} external libraries".format(app.name))
 
+if builder_helper.verify_args() == False:
+    exit(1)
+
 builder_helper.sanitize_app(app)
 
 modules_to_build = builder_helper.get_modules()
-verbose = builder_helper.has_verbose()
-has_test = builder_helper.has_test()
-static_libs = builder_helper.is_static_libs()
-compiler = builder_helper.build_compiler
-build_platform = builder_helper.build_platform
-compile_mode = builder_helper.build_mode
+verbose = builder_helper.build_verbose
+has_test = builder_helper.build_tests
 
 if verbose:
     if modules_to_build:
@@ -55,7 +54,7 @@ extlib_bin_path = builder_helper.build_extlib_bin_path
 extlib_etc_path = builder_helper.build_extlib_etc_path
 extlib_res_path = builder_helper.build_extlib_res_path
 
-conan_options = {'*:shared': static_libs == False}
+conan_options = {'*:shared': builder_helper.build_static_libs == False}
 if hasattr(app, "conan_options"):
     conan_options.update(app.conan_options)
 

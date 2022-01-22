@@ -20,12 +20,14 @@ if env["CXX"] == "em++":
             "-s", "ASSERTIONS=1",
         ],
     )
-    emscripten_env.build_bin(["bin/imgui_emscripten_sdl_demo.cpp"], add_libs = None, bin_name = "imgui_emscripten_sdl_demo.html")
+    emscripten_env.build_bin(["src/imgui_emscripten_sdl_demo.cpp"], bin_name = "imgui_emscripten_sdl_demo.html")
     Return()
 
-env.build_bin("src/http_demo.cpp", add_libs = None, bin_name = "http_demo")
-env.build_bin("src/pcap_demo.cpp", add_libs = None, bin_name = "pcap_demo")
+env.build_bin("src/http_demo.cpp", bin_name = "http_demo")
+env.build_bin("src/pcap_demo.cpp", bin_name = "pcap_demo")
 if builder_helper.build_platform == "windows":
-    env.build_bin("src/imgui_win_d11_demo.cpp", add_libs = None, bin_name = "imgui_win_d11_demo")
+    env.build_bin("src/imgui_win_d11_demo.cpp", bin_name = "imgui_win_d11_demo")
+else:
+    env.build_bin("src/imgui_opengl3_glfw_demo.cpp", bin_name = "imgui_opengl3_glfw_demo")
 
 Return()

@@ -7,6 +7,6 @@ if env["CXX"] != "em++":
 
 env.Append(CPPFLAGS = ["-s", "WASM=1"])
 
-bin = env.build_bin(["src/main.cpp"], bin_name = "hello.html")
+bin = env.build_bin("src/main.cpp", bin_name = "hello.html")
 
 Return('bin')

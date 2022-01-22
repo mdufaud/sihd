@@ -119,8 +119,9 @@ build: intro
 						dist=$(dist) \
 						py=$(py) \
 						lua=$(lua) \
+						demo=$(demo) \
 						asan=$(asan) \
-						libs=$(libs) \
+						static=$(static) \
 						j=$(j) \
 						$(SCONS_BUILD_CMD)
 
@@ -180,7 +181,7 @@ gdbtest: test
 
 gtest: gdbtest
 
-santest: asan=1
+santest: asan = 1
 santest: test
 
 stest: santest
@@ -250,7 +251,7 @@ endif
 
 dep: intro
 	$(call log_info,makefile,starting conan with command: $(CONAN_INSTALL))
-	@env test=$(test) verbose=$(verbose) modules=$(modules) lua=$(lua) py=$(py) $(CONAN_INSTALL)
+	@env test=$(test) verbose=$(verbose) modules=$(modules) lua=$(lua) py=$(py) demo=$(demo) $(CONAN_INSTALL)
 
 # make dep mod MODULE
 ifeq ($(word 2, $(MAKECMDGOALS)), mod)
@@ -315,9 +316,15 @@ clean_dist:
 	@$(call log_info,makefile,removing distribution)
 	rm -rf $(DIST_PATH)
 
-fclean:
+bclean:
 	@$(call log_info,makefile,removing build)
 	rm -rf $(BUILD_ENTRY_PATH) $(DIST_PATH)
+
+fclean: bclean
+	@$(call log_info,makefile,removing all files)
+	@find $(HERE) -name "*vgcore*"
+	@find $(HERE) -name "*.scons*"
+	@find $(HERE) -name "*.ini"
 
 ### Makefile
 .PHONY: install build verbose dist fclean clean clean_dist clean_dep

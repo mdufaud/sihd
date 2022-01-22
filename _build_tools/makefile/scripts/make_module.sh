@@ -23,6 +23,8 @@ mkdir -p $MODULE_NAME/src \
 
 if [ ! -f $MODULE_NAME/scons.py ]; then
     cp $SCRIPT_DIR/../templates/scons_template.txt $MODULE_NAME/scons.py
+    sed -i "s/APP_NAME/$APP_NAME/g" $MODULE_NAME/scons.py
+    sed -i "s/MODULE_NAME/$MODULE_NAME/g" $MODULE_NAME/scons.py
 fi
 if [ ! -f $MODULE_NAME/test/main.cpp ]; then
     cp $SCRIPT_DIR/../templates/test/main_template.txt $MODULE_NAME/test/main.cpp

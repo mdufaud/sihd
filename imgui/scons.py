@@ -2,7 +2,7 @@ import os
 
 Import('env')
 
-has_sdl2 = False
+has_sdl2 = True
 scons_log_file = File(".scons_conf.log")
 scons_conf_dir = Dir(".scons_conf.d")
 scons_conf = env.Configure(log_file = scons_log_file, conf_dir = scons_conf_dir)
@@ -64,7 +64,7 @@ for header in imgui_headers:
 imgui_lib = env.build_lib(imgui_srcs, lib_name = "imgui")
 env.Prepend(LIBS = "imgui")
 
-lib = env.build_lib()
-test = env.build_test()
+lib = env.build_lib(Glob('src/*.cpp'), lib_name = env['APP_MODULE_FORMAT_NAME'])
+test = env.build_test(Glob('test/*.cpp'), add_libs = [env['APP_MODULE_FORMAT_NAME']])
 
 Return('lib')

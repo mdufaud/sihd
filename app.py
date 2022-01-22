@@ -46,52 +46,60 @@ modules = {
     },
     "core": {
         "depends": ['util'],
+        "add-depends-libs": True,
     },
     "net": {
         "depends": ['util'],
+        "add-depends-libs": True,
     },
     "zip": {
         "depends": ['util'],
+        "add-depends-libs": True,
         "use-extlibs": ['libzip'],
         "libs": ['zip'],
     },
     "ssh": {
         "depends": ['util'],
+        "add-depends-libs": True,
         ## libssh-dev
-        "libs": ['ssh'],
+        "libs": ['sihd_util', 'ssh'],
     },
     "http": {
         "depends": ['net'],
+        "add-depends-libs": True,
         "use-extlibs": ['openssl', 'libcurl', 'libwebsockets'],
         "libs": ['curl', 'websockets', 'ssl', 'crypto'],
     },
     "pcap": {
         "depends": ['net'],
+        "add-depends-libs": True,
         "use-extlibs": ['libpcap'],
         "libs": ['pcap'],
     },
     "usb": {
         "depends": ['util'],
+        "add-depends-libs": True,
         ## libusb-dev libusb-1.0-0
         "use-extlibs": ['libusb'],
         "libs": ['usb'],
     },
     "bt": {
         "depends": ['util'],
+        "add-depends-libs": True,
         ## libbluetooth-dev
         "libs": ['bluetooth'],
     },
     "csv": {
         "depends": ['util'],
+        "add-depends-libs": True,
     },
     "emscripten": {
         "depends": ['util'],
-    },
-    "ncurses": {
-
+        "add-depends-libs": True,
     },
     "imgui": {
         "depends": ['util'],
+        "add-depends-libs": True,
         "use-extlibs": ['glfw', 'glew'],
         "linux-libs": ['glfw', 'GLEW', 'GL'],
         "windows-libs": ["dwmapi", "d3d11", "d3dcompiler", "dxgi", "gdi32"],
@@ -100,16 +108,19 @@ modules = {
             "pkg-config --cflags --libs sdl2"
         ],
         "git-url": "https://github.com/ocornut/imgui.git",
-        "git-branch": "v1.81",
+        "git-branch": "v1.86",
     },
 }
 ## conditionnals - only if activated
 conditionnal_modules = {
     "demo": {
         "depends": ['pcap', 'http', 'imgui'],
+        "add-depends-libs": True,
+        "conditionnal-env": "demo",
     },
     "lua": {
         "depends": ['util'],
+        "add-depends-libs": True,
         "use-extlibs": ['sol2'],
         "conditionnal-env": "lua",
         "conditionnal-depends": ['core', 'net', 'http'],
@@ -121,11 +132,12 @@ conditionnal_modules = {
     },
     "luabin": {
         "depends": ['lua'],
+        "add-depends-libs": True,
         "conditionnal-env": "lua",
-        "flags": ["-Wno-unused-parameter"]
     },
     "py": {
         "depends": ['util'],
+        "add-depends-libs": True,
         "use-extlibs": ['pybind11'],
         "conditionnal-env": "py",
         "conditionnal-depends": ['core', 'net', 'http'],

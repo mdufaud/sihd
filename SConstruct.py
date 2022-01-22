@@ -22,6 +22,10 @@ sys.dont_write_bytecode = False
 
 builder_helper.info("building {}".format(app.name))
 builder_helper.info("building to: {}".format(builder_helper.build_path))
+
+if builder_helper.verify_args() == False:
+    Exit(1)
+
 builder_helper.sanitize_app(app)
 
 ###############################################################################
@@ -29,40 +33,25 @@ builder_helper.sanitize_app(app)
 ###############################################################################
 
 modules_to_build = builder_helper.get_modules()
-has_test = builder_helper.has_test()
-verbose = builder_helper.has_verbose()
-asan = builder_helper.is_address_sanatizer()
-build_static_libs = builder_helper.is_static_libs()
 
 compiler = builder_helper.build_compiler
 build_platform = builder_helper.build_platform
-compile_mode = builder_helper.build_mode
-arch = builder_helper.build_architecture
 
 distribution = builder_helper.do_distribution()
-
-if build_platform not in ("windows", "linux"):
-    builder_helper.error("platform {} is not supported".format(build_platform))
-    exit(1)
-if compiler not in ("gcc", "clang", "mingw", "em"):
-    builder_helper.error("compiler {} is not supported".format(compiler))
-    exit(1)
-if compile_mode not in ("debug", "release"):
-    builder_helper.error("mode {} unknown".format(compile_mode))
-    exit(1)
+verbose = builder_helper.has_verbose()
 
 if verbose:
     builder_helper.info("platform: " + build_platform)
     builder_helper.info("compiler: " + compiler)
-    builder_helper.info("arch: " + arch)
-    builder_helper.info("mode: " + compile_mode)
-    builder_helper.info("tests: " + (has_test and "yes" or "no"))
-    builder_helper.info("address sanatizer: " + (asan and "yes" or "no"))
+    builder_helper.info("arch: " + builder_helper.build_architecture)
+    builder_helper.info("mode: " + builder_helper.build_mode)
+    builder_helper.info("tests: " + (builder_helper.build_tests and "yes" or "no"))
+    builder_helper.info("libraries: " + (builder_helper.build_static_libs and "static" or "shared"))
+    builder_helper.info("address sanatizer: " + (builder_helper.build_asan and "yes" or "no"))
 
 # Get modules configuration for this build
 try:
-    build_modules = modules_helper.get_modules(app,
-        specific_modules=modules_to_build)
+    build_modules = modules_helper.get_modules(app, specific_modules=modules_to_build)
 except RuntimeError as e:
     builder_helper.error(str(e))
     Exit(1)
@@ -151,9 +140,9 @@ if not distribution:
         ],
     )
 
-if compile_mode == "debug":
+if builder_helper.build_mode == "debug":
     add_env_app_conf(base_env, "debug")
-elif compile_mode == "release":
+elif builder_helper.build_mode == "release":
     add_env_app_conf(base_env, "release")
 
 # CLANG build
@@ -164,7 +153,7 @@ if compiler == "clang":
         AR = "ar",
         RANLIB = "ranlib",
     )
-    if asan:
+    if builder_helper.build_asan:
         # Needs to be first
         base_env.Append(
             LIBS = ["asan"],
@@ -174,16 +163,13 @@ if compiler == "clang":
     add_env_app_conf(base_env, "clang")
 # MINGW build
 elif compiler == "mingw":
-    if asan:
-        builder_helper.error("cannot use address sanitizer with mingw")
-        Exit(1)
     base_env.Replace(
         CC = "x86_64-w64-mingw32-gcc",
         CXX = "x86_64-w64-mingw32-g++",
         AR = "x86_64-w64-mingw32-ar",
         RANLIB = "x86_64-w64-mingw32-ranlib",
     )
-    if not build_static_libs:
+    if not builder_helper.build_static_libs:
         base_env.Replace(
             SHLIBSUFFIX = ".dll",
             LIBPREFIX = "",
@@ -191,7 +177,7 @@ elif compiler == "mingw":
     add_env_app_conf(base_env, "mingw")
 # GCC build
 elif compiler == "gcc":
-    if asan:
+    if builder_helper.build_asan:
         # Needs to be first
         base_env.Append(
             LIBS = ["asan"],
@@ -215,9 +201,10 @@ Decider('timestamp-newer')
 # Build
 ###############################################################################
 
-## modules environnement methods
-
+modules_generated_libs = {}
+modules_generated_bins = {}
 targets = []
+
 def add_targets(src):
     """ Remember every source file used to build """
     global targets
@@ -228,20 +215,19 @@ def add_targets(src):
     else:
         targets.append(src)
 
-def build_test(self, src=None, add_libs=[], test_name=None, **kwargs):
+## modules environnement methods
+
+def build_test(self, src, test_name=None, add_libs=[], **kwargs):
     """ Environment method to build unit test binary for a module """
-    if has_test == False:
+    if builder_helper.build_tests == False:
         return None
-    src = src or Glob('test/*.cpp')
-    # Not only main.cpp
+    if modules_to_build and self['APP_MODULE_NAME'] not in modules_to_build:
+        return None
     add_targets(src)
     if test_name is None:
-        test_name = self["APP_MODULE_NAME"]
+        test_name = self["APP_MODULE_FORMAT_NAME"]
     test_env = self.Clone()
-    if add_libs is not None:
-        if not add_libs:
-            add_libs = [self['APP_MODULE_NAME']]
-        test_env.Prepend(LIBS = add_libs)
+    test_env.Prepend(LIBS = add_libs)
     add_env_app_conf(test_env, "test")
     if compiler == "clang":
         add_env_app_conf(test_env, "clang_test")
@@ -252,29 +238,34 @@ def build_test(self, src=None, add_libs=[], test_name=None, **kwargs):
     test_path = os.path.join(builder_helper.build_test_path, "bin", test_name)
     return test_env.Program(test_path, src, **kwargs)
 
-def build_lib(self, src=None, lib_name=None, static=None, **kwargs):
+def build_lib(self, src, lib_name=None, static=None, **kwargs):
     """ Environment method to build a shared library for a module """
-    src = src or Glob('src/*.cpp')
+    global modules_generated_libs
     add_targets(src)
-    module_name = self["APP_MODULE_NAME"]
+    module_name = self["APP_MODULE_FORMAT_NAME"]
     if lib_name is None:
         lib_name = module_name
     lib_path = os.path.join(builder_helper.build_lib_path, lib_name)
-    if (static is not None and static) or build_static_libs:
+    if (static is not None and static) or builder_helper.build_static_libs:
         lib = self.StaticLibrary(lib_path, src, **kwargs)
     else:
         lib = self.SharedLibrary(lib_path, src, **kwargs)
+    modules_generated_libs.setdefault(self['APP_MODULE_NAME'], []).append(lib_name)
     return lib
 
-def build_bin(self, src, bin_name=None, **kwargs):
+def build_bin(self, src, bin_name=None, add_libs=[], **kwargs):
     """ Environment method to build a binary for a module """
+    global modules_generated_bins
     add_targets(src)
     if bin_name is None:
-        bin_name = self['APP_MODULE_NAME']
-        if compiler == "mingw":
-            bin_name += ".exe"
+        bin_name = self['APP_MODULE_FORMAT_NAME']
+    if compiler == "mingw":
+        bin_name += ".exe"
+    bin_env = self.Clone()
+    bin_env.Prepend(LIBS = add_libs)
     bin_path = os.path.join(builder_helper.build_bin_path, bin_name)
-    return self.Program(bin_path, src, **kwargs)
+    modules_generated_bins.setdefault(self['APP_MODULE_NAME'], []).append(bin_name)
+    return bin_env.Program(bin_path, src, **kwargs)
 
 # methods to build either test, lib or executable
 base_env.AddMethod(build_lib, "build_lib")
@@ -286,10 +277,6 @@ base_env.AddMethod(build_test, "build_test")
 def get_modules_headers(*args):
     """ Returns modules headers path """
     return [os.path.join("#", m, "include") for m in args]
-
-def get_modules_libname(*args):
-    """ Returns modules shared library names """
-    return ["{}_{}".format(app.name, m) for m in args]
 
 def load_env_packages_config(env, *configs):
     """ Parse multiple pkg-configs: libraries/includes utilities """
@@ -306,7 +293,7 @@ def load_env_packages_specific_config(env, *configs):
         except OSError as e:
             builder_helper.warning("package {} not found".format(config))
 
-def copy_module_dir(module_name, dirname_to_copy):
+def copy_module_dir_into_build(module_name, dirname_to_copy):
     """ recursive copy of MODNAME/DIRNAME to build/DIRNAME """
     module_dir_input = Dir(module_name).Dir(dirname_to_copy)
     build_dir_output = build_dir.Dir(dirname_to_copy)
@@ -324,27 +311,39 @@ for conf in build_order:
     modname = conf["modname"]
     builder_helper.info("building module: {}".format(modname))
     module_format = "{}_{}".format(app.name, modname)
-    # Getting module's build configuration
+    ## getting module's build configuration
     depends = conf.get("depends", [])
-    libs = conf.get("libs", [])
+    # get platform dependent libs
     platform_libs = conf.get("{}-libs".format(build_platform), [])
+    # add flag
     flags = conf.get("flags", [])
     platform_flags = conf.get("{}-flags".format(build_platform), [])
+    # add linkflags
     link = conf.get("link", [])
     platform_link = conf.get("{}-link".format(build_platform), [])
+    # add libs generated by parent modules
+    depends_generated_libs = []
+    if conf.get("add-depends-libs") is True:
+        for dep_modname in conf.get("original-depends"):
+            for generated_lib_name in modules_generated_libs.get(dep_modname, []):
+                depends_generated_libs.insert(0, generated_lib_name)
     # Create a specific environment for the module
     env = base_env.Clone()
     env.Prepend(
         # adding headers of depending modules and self
         CPPPATH = get_modules_headers(modname, *depends),
         # adding libraries
-        LIBS = get_modules_libname(*depends) + libs + platform_libs,
+        LIBS = depends_generated_libs
+                + modules_helper.get_module_libs(build_modules, modname)
+                + platform_libs,
         # adding specified flags
-        CCFLAGS = flags + platform_flags,
+        CPPFLAGS = flags + platform_flags,
         # adding specified link flags
         LINKFLAGS = link + platform_link,
+        # module name
+        APP_MODULE_NAME = modname,
         # formatted module name PROJNAME_MODULENAME
-        APP_MODULE_NAME = module_format,
+        APP_MODULE_FORMAT_NAME = module_format,
         # configuration of module for scons.py
         APP_MODULE_CONF = conf,
     )
@@ -354,6 +353,22 @@ for conf in build_order:
     # use multiple binaries output to add libraries/includes path
     parse_configs = conf.get("parse-configs", [])
     load_env_packages_specific_config(env, *parse_configs)
+    # transform LIBS configuration with parse-configs
+    # to unique elements and reverse order to have good linkage
+    final_lib = env['LIBS']
+    new_final_lib = []
+    for el in final_lib[::-1]:
+        if el not in new_final_lib:
+            new_final_lib.append(el)
+    new_final_lib.reverse()
+    env['LIBS'] = new_final_lib
+    # remove duplicates while preserving order
+    env['CPPFLAGS'] = list(dict.fromkeys(env['CPPFLAGS']))
+    env['LINKFLAGS'] = list(dict.fromkeys(env['LINKFLAGS']))
+    # fill module configurations with what was actually used
+    conf["libs"] = env['LIBS']
+    conf["flags"] = env['CPPFLAGS']
+    conf["link"] = env['LINKFLAGS']
     # some helpful debug when building
     if verbose:
         print("- needed libraries")
@@ -373,10 +388,11 @@ for conf in build_order:
                                 duplicate = 0,
                                 exports = ['env'])
     # copy module/etc content to build/etc
-    copy_module_dir(modname, "etc")
-    copy_module_dir(modname, "include")
+    copy_module_dir_into_build(modname, "etc")
+    copy_module_dir_into_build(modname, "include")
     if verbose:
         print("")
+
 
 ###############################################################################
 # Replace vars in files

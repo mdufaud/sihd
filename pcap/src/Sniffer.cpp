@@ -359,14 +359,14 @@ bool    Sniffer::set_max_sniff(size_t n)
 
 bool    Sniffer::set_linux_protocol(int protocol)
 {
-#if !defined(__SIHD_WINDOWS__)
+#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
     int ret = pcap_set_protocol_linux(_pcap_ptr, protocol);
     if (ret != 0)
         LOG(error, "Sniffer: cannot set linux protocol on an activated capture handle");
     return ret == 0;
 #else
     (void)protocol;
-    LOG(error, "Sniffer: cannot set linux protocol windows");
+    LOG(error, "Sniffer: cannot set linux protocol");
     return false;
 #endif
 }

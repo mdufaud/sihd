@@ -1,7 +1,7 @@
 import os
+import sys
 
-static_depends_duplication_parameters = ['depends', 'libs']
-matching_depends_duplication_parameters = ['-configs']
+must_have_parameters = ['depends', 'libs', 'link', 'flags']
 
 def fill_modlist_from_modules(modules, specific_modules, modlist):
     """ Gets all modules to build from a single module to build """
@@ -20,39 +20,62 @@ def __rec_fill_module_real_depends(modules, module_name, to_fill_module_conf):
     conf = modules.get(module_name, None)
     if conf is None:
         raise RuntimeError("Error in module's configuration, not a module: {}".format(module_name))
-    parameters_to_duplicate = list(
-        filter(
-            lambda key: any(param in key for param in matching_depends_duplication_parameters),
-            conf.keys()
-        )
-    )
-    parameters_to_duplicate.extend(static_depends_duplication_parameters)
-    for param in parameters_to_duplicate:
-        if not param in to_fill_module_conf:
-            to_fill_module_conf[param] = []
-        to_fill_module_conf[param].extend(conf.get(param, []))
+    curr_depends = to_fill_module_conf.setdefault("depends", [])
     depends = conf.get('depends', [])
+    for dependancy in depends:
+        if dependancy not in curr_depends:
+            curr_depends.insert(0, dependancy)
     for depending_module_name in depends:
         __rec_fill_module_real_depends(modules, depending_module_name, to_fill_module_conf)
 
+def __get_module_fill_order(modules):
+    order = []
+    iterations = 0
+    # maximum is worst case scenario
+    max_iterations = pow(len(modules), 2)
+    while len(order) != len(modules):
+        for modname, conf in modules.items():
+            if modname in order:
+                continue
+            depends = conf.get("depends", [])
+            if all(dep in order for dep in depends):
+                order.append(modname)
+        iterations += 1
+        if iterations > max_iterations:
+            print("module order error", file = sys.stderr)
+            print("maximum module order completion: {}".format(order), file = sys.stderr)
+            for modname, conf in modules.items():
+                print("module[{}] dependancies -> {}".format(modname, conf.get("depends", [])), file = sys.stderr)
+            raise SystemExit("maximum iterations reached to get modules build order - check your app configuration")
+    return order
+
 def resolve_modules_dependencies(modules):
     """ Fill all modules real dependency tree """
-    for name, conf in modules.items():
+    order = __get_module_fill_order(modules)
+    for name in order:
+        conf = modules[name]
         conf["modname"] = name
-        # Adds depends config if not here
-        if "depends" not in conf:
-            conf["depends"] = []
+        # Adds must have parameters
+        for param in must_have_parameters:
+            if param not in conf:
+                conf[param] = []
+        conf["original-depends"] = conf["depends"]
         # Adds conditionnal dependencies if they are in the current build
         conditionnal_depends = conf.get("conditionnal-depends", [])
         if conditionnal_depends:
             conf['depends'].extend([cond_mod for cond_mod in conditionnal_depends if cond_mod in modules])
         # Get dependency tree
         __rec_fill_module_real_depends(modules, name, conf)
-        # Remove duplicates
-        for key in conf.keys():
-            if any(param in key for param in matching_depends_duplication_parameters) \
-                    or key in static_depends_duplication_parameters:
-                conf[key] = list(set(conf[key]))
+
+def get_module_libs(modules, modname):
+    conf = modules[modname]
+    libs = []
+    for dep in conf["depends"]:
+        dep_conf = modules[dep]
+        dep_libs = dep_conf.get('libs', [])
+        libs[:0] = dep_libs
+    libs[:0] = conf['libs']
+    return libs
 
 def get_global_extlibs(app):
     libs = hasattr(app, "libs") and app.libs or []
@@ -122,25 +145,6 @@ def get_module_merged_with_conditionnals(app):
         for key, value in app.conditionnal_modules.items():
             ret[key] = value
     return ret
-
-def get_build_order(modules):
-    order = []
-    keys = modules.keys()
-    lenkeys = len(keys)
-    while len(order) != lenkeys:
-        for modname, conf in modules.items():
-            if modname in order:
-                continue
-            depends = conf.get('depends', None)
-            if depends is not None:
-                depends = conf['depends']
-                # check if all dependencies are in keys and check if all dependencies already are in order
-                if all(depend in keys for depend in depends) \
-                    and all(depend in order for depend in depends):
-                    order.append(modname)
-            else:
-                order.append(modname)
-    return order
 
 def get_conditionnals_from_env(app):
     ret = []
