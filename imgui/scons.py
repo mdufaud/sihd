@@ -40,7 +40,7 @@ sihd_imgui_srcs = ["src/ImguiRunner.cpp"]
 sihd_imgui_tests = [
     "test/main.cpp",
     "test/TestCompilation.cpp",
-    "test/TestOpenGL3_GFLW.cpp"
+    "test/TestOpenGL3_GLFW.cpp"
 ]
 
 ## Windows directX
@@ -95,6 +95,6 @@ for header in imgui_headers:
 imgui_lib = env.build_lib(imgui_srcs, lib_name = "imgui")
 env.Prepend(LIBS = "imgui")
 lib = env.build_lib(sihd_imgui_srcs, lib_name = env['APP_MODULE_FORMAT_NAME'])
-test = env.build_test(Glob('test/*.cpp'), add_libs = [env['APP_MODULE_FORMAT_NAME']])
+test = env.build_test(sihd_imgui_tests, add_libs = [env['APP_MODULE_FORMAT_NAME']])
 
 Return('lib')
