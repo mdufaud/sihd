@@ -25,8 +25,9 @@ else:
 ## Build ImGui and sihd_imgui libraries
 
 # append path "imgui" and "imgui/backends"
+imgui_env = env.Clone()
 imgui_backends_dir = imgui_dir.Dir("backends")
-env.Append(CPPPATH = [str(imgui_dir), str(imgui_backends_dir)])
+imgui_env.Append(CPPPATH = [str(imgui_dir), str(imgui_backends_dir)])
 
 # choose sources to build imgui lib
 imgui_srcs = Glob(str(imgui_dir) + "/*.cpp")
@@ -92,7 +93,8 @@ for header in imgui_headers:
 
 ## Build libimgui and libsihd_imgui
 
-imgui_lib = env.build_lib(imgui_srcs, lib_name = "imgui")
+imgui_lib = imgui_env.build_lib(imgui_srcs, lib_name = "imgui")
+
 env.Prepend(LIBS = "imgui")
 lib = env.build_lib(sihd_imgui_srcs, lib_name = env['APP_MODULE_FORMAT_NAME'])
 test = env.build_test(sihd_imgui_tests, add_libs = [env['APP_MODULE_FORMAT_NAME']])

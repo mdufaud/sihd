@@ -369,10 +369,6 @@ for conf in build_order:
     # remove duplicates while preserving order
     env['CPPFLAGS'] = list(dict.fromkeys(env['CPPFLAGS']))
     env['LINKFLAGS'] = list(dict.fromkeys(env['LINKFLAGS']))
-    # fill module configurations with what was actually used
-    conf["libs"] = env['LIBS']
-    conf["flags"] = env['CPPFLAGS']
-    conf["link"] = env['LINKFLAGS']
     # some helpful debug when building
     if verbose:
         print("- needed libraries")
@@ -391,6 +387,12 @@ for conf in build_order:
                                 variant_dir = os.path.join(builder_helper.build_obj_path, modname),
                                 duplicate = 0,
                                 exports = ['env'])
+    # fill module configurations with what was actually used
+    conf["libs"] = env['LIBS']
+    conf["flags"] = env['CPPFLAGS']
+    conf["link"] = env['LINKFLAGS']
+    # update added paths
+    base_env["CPPPATH"] = list(set(env["CPPPATH"]))
     # copy module/etc content to build/etc
     copy_module_dir_into_build(modname, "etc")
     copy_module_dir_into_build(modname, "include")

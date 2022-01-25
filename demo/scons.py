@@ -25,12 +25,6 @@ if env["CXX"] == "em++":
     emscripten_env.build_bin(["src/imgui_emscripten_sdl_demo.cpp"], bin_name = "imgui_emscripten_sdl_demo.html")
     Return()
 
-has_sdl2 = os.getenv("sdl") == "1"
-if has_sdl2:
-    env.Append(CPPPATH = [str(Dir(builder_helper.build_extlib_hdr_path).Dir("SDL2"))])
-    # env.Append(LIBS = ["SDL2main", "SDL2", "shell32"])
-    env.Append(LIBS = ["SDL2main", "SDL2"])
-
 env.build_bin("src/http_demo.cpp", bin_name = "http_demo")
 env.build_bin("src/pcap_demo.cpp", bin_name = "pcap_demo")
 env.build_bin("src/imgui_opengl3_glfw_demo.cpp", bin_name = "imgui_opengl3_glfw_demo")
