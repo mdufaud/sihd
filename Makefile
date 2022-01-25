@@ -321,10 +321,10 @@ bclean:
 	rm -rf $(BUILD_ENTRY_PATH) $(DIST_PATH)
 
 fclean: bclean
-	@$(call log_info,makefile,removing all files)
-	@find $(HERE) -name "*vgcore*"
-	@find $(HERE) -name "*.scons*"
-	@find $(HERE) -name "*.ini"
+	@$(call log_info,makefile,removing remaining files)
+	find . -name "*vgcore*" -type f -exec rm -f {} \;
+	find . -name "*.ini" -type f -exec rm -f {} \;
+	find . -maxdepth 1 -name "*.scons*" -type d -exec rm -rf {} \;
 
 ### Makefile
 .PHONY: install build verbose dist fclean clean clean_dist clean_dep

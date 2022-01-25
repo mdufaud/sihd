@@ -1,3 +1,5 @@
+import os
+
 Import('env')
 
 builder_helper = env["BUILDER_HELPER"]
@@ -23,11 +25,17 @@ if env["CXX"] == "em++":
     emscripten_env.build_bin(["src/imgui_emscripten_sdl_demo.cpp"], bin_name = "imgui_emscripten_sdl_demo.html")
     Return()
 
+has_sdl2 = os.getenv("sdl") == "1"
+if has_sdl2:
+    env.Append(CPPPATH = [str(Dir(builder_helper.build_extlib_hdr_path).Dir("SDL2"))])
+    # env.Append(LIBS = ["SDL2main", "SDL2", "shell32"])
+    env.Append(LIBS = ["SDL2main", "SDL2"])
+
 env.build_bin("src/http_demo.cpp", bin_name = "http_demo")
 env.build_bin("src/pcap_demo.cpp", bin_name = "pcap_demo")
+env.build_bin("src/imgui_opengl3_glfw_demo.cpp", bin_name = "imgui_opengl3_glfw_demo")
 if builder_helper.build_platform == "windows":
     env.build_bin("src/imgui_win_d11_demo.cpp", bin_name = "imgui_win_d11_demo")
-else:
-    env.build_bin("src/imgui_opengl3_glfw_demo.cpp", bin_name = "imgui_opengl3_glfw_demo")
+    env.build_bin("src/imgui_win_d11_sdl_demo.cpp", bin_name = "imgui_win_d11_sdl_demo")
 
 Return()

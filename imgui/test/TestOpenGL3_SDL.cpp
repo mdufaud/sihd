@@ -7,30 +7,30 @@
 
 #include <sihd/imgui/ImguiRunner.hpp>
 #include <sihd/imgui/ImguiRendererOpenGL.hpp>
-#include <sihd/imgui/ImguiBackendGlfw.hpp>
+#include <sihd/imgui/ImguiBackendSDL.hpp>
 
 namespace test
 {
     LOGGER;
     using namespace sihd::imgui;
     using namespace sihd::util;
-    class TestOpenGL3_GLFW: public ::testing::Test
+    class TestOpenGL3_SDL: public ::testing::Test
     {
         protected:
-            TestOpenGL3_GLFW()
+            TestOpenGL3_SDL()
             {
                 char *test_path = getenv("TEST_PATH");
                 _base_test_dir = sihd::util::Files::combine({
                     test_path == nullptr ? "unit_test" : test_path,
                     "imgui",
-                    "opengl3_glfw"
+                    "opengl3_sdl"
                 });
                 _cwd = sihd::util::OS::get_cwd();
                 sihd::util::LoggerManager::basic();
                 sihd::util::Files::make_directories(_base_test_dir);
             }
 
-            virtual ~TestOpenGL3_GLFW()
+            virtual ~TestOpenGL3_SDL()
             {
                 sihd::util::LoggerManager::clear_loggers();
             }
@@ -47,11 +47,10 @@ namespace test
             std::string _base_test_dir;
     };
 
-    TEST_F(TestOpenGL3_GLFW, test_simple_interactive)
+    TEST_F(TestOpenGL3_SDL, test_opengl3_sdl_interactive)
     {
         if (sihd::util::Term::is_interactive() == false)
             GTEST_SKIP_("requires interaction");
-
         ImguiRunner imgui("imgui-runner");
         ASSERT_TRUE(imgui.init_imgui());
 
@@ -59,15 +58,15 @@ namespace test
         ImguiRendererOpenGL opengl_renderer;
         opengl_renderer.set_clear_color(&clear_color);
 
-        ImguiBackendGlfw glfw_backend;
-        ASSERT_TRUE(glfw_backend.init_window("OpenGL3 GLFW test"));
+        ImguiBackendSDL sdl_backend;
+        ASSERT_TRUE(sdl_backend.init_window("OpenGL3 SDL test"));
         ASSERT_TRUE(opengl_renderer.init());
-        ASSERT_TRUE(glfw_backend.init_backend_opengl());
+        ASSERT_TRUE(sdl_backend.init_backend_opengl());
 
         bool show_demo_window = true;
         bool show_another_window = false;
 
-        imgui.set_backend(&glfw_backend);
+        imgui.set_backend(&sdl_backend);
         imgui.set_renderer(&opengl_renderer);
         imgui.set_build_frame([&] () -> bool
         {

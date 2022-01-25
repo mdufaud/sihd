@@ -1,7 +1,9 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/imgui/ImguiRunner.hpp>
-#include <sihd/imgui/ImguiRendererOpenGL.hpp>
-#include <sihd/imgui/ImguiBackendGlfw.hpp>
+#include <sihd/imgui/ImguiRendererDirectX.hpp>
+
+#define SDL_MAIN_HANDLED
+#include <sihd/imgui/ImguiBackendSDL.hpp>
 
 using namespace sihd::util;
 using namespace sihd::imgui;
@@ -14,26 +16,29 @@ int main()
     if (!imgui.init_imgui())
         return 1;
 
+    ImguiRendererDirectX dx_renderer;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    ImguiRendererOpenGL opengl_renderer;
-    opengl_renderer.set_clear_color(&clear_color);
+    dx_renderer.set_clear_color(&clear_color);
 
-    ImguiBackendGlfw glfw_backend;
-    if (!glfw_backend.init_window("OpenGL3 GLFW demo"))
+    ImguiBackendSDL sdl_backend;
+    sdl_backend.set_resize_renderer(&dx_renderer);
+
+    if (!sdl_backend.init_window("Windows Dx11+SDL demo"))
         return 1;
 
-    if (!opengl_renderer.init())
+    // init DX renderer with Windows's HWND window
+    if (!dx_renderer.init(sdl_backend.windows_window()))
         return 1;
 
-    if (!glfw_backend.init_backend_opengl())
+    // init SDL DX
+    if (!sdl_backend.init_backend_dx())
         return 1;
 
     bool show_demo_window = true;
     bool show_another_window = false;
 
-    imgui.set_backend(&glfw_backend);
-    imgui.set_renderer(&opengl_renderer);
-    imgui.set_emscripten(true);
+    imgui.set_backend(&sdl_backend);
+    imgui.set_renderer(&dx_renderer);
     imgui.set_build_frame([&] () -> bool
     {
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).

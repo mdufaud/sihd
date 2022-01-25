@@ -118,6 +118,8 @@ base_env = Environment(
     APP_MODULES_BUILD = build_modules.keys(),
     BUILDER_HELPER = builder_helper,
 )
+if build_platform == "windows":
+    base_env.Append(LIBPATH = builder_helper.build_extlib_bin_path)
 
 # Build output
 if not verbose:
@@ -280,6 +282,8 @@ def get_modules_headers(*args):
 
 def load_env_packages_config(env, *configs):
     """ Parse multiple pkg-configs: libraries/includes utilities """
+    if build_platform == "windows":
+        return True
     return load_env_packages_specific_config(env, [
         "pkg-config {} --cflags --libs".format(config)
         for config in configs

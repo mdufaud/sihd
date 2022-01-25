@@ -59,9 +59,9 @@ modules = {
         "libs": ['zip'],
     },
     "ssh": {
+        ## libssh-dev
         "depends": ['util'],
         "add-depends-libs": True,
-        ## libssh-dev
         "libs": ['sihd_util', 'ssh'],
     },
     "http": {
@@ -77,16 +77,16 @@ modules = {
         "libs": ['pcap'],
     },
     "usb": {
+        ## libusb-dev
         "depends": ['util'],
         "add-depends-libs": True,
-        ## libusb-dev libusb-1.0-0
         "use-extlibs": ['libusb'],
         "libs": ['usb'],
     },
     "bt": {
+        ## libbluetooth-dev
         "depends": ['util'],
         "add-depends-libs": True,
-        ## libbluetooth-dev
         "libs": ['bluetooth'],
     },
     "csv": {
@@ -98,15 +98,26 @@ modules = {
         "add-depends-libs": True,
     },
     "imgui": {
+        ## libmesa-dev for opengl
         "depends": ['util'],
         "add-depends-libs": True,
-        "use-extlibs": ['glfw', 'glew'],
+        "use-extlibs": ['glfw', 'glew', 'sdl'],
         "linux-libs": ['glfw', 'GLEW', 'GL'],
-        "windows-libs": ["dwmapi", "d3d11", "d3dcompiler", "dxgi", "gdi32"],
-        "windows-flags": ["-Wno-cast-function-type"],
-        "parse-configs": [
-            "pkg-config --cflags --libs sdl2"
+        "windows-libs": [
+            "glfw3", "glew32", "opengl32",
+            # desktop window manager api
+            "dwmapi",
+            # direct x11
+            "d3d11",
+            # shader compiler
+            "d3dcompiler",
+            # directx graphics infrastructure
+            "dxgi",
+            # graphics device interface
+            "gdi32"
         ],
+        "windows-flags": ["-Wno-cast-function-type"],
+        "pkg-configs": ["sdl2"],
         "git-url": "https://github.com/ocornut/imgui.git",
         "git-branch": "v1.86",
     },
@@ -125,10 +136,7 @@ conditionnal_modules = {
         "conditionnal-env": "lua",
         "conditionnal-depends": ['core', 'net', 'http'],
         "flags": ["-Wno-unused-parameter"],
-        "parse-configs": [
-            "pkg-config --cflags --libs lua-5.3",
-            "pkg-config --cflags --libs lua53",
-        ],
+        "pkg-configs": ["lua-5.3", "lua53"],
     },
     "luabin": {
         "depends": ['lua'],
