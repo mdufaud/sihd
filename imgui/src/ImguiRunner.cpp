@@ -1,4 +1,5 @@
 #include <sihd/imgui/ImguiRunner.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 
@@ -32,7 +33,7 @@ void    ImguiRunner::_emscripten_loop(void *arg)
     if (arg != nullptr)
     {
         ImguiRunner *imgui = (ImguiRunner *)arg;
-        imgui->_loop();
+        imgui->_loop_once();
     }
 }
 
@@ -47,7 +48,7 @@ bool    ImguiRunner::run()
     if (_emscripten)
     {
 #if defined(__SIHD_EMSCRIPTEN__)
-        emscripten_set_main_loop_arg(&ImguiRunner::_emscripten_loop, this, _emscripten_fps, false);
+        emscripten_set_main_loop_arg(ImguiRunner::_emscripten_loop, this, _emscripten_fps, true);
 #endif
     }
     else
@@ -91,20 +92,23 @@ bool    ImguiRunner::init_imgui()
     return true;
 }
 
+void    ImguiRunner::_loop_once()
+{
+    _imgui_backend_ptr->poll();
+    _gui_running = _imgui_backend_ptr->should_close() == false;
+    if (_running && _gui_running)
+    {
+        _gui_running = this->_new_frame();
+        _gui_running = _gui_running && this->_build_frame();
+        _gui_running = _gui_running && this->_render();
+    }
+}
+
 void    ImguiRunner::_loop()
 {
-    bool gui_running = true;
-    while (_running && gui_running)
-    {
-        _imgui_backend_ptr->poll();
-        gui_running = _imgui_backend_ptr->should_close() == false;
-        if (_running && gui_running)
-        {
-            gui_running = this->_new_frame();
-            gui_running = gui_running && this->_build_frame();
-            gui_running = gui_running && this->_render();
-        }
-    }
+    _gui_running = true;
+    while (_running && _gui_running)
+        this->_loop_once();
     this->_shutdown();
 }
 

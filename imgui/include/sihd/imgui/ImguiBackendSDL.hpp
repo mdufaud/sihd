@@ -23,6 +23,13 @@ class ImguiBackendSDL: public sihd::imgui::IImguiBackend
         ImguiBackendSDL();
         virtual ~ImguiBackendSDL();
 
+        void select_opengl2();
+        void select_opengl3();
+        void select_opengl32();
+        void decide_opengl_version();
+        //Set up an OpenGL context for rendering into an OpenGL window.
+        void set_sdl_context_at_prerender(bool active);
+
         bool init_window(const std::string & name, size_t width = 1280, size_t height = 800);
         bool init_backend_opengl();
         bool init_backend_dx();
@@ -43,10 +50,12 @@ class ImguiBackendSDL: public sihd::imgui::IImguiBackend
 # endif
 
     protected:
+        virtual bool _sdl_init();
 
     private:
         bool _is_init;
         bool _close;
+        bool _sdl_context_at_prerender;
         SDL_Window *_sdl_window_ptr;
         SDL_GLContext _sdl_context_ptr;
         IImguiRenderer *_imgui_renderer_ptr;

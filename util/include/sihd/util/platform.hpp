@@ -1,6 +1,10 @@
 #ifndef PLATFORM_H__
 # define PLATFORM_H__
 
+# if defined(__EMSCRIPTEN__)
+#  define __SIHD_EMSCRIPTEN__
+# endif
+
 # if (defined(_WIN16) || defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__) || defined(__MINGW32__))
 
 #  define __SIHD_WINDOWS__
@@ -16,10 +20,6 @@
 #  define __SIHD_ANDROID__
 # else
 #  define __SIHD_PLATFORM__ "linux"
-# endif
-
-# if defined(__EMSCRIPTEN__)
-#  define __SIHD_EMSCRIPTEN__
 # endif
 
 # elif defined(_AIX) || defined(__TOS__AIX__)

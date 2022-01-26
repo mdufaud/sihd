@@ -15,12 +15,68 @@ ImguiBackendSDL::ImguiBackendSDL():
 {
     _is_init = false;
     _close = false;
+    _sdl_context_at_prerender = false;
+    this->_sdl_init();
 }
 
 ImguiBackendSDL::~ImguiBackendSDL()
 {
     this->shutdown();
     this->terminate();
+}
+
+bool    ImguiBackendSDL::_sdl_init()
+{
+    if (SDL_WasInit(SDL_INIT_VIDEO) == 0)
+    {
+        // Setup SDL
+        // (Some versions of SDL before <2.0.10 appears to have performance/stalling issues on a minority of Windows systems,
+        // depending on whether SDL_INIT_GAMECONTROLLER is enabled or disabled.. updating to latest version of SDL is recommended!)
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
+        {
+            LOG(error, "ImguiBackendSDL: " << SDL_GetError());
+            return false;
+        }
+    }
+    return true;
+}
+
+void    ImguiBackendSDL::select_opengl2()
+{
+    // GL ES 2.0 + GLSL 100
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+}
+
+void    ImguiBackendSDL::select_opengl3()
+{
+    // GL 3.0 + GLSL 130
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+}
+
+void    ImguiBackendSDL::select_opengl32()
+{
+    // GL 3.2 Core + GLSL 150
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+}
+
+void    ImguiBackendSDL::decide_opengl_version()
+{
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+    this->select_opengl2();
+#elif defined(__APPLE__)
+    this->select_opengl32();
+#else
+    this->select_opengl3();
+#endif
 }
 
 bool    ImguiBackendSDL::init_window(const std::string & name, size_t width, size_t height)
@@ -30,36 +86,9 @@ bool    ImguiBackendSDL::init_window(const std::string & name, size_t width, siz
         LOG(warning, "ImguiBackendSDL: already initialized");
         return true;
     }
-    // Setup SDL
-    // (Some versions of SDL before <2.0.10 appears to have performance/stalling issues on a minority of Windows systems,
-    // depending on whether SDL_INIT_GAMECONTROLLER is enabled or disabled.. updating to latest version of SDL is recommended!)
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
-    {
-        LOG(error, "ImguiBackendSDL: " << SDL_GetError());
+    if (this->_sdl_init() == false)
         return false;
-    }
     _close = false;
-
-    // Decide GL+GLSL versions
-#if defined(IMGUI_IMPL_OPENGL_ES2)
-    // GL ES 2.0 + GLSL 100
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-#elif defined(__APPLE__)
-    // GL 3.2 Core + GLSL 150
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-#else
-    // GL 3.0 + GLSL 130
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-#endif
     // Create window with graphics context
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
@@ -109,6 +138,11 @@ void    ImguiBackendSDL::set_resize_renderer(IImguiRenderer *renderer)
     _imgui_renderer_ptr = renderer;
 }
 
+void    ImguiBackendSDL::set_sdl_context_at_prerender(bool active)
+{
+    _sdl_context_at_prerender = active;
+}
+
 void    ImguiBackendSDL::new_frame()
 {
     ImGui_ImplSDL2_NewFrame();
@@ -148,6 +182,8 @@ bool    ImguiBackendSDL::should_close()
 
 void    ImguiBackendSDL::pre_render()
 {
+    if (_sdl_context_at_prerender)
+        SDL_GL_MakeCurrent(_sdl_window_ptr, _sdl_context_ptr);
 }
 
 void    ImguiBackendSDL::post_render()

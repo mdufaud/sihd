@@ -78,6 +78,12 @@ if compiling_with_emscripten:
         LIBS = ["SDL2"],
         CPPFLAGS = [
             "-s", "USE_SDL=2",
+            "-s", "WASM=1",
+            "-s", "NO_FILESYSTEM=1",
+            "-s", "ALLOW_MEMORY_GROWTH=1",
+            "-s", "NO_EXIT_RUNTIME=0",
+            "-s", "ASSERTIONS=1",
+            "-s", "OFFSCREEN_FRAMEBUFFER=1"
         ],
     )
 elif compile_sdl:

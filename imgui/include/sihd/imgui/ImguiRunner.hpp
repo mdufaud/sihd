@@ -33,6 +33,7 @@ class ImguiRunner:  public sihd::util::Named,
         static void _emscripten_loop(void *arg);
 
         virtual void _loop();
+        virtual void _loop_once();
         virtual bool _new_frame();
         virtual bool _build_frame();
         virtual bool _render();
@@ -42,6 +43,7 @@ class ImguiRunner:  public sihd::util::Named,
         std::mutex _mutex;
 
         bool _running;
+        bool _gui_running;
         bool _emscripten;
         int _emscripten_fps;
         IImguiRenderer *_imgui_renderer_ptr;

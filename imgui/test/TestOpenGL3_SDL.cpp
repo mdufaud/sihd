@@ -59,6 +59,7 @@ namespace test
         opengl_renderer.set_clear_color(&clear_color);
 
         ImguiBackendSDL sdl_backend;
+        sdl_backend.decide_opengl_version();
         ASSERT_TRUE(sdl_backend.init_window("OpenGL3 SDL test"));
         ASSERT_TRUE(opengl_renderer.init());
         ASSERT_TRUE(sdl_backend.init_backend_opengl());
