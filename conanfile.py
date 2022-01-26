@@ -12,7 +12,7 @@ import app
 from _build_tools import modules as modules_helper
 from _build_tools import builder as builder_helper
 
-builder_helper.info("fetching {} external libraries".format(app.name))
+builder_helper.info("fetching external libraries for {}".format(app.name))
 
 if builder_helper.verify_args() == False:
     exit(1)
@@ -29,19 +29,43 @@ if verbose:
     if has_test:
         builder_helper.debug("including test libs")
 
-modules = modules_helper.get_modules(app, specific_modules=modules_to_build)
-if verbose:
-    builder_helper.debug("modules configuration: ")
-    pp.pprint(modules)
-    print()
+extlibs = {}
 
-extlibs = modules_helper.get_modules_extlibs(app, modules)
-if has_test and hasattr(app, "test_libs"):
-    extlibs.update(modules_helper.get_extlibs_versions(app, app.test_libs))
-if verbose:
-    builder_helper.debug("modules external libs:")
-    pp.pprint(extlibs)
-    print()
+if modules_to_build != "NONE":
+    builder_helper.info("parsing modules")
+
+    modules = modules_helper.get_modules(app, specific_modules=modules_to_build)
+    if verbose:
+        builder_helper.debug("modules configuration: ")
+        pp.pprint(modules)
+        print()
+
+    builder_helper.info("getting modules external libs")
+
+    extlibs.update(modules_helper.get_modules_extlibs(app, modules))
+    if has_test and hasattr(app, "test_libs"):
+        extlibs.update(modules_helper.get_extlibs_versions(app, app.test_libs))
+
+    if verbose:
+        builder_helper.debug("modules external libs:")
+        pp.pprint(extlibs)
+        print()
+
+builder_helper.info("looking for manual external libs to fetch")
+
+more_libs = os.getenv("libs", "").split(",")
+app_external_libs = hasattr(app, "extlibs") and app.extlibs or {}
+for libname in more_libs:
+    if not libname:
+        continue
+    if libname not in app_external_libs:
+        builder_helper.warning("no external lib named: " + libname)
+    else:
+        builder_helper.info("added manual external lib: " + libname)
+        extlibs[libname] = app_external_libs[libname]
+
+builder_helper.info("setting up conan")
+print()
 
 post_treatment_libs = {
     "*lua.*": {"from": "lua.", "to": "lua5.3."}

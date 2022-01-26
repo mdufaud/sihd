@@ -101,7 +101,7 @@ modules = {
         ## libmesa-dev for opengl
         "depends": ['util'],
         "add-depends-libs": True,
-        "use-extlibs": ['glfw', 'glew', 'sdl'],
+        "use-extlibs": ['glfw', 'glew'],
         "linux-libs": ['glfw', 'GLEW', 'GL'],
         "windows-libs": [
             "glfw3", "glew32", "opengl32",

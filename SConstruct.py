@@ -114,8 +114,11 @@ base_env = Environment(
     LIBPATH = [builder_helper.build_lib_path, builder_helper.build_extlib_lib_path],
     # libraries name
     LIBS = global_libs,
+    # app access
+    APP_CONFIG = app,
     # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
+    # builder helper for sconscript
     BUILDER_HELPER = builder_helper,
 )
 if build_platform == "windows":
@@ -219,7 +222,10 @@ def add_targets(src):
 
 ## modules environnement methods
 
-def build_test(self, src, test_name=None, add_libs=[], **kwargs):
+def _env_parse_config(self, config):
+    return load_env_packages_config(self, [config])
+
+def _env_build_test(self, src, test_name=None, add_libs=[], **kwargs):
     """ Environment method to build unit test binary for a module """
     if builder_helper.build_tests == False:
         return None
@@ -240,7 +246,7 @@ def build_test(self, src, test_name=None, add_libs=[], **kwargs):
     test_path = os.path.join(builder_helper.build_test_path, "bin", test_name)
     return test_env.Program(test_path, src, **kwargs)
 
-def build_lib(self, src, lib_name=None, static=None, **kwargs):
+def _env_build_lib(self, src, lib_name=None, static=None, **kwargs):
     """ Environment method to build a shared library for a module """
     global modules_generated_libs
     add_targets(src)
@@ -255,7 +261,7 @@ def build_lib(self, src, lib_name=None, static=None, **kwargs):
     modules_generated_libs.setdefault(self['APP_MODULE_NAME'], []).append(lib_name)
     return lib
 
-def build_bin(self, src, bin_name=None, add_libs=[], **kwargs):
+def _env_build_bin(self, src, bin_name=None, add_libs=[], **kwargs):
     """ Environment method to build a binary for a module """
     global modules_generated_bins
     add_targets(src)
@@ -270,9 +276,10 @@ def build_bin(self, src, bin_name=None, add_libs=[], **kwargs):
     return bin_env.Program(bin_path, src, **kwargs)
 
 # methods to build either test, lib or executable
-base_env.AddMethod(build_lib, "build_lib")
-base_env.AddMethod(build_bin, "build_bin")
-base_env.AddMethod(build_test, "build_test")
+base_env.AddMethod(_env_build_lib, "build_lib")
+base_env.AddMethod(_env_build_bin, "build_bin")
+base_env.AddMethod(_env_build_test, "build_test")
+base_env.AddMethod(_env_parse_config, "parse_config")
 
 ## build utilities
 
@@ -282,8 +289,8 @@ def get_modules_headers(*args):
 
 def load_env_packages_config(env, *configs):
     """ Parse multiple pkg-configs: libraries/includes utilities """
-    if build_platform == "windows":
-        return True
+    if build_platform == "windows" or compiler == "em":
+        return False
     return load_env_packages_specific_config(env, [
         "pkg-config {} --cflags --libs".format(config)
         for config in configs

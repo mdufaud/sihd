@@ -128,49 +128,52 @@ def is_static_libs():
 
 def sanitize_app(app):
     platform = get_platform()
-    if platform == "windows":
-        info("cross building for windows - changes to app's configuration may apply")
-        # remove libs from app.libs if they are linux only
-        if hasattr(app, "libs") and isinstance(app.libs, list):
-            for linux_lib in linux_only_libs:
-                if linux_lib in app.libs:
-                    info("global lib '{}' is removed from list".format(linux_lib))
-                    app.libs.remove(linux_lib)
-        # remove libs from app.test_libs if they are linux only
-        if hasattr(app, "test_libs") and isinstance(app.test_libs, list):
-            for linux_lib in linux_only_libs:
-                if linux_lib in app.test_libs:
-                    info("global test lib '{}' is removed from list".format(linux_lib))
-                    app.test_libs.remove(linux_lib)
-        # remove external libs dependencies in app.libs_versions if they are linux only
-        if hasattr(app, "libs_versions") and isinstance(app.libs_versions, dict):
-            to_remove = [name for name in app.libs_versions.keys() if name in linux_only_extlibs]
-            for remove in to_remove:
-                info("external lib '{}' is removed from list".format(remove))
-                del app.libs_versions[remove]
-        # remove modules from list if they depend on a linux lib
-        modules = build_tools_modules.get_module_merged_with_conditionnals(app)
-        to_remove = set()
-        # check if module depends on a linux lib
-        for modname, conf in modules.items():
-            use_extlibs = conf.get("use-extlibs", [])
-            matches = [lib for lib in use_extlibs if lib in linux_only_extlibs]
-            if matches:
-                warning("module '{}' use linux libs: {}".format(modname, ', '.join(matches)))
-                to_remove.add(modname)
-            libs = conf.get("libs", [])
-            matches = [lib for lib in libs if lib in linux_only_extlibs]
-            if matches:
-                warning("module '{}' use linux libs: {}".format(modname, ', '.join(matches)))
-                to_remove.add(modname)
-        # removing modules that depends on removed modules
-        for modname, conf in modules.items():
-            depends = conf.get("depends", [])
-            if any(mod in to_remove for mod in depends):
-                to_remove.add(modname)
+    if platform != "windows":
+        return
+    print()
+    info("cross building for windows - changes to app's configuration may apply")
+    # remove libs from app.libs if they are linux only
+    if hasattr(app, "libs") and isinstance(app.libs, list):
+        for linux_lib in linux_only_libs:
+            if linux_lib in app.libs:
+                info("global lib '{}' is removed from list".format(linux_lib))
+                app.libs.remove(linux_lib)
+    # remove libs from app.test_libs if they are linux only
+    if hasattr(app, "test_libs") and isinstance(app.test_libs, list):
+        for linux_lib in linux_only_libs:
+            if linux_lib in app.test_libs:
+                info("global test lib '{}' is removed from list".format(linux_lib))
+                app.test_libs.remove(linux_lib)
+    # remove external libs dependencies in app.libs_versions if they are linux only
+    if hasattr(app, "libs_versions") and isinstance(app.libs_versions, dict):
+        to_remove = [name for name in app.libs_versions.keys() if name in linux_only_extlibs]
         for remove in to_remove:
-            info("module '{}' is removed from list".format(remove))
-            build_tools_modules.remove_module(app, remove)
+            info("external lib '{}' is removed from list".format(remove))
+            del app.libs_versions[remove]
+    # remove modules from list if they depend on a linux lib
+    modules = build_tools_modules.get_module_merged_with_conditionnals(app)
+    to_remove = set()
+    # check if module depends on a linux lib
+    for modname, conf in modules.items():
+        use_extlibs = conf.get("use-extlibs", [])
+        matches = [lib for lib in use_extlibs if lib in linux_only_extlibs]
+        if matches:
+            warning("module '{}' use linux libs: {}".format(modname, ', '.join(matches)))
+            to_remove.add(modname)
+        libs = conf.get("libs", [])
+        matches = [lib for lib in libs if lib in linux_only_extlibs]
+        if matches:
+            warning("module '{}' use linux libs: {}".format(modname, ', '.join(matches)))
+            to_remove.add(modname)
+    # removing modules that depends on removed modules
+    for modname, conf in modules.items():
+        depends = conf.get("depends", [])
+        if any(mod in to_remove for mod in depends):
+            to_remove.add(modname)
+    for remove in to_remove:
+        info("module '{}' is removed from list".format(remove))
+        build_tools_modules.remove_module(app, remove)
+    print()
 
 # compilation
 build_compiler = get_compiler()

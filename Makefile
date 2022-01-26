@@ -119,7 +119,6 @@ build: intro
 						dist=$(dist) \
 						py=$(py) \
 						lua=$(lua) \
-						demo=$(demo) \
 						asan=$(asan) \
 						static=$(static) \
 						j=$(j) \
@@ -251,7 +250,7 @@ endif
 
 dep: intro
 	$(call log_info,makefile,starting conan with command: $(CONAN_INSTALL))
-	@env test=$(test) verbose=$(verbose) modules=$(modules) lua=$(lua) py=$(py) demo=$(demo) $(CONAN_INSTALL)
+	@env test=$(test) verbose=$(verbose) modules=$(modules) lua=$(lua) py=$(py) libs=$(libs) $(CONAN_INSTALL)
 
 # make dep mod MODULE
 ifeq ($(word 2, $(MAKECMDGOALS)), mod)
@@ -259,6 +258,15 @@ MODULES_NAME = $(word 3, $(MAKECMDGOALS))$(m)
 dep: modules = $(MODULES_NAME)
 mod:
 $(MODULES_NAME):
+endif
+
+# make dep mod MODULE
+ifeq ($(word 2, $(MAKECMDGOALS)), lib)
+LIBS_NAME = $(word 3, $(MAKECMDGOALS))
+dep: modules = NONE
+dep: libs = $(LIBS_NAME)
+mod:
+$(LIBS_NAME):
 endif
 
 # make dep test

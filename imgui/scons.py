@@ -5,13 +5,6 @@ Import('env')
 builder_helper = env["BUILDER_HELPER"]
 conf = env["APP_MODULE_CONF"]
 
-## Check for SDL2
-has_sdl2 = os.getenv("sdl") == "1"
-if has_sdl2:
-    extlib_sdl_dir = Dir(builder_helper.build_extlib_hdr_path).Dir("SDL2")
-    env.Append(CPPPATH = [str(extlib_sdl_dir)])
-    env.Append(LIBS = ["SDL2main", "SDL2"])
-
 ## Clone ImGui repository
 
 imgui_dir = Dir("imgui")
@@ -24,10 +17,7 @@ else:
 
 ## Build ImGui and sihd_imgui libraries
 
-# append path "imgui" and "imgui/backends"
-imgui_env = env.Clone()
 imgui_backends_dir = imgui_dir.Dir("backends")
-imgui_env.Append(CPPPATH = [str(imgui_dir), str(imgui_backends_dir)])
 
 # choose sources to build imgui lib
 imgui_srcs = Glob(str(imgui_dir) + "/*.cpp")
@@ -43,6 +33,14 @@ sihd_imgui_tests = [
     "test/TestCompilation.cpp",
     "test/TestOpenGL3_GLFW.cpp"
 ]
+
+# getting supported backends
+imgui_headers.extend([
+    imgui_backends_dir.File("imgui_impl_glfw.h"),
+    imgui_backends_dir.File("imgui_impl_opengl3.h"),
+    imgui_backends_dir.File("imgui_impl_opengl3_loader.h"),
+    imgui_backends_dir.File("imgui_impl_sdl.h"),
+])
 
 ## Windows directX
 
@@ -66,20 +64,33 @@ imgui_srcs.extend([
     imgui_backends_dir.File("imgui_impl_glfw.cpp"),
     imgui_backends_dir.File("imgui_impl_opengl3.cpp"),
 ])
-imgui_headers.extend([
-    imgui_backends_dir.File("imgui_impl_glfw.h"),
-    imgui_backends_dir.File("imgui_impl_opengl3.h"),
-    imgui_backends_dir.File("imgui_impl_opengl3_loader.h"),
-])
 sihd_imgui_srcs.extend([
     "src/ImguiBackendGlfw.cpp",
     "src/ImguiRendererOpenGL.cpp",
 ])
 
-# append extra if SDL2 found
-if has_sdl2:
+## Check for SDL2
+compile_sdl = os.getenv("sdl") == "1"
+compiling_with_emscripten = env["CXX"] == "em++"
+
+if compiling_with_emscripten:
+    env.Append(
+        LIBS = ["SDL2"],
+        CPPFLAGS = [
+            "-s", "USE_SDL=2",
+        ],
+    )
+elif compile_sdl:
+    # try pkg-config sdl2
+    if not env.parse_config("SDL2"):
+        # try appending SDL2 from extlib repository
+        extlib_sdl_dir = Dir(builder_helper.build_extlib_hdr_path).Dir("SDL2")
+        env.Append(CPPPATH = [str(extlib_sdl_dir)])
+        env.Append(LIBS = ["SDL2"])
+
+# append extra SDL sources
+if compile_sdl or compiling_with_emscripten:
     imgui_srcs.append(imgui_backends_dir.File("imgui_impl_sdl.cpp"))
-    imgui_headers.append(imgui_backends_dir.File("imgui_impl_sdl.h"))
     sihd_imgui_srcs.append("src/ImguiBackendSDL.cpp")
     sihd_imgui_tests.append("test/TestOpenGL3_SDL.cpp")
 
@@ -92,6 +103,9 @@ for header in imgui_headers:
     shutil.copy(str(header), str(sihd_imgui_include_dir))
 
 ## Build libimgui and libsihd_imgui
+imgui_env = env.Clone()
+# append path "imgui" and "imgui/backends"
+imgui_env.Append(CPPPATH = [str(imgui_dir), str(imgui_backends_dir)])
 
 imgui_lib = imgui_env.build_lib(imgui_srcs, lib_name = "imgui")
 

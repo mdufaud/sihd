@@ -20,16 +20,20 @@ if env["CXX"] == "em++":
             "-s", "ALLOW_MEMORY_GROWTH=1",
             "-s", "NO_EXIT_RUNTIME=0",
             "-s", "ASSERTIONS=1",
+            "-s", "USE_SDL=2",
         ],
     )
     emscripten_env.build_bin(["src/imgui_emscripten_sdl_demo.cpp"], bin_name = "imgui_emscripten_sdl_demo.html")
     Return()
+
+compile_sdl = os.getenv("sdl") == "1"
 
 env.build_bin("src/http_demo.cpp", bin_name = "http_demo")
 env.build_bin("src/pcap_demo.cpp", bin_name = "pcap_demo")
 env.build_bin("src/imgui_opengl3_glfw_demo.cpp", bin_name = "imgui_opengl3_glfw_demo")
 if builder_helper.build_platform == "windows":
     env.build_bin("src/imgui_win_d11_demo.cpp", bin_name = "imgui_win_d11_demo")
-    env.build_bin("src/imgui_win_d11_sdl_demo.cpp", bin_name = "imgui_win_d11_sdl_demo")
+    if compile_sdl:
+        env.build_bin("src/imgui_win_d11_sdl_demo.cpp", bin_name = "imgui_win_d11_sdl_demo")
 
 Return()
