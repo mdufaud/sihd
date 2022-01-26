@@ -33,7 +33,6 @@ int main()
 
     imgui.set_backend(&glfw_backend);
     imgui.set_renderer(&opengl_renderer);
-    imgui.set_emscripten(true);
     imgui.set_build_frame([&] () -> bool
     {
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
