@@ -5,7 +5,7 @@
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
 
-#include <imgui.h>
+#include <sihd/imgui/imgui.h>
 
 namespace test
 {

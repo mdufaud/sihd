@@ -119,6 +119,7 @@ build: intro
 						dist=$(dist) \
 						py=$(py) \
 						lua=$(lua) \
+						demo=$(demo) \
 						asan=$(asan) \
 						static=$(static) \
 						j=$(j) \
@@ -293,6 +294,7 @@ checkdep:
 # Distribution
 ##############
 
+dist: mode = release
 dist: dist = 1
 dist: build
 

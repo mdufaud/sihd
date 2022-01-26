@@ -42,6 +42,7 @@ extlibs = {
 }
 modules = {
     "util": {
+        # apt nlohmann-json-dev / pacman nlohmann-json
         "use-extlibs": ['nlohmann_json'],
     },
     "core": {
@@ -53,38 +54,41 @@ modules = {
         "add-depends-libs": True,
     },
     "zip": {
+        # apt libzip-dev / pacman libzip
         "depends": ['util'],
         "add-depends-libs": True,
         "use-extlibs": ['libzip'],
         "libs": ['zip'],
     },
     "ssh": {
-        ## libssh-dev
+        # apt libssh-dev / pacman libssh
         "depends": ['util'],
         "add-depends-libs": True,
         "libs": ['sihd_util', 'ssh'],
     },
     "http": {
+        # apt libwebsockets-dev / pacman libwebsockets
         "depends": ['net'],
         "add-depends-libs": True,
         "use-extlibs": ['openssl', 'libcurl', 'libwebsockets'],
         "libs": ['curl', 'websockets', 'ssl', 'crypto'],
     },
     "pcap": {
+        # apt libpcap-dev / pacman libpcap
         "depends": ['net'],
         "add-depends-libs": True,
         "use-extlibs": ['libpcap'],
         "libs": ['pcap'],
     },
     "usb": {
-        ## libusb-dev
+        # apt libusb-dev / pacman libusb
         "depends": ['util'],
         "add-depends-libs": True,
         "use-extlibs": ['libusb'],
         "libs": ['usb'],
     },
     "bt": {
-        ## libbluetooth-dev
+        # apt libbluetooth-dev
         "depends": ['util'],
         "add-depends-libs": True,
         "libs": ['bluetooth'],
@@ -98,7 +102,10 @@ modules = {
         "add-depends-libs": True,
     },
     "imgui": {
-        ## libmesa-dev for opengl
+        # apt libmesa-dev for opengl
+        # apt libglew-dev / pacman glew
+        # apt libglfw-dev / pacman glfw
+        # apt libsdl2-dev / pacman sdl2
         "depends": ['util'],
         "add-depends-libs": True,
         "use-extlibs": ['glfw', 'glew'],
@@ -130,6 +137,7 @@ conditionnal_modules = {
         "conditionnal-env": "demo",
     },
     "lua": {
+        # apt liblua5.3-dev / pacman lua
         "depends": ['util'],
         "add-depends-libs": True,
         "use-extlibs": ['sol2'],
@@ -142,14 +150,16 @@ conditionnal_modules = {
         "depends": ['lua'],
         "add-depends-libs": True,
         "conditionnal-env": "lua",
+        "flags": ["-Wno-unused-parameter"],
     },
     "py": {
+        # apt libpython-dev / pacman python
         "depends": ['util'],
         "add-depends-libs": True,
         "use-extlibs": ['pybind11'],
         "conditionnal-env": "py",
         "conditionnal-depends": ['core', 'net', 'http'],
-        ## pip install python-config
+        # pip install python-config
         "parse-configs": [
             'python-config --cflags --ldflags --embed',
             'python3-config --cflags --ldflags --embed',
@@ -205,6 +215,7 @@ mingw_libs = ['ws2_32', 'psapi']
 mingw_defines = ["_WIN64", "_WIN32_WINNT=0x0600"]
 
 ## test specifics
+# apt libgtest-dev / pacman gtest
 test_libs = ['gtest', 'stdc++fs']
 
 #############

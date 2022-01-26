@@ -223,6 +223,7 @@ def add_targets(src):
 ## modules environnement methods
 
 def _env_parse_config(self, config):
+    """ Environment method to add pkg-config dynamically for a module """
     return load_env_packages_config(self, [config])
 
 def _env_build_test(self, src, test_name=None, add_libs=[], **kwargs):
