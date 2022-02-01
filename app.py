@@ -1,15 +1,18 @@
-# distribution informations
 name = 'sihd'
 version = "0.1"
 maintainer = "mdufaud <maxence_dufaud@hotmail.fr>"
 uploaders = "azouiten <alexandre.zouiten1@gmail.com>"
 section = "libdevel"
+priority = "optional"
 description = "Simple Input Handler Displayer"
+license = "GPL3"
+architecture = "any"
+source = "https://github.com/mdufaud/sihd.git"
 
 # modules and libs descriptions
 extlibs = {
     ## unit test
-    "gtest": "cci.20210126",
+    "gtest": "1.11.0",
     ## json parsing
     "nlohmann_json": "3.9.1",
     ## crypt
@@ -39,6 +42,18 @@ extlibs = {
     "libzip": "1.7.3",
     ## other
     "libjpeg": "9d",
+}
+apt_packages = {
+    "nlohmann_json": "nlohmann-json3-dev",
+    "openssl": "openssl",
+    "libcurl": "libcurl4-openssl-dev",
+    "libwebsockets": "libwebsockets-dev"
+}
+pacman_packages = {
+    "nlohmann_json": "nlohmann-json",
+    "openssl": "openssl",
+    "libcurl": "libcurl",
+    "libwebsockets": "libwebsockets"
 }
 modules = {
     "util": {

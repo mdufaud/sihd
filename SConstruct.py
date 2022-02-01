@@ -92,14 +92,6 @@ base_env = Environment(
         'PATH': os.getenv("PATH"),
         'LIBPATH': os.getenv("LIBPATH")
     },
-    # compiler for c
-    CC = "gcc",
-    # compiler for c++
-    CXX = "c++",
-    # static library archiver
-    AR = "ar",
-    # static library indexer
-    RANLIB = "ranlib",
     # c++ compile flags
     CXXFLAGS = ["-std=c++17"],
     # c and c++ compile flags
@@ -120,6 +112,8 @@ base_env = Environment(
     APP_MODULES_BUILD = build_modules.keys(),
     # builder helper for sconscript
     BUILDER_HELPER = builder_helper,
+    # lib version
+    SHLIBVERSION = app.version
 )
 if build_platform == "windows":
     base_env.Append(LIBPATH = builder_helper.build_extlib_bin_path)
@@ -153,9 +147,13 @@ elif builder_helper.build_mode == "release":
 # CLANG build
 if compiler == "clang":
     base_env.Replace(
+        # compiler for c
         CC = "clang",
+        # compiler for c++
         CXX = "clang++",
+        # static library archiver
         AR = "ar",
+        # static library indexer
         RANLIB = "ranlib",
     )
     if builder_helper.build_asan:
@@ -182,6 +180,16 @@ elif compiler == "mingw":
     add_env_app_conf(base_env, "mingw")
 # GCC build
 elif compiler == "gcc":
+    base_env.Replace(
+        # compiler for c
+        CC = "gcc",
+        # compiler for c++
+        CXX = "c++",
+        # static library archiver
+        AR = "ar",
+        # static library indexer
+        RANLIB = "ranlib",
+    )
     if builder_helper.build_asan:
         # Needs to be first
         base_env.Append(
@@ -208,6 +216,8 @@ Decider('timestamp-newer')
 
 modules_generated_libs = {}
 modules_generated_bins = {}
+modules_scons_libs = {}
+modules_scons_bins = {}
 targets = []
 
 def add_targets(src):
@@ -250,6 +260,7 @@ def _env_build_test(self, src, test_name=None, add_libs=[], **kwargs):
 def _env_build_lib(self, src, lib_name=None, static=None, **kwargs):
     """ Environment method to build a shared library for a module """
     global modules_generated_libs
+    global modules_scons_libs
     add_targets(src)
     module_name = self["APP_MODULE_FORMAT_NAME"]
     if lib_name is None:
@@ -259,12 +270,15 @@ def _env_build_lib(self, src, lib_name=None, static=None, **kwargs):
         lib = self.StaticLibrary(lib_path, src, **kwargs)
     else:
         lib = self.SharedLibrary(lib_path, src, **kwargs)
-    modules_generated_libs.setdefault(self['APP_MODULE_NAME'], []).append(lib_name)
+    module_name = self['APP_MODULE_NAME']
+    modules_generated_libs.setdefault(module_name, []).append(lib_name)
+    modules_scons_libs[module_name] = lib
     return lib
 
 def _env_build_bin(self, src, bin_name=None, add_libs=[], **kwargs):
     """ Environment method to build a binary for a module """
     global modules_generated_bins
+    global modules_scons_bins
     add_targets(src)
     if bin_name is None:
         bin_name = self['APP_MODULE_FORMAT_NAME']
@@ -273,8 +287,11 @@ def _env_build_bin(self, src, bin_name=None, add_libs=[], **kwargs):
     bin_env = self.Clone()
     bin_env.Prepend(LIBS = add_libs)
     bin_path = os.path.join(builder_helper.build_bin_path, bin_name)
-    modules_generated_bins.setdefault(self['APP_MODULE_NAME'], []).append(bin_name)
-    return bin_env.Program(bin_path, src, **kwargs)
+    bin = bin_env.Program(bin_path, src, **kwargs)
+    module_name = self['APP_MODULE_NAME']
+    modules_generated_bins.setdefault(module_name, []).append(bin_name)
+    modules_scons_libs[module_name] = bin
+    return bin
 
 # methods to build either test, lib or executable
 base_env.AddMethod(_env_build_lib, "build_lib")
@@ -523,6 +540,6 @@ def after_build():
     if builder_helper.build_for_windows:
         builder_helper.copy_dll_to_bin()
     if success and distribution:
-        builder_helper.distribute_app(app)
+        builder_helper.distribute_app(app, build_modules)
 
 atexit.register(after_build)

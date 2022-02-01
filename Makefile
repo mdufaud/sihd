@@ -294,9 +294,53 @@ checkdep:
 # Distribution
 ##############
 
-dist: mode = release
-dist: dist = 1
-dist: build
+dist_tar: dist = tar
+dist_tar: mode = release
+dist_tar: build
+
+dist_apt: dist = apt
+dist_apt: mode = release
+dist_apt: build
+
+dist_pacman: dist = pacman
+dist_pacman: mode = release
+dist_pacman: build
+
+##############
+# Install
+##############
+
+ifeq ($(INSTALL_PREFIX),)
+    INSTALL_PREFIX := /usr/local
+endif
+
+confirm_install:
+	@$(call log_info,makefile,installing in: $(INSTALL_DESTDIR)$(INSTALL_PREFIX))
+	@echo -n "Please confirm [y/N] " && read answer && [ $${answer:-N} = y ]
+
+install: confirm_install
+	@install -d $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/lib
+	@install -d $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/bin
+	@if [ ! -z "`ls -A $(LIB_PATH) 2>/dev/null`" ]; then \
+		$(call log_echo_info,makefile,installing libraries: $(LIB_PATH) -> $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/lib); \
+		install --compare --mode=755 $(LIB_PATH)/* $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/lib; \
+	else \
+		$(call log_echo_warning,makefile,no libraries to install); \
+	fi
+	@if [ ! -z "`ls -A $(BIN_PATH) 2>/dev/null`" ]; then \
+		$(call log_echo_info,makefile,installing binaries: $(BIN_PATH) -> $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/bin); \
+		install --compare --mode=755 $(BIN_PATH)/* $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/bin; \
+	else \
+		$(call log_echo_warning,makefile,no binaries to install); \
+	fi
+	@$(call log_echo_info,makefile,installing resources: ${RES_PATH} -> $(INSTALL_DESTDIR)/etc)
+	@for path in `find $(RES_PATH) -type f | sed "s|${RES_PATH}/||g"`; do \
+		install -D --compare --mode=744 "$(RES_PATH)/$$path" "$(INSTALL_DESTDIR)/etc/$$path"; \
+	done
+	@$(call log_echo_info,makefile,installing headers: ${INCLUDE_PATH} -> $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/include)
+	@for path in `find $(INCLUDE_PATH) -type f | sed "s|${INCLUDE_PATH}/||g"`; do \
+		install -D --compare --mode=744 "$(INCLUDE_PATH)/$$path" "$(INSTALL_DESTDIR)$(INSTALL_PREFIX)/include/$$path"; \
+	done
 
 ##########
 # Serve

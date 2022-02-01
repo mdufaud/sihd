@@ -3,7 +3,7 @@ Import('env')
 builder_helper = env["BUILDER_HELPER"]
 if env["CXX"] != "em++":
     builder_helper.error("emscripten: must be built using emscripten compiler (add compiler=em)")
-    Exit(1)
+    Return('')
 
 env.Append(CPPFLAGS = ["-s", "WASM=1"])
 

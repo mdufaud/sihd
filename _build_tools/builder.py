@@ -4,6 +4,7 @@ import os
 import glob
 import shutil
 import tarfile
+import subprocess
 from os.path import join, dirname, abspath
 sys.path.append(".")
 sys.dont_write_bytecode = True
@@ -33,6 +34,7 @@ def warning(*msg):
 def error(*msg):
     print("builder [error]:", *msg, file=sys.stderr)
 
+###############################################################################
 # from conans/client/tools/oss.py in https://github.com/conan-io
 
 architectures = {
@@ -81,6 +83,35 @@ def get_arch():
             arch = architectures[arch]
     return os.getenv('arch', "") or arch
 
+# from conans/conan/tools/gnu/get_gnu_triplet.py in https://github.com/conan-io
+
+def _build_gnu_triplet(machine, vendor):
+    op_system = {
+        "Windows": "w64-mingw32",
+        "Linux": "linux-gnu",
+        "Darwin": "apple-darwin",
+        "Android": "linux-android",
+        "Macos": "apple-darwin",
+        "iOS": "apple-ios",
+        "watchOS": "apple-watchos",
+        "tvOS": "apple-tvos",
+        # NOTE: it technically must be "asmjs-unknown-emscripten" or
+        # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
+        "Emscripten": "local-emscripten",
+        "AIX": "ibm-aix",
+        "Neutrino": "nto-qnx"
+    }.get(vendor, vendor)
+    if vendor in ("linux", "android"):
+        if "arm" in machine and "armv8" not in machine:
+            op_system += "eabi"
+        if (machine == "armv5hf" or machine == "armv7hf") and vendor == "linux":
+            op_system += "hf"
+        if machine == "armv8_32" and vendor == "linux":
+            op_system += "_ilp32"
+    return "{}-{}".format(machine, op_system)
+
+###############################################################################
+
 def is_android():
     return "ANDROID_ARGUMENT" in os.environ
 
@@ -105,6 +136,7 @@ def get_platform():
     build_platform = __get_platform()
     return specific_compilers_platform.get(compiler, build_platform)
 
+
 def get_compile_mode():
     return (os.getenv("mode", "") or "debug").lower()
 
@@ -118,10 +150,10 @@ def is_address_sanatizer():
     return bool(os.getenv("asan", None))
 
 def do_distribution():
-    return bool(os.getenv("dist", None))
+    return os.getenv("dist", None) is not None
 
 def get_modules():
-    return os.getenv('modules', "")
+    return os.getenv("modules", "")
 
 def is_static_libs():
     return bool(os.getenv("static", None))
@@ -189,6 +221,9 @@ build_platform = get_platform()
 build_on_android = is_android()
 build_for_windows = build_platform == "windows"
 build_for_linux = build_platform == "linux"
+
+def get_gnu_triplet():
+    return _build_gnu_triplet(build_architecture, build_platform)
 
 # path ROOT
 build_root_path = abspath(dirname(dirname(__file__)))
@@ -258,51 +293,178 @@ def create_tar_package(app):
     tar_path = join(build_dist_path, "{}-{}.tar.gz".format(app.name, app.version))
     info("compressing build to: " + tar_path)
     with tarfile.open(tar_path, "w:gz") as tar:
+        # include
         if os.path.isdir(build_hdr_path):
             tar.add(build_hdr_path, arcname = os.path.basename(build_hdr_path))
+        # lib
         if os.path.isdir(build_lib_path):
             tar.add(build_lib_path, arcname = os.path.basename(build_lib_path))
+        # bin
         if os.path.isdir(build_bin_path):
             tar.add(build_bin_path, arcname = os.path.basename(build_bin_path))
+        # etc
         if os.path.isdir(build_etc_path):
             tar.add(build_etc_path, arcname = os.path.basename(build_etc_path))
-        # extlibs
+        # extlibs/include
         if os.path.isdir(build_extlib_hdr_path):
             tar.add(build_extlib_hdr_path, arcname = os.path.basename(build_hdr_path))
+        # extlibs/lib
         if not build_for_windows and os.path.isdir(build_extlib_lib_path):
             tar.add(build_extlib_lib_path, arcname = os.path.basename(build_lib_path))
+        # extlibs/bin
         if os.path.isdir(build_extlib_bin_path):
             tar.add(build_extlib_bin_path, arcname = os.path.basename(build_bin_path))
 
 # package dh-make
-def create_apt_package(app):
+def create_apt_package(app, modules):
+    try:
+        dependencies = build_tools_modules.get_modules_packages(app, "apt", modules)
+    except SystemExit as err:
+        error(err)
+        exit(1)
     apt_path = join(build_dist_path, "apt", "{}-{}".format(app.name, app.version))
-    control_path = join(apt_path, "control")
-    copyright_path = join(apt_path, "copyright")
+    debian_path = join(apt_path, "DEBIAN")
+    control_path = join(debian_path, "control")
+    copyright_path = join(debian_path, "copyright")
+    rules_path = join(debian_path, "rules")
+    preinst_script_path = join(debian_path, "preinst")
+    postinst_script_path = join(debian_path, "postinst")
+    prerm_script_path = join(debian_path, "prerm")
+    postrm_script_path = join(debian_path, "postrm")
+    apt_binary_path = join(apt_path, "usr", "bin")
+    apt_include_path = join(apt_path, "usr", "include")
+    apt_lib_path = join(apt_path, "usr", "lib", "$(DEB_HOST_MULTIARCH)")
+    apt_share_path = join(apt_path, "usr", "share")
+    apt_etc_path = join(apt_path, "etc")
     info("creating apt package: " + apt_path)
-    os.makedirs(apt_path, exist_ok = True)
+    # debian/control
+    os.makedirs(debian_path, exist_ok = True)
     with open(control_path, "w") as fd:
-        fd.write("Source: {}\n".format(app.name))
-        fd.write("Section: {}\n".format("libdevel"))
-        fd.write("Priority: {}\n".format("optional"))
-        fd.write("Maintainer: {}\n".format(app.maintainer))
-        fd.write("Build-Depends: {}\n".format("debhelper (>= 7)"))
-        fd.write("\n")
         fd.write("Package: {}\n".format(app.name))
-        fd.write("Architecture: {}\n".format("any"))
-        fd.write("Depends: {}\n".format("${shlibs:Depends}"))
+        priority = hasattr(app, "priority") and app.priority or "optional"
+        fd.write("Priority: {}\n".format(priority))
+        fd.write("Maintainer: {}\n".format(app.maintainer))
+        if hasattr(app, "uploaders"):
+            fd.write("Uploaders: {}\n".format(app.uploaders))
+        if hasattr(app, "url"):
+            fd.write("Homepage: {}\n".format(app.url))
+        if hasattr(app, "section"):
+            fd.write("Section: {}\n".format(app.section))
+        fd.write("Architecture: {}\n".format(app.architecture))
+        if hasattr(app, "multi_architecture"):
+            fd.write("Multi-Arch: {}\n".format(app.multi_architecture))
+        fd.write("Version: {}\n".format(app.version))
+        if dependencies:
+            # Depends: libname (>= version), other_libname (>= other_version)
+            fd.write("Depends: {}\n".format(", ".join(["{} (>= {})".format(k, v) for k, v in dependencies.items()])))
         fd.write("Description: {}\n".format(app.description))
+    # /usr/bin
+    if os.path.isdir(build_bin_path):
+        os.makedirs(apt_binary_path, exist_ok = True)
+        shutil.copytree(build_bin_path, apt_binary_path, dirs_exist_ok = True)
+    # /usr/include
+    if os.path.isdir(build_hdr_path):
+        os.makedirs(apt_include_path, exist_ok = True)
+        shutil.copytree(build_hdr_path, apt_include_path, dirs_exist_ok = True)
+    # /usr/lib/machine-vendor-os
+    if os.path.isdir(build_lib_path):
+        os.makedirs(apt_lib_path, exist_ok = True)
+        shutil.copytree(build_lib_path, apt_lib_path, dirs_exist_ok = True)
+    # /etc
+    if os.path.isdir(build_etc_path):
+        os.makedirs(apt_etc_path, exist_ok = True)
+        shutil.copytree(build_etc_path, apt_etc_path, dirs_exist_ok = True)
+    # dpkg-deb to build package
+    subprocess.call(['dpkg-deb', '--build', apt_path])
 
-def create_pacman_package(app):
+def create_pacman_package(app, modules):
+    try:
+        dependencies = build_tools_modules.get_modules_packages(app, "pacman", modules)
+    except SystemExit as err:
+        error(err)
+        exit(1)
     pacman_path = join(build_dist_path, "pacman", "{}-{}".format(app.name, app.version))
     info("creating pacman package: " + pacman_path)
     os.makedirs(pacman_path, exist_ok = True)
+    pkg_build_path = join(pacman_path, "PKGBUILD")
+    # change directory to pacman path
+    old_cwd = os.getcwd()
+    os.chdir(pacman_path)
+    # calc cheksum
+    checksum = "sha512sums=('SKIP')\n"
+    """
+    proc = subprocess.call(['makepkg', '-g'], stdout = subprocess.PIPE)
+    if proc:
+        stdout = proc.stdout.read()
+        if stdout:
+            checksum = proc.stdout.read()
+    """
+    # create PKGBUILD file
+    with open(pkg_build_path, "w") as fd:
+        fd.write('# Maintainer: {}\n'.format(app.maintainer))
+        fd.write('\n')
+        fd.write('pkgname={}\n'.format(app.name))
+        fd.write('pkgver={}\n'.format(app.version))
+        fd.write('pkgrel={}\n'.format(1))
+        fd.write('pkgdesc="{}"\n'.format(app.description))
+        fd.write("arch=('{}')\n".format(app.architecture))
+        if hasattr(app, "url"):
+            fd.write('url="{}"\n'.format(app.url))
+        if hasattr(app, "license"):
+            fd.write("license=('{}')\n".format(app.license))
+        if hasattr(app, "section"):
+            fd.write("groups=('{}')\n".format(app.section))
+        fd.write("makedepends=('git' 'make' 'scons')\n")
+        if dependencies:
+            # depends=('libname>=version' 'other_libname>=other_version')
+            fd.write("depends=({})\n".format(" ".join(["'{}>={}'".format(k, v) for k, v in dependencies.items()])))
+        if hasattr(app, "source"):
+            fd.write('source=("{appname}-{appversion}::git+{source}#tag=v{appversion}")\n'.format(
+                appname = app.name,
+                appversion = app.version,
+                source = app.source
+            ))
+        fd.write(checksum)
+        fd.write('\n')
+        fd.write(('build() {{\n'
+            '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
+            '\tmake fclean\n'
+            '\tenv modules={modules} py={py} lua={lua} '
+            'asan={asan} static={static} '
+            'platform={platform} compiler={compiler} arch={arch} mode={mode} '
+            'scons -Q\n'
+        '}}\n').format(
+            modules = os.getenv("modules"),
+            py = os.getenv("py") or "0",
+            lua = os.getenv("lua") or "0",
+            asan = os.getenv("asan") or "0",
+            static = os.getenv("static") or "0",
+            arch = build_architecture,
+            platform = build_platform,
+            compiler = build_compiler,
+            mode = build_mode,
+        ))
+        fd.write('\n')
+        fd.write(('package() {{\n'
+            '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
+            '\tmake install INSTALL_DESTDIR="${{pkgdir}}/" INSTALL_PREFIX="/usr"\n'
+        '}}\n').format())
+    # change back to old directory
+    os.chdir(old_cwd)
 
-def distribute_app(app):
-    info("distributing app " + app.name)
-    create_tar_package(app)
-    create_apt_package(app)
-    create_pacman_package(app)
+def distribute_app(app, modules):
+    dist_type = os.getenv("dist", None)
+    if dist_type is None:
+        raise SystemExit("cannot distribute app without its type")
+    info("creating {} distribution for app {}".format(dist_type, app.name))
+    if dist_type == "tar":
+        create_tar_package(app)
+    elif dist_type == "apt":
+        create_apt_package(app, modules)
+    elif dist_type == "pacman":
+        create_pacman_package(app, modules)
+    else:
+        raise SystemExit("cannot distribute app type: {}".format(dist_type))
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:

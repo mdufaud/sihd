@@ -77,19 +77,15 @@ def get_module_libs(modules, modname):
     libs[:0] = conf['libs']
     return libs
 
-def get_global_extlibs(app):
-    libs = hasattr(app, "libs") and app.libs or []
-    return libs
-
 def get_extlibs_versions(app, modules_extlibs):
     if not hasattr(app, "extlibs"):
         return {}
     extlibs = app.extlibs
     ret = {}
     # matching with extlibs
-    for extlib in modules_extlibs:
+    for extlibname in modules_extlibs:
         for libname, version in extlibs.items():
-            if libname == extlib:
+            if libname == extlibname:
                 ret[libname] = version
     return ret
 
@@ -100,13 +96,26 @@ def get_modules_extlibs(app, modules):
     modules_extlibs = set()
     # getting used libs for every modules
     for _, module in modules.items():
-        libs = module.get('use-extlibs', [])
-        for lib in libs:
-            modules_extlibs.add(lib)
+        extlibs = module.get('use-extlibs', [])
+        for extlib in extlibs:
+            modules_extlibs.add(extlib)
     # adding global libs + test_libs
-    for extlib in get_global_extlibs(app):
-        modules_extlibs.add(extlib)
+    for lib in (hasattr(app, "libs") and app.libs or []):
+        modules_extlibs.add(lib)
     return get_extlibs_versions(app, modules_extlibs)
+
+def get_modules_packages(app, packet_manager_name, modules):
+    key = "{}_packages".format(packet_manager_name)
+    if not hasattr(app, key):
+        return {}
+    package_manager_conf = getattr(app, key)
+    modules_extlibs = get_modules_extlibs(app, modules)
+    ret = {}
+    for libname, version in modules_extlibs.items():
+        if libname not in package_manager_conf:
+            raise SystemExit("external library '{}' not declared in packet manager '{}'".format(libname, packet_manager_name))
+        ret[package_manager_conf[libname]] = version
+    return ret
 
 def add_conditionnal_module(conditionnal_modules, modules, modname):
     conditionnal_module = conditionnal_modules.get(modname, None)
