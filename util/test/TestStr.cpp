@@ -9,6 +9,8 @@
 
 #include <errno.h>
 
+#include <sihd/util/version.hpp>
+
 namespace test
 {
     using namespace sihd::util;
@@ -376,7 +378,7 @@ namespace test
     TEST_F(TestStr, test_str_hexdump)
     {
         std::string s = "hello world - how are you";
-        TRACE(Str::addr_to_string(s.data()));
+        LOG(debug, Str::addr_to_string(s.data()));
         EXPECT_EQ(Str::addr_to_string(0x0, 5), "0x00000");
         EXPECT_EQ(Str::num_to_string(312, 10), "312");
         EXPECT_EQ(Str::num_to_string(16, 16), "10");

@@ -293,11 +293,42 @@ def _env_build_bin(self, src, bin_name=None, add_libs=[], **kwargs):
     modules_scons_libs[module_name] = bin
     return bin
 
+###############################################################################
+# Replace vars in files
+###############################################################################
+
+def _sed_replace(file, replace_dic):
+    for key, value in replace_dic.items():
+        subprocess.call(['sed', '-i', 's/{}/{}/g'.format(key, value), file])
+
+def _fileinput_replace(file, replace_dic):
+    for line in fileinput.input(file, inplace=True):
+        for key, value in replace_dic.items():
+            print(line.replace(key, value), end='')
+
+def _env_replace_in_build(self, to_replace, replace_dic):
+    true_replace = []
+    for pattern in to_replace:
+        ret = glob.glob(os.path.join(str(build_dir), pattern), recursive = True)
+        if ret:
+            true_replace += ret
+        else:
+            true_replace.append(pattern)
+    if verbose:
+        builder_helper.debug("replacing values in build files - {} files to replace".format(len(true_replace)))
+    for file in true_replace:
+        if os.path.isfile(file) == False:
+            builder_helper.warning("file to replace '{}' does not exists".format(file))
+            continue
+        builder_helper.debug("replacing file: " + file)
+        _sed_replace(file, replace_dic)
+
 # methods to build either test, lib or executable
 base_env.AddMethod(_env_build_lib, "build_lib")
 base_env.AddMethod(_env_build_bin, "build_bin")
 base_env.AddMethod(_env_build_test, "build_test")
 base_env.AddMethod(_env_parse_config, "parse_config")
+base_env.AddMethod(_env_replace_in_build, "build_replace")
 
 ## build utilities
 
@@ -358,9 +389,8 @@ for conf in build_order:
                 depends_generated_libs.insert(0, generated_lib_name)
     # Create a specific environment for the module
     env = base_env.Clone()
+    # no need to add headers as they are copied to build
     env.Prepend(
-        # adding headers of depending modules and self
-        CPPPATH = get_modules_headers(modname, *depends),
         # adding libraries
         LIBS = depends_generated_libs
                 + modules_helper.get_module_libs(build_modules, modname)
@@ -406,6 +436,9 @@ for conf in build_order:
         if parse_configs:
             print("- needed specific packages configs")
             pp.pprint(parse_configs)
+    # copy module/etc content to build/etc
+    copy_module_dir_into_build(modname, "etc")
+    copy_module_dir_into_build(modname, "include")
     # read module's scons script file
     module_dir = Dir(modname)
     built[modname] = SConscript(module_dir.File("scons.py"),
@@ -418,47 +451,8 @@ for conf in build_order:
     conf["link"] = env['LINKFLAGS']
     # update added paths
     base_env["CPPPATH"] = list(set(env["CPPPATH"]))
-    # copy module/etc content to build/etc
-    copy_module_dir_into_build(modname, "etc")
-    copy_module_dir_into_build(modname, "include")
     if verbose:
         print("")
-
-
-###############################################################################
-# Replace vars in files
-###############################################################################
-
-def sed_replace(file, replace_dic):
-    for key, value in replace_dic.items():
-        subprocess.call(['sed', '-i', 's/{}/{}/g'.format(key, value), file])
-
-def fileinput_replace(file, replace_dic):
-    for line in fileinput.input(file, inplace=True):
-        for key, value in replace_dic.items():
-            print(line.replace(key, value), end='')
-
-def replace_res_in_build(to_replace, replace_dic):
-    true_replace = []
-    for pattern in to_replace:
-        ret = glob.glob(os.path.join(str(build_dir), pattern), recursive = True)
-        if ret:
-            true_replace += ret
-        else:
-            true_replace.append(pattern)
-    if verbose:
-        builder_helper.debug("replacing values in build files - {} files to replace".format(len(true_replace)))
-    for file in true_replace:
-        if os.path.isfile(file) == False:
-            builder_helper.warning("file to replace '{}' does not exists".format(file))
-            continue
-        if verbose:
-            builder_helper.debug("replacing file: " + file)
-        sed_replace(file, replace_dic)
-
-# Replace every strings in specified files
-if hasattr(app, "replace_files") and hasattr(app, "replace_vars"):
-    replace_res_in_build(app.replace_files, app.replace_vars)
 
 ###############################################################################
 # Scons progress build output

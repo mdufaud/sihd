@@ -1,5 +1,5 @@
 name = 'sihd'
-version = "0.1"
+version = "0.1.0"
 
 # external libs versions
 extlibs = {
@@ -162,17 +162,6 @@ conditionnal_modules = {
             'python3-config --cflags --ldflags --embed',
         ],
     }
-}
-
-#############
-# replace
-#############
-
-replace_files = [
-    "etc/sihd/core/test.txt"
-]
-replace_vars = {
-    "VERSION": "0.1"
 }
 
 #############
