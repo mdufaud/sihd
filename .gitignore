@@ -14,3 +14,4 @@ vgcore*
 build/*
 dist/*
 imgui/imgui
+.installed

@@ -1,15 +1,7 @@
 name = 'sihd'
 version = "0.1"
-maintainer = "mdufaud <maxence_dufaud@hotmail.fr>"
-uploaders = "azouiten <alexandre.zouiten1@gmail.com>"
-section = "libdevel"
-priority = "optional"
-description = "Simple Input Handler Displayer"
-license = "GPL3"
-architecture = "any"
-source = "https://github.com/mdufaud/sihd.git"
 
-# modules and libs descriptions
+# external libs versions
 extlibs = {
     ## unit test
     "gtest": "1.11.0",
@@ -43,18 +35,8 @@ extlibs = {
     ## other
     "libjpeg": "9d",
 }
-apt_packages = {
-    "nlohmann_json": "nlohmann-json3-dev",
-    "openssl": "openssl",
-    "libcurl": "libcurl4-openssl-dev",
-    "libwebsockets": "libwebsockets-dev"
-}
-pacman_packages = {
-    "nlohmann_json": "nlohmann-json",
-    "openssl": "openssl",
-    "libcurl": "libcurl",
-    "libwebsockets": "libwebsockets"
-}
+
+# modules descriptions
 modules = {
     "util": {
         # apt nlohmann-json-dev / pacman nlohmann-json
@@ -139,12 +121,12 @@ modules = {
             "gdi32"
         ],
         "windows-flags": ["-Wno-cast-function-type"],
-        "pkg-configs": ["sdl2"],
         "git-url": "https://github.com/ocornut/imgui.git",
         "git-branch": "v1.86",
     },
 }
-## conditionnals - only if activated
+
+# conditionnal modules - activated only if compiled specifically or by env variable
 conditionnal_modules = {
     "demo": {
         "depends": ['pcap', 'http', 'imgui'],
@@ -182,13 +164,66 @@ conditionnal_modules = {
     }
 }
 
-## build changes
+#############
+# replace
+#############
+
 replace_files = [
     "etc/sihd/core/test.txt"
 ]
 replace_vars = {
     "VERSION": "0.1"
 }
+
+#############
+# distribution
+#############
+
+description = "Simple Input Handler Displayer"
+license = "GPL3"
+section = "libdevel"
+priority = "optional"
+architecture = "any"
+multi_architecture = "same"
+maintainer = "mdufaud <maxence_dufaud@hotmail.fr>"
+uploaders = "azouiten <alexandre.zouiten1@gmail.com>"
+source = "https://github.com/mdufaud/sihd.git"
+
+app_build_env = ['py', 'lua', 'sdl']
+
+# packages equivalent to build DEBIAN/control dependencies
+apt_packages = {
+    "nlohmann_json": "nlohmann-json3-dev",
+    "openssl": "openssl",
+    "libcurl": "libcurl4-openssl-dev",
+    "libwebsockets": "libwebsockets-dev",
+    "libpcap": "libpcap-dev",
+    "libssh": "libssh-dev",
+    "pybind11": "python3-pybind11",
+    "sol2": "",
+    "glfw": "libglfw-dev",
+    "glew": "libglew-dev",
+    "sdl2": "libsdl2-dev",
+}
+
+# packages equivalent to build PKGBUILD dependencies
+pacman_packages = {
+    "nlohmann_json": "nlohmann-json",
+    "openssl": "openssl",
+    "libcurl": "libcurl",
+    "libwebsockets": "libwebsockets",
+    "libpcap": "libpcap",
+    "libssh": "libssh",
+    "pybind11": "pybind11",
+    "sol2": "",
+    "glfw": "glfw",
+    "glew": "glew",
+    "sdl2": "sdl2",
+}
+
+#############
+# compilation
+#############
 
 ## general compilation parameters
 libs = ['pthread', 'dl']
@@ -235,7 +270,6 @@ test_libs = ['gtest', 'stdc++fs']
 
 #############
 # after build
-# -> copy python library to another name in build so we can use it
 #############
 
 # linux extension is -> cpython-36m-x86_64-linux-gnu.so
@@ -247,16 +281,18 @@ def __get_python_libname():
                             shell = True, stdout = subprocess.PIPE)
     return proc.stdout.read().decode().strip()
 
-def on_build_success(modlist, build_path, build_lib_path):
-    if "py" not in modlist:
+def on_build_success(build_modules, builder_helper):
+    if "py" not in build_modules:
         return
+    # -> copy python library to another name in build so we can use it
     python_libname = __get_python_libname()
-    if python_libname:
-        import os
-        import glob
-        import shutil
-        lib_pattern = os.path.join(build_lib_path, "libsihd_py*.so")
-        for lib in glob.glob(lib_pattern):
-            pybind11_compliant = lib.replace("libsihd_py", "sihd")
-            pybind11_compliant = pybind11_compliant.replace(".so", python_libname)
-            shutil.copyfile(lib, pybind11_compliant)
+    if not python_libname:
+        return
+    import os
+    import glob
+    import shutil
+    lib_pattern = os.path.join(builder_helper.build_lib_path, "libsihd_py*.so")
+    for lib in glob.glob(lib_pattern):
+        pybind11_compliant = lib.replace("libsihd_py", "sihd")
+        pybind11_compliant = pybind11_compliant.replace(".so", python_libname)
+        shutil.copyfile(lib, pybind11_compliant)

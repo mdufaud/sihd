@@ -114,7 +114,9 @@ def get_modules_packages(app, packet_manager_name, modules):
     for libname, version in modules_extlibs.items():
         if libname not in package_manager_conf:
             raise SystemExit("external library '{}' not declared in packet manager '{}'".format(libname, packet_manager_name))
-        ret[package_manager_conf[libname]] = version
+        package_libname = package_manager_conf[libname]
+        if package_libname:
+            ret[package_libname] = version
     return ret
 
 def add_conditionnal_module(conditionnal_modules, modules, modname):

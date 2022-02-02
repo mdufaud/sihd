@@ -150,7 +150,7 @@ def is_address_sanatizer():
     return bool(os.getenv("asan", None))
 
 def do_distribution():
-    return os.getenv("dist", None) is not None
+    return bool(os.getenv("dist", None))
 
 def get_modules():
     return os.getenv("modules", "")
@@ -339,6 +339,7 @@ def create_apt_package(app, modules):
     info("creating apt package: " + apt_path)
     # debian/control
     os.makedirs(debian_path, exist_ok = True)
+    info("creating apt control file: {}".format(control_path))
     with open(control_path, "w") as fd:
         fd.write("Package: {}\n".format(app.name))
         priority = hasattr(app, "priority") and app.priority or "optional"
@@ -375,7 +376,10 @@ def create_apt_package(app, modules):
         os.makedirs(apt_etc_path, exist_ok = True)
         shutil.copytree(build_etc_path, apt_etc_path, dirs_exist_ok = True)
     # dpkg-deb to build package
-    subprocess.call(['dpkg-deb', '--build', apt_path])
+    if shutil.which("dpkg-deb") is not None:
+        subprocess.call(['dpkg-deb', '--build', apt_path])
+    else:
+        error("dpkg-deb is missing")
 
 def create_pacman_package(app, modules):
     try:
@@ -392,13 +396,19 @@ def create_pacman_package(app, modules):
     os.chdir(pacman_path)
     # calc cheksum
     checksum = "sha512sums=('SKIP')\n"
-    """
-    proc = subprocess.call(['makepkg', '-g'], stdout = subprocess.PIPE)
-    if proc:
-        stdout = proc.stdout.read()
-        if stdout:
-            checksum = proc.stdout.read()
-    """
+    if shutil.which("makepkg") is not None:
+        proc = subprocess.call(['makepkg', '-g'], stdout = subprocess.PIPE)
+        if proc and proc.stdout:
+            stdout = proc.stdout.read().decode().strip()
+            if stdout:
+                checksum = stdout
+            else:
+                warning("makepkg error - skipping sha512sum")
+        else:
+            warning("makepkg command failed - skipping sha512sum")
+    else:
+        warning("makepkg is missing - skipping sha512sum")
+    info("creating pacman PKGBUILD: {}".format(pkg_build_path))
     # create PKGBUILD file
     with open(pkg_build_path, "w") as fd:
         fd.write('# Maintainer: {}\n'.format(app.maintainer))
@@ -419,9 +429,7 @@ def create_pacman_package(app, modules):
             # depends=('libname>=version' 'other_libname>=other_version')
             fd.write("depends=({})\n".format(" ".join(["'{}>={}'".format(k, v) for k, v in dependencies.items()])))
         if hasattr(app, "source"):
-            fd.write('source=("{appname}-{appversion}::git+{source}#tag=v{appversion}")\n'.format(
-                appname = app.name,
-                appversion = app.version,
+            fd.write('source=("${{pkgname}}-${{pkgver}}::git+{source}#tag=v${{pkgver}}")\n'.format(
                 source = app.source
             ))
         fd.write(checksum)
@@ -429,26 +437,31 @@ def create_pacman_package(app, modules):
         fd.write(('build() {{\n'
             '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
             '\tmake fclean\n'
-            '\tenv modules={modules} py={py} lua={lua} '
-            'asan={asan} static={static} '
-            'platform={platform} compiler={compiler} arch={arch} mode={mode} '
-            'scons -Q\n'
-        '}}\n').format(
+            '\tenv modules={modules} asan={asan} static={static} '
+            'platform={platform} compiler={compiler} arch={arch} mode={mode} ')
+        .format(
             modules = os.getenv("modules"),
-            py = os.getenv("py") or "0",
-            lua = os.getenv("lua") or "0",
             asan = os.getenv("asan") or "0",
             static = os.getenv("static") or "0",
-            arch = build_architecture,
             platform = build_platform,
             compiler = build_compiler,
+            arch = build_architecture,
             mode = build_mode,
         ))
+        if hasattr(app, "app_build_env"):
+            fd.write(" ".join(["{}={}".format(k, os.getenv(k) or "0") for k in app.app_build_env]))
+        fd.write(' scons -Q\n}}\n')
         fd.write('\n')
         fd.write(('package() {{\n'
             '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
-            '\tmake install INSTALL_DESTDIR="${{pkgdir}}/" INSTALL_PREFIX="/usr"\n'
-        '}}\n').format())
+            '\tmake install INSTALL_DESTDIR="${{pkgdir}}" INSTALL_PREFIX="/usr" '
+            'platform={platform} compiler={compiler} arch={arch} mode={mode}\n'
+        '}}\n').format(
+            platform = build_platform,
+            compiler = build_compiler,
+            arch = build_architecture,
+            mode = build_mode,
+        ))
     # change back to old directory
     os.chdir(old_cwd)
 

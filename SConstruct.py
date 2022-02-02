@@ -112,7 +112,7 @@ base_env = Environment(
     APP_MODULES_BUILD = build_modules.keys(),
     # builder helper for sconscript
     BUILDER_HELPER = builder_helper,
-    # lib version
+    # lib version + automatic symbolic links
     SHLIBVERSION = app.version
 )
 if build_platform == "windows":
@@ -534,7 +534,7 @@ def after_build():
     success, failures_message = build_status()
     display_build_status(success, failures_message)
     if success and hasattr(app, "on_build_success"):
-        app.on_build_success(build_modules.keys(), str(build_dir), str(lib_dir))
+        app.on_build_success(build_modules, builder_helper)
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules.keys())
     if builder_helper.build_for_windows:
