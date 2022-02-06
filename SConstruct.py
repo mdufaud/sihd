@@ -41,6 +41,7 @@ distribution = builder_helper.do_distribution()
 verbose = builder_helper.has_verbose()
 
 if verbose:
+    builder_helper.info("modules: {}".format(modules_to_build and modules_to_build.split(',') or "all"))
     builder_helper.info("platform: " + build_platform)
     builder_helper.info("compiler: " + compiler)
     builder_helper.info("arch: " + builder_helper.build_architecture)

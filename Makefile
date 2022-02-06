@@ -115,13 +115,13 @@ endif
 
 build: intro
 	$(call mk_log_info,makefile,starting build with command: $(SCONS_BUILD_CMD))
-	@cd $(HERE) && env verbose=$(verbose) \
-						modules=$(modules) \
-						test=$(test) \
-						dist=$(dist) \
-						mode=$(mode) \
-						j=$(j) \
-						$(SCONS_BUILD_CMD)
+	@cd $(HERE)
+	@verbose=$(verbose) \
+		modules=$(modules) \
+		test=$(test) \
+		dist=$(dist) \
+		mode=$(mode) \
+		$(SCONS_BUILD_CMD)
 
 build_debug: SCONS_ARGS = --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
 build_debug: SCONS_PREFIX = time
@@ -420,6 +420,7 @@ bclean:
 
 fclean: bclean
 	@$(call mk_log_info,makefile,removing remaining files)
+	rm .sconsign.dblite
 	find . -name "*vgcore*" -type f -exec rm -f {} \;
 	find . -name "*.ini" -type f -exec rm -f {} \;
 	find . -maxdepth 1 -name "*.scons*" -type d -exec rm -rf {} \;

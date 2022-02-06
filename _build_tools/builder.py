@@ -13,7 +13,9 @@ try:
 except ImportError:
     from . import modules as build_tools_modules
 
+# TODO in app config
 linux_only_libs = ['dl', 'ssh']
+# TODO in app config
 linux_only_extlibs = ['pybind11', 'bluetooth']
 
 default_compiler = os.getenv("COMPILER", "gcc")
@@ -141,22 +143,22 @@ def get_compile_mode():
     return (os.getenv("mode", "") or "debug").lower()
 
 def has_verbose():
-    return bool(os.getenv("verbose", None))
+    return os.getenv("verbose", None) == "1"
 
 def has_test():
-    return bool(os.getenv("test", None))
+    return os.getenv("test", None) == "1"
 
 def is_address_sanatizer():
-    return bool(os.getenv("asan", None))
+    return os.getenv("asan", None) == "1"
 
 def do_distribution():
-    return bool(os.getenv("dist", None))
+    return os.getenv("dist", None) == "1"
 
 def get_modules():
     return os.getenv("modules", "")
 
 def is_static_libs():
-    return bool(os.getenv("static", None))
+    return os.getenv("static", None) == "1"
 
 def sanitize_app(app):
     platform = get_platform()
@@ -176,12 +178,12 @@ def sanitize_app(app):
             if linux_lib in app.test_libs:
                 info("global test lib '{}' is removed from list".format(linux_lib))
                 app.test_libs.remove(linux_lib)
-    # remove external libs dependencies in app.libs_versions if they are linux only
-    if hasattr(app, "libs_versions") and isinstance(app.libs_versions, dict):
-        to_remove = [name for name in app.libs_versions.keys() if name in linux_only_extlibs]
+    # remove external libs dependencies in app.extlibs if they are linux only
+    if hasattr(app, "extlibs") and isinstance(app.extlibs, dict):
+        to_remove = [name for name in app.extlibs.keys() if name in linux_only_extlibs]
         for remove in to_remove:
             info("external lib '{}' is removed from list".format(remove))
-            del app.libs_versions[remove]
+            del app.extlibs[remove]
     # remove modules from list if they depend on a linux lib
     modules = build_tools_modules.get_module_merged_with_conditionnals(app)
     to_remove = set()
@@ -274,7 +276,9 @@ def verify_args():
             ret = False
     return ret
 
+###############################################################################
 ## Distribution
+###############################################################################
 
 def copy_dll_to_bin():
     if not os.path.isdir(build_bin_path):
@@ -285,9 +289,10 @@ def copy_dll_to_bin():
     if os.path.isdir(build_lib_path):
         libs_path.extend(glob.glob(os.path.join(build_lib_path, "*.dll")))
     for lib_path in libs_path:
-        info("Copying '" + lib_path + "' to bin")
+        info("copying '" + lib_path + "' to bin")
         shutil.copyfile(lib_path, os.path.join(build_bin_path, os.path.basename(lib_path)))
 
+# TAR
 def create_tar_package(app):
     os.makedirs(build_dist_path, exist_ok = True)
     tar_path = join(build_dist_path, "{}-{}.tar.gz".format(app.name, app.version))
@@ -315,7 +320,7 @@ def create_tar_package(app):
         if os.path.isdir(build_extlib_bin_path):
             tar.add(build_extlib_bin_path, arcname = os.path.basename(build_bin_path))
 
-# package dh-make
+# APT
 def create_apt_package(app, modules):
     try:
         dependencies = build_tools_modules.get_modules_packages(app, "apt", modules)
@@ -381,6 +386,7 @@ def create_apt_package(app, modules):
     else:
         error("dpkg-deb is missing")
 
+# PACMAN
 def create_pacman_package(app, modules):
     try:
         dependencies = build_tools_modules.get_modules_packages(app, "pacman", modules)
@@ -394,20 +400,6 @@ def create_pacman_package(app, modules):
     # change directory to pacman path
     old_cwd = os.getcwd()
     os.chdir(pacman_path)
-    # calc cheksum
-    checksum = "sha512sums=('SKIP')\n"
-    if shutil.which("makepkg") is not None:
-        proc = subprocess.call(['makepkg', '-g'], stdout = subprocess.PIPE)
-        if proc and proc.stdout:
-            stdout = proc.stdout.read().decode().strip()
-            if stdout:
-                checksum = stdout
-            else:
-                warning("makepkg error - skipping sha512sum")
-        else:
-            warning("makepkg command failed - skipping sha512sum")
-    else:
-        warning("makepkg is missing - skipping sha512sum")
     info("creating pacman PKGBUILD: {}".format(pkg_build_path))
     # create PKGBUILD file
     with open(pkg_build_path, "w") as fd:
@@ -428,12 +420,9 @@ def create_pacman_package(app, modules):
         if dependencies:
             # depends=('libname>=version' 'other_libname>=other_version')
             fd.write("depends=({})\n".format(" ".join(["'{}>={}'".format(k, v) for k, v in dependencies.items()])))
-        if hasattr(app, "source"):
-            fd.write('source=("${{pkgname}}-${{pkgver}}::git+{source}#tag=v${{pkgver}}")\n'.format(
-                source = app.source
-            ))
-        fd.write(checksum)
-        fd.write('\n')
+        if hasattr(app, "pacman_source"):
+            fd.write('source=("{}")\n'.format(app.pacman_source))
+        fd.write("sha512sums=('SKIP')\n\n")
         fd.write(('build() {{\n'
             '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
             '\tmake fclean\n'
@@ -448,9 +437,9 @@ def create_pacman_package(app, modules):
             arch = build_architecture,
             mode = build_mode,
         ))
-        if hasattr(app, "app_build_env"):
-            fd.write(" ".join(["{}={}".format(k, os.getenv(k) or "0") for k in app.app_build_env]))
-        fd.write(' scons -Q\n}}\n')
+        if hasattr(app, "additionnal_build_env"):
+            fd.write(" ".join(["{}={}".format(k, os.getenv(k) or "0") for k in app.additionnal_build_env]))
+        fd.write(' scons -Q\n}\n')
         fd.write('\n')
         fd.write(('package() {{\n'
             '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
@@ -478,6 +467,8 @@ def distribute_app(app, modules):
         create_pacman_package(app, modules)
     else:
         raise SystemExit("cannot distribute app type: {}".format(dist_type))
+
+###############################################################################
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
