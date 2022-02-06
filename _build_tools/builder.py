@@ -152,7 +152,7 @@ def is_address_sanatizer():
     return os.getenv("asan", None) == "1"
 
 def do_distribution():
-    return os.getenv("dist", None) == "1"
+    return os.getenv("dist", None) != None
 
 def get_modules():
     return os.getenv("modules", "")
@@ -349,9 +349,9 @@ def create_apt_package(app, modules):
         fd.write("Package: {}\n".format(app.name))
         priority = hasattr(app, "priority") and app.priority or "optional"
         fd.write("Priority: {}\n".format(priority))
-        fd.write("Maintainer: {}\n".format(app.maintainer))
-        if hasattr(app, "uploaders"):
-            fd.write("Uploaders: {}\n".format(app.uploaders))
+        fd.write("Maintainer: {}\n".format(app.maintainers[0]))
+        if hasattr(app, "contributors"):
+            fd.write("Uploaders: {}\n".format(", ".join(app.contributors)))
         if hasattr(app, "url"):
             fd.write("Homepage: {}\n".format(app.url))
         if hasattr(app, "section"):
@@ -403,7 +403,10 @@ def create_pacman_package(app, modules):
     info("creating pacman PKGBUILD: {}".format(pkg_build_path))
     # create PKGBUILD file
     with open(pkg_build_path, "w") as fd:
-        fd.write('# Maintainer: {}\n'.format(app.maintainer))
+        for maintainer in app.maintainers:
+            fd.write('# Maintainer: {}\n'.format(maintainer))
+        for uploader in getattr(app, "contributors", []):
+            fd.write("# Contributor: {}\n".format(uploader))
         fd.write('\n')
         fd.write('pkgname={}\n'.format(app.name))
         fd.write('pkgver={}\n'.format(app.version))
@@ -426,7 +429,7 @@ def create_pacman_package(app, modules):
         fd.write(('build() {{\n'
             '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
             '\tmake fclean\n'
-            '\tenv modules={modules} asan={asan} static={static} '
+            '\tmake modules={modules} asan={asan} static={static} '
             'platform={platform} compiler={compiler} arch={arch} mode={mode} ')
         .format(
             modules = os.getenv("modules"),
@@ -439,7 +442,7 @@ def create_pacman_package(app, modules):
         ))
         if hasattr(app, "additionnal_build_env"):
             fd.write(" ".join(["{}={}".format(k, os.getenv(k) or "0") for k in app.additionnal_build_env]))
-        fd.write(' scons -Q\n}\n')
+        fd.write('\n}\n')
         fd.write('\n')
         fd.write(('package() {{\n'
             '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'

@@ -165,10 +165,8 @@ section = "libdevel"
 priority = "optional"
 architecture = "any"
 multi_architecture = "same"
-maintainer = "mdufaud <maxence_dufaud@hotmail.fr>"
-uploaders = "azouiten <alexandre.zouiten1@gmail.com>"
-
-additionnal_build_env = ['py', 'lua', 'sdl']
+maintainers = ["mdufaud <maxence_dufaud@hotmail.fr>"]
+contributors = ["azouiten <alexandre.zouiten1@gmail.com>"]
 
 # packages equivalent to build DEBIAN/control dependencies
 apt_packages = {
@@ -189,12 +187,15 @@ apt_packages = {
     "sdl2": "libsdl2-dev",
 }
 
-# packages equivalent to build PKGBUILD dependencies
+# used to create PKGBUILD build command
+additionnal_build_env = ['py', 'lua', 'sdl']
+# source to clone and build
 pacman_source = "{name}-{version}::git+{git_url}#tag={version}".format(
     name = name,
     version = version,
     git_url = git_url,
 )
+# packages equivalent to build PKGBUILD dependencies
 pacman_packages = {
     "gtest": "gtest",
     "nlohmann_json": "nlohmann-json",
