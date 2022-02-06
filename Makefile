@@ -420,7 +420,7 @@ bclean:
 
 fclean: bclean
 	@$(call mk_log_info,makefile,removing remaining files)
-	rm .sconsign.dblite
+	rm -f .sconsign.dblite
 	find . -name "*vgcore*" -type f -exec rm -f {} \;
 	find . -name "*.ini" -type f -exec rm -f {} \;
 	find . -maxdepth 1 -name "*.scons*" -type d -exec rm -rf {} \;
