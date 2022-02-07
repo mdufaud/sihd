@@ -152,7 +152,7 @@ def is_address_sanatizer():
     return os.getenv("asan", None) == "1"
 
 def do_distribution():
-    return os.getenv("dist", None) != None
+    return os.getenv("dist", "") != ""
 
 def get_modules():
     return os.getenv("modules", "")
@@ -235,6 +235,7 @@ build_dist_path = join(build_root_path, "dist")
 
 # path BUILD
 build_entry_path = join(build_root_path, "build")
+build_last_link_path = join(build_entry_path, "last")
 build_path = join(build_entry_path, "{}-{}".format(build_platform, build_architecture), build_mode)
 
 build_extlib_path = join(build_path, "extlib")
@@ -276,10 +277,6 @@ def verify_args():
             ret = False
     return ret
 
-###############################################################################
-## Distribution
-###############################################################################
-
 def copy_dll_to_bin():
     if not os.path.isdir(build_bin_path):
         return
@@ -291,6 +288,17 @@ def copy_dll_to_bin():
     for lib_path in libs_path:
         info("copying '" + lib_path + "' to bin")
         shutil.copyfile(lib_path, os.path.join(build_bin_path, os.path.basename(lib_path)))
+
+def finalize():
+    if os.path.exists(build_last_link_path):
+        os.remove(build_last_link_path)
+    os.symlink(build_path, build_last_link_path)
+    if build_for_windows:
+        copy_dll_to_bin()
+
+###############################################################################
+## Distribution
+###############################################################################
 
 # TAR
 def create_tar_package(app):

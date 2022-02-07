@@ -70,7 +70,7 @@ sihd_imgui_srcs.extend([
 ])
 
 ## Check for SDL2
-compile_sdl = os.getenv("sdl") == "1"
+compile_sdl = os.getenv("sdl", None) == "1"
 compiling_with_emscripten = env["CXX"] == "em++"
 
 if compiling_with_emscripten:

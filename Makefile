@@ -384,7 +384,7 @@ uninstall:
 	@$(call echo_log_warning,makefile,those files will be removed)
 	@echo -n "Please confirm files removal [y/N] " && read answer && [ $${answer:-N} = y ]
 	rm -rf $(INSTALLED_FILES)
-	rm $(INSTALLED_FILES_DESTINATION)
+	rm -f $(INSTALLED_FILES_DESTINATION)
 
 ##########
 # Serve
@@ -420,10 +420,10 @@ bclean:
 
 fclean: bclean
 	@$(call mk_log_info,makefile,removing remaining files)
-	rm -f .sconsign.dblite
-	find . -name "*vgcore*" -type f -exec rm -f {} \;
-	find . -name "*.ini" -type f -exec rm -f {} \;
-	find . -maxdepth 1 -name "*.scons*" -type d -exec rm -rf {} \;
+	@rm -f .sconsign.dblite
+	@find . -name "*vgcore*" -type f -exec rm -f {} \;
+	@find . -name "*.ini" -type f -exec rm -f {} \;
+	@find . -maxdepth 1 -name "*.scons*" -type d -exec rm -rf {} \;
 
 ### Makefile
 .PHONY: install confirm_install uninstall build verbose dist fclean clean clean_dist clean_dep

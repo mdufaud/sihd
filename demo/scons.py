@@ -26,7 +26,7 @@ if env["CXX"] == "em++":
     emscripten_env.build_bin(["src/imgui_emscripten_sdl_demo.cpp"], bin_name = "imgui_emscripten_sdl_demo.html")
     Return()
 
-compile_sdl = os.getenv("sdl") == "1"
+compile_sdl = os.getenv("sdl", None) == "1"
 
 env.build_bin("src/http_demo.cpp", bin_name = "http_demo")
 env.build_bin("src/pcap_demo.cpp", bin_name = "pcap_demo")

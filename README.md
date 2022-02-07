@@ -2,63 +2,79 @@
 
 Simple Input Handler Displayer
 
-Aimed to be a simple C++ library with some python and/or LUA bindings that gets, parse and display data
+Aimed to be a simple C++ library with some python and/or LUA bindings that gets, parse and displays data.
+
+---
 
 ## Dependencies
 
 ### C++
 
-version 17
+Used by core application.
+
+**version 17**
 
 ### SCons
 
-SCons version v4.1.0 (builder)
+Manages compilation rules with python3.
+
+**SCons version v4.1.0**
 
 ```shell
-pip install scons
+apt install scons
 ```
 
 ### Conan
 
-Conan version 1.35.0 (manages dependencies)
+Pulls dependencies from https://conan.io/center/
 
-[Conan install doc](https://docs.conan.io/en/latest/installation.html)
+Not needed if dependencies are directly installed on the building system.
+
+Needed for Windows cross building to get DLLs or Emscripten building to get static libraries.
+
+**Conan version 1.35.0** ([Conan install doc](https://docs.conan.io/en/latest/installation.html))
 
 ```shell
 pip install conan
 ```
 
-### Python-pip
+### python-pip
 
-Don't forget to add to your bashrc:
+If conan is installed from python-pip, don't forget to add to ~/.bashrc:
 
 ```shell
 export PATH=$PATH:$HOME/.local/bin
 ```
 
-To find conan and scons from python-pip binaries folder.
+To find conan binary from python-pip binaries folder.
 
 ### Compilers
 
-g++ (GCC) 7.5.0
+**g++ 7.5.0**
 
 ```shell
-sudo apt install g++
+apt install g++
 ```
 
-clang++ 6.0.0
+**clang++ 6.0.0**
 
 ```shell
 # to install
-sudo apt install clang libc++-dev libc++abi-dev llvm
+apt install clang libc++-dev libc++abi-dev llvm
 ```
 
-mingw 7.3-posix
+**g++-mingw 7.3-posix**
 
 ```shell
-sudo apt install g++-mingw-w64-x86-64
+apt install g++-mingw-w64-x86-64
 # configure mingw32 to posix
-sudo update-alternatives --config x86_64-w64-mingw32-g++
+update-alternatives --config x86_64-w64-mingw32-g++
+```
+
+**emscripten 3.0.0**
+
+```shell
+apt install emscripten
 ```
 
 ### External libraries
@@ -74,15 +90,13 @@ make dep
 make dep test=1
 # to get depencencies compiled with clang
 make dep compiler=clang
-# to get dependencies for a single module
+# to get dependencies for single/multiple module.s
 make dep mod COMMA_SEPARATED_MODULES
-# to get windows dependencies
+# to get windows dll dependencies
 make dep platform=win
 ```
 
-To get libraries compiled with clang, add to your command line: "compiler=clang"
-
-To get libraries compiled for windows (dll), add to your command line: "platform=win"
+---
 
 ## Build
 
@@ -92,7 +106,7 @@ To build binaries and compile shared libraries with scons
 make
 ```
 
-To compile specific or single module
+To compile single/multiple module.s
 
 ```shell
 make modules=COMMA_SEPARATED_MODULES
@@ -100,13 +114,17 @@ make modules=COMMA_SEPARATED_MODULES
 make mod COMMA_SEPARATED_MODULES
 ```
 
-To compile with clang, add to your command line: "compiler=clang"
-
-To compile with mingw, add to your command line: "compiler=mingw"
+Add to command line for:
+- static libraries: "static=1"
+- address sanatizer: "asan=1"
+- no debug symbols: "mode=release"
+- use clang compiler: "compiler=clang"
+- use mingw compiler: "compiler=mingw"
+- use emscripten compiler: "compiler=em" (automatically builds with static libraries)
 
 ### Python bindings build
 
-python-3.6.7
+**python-3.6.7**
 
 It is recommended to install it on your system with a packet manager: python3-dev
 
@@ -122,7 +140,7 @@ make mod core,py
 
 ### Lua bindings build
 
-lua-5.3.5
+**lua-5.3.5**
 
 It is recommended to install it on your system with a packet manager: lua5.3-dev
 
@@ -133,6 +151,41 @@ make lua=1
 # or
 make mod core,lua
 ```
+
+---
+
+## Demo
+
+Get dependencies (skippable step)
+
+```shell
+make dep mod demo
+```
+
+Build demo
+
+```shell
+make mod demo
+```
+
+Execute demo binaries in: **build/last/bin**
+
+
+### Windows demo
+
+```shell
+make dep mod demo platform=win
+make mod demo platform=win
+```
+
+### Emscripten demo
+
+```shell
+make dep mod demo compiler=em
+make mod demo compiler=em
+```
+
+---
 
 ## Tests
 
@@ -160,4 +213,54 @@ Filter tests
 make test m=COMMA_SEPARATED_MODULES t=FILTER
 # or
 make test COMMA_SEPARATED_MODULES FILTER
+```
+
+---
+
+## Distribution
+
+To create pacman distribution PKGBUILD file
+
+```shell
+make dist_pacman
+# for a single/multiple module.s
+make dist_pacman mod COMMA_SEPARATED_MODULES
+```
+
+To create apt distribution .deb file
+
+```shell
+make dist_apt
+# for a single/multiple module.s
+make dist_apt mod COMMA_SEPARATED_MODULES
+```
+
+To create a tar.gz with current build
+
+```shell
+make dist_tar
+# for a single/multiple module.s
+make dist_tar mod COMMA_SEPARATED_MODULES
+```
+
+---
+
+## Installation
+
+To install build into your system **/usr/local**
+
+```shell
+make install
+# to change default install directory from /usr/local/lib -> pkg/usr/local/lib ...
+make install INSTALL_DESTDIR=pkg
+# to change default /usr/local to /usr
+make install INSTALL_PREFIX=/usr
+```
+
+This will create into Makefile's folder a '.installed' containing every file installed
+
+This file is used by 'uninstall' makefile rule to remove what has been installed.
+
+```shell
+make uninstall
 ```

@@ -532,9 +532,10 @@ def after_build():
         app.on_build_success(build_modules, builder_helper)
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules.keys())
-    if builder_helper.build_for_windows:
-        builder_helper.copy_dll_to_bin()
+    builder_helper.finalize()
     if success and distribution:
         builder_helper.distribute_app(app, build_modules)
 
 atexit.register(after_build)
+
+builder_helper.info("starting scons build")
