@@ -358,8 +358,9 @@ def create_apt_package(app, modules):
         priority = hasattr(app, "priority") and app.priority or "optional"
         fd.write("Priority: {}\n".format(priority))
         fd.write("Maintainer: {}\n".format(app.maintainers[0]))
-        if hasattr(app, "contributors"):
-            fd.write("Uploaders: {}\n".format(", ".join(app.contributors)))
+        all_contributors = app.maintainers[1:] + getattr(app, "contributors", [])
+        if all_contributors:
+            fd.write("Uploaders: {}\n".format(", ".join(all_contributors)))
         if hasattr(app, "url"):
             fd.write("Homepage: {}\n".format(app.url))
         if hasattr(app, "section"):

@@ -56,12 +56,17 @@ try:
 except RuntimeError as e:
     builder_helper.error(str(e))
     Exit(1)
-global_libs = hasattr(app, "libs") and app.libs or []
+global_libs = getattr(app, "libs", [])
+global_platform_libs = getattr(app, "{}_libs".format(build_platform), [])
 if verbose:
     builder_helper.debug("modules configuration:")
     pp.pprint(build_modules)
-    builder_helper.debug("libs:")
-    pp.pprint(global_libs)
+    if global_libs:
+        builder_helper.debug("libs:")
+        pp.pprint(global_libs)
+    if global_platform_libs:
+        builder_helper.debug("{} libs:".format(build_platform))
+        pp.pprint(global_platform_libs)
     print()
 
 ###############################################################################
@@ -106,7 +111,7 @@ base_env = Environment(
     # libraries path
     LIBPATH = [builder_helper.build_lib_path, builder_helper.build_extlib_lib_path],
     # libraries name
-    LIBS = global_libs,
+    LIBS = global_platform_libs + global_libs,
     # app access
     APP_CONFIG = app,
     # extra key for modules to build

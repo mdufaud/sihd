@@ -41,6 +41,8 @@ extlibs = {
 modules = {
     "util": {
         "use-extlibs": ['nlohmann_json'],
+        "libs": ['pthread'],
+        "linux-libs": ['dl', 'rt'],
     },
     "core": {
         "depends": ['util'],
@@ -219,7 +221,6 @@ pacman_packages = {
 #############
 
 ## general compilation parameters
-libs = ['pthread', 'dl']
 flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
 defines = []
 
@@ -258,7 +259,6 @@ mingw_libs = ['ws2_32', 'psapi']
 mingw_defines = ["_WIN64", "_WIN32_WINNT=0x0600"]
 
 ## test specifics
-# apt libgtest-dev / pacman gtest
 test_libs = ['gtest', 'stdc++fs']
 
 #############
