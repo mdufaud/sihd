@@ -436,9 +436,10 @@ for conf in build_order:
         if parse_configs:
             print("- needed specific packages configs")
             pp.pprint(parse_configs)
-    # copy module/etc content to build/etc
+    # copy module/[etc|include|share] to build/[etc|include|share]
     copy_module_dir_into_build(modname, "etc")
     copy_module_dir_into_build(modname, "include")
+    copy_module_dir_into_build(modname, "share")
     # read module's scons script file
     module_dir = Dir(modname)
     built[modname] = SConscript(module_dir.File("scons.py"),

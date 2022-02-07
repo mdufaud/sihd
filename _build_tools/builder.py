@@ -236,16 +236,17 @@ build_entry_path = join(build_root_path, "build")
 build_path = join(build_entry_path, "{}-{}".format(build_platform, build_architecture), build_mode)
 
 build_extlib_path = join(build_path, "extlib")
+build_extlib_bin_path = join(build_extlib_path, "bin")
 build_extlib_lib_path = join(build_extlib_path, "lib")
 build_extlib_hdr_path = join(build_extlib_path, "include")
-build_extlib_bin_path = join(build_extlib_path, "bin")
 build_extlib_etc_path = join(build_extlib_path, "etc")
 build_extlib_res_path = join(build_extlib_path, "res")
 
 build_bin_path = join(build_path, "bin")
+build_lib_path = join(build_path, "lib")
 build_hdr_path = join(build_path, "include")
 build_etc_path = join(build_path, "etc")
-build_lib_path = join(build_path, "lib")
+build_share_path = join(build_path, "share")
 build_test_path = join(build_path, "test")
 build_obj_path = join(build_path, "obj")
 
@@ -305,6 +306,9 @@ def create_tar_package(app):
         # etc
         if os.path.isdir(build_etc_path):
             tar.add(build_etc_path, arcname = os.path.basename(build_etc_path))
+        # share
+        if os.path.isdir(build_share_path):
+            tar.add(build_share_path, arcname = os.path.basename(build_share_path))
         # extlibs/include
         if os.path.isdir(build_extlib_hdr_path):
             tar.add(build_extlib_hdr_path, arcname = os.path.basename(build_hdr_path))
@@ -331,11 +335,7 @@ def create_apt_package(app, modules):
     postinst_script_path = join(debian_path, "postinst")
     prerm_script_path = join(debian_path, "prerm")
     postrm_script_path = join(debian_path, "postrm")
-    apt_binary_path = join(apt_path, "usr", "bin")
-    apt_include_path = join(apt_path, "usr", "include")
-    apt_lib_path = join(apt_path, "usr", "lib", "$(DEB_HOST_MULTIARCH)")
     apt_share_path = join(apt_path, "usr", "share")
-    apt_etc_path = join(apt_path, "etc")
     info("creating apt package: " + apt_path)
     # debian/control
     os.makedirs(debian_path, exist_ok = True)
@@ -360,18 +360,27 @@ def create_apt_package(app, modules):
             fd.write("Depends: {}\n".format(", ".join(["{} (>= {})".format(k, v) for k, v in dependencies.items()])))
         fd.write("Description: {}\n".format(app.description))
     # /usr/bin
+    apt_binary_path = join(apt_path, "usr", "bin")
     if os.path.isdir(build_bin_path):
         os.makedirs(apt_binary_path, exist_ok = True)
         shutil.copytree(build_bin_path, apt_binary_path, dirs_exist_ok = True)
     # /usr/include
+    apt_include_path = join(apt_path, "usr", "include")
     if os.path.isdir(build_hdr_path):
         os.makedirs(apt_include_path, exist_ok = True)
         shutil.copytree(build_hdr_path, apt_include_path, dirs_exist_ok = True)
+    # /usr/share
+    apt_share_path = join(apt_path, "usr", "share")
+    if os.path.isdir(build_share_path):
+        os.makedirs(apt_share_path, exist_ok = True)
+        shutil.copytree(build_share_path, apt_share_path, dirs_exist_ok = True)
     # /usr/lib/machine-vendor-os
+    apt_lib_path = join(apt_path, "usr", "lib", "$(DEB_HOST_MULTIARCH)")
     if os.path.isdir(build_lib_path):
         os.makedirs(apt_lib_path, exist_ok = True)
         shutil.copytree(build_lib_path, apt_lib_path, dirs_exist_ok = True)
     # /etc
+    apt_etc_path = join(apt_path, "etc")
     if os.path.isdir(build_etc_path):
         os.makedirs(apt_etc_path, exist_ok = True)
         shutil.copytree(build_etc_path, apt_etc_path, dirs_exist_ok = True)

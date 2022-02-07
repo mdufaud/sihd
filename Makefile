@@ -47,7 +47,8 @@ TEST_PATH = $(BUILD_PATH)/test
 TEST_BIN_PATH = $(TEST_PATH)/bin
 BIN_PATH = $(BUILD_PATH)/bin
 OBJ_PATH = $(BUILD_PATH)/obj
-RES_PATH = $(BUILD_PATH)/etc
+ETC_PATH = $(BUILD_PATH)/etc
+SHARE_PATH = $(BUILD_PATH)/share
 
 # Dist path
 DIST_PATH = $(HERE)/dist
@@ -88,7 +89,8 @@ export TEST_PATH
 export BUILD_PATH
 export LIB_PATH
 export BIN_PATH
-export RES_PATH
+export ETC_PATH
+export SHARE_PATH
 export EXTLIB_PATH
 export EXTLIB_LIB_PATH
 
@@ -333,7 +335,8 @@ INSTALLED_FILES_DESTINATION := $(HERE)/.installed
 INSTALL_LIB_DEST = $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/lib$(INSTALL_LIBSUFFIX)
 INSTALL_BIN_DEST = $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/bin$(INSTALL_BINSUFFIX)
 INSTALL_ETC_DEST = $(INSTALL_DESTDIR)/etc$(INSTALL_ETCSUFFIX)
-INSTALL_HDR_DEST = $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/include$(INSTALL_INCLUDESUFFIX)
+INSTALL_INCLUDE_DEST = $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/include$(INSTALL_INCLUDESUFFIX)
+INSTALL_SHARE_DEST = $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/share$(INSTALL_INCLUDESUFFIX)
 
 confirm_install:
 	@$(call mk_log_info,makefile,will install in: $(INSTALL_DESTDIR)$(INSTALL_PREFIX))
@@ -344,37 +347,52 @@ confirm_install:
 install: confirm_install
 	@$(call mk_log_info,makefile,installed files can be found in: $(INSTALLED_FILES_DESTINATION))
 	@echo "# install date: `date "+%Y-%m-%d %H:%M:%S"`" > $(INSTALLED_FILES_DESTINATION)
+# install lib
 	@$(call echo_log_info,makefile,installing librairies: ${LIB_PATH} -> $(INSTALL_LIB_DEST))
 	@for path in `ls -A $(LIB_PATH) 2>/dev/null`; do \
 		dest=$(INSTALL_LIB_DEST)/$$path; \
 		install -D --compare --mode=755 "$(LIB_PATH)/$$path" "$$dest"; \
 		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
 	done
+# install bin
 	@$(call echo_log_info,makefile,installing binaries: ${BIN_PATH} -> $(INSTALL_BIN_DEST))
 	@for path in `ls -A $(BIN_PATH) 2>/dev/null`; do \
 		dest=$(INSTALL_BIN_DEST)/$$path; \
 		install -D --compare --mode=755 "$(BIN_PATH)/$$path" "$$dest"; \
 		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
 	done
-	@# getting all root directories of built resources for future removal
-	@for path in `ls -A $(RES_PATH) 2>/dev/null`; do \
+# getting all root directories of built resources for future removal
+	@for path in `ls -A $(ETC_PATH) 2>/dev/null`; do \
 		dest="$(INSTALL_ETC_DEST)/$$path"; \
 		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
 	done
-	@# getting all root directories of built includes for future removal
+# install etc
+	@$(call echo_log_info,makefile,installing resources: ${ETC_PATH} -> $(INSTALL_ETC_DEST))
+	@for path in `find $(ETC_PATH) -type f 2>/dev/null | sed "s|${ETC_PATH}/||g"`; do \
+		dest="$(INSTALL_ETC_DEST)/$$path"; \
+		install -D --compare --mode=744 "$(ETC_PATH)/$$path" "$$dest"; \
+	done
+# getting all root directories of built includes for future removal
 	@for path in `ls -A $(INCLUDE_PATH) 2>/dev/null`; do \
-		dest="$(INSTALL_HDR_DEST)/$$path"; \
+		dest="$(INSTALL_INCLUDE_DEST)/$$path"; \
 		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
 	done
-	@$(call echo_log_info,makefile,installing resources: ${RES_PATH} -> $(INSTALL_ETC_DEST))
-	@for path in `find $(RES_PATH) -type f 2>/dev/null | sed "s|${RES_PATH}/||g"`; do \
-		dest="$(INSTALL_ETC_DEST)/$$path"; \
-		install -D --compare --mode=744 "$(RES_PATH)/$$path" "$$dest"; \
-	done
-	@$(call echo_log_info,makefile,installing headers: ${INCLUDE_PATH} -> $(INSTALL_HDR_DEST))
+# install headers
+	@$(call echo_log_info,makefile,installing headers: ${INCLUDE_PATH} -> $(INSTALL_INCLUDE_DEST))
 	@for path in `find $(INCLUDE_PATH) -type f 2>/dev/null | sed "s|${INCLUDE_PATH}/||g"`; do \
-		dest=$(INSTALL_HDR_DEST)/$$path; \
+		dest=$(INSTALL_INCLUDE_DEST)/$$path; \
 		install -D --compare --mode=744 "$(INCLUDE_PATH)/$$path" "$$dest"; \
+	done
+# getting all root directories of built share for future removal
+	@for path in `ls -A $(SHARE_PATH) 2>/dev/null`; do \
+		dest="$(INSTALL_SHARE_DEST)/$$path"; \
+		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
+	done
+# install shared
+	@$(call echo_log_info,makefile,installing shared: ${SHARE_PATH} -> $(INSTALL_SHARE_DEST))
+	@for path in `find $(SHARE_PATH) -type f 2>/dev/null | sed "s|${SHARE_PATH}/||g"`; do \
+		dest=$(INSTALL_SHARE_DEST)/$$path; \
+		install -D --compare --mode=744 "$(SHARE_PATH)/$$path" "$$dest"; \
 	done
 
 uninstall:
@@ -404,7 +422,7 @@ clean:
 	rm -rf $(TEST_PATH)
 	rm -rf $(OBJ_PATH)
 	rm -rf $(BIN_PATH)
-	rm -rf $(RES_PATH)
+	rm -rf $(ETC_PATH)
 
 clean_dep:
 	@$(call mk_log_info,makefile,removing dependencies)
