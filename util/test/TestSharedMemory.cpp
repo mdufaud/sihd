@@ -4,8 +4,16 @@
 #include <sihd/util/Files.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
-#include <sihd/util/Waitable.hpp>
 #include <sihd/util/SharedMemory.hpp>
+
+#include <semaphore.h>
+#define BUF_SIZE 2
+struct shmbuf
+{
+    sem_t   sem1;            /* POSIX unnamed semaphore */
+    sem_t   sem2;            /* POSIX unnamed semaphore */
+    int     data[BUF_SIZE];   /* Data being transferred */
+};
 
 namespace test
 {
@@ -49,38 +57,48 @@ namespace test
     {
         if (sihd::util::Term::is_interactive() == false)
             GTEST_SKIP_("requires interaction");
-        Waitable waitable;
-        size_t mem_size = sizeof(int) * 2;
         int pid = fork();
         ASSERT_NE(pid, -1);
         if (pid != 0)
         {
             LOG(debug, "--- begin of parent ---");
-            usleep(2E5);
-            LOG(debug, "--- parent reading data ---");
+            usleep(1E5);
+            LOG(debug, "--- parent attaching ---");
+            // no attach_read_only with semaphores - it segfaults
             SharedMemory mem;
-            ASSERT_TRUE(mem.attach("/id", mem_size));
-            int *data = (int *)mem.data();
-            ASSERT_NE(data, nullptr);
-            LOG(debug, "data[0] -> " << data[0]);
-            LOG(debug, "data[1] -> " << data[1]);
-            EXPECT_EQ(data[0], 42);
-            EXPECT_EQ(data[1], 24);
-            usleep(4E5);
+            ASSERT_TRUE(mem.attach("/id", sizeof(shmbuf)));
+            if (mem.data())
+            {
+                LOG(debug, "--- parent attached ---");
+                struct shmbuf *shmp = (struct shmbuf *)mem.data();
+                EXPECT_NE(sem_wait(&shmp->sem1), -1);
+                LOG(debug, "data[0] -> " << shmp->data[0]);
+                LOG(debug, "data[1] -> " << shmp->data[1]);
+                EXPECT_EQ(shmp->data[0], 42);
+                EXPECT_EQ(shmp->data[1], 24);
+                EXPECT_NE(sem_post(&shmp->sem2), -1);
+            }
             LOG(debug, "--- end of parent ---");
         }
         else if (pid == 0)
         {
             LOG(debug, "--- begin of child ---");
             SharedMemory mem;
-            ASSERT_TRUE(mem.create_read_only("/id", mem_size));
-            int *data = (int *)mem.data();
-            data[0] = 42;
-            data[1] = 24;
-            LOG(debug, "--- child wrote to data - waiting for parent ---");
-            // wait for parent to read
-            usleep(5E5);
+            ASSERT_TRUE(mem.create("/id", sizeof(shmbuf)));
+            if (mem.data())
+            {
+                LOG(debug, "--- child created shared memory ---");
+                struct shmbuf *shmp = (struct shmbuf *)mem.data();
+                ASSERT_NE(sem_init(&shmp->sem1, 1, 0), -1);
+                ASSERT_NE(sem_init(&shmp->sem2, 1, 0), -1);
+                shmp->data[0] = 42;
+                shmp->data[1] = 24;
+                EXPECT_NE(sem_post(&shmp->sem1), -1);
+                LOG(debug, "--- child wrote data - waiting for parent to read it ---");
+                EXPECT_NE(sem_wait(&shmp->sem2), -1);
+            }
             LOG(debug, "--- end of child ---");
+            usleep(1E5);
         }
     }
 

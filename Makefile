@@ -184,6 +184,11 @@ santest: test
 
 stest: santest
 
+stracetest: DEBUGGER = strace
+stracetest: test
+
+ttest: stracetest
+
 .PHONY: test vtest gtest stest valgrindtest gdbtest santest
 
 # handles:

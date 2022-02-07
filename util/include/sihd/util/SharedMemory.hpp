@@ -14,7 +14,6 @@ class SharedMemory
         virtual ~SharedMemory();
 
         bool create(const std::string & id, size_t size, mode_t mode = 0600);
-        bool create_read_only(const std::string & id, size_t size, mode_t mode = 0600);
 
         bool attach(const std::string & id, size_t size, mode_t mode = 0600);
         bool attach_read_only(const std::string & id, size_t size, mode_t mode = 0400);
@@ -27,7 +26,8 @@ class SharedMemory
         size_t size() const { return _size; }
         const void *cdata() const { return _addr; }
         const std::string & id() const { return _id; }
-        bool attached() const { return _created == false; }
+
+        bool creator() const { return _created; }
 
     protected:
 

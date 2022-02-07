@@ -37,11 +37,6 @@ bool    SharedMemory::create(const std::string & id, size_t size, mode_t mode)
     return this->_create(id, size, mode, O_RDWR | O_CREAT, PROT_READ | PROT_WRITE);
 }
 
-bool    SharedMemory::create_read_only(const std::string & id, size_t size, mode_t mode)
-{
-    return this->_create(id, size, mode, O_RDWR | O_CREAT, PROT_READ);
-}
-
 bool    SharedMemory::_create(const std::string & id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
 {
     _fd = shm_open(id.c_str(), shm_flags, mode);
