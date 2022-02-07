@@ -41,6 +41,7 @@ distribution = builder_helper.do_distribution()
 verbose = builder_helper.has_verbose()
 
 if verbose:
+    builder_helper.info("modules: {}".format(modules_to_build and modules_to_build.split(',') or "all"))
     builder_helper.info("platform: " + build_platform)
     builder_helper.info("compiler: " + compiler)
     builder_helper.info("arch: " + builder_helper.build_architecture)
@@ -55,12 +56,17 @@ try:
 except RuntimeError as e:
     builder_helper.error(str(e))
     Exit(1)
-global_libs = hasattr(app, "libs") and app.libs or []
+global_libs = getattr(app, "libs", [])
+global_platform_libs = getattr(app, "{}_libs".format(build_platform), [])
 if verbose:
     builder_helper.debug("modules configuration:")
     pp.pprint(build_modules)
-    builder_helper.debug("libs:")
-    pp.pprint(global_libs)
+    if global_libs:
+        builder_helper.debug("libs:")
+        pp.pprint(global_libs)
+    if global_platform_libs:
+        builder_helper.debug("{} libs:".format(build_platform))
+        pp.pprint(global_platform_libs)
     print()
 
 ###############################################################################
@@ -105,7 +111,7 @@ base_env = Environment(
     # libraries path
     LIBPATH = [builder_helper.build_lib_path, builder_helper.build_extlib_lib_path],
     # libraries name
-    LIBS = global_libs,
+    LIBS = global_platform_libs + global_libs,
     # app access
     APP_CONFIG = app,
     # extra key for modules to build
@@ -532,9 +538,10 @@ def after_build():
         app.on_build_success(build_modules, builder_helper)
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules.keys())
-    if builder_helper.build_for_windows:
-        builder_helper.copy_dll_to_bin()
+    builder_helper.finalize()
     if success and distribution:
         builder_helper.distribute_app(app, build_modules)
 
 atexit.register(after_build)
+
+builder_helper.info("starting scons build")

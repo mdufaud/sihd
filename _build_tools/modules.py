@@ -161,7 +161,7 @@ def get_conditionnals_from_env(app):
     ret = []
     for key, conf in app.conditionnal_modules.items():
         cond_env = conf.get("conditionnal-env", None)
-        if cond_env is not None and os.getenv(cond_env, None):
+        if cond_env is not None and os.getenv(cond_env, None) == "1":
             ret.append(key)
     return ret
 

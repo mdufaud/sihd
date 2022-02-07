@@ -1,5 +1,6 @@
 name = 'sihd'
 version = "0.1.0"
+git_url = "https://github.com/mdufaud/sihd.git"
 
 # external libs versions
 extlibs = {
@@ -39,8 +40,9 @@ extlibs = {
 # modules descriptions
 modules = {
     "util": {
-        # apt nlohmann-json-dev / pacman nlohmann-json
         "use-extlibs": ['nlohmann_json'],
+        "libs": ['pthread'],
+        "linux-libs": ['dl', 'rt'],
     },
     "core": {
         "depends": ['util'],
@@ -51,43 +53,38 @@ modules = {
         "add-depends-libs": True,
     },
     "zip": {
-        # apt libzip-dev / pacman libzip
         "depends": ['util'],
         "add-depends-libs": True,
         "use-extlibs": ['libzip'],
         "libs": ['zip'],
     },
     "ssh": {
-        # apt libssh-dev / pacman libssh
         "depends": ['util'],
         "add-depends-libs": True,
-        "libs": ['sihd_util', 'ssh'],
+        "libs": ['ssh'],
     },
     "http": {
-        # apt libwebsockets-dev / pacman libwebsockets
         "depends": ['net'],
         "add-depends-libs": True,
         "use-extlibs": ['openssl', 'libcurl', 'libwebsockets'],
         "libs": ['curl', 'websockets', 'ssl', 'crypto'],
     },
     "pcap": {
-        # apt libpcap-dev / pacman libpcap
         "depends": ['net'],
         "add-depends-libs": True,
         "use-extlibs": ['libpcap'],
         "libs": ['pcap'],
     },
     "usb": {
-        # apt libusb-dev / pacman libusb
         "depends": ['util'],
         "add-depends-libs": True,
         "use-extlibs": ['libusb'],
         "libs": ['usb'],
     },
     "bt": {
-        # apt libbluetooth-dev
         "depends": ['util'],
         "add-depends-libs": True,
+        "use-extlibs": ['libbluetooth'],
         "libs": ['bluetooth'],
     },
     "csv": {
@@ -100,9 +97,6 @@ modules = {
     },
     "imgui": {
         # apt libmesa-dev for opengl
-        # apt libglew-dev / pacman glew
-        # apt libglfw-dev / pacman glfw
-        # apt libsdl2-dev / pacman sdl2
         "depends": ['util'],
         "add-depends-libs": True,
         "use-extlibs": ['glfw', 'glew'],
@@ -150,7 +144,6 @@ conditionnal_modules = {
         "flags": ["-Wno-unused-parameter"],
     },
     "py": {
-        # apt libpython-dev / pacman python
         "depends": ['util'],
         "add-depends-libs": True,
         "use-extlibs": ['pybind11'],
@@ -174,20 +167,21 @@ section = "libdevel"
 priority = "optional"
 architecture = "any"
 multi_architecture = "same"
-maintainer = "mdufaud <maxence_dufaud@hotmail.fr>"
-uploaders = "azouiten <alexandre.zouiten1@gmail.com>"
-source = "https://github.com/mdufaud/sihd.git"
-
-app_build_env = ['py', 'lua', 'sdl']
+maintainers = ["mdufaud <maxence_dufaud@hotmail.fr>"]
+contributors = ["azouiten <alexandre.zouiten1@gmail.com>"]
 
 # packages equivalent to build DEBIAN/control dependencies
 apt_packages = {
+    "gtest": "libgtest-dev",
     "nlohmann_json": "nlohmann-json3-dev",
     "openssl": "openssl",
     "libcurl": "libcurl4-openssl-dev",
     "libwebsockets": "libwebsockets-dev",
     "libpcap": "libpcap-dev",
     "libssh": "libssh-dev",
+    "libusb": "libusb-dev",
+    "libzip": "libzip-dev",
+    "libbluetooth": "libbluetooth-dev",
     "pybind11": "python3-pybind11",
     "sol2": "",
     "glfw": "libglfw-dev",
@@ -195,14 +189,26 @@ apt_packages = {
     "sdl2": "libsdl2-dev",
 }
 
+# used to create PKGBUILD build command
+additionnal_build_env = ['py', 'lua', 'sdl']
+# source to clone and build
+pacman_source = "{name}-{version}::git+{git_url}#tag={version}".format(
+    name = name,
+    version = version,
+    git_url = git_url,
+)
 # packages equivalent to build PKGBUILD dependencies
 pacman_packages = {
+    "gtest": "gtest",
     "nlohmann_json": "nlohmann-json",
     "openssl": "openssl",
-    "libcurl": "libcurl",
+    "libcurl": "curl",
     "libwebsockets": "libwebsockets",
     "libpcap": "libpcap",
     "libssh": "libssh",
+    "libusb": "libusb",
+    "libzip": "libzip",
+    "libbluetooth": "bluez",
     "pybind11": "pybind11",
     "sol2": "",
     "glfw": "glfw",
@@ -215,7 +221,6 @@ pacman_packages = {
 #############
 
 ## general compilation parameters
-libs = ['pthread', 'dl']
 flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
 defines = []
 
@@ -254,7 +259,6 @@ mingw_libs = ['ws2_32', 'psapi']
 mingw_defines = ["_WIN64", "_WIN32_WINNT=0x0600"]
 
 ## test specifics
-# apt libgtest-dev / pacman gtest
 test_libs = ['gtest', 'stdc++fs']
 
 #############
