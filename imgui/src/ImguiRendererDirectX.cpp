@@ -4,7 +4,7 @@
 namespace sihd::imgui
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 ImguiRendererDirectX::ImguiRendererDirectX():
     _is_init(false),
@@ -35,12 +35,12 @@ bool    ImguiRendererDirectX::init(HWND window)
 {
     if (_is_init)
     {
-        LOG(warning, "ImguiRendererDirectX: already initialized");
+        SIHD_LOG(warning, "ImguiRendererDirectX: already initialized");
         return true;
     }
     if (_clear_color_ptr == nullptr)
     {
-        LOG(error, "ImguiRendererDirectX: cannot init before a clear color vector is set");
+        SIHD_LOG(error, "ImguiRendererDirectX: cannot init before a clear color vector is set");
         return false;
     }
     bool ret = this->_create_dx_device(window);
@@ -48,11 +48,11 @@ bool    ImguiRendererDirectX::init(HWND window)
     {
         ret = ImGui_ImplDX11_Init(_dx_device_ptr, _dx_device_context_ptr);
         if (!ret)
-            LOG(error, "ImguiRendererDirectX: ImGui_ImplDX11_Init failed");
+            SIHD_LOG(error, "ImguiRendererDirectX: ImGui_ImplDX11_Init failed");
         _is_init = ret;
     }
     else
-        LOG(error, "ImguiRendererDirectX: D3D11CreateDeviceAndSwapChain failed");
+        SIHD_LOG(error, "ImguiRendererDirectX: D3D11CreateDeviceAndSwapChain failed");
     return ret;
 }
 

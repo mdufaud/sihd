@@ -20,7 +20,7 @@ namespace sihd::http
 
 SIHD_UTIL_REGISTER_FACTORY(HttpServer)
 
-NEW_LOGGER("sihd::http");
+SIHD_NEW_LOGGER("sihd::http");
 
 using namespace sihd::util;
 
@@ -79,7 +79,7 @@ bool    HttpServer::set_root_dir(const std::string & root_dir)
     if (ret)
         _root_dir = root_dir;
     else
-        LOG(error, "HttpServer: root dir does not exists: " << root_dir);
+        SIHD_LOG(error, "HttpServer: root dir does not exists: " << root_dir);
     return ret;
 }
 
@@ -94,7 +94,7 @@ bool    HttpServer::set_ssl_cert_path(const std::string & path)
     if (ret)
         _ssl_cert_path = path;
     else
-        LOG(error, "HttpServer: ssl cert path does not exists: " << path);
+        SIHD_LOG(error, "HttpServer: ssl cert path does not exists: " << path);
     return ret;
 }
 
@@ -104,7 +104,7 @@ bool    HttpServer::set_ssl_cert_key(const std::string & path)
     if (ret)
         _ssl_cert_key = path;
     else
-        LOG(error, "HttpServer: ssl cert key does not exists: " << path);
+        SIHD_LOG(error, "HttpServer: ssl cert key does not exists: " << path);
     return ret;
 }
 
@@ -171,7 +171,7 @@ bool    HttpServer::run()
     _lws_context_ptr = lws_create_context(&lws_info);
     if (_lws_context_ptr == nullptr)
     {
-        LOG(error, "HttpServer: failed to create context");
+        SIHD_LOG(error, "HttpServer: failed to create context");
         return false;
     }
     // update port if _port set to 0
@@ -300,25 +300,25 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
         case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
         {
             // This gives the user code a chance to forbid an http access
-            LOG(debug, "Callback check access rights");
+            SIHD_LOG(debug, "Callback check access rights");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
-            //TRACE(args->p);
+            //SIHD_TRACE(args->p);
             break ;
         }
         case LWS_CALLBACK_PROCESS_HTML:
         {
             // This gives your user code a chance to mangle outgoing HTML
-             LOG(debug, "Callback check process HTML");
+             SIHD_LOG(debug, "Callback check process HTML");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
-            //TRACE(args->p);
+            //SIHD_TRACE(args->p);
             break ;
         }
         case LWS_CALLBACK_ADD_HEADERS:
         {
             // This gives your user code a chance to add headers to a server transaction bound to your protocol
-            LOG(debug, "Callback add header callback");
+            SIHD_LOG(debug, "Callback add header callback");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
             /*
@@ -352,7 +352,7 @@ HttpRequest::RequestType    HttpServer::_get_request_type(struct lws *wsi)
 
 int     HttpServer::_on_http_request(HttpSession *session, const std::string & path)
 {
-    LOG(debug, "HttpServer: " << HttpRequest::request_to_string(session->request_type) << " request: " << path);
+    SIHD_LOG(debug, "HttpServer: " << HttpRequest::request_to_string(session->request_type) << " request: " << path);
     int rc = 0;
     std::string resource_path;
     if (this->get_resource_path(path, resource_path))
@@ -440,7 +440,7 @@ bool    HttpServer::_check_webservices(HttpSession *session, const std::string &
         if (hdr_len >= 0)
             content_header[hdr_len] = 0;
         else
-            LOG(error, "HttpServer: failed to copy header serving webservice: " << webservice_name);
+            SIHD_LOG(error, "HttpServer: failed to copy header serving webservice: " << webservice_name);
         if (ret && content_header[0] != 0)
         {
             size_t content_length_header_size = std::strtoul(content_header, nullptr, 10);
@@ -459,7 +459,7 @@ bool    HttpServer::_check_webservices(HttpSession *session, const std::string &
                 session->request = new HttpRequest(path, this->_get_uri_args(session->wsi), session->request_type);
                 if (session->content == nullptr || session->request == nullptr)
                 {
-                    LOG(error, "HttpServer: handling POST or PUT request serving webservice: " << webservice_name);
+                    SIHD_LOG(error, "HttpServer: handling POST or PUT request serving webservice: " << webservice_name);
                     ret = false;
                     session->clear_request();
                 }
@@ -556,14 +556,14 @@ int     HttpServer::_lws_websocket_callback(struct lws *wsi, enum lws_callback_r
         {
             const char *error = (const char *)in;
             if (error != nullptr)
-                LOG(warning, "HttpServer: client connection error: " << error);
+                SIHD_LOG(warning, "HttpServer: client connection error: " << error);
             break ;
         }
         // Called before a socketfd is about to connect()
         case LWS_CALLBACK_CONNECTING:
         {
             lws_sockfd_type *fd = (lws_sockfd_type *)in;
-            LOG(debug, "Callback connecting file descriptor: " << fd);
+            SIHD_LOG(debug, "Callback connecting file descriptor: " << fd);
             break ;
         }
         default:
@@ -658,7 +658,7 @@ bool    HttpServer::_send_http_headers(struct lws *wsi, HttpHeader & header)
         return false;
     if (lws_write(wsi, header.buf(), header.size(), LWS_WRITE_HTTP_HEADERS) != (int)header.size())
     {
-        LOG(error, "HttpServer: failed to write HTTP headers");
+        SIHD_LOG(error, "HttpServer: failed to write HTTP headers");
         return false;
     }
     return true;
@@ -683,7 +683,7 @@ bool    HttpServer::_add_protocol(const char *name, lws_callback_function *callb
     }
     else
     {
-        LOG(error, "HttpServer: failed to add protocol: " << name);
+        SIHD_LOG(error, "HttpServer: failed to add protocol: " << name);
         --_protocols_count;
     }
     return _lws_protocols_ptr != nullptr;

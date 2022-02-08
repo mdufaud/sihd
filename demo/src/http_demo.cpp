@@ -22,7 +22,7 @@ namespace test::module
 using namespace sihd::util;
 using namespace sihd::http;
 
-NEW_LOGGER("test::module");
+SIHD_NEW_LOGGER("test::module");
 
 class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebsocketHandler
 {
@@ -42,17 +42,17 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
         {
             _webservice->set_entry_point("get", [this] (const HttpRequest & req, HttpResponse & resp)
             {
-                LOG(info, req.request_to_string(req.request_type()) << " request received");
+                SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
                 resp.set_content("hello get world");
             });
 
             _webservice->set_entry_point("post", [this] (const HttpRequest & req, HttpResponse & resp)
             {
-                LOG(info, req.request_to_string(req.request_type()) << " request received");
+                SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
                 if (req.content())
                 {
                     std::string content = req.content()->cpp_str();
-                    LOG(info, "Received POST body: " << content);
+                    SIHD_LOG(info, "Received POST body: " << content);
                     resp.http_header().set_status(HTTP_STATUS_OK);
                 }
                 else
@@ -62,7 +62,7 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
 
             _webservice->set_entry_point("delete", [this] (const HttpRequest & req, HttpResponse & resp)
             {
-                LOG(info, req.request_to_string(req.request_type()) << " request received");
+                SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
                 resp.http_header().set_status(HTTP_STATUS_OK);
                 resp.set_json_content({"hello", "world"});
             },
@@ -70,11 +70,11 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
 
             _webservice->set_entry_point("put", [this] (const HttpRequest & req, HttpResponse & resp)
             {
-                LOG(info, req.request_to_string(req.request_type()) << " request received");
+                SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
                 if (req.content())
                 {
                     std::string content = req.content()->cpp_str();
-                    LOG(info, "Received PUT body: " << content);
+                    SIHD_LOG(info, "Received PUT body: " << content);
                     resp.http_header().set_status(HTTP_STATUS_OK);
                 }
                 else
@@ -87,12 +87,12 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
 
         void on_open(const char *protocol_name)
         {
-            LOG(debug, "Opened websocket of protocol: " << protocol_name);
+            SIHD_LOG(debug, "Opened websocket of protocol: " << protocol_name);
         };
 
         bool on_read(const sihd::util::ArrStr & array)
         {
-            LOG(debug, "Read from client websocket: " << array.to_string());
+            SIHD_LOG(debug, "Read from client websocket: " << array.to_string());
             _client_wrote = true;
             return true;
         };
@@ -105,14 +105,14 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
                 const char hw[] = "hello world";
                 protocol->write_protocol = LWS_WRITE_TEXT;
                 array.from(hw);
-                LOG(debug, "Wrote back to client websocket: " << hw);
+                SIHD_LOG(debug, "Wrote back to client websocket: " << hw);
             }
             return true;
         }
 
         void on_close()
         {
-            LOG(debug, "Closed websocket");
+            SIHD_LOG(debug, "Closed websocket");
         }
 
         // websocket
@@ -132,12 +132,12 @@ static void http_test()
         }));
         std::string root_path = Files::get_parent(Files::get_parent(OS::get_executable_path()));
         std::string res_path = Files::combine({root_path, "etc", "sihd", "demo", "http_demo"});
-        LOG(info, "Root dir: " << res_path);
+        SIHD_LOG(info, "Root dir: " << res_path);
         server.set_root_dir(res_path);
         server.set_port(3000);
-        LOG(info, "=========================================================");
-        LOG(info, "Open web browser at localhost:3000");
-        LOG(info, "=========================================================");
+        SIHD_LOG(info, "=========================================================");
+        SIHD_LOG(info, "Open web browser at localhost:3000");
+        SIHD_LOG(info, "=========================================================");
         server.run();
 }
 

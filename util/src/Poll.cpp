@@ -15,7 +15,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 Poll::Poll()
 {
@@ -49,7 +49,7 @@ int     Poll::_get_or_add_fd(int fd)
     if (fd < 0)
         return -1;
     if (_max_fds <= 0)
-        LOG(warning, "Poll: no max file descriptors limit was set");
+        SIHD_LOG(warning, "Poll: no max file descriptors limit was set");
     std::lock_guard lock(_fds_mutex);
     int idx = -1;
     size_t i = 0;
@@ -229,7 +229,7 @@ bool    Poll::run()
         return false;
     if (_timeout_milliseconds < 0)
     {
-        LOG(error, "Poll: cannot run polling without a timeout");
+        SIHD_LOG(error, "Poll: cannot run polling without a timeout");
         return false;
     }
     std::lock_guard lock(_run_mutex);
@@ -264,7 +264,7 @@ void    Poll::_process(int poll_return)
     _timedout = poll_return == 0;
     _error = poll_return < 0;
     if (poll_return < 0)
-        LOG(error, "Poll: " << strerror(errno));
+        SIHD_LOG(error, "Poll: " << strerror(errno));
     if (poll_return > 0)
     {
         size_t i = 0;

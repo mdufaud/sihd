@@ -11,7 +11,7 @@ struct TestStruct
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     class TestProviders:   public ::testing::Test
     {

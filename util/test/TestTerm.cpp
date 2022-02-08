@@ -5,7 +5,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     class TestTerm:   public ::testing::Test
     {
@@ -33,9 +33,9 @@ namespace test
     {
         if (Term::is_interactive() == false)
             GTEST_SKIP();
-        LOG(debug, Term::red("Hello world"));
-        LOG(debug, Term::bold("bold"));
-        LOG(debug, Term::white_bg(" White bg "));
-        LOG(debug, Term::fmt2(" White bg - red text ", Term::Attr::WHITEBG, Term::Attr::RED2));
+        SIHD_LOG(debug, Term::red("Hello world"));
+        SIHD_LOG(debug, Term::bold("bold"));
+        SIHD_LOG(debug, Term::white_bg(" White bg "));
+        SIHD_LOG(debug, Term::fmt2(" White bg - red text ", Term::Attr::WHITEBG, Term::Attr::RED2));
     }
 }

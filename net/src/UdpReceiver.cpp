@@ -7,7 +7,7 @@ namespace sihd::net
 
 SIHD_UTIL_REGISTER_FACTORY(UdpReceiver)
 
-LOGGER;
+SIHD_LOGGER;
 
 UdpReceiver::UdpReceiver(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent)

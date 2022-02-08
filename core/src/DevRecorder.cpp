@@ -11,7 +11,7 @@ namespace sihd::core
 
 SIHD_UTIL_REGISTER_FACTORY(DevRecorder)
 
-LOGGER;
+SIHD_LOGGER;
 
 DevRecorder::DevRecorder(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent), _running(false), _channel_records_ptr(nullptr)
@@ -38,7 +38,7 @@ bool    DevRecorder::add_record_channel(const std::string & conf)
     std::vector<std::string> split = splitter.split(conf);
     if (split.size() != 2)
     {
-        LOG(error, "DevRecorder: record channel configuration got '"
+        SIHD_LOG(error, "DevRecorder: record channel configuration got '"
                     << conf << "' - expected: ALIAS=CHANNEL_PATH");
         return false;
     }
@@ -71,7 +71,7 @@ bool    DevRecorder::on_init()
     _handler_ptr = this->find<sihd::util::IHandler<const std::string &, const Channel *>>(_handler_path);
     if (_handler_ptr == nullptr)
     {
-        LOG(error, "DevRecorder: handler not found: " << _handler_path);
+        SIHD_LOG(error, "DevRecorder: handler not found: " << _handler_path);
         return false;
     }
     this->add_unlinked_channel(CHANNEL_RECORDS, sihd::util::DUINT, 1);
@@ -89,7 +89,7 @@ bool    DevRecorder::on_start()
         channel_ptr = this->find<Channel>(pair.second);
         if (channel_ptr == nullptr)
         {
-            LOG(error, "DevRecorder: channel to record '"
+            SIHD_LOG(error, "DevRecorder: channel to record '"
                         << pair.first << "' not found: " << pair.second);
             return false;
         }

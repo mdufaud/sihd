@@ -4,7 +4,7 @@
 namespace sihd::imgui
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 ImguiRendererOpenGL::ImguiRendererOpenGL(): _is_init(false)
 {
@@ -30,12 +30,12 @@ bool    ImguiRendererOpenGL::init(const char *glsl_version)
 {
     if (_is_init)
     {
-        LOG(warning, "ImguiRendererOpenGL: already initialized");
+        SIHD_LOG(warning, "ImguiRendererOpenGL: already initialized");
         return true;
     }
     if (_clear_color_ptr == nullptr)
     {
-        LOG(error, "ImguiRendererOpenGL: cannot init before a clear color vector is set");
+        SIHD_LOG(error, "ImguiRendererOpenGL: cannot init before a clear color vector is set");
         return false;
     }
     _is_init = ImGui_ImplOpenGL3_Init(glsl_version);

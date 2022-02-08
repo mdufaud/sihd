@@ -11,7 +11,7 @@
 namespace sihd::ssh
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 SshChannel::SshChannel(ssh_channel channel): _ssh_channel_ptr(channel)
 {

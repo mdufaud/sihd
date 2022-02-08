@@ -8,7 +8,7 @@
 
 namespace test
 {
-    NEW_LOGGER("test");
+    SIHD_NEW_LOGGER("test");
     using namespace sihd::pcap;
     using namespace sihd::util;
     class TestSniffer:   public ::testing::Test
@@ -37,7 +37,7 @@ namespace test
                 sihd::net::IpAddr ip(*addr);
 
                 if (!ip.empty())
-                    LOG(debug, pre << ip.get_first_ip());
+                    SIHD_LOG(debug, pre << ip.get_first_ip());
             }
     };
 
@@ -47,7 +47,7 @@ namespace test
 
         for (const PcapIFace & iface: pcapif.ifaces())
         {
-            LOG(debug, "Interface: " << iface.dump());
+            SIHD_LOG(debug, "Interface: " << iface.dump());
             for (const auto & addr: iface.addresses())
             {
                 dump_ip("Addr: ", addr->addr);

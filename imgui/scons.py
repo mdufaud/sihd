@@ -7,16 +7,11 @@ conf = env["APP_MODULE_CONF"]
 
 ## Clone ImGui repository
 
-imgui_dir = Dir("imgui")
-if not os.path.isdir(str(imgui_dir)):
-    builder_helper.info("imgui: cloning repository")
-    import subprocess
-    subprocess.call(['git', 'clone', '--branch', conf["git-branch"], conf["git-url"], str(imgui_dir)])
-else:
-    builder_helper.info("imgui: repository already cloned")
+env.git_clone(conf["git-url"], conf["git-branch"], "imgui")
 
 ## Build ImGui and sihd_imgui libraries
 
+imgui_dir = Dir("imgui")
 imgui_backends_dir = imgui_dir.Dir("backends")
 
 # choose sources to build imgui lib

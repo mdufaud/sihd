@@ -9,7 +9,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::ssh;
     using namespace sihd::util;
     class TestSftp: public ::testing::Test
@@ -77,7 +77,7 @@ namespace test
         EXPECT_TRUE(std::find(list.begin(), list.end(), "new_dir/") != list.end());
         for (const std::string & name: list)
         {
-            LOG(debug, name);
+            SIHD_LOG(debug, name);
         }
 
         std::vector<SftpAttribute> attrs;

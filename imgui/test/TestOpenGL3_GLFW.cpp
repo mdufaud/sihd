@@ -11,7 +11,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::imgui;
     using namespace sihd::util;
     class TestOpenGL3_GLFW: public ::testing::Test

@@ -5,7 +5,7 @@
 namespace sihd::http
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 HttpRequest::HttpRequest(const std::string & path, RequestType request_type)
 {

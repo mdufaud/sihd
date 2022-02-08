@@ -5,7 +5,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
 
 
@@ -33,7 +33,7 @@ namespace test
                 this->add_conf("list", &ConfigurableObj::set_list);
                 this->add_conf("json", &ConfigurableObj::set_json);
                 // Multiple args
-                this->add_conf<bool, int>("dual", [&] (bool b, int i) { TRACE(b << " " << i); return true; });
+                this->add_conf<bool, int>("dual", [&] (bool b, int i) { SIHD_TRACE(b << " " << i); return true; });
             }
 
             ~ConfigurableObj() {};

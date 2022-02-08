@@ -14,7 +14,7 @@
 
 namespace test
 {
-    NEW_LOGGER("test");
+    SIHD_NEW_LOGGER("test");
     using namespace sihd::http;
     using namespace sihd::util;
     class TestHttpServer: public ::testing::Test
@@ -69,18 +69,18 @@ namespace test
             {
                 _webservice->set_entry_point("some_get", [this] (const HttpRequest & req, HttpResponse & resp)
                 {
-                    LOG(info, req.request_to_string(req.request_type()) << " request received");
+                    SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
                     resp.set_content("hello get world");
                     ++_nget;
                 });
 
                 _webservice->set_entry_point("some_post", [this] (const HttpRequest & req, HttpResponse & resp)
                 {
-                    LOG(info, req.request_to_string(req.request_type()) << " request received");
+                    SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
                     if (req.content())
                     {
                         _post_content = req.content()->cpp_str();
-                        LOG(info, "Received POST body: " << _post_content);
+                        SIHD_LOG(info, "Received POST body: " << _post_content);
                         resp.http_header().set_status(HTTP_STATUS_OK);
                         ++_npost;
                     }
@@ -91,7 +91,7 @@ namespace test
 
                 _webservice->set_entry_point("some_delete", [this] (const HttpRequest & req, HttpResponse & resp)
                 {
-                    LOG(info, req.request_to_string(req.request_type()) << " request received");
+                    SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
                     resp.http_header().set_status(HTTP_STATUS_OK);
                     resp.set_json_content({"hello", "world"});
                     ++_ndelete;
@@ -100,11 +100,11 @@ namespace test
 
                 _webservice->set_entry_point("some_put", [this] (const HttpRequest & req, HttpResponse & resp)
                 {
-                    LOG(info, req.request_to_string(req.request_type()) << " request received");
+                    SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
                     if (req.content())
                     {
                         _post_content = req.content()->cpp_str();
-                        LOG(info, "Received PUT body: " << _post_content);
+                        SIHD_LOG(info, "Received PUT body: " << _post_content);
                         resp.http_header().set_status(HTTP_STATUS_OK);
                         ++_nput;
                     }
@@ -118,13 +118,13 @@ namespace test
 
             void on_open(const char *protocol_name)
             {
-                LOG(debug, "Opened websocket of protocol: " << protocol_name);
+                SIHD_LOG(debug, "Opened websocket of protocol: " << protocol_name);
                 ++_nopen;
             };
 
             bool on_read(const sihd::util::ArrStr & array)
             {
-                LOG(debug, "Read from client websocket: " << array.to_string());
+                SIHD_LOG(debug, "Read from client websocket: " << array.to_string());
                 _client_wrote = true;
                 ++_nread;
                 return true;
@@ -138,7 +138,7 @@ namespace test
                     const char hw[] = "hello world";
                     protocol->write_protocol = LWS_WRITE_TEXT;
                     array.from(hw);
-                    LOG(debug, "Wrote back to client websocket: " << hw);
+                    SIHD_LOG(debug, "Wrote back to client websocket: " << hw);
                     ++_nwrite;
                 }
                 return true;
@@ -146,7 +146,7 @@ namespace test
 
             void on_close()
             {
-                LOG(debug, "Closed websocket");
+                SIHD_LOG(debug, "Closed websocket");
                 ++_nclosed;
             }
 
@@ -180,9 +180,9 @@ namespace test
         }));
         server.set_root_dir("test/resources/mount_point");
         server.set_port(3000);
-        LOG(info, "=========================================================");
-        LOG(info, "Open web browser at localhost:3000");
-        LOG(info, "=========================================================");
+        SIHD_LOG(info, "=========================================================");
+        SIHD_LOG(info, "Open web browser at localhost:3000");
+        SIHD_LOG(info, "=========================================================");
         server.run();
         EXPECT_GT(server._nopen, 0);
         EXPECT_GT(server._nread, 0);

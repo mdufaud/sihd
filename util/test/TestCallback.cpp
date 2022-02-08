@@ -5,7 +5,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
 
     int non_member_counter;

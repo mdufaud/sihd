@@ -19,9 +19,9 @@ namespace test
             {
             }
 
-            std::thread::id  main_id;
-            std::thread::id  other_id;
-            std::string      other_name;
+            pthread_t main_id;
+            pthread_t other_id;
+            std::string other_name;
 
         public:
             void    test()
@@ -40,7 +40,7 @@ namespace test
         t.join();
         EXPECT_EQ(Thread::get_name(), "main");
         EXPECT_EQ(this->other_name, "another-thread");
-        EXPECT_NE(this->other_id, this->main_id);
-        EXPECT_EQ(this->main_id, Thread::id());
+        EXPECT_FALSE(Thread::equals(this->other_id, this->main_id));
+        EXPECT_FALSE(Thread::equals(this->main_id,  Thread::id()));
     }
 }

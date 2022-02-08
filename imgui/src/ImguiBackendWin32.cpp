@@ -16,7 +16,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 namespace sihd::imgui
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 ImguiBackendWin32::ImguiBackendWin32(): _is_init(false), _window(nullptr), _imgui_renderer_ptr(nullptr)
 {
@@ -32,7 +32,7 @@ bool    ImguiBackendWin32::init_window(const std::string & name, size_t width, s
 {
     if (_window != nullptr)
     {
-        LOG(warning, "ImguiBackendWin32: already initialized");
+        SIHD_LOG(warning, "ImguiBackendWin32: already initialized");
         return true;
     }
     _close = false;
@@ -60,7 +60,7 @@ bool    ImguiBackendWin32::init_window(const std::string & name, size_t width, s
         ::SetWindowPos(_window, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
     }
     else
-        LOG(error, "ImguiBackendWin32: CreateWindow failed");
+        SIHD_LOG(error, "ImguiBackendWin32: CreateWindow failed");
     return _window != nullptr;
 }
 
@@ -68,14 +68,14 @@ bool    ImguiBackendWin32::init_backend()
 {
     if (_window == nullptr)
     {
-        LOG(error, "ImguiBackendWin32: window not initialized");
+        SIHD_LOG(error, "ImguiBackendWin32: window not initialized");
         return false;
     }
     ::ShowWindow(_window, SW_SHOWDEFAULT);
     ::UpdateWindow(_window);
     _is_init = ImGui_ImplWin32_Init(_window);
     if (!_is_init)
-        LOG(error, "ImguiBackendWin32: ImGui_ImplWin32_Init failed");
+        SIHD_LOG(error, "ImguiBackendWin32: ImGui_ImplWin32_Init failed");
     return _is_init;
 }
 

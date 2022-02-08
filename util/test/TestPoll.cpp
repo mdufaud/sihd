@@ -7,7 +7,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     class TestPoll:   public ::testing::Test
     {
@@ -61,29 +61,29 @@ namespace test
 
         Handler<Poll *> poll_handler([this, &buffer] (Poll *poll)
         {
-            LOG(debug, "Polled");
+            SIHD_LOG(debug, "Polled");
             auto events = poll->get_events();
             for (Poll::PollEvent & event: events)
             {
                 int fd = event.fd;
                 if (event.readable)
                 {
-                    LOG(debug, "Reading in fd: " << fd);
+                    SIHD_LOG(debug, "Reading in fd: " << fd);
                     int ret = read(fd, buffer, 20);
                     buffer[ret] = 0;
-                    LOG(debug, "Read " << ret << " bytes: '" << buffer << "'");
+                    SIHD_LOG(debug, "Read " << ret << " bytes: '" << buffer << "'");
                     _read_count += 1;
                 }
                 if (event.writable)
                 {
-                    LOG(debug, "Writing in fd: " << fd);
+                    SIHD_LOG(debug, "Writing in fd: " << fd);
                     int ret = write(fd, "hello world", 11);
-                    LOG(debug, "Wrote " << ret << " bytes: 'hello world'");
+                    SIHD_LOG(debug, "Wrote " << ret << " bytes: 'hello world'");
                     _write_count += 1;
                 }
             }
             _timedout += (int)poll->polling_timeout();
-            LOG(debug, "Time spent in poll: " << time::to_micro(poll->polling_time())
+            SIHD_LOG(debug, "Time spent in poll: " << time::to_micro(poll->polling_time())
                         << " microsec (timed out ? " << poll->polling_timeout() << ")");
         });
         poll.add_observer(&poll_handler);

@@ -7,7 +7,7 @@
 
 namespace test
 {
-    NEW_LOGGER("test");
+    SIHD_NEW_LOGGER("test");
     using namespace sihd::lua;
     class TestLuaUtilApi:   public ::testing::Test
     {
@@ -33,7 +33,7 @@ namespace test
 
     TEST_F(TestLuaUtilApi, test_lua_util)
     {
-        TRACE(sihd::util::OS::get_cwd());
+        SIHD_TRACE(sihd::util::OS::get_cwd());
         sol::state lua;
         // For print etc...
         lua.open_libraries(sol::lib::base);

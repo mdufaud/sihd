@@ -3,6 +3,7 @@
 
 # include <time.h>
 # include <string>
+# include <string_view>
 # include <sihd/util/Thread.hpp>
 
 namespace sihd::util
@@ -24,17 +25,17 @@ class LogInfo
         LogInfo(const std::string & source, LogLevel level);
         virtual ~LogInfo();
 
-        std::string source;
+        std::string_view source;
         LogLevel level;
-        std::string level_str;
-        std::thread::id thread_id;
+        const char *level_str;
+        pthread_t thread_id;
         std::string thread_id_str;
-        std::string thread_name;
+        std::string_view thread_name;
         struct timespec timestamp;
 
-        const std::string & get_level() const;
+        const std::string & get_thread_id();
 
-        static const std::string & get_level(LogLevel level);
+        static const char *get_level(LogLevel level);
         static LogLevel string_to_level(const std::string & level);
 };
 

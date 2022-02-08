@@ -8,7 +8,7 @@
 namespace sihd::http
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 HttpHeader::HttpHeader()
 {
@@ -105,18 +105,18 @@ bool    HttpHeader::finalize(struct lws *wsi)
     // STATUS
     rc = lws_add_http_header_status(wsi, _status, &_ptr, end);
     if (rc)
-        LOG(error, "HttpHeader: cannot set status");
+        SIHD_LOG(error, "HttpHeader: cannot set status");
     // CONTENT TYPE
     std::string type = HttpHeader::build_content_type(_content_type, _encoding);
     rc = lws_add_http_header_by_token(wsi, WSI_TOKEN_HTTP_CONTENT_TYPE,
                                         (u_char *)type.c_str(),
                                         type.size(), &_ptr, end);
     if (rc)
-        LOG(error, "HttpHeader: cannot set content-type");
+        SIHD_LOG(error, "HttpHeader: cannot set content-type");
     // CONTENT LENGTH
     rc = lws_add_http_header_content_length(wsi, _content_size, &_ptr, end);
     if (rc)
-        LOG(error, "HttpHeader: cannot set content-length");
+        SIHD_LOG(error, "HttpHeader: cannot set content-length");
     // SERVER NAME
     if (_server_name.empty() == false)
     {
@@ -125,7 +125,7 @@ bool    HttpHeader::finalize(struct lws *wsi)
                                             _server_name.size(),
                                             &_ptr, end);
         if (rc)
-            LOG(error, "HttpHeader: cannot set server name");
+            SIHD_LOG(error, "HttpHeader: cannot set server name");
     }
     // TOKENS
     for (const auto & pair: _headers_token)
@@ -133,7 +133,7 @@ bool    HttpHeader::finalize(struct lws *wsi)
         rc = lws_add_http_header_by_token(wsi, pair.first, (u_char *)pair.second.c_str(),
                                             pair.second.size(), &_ptr, end);
         if (rc)
-            LOG(error, "HttpHeader: cannot set token '" << pair.first << "'");
+            SIHD_LOG(error, "HttpHeader: cannot set token '" << pair.first << "'");
     }
     // HEADERS NAME
     for (const auto & [name, value]: _headers_name)
@@ -142,12 +142,12 @@ bool    HttpHeader::finalize(struct lws *wsi)
                                             (u_char *)value.c_str(),
                                             value.size(), &_ptr, end);
         if (rc)
-            LOG(error, "HttpHeader: cannot set status '" << name << "'");
+            SIHD_LOG(error, "HttpHeader: cannot set status '" << name << "'");
     }
     // FINALIZE
     rc = lws_finalize_http_header(wsi, &_ptr, end);
     if (rc)
-        LOG(error, "HttpHeader: cannot finalize HTTP headers");
+        SIHD_LOG(error, "HttpHeader: cannot finalize HTTP headers");
     *_ptr = 0;
     return rc == 0;
 }

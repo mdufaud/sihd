@@ -7,7 +7,7 @@ namespace sihd::pcap
 
 SIHD_UTIL_REGISTER_FACTORY(PcapWriter)
 
-LOGGER;
+SIHD_LOGGER;
 
 PcapWriter::PcapWriter(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent),
@@ -33,7 +33,7 @@ bool    PcapWriter::set_datalink(int dtl)
 {
     if (PcapUtils::is_datalink(dtl) == false)
     {
-        LOG(error, "PcapWriter: is not a datalink: " << dtl);
+        SIHD_LOG(error, "PcapWriter: is not a datalink: " << dtl);
         return false;
     }
     _linktype = dtl;
@@ -68,13 +68,13 @@ bool    PcapWriter::open(const std::string & path)
     {
         if ((_pcap_dumper_ptr = pcap_dump_open(_pcap_ptr, path.c_str())) == nullptr)
         {
-            LOG(error, "PcapWriter: can not open pcap for writing: " << path);
+            SIHD_LOG(error, "PcapWriter: can not open pcap for writing: " << path);
             this->close();
         }
     }
     else
     {
-        LOG(error, "PcapWriter: can not open fake pcap for writing");
+        SIHD_LOG(error, "PcapWriter: can not open fake pcap for writing");
     }
     return _pcap_dumper_ptr != nullptr;
 }

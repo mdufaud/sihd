@@ -10,7 +10,7 @@
 namespace sihd::ssh
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 SshScp::SshScp(ssh_session session):
     _remote_opened(false), _ssh_scp_ptr(nullptr), _ssh_session_ptr(session)
@@ -39,12 +39,12 @@ bool    SshScp::_open(int flags, const std::string & location)
     _ssh_scp_ptr = ssh_scp_new(_ssh_session_ptr, flags, location.c_str());
     if (_ssh_scp_ptr == nullptr)
     {
-        LOG(error, "SshScp: failed to create new scp session: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshScp: failed to create new scp session: " << ssh_get_error(_ssh_session_ptr));
         return false;
     }
     if (ssh_scp_init(_ssh_scp_ptr) != SSH_OK)
     {
-        LOG(error, "SshScp: failed to initialize scp session: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshScp: failed to initialize scp session: " << ssh_get_error(_ssh_session_ptr));
         ssh_scp_free(_ssh_scp_ptr);
         return false;
     }
@@ -69,10 +69,10 @@ bool    SshScp::leave_dir()
     {
         if (ssh_scp_leave_directory(_ssh_scp_ptr) == SSH_OK)
             return true;
-        LOG(error, "SshScp: failed leaving directory: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshScp: failed leaving directory: " << ssh_get_error(_ssh_session_ptr));
     }
     else
-        LOG(error, "SshScp: cannot leave directory, no remote is opened");
+        SIHD_LOG(error, "SshScp: cannot leave directory, no remote is opened");
     return false;
 }
 
@@ -83,7 +83,7 @@ bool    SshScp::push_dir(const std::string & name, int mode)
 
     int r = ssh_scp_push_directory(_ssh_scp_ptr, name.c_str(), mode);
     if (r != SSH_OK)
-        LOG(error, "SshScp: failed to create directory: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshScp: failed to create directory: " << ssh_get_error(_ssh_session_ptr));
     return r == SSH_OK;
 }
 
@@ -103,7 +103,7 @@ bool    SshScp::push_file(const std::string & local_path, const std::string & re
     ssize_t read_ret;
     int r = ssh_scp_push_file(_ssh_scp_ptr, remote_path.c_str(), size, mode);
     if (r != SSH_OK)
-        LOG(error, "SshScp: failed to initialize file push: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshScp: failed to initialize file push: " << ssh_get_error(_ssh_session_ptr));
     while (r == SSH_OK && !file.error() && !file.eof())
     {
         read_ret = file.read(buf, SIHD_SSH_SCP_BUFFSIZE);
@@ -111,7 +111,7 @@ bool    SshScp::push_file(const std::string & local_path, const std::string & re
         {
             r = ssh_scp_write(_ssh_scp_ptr, buf, read_ret);
             if (r != SSH_OK)
-                LOG(error, "SshScp: failed to write while pushing file: " << ssh_get_error(_ssh_session_ptr));
+                SIHD_LOG(error, "SshScp: failed to write while pushing file: " << ssh_get_error(_ssh_session_ptr));
         }
     }
     return r == SSH_OK;
@@ -124,7 +124,7 @@ bool    SshScp::push_file_content(const std::string & remote_path, const char *b
     int r = ssh_scp_push_file(_ssh_scp_ptr, remote_path.c_str(), size, mode);
     if (r != SSH_OK)
     {
-        LOG(error, "SshScp: failed to initialize file push: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshScp: failed to initialize file push: " << ssh_get_error(_ssh_session_ptr));
         return false;
     }
     return ssh_scp_write(_ssh_scp_ptr, buf, size);
@@ -143,14 +143,14 @@ bool    SshScp::pull_file(const std::string & remote_path, const std::string & l
     if (r != SSH_SCP_REQUEST_NEWFILE)
     {
         this->close();
-        LOG(error, "SshScp: failed to retrieve pull informations: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshScp: failed to retrieve pull informations: " << ssh_get_error(_ssh_session_ptr));
         return false;
     }
     size_t total = ssh_scp_request_get_size(_ssh_scp_ptr);
     if (ssh_scp_accept_request(_ssh_scp_ptr) != SSH_OK)
     {
         this->close();
-        LOG(error, "SshScp: failed to accept pull request: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshScp: failed to accept pull request: " << ssh_get_error(_ssh_session_ptr));
         return false;
     }
 
@@ -160,7 +160,7 @@ bool    SshScp::pull_file(const std::string & remote_path, const std::string & l
     {
         if (file.write(buf, r) < 0)
         {
-            LOG(error, "SshScp: failed writing file: " << local_path);
+            SIHD_LOG(error, "SshScp: failed writing file: " << local_path);
             break ;
         }
         wrote += r;

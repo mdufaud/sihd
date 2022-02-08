@@ -9,7 +9,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::core;
     using namespace sihd::util;
     class TestRecords:  public ::testing::Test
@@ -83,13 +83,13 @@ namespace test
 
         if (play != nullptr && end != nullptr)
         {
-            LOG(debug, "Playing");
+            SIHD_LOG(debug, "Playing");
             play->write(0, true);
-            LOG(debug, "Sleeping");
+            SIHD_LOG(debug, "Sleeping");
             sihd::util::time::msleep(5);
-            LOG(debug, "Stopping recorder");
+            SIHD_LOG(debug, "Stopping recorder");
             mem_recorder.stop();
-            LOG(debug, "Waiting the end");
+            SIHD_LOG(debug, "Waiting the end");
             ChannelWaiter waiter(end);
             EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(60)));
         }
@@ -170,7 +170,7 @@ namespace test
                 EXPECT_GT(pair.second.timestamp, last_timestamp);
         }
 
-        LOG(debug, "Printing dev recorder total values");
+        SIHD_LOG(debug, "Printing dev recorder total values");
         std::cout << mem_recorder.hexdump_records() << std::endl;
         std::cout << mem_recorder.hexdump_timeline() << std::endl;
 

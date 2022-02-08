@@ -19,7 +19,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 SharedMemory::SharedMemory(): _fd(-1), _size(0), _addr(nullptr), _created(false)
 {
@@ -42,7 +42,7 @@ bool    SharedMemory::_create(const std::string & id, size_t size, mode_t mode, 
     _fd = shm_open(id.c_str(), shm_flags, mode);
     if (_fd == -1)
     {
-        LOG(error, "SharedMemory: shm_open: " << strerror(errno));
+        SIHD_LOG(error, "SharedMemory: shm_open: " << strerror(errno));
         return false;
     }
     _created = true;
@@ -51,14 +51,14 @@ bool    SharedMemory::_create(const std::string & id, size_t size, mode_t mode, 
     if (ftruncate(_fd, size) == -1)
     {
         this->clear();
-        LOG(error, "SharedMemory: ftruncate: " << strerror(errno));
+        SIHD_LOG(error, "SharedMemory: ftruncate: " << strerror(errno));
         return false;
     }
     _addr = mmap(nullptr, size, mmap_flags, MAP_SHARED, _fd, 0);
     if (_addr == MAP_FAILED)
     {
         this->clear();
-        LOG(error, "SharedMemory: mmap: " << strerror(errno));
+        SIHD_LOG(error, "SharedMemory: mmap: " << strerror(errno));
         return false;
     }
     return true;
@@ -79,7 +79,7 @@ bool    SharedMemory::_attach(const std::string & id, size_t size, mode_t mode, 
     _fd = shm_open(id.c_str(), shm_flags, mode);
     if (_fd == -1)
     {
-        LOG(error, "SharedMemory: shm_open: " << strerror(errno));
+        SIHD_LOG(error, "SharedMemory: shm_open: " << strerror(errno));
         return false;
     }
     _created = false;
@@ -89,7 +89,7 @@ bool    SharedMemory::_attach(const std::string & id, size_t size, mode_t mode, 
     if (_addr == MAP_FAILED)
     {
         this->clear();
-        LOG(error, "SharedMemory: mmap: " << strerror(errno));
+        SIHD_LOG(error, "SharedMemory: mmap: " << strerror(errno));
         return false;
     }
     return true;
@@ -102,7 +102,7 @@ bool    SharedMemory::clear()
     {
         if (_created && munmap(_addr, _size) == -1)
         {
-            LOG(error, "SharedMemory: munmap: " << strerror(errno));
+            SIHD_LOG(error, "SharedMemory: munmap: " << strerror(errno));
             ret = false;
         }
     }
@@ -110,7 +110,7 @@ bool    SharedMemory::clear()
     {
         if (_created && shm_unlink(_id.c_str()) == -1)
         {
-            LOG(error, "SharedMemory: shm_unlink: " << strerror(errno));
+            SIHD_LOG(error, "SharedMemory: shm_unlink: " << strerror(errno));
             ret = false;
         }
         _fd = -1;
@@ -125,12 +125,6 @@ bool    SharedMemory::clear()
 #else
 
 bool    SharedMemory::create(const std::string & id, size_t size, mode_t mode)
-{
-    (void)id; (void)size; (void)mode;
-    return false;
-}
-
-bool    SharedMemory::create_read_only(const std::string & id, size_t size, mode_t mode)
 {
     (void)id; (void)size; (void)mode;
     return false;

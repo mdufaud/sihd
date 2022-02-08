@@ -7,7 +7,7 @@ namespace sihd::util
 
 SIHD_UTIL_REGISTER_FACTORY(Named);
 
-LOGGER;
+SIHD_LOGGER;
 
 Named *NamedFactory::load(const std::string & libname,
                             const std::string & classname,

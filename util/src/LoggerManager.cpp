@@ -1,4 +1,6 @@
 #include <sihd/util/LoggerManager.hpp>
+#include <sihd/util/BasicLogger.hpp>
+#include <sihd/util/ConsoleLogger.hpp>
 #include <algorithm>
 
 namespace sihd::util
@@ -108,6 +110,11 @@ void    LoggerManager::clear_filters()
 void    LoggerManager::basic(FILE *output, bool print_thread_id)
 {
     get()->add_logger(new BasicLogger(output, print_thread_id));
+}
+
+void    LoggerManager::console()
+{
+    get()->add_logger(new ConsoleLogger());
 }
 
 }

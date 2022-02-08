@@ -5,7 +5,7 @@
 namespace sihd::ssh
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 SshShell::SshShell(ssh_session session): _ssh_session_ptr(session)
 {
@@ -20,31 +20,31 @@ bool    SshShell::open(bool x11)
     ssh_channel channel_ptr = ssh_channel_new(_ssh_session_ptr);
     if (channel_ptr == nullptr)
     {
-        LOG(error, "SshShell: failed to create a ssh channel: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshShell: failed to create a ssh channel: " << ssh_get_error(_ssh_session_ptr));
         return false;
     }
     _channel.set_channel(channel_ptr);
     bool ret = _channel.open_session();
     if (!ret)
-        LOG(error, "SshShell: failed to open a ssh channel session");
+        SIHD_LOG(error, "SshShell: failed to open a ssh channel session");
     if (ret && _channel.request_pty() == false)
     {
-        LOG(error, "SshShell: failed to request a ssh pty");
+        SIHD_LOG(error, "SshShell: failed to request a ssh pty");
         ret = false;
     }
     if (ret && _channel.change_pty_size(80, 24) == false)
     {
-        LOG(error, "SshShell: failed to change pty size");
+        SIHD_LOG(error, "SshShell: failed to change pty size");
         ret = false;
     }
     if (ret && x11 && _channel.request_x11("", "", 0, false) == false)
     {
-        LOG(error, "SshShell: failed to request x11");
+        SIHD_LOG(error, "SshShell: failed to request x11");
         ret = false;
     }
     if (ret && _channel.request_shell() == false)
     {
-        LOG(error, "SshShell: failed to request shell");
+        SIHD_LOG(error, "SshShell: failed to request shell");
         ret = false;
     }
     if (!ret)
@@ -90,7 +90,7 @@ bool    SshShell::read_loop()
             nbytes = _channel.read(buf, bufsize);
             if (nbytes < 0)
             {
-                LOG(error, "SshShell: error reading channel");
+                SIHD_LOG(error, "SshShell: error reading channel");
                 ret = false;
                 break ;
             }
@@ -109,7 +109,7 @@ bool    SshShell::read_loop()
                 nwritten = _channel.write(line, line_size);
                 if (nwritten != (int)line_size)
                 {
-                    LOG_ERROR("SshShell: error writing to channel '%d' != '%d'", nwritten, (int)line_size);
+                    SIHD_LOG_ERROR("SshShell: error writing to channel '%d' != '%d'", nwritten, (int)line_size);
                     ret = false;
                     break ;
                 }
@@ -118,7 +118,7 @@ bool    SshShell::read_loop()
             {
                 if (reader.error())
                 {
-                    LOG(error, "SshShell: error reading stdin");
+                    SIHD_LOG(error, "SshShell: error reading stdin");
                     ret = false;
                 }
                 std::cout << std::endl;

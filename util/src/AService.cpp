@@ -5,7 +5,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 # define CREATE_SERVICE_OPERATION(OP, ID)\
 bool    AService::OP()\
@@ -26,7 +26,7 @@ bool    AService::OP()\
             Named *obj = dynamic_cast<Named *>(this);\
             if (obj != nullptr)\
             {\
-                LOG(warning, "AService: cannot change the state of " << obj->get_name() << " to " #OP);\
+                SIHD_LOG(warning, "AService: cannot change the state of " << obj->get_name() << " to " #OP);\
             }\
         }\
     }\

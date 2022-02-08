@@ -7,7 +7,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::core;
     class TestDevPulsation:   public ::testing::Test
     {
@@ -50,7 +50,7 @@ namespace test
         if (activate != nullptr && beat != nullptr)
         {
             activate->write(0, true);
-            LOG(debug, "Activated pulsation");
+            SIHD_LOG(debug, "Activated pulsation");
             // wait for 4 pulsation in 6 ms
             ChannelWaiter waiter(beat);
             EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(6), 4));
@@ -72,7 +72,7 @@ namespace test
         if (activate != nullptr && beat != nullptr)
         {
             activate->write(0, true);
-            LOG(debug, "Activated pulsation");
+            SIHD_LOG(debug, "Activated pulsation");
             // wait for 4 pulsation in 6 ms
             ChannelWaiter waiter(beat);
             EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(6), 4));

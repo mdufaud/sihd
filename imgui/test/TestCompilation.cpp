@@ -9,7 +9,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     // using namespace sihd::imgui;
     using namespace sihd::util;
     class TestCompilation: public ::testing::Test

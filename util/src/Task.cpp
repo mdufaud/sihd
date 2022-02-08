@@ -4,7 +4,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 Task::Task(): run_at(0), resched_time(0), _runnable_ptr(nullptr)
 {

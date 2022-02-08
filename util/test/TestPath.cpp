@@ -8,7 +8,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     class TestPath:   public ::testing::Test
     {
@@ -55,7 +55,7 @@ namespace test
         Path::clear("sihd-test");
         EXPECT_EQ(Path::get("sihd-test", "file.txt"), "");
 
-        TRACE(Path::find("test/TestPath.cpp"));
+        SIHD_TRACE(Path::find("test/TestPath.cpp"));
         std::filesystem::remove_all(test_path);
     }
 }

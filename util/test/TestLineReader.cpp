@@ -7,7 +7,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     class TestLineReader: public ::testing::Test
     {
@@ -52,11 +52,11 @@ namespace test
 
         std::string path = Files::combine(_base_test_dir, "one_line.txt");
 
-        LOG(info, "Writing test file: " << path);
+        SIHD_LOG(info, "Writing test file: " << path);
         EXPECT_TRUE(Files::write(path, "hello world"));
 
         EXPECT_TRUE(reader.open(path));
-        LOG(info, "Reading");
+        SIHD_LOG(info, "Reading");
         EXPECT_TRUE(reader.read_next());
         EXPECT_TRUE(reader.get_read_data(&line, &size));
         // EXPECT_EQ(size, strlen("hello world"));
@@ -69,11 +69,11 @@ namespace test
         EXPECT_TRUE(reader.close());
 
         // testing with a line feed at the end
-        LOG(info, "Writing test file with linefeed at the end: " << path);
+        SIHD_LOG(info, "Writing test file with linefeed at the end: " << path);
         EXPECT_TRUE(Files::write(path, "hello world\n"));
 
         EXPECT_TRUE(reader.open(path));
-        LOG(info, "Reading");
+        SIHD_LOG(info, "Reading");
         EXPECT_TRUE(reader.read_next());
         EXPECT_TRUE(reader.get_read_data(&line, &size));
         // EXPECT_EQ(size, strlen("hello world"));
@@ -94,12 +94,12 @@ namespace test
 
         std::string path = Files::combine(_base_test_dir, "two_lines.txt");
 
-        LOG(info, "Writing test file: " << path);
+        SIHD_LOG(info, "Writing test file: " << path);
         EXPECT_TRUE(Files::write(path, "hello world\nhow are you"));
 
         EXPECT_TRUE(reader.open(path));
 
-        LOG(info, "First read");
+        SIHD_LOG(info, "First read");
         EXPECT_TRUE(reader.read_next());
         EXPECT_TRUE(reader.get_read_data(&line, &size));
         // EXPECT_EQ(size, strlen("hello world"));
@@ -109,7 +109,7 @@ namespace test
             EXPECT_STREQ(line, "hello world");
         }
 
-        LOG(info, "Second read");
+        SIHD_LOG(info, "Second read");
         EXPECT_TRUE(reader.read_next());
         EXPECT_TRUE(reader.get_read_data(&line, &size));
         // EXPECT_EQ(size, strlen("how are you"));
@@ -123,12 +123,12 @@ namespace test
         EXPECT_TRUE(reader.close());
 
         // testing with a line feed at the end
-        LOG(info, "Writing test file with linefeed at the end: " << path);
+        SIHD_LOG(info, "Writing test file with linefeed at the end: " << path);
         EXPECT_TRUE(Files::write(path, "hello world\nhow are you\n"));
 
         EXPECT_TRUE(reader.open(path));
 
-        LOG(info, "First read");
+        SIHD_LOG(info, "First read");
         EXPECT_TRUE(reader.read_next());
         EXPECT_TRUE(reader.get_read_data(&line, &size));
         // EXPECT_EQ(size, strlen("hello world"));
@@ -138,7 +138,7 @@ namespace test
             EXPECT_STREQ(line, "hello world");
         }
 
-        LOG(info, "Second read");
+        SIHD_LOG(info, "Second read");
         EXPECT_TRUE(reader.read_next());
         EXPECT_TRUE(reader.get_read_data(&line, &size));
         // EXPECT_EQ(size, strlen("how are you"));
@@ -160,12 +160,12 @@ namespace test
 
         std::string path = Files::combine(_base_test_dir, "multiple_feeds.txt");
 
-        LOG(info, "Writing test file: " << path);
+        SIHD_LOG(info, "Writing test file: " << path);
         EXPECT_TRUE(Files::write(path, "hello world\n!\n\n\n"));
 
         EXPECT_TRUE(reader.open(path));
 
-        LOG(info, "First read");
+        SIHD_LOG(info, "First read");
         EXPECT_TRUE(reader.read_next());
         EXPECT_TRUE(reader.get_read_data(&line, &size));
         // EXPECT_EQ(size, strlen("hello world"));
@@ -175,7 +175,7 @@ namespace test
             EXPECT_STREQ(line, "hello world");
         }
 
-        LOG(info, "Second read");
+        SIHD_LOG(info, "Second read");
         EXPECT_TRUE(reader.read_next());
         EXPECT_TRUE(reader.get_read_data(&line, &size));
         // EXPECT_EQ(size, strlen("!"));
@@ -185,7 +185,7 @@ namespace test
             EXPECT_STREQ(line, "!");
         }
 
-        LOG(info, "Third read");
+        SIHD_LOG(info, "Third read");
         EXPECT_TRUE(reader.read_next());
         EXPECT_TRUE(reader.get_read_data(&line, &size));
         // EXPECT_EQ(size, 0u);
@@ -195,7 +195,7 @@ namespace test
             EXPECT_STREQ(line, "");
         }
 
-        LOG(info, "Fourth read");
+        SIHD_LOG(info, "Fourth read");
         EXPECT_TRUE(reader.read_next());
         EXPECT_TRUE(reader.get_read_data(&line, &size));
         // EXPECT_EQ(size, 0u);
@@ -214,7 +214,7 @@ namespace test
         LineReader reader("line-reader");
         std::string path = Files::combine(_base_test_dir, "nothing.txt");
 
-        LOG(info, "Writing test file: " << path);
+        SIHD_LOG(info, "Writing test file: " << path);
         EXPECT_TRUE(Files::write(path, ""));
 
         EXPECT_TRUE(reader.open(path));
@@ -230,7 +230,7 @@ namespace test
 
         std::string path = Files::combine(_base_test_dir, "buffer_test.txt");
 
-        LOG(info, "Writing test file: " << path);
+        SIHD_LOG(info, "Writing test file: " << path);
         EXPECT_TRUE(Files::write(path, "hello world\nhow are you\n?\n"));
 
         EXPECT_TRUE(reader.set_read_buffsize(1));
@@ -260,9 +260,9 @@ namespace test
         std::string path_file = Files::combine(_base_test_dir, "perf_compare_file.txt");
         std::string path_line_reader = Files::combine(_base_test_dir, "perf_compare_line_reader.txt");
 
-        LOG(info, "Input: " << path_input);
-        LOG(info, "Output file: " << path_file);
-        LOG(info, "Output line reader: " << path_line_reader);
+        SIHD_LOG(info, "Input: " << path_input);
+        SIHD_LOG(info, "Output file: " << path_file);
+        SIHD_LOG(info, "Output line reader: " << path_line_reader);
 
         File writer(path_input, "w");
         writer.write(filecontent, filesize);

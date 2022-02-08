@@ -4,7 +4,7 @@
 namespace sihd::zip
 {
 
-NEW_LOGGER("sihd::zip");
+SIHD_NEW_LOGGER("sihd::zip");
 
 std::string ZipUtils::get_error(int code)
 {

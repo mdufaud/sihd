@@ -4,7 +4,7 @@
 namespace sihd::usb
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 UsbUtils::UsbUtils()
 {

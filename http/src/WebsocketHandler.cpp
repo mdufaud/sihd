@@ -4,7 +4,7 @@
 namespace sihd::http
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 WebsocketHandler::WebsocketHandler()
 {

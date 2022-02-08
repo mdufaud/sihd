@@ -7,7 +7,7 @@
 
 namespace test
 {
-    NEW_LOGGER("test");
+    SIHD_NEW_LOGGER("test");
     using namespace sihd::csv;
     using namespace sihd::util;
     class TestCsv:   public ::testing::Test
@@ -41,7 +41,7 @@ namespace test
         std::string path = Files::combine(_base_test_dir, "test_write.csv");
         CsvWriter writer("csv-writer");
 
-        LOG(info, "Writing csv: " << path);
+        SIHD_LOG(info, "Writing csv: " << path);
         EXPECT_TRUE(writer.open(path));
         EXPECT_TRUE(writer.write_commentary(""));
         EXPECT_TRUE(writer.write_commentary("hello world"));
@@ -71,7 +71,7 @@ namespace test
         CsvReader reader("csv-reader");
         std::vector<std::string> values;
 
-        LOG(info, "Reading csv: " << path);
+        SIHD_LOG(info, "Reading csv: " << path);
         EXPECT_TRUE(reader.open(path));
         // must skip the two comments
         EXPECT_TRUE(reader.read_next());

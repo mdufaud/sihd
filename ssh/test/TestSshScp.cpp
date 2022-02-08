@@ -8,7 +8,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::ssh;
     using namespace sihd::util;
     class TestSshScp: public ::testing::Test
@@ -48,7 +48,7 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_key_auto();
-        LOG(info, "Auth status: " << auth.to_string());
+        SIHD_LOG(info, "Auth status: " << auth.to_string());
         EXPECT_TRUE(auth.success());
 
         SshScp scp = session.make_scp();
@@ -87,7 +87,7 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_key_auto();
-        LOG(info, "Auth status: " << auth.to_string());
+        SIHD_LOG(info, "Auth status: " << auth.to_string());
         EXPECT_TRUE(auth.success());
 
         SshScp scp = session.make_scp();

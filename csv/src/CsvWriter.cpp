@@ -7,7 +7,7 @@ namespace sihd::csv
 
 SIHD_UTIL_REGISTER_FACTORY(CsvWriter)
 
-LOGGER;
+SIHD_LOGGER;
 
 CsvWriter::CsvWriter(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent)
@@ -37,7 +37,7 @@ bool    CsvWriter::set_quote_value(int c)
     if (_end_quote_c < 0)
     {
         _begin_quote_c = -1;
-        LOG(error, "CsvWriter: quote character '" << c << "' is not supported");
+        SIHD_LOG(error, "CsvWriter: quote character '" << c << "' is not supported");
         return false;
     }
     _begin_quote_c = c;
@@ -51,7 +51,7 @@ bool    CsvWriter::set_delimiter(int c)
         _delimiter = c;
         return true;
     }
-    LOG(error, "CsvWriter: delimiter is not a printable character");
+    SIHD_LOG(error, "CsvWriter: delimiter is not a printable character");
     return false;
 }
 
@@ -62,7 +62,7 @@ bool    CsvWriter::set_commentary(int c)
         _comment = c;
         return true;
     }
-    LOG(error, "CsvWriter: commentary is not a printable character");
+    SIHD_LOG(error, "CsvWriter: commentary is not a printable character");
     return false;
 }
 
@@ -90,7 +90,7 @@ bool    CsvWriter::new_row()
 {
     if (_file.write_char(_line_feed) == false)
     {
-        LOG(error, "CsvWriter: failed to write new line");
+        SIHD_LOG(error, "CsvWriter: failed to write new line");
         return false;
     }
     _row += 1;
@@ -107,7 +107,7 @@ ssize_t CsvWriter::write_commentary(const std::string & value)
     ret += _file.write(value);
     ret += (ssize_t)this->new_row();
     if (ret < (ssize_t)(value.size() + 2))
-        LOG(error, "CsvWriter: failed to write commentary");
+        SIHD_LOG(error, "CsvWriter: failed to write commentary");
     return ret;
 }
 
@@ -127,7 +127,7 @@ ssize_t CsvWriter::write(const char *data, size_t size)
     else
         ret += _file.write(data, size);
     if (ret < (ssize_t)size)
-        LOG_ERROR("CsvWriter: write failed '%ld' < '%lu'", ret, size);
+        SIHD_LOG_ERROR("CsvWriter: write failed '%ld' < '%lu'", ret, size);
     _col += ret;
     _max_col = std::max(_max_col, _col);
     return ret;

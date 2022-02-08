@@ -5,7 +5,7 @@
 namespace sihd::ssh
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 static int ssh_command_channel_data_callback(ssh_session session, ssh_channel channel,
                                                 void *data, uint32_t len, int is_stderr,
@@ -90,14 +90,14 @@ bool    SshCommand::_execute(const std::string & cmd, bool async)
     ssh_channel channel_ptr = ssh_channel_new(_ssh_session_ptr);
     if (channel_ptr == nullptr)
     {
-        LOG(error, "SshCommand: failed to create a ssh channel: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshCommand: failed to create a ssh channel: " << ssh_get_error(_ssh_session_ptr));
         return false;
     }
     _channel.set_channel(channel_ptr);
     _channel.set_blocking(async == false);
     if (_channel.open_session() == false)
     {
-        LOG(error, "SshCommand: failed to open a ssh channel session");
+        SIHD_LOG(error, "SshCommand: failed to open a ssh channel session");
         _channel.clear_channel();
         return false;
     }
@@ -109,7 +109,7 @@ bool    SshCommand::_execute(const std::string & cmd, bool async)
     ssh_callbacks_init(&_ssh_callbacks);
     if (ssh_set_channel_callbacks(_channel.channel(), &_ssh_callbacks) != SSH_OK)
     {
-        LOG(error, "SshCommand: failed to set callbacks to the channel");
+        SIHD_LOG(error, "SshCommand: failed to set callbacks to the channel");
         _channel.clear_channel();
         return false;
     }
@@ -117,7 +117,7 @@ bool    SshCommand::_execute(const std::string & cmd, bool async)
     bool ret = _channel.request_exec(cmd);
     if (!ret)
     {
-        LOG(error, "SshCommand: failed to execute command: " << cmd);
+        SIHD_LOG(error, "SshCommand: failed to execute command: " << cmd);
         _channel.clear_channel();
     }
     else

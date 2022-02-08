@@ -4,7 +4,7 @@
 namespace sihd::pcap
 {
 
-NEW_LOGGER("sihd::pcap");
+SIHD_NEW_LOGGER("sihd::pcap");
 
 bool PcapUtils::_is_init = false;
 
@@ -25,7 +25,7 @@ bool    PcapUtils::init(unsigned int opts)
     char errbuf[PCAP_ERRBUF_SIZE];
     PcapUtils::_is_init = pcap_init(opts, errbuf) == 0;
     if (PcapUtils::_is_init == false)
-        LOG(error, "PcapUtils: " << errbuf);
+        SIHD_LOG(error, "PcapUtils: " << errbuf);
     return PcapUtils::_is_init;
 }
 
@@ -35,7 +35,7 @@ bool    PcapUtils::lookupnet(const std::string & dev, bpf_u_int32 *ip, bpf_u_int
 
     int ret = pcap_lookupnet(dev.c_str(), ip, mask, errbuf);
     if (ret != 0)
-        LOG(error, "PcapUtils: " << errbuf);
+        SIHD_LOG(error, "PcapUtils: " << errbuf);
     return ret;
 }
 

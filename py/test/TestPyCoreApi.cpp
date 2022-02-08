@@ -6,7 +6,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::py;
     class TestPyCoreApi:   public ::testing::Test
     {
@@ -35,7 +35,7 @@ namespace test
         std::string libpath = getenv("LIB_PATH");
         if (libpath.empty() == false)
         {
-            TRACE("Changing directory to: " << libpath);
+            SIHD_TRACE("Changing directory to: " << libpath);
             chdir(libpath.c_str());
         }
         pybind11::scoped_interpreter guard{};

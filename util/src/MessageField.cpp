@@ -40,7 +40,7 @@ bool    MessageField::assign_field_buffer(uint8_t *buffer)
 {
     if (_size == 0 || _dt == DNONE || _array_ptr == nullptr)
     {
-        LOG_ERROR("MessageField: for %s cannot assign array before it is built",
+        SIHD_LOG_ERROR("MessageField: for %s cannot assign array before it is built",
                     this->get_name().c_str());
         return false;
     }

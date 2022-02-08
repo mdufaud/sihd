@@ -5,7 +5,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     class TestSplitter:   public ::testing::Test
     {
@@ -128,11 +128,11 @@ namespace test
         const char *cmd = "cmd (do 'something')   or don\\'t but[hurry up  mate]";
 
         splitter.set_escape_sequences("([");
-        LOG(info, "Splitting command: '" << cmd << "'");
+        SIHD_LOG(info, "Splitting command: '" << cmd << "'");
         std::vector<std::string> splits = splitter.split(cmd);
         for (const auto & split: splits)
         {
-            LOG(debug, split);
+            SIHD_LOG(debug, split);
         }
         EXPECT_EQ(splits.size(), 5u);
         if (splits.size() == 5)
@@ -146,11 +146,11 @@ namespace test
         std::cout << std::endl;
 
         splitter.set_escape_sequences("(");
-        LOG(info, "Same string but with restriction on (");
+        SIHD_LOG(info, "Same string but with restriction on (");
         std::vector<std::string> splits_with_restriction = splitter.split(cmd);
         for (const auto & split: splits_with_restriction)
         {
-            LOG(debug, split);
+            SIHD_LOG(debug, split);
         }
         EXPECT_EQ(splits_with_restriction.size(), 7u);
         if (splits_with_restriction.size() == 7)
@@ -168,11 +168,11 @@ namespace test
 
         splitter.set_escape_sequences_all();
         const char *fullcmd = "'hello world  !'";
-        LOG(info, "Splitting command: '" << fullcmd << "'");
+        SIHD_LOG(info, "Splitting command: '" << fullcmd << "'");
         std::vector<std::string> full_split = splitter.split(fullcmd);
         for (const auto & split: full_split)
         {
-            LOG(debug, split);
+            SIHD_LOG(debug, split);
         }
         EXPECT_EQ(full_split.size(), 1u);
         if (full_split.size() == 1)
@@ -181,11 +181,11 @@ namespace test
         }
 
         const char *unclosed_seq = "'hello world  !";
-        LOG(info, "Splitting command: '" << unclosed_seq << "'");
+        SIHD_LOG(info, "Splitting command: '" << unclosed_seq << "'");
         std::vector<std::string> unclosed_split = splitter.split(unclosed_seq);
         for (const auto & split: unclosed_split)
         {
-            LOG(debug, split);
+            SIHD_LOG(debug, split);
         }
         EXPECT_EQ(unclosed_split.size(), 1u);
         if (unclosed_split.size() == 1)

@@ -5,7 +5,7 @@ namespace sihd::core
 
 using namespace sihd::util;
 
-LOGGER;
+SIHD_LOGGER;
 
 // permits copying of existent maps instead of instanciating every time the same maps
 sihd::util::ServiceController Device::_default_service_controller;
@@ -27,7 +27,7 @@ bool    Device::do_setup()
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->setup() == false)
         {
-            LOG(error, "Device: " << this->get_name() << " could not setup service: " << name);
+            SIHD_LOG(error, "Device: " << this->get_name() << " could not setup service: " << name);
             return false;
         }
     }
@@ -41,7 +41,7 @@ bool    Device::do_init()
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->init() == false)
         {
-            LOG(error, "Device: " << this->get_name() << " could not init service: " << name);
+            SIHD_LOG(error, "Device: " << this->get_name() << " could not init service: " << name);
             return false;
         }
     }
@@ -59,7 +59,7 @@ bool    Device::do_start()
         {
             if (service->start() == false)
             {
-                LOG(error, "Device: " << this->get_name() << " could not start service: " << name);
+                SIHD_LOG(error, "Device: " << this->get_name() << " could not start service: " << name);
                 ret = false;
                 break ;
             }
@@ -87,7 +87,7 @@ bool    Device::do_stop()
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->stop() == false)
         {
-            LOG(error, "Device: " << this->get_name() << " could not stop service: " << name);
+            SIHD_LOG(error, "Device: " << this->get_name() << " could not stop service: " << name);
             return false;
         }
     }
@@ -101,7 +101,7 @@ bool    Device::do_reset()
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->reset() == false)
         {
-            LOG(error, "Device: " << this->get_name() << " could not reset service: " << name);
+            SIHD_LOG(error, "Device: " << this->get_name() << " could not reset service: " << name);
             return false;
         }
     }

@@ -4,11 +4,11 @@
 namespace sihd::imgui
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 static void glfw_error_callback(int error, const char* description)
 {
-    LOG(error, "GLFW: " << description << " (" << error << ")");
+    SIHD_LOG(error, "GLFW: " << description << " (" << error << ")");
 }
 
 ImguiBackendGlfw::ImguiBackendGlfw(): _glfw_window_ptr(nullptr)
@@ -26,7 +26,7 @@ bool    ImguiBackendGlfw::init_window(const std::string & name, size_t width, si
 {
     if (_glfw_window_ptr != nullptr)
     {
-        LOG(warning, "ImguiBackendGlfw: already initialized");
+        SIHD_LOG(warning, "ImguiBackendGlfw: already initialized");
         return true;
     }
     // Setup window
@@ -65,7 +65,7 @@ bool    ImguiBackendGlfw::init_backend_opengl()
 {
     if (_glfw_window_ptr == nullptr)
     {
-        LOG(error, "ImguiBackendGlfw: window not initialized");
+        SIHD_LOG(error, "ImguiBackendGlfw: window not initialized");
         return false;
     }
     _is_init = ImGui_ImplGlfw_InitForOpenGL(_glfw_window_ptr, true);

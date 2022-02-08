@@ -17,7 +17,7 @@ struct shmbuf
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     using namespace sihd::util;
     class TestSharedMemory: public ::testing::Test
@@ -61,44 +61,44 @@ namespace test
         ASSERT_NE(pid, -1);
         if (pid != 0)
         {
-            LOG(debug, "--- begin of parent ---");
+            SIHD_LOG(debug, "--- begin of parent ---");
             usleep(1E5);
-            LOG(debug, "--- parent attaching ---");
+            SIHD_LOG(debug, "--- parent attaching ---");
             // no attach_read_only with semaphores - it segfaults
             SharedMemory mem;
             ASSERT_TRUE(mem.attach("/id", sizeof(shmbuf)));
             if (mem.data())
             {
-                LOG(debug, "--- parent attached ---");
+                SIHD_LOG(debug, "--- parent attached ---");
                 struct shmbuf *shmp = (struct shmbuf *)mem.data();
                 EXPECT_NE(sem_wait(&shmp->sem1), -1);
-                LOG(debug, "data[0] -> " << shmp->data[0]);
-                LOG(debug, "data[1] -> " << shmp->data[1]);
+                SIHD_LOG(debug, "data[0] -> " << shmp->data[0]);
+                SIHD_LOG(debug, "data[1] -> " << shmp->data[1]);
                 EXPECT_EQ(shmp->data[0], 42);
                 EXPECT_EQ(shmp->data[1], 24);
                 EXPECT_NE(sem_post(&shmp->sem2), -1);
             }
-            LOG(debug, "--- end of parent ---");
+            SIHD_LOG(debug, "--- end of parent ---");
         }
         else if (pid == 0)
         {
-            LOG(debug, "--- begin of child ---");
+            SIHD_LOG(debug, "--- begin of child ---");
             SharedMemory mem;
             ASSERT_TRUE(mem.create("/id", sizeof(shmbuf)));
             if (mem.data())
             {
-                LOG(debug, "--- child created shared memory ---");
+                SIHD_LOG(debug, "--- child created shared memory ---");
                 struct shmbuf *shmp = (struct shmbuf *)mem.data();
                 ASSERT_NE(sem_init(&shmp->sem1, 1, 0), -1);
                 ASSERT_NE(sem_init(&shmp->sem2, 1, 0), -1);
                 shmp->data[0] = 42;
                 shmp->data[1] = 24;
                 EXPECT_NE(sem_post(&shmp->sem1), -1);
-                LOG(debug, "--- child wrote data - waiting for parent to read it ---");
+                SIHD_LOG(debug, "--- child wrote data - waiting for parent to read it ---");
                 EXPECT_NE(sem_wait(&shmp->sem2), -1);
             }
-            LOG(debug, "--- end of child ---");
-            usleep(1E5);
+            SIHD_LOG(debug, "--- end of child ---");
+            exit(0);
         }
     }
 

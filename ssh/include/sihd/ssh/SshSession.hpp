@@ -35,7 +35,7 @@ class SshSession
         bool set_user(const std::string & user);
         bool set_host(const std::string & host);
         bool set_port(int port);
-        // verbosity = SSH_LOG_NOLOG, SSH_LOG_WARNING, SSH_LOG_PROTOCOL, SSH_LOG_PACKET, SSH_LOG_FUNCTIONS
+        // verbosity = SSH_LOG_NOLOG, SSH_SIHD_LOG_WARNING, SSH_LOG_PROTOCOL, SSH_LOG_PACKET, SSH_LOG_FUNCTIONS
         bool set_verbosity(int verbosity);
         void set_blocking(bool active);
 

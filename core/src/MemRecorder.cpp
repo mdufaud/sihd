@@ -7,7 +7,7 @@ namespace sihd::core
 
 SIHD_UTIL_REGISTER_FACTORY(MemRecorder)
 
-LOGGER;
+SIHD_LOGGER;
 
 MemRecorder::MemRecorder(const std::string & name, sihd::util::Node *parent):
     ACoreObject(name, parent)

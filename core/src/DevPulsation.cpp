@@ -10,7 +10,7 @@ namespace sihd::core
 
 SIHD_UTIL_REGISTER_FACTORY(DevPulsation)
 
-LOGGER;
+SIHD_LOGGER;
 
 DevPulsation::DevPulsation(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
@@ -38,7 +38,7 @@ bool    DevPulsation::set_frequency(double freq)
 {
     if (freq < 0)
     {
-        LOG(error, "DevPulsation: impossible frequency: " << freq << " hz");
+        SIHD_LOG(error, "DevPulsation: impossible frequency: " << freq << " hz");
         return false;
     }
     _frequency = freq;
@@ -79,7 +79,7 @@ bool    DevPulsation::on_start()
 {
     if (_frequency == 0)
     {
-        LOG(error, "DevPulsation: cannot start without a frequency configured");
+        SIHD_LOG(error, "DevPulsation: cannot start without a frequency configured");
         return false;
     }
     if (!this->get_channel(CHANNEL_HEART, &_channel_heartbeat_ptr))
@@ -92,7 +92,7 @@ bool    DevPulsation::on_start()
         _scheduler.pause();
     if (_scheduler.start() == false)
     {
-        LOG(error, "DevPulsation: could not start scheduler");
+        SIHD_LOG(error, "DevPulsation: could not start scheduler");
         return false;
     }
     _scheduler.add_task(new sihd::util::Task(this, 0, sihd::util::time::freq(_frequency)));
@@ -108,7 +108,7 @@ bool    DevPulsation::on_stop()
     }
     if (_scheduler.stop() == false)
     {
-        LOG(error, "DevPulsation: could not stop scheduler");
+        SIHD_LOG(error, "DevPulsation: could not stop scheduler");
         return false;
     }
     return true;

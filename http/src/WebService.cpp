@@ -7,7 +7,7 @@ namespace sihd::http
 
 SIHD_UTIL_REGISTER_FACTORY(WebService)
 
-LOGGER;
+SIHD_LOGGER;
 
 WebService::WebService(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent)

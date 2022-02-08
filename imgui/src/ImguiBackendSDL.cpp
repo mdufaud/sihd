@@ -8,7 +8,7 @@
 namespace sihd::imgui
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 ImguiBackendSDL::ImguiBackendSDL():
     _sdl_window_ptr(nullptr), _sdl_context_ptr(nullptr), _imgui_renderer_ptr(nullptr)
@@ -34,7 +34,7 @@ bool    ImguiBackendSDL::_sdl_init()
         // depending on whether SDL_INIT_GAMECONTROLLER is enabled or disabled.. updating to latest version of SDL is recommended!)
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
         {
-            LOG(error, "ImguiBackendSDL: " << SDL_GetError());
+            SIHD_LOG(error, "ImguiBackendSDL: " << SDL_GetError());
             return false;
         }
     }
@@ -83,7 +83,7 @@ bool    ImguiBackendSDL::init_window(const std::string & name, size_t width, siz
 {
     if (_sdl_window_ptr != nullptr)
     {
-        LOG(warning, "ImguiBackendSDL: already initialized");
+        SIHD_LOG(warning, "ImguiBackendSDL: already initialized");
         return true;
     }
     if (this->_sdl_init() == false)
@@ -97,7 +97,7 @@ bool    ImguiBackendSDL::init_window(const std::string & name, size_t width, siz
     _sdl_window_ptr = SDL_CreateWindow(name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, window_flags);
     if (_sdl_window_ptr == nullptr)
     {
-        LOG(error, "ImguiBackendSDL: " << SDL_GetError());
+        SIHD_LOG(error, "ImguiBackendSDL: " << SDL_GetError());
         return false;
     }
     return true;
@@ -107,13 +107,13 @@ bool    ImguiBackendSDL::init_backend_opengl()
 {
     if (_sdl_window_ptr == nullptr)
     {
-        LOG(error, "ImguiBackendSDL: window not initialized");
+        SIHD_LOG(error, "ImguiBackendSDL: window not initialized");
         return false;
     }
     _sdl_context_ptr = SDL_GL_CreateContext(_sdl_window_ptr);
     if (_sdl_context_ptr == nullptr)
     {
-        LOG(error, "ImguiBackendSDL: " << SDL_GetError());
+        SIHD_LOG(error, "ImguiBackendSDL: " << SDL_GetError());
         return false;
     }
     SDL_GL_MakeCurrent(_sdl_window_ptr, _sdl_context_ptr);
@@ -126,7 +126,7 @@ bool    ImguiBackendSDL::init_backend_dx()
 {
     if (_sdl_window_ptr == nullptr)
     {
-        LOG(error, "ImguiBackendSDL: window not initialized");
+        SIHD_LOG(error, "ImguiBackendSDL: window not initialized");
         return false;
     }
     _is_init = ImGui_ImplSDL2_InitForD3D(_sdl_window_ptr);
@@ -217,7 +217,7 @@ HWND    ImguiBackendSDL::windows_window()
 {
     if (_sdl_window_ptr == nullptr)
     {
-        LOG(error, "ImguiBackendSDL: window not initialized");
+        SIHD_LOG(error, "ImguiBackendSDL: window not initialized");
         return nullptr;
     }
     SDL_SysWMinfo wmInfo;

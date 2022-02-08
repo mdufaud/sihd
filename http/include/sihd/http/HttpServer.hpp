@@ -22,7 +22,7 @@
 namespace sihd::http
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 class HttpServer:   public sihd::util::Node,
                     public sihd::util::Configurable,

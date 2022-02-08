@@ -69,8 +69,9 @@ class Str
         static std::string & to_lower(std::string & s);
         static std::string replace(const std::string_view s, const std::string_view from, const std::string_view to);
 
+        static std::string to_hex(uint64_t n);
         static std::string addr_to_string(void *addr, size_t padding = 0);
-        static std::string num_to_string(size_t num, uint16_t base);
+        static std::string num_to_string(int64_t num, uint16_t base);
         static char num_to_char(size_t num);
         static std::string hexdump(const void *mem, size_t size, char delim = ' ');
         // formatted hexdump
@@ -82,6 +83,7 @@ class Str
         static bool ends_with(const std::string_view s, const std::string_view end);
 
         static std::map<std::string, std::string> parse_configuration(const std::string & conf);
+
 
         static bool to_long(const std::string & str, long *ret, uint16_t base = 0);
         static bool to_ulong(const std::string & str, unsigned long *ret, uint16_t base = 0);

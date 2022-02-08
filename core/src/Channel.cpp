@@ -5,7 +5,7 @@ namespace sihd::core
 
 using namespace sihd::util;
 
-NEW_LOGGER("sihd::core");
+SIHD_NEW_LOGGER("sihd::core");
 
 sihd::util::IClock *Channel::_default_channel_clock_ptr = &sihd::util::Clock::default_clock;
 
@@ -44,23 +44,23 @@ Channel     *Channel::build(const std::string & configuration)
     auto map = Str::parse_configuration(configuration);
     if (map.find("name") == map.end())
     {
-        LOG(error, "Channel: cannot build from configuration '" << configuration << "' no name");
+        SIHD_LOG(error, "Channel: cannot build from configuration '" << configuration << "' no name");
         return nullptr;
     }
     if (map.find("type") == map.end())
     {
-        LOG(error, "Channel: cannot build from configuration '" << configuration << "' no type");
+        SIHD_LOG(error, "Channel: cannot build from configuration '" << configuration << "' no type");
         return nullptr;
     }
     if (map.find("size") == map.end())
     {
-        LOG(error, "Channel: cannot build from configuration '" << configuration << "' no size");
+        SIHD_LOG(error, "Channel: cannot build from configuration '" << configuration << "' no size");
         return nullptr;
     }
     unsigned long val;
     if (Str::to_ulong(map["size"], &val) == false)
     {
-        LOG(error, "Channel: cannot build from configuration '" << configuration
+        SIHD_LOG(error, "Channel: cannot build from configuration '" << configuration
                     << "' size is either overflow or invalid");
         return nullptr;
     }
@@ -100,7 +100,7 @@ bool    Channel::write(const IArray & arr)
 {
     if (_notifying)
     {
-        LOG(warning, "Channel: cannot write while notifying");
+        SIHD_LOG(warning, "Channel: cannot write while notifying");
         return false;
     }
     bool ret = false;
@@ -117,12 +117,12 @@ bool    Channel::write(const IArray & arr)
     {
         if (_array_ptr->is_same_type(arr) == false)
         {
-            LOG(error, "Channel: cannot write an array from different type: "
+            SIHD_LOG(error, "Channel: cannot write an array from different type: "
                 << arr.data_type_to_string() << " != " << _array_ptr->data_type_to_string());
         }
         else if (_array_ptr->byte_capacity() <= arr.byte_size())
         {
-            LOG(error, "Channel: cannot write an array with too many bytes: "
+            SIHD_LOG(error, "Channel: cannot write an array with too many bytes: "
                     << arr.byte_size() << " > " << _array_ptr->byte_capacity());
         }
     }

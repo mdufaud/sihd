@@ -28,17 +28,17 @@ namespace test::module
 using namespace sihd::util;
 using namespace sihd::pcap;
 
-NEW_LOGGER("test::module");
+SIHD_NEW_LOGGER("test::module");
 
 
 static std::string interfaces_test()
 {
-    LOG(info, "Net interfaces");
+    SIHD_LOG(info, "Net interfaces");
     std::string interface_to_sniff;
     PcapInterfaces ifaces;
     for (const auto & iface: ifaces.ifaces())
     {
-        LOG(info, iface.dump());
+        SIHD_LOG(info, iface.dump());
         if (iface.up() && !iface.loopback())
         {
             interface_to_sniff = iface.name();
@@ -50,12 +50,12 @@ static std::string interfaces_test()
 
 static void sniffer_test(const std::string & interface_to_sniff)
 {
-    LOG(info, "Sniffing on eth0");
+    SIHD_LOG(info, "Sniffing on eth0");
     Sniffer pcap("pcap-sniffer");
     Handler<Sniffer *> obs([] (Sniffer *obj)
     {
-        // TRACE(obj->array().hexdump());
-        LOG(info, obj->array().size());
+        // SIHD_TRACE(obj->array().hexdump());
+        SIHD_LOG(info, obj->array().size());
         std::cout << Str::hexdump_fmt(obj->array().cbuf(), obj->array().byte_size()) << std::endl;
     });
     pcap.add_observer(&obs);
@@ -67,7 +67,7 @@ static void sniffer_test(const std::string & interface_to_sniff)
         pcap.set_promiscuous(false);
         pcap.set_snaplen(2048);
         pcap.set_timeout(512);
-        LOG(info, "Activating packet capture");
+        SIHD_LOG(info, "Activating packet capture");
         pcap.activate();
         if (pcap.is_active())
         {
@@ -78,7 +78,7 @@ static void sniffer_test(const std::string & interface_to_sniff)
             pcap.close();
         }
     }
-    LOG(info, "Ending packet capture");
+    SIHD_LOG(info, "Ending packet capture");
     std::cout << std::endl;
 }
 

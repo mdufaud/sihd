@@ -11,7 +11,7 @@
 namespace sihd::net
 {
 
-NEW_LOGGER("sihd::net");
+SIHD_NEW_LOGGER("sihd::net");
 
 std::map<std::string, int> Ip::_domain_to_str = {
     {"unix", PF_UNIX}, {"ipv4", PF_INET}, {"ipv6", PF_INET6},

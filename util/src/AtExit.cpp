@@ -5,7 +5,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 bool AtExit::installed = false;
 std::mutex AtExit::runnable_mutex;
@@ -68,7 +68,7 @@ bool    AtExit::install()
         int ret = std::atexit(exit_callback);
         if (ret != 0)
         {
-            LOG(error, "AtExit: cannot install atexit handler");
+            SIHD_LOG(error, "AtExit: cannot install atexit handler");
             return false;
         }
         installed = true;

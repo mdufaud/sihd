@@ -6,7 +6,7 @@ namespace sihd::util
 
 SIHD_UTIL_REGISTER_FACTORY(Scheduler);
 
-LOGGER;
+SIHD_LOGGER;
 
 Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent)
 {

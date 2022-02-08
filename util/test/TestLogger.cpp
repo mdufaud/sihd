@@ -9,7 +9,7 @@
 
 namespace test
 {
-    NEW_LOGGER("test");
+    SIHD_NEW_LOGGER("test");
     using namespace sihd::util;
     class LogCounter:   public ALogger
     {
@@ -73,7 +73,7 @@ namespace test
             }
     };
 
-    TEST_F(TestLogger, test_logging)
+    TEST_F(TestLogger, test_logger_basic)
     {
         Logger  log("test::logger");
 
@@ -94,59 +94,59 @@ namespace test
         ASSERT_TRUE(this->has_logged_every_levels());
     }
 
-    TEST_F(TestLogger, test_logging_macros)
+    TEST_F(TestLogger, test_logger_macros)
     {
         LoggerManager::add(new BasicLogger());
-        LOG(debug, "DEBUG");
-        LOG(info, "INFO");
-        LOG(warning, "WARNING");
-        LOG(error, "ERROR");
-        LOG(critical, "CRITICAL");
+        SIHD_LOG(debug, "DEBUG");
+        SIHD_LOG(info, "INFO");
+        SIHD_LOG(warning, "WARNING");
+        SIHD_LOG(error, "ERROR");
+        SIHD_LOG(critical, "CRITICAL");
         ASSERT_TRUE(this->has_logged_every_levels());
         ASSERT_EQ(log_counter->src, "test");
 
-        TRACE("TEST TRACE");
+        SIHD_TRACE("TEST TRACE");
         ASSERT_EQ(log_counter->debug, 2);
 
-        LOG(info, "stream test: " << 1.23 << " - " << "hello");
+        SIHD_LOG(info, "stream test: " << 1.23 << " - " << "hello");
         ASSERT_EQ(log_counter->msg, "stream test: 1.23 - hello");
 
-        LOG_INFO("int test: %02d - %s", 2, "world");
+        SIHD_LOG_INFO("int test: %02d - %s", 2, "world");
         ASSERT_EQ(log_counter->msg, "int test: 02 - world");
         ASSERT_EQ(log_counter->info, 3);
     }
 
-    TEST_F(TestLogger, test_filters)
+    TEST_F(TestLogger, test_logger_filters)
     {
-        auto logger = new BasicLogger();
+        auto logger = new BasicLogger(stderr, true);
         LoggerManager::add(logger);
         logger->add_filter(new LevelFilterLogger(LogLevel::warning));
         log_counter->add_filter(new LevelFilterLogger(LogLevel::warning));
-        LOG(error, "Should print");
+        SIHD_LOG(error, "Should print");
         ASSERT_EQ(log_counter->error, 1);
-        LOG(warning, "Should print");
+        SIHD_LOG(warning, "Should print");
         ASSERT_EQ(log_counter->warning, 1);
-        LOG(info, "Should not print");
+        SIHD_LOG(info, "Should not print");
         ASSERT_EQ(log_counter->info, 0);
-        LOG(debug, "Should not print");
+        SIHD_LOG(debug, "Should not print");
         ASSERT_EQ(log_counter->debug, 0);
         logger->remove_filters();
         log_counter->remove_filters();
 
         LoggerManager::filter(new LevelFilterLogger("CRITICAL"));
-        LOG(critical, "Should print");
+        SIHD_LOG(critical, "Should print");
         ASSERT_EQ(log_counter->critical, 1);
-        LOG(error, "Should not print");
+        SIHD_LOG(error, "Should not print");
         ASSERT_EQ(log_counter->error, 1);
         LoggerManager::clear_filters();
 
         LoggerManager::filter(new SourceFilterLogger("test"));
-        LOG(critical, "Should not print");
+        SIHD_LOG(critical, "Should not print");
         ASSERT_EQ(log_counter->critical, 1);
         LoggerManager::clear_filters();
 
         LoggerManager::filter(new SourceFilterLogger("other"));
-        LOG(debug, "Should print");
+        SIHD_LOG(debug, "Should print");
         ASSERT_EQ(log_counter->debug, 1);
     }
 }

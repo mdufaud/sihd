@@ -5,7 +5,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 Worker::Worker(IRunnable *runnable): _runnable_ptr(nullptr), _started(false), _running(false)
 {
@@ -49,7 +49,7 @@ bool    Worker::start_worker(const std::string & name)
 {
     if (_runnable_ptr == nullptr)
     {
-        LOG_ERROR("Worker: cannot start worker '%s': nothing to run", name.c_str());
+        SIHD_LOG_ERROR("Worker: cannot start worker '%s': nothing to run", name.c_str());
         return false;
     }
     {

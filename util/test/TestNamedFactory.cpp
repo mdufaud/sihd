@@ -6,7 +6,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     class TestNamedFactory:   public ::testing::Test
     {
@@ -36,23 +36,15 @@ namespace test
         EXPECT_EQ(NamedFactory::load("sihd_util", "unknown_symbol", "err"), nullptr);
 
         Named *node = NamedFactory::load("sihd_util", "Node", "test_node");
-        EXPECT_NE(node, nullptr);
-        if (node == nullptr)
-            return ;
+        ASSERT_NE(node, nullptr);
         EXPECT_EQ(node->get_name(), "test_node");
         Node *casted = dynamic_cast<Node *>(node);
-        EXPECT_NE(casted, nullptr);
-        if (casted != nullptr)
-        {
-            Named *child = NamedFactory::load("sihd_util", "Node", "child_node", casted);
-            EXPECT_NE(child, nullptr);
-            if (child != nullptr)
-            {
-                EXPECT_EQ(child->get_parent(), casted);
-                if (child->get_parent() != casted)
-                    delete child;
-            }
-        }
+        ASSERT_NE(casted, nullptr);
+        Named *child = NamedFactory::load("sihd_util", "Node", "child_node", casted);
+        ASSERT_NE(child, nullptr);
+        EXPECT_EQ(child->get_parent(), casted);
+        if (child->get_parent() != casted)
+            delete child;
         delete node;
     }
 }

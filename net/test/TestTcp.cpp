@@ -9,7 +9,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     using namespace sihd::net;
     class TestTcp:  public ::testing::Test
@@ -60,16 +60,16 @@ namespace test
         {
             for (BasicServerHandler::Client *client: bsh->new_clients())
             {
-                LOG(info, "Server new client: " << client->fd());
+                SIHD_LOG(info, "Server new client: " << client->fd());
                 bsh->send_to_client(client, welcome_arr);
             }
             for (BasicServerHandler::Client *client: bsh->read_activity())
             {
-                LOG(info, "Client said: " << client->read_array->to_string(','));
+                SIHD_LOG(info, "Client said: " << client->read_array->to_string(','));
             }
             for (BasicServerHandler::Client *client: bsh->write_activity())
             {
-                LOG(info, "Server wrote to client: " << client->write_array->to_string(','));
+                SIHD_LOG(info, "Server wrote to client: " << client->write_array->to_string(','));
             }
         });
         server_handler.add_observer(&handler);
@@ -77,12 +77,12 @@ namespace test
         Worker worker(&server);
         EXPECT_TRUE(worker.start_sync_worker("tcp-server"));
 
-        LOG(debug, "Simulating a new connection");
+        SIHD_LOG(debug, "Simulating a new connection");
         client1.open_and_connect(localhost);
 
         usleep(1000);
 
-        LOG(debug, "Simulating a send from client: " << hello_world_arr.to_string());
+        SIHD_LOG(debug, "Simulating a send from client: " << hello_world_arr.to_string());
         EXPECT_TRUE(client1.send_all(hello_world_arr));
 
         usleep(1000);
@@ -94,7 +94,7 @@ namespace test
             EXPECT_TRUE(client->read_array->is_equal(hello_world_arr));
         }
 
-        LOG(debug, "Simulating 3 new connections");
+        SIHD_LOG(debug, "Simulating 3 new connections");
 
         client2.open_and_connect(localhost);
         client3.open_and_connect(localhost);
@@ -102,7 +102,7 @@ namespace test
 
         usleep(2000);
 
-        LOG(debug, "Simulating a new unacceptable connection");
+        SIHD_LOG(debug, "Simulating a new unacceptable connection");
         client5.open_and_connect(localhost);
 
         usleep(1000);
@@ -115,11 +115,11 @@ namespace test
             EXPECT_EQ(client5.receive(hello_world_arr), 0);
         }
 
-        LOG(debug, "Stop serving");
+        SIHD_LOG(debug, "Stop serving");
         EXPECT_TRUE(server.stop_serving());
         EXPECT_TRUE(worker.stop_worker());
 
-        LOG(debug, "Total observations: " << handler_waiter.notifications);
+        SIHD_LOG(debug, "Total observations: " << handler_waiter.notifications);
         // should be lower than ~11 in general
         EXPECT_LT(handler_waiter.notifications, 15);
     }
@@ -156,7 +156,7 @@ namespace test
         sihd::util::Handler<INetReceiver *> handler([&recv] (INetReceiver *rcv)
         {
             rcv->receive(recv);
-            LOG(debug, "Data received: " << recv.to_string() << " - " << recv.byte_size() << " bytes");
+            SIHD_LOG(debug, "Data received: " << recv.to_string() << " - " << recv.byte_size() << " bytes");
         });
         client.add_observer(&handler);
         EXPECT_EQ(accepted.send(bye), (ssize_t)bye.size());

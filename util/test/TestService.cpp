@@ -8,7 +8,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
 
     class FakeService:  public AService
@@ -85,14 +85,14 @@ namespace test
             {
                 ++obs_changed;
                 (void)service;
-                TRACE("Service changed state");
+                SIHD_TRACE("Service changed state");
             }
 
             virtual void handle(ServiceController *ctrl)
             {
                 ++obs_changed;
                 auto machine = ctrl->statemachine;
-                LOG(debug, "Service state: " << machine.get_state_name(machine.get_state()));
+                SIHD_LOG(debug, "Service state: " << machine.get_state_name(machine.get_state()));
             }
 
             int obs_changed;

@@ -5,7 +5,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::net;
     class TestSocket:   public ::testing::Test
     {
@@ -38,8 +38,8 @@ namespace test
         EXPECT_TRUE(socket_client.open(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
         EXPECT_TRUE(socket_server.set_reuseaddr(true));
 
-        TRACE("Socket rcv: " << socket_server.socket());
-        TRACE("Socket send: " << socket_client.socket());
+        SIHD_TRACE("Socket rcv: " << socket_server.socket());
+        SIHD_TRACE("Socket send: " << socket_client.socket());
 
         IpAddr local_ipv6 = {"::1", 4200};
         const char buff[] = "hello world";

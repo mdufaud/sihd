@@ -4,7 +4,7 @@
 namespace sihd::util
 {
 
-NEW_LOGGER("sihd::util");
+SIHD_NEW_LOGGER("sihd::util");
 
 Logger::Logger(const std::string & name): name(name)
 {

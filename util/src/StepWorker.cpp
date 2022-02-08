@@ -4,7 +4,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 StepWorker::StepWorker(IRunnable *runnable): Worker(runnable), _pause(false), _sleep_time(0)
 {
@@ -20,7 +20,7 @@ bool    StepWorker::set_frequency(double frequency)
 {
     if (frequency <= 0.0)
     {
-        LOG(error, "StepWorker: frequency " << frequency << " cannot be negative");
+        SIHD_LOG(error, "StepWorker: frequency " << frequency << " cannot be negative");
         return false;
     }
     _sleep_time = time::freq(frequency);
@@ -70,7 +70,7 @@ bool    StepWorker::on_worker_start()
 {
     if (_sleep_time == 0)
     {
-        LOG(error, "StepWorker: no frequency configured");
+        SIHD_LOG(error, "StepWorker: no frequency configured");
         return false;
     }
     return true;

@@ -4,7 +4,7 @@
 namespace sihd::net
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 NetInterfaces::NetInterfaces()
 {

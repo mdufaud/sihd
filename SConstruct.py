@@ -224,6 +224,7 @@ modules_generated_libs = {}
 modules_generated_bins = {}
 modules_scons_libs = {}
 modules_scons_bins = {}
+modules_cloned_git_repositories = {}
 targets = []
 
 def add_targets(src):
@@ -299,9 +300,22 @@ def _env_build_bin(self, src, bin_name=None, add_libs=[], **kwargs):
     modules_scons_libs[module_name] = bin
     return bin
 
-###############################################################################
-# Replace vars in files
-###############################################################################
+def _env_git_clone(self, url, branch, dest):
+    global modules_cloned_git_repositories
+    modname = self['APP_MODULE_NAME']
+    dest = os.path.join(builder_helper.build_root_path, modname, dest)
+    ret = True
+    if os.path.isdir(dest):
+        builder_helper.info("repository already cloned: {}".format(dest))
+    else:
+        builder_helper.info("cloning repository: {} -> {}".format(url, dest))
+        args = ['git', 'clone', '--branch', branch, '--depth', '1', url, dest]
+        if verbose:
+            builder_helper.info("git clone cmd: '{}'".format(" ".join(args)))
+        ret = subprocess.call(args) == 0
+    if ret:
+        modules_cloned_git_repositories.setdefault(modname, []).append(dest)
+    return ret
 
 def _sed_replace(file, replace_dic):
     for key, value in replace_dic.items():
@@ -335,6 +349,7 @@ base_env.AddMethod(_env_build_bin, "build_bin")
 base_env.AddMethod(_env_build_test, "build_test")
 base_env.AddMethod(_env_parse_config, "parse_config")
 base_env.AddMethod(_env_replace_in_build, "build_replace")
+base_env.AddMethod(_env_git_clone, "git_clone")
 
 ## build utilities
 

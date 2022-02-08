@@ -11,7 +11,7 @@
 namespace sihd::net
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 using namespace sihd::util;
 
@@ -179,7 +179,7 @@ void    IpAddr::_fill_subnet()
     struct sockaddr_in addr;
     if (this->get_first_sockaddr_in(&addr) == false)
     {
-        LOG(warning, "IpAddr: no IPV4 address found to fill subnet for host: " << _host);
+        SIHD_LOG(warning, "IpAddr: no IPV4 address found to fill subnet for host: " << _host);
         return ;
     }
     _subnet.netid.s_addr = addr.sin_addr.s_addr & _subnet.netmask.s_addr;
@@ -213,13 +213,13 @@ bool    IpAddr::_netmask_from_str(const std::string & mask_value_str)
     uint32_t mask_value;
     if (!Str::is_number(mask_value_str) || !Str::convert_from_string<uint32_t>(mask_value_str, mask_value))
     {
-        LOG(error, "IpAddr: not a subnet mask: " << mask_value_str);
+        SIHD_LOG(error, "IpAddr: not a subnet mask: " << mask_value_str);
         return false;
     }
     uint32_t actual_mask = IpAddr::value_to_netmask(mask_value);
     if (IpAddr::is_valid_netmask(htonl(actual_mask)) == false)
     {
-        LOG(error, "IpAddr: not a valid mask: " << mask_value_str);
+        SIHD_LOG(error, "IpAddr: not a valid mask: " << mask_value_str);
         return false;
     }
     _subnet.netmask.s_addr = actual_mask;
@@ -234,7 +234,7 @@ bool    IpAddr::set_subnet_mask(const std::string & mask)
         return false;
     if (IpAddr::is_valid_netmask(htonl(sockaddr_mask.sin_addr.s_addr)) == false)
     {
-        LOG(error, "IpAddr: not a valid mask: " << mask);
+        SIHD_LOG(error, "IpAddr: not a valid mask: " << mask);
         return false;
     }
     _subnet.netmask.s_addr = sockaddr_mask.sin_addr.s_addr;
@@ -247,7 +247,7 @@ bool    IpAddr::set_subnet_mask(uint32_t mask)
 {
     if (IpAddr::is_valid_netmask(htonl(mask)) == false)
     {
-        LOG(error, "IpAddr: not a valid mask: " << mask);
+        SIHD_LOG(error, "IpAddr: not a valid mask: " << mask);
         return false;
     }
     _subnet.netmask.s_addr = mask;
@@ -322,7 +322,7 @@ bool    IpAddr::to_sockaddr_in(sockaddr_in *addr, const std::string & ip, int po
     {
         // 0 is returned if src does not contain a character string representing a valid network address in the specified address family
         if (ret == -1)
-            LOG(error, "IpAddr: to_sockaddr_in error for ip '" << ip << "': " << strerror(errno));
+            SIHD_LOG(error, "IpAddr: to_sockaddr_in error for ip '" << ip << "': " << strerror(errno));
         return false;
     }
     addr->sin_family = AF_INET;
@@ -338,7 +338,7 @@ bool    IpAddr::to_sockaddr_in6(sockaddr_in6 *addr, const std::string & ip, int 
     {
         // 0 is returned if src does not contain a character string representing a valid network address in the specified address family
         if (ret == -1)
-            LOG(error, "IpAddr: to_sockaddr_in6 error for ip '" << ip << "': " << strerror(errno));
+            SIHD_LOG(error, "IpAddr: to_sockaddr_in6 error for ip '" << ip << "': " << strerror(errno));
         return false;
     }
     addr->sin6_family = AF_INET6;
@@ -368,7 +368,7 @@ std::string IpAddr::fetch_ip_name(sockaddr *addr, socklen_t addr_len)
     int ret = ::getnameinfo(addr, addr_len, host, NI_MAXHOST, nullptr, 0, flags);
     if (ret != 0)
     {
-        LOG(error, "IpAddr: getnameinfo error: " << gai_strerror(ret));
+        SIHD_LOG(error, "IpAddr: getnameinfo error: " << gai_strerror(ret));
         return "";
     }
     return host;
@@ -497,7 +497,7 @@ std::optional<IpAddr::DnsInfo> IpAddr::dns_lookup(const std::string & host, bool
     IpAddr::_fill_dns_lookup_hints(&hints);
     if ((ret = getaddrinfo(host.c_str(), NULL, &hints, &results)) != 0)
     {
-        LOG(error, "IpAddr: getaddrinfo error '" << host << "': " << gai_strerror(ret));
+        SIHD_LOG(error, "IpAddr: getaddrinfo error '" << host << "': " << gai_strerror(ret));
         return std::nullopt;
     }
     first_result = results;

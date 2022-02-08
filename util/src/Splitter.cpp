@@ -6,7 +6,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 Splitter::Splitter(): _empty_delimitations(false), _compare_method(nullptr)
 {

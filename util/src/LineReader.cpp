@@ -9,7 +9,7 @@ namespace sihd::util
 
 SIHD_UTIL_REGISTER_FACTORY(LineReader)
 
-LOGGER;
+SIHD_LOGGER;
 
 LineReader::LineReader(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent)
@@ -59,7 +59,7 @@ bool    LineReader::set_read_buffsize(size_t buff)
         return true;
     if (buff == 0)
     {
-        LOG(error, "LineReader: cannot set read buffer size to 0");
+        SIHD_LOG(error, "LineReader: cannot set read buffer size to 0");
         return false;
     }
     _read_buff_size = buff;
@@ -72,7 +72,7 @@ bool    LineReader::set_line_buffsize(size_t buff)
         return true;
     if (buff == 0)
     {
-        LOG(error, "LineReader: cannot set line buffer size to 0");
+        SIHD_LOG(error, "LineReader: cannot set line buffer size to 0");
         return false;
     }
     _line_buff_size = buff;
@@ -190,7 +190,7 @@ bool    LineReader::_allocate_line()
 {
     _line_ptr = (char *)realloc(_line_ptr, _line_buff_size + 1);
     if (_line_ptr == nullptr)
-        LOG(error, "LineReader: error allocating line");
+        SIHD_LOG(error, "LineReader: error allocating line");
     return _line_ptr != nullptr;
 }
 
@@ -198,7 +198,7 @@ bool    LineReader::_allocate_read_buffer()
 {
     _read_ptr = (char *)realloc(_read_ptr, _read_buff_size + 1);
     if (_read_ptr == nullptr)
-        LOG(error, "LineReader: error allocating read buffer");
+        SIHD_LOG(error, "LineReader: error allocating read buffer");
     return _read_ptr != nullptr;
 }
 

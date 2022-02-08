@@ -8,7 +8,7 @@ namespace sihd::csv
 
 SIHD_UTIL_REGISTER_FACTORY(CsvReader)
 
-NEW_LOGGER("sihd::csv");
+SIHD_NEW_LOGGER("sihd::csv");
 
 CsvReader::CsvReader(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent)
@@ -33,7 +33,7 @@ bool    CsvReader::set_quote_value(int c)
 {
     if (sihd::util::Str::closing_escape_of(c) < 0)
     {
-        LOG(error, "CsvReader: quote character '" << c << "' is not supported");
+        SIHD_LOG(error, "CsvReader: quote character '" << c << "' is not supported");
         return false;
     }
     _quote = c;
@@ -45,7 +45,7 @@ bool    CsvReader::set_delimiter(int c)
 {
     if (std::isprint(c) == 0)
     {
-        LOG(error, "CsvReader: delimiter is not a printable character");
+        SIHD_LOG(error, "CsvReader: delimiter is not a printable character");
         return false;
     }
     _splitter.set_delimiter((char *)&c);
@@ -59,7 +59,7 @@ bool    CsvReader::set_commentary(int c)
         _comment = c;
         return true;
     }
-    LOG(error, "CsvReader: commentary is not a printable character");
+    SIHD_LOG(error, "CsvReader: commentary is not a printable character");
     return false;
 }
 
@@ -103,7 +103,7 @@ bool    CsvReader::read_next()
     }
     // ret < 0 can mean an end of file
     if (ret < 0 && errno > 0)
-        LOG(error, "CsvReader: read error: " << strerror(errno));
+        SIHD_LOG(error, "CsvReader: read error: " << strerror(errno));
     return ret >= 0;
 }
 

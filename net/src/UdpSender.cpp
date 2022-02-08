@@ -7,7 +7,7 @@ namespace sihd::net
 
 SIHD_UTIL_REGISTER_FACTORY(UdpSender)
 
-LOGGER;
+SIHD_LOGGER;
 
 UdpSender::UdpSender(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent)

@@ -9,7 +9,7 @@ namespace sihd::zip
 
 SIHD_UTIL_REGISTER_FACTORY(ZipReader)
 
-LOGGER;
+SIHD_LOGGER;
 
 using namespace sihd::util;
 
@@ -65,7 +65,7 @@ bool    ZipReader::_allocate_buffer_if_null()
         _buf_ptr = new char[_buf_total_size];
         if (_buf_ptr == nullptr)
         {
-            LOG(error, "ZipReader: could not allocate read buffer of size: " << _buf_total_size);
+            SIHD_LOG(error, "ZipReader: could not allocate read buffer of size: " << _buf_total_size);
         }
         else
         {
@@ -88,7 +88,7 @@ bool    ZipReader::set_password(const char *password)
         return false;
     if (zip_set_default_password(_zip_ptr, password) < 0)
     {
-        LOG(error, "ZipReader: could not set password: " << ZipUtils::get_error(_zip_ptr));
+        SIHD_LOG(error, "ZipReader: could not set password: " << ZipUtils::get_error(_zip_ptr));
         return false;
     }
     return true;
@@ -98,7 +98,7 @@ bool    ZipReader::set_buffer_size(size_t size)
 {
     if (size == 0)
     {
-        LOG(error, "ZipReader: cannot set buffer to 0");
+        SIHD_LOG(error, "ZipReader: cannot set buffer to 0");
         return false;
     }
     this->_delete_buffer();
@@ -117,7 +117,7 @@ bool    ZipReader::open(const std::string & path, bool do_strict_checks)
     _zip_ptr = zip_open(path.c_str(), flags, &error);
     if (_zip_ptr == nullptr)
     {
-        LOG(error, "ZipReader: could not open zip: " << ZipUtils::get_error(error));
+        SIHD_LOG(error, "ZipReader: could not open zip: " << ZipUtils::get_error(error));
         return false;
     }
     this->_init();
@@ -143,7 +143,7 @@ bool    ZipReader::close()
         this->_close_file();
         ret = zip_close(_zip_ptr) == 0;
         if (!ret)
-            LOG(error, "ZipReader: could not close zip file: " << ZipUtils::get_error(_zip_ptr));
+            SIHD_LOG(error, "ZipReader: could not close zip file: " << ZipUtils::get_error(_zip_ptr));
         _zip_ptr = nullptr;
     }
     return ret;
@@ -155,7 +155,7 @@ bool    ZipReader::remove(size_t index)
         return false;
     if (zip_delete(_zip_ptr, index) < 0)
     {
-        LOG(error, "ZipReader: could not remove index '" << index << "': " << ZipUtils::get_error(_zip_ptr));
+        SIHD_LOG(error, "ZipReader: could not remove index '" << index << "': " << ZipUtils::get_error(_zip_ptr));
         return false;
     }
     return true;
@@ -167,7 +167,7 @@ bool    ZipReader::rename(size_t index, const char *name)
         return false;
     if (zip_file_rename(_zip_ptr, index, name, ZIP_FL_ENC_UTF_8) < 0)
     {
-        LOG(error, "ZipReader: could not rename index '" << index << "': " << ZipUtils::get_error(_zip_ptr));
+        SIHD_LOG(error, "ZipReader: could not rename index '" << index << "': " << ZipUtils::get_error(_zip_ptr));
         return false;
     }
     return true;
@@ -228,7 +228,7 @@ bool    ZipReader::load_entry(size_t idx)
     _entry_error = zip_stat_index(_zip_ptr, _current_idx, 0, &_current_zip_entry) != 0;
     if (_entry_error)
     {
-        LOG(error, "ZipReader: could not read entry '" << idx << "': " << ZipUtils::get_error(_zip_ptr));
+        SIHD_LOG(error, "ZipReader: could not read entry '" << idx << "': " << ZipUtils::get_error(_zip_ptr));
     }
     return !_entry_error;
 }
@@ -243,7 +243,7 @@ bool    ZipReader::load_entry(const std::string & name)
     _entry_error = zip_stat(_zip_ptr, name.c_str(), 0, &_current_zip_entry) != 0;
     if (_entry_error)
     {
-        LOG(error, "ZipReader: could not read entry '" << name << "': " << ZipUtils::get_error(_zip_ptr));
+        SIHD_LOG(error, "ZipReader: could not read entry '" << name << "': " << ZipUtils::get_error(_zip_ptr));
     }
     return !_entry_error;
 }
@@ -275,7 +275,7 @@ ssize_t     ZipReader::read_entry(const char *password)
             _current_zip_file_ptr = zip_fopen_index(_zip_ptr, _current_zip_entry.index, 0);
         if (_current_zip_file_ptr == nullptr)
         {
-            LOG(error, "ZipReader: could not open entry: " << _current_zip_entry.name);
+            SIHD_LOG(error, "ZipReader: could not open entry: " << _current_zip_entry.name);
             return -1;
         }
         _zip_reading_file = true;
@@ -284,7 +284,7 @@ ssize_t     ZipReader::read_entry(const char *password)
     _read_buf_size = ret;
     if (ret < 0)
     {
-        LOG(error, "ZipReader: could not read entry: " << _current_zip_entry.name);
+        SIHD_LOG(error, "ZipReader: could not read entry: " << _current_zip_entry.name);
     }
     else
         _buf_ptr[ret] = 0;
@@ -302,7 +302,7 @@ bool    ZipReader::write_entry(const std::string & path, const char *password)
     {
         ret = Files::make_directory(path, 0640);
         if (!ret)
-            LOG(error, "ZipReader: could not write directory entry '" << _current_zip_entry.name << "' to: " << path);
+            SIHD_LOG(error, "ZipReader: could not write directory entry '" << _current_zip_entry.name << "' to: " << path);
         return ret;
     }
     File file(path, "w");
@@ -314,7 +314,7 @@ bool    ZipReader::write_entry(const std::string & path, const char *password)
             ret = file.write(_buf_ptr, read) > 0;
             if (!ret)
             {
-                LOG(error, "ZipReader: could not write file entry '" << _current_zip_entry.name << "' to: " << path);
+                SIHD_LOG(error, "ZipReader: could not write file entry '" << _current_zip_entry.name << "' to: " << path);
                 this->_close_file();
             }
         }

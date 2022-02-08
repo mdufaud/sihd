@@ -23,8 +23,8 @@ void    BasicLogger::log(const LogInfo & info, const char *msg)
 #endif
             info.timestamp.tv_sec, info.timestamp.tv_nsec,
             print_thread_id ? info.thread_id_str.c_str() : "",
-            info.thread_name.c_str(),
-            info.level_str.c_str(), info.source.c_str(), msg);
+            info.thread_name.data(),
+            info.level_str, info.source.data(), msg);
 }
 
 }

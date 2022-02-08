@@ -7,7 +7,7 @@ namespace sihd::net
 
 SIHD_UTIL_REGISTER_FACTORY(TcpClient)
 
-LOGGER;
+SIHD_LOGGER;
 
 TcpClient::TcpClient(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent)

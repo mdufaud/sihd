@@ -161,8 +161,14 @@ char    Str::num_to_char(size_t num)
         return '0' + num;
 }
 
-std::string     Str::num_to_string(size_t num, uint16_t base)
+std::string     Str::to_hex(uint64_t n)
 {
+    return Str::num_to_string(n, 16);
+}
+
+std::string     Str::num_to_string(int64_t num, uint16_t base)
+{
+    /*
     size_t i = 0;
     size_t size = Num::get_size(num, base);
     std::string ret;
@@ -176,6 +182,18 @@ std::string     Str::num_to_string(size_t num, uint16_t base)
             num = num / base;
         }
         ++i;
+    }
+    */
+    if (num == 0)
+        return "0";
+    std::string ret;
+    while (num != 0)
+    {
+        if (num < base)
+            ret = num_to_char(num) + ret;
+        else
+            ret = num_to_char(num % base) + ret;
+        num = num / base;
     }
     return ret;
 }

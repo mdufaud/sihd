@@ -56,7 +56,7 @@ typedef void (*sighandler_t)(int);
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 bool OS::signal_used = false;
 std::mutex OS::signal_mutex;
@@ -108,7 +108,7 @@ bool    OS::clear_signal_handler(int sig, IRunnable *runnable)
 
 void    OS::_signal_callback(int sig)
 {
-    LOG(debug, "Signal caught: " << OS::get_signal_name(sig));
+    SIHD_LOG(debug, "Signal caught: " << OS::get_signal_name(sig));
     std::lock_guard lock(OS::signal_mutex);
     for (IRunnable *runnable : OS::map_signals_handlers[sig])
     {
@@ -121,7 +121,7 @@ bool    OS::add_signal_handler(int sig, IRunnable *runnable)
     sighandler_t handler = signal(sig, OS::_signal_callback);
     if (handler == SIG_ERR)
     {
-        LOG(error, "Error handling signal: " << OS::get_signal_name(sig));
+        SIHD_LOG(error, "Error handling signal: " << OS::get_signal_name(sig));
         return false;
     }
     std::lock_guard lock(OS::signal_mutex);
@@ -144,7 +144,7 @@ bool    OS::unhandle_signal(int sig)
     sighandler_t handler = signal(sig, SIG_DFL);
     if (handler == SIG_ERR)
     {
-        LOG(error, "Error removing signal: " << OS::get_signal_name(sig));
+        SIHD_LOG(error, "Error removing signal: " << OS::get_signal_name(sig));
         return false;
     }
     return true;
@@ -170,7 +170,7 @@ rlim_t  OS::get_max_fds()
     struct rlimit r;
     if (getrlimit(RLIMIT_NOFILE, &r) == -1)
     {
-        LOG(error, "OS: getrlim_t " << strerror(errno));
+        SIHD_LOG(error, "OS: getrlim_t " << strerror(errno));
         return 0;
     }
     return r.rlim_cur;
@@ -187,7 +187,7 @@ bool    OS::ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
     bool ret = ::ioctlsocket(fd, request, reinterpret_cast<long unsigned int *>(arg_ptr)) == 0;
 #endif
     if (!ret && logerror)
-        LOG(error, "OS: ioctl error: " << strerror(errno));
+        SIHD_LOG(error, "OS: ioctl error: " << strerror(errno));
     return ret == 0;
 }
 
@@ -199,7 +199,7 @@ bool    OS::stat(const char *pathname, struct stat *statbuf, bool logerror)
     bool ret = ::_stat(pathname, reinterpret_cast<struct _stat64i32 *>(statbuf)) == 0;
 #endif
     if (!ret && logerror)
-        LOG(error, "OS: stat error: " << strerror(errno));
+        SIHD_LOG(error, "OS: stat error: " << strerror(errno));
     return ret == 0;
 }
 
@@ -211,7 +211,7 @@ bool    OS::fstat(int fd, struct stat *statbuf, bool logerror)
     bool ret = ::_fstat(fd, reinterpret_cast<struct _stat64i32 *>(statbuf)) == 0;
 #endif
     if (!ret && logerror)
-        LOG(error, "OS: fstat error: " << strerror(errno));
+        SIHD_LOG(error, "OS: fstat error: " << strerror(errno));
     return ret == 0;
 }
 
@@ -225,7 +225,7 @@ bool    OS::setsockopt(int socket, int level, int optname, const void *optval, s
     bool ret = ::setsockopt(socket, level, optname, (const char *)optval, optlen) >= 0;
 #endif
     if (!ret && logerror)
-        LOG(error, "OS: getsockopt error: " << strerror(errno));
+        SIHD_LOG(error, "OS: getsockopt error: " << strerror(errno));
     return ret;
 }
 
@@ -239,7 +239,7 @@ bool    OS::getsockopt(int socket, int level, int optname, void *optval, socklen
     bool ret = ::getsockopt(socket, level, optname, (char *)optval, optlen) >= 0;
 #endif
     if (!ret && logerror)
-        LOG(error, "OS: getsockopt error: " << strerror(errno));
+        SIHD_LOG(error, "OS: getsockopt error: " << strerror(errno));
     return ret;
 }
 
@@ -362,7 +362,7 @@ bool    OS::is_run_by_debugger()
 
     if (pid == -1)
     {
-        LOG(error, "OS: fork error: " << strerror(errno));
+        SIHD_LOG(error, "OS: fork error: " << strerror(errno));
         return false;
     }
     if (pid == 0)
@@ -450,17 +450,17 @@ void *OS::load_symbol_unload_lib(const std::string & lib_name, const std::string
     void *handle = OS::load_lib(lib_name);
     if (handle == nullptr)
     {
-        LOG(error, "OS: could not load library: " << OS::get_error_lib());
+        SIHD_LOG(error, "OS: could not load library: " << OS::get_error_lib());
         return nullptr;
     }
     void *sym_ptr = OS::get_symbol_lib(handle, sym_name);
     if (sym_ptr == nullptr)
     {
-        LOG(error, "OS: could not load symbol: " << OS::get_error_lib());
+        SIHD_LOG(error, "OS: could not load symbol: " << OS::get_error_lib());
         return nullptr;
     }
     if (dlclose(handle) != 0)
-        LOG(warning, "OS: could not close lib handle: " << OS::get_error_lib());
+        SIHD_LOG(warning, "OS: could not close lib handle: " << OS::get_error_lib());
     return sym_ptr;
 }
 
@@ -501,12 +501,12 @@ size_t  OS::get_peak_rss()
     int fd = -1;
     if ((fd = open("/proc/self/psinfo", O_RDONLY)) == -1)
     {
-        LOG(error, "OS: get_peak_rss open: " << strerror(errno));
+        SIHD_LOG(error, "OS: get_peak_rss open: " << strerror(errno));
         return (size_t)0L;
     }
     if (read(fd, &psinfo, sizeof(psinfo)) != sizeof(psinfo))
     {
-        LOG(error, "OS: get_peak_rss read: " << strerror(errno));
+        SIHD_LOG(error, "OS: get_peak_rss read: " << strerror(errno));
         close(fd);
         return (size_t)0L;
     }
@@ -518,7 +518,7 @@ size_t  OS::get_peak_rss()
     struct rusage rusage;
     if (getrusage(RUSAGE_SELF, &rusage) == -1)
     {
-        LOG(error, "OS: get_peak_rss getrusage: " << strerror(errno));
+        SIHD_LOG(error, "OS: get_peak_rss getrusage: " << strerror(errno));
         return (size_t)0L;
     }
 # if defined(__SIHD_APPLE__)
@@ -550,7 +550,7 @@ size_t  OS::get_current_rss()
     mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
     if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &infoCount) != KERN_SUCCESS)
     {
-        LOG(error, "OS: get_current_rss task info");
+        SIHD_LOG(error, "OS: get_current_rss task info");
         return (size_t)0L;
     }
     return (size_t)info.resident_size;
@@ -561,13 +561,13 @@ size_t  OS::get_current_rss()
     FILE* fp = NULL;
     if ((fp = fopen("/proc/self/statm", "r")) == NULL)
     {
-        LOG(error, "OS: get_current_rss fopen: " << strerror(errno));
+        SIHD_LOG(error, "OS: get_current_rss fopen: " << strerror(errno));
         return (size_t)0L;
     }
     if (fscanf(fp, "%*s%ld", &rss) != 1)
     {
         fclose(fp);
-        LOG(error, "OS: get_current_rss fscanf: " << strerror(errno));
+        SIHD_LOG(error, "OS: get_current_rss fscanf: " << strerror(errno));
         return (size_t)0L;
     }
     fclose(fp);

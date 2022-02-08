@@ -10,7 +10,7 @@
 namespace sihd::net
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 #if !defined(__SIHD_WINDOWS__)
 

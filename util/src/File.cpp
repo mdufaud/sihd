@@ -6,7 +6,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 File::File()
 {
@@ -91,7 +91,7 @@ bool    File::_allocate_buffer_if_not_exists()
         _buf_ptr = new char[_buf_size];
         if (_buf_ptr == nullptr)
         {
-            LOG(error, "File: could not allocate buffer: " << _buf_size);
+            SIHD_LOG(error, "File: could not allocate buffer: " << _buf_size);
         }
         else
         {
@@ -109,7 +109,7 @@ bool    File::buff_stream()
         int ret = setvbuf(_file_ptr, _buf_ptr, _buf_mode, _buf_size);
         if (ret < 0)
         {
-            LOG(error, "File: could not set stream buffer: " << strerror(errno));
+            SIHD_LOG(error, "File: could not set stream buffer: " << strerror(errno));
             return false;
         }
     }
@@ -132,7 +132,7 @@ bool    File::open_fd(int fd, const char *mode)
     _file_ptr = fdopen(fd, mode);
     if (_file_ptr == nullptr)
     {
-        LOG(error, "File: " << strerror(errno) << ": for file descriptor " << fd);
+        SIHD_LOG(error, "File: " << strerror(errno) << ": for file descriptor " << fd);
     }
     else
         _stream_ownership = true;
@@ -152,7 +152,7 @@ bool    File::open_tmpfile()
     _file_ptr = tmpfile();
     if (_file_ptr == nullptr)
     {
-        LOG(error, "File: could not open temporary file");
+        SIHD_LOG(error, "File: could not open temporary file");
     }
     else
         _stream_ownership = true;
@@ -179,7 +179,7 @@ bool    File::open_tmp(const std::string & tmp_name_template, const char *mode)
 #endif
     if (fd < 0)
     {
-        LOG(error, "File: could not open temporary file: " << strerror(errno));
+        SIHD_LOG(error, "File: could not open temporary file: " << strerror(errno));
         return false;
     }
     if (this->open_fd(fd, mode))
@@ -193,7 +193,7 @@ bool    File::open(const std::string & path, const char *mode)
     _file_ptr = fopen(path.c_str(), mode);
     if (_file_ptr == nullptr)
     {
-        LOG(error, "File: " << strerror(errno) << ": " << path);
+        SIHD_LOG(error, "File: " << strerror(errno) << ": " << path);
     }
     else
     {
@@ -232,7 +232,7 @@ bool    File::flush()
 {
     if (_file_ptr != nullptr && fflush(_file_ptr) != 0)
     {
-        LOG(error, "File: could not flush file: " << strerror(errno));
+        SIHD_LOG(error, "File: could not flush file: " << strerror(errno));
         return false;
     }
     return _file_ptr != nullptr;
@@ -244,7 +244,7 @@ bool    File::close()
     {
         if (_stream_ownership && fclose(_file_ptr) != 0)
         {
-            LOG(error, "File: could not close file: " << strerror(errno));
+            SIHD_LOG(error, "File: could not close file: " << strerror(errno));
             return false;
         }
         _file_ptr = nullptr;
@@ -272,7 +272,7 @@ long    File::tell()
 {
     long ret = ftell(_file_ptr);
     if (ret < 0)
-        LOG(error, "File: tell: " << strerror(errno));
+        SIHD_LOG(error, "File: tell: " << strerror(errno));
     return ret;
 }
 
@@ -295,7 +295,7 @@ bool    File::_seek(long offset, int origin)
 {
     int ret = fseek(_file_ptr, offset, origin);
     if (ret < 0)
-        LOG(error, "File: seek: " << strerror(errno));
+        SIHD_LOG(error, "File: seek: " << strerror(errno));
     return ret == 0;
 }
 

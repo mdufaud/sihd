@@ -4,7 +4,7 @@
 namespace sihd::ssh
 {
 
-NEW_LOGGER("sihd::ssh");
+SIHD_NEW_LOGGER("sihd::ssh");
 
 SshKey::SshKey(ssh_key key): _ssh_key_ptr(key)
 {

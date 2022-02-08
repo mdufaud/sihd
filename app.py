@@ -184,7 +184,7 @@ apt_packages = {
     "libbluetooth": "libbluetooth-dev",
     "pybind11": "python3-pybind11",
     "sol2": "",
-    "glfw": "libglfw-dev",
+    "glfw": "libglfw3-dev",
     "glew": "libglew-dev",
     "sdl2": "libsdl2-dev",
 }

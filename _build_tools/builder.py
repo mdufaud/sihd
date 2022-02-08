@@ -283,11 +283,11 @@ def copy_dll_to_bin():
         return
     libs_path = []
     if os.path.isdir(build_extlib_lib_path):
-        libs_path.extend(glob.glob(os.path.join(build_extlib_lib_path, "*.dll")))
+        libs_path.extend(glob.glob(os.path.join(build_extlib_lib_path, "*.dll*")))
     if os.path.isdir(build_lib_path):
-        libs_path.extend(glob.glob(os.path.join(build_lib_path, "*.dll")))
+        libs_path.extend(glob.glob(os.path.join(build_lib_path, "*.dll*")))
     for lib_path in libs_path:
-        info("copying '" + lib_path + "' to bin")
+        #info("copying '" + lib_path + "' to bin")
         shutil.copyfile(lib_path, os.path.join(build_bin_path, os.path.basename(lib_path)))
 
 def finalize():

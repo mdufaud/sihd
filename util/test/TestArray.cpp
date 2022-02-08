@@ -5,7 +5,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     class TestArray:   public ::testing::Test
     {
@@ -53,12 +53,12 @@ namespace test
         EXPECT_EQ(arr_int[0], 10);
         EXPECT_EQ(arr_int[1], 20);
         EXPECT_EQ(arr_int[2], 30);
-        LOG(debug, arr_int.to_string(','));
+        SIHD_LOG(debug, arr_int.to_string(','));
 
         ArrInt arr2;
         EXPECT_TRUE(arr2.from_string(arr_int.to_string(','), ","));
         EXPECT_TRUE(arr2.is_equal(arr_int));
-        LOG(debug, arr2.to_string(','));
+        SIHD_LOG(debug, arr2.to_string(','));
 
         EXPECT_FALSE(arr_int.from_string("a,b,c", ","));
         EXPECT_EQ(arr_int.size(), 0u);
@@ -70,34 +70,34 @@ namespace test
         EXPECT_FLOAT_EQ(arr_float[1], 22.1);
         EXPECT_FLOAT_EQ(arr_float[2], 33.2);
         EXPECT_FLOAT_EQ(arr_float[3], 44.3);
-        LOG(debug, arr_float.to_string(','));
+        SIHD_LOG(debug, arr_float.to_string(','));
 
         ArrStr arr_str;
         arr_str.from_string("hello world");
         EXPECT_EQ(arr_str.to_string(), "hello world");
-        LOG(debug, arr_str.to_string());
+        SIHD_LOG(debug, arr_str.to_string());
     }
 
     TEST_F(TestArray, test_array_iterator_for)
     {
         ArrInt arr = {10, 20, 30, 40};
 
-        LOG(debug, "Array to iter: " << arr.to_string(' '));
+        SIHD_LOG(debug, "Array to iter: " << arr.to_string(' '));
         int val;
         int idx = 0;
-        LOG(debug, "Forward range loop");
+        SIHD_LOG(debug, "Forward range loop");
         for (const int & i: arr)
         {
-            LOG(debug, i);
+            SIHD_LOG(debug, i);
             val = i;
             ++idx;
         }
         EXPECT_EQ(val, 40);
         EXPECT_EQ(idx, 4);
-        LOG(debug, "Reverse range loop");
+        SIHD_LOG(debug, "Reverse range loop");
         for (auto it = arr.crbegin(); it != arr.crend(); ++it)
         {
-            LOG(debug, *it);
+            SIHD_LOG(debug, *it);
             val = *it;
             ++idx;
         }
@@ -107,7 +107,7 @@ namespace test
 
     TEST_F(TestArray, test_array_iterator_algo)
     {
-        LOG(debug, "Testing iterator find");
+        SIHD_LOG(debug, "Testing iterator find");
 
         ArrInt arr_int = {10, 20, 30, 40};
 
@@ -118,7 +118,7 @@ namespace test
         EXPECT_EQ(*it_found, 20);
         EXPECT_EQ(it_not_found, arr_int.end());
 
-        LOG(debug, "Testing iterator algorithm");
+        SIHD_LOG(debug, "Testing iterator algorithm");
 
         EXPECT_FALSE(std::binary_search(arr_int.cbegin(), arr_int.cend(), 31));
         std::for_each(arr_int.begin(), arr_int.end(), [] (int & i) { ++i; });
@@ -129,36 +129,36 @@ namespace test
         EXPECT_EQ(*std::max_element(arr_int.crbegin(), arr_int.crend()), 41);
 
         ArrStr arr_str("edcba");
-        LOG(debug, "Sort before: " << arr_str.to_string());
+        SIHD_LOG(debug, "Sort before: " << arr_str.to_string());
         std::sort(arr_str.begin(), arr_str.end());
-        LOG(debug, "Sort after: " << arr_str.to_string());
+        SIHD_LOG(debug, "Sort after: " << arr_str.to_string());
         EXPECT_TRUE(arr_str.is_equal("abcde"));
 
-        LOG(debug, "Reverse before: " << arr_str.to_string());
+        SIHD_LOG(debug, "Reverse before: " << arr_str.to_string());
         std::reverse(arr_str.begin(), arr_str.end());
-        LOG(debug, "Reverse before: " << arr_str.to_string());
+        SIHD_LOG(debug, "Reverse before: " << arr_str.to_string());
         EXPECT_TRUE(arr_str.is_equal("edcba"));
 
-        LOG(debug, "Fill before: " << arr_str.to_string());
+        SIHD_LOG(debug, "Fill before: " << arr_str.to_string());
         std::fill(arr_str.begin(), arr_str.end(), 'a');
-        LOG(debug, "Fill after: " << arr_str.to_string());
+        SIHD_LOG(debug, "Fill after: " << arr_str.to_string());
         EXPECT_TRUE(arr_str.is_equal("aaaaa"));
 
-        LOG(debug, "Testing empty iterator");
+        SIHD_LOG(debug, "Testing empty iterator");
         ArrDouble arr_dbl;
         ArrDouble::const_reverse_iterator it_dbl;
         it_dbl = arr_dbl.crbegin();
         it_dbl = std::find(arr_dbl.crbegin(), arr_dbl.crend(), 50.0);
         EXPECT_EQ(it_dbl, arr_dbl.crend());
 
-        LOG(debug, "Testing reverse iterator");
+        SIHD_LOG(debug, "Testing reverse iterator");
         const int8_t bytes[] = {1, 2, 3, 4};
         const int8_t reversed_bytes[] = {4, 3,  2, 1};
         ArrByte arr_byte(bytes, 4);
 
-        LOG(debug, "Reverse before: " << arr_byte.to_string(' '));
+        SIHD_LOG(debug, "Reverse before: " << arr_byte.to_string(' '));
         std::reverse(arr_byte.rbegin(), arr_byte.rend());
-        LOG(debug, "Reverse after: " << arr_byte.to_string(' '));
+        SIHD_LOG(debug, "Reverse after: " << arr_byte.to_string(' '));
         EXPECT_TRUE(arr_byte.is_equal(reversed_bytes, 4));
     }
 
@@ -294,7 +294,7 @@ namespace test
     {
         Array<uint8_t> arr(20);
         uint8_t arr8[4] = {1, 2, 3, 4};
-        LOG(info, "Appending once");
+        SIHD_LOG(info, "Appending once");
         arr.push_back(arr8, 4);
         EXPECT_EQ(arr.size(), 4ul);
         EXPECT_EQ(arr.capacity(), 20ul);
@@ -302,22 +302,22 @@ namespace test
         EXPECT_EQ(arr[1], 2);
         EXPECT_EQ(arr[2], 3);
         EXPECT_EQ(arr[3], 4);
-        LOG(info, "Appending another");
+        SIHD_LOG(info, "Appending another");
         arr.push_back(arr8, 4);
         EXPECT_EQ(arr.size(), 8ul);
         EXPECT_EQ(arr.capacity(), 20ul);
         this->test_array(arr);
-        LOG(info, "Appending time 2");
+        SIHD_LOG(info, "Appending time 2");
         arr.push_back(arr8, 4);
         arr.push_back(arr8, 4);
         EXPECT_EQ(arr.size(), 16ul);
         EXPECT_EQ(arr.capacity(), 20ul);
-        LOG(info, "Appending to limit");
+        SIHD_LOG(info, "Appending to limit");
         arr.push_back(arr8, 4);
         EXPECT_EQ(arr.size(), 20ul);
         EXPECT_EQ(arr.capacity(), 20ul);
         this->test_array(arr);
-        LOG(info, "Appending after limit");
+        SIHD_LOG(info, "Appending after limit");
         arr.push_back(arr8, 4);
         EXPECT_EQ(arr.size(), 24ul);
         EXPECT_EQ(arr.capacity(), 24ul);

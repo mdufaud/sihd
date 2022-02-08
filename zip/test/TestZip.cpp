@@ -8,7 +8,7 @@
 
 namespace test
 {
-    NEW_LOGGER("test");
+    SIHD_NEW_LOGGER("test");
     using namespace sihd::zip;
     using namespace sihd::util;
     class TestZip:   public ::testing::Test
@@ -49,12 +49,12 @@ namespace test
         EXPECT_TRUE(writer.set_aes_encryption(128));
         EXPECT_FALSE(writer.set_conf("aes", 10));
 
-        LOG(info, "Creating zip archive: " << zip_path);
+        SIHD_LOG(info, "Creating zip archive: " << zip_path);
         EXPECT_TRUE(writer.open(zip_path));
 
         // Adding fs directory
         std::string entry = "test/resources/to_zip";
-        LOG(info, "Zipping: " << entry);
+        SIHD_LOG(info, "Zipping: " << entry);
         EXPECT_TRUE(writer.fs_add(entry, "to_zip"));
 
         // Adding array entry
@@ -79,14 +79,14 @@ namespace test
         size_t size;
         std::string entry_name = "toto_entry";
         EXPECT_TRUE(reader.load_entry(entry_name));
-        LOG(info, "Trying to read entry without password");
+        SIHD_LOG(info, "Trying to read entry without password");
         EXPECT_TRUE(reader.read_entry() == -1);
-        LOG(info, "Trying to read entry with password");
+        SIHD_LOG(info, "Trying to read entry with password");
         EXPECT_TRUE(reader.read_entry(password) > 0);
         EXPECT_TRUE(reader.get_read_data(&data, &size));
         EXPECT_STREQ(data, arr_entry.to_string().c_str());
 
-        LOG(info, "Setting global password");
+        SIHD_LOG(info, "Setting global password");
         EXPECT_TRUE(reader.set_conf("password", password));
         entry_name = "toto_entry2";
         EXPECT_TRUE(reader.load_entry(entry_name));
@@ -123,10 +123,10 @@ namespace test
         while (reader.read_next())
         {
             EXPECT_TRUE(reader.get_read_data(&data, &size));
-            LOG(info, "Zip entry: " << data);
+            SIHD_LOG(info, "Zip entry: " << data);
             if (reader.is_entry_directory())
             {
-                LOG(info, "-> directory");
+                SIHD_LOG(info, "-> directory");
             }
             else
             {
@@ -136,10 +136,10 @@ namespace test
                 {
                     // removing linefeed from text
                     data[size - 1] = 0;
-                    LOG(info, "-> content: " << data);
+                    SIHD_LOG(info, "-> content: " << data);
                 }
                 else
-                    LOG(info, "-> empty");
+                    SIHD_LOG(info, "-> empty");
             }
         }
 

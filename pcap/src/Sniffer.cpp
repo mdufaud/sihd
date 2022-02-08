@@ -8,7 +8,7 @@ namespace sihd::pcap
 
 SIHD_UTIL_REGISTER_FACTORY(Sniffer)
 
-LOGGER;
+SIHD_LOGGER;
 
 Sniffer::Sniffer(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent), _active(false), _running(false),
@@ -44,7 +44,7 @@ bool    Sniffer::open(const std::string & source)
     char errbuf[PCAP_ERRBUF_SIZE];
     _pcap_ptr = pcap_create(source.c_str(), errbuf);
     if (_pcap_ptr == nullptr)
-        LOG(error, "Sniffer: " << errbuf);
+        SIHD_LOG(error, "Sniffer: " << errbuf);
     return _pcap_ptr != nullptr;
 }
 
@@ -95,11 +95,11 @@ bool    Sniffer::run()
     int ret = pcap_loop(_pcap_ptr, _max_sniff, Sniffer::_callback, (u_char *)this);
     if (ret == PCAP_ERROR)
     {
-        LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: " << this->error());
     }
     else if (ret == PCAP_ERROR_BREAK)
     {
-        LOG(warning, "Sniffer: broke loop before the total packet count was read");
+        SIHD_LOG(warning, "Sniffer: broke loop before the total packet count was read");
     }
     _running = false;
     return ret == 0;
@@ -125,11 +125,11 @@ bool    Sniffer::sniff()
     int ret = pcap_dispatch(_pcap_ptr, _max_sniff, Sniffer::_callback, (u_char *)this);
     if (ret == PCAP_ERROR)
     {
-        LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: " << this->error());
     }
     else if (ret == PCAP_ERROR_BREAK)
     {
-        LOG(warning, "Sniffer: broke dispatch before the total packet count was read");
+        SIHD_LOG(warning, "Sniffer: broke dispatch before the total packet count was read");
     }
     return ret == 0;
 }
@@ -141,7 +141,7 @@ bool    Sniffer::read_next()
     int ret = pcap_next_ex(_pcap_ptr, &hdr, (const u_char **)(&data));
     if (ret == PCAP_ERROR)
     {
-        LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: " << this->error());
     }
     else if (ret >= 0)
         this->new_packet(hdr, data);
@@ -218,15 +218,15 @@ void    Sniffer::_log_if_error(int ret)
 {
     if (ret == PCAP_ERROR)
     {
-        LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: " << this->error());
     }
     else if (ret == PCAP_WARNING)
     {
-        LOG(warning, "Sniffer: " << this->error());
+        SIHD_LOG(warning, "Sniffer: " << this->error());
     }
     else if (ret != 0)
     {
-        LOG(error, "Sniffer: " << PcapUtils::get_status(ret));
+        SIHD_LOG(error, "Sniffer: " << PcapUtils::get_status(ret));
     }
 }
 
@@ -249,7 +249,7 @@ std::vector<int>    Sniffer::datalinks()
         pcap_free_datalinks(lst);
     }
     else
-        LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: " << this->error());
     return ret;
 }
 
@@ -270,7 +270,7 @@ std::vector<int>    Sniffer::timestamp_types()
         pcap_free_tstamp_types(lst);
     }
     else
-        LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: " << this->error());
     return ret;
 }
 
@@ -288,7 +288,7 @@ bool    Sniffer::is_nonblock()
     char errbuf[PCAP_ERRBUF_SIZE];
     int ret = pcap_getnonblock(_pcap_ptr, errbuf);
     if (ret < 0)
-        LOG(error, "Sniffer: " << errbuf);
+        SIHD_LOG(error, "Sniffer: " << errbuf);
     return ret == 1;
 }
 
@@ -341,13 +341,13 @@ bool    Sniffer::set_direction(const std::string & direction)
         dir =  PCAP_D_OUT;
     else if (direction != "both")
     {
-        LOG(error, "Sniffer: packet direction unknown: '" << direction
+        SIHD_LOG(error, "Sniffer: packet direction unknown: '" << direction
                     << "' possible values are: in - out - both");
         return false;
     }
     int ret = pcap_setdirection(_pcap_ptr, dir);
     if (ret != 0)
-        LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: " << this->error());
     return ret == 0;
 }
 
@@ -362,11 +362,11 @@ bool    Sniffer::set_linux_protocol(int protocol)
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
     int ret = pcap_set_protocol_linux(_pcap_ptr, protocol);
     if (ret != 0)
-        LOG(error, "Sniffer: cannot set linux protocol on an activated capture handle");
+        SIHD_LOG(error, "Sniffer: cannot set linux protocol on an activated capture handle");
     return ret == 0;
 #else
     (void)protocol;
-    LOG(error, "Sniffer: cannot set linux protocol");
+    SIHD_LOG(error, "Sniffer: cannot set linux protocol");
     return false;
 #endif
 }
@@ -375,7 +375,7 @@ bool    Sniffer::set_promiscuous(bool active)
 {
     int ret = pcap_set_promisc(_pcap_ptr, (int)active);
     if (ret != 0)
-        LOG(error, "Sniffer: cannot set promiscuous mode on an activated capture handle");
+        SIHD_LOG(error, "Sniffer: cannot set promiscuous mode on an activated capture handle");
     return ret == 0;
 }
 
@@ -383,7 +383,7 @@ bool    Sniffer::set_monitor(bool active)
 {
     int ret = pcap_set_rfmon(_pcap_ptr, (int)active);
     if (ret != 0)
-        LOG(error, "Sniffer: cannot set monitor mode on an activated capture handle");
+        SIHD_LOG(error, "Sniffer: cannot set monitor mode on an activated capture handle");
     return ret == 0;
 }
 
@@ -391,7 +391,7 @@ bool    Sniffer::set_immediate(bool active)
 {
     int ret = pcap_set_immediate_mode(_pcap_ptr, (int)active);
     if (ret != 0)
-        LOG(error, "Sniffer: cannot set immediate mode on an activated capture handle");
+        SIHD_LOG(error, "Sniffer: cannot set immediate mode on an activated capture handle");
     return ret == 0;
 }
 
@@ -399,7 +399,7 @@ bool    Sniffer::set_buffer_size(int size)
 {
     int ret = pcap_set_buffer_size(_pcap_ptr, size);
     if (ret != 0)
-        LOG(error, "Sniffer: cannot set buffer size on an activated capture handle");
+        SIHD_LOG(error, "Sniffer: cannot set buffer size on an activated capture handle");
     return ret == 0;
 }
 
@@ -429,7 +429,7 @@ bool    Sniffer::set_snaplen(int len)
 {
     int ret = pcap_set_snaplen(_pcap_ptr, len);
     if (ret != 0)
-        LOG(error, "Sniffer: cannot set snaplen on an activated capture handle");
+        SIHD_LOG(error, "Sniffer: cannot set snaplen on an activated capture handle");
     return ret == 0;
 }
 
@@ -437,7 +437,7 @@ bool    Sniffer::set_timeout(int ms)
 {
     int ret = pcap_set_timeout(_pcap_ptr, ms);
     if (ret != 0)
-        LOG(error, "Sniffer: cannot set timeout on an activated capture handle");
+        SIHD_LOG(error, "Sniffer: cannot set timeout on an activated capture handle");
     return ret == 0;
 }
 
@@ -446,7 +446,7 @@ bool    Sniffer::set_nonblock(bool block)
     char errbuf[PCAP_ERRBUF_SIZE];
     int ret = pcap_setnonblock(_pcap_ptr, (int)block, errbuf);
     if (ret != 0)
-        LOG(error, "Sniffer: " << errbuf);
+        SIHD_LOG(error, "Sniffer: " << errbuf);
     return ret == 0;
 }
 

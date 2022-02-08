@@ -7,7 +7,7 @@
 namespace sihd::bt
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 BtUtils::BtUtils()
 {

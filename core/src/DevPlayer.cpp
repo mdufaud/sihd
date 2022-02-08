@@ -11,7 +11,7 @@ namespace sihd::core
 
 SIHD_UTIL_REGISTER_FACTORY(DevPlayer)
 
-LOGGER;
+SIHD_LOGGER;
 
 using namespace sihd::util;
 
@@ -57,7 +57,7 @@ bool    DevPlayer::set_provider_wait_time(time_t milliseconds)
 {
     if (milliseconds <= 0)
     {
-        LOG(error, "DevPlayer: cannot wait for " << milliseconds << " milliseconds");
+        SIHD_LOG(error, "DevPlayer: cannot wait for " << milliseconds << " milliseconds");
         return false;
     }
     _collector.set_timeout_milliseconds(milliseconds);
@@ -71,7 +71,7 @@ bool    DevPlayer::add_alias(const std::string & alias_conf)
 
     if (conf.size() != 2)
     {
-        LOG(error, "DevReplayer: wrong alias configuration: '" << alias_conf
+        SIHD_LOG(error, "DevReplayer: wrong alias configuration: '" << alias_conf
                 << "' - expected RECORD_CHANNEL_NAME=CHANNEL_PATH");
         return false;
     }
@@ -106,7 +106,7 @@ bool    DevPlayer::on_start()
     IProvider<PlayableRecord> *provider = this->find<IProvider<PlayableRecord>>(_provider_path);
     if (provider == nullptr)
     {
-        LOG(error, "DevReplayer: could not find provider: " << _provider_path);
+        SIHD_LOG(error, "DevReplayer: could not find provider: " << _provider_path);
         return false;
     }
     _collector.set_provider(provider);
@@ -124,7 +124,7 @@ bool    DevPlayer::on_start()
         channel_ptr = this->find<Channel>(pair.second);
         if (channel_ptr == nullptr)
         {
-            LOG(error, "DevRecorder: channel to record '"
+            SIHD_LOG(error, "DevRecorder: channel to record '"
                         << pair.first << "' not found: " << pair.second);
             return false;
         }
@@ -135,14 +135,14 @@ bool    DevPlayer::on_start()
         _scheduler_ptr->pause();
     if (_scheduler_ptr->start() == false)
     {
-        LOG(error, "DevReplayer: could not start scheduler");
+        SIHD_LOG(error, "DevReplayer: could not start scheduler");
         return false;
     }
     // start thread
     if (_worker.start_worker(this->get_name()) == false)
     {
         _scheduler_ptr->stop();
-        LOG(error, "DevReplayer: could not start worker");
+        SIHD_LOG(error, "DevReplayer: could not start worker");
         return false;
     }
     _running = true;
@@ -161,7 +161,7 @@ bool    DevPlayer::run()
     if (c != nullptr)
         c->write(*record.value);
     else
-        LOG(error, "DevPlayer: channel '" << record.name << "' not found");
+        SIHD_LOG(error, "DevPlayer: channel '" << record.name << "' not found");
     // notify worker loop that a record has been played
     _waitable.notify(1);
     // if no next record to be played - notify the end of player
@@ -205,9 +205,9 @@ bool    DevPlayer::on_stop()
     }
     _waitable.notify_all();
     if (_worker.stop_worker() == false)
-        LOG(error, "DevReplayer: could not stop worker");
+        SIHD_LOG(error, "DevReplayer: could not stop worker");
     if (_scheduler_ptr->stop() == false)
-        LOG(error, "DevReplayer: could not stop scheduler");
+        SIHD_LOG(error, "DevReplayer: could not stop scheduler");
     _channel_play_ptr = nullptr;
     _channel_end_ptr = nullptr;
     _collector.wait_stop();

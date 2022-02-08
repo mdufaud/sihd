@@ -10,7 +10,7 @@ namespace sihd::util
 
 SIHD_UTIL_REGISTER_FACTORY(Node);
 
-LOGGER;
+SIHD_LOGGER;
 
 Node::Node(const std::string & name, Node *parent):
     Named(name, parent)
@@ -49,7 +49,7 @@ bool    Node::add_child(const std::string & name, Named *child, bool ownership)
 {
     if (this->get_child(name) != nullptr)
     {
-        LOG_WARN("Node: '%s' child '%s' already exists",
+        SIHD_LOG_WARN("Node: '%s' child '%s' already exists",
                     this->get_full_name().c_str(), name.c_str());
         return false;
     }
@@ -169,7 +169,7 @@ bool    Node::add_link(const std::string & link, const std::string & path)
 {
     if (_link_map.find(link) != _link_map.end())
     {
-        LOG_WARN("Node: '%s' link '%s' already exists",
+        SIHD_LOG_WARN("Node: '%s' link '%s' already exists",
                     this->get_full_name().c_str(), link.c_str());
         return false;
     }
@@ -217,7 +217,7 @@ bool    Node::resolve_links(size_t recursion)
         child = this->get_link(path, recursion);
         if (child == nullptr)
         {
-            LOG_ERROR("Node: '%s' could not resolve link '%s' => '%s'",
+            SIHD_LOG_ERROR("Node: '%s' could not resolve link '%s' => '%s'",
                         this->get_full_name().c_str(),
                         link.c_str(),
                         path.c_str());

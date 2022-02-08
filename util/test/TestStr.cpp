@@ -15,7 +15,7 @@ namespace test
 {
     using namespace sihd::util;
 
-    LOGGER;
+    SIHD_LOGGER;
 
     class TestStr:   public ::testing::Test
     {
@@ -42,14 +42,14 @@ namespace test
             {
                 long val;
                 bool ret = Str::to_long(str, &val, base);
-                LOG(debug, "Test signed long (errno = " << errno << ") -> " << str);
+                SIHD_LOG(debug, "Test signed long (errno = " << errno << ") -> " << str);
                 if (ret)
                 {
-                    LOG(debug, "Value found: " << val);
+                    SIHD_LOG(debug, "Value found: " << val);
                     _val = val;
                     return true;
                 }
-                LOG(debug, "Failed to find a signed long");
+                SIHD_LOG(debug, "Failed to find a signed long");
                 return ret;
             }
 
@@ -57,14 +57,14 @@ namespace test
             {
                 unsigned long val;
                 bool ret = Str::to_ulong(str, &val, base);
-                LOG(debug, "Test unsigned long (errno = " << errno << ") -> " << str);
+                SIHD_LOG(debug, "Test unsigned long (errno = " << errno << ") -> " << str);
                 if (ret)
                 {
-                    LOG(debug, "Value found: " << val);
+                    SIHD_LOG(debug, "Value found: " << val);
                     _uval = val;
                     return true;
                 }
-                LOG(debug, "Failed to find an unsigned long");
+                SIHD_LOG(debug, "Failed to find an unsigned long");
                 return ret;
             }
 
@@ -72,14 +72,14 @@ namespace test
             {
                 double val;
                 bool ret = Str::to_double(str, &val);
-                LOG(debug, "Test double (errno = " << errno << ") -> " << str);
+                SIHD_LOG(debug, "Test double (errno = " << errno << ") -> " << str);
                 if (ret)
                 {
-                    LOG(debug, "Value found: " << val);
+                    SIHD_LOG(debug, "Value found: " << val);
                     _dval = val;
                     return true;
                 }
-                LOG(debug, "Failed to find a double");
+                SIHD_LOG(debug, "Failed to find a double");
                 return ret;
             }
 
@@ -345,7 +345,7 @@ namespace test
     TEST_F(TestStr, test_str_demangle)
     {
         std::string res = Str::demangle(typeid(*this).name());
-        LOG(info, "Demangled: " << res);
+        SIHD_LOG(info, "Demangled: " << res);
         EXPECT_EQ(res, "test::TestStr_test_str_demangle_Test");
     }
 
@@ -378,7 +378,7 @@ namespace test
     TEST_F(TestStr, test_str_hexdump)
     {
         std::string s = "hello world - how are you";
-        LOG(debug, Str::addr_to_string(s.data()));
+        SIHD_LOG(debug, Str::addr_to_string(s.data()));
         EXPECT_EQ(Str::addr_to_string(0x0, 5), "0x00000");
         EXPECT_EQ(Str::num_to_string(312, 10), "312");
         EXPECT_EQ(Str::num_to_string(16, 16), "10");

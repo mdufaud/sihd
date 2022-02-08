@@ -7,7 +7,7 @@ namespace sihd::core
 
 SIHD_UTIL_REGISTER_FACTORY(Core)
 
-LOGGER;
+SIHD_LOGGER;
 
 Core::Core(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent)

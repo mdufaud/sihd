@@ -6,7 +6,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     class TestOs:   public ::testing::Test,
                     public IRunnable
@@ -68,9 +68,9 @@ namespace test
         size_t peak = OS::get_peak_rss();
         size_t current = OS::get_current_rss();
 
-        LOG(info, "Peak rss: " << peak / (1024 * 1024) << " mb");
-        LOG(info, "Current rss: " << current / (1024 * 1024) << " mb");
-        LOG(info, "Max file descriptors: " << max_fds);
+        SIHD_LOG(info, "Peak rss: " << peak / (1024 * 1024) << " mb");
+        SIHD_LOG(info, "Current rss: " << current / (1024 * 1024) << " mb");
+        SIHD_LOG(info, "Max file descriptors: " << max_fds);
 
         EXPECT_TRUE(peak > 0);
         EXPECT_TRUE(current > 0);

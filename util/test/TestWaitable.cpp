@@ -6,7 +6,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     class TestWaitable:   public ::testing::Test
     {

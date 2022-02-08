@@ -16,7 +16,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 template <typename T>
 class Array: public IArray, public ICloneable<Array<T>>
@@ -137,7 +137,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (size % this->data_size() != 0)
             {
-                LOG_ERROR("Array::byte_resize cannot resize - %lu not divisible by data size %lu",
+                SIHD_LOG_ERROR("Array::byte_resize cannot resize - %lu not divisible by data size %lu",
                             size, this->data_size());
                 return false;
             }
@@ -148,7 +148,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (size % this->data_size() != 0)
             {
-                LOG_ERROR("Array::byte_reserve cannot reserve - %lu not divisible by data size %lu",
+                SIHD_LOG_ERROR("Array::byte_reserve cannot reserve - %lu not divisible by data size %lu",
                             size, this->data_size());
                 return false;
             }
@@ -287,13 +287,13 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (byte_size % this->data_size() != 0)
             {
-                LOG_ERROR("Array::assign_bytes cannot assign buffer - size %lu not divisible by %lu",
+                SIHD_LOG_ERROR("Array::assign_bytes cannot assign buffer - size %lu not divisible by %lu",
                             byte_size, this->data_size());
                 return false;
             }
             if (byte_capacity % this->data_size() != 0)
             {
-                LOG_ERROR("Array::assign_bytes cannot assign buffer - capacity %lu not divisible by %lu",
+                SIHD_LOG_ERROR("Array::assign_bytes cannot assign buffer - capacity %lu not divisible by %lu",
                             byte_capacity, this->data_size());
                 return false;
             }
@@ -876,7 +876,7 @@ class ArrayUtil
         {
             if (starting_offset > distributing_array.byte_capacity())
             {
-                LOG_ERROR("ArrayUtil: starting offset is beyond distributing array capacity (%lu > %lu)",
+                SIHD_LOG_ERROR("ArrayUtil: starting offset is beyond distributing array capacity (%lu > %lu)",
                             starting_offset, distributing_array.byte_capacity());
                 return false;
             }
@@ -885,7 +885,7 @@ class ArrayUtil
                 total += pair.second * pair.first->data_size();
             if ((total + starting_offset) > distributing_array.byte_capacity())
             {
-                LOG_ERROR("ArrayUtil: total distribution exceed array capacity (%lu > %lu)",
+                SIHD_LOG_ERROR("ArrayUtil: total distribution exceed array capacity (%lu > %lu)",
                             total + starting_offset, distributing_array.byte_capacity());
                 return false;
             }

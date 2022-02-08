@@ -10,7 +10,7 @@
 
 namespace test
 {
-    NEW_LOGGER("test");
+    SIHD_NEW_LOGGER("test");
     using namespace sihd::util;
     using namespace sihd::ssh;
     class TestSshSession: public ::testing::Test
@@ -50,7 +50,7 @@ namespace test
         session.set_verbosity(SSH_LOG_PROTOCOL);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_key_file(Files::combine(home, ".ssh/id_rsa"));
-        LOG(info, "Auth status: " << auth.to_string());
+        SIHD_LOG(info, "Auth status: " << auth.to_string());
         EXPECT_TRUE(auth.success());
 
         session.disconnect();
@@ -58,7 +58,7 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         EXPECT_TRUE(session.connected());
         auth = session.auth_key_auto();
-        LOG(info, "Auth status: " << auth.to_string());
+        SIHD_LOG(info, "Auth status: " << auth.to_string());
         EXPECT_TRUE(auth.success());
     }
 
@@ -77,13 +77,13 @@ namespace test
         fflush(stdout);
         if (LineReader::fast_read_line(user, stdin) == false)
             GTEST_SKIP_("no user input");
-        LOG(info, "Connection to " << user << "@" << host);
+        SIHD_LOG(info, "Connection to " << user << "@" << host);
         SshSession session;
-        GTEST_ASSERT_EQ(session.fast_connect(user, host, 22, SSH_LOG_PROTOCOL | SSH_LOG_DEBUG | SSH_LOG_PACKET | SSH_LOG_WARN), true);
+        GTEST_ASSERT_EQ(session.fast_connect(user, host, 22, SSH_LOG_PROTOCOL | SSH_SIHD_LOG_DEBUG | SSH_LOG_PACKET | SSH_LOG_WARN), true);
         session.set_verbosity(SSH_LOG_PROTOCOL);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_interactive_keyboard();
-        LOG(info, "Auth status: " << auth.to_string());
+        SIHD_LOG(info, "Auth status: " << auth.to_string());
     }
 
     TEST_F(TestSshSession, test_sshsession_connect)

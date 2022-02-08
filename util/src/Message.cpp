@@ -5,7 +5,7 @@ namespace sihd::util
 
 SIHD_UTIL_REGISTER_FACTORY(Message);
 
-LOGGER;
+SIHD_LOGGER;
 
 Message::Message(const std::string & name, Node *parent): Node(name, parent)
 {
@@ -31,13 +31,13 @@ IMessageField *Message::clone()
                 cloned->add_field(name, cloned_field);
             else
             {
-                LOG(critical, "Message: clone failed for " << name);
+                SIHD_LOG(critical, "Message: clone failed for " << name);
                 error = true;
             }
         }
         else
         {
-            LOG(critical, "Message: could not clone field " << name << " - not a IMessageField");
+            SIHD_LOG(critical, "Message: could not clone field " << name << " - not a IMessageField");
             error = true;
         }
         if (error)
@@ -75,7 +75,7 @@ bool    Message::add_field(const std::string & name, IMessageField *msg)
     Named *named = dynamic_cast<Named *>(msg);
     if (named == nullptr)
     {
-        LOG(error, "Message: cannot add as a child: not a Named object");
+        SIHD_LOG(error, "Message: cannot add as a child: not a Named object");
         return false;
     }
     return this->add_child(name, named, true) && this->_add_field_size(msg);
@@ -120,7 +120,7 @@ bool    Message::_assign_field_array(IMessageField *field)
         __assign_arr_at += field->get_field_byte_size();
         if (__assign_arr_at > _total_size)
         {
-            LOG_ERROR("Message: for %s total size %lu is inferior to calculated size %lu",
+            SIHD_LOG_ERROR("Message: for %s total size %lu is inferior to calculated size %lu",
                         this->get_name().c_str(), _total_size, __assign_arr_at);
             return false;
         }

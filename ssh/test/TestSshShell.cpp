@@ -9,7 +9,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::ssh;
     using namespace sihd::util;
     class TestSshShell: public ::testing::Test

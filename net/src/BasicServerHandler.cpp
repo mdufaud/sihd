@@ -5,7 +5,7 @@
 namespace sihd::net
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 BasicServerHandler::BasicServerHandler()
 {

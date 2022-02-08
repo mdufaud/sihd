@@ -4,7 +4,7 @@
 namespace sihd::http
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 HttpResponse::HttpResponse(Mime *mimes): _mime_ptr(mimes)
 {

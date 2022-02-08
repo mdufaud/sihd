@@ -4,7 +4,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 Runnable::Runnable()
 {

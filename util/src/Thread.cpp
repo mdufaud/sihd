@@ -1,48 +1,53 @@
 #include <sihd/util/Thread.hpp>
+#include <sihd/util/Str.hpp>
+#include <string>
 #include <sstream>
 
 namespace sihd::util
 {
 
-std::thread::id Thread::main = id();
-std::mutex      Thread::thread_mutex;
-std::map<std::thread::id, std::string>  Thread::thread_map = {
+pthread_t Thread::main = Thread::id();
+std::mutex Thread::thread_mutex;
+std::map<pthread_t, std::string, Thread::ComparePthreadKeys> Thread::thread_map = {
     {Thread::main, "main"}
 };
 
-std::thread::id     Thread::id()
+bool    Thread::equals(const pthread_t & id1, const pthread_t & id2)
 {
-    return std::this_thread::get_id();
+    return memcmp(&id1, &id2, sizeof(pthread_t)) == 0;
 }
 
-std::string     Thread::id_str(std::thread::id id)
+pthread_t   Thread::id()
 {
-    std::stringstream ss;
-    ss << "0x" << std::hex << id;
-    return ss.str();
+    return pthread_self();
+}
+
+std::string     Thread::id_str(pthread_t id)
+{
+    return "0x" + Str::to_hex(id);
 }
 
 std::string     Thread::id_str()
 {
-    return id_str(id());
+    return Thread::id_str(Thread::id());
 }
 
 void    Thread::set_name(const std::string & name)
 {
     std::lock_guard lock(thread_mutex);
-    thread_map[id()] = name;
+    thread_map[Thread::id()] = name;
 }
 
 void    Thread::del_name()
 {
     std::lock_guard lock(thread_mutex);
-    thread_map.erase(id());
+    thread_map.erase(Thread::id());
 }
 
 const std::string & Thread::get_name()
 {
     std::lock_guard lock(thread_mutex);
-    return thread_map[id()];
+    return thread_map[Thread::id()];
 }
 
 }

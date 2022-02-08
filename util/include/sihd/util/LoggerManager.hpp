@@ -4,7 +4,6 @@
 # include <sihd/util/ALogger.hpp>
 # include <sihd/util/ALogFilterer.hpp>
 # include <sihd/util/LogInfo.hpp>
-# include <sihd/util/BasicLogger.hpp>
 # include <list>
 # include <mutex>
 
@@ -48,6 +47,7 @@ class LoggerManager: public ALogFilterer
         static LoggerManager *get();
 
         static void basic(FILE *output = stderr, bool print_thread_id = false);
+        static void console();
         static bool add(ALogger *logger);
         static bool remove(ALogger *logger);
         static bool filter(ILoggerFilter *filter);

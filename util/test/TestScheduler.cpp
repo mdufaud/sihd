@@ -7,7 +7,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     using namespace std::chrono;
 
@@ -45,7 +45,7 @@ namespace test
                     if (micro > (us + delta)
                         || micro < (us - delta))
                         good_freq = false;
-                    //TRACE("Time since last call: " << us << " us");
+                    //SIHD_TRACE("Time since last call: " << us << " us");
                     _last = now;
                 }
                 ran += 1;
@@ -95,24 +95,24 @@ namespace test
         std::time_t now = clock.now();
         seq.add_task(new Task([&] () -> bool
         {
-            TRACE("Should run once");
+            SIHD_TRACE("Should run once");
             ++ran;
             return true;
         }, now + time::milli(10)));
         seq.add_task(new Task([&] () -> bool
         {
-            TRACE("Should not run");
+            SIHD_TRACE("Should not run");
             ++ran;
             return true;
         }, now + time::sec(1)));
         seq.start();
-        TRACE("Before sleep");
+        SIHD_TRACE("Before sleep");
         std::this_thread::sleep_for(std::chrono::milliseconds(9));
         EXPECT_EQ(ran, 0);
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
         EXPECT_EQ(ran, 1);
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        TRACE("After sleep");
+        SIHD_TRACE("After sleep");
         seq.stop();
         EXPECT_EQ(ran, 1);
         auto after = steady_clock.now();
@@ -138,35 +138,35 @@ namespace test
         }, clock.now() + 100, time::micro(should_run_every_us)));
         std::time_t sleep_time = 10;
         seq.start();
-        LOG(debug, "Started scheduler");
+        SIHD_LOG(debug, "Started scheduler");
         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
-        LOG(debug, "Pausing scheduler");
+        SIHD_LOG(debug, "Pausing scheduler");
         seq.pause();
-        LOG(debug, "Paused scheduler");
+        SIHD_LOG(debug, "Paused scheduler");
         EXPECT_NEAR(lambda_ran, 11, 1);
         EXPECT_EQ(seq.overruns, 0u);
         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
         EXPECT_NEAR(lambda_ran, 11, 1);
         EXPECT_EQ(seq.overruns, 0u);
-        LOG(debug, "Resuming scheduler");
+        SIHD_LOG(debug, "Resuming scheduler");
         seq.resume();
-        LOG(debug, "Resumed scheduler");
+        SIHD_LOG(debug, "Resumed scheduler");
         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
-        LOG(debug, "Pausing scheduler");
+        SIHD_LOG(debug, "Pausing scheduler");
         seq.pause();
-        LOG(debug, "Paused scheduler");
+        SIHD_LOG(debug, "Paused scheduler");
         EXPECT_NEAR(lambda_ran, 21, 1);
         EXPECT_EQ(seq.overruns, 0u);
         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
         EXPECT_NEAR(lambda_ran, 21, 1);
         EXPECT_EQ(seq.overruns, 0u);
-        LOG(debug, "Resuming scheduler");
+        SIHD_LOG(debug, "Resuming scheduler");
         seq.resume();
-        LOG(debug, "Resumed scheduler");
+        SIHD_LOG(debug, "Resumed scheduler");
         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
-        LOG(debug, "Stopping scheduler");
+        SIHD_LOG(debug, "Stopping scheduler");
         seq.stop();
-        LOG(debug, "Stopped scheduler");
+        SIHD_LOG(debug, "Stopped scheduler");
         EXPECT_NEAR(lambda_ran, 31, 1);
         EXPECT_EQ(seq.overruns, 0u);
     }
@@ -182,7 +182,7 @@ namespace test
         int lambda_ran = 0;
         std::function<bool()> fun = [&lambda_ran] () -> bool
         {
-            TRACE("PLAY")
+            SIHD_TRACE("PLAY")
             ++lambda_ran;
             return true;
         };
@@ -195,10 +195,10 @@ namespace test
         seq.set_as_fast_as_possible(true);
         std::time_t milli_sleep = 7;
         seq.start();
-        LOG(debug, "Started scheduler");
+        SIHD_LOG(debug, "Started scheduler");
         std::this_thread::sleep_for(std::chrono::milliseconds(milli_sleep));
         seq.stop();
-        LOG(debug, "Stopped scheduler");
+        SIHD_LOG(debug, "Stopped scheduler");
         EXPECT_EQ(lambda_ran, 5);
     }
 }

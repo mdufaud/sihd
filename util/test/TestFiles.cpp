@@ -7,7 +7,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     class TestFiles:   public ::testing::Test
     {
@@ -38,7 +38,7 @@ namespace test
 
             bool    log_make_dirs(std::string path)
             {
-                LOG(debug, "Making directory: " << path);
+                SIHD_LOG(debug, "Making directory: " << path);
                 return Files::make_directories(path);
             }
 
@@ -150,14 +150,14 @@ namespace test
         std::vector<std::string> rec_children = Files::get_recursive_children(sandbox_path);
         for (const auto & child: rec_children)
         {
-            LOG(debug, "get_recursive_children: " << child);
+            SIHD_LOG(debug, "get_recursive_children: " << child);
         }
         EXPECT_EQ(rec_children.size(), 6u);
 
         std::vector<std::string> children = Files::get_children(Files::combine(sandbox_path, "path"));
         for (const auto & child: children)
         {
-            LOG(debug, "get_children: " << child);
+            SIHD_LOG(debug, "get_children: " << child);
         }
         EXPECT_EQ(children.size(), 2u);
 
@@ -179,7 +179,7 @@ namespace test
         std::string path = Files::combine({_base_test_dir, "io", "test.txt"});
         EXPECT_TRUE(Str::ends_with(path, "test/util_files/io/test.txt"));
         EXPECT_TRUE(this->log_make_dirs(Files::get_parent(path)));
-        LOG(info, "Writing file to: " << path);
+        SIHD_LOG(info, "Writing file to: " << path);
         EXPECT_TRUE(Files::write(path, file_content));
         EXPECT_EQ(Files::read_all(path), file_content);
         EXPECT_EQ(Files::read(path, 5), "hello");

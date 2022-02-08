@@ -5,7 +5,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     using namespace sihd::core;
     class TestDevice:   public ::testing::Test

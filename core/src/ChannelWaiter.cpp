@@ -4,7 +4,7 @@
 namespace sihd::core
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 ChannelWaiter::ChannelWaiter(Channel *c): ACoreObject("channel_waiter", nullptr), _channel(nullptr)
 {
@@ -40,7 +40,7 @@ bool    ChannelWaiter::set_channel(Channel *channel)
 {
     if (channel == nullptr)
     {
-        LOG(error, "ChannelWaiter: no channel to set");
+        SIHD_LOG(error, "ChannelWaiter: no channel to set");
         return false;
     }
     if (_channel == channel)
@@ -48,7 +48,7 @@ bool    ChannelWaiter::set_channel(Channel *channel)
     this->clear_channel();
     if (channel->add_observer(this) == false)
     {
-        LOG(error, "ChannelWaiter: could not add observer to channel: " << channel->get_full_name());
+        SIHD_LOG(error, "ChannelWaiter: could not add observer to channel: " << channel->get_full_name());
         return false;
     }
     _channel = channel;

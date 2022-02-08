@@ -6,7 +6,7 @@
 namespace sihd::py
 {
 
-NEW_LOGGER("sihd::py");
+SIHD_NEW_LOGGER("sihd::py");
 
 using namespace sihd::util;
 

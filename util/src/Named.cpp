@@ -7,7 +7,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 char Named::separator = '.';
 

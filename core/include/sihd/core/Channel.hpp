@@ -12,7 +12,7 @@
 namespace sihd::core
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 class Channel:  public sihd::util::Named,
                 public sihd::util::Observable<Channel>
@@ -80,7 +80,7 @@ class Channel:  public sihd::util::Named,
         {
             if (_notifying)
             {
-                LOG(warning, "Channel: cannot write while notifying");
+                SIHD_LOG(warning, "Channel: cannot write while notifying");
                 return false;
             }
             sihd::util::Array<T> *arr = sihd::util::ArrayUtil::cast_array<T>(_array_ptr);
@@ -95,7 +95,7 @@ class Channel:  public sihd::util::Named,
             }
             else
             {
-                LOG(error, "Channel: wrong type for writing "
+                SIHD_LOG(error, "Channel: wrong type for writing "
                         << _array_ptr->data_type_to_string() << " != "
                         << sihd::util::Datatype::type_to_string<T>())
             }

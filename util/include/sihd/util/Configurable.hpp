@@ -8,7 +8,7 @@
 
 namespace sihd::util
 {
-LOGGER;
+SIHD_LOGGER;
 class Configurable
 {
     public:

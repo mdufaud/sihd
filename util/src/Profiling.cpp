@@ -4,7 +4,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 Timeit::Timeit(const std::string & fun_name)
 {
@@ -15,7 +15,7 @@ Timeit::Timeit(const std::string & fun_name)
 Timeit::~Timeit()
 {
     std::time_t now = _clock.now();
-    LOG_DEBUG("Timeit[%s]: time %lu micro", _fun_name.c_str(), time::to_micro(now - _begin));
+    SIHD_LOG_DEBUG("Timeit[%s]: time %lu micro", _fun_name.c_str(), time::to_micro(now - _begin));
 }
 
 }

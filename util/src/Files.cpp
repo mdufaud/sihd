@@ -18,7 +18,7 @@
 namespace sihd::util
 {
 
-LOGGER;
+SIHD_LOGGER;
 
 # if defined(__SIHD_WINDOWS__)
 char Files::sep = '\\';
@@ -76,13 +76,13 @@ bool    Files::remove_directories(const std::string & path)
         {
             if (Files::remove_directory(*it) == false)
             {
-                LOG(warning, "Files: cannot remove directory: " << *it);
+                SIHD_LOG(warning, "Files: cannot remove directory: " << *it);
                 ret = false;
             }
         }
         else if (Files::remove_file(*it) == false)
         {
-            LOG(warning, "Files: cannot remove file: " << *it);
+            SIHD_LOG(warning, "Files: cannot remove file: " << *it);
             ret = false;
         }
     }

@@ -8,7 +8,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace APP_NAME::MODULE_NAME;
     using namespace sihd::util;
     class TestCLASS_NAME: public ::testing::Test

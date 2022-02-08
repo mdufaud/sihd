@@ -12,7 +12,7 @@ namespace sihd::imgui
 
 SIHD_UTIL_REGISTER_FACTORY(ImguiRunner)
 
-NEW_LOGGER("sihd::imgui");
+SIHD_NEW_LOGGER("sihd::imgui");
 
 ImguiRunner::ImguiRunner(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent),
@@ -163,7 +163,7 @@ bool    ImguiRunner::set_emscripten(bool active)
 {
 #if !defined(__SIHD_EMSCRIPTEN__)
     (void)active;
-    LOG(warning, "ImguiRunner: cannot set emscripten - it is absent");
+    SIHD_LOG(warning, "ImguiRunner: cannot set emscripten - it is absent");
     return false;
 #else
     _emscripten = active;

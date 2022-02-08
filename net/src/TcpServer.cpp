@@ -11,7 +11,7 @@ using namespace sihd::util;
 
 SIHD_UTIL_REGISTER_FACTORY(TcpServer)
 
-LOGGER;
+SIHD_LOGGER;
 
 TcpServer::TcpServer(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent)
@@ -113,7 +113,7 @@ bool    TcpServer::serve()
         this->_setup_poll();
         ret = _server_handler_ptr != nullptr;
         if (!ret)
-            LOG(error, "TcpServer: cannot serve without a server handler");
+            SIHD_LOG(error, "TcpServer: cannot serve without a server handler");
         ret = ret && _socket.listen(this->queue_size());
         ret = ret && _poll.run();
     }

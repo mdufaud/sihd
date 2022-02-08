@@ -12,7 +12,7 @@
 
 namespace test
 {
-    LOGGER;
+    SIHD_LOGGER;
     using namespace sihd::util;
     class TestProcess:   public ::testing::Test
     {
@@ -46,7 +46,7 @@ namespace test
 
         proc.stdout_to([] (const char *buf, [[maybe_unused]] size_t size)
         {
-            LOG(debug, buf);
+            SIHD_LOG(debug, buf);
         })
         .stderr_close();
 
@@ -57,7 +57,7 @@ namespace test
         });
         Worker worker(&task);
         EXPECT_TRUE(worker.start_sync_worker("proc"));
-        LOG(debug, "Kill cat process with ctrl + d")
+        SIHD_LOG(debug, "Kill cat process with ctrl + d")
         EXPECT_TRUE(proc.wait_process_end(time::sec(10)));
         proc.stop();
         worker.stop_worker();
@@ -72,7 +72,7 @@ namespace test
         proc.stdin_from("hello")
         .stdout_to([&res] (const char *buf, [[maybe_unused]] size_t size)
         {
-            LOG(debug, buf);
+            SIHD_LOG(debug, buf);
             res.push_back(buf);
         })
         .stderr_close();
@@ -168,7 +168,7 @@ namespace test
         std::string test_file = Files::combine(test_dir, "hello.txt");
         std::filesystem::create_directories(Files::get_parent(test_file));
 
-        LOG(info, "Writing file for 'cat' input: " << test_file)
+        SIHD_LOG(info, "Writing file for 'cat' input: " << test_file)
         EXPECT_TRUE(Files::write(test_file, "hello world"));
 
         Process proc{"cat"};
@@ -220,8 +220,8 @@ namespace test
         EXPECT_TRUE(proc.stdout_to_file(stdout_path));
         EXPECT_TRUE(proc.stderr_to_file(stderr_path));
 
-        TRACE("Redirecting stdout to: " << stdout_path);
-        TRACE("Redirecting stderr to: " << stderr_path);
+        SIHD_TRACE("Redirecting stdout to: " << stdout_path);
+        SIHD_TRACE("Redirecting stderr to: " << stderr_path);
 
         EXPECT_TRUE(proc.start());
         EXPECT_TRUE(proc.wait_any());
@@ -313,7 +313,7 @@ namespace test
         cat.wait_exit();
         EXPECT_FALSE(cat.has_exited());
         EXPECT_TRUE(cat.has_exited_by_signal());
-        TRACE("Signal exit number: " << cat.signal_exit_number());
+        SIHD_TRACE("Signal exit number: " << cat.signal_exit_number());
         EXPECT_EQ(cat.signal_exit_number(), SIGTERM);
     }
 
@@ -326,7 +326,7 @@ namespace test
         EXPECT_TRUE(cat.kill(SIGSTOP));
         cat.wait_stop();
         EXPECT_TRUE(cat.has_stopped_by_signal());
-        TRACE("Signal stop number: " << cat.signal_stop_number());
+        SIHD_TRACE("Signal stop number: " << cat.signal_stop_number());
         EXPECT_EQ(cat.signal_stop_number(), SIGSTOP);
 
         EXPECT_TRUE(cat.kill(SIGCONT));
