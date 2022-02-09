@@ -3,21 +3,29 @@
 
 # include <sihd/util/platform.hpp>
 # include <sihd/util/IRunnable.hpp>
+# include <sihd/util/IHandler.hpp>
 
 # include <signal.h>
-# include <sys/stat.h> // stat
+# include <sys/stat.h>
 
 # if !defined(__SIHD_WINDOWS__)
 #  include <dlfcn.h>
 #  include <sys/ioctl.h>
 #  include <sys/socket.h>
 #  include <sys/resource.h>
+
+typedef rlim_t sihd_rlim_t;
+typedef uid_t sihd_uid_t;
+
 # else
 #  include <winsock2.h>
 #  include <ws2def.h>
 #  include <winsock.h>
 #  include <ws2tcpip.h>
-typedef unsigned long rlim_t;
+
+typedef unsigned long sihd_rlim_t;
+typedef unsigned int sihd_uid_t;
+
 # endif
 
 # include <string>
@@ -34,13 +42,13 @@ class OS
         static std::string get_signal_name(int sig);
 
         // adds a handler to be run when signal is catched
-        static bool add_signal_handler(int sig, IRunnable *runnable);
+        static bool add_signal_handler(int sig, IHandler<int> *handler);
         // remove and deletes all handlers attached to this signal
         static bool clear_signal_handlers(int sig);
         // remove and deletes all handlers
         static bool clear_signal_handlers();
         // remove a single handler - if you have the ptr to remove the handler, means you can delete it
-        static bool clear_signal_handler(int sig, IRunnable *runnable);
+        static bool clear_signal_handler(int sig, IHandler<int> *handler);
 
         // set signal handling to default - already taken care of, do not call
         static bool unhandle_signal(int sig);
@@ -53,8 +61,11 @@ class OS
         static bool setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror = false);
         static bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror = false);
 
-        static rlim_t get_max_fds();
+        static sihd_rlim_t get_max_fds();
 
+        static bool is_root();
+
+        static std::string get_home();
         static std::string get_executable_path();
         static std::string get_cwd();
 
@@ -108,7 +119,7 @@ class OS
 # endif
         static bool signal_used;
         static std::mutex signal_mutex;
-        static std::map<int, std::list<IRunnable *>> map_signals_handlers;
+        static std::map<int, std::list<IHandler<int> *>> map_signals_handlers;
 };
 
 }

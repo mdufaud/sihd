@@ -1,5 +1,5 @@
-#ifndef __SIHD_NET_IF_HPP__
-# define __SIHD_NET_IF_HPP__
+#ifndef __SIHD_NET_NETUTILS_HPP__
+# define __SIHD_NET_NETUTILS_HPP__
 
 # include <sihd/util/platform.hpp>
 # include <vector>
@@ -38,7 +38,7 @@
 namespace sihd::net
 {
 
-class If
+class NetUtils
 {
     public:
         static int get_interface_idx(int sock, const std::string & name);
@@ -51,8 +51,8 @@ class If
     protected:
 
     private:
-        If() {};
-        ~If() {};
+        NetUtils() {};
+        ~NetUtils() {};
 };
 
 }

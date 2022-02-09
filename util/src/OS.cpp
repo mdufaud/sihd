@@ -60,14 +60,14 @@ SIHD_LOGGER;
 
 bool OS::signal_used = false;
 std::mutex OS::signal_mutex;
-std::map<int, std::list<IRunnable *>> OS::map_signals_handlers;
+std::map<int, std::list<IHandler<int> *>> OS::map_signals_handlers;
 
 bool    OS::clear_signal_handlers(int sig)
 {
     std::lock_guard lock(OS::signal_mutex);
-    for (IRunnable *runnable : OS::map_signals_handlers[sig])
+    for (IHandler<int> *handler : OS::map_signals_handlers[sig])
     {
-        delete runnable;
+        delete handler;
     }
     OS::map_signals_handlers[sig].clear();
     return unhandle_signal(sig);
@@ -77,13 +77,13 @@ bool    OS::clear_signal_handlers()
 {
     std::lock_guard lock(OS::signal_mutex);
     bool ret = true;
-    for (auto & [sig, runnables_lst] : OS::map_signals_handlers)
+    for (auto & [sig, handlers_lst] : OS::map_signals_handlers)
     {
-        for (IRunnable *runnable : runnables_lst)
+        for (IHandler<int> *handler : handlers_lst)
         {
-            delete runnable;
+            delete handler;
         }
-        runnables_lst.clear();
+        handlers_lst.clear();
         if (unhandle_signal(sig) == false)
             ret = false;
     }
@@ -91,7 +91,7 @@ bool    OS::clear_signal_handlers()
     return ret;
 }
 
-bool    OS::clear_signal_handler(int sig, IRunnable *runnable)
+bool    OS::clear_signal_handler(int sig, IHandler<int> *runnable)
 {
     std::lock_guard lock(OS::signal_mutex);
     auto & lst = OS::map_signals_handlers[sig];
@@ -110,22 +110,22 @@ void    OS::_signal_callback(int sig)
 {
     SIHD_LOG(debug, "Signal caught: " << OS::get_signal_name(sig));
     std::lock_guard lock(OS::signal_mutex);
-    for (IRunnable *runnable : OS::map_signals_handlers[sig])
+    for (IHandler<int> *handler : OS::map_signals_handlers[sig])
     {
-        runnable->run();
+        handler->handle(sig);
     }
 }
 
-bool    OS::add_signal_handler(int sig, IRunnable *runnable)
+bool    OS::add_signal_handler(int sig, IHandler<int> *handler)
 {
-    sighandler_t handler = signal(sig, OS::_signal_callback);
-    if (handler == SIG_ERR)
+    sighandler_t sighandler = signal(sig, OS::_signal_callback);
+    if (sighandler == SIG_ERR)
     {
         SIHD_LOG(error, "Error handling signal: " << OS::get_signal_name(sig));
         return false;
     }
     std::lock_guard lock(OS::signal_mutex);
-    OS::map_signals_handlers[sig].push_back(runnable);
+    OS::map_signals_handlers[sig].push_back(handler);
     if (OS::signal_used == false)
     {
         AtExit::add_handler(new Runnable([] () -> bool
@@ -164,7 +164,7 @@ std::string OS::get_signal_name(int sig)
 
 // utilities
 
-rlim_t  OS::get_max_fds()
+sihd_rlim_t OS::get_max_fds()
 {
 #if !defined(__SIHD_WINDOWS__)
     struct rlimit r;
@@ -241,6 +241,25 @@ bool    OS::getsockopt(int socket, int level, int optname, void *optval, socklen
     if (!ret && logerror)
         SIHD_LOG(error, "OS: getsockopt error: " << strerror(errno));
     return ret;
+}
+
+bool    OS::is_root()
+{
+#if defined(__SIHD_WINDOWS__)
+    //TODO
+    return false;
+#else
+    return getuid() == 0;
+#endif
+}
+
+std::string OS::get_home()
+{
+#if defined(__SIHD_WINDOWS__)
+    return Files::combine(getenv("HOMEDRIVE"), getenv("HOMEPATH"));
+#else
+    return getenv("HOME");
+#endif
 }
 
 std::string OS::get_cwd()

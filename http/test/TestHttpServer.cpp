@@ -6,7 +6,7 @@
 #include <sihd/util/File.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
-#include <sihd/util/Runnable.hpp>
+#include <sihd/util/Handler.hpp>
 
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/WebsocketHandler.hpp>
@@ -173,10 +173,10 @@ namespace test
             GTEST_SKIP_("requires interaction");
 
         SimpleHttpServer server;
-        OS::add_signal_handler(SIGINT, new Runnable([&server] () -> bool
+        OS::add_signal_handler(SIGINT, new Handler<int>([&server] (int sig)
         {
+            (void)sig;
             server.stop();
-            return true;
         }));
         server.set_root_dir("test/resources/mount_point");
         server.set_port(3000);

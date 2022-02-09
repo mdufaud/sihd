@@ -3,27 +3,55 @@
 namespace sihd::util
 {
 
-std::vector<std::string>     Datatype::dt_to_str = {
-    "none", "bool", "char", "byte", "ubyte", "short", "ushort",
-    "int", "uint", "long", "ulong", "float", "double",
-    "string", "object"
-};
-
-std::map<std::string, Type>   Datatype::dt_from_str = {
-    {"none", DNONE}, {"bool", DBOOL}, {"char", DCHAR}, {"byte", DBYTE}, {"ubyte", DUBYTE},
-    {"short", DSHORT}, {"ushort", DUSHORT}, {"int", DINT}, {"uint", DUINT},
-    {"long", DLONG}, {"ulong", DULONG}, {"float", DFLOAT}, {"double", DDOUBLE},
-    {"string", DSTRING}, {"object", DOBJECT}
-};
+Type  Datatype::string_to_datatype(const std::string & type)
+{
+    static std::map<std::string, Type> str_to_datatype = {
+        {"none", DNONE}, {"bool", DBOOL}, {"char", DCHAR}, {"byte", DBYTE}, {"ubyte", DUBYTE},
+        {"short", DSHORT}, {"ushort", DUSHORT}, {"int", DINT}, {"uint", DUINT},
+        {"long", DLONG}, {"ulong", DULONG}, {"float", DFLOAT}, {"double", DDOUBLE},
+        {"string", DSTRING}, {"object", DOBJECT}
+    };
+    return str_to_datatype[type];
+}
 
 std::string  Datatype::datatype_to_string(Type type)
 {
-    return dt_to_str[type];
-}
-
-Type  Datatype::string_to_datatype(const std::string & type)
-{
-    return dt_from_str[type];
+    switch (type)
+    {
+        case DNONE:
+            return "none";
+        case DBOOL:
+            return "bool";
+        case DCHAR:
+            return "char";
+        case DBYTE:
+            return "byte";
+        case DUBYTE:
+            return "ubyte";
+        case DSHORT:
+            return "short";
+        case DUSHORT:
+            return "ushort";
+        case DINT:
+            return "int";
+        case DUINT:
+            return "uint";
+        case DLONG:
+            return "long";
+        case DULONG:
+            return "ulong";
+        case DFLOAT:
+            return "float";
+        case DDOUBLE:
+            return "double";
+        case DSTRING:
+            return "string";
+        case DOBJECT:
+            return "object";
+        default:
+            break ;
+    }
+    return "unknown";
 }
 
 size_t  Datatype::datatype_size(Type type)

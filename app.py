@@ -8,8 +8,6 @@ extlibs = {
     "gtest": "1.11.0",
     ## json parsing
     "nlohmann_json": "3.9.1",
-    ## crypt
-    "openssl": "1.1.1i",
     ## http
     "libwebsockets": "4.3.0",
     "libcurl": "7.75.0",
@@ -265,9 +263,9 @@ test_libs = ['gtest', 'stdc++fs']
 # after build
 #############
 
-# linux extension is -> cpython-36m-x86_64-linux-gnu.so
-# windows extension is -> cp37-win_amd64.pyd
-# though python cannot be used with mingw so...
+# linux extension is something like -> cpython-3Xm-x86_64-linux-gnu.so
+# windows extension -> cp3X-win_amd64.pyd
+# though python cannot be used with mingw
 def __get_python_libname():
     import subprocess
     proc = subprocess.Popen("python3-config --extension-suffix",
@@ -277,14 +275,15 @@ def __get_python_libname():
 def on_build_success(build_modules, builder_helper):
     if "py" not in build_modules:
         return
-    # -> copy python library to another name in build so we can use it
+    # for pybind11 shared lib to be usable by python interpreter
+    # it needs to be like lib*.cpython-VER-ARCH-VENDOR-OS.so
     python_libname = __get_python_libname()
     if not python_libname:
         return
     import os
     import glob
     import shutil
-    lib_pattern = os.path.join(builder_helper.build_lib_path, "libsihd_py*.so")
+    lib_pattern = os.path.join(builder_helper.build_lib_path, "libsihd_py*.so*")
     for lib in glob.glob(lib_pattern):
         pybind11_compliant = lib.replace("libsihd_py", "sihd")
         pybind11_compliant = pybind11_compliant.replace(".so", python_libname)

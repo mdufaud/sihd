@@ -268,6 +268,34 @@ long    File::filesize()
     return ret;
 }
 
+void    File::lock()
+{
+#if !defined(__SIHD_WINDOWS__)
+    flockfile(_file_ptr);
+#else
+    _lock_file(_file_ptr);
+#endif
+}
+
+bool    File::trylock()
+{
+#if !defined(__SIHD_WINDOWS__)
+    return ftrylockfile(_file_ptr) == 0;
+#else
+    _lock_file(_file_ptr);
+    return false;
+#endif
+}
+
+void    File::unlock()
+{
+#if !defined(__SIHD_WINDOWS__)
+    funlockfile(_file_ptr);
+#else
+    _unlock_file(_file_ptr);
+#endif
+}
+
 long    File::tell()
 {
     long ret = ftell(_file_ptr);

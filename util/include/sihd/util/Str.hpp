@@ -70,6 +70,8 @@ class Str
         static std::string replace(const std::string_view s, const std::string_view from, const std::string_view to);
 
         static std::string to_hex(uint64_t n);
+        static std::string to_dec(uint64_t n);
+        static std::string to_oct(uint64_t n);
         static std::string addr_to_string(void *addr, size_t padding = 0);
         static std::string num_to_string(int64_t num, uint16_t base);
         static char num_to_char(size_t num);

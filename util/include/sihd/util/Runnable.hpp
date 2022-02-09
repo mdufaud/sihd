@@ -11,9 +11,18 @@ class Runnable: public IRunnable
 {
     public:
         Runnable();
+        Runnable(IRunnable *runnable_ptr);
         Runnable(std::function<bool()> fun);
+
+        template <typename C>
+        Runnable(C* obj, bool (C::*fun)())
+        {
+            this->set_method(obj, fun);
+        }
+
         virtual ~Runnable();
 
+        void set_runnable(IRunnable *runnable_ptr);
         void set_method(std::function<bool()> fun);
 
         template <typename C>

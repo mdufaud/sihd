@@ -497,10 +497,10 @@ try:
 
     Progress(progress_function, interval = 1)
 except (OSError, IOError) as e:
-    builder_helper.error("won't display progress - reason: " + str(e), file=sys.stderr)
+    builder_helper.error("won't display progress - reason: " + str(e))
 
 ###############################################################################
-# Scons final build status
+# Scons after build
 ###############################################################################
 
 import atexit
@@ -552,7 +552,7 @@ def after_build():
     if success and hasattr(app, "on_build_success"):
         app.on_build_success(build_modules, builder_helper)
     elif hasattr(app, "on_build_fail"):
-        app.on_build_fail(build_modules.keys())
+        app.on_build_fail(build_modules, builder_helper)
     builder_helper.finalize()
     if success and distribution:
         builder_helper.distribute_app(app, build_modules)

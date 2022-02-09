@@ -1,0 +1,220 @@
+#include <sihd/util/Daemon.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/FileLogger.hpp>
+
+#include <signal.h>
+#include <unistd.h>
+// #include <fcntl.h> // open
+
+#if defined(__SIHD_WINDOWS__)
+# include <windows.h>
+#endif
+
+namespace sihd::util
+{
+
+SIHD_UTIL_REGISTER_FACTORY(Daemon)
+
+SIHD_LOGGER;
+
+Daemon::Daemon(const std::string & name, sihd::util::Node *parent):
+    sihd::util::Named(name, parent)
+{
+    _signals_handled = false;
+    _uid = 0;
+#if !defined(__SIHD_WINDOWS__)
+    _working_dir_path = Files::sep_str();
+    _pid_file_path = "/var/lock/" + this->get_name() + "_daemon.lock";
+#else
+    _working_dir_path = OS::get_home();
+#endif
+    this->add_conf("uid", &Daemon::set_uid);
+    this->add_conf("pid_file", &Daemon::set_pid_file_path);
+    this->add_conf("working_dir", &Daemon::set_working_dir_path);
+}
+
+Daemon::~Daemon()
+{
+    this->_remove_pid_file();
+}
+
+bool    Daemon::set_uid(sihd_uid_t uid)
+{
+    _uid = uid;
+    return true;
+}
+
+void    Daemon::_remove_pid_file()
+{
+    if (_pid_file.is_open())
+    {
+        std::string path = _pid_file.path();
+        _pid_file.close();
+        Files::remove_file(path);
+    }
+}
+
+bool    Daemon::set_pid_file_path(const std::string & path)
+{
+    _pid_file_path = path;
+    return true;
+}
+
+bool    Daemon::set_working_dir_path(const std::string & path)
+{
+    _working_dir_path = path;
+    return true;
+}
+
+void    Daemon::_handle_sig(int sig)
+{
+    if (sig == SIGTERM || sig == SIGSEGV)
+    {
+        SIHD_LOG(info, "Daemon: exit signal received: " << OS::get_signal_name(sig));
+        exit(0);
+    }
+#if !defined(__SIHD_WINDOWS__)
+    if (sig == SIGCHLD)
+    {
+        SIHD_LOG(debug, "Daemon: sigchild");
+        return ;
+    }
+#else
+#endif
+    SIHD_LOG(info, "Daemon: signal received: " << OS::get_signal_name(sig));
+}
+
+bool    Daemon::_handle_signals()
+{
+    if (_signals_handled)
+        return true;
+    // will get deleted by OS
+    IHandler<int> *handler_ptr = new Handler<int>(this, &Daemon::_handle_sig);
+    bool ret = true;
+    int i = 0;
+    while (i < 64)
+    {
+        if (OS::add_signal_handler(i, handler_ptr) == false)
+            ret = false;
+        ++i;
+    }
+    _signals_handled = true;
+    return ret;
+}
+
+bool    Daemon::_lock_pid_file()
+{
+    if (_pid_file.is_open() == true)
+        return true;
+    if (_pid_file.open(_pid_file_path, "w") == false)
+        return false;
+    if (_pid_file.trylock() == false)
+    {
+        SIHD_LOG(error, "Daemon: cannot lock file");
+        _pid_file.close();
+        return false;
+    }
+    return true;
+}
+
+bool    Daemon::_write_pid_file()
+{
+    if (_pid_file.is_open() == false)
+        return false;
+    std::string towrite = Str::to_dec(getpid()) + "\n";
+    bool ret = _pid_file.write(towrite) == (ssize_t)towrite.size();
+    if (ret == false)
+        SIHD_LOG(error, "Daemon: failed to write pid file");
+    return ret;
+}
+
+#if !defined(__SIHD_WINDOWS__)
+
+bool    Daemon::run()
+{
+    // lock file
+    if (_lock_pid_file() == false)
+        return false;
+    // first fork (run in background)
+    pid_t pid = fork();
+    if (pid < 0)
+    {
+        SIHD_LOG(error, "Daemon: fork failed: " << strerror(errno));
+        return false;
+    }
+    else if (pid > 0)
+        _exit(EXIT_SUCCESS);
+    // install signal handlers
+    this->_handle_signals();
+    // process not killed once shell is exited
+    pid_t sid = setsid();
+    if (sid < 0)
+    {
+        SIHD_LOG(error, "Daemon: setsid failed: " << strerror(errno));
+        _exit(1);
+    }
+    // second fork (cannot take a controlling terminal)
+    if ((pid = fork()) < 0)
+    {
+        SIHD_LOG(error, "Daemon: second fork failed: " << strerror(errno));
+        _exit(2);
+    }
+    if (pid > 0)
+        _exit(EXIT_SUCCESS);
+    // write pid file
+    _write_pid_file();
+    // change file creation mask
+    umask(0);
+    // change directory
+    if (chdir(_working_dir_path.c_str()) < 0)
+    {
+        SIHD_LOG(error, "Daemon: chdir failed: " << strerror(errno));
+        _exit(3);
+    }
+    // change uid
+    if (_uid)
+    {
+        // set right ownership to pid file
+        if (chown(_pid_file_path.c_str(), _uid, 0) != 0)
+        {
+            SIHD_LOG(warning, "Daemon: can't set pid file ownership to uid: " << _uid);
+        }
+        if (setuid(_uid) != 0)
+        {
+            SIHD_LOG(warning, "Daemon: can't set process ownership to uid: " << _uid);
+        }
+    }
+    // close file descriptors
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+    /*
+    if (open("/dev/null", O_RDWR) == STDIN_FILENO)
+    {
+        if (dup2(STDIN_FILENO, STDOUT_FILENO) != STDOUT_FILENO)
+            SIHD_LOG(warning, "Daemon: could not open back stdout file number");
+        if (dup2(STDIN_FILENO, STDERR_FILENO) != STDERR_FILENO)
+            SIHD_LOG(warning, "Daemon: could not open back stderr file number");
+    }
+    else
+    {
+        SIHD_LOG(warning, "Daemon: could not open back stdin file number");
+    }
+    */
+    SIHD_LOG(info, "Daemon: started with pid: " << getpid());
+    return true;
+}
+
+#else
+
+bool    Daemon::run()
+{
+    // TODO
+    FreeConsole();
+    return true;
+}
+
+#endif
+
+}

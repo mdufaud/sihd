@@ -125,10 +125,10 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
 static void http_test()
 {
         SimpleHttpServer server;
-        OS::add_signal_handler(SIGINT, new Runnable([&server] () -> bool
+        OS::add_signal_handler(SIGINT, new Handler<int>([&server] (int sig)
         {
+            (void)sig;
             server.stop();
-            return true;
         }));
         std::string root_path = Files::get_parent(Files::get_parent(OS::get_executable_path()));
         std::string res_path = Files::combine({root_path, "etc", "sihd", "demo", "http_demo"});

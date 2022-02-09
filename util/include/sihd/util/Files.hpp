@@ -27,6 +27,7 @@ class Files
         static std::vector<std::string> get_recursive_children(const std::string & path);
 
         // path manipulation
+        static bool is_absolute(const std::string & path);
         static std::string normalize(const std::string & path);
         static std::string trim_path(std::string && path, const std::string & to_remove);
         static std::string trim_path(const std::string & path, const std::string & to_remove);

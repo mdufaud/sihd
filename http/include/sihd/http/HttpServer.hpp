@@ -1,12 +1,18 @@
 #ifndef __SIHD_HTTP_HTTPSERVER_HPP__
 # define __SIHD_HTTP_HTTPSERVER_HPP__
 
+# include <mutex>
+# include <set>
+
+# include <libwebsockets.h>
+
 # include <sihd/util/Node.hpp>
 # include <sihd/util/IStoppableRunnable.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/StepWorker.hpp>
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Array.hpp>
+# include <sihd/util/OS.hpp>
 
 # include <sihd/http/Mime.hpp>
 # include <sihd/http/IWebsocketHandler.hpp>
@@ -14,10 +20,6 @@
 # include <sihd/http/HttpRequest.hpp>
 # include <sihd/http/HttpResponse.hpp>
 # include <sihd/http/HttpHeader.hpp>
-
-# include <mutex>
-# include <set>
-# include <libwebsockets.h>
 
 namespace sihd::http
 {

@@ -4,8 +4,6 @@
 namespace APP_NAME::MODULE_NAME
 {
 
-SIHD_LOGGER;
-
 CLASS_NAME::CLASS_NAME()
 {
 }

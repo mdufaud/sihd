@@ -1,7 +1,7 @@
 #ifndef __SIHD_NET_NETINTERFACES_HPP__
 # define __SIHD_NET_NETINTERFACES_HPP__
 
-# include <sihd/net/If.hpp>
+# include <sihd/net/NetUtils.hpp>
 
 namespace sihd::net
 {

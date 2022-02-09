@@ -69,6 +69,10 @@ class File
         long tell();
         long filesize();
 
+        void lock();
+        bool trylock();
+        void unlock();
+
         FILE *file() { return _file_ptr; }
         const std::string & path() const { return _path; }
 

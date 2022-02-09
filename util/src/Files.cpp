@@ -337,6 +337,16 @@ std::string Files::combine(const std::string & path1, const std::string & path2)
     return ret;
 }
 
+bool    Files::is_absolute(const std::string & path)
+{
+#if defined(__SIHD_WINDOWS__)
+    return (path.length() > 1 && path[0] == Files::sep && path[1] == Files::sep)
+            || (path.length() > 2 && path[1] == ':' && path[2] == Files::sep);
+#else
+    return path.length() > 0 && path[0] == Files::sep;
+#endif
+}
+
 // files
 
 bool    Files::are_equals(const std::string & path1, const std::string & path2)

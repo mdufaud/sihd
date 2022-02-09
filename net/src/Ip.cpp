@@ -13,20 +13,6 @@ namespace sihd::net
 
 SIHD_NEW_LOGGER("sihd::net");
 
-std::map<std::string, int> Ip::_domain_to_str = {
-    {"unix", PF_UNIX}, {"ipv4", PF_INET}, {"ipv6", PF_INET6},
-    /*
-    {"ipx", PF_IPX}, {"netlink", PF_NETLINK}, {"x25", PF_X25}, {"ax25", PF_AX25},
-    {"atmpvc", PF_ATMPVC}, {"appletalk", PF_APPLETALK}, {"packet", PF_PACKET},
-    */
-};
-
-std::map<std::string, int> Ip::_socktype_to_str = {
-    {"udp", SOCK_DGRAM}, {"tcp", SOCK_STREAM},
-    {"datagram", SOCK_DGRAM}, {"stream", SOCK_STREAM}, {"raw", SOCK_RAW},
-    {"seqpacket", SOCK_SEQPACKET}, {"rdm", SOCK_RDM}, {"packet", SOCK_PACKET},
-};
-
 std::string     Ip::domain_to_string(int domain)
 {
     switch (domain)
@@ -101,16 +87,28 @@ int     Ip::protocol(const std::string & name)
 
 int     Ip::domain(const std::string & name)
 {
-    if (_domain_to_str.find(name) == _domain_to_str.end())
+    static std::map<std::string, int> domain_to_str = {
+        {"unix", PF_UNIX}, {"ipv4", PF_INET}, {"ipv6", PF_INET6},
+        /*
+        {"ipx", PF_IPX}, {"netlink", PF_NETLINK}, {"x25", PF_X25}, {"ax25", PF_AX25},
+        {"atmpvc", PF_ATMPVC}, {"appletalk", PF_APPLETALK}, {"packet", PF_PACKET},
+        */
+    };
+    if (domain_to_str.find(name) == domain_to_str.end())
         return -1;
-    return _domain_to_str[name];
+    return domain_to_str[name];
 }
 
 int     Ip::socktype(const std::string & name)
 {
-    if (_socktype_to_str.find(name) == _socktype_to_str.end())
+    static std::map<std::string, int> socktype_to_str = {
+        {"udp", SOCK_DGRAM}, {"tcp", SOCK_STREAM},
+        {"datagram", SOCK_DGRAM}, {"stream", SOCK_STREAM}, {"raw", SOCK_RAW},
+        {"seqpacket", SOCK_SEQPACKET}, {"rdm", SOCK_RDM}, {"packet", SOCK_PACKET},
+    };
+    if (socktype_to_str.find(name) == socktype_to_str.end())
         return -1;
-    return _socktype_to_str[name];
+    return socktype_to_str[name];
 }
 
 }

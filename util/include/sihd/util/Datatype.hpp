@@ -36,9 +36,6 @@ class Datatype
         Datatype() {};
         ~Datatype() {};
 
-        static std::vector<std::string> dt_to_str;
-        static std::map<std::string, Type> dt_from_str;
-
     public:
         static size_t datatype_size(Type type);
         static std::string datatype_to_string(Type type);

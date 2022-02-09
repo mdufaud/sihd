@@ -6,6 +6,7 @@
 # include <sihd/util/IStoppableRunnable.hpp>
 # include <sihd/util/IHandler.hpp>
 # include <sihd/util/Clocks.hpp>
+# include <sihd/util/OS.hpp>
 # include <sihd/util/time.hpp>
 # include <vector>
 # include <mutex>
@@ -14,7 +15,6 @@
 #  include <sys/resource.h> //rlim_t
 #  include <poll.h> //pollfd
 # else
-typedef unsigned long rlim_t;
 #  include <winsock2.h>
 # endif
 
@@ -81,7 +81,7 @@ class Poll: public IStoppableRunnable, public Observable<Poll>
         int _timeout_milliseconds;
 
         bool _running;
-        rlim_t _max_fds;
+        sihd_rlim_t _max_fds;
         std::vector<struct pollfd> _lst_fds;
         SystemClock _clock;
 

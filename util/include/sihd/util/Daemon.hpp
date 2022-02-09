@@ -1,0 +1,54 @@
+#ifndef __SIHD_UTIL_DAEMON_HPP__
+# define __SIHD_UTIL_DAEMON_HPP__
+
+# include <sihd/util/Node.hpp>
+# include <sihd/util/Configurable.hpp>
+# include <sihd/util/IRunnable.hpp>
+
+# include <sihd/util/Handler.hpp>
+# include <sihd/util/File.hpp>
+# include <sihd/util/Files.hpp>
+# include <sihd/util/OS.hpp>
+
+namespace sihd::util
+{
+
+class Daemon:   public sihd::util::Named,
+                public sihd::util::Configurable,
+                public sihd::util::IRunnable
+{
+    public:
+        Daemon(const std::string & name, sihd::util::Node *parent = nullptr);
+        virtual ~Daemon();
+
+        bool set_uid(sihd_uid_t uid);
+        bool set_pid_file_path(const std::string & path);
+        bool set_working_dir_path(const std::string & path);
+
+        /*
+            clear LoggerManager's loggers and/or install any file logger before calling run
+        */
+        bool run();
+
+        const std::string & pid_file() const { return _pid_file_path; }
+        const std::string & working_dir() const { return _working_dir_path; }
+
+    protected:
+        bool _lock_pid_file();
+        bool _write_pid_file();
+        void _remove_pid_file();
+
+        void _handle_sig(int sig);
+        bool _handle_signals();
+
+    private:
+        bool _signals_handled;
+        sihd_uid_t _uid;
+        std::string _pid_file_path;
+        std::string _working_dir_path;
+        File _pid_file;
+};
+
+}
+
+#endif

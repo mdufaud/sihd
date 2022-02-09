@@ -1,7 +1,7 @@
 #ifndef __SIHD_NET_IP_HPP__
 # define __SIHD_NET_IP_HPP__
 
-# include <sihd/net/If.hpp>
+# include <sihd/net/NetUtils.hpp>
 
 namespace sihd::net
 {
@@ -15,11 +15,6 @@ class Ip
         static int protocol(const std::string & name);
         static int domain(const std::string & name);
         static int socktype(const std::string & name);
-
-    private:
-        static std::map<std::string, int> _domain_to_str;
-        static std::map<std::string, int> _socktype_to_str;
-
 };
 
 

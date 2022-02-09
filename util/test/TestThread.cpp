@@ -24,7 +24,7 @@ namespace test
             std::string other_name;
 
         public:
-            void    test()
+            void test()
             {
                 this->other_id = Thread::id();
                 Thread::set_name("another-thread");
@@ -41,6 +41,6 @@ namespace test
         EXPECT_EQ(Thread::get_name(), "main");
         EXPECT_EQ(this->other_name, "another-thread");
         EXPECT_FALSE(Thread::equals(this->other_id, this->main_id));
-        EXPECT_FALSE(Thread::equals(this->main_id,  Thread::id()));
+        EXPECT_TRUE(Thread::equals(this->main_id,  Thread::id()));
     }
 }

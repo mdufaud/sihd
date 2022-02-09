@@ -1,4 +1,4 @@
-#include <sihd/net/If.hpp>
+#include <sihd/net/NetUtils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/OS.hpp>
 #include <string.h>
@@ -14,7 +14,7 @@ SIHD_LOGGER;
 
 #if !defined(__SIHD_WINDOWS__)
 
-int     If::get_interface_idx(int sock, const std::string & name)
+int     NetUtils::get_interface_idx(int sock, const std::string & name)
 {
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
@@ -24,7 +24,7 @@ int     If::get_interface_idx(int sock, const std::string & name)
     return -1;
 }
 
-bool    If::get_interface_name(int sock, int idx, std::string & to_fill)
+bool    NetUtils::get_interface_name(int sock, int idx, std::string & to_fill)
 {
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
@@ -35,7 +35,7 @@ bool    If::get_interface_name(int sock, int idx, std::string & to_fill)
     return true;
 }
 
-bool    If::get_interface_mac(int sock, const std::string & name, struct sockaddr *to_fill)
+bool    NetUtils::get_interface_mac(int sock, const std::string & name, struct sockaddr *to_fill)
 {
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
@@ -46,7 +46,7 @@ bool    If::get_interface_mac(int sock, const std::string & name, struct sockadd
     return true;
 }
 
-bool    If::get_interface_addr(int sock, const std::string & name, struct sockaddr *to_fill)
+bool    NetUtils::get_interface_addr(int sock, const std::string & name, struct sockaddr *to_fill)
 {
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
@@ -57,7 +57,7 @@ bool    If::get_interface_addr(int sock, const std::string & name, struct sockad
     return true;
 }
 
-bool    If::get_interface_broadcast(int sock, const std::string & name, struct sockaddr *to_fill)
+bool    NetUtils::get_interface_broadcast(int sock, const std::string & name, struct sockaddr *to_fill)
 {
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
@@ -68,7 +68,7 @@ bool    If::get_interface_broadcast(int sock, const std::string & name, struct s
     return true;
 }
 
-bool    If::get_interface_netmask(int sock, const std::string & name, struct sockaddr *to_fill)
+bool    NetUtils::get_interface_netmask(int sock, const std::string & name, struct sockaddr *to_fill)
 {
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
@@ -81,32 +81,32 @@ bool    If::get_interface_netmask(int sock, const std::string & name, struct soc
 
 #else
 
-int     If::get_interface_idx(int sock, const std::string & name)
+int     NetUtils::get_interface_idx(int sock, const std::string & name)
 {
     (void)sock;(void)name; return -1;
 }
 
-bool    If::get_interface_name(int sock, int idx, std::string & to_fill)
+bool    NetUtils::get_interface_name(int sock, int idx, std::string & to_fill)
 {
     (void)sock;(void)idx;(void)to_fill; return false;
 }
 
-bool    If::get_interface_mac(int sock, const std::string & name, struct sockaddr *to_fill)
+bool    NetUtils::get_interface_mac(int sock, const std::string & name, struct sockaddr *to_fill)
 {
     (void)sock;(void)name;(void)to_fill; return false;
 }
 
-bool    If::get_interface_addr(int sock, const std::string & name, struct sockaddr *to_fill)
+bool    NetUtils::get_interface_addr(int sock, const std::string & name, struct sockaddr *to_fill)
 {
     (void)sock;(void)name;(void)to_fill; return false;
 }
 
-bool    If::get_interface_broadcast(int sock, const std::string & name, struct sockaddr *to_fill)
+bool    NetUtils::get_interface_broadcast(int sock, const std::string & name, struct sockaddr *to_fill)
 {
     (void)sock;(void)name;(void)to_fill; return false;
 }
 
-bool    If::get_interface_netmask(int sock, const std::string & name, struct sockaddr *to_fill)
+bool    NetUtils::get_interface_netmask(int sock, const std::string & name, struct sockaddr *to_fill)
 {
     (void)sock;(void)name;(void)to_fill; return false;
 }

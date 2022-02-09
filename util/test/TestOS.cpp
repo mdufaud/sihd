@@ -2,14 +2,14 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/OS.hpp>
-#include <sihd/util/Task.hpp>
+#include <sihd/util/Handler.hpp>
 
 namespace test
 {
     SIHD_LOGGER;
     using namespace sihd::util;
     class TestOs:   public ::testing::Test,
-                    public IRunnable
+                    public IHandler<int>
     {
         protected:
             TestOs()
@@ -31,10 +31,10 @@ namespace test
             {
             }
 
-            bool    run()
+            void handle(int sig)
             {
+                (void)sig;
                 ++ran;
-                return true;
             }
 
             int ran = 0;
@@ -50,15 +50,14 @@ namespace test
     {
         this->ran = 0;
         int sig = SIGINT;
-        auto task = new Task(this);
-        EXPECT_TRUE(OS::add_signal_handler(sig, task));
+        Handler<int> handler = Handler<int>(this);
+        EXPECT_TRUE(OS::add_signal_handler(sig, &handler));
         EXPECT_EQ(this->ran, 0);
         raise(sig);
         EXPECT_EQ(this->ran, 1);
         raise(sig);
         EXPECT_EQ(this->ran, 2);
-        EXPECT_TRUE(OS::clear_signal_handler(sig, task));
-        delete task;
+        EXPECT_TRUE(OS::clear_signal_handler(sig, &handler));
     }
 
     TEST_F(TestOs, test_os_resources)
