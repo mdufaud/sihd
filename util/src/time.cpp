@@ -40,6 +40,11 @@ double to_double(time_t nano)
     return nano / 1E9;
 }
 
+double to_freq(time_t nano)
+{
+    return (1 / (double)(nano / 1E9));
+}
+
 struct timeval double_to_tv(double time)
 {
     struct timeval ret;
@@ -141,14 +146,14 @@ time_t min(time_t t)
     return sec(t) * 60;
 }
 
-time_t hour(time_t t)
+time_t hours(time_t t)
 {
     return min(t) * 60;
 }
 
-time_t day(time_t t)
+time_t days(time_t t)
 {
-    return hour(t) * 24;
+    return hours(t) * 24;
 }
 
 time_t freq(double hz)

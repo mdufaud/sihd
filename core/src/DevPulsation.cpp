@@ -70,8 +70,8 @@ bool    DevPulsation::run()
 
 bool    DevPulsation::on_init()
 {
-    this->add_unlinked_channel(CHANNEL_HEART, sihd::util::DUINT, 1);
-    this->add_unlinked_channel(CHANNEL_ACTIVATE, sihd::util::DBOOL, 1);
+    this->add_unlinked_channel(CHANNEL_HEART, sihd::util::TYPE_UINT, 1);
+    this->add_unlinked_channel(CHANNEL_ACTIVATE, sihd::util::TYPE_BOOL, 1);
     return true;
 }
 

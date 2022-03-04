@@ -351,6 +351,34 @@ bool   Str::to_ulong(const std::string & str, unsigned long *ret, uint16_t base)
     return true;
 }
 
+bool    Str::to_llong(const std::string & str, long long *ret, uint16_t base)
+{
+    errno = 0;
+    char *endptr = NULL;
+    *ret = strtoll(str.c_str(), &endptr, base);
+    if (str.c_str() == endptr)
+        return false;
+    if (*ret == 0L && errno == EINVAL)
+        return false;
+    if ((*ret == LLONG_MIN || *ret == LLONG_MAX) && errno == ERANGE)
+        return false;
+    return true;
+}
+
+bool   Str::to_ullong(const std::string & str, unsigned long long *ret, uint16_t base)
+{
+    errno = 0;
+    char *endptr = NULL;
+    *ret = strtoull(str.c_str(), &endptr, base);
+    if (str.c_str() == endptr)
+        return false;
+    if (*ret == 0UL && errno == EINVAL)
+        return false;
+    if (*ret == ULLONG_MAX && errno == ERANGE)
+        return false;
+    return true;
+}
+
 bool    Str::to_double(const std::string & str, double *ret)
 {
     errno = 0;
@@ -438,8 +466,8 @@ bool Str::convert_from_string<int32_t>(const std::string & str, int32_t & value,
 template <>
 bool Str::convert_from_string<int64_t>(const std::string & str, int64_t & value, uint16_t base)
 {
-    long longval;
-    bool ret = Str::to_long(str, &longval, base);
+    long long longval;
+    bool ret = Str::to_llong(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
@@ -478,8 +506,8 @@ bool Str::convert_from_string<uint32_t>(const std::string & str, uint32_t & valu
 template <>
 bool Str::convert_from_string<uint64_t>(const std::string & str, uint64_t & value, uint16_t base)
 {
-    unsigned long longval;
-    bool ret = Str::to_ulong(str, &longval, base);
+    unsigned long long longval;
+    bool ret = Str::to_ullong(str, &longval, base);
     if (ret)
         value = longval;
     return ret;

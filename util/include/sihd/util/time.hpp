@@ -24,6 +24,8 @@ struct timeval double_to_tv(double time);
 struct timeval double_to_nano_tv(double time);
 // milliseconds -> timeval (micro resolution)
 struct timeval milli_to_tv(time_t milliseconds);
+constexpr auto ms_to_tv = time::milli_to_tv;
+constexpr auto milliseconds_to_tv = time::milli_to_tv;
 // nano -> timeval (micro resolution)
 struct timeval to_tv(time_t micro);
 // nano -> timeval (nano resolution)
@@ -37,33 +39,51 @@ struct tm *to_tm(time_t nano, bool localtime = false);
 
 // nano -> micro
 time_t to_micro(time_t nano);
+constexpr auto to_us = time::to_micro;
+constexpr auto to_microseconds = time::to_micro;
 // nano -> milli
 time_t to_milli(time_t nano);
+constexpr auto to_ms = time::to_milli;
+constexpr auto to_milliseconds = time::to_milli;
 // nano -> sec
 time_t to_sec(time_t nano);
+constexpr auto to_seconds = time::to_sec;
 // nano -> min
 time_t to_min(time_t nano);
+constexpr auto to_minutes = time::to_min;
 // nano -> hour
-time_t to_hour(time_t nano);
+time_t to_hours(time_t nano);
 // nano -> day
-time_t to_day(time_t nano);
+time_t to_days(time_t nano);
 // nano -> seconds,milliseconds
 double to_double(time_t nano);
+// nano -> hz
+double to_freq(time_t nano);
+constexpr auto to_hz = time::to_freq;
+constexpr auto to_frequency = time::to_freq;
 
 // micro -> nano
 time_t micro(time_t micro);
+constexpr auto us = time::micro;
+constexpr auto microseconds = time::micro;
 // milli -> nano
 time_t milli(time_t milli);
+constexpr auto ms = time::milli;
+constexpr auto milliseconds = time::milli;
 // sec -> nano
 time_t sec(time_t sec);
+constexpr auto seconds = time::sec;
 // min -> nano
 time_t min(time_t min);
+constexpr auto minutes = time::min;
 // hour -> nano
-time_t hour(time_t hour);
+time_t hours(time_t hour);
 // day -> nano
-time_t day(time_t day);
+time_t days(time_t day);
 // hz -> nano
 time_t freq(double hz);
+constexpr auto frequency = time::freq;
+constexpr auto hz = time::freq;
 
 // tm struct -> nano
 time_t tm(struct tm *tm);

@@ -94,8 +94,8 @@ void    DevPlayer::handle(sihd::core::Channel *c)
 
 bool    DevPlayer::on_init()
 {
-    this->add_unlinked_channel(CHANNEL_PLAY, DBOOL, 1);
-    this->add_unlinked_channel(CHANNEL_END, DBOOL, 1);
+    this->add_unlinked_channel(CHANNEL_PLAY, TYPE_BOOL, 1);
+    this->add_unlinked_channel(CHANNEL_END, TYPE_BOOL, 1);
     _scheduler_ptr = this->add_child<Scheduler>("scheduler");
     return true;
 }

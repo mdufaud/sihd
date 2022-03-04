@@ -36,7 +36,6 @@ class MemRecorder:  public ACoreObject,
         bool provider_empty() const override;
         bool providing() const override;
         bool provide(PlayableRecord *value) override;
-        void handle(const std::string & name, const Channel *array) override;
 
         std::string hexdump_records();
         std::string hexdump_timeline(const std::string & separation_cols = "\t", char separation_data = ' ');
@@ -45,13 +44,13 @@ class MemRecorder:  public ACoreObject,
         const MapListRecordedValues get_recorded_values() const { return _map_record; }
         const SortedRecordedValues get_sorted_recorded_values() const { return _map_sorted_records; }
 
-    private:
+    protected:
+        void handle(const std::string & name, const Channel *array) override;
 
+    private:
         bool _provides;
         bool _records;
-
         bool _running;
-
         MapListRecordedValues _map_record;
         SortedRecordedValues _map_sorted_records;
 };

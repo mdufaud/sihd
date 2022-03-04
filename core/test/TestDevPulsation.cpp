@@ -35,16 +35,15 @@ namespace test
     {
         Core core;
 
-        DevPulsation dev("pulsation", &core);
-        dev.set_parent_ownership(false);
+        DevPulsation *dev_ptr = core.add_child<DevPulsation>("pulsation");
         // 1000hz = 1000/s = 1ms
-        EXPECT_TRUE(dev.set_conf("frequency", 1000.0));
+        EXPECT_TRUE(dev_ptr->set_conf("frequency", 1000.0));
 
         EXPECT_TRUE(core.init());
         EXPECT_TRUE(core.start());
 
-        Channel *activate = dev.get_channel("activate");
-        Channel *beat = dev.get_channel("heartbeat");
+        Channel *activate = dev_ptr->get_channel("activate");
+        Channel *beat = dev_ptr->get_channel("heartbeat");
         EXPECT_NE(activate, nullptr);
         EXPECT_NE(beat, nullptr);
         if (activate != nullptr && beat != nullptr)
@@ -59,14 +58,13 @@ namespace test
         EXPECT_TRUE(core.reset());
 
         // reset
-        DevPulsation dev2("pulsation", &core);
-        dev2.set_parent_ownership(false);
-        EXPECT_TRUE(dev2.set_conf("frequency", 1000.0));
+        DevPulsation *dev2_ptr = core.add_child<DevPulsation>("pulsation");
+        EXPECT_TRUE(dev2_ptr->set_conf("frequency", 1000.0));
         EXPECT_TRUE(core.init());
         EXPECT_TRUE(core.start());
 
-        activate = dev2.get_channel("activate");
-        beat = dev2.get_channel("heartbeat");
+        activate = dev2_ptr->get_channel("activate");
+        beat = dev2_ptr->get_channel("heartbeat");
         EXPECT_NE(activate, nullptr);
         EXPECT_NE(beat, nullptr);
         if (activate != nullptr && beat != nullptr)

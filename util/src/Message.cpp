@@ -101,7 +101,7 @@ bool    Message::finish()
     if (this->is_finished())
         return false;
     __assign_arr_at = 0;
-    _arr.new_buffer(_total_size, true);
+    _arr.resize(_total_size);
     for (const std::string & name: this->get_children_keys())
     {
         IMessageField *field = this->find<IMessageField>(name);

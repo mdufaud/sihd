@@ -32,7 +32,7 @@ namespace test
             void handle(Channel *c)
             {
                 SIHD_TRACE(c->array()->data_type_to_string());
-                if (c->array()->data_type() == DINT)
+                if (c->array()->data_type() == TYPE_INT)
                 {
                     Array<int> *arr_int = ArrayUtil::cast_array<int>(c->array());
                     int *c_arr_int = arr_int->data();
@@ -57,7 +57,7 @@ namespace test
         EXPECT_EQ(c.array()->data_size(), 4u);
         EXPECT_EQ(c.array()->data_type_to_string(), "float");
         EXPECT_EQ(c.array()->capacity(), 4u);
-        EXPECT_EQ(c.array()->data_type(), DFLOAT);
+        EXPECT_EQ(c.array()->data_type(), TYPE_FLOAT);
         EXPECT_EQ(_notified[&c], 0);
         c.notify();
         EXPECT_EQ(_notified[&c], 0);

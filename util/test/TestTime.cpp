@@ -30,6 +30,13 @@ namespace test
             }
     };
 
+
+    TEST_F(TestTime, test_time_freq)
+    {
+        EXPECT_DOUBLE_EQ(time::freq(10), time::milli(100));
+        EXPECT_DOUBLE_EQ(time::to_hz(time::milli(100)), 10);
+    }
+
     TEST_F(TestTime, test_time_double)
     {
         double time_dbl = time::to_double(time::sec(1) + time::milli(23));
@@ -59,8 +66,8 @@ namespace test
 
     TEST_F(TestTime, test_time_tm)
     {
-        struct tm *tm = time::to_tm(time::day(3 * 365) + time::day(31) + time::day(25)
-                                        + time::hour(20) + time::min(37) + time::sec(10),
+        struct tm *tm = time::to_tm(time::days(3 * 365) + time::days(31) + time::days(25)
+                                        + time::hours(20) + time::min(37) + time::sec(10),
                                         false);
         EXPECT_NE(tm, nullptr);
         if (tm)

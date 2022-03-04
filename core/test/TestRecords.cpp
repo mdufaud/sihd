@@ -39,8 +39,8 @@ namespace test
     {
         Core core;
 
-        Channel *int_channel = core.add_channel("int_channel", sihd::util::DINT, 2);
-        Channel *bool_channel = core.add_channel("bool_channel", sihd::util::DBOOL, 4);
+        Channel *int_channel = core.add_channel("int_channel", sihd::util::TYPE_INT, 2);
+        Channel *bool_channel = core.add_channel("bool_channel", sihd::util::TYPE_BOOL, 4);
 
         MemRecorder mem_recorder("mem_recorder", &core);
         EXPECT_TRUE(mem_recorder.set_conf("provider", true));
@@ -108,12 +108,12 @@ namespace test
     TEST_F(TestRecords, test_records_dev_recorder)
     {
         Core core;
-        Channel *int_channel = core.add_channel("int_channel", sihd::util::DINT, 2);
-        Channel *bool_channel = core.add_channel("bool_channel", sihd::util::DBOOL, 4);
+        Channel *int_channel = core.add_channel("int_channel", sihd::util::TYPE_INT, 2);
+        Channel *bool_channel = core.add_channel("bool_channel", sihd::util::TYPE_BOOL, 4);
         bool_channel->set_write_on_change(false);
-        Channel *double_channel = core.add_channel("double_channel", sihd::util::DDOUBLE, 1);
+        Channel *double_channel = core.add_channel("double_channel", sihd::util::TYPE_DOUBLE, 1);
         // unused channel
-        core.add_channel("char_channel", sihd::util::DCHAR, 10);
+        core.add_channel("char_channel", sihd::util::TYPE_CHAR, 10);
 
         MemRecorder mem_recorder("mem_recorder", &core);
         EXPECT_TRUE(mem_recorder.set_conf("provider", true));

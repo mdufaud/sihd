@@ -121,7 +121,7 @@ int     Splitter::count_tokens(const char *s) const
     return count;
 }
 
-std::string  Splitter::get_next_token(const char *s, int *idx) const
+std::string_view    Splitter::get_next_token(const char *s, int *idx) const
 {
     int x = *idx;
     int delimiter_offset;
@@ -157,7 +157,7 @@ std::string  Splitter::get_next_token(const char *s, int *idx) const
         }
     }
     *idx = y;
-    return std::string(s + x, y - x);
+    return std::string_view(s + x, std::max(0, y - x));
 }
 
 std::vector<std::string>    Splitter::split(const std::string & str) const
@@ -167,6 +167,22 @@ std::vector<std::string>    Splitter::split(const std::string & str) const
     const char *s = str.c_str();
     int tokens = this->count_tokens(s);
     std::vector<std::string> ret;
+    ret.resize(tokens);
+
+    int i = 0;
+    int j = 0;
+    while (tokens-- > 0)
+        ret[i++] = this->get_next_token(s, &j);
+    return ret;
+}
+
+std::vector<std::string_view>   Splitter::split_view(const std::string & str) const
+{
+   if (_delimiter.empty() && _compare_method == nullptr)
+        return {str};
+    const char *s = str.c_str();
+    int tokens = this->count_tokens(s);
+    std::vector<std::string_view> ret;
     ret.resize(tokens);
 
     int i = 0;

@@ -58,7 +58,7 @@ bool    DevRecorder::is_running() const
     return _running;
 }
 
-void    DevRecorder::handle([[maybe_unused]] sihd::core::Channel *channel)
+void    DevRecorder::handle(sihd::core::Channel *channel)
 {
     std::string & alias = _map_channels[channel];
     _handler_ptr->handle(alias, channel);
@@ -74,7 +74,7 @@ bool    DevRecorder::on_init()
         SIHD_LOG(error, "DevRecorder: handler not found: " << _handler_path);
         return false;
     }
-    this->add_unlinked_channel(CHANNEL_RECORDS, sihd::util::DUINT, 1);
+    this->add_unlinked_channel(CHANNEL_RECORDS, sihd::util::TYPE_UINT, 1);
     return true;
 }
 
@@ -102,7 +102,10 @@ bool    DevRecorder::on_start()
 
 bool    DevRecorder::on_stop()
 {
-    _running = false;
+    {
+        std::lock_guard l(_run_mutex);
+        _running = false;
+    }
     _channel_records_ptr = nullptr;
     _map_channels.clear();
     return true;
@@ -111,6 +114,7 @@ bool    DevRecorder::on_stop()
 bool    DevRecorder::on_reset()
 {
     _records_array[0] = 0;
+    _handler_ptr = nullptr;
     return true;
 }
 

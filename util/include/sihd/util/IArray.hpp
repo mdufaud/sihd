@@ -2,7 +2,7 @@
 # define __SIHD_UTIL_IARRAY_HPP__
 
 # include <sihd/util/ICloneable.hpp>
-# include <sihd/util/Datatype.hpp>
+# include <sihd/util/Types.hpp>
 # include <string_view>
 
 namespace sihd::util
@@ -33,13 +33,12 @@ class IArray
         virtual bool copy_from_bytes(const uint8_t *buf, size_t size, size_t byte_offset = 0) = 0;
         virtual bool copy_to(uint8_t *buf, size_t size) const = 0;
         // assign buffer to internal buffer
-        virtual bool assign_bytes(uint8_t *buf, size_t size) = 0;
+        virtual bool assign_bytes(uint8_t *buf, size_t byte_size) = 0;
 
-        virtual bool byte_resize(size_t size) = 0;
-        virtual bool byte_reserve(size_t capacity) = 0;
+        virtual bool byte_resize(size_t byte_size) = 0;
+        virtual bool byte_reserve(size_t byte_capacity) = 0;
         // no byte size
         virtual bool resize(size_t size) = 0;
-        // no byte size
         virtual bool reserve(size_t capacity) = 0;
         // should resize to 0
         virtual void clear() = 0;

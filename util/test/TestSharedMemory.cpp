@@ -62,7 +62,7 @@ namespace test
         if (pid != 0)
         {
             SIHD_LOG(debug, "--- begin of parent ---");
-            usleep(1E5);
+            usleep(1E4);
             SIHD_LOG(debug, "--- parent attaching ---");
             // no attach_read_only with semaphores - it segfaults
             SharedMemory mem;

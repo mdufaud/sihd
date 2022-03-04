@@ -86,9 +86,10 @@ class Str
 
         static std::map<std::string, std::string> parse_configuration(const std::string & conf);
 
-
         static bool to_long(const std::string & str, long *ret, uint16_t base = 0);
         static bool to_ulong(const std::string & str, unsigned long *ret, uint16_t base = 0);
+        static bool to_llong(const std::string & str, long long *ret, uint16_t base = 0);
+        static bool to_ullong(const std::string & str, unsigned long long *ret, uint16_t base = 0);
         static bool to_double(const std::string & str, double *ret);
 
         template <typename T>

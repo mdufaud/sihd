@@ -33,16 +33,16 @@ class Configurable
             _callbackManager.set<bool, T1, T2>(name, fun);
         };
 
+        template <typename T1, typename T2, typename T3>
+        void    add_conf(const std::string & name, std::function<bool(T1, T2, T3)> fun)
+        {
+            _callbackManager.set<bool, T1, T2, T3>(name, fun);
+        };
+
         template <typename T>
         bool    set_conf(const std::string & name)
         {
             return _callbackManager.call<bool, T>(name);
-        }
-
-        template <typename T>
-        bool    set_conf(const std::string & name, T param)
-        {
-            return _callbackManager.call<bool, T>(name, param);
         }
 
         template <typename ...T>
@@ -83,13 +83,18 @@ class Configurable
             return _callbackManager.call<bool, uint8_t>(name, param);
         }
 
-        bool    set_conf_str(const std::string & name, std::string param)
+        bool    set_conf_str(const std::string & name, const std::string & param)
         {
-            try { return _callbackManager.call<bool, std::string &>(name, param); }
-            catch (const std::invalid_argument & e) {}
             try { return _callbackManager.call<bool, const std::string &>(name, param); }
             catch (const std::invalid_argument & e) {}
-            try { return _callbackManager.call<bool, const char *>(name, param.c_str()); }
+            return _callbackManager.call<bool, const char *>(name, param.c_str());
+        }
+
+        bool    set_conf_str(const std::string & name, const char *param)
+        {
+            try { return _callbackManager.call<bool, const char *>(name, param); }
+            catch (const std::invalid_argument & e) {}
+            try { return _callbackManager.call<bool, const std::string &>(name, param); }
             catch (const std::invalid_argument & e) {}
             return _callbackManager.call<bool, std::string>(name, param);
         }

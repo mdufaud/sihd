@@ -30,6 +30,7 @@ class Daemon:   public sihd::util::Named,
         */
         bool run();
 
+        sihd_uid_t uid() const { return _uid; }
         const std::string & pid_file() const { return _pid_file_path; }
         const std::string & working_dir() const { return _working_dir_path; }
 

@@ -45,16 +45,6 @@ bool    Daemon::set_uid(sihd_uid_t uid)
     return true;
 }
 
-void    Daemon::_remove_pid_file()
-{
-    if (_pid_file.is_open())
-    {
-        std::string path = _pid_file.path();
-        _pid_file.close();
-        Files::remove_file(path);
-    }
-}
-
 bool    Daemon::set_pid_file_path(const std::string & path)
 {
     _pid_file_path = path;
@@ -101,6 +91,16 @@ bool    Daemon::_handle_signals()
     }
     _signals_handled = true;
     return ret;
+}
+
+void    Daemon::_remove_pid_file()
+{
+    if (_pid_file.is_open())
+    {
+        std::string path = _pid_file.path();
+        _pid_file.close();
+        Files::remove_file(path);
+    }
 }
 
 bool    Daemon::_lock_pid_file()
@@ -211,7 +211,13 @@ bool    Daemon::run()
 bool    Daemon::run()
 {
     // TODO
+    // maybe use windows services
     FreeConsole();
+    if (chdir(_working_dir_path.c_str()) < 0)
+    {
+        SIHD_LOG(error, "Daemon: chdir failed: " << strerror(errno));
+        return false;
+    }
     return true;
 }
 

@@ -83,26 +83,28 @@ class Channel:  public sihd::util::Named,
                 SIHD_LOG(warning, "Channel: cannot write while notifying");
                 return false;
             }
-            sihd::util::Array<T> *arr = sihd::util::ArrayUtil::cast_array<T>(_array_ptr);
-            bool ret = arr != nullptr;
+            sihd::util::Array<T> *arr_ptr = sihd::util::ArrayUtil::cast_array<T>(_array_ptr);
+            bool ret = arr_ptr != nullptr;
             if (ret)
             {
                 std::lock_guard lock(_arr_mutex);
-                if (_write_change_only && arr->at(idx) == value)
+                if (_write_change_only && arr_ptr->at(idx) == value)
                     return true;
-                arr->set(idx, value);
+                arr_ptr->set(idx, value);
                 _timestamp = _clock_ptr->now();
             }
             else
             {
                 SIHD_LOG(error, "Channel: wrong type for writing "
                         << _array_ptr->data_type_to_string() << " != "
-                        << sihd::util::Datatype::type_to_string<T>())
+                        << sihd::util::Types::to_string<T>())
             }
             if (ret)
                 this->notify();
             return ret;
         }
+
+        bool write(const Channel & other);
 
     protected:
         virtual void _init(sihd::util::Type type, size_t size);

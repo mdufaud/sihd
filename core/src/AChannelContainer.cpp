@@ -13,7 +13,24 @@ AChannelContainer::~AChannelContainer()
 {
 }
 
-Channel     *AChannelContainer::get_channel(const std::string & name)
+Channel *AChannelContainer::find_channel(const std::string & path)
+{
+    return this->find<Channel>(path);
+}
+
+bool    AChannelContainer::find_channel(const std::string & path, Channel **to_fill)
+{
+    Channel *c = this->find_channel(path);
+    if (c == nullptr)
+    {
+        SIHD_LOG_ERROR("ChannelContainer: '%s' no such channel '%s'", this->get_full_name().c_str(), path.c_str());
+        return false;
+    }
+    *to_fill = c;
+    return true;
+}
+
+Channel *AChannelContainer::get_channel(const std::string & name)
 {
     Named *child = this->get_child(name);
     if (child)
@@ -45,7 +62,7 @@ Channel *AChannelContainer::add_unlinked_channel(const std::string & name, sihd:
 
 Channel *AChannelContainer::add_unlinked_channel(const std::string & name, const std::string & type, size_t size)
 {
-    return this->add_unlinked_channel(name, sihd::util::Datatype::string_to_datatype(type), size);
+    return this->add_unlinked_channel(name, sihd::util::Types::string_to_type(type), size);
 }
 
 Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Type type, size_t size)
@@ -67,7 +84,7 @@ Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Ty
 
 Channel *AChannelContainer::add_channel(const std::string & name, const std::string & type, size_t size)
 {
-    return this->add_channel(name, sihd::util::Datatype::string_to_datatype(type), size);
+    return this->add_channel(name, sihd::util::Types::string_to_type(type), size);
 }
 
 bool    AChannelContainer::_check_link(const std::string & name, Named *child)
@@ -85,7 +102,7 @@ bool    AChannelContainer::_check_link(const std::string & name, Named *child)
     {
         SIHD_LOG_ERROR("ChannelContainer: '%s' channel link size not same type '%s': '%s' != '%s'",
                     this->get_full_name().c_str(), name.c_str(),
-                    sihd::util::Datatype::datatype_to_string(conf.type).c_str(),
+                    sihd::util::Types::type_to_string(conf.type).c_str(),
                     chan->array()->data_type_to_string().c_str());
         ret = false;
     }

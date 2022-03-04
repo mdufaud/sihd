@@ -25,7 +25,7 @@ class DevRecorder:   public sihd::core::Device
         bool remove_recorded_channel(const std::string & alias);
 
     protected:
-        void handle([[maybe_unused]] sihd::core::Channel *c) override;
+        void handle(sihd::core::Channel *c) override;
 
         bool on_init() override;
         bool on_start() override;
@@ -33,6 +33,7 @@ class DevRecorder:   public sihd::core::Device
         bool on_reset() override;
 
     private:
+        std::mutex _run_mutex;
         std::mutex _mutex_recorded_values;
         // list of channels path to get at start
         std::map<std::string, std::string> _map_channels_alias;

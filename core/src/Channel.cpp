@@ -12,13 +12,13 @@ sihd::util::IClock *Channel::_default_channel_clock_ptr = &sihd::util::Clock::de
 Channel::Channel(const std::string & name, const std::string & type, size_t size, Node *parent):
     Named(name, parent)
 {
-    this->_init(Datatype::string_to_datatype(type), size);
+    this->_init(Types::string_to_type(type), size);
 }
 
 Channel::Channel(const std::string & name, const std::string & type, Node *parent):
     Named(name, parent)
 {
-    this->_init(Datatype::string_to_datatype(type), 1);
+    this->_init(Types::string_to_type(type), 1);
 }
 
 Channel::Channel(const std::string & name, Type type, size_t size, Node *parent):
@@ -74,7 +74,7 @@ void    Channel::_init(Type type, size_t size)
     if (_array_ptr == nullptr)
     {
         throw std::invalid_argument(Str::format("Channel: no such type %s for channel %s",
-                                                    Datatype::datatype_to_string(type).c_str(),
+                                                    Types::type_to_string(type).c_str(),
                                                     this->get_name().c_str()));
     }
     _array_ptr->resize(size);
@@ -96,6 +96,12 @@ bool    Channel::copy_to(IArray & arr)
     return arr.copy_from_bytes(*_array_ptr);
 }
 
+bool    Channel::write(const Channel & other)
+{
+    const IArray *other_array = other.carray();
+    return other_array != nullptr && this->write(*other_array);
+}
+
 bool    Channel::write(const IArray & arr)
 {
     if (_notifying)
@@ -115,15 +121,17 @@ bool    Channel::write(const IArray & arr)
         this->notify();
     else
     {
+        /*
         if (_array_ptr->is_same_type(arr) == false)
         {
             SIHD_LOG(error, "Channel: cannot write an array from different type: "
                 << arr.data_type_to_string() << " != " << _array_ptr->data_type_to_string());
         }
-        else if (_array_ptr->byte_capacity() <= arr.byte_size())
+        else */
+        if (arr.byte_size() > _array_ptr->byte_size())
         {
             SIHD_LOG(error, "Channel: cannot write an array with too many bytes: "
-                    << arr.byte_size() << " > " << _array_ptr->byte_capacity());
+                    << arr.byte_size() << " > " << _array_ptr->byte_size());
         }
     }
     return ret;

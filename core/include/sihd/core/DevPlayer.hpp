@@ -35,7 +35,7 @@ class DevPlayer:    public sihd::core::Device,
     protected:
         using Device::handle;
 
-        void handle([[maybe_unused]] sihd::core::Channel *c) override;
+        void handle(sihd::core::Channel *c) override;
         void handle(sihd::util::Collector<PlayableRecord> *collector) override;
 
         bool on_init() override;

@@ -18,6 +18,13 @@ Device::Device(const std::string & name, Node *parent):
 
 Device::~Device()
 {
+    if (this->get_parent() == nullptr)
+    {
+        if (_default_service_controller.statemachine.get_last_event() == AService::START)
+            this->stop();
+        if (_default_service_controller.statemachine.get_last_event() == AService::STOP)
+            this->reset();
+    }
 }
 
 bool    Device::do_setup()

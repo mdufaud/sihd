@@ -62,39 +62,43 @@ class Array: public IArray, public ICloneable<Array<T>>
         };
 
         // IArray
+
         uint8_t *buf() { return (uint8_t *)_buf_ptr; }
         const uint8_t *cbuf() const { return (uint8_t *)_buf_ptr; }
+
         size_t data_size() const { return sizeof(T); }
+
         size_t size() const { return _size; }
         size_t byte_size() const { return _size * sizeof(T); }
+
         size_t capacity() const { return _capacity; }
         size_t byte_capacity() const { return _capacity * sizeof(T); }
-        Type data_type() const { return Datatype::type_to_datatype<T>(); }
-        std::string data_type_to_string() const { return Datatype::datatype_to_string(this->data_type()); }
 
-        bool copy_from(const IArray & arr, size_t from = 0)
-        {
-            if (this->is_same_type(arr))
-                return this->copy_from_bytes(arr.cbuf(), arr.byte_size(), from);
-            return false;
-        }
+        Type data_type() const { return Types::to_type<T>(); }
+        std::string data_type_to_string() const { return Types::type_to_string(this->data_type()); }
 
-        bool copy_from_bytes(const IArray & arr, size_t from = 0)
+        bool copy_from_bytes(const uint8_t *buf, size_t size, size_t byte_offset = 0)
         {
-            return this->copy_from_bytes(arr.cbuf(), arr.byte_size(), from);
-        }
-
-        bool copy_from_bytes(const uint8_t *buf, size_t size, size_t from = 0)
-        {
-            if (size + from > this->byte_capacity())
+            if (size + byte_offset > this->byte_size())
                 return false;
-            memcpy(this->buf() + from, buf, size);
+            memcpy(this->buf() + byte_offset, buf, size);
             return true;
+        }
+
+        bool copy_from_bytes(const IArray & arr, size_t byte_offset = 0)
+        {
+            return this->copy_from_bytes(arr.cbuf(), arr.byte_size(), byte_offset);
+        }
+
+        bool copy_from(const IArray & arr, size_t byte_offset = 0)
+        {
+            return this->is_same_type(arr)
+                    && this->copy_from_bytes(arr.cbuf(), arr.byte_size(), byte_offset);
         }
 
         bool copy_to(uint8_t *buf, size_t size) const
         {
-            if (size > this->byte_capacity())
+            if (size > this->byte_size())
                 return false;
             memcpy(buf, (void *)_buf_ptr, size);
             return true;
@@ -137,8 +141,8 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (size % this->data_size() != 0)
             {
-                SIHD_LOG_ERROR("Array::byte_resize cannot resize - %lu not divisible by data size %lu",
-                            size, this->data_size());
+                SIHD_LOG_DEBUG("Array::byte_resize cannot resize - %lu not divisible by data size %lu",
+                                size, this->data_size());
                 return false;
             }
             return this->resize(size / this->data_size());
@@ -148,8 +152,8 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (size % this->data_size() != 0)
             {
-                SIHD_LOG_ERROR("Array::byte_reserve cannot reserve - %lu not divisible by data size %lu",
-                            size, this->data_size());
+                SIHD_LOG_DEBUG("Array::byte_reserve cannot reserve - %lu not divisible by data size %lu",
+                                size, this->data_size());
                 return false;
             }
             return this->reserve(size / this->data_size());
@@ -236,7 +240,6 @@ class Array: public IArray, public ICloneable<Array<T>>
             return _buf_ptr != nullptr ? std::string_view((char *)_buf_ptr, this->byte_size()) : "";
         }
 
-
         // ICloneable
 
         Array<T> *clone()
@@ -271,7 +274,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         // compares memory from internal buffer and array of size
         bool is_equal(const T *arr, size_t size) const
         {
-            if (size > this->capacity())
+            if (size > this->size())
                 return false;
             return memcmp(_buf_ptr, arr, size) == 0;
         }
@@ -287,14 +290,14 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (byte_size % this->data_size() != 0)
             {
-                SIHD_LOG_ERROR("Array::assign_bytes cannot assign buffer - size %lu not divisible by %lu",
-                            byte_size, this->data_size());
+                SIHD_LOG_DEBUG("Array::assign_bytes cannot assign buffer - size %lu not divisible by %lu",
+                                byte_size, this->data_size());
                 return false;
             }
             if (byte_capacity % this->data_size() != 0)
             {
-                SIHD_LOG_ERROR("Array::assign_bytes cannot assign buffer - capacity %lu not divisible by %lu",
-                            byte_capacity, this->data_size());
+                SIHD_LOG_DEBUG("Array::assign_bytes cannot assign buffer - capacity %lu not divisible by %lu",
+                                byte_capacity, this->data_size());
                 return false;
             }
             return this->assign((T *)buf, byte_size / this->data_size(), byte_capacity / this->data_size());
@@ -315,6 +318,17 @@ class Array: public IArray, public ICloneable<Array<T>>
             _capacity = capacity;
             _has_ownership = false;
             return true;
+        }
+
+        // delete internal buffer if it has ownership - set internal buffer to nullptr
+        void delete_buffer()
+        {
+            if (_buf_ptr != nullptr && _has_ownership)
+                delete[] _buf_ptr;
+            _size = 0;
+            _capacity = 0;
+            _buf_ptr = nullptr;
+            _has_ownership = false;
         }
 
         // delete internal buffer if exists then allocates new one
@@ -416,17 +430,6 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         // set value arr[idx] = value
         inline T & operator[](size_t idx) { return _buf_ptr[idx]; }
-
-        // delete internal buffer if it has ownership - set internal buffer to nullptr
-        void delete_buffer()
-        {
-            if (_buf_ptr != nullptr && _has_ownership)
-                delete[] _buf_ptr;
-            _size = 0;
-            _capacity = 0;
-            _buf_ptr = nullptr;
-            _has_ownership = false;
-        }
 
         // Array<T> iterator
 
@@ -874,19 +877,19 @@ class ArrayUtil
                                         const std::vector<std::pair<IArray *, size_t>> assigned_arrays,
                                         size_t starting_offset = 0)
         {
-            if (starting_offset > distributing_array.byte_capacity())
+            if (starting_offset > distributing_array.byte_size())
             {
-                SIHD_LOG_ERROR("ArrayUtil: starting offset is beyond distributing array capacity (%lu > %lu)",
-                            starting_offset, distributing_array.byte_capacity());
+                SIHD_LOG_DEBUG("ArrayUtil: starting offset is beyond distributing array size (%lu > %lu)",
+                            starting_offset, distributing_array.byte_size());
                 return false;
             }
             size_t total = 0;
             for (const auto & pair: assigned_arrays)
                 total += pair.second * pair.first->data_size();
-            if ((total + starting_offset) > distributing_array.byte_capacity())
+            if ((total + starting_offset) > distributing_array.byte_size())
             {
-                SIHD_LOG_ERROR("ArrayUtil: total distribution exceed array capacity (%lu > %lu)",
-                            total + starting_offset, distributing_array.byte_capacity());
+                SIHD_LOG_DEBUG("ArrayUtil: total distribution exceed array size (%lu > %lu)",
+                            total + starting_offset, distributing_array.byte_size());
                 return false;
             }
             size_t distributed_byte_size;
@@ -894,7 +897,8 @@ class ArrayUtil
             for (const auto & pair: assigned_arrays)
             {
                 distributed_byte_size = pair.second * pair.first->data_size();
-                pair.first->assign_bytes(distributing_array.buf() + offset_idx, distributed_byte_size);
+                if (pair.first->assign_bytes(distributing_array.buf() + offset_idx, distributed_byte_size) == false)
+                    return false;
                 offset_idx += distributed_byte_size;
             }
             return true;
@@ -912,31 +916,31 @@ class ArrayUtil
         {
             switch (dt)
             {
-                case DBOOL:
+                case TYPE_BOOL:
                     return new ArrBool(size);
-                case DCHAR:
+                case TYPE_CHAR:
                     return new ArrChar(size);
-                case DBYTE:
+                case TYPE_BYTE:
                     return new ArrByte(size);
-                case DUBYTE:
+                case TYPE_UBYTE:
                     return new ArrUByte(size);
-                case DSHORT:
+                case TYPE_SHORT:
                     return new ArrShort(size);
-                case DUSHORT:
+                case TYPE_USHORT:
                     return new ArrUShort(size);
-                case DINT:
+                case TYPE_INT:
                     return new ArrInt(size);
-                case DUINT:
+                case TYPE_UINT:
                     return new ArrUInt(size);
-                case DLONG:
+                case TYPE_LONG:
                     return new ArrLong(size);
-                case DULONG:
+                case TYPE_ULONG:
                     return new ArrULong(size);
-                case DFLOAT:
+                case TYPE_FLOAT:
                     return new ArrFloat(size);
-                case DDOUBLE:
+                case TYPE_DOUBLE:
                     return new ArrDouble(size);
-                case DSTRING:
+                case TYPE_STRING:
                     return new ArrStr(size);
                 default:
                     break ;
@@ -959,7 +963,7 @@ class ArrayUtil
                 throw std::invalid_argument(
                     Str::format("ArrayUtil::read_array wrong type - invalid cast: %s != %s",
                                 uncasted_array.data_type_to_string().c_str(),
-                                Datatype::datatype_to_string(Datatype::type_to_datatype<T>()).c_str())
+                                Types::to_string<T>().c_str())
                 );
             }
             return arr->at(idx);
@@ -982,7 +986,7 @@ class ArrayUtil
                 throw std::invalid_argument(
                     Str::format("ArrayUtil::write_array wrong type - invalid cast: %s != %s",
                                 uncasted_array.data_type_to_string().c_str(),
-                                Datatype::datatype_to_string(Datatype::type_to_datatype<T>()).c_str())
+                                Types::to_string<T>().c_str())
                 );
             }
             arr->set(idx, value);

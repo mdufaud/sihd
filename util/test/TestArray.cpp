@@ -382,9 +382,9 @@ namespace test
         EXPECT_EQ(buffer_ubyte[0], 255);
 
         EXPECT_EQ(buffer_byte.data_size(), sizeof(char));
-        EXPECT_EQ(buffer_byte.data_type(), Type::DBYTE);
+        EXPECT_EQ(buffer_byte.data_type(), Type::TYPE_BYTE);
         EXPECT_EQ(buffer_ubyte.data_size(), sizeof(char));
-        EXPECT_EQ(buffer_ubyte.data_type(), Type::DUBYTE);
+        EXPECT_EQ(buffer_ubyte.data_type(), Type::TYPE_UBYTE);
 
         sihd::util::ArrShort buffer_short(1);
         buffer_short[0] = 2;
@@ -394,9 +394,9 @@ namespace test
         EXPECT_EQ(buffer_ushort[0], 2u);
 
         EXPECT_EQ(buffer_short.data_size(), sizeof(short));
-        EXPECT_EQ(buffer_short.data_type(), Type::DSHORT);
+        EXPECT_EQ(buffer_short.data_type(), Type::TYPE_SHORT);
         EXPECT_EQ(buffer_ushort.data_size(), sizeof(short));
-        EXPECT_EQ(buffer_ushort.data_type(), Type::DUSHORT);
+        EXPECT_EQ(buffer_ushort.data_type(), Type::TYPE_USHORT);
 
         sihd::util::ArrInt buffer_int(1);
         buffer_int[0] = 2;
@@ -406,9 +406,9 @@ namespace test
         EXPECT_EQ(buffer_uint[0], -1u);
 
         EXPECT_EQ(buffer_int.data_size(), sizeof(int));
-        EXPECT_EQ(buffer_int.data_type(), Type::DINT);
+        EXPECT_EQ(buffer_int.data_type(), Type::TYPE_INT);
         EXPECT_EQ(buffer_uint.data_size(), sizeof(int));
-        EXPECT_EQ(buffer_uint.data_type(), Type::DUINT);
+        EXPECT_EQ(buffer_uint.data_type(), Type::TYPE_UINT);
 
         sihd::util::ArrLong buffer_long(1);
         buffer_long[0] = 1;
@@ -418,23 +418,23 @@ namespace test
         EXPECT_EQ(buffer_ulong[0], -1ul);
 
         EXPECT_EQ(buffer_long.data_size(), sizeof(long));
-        EXPECT_EQ(buffer_long.data_type(), Type::DLONG);
+        EXPECT_EQ(buffer_long.data_type(), Type::TYPE_LONG);
         EXPECT_EQ(buffer_ulong.data_size(), sizeof(long));
-        EXPECT_EQ(buffer_ulong.data_type(), Type::DULONG);
+        EXPECT_EQ(buffer_ulong.data_type(), Type::TYPE_ULONG);
 
         sihd::util::ArrFloat buffer_float(1);
         buffer_float[0] = 133.7;
         EXPECT_FLOAT_EQ(buffer_float[0], 133.7f);
 
         EXPECT_EQ(buffer_float.data_size(), sizeof(float));
-        EXPECT_EQ(buffer_float.data_type(), Type::DFLOAT);
+        EXPECT_EQ(buffer_float.data_type(), Type::TYPE_FLOAT);
 
         sihd::util::ArrDouble buffer_dbl(1);
         buffer_dbl[0] = 123.4;
         EXPECT_FLOAT_EQ(buffer_dbl[0], 123.4);
 
         EXPECT_EQ(buffer_dbl.data_size(), sizeof(double));
-        EXPECT_EQ(buffer_dbl.data_type(), Type::DDOUBLE);
+        EXPECT_EQ(buffer_dbl.data_type(), Type::TYPE_DOUBLE);
     }
 
     // Test from method
@@ -463,7 +463,7 @@ namespace test
 
     TEST_F(TestArray, test_array_util_create)
     {
-        _array_ptr = ArrayUtil::create_from_type(DINT, 1);
+        _array_ptr = ArrayUtil::create_from_type(TYPE_INT, 1);
         EXPECT_NE(_array_ptr, nullptr);
         _array_ptr->resize(1);
         EXPECT_EQ(ArrayUtil::read_array<int>(_array_ptr, 0), 0);

@@ -23,11 +23,12 @@ class Splitter
         bool set_escape_sequences_all();
 
         std::vector<std::string> split(const std::string & str) const;
+        std::vector<std::string_view> split_view(const std::string & str) const;
 
         // count number of tokens to return
         int count_tokens(const char *s) const;
         // return the next token and updates the index
-        std::string get_next_token(const char *s, int *idx) const;
+        std::string_view get_next_token(const char *s, int *idx) const;
 
     protected:
 

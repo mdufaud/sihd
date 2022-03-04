@@ -22,7 +22,7 @@ namespace test
 
             virtual void SetUp()
             {
-                if (Endian::get_endian() != Endian::little)
+                if (Endian::get_endian() != Endian::LITTLE)
                     GTEST_SKIP() << "Those tests are assumed to be in little endianness";
             }
 
@@ -87,8 +87,8 @@ namespace test
         const uint64_t u64 = 0x1234567890abcdefULL;
         uint8_t *ptr;
 
-        uint16_t u16_big = Endian::convert<uint16_t, Endian::big>(u16);
-        uint16_t u16_little = Endian::convert<uint16_t, Endian::little>(u16);
+        uint16_t u16_big = Endian::convert<uint16_t, Endian::BIG>(u16);
+        uint16_t u16_little = Endian::convert<uint16_t, Endian::LITTLE>(u16);
 
         // Asserting the right endianness for the test
         ptr = (uint8_t *)&u16;
@@ -103,8 +103,8 @@ namespace test
         EXPECT_EQ((uint8_t)0x34, ptr[0]);
         EXPECT_EQ((uint8_t)0x12, ptr[1]);
 
-        uint32_t u32_big = Endian::convert<uint32_t, Endian::big>(u32);
-        uint32_t u32_little = Endian::convert<uint32_t>(u32, Endian::little);
+        uint32_t u32_big = Endian::convert<uint32_t, Endian::BIG>(u32);
+        uint32_t u32_little = Endian::convert<uint32_t>(u32, Endian::LITTLE);
 
         ptr = (uint8_t *)&u32_big;
         EXPECT_EQ((uint8_t)0x12, ptr[0]);
@@ -118,8 +118,8 @@ namespace test
         EXPECT_EQ((uint8_t)0x56, ptr[1]);
         EXPECT_EQ((uint8_t)0x78, ptr[0]);
 
-        uint64_t u64_big = Endian::convert(u64, Endian::big);
-        uint64_t u64_little = Endian::convert<uint64_t, Endian::little>(u64);
+        uint64_t u64_big = Endian::convert(u64, Endian::BIG);
+        uint64_t u64_little = Endian::convert<uint64_t, Endian::LITTLE>(u64);
 
         ptr = (uint8_t *)&u64_big;
         EXPECT_EQ((uint8_t)0x12, ptr[0]);
@@ -141,11 +141,11 @@ namespace test
         EXPECT_EQ((uint8_t)0xcd, ptr[1]);
         EXPECT_EQ((uint8_t)0xef, ptr[0]);
 
-        EXPECT_EQ(u16_little, Endian::convert_from(u16_little, Endian::little));
-        EXPECT_EQ(u32_little, Endian::convert_from(u32_little, Endian::little));
-        EXPECT_EQ(u64_little, Endian::convert_from(u64_little, Endian::little));
-        EXPECT_EQ(u16_little, Endian::convert_from(u16_big, Endian::big));
-        EXPECT_EQ(u32_little, Endian::convert_from(u32_big, Endian::big));
-        EXPECT_EQ(u64_little, Endian::convert_from(u64_big, Endian::big));
+        EXPECT_EQ(u16_little, Endian::convert_from(u16_little, Endian::LITTLE));
+        EXPECT_EQ(u32_little, Endian::convert_from(u32_little, Endian::LITTLE));
+        EXPECT_EQ(u64_little, Endian::convert_from(u64_little, Endian::LITTLE));
+        EXPECT_EQ(u16_little, Endian::convert_from(u16_big, Endian::BIG));
+        EXPECT_EQ(u32_little, Endian::convert_from(u32_big, Endian::BIG));
+        EXPECT_EQ(u64_little, Endian::convert_from(u64_big, Endian::BIG));
     }
 }

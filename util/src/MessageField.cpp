@@ -8,7 +8,7 @@ SIHD_UTIL_REGISTER_FACTORY(MessageField);
 
 MessageField::MessageField(const std::string & name, Node *parent): Named(name, parent)
 {
-    _dt = DNONE;
+    _dt = TYPE_NONE;
     _size = 0;
     _array_ptr = nullptr;
 }
@@ -38,7 +38,7 @@ IMessageField   *MessageField::clone()
 
 bool    MessageField::assign_field_buffer(uint8_t *buffer)
 {
-    if (_size == 0 || _dt == DNONE || _array_ptr == nullptr)
+    if (_size == 0 || _dt == TYPE_NONE || _array_ptr == nullptr)
     {
         SIHD_LOG_ERROR("MessageField: for %s cannot assign array before it is built",
                     this->get_name().c_str());

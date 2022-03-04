@@ -22,7 +22,7 @@ class DevPulsation: public sihd::core::Device,
         bool run() override;
 
     protected:
-        void handle([[maybe_unused]] sihd::core::Channel *c) override;
+        void handle(sihd::core::Channel *c) override;
 
         bool on_init() override;
         bool on_start() override;

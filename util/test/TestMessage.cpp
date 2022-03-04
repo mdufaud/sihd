@@ -88,7 +88,7 @@ namespace test
         EXPECT_EQ(buf.size(), msg.get_field_byte_size());
 
         // Fill the message
-        msg.field_read_from(buf.buf(), buf.size());
+        ASSERT_TRUE(msg.field_read_from(buf.buf(), buf.size()));
 
         // Retrieve fields and check buffer positionning
         MessageField *bfield = msg.find<MessageField>("bool");

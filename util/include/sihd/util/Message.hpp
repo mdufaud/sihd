@@ -3,7 +3,7 @@
 
 # include <string>
 # include <stdexcept>
-# include <sihd/util/Datatype.hpp>
+# include <sihd/util/Types.hpp>
 # include <sihd/util/Array.hpp>
 # include <sihd/util/Node.hpp>
 # include <sihd/util/Logger.hpp>
@@ -21,7 +21,7 @@ class Message:  public Node,
         virtual ~Message();
 
         // IMessageField
-        virtual size_t  get_field_byte_size() override { return _total_size; }
+        virtual size_t get_field_byte_size() override { return _total_size; }
         virtual bool assign_field_buffer(uint8_t *buffer) override;
         virtual bool field_read_from(const uint8_t *buffer, size_t size) override;
         virtual bool field_write_to(uint8_t *buffer, size_t size) override;
@@ -34,7 +34,7 @@ class Message:  public Node,
         template <typename T>
         bool add_field(const std::string & name, size_t size = 1)
         {
-            return this->add_field(name, Datatype::type_to_datatype<T>(), size);
+            return this->add_field(name, Types::to_type<T>(), size);
         }
 
         virtual bool add_field(const std::string & name, Type dt, size_t size = 1);

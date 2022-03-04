@@ -18,6 +18,9 @@ class AChannelContainer:    public sihd::util::Node,
         AChannelContainer(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~AChannelContainer();
 
+        Channel *find_channel(const std::string & name);
+        bool find_channel(const std::string & name, Channel **to_fill);
+
         Channel *get_channel(const std::string & name);
         bool get_channel(const std::string & name, Channel **to_fill);
 
