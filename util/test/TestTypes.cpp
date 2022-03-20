@@ -44,7 +44,6 @@ namespace test
         EXPECT_EQ(Types::string_to_type("ulong"), TYPE_ULONG);
         EXPECT_EQ(Types::string_to_type("float"), TYPE_FLOAT);
         EXPECT_EQ(Types::string_to_type("double"), TYPE_DOUBLE);
-        EXPECT_EQ(Types::string_to_type("string"), TYPE_STRING);
         EXPECT_EQ(Types::string_to_type("object"), TYPE_OBJECT);
     }
 
@@ -63,7 +62,6 @@ namespace test
         EXPECT_EQ(Types::type_to_string(TYPE_ULONG), "ulong");
         EXPECT_EQ(Types::type_to_string(TYPE_FLOAT), "float");
         EXPECT_EQ(Types::type_to_string(TYPE_DOUBLE), "double");
-        EXPECT_EQ(Types::type_to_string(TYPE_STRING), "string");
         EXPECT_EQ(Types::type_to_string(TYPE_OBJECT), "object");
     }
 
@@ -81,7 +79,6 @@ namespace test
         EXPECT_EQ(Types::to_type<uint64_t>(), TYPE_ULONG);
         EXPECT_EQ(Types::to_type<float>(), TYPE_FLOAT);
         EXPECT_EQ(Types::to_type<double>(), TYPE_DOUBLE);
-        EXPECT_EQ(Types::to_type<std::string>(), TYPE_STRING);
         struct randomstruct
         {
             int hello;

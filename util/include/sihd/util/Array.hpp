@@ -66,6 +66,11 @@ class Array: public IArray, public ICloneable<Array<T>>
         uint8_t *buf() { return (uint8_t *)_buf_ptr; }
         const uint8_t *cbuf() const { return (uint8_t *)_buf_ptr; }
 
+        size_t byte_index(size_t index) const { return index * sizeof(T); }
+
+        uint8_t *buf_at(size_t index) { return (uint8_t *)&_buf_ptr[index]; }
+        const uint8_t *cbuf_at(size_t index) const { return (uint8_t *)&_buf_ptr[index]; }
+
         size_t data_size() const { return sizeof(T); }
 
         size_t size() const { return _size; }
@@ -940,8 +945,6 @@ class ArrayUtil
                     return new ArrFloat(size);
                 case TYPE_DOUBLE:
                     return new ArrDouble(size);
-                case TYPE_STRING:
-                    return new ArrStr(size);
                 default:
                     break ;
             }

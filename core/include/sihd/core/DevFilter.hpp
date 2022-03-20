@@ -2,6 +2,7 @@
 # define __SIHD_CORE_DEVFILTER_HPP__
 
 # include <sihd/core/Device.hpp>
+# include <sihd/util/Value.hpp>
 
 namespace sihd::core
 {
@@ -13,6 +14,14 @@ class DevFilter:   public sihd::core::Device
         virtual ~DevFilter();
 
         bool set_filter_equal(const std::string & conf);
+        bool set_filter_superior(const std::string & conf);
+        bool set_filter_superior_equal(const std::string & conf);
+        bool set_filter_inferior(const std::string & conf);
+        bool set_filter_inferior_equal(const std::string & conf);
+        bool set_filter_byte_and(const std::string & conf);
+        bool set_filter_byte_or(const std::string & conf);
+        bool set_filter_byte_xor(const std::string & conf);
+
         bool is_running() const override;
 
     protected:
@@ -29,18 +38,21 @@ class DevFilter:   public sihd::core::Device
     private:
         enum RuleType
         {
-            none,
-            superior,
-            equal,
+            NONE,
+            EQUAL,
+            SUPERIOR,
+            SUPERIOR_EQUAL,
+            INFERIOR,
+            INFERIOR_EQUAL,
+            BYTE_AND,
+            BYTE_OR,
+            BYTE_XOR,
         };
 
         struct RuleConf
         {
             RuleType type;
-            std::string channel_in_path;
-            std::string channel_out_path;
-            std::string trigger;
-            std::string write;
+            std::map<std::string, std::string> conf_map;
         };
 
         struct Rule
@@ -49,26 +61,31 @@ class DevFilter:   public sihd::core::Device
             ~Rule();
 
             bool parse(const RuleConf & conf, Channel *in, Channel *out);
+            bool parse_trigger_config(const RuleConf & conf);
+            bool parse_write_config(const RuleConf & conf);
+            bool parse_options_config(const RuleConf & conf);
+            bool verify_parsed();
 
             RuleType type;
             Channel *channel_in_ptr;
             Channel *channel_out_ptr;
             bool write_same_value;
             size_t trigger_idx;
-            int64_t trigger_value;
+            sihd::util::Value trigger_value;
             size_t write_idx;
-            int64_t write_value;
+            sihd::util::Value write_value;
+            bool notify_if_same;
+            bool should_match;
         };
 
         bool _parse_conf(const std::string & conf, RuleConf & rule_to_fill);
-        void _handle_int(Channel *channel_in, Rule *rule_ptr);
-        void _handle_float(Channel *channel_in, Rule *rule_ptr);
         void _matched(Channel *channel_out, Rule *rule, int64_t out_val);
+        void _apply_rule(Channel *channel, Rule *rule);
 
         bool _running;
         std::mutex _run_mutex;
         std::vector<RuleConf> _rules_lst;
-        std::map<Channel *, std::unique_ptr<Rule>> _rules_map;
+        std::map<Channel *, std::vector<std::unique_ptr<Rule>>> _rules_map;
 };
 
 }

@@ -74,7 +74,7 @@ namespace test
         });
         out_channel->add_observer(&counter);
 
-        // sync on first TODO ChannelWaitARR
+        // sync on first TODO ChannelWait
 
         ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
         ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));

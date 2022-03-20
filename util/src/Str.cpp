@@ -428,9 +428,16 @@ bool Str::convert_from_string<bool>(const std::string & str, bool & value, [[may
 template <>
 bool Str::convert_from_string<char>(const std::string & str, char & value, [[maybe_unused]] uint16_t base)
 {
+    char c = 0;
     if (str.size() == 1)
-        value = str[0];
-    return str.size() == 1;
+        c = str[0];
+    else if (str.size() == 3 && str[0] == '\'' && str[2] == '\'')
+        c = str[1];
+    else
+        return false;
+    if (isprint(c))
+        value = c;
+    return c != 0;
 }
 
 template <>

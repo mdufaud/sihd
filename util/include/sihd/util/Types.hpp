@@ -23,7 +23,6 @@ enum Type
     TYPE_ULONG,
     TYPE_FLOAT,
     TYPE_DOUBLE,
-    TYPE_STRING,
     TYPE_OBJECT,
 };
 

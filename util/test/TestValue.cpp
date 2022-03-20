@@ -44,14 +44,70 @@ namespace test
             std::string _base_test_dir;
     };
 
+    TEST_F(TestValue, test_value_compare)
+    {
+        Value v5(5);
+        Value v10(10);
+        Value v10_same(10);
+        Value v11_float(11.2);
+        Value v11_float_same(11.2);
+
+        EXPECT_TRUE(v10 > v5);
+        EXPECT_TRUE(v10 != v5);
+
+        EXPECT_TRUE(v10 == v10_same);
+        EXPECT_TRUE(v10_same == v10);
+        EXPECT_TRUE(v10 >= v10_same);
+        EXPECT_TRUE(v10 <= v10_same);
+        EXPECT_FALSE(v10 != v10_same);
+
+        EXPECT_TRUE(v10 != v11_float);
+        EXPECT_TRUE(v11_float != v10);
+        EXPECT_TRUE(v10 < v11_float);
+        EXPECT_TRUE(v11_float > v10);
+
+        EXPECT_TRUE(v11_float_same == v11_float);
+        EXPECT_TRUE(v11_float >= v11_float_same);
+        EXPECT_TRUE(v11_float <= v11_float_same);
+        EXPECT_FALSE(v11_float != v11_float_same);
+    }
+
     TEST_F(TestValue, test_value_float)
     {
-        Value val;
+        Value valf(3.124f);
 
-        val.set(3.124);
-        EXPECT_TRUE(val > 3.123);
-        EXPECT_TRUE(val == 3.124);
-        EXPECT_TRUE(val < 3.125);
+        EXPECT_TRUE(valf > 3.123f);
+        EXPECT_TRUE(valf > 3.123d);
+        EXPECT_TRUE(valf == 3.124f);
+        EXPECT_TRUE(valf == 3.124d);
+        EXPECT_TRUE(valf < 3.125f);
+        EXPECT_TRUE(valf < 3.125d);
+
+        EXPECT_TRUE(valf < 4);
+        EXPECT_TRUE(valf > 3);
+
+        Value vald(6.28);
+
+        EXPECT_TRUE(vald > 6.27);
+        EXPECT_TRUE(vald > 6.27f);
+        EXPECT_TRUE(vald == 6.28);
+        // comparing to float requires higher epsilon than machine's
+        EXPECT_TRUE(vald.compare_float_epsilon(6.28f, 0.00001) == 0);
+        EXPECT_TRUE(vald < 6.29);
+        EXPECT_TRUE(vald < 6.29f);
+
+        EXPECT_TRUE(vald < 7);
+        EXPECT_TRUE(vald > 6);
+    }
+
+    TEST_F(TestValue, test_value_max)
+    {
+        int8_t test8 = 255;
+        Value val(test8);
+
+        EXPECT_TRUE(val < 2000);
+        EXPECT_TRUE(val == 255);
+        EXPECT_TRUE(val > 254);
     }
 
     TEST_F(TestValue, test_value)
@@ -60,10 +116,15 @@ namespace test
         int16_t test16 = 16;
         int32_t test32 = 32;
         int64_t test64 = 64;
-        float testf = 3.14;
-        double testd = 6.28;
 
         Value val;
+        val.set(true);
+        EXPECT_TRUE(val == true);
+        EXPECT_TRUE(val != false);
+        val.set('c');
+        EXPECT_TRUE(val == 'c');
+        EXPECT_TRUE(val > 'b');
+        EXPECT_TRUE(val < 'd');
         val.set(test8);
         EXPECT_TRUE(val == test8);
         EXPECT_TRUE(val < test16);
@@ -76,12 +137,6 @@ namespace test
         EXPECT_TRUE(val == test32);
         val.set(test64);
         EXPECT_TRUE(val == test64);
-        val.set(testf);
-        EXPECT_TRUE(val == testf);
-        EXPECT_TRUE(val < 4.0);
-        val.set(testd);
-        EXPECT_TRUE(val == testd);
-        EXPECT_TRUE(val > 6.0);
     }
 
 }

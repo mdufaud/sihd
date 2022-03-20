@@ -15,6 +15,9 @@ class IArray
 
         virtual uint8_t *buf() = 0;
         virtual const uint8_t *cbuf() const = 0;
+        virtual size_t byte_index(size_t index) const = 0;
+        virtual uint8_t *buf_at(size_t index) = 0;
+        virtual const uint8_t *cbuf_at(size_t index) const = 0;
         virtual size_t size() const = 0;
         virtual size_t capacity() const = 0;
         virtual size_t data_size() const = 0;

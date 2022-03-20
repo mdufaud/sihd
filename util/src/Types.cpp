@@ -13,7 +13,6 @@
 #define STR_TYPE_ULONG "ulong"
 #define STR_TYPE_FLOAT "float"
 #define STR_TYPE_DOUBLE "double"
-#define STR_TYPE_STRING "string"
 #define STR_TYPE_OBJECT "object"
 
 namespace sihd::util
@@ -29,7 +28,6 @@ Type  Types::string_to_type(const std::string & type)
         {STR_TYPE_INT, TYPE_INT}, {STR_TYPE_UINT, TYPE_UINT},
         {STR_TYPE_LONG, TYPE_LONG}, {STR_TYPE_ULONG, TYPE_ULONG},
         {STR_TYPE_FLOAT, TYPE_FLOAT}, {STR_TYPE_DOUBLE, TYPE_DOUBLE},
-        {STR_TYPE_STRING, TYPE_STRING},
         {STR_TYPE_OBJECT, TYPE_OBJECT}
     };
     return str_to_type[type];
@@ -65,8 +63,6 @@ std::string  Types::type_to_string(Type type)
             return STR_TYPE_FLOAT;
         case TYPE_DOUBLE:
             return STR_TYPE_DOUBLE;
-        case TYPE_STRING:
-            return STR_TYPE_STRING;
         case TYPE_OBJECT:
             return STR_TYPE_OBJECT;
         default:
@@ -133,7 +129,5 @@ template <>
 Type    Types::to_type<float>() { return TYPE_FLOAT; };
 template <>
 Type    Types::to_type<double>() { return TYPE_DOUBLE; };
-template <>
-Type    Types::to_type<std::string>() { return TYPE_STRING; };
 
 }
