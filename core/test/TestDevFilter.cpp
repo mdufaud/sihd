@@ -76,8 +76,12 @@ namespace test
         Core core;
 
         DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
-        ASSERT_TRUE(dev_ptr->set_conf_str("filter_superior", "in=..in_channel;out=..out_channel;trigger=1:10;write=2:15"));
-        ASSERT_TRUE(dev_ptr->set_conf_str("filter_superior_equal", "in=..in_channel;out=..out_channel;trigger=200"));
+        dev_ptr->set_rule(DevFilter::RuleConf(DevFilter::SUPERIOR)
+                            .in("..in_channel")
+                            .out("..out_channel")
+                            .trigger<int>(1, 10)
+                            .write<int>(2, 15));
+        ASSERT_TRUE(dev_ptr->set_conf_str("filter_superior_equal", "in=..in_channel;out=..out_channel;trigger=0x200"));
 
         core.add_channel("in_channel", "int", 3);
         core.add_channel("out_channel", "int", 3);
@@ -101,8 +105,8 @@ namespace test
         EXPECT_EQ(out_channel->read<int>(0), 0);
         in_channel->write<int>(0, 199);
         EXPECT_EQ(out_channel->read<int>(0), 0);
-        in_channel->write<int>(0, 200);
-        EXPECT_EQ(out_channel->read<int>(0), 200);
+        in_channel->write<int>(0, 0x200);
+        EXPECT_EQ(out_channel->read<int>(0), 0x200);
     }
 
     TEST_F(TestDevFilter, test_devfilter_inferior)
@@ -144,7 +148,11 @@ namespace test
         Core core;
 
         DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
-        ASSERT_TRUE(dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..out_channel;trigger=3.14f;write=0x1"));
+        dev_ptr->set_rule(DevFilter::RuleConf(DevFilter::EQUAL)
+                    .in("..in_channel")
+                    .out("..out_channel")
+                    .trigger(0, 3.14f)
+                    .write(0, 0x1));
         ASSERT_TRUE(dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..out_channel;trigger=6.28f;write=0b101"));
 
         core.add_channel("in_channel", "float");
@@ -166,6 +174,7 @@ namespace test
         EXPECT_EQ(out_channel->read<int>(0), 0);
         in_channel->write<float>(0, 3.14f);
         EXPECT_EQ(out_channel->read<int>(0), 1);
+
         in_channel->write<float>(0, 6.28f);
         EXPECT_EQ(out_channel->read<int>(0), 0b101);
     }

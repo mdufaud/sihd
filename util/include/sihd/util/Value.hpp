@@ -34,6 +34,14 @@ class Value
 
         virtual ~Value() {}
 
+        template <typename T>
+        static Value create(const T & val)
+        {
+            Value ret;
+            ret.set<T>(val);
+            return ret;
+        }
+
         inline bool empty() const { return this->type == TYPE_NONE; }
 
         void clear()

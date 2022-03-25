@@ -87,11 +87,14 @@ class Channel:  public sihd::util::Named,
             bool ret = arr_ptr != nullptr;
             if (ret)
             {
-                std::lock_guard lock(_arr_mutex);
-                if (_write_change_only && arr_ptr->at(idx) == value)
-                    return true;
-                arr_ptr->set(idx, value);
-                _timestamp = _clock_ptr->now();
+                {
+                    std::lock_guard lock(_arr_mutex);
+                    if (_write_change_only && arr_ptr->at(idx) == value)
+                        return true;
+                    arr_ptr->set(idx, value);
+                    _timestamp = _clock_ptr->now();
+                }
+                this->notify();
             }
             else
             {
@@ -99,8 +102,6 @@ class Channel:  public sihd::util::Named,
                         << _array_ptr->data_type_to_string() << " != "
                         << sihd::util::Types::to_string<T>())
             }
-            if (ret)
-                this->notify();
             return ret;
         }
 

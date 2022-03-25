@@ -16,42 +16,54 @@ class Configurable
         virtual ~Configurable() {};
 
         template <class C, typename T>
-        void    add_conf(const std::string & name, bool (C::*method)(T))
+        void add_conf(const std::string & name, bool (C::*method)(T))
         {
             _callbackManager.set<C, bool, T>(name, dynamic_cast<C *>(this), method);
         };
 
+        template <class C, typename T1, typename T2>
+        void add_conf(const std::string & name, bool (C::*method)(T1, T2))
+        {
+            _callbackManager.set<C, bool, T1, T2>(name, dynamic_cast<C *>(this), method);
+        };
+
+        template <class C, typename T1, typename T2, typename T3>
+        void add_conf(const std::string & name, bool (C::*method)(T1, T2, T3))
+        {
+            _callbackManager.set<C, bool, T1, T2, T3>(name, dynamic_cast<C *>(this), method);
+        };
+
         template <typename T>
-        void    add_conf(const std::string & name, std::function<bool(T)> fun)
+        void add_conf(const std::string & name, std::function<bool(T)> fun)
         {
             _callbackManager.set<bool, T>(name, fun);
         };
 
         template <typename T1, typename T2>
-        void    add_conf(const std::string & name, std::function<bool(T1, T2)> fun)
+        void add_conf(const std::string & name, std::function<bool(T1, T2)> fun)
         {
             _callbackManager.set<bool, T1, T2>(name, fun);
         };
 
         template <typename T1, typename T2, typename T3>
-        void    add_conf(const std::string & name, std::function<bool(T1, T2, T3)> fun)
+        void add_conf(const std::string & name, std::function<bool(T1, T2, T3)> fun)
         {
             _callbackManager.set<bool, T1, T2, T3>(name, fun);
         };
 
         template <typename T>
-        bool    set_conf(const std::string & name)
+        bool set_conf(const std::string & name)
         {
             return _callbackManager.call<bool, T>(name);
         }
 
         template <typename ...T>
-        bool    set_conf(const std::string & name, T... params)
+        bool set_conf(const std::string & name, T... params)
         {
             return _callbackManager.call<bool, T...>(name, params...);
         }
 
-        bool    set_conf_float(const std::string & name, double param)
+        bool set_conf_float(const std::string & name, double param)
         {
             try
             {
@@ -63,7 +75,7 @@ class Configurable
             }
         }
 
-        bool    set_conf_int(const std::string & name, int64_t param)
+        bool set_conf_int(const std::string & name, int64_t param)
         {
             try { return _callbackManager.call<bool, int64_t>(name, param); }
             catch (const std::invalid_argument & e) {}
@@ -83,14 +95,14 @@ class Configurable
             return _callbackManager.call<bool, uint8_t>(name, param);
         }
 
-        bool    set_conf_str(const std::string & name, const std::string & param)
+        bool set_conf_str(const std::string & name, const std::string & param)
         {
             try { return _callbackManager.call<bool, const std::string &>(name, param); }
             catch (const std::invalid_argument & e) {}
             return _callbackManager.call<bool, const char *>(name, param.c_str());
         }
 
-        bool    set_conf_str(const std::string & name, const char *param)
+        bool set_conf_str(const std::string & name, const char *param)
         {
             try { return _callbackManager.call<bool, const char *>(name, param); }
             catch (const std::invalid_argument & e) {}
@@ -99,7 +111,7 @@ class Configurable
             return _callbackManager.call<bool, std::string>(name, param);
         }
 
-        bool    set_conf(const std::string & key, nlohmann::json & val)
+        bool set_conf(const std::string & key, nlohmann::json & val)
         {
             if (val.is_null())
                 return false;
@@ -126,12 +138,12 @@ class Configurable
             return false;
         }
 
-        bool    set_conf(nlohmann::json && json)
+        bool set_conf(nlohmann::json && json)
         {
             return this->set_conf(json);
         }
 
-        bool    set_conf(nlohmann::json & json)
+        bool set_conf(nlohmann::json & json)
         {
             if (json.is_object() == false || json.is_null())
                 return false;
@@ -147,7 +159,7 @@ class Configurable
     private:
         CallbackManager _callbackManager;
 
-        bool    _set_conf_json(const std::string & name, nlohmann::json & val)
+        bool _set_conf_json(const std::string & name, nlohmann::json & val)
         {
             try { return _callbackManager.call<bool, nlohmann::json &>(name, val); }
             catch (const std::invalid_argument & e) {}
