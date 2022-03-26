@@ -76,10 +76,10 @@ namespace test
         Core core;
 
         DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
-        dev_ptr->set_rule(DevFilter::RuleConf(DevFilter::SUPERIOR)
+        dev_ptr->set_filter(DevFilter::Rule(DevFilter::SUPERIOR)
                             .in("..in_channel")
-                            .out("..out_channel")
                             .trigger<int>(1, 10)
+                            .out("..out_channel")
                             .write<int>(2, 15));
         ASSERT_TRUE(dev_ptr->set_conf_str("filter_superior_equal", "in=..in_channel;out=..out_channel;trigger=0x200"));
 
@@ -148,12 +148,13 @@ namespace test
         Core core;
 
         DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
-        dev_ptr->set_rule(DevFilter::RuleConf(DevFilter::EQUAL)
+        dev_ptr->set_filter(DevFilter::Rule(DevFilter::EQUAL)
                     .in("..in_channel")
-                    .out("..out_channel")
                     .trigger(0, 3.14f)
-                    .write(0, 0x1));
-        ASSERT_TRUE(dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..out_channel;trigger=6.28f;write=0b101"));
+                    .out("..out_channel")
+                    .write(0, 0x1)
+                    .delay(sihd::util::time::ms(2)));
+        ASSERT_TRUE(dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..out_channel;trigger=6.28f;write=0b101;delay=0.001"));
 
         core.add_channel("in_channel", "float");
         core.add_channel("out_channel", "int");
@@ -173,9 +174,15 @@ namespace test
         in_channel->write<float>(0, 3.15f);
         EXPECT_EQ(out_channel->read<int>(0), 0);
         in_channel->write<float>(0, 3.14f);
+        EXPECT_EQ(out_channel->read<int>(0), 0);
+        usleep(1000);
+        EXPECT_EQ(out_channel->read<int>(0), 0);
+        usleep(2000);
         EXPECT_EQ(out_channel->read<int>(0), 1);
 
         in_channel->write<float>(0, 6.28f);
+        EXPECT_EQ(out_channel->read<int>(0), 1);
+        usleep(3000);
         EXPECT_EQ(out_channel->read<int>(0), 0b101);
     }
 

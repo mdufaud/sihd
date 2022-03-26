@@ -156,6 +156,13 @@ time_t days(time_t t)
     return hours(t) * 24;
 }
 
+time_t from_double(double sec_milli)
+{
+    time_t sec = (time_t)sec_milli;
+    time_t nano = (double)(sec_milli - sec) * 1E9;
+    return time::sec(sec) + nano;
+}
+
 time_t freq(double hz)
 {
     if (hz < 0.0)

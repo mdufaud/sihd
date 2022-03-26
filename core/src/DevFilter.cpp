@@ -12,6 +12,7 @@
 #define CONF_KEY_WRITE "write"
 #define CONF_KEY_MATCH "match"
 #define CONF_KEY_NOTIFY_SAME "notify_same"
+#define CONF_KEY_DELAY "delay"
 
 namespace sihd::core
 {
@@ -21,7 +22,7 @@ SIHD_UTIL_REGISTER_FACTORY(DevFilter)
 SIHD_LOGGER;
 
 DevFilter::DevFilter(const std::string & name, sihd::util::Node *parent):
-    sihd::core::Device(name, parent), _running(false)
+    sihd::core::Device(name, parent), _running(false), _scheduler_ptr(nullptr), _rule_with_delay(false)
 {
     this->add_conf("filter_equal", &DevFilter::set_filter_equal);
     this->add_conf("filter_superior", &DevFilter::set_filter_superior);
@@ -37,114 +38,119 @@ DevFilter::~DevFilter()
 {
 }
 
-bool    DevFilter::_parse_conf(const std::string & conf_str, RuleType type)
+bool    DevFilter::_parse_conf(const std::string & rule_str, RuleType type)
 {
     // in=channel_path_in;out=channel_path_out;trigger=i:val1;write=j:val2
-    RuleConf rule_conf(type);
-    bool ret = rule_conf.parse(conf_str);
+    Rule rule(type);
+    bool ret = rule.parse(rule_str);
     if (ret)
-        _rules_lst.push_back(rule_conf);
+        this->set_filter(rule);
     return ret;
 }
 
-void    DevFilter::set_rule(const RuleConf & rule_conf)
+void    DevFilter::set_filter(const Rule & rule)
 {
-    _rules_lst.push_back(rule_conf);
+    if (rule.nano_delay > 0)
+        _rule_with_delay = true;
+    _rules_lst.push_back(rule);
 }
 
-bool    DevFilter::set_filter_equal(const std::string & conf_str)
+bool    DevFilter::set_filter_equal(const std::string & rule_str)
 {
-    return this->_parse_conf(conf_str, EQUAL);
+    return this->_parse_conf(rule_str, EQUAL);
 }
 
-bool    DevFilter::set_filter_superior(const std::string & conf_str)
+bool    DevFilter::set_filter_superior(const std::string & rule_str)
 {
-    return this->_parse_conf(conf_str, SUPERIOR);
+    return this->_parse_conf(rule_str, SUPERIOR);
 }
 
-bool    DevFilter::set_filter_superior_equal(const std::string & conf_str)
+bool    DevFilter::set_filter_superior_equal(const std::string & rule_str)
 {
-    return this->_parse_conf(conf_str, SUPERIOR_EQUAL);
+    return this->_parse_conf(rule_str, SUPERIOR_EQUAL);
 }
 
-bool    DevFilter::set_filter_inferior(const std::string & conf_str)
+bool    DevFilter::set_filter_inferior(const std::string & rule_str)
 {
-    return this->_parse_conf(conf_str, INFERIOR);
+    return this->_parse_conf(rule_str, INFERIOR);
 }
 
-bool    DevFilter::set_filter_inferior_equal(const std::string & conf_str)
+bool    DevFilter::set_filter_inferior_equal(const std::string & rule_str)
 {
-    return this->_parse_conf(conf_str, INFERIOR_EQUAL);
+    return this->_parse_conf(rule_str, INFERIOR_EQUAL);
 }
 
-bool    DevFilter::set_filter_byte_and(const std::string & conf_str)
+bool    DevFilter::set_filter_byte_and(const std::string & rule_str)
 {
-    return this->_parse_conf(conf_str, BYTE_AND);
+    return this->_parse_conf(rule_str, BYTE_AND);
 }
 
-bool    DevFilter::set_filter_byte_or(const std::string & conf_str)
+bool    DevFilter::set_filter_byte_or(const std::string & rule_str)
 {
-    return this->_parse_conf(conf_str, BYTE_OR);
+    return this->_parse_conf(rule_str, BYTE_OR);
 }
 
-bool    DevFilter::set_filter_byte_xor(const std::string & conf_str)
+bool    DevFilter::set_filter_byte_xor(const std::string & rule_str)
 {
-    return this->_parse_conf(conf_str, BYTE_XOR);
+    return this->_parse_conf(rule_str, BYTE_XOR);
 }
 
-void    DevFilter::_matched(Channel *channel_out, const RuleConf *conf_ptr, int64_t out_val)
+void    DevFilter::_rule_match(Channel *channel_out, const Rule *rule_ptr, int64_t out_val)
 {
     sihd::util::IArray *array_out = channel_out->array();
-    if (conf_ptr->notify_if_same
-            || memcmp((void *)(array_out->buf_at(conf_ptr->write_idx)), (const void *)&out_val, array_out->data_size()) != 0)
+    if (rule_ptr->notify_if_same
+            || memcmp((void *)(array_out->buf_at(rule_ptr->write_idx)), (const void *)&out_val, array_out->data_size()) != 0)
     {
-        memcpy((void *)(array_out->buf_at(conf_ptr->write_idx)),
+        memcpy((void *)(array_out->buf_at(rule_ptr->write_idx)),
                 (const void *)&out_val,
                 array_out->data_size());
         channel_out->notify();
     }
 }
 
-void    DevFilter::_apply_rule(const sihd::core::Channel *channel_in, sihd::core::Channel *channel_out, const RuleConf *conf_ptr)
+void    DevFilter::_apply_rule(const sihd::core::Channel *channel_in, sihd::core::Channel *channel_out, const Rule *rule_ptr)
 {
     const sihd::util::IArray *array_in = channel_in->carray();
-    sihd::util::Value in_value(array_in->cbuf_at(conf_ptr->trigger_idx), array_in->data_type());
+    sihd::util::Value in_value(array_in->cbuf_at(rule_ptr->trigger_idx), array_in->data_type());
     bool matched = false;
-    switch (conf_ptr->type)
+    switch (rule_ptr->type)
     {
         case EQUAL:
-            matched = in_value == conf_ptr->trigger_value;
+            matched = in_value == rule_ptr->trigger_value;
             break ;
         case SUPERIOR:
-            matched = in_value > conf_ptr->trigger_value;
+            matched = in_value > rule_ptr->trigger_value;
             break ;
         case SUPERIOR_EQUAL:
-            matched = in_value >= conf_ptr->trigger_value;
+            matched = in_value >= rule_ptr->trigger_value;
             break ;
         case INFERIOR:
-            matched = in_value < conf_ptr->trigger_value;
+            matched = in_value < rule_ptr->trigger_value;
             break ;
         case INFERIOR_EQUAL:
-            matched = in_value <= conf_ptr->trigger_value;
+            matched = in_value <= rule_ptr->trigger_value;
             break ;
         case BYTE_AND:
-            matched = in_value.data & conf_ptr->trigger_value.data;
+            matched = in_value.data & rule_ptr->trigger_value.data;
             break ;
         case BYTE_OR:
-            matched = in_value.data | conf_ptr->trigger_value.data;
+            matched = in_value.data | rule_ptr->trigger_value.data;
             break ;
         case BYTE_XOR:
-            matched = in_value.data ^ conf_ptr->trigger_value.data;
+            matched = in_value.data ^ rule_ptr->trigger_value.data;
             break ;
         default:
             break ;
     }
-    if (conf_ptr->should_match == matched)
+    if (rule_ptr->should_match == matched)
     {
-        int64_t out_val = conf_ptr->write_same_value
+        int64_t out_val = rule_ptr->write_same_value
                             ? in_value.data
-                            : conf_ptr->write_value.data;
-        this->_matched(channel_out, conf_ptr, out_val);
+                            : rule_ptr->write_value.data;
+        if (rule_ptr->nano_delay > 0 && _scheduler_ptr != nullptr)
+            _scheduler_ptr->add_task(new DelayWriter(this, channel_out, rule_ptr, out_val, _scheduler_ptr));
+        else
+            this->_rule_match(channel_out, rule_ptr, out_val);
     }
 }
 
@@ -153,9 +159,9 @@ void    DevFilter::handle(sihd::core::Channel *channel)
     auto it = _rules_map.find(channel);
     if (it == _rules_map.end())
         return ;
-    for (const std::unique_ptr<Rule> & rule_uptr: it->second)
+    for (const std::unique_ptr<InternalRule> & rule_uptr: it->second)
     {
-        this->_apply_rule(channel, rule_uptr.get()->channel_out_ptr, rule_uptr.get()->conf_ptr);
+        this->_apply_rule(channel, rule_uptr.get()->channel_out_ptr, rule_uptr.get()->rule_ptr);
     }
 }
 
@@ -171,6 +177,10 @@ bool    DevFilter::on_setup()
 
 bool    DevFilter::on_init()
 {
+    if (_rule_with_delay)
+    {
+        _scheduler_ptr = this->add_child<sihd::util::Scheduler>("delay_scheduler");
+    }
     return true;
 }
 
@@ -181,12 +191,12 @@ bool    DevFilter::on_start()
     Channel *channel_out;
 
     ret = true;
-    for (const RuleConf & conf: _rules_lst)
+    for (const Rule & conf: _rules_lst)
     {
         if (this->find_channel(conf.channel_in, &channel_in)
                 && this->find_channel(conf.channel_out, &channel_out))
         {
-            std::unique_ptr<Rule> rule(new Rule());
+            std::unique_ptr<InternalRule> rule(new InternalRule());
             if (rule.get()->set(&conf, channel_in, channel_out))
                 _rules_map[channel_in].push_back(std::move(rule));
             else
@@ -195,6 +205,11 @@ bool    DevFilter::on_start()
         }
         else
             ret = false;
+    }
+    if (_scheduler_ptr != nullptr && _scheduler_ptr->start() == false)
+    {
+        SIHD_LOG(error, "DevFilter: could not start scheduler");
+        return false;
     }
     _running = ret;
     return ret;
@@ -206,6 +221,11 @@ bool    DevFilter::on_stop()
         std::lock_guard l(_run_mutex);
         _running = false;
     }
+    if (_scheduler_ptr != nullptr && _scheduler_ptr->stop() == false)
+    {
+        SIHD_LOG(error, "DevFilter: could not stop scheduler");
+        return false;
+    }
     _rules_map.clear();
     return true;
 }
@@ -213,65 +233,80 @@ bool    DevFilter::on_stop()
 bool    DevFilter::on_reset()
 {
     _rules_lst.clear();
+    _rule_with_delay = false;
+    _scheduler_ptr = nullptr;
     return true;
 }
 
 /* ************************************************************************* */
-/* DevFilter::RuleConf */
+/* DevFilter::Rule */
 /* ************************************************************************* */
 
 
-DevFilter::RuleConf::RuleConf(RuleType type):
+DevFilter::Rule::Rule(RuleType type):
     type(type),
     trigger_idx(0), trigger_value(0),
     write_same_value(true), write_idx(0), write_value(0),
-    notify_if_same(false), should_match(true)
+    notify_if_same(false), should_match(true),
+    nano_delay(0)
 {
 }
 
-DevFilter::RuleConf::~RuleConf()
+DevFilter::Rule::~Rule()
 {
 }
 
-DevFilter::RuleConf &   DevFilter::RuleConf::in(std::string_view channel_name)
+DevFilter::Rule &   DevFilter::Rule::in(std::string_view channel_name)
 {
     this->channel_in = channel_name;
     return *this;
 }
 
-DevFilter::RuleConf &   DevFilter::RuleConf::out(std::string_view channel_name)
+DevFilter::Rule &   DevFilter::Rule::out(std::string_view channel_name)
 {
     this->channel_out = channel_name;
     return *this;
 }
 
-DevFilter::RuleConf &   DevFilter::RuleConf::notify_same(bool active)
+DevFilter::Rule &   DevFilter::Rule::notify_same(bool active)
 {
     this->notify_if_same = active;
     return *this;
 }
 
-DevFilter::RuleConf &   DevFilter::RuleConf::match(bool active)
+DevFilter::Rule &   DevFilter::Rule::match(bool active)
 {
     this->should_match = active;
     return *this;
 }
 
-DevFilter::RuleConf &   DevFilter::RuleConf::write_same()
+DevFilter::Rule &   DevFilter::Rule::write_same()
 {
     this->write_same_value = true;
     this->write_idx = this->trigger_idx;
     return *this;
 }
 
-DevFilter::RuleConf &   DevFilter::RuleConf::write_same(size_t idx)
+DevFilter::Rule &   DevFilter::Rule::write_same(size_t idx)
 {
     this->write_same_value = true;
     this->write_idx = idx;
     return *this;
 }
 
-bool    DevFilter::RuleConf::parse(const std::string & conf_str)
+DevFilter::Rule &   DevFilter::Rule::delay(double delay)
+{
+    this->nano_delay = sihd::util::time::from_double(delay);
+    return *this;
+}
+
+DevFilter::Rule &   DevFilter::Rule::delay(time_t nano_delay)
+{
+    this->nano_delay = nano_delay;
+    return *this;
+}
+
+bool    DevFilter::Rule::parse(const std::string & conf_str)
 {
     std::map<std::string, std::string> rule_conf_map = sihd::util::Str::parse_configuration(conf_str);
     if (rule_conf_map.find(CONF_KEY_CHANNEL_IN) == rule_conf_map.end())
@@ -296,7 +331,7 @@ bool    DevFilter::RuleConf::parse(const std::string & conf_str)
             && this->_parse_options_config(rule_conf_map);
 }
 
-bool    DevFilter::RuleConf::_parse_options_config(const std::map<std::string, std::string> & conf_map)
+bool    DevFilter::Rule::_parse_options_config(const std::map<std::string, std::string> & conf_map)
 {
     if (conf_map.find(CONF_KEY_MATCH) != conf_map.end())
     {
@@ -314,10 +349,20 @@ bool    DevFilter::RuleConf::_parse_options_config(const std::map<std::string, s
             return false;
         }
     }
+    if (conf_map.find(CONF_KEY_DELAY) != conf_map.end())
+    {
+        double delay;
+        if (sihd::util::Str::convert_from_string<double>(conf_map.at(CONF_KEY_DELAY), delay) == false)
+        {
+            SIHD_LOG_ERROR("DevFilter: conf error for '%s': %s", CONF_KEY_DELAY, conf_map.at(CONF_KEY_DELAY).c_str());
+            return false;
+        }
+        this->nano_delay = sihd::util::time::from_double(delay);
+    }
     return true;
 }
 
-bool    DevFilter::RuleConf::_parse_trigger_config(const std::map<std::string, std::string> & conf_map)
+bool    DevFilter::Rule::_parse_trigger_config(const std::map<std::string, std::string> & conf_map)
 {
     const std::string & conf_trigger = conf_map.at(CONF_KEY_TRIGGER);
     sihd::util::Splitter splitter(":");
@@ -367,7 +412,7 @@ bool    DevFilter::RuleConf::_parse_trigger_config(const std::map<std::string, s
     return true;
 }
 
-bool    DevFilter::RuleConf::_parse_write_config(const std::map<std::string, std::string> & conf_map)
+bool    DevFilter::Rule::_parse_write_config(const std::map<std::string, std::string> & conf_map)
 {
     if (conf_map.find(CONF_KEY_WRITE) == conf_map.end())
     {
@@ -425,18 +470,38 @@ bool    DevFilter::RuleConf::_parse_write_config(const std::map<std::string, std
 }
 
 /* ************************************************************************* */
-/* DevFilter::Rule */
+/* DevFilter::DelayWriter */
 /* ************************************************************************* */
 
-DevFilter::Rule::Rule(): channel_in_ptr(nullptr), channel_out_ptr(nullptr), conf_ptr(nullptr)
+DevFilter::DelayWriter::DelayWriter(DevFilter *dev, Channel *channel_out, const Rule *rule_ptr, int64_t out_val, sihd::util::Scheduler *scheduler_ptr):
+    sihd::util::Task(this, scheduler_ptr->get_clock()->now() + rule_ptr->nano_delay, 0),
+    dev(dev), channel_out(channel_out), rule_ptr(rule_ptr), out_val(out_val)
 {
 }
 
-DevFilter::Rule::~Rule()
+DevFilter::DelayWriter::~DelayWriter()
 {
 }
 
-bool    DevFilter::Rule::set(const DevFilter::RuleConf *conf, Channel *in, Channel *out)
+bool    DevFilter::DelayWriter::run()
+{
+    this->dev->_rule_match(this->channel_out, this->rule_ptr, this->out_val);
+    return true;
+}
+
+/* ************************************************************************* */
+/* DevFilter::InternalRule */
+/* ************************************************************************* */
+
+DevFilter::InternalRule::InternalRule(): channel_in_ptr(nullptr), channel_out_ptr(nullptr), rule_ptr(nullptr)
+{
+}
+
+DevFilter::InternalRule::~InternalRule()
+{
+}
+
+bool    DevFilter::InternalRule::set(const DevFilter::Rule *conf, Channel *in, Channel *out)
 {
     if (in == out)
     {
@@ -446,29 +511,29 @@ bool    DevFilter::Rule::set(const DevFilter::RuleConf *conf, Channel *in, Chann
     }
     this->channel_in_ptr = in;
     this->channel_out_ptr = out;
-    this->conf_ptr = conf;
+    this->rule_ptr = conf;
     return this->verify();
 }
 
-bool    DevFilter::Rule::verify()
+bool    DevFilter::InternalRule::verify()
 {
     // check if index will be good
-    if (conf_ptr->trigger_idx >= this->channel_in_ptr->array()->size())
+    if (rule_ptr->trigger_idx >= this->channel_in_ptr->array()->size())
     {
         SIHD_LOG_ERROR("DevFilter: trigger index %lu is higher or equal than channel input '%s' size %lu",
-                        conf_ptr->trigger_idx, conf_ptr->channel_in.c_str(), this->channel_in_ptr->array()->size());
+                        rule_ptr->trigger_idx, rule_ptr->channel_in.c_str(), this->channel_in_ptr->array()->size());
         return false;
     }
-    if (conf_ptr->write_idx >= this->channel_out_ptr->array()->size())
+    if (rule_ptr->write_idx >= this->channel_out_ptr->array()->size())
     {
         SIHD_LOG_ERROR("DevFilter: write index %lu is higher or equal than channel output '%s' size %lu",
-                        conf_ptr->write_idx, conf_ptr->channel_out.c_str(), this->channel_out_ptr->array()->size());
+                        rule_ptr->write_idx, rule_ptr->channel_out.c_str(), this->channel_out_ptr->array()->size());
         return false;
     }
     bool in_array_is_float = this->channel_in_ptr->array()->data_type() == sihd::util::TYPE_FLOAT
                             || this->channel_in_ptr->array()->data_type() == sihd::util::TYPE_DOUBLE;
     // check if trigger value type against channel
-    if (conf_ptr->trigger_value.is_float() && in_array_is_float == false)
+    if (rule_ptr->trigger_value.is_float() && in_array_is_float == false)
     {
         SIHD_LOG_ERROR("DevFilter: type error, trigger value is float and channel input '%s' is not a floating type",
                         this->channel_in_ptr->get_name().c_str());
@@ -478,8 +543,8 @@ bool    DevFilter::Rule::verify()
     bool out_array_is_float = this->channel_out_ptr->array()->data_type() == sihd::util::TYPE_FLOAT
                                 || this->channel_out_ptr->array()->data_type() == sihd::util::TYPE_DOUBLE;
     if (out_array_is_float == false
-            && ((conf_ptr->write_same_value && conf_ptr->trigger_value.is_float())
-                || (conf_ptr->write_same_value == false && conf_ptr->write_value.is_float())))
+            && ((rule_ptr->write_same_value && rule_ptr->trigger_value.is_float())
+                || (rule_ptr->write_same_value == false && rule_ptr->write_value.is_float())))
     {
         SIHD_LOG_ERROR("DevFilter: type error, write value is float and channel output '%s' is not a floating type",
                         this->channel_out_ptr->get_name().c_str());

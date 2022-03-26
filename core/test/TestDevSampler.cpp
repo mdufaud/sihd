@@ -7,6 +7,7 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/core/DevSampler.hpp>
 #include <sihd/core/Core.hpp>
+#include <sihd/core/ChannelWaiter.hpp>
 
 namespace test
 {
@@ -74,22 +75,30 @@ namespace test
         });
         out_channel->add_observer(&counter);
 
-        // sync on first TODO ChannelWait
+        ChannelWaiter waiter(out_channel);
+        ASSERT_TRUE(in_channel->write(ArrInt({0, 0, 1})));
+        waiter.wait_for(sihd::util::time::sec(1));
 
         ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
         ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
         ASSERT_TRUE(in_channel->write(ArrInt({3, 4, 5})));
-        SIHD_TRACE(out_channel->array()->to_string(','));
-        usleep(1E4);
+        waiter.wait_for(sihd::util::time::sec(1));
+        EXPECT_EQ(out_channel->array()->to_string(','), "3,4,5");
+        EXPECT_EQ(notif, 2);
+
         ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
         ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
-        ASSERT_TRUE(in_channel->write(ArrInt({3, 4, 5})));
-        SIHD_TRACE(out_channel->array()->to_string(','));
-        usleep(1E4);
+        ASSERT_TRUE(in_channel->write(ArrInt({4, 5, 6})));
+        waiter.wait_for(sihd::util::time::sec(1));
+        EXPECT_EQ(out_channel->array()->to_string(','), "4,5,6");
+        EXPECT_EQ(notif, 3);
+
         ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
         ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
-        ASSERT_TRUE(in_channel->write(ArrInt({3, 4, 5})));
-        SIHD_TRACE(out_channel->array()->to_string(','));
+        ASSERT_TRUE(in_channel->write(ArrInt({5, 6, 7})));
+        waiter.wait_for(sihd::util::time::sec(1));
+        EXPECT_EQ(out_channel->array()->to_string(','), "5,6,7");
+        EXPECT_EQ(notif, 4);
     }
 
 }

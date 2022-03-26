@@ -84,6 +84,8 @@ time_t days(time_t day);
 time_t freq(double hz);
 constexpr auto frequency = time::freq;
 constexpr auto hz = time::freq;
+// seconds,milliseconds -> nano
+time_t from_double(double sec_milli);
 
 // tm struct -> nano
 time_t tm(struct tm *tm);

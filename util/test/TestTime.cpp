@@ -48,6 +48,9 @@ namespace test
 
         double time_dbl_from_tv = time::tv_to_double(tv);
         EXPECT_NEAR(time_dbl, time_dbl_from_tv, 0.0001);
+
+        EXPECT_EQ(time::from_double(0.001), time::ms(1));
+        EXPECT_EQ(time::from_double(1.324999), time::sec(1) + time::ms(324) + time::micro(999));
     }
 
     TEST_F(TestTime, test_time_timeval)

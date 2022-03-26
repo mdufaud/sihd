@@ -3,6 +3,7 @@
 
 # include <sihd/core/Device.hpp>
 # include <sihd/util/Value.hpp>
+# include <sihd/util/Scheduler.hpp>
 
 namespace sihd::core
 {
@@ -23,26 +24,30 @@ class DevFilter: public sihd::core::Device
             BYTE_XOR,
         };
 
-        class RuleConf
+        class Rule
         {
             public:
-                RuleConf(RuleType type);
-                ~RuleConf();
+                Rule(RuleType type);
+                ~Rule();
 
                 bool parse(const std::string & conf);
-                RuleConf & in(std::string_view channel_name);
-                RuleConf & out(std::string_view channel_name);
+                Rule & in(std::string_view channel_name);
+                Rule & out(std::string_view channel_name);
                 // notify if same value is wrote in channel's output
-                RuleConf & notify_same(bool active);
+                Rule & notify_same(bool active);
                 // if rule should match or not match
-                RuleConf & match(bool active);
+                Rule & match(bool active);
                 // write trigger value at channel's output idx
-                RuleConf & write_same(size_t idx);
+                Rule & write_same(size_t idx);
                 // must be called after setting trigger index with 'trigger' method
-                RuleConf & write_same();
+                Rule & write_same();
+                // delay write by X nanoseconds
+                Rule & delay(time_t nano_delay);
+                // delay write by seconds.milliseconds
+                Rule & delay(double delay);
 
                 template <typename T>
-                RuleConf & trigger(size_t idx, T val)
+                Rule & trigger(size_t idx, T val)
                 {
                     this->trigger_idx = idx;
                     this->trigger_value.set<T>(val);
@@ -50,7 +55,7 @@ class DevFilter: public sihd::core::Device
                 }
 
                 template <typename T>
-                RuleConf & write(size_t idx, T val)
+                Rule & write(size_t idx, T val)
                 {
                     this->write_idx = idx;
                     this->write_same_value = false;
@@ -72,6 +77,7 @@ class DevFilter: public sihd::core::Device
                 // options
                 bool notify_if_same;
                 bool should_match;
+                time_t nano_delay;
 
             private:
                 bool _parse_trigger_config(const std::map<std::string, std::string> & conf);
@@ -82,16 +88,16 @@ class DevFilter: public sihd::core::Device
         DevFilter(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~DevFilter();
 
-        bool set_filter_equal(const std::string & conf);
-        bool set_filter_superior(const std::string & conf);
-        bool set_filter_superior_equal(const std::string & conf);
-        bool set_filter_inferior(const std::string & conf);
-        bool set_filter_inferior_equal(const std::string & conf);
-        bool set_filter_byte_and(const std::string & conf);
-        bool set_filter_byte_or(const std::string & conf);
-        bool set_filter_byte_xor(const std::string & conf);
+        bool set_filter_equal(const std::string & rule_str);
+        bool set_filter_superior(const std::string & rule_str);
+        bool set_filter_superior_equal(const std::string & rule_str);
+        bool set_filter_inferior(const std::string & rule_str);
+        bool set_filter_inferior_equal(const std::string & rule_str);
+        bool set_filter_byte_and(const std::string & rule_str);
+        bool set_filter_byte_or(const std::string & rule_str);
+        bool set_filter_byte_xor(const std::string & rule_str);
 
-        void set_rule(const RuleConf & conf);
+        void set_filter(const Rule & rule);
 
         bool is_running() const override;
 
@@ -106,28 +112,45 @@ class DevFilter: public sihd::core::Device
         bool on_stop() override;
         bool on_reset() override;
 
-    private:
-        struct Rule
-        {
-            Rule();
-            ~Rule();
+        void _rule_match(Channel *channel_out, const Rule *rule_ptr, int64_t out_val);
 
-            bool set(const RuleConf *conf, Channel *in, Channel *out);
+    private:
+        class DelayWriter: public sihd::util::Task
+        {
+            public:
+                DelayWriter(DevFilter *dev, Channel *channel_out, const Rule *rule_ptr, int64_t out_val, sihd::util::Scheduler *scheduler_ptr);
+                ~DelayWriter();
+
+                bool run();
+
+                DevFilter *dev;
+                Channel *channel_out;
+                const Rule *rule_ptr;
+                int64_t out_val;
+        };
+
+        struct InternalRule
+        {
+            InternalRule();
+            ~InternalRule();
+
+            bool set(const Rule *conf, Channel *in, Channel *out);
             bool verify();
 
             Channel *channel_in_ptr;
             Channel *channel_out_ptr;
-            const RuleConf *conf_ptr;
+            const Rule *rule_ptr;
         };
 
         bool _parse_conf(const std::string & conf, RuleType type);
-        void _matched(Channel *channel_out, const RuleConf *conf_ptr, int64_t out_val);
-        void _apply_rule(const Channel *channel_in, Channel *channel_out, const RuleConf *conf_ptr);
+        void _apply_rule(const Channel *channel_in, Channel *channel_out, const Rule *rule_ptr);
 
         bool _running;
         std::mutex _run_mutex;
-        std::vector<RuleConf> _rules_lst;
-        std::map<Channel *, std::vector<std::unique_ptr<Rule>>> _rules_map;
+        std::vector<Rule> _rules_lst;
+        std::map<Channel *, std::vector<std::unique_ptr<InternalRule>>> _rules_map;
+        sihd::util::Scheduler *_scheduler_ptr;
+        bool _rule_with_delay;
 };
 
 }
