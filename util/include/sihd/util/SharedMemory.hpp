@@ -4,6 +4,10 @@
 # include <sihd/util/platform.hpp>
 # include <string>
 
+# if defined(__SIHD_EMSCRIPTEN__)
+#  define mode_t unsigned int
+# endif
+
 namespace sihd::util
 {
 
@@ -44,5 +48,9 @@ class SharedMemory
 };
 
 }
+
+# if defined(__SIHD_EMSCRIPTEN__)
+#  undef mode_t
+# endif
 
 #endif

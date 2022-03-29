@@ -104,6 +104,7 @@ void    DevFilter::_rule_match(Channel *channel_out, const Rule *rule_ptr, int64
         memcpy((void *)(array_out->buf_at(rule_ptr->write_idx)),
                 (const void *)&out_val,
                 array_out->data_size());
+        channel_out->do_timestamp();
         channel_out->notify();
     }
 }

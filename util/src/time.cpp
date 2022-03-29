@@ -116,14 +116,14 @@ time_t to_min(time_t nano)
     return to_sec(nano) / 60;
 }
 
-time_t to_hour(time_t nano)
+time_t to_hours(time_t nano)
 {
     return to_min(nano) / 60;
 }
 
-time_t to_day(time_t nano)
+time_t to_days(time_t nano)
 {
-    return to_hour(nano) / 24;
+    return to_hours(nano) / 24;
 }
 
 time_t micro(time_t t)

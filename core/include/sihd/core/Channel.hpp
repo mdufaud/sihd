@@ -48,6 +48,8 @@ class Channel:  public sihd::util::Named,
         // notifies all observers and prevent writing inside notification thread
         void notify();
 
+        void do_timestamp();
+
         // write and notify only if a change happened
         void set_write_on_change(bool activate) { _write_change_only = activate; }
 
@@ -92,7 +94,7 @@ class Channel:  public sihd::util::Named,
                     if (_write_change_only && arr_ptr->at(idx) == value)
                         return true;
                     arr_ptr->set(idx, value);
-                    _timestamp = _clock_ptr->now();
+                    this->do_timestamp();
                 }
                 this->notify();
             }

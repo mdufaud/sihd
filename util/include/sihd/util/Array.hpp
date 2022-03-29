@@ -22,6 +22,8 @@ template <typename T>
 class Array: public IArray, public ICloneable<Array<T>>
 {
     public:
+        using value_type = T;
+
         Array()
         {
             _buf_ptr = nullptr;
@@ -50,6 +52,21 @@ class Array: public IArray, public ICloneable<Array<T>>
         Array(std::initializer_list<T> list): Array()
         {
             this->reserve(list.size());
+            for (const T & value: list)
+                this->push_back(value);
+        }
+
+        Array(const std::vector<T> & list): Array()
+        {
+            this->reserve(list.size());
+            for (const T & value: list)
+                this->push_back(value);
+        }
+
+        template <size_t SIZE>
+        Array(const std::array<T, SIZE> & list): Array()
+        {
+            this->reserve(SIZE);
             for (const T & value: list)
                 this->push_back(value);
         }

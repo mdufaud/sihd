@@ -26,7 +26,6 @@ class Named
             return "";
         };
 
-        virtual bool add_parent(Node *parent);
         virtual bool set_parent(Node *parent);
 
         bool is_owned_by_parent() const;

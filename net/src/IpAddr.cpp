@@ -364,7 +364,6 @@ std::string IpAddr::fetch_ip_name(sockaddr *addr, socklen_t addr_len)
 {
     char host[NI_MAXHOST];
     int flags = NI_NAMEREQD;
-
     int ret = ::getnameinfo(addr, addr_len, host, NI_MAXHOST, nullptr, 0, flags);
     if (ret != 0)
     {

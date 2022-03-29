@@ -89,10 +89,6 @@ modules = {
         "depends": ['util'],
         "add-depends-libs": True,
     },
-    "emscripten": {
-        "depends": ['util'],
-        "add-depends-libs": True,
-    },
     "imgui": {
         # apt libmesa-dev for opengl
         "depends": ['util'],

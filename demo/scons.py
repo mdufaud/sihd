@@ -7,8 +7,10 @@ builder_helper = env["BUILDER_HELPER"]
 demo_etc_dir = Dir("etc").Dir("sihd").Dir("demo")
 
 if env["CXX"] == "em++":
-    emscripten_env = env.Clone()
-    emscripten_env.Replace(
+    # env.Append(CPPFLAGS = ["-s", "WASM=1"])
+    # env.build_bin(["src/emscripten_hello_world.cpp"], bin_name = "hello_world.html")
+    emscripten_imgui_env = env.Clone()
+    emscripten_imgui_env.Replace(
         CPPFLAGS = [
             "-DIMGUI_DISABLE_FILE_FUNCTIONS",
             "-s", "USE_SDL=2",
@@ -23,7 +25,8 @@ if env["CXX"] == "em++":
             "-s", "USE_SDL=2",
         ],
     )
-    emscripten_env.build_bin(["src/imgui_emscripten_sdl_demo.cpp"], bin_name = "imgui_emscripten_sdl_demo.html")
+    emscripten_imgui_env.build_bin(["src/imgui_emscripten_sdl_demo.cpp"], bin_name = "imgui_emscripten_sdl_demo.html")
+
     Return()
 
 compile_sdl = os.getenv("sdl", None) == "1"

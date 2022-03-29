@@ -96,6 +96,11 @@ bool    Channel::copy_to(IArray & arr)
     return arr.copy_from_bytes(*_array_ptr);
 }
 
+void    Channel::do_timestamp()
+{
+    _timestamp = _clock_ptr->now();
+}
+
 bool    Channel::write(const Channel & other)
 {
     const IArray *other_array = other.carray();
@@ -115,7 +120,7 @@ bool    Channel::write(const IArray & arr)
         if (_write_change_only && _array_ptr->is_equal(arr) == true)
             return true;
         ret = _array_ptr->copy_from_bytes(arr);
-        _timestamp = _clock_ptr->now();
+        this->do_timestamp();
     }
     if (ret)
         this->notify();

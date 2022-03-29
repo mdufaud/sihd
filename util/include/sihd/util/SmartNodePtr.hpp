@@ -12,11 +12,9 @@ struct SmartNodeDeleter
 {
     void operator()(T* ptr)
     {
-        if (ptr != nullptr)
+        if (ptr != nullptr && ptr->is_owned_by_parent() == false)
         {
-            Named *n = dynamic_cast<Named *>(ptr);
-            if (n == nullptr || n->is_owned_by_parent() == false)
-                delete ptr;
+            delete ptr;
         }
     }
 };

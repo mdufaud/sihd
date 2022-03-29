@@ -11,10 +11,9 @@
 namespace sihd::util
 {
 
-class Node:   public Named
+class Node: public Named
 {
     public:
-
         class AlreadyHasChild: public std::exception
         {
             public:
@@ -40,7 +39,7 @@ class Node:   public Named
                 }
         };
 
-        struct   TreeOpts
+        struct TreeOpts
         {
             size_t  indent = 0;
             size_t  indent_by_iter = 2;
@@ -49,7 +48,7 @@ class Node:   public Named
             bool    description = false;
         };
 
-        struct  ChildEntry
+        struct ChildEntry
         {
             std::string name;
             Named *obj;
@@ -94,8 +93,10 @@ class Node:   public Named
         static std::pair<std::string, std::string> get_parent_path(const std::string & path);
 
         // Ownership
+        bool has_ownership(const Named *child);
         bool has_ownership(const std::string & name);
         bool set_child_ownership(const std::string & name, bool ownership);
+        bool set_child_ownership(const Named *child, bool ownership);
 
         // Find
         template<class C>
@@ -108,6 +109,7 @@ class Node:   public Named
         }
         Named *get_child(const std::string & name) const;
         ChildEntry *get_child_entry(const std::string & name) const;
+        ChildEntry *get_child_entry(const Named *child) const;
 
         // Links
         bool is_link(const std::string & link) const;

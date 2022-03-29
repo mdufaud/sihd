@@ -31,13 +31,30 @@ namespace test
             }
     };
 
-    TEST_F(TestLuaUtilApi, test_lua_util)
+    TEST_F(TestLuaUtilApi, test_luautil_node)
     {
-        SIHD_TRACE(sihd::util::OS::get_cwd());
         sol::state lua;
         // For print etc...
         lua.open_libraries(sol::lib::base);
         LuaUtilApi::load(lua);
-        lua.script_file("test/lua/test_import.lua");
+        lua.script_file("test/lua/util/test_node.lua");
+    }
+
+    TEST_F(TestLuaUtilApi, test_luautil_array)
+    {
+        sol::state lua;
+        // For print etc...
+        lua.open_libraries(sol::lib::base);
+        LuaUtilApi::load(lua);
+        lua.script_file("test/lua/util/test_array.lua");
+    }
+
+    TEST_F(TestLuaUtilApi, test_luautil_tools)
+    {
+        sol::state lua;
+        // For print etc...
+        lua.open_libraries(sol::lib::base);
+        LuaUtilApi::load(lua);
+        lua.script_file("test/lua/util/test_tools.lua");
     }
 }

@@ -27,22 +27,15 @@ bool    Named::set_parent_ownership(bool ownership)
 {
     Node *parent = this->get_parent();
     if (parent != nullptr)
-        return parent->set_child_ownership(this->get_name(), ownership);
+        return parent->set_child_ownership(this, ownership);
     return false;
 }
 
 bool    Named::is_owned_by_parent() const
 {
     return this->get_parent() != nullptr
-        ? this->get_parent()->has_ownership(this->get_name())
+        ? this->get_parent()->has_ownership(this)
         : false;
-}
-
-bool    Named::add_parent(Node *parent)
-{
-    if (_parent_ptr != nullptr)
-        return false;
-    return parent->add_child(this);
 }
 
 bool    Named::set_parent(Node *parent)
@@ -91,9 +84,12 @@ Node   *Named::get_root()
 
 const Node   *Named::cget_root() const
 {
-    Node *tmp;
-    const Node *obj = Node::to_cnode(this);
+    const Node *obj = this->get_parent();
 
+    if (obj == nullptr)
+        return Node::to_cnode(this);
+
+    Node *tmp;
     while (obj != nullptr)
     {
         tmp = obj->get_parent();

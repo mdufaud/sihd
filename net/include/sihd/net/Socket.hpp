@@ -49,6 +49,7 @@ class Socket
         static bool is_socket_blocking(int socket);
         static bool is_socket_broadcast(int socket);
         static bool is_socket_tcp_nodelay(int socket);
+        static bool bind_socket_to_device(int socket, std::string_view name);
 
         // Operations on internal socket //
 
@@ -56,6 +57,7 @@ class Socket
         bool set_blocking(bool active) const { return Socket::set_socket_blocking(_socket, active); }
         bool set_reuseaddr(bool active) const { return Socket::set_socket_reuseaddr(_socket, active); }
         bool set_broadcast(bool active) const { return Socket::set_socket_broadcast(_socket, active); }
+        bool bind_to_device(std::string_view name) const { return Socket::bind_socket_to_device(_socket, name); }
 
         bool is_tcp_nodelay() const { return Socket::is_socket_tcp_nodelay(_socket); }
         bool is_blocking() const { return Socket::is_socket_blocking(_socket); }
@@ -203,7 +205,6 @@ class Socket
     protected:
 
     private:
-        void _init();
         void _clear_socket_info();
         // returns sent value
         static ssize_t _adapt_array_size(sihd::util::IArray & array, ssize_t sent);

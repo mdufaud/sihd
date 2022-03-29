@@ -12,42 +12,40 @@ SIHD_LOGGER;
 
 Socket::Socket()
 {
-    this->_init();
+    this->_clear_socket_info();
+    _rcv_flags = 0;
+    _send_flags = 0;
+    _verbose = false;
 }
 
-Socket::Socket(int domain, int socket_type, int protocol)
+Socket::Socket(int domain, int socket_type, int protocol): Socket()
 {
-    this->_init();
     this->open(domain, socket_type, protocol);
 }
 
-Socket::Socket(const std::string & domain, const std::string & socket_type, const std::string & protocol)
+Socket::Socket(const std::string & domain, const std::string & socket_type, const std::string & protocol): Socket()
 {
-    this->_init();
     this->open(domain, socket_type, protocol);
 }
 
-Socket::Socket(int socket)
+Socket::Socket(int socket): Socket()
 {
-    this->_init();
     if (Socket::get_socket_infos(socket, &_domain, &_type, &_protocol))
         _socket = socket;
     else
         this->_clear_socket_info();
 }
 
-Socket::Socket(int socket, int domain, int socket_type, int protocol)
+Socket::Socket(int socket, int domain, int socket_type, int protocol): Socket()
 {
-    this->_init();
     _socket = socket;
     _domain = domain;
     _type = socket_type;
     _protocol = protocol;
 }
 
-Socket::Socket(int socket, const std::string & domain, const std::string & socket_type, const std::string & protocol)
+Socket::Socket(int socket, const std::string & domain, const std::string & socket_type, const std::string & protocol): Socket()
 {
-    this->_init();
     _socket = socket;
     _domain = Ip::domain(domain);
     _type = Ip::socktype(socket_type);
@@ -64,14 +62,6 @@ Socket::~Socket()
 {
     this->shutdown();
     this->close();
-}
-
-void    Socket::_init()
-{
-    this->_clear_socket_info();
-    _rcv_flags = 0;
-    _send_flags = 0;
-    _verbose = false;
 }
 
 void    Socket::_clear_socket_info()
@@ -116,6 +106,20 @@ bool    Socket::is_socket_broadcast(int socket)
     int res;
     socklen_t length = sizeof(int);
     return sihd::util::OS::getsockopt(socket, SOL_SOCKET, SO_BROADCAST, &res, &length, true) && res != 0;
+}
+
+bool    Socket::bind_socket_to_device(int socket, std::string_view name)
+{
+#if !defined (__SIHD_WINDOWS__)
+    char device_name[IFNAMSIZ];
+
+    strncpy(device_name, name.data(), std::min(name.size(), (size_t)IFNAMSIZ));
+    return sihd::util::OS::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name), true);
+#else
+    (void)socket;
+    (void)name;
+    return false;
+#endif
 }
 
 bool    Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)

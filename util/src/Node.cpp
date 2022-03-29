@@ -64,11 +64,33 @@ bool    Node::add_child(const std::string & name, Named *child, bool ownership)
     return true;
 }
 
+Node::ChildEntry  *Node::get_child_entry(const Named *child) const
+{
+    for (const auto & pair: _children_map)
+    {
+        if (pair.second->obj == child)
+            return pair.second;
+    }
+    return nullptr;
+}
+
+bool    Node::has_ownership(const Named *child)
+{
+    ChildEntry *entry = this->get_child_entry(child);
+    return entry != nullptr && entry->ownership;
+}
+
 bool    Node::has_ownership(const std::string & name)
 {
     ChildEntry *entry = this->get_child_entry(name);
+    return entry != nullptr && entry->ownership;
+}
+
+bool    Node::set_child_ownership(const Named *child, bool ownership)
+{
+    ChildEntry *entry = this->get_child_entry(child);
     if (entry != nullptr)
-        return entry->ownership;
+        entry->ownership = ownership;
     return entry != nullptr;
 }
 
