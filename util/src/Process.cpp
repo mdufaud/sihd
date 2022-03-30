@@ -30,26 +30,27 @@ SIHD_LOGGER;
 
 Process::Process()
 {
-    this->_init();
+    _pid = -1;
+    _poll.set_timeout(1);
+    _poll.add_observer(this);
+    this->open_mode = SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE;
+    this->clear();
 }
 
-Process::Process(std::function<int()> fun)
+Process::Process(std::function<int()> fun): Process()
 {
-    this->_init();
     _fun_to_execute = fun;
 }
 
-Process::Process(const std::vector<std::string> & args)
+Process::Process(const std::vector<std::string> & args): Process()
 {
-    this->_init();
     _argv.reserve(args.size() + 1);
     for (const std::string & arg: args)
         _argv.push_back(arg.c_str());
 }
 
-Process::Process(std::initializer_list<const char *> args)
+Process::Process(std::initializer_list<const char *> args): Process()
 {
-    this->_init();
     _argv.reserve(args.size() + 1);
     std::copy(args.begin(), args.end(), std::back_inserter(_argv));
 }
@@ -57,15 +58,6 @@ Process::Process(std::initializer_list<const char *> args)
 Process::~Process()
 {
     this->end();
-}
-
-void    Process::_init()
-{
-    _pid = -1;
-    _poll.set_timeout(1);
-    _poll.add_observer(this);
-    this->open_mode = SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE;
-    this->clear();
 }
 
 void    Process::clear()
@@ -462,7 +454,6 @@ bool    Process::start()
         if (this->_do_spawn() == false)
             return false;
 #else
-    SIHD_TRACE("FORK")
         this->_do_fork();
 #endif
     }
@@ -537,7 +528,7 @@ bool    Process::end()
         if (running == false)
             break ;
         --tries;
-        usleep(1000);
+        usleep(1E4);
     }
     if (running)
     {

@@ -12,7 +12,7 @@ class ConsoleLogger: public ALogger
         ConsoleLogger();
         virtual ~ConsoleLogger();
 
-        virtual void log(const LogInfo & info, const char *msg) override;
+        virtual void log(const LogInfo & info, const std::string_view & msg) override;
 
     protected:
 

@@ -13,7 +13,7 @@ BasicLogger::~BasicLogger()
 {
 }
 
-void    BasicLogger::log(const LogInfo & info, const char *msg)
+void    BasicLogger::log(const LogInfo & info, const std::string_view & msg)
 {
 //SEC.NANO [THREAD] LEVEL SRC MSG
 #if defined(__SIHD_WINDOWS__)
@@ -24,7 +24,7 @@ void    BasicLogger::log(const LogInfo & info, const char *msg)
             info.timestamp.tv_sec, info.timestamp.tv_nsec,
             print_thread_id ? info.thread_id_str.c_str() : "",
             info.thread_name.data(),
-            info.level_str, info.source.data(), msg);
+            info.level_str, info.source.data(), msg.data());
 }
 
 }

@@ -14,4 +14,5 @@ vgcore*
 build/*
 dist/*
 imgui/imgui
+lua/luabridge
 .installed

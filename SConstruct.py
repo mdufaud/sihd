@@ -163,13 +163,13 @@ if compiler == "clang":
         RANLIB = "ranlib",
     )
     if builder_helper.build_asan:
-        # Needs to be first
         base_env.Append(
-            LIBS = ["asan"],
             CPPFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"],
+            LINKFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"]
         )
     base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
     add_env_app_conf(base_env, "clang")
+
 # MINGW build
 elif compiler == "mingw":
     base_env.Replace(
@@ -197,10 +197,9 @@ elif compiler == "gcc":
         RANLIB = "ranlib",
     )
     if builder_helper.build_asan:
-        # Needs to be first
         base_env.Append(
-            LIBS = ["asan"],
-            CPPFLAGS  = ["-fsanitize=address", "-fno-omit-frame-pointer"],
+            CPPFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"],
+            LINKFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"]
         )
     add_env_app_conf(base_env, "gcc")
 # EMSCRIPTEN build
@@ -300,7 +299,7 @@ def _env_build_bin(self, src, bin_name=None, add_libs=[], **kwargs):
     modules_scons_libs[module_name] = bin
     return bin
 
-def _env_git_clone(self, url, branch, dest):
+def _env_git_clone(self, url, branch, dest, recursive = False):
     global modules_cloned_git_repositories
     modname = self['APP_MODULE_NAME']
     dest = os.path.join(builder_helper.build_root_path, modname, dest)
@@ -309,7 +308,10 @@ def _env_git_clone(self, url, branch, dest):
         builder_helper.info("repository already cloned: {}".format(dest))
     else:
         builder_helper.info("cloning repository: {} -> {}".format(url, dest))
-        args = ['git', 'clone', '--branch', branch, '--depth', '1', url, dest]
+        args = ['git', 'clone']
+        if recursive:
+            args.append("--recursive")
+        args.extend(['--branch', branch, '--depth', '1', url, dest])
         if verbose:
             builder_helper.info("git clone cmd: '{}'".format(" ".join(args)))
         ret = subprocess.call(args) == 0
@@ -426,6 +428,7 @@ for conf in build_order:
         APP_MODULE_FORMAT_NAME = module_format,
         # configuration of module for scons.py
         APP_MODULE_CONF = conf,
+        APP_MODULE_DIR = os.path.abspath(str(Dir(modname)))
     )
     # use multiple pkg-config output to add libraries/includes path
     package_configs = conf.get("pkg-configs", [])
@@ -441,6 +444,11 @@ for conf in build_order:
         if el not in new_final_lib:
             new_final_lib.append(el)
     new_final_lib.reverse()
+    try:
+        new_final_lib.remove("asan")
+        new_final_lib.insert(0, "asan")
+    except ValueError:
+        pass
     env['LIBS'] = new_final_lib
     # remove duplicates while preserving order
     env['CPPFLAGS'] = list(dict.fromkeys(env['CPPFLAGS']))

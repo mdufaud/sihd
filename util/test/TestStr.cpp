@@ -9,8 +9,6 @@
 
 #include <errno.h>
 
-#include <sihd/util/version.hpp>
-
 namespace test
 {
     using namespace sihd::util;

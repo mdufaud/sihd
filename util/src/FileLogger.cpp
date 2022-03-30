@@ -14,7 +14,7 @@ FileLogger::~FileLogger()
 {
 }
 
-void    FileLogger::log(const LogInfo & info, const char *msg)
+void    FileLogger::log(const LogInfo & info, const std::string_view & msg)
 {
 //SEC.NANO [THREAD] LEVEL SRC MSG
 #if defined(__SIHD_WINDOWS__)
@@ -24,7 +24,7 @@ void    FileLogger::log(const LogInfo & info, const char *msg)
 #endif
             info.timestamp.tv_sec, info.timestamp.tv_nsec,
             info.thread_name.data(),
-            info.level_str, info.source.data(), msg);
+            info.level_str, info.source.data(), msg.data());
 }
 
 

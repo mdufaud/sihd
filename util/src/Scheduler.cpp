@@ -73,7 +73,7 @@ bool    Scheduler::stop()
     return ret;
 }
 
-bool    Scheduler::is_running()
+bool    Scheduler::is_running() const
 {
     return _running;
 }

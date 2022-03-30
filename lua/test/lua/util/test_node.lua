@@ -1,5 +1,5 @@
-local root = sihd.util.Node.new("root")
-local child = sihd.util.Named.new("child", root)
+local root = sihd.util.Node("root", nil)
+local child = sihd.util.Named("child", root)
 assert(child:get_name() == "child")
 assert(root:get_name() == "root")
 assert(root:get_child("child") == child)
@@ -7,7 +7,7 @@ assert(child:get_parent() == root)
 assert(child:get_root() == root)
 assert(child:find("..") == root)
 
-local second_child = sihd.util.Named.new("second_child")
+local second_child = sihd.util.Named("second_child", nil)
 root:add_child_name("toto", second_child)
 
 assert(second_child:get_name() == "second_child")

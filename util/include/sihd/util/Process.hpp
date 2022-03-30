@@ -29,6 +29,8 @@ class Process: public IStoppableRunnable, public IHandler<Poll *>
         Process(std::initializer_list<const char *> args);
         virtual ~Process();
 
+        Process(const Process &) = delete;
+
         // reset so you can run again
         void reset();
         // reset and clear file descriptors
@@ -148,7 +150,6 @@ class Process: public IStoppableRunnable, public IHandler<Poll *>
         void _add_close_action(posix_spawn_file_actions_t *actions, int fd);
         bool _do_spawn();
 #endif
-        void _init();
         void _init_poll();
         // fd redirections setting
         void _fdw_close(FileDescWrapper & fdw);

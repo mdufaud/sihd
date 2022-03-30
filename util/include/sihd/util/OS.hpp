@@ -9,6 +9,7 @@
 # include <sys/stat.h>
 
 # if !defined(__SIHD_WINDOWS__)
+
 #  include <dlfcn.h>
 #  include <sys/ioctl.h>
 #  include <sys/socket.h>
@@ -18,6 +19,7 @@ typedef rlim_t sihd_rlim_t;
 typedef uid_t sihd_uid_t;
 
 # else
+
 #  include <winsock2.h>
 #  include <ws2def.h>
 #  include <winsock.h>
@@ -72,9 +74,14 @@ class OS
         // debuggers
         static bool is_run_by_debugger();
         static bool is_run_by_valgrind();
+        static bool is_run_with_asan();
 
         // lib
         static void *load_symbol_unload_lib(const std::string & lib_name, const std::string & sym_name);
+
+        static pid_t get_pid();
+        static bool kill(pid_t pid, int sig);
+
 # if !defined(__SIHD_WINDOWS__)
         static std::string get_error_lib();
         static void *load_lib(const std::string & lib_name);
@@ -82,29 +89,13 @@ class OS
         static bool close_lib(void *handle);
 # endif
 
-# if !defined(__SIHD_WINDOWS__)
-        static int get_interface_idx(const std::string & name);
-        static std::string get_interface_mac_addr(const std::string & name);
-        static std::string get_interface_ip_addr(const std::string & name);
-# endif
-
         // backtrace
-# if !defined(__SIHD_WINDOWS__)
-        static const int backtrace_size;
-
-        // emergency calls for when memory fails
-        static ssize_t write(int fd, const char *s);
-        // emergency calls for when memory fails
-        static ssize_t write_endl(int fd, const char *s);
-        // emergency calls for when memory fails
-        static ssize_t write_number(int fd, int number);
-
+        static int backtrace_size;
         // prints formatted backtrace into file descriptor
         static ssize_t backtrace(int fd);
-# endif
 
-        static size_t  get_peak_rss();
-        static size_t  get_current_rss();
+        static size_t get_peak_rss();
+        static size_t get_current_rss();
 
     protected:
         // called when signal is caught
@@ -116,6 +107,13 @@ class OS
 
 # if !defined(__SIHD_WINDOWS__)
         static void *backtrace_buffer[];
+
+        // emergency calls for when memory fails
+        static ssize_t write(int fd, const char *s);
+        // emergency calls for when memory fails
+        static ssize_t write_endl(int fd, const char *s);
+        // emergency calls for when memory fails
+        static ssize_t write_number(int fd, int number);
 # endif
         static bool signal_used;
         static std::mutex signal_mutex;

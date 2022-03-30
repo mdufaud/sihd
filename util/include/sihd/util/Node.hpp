@@ -99,7 +99,7 @@ class Node: public Named
         bool set_child_ownership(const Named *child, bool ownership);
 
         // Find
-        template<class C>
+        template <class C>
         C *get_child(const std::string & name) const
         {
             Named *obj = this->get_child(name);

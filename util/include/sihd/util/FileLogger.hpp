@@ -13,7 +13,7 @@ class FileLogger: public ALogger
         FileLogger(const std::string & path, bool append = true);
         virtual ~FileLogger();
 
-        virtual void log(const LogInfo & info, const char *msg) override;
+        virtual void log(const LogInfo & info, const std::string_view & msg) override;
 
         bool is_open() const { return _file.is_open(); }
         const std::string & path() const { return _file.path(); }

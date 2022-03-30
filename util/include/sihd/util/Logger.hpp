@@ -3,6 +3,7 @@
 
 # include <iostream>
 # include <string>
+# include <string_view>
 # include <sihd/util/Str.hpp>
 # include <sihd/util/LoggerManager.hpp>
 
@@ -45,13 +46,13 @@ class Logger
         Logger(const std::string & name);
         virtual ~Logger();
 
-        void debug(const char *msg);
-        void info(const char *msg);
-        void warning(const char *msg);
-        void error(const char *msg);
-        void critical(const char *msg);
+        void debug(std::string_view msg);
+        void info(std::string_view msg);
+        void warning(std::string_view msg);
+        void error(std::string_view msg);
+        void critical(std::string_view msg);
 
-        void log(LogLevel level, const char *msg);
+        void log(LogLevel level, std::string_view msg);
 
         std::string name;
 };

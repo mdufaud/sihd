@@ -41,7 +41,7 @@ class LoggerManager: public ALogFilterer
             return found;
         }
 
-        void log(const char *src, LogLevel level, const char *message);
+        void log(const std::string & src, LogLevel level, const std::string_view & msg);
 
         static LoggerManager _g_singleton;
         static LoggerManager *get();

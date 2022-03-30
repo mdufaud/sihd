@@ -125,11 +125,12 @@ conditionnal_modules = {
         # apt liblua5.3-dev / pacman lua
         "depends": ['util'],
         "add-depends-libs": True,
-        "use-extlibs": ['sol2'],
         "conditionnal-env": "lua",
         "conditionnal-depends": ['core', 'net', 'http'],
         "flags": ["-Wno-unused-parameter"],
         "pkg-configs": ["lua-5.3", "lua53"],
+        "git-url": "git@github.com:kunitoki/LuaBridge3.git",
+        "git-branch": "2.6",
     },
     "luabin": {
         "depends": ['lua'],

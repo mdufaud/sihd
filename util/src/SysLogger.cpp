@@ -22,7 +22,7 @@ SysLogger::~SysLogger()
 #endif
 }
 
-void    SysLogger::log(const LogInfo & info, const char *msg)
+void    SysLogger::log(const LogInfo & info, const std::string_view & msg)
 {
 #if !defined(__SIHD_WINDOWS__)
     int prio;
@@ -50,7 +50,7 @@ void    SysLogger::log(const LogInfo & info, const char *msg)
     syslog(prio, "%ld.%09ld\t[%s]\t%s\t%s\t%s\n",
             info.timestamp.tv_sec, info.timestamp.tv_nsec,
             info.thread_name.data(),
-            info.level_str, info.source.data(), msg);
+            info.level_str, info.source.data(), msg.data());
 #else
     (void)info; (void)msg;
 #endif

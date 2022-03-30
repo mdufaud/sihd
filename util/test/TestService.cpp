@@ -20,29 +20,29 @@ namespace test
             int n_stop = 0;
             int n_reset = 0;
 
-            virtual bool    is_running() const { return n_start > 0; }
+            virtual bool is_running() const { return n_start > 0; }
 
-            virtual bool    do_setup()
+            virtual bool do_setup()
             {
                 ++n_setup;
                 return true;
             }
-            virtual bool    do_init()
+            virtual bool do_init()
             {
                 ++n_init;
                 return true;
             }
-            virtual bool    do_start()
+            virtual bool do_start()
             {
                 ++n_start;
                 return true;
             }
-            virtual bool    do_stop()
+            virtual bool do_stop()
             {
                 ++n_stop;
                 return true;
             }
-            virtual bool    do_reset()
+            virtual bool do_reset()
             {
                 ++n_reset;
                 return true;
@@ -53,7 +53,7 @@ namespace test
     class FakeServiceWithController: public FakeService
     {
         public:
-            ServiceController   ctrl;
+            ServiceController ctrl;
             virtual IServiceController *get_service_ctrl() override { return &ctrl; };
     };
 

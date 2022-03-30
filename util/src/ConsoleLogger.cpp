@@ -16,7 +16,7 @@ ConsoleLogger::~ConsoleLogger()
 {
 }
 
-void    ConsoleLogger::log(const LogInfo & info, const char *msg)
+void    ConsoleLogger::log(const LogInfo & info, const std::string_view & msg)
 {
     const char *beg;
     const char *level;
@@ -48,7 +48,7 @@ void    ConsoleLogger::log(const LogInfo & info, const char *msg)
             level = "N";
             beg = Term::Attr::WHITE;
     }
-    fprintf(stderr, "%s%s [%s] <%s> %s%s\n", beg, level, info.thread_name.data(), info.source.data(), msg, end);
+    fprintf(stderr, "%s%s [%s] <%s> %s%s\n", beg, level, info.thread_name.data(), info.source.data(), msg.data(), end);
 }
 
 }

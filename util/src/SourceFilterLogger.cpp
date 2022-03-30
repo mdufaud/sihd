@@ -12,7 +12,7 @@ SourceFilterLogger::~SourceFilterLogger()
 {
 }
 
-bool    SourceFilterLogger::filter(const LogInfo & info, const char *msg)
+bool    SourceFilterLogger::filter(const LogInfo & info, const std::string_view & msg)
 {
     (void)msg;
     return this->match_only

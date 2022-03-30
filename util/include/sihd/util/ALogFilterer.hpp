@@ -38,7 +38,7 @@ class ALogFilterer
         }
 
         void remove_filters();
-        bool should_filter(const LogInfo & info, const char *msg);
+        bool should_filter(const LogInfo & info, const std::string_view & msg);
 
     private:
         std::list<ILoggerFilter *>::iterator _find(ILoggerFilter *filter);

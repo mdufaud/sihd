@@ -12,7 +12,7 @@ class SourceFilterLogger:   public ILoggerFilter
         SourceFilterLogger(const std::string & source, bool match_only = false);
         virtual ~SourceFilterLogger();
 
-        virtual bool filter(const LogInfo & info, const char *msg);
+        virtual bool filter(const LogInfo & info, const std::string_view & msg);
 
         std::string source;
         bool match_only;

@@ -738,6 +738,11 @@ class ArrStr: public ArrChar
 {
     public:
         using ArrChar::ArrChar;
+        using ArrChar::pop;
+        using ArrChar::front;
+        using ArrChar::back;
+        using ArrChar::at;
+        using ArrChar::set;
         using ArrChar::is_equal;
         using ArrChar::copy_from;
         using ArrChar::assign;
@@ -745,6 +750,7 @@ class ArrStr: public ArrChar
         using ArrChar::from;
         using ArrChar::from_string;
         using ArrChar::to_string;
+        using ArrChar::cpp_str;
 
         std::string to_string([[maybe_unused]] char delimiter = '\0') const
         {
@@ -758,6 +764,14 @@ class ArrStr: public ArrChar
         ArrStr(const char *str): ArrChar()
         {
             this->push_back(str);
+        }
+
+        ArrStr *clone() const
+        {
+            ArrStr *cloned = new ArrStr();
+            if (cloned != nullptr)
+                cloned->from(*this);
+            return cloned;
         }
 
         bool is_equal(const char *str) const

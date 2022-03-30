@@ -46,7 +46,7 @@ void    ALogFilterer::remove_filters()
     _filters_lst.clear();
 }
 
-bool    ALogFilterer::should_filter(const LogInfo & info, const char *msg)
+bool    ALogFilterer::should_filter(const LogInfo & info, const std::string_view & msg)
 {
     for (ILoggerFilter *filter : _filters_lst)
     {

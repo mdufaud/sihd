@@ -144,7 +144,7 @@ namespace test
         EXPECT_EQ(proc.return_code(), 0);
     }
 
-    TEST_F(TestProcess, test_process_in)
+    TEST_F(TestProcess, test_process_in_cat)
     {
         if (Term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
@@ -161,6 +161,27 @@ namespace test
         proc.stdin_from("3");
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(output, "hello world123");
+        EXPECT_TRUE(proc.has_exited());
+        EXPECT_EQ(proc.return_code(), 0);
+    }
+
+    TEST_F(TestProcess, test_process_in_wc)
+    {
+        if (Term::is_interactive() == false)
+            GTEST_SKIP() << "Is an interactive test";
+        Process proc{"wc", "-c"};
+        std::string result;
+
+        proc.stdin_from("hello world");
+        proc.stdout_to([&result] (const char *buf, size_t size)
+        {
+            (void)size;
+            result = buf;
+        });
+        EXPECT_TRUE(proc.start());
+        proc.stdin_close();
+        EXPECT_TRUE(proc.end());
+        EXPECT_EQ(result, "11\n");
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 0);
     }

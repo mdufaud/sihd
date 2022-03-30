@@ -12,11 +12,12 @@
 # include <sihd/util/Thread.hpp>
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Configurable.hpp>
+# include <sihd/util/IStoppableRunnable.hpp>
 
 namespace sihd::util
 {
 
-class Scheduler: public Named, public IRunnable, public Configurable
+class Scheduler: public Named, public IStoppableRunnable, public Configurable
 {
     public:
         Scheduler(const std::string & name, Node *parent = nullptr);
@@ -24,6 +25,7 @@ class Scheduler: public Named, public IRunnable, public Configurable
 
         bool start();
         bool stop();
+        bool is_running() const;
 
         void pause();
         void resume();
@@ -35,11 +37,8 @@ class Scheduler: public Named, public IRunnable, public Configurable
 
         IClock *get_clock();
         void set_clock(IClock *clock);
-        bool is_running();
 
         bool set_as_fast_as_possible(bool active);
-
-        virtual bool run();
 
         // number of overruns that occured after started
         uint32_t overruns;
@@ -49,6 +48,8 @@ class Scheduler: public Named, public IRunnable, public Configurable
         uint32_t acceptable_nano;
 
     protected:
+        virtual bool run();
+
         void _delete_tasks();
         void _add_to_delete_task(Task *t);
         bool _wait_for_next_task(std::time_t steady_time);

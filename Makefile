@@ -123,6 +123,7 @@ build: intro
 		test=$(test) \
 		dist=$(dist) \
 		mode=$(mode) \
+		asan=$(asan) \
 		$(SCONS_BUILD_CMD)
 
 build_debug: SCONS_ARGS = --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time

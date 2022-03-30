@@ -14,34 +14,34 @@ Logger::~Logger()
 {
 }
 
-void    Logger::debug(const char *msg)
+void    Logger::debug(std::string_view msg)
 {
     this->log(LogLevel::debug, msg);
 }
 
-void    Logger::info(const char *msg)
+void    Logger::info(std::string_view msg)
 {
     this->log(LogLevel::info, msg);
 }
 
-void    Logger::warning(const char *msg)
+void    Logger::warning(std::string_view msg)
 {
     this->log(LogLevel::warning, msg);
 }
 
-void    Logger::error(const char *msg)
+void    Logger::error(std::string_view msg)
 {
     this->log(LogLevel::error, msg);
 }
 
-void    Logger::critical(const char *msg)
+void    Logger::critical(std::string_view msg)
 {
     this->log(LogLevel::critical, msg);
 }
 
-void    Logger::log(LogLevel level, const char *msg)
+void    Logger::log(LogLevel level, std::string_view msg)
 {
-    LoggerManager::get()->log(name.c_str(), level, msg);
+    LoggerManager::get()->log(name, level, msg);
 }
 
 }

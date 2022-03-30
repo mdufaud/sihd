@@ -6,15 +6,19 @@
 namespace sihd::lua
 {
 
+SIHD_NEW_LOGGER("sihd::apilua");
+
 using namespace sihd::util;
 
-void    LuaApi::load(sol::state & lua)
+std::string LuaApi::dir = Files::get_parent(Files::get_parent(OS::get_executable_path()));
+
+void    LuaApi::load(lua_State *state)
 {
-    if (lua.get_or("sihd", nullptr) != nullptr)
-        return ;
-    sol::table sihd = lua.create_named_table("sihd");
-    // from sihd_path/bin/exe.lua -> sihd[dir] = sihd_path
-    sihd["dir"] = Files::get_parent(Files::get_parent(OS::get_executable_path()));
+    luabridge::getGlobalNamespace(state)
+        .beginNamespace("sihd")
+            // from sihd_path/bin/exe.lua -> sihd[dir] = sihd_path
+            .addProperty("dir", &LuaApi::dir, false)
+        .endNamespace();
 }
 
 }

@@ -26,7 +26,7 @@ namespace test
             std::string msg;
             std::string src;
 
-            virtual void    log(const LogInfo & info, const char *msg) override
+            virtual void log(const LogInfo & info, const std::string_view & msg) override
             {
                 this->msg = msg;
                 this->src = info.source;

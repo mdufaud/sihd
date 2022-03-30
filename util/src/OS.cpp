@@ -164,6 +164,26 @@ std::string OS::get_signal_name(int sig)
 
 // utilities
 
+bool   OS::kill(pid_t pid, int sig)
+{
+#if !defined(__SIHD_WINDOWS__)
+    return ::kill(pid, sig) == 0;
+#else
+    (void)pid;
+    (void)sig;
+    return false;
+#endif
+}
+
+pid_t   OS::get_pid()
+{
+#if !defined(__SIHD_WINDOWS__)
+    return getpid();
+#else
+    return GetCurrentProcessId();
+#endif
+}
+
 sihd_rlim_t OS::get_max_fds()
 {
 #if !defined(__SIHD_WINDOWS__)
@@ -298,12 +318,16 @@ std::string OS::get_executable_path()
 
 #if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 
-# ifndef SIHD_BACKTRACE_SIZE
-#  define SIHD_BACKTRACE_SIZE 15
+# ifndef SIHD_MAX_BACKTRACE_SIZE
+#  define SIHD_MAX_BACKTRACE_SIZE 100
 # endif
 
-void *OS::backtrace_buffer[SIHD_BACKTRACE_SIZE];
-const int OS::backtrace_size = SIHD_BACKTRACE_SIZE;
+# ifndef SIHD_DEFAULT_BACKTRACE_SIZE
+#  define SIHD_DEFAULT_BACKTRACE_SIZE 15
+# endif
+
+void *OS::backtrace_buffer[SIHD_MAX_BACKTRACE_SIZE];
+int OS::backtrace_size = SIHD_DEFAULT_BACKTRACE_SIZE;
 
 ssize_t  OS::write(int fd, const char *s)
 {
@@ -334,7 +358,7 @@ ssize_t   OS::write_number(int fd, int number)
 
 ssize_t    OS::backtrace(int fd)
 {
-    size_t wanted_size = std::min(OS::backtrace_size, SIHD_BACKTRACE_SIZE);
+    size_t wanted_size = std::min(OS::backtrace_size, SIHD_MAX_BACKTRACE_SIZE);
     size_t size = ::backtrace(OS::backtrace_buffer, wanted_size);
     char **strings = (char **)backtrace_symbols(OS::backtrace_buffer, size);
     bool ret = write(fd, "sihd::util::OS::backtrace (") > 0;
@@ -358,9 +382,26 @@ ssize_t    OS::backtrace(int fd)
     return size;
 }
 
+#else // no backtrace
+
+ssize_t    OS::backtrace(int fd)
+{
+    (void)fd;
+    return -1;
+}
+
 #endif // end of backtrace
 
 // debuggers
+
+bool    OS::is_run_with_asan()
+{
+#if defined(__SANITIZE_ADDRESS__)
+    return true;
+#else
+    return false;
+#endif
+}
 
 bool    OS::is_run_by_valgrind()
 {
