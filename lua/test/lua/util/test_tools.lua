@@ -1,8 +1,6 @@
 local util = sihd.util
 
--- log
 if util.os.is_run_with_asan == false then
-    util.log.info(sihd.dir)
     assert(sihd.dir ~= "")
 end
 
@@ -24,12 +22,20 @@ print("current thread raw id: " .. util.thread.id())
 print("current thread id: " .. util.thread.id_str())
 
 -- signal
---util.os.kill(util.os.pid(), 2)
+-- util.os.kill(util.os.pid(), 2)
 
 -- backtrace
 util.os.backtrace_size = 2
-util.os.backtrace(util.os.stdout)
+assert(util.os.backtrace(util.os.stdout) == 2)
 
 -- resources
-print(util.os.get_peak_rss())
-print(util.os.get_current_rss())
+assert(util.os.get_peak_rss() > 0)
+assert(util.os.get_current_rss() > 0)
+
+-- str
+
+local split = util.str.split("hello world", " ")
+
+assert(#split == 2)
+assert(split[1] == "hello")
+assert(split[2] == "world")

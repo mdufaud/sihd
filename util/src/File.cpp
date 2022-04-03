@@ -10,24 +10,26 @@ SIHD_LOGGER;
 
 File::File()
 {
-    this->_init();
+    _file_ptr = nullptr;
+    _buf_ptr = nullptr;
+    _buf_size = 4096;
+    // default is new line buffering
+    _buf_mode = _IOLBF;
+    _stream_ownership = true;
 }
 
-File::File(int fd, const char *mode)
+File::File(int fd, const char *mode): File()
 {
-    this->_init();
     this->open_fd(fd, mode);
 }
 
-File::File(FILE *stream, bool ownership)
+File::File(FILE *stream, bool ownership): File()
 {
-    this->_init();
     this->set_stream(stream, ownership);
 }
 
-File::File(const std::string & path, const char *mode)
+File::File(const std::string_view path, const char *mode): File()
 {
-    this->_init();
     this->open(path, mode);
 }
 
@@ -35,16 +37,6 @@ File::~File()
 {
     this->close();
     this->_delete_buffer();
-}
-
-void    File::_init()
-{
-    _file_ptr = nullptr;
-    _buf_ptr = nullptr;
-    _buf_size = 4096;
-    // default is new line buffering
-    _buf_mode = _IOLBF;
-    _stream_ownership = true;
 }
 
 std::optional<struct stat>  File::stat()
@@ -159,11 +151,11 @@ bool    File::open_tmpfile()
     return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
 }
 
-bool    File::open_tmp(const std::string & tmp_name_template, const char *mode)
+bool    File::open_tmp(const std::string_view tmp_name_template, const char *mode)
 {
     this->close();
     char path[tmp_name_template.size()];
-    strcpy(path, tmp_name_template.c_str());
+    strcpy(path, tmp_name_template.data());
     size_t x_count = 0;
     size_t len = tmp_name_template.size();
     size_t i = 0;
@@ -187,10 +179,10 @@ bool    File::open_tmp(const std::string & tmp_name_template, const char *mode)
     return this->is_open();
 }
 
-bool    File::open(const std::string & path, const char *mode)
+bool    File::open(const std::string_view path, const char *mode)
 {
     this->close();
-    _file_ptr = fopen(path.c_str(), mode);
+    _file_ptr = fopen(path.data(), mode);
     if (_file_ptr == nullptr)
     {
         SIHD_LOG(error, "File: " << strerror(errno) << ": " << path);
@@ -359,13 +351,13 @@ ssize_t File::write(const IArray & array, size_t byte_offset)
     return this->write(reinterpret_cast<const char *>(array.cbuf() + byte_offset), array.byte_size() - byte_offset);
 }
 
-ssize_t File::write(const std::string & str, size_t size_limit)
+ssize_t File::write(const std::string_view str, size_t size_limit)
 {
     if (size_limit == 0)
         size_limit = str.size();
     else
         size_limit = std::min(size_limit, str.size());
-    return this->write(str.c_str(), size_limit);
+    return this->write(str.data(), size_limit);
 }
 
 bool    File::write_char(int c)

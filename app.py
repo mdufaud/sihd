@@ -217,7 +217,11 @@ pacman_packages = {
 
 ## general compilation parameters
 flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
-defines = []
+defines = [
+    "SIHD_VERSION_MAJOR=" + version.split('.')[0],
+    "SIHD_VERSION_MINOR=" + version.split('.')[1],
+    "SIHD_VERSION_PATCH=" + version.split('.')[2],
+]
 
 ## mode specifics
 debug_flags = ["-g", "-O2"]

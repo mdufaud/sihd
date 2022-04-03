@@ -361,7 +361,7 @@ ssize_t    OS::backtrace(int fd)
     size_t wanted_size = std::min(OS::backtrace_size, SIHD_MAX_BACKTRACE_SIZE);
     size_t size = ::backtrace(OS::backtrace_buffer, wanted_size);
     char **strings = (char **)backtrace_symbols(OS::backtrace_buffer, size);
-    bool ret = write(fd, "sihd::util::OS::backtrace (") > 0;
+    bool ret = write(fd, "backtrace (") > 0;
     ret = ret && write_number(fd, size) > 0;
     ret = ret && write_endl(fd, " calls)") > 0;
     if (strings == nullptr)

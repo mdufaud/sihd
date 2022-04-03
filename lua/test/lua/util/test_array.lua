@@ -22,6 +22,22 @@ assert(arr_int:at(1) == 34)
 arr_int:set(0, 15)
 assert(arr_int:at(0) == 15)
 
+arr_int:copy_from({10, 30})
+assert(arr_int:at(0) == 10)
+assert(arr_int:at(1) == 30)
+
+arr_int:copy_from({20}, 1)
+assert(arr_int:at(0) == 10)
+assert(arr_int:at(1) == 20)
+
+arr_int:push_back({30, 40, 50})
+assert(arr_int:size() == 5)
+assert(arr_int:at(0) == 10)
+assert(arr_int:at(1) == 20)
+assert(arr_int:at(2) == 30)
+assert(arr_int:at(3) == 40)
+assert(arr_int:at(4) == 50)
+
 -- for i, val in pairs(arr_int) do
 --     print("[" .. i .. "] = " .. val)
 -- end
@@ -31,12 +47,21 @@ assert(sihd.util.types.type_size(dt), 4)
 assert(sihd.util.types.type_to_string(dt), "int")
 assert(sihd.util.types.string_to_type("int"), dt)
 
-local arr_int2 = sihd.util.ArrInt.from({1, 2, 3})
+local arr_int2 = sihd.util.ArrInt.new({1, 2, 3})
 assert(arr_int2:to_string(",") == "1,2,3")
 
-local arr_str = sihd.util.ArrStr.from("hello world")
+local arr_str = sihd.util.ArrStr.new("hello world")
 arr_str:push_back(", how are you ?")
 assert(arr_str:str() == "hello world, how are you ?")
 
-local arr_str2 = sihd.util.ArrStr.from({'a', 'b', 'c'})
-assert(arr_str2:str() == "abc")
+local arr_char = sihd.util.ArrChar.new({"a", "b", "c"})
+assert(arr_char:to_string(",") == "97,98,99")
+assert(arr_char:back() == "c")
+arr_char:push_back("d")
+assert(arr_char:back() == "d")
+
+local arr_bool = sihd.util.ArrBool.new({true, false})
+assert(arr_bool:front() == true)
+assert(arr_bool:back() == false)
+arr_bool:push_back(true)
+assert(arr_bool:back() == true)

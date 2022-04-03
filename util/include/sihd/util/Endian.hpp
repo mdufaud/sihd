@@ -13,8 +13,6 @@ class Endian
         Endian() {};
         ~Endian() {};
 
-        static std::string endian_type_to_str[];
-
     public:
         enum Endianness
         {
@@ -23,12 +21,17 @@ class Endian
             BIG,
         };
 
-        static std::string type_to_string(Endianness type)
+        static constexpr Endianness get_endian()
         {
-            return Endian::endian_type_to_str[type];
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+            return LITTLE;
+#elif __BYTE_ORDER == __BIG_ENDIAN
+            return BIG;
+#else
+            return UNKNOWN;
+#endif
         }
-
-        static Endianness get_endian();
+        static std::string type_to_string(Endianness type);
         static bool switch_buffer_endianness(void *buf, uint8_t size, size_t buf_size);
 
         // error if trying to swap non defined templates

@@ -181,12 +181,15 @@ std::string     Str::num_to_string(int64_t num, uint16_t base)
     if (num == 0)
         return "0";
     std::string ret;
+    size_t i = Num::get_size(num, base);
+    ret.resize(i);
     while (num != 0)
     {
+        i--;
         if (num < base)
-            ret = num_to_char(num) + ret;
+            ret[i] = num_to_char(num);
         else
-            ret = num_to_char(num % base) + ret;
+            ret[i] = num_to_char(num % base);
         num = num / base;
     }
     return ret;
@@ -197,7 +200,9 @@ std::string     Str::addr_to_string(void *addr, size_t padding)
     size_t numsize = Num::get_size((size_t)addr, 16);
     ssize_t i = 0;
     ssize_t total_zero = padding - numsize;
-    std::string ret = "0x";
+    std::string ret;
+    ret.reserve(2 + numsize + total_zero);
+    ret = "0x";
     while (i < total_zero)
     {
         ret += "0";
@@ -305,7 +310,7 @@ bool    Str::is_number(const std::string_view s, uint16_t base)
     return true;
 }
 
-std::map<std::string, std::string>  Str::parse_configuration(const std::string & conf)
+std::map<std::string, std::string>  Str::parse_configuration(const std::string_view conf)
 {
     std::map<std::string, std::string> ret;
     Splitter splitter(";");
@@ -323,12 +328,12 @@ std::map<std::string, std::string>  Str::parse_configuration(const std::string &
     return ret;
 }
 
-bool    Str::to_long(const std::string & str, long *ret, uint16_t base)
+bool    Str::to_long(const std::string_view str, long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
-    *ret = strtol(str.c_str(), &endptr, base);
-    if (str.c_str() == endptr)
+    *ret = strtol(str.data(), &endptr, base);
+    if (str.data() == endptr)
         return false;
     if (*ret == 0L && errno == EINVAL)
         return false;
@@ -337,12 +342,12 @@ bool    Str::to_long(const std::string & str, long *ret, uint16_t base)
     return true;
 }
 
-bool   Str::to_ulong(const std::string & str, unsigned long *ret, uint16_t base)
+bool   Str::to_ulong(const std::string_view str, unsigned long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
-    *ret = strtoul(str.c_str(), &endptr, base);
-    if (str.c_str() == endptr)
+    *ret = strtoul(str.data(), &endptr, base);
+    if (str.data() == endptr)
         return false;
     if (*ret == 0UL && errno == EINVAL)
         return false;
@@ -351,12 +356,12 @@ bool   Str::to_ulong(const std::string & str, unsigned long *ret, uint16_t base)
     return true;
 }
 
-bool    Str::to_llong(const std::string & str, long long *ret, uint16_t base)
+bool    Str::to_llong(const std::string_view str, long long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
-    *ret = strtoll(str.c_str(), &endptr, base);
-    if (str.c_str() == endptr)
+    *ret = strtoll(str.data(), &endptr, base);
+    if (str.data() == endptr)
         return false;
     if (*ret == 0L && errno == EINVAL)
         return false;
@@ -365,12 +370,12 @@ bool    Str::to_llong(const std::string & str, long long *ret, uint16_t base)
     return true;
 }
 
-bool   Str::to_ullong(const std::string & str, unsigned long long *ret, uint16_t base)
+bool   Str::to_ullong(const std::string_view str, unsigned long long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
-    *ret = strtoull(str.c_str(), &endptr, base);
-    if (str.c_str() == endptr)
+    *ret = strtoull(str.data(), &endptr, base);
+    if (str.data() == endptr)
         return false;
     if (*ret == 0UL && errno == EINVAL)
         return false;
@@ -379,12 +384,12 @@ bool   Str::to_ullong(const std::string & str, unsigned long long *ret, uint16_t
     return true;
 }
 
-bool    Str::to_double(const std::string & str, double *ret)
+bool    Str::to_double(const std::string_view str, double *ret)
 {
     errno = 0;
     char *endptr = NULL;
-    *ret = strtod(str.c_str(), &endptr);
-    if (str.c_str() == endptr)
+    *ret = strtod(str.data(), &endptr);
+    if (str.data() == endptr)
         return false;
     if (*ret == 0 && errno == EINVAL)
         return false;
@@ -394,7 +399,7 @@ bool    Str::to_double(const std::string & str, double *ret)
 }
 
 template <>
-bool Str::convert_from_string<bool>(const std::string & str, bool & value, [[maybe_unused]] uint16_t base)
+bool Str::convert_from_string<bool>(const std::string_view str, bool & value, [[maybe_unused]] uint16_t base)
 {
     bool ret = false;
     if (str == "1")
@@ -426,7 +431,7 @@ bool Str::convert_from_string<bool>(const std::string & str, bool & value, [[may
 }
 
 template <>
-bool Str::convert_from_string<char>(const std::string & str, char & value, [[maybe_unused]] uint16_t base)
+bool Str::convert_from_string<char>(const std::string_view str, char & value, [[maybe_unused]] uint16_t base)
 {
     char c = 0;
     if (str.size() == 1)
@@ -441,7 +446,7 @@ bool Str::convert_from_string<char>(const std::string & str, char & value, [[may
 }
 
 template <>
-bool Str::convert_from_string<int8_t>(const std::string & str, int8_t & value, uint16_t base)
+bool Str::convert_from_string<int8_t>(const std::string_view str, int8_t & value, uint16_t base)
 {
     long longval;
     bool ret = Str::to_long(str, &longval, base);
@@ -451,7 +456,7 @@ bool Str::convert_from_string<int8_t>(const std::string & str, int8_t & value, u
 }
 
 template <>
-bool Str::convert_from_string<int16_t>(const std::string & str, int16_t & value, uint16_t base)
+bool Str::convert_from_string<int16_t>(const std::string_view str, int16_t & value, uint16_t base)
 {
     long longval;
     bool ret = Str::to_long(str, &longval, base);
@@ -461,7 +466,7 @@ bool Str::convert_from_string<int16_t>(const std::string & str, int16_t & value,
 }
 
 template <>
-bool Str::convert_from_string<int32_t>(const std::string & str, int32_t & value, uint16_t base)
+bool Str::convert_from_string<int32_t>(const std::string_view str, int32_t & value, uint16_t base)
 {
     long longval;
     bool ret = Str::to_long(str, &longval, base);
@@ -471,7 +476,7 @@ bool Str::convert_from_string<int32_t>(const std::string & str, int32_t & value,
 }
 
 template <>
-bool Str::convert_from_string<int64_t>(const std::string & str, int64_t & value, uint16_t base)
+bool Str::convert_from_string<int64_t>(const std::string_view str, int64_t & value, uint16_t base)
 {
     long long longval;
     bool ret = Str::to_llong(str, &longval, base);
@@ -481,7 +486,7 @@ bool Str::convert_from_string<int64_t>(const std::string & str, int64_t & value,
 }
 
 template <>
-bool Str::convert_from_string<uint8_t>(const std::string & str, uint8_t & value, uint16_t base)
+bool Str::convert_from_string<uint8_t>(const std::string_view str, uint8_t & value, uint16_t base)
 {
     unsigned long longval;
     bool ret = Str::to_ulong(str, &longval, base);
@@ -491,7 +496,7 @@ bool Str::convert_from_string<uint8_t>(const std::string & str, uint8_t & value,
 }
 
 template <>
-bool Str::convert_from_string<uint16_t>(const std::string & str, uint16_t & value, uint16_t base)
+bool Str::convert_from_string<uint16_t>(const std::string_view str, uint16_t & value, uint16_t base)
 {
     unsigned long longval;
     bool ret = Str::to_ulong(str, &longval, base);
@@ -501,7 +506,7 @@ bool Str::convert_from_string<uint16_t>(const std::string & str, uint16_t & valu
 }
 
 template <>
-bool Str::convert_from_string<uint32_t>(const std::string & str, uint32_t & value, uint16_t base)
+bool Str::convert_from_string<uint32_t>(const std::string_view str, uint32_t & value, uint16_t base)
 {
     unsigned long longval;
     bool ret = Str::to_ulong(str, &longval, base);
@@ -511,7 +516,7 @@ bool Str::convert_from_string<uint32_t>(const std::string & str, uint32_t & valu
 }
 
 template <>
-bool Str::convert_from_string<uint64_t>(const std::string & str, uint64_t & value, uint16_t base)
+bool Str::convert_from_string<uint64_t>(const std::string_view str, uint64_t & value, uint16_t base)
 {
     unsigned long long longval;
     bool ret = Str::to_ullong(str, &longval, base);
@@ -521,7 +526,7 @@ bool Str::convert_from_string<uint64_t>(const std::string & str, uint64_t & valu
 }
 
 template <>
-bool Str::convert_from_string<float>(const std::string & str, float & value, [[maybe_unused]] uint16_t base)
+bool Str::convert_from_string<float>(const std::string_view str, float & value, [[maybe_unused]] uint16_t base)
 {
     double doubleval;
     bool ret = Str::to_double(str, &doubleval);
@@ -531,7 +536,7 @@ bool Str::convert_from_string<float>(const std::string & str, float & value, [[m
 }
 
 template <>
-bool Str::convert_from_string<double>(const std::string & str, double & value, [[maybe_unused]] uint16_t base)
+bool Str::convert_from_string<double>(const std::string_view str, double & value, [[maybe_unused]] uint16_t base)
 {
     double doubleval;
     bool ret = Str::to_double(str, &doubleval);

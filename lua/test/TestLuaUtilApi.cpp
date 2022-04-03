@@ -3,6 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/OS.hpp>
 
+#include <sihd/lua/Vm.hpp>
 #include <sihd/lua/LuaUtilApi.hpp>
 
 namespace test
@@ -25,6 +26,8 @@ namespace test
 
             virtual void SetUp()
             {
+                _vm.new_state();
+                ASSERT_NE(_vm.lua_state(), nullptr);
             }
 
             virtual void TearDown()
@@ -33,42 +36,53 @@ namespace test
 
             bool do_script(const std::string & path)
             {
-                lua_State* state = luaL_newstate();
-                luaL_openlibs(state);
-
-                LuaApi::load(state);
-                LuaUtilApi::load(state);
-
-                int ret = luaL_dofile(state, path.c_str());
-                if (ret != 0)
-                    SIHD_LOG(error, "Error ! " << lua_tostring(state, -1));
-                lua_close(state);
-                return ret == 0;
+                bool ret = _vm.do_file(path);
+                if (ret == false)
+                    SIHD_LOG(error, "Lua error: " << _vm.last_string());
+                return ret;
             }
+
+            Vm _vm;
     };
 
     TEST_F(TestLuaUtilApi, test_luautil_node)
     {
+        LuaUtilApi::load_base(_vm);
         EXPECT_TRUE(this->do_script("test/lua/util/test_node.lua"));
     }
 
     TEST_F(TestLuaUtilApi, test_luautil_array)
     {
+        LuaUtilApi::load_base(_vm);
         EXPECT_TRUE(this->do_script("test/lua/util/test_array.lua"));
     }
 
     TEST_F(TestLuaUtilApi, test_luautil_tools)
     {
+        LuaUtilApi::load_tools(_vm);
         EXPECT_TRUE(this->do_script("test/lua/util/test_tools.lua"));
-    }
-
-    TEST_F(TestLuaUtilApi, test_luautil_scheduler)
-    {
-        EXPECT_TRUE(this->do_script("test/lua/util/test_scheduler.lua"));
     }
 
     TEST_F(TestLuaUtilApi, test_luautil_process)
     {
+        if (OS::is_run_by_valgrind())
+            GTEST_SKIP() << "Cannot be run under valgrind";
+        LuaUtilApi::load_process(_vm);
         EXPECT_TRUE(this->do_script("test/lua/util/test_process.lua"));
+    }
+
+    TEST_F(TestLuaUtilApi, test_luautil_files)
+    {
+        LuaUtilApi::load_base(_vm);
+        LuaUtilApi::load_files(_vm);
+        EXPECT_TRUE(this->do_script("test/lua/util/test_files.lua"));
+    }
+
+        TEST_F(TestLuaUtilApi, test_luautil_threading)
+    {
+        LuaUtilApi::load_base(_vm);
+        LuaUtilApi::load_tools(_vm);
+        LuaUtilApi::load_threading(_vm);
+        EXPECT_TRUE(this->do_script("test/lua/util/test_threading.lua"));
     }
 }

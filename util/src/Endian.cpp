@@ -3,19 +3,17 @@
 namespace sihd::util
 {
 
-std::string Endian::endian_type_to_str[3] = {
-    "unknown", "little", "big"
-};
-
-Endian::Endianness  Endian::get_endian()
+std::string Endian::type_to_string(Endianness type)
 {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-    return LITTLE;
-#elif __BYTE_ORDER == __BIG_ENDIAN
-    return BIG;
-#else
-    return UNKNOWN;
-#endif
+    switch (type)
+    {
+        case BIG:
+            return "big";
+        case LITTLE:
+            return "little";
+        default:
+            return "unknown";
+    }
 }
 
 bool    Endian::switch_buffer_endianness(void *buf, uint8_t size, size_t buf_size)

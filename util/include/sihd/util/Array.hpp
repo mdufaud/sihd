@@ -342,6 +342,11 @@ class Array: public IArray, public ICloneable<Array<T>>
             return true;
         }
 
+        void set_buffer_ownership(bool active)
+        {
+            _has_ownership = active;
+        }
+
         // delete internal buffer if it has ownership - set internal buffer to nullptr
         void delete_buffer()
         {
@@ -715,7 +720,7 @@ class Array: public IArray, public ICloneable<Array<T>>
 };
 // end of class Array<T>
 
-// added capacity when resizing for less resizes
+// added capacity when resizing for less allocations
 template <typename T>
 size_t Array<T>::added_resize_capacity = 1;
 

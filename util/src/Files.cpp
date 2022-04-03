@@ -28,32 +28,32 @@ char Files::sep = '/';
 
 // stat
 
-bool    Files::exists(const std::string & path)
+bool    Files::exists(const std::string_view path)
 {
     struct stat s;
-    return OS::stat(path.c_str(), &s) == 0;
+    return OS::stat(path.data(), &s) == 0;
 }
 
-bool    Files::is_file(const std::string & path)
+bool    Files::is_file(const std::string_view path)
 {
     struct stat s;
-    if (OS::stat(path.c_str(), &s) == 0)
+    if (OS::stat(path.data(), &s) == 0)
         return s.st_mode & S_IFREG;
     return false;
 }
 
-bool    Files::is_dir(const std::string & path)
+bool    Files::is_dir(const std::string_view path)
 {
     struct stat s;
-    if (OS::stat(path.c_str(), &s) == 0)
+    if (OS::stat(path.data(), &s) == 0)
         return s.st_mode & S_IFDIR;
     return false;
 }
 
-size_t    Files::get_filesize(const std::string & path)
+size_t    Files::get_filesize(const std::string_view path)
 {
     struct stat s;
-    if (OS::stat(path.c_str(), &s) == 0)
+    if (OS::stat(path.data(), &s) == 0)
         return s.st_size;
     return 0;
 }
@@ -151,17 +151,17 @@ std::vector<std::string>    Files::get_recursive_children(const std::string & pa
 
 #else
 
-void    Files::_get_recursive_children(const std::string & path, std::vector<std::string> & children)
+void    Files::_get_recursive_children(const std::string_view & path, std::vector<std::string> & children)
 {
     DIR *dir_ptr;
     struct dirent *dirent;
-    if ((dir_ptr = opendir(path.c_str())) != NULL)
+    if ((dir_ptr = opendir(path.data())) != NULL)
     {
         while ((dirent = readdir(dir_ptr)) != NULL)
         {
             if (strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
                 continue ;
-            std::string childpath = Files::combine(path, dirent->d_name);
+            std::string childpath = Files::_combine(path, dirent->d_name);
             if (dirent->d_type & DT_DIR)
             {
                 children.push_back(childpath + Files::sep);
@@ -176,19 +176,19 @@ void    Files::_get_recursive_children(const std::string & path, std::vector<std
     }
 }
 
-std::vector<std::string>    Files::get_recursive_children(const std::string & path)
+std::vector<std::string>    Files::get_recursive_children(const std::string_view path)
 {
     std::vector<std::string> ret;
     Files::_get_recursive_children(path, ret);
     return ret;
 }
 
-std::vector<std::string>    Files::get_children(const std::string & path)
+std::vector<std::string>    Files::get_children(const std::string_view path)
 {
     std::vector<std::string> ret;
     DIR *dir_ptr;
     struct dirent *dirent;
-    if ((dir_ptr = opendir(path.c_str())) != NULL)
+    if ((dir_ptr = opendir(path.data())) != NULL)
     {
         while ((dirent = readdir(dir_ptr)) != NULL)
         {
@@ -259,7 +259,7 @@ std::string    Files::trim_path(const std::string & path, const std::string & to
     return ret;
 }
 
-std::string     Files::get_extension(const std::string & path)
+std::string     Files::get_extension(const std::string_view path)
 {
     std::string ret;
     size_t slash_idx = path.find_last_of(Files::sep);
@@ -271,16 +271,16 @@ std::string     Files::get_extension(const std::string & path)
     return ret;
 }
 
-std::string     Files::get_filename(const std::string & path)
+std::string     Files::get_filename(const std::string_view path)
 {
     size_t idx = path.find_last_of(Files::sep);
     if (idx == std::string::npos)
-        return path;
-    std::string ret = path.substr(idx + 1, path.size());
-    return ret;
+        return std::string(path.data(), path.size());
+    std::string_view filename = path.substr(idx + 1);
+    return std::string(filename.data(), filename.size());
 }
 
-std::string     Files::get_parent(const std::string & path)
+std::string     Files::get_parent(const std::string_view path)
 {
     // removing extra slashes: /path/to/dir///// -> /path/to/dir
     size_t i = path.size() == 0 ? 0 : path.size() - 1;
@@ -325,10 +325,27 @@ std::string  Files::combine(const std::vector<std::string> & list)
 
 std::string Files::combine(const std::string & path1, const std::string & path2)
 {
+    return Files::_combine(path1, path2);
+    /*
     if (path1.empty())
         return path2;
     if (path1[path1.size() - 1] == Files::sep)
         return path1 + path2;
+    std::string ret;
+    ret.reserve(path1.size() + 1 + path2.size());
+    ret.append(path1);
+    ret.push_back(Files::sep);
+    ret.append(path2);
+    return ret;
+    */
+}
+
+std::string Files::_combine(const std::string_view path1, const std::string_view path2)
+{
+    if (path1.empty())
+        return std::string(path2.data(), path2.size());
+    if (path1[path1.size() - 1] == Files::sep)
+        return std::string(path1.data(), path1.size()) + path2.data();
     std::string ret;
     ret.reserve(path1.size() + 1 + path2.size());
     ret.append(path1);
@@ -349,7 +366,7 @@ bool    Files::is_absolute(const std::string & path)
 
 // files
 
-bool    Files::are_equals(const std::string & path1, const std::string & path2)
+bool    Files::are_equals(const std::string_view path1, const std::string_view path2)
 {
     File file1(path1, "rb");
     File file2(path2, "rb");
@@ -375,7 +392,7 @@ bool    Files::remove_file(const std::string & path)
     return remove(path.c_str()) == 0;
 }
 
-bool    Files::write(const std::string & path, const std::string & content, bool append)
+bool    Files::write(const std::string_view path, const std::string_view content, bool append)
 {
     File file(path, append ? "a" : "w");
 
@@ -384,7 +401,7 @@ bool    Files::write(const std::string & path, const std::string & content, bool
     return false;
 }
 
-bool    Files::write_binary(const std::string & path, const char *data, size_t size, bool append)
+bool    Files::write_binary(const std::string_view path, const char *data, size_t size, bool append)
 {
     File file(path, append ? "ab" : "wb");
 
@@ -393,7 +410,7 @@ bool    Files::write_binary(const std::string & path, const char *data, size_t s
     return -1;
 }
 
-std::optional<std::string>  Files::read(const std::string & path, size_t size)
+std::optional<std::string>  Files::read(const std::string_view path, size_t size)
 {
     File file(path, "r");
 
@@ -410,9 +427,9 @@ std::optional<std::string>  Files::read(const std::string & path, size_t size)
     return std::nullopt;
 }
 
-std::optional<std::string>  Files::read_all(const std::string & path)
+std::optional<std::string>  Files::read_all(const std::string_view path)
 {
-    std::ifstream file(path, std::ifstream::in);
+    std::ifstream file(path.data(), std::ifstream::in);
     if (file.is_open() && file.good())
     {
         std::stringstream buffer;
@@ -423,7 +440,7 @@ std::optional<std::string>  Files::read_all(const std::string & path)
     return std::nullopt;
 }
 
-ssize_t Files::read_binary(const std::string & path, char *buf, size_t size)
+ssize_t Files::read_binary(const std::string_view path, char *buf, size_t size)
 {
     File file(path, "rb");
 

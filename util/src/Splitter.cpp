@@ -12,18 +12,22 @@ Splitter::Splitter(): _empty_delimitations(false), _compare_method(nullptr)
 {
 }
 
-Splitter::Splitter(int delimiter, const std::string & authorized_open_escape_sequences):
-    _empty_delimitations(false), _delimiter(1, delimiter),
-    _authorized_open_escape_sequences(authorized_open_escape_sequences),
-    _compare_method(nullptr)
+Splitter::Splitter(int delimiter, const std::string & authorized_open_escape_sequences): Splitter()
 {
+    _delimiter = std::string(1, delimiter);
+    _authorized_open_escape_sequences = authorized_open_escape_sequences;
 }
 
-Splitter::Splitter(const std::string & delimiter, const std::string & authorized_open_escape_sequences):
-    _empty_delimitations(false), _delimiter(delimiter),
-    _authorized_open_escape_sequences(authorized_open_escape_sequences),
-    _compare_method(nullptr)
+Splitter::Splitter(const std::string & delimiter, const std::string & authorized_open_escape_sequences): Splitter()
 {
+    _delimiter = delimiter;
+    _authorized_open_escape_sequences = authorized_open_escape_sequences;
+}
+
+Splitter::Splitter(int (*fun)(int), const std::string & authorized_open_escape_sequences): Splitter()
+{
+    this->set_delimiter_method(fun);
+    _authorized_open_escape_sequences = authorized_open_escape_sequences;
 }
 
 Splitter::~Splitter()
@@ -160,11 +164,11 @@ std::string_view    Splitter::get_next_token(const char *s, int *idx) const
     return std::string_view(s + x, std::max(0, y - x));
 }
 
-std::vector<std::string>    Splitter::split(const std::string & str) const
+std::vector<std::string>    Splitter::split(const std::string_view str) const
 {
    if (_delimiter.empty() && _compare_method == nullptr)
-        return {str};
-    const char *s = str.c_str();
+        return {std::string(str.data(), str.size())};
+    const char *s = str.data();
     int tokens = this->count_tokens(s);
     std::vector<std::string> ret;
     ret.resize(tokens);
@@ -176,11 +180,11 @@ std::vector<std::string>    Splitter::split(const std::string & str) const
     return ret;
 }
 
-std::vector<std::string_view>   Splitter::split_view(const std::string & str) const
+std::vector<std::string_view>   Splitter::split_view(const std::string_view str) const
 {
    if (_delimiter.empty() && _compare_method == nullptr)
         return {str};
-    const char *s = str.c_str();
+    const char *s = str.data();
     int tokens = this->count_tokens(s);
     std::vector<std::string_view> ret;
     ret.resize(tokens);

@@ -17,14 +17,14 @@ class File
         File();
         File(int fd, const char *mode);
         File(FILE *stream, bool ownership);
-        File(const std::string & path, const char *mode);
+        File(const std::string_view path, const char *mode);
         virtual ~File();
 
-        virtual bool open(const std::string & path, const char *mode);
+        virtual bool open(const std::string_view path, const char *mode);
         virtual bool open_fd(int fd, const char *mode);
         virtual bool set_stream(FILE *stream, bool ownership);
         // template must contain XXX
-        virtual bool open_tmp(const std::string & tmp_name_template, const char *mode);
+        virtual bool open_tmp(const std::string_view tmp_name_template, const char *mode);
         virtual bool open_tmpfile();
         virtual bool is_open() const;
         virtual bool close();
@@ -60,7 +60,7 @@ class File
 
         ssize_t write(const IArray & array, size_t byte_offset = 0);
         // can set a limit to the string length
-        ssize_t write(const std::string & str, size_t size_limit = 0);
+        ssize_t write(const std::string_view str, size_t size_limit = 0);
         bool write_char(int c);
 
         bool seek(long offset);
@@ -85,7 +85,6 @@ class File
         bool buffering_none() const { return _buf_mode == _IONBF; }
 
     protected:
-        virtual void _init();
 
     private:
         bool _seek(long offset, int origin);

@@ -24,11 +24,11 @@ class Waitable
         bool wait_for(std::time_t nano_duration);
         // wait X notifications for a duration
         bool wait_loop(std::time_t nano_duration, uint32_t times);
+        // cancel wait loop
+        void cancel_loop();
         // wait for x nanoseconds -- returns time elapsed
         std::time_t wait_elapsed(std::time_t nano_duration);
 
-
-        void cancel_loop();
 
     protected:
         std::mutex _mutex;

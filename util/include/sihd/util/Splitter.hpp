@@ -12,6 +12,7 @@ class Splitter
         Splitter();
         Splitter(int delimiter, const std::string & authorized_open_escape_sequences = "");
         Splitter(const std::string & delimiter, const std::string & authorized_open_escape_sequences = "");
+        Splitter(int (*fun)(int), const std::string & authorized_open_escape_sequences = "");
         virtual ~Splitter();
 
         void set_delimiter_method(int (*fun)(int));
@@ -22,8 +23,8 @@ class Splitter
         bool set_escape_sequences(const std::string & sequences);
         bool set_escape_sequences_all();
 
-        std::vector<std::string> split(const std::string & str) const;
-        std::vector<std::string_view> split_view(const std::string & str) const;
+        std::vector<std::string> split(const std::string_view str) const;
+        std::vector<std::string_view> split_view(const std::string_view str) const;
 
         // count number of tokens to return
         int count_tokens(const char *s) const;
