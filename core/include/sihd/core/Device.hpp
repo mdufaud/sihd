@@ -12,8 +12,18 @@ class Device:   public AChannelContainer,
                 public ACoreService
 {
     public:
+        using ACoreService::setup;
+        using ACoreService::init;
+        using ACoreService::start;
+        using ACoreService::stop;
+        using ACoreService::reset;
+        using ACoreService::is_running;
+
         Device(const std::string & name, Node *parent = nullptr);
         virtual ~Device();
+
+        virtual sihd::util::ServiceController::State device_state() const;
+        virtual const char *device_state_str() const;
 
     protected:
         virtual void handle([[maybe_unused]] Channel *c) override {}

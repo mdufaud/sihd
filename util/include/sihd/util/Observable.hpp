@@ -40,6 +40,19 @@ class Observable: public IObservable<T>
             return std::find(_observers.begin(), _observers.end(), obs) != _observers.end();
         }
 
+        template <typename OBS_TYPE>
+        OBS_TYPE *get_first_observer()
+        {
+            std::lock_guard<std::mutex> l(_mutex);
+            for (IHandler<T *> *observer: _observers)
+            {
+                OBS_TYPE *casted = dynamic_cast<OBS_TYPE *>(observer);
+                if (casted != nullptr)
+                    return casted;
+            }
+            return nullptr;
+        }
+
     protected:
         virtual void notify_observers(T *sender)
         {

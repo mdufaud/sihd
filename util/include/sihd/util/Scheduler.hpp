@@ -23,17 +23,17 @@ class Scheduler: public Named, public IStoppableRunnable, public Configurable
         Scheduler(const std::string & name, Node *parent = nullptr);
         virtual ~Scheduler();
 
-        bool start();
-        bool stop();
-        bool is_running() const;
+        virtual bool start();
+        virtual bool stop();
+        virtual bool is_running() const;
 
-        void pause();
-        void resume();
+        virtual void pause();
+        virtual void resume();
 
-        void add_task(Task *t);
-        void remove_task(Task *t);
+        virtual void add_task(Task *t);
+        virtual void remove_task(Task *t);
 
-        void clear_tasks();
+        virtual void clear_tasks();
 
         IClock *get_clock();
         void set_clock(IClock *clock);
@@ -54,7 +54,7 @@ class Scheduler: public Named, public IStoppableRunnable, public Configurable
         void _add_to_delete_task(Task *t);
         bool _wait_for_next_task(std::time_t steady_time);
         Task *_get_next_task(std::time_t time);
-        void _play_task(Task *task, std::time_t time);
+        virtual void _play_task(Task *task, std::time_t time);
 
         bool _running;
         IClock *_clock_ptr;

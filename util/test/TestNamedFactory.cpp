@@ -3,6 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Node.hpp>
+#include <sihd/util/OS.hpp>
 
 namespace test
 {
@@ -32,6 +33,8 @@ namespace test
 
     TEST_F(TestNamedFactory, test_namedfactory)
     {
+        if (OS::is_run_with_asan())
+            GTEST_SKIP() << "test does not work with address sanatizer";
         EXPECT_EQ(NamedFactory::load("unknown_lib", "symbol", "err"), nullptr);
         EXPECT_EQ(NamedFactory::load("sihd_util", "unknown_symbol", "err"), nullptr);
 

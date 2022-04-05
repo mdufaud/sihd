@@ -26,24 +26,24 @@ class Worker: public IRunnable, public Configurable
         Worker(IRunnable *runnable = nullptr);
         virtual ~Worker();
 
-        void set_runnable(IRunnable *runnable);
-        bool start_worker(const std::string & name);
-        bool start_sync_worker(const std::string & name);
-        bool stop_worker();
-        bool is_worker_running()
+        virtual void set_runnable(IRunnable *runnable);
+        virtual bool start_worker(const std::string & name);
+        virtual bool start_sync_worker(const std::string & name);
+        virtual bool stop_worker();
+        virtual bool is_worker_running() const
         {
             return _running;
         }
-        bool is_worker_started()
+        virtual bool is_worker_started() const
         {
             return _started;
         }
 
-        virtual bool run();
-
     protected:
+        virtual bool run();
         virtual bool on_worker_start();
         virtual bool on_worker_stop();
+
         std::string & _worker_get_name();
         IRunnable *_worker_get_runnable();
         void _worker_set_running(bool active);
@@ -56,6 +56,7 @@ class Worker: public IRunnable, public Configurable
         bool _running;
         Waitable _running_waitable;
         std::mutex  _worker_mutex;
+        std::mutex  _worker_sync_mutex;
         std::thread _worker_thread;
 };
 

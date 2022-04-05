@@ -4,7 +4,8 @@ import sys
 must_have_parameters = ['depends', 'libs', 'link', 'flags']
 
 def fill_modlist_from_modules(modules, specific_modules, modlist):
-    """ Gets all modules to build from a single module to build """
+    """ @brief Gets all modules to build from a single module to build
+    """
     if not specific_modules:
         return
     for module_name in specific_modules:
@@ -16,7 +17,8 @@ def fill_modlist_from_modules(modules, specific_modules, modlist):
         #fill_modlist_from_modules(modules, conf.get('conditionnal-depends', []), modlist)
 
 def __rec_fill_module_real_depends(modules, module_name, to_fill_module_conf):
-    """ Fill a single module real dependency tree into modules """
+    """ @brief Fill a single module real dependency tree into modules
+    """
     conf = modules.get(module_name, None)
     if conf is None:
         raise RuntimeError("Error in module's configuration, not a module: {}".format(module_name))
@@ -50,7 +52,9 @@ def __get_module_fill_order(modules):
     return order
 
 def resolve_modules_dependencies(modules):
-    """ Fill all modules real dependency tree """
+    """ @brief Fill all modules real dependency tree
+        @param modules modules dict
+    """
     order = __get_module_fill_order(modules)
     for name in order:
         conf = modules[name]
@@ -91,7 +95,8 @@ def get_extlibs_versions(app, modules_extlibs):
 
 def get_modules_extlibs(app, modules):
     """ Gets all libs versions needed by selected modules
-        @return dict[libname] = version
+        @param app the application configuration module
+        @return dict as dict[libname] = version
     """
     modules_extlibs = set()
     # getting used libs for every modules
@@ -120,20 +125,34 @@ def get_modules_packages(app, packet_manager_name, modules):
     return ret
 
 def add_conditionnal_module(conditionnal_modules, modules, modname):
+    """ @brief check if a conditionnal module is in modules list
+        @param conditionnal_modules modules dictionnary from application's conf
+        @param modules modules dict to add to
+        @param modname the module to be added from conditionnal_modules
+    """
     conditionnal_module = conditionnal_modules.get(modname, None)
     if conditionnal_module is None:
         raise RuntimeError("App does not have conditionnal module named: " + modname)
     modules[modname] = conditionnal_module
 
-def has_conditionnal_in_modules_list(app_conditionnal_modules, modules):
+def has_conditionnal_in_modules_list(conditionnal_modules, modules):
+    """ @brief check if a conditionnal module is in modules list
+        @param conditionnal_modules modules dictionnary from application's conf
+        @param modules modules dict to check
+        @return bool
+    """
     ret = False
     for modname in modules:
-        if modname in app_conditionnal_modules:
+        if modname in conditionnal_modules:
             ret = True
             break
     return ret
 
 def check_conditionnal_modules(app):
+    """ @brief check if application conf has conditionnal modules and check if names are unique
+        @param app the application configuration module
+        @return bool
+    """
     has_conditionnals = hasattr(app, "conditionnal_modules")
     if has_conditionnals is True:
         for modname, _ in app.conditionnal_modules.items():
@@ -142,12 +161,20 @@ def check_conditionnal_modules(app):
     return has_conditionnals
 
 def remove_module(app, modname):
+    """ @brief removes a module from application conf
+        @param app the application configuration module
+        @param modname the module to be removed
+    """
     if hasattr(app, "modules") and modname in app.modules:
         del app.modules[modname]
     if hasattr(app, "conditionnal_modules") and modname in app.conditionnal_modules:
         del app.conditionnal_modules[modname]
 
 def get_module_merged_with_conditionnals(app):
+    """ @brief merge app.modules and app.conditionnal_modules
+        @param app the application configuration module
+        @return dict of complete modules
+    """
     ret = {}
     if hasattr(app, "modules"):
         for key, value in app.modules.items():
@@ -158,6 +185,10 @@ def get_module_merged_with_conditionnals(app):
     return ret
 
 def get_conditionnals_from_env(app):
+    """ @brief gets conditionnal modules based on their presence in env
+        @param app the application configuration module
+        @return list of module names
+    """
     ret = []
     for key, conf in app.conditionnal_modules.items():
         cond_env = conf.get("conditionnal-env", None)
@@ -165,10 +196,10 @@ def get_conditionnals_from_env(app):
             ret.append(key)
     return ret
 
-def get_modules(app, specific_modules="", conditionnals=[]):
+def build_modules_conf(app, specific_modules=[], conditionnals=[]):
     """ @brief build modules from application configuration
         @param app the application configuration module
-        @param specific_modules build specific comma separated modules instead of all
+        @param specific_modules_list build specific modules instead of all
         @param conditionnals list of conditionnal modules to be added to the build
         @return list
     """
@@ -176,13 +207,12 @@ def get_modules(app, specific_modules="", conditionnals=[]):
         raise RuntimeError("App's configuration file should have modules")
     conditionnals.extend(get_conditionnals_from_env(app))
     modules = {}
-    specific_modules_list = specific_modules.split(',')
     if specific_modules:
         app_modules = app.modules
         # if a conditionnal is in specific module list, add conditionnals to list of modules
-        if has_conditionnal_in_modules_list(app.conditionnal_modules, specific_modules_list):
+        if has_conditionnal_in_modules_list(app.conditionnal_modules, specific_modules):
             app_modules = get_module_merged_with_conditionnals(app)
-        fill_modlist_from_modules(app_modules, specific_modules_list, modules)
+        fill_modlist_from_modules(app_modules, specific_modules, modules)
     else:
         modules = app.modules
     # Add specific conditionnal modules

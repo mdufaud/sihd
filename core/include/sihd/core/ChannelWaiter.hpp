@@ -20,9 +20,8 @@ class ChannelWaiter: public ACoreObject
         void clear_channel();
         bool wait_for(time_t nano, uint32_t notifications = 1);
 
-        bool do_stop() override;
-
     protected:
+        bool do_stop() override;
 
     private:
         void handle(Channel *channel) override;

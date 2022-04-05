@@ -2,7 +2,6 @@
 
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Node.hpp>
-#include <sihd/util/SmartNodePtr.hpp>
 
 #include <sihd/util/Types.hpp>
 #include <sihd/util/time.hpp>
@@ -14,22 +13,15 @@
 #include <sihd/util/Path.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Endian.hpp>
-
+#include <sihd/util/Term.hpp>
 #include <sihd/util/AService.hpp>
-#include <sihd/util/ServiceController.hpp>
 
 #include <sihd/util/Process.hpp>
 
 #include <sihd/util/File.hpp>
 #include <sihd/util/LineReader.hpp>
-#include <sihd/util/SharedMemory.hpp>
-#include <sihd/util/Term.hpp>
-#include <sihd/util/Waitable.hpp>
 
-#include <LuaBridge/Vector.h>
-#include <LuaBridge/Map.h>
-#include <LuaBridge/UnorderedMap.h>
-#include <LuaBridge/detail/Stack.h>
+#include <sihd/util/SharedMemory.hpp>
 
 #include <unistd.h>
 
@@ -49,112 +41,6 @@
         .addFunction("__len", &ArrType::size)\
     .endClass()
 
-namespace luabridge
-{
-    // LuaBridge smart pointer management for Named/Node pattern
-    template <class C>
-    struct ContainerTraits <sihd::util::SmartNodePtr<C>>
-    {
-        using Type = C;
-
-        static sihd::util::SmartNodePtr<C> construct(C* obj)
-        {
-            return obj;
-        }
-
-        static C *get(sihd::util::SmartNodePtr<C> & obj)
-        {
-            return obj.get();
-        }
-    };
-
-    // std::string_view as a pushable lua class
-    template <>
-    struct Stack<std::string_view>
-    {
-        static void push(lua_State* L, const std::string_view & str)
-        {
-            lua_pushlstring(L, str.data(), str.size());
-        }
-
-        static std::string_view get(lua_State* L, int index)
-        {
-            size_t len;
-            if (lua_type(L, index) == LUA_TSTRING)
-            {
-                const char *str = lua_tolstring(L, index, &len);
-                return std::string_view(str, len);
-            }
-
-            // Lua reference manual:
-            // If the value is a number, then lua_tolstring also changes the actual value in the stack to a string.
-            //(This change confuses lua_next when lua_tolstring is applied to keys during a table traversal.)
-            lua_pushvalue(L, index);
-            const char *str = lua_tolstring(L, -1, &len);
-            std::string_view string(str, len);
-            lua_pop(L, 1); // Pop the temporary string
-            return string;
-        }
-
-        static bool isInstance(lua_State* L, int index)
-        {
-            return lua_type(L, index) == LUA_TSTRING;
-        }
-    };
-
-    // template <typename T>
-    // struct Stack<sihd::util::Array<T>>
-    // {
-    //     static void push(lua_State* L, const sihd::util::Array<T> & array)
-    //     {
-    //         lua_createtable(L, static_cast<int>(array.size()), 0);
-    //         for (std::size_t i = 0; i < array.size(); ++i)
-    //         {
-    //             lua_pushinteger(L, static_cast<lua_Integer>(i + 1));
-    //             Stack<T>::push(L, array[i]);
-    //             lua_settable(L, -3);
-    //         }
-    //     }
-
-    //     static sihd::util::Array<T> get(lua_State* L, int index)
-    //     {
-    //         if (!lua_istable(L, index))
-    //         {
-    //             luaL_error(L, "#%d argument must be a table", index);
-    //         }
-    //         sihd::util::Array<T> array;
-    //         array.reserve(static_cast<std::size_t>(get_length(L, index)));
-
-    //         const int absindex = lua_absindex(L, index);
-    //         lua_pushnil(L);
-    //         while (lua_next(L, absindex) != 0)
-    //         {
-    //             array.push_back(Stack<T>::get(L, -1));
-    //             lua_pop(L, 1);
-    //         }
-    //         return array;
-    //     }
-
-    //     static bool isInstance(lua_State* L, int index)
-    //     {
-    //         return lua_istable(L, index);
-    //     }
-    // };
-
-    // enable enums in Lua
-
-    template <>
-    struct Stack<sihd::util::Type>: sihd::lua::EnumWrapper<sihd::util::Type>
-    {
-    };
-
-    template <>
-    struct Stack<sihd::util::ServiceController::State>: sihd::lua::EnumWrapper<sihd::util::ServiceController::State>
-    {
-    };
-
-};
-
 namespace sihd::lua
 {
 
@@ -165,7 +51,7 @@ Logger LuaUtilApi::logger("sihd::lua");
 // from path/bin/exe.lua -> path/bin -> path
 std::string LuaUtilApi::dir = Files::get_parent(Files::get_parent(OS::get_executable_path()));
 
-SIHD_NEW_LOGGER("sihd::luapi");
+SIHD_LOGGER;
 
 bool    LuaUtilApi::_configurable_recursive_set(Configurable *obj, const std::string & key, luabridge::LuaRef ref)
 {
@@ -214,13 +100,6 @@ void    LuaUtilApi::load_process(Vm & vm)
                 /**
                  * Process
                  */
-                .beginClass<IRunnable>("IRunnable")
-                    .addFunction("run", &IRunnable::run)
-                .endClass()
-                .deriveClass<IStoppableRunnable, IRunnable>("IStoppableRunnable")
-                    .addFunction("is_running", &IStoppableRunnable::is_running)
-                    .addFunction("stop", &IStoppableRunnable::stop)
-                .endClass()
                 .deriveClass<Process, IStoppableRunnable>("Process")
                     .addConstructor<void (*)()>()
                     .addFunction("add_argv", +[] (Process *self, luabridge::LuaRef ref, lua_State *state)
@@ -487,7 +366,6 @@ void    LuaUtilApi::load_threading(Vm & vm)
                  * Scheduler
                  */
                 .deriveClass<Scheduler, Named>("CppScheduler")
-                    // .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<Scheduler>>()
                     // Configurable
                     .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<Scheduler>)
                     // other
@@ -533,23 +411,12 @@ void    LuaUtilApi::load_threading(Vm & vm)
                         luabridge::LuaRef reschedule = tbl["reschedule"];
                         if (reschedule.isNumber())
                             reschedule_every = reschedule.cast<time_t>();
-                        LuaTask *task_ptr = new LuaTask(self, lua_fun, timestamp_to_run, reschedule_every);
+                        LuaTask *task_ptr = new LuaTask(lua_fun, timestamp_to_run, reschedule_every);
                         if (task_ptr != nullptr)
-                            self->add_task(task_ptr);
+                        {
+                            self->add_lua_task(task_ptr);
+                        }
                     })
-                .endClass()
-                /**
-                 * Splitter
-                 */
-                .beginClass<Splitter>("Splitter")
-                    .addConstructor<void (*)()>()
-                    .addFunction("set_empty_delimitations", &Splitter::set_empty_delimitations)
-                    .addFunction("set_delimiter", &Splitter::set_delimiter)
-                    .addFunction("set_delimiter_spaces", &Splitter::set_delimiter_spaces)
-                    .addFunction("set_escape_sequences", &Splitter::set_escape_sequences)
-                    .addFunction("set_escape_sequences_all", &Splitter::set_escape_sequences_all)
-                    .addFunction("split", &Splitter::split)
-                    .addFunction("count_tokens", &Splitter::count_tokens)
                 .endClass()
                 /**
                  * Waitable
@@ -565,6 +432,52 @@ void    LuaUtilApi::load_threading(Vm & vm)
                     .addFunction("wait_loop", &Waitable::wait_loop)
                     .addFunction("cancel_loop", &Waitable::cancel_loop)
                     .addFunction("wait_elapsed", &Waitable::wait_elapsed)
+                .endClass()
+                /**
+                 * Waitable
+                 */
+                .beginClass<LuaWorker>("Worker")
+                    .addConstructor<void (*)(luabridge::LuaRef ref)>()
+                    .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<LuaWorker>)
+                    .addFunction("start_worker", std::function<bool (LuaWorker *, const std::string &)>(
+                    [&vm] (LuaWorker *self, const std::string & name)
+                    {
+                        self->set_vm(&vm);
+                        return self->start_worker(name);
+                    }))
+                    .addFunction("start_sync_worker", std::function<bool (LuaWorker *, const std::string &)>(
+                    [&vm] (LuaWorker *self, const std::string & name)
+                    {
+                        self->set_vm(&vm);
+                        return self->start_sync_worker(name);
+                    }))
+                    .addFunction("stop_worker", static_cast<bool (LuaWorker::*)()>(&Worker::stop_worker))
+                    .addFunction("is_worker_running", static_cast<bool (LuaWorker::*)() const>(&Worker::is_worker_running))
+                    .addFunction("is_worker_started", static_cast<bool (LuaWorker::*)() const>(&Worker::is_worker_started))
+                .endClass()
+                .beginClass<LuaStepWorker>("StepWorker")
+                    .addConstructor<void (*)(luabridge::LuaRef ref)>()
+                    .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<LuaStepWorker>)
+                    .addFunction("start_worker", std::function<bool (LuaStepWorker *, const std::string &)>(
+                    [&vm] (LuaStepWorker *self, const std::string & name)
+                    {
+                        self->set_vm(&vm);
+                        return self->start_worker(name);
+                    }))
+                    .addFunction("start_sync_worker", std::function<bool (LuaStepWorker *, const std::string &)>(
+                    [&vm] (LuaStepWorker *self, const std::string & name)
+                    {
+                        self->set_vm(&vm);
+                        return self->start_sync_worker(name);
+                    }))
+                    .addFunction("stop_worker", static_cast<bool (LuaStepWorker::*)()>(&Worker::stop_worker))
+                    .addFunction("is_worker_running", static_cast<bool (LuaStepWorker::*)() const>(&Worker::is_worker_running))
+                    .addFunction("is_worker_started", static_cast<bool (LuaStepWorker::*)() const>(&Worker::is_worker_started))
+                    .addFunction("set_frequency", static_cast<bool (LuaStepWorker::*)(double)>(&StepWorker::set_frequency))
+                    .addFunction("pause_worker", static_cast<void (LuaStepWorker::*)()>(&StepWorker::pause_worker))
+                    .addFunction("resume_worker", static_cast<void (LuaStepWorker::*)()>(&StepWorker::resume_worker))
+                    .addFunction("nano_sleep_time", static_cast<time_t (LuaStepWorker::*)() const>(&StepWorker::nano_sleep_time))
+                    .addFunction("frequency", static_cast<double (LuaStepWorker::*)() const>(&StepWorker::frequency))
                 .endClass()
             .endNamespace()
         .endNamespace();
@@ -595,7 +508,7 @@ void    LuaUtilApi::load_tools(Vm & vm)
                 .addProperty("platform", &LuaUtilApi::_get_platform_str)
                 .addVariable("clock", &Clock::default_clock)
                 /**
-                 * Classes
+                 * Clock
                  */
                 .beginClass<IClock>("IClock")
                     .addFunction("now", &IClock::now)
@@ -606,6 +519,19 @@ void    LuaUtilApi::load_tools(Vm & vm)
                 .endClass()
                     .deriveClass<SteadyClock, IClock>("SteadyClock")
                     .addConstructor<void (*)()>()
+                .endClass()
+                /**
+                 * Splitter
+                 */
+                .beginClass<Splitter>("Splitter")
+                    .addConstructor<void (*)()>()
+                    .addFunction("set_empty_delimitations", &Splitter::set_empty_delimitations)
+                    .addFunction("set_delimiter", &Splitter::set_delimiter)
+                    .addFunction("set_delimiter_spaces", &Splitter::set_delimiter_spaces)
+                    .addFunction("set_escape_sequences", &Splitter::set_escape_sequences)
+                    .addFunction("set_escape_sequences_all", &Splitter::set_escape_sequences_all)
+                    .addFunction("split", &Splitter::split)
+                    .addFunction("count_tokens", &Splitter::count_tokens)
                 .endClass()
                 /**
                  * Namespaces
@@ -833,6 +759,16 @@ void    LuaUtilApi::load_base(Vm & vm)
                 .beginClass<ServiceController>("ServiceController")
                     .addFunction("get_state", &ServiceController::get_state)
                 .endClass()
+                /**
+                 * Runnable
+                 */
+                .beginClass<IRunnable>("IRunnable")
+                    .addFunction("run", &IRunnable::run)
+                .endClass()
+                .deriveClass<IStoppableRunnable, IRunnable>("IStoppableRunnable")
+                    .addFunction("is_running", &IStoppableRunnable::is_running)
+                    .addFunction("stop", &IStoppableRunnable::stop)
+                .endClass()
             .endNamespace()
         .endNamespace();
 }
@@ -851,26 +787,57 @@ void    LuaUtilApi::load_all(Vm & vm)
 /* ************************************************************************* */
 
 LuaUtilApi::LuaScheduler::LuaScheduler(const std::string & name, sihd::util::Node *parent):
-    Scheduler(name, parent)
+    Scheduler(name, parent), _vm_ptr(nullptr), _vm_thread(nullptr)
 {
-    _vm_ptr = nullptr;
-    _state_ptr = nullptr;
 }
 
 LuaUtilApi::LuaScheduler::~LuaScheduler()
 {
 }
 
-bool    LuaUtilApi::LuaScheduler::run()
+bool    LuaUtilApi::LuaScheduler::start()
 {
-    bool ret = false;
-    if (_vm_ptr != nullptr)
+    if (_vm_ptr == nullptr)
+        return false;
+    if (this->is_running())
+        return true;
     {
-        _state_ptr = _vm_ptr->new_thread();
-        ret = Scheduler::run();
-        _state_ptr = nullptr;
+        // create new lua stack for thread
+        std::lock_guard lrun(_mutex_task);
+        if (_vm_ptr->new_thread(_vm_thread) == false)
+            return false;
+        lua_State *state_ptr = _vm_thread.lua_state();
+        for (const auto & pair: _task_map)
+        {
+            // if lua tasks has been added before thread is created, set new lua state
+            LuaTask *lua_task = dynamic_cast<LuaTask *>(pair.second);
+            if (lua_task != nullptr)
+                lua_task->new_lua_state(state_ptr);
+        }
     }
-    return ret;
+    return Scheduler::start();
+}
+
+bool    LuaUtilApi::LuaScheduler::stop()
+{
+    {
+        std::lock_guard lrun(_mutex_task);
+        _vm_thread.close_state();
+    }
+    return Scheduler::stop();
+}
+
+void    LuaUtilApi::LuaScheduler::add_lua_task(LuaTask *task_ptr)
+{
+    {
+        std::lock_guard l(_mutex_task);
+        // if thread is running and new task is added, change lua state to thread state
+        if (this->is_running() && _vm_thread.lua_state() != nullptr)
+        {
+            task_ptr->new_lua_state(_vm_thread.lua_state());
+        }
+    }
+    this->add_task(task_ptr);
 }
 
 void    LuaUtilApi::LuaScheduler::set_vm(Vm *vm_ptr)
@@ -878,16 +845,43 @@ void    LuaUtilApi::LuaScheduler::set_vm(Vm *vm_ptr)
     _vm_ptr = vm_ptr;
 }
 
-lua_State   *LuaUtilApi::LuaScheduler::lua_state() const
+/* ************************************************************************* */
+/* LuaThreadRunner */
+/* ************************************************************************* */
+
+LuaUtilApi::LuaThreadRunner::LuaThreadRunner(luabridge::LuaRef lua_ref): _original_fun(lua_ref), _fun(lua_ref)
 {
-    return _state_ptr;
+}
+
+LuaUtilApi::LuaThreadRunner::~LuaThreadRunner()
+{
+}
+
+void    LuaUtilApi::LuaThreadRunner::new_lua_state(lua_State *new_state)
+{
+    if (_fun.state() != new_state)
+    {
+        // push original function on top of stack
+        _original_fun.push();
+        // transfer top of stack to top of thread state stack
+        lua_xmove(_original_fun.state(), new_state, 1);
+        // create function ref from last stack element (without index - it pops the value)
+        _fun = luabridge::LuaRef::fromStack(new_state, -1);
+    }
+}
+
+void    LuaUtilApi::LuaThreadRunner::set_lua_method(luabridge::LuaRef & ref)
+{
+    _original_fun = ref;
+    _fun = luabridge::LuaRef(ref.state());
 }
 
 /* ************************************************************************* */
 /* LuaRunnable */
 /* ************************************************************************* */
 
-LuaUtilApi::LuaRunnable::LuaRunnable(luabridge::LuaRef lua_ref): fun(lua_ref)
+LuaUtilApi::LuaRunnable::LuaRunnable(luabridge::LuaRef lua_ref): LuaThreadRunner(lua_ref)
+
 {
 }
 
@@ -897,20 +891,18 @@ LuaUtilApi::LuaRunnable::~LuaRunnable()
 
 bool    LuaUtilApi::LuaRunnable::run()
 {
-    if (this->fun.isFunction())
-        return this->fun();
-    return false;
+    return this->call_lua_method<bool>();
 }
 
 /* ************************************************************************* */
 /* LuaTask */
 /* ************************************************************************* */
 
-LuaUtilApi::LuaTask::LuaTask(ILuaThreadStateHandler *handler,
-                                luabridge::LuaRef lua_ref,
+LuaUtilApi::LuaTask::LuaTask(luabridge::LuaRef lua_ref,
                                 time_t timestamp_to_run,
                                 time_t reschedule_every):
-    Task(nullptr, timestamp_to_run, reschedule_every), _lua_thread_handler_ptr(handler), _fun(lua_ref)
+    Task(nullptr, timestamp_to_run, reschedule_every),
+    LuaThreadRunner(lua_ref)
 {
 }
 
@@ -920,14 +912,73 @@ LuaUtilApi::LuaTask::~LuaTask()
 
 bool    LuaUtilApi::LuaTask::run()
 {
-    if (_fun.isFunction())
+    return this->call_lua_method<bool>();
+}
+
+/* ************************************************************************* */
+/* LuaWorker */
+/* ************************************************************************* */
+
+LuaUtilApi::LuaWorker::LuaWorker(luabridge::LuaRef lua_ref): _vm_ptr(nullptr), _lua_runnable(lua_ref)
+{
+    this->set_runnable(&_lua_runnable);
+}
+
+LuaUtilApi::LuaWorker::~LuaWorker()
+{
+}
+
+void    LuaUtilApi::LuaWorker::set_vm(Vm *vm_ptr)
+{
+    _vm_ptr = vm_ptr;
+}
+
+bool    LuaUtilApi::LuaWorker::start_worker(const std::string & name)
+{
+    if (this->is_worker_started() == false)
     {
-        _fun.push();
-        lua_xmove(_fun.state(), _lua_thread_handler_ptr->lua_state(), 1);
-        lua_call(_lua_thread_handler_ptr->lua_state(), 0, 0);
-        return true;
+        Vm vm_thread;
+        if (_vm_ptr->new_thread(vm_thread) == false)
+            return false;
+        lua_State *state = vm_thread.lua_state();
+        if (state == nullptr)
+            return false;
+        _lua_runnable.new_lua_state(state);
     }
-    return false;
+    return Worker::start_worker(name);
+}
+
+/* ************************************************************************* */
+/* LuaStepWorker */
+/* ************************************************************************* */
+
+LuaUtilApi::LuaStepWorker::LuaStepWorker(luabridge::LuaRef lua_ref): _vm_ptr(nullptr), _lua_runnable(lua_ref)
+{
+    this->set_runnable(&_lua_runnable);
+}
+
+LuaUtilApi::LuaStepWorker::~LuaStepWorker()
+{
+}
+
+void    LuaUtilApi::LuaStepWorker::set_vm(Vm *vm_ptr)
+{
+    _vm_ptr = vm_ptr;
+}
+
+bool    LuaUtilApi::LuaStepWorker::start_worker(const std::string & name)
+{
+    if (this->is_worker_started() == false)
+    {
+        Vm vm_thread;
+        if (_vm_ptr->new_thread(vm_thread) == false)
+            return false;
+        lua_State *state = vm_thread.lua_state();
+        if (state == nullptr)
+            return false;
+        _lua_runnable.new_lua_state(state);
+    }
+    return StepWorker::start_worker(name);
 }
 
 }

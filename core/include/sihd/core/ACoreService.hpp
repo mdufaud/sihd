@@ -12,6 +12,13 @@ class ACoreService: public sihd::util::AService,
                     public sihd::util::IHandler<sihd::util::ServiceController *>
 {
     public:
+        using sihd::util::AService::setup;
+        using sihd::util::AService::init;
+        using sihd::util::AService::start;
+        using sihd::util::AService::stop;
+        using sihd::util::AService::reset;
+        using sihd::util::AService::is_running;
+
         virtual ~ACoreService() {};
 
     protected:

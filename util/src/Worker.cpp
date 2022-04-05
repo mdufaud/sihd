@@ -22,29 +22,6 @@ void    Worker::set_runnable(IRunnable *runnable)
     _runnable_ptr = runnable;
 }
 
-bool    Worker::run()
-{
-    Thread::set_name(_worker_thread_name);
-    this->_worker_set_running(true);
-    bool ret = _runnable_ptr->run();
-    this->_worker_set_running(false);
-    return ret;
-}
-
-bool    Worker::start_sync_worker(const std::string & name)
-{
-    bool ret = this->start_worker(name);
-    bool wait = ret;
-    if (ret)
-    {
-        std::lock_guard lock(_worker_mutex);
-        wait = _running == false;
-    }
-    if (wait)
-        _running_waitable.infinite_wait();
-    return ret;
-}
-
 bool    Worker::start_worker(const std::string & name)
 {
     if (_runnable_ptr == nullptr)
@@ -55,7 +32,7 @@ bool    Worker::start_worker(const std::string & name)
     {
         std::lock_guard lock(_worker_mutex);
         if (_started == true)
-            return false;
+            return true;
         _started = true;
     }
     bool ret = this->on_worker_start();
@@ -67,12 +44,34 @@ bool    Worker::start_worker(const std::string & name)
     return ret;
 }
 
+bool    Worker::start_sync_worker(const std::string & name)
+{
+    std::lock_guard lock(_worker_sync_mutex);
+    bool ret = this->start_worker(name);
+    while (ret && _running == false)
+        _running_waitable.wait_for(time::micro(100));
+    return ret;
+}
+
+bool    Worker::run()
+{
+    // unlocks start_sync_worker
+    this->_worker_set_running(true);
+    // start only when start_sync_worker ends
+    std::lock_guard lock(_worker_sync_mutex);
+
+    Thread::set_name(_worker_thread_name);
+    bool ret = _runnable_ptr->run();
+    this->_worker_set_running(false);
+    return ret;
+}
+
 bool    Worker::stop_worker()
 {
     {
         std::lock_guard lock(_worker_mutex);
         if (_started == false)
-            return false;
+            return true;
         _started = false;
     }
     bool ret = true;

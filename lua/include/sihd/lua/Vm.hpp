@@ -9,6 +9,7 @@
 # include <string>
 # include <string_view>
 # include <mutex>
+# include <map>
 
 namespace sihd::lua
 {
@@ -23,11 +24,20 @@ class ILuaThreadStateHandler
 class Vm: public ILuaThreadStateHandler
 {
     public:
+        // create a lua_State and loads library
         Vm();
+        // does not take ownership
+        Vm(lua_State *state);
         virtual ~Vm();
 
+        // close any old lua_State and create a lua_State and loads library
         bool new_state();
-        lua_State *new_thread();
+        // close lua_State if ownership
+        void close_state();
+        // close any old lua_State and set new unowned state
+        void set_state(lua_State *state);
+
+        bool new_thread(Vm & vm);
 
         luabridge::LuaRef new_table();
         luabridge::LuaRef get_ref(std::string_view name);
@@ -40,17 +50,23 @@ class Vm: public ILuaThreadStateHandler
 
         bool do_file(std::string_view path);
         bool do_string(std::string_view str);
-
         std::string last_string();
 
-        lua_State *lua_state() const { return _state_ptr; }
-        std::lock_guard<std::mutex> lock();
+        void dump_stack(int max = -1, FILE *output = stdout);
 
+        lua_State *lua_state() const { return _state_ptr; }
+
+        static Vm *get_vm(lua_State *state);
     protected:
 
     private:
+        bool _state_ownership;
         lua_State *_state_ptr;
-        std::mutex _mutex;
+
+        static void _register_vm(lua_State *state, Vm *vm);
+        static void _unregister_vm(lua_State *state);
+
+        static std::map<lua_State *, Vm *> _map_vm;
 };
 
 }

@@ -43,10 +43,18 @@ class StateMachine: public IStateMachine
             return ret;
         }
 
-        STATE get_state() { return _state; }
-        EVENT get_last_event() { return _last_event; }
-        std::string get_state_name(STATE st) { return _states_name[st]; }
-        std::string get_event_name(EVENT evt) { return _events_name[evt]; }
+        STATE get_state() const { return _state; }
+        EVENT get_last_event() const { return _last_event; }
+        std::string get_state_name(STATE st) const
+        {
+            auto it = _states_name.find(st);
+            return it == _states_name.end() ? "" : it->second;
+        }
+        std::string get_event_name(EVENT evt) const
+        {
+            auto it = _events_name.find(evt);
+            return it == _events_name.end() ? "" : it->second;
+        }
         void set_state_name(STATE st, const std::string & name) { _states_name[st] = name; }
         void set_event_name(EVENT evt, const std::string & name) { _events_name[evt] = name; }
 

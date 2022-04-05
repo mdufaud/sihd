@@ -27,6 +27,16 @@ Device::~Device()
     }
 }
 
+ServiceController::State    Device::device_state() const
+{
+    return _service_controller.get_state();
+}
+
+const char  *Device::device_state_str() const
+{
+    return ServiceController::state_to_string(this->device_state());
+}
+
 bool    Device::do_setup()
 {
     for (auto & [name, entry]: this->get_children())

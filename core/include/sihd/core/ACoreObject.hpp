@@ -14,6 +14,13 @@ class ACoreObject:  public sihd::util::Named,
                     public ACoreService
 {
     public:
+        using ACoreService::setup;
+        using ACoreService::init;
+        using ACoreService::start;
+        using ACoreService::stop;
+        using ACoreService::reset;
+        using ACoreService::is_running;
+
         ACoreObject(const std::string & name, sihd::util::Node *parent = nullptr): sihd::util::Named(name, parent) {}
         virtual ~ACoreObject() {}
 

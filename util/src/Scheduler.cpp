@@ -48,7 +48,7 @@ bool    Scheduler::start()
     {
         std::lock_guard l(_mutex_run);
         if (_running == true)
-            return false;
+            return true;
         _running = true;
     }
     overruns = 0;
@@ -62,7 +62,7 @@ bool    Scheduler::stop()
     {
         std::lock_guard l(_mutex_run);
         if (_running == false)
-            return false;
+            return true;
         _running = false;
         _paused = false;
     }

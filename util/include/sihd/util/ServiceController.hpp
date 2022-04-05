@@ -32,13 +32,15 @@ class ServiceController:    public AService::IServiceController,
         virtual bool op_start(AService::Operation op);
         virtual bool op_end(AService::Operation op, bool status);
 
-        State get_state()
+        State get_state() const
         {
             return statemachine.get_state();
         }
 
         void optionnal_setup();
         void optionnal_init();
+
+        static const char *state_to_string(State state);
 
         StateMachine<State, AService::Operation> statemachine;
 

@@ -4,12 +4,18 @@
 # include <sihd/lua/Vm.hpp>
 
 # include <sihd/util/Logger.hpp>
+# include <sihd/util/ServiceController.hpp>
+# include <sihd/util/SmartNodePtr.hpp>
 
 # include <sihd/util/Array.hpp>
 # include <sihd/util/Configurable.hpp>
 
 # include <sihd/util/Task.hpp>
 # include <sihd/util/Scheduler.hpp>
+# include <sihd/util/Waitable.hpp>
+# include <sihd/util/Worker.hpp>
+# include <sihd/util/StepWorker.hpp>
+
 # include <sihd/util/IHandler.hpp>
 # include <sihd/util/IReader.hpp>
 # include <sihd/util/IWriter.hpp>
@@ -17,6 +23,11 @@
 # include <sihd/util/version.hpp>
 # include <sihd/util/platform.hpp>
 # include <sihd/util/Endian.hpp>
+
+#include <LuaBridge/Vector.h>
+#include <LuaBridge/Map.h>
+#include <LuaBridge/UnorderedMap.h>
+#include <LuaBridge/detail/Stack.h>
 
 # include <memory>
 
@@ -36,6 +47,78 @@ struct EnumWrapper
         return static_cast <T>(lua_tointeger(L, index));
     }
 };
+
+}
+
+namespace luabridge
+{
+    // LuaBridge smart pointer management for Named/Node pattern
+    template <class C>
+    struct ContainerTraits<sihd::util::SmartNodePtr<C>>
+    {
+        using Type = C;
+
+        static sihd::util::SmartNodePtr<C> construct(C* obj)
+        {
+            return obj;
+        }
+
+        static C *get(sihd::util::SmartNodePtr<C> & obj)
+        {
+            return obj.get();
+        }
+    };
+
+    // std::string_view as a pushable lua class
+    template <>
+    struct Stack<std::string_view>
+    {
+        static void push(lua_State* L, const std::string_view & str)
+        {
+            lua_pushlstring(L, str.data(), str.size());
+        }
+
+        static std::string_view get(lua_State* L, int index)
+        {
+            size_t len;
+            if (lua_type(L, index) == LUA_TSTRING)
+            {
+                const char *str = lua_tolstring(L, index, &len);
+                return std::string_view(str, len);
+            }
+
+            // Lua reference manual:
+            // If the value is a number, then lua_tolstring also changes the actual value in the stack to a string.
+            //(This change confuses lua_next when lua_tolstring is applied to keys during a table traversal.)
+            lua_pushvalue(L, index);
+            const char *str = lua_tolstring(L, -1, &len);
+            std::string_view string(str, len);
+            lua_pop(L, 1); // Pop the temporary string
+            return string;
+        }
+
+        static bool isInstance(lua_State* L, int index)
+        {
+            return lua_type(L, index) == LUA_TSTRING;
+        }
+    };
+
+    // enable enums in Lua
+
+    template <>
+    struct Stack<sihd::util::Type>: sihd::lua::EnumWrapper<sihd::util::Type>
+    {
+    };
+
+    template <>
+    struct Stack<sihd::util::ServiceController::State>: sihd::lua::EnumWrapper<sihd::util::ServiceController::State>
+    {
+    };
+
+};
+
+namespace sihd::lua
+{
 
 class LuaUtilApi
 {
@@ -96,61 +179,103 @@ class LuaUtilApi
          * sihd wrapped into lua
          */
 
-        class LuaScheduler: public sihd::util::Scheduler, public ILuaThreadStateHandler
+        class LuaThreadRunner
         {
             public:
-                LuaScheduler(const std::string & name, sihd::util::Node *parent = nullptr);
-                ~LuaScheduler();
+                LuaThreadRunner(luabridge::LuaRef lua_ref);
+                virtual ~LuaThreadRunner();
 
-                void set_vm(Vm *vm_ptr);
-                bool run();
+                void set_lua_method(luabridge::LuaRef & ref);
+                void new_lua_state(lua_State *state);
 
-                lua_State *lua_state() const;
-
-            private:
-                Vm *_vm_ptr;
-                lua_State *_state_ptr;
-        };
-
-        class LuaTask: public sihd::util::Task
-        {
-            public:
-                LuaTask(ILuaThreadStateHandler *handler, luabridge::LuaRef lua_ref,
-                            time_t timestamp_to_run = 0, time_t reschedule_every = 0);
-                ~LuaTask();
-
-                bool run();
+                template <typename R, typename ...T>
+                R   call_lua_method(T... args)
+                {
+                    return _fun(args...);
+                }
 
             private:
-                ILuaThreadStateHandler *_lua_thread_handler_ptr;
+                luabridge::LuaRef _original_fun;
                 luabridge::LuaRef _fun;
         };
 
-        class LuaRunnable: public sihd::util::IRunnable
+        class LuaTask: public sihd::util::Task, public LuaThreadRunner
+        {
+            public:
+                LuaTask(luabridge::LuaRef lua_ref, time_t timestamp_to_run = 0, time_t reschedule_every = 0);
+                ~LuaTask();
+
+                bool run();
+        };
+
+        class LuaRunnable: public sihd::util::IRunnable, public LuaThreadRunner
         {
             public:
                 LuaRunnable(luabridge::LuaRef lua_ref);
                 ~LuaRunnable();
 
                 bool run();
-
-                luabridge::LuaRef fun;
         };
 
         template <typename ...T>
-        class LuaHandler: public sihd::util::IHandler<T...>
+        class LuaHandler: public sihd::util::IHandler<T...>, public LuaThreadRunner
         {
             public:
-                LuaHandler(luabridge::LuaRef lua_ref): fun(lua_ref) {}
+                LuaHandler(luabridge::LuaRef lua_ref): LuaThreadRunner(lua_ref) {}
                 ~LuaHandler() {}
 
                 void handle(T... args)
                 {
-                    if (this->fun.isFunction())
-                        this->fun(args...);
+                    this->call_lua_method<T...>(args...);
                 }
 
-                luabridge::LuaRef fun;
+        };
+
+        class LuaScheduler: public sihd::util::Scheduler
+        {
+            public:
+                LuaScheduler(const std::string & name, sihd::util::Node *parent = nullptr);
+                ~LuaScheduler();
+
+                void set_vm(Vm *vm_ptr);
+                void add_lua_task(LuaTask *task_ptr);
+
+                bool start() override;
+                bool stop() override;
+
+            protected:
+
+            private:
+                Vm *_vm_ptr;
+                Vm _vm_thread;
+        };
+
+        class LuaWorker: public sihd::util::Worker
+        {
+            public:
+                LuaWorker(luabridge::LuaRef ref);
+                ~LuaWorker();
+
+                void set_vm(Vm *vm_ptr);
+                bool start_worker(const std::string & name) override;
+
+            private:
+                Vm *_vm_ptr;
+                LuaRunnable _lua_runnable;
+        };
+
+        class LuaStepWorker: public sihd::util::StepWorker
+        {
+            public:
+                LuaStepWorker(luabridge::LuaRef ref);
+                ~LuaStepWorker();
+
+                void set_vm(Vm *vm_ptr);
+                bool start_worker(const std::string & name) override;
+
+            private:
+                Vm *_vm_ptr;
+                LuaRunnable _lua_runnable;
         };
 
     private:

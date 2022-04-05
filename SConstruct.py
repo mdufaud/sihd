@@ -33,6 +33,11 @@ builder_helper.sanitize_app(app)
 ###############################################################################
 
 modules_to_build = builder_helper.get_modules()
+modules_forced_to_build = builder_helper.get_force_build_modules()
+
+modules_lst = modules_to_build.split(',')
+if modules_forced_to_build:
+    modules_lst.extend(modules_forced_to_build.split(','))
 
 compiler = builder_helper.build_compiler
 build_platform = builder_helper.build_platform
@@ -41,7 +46,7 @@ distribution = builder_helper.do_distribution()
 verbose = builder_helper.has_verbose()
 
 if verbose:
-    builder_helper.info("modules: {}".format(modules_to_build and modules_to_build.split(',') or "all"))
+    builder_helper.info("modules: {}".format(modules_lst or "all"))
     builder_helper.info("platform: " + build_platform)
     builder_helper.info("compiler: " + compiler)
     builder_helper.info("arch: " + builder_helper.build_architecture)
@@ -52,7 +57,7 @@ if verbose:
 
 # Get modules configuration for this build
 try:
-    build_modules = modules_helper.get_modules(app, specific_modules=modules_to_build)
+    build_modules = modules_helper.build_modules_conf(app, specific_modules=modules_lst)
 except RuntimeError as e:
     builder_helper.error(str(e))
     Exit(1)

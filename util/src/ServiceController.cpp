@@ -83,7 +83,34 @@ bool    ServiceController::op_end(AService::Operation op, bool status)
     bool ret = statemachine.transition(status ? AService::SUCCESS : AService::ERROR);
     this->notify_observers(this);
     return ret;
-
 }
+
+const char  *ServiceController::state_to_string(State state)
+{
+    switch (state)
+    {
+        case CONFIGURING:
+            return "configuring";
+        case CONFIGURED:
+            return "configured";
+        case INITIALIZING:
+            return "initializing";
+        case STARTING:
+            return "starting";
+        case RUNNING:
+            return "running";
+        case STOPPING:
+            return "stopping";
+        case STOPPED:
+            return "stopped";
+        case RESETTING:
+            return "resetting";
+        case ERROR:
+            return "error";
+        default:
+            return "none";
+    }
+}
+
 
 }

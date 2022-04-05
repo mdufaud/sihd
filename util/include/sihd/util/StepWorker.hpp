@@ -15,9 +15,6 @@ class StepWorker: public Worker, public ISteppable
 
         bool set_frequency(double freq);
 
-        virtual bool run() override;
-        virtual bool step() override;
-
         virtual void pause_worker();
         virtual void resume_worker();
 
@@ -25,6 +22,8 @@ class StepWorker: public Worker, public ISteppable
         double frequency() const { return time::to_hz(_sleep_time); };
 
     protected:
+        virtual bool run() override;
+        virtual bool step() override;
         virtual bool on_worker_start() override;
         virtual bool on_worker_stop() override;
 

@@ -12,7 +12,11 @@
 #  define SIHD_LOG_LEVEL(logger, level, msg)
 #  define SIHD_NEW_LOGGER(name)
 #  define SIHD_LOGGER
+#  define SIHD_COUT(msg)
+#  define SIHD_CERR(msg)
 # else
+#  define SIHD_COUT(msg) std::cout << msg << std::endl;
+#  define SIHD_CERR(msg) std::cerr << msg << std::endl;
 #  define SIHD_LOG_LEVEL(logger, level, msg) { \
     std::ostringstream __loss; \
     __loss << msg; \

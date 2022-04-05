@@ -20,12 +20,18 @@ if builder_helper.verify_args() == False:
 builder_helper.sanitize_app(app)
 
 modules_to_build = builder_helper.get_modules()
+modules_forced_to_build = builder_helper.get_force_build_modules()
+
+modules_lst = modules_to_build.split(',')
+if modules_forced_to_build:
+    modules_lst.extend(modules_forced_to_build.split(','))
+
 verbose = builder_helper.build_verbose
 has_test = builder_helper.build_tests
 
 if verbose:
-    if modules_to_build:
-        builder_helper.debug("getting libs from modules -> {}".format(modules_to_build))
+    if modules_lst:
+        builder_helper.debug("getting libs from modules -> {}".format(modules_lst))
     if has_test:
         builder_helper.debug("including test libs")
 
@@ -34,7 +40,7 @@ extlibs = {}
 if modules_to_build != "NONE":
     builder_helper.info("parsing modules")
 
-    modules = modules_helper.get_modules(app, specific_modules=modules_to_build)
+    modules = modules_helper.build_modules_conf(app, specific_modules=modules_lst)
     if verbose:
         builder_helper.debug("modules configuration: ")
         pp.pprint(modules)
