@@ -32,7 +32,7 @@ void    Scheduler::set_clock(IClock *ptr)
     _clock_ptr = ptr;
 }
 
-IClock  *Scheduler::get_clock()
+IClock  *Scheduler::get_clock() const
 {
     return _clock_ptr;
 }
@@ -78,19 +78,21 @@ bool    Scheduler::is_running() const
     return _running;
 }
 
-bool    Scheduler::_wait_for_next_task(time_t steady_time)
+bool    Scheduler::_wait_for_next_task()
 {
     if (_paused)
     {
-        time_t elapsed = _waitable.infinite_wait_elapsed();
-        steady_time += elapsed;
-        _paused_time += elapsed;
+        time_t before = _clock_ptr->now();
+        _waitable.infinite_wait();
+        _paused_time += (_clock_ptr->now() - before);
     }
     while (_task_map.empty() && _running)
         _waitable.infinite_wait();
-    if (_running)
-        return _no_delay ? true : _waitable.wait_for(_next_run - steady_time);
-    return false;
+    if (_running == false)
+        return false;
+    return _no_delay
+        ? true
+        : _waitable.wait_for(_next_run - _clock_ptr->now() - this->acceptable_nano);
 }
 
 Task    *Scheduler::_get_next_task(time_t time)
@@ -98,11 +100,13 @@ Task    *Scheduler::_get_next_task(time_t time)
     std::lock_guard l(_mutex_task);
     Task *task = _task_map.begin()->second;
 
-    time_t diff = task->run_at - (time + this->acceptable_nano) + _paused_time;
-    if (-diff > (time_t)this->overrun_at)
+    // difference between the time the task should have been played at (+paused time)
+    // and current time
+    time_t diff = (task->run_at + _paused_time) - time;
+    if (task->run_at > 0 && -diff > (time_t)this->overrun_at)
         this->overruns += 1;
-
-    if (diff <= 0 || _no_delay)
+    // play task if near the time to be played or if no delay
+    if ((diff - this->acceptable_nano) <= 0 || _no_delay)
         _task_map.erase(_task_map.begin());
     else
         task = nullptr;
@@ -123,30 +127,36 @@ void    Scheduler::_play_task(Task *task, time_t now)
         this->_add_to_delete_task(task);
 }
 
+time_t  Scheduler::now() const
+{
+    return _clock_ptr != nullptr ? _clock_ptr->now() : 0;
+}
+
 bool    Scheduler::run()
 {
     sihd::util::Thread::set_name(this->get_name());
     if (_clock_ptr == nullptr || _clock_ptr->start() == false)
         return false;
-    _begin_run = _clock_ptr->now() - _steady_clock.now();
-    time_t steady_time = _steady_clock.now() + _begin_run;
+    _begin_run = _clock_ptr->now();
+    time_t now = _begin_run;
     Task *task = nullptr;
     while (_running)
     {
-        this->_wait_for_next_task(steady_time);
+        this->_wait_for_next_task();
         if (_running && _paused == false)
         {
-            steady_time = _steady_clock.now() + _begin_run;
+            now = _clock_ptr->now();
             // returns most urgent task to play
-            task = this->_get_next_task(steady_time);
+            task = this->_get_next_task(now);
             // run and reschedule or add to delete list
             if (task != nullptr)
-                this->_play_task(task, steady_time);
+                this->_play_task(task, now);
             // delete tasks in delete list
             this->_delete_tasks();
-            steady_time = _steady_clock.now() + _begin_run;
+            now = _clock_ptr->now();
         }
     }
+    _begin_run = 0;
     return true;
 }
 

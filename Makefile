@@ -149,6 +149,7 @@ endif # module
 get-module-name = $(word 2, $(subst _, , $(notdir $1)))
 
 TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
+TEST_DEFAULT_ARGS =
 TEST_ARGS =
 DEBUGGER_ARGS =
 
@@ -160,7 +161,7 @@ test: build
 	$(call mk_log_info,makefile,starting tests in build: $(TEST_PATH))
 	@- $(foreach TEST_BIN, $(TEST_EXEC), \
 		$(eval TEST_CMD_LINE = \
-			env $(DEBUGGER) $(DEBUGGER_ARGS) $(TEST_BIN) $(TEST_ARGS)\
+			env $(DEBUGGER) $(DEBUGGER_ARGS) $(TEST_BIN) $(TEST_DEFAULT_ARGS) $(TEST_ARGS)\
 		) \
 		$(eval TEST_MODULE_NAME = $(call get-module-name, $(TEST_BIN))) \
 		cd $(HERE)/$(TEST_MODULE_NAME); \
@@ -169,6 +170,9 @@ test: build
 		$(TEST_CMD_LINE); \
 		cd - > /dev/null; \
 	)
+
+itest: TEST_DEFAULT_ARGS += 0>&-
+itest: test
 
 valgrindtest: DEBUGGER_ARGS = --leak-check=full --show-leak-kinds=all --trace-children=no --track-origins=yes
 valgrindtest: DEBUGGER = valgrind
@@ -204,7 +208,7 @@ COMMA = ,
 MODULES_NAME = $(word 2, $(MAKECMDGOALS))$(m)
 MODULES_NAME_SPLIT = $(subst $(COMMA), ,$(MODULES_NAME))
 TEST_NAME = $(word 3, $(MAKECMDGOALS))$(t)
-TEST_ARGS = --gtest_death_test_style=threadsafe --gtest_shuffle
+TEST_DEFAULT_ARGS += --gtest_death_test_style=threadsafe --gtest_shuffle
 
 ifeq ($(MODULES_NAME),all)
 	TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
@@ -226,13 +230,13 @@ endif
 
 # ls to list tests, else filter tests
 ifeq ($(TEST_NAME),ls)
-	TEST_ARGS += --gtest_list_tests
+	TEST_DEFAULT_ARGS += --gtest_list_tests
 else
-	TEST_ARGS += --gtest_filter="*$(TEST_NAME)*"
+	TEST_DEFAULT_ARGS += --gtest_filter="*$(TEST_NAME)*"
 endif
 
 ifneq ($(repeat), )
-	TEST_ARGS += --gtest_repeat="$(repeat)"
+	TEST_DEFAULT_ARGS += --gtest_repeat="$(repeat)" --gtest_throw_on_failure
 endif
 
 ifneq ($(MODULES_NAME), )

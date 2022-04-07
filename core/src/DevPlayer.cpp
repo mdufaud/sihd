@@ -172,6 +172,7 @@ bool    DevPlayer::run()
 
 void    DevPlayer::handle(Collector<PlayableRecord> *collector)
 {
+    // called for each record with a lock on collector data
     PlayableRecord record = collector->data();
     _queue.push(record);
     _first_timestamp = record.timestamp * (1 * _first_timestamp < 0);
@@ -179,6 +180,7 @@ void    DevPlayer::handle(Collector<PlayableRecord> *collector)
     // wait tasks to be played as not to overflow the scheduler
     while (_running && (_queue.size() > _records_queue_limit))
         _waitable.infinite_wait();
+    // calls DevPlayer::run to execute record at setted time
     if (_running)
         _scheduler_ptr->add_task(new Task(this, execute_at));
 }
@@ -188,6 +190,7 @@ bool    DevPlayer::_worker_loop()
     _time_begin = _scheduler_ptr->get_clock()->now();
     _first_timestamp = -1;
     _last_record = false;
+    // run collector loop which calls DevPlayer::handle for each record
     bool ret = _collector.run();
     // last record to be played in scheduler thread can have no next record
     _last_record = true;

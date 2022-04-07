@@ -365,29 +365,27 @@ void    LuaUtilApi::load_threading(Vm & vm)
                 /**
                  * Scheduler
                  */
-                .deriveClass<Scheduler, Named>("CppScheduler")
-                    // Configurable
-                    .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<Scheduler>)
-                    // other
-                    .addFunction("start", &Scheduler::start)
-                    .addFunction("stop", &Scheduler::stop)
-                    .addFunction("is_running", &Scheduler::is_running)
-                    .addFunction("pause", &Scheduler::pause)
-                    .addFunction("resume", &Scheduler::resume)
-                    .addFunction("get_clock", &Scheduler::get_clock)
-                    .addFunction("set_clock", &Scheduler::set_clock)
-                    .addFunction("set_as_fast_as_possible", &Scheduler::set_as_fast_as_possible)
-                    .addFunction("clear_tasks", &Scheduler::clear_tasks)
-                    .addProperty("overruns", &Scheduler::overruns)
-                    .addProperty("overrun_at",
-                        +[] (const Scheduler *self) { return self->overrun_at; },
-                        +[] (Scheduler *self, uint32_t val) { self->overrun_at = val; })
-                    .addProperty("acceptable_nano",
-                        +[] (const Scheduler *self) { return self->acceptable_nano; },
-                        +[] (Scheduler *self, uint32_t val) { self->acceptable_nano = val; })
-                .endClass()
-                .deriveClass<LuaScheduler, Scheduler>("Scheduler")
+                .deriveClass<LuaScheduler, Named>("Scheduler")
                     .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<LuaScheduler>>()
+                    // Configurable
+                    .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<LuaScheduler>)
+                    // Scheduler
+                    .addFunction("stop", static_cast<bool (LuaScheduler::*)()>(&Scheduler::stop))
+                    .addFunction("is_running", static_cast<bool (LuaScheduler::*)() const>(&Scheduler::is_running))
+                    .addFunction("pause", static_cast<void (LuaScheduler::*)()>(&Scheduler::pause))
+                    .addFunction("resume", static_cast<void (LuaScheduler::*)()>(&Scheduler::resume))
+                    .addFunction("get_clock", static_cast<IClock *(LuaScheduler::*)() const>(&Scheduler::get_clock))
+                    .addFunction("set_clock", static_cast<void (LuaScheduler::*)(IClock *)>(&Scheduler::set_clock))
+                    .addFunction("set_as_fast_as_possible", static_cast<bool (LuaScheduler::*)(bool)>(&Scheduler::set_as_fast_as_possible))
+                    .addFunction("clear_tasks", static_cast<void (LuaScheduler::*)()>(&Scheduler::clear_tasks))
+                    .addProperty("overruns", +[] (const LuaScheduler *self) { return self->overruns; })
+                    .addProperty("overrun_at",
+                        +[] (const LuaScheduler *self) { return self->overrun_at; },
+                        +[] (LuaScheduler *self, uint32_t val) { self->overrun_at = val; })
+                    .addProperty("acceptable_nano",
+                        +[] (const LuaScheduler *self) { return self->acceptable_nano; },
+                        +[] (LuaScheduler *self, uint32_t val) { self->acceptable_nano = val; })
+                    // LuaScheduler
                     .addFunction("start", std::function<bool (LuaScheduler *)>([&vm] (LuaScheduler *self)
                     {
                         self->set_vm(&vm);

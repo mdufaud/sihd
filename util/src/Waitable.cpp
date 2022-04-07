@@ -99,9 +99,9 @@ std::time_t Waitable::wait_elapsed(std::time_t nano_duration)
     if (nano_duration <= 0)
         return 0;
     SteadyClock clock;
-    std::time_t now = clock.now();
+    std::time_t before = clock.now();
     this->wait_for(nano_duration);
-    return clock.now() - now;
+    return clock.now() - before;
 }
 
 }

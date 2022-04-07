@@ -41,18 +41,20 @@ class Vm: public ILuaThreadStateHandler
 
         luabridge::LuaRef new_table();
         luabridge::LuaRef get_ref(std::string_view name);
-
         template <typename T>
         void set_ref(std::string_view name, T obj)
         {
             luabridge::setGlobal(_state_ptr, obj, name.data());
         }
+        bool ref_exists(std::string_view name);
+        bool refs_exists(const std::initializer_list<std::string_view> & lst);
 
         bool do_file(std::string_view path);
         bool do_string(std::string_view str);
         std::string last_string();
 
-        void dump_stack(int max = -1, FILE *output = stdout);
+        std::string dump_stack(int max = -1);
+        void print_stack(int max = -1, FILE *output = stdout);
 
         lua_State *lua_state() const { return _state_ptr; }
 

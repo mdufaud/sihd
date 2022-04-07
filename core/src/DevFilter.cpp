@@ -99,7 +99,9 @@ void    DevFilter::_rule_match(Channel *channel_out, const Rule *rule_ptr, int64
 {
     sihd::util::IArray *array_out = channel_out->array();
     if (rule_ptr->notify_if_same
-            || memcmp((void *)(array_out->buf_at(rule_ptr->write_idx)), (const void *)&out_val, array_out->data_size()) != 0)
+            || memcmp((void *)(array_out->buf_at(rule_ptr->write_idx)),
+                        (const void *)&out_val,
+                        array_out->data_size()) != 0)
     {
         memcpy((void *)(array_out->buf_at(rule_ptr->write_idx)),
                 (const void *)&out_val,
@@ -475,7 +477,7 @@ bool    DevFilter::Rule::_parse_write_config(const std::map<std::string, std::st
 /* ************************************************************************* */
 
 DevFilter::DelayWriter::DelayWriter(DevFilter *dev, Channel *channel_out, const Rule *rule_ptr, int64_t out_val, sihd::util::Scheduler *scheduler_ptr):
-    sihd::util::Task(this, scheduler_ptr->get_clock()->now() + rule_ptr->nano_delay, 0),
+    sihd::util::Task(this, scheduler_ptr->now() + rule_ptr->nano_delay, 0),
     dev(dev), channel_out(channel_out), rule_ptr(rule_ptr), out_val(out_val)
 {
 }

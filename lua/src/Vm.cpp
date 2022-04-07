@@ -4,7 +4,7 @@
 namespace sihd::lua
 {
 
-SIHD_NEW_LOGGER("sihd::luapi");
+SIHD_NEW_LOGGER("sihd::lua::api");
 
 std::map<lua_State *, Vm *> Vm::_map_vm;
 
@@ -74,6 +74,41 @@ luabridge::LuaRef   Vm::get_ref(std::string_view name)
     return luabridge::getGlobal(_state_ptr, name.data());
 }
 
+bool    Vm::ref_exists(std::string_view name)
+{
+    lua_getglobal(_state_ptr, name.data());
+    return lua_isnil(_state_ptr, -1) == 0;
+}
+
+bool    Vm::refs_exists(const std::initializer_list<std::string_view> & lst)
+{
+    if (lst.empty())
+        return false;
+    size_t i = 0;
+    while (i < lst.size())
+    {
+        if (i == 0)
+        {
+            // first time
+            lua_getglobal(_state_ptr, lst[i].data());
+        }
+        else
+        {
+            if (lua_istable(_state_ptr, -1) == 0)
+            {
+                lua_remove(_state_ptr, -1);
+                return false;
+            }
+            lua_getfield(_state_ptr, -1, lst[i].data());
+            lua_remove(_state_ptr, -2);
+        }
+        ++i;
+    }
+    bool ret = lua_isnil(_state_ptr, -1) == 0;
+    lua_remove(_state_ptr, -1);
+    return ret;
+}
+
 bool    Vm::do_file(std::string_view path)
 {
     return luaL_dofile(_state_ptr, path.data()) == 0;
@@ -89,39 +124,46 @@ std::string Vm::last_string()
     return lua_tostring(_state_ptr, -1);
 }
 
-void    Vm::dump_stack(int max, FILE *output)
+void    Vm::print_stack(int max, FILE *output)
+{
+    fprintf(output, this->dump_stack(max).c_str());
+}
+
+std::string     Vm::dump_stack(int max)
 {
     if (_state_ptr == nullptr)
-        return ;
+        return "";
+    std::stringstream ss;
     int top = lua_gettop(_state_ptr);
     if (max >= 0)
         top = std::min(top, max);
-    fprintf(output, "lua stack %p (%d):\n", _state_ptr, top);
+    ss << "lua stack " << _state_ptr << " (" << top << "):\n";
     int i = 1;
     while (i <= top)
     {
-        fprintf(output, "stack[%d]:\t", i);
+        ss << "stack[" << i << "]:\t";
         switch (lua_type(_state_ptr, i))
         {
             case LUA_TNUMBER:
-                fprintf(output, "%g", lua_tonumber(_state_ptr, i));
+                ss << lua_tonumber(_state_ptr, i);
                 break ;
             case LUA_TSTRING:
-                fprintf(output, "%s", lua_tostring(_state_ptr, i));
+                ss << lua_tostring(_state_ptr, i);
                 break ;
             case LUA_TBOOLEAN:
-                fprintf(output, "%s", (lua_toboolean(_state_ptr, i) ? "true" : "false"));
+                ss << (lua_toboolean(_state_ptr, i) ? "true" : "false");
                 break ;
             case LUA_TNIL:
-                fprintf(output, "nil");
+                ss << "nil";
                 break ;
             default:
-                fprintf(output, "%p", lua_topointer(_state_ptr, i));
+                ss << lua_topointer(_state_ptr, i);
                 break ;
         }
-        fprintf(output, " (%s)\n", luaL_typename(_state_ptr, i));
+        ss << " (" << luaL_typename(_state_ptr, i) << ")\n";
         ++i;
     }
+    return ss.str();
 }
 
 /* ************************************************************************* */
