@@ -38,7 +38,7 @@ class MemRecorder:  public ACoreObject,
         bool provide(PlayableRecord *value) override;
 
         std::string hexdump_records();
-        std::string hexdump_timeline(const std::string & separation_cols = "\t", char separation_data = ' ');
+        std::string hexdump_timeline(std::string_view separation_cols = "\t", char separation_data = ' ');
         void clear();
 
         const MapListRecordedValues get_recorded_values() const { return _map_record; }

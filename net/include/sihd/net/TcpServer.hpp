@@ -27,11 +27,11 @@ class TcpServer:    public INetServer,
         bool socket_opened() { return _socket.is_open(); }
 
         bool bind(const IpAddr & addr);
-        bool bind(const std::string & path) { return _socket.bind(path); }
+        bool bind(std::string_view path) { return _socket.bind(path); }
 
         bool open_and_bind(const IpAddr & ip);
-        bool open_and_bind(const std::string & ip, int port);
-        bool open_unix_and_bind(const std::string & path);
+        bool open_and_bind(std::string_view ip, int port);
+        bool open_unix_and_bind(std::string_view path);
 
         bool close();
 

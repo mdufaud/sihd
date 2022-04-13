@@ -46,27 +46,27 @@ bool    PcapWriter::set_snaplen(int len)
     return true;
 }
 
-bool    PcapWriter::open(const std::string & path, int datalink, int snaplen)
+bool    PcapWriter::open(std::string_view path, int datalink, int snaplen)
 {
     if (this->set_datalink(datalink) && this->set_snaplen(snaplen))
         return this->open(path);
     return false;
 }
 
-bool    PcapWriter::open(const std::string & path, int datalink)
+bool    PcapWriter::open(std::string_view path, int datalink)
 {
     if (this->set_datalink(datalink))
         return this->open(path);
     return false;
 }
 
-bool    PcapWriter::open(const std::string & path)
+bool    PcapWriter::open(std::string_view path)
 {
     this->close();
     _pcap_ptr = pcap_open_dead(_linktype, _snaplen);
     if (_pcap_ptr != nullptr)
     {
-        if ((_pcap_dumper_ptr = pcap_dump_open(_pcap_ptr, path.c_str())) == nullptr)
+        if ((_pcap_dumper_ptr = pcap_dump_open(_pcap_ptr, path.data())) == nullptr)
         {
             SIHD_LOG(error, "PcapWriter: can not open pcap for writing: " << path);
             this->close();

@@ -15,9 +15,9 @@ class PcapReader:   public sihd::util::Named, public sihd::util::IReaderTimestam
         PcapReader(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~PcapReader();
 
-        bool open(const std::string & path);
-        bool open_micro_precision(const std::string & path);
-        bool open_nano_precision(const std::string & path);
+        bool open(std::string_view path);
+        bool open_micro_precision(std::string_view path);
+        bool open_nano_precision(std::string_view path);
         bool open(FILE *file);
         bool open_micro_precision(FILE *file);
         bool open_nano_precision(FILE *file);

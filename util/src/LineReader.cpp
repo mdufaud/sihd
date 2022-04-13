@@ -79,7 +79,7 @@ bool    LineReader::set_line_buffsize(size_t buff)
     return this->_allocate_line();
 }
 
-bool    LineReader::open(const std::string & path)
+bool    LineReader::open(std::string_view path)
 {
     return this->_init() && _file.open(path, "r");
 }

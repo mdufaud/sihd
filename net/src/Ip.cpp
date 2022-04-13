@@ -13,7 +13,7 @@ namespace sihd::net
 
 SIHD_NEW_LOGGER("sihd::net");
 
-std::string     Ip::domain_to_string(int domain)
+const char  *Ip::domain_to_string(int domain)
 {
     switch (domain)
     {
@@ -46,7 +46,7 @@ std::string     Ip::domain_to_string(int domain)
     }
 }
 
-std::string     Ip::socktype_to_string(int socktype)
+const char  *Ip::socktype_to_string(int socktype)
 {
     switch (socktype)
     {
@@ -69,7 +69,7 @@ std::string     Ip::socktype_to_string(int socktype)
     }
 }
 
-std::string     Ip::protocol_to_string(int protocol)
+const char  *Ip::protocol_to_string(int protocol)
 {
     struct protoent *pe = getprotobynumber(protocol);
     if (pe == nullptr)
@@ -77,38 +77,40 @@ std::string     Ip::protocol_to_string(int protocol)
     return pe->p_name;
 }
 
-int     Ip::protocol(const std::string & name)
+int     Ip::protocol(std::string_view name)
 {
-    struct protoent *pe = getprotobyname(name.c_str());
+    struct protoent *pe = getprotobyname(name.data());
     if (pe == nullptr)
         return -1;
     return pe->p_proto;
 }
 
-int     Ip::domain(const std::string & name)
+int     Ip::domain(std::string_view name)
 {
-    static std::map<std::string, int> domain_to_str = {
+    static std::map<std::string_view, int> domain_to_str = {
         {"unix", PF_UNIX}, {"ipv4", PF_INET}, {"ipv6", PF_INET6},
         /*
         {"ipx", PF_IPX}, {"netlink", PF_NETLINK}, {"x25", PF_X25}, {"ax25", PF_AX25},
         {"atmpvc", PF_ATMPVC}, {"appletalk", PF_APPLETALK}, {"packet", PF_PACKET},
         */
     };
-    if (domain_to_str.find(name) == domain_to_str.end())
+    auto it = domain_to_str.find(name);
+    if (it == domain_to_str.end())
         return -1;
-    return domain_to_str[name];
+    return it->second;
 }
 
-int     Ip::socktype(const std::string & name)
+int     Ip::socktype(std::string_view name)
 {
-    static std::map<std::string, int> socktype_to_str = {
+    static std::map<std::string_view, int> socktype_to_str = {
         {"udp", SOCK_DGRAM}, {"tcp", SOCK_STREAM},
         {"datagram", SOCK_DGRAM}, {"stream", SOCK_STREAM}, {"raw", SOCK_RAW},
         {"seqpacket", SOCK_SEQPACKET}, {"rdm", SOCK_RDM}, {"packet", SOCK_PACKET},
     };
-    if (socktype_to_str.find(name) == socktype_to_str.end())
+    auto it = socktype_to_str.find(name);
+    if (it == socktype_to_str.end())
         return -1;
-    return socktype_to_str[name];
+    return it->second;
 }
 
 }

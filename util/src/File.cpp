@@ -18,7 +18,7 @@ File::File()
     _stream_ownership = true;
 }
 
-File::File(int fd, const char *mode): File()
+File::File(int fd, std::string_view mode): File()
 {
     this->open_fd(fd, mode);
 }
@@ -28,7 +28,7 @@ File::File(FILE *stream, bool ownership): File()
     this->set_stream(stream, ownership);
 }
 
-File::File(const std::string_view path, const char *mode): File()
+File::File(std::string_view path, std::string_view mode): File()
 {
     this->open(path, mode);
 }
@@ -118,10 +118,10 @@ void    File::_delete_buffer()
     }
 }
 
-bool    File::open_fd(int fd, const char *mode)
+bool    File::open_fd(int fd, std::string_view mode)
 {
     this->close();
-    _file_ptr = fdopen(fd, mode);
+    _file_ptr = fdopen(fd, mode.data());
     if (_file_ptr == nullptr)
     {
         SIHD_LOG(error, "File: " << strerror(errno) << ": for file descriptor " << fd);
@@ -151,7 +151,7 @@ bool    File::open_tmpfile()
     return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
 }
 
-bool    File::open_tmp(const std::string_view tmp_name_template, const char *mode)
+bool    File::open_tmp(std::string_view tmp_name_template, std::string_view mode)
 {
     this->close();
     char path[tmp_name_template.size()];
@@ -179,10 +179,10 @@ bool    File::open_tmp(const std::string_view tmp_name_template, const char *mod
     return this->is_open();
 }
 
-bool    File::open(const std::string_view path, const char *mode)
+bool    File::open(std::string_view path, std::string_view mode)
 {
     this->close();
-    _file_ptr = fopen(path.data(), mode);
+    _file_ptr = fopen(path.data(), mode.data());
     if (_file_ptr == nullptr)
     {
         SIHD_LOG(error, "File: " << strerror(errno) << ": " << path);
@@ -351,7 +351,7 @@ ssize_t File::write(const IArray & array, size_t byte_offset)
     return this->write(reinterpret_cast<const char *>(array.cbuf() + byte_offset), array.byte_size() - byte_offset);
 }
 
-ssize_t File::write(const std::string_view str, size_t size_limit)
+ssize_t File::write(std::string_view str, size_t size_limit)
 {
     if (size_limit == 0)
         size_limit = str.size();

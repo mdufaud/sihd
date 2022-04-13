@@ -19,9 +19,9 @@ class PcapWriter:   public sihd::util::Named,
         PcapWriter(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~PcapWriter();
 
-        bool open(const std::string & path);
-        bool open(const std::string & path, int datalink);
-        bool open(const std::string & path, int datalink, int snaplen);
+        bool open(std::string_view path);
+        bool open(std::string_view path, int datalink);
+        bool open(std::string_view path, int datalink, int snaplen);
         bool close();
         bool is_open() const;
 

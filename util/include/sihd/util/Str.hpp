@@ -33,7 +33,7 @@ class Str
 
         static size_t hexdump_cols;
 
-        static void append_sep(std::string & str, const std::string_view append, const std::string_view sep = ",");
+        static void append_sep(std::string & str, std::string_view append, std::string_view sep = ",");
 
         static std::string gmtime_to_string(time_t nano, bool total_parenthesis = false, bool nano_resolution = false);
         static std::string localtime_to_string(time_t nano, bool total_parenthesis = false, bool nano_resolution = false);
@@ -56,18 +56,18 @@ class Str
         // [hello] -> 7
         static int get_closing_escape_index(const char *s, int index, const char *authorized_open_escape_sequences = nullptr);
 
-        static std::string remove_escape_char(const std::string_view str);
-        static std::string remove_escape_sequences(const std::string_view str, const char *authorized_open_escape_sequences = nullptr);
+        static std::string remove_escape_char(std::string_view str);
+        static std::string remove_escape_sequences(std::string_view str, const char *authorized_open_escape_sequences = nullptr);
 
         // clone str from_idx to size (or all the remaining str)
-        static char *csub(const char *str, size_t from_idx, ssize_t size = 0);
-        static std::string join(const std::vector<std::string> & join_lst, const std::string_view join_with = "");
-        static std::string demangle(const char *name);
-        static std::string format(const char *format, ...);
-        static std::string trim(const std::string_view s);
+        static char *csub(std::string_view str, size_t from_idx, ssize_t size = 0);
+        static std::string join(const std::vector<std::string> & join_lst, std::string_view join_with = "");
+        static std::string demangle(std::string_view name);
+        static std::string format(std::string_view format, ...);
+        static std::string trim(std::string_view s);
         static std::string & to_upper(std::string & s);
         static std::string & to_lower(std::string & s);
-        static std::string replace(const std::string_view s, const std::string_view from, const std::string_view to);
+        static std::string replace(std::string_view s, std::string_view from, std::string_view to);
 
         static std::string to_hex(uint64_t n);
         static std::string to_dec(uint64_t n);
@@ -80,57 +80,57 @@ class Str
         static std::string hexdump_fmt(const void *mem, size_t size);
 
         static bool is_digit(int c, uint16_t base = 10);
-        static bool is_number(const std::string_view s, uint16_t base = 10);
-        static bool starts_with(const std::string_view s, const std::string_view start);
-        static bool ends_with(const std::string_view s, const std::string_view end);
+        static bool is_number(std::string_view s, uint16_t base = 10);
+        static bool starts_with(std::string_view s, std::string_view start);
+        static bool ends_with(std::string_view s, std::string_view end);
 
-        static std::map<std::string, std::string> parse_configuration(const std::string_view conf);
+        static std::map<std::string, std::string> parse_configuration(std::string_view conf);
 
-        static bool to_long(const std::string_view str, long *ret, uint16_t base = 0);
-        static bool to_ulong(const std::string_view str, unsigned long *ret, uint16_t base = 0);
-        static bool to_llong(const std::string_view str, long long *ret, uint16_t base = 0);
-        static bool to_ullong(const std::string_view str, unsigned long long *ret, uint16_t base = 0);
-        static bool to_double(const std::string_view str, double *ret);
+        static bool to_long(std::string_view str, long *ret, uint16_t base = 0);
+        static bool to_ulong(std::string_view str, unsigned long *ret, uint16_t base = 0);
+        static bool to_llong(std::string_view str, long long *ret, uint16_t base = 0);
+        static bool to_ullong(std::string_view str, unsigned long long *ret, uint16_t base = 0);
+        static bool to_double(std::string_view str, double *ret);
 
         template <typename T>
-        static bool convert_from_string(const std::string_view str, T & value, uint16_t base = 0);
+        static bool convert_from_string(std::string_view str, T & value, uint16_t base = 0);
 };
 
 template <>
-bool Str::convert_from_string<bool>(const std::string_view str, bool & value, uint16_t base);
+bool Str::convert_from_string<bool>(std::string_view str, bool & value, uint16_t base);
 
 template <>
-bool Str::convert_from_string<char>(const std::string_view str, char & value, uint16_t base);
+bool Str::convert_from_string<char>(std::string_view str, char & value, uint16_t base);
 
 template <>
-bool Str::convert_from_string<int8_t>(const std::string_view str, int8_t & value, uint16_t base);
+bool Str::convert_from_string<int8_t>(std::string_view str, int8_t & value, uint16_t base);
 
 template <>
-bool Str::convert_from_string<uint8_t>(const std::string_view str, uint8_t & value, uint16_t base);
+bool Str::convert_from_string<uint8_t>(std::string_view str, uint8_t & value, uint16_t base);
 
 template <>
-bool Str::convert_from_string<int16_t>(const std::string_view str, int16_t & value, uint16_t base);
+bool Str::convert_from_string<int16_t>(std::string_view str, int16_t & value, uint16_t base);
 
 template <>
-bool Str::convert_from_string<uint16_t>(const std::string_view str, uint16_t & value, uint16_t base);
+bool Str::convert_from_string<uint16_t>(std::string_view str, uint16_t & value, uint16_t base);
 
 template <>
-bool Str::convert_from_string<int32_t>(const std::string_view str, int32_t & value, uint16_t base);
+bool Str::convert_from_string<int32_t>(std::string_view str, int32_t & value, uint16_t base);
 
 template <>
-bool Str::convert_from_string<uint32_t>(const std::string_view str, uint32_t & value, uint16_t base);
+bool Str::convert_from_string<uint32_t>(std::string_view str, uint32_t & value, uint16_t base);
 
 template <>
-bool Str::convert_from_string<int64_t>(const std::string_view str, int64_t & value, uint16_t base);
+bool Str::convert_from_string<int64_t>(std::string_view str, int64_t & value, uint16_t base);
 
 template <>
-bool Str::convert_from_string<uint64_t>(const std::string_view str, uint64_t & value, uint16_t base);
+bool Str::convert_from_string<uint64_t>(std::string_view str, uint64_t & value, uint16_t base);
 
 template <>
-bool Str::convert_from_string<float>(const std::string_view str, float & value, uint16_t base);
+bool Str::convert_from_string<float>(std::string_view str, float & value, uint16_t base);
 
 template <>
-bool Str::convert_from_string<double>(const std::string_view str, double & value, uint16_t base);
+bool Str::convert_from_string<double>(std::string_view str, double & value, uint16_t base);
 
 }
 

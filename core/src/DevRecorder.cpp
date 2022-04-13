@@ -26,13 +26,13 @@ DevRecorder::~DevRecorder()
 {
 }
 
-bool    DevRecorder::set_handler(const std::string & path)
+bool    DevRecorder::set_handler(std::string_view path)
 {
     _handler_path = path;
     return true;
 }
 
-bool    DevRecorder::add_record_channel(const std::string & conf)
+bool    DevRecorder::add_record_channel(std::string_view conf)
 {
     sihd::util::Splitter splitter("=");
     std::vector<std::string> split = splitter.split(conf);
@@ -48,8 +48,9 @@ bool    DevRecorder::add_record_channel(const std::string & conf)
 
 bool    DevRecorder::remove_recorded_channel(const std::string & alias)
 {
-    if (_map_channels_alias.find(alias) != _map_channels_alias.end())
-        _map_channels_alias.erase(alias);
+    auto it = _map_channels_alias.find(alias);
+    if (it != _map_channels_alias.end())
+        _map_channels_alias.erase(it);
     return true;
 }
 

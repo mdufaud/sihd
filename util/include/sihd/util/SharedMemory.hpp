@@ -2,7 +2,9 @@
 # define __SIHD_UTIL_SHAREDMEMORY_HPP__
 
 # include <sihd/util/platform.hpp>
+# include <sys/stat.h>
 # include <string>
+# include <string_view>
 
 # if defined(__SIHD_EMSCRIPTEN__)
 #  define mode_t unsigned int
@@ -17,10 +19,10 @@ class SharedMemory
         SharedMemory();
         virtual ~SharedMemory();
 
-        bool create(const std::string & id, size_t size, mode_t mode = 0600);
+        bool create(std::string_view id, size_t size, mode_t mode = 0600);
 
-        bool attach(const std::string & id, size_t size, mode_t mode = 0600);
-        bool attach_read_only(const std::string & id, size_t size, mode_t mode = 0400);
+        bool attach(std::string_view id, size_t size, mode_t mode = 0600);
+        bool attach_read_only(std::string_view id, size_t size, mode_t mode = 0400);
 
         bool clear();
 
@@ -37,8 +39,8 @@ class SharedMemory
 
     private:
 #if !defined(__SIHD_WINDOWS__)
-        bool _create(const std::string & id, size_t size, mode_t mode, int shm_flags, int mmap_flags);
-        bool _attach(const std::string & id, size_t size, mode_t mode, int shm_flags, int mmap_flags);
+        bool _create(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags);
+        bool _attach(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags);
 #endif
         int _fd;
         size_t _size;

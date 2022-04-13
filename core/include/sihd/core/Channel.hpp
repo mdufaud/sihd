@@ -19,11 +19,11 @@ class Channel:  public sihd::util::Named,
 {
     public:
         Channel(const std::string & name,
-                const std::string & type,
+                std::string_view type,
                 size_t size,
                 sihd::util::Node *parent = nullptr);
         Channel(const std::string & name,
-                const std::string & type,
+                std::string_view type,
                 sihd::util::Node *parent = nullptr);
         Channel(const std::string & name,
                 sihd::util::Type type,
@@ -37,7 +37,7 @@ class Channel:  public sihd::util::Named,
         static sihd::util::IClock *get_default_clock() { return _default_channel_clock_ptr; }
 
         // "name=CHANNEL_NAME;type=CHANNEL_TYPE;size=CHANNEL_SIZE"
-        static Channel *build(const std::string & configuration);
+        static Channel *build(std::string_view configuration);
 
         void set_clock(sihd::util::IClock *clock);
         // get last write timestamp (thread safe)

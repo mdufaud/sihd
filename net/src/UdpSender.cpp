@@ -38,13 +38,13 @@ bool    UdpSender::open_and_connect(const IpAddr & ip)
     return this->open_socket(ip.prefers_ipv6()) && this->connect(ip);
 }
 
-bool    UdpSender::open_and_connect(const std::string & ip, int port)
+bool    UdpSender::open_and_connect(std::string_view ip, int port)
 {
     IpAddr addr(ip, port, true);
     return this->open_socket(addr.prefers_ipv6()) && this->connect(addr);
 }
 
-bool    UdpSender::open_unix_and_connect(const std::string & path)
+bool    UdpSender::open_unix_and_connect(std::string_view path)
 {
     return this->open_socket_unix() && this->connect(path);
 }

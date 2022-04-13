@@ -7,14 +7,14 @@ namespace sihd::http
 
 SIHD_LOGGER;
 
-HttpRequest::HttpRequest(const std::string & path, RequestType request_type)
+HttpRequest::HttpRequest(std::string_view path, RequestType request_type)
 {
     _array_content = nullptr;
     _path = path;
     _request_type = request_type;
 }
 
-HttpRequest::HttpRequest(const std::string & path, const std::vector<std::string> & uri_args, RequestType request_type):
+HttpRequest::HttpRequest(std::string_view path, const std::vector<std::string> & uri_args, RequestType request_type):
     HttpRequest(path, request_type)
 {
     _uri_args_lst = uri_args;

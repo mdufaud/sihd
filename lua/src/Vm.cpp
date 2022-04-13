@@ -82,15 +82,15 @@ bool    Vm::ref_exists(std::string_view name)
 
 bool    Vm::refs_exists(const std::initializer_list<std::string_view> & lst)
 {
-    if (lst.empty())
+    if (lst.size() == 0)
         return false;
-    size_t i = 0;
-    while (i < lst.size())
+    bool first = true;
+    for (const std::string_view & str: lst)
     {
-        if (i == 0)
+        if (first)
         {
-            // first time
-            lua_getglobal(_state_ptr, lst[i].data());
+            lua_getglobal(_state_ptr, str.data());
+            first = false;
         }
         else
         {
@@ -99,10 +99,9 @@ bool    Vm::refs_exists(const std::initializer_list<std::string_view> & lst)
                 lua_remove(_state_ptr, -1);
                 return false;
             }
-            lua_getfield(_state_ptr, -1, lst[i].data());
+            lua_getfield(_state_ptr, -1, str.data());
             lua_remove(_state_ptr, -2);
         }
-        ++i;
     }
     bool ret = lua_isnil(_state_ptr, -1) == 0;
     lua_remove(_state_ptr, -1);

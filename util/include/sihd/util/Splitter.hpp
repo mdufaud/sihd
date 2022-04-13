@@ -18,13 +18,13 @@ class Splitter
         void set_delimiter_method(int (*fun)(int));
 
         bool set_empty_delimitations(bool active);
-        bool set_delimiter(const std::string & delimiter);
+        bool set_delimiter(std::string_view delimiter);
         bool set_delimiter_spaces();
-        bool set_escape_sequences(const std::string & sequences);
+        bool set_escape_sequences(std::string_view sequences);
         bool set_escape_sequences_all();
 
-        std::vector<std::string> split(const std::string_view str) const;
-        std::vector<std::string_view> split_view(const std::string_view str) const;
+        std::vector<std::string> split(std::string_view str) const;
+        std::vector<std::string_view> split_view(std::string_view str) const;
 
         // count number of tokens to return
         int count_tokens(const char *s) const;

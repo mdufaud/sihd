@@ -141,9 +141,9 @@ Process &   Process::stdin_from(int fd)
     return *this;
 }
 
-bool   Process::stdin_from_file(const std::string & path)
+bool   Process::stdin_from_file(std::string_view path)
 {
-    _stdin.fd_read = open(path.c_str(), O_RDONLY);
+    _stdin.fd_read = open(path.data(), O_RDONLY);
     if (_stdin.fd_read < 0)
         SIHD_LOG(error, "Process: could not open file input: " << path);
     return _stdin.fd_read >= 0;
@@ -183,7 +183,7 @@ Process &   Process::stdout_to(Process & proc)
     return *this;
 }
 
-bool   Process::stdout_to_file(const std::string & path, bool append)
+bool   Process::stdout_to_file(std::string_view path, bool append)
 {
     return this->_fdw_to_file(_stdout, path, append);
 }
@@ -222,7 +222,7 @@ Process &   Process::stderr_to(Process & proc)
     return *this;
 }
 
-bool   Process::stderr_to_file(const std::string & path, bool append)
+bool   Process::stderr_to_file(std::string_view path, bool append)
 {
     return this->_fdw_to_file(_stderr, path, append);
 }
@@ -256,10 +256,10 @@ void    Process::_fdw_to(FileDescWrapper & fdw, int fd)
     fdw.fd_write = fd;
 }
 
-bool    Process::_fdw_to_file(FileDescWrapper & fdw, const std::string & path, bool append)
+bool    Process::_fdw_to_file(FileDescWrapper & fdw, std::string_view path, bool append)
 {
     fdw.fun = nullptr;
-    fdw.fd_write = open(path.c_str(),
+    fdw.fd_write = open(path.data(),
                         O_WRONLY | O_CREAT | (append ? O_APPEND : 0),
                         this->open_mode);
     if (fdw.fd_write >= 0)

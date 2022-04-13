@@ -15,7 +15,7 @@ class ALogger:  public ALogFilterer
         ALogger() {};
         virtual ~ALogger() {};
 
-        virtual void log(const LogInfo & info, const std::string_view & msg) = 0;
+        virtual void log(const LogInfo & info, std::string_view msg) = 0;
 
     private:
 };

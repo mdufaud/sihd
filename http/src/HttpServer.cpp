@@ -60,7 +60,7 @@ HttpServer::~HttpServer()
     }
 }
 
-bool    HttpServer::set_encoding(const std::string & encoding)
+bool    HttpServer::set_encoding(std::string_view encoding)
 {
     _http_header.set_charset(encoding);
     _encoding = encoding;
@@ -73,7 +73,7 @@ bool    HttpServer::set_port(int port)
     return true;
 }
 
-bool    HttpServer::set_root_dir(const std::string & root_dir)
+bool    HttpServer::set_root_dir(std::string_view root_dir)
 {
     bool ret = Files::is_dir(root_dir);
     if (ret)
@@ -88,7 +88,7 @@ bool    HttpServer::set_poll_frequency(double freq)
     return _worker.set_frequency(freq);
 }
 
-bool    HttpServer::set_ssl_cert_path(const std::string & path)
+bool    HttpServer::set_ssl_cert_path(std::string_view path)
 {
     bool ret = Files::is_file(path);
     if (ret)
@@ -98,7 +98,7 @@ bool    HttpServer::set_ssl_cert_path(const std::string & path)
     return ret;
 }
 
-bool    HttpServer::set_ssl_cert_key(const std::string & path)
+bool    HttpServer::set_ssl_cert_key(std::string_view path)
 {
     bool ret = Files::is_file(path);
     if (ret)
@@ -122,13 +122,13 @@ bool    HttpServer::remove_resource_path(const std::string & path)
     return true;
 }
 
-bool    HttpServer::set_404_path(const std::string & path)
+bool    HttpServer::set_404_path(std::string_view path)
 {
     _404_page_path = path;
     return true;
 }
 
-bool    HttpServer::set_servername(const std::string & name)
+bool    HttpServer::set_servername(std::string_view name)
 {
     _http_header.set_servername(name);
     return true;
@@ -197,9 +197,10 @@ bool    HttpServer::run()
     return true;
 }
 
-bool    HttpServer::get_resource_path(const std::string & path, std::string & res)
+bool    HttpServer::get_resource_path(std::string_view path, std::string & res)
 {
-    std::string tmp_path = _root_dir + path;
+    std::string tmp_path = _root_dir;
+    tmp_path.append(path.data(), path.size());
     bool ret = Files::is_file(tmp_path);
     if (!ret && (ret = Files::is_dir(path)))
         tmp_path += "/index.html";
@@ -207,7 +208,8 @@ bool    HttpServer::get_resource_path(const std::string & path, std::string & re
     {
         for (const std::string & resource_path: _resources_path)
         {
-            tmp_path = resource_path + path;
+            tmp_path = resource_path;
+            tmp_path.append(path.data(), path.size());
             if ((ret = Files::exists(tmp_path)))
                 break ;
         }
@@ -350,7 +352,7 @@ HttpRequest::RequestType    HttpServer::_get_request_type(struct lws *wsi)
     return HttpRequest::NONE;
 }
 
-int     HttpServer::_on_http_request(HttpSession *session, const std::string & path)
+int     HttpServer::_on_http_request(HttpSession *session, std::string_view path)
 {
     SIHD_LOG(debug, "HttpServer: " << HttpRequest::request_to_string(session->request_type) << " request: " << path);
     int rc = 0;
@@ -409,7 +411,7 @@ int     HttpServer::_on_http_file_completion_end()
     return 0;
 }
 
-WebService  *HttpServer::_get_webservice_from_path(const std::string & path, std::string *webservice_name)
+WebService  *HttpServer::_get_webservice_from_path(std::string_view path, std::string *webservice_name)
 {
     std::string_view path_view(path);
 
@@ -424,7 +426,7 @@ WebService  *HttpServer::_get_webservice_from_path(const std::string & path, std
     return this->get_child<WebService>(name);
 }
 
-bool    HttpServer::_check_webservices(HttpSession *session, const std::string & path)
+bool    HttpServer::_check_webservices(HttpSession *session, std::string_view path)
 {
     std::string webservice_name;
     WebService *webservice = this->_get_webservice_from_path(path, &webservice_name);
@@ -630,11 +632,11 @@ std::vector<std::string>   HttpServer::_get_uri_args(struct lws *wsi)
     return ret;
 }
 
-bool    HttpServer::_send_404(struct lws *wsi, const std::string & html_404)
+bool    HttpServer::_send_404(struct lws *wsi, std::string_view html_404)
 {
     _http_header.set_common(HTTP_STATUS_NOT_FOUND, _mime.get("html"), html_404.size());
     this->_send_http_headers(wsi, _http_header);
-    return lws_write_http(wsi, html_404.c_str(), html_404.size()) == (int)html_404.size();
+    return lws_write_http(wsi, html_404.data(), html_404.size()) == (int)html_404.size();
 }
 
 bool    HttpServer::_send_http_no_content(struct lws *wsi, int code)
@@ -643,7 +645,7 @@ bool    HttpServer::_send_http_no_content(struct lws *wsi, int code)
     return this->_send_http_headers(wsi, _http_header);
 }
 
-bool    HttpServer::_send_http_redirect(struct lws *wsi, const std::string & redirect_path, int code)
+bool    HttpServer::_send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code)
 {
     _http_header.set_common(code, _mime.get("html"), 0);
     _http_header.set_header_by_token(WSI_TOKEN_HTTP_LOCATION, redirect_path);

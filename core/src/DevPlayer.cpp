@@ -47,7 +47,7 @@ bool    DevPlayer::set_scheduler_queue_size(size_t limit)
     return true;
 }
 
-bool    DevPlayer::set_provider(const std::string & path)
+bool    DevPlayer::set_provider(std::string_view path)
 {
     _provider_path = path;
     return true;
@@ -64,7 +64,7 @@ bool    DevPlayer::set_provider_wait_time(time_t milliseconds)
     return true;
 }
 
-bool    DevPlayer::add_alias(const std::string & alias_conf)
+bool    DevPlayer::add_alias(std::string_view alias_conf)
 {
     sihd::util::Splitter splitter("=");
     std::vector<std::string> conf = splitter.split(alias_conf);

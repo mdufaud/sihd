@@ -319,27 +319,29 @@ int     Sniffer::datalink()
 
 // settings
 
-bool    Sniffer::set_filter(const std::string & filter)
+bool    Sniffer::set_filter(std::string_view filter)
 {
     // bpf_u_int32 netmask = PCAP_NETMASK_UNKNOWN
     bpf_u_int32 netmask = 0;
     bool optimize = true;
     struct bpf_program pcap_filter;
-    int ret = pcap_compile(_pcap_ptr, &pcap_filter, filter.c_str(), (int)optimize, netmask);
+    int ret = pcap_compile(_pcap_ptr, &pcap_filter, filter.data(), (int)optimize, netmask);
     if (ret == 0)
         ret = pcap_setfilter(_pcap_ptr, &pcap_filter);
     this->_log_if_error(ret);
     return ret == 0;
 }
 
-bool    Sniffer::set_direction(const std::string & direction)
+bool    Sniffer::set_direction(std::string_view direction)
 {
-    pcap_direction_t dir = PCAP_D_INOUT;
+    pcap_direction_t dir;
     if (direction == "in")
         dir = PCAP_D_IN;
     else if (direction == "out")
         dir =  PCAP_D_OUT;
-    else if (direction != "both")
+    else if (direction == "both")
+        dir =  PCAP_D_INOUT;
+    else
     {
         SIHD_LOG(error, "Sniffer: packet direction unknown: '" << direction
                     << "' possible values are: in - out - both");

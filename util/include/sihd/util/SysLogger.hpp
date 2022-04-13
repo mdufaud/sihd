@@ -21,7 +21,7 @@ class SysLogger: public ALogger
 # endif
         virtual ~SysLogger();
 
-        virtual void log(const LogInfo & info, const std::string_view & msg) override;
+        virtual void log(const LogInfo & info, std::string_view msg) override;
 
     protected:
 

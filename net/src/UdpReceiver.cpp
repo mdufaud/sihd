@@ -51,7 +51,7 @@ bool    UdpReceiver::bind(const IpAddr & addr)
     return _socket.bind(addr);
 }
 
-bool    UdpReceiver::bind_unix(const std::string & path)
+bool    UdpReceiver::bind_unix(std::string_view path)
 {
     return _socket.bind_unix(path);
 }
@@ -61,13 +61,13 @@ bool    UdpReceiver::open_and_bind(const IpAddr & ip)
     return this->open_socket(ip.prefers_ipv6()) && this->bind(ip);
 }
 
-bool    UdpReceiver::open_and_bind(const std::string & ip, int port)
+bool    UdpReceiver::open_and_bind(std::string_view ip, int port)
 {
     IpAddr addr(ip, port, true);
     return this->open_socket(addr.prefers_ipv6()) && this->bind(addr);
 }
 
-bool    UdpReceiver::open_unix_and_bind(const std::string & path)
+bool    UdpReceiver::open_unix_and_bind(std::string_view path)
 {
     return this->open_socket_unix() && this->bind(path);
 }

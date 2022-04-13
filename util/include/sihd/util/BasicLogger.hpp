@@ -12,7 +12,7 @@ class BasicLogger: public ALogger
         BasicLogger(FILE *output = stderr, bool print_thread_id = false);
         virtual ~BasicLogger();
 
-        virtual void log(const LogInfo & info, const std::string_view & msg) override;
+        virtual void log(const LogInfo & info, std::string_view msg) override;
 
         bool print_thread_id;
 

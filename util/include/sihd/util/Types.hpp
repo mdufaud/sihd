@@ -33,8 +33,8 @@ class Types
 
     public:
         static size_t type_size(Type type);
-        static std::string type_to_string(Type type);
-        static Type string_to_type(const std::string & type);
+        static const char *type_to_string(Type type);
+        static Type string_to_type(std::string_view type);
 
         template <typename T>
         static Type to_type()

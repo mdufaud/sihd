@@ -27,7 +27,7 @@ void    PcapInterfaces::_free()
     }
 }
 
-struct pcap_addr    *PcapInterfaces::get_addr(const std::string & name)
+struct pcap_addr    *PcapInterfaces::get_addr(std::string_view name)
 {
     pcap_if_t *tmp = _interfaces_ptr;
     pcap_addr *addr = nullptr;

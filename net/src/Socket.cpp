@@ -23,7 +23,7 @@ Socket::Socket(int domain, int socket_type, int protocol): Socket()
     this->open(domain, socket_type, protocol);
 }
 
-Socket::Socket(const std::string & domain, const std::string & socket_type, const std::string & protocol): Socket()
+Socket::Socket(std::string_view domain, std::string_view socket_type, std::string_view protocol): Socket()
 {
     this->open(domain, socket_type, protocol);
 }
@@ -44,7 +44,7 @@ Socket::Socket(int socket, int domain, int socket_type, int protocol): Socket()
     _protocol = protocol;
 }
 
-Socket::Socket(int socket, const std::string & domain, const std::string & socket_type, const std::string & protocol): Socket()
+Socket::Socket(int socket, std::string_view domain, std::string_view socket_type, std::string_view protocol): Socket()
 {
     _socket = socket;
     _domain = Ip::domain(domain);
@@ -174,7 +174,7 @@ std::optional<IpAddr>   Socket::get_socket_ip(int socket, bool ipv6)
 /* Socket open/close */
 /* ************************************************************************* */
 
-bool    Socket::open(const std::string & domain, const std::string & type, const std::string & protocol)
+bool    Socket::open(std::string_view domain, std::string_view type, std::string_view protocol)
 {
     int sockdomain = Ip::domain(domain);
     int socktype = Ip::socktype(type);
@@ -465,25 +465,25 @@ int     Socket::accept(IpAddr & ipaddr)
 /* Socket ip strings operations */
 /* ************************************************************************* */
 
-bool    Socket::bind(const std::string & host, int port)
+bool    Socket::bind(std::string_view host, int port)
 {
     IpAddr addr(host, port, true);
     return this->bind(addr);
 }
 
-bool    Socket::connect(const std::string & host, int port)
+bool    Socket::connect(std::string_view host, int port)
 {
     IpAddr addr(host, port, true);
     return this->connect(addr);
 }
 
-ssize_t     Socket::send_to(const std::string & host, int port, const void *data, size_t size)
+ssize_t     Socket::send_to(std::string_view host, int port, const void *data, size_t size)
 {
     IpAddr addr(host, port, true);
     return this->send_to(addr, data, size);
 }
 
-bool    Socket::send_all_to(const std::string & host, int port, const void *data, size_t size)
+bool    Socket::send_all_to(std::string_view host, int port, const void *data, size_t size)
 {
     IpAddr addr(host, port, true);
     return this->send_all_to(addr, data, size);
@@ -495,37 +495,37 @@ bool    Socket::send_all_to(const std::string & host, int port, const void *data
 
 #if !defined(__SIHD_WINDOWS__)
 
-bool        Socket::bind_unix(const std::string & path)
+bool        Socket::bind_unix(std::string_view path)
 {
     sockaddr_un addr;
     addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, path.c_str());
+    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path)));
     return this->bind((sockaddr *)&addr, SUN_LEN(&addr));
 }
 
-bool        Socket::connect_unix(const std::string & path)
+bool        Socket::connect_unix(std::string_view path)
 {
     sockaddr_un addr;
     addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, path.c_str());
+    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path)));
     return this->connect((sockaddr *)&addr, SUN_LEN(&addr));
 }
 
-ssize_t     Socket::send_to_unix(const std::string & path, const void *data, size_t size)
+ssize_t     Socket::send_to_unix(std::string_view path, const void *data, size_t size)
 {
     sockaddr_un addr;
     addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, path.c_str());
+    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path)));
     return this->send_to((sockaddr *)&addr, SUN_LEN(&addr), data, size);
 }
 
-bool    Socket::send_all_to_unix(const std::string & path, const void *data, size_t size)
+bool    Socket::send_all_to_unix(std::string_view path, const void *data, size_t size)
 {
     ssize_t ret;
     size_t sent = 0;
     sockaddr_un addr;
     addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, path.c_str());
+    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path)));
     size_t sun_len = SUN_LEN(&addr);
 
     while (sent < size)
@@ -603,10 +603,10 @@ bool    Socket::is_socket_blocking(int socket)
 /* ************************************************************************* */
 
 std::string Socket::get_unix_socket_peername([[maybe_unused]] int socket) { return ""; }
-bool Socket::bind_unix([[maybe_unused]] const std::string & path) { return false; }
-bool Socket::connect_unix([[maybe_unused]] const std::string & path) { return false; }
-ssize_t Socket::send_to_unix([[maybe_unused]] const std::string & path, [[maybe_unused]] const void *data, [[maybe_unused]] size_t size) { return -1; }
-bool Socket::send_all_to_unix([[maybe_unused]] const std::string & path, [[maybe_unused]] const void *data, [[maybe_unused]] size_t size) { return false; }
+bool Socket::bind_unix([[maybe_unused]] std::string_view path) { return false; }
+bool Socket::connect_unix([[maybe_unused]] std::string_view path) { return false; }
+ssize_t Socket::send_to_unix([[maybe_unused]] std::string_view path, [[maybe_unused]] const void *data, [[maybe_unused]] size_t size) { return -1; }
+bool Socket::send_all_to_unix([[maybe_unused]] std::string_view path, [[maybe_unused]] const void *data, [[maybe_unused]] size_t size) { return false; }
 ssize_t Socket::receive_from_unix([[maybe_unused]] std::string & path, [[maybe_unused]] void *data, [[maybe_unused]] size_t size) { return -1; }
 
 bool    Socket::set_socket_blocking(int socket, bool active)

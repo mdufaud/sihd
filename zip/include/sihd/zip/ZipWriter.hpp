@@ -21,24 +21,24 @@ class ZipWriter: public sihd::util::Named, public sihd::util::Configurable
         void encrypt_in_aes_192();
         void encrypt_in_aes_256();
 
-        bool open(const std::string & path, bool fails_if_exists = true, bool truncate = false);
+        bool open(std::string_view path, bool fails_if_exists = true, bool truncate = false);
 
         // add either file or directory from filesystem
-        bool fs_add(const std::string & path, const std::string & name);
+        bool fs_add(std::string_view path, std::string_view name);
         // recursively add directory and its content from filesystem
-        bool fs_add_dir(const std::string & path, const std::string & name);
+        bool fs_add_dir(std::string_view path, std::string_view name);
         // add file from filesystem
-        bool fs_add_file(const std::string & path, const std::string & name);
+        bool fs_add_file(std::string_view path, std::string_view name);
 
         // add dir in memory
-        bool add_dir(const std::string & name);
+        bool add_dir(std::string_view name);
         // add file content in memory
-        bool add_file(const std::string & name, const void *data, size_t size);
+        bool add_file(std::string_view name, const void *data, size_t size);
 
         // encrypt a single entry
-        bool encrypt(size_t index, const char *password);
+        bool encrypt(size_t index, std::string_view password);
         // encrypt all entries
-        bool encrypt_all(const char *password);
+        bool encrypt_all(std::string_view password);
 
         // close and save changes
         bool close();
@@ -46,7 +46,7 @@ class ZipWriter: public sihd::util::Named, public sihd::util::Configurable
     protected:
 
     private:
-        bool _add_source(const std::string & name, zip_source_t *source);
+        bool _add_source(std::string_view name, zip_source_t *source);
 
         zip_t *_zip_ptr;
         short _encryption_method;

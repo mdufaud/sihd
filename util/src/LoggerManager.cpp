@@ -56,7 +56,7 @@ void    LoggerManager::remove_loggers()
     _loggers_lst.clear();
 }
 
-void    LoggerManager::log(const std::string & src, LogLevel level, const std::string_view & msg)
+void    LoggerManager::log(const std::string & src, LogLevel level, std::string_view msg)
 {
     std::lock_guard<std::mutex> l(_mutex);
     LogInfo info(src, level);

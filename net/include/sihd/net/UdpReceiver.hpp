@@ -32,11 +32,11 @@ class UdpReceiver:  public INetReceiver,
         bool socket_opened() { return _socket.is_open(); }
 
         bool bind(const IpAddr & addr);
-        bool bind_unix(const std::string & path);
+        bool bind_unix(std::string_view path);
 
         bool open_and_bind(const IpAddr & ip);
-        bool open_and_bind(const std::string & ip, int port);
-        bool open_unix_and_bind(const std::string & path);
+        bool open_and_bind(std::string_view ip, int port);
+        bool open_unix_and_bind(std::string_view path);
 
         bool close();
 

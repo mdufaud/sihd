@@ -14,7 +14,7 @@ class PcapUtils
     public:
         static bool init(unsigned int opts = PCAP_CHAR_ENC_UTF_8);
 
-        static bool lookupnet(const std::string & dev, bpf_u_int32 *ip, bpf_u_int32 *mask);
+        static bool lookupnet(std::string_view dev, bpf_u_int32 *ip, bpf_u_int32 *mask);
 
         static std::string get_status(int code);
         static std::string version();
@@ -22,12 +22,12 @@ class PcapUtils
         static bool is_timestamp_type(int ts);
         static std::string timestamp_type_to_string(int ts);
         static std::string timestamp_type_to_desc(int dtl);
-        static int string_to_timestamp_type(const std::string & dtl);
+        static int string_to_timestamp_type(std::string_view dtl);
 
         static bool is_datalink(int dtl);
         static std::string datalink_to_string(int dtl);
         static std::string datalink_to_desc(int dtl);
-        static int string_to_datalink(const std::string & dtl);
+        static int string_to_datalink(std::string_view dtl);
 
     protected:
 

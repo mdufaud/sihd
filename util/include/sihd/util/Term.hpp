@@ -61,25 +61,25 @@ class Term
             static const char *ENDC;
         };
 
-        static std::string fmt(const std::string & str, const char *attr)
+        static std::string fmt(std::string_view str, const char *attr)
         {
-            return Str::format("%s%s%s", attr, str.c_str(), Attr::ENDC);
+            return Str::format("%s%s%s", attr, str.data(), Attr::ENDC);
         }
 
-        static std::string fmt2(const std::string & str, const char *attr, const char *attr2)
+        static std::string fmt2(std::string_view str, const char *attr, const char *attr2)
         {
-            return Str::format("%s%s%s%s", attr, attr2, str.c_str(), Attr::ENDC);
+            return Str::format("%s%s%s%s", attr, attr2, str.data(), Attr::ENDC);
         }
 
-        static std::string underline(const std::string & str) { return Term::fmt(str, Attr::UNDERLINE); }
-        static std::string bold(const std::string & str) { return Term::fmt(str, Attr::BOLD); }
-        static std::string selected(const std::string & str) { return Term::fmt(str, Attr::SELECTED); }
-        static std::string blink(const std::string & str) { return Term::fmt(str, Attr::BLINK); }
+        static std::string underline(std::string_view str) { return Term::fmt(str, Attr::UNDERLINE); }
+        static std::string bold(std::string_view str) { return Term::fmt(str, Attr::BOLD); }
+        static std::string selected(std::string_view str) { return Term::fmt(str, Attr::SELECTED); }
+        static std::string blink(std::string_view str) { return Term::fmt(str, Attr::BLINK); }
 
-        static std::string red(const std::string & str) { return Term::fmt(str, Attr::RED2); }
-        static std::string green(const std::string & str) { return Term::fmt(str, Attr::GREEN2); }
+        static std::string red(std::string_view str) { return Term::fmt(str, Attr::RED2); }
+        static std::string green(std::string_view str) { return Term::fmt(str, Attr::GREEN2); }
 
-        static std::string white_bg(const std::string & str) { return Term::fmt2(str, Attr::WHITEBG, Attr::BLACK); }
+        static std::string white_bg(std::string_view str) { return Term::fmt2(str, Attr::WHITEBG, Attr::BLACK); }
 
 
     private:

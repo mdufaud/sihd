@@ -9,13 +9,13 @@ SIHD_NEW_LOGGER("sihd::core");
 
 sihd::util::IClock *Channel::_default_channel_clock_ptr = &sihd::util::Clock::default_clock;
 
-Channel::Channel(const std::string & name, const std::string & type, size_t size, Node *parent):
+Channel::Channel(const std::string & name, std::string_view type, size_t size, Node *parent):
     Named(name, parent)
 {
     this->_init(Types::string_to_type(type), size);
 }
 
-Channel::Channel(const std::string & name, const std::string & type, Node *parent):
+Channel::Channel(const std::string & name, std::string_view type, Node *parent):
     Named(name, parent)
 {
     this->_init(Types::string_to_type(type), 1);
@@ -39,7 +39,7 @@ Channel::~Channel()
         delete _array_ptr;
 }
 
-Channel     *Channel::build(const std::string & configuration)
+Channel     *Channel::build(std::string_view configuration)
 {
     auto map = Str::parse_configuration(configuration);
     if (map.find("name") == map.end())
@@ -74,7 +74,7 @@ void    Channel::_init(Type type, size_t size)
     if (_array_ptr == nullptr)
     {
         throw std::invalid_argument(Str::format("Channel: no such type %s for channel %s",
-                                                    Types::type_to_string(type).c_str(),
+                                                    Types::type_to_string(type),
                                                     this->get_name().c_str()));
     }
     _array_ptr->resize(size);

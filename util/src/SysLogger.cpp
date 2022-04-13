@@ -22,7 +22,7 @@ SysLogger::~SysLogger()
 #endif
 }
 
-void    SysLogger::log(const LogInfo & info, const std::string_view & msg)
+void    SysLogger::log(const LogInfo & info, std::string_view msg)
 {
 #if !defined(__SIHD_WINDOWS__)
     int prio;

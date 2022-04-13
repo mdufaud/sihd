@@ -30,7 +30,7 @@ class DevFilter: public sihd::core::Device
                 Rule(RuleType type);
                 ~Rule();
 
-                bool parse(const std::string & conf);
+                bool parse(std::string_view conf);
                 Rule & in(std::string_view channel_name);
                 Rule & out(std::string_view channel_name);
                 // notify if same value is wrote in channel's output
@@ -88,14 +88,14 @@ class DevFilter: public sihd::core::Device
         DevFilter(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~DevFilter();
 
-        bool set_filter_equal(const std::string & rule_str);
-        bool set_filter_superior(const std::string & rule_str);
-        bool set_filter_superior_equal(const std::string & rule_str);
-        bool set_filter_inferior(const std::string & rule_str);
-        bool set_filter_inferior_equal(const std::string & rule_str);
-        bool set_filter_byte_and(const std::string & rule_str);
-        bool set_filter_byte_or(const std::string & rule_str);
-        bool set_filter_byte_xor(const std::string & rule_str);
+        bool set_filter_equal(std::string_view rule_str);
+        bool set_filter_superior(std::string_view rule_str);
+        bool set_filter_superior_equal(std::string_view rule_str);
+        bool set_filter_inferior(std::string_view rule_str);
+        bool set_filter_inferior_equal(std::string_view rule_str);
+        bool set_filter_byte_and(std::string_view rule_str);
+        bool set_filter_byte_or(std::string_view rule_str);
+        bool set_filter_byte_xor(std::string_view rule_str);
 
         void set_filter(const Rule & rule);
 
@@ -142,7 +142,7 @@ class DevFilter: public sihd::core::Device
             const Rule *rule_ptr;
         };
 
-        bool _parse_conf(const std::string & conf, RuleType type);
+        bool _parse_conf(std::string_view conf, RuleType type);
         void _apply_rule(const Channel *channel_in, Channel *channel_out, const Rule *rule_ptr);
 
         bool _running;

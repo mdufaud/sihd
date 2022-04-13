@@ -70,7 +70,7 @@ namespace test
         // Test reading
         ZipReader reader("zip-reader");
 
-        EXPECT_FALSE(reader.set_conf("password", password));
+        EXPECT_FALSE(reader.set_conf_str("password", password));
 
         EXPECT_TRUE(reader.open(zip_path));
         EXPECT_EQ(reader.count_entries(), 13u);
@@ -87,7 +87,7 @@ namespace test
         EXPECT_STREQ(data, arr_entry.to_string().c_str());
 
         SIHD_LOG(info, "Setting global password");
-        EXPECT_TRUE(reader.set_conf("password", password));
+        EXPECT_TRUE(reader.set_conf_str("password", password));
         entry_name = "toto_entry2";
         EXPECT_TRUE(reader.load_entry(entry_name));
         EXPECT_TRUE(reader.read_entry() > 0);

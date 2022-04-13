@@ -23,11 +23,11 @@ class UdpSender:    public INetSender,
         bool socket_opened() { return _socket.is_open(); }
 
         bool connect(const IpAddr & addr);
-        bool connect_unix(const std::string & path) { return _socket.connect_unix(path); }
+        bool connect_unix(std::string_view path) { return _socket.connect_unix(path); }
 
         bool open_and_connect(const IpAddr & ip);
-        bool open_and_connect(const std::string & ip, int port);
-        bool open_unix_and_connect(const std::string & path);
+        bool open_and_connect(std::string_view ip, int port);
+        bool open_unix_and_connect(std::string_view path);
 
         bool close();
 

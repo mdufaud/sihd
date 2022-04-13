@@ -16,7 +16,7 @@ HttpResponse::~HttpResponse()
 {
 }
 
-void    HttpResponse::set_content_type(const std::string & mime_type)
+void    HttpResponse::set_content_type(std::string_view mime_type)
 {
     _http_header.set_content_type(mime_type);
 }
@@ -37,12 +37,12 @@ bool    HttpResponse::set_json_content(const nlohmann::json & data)
     return true;
 }
 
-bool    HttpResponse::set_content(const std::string & str)
+bool    HttpResponse::set_content(std::string_view str)
 {
     this->_set_mime_type_if_not_set(Mime::MIME_TEXT_PLAIN);
     if (_array.resize(str.size()) == false)
         return false;
-    _array.copy_from_bytes((const uint8_t *)str.c_str(), str.size());
+    _array.copy_from_bytes((const uint8_t *)str.data(), str.size());
     return true;
 }
 

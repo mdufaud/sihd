@@ -16,7 +16,7 @@ ConsoleLogger::~ConsoleLogger()
 {
 }
 
-void    ConsoleLogger::log(const LogInfo & info, const std::string_view & msg)
+void    ConsoleLogger::log(const LogInfo & info, std::string_view msg)
 {
     const char *beg;
     const char *level;

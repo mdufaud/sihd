@@ -34,7 +34,7 @@ Splitter::~Splitter()
 {
 }
 
-bool    Splitter::set_delimiter(const std::string & str)
+bool    Splitter::set_delimiter(std::string_view str)
 {
     _delimiter = str;
     return true;
@@ -57,7 +57,7 @@ bool    Splitter::set_empty_delimitations(bool active)
     return true;
 }
 
-bool    Splitter::set_escape_sequences(const std::string & str)
+bool    Splitter::set_escape_sequences(std::string_view str)
 {
     _authorized_open_escape_sequences = str;
     return true;
@@ -164,7 +164,7 @@ std::string_view    Splitter::get_next_token(const char *s, int *idx) const
     return std::string_view(s + x, std::max(0, y - x));
 }
 
-std::vector<std::string>    Splitter::split(const std::string_view str) const
+std::vector<std::string>    Splitter::split(std::string_view str) const
 {
    if (_delimiter.empty() && _compare_method == nullptr)
         return {std::string(str.data(), str.size())};
@@ -180,7 +180,7 @@ std::vector<std::string>    Splitter::split(const std::string_view str) const
     return ret;
 }
 
-std::vector<std::string_view>   Splitter::split_view(const std::string_view str) const
+std::vector<std::string_view>   Splitter::split_view(std::string_view str) const
 {
    if (_delimiter.empty() && _compare_method == nullptr)
         return {str};

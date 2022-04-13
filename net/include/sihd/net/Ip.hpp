@@ -9,12 +9,12 @@ namespace sihd::net
 class Ip
 {
     public:
-        static std::string domain_to_string(int domain);
-        static std::string socktype_to_string(int socktype);
-        static std::string protocol_to_string(int protocol);
-        static int protocol(const std::string & name);
-        static int domain(const std::string & name);
-        static int socktype(const std::string & name);
+        static const char *domain_to_string(int domain);
+        static const char *socktype_to_string(int socktype);
+        static const char *protocol_to_string(int protocol);
+        static int protocol(std::string_view name);
+        static int domain(std::string_view name);
+        static int socktype(std::string_view name);
 };
 
 

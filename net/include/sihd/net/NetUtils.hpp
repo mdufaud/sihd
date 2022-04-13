@@ -41,12 +41,12 @@ namespace sihd::net
 class NetUtils
 {
     public:
-        static int get_interface_idx(int sock, const std::string & name);
+        static int get_interface_idx(int sock, std::string_view name);
         static bool get_interface_name(int sock, int idx, std::string & to_fill);
-        static bool get_interface_mac(int sock, const std::string & name, struct sockaddr *to_fill);
-        static bool get_interface_addr(int sock, const std::string & name, struct sockaddr *to_fill);
-        static bool get_interface_broadcast(int sock, const std::string & name, struct sockaddr *to_fill);
-        static bool get_interface_netmask(int sock, const std::string & name, struct sockaddr *to_fill);
+        static bool get_interface_mac(int sock, std::string_view name, struct sockaddr *to_fill);
+        static bool get_interface_addr(int sock, std::string_view name, struct sockaddr *to_fill);
+        static bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr *to_fill);
+        static bool get_interface_netmask(int sock, std::string_view name, struct sockaddr *to_fill);
 
     protected:
 

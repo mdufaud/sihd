@@ -249,7 +249,7 @@ void    LuaUtilApi::load_files(Vm & vm)
                     .addFunction("get_recursive_children", &Files::get_recursive_children)
                     .addFunction("is_absolute", &Files::is_absolute)
                     .addFunction("normalize", &Files::normalize)
-                    .addFunction("trim_path", static_cast<std::string (*)(const std::string &, const std::string &)>(&Files::trim_path))
+                    .addFunction("trim_path", static_cast<std::string (*)(std::string_view, std::string_view)>(&Files::trim_path))
                     .addFunction("get_parent", &Files::get_parent)
                     .addFunction("get_filename", &Files::get_filename)
                     .addFunction("get_extension", &Files::get_extension)
@@ -622,6 +622,8 @@ void    LuaUtilApi::load_tools(Vm & vm)
 
 void    LuaUtilApi::load_base(Vm & vm)
 {
+    if (vm.refs_exists({"sihd", "version"}))
+        return ;
     luabridge::getGlobalNamespace(vm.lua_state())
         .beginNamespace("sihd")
             .addProperty("dir", &LuaUtilApi::dir, false)
@@ -931,7 +933,7 @@ void    LuaUtilApi::LuaWorker::set_vm(Vm *vm_ptr)
     _vm_ptr = vm_ptr;
 }
 
-bool    LuaUtilApi::LuaWorker::start_worker(const std::string & name)
+bool    LuaUtilApi::LuaWorker::start_worker(const std::string_view name)
 {
     if (this->is_worker_started() == false)
     {
@@ -964,7 +966,7 @@ void    LuaUtilApi::LuaStepWorker::set_vm(Vm *vm_ptr)
     _vm_ptr = vm_ptr;
 }
 
-bool    LuaUtilApi::LuaStepWorker::start_worker(const std::string & name)
+bool    LuaUtilApi::LuaStepWorker::start_worker(const std::string_view name)
 {
     if (this->is_worker_started() == false)
     {

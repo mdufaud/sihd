@@ -13,51 +13,50 @@ class Files
 {
     public:
         // stat
-        static bool exists(const std::string_view path);
-        static bool is_file(const std::string_view path);
-        static bool is_dir(const std::string_view path);
-        static size_t get_filesize(const std::string_view path);
+        static bool exists(std::string_view path);
+        static bool is_file(std::string_view path);
+        static bool is_dir(std::string_view path);
+        static size_t get_filesize(std::string_view path);
 
-        // directories (std::string to be sure there's a closed string and not making/deleting what is not wanted)
-        static bool remove_directory(const std::string & path);
-        static bool remove_directories(const std::string & path);
-        static bool make_directory(const std::string & path, mode_t mode = 0750);
-        static bool make_directories(const std::string & path, mode_t mode = 0750);
-        static std::vector<std::string> get_children(const std::string_view path);
-        static std::vector<std::string> get_recursive_children(const std::string_view path);
+        // directories
+        static bool remove_directory(std::string_view path);
+        static bool remove_directories(std::string_view path);
+        static bool make_directory(std::string_view path, mode_t mode = 0750);
+        static bool make_directories(std::string_view path, mode_t mode = 0750);
+        static std::vector<std::string> get_children(std::string_view path);
+        static std::vector<std::string> get_recursive_children(std::string_view path);
 
-        // path manipulation (std::string because path manipulation with not closed string might lead to horrors)
-        static bool is_absolute(const std::string & path);
-        static std::string normalize(const std::string & path);
-        static std::string trim_path(std::string && path, const std::string & to_remove);
-        static std::string trim_path(const std::string & path, const std::string & to_remove);
-        static void trim_in_path(std::string & path, const std::string & to_remove);
-        static void trim_in_path(std::vector<std::string> & list, const std::string & to_remove);
+        // path manipulation
+        static bool is_absolute(std::string_view path);
+        static std::string normalize(std::string_view path);
+        static std::string trim_path(std::string_view path, std::string_view to_remove);
+        static void trim_in_path(std::string & path, std::string_view to_remove);
+        static void trim_in_path(std::vector<std::string> & list, std::string_view to_remove);
 
-        static std::string get_parent(const std::string_view path);
-        static std::string get_filename(const std::string_view path);
-        static std::string get_extension(const std::string_view path);
+        static std::string get_parent(std::string_view path);
+        static std::string get_filename(std::string_view path);
+        static std::string get_extension(std::string_view path);
 
-        static std::string combine(std::vector<std::string> && list);
+        static std::string combine(std::initializer_list<std::string_view> list);
         static std::string combine(const std::vector<std::string> & list);
         // if path2 is empty, it will append the separation character to path1
-        static std::string combine(const std::string & path1, const std::string & path2);
+        static std::string combine(std::string_view path1, std::string_view path2);
 
         // files
-        static bool remove_file(const std::string & path);
-        static bool are_equals(const std::string_view path1, const std::string_view path2);
+        static bool remove_file(std::string_view path);
+        static bool are_equals(std::string_view path1, std::string_view path2);
 
         // fast read from file
-        static ssize_t read_binary(const std::string_view path, char *buf, size_t size);
+        static ssize_t read_binary(std::string_view path, char *buf, size_t size);
         // fast string read from file
-        static std::optional<std::string> read(const std::string_view path, size_t size);
+        static std::optional<std::string> read(std::string_view path, size_t size);
         // fast all file read
-        static std::optional<std::string> read_all(const std::string_view path);
+        static std::optional<std::string> read_all(std::string_view path);
 
         // fast binary write into file
-        static bool write_binary(const std::string_view path, const char *data, size_t size, bool append = false);
+        static bool write_binary(std::string_view path, const char *data, size_t size, bool append = false);
         // fast write into file
-        static bool write(const std::string_view path, const std::string_view content, bool append = false);
+        static bool write(std::string_view path, std::string_view content, bool append = false);
 
         inline static std::string sep_str() { return std::string(1, Files::sep); };
         static char sep;
@@ -68,10 +67,10 @@ class Files
         Files() {};
         virtual ~Files() {};
 
-        static std::string _combine(const std::string_view path1, const std::string_view path2);
+        static std::string _combine(std::string_view path1, std::string_view path2);
 
 # if !defined(__SIHD_WINDOWS__)
-        static void _get_recursive_children(const std::string_view & path, std::vector<std::string> & children);
+        static void _get_recursive_children(std::string_view path, std::vector<std::string> & children);
 # endif
 };
 

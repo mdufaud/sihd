@@ -31,7 +31,7 @@ const char Str::g_escapes_open[] = "\"'[({<";
 const char Str::g_escapes_close[] = "\"'])}>";
 char Str::g_escape_char = '\\';
 
-void    Str::append_sep(std::string & str, const std::string_view append, const std::string_view sep)
+void    Str::append_sep(std::string & str, std::string_view append, std::string_view sep)
 {
     if (str.empty())
         str += append;
@@ -42,7 +42,7 @@ void    Str::append_sep(std::string & str, const std::string_view append, const 
     }
 }
 
-char    *Str::csub(const char *str, size_t from_idx, ssize_t size)
+char    *Str::csub(std::string_view str, size_t from_idx, ssize_t size)
 {
     if (size < 0)
         return nullptr;
@@ -59,7 +59,7 @@ char    *Str::csub(const char *str, size_t from_idx, ssize_t size)
     return ret;
 }
 
-std::string     Str::join(const std::vector<std::string> & join_lst, const std::string_view join_with)
+std::string     Str::join(const std::vector<std::string> & join_lst, std::string_view join_with)
 {
     std::stringstream ss;
     bool first = true;
@@ -74,27 +74,27 @@ std::string     Str::join(const std::vector<std::string> & join_lst, const std::
     return ss.str();
 }
 
-std::string     Str::demangle(const char *name)
+std::string     Str::demangle(std::string_view name)
 {
     int status = -1;
-    char *ptr = abi::__cxa_demangle(name, NULL, NULL, &status);
+    char *ptr = abi::__cxa_demangle(name.data(), NULL, NULL, &status);
     if (status == 0)
     {
         std::string ret = ptr;
         free(ptr);
         return ret;
     }
-    return name;
+    return name.data();
 }
 
-std::string     Str::format(const char *format, ...)
+std::string     Str::format(std::string_view format, ...)
 {
     std::string str;
     va_list args;
     va_start(args, format);
     {
         std::lock_guard<std::mutex> l(g_buffer_mutex);
-        size_t ret = vsnprintf(g_buffer, g_buffer_size, format, args);
+        size_t ret = vsnprintf(g_buffer, g_buffer_size, format.data(), args);
         ret = ret > g_buffer_size ? g_buffer_size : ret;
         str.assign(g_buffer, ret);
     }
@@ -102,7 +102,7 @@ std::string     Str::format(const char *format, ...)
     return str;
 }
 
-std::string     Str::trim(const std::string_view s)
+std::string     Str::trim(std::string_view s)
 {
     size_t len = s.size();
     size_t i = 0;
@@ -136,7 +136,7 @@ std::string &   Str::to_lower(std::string & s)
     return s;
 }
 
-std::string     Str::replace(const std::string_view s, const std::string_view from, const std::string_view to)
+std::string     Str::replace(std::string_view s, std::string_view from, std::string_view to)
 {
     std::string ret;
     size_t i = s.find(from);
@@ -270,12 +270,12 @@ std::string     Str::hexdump_fmt(const void *mem, size_t size)
     return ret;
 }
 
-bool    Str::starts_with(const std::string_view s, const std::string_view start)
+bool    Str::starts_with(std::string_view s, std::string_view start)
 {
     return strncmp(s.data(), start.data(), start.length()) == 0;
 }
 
-bool    Str::ends_with(const std::string_view s, const std::string_view end)
+bool    Str::ends_with(std::string_view s, std::string_view end)
 {
     ssize_t ending = s.length() - end.length();
     if (ending < 0)
@@ -293,7 +293,7 @@ bool    Str::is_digit(int c, uint16_t base)
         || (c >= 'A' && c <= 'A' + (base - 1));
 }
 
-bool    Str::is_number(const std::string_view s, uint16_t base)
+bool    Str::is_number(std::string_view s, uint16_t base)
 {
     size_t i = 0;
     const char *data = s.data();
@@ -310,7 +310,7 @@ bool    Str::is_number(const std::string_view s, uint16_t base)
     return true;
 }
 
-std::map<std::string, std::string>  Str::parse_configuration(const std::string_view conf)
+std::map<std::string, std::string>  Str::parse_configuration(std::string_view conf)
 {
     std::map<std::string, std::string> ret;
     Splitter splitter(";");
@@ -328,7 +328,7 @@ std::map<std::string, std::string>  Str::parse_configuration(const std::string_v
     return ret;
 }
 
-bool    Str::to_long(const std::string_view str, long *ret, uint16_t base)
+bool    Str::to_long(std::string_view str, long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
@@ -342,7 +342,7 @@ bool    Str::to_long(const std::string_view str, long *ret, uint16_t base)
     return true;
 }
 
-bool   Str::to_ulong(const std::string_view str, unsigned long *ret, uint16_t base)
+bool   Str::to_ulong(std::string_view str, unsigned long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
@@ -356,7 +356,7 @@ bool   Str::to_ulong(const std::string_view str, unsigned long *ret, uint16_t ba
     return true;
 }
 
-bool    Str::to_llong(const std::string_view str, long long *ret, uint16_t base)
+bool    Str::to_llong(std::string_view str, long long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
@@ -370,7 +370,7 @@ bool    Str::to_llong(const std::string_view str, long long *ret, uint16_t base)
     return true;
 }
 
-bool   Str::to_ullong(const std::string_view str, unsigned long long *ret, uint16_t base)
+bool   Str::to_ullong(std::string_view str, unsigned long long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
@@ -384,7 +384,7 @@ bool   Str::to_ullong(const std::string_view str, unsigned long long *ret, uint1
     return true;
 }
 
-bool    Str::to_double(const std::string_view str, double *ret)
+bool    Str::to_double(std::string_view str, double *ret)
 {
     errno = 0;
     char *endptr = NULL;
@@ -399,7 +399,7 @@ bool    Str::to_double(const std::string_view str, double *ret)
 }
 
 template <>
-bool Str::convert_from_string<bool>(const std::string_view str, bool & value, [[maybe_unused]] uint16_t base)
+bool Str::convert_from_string<bool>(std::string_view str, bool & value, [[maybe_unused]] uint16_t base)
 {
     bool ret = false;
     if (str == "1")
@@ -431,7 +431,7 @@ bool Str::convert_from_string<bool>(const std::string_view str, bool & value, [[
 }
 
 template <>
-bool Str::convert_from_string<char>(const std::string_view str, char & value, [[maybe_unused]] uint16_t base)
+bool Str::convert_from_string<char>(std::string_view str, char & value, [[maybe_unused]] uint16_t base)
 {
     char c = 0;
     if (str.size() == 1)
@@ -446,7 +446,7 @@ bool Str::convert_from_string<char>(const std::string_view str, char & value, [[
 }
 
 template <>
-bool Str::convert_from_string<int8_t>(const std::string_view str, int8_t & value, uint16_t base)
+bool Str::convert_from_string<int8_t>(std::string_view str, int8_t & value, uint16_t base)
 {
     long longval;
     bool ret = Str::to_long(str, &longval, base);
@@ -456,7 +456,7 @@ bool Str::convert_from_string<int8_t>(const std::string_view str, int8_t & value
 }
 
 template <>
-bool Str::convert_from_string<int16_t>(const std::string_view str, int16_t & value, uint16_t base)
+bool Str::convert_from_string<int16_t>(std::string_view str, int16_t & value, uint16_t base)
 {
     long longval;
     bool ret = Str::to_long(str, &longval, base);
@@ -466,7 +466,7 @@ bool Str::convert_from_string<int16_t>(const std::string_view str, int16_t & val
 }
 
 template <>
-bool Str::convert_from_string<int32_t>(const std::string_view str, int32_t & value, uint16_t base)
+bool Str::convert_from_string<int32_t>(std::string_view str, int32_t & value, uint16_t base)
 {
     long longval;
     bool ret = Str::to_long(str, &longval, base);
@@ -476,7 +476,7 @@ bool Str::convert_from_string<int32_t>(const std::string_view str, int32_t & val
 }
 
 template <>
-bool Str::convert_from_string<int64_t>(const std::string_view str, int64_t & value, uint16_t base)
+bool Str::convert_from_string<int64_t>(std::string_view str, int64_t & value, uint16_t base)
 {
     long long longval;
     bool ret = Str::to_llong(str, &longval, base);
@@ -486,7 +486,7 @@ bool Str::convert_from_string<int64_t>(const std::string_view str, int64_t & val
 }
 
 template <>
-bool Str::convert_from_string<uint8_t>(const std::string_view str, uint8_t & value, uint16_t base)
+bool Str::convert_from_string<uint8_t>(std::string_view str, uint8_t & value, uint16_t base)
 {
     unsigned long longval;
     bool ret = Str::to_ulong(str, &longval, base);
@@ -496,7 +496,7 @@ bool Str::convert_from_string<uint8_t>(const std::string_view str, uint8_t & val
 }
 
 template <>
-bool Str::convert_from_string<uint16_t>(const std::string_view str, uint16_t & value, uint16_t base)
+bool Str::convert_from_string<uint16_t>(std::string_view str, uint16_t & value, uint16_t base)
 {
     unsigned long longval;
     bool ret = Str::to_ulong(str, &longval, base);
@@ -506,7 +506,7 @@ bool Str::convert_from_string<uint16_t>(const std::string_view str, uint16_t & v
 }
 
 template <>
-bool Str::convert_from_string<uint32_t>(const std::string_view str, uint32_t & value, uint16_t base)
+bool Str::convert_from_string<uint32_t>(std::string_view str, uint32_t & value, uint16_t base)
 {
     unsigned long longval;
     bool ret = Str::to_ulong(str, &longval, base);
@@ -516,7 +516,7 @@ bool Str::convert_from_string<uint32_t>(const std::string_view str, uint32_t & v
 }
 
 template <>
-bool Str::convert_from_string<uint64_t>(const std::string_view str, uint64_t & value, uint16_t base)
+bool Str::convert_from_string<uint64_t>(std::string_view str, uint64_t & value, uint16_t base)
 {
     unsigned long long longval;
     bool ret = Str::to_ullong(str, &longval, base);
@@ -526,7 +526,7 @@ bool Str::convert_from_string<uint64_t>(const std::string_view str, uint64_t & v
 }
 
 template <>
-bool Str::convert_from_string<float>(const std::string_view str, float & value, [[maybe_unused]] uint16_t base)
+bool Str::convert_from_string<float>(std::string_view str, float & value, [[maybe_unused]] uint16_t base)
 {
     double doubleval;
     bool ret = Str::to_double(str, &doubleval);
@@ -536,7 +536,7 @@ bool Str::convert_from_string<float>(const std::string_view str, float & value, 
 }
 
 template <>
-bool Str::convert_from_string<double>(const std::string_view str, double & value, [[maybe_unused]] uint16_t base)
+bool Str::convert_from_string<double>(std::string_view str, double & value, [[maybe_unused]] uint16_t base)
 {
     double doubleval;
     bool ret = Str::to_double(str, &doubleval);
@@ -600,7 +600,7 @@ int     Str::get_closing_escape_index(const char *str, int index, const char *au
     return -2;
 }
 
-std::string  Str::remove_escape_char(const std::string_view str)
+std::string  Str::remove_escape_char(std::string_view str)
 {
     std::string ret;
     const char *cstr = str.data();
@@ -634,7 +634,7 @@ std::string  Str::remove_escape_char(const std::string_view str)
     return ret;
 }
 
-std::string  Str::remove_escape_sequences(const std::string_view str, const char *authorized_open_escape_sequences)
+std::string  Str::remove_escape_sequences(std::string_view str, const char *authorized_open_escape_sequences)
 {
     const char *cstr = str.data();
     std::string ret;

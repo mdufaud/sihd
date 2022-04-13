@@ -25,11 +25,11 @@ class Socket
         Socket();
         // opens
         Socket(int domain, int socket_type, int protocol);
-        Socket(const std::string & domain, const std::string & socket_type, const std::string & protocol);
+        Socket(std::string_view domain, std::string_view socket_type, std::string_view protocol);
         // from existing socket
         Socket(int socket);
         Socket(int socket, int domain, int socket_type, int protocol);
-        Socket(int socket, const std::string & domain, const std::string & socket_type, const std::string & protocol);
+        Socket(int socket, std::string_view domain, std::string_view socket_type, std::string_view protocol);
 
         virtual ~Socket();
 
@@ -63,7 +63,7 @@ class Socket
         bool is_blocking() const { return Socket::is_socket_blocking(_socket); }
         bool is_broadcast() const { return Socket::is_socket_broadcast(_socket); }
 
-        bool open(const std::string & domain, const std::string & type, const std::string & protocol);
+        bool open(std::string_view domain, std::string_view type, std::string_view protocol);
         bool open(int domain, int socket_type, int protocol);
         bool close();
         bool shutdown();
@@ -141,14 +141,14 @@ class Socket
 
 
         // IP from std::string
-        bool bind(const std::string & host, int port);
-        bool connect(const std::string & host, int port);
-        ssize_t send_to(const std::string & host, int port, const void *data, size_t size);
-        bool send_all_to(const std::string & host, int port, const void *data, size_t size);
+        bool bind(std::string_view host, int port);
+        bool connect(std::string_view host, int port);
+        ssize_t send_to(std::string_view host, int port, const void *data, size_t size);
+        bool send_all_to(std::string_view host, int port, const void *data, size_t size);
         // sihd::util::IArray
-        ssize_t send_to(const std::string & host, int port, const sihd::util::IArray & arr)
+        ssize_t send_to(std::string_view host, int port, const sihd::util::IArray & arr)
             { return this->send_to(host, port, arr.cbuf(), arr.byte_size()); }
-        ssize_t send_all_to(const std::string & host, int port, const sihd::util::IArray & arr)
+        ssize_t send_all_to(std::string_view host, int port, const sihd::util::IArray & arr)
             { return this->send_all_to(host, port, arr.cbuf(), arr.byte_size()); }
 
         /*
@@ -174,15 +174,15 @@ class Socket
         // Operations on unix sockets //
 
         static std::string get_unix_socket_peername(int socket);
-        bool bind_unix(const std::string & path);
-        bool connect_unix(const std::string & path);
-        ssize_t send_to_unix(const std::string & path, const void *data, size_t size);
-        bool send_all_to_unix(const std::string & path, const void *data, size_t size);
+        bool bind_unix(std::string_view path);
+        bool connect_unix(std::string_view path);
+        ssize_t send_to_unix(std::string_view path, const void *data, size_t size);
+        bool send_all_to_unix(std::string_view path, const void *data, size_t size);
         ssize_t receive_from_unix(std::string & path, void *data, size_t size);
         // sihd::util::IArray
-        ssize_t send_to_unix(const std::string & path, const sihd::util::IArray & arr)
+        ssize_t send_to_unix(std::string_view path, const sihd::util::IArray & arr)
             { return this->send_to_unix(path, arr.cbuf(), arr.byte_size()); }
-        bool send_all_to_unix(const std::string & path, const sihd::util::IArray & arr)
+        bool send_all_to_unix(std::string_view path, const sihd::util::IArray & arr)
             { return this->send_all_to_unix(path, arr.cbuf(), arr.byte_size()); }
         ssize_t receive_from_unix(std::string & path, sihd::util::IArray & arr)
             { return Socket::_adapt_array_size(arr, this->receive_from_unix(path, arr.buf(), arr.byte_capacity())); }

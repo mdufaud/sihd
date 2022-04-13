@@ -64,21 +64,21 @@ class Process: public IStoppableRunnable, public IHandler<Poll *>
         Process & stdin_close();
         Process & stdin_from(const std::string & input);
         Process & stdin_from(int fd);
-        bool stdin_from_file(const std::string & path);
+        bool stdin_from_file(std::string_view path);
 
         Process & stdout_close();
         Process & stdout_to(std::function<void(const char *, ssize_t)> fun);
         Process & stdout_to(std::string & output);
         Process & stdout_to(int fd);
         Process & stdout_to(Process & proc);
-        bool stdout_to_file(const std::string & path, bool append = false);
+        bool stdout_to_file(std::string_view path, bool append = false);
 
         Process & stderr_close();
         Process & stderr_to(std::function<void(const char *, ssize_t)> fun);
         Process & stderr_to(std::string & output);
         Process & stderr_to(int fd);
         Process & stderr_to(Process & proc);
-        bool stderr_to_file(const std::string & path, bool append = false);
+        bool stderr_to_file(std::string_view path, bool append = false);
 
         void clear_argv();
         Process & add_argv(const std::string & arg);
@@ -156,7 +156,7 @@ class Process: public IStoppableRunnable, public IHandler<Poll *>
         void _fdw_to(FileDescWrapper & fdw, std::function<void(const char *, ssize_t)> && fun);
         void _fdw_to(FileDescWrapper & fdw, std::string & output);
         void _fdw_to(FileDescWrapper & fdw, int fd);
-        bool _fdw_to_file(FileDescWrapper & fdw, const std::string & path, bool append);
+        bool _fdw_to_file(FileDescWrapper & fdw, std::string_view path, bool append);
 
         void handle(Poll *poll);
 

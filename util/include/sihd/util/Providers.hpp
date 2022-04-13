@@ -58,7 +58,7 @@ class AProvider: public sihd::util::IProvider<TYPE>
     public:
         virtual ~AProvider() {}
 
-        virtual bool provider_wait_for_data(time_t nano_duration)
+        virtual bool provider_wait_data_for(time_t nano_duration)
         {
             return _waitable.wait_for(nano_duration) == false;
         }
@@ -68,7 +68,10 @@ class AProvider: public sihd::util::IProvider<TYPE>
             _waitable.infinite_wait();
         }
 
-        std::lock_guard<std::mutex> provider_lock_guard() { return std::lock_guard(_mutex); }
+        std::lock_guard<std::mutex> provider_lock_guard()
+        {
+            return std::lock_guard(_mutex);
+        }
 
     protected:
         void _provider_notify() { _waitable.notify(1); }

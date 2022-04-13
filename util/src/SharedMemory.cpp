@@ -32,14 +32,14 @@ SharedMemory::~SharedMemory()
 
 #if !defined(__SIHD_WINDOWS__)
 
-bool    SharedMemory::create(const std::string & id, size_t size, mode_t mode)
+bool    SharedMemory::create(std::string_view id, size_t size, mode_t mode)
 {
     return this->_create(id, size, mode, O_RDWR | O_CREAT, PROT_READ | PROT_WRITE);
 }
 
-bool    SharedMemory::_create(const std::string & id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
+bool    SharedMemory::_create(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
 {
-    _fd = shm_open(id.c_str(), shm_flags, mode);
+    _fd = shm_open(id.data(), shm_flags, mode);
     if (_fd == -1)
     {
         SIHD_LOG(error, "SharedMemory: shm_open: " << strerror(errno));
@@ -64,19 +64,19 @@ bool    SharedMemory::_create(const std::string & id, size_t size, mode_t mode, 
     return true;
 }
 
-bool    SharedMemory::attach(const std::string & id, size_t size, mode_t mode)
+bool    SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
 {
     return this->_attach(id, size, mode, O_RDWR, PROT_READ | PROT_WRITE);
 }
 
-bool    SharedMemory::attach_read_only(const std::string & id, size_t size, mode_t mode)
+bool    SharedMemory::attach_read_only(std::string_view id, size_t size, mode_t mode)
 {
     return this->_attach(id, size, mode, O_RDONLY, PROT_READ);
 }
 
-bool    SharedMemory::_attach(const std::string & id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
+bool    SharedMemory::_attach(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
 {
-    _fd = shm_open(id.c_str(), shm_flags, mode);
+    _fd = shm_open(id.data(), shm_flags, mode);
     if (_fd == -1)
     {
         SIHD_LOG(error, "SharedMemory: shm_open: " << strerror(errno));
@@ -124,19 +124,19 @@ bool    SharedMemory::clear()
 
 #else
 
-bool    SharedMemory::create(const std::string & id, size_t size, mode_t mode)
+bool    SharedMemory::create(std::string_view id, size_t size, mode_t mode)
 {
     (void)id; (void)size; (void)mode;
     return false;
 }
 
-bool    SharedMemory::attach(const std::string & id, size_t size, mode_t mode)
+bool    SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
 {
     (void)id; (void)size; (void)mode;
     return false;
 }
 
-bool    SharedMemory::attach_read_only(const std::string & id, size_t size, mode_t mode)
+bool    SharedMemory::attach_read_only(std::string_view id, size_t size, mode_t mode)
 {
     (void)id; (void)size; (void)mode;
     return false;

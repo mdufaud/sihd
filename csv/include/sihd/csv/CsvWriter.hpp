@@ -22,18 +22,18 @@ class CsvWriter:    public sihd::util::Named,
         bool set_delimiter(int c);
         bool set_commentary(int c);
 
-        bool open(const std::string & path, bool append = false);
+        bool open(std::string_view path, bool append = false);
         bool is_open() const;
         bool close();
 
         bool new_row();
-        ssize_t write_commentary(const std::string & commentary);
+        ssize_t write_commentary(std::string_view commentary);
 
         // IWriterTimestamp
 		ssize_t write(const char *data, size_t size);
 		ssize_t write(const char *data, size_t size, time_t nano_timestamp);
 
-        ssize_t write(const std::string & value);
+        ssize_t write(std::string_view value);
         ssize_t write(const std::vector<std::string> & values);
 
         ssize_t write_row(const std::vector<std::string> & values);

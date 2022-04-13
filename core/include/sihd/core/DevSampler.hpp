@@ -17,7 +17,7 @@ class DevSampler:   public sihd::core::Device,
         DevSampler(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~DevSampler();
 
-        bool set_sample(const std::string & conf);
+        bool set_sample(std::string_view conf);
         bool set_frequency(double freq);
 
         bool is_running() const override;

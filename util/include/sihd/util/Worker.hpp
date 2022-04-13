@@ -27,8 +27,8 @@ class Worker: public IRunnable, public Configurable
         virtual ~Worker();
 
         virtual void set_runnable(IRunnable *runnable);
-        virtual bool start_worker(const std::string & name);
-        virtual bool start_sync_worker(const std::string & name);
+        virtual bool start_worker(std::string_view name);
+        virtual bool start_sync_worker(std::string_view name);
         virtual bool stop_worker();
         virtual bool is_worker_running() const
         {

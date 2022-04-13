@@ -22,11 +22,11 @@ void    Worker::set_runnable(IRunnable *runnable)
     _runnable_ptr = runnable;
 }
 
-bool    Worker::start_worker(const std::string & name)
+bool    Worker::start_worker(std::string_view name)
 {
     if (_runnable_ptr == nullptr)
     {
-        SIHD_LOG_ERROR("Worker: cannot start worker '%s': nothing to run", name.c_str());
+        SIHD_LOG_ERROR("Worker: cannot start worker '%s': nothing to run", name.data());
         return false;
     }
     {
@@ -44,7 +44,7 @@ bool    Worker::start_worker(const std::string & name)
     return ret;
 }
 
-bool    Worker::start_sync_worker(const std::string & name)
+bool    Worker::start_sync_worker(std::string_view name)
 {
     std::lock_guard lock(_worker_sync_mutex);
     bool ret = this->start_worker(name);

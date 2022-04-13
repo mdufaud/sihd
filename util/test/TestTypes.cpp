@@ -49,20 +49,20 @@ namespace test
 
     TEST_F(TestTypes, test_types_str)
     {
-        EXPECT_EQ(Types::type_to_string(TYPE_NONE), "none");
-        EXPECT_EQ(Types::type_to_string(TYPE_BOOL), "bool");
-        EXPECT_EQ(Types::type_to_string(TYPE_CHAR), "char");
-        EXPECT_EQ(Types::type_to_string(TYPE_BYTE), "byte");
-        EXPECT_EQ(Types::type_to_string(TYPE_UBYTE), "ubyte");
-        EXPECT_EQ(Types::type_to_string(TYPE_SHORT), "short");
-        EXPECT_EQ(Types::type_to_string(TYPE_USHORT), "ushort");
-        EXPECT_EQ(Types::type_to_string(TYPE_INT), "int");
-        EXPECT_EQ(Types::type_to_string(TYPE_UINT), "uint");
-        EXPECT_EQ(Types::type_to_string(TYPE_LONG), "long");
-        EXPECT_EQ(Types::type_to_string(TYPE_ULONG), "ulong");
-        EXPECT_EQ(Types::type_to_string(TYPE_FLOAT), "float");
-        EXPECT_EQ(Types::type_to_string(TYPE_DOUBLE), "double");
-        EXPECT_EQ(Types::type_to_string(TYPE_OBJECT), "object");
+        EXPECT_STREQ(Types::type_to_string(TYPE_NONE), "none");
+        EXPECT_STREQ(Types::type_to_string(TYPE_BOOL), "bool");
+        EXPECT_STREQ(Types::type_to_string(TYPE_CHAR), "char");
+        EXPECT_STREQ(Types::type_to_string(TYPE_BYTE), "byte");
+        EXPECT_STREQ(Types::type_to_string(TYPE_UBYTE), "ubyte");
+        EXPECT_STREQ(Types::type_to_string(TYPE_SHORT), "short");
+        EXPECT_STREQ(Types::type_to_string(TYPE_USHORT), "ushort");
+        EXPECT_STREQ(Types::type_to_string(TYPE_INT), "int");
+        EXPECT_STREQ(Types::type_to_string(TYPE_UINT), "uint");
+        EXPECT_STREQ(Types::type_to_string(TYPE_LONG), "long");
+        EXPECT_STREQ(Types::type_to_string(TYPE_ULONG), "ulong");
+        EXPECT_STREQ(Types::type_to_string(TYPE_FLOAT), "float");
+        EXPECT_STREQ(Types::type_to_string(TYPE_DOUBLE), "double");
+        EXPECT_STREQ(Types::type_to_string(TYPE_OBJECT), "object");
     }
 
     TEST_F(TestTypes, test_types_template)

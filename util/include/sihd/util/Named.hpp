@@ -2,6 +2,7 @@
 # define __SIHD_UTIL_NAMED_HPP__
 
 # include <string>
+# include <string_view>
 # include <iostream>
 
 namespace sihd::util

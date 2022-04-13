@@ -23,7 +23,7 @@ class Mime
         /**
          * Add a new mime type.
          */
-        void add(const std::string & ext, const std::string & content_type);
+        void add(const std::string & ext, std::string_view content_type);
 
         /**
          * text/plain

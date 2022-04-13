@@ -13,7 +13,7 @@ class LevelFilterLogger:    public ILoggerFilter
         LevelFilterLogger(const std::string & level, bool match = false);
         virtual ~LevelFilterLogger();
 
-        virtual bool filter(const LogInfo & info, const std::string_view & msg);
+        virtual bool filter(const LogInfo & info, std::string_view msg);
 
         LogLevel level;
         bool match;

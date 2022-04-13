@@ -25,9 +25,9 @@ class AChannelContainer:    public sihd::util::Node,
         bool get_channel(const std::string & name, Channel **to_fill);
 
         Channel *add_unlinked_channel(const std::string & name, sihd::util::Type type, size_t size = 1);
-        Channel *add_unlinked_channel(const std::string & name, const std::string & type, size_t size = 1);
+        Channel *add_unlinked_channel(const std::string & name, std::string_view type, size_t size = 1);
         Channel *add_channel(const std::string & name, sihd::util::Type type, size_t size = 1);
-        Channel *add_channel(const std::string & name, const std::string & type, size_t size = 1);
+        Channel *add_channel(const std::string & name, std::string_view type, size_t size = 1);
 
         bool observe_channel(const std::string & channel_name);
         bool observe_channel(Channel *c);

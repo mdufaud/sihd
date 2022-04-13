@@ -67,7 +67,7 @@ void    ZipWriter::encrypt_in_aes_256()
     _encryption_method = ZIP_EM_AES_256;
 }
 
-bool    ZipWriter::open(const std::string & path, bool fails_if_exists, bool truncate)
+bool    ZipWriter::open(std::string_view path, bool fails_if_exists, bool truncate)
 {
     int flags = ZIP_CREATE;
     int error;
@@ -77,7 +77,7 @@ bool    ZipWriter::open(const std::string & path, bool fails_if_exists, bool tru
     if (truncate)
         flags |= ZIP_TRUNCATE;
     this->close();
-    _zip_ptr = zip_open(path.c_str(), flags, &error);
+    _zip_ptr = zip_open(path.data(), flags, &error);
     if (_zip_ptr == nullptr)
         SIHD_LOG(error, "ZipWriter: could not open zip: " << ZipUtils::get_error(error));
     return _zip_ptr != nullptr;
@@ -96,16 +96,16 @@ bool    ZipWriter::close()
     return ret;
 }
 
-bool    ZipWriter::add_dir(const std::string & name)
+bool    ZipWriter::add_dir(std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
-    if (zip_dir_add(_zip_ptr, name.c_str(), ZIP_FL_ENC_UTF_8) < 0)
+    if (zip_dir_add(_zip_ptr, name.data(), ZIP_FL_ENC_UTF_8) < 0)
         return false;
     return true;
 }
 
-bool    ZipWriter::fs_add(const std::string & path, const std::string & name)
+bool    ZipWriter::fs_add(std::string_view path, std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -116,7 +116,7 @@ bool    ZipWriter::fs_add(const std::string & path, const std::string & name)
     return false;
 }
 
-bool    ZipWriter::fs_add_dir(const std::string & path, const std::string & name)
+bool    ZipWriter::fs_add_dir(std::string_view path, std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -127,7 +127,7 @@ bool    ZipWriter::fs_add_dir(const std::string & path, const std::string & name
     }
     std::vector<std::string> children = Files::get_children(path);
     bool ret = true;
-    for (const std::string & child: children)
+    for (std::string_view child: children)
     {
         ret = this->fs_add(Files::combine(path, child), Files::combine(name, child));
         if (!ret)
@@ -136,7 +136,7 @@ bool    ZipWriter::fs_add_dir(const std::string & path, const std::string & name
     return ret;
 }
 
-bool    ZipWriter::add_file(const std::string & name, const void *data, size_t size)
+bool    ZipWriter::add_file(std::string_view name, const void *data, size_t size)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -149,11 +149,11 @@ bool    ZipWriter::add_file(const std::string & name, const void *data, size_t s
     return this->_add_source(name, source);
 }
 
-bool    ZipWriter::fs_add_file(const std::string & path, const std::string & name)
+bool    ZipWriter::fs_add_file(std::string_view path, std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
-    zip_source_t *source = zip_source_file(_zip_ptr, path.c_str(), 0, 0);
+    zip_source_t *source = zip_source_file(_zip_ptr, path.data(), 0, 0);
     if (source == nullptr)
     {
         SIHD_LOG(error, "ZipWriter: could not add file to zip '" << ZipUtils::get_error(_zip_ptr) << "' for: " << path);
@@ -162,11 +162,11 @@ bool    ZipWriter::fs_add_file(const std::string & path, const std::string & nam
     return this->_add_source(name, source);
 }
 
-bool    ZipWriter::_add_source(const std::string & name, zip_source_t *source)
+bool    ZipWriter::_add_source(std::string_view name, zip_source_t *source)
 {
     if (_zip_ptr == nullptr)
         return false;
-    int ret = zip_file_add(_zip_ptr, name.c_str(), source, ZIP_FL_ENC_UTF_8);
+    int ret = zip_file_add(_zip_ptr, name.data(), source, ZIP_FL_ENC_UTF_8);
     if (ret < 0)
     {
         SIHD_LOG(error, "ZipWriter: could not add file to zip '" << ZipUtils::get_error(_zip_ptr) << "' for: " << name);
@@ -175,17 +175,17 @@ bool    ZipWriter::_add_source(const std::string & name, zip_source_t *source)
     return ret >= 0;
 }
 
-bool    ZipWriter::encrypt(size_t index, const char *password)
+bool    ZipWriter::encrypt(size_t index, std::string_view password)
 {
     if (_zip_ptr == nullptr)
         return false;
-    bool ret = zip_file_set_encryption(_zip_ptr, index, _encryption_method, password) >= 0;
+    bool ret = zip_file_set_encryption(_zip_ptr, index, _encryption_method, password.data()) >= 0;
     if (!ret)
         SIHD_LOG(error, "ZipWriter: failed to set encryption on index '" << index << "': " << ZipUtils::get_error(_zip_ptr));
     return ret;
 }
 
-bool    ZipWriter::encrypt_all(const char *password)
+bool    ZipWriter::encrypt_all(std::string_view password)
 {
     if (_zip_ptr == nullptr)
         return false;

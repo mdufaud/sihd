@@ -15,11 +15,11 @@ class HttpResponse
         HttpResponse(Mime *mimes = nullptr);
         virtual ~HttpResponse();
 
-        bool set_content(const std::string & str);
+        bool set_content(std::string_view str);
         bool set_content(const sihd::util::IArray & data);
         bool set_json_content(const nlohmann::json & data);
 
-        void set_content_type(const std::string & mime_type);
+        void set_content_type(std::string_view mime_type);
         void set_content_type_from_extension(const std::string & extension);
 
         HttpHeader & http_header() { return _http_header; }

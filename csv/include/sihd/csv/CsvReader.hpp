@@ -22,7 +22,7 @@ class CsvReader:    public sihd::util::Named,
         bool set_delimiter(int c);
         bool set_commentary(int c);
 
-        bool open(const std::string & path);
+        bool open(std::string_view path);
         bool is_open() const;
         bool close();
 

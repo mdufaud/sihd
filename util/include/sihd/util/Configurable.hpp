@@ -99,19 +99,28 @@ class Configurable
         {
             try { return _callbackManager.call<bool, const std::string &>(name, param); }
             catch (const std::invalid_argument & e) {}
+            try { return _callbackManager.call<bool, std::string_view>(name, param); }
+            catch (const std::invalid_argument & e) {}
             return _callbackManager.call<bool, const char *>(name, param.c_str());
+        }
+
+        bool set_conf_str(const std::string & name, std::string_view param)
+        {
+            try { return _callbackManager.call<bool, std::string_view>(name, param); }
+            catch (const std::invalid_argument & e) {}
+            try { return _callbackManager.call<bool, const char *>(name, param.data()); }
+            catch (const std::invalid_argument & e) {}
+            std::string str(param.data(), param.size());
+            return this->set_conf_str(name, str);
         }
 
         bool set_conf_str(const std::string & name, const char *param)
         {
-            try { return _callbackManager.call<bool, const char *>(name, param); }
-            catch (const std::invalid_argument & e) {}
-            try { return _callbackManager.call<bool, const std::string &>(name, param); }
-            catch (const std::invalid_argument & e) {}
-            return _callbackManager.call<bool, std::string>(name, param);
+            std::string_view str_view(param);
+            return this->set_conf_str(name, str_view);
         }
 
-        bool set_conf(const std::string & key, nlohmann::json & val)
+        bool set_conf(const std::string & key, const nlohmann::json & val)
         {
             if (val.is_null())
                 return false;
@@ -138,12 +147,12 @@ class Configurable
             return false;
         }
 
-        bool set_conf(nlohmann::json && json)
+        bool set_conf(const nlohmann::json && json)
         {
             return this->set_conf(json);
         }
 
-        bool set_conf(nlohmann::json & json)
+        bool set_conf(const nlohmann::json & json)
         {
             if (json.is_object() == false || json.is_null())
                 return false;
@@ -159,13 +168,11 @@ class Configurable
     private:
         CallbackManager _callbackManager;
 
-        bool _set_conf_json(const std::string & name, nlohmann::json & val)
+        bool _set_conf_json(const std::string & name, const nlohmann::json & val)
         {
-            try { return _callbackManager.call<bool, nlohmann::json &>(name, val); }
-            catch (const std::invalid_argument & e) {}
             try { return _callbackManager.call<bool, const nlohmann::json &>(name, val); }
             catch (const std::invalid_argument & e) {}
-            return _callbackManager.call<bool, nlohmann::json>(name, val);
+            return _callbackManager.call<bool, const nlohmann::json>(name, val);
         }
 };
 

@@ -29,11 +29,11 @@ bool    PcapUtils::init(unsigned int opts)
     return PcapUtils::_is_init;
 }
 
-bool    PcapUtils::lookupnet(const std::string & dev, bpf_u_int32 *ip, bpf_u_int32 *mask)
+bool    PcapUtils::lookupnet(std::string_view dev, bpf_u_int32 *ip, bpf_u_int32 *mask)
 {
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    int ret = pcap_lookupnet(dev.c_str(), ip, mask, errbuf);
+    int ret = pcap_lookupnet(dev.data(), ip, mask, errbuf);
     if (ret != 0)
         SIHD_LOG(error, "PcapUtils: " << errbuf);
     return ret;
@@ -54,9 +54,9 @@ std::string PcapUtils::datalink_to_desc(int dtl)
     return pcap_datalink_val_to_description(dtl);
 }
 
-int     PcapUtils::string_to_datalink(const std::string & dtl)
+int     PcapUtils::string_to_datalink(std::string_view dtl)
 {
-    return pcap_datalink_name_to_val(dtl.c_str());
+    return pcap_datalink_name_to_val(dtl.data());
 }
 
 bool    PcapUtils::is_timestamp_type(int ts)
@@ -74,9 +74,9 @@ std::string PcapUtils::timestamp_type_to_desc(int ts)
     return pcap_tstamp_type_val_to_description(ts);
 }
 
-int     PcapUtils::string_to_timestamp_type(const std::string & ts)
+int     PcapUtils::string_to_timestamp_type(std::string_view ts)
 {
-    return pcap_tstamp_type_name_to_val(ts.c_str());
+    return pcap_tstamp_type_name_to_val(ts.data());
 }
 
 }

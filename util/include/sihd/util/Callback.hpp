@@ -4,6 +4,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <memory>
 
 namespace sihd::util
 {
@@ -12,14 +13,7 @@ class CallbackManager
 {
     public:
         CallbackManager() {}
-        ~CallbackManager()
-        {
-            for (auto & [name, callback]: _callbacks)
-            {
-                (void)name;
-                delete callback;
-            }
-        }
+        ~CallbackManager() {}
 
         bool exists(const std::string & name)
         {
@@ -30,7 +24,6 @@ class CallbackManager
         {
             if (_callbacks.find(name) != _callbacks.end())
             {
-                delete _callbacks[name];
                 _callbacks.erase(name);
             }
         }
@@ -39,27 +32,27 @@ class CallbackManager
         template<typename R, typename ...Targs>
         void set(const std::string & name, R (*fun)(Targs...))
         {
-            _callbacks[name] = new Callback<R, Targs...>([fun](Targs... args)
+            _callbacks.insert(std::make_pair(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun](Targs... args)
             {
                 return (*fun)(args...);
-            });
+            }))));
         }
 
         // Member functions binding
         template<typename C, typename R, typename ...Targs>
-        void set(const std::string & name, C* obj, R (C::*fun)(Targs...))
+        void set(const std::string & name, C *obj, R (C::*fun)(Targs...))
         {
-            _callbacks[name] = new Callback<R, Targs...>([fun, obj](Targs... args)
+            _callbacks.insert(std::make_pair(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun, obj](Targs... args)
             {
                 return (obj->*fun)(args...);
-            });
+            }))));
         }
 
         // std::function binding
         template<typename R, typename ...Targs>
         void set(const std::string & name, std::function<R (Targs...)> fun)
         {
-            _callbacks[name] = new Callback<R, Targs...>(std::move(fun));
+            _callbacks.insert(std::make_pair(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun)))));
         }
 
         // The entire signature of the lambda must be passed to this overload.
@@ -67,7 +60,7 @@ class CallbackManager
         void set(const std::string & name, Callable callable)
         {
             std::function<R (Targs...)> fun(callable);
-            _callbacks[name] = new Callback<R, Targs...>(std::move(fun));
+            _callbacks.insert(std::make_pair(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun)))));
         }
 
         // Calling
@@ -87,6 +80,15 @@ class CallbackManager
         R call(const std::string & name)
         {
             return this->call_base<R>(name);
+        }
+
+        template<typename R, typename ...Targs>
+        bool check_call_type(const std::string & name)
+        {
+            CallbackBase *cbase = _callbacks[name].get();
+            if (cbase == nullptr)
+                return false;
+            return dynamic_cast<Callback<R, Targs...> *>(cbase) != nullptr;
         }
 
     private:
@@ -121,18 +123,18 @@ class CallbackManager
         template<typename R, typename ...Targs>
         R call_base(const std::string & name, Targs... args)
         {
-            CallbackBase* cbase = _callbacks[name];
+            CallbackBase *cbase = _callbacks[name].get();
             if (cbase == nullptr)
                 throw std::out_of_range("No callback named '" + name + "'.");
 
-            Callback<R, Targs...>* cb = dynamic_cast<Callback<R, Targs...> *>(cbase);
+            Callback<R, Targs...> *cb = dynamic_cast<Callback<R, Targs...> *>(cbase);
             if (cb == nullptr)
                 throw std::invalid_argument("Cast error for callback '" + name + "', check signature.");
 
             return cb->call(args...);
         }
 
-        std::map<std::string, CallbackBase*> _callbacks;
+        std::map<std::string, std::unique_ptr<CallbackBase>> _callbacks;
 };
 
 }

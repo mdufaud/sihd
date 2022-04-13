@@ -34,21 +34,21 @@ class HttpServer:   public sihd::util::Node,
         HttpServer(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~HttpServer();
 
-        bool set_encoding(const std::string & encoding);
+        bool set_encoding(std::string_view encoding);
         bool set_port(int port);
-        bool set_root_dir(const std::string & root_dir);
+        bool set_root_dir(std::string_view root_dir);
         bool set_poll_frequency(double freq);
-        bool set_ssl_cert_path(const std::string & path);
-        bool set_ssl_cert_key(const std::string & path);
-        bool set_404_path(const std::string & path);
-        bool set_servername(const std::string & path);
+        bool set_ssl_cert_path(std::string_view path);
+        bool set_ssl_cert_key(std::string_view path);
+        bool set_404_path(std::string_view path);
+        bool set_servername(std::string_view path);
         bool add_resource_path(const std::string & path);
         bool remove_resource_path(const std::string & path);
 
         virtual bool run();
         virtual bool stop();
 
-        virtual bool get_resource_path(const std::string & path, std::string & res);
+        virtual bool get_resource_path(std::string_view path, std::string & res);
 
     protected:
         struct HttpSession
@@ -107,13 +107,13 @@ class HttpServer:   public sihd::util::Node,
 
         HttpRequest::RequestType _get_request_type(struct lws *wsi);
 
-        virtual int _on_http_request(HttpSession *session, const std::string & path);
+        virtual int _on_http_request(HttpSession *session, std::string_view path);
         virtual int _on_http_body(HttpSession *session, const uint8_t *buf, size_t size);
         virtual int _on_http_body_end(HttpSession *session);
         virtual int _on_http_request_end();
         virtual int _on_http_file_completion_end();
 
-        virtual bool _check_webservices(HttpSession *session, const std::string & path);
+        virtual bool _check_webservices(HttpSession *session, std::string_view path);
         virtual bool _serve_webservice(HttpSession *session, WebService *webservice, const HttpRequest & request);
 
         // websocket protocol callbacks
@@ -137,14 +137,14 @@ class HttpServer:   public sihd::util::Node,
         /*
             code = HTTP_STATUS_MOVED_PERMANENTLY || HTTP_STATUS_FOUND || HTTP_STATUS_SEE_OTHER || HTTP_STATUS_NOT_MODIFIED
         */
-        virtual bool _send_http_redirect(struct lws *wsi, const std::string & redirect_path, int code = HTTP_STATUS_MOVED_PERMANENTLY);
-        virtual bool _send_404(struct lws *wsi, const std::string & html_404);
+        virtual bool _send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code = HTTP_STATUS_MOVED_PERMANENTLY);
+        virtual bool _send_404(struct lws *wsi, std::string_view html_404);
 
         virtual const char *_get_client_ip(struct lws *wsi);
         std::vector<std::string> _get_uri_args(struct lws *wsi);
 
     private:
-        WebService *_get_webservice_from_path(const std::string & path, std::string *webservice_name = nullptr);
+        WebService *_get_webservice_from_path(std::string_view path, std::string *webservice_name = nullptr);
 
         struct LwsPollingScheduler: public sihd::util::IRunnable
         {

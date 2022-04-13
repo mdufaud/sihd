@@ -48,7 +48,7 @@ std::string Mime::get(const std::string & ext) const
     return "text/" + ext;
 }
 
-void    Mime::add(const std::string & ext, const std::string & content_type)
+void    Mime::add(const std::string & ext, std::string_view content_type)
 {
     _types[ext] = content_type;
 }

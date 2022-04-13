@@ -38,7 +38,7 @@ DevFilter::~DevFilter()
 {
 }
 
-bool    DevFilter::_parse_conf(const std::string & rule_str, RuleType type)
+bool    DevFilter::_parse_conf(std::string_view rule_str, RuleType type)
 {
     // in=channel_path_in;out=channel_path_out;trigger=i:val1;write=j:val2
     Rule rule(type);
@@ -55,42 +55,42 @@ void    DevFilter::set_filter(const Rule & rule)
     _rules_lst.push_back(rule);
 }
 
-bool    DevFilter::set_filter_equal(const std::string & rule_str)
+bool    DevFilter::set_filter_equal(std::string_view rule_str)
 {
     return this->_parse_conf(rule_str, EQUAL);
 }
 
-bool    DevFilter::set_filter_superior(const std::string & rule_str)
+bool    DevFilter::set_filter_superior(std::string_view rule_str)
 {
     return this->_parse_conf(rule_str, SUPERIOR);
 }
 
-bool    DevFilter::set_filter_superior_equal(const std::string & rule_str)
+bool    DevFilter::set_filter_superior_equal(std::string_view rule_str)
 {
     return this->_parse_conf(rule_str, SUPERIOR_EQUAL);
 }
 
-bool    DevFilter::set_filter_inferior(const std::string & rule_str)
+bool    DevFilter::set_filter_inferior(std::string_view rule_str)
 {
     return this->_parse_conf(rule_str, INFERIOR);
 }
 
-bool    DevFilter::set_filter_inferior_equal(const std::string & rule_str)
+bool    DevFilter::set_filter_inferior_equal(std::string_view rule_str)
 {
     return this->_parse_conf(rule_str, INFERIOR_EQUAL);
 }
 
-bool    DevFilter::set_filter_byte_and(const std::string & rule_str)
+bool    DevFilter::set_filter_byte_and(std::string_view rule_str)
 {
     return this->_parse_conf(rule_str, BYTE_AND);
 }
 
-bool    DevFilter::set_filter_byte_or(const std::string & rule_str)
+bool    DevFilter::set_filter_byte_or(std::string_view rule_str)
 {
     return this->_parse_conf(rule_str, BYTE_OR);
 }
 
-bool    DevFilter::set_filter_byte_xor(const std::string & rule_str)
+bool    DevFilter::set_filter_byte_xor(std::string_view rule_str)
 {
     return this->_parse_conf(rule_str, BYTE_XOR);
 }
@@ -309,22 +309,22 @@ DevFilter::Rule &   DevFilter::Rule::delay(time_t nano_delay)
     return *this;
 }
 
-bool    DevFilter::Rule::parse(const std::string & conf_str)
+bool    DevFilter::Rule::parse(std::string_view conf_str)
 {
     std::map<std::string, std::string> rule_conf_map = sihd::util::Str::parse_configuration(conf_str);
     if (rule_conf_map.find(CONF_KEY_CHANNEL_IN) == rule_conf_map.end())
     {
-        SIHD_LOG_ERROR("DevFilter: no channel input '%s' in configuration: %s", CONF_KEY_CHANNEL_IN, conf_str.c_str());
+        SIHD_LOG_ERROR("DevFilter: no channel input '%s' in configuration: %s", CONF_KEY_CHANNEL_IN, conf_str.data());
         return false;
     }
     if (rule_conf_map.find(CONF_KEY_CHANNEL_OUT) == rule_conf_map.end())
     {
-        SIHD_LOG_ERROR("DevFilter: no channel output '%s' in configuration: %s", CONF_KEY_CHANNEL_OUT, conf_str.c_str());
+        SIHD_LOG_ERROR("DevFilter: no channel output '%s' in configuration: %s", CONF_KEY_CHANNEL_OUT, conf_str.data());
         return false;
     }
     if (rule_conf_map.find(CONF_KEY_TRIGGER) == rule_conf_map.end())
     {
-        SIHD_LOG_ERROR("DevFilter: no trigger value '%s' in configuration: %s", CONF_KEY_TRIGGER, conf_str.c_str());
+        SIHD_LOG_ERROR("DevFilter: no trigger value '%s' in configuration: %s", CONF_KEY_TRIGGER, conf_str.data());
         return false;
     }
     this->channel_in = rule_conf_map.at(CONF_KEY_CHANNEL_IN);

@@ -35,7 +35,7 @@ class Collector:    public IStoppableRunnable,
             {
                 // wait for a data
                 while (_running && _provider_ptr->providing() && _provider_ptr->provider_empty())
-                    _provider_ptr->provider_wait_for_data(_provider_wait_milliseconds);
+                    _provider_ptr->provider_wait_data_for(_provider_wait_milliseconds);
                 if (_running == false || _provider_ptr->providing() == false)
                     break ;
                 // lock and get data

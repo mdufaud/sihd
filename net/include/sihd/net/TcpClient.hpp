@@ -32,12 +32,12 @@ class TcpClient:    public INetReceiver,
         bool socket_opened() { return _socket.is_open(); }
 
         bool connect(const IpAddr & addr);
-        bool connect(const std::string & ip, int port);
-        bool connect(const std::string & path);
+        bool connect(std::string_view ip, int port);
+        bool connect(std::string_view path);
 
         bool open_and_connect(const IpAddr & ip);
-        bool open_and_connect(const std::string & ip, int port);
-        bool open_unix_and_connect(const std::string & path);
+        bool open_and_connect(std::string_view ip, int port);
+        bool open_unix_and_connect(std::string_view path);
 
         bool close();
 

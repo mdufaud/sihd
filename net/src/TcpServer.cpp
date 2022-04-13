@@ -75,13 +75,13 @@ bool    TcpServer::open_and_bind(const IpAddr & ip)
     return this->open_socket(ip.prefers_ipv6()) && this->bind(ip);
 }
 
-bool    TcpServer::open_and_bind(const std::string & ip, int port)
+bool    TcpServer::open_and_bind(std::string_view ip, int port)
 {
     IpAddr addr(ip, port, true);
     return this->open_socket(addr.prefers_ipv6()) && this->bind(addr);
 }
 
-bool    TcpServer::open_unix_and_bind(const std::string & path)
+bool    TcpServer::open_unix_and_bind(std::string_view path)
 {
     return this->open_socket_unix() && this->bind(path);
 }

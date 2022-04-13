@@ -73,12 +73,12 @@ namespace luabridge
     template <>
     struct Stack<std::string_view>
     {
-        static void push(lua_State* L, const std::string_view & str)
+        static void push(lua_State *L, const std::string_view & str)
         {
             lua_pushlstring(L, str.data(), str.size());
         }
 
-        static std::string_view get(lua_State* L, int index)
+        static std::string_view get(lua_State *L, int index)
         {
             size_t len;
             if (lua_type(L, index) == LUA_TSTRING)
@@ -86,7 +86,6 @@ namespace luabridge
                 const char *str = lua_tolstring(L, index, &len);
                 return std::string_view(str, len);
             }
-
             // Lua reference manual:
             // If the value is a number, then lua_tolstring also changes the actual value in the stack to a string.
             //(This change confuses lua_next when lua_tolstring is applied to keys during a table traversal.)
@@ -97,7 +96,7 @@ namespace luabridge
             return string;
         }
 
-        static bool isInstance(lua_State* L, int index)
+        static bool isInstance(lua_State *L, int index)
         {
             return lua_type(L, index) == LUA_TSTRING;
         }
@@ -257,7 +256,7 @@ class LuaUtilApi
                 ~LuaWorker();
 
                 void set_vm(Vm *vm_ptr);
-                bool start_worker(const std::string & name) override;
+                bool start_worker(const std::string_view name) override;
 
             private:
                 Vm *_vm_ptr;
@@ -271,7 +270,7 @@ class LuaUtilApi
                 ~LuaStepWorker();
 
                 void set_vm(Vm *vm_ptr);
-                bool start_worker(const std::string & name) override;
+                bool start_worker(const std::string_view name) override;
 
             private:
                 Vm *_vm_ptr;

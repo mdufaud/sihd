@@ -23,8 +23,8 @@ class HttpRequest
             REQ_DELETE = 3,
         };
 
-        HttpRequest(const std::string & path, RequestType request_type = GET);
-        HttpRequest(const std::string & path, const std::vector<std::string> & uri_args, RequestType request_type = GET);
+        HttpRequest(std::string_view path, RequestType request_type = GET);
+        HttpRequest(std::string_view path, const std::vector<std::string> & uri_args, RequestType request_type = GET);
         virtual ~HttpRequest();
 
         static RequestType request_from_string(std::string type);

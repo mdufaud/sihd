@@ -22,8 +22,8 @@ class Daemon:   public sihd::util::Named,
         virtual ~Daemon();
 
         bool set_uid(sihd_uid_t uid);
-        bool set_pid_file_path(const std::string & path);
-        bool set_working_dir_path(const std::string & path);
+        bool set_pid_file_path(std::string_view path);
+        bool set_working_dir_path(std::string_view path);
 
         /*
             clear LoggerManager's loggers and/or install any file logger before calling run

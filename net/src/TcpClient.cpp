@@ -49,13 +49,13 @@ bool    TcpClient::connect(const IpAddr & addr)
     return _connected;
 }
 
-bool    TcpClient::connect(const std::string & ip, int port)
+bool    TcpClient::connect(std::string_view ip, int port)
 {
     IpAddr addr(ip, port, true);
     return this->connect(addr);
 }
 
-bool    TcpClient::connect(const std::string & path)
+bool    TcpClient::connect(std::string_view path)
 {
     _connected = _socket.connect_unix(path);
     return _connected;
@@ -66,13 +66,13 @@ bool    TcpClient::open_and_connect(const IpAddr & ip)
     return this->open_socket(ip.prefers_ipv6()) && this->connect(ip);
 }
 
-bool    TcpClient::open_and_connect(const std::string & ip, int port)
+bool    TcpClient::open_and_connect(std::string_view ip, int port)
 {
     IpAddr addr(ip, port, true);
     return this->open_socket(addr.prefers_ipv6()) && this->connect(addr);
 }
 
-bool    TcpClient::open_unix_and_connect(const std::string & path)
+bool    TcpClient::open_unix_and_connect(std::string_view path)
 {
     return this->open_socket_unix() && this->connect(path);
 }

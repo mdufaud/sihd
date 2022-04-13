@@ -29,7 +29,7 @@ bool    DevSampler::set_frequency(double freq)
     return ret;
 }
 
-bool    DevSampler::set_sample(const std::string & conf)
+bool    DevSampler::set_sample(std::string_view conf)
 {
     sihd::util::Splitter splitter("=");
     std::vector<std::string> splitted = splitter.split(conf);

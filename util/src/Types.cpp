@@ -15,12 +15,15 @@
 #define STR_TYPE_DOUBLE "double"
 #define STR_TYPE_OBJECT "object"
 
+#include <string.h>
+#include <iostream>
+
 namespace sihd::util
 {
 
-Type  Types::string_to_type(const std::string & type)
+Type  Types::string_to_type(std::string_view type)
 {
-    static std::map<std::string, Type> str_to_type = {
+    static std::map<std::string_view, Type> str_to_type = {
         {STR_TYPE_NONE, TYPE_NONE},
         {STR_TYPE_BOOL, TYPE_BOOL}, {STR_TYPE_CHAR, TYPE_CHAR},
         {STR_TYPE_BYTE, TYPE_BYTE}, {STR_TYPE_UBYTE, TYPE_UBYTE},
@@ -30,10 +33,10 @@ Type  Types::string_to_type(const std::string & type)
         {STR_TYPE_FLOAT, TYPE_FLOAT}, {STR_TYPE_DOUBLE, TYPE_DOUBLE},
         {STR_TYPE_OBJECT, TYPE_OBJECT}
     };
-    return str_to_type[type];
+    return str_to_type[type.data()];
 }
 
-std::string  Types::type_to_string(Type type)
+const char  *Types::type_to_string(Type type)
 {
     switch (type)
     {

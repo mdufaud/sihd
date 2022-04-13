@@ -21,11 +21,11 @@ class ZipReader:    public sihd::util::Named,
         // set internal reading buff size
         bool set_buffer_size(size_t size);
         // set general password for encrypted content
-        bool set_password(const char *password);
+        bool set_password(std::string_view password);
         // when looping on read_next, get_read_data returns only entries names
         bool set_read_entry_names(bool active);
 
-        bool open(const std::string & path, bool do_strict_checks = false);
+        bool open(std::string_view path, bool do_strict_checks = false);
         bool is_open() const { return _zip_ptr != nullptr; }
         // close and save
         bool close();
@@ -38,17 +38,17 @@ class ZipReader:    public sihd::util::Named,
 
         // modify zip entries
         bool remove(size_t index);
-        bool rename(size_t index, const char *name);
+        bool rename(size_t index, std::string_view name);
 
         size_t count_entries() const { return _total_entries; }
         bool load_entry(size_t index);
-        bool load_entry(const std::string & name);
+        bool load_entry(std::string_view name);
 
         const struct zip_stat *get_entry() const;
         bool is_entry_directory() const;
 
-        ssize_t read_entry(const char *password = nullptr);
-        bool write_entry(const std::string & path, const char *password = nullptr);
+        ssize_t read_entry(std::string_view password = "");
+        bool write_entry(std::string_view path, std::string_view password = "");
 
     protected:
 

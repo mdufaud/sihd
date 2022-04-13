@@ -32,7 +32,7 @@ bool    HttpHeader::set_buffer_size(size_t size)
     return ret;
 }
 
-void    HttpHeader::set_servername(const std::string & name)
+void    HttpHeader::set_servername(std::string_view name)
 {
     _server_name = name;
 }
@@ -42,21 +42,24 @@ void    HttpHeader::set_status(uint32_t status)
     _status = status;
 }
 
-void    HttpHeader::set_content_type(const std::string & type)
+void    HttpHeader::set_content_type(std::string_view type)
 {
     _content_type = type;
 }
 
-void    HttpHeader::set_charset(const std::string & encoding)
+void    HttpHeader::set_charset(std::string_view encoding)
 {
     _encoding = encoding;
 }
 
-std::string HttpHeader::build_content_type(const std::string & type, const std::string & encoding)
+std::string HttpHeader::build_content_type(std::string_view type, std::string_view encoding)
 {
-    std::string ret = type;
+    std::string ret(type.data(), type.size());
     if (encoding.empty() == false)
-        ret += "; charset=" + encoding;
+    {
+        ret.append("; charset=");
+        ret.append(encoding.data(), encoding.size());
+    }
     return ret;
 }
 
@@ -65,7 +68,7 @@ void    HttpHeader::set_content_size(size_t len)
     _content_size = len;
 }
 
-void    HttpHeader::set_common(uint32_t status, const std::string & content_type, size_t content_len)
+void    HttpHeader::set_common(uint32_t status, std::string_view content_type, size_t content_len)
 {
     this->set_status(status);
     this->set_content_type(content_type);
@@ -86,12 +89,12 @@ void    HttpHeader::remove_header(const std::string & name)
         _headers_name.erase(it);
 }
 
-void    HttpHeader::set_header_by_token(enum lws_token_indexes token, const std::string & value)
+void    HttpHeader::set_header_by_token(enum lws_token_indexes token, std::string_view value)
 {
     _headers_token[token] = value;
 }
 
-void    HttpHeader::set_header(const std::string & name, const std::string & value)
+void    HttpHeader::set_header(const std::string & name, std::string_view value)
 {
     _headers_name[name] = value;
 }

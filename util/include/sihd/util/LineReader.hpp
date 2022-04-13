@@ -20,12 +20,12 @@ class LineReader:   public sihd::util::Named,
 
         static bool fast_read_line(std::string & line, FILE *stream = stdin, size_t buffsize = 1);
 
-        bool set_read_buffsize(size_t buff);
-        bool set_line_buffsize(size_t buff);
+        bool set_read_buffsize(size_t buffsize);
+        bool set_line_buffsize(size_t buffsize);
         bool set_delimiter_in_line(bool active);
         bool set_delimiter(int c);
 
-        bool open(const std::string & path);
+        bool open(std::string_view path);
         bool is_open() const;
         bool close();
 

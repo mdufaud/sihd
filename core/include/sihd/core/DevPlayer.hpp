@@ -27,9 +27,9 @@ class DevPlayer:    public sihd::core::Device,
         bool run() override;
         bool is_running() const override;
 
-        bool set_provider(const std::string & path);
+        bool set_provider(std::string_view path);
         bool set_provider_wait_time(time_t milliseconds);
-        bool add_alias(const std::string & alias_conf);
+        bool add_alias(std::string_view alias_conf);
         bool set_scheduler_queue_size(size_t limit);
 
     protected:

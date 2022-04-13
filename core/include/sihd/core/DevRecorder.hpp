@@ -18,9 +18,9 @@ class DevRecorder:   public sihd::core::Device
         bool is_running() const override;
 
         // gets at init() the recorder pointing to path
-        bool set_handler(const std::string & path);
+        bool set_handler(std::string_view path);
         // expects conf: ALIAS=CHANNEL_NAME
-        bool add_record_channel(const std::string & conf);
+        bool add_record_channel(std::string_view conf);
         // removes channel from alias
         bool remove_recorded_channel(const std::string & alias);
 

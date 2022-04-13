@@ -66,7 +66,7 @@ bool    CsvWriter::set_commentary(int c)
     return false;
 }
 
-bool    CsvWriter::open(const std::string & path, bool append)
+bool    CsvWriter::open(std::string_view path, bool append)
 {
     _col = 0;
     _row = 0;
@@ -98,7 +98,7 @@ bool    CsvWriter::new_row()
     return true;
 }
 
-ssize_t CsvWriter::write_commentary(const std::string & value)
+ssize_t CsvWriter::write_commentary(std::string_view value)
 {
     ssize_t ret = 0;
     if (_col > 0)
@@ -141,9 +141,9 @@ ssize_t CsvWriter::write(const char *data, size_t size, time_t nano_timestamp)
     return ret;
 }
 
-ssize_t CsvWriter::write(const std::string & value)
+ssize_t CsvWriter::write(std::string_view value)
 {
-    return this->write(value.c_str(), value.size());
+    return this->write(value.data(), value.size());
 }
 
 ssize_t CsvWriter::write(const std::vector<std::string> & values)

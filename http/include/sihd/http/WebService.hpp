@@ -21,8 +21,8 @@ class WebService:   public sihd::util::Named
                                 HttpRequest::RequestType type = HttpRequest::GET);
         template <class C>
         void set_entry_point(const std::string & path,
-                                        void (C::*method)(const HttpRequest &, HttpResponse &),
-                                        HttpRequest::RequestType type = HttpRequest::GET)
+                                void (C::*method)(const HttpRequest &, HttpResponse &),
+                                HttpRequest::RequestType type = HttpRequest::GET)
         {
             _callback_manager_map[type].set<C, void, const HttpRequest &, HttpResponse &>(path, dynamic_cast<C *>(this), method);
         }

@@ -31,11 +31,11 @@ void    PcapReader::set_pcap(pcap_t *pcap, bool ownership)
     _pcap_ptr = pcap;
 }
 
-bool    PcapReader::open(const std::string & path)
+bool    PcapReader::open(std::string_view path)
 {
     this->close();
     char errbuf[PCAP_ERRBUF_SIZE];
-    _pcap_ptr = pcap_open_offline(path.c_str(), errbuf);
+    _pcap_ptr = pcap_open_offline(path.data(), errbuf);
     if (_pcap_ptr == nullptr)
     {
         SIHD_LOG(error, "PcapReader: " << errbuf << ": " << path);
@@ -45,14 +45,14 @@ bool    PcapReader::open(const std::string & path)
     return true;
 }
 
-bool    PcapReader::open_micro_precision(const std::string & path)
+bool    PcapReader::open_micro_precision(std::string_view path)
 {
-    return this->_open_precision(path.c_str(), PCAP_TSTAMP_PRECISION_MICRO);
+    return this->_open_precision(path.data(), PCAP_TSTAMP_PRECISION_MICRO);
 }
 
-bool    PcapReader::open_nano_precision(const std::string & path)
+bool    PcapReader::open_nano_precision(std::string_view path)
 {
-    return this->_open_precision(path.c_str(), PCAP_TSTAMP_PRECISION_NANO);
+    return this->_open_precision(path.data(), PCAP_TSTAMP_PRECISION_NANO);
 }
 
 bool    PcapReader::_open_precision(const char *path, u_int precision)

@@ -45,13 +45,13 @@ bool    Daemon::set_uid(sihd_uid_t uid)
     return true;
 }
 
-bool    Daemon::set_pid_file_path(const std::string & path)
+bool    Daemon::set_pid_file_path(std::string_view path)
 {
     _pid_file_path = path;
     return true;
 }
 
-bool    Daemon::set_working_dir_path(const std::string & path)
+bool    Daemon::set_working_dir_path(std::string_view path)
 {
     _working_dir_path = path;
     return true;

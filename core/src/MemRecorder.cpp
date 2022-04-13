@@ -110,7 +110,7 @@ std::string     MemRecorder::hexdump_records()
     return ss.str();
 }
 
-std::string     MemRecorder::hexdump_timeline(const std::string & separation_cols, char separation_data)
+std::string     MemRecorder::hexdump_timeline(std::string_view separation_cols, char separation_data)
 {
     std::stringstream ss;
     for (const auto & map_pair: _map_sorted_records)

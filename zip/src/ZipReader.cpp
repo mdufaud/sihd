@@ -82,11 +82,11 @@ bool    ZipReader::set_read_entry_names(bool active)
     return true;
 }
 
-bool    ZipReader::set_password(const char *password)
+bool    ZipReader::set_password(std::string_view password)
 {
     if (_zip_ptr == nullptr)
         return false;
-    if (zip_set_default_password(_zip_ptr, password) < 0)
+    if (zip_set_default_password(_zip_ptr, password.data()) < 0)
     {
         SIHD_LOG(error, "ZipReader: could not set password: " << ZipUtils::get_error(_zip_ptr));
         return false;
@@ -106,7 +106,7 @@ bool    ZipReader::set_buffer_size(size_t size)
     return this->_allocate_buffer_if_null();
 }
 
-bool    ZipReader::open(const std::string & path, bool do_strict_checks)
+bool    ZipReader::open(std::string_view path, bool do_strict_checks)
 {
     int flags = ZIP_RDONLY;
     int error;
@@ -114,7 +114,7 @@ bool    ZipReader::open(const std::string & path, bool do_strict_checks)
     if (do_strict_checks)
         flags |= ZIP_CHECKCONS;
     this->close();
-    _zip_ptr = zip_open(path.c_str(), flags, &error);
+    _zip_ptr = zip_open(path.data(), flags, &error);
     if (_zip_ptr == nullptr)
     {
         SIHD_LOG(error, "ZipReader: could not open zip: " << ZipUtils::get_error(error));
@@ -161,11 +161,11 @@ bool    ZipReader::remove(size_t index)
     return true;
 }
 
-bool    ZipReader::rename(size_t index, const char *name)
+bool    ZipReader::rename(size_t index, std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
-    if (zip_file_rename(_zip_ptr, index, name, ZIP_FL_ENC_UTF_8) < 0)
+    if (zip_file_rename(_zip_ptr, index, name.data(), ZIP_FL_ENC_UTF_8) < 0)
     {
         SIHD_LOG(error, "ZipReader: could not rename index '" << index << "': " << ZipUtils::get_error(_zip_ptr));
         return false;
@@ -198,7 +198,7 @@ bool    ZipReader::read_next()
         }
     }
     if (ret && _only_load_entries == false)
-        ret = this->read_entry(nullptr) >= 0;
+        ret = this->read_entry() >= 0;
     ++_current_idx;
     return ret;
 }
@@ -233,14 +233,14 @@ bool    ZipReader::load_entry(size_t idx)
     return !_entry_error;
 }
 
-bool    ZipReader::load_entry(const std::string & name)
+bool    ZipReader::load_entry(std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
     if (_zip_reading_file)
         this->_close_file();
     zip_stat_init(&_current_zip_entry);
-    _entry_error = zip_stat(_zip_ptr, name.c_str(), 0, &_current_zip_entry) != 0;
+    _entry_error = zip_stat(_zip_ptr, name.data(), 0, &_current_zip_entry) != 0;
     if (_entry_error)
     {
         SIHD_LOG(error, "ZipReader: could not read entry '" << name << "': " << ZipUtils::get_error(_zip_ptr));
@@ -263,14 +263,14 @@ bool    ZipReader::is_entry_directory() const
     return false;
 }
 
-ssize_t     ZipReader::read_entry(const char *password)
+ssize_t     ZipReader::read_entry(std::string_view password)
 {
     if (_zip_ptr == nullptr)
         return false;
     if (_current_zip_file_ptr == nullptr)
     {
-        if (password != nullptr)
-            _current_zip_file_ptr = zip_fopen_index_encrypted(_zip_ptr, _current_zip_entry.index, 0, password);
+        if (password.empty() == false)
+            _current_zip_file_ptr = zip_fopen_index_encrypted(_zip_ptr, _current_zip_entry.index, 0, password.data());
         else
             _current_zip_file_ptr = zip_fopen_index(_zip_ptr, _current_zip_entry.index, 0);
         if (_current_zip_file_ptr == nullptr)
@@ -293,14 +293,14 @@ ssize_t     ZipReader::read_entry(const char *password)
     return ret;
 }
 
-bool    ZipReader::write_entry(const std::string & path, const char *password)
+bool    ZipReader::write_entry(std::string_view path, std::string_view password)
 {
     if (_zip_ptr == nullptr)
         return false;
     bool ret = false;
     if (this->is_entry_directory())
     {
-        ret = Files::make_directory(path, 0640);
+        ret = Files::make_directory(path.data(), 0640);
         if (!ret)
             SIHD_LOG(error, "ZipReader: could not write directory entry '" << _current_zip_entry.name << "' to: " << path);
         return ret;

@@ -28,7 +28,7 @@ class MessageField: public Named,
         // Named
         virtual std::string get_description() const override
         {
-            return Str::format("%s[%lu]", Types::type_to_string(_dt).c_str(), _size);
+            return Str::format("%s[%lu]", Types::type_to_string(_dt), _size);
         }
 
         // ICloneable

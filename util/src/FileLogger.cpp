@@ -14,7 +14,7 @@ FileLogger::~FileLogger()
 {
 }
 
-void    FileLogger::log(const LogInfo & info, const std::string_view & msg)
+void    FileLogger::log(const LogInfo & info, std::string_view msg)
 {
 //SEC.NANO [THREAD] LEVEL SRC MSG
 #if defined(__SIHD_WINDOWS__)

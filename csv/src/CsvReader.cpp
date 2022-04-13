@@ -63,7 +63,7 @@ bool    CsvReader::set_commentary(int c)
     return false;
 }
 
-bool    CsvReader::open(const std::string & path)
+bool    CsvReader::open(std::string_view path)
 {
     return _file.open(path, "r");
 }

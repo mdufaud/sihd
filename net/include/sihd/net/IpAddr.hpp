@@ -21,8 +21,8 @@ class IpAddr
     public:
         IpAddr();
         IpAddr(int port, bool ipv6 = false);
-        IpAddr(const std::string & host, bool dns_lookup = false);
-        IpAddr(const std::string & host, int port, bool dns_lookup = false);
+        IpAddr(std::string_view host, bool dns_lookup = false);
+        IpAddr(std::string_view host, int port, bool dns_lookup = false);
         IpAddr(const sockaddr & addr, size_t addr_len, bool dns_lookup = false);
         IpAddr(const sockaddr & addr, bool dns_lookup = false);
         IpAddr(const sockaddr_in & addr, bool dns_lookup = false);
@@ -70,14 +70,14 @@ class IpAddr
         };
 
         // do a DNS lookup to find every ip addr for every socket and every protocols
-        static std::optional<DnsInfo> dns_lookup(const std::string & host, bool ipv6 = false);
-        static std::string fetch_ip_name(const std::string & ip);
+        static std::optional<DnsInfo> dns_lookup(std::string_view host, bool ipv6 = false);
+        static std::string fetch_ip_name(std::string_view ip);
         static std::string fetch_ip_name(sockaddr *addr, socklen_t addr_len);
 
         // checks both ipv4 and ipv6
-        static bool is_valid_ip(const std::string & ip);
-        static bool is_valid_ipv4(const std::string & ip);
-        static bool is_valid_ipv6(const std::string & ip);
+        static bool is_valid_ip(std::string_view ip);
+        static bool is_valid_ipv4(std::string_view ip);
+        static bool is_valid_ipv6(std::string_view ip);
         static std::string ip_to_string(const sockaddr_in & addr_in);
         static std::string ip_to_string(const sockaddr_in6 & addr_in);
         static std::string ip_to_string(const in_addr & addr_in);
@@ -87,11 +87,11 @@ class IpAddr
             depending on ip, fills ipsockaddr addr, addr_len and type with corresponding ipv4 or ipv6 struct
             port is optionnal and setted in addr_in or addr_in6
         */
-        static bool fill_ipsockaddr(IpSockAddr & ipsockaddr, const std::string & ip, int port = 0);
+        static bool fill_ipsockaddr(IpSockAddr & ipsockaddr, std::string_view ip, int port = 0);
         // fills sockaddr_in from ip/port
-        static bool to_sockaddr_in(sockaddr_in *filled, const std::string & ip, int port = 0);
+        static bool to_sockaddr_in(sockaddr_in *filled, std::string_view ip, int port = 0);
         // fills sockaddr_in6 from ip(v6)/port
-        static bool to_sockaddr_in6(sockaddr_in6 *filled, const std::string & ip, int port = 0);
+        static bool to_sockaddr_in6(sockaddr_in6 *filled, std::string_view ip, int port = 0);
         // fills sockaddr_in from ip/port
         static bool to_sockaddr_in(sockaddr_in *filled, const sockaddr & addr, size_t addr_len);
         // fills sockaddr_in6 from ip(v6)/port
@@ -115,11 +115,11 @@ class IpAddr
         void clear();
 
         // subnets
-        bool is_same_subnet(const std::string & ip) const;
+        bool is_same_subnet(std::string_view ip) const;
         bool is_same_subnet(const sockaddr_in & addr) const;
         bool is_same_subnet(const IpAddr & addr) const;
 
-        bool set_subnet_mask(const std::string & mask);
+        bool set_subnet_mask(std::string_view mask);
         bool set_subnet_mask(uint32_t mask);
         bool has_subnet() const { return _has_subnet; }
         std::string dump_subnet() const;
@@ -128,7 +128,7 @@ class IpAddr
 
         // clear and set ip from source
         void from_any(int port, bool ipv6 = false);
-        bool from(const std::string & host, int port = 0);
+        bool from(std::string_view host, int port = 0);
         bool from(const sockaddr & addr, size_t addr_len);
         bool from(const sockaddr_in & addr_in);
         bool from(const sockaddr_in6 & addr_in6);
@@ -186,10 +186,10 @@ class IpAddr
 
         void _add_ip(const sockaddr_in & addr, int socktype, int protocol);
         void _add_ip(const sockaddr_in6 & addr, int socktype, int protocol);
-        void _add_ip(const std::string & ip, int socktype, int protocol);
+        void _add_ip(std::string_view ip, int socktype, int protocol);
         void _add_ip(const IpEntry & ip);
 
-        bool _netmask_from_str(const std::string & mask_value);
+        bool _netmask_from_str(std::string_view mask_value);
         void _fill_subnet();
         void _reset_subnet();
         void _dump_netdata();

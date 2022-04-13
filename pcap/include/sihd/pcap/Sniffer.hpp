@@ -64,9 +64,9 @@ class Sniffer:  public sihd::util::Named,
         bool set_snaplen(int len);
         bool set_timeout(int ms);
         // in / out / both
-        bool set_direction(const std::string & direction);
+        bool set_direction(std::string_view direction);
 
-        bool set_filter(const std::string & filter);
+        bool set_filter(std::string_view filter);
 
         std::vector<int> datalinks();
         std::vector<int> timestamp_types();
