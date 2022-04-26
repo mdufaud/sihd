@@ -1,8 +1,8 @@
 #ifndef __SIHD_PY_PYCOREAPI_HPP__
 # define __SIHD_PY_PYCOREAPI_HPP__
 
+# include <sihd/py/PyApi.hpp>
 # include <sihd/core/Device.hpp>
-# include <pybind11/pybind11.h>
 
 namespace sihd::py
 {
@@ -14,7 +14,6 @@ class PyCoreApi
     protected:
 
     private:
-        PyCoreApi() {};
         ~PyCoreApi() {};
 };
 

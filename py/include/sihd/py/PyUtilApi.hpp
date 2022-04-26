@@ -1,8 +1,16 @@
 #ifndef __SIHD_PY_PYUTILAPI_HPP__
 # define __SIHD_PY_PYUTILAPI_HPP__
 
-# include <pybind11/pybind11.h>
+# include <sihd/py/PyApi.hpp>
+
 # include <sihd/util/SmartNodePtr.hpp>
+# include <sihd/util/Logger.hpp>
+# include <sihd/util/Task.hpp>
+# include <sihd/util/Array.hpp>
+# include <sihd/util/Node.hpp>
+
+# include <pybind11/chrono.h>
+# include <pybind11/stl.h>
 
 PYBIND11_DECLARE_HOLDER_TYPE(T, sihd::util::SmartNodePtr<T>);
 
@@ -12,10 +20,60 @@ namespace sihd::py
 class PyUtilApi
 {
     public:
+        // python sihd.util.log 's logger
+        static sihd::util::Logger logger;
+        // binary dir
+        static std::string dir;
+
+        static void add_util_api(PyApi::PyModule & pymodule);
+
+        class __attribute__ ((visibility("hidden"))) PyTask: public sihd::util::Task
+        {
+            public:
+                PyTask(const pybind11::function & task, time_t timestamp_to_run = 0, time_t reschedule_every = 0);
+                ~PyTask();
+
+                bool run();
+
+            private:
+                pybind11::function _fun;
+        };
+
+    protected:
+        // Array utils
+
+        template <typename T>
+        static T _array_py_getitem(const sihd::util::Array<T> & self, size_t idx)
+        {
+            if (idx >= self.size())
+                throw pybind11::index_error();
+            return self.at(idx);
+        }
+
+        template <typename T>
+        static pybind11::iterator _array_py_iter(const sihd::util::Array<T> & self)
+        {
+            return pybind11::make_iterator(self.cbegin(), self.cend());
+        }
+
+        template <typename T>
+        static bool _array_py_contains(const sihd::util::Array<T> & self, T value)
+        {
+            return std::find(self.cbegin(), self.cend(), value) != self.cend();
+        }
+
+        template <typename T>
+        static sihd::util::Array<T> _array_py_reversed(const sihd::util::Array<T> & self)
+        {
+            sihd::util::Array<T> ret;
+            ret.resize(self.size());
+            std::copy(self.crbegin(), self.crend(), ret.begin());
+            return ret;
+        }
 
     private:
-        PyUtilApi() {};
         ~PyUtilApi() {};
+
 };
 
 }

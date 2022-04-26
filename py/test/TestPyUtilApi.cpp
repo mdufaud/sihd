@@ -1,19 +1,33 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Files.hpp>
+#include <sihd/util/OS.hpp>
+#include <sihd/util/Term.hpp>
 #include <sihd/py/PyUtilApi.hpp>
 #include <pybind11/embed.h>
+
+#include "DirectorySwitcher.hpp"
 
 namespace test
 {
     SIHD_NEW_LOGGER("test");
+    using namespace sihd::util;
     using namespace sihd::py;
     class TestPyUtilApi:   public ::testing::Test
     {
         protected:
             TestPyUtilApi()
             {
+                char *test_path = getenv("TEST_PATH");
+                _base_test_dir = sihd::util::Files::combine({
+                    test_path == nullptr ? "unit_test" : test_path,
+                    "py",
+                    "pyutilapi"
+                });
+                _cwd = sihd::util::OS::get_cwd();
                 sihd::util::LoggerManager::basic();
+                sihd::util::Files::make_directories(_base_test_dir);
             }
 
             virtual ~TestPyUtilApi()
@@ -28,29 +42,29 @@ namespace test
             virtual void TearDown()
             {
             }
+
+            std::string _cwd;
+            std::string _base_test_dir;
     };
 
-    TEST_F(TestPyUtilApi, test_py_util_api)
+    TEST_F(TestPyUtilApi, test_pyutil_node)
     {
-        std::string libpath = getenv("LIB_PATH");
-        if (libpath.empty() == false)
-        {
-            SIHD_TRACE("Changing directory to: " << libpath);
-            chdir(libpath.c_str());
-        }
+        DirectorySwitcher d(getenv("LIB_PATH"));
         pybind11::scoped_interpreter guard{};
-        EXPECT_NO_THROW(pybind11::exec(R"(
-            import sihd_util
-            root = sihd_util.Node("root")
-            parent1 = sihd_util.Node("parent1", root)
-            parent2 = sihd_util.Node("parent2", root)
-            sub_parent1 = sihd_util.Node("sub_parent", parent1)
-            sub_parent2 = sihd_util.Node("sub_parent", parent2)
-            named1 = sihd_util.Named("child", sub_parent1)
-            named2 = sihd_util.Named("child", sub_parent2)
-            named_parentless = sihd_util.Named("orphan")
-            print(root.get_name())
-            print(named1.get_name())
-        )"));
+        EXPECT_NO_THROW(pybind11::eval_file(_cwd + "/test/py/util/test_node.py"));
+    }
+
+    TEST_F(TestPyUtilApi, test_pyutil_thread)
+    {
+        DirectorySwitcher d(getenv("LIB_PATH"));
+        pybind11::scoped_interpreter guard{};
+        EXPECT_NO_THROW(pybind11::eval_file(_cwd + "/test/py/util/test_thread.py"));
+    }
+
+    TEST_F(TestPyUtilApi, test_pyutil_array)
+    {
+        DirectorySwitcher d(getenv("LIB_PATH"));
+        pybind11::scoped_interpreter guard{};
+        EXPECT_NO_THROW(pybind11::eval_file(_cwd + "/test/py/util/test_array.py"));
     }
 }

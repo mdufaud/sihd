@@ -9,6 +9,7 @@
 # include <cstdint>
 # include <stdexcept>
 # include <memory>
+# include <algorithm>
 
 # include <string.h>
 # include <strings.h>
@@ -543,8 +544,8 @@ class Array: public IArray, public ICloneable<Array<T>>
                 bool operator!=(const ArrayIterator & rhs) const { return !(*this == rhs); }
 
                 bool operator<(const ArrayIterator & rhs) const { return this->array_curr < rhs.array_curr; }
-                bool operator<=(const ArrayIterator & rhs) const { return this->array_curr <= rhs.array_curr; }
                 bool operator>(const ArrayIterator & rhs) const { return !(*this <= rhs); }
+                bool operator<=(const ArrayIterator & rhs) const { return this->array_curr <= rhs.array_curr; }
                 bool operator>=(const ArrayIterator & rhs) const { return !(*this < rhs); }
 
                 reference operator*()
@@ -553,8 +554,13 @@ class Array: public IArray, public ICloneable<Array<T>>
                     return *this->array_curr;
                 }
 
+                size_t idx()
+                {
+                    this->_check_pos(this->array_curr);
+                    return this->array_curr - this->array_beg;
+                }
+
             private:
-                void _check_range(ssize_t movement) const { return this->_check_pos(this->array_curr + movement); }
                 void _check_pos(pointer pos) const
                 {
                     if (pos < this->array_beg && pos > this->array_end)
@@ -568,8 +574,8 @@ class Array: public IArray, public ICloneable<Array<T>>
         iterator begin() { return iterator(this->data(), this->data(), this->data() + this->size()); }
         iterator end() { return iterator(this->data(), this->data() + this->size(), this->data() + this->size()); }
 
-        const_iterator cbegin() { return const_iterator(this->data(), this->data(), this->data() + this->size()); }
-        const_iterator cend() { return const_iterator(this->data(), this->data() + this->size(), this->data() + this->size()); }
+        const_iterator cbegin() const { return const_iterator(this->cdata(), this->cdata(), this->cdata() + this->size()); }
+        const_iterator cend() const { return const_iterator(this->cdata(), this->cdata() + this->size(), this->cdata() + this->size()); }
 
         // end of Array<T> iterator
 
@@ -630,7 +636,7 @@ class Array: public IArray, public ICloneable<Array<T>>
                     return ret;
                 }
 
-                difference_type operator-(const ReverseArrayIterator & rhs) const { return this->array_curr - rhs.array_curr; }
+                difference_type operator-(const ReverseArrayIterator & rhs) const { return rhs.array_curr - this->array_curr; }
 
                 ReverseArrayIterator operator+(ssize_t i)
                 {
@@ -658,8 +664,8 @@ class Array: public IArray, public ICloneable<Array<T>>
                 bool operator!=(const ReverseArrayIterator & rhs) const { return !(*this == rhs); }
 
                 bool operator<(const ReverseArrayIterator & rhs) const { return this->array_curr > rhs.array_curr; }
-                bool operator<=(const ReverseArrayIterator & rhs) const { return this->array_curr >= rhs.array_curr; }
                 bool operator>(const ReverseArrayIterator & rhs) const { return !(*this <= rhs); }
+                bool operator<=(const ReverseArrayIterator & rhs) const { return this->array_curr >= rhs.array_curr; }
                 bool operator>=(const ReverseArrayIterator & rhs) const { return !(*this < rhs); }
 
                 reference operator*()
@@ -668,8 +674,13 @@ class Array: public IArray, public ICloneable<Array<T>>
                     return *this->array_curr;
                 }
 
+                size_t idx()
+                {
+                    this->_check_pos(this->array_curr);
+                    return this->array_curr - this->array_beg;
+                }
+
             private:
-                void _check_range(ssize_t movement) const { return this->_check_pos(this->array_curr + movement); }
                 void _check_pos(pointer pos) const
                 {
                     if (pos < this->array_beg && pos > this->array_end)
@@ -693,21 +704,39 @@ class Array: public IArray, public ICloneable<Array<T>>
                                     this->data() + this->size());
         }
 
-        const_reverse_iterator crbegin()
+        const_reverse_iterator crbegin() const
         {
-            return const_reverse_iterator(this->data(),
-                                            this->data() + this->size() - 1,
-                                            this->data() + this->size());
+            return const_reverse_iterator(this->cdata(),
+                                            this->cdata() + this->size() - 1,
+                                            this->cdata() + this->size());
         }
 
-        const_reverse_iterator crend()
+        const_reverse_iterator crend() const
         {
-            return const_reverse_iterator(this->data(),
-                                            this->data() - 1,
-                                            this->data() + this->size());
+            return const_reverse_iterator(this->cdata(),
+                                            this->cdata() - 1,
+                                            this->cdata() + this->size());
         }
+
+        static constexpr size_t npos = size_t(-1);
 
         // end of Array<T> reverse iterator
+
+        size_t find(const T value) const
+        {
+            const_iterator it = std::find(this->cbegin(), this->cend(), value);
+            if (it == this->cend())
+                return Array<T>::npos;
+            return it.idx();
+        }
+
+        size_t rfind(const T value) const
+        {
+            const_reverse_iterator it = std::find(this->crbegin(), this->crend(), value);
+            if (it == this->crend())
+                return Array<T>::npos;
+            return it.idx();
+        }
 
     protected:
         T *_buf_ptr;
@@ -756,6 +785,7 @@ class ArrStr: public ArrChar
         using ArrChar::from_string;
         using ArrChar::to_string;
         using ArrChar::cpp_str;
+        using ArrChar::clone;
 
         std::string to_string([[maybe_unused]] char delimiter = '\0') const
         {

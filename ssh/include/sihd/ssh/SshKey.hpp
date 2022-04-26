@@ -13,12 +13,12 @@ class SshKey
         SshKey(ssh_key key = nullptr);
         virtual ~SshKey();
 
-        static enum ssh_keytypes_e type_from_name(const char *name);
+        static enum ssh_keytypes_e type_from_name(std::string_view name);
         static const char *type_to_string(enum ssh_keytypes_e type);
 
         bool generate(enum ssh_keytypes_e type, int parameter);
-        bool import_pubkey_file(const std::string & path);
-        bool import_privkey_file(const std::string & path, const char *passphrase = nullptr);
+        bool import_pubkey_file(std::string_view path);
+        bool import_privkey_file(std::string_view path, const char *passphrase = nullptr);
         /*
             SSH_KEYTYPE_UNKNOWN, SSH_KEYTYPE_DSS, SSH_KEYTYPE_RSA,
             SSH_KEYTYPE_RSA1, SSH_KEYTYPE_ECDSA, SSH_KEYTYPE_ED25519,

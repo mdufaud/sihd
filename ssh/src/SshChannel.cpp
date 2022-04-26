@@ -53,44 +53,44 @@ bool    SshChannel::open_agent()
     WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_auth_agent(_ssh_channel_ptr));
 }
 
-bool    SshChannel::open_x11(const std::string & addr, int port)
+bool    SshChannel::open_x11(std::string_view addr, int port)
 {
     if (_ssh_channel_ptr == nullptr)
         return false;
-    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_x11(_ssh_channel_ptr, addr.c_str(), port));
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_x11(_ssh_channel_ptr, addr.data(), port));
 }
 
-bool    SshChannel::open_forward(const std::string & remotehost, int remoteport,
-                                            const std::string & sourcehost, int localport)
+bool    SshChannel::open_forward(std::string_view remotehost, int remoteport,
+                                            std::string_view sourcehost, int localport)
 {
     if (_ssh_channel_ptr == nullptr)
         return false;
     WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_forward(_ssh_channel_ptr,
-                                            remotehost.c_str(), remoteport,
-                                            sourcehost.c_str(), localport));
+                                            remotehost.data(), remoteport,
+                                            sourcehost.data(), localport));
 }
 
 #if LIBSSH_VERSION_MINOR > 7
 
 /*
-bool    SshChannel::open_reverse_forward(const std::string & remotehost, int remoteport,
-                                            const std::string & sourcehost, int localport)
+bool    SshChannel::open_reverse_forward(std::string_view remotehost, int remoteport,
+                                            std::string_view sourcehost, int localport)
 {
     if (_ssh_channel_ptr == nullptr)
         return false;
     WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_reverse_forward(_ssh_channel_ptr,
-                                                                remotehost.c_str(), remoteport,
-                                                                sourcehost.c_str(), localport));
+                                                                remotehost.data(), remoteport,
+                                                                sourcehost.data(), localport));
 }
 */
 
-bool    SshChannel::open_forward_unix(const std::string & remotepath,
-                                        const std::string & sourcehost, int localport)
+bool    SshChannel::open_forward_unix(std::string_view remotepath,
+                                        std::string_view sourcehost, int localport)
 {
     if (_ssh_channel_ptr == nullptr)
         return false;
-    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_forward_unix(_ssh_channel_ptr, remotepath.c_str(),
-                                                                sourcehost.c_str(), localport));
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_forward_unix(_ssh_channel_ptr, remotepath.data(),
+                                                                sourcehost.data(), localport));
 }
 
 #endif
@@ -110,16 +110,16 @@ bool    SshChannel::request_sftp()
     WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_sftp(_ssh_channel_ptr));
 }
 
-bool    SshChannel::request_x11(const std::string & protocol, const std::string & cookie,
+bool    SshChannel::request_x11(std::string_view protocol, std::string_view cookie,
                                     int screen_number, bool single_connection)
 {
     WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_x11(_ssh_channel_ptr, (int)single_connection,
-                                                        protocol.c_str(), cookie.c_str(), screen_number));
+                                                        protocol.data(), cookie.data(), screen_number));
 }
 
-bool    SshChannel::request_subsystem(const std::string & subsys)
+bool    SshChannel::request_subsystem(std::string_view subsys)
 {
-    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_subsystem(_ssh_channel_ptr, subsys.c_str()));
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_subsystem(_ssh_channel_ptr, subsys.data()));
 }
 
 bool    SshChannel::request_pty()
@@ -137,18 +137,18 @@ bool    SshChannel::request_shell()
     WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_shell(_ssh_channel_ptr));
 }
 
-bool    SshChannel::request_exec(const std::string & cmd)
+bool    SshChannel::request_exec(std::string_view cmd)
 {
-    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_exec(_ssh_channel_ptr, cmd.c_str()));
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_exec(_ssh_channel_ptr, cmd.data()));
 }
 
 /* ************************************************************************* */
 /* utils */
 /* ************************************************************************* */
 
-bool    SshChannel::set_env(const std::string & name, const std::string & value)
+bool    SshChannel::set_env(std::string_view name, std::string_view value)
 {
-    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_env(_ssh_channel_ptr, name.c_str(), value.c_str()));
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_request_env(_ssh_channel_ptr, name.data(), value.data()));
 }
 
 int     SshChannel::exit_status()
@@ -194,9 +194,9 @@ int     SshChannel::poll_timeout_stderr(int timeout_ms)
 /* read - write */
 /* ************************************************************************* */
 
-bool    SshChannel::send_signal(const std::string & sig)
+bool    SshChannel::send_signal(std::string_view sig)
 {
-    return ssh_channel_request_send_signal(_ssh_channel_ptr, sig.c_str());
+    return ssh_channel_request_send_signal(_ssh_channel_ptr, sig.data());
 }
 
 bool    SshChannel::send_eof()

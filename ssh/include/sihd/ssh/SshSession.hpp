@@ -32,8 +32,8 @@ class SshSession
 
         bool new_session();
 
-        bool set_user(const std::string & user);
-        bool set_host(const std::string & host);
+        bool set_user(std::string_view user);
+        bool set_host(std::string_view host);
         bool set_port(int port);
         // verbosity = SSH_LOG_NOLOG, SSH_SIHD_LOG_WARNING, SSH_LOG_PROTOCOL, SSH_LOG_PACKET, SSH_LOG_FUNCTIONS
         bool set_verbosity(int verbosity);
@@ -41,7 +41,7 @@ class SshSession
 
         bool connect();
         bool connected();
-        bool fast_connect(const std::string & user, const std::string & host, int port = 22, int verbosity = SSH_LOG_NOLOG);
+        bool fast_connect(std::string_view user, std::string_view host, int port = 22, int verbosity = SSH_LOG_NOLOG);
 
         bool check_hostkey();
 
@@ -80,11 +80,11 @@ class SshSession
         AuthState auth_none();
         AuthState auth_agent();
         AuthState auth_gssapi();
-        AuthState auth_password(const std::string & password);
+        AuthState auth_password(std::string_view password);
         AuthState auth_key(const SshKey & private_key);
-        AuthState auth_key_file(const std::string & private_key_path, const char *passphrase = nullptr);
+        AuthState auth_key_file(std::string_view private_key_path, const char *passphrase = nullptr);
         AuthState auth_key_try(const SshKey & public_key);
-        AuthState auth_key_try_file(const std::string & public_key_path);
+        AuthState auth_key_try_file(std::string_view public_key_path);
         AuthState auth_key_auto(const char *passphrase = nullptr);
         AuthState auth_interactive_keyboard();
 

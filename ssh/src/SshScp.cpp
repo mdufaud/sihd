@@ -33,10 +33,10 @@ void    SshScp::close()
     }
 }
 
-bool    SshScp::_open(int flags, const std::string & location)
+bool    SshScp::_open(int flags, std::string_view location)
 {
     this->close();
-    _ssh_scp_ptr = ssh_scp_new(_ssh_session_ptr, flags, location.c_str());
+    _ssh_scp_ptr = ssh_scp_new(_ssh_session_ptr, flags, location.data());
     if (_ssh_scp_ptr == nullptr)
     {
         SIHD_LOG(error, "SshScp: failed to create new scp session: " << ssh_get_error(_ssh_session_ptr));
@@ -56,9 +56,9 @@ bool    SshScp::remote_opened()
     return _remote_opened;
 }
 
-bool    SshScp::open_remote(const std::string & remote_path)
+bool    SshScp::open_remote(std::string_view remote_path)
 {
-    bool success = this->_open(SSH_SCP_WRITE | SSH_SCP_RECURSIVE, remote_path.c_str());
+    bool success = this->_open(SSH_SCP_WRITE | SSH_SCP_RECURSIVE, remote_path.data());
     _remote_opened = success;
     return success;
 }
@@ -76,18 +76,18 @@ bool    SshScp::leave_dir()
     return false;
 }
 
-bool    SshScp::push_dir(const std::string & name, int mode)
+bool    SshScp::push_dir(std::string_view name, int mode)
 {
     if (_remote_opened == false)
         return false;
 
-    int r = ssh_scp_push_directory(_ssh_scp_ptr, name.c_str(), mode);
+    int r = ssh_scp_push_directory(_ssh_scp_ptr, name.data(), mode);
     if (r != SSH_OK)
         SIHD_LOG(error, "SshScp: failed to create directory: " << ssh_get_error(_ssh_session_ptr));
     return r == SSH_OK;
 }
 
-bool    SshScp::push_file(const std::string & local_path, const std::string & remote_path, size_t max_size, int mode)
+bool    SshScp::push_file(std::string_view local_path, std::string_view remote_path, size_t max_size, int mode)
 {
     if (_remote_opened == false)
         return false;
@@ -101,7 +101,7 @@ bool    SshScp::push_file(const std::string & local_path, const std::string & re
         size = std::max(size, max_size);
 
     ssize_t read_ret;
-    int r = ssh_scp_push_file(_ssh_scp_ptr, remote_path.c_str(), size, mode);
+    int r = ssh_scp_push_file(_ssh_scp_ptr, remote_path.data(), size, mode);
     if (r != SSH_OK)
         SIHD_LOG(error, "SshScp: failed to initialize file push: " << ssh_get_error(_ssh_session_ptr));
     while (r == SSH_OK && !file.error() && !file.eof())
@@ -117,11 +117,11 @@ bool    SshScp::push_file(const std::string & local_path, const std::string & re
     return r == SSH_OK;
 }
 
-bool    SshScp::push_file_content(const std::string & remote_path, const char *buf, size_t size, int mode)
+bool    SshScp::push_file_content(std::string_view remote_path, const char *buf, size_t size, int mode)
 {
     if (_remote_opened == false)
         return false;
-    int r = ssh_scp_push_file(_ssh_scp_ptr, remote_path.c_str(), size, mode);
+    int r = ssh_scp_push_file(_ssh_scp_ptr, remote_path.data(), size, mode);
     if (r != SSH_OK)
     {
         SIHD_LOG(error, "SshScp: failed to initialize file push: " << ssh_get_error(_ssh_session_ptr));
@@ -130,13 +130,13 @@ bool    SshScp::push_file_content(const std::string & remote_path, const char *b
     return ssh_scp_write(_ssh_scp_ptr, buf, size);
 }
 
-bool    SshScp::pull_file(const std::string & remote_path, const std::string & local_path)
+bool    SshScp::pull_file(std::string_view remote_path, std::string_view local_path)
 {
     sihd::util::File file(local_path, "wb");
     if (file.is_open() == false)
         return false;
 
-    if (this->_open(SSH_SCP_READ, remote_path.c_str()) == false)
+    if (this->_open(SSH_SCP_READ, remote_path.data()) == false)
         return false;
 
     int r = ssh_scp_pull_request(_ssh_scp_ptr);

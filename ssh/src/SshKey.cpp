@@ -42,11 +42,11 @@ bool    SshKey::generate(enum ssh_keytypes_e type, int parameter)
     return _ssh_key_ptr != nullptr && ssh_pki_generate(type, parameter, &_ssh_key_ptr) == SSH_OK;
 }
 
-bool    SshKey::import_privkey_file(const std::string & path, const char *passphrase)
+bool    SshKey::import_privkey_file(std::string_view path, const char *passphrase)
 {
     this->_new_key();
     return _ssh_key_ptr != nullptr
-        && ssh_pki_import_privkey_file(path.c_str(), passphrase,
+        && ssh_pki_import_privkey_file(path.data(), passphrase,
                                             nullptr, this, &_ssh_key_ptr) == SSH_OK;
 }
 
@@ -58,10 +58,10 @@ bool    SshKey::import_privkey_mem(const char *base64_key, const char *passphras
                                             nullptr, this, &_ssh_key_ptr) == SSH_OK;
 }
 
-bool    SshKey::import_pubkey_file(const std::string & path)
+bool    SshKey::import_pubkey_file(std::string_view path)
 {
     this->_new_key();
-    return _ssh_key_ptr != nullptr && ssh_pki_import_pubkey_file(path.c_str(), &_ssh_key_ptr) == SSH_OK;
+    return _ssh_key_ptr != nullptr && ssh_pki_import_pubkey_file(path.data(), &_ssh_key_ptr) == SSH_OK;
 }
 
 bool    SshKey::import_pubkey_mem(const char *base64_key, enum ssh_keytypes_e type)
@@ -99,9 +99,9 @@ bool    SshKey::is_private() const
     return _ssh_key_ptr != nullptr && ssh_key_is_private(_ssh_key_ptr);
 }
 
-enum ssh_keytypes_e SshKey::type_from_name(const char *name)
+enum ssh_keytypes_e SshKey::type_from_name(std::string_view name)
 {
-    return ssh_key_type_from_name(name);
+    return ssh_key_type_from_name(name.data());
 }
 
 const char  *SshKey::type_to_string(enum ssh_keytypes_e type)

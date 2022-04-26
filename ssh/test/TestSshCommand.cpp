@@ -95,12 +95,13 @@ namespace test
         SshCommand cmd = session.make_command();
         cmd.output_handler = &test_output_handler;
 
-        EXPECT_TRUE(cmd.execute_async("echo hello; sleep 1; echo world;"));
+        EXPECT_TRUE(cmd.execute_async("echo hello; sleep 0.01; echo world;"));
 
         time_t before = clock.now();
         EXPECT_TRUE(cmd.wait());
         time_t after = clock.now();
-        EXPECT_GT(after - before, time::milli(900));
+        EXPECT_GT(after - before, time::milli(9));
+        EXPECT_LT(after - before, time::milli(100));
 
         EXPECT_EQ(stderr_str, "");
         EXPECT_EQ(stdout_str, "hello\nworld\n");

@@ -20,10 +20,10 @@
 #  define SIHD_LOG_LEVEL(logger, level, msg) { \
     std::ostringstream __loss; \
     __loss << msg; \
-    logger.log(sihd::util::LogLevel::level, __loss.str().c_str()); \
+    logger.log(sihd::util::LogLevel::level, __loss.str()); \
 }
 #  define SIHD_LOG(level, msg) SIHD_LOG_LEVEL(__sihd_logger__, level, msg);
-#  define SIHD_LOG_FORMAT(level, message, ...) __sihd_logger__.log(level, sihd::util::Str::format(message, ##__VA_ARGS__).c_str());
+#  define SIHD_LOG_FORMAT(level, message, ...) __sihd_logger__.log(level, sihd::util::Str::format(message, ##__VA_ARGS__));
 
 #  define SIHD_LOG_DEBUG(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::debug, message, ##__VA_ARGS__);
 #  define SIHD_LOG_INFO(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::info, message, ##__VA_ARGS__);

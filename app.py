@@ -144,6 +144,7 @@ conditionnal_modules = {
         "use-extlibs": ['pybind11'],
         "conditionnal-env": "py",
         "conditionnal-depends": ['core', 'net', 'http'],
+        "clang-flags": ["-Wno-unused-command-line-argument"],
         # pip install python-config
         "parse-configs": [
             'python-config --cflags --ldflags --embed',

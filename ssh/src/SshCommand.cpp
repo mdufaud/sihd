@@ -7,9 +7,9 @@ namespace sihd::ssh
 
 SIHD_LOGGER;
 
-static int ssh_command_channel_data_callback(ssh_session session, ssh_channel channel,
-                                                void *data, uint32_t len, int is_stderr,
-                                                void *userdata)
+int     SshCommand::ssh_command_channel_data_callback(ssh_session session, ssh_channel channel,
+                                                        void *data, uint32_t len, int is_stderr,
+                                                        void *userdata)
 {
     (void)session;
     (void)channel;
@@ -18,8 +18,8 @@ static int ssh_command_channel_data_callback(ssh_session session, ssh_channel ch
     return (int)len;
 }
 
-static void ssh_command_exit_signal_callback(ssh_session session, ssh_channel channel, const char *signal, int core,
-                                                const char *errmsg, const char *lang, void *userdata)
+void    SshCommand::ssh_command_exit_signal_callback(ssh_session session, ssh_channel channel, const char *signal, int core,
+                                                        const char *errmsg, const char *lang, void *userdata)
 {
     (void)session;
     (void)channel;
@@ -28,7 +28,7 @@ static void ssh_command_exit_signal_callback(ssh_session session, ssh_channel ch
     sshcommand->_callback_exit_signal(signal, core, errmsg);
 }
 
-static void ssh_command_exit_status_callback(ssh_session session, ssh_channel channel, int exit_status, void *userdata)
+void    SshCommand::ssh_command_exit_status_callback(ssh_session session, ssh_channel channel, int exit_status, void *userdata)
 {
     (void)session;
     (void)channel;
@@ -75,17 +75,17 @@ void    SshCommand::_callback_exit_signal(const char *signal, int core, const ch
     _waitable.notify_all();
 }
 
-bool    SshCommand::execute(const std::string & cmd)
+bool    SshCommand::execute(std::string_view cmd)
 {
     return this->_execute(cmd, false);
 }
 
-bool    SshCommand::execute_async(const std::string & cmd)
+bool    SshCommand::execute_async(std::string_view cmd)
 {
     return this->_execute(cmd, true);
 }
 
-bool    SshCommand::_execute(const std::string & cmd, bool async)
+bool    SshCommand::_execute(std::string_view cmd, bool async)
 {
     ssh_channel channel_ptr = ssh_channel_new(_ssh_session_ptr);
     if (channel_ptr == nullptr)
@@ -103,9 +103,9 @@ bool    SshCommand::_execute(const std::string & cmd, bool async)
     }
     memset(&_ssh_callbacks, 0, sizeof(_ssh_callbacks));
     _ssh_callbacks.userdata = (void *)this;
-    _ssh_callbacks.channel_data_function = ssh_command_channel_data_callback;
-    _ssh_callbacks.channel_exit_signal_function = ssh_command_exit_signal_callback;
-    _ssh_callbacks.channel_exit_status_function = ssh_command_exit_status_callback;
+    _ssh_callbacks.channel_data_function = SshCommand::ssh_command_channel_data_callback;
+    _ssh_callbacks.channel_exit_signal_function = SshCommand::ssh_command_exit_signal_callback;
+    _ssh_callbacks.channel_exit_status_function = SshCommand::ssh_command_exit_status_callback;
     ssh_callbacks_init(&_ssh_callbacks);
     if (ssh_set_channel_callbacks(_channel.channel(), &_ssh_callbacks) != SSH_OK)
     {
@@ -125,12 +125,12 @@ bool    SshCommand::_execute(const std::string & cmd, bool async)
     return ret;
 }
 
-bool    SshCommand::wait(time_t timeout_nano)
+bool    SshCommand::wait(time_t timeout_nano, time_t milliseconds_poll_time)
 {
     if (_channel.is_open() == false)
         return true;
     int r;
-    while ((r = _channel.exit_status()) == -1 && _stop == false)
+    while (_stop == false && (r = _channel.exit_status()) == -1)
     {
         if (timeout_nano > 0)
         {
@@ -139,7 +139,7 @@ bool    SshCommand::wait(time_t timeout_nano)
             break ;
         }
         else
-            _waitable.wait_for(sihd::util::time::sec(1));
+            _waitable.wait_for(sihd::util::time::milli(milliseconds_poll_time));
     }
     if (r != -1)
         _channel.clear_channel();

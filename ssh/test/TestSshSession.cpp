@@ -71,15 +71,16 @@ namespace test
             GTEST_SKIP_("need interactive keyboard");
 
         std::string host = "localhost";
-
+        SIHD_LOG(info, "Initiating keyboard password connection to @" << host);
+        SIHD_LOG(info, "If you don't want to, you can leave user empty to skip the test");
         std::string user;
         std::cout << "User: ";
         fflush(stdout);
-        if (LineReader::fast_read_line(user, stdin) == false)
+        if (LineReader::fast_read_line(user, stdin) == false || user.empty())
             GTEST_SKIP_("no user input");
         SIHD_LOG(info, "Connection to " << user << "@" << host);
         SshSession session;
-        GTEST_ASSERT_EQ(session.fast_connect(user, host, 22, SSH_LOG_PROTOCOL | SSH_SIHD_LOG_DEBUG | SSH_LOG_PACKET | SSH_LOG_WARN), true);
+        GTEST_ASSERT_EQ(session.fast_connect(user, host, 22, SSH_LOG_PROTOCOL | SSH_LOG_DEBUG | SSH_LOG_PACKET | SSH_LOG_WARN), true);
         session.set_verbosity(SSH_LOG_PROTOCOL);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_interactive_keyboard();

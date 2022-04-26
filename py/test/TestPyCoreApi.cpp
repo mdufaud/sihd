@@ -1,8 +1,13 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Files.hpp>
+#include <sihd/util/OS.hpp>
+#include <sihd/util/Term.hpp>
 #include <sihd/py/PyCoreApi.hpp>
 #include <pybind11/embed.h>
+
+#include "DirectorySwitcher.hpp"
 
 namespace test
 {
@@ -13,7 +18,15 @@ namespace test
         protected:
             TestPyCoreApi()
             {
+                char *test_path = getenv("TEST_PATH");
+                _base_test_dir = sihd::util::Files::combine({
+                    test_path == nullptr ? "unit_test" : test_path,
+                    "py",
+                    "pycoreapi"
+                });
+                _cwd = sihd::util::OS::get_cwd();
                 sihd::util::LoggerManager::basic();
+                sihd::util::Files::make_directories(_base_test_dir);
             }
 
             virtual ~TestPyCoreApi()
@@ -28,26 +41,15 @@ namespace test
             virtual void TearDown()
             {
             }
+
+            std::string _cwd;
+            std::string _base_test_dir;
     };
 
     TEST_F(TestPyCoreApi, test_py_core_api)
     {
-        std::string libpath = getenv("LIB_PATH");
-        if (libpath.empty() == false)
-        {
-            SIHD_TRACE("Changing directory to: " << libpath);
-            chdir(libpath.c_str());
-        }
+        DirectorySwitcher d(getenv("LIB_PATH"));
         pybind11::scoped_interpreter guard{};
-        EXPECT_NO_THROW(pybind11::exec(R"(
-            import sihd_core
-            channel = sihd_core.Channel("chan", "int", 8)
-            print(channel.get_name())
-            import sihd_util
-            root = sihd_util.Node("root", None)
-            named = sihd_util.Named("child", root)
-            print(root.get_name())
-            print(named.get_name())
-        )"));
+        EXPECT_NO_THROW(pybind11::eval_file(_cwd + "/test/py/core/test_channel.py"));
     }
 }

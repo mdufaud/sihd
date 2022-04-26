@@ -60,21 +60,21 @@ class Sftp
         bool open();
         void close();
 
-        bool mkdir(const std::string & path, mode_t mode = 0755);
-        bool symlink(const std::string & from, const std::string & to);
+        bool mkdir(std::string_view path, mode_t mode = 0755);
+        bool symlink(std::string_view from, std::string_view to);
 
-        bool send_file(const std::string & local_path, const std::string & remote_path, mode_t mode = 0644);
-        bool get_file(const std::string & remote_path, const std::string & local_path);
+        bool send_file(std::string_view local_path, std::string_view remote_path, mode_t mode = 0644);
+        bool get_file(std::string_view remote_path, std::string_view local_path);
 
-        bool list_dir(const std::string & path, std::vector<SftpAttribute> & list);
-        bool list_dir_filenames(const std::string & path, std::vector<std::string> & list);
+        bool list_dir(std::string_view path, std::vector<SftpAttribute> & list);
+        bool list_dir_filenames(std::string_view path, std::vector<std::string> & list);
 
-        bool rename(const std::string & from, const std::string & to);
-        bool chmod(const std::string & path, mode_t mode);
-        bool chown(const std::string & path, uid_t owner, gid_t group);
+        bool rename(std::string_view from, std::string_view to);
+        bool chmod(std::string_view path, mode_t mode);
+        bool chown(std::string_view path, uid_t owner, gid_t group);
 
-        bool rmdir(const std::string & path);
-        bool rm(const std::string & path);
+        bool rmdir(std::string_view path);
+        bool rm(std::string_view path);
 
         int version();
 

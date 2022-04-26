@@ -125,7 +125,7 @@ std::string Vm::last_string()
 
 void    Vm::print_stack(int max, FILE *output)
 {
-    fprintf(output, this->dump_stack(max).c_str());
+    fprintf(output, "%s", this->dump_stack(max).c_str());
 }
 
 std::string     Vm::dump_stack(int max)

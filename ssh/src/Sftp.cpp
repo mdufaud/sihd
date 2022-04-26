@@ -49,14 +49,14 @@ void    Sftp::close()
     }
 }
 
-bool    Sftp::send_file(const std::string & local_path, const std::string & remote_path, mode_t mode)
+bool    Sftp::send_file(std::string_view local_path, std::string_view remote_path, mode_t mode)
 {
     sihd::util::File local_file(local_path, "rb");
     if (local_file.is_open() == false)
         return false;
 
     int flags = O_WRONLY | O_CREAT | O_TRUNC;
-    SftpFile remote_file(sftp_open(_sftp_session_ptr, remote_path.c_str(), flags, mode));
+    SftpFile remote_file(sftp_open(_sftp_session_ptr, remote_path.data(), flags, mode));
     if (remote_file.get() == nullptr)
     {
         SIHD_LOG(error, "Sftp: failed to open remote file: '" << remote_path << "' " << ssh_get_error(_ssh_session_ptr));
@@ -78,7 +78,7 @@ bool    Sftp::send_file(const std::string & local_path, const std::string & remo
         nwritten = sftp_write(remote_file.get(), buf, nread);
         if (nwritten != nread)
         {
-            SIHD_LOG_ERROR("Sftp: failed writing remote file: '%s' '%d != '%d'", remote_path.c_str(), nwritten, nread);
+            SIHD_LOG_ERROR("Sftp: failed writing remote file: '%s' '%d != '%d'", remote_path.data(), nwritten, nread);
             ret = false;
             break ;
         }
@@ -86,14 +86,14 @@ bool    Sftp::send_file(const std::string & local_path, const std::string & remo
     return ret;
 }
 
-bool    Sftp::get_file(const std::string & remote_path, const std::string & local_path)
+bool    Sftp::get_file(std::string_view remote_path, std::string_view local_path)
 {
     sihd::util::File local_file(local_path, "wb");
     if (local_file.is_open() == false)
         return false;
 
     int flags = O_RDONLY;
-    SftpFile remote_file(sftp_open(_sftp_session_ptr, remote_path.c_str(), flags, 0));
+    SftpFile remote_file(sftp_open(_sftp_session_ptr, remote_path.data(), flags, 0));
     if (remote_file.get() == nullptr)
     {
         SIHD_LOG(error, "Sftp: failed to open remote file: '" << remote_path << "' " << ssh_get_error(_ssh_session_ptr));
@@ -117,7 +117,7 @@ bool    Sftp::get_file(const std::string & remote_path, const std::string & loca
         nwritten = local_file.write(buf, nread);
         if (nwritten != nread)
         {
-            SIHD_LOG_ERROR("Sftp: failed writing local file: '%s' '%d != '%d'", local_path.c_str(), nwritten, nread);
+            SIHD_LOG_ERROR("Sftp: failed writing local file: '%s' '%d != '%d'", local_path.data(), nwritten, nread);
             ret = false;
             break ;
         }
@@ -125,23 +125,23 @@ bool    Sftp::get_file(const std::string & remote_path, const std::string & loca
     return ret;
 }
 
-bool    Sftp::mkdir(const std::string & path, mode_t mode)
+bool    Sftp::mkdir(std::string_view path, mode_t mode)
 {
-    int r = sftp_mkdir(_sftp_session_ptr, path.c_str(), mode);
+    int r = sftp_mkdir(_sftp_session_ptr, path.data(), mode);
     if (r != 0)
         SIHD_LOG(error, "Sftp: failed to mkdir: '" << path << "' " << this->error());
     return r == SSH_FX_OK;
 }
 
-bool    Sftp::symlink(const std::string & from, const std::string & to)
+bool    Sftp::symlink(std::string_view from, std::string_view to)
 {
-    int r = sftp_symlink(_sftp_session_ptr, from.c_str(), to.c_str());
+    int r = sftp_symlink(_sftp_session_ptr, from.data(), to.data());
     if (r != 0)
-        SIHD_LOG_ERROR("Sftp: failed to create symbolic link from '%s' to '%s' %s", from.c_str(), to.c_str(), this->error());
+        SIHD_LOG_ERROR("Sftp: failed to create symbolic link from '%s' to '%s' %s", from.data(), to.data(), this->error());
     return r == SSH_FX_OK;
 }
 
-bool    Sftp::list_dir_filenames(const std::string & path, std::vector<std::string> & list)
+bool    Sftp::list_dir_filenames(std::string_view path, std::vector<std::string> & list)
 {
     std::vector<SftpAttribute> attrs;
     if (this->list_dir(path, attrs) == false)
@@ -160,9 +160,9 @@ bool    Sftp::list_dir_filenames(const std::string & path, std::vector<std::stri
     return true;
 }
 
-bool    Sftp::list_dir(const std::string & path, std::vector<SftpAttribute> & list)
+bool    Sftp::list_dir(std::string_view path, std::vector<SftpAttribute> & list)
 {
-    SftpDir dir(sftp_opendir(_sftp_session_ptr, path.c_str()));
+    SftpDir dir(sftp_opendir(_sftp_session_ptr, path.data()));
     if (dir.get() == nullptr)
     {
         SIHD_LOG(error, "Stfp: failed to open directory: " << path);
@@ -184,17 +184,17 @@ bool    Sftp::list_dir(const std::string & path, std::vector<SftpAttribute> & li
     return ret;
 }
 
-bool    Sftp::rename(const std::string & from, const std::string & to)
+bool    Sftp::rename(std::string_view from, std::string_view to)
 {
-    int r = sftp_rename(_sftp_session_ptr, from.c_str(), to.c_str());
+    int r = sftp_rename(_sftp_session_ptr, from.data(), to.data());
     if (r != 0)
-        SIHD_LOG_ERROR("Sftp: failed to rename '%s' to '%s' %s", from.c_str(), to.c_str(), this->error());
+        SIHD_LOG_ERROR("Sftp: failed to rename '%s' to '%s' %s", from.data(), to.data(), this->error());
     return r == SSH_FX_OK;
 }
 
-bool    Sftp::rm(const std::string & path)
+bool    Sftp::rm(std::string_view path)
 {
-    int r = sftp_unlink(_sftp_session_ptr, path.c_str());
+    int r = sftp_unlink(_sftp_session_ptr, path.data());
     if (r != 0)
         SIHD_LOG(error, "Sftp: failed to remove: '" << path << "' " << this->error());
     return r == SSH_FX_OK;

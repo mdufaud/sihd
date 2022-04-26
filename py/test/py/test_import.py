@@ -1,1 +1,0 @@
-print("hello {name} with {number}".format(**locals()))

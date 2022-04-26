@@ -59,7 +59,10 @@ namespace test
         EXPECT_TRUE(session.auth_key_auto().success());
 
         SshShell shell = session.make_shell();
-        EXPECT_TRUE(shell.open(true));
-        EXPECT_TRUE(shell.read_loop());
+        ASSERT_TRUE(shell.open(true));
+        SIHD_COUT("=========================================================");
+        SIHD_LOG(debug, "Shell opened: type 'exit' to exit session");
+        SIHD_COUT("=========================================================");
+        ASSERT_TRUE(shell.read_loop());
     }
 }

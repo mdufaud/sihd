@@ -133,7 +133,7 @@ class LuaUtilApi
 
         // lua sihd.util.log 's logger
         static sihd::util::Logger logger;
-
+        // binary dir
         static std::string dir;
 
         /**
@@ -225,7 +225,8 @@ class LuaUtilApi
 
                 void handle(T... args)
                 {
-                    this->call_lua_method<T...>(args...);
+                    //ISO C++03 14.2/4
+                    this->template call_lua_method<void, T...>(args...);
                 }
 
         };

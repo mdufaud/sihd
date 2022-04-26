@@ -105,6 +105,21 @@ namespace test
         EXPECT_EQ(idx, 8);
     }
 
+    TEST_F(TestArray, test_array_iterator_embedded)
+    {
+        ArrInt i;
+
+        i.resize(4);
+        std::generate(i.begin(), i.end(), [n = 1] () mutable { return n++; });
+        // {1, 2, 3, 4}
+        EXPECT_EQ(i.find(1), 0);
+        EXPECT_EQ(i.find(2), 1);
+        EXPECT_EQ(i.find(4), 3);
+        EXPECT_EQ(i.rfind(1), 0);
+        EXPECT_EQ(i.rfind(2), 1);
+        EXPECT_EQ(i.rfind(4), 3);
+    }
+
     TEST_F(TestArray, test_array_iterator_algo)
     {
         SIHD_LOG(debug, "Testing iterator find");
@@ -153,13 +168,38 @@ namespace test
 
         SIHD_LOG(debug, "Testing reverse iterator");
         const int8_t bytes[] = {1, 2, 3, 4};
-        const int8_t reversed_bytes[] = {4, 3,  2, 1};
+        const int8_t reversed_bytes[] = {4, 3, 2, 1};
         ArrByte arr_byte(bytes, 4);
 
         SIHD_LOG(debug, "Reverse before: " << arr_byte.to_string(' '));
         std::reverse(arr_byte.rbegin(), arr_byte.rend());
         SIHD_LOG(debug, "Reverse after: " << arr_byte.to_string(' '));
+        // {4, 3, 2, 1}
         EXPECT_TRUE(arr_byte.is_equal(reversed_bytes, 4));
+
+        SIHD_LOG(debug, "Removing 4");
+        auto it_remove = std::remove(arr_byte.begin(), arr_byte.end(), 4);
+        // {3, 2, 1, 4}
+        EXPECT_EQ(*it_remove, 1);
+        auto it_rm_find = std::find(arr_byte.begin(), it_remove, 4);
+        EXPECT_EQ(it_rm_find, it_remove);
+        arr_byte.resize(3);
+        // {3, 2, 1}
+        SIHD_LOG(debug, "Remove after: " << arr_byte.to_string(' '));
+
+        SIHD_LOG(debug, "Replace 3 -> 4");
+        std::replace(arr_byte.begin(), arr_byte.end(), 3, 4);
+        // {4, 2, 1}
+        SIHD_LOG(debug, "Replace after: " << arr_byte.to_string(' '));
+        EXPECT_EQ(arr_byte[0], 4);
+
+        SIHD_LOG(debug, "Rotate left by 1");
+        std::rotate(arr_byte.begin(), arr_byte.begin() + 1, arr_byte.end());
+        // {2, 1, 4}
+        SIHD_LOG(debug, "Rotate after: " << arr_byte.to_string(' '));
+        EXPECT_EQ(arr_byte[0], 2);
+        EXPECT_EQ(arr_byte[1], 1);
+        EXPECT_EQ(arr_byte[2], 4);
     }
 
     TEST_F(TestArray, test_array_str)

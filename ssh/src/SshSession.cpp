@@ -18,7 +18,7 @@ SshSession::~SshSession()
     ssh_finalize();
 }
 
-bool    SshSession::fast_connect(const std::string & user, const std::string & host, int port, int verbosity)
+bool    SshSession::fast_connect(std::string_view user, std::string_view host, int port, int verbosity)
 {
     this->delete_session();
     if (this->new_session() == false)
@@ -134,9 +134,9 @@ SshSession::AuthState   SshSession::auth_gssapi()
     return AuthState(ssh_userauth_gssapi(_ssh_session_ptr));
 }
 
-SshSession::AuthState   SshSession::auth_password(const std::string & password)
+SshSession::AuthState   SshSession::auth_password(std::string_view password)
 {
-    return AuthState(ssh_userauth_password(_ssh_session_ptr, nullptr, password.c_str()));
+    return AuthState(ssh_userauth_password(_ssh_session_ptr, nullptr, password.data()));
 }
 
 SshSession::AuthState   SshSession::auth_key_auto(const char *passphrase)
@@ -144,7 +144,7 @@ SshSession::AuthState   SshSession::auth_key_auto(const char *passphrase)
     return AuthState(ssh_userauth_publickey_auto(_ssh_session_ptr, nullptr, passphrase));
 }
 
-SshSession::AuthState   SshSession::auth_key_file(const std::string & private_key_path, const char *passphrase)
+SshSession::AuthState   SshSession::auth_key_file(std::string_view private_key_path, const char *passphrase)
 {
     SshKey key;
 
@@ -154,7 +154,7 @@ SshSession::AuthState   SshSession::auth_key_file(const std::string & private_ke
     return AuthState(SSH_AUTH_ERROR);
 }
 
-SshSession::AuthState   SshSession::auth_key_try_file(const std::string & public_key_path)
+SshSession::AuthState   SshSession::auth_key_try_file(std::string_view public_key_path)
 {
     SshKey key;
 
@@ -196,7 +196,7 @@ SshSession::AuthState   SshSession::auth_interactive_keyboard()
                 std::cout << prompt;
                 std::string answer;
                 std::cin >> answer;
-                if (ssh_userauth_kbdint_setanswer(_ssh_session_ptr, i, answer.c_str()) < 0)
+                if (ssh_userauth_kbdint_setanswer(_ssh_session_ptr, i, answer.data()) < 0)
                     return AuthState(SSH_AUTH_ERROR);
             }
             else
@@ -215,14 +215,14 @@ SshSession::AuthState   SshSession::auth_interactive_keyboard()
     return AuthState(r);
 }
 
-bool    SshSession::set_user(const std::string & user)
+bool    SshSession::set_user(std::string_view user)
 {
-    return this->_set("user", SSH_OPTIONS_USER, user.c_str());
+    return this->_set("user", SSH_OPTIONS_USER, user.data());
 }
 
-bool    SshSession::set_host(const std::string & host)
+bool    SshSession::set_host(std::string_view host)
 {
-    return this->_set("host", SSH_OPTIONS_HOST, host.c_str());
+    return this->_set("host", SSH_OPTIONS_HOST, host.data());
 }
 
 bool    SshSession::set_port(int port)

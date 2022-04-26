@@ -77,11 +77,11 @@ namespace test
         Value valf(3.124f);
 
         EXPECT_TRUE(valf > 3.123f);
-        EXPECT_TRUE(valf > 3.123d);
+        EXPECT_TRUE(valf > 3.123);
         EXPECT_TRUE(valf == 3.124f);
-        EXPECT_TRUE(valf == 3.124d);
+        EXPECT_TRUE(valf == 3.124);
         EXPECT_TRUE(valf < 3.125f);
-        EXPECT_TRUE(valf < 3.125d);
+        EXPECT_TRUE(valf < 3.125);
 
         EXPECT_TRUE(valf < 4);
         EXPECT_TRUE(valf > 3);
@@ -102,7 +102,7 @@ namespace test
 
     TEST_F(TestValue, test_value_max)
     {
-        int8_t test8 = 255;
+        uint8_t test8 = 255;
         Value val(test8);
 
         EXPECT_TRUE(val < 2000);

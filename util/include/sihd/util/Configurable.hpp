@@ -34,19 +34,19 @@ class Configurable
         };
 
         template <typename T>
-        void add_conf(const std::string & name, std::function<bool(T)> fun)
+        void add_conf(const std::string & name, std::function<bool (T)> fun)
         {
             _callbackManager.set<bool, T>(name, fun);
         };
 
         template <typename T1, typename T2>
-        void add_conf(const std::string & name, std::function<bool(T1, T2)> fun)
+        void add_conf(const std::string & name, std::function<bool (T1, T2)> fun)
         {
             _callbackManager.set<bool, T1, T2>(name, fun);
         };
 
         template <typename T1, typename T2, typename T3>
-        void add_conf(const std::string & name, std::function<bool(T1, T2, T3)> fun)
+        void add_conf(const std::string & name, std::function<bool (T1, T2, T3)> fun)
         {
             _callbackManager.set<bool, T1, T2, T3>(name, fun);
         };

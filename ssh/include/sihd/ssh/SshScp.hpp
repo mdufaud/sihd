@@ -14,15 +14,15 @@ class SshScp
         virtual ~SshScp();
 
         bool remote_opened();
-        bool open_remote(const std::string & remote_path);
-        bool push_file_content(const std::string & remote_path, const char *buf,
+        bool open_remote(std::string_view remote_path);
+        bool push_file_content(std::string_view remote_path, const char *buf,
                                 size_t size, int mode = 0644);
-        bool push_file(const std::string & local_path, const std::string & remote_path,
+        bool push_file(std::string_view local_path, std::string_view remote_path,
                         size_t max_size = 0, int mode = 0644);
-        bool push_dir(const std::string & name, int mode = 0755);
+        bool push_dir(std::string_view name, int mode = 0755);
         bool leave_dir();
 
-        bool pull_file(const std::string & remote_path, const std::string & local_path);
+        bool pull_file(std::string_view remote_path, std::string_view local_path);
 
         void close();
 
@@ -34,7 +34,7 @@ class SshScp
     protected:
 
     private:
-        bool _open(int flags, const std::string & location);
+        bool _open(int flags, std::string_view location);
 
         bool _remote_opened;
         ssh_scp _ssh_scp_ptr;

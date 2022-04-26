@@ -8,7 +8,10 @@ assert(child:get_root() == root)
 assert(child:find("..") == root)
 
 local second_child = sihd.util.Named("second_child", nil)
+
+assert(root:find("toto") == nil)
 root:add_child_name("toto", second_child)
+assert(root:find("toto") == second_child)
 
 assert(second_child:get_name() == "second_child")
 assert(second_child:get_parent() == root)

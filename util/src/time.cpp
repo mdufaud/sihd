@@ -2,6 +2,7 @@
 #include <thread>
 
 #include <iostream>
+
 namespace sihd::util::time
 {
 

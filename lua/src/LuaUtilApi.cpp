@@ -46,8 +46,9 @@ namespace sihd::lua
 
 using namespace sihd::util;
 
+// Statics
+// logger used by lua code
 Logger LuaUtilApi::logger("sihd::lua");
-
 // from path/bin/exe.lua -> path/bin -> path
 std::string LuaUtilApi::dir = Files::get_parent(Files::get_parent(OS::get_executable_path()));
 
@@ -86,7 +87,7 @@ bool    LuaUtilApi::_configurable_recursive_set(Configurable *obj, const std::st
         }
         default:
         {
-            logger.error(Str::format("Configuration '%s' type error", key.c_str()).c_str());
+            logger.error(Str::format("Configuration key '%s' type error", key.c_str()).c_str());
         }
     }
     return false;
@@ -540,7 +541,7 @@ void    LuaUtilApi::load_tools(Vm & vm)
                     .addFunction("usleep", &time::usleep)
                     .addFunction("msleep", &time::msleep)
                     .addFunction("sleep", &time::sleep)
-                    // convert to nano
+                    // convert from nano
                     .addFunction("to_us", &time::to_micro)
                     .addFunction("to_ms", &time::to_milli)
                     .addFunction("to_sec", &time::to_sec)
@@ -549,7 +550,7 @@ void    LuaUtilApi::load_tools(Vm & vm)
                     .addFunction("to_days", &time::to_days)
                     .addFunction("to_double", &time::to_double)
                     .addFunction("to_hz", &time::to_freq)
-                    // convert from nano
+                    // convert to nano
                     .addFunction("us", &time::micro)
                     .addFunction("ms", &time::milli)
                     .addFunction("sec", &time::sec)
@@ -667,8 +668,8 @@ void    LuaUtilApi::load_base(Vm & vm)
                     .addFunction("get_child", static_cast<Named *(Node::*)(const std::string &) const>(&Node::get_child))
                     .addFunction("add_child", +[] (Node *self, Named *child) { return self->add_child(child); })
                     .addFunction("add_child_name", +[] (Node *self, const std::string & name, Named *child) { return self->add_child(name, child); })
-                    .addFunction("delete_child", static_cast<bool (Node::*)(const Named *)>(&Node::delete_child))
-                    .addFunction("delete_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::delete_child))
+                    // .addFunction("delete_child", static_cast<bool (Node::*)(const Named *)>(&Node::delete_child))
+                    // .addFunction("delete_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::delete_child))
                     .addFunction("is_link", &Node::is_link)
                     .addFunction("add_link", &Node::add_link)
                     .addFunction("remove_link", &Node::remove_link)
@@ -727,6 +728,10 @@ void    LuaUtilApi::load_base(Vm & vm)
                             luaL_error(state, "ArrStr new argument must be a string");
                         return array;
                     })
+                    .addFunction("clone", +[] (ArrStr *self)
+                    {
+                        return self->clone();
+                    })
                     .addFunction("push_back", static_cast<bool (ArrStr::*)(const std::string &)>(&ArrStr::push_back))
                     .addFunction("copy_from", +[] (ArrStr *self, const std::string & src, luabridge::LuaRef from_ref)
                     {
@@ -735,7 +740,6 @@ void    LuaUtilApi::load_base(Vm & vm)
                             from = from_ref.cast<size_t>();
                         return self->copy_from(src, from);
                     })
-                    .addFunction("clone", &ArrStr::clone)
                     .addFunction("pop", static_cast<char (ArrStr::*)(size_t)>(&ArrChar::pop))
                     .addFunction("front", static_cast<char (ArrStr::*)() const>(&ArrChar::front))
                     .addFunction("back", static_cast<char (ArrStr::*)() const>(&ArrChar::back))
