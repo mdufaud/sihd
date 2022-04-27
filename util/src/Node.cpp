@@ -123,10 +123,10 @@ bool    Node::delete_child(const Named *child)
 
 bool    Node::delete_child(const std::string & name)
 {
-    return this->delete_child_entry(this->get_child_entry(name));
+    return this->_delete_child_entry(this->get_child_entry(name));
 }
 
-bool    Node::delete_child_entry(Node::ChildEntry *entry)
+bool    Node::_delete_child_entry(Node::ChildEntry *entry)
 {
     if (entry == nullptr)
         return false;
@@ -134,6 +134,23 @@ bool    Node::delete_child_entry(Node::ChildEntry *entry)
     {
         delete entry->obj;
     }
+    return this->_remove_child_entry(entry);
+}
+
+bool    Node::remove_child(const Named *child)
+{
+    return this->remove_child(child->get_name());
+}
+
+bool    Node::remove_child(const std::string & name)
+{
+    return this->_remove_child_entry(this->get_child_entry(name));
+}
+
+bool    Node::_remove_child_entry(Node::ChildEntry *entry)
+{
+    if (entry == nullptr)
+        return false;
     auto it = std::find(_children_keys.begin(), _children_keys.end(), entry->name);
     if (it != _children_keys.end())
         _children_keys.erase(it);
@@ -148,7 +165,7 @@ void    Node::delete_children()
     {
         ChildEntry *entry = it->second;
         it = _children_map.erase(it);
-        this->delete_child_entry(entry);
+        this->_delete_child_entry(entry);
     }
     _children_map.clear();
     _children_keys.clear();

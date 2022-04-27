@@ -387,9 +387,10 @@ void    LuaUtilApi::load_threading(Vm & vm)
                         +[] (const LuaScheduler *self) { return self->acceptable_nano; },
                         +[] (LuaScheduler *self, uint32_t val) { self->acceptable_nano = val; })
                     // LuaScheduler
-                    .addFunction("start", std::function<bool (LuaScheduler *)>([&vm] (LuaScheduler *self)
+                    .addFunction("start", std::function<bool (LuaScheduler *, lua_State *)>(
+                    +[] (LuaScheduler *self, lua_State *state)
                     {
-                        self->set_vm(&vm);
+                        self->set_state(state);
                         return self->start();
                     }))
                     .addFunction("add_task", +[] (LuaScheduler *self, luabridge::LuaRef tbl, lua_State *state)
@@ -438,16 +439,16 @@ void    LuaUtilApi::load_threading(Vm & vm)
                 .beginClass<LuaWorker>("Worker")
                     .addConstructor<void (*)(luabridge::LuaRef ref)>()
                     .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<LuaWorker>)
-                    .addFunction("start_worker", std::function<bool (LuaWorker *, const std::string &)>(
-                    [&vm] (LuaWorker *self, const std::string & name)
+                    .addFunction("start_worker", std::function<bool (LuaWorker *, const std::string &, lua_State *)>(
+                    [&vm] (LuaWorker *self, const std::string & name, lua_State *state)
                     {
-                        self->set_vm(&vm);
+                        self->set_state(state);
                         return self->start_worker(name);
                     }))
-                    .addFunction("start_sync_worker", std::function<bool (LuaWorker *, const std::string &)>(
-                    [&vm] (LuaWorker *self, const std::string & name)
+                    .addFunction("start_sync_worker", std::function<bool (LuaWorker *, const std::string &, lua_State *)>(
+                    [&vm] (LuaWorker *self, const std::string & name, lua_State *state)
                     {
-                        self->set_vm(&vm);
+                        self->set_state(state);
                         return self->start_sync_worker(name);
                     }))
                     .addFunction("stop_worker", static_cast<bool (LuaWorker::*)()>(&Worker::stop_worker))
@@ -457,16 +458,16 @@ void    LuaUtilApi::load_threading(Vm & vm)
                 .beginClass<LuaStepWorker>("StepWorker")
                     .addConstructor<void (*)(luabridge::LuaRef ref)>()
                     .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<LuaStepWorker>)
-                    .addFunction("start_worker", std::function<bool (LuaStepWorker *, const std::string &)>(
-                    [&vm] (LuaStepWorker *self, const std::string & name)
+                    .addFunction("start_worker", std::function<bool (LuaStepWorker *, const std::string &, lua_State *)>(
+                    [&vm] (LuaStepWorker *self, const std::string & name, lua_State *state)
                     {
-                        self->set_vm(&vm);
+                        self->set_state(state);
                         return self->start_worker(name);
                     }))
-                    .addFunction("start_sync_worker", std::function<bool (LuaStepWorker *, const std::string &)>(
-                    [&vm] (LuaStepWorker *self, const std::string & name)
+                    .addFunction("start_sync_worker", std::function<bool (LuaStepWorker *, const std::string &, lua_State *)>(
+                    [&vm] (LuaStepWorker *self, const std::string & name, lua_State *state)
                     {
-                        self->set_vm(&vm);
+                        self->set_state(state);
                         return self->start_sync_worker(name);
                     }))
                     .addFunction("stop_worker", static_cast<bool (LuaStepWorker::*)()>(&Worker::stop_worker))
@@ -668,8 +669,8 @@ void    LuaUtilApi::load_base(Vm & vm)
                     .addFunction("get_child", static_cast<Named *(Node::*)(const std::string &) const>(&Node::get_child))
                     .addFunction("add_child", +[] (Node *self, Named *child) { return self->add_child(child); })
                     .addFunction("add_child_name", +[] (Node *self, const std::string & name, Named *child) { return self->add_child(name, child); })
-                    // .addFunction("delete_child", static_cast<bool (Node::*)(const Named *)>(&Node::delete_child))
-                    // .addFunction("delete_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::delete_child))
+                    .addFunction("remove_child", static_cast<bool (Node::*)(const Named *)>(&Node::remove_child))
+                    .addFunction("remove_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::remove_child))
                     .addFunction("is_link", &Node::is_link)
                     .addFunction("add_link", &Node::add_link)
                     .addFunction("remove_link", &Node::remove_link)
@@ -791,7 +792,7 @@ void    LuaUtilApi::load_all(Vm & vm)
 /* ************************************************************************* */
 
 LuaUtilApi::LuaScheduler::LuaScheduler(const std::string & name, sihd::util::Node *parent):
-    Scheduler(name, parent), _vm_ptr(nullptr), _vm_thread(nullptr)
+    Scheduler(name, parent), _state_ptr(nullptr), _vm_thread(nullptr)
 {
 }
 
@@ -801,14 +802,16 @@ LuaUtilApi::LuaScheduler::~LuaScheduler()
 
 bool    LuaUtilApi::LuaScheduler::start()
 {
-    if (_vm_ptr == nullptr)
+    if (_state_ptr == nullptr)
         return false;
     if (this->is_running())
         return true;
     {
         // create new lua stack for thread
         std::lock_guard lrun(_mutex_task);
-        if (_vm_ptr->new_thread(_vm_thread) == false)
+        // make non owning LuaVm from lua_State
+        Vm vm(_state_ptr);
+        if (vm.new_thread(_vm_thread) == false)
             return false;
         lua_State *state_ptr = _vm_thread.lua_state();
         for (const auto & pair: _task_map)
@@ -844,9 +847,9 @@ void    LuaUtilApi::LuaScheduler::add_lua_task(LuaTask *task_ptr)
     this->add_task(task_ptr);
 }
 
-void    LuaUtilApi::LuaScheduler::set_vm(Vm *vm_ptr)
+void    LuaUtilApi::LuaScheduler::set_state(lua_State *state)
 {
-    _vm_ptr = vm_ptr;
+    _state_ptr = state;
 }
 
 /* ************************************************************************* */
@@ -869,15 +872,9 @@ void    LuaUtilApi::LuaThreadRunner::new_lua_state(lua_State *new_state)
         _original_fun.push();
         // transfer top of stack to top of thread state stack
         lua_xmove(_original_fun.state(), new_state, 1);
-        // create function ref from last stack element (without index - it pops the value)
+        // create function ref from last stack element (without index it pops the value)
         _fun = luabridge::LuaRef::fromStack(new_state, -1);
     }
-}
-
-void    LuaUtilApi::LuaThreadRunner::set_lua_method(luabridge::LuaRef & ref)
-{
-    _original_fun = ref;
-    _fun = luabridge::LuaRef(ref.state());
 }
 
 /* ************************************************************************* */
@@ -923,7 +920,7 @@ bool    LuaUtilApi::LuaTask::run()
 /* LuaWorker */
 /* ************************************************************************* */
 
-LuaUtilApi::LuaWorker::LuaWorker(luabridge::LuaRef lua_ref): _vm_ptr(nullptr), _lua_runnable(lua_ref)
+LuaUtilApi::LuaWorker::LuaWorker(luabridge::LuaRef lua_ref): _state_ptr(nullptr), _lua_runnable(lua_ref)
 {
     this->set_runnable(&_lua_runnable);
 }
@@ -932,19 +929,18 @@ LuaUtilApi::LuaWorker::~LuaWorker()
 {
 }
 
-void    LuaUtilApi::LuaWorker::set_vm(Vm *vm_ptr)
+void    LuaUtilApi::LuaWorker::set_state(lua_State *state)
 {
-    _vm_ptr = vm_ptr;
+    _state_ptr = state;
 }
 
 bool    LuaUtilApi::LuaWorker::start_worker(const std::string_view name)
 {
     if (this->is_worker_started() == false)
     {
-        Vm vm_thread;
-        if (_vm_ptr->new_thread(vm_thread) == false)
-            return false;
-        lua_State *state = vm_thread.lua_state();
+        // make non owning LuaVm from lua_State
+        Vm current_vm(_state_ptr);
+        lua_State *state = current_vm.new_luathread();
         if (state == nullptr)
             return false;
         _lua_runnable.new_lua_state(state);
@@ -956,7 +952,7 @@ bool    LuaUtilApi::LuaWorker::start_worker(const std::string_view name)
 /* LuaStepWorker */
 /* ************************************************************************* */
 
-LuaUtilApi::LuaStepWorker::LuaStepWorker(luabridge::LuaRef lua_ref): _vm_ptr(nullptr), _lua_runnable(lua_ref)
+LuaUtilApi::LuaStepWorker::LuaStepWorker(luabridge::LuaRef lua_ref): _state_ptr(nullptr), _lua_runnable(lua_ref)
 {
     this->set_runnable(&_lua_runnable);
 }
@@ -965,19 +961,18 @@ LuaUtilApi::LuaStepWorker::~LuaStepWorker()
 {
 }
 
-void    LuaUtilApi::LuaStepWorker::set_vm(Vm *vm_ptr)
+void    LuaUtilApi::LuaStepWorker::set_state(lua_State *state)
 {
-    _vm_ptr = vm_ptr;
+    _state_ptr = state;
 }
 
 bool    LuaUtilApi::LuaStepWorker::start_worker(const std::string_view name)
 {
     if (this->is_worker_started() == false)
     {
-        Vm vm_thread;
-        if (_vm_ptr->new_thread(vm_thread) == false)
-            return false;
-        lua_State *state = vm_thread.lua_state();
+        // make non owning LuaVm from lua_State
+        Vm current_vm(_state_ptr);
+        lua_State *state = current_vm.new_luathread();
         if (state == nullptr)
             return false;
         _lua_runnable.new_lua_state(state);

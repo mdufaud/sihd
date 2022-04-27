@@ -17,6 +17,13 @@ class Waitable
         void notify(int times);
         void notify_all();
 
+        template <class Predicate>
+        void wait_predicate(Predicate p)
+        {
+            std::unique_lock lock(_mutex);
+            _condition.wait(lock, p);
+        }
+
         void infinite_wait();
         std::time_t infinite_wait_elapsed();
         bool wait_until(std::time_t nano_timestamp);

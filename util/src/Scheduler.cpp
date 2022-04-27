@@ -64,8 +64,8 @@ bool    Scheduler::stop()
         if (_running == false)
             return true;
         _running = false;
-        _paused = false;
     }
+    this->resume();
     _waitable.notify_all();
     bool ret = _clock_ptr != nullptr && _clock_ptr->stop();
     if (_thread.joinable())
@@ -80,13 +80,17 @@ bool    Scheduler::is_running() const
 
 bool    Scheduler::_wait_for_next_task()
 {
-    if (_paused)
     {
-        time_t before = _clock_ptr->now();
-        _waitable.infinite_wait();
-        _paused_time += (_clock_ptr->now() - before);
+        std::lock_guard l(_mutex_pause);
+        if (_paused)
+        {
+            time_t before = _clock_ptr->now();
+            while (_paused)
+                _waitable_pause.infinite_wait();
+            _paused_time += (_clock_ptr->now() - before);
+        }
     }
-    while (_task_map.empty() && _running)
+    while (_running && _task_map.empty())
         _waitable.infinite_wait();
     if (_running == false)
         return false;
@@ -162,13 +166,17 @@ bool    Scheduler::run()
 
 void    Scheduler::pause()
 {
+    std::lock_guard l(_mutex_pause);
     _paused = true;
 }
 
 void    Scheduler::resume()
 {
     _paused = false;
-    _waitable.notify_all();
+    // if in pause lock - try to notify wait until unlocked
+    while (_mutex_pause.try_lock() == false)
+        _waitable_pause.notify_all();
+    _mutex_pause.unlock();
 }
 
 void    Scheduler::add_task(Task *task)

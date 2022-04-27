@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_SCHEDULER_HPP__
 # define __SIHD_UTIL_SCHEDULER_HPP__
 
+# include <atomic>
 # include <list>
 # include <map>
 # include <thread>
@@ -50,7 +51,7 @@ class Scheduler: public Named, public IStoppableRunnable, public Configurable
         uint32_t acceptable_nano;
 
     protected:
-        virtual bool run();
+        bool run();
 
         void _delete_tasks();
         void _add_to_delete_task(Task *t);
@@ -65,7 +66,9 @@ class Scheduler: public Named, public IStoppableRunnable, public Configurable
         time_t _begin_run;
         std::mutex _mutex_task;
         std::mutex _mutex_run;
+        std::mutex _mutex_pause;
         Waitable _waitable;
+        Waitable _waitable_pause;
         SteadyClock _steady_clock;
         std::list<Task *> _task_rm_list;
         std::multimap<time_t, Task *> _task_map;

@@ -16,7 +16,6 @@
 #include <sihd/util/AService.hpp>
 #include <sihd/util/ServiceController.hpp>
 
-// .def("push_back", &LuaUtilApi::_array_lua_push_back<PrimitiveType>)
 // .def("copy_from", &LuaUtilApi::_array_lua_copy_table<PrimitiveType>)
 
 #define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType) \
@@ -25,6 +24,9 @@
         .def(pybind11::init<size_t>()) \
         .def(pybind11::init<const std::vector<PrimitiveType>>()) \
         .def("clone", &ArrType::clone) \
+        .def("push_back", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_back)) \
+        .def("push_back", &PyUtilApi::_array_py_push_back_list<PrimitiveType>) \
+        .def("push_back", &PyUtilApi::_array_py_push_back_tuple<PrimitiveType>) \
         .def("pop", &ArrType::pop) \
         .def("front", &ArrType::front) \
         .def("back", &ArrType::back) \
@@ -188,8 +190,8 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("get_child", static_cast<Named *(Node::*)(const std::string &) const>(&Node::get_child))
         .def("add_child", +[] (Node *self, Named *child) { return self->add_child(child); })
         .def("add_child_name", +[] (Node *self, const std::string & name, Named *child) { return self->add_child(name, child); })
-        // .def("delete_child", static_cast<bool (Node::*)(const Named *)>(&Node::delete_child))
-        // .def("delete_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::delete_child))
+        .def("remove_child", static_cast<bool (Node::*)(const Named *)>(&Node::remove_child))
+        .def("remove_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::remove_child))
         .def("is_link", &Node::is_link)
         .def("add_link", &Node::add_link)
         .def("remove_link", &Node::remove_link)
@@ -211,7 +213,7 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("stop", &AService::stop)
         .def("reset", &AService::reset)
         .def("is_running", &AService::is_running)
-        .def("get_service_ctrl", &AService::get_service_ctrl);
+        .def("get_service_ctrl", &AService::get_service_ctrl, pybind11::return_value_policy::reference_internal);
 
     pybind11::class_<IClock>(m_util, "IClock")
         .def("is_steady", &IClock::is_steady)
@@ -230,7 +232,7 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
     pybind11::class_<Scheduler, Named, Configurable, SmartNodePtr<Scheduler>>(m_util, "Scheduler")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
-        .def("get_clock", &Scheduler::get_clock)
+        .def("get_clock", &Scheduler::get_clock, pybind11::return_value_policy::reference_internal)
         .def("set_clock", &Scheduler::set_clock)
         .def("start", &Scheduler::start)
         .def("stop", &Scheduler::stop)

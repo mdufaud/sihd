@@ -184,8 +184,13 @@ class LuaUtilApi
                 LuaThreadRunner(luabridge::LuaRef lua_ref);
                 virtual ~LuaThreadRunner();
 
-                void set_lua_method(luabridge::LuaRef & ref);
                 void new_lua_state(lua_State *state);
+
+                template <typename ...T>
+                void call_lua_method_noret(T... args)
+                {
+                    _fun(args...);
+                }
 
                 template <typename R, typename ...T>
                 R   call_lua_method(T... args)
@@ -237,7 +242,7 @@ class LuaUtilApi
                 LuaScheduler(const std::string & name, sihd::util::Node *parent = nullptr);
                 ~LuaScheduler();
 
-                void set_vm(Vm *vm_ptr);
+                void set_state(lua_State *state);
                 void add_lua_task(LuaTask *task_ptr);
 
                 bool start() override;
@@ -246,7 +251,7 @@ class LuaUtilApi
             protected:
 
             private:
-                Vm *_vm_ptr;
+                lua_State *_state_ptr;
                 Vm _vm_thread;
         };
 
@@ -256,11 +261,11 @@ class LuaUtilApi
                 LuaWorker(luabridge::LuaRef ref);
                 ~LuaWorker();
 
-                void set_vm(Vm *vm_ptr);
+                void set_state(lua_State *state);
                 bool start_worker(const std::string_view name) override;
 
             private:
-                Vm *_vm_ptr;
+                lua_State *_state_ptr;
                 LuaRunnable _lua_runnable;
         };
 
@@ -270,11 +275,11 @@ class LuaUtilApi
                 LuaStepWorker(luabridge::LuaRef ref);
                 ~LuaStepWorker();
 
-                void set_vm(Vm *vm_ptr);
+                void set_state(lua_State *state);
                 bool start_worker(const std::string_view name) override;
 
             private:
-                Vm *_vm_ptr;
+                lua_State *_state_ptr;
                 LuaRunnable _lua_runnable;
         };
 

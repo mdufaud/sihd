@@ -35,17 +35,17 @@ class Node: public Named
             public:
                 virtual const char *what() const throw()
                 {
-                    return "Maximum link recursion";
+                    return "Maximum node link recursion";
                 }
         };
 
         struct TreeOpts
         {
-            size_t  indent = 0;
-            size_t  indent_by_iter = 2;
-            size_t  current_recursion = 0;
-            size_t  max_recursion = 0;
-            bool    description = false;
+            size_t indent = 0;
+            size_t indent_by_iter = 2;
+            size_t current_recursion = 0;
+            size_t max_recursion = 0;
+            bool description = false;
         };
 
         struct ChildEntry
@@ -59,8 +59,8 @@ class Node: public Named
         virtual ~Node();
 
         // Children
-        virtual bool add_child(const std::string & name, Named *child, bool ownership = true);
-        virtual bool add_child(Named *child, bool ownership = true);
+        virtual bool add_child(const std::string & name, Named *child, bool take_ownership = true);
+        virtual bool add_child(Named *child, bool take_ownership = true);
 
         // release internal pointer and takes ownership
         virtual bool add_child(std::unique_ptr<Named> & unique);
@@ -79,18 +79,16 @@ class Node: public Named
             return child;
         }
 
-        // Unsafe -> throws
-        void add_child_unsafe(Named *child, bool ownership = true);
+        // unsafe -> throws
+        virtual void add_child_unsafe(Named *child, bool take_ownership = true);
 
-        bool delete_child_entry(ChildEntry *entry);
-        bool delete_child(const Named *child);
+        virtual bool remove_child(const Named *child);
+        virtual bool remove_child(const std::string & name);
+
+        virtual bool delete_child(const Named *child);
         virtual bool delete_child(const std::string & name);
-        virtual void delete_children();
 
-        // Static
-        static Node *to_node(Named *child);
-        static const Node *to_cnode(const Named *child);
-        static std::pair<std::string, std::string> get_parent_path(const std::string & path);
+        virtual void delete_children();
 
         // Ownership
         bool has_ownership(const Named *child);
@@ -118,6 +116,7 @@ class Node: public Named
         Named *get_link(const std::string & path, size_t recursion = 0);
         bool resolve_links(size_t recursion = 0);
 
+        // Tree description
         std::string get_tree_str() const;
         std::string get_tree_desc_str() const;
         std::string get_tree_str(TreeOpts opts) const;
@@ -125,11 +124,20 @@ class Node: public Named
         void print_tree_desc() const;
         void print_tree(TreeOpts opts) const;
 
+        // Static
+        static Node *to_node(Named *child);
+        static const Node *to_cnode(const Named *child);
+        static std::pair<std::string, std::string> get_parent_path(const std::string & path);
+
         const std::map<std::string, ChildEntry *> & get_children() const;
         const std::vector<std::string> & get_children_keys() const;
 
     protected:
+        virtual bool _remove_child_entry(ChildEntry *entry);
+        virtual bool _delete_child_entry(ChildEntry *entry);
+
         virtual bool _check_link(const std::string & name, Named *child);
+
         virtual void _get_tree_children(std::stringstream & ss, TreeOpts opts) const;
         virtual void _iterate_tree_children(std::stringstream & ss,
                                                 TreeOpts & opts,

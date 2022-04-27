@@ -56,9 +56,14 @@ bool    Vm::new_state()
     return _state_ptr != nullptr;
 }
 
+lua_State   *Vm::new_luathread()
+{
+    return lua_newthread(_state_ptr);
+}
+
 bool    Vm::new_thread(Vm & vm)
 {
-    lua_State *thread_state = lua_newthread(_state_ptr);
+    lua_State *thread_state = this->new_luathread();
     if (thread_state != nullptr)
         vm.set_state(thread_state);
     return thread_state != nullptr;

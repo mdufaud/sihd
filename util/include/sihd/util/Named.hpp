@@ -17,9 +17,8 @@ class Named
         virtual ~Named();
 
         const std::string & get_name() const;
-        Node  *get_parent() const;
-        const Node  *cget_parent() const;
-
+        Node *get_parent() const;
+        const Node *cget_parent() const;
         std::string get_full_name() const;
         std::string get_class_name() const;
         virtual std::string get_description() const
@@ -28,7 +27,6 @@ class Named
         };
 
         virtual bool set_parent(Node *parent);
-
         bool is_owned_by_parent() const;
         virtual bool set_parent_ownership(bool ownership);
 

@@ -158,7 +158,7 @@ def get_modules():
     return os.getenv("modules", "")
 
 def get_force_build_modules():
-    return os.getenv("build_modules", "")
+    return os.getenv("fmod", "")
 
 def is_static_libs():
     return os.getenv("static", None) == "1"

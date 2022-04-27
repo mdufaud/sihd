@@ -37,6 +37,7 @@ class Vm: public ILuaThreadStateHandler
         // close any old lua_State and set new unowned state
         void set_state(lua_State *state);
 
+        lua_State *new_luathread();
         bool new_thread(Vm & vm);
 
         luabridge::LuaRef new_table();

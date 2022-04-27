@@ -158,6 +158,7 @@ ifneq ($(findstring test,$(word 1, $(MAKECMDGOALS))), )
 
 test: test = 1
 test: build
+	@sh $(MAKEFILE_TOOLS)/scripts/generate_test_env.sh
 	$(call mk_log_info,makefile,starting tests in build: $(TEST_PATH))
 	@- $(foreach TEST_BIN, $(TEST_EXEC), \
 		$(eval TEST_CMD_LINE = \

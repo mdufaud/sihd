@@ -26,6 +26,7 @@ class Worker: public IRunnable, public Configurable
         Worker(IRunnable *runnable = nullptr);
         virtual ~Worker();
 
+        void set_worker_detach(bool active);
         virtual void set_runnable(IRunnable *runnable);
         virtual bool start_worker(std::string_view name);
         virtual bool start_sync_worker(std::string_view name);
@@ -54,9 +55,10 @@ class Worker: public IRunnable, public Configurable
 
         bool _started;
         bool _running;
+        bool _detach;
         Waitable _running_waitable;
-        std::mutex  _worker_mutex;
-        std::mutex  _worker_sync_mutex;
+        std::mutex _worker_mutex;
+        std::mutex _worker_sync_mutex;
         std::thread _worker_thread;
 };
 

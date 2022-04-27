@@ -48,6 +48,7 @@ class Channel:  public sihd::util::Named,
         // notifies all observers and prevent writing inside notification thread
         void notify();
 
+        // write internal timestamp with clock
         void do_timestamp();
 
         // write and notify only if a change happened

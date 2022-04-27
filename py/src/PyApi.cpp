@@ -9,7 +9,7 @@ std::map<std::string_view, std::function<void (PyApi::PyModule &)>> PyApi::api_l
 
 PYBIND11_MODULE(sihd, m_sihd)
 {
-    m_sihd.doc() = "hello";
+    m_sihd.doc() = "sihd";
     PyApi::set_api_to_module(m_sihd);
 }
 

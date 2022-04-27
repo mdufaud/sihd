@@ -31,8 +31,10 @@ class PyApi
                 std::vector<std::string_view> _modules_imported;
         };
 
+        // called when module is imported
         static void set_api_to_module(pybind11::module_ &);
 
+        // api to be added before main()
         static void add_api(std::string_view name, std::function<void (PyModule &)> f);
 
     protected:

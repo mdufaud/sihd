@@ -46,7 +46,7 @@ namespace test
             std::string _base_test_dir;
     };
 
-    TEST_F(TestPyCoreApi, test_py_core_api)
+    TEST_F(TestPyCoreApi, test_pycore_channel)
     {
         DirectorySwitcher d(getenv("LIB_PATH"));
         pybind11::scoped_interpreter guard{};

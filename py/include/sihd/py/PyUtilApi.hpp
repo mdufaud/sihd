@@ -43,6 +43,36 @@ class PyUtilApi
         // Array utils
 
         template <typename T>
+        static bool _array_py_push_back_list(sihd::util::Array<T> & self, pybind11::list list)
+        {
+            bool ret = true;
+            for (const auto & item: list)
+            {
+                if (self.push_back(item.cast<T>()) == false)
+                {
+                    ret = false;
+                    break ;
+                }
+            }
+            return ret;
+        }
+
+        template <typename T>
+        static bool _array_py_push_back_tuple(sihd::util::Array<T> & self, pybind11::tuple tuple)
+        {
+            bool ret = true;
+            for (const auto & item: tuple)
+            {
+                if (self.push_back(item.cast<T>()) == false)
+                {
+                    ret = false;
+                    break ;
+                }
+            }
+            return ret;
+        }
+
+        template <typename T>
         static T _array_py_getitem(const sihd::util::Array<T> & self, size_t idx)
         {
             if (idx >= self.size())

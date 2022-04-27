@@ -67,7 +67,7 @@ void    LuaCoreApi::load(Vm & vm)
                         }
                         else if (fun.isFunction())
                         {
-                            LuaCoreApi::_channel_handler.add_channel_obs(self, fun);
+                            LuaCoreApi::_channel_handler.add_channel_obs(self, state, fun);
                             self->add_observer(&LuaCoreApi::_channel_handler);
                         }
                         else
@@ -212,23 +212,38 @@ LuaCoreApi::LuaChannelHandler::~LuaChannelHandler()
 
 void    LuaCoreApi::LuaChannelHandler::handle(Channel *c)
 {
-    auto it = _map_handler.find(c);
-    if (it == _map_handler.end())
-        return ;
-    luabridge::LuaRef & fun = it->second;
-    if (fun.isFunction())
     {
-        fun(c);
+        std::lock_guard l(_mutex_map);
+        // find lua method
+        auto it = _map_handler.find(c);
+        if (it == _map_handler.end())
+            return ;
+        // handle channel
+        it->second.thread_runner.call_lua_method_noret<Channel *>(c);
     }
 }
 
-void    LuaCoreApi::LuaChannelHandler::add_channel_obs(Channel *c, luabridge::LuaRef ref)
+void    LuaCoreApi::LuaChannelHandler::add_channel_obs(Channel *c, lua_State *state, luabridge::LuaRef ref)
 {
-    _map_handler.insert({c, ref});
+    LuaSingleChannelHandler lsch(state, ref);
+    // make non owning LuaVm from lua_State
+    Vm current_vm(state);
+    // create a thread from current stack
+    lua_State *new_thread_state = current_vm.new_luathread();
+    if (new_thread_state == nullptr)
+        return ;
+    // set new thread's lua_State to LuaThreadRunner
+    lsch.thread_runner.new_lua_state(new_thread_state);
+    {
+        // set infos to handling map
+        std::lock_guard l(_mutex_map);
+        _map_handler.insert({c, std::move(lsch)});
+    }
 }
 
 void    LuaCoreApi::LuaChannelHandler::remove_channel_obs(Channel *c)
 {
+    std::lock_guard l(_mutex_map);
     _map_handler.erase(c);
 }
 
