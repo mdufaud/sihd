@@ -61,7 +61,7 @@ namespace test
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         EXPECT_TRUE(worker.stop_worker());
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
-        EXPECT_EQ(ran, 10);
+        EXPECT_NEAR(ran, 10, 1);
     }
 
     TEST_F(TestWorker, test_stepworker_once)

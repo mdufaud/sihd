@@ -38,7 +38,7 @@ class LuaCoreApi
                     LuaSingleChannelHandler(lua_State *state, luabridge::LuaRef ref):
                         state(state), thread_runner(ref)
                     {
-                    };
+                    }
 
                     lua_State *state;
                     LuaUtilApi::LuaThreadRunner thread_runner;

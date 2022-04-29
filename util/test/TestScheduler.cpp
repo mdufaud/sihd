@@ -99,12 +99,11 @@ namespace test
             GTEST_SKIP() << "Valgrind debugger doesn't hold up there";
 
         Scheduler seq("seq");
-        SystemClock clock;
         steady_clock steady_clock;
 
         int ran = 0;
         auto before = steady_clock.now();
-        std::time_t now = clock.now();
+        std::time_t now = seq.now();
         seq.add_task(new Task([&] () -> bool
         {
             SIHD_TRACE("Should run once");
@@ -136,7 +135,6 @@ namespace test
         if (OS::is_run_by_valgrind())
             GTEST_SKIP() << "Test is buggy under valgrind debugger";
         Scheduler seq("seq");
-        SystemClock clock;
 
         int lambda_ran = 0;
         // 1 ms
@@ -186,14 +184,13 @@ namespace test
         if (OS::is_run_by_valgrind())
             GTEST_SKIP() << "Test is buggy under valgrind debugger";
         Scheduler seq("seq");
-        SystemClock clock;
         int lambda_ran = 0;
         std::function<bool()> fun = [&lambda_ran] () -> bool
         {
             ++lambda_ran;
             return true;
         };
-        time_t now = clock.now();
+        time_t now = seq.now();
         seq.add_task(new Task(fun, now + time::milli(1)));
         seq.add_task(new Task(fun, now + time::milli(5)));
         seq.add_task(new Task(fun, now + time::milli(10)));
@@ -206,5 +203,31 @@ namespace test
         seq.stop();
         SIHD_LOG(debug, "Stopped scheduler");
         EXPECT_EQ(lambda_ran, 5);
+    }
+
+    TEST_F(TestScheduler, test_sched_burst)
+    {
+        if (OS::is_run_by_valgrind())
+            GTEST_SKIP() << "Test is buggy under valgrind debugger";
+        Scheduler seq("seq");
+        int lambda_ran = 0;
+        std::function<bool()> fun = [&lambda_ran] () -> bool
+        {
+            ++lambda_ran;
+            return true;
+        };
+        seq.add_task(new Task(fun, 0, 1));
+        int i = 0;
+        while (i < 100)
+        {
+            seq.start();
+            std::this_thread::sleep_for(std::chrono::microseconds(200));
+            seq.pause();
+            std::this_thread::sleep_for(std::chrono::microseconds(200));
+            seq.resume();
+            std::this_thread::sleep_for(std::chrono::microseconds(200));
+            seq.stop();
+            ++i;
+        }
     }
 }

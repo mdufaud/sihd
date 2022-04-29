@@ -6,7 +6,7 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-StepWorker::StepWorker(IRunnable *runnable): Worker(runnable), _pause(false), _sleep_time(0)
+StepWorker::StepWorker(IRunnable *runnable): Worker(runnable), _pause(false), _pausing(false), _sleep_time(0)
 {
     this->add_conf("frequency", &StepWorker::set_frequency);
 }
@@ -29,31 +29,38 @@ bool    StepWorker::set_frequency(double frequency)
 
 bool    StepWorker::run()
 {
-    Thread::set_name(this->_worker_get_name());
-    this->_worker_set_running(true);
     bool ret = true;
     std::time_t now = 0;
     std::time_t after = 0;
     if (_pause)
+    {
+        Modificator m(_pausing, true);
         _pause_waitable.infinite_wait();
+    }
     while (this->is_worker_started())
     {
         now = _clock.now();
         if ((ret = this->step()) == false)
             break ;
         after = _clock.now();
-        _pause_waitable.wait_for(_sleep_time - (after - now));
+        {
+            Modificator m(_pausing, true);
+            _pause_waitable.wait_for(_sleep_time - (after - now));
+        }
         if (_pause)
+        {
+            Modificator m(_pausing, true);
             _pause_waitable.infinite_wait();
+        }
     }
-    this->_worker_set_running(false);
     return ret;
 }
 
 void    StepWorker::resume_worker()
 {
     _pause = false;
-    _pause_waitable.notify_all();
+    while (_pausing.load() == true)
+        _pause_waitable.notify_all();
 }
 
 void    StepWorker::pause_worker()
@@ -78,7 +85,7 @@ bool    StepWorker::on_worker_start()
 
 bool    StepWorker::on_worker_stop()
 {
-    _pause_waitable.notify_all();
+    this->resume_worker();
     return true;
 }
 

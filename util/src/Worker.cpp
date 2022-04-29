@@ -44,7 +44,7 @@ bool    Worker::start_worker(std::string_view name)
     if (ret)
     {
         _worker_thread_name = name;
-        _worker_thread = std::thread(&Worker::run, this);
+        _worker_thread = std::thread(&Worker::_prepare_run, this);
         if (_detach)
             _worker_thread.detach();
     }
@@ -53,24 +53,28 @@ bool    Worker::start_worker(std::string_view name)
 
 bool    Worker::start_sync_worker(std::string_view name)
 {
-    std::lock_guard lock(_worker_sync_mutex);
+    _synchro.init_sync(2);
     bool ret = this->start_worker(name);
-    while (ret && _running == false)
-        _running_waitable.wait_for(time::micro(100));
+    if (ret)
+        _synchro.sync();
+    _synchro.reset();
+    return ret;
+}
+
+bool    Worker::_prepare_run()
+{
+    this->_worker_set_running(true);
+    Thread::set_name(_worker_thread_name);
+    if (_synchro.to_sync() > 0)
+        _synchro.sync();
+    bool ret = this->run();
+    this->_worker_set_running(false);
     return ret;
 }
 
 bool    Worker::run()
 {
-    // unlocks start_sync_worker
-    this->_worker_set_running(true);
-    // start only when start_sync_worker ends
-    std::lock_guard lock(_worker_sync_mutex);
-
-    Thread::set_name(_worker_thread_name);
-    bool ret = _runnable_ptr->run();
-    this->_worker_set_running(false);
-    return ret;
+    return _runnable_ptr->run();
 }
 
 bool    Worker::stop_worker()
@@ -102,7 +106,6 @@ void    Worker::_worker_set_running(bool active)
     {
         std::lock_guard lock(_worker_mutex);
         _running = active;
-        _running_waitable.notify_all();
     }
 }
 

@@ -3,9 +3,9 @@
 #include <sihd/util/Files.hpp>
 #include <sihd/util/OS.hpp>
 
-#include <sihd/util/Configurable.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Splitter.hpp>
+#include <sihd/util/Waitable.hpp>
 
 #include <sihd/util/version.hpp>
 #include <sihd/util/Types.hpp>
@@ -65,11 +65,16 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
     pybind11::module m_util = m_sihd.def_submodule("util", "sihd::util");
 
     m_util.def_submodule("log", "sihd::util::Logger")
-        .def("debug", +[] (std::string_view log) { PyUtilApi::logger.log(debug, log); })
-        .def("info", +[] (std::string_view log) { PyUtilApi::logger.log(info, log); })
-        .def("warning", +[] (std::string_view log) { PyUtilApi::logger.log(warning, log); })
-        .def("error", +[] (std::string_view log) { PyUtilApi::logger.log(error, log); })
-        .def("critical", +[] (std::string_view log) { PyUtilApi::logger.log(critical, log); });
+        .def("debug", +[] (std::string_view log) { PyUtilApi::logger.log(debug, log); },
+            pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("info", +[] (std::string_view log) { PyUtilApi::logger.log(info, log); },
+            pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("warning", +[] (std::string_view log) { PyUtilApi::logger.log(warning, log); },
+            pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("error", +[] (std::string_view log) { PyUtilApi::logger.log(error, log); },
+            pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("critical", +[] (std::string_view log) { PyUtilApi::logger.log(critical, log); },
+            pybind11::call_guard<pybind11::gil_scoped_release>());
 
     m_util.def_submodule("types", "sihd::util::Types")
         .def("type_size", &Types::type_size)
@@ -93,10 +98,10 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
 
     m_util.def_submodule("time", "sihd::util::time")
         // sleep
-        .def("nsleep", &time::nsleep)
-        .def("usleep", &time::usleep)
-        .def("msleep", &time::msleep)
-        .def("sleep", &time::sleep)
+        .def("nsleep", &time::nsleep, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("usleep", &time::usleep, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("msleep", &time::msleep, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("sleep", &time::sleep, pybind11::call_guard<pybind11::gil_scoped_release>())
         // convert from nano
         .def("to_us", &time::to_micro)
         .def("to_ms", &time::to_milli)
@@ -127,40 +132,7 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("count_tokens", &Splitter::count_tokens);
 
     pybind11::class_<Configurable>(m_util, "Configurable")
-        .def("set_conf", +[] (Configurable & self, const pybind11::dict & conf)
-        {
-            std::string key;
-            bool ret = true;
-            for (const auto & item: conf)
-            {
-                try
-                {
-                    key = pybind11::str(item.first);
-                }
-                catch (const pybind11::cast_error & e)
-                {
-                    throw std::runtime_error("configuration key is not a string");
-                }
-                try
-                {
-                    ret = self.set_conf_str(key, item.second.cast<std::string>()) && ret;
-                    continue ;
-                }
-                catch (const pybind11::cast_error & e)
-                {
-                }
-                PyObject *val = item.second.ptr();
-                if (PyBool_Check(val))
-                    ret = self.set_conf<bool>(key, item.second.cast<bool>()) && ret;
-                else if (PyLong_Check(val))
-                    ret = self.set_conf_int(key, item.second.cast<int64_t>()) && ret;
-                else if (PyFloat_Check(val))
-                    ret = self.set_conf_float(key, item.second.cast<double>()) && ret;
-                else
-                    throw std::runtime_error(Str::format("configuration '%s' type error", key.c_str()).c_str());
-            }
-            return ret;
-        });
+        .def("set_conf", &PyUtilApi::_configurable_set_conf);
 
     pybind11::class_<Named, SmartNodePtr<Named>>(m_util, "Named")
         // keep_alive 1 -> this | 2 -> first arg | 3 -> parent
@@ -168,15 +140,17 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
         .def_property_readonly("c_ptr", +[] (const Named *self) -> int64_t { return (int64_t)self; })
-        .def("get_parent", &Named::get_parent)
+        .def("get_parent", &Named::get_parent, pybind11::return_value_policy::reference_internal)
         .def("get_name", &Named::get_name)
         .def("get_full_name", &Named::get_full_name)
         .def("get_class_name", &Named::get_class_name)
         .def("get_description", &Named::get_description)
         .def("get_full_name", &Named::get_full_name)
-        .def("get_root", &Named::get_root)
-        .def("find", static_cast<Named * (Named::*)(const std::string &)>(&Named::find))
-        .def("find_from", static_cast<Named * (Named::*)(Named *, const std::string &)>(&Named::find));
+        .def("get_root", &Named::get_root, pybind11::return_value_policy::reference_internal)
+        .def("find", static_cast<Named * (Named::*)(const std::string &)>(&Named::find),
+            pybind11::return_value_policy::reference_internal)
+        .def("find_from", static_cast<Named * (Named::*)(Named *, const std::string &)>(&Named::find),
+            pybind11::return_value_policy::reference_internal);
 
     pybind11::class_<Node::ChildEntry>(m_util, "ChildEntry")
         .def_readonly("name", &Node::ChildEntry::name)
@@ -187,7 +161,8 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         // keeps alive parent while node object is alive
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
-        .def("get_child", static_cast<Named *(Node::*)(const std::string &) const>(&Node::get_child))
+        .def("get_child", static_cast<Named *(Node::*)(const std::string &) const>(&Node::get_child),
+            pybind11::return_value_policy::reference_internal)
         .def("add_child", +[] (Node *self, Named *child) { return self->add_child(child); })
         .def("add_child_name", +[] (Node *self, const std::string & name, Named *child) { return self->add_child(name, child); })
         .def("remove_child", static_cast<bool (Node::*)(const Named *)>(&Node::remove_child))
@@ -195,7 +170,7 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("is_link", &Node::is_link)
         .def("add_link", &Node::add_link)
         .def("remove_link", &Node::remove_link)
-        .def("get_link", &Node::get_link)
+        .def("get_link", &Node::get_link, pybind11::return_value_policy::reference_internal)
         .def("resolve_links", &Node::resolve_links)
         .def("get_tree_str", static_cast<std::string (Node::*)() const>(&Node::get_tree_str))
         .def("get_tree_desc_str", &Node::get_tree_desc_str)
@@ -207,11 +182,11 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("get_state", &ServiceController::get_state);
 
     pybind11::class_<AService>(m_util, "AService")
-        .def("setup", &AService::setup)
-        .def("init", &AService::init)
-        .def("start", &AService::start)
-        .def("stop", &AService::stop)
-        .def("reset", &AService::reset)
+        .def("setup", &AService::setup, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("init", &AService::init, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("start", &AService::start, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("stop", &AService::stop, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("reset", &AService::reset, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("is_running", &AService::is_running)
         .def("get_service_ctrl", &AService::get_service_ctrl, pybind11::return_value_policy::reference_internal);
 
@@ -229,21 +204,32 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
 
     m_util.attr("clock") = &Clock::default_clock;
 
+    pybind11::class_<Waitable>(m_util, "Waitable")
+        .def(pybind11::init<>())
+        .def("notify", &Waitable::notify)
+        .def("notify_all", &Waitable::notify_all)
+        .def("infinite_wait", &Waitable::infinite_wait, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("infinite_wait_elapsed", &Waitable::infinite_wait_elapsed, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("wait_until", &Waitable::wait_until, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("wait_for", &Waitable::wait_for, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("wait_loop", &Waitable::wait_loop, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("wait_elapsed", &Waitable::wait_elapsed, pybind11::call_guard<pybind11::gil_scoped_release>());
+
     pybind11::class_<Scheduler, Named, Configurable, SmartNodePtr<Scheduler>>(m_util, "Scheduler")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
         .def("get_clock", &Scheduler::get_clock, pybind11::return_value_policy::reference_internal)
         .def("set_clock", &Scheduler::set_clock)
-        .def("start", &Scheduler::start)
-        .def("stop", &Scheduler::stop)
+        .def("start", &Scheduler::start, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("stop", &Scheduler::stop, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("is_running", &Scheduler::is_running)
         .def("pause", &Scheduler::pause)
-        .def("resume", &Scheduler::resume)
+        .def("resume", &Scheduler::resume, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("add_task", +[] (Scheduler & self, const pybind11::function & task, time_t when, time_t repeat)
         {
             self.add_task(new PyUtilApi::PyTask(task, when, repeat));
         }, pybind11::arg("task"), pybind11::arg("when") = 0, pybind11::arg("repeat") = 0)
-        .def("clear_tasks", &Scheduler::clear_tasks)
+        .def("clear_tasks", &Scheduler::clear_tasks, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def_readonly("overruns", &Scheduler::overruns)
         .def_readwrite("overrun_at", &Scheduler::overrun_at)
         .def_readwrite("acceptable_nano", &Scheduler::acceptable_nano);
@@ -293,6 +279,62 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("__contains__", &PyUtilApi::_array_py_contains<char>)
         .def("__reversed__", &PyUtilApi::_array_py_reversed<char>)
         .def("__iter__", &PyUtilApi::_array_py_iter<char>, pybind11::keep_alive<0, 1>());
+}
+
+bool    PyUtilApi::_configurable_set_conf(Configurable *self, const pybind11::dict & conf)
+{
+    std::string key;
+    bool ret = true;
+    for (const auto & item: conf)
+    {
+        try
+        {
+            key = pybind11::str(item.first);
+        }
+        catch (const pybind11::cast_error & e)
+        {
+            throw std::runtime_error("configuration key is not a string");
+        }
+        PyObject *val = item.second.ptr();
+        if (PyTuple_Check(val))
+        {
+            pybind11::tuple tuple = item.second.cast<pybind11::tuple>();
+            for (const auto & el: tuple)
+            {
+                ret = PyUtilApi::_configurable_set_single_conf(self, key, el) && ret;
+            }
+        }
+        else if (PyList_Check(val))
+        {
+            pybind11::list list = item.second.cast<pybind11::list>();
+            for (const auto & el: list)
+            {
+                ret = PyUtilApi::_configurable_set_single_conf(self, key, el) && ret;
+            }
+        }
+        else
+            ret = PyUtilApi::_configurable_set_single_conf(self, key, item.second) && ret;
+    }
+    return ret;
+}
+
+bool    PyUtilApi::_configurable_set_single_conf(sihd::util::Configurable *self, const std::string & key, const pybind11::handle & handle)
+{
+    try
+    {
+        return self->set_conf_str(key, handle.cast<std::string>());
+    }
+    catch (const pybind11::cast_error & e)
+    {
+    }
+    PyObject *val = handle.ptr();
+    if (PyBool_Check(val))
+        return self->set_conf<bool>(key, handle.cast<bool>());
+    else if (PyLong_Check(val))
+        return self->set_conf_int(key, handle.cast<int64_t>());
+    else if (PyFloat_Check(val))
+        return self->set_conf_float(key, handle.cast<double>());
+    throw std::runtime_error(Str::format("configuration '%s' type error", key.c_str()).c_str());
 }
 
 static void __attribute__ ((constructor)) premain()

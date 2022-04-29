@@ -35,9 +35,9 @@ class Observable: public IObservable<T>
             return true;
         }
 
-        bool is_observer(IHandler<T *> *obs)
+        bool is_observer(IHandler<T *> *obs) const
         {
-            return std::find(_observers.begin(), _observers.end(), obs) != _observers.end();
+            return std::find(_observers.cbegin(), _observers.cend(), obs) != _observers.cend();
         }
 
         template <typename OBS_TYPE>

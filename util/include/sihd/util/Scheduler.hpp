@@ -11,9 +11,10 @@
 # include <sihd/util/Logger.hpp>
 # include <sihd/util/time.hpp>
 # include <sihd/util/Thread.hpp>
-# include <sihd/util/Waitable.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/IStoppableRunnable.hpp>
+# include <sihd/util/Waitable.hpp>
+# include <sihd/util/Modificator.hpp>
 
 namespace sihd::util
 {
@@ -59,22 +60,25 @@ class Scheduler: public Named, public IStoppableRunnable, public Configurable
         Task *_get_next_task(time_t time);
         virtual void _play_task(Task *task, time_t time);
 
-        bool _running;
+        std::atomic<bool> _running;
+        std::atomic<bool> _paused;
+        std::atomic<bool> _waiting;
+        std::atomic<bool> _pausing;
+        std::atomic<bool> _playing;
         IClock *_clock_ptr;
         std::thread _thread;
         time_t _next_run;
         time_t _begin_run;
         std::mutex _mutex_task;
-        std::mutex _mutex_run;
-        std::mutex _mutex_pause;
-        Waitable _waitable;
+        std::mutex _mutex_state;
+        std::mutex _mutex_play;
+        Waitable _waitable_task;
         Waitable _waitable_pause;
-        SteadyClock _steady_clock;
+        Waitable _waitable_play;
         std::list<Task *> _task_rm_list;
         std::multimap<time_t, Task *> _task_map;
 
         SystemClock _default_clock;
-        bool _paused;
         bool _no_delay;
         time_t _paused_time;
 };

@@ -8,6 +8,7 @@
 # include <sihd/util/Task.hpp>
 # include <sihd/util/Array.hpp>
 # include <sihd/util/Node.hpp>
+# include <sihd/util/Configurable.hpp>
 
 # include <pybind11/chrono.h>
 # include <pybind11/stl.h>
@@ -40,6 +41,12 @@ class PyUtilApi
         };
 
     protected:
+        static bool _configurable_set_conf(sihd::util::Configurable *self,
+                                            const pybind11::dict & conf);
+        static bool _configurable_set_single_conf(sihd::util::Configurable *self,
+                                                    const std::string & key,
+                                                    const pybind11::handle & handle);
+
         // Array utils
 
         template <typename T>

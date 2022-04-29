@@ -10,7 +10,7 @@
 # include <sihd/util/Clocks.hpp>
 # include <sihd/util/time.hpp>
 # include <sihd/util/Thread.hpp>
-# include <sihd/util/Waitable.hpp>
+# include <sihd/util/Synchronizer.hpp>
 
 namespace sihd::util
 {
@@ -20,7 +20,7 @@ namespace sihd::util
  *          though as a backup, can set a method to run
  *
  */
-class Worker: public IRunnable, public Configurable
+class Worker: protected IRunnable, public Configurable
 {
     public:
         Worker(IRunnable *runnable = nullptr);
@@ -45,6 +45,7 @@ class Worker: public IRunnable, public Configurable
         virtual bool on_worker_start();
         virtual bool on_worker_stop();
 
+        virtual bool _prepare_run();
         std::string & _worker_get_name();
         IRunnable *_worker_get_runnable();
         void _worker_set_running(bool active);
@@ -56,7 +57,7 @@ class Worker: public IRunnable, public Configurable
         bool _started;
         bool _running;
         bool _detach;
-        Waitable _running_waitable;
+        Synchronizer _synchro;
         std::mutex _worker_mutex;
         std::mutex _worker_sync_mutex;
         std::thread _worker_thread;

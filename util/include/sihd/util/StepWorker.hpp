@@ -3,11 +3,13 @@
 
 # include <sihd/util/Worker.hpp>
 # include <sihd/util/ISteppable.hpp>
+# include <sihd/util/Modificator.hpp>
+# include <atomic>
 
 namespace sihd::util
 {
 
-class StepWorker: public Worker, public ISteppable
+class StepWorker: public Worker, protected ISteppable
 {
     public:
         StepWorker(IRunnable *runnable = nullptr);
@@ -27,7 +29,8 @@ class StepWorker: public Worker, public ISteppable
         virtual bool on_worker_start() override;
         virtual bool on_worker_stop() override;
 
-        bool _pause;
+        std::atomic<bool> _pause;
+        std::atomic<bool> _pausing;
         std::time_t _sleep_time;
         SteadyClock _clock;
         Waitable _pause_waitable;

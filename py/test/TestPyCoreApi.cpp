@@ -52,4 +52,11 @@ namespace test
         pybind11::scoped_interpreter guard{};
         EXPECT_NO_THROW(pybind11::eval_file(_cwd + "/test/py/core/test_channel.py"));
     }
+
+    TEST_F(TestPyCoreApi, test_pycore_devpulsation)
+    {
+        DirectorySwitcher d(getenv("LIB_PATH"));
+        pybind11::scoped_interpreter guard{};
+        EXPECT_NO_THROW(pybind11::eval_file(_cwd + "/test/py/core/test_devpulsation.py"));
+    }
 }

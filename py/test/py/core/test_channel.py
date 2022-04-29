@@ -36,13 +36,18 @@ assert(ch_float.write(0, 1.234))
 f = ch_float.read(0)
 assert(f < 1.235 and f > 1.233)
 
+nobs = 0
 observed_channel = None
 def channel_obs(channel):
+    global nobs
     global observed_channel
     observed_channel = channel
+    nobs += 1
 
 ch_bool.set_observer(channel_obs)
+ch_bool.write(0, False)
 ch_bool.write(0, False)
 ch_bool.set_observer(None)
 
 assert(observed_channel == ch_bool)
+assert(nobs == 1)

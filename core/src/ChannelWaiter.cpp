@@ -6,7 +6,8 @@ namespace sihd::core
 
 SIHD_LOGGER;
 
-ChannelWaiter::ChannelWaiter(Channel *c): ACoreObject("channel_waiter", nullptr), _channel(nullptr)
+ChannelWaiter::ChannelWaiter(Channel *c):
+    ACoreObject("channel_waiter", nullptr), _channel(nullptr)
 {
     if (c != nullptr)
         this->set_channel(c);

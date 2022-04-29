@@ -19,15 +19,13 @@ ch_beat:set_observer(function (ch)
 end)
 
 ch_activate:write(0, true)
-
-local res = waiter:wait_for(sihd.util.time.ms(50), 5)
-
+local ret = waiter:wait_for(sihd.util.time.ms(50), 5)
 ch_activate:write(0, false)
 
 ch_beat:set_observer(nil)
 
 print(i)
 assert(i >= 5)
-assert(res == true)
+assert(ret == true)
 
 core:stop()
