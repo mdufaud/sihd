@@ -3,7 +3,7 @@
 
 # include <sihd/util/Worker.hpp>
 # include <sihd/util/ISteppable.hpp>
-# include <sihd/util/Modificator.hpp>
+# include <sihd/util/ScopedModifier.hpp>
 # include <atomic>
 
 namespace sihd::util

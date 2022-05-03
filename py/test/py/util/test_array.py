@@ -8,8 +8,9 @@ assert(arr_char[0] == "a")
 arr_char.push_back(["b", "c"])
 arr_char.push_back("d")
 arr_char.push_back(("e", "f"))
+arr_char.push_back(" !")
 
-print(arr_char.to_string(" "))
+assert(arr_char.to_string() == "abcdef !")
 
 arr_int = sihd.util.ArrInt([1, 2, 3])
 assert(len(arr_int) == 3)

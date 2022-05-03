@@ -39,9 +39,16 @@ class Array: public IArray, public ICloneable<Array<T>>
             this->push_back(data, size);
         }
 
-        Array(const Array<T> & array): Array()
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        Array(const char *str): Array(str, strlen(str))
         {
-            this->from(array);
+        }
+
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        Array(std::string view): Array(view.data(), view.size())
+        {
         }
 
         Array(size_t capacity): Array()
@@ -49,6 +56,8 @@ class Array: public IArray, public ICloneable<Array<T>>
             if (capacity > 0)
                 this->reserve(capacity);
         }
+
+        // containers constructors
 
         Array(std::initializer_list<T> list): Array()
         {
@@ -72,7 +81,45 @@ class Array: public IArray, public ICloneable<Array<T>>
                 this->push_back(value);
         }
 
-        Array & operator=(const Array<T> &) = delete;
+        // copy constructor
+
+        Array(const Array<T> & array): Array()
+        {
+            this->from(array);
+        }
+
+        Array(Array<T> && other): Array()
+        {
+            *this = std::move(other);
+        }
+
+        Array & operator=(const Array<T> & other)
+        {
+            if (&other != this)
+            {
+                _buf_ptr = nullptr;
+                _size = 0;
+                _capacity = 0;
+                _has_ownership = false;
+                this->from(other);
+            }
+            return *this;
+        }
+
+        Array & operator=(Array<T> && other)
+        {
+            if (&other != this)
+            {
+                _buf_ptr = other._buf_ptr;
+                _capacity = other._capacity;
+                _size = other._size;
+                _has_ownership = other._has_ownership;
+                other._buf_ptr = nullptr;
+                other._capacity = 0;
+                other._size = 0;
+            }
+            return *this;
+        };
 
         virtual ~Array()
         {
@@ -98,11 +145,11 @@ class Array: public IArray, public ICloneable<Array<T>>
         size_t byte_capacity() const { return _capacity * sizeof(T); }
 
         Type data_type() const { return Types::to_type<T>(); }
-        std::string data_type_to_string() const { return Types::type_to_string(this->data_type()); }
+        const char *data_type_to_string() const { return Types::type_to_string(this->data_type()); }
 
-        bool copy_from_bytes(const uint8_t *buf, size_t size, size_t byte_offset = 0)
+        bool copy_from_bytes(const void *buf, size_t size, size_t byte_offset = 0)
         {
-            if (size + byte_offset > this->byte_size())
+            if ((size + byte_offset) > this->byte_size())
                 return false;
             memcpy(this->buf() + byte_offset, buf, size);
             return true;
@@ -113,29 +160,30 @@ class Array: public IArray, public ICloneable<Array<T>>
             return this->copy_from_bytes(arr.cbuf(), arr.byte_size(), byte_offset);
         }
 
-        bool copy_from(const IArray & arr, size_t byte_offset = 0)
+        bool copy_from_bytes(const IArrayView & arr, size_t byte_offset = 0)
         {
-            return this->is_same_type(arr)
-                    && this->copy_from_bytes(arr.cbuf(), arr.byte_size(), byte_offset);
+            return this->copy_from_bytes(arr.buf(), arr.byte_size(), byte_offset);
         }
 
-        bool copy_to(uint8_t *buf, size_t size) const
+        bool copy_to_bytes(void *buf, size_t size, size_t byte_offset) const
         {
-            if (size > this->byte_size())
+            if (size + byte_offset > this->byte_size())
                 return false;
-            memcpy(buf, (void *)_buf_ptr, size);
+            memcpy(buf, this->cbuf() + byte_offset, size);
             return true;
         }
 
-        bool from(const IArray & arr)
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        bool from_string(std::string_view data)
         {
-            if (this->is_same_type(arr) == false)
-                return false;
-            return this->from(arr.cbuf(), arr.capacity());
+            this->delete_buffer();
+            return this->push_back(data);
         }
 
-        bool from_string(const std::string & data, const char *delimiters)
+        bool from_string(std::string_view data, const char *delimiters)
         {
+            // can be optimized with string views
             bool ret = true;
             Splitter splitter(delimiters);
             const std::vector<std::string> splits = splitter.split(data);
@@ -155,31 +203,70 @@ class Array: public IArray, public ICloneable<Array<T>>
             return ret;
         }
 
-        bool assign_bytes(uint8_t *buf, size_t size)
+        bool from(const IArrayView & arr)
+        {
+            return this->from_bytes(arr.buf(), arr.byte_size());
+        }
+
+        bool from(const IArray & arr)
+        {
+            return this->from_bytes(arr.cbuf(), arr.byte_size());
+        }
+
+        bool from_bytes(const void *buf, size_t byte_size)
+        {
+            if (byte_size % this->data_size() != 0)
+            {
+                SIHD_LOG_DEBUG("Array::byte_reserve cannot reserve - %lu not divisible by data size %lu",
+                                byte_size, this->data_size());
+                return false;
+            }
+            return this->from((const T *)buf, byte_size / this->data_size());
+        }
+
+        bool assign_bytes(void *buf, size_t size)
         {
             return this->assign_bytes(buf, size, size);
         }
 
-        bool byte_resize(size_t size)
+        bool byte_resize(size_t byte_size)
         {
-            if (size % this->data_size() != 0)
+            if (byte_size % this->data_size() != 0)
             {
                 SIHD_LOG_DEBUG("Array::byte_resize cannot resize - %lu not divisible by data size %lu",
-                                size, this->data_size());
+                                byte_size, this->data_size());
                 return false;
             }
-            return this->resize(size / this->data_size());
+            return this->resize(byte_size / this->data_size());
         }
 
-        bool byte_reserve(size_t size)
+        bool byte_reserve(size_t byte_size)
         {
-            if (size % this->data_size() != 0)
+            if (byte_size % this->data_size() != 0)
             {
                 SIHD_LOG_DEBUG("Array::byte_reserve cannot reserve - %lu not divisible by data size %lu",
-                                size, this->data_size());
+                                byte_size, this->data_size());
                 return false;
             }
-            return this->reserve(size / this->data_size());
+            return this->reserve(byte_size / this->data_size());
+        }
+
+        // delete internal buffer if exists then sets it to bytes buffer buf - does not take ownership
+        bool assign_bytes(void *buf, size_t byte_size, size_t byte_capacity)
+        {
+            if (byte_size % this->data_size() != 0)
+            {
+                SIHD_LOG_DEBUG("Array::assign_bytes cannot assign buffer - size %lu not divisible by %lu",
+                                byte_size, this->data_size());
+                return false;
+            }
+            if (byte_capacity % this->data_size() != 0)
+            {
+                SIHD_LOG_DEBUG("Array::assign_bytes cannot assign buffer - capacity %lu not divisible by %lu",
+                                byte_capacity, this->data_size());
+                return false;
+            }
+            return this->assign((T *)buf, byte_size / this->data_size(), byte_capacity / this->data_size());
         }
 
         bool resize(size_t size)
@@ -195,14 +282,14 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (_buf_ptr != nullptr)
             {
-                T *newbuf = new T[capacity]();
-                if (newbuf == nullptr)
+                T *new_buf = new T[capacity]();
+                if (new_buf == nullptr)
                     return false;
-                size_t min = std::min(capacity, _size);
-                memcpy((void *)newbuf, (void *)_buf_ptr, min * this->data_size());
+                size_t new_size = std::min(_size, capacity);
+                memcpy((void *)new_buf, (const void *)_buf_ptr, new_size * this->data_size());
                 this->delete_buffer();
-                _buf_ptr = newbuf;
-                _size = min;
+                _buf_ptr = new_buf;
+                _size = new_size;
                 _capacity = capacity;
                 _has_ownership = true;
             }
@@ -216,11 +303,28 @@ class Array: public IArray, public ICloneable<Array<T>>
             return this->data_type() == arr.data_type();
         }
 
-        bool is_equal(const IArray & arr) const
+        bool is_same_type(const IArrayView & arr) const
         {
-            if (arr.byte_size() != this->byte_size())
+            return this->data_type() == arr.data_type();
+        }
+
+        bool is_bytes_equal(const void *buf, size_t size, size_t byte_offset = 0) const
+        {
+            if (byte_offset > this->byte_size())
                 return false;
-            return memcmp(_buf_ptr, arr.cbuf(), this->byte_size()) == 0;
+            if ((this->byte_size() - byte_offset) > size)
+                return false;
+            return memcmp(this->cbuf() + byte_offset, buf, this->byte_size() - byte_offset) == 0;
+        }
+
+        bool is_bytes_equal(const IArray & arr, size_t byte_offset = 0) const
+        {
+            return this->is_bytes_equal(arr.cbuf(), arr.byte_size(), byte_offset);
+        }
+
+        bool is_bytes_equal(const IArrayView & arr, size_t byte_offset = 0) const
+        {
+            return this->is_bytes_equal(arr.buf(), arr.byte_size(), byte_offset);
         }
 
         std::string hexdump(char delimiter = ' ') const
@@ -228,21 +332,42 @@ class Array: public IArray, public ICloneable<Array<T>>
             return Str::hexdump(_buf_ptr, this->byte_size(), delimiter);
         }
 
-        std::string to_string(char delimiter = '\0') const
+        std::string to_string() const
+        {
+            if constexpr (std::is_same_v<T, char>)
+            {
+                if (this->size() > 0 && this->cdata()[this->size() - 1] == '\0')
+                    return std::string(this->cdata(), this->size() - 1);
+                return std::string(this->cdata(), this->size());
+            }
+            else
+            {
+                std::string s;
+                s.reserve(_size);
+                size_t i = 0;
+                while (i < _size)
+                {
+                    s += std::to_string(_buf_ptr[i]);
+                    ++i;
+                }
+                return s;
+            }
+        }
+
+        std::string to_string(char delimiter) const
         {
             std::string s;
-
             // trying to reserve at least 1 char by element + delimiters (if there are)
-            if (delimiter == 0)
-                s.reserve(_size);
-            else
-                s.reserve(_size + std::max(0, int(_size - 2)));
+            s.reserve(_size + std::max(0, int(_size - 2)));
             size_t i = 0;
             while (i < _size)
             {
-                if (i > 0 && delimiter != 0)
+                if (i > 0)
                     s += delimiter;
-                s += std::to_string(_buf_ptr[i]);
+                if constexpr (std::is_same_v<T, char>)
+                    s += _buf_ptr[i];
+                else
+                    s += std::to_string(_buf_ptr[i]);
                 ++i;
             }
             return s;
@@ -265,7 +390,7 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         // ICloneable
 
-        Array<T> *clone()
+        Array<T> *clone() const
         {
             Array<T> *cloned = new Array<T>();
             if (cloned != nullptr)
@@ -273,75 +398,15 @@ class Array: public IArray, public ICloneable<Array<T>>
             return cloned;
         }
 
+        IArray *clone_array() const
+        {
+            return this->clone();
+        }
+
         // Class methods
 
         T *data() { return _buf_ptr; }
         const T *cdata() const { return _buf_ptr; }
-
-        std::vector<T> cpp_vector() const
-        {
-            return _buf_ptr != nullptr
-                ? std::vector<T>(_buf_ptr, _buf_ptr + _size)
-                : std::vector<T>();
-        }
-
-        template <size_t ARRAY_SIZE>
-        std::array<T, ARRAY_SIZE> cpp_array() const
-        {
-            std::array<T, ARRAY_SIZE> arr;
-            if (_buf_ptr != nullptr && _size >= ARRAY_SIZE)
-                memcpy(arr.data(), _buf_ptr, ARRAY_SIZE * this->data_size());
-            return arr;
-        }
-
-        // compares memory from internal buffer and array of size
-        bool is_equal(const T *arr, size_t size) const
-        {
-            if (size > this->size())
-                return false;
-            return memcmp(_buf_ptr, arr, size) == 0;
-        }
-
-        // copies values from array
-        bool copy_from(const T *arr, size_t size, size_t from = 0)
-        {
-            return this->copy_from_bytes((uint8_t *)arr, size * this->data_size(), from * this->data_size());
-        }
-
-        // delete internal buffer if exists then sets it to bytes buffer buf - does not take ownership
-        bool assign_bytes(void *buf, size_t byte_size, size_t byte_capacity)
-        {
-            if (byte_size % this->data_size() != 0)
-            {
-                SIHD_LOG_DEBUG("Array::assign_bytes cannot assign buffer - size %lu not divisible by %lu",
-                                byte_size, this->data_size());
-                return false;
-            }
-            if (byte_capacity % this->data_size() != 0)
-            {
-                SIHD_LOG_DEBUG("Array::assign_bytes cannot assign buffer - capacity %lu not divisible by %lu",
-                                byte_capacity, this->data_size());
-                return false;
-            }
-            return this->assign((T *)buf, byte_size / this->data_size(), byte_capacity / this->data_size());
-        }
-
-        // delete internal buffer if exists then sets it to array buf - does not take ownership
-        bool assign(T *arr, size_t size)
-        {
-            return this->assign(arr, size, size);
-        }
-
-        // delete internal buffer if exists then sets it to array buf - does not take ownership
-        bool assign(T *arr, size_t size, size_t capacity)
-        {
-            this->delete_buffer();
-            _buf_ptr = arr;
-            _size = size;
-            _capacity = capacity;
-            _has_ownership = false;
-            return true;
-        }
 
         void set_buffer_ownership(bool active)
         {
@@ -372,62 +437,290 @@ class Array: public IArray, public ICloneable<Array<T>>
             return _buf_ptr != nullptr;
         }
 
-        /**
-         * @brief Creates a new array from a source
-         *
-         * @param buf Array to copy from
-         * @param size The size of bytes to copy from buffer
-         * @return true buffer allocated
-         * @return false buffer not allocated
-         */
-        bool from(const uint8_t *buf, size_t size)
+        std::vector<T> cpp_vector() const
         {
-            if (buf == nullptr)
-                return false;
+            return _buf_ptr != nullptr
+                ? std::vector<T>(_buf_ptr, _buf_ptr + _size)
+                : std::vector<T>();
+        }
+
+        template <size_t ARRAY_SIZE>
+        std::array<T, ARRAY_SIZE> cpp_array() const
+        {
+            std::array<T, ARRAY_SIZE> arr;
+            if (_buf_ptr != nullptr && _size >= ARRAY_SIZE)
+                memcpy(arr.data(), _buf_ptr, ARRAY_SIZE * this->data_size());
+            return arr;
+        }
+
+        bool is_equal(const std::vector<T> & vec, size_t byte_offset = 0) const
+        {
+            return this->is_equal(vec.data(), vec.size(), byte_offset);
+        }
+
+        template <size_t ARRAY_SIZE>
+        bool is_equal(const std::array<T, ARRAY_SIZE> & array, size_t byte_offset = 0) const
+        {
+            return this->is_equal(array.data(), array.size(), byte_offset);
+        }
+
+        bool is_equal(const Array<T> & arr, size_t byte_offset = 0) const
+        {
+            return this->is_equal(arr.cdata(), arr.size(), byte_offset);
+        }
+
+        bool is_equal(std::initializer_list<T> init, size_t byte_offset = 0) const
+        {
+            auto it = init.begin();
+            return this->is_equal(&(*it), init.size(), byte_offset);
+        }
+
+        // compares memory from internal buffer and array of size
+        bool is_equal(const T *arr, size_t size, size_t byte_offset = 0) const
+        {
+            return this->is_bytes_equal(arr, size * this->data_size(), byte_offset * this->data_size());
+        }
+
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        bool is_equal(std::string_view str, size_t byte_offset = 0) const
+        {
+            return this->is_bytes_equal(str.data(), str.size(), byte_offset);
+        }
+
+        bool from(const std::vector<T> & vec)
+        {
+            return this->from(vec.data(), vec.size());
+        }
+
+        template <size_t ARRAY_SIZE>
+        bool from(const std::array<T, ARRAY_SIZE> & array)
+        {
+            return this->from(array.data(), array.size());
+        }
+
+        bool from(const T *arr, size_t size)
+        {
             if (this->new_buffer(size))
             {
-                memcpy(_buf_ptr, buf, size * this->data_size());
+                memcpy(_buf_ptr, arr, size * this->data_size());
                 _size = size;
             }
             return _buf_ptr != nullptr;
         }
 
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        bool from(std::string_view str)
+        {
+            return this->from_bytes(str.data(), str.size());
+        }
+
+        bool copy_from(const std::vector<T> & vec, size_t byte_offset = 0)
+        {
+            return this->copy_from(vec.data(), vec.size(), byte_offset);
+        }
+
+        template <size_t ARRAY_SIZE>
+        bool copy_from(const std::array<T, ARRAY_SIZE> & array, size_t byte_offset = 0)
+        {
+            return this->copy_from(array.data(), array.size(), byte_offset);
+        }
+
+        // copies values from array
+        bool copy_from(const T *arr, size_t size, size_t byte_offset = 0)
+        {
+            return this->copy_from_bytes(arr, size * this->data_size(), byte_offset * this->data_size());
+        }
+
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        bool copy_from(const char *str, size_t byte_offset = 0)
+        {
+            return this->copy_from_bytes(str, strlen(str), byte_offset);
+        }
+
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        bool copy_from(std::string_view view, size_t byte_offset = 0)
+        {
+            return this->copy_from_bytes(view.data(), view.size(), byte_offset);
+        }
+
+        // delete internal buffer if exists then sets it to vector buf - does not take ownership
+        bool assign(const std::vector<T> & vec)
+        {
+            return this->assign(vec.data(), vec.size());
+        }
+
+        // delete internal buffer if exists then sets it to array buf - does not take ownership
+        template <size_t ARRAY_SIZE>
+        bool assign(const std::array<T, ARRAY_SIZE> & array)
+        {
+            return this->assign(array.data(), array.size());
+        }
+
+        // delete internal buffer if exists then sets it to array buf - does not take ownership
+        bool assign(T *arr, size_t size)
+        {
+            return this->assign(arr, size, size);
+        }
+
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        bool assign(char *str)
+        {
+            size_t size = strlen(str);
+            return this->assign(str, size, size);
+        }
+
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        bool assign(std::string & str)
+        {
+            return this->assign(str.data(), str.size(), str.size());
+        }
+
+        // delete internal buffer if exists then sets it to array buf - does not take ownership
+        bool assign(T *arr, size_t size, size_t capacity)
+        {
+            this->delete_buffer();
+            _buf_ptr = arr;
+            _size = size;
+            _capacity = capacity;
+            _has_ownership = false;
+            return true;
+        }
+
+        bool push_back(const std::vector<T> & vec)
+        {
+            return this->push_back(vec.data(), vec.size());
+        }
+
+        template <size_t ARRAY_SIZE>
+        bool push_back(const std::array<T, ARRAY_SIZE> & array)
+        {
+            return this->push_back(array.data(), array.size());
+        }
+
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        bool push_back(std::string_view str)
+        {
+            return this->push_back(str.data(), str.size());
+        }
+
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        bool push_back(const char *str)
+        {
+            return this->push_back(str, strlen(str));
+        }
+
         // push whole array buf of size at the end of the internal buffer
         bool push_back(const T *buf, size_t size)
         {
-            if (_size + size > _capacity)
-                this->reserve(_size + std::max(Array::added_resize_capacity, size));
-            if (_buf_ptr != nullptr)
-            {
-                memcpy((uint8_t *)(_buf_ptr + _size), buf, size * this->data_size());
-                _size += size;
-            }
-            return _buf_ptr != nullptr;
+            return this->insert(buf, size, _size);
         }
 
         // push a single value at the end of the array
         bool push_back(const T & value)
         {
-            if (_size + 1 > _capacity)
-                this->reserve(_size + Array::added_resize_capacity);
+            return this->insert(value, _size);
+        }
+
+        bool push_front(const std::vector<T> & vec)
+        {
+            return this->push_front(vec.data(), vec.size());
+        }
+
+        template <size_t ARRAY_SIZE>
+        bool push_front(const std::array<T, ARRAY_SIZE> & array)
+        {
+            return this->push_front(array.data(), array.size());
+        }
+
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        bool push_front(std::string_view str)
+        {
+            return this->push_front(str.data(), str.size());
+        }
+
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        bool push_front(const char *str)
+        {
+            return this->push_front(str, strlen(str));
+        }
+
+        // push whole array buf of size at the front of the internal buffer
+        bool push_front(const T *buf, size_t size)
+        {
+            return this->insert(buf, size, 0);
+        }
+
+        // push a single value at the beginning of the array
+        bool push_front(const T & value)
+        {
+            return this->insert(value, 0);
+        }
+
+        bool insert(const T *buf, size_t size, size_t idx)
+        {
+            // ex: insert({4, 5, 6}, 3, 2)
+            // internal buffer: {0, 1, 2, 3}
+
+            if (idx > _size)
+                return false;
+            if (_size + size > _capacity)
+                this->reserve(_size + std::max(Array::added_resize_capacity, size));
             if (_buf_ptr != nullptr)
             {
-                _buf_ptr[_size] = value;
-                ++_size;
+                // have to move 2 and 3 -> 3 * sizeof(int) to the right to leave room for insertion
+                size_t len_move = (_size - idx) * this->data_size();
+                // no need to move if idx == _size
+                if (len_move > 0)
+                {
+                    memmove((uint8_t *)(_buf_ptr + (idx + size)),
+                            (uint8_t *)(_buf_ptr + idx),
+                            len_move);
+                    // -> {0, 1, _, _, _, 2, 3}
+                }
+                memcpy((uint8_t *)(_buf_ptr + idx), buf, size * this->data_size());
+                // -> {0, 1, 4, 5}
+                _size += size;
+                // -> {0, 1, 4, 5, 6, 2, 3}
             }
             return _buf_ptr != nullptr;
+        }
+
+        bool insert(const T & value, size_t idx)
+        {
+            return this->insert(&value, 1, idx);
         }
 
         // remove value at idx and returns it
         T pop(size_t idx)
         {
+            // ex: pop(1)
+            // internal buffer: {5, 10, 15}
+
+            // get value - might throw - checks idx
             T ret = this->at(idx);
             size_t len = (_size - (idx + 1)) * this->data_size();
+
+            // moving all remaining buffer to current idx
             memmove((uint8_t *)(_buf_ptr + idx),
                     (uint8_t *)(_buf_ptr + idx + 1),
                     len);
+            // -> {5, 15, 15}
+
+            // set to 0 remaining of memory
             memset((uint8_t *)(_buf_ptr + _size - 1), 0, this->data_size());
-            _size -= 1;
+            // -> {5, 15, 0}
+            --_size;
+            // -> {5, 15}
             return ret;
         }
 
@@ -751,7 +1044,7 @@ class Array: public IArray, public ICloneable<Array<T>>
 
 // added capacity when resizing for less allocations
 template <typename T>
-size_t Array<T>::added_resize_capacity = 1;
+size_t Array<T>::added_resize_capacity = 4;
 
 // typedef for types
 typedef Array<bool>       ArrBool;
@@ -766,126 +1059,6 @@ typedef Array<int64_t>    ArrLong;
 typedef Array<uint64_t>   ArrULong;
 typedef Array<float>      ArrFloat;
 typedef Array<double>     ArrDouble;
-
-// specialization of char array -> char * can be strlen
-class ArrStr: public ArrChar
-{
-    public:
-        using ArrChar::ArrChar;
-        using ArrChar::pop;
-        using ArrChar::front;
-        using ArrChar::back;
-        using ArrChar::at;
-        using ArrChar::set;
-        using ArrChar::is_equal;
-        using ArrChar::copy_from;
-        using ArrChar::assign;
-        using ArrChar::push_back;
-        using ArrChar::from;
-        using ArrChar::from_string;
-        using ArrChar::to_string;
-        using ArrChar::cpp_str;
-        using ArrChar::clone;
-
-        std::string to_string([[maybe_unused]] char delimiter = '\0') const
-        {
-            if (this->size() > 0 && this->cdata()[this->size() - 1] == '\0')
-                return std::string(this->cdata(), this->size() - 1);
-            return std::string(this->cdata(), this->size());
-        }
-
-        // char *
-
-        ArrStr(const char *str): ArrChar()
-        {
-            this->push_back(str);
-        }
-
-        ArrStr *clone() const
-        {
-            ArrStr *cloned = new ArrStr();
-            if (cloned != nullptr)
-                cloned->from(*this);
-            return cloned;
-        }
-
-        bool is_equal(const char *str) const
-        {
-            return this->is_equal(str, strlen(str));
-        }
-
-        bool copy_from(const char *str, size_t from = 0)
-        {
-            return this->copy_from(str, strlen(str), from);
-        }
-
-        bool assign(char *str)
-        {
-            size_t len = strlen(str);
-            return this->assign(str, len, len);
-        }
-
-        bool assign(char *str, size_t capacity)
-        {
-            size_t len = strlen(str);
-            return this->assign(str, len, capacity);
-        }
-
-        bool push_back(const char *str)
-        {
-            return this->push_back(str, strlen(str));
-        }
-
-        bool from(const char *str)
-        {
-            return this->from(reinterpret_cast<const uint8_t *>(str), strlen(str));
-        }
-
-        // std::string
-
-        ArrStr(const std::string & str): ArrChar()
-        {
-            this->push_back(str);
-        }
-
-        bool is_equal(const std::string & str) const
-        {
-            return this->is_equal(str.c_str(), str.size());
-        }
-
-        bool copy_from(const std::string & str, size_t from = 0)
-        {
-            return this->copy_from(str.c_str(), str.size(), from);
-        }
-
-        bool assign(std::string & str)
-        {
-            return this->assign(str, str.capacity());
-        }
-
-        bool assign(std::string & str, size_t capacity)
-        {
-            return this->assign(str.data(), str.size(), capacity);
-        }
-
-        bool push_back(const std::string & str)
-        {
-            return this->push_back(str.c_str(), str.size());
-        }
-
-        bool from(const std::string & str)
-        {
-            return this->from(reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
-        }
-
-        bool from_string(const std::string & data, [[maybe_unused]] const char *delimiters = "")
-        {
-            this->delete_buffer();
-            this->push_back(data);
-            return true;
-        }
-};
-// end of class ArrStr
 
 // array utils for array manipulation
 class ArrayUtil
@@ -917,7 +1090,7 @@ class ArrayUtil
             size_t copy_idx = 0;
             for (const IArray *array: arrays)
             {
-                if (ret->copy_from(*array, copy_idx) == false)
+                if (ret->copy_from_bytes(*array, copy_idx) == false)
                 {
                     delete ret;
                     return nullptr;
@@ -975,14 +1148,6 @@ class ArrayUtil
             return true;
         }
 
-        static IArray *clone_array(const IArray & to_clone)
-        {
-            IArray *ret = ArrayUtil::create_from_type(to_clone.data_type());
-            ret->resize(to_clone.size());
-            ret->copy_from_bytes(to_clone.cbuf(), to_clone.byte_size());
-            return ret;
-        }
-
         static IArray *create_from_type(Type dt, size_t size = 0)
         {
             switch (dt)
@@ -1024,52 +1189,58 @@ class ArrayUtil
         }
 
         template <typename T>
-        static T read_array(IArray & uncasted_array, size_t idx)
+        static inline const Array<T> *cast_array(const IArray *ptr)
         {
-            Array<T> *arr = ArrayUtil::cast_array<T>(&uncasted_array);
-            if (arr == nullptr)
+            return dynamic_cast<const Array<T> *>(ptr);
+        }
+
+        template <typename T>
+        static bool read_array_into(const IArray & arr, size_t idx, T & val)
+        {
+            return arr.copy_to_bytes(&val, sizeof(T), arr.byte_index(idx));
+        }
+
+        template <typename T>
+        static bool read_array_into(const IArray *arr, size_t idx, T & val)
+        {
+            return ArrayUtil::read_array_into<T>(*arr, idx, val);
+        }
+
+        template <typename T>
+        static T read_array(const IArray & arr, size_t idx)
+        {
+            T ret;
+            if ( ArrayUtil::read_array_into<T>(arr, idx, ret) == false)
             {
                 throw std::invalid_argument(
-                    Str::format("ArrayUtil::read_array wrong type - invalid cast: %s != %s",
-                                uncasted_array.data_type_to_string().c_str(),
-                                Types::to_string<T>().c_str())
+                    Str::format("ArrayUtil::read_array cannot copy data from idx %lu into type '%s' (array type: '%s')",
+                                idx,
+                                Types::to_string<T>(),
+                                arr.data_type_to_string())
                 );
             }
-            return arr->at(idx);
+            return ret;
         }
 
         template <typename T>
-        static T read_array(IArray *uncasted_array, size_t idx)
+        static T read_array(const IArray *arr, size_t idx)
         {
-            return ArrayUtil::read_array<T>(*uncasted_array, idx);
+            return ArrayUtil::read_array<T>(*arr, idx);
         }
 
         template <typename T>
-        static bool write_array(IArray & uncasted_array, size_t idx, T value)
+        static bool write_array(IArray & arr, size_t idx, T value)
         {
-            if (idx >= uncasted_array.capacity())
-                return false;
-            Array<T> *arr = ArrayUtil::cast_array<T>(&uncasted_array);
-            if (arr == nullptr)
-            {
-                throw std::invalid_argument(
-                    Str::format("ArrayUtil::write_array wrong type - invalid cast: %s != %s",
-                                uncasted_array.data_type_to_string().c_str(),
-                                Types::to_string<T>().c_str())
-                );
-            }
-            arr->set(idx, value);
-            return true;
+            return arr.copy_from_bytes(&value, sizeof(T), arr.byte_index(idx));
         }
 
         template <typename T>
-        static bool write_array(IArray *uncasted_array, size_t idx, T value)
+        static bool write_array(IArray *arr, size_t idx, T value)
         {
-            return ArrayUtil::write_array<T>(*uncasted_array, idx, value);
+            return ArrayUtil::write_array<T>(*arr, idx, value);
         }
 
     private:
-        ArrayUtil() {};
         ~ArrayUtil() {};
 };
 // end of class ArrayUtil

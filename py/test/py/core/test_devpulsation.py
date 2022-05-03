@@ -3,9 +3,9 @@ import sihd
 core = sihd.core.Core("core")
 dev = sihd.core.DevPulsation("devpulsation", core)
 
-dev.set_conf({
-    "frequency": [1.0, 2.0, 3.0, 500.0]
-})
+assert(dev.set_conf(
+    frequency = [1.0, 2.0, 3.0, 500.0]
+))
 
 assert(core.init())
 assert(core.start())

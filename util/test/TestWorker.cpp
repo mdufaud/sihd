@@ -4,6 +4,7 @@
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/StepWorker.hpp>
 #include <sihd/util/Task.hpp>
+#include <sihd/util/OS.hpp>
 
 namespace test
 {
@@ -44,10 +45,15 @@ namespace test
         EXPECT_TRUE(worker.start_sync_worker("worker-thread"));
         EXPECT_TRUE(worker.stop_worker());
         EXPECT_EQ(ran, 1);
+        EXPECT_TRUE(worker.start_sync_worker("worker-thread"));
+        EXPECT_TRUE(worker.stop_worker());
+        EXPECT_EQ(ran, 2);
     }
 
-    TEST_F(TestWorker, test_stepworker_simple)
+    TEST_F(TestWorker, test_stepworker_multiple)
     {
+        if (OS::is_run_by_valgrind())
+            GTEST_SKIP() << "Buggy with valgrind";
         int ran = 0;
         Task task([&] () -> bool
         {

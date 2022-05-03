@@ -17,13 +17,13 @@ Message::~Message()
 {
 }
 
-IMessageField *Message::clone()
+IMessageField *Message::clone() const
 {
     bool error = false;
     Message *cloned = new Message(this->get_name());
     for (const std::string & name: this->get_children_keys())
     {
-        IMessageField *field = this->find<IMessageField>(name);
+        const IMessageField *field = this->cfind<IMessageField>(name);
         if (field != nullptr)
         {
             IMessageField *cloned_field = field->clone();

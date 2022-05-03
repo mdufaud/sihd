@@ -9,7 +9,7 @@ assert(line_reader:read_next())
 local line = line_reader:get_read_data()
 assert(line ~= nil)
 
-assert(line:str() ~= "")
+assert(line:to_string() ~= "")
 assert(line:size() > 0)
 
 line_reader:close()
@@ -21,12 +21,12 @@ local file = sihd.util.File()
 
 assert(file:open("test/lua/util/test_files.lua", "r"))
 
-local array = sihd.util.ArrStr()
+local array = sihd.util.ArrChar()
 array:reserve(4096)
+assert(array:size() == 0)
 
 assert(file:read(array))
 
-assert(array:str() ~= "")
 assert(array:size() > 0)
 
 file:close()

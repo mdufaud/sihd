@@ -34,7 +34,7 @@ bool    StepWorker::run()
     std::time_t after = 0;
     if (_pause)
     {
-        Modificator m(_pausing, true);
+        ScopedModifier m(_pausing, true);
         _pause_waitable.infinite_wait();
     }
     while (this->is_worker_started())
@@ -43,15 +43,10 @@ bool    StepWorker::run()
         if ((ret = this->step()) == false)
             break ;
         after = _clock.now();
-        {
-            Modificator m(_pausing, true);
-            _pause_waitable.wait_for(_sleep_time - (after - now));
-        }
+        ScopedModifier m(_pausing, true);
+        _pause_waitable.wait_for(_sleep_time - (after - now));
         if (_pause)
-        {
-            Modificator m(_pausing, true);
             _pause_waitable.infinite_wait();
-        }
     }
     return ret;
 }
@@ -70,7 +65,7 @@ void    StepWorker::pause_worker()
 
 bool    StepWorker::step()
 {
-    return this->_worker_get_runnable()->run();
+    return Worker::run();
 }
 
 bool    StepWorker::on_worker_start()

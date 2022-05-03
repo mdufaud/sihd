@@ -210,6 +210,6 @@ namespace test
         }
 
         // channel array and back_array must be in the same state
-        EXPECT_TRUE(back_array->is_equal(*int_channel->array()));
+        EXPECT_TRUE(back_array->is_bytes_equal(*int_channel->array()));
     }
 }

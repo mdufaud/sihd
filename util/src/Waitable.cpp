@@ -15,6 +15,7 @@ Waitable::Waitable()
 
 Waitable::~Waitable()
 {
+    // notifies all
     this->cancel_loop();
 }
 

@@ -55,6 +55,10 @@ class Node: public Named
             bool ownership;
         };
 
+        Node() = delete;
+        Node(const Node & other) = delete;
+        Node & operator=(const Node & other) = delete;
+        Node & operator=(Node && other) = delete;
         Node(const std::string & name, Node *parent = nullptr);
         virtual ~Node();
 

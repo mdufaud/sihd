@@ -582,14 +582,14 @@ int     HttpServer::_on_websocket_open(IWebsocketHandler *handler, WebsocketSess
 
 int     HttpServer::_on_websocket_read(IWebsocketHandler *handler, WebsocketSession *session)
 {
-    sihd::util::ArrStr arr;
+    sihd::util::ArrChar arr;
     arr.assign_bytes((uint8_t *)session->in, session->len);
     return handler->on_read(arr) ? 0 : -1;
 }
 
 int     HttpServer::_on_websocket_write(IWebsocketHandler *handler, WebsocketSession *session)
 {
-    sihd::util::ArrStr arr_to_write;
+    sihd::util::ArrChar arr_to_write;
     LwsWriteProtocol lws_proto;
     lws_proto.write_protocol = LWS_WRITE_TEXT;
     bool ret = handler->on_write(arr_to_write, &lws_proto);

@@ -13,6 +13,11 @@ class Node;
 class Named
 {
     public:
+        Named() = delete;
+        Named(const Named & other) = delete;
+        Named & operator=(const Named & other) = delete;
+        Named & operator=(Named && other) = delete;
+
         Named(const std::string & name, Node *parent = nullptr);
         virtual ~Named();
 

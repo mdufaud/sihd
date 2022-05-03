@@ -122,7 +122,7 @@ namespace test
                 ++_nopen;
             };
 
-            bool on_read(const sihd::util::ArrStr & array)
+            bool on_read(const sihd::util::ArrChar & array)
             {
                 SIHD_LOG(debug, "Read from client websocket: " << array.to_string());
                 _client_wrote = true;
@@ -130,7 +130,7 @@ namespace test
                 return true;
             };
 
-            bool on_write(sihd::util::ArrStr & array, LwsWriteProtocol *protocol)
+            bool on_write(sihd::util::ArrChar & array, LwsWriteProtocol *protocol)
             {
                 if (_client_wrote)
                 {

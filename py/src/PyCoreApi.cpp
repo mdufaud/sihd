@@ -30,13 +30,15 @@ void    PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
     pybind11::module m_core = m_sihd.def_submodule("core", "sihd::core");
 
     pybind11::class_<Channel, Named, SmartNodePtr<Channel>>(m_core, "Channel")
-        .def(pybind11::init<const std::string &, const std::string &, size_t, Node *>())
+        .def(pybind11::init<const std::string &, const std::string &, size_t, Node *>(),
+            pybind11::keep_alive<1, 5>())
         .def(pybind11::init<const std::string &, const std::string &, size_t>())
-        .def(pybind11::init<const std::string &, const std::string &, Node *>())
+        .def(pybind11::init<const std::string &, const std::string &, Node *>(),
+            pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &, const std::string &>())
         .def("set_write_on_change", &Channel::set_write_on_change)
         .def("timestamp", &Channel::timestamp)
-        .def("array", static_cast<sihd::util::IArray *(Channel::*)()>(&Channel::array),
+        .def("array", static_cast<const sihd::util::IArray *(Channel::*)() const>(&Channel::array),
             pybind11::return_value_policy::reference_internal)
         .def("notify", &Channel::notify, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("set_observer", +[] (Channel *self, pybind11::none none)
@@ -152,8 +154,6 @@ void    PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
             .def("get_channel", static_cast<Channel *(Device::*)(const std::string &)>(&Device::get_channel),
                 pybind11::return_value_policy::reference_internal)
             .def("add_channel", static_cast<Channel *(Device::*)(const std::string &, std::string_view, size_t)>(&Device::add_channel),
-                pybind11::return_value_policy::reference_internal)
-            .def("add_unlinked_channel", static_cast<Channel *(Device::*)(const std::string &, std::string_view, size_t)>(&Device::add_unlinked_channel),
                 pybind11::return_value_policy::reference_internal)
             .def("setup", static_cast<bool (Device::*)()>(&ACoreService::setup),
                 pybind11::call_guard<pybind11::gil_scoped_release>())

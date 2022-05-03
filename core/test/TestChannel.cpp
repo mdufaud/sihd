@@ -34,11 +34,13 @@ namespace test
                 SIHD_TRACE(c->array()->data_type_to_string());
                 if (c->array()->data_type() == TYPE_INT)
                 {
-                    Array<int> *arr_int = ArrayUtil::cast_array<int>(c->array());
-                    int *c_arr_int = arr_int->data();
-                    _at_val = arr_int->at(0);
-                    _c_arr_val = c_arr_int[0];
-                    _read_val = c->read<int>(0);
+                    const Array<int> *arr_int = ArrayUtil::cast_array<int>(c->array());
+                    const int *c_arr_int = arr_int->cdata();
+                    EXPECT_NO_THROW(
+                        _at_val = arr_int->at(0);
+                        _c_arr_val = c_arr_int[0];
+                        _read_val = c->read<int>(0);
+                    );
                 }
                 _notified[c] += 1;
             }
@@ -55,7 +57,7 @@ namespace test
 
         EXPECT_EQ(c.array()->byte_size(), 4 * sizeof(float));
         EXPECT_EQ(c.array()->data_size(), 4u);
-        EXPECT_EQ(c.array()->data_type_to_string(), "float");
+        EXPECT_STREQ(c.array()->data_type_to_string(), "float");
         EXPECT_EQ(c.array()->capacity(), 4u);
         EXPECT_EQ(c.array()->data_type(), TYPE_FLOAT);
         EXPECT_EQ(_notified[&c], 0);
@@ -72,10 +74,10 @@ namespace test
 
         c.add_observer(this);
         EXPECT_EQ(_notified[&c], 0);
-        EXPECT_EQ(c.read<int>(0), 0);
+        EXPECT_NO_THROW(EXPECT_EQ(c.read<int>(0), 0));
         EXPECT_TRUE(c.write<int>(0, 20));
         EXPECT_EQ(_notified[&c], 1);
-        EXPECT_EQ(c.read<int>(0), 20);
+        EXPECT_NO_THROW(EXPECT_EQ(c.read<int>(0), 20));
 
         EXPECT_EQ(_at_val, 20);
         EXPECT_EQ(_c_arr_val, 20);
@@ -91,12 +93,14 @@ namespace test
         EXPECT_EQ(_notified[&c], 0);
         c.write(arr);
         EXPECT_EQ(_notified[&c], 1);
-        EXPECT_DOUBLE_EQ(c.read<double>(0), 1.0);
-        EXPECT_DOUBLE_EQ(c.read<double>(1), 1.1);
-        EXPECT_DOUBLE_EQ(c.read<double>(2), 1.2);
-        EXPECT_DOUBLE_EQ(c.read<double>(3), 1.3);
-        EXPECT_DOUBLE_EQ(c.read<double>(4), 1.4);
-        EXPECT_DOUBLE_EQ(c.read<double>(5), 1.5);
+        EXPECT_NO_THROW(
+            EXPECT_DOUBLE_EQ(c.read<double>(0), 1.0);
+            EXPECT_DOUBLE_EQ(c.read<double>(1), 1.1);
+            EXPECT_DOUBLE_EQ(c.read<double>(2), 1.2);
+            EXPECT_DOUBLE_EQ(c.read<double>(3), 1.3);
+            EXPECT_DOUBLE_EQ(c.read<double>(4), 1.4);
+            EXPECT_DOUBLE_EQ(c.read<double>(5), 1.5);
+        );
         c.write(arr);
         EXPECT_EQ(_notified[&c], 1);
         c.set_write_on_change(false);
@@ -115,7 +119,7 @@ namespace test
         EXPECT_NO_THROW(c = Channel::build("name=chan;type=float;size=2"));
         EXPECT_NE(c, nullptr);
         EXPECT_EQ(c->get_name(), "chan");
-        EXPECT_EQ(c->array()->data_type_to_string(), "float");
+        EXPECT_STREQ(c->array()->data_type_to_string(), "float");
         EXPECT_EQ(c->array()->size(), 2u);
         delete c;
     }

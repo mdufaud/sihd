@@ -47,11 +47,11 @@ bool    Scheduler::set_as_fast_as_possible(bool active)
 
 bool    Scheduler::_wait_for_next_task()
 {
-    Modificator w(_waiting, true);
+    ScopedModifier w(_waiting, true);
     {
         if (_paused)
         {
-            Modificator p(_pausing, true);
+            ScopedModifier p(_pausing, true);
             time_t before = _clock_ptr->now();
             while (_running && _paused)
                 _waitable_pause.infinite_wait();

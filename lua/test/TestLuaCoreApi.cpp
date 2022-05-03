@@ -57,6 +57,14 @@ namespace test
             std::string _base_test_dir;
     };
 
+    TEST_F(TestLuaCoreApi, test_luacoreapi_channel)
+    {
+        LuaUtilApi::load_base(_vm);
+        LuaUtilApi::load_tools(_vm);
+        LuaCoreApi::load(_vm);
+        EXPECT_TRUE(this->do_script("test/lua/core/test_channel.lua"));
+    }
+
     TEST_F(TestLuaCoreApi, test_luacoreapi_devpulsation)
     {
         LuaUtilApi::load_base(_vm);

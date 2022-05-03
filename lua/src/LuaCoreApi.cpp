@@ -39,7 +39,6 @@ void    LuaCoreApi::load(Vm & vm)
                     .addFunction("find_channel", static_cast<Channel *(Device::*)(const std::string &)>(&Device::find_channel))
                     .addFunction("get_channel", static_cast<Channel *(Device::*)(const std::string &)>(&Device::get_channel))
                     .addFunction("add_channel", static_cast<Channel *(Device::*)(const std::string &, std::string_view, size_t)>(&Device::add_channel))
-                    .addFunction("add_unlinked_channel", static_cast<Channel *(Device::*)(const std::string &, std::string_view, size_t)>(&Device::add_unlinked_channel))
                     .addFunction("setup", static_cast<bool (Device::*)()>(&ACoreService::setup))
                     .addFunction("init", static_cast<bool (Device::*)()>(&ACoreService::init))
                     .addFunction("start", static_cast<bool (Device::*)()>(&ACoreService::start))
@@ -53,11 +52,11 @@ void    LuaCoreApi::load(Vm & vm)
                     .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<Core>>()
                 .endClass()
                 .deriveClass<Channel, sihd::util::Named>("Channel")
-                    // no constructor intended
+                    .addConstructor<void (*)(const std::string &, const std::string &, size_t, Node *), SmartNodePtr<Channel>>()
                     .addFunction("set_write_on_change", &Channel::set_write_on_change)
                     .addFunction("notify", &Channel::notify)
                     .addFunction("timestamp", &Channel::timestamp)
-                    .addFunction("array", static_cast<sihd::util::IArray *(Channel::*)()>(&Channel::array))
+                    .addFunction("array", static_cast<const sihd::util::IArray *(Channel::*)() const>(&Channel::array))
                     .addFunction("set_observer", +[] (Channel *self, luabridge::LuaRef fun, lua_State *state)
                     {
                         if (fun.isNil())
@@ -79,7 +78,7 @@ void    LuaCoreApi::load(Vm & vm)
                     })
                     .addFunction("write_array", +[] (Channel *self, const IArray *array_ptr)
                     {
-                        return self->write(*array_ptr);
+                        return array_ptr != nullptr ? self->write(*array_ptr) : false;
                     })
                     .addFunction("write", +[] (Channel *self, size_t idx, luabridge::LuaRef arg)
                     {

@@ -58,7 +58,7 @@ namespace test
         EXPECT_TRUE(writer.fs_add(entry, "to_zip"));
 
         // Adding array entry
-        sihd::util::ArrStr arr_entry("hello test world");
+        sihd::util::ArrChar arr_entry("hello test world");
         EXPECT_TRUE(writer.add_file("toto_entry", arr_entry.cbuf(), arr_entry.byte_size()));
         EXPECT_TRUE(writer.add_file("toto_entry2", arr_entry.cbuf(), arr_entry.byte_size()));
 

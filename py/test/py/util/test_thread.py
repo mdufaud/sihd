@@ -8,9 +8,9 @@ def fun():
     global i
     i += 1
 
-assert(sched.set_conf({
-    "as_fast_as_possible": False,
-}))
+assert(sched.set_conf(
+    as_fast_as_possible = False,
+))
 
 sched.add_task(fun, 0, sihd.util.time.ms(10))
 

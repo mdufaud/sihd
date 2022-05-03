@@ -90,14 +90,14 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
             SIHD_LOG(debug, "Opened websocket of protocol: " << protocol_name);
         };
 
-        bool on_read(const sihd::util::ArrStr & array)
+        bool on_read(const sihd::util::ArrChar & array)
         {
             SIHD_LOG(debug, "Read from client websocket: " << array.to_string());
             _client_wrote = true;
             return true;
         };
 
-        bool on_write(sihd::util::ArrStr & array, LwsWriteProtocol *protocol)
+        bool on_write(sihd::util::ArrChar & array, LwsWriteProtocol *protocol)
         {
             if (_client_wrote)
             {

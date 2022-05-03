@@ -14,7 +14,7 @@
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/IStoppableRunnable.hpp>
 # include <sihd/util/Waitable.hpp>
-# include <sihd/util/Modificator.hpp>
+# include <sihd/util/ScopedModifier.hpp>
 
 namespace sihd::util
 {
@@ -64,7 +64,6 @@ class Scheduler: public Named, public IStoppableRunnable, public Configurable
         std::atomic<bool> _paused;
         std::atomic<bool> _waiting;
         std::atomic<bool> _pausing;
-        std::atomic<bool> _playing;
         IClock *_clock_ptr;
         std::thread _thread;
         time_t _next_run;
@@ -74,7 +73,6 @@ class Scheduler: public Named, public IStoppableRunnable, public Configurable
         std::mutex _mutex_play;
         Waitable _waitable_task;
         Waitable _waitable_pause;
-        Waitable _waitable_play;
         std::list<Task *> _task_rm_list;
         std::multimap<time_t, Task *> _task_map;
 

@@ -167,7 +167,7 @@ class LuaUtilApi
             size_t size = 0;
             if (reader->get_read_data(&data, &size))
             {
-                sihd::util::ArrStr array;
+                sihd::util::ArrChar array;
                 array.assign(data, size);
                 return luabridge::LuaRef(state, array);
             }
@@ -316,6 +316,14 @@ class LuaUtilApi
         static sihd::util::Array<T> _array_lua_new(luabridge::LuaRef ref, lua_State *state)
         {
             sihd::util::Array<T> array;
+            if constexpr (std::is_same_v<T, char>)
+            {
+                if (ref.isString())
+                {
+                    array.from(ref.cast<std::string>());
+                    return array;
+                }
+            }
             if (ref.isTable())
             {
                 array.reserve(ref.length());
@@ -331,6 +339,14 @@ class LuaUtilApi
         static bool _array_lua_push_back(sihd::util::Array<T> *self, luabridge::LuaRef ref)
         {
             bool ret = true;
+            if constexpr (std::is_same_v<T, char>)
+            {
+                if (ref.isString())
+                {
+                    self->push_back(ref.cast<std::string>());
+                    return true;
+                }
+            }
             if (ref.isTable())
             {
                 self->reserve(self->size() + ref.length());
@@ -343,21 +359,76 @@ class LuaUtilApi
         }
 
         template <typename T>
-        static bool _array_lua_copy_table(sihd::util::Array<T> *self, luabridge::LuaRef tbl, luabridge::LuaRef from)
+        static bool _array_lua_push_front(sihd::util::Array<T> *self, luabridge::LuaRef ref)
         {
-            if (tbl.isTable() == false)
-                return false;
+            bool ret = true;
+            if constexpr (std::is_same_v<T, char>)
+            {
+                if (ref.isString())
+                {
+                    self->push_front(ref.cast<std::string>());
+                    return true;
+                }
+            }
+            if (ref.isTable())
+            {
+                self->reserve(self->size() + ref.length());
+                for (const auto & pair: luabridge::pairs(ref))
+                    ret = ret && self->push_front(pair.second.cast<T>());
+            }
+            else
+                ret = self->push_front(ref.cast<T>());
+            return ret;
+        }
+
+        template <typename T>
+        static bool _array_lua_copy_table(sihd::util::Array<T> *self, luabridge::LuaRef ref, luabridge::LuaRef from_ref)
+        {
             size_t from_idx = 0;
-            if (from.isNil() == false)
-                from_idx = from.cast<size_t>();
-            if ((size_t)tbl.length() > (from_idx + self->size()))
+            if (from_ref.isNil() == false)
+                from_idx = from_ref.cast<size_t>();
+            if constexpr (std::is_same_v<T, char>)
+            {
+                if (ref.isString())
+                {
+                    self->copy_from(ref.cast<std::string>(), from_idx);
+                    return true;
+                }
+            }
+            if (ref.isTable() == false)
                 return false;
-            for (const auto & pair: luabridge::pairs(tbl))
+            if ((size_t)ref.length() > (from_idx + self->size()))
+                return false;
+            for (const auto & pair: luabridge::pairs(ref))
             {
                 self->set(from_idx, pair.second.cast<T>());
                 ++from_idx;
             }
             return true;
+        }
+
+        template <typename T>
+        static bool _array_lua_from(sihd::util::Array<T> *self, luabridge::LuaRef ref)
+        {
+            bool ret = true;
+            if constexpr (std::is_same_v<T, char>)
+            {
+                if (ref.isString())
+                {
+                    self->from(ref.cast<std::string>());
+                    return true;
+                }
+            }
+            self->delete_buffer();
+            if (ref.isTable())
+            {
+                self->reserve(self->size() + ref.length());
+                for (const auto & pair: luabridge::pairs(ref))
+                    ret = ret && self->push_back(pair.second.cast<T>());
+            }
+            else
+                ret = self->push_back(ref.cast<T>());
+            return ret;
         }
 
         // Configurable's recursive setting

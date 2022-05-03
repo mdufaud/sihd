@@ -29,7 +29,7 @@ class Message:  public Node,
         virtual bool finish() override;
 
         // ICloneable
-        virtual IMessageField *clone() override;
+        virtual IMessageField *clone() const override;
 
         template <typename T>
         bool add_field(const std::string & name, size_t size = 1)

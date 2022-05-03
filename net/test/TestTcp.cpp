@@ -38,8 +38,8 @@ namespace test
     {
         IpAddr localhost = IpAddr::get_localhost(4242);
 
-        sihd::util::ArrStr hello_world_arr("hello world");
-        sihd::util::ArrStr welcome_arr("welcome");
+        sihd::util::ArrChar hello_world_arr("hello world");
+        sihd::util::ArrChar welcome_arr("welcome");
 
         TcpServer server("tcp-server");
         TcpClient client1("tcp-client-1");
@@ -91,7 +91,7 @@ namespace test
         if (server_handler.clients().size() == 1)
         {
             BasicServerHandler::Client *client = server_handler.clients()[0];
-            EXPECT_TRUE(client->read_array->is_equal(hello_world_arr));
+            EXPECT_TRUE(client->read_array->is_bytes_equal(hello_world_arr));
         }
 
         SIHD_LOG(debug, "Simulating 3 new connections");
@@ -129,7 +129,7 @@ namespace test
         IpAddr localhost = IpAddr::get_localhost(4242);
         sihd::util::ArrChar hello("hello world", sizeof("hello world"));
         sihd::util::ArrChar bye("bye", sizeof("bye"));
-        sihd::util::ArrStr recv(20);
+        sihd::util::ArrChar recv(20);
         TcpClient client("tcp-client");
         Socket server;
 

@@ -20,12 +20,12 @@ void    WebsocketHandler::on_open(const char *protocol_name)
         this->callback_open(protocol_name);
 }
 
-bool    WebsocketHandler::on_read(const sihd::util::ArrStr & array)
+bool    WebsocketHandler::on_read(const sihd::util::ArrChar & array)
 {
     return !this->callback_read || this->callback_read(array);
 }
 
-bool    WebsocketHandler::on_write(sihd::util::ArrStr & array, LwsWriteProtocol *protocol)
+bool    WebsocketHandler::on_write(sihd::util::ArrChar & array, LwsWriteProtocol *protocol)
 {
     return !this->callback_write || this->callback_write(array, protocol);
 }

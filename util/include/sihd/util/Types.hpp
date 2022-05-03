@@ -43,7 +43,7 @@ class Types
         }
 
         template <typename T>
-        static std::string to_string()
+        static const char *to_string()
         {
             return type_to_string(to_type<T>());
         }

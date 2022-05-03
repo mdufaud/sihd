@@ -14,13 +14,13 @@ class WebsocketHandler: public sihd::http::IWebsocketHandler
         virtual ~WebsocketHandler();
 
 		void on_open(const char *protocol_number);
-		bool on_read(const sihd::util::ArrStr & array);
-		bool on_write(sihd::util::ArrStr & array, LwsWriteProtocol *protocol);
+		bool on_read(const sihd::util::ArrChar & array);
+		bool on_write(sihd::util::ArrChar & array, LwsWriteProtocol *protocol);
 		void on_close();
 
         std::function<void(const char *)> callback_open;
-        std::function<bool(const sihd::util::ArrStr &)> callback_read;
-        std::function<bool(sihd::util::ArrStr &, LwsWriteProtocol *)> callback_write;
+        std::function<bool(const sihd::util::ArrChar &)> callback_read;
+        std::function<bool(sihd::util::ArrChar &, LwsWriteProtocol *)> callback_write;
         std::function<void()> callback_close;
 
     protected:

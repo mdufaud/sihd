@@ -97,23 +97,14 @@ bool    DevFilter::set_filter_byte_xor(std::string_view rule_str)
 
 void    DevFilter::_rule_match(Channel *channel_out, const Rule *rule_ptr, int64_t out_val)
 {
-    sihd::util::IArray *array_out = channel_out->array();
-    if (rule_ptr->notify_if_same
-            || memcmp((void *)(array_out->buf_at(rule_ptr->write_idx)),
-                        (const void *)&out_val,
-                        array_out->data_size()) != 0)
-    {
-        memcpy((void *)(array_out->buf_at(rule_ptr->write_idx)),
-                (const void *)&out_val,
-                array_out->data_size());
-        channel_out->do_timestamp();
-        channel_out->notify();
-    }
+    channel_out->set_write_on_change(!rule_ptr->notify_if_same);
+    const sihd::util::IArray *array_out = channel_out->array();
+    channel_out->write({(const int8_t *)&out_val, array_out->data_size()}, array_out->byte_index(rule_ptr->write_idx));
 }
 
 void    DevFilter::_apply_rule(const sihd::core::Channel *channel_in, sihd::core::Channel *channel_out, const Rule *rule_ptr)
 {
-    const sihd::util::IArray *array_in = channel_in->carray();
+    const sihd::util::IArray *array_in = channel_in->array();
     sihd::util::Value in_value(array_in->cbuf_at(rule_ptr->trigger_idx), array_in->data_type());
     bool matched = false;
     switch (rule_ptr->type)

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Waitable.hpp>
+#include <sihd/util/OS.hpp>
 #include <sihd/util/time.hpp>
 
 namespace test
@@ -32,6 +33,8 @@ namespace test
 
     TEST_F(TestWaitable, test_waitable_elapsed)
     {
+        if (OS::is_run_by_valgrind())
+            GTEST_SKIP() << "Buggy with valgrind";
         Waitable waitable;
 
         std::thread t([&] ()
@@ -46,6 +49,8 @@ namespace test
 
     TEST_F(TestWaitable, test_waitable_loop)
     {
+        if (OS::is_run_by_valgrind())
+            GTEST_SKIP() << "Buggy with valgrind";
         Waitable waitable;
         SteadyClock clock;
 
@@ -68,6 +73,8 @@ namespace test
 
     TEST_F(TestWaitable, test_waitable_loop_fail)
     {
+        if (OS::is_run_by_valgrind())
+            GTEST_SKIP() << "Buggy with valgrind";
         Waitable waitable;
         SteadyClock clock;
 

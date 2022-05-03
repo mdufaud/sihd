@@ -16,8 +16,6 @@
 #include <sihd/util/AService.hpp>
 #include <sihd/util/ServiceController.hpp>
 
-// .def("copy_from", &LuaUtilApi::_array_lua_copy_table<PrimitiveType>)
-
 #define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType) \
     pybind11::class_<ArrType, IArray>(m_util, #ArrType) \
         .def(pybind11::init<>()) \
@@ -27,13 +25,15 @@
         .def("push_back", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_back)) \
         .def("push_back", &PyUtilApi::_array_py_push_back_list<PrimitiveType>) \
         .def("push_back", &PyUtilApi::_array_py_push_back_tuple<PrimitiveType>) \
+        .def("push_front", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_front)) \
+        .def("push_front", &PyUtilApi::_array_py_push_front_list<PrimitiveType>) \
+        .def("push_front", &PyUtilApi::_array_py_push_front_tuple<PrimitiveType>) \
         .def("pop", &ArrType::pop) \
         .def("front", &ArrType::front) \
         .def("back", &ArrType::back) \
         .def("at", &ArrType::at) \
-        .def("to_string", &ArrType::to_string) \
-        .def("__getitem__", &PyUtilApi::_array_py_getitem<PrimitiveType>) \
         .def("__setitem__", &ArrType::set) \
+        .def("__getitem__", &PyUtilApi::_array_py_getitem<PrimitiveType>) \
         .def("__contains__", &PyUtilApi::_array_py_contains<PrimitiveType>) \
         .def("__reversed__", &PyUtilApi::_array_py_reversed<PrimitiveType>) \
         .def("__iter__", &PyUtilApi::_array_py_iter<PrimitiveType>, pybind11::keep_alive<0, 1>());
@@ -147,10 +147,8 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("get_description", &Named::get_description)
         .def("get_full_name", &Named::get_full_name)
         .def("get_root", &Named::get_root, pybind11::return_value_policy::reference_internal)
-        .def("find", static_cast<Named * (Named::*)(const std::string &)>(&Named::find),
-            pybind11::return_value_policy::reference_internal)
-        .def("find_from", static_cast<Named * (Named::*)(Named *, const std::string &)>(&Named::find),
-            pybind11::return_value_policy::reference_internal);
+        .def("find", static_cast<Named * (Named::*)(const std::string &)>(&Named::find))
+        .def("find_from", static_cast<Named * (Named::*)(Named *, const std::string &)>(&Named::find));
 
     pybind11::class_<Node::ChildEntry>(m_util, "ChildEntry")
         .def_readonly("name", &Node::ChildEntry::name)
@@ -246,11 +244,32 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("data_type", &IArray::data_type)
         .def("data_type_to_string", &IArray::data_type_to_string)
         .def("hexdump", &IArray::hexdump)
-        .def("to_string", &IArray::to_string)
+        .def("to_string", static_cast<std::string (IArray::*)() const>(&IArray::to_string))
+        .def("to_string", static_cast<std::string (IArray::*)(char) const>(&IArray::to_string))
         .def("clear", &IArray::clear)
         .def("__len__", &IArray::size);
+    pybind11::class_<ArrChar, IArray>(m_util, "ArrChar")
+        .def(pybind11::init<>())
+        .def(pybind11::init<size_t>())
+        .def(pybind11::init<const std::vector<char>>())
+        .def(pybind11::init<const char *>())
+        .def("clone", &ArrChar::clone)
+        .def("push_back", static_cast<bool (ArrChar::*)(const char *)>(&ArrChar::push_back))
+        .def("push_back", &PyUtilApi::_array_py_push_back_list<char>)
+        .def("push_back", &PyUtilApi::_array_py_push_back_tuple<char>)
+        .def("push_front", static_cast<bool (ArrChar::*)(const char *)>(&ArrChar::push_front))
+        .def("push_front", &PyUtilApi::_array_py_push_front_list<char>)
+        .def("push_front", &PyUtilApi::_array_py_push_front_tuple<char>)
+        .def("pop", &ArrChar::pop)
+        .def("front", &ArrChar::front)
+        .def("back", &ArrChar::back)
+        .def("at", &ArrChar::at)
+        .def("__setitem__", &ArrChar::set)
+        .def("__getitem__", &PyUtilApi::_array_py_getitem<char>)
+        .def("__contains__", &PyUtilApi::_array_py_contains<char>)
+        .def("__reversed__", &PyUtilApi::_array_py_reversed<char>)
+        .def("__iter__", &PyUtilApi::_array_py_iter<char>, pybind11::keep_alive<0, 1>());
     DECLARE_ARRAY_USERTYPE(ArrBool, bool)
-    DECLARE_ARRAY_USERTYPE(ArrChar, char)
     DECLARE_ARRAY_USERTYPE(ArrByte, int8_t)
     DECLARE_ARRAY_USERTYPE(ArrUByte, uint8_t)
     DECLARE_ARRAY_USERTYPE(ArrShort, int16_t)
@@ -261,31 +280,13 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
     DECLARE_ARRAY_USERTYPE(ArrULong, uint64_t)
     DECLARE_ARRAY_USERTYPE(ArrFloat, float)
     DECLARE_ARRAY_USERTYPE(ArrDouble, double)
-    pybind11::class_<ArrStr, IArray>(m_util, "ArrStr")
-        .def(pybind11::init<>())
-        .def(pybind11::init<size_t>())
-        .def(pybind11::init<const std::string &>())
-        .def("clone", +[] (ArrStr *self)
-        {
-            return self->clone();
-        })
-        .def("pop", &ArrStr::pop)
-        .def("front", &ArrStr::front)
-        .def("back", &ArrStr::back)
-        .def("at", &ArrStr::at)
-        .def("str", &ArrStr::cpp_str)
-        .def("__getitem__", &PyUtilApi::_array_py_getitem<char>)
-        .def("__setitem__", &ArrStr::set)
-        .def("__contains__", &PyUtilApi::_array_py_contains<char>)
-        .def("__reversed__", &PyUtilApi::_array_py_reversed<char>)
-        .def("__iter__", &PyUtilApi::_array_py_iter<char>, pybind11::keep_alive<0, 1>());
 }
 
-bool    PyUtilApi::_configurable_set_conf(Configurable *self, const pybind11::dict & conf)
+bool    PyUtilApi::_configurable_set_conf(Configurable *self, const pybind11::kwargs & kwargs)
 {
     std::string key;
     bool ret = true;
-    for (const auto & item: conf)
+    for (const auto & item: kwargs)
     {
         try
         {

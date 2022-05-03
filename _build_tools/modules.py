@@ -207,7 +207,7 @@ def build_modules_conf(app, specific_modules=[], conditionnals=[]):
         raise RuntimeError("App's configuration file should have modules")
     conditionnals.extend(get_conditionnals_from_env(app))
     modules = {}
-    if specific_modules:
+    if specific_modules and specific_modules[0] != '':
         app_modules = app.modules
         # if a conditionnal is in specific module list, add conditionnals to list of modules
         if has_conditionnal_in_modules_list(app.conditionnal_modules, specific_modules):

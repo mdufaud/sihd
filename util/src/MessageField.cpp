@@ -27,10 +27,10 @@ bool    MessageField::build_array(Type dt, size_t size)
     return _array_ptr != nullptr;
 }
 
-IMessageField   *MessageField::clone()
+IMessageField   *MessageField::clone() const
 {
     MessageField *cloned = new MessageField(this->get_name());
-    IArray *arr = this->array();
+    const IArray *arr = this->array();
     if (arr != nullptr && cloned != nullptr)
         cloned->build_array(arr->data_type(), arr->size());
     return cloned;

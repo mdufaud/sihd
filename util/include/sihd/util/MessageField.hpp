@@ -32,7 +32,7 @@ class MessageField: public Named,
         }
 
         // ICloneable
-        virtual IMessageField *clone() override;
+        virtual IMessageField *clone() const override;
 
         template <typename T>
         T   read_value(size_t idx)
@@ -42,7 +42,7 @@ class MessageField: public Named,
             return ArrayUtil::read_array<T>(*_array_ptr, idx);
         }
         virtual bool build_array(Type dt, size_t size);
-        IArray *array() { return _array_ptr; };
+        IArray *array() const { return _array_ptr; };
 
     protected:
 

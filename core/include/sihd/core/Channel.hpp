@@ -2,12 +2,14 @@
 # define __SIHD_CORE_CHANNEL_HPP__
 
 # include <sihd/util/Array.hpp>
+# include <sihd/util/ArrayView.hpp>
 # include <sihd/util/Named.hpp>
 # include <sihd/util/Observable.hpp>
 # include <sihd/util/Logger.hpp>
 # include <sihd/util/time.hpp>
 # include <sihd/util/Clocks.hpp>
 # include <mutex>
+# include <atomic>
 
 namespace sihd::core
 {
@@ -19,18 +21,18 @@ class Channel:  public sihd::util::Named,
 {
     public:
         Channel(const std::string & name,
-                std::string_view type,
-                size_t size,
-                sihd::util::Node *parent = nullptr);
-        Channel(const std::string & name,
-                std::string_view type,
-                sihd::util::Node *parent = nullptr);
-        Channel(const std::string & name,
                 sihd::util::Type type,
                 size_t size,
                 sihd::util::Node *parent = nullptr);
         Channel(const std::string & name,
                 sihd::util::Type type,
+                sihd::util::Node *parent = nullptr);
+        Channel(const std::string & name,
+                std::string_view type,
+                size_t size,
+                sihd::util::Node *parent = nullptr);
+        Channel(const std::string & name,
+                std::string_view type,
                 sihd::util::Node *parent = nullptr);
         virtual ~Channel();
 
@@ -54,19 +56,35 @@ class Channel:  public sihd::util::Named,
         // write and notify only if a change happened
         void set_write_on_change(bool activate) { _write_change_only = activate; }
 
-        sihd::util::IArray *array() { return _array_ptr; }
-        const sihd::util::IArray *carray() const { return _array_ptr; }
-
+        const sihd::util::IArray *array() const { return _array_ptr; }
         template <typename T>
-        sihd::util::Array<T> *array()
+        const sihd::util::Array<T> *array() const
         {
             return sihd::util::ArrayUtil::cast_array<T>(_array_ptr);
         }
 
-        // copy internal array into arr
-        bool copy_to(sihd::util::IArray & arr);
+        size_t size() const { return _array_ptr->size(); }
+        size_t byte_size() const { return _array_ptr->byte_size(); }
+        size_t byte_index(size_t idx) const { return _array_ptr->byte_index(idx); }
 
-        // utility for reading (dynamic cast is slow)
+        size_t data_size() const { return _array_ptr->data_size(); }
+        sihd::util::Type data_type() const { return _array_ptr->data_type(); }
+
+        bool is_same_type(const Channel *other) const { return _array_ptr->is_same_type(*other->array()); }
+
+        // copy internal array into arr
+
+        bool copy_to(sihd::util::IArray & arr, size_t byte_offset = 0);
+
+        // utility for reading
+
+        template <typename T>
+        bool read_into(size_t idx, T & val)
+        {
+            std::lock_guard lock(_arr_mutex);
+            return sihd::util::ArrayUtil::read_array_into<T>(_array_ptr, idx, val);
+        }
+
         template <typename T>
         T   read(size_t idx)
         {
@@ -75,44 +93,18 @@ class Channel:  public sihd::util::Named,
         }
 
         // copy arr to internal array
-        bool write(const sihd::util::IArray & arr);
+        bool write(const sihd::util::ArrViewByte & arr, size_t byte_offset = 0);
+        bool write(const Channel & other);
 
-        // utility for writing (dynamic cast is slow)
+        // utility for writing
+
         template <typename T>
         bool write(size_t idx, T value)
         {
-            if (_notifying)
-            {
-                SIHD_LOG(warning, "Channel: cannot write while notifying");
-                return false;
-            }
-            sihd::util::Array<T> *arr_ptr = sihd::util::ArrayUtil::cast_array<T>(_array_ptr);
-            bool ret = arr_ptr != nullptr;
-            if (ret)
-            {
-                {
-                    std::lock_guard lock(_arr_mutex);
-                    if (_write_change_only && arr_ptr->at(idx) == value)
-                        return true;
-                    arr_ptr->set(idx, value);
-                    this->do_timestamp();
-                }
-                this->notify();
-            }
-            else
-            {
-                SIHD_LOG(error, "Channel: wrong type for writing "
-                        << _array_ptr->data_type_to_string() << " != "
-                        << sihd::util::Types::to_string<T>())
-            }
-            return ret;
+            return this->write({(const int8_t *)&value, sizeof(T)}, _array_ptr->byte_index(idx));
         }
 
-        bool write(const Channel & other);
-
     protected:
-        virtual void _init(sihd::util::Type type, size_t size);
-
         static sihd::util::IClock *_default_channel_clock_ptr;
 
     private:
@@ -122,7 +114,7 @@ class Channel:  public sihd::util::Named,
         sihd::util::IArray *_array_ptr;
         std::mutex _arr_mutex;
 
-        bool _notifying;
+        std::atomic<bool> _notifying;
         std::mutex _notify_mutex;
 
         bool _write_change_only;

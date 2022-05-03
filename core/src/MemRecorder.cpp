@@ -52,7 +52,7 @@ void    MemRecorder::add_record(const std::string & name, time_t timestamp, cons
 {
     if (!_records && !_provides)
         return ;
-    sihd::util::IArray *arr = sihd::util::ArrayUtil::clone_array(*array);
+    sihd::util::IArray *arr = array->clone_array();
     if (_records)
         _map_record[name].push_back({timestamp, arr});
     if (_provides)
@@ -93,7 +93,7 @@ bool    MemRecorder::provide(PlayableRecord *value)
 
 void    MemRecorder::handle(const std::string & name, const Channel *channel)
 {
-    this->add_record(name, channel->ctimestamp(), channel->carray());
+    this->add_record(name, channel->ctimestamp(), channel->array());
 }
 
 std::string     MemRecorder::hexdump_records()

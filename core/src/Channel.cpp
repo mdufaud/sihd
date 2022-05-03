@@ -9,28 +9,36 @@ SIHD_NEW_LOGGER("sihd::core");
 
 sihd::util::IClock *Channel::_default_channel_clock_ptr = &sihd::util::Clock::default_clock;
 
-Channel::Channel(const std::string & name, std::string_view type, size_t size, Node *parent):
-    Named(name, parent)
-{
-    this->_init(Types::string_to_type(type), size);
-}
-
-Channel::Channel(const std::string & name, std::string_view type, Node *parent):
-    Named(name, parent)
-{
-    this->_init(Types::string_to_type(type), 1);
-}
-
 Channel::Channel(const std::string & name, Type type, size_t size, Node *parent):
     Named(name, parent)
 {
-    this->_init(type, size);
+    _array_ptr = ArrayUtil::create_from_type(type, size);
+    if (_array_ptr == nullptr)
+    {
+        throw std::invalid_argument(Str::format("Channel: no such type %s for channel %s",
+                                                    Types::type_to_string(type),
+                                                    this->get_name().c_str()));
+    }
+    _array_ptr->resize(size);
+    _notifying = false;
+    _write_change_only = true;
+    _timestamp = 0;
+    _clock_ptr = Channel::get_default_clock();
 }
 
 Channel::Channel(const std::string & name, Type type, Node *parent):
-    Named(name, parent)
+    Channel(name, type, 1, parent)
 {
-    this->_init(type, 1);
+}
+
+Channel::Channel(const std::string & name, std::string_view type, size_t size, Node *parent):
+    Channel(name, Types::string_to_type(type), size, parent)
+{
+}
+
+Channel::Channel(const std::string & name, std::string_view type, Node *parent):
+    Channel(name, Types::string_to_type(type), 1, parent)
+{
 }
 
 Channel::~Channel()
@@ -67,33 +75,16 @@ Channel     *Channel::build(std::string_view configuration)
     return new Channel(map["name"], map["type"], val);
 }
 
-void    Channel::_init(Type type, size_t size)
-{
-    std::lock_guard lock(_arr_mutex);
-    _array_ptr = ArrayUtil::create_from_type(type, size);
-    if (_array_ptr == nullptr)
-    {
-        throw std::invalid_argument(Str::format("Channel: no such type %s for channel %s",
-                                                    Types::type_to_string(type),
-                                                    this->get_name().c_str()));
-    }
-    _array_ptr->resize(size);
-    _notifying = false;
-    _write_change_only = true;
-    _timestamp = 0;
-    _clock_ptr = Channel::get_default_clock();
-}
-
 std::time_t     Channel::timestamp()
 {
     std::lock_guard lock(_arr_mutex);
     return _timestamp;
 }
 
-bool    Channel::copy_to(IArray & arr)
+bool    Channel::copy_to(IArray & arr, size_t byte_offset)
 {
     std::lock_guard lock(_arr_mutex);
-    return arr.copy_from_bytes(*_array_ptr);
+    return arr.copy_from_bytes(*_array_ptr, byte_offset);
 }
 
 void    Channel::do_timestamp()
@@ -103,11 +94,11 @@ void    Channel::do_timestamp()
 
 bool    Channel::write(const Channel & other)
 {
-    const IArray *other_array = other.carray();
+    const IArray *other_array = other.array();
     return other_array != nullptr && this->write(*other_array);
 }
 
-bool    Channel::write(const IArray & arr)
+bool    Channel::write(const sihd::util::ArrViewByte & arr_view, size_t byte_offset)
 {
     if (_notifying)
     {
@@ -117,28 +108,20 @@ bool    Channel::write(const IArray & arr)
     bool ret = false;
     {
         std::lock_guard lock(_arr_mutex);
-        if (_write_change_only && _array_ptr->is_equal(arr) == true)
+        if (arr_view.byte_size() + byte_offset > _array_ptr->byte_size())
+        {
+            SIHD_LOG_ERROR("Channel: cannot write %lu bytes at %lu offset into %lu bytes",
+                            arr_view.byte_size(), byte_offset, _array_ptr->byte_size());
+            return false;
+        }
+        if (_write_change_only
+                && _array_ptr->is_bytes_equal(arr_view.buf(), arr_view.byte_size(), byte_offset))
             return true;
-        ret = _array_ptr->copy_from_bytes(arr);
-        this->do_timestamp();
+        if ((ret = _array_ptr->copy_from_bytes(arr_view, byte_offset)) == true)
+            this->do_timestamp();
     }
     if (ret)
         this->notify();
-    else
-    {
-        /*
-        if (_array_ptr->is_same_type(arr) == false)
-        {
-            SIHD_LOG(error, "Channel: cannot write an array from different type: "
-                << arr.data_type_to_string() << " != " << _array_ptr->data_type_to_string());
-        }
-        else */
-        if (arr.byte_size() > _array_ptr->byte_size())
-        {
-            SIHD_LOG(error, "Channel: cannot write an array with too many bytes: "
-                    << arr.byte_size() << " > " << _array_ptr->byte_size());
-        }
-    }
     return ret;
 }
 

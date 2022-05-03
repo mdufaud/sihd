@@ -103,7 +103,7 @@ bool    AChannelContainer::_check_link(const std::string & name, Named *child)
         SIHD_LOG_ERROR("ChannelContainer: '%s' channel link size not same type '%s': '%s' != '%s'",
                     this->get_full_name().c_str(), name.c_str(),
                     sihd::util::Types::type_to_string(conf.type),
-                    chan->array()->data_type_to_string().c_str());
+                    chan->array()->data_type_to_string());
         ret = false;
     }
     if (conf.size != chan->array()->size())

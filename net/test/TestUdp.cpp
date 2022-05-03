@@ -72,7 +72,7 @@ namespace test
 
     TEST_F(TestUdp, test_udp_sendrcv_connect)
     {
-        sihd::util::ArrStr array_rcv(40);
+        sihd::util::ArrChar array_rcv(40);
 
         UdpSender sender("udp-sender");
         UdpReceiver receiver("udp-receiver");
@@ -95,21 +95,21 @@ namespace test
         EXPECT_EQ(sender.send(helloworld, sizeof(helloworld)), (ssize_t)sizeof(helloworld));
         EXPECT_EQ(receiver.receive(array_rcv), (ssize_t)sizeof(helloworld));
 
-        EXPECT_TRUE(array_rcv.is_equal(helloworld, sizeof(helloworld) - 1));
+        EXPECT_TRUE(array_rcv.is_equal(helloworld, sizeof(helloworld)));
         EXPECT_EQ(array_rcv.size(), sizeof(helloworld));
 
         const char hello[] = "hello";
         EXPECT_EQ(sender.send(hello, sizeof(hello)), (ssize_t)sizeof(hello));
         EXPECT_TRUE(receiver.poll(10));
 
-        EXPECT_TRUE(array_rcv.is_equal(hello, sizeof(hello) - 1));
+        EXPECT_TRUE(array_rcv.is_equal(hello, sizeof(hello)));
         EXPECT_EQ(array_rcv.size(), sizeof(hello));
     }
 
     TEST_F(TestUdp, test_udp_sendrcv_broadcast)
     {
         const char helloworld[] = "hello world";
-        sihd::util::ArrStr array_rcv(40);
+        sihd::util::ArrChar array_rcv(40);
 
         UdpSender sender("udp-sender");
         EXPECT_TRUE(sender.open_socket());
@@ -128,7 +128,7 @@ namespace test
         receiver.receive(iprcv, array_rcv);
         EXPECT_EQ(iprcv.get_first_ipv4(), "127.0.0.1");
 
-        EXPECT_TRUE(array_rcv.is_equal(helloworld, sizeof(helloworld) - 1));
+        EXPECT_TRUE(array_rcv.is_equal(helloworld, sizeof(helloworld)));
         EXPECT_EQ(array_rcv.size(), sizeof(helloworld));
     }
 

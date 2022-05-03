@@ -93,6 +93,7 @@ namespace test
                 ASSERT_NE(sem_init(&shmp->sem2, 1, 0), -1);
                 shmp->data[0] = 42;
                 shmp->data[1] = 24;
+                usleep(2000);
                 EXPECT_NE(sem_post(&shmp->sem1), -1);
                 SIHD_LOG(debug, "--- child wrote data - waiting for parent to read it ---");
                 EXPECT_NE(sem_wait(&shmp->sem2), -1);

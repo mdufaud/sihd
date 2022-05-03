@@ -11,6 +11,7 @@
 # include <sihd/util/time.hpp>
 # include <sihd/util/Thread.hpp>
 # include <sihd/util/Synchronizer.hpp>
+# include <sihd/util/ScopedModifier.hpp>
 
 namespace sihd::util
 {
@@ -46,21 +47,17 @@ class Worker: protected IRunnable, public Configurable
         virtual bool on_worker_stop();
 
         virtual bool _prepare_run();
-        std::string & _worker_get_name();
-        IRunnable *_worker_get_runnable();
-        void _worker_set_running(bool active);
 
     private:
         std::string _worker_thread_name;
         IRunnable *_runnable_ptr;
 
-        bool _started;
-        bool _running;
+        std::atomic<bool> _started;
+        std::atomic<bool> _running;
         bool _detach;
         Synchronizer _synchro;
-        std::mutex _worker_mutex;
-        std::mutex _worker_sync_mutex;
         std::thread _worker_thread;
+        std::mutex _mutex_state;
 };
 
 }

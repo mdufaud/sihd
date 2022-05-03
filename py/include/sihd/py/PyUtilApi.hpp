@@ -42,7 +42,7 @@ class PyUtilApi
 
     protected:
         static bool _configurable_set_conf(sihd::util::Configurable *self,
-                                            const pybind11::dict & conf);
+                                            const pybind11::kwargs & kwargs);
         static bool _configurable_set_single_conf(sihd::util::Configurable *self,
                                                     const std::string & key,
                                                     const pybind11::handle & handle);
@@ -71,6 +71,36 @@ class PyUtilApi
             for (const auto & item: tuple)
             {
                 if (self.push_back(item.cast<T>()) == false)
+                {
+                    ret = false;
+                    break ;
+                }
+            }
+            return ret;
+        }
+
+        template <typename T>
+        static bool _array_py_push_front_list(sihd::util::Array<T> & self, pybind11::list list)
+        {
+            bool ret = true;
+            for (const auto & item: list)
+            {
+                if (self.push_front(item.cast<T>()) == false)
+                {
+                    ret = false;
+                    break ;
+                }
+            }
+            return ret;
+        }
+
+        template <typename T>
+        static bool _array_py_push_front_tuple(sihd::util::Array<T> & self, pybind11::tuple tuple)
+        {
+            bool ret = true;
+            for (const auto & item: tuple)
+            {
+                if (self.push_front(item.cast<T>()) == false)
                 {
                     ret = false;
                     break ;

@@ -29,9 +29,22 @@ BUILDER = $(BUILD_TOOLS)/builder.py
 # Builder + env conf
 
 BUILDER_RESP = $(shell arch=$(arch) mode=$(mode) platform=$(platform) compiler=$(compiler) python3 $(BUILDER) all)
+
 PLATFORM = $(word 1, $(BUILDER_RESP))
+ifeq ($(PLATFORM),)
+$(error "Makefile: platform not found - cannot find build path")
+endif
+
 ARCH = $(word 2, $(BUILDER_RESP))
+ifeq ($(ARCH),)
+$(error "Makefile: architecture not found - cannot find build path")
+endif
+
 COMPILE_MODE = $(word 3, $(BUILDER_RESP))
+ifeq ($(COMPILE_MODE),)
+$(error "Makefile: compilation mode not found - cannot find build path")
+endif
+
 COMPILER = $(word 4, $(BUILDER_RESP))
 ANDROID = $(word 5, $(BUILDER_RESP))
 

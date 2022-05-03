@@ -12,7 +12,7 @@ class ICloneable
     public:
         virtual ~ICloneable() {};
 
-        virtual T *clone() = 0;
+        virtual T *clone() const = 0;
 };
 
 }

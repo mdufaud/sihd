@@ -31,13 +31,14 @@
         .addStaticFunction("new", &LuaUtilApi::_array_lua_new<PrimitiveType>)\
         .addFunction("clone", &ArrType::clone)\
         .addFunction("push_back", &LuaUtilApi::_array_lua_push_back<PrimitiveType>)\
+        .addFunction("push_front", &LuaUtilApi::_array_lua_push_front<PrimitiveType>)\
         .addFunction("copy_from", &LuaUtilApi::_array_lua_copy_table<PrimitiveType>)\
+        .addFunction("from", &LuaUtilApi::_array_lua_from<PrimitiveType>)\
         .addFunction("pop", &ArrType::pop)\
         .addFunction("front", &ArrType::front)\
         .addFunction("back", &ArrType::back)\
         .addFunction("at", &ArrType::at)\
         .addFunction("set", &ArrType::set)\
-        .addFunction("to_string", &ArrType::to_string)\
         .addFunction("__len", &ArrType::size)\
     .endClass()
 
@@ -131,7 +132,14 @@ void    LuaUtilApi::load_process(Vm & vm)
                             luaL_error(state, "stdout_to argument must a function callback");
                         self->stdout_to([ref] (const char *buf, size_t size)
                         {
-                            ref(buf, size);
+                            try
+                            {
+                                ref(buf, size);
+                            }
+                            catch (const luabridge::LuaException & e)
+                            {
+                                SIHD_LOG(error, e.what());
+                            }
                         });
                     })
                     .addFunction("stdout_to_fd", +[] (Process *self, int fd)
@@ -151,7 +159,14 @@ void    LuaUtilApi::load_process(Vm & vm)
                             luaL_error(state, "stderr_to argument must a function callback");
                         self->stderr_to([ref] (const char *buf, size_t size)
                         {
-                            ref(buf, size);
+                            try
+                            {
+                                ref(buf, size);
+                            }
+                            catch (const luabridge::LuaException & e)
+                            {
+                                SIHD_LOG(error, e.what());
+                            }
                         });
                     })
                     .addFunction("stderr_to_fd", +[] (Process *self, int fd)
@@ -299,7 +314,7 @@ void    LuaUtilApi::load_files(Vm & vm)
                             good = self->read_line(&line, &size);
                         if (good)
                         {
-                            sihd::util::ArrStr array;
+                            sihd::util::ArrChar array;
                             array.from(line);
                             free(line);
                             return luabridge::LuaRef(state, array);
@@ -702,8 +717,14 @@ void    LuaUtilApi::load_base(Vm & vm)
                     .addFunction("data_type", &IArray::data_type)
                     .addFunction("data_type_to_string", &IArray::data_type_to_string)
                     .addFunction("hexdump", &IArray::hexdump)
-                    .addFunction("to_string", &IArray::to_string)
+                    .addFunction("to_string", +[] (IArray *self, luabridge::LuaRef ref)
+                    {
+                        if (ref.isNil())
+                            return self->to_string();
+                        return self->to_string(ref.cast<char>());
+                    })
                     .addFunction("clear", &IArray::clear)
+                    .addFunction("is_same_type", static_cast<bool (IArray::*)(const IArray &) const>(&IArray::is_same_type))
                 .endClass()
                 DECLARE_ARRAY_USERTYPE(ArrBool, bool)
                 DECLARE_ARRAY_USERTYPE(ArrChar, char)
@@ -717,38 +738,6 @@ void    LuaUtilApi::load_base(Vm & vm)
                 DECLARE_ARRAY_USERTYPE(ArrULong, uint64_t)
                 DECLARE_ARRAY_USERTYPE(ArrFloat, float)
                 DECLARE_ARRAY_USERTYPE(ArrDouble, double)
-                // a bit of a specialization for ArrStr
-                .deriveClass<ArrStr, IArray>("ArrStr")
-                    .addConstructor<void (*)()>()
-                    .addStaticFunction("new", +[] (luabridge::LuaRef ref, lua_State *state)
-                    {
-                        ArrStr array;
-                        if (ref.isString())
-                            array.push_back(ref.cast<const char *>());
-                        else
-                            luaL_error(state, "ArrStr new argument must be a string");
-                        return array;
-                    })
-                    .addFunction("clone", +[] (ArrStr *self)
-                    {
-                        return self->clone();
-                    })
-                    .addFunction("push_back", static_cast<bool (ArrStr::*)(const std::string &)>(&ArrStr::push_back))
-                    .addFunction("copy_from", +[] (ArrStr *self, const std::string & src, luabridge::LuaRef from_ref)
-                    {
-                        size_t from = 0;
-                        if (from_ref.isNil() == false)
-                            from = from_ref.cast<size_t>();
-                        return self->copy_from(src, from);
-                    })
-                    .addFunction("pop", static_cast<char (ArrStr::*)(size_t)>(&ArrChar::pop))
-                    .addFunction("front", static_cast<char (ArrStr::*)() const>(&ArrChar::front))
-                    .addFunction("back", static_cast<char (ArrStr::*)() const>(&ArrChar::back))
-                    .addFunction("at", static_cast<char (ArrStr::*)(size_t) const>(&ArrChar::at))
-                    .addFunction("set", static_cast<void (ArrStr::*)(size_t, char)>(&ArrChar::set))
-                    .addFunction("str", static_cast<std::string (ArrStr::*)() const>(&ArrChar::cpp_str))
-                    .addFunction("__len", static_cast<size_t (ArrStr::*)() const>(&ArrChar::size))
-                .endClass()
                 /**
                  * Service
                  */
@@ -892,7 +881,15 @@ LuaUtilApi::LuaRunnable::~LuaRunnable()
 
 bool    LuaUtilApi::LuaRunnable::run()
 {
-    return this->call_lua_method<bool>();
+    try
+    {
+        return this->call_lua_method<bool>();
+    }
+    catch (const luabridge::LuaException & e)
+    {
+        SIHD_LOG(error, e.what());
+    }
+    return false;
 }
 
 /* ************************************************************************* */
@@ -913,7 +910,15 @@ LuaUtilApi::LuaTask::~LuaTask()
 
 bool    LuaUtilApi::LuaTask::run()
 {
-    return this->call_lua_method<bool>();
+    try
+    {
+        return this->call_lua_method<bool>();
+    }
+    catch (const luabridge::LuaException & e)
+    {
+        SIHD_LOG(error, e.what());
+    }
+    return false;
 }
 
 /* ************************************************************************* */

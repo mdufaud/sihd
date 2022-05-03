@@ -72,7 +72,7 @@ namespace test
         EXPECT_FLOAT_EQ(arr_float[3], 44.3);
         SIHD_LOG(debug, arr_float.to_string(','));
 
-        ArrStr arr_str;
+        ArrChar arr_str;
         arr_str.from_string("hello world");
         EXPECT_EQ(arr_str.to_string(), "hello world");
         SIHD_LOG(debug, arr_str.to_string());
@@ -143,7 +143,7 @@ namespace test
         EXPECT_EQ(*std::min_element(arr_int.crbegin(), arr_int.crend()), 11);
         EXPECT_EQ(*std::max_element(arr_int.crbegin(), arr_int.crend()), 41);
 
-        ArrStr arr_str("edcba");
+        ArrChar arr_str("edcba");
         SIHD_LOG(debug, "Sort before: " << arr_str.to_string());
         std::sort(arr_str.begin(), arr_str.end());
         SIHD_LOG(debug, "Sort after: " << arr_str.to_string());
@@ -205,7 +205,7 @@ namespace test
     TEST_F(TestArray, test_array_str)
     {
         const char hw[] = "hello world";
-        ArrStr arr(hw);
+        ArrChar arr(hw);
         EXPECT_EQ(arr.hexdump(','), "68,65,6c,6c,6f,20,77,6f,72,6c,64");
         EXPECT_EQ(arr.to_string(), "hello world");
         EXPECT_TRUE(arr.is_equal("hello world"));
@@ -315,6 +315,30 @@ namespace test
         EXPECT_EQ(arr[7], 0);
     }
 
+    TEST_F(TestArray, test_array_push_front)
+    {
+        ArrInt arr;
+
+        arr.push_front(10);
+        arr.push_front(5);
+        arr.push_front(0);
+        ASSERT_EQ(arr.size(), 3u);
+        EXPECT_EQ(arr.front(), 0);
+        EXPECT_EQ(arr.back(), 10);
+        EXPECT_EQ(arr[0], 0);
+        EXPECT_EQ(arr[1], 5);
+        EXPECT_EQ(arr[2], 10);
+
+        arr.push_front({-10, -5});
+        SIHD_LOG(debug, arr.to_string(' '));
+        ASSERT_EQ(arr.size(), 5u);
+        EXPECT_EQ(arr[0], -10);
+        EXPECT_EQ(arr[1], -5);
+        EXPECT_EQ(arr[2], 0);
+        EXPECT_EQ(arr[3], 5);
+        EXPECT_EQ(arr[4], 10);
+    }
+
     TEST_F(TestArray, test_array_push_back)
     {
         Array<float> arr(4);
@@ -323,11 +347,12 @@ namespace test
         arr.push_back(0.3);
         arr.push_back(0.4);
         EXPECT_EQ(arr.size(), 4ul);
-        EXPECT_EQ(arr.capacity(), 4ul);
-        arr.push_back(0.5);
-        EXPECT_EQ(arr.size(), 5ul);
-        EXPECT_EQ(arr.capacity(), 5ul);
-        EXPECT_EQ(arr[4], 0.5);
+        EXPECT_GE(arr.capacity(), 4ul);
+        arr.push_back({0.5, 0.6});
+        ASSERT_EQ(arr.size(), 6ul);
+        EXPECT_GE(arr.capacity(), 6ul);
+        EXPECT_FLOAT_EQ(arr[4], 0.5);
+        EXPECT_FLOAT_EQ(arr[5], 0.6);
     }
 
     TEST_F(TestArray, test_array_push_back_array)
@@ -477,23 +502,57 @@ namespace test
         EXPECT_EQ(buffer_dbl.data_type(), Type::TYPE_DOUBLE);
     }
 
-    // Test from method
+    TEST_F(TestArray, test_array_move)
+    {
+        ArrInt arr;
+        ArrInt arr_moved;
+        int *buffer_ptr;
+
+        arr.from({1, 2, 3});
+        buffer_ptr = arr.data();
+        arr_moved = std::move(arr);
+        EXPECT_EQ(arr.data(), nullptr);
+        EXPECT_EQ(arr_moved.data(), buffer_ptr);
+        EXPECT_EQ(arr_moved.size(), 3);
+
+        ArrInt arr_move_constructor(std::move(arr_moved));
+        EXPECT_EQ(arr_moved.data(), nullptr);
+        EXPECT_EQ(arr_move_constructor.data(), buffer_ptr);
+        EXPECT_EQ(arr_move_constructor.size(), 3);
+    }
+
+    TEST_F(TestArray, test_array_equal)
+    {
+        ArrInt arr_int({1, 2, 3});
+        int tbl_all[3] = {1, 2, 3};
+        int tbl_two[2] = {2, 3};
+
+        EXPECT_TRUE(arr_int.is_equal(arr_int));
+        EXPECT_TRUE(arr_int.is_equal({1, 2, 3}));
+        EXPECT_TRUE(arr_int.is_equal({2, 3}, 1));
+        EXPECT_TRUE(arr_int.is_bytes_equal((const uint8_t *)tbl_all, 3 * sizeof(int)));
+        EXPECT_TRUE(arr_int.is_bytes_equal((const uint8_t *)tbl_two, 2 * sizeof(int), 1 * sizeof(int)));
+    }
+
     TEST_F(TestArray, test_array_from)
     {
-        sihd::util::ArrInt buffer(2);
+        ArrInt buffer(2);
 
+        buffer.resize(2);
         buffer[0] = 13;
         buffer[1] = 37;
         EXPECT_EQ(buffer[0], 13);
         EXPECT_EQ(buffer[1], 37);
 
-        sihd::util::ArrInt buffer_copied;
+        ArrInt buffer_copied;
         EXPECT_EQ(buffer_copied.from(buffer), true);
         EXPECT_EQ(buffer_copied[0], 13);
         EXPECT_EQ(buffer_copied[1], 37);
 
-        sihd::util::ArrFloat buffer_impossible_copy;
-        EXPECT_EQ(buffer_impossible_copy.from(buffer), false);
+        ArrByte buffer_byte;
+        buffer_byte.resize(3);
+        ArrFloat buffer_impossible_copy;
+        EXPECT_EQ(buffer_impossible_copy.from(buffer_byte), false);
 
         ArrInt *buffer_clone = buffer.clone();
         EXPECT_EQ(buffer_clone->at(0), 13);

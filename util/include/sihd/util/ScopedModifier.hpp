@@ -1,5 +1,5 @@
-#ifndef __SIHD_UTIL_MODIFICATOR_HPP__
-# define __SIHD_UTIL_MODIFICATOR_HPP__
+#ifndef __SIHD_UTIL_SCOPEDMODIFIER_HPP__
+# define __SIHD_UTIL_SCOPEDMODIFIER_HPP__
 
 # include <functional>
 
@@ -7,16 +7,16 @@ namespace sihd::util
 {
 
 template <typename T, typename V>
-class Modificator
+class ScopedModifier
 {
     public:
-        Modificator(T & val, V new_val): _ref(val)
+        ScopedModifier(T & val, V new_val): _ref(val)
         {
             _old_val = val;
             val = new_val;
         }
 
-        ~Modificator()
+        ~ScopedModifier()
         {
             _ref.get() = _old_val;
         }
