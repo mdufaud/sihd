@@ -9,7 +9,7 @@ assert(line_reader:read_next())
 local line = line_reader:get_read_data()
 assert(line ~= nil)
 
-assert(line:to_string() ~= "")
+assert(line:str() ~= "")
 assert(line:size() > 0)
 
 line_reader:close()

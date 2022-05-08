@@ -62,10 +62,10 @@ namespace test
 
     TEST_F(TestOs, test_os_resources)
     {
-        size_t max_fds = OS::get_max_fds();
+        size_t max_fds = OS::max_fds();
         // in bytes
-        size_t peak = OS::get_peak_rss();
-        size_t current = OS::get_current_rss();
+        size_t peak = OS::peak_rss();
+        size_t current = OS::current_rss();
 
         SIHD_LOG(info, "Peak rss: " << peak / (1024 * 1024) << " mb");
         SIHD_LOG(info, "Current rss: " << current / (1024 * 1024) << " mb");

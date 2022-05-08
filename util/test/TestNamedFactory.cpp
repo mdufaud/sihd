@@ -40,13 +40,13 @@ namespace test
 
         Named *node = NamedFactory::load("sihd_util", "Node", "test_node");
         ASSERT_NE(node, nullptr);
-        EXPECT_EQ(node->get_name(), "test_node");
+        EXPECT_EQ(node->name(), "test_node");
         Node *casted = dynamic_cast<Node *>(node);
         ASSERT_NE(casted, nullptr);
         Named *child = NamedFactory::load("sihd_util", "Node", "child_node", casted);
         ASSERT_NE(child, nullptr);
-        EXPECT_EQ(child->get_parent(), casted);
-        if (child->get_parent() != casted)
+        EXPECT_EQ(child->parent(), casted);
+        if (child->parent() != casted)
             delete child;
         delete node;
     }

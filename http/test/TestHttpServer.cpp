@@ -2,7 +2,7 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Str.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
@@ -23,14 +23,14 @@ namespace test
             TestHttpServer()
             {
                 char *test_path = getenv("TEST_PATH");
-                _base_test_dir = sihd::util::Files::combine({
+                _base_test_dir = sihd::util::FS::combine({
                     test_path == nullptr ? "unit_test" : test_path,
                     "http",
                     "httpserver"
                 });
-                _cwd = sihd::util::OS::get_cwd();
+                _cwd = sihd::util::OS::cwd();
                 sihd::util::LoggerManager::basic();
-                sihd::util::Files::make_directories(_base_test_dir);
+                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestHttpServer()
@@ -124,7 +124,7 @@ namespace test
 
             bool on_read(const sihd::util::ArrChar & array)
             {
-                SIHD_LOG(debug, "Read from client websocket: " << array.to_string());
+                SIHD_LOG(debug, "Read from client websocket: " << array.str());
                 _client_wrote = true;
                 ++_nread;
                 return true;

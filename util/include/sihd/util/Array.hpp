@@ -4,6 +4,7 @@
 # include <sihd/util/Logger.hpp>
 # include <sihd/util/IArray.hpp>
 # include <sihd/util/Splitter.hpp>
+# include <sihd/util/ICloneable.hpp>
 
 # include <utility>
 # include <cstdint>
@@ -57,7 +58,7 @@ class Array: public IArray, public ICloneable<Array<T>>
                 this->reserve(capacity);
         }
 
-        // containers constructors
+        // contiguous std containers constructors
 
         Array(std::initializer_list<T> list): Array()
         {
@@ -83,6 +84,7 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         // copy constructor
 
+        // you have to check for good memory allocation here
         Array(const Array<T> & array): Array()
         {
             this->from(array);
@@ -93,6 +95,7 @@ class Array: public IArray, public ICloneable<Array<T>>
             *this = std::move(other);
         }
 
+        // you have to check for good memory allocation here
         Array & operator=(const Array<T> & other)
         {
             if (&other != this)
@@ -144,8 +147,8 @@ class Array: public IArray, public ICloneable<Array<T>>
         size_t capacity() const { return _capacity; }
         size_t byte_capacity() const { return _capacity * sizeof(T); }
 
-        Type data_type() const { return Types::to_type<T>(); }
-        const char *data_type_to_string() const { return Types::type_to_string(this->data_type()); }
+        Type data_type() const { return Types::type<T>(); }
+        const char *data_type_str() const { return Types::type_str(this->data_type()); }
 
         bool copy_from_bytes(const void *buf, size_t size, size_t byte_offset = 0)
         {
@@ -175,13 +178,13 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         // char specialization
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        bool from_string(std::string_view data)
+        bool from_str(std::string_view data)
         {
             this->delete_buffer();
             return this->push_back(data);
         }
 
-        bool from_string(std::string_view data, const char *delimiters)
+        bool from_str(std::string_view data, const char *delimiters)
         {
             // can be optimized with string views
             bool ret = true;
@@ -332,7 +335,7 @@ class Array: public IArray, public ICloneable<Array<T>>
             return Str::hexdump(_buf_ptr, this->byte_size(), delimiter);
         }
 
-        std::string to_string() const
+        std::string str() const
         {
             if constexpr (std::is_same_v<T, char>)
             {
@@ -354,7 +357,7 @@ class Array: public IArray, public ICloneable<Array<T>>
             }
         }
 
-        std::string to_string(char delimiter) const
+        std::string str(char delimiter) const
         {
             std::string s;
             // trying to reserve at least 1 char by element + delimiters (if there are)
@@ -1215,8 +1218,8 @@ class ArrayUtil
                 throw std::invalid_argument(
                     Str::format("ArrayUtil::read_array cannot copy data from idx %lu into type '%s' (array type: '%s')",
                                 idx,
-                                Types::to_string<T>(),
-                                arr.data_type_to_string())
+                                Types::str<T>(),
+                                arr.data_type_str())
                 );
             }
             return ret;

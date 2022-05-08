@@ -22,7 +22,7 @@ namespace test
 
             virtual void SetUp()
             {
-                if (Endian::get_endian() != Endian::LITTLE)
+                if (Endian::endian() != Endian::LITTLE)
                     GTEST_SKIP() << "Those tests are assumed to be in little endianness";
             }
 

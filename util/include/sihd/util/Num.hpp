@@ -10,7 +10,7 @@ namespace sihd::util
 class Num
 {
     public:
-        static size_t get_size(int64_t number, uint16_t base);
+        static size_t size(int64_t number, uint16_t base);
 
     protected:
 

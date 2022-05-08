@@ -58,7 +58,8 @@ class Poll: public IStoppableRunnable, public Observable<Poll>
 
         int poll(int milliseconds_timeout = -1);
 
-        const std::vector<PollEvent> & get_events() const { return _lst_events; };
+        const std::vector<PollEvent> & events() const { return _lst_events; };
+
         time_t polling_time() const { return _last_poll_time; }
         bool polling_timeout() const { return _timedout; }
         bool polling_error() const { return _error; }

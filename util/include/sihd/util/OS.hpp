@@ -41,7 +41,7 @@ namespace sihd::util
 class OS
 {
     public:
-        static std::string get_signal_name(int sig);
+        static std::string signal_name(int sig);
 
         // adds a handler to be run when signal is catched
         static bool add_signal_handler(int sig, IHandler<int> *handler);
@@ -63,13 +63,13 @@ class OS
         static bool setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror = false);
         static bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror = false);
 
-        static sihd_rlim_t get_max_fds();
+        static sihd_rlim_t max_fds();
 
         static bool is_root();
 
-        static std::string get_home();
-        static std::string get_executable_path();
-        static std::string get_cwd();
+        static std::string home_path();
+        static std::string executable_path();
+        static std::string cwd();
 
         // debuggers
         static bool is_run_by_debugger();
@@ -79,13 +79,13 @@ class OS
         // lib
         static void *load_symbol_unload_lib(const std::string & lib_name, const std::string & sym_name);
 
-        static pid_t get_pid();
+        static pid_t pid();
         static bool kill(pid_t pid, int sig);
 
 # if !defined(__SIHD_WINDOWS__)
-        static std::string get_error_lib();
+        static std::string lib_error();
         static void *load_lib(const std::string & lib_name);
-        static void *get_symbol_lib(void *handle, const std::string & sym_name);
+        static void *load_symbol(void *handle, const std::string & sym_name);
         static bool close_lib(void *handle);
 # endif
 
@@ -94,8 +94,8 @@ class OS
         // prints formatted backtrace into file descriptor
         static ssize_t backtrace(int fd);
 
-        static size_t get_peak_rss();
-        static size_t get_current_rss();
+        static size_t peak_rss();
+        static size_t current_rss();
 
     protected:
         // called when signal is caught

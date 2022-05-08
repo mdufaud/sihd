@@ -1,7 +1,7 @@
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 
 #ifndef SIHD_HTTP_URI_BUFSIZE
 # define SIHD_HTTP_URI_BUFSIZE 256
@@ -34,7 +34,7 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
     _worker.set_runnable(&_polling_scheduler);
     _worker.set_frequency(30);
 
-    _http_header.set_servername(this->get_name());
+    _http_header.set_servername(this->name());
     _http_header.set_header("Access-Control-Allow-Origin:", "*");
     this->set_encoding("utf-8");
 
@@ -75,7 +75,7 @@ bool    HttpServer::set_port(int port)
 
 bool    HttpServer::set_root_dir(std::string_view root_dir)
 {
-    bool ret = Files::is_dir(root_dir);
+    bool ret = FS::is_dir(root_dir);
     if (ret)
         _root_dir = root_dir;
     else
@@ -90,7 +90,7 @@ bool    HttpServer::set_poll_frequency(double freq)
 
 bool    HttpServer::set_ssl_cert_path(std::string_view path)
 {
-    bool ret = Files::is_file(path);
+    bool ret = FS::is_file(path);
     if (ret)
         _ssl_cert_path = path;
     else
@@ -100,7 +100,7 @@ bool    HttpServer::set_ssl_cert_path(std::string_view path)
 
 bool    HttpServer::set_ssl_cert_key(std::string_view path)
 {
-    bool ret = Files::is_file(path);
+    bool ret = FS::is_file(path);
     if (ret)
         _ssl_cert_key = path;
     else
@@ -181,7 +181,7 @@ bool    HttpServer::run()
         std::lock_guard l(_mutex);
         _running = true;
     }
-    _worker.start_worker(this->get_name() + "-callback");
+    _worker.start_worker(this->name() + "-callback");
     while (_running == true && n >= 0)
         n = lws_service(_lws_context_ptr, 0);
     _worker.stop_worker();
@@ -201,8 +201,8 @@ bool    HttpServer::get_resource_path(std::string_view path, std::string & res)
 {
     std::string tmp_path = _root_dir;
     tmp_path.append(path.data(), path.size());
-    bool ret = Files::is_file(tmp_path);
-    if (!ret && (ret = Files::is_dir(path)))
+    bool ret = FS::is_file(tmp_path);
+    if (!ret && (ret = FS::is_dir(path)))
         tmp_path += "/index.html";
     if (!ret)
     {
@@ -210,7 +210,7 @@ bool    HttpServer::get_resource_path(std::string_view path, std::string & res)
         {
             tmp_path = resource_path;
             tmp_path.append(path.data(), path.size());
-            if ((ret = Files::exists(tmp_path)))
+            if ((ret = FS::exists(tmp_path)))
                 break ;
         }
     }
@@ -359,7 +359,7 @@ int     HttpServer::_on_http_request(HttpSession *session, std::string_view path
     std::string resource_path;
     if (this->get_resource_path(path, resource_path))
     {
-        std::string type = HttpHeader::build_content_type(_mime.get(Files::get_extension(resource_path)), _encoding);
+        std::string type = HttpHeader::build_content_type(_mime.get(FS::extension(resource_path)), _encoding);
         if (lws_serve_http_file(session->wsi, resource_path.c_str(), type.c_str(), nullptr, 0) < 0)
             rc = -1;
         session->should_complete_transaction = false;

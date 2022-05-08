@@ -21,12 +21,12 @@ class Named
         Named(const std::string & name, Node *parent = nullptr);
         virtual ~Named();
 
-        const std::string & get_name() const;
-        Node *get_parent() const;
-        const Node *cget_parent() const;
-        std::string get_full_name() const;
-        std::string get_class_name() const;
-        virtual std::string get_description() const
+        const std::string & name() const;
+        Node *parent() const;
+        const Node *cparent() const;
+        std::string full_name() const;
+        std::string class_name() const;
+        virtual std::string description() const
         {
             return "";
         };
@@ -35,8 +35,8 @@ class Named
         bool is_owned_by_parent() const;
         virtual bool set_parent_ownership(bool ownership);
 
-        Node *get_root();
-        const Node *cget_root() const;
+        Node *root();
+        const Node *croot() const;
 
         const Named *cfind(const Named *from, const std::string & path) const;
         const Named *cfind(const std::string & path) const;

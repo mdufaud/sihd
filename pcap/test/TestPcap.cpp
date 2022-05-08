@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/pcap/PcapReader.hpp>
 #include <sihd/pcap/PcapWriter.hpp>
 
@@ -16,7 +16,7 @@ namespace test
             TestPcap()
             {
                 sihd::util::LoggerManager::basic();
-                sihd::util::Files::make_directories(_base_test_dir);
+                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestPcap()
@@ -32,7 +32,7 @@ namespace test
             {
             }
 
-            std::string _base_test_dir = sihd::util::Files::combine({getenv("TEST_PATH"), "pcap"});
+            std::string _base_test_dir = sihd::util::FS::combine({getenv("TEST_PATH"), "pcap"});
     };
 
     TEST_F(TestPcap, test_pcap_reader)
@@ -69,7 +69,7 @@ namespace test
         char hw[] = "hello world";
         PcapWriter writer("pcap-writer");
 
-        std::string path = Files::combine(_base_test_dir, "test.pcap");
+        std::string path = FS::combine(_base_test_dir, "test.pcap");
         SIHD_LOG(info, "Writing pcap: " << path);
 
         EXPECT_TRUE(writer.open(path, DLT_EN10MB));
@@ -78,7 +78,7 @@ namespace test
         EXPECT_TRUE(writer.write(hw, sizeof(hw)));
         EXPECT_TRUE(writer.close());
 
-        std::string content = Files::read_all(path).value();
+        std::string content = FS::read_all(path).value();
         EXPECT_EQ(memcmp(content.c_str() + content.size() - sizeof(hw), hw, sizeof(hw)), 0);
     }
 }

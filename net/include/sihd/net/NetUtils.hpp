@@ -41,12 +41,32 @@ namespace sihd::net
 class NetUtils
 {
     public:
-        static int get_interface_idx(int sock, std::string_view name);
+        static int interface_idx(int sock, std::string_view name);
         static bool get_interface_name(int sock, int idx, std::string & to_fill);
         static bool get_interface_mac(int sock, std::string_view name, struct sockaddr *to_fill);
         static bool get_interface_addr(int sock, std::string_view name, struct sockaddr *to_fill);
         static bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr *to_fill);
         static bool get_interface_netmask(int sock, std::string_view name, struct sockaddr *to_fill);
+
+        static bool get_interface_mac(int sock, std::string_view name, struct sockaddr_in *to_fill)
+            { return NetUtils::get_interface_mac(sock, name, (struct sockaddr *)to_fill); }
+        static bool get_interface_mac(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
+            { return NetUtils::get_interface_mac(sock, name, (struct sockaddr *)to_fill); }
+
+        static bool get_interface_addr(int sock, std::string_view name, struct sockaddr_in *to_fill)
+            { return NetUtils::get_interface_addr(sock, name, (struct sockaddr *)to_fill); }
+        static bool get_interface_addr(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
+            { return NetUtils::get_interface_addr(sock, name, (struct sockaddr *)to_fill); }
+
+        static bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr_in *to_fill)
+            { return NetUtils::get_interface_broadcast(sock, name, (struct sockaddr *)to_fill); }
+        static bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
+            { return NetUtils::get_interface_broadcast(sock, name, (struct sockaddr *)to_fill); }
+
+        static bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in *to_fill)
+            { return NetUtils::get_interface_netmask(sock, name, (struct sockaddr *)to_fill); }
+        static bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
+            { return NetUtils::get_interface_netmask(sock, name, (struct sockaddr *)to_fill); }
 
     protected:
 

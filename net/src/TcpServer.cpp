@@ -175,7 +175,7 @@ void    TcpServer::handle(sihd::util::Poll *poll)
         _server_handler_ptr->handle_no_activity(this, poll->polling_time());
     else
         _server_handler_ptr->handle_activity(this, poll->polling_time());
-    auto events = poll->get_events();
+    auto events = poll->events();
     for (const auto & event: events)
     {
         if (event.fd == _socket.socket())

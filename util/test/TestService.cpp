@@ -54,7 +54,7 @@ namespace test
     {
         public:
             ServiceController ctrl;
-            virtual IServiceController *get_service_ctrl() override { return &ctrl; };
+            virtual IServiceController *service_ctrl() override { return &ctrl; };
     };
 
     class TestService:  public ::testing::Test,
@@ -92,7 +92,7 @@ namespace test
             {
                 ++obs_changed;
                 auto machine = ctrl->statemachine;
-                SIHD_LOG(debug, "Service state: " << machine.get_state_name(machine.get_state()));
+                SIHD_LOG(debug, "Service state: " << machine.state_name(machine.state()));
             }
 
             int obs_changed;
@@ -101,7 +101,7 @@ namespace test
     TEST_F(TestService, test_service_ctrl)
     {
         FakeServiceWithController service;
-        EXPECT_NE(service.get_service_ctrl(), nullptr);
+        EXPECT_NE(service.service_ctrl(), nullptr);
         service.ctrl.add_observer(this);
 
         // cannot do anything else than setup (except reset)
@@ -219,7 +219,7 @@ namespace test
         EXPECT_TRUE(service.start());
         EXPECT_EQ(service.n_start, 2);
 
-        EXPECT_EQ(service.get_service_ctrl(), nullptr);
+        EXPECT_EQ(service.service_ctrl(), nullptr);
 
         EXPECT_EQ(obs_changed, 6);
     }

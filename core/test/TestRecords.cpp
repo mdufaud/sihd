@@ -70,9 +70,9 @@ namespace test
         mem_recorder.add_record("bool", sihd::util::time::milli(50), &arr_bool);
 
 
-        std::cout << core.get_tree_desc_str() << std::endl;
+        std::cout << core.tree_desc_str() << std::endl;
         EXPECT_TRUE(core.init());
-        std::cout << core.get_tree_desc_str() << std::endl;
+        std::cout << core.tree_desc_str() << std::endl;
 
         Channel *end = dev_replayer.get_channel("end");
         EXPECT_NE(end, nullptr);
@@ -133,9 +133,9 @@ namespace test
         // or this
         dev_recorder.set_conf_str("record", "char=..char_channel");
 
-        std::cout << core.get_tree_desc_str() << std::endl;
+        std::cout << core.tree_desc_str() << std::endl;
         EXPECT_TRUE(core.init());
-        std::cout << core.get_tree_desc_str() << std::endl;
+        std::cout << core.tree_desc_str() << std::endl;
         EXPECT_TRUE(core.start());
 
         // write multiple values
@@ -158,8 +158,8 @@ namespace test
         EXPECT_TRUE(core.stop());
 
         // verify recording
-        const MapListRecordedValues & map = mem_recorder.get_recorded_values();
-        const SortedRecordedValues & sorted_map = mem_recorder.get_sorted_recorded_values();
+        const MapListRecordedValues & map = mem_recorder.recorded_values();
+        const SortedRecordedValues & sorted_map = mem_recorder.sorted_recorded_values();
 
         time_t last_timestamp = -1;
         for (const auto & pair: sorted_map)

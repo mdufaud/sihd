@@ -29,7 +29,7 @@ bool    MessageField::build_array(Type dt, size_t size)
 
 IMessageField   *MessageField::clone() const
 {
-    MessageField *cloned = new MessageField(this->get_name());
+    MessageField *cloned = new MessageField(this->name());
     const IArray *arr = this->array();
     if (arr != nullptr && cloned != nullptr)
         cloned->build_array(arr->data_type(), arr->size());
@@ -41,10 +41,10 @@ bool    MessageField::assign_field_buffer(uint8_t *buffer)
     if (_size == 0 || _dt == TYPE_NONE || _array_ptr == nullptr)
     {
         SIHD_LOG_ERROR("MessageField: for %s cannot assign array before it is built",
-                    this->get_name().c_str());
+                    this->name().c_str());
         return false;
     }
-    return _array_ptr->assign_bytes(buffer, this->get_field_byte_size());
+    return _array_ptr->assign_bytes(buffer, this->field_byte_size());
 }
 
 bool    MessageField::field_read_from(const uint8_t *buffer, size_t size)

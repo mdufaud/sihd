@@ -307,7 +307,7 @@ class LuaUtilApi
         template <sihd::util::Endian::Endianness E>
         static constexpr bool _is_endian()
         {
-            return sihd::util::Endian::get_endian() == E;
+            return sihd::util::Endian::endian() == E;
         }
 
         // Array utils

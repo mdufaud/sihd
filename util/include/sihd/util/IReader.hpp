@@ -16,7 +16,7 @@ class IReaderTimestamp: public IReader
 {
     public:
         virtual ~IReaderTimestamp() {};
-		virtual bool get_read_timestamp(time_t *nano_timestamp) const = 0;
+		virtual bool read_timestamp(time_t *nano_timestamp) const = 0;
 };
 
 }

@@ -8,7 +8,7 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Thread.hpp>
 #include <sihd/util/OS.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/Str.hpp>
 #include <sihd/util/Path.hpp>
 #include <sihd/util/Splitter.hpp>
@@ -51,7 +51,7 @@ using namespace sihd::util;
 // logger used by lua code
 Logger LuaUtilApi::logger("sihd::lua");
 // from path/bin/exe.lua -> path/bin -> path
-std::string LuaUtilApi::dir = Files::get_parent(Files::get_parent(OS::get_executable_path()));
+std::string LuaUtilApi::dir = FS::parent(FS::parent(OS::executable_path()));
 
 SIHD_LOGGER;
 
@@ -253,35 +253,35 @@ void    LuaUtilApi::load_files(Vm & vm)
         .beginNamespace("sihd")
             .beginNamespace("util")
                 .beginNamespace("fs")
-                    .addFunction("exists", &Files::exists)
-                    .addFunction("is_file", &Files::is_file)
-                    .addFunction("is_dir", &Files::is_dir)
-                    .addFunction("get_filesize", &Files::get_filesize)
-                    .addFunction("remove_directory", &Files::remove_directory)
-                    .addFunction("remove_directories", &Files::remove_directories)
-                    .addFunction("make_directory", &Files::make_directory)
-                    .addFunction("make_directories", &Files::make_directories)
-                    .addFunction("get_children", &Files::get_children)
-                    .addFunction("get_recursive_children", &Files::get_recursive_children)
-                    .addFunction("is_absolute", &Files::is_absolute)
-                    .addFunction("normalize", &Files::normalize)
-                    .addFunction("trim_path", static_cast<std::string (*)(std::string_view, std::string_view)>(&Files::trim_path))
-                    .addFunction("get_parent", &Files::get_parent)
-                    .addFunction("get_filename", &Files::get_filename)
-                    .addFunction("get_extension", &Files::get_extension)
+                    .addFunction("exists", &FS::exists)
+                    .addFunction("is_file", &FS::is_file)
+                    .addFunction("is_dir", &FS::is_dir)
+                    .addFunction("filesize", &FS::filesize)
+                    .addFunction("remove_directory", &FS::remove_directory)
+                    .addFunction("remove_directories", &FS::remove_directories)
+                    .addFunction("make_directory", &FS::make_directory)
+                    .addFunction("make_directories", &FS::make_directories)
+                    .addFunction("children", &FS::children)
+                    .addFunction("recursive_children", &FS::recursive_children)
+                    .addFunction("is_absolute", &FS::is_absolute)
+                    .addFunction("normalize", &FS::normalize)
+                    .addFunction("trim_path", static_cast<std::string (*)(std::string_view, std::string_view)>(&FS::trim_path))
+                    .addFunction("parent", &FS::parent)
+                    .addFunction("filename", &FS::filename)
+                    .addFunction("extension", &FS::extension)
                     .addFunction("combine", +[] (luabridge::LuaRef arg1, luabridge::LuaRef arg2)
                     {
                         if (arg1.isTable())
                         {
                             std::string ret;
                             for (const auto & pair: luabridge::pairs(arg1))
-                                ret = Files::combine(ret, pair.second.cast<std::string>());
+                                ret = FS::combine(ret, pair.second.cast<std::string>());
                             return ret;
                         }
-                        return Files::combine(arg1.cast<std::string>(), arg2.cast<std::string>());
+                        return FS::combine(arg1.cast<std::string>(), arg2.cast<std::string>());
                     })
-                    .addFunction("remove_file", &Files::remove_file)
-                    .addFunction("are_equals", &Files::are_equals)
+                    .addFunction("remove_file", &FS::remove_file)
+                    .addFunction("are_equals", &FS::are_equals)
                 .endNamespace()
                 /**
                  * File
@@ -323,19 +323,16 @@ void    LuaUtilApi::load_files(Vm & vm)
                         return luabridge::LuaRef(state);
                     })
                     // write
-                    .addFunction("write_array", +[] (File *self, const IArray *array_ptr, luabridge::LuaRef ref)
+                    .addFunction("write_array", +[] (File *self, const IArray *array_ptr)
                     {
-                        size_t byte_offset = 0;
-                        if (ref.isNumber())
-                            byte_offset = ref.cast<size_t>();
-                        return self->write(*array_ptr, byte_offset);
+                        return self->write(*array_ptr);
                     })
                     .addFunction("write", +[] (File *self, const std::string & str, luabridge::LuaRef ref)
                     {
-                        size_t size_limit = 0;
+                        std::string_view view(str);
                         if (ref.isNumber())
-                            size_limit = ref.cast<size_t>();
-                        return self->write(str, size_limit);
+                            view.remove_suffix(ref.cast<size_t>());
+                        return self->write(view);
                     })
                     // test cases
                     .addFunction("eof", &File::eof)
@@ -390,7 +387,8 @@ void    LuaUtilApi::load_threading(Vm & vm)
                     .addFunction("is_running", static_cast<bool (LuaScheduler::*)() const>(&Scheduler::is_running))
                     .addFunction("pause", static_cast<void (LuaScheduler::*)()>(&Scheduler::pause))
                     .addFunction("resume", static_cast<void (LuaScheduler::*)()>(&Scheduler::resume))
-                    .addFunction("get_clock", static_cast<IClock *(LuaScheduler::*)() const>(&Scheduler::get_clock))
+                    .addFunction("now", static_cast<time_t (LuaScheduler::*)() const>(&Scheduler::now))
+                    .addFunction("clock", static_cast<IClock *(LuaScheduler::*)() const>(&Scheduler::clock))
                     .addFunction("set_clock", static_cast<void (LuaScheduler::*)(IClock *)>(&Scheduler::set_clock))
                     .addFunction("set_as_fast_as_possible", static_cast<bool (LuaScheduler::*)(bool)>(&Scheduler::set_as_fast_as_possible))
                     .addFunction("clear_tasks", static_cast<void (LuaScheduler::*)()>(&Scheduler::clear_tasks))
@@ -580,7 +578,7 @@ void    LuaUtilApi::load_tools(Vm & vm)
                     .addFunction("id", &Thread::id)
                     .addFunction("id_str", static_cast<std::string (*)()>(&Thread::id_str))
                     .addFunction("set_name", &Thread::set_name)
-                    .addFunction("get_name", &Thread::get_name)
+                    .addFunction("name", &Thread::name)
                 .endNamespace()
                 .beginNamespace("os")
                     .addProperty("stdin", &LuaUtilApi::_get_int<STDIN_FILENO>)
@@ -590,23 +588,23 @@ void    LuaUtilApi::load_tools(Vm & vm)
                         +[] () { return OS::backtrace_size; },
                         +[] (int val) { OS::backtrace_size = val; })
                     .addFunction("backtrace", &OS::backtrace)
-                    .addFunction("pid", &OS::get_pid)
+                    .addFunction("pid", &OS::pid)
                     .addFunction("kill", &OS::kill)
-                    .addFunction("get_signal_name", &OS::get_signal_name)
-                    .addFunction("get_max_fds", &OS::get_max_fds)
+                    .addFunction("signal_name", &OS::signal_name)
+                    .addFunction("max_fds", &OS::max_fds)
                     .addFunction("is_root", &OS::is_root)
-                    .addFunction("get_home", &OS::get_home)
-                    .addFunction("get_executable_path", &OS::get_executable_path)
-                    .addFunction("get_cwd", &OS::get_cwd)
+                    .addFunction("home_path", &OS::home_path)
+                    .addFunction("executable_path", &OS::executable_path)
+                    .addFunction("cwd", &OS::cwd)
                     .addFunction("is_run_by_debugger", &OS::is_run_by_debugger)
                     .addFunction("is_run_by_valgrind", &OS::is_run_by_valgrind)
                     .addFunction("is_run_with_asan", &OS::is_run_with_asan)
-                    .addFunction("get_peak_rss", &OS::get_peak_rss)
-                    .addFunction("get_current_rss", &OS::get_current_rss)
+                    .addFunction("peak_rss", &OS::peak_rss)
+                    .addFunction("current_rss", &OS::current_rss)
                 .endNamespace()
                 .beginNamespace("str")
-                    .addFunction("gmtime_to_string", &Str::gmtime_to_string)
-                    .addFunction("localtime_to_string", &Str::localtime_to_string)
+                    .addFunction("gmtime_str", &Str::gmtime_str)
+                    .addFunction("localtime_str", &Str::localtime_str)
                     .addFunction("trim", &Str::trim)
                     .addFunction("replace", &Str::replace)
                     .addFunction("starts_with", &Str::starts_with)
@@ -668,13 +666,13 @@ void    LuaUtilApi::load_base(Vm & vm)
                 .beginClass<Named>("Named")
                     .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<Named>>()
                     .addProperty("c_ptr", +[] (const Named *self) -> int64_t { return (int64_t)self; })
-                    .addFunction("get_parent", &Named::get_parent)
-                    .addFunction("get_name", &Named::get_name)
-                    .addFunction("get_full_name", &Named::get_full_name)
-                    .addFunction("get_class_name", &Named::get_class_name)
-                    .addFunction("get_description", &Named::get_description)
-                    .addFunction("get_full_name", &Named::get_full_name)
-                    .addFunction("get_root", &Named::get_root)
+                    .addFunction("parent", &Named::parent)
+                    .addFunction("name", &Named::name)
+                    .addFunction("full_name", &Named::full_name)
+                    .addFunction("class_name", &Named::class_name)
+                    .addFunction("description", &Named::description)
+                    .addFunction("full_name", &Named::full_name)
+                    .addFunction("root", &Named::root)
                     .addFunction("find", static_cast<Named * (Named::*)(const std::string &)>(&Named::find))
                     .addFunction("find_from", static_cast<Named * (Named::*)(Named *, const std::string &)>(&Named::find))
                     .addFunction("__eq", +[] (const Named *self, const Named *other) -> bool { return self == other; })
@@ -689,12 +687,12 @@ void    LuaUtilApi::load_base(Vm & vm)
                     .addFunction("is_link", &Node::is_link)
                     .addFunction("add_link", &Node::add_link)
                     .addFunction("remove_link", &Node::remove_link)
-                    .addFunction("get_link", &Node::get_link)
+                    .addFunction("resolve_link", &Node::resolve_link)
                     .addFunction("resolve_links", &Node::resolve_links)
-                    .addFunction("get_tree_str", static_cast<std::string (Node::*)() const>(&Node::get_tree_str))
-                    .addFunction("get_tree_desc_str", &Node::get_tree_desc_str)
-                    .addFunction("get_children", &Node::get_children)
-                    .addFunction("get_children_keys", &Node::get_children_keys)
+                    .addFunction("tree_str", static_cast<std::string (Node::*)() const>(&Node::tree_str))
+                    .addFunction("tree_desc_str", &Node::tree_desc_str)
+                    .addFunction("children", &Node::children)
+                    .addFunction("children_keys", &Node::children_keys)
                     .addFunction("__eq", +[] (const Node *self, const Named *other) -> bool { return self == other; })
                 .endClass()
                 /**
@@ -702,8 +700,8 @@ void    LuaUtilApi::load_base(Vm & vm)
                  */
                 .beginNamespace("types")
                     .addFunction("type_size", &Types::type_size)
-                    .addFunction("type_to_string", &Types::type_to_string)
-                    .addFunction("string_to_type", &Types::string_to_type)
+                    .addFunction("type_str", &Types::type_str)
+                    .addFunction("from_str", &Types::from_str)
                 .endNamespace()
                 .beginClass<IArray>("IArray")
                     .addFunction("size", &IArray::size)
@@ -715,16 +713,16 @@ void    LuaUtilApi::load_base(Vm & vm)
                     .addFunction("byte_resize", &IArray::byte_resize)
                     .addFunction("byte_reserve", &IArray::byte_reserve)
                     .addFunction("data_type", &IArray::data_type)
-                    .addFunction("data_type_to_string", &IArray::data_type_to_string)
+                    .addFunction("data_type_str", &IArray::data_type_str)
                     .addFunction("hexdump", &IArray::hexdump)
-                    .addFunction("to_string", +[] (IArray *self, luabridge::LuaRef ref)
+                    .addFunction("str", +[] (IArray *self, luabridge::LuaRef ref)
                     {
                         if (ref.isNil())
-                            return self->to_string();
-                        return self->to_string(ref.cast<char>());
+                            return self->str();
+                        return self->str(ref.cast<char>());
                     })
                     .addFunction("clear", &IArray::clear)
-                    .addFunction("is_same_type", static_cast<bool (IArray::*)(const IArray &) const>(&IArray::is_same_type))
+                    // .addFunction("is_same_type", static_cast<bool (IArray::*)(const IArray &) const>(&IArray::is_same_type))
                 .endClass()
                 DECLARE_ARRAY_USERTYPE(ArrBool, bool)
                 DECLARE_ARRAY_USERTYPE(ArrChar, char)
@@ -748,10 +746,10 @@ void    LuaUtilApi::load_base(Vm & vm)
                     .addFunction("stop", &AService::stop)
                     .addFunction("reset", &AService::reset)
                     .addFunction("is_running", &AService::is_running)
-                    .addFunction("get_service_ctrl", &AService::get_service_ctrl)
+                    .addFunction("service_ctrl", &AService::service_ctrl)
                 .endClass()
                 .beginClass<ServiceController>("ServiceController")
-                    .addFunction("get_state", &ServiceController::get_state)
+                    .addFunction("state", &ServiceController::state)
                 .endClass()
                 /**
                  * Runnable

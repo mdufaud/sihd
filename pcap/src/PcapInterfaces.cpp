@@ -27,10 +27,10 @@ void    PcapInterfaces::_free()
     }
 }
 
-struct pcap_addr    *PcapInterfaces::get_addr(std::string_view name)
+struct pcap_addr    *PcapInterfaces::pcap_addr(std::string_view name)
 {
     pcap_if_t *tmp = _interfaces_ptr;
-    pcap_addr *addr = nullptr;
+    struct pcap_addr *addr = nullptr;
     while (tmp)
     {
         if (name == tmp->name)
@@ -100,7 +100,7 @@ bool    PcapInterfaces::error()
 
 std::string PcapInterfaces::status()
 {
-    return PcapUtils::get_status(_code);
+    return PcapUtils::status_str(_code);
 }
 
 // IFACE

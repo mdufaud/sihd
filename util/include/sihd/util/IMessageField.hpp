@@ -11,7 +11,7 @@ class IMessageField: public ICloneable<IMessageField>
 {
     public:
         virtual ~IMessageField() {};
-        virtual size_t get_field_byte_size() = 0;
+        virtual size_t field_byte_size() const = 0;
         virtual bool assign_field_buffer(uint8_t *buffer) = 0;
         virtual bool field_read_from(const uint8_t *buffer, size_t size) = 0;
         virtual bool field_write_to(uint8_t *buffer, size_t size) = 0;

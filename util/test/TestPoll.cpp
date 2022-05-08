@@ -62,7 +62,7 @@ namespace test
         Handler<Poll *> poll_handler([this, &buffer] (Poll *poll)
         {
             SIHD_LOG(debug, "Polled");
-            auto events = poll->get_events();
+            auto events = poll->events();
             for (Poll::PollEvent & event: events)
             {
                 int fd = event.fd;

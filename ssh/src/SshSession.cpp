@@ -369,7 +369,7 @@ bool    SshSession::_set(const char *from, ssh_options_e option, const void *val
     return r == SSH_OK;
 }
 
-std::string     SshSession::AuthMethods::to_string() const
+std::string     SshSession::AuthMethods::str() const
 {
     if (this->methods == 0)
         return "unknown";
@@ -387,7 +387,7 @@ std::string     SshSession::AuthMethods::to_string() const
     return ret;
 }
 
-std::string     SshSession::AuthState::to_string() const
+const char  *SshSession::AuthState::str() const
 {
     switch (this->status)
     {

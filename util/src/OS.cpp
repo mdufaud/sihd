@@ -2,7 +2,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/AtExit.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 
 #include <vector>
 #include <algorithm>
@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <limits.h>
 
-// for get_max_rss / get_peak_rss
+// for get_max_rss / peak_rss
 #if defined(__SIHD_WINDOWS__)
 # include <windows.h>
 # include <psapi.h>
@@ -49,7 +49,7 @@ typedef void (*sighandler_t)(int);
 #endif
 
 #if !defined(__SIHD_UTIL_OS_DEFAULT_MAX_FDS__)
-// backup for get_max_fds
+// backup for max_fds
 # define __SIHD_UTIL_OS_DEFAULT_MAX_FDS__ 512
 #endif
 
@@ -108,7 +108,7 @@ bool    OS::clear_signal_handler(int sig, IHandler<int> *runnable)
 
 void    OS::_signal_callback(int sig)
 {
-    SIHD_LOG(debug, "Signal caught: " << OS::get_signal_name(sig));
+    SIHD_LOG(debug, "Signal caught: " << OS::signal_name(sig));
     std::lock_guard lock(OS::signal_mutex);
     for (IHandler<int> *handler : OS::map_signals_handlers[sig])
     {
@@ -121,7 +121,7 @@ bool    OS::add_signal_handler(int sig, IHandler<int> *handler)
     sighandler_t sighandler = signal(sig, OS::_signal_callback);
     if (sighandler == SIG_ERR)
     {
-        SIHD_LOG(error, "Error handling signal: " << OS::get_signal_name(sig));
+        SIHD_LOG(error, "Error handling signal: " << OS::signal_name(sig));
         return false;
     }
     std::lock_guard lock(OS::signal_mutex);
@@ -144,13 +144,13 @@ bool    OS::unhandle_signal(int sig)
     sighandler_t handler = signal(sig, SIG_DFL);
     if (handler == SIG_ERR)
     {
-        SIHD_LOG(error, "Error removing signal: " << OS::get_signal_name(sig));
+        SIHD_LOG(error, "Error removing signal: " << OS::signal_name(sig));
         return false;
     }
     return true;
 }
 
-std::string OS::get_signal_name(int sig)
+std::string OS::signal_name(int sig)
 {
 #if !defined(__SIHD_WINDOWS__)
     char *signame = strsignal(sig);
@@ -175,7 +175,7 @@ bool   OS::kill(pid_t pid, int sig)
 #endif
 }
 
-pid_t   OS::get_pid()
+pid_t   OS::pid()
 {
 #if !defined(__SIHD_WINDOWS__)
     return getpid();
@@ -184,7 +184,7 @@ pid_t   OS::get_pid()
 #endif
 }
 
-sihd_rlim_t OS::get_max_fds()
+sihd_rlim_t OS::max_fds()
 {
 #if !defined(__SIHD_WINDOWS__)
     struct rlimit r;
@@ -273,16 +273,16 @@ bool    OS::is_root()
 #endif
 }
 
-std::string OS::get_home()
+std::string OS::home_path()
 {
 #if defined(__SIHD_WINDOWS__)
-    return Files::combine(getenv("HOMEDRIVE"), getenv("HOMEPATH"));
+    return FS::combine(getenv("HOMEDRIVE"), getenv("HOMEPATH"));
 #else
     return getenv("HOME");
 #endif
 }
 
-std::string OS::get_cwd()
+std::string OS::cwd()
 {
     char cwd[PATH_MAX];
 
@@ -291,7 +291,7 @@ std::string OS::get_cwd()
     return "";
 }
 
-std::string OS::get_executable_path()
+std::string OS::executable_path()
 {
 #if defined(__SIHD_WINDOWS__)
     char path[MAX_PATH];
@@ -486,14 +486,14 @@ void *OS::load_lib(const std::string & lib_name)
     return handle;
 }
 
-void *OS::get_symbol_lib(void *handle, const std::string & sym_name)
+void *OS::load_symbol(void *handle, const std::string & sym_name)
 {
     if (handle == nullptr)
         return nullptr;
     return dlsym(handle, sym_name.c_str());
 }
 
-std::string OS::get_error_lib()
+std::string OS::lib_error()
 {
     return dlerror();
 }
@@ -510,17 +510,17 @@ void *OS::load_symbol_unload_lib(const std::string & lib_name, const std::string
     void *handle = OS::load_lib(lib_name);
     if (handle == nullptr)
     {
-        SIHD_LOG(error, "OS: could not load library: " << OS::get_error_lib());
+        SIHD_LOG(error, "OS: could not load library: " << OS::lib_error());
         return nullptr;
     }
-    void *sym_ptr = OS::get_symbol_lib(handle, sym_name);
+    void *sym_ptr = OS::load_symbol(handle, sym_name);
     if (sym_ptr == nullptr)
     {
-        SIHD_LOG(error, "OS: could not load symbol: " << OS::get_error_lib());
+        SIHD_LOG(error, "OS: could not load symbol: " << OS::lib_error());
         return nullptr;
     }
     if (dlclose(handle) != 0)
-        SIHD_LOG(warning, "OS: could not close lib handle: " << OS::get_error_lib());
+        SIHD_LOG(warning, "OS: could not close lib handle: " << OS::lib_error());
     return sym_ptr;
 }
 
@@ -547,7 +547,7 @@ void *OS::load_symbol_unload_lib(const std::string & lib_name, const std::string
  * memory use) measured in bytes, or zero if the value cannot be
  * determined on this OS.
  */
-size_t  OS::get_peak_rss()
+size_t  OS::peak_rss()
 {
 #if defined(__SIHD_WINDOWS__)
 
@@ -561,12 +561,12 @@ size_t  OS::get_peak_rss()
     int fd = -1;
     if ((fd = open("/proc/self/psinfo", O_RDONLY)) == -1)
     {
-        SIHD_LOG(error, "OS: get_peak_rss open: " << strerror(errno));
+        SIHD_LOG(error, "OS: peak_rss open: " << strerror(errno));
         return (size_t)0L;
     }
     if (read(fd, &psinfo, sizeof(psinfo)) != sizeof(psinfo))
     {
-        SIHD_LOG(error, "OS: get_peak_rss read: " << strerror(errno));
+        SIHD_LOG(error, "OS: peak_rss read: " << strerror(errno));
         close(fd);
         return (size_t)0L;
     }
@@ -578,7 +578,7 @@ size_t  OS::get_peak_rss()
     struct rusage rusage;
     if (getrusage(RUSAGE_SELF, &rusage) == -1)
     {
-        SIHD_LOG(error, "OS: get_peak_rss getrusage: " << strerror(errno));
+        SIHD_LOG(error, "OS: peak_rss getrusage: " << strerror(errno));
         return (size_t)0L;
     }
 # if defined(__SIHD_APPLE__)
@@ -596,7 +596,7 @@ size_t  OS::get_peak_rss()
  * Returns the current resident set size (physical memory use) measured
  * in bytes, or zero if the value cannot be determined on this OS.
  */
-size_t  OS::get_current_rss()
+size_t  OS::current_rss()
 {
 #if defined(__SIHD_WINDOWS__)
 
@@ -610,7 +610,7 @@ size_t  OS::get_current_rss()
     mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
     if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &infoCount) != KERN_SUCCESS)
     {
-        SIHD_LOG(error, "OS: get_current_rss task info");
+        SIHD_LOG(error, "OS: current_rss task info");
         return (size_t)0L;
     }
     return (size_t)info.resident_size;
@@ -621,13 +621,13 @@ size_t  OS::get_current_rss()
     FILE* fp = NULL;
     if ((fp = fopen("/proc/self/statm", "r")) == NULL)
     {
-        SIHD_LOG(error, "OS: get_current_rss fopen: " << strerror(errno));
+        SIHD_LOG(error, "OS: current_rss fopen: " << strerror(errno));
         return (size_t)0L;
     }
     if (fscanf(fp, "%*s%ld", &rss) != 1)
     {
         fclose(fp);
-        SIHD_LOG(error, "OS: get_current_rss fscanf: " << strerror(errno));
+        SIHD_LOG(error, "OS: current_rss fscanf: " << strerror(errno));
         return (size_t)0L;
     }
     fclose(fp);

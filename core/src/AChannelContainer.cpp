@@ -23,7 +23,7 @@ bool    AChannelContainer::find_channel(const std::string & path, Channel **to_f
     Channel *c = this->find_channel(path);
     if (c == nullptr)
     {
-        SIHD_LOG_ERROR("ChannelContainer: '%s' no such channel '%s'", this->get_full_name().c_str(), path.c_str());
+        SIHD_LOG_ERROR("ChannelContainer: '%s' no such channel '%s'", this->full_name().c_str(), path.c_str());
         return false;
     }
     *to_fill = c;
@@ -43,7 +43,7 @@ bool    AChannelContainer::get_channel(const std::string & name, Channel **to_fi
     Channel *c = this->get_channel(name);
     if (c == nullptr)
     {
-        SIHD_LOG_ERROR("ChannelContainer: '%s' no such channel '%s'", this->get_full_name().c_str(), name.c_str());
+        SIHD_LOG_ERROR("ChannelContainer: '%s' no such channel '%s'", this->full_name().c_str(), name.c_str());
         return false;
     }
     *to_fill = c;
@@ -62,7 +62,7 @@ Channel *AChannelContainer::add_unlinked_channel(const std::string & name, sihd:
 
 Channel *AChannelContainer::add_unlinked_channel(const std::string & name, std::string_view type, size_t size)
 {
-    return this->add_unlinked_channel(name, sihd::util::Types::string_to_type(type), size);
+    return this->add_unlinked_channel(name, sihd::util::Types::from_str(type), size);
 }
 
 Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Type type, size_t size)
@@ -70,12 +70,12 @@ Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Ty
     Channel *c = new Channel(name, type, size);
     if (c == nullptr)
     {
-        SIHD_LOG_ERROR("ChannelContainer: '%s' memory error for channel '%s'", this->get_full_name().c_str(), name.c_str());
+        SIHD_LOG_ERROR("ChannelContainer: '%s' memory error for channel '%s'", this->full_name().c_str(), name.c_str());
         return nullptr;
     }
     if (this->add_child(c, true) == false)
     {
-        SIHD_LOG_ERROR("ChannelContainer: '%s' cannot add channel '%s'", this->get_full_name().c_str(), name.c_str());
+        SIHD_LOG_ERROR("ChannelContainer: '%s' cannot add channel '%s'", this->full_name().c_str(), name.c_str());
         delete c;
         return nullptr;
     }
@@ -84,7 +84,7 @@ Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Ty
 
 Channel *AChannelContainer::add_channel(const std::string & name, std::string_view type, size_t size)
 {
-    return this->add_channel(name, sihd::util::Types::string_to_type(type), size);
+    return this->add_channel(name, sihd::util::Types::from_str(type), size);
 }
 
 bool    AChannelContainer::_check_link(const std::string & name, Named *child)
@@ -101,15 +101,15 @@ bool    AChannelContainer::_check_link(const std::string & name, Named *child)
     if (conf.type != chan->array()->data_type())
     {
         SIHD_LOG_ERROR("ChannelContainer: '%s' channel link size not same type '%s': '%s' != '%s'",
-                    this->get_full_name().c_str(), name.c_str(),
-                    sihd::util::Types::type_to_string(conf.type),
-                    chan->array()->data_type_to_string());
+                    this->full_name().c_str(), name.c_str(),
+                    sihd::util::Types::type_str(conf.type),
+                    chan->array()->data_type_str());
         ret = false;
     }
     if (conf.size != chan->array()->size())
     {
         SIHD_LOG_ERROR("ChannelContainer: '%s' channel link size not equal '%s': '%lu' != '%lu'",
-                    this->get_full_name().c_str(), name.c_str(),
+                    this->full_name().c_str(), name.c_str(),
                     conf.size, chan->array()->size());
         ret = false;
     }
@@ -122,7 +122,7 @@ bool    AChannelContainer::observe_channel(const std::string & channel_name)
     if (c != nullptr)
         return this->observe_channel(c);
     SIHD_LOG_ERROR("ChannelContainer: '%s' cannot find channel '%s' to observe",
-            this->get_full_name().c_str(), channel_name.c_str());
+            this->full_name().c_str(), channel_name.c_str());
     return false;
 }
 

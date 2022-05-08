@@ -34,7 +34,7 @@ class ZipReader:    public sihd::util::Named,
 
         bool read_next();
 		bool get_read_data(char **data, size_t *size) const;
-		bool get_read_timestamp(time_t *nano_timestamp) const;
+		bool read_timestamp(time_t *nano_timestamp) const;
 
         // modify zip entries
         bool remove(size_t index);

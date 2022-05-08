@@ -35,8 +35,8 @@ class Str
 
         static void append_sep(std::string & str, std::string_view append, std::string_view sep = ",");
 
-        static std::string gmtime_to_string(time_t nano, bool total_parenthesis = false, bool nano_resolution = false);
-        static std::string localtime_to_string(time_t nano, bool total_parenthesis = false, bool nano_resolution = false);
+        static std::string gmtime_str(time_t nano, bool total_parenthesis = false, bool nano_resolution = false);
+        static std::string localtime_str(time_t nano, bool total_parenthesis = false, bool nano_resolution = false);
 
         static bool is_escape_sequence_open(int c, const char *authorized_open_escape_sequences = nullptr);
         static bool is_escape_sequence_close(int c, const char *authorized_close_escape_sequences = nullptr);
@@ -54,7 +54,7 @@ class Str
         static bool is_escaped_char(const char *str, int index);
         static int closing_escape_of(int sequence);
         // [hello] -> 7
-        static int get_closing_escape_index(const char *s, int index, const char *authorized_open_escape_sequences = nullptr);
+        static int closing_escape_index(const char *s, int index, const char *authorized_open_escape_sequences = nullptr);
 
         static std::string remove_escape_char(std::string_view str);
         static std::string remove_escape_sequences(std::string_view str, const char *authorized_open_escape_sequences = nullptr);
@@ -72,8 +72,8 @@ class Str
         static std::string to_hex(uint64_t n);
         static std::string to_dec(uint64_t n);
         static std::string to_oct(uint64_t n);
-        static std::string addr_to_string(void *addr, size_t padding = 0);
-        static std::string num_to_string(int64_t num, uint16_t base);
+        static std::string addr_str(void *addr, size_t padding = 0);
+        static std::string num_str(int64_t num, uint16_t base);
         static char num_to_char(size_t num);
         static std::string hexdump(const void *mem, size_t size, char delim = ' ');
         // formatted hexdump

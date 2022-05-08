@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/time.hpp>
@@ -19,7 +19,7 @@ namespace test
             TestSshCommand()
             {
                 sihd::util::LoggerManager::basic();
-                sihd::util::Files::make_directories(_base_test_dir);
+                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestSshCommand()
@@ -35,7 +35,7 @@ namespace test
             {
             }
 
-            std::string _base_test_dir = sihd::util::Files::combine({getenv("TEST_PATH"), "ssh", "sshcommand"});
+            std::string _base_test_dir = sihd::util::FS::combine({getenv("TEST_PATH"), "ssh", "sshcommand"});
     };
 
     TEST_F(TestSshCommand, test_sshcommand_simple)
@@ -46,7 +46,7 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_key_auto();
-        SIHD_LOG(info, "Auth status: " << auth.to_string());
+        SIHD_LOG(info, "Auth status: " << auth.str());
         EXPECT_TRUE(auth.success());
 
         std::string stdout_str;
@@ -77,7 +77,7 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_key_auto();
-        SIHD_LOG(info, "Auth status: " << auth.to_string());
+        SIHD_LOG(info, "Auth status: " << auth.str());
         EXPECT_TRUE(auth.success());
 
         std::string stdout_str;

@@ -24,7 +24,7 @@ void    BasicLogger::log(const LogInfo & info, std::string_view msg)
             info.timestamp.tv_sec, info.timestamp.tv_nsec,
             print_thread_id ? info.thread_id_str.c_str() : "",
             info.thread_name.data(),
-            info.level_str, info.source.data(), msg.data());
+            info.strlevel, info.source.data(), msg.data());
 }
 
 }

@@ -14,9 +14,9 @@ assert(before < after)
 assert(util.time.us(1), 1000)
 
 -- thread
-assert(util.thread.get_name(), "main")
+assert(util.thread.name(), "main")
 util.thread.set_name("toto")
-assert(util.thread.get_name(), "toto")
+assert(util.thread.name(), "toto")
 
 print("current thread raw id: " .. util.thread.id())
 print("current thread id: " .. util.thread.id_str())
@@ -29,8 +29,8 @@ util.os.backtrace_size = 2
 assert(util.os.backtrace(util.os.stdout) == 2)
 
 -- resources
-assert(util.os.get_peak_rss() > 0)
-assert(util.os.get_current_rss() > 0)
+assert(util.os.peak_rss() > 0)
+assert(util.os.current_rss() > 0)
 
 -- str
 

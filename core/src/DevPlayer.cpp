@@ -139,7 +139,7 @@ bool    DevPlayer::on_start()
         return false;
     }
     // start thread
-    if (_worker.start_worker(this->get_name()) == false)
+    if (_worker.start_worker(this->name()) == false)
     {
         _scheduler_ptr->stop();
         SIHD_LOG(error, "DevReplayer: could not start worker");
@@ -187,7 +187,7 @@ void    DevPlayer::handle(Collector<PlayableRecord> *collector)
 
 bool    DevPlayer::_worker_loop()
 {
-    _time_begin = _scheduler_ptr->get_clock()->now();
+    _time_begin = _scheduler_ptr->clock()->now();
     _first_timestamp = -1;
     _last_record = false;
     // run collector loop which calls DevPlayer::handle for each record

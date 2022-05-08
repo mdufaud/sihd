@@ -111,8 +111,8 @@ class ArrayView: public IArrayView
         size_t size() const { return _size; }
         size_t byte_size() const { return _size * sizeof(T); }
 
-        Type data_type() const { return Types::to_type<T>(); }
-        const char *data_type_to_string() const { return Types::type_to_string(this->data_type()); }
+        Type data_type() const { return Types::type<T>(); }
+        const char *data_type_str() const { return Types::type_str(this->data_type()); }
 
         bool is_same_type(const IArrayView & arr) const
         {
@@ -141,19 +141,21 @@ class ArrayView: public IArrayView
             return true;
         }
 
-        void remove_prefix(size_t size)
+        ArrayView<T> & remove_prefix(size_t size)
         {
             if (size > _size)
                 size = _size;
             _buf_ptr += size;
             _size -= size;
+            return *this;
         }
 
-        void remove_suffix(size_t size)
+        ArrayView<T> & remove_suffix(size_t size)
         {
             if (size > _size)
                 size = _size;
             _size -= size;
+            return *this;
         }
 
         std::string hexdump(char delimiter = ' ') const
@@ -161,7 +163,7 @@ class ArrayView: public IArrayView
             return Str::hexdump(_buf_ptr, this->byte_size(), delimiter);
         }
 
-        std::string to_string() const
+        std::string str() const
         {
             if constexpr (std::is_same_v<T, char>)
             {
@@ -183,7 +185,7 @@ class ArrayView: public IArrayView
             }
         }
 
-        std::string to_string(char delimiter) const
+        std::string str(char delimiter) const
         {
             std::string s;
             // trying to reserve at least 1 char by element + delimiters (if there are)
@@ -232,6 +234,8 @@ class ArrayView: public IArrayView
             return arr;
         }
 
+        // "hello world".subview(6) -> "world"
+        // "hello world".subview(0, 5) -> "hello"
         ArrayView<T> subview(size_t pos, size_t count = -1)
         {
             pos = std::min(pos, _size);

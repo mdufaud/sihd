@@ -1,6 +1,6 @@
 #include <sihd/util/Path.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/Splitter.hpp>
 
 namespace sihd::util
@@ -33,8 +33,8 @@ std::string     Path::get(const std::string & req)
     Splitter splitter(url_delimiter);
     std::vector<std::string> split = splitter.split(req);
     if (split.size() <= 1)
-        return get_from("", req);
-    return get(split[0], split[1]);
+        return Path::get_from("", req);
+    return Path::get(split[0], split[1]);
 }
 
 std::string     Path::get(const std::string & url, const std::string & path)
@@ -44,13 +44,13 @@ std::string     Path::get(const std::string & url, const std::string & path)
         std::lock_guard lock(path_mutex);
         url_path = url_to_path[url];
     }
-    return get_from(url_path, path);
+    return Path::get_from(url_path, path);
 }
 
 std::string     Path::get_from(const std::string & from, const std::string & path)
 {
-    std::string ret = Files::combine(from, path);
-    if (Files::exists(ret))
+    std::string ret = FS::combine(from, path);
+    if (FS::exists(ret))
         return ret;
     return "";
 }
@@ -62,7 +62,7 @@ std::string     Path::find(const std::string & path)
     for (const auto & [url, url_path] : url_to_path)
     {
         (void)url;
-        ret = get_from(url_path, path);
+        ret = Path::get_from(url_path, path);
         if (!ret.empty())
             break ;
     }

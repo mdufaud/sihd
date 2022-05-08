@@ -44,7 +44,7 @@ void    Thread::del_name()
     thread_map.erase(Thread::id());
 }
 
-const std::string & Thread::get_name()
+const std::string & Thread::name()
 {
     std::lock_guard lock(thread_mutex);
     return thread_map[Thread::id()];

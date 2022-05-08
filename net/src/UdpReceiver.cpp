@@ -113,7 +113,7 @@ bool    UdpReceiver::poll()
 
 void    UdpReceiver::handle(sihd::util::Poll *poll)
 {
-    auto events = poll->get_events();
+    auto events = poll->events();
     if (events.size() > 0)
     {
         auto event = events[0];

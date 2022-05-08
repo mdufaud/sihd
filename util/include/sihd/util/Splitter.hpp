@@ -29,7 +29,7 @@ class Splitter
         // count number of tokens to return
         int count_tokens(const char *s) const;
         // return the next token and updates the index
-        std::string_view get_next_token(const char *s, int *idx) const;
+        std::string_view next_token(const char *s, int *idx) const;
 
     protected:
 

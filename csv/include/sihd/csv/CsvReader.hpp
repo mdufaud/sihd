@@ -29,7 +29,7 @@ class CsvReader:    public sihd::util::Named,
         bool read_next();
         bool get_read_data(std::vector<std::string> & data) const;
 		bool get_read_data(char **data, size_t *size) const;
-		bool get_read_timestamp(time_t *nano_timestamp) const;
+		bool read_timestamp(time_t *nano_timestamp) const;
 
         int comment() const { return _comment; }
 

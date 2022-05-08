@@ -1,7 +1,7 @@
 #include <sihd/zip/ZipReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/File.hpp>
 
 namespace sihd::zip
@@ -212,7 +212,7 @@ bool    ZipReader::get_read_data(char **data, size_t *size) const
     return true;
 }
 
-bool    ZipReader::get_read_timestamp(time_t *nano_timestamp) const
+bool    ZipReader::read_timestamp(time_t *nano_timestamp) const
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -300,7 +300,7 @@ bool    ZipReader::write_entry(std::string_view path, std::string_view password)
     bool ret = false;
     if (this->is_entry_directory())
     {
-        ret = Files::make_directory(path.data(), 0640);
+        ret = FS::make_directory(path.data(), 0640);
         if (!ret)
             SIHD_LOG(error, "ZipReader: could not write directory entry '" << _current_zip_entry.name << "' to: " << path);
         return ret;

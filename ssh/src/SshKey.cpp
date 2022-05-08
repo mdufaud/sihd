@@ -104,7 +104,7 @@ enum ssh_keytypes_e SshKey::type_from_name(std::string_view name)
     return ssh_key_type_from_name(name.data());
 }
 
-const char  *SshKey::type_to_string(enum ssh_keytypes_e type)
+const char  *SshKey::type_str(enum ssh_keytypes_e type)
 {
     return ssh_key_type_to_char(type);
 }

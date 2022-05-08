@@ -4,6 +4,7 @@
 # include <sihd/util/platform.hpp>
 # include <sihd/util/OS.hpp>
 # include <sihd/util/IArray.hpp>
+# include <sihd/util/ArrayView.hpp>
 # include <cstdio>
 # include <string>
 # include <optional>
@@ -18,7 +19,14 @@ class File
         File(int fd, std::string_view mode);
         File(FILE *stream, bool ownership);
         File(std::string_view path, std::string_view mode);
+        File(File && other);
         virtual ~File();
+
+        // don't like hidden behavior so i prefer deleting copy operators
+        File(const File & other) = delete;
+        File & operator=(const File & other) = delete;
+
+        File & operator=(File && other);
 
         virtual bool open(std::string_view path, std::string_view mode);
         virtual bool open_fd(int fd, std::string_view mode);
@@ -55,12 +63,12 @@ class File
         virtual ssize_t read(char *buf, size_t size);
 
         ssize_t read(IArray & array);
+        // getline allocates line but you have to free it
         ssize_t read_line(char **line, size_t *size);
+        // getdelim allocates line but you have to free it
         ssize_t read_line_delim(char **line, size_t *size, int delim);
 
-        ssize_t write(const IArray & array, size_t byte_offset = 0);
-        // can set a limit to the string length
-        ssize_t write(std::string_view str, size_t size_limit = 0);
+        ssize_t write(ArrViewChar view);
         bool write_char(int c);
 
         bool seek(long offset);

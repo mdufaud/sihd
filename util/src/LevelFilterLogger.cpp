@@ -11,7 +11,7 @@ LevelFilterLogger::LevelFilterLogger(LogLevel lvl, bool match):
 LevelFilterLogger::LevelFilterLogger(const std::string & lvl, bool match):
     match(match)
 {
-    this->level = LogInfo::string_to_level(lvl);
+    this->level = LogInfo::level_from_str(lvl);
 }
 
 LevelFilterLogger::~LevelFilterLogger()
@@ -24,7 +24,7 @@ bool    LevelFilterLogger::filter(const LogInfo & info, std::string_view msg)
     // filter exact loglevel or lower loglevels
     return this->match
         ? info.level == this->level
-        : info.level < this->level;
+        : this->level < info.level;
 }
 
 }

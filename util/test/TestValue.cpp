@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
 #include <sihd/util/Value.hpp>
@@ -17,14 +17,14 @@ namespace test
             TestValue()
             {
                 char *test_path = getenv("TEST_PATH");
-                _base_test_dir = sihd::util::Files::combine({
+                _base_test_dir = sihd::util::FS::combine({
                     test_path == nullptr ? "unit_test" : test_path,
                     "util",
                     "value"
                 });
-                _cwd = sihd::util::OS::get_cwd();
+                _cwd = sihd::util::OS::cwd();
                 sihd::util::LoggerManager::basic();
-                sihd::util::Files::make_directories(_base_test_dir);
+                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestValue()

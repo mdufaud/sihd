@@ -43,7 +43,7 @@ namespace test
         EXPECT_TRUE(msg1.finish());
 
         msg1.print_tree_desc();
-        EXPECT_EQ(msg1.get_field_byte_size(), sizeof(int) + 200 * sizeof(char));
+        EXPECT_EQ(msg1.field_byte_size(), sizeof(int) + 200 * sizeof(char));
 
         Message msg2("msg2");
 
@@ -55,7 +55,7 @@ namespace test
         EXPECT_TRUE(msg2.finish());
 
         msg2.print_tree_desc();
-        EXPECT_EQ(msg2.get_field_byte_size(), msg1.get_field_byte_size() * 2
+        EXPECT_EQ(msg2.field_byte_size(), msg1.field_byte_size() * 2
             + sizeof(bool) + sizeof(short) * 2 + sizeof(double) * 2);
         //TODO
     }
@@ -69,7 +69,7 @@ namespace test
         EXPECT_TRUE(msg.add_field<float>("float", 5));
         EXPECT_TRUE(msg.finish());
         msg.print_tree();
-        EXPECT_EQ(msg.get_field_byte_size(), sizeof(bool) + sizeof(uint32_t) * 2 + sizeof(float) * 5);
+        EXPECT_EQ(msg.field_byte_size(), sizeof(bool) + sizeof(uint32_t) * 2 + sizeof(float) * 5);
 
         // Making a fake buffer to fill the message
         ArrByte    buf;
@@ -85,7 +85,7 @@ namespace test
         for (size_t i = 0; i < farr.size(); ++i)
             farr[i] = 3.0 + (0.1 * i);
 
-        EXPECT_EQ(buf.size(), msg.get_field_byte_size());
+        EXPECT_EQ(buf.size(), msg.field_byte_size());
 
         // Fill the message
         ASSERT_TRUE(msg.field_read_from(buf.buf(), buf.size()));

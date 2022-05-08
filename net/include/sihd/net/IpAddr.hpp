@@ -58,11 +58,11 @@ class IpAddr
 
             std::string ip() const
             {
-                return ipv6 ? IpAddr::ip_to_string(this->addr6) : IpAddr::ip_to_string(this->addr);
+                return ipv6 ? IpAddr::ip_str(this->addr6) : IpAddr::ip_str(this->addr);
             }
         };
 
-        // represents info from dns lookup
+        // dns lookup
         struct DnsInfo
         {
             std::string hostname;
@@ -78,10 +78,13 @@ class IpAddr
         static bool is_valid_ip(std::string_view ip);
         static bool is_valid_ipv4(std::string_view ip);
         static bool is_valid_ipv6(std::string_view ip);
-        static std::string ip_to_string(const sockaddr_in & addr_in);
-        static std::string ip_to_string(const sockaddr_in6 & addr_in);
-        static std::string ip_to_string(const in_addr & addr_in);
-        static std::string ip_to_string(const in6_addr & addr_in);
+        static std::string ip_str(const sockaddr & addr);
+        static std::string ipv4_str(const sockaddr & addr);
+        static std::string ipv6_str(const sockaddr & addr);
+        static std::string ip_str(const sockaddr_in & addr_in);
+        static std::string ip_str(const sockaddr_in6 & addr_in);
+        static std::string ip_str(const in_addr & addr_in);
+        static std::string ip_str(const in6_addr & addr_in);
 
         /*
             depending on ip, fills ipsockaddr addr, addr_len and type with corresponding ipv4 or ipv6 struct
@@ -98,7 +101,7 @@ class IpAddr
         static bool to_sockaddr_in6(sockaddr_in6 *filled, const sockaddr & addr, size_t addr_len);
 
         // build IpAddr from localhost
-        static IpAddr get_localhost(int port, bool ipv6 = false);
+        static IpAddr localhost(int port, bool ipv6 = false);
 
         // apply mask on src to dst to get netid addr
         static void fill_sockaddr_network_id(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask);
@@ -107,7 +110,7 @@ class IpAddr
         static void fill_sockaddr_broadcast(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask);
         static void fill_sockaddr_broadcast(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask);
         // transform value to network mask
-        static uint32_t value_to_netmask(uint32_t value);
+        static uint32_t to_netmask(uint32_t value);
         // check for valid netmask
         static bool is_valid_netmask(uint32_t mask);
 
@@ -148,26 +151,31 @@ class IpAddr
         bool get_first_sockaddr_in6(sockaddr_in6 *filled) const { return this->get_sockaddr_in6(filled, -1, -1); }
 
         // returns string ip address
-        std::string get_ip(int socktype, int protocol, bool ipv6 = false) const;
+        std::string matching_ip_str(int socktype, int protocol, bool ipv6 = false) const;
         // returns string ip address for socket type
-        std::string get_socktype_ip(int socktype, bool ipv6 = false) const { return this->get_ip(socktype, -1, ipv6); }
+        std::string socktype_ip_str(int socktype, bool ipv6 = false) const { return this->matching_ip_str(socktype, -1, ipv6); }
         // returns string ip address for protocol
-        std::string get_protocol_ip(int protocol, bool ipv6 = false) const { return this->get_ip(-1, protocol, ipv6); }
+        std::string protocol_ip_str(int protocol, bool ipv6 = false) const { return this->matching_ip_str(-1, protocol, ipv6); }
 
-        std::string get_first_ipv4() const { return this->get_ip(-1, -1, false); }
-        std::string get_first_ipv6() const { return this->get_ip(-1, -1, true); }
-        std::string get_first_ip() const { return this->prefers_ipv6() ? this->get_first_ipv6() : this->get_first_ipv4(); }
+        // returns string ip address
+        std::string matching_ip_str(std::string_view socktype, std::string_view protocol, bool ipv6 = false) const;
+        // returns string ip address for socket type
+        std::string socktype_ip_str(std::string_view socktype, bool ipv6 = false) const { return this->matching_ip_str(socktype, "", ipv6); }
+        // returns string ip address for protocol
+        std::string protocol_ip_str(std::string_view protocol, bool ipv6 = false) const { return this->matching_ip_str("", protocol, ipv6); }
+
+        std::string first_ipv4_str() const { return this->matching_ip_str(-1, -1, false); }
+        std::string first_ipv6_str() const { return this->matching_ip_str(-1, -1, true); }
+        std::string first_ip_str() const { return this->prefers_ipv6() ? this->first_ipv6_str() : this->first_ipv4_str(); }
 
         // getters
         const std::string & host() const { return _host; }
         const std::string & hostname() const { return _hostname; }
         int port() const { return _port; }
-
         bool dns_resolved() const { return _dns_resolved; }
-
         bool empty() const { return _lst_ip.empty(); }
-        size_t count_ip() const { return _lst_ip.size(); }
-        const std::vector<IpEntry> lst_ip() const { return _lst_ip; }
+        size_t ip_count() const { return _lst_ip.size(); }
+        const std::vector<IpEntry> ip_lst() const { return _lst_ip; }
 
     protected:
 

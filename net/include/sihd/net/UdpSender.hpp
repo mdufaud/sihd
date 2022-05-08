@@ -26,22 +26,15 @@ class UdpSender:    public INetSender,
         bool connect_unix(std::string_view path) { return _socket.connect_unix(path); }
 
         bool open_and_connect(const IpAddr & ip);
-        bool open_and_connect(std::string_view ip, int port);
         bool open_unix_and_connect(std::string_view path);
 
         bool close();
 
-        ssize_t send(const void *data, size_t len);
-        bool send_all(const void *data, size_t len);
+        ssize_t send(sihd::util::ArrViewChar view);
+        bool send_all(sihd::util::ArrViewChar view);
 
-        ssize_t send(const sihd::util::IArray & arr);
-        bool send_all(const sihd::util::IArray & arr);
-
-        ssize_t send_to(const IpAddr & addr, const void *data, size_t len);
-        bool send_to_all(const IpAddr & addr, const void *data, size_t len);
-
-        ssize_t send_to(const IpAddr & addr, const sihd::util::IArray & arr);
-        bool send_to_all(const IpAddr & addr, const sihd::util::IArray & arr);
+        ssize_t send_to(const IpAddr & addr, sihd::util::ArrViewChar view);
+        bool send_to_all(const IpAddr & addr, sihd::util::ArrViewChar view);
 
         const Socket & socket() const { return _socket; }
 

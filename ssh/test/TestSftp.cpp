@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
 #include <sihd/ssh/SshSession.hpp>
@@ -18,14 +18,14 @@ namespace test
             TestSftp()
             {
                 char *test_path = getenv("TEST_PATH");
-                _base_test_dir = sihd::util::Files::combine({
+                _base_test_dir = sihd::util::FS::combine({
                     test_path == nullptr ? "unit_test" : test_path,
                     "ssh",
                     "sftp"
                 });
-                _cwd = sihd::util::OS::get_cwd();
+                _cwd = sihd::util::OS::cwd();
                 sihd::util::LoggerManager::basic();
-                sihd::util::Files::make_directories(_base_test_dir);
+                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestSftp()
@@ -47,9 +47,9 @@ namespace test
 
     TEST_F(TestSftp, test_sftp)
     {
-        std::string test_dir = sihd::util::Files::combine(_base_test_dir, "mkdir");
-        sihd::util::Files::remove_directories(test_dir);
-        sihd::util::Files::make_directories(test_dir);
+        std::string test_dir = sihd::util::FS::combine(_base_test_dir, "mkdir");
+        sihd::util::FS::remove_directories(test_dir);
+        sihd::util::FS::make_directories(test_dir);
 
         std::string user = getenv("USER");
         SshSession session;
@@ -61,13 +61,13 @@ namespace test
         Sftp sftp = session.make_sftp();
         EXPECT_TRUE(sftp.open());
         EXPECT_TRUE(sftp.mkdir(test_dir + "/new_dir"));
-        EXPECT_TRUE(Files::is_dir(test_dir + "/new_dir"));
+        EXPECT_TRUE(FS::is_dir(test_dir + "/new_dir"));
 
         EXPECT_TRUE(sftp.send_file("test/resources/file.txt", test_dir + "/sent_file.txt"));
         EXPECT_TRUE(sftp.get_file(_cwd + "/test/resources/file.txt", test_dir + "/recv_file.txt"));
-        EXPECT_TRUE(Files::is_file(test_dir + "/sent_file.txt"));
-        EXPECT_TRUE(Files::is_file(test_dir + "/recv_file.txt"));
-        EXPECT_EQ(Files::get_filesize(test_dir + "/sent_file.txt"), Files::get_filesize("test/resources/file.txt"));
+        EXPECT_TRUE(FS::is_file(test_dir + "/sent_file.txt"));
+        EXPECT_TRUE(FS::is_file(test_dir + "/recv_file.txt"));
+        EXPECT_EQ(FS::filesize(test_dir + "/sent_file.txt"), FS::filesize("test/resources/file.txt"));
 
         std::vector<std::string> list;
         EXPECT_TRUE(sftp.list_dir_filenames(test_dir, list));
@@ -90,7 +90,7 @@ namespace test
         {
             if (attr.is_file())
             {
-                EXPECT_EQ(attr.size(), Files::get_filesize("test/resources/file.txt"));
+                EXPECT_EQ(attr.size(), FS::filesize("test/resources/file.txt"));
             }
             nlink += (int)attr.is_link();
             nregular += (int)attr.is_file();

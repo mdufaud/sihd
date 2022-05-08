@@ -21,7 +21,7 @@ class Endian
             BIG,
         };
 
-        static constexpr Endianness get_endian()
+        static constexpr Endianness endian()
         {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
             return LITTLE;
@@ -31,7 +31,7 @@ class Endian
             return UNKNOWN;
 #endif
         }
-        static std::string type_to_string(Endianness type);
+        static std::string type_str(Endianness type);
         static bool switch_buffer_endianness(void *buf, uint8_t size, size_t buf_size);
 
         // error if trying to swap non defined templates

@@ -3,7 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/File.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/Term.hpp>
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshChannel.hpp>
@@ -19,7 +19,7 @@ namespace test
             TestSshSession()
             {
                 sihd::util::LoggerManager::basic();
-                sihd::util::Files::make_directories(_base_test_dir);
+                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestSshSession()
@@ -35,13 +35,13 @@ namespace test
             {
             }
 
-            std::string _base_test_dir = sihd::util::Files::combine({getenv("TEST_PATH"), "ssh", "sshsession"});
+            std::string _base_test_dir = sihd::util::FS::combine({getenv("TEST_PATH"), "ssh", "sshsession"});
     };
 
     TEST_F(TestSshSession, test_sshsession_auth_key)
     {
         std::string home = getenv("HOME");
-        if (Files::is_file(Files::combine(home, ".ssh/id_rsa")) == false)
+        if (FS::is_file(FS::combine(home, ".ssh/id_rsa")) == false)
             GTEST_SKIP_("need ~/.ssh/id_rsa");
         std::string user = getenv("USER");
         SshSession session;
@@ -49,8 +49,8 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         session.set_verbosity(SSH_LOG_PROTOCOL);
         EXPECT_TRUE(session.connected());
-        auto auth = session.auth_key_file(Files::combine(home, ".ssh/id_rsa"));
-        SIHD_LOG(info, "Auth status: " << auth.to_string());
+        auto auth = session.auth_key_file(FS::combine(home, ".ssh/id_rsa"));
+        SIHD_LOG(info, "Auth status: " << auth.str());
         EXPECT_TRUE(auth.success());
 
         session.disconnect();
@@ -58,14 +58,14 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         EXPECT_TRUE(session.connected());
         auth = session.auth_key_auto();
-        SIHD_LOG(info, "Auth status: " << auth.to_string());
+        SIHD_LOG(info, "Auth status: " << auth.str());
         EXPECT_TRUE(auth.success());
     }
 
     TEST_F(TestSshSession, test_sshsession_auth_interactive_keyboard)
     {
         std::string home = getenv("HOME");
-        if (Files::is_dir(Files::combine(home, ".ssh")) == false)
+        if (FS::is_dir(FS::combine(home, ".ssh")) == false)
             GTEST_SKIP_("need ~/.ssh");
         if (Term::is_interactive() == false)
             GTEST_SKIP_("need interactive keyboard");
@@ -84,13 +84,13 @@ namespace test
         session.set_verbosity(SSH_LOG_PROTOCOL);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_interactive_keyboard();
-        SIHD_LOG(info, "Auth status: " << auth.to_string());
+        SIHD_LOG(info, "Auth status: " << auth.str());
     }
 
     TEST_F(TestSshSession, test_sshsession_connect)
     {
         std::string home = getenv("HOME");
-        if (Files::is_dir(Files::combine(home, ".ssh")) == false)
+        if (FS::is_dir(FS::combine(home, ".ssh")) == false)
             GTEST_SKIP_("need ~/.ssh");
         std::string user = getenv("USER");
         SshSession session;

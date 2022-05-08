@@ -20,8 +20,8 @@ Message::~Message()
 IMessageField *Message::clone() const
 {
     bool error = false;
-    Message *cloned = new Message(this->get_name());
-    for (const std::string & name: this->get_children_keys())
+    Message *cloned = new Message(this->name());
+    for (const std::string & name: this->children_keys())
     {
         const IMessageField *field = this->cfind<IMessageField>(name);
         if (field != nullptr)
@@ -55,7 +55,7 @@ IMessageField *Message::clone() const
 
 bool    Message::assign_field_buffer(uint8_t *buffer)
 {
-    _arr.assign_bytes(buffer, this->get_field_byte_size());
+    _arr.assign_bytes(buffer, this->field_byte_size());
     return true;
 }
 
@@ -92,7 +92,7 @@ bool    Message::add_field(const std::string & name, Type dt, size_t size)
 
 bool    Message::_add_field_size(IMessageField *field)
 {
-    _total_size += field->get_field_byte_size();
+    _total_size += field->field_byte_size();
     return true;
 }
 
@@ -102,7 +102,7 @@ bool    Message::finish()
         return false;
     __assign_arr_at = 0;
     _arr.resize(_total_size);
-    for (const std::string & name: this->get_children_keys())
+    for (const std::string & name: this->children_keys())
     {
         IMessageField *field = this->find<IMessageField>(name);
         if (field == nullptr || this->_assign_field_array(field) == false)
@@ -117,11 +117,11 @@ bool    Message::_assign_field_array(IMessageField *field)
     bool ret = field->assign_field_buffer(_arr.buf() + __assign_arr_at);
     if (ret)
     {
-        __assign_arr_at += field->get_field_byte_size();
+        __assign_arr_at += field->field_byte_size();
         if (__assign_arr_at > _total_size)
         {
             SIHD_LOG_ERROR("Message: for %s total size %lu is inferior to calculated size %lu",
-                        this->get_name().c_str(), _total_size, __assign_arr_at);
+                        this->name().c_str(), _total_size, __assign_arr_at);
             return false;
         }
     }

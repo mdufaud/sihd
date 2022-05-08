@@ -4,7 +4,7 @@
 # include <sihd/net/Ip.hpp>
 # include <sihd/net/IpAddr.hpp>
 # include <sihd/util/Configurable.hpp>
-# include <sihd/util/Array.hpp>
+# include <sihd/util/ArrayView.hpp>
 # include <sihd/util/OS.hpp>
 
 # if !defined(__SIHD_WINDOWS__)
@@ -23,15 +23,22 @@ class Socket
 {
     public:
         Socket();
-        // opens
+        // open socket
         Socket(int domain, int socket_type, int protocol);
         Socket(std::string_view domain, std::string_view socket_type, std::string_view protocol);
-        // from existing socket
-        Socket(int socket);
+        // from existing socket - get_infos perform up to 3 getsockopt
+        Socket(int socket, bool get_infos = true);
         Socket(int socket, int domain, int socket_type, int protocol);
         Socket(int socket, std::string_view domain, std::string_view socket_type, std::string_view protocol);
-
+        Socket(Socket && other);
         virtual ~Socket();
+
+        // don't like hidden behavior so i prefer deleting copy operators
+        Socket(const Socket & other) = delete;
+        Socket & operator=(const Socket & other) = delete;
+
+        Socket & operator=(Socket && other);
+        operator int() const { return _socket; }
 
         // Class utilities for socket manipulation //
 
@@ -39,7 +46,7 @@ class Socket
         static bool get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len);
 
         // return an IpAdress from socket using get_socket_peername; if ipv6 is true, checks for an ipv6 addr first
-        static std::optional<IpAddr> get_socket_ip(int socket, bool ipv6 = false);
+        static std::optional<IpAddr> socket_ip(int socket, bool ipv6 = false);
         static bool get_socket_infos(int socket, int *domain, int *type, int *protocol);
 
         static bool set_socket_blocking(int socket, bool active);
@@ -52,6 +59,8 @@ class Socket
         static bool bind_socket_to_device(int socket, std::string_view name);
 
         // Operations on internal socket //
+
+        bool get_infos();
 
         bool set_tcp_nodelay(bool active) const { return Socket::set_socket_tcp_nodelay(_socket, active); }
         bool set_blocking(bool active) const { return Socket::set_socket_blocking(_socket, active); }
@@ -69,10 +78,8 @@ class Socket
         bool shutdown();
         bool is_open() const { return _socket >= 0; }
 
-        ssize_t send(const void *data, size_t size);
-        bool send_all(const void *data, size_t size);
-        ssize_t send(const sihd::util::IArray & arr) { return this->send(arr.cbuf(), arr.byte_size()); }
-        bool send_all(const sihd::util::IArray & arr) { return this->send_all(arr.cbuf(), arr.byte_size()); }
+        ssize_t send(sihd::util::ArrViewChar view);
+        bool send_all(sihd::util::ArrViewChar view);
 
         ssize_t receive(void *data, size_t size);
         ssize_t receive(sihd::util::IArray & arr)
@@ -86,10 +93,10 @@ class Socket
 
         // Utilities for internal socket //
 
-        std::optional<IpAddr> get_peername(bool ipv6 = false) const { return Socket::get_socket_ip(_socket, ipv6); }
-        int get_local_port() const
+        std::optional<IpAddr> peeraddr(bool ipv6 = false) const { return Socket::socket_ip(_socket, ipv6); }
+        int local_port() const
         {
-            auto opt_ip = this->get_peername(true);
+            auto opt_ip = this->peeraddr(true);
             return opt_ip ? opt_ip.value().port() : -1;
         }
 
@@ -98,92 +105,32 @@ class Socket
         // sockaddr
         bool bind(const sockaddr *addr, socklen_t addr_len);
         bool connect(const sockaddr *addr, socklen_t addr_len);
-        ssize_t send_to(const sockaddr *addr, socklen_t addr_len, const void *data, size_t size);
-        bool send_all_to(const sockaddr *addr, socklen_t addr_len, const void *data, size_t size);
+        ssize_t send_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrViewChar view);
+        bool send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrViewChar view);
         ssize_t receive_from(sockaddr *addr, socklen_t *addr_len, void *data, size_t size);
-        // sihd::util::IArray
-        ssize_t send_to(const sockaddr *addr, socklen_t addr_len, const sihd::util::IArray & arr)
-            { return this->send_to(addr, addr_len, arr.cbuf(), arr.byte_size()); }
-        bool send_all_to(const sockaddr *addr, socklen_t addr_len, const sihd::util::IArray & arr)
-            { return this->send_all_to(addr, addr_len, arr.cbuf(), arr.byte_size()); }
         ssize_t receive_from(sockaddr *addr, socklen_t *addr_len, sihd::util::IArray & arr)
             { return Socket::_adapt_array_size(arr, this->receive_from(addr, addr_len, arr.buf(), arr.byte_capacity())); }
 
-        // sockaddr_in6
-        bool bind(const sockaddr_in6 & addr)
-            { return this->bind((sockaddr *)&addr, sizeof(sockaddr_in6)); }
-        bool connect(const sockaddr_in6 & addr)
-            { return this->connect((sockaddr *)&addr, sizeof(sockaddr_in6)); }
-        ssize_t send_to(const sockaddr_in6 & addr, const void *data, size_t size)
-            { return this->send_to((sockaddr *)&addr, sizeof(sockaddr_in6), data, size); }
-        bool send_all_to(const sockaddr_in6 & addr, const void *data, size_t size)
-            { return this->send_all_to((sockaddr *)&addr, sizeof(sockaddr_in6), data, size); }
-        // sihd::util::IArray
-        ssize_t send_to(const sockaddr_in6 & addr, const sihd::util::IArray & arr)
-            { return this->send_to((sockaddr *)&addr, sizeof(sockaddr_in6), arr); }
-        bool send_all_to(const sockaddr_in6 & addr, const sihd::util::IArray & arr)
-            { return this->send_all_to((sockaddr *)&addr, sizeof(sockaddr_in6), arr); }
-
-        // sockaddr_in
-        bool bind(const sockaddr_in & addr)
-            { return this->bind((sockaddr *)&addr, sizeof(sockaddr_in)); }
-        bool connect(const sockaddr_in & addr)
-            { return this->connect((sockaddr *)&addr, sizeof(sockaddr_in)); }
-        ssize_t send_to(const sockaddr_in & addr, const void *data, size_t size)
-            { return this->send_to((sockaddr *)&addr, sizeof(sockaddr_in), data, size); }
-        bool send_all_to(const sockaddr_in & addr, const void *data, size_t size)
-            { return this->send_all_to((sockaddr *)&addr, sizeof(sockaddr_in), data, size); }
-        // sihd::util::IArray
-        ssize_t send_to(const sockaddr_in & addr, const sihd::util::IArray & arr)
-            { return this->send_to((sockaddr *)&addr, sizeof(sockaddr_in), arr); }
-        bool send_all_to(const sockaddr_in & addr, const sihd::util::IArray & arr)
-            { return this->send_all_to((sockaddr *)&addr, sizeof(sockaddr_in), arr); }
-
-
-        // IP from std::string
-        bool bind(std::string_view host, int port);
-        bool connect(std::string_view host, int port);
-        ssize_t send_to(std::string_view host, int port, const void *data, size_t size);
-        bool send_all_to(std::string_view host, int port, const void *data, size_t size);
-        // sihd::util::IArray
-        ssize_t send_to(std::string_view host, int port, const sihd::util::IArray & arr)
-            { return this->send_to(host, port, arr.cbuf(), arr.byte_size()); }
-        ssize_t send_all_to(std::string_view host, int port, const sihd::util::IArray & arr)
-            { return this->send_all_to(host, port, arr.cbuf(), arr.byte_size()); }
-
         /*
             sihd::net::IpAddr
-
-            Calls corresponding methods trying to find ipv4 addr with matching Socket's socktype and protocol
-                then first ipv4.
         */
         bool bind(const IpAddr & addr);
         bool connect(const IpAddr & addr);
         // calls send_to_ip  or first IPV4 ip
-        ssize_t send_to(const IpAddr & addr, const void *data, size_t size);
-        bool send_all_to(const IpAddr & addr, const void *data, size_t size);
+        ssize_t send_to(const IpAddr & addr, sihd::util::ArrViewChar view);
+        bool send_all_to(const IpAddr & addr, sihd::util::ArrViewChar view);
         ssize_t receive_from(IpAddr & addr, void *data, size_t size);
-        // sihd::util::IArray
-        ssize_t send_to(const IpAddr & addr, const sihd::util::IArray & arr)
-            { return this->send_to(addr, arr.cbuf(), arr.byte_size()); }
-        bool send_all_to(const IpAddr & addr, const sihd::util::IArray & arr)
-            { return this->send_to(addr, arr.cbuf(), arr.byte_size()); }
         ssize_t receive_from(IpAddr & addr, sihd::util::IArray & arr)
             { return Socket::_adapt_array_size(arr, this->receive_from(addr, arr.buf(), arr.byte_capacity())); }
 
         // Operations on unix sockets //
 
-        static std::string get_unix_socket_peername(int socket);
+        static std::string unix_socket_peername(int socket);
         bool bind_unix(std::string_view path);
         bool connect_unix(std::string_view path);
-        ssize_t send_to_unix(std::string_view path, const void *data, size_t size);
-        bool send_all_to_unix(std::string_view path, const void *data, size_t size);
+        ssize_t send_to_unix(std::string_view path, sihd::util::ArrViewChar view);
+        bool send_all_to_unix(std::string_view path, sihd::util::ArrViewChar view);
         ssize_t receive_from_unix(std::string & path, void *data, size_t size);
-        // sihd::util::IArray
-        ssize_t send_to_unix(std::string_view path, const sihd::util::IArray & arr)
-            { return this->send_to_unix(path, arr.cbuf(), arr.byte_size()); }
-        bool send_all_to_unix(std::string_view path, const sihd::util::IArray & arr)
-            { return this->send_all_to_unix(path, arr.cbuf(), arr.byte_size()); }
         ssize_t receive_from_unix(std::string & path, sihd::util::IArray & arr)
             { return Socket::_adapt_array_size(arr, this->receive_from_unix(path, arr.buf(), arr.byte_capacity())); }
 

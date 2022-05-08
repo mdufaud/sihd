@@ -10,7 +10,7 @@ SIHD_LOGGER;
 # define CREATE_SERVICE_OPERATION(OP, ID)\
 bool    AService::OP()\
 {\
-    AService::IServiceController *ctrl = this->get_service_ctrl();\
+    AService::IServiceController *ctrl = this->service_ctrl();\
     bool ret = false;\
     if (ctrl == nullptr)\
         ret = this->do_##OP();\
@@ -26,7 +26,7 @@ bool    AService::OP()\
             Named *obj = dynamic_cast<Named *>(this);\
             if (obj != nullptr)\
             {\
-                SIHD_LOG(warning, "AService: cannot change the state of " << obj->get_name() << " to " #OP);\
+                SIHD_LOG(warning, "AService: cannot change the state of " << obj->name() << " to " #OP);\
             }\
         }\
     }\

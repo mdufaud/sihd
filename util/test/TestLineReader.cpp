@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/Profiling.hpp>
 
@@ -15,7 +15,7 @@ namespace test
             TestLineReader()
             {
                 sihd::util::LoggerManager::basic();
-                sihd::util::Files::make_directories(_base_test_dir);
+                sihd::util::FS::make_directories(_base_test_dir);
                 ::srand(::time(NULL));
             }
 
@@ -41,7 +41,7 @@ namespace test
                 s[size] = 0;
             }
 
-            std::string _base_test_dir = sihd::util::Files::combine({getenv("TEST_PATH"), "util", "linereader"});
+            std::string _base_test_dir = sihd::util::FS::combine({getenv("TEST_PATH"), "util", "linereader"});
     };
 
     TEST_F(TestLineReader, test_linereader_one_line)
@@ -50,10 +50,10 @@ namespace test
         char *line;
         size_t size;
 
-        std::string path = Files::combine(_base_test_dir, "one_line.txt");
+        std::string path = FS::combine(_base_test_dir, "one_line.txt");
 
         SIHD_LOG(info, "Writing test file: " << path);
-        EXPECT_TRUE(Files::write(path, "hello world"));
+        EXPECT_TRUE(FS::write(path, "hello world"));
 
         EXPECT_TRUE(reader.open(path));
         SIHD_LOG(info, "Reading");
@@ -70,7 +70,7 @@ namespace test
 
         // testing with a line feed at the end
         SIHD_LOG(info, "Writing test file with linefeed at the end: " << path);
-        EXPECT_TRUE(Files::write(path, "hello world\n"));
+        EXPECT_TRUE(FS::write(path, "hello world\n"));
 
         EXPECT_TRUE(reader.open(path));
         SIHD_LOG(info, "Reading");
@@ -92,10 +92,10 @@ namespace test
         char *line;
         size_t size;
 
-        std::string path = Files::combine(_base_test_dir, "two_lines.txt");
+        std::string path = FS::combine(_base_test_dir, "two_lines.txt");
 
         SIHD_LOG(info, "Writing test file: " << path);
-        EXPECT_TRUE(Files::write(path, "hello world\nhow are you"));
+        EXPECT_TRUE(FS::write(path, "hello world\nhow are you"));
 
         EXPECT_TRUE(reader.open(path));
 
@@ -124,7 +124,7 @@ namespace test
 
         // testing with a line feed at the end
         SIHD_LOG(info, "Writing test file with linefeed at the end: " << path);
-        EXPECT_TRUE(Files::write(path, "hello world\nhow are you\n"));
+        EXPECT_TRUE(FS::write(path, "hello world\nhow are you\n"));
 
         EXPECT_TRUE(reader.open(path));
 
@@ -158,10 +158,10 @@ namespace test
         char *line;
         size_t size;
 
-        std::string path = Files::combine(_base_test_dir, "multiple_feeds.txt");
+        std::string path = FS::combine(_base_test_dir, "multiple_feeds.txt");
 
         SIHD_LOG(info, "Writing test file: " << path);
-        EXPECT_TRUE(Files::write(path, "hello world\n!\n\n\n"));
+        EXPECT_TRUE(FS::write(path, "hello world\n!\n\n\n"));
 
         EXPECT_TRUE(reader.open(path));
 
@@ -212,10 +212,10 @@ namespace test
     TEST_F(TestLineReader, test_linereader_none)
     {
         LineReader reader("line-reader");
-        std::string path = Files::combine(_base_test_dir, "nothing.txt");
+        std::string path = FS::combine(_base_test_dir, "nothing.txt");
 
         SIHD_LOG(info, "Writing test file: " << path);
-        EXPECT_TRUE(Files::write(path, ""));
+        EXPECT_TRUE(FS::write(path, ""));
 
         EXPECT_TRUE(reader.open(path));
         EXPECT_FALSE(reader.read_next());
@@ -228,10 +228,10 @@ namespace test
         char *line;
         size_t size;
 
-        std::string path = Files::combine(_base_test_dir, "buffer_test.txt");
+        std::string path = FS::combine(_base_test_dir, "buffer_test.txt");
 
         SIHD_LOG(info, "Writing test file: " << path);
-        EXPECT_TRUE(Files::write(path, "hello world\nhow are you\n?\n"));
+        EXPECT_TRUE(FS::write(path, "hello world\nhow are you\n?\n"));
 
         EXPECT_TRUE(reader.set_read_buffsize(1));
         EXPECT_TRUE(reader.open(path));
@@ -256,9 +256,9 @@ namespace test
         char filecontent[filesize + 1];
         this->gen_random(filecontent, filesize);
 
-        std::string path_input = Files::combine(_base_test_dir, "perf_filegen.txt");
-        std::string path_file = Files::combine(_base_test_dir, "perf_compare_file.txt");
-        std::string path_line_reader = Files::combine(_base_test_dir, "perf_compare_line_reader.txt");
+        std::string path_input = FS::combine(_base_test_dir, "perf_filegen.txt");
+        std::string path_file = FS::combine(_base_test_dir, "perf_compare_file.txt");
+        std::string path_line_reader = FS::combine(_base_test_dir, "perf_compare_line_reader.txt");
 
         SIHD_LOG(info, "Input: " << path_input);
         SIHD_LOG(info, "Output file: " << path_file);
@@ -306,8 +306,8 @@ namespace test
         }
         writer.close();
         EXPECT_EQ(total_rl, total_file);
-        EXPECT_TRUE(Files::are_equals(path_input, path_file));
-        EXPECT_TRUE(Files::are_equals(path_input, path_line_reader));
+        EXPECT_TRUE(FS::are_equals(path_input, path_file));
+        EXPECT_TRUE(FS::are_equals(path_input, path_line_reader));
     }
 
 }

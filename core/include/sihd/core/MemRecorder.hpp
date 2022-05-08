@@ -28,7 +28,7 @@ class MemRecorder:  public ACoreObject,
         bool set_provider(bool active);
         bool set_recorder(bool active);
 
-        inline void add_record(const PlayableRecord & record);
+        void add_record(const PlayableRecord & record);
         void add_record(const std::string & name, time_t timestamp, const sihd::util::IArray *array);
         void add_records(const std::vector<PlayableRecord> & records);
         void add_records(const std::list<PlayableRecord> & records);
@@ -41,8 +41,8 @@ class MemRecorder:  public ACoreObject,
         std::string hexdump_timeline(std::string_view separation_cols = "\t", char separation_data = ' ');
         void clear();
 
-        const MapListRecordedValues get_recorded_values() const { return _map_record; }
-        const SortedRecordedValues get_sorted_recorded_values() const { return _map_sorted_records; }
+        const MapListRecordedValues recorded_values() const { return _map_record; }
+        const SortedRecordedValues sorted_recorded_values() const { return _map_sorted_records; }
 
     protected:
         void handle(const std::string & name, const Channel *array) override;

@@ -117,13 +117,13 @@ class Node: public Named
         bool is_link(const std::string & link) const;
         bool add_link(const std::string & link, const std::string & path);
         bool remove_link(const std::string & link);
-        Named *get_link(const std::string & path, size_t recursion = 0);
+        Named *resolve_link(const std::string & path, size_t recursion = 0);
         bool resolve_links(size_t recursion = 0);
 
         // Tree description
-        std::string get_tree_str() const;
-        std::string get_tree_desc_str() const;
-        std::string get_tree_str(TreeOpts opts) const;
+        std::string tree_str() const;
+        std::string tree_desc_str() const;
+        std::string tree_str(TreeOpts opts) const;
         void print_tree() const;
         void print_tree_desc() const;
         void print_tree(TreeOpts opts) const;
@@ -131,10 +131,10 @@ class Node: public Named
         // Static
         static Node *to_node(Named *child);
         static const Node *to_cnode(const Named *child);
-        static std::pair<std::string, std::string> get_parent_path(const std::string & path);
+        static std::pair<std::string, std::string> parent_path(const std::string & path);
 
-        const std::map<std::string, ChildEntry *> & get_children() const;
-        const std::vector<std::string> & get_children_keys() const;
+        const std::map<std::string, ChildEntry *> & children() const;
+        const std::vector<std::string> & children_keys() const;
 
     protected:
         virtual bool _remove_child_entry(ChildEntry *entry);
@@ -142,11 +142,11 @@ class Node: public Named
 
         virtual bool _check_link(const std::string & name, Named *child);
 
-        virtual void _get_tree_children(std::stringstream & ss, TreeOpts opts) const;
+        virtual void _tree_children(std::stringstream & ss, TreeOpts opts) const;
         virtual void _iterate_tree_children(std::stringstream & ss,
                                                 TreeOpts & opts,
                                                 const std::string & indent) const;
-        virtual void _get_tree_child_desc(std::stringstream & ss,
+        virtual void _tree_child_desc(std::stringstream & ss,
                                                 const TreeOpts & opts,
                                                 const std::string & indent,
                                                 const std::string & name,

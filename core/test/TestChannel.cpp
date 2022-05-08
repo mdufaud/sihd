@@ -31,7 +31,7 @@ namespace test
 
             void handle(Channel *c)
             {
-                SIHD_TRACE(c->array()->data_type_to_string());
+                SIHD_TRACE(c->array()->data_type_str());
                 if (c->array()->data_type() == TYPE_INT)
                 {
                     const Array<int> *arr_int = ArrayUtil::cast_array<int>(c->array());
@@ -57,7 +57,7 @@ namespace test
 
         EXPECT_EQ(c.array()->byte_size(), 4 * sizeof(float));
         EXPECT_EQ(c.array()->data_size(), 4u);
-        EXPECT_STREQ(c.array()->data_type_to_string(), "float");
+        EXPECT_STREQ(c.array()->data_type_str(), "float");
         EXPECT_EQ(c.array()->capacity(), 4u);
         EXPECT_EQ(c.array()->data_type(), TYPE_FLOAT);
         EXPECT_EQ(_notified[&c], 0);
@@ -118,8 +118,8 @@ namespace test
         Channel *c = nullptr;
         EXPECT_NO_THROW(c = Channel::build("name=chan;type=float;size=2"));
         EXPECT_NE(c, nullptr);
-        EXPECT_EQ(c->get_name(), "chan");
-        EXPECT_STREQ(c->array()->data_type_to_string(), "float");
+        EXPECT_EQ(c->name(), "chan");
+        EXPECT_STREQ(c->array()->data_type_str(), "float");
         EXPECT_EQ(c->array()->size(), 2u);
         delete c;
     }

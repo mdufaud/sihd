@@ -28,7 +28,7 @@ class AService: public Observable<AService>
                 virtual bool op_start(Operation op) = 0;
                 virtual bool op_end(Operation op, bool status) = 0;
         };
-        virtual IServiceController *get_service_ctrl() { return nullptr; };
+        virtual IServiceController *service_ctrl() { return nullptr; };
 
         virtual bool setup();
         virtual bool init();

@@ -14,7 +14,7 @@ class SshKey
         virtual ~SshKey();
 
         static enum ssh_keytypes_e type_from_name(std::string_view name);
-        static const char *type_to_string(enum ssh_keytypes_e type);
+        static const char *type_str(enum ssh_keytypes_e type);
 
         bool generate(enum ssh_keytypes_e type, int parameter);
         bool import_pubkey_file(std::string_view path);

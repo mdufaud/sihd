@@ -38,12 +38,11 @@ namespace test
     {
         sihd::util::ArrInt array_send = {1, 2, 3, 4, 5, 6};
         sihd::util::ArrInt array_rcv(array_send.size());
-        IpAddr localhost("127.0.0.1", 4242);
         UdpSender sender("udp-sender");
         UdpReceiver receiver("udp-receiver");
 
-        EXPECT_TRUE(sender.open_and_connect(localhost));
-        EXPECT_TRUE(receiver.open_and_bind(localhost));
+        EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4242}));
+        EXPECT_TRUE(receiver.open_and_bind({"127.0.0.1", 4242}));
 
         sihd::util::ObserverWaiter obs(&receiver);
 
@@ -51,7 +50,7 @@ namespace test
         sihd::util::Handler<INetReceiver *> handler([&receive_ret, &array_rcv] (INetReceiver *rcv)
         {
             receive_ret = rcv->receive(array_rcv);
-            SIHD_LOG(debug, "Data received: " << array_rcv.to_string(' ') << " - " << array_rcv.byte_size() << " bytes");
+            SIHD_LOG(debug, "Data received: " << array_rcv.str(' ') << " - " << array_rcv.byte_size() << " bytes");
         });
         receiver.add_observer(&handler);
         receiver.set_poll_timeout(1);
@@ -59,7 +58,7 @@ namespace test
         SIHD_LOG(debug, "Starting receiver");
         EXPECT_TRUE(worker.start_sync_worker("receiver"));
 
-        SIHD_LOG(debug, "Sending: " << array_send.to_string(',') << " (" << array_send.byte_size() << " bytes)");
+        SIHD_LOG(debug, "Sending: " << array_send.str(',') << " (" << array_send.byte_size() << " bytes)");
         EXPECT_EQ(sender.send(array_send), (ssize_t)array_send.byte_size());
 
         usleep(1000);
@@ -77,8 +76,8 @@ namespace test
         UdpSender sender("udp-sender");
         UdpReceiver receiver("udp-receiver");
 
-        EXPECT_TRUE(sender.open_and_connect("127.0.0.1", 4242));
-        EXPECT_TRUE(receiver.open_and_bind(IpAddr::get_localhost(4242)));
+        EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4242}));
+        EXPECT_TRUE(receiver.open_and_bind(IpAddr::localhost(4242)));
 
         EXPECT_TRUE(receiver.socket_opened());
         EXPECT_TRUE(receiver.socket().set_blocking(false));
@@ -87,23 +86,23 @@ namespace test
         sihd::util::Handler<INetReceiver *> handler([&array_rcv] (INetReceiver *rcv)
         {
             rcv->receive(array_rcv);
-            SIHD_LOG(debug, "Data received: " << array_rcv.to_string() << " - " << array_rcv.byte_size() << " bytes");
+            SIHD_LOG(debug, "Data received: " << array_rcv.str() << " - " << array_rcv.byte_size() << " bytes");
         });
         receiver.add_observer(&handler);
 
         const char helloworld[] = "hello world";
-        EXPECT_EQ(sender.send(helloworld, sizeof(helloworld)), (ssize_t)sizeof(helloworld));
-        EXPECT_EQ(receiver.receive(array_rcv), (ssize_t)sizeof(helloworld));
+        EXPECT_EQ(sender.send(helloworld), strlen(helloworld));
+        EXPECT_EQ(receiver.receive(array_rcv), strlen(helloworld));
 
-        EXPECT_TRUE(array_rcv.is_equal(helloworld, sizeof(helloworld)));
-        EXPECT_EQ(array_rcv.size(), sizeof(helloworld));
+        EXPECT_TRUE(array_rcv.is_equal(helloworld));
+        EXPECT_EQ(array_rcv.size(), strlen(helloworld));
 
         const char hello[] = "hello";
-        EXPECT_EQ(sender.send(hello, sizeof(hello)), (ssize_t)sizeof(hello));
+        EXPECT_EQ(sender.send(hello), strlen(hello));
         EXPECT_TRUE(receiver.poll(10));
 
-        EXPECT_TRUE(array_rcv.is_equal(hello, sizeof(hello)));
-        EXPECT_EQ(array_rcv.size(), sizeof(hello));
+        EXPECT_TRUE(array_rcv.is_equal(hello));
+        EXPECT_EQ(array_rcv.size(), strlen(hello));
     }
 
     TEST_F(TestUdp, test_udp_sendrcv_broadcast)
@@ -121,15 +120,15 @@ namespace test
         EXPECT_TRUE(receiver.open_and_bind(any_ip));
         EXPECT_TRUE(receiver.socket_opened());
 
-        IpAddr broadcast_ip("127.255.255.255", 4242, false);
-        EXPECT_EQ(sender.send_to(broadcast_ip, helloworld, sizeof(helloworld)), (ssize_t)sizeof(helloworld));
+        // send to broadcast ip
+        EXPECT_EQ(sender.send_to({"127.255.255.255", 4242}, helloworld), strlen(helloworld));
 
         IpAddr iprcv;
         receiver.receive(iprcv, array_rcv);
-        EXPECT_EQ(iprcv.get_first_ipv4(), "127.0.0.1");
+        EXPECT_EQ(iprcv.first_ipv4_str(), "127.0.0.1");
 
-        EXPECT_TRUE(array_rcv.is_equal(helloworld, sizeof(helloworld)));
-        EXPECT_EQ(array_rcv.size(), sizeof(helloworld));
+        EXPECT_TRUE(array_rcv.is_equal(helloworld));
+        EXPECT_EQ(array_rcv.size(), strlen(helloworld));
     }
 
 }

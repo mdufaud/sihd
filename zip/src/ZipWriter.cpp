@@ -1,7 +1,7 @@
 #include <sihd/zip/ZipWriter.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 
 namespace sihd::zip
 {
@@ -109,9 +109,9 @@ bool    ZipWriter::fs_add(std::string_view path, std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
-    if (Files::is_dir(path))
+    if (FS::is_dir(path))
         return this->fs_add_dir(path, name);
-    else if (Files::is_file(path))
+    else if (FS::is_file(path))
         return this->fs_add_file(path, name);
     return false;
 }
@@ -125,11 +125,11 @@ bool    ZipWriter::fs_add_dir(std::string_view path, std::string_view name)
         SIHD_LOG(error, "ZipWriter: could not add directory to zip '" << ZipUtils::get_error(_zip_ptr) << "' for: " << path);
         return false;
     }
-    std::vector<std::string> children = Files::get_children(path);
+    std::vector<std::string> children = FS::children(path);
     bool ret = true;
     for (std::string_view child: children)
     {
-        ret = this->fs_add(Files::combine(path, child), Files::combine(name, child));
+        ret = this->fs_add(FS::combine(path, child), FS::combine(name, child));
         if (!ret)
             break ;
     }

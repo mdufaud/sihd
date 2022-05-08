@@ -34,7 +34,7 @@ void    Scheduler::set_clock(IClock *ptr)
     _clock_ptr = ptr;
 }
 
-IClock  *Scheduler::get_clock() const
+IClock  *Scheduler::clock() const
 {
     return _clock_ptr;
 }
@@ -105,7 +105,7 @@ time_t  Scheduler::now() const
 
 bool    Scheduler::run()
 {
-    sihd::util::Thread::set_name(this->get_name());
+    sihd::util::Thread::set_name(this->name());
     if (_clock_ptr == nullptr || _clock_ptr->start() == false)
         return false;
     _begin_run = _clock_ptr->now();

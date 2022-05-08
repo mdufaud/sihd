@@ -3,7 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/zip/ZipWriter.hpp>
 #include <sihd/zip/ZipReader.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/Array.hpp>
 
 namespace test
@@ -18,7 +18,7 @@ namespace test
             {
                 sihd::util::LoggerManager::basic();
                 _test_path = getenv("TEST_PATH");
-                _base_test_dir = sihd::util::Files::combine(_test_path, "zip");
+                _base_test_dir = sihd::util::FS::combine(_test_path, "zip");
             }
 
             virtual ~TestZip()
@@ -28,7 +28,7 @@ namespace test
 
             virtual void SetUp()
             {
-                sihd::util::Files::make_directory(_base_test_dir);
+                sihd::util::FS::make_directory(_base_test_dir);
             }
 
             virtual void TearDown()
@@ -41,8 +41,8 @@ namespace test
 
     TEST_F(TestZip, test_zip_writer)
     {
-        std::string zip_path = Files::combine(_base_test_dir, "to_zip.zip");
-        Files::remove_file(zip_path);
+        std::string zip_path = FS::combine(_base_test_dir, "to_zip.zip");
+        FS::remove_file(zip_path);
 
         ZipWriter writer("zip-writer");
 
@@ -84,7 +84,7 @@ namespace test
         SIHD_LOG(info, "Trying to read entry with password");
         EXPECT_TRUE(reader.read_entry(password) > 0);
         EXPECT_TRUE(reader.get_read_data(&data, &size));
-        EXPECT_STREQ(data, arr_entry.to_string().c_str());
+        EXPECT_STREQ(data, arr_entry.str().c_str());
 
         SIHD_LOG(info, "Setting global password");
         EXPECT_TRUE(reader.set_conf_str("password", password));
@@ -92,7 +92,7 @@ namespace test
         EXPECT_TRUE(reader.load_entry(entry_name));
         EXPECT_TRUE(reader.read_entry() > 0);
         EXPECT_TRUE(reader.get_read_data(&data, &size));
-        EXPECT_STREQ(data, arr_entry.to_string().c_str());
+        EXPECT_STREQ(data, arr_entry.str().c_str());
 
         entry_name = "to_zip/file.txt";
         EXPECT_TRUE(reader.load_entry(entry_name));

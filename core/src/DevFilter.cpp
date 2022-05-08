@@ -530,7 +530,7 @@ bool    DevFilter::InternalRule::verify()
     if (rule_ptr->trigger_value.is_float() && in_array_is_float == false)
     {
         SIHD_LOG_ERROR("DevFilter: type error, trigger value is float and channel input '%s' is not a floating type",
-                        this->channel_in_ptr->get_name().c_str());
+                        this->channel_in_ptr->name().c_str());
         return false;
     }
     // check write value type against channel
@@ -541,7 +541,7 @@ bool    DevFilter::InternalRule::verify()
                 || (rule_ptr->write_same_value == false && rule_ptr->write_value.is_float())))
     {
         SIHD_LOG_ERROR("DevFilter: type error, write value is float and channel output '%s' is not a floating type",
-                        this->channel_out_ptr->get_name().c_str());
+                        this->channel_out_ptr->name().c_str());
         return false;
     }
     return true;

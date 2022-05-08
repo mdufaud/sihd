@@ -5,9 +5,9 @@ namespace sihd::util
 
 ServiceController::ServiceController(const StateMachine<State, AService::Operation> & to_copy_statemachine): statemachine(NONE)
 {
-    statemachine.set_map_transitions(to_copy_statemachine.get_map_transitions());
-    statemachine.set_map_states_names(to_copy_statemachine.get_map_states_names());
-    statemachine.set_map_events_names(to_copy_statemachine.get_map_events_names());
+    statemachine.set_transitions_map(to_copy_statemachine.transitions_map());
+    statemachine.set_states_names_map(to_copy_statemachine.states_names_map());
+    statemachine.set_events_names_map(to_copy_statemachine.events_names_map());
 }
 
 ServiceController::ServiceController(): statemachine(NONE)
@@ -85,7 +85,7 @@ bool    ServiceController::op_end(AService::Operation op, bool status)
     return ret;
 }
 
-const char  *ServiceController::state_to_string(State state)
+const char  *ServiceController::state_str(State state)
 {
     switch (state)
     {

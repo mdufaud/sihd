@@ -54,10 +54,10 @@ namespace test
                 struct sockaddr_in broadcast;
                 IpAddr::fill_sockaddr_network_id(netid, *base, mask);
                 IpAddr::fill_sockaddr_broadcast(broadcast, *base, mask);
-                SIHD_LOG(debug, "Base ip: " << IpAddr::ip_to_string(*base));
-                SIHD_LOG(debug, "Netmask: " << IpAddr::ip_to_string(mask));
-                SIHD_LOG(debug, "Netid: " << IpAddr::ip_to_string(netid));
-                SIHD_LOG(debug, "Broadcast: " << IpAddr::ip_to_string(broadcast));
+                SIHD_LOG(debug, "Base ip: " << IpAddr::ip_str(*base));
+                SIHD_LOG(debug, "Netmask: " << IpAddr::ip_str(mask));
+                SIHD_LOG(debug, "Netid: " << IpAddr::ip_str(netid));
+                SIHD_LOG(debug, "Broadcast: " << IpAddr::ip_str(broadcast));
             }
             SIHD_LOG(debug, "--- IPV6 ---");
             const struct ifaddrs *ifaddr6 = iface->get_addr(AF_INET6);
@@ -70,10 +70,10 @@ namespace test
                 struct sockaddr_in6 broadcast;
                 IpAddr::fill_sockaddr_network_id(netid, *base, mask);
                 IpAddr::fill_sockaddr_broadcast(broadcast, *base, mask);
-                SIHD_LOG(debug, "Base ip: " << IpAddr::ip_to_string(*base));
-                SIHD_LOG(debug, "Netmask: " << IpAddr::ip_to_string(mask));
-                SIHD_LOG(debug, "Netid: " << IpAddr::ip_to_string(netid));
-                SIHD_LOG(debug, "Broadcast: " << IpAddr::ip_to_string(broadcast));
+                SIHD_LOG(debug, "Base ip: " << IpAddr::ip_str(*base));
+                SIHD_LOG(debug, "Netmask: " << IpAddr::ip_str(mask));
+                SIHD_LOG(debug, "Netid: " << IpAddr::ip_str(netid));
+                SIHD_LOG(debug, "Broadcast: " << IpAddr::ip_str(broadcast));
             }
             std::cout << std::endl;
         }

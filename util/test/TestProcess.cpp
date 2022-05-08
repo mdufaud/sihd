@@ -2,7 +2,7 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Process.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
 #include <filesystem>
@@ -34,7 +34,7 @@ namespace test
             virtual void TearDown()
             {
             }
-            std::string _base_test_dir = Files::combine({getenv("TEST_PATH"), "util_process"});
+            std::string _base_test_dir = FS::combine({getenv("TEST_PATH"), "util_process"});
     };
 
     /*
@@ -196,13 +196,13 @@ namespace test
     {
         if (OS::is_run_by_valgrind())
             GTEST_SKIP() << "Buggy with valgrind";
-        std::string test_dir = Files::combine(_base_test_dir, "in_file");
+        std::string test_dir = FS::combine(_base_test_dir, "in_file");
         std::filesystem::remove_all(test_dir);
-        std::string test_file = Files::combine(test_dir, "hello.txt");
-        std::filesystem::create_directories(Files::get_parent(test_file));
+        std::string test_file = FS::combine(test_dir, "hello.txt");
+        std::filesystem::create_directories(FS::parent(test_file));
 
         SIHD_LOG(info, "Writing file for 'cat' input: " << test_file)
-        EXPECT_TRUE(Files::write(test_file, "hello world"));
+        EXPECT_TRUE(FS::write(test_file, "hello world"));
 
         if (Term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
@@ -220,29 +220,29 @@ namespace test
 
     TEST_F(TestProcess, test_process_file_out)
     {
-        std::string test_dir = Files::combine(_base_test_dir, "to_file");
+        std::string test_dir = FS::combine(_base_test_dir, "to_file");
         std::filesystem::remove_all(test_dir);
-        std::string test_file = Files::combine(test_dir, "output.txt");
-        std::filesystem::create_directories(Files::get_parent(test_file));
+        std::string test_file = FS::combine(test_dir, "output.txt");
+        std::filesystem::create_directories(FS::parent(test_file));
         Process proc{"echo", "hello", "world"};
 
         EXPECT_TRUE(proc.stdout_to_file(test_file));
-        EXPECT_EQ(Files::read_all(test_file).value(), "");
+        EXPECT_EQ(FS::read_all(test_file).value(), "");
         EXPECT_TRUE(proc.start());
         EXPECT_TRUE(proc.wait_any());
         EXPECT_TRUE(proc.end());
-        EXPECT_EQ(Files::read_all(test_file).value(), "hello world\n");
+        EXPECT_EQ(FS::read_all(test_file).value(), "hello world\n");
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 0);
     }
 
     TEST_F(TestProcess, test_process_file_out_err)
     {
-        std::string path = Files::combine(_base_test_dir, "file_out_err");
+        std::string path = FS::combine(_base_test_dir, "file_out_err");
         std::filesystem::remove_all(path);
         std::filesystem::create_directories(path);
-        std::string stdout_path = Files::combine(path, "stdout.txt");
-        std::string stderr_path = Files::combine(path, "stderr.txt");
+        std::string stdout_path = FS::combine(path, "stdout.txt");
+        std::string stderr_path = FS::combine(path, "stderr.txt");
 
         Process proc([]() -> int {
             std::cout << "hello world";
@@ -265,8 +265,8 @@ namespace test
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 1);
 
-        EXPECT_EQ(Files::read_all(stdout_path).value(), "hello world");
-        EXPECT_EQ(Files::read_all(stderr_path).value(), "nope");
+        EXPECT_EQ(FS::read_all(stdout_path).value(), "hello world");
+        EXPECT_EQ(FS::read_all(stderr_path).value(), "nope");
     }
 
     TEST_F(TestProcess, test_process_close)

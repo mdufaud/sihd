@@ -18,33 +18,33 @@ Device::Device(const std::string & name, Node *parent):
 
 Device::~Device()
 {
-    if (this->get_parent() == nullptr)
+    if (this->parent() == nullptr)
     {
-        if (_default_service_controller.statemachine.get_last_event() == AService::START)
+        if (_default_service_controller.statemachine.last_event() == AService::START)
             this->stop();
-        if (_default_service_controller.statemachine.get_last_event() == AService::STOP)
+        if (_default_service_controller.statemachine.last_event() == AService::STOP)
             this->reset();
     }
 }
 
 ServiceController::State    Device::device_state() const
 {
-    return _service_controller.get_state();
+    return _service_controller.state();
 }
 
 const char  *Device::device_state_str() const
 {
-    return ServiceController::state_to_string(this->device_state());
+    return ServiceController::state_str(this->device_state());
 }
 
 bool    Device::do_setup()
 {
-    for (auto & [name, entry]: this->get_children())
+    for (auto & [name, entry]: this->children())
     {
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->setup() == false)
         {
-            SIHD_LOG(error, "Device: " << this->get_name() << " could not setup service: " << name);
+            SIHD_LOG(error, "Device: " << this->name() << " could not setup service: " << name);
             return false;
         }
     }
@@ -53,12 +53,12 @@ bool    Device::do_setup()
 
 bool    Device::do_init()
 {
-    for (auto & [name, entry]: this->get_children())
+    for (auto & [name, entry]: this->children())
     {
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->init() == false)
         {
-            SIHD_LOG(error, "Device: " << this->get_name() << " could not init service: " << name);
+            SIHD_LOG(error, "Device: " << this->name() << " could not init service: " << name);
             return false;
         }
     }
@@ -69,14 +69,14 @@ bool    Device::do_start()
 {
     bool ret = true;
     std::list<AService *> started_services;
-    for (auto & [name, entry]: this->get_children())
+    for (auto & [name, entry]: this->children())
     {
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr)
         {
             if (service->start() == false)
             {
-                SIHD_LOG(error, "Device: " << this->get_name() << " could not start service: " << name);
+                SIHD_LOG(error, "Device: " << this->name() << " could not start service: " << name);
                 ret = false;
                 break ;
             }
@@ -99,12 +99,12 @@ bool    Device::do_start()
 bool    Device::do_stop()
 {
     this->remove_channels_observation();
-    for (auto & [name, entry]: this->get_children())
+    for (auto & [name, entry]: this->children())
     {
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->stop() == false)
         {
-            SIHD_LOG(error, "Device: " << this->get_name() << " could not stop service: " << name);
+            SIHD_LOG(error, "Device: " << this->name() << " could not stop service: " << name);
             return false;
         }
     }
@@ -113,12 +113,12 @@ bool    Device::do_stop()
 
 bool    Device::do_reset()
 {
-    for (auto & [name, entry]: this->get_children())
+    for (auto & [name, entry]: this->children())
     {
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->reset() == false)
         {
-            SIHD_LOG(error, "Device: " << this->get_name() << " could not reset service: " << name);
+            SIHD_LOG(error, "Device: " << this->name() << " could not reset service: " << name);
             return false;
         }
     }

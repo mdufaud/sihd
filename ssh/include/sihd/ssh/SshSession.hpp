@@ -57,7 +57,7 @@ class SshSession
             bool interactive() const { return methods & SSH_AUTH_METHOD_INTERACTIVE; }
             bool gss_api() const { return methods & SSH_AUTH_METHOD_GSSAPI_MIC; }
 
-            std::string to_string() const;
+            std::string str() const;
 
             int methods;
         };
@@ -73,7 +73,7 @@ class SshSession
             bool success() const { return status == SSH_AUTH_SUCCESS; }
             bool again() const { return status == SSH_AUTH_AGAIN; }
 
-            std::string to_string() const;
+            const char *str() const;
 
             int status;
         };

@@ -36,7 +36,7 @@ class Channel:  public sihd::util::Named,
                 sihd::util::Node *parent = nullptr);
         virtual ~Channel();
 
-        static sihd::util::IClock *get_default_clock() { return _default_channel_clock_ptr; }
+        static sihd::util::IClock *default_clock() { return _default_channel_clock_ptr; }
 
         // "name=CHANNEL_NAME;type=CHANNEL_TYPE;size=CHANNEL_SIZE"
         static Channel *build(std::string_view configuration);

@@ -21,7 +21,7 @@
 namespace sihd::util
 {
 
-Type  Types::string_to_type(std::string_view type)
+Type  Types::from_str(std::string_view type)
 {
     static std::map<std::string_view, Type> str_to_type = {
         {STR_TYPE_NONE, TYPE_NONE},
@@ -36,7 +36,7 @@ Type  Types::string_to_type(std::string_view type)
     return str_to_type[type.data()];
 }
 
-const char  *Types::type_to_string(Type type)
+const char  *Types::type_str(Type type)
 {
     switch (type)
     {
@@ -109,28 +109,28 @@ size_t  Types::type_size(Type type)
 }
 
 template <>
-Type    Types::to_type<bool>() { return TYPE_BOOL; };
+Type    Types::type<bool>() { return TYPE_BOOL; };
 template <>
-Type    Types::to_type<char>() { return TYPE_CHAR; };
+Type    Types::type<char>() { return TYPE_CHAR; };
 template <>
-Type    Types::to_type<int8_t>() { return TYPE_BYTE; };
+Type    Types::type<int8_t>() { return TYPE_BYTE; };
 template <>
-Type    Types::to_type<uint8_t>() { return TYPE_UBYTE; };
+Type    Types::type<uint8_t>() { return TYPE_UBYTE; };
 template <>
-Type    Types::to_type<int16_t>() { return TYPE_SHORT; };
+Type    Types::type<int16_t>() { return TYPE_SHORT; };
 template <>
-Type    Types::to_type<uint16_t>() { return TYPE_USHORT; };
+Type    Types::type<uint16_t>() { return TYPE_USHORT; };
 template <>
-Type    Types::to_type<int32_t>() { return TYPE_INT; };
+Type    Types::type<int32_t>() { return TYPE_INT; };
 template <>
-Type    Types::to_type<uint32_t>() { return TYPE_UINT; };
+Type    Types::type<uint32_t>() { return TYPE_UINT; };
 template <>
-Type    Types::to_type<int64_t>() { return TYPE_LONG; };
+Type    Types::type<int64_t>() { return TYPE_LONG; };
 template <>
-Type    Types::to_type<uint64_t>() { return TYPE_ULONG; };
+Type    Types::type<uint64_t>() { return TYPE_ULONG; };
 template <>
-Type    Types::to_type<float>() { return TYPE_FLOAT; };
+Type    Types::type<float>() { return TYPE_FLOAT; };
 template <>
-Type    Types::to_type<double>() { return TYPE_DOUBLE; };
+Type    Types::type<double>() { return TYPE_DOUBLE; };
 
 }

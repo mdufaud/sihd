@@ -25,7 +25,7 @@ Named::~Named()
 
 bool    Named::set_parent_ownership(bool ownership)
 {
-    Node *parent = this->get_parent();
+    Node *parent = this->parent();
     if (parent != nullptr)
         return parent->set_child_ownership(this, ownership);
     return false;
@@ -33,8 +33,8 @@ bool    Named::set_parent_ownership(bool ownership)
 
 bool    Named::is_owned_by_parent() const
 {
-    return this->get_parent() != nullptr
-        ? this->get_parent()->has_ownership(this)
+    return this->parent() != nullptr
+        ? this->parent()->has_ownership(this)
         : false;
 }
 
@@ -45,46 +45,46 @@ bool    Named::set_parent(Node *parent)
     return _parent_ptr == parent;
 }
 
-const std::string & Named::get_name() const
+const std::string & Named::name() const
 {
     return _name;
 }
 
-std::string     Named::get_full_name() const
+std::string     Named::full_name() const
 {
-    std::string ret = this->get_name();
-    Node *parent = this->get_parent();
+    std::string ret = this->name();
+    Node *parent = this->parent();
     while (parent != nullptr)
     {
-        ret = parent->get_name() + Named::separator + ret;
-        parent = parent->get_parent();
+        ret = parent->name() + Named::separator + ret;
+        parent = parent->parent();
     }
     return ret;
 }
 
-Node  *Named::get_parent() const
+Node  *Named::parent() const
 {
     return _parent_ptr;
 }
 
-const Node  *Named::cget_parent() const
+const Node  *Named::cparent() const
 {
     return _parent_ptr;
 }
 
-std::string     Named::get_class_name() const
+std::string     Named::class_name() const
 {
     return sihd::util::Str::demangle(typeid(*this).name());
 }
 
-Node   *Named::get_root()
+Node   *Named::root()
 {
-    return const_cast<Node *>(const_cast<Named *>(this)->cget_root());
+    return const_cast<Node *>(const_cast<Named *>(this)->croot());
 }
 
-const Node   *Named::cget_root() const
+const Node   *Named::croot() const
 {
-    const Node *obj = this->get_parent();
+    const Node *obj = this->parent();
 
     if (obj == nullptr)
         return Node::to_cnode(this);
@@ -92,7 +92,7 @@ const Node   *Named::cget_root() const
     Node *tmp;
     while (obj != nullptr)
     {
-        tmp = obj->get_parent();
+        tmp = obj->parent();
         if (tmp == nullptr)
             break ;
         obj = tmp;
@@ -144,7 +144,7 @@ const Named   *Named::cfind(const std::string & path) const
         if (current == nullptr)
             current = this;
         else
-            current = current->get_parent();
+            current = current->parent();
         ++i;
     }
     if (i == 0)
@@ -152,7 +152,7 @@ const Named   *Named::cfind(const std::string & path) const
         if (path.size() > 0 && path[0] == '/')
         {
             std::string search_path = path.substr(1);
-            current = this->cget_root();
+            current = this->croot();
             return this->cfind(current, search_path);
         }
         else

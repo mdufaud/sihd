@@ -25,11 +25,14 @@
 #  define SIHD_LOG(level, msg) SIHD_LOG_LEVEL(__sihd_logger__, level, msg);
 #  define SIHD_LOG_FORMAT(level, message, ...) __sihd_logger__.log(level, sihd::util::Str::format(message, ##__VA_ARGS__));
 
-#  define SIHD_LOG_DEBUG(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::debug, message, ##__VA_ARGS__);
-#  define SIHD_LOG_INFO(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::info, message, ##__VA_ARGS__);
-#  define SIHD_LOG_WARN(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::warning, message, ##__VA_ARGS__);
+#  define SIHD_LOG_EMERG(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::emergency, message, ##__VA_ARGS__);
+#  define SIHD_LOG_ALERT(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::alert, message, ##__VA_ARGS__);
+#  define SIHD_LOG_CRIT(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::critical, message, ##__VA_ARGS__);
 #  define SIHD_LOG_ERROR(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::error, message, ##__VA_ARGS__);
-#  define SIHD_LOG_CRITICAL(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::critical, message, ##__VA_ARGS__);
+#  define SIHD_LOG_WARN(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::warning, message, ##__VA_ARGS__);
+#  define SIHD_LOG_NOTICE(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::notice, message, ##__VA_ARGS__);
+#  define SIHD_LOG_INFO(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::info, message, ##__VA_ARGS__);
+#  define SIHD_LOG_DEBUG(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::debug, message, ##__VA_ARGS__);
 
 #  define SIHD_LOGGER extern sihd::util::Logger __sihd_logger__;
 #  define SIHD_NEW_LOGGER(name) sihd::util::Logger __sihd_logger__(name);
@@ -50,11 +53,14 @@ class Logger
         Logger(const std::string & name);
         virtual ~Logger();
 
-        void debug(std::string_view msg);
-        void info(std::string_view msg);
-        void warning(std::string_view msg);
-        void error(std::string_view msg);
+        void emergency(std::string_view msg);
+        void alert(std::string_view msg);
         void critical(std::string_view msg);
+        void error(std::string_view msg);
+        void warning(std::string_view msg);
+        void notice(std::string_view msg);
+        void info(std::string_view msg);
+        void debug(std::string_view msg);
 
         void log(LogLevel level, std::string_view msg);
 

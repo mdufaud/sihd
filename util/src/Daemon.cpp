@@ -24,10 +24,10 @@ Daemon::Daemon(const std::string & name, sihd::util::Node *parent):
     _signals_handled = false;
     _uid = 0;
 #if !defined(__SIHD_WINDOWS__)
-    _working_dir_path = Files::sep_str();
-    _pid_file_path = "/var/lock/" + this->get_name() + "_daemon.lock";
+    _working_dir_path = FS::sep_str();
+    _pid_file_path = "/var/lock/" + this->name() + "_daemon.lock";
 #else
-    _working_dir_path = OS::get_home();
+    _working_dir_path = OS::home_path();
 #endif
     this->add_conf("uid", &Daemon::set_uid);
     this->add_conf("pid_file", &Daemon::set_pid_file_path);
@@ -61,7 +61,7 @@ void    Daemon::_handle_sig(int sig)
 {
     if (sig == SIGTERM || sig == SIGSEGV)
     {
-        SIHD_LOG(info, "Daemon: exit signal received: " << OS::get_signal_name(sig));
+        SIHD_LOG(info, "Daemon: exit signal received: " << OS::signal_name(sig));
         exit(0);
     }
 #if !defined(__SIHD_WINDOWS__)
@@ -72,7 +72,7 @@ void    Daemon::_handle_sig(int sig)
     }
 #else
 #endif
-    SIHD_LOG(info, "Daemon: signal received: " << OS::get_signal_name(sig));
+    SIHD_LOG(info, "Daemon: signal received: " << OS::signal_name(sig));
 }
 
 bool    Daemon::_handle_signals()
@@ -99,7 +99,7 @@ void    Daemon::_remove_pid_file()
     {
         std::string path = _pid_file.path();
         _pid_file.close();
-        Files::remove_file(path);
+        FS::remove_file(path);
     }
 }
 

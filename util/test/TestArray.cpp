@@ -48,41 +48,41 @@ namespace test
     TEST_F(TestArray, test_array_from_string)
     {
         ArrInt arr_int;
-        EXPECT_TRUE(arr_int.from_string("10,20,30", ","));
+        EXPECT_TRUE(arr_int.from_str("10,20,30", ","));
         EXPECT_EQ(arr_int.size(), 3u);
         EXPECT_EQ(arr_int[0], 10);
         EXPECT_EQ(arr_int[1], 20);
         EXPECT_EQ(arr_int[2], 30);
-        SIHD_LOG(debug, arr_int.to_string(','));
+        SIHD_LOG(debug, arr_int.str(','));
 
         ArrInt arr2;
-        EXPECT_TRUE(arr2.from_string(arr_int.to_string(','), ","));
+        EXPECT_TRUE(arr2.from_str(arr_int.str(','), ","));
         EXPECT_TRUE(arr2.is_equal(arr_int));
-        SIHD_LOG(debug, arr2.to_string(','));
+        SIHD_LOG(debug, arr2.str(','));
 
-        EXPECT_FALSE(arr_int.from_string("a,b,c", ","));
+        EXPECT_FALSE(arr_int.from_str("a,b,c", ","));
         EXPECT_EQ(arr_int.size(), 0u);
 
         ArrFloat arr_float;
-        EXPECT_TRUE(arr_float.from_string("123.456,22.1,33.2,44.3", ","));
+        EXPECT_TRUE(arr_float.from_str("123.456,22.1,33.2,44.3", ","));
         EXPECT_EQ(arr_float.size(), 4u);
         EXPECT_FLOAT_EQ(arr_float[0], 123.456);
         EXPECT_FLOAT_EQ(arr_float[1], 22.1);
         EXPECT_FLOAT_EQ(arr_float[2], 33.2);
         EXPECT_FLOAT_EQ(arr_float[3], 44.3);
-        SIHD_LOG(debug, arr_float.to_string(','));
+        SIHD_LOG(debug, arr_float.str(','));
 
         ArrChar arr_str;
-        arr_str.from_string("hello world");
-        EXPECT_EQ(arr_str.to_string(), "hello world");
-        SIHD_LOG(debug, arr_str.to_string());
+        arr_str.from_str("hello world");
+        EXPECT_EQ(arr_str.str(), "hello world");
+        SIHD_LOG(debug, arr_str.str());
     }
 
     TEST_F(TestArray, test_array_iterator_for)
     {
         ArrInt arr = {10, 20, 30, 40};
 
-        SIHD_LOG(debug, "Array to iter: " << arr.to_string(' '));
+        SIHD_LOG(debug, "Array to iter: " << arr.str(' '));
         int val;
         int idx = 0;
         SIHD_LOG(debug, "Forward range loop");
@@ -144,19 +144,19 @@ namespace test
         EXPECT_EQ(*std::max_element(arr_int.crbegin(), arr_int.crend()), 41);
 
         ArrChar arr_str("edcba");
-        SIHD_LOG(debug, "Sort before: " << arr_str.to_string());
+        SIHD_LOG(debug, "Sort before: " << arr_str.str());
         std::sort(arr_str.begin(), arr_str.end());
-        SIHD_LOG(debug, "Sort after: " << arr_str.to_string());
+        SIHD_LOG(debug, "Sort after: " << arr_str.str());
         EXPECT_TRUE(arr_str.is_equal("abcde"));
 
-        SIHD_LOG(debug, "Reverse before: " << arr_str.to_string());
+        SIHD_LOG(debug, "Reverse before: " << arr_str.str());
         std::reverse(arr_str.begin(), arr_str.end());
-        SIHD_LOG(debug, "Reverse before: " << arr_str.to_string());
+        SIHD_LOG(debug, "Reverse before: " << arr_str.str());
         EXPECT_TRUE(arr_str.is_equal("edcba"));
 
-        SIHD_LOG(debug, "Fill before: " << arr_str.to_string());
+        SIHD_LOG(debug, "Fill before: " << arr_str.str());
         std::fill(arr_str.begin(), arr_str.end(), 'a');
-        SIHD_LOG(debug, "Fill after: " << arr_str.to_string());
+        SIHD_LOG(debug, "Fill after: " << arr_str.str());
         EXPECT_TRUE(arr_str.is_equal("aaaaa"));
 
         SIHD_LOG(debug, "Testing empty iterator");
@@ -171,9 +171,9 @@ namespace test
         const int8_t reversed_bytes[] = {4, 3, 2, 1};
         ArrByte arr_byte(bytes, 4);
 
-        SIHD_LOG(debug, "Reverse before: " << arr_byte.to_string(' '));
+        SIHD_LOG(debug, "Reverse before: " << arr_byte.str(' '));
         std::reverse(arr_byte.rbegin(), arr_byte.rend());
-        SIHD_LOG(debug, "Reverse after: " << arr_byte.to_string(' '));
+        SIHD_LOG(debug, "Reverse after: " << arr_byte.str(' '));
         // {4, 3, 2, 1}
         EXPECT_TRUE(arr_byte.is_equal(reversed_bytes, 4));
 
@@ -185,18 +185,18 @@ namespace test
         EXPECT_EQ(it_rm_find, it_remove);
         arr_byte.resize(3);
         // {3, 2, 1}
-        SIHD_LOG(debug, "Remove after: " << arr_byte.to_string(' '));
+        SIHD_LOG(debug, "Remove after: " << arr_byte.str(' '));
 
         SIHD_LOG(debug, "Replace 3 -> 4");
         std::replace(arr_byte.begin(), arr_byte.end(), 3, 4);
         // {4, 2, 1}
-        SIHD_LOG(debug, "Replace after: " << arr_byte.to_string(' '));
+        SIHD_LOG(debug, "Replace after: " << arr_byte.str(' '));
         EXPECT_EQ(arr_byte[0], 4);
 
         SIHD_LOG(debug, "Rotate left by 1");
         std::rotate(arr_byte.begin(), arr_byte.begin() + 1, arr_byte.end());
         // {2, 1, 4}
-        SIHD_LOG(debug, "Rotate after: " << arr_byte.to_string(' '));
+        SIHD_LOG(debug, "Rotate after: " << arr_byte.str(' '));
         EXPECT_EQ(arr_byte[0], 2);
         EXPECT_EQ(arr_byte[1], 1);
         EXPECT_EQ(arr_byte[2], 4);
@@ -207,25 +207,25 @@ namespace test
         const char hw[] = "hello world";
         ArrChar arr(hw);
         EXPECT_EQ(arr.hexdump(','), "68,65,6c,6c,6f,20,77,6f,72,6c,64");
-        EXPECT_EQ(arr.to_string(), "hello world");
+        EXPECT_EQ(arr.str(), "hello world");
         EXPECT_TRUE(arr.is_equal("hello world"));
 
         arr.push_back(" !");
-        EXPECT_EQ(arr.to_string(), "hello world !");
+        EXPECT_EQ(arr.str(), "hello world !");
         EXPECT_TRUE(arr.is_equal("hello world !"));
 
         char *str = strdup("test");
         EXPECT_TRUE(arr.assign(str));
-        EXPECT_EQ(arr.to_string(), "test");
+        EXPECT_EQ(arr.str(), "test");
         EXPECT_TRUE(arr.is_equal("test"));
         free(str);
 
         EXPECT_TRUE(arr.from("derp"));
-        EXPECT_EQ(arr.to_string(), "derp");
+        EXPECT_EQ(arr.str(), "derp");
         EXPECT_TRUE(arr.is_equal("derp"));
 
         EXPECT_TRUE(arr.copy_from("aaaa"));
-        EXPECT_EQ(arr.to_string(), "aaaa");
+        EXPECT_EQ(arr.str(), "aaaa");
         EXPECT_TRUE(arr.is_equal("aaaa"));
     }
 
@@ -330,7 +330,7 @@ namespace test
         EXPECT_EQ(arr[2], 10);
 
         arr.push_front({-10, -5});
-        SIHD_LOG(debug, arr.to_string(' '));
+        SIHD_LOG(debug, arr.str(' '));
         ASSERT_EQ(arr.size(), 5u);
         EXPECT_EQ(arr[0], -10);
         EXPECT_EQ(arr[1], -5);

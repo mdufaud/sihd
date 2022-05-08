@@ -117,31 +117,31 @@ namespace test
 
     TEST_F(TestStr, test_str_time2str)
     {
-        std::string time_str = Str::gmtime_to_string(time::micro(123));
+        std::string time_str = Str::gmtime_str(time::micro(123));
         EXPECT_EQ(time_str, "+123us");
-        time_str = Str::gmtime_to_string(time::milli(1));
+        time_str = Str::gmtime_str(time::milli(1));
         EXPECT_EQ(time_str, "+1ms:0us");
-        time_str = Str::gmtime_to_string(time::sec(12) + time::micro(12));
+        time_str = Str::gmtime_str(time::sec(12) + time::micro(12));
         EXPECT_EQ(time_str, "+12s:0ms:12us");
-        time_str = Str::gmtime_to_string(time::hours(12));
+        time_str = Str::gmtime_str(time::hours(12));
         EXPECT_EQ(time_str, "+12h:0m:0s:0ms:0us");
-        time_str = Str::gmtime_to_string(time::hours(24));
+        time_str = Str::gmtime_str(time::hours(24));
         EXPECT_EQ(time_str, "+1d::0h:0m:0s:0ms:0us");
-        time_str = Str::gmtime_to_string(time::days(24));
+        time_str = Str::gmtime_str(time::days(24));
         EXPECT_EQ(time_str, "+24d::0h:0m:0s:0ms:0us");
-        time_str = Str::gmtime_to_string(time::days(31));
+        time_str = Str::gmtime_str(time::days(31));
         EXPECT_EQ(time_str, "+1m:0d::0h:0m:0s:0ms:0us");
-        time_str = Str::gmtime_to_string(time::days(365));
+        time_str = Str::gmtime_str(time::days(365));
         EXPECT_EQ(time_str, "+1y:0m:0d::0h:0m:0s:0ms:0us");
-        time_str = Str::gmtime_to_string(time::days(365) * 2);
+        time_str = Str::gmtime_str(time::days(365) * 2);
         EXPECT_EQ(time_str, "+2y:0m:0d::0h:0m:0s:0ms:0us");
 
-        time_str = Str::gmtime_to_string(-time::sec(42));
+        time_str = Str::gmtime_str(-time::sec(42));
         EXPECT_EQ(time_str, "-42s:0ms:0us");
 
-        std::string nano_time_str = Str::gmtime_to_string(123, false, true);
+        std::string nano_time_str = Str::gmtime_str(123, false, true);
         EXPECT_EQ(nano_time_str, "+0us:123ns");
-        nano_time_str = Str::gmtime_to_string(-123, true, true);
+        nano_time_str = Str::gmtime_str(-123, true, true);
         EXPECT_EQ(nano_time_str, "-0us:123ns (-123)");
     }
 
@@ -376,12 +376,12 @@ namespace test
     TEST_F(TestStr, test_str_hexdump)
     {
         std::string s = "hello world - how are you";
-        SIHD_LOG(debug, Str::addr_to_string(s.data()));
-        EXPECT_EQ(Str::addr_to_string(0x0, 5), "0x00000");
-        EXPECT_EQ(Str::num_to_string(312, 10), "312");
-        EXPECT_EQ(Str::num_to_string(16, 16), "10");
-        EXPECT_EQ(Str::num_to_string(15, 16), "f");
-        EXPECT_EQ(Str::num_to_string(255, 16), "ff");
+        SIHD_LOG(debug, Str::addr_str(s.data()));
+        EXPECT_EQ(Str::addr_str(0x0, 5), "0x00000");
+        EXPECT_EQ(Str::num_str(312, 10), "312");
+        EXPECT_EQ(Str::num_str(16, 16), "10");
+        EXPECT_EQ(Str::num_str(15, 16), "f");
+        EXPECT_EQ(Str::num_str(255, 16), "ff");
         EXPECT_EQ(Str::hexdump(s.data(), s.length(), ','), "68,65,6c,6c,6f,20,77,6f,72,6c,64,20,2d,20,68,6f,77,20,61,72,65,20,79,6f,75");
         std::string dump = Str::hexdump_fmt(s.data(), s.length());
         std::cout << dump << std::endl;

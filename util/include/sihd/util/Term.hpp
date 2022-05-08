@@ -26,39 +26,64 @@ class Term
             static const char *BLINK;
             static const char *BLINK2;
             static const char *SELECTED;
+
             static const char *BLACK;
             static const char *RED;
             static const char *GREEN;
             static const char *YELLOW;
             static const char *BLUE;
             static const char *VIOLET;
-            static const char *BEIGE;
+            static const char *CYAN;
             static const char *WHITE;
             static const char *GREY;
+
             static const char *BLACKBG;
             static const char *REDBG;
             static const char *GREENBG;
             static const char *YELLOWBG;
             static const char *BLUEBG;
             static const char *VIOLETBG;
-            static const char *BEIGEBG;
+            static const char *CYANBG;
             static const char *WHITEBG;
             static const char *GREYBG;
+
             static const char *RED2;
             static const char *GREEN2;
             static const char *YELLOW2;
             static const char *BLUE2;
             static const char *VIOLET2;
-            static const char *BEIGE2;
+            static const char *CYAN2;
             static const char *WHITE2;
+
             static const char *REDBG2;
             static const char *GREENBG2;
             static const char *YELLOWBG2;
             static const char *BLUEBG2;
             static const char *VIOLETBG2;
-            static const char *BEIGEBG2;
+            static const char *CYANBG2;
             static const char *WHITEBG2;
+
             static const char *ENDC;
+
+            // clears from cursor until end of screen
+            static const char *CLEAR_SCREEN_END;
+            // clears from cursor to beginning of screen
+            static const char *CLEAR_SCREEN_BEG;
+            // clears entire screen
+            static const char *CLEAR_SCREEN;
+
+            // clears from cursor to end of line
+            static const char *CLEAR_LINE_END;
+            // clears from cursor to start of line
+            static const char *CLEAR_LINE_BEG;
+            // clears entire line
+            static const char *CLEAR_LINE;
+
+            static const char *SAVE_CURSOR;
+            static const char *RESTORE_CURSOR;
+
+            static const char *SCROLL_UP;
+            static const char *SCROLL_DOWN;
         };
 
         static std::string fmt(std::string_view str, const char *attr)
@@ -81,10 +106,21 @@ class Term
 
         static std::string white_bg(std::string_view str) { return Term::fmt2(str, Attr::WHITEBG, Attr::BLACK); }
 
+        static std::string move_cursor_up(int n);
+        static std::string move_cursor_down(int n);
+        static std::string move_cursor_right(int n);
+        static std::string move_cursor_left(int n);
+
+        // moves cursor to beginning of line n lines down
+        static std::string next_line(int n);
+        // moves cursor to beginning of line n lines up
+        static std::string prev_line(int n);
+
+        static std::string set_pos(int line, int col);
+        static std::string set_col(int n);
 
     private:
-        Term();
-        virtual ~Term() {};
+        ~Term() {};
 };
 
 }

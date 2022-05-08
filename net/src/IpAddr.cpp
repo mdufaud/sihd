@@ -118,14 +118,14 @@ bool    IpAddr::from(const sockaddr & addr, size_t addr_len)
     this->clear();
     if (IpAddr::to_sockaddr_in6(&addr_in6, addr, addr_len))
     {
-        _host = IpAddr::ip_to_string(addr_in6);
+        _host = IpAddr::ip_str(addr_in6);
         _port = ntohs(addr_in6.sin6_port);
         this->_add_ip(addr_in6, 0, IPPROTO_IP);
         this->set_ipv6_preference(true);
     }
     else if (IpAddr::to_sockaddr_in(&addr_in, addr, addr_len))
     {
-        _host = IpAddr::ip_to_string(addr_in);
+        _host = IpAddr::ip_str(addr_in);
         _port = ntohs(addr_in.sin_port);
         this->_add_ip(addr_in, 0, IPPROTO_IP);
     }
@@ -135,7 +135,7 @@ bool    IpAddr::from(const sockaddr & addr, size_t addr_len)
 bool    IpAddr::from(const sockaddr_in & addr_in)
 {
     this->clear();
-    _host = IpAddr::ip_to_string(addr_in);
+    _host = IpAddr::ip_str(addr_in);
     _port = ntohs(addr_in.sin_port);
     this->_add_ip(addr_in, 0, IPPROTO_IP);
     return true;
@@ -144,7 +144,7 @@ bool    IpAddr::from(const sockaddr_in & addr_in)
 bool    IpAddr::from(const sockaddr_in6 & addr_in6)
 {
     this->clear();
-    _host = IpAddr::ip_to_string(addr_in6);
+    _host = IpAddr::ip_str(addr_in6);
     _port = ntohs(addr_in6.sin6_port);
     this->_add_ip(addr_in6, 0, IPPROTO_IP);
     this->set_ipv6_preference(true);
@@ -193,12 +193,12 @@ void    IpAddr::_fill_subnet()
 std::string IpAddr::dump_subnet() const
 {
     std::stringstream ss;
-    ss << "network id: " << IpAddr::ip_to_string(_subnet.netid) << std::endl
-        << "wildcard: " << IpAddr::ip_to_string(_subnet.wildcard) << std::endl
-        << "netmask: " << IpAddr::ip_to_string(_subnet.netmask) << std::endl
-        << "host min: " << IpAddr::ip_to_string(_subnet.hostmin) << std::endl
-        << "host max: " << IpAddr::ip_to_string(_subnet.hostmax) << std::endl
-        << "broadcast: " << IpAddr::ip_to_string(_subnet.broadcast) << std::endl
+    ss << "network id: " << IpAddr::ip_str(_subnet.netid) << std::endl
+        << "wildcard: " << IpAddr::ip_str(_subnet.wildcard) << std::endl
+        << "netmask: " << IpAddr::ip_str(_subnet.netmask) << std::endl
+        << "host min: " << IpAddr::ip_str(_subnet.hostmin) << std::endl
+        << "host max: " << IpAddr::ip_str(_subnet.hostmax) << std::endl
+        << "broadcast: " << IpAddr::ip_str(_subnet.broadcast) << std::endl
         << "number of hosts: " << _subnet.hosts << std::endl;
     return ss.str();
 }
@@ -216,7 +216,7 @@ bool    IpAddr::_netmask_from_str(std::string_view mask_value_str)
         SIHD_LOG(error, "IpAddr: not a subnet mask: " << mask_value_str);
         return false;
     }
-    uint32_t actual_mask = IpAddr::value_to_netmask(mask_value);
+    uint32_t actual_mask = IpAddr::to_netmask(mask_value);
     if (IpAddr::is_valid_netmask(htonl(actual_mask)) == false)
     {
         SIHD_LOG(error, "IpAddr: not a valid mask: " << mask_value_str);
@@ -347,7 +347,7 @@ bool    IpAddr::to_sockaddr_in6(sockaddr_in6 *addr, std::string_view ip, int por
     return true;
 }
 
-IpAddr  IpAddr::get_localhost(int port, bool ipv6)
+IpAddr  IpAddr::localhost(int port, bool ipv6)
 {
     return {ipv6 ? "::1" : "127.0.0.1", port, false};
 }
@@ -391,22 +391,44 @@ bool    IpAddr::is_valid_ip(std::string_view ip)
     return IpAddr::is_valid_ipv4(ip) || IpAddr::is_valid_ipv6(ip);
 }
 
-std::string     IpAddr::ip_to_string(const sockaddr_in & addr_in)
+std::string     IpAddr::ipv4_str(const sockaddr & addr)
 {
-    return IpAddr::ip_to_string(addr_in.sin_addr);
+    return IpAddr::ip_str(reinterpret_cast<const sockaddr_in &>(addr));
 }
 
-std::string     IpAddr::ip_to_string(const sockaddr_in6 & addr_in)
+std::string     IpAddr::ipv6_str(const sockaddr & addr)
 {
-    return IpAddr::ip_to_string(addr_in.sin6_addr);
+    return IpAddr::ip_str(reinterpret_cast<const sockaddr_in6 &>(addr));
 }
 
-std::string     IpAddr::ip_to_string(const in_addr & addr_in)
+std::string     IpAddr::ip_str(const sockaddr & addr)
+{
+    sockaddr_in addr_in;
+    sockaddr_in6 addr_in6;
+
+    if (IpAddr::to_sockaddr_in6(&addr_in6, addr, 0))
+        return IpAddr::ip_str(addr_in);
+    else if (IpAddr::to_sockaddr_in(&addr_in, addr, 0))
+        return IpAddr::ip_str(addr_in6);
+    return "";
+}
+
+std::string     IpAddr::ip_str(const sockaddr_in & addr_in)
+{
+    return IpAddr::ip_str(addr_in.sin_addr);
+}
+
+std::string     IpAddr::ip_str(const sockaddr_in6 & addr_in)
+{
+    return IpAddr::ip_str(addr_in.sin6_addr);
+}
+
+std::string     IpAddr::ip_str(const in_addr & addr_in)
 {
     return inet_ntop(AF_INET, (void *)(&addr_in), _ip_buffer, INET_ADDRSTRLEN);
 }
 
-std::string     IpAddr::ip_to_string(const in6_addr & addr_in)
+std::string     IpAddr::ip_str(const in6_addr & addr_in)
 {
     return inet_ntop(AF_INET6, (void *)(&addr_in), _ip_buffer, INET6_ADDRSTRLEN);
 }
@@ -441,7 +463,7 @@ void    IpAddr::fill_sockaddr_broadcast(struct sockaddr_in6 & dst, struct sockad
     }
 }
 
-uint32_t    IpAddr::value_to_netmask(uint32_t value)
+uint32_t    IpAddr::to_netmask(uint32_t value)
 {
     return ntohl(0xffffffff << (32 - value));
 }
@@ -584,7 +606,12 @@ bool    IpAddr::get_sockaddr_in6(sockaddr_in6 *addr, int socktype, int protocol)
     return info != nullptr;
 }
 
-std::string IpAddr::get_ip(int socktype, int protocol, bool ipv6) const
+std::string IpAddr::matching_ip_str(std::string_view socktype, std::string_view protocol, bool ipv6) const
+{
+    return this->matching_ip_str(Ip::socktype(socktype), Ip::protocol(protocol), ipv6);
+}
+
+std::string IpAddr::matching_ip_str(int socktype, int protocol, bool ipv6) const
 {
     const IpAddr::IpEntry *info = this->_get_ip_info(socktype, protocol, ipv6);
     if (info != nullptr)

@@ -21,7 +21,7 @@ class Message:  public Node,
         virtual ~Message();
 
         // IMessageField
-        virtual size_t get_field_byte_size() override { return _total_size; }
+        virtual size_t field_byte_size() const override { return _total_size; }
         virtual bool assign_field_buffer(uint8_t *buffer) override;
         virtual bool field_read_from(const uint8_t *buffer, size_t size) override;
         virtual bool field_write_to(uint8_t *buffer, size_t size) override;
@@ -34,7 +34,7 @@ class Message:  public Node,
         template <typename T>
         bool add_field(const std::string & name, size_t size = 1)
         {
-            return this->add_field(name, Types::to_type<T>(), size);
+            return this->add_field(name, Types::type<T>(), size);
         }
 
         virtual bool add_field(const std::string & name, Type dt, size_t size = 1);
@@ -50,7 +50,7 @@ class Message:  public Node,
         virtual bool add_field(const std::string & name, IMessageField *field);
 
         // Named
-        virtual std::string get_description() const override
+        virtual std::string description() const override
         {
             return Str::format("%lu bytes", _total_size);
         }

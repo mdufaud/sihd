@@ -49,12 +49,6 @@ bool    TcpClient::connect(const IpAddr & addr)
     return _connected;
 }
 
-bool    TcpClient::connect(std::string_view ip, int port)
-{
-    IpAddr addr(ip, port, true);
-    return this->connect(addr);
-}
-
 bool    TcpClient::connect(std::string_view path)
 {
     _connected = _socket.connect_unix(path);
@@ -64,12 +58,6 @@ bool    TcpClient::connect(std::string_view path)
 bool    TcpClient::open_and_connect(const IpAddr & ip)
 {
     return this->open_socket(ip.prefers_ipv6()) && this->connect(ip);
-}
-
-bool    TcpClient::open_and_connect(std::string_view ip, int port)
-{
-    IpAddr addr(ip, port, true);
-    return this->open_socket(addr.prefers_ipv6()) && this->connect(addr);
 }
 
 bool    TcpClient::open_unix_and_connect(std::string_view path)
@@ -142,29 +130,19 @@ ssize_t TcpClient::receive(void *buf, size_t len)
     return ret;
 }
 
-ssize_t TcpClient::send(const void *data, size_t len)
+ssize_t TcpClient::send(sihd::util::ArrViewChar view)
 {
-    return _socket.send(data, len);
+    return _socket.send(view);
 }
 
-bool    TcpClient::send_all(const void *data, size_t len)
+bool    TcpClient::send_all(sihd::util::ArrViewChar view)
 {
-    return _socket.send_all(data, len);
-}
-
-ssize_t TcpClient::send(const sihd::util::IArray & arr)
-{
-    return _socket.send(arr);
-}
-
-bool    TcpClient::send_all(const sihd::util::IArray & arr)
-{
-    return _socket.send_all(arr);
+    return _socket.send_all(view);
 }
 
 void    TcpClient::handle(sihd::util::Poll *poll)
 {
-    auto events = poll->get_events();
+    auto events = poll->events();
     if (events.size() > 0)
     {
         auto event = events[0];

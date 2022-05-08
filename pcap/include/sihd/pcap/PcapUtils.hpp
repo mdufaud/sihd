@@ -16,26 +16,25 @@ class PcapUtils
 
         static bool lookupnet(std::string_view dev, bpf_u_int32 *ip, bpf_u_int32 *mask);
 
-        static std::string get_status(int code);
+        static std::string status_str(int code);
         static std::string version();
 
         static bool is_timestamp_type(int ts);
-        static std::string timestamp_type_to_string(int ts);
-        static std::string timestamp_type_to_desc(int dtl);
-        static int string_to_timestamp_type(std::string_view dtl);
+        static std::string timestamp_type_str(int ts);
+        static std::string timestamp_type_desc(int dtl);
+        static int timestamp_type(std::string_view dtl);
 
         static bool is_datalink(int dtl);
-        static std::string datalink_to_string(int dtl);
-        static std::string datalink_to_desc(int dtl);
-        static int string_to_datalink(std::string_view dtl);
+        static std::string datalink_str(int dtl);
+        static std::string datalink_desc(int dtl);
+        static int datalink(std::string_view dtl);
 
     protected:
 
     private:
-        static bool _is_init;
-
-        PcapUtils() {};
         ~PcapUtils() {};
+
+        static bool _is_init;
 };
 
 }

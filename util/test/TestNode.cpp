@@ -46,10 +46,10 @@ namespace test
         // Parent - child
         Named *child1 = root.find("child1");
         ASSERT_NE(child1, nullptr);
-        EXPECT_EQ(child1->get_name(), "child1");
+        EXPECT_EQ(child1->name(), "child1");
         EXPECT_EQ(root.get_child("child3"), child3);
-        EXPECT_EQ(parent->get_parent(), &root);
-        EXPECT_EQ(child1->get_root(), &root);
+        EXPECT_EQ(parent->parent(), &root);
+        EXPECT_EQ(child1->root(), &root);
 
         // Node casting
         EXPECT_EQ(Node::to_node(root.get_child("parent")), parent);
@@ -58,7 +58,7 @@ namespace test
         // Find
         Named *found = root.find("parent.cousin1");
         ASSERT_NE(found, nullptr);
-        EXPECT_EQ(found->get_name(), "cousin1");
+        EXPECT_EQ(found->name(), "cousin1");
         EXPECT_EQ(found, parent->find("cousin1"));
         EXPECT_EQ(found, parent->find(".cousin1"));
         EXPECT_EQ(found, root.find(".parent.cousin1"));
@@ -67,7 +67,7 @@ namespace test
         EXPECT_EQ(&root, child3->find_node(".."));
 
         // Root
-        EXPECT_EQ(parent->get_root(), &root);
+        EXPECT_EQ(parent->root(), &root);
         // From root
         EXPECT_EQ(cousin3, parent->find("/parent.cousin3"));
         EXPECT_EQ(cousin3, root.find("parent.cousin3"));

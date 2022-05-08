@@ -10,7 +10,7 @@ arr_char.push_back("d")
 arr_char.push_back(("e", "f"))
 arr_char.push_back(" !")
 
-assert(arr_char.to_string() == "abcdef !")
+assert(arr_char.str() == "abcdef !")
 
 arr_int = sihd.util.ArrInt([1, 2, 3])
 assert(len(arr_int) == 3)

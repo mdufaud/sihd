@@ -25,12 +25,7 @@ class IArrayView
 
         virtual bool is_same_type(const IArrayView & arr) const = 0;
         virtual Type data_type() const = 0;
-        virtual const char *data_type_to_string() const = 0;
-
-        // modifiers
-
-        virtual void remove_prefix(size_t size) = 0;
-        virtual void remove_suffix(size_t size) = 0;
+        virtual const char *data_type_str() const = 0;
 
         // comparison
 
@@ -44,8 +39,8 @@ class IArrayView
         // views
 
         virtual std::string hexdump(char delimiter = ' ') const = 0;
-        virtual std::string to_string() const = 0;
-        virtual std::string to_string(char delimiter) const = 0;
+        virtual std::string str() const = 0;
+        virtual std::string str(char delimiter) const = 0;
 
         virtual std::string cpp_str() const = 0;
         virtual std::string_view cpp_str_view() const = 0;

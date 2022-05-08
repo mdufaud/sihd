@@ -32,8 +32,8 @@ namespace test
     TEST_F(TestNamed, test_named_util)
     {
         Named named("obj");
-        EXPECT_EQ(named.get_name(), "obj");
-        EXPECT_EQ(named.get_parent(), nullptr);
+        EXPECT_EQ(named.name(), "obj");
+        EXPECT_EQ(named.parent(), nullptr);
     }
 
     TEST_F(TestNamed, test_named_find)

@@ -1,4 +1,4 @@
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/OS.hpp>
@@ -21,20 +21,20 @@ namespace sihd::util
 SIHD_LOGGER;
 
 # if defined(__SIHD_WINDOWS__)
-char Files::sep = '\\';
+char FS::sep = '\\';
 # else
-char Files::sep = '/';
+char FS::sep = '/';
 # endif
 
 // stat
 
-bool    Files::exists(std::string_view path)
+bool    FS::exists(std::string_view path)
 {
     struct stat s;
     return OS::stat(path.data(), &s) == 0;
 }
 
-bool    Files::is_file(std::string_view path)
+bool    FS::is_file(std::string_view path)
 {
     struct stat s;
     if (OS::stat(path.data(), &s) == 0)
@@ -42,7 +42,7 @@ bool    Files::is_file(std::string_view path)
     return false;
 }
 
-bool    Files::is_dir(std::string_view path)
+bool    FS::is_dir(std::string_view path)
 {
     struct stat s;
     if (OS::stat(path.data(), &s) == 0)
@@ -50,7 +50,7 @@ bool    Files::is_dir(std::string_view path)
     return false;
 }
 
-size_t    Files::get_filesize(std::string_view path)
+size_t    FS::filesize(std::string_view path)
 {
     struct stat s;
     if (OS::stat(path.data(), &s) == 0)
@@ -60,27 +60,27 @@ size_t    Files::get_filesize(std::string_view path)
 
 // directories
 
-bool    Files::remove_directory(std::string_view path)
+bool    FS::remove_directory(std::string_view path)
 {
     return rmdir(path.data()) == 0;
 }
 
-bool    Files::remove_directories(std::string_view path)
+bool    FS::remove_directories(std::string_view path)
 {
     bool ret = true;
-    std::vector<std::string> children = Files::get_recursive_children(path);
+    std::vector<std::string> children = FS::recursive_children(path);
     for (auto it = children.rbegin(); it != children.rend(); ++it)
     {
         // remove maximum of entries
-        if (Files::is_dir(*it))
+        if (FS::is_dir(*it))
         {
-            if (Files::remove_directory(*it) == false)
+            if (FS::remove_directory(*it) == false)
             {
                 SIHD_LOG(warning, "Files: cannot remove directory: " << *it);
                 ret = false;
             }
         }
-        else if (Files::remove_file(*it) == false)
+        else if (FS::remove_file(*it) == false)
         {
             SIHD_LOG(warning, "Files: cannot remove file: " << *it);
             ret = false;
@@ -89,9 +89,9 @@ bool    Files::remove_directories(std::string_view path)
     return ret;
 }
 
-bool    Files::make_directory(std::string_view path, mode_t mode)
+bool    FS::make_directory(std::string_view path, mode_t mode)
 {
-    if (Files::is_dir(path))
+    if (FS::is_dir(path))
         return true;
 # if defined(__SIHD_WINDOWS__)
     (void)mode;
@@ -101,21 +101,21 @@ bool    Files::make_directory(std::string_view path, mode_t mode)
 # endif
 }
 
-bool    Files::make_directories(std::string_view path, mode_t mode)
+bool    FS::make_directories(std::string_view path, mode_t mode)
 {
     bool ret = true;
     if (!path.empty())
     {
-        std::string sep(1, Files::sep);
+        std::string sep(1, FS::sep);
         Splitter splitter(sep);
         std::vector<std::string> dirnames = splitter.split(path);
-        std::string current_path = path[0] == Files::sep ? sep : "";
+        std::string current_path = path[0] == FS::sep ? sep : "";
         for (const auto & dirname: dirnames)
         {
-            current_path = Files::combine(current_path, dirname);
-            if (Files::is_dir(current_path))
+            current_path = FS::combine(current_path, dirname);
+            if (FS::is_dir(current_path))
                 continue ;
-            ret = Files::make_directory(current_path, mode);
+            ret = FS::make_directory(current_path, mode);
             if (ret == false)
                 break ;
         }
@@ -127,7 +127,7 @@ bool    Files::make_directories(std::string_view path, mode_t mode)
 
 // TODO cannot link filesystem with mingw for the life of me
 
-std::vector<std::string>    Files::get_children(std::string_view path)
+std::vector<std::string>    FS::children(std::string_view path)
 {
     std::vector<std::string> ret;
     (void)path;
@@ -138,7 +138,7 @@ std::vector<std::string>    Files::get_children(std::string_view path)
     return ret;
 }
 
-std::vector<std::string>    Files::get_recursive_children(std::string_view path)
+std::vector<std::string>    FS::recursive_children(std::string_view path)
 {
     std::vector<std::string> ret;
     (void)path;
@@ -151,7 +151,7 @@ std::vector<std::string>    Files::get_recursive_children(std::string_view path)
 
 #else
 
-void    Files::_get_recursive_children(std::string_view path, std::vector<std::string> & children)
+void    FS::_get_recursive_children(std::string_view path, std::vector<std::string> & children)
 {
     DIR *dir_ptr;
     struct dirent *dirent;
@@ -161,11 +161,11 @@ void    Files::_get_recursive_children(std::string_view path, std::vector<std::s
         {
             if (strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
                 continue ;
-            std::string childpath = Files::_combine(path, dirent->d_name);
+            std::string childpath = FS::_combine(path, dirent->d_name);
             if (dirent->d_type & DT_DIR)
             {
-                children.push_back(childpath + Files::sep);
-                Files::_get_recursive_children(childpath, children);
+                children.push_back(childpath + FS::sep);
+                FS::_get_recursive_children(childpath, children);
             }
             else
             {
@@ -176,14 +176,14 @@ void    Files::_get_recursive_children(std::string_view path, std::vector<std::s
     }
 }
 
-std::vector<std::string>    Files::get_recursive_children(std::string_view path)
+std::vector<std::string>    FS::recursive_children(std::string_view path)
 {
     std::vector<std::string> ret;
-    Files::_get_recursive_children(path, ret);
+    FS::_get_recursive_children(path, ret);
     return ret;
 }
 
-std::vector<std::string>    Files::get_children(std::string_view path)
+std::vector<std::string>    FS::children(std::string_view path)
 {
     std::vector<std::string> ret;
     DIR *dir_ptr;
@@ -195,7 +195,7 @@ std::vector<std::string>    Files::get_children(std::string_view path)
             if (strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
                 continue ;
             if (dirent->d_type & DT_DIR)
-                ret.push_back(std::string(dirent->d_name) + Files::sep);
+                ret.push_back(std::string(dirent->d_name) + FS::sep);
             else
                 ret.push_back(dirent->d_name);
         }
@@ -208,9 +208,9 @@ std::vector<std::string>    Files::get_children(std::string_view path)
 
 // path manipulation
 
-std::string Files::normalize(std::string_view path)
+std::string FS::normalize(std::string_view path)
 {
-    std::string sep(1, Files::sep);
+    std::string sep(1, FS::sep);
     Splitter splitter(sep);
     std::vector<std::string> lst;
     std::vector<std::string> splits = splitter.split(path);
@@ -222,41 +222,41 @@ std::string Files::normalize(std::string_view path)
         else
             lst.push_back(split);
     }
-    bool start_with_slash = path.size() > 0 && path[0] == Files::sep;
+    bool start_with_slash = path.size() > 0 && path[0] == FS::sep;
     std::string ret = Str::join(lst, sep);
     if (start_with_slash)
-        ret.insert(0, 1, Files::sep);
+        ret.insert(0, 1, FS::sep);
     return ret;
 }
 
-void    Files::trim_in_path(std::string & path, std::string_view to_remove)
+void    FS::trim_in_path(std::string & path, std::string_view to_remove)
 {
     size_t idx = path.find(to_remove);
     if (idx == std::string::npos)
         return ;
     idx = idx + to_remove.size();
-    if (path[idx] == Files::sep)
+    if (path[idx] == FS::sep)
         ++idx;
     path = path.substr(idx, path.size());
 }
 
-void    Files::trim_in_path(std::vector<std::string> & list, std::string_view to_remove)
+void    FS::trim_in_path(std::vector<std::string> & list, std::string_view to_remove)
 {
     for (auto & path: list)
-        Files::trim_in_path(path, to_remove);
+        FS::trim_in_path(path, to_remove);
 }
 
-std::string    Files::trim_path(std::string_view path, std::string_view to_remove)
+std::string    FS::trim_path(std::string_view path, std::string_view to_remove)
 {
     std::string ret(path.data(), path.size());
-    Files::trim_in_path(ret, to_remove);
+    FS::trim_in_path(ret, to_remove);
     return ret;
 }
 
-std::string     Files::get_extension(std::string_view path)
+std::string     FS::extension(std::string_view path)
 {
     std::string ret;
-    size_t slash_idx = path.find_last_of(Files::sep);
+    size_t slash_idx = path.find_last_of(FS::sep);
     if (slash_idx == std::string::npos)
         slash_idx = 0;
     size_t first_dot_idx = path.find_first_of('.', slash_idx);
@@ -265,27 +265,27 @@ std::string     Files::get_extension(std::string_view path)
     return ret;
 }
 
-std::string     Files::get_filename(std::string_view path)
+std::string     FS::filename(std::string_view path)
 {
-    size_t idx = path.find_last_of(Files::sep);
+    size_t idx = path.find_last_of(FS::sep);
     if (idx == std::string::npos)
         return std::string(path.data(), path.size());
     std::string_view filename = path.substr(idx + 1);
     return std::string(filename.data(), filename.size());
 }
 
-std::string     Files::get_parent(std::string_view path)
+std::string     FS::parent(std::string_view path)
 {
     // removing extra slashes: /path/to/dir///// -> /path/to/dir
     size_t i = path.size() == 0 ? 0 : path.size() - 1;
-    while (i > 0 && path[i] == Files::sep)
+    while (i > 0 && path[i] == FS::sep)
         --i;
     // removing trailing slashes: /path/to/////dir -> /path/to
     std::string ret;
-    size_t idx = path.find_last_of(Files::sep, i);
+    size_t idx = path.find_last_of(FS::sep, i);
     while (idx != std::string::npos && idx > 0)
     {
-        if (path[idx - 1] != Files::sep)
+        if (path[idx - 1] != FS::sep)
         {
             ret = path.substr(0, idx);
             break ;
@@ -295,60 +295,60 @@ std::string     Files::get_parent(std::string_view path)
     return ret;
 }
 
-std::string  Files::combine(std::initializer_list<std::string_view> list)
+std::string  FS::combine(std::initializer_list<std::string_view> list)
 {
     std::string ret;
 
     for (const std::string_view & path: list)
     {
-        ret = Files::combine(ret, path);
+        ret = FS::combine(ret, path);
     }
     return ret;
 }
 
-std::string  Files::combine(const std::vector<std::string> & list)
+std::string  FS::combine(const std::vector<std::string> & list)
 {
     std::string ret;
 
     for (const std::string & path: list)
     {
-        ret = Files::combine(ret, path);
+        ret = FS::combine(ret, path);
     }
     return ret;
 }
 
-std::string Files::combine(std::string_view path1, std::string_view path2)
+std::string FS::combine(std::string_view path1, std::string_view path2)
 {
-    return Files::_combine(path1, path2);
+    return FS::_combine(path1, path2);
 }
 
-std::string Files::_combine(std::string_view path1, std::string_view path2)
+std::string FS::_combine(std::string_view path1, std::string_view path2)
 {
     if (path1.empty())
         return std::string(path2.data(), path2.size());
-    if (path1[path1.size() - 1] == Files::sep)
+    if (path1[path1.size() - 1] == FS::sep)
         return std::string(path1.data(), path1.size()) + path2.data();
     std::string ret;
     ret.reserve(path1.size() + 1 + path2.size());
     ret.append(path1);
-    ret.push_back(Files::sep);
+    ret.push_back(FS::sep);
     ret.append(path2);
     return ret;
 }
 
-bool    Files::is_absolute(std::string_view path)
+bool    FS::is_absolute(std::string_view path)
 {
 #if defined(__SIHD_WINDOWS__)
-    return (path.length() > 1 && path[0] == Files::sep && path[1] == Files::sep)
-            || (path.length() > 2 && path[1] == ':' && path[2] == Files::sep);
+    return (path.length() > 1 && path[0] == FS::sep && path[1] == FS::sep)
+            || (path.length() > 2 && path[1] == ':' && path[2] == FS::sep);
 #else
-    return path.length() > 0 && path[0] == Files::sep;
+    return path.length() > 0 && path[0] == FS::sep;
 #endif
 }
 
 // files
 
-bool    Files::are_equals(std::string_view path1, std::string_view path2)
+bool    FS::are_equals(std::string_view path1, std::string_view path2)
 {
     File file1(path1, "rb");
     File file2(path2, "rb");
@@ -369,30 +369,30 @@ bool    Files::are_equals(std::string_view path1, std::string_view path2)
     return true;
 }
 
-bool    Files::remove_file(std::string_view path)
+bool    FS::remove_file(std::string_view path)
 {
     return remove(path.data()) == 0;
 }
 
-bool    Files::write(std::string_view path, std::string_view content, bool append)
+bool    FS::write(std::string_view path, ArrViewChar view, bool append)
 {
     File file(path, append ? "a" : "w");
 
     if (file.is_open())
-        return file.write(content) == (ssize_t)content.size();
+        return file.write(view) == (ssize_t)view.byte_size();
     return false;
 }
 
-bool    Files::write_binary(std::string_view path, const char *data, size_t size, bool append)
+bool    FS::write_binary(std::string_view path, ArrViewChar view, bool append)
 {
     File file(path, append ? "ab" : "wb");
 
     if (file.is_open())
-        return file.write(data, size) == (ssize_t)size;
+        return file.write(view) == (ssize_t)view.byte_size();
     return -1;
 }
 
-std::optional<std::string>  Files::read(std::string_view path, size_t size)
+std::optional<std::string>  FS::read(std::string_view path, size_t size)
 {
     File file(path, "r");
 
@@ -409,7 +409,7 @@ std::optional<std::string>  Files::read(std::string_view path, size_t size)
     return std::nullopt;
 }
 
-std::optional<std::string>  Files::read_all(std::string_view path)
+std::optional<std::string>  FS::read_all(std::string_view path)
 {
     std::ifstream file(path.data(), std::ifstream::in);
     if (file.is_open() && file.good())
@@ -422,7 +422,7 @@ std::optional<std::string>  Files::read_all(std::string_view path)
     return std::nullopt;
 }
 
-ssize_t Files::read_binary(std::string_view path, char *buf, size_t size)
+ssize_t FS::read_binary(std::string_view path, char *buf, size_t size)
 {
     File file(path, "rb");
 

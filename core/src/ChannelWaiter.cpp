@@ -49,7 +49,7 @@ bool    ChannelWaiter::set_channel(Channel *channel)
     this->clear_channel();
     if (channel->add_observer(this) == false)
     {
-        SIHD_LOG(error, "ChannelWaiter: could not add observer to channel: " << channel->get_full_name());
+        SIHD_LOG(error, "ChannelWaiter: could not add observer to channel: " << channel->full_name());
         return false;
     }
     _channel = channel;

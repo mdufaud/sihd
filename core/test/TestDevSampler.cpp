@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
 #include <sihd/util/Handler.hpp>
@@ -20,14 +20,14 @@ namespace test
             TestDevSampler()
             {
                 char *test_path = getenv("TEST_PATH");
-                _base_test_dir = sihd::util::Files::combine({
+                _base_test_dir = sihd::util::FS::combine({
                     test_path == nullptr ? "unit_test" : test_path,
                     "core",
                     "devsampler"
                 });
-                _cwd = sihd::util::OS::get_cwd();
+                _cwd = sihd::util::OS::cwd();
                 sihd::util::LoggerManager::basic();
-                sihd::util::Files::make_directories(_base_test_dir);
+                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestDevSampler()
@@ -83,21 +83,21 @@ namespace test
         ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
         ASSERT_TRUE(in_channel->write(ArrInt({3, 4, 5})));
         waiter.wait_for(sihd::util::time::sec(1));
-        EXPECT_EQ(out_channel->array()->to_string(','), "3,4,5");
+        EXPECT_EQ(out_channel->array()->str(','), "3,4,5");
         EXPECT_EQ(notif, 2);
 
         ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
         ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
         ASSERT_TRUE(in_channel->write(ArrInt({4, 5, 6})));
         waiter.wait_for(sihd::util::time::sec(1));
-        EXPECT_EQ(out_channel->array()->to_string(','), "4,5,6");
+        EXPECT_EQ(out_channel->array()->str(','), "4,5,6");
         EXPECT_EQ(notif, 3);
 
         ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
         ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
         ASSERT_TRUE(in_channel->write(ArrInt({5, 6, 7})));
         waiter.wait_for(sihd::util::time::sec(1));
-        EXPECT_EQ(out_channel->array()->to_string(','), "5,6,7");
+        EXPECT_EQ(out_channel->array()->str(','), "5,6,7");
         EXPECT_EQ(notif, 4);
     }
 

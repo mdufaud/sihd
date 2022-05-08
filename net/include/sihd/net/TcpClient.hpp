@@ -32,11 +32,9 @@ class TcpClient:    public INetReceiver,
         bool socket_opened() { return _socket.is_open(); }
 
         bool connect(const IpAddr & addr);
-        bool connect(std::string_view ip, int port);
         bool connect(std::string_view path);
 
         bool open_and_connect(const IpAddr & ip);
-        bool open_and_connect(std::string_view ip, int port);
         bool open_unix_and_connect(std::string_view path);
 
         bool close();
@@ -60,11 +58,8 @@ class TcpClient:    public INetReceiver,
 
         ssize_t receive(void *buf, size_t len);
 
-        ssize_t send(const void *data, size_t len);
-        bool send_all(const void *data, size_t len);
-
-        ssize_t send(const sihd::util::IArray & arr);
-        bool send_all(const sihd::util::IArray & arr);
+        ssize_t send(sihd::util::ArrViewChar view);
+        bool send_all(sihd::util::ArrViewChar view);
 
         // to set blocking/broadcast
         const Socket & socket() const { return _socket; }

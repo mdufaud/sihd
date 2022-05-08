@@ -19,7 +19,7 @@ sched:add_task({
 
 sihd.util.log.info("testing single Scheduler with processing to mess with stack")
 
-local before = sched:get_clock():now()
+local before = sched:now()
 
 sched:start()
 
@@ -32,7 +32,7 @@ end
 waitable:wait_for(sihd.util.time.sec(1))
 sched:stop()
 
-local after = sched:get_clock():now()
+local after = sched:now()
 
 print("process time: " .. sihd.util.time.to_double(after - before))
 print("total called: " .. called)

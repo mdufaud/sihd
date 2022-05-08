@@ -173,7 +173,7 @@ bool    Sniffer::get_read_data(char **data, size_t *size) const
     return true;
 }
 
-bool    Sniffer::get_read_timestamp(time_t *nano_timestamp) const
+bool    Sniffer::read_timestamp(time_t *nano_timestamp) const
 {
     *nano_timestamp = _pkt_nano_timestamp;
     return true;
@@ -226,7 +226,7 @@ void    Sniffer::_log_if_error(int ret)
     }
     else if (ret != 0)
     {
-        SIHD_LOG(error, "Sniffer: " << PcapUtils::get_status(ret));
+        SIHD_LOG(error, "Sniffer: " << PcapUtils::status_str(ret));
     }
 }
 

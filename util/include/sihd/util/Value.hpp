@@ -54,7 +54,7 @@ class Value
         void set(T val)
         {
             static_assert(std::is_fundamental<T>::value);
-            this->type = Types::to_type<T>();
+            this->type = Types::type<T>();
             this->data = 0;
             memcpy(&this->data, &val, sizeof(T));
         }
@@ -126,7 +126,7 @@ class Value
                     || this->from_char_string(str);
         }
 
-        std::string to_string() const
+        std::string str() const
         {
             if (this->type == TYPE_FLOAT)
                 return std::to_string(this->to_float());

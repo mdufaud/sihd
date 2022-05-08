@@ -36,7 +36,7 @@ namespace test
 
     TEST_F(TestTcp, test_tcp_server)
     {
-        IpAddr localhost = IpAddr::get_localhost(4242);
+        IpAddr localhost = IpAddr::localhost(4242);
 
         sihd::util::ArrChar hello_world_arr("hello world");
         sihd::util::ArrChar welcome_arr("welcome");
@@ -65,11 +65,11 @@ namespace test
             }
             for (BasicServerHandler::Client *client: bsh->read_activity())
             {
-                SIHD_LOG(info, "Client said: " << client->read_array->to_string(','));
+                SIHD_LOG(info, "Client said: " << client->read_array->str(','));
             }
             for (BasicServerHandler::Client *client: bsh->write_activity())
             {
-                SIHD_LOG(info, "Server wrote to client: " << client->write_array->to_string(','));
+                SIHD_LOG(info, "Server wrote to client: " << client->write_array->str(','));
             }
         });
         server_handler.add_observer(&handler);
@@ -82,7 +82,7 @@ namespace test
 
         usleep(1000);
 
-        SIHD_LOG(debug, "Simulating a send from client: " << hello_world_arr.to_string());
+        SIHD_LOG(debug, "Simulating a send from client: " << hello_world_arr.str());
         EXPECT_TRUE(client1.send_all(hello_world_arr));
 
         usleep(1000);
@@ -126,9 +126,9 @@ namespace test
 
     TEST_F(TestTcp, test_tcp_client)
     {
-        IpAddr localhost = IpAddr::get_localhost(4242);
-        sihd::util::ArrChar hello("hello world", sizeof("hello world"));
-        sihd::util::ArrChar bye("bye", sizeof("bye"));
+        IpAddr localhost = IpAddr::localhost(4242);
+        sihd::util::ArrChar hello("hello world");
+        sihd::util::ArrChar bye("bye");
         sihd::util::ArrChar recv(20);
         TcpClient client("tcp-client");
         Socket server;
@@ -156,7 +156,7 @@ namespace test
         sihd::util::Handler<INetReceiver *> handler([&recv] (INetReceiver *rcv)
         {
             rcv->receive(recv);
-            SIHD_LOG(debug, "Data received: " << recv.to_string() << " - " << recv.byte_size() << " bytes");
+            SIHD_LOG(debug, "Data received: " << recv.str() << " - " << recv.byte_size() << " bytes");
         });
         client.add_observer(&handler);
         EXPECT_EQ(accepted.send(bye), (ssize_t)bye.size());

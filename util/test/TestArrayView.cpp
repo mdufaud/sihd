@@ -64,7 +64,7 @@ namespace test
         ArrViewChar view_str("hello world");
 
         EXPECT_TRUE(view_str.is_equal("hello world"));
-        EXPECT_EQ(view_str.to_string(), "hello world");
+        EXPECT_EQ(view_str.str(), "hello world");
 
         EXPECT_TRUE(view_str.subview(0, 5).is_equal("hello"));
         EXPECT_TRUE(view_str.subview(6).is_equal("world"));

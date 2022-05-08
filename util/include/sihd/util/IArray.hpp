@@ -2,7 +2,6 @@
 # define __SIHD_UTIL_IARRAY_HPP__
 
 # include <sihd/util/IArrayView.hpp>
-# include <sihd/util/ICloneable.hpp>
 # include <sihd/util/Types.hpp>
 # include <string_view>
 
@@ -34,7 +33,7 @@ class IArray
         virtual bool is_same_type(const IArray & arr) const = 0;
         virtual bool is_same_type(const IArrayView & arr) const = 0;
         virtual Type data_type() const = 0;
-        virtual const char *data_type_to_string() const = 0;
+        virtual const char *data_type_str() const = 0;
 
         // comparison
 
@@ -47,7 +46,7 @@ class IArray
         virtual bool from(const IArray & arr) = 0;
         virtual bool from(const IArrayView & arr) = 0;
         virtual bool from_bytes(const void *buf, size_t byte_size) = 0;
-        virtual bool from_string(std::string_view data, const char *delimiters) = 0;
+        virtual bool from_str(std::string_view data, const char *delimiters) = 0;
 
         // copy data to internal buffer
 
@@ -78,8 +77,8 @@ class IArray
         // views
 
         virtual std::string hexdump(char delimiter = ' ') const = 0;
-        virtual std::string to_string() const = 0;
-        virtual std::string to_string(char delimiter) const = 0;
+        virtual std::string str() const = 0;
+        virtual std::string str(char delimiter) const = 0;
 
         virtual std::string cpp_str() const = 0;
         virtual std::string_view cpp_str_view() const = 0;

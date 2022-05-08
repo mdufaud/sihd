@@ -6,10 +6,10 @@ namespace sihd::util
 
 LogInfo::LogInfo(const std::string & src, LogLevel lvl): source(src), level(lvl)
 {
-    thread_id = Thread::id();
-    thread_id_str = Thread::id_str(thread_id);
-    thread_name = Thread::get_name();
-    level_str = this->get_level(this->level);
+    this->thread_id = Thread::id();
+    this->thread_id_str = Thread::id_str(thread_id);
+    this->thread_name = Thread::name();
+    this->strlevel = this->level_str(this->level);
     ::clock_gettime(CLOCK_REALTIME, &timestamp);
 }
 
@@ -17,38 +17,47 @@ LogInfo::~LogInfo()
 {
 }
 
-const char  *LogInfo::get_level(LogLevel level)
+const char  *LogInfo::level_str(LogLevel level)
 {
     switch (level)
     {
-        case LogLevel::debug:
-            return "DEBUG";
-        case LogLevel::info:
-            return "INFO";
-        case LogLevel::warning:
-            return "WARNING";
-        case LogLevel::error:
-            return "ERROR";
+        case LogLevel::emergency:
+            return "EMERGENCY";
+        case LogLevel::alert:
+            return "ALERT";
         case LogLevel::critical:
             return "CRITICAL";
+        case LogLevel::error:
+            return "ERROR";
+        case LogLevel::warning:
+            return "WARNING";
+        case LogLevel::notice:
+            return "NOTICE";
+        case LogLevel::info:
+            return "INFO";
+        case LogLevel::debug:
+            return "DEBUG";
         default:
             return "NONE";
     }
 }
 
-LogLevel    LogInfo::string_to_level(const std::string & level)
+LogLevel    LogInfo::level_from_str(std::string_view level)
 {
-    if (level == "INFO")
-        return LogLevel::info;
-    else if (level == "ERROR")
-        return LogLevel::error;
-    else if (level == "WARNING")
-        return LogLevel::warning;
-    else if (level == "DEBUG")
-        return LogLevel::debug;
-    else if (level == "CRITICAL")
-        return LogLevel::critical;
-    return LogLevel::none;
+    static std::map<std::string_view, LogLevel> log_to_str = {
+        {"EMERGENCY", emergency},
+        {"ALERT", alert},
+        {"CRITICAL", critical},
+        {"ERROR", error},
+        {"WARNING", warning},
+        {"NOTICE", notice},
+        {"INFO", info},
+        {"DEBUG", debug}
+    };
+    auto it = log_to_str.find(level);
+    if (it == log_to_str.end())
+        return LogLevel::none;
+    return it->second;
 }
 
 }

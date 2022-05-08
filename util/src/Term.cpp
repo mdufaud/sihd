@@ -1,53 +1,109 @@
 
 #include <sihd/util/Term.hpp>
 
+#define ESC "\33["
+
 namespace sihd::util
 {
 
-const char *Term::Attr::UNDERLINE = "\033[4m";
-const char *Term::Attr::BOLD = "\33[1m";
-const char *Term::Attr::ITALIC = "\33[3m";
-const char *Term::Attr::URL = "\33[4m";
-const char *Term::Attr::BLINK = "\33[5m";
-const char *Term::Attr::BLINK2 = "\33[6m";
-const char *Term::Attr::SELECTED = "\33[7m";
+const char *Term::Attr::UNDERLINE = ESC "4m";
+const char *Term::Attr::BOLD = ESC "1m";
+const char *Term::Attr::ITALIC = ESC "3m";
+const char *Term::Attr::URL = ESC "4m";
+const char *Term::Attr::BLINK = ESC "5m";
+const char *Term::Attr::BLINK2 = ESC "6m";
+const char *Term::Attr::SELECTED = ESC "7m";
 
-const char *Term::Attr::BLACK = "\33[30m";
-const char *Term::Attr::RED = "\33[31m";
-const char *Term::Attr::GREEN = "\33[32m";
-const char *Term::Attr::YELLOW = "\33[33m";
-const char *Term::Attr::BLUE  = "\33[34m";
-const char *Term::Attr::VIOLET = "\33[35m";
-const char *Term::Attr::BEIGE = "\33[36m";
-const char *Term::Attr::WHITE = "\33[37m";
-const char *Term::Attr::GREY  = "\33[90m";
+const char *Term::Attr::BLACK = ESC "30m";
+const char *Term::Attr::RED = ESC "31m";
+const char *Term::Attr::GREEN = ESC "32m";
+const char *Term::Attr::YELLOW = ESC "33m";
+const char *Term::Attr::BLUE  = ESC "34m";
+const char *Term::Attr::VIOLET = ESC "35m";
+const char *Term::Attr::CYAN = ESC "36m";
+const char *Term::Attr::WHITE = ESC "37m";
+const char *Term::Attr::GREY  = ESC "90m";
 
-const char *Term::Attr::BLACKBG = "\33[40m";
-const char *Term::Attr::REDBG = "\33[41m";
-const char *Term::Attr::GREENBG = "\33[42m";
-const char *Term::Attr::YELLOWBG = "\33[43m";
-const char *Term::Attr::BLUEBG  = "\33[44m";
-const char *Term::Attr::VIOLETBG = "\33[45m";
-const char *Term::Attr::BEIGEBG = "\33[46m";
-const char *Term::Attr::WHITEBG = "\33[47m";
-const char *Term::Attr::GREYBG = "\33[100m";
+const char *Term::Attr::BLACKBG = ESC "40m";
+const char *Term::Attr::REDBG = ESC "41m";
+const char *Term::Attr::GREENBG = ESC "42m";
+const char *Term::Attr::YELLOWBG = ESC "43m";
+const char *Term::Attr::BLUEBG  = ESC "44m";
+const char *Term::Attr::VIOLETBG = ESC "45m";
+const char *Term::Attr::CYANBG = ESC "46m";
+const char *Term::Attr::WHITEBG = ESC "47m";
+const char *Term::Attr::GREYBG = ESC "100m";
 
-const char *Term::Attr::RED2 = "\33[91m";
-const char *Term::Attr::GREEN2 = "\33[92m";
-const char *Term::Attr::YELLOW2 = "\33[93m";
-const char *Term::Attr::BLUE2  = "\33[94m";
-const char *Term::Attr::VIOLET2 = "\33[95m";
-const char *Term::Attr::BEIGE2 = "\33[96m";
-const char *Term::Attr::WHITE2 = "\33[97m";
+const char *Term::Attr::RED2 = ESC "91m";
+const char *Term::Attr::GREEN2 = ESC "92m";
+const char *Term::Attr::YELLOW2 = ESC "93m";
+const char *Term::Attr::BLUE2  = ESC "94m";
+const char *Term::Attr::VIOLET2 = ESC "95m";
+const char *Term::Attr::CYAN2 = ESC "96m";
+const char *Term::Attr::WHITE2 = ESC "97m";
 
-const char *Term::Attr::REDBG2 = "\33[101m";
-const char *Term::Attr::GREENBG2 = "\33[102m";
-const char *Term::Attr::YELLOWBG2 = "\33[103m";
-const char *Term::Attr::BLUEBG2  = "\33[104m";
-const char *Term::Attr::VIOLETBG2 = "\33[105m";
-const char *Term::Attr::BEIGEBG2 = "\33[106m";
-const char *Term::Attr::WHITEBG2 = "\33[107m";
+const char *Term::Attr::REDBG2 = ESC "101m";
+const char *Term::Attr::GREENBG2 = ESC "102m";
+const char *Term::Attr::YELLOWBG2 = ESC "103m";
+const char *Term::Attr::BLUEBG2  = ESC "104m";
+const char *Term::Attr::VIOLETBG2 = ESC "105m";
+const char *Term::Attr::CYANBG2 = ESC "106m";
+const char *Term::Attr::WHITEBG2 = ESC "107m";
 
-const char *Term::Attr::ENDC = "\033[0m";
+const char *Term::Attr::ENDC = ESC "0m";
+
+const char *Term::Attr::CLEAR_SCREEN_END = ESC "0J";
+const char *Term::Attr::CLEAR_SCREEN_BEG = ESC "1J";
+const char *Term::Attr::CLEAR_SCREEN = ESC "2J";
+
+const char *Term::Attr::CLEAR_LINE_END = ESC "0K";
+const char *Term::Attr::CLEAR_LINE_BEG = ESC "1K";
+const char *Term::Attr::CLEAR_LINE = ESC "2K";
+
+const char *Term::Attr::SAVE_CURSOR = ESC "s";
+const char *Term::Attr::RESTORE_CURSOR = ESC "u";
+
+const char *Term::Attr::SCROLL_UP = ESC "S";
+const char *Term::Attr::SCROLL_DOWN = ESC "T";
+
+std::string Term::move_cursor_up(int n)
+{
+    return Str::format(ESC "%dA", n);
+}
+
+std::string Term::move_cursor_down(int n)
+{
+    return Str::format(ESC "%dB", n);
+}
+
+std::string Term::move_cursor_right(int n)
+{
+    return Str::format(ESC "%dC", n);
+}
+
+std::string Term::move_cursor_left(int n)
+{
+    return Str::format(ESC "%dD", n);
+}
+
+std::string Term::next_line(int n)
+{
+    return Str::format(ESC "%dE", n);
+}
+
+std::string Term::prev_line(int n)
+{
+    return Str::format(ESC "%dF", n);
+}
+
+std::string Term::set_pos(int line, int col)
+{
+    return Str::format(ESC "%d;%dH", line, col);
+}
+
+std::string Term::set_col(int n)
+{
+    return Str::format(ESC "%dG", n);
+}
 
 }

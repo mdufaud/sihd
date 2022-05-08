@@ -81,54 +81,54 @@ namespace test
         EXPECT_FALSE(first_machine.transition(Event::EVT_ERROR));
         EXPECT_FALSE(first_machine.transition(Event::EVT2));
 
-        EXPECT_EQ(first_machine.get_state(), FIRST);
+        EXPECT_EQ(first_machine.state(), FIRST);
 
         // FIRST -> EVT1 -> BEFORE_EVT1
         EXPECT_TRUE(first_machine.transition(EVT1));
-        EXPECT_EQ(first_machine.get_last_event(), EVT1);
-        EXPECT_EQ(first_machine.get_state(), BEFORE_EVT1);
+        EXPECT_EQ(first_machine.last_event(), EVT1);
+        EXPECT_EQ(first_machine.state(), BEFORE_EVT1);
 
         // EVT1 -> EVT1 => no transition - no change
         EXPECT_FALSE(first_machine.transition(EVT1));
-        EXPECT_EQ(first_machine.get_last_event(), EVT1);
-        EXPECT_EQ(first_machine.get_state(), BEFORE_EVT1);
+        EXPECT_EQ(first_machine.last_event(), EVT1);
+        EXPECT_EQ(first_machine.state(), BEFORE_EVT1);
 
         // EVT1 -> EVT_ERROR -> error state
         EXPECT_TRUE(first_machine.transition(EVT_ERROR));
-        EXPECT_EQ(first_machine.get_last_event(), EVT_ERROR);
-        EXPECT_EQ(first_machine.get_state(), State::ERROR);
+        EXPECT_EQ(first_machine.last_event(), EVT_ERROR);
+        EXPECT_EQ(first_machine.state(), State::ERROR);
 
         // let's get back to before it failed
         StateMachine<State, Event> evt1_machine(BEFORE_EVT1);
         this->add_transitions(evt1_machine);
 
-        EXPECT_EQ(evt1_machine.get_state(), BEFORE_EVT1);
+        EXPECT_EQ(evt1_machine.state(), BEFORE_EVT1);
 
         // let's say we did it
         EXPECT_TRUE(evt1_machine.transition(EVT_SUCCESS));
-        EXPECT_EQ(evt1_machine.get_last_event(), EVT_SUCCESS);
-        EXPECT_EQ(evt1_machine.get_state(), State::DONE_EVT1);
+        EXPECT_EQ(evt1_machine.last_event(), EVT_SUCCESS);
+        EXPECT_EQ(evt1_machine.state(), State::DONE_EVT1);
 
         // testing last transition -> DONE_EVT1 -> EVT2 -> DONE_EVT2
         EXPECT_TRUE(evt1_machine.transition(EVT2));
-        EXPECT_EQ(evt1_machine.get_last_event(), EVT2);
-        EXPECT_EQ(evt1_machine.get_state(), State::DONE_EVT2);
+        EXPECT_EQ(evt1_machine.last_event(), EVT2);
+        EXPECT_EQ(evt1_machine.state(), State::DONE_EVT2);
     }
 
     TEST_F(TestStateMachine, test_statemachine_naming)
     {
         StateMachine<State, Event> machine(FIRST);
         this->add_names(machine);
-        EXPECT_EQ(machine.get_event_name(machine.get_last_event()), "");
-        EXPECT_EQ(machine.get_event_name(Event::EVT1), "EVT1");
-        EXPECT_EQ(machine.get_event_name(Event::EVT2), "EVT2");
-        EXPECT_EQ(machine.get_event_name(Event::EVT_SUCCESS), "EVT_SUCCESS");
-        EXPECT_EQ(machine.get_event_name(Event::EVT_ERROR), "EVT_ERROR");
+        EXPECT_EQ(machine.event_name(machine.last_event()), "");
+        EXPECT_EQ(machine.event_name(Event::EVT1), "EVT1");
+        EXPECT_EQ(machine.event_name(Event::EVT2), "EVT2");
+        EXPECT_EQ(machine.event_name(Event::EVT_SUCCESS), "EVT_SUCCESS");
+        EXPECT_EQ(machine.event_name(Event::EVT_ERROR), "EVT_ERROR");
 
-        EXPECT_EQ(machine.get_state(), State::FIRST);
-        EXPECT_EQ(machine.get_state_name(State::BEFORE_EVT1), "BEFORE_EVT1");
-        EXPECT_EQ(machine.get_state_name(State::DONE_EVT1), "DONE_EVT1");
-        EXPECT_EQ(machine.get_state_name(State::DONE_EVT2), "DONE_EVT2");
-        EXPECT_EQ(machine.get_state_name(State::ERROR), "ERROR");
+        EXPECT_EQ(machine.state(), State::FIRST);
+        EXPECT_EQ(machine.state_name(State::BEFORE_EVT1), "BEFORE_EVT1");
+        EXPECT_EQ(machine.state_name(State::DONE_EVT1), "DONE_EVT1");
+        EXPECT_EQ(machine.state_name(State::DONE_EVT2), "DONE_EVT2");
+        EXPECT_EQ(machine.state_name(State::ERROR), "ERROR");
     }
 }

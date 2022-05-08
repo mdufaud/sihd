@@ -33,10 +33,30 @@ File::File(std::string_view path, std::string_view mode): File()
     this->open(path, mode);
 }
 
+File::File(File && other)
+{
+    *this = std::move(other);
+}
+
 File::~File()
 {
     this->close();
     this->_delete_buffer();
+}
+
+File &  File::operator=(File && other)
+{
+    _file_ptr = other._file_ptr;
+    _path = std::move(other._path);
+    _buf_ptr = other._buf_ptr;
+    _buf_size = other._buf_size;
+    _buf_mode = other._buf_mode;
+    _stream_ownership = other._stream_ownership;
+
+    other._file_ptr = nullptr;
+    other._buf_ptr = nullptr;
+    other._buf_size = 0;
+    return *this;
 }
 
 std::optional<struct stat>  File::stat()
@@ -345,19 +365,9 @@ ssize_t File::write(const char *str, size_t size)
     return ret;
 }
 
-ssize_t File::write(const IArray & array, size_t byte_offset)
+ssize_t File::write(ArrViewChar view)
 {
-    byte_offset = std::min(byte_offset, array.byte_size());
-    return this->write(reinterpret_cast<const char *>(array.cbuf() + byte_offset), array.byte_size() - byte_offset);
-}
-
-ssize_t File::write(std::string_view str, size_t size_limit)
-{
-    if (size_limit == 0)
-        size_limit = str.size();
-    else
-        size_limit = std::min(size_limit, str.size());
-    return this->write(str.data(), size_limit);
+    return this->write(view.data(), view.byte_size());
 }
 
 bool    File::write_char(int c)

@@ -33,48 +33,48 @@ class Types
 
     public:
         static size_t type_size(Type type);
-        static const char *type_to_string(Type type);
-        static Type string_to_type(std::string_view type);
+        static const char *type_str(Type type);
+        static Type from_str(std::string_view type);
 
         template <typename T>
-        static Type to_type()
+        static Type type()
         {
             return TYPE_OBJECT;
         }
 
         template <typename T>
-        static const char *to_string()
+        static const char *str()
         {
-            return type_to_string(to_type<T>());
+            return type_str(type<T>());
         }
 };
 
 template <>
-Type    Types::to_type<bool>();
+Type    Types::type<bool>();
 template <>
-Type    Types::to_type<char>();
+Type    Types::type<char>();
 template <>
-Type    Types::to_type<int8_t>();
+Type    Types::type<int8_t>();
 template <>
-Type    Types::to_type<uint8_t>();
+Type    Types::type<uint8_t>();
 template <>
-Type    Types::to_type<int16_t>();
+Type    Types::type<int16_t>();
 template <>
-Type    Types::to_type<uint16_t>();
+Type    Types::type<uint16_t>();
 template <>
-Type    Types::to_type<int32_t>();
+Type    Types::type<int32_t>();
 template <>
-Type    Types::to_type<uint32_t>();
+Type    Types::type<uint32_t>();
 template <>
-Type    Types::to_type<int64_t>();
+Type    Types::type<int64_t>();
 template <>
-Type    Types::to_type<uint64_t>();
+Type    Types::type<uint64_t>();
 template <>
-Type    Types::to_type<float>();
+Type    Types::type<float>();
 template <>
-Type    Types::to_type<double>();
+Type    Types::type<double>();
 template <>
-Type    Types::to_type<std::string>();
+Type    Types::type<std::string>();
 
 }
 

@@ -3,7 +3,7 @@
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Str.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
@@ -92,7 +92,7 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
 
         bool on_read(const sihd::util::ArrChar & array)
         {
-            SIHD_LOG(debug, "Read from client websocket: " << array.to_string());
+            SIHD_LOG(debug, "Read from client websocket: " << array.str());
             _client_wrote = true;
             return true;
         };
@@ -130,8 +130,8 @@ static void http_test()
             (void)sig;
             server.stop();
         }));
-        std::string root_path = Files::get_parent(Files::get_parent(OS::get_executable_path()));
-        std::string res_path = Files::combine({root_path, "etc", "sihd", "demo", "http_demo"});
+        std::string root_path = FS::parent(FS::parent(OS::executable_path()));
+        std::string res_path = FS::combine({root_path, "etc", "sihd", "demo", "http_demo"});
         SIHD_LOG(info, "Root dir: " << res_path);
         server.set_root_dir(res_path);
         server.set_port(3000);

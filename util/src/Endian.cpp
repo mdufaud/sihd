@@ -3,7 +3,7 @@
 namespace sihd::util
 {
 
-std::string Endian::type_to_string(Endianness type)
+std::string Endian::type_str(Endianness type)
 {
     switch (type)
     {

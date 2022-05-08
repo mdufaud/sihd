@@ -16,14 +16,14 @@ Channel::Channel(const std::string & name, Type type, size_t size, Node *parent)
     if (_array_ptr == nullptr)
     {
         throw std::invalid_argument(Str::format("Channel: no such type %s for channel %s",
-                                                    Types::type_to_string(type),
-                                                    this->get_name().c_str()));
+                                                    Types::type_str(type),
+                                                    this->name().c_str()));
     }
     _array_ptr->resize(size);
     _notifying = false;
     _write_change_only = true;
     _timestamp = 0;
-    _clock_ptr = Channel::get_default_clock();
+    _clock_ptr = Channel::default_clock();
 }
 
 Channel::Channel(const std::string & name, Type type, Node *parent):
@@ -32,12 +32,12 @@ Channel::Channel(const std::string & name, Type type, Node *parent):
 }
 
 Channel::Channel(const std::string & name, std::string_view type, size_t size, Node *parent):
-    Channel(name, Types::string_to_type(type), size, parent)
+    Channel(name, Types::from_str(type), size, parent)
 {
 }
 
 Channel::Channel(const std::string & name, std::string_view type, Node *parent):
-    Channel(name, Types::string_to_type(type), 1, parent)
+    Channel(name, Types::from_str(type), 1, parent)
 {
 }
 

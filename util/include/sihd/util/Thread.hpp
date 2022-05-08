@@ -19,7 +19,7 @@ class Thread
         static std::string id_str(pthread_t id);
         static void set_name(const std::string & name);
         static void del_name();
-        static const std::string & get_name();
+        static const std::string & name();
         static bool equals(const pthread_t & id1, const pthread_t & id2);
 
         static pthread_t main;

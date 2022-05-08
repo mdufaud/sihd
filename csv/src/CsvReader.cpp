@@ -116,7 +116,7 @@ bool    CsvReader::get_read_data(char **data, size_t *size) const
     return true;
 }
 
-bool    CsvReader::get_read_timestamp(time_t *nano_timestamp) const
+bool    CsvReader::read_timestamp(time_t *nano_timestamp) const
 {
     if (_line_ptr == nullptr)
         return false;

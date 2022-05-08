@@ -2,7 +2,7 @@ import sihd
 
 ch_bool = sihd.core.Channel("ch_bool", "bool", 1)
 
-assert(ch_bool.get_name() == "ch_bool")
+assert(ch_bool.name() == "ch_bool")
 assert(ch_bool.write(0, False))
 assert(ch_bool.read(0) == False)
 assert(ch_bool.write(0, True))

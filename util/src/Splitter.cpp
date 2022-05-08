@@ -102,7 +102,7 @@ int     Splitter::count_tokens(const char *s) const
             ++count;
         while (s[i])
         {
-            int closed_at = Str::get_closing_escape_index(s, i, _authorized_open_escape_sequences.c_str());
+            int closed_at = Str::closing_escape_index(s, i, _authorized_open_escape_sequences.c_str());
             // matched closure
             if (closed_at > 0)
                 i = closed_at;
@@ -125,7 +125,7 @@ int     Splitter::count_tokens(const char *s) const
     return count;
 }
 
-std::string_view    Splitter::get_next_token(const char *s, int *idx) const
+std::string_view    Splitter::next_token(const char *s, int *idx) const
 {
     int x = *idx;
     int delimiter_offset;
@@ -142,7 +142,7 @@ std::string_view    Splitter::get_next_token(const char *s, int *idx) const
     int y = x;
     while (s[y])
     {
-        int closed_at = Str::get_closing_escape_index(s, y, _authorized_open_escape_sequences.c_str());
+        int closed_at = Str::closing_escape_index(s, y, _authorized_open_escape_sequences.c_str());
         // matched closure
         if (closed_at > 0)
             y = closed_at;
@@ -176,7 +176,7 @@ std::vector<std::string>    Splitter::split(std::string_view str) const
     int i = 0;
     int j = 0;
     while (tokens-- > 0)
-        ret[i++] = this->get_next_token(s, &j);
+        ret[i++] = this->next_token(s, &j);
     return ret;
 }
 
@@ -192,7 +192,7 @@ std::vector<std::string_view>   Splitter::split_view(std::string_view str) const
     int i = 0;
     int j = 0;
     while (tokens-- > 0)
-        ret[i++] = this->get_next_token(s, &j);
+        ret[i++] = this->next_token(s, &j);
     return ret;
 }
 

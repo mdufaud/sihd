@@ -8,7 +8,7 @@ SIHD_NEW_LOGGER("sihd::pcap");
 
 bool PcapUtils::_is_init = false;
 
-std::string PcapUtils::get_status(int code)
+std::string PcapUtils::status_str(int code)
 {
     return pcap_statustostr(code);
 }
@@ -44,17 +44,17 @@ bool    PcapUtils::is_datalink(int dtl)
     return pcap_datalink_val_to_name(dtl) != nullptr;
 }
 
-std::string PcapUtils::datalink_to_string(int dtl)
+std::string PcapUtils::datalink_str(int dtl)
 {
     return pcap_datalink_val_to_name(dtl);
 }
 
-std::string PcapUtils::datalink_to_desc(int dtl)
+std::string PcapUtils::datalink_desc(int dtl)
 {
     return pcap_datalink_val_to_description(dtl);
 }
 
-int     PcapUtils::string_to_datalink(std::string_view dtl)
+int     PcapUtils::datalink(std::string_view dtl)
 {
     return pcap_datalink_name_to_val(dtl.data());
 }
@@ -64,17 +64,17 @@ bool    PcapUtils::is_timestamp_type(int ts)
     return pcap_tstamp_type_val_to_name(ts) != nullptr;
 }
 
-std::string PcapUtils::timestamp_type_to_string(int ts)
+std::string PcapUtils::timestamp_type_str(int ts)
 {
     return pcap_tstamp_type_val_to_name(ts);
 }
 
-std::string PcapUtils::timestamp_type_to_desc(int ts)
+std::string PcapUtils::timestamp_type_desc(int ts)
 {
     return pcap_tstamp_type_val_to_description(ts);
 }
 
-int     PcapUtils::string_to_timestamp_type(std::string_view ts)
+int     PcapUtils::timestamp_type(std::string_view ts)
 {
     return pcap_tstamp_type_name_to_val(ts.data());
 }

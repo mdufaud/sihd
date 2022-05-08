@@ -1,6 +1,6 @@
 #include <sihd/py/PyUtilApi.hpp>
 
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/util/OS.hpp>
 
 #include <sihd/util/Scheduler.hpp>
@@ -44,7 +44,7 @@ namespace sihd::py
 using namespace sihd::util;
 
 // from path/bin/exe.lua -> path/bin -> path
-std::string PyUtilApi::dir = Files::get_parent(Files::get_parent(OS::get_executable_path()));
+std::string PyUtilApi::dir = FS::parent(FS::parent(OS::executable_path()));
 
 // global api logger
 SIHD_NEW_LOGGER("sihd::py::api");
@@ -78,14 +78,14 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
 
     m_util.def_submodule("types", "sihd::util::Types")
         .def("type_size", &Types::type_size)
-        .def("type_to_string", &Types::type_to_string)
-        .def("string_to_type", &Types::string_to_type);
+        .def("type_str", &Types::type_str)
+        .def("from_str", &Types::from_str);
 
     m_util.def_submodule("thread", "sihd::util::Thread")
         .def("id", &Thread::id)
         .def("id_str", static_cast<std::string (*)()>(&Thread::id_str))
         .def("set_name", &Thread::set_name)
-        .def("get_name", &Thread::get_name);
+        .def("name", &Thread::name);
 
     m_util.def_submodule("path", "sihd::util::Path")
         .def("set", &Path::set)
@@ -140,13 +140,13 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
         .def_property_readonly("c_ptr", +[] (const Named *self) -> int64_t { return (int64_t)self; })
-        .def("get_parent", &Named::get_parent, pybind11::return_value_policy::reference_internal)
-        .def("get_name", &Named::get_name)
-        .def("get_full_name", &Named::get_full_name)
-        .def("get_class_name", &Named::get_class_name)
-        .def("get_description", &Named::get_description)
-        .def("get_full_name", &Named::get_full_name)
-        .def("get_root", &Named::get_root, pybind11::return_value_policy::reference_internal)
+        .def("parent", &Named::parent, pybind11::return_value_policy::reference_internal)
+        .def("name", &Named::name)
+        .def("full_name", &Named::full_name)
+        .def("class_name", &Named::class_name)
+        .def("description", &Named::description)
+        .def("full_name", &Named::full_name)
+        .def("root", &Named::root, pybind11::return_value_policy::reference_internal)
         .def("find", static_cast<Named * (Named::*)(const std::string &)>(&Named::find))
         .def("find_from", static_cast<Named * (Named::*)(Named *, const std::string &)>(&Named::find));
 
@@ -168,16 +168,16 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("is_link", &Node::is_link)
         .def("add_link", &Node::add_link)
         .def("remove_link", &Node::remove_link)
-        .def("get_link", &Node::get_link, pybind11::return_value_policy::reference_internal)
+        .def("resolve_link", &Node::resolve_link, pybind11::return_value_policy::reference_internal)
         .def("resolve_links", &Node::resolve_links)
-        .def("get_tree_str", static_cast<std::string (Node::*)() const>(&Node::get_tree_str))
-        .def("get_tree_desc_str", &Node::get_tree_desc_str)
+        .def("tree_str", static_cast<std::string (Node::*)() const>(&Node::tree_str))
+        .def("tree_desc_str", &Node::tree_desc_str)
         // ties lifetime of return to 'this'
-        .def("get_children", &Node::get_children, pybind11::return_value_policy::reference_internal)
-        .def("get_children_keys", &Node::get_children_keys, pybind11::return_value_policy::reference_internal);
+        .def("children", &Node::children, pybind11::return_value_policy::reference_internal)
+        .def("children_keys", &Node::children_keys, pybind11::return_value_policy::reference_internal);
 
     pybind11::class_<ServiceController>(m_util, "ServiceController")
-        .def("get_state", &ServiceController::get_state);
+        .def("state", &ServiceController::state);
 
     pybind11::class_<AService>(m_util, "AService")
         .def("setup", &AService::setup, pybind11::call_guard<pybind11::gil_scoped_release>())
@@ -186,7 +186,7 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("stop", &AService::stop, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("reset", &AService::reset, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("is_running", &AService::is_running)
-        .def("get_service_ctrl", &AService::get_service_ctrl, pybind11::return_value_policy::reference_internal);
+        .def("service_ctrl", &AService::service_ctrl, pybind11::return_value_policy::reference_internal);
 
     pybind11::class_<IClock>(m_util, "IClock")
         .def("is_steady", &IClock::is_steady)
@@ -216,7 +216,7 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
     pybind11::class_<Scheduler, Named, Configurable, SmartNodePtr<Scheduler>>(m_util, "Scheduler")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
-        .def("get_clock", &Scheduler::get_clock, pybind11::return_value_policy::reference_internal)
+        .def("clock", &Scheduler::clock, pybind11::return_value_policy::reference_internal)
         .def("set_clock", &Scheduler::set_clock)
         .def("start", &Scheduler::start, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("stop", &Scheduler::stop, pybind11::call_guard<pybind11::gil_scoped_release>())
@@ -242,10 +242,10 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("byte_resize", &IArray::byte_resize)
         .def("byte_reserve", &IArray::byte_reserve)
         .def("data_type", &IArray::data_type)
-        .def("data_type_to_string", &IArray::data_type_to_string)
+        .def("data_type_str", &IArray::data_type_str)
         .def("hexdump", &IArray::hexdump)
-        .def("to_string", static_cast<std::string (IArray::*)() const>(&IArray::to_string))
-        .def("to_string", static_cast<std::string (IArray::*)(char) const>(&IArray::to_string))
+        .def("str", static_cast<std::string (IArray::*)() const>(&IArray::str))
+        .def("str", static_cast<std::string (IArray::*)(char) const>(&IArray::str))
         .def("clear", &IArray::clear)
         .def("__len__", &IArray::size);
     pybind11::class_<ArrChar, IArray>(m_util, "ArrChar")

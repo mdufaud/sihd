@@ -37,7 +37,7 @@ namespace test
                 sihd::net::IpAddr ip(*addr);
 
                 if (!ip.empty())
-                    SIHD_LOG(debug, pre << ip.get_first_ip());
+                    SIHD_LOG(debug, pre << ip.first_ip_str());
             }
     };
 

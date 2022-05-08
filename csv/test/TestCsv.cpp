@@ -3,7 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/csv/CsvWriter.hpp>
 #include <sihd/csv/CsvReader.hpp>
-#include <sihd/util/Files.hpp>
+#include <sihd/util/FS.hpp>
 
 namespace test
 {
@@ -16,7 +16,7 @@ namespace test
             TestCsv()
             {
                 sihd::util::LoggerManager::basic();
-                Files::make_directories(_base_test_dir);
+                FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestCsv()
@@ -32,13 +32,13 @@ namespace test
             {
             }
 
-            std::string _base_test_dir = Files::combine({getenv("TEST_PATH"), "csv"});
+            std::string _base_test_dir = FS::combine({getenv("TEST_PATH"), "csv"});
 
     };
 
     TEST_F(TestCsv, test_csv_writer)
     {
-        std::string path = Files::combine(_base_test_dir, "test_write.csv");
+        std::string path = FS::combine(_base_test_dir, "test_write.csv");
         CsvWriter writer("csv-writer");
 
         SIHD_LOG(info, "Writing csv: " << path);
@@ -62,7 +62,7 @@ namespace test
         EXPECT_TRUE(writer.write_commentary("bye"));
         EXPECT_TRUE(writer.close());
 
-        EXPECT_TRUE(sihd::util::Files::are_equals(path, "test/resources/expected.csv"));
+        EXPECT_TRUE(sihd::util::FS::are_equals(path, "test/resources/expected.csv"));
     }
 
     TEST_F(TestCsv, test_csv_reader)

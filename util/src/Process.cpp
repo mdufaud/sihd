@@ -555,7 +555,7 @@ bool    Process::kill(int sig)
 
 void    Process::handle(Poll *poll)
 {
-    auto events = poll->get_events();
+    auto events = poll->events();
     for (auto & event: events)
     {
         int fd = event.fd;

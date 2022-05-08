@@ -14,19 +14,19 @@ Logger::~Logger()
 {
 }
 
-void    Logger::debug(std::string_view msg)
+void    Logger::emergency(std::string_view msg)
 {
-    this->log(LogLevel::debug, msg);
+    this->log(LogLevel::emergency, msg);
 }
 
-void    Logger::info(std::string_view msg)
+void    Logger::alert(std::string_view msg)
 {
-    this->log(LogLevel::info, msg);
+    this->log(LogLevel::alert, msg);
 }
 
-void    Logger::warning(std::string_view msg)
+void    Logger::critical(std::string_view msg)
 {
-    this->log(LogLevel::warning, msg);
+    this->log(LogLevel::critical, msg);
 }
 
 void    Logger::error(std::string_view msg)
@@ -34,9 +34,24 @@ void    Logger::error(std::string_view msg)
     this->log(LogLevel::error, msg);
 }
 
-void    Logger::critical(std::string_view msg)
+void    Logger::warning(std::string_view msg)
 {
-    this->log(LogLevel::critical, msg);
+    this->log(LogLevel::warning, msg);
+}
+
+void    Logger::notice(std::string_view msg)
+{
+    this->log(LogLevel::notice, msg);
+}
+
+void    Logger::info(std::string_view msg)
+{
+    this->log(LogLevel::info, msg);
+}
+
+void    Logger::debug(std::string_view msg)
+{
+    this->log(LogLevel::debug, msg);
 }
 
 void    Logger::log(LogLevel level, std::string_view msg)

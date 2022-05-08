@@ -13,7 +13,7 @@ namespace sihd::net
 
 SIHD_NEW_LOGGER("sihd::net");
 
-const char  *Ip::domain_to_string(int domain)
+const char  *Ip::domain_str(int domain)
 {
     switch (domain)
     {
@@ -46,7 +46,7 @@ const char  *Ip::domain_to_string(int domain)
     }
 }
 
-const char  *Ip::socktype_to_string(int socktype)
+const char  *Ip::socktype_str(int socktype)
 {
     switch (socktype)
     {
@@ -69,7 +69,7 @@ const char  *Ip::socktype_to_string(int socktype)
     }
 }
 
-const char  *Ip::protocol_to_string(int protocol)
+const char  *Ip::protocol_str(int protocol)
 {
     struct protoent *pe = getprotobynumber(protocol);
     if (pe == nullptr)

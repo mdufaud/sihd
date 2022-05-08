@@ -43,14 +43,14 @@ class StateMachine: public IStateMachine
             return ret;
         }
 
-        STATE get_state() const { return _state; }
-        EVENT get_last_event() const { return _last_event; }
-        std::string get_state_name(STATE st) const
+        STATE state() const { return _state; }
+        EVENT last_event() const { return _last_event; }
+        std::string state_name(STATE st) const
         {
             auto it = _states_name.find(st);
             return it == _states_name.end() ? "" : it->second;
         }
-        std::string get_event_name(EVENT evt) const
+        std::string event_name(EVENT evt) const
         {
             auto it = _events_name.find(evt);
             return it == _events_name.end() ? "" : it->second;
@@ -58,13 +58,13 @@ class StateMachine: public IStateMachine
         void set_state_name(STATE st, const std::string & name) { _states_name[st] = name; }
         void set_event_name(EVENT evt, const std::string & name) { _events_name[evt] = name; }
 
-        void set_map_transitions(const std::map<STATE, std::map<EVENT, STATE>> & transitions) { _transitions = transitions; }
-        void set_map_states_names(const std::map<STATE, std::string> & states) { _states_name = states; }
-        void set_map_events_names(const std::map<EVENT, std::string> & events) { _events_name = events; }
+        void set_transitions_map(const std::map<STATE, std::map<EVENT, STATE>> & transitions) { _transitions = transitions; }
+        void set_states_names_map(const std::map<STATE, std::string> & states) { _states_name = states; }
+        void set_events_names_map(const std::map<EVENT, std::string> & events) { _events_name = events; }
 
-        const std::map<STATE, std::map<EVENT, STATE>> & get_map_transitions() const { return _transitions; }
-        const std::map<STATE, std::string> & get_map_states_names() const { return _states_name; }
-        const std::map<EVENT, std::string> & get_map_events_names() const { return _events_name; }
+        const std::map<STATE, std::map<EVENT, STATE>> & transitions_map() const { return _transitions; }
+        const std::map<STATE, std::string> & states_names_map() const { return _states_name; }
+        const std::map<EVENT, std::string> & events_names_map() const { return _events_name; }
 
     protected:
 

@@ -39,7 +39,7 @@ class Scheduler: public Named, public IStoppableRunnable, public Configurable
 
         time_t now() const;
 
-        IClock *get_clock() const;
+        IClock *clock() const;
         void set_clock(IClock *clock);
 
         bool set_as_fast_as_possible(bool active);

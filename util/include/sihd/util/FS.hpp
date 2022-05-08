@@ -1,30 +1,30 @@
-#ifndef __SIHD_UTIL_FILES_HPP__
-# define __SIHD_UTIL_FILES_HPP__
+#ifndef __SIHD_UTIL_FS_HPP__
+# define __SIHD_UTIL_FS_HPP__
 
 # include <sihd/util/Str.hpp> // Str utils, vector, sstream, string
-# include <sihd/util/IArray.hpp>
+# include <sihd/util/ArrayView.hpp>
 # include <optional>
 # include <fstream>
 
 namespace sihd::util
 {
 
-class Files
+class FS
 {
     public:
         // stat
         static bool exists(std::string_view path);
         static bool is_file(std::string_view path);
         static bool is_dir(std::string_view path);
-        static size_t get_filesize(std::string_view path);
+        static size_t filesize(std::string_view path);
 
         // directories
         static bool remove_directory(std::string_view path);
         static bool remove_directories(std::string_view path);
         static bool make_directory(std::string_view path, mode_t mode = 0750);
         static bool make_directories(std::string_view path, mode_t mode = 0750);
-        static std::vector<std::string> get_children(std::string_view path);
-        static std::vector<std::string> get_recursive_children(std::string_view path);
+        static std::vector<std::string> children(std::string_view path);
+        static std::vector<std::string> recursive_children(std::string_view path);
 
         // path manipulation
         static bool is_absolute(std::string_view path);
@@ -33,9 +33,9 @@ class Files
         static void trim_in_path(std::string & path, std::string_view to_remove);
         static void trim_in_path(std::vector<std::string> & list, std::string_view to_remove);
 
-        static std::string get_parent(std::string_view path);
-        static std::string get_filename(std::string_view path);
-        static std::string get_extension(std::string_view path);
+        static std::string parent(std::string_view path);
+        static std::string filename(std::string_view path);
+        static std::string extension(std::string_view path);
 
         static std::string combine(std::initializer_list<std::string_view> list);
         static std::string combine(const std::vector<std::string> & list);
@@ -54,18 +54,17 @@ class Files
         static std::optional<std::string> read_all(std::string_view path);
 
         // fast binary write into file
-        static bool write_binary(std::string_view path, const char *data, size_t size, bool append = false);
+        static bool write_binary(std::string_view path, ArrViewChar view, bool append = false);
         // fast write into file
-        static bool write(std::string_view path, std::string_view content, bool append = false);
+        static bool write(std::string_view path, ArrViewChar view, bool append = false);
 
-        inline static std::string sep_str() { return std::string(1, Files::sep); };
+        inline static std::string sep_str() { return std::string(1, FS::sep); };
         static char sep;
 
     protected:
 
     private:
-        Files() {};
-        virtual ~Files() {};
+        virtual ~FS() {};
 
         static std::string _combine(std::string_view path1, std::string_view path2);
 

@@ -3,7 +3,7 @@
 namespace sihd::util
 {
 
-size_t  Num::get_size(int64_t number, uint16_t base)
+size_t  Num::size(int64_t number, uint16_t base)
 {
     size_t ret = 0;
     while (number != 0)

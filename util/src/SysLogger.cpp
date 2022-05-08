@@ -25,32 +25,11 @@ SysLogger::~SysLogger()
 void    SysLogger::log(const LogInfo & info, std::string_view msg)
 {
 #if !defined(__SIHD_WINDOWS__)
-    int prio;
-
-    switch (info.level)
-    {
-        case LogLevel::debug:
-            prio = LOG_DEBUG;
-            break ;
-        case LogLevel::info:
-            prio = LOG_INFO;
-            break ;
-        case LogLevel::warning:
-            prio = LOG_WARNING;
-            break ;
-        case LogLevel::error:
-            prio = LOG_ERR;
-            break ;
-        case LogLevel::critical:
-            prio = LOG_CRIT;
-            break ;
-        default:
-            prio = LOG_NOTICE;
-    }
-    syslog(prio, "%ld.%09ld\t[%s]\t%s\t%s\t%s\n",
+    // loglevel is done same as syslog
+    syslog(info.level, "%ld.%09ld\t[%s]\t%s\t%s\t%s\n",
             info.timestamp.tv_sec, info.timestamp.tv_nsec,
             info.thread_name.data(),
-            info.level_str, info.source.data(), msg.data());
+            info.strlevel, info.source.data(), msg.data());
 #else
     (void)info; (void)msg;
 #endif

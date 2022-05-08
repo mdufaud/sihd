@@ -24,7 +24,7 @@ void    FileLogger::log(const LogInfo & info, std::string_view msg)
 #endif
             info.timestamp.tv_sec, info.timestamp.tv_nsec,
             info.thread_name.data(),
-            info.level_str, info.source.data(), msg.data());
+            info.strlevel, info.source.data(), msg.data());
 }
 
 

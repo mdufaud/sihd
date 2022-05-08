@@ -48,7 +48,7 @@ class PcapInterfaces
 
         std::string status();
 
-        struct pcap_addr *get_addr(std::string_view name);
+        struct pcap_addr *pcap_addr(std::string_view name);
         pcap_if_t *get() { return _interfaces_ptr; }
 
     protected:

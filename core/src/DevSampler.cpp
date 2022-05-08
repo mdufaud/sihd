@@ -90,7 +90,7 @@ bool    DevSampler::on_start()
         else
             ret = false;
     }
-    if (ret && _step_worker.start_worker(this->get_name()) == false)
+    if (ret && _step_worker.start_worker(this->name()) == false)
     {
         SIHD_LOG(error, "DevSampler: could not start worker");
         return false;

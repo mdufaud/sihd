@@ -18,7 +18,7 @@ class MessageField: public Named,
         ~MessageField();
 
         // IMessageField
-        virtual size_t get_field_byte_size() override { return _size * Types::type_size(_dt); }
+        virtual size_t field_byte_size() const override { return _size * Types::type_size(_dt); }
         virtual bool assign_field_buffer(uint8_t *buffer) override;
         virtual bool field_read_from(const uint8_t *buffer, size_t size) override;
         virtual bool field_write_to(uint8_t *buffer, size_t size) override;
@@ -26,9 +26,9 @@ class MessageField: public Named,
         virtual bool finish() override { return this->is_finished(); }
 
         // Named
-        virtual std::string get_description() const override
+        virtual std::string description() const override
         {
-            return Str::format("%s[%lu]", Types::type_to_string(_dt), _size);
+            return Str::format("%s[%lu]", Types::type_str(_dt), _size);
         }
 
         // ICloneable

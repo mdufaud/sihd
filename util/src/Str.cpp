@@ -163,25 +163,25 @@ char    Str::num_to_char(size_t num)
 
 std::string     Str::to_hex(uint64_t n)
 {
-    return Str::num_to_string(n, 16);
+    return Str::num_str(n, 16);
 }
 
 std::string     Str::to_dec(uint64_t n)
 {
-    return Str::num_to_string(n, 10);
+    return Str::num_str(n, 10);
 }
 
 std::string     Str::to_oct(uint64_t n)
 {
-    return Str::num_to_string(n, 8);
+    return Str::num_str(n, 8);
 }
 
-std::string     Str::num_to_string(int64_t num, uint16_t base)
+std::string     Str::num_str(int64_t num, uint16_t base)
 {
     if (num == 0)
         return "0";
     std::string ret;
-    size_t i = Num::get_size(num, base);
+    size_t i = Num::size(num, base);
     ret.resize(i);
     while (num != 0)
     {
@@ -195,9 +195,9 @@ std::string     Str::num_to_string(int64_t num, uint16_t base)
     return ret;
 }
 
-std::string     Str::addr_to_string(void *addr, size_t padding)
+std::string     Str::addr_str(void *addr, size_t padding)
 {
-    size_t numsize = Num::get_size((size_t)addr, 16);
+    size_t numsize = Num::size((size_t)addr, 16);
     ssize_t i = 0;
     ssize_t total_zero = padding - numsize;
     std::string ret;
@@ -208,7 +208,7 @@ std::string     Str::addr_to_string(void *addr, size_t padding)
         ret += "0";
         ++i;
     }
-    ret += num_to_string((size_t)addr, 16);
+    ret += num_str((size_t)addr, 16);
     return ret;
 }
 
@@ -223,7 +223,7 @@ std::string     Str::hexdump(const void *mem, size_t size, char delim)
             ret += delim;
         if (hex < 16)
             ret += "0";
-        ret += num_to_string(hex, 16);
+        ret += num_str(hex, 16);
         ++i;
     }
     return ret;
@@ -239,13 +239,13 @@ std::string     Str::hexdump_fmt(const void *mem, size_t size)
     while (i < size + suppl)
     {
         if ((i % cols) == 0)
-            ret += addr_to_string((void *)i) + ":\t";
+            ret += addr_str((void *)i) + ":\t";
         if (i < size)
         {
             uint16_t hex = 0xFF & ((char *)mem)[i];
             if (hex < 16)
                 ret += "0";
-            ret += num_to_string(hex, 16) + " ";
+            ret += num_str(hex, 16) + " ";
         }
         else
             ret += "   ";
@@ -579,7 +579,7 @@ bool    Str::is_escaped_char(const char *str, int index)
     return false;
 }
 
-int     Str::get_closing_escape_index(const char *str, int index, const char *authorized_open_escape_sequences)
+int     Str::closing_escape_index(const char *str, int index, const char *authorized_open_escape_sequences)
 {
     int open_esc = str[index];
     if (authorized_open_escape_sequences != nullptr
@@ -690,12 +690,12 @@ std::string  Str::remove_escape_sequences(std::string_view str, const char *auth
     return ret;
 }
 
-std::string Str::gmtime_to_string(time_t nano, bool total_parenthesis, bool nano_resolution)
+std::string Str::gmtime_str(time_t nano, bool total_parenthesis, bool nano_resolution)
 {
     return Str::_time_to_string(nano, total_parenthesis, nano_resolution, false);
 }
 
-std::string Str::localtime_to_string(time_t nano, bool total_parenthesis, bool nano_resolution)
+std::string Str::localtime_str(time_t nano, bool total_parenthesis, bool nano_resolution)
 {
     return Str::_time_to_string(nano, total_parenthesis, nano_resolution, true);
 }
