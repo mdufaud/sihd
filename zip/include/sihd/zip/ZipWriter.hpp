@@ -3,6 +3,7 @@
 
 # include <sihd/util/Node.hpp>
 # include <sihd/util/Configurable.hpp>
+# include <sihd/util/ArrayView.hpp>
 # include <sihd/zip/ZipUtils.hpp>
 
 namespace sihd::zip
@@ -33,7 +34,7 @@ class ZipWriter: public sihd::util::Named, public sihd::util::Configurable
         // add dir in memory
         bool add_dir(std::string_view name);
         // add file content in memory
-        bool add_file(std::string_view name, const void *data, size_t size);
+        bool add_file(std::string_view name, sihd::util::ArrViewChar view);
 
         // encrypt a single entry
         bool encrypt(size_t index, std::string_view password);

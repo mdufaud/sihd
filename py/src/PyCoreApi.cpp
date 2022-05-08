@@ -41,25 +41,29 @@ void    PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
         .def("array", static_cast<const sihd::util::IArray *(Channel::*)() const>(&Channel::array),
             pybind11::return_value_policy::reference_internal)
         .def("notify", &Channel::notify, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("size", &Channel::size)
+        .def("data_size", &Channel::data_size)
+        .def("data_type", &Channel::data_type)
+        .def("is_same_type", &Channel::is_same_type)
         .def("set_observer", +[] (Channel *self, pybind11::none none)
         {
             (void)none;
             PyCoreApi::_channel_handler.remove_channel_obs(self);
             self->remove_observer(&PyCoreApi::_channel_handler);
-        }, pybind11::call_guard<pybind11::gil_scoped_release>())
+        })
         .def("set_observer", +[] (Channel *self, pybind11::function fun)
         {
             PyCoreApi::_channel_handler.add_channel_obs(self, fun);
             self->add_observer(&PyCoreApi::_channel_handler);
-        }, pybind11::call_guard<pybind11::gil_scoped_release>())
+        })
         .def("copy_to", +[] (Channel *self, IArray *array_ptr)
         {
             return self->copy_to(*array_ptr);
-        }, pybind11::call_guard<pybind11::gil_scoped_release>())
+        })
         .def("write_array", +[] (Channel *self, const IArray *array_ptr)
         {
             return self->write(*array_ptr);
-        }, pybind11::call_guard<pybind11::gil_scoped_release>())
+        })
         .def("write", +[] (Channel *self, size_t idx, pybind11::object arg)
         {
             if (self->array() == nullptr)

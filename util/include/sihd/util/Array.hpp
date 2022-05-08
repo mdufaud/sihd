@@ -150,6 +150,16 @@ class Array: public IArray, public ICloneable<Array<T>>
         Type data_type() const { return Types::type<T>(); }
         const char *data_type_str() const { return Types::type_str(this->data_type()); }
 
+        bool is_same_type(const IArray & arr) const
+        {
+            return this->data_type() == arr.data_type();
+        }
+
+        bool is_same_type(const IArrayView & arr) const
+        {
+            return this->data_type() == arr.data_type();
+        }
+
         bool copy_from_bytes(const void *buf, size_t size, size_t byte_offset = 0)
         {
             if ((size + byte_offset) > this->byte_size())
@@ -299,16 +309,6 @@ class Array: public IArray, public ICloneable<Array<T>>
             else
                 this->new_buffer(capacity, true);
             return _buf_ptr != nullptr;
-        }
-
-        bool is_same_type(const IArray & arr) const
-        {
-            return this->data_type() == arr.data_type();
-        }
-
-        bool is_same_type(const IArrayView & arr) const
-        {
-            return this->data_type() == arr.data_type();
         }
 
         bool is_bytes_equal(const void *buf, size_t size, size_t byte_offset = 0) const

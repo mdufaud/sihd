@@ -65,15 +65,21 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
     pybind11::module m_util = m_sihd.def_submodule("util", "sihd::util");
 
     m_util.def_submodule("log", "sihd::util::Logger")
-        .def("debug", +[] (std::string_view log) { PyUtilApi::logger.log(debug, log); },
+        .def("emergency", +[] (std::string_view log) { PyUtilApi::logger.log(emergency, log); },
             pybind11::call_guard<pybind11::gil_scoped_release>())
-        .def("info", +[] (std::string_view log) { PyUtilApi::logger.log(info, log); },
+        .def("alert", +[] (std::string_view log) { PyUtilApi::logger.log(alert, log); },
             pybind11::call_guard<pybind11::gil_scoped_release>())
-        .def("warning", +[] (std::string_view log) { PyUtilApi::logger.log(warning, log); },
+        .def("critical", +[] (std::string_view log) { PyUtilApi::logger.log(critical, log); },
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("error", +[] (std::string_view log) { PyUtilApi::logger.log(error, log); },
             pybind11::call_guard<pybind11::gil_scoped_release>())
-        .def("critical", +[] (std::string_view log) { PyUtilApi::logger.log(critical, log); },
+        .def("warning", +[] (std::string_view log) { PyUtilApi::logger.log(warning, log); },
+            pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("notice", +[] (std::string_view log) { PyUtilApi::logger.log(notice, log); },
+            pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("info", +[] (std::string_view log) { PyUtilApi::logger.log(info, log); },
+            pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("debug", +[] (std::string_view log) { PyUtilApi::logger.log(debug, log); },
             pybind11::call_guard<pybind11::gil_scoped_release>());
 
     m_util.def_submodule("types", "sihd::util::Types")

@@ -39,6 +39,7 @@ assert(f < 1.235 and f > 1.233)
 nobs = 0
 observed_channel = None
 def channel_obs(channel):
+    print(channel.name() + " notified")
     global nobs
     global observed_channel
     observed_channel = channel

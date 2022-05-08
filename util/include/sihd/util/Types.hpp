@@ -37,13 +37,13 @@ class Types
         static Type from_str(std::string_view type);
 
         template <typename T>
-        static Type type()
+        static constexpr Type type()
         {
             return TYPE_OBJECT;
         }
 
         template <typename T>
-        static const char *str()
+        static constexpr const char *str()
         {
             return type_str(type<T>());
         }

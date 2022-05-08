@@ -136,11 +136,11 @@ bool    ZipWriter::fs_add_dir(std::string_view path, std::string_view name)
     return ret;
 }
 
-bool    ZipWriter::add_file(std::string_view name, const void *data, size_t size)
+bool    ZipWriter::add_file(std::string_view name, sihd::util::ArrViewChar view)
 {
     if (_zip_ptr == nullptr)
         return false;
-    zip_source_t *source = zip_source_buffer(_zip_ptr, data, size, 0);
+    zip_source_t *source = zip_source_buffer(_zip_ptr, view.data(), view.byte_size(), 0);
     if (source == nullptr)
     {
         SIHD_LOG(error, "ZipWriter: could not add file to zip '" << ZipUtils::get_error(_zip_ptr) << "' for: " << name);

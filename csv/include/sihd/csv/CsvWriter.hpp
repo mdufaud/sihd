@@ -34,7 +34,10 @@ class CsvWriter:    public sihd::util::Named,
 		ssize_t write(const char *data, size_t size, time_t nano_timestamp);
 
         ssize_t write(std::string_view value);
+        ssize_t write(std::string_view value, time_t nano_timestamp);
+
         ssize_t write(const std::vector<std::string> & values);
+        ssize_t write(const std::vector<std::string> & values, time_t nano_timestamp);
 
         ssize_t write_row(const std::vector<std::string> & values);
         ssize_t write_row(const std::vector<std::string> & values, time_t nano_timestamp);

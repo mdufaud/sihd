@@ -57,10 +57,10 @@ namespace test
         SIHD_LOG(info, "Zipping: " << entry);
         EXPECT_TRUE(writer.fs_add(entry, "to_zip"));
 
+        const char hw[] = "hello test world";
         // Adding array entry
-        sihd::util::ArrChar arr_entry("hello test world");
-        EXPECT_TRUE(writer.add_file("toto_entry", arr_entry.cbuf(), arr_entry.byte_size()));
-        EXPECT_TRUE(writer.add_file("toto_entry2", arr_entry.cbuf(), arr_entry.byte_size()));
+        EXPECT_TRUE(writer.add_file("toto_entry", hw));
+        EXPECT_TRUE(writer.add_file("toto_entry2", hw));
 
         const char *password = "toto";
 
@@ -84,7 +84,7 @@ namespace test
         SIHD_LOG(info, "Trying to read entry with password");
         EXPECT_TRUE(reader.read_entry(password) > 0);
         EXPECT_TRUE(reader.get_read_data(&data, &size));
-        EXPECT_STREQ(data, arr_entry.str().c_str());
+        EXPECT_STREQ(data, hw);
 
         SIHD_LOG(info, "Setting global password");
         EXPECT_TRUE(reader.set_conf_str("password", password));
@@ -92,7 +92,7 @@ namespace test
         EXPECT_TRUE(reader.load_entry(entry_name));
         EXPECT_TRUE(reader.read_entry() > 0);
         EXPECT_TRUE(reader.get_read_data(&data, &size));
-        EXPECT_STREQ(data, arr_entry.str().c_str());
+        EXPECT_STREQ(data, hw);
 
         entry_name = "to_zip/file.txt";
         EXPECT_TRUE(reader.load_entry(entry_name));

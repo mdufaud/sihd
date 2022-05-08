@@ -46,9 +46,10 @@ class ArrayView: public IArrayView
         ArrayView(const std::string & str): ArrayView(str.data(), str.size()) {}
 
         // char specialization
-        // remove conversion with temporary allocation
+        // WARNING: using temporary std::string must only be used passed in functions,
+        // where scope allows std::string's buffer to live
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        ArrayView(const std::string && view) = delete;
+        ArrayView(std::string && str): ArrayView(str.data(), str.size()) {}
 
         // byte constructors
 
@@ -112,6 +113,7 @@ class ArrayView: public IArrayView
         size_t byte_size() const { return _size * sizeof(T); }
 
         Type data_type() const { return Types::type<T>(); }
+
         const char *data_type_str() const { return Types::type_str(this->data_type()); }
 
         bool is_same_type(const IArrayView & arr) const

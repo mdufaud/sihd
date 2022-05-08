@@ -24,7 +24,7 @@ ch_activate:write(0, false)
 
 ch_beat:set_observer(nil)
 
-print(i)
+print("Total beat: " .. i)
 assert(i >= 5)
 assert(ret == true)
 
