@@ -30,7 +30,7 @@ SharedMemory::~SharedMemory()
     this->clear();
 }
 
-#if !defined(__SIHD_WINDOWS__)
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__)
 
 bool    SharedMemory::create(std::string_view id, size_t size, mode_t mode)
 {
