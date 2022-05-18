@@ -54,7 +54,7 @@ namespace test
         Waitable waitable;
         SteadyClock clock;
 
-        std::time_t now = clock.now();
+        time_t now = clock.now();
         std::thread t([&] ()
         {
             int i = 0;
@@ -78,7 +78,7 @@ namespace test
         Waitable waitable;
         SteadyClock clock;
 
-        std::time_t now = clock.now();
+        time_t now = clock.now();
         std::thread t([&] ()
         {
             int i = 0;

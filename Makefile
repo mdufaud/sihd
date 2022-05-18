@@ -456,6 +456,10 @@ clean_dist:
 	@$(call mk_log_info,makefile,removing distribution)
 	rm -rf $(DIST_PATH)
 
+clean_cache:
+	@$(call mk_log_info,makefile,removing cache)
+	rm -rf $(HERE)/.build_cache
+
 bclean:
 	@$(call mk_log_info,makefile,removing build)
 	rm -rf $(BUILD_ENTRY_PATH) $(DIST_PATH)

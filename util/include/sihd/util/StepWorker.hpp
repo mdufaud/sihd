@@ -31,7 +31,7 @@ class StepWorker: public Worker, protected ISteppable
 
         std::atomic<bool> _pause;
         std::atomic<bool> _pausing;
-        std::time_t _sleep_time;
+        time_t _sleep_time;
         SteadyClock _clock;
         Waitable _pause_waitable;
 };

@@ -37,6 +37,12 @@ class Types
         static Type from_str(std::string_view type);
 
         template <typename T>
+        static constexpr bool is_same(Type type)
+        {
+            return Types::type<T>() == type;
+        }
+
+        template <typename T>
         static constexpr Type type()
         {
             return TYPE_OBJECT;

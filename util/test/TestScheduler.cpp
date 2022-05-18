@@ -36,7 +36,7 @@ namespace test
             virtual bool run()
             {
                 time_point<steady_clock, nanoseconds> now = _clock.now();
-                std::time_t usec = duration_cast<microseconds>(now - _last).count();
+                time_t usec = duration_cast<microseconds>(now - _last).count();
                 if (_last.time_since_epoch().count() == 0)
                     _last = now;
                 else
@@ -54,7 +54,7 @@ namespace test
                 return true;
             }
 
-            std::time_t delta_us = 0;
+            time_t delta_us = 0;
             bool good_freq = true;
             int ran = 0;
             int should_run_every_us = 0;
@@ -81,7 +81,7 @@ namespace test
         this->should_run_every_us = 100;
         seq.add_task(new Task(this, 0, time::micro(this->should_run_every_us)));
         seq.start();
-        std::time_t sleep_time = 50;
+        time_t sleep_time = 50;
         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
         seq.stop();
         EXPECT_EQ(lambda_ran, 1);
@@ -103,7 +103,7 @@ namespace test
 
         int ran = 0;
         auto before = steady_clock.now();
-        std::time_t now = seq.now();
+        time_t now = seq.now();
         seq.add_task(new Task([&] () -> bool
         {
             SIHD_TRACE("Should run once");
@@ -126,7 +126,7 @@ namespace test
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         EXPECT_EQ(ran, 1);
         auto after = steady_clock.now();
-        std::time_t diff_ms = duration_cast<milliseconds>(after - before).count();
+        time_t diff_ms = duration_cast<milliseconds>(after - before).count();
         EXPECT_LE(diff_ms, 17);
     }
 
@@ -144,7 +144,7 @@ namespace test
             ++lambda_ran;
             return true;
         }, 0, time::ms(should_run_every_ms)));
-        std::time_t sleep_ms = 10;
+        time_t sleep_ms = 10;
         seq.start();
         SIHD_LOG(debug, "Started scheduler");
         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));

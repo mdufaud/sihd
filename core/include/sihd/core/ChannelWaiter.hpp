@@ -20,6 +20,8 @@ class ChannelWaiter: public ACoreObject
         void clear_channel();
         bool wait_for(time_t nano, uint32_t notifications = 1);
 
+        int notifications() const { return _count.load(); }
+
     protected:
         bool do_stop() override;
 
@@ -28,6 +30,7 @@ class ChannelWaiter: public ACoreObject
 
         Channel *_channel;
         sihd::util::Waitable _waitable;
+        std::atomic<int> _count;
 
 };
 

@@ -11,7 +11,6 @@
 #define CONF_KEY_TRIGGER "trigger"
 #define CONF_KEY_WRITE "write"
 #define CONF_KEY_MATCH "match"
-#define CONF_KEY_NOTIFY_SAME "notify_same"
 #define CONF_KEY_DELAY "delay"
 
 namespace sihd::core
@@ -97,7 +96,6 @@ bool    DevFilter::set_filter_byte_xor(std::string_view rule_str)
 
 void    DevFilter::_rule_match(Channel *channel_out, const Rule *rule_ptr, int64_t out_val)
 {
-    channel_out->set_write_on_change(!rule_ptr->notify_if_same);
     const sihd::util::IArray *array_out = channel_out->array();
     channel_out->write({(const int8_t *)&out_val, array_out->data_size()}, array_out->byte_index(rule_ptr->write_idx));
 }
@@ -241,8 +239,7 @@ DevFilter::Rule::Rule(RuleType type):
     type(type),
     trigger_idx(0), trigger_value(0),
     write_same_value(true), write_idx(0), write_value(0),
-    notify_if_same(false), should_match(true),
-    nano_delay(0)
+    should_match(true), nano_delay(0)
 {
 }
 
@@ -259,12 +256,6 @@ DevFilter::Rule &   DevFilter::Rule::in(std::string_view channel_name)
 DevFilter::Rule &   DevFilter::Rule::out(std::string_view channel_name)
 {
     this->channel_out = channel_name;
-    return *this;
-}
-
-DevFilter::Rule &   DevFilter::Rule::notify_same(bool active)
-{
-    this->notify_if_same = active;
     return *this;
 }
 
@@ -332,14 +323,6 @@ bool    DevFilter::Rule::_parse_options_config(const std::map<std::string, std::
         if (sihd::util::Str::convert_from_string<bool>(conf_map.at(CONF_KEY_MATCH), this->should_match) == false)
         {
             SIHD_LOG_ERROR("DevFilter: conf error for '%s': %s", CONF_KEY_MATCH, conf_map.at(CONF_KEY_MATCH).c_str());
-            return false;
-        }
-    }
-    if (conf_map.find(CONF_KEY_NOTIFY_SAME) != conf_map.end())
-    {
-        if (sihd::util::Str::convert_from_string<bool>(conf_map.at(CONF_KEY_NOTIFY_SAME), this->notify_if_same) == false)
-        {
-            SIHD_LOG_ERROR("DevFilter: conf error for '%s': %s", CONF_KEY_NOTIFY_SAME, conf_map.at(CONF_KEY_NOTIFY_SAME).c_str());
             return false;
         }
     }

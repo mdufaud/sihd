@@ -25,9 +25,16 @@ class Array: public IArray, public ICloneable<Array<T>>
 {
     public:
         using value_type = T;
+        using size_type = size_t;
+        using pointer = T *;
+        using const_pointer = const T *;
+        using reference = T &;
+        using const_reference = const T &;
 
         Array()
         {
+            // this array implementation heavily relies on memcpy/memcmp
+            static_assert(std::is_trivially_copyable_v<T>);
             _buf_ptr = nullptr;
             _size = 0;
             _capacity = 0;
@@ -196,24 +203,30 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         bool from_str(std::string_view data, const char *delimiters)
         {
-            // can be optimized with string views
-            bool ret = true;
-            Splitter splitter(delimiters);
-            const std::vector<std::string> splits = splitter.split(data);
-            this->reserve(splits.size());
-            this->resize(0);
-            for (const std::string & split: splits)
+            if constexpr (std::is_fundamental_v<T>)
             {
-                T value;
-                if (Str::convert_from_string<T>(split, value))
-                    this->push_back(value);
-                else
+                // can be optimized with string views
+                bool ret = true;
+                Splitter splitter(delimiters);
+                const std::vector<std::string> splits = splitter.split(data);
+                this->reserve(splits.size());
+                this->resize(0);
+                for (const std::string & split: splits)
                 {
-                    ret = false;
-                    break ;
+                    T value;
+                    if (Str::convert_from_string<T>(split, value))
+                        this->push_back(value);
+                    else
+                    {
+                        ret = false;
+                        break ;
+                    }
                 }
+                return ret;
             }
-            return ret;
+            else
+                // TODO
+                return false;
         }
 
         bool from(const IArrayView & arr)
@@ -343,7 +356,7 @@ class Array: public IArray, public ICloneable<Array<T>>
                     return std::string(this->cdata(), this->size() - 1);
                 return std::string(this->cdata(), this->size());
             }
-            else
+            if constexpr (std::is_fundamental_v<T>)
             {
                 std::string s;
                 s.reserve(_size);
@@ -355,25 +368,32 @@ class Array: public IArray, public ICloneable<Array<T>>
                 }
                 return s;
             }
+            else
+                return Str::hexdump(_buf_ptr, this->byte_size(), 0);
         }
 
         std::string str(char delimiter) const
         {
-            std::string s;
-            // trying to reserve at least 1 char by element + delimiters (if there are)
-            s.reserve(_size + std::max(0, int(_size - 2)));
-            size_t i = 0;
-            while (i < _size)
+            if constexpr (std::is_fundamental_v<T>)
             {
-                if (i > 0)
-                    s += delimiter;
-                if constexpr (std::is_same_v<T, char>)
-                    s += _buf_ptr[i];
-                else
-                    s += std::to_string(_buf_ptr[i]);
-                ++i;
+                std::string s;
+                // trying to reserve at least 1 char by element + delimiters (if there are)
+                s.reserve(_size + std::max(0, int(_size - 2)));
+                size_t i = 0;
+                while (i < _size)
+                {
+                    if (i > 0)
+                        s += delimiter;
+                    if constexpr (std::is_same_v<T, char>)
+                        s += _buf_ptr[i];
+                    else
+                        s += std::to_string(_buf_ptr[i]);
+                    ++i;
+                }
+                return s;
             }
-            return s;
+            else
+                return Str::hexdump(_buf_ptr, this->byte_size(), delimiter);
         }
 
         void clear()

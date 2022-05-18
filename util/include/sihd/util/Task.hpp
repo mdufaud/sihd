@@ -2,6 +2,7 @@
 # define __SIHD_UTIL_TASK_HPP__
 
 # include <sihd/util/IRunnable.hpp>
+# include <sihd/util/Timestamp.hpp>
 # include <functional>
 # include <ctime>
 
@@ -13,19 +14,19 @@ class Task: public IRunnable
     public:
         Task();
         Task(IRunnable *to_run,
-                std::time_t timestamp_to_run = 0,
-                std::time_t reschedule_every = 0);
+                Timestamp timestamp_to_run = 0,
+                Timestamp reschedule_every = 0);
         Task(std::function<bool(void)> fun,
-                std::time_t timestamp_to_run = 0,
-                std::time_t reschedule_every = 0);
+                Timestamp timestamp_to_run = 0,
+                Timestamp reschedule_every = 0);
         virtual ~Task();
 
         bool run();
         void set_method(std::function<bool(void)> fun);
         void set_runnable(IRunnable *to_run);
 
-        std::time_t run_at;
-        std::time_t resched_time;
+        time_t run_at;
+        time_t resched_time;
 
     private:
         IRunnable *_runnable_ptr;

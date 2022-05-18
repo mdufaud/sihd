@@ -14,7 +14,7 @@ ChannelWaiter::ChannelWaiter(Channel *c):
 }
 
 ChannelWaiter::ChannelWaiter(const std::string & name, sihd::util::Node *parent):
-    ACoreObject(name, parent), _channel(nullptr)
+    ACoreObject(name, parent), _channel(nullptr), _count(0)
 {
 }
 
@@ -34,6 +34,7 @@ void    ChannelWaiter::clear_channel()
     _waitable.notify_all();
     if (_channel != nullptr)
         _channel->remove_observer(this);
+    _count = 0;
     _channel = nullptr;
 }
 
@@ -52,6 +53,7 @@ bool    ChannelWaiter::set_channel(Channel *channel)
         SIHD_LOG(error, "ChannelWaiter: could not add observer to channel: " << channel->full_name());
         return false;
     }
+    _count = 0;
     _channel = channel;
     return true;
 }
@@ -64,9 +66,9 @@ bool    ChannelWaiter::wait_for(time_t nano, uint32_t notifications)
     return _waitable.wait_loop(nano, notifications) == false;
 }
 
-void    ChannelWaiter::handle(Channel *channel)
+void    ChannelWaiter::handle([[maybe_unused]] Channel *channel)
 {
-    (void)channel;
+    _count += 1;
     _waitable.notify(1);
 }
 

@@ -181,7 +181,8 @@ void    Scheduler::add_task(Task *task)
     std::lock_guard l(_mutex_task);
     _task_map.insert(std::pair<time_t, Task *>(task->run_at, task));
     _next_run = _task_map.begin()->first;
-    _waitable_task.notify_all();
+    while (_waiting.load() == true)
+        _waitable_task.notify_all();
 }
 
 void    Scheduler::remove_task(Task *task)
@@ -196,7 +197,8 @@ void    Scheduler::remove_task(Task *task)
         }
     }
     _next_run = _task_map.begin()->first;
-    _waitable_task.notify_all();
+    while (_waiting.load() == true)
+        _waitable_task.notify_all();
 }
 
 void    Scheduler::clear_tasks()
@@ -209,7 +211,8 @@ void    Scheduler::clear_tasks()
             delete pair.second;
     }
     _task_map.clear();
-    _waitable_task.notify_all();
+    while (_waiting.load() == true)
+        _waitable_task.notify_all();
 }
 
 void    Scheduler::_add_to_delete_task(Task *task)

@@ -30,8 +30,8 @@ bool    StepWorker::set_frequency(double frequency)
 bool    StepWorker::run()
 {
     bool ret = true;
-    std::time_t now = 0;
-    std::time_t after = 0;
+    time_t now = 0;
+    time_t after = 0;
     if (_pause)
     {
         ScopedModifier m(_pausing, true);

@@ -24,7 +24,6 @@ class DevPlayer:    public sihd::core::Device,
         DevPlayer(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~DevPlayer();
 
-        bool run() override;
         bool is_running() const override;
 
         bool set_provider(std::string_view path);
@@ -38,6 +37,8 @@ class DevPlayer:    public sihd::core::Device,
         void handle(sihd::core::Channel *c) override;
         void handle(sihd::util::Collector<PlayableRecord> *collector) override;
 
+        bool run() override;
+
         bool on_init() override;
         bool on_start() override;
         bool on_stop() override;
@@ -46,8 +47,9 @@ class DevPlayer:    public sihd::core::Device,
     private:
         bool _worker_loop();
 
+        std::atomic<bool> _waiting;
         bool _running;
-        bool _last_record;
+        std::atomic<bool> _last_record;
         size_t _records_queue_limit;
         std::string _provider_path;
 

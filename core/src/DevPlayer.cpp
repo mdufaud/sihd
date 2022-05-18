@@ -17,6 +17,7 @@ using namespace sihd::util;
 
 DevPlayer::DevPlayer(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
+    _waiting(false),
     _running(false),
     _channel_play_ptr(nullptr),
     _channel_end_ptr(nullptr)
@@ -25,7 +26,7 @@ DevPlayer::DevPlayer(const std::string & name, sihd::util::Node *parent):
     _worker.set_runnable(&_runnable);
     _collector.add_observer(this);
     this->set_provider_wait_time(10);
-    this->set_scheduler_queue_size(20);
+    this->set_scheduler_queue_size(200);
     this->add_conf("provider", &DevPlayer::set_provider);
     this->add_conf("provider_wait_time", &DevPlayer::set_provider_wait_time);
     this->add_conf("queue_size", &DevPlayer::set_scheduler_queue_size);
@@ -110,13 +111,14 @@ bool    DevPlayer::on_start()
         return false;
     }
     _collector.set_provider(provider);
-    // channel.play
+    // channel play
     if (this->get_channel(CHANNEL_PLAY, &_channel_play_ptr) == false)
         return false;
     this->observe_channel(_channel_play_ptr);
     // channel end
     if (this->get_channel(CHANNEL_END, &_channel_end_ptr) == false)
         return false;
+    _channel_end_ptr->write<bool>(0, false);
     // channels to play to
     Channel *channel_ptr;
     for (const auto & pair: _map_channels_alias)
@@ -166,7 +168,8 @@ bool    DevPlayer::run()
     _waitable.notify(1);
     // if no next record to be played - notify the end of player
     if (_last_record && _queue.empty())
-        _channel_end_ptr->notify();
+        _channel_end_ptr->write<bool>(0, true);
+    SIHD_TRACE("TASK: " << _queue.size())
     return true;
 }
 
@@ -175,11 +178,13 @@ void    DevPlayer::handle(Collector<PlayableRecord> *collector)
     // called for each record with a lock on collector data
     PlayableRecord record = collector->data();
     _queue.push(record);
-    _first_timestamp = record.timestamp * (1 * _first_timestamp < 0);
+    _first_timestamp = record.timestamp * (1 * (_first_timestamp < 0));
     time_t execute_at = _time_begin + (record.timestamp - _first_timestamp);
+    _waiting = true;
     // wait tasks to be played as not to overflow the scheduler
     while (_running && (_queue.size() > _records_queue_limit))
         _waitable.infinite_wait();
+    _waiting = false;
     // calls DevPlayer::run to execute record at setted time
     if (_running)
         _scheduler_ptr->add_task(new Task(this, execute_at));
@@ -187,7 +192,7 @@ void    DevPlayer::handle(Collector<PlayableRecord> *collector)
 
 bool    DevPlayer::_worker_loop()
 {
-    _time_begin = _scheduler_ptr->clock()->now();
+    _time_begin = _scheduler_ptr->now();
     _first_timestamp = -1;
     _last_record = false;
     // run collector loop which calls DevPlayer::handle for each record
@@ -196,7 +201,7 @@ bool    DevPlayer::_worker_loop()
     _last_record = true;
     // if no task in queue - notify end of player
     if (_queue.empty())
-        _channel_end_ptr->notify();
+        _channel_end_ptr->write<bool>(0, true);
     return ret;
 }
 
@@ -206,7 +211,8 @@ bool    DevPlayer::on_stop()
         std::lock_guard l(_run_mutex);
         _running = false;
     }
-    _waitable.notify_all();
+    while (_waiting.load())
+        _waitable.notify_all();
     if (_worker.stop_worker() == false)
         SIHD_LOG(error, "DevReplayer: could not stop worker");
     if (_scheduler_ptr->stop() == false)

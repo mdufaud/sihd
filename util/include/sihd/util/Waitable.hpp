@@ -4,6 +4,7 @@
 # include <mutex>
 # include <condition_variable>
 # include <sihd/util/Clocks.hpp>
+# include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
 {
@@ -25,17 +26,16 @@ class Waitable
         }
 
         void infinite_wait();
-        std::time_t infinite_wait_elapsed();
-        bool wait_until(std::time_t nano_timestamp);
+        time_t infinite_wait_elapsed();
+        bool wait_until(Timestamp t);
         // wait for x nanoseconds -- returns true if timed out
-        bool wait_for(std::time_t nano_duration);
+        bool wait_for(Timestamp t);
         // wait X notifications for a duration
-        bool wait_loop(std::time_t nano_duration, uint32_t times);
+        bool wait_loop(Timestamp t, uint32_t times);
         // cancel wait loop
         void cancel_loop();
         // wait for x nanoseconds -- returns time elapsed
-        std::time_t wait_elapsed(std::time_t nano_duration);
-
+        time_t wait_elapsed(Timestamp t);
 
     protected:
         std::mutex _mutex;

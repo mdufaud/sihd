@@ -53,6 +53,23 @@ namespace test
             }
     };
 
+    TEST_F(TestArrayView, test_arrayview_struct)
+    {
+        struct Test
+        {
+            int x;
+            int y;
+        };
+
+        Test arr[3];
+        arr[0].x = 42;
+        arr[0].y = 1337;
+
+        ArrayView<Test> view(arr, 3);
+        EXPECT_EQ(view[0].x, 42);
+        EXPECT_EQ(view[0].y, 1337);
+    }
+
     TEST_F(TestArrayView, test_arrayview_init)
     {
         // initializer list can work only when stack is scoped

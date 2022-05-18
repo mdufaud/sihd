@@ -690,14 +690,14 @@ std::string  Str::remove_escape_sequences(std::string_view str, const char *auth
     return ret;
 }
 
-std::string Str::gmtime_str(time_t nano, bool total_parenthesis, bool nano_resolution)
+std::string Str::gmtime_str(Timestamp timestamp, bool total_parenthesis, bool nano_resolution)
 {
-    return Str::_time_to_string(nano, total_parenthesis, nano_resolution, false);
+    return Str::_time_to_string(timestamp, total_parenthesis, nano_resolution, false);
 }
 
-std::string Str::localtime_str(time_t nano, bool total_parenthesis, bool nano_resolution)
+std::string Str::localtime_str(Timestamp timestamp, bool total_parenthesis, bool nano_resolution)
 {
-    return Str::_time_to_string(nano, total_parenthesis, nano_resolution, true);
+    return Str::_time_to_string(timestamp, total_parenthesis, nano_resolution, true);
 }
 
 std::string Str::_time_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime)

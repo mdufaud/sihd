@@ -127,6 +127,9 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("from_double", &time::from_double)
         .def("hz", &time::freq);
 
+    pybind11::class_<Timestamp>(m_util, "Timestamp")
+        .def(pybind11::init<time_t>());
+
     pybind11::class_<Splitter>(m_util, "Splitter")
         .def(pybind11::init<>())
         .def("set_empty_delimitations", &Splitter::set_empty_delimitations)

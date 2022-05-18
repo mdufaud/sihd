@@ -173,7 +173,7 @@ class ArrayView: public IArrayView
                     return std::string(this->data(), this->size() - 1);
                 return std::string(this->data(), this->size());
             }
-            else
+            if constexpr (std::is_fundamental_v<T>)
             {
                 std::string s;
                 s.reserve(_size);
@@ -185,25 +185,32 @@ class ArrayView: public IArrayView
                 }
                 return s;
             }
+            else
+                return Str::hexdump(_buf_ptr, this->byte_size());
         }
 
         std::string str(char delimiter) const
         {
-            std::string s;
-            // trying to reserve at least 1 char by element + delimiters (if there are)
-            s.reserve(_size + std::max(0, int(_size - 2)));
-            size_t i = 0;
-            while (i < _size)
+            if constexpr (std::is_fundamental_v<T>)
             {
-                if (i > 0)
-                    s += delimiter;
-                if constexpr (std::is_same_v<T, char>)
-                    s += _buf_ptr[i];
-                else
-                    s += std::to_string(_buf_ptr[i]);
-                ++i;
+                std::string s;
+                // trying to reserve at least 1 char by element + delimiters (if there are)
+                s.reserve(_size + std::max(0, int(_size - 2)));
+                size_t i = 0;
+                while (i < _size)
+                {
+                    if (i > 0)
+                        s += delimiter;
+                    if constexpr (std::is_same_v<T, char>)
+                        s += _buf_ptr[i];
+                    else
+                        s += std::to_string(_buf_ptr[i]);
+                    ++i;
+                }
+                return s;
             }
-            return s;
+            else
+                return Str::hexdump(_buf_ptr, this->byte_size(), delimiter);
         }
 
         std::string cpp_str() const

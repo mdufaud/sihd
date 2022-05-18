@@ -50,7 +50,7 @@ class MemRecorder:  public ACoreObject,
     private:
         bool _provides;
         bool _records;
-        bool _running;
+        std::atomic<bool> _running;
         MapListRecordedValues _map_record;
         SortedRecordedValues _map_sorted_records;
 };

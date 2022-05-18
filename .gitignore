@@ -16,3 +16,4 @@ dist/*
 imgui/imgui
 lua/luabridge
 .installed
+.build_cache

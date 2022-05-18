@@ -6,7 +6,7 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-Timeit::Timeit(const std::string & fun_name)
+Timeit::Timeit(std::string_view fun_name)
 {
     _begin = _clock.now();
     _fun_name = fun_name;
@@ -14,8 +14,8 @@ Timeit::Timeit(const std::string & fun_name)
 
 Timeit::~Timeit()
 {
-    std::time_t now = _clock.now();
-    SIHD_LOG_DEBUG("Timeit[%s]: time %lu micro", _fun_name.c_str(), time::to_micro(now - _begin));
+    time_t now = _clock.now();
+    SIHD_LOG_DEBUG("Timeit[%s]: time %s", _fun_name.c_str(), Timestamp(now - _begin).gmtime_str().c_str());
 }
 
 }

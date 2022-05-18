@@ -220,6 +220,9 @@ elif compiler == "em":
 # Decides when to recompile - removing slow md5 in favor of timestamps
 Decider('timestamp-newer')
 
+# Cache compile build with md5
+CacheDir('{}/.build_cache'.format(builder_helper.build_root_path))
+
 ###############################################################################
 # Build
 ###############################################################################
@@ -277,10 +280,11 @@ def _env_build_lib(self, src, lib_name=None, static=None, **kwargs):
     if lib_name is None:
         lib_name = module_name
     lib_path = os.path.join(builder_helper.build_lib_path, lib_name)
+    # no cache for symlinks renewal
     if (static is not None and static) or builder_helper.build_static_libs:
-        lib = self.StaticLibrary(lib_path, src, **kwargs)
+        lib = NoCache(self.StaticLibrary(lib_path, src, **kwargs))
     else:
-        lib = self.SharedLibrary(lib_path, src, **kwargs)
+        lib = NoCache(self.SharedLibrary(lib_path, src, **kwargs))
     module_name = self['APP_MODULE_NAME']
     modules_generated_libs.setdefault(module_name, []).append(lib_name)
     modules_scons_libs[module_name] = lib

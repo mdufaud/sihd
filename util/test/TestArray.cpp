@@ -588,4 +588,23 @@ namespace test
         EXPECT_EQ(arr2.at(2), 6);
     }
 
+    TEST_F(TestArray, test_array_struct)
+    {
+        struct Test
+        {
+            int x;
+            int y;
+        };
+
+        Array<Test> arr;
+        arr.push_back({
+            .x = 42,
+            .y = 1337,
+        });
+        EXPECT_EQ(arr[0].x, 42);
+        EXPECT_EQ(arr[0].y, 1337);
+
+        SIHD_LOG_DEBUG(arr.str(' '));
+    }
+
 }

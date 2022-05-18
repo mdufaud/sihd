@@ -153,8 +153,8 @@ namespace test
                     .trigger(0, 3.14f)
                     .out("..out_channel")
                     .write(0, 0x1)
-                    .delay(time::ms(1)));
-        ASSERT_TRUE(dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..out_channel;trigger=6.28f;write=0b101;delay=0.001"));
+                    .delay(time::ms(2)));
+        ASSERT_TRUE(dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..out_channel;trigger=6.28f;write=0b101;delay=0.002"));
 
         core.add_channel("in_channel", "float");
         core.add_channel("out_channel", "int");
@@ -175,15 +175,15 @@ namespace test
         EXPECT_EQ(out_channel->read<int>(0), 0);
         in_channel->write<float>(0, 3.14f);
         EXPECT_EQ(out_channel->read<int>(0), 0);
-        usleep(900);
+        usleep(1900);
         EXPECT_EQ(out_channel->read<int>(0), 0);
         usleep(300);
         EXPECT_EQ(out_channel->read<int>(0), 1);
 
         in_channel->write<float>(0, 6.28f);
         EXPECT_EQ(out_channel->read<int>(0), 1);
-        // delay -> 0.001 = 1000hz -> 1ms
-        usleep(1300);
+        // delay -> 0.002 = 1000hz -> 2ms
+        usleep(2300);
         EXPECT_EQ(out_channel->read<int>(0), 0b101);
     }
 

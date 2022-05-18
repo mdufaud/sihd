@@ -10,7 +10,7 @@ class IClock
 {
     public:
         virtual ~IClock() {};
-        virtual std::time_t now() = 0;
+        virtual time_t now() = 0;
         virtual bool is_steady() = 0;
         virtual bool start() = 0;
         virtual bool stop() = 0;
@@ -22,7 +22,7 @@ class SteadyClock:  public IClock
         SteadyClock();
         ~SteadyClock();
 
-        virtual std::time_t now();
+        virtual time_t now();
         virtual bool is_steady();
         virtual bool start() { return true; };
         virtual bool stop() { return true; };
@@ -37,7 +37,7 @@ class SystemClock:  public IClock
         SystemClock();
         ~SystemClock();
 
-        virtual std::time_t now();
+        virtual time_t now();
         virtual bool is_steady();
         virtual bool start() { return true; };
         virtual bool stop() { return true; };

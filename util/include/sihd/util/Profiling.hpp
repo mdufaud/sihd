@@ -3,7 +3,8 @@
 
 # include <sihd/util/Clocks.hpp>
 # include <sihd/util/time.hpp>
-# include <string>
+# include <sihd/util/Timestamp.hpp>
+# include <string_view>
 
 namespace sihd::util
 {
@@ -11,14 +12,14 @@ namespace sihd::util
 class Timeit
 {
     public:
-        Timeit(const std::string & fun_name = "");
+        Timeit(std::string_view fun_name = "");
         virtual ~Timeit();
 
     protected:
 
     private:
         std::string _fun_name;
-        std::time_t _begin;
+        time_t _begin;
         SteadyClock _clock;
 };
 

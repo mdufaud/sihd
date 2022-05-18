@@ -19,10 +19,10 @@ class DevPulsation: public sihd::core::Device,
 
         bool set_frequency(double freq);
 
-        bool run() override;
-
     protected:
         void handle(sihd::core::Channel *c) override;
+
+        bool run() override;
 
         bool on_init() override;
         bool on_start() override;

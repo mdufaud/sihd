@@ -33,8 +33,6 @@ class DevFilter: public sihd::core::Device
                 bool parse(std::string_view conf);
                 Rule & in(std::string_view channel_name);
                 Rule & out(std::string_view channel_name);
-                // notify if same value is wrote in channel's output
-                Rule & notify_same(bool active);
                 // if rule should match or not match
                 Rule & match(bool active);
                 // write trigger value at channel's output idx
@@ -75,7 +73,6 @@ class DevFilter: public sihd::core::Device
                 size_t write_idx;
                 sihd::util::Value write_value;
                 // options
-                bool notify_if_same;
                 bool should_match;
                 time_t nano_delay;
 

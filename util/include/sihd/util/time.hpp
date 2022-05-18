@@ -62,6 +62,20 @@ double to_freq(time_t nano);
 constexpr auto to_hz = time::to_freq;
 constexpr auto to_frequency = time::to_freq;
 
+// chrono -> nano
+template <typename T>
+constexpr std::chrono::duration<int64_t, T> to_duration(time_t nano)
+{
+    // seconds -> nano / 1E9        = nano / (1E9 / 1) / 1
+    // milliseconds -> nano / 1E6   = nano / (1E9 / 1E3) / 1
+    // nano -> nano / 1             = nano / (1E9 / 1E9) / 1
+    // min -> (nano / 1E9) / 60     = nano / (1E9 / 1) / 60
+    return std::chrono::duration<int64_t, T>((nano
+        / (std::chrono::duration<int64_t, std::nano>::period::den
+            / std::chrono::duration<int64_t, T>::period::den))
+                / std::chrono::duration<int64_t, T>::period::num);
+}
+
 // micro -> nano
 time_t micro(time_t micro);
 constexpr auto us = time::micro;
@@ -86,6 +100,19 @@ constexpr auto frequency = time::freq;
 constexpr auto hz = time::freq;
 // seconds,milliseconds -> nano
 time_t from_double(double sec_milli);
+
+// chrono -> nano
+template <typename T>
+constexpr time_t duration(std::chrono::duration<int64_t, T> duration)
+{
+    // seconds -> count() * 1E9     == count() * (1E9 / 1) * 1
+    // nano -> count() * 1          == count() * (1E9 / 1E9) * 1
+    // min -> count() * 1E9 * 60    == count() * (1E9 / 1) * 60
+    return (duration.count()
+        * (std::chrono::duration<int64_t, std::nano>::period::den
+            / std::chrono::duration<int64_t, T>::period::den))
+                * std::chrono::duration<int64_t, T>::period::num;
+}
 
 // tm struct -> nano
 time_t tm(struct tm *tm);

@@ -75,24 +75,21 @@ namespace test
         std::cout << core.tree_desc_str() << std::endl;
 
         Channel *end = dev_replayer.get_channel("end");
-        EXPECT_NE(end, nullptr);
+        ASSERT_NE(end, nullptr);
         Channel *play = dev_replayer.get_channel("play");
-        EXPECT_NE(play, nullptr);
+        ASSERT_NE(play, nullptr);
 
         EXPECT_TRUE(core.start());
 
-        if (play != nullptr && end != nullptr)
-        {
-            SIHD_LOG(debug, "Playing");
-            play->write(0, true);
-            SIHD_LOG(debug, "Sleeping");
-            sihd::util::time::msleep(5);
-            SIHD_LOG(debug, "Stopping recorder");
-            mem_recorder.stop();
-            SIHD_LOG(debug, "Waiting the end");
-            ChannelWaiter waiter(end);
-            EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(60)));
-        }
+        ChannelWaiter waiter(end);
+        SIHD_LOG(debug, "Playing");
+        play->write(0, true);
+        SIHD_LOG(debug, "Sleeping");
+        sihd::util::time::msleep(5);
+        SIHD_LOG(debug, "Stopping recorder");
+        mem_recorder.stop();
+        SIHD_LOG(debug, "Waiting the end");
+        EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(60)));
 
         EXPECT_TRUE(core.stop());
 

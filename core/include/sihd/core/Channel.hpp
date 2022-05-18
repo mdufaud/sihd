@@ -43,9 +43,9 @@ class Channel:  public sihd::util::Named,
 
         void set_clock(sihd::util::IClock *clock);
         // get last write timestamp (thread safe)
-        std::time_t timestamp();
+        time_t timestamp();
         // get last write timestamp (not thread safe)
-        std::time_t ctimestamp() const { return _timestamp; };
+        time_t ctimestamp() const { return _timestamp; };
 
         // notifies all observers and prevent writing inside notification thread
         void notify();
@@ -71,6 +71,9 @@ class Channel:  public sihd::util::Named,
         sihd::util::Type data_type() const { return _array_ptr->data_type(); }
 
         bool is_same_type(const Channel *other) const { return _array_ptr->is_same_type(*other->array()); }
+
+        template <typename T>
+        bool is_same_type() const { return sihd::util::Types::is_same<T>(_array_ptr->data_type()); }
 
         // copy internal array into arr
 
@@ -109,7 +112,7 @@ class Channel:  public sihd::util::Named,
 
     private:
         sihd::util::IClock *_clock_ptr;
-        std::time_t _timestamp;
+        time_t _timestamp;
 
         sihd::util::IArray *_array_ptr;
         std::mutex _arr_mutex;

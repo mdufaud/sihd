@@ -10,6 +10,7 @@
 # include <map>
 # include <optional>
 # include <sihd/util/Num.hpp>
+# include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
 {
@@ -35,8 +36,8 @@ class Str
 
         static void append_sep(std::string & str, std::string_view append, std::string_view sep = ",");
 
-        static std::string gmtime_str(time_t nano, bool total_parenthesis = false, bool nano_resolution = false);
-        static std::string localtime_str(time_t nano, bool total_parenthesis = false, bool nano_resolution = false);
+        static std::string gmtime_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
+        static std::string localtime_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
 
         static bool is_escape_sequence_open(int c, const char *authorized_open_escape_sequences = nullptr);
         static bool is_escape_sequence_close(int c, const char *authorized_close_escape_sequences = nullptr);

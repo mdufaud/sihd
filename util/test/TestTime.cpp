@@ -3,6 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/FS.hpp>
 #include <sihd/util/time.hpp>
+#include <sihd/util/Timestamp.hpp>
 
 namespace test
 {
@@ -30,6 +31,67 @@ namespace test
             }
     };
 
+    TEST_F(TestTime, test_time_timestamp)
+    {
+        Timestamp timestamp(std::chrono::seconds(2));
+
+        EXPECT_EQ(timestamp.get(), time::seconds(2));
+
+        std::chrono::seconds s = timestamp;
+        EXPECT_EQ(s.count(), 2);
+
+        // auto converted to time_t
+        EXPECT_EQ(timestamp, time::seconds(2));
+
+        // comparisons
+        EXPECT_EQ(timestamp, Timestamp(timestamp));
+        EXPECT_EQ(timestamp, timestamp);
+        EXPECT_EQ(timestamp, timestamp.get());
+        EXPECT_LE(timestamp, Timestamp(timestamp + 1));
+        EXPECT_LE(timestamp, timestamp + 1);
+        EXPECT_GT(timestamp, Timestamp(timestamp - 1));
+        EXPECT_GT(timestamp, timestamp - 1);
+
+        timestamp += time::seconds(1);
+        timestamp += std::chrono::seconds(1);
+        EXPECT_EQ(timestamp - std::chrono::seconds(1), std::chrono::seconds(3));
+
+        EXPECT_EQ(timestamp.nanoseconds(), 4E9);
+        EXPECT_EQ(timestamp.microseconds(), 4E6);
+        EXPECT_EQ(timestamp.milliseconds(), 4E3);
+        EXPECT_EQ(timestamp.seconds(), 4);
+        EXPECT_EQ(timestamp.minutes(), 0);
+        EXPECT_EQ(timestamp.hours(), 0);
+        EXPECT_EQ(timestamp.days(), 0);
+
+        SIHD_LOG_DEBUG(timestamp.gmtime_str());
+        SIHD_LOG_DEBUG(timestamp.localtime_str());
+
+        auto fun = [] (std::chrono::seconds sec) { return sec.count(); };
+        EXPECT_EQ(fun(timestamp), 4);
+    }
+
+    TEST_F(TestTime, test_time_duration)
+    {
+        std::chrono::nanoseconds chrono_nano = time::to_duration<std::nano>(123);
+        EXPECT_EQ(chrono_nano.count(), 123);
+
+        std::chrono::milliseconds chrono_milli = time::to_duration<std::milli>(time::milliseconds(456));
+        EXPECT_EQ(chrono_milli.count(), 456);
+
+        std::chrono::seconds chrono_seconds = time::to_duration<std::ratio<1>>(time::seconds(789));
+        EXPECT_EQ(chrono_seconds.count(), 789);
+
+        std::chrono::minutes chrono_min = time::to_duration<std::ratio<60>>(time::minutes(10));
+        EXPECT_EQ(chrono_min.count(), 10);
+
+        EXPECT_EQ(time::duration(std::chrono::nanoseconds(2)), 2);
+        EXPECT_EQ(time::duration(std::chrono::microseconds(2)), time::microseconds(2));
+        EXPECT_EQ(time::duration(std::chrono::milliseconds(2)), time::milliseconds(2));
+        EXPECT_EQ(time::duration(std::chrono::seconds(2)), time::seconds(2));
+        EXPECT_EQ(time::duration(std::chrono::minutes(2)), time::minutes(2));
+        EXPECT_EQ(time::duration(std::chrono::hours(2)), time::hours(2));
+    }
 
     TEST_F(TestTime, test_time_freq)
     {

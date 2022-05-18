@@ -33,7 +33,8 @@ Type  Types::from_str(std::string_view type)
         {STR_TYPE_FLOAT, TYPE_FLOAT}, {STR_TYPE_DOUBLE, TYPE_DOUBLE},
         {STR_TYPE_OBJECT, TYPE_OBJECT}
     };
-    return str_to_type[type.data()];
+    auto it = str_to_type.find(type);
+    return it == str_to_type.end() ? TYPE_NONE : it->second;
 }
 
 const char  *Types::type_str(Type type)

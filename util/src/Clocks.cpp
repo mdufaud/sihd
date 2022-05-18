@@ -13,7 +13,7 @@ SteadyClock::~SteadyClock()
 {
 }
 
-std::time_t     SteadyClock::now()
+time_t     SteadyClock::now()
 {
     return _clock.now().time_since_epoch().count();
 }
@@ -31,7 +31,7 @@ SystemClock::~SystemClock()
 {
 }
 
-std::time_t     SystemClock::now()
+time_t     SystemClock::now()
 {
     return _clock.now().time_since_epoch().count();
 }

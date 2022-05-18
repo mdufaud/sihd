@@ -17,7 +17,7 @@ struct PlayableRecord
 typedef std::pair<time_t, sihd::util::IArray *> RecordedValue;
 typedef std::list<RecordedValue> ListRecordedValues;
 typedef std::map<std::string, ListRecordedValues> MapListRecordedValues;
-typedef std::multimap<std::time_t, PlayableRecord> SortedRecordedValues;
+typedef std::multimap<time_t, PlayableRecord> SortedRecordedValues;
 
 }
 
