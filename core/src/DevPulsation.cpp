@@ -92,7 +92,7 @@ bool    DevPulsation::on_start()
     this->observe_channel(_channel_activate_ptr);
     if (_channel_activate_ptr->read<bool>(0) == false)
         _scheduler.pause();
-    _scheduler.add_task(new sihd::util::Task(this, 0, sihd::util::time::freq(_frequency)));
+    _scheduler.add_task(new sihd::util::Task(this, 0, sihd::util::Time::freq(_frequency)));
     if (_scheduler.start() == false)
     {
         SIHD_LOG(error, "DevPulsation: could not start scheduler");

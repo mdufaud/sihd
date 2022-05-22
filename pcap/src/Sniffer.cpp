@@ -1,7 +1,7 @@
 #include <sihd/pcap/Sniffer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/time.hpp>
+#include <sihd/util/Time.hpp>
 
 namespace sihd::pcap
 {
@@ -153,9 +153,9 @@ bool    Sniffer::read_next()
 void    Sniffer::new_packet(const struct pcap_pkthdr *h, const u_char *bytes)
 {
     if (_nano_precision)
-        _pkt_nano_timestamp = sihd::util::time::nano_tv(h->ts);
+        _pkt_nano_timestamp = sihd::util::Time::nano_tv(h->ts);
     else
-        _pkt_nano_timestamp = sihd::util::time::tv(h->ts);
+        _pkt_nano_timestamp = sihd::util::Time::tv(h->ts);
     _array.resize(h->len);
     _array.copy_from_bytes(bytes, h->len);
     this->notify_observers(this);

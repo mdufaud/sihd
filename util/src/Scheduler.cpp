@@ -11,7 +11,7 @@ SIHD_LOGGER;
 Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent)
 {
     _clock_ptr = &_default_clock;
-    overrun_at = time::micro(300);
+    overrun_at = Time::micro(300);
     acceptable_nano = 100;
     _next_run = 0;
     _running = false;

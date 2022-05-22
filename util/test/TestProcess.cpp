@@ -59,7 +59,7 @@ namespace test
         Worker worker(&task);
         EXPECT_TRUE(worker.start_sync_worker("proc"));
         SIHD_LOG(debug, "Kill cat process with ctrl + d")
-        EXPECT_TRUE(proc.wait_process_end(time::sec(10)));
+        EXPECT_TRUE(proc.wait_process_end(Time::sec(10)));
         proc.stop();
         worker.stop_worker();
     }

@@ -1,6 +1,6 @@
 #include <sihd/util/Str.hpp>
 #include <sihd/util/Splitter.hpp>
-#include <sihd/util/time.hpp>
+#include <sihd/util/Time.hpp>
 
 #include <sstream>
 #include <cstdarg>
@@ -703,37 +703,41 @@ std::string Str::localtime_str(Timestamp timestamp, bool total_parenthesis, bool
 std::string Str::_time_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime)
 {
     std::stringstream ss;
-    struct tm *tm = time::to_tm(std::abs(nano), localtime);
-    if (tm)
+    struct tm tm = Time::to_tm(std::abs(nano), localtime);
+    bool next_step;
+    ss << (nano > 0 ? "+" : "-");
+    if ((next_step = tm.tm_year > 70))
+        ss << tm.tm_year - 70 << "y:";
+    if ((next_step = next_step || tm.tm_mon > 0))
+        ss << tm.tm_mon << "m:";
+    if ((next_step = next_step || (tm.tm_mday - 1) > 0))
+        ss << tm.tm_mday - 1 << "d::";
+    if ((next_step = next_step || tm.tm_hour > 0))
+        ss << tm.tm_hour << "h:";
+    if ((next_step = next_step || tm.tm_min > 0))
+        ss << tm.tm_min << "m:";
+    if ((next_step = next_step || tm.tm_sec > 0))
+        ss << tm.tm_sec << "s:";
+    time_t ms = Time::to_milli(nano) % (int)1E3;
+    if ((next_step = next_step || ms > 0))
+        ss << ms << "ms:";
+    time_t us = Time::to_micro(nano) % (int)1E3;
+    ss << us << "us";
+    if (nano_resolution)
     {
-        bool next_step;
-        ss << (nano > 0 ? "+" : "-");
-        if ((next_step = tm->tm_year > 70))
-            ss << tm->tm_year - 70 << "y:";
-        if ((next_step = next_step || tm->tm_mon > 0))
-            ss << tm->tm_mon << "m:";
-        if ((next_step = next_step || (tm->tm_mday - 1) > 0))
-            ss << tm->tm_mday - 1 << "d::";
-        if ((next_step = next_step || tm->tm_hour > 0))
-            ss << tm->tm_hour << "h:";
-        if ((next_step = next_step || tm->tm_min > 0))
-            ss << tm->tm_min << "m:";
-        if ((next_step = next_step || tm->tm_sec > 0))
-            ss << tm->tm_sec << "s:";
-        time_t ms = time::to_milli(nano) % (int)1E3;
-        if ((next_step = next_step || ms > 0))
-            ss << ms << "ms:";
-        time_t us = time::to_micro(nano) % (int)1E3;
-        ss << us << "us";
-        if (nano_resolution)
-        {
-            time_t ns = std::abs(nano) % (int)1E3;
-            ss << ":" << ns << "ns";
-        }
-        if (total_parenthesis)
-            ss << " (" << nano << ")";
+        time_t ns = std::abs(nano) % (int)1E3;
+        ss << ":" << ns << "ns";
     }
+    if (total_parenthesis)
+        ss << " (" << nano << ")";
     return ss.str();
+}
+
+std::string     Str::format_time(Timestamp t, std::string_view format)
+{
+    struct tm tm = Time::to_tm(t.get());
+    size_t ret = strftime(Str::g_buffer, Str::g_buffer_size, format.data(), &tm);
+    return std::string(Str::g_buffer, ret);
 }
 
 }

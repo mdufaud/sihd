@@ -13,23 +13,23 @@ Timestamp::Timestamp(std::chrono::nanoseconds duration): _nano(duration.count())
 {
 }
 
-Timestamp::Timestamp(std::chrono::microseconds duration): _nano(time::duration<std::micro>(duration))
+Timestamp::Timestamp(std::chrono::microseconds duration): _nano(Time::duration<std::micro>(duration))
 {
 }
 
-Timestamp::Timestamp(std::chrono::milliseconds duration): _nano(time::duration<std::milli>(duration))
+Timestamp::Timestamp(std::chrono::milliseconds duration): _nano(Time::duration<std::milli>(duration))
 {
 }
 
-Timestamp::Timestamp(std::chrono::seconds duration): _nano(time::duration<std::ratio<1>>(duration))
+Timestamp::Timestamp(std::chrono::seconds duration): _nano(Time::duration<std::ratio<1>>(duration))
 {
 }
 
-Timestamp::Timestamp(std::chrono::minutes duration): _nano(time::duration<std::ratio<60>>(duration))
+Timestamp::Timestamp(std::chrono::minutes duration): _nano(Time::duration<std::ratio<60>>(duration))
 {
 }
 
-Timestamp::Timestamp(std::chrono::hours duration): _nano(time::duration<std::ratio<3600>>(duration))
+Timestamp::Timestamp(std::chrono::hours duration): _nano(Time::duration<std::ratio<3600>>(duration))
 {
 }
 
@@ -37,33 +37,38 @@ Timestamp::~Timestamp()
 {
 }
 
-std::string     Timestamp::gmtime_str(bool total_parenthesis, bool nano_resolution)
+std::string     Timestamp::gmtime_str(bool total_parenthesis, bool nano_resolution) const
 {
     return Str::gmtime_str(_nano, total_parenthesis, nano_resolution);
 }
 
-std::string     Timestamp::localtime_str(bool total_parenthesis, bool nano_resolution)
+std::string     Timestamp::localtime_str(bool total_parenthesis, bool nano_resolution) const
 {
     return Str::localtime_str(_nano, total_parenthesis, nano_resolution);
 }
 
+std::string     Timestamp::format(std::string_view fmt) const
+{
+    return Str::format_time(std::abs(_nano), fmt);
+}
+
 Timestamp::ClockTime Timestamp::clocktime() const
 {
-    struct tm *tm = time::to_tm(std::abs(_nano), true);
+    struct tm tm = Time::to_tm(std::abs(_nano), true);
     return {
-        .second = tm->tm_sec,
-        .minute = tm->tm_min,
-        .hour = tm->tm_hour
+        .second = tm.tm_sec,
+        .minute = tm.tm_min,
+        .hour = tm.tm_hour
     };
 }
 
 Timestamp::Calendar Timestamp::calendar() const
 {
-    struct tm *tm = time::to_tm(std::abs(_nano), true);
+    struct tm tm = Time::to_tm(std::abs(_nano), true);
     return {
-        .day = tm->tm_mday,
-        .month = tm->tm_mon + 1,
-        .year = tm->tm_year + 1900
+        .day = tm.tm_mday,
+        .month = tm.tm_mon + 1,
+        .year = tm.tm_year + 1900
     };
 }
 

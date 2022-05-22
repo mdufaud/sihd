@@ -6,7 +6,7 @@
 # include <sihd/util/Named.hpp>
 # include <sihd/util/Observable.hpp>
 # include <sihd/util/Logger.hpp>
-# include <sihd/util/time.hpp>
+# include <sihd/util/Time.hpp>
 # include <sihd/util/Clocks.hpp>
 # include <mutex>
 # include <atomic>

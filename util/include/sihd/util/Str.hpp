@@ -38,6 +38,8 @@ class Str
 
         static std::string gmtime_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
         static std::string localtime_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
+        // fmt strftime -> "%Y-%m-%d %H:%M:%S"
+        static std::string format_time(Timestamp t, std::string_view format);
 
         static bool is_escape_sequence_open(int c, const char *authorized_open_escape_sequences = nullptr);
         static bool is_escape_sequence_close(int c, const char *authorized_close_escape_sequences = nullptr);

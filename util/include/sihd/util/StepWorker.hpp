@@ -21,7 +21,7 @@ class StepWorker: public Worker, protected ISteppable
         virtual void resume_worker();
 
         time_t nano_sleep_time() const { return _sleep_time; }
-        double frequency() const { return time::to_hz(_sleep_time); };
+        double frequency() const { return Time::to_hz(_sleep_time); };
 
     protected:
         virtual bool run() override;

@@ -23,7 +23,7 @@ bool    StepWorker::set_frequency(double frequency)
         SIHD_LOG(error, "StepWorker: frequency " << frequency << " cannot be negative");
         return false;
     }
-    _sleep_time = time::freq(frequency);
+    _sleep_time = Time::freq(frequency);
     return true;
 }
 

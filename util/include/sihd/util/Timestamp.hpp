@@ -1,7 +1,7 @@
 #ifndef __SIHD_UTIL_TIMESTAMP_HPP__
 # define __SIHD_UTIL_TIMESTAMP_HPP__
 
-# include <sihd/util/time.hpp>
+# include <sihd/util/Time.hpp>
 # include <chrono>
 # include <string>
 
@@ -9,21 +9,21 @@
     template <typename T> \
     bool operator OP(std::chrono::duration<int64_t, T> duration) const \
     { \
-        return _nano OP time::duration<T>(duration); \
+        return _nano OP Time::duration<T>(duration); \
     }
 
 # define __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(OP) \
     template <typename T> \
     Timestamp operator OP(std::chrono::duration<int64_t, T> duration) \
     { \
-        return Timestamp(_nano OP time::duration<T>(duration)); \
+        return Timestamp(_nano OP Time::duration<T>(duration)); \
     }
 
 # define __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(OP) \
     template <typename T> \
     Timestamp & operator OP(std::chrono::duration<int64_t, T> duration) \
     { \
-        _nano OP time::duration<T>(duration); \
+        _nano OP Time::duration<T>(duration); \
         return *this; \
     }
 
@@ -81,33 +81,35 @@ class Timestamp
         template <typename T>
         static Timestamp from(std::chrono::duration<int64_t, T> duration)
         {
-            return Timestamp(time::duration<T>(duration));
+            return Timestamp(Time::duration<T>(duration));
         }
 
         operator time_t() const { return _nano; }
         operator std::chrono::nanoseconds() const { return std::chrono::nanoseconds(_nano); }
-        operator std::chrono::microseconds() const { return time::to_duration<std::micro>(_nano); }
-        operator std::chrono::milliseconds() const { return time::to_duration<std::milli>(_nano); }
-        operator std::chrono::seconds() const { return time::to_duration<std::ratio<1>>(_nano); }
-        operator std::chrono::minutes() const { return time::to_duration<std::ratio<60>>(_nano); }
-        operator std::chrono::hours() const { return time::to_duration<std::ratio<3600>>(_nano); }
+        operator std::chrono::microseconds() const { return Time::to_duration<std::micro>(_nano); }
+        operator std::chrono::milliseconds() const { return Time::to_duration<std::milli>(_nano); }
+        operator std::chrono::seconds() const { return Time::to_duration<std::ratio<1>>(_nano); }
+        operator std::chrono::minutes() const { return Time::to_duration<std::ratio<60>>(_nano); }
+        operator std::chrono::hours() const { return Time::to_duration<std::ratio<3600>>(_nano); }
 
         template <typename T>
         std::chrono::duration<int64_t, T> duration() const
         {
-            return time::to_duration<T>(_nano);
+            return Time::to_duration<T>(_nano);
         }
 
         time_t nanoseconds() const { return _nano; }
-        time_t microseconds() const { return time::to_microseconds(_nano); }
-        time_t milliseconds() const { return time::to_milliseconds(_nano); }
-        time_t seconds() const { return time::to_seconds(_nano); }
-        time_t minutes() const { return time::to_minutes(_nano); }
-        time_t hours() const { return time::to_hours(_nano); }
-        time_t days() const { return time::to_days(_nano); }
+        time_t microseconds() const { return Time::to_microseconds(_nano); }
+        time_t milliseconds() const { return Time::to_milliseconds(_nano); }
+        time_t seconds() const { return Time::to_seconds(_nano); }
+        time_t minutes() const { return Time::to_minutes(_nano); }
+        time_t hours() const { return Time::to_hours(_nano); }
+        time_t days() const { return Time::to_days(_nano); }
 
-        std::string gmtime_str(bool total_parenthesis = false, bool nano_resolution = false);
-        std::string localtime_str(bool total_parenthesis = false, bool nano_resolution = false);
+        std::string gmtime_str(bool total_parenthesis = false, bool nano_resolution = false) const;
+        std::string localtime_str(bool total_parenthesis = false, bool nano_resolution = false) const;
+        // format strftime -> "%Y-%m-%d %H:%M:%S"
+        std::string format(std::string_view format) const;
 
         time_t get() const { return _nano; }
         struct ClockTime

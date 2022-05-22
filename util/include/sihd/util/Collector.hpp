@@ -83,10 +83,10 @@ class Collector:    public IStoppableRunnable,
 
         T & data() { return _data; }
         IProvider<T> *provider() const { return _provider_ptr; }
-        time_t timeout_milliseconds() const { return sihd::util::time::to_ms(_provider_wait_milliseconds); }
+        time_t timeout_milliseconds() const { return sihd::util::Time::to_ms(_provider_wait_milliseconds); }
 
         void set_provider(IProvider<T> *ptr) { _provider_ptr = ptr; }
-        void set_timeout_milliseconds(time_t milli) { _provider_wait_milliseconds = sihd::util::time::ms(milli); }
+        void set_timeout_milliseconds(time_t milli) { _provider_wait_milliseconds = sihd::util::Time::ms(milli); }
 
     protected:
 

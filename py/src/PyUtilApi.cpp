@@ -9,7 +9,7 @@
 
 #include <sihd/util/version.hpp>
 #include <sihd/util/Types.hpp>
-#include <sihd/util/time.hpp>
+#include <sihd/util/Time.hpp>
 #include <sihd/util/Thread.hpp>
 #include <sihd/util/Path.hpp>
 #include <sihd/util/Node.hpp>
@@ -104,28 +104,28 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
 
     m_util.def_submodule("time", "sihd::util::time")
         // sleep
-        .def("nsleep", &time::nsleep, pybind11::call_guard<pybind11::gil_scoped_release>())
-        .def("usleep", &time::usleep, pybind11::call_guard<pybind11::gil_scoped_release>())
-        .def("msleep", &time::msleep, pybind11::call_guard<pybind11::gil_scoped_release>())
-        .def("sleep", &time::sleep, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("nsleep", &Time::nsleep, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("usleep", &Time::usleep, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("msleep", &Time::msleep, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("sleep", &Time::sleep, pybind11::call_guard<pybind11::gil_scoped_release>())
         // convert from nano
-        .def("to_us", &time::to_micro)
-        .def("to_ms", &time::to_milli)
-        .def("to_sec", &time::to_sec)
-        .def("to_min", &time::to_min)
-        .def("to_hours", &time::to_hours)
-        .def("to_days", &time::to_days)
-        .def("to_double", &time::to_double)
-        .def("to_hz", &time::to_freq)
+        .def("to_us", &Time::to_micro)
+        .def("to_ms", &Time::to_milli)
+        .def("to_sec", &Time::to_sec)
+        .def("to_min", &Time::to_min)
+        .def("to_hours", &Time::to_hours)
+        .def("to_days", &Time::to_days)
+        .def("to_double", &Time::to_double)
+        .def("to_hz", &Time::to_freq)
         // convert to nano
-        .def("us", &time::micro)
-        .def("ms", &time::milli)
-        .def("sec", &time::sec)
-        .def("min", &time::min)
-        .def("hours", &time::hours)
-        .def("days", &time::days)
-        .def("from_double", &time::from_double)
-        .def("hz", &time::freq);
+        .def("us", &Time::micro)
+        .def("ms", &Time::milli)
+        .def("sec", &Time::sec)
+        .def("min", &Time::min)
+        .def("hours", &Time::hours)
+        .def("days", &Time::days)
+        .def("from_double", &Time::from_double)
+        .def("hz", &Time::freq);
 
     pybind11::class_<Timestamp>(m_util, "Timestamp")
         .def(pybind11::init<time_t>());

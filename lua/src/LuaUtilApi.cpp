@@ -4,7 +4,7 @@
 #include <sihd/util/Node.hpp>
 
 #include <sihd/util/Types.hpp>
-#include <sihd/util/time.hpp>
+#include <sihd/util/Time.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Thread.hpp>
 #include <sihd/util/OS.hpp>
@@ -555,28 +555,28 @@ void    LuaUtilApi::load_tools(Vm & vm)
                  */
                 .beginNamespace("time")
                     // sleep
-                    .addFunction("nsleep", &time::nsleep)
-                    .addFunction("usleep", &time::usleep)
-                    .addFunction("msleep", &time::msleep)
-                    .addFunction("sleep", &time::sleep)
+                    .addFunction("nsleep", &Time::nsleep)
+                    .addFunction("usleep", &Time::usleep)
+                    .addFunction("msleep", &Time::msleep)
+                    .addFunction("sleep", &Time::sleep)
                     // convert from nano
-                    .addFunction("to_us", &time::to_micro)
-                    .addFunction("to_ms", &time::to_milli)
-                    .addFunction("to_sec", &time::to_sec)
-                    .addFunction("to_min", &time::to_min)
-                    .addFunction("to_hours", &time::to_hours)
-                    .addFunction("to_days", &time::to_days)
-                    .addFunction("to_double", &time::to_double)
-                    .addFunction("to_hz", &time::to_freq)
+                    .addFunction("to_us", &Time::to_micro)
+                    .addFunction("to_ms", &Time::to_milli)
+                    .addFunction("to_sec", &Time::to_sec)
+                    .addFunction("to_min", &Time::to_min)
+                    .addFunction("to_hours", &Time::to_hours)
+                    .addFunction("to_days", &Time::to_days)
+                    .addFunction("to_double", &Time::to_double)
+                    .addFunction("to_hz", &Time::to_freq)
                     // convert to nano
-                    .addFunction("us", &time::micro)
-                    .addFunction("ms", &time::milli)
-                    .addFunction("sec", &time::sec)
-                    .addFunction("min", &time::min)
-                    .addFunction("hours", &time::hours)
-                    .addFunction("days", &time::days)
-                    .addFunction("from_double", &time::from_double)
-                    .addFunction("hz", &time::freq)
+                    .addFunction("us", &Time::micro)
+                    .addFunction("ms", &Time::milli)
+                    .addFunction("sec", &Time::sec)
+                    .addFunction("min", &Time::min)
+                    .addFunction("hours", &Time::hours)
+                    .addFunction("days", &Time::days)
+                    .addFunction("from_double", &Time::from_double)
+                    .addFunction("hz", &Time::freq)
                 .endNamespace()
                 .beginNamespace("thread")
                     .addFunction("id", &Thread::id)

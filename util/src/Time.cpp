@@ -1,52 +1,55 @@
-#include <sihd/util/time.hpp>
+#include <sihd/util/Time.hpp>
+
 #include <thread>
 
-#include <iostream>
+#include <string.h>
 
-namespace sihd::util::time
+namespace sihd::util
 {
 
-void nsleep(time_t nano)
+std::mutex Time::_unsafe_c_mutex;
+
+void    Time::nsleep(time_t nano)
 {
     std::this_thread::sleep_for(std::chrono::nanoseconds(nano));
 }
 
-void usleep(time_t micro)
+void    Time::usleep(time_t micro)
 {
     std::this_thread::sleep_for(std::chrono::microseconds(micro));
 }
 
-void msleep(time_t milli)
+void    Time::msleep(time_t milli)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(milli));
 }
 
-void sleep(time_t sec)
+void    Time::sleep(time_t sec)
 {
     std::this_thread::sleep_for(std::chrono::seconds(sec));
 }
 
-double tv_to_double(const struct timeval & tv)
+double  Time::tv_to_double(const struct timeval & tv)
 {
     return (double)tv.tv_sec + (tv.tv_usec / 1E6);
 }
 
-double nano_tv_to_double(const struct timeval & tv)
+double  Time::nano_tv_to_double(const struct timeval & tv)
 {
     return (double)tv.tv_sec + (tv.tv_usec / 1E9);
 }
 
-double to_double(time_t nano)
+double  Time::to_double(time_t nano)
 {
     return nano / 1E9;
 }
 
-double to_freq(time_t nano)
+double  Time::to_freq(time_t nano)
 {
     return (1 / (double)(nano / 1E9));
 }
 
-struct timeval double_to_tv(double time)
+struct timeval  Time::double_to_tv(double time)
 {
     struct timeval ret;
 
@@ -55,7 +58,7 @@ struct timeval double_to_tv(double time)
     return ret;
 }
 
-struct timeval double_to_nano_tv(double time)
+struct timeval  Time::double_to_nano_tv(double time)
 {
     struct timeval ret;
 
@@ -64,7 +67,7 @@ struct timeval double_to_nano_tv(double time)
     return ret;
 }
 
-struct timeval milli_to_tv(time_t milliseconds)
+struct timeval  Time::milli_to_tv(time_t milliseconds)
 {
     struct timeval ret;
 
@@ -73,7 +76,7 @@ struct timeval milli_to_tv(time_t milliseconds)
     return ret;
 }
 
-struct timeval to_tv(time_t nano)
+struct timeval  Time::to_tv(time_t nano)
 {
     struct timeval ret;
 
@@ -82,7 +85,7 @@ struct timeval to_tv(time_t nano)
     return ret;
 }
 
-struct timeval to_nano_tv(time_t nano)
+struct timeval  Time::to_nano_tv(time_t nano)
 {
     struct timeval ret;
 
@@ -91,102 +94,101 @@ struct timeval to_nano_tv(time_t nano)
     return ret;
 }
 
-struct tm *to_tm(time_t nano, bool localtime)
+struct tm Time::to_tm(time_t nano, bool localtime)
 {
+    std::lock_guard l(_unsafe_c_mutex);
     time_t sec = nano / 1E9;
-    return localtime ? ::localtime(&sec) : ::gmtime(&sec);
+    // make a copy
+    return localtime ? *::localtime(&sec) : *::gmtime(&sec);
 }
 
-time_t to_micro(time_t nano)
+time_t  Time::to_micro(time_t nano)
 {
     return nano / 1E3;
 }
 
-time_t to_milli(time_t nano)
+time_t  Time::to_milli(time_t nano)
 {
     return nano / 1E6;
 }
 
-time_t to_sec(time_t nano)
+time_t  Time::to_sec(time_t nano)
 {
     return nano / 1E9;
 }
 
-time_t to_min(time_t nano)
+time_t  Time::to_min(time_t nano)
 {
     return to_sec(nano) / 60;
 }
 
-time_t to_hours(time_t nano)
+time_t  Time::to_hours(time_t nano)
 {
     return to_min(nano) / 60;
 }
 
-time_t to_days(time_t nano)
+time_t  Time::to_days(time_t nano)
 {
     return to_hours(nano) / 24;
 }
 
-time_t micro(time_t t)
+time_t  Time::micro(time_t t)
 {
     return t * 1E3;
 }
 
-time_t milli(time_t t)
+time_t  Time::milli(time_t t)
 {
     return t * 1E6;
 }
 
-time_t sec(time_t t)
+time_t  Time::sec(time_t t)
 {
     return t * 1E9;
 }
 
-time_t min(time_t t)
+time_t  Time::min(time_t t)
 {
     return sec(t) * 60;
 }
 
-time_t hours(time_t t)
+time_t  Time::hours(time_t t)
 {
     return min(t) * 60;
 }
 
-time_t days(time_t t)
+time_t  Time::days(time_t t)
 {
     return hours(t) * 24;
 }
 
-time_t from_double(double sec_milli)
+time_t  Time::from_double(double sec_milli)
 {
     time_t sec = (time_t)sec_milli;
     time_t nano = (double)(sec_milli - sec) * 1E9;
-    return time::sec(sec) + nano;
+    return Time::sec(sec) + nano;
 }
 
-time_t freq(double hz)
+time_t  Time::freq(double hz)
 {
     if (hz < 0.0)
         return 0;
     return (double)(1. / hz) * 1E9;
 }
 
-time_t tv(const struct timeval & tv)
+time_t  Time::tv(const struct timeval & tv)
 {
     return (tv.tv_sec * 1E9) + (tv.tv_usec * 1E3);
 }
 
-time_t nano_tv(const struct timeval & tv)
+time_t  Time::nano_tv(const struct timeval & tv)
 {
     return (tv.tv_sec * 1E9) + tv.tv_usec;
 }
 
-time_t tm(struct tm *tm)
+time_t  Time::tm(struct tm & tm)
 {
-    time_t ret = 0;
-    if (tm != nullptr)
-        ret = mktime(tm) * 1E9;
-    return ret;
+    return mktime(&tm) * 1E9;
 }
 
 }

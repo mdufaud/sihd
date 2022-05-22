@@ -52,7 +52,7 @@ namespace test
             SIHD_LOG(debug, "Activated pulsation");
             // wait for 4 pulsation in 6 ms
             ChannelWaiter waiter(beat);
-            EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(6), 4));
+            EXPECT_TRUE(waiter.wait_for(sihd::util::Time::milli(6), 4));
         }
         EXPECT_TRUE(core.stop());
         EXPECT_TRUE(core.reset());
@@ -73,7 +73,7 @@ namespace test
             SIHD_LOG(debug, "Activated pulsation");
             // wait for 4 pulsation in 6 ms
             ChannelWaiter waiter(beat);
-            EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(6), 4));
+            EXPECT_TRUE(waiter.wait_for(sihd::util::Time::milli(6), 4));
         }
         EXPECT_TRUE(core.stop());
         EXPECT_TRUE(core.reset());

@@ -4,7 +4,7 @@
 #include <sihd/util/FS.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Clocks.hpp>
-#include <sihd/util/time.hpp>
+#include <sihd/util/Time.hpp>
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshCommand.hpp>
 
@@ -100,8 +100,8 @@ namespace test
         time_t before = clock.now();
         EXPECT_TRUE(cmd.wait());
         time_t after = clock.now();
-        EXPECT_GT(after - before, time::milli(9));
-        EXPECT_LT(after - before, time::milli(100));
+        EXPECT_GT(after - before, Time::milli(9));
+        EXPECT_LT(after - before, Time::milli(100));
 
         EXPECT_EQ(stderr_str, "");
         EXPECT_EQ(stdout_str, "hello\nworld\n");

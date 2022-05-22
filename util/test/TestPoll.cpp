@@ -83,7 +83,7 @@ namespace test
                 }
             }
             _timedout += (int)poll->polling_timeout();
-            SIHD_LOG(debug, "Time spent in poll: " << time::to_micro(poll->polling_time())
+            SIHD_LOG(debug, "Time spent in poll: " << Time::to_micro(poll->polling_time())
                         << " microsec (timed out ? " << poll->polling_timeout() << ")");
         });
         poll.add_observer(&poll_handler);

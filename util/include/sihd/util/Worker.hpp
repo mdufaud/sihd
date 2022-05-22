@@ -8,7 +8,7 @@
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Clocks.hpp>
-# include <sihd/util/time.hpp>
+# include <sihd/util/Time.hpp>
 # include <sihd/util/Thread.hpp>
 # include <sihd/util/Synchronizer.hpp>
 # include <sihd/util/ScopedModifier.hpp>

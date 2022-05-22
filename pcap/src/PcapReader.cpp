@@ -1,7 +1,7 @@
 #include <sihd/pcap/PcapReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/time.hpp>
+#include <sihd/util/Time.hpp>
 
 namespace sihd::pcap
 {
@@ -153,9 +153,9 @@ bool    PcapReader::read_timestamp(time_t *nano_timestamp) const
     if (_pkt_hdr_ptr == nullptr)
         return false;
     if (_precision == PCAP_TSTAMP_PRECISION_MICRO)
-        *nano_timestamp = time::tv(_pkt_hdr_ptr->ts);
+        *nano_timestamp = Time::tv(_pkt_hdr_ptr->ts);
     else if (_precision == PCAP_TSTAMP_PRECISION_NANO)
-        *nano_timestamp = time::nano_tv(_pkt_hdr_ptr->ts);
+        *nano_timestamp = Time::nano_tv(_pkt_hdr_ptr->ts);
     return true;
 }
 
