@@ -47,5 +47,34 @@ std::string     Timestamp::localtime_str(bool total_parenthesis, bool nano_resol
     return Str::localtime_str(_nano, total_parenthesis, nano_resolution);
 }
 
+Timestamp::ClockTime Timestamp::clocktime() const
+{
+    struct tm *tm = time::to_tm(std::abs(_nano), true);
+    return {
+        .second = tm->tm_sec,
+        .minute = tm->tm_min,
+        .hour = tm->tm_hour
+    };
+}
+
+Timestamp::Calendar Timestamp::calendar() const
+{
+    struct tm *tm = time::to_tm(std::abs(_nano), true);
+    return {
+        .day = tm->tm_mday,
+        .month = tm->tm_mon + 1,
+        .year = tm->tm_year + 1900
+    };
+}
+
+std::string Timestamp::ClockTime::str() const
+{
+    return Str::format("%02d:%02d:%02d", hour, minute, second);
+}
+
+std::string Timestamp::Calendar::str() const
+{
+    return Str::format("%02d/%02d/%04d", day, month, year);
+}
 
 }

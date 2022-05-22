@@ -69,6 +69,14 @@ namespace test
 
         auto fun = [] (std::chrono::seconds sec) { return sec.count(); };
         EXPECT_EQ(fun(timestamp), 4);
+
+        std::chrono::system_clock clock;
+
+        auto timepoint = clock.now();
+        Timestamp tclock(timepoint.time_since_epoch());
+        EXPECT_EQ(tclock, timepoint.time_since_epoch());
+
+        SIHD_LOG(debug, tclock.calendar().str() << " - " << tclock.clocktime().str());
     }
 
     TEST_F(TestTime, test_time_duration)

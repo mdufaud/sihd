@@ -45,12 +45,7 @@ class Timestamp
         explicit Timestamp(std::chrono::hours duration);
         ~Timestamp();
 
-        template <typename T>
-        bool operator==(std::chrono::duration<int64_t, T> duration)
-        {
-            return _nano == time::duration<T>(duration);
-        }
-
+        // std::chrono::duration templates
         __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(==);
         __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(!=);
         __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(>=);
@@ -70,11 +65,18 @@ class Timestamp
         __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(/=);
         __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(%=);
 
+        // time_t assign
         __TMP_TIMESTAMP_ASSIGN_OPERATION__(+=);
         __TMP_TIMESTAMP_ASSIGN_OPERATION__(-=);
         __TMP_TIMESTAMP_ASSIGN_OPERATION__(*=);
         __TMP_TIMESTAMP_ASSIGN_OPERATION__(/=);
         __TMP_TIMESTAMP_ASSIGN_OPERATION__(%=);
+
+        template <typename T>
+        static Timestamp from(std::chrono::time_point<T> timepoint)
+        {
+            return Timestamp(timepoint.time_since_epoch().count());
+        }
 
         template <typename T>
         static Timestamp from(std::chrono::duration<int64_t, T> duration)
@@ -108,6 +110,27 @@ class Timestamp
         std::string localtime_str(bool total_parenthesis = false, bool nano_resolution = false);
 
         time_t get() const { return _nano; }
+        struct ClockTime
+        {
+            int second;
+            int minute;
+            int hour;
+
+            std::string str() const;
+        };
+
+        ClockTime clocktime() const;
+
+        struct Calendar
+        {
+            int day;
+            int month;
+            int year;
+
+            std::string str() const;
+        };
+
+        Calendar calendar() const;
 
     protected:
 
