@@ -216,18 +216,53 @@ namespace test
             ++lambda_ran;
             return true;
         };
+        // repeat task as fast as possible
         seq.add_task(new Task(fun, 0, 1));
-        int i = 0;
-        while (i < 100)
-        {
-            seq.start();
-            std::this_thread::sleep_for(std::chrono::microseconds(200));
-            seq.pause();
-            std::this_thread::sleep_for(std::chrono::microseconds(200));
-            seq.resume();
-            std::this_thread::sleep_for(std::chrono::microseconds(200));
-            seq.stop();
-            ++i;
-        }
+        // spam state change
+        std::thread t1([&] () {
+            int i = 0;
+            while (i < 100)
+            {
+                seq.start();
+                std::this_thread::sleep_for(std::chrono::microseconds(200));
+                seq.pause();
+                std::this_thread::sleep_for(std::chrono::microseconds(200));
+                seq.resume();
+                std::this_thread::sleep_for(std::chrono::microseconds(200));
+                seq.stop();
+                ++i;
+            }
+        });
+        // spam new tasks
+        std::thread t2([&] () {
+            int i = 0;
+            while (i < 100)
+            {
+                seq.add_task(new Task(fun, seq.now() + Time::us(100)));
+                seq.add_task(new Task(fun, seq.now() + Time::us(200)));
+                seq.add_task(new Task(fun, seq.now() + Time::us(300)));
+                seq.add_task(new Task(fun, seq.now() + Time::us(400)));
+                std::this_thread::sleep_for(std::chrono::microseconds(300));
+                ++i;
+            }
+        });
+        // create and delete new tasks
+        std::thread t3([&] () {
+            int i = 0;
+            while (i < 100)
+            {
+                Task *t = new Task(fun, seq.now() + Time::seconds(303));
+                seq.add_task(t);
+                std::this_thread::sleep_for(std::chrono::microseconds(500));
+                seq.remove_task(t);
+                delete t;
+                ++i;
+            }
+        });
+        // thread 1 start scheduler
+        t1.join();
+        t2.join();
+        t3.join();
+        SIHD_LOG(debug, "Total executions: " << lambda_ran);
     }
 }
