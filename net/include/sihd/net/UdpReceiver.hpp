@@ -10,7 +10,6 @@
 # include <sihd/util/Handler.hpp>
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Poll.hpp>
-# include <sihd/util/Observable.hpp>
 
 namespace sihd::net
 {
@@ -59,12 +58,8 @@ class UdpReceiver:  public INetReceiver,
         bool stop();
         bool is_running() const { return _poll.is_running(); }
 
-        // called anytime poll can read the socket
-        void set_handler(sihd::util::IHandler<INetReceiver *> *handler);
-
         // to set blocking/broadcast
         const Socket & socket() const { return _socket; }
-        const IpAddr & client_addr() const { return _client_addr; }
 
     protected:
 
@@ -73,7 +68,6 @@ class UdpReceiver:  public INetReceiver,
         void _setup_poll();
 
         Socket _socket;
-        IpAddr _client_addr;
         std::mutex _poll_mutex;
         sihd::util::Poll _poll;
 };

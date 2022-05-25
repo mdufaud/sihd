@@ -25,7 +25,8 @@ class Str
         static std::mutex g_buffer_mutex;
         static char g_buffer[];
 
-        static std::string _time_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime);
+        static std::string _timeoffset_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime);
+        static std::string _format_time(time_t nano,std::string_view format, bool localtime);
 
     public:
         static const char g_escapes_open[];
@@ -36,10 +37,11 @@ class Str
 
         static void append_sep(std::string & str, std::string_view append, std::string_view sep = ",");
 
-        static std::string gmtime_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
-        static std::string localtime_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
+        static std::string timeoffset_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
+        static std::string localtimeoffset_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
         // fmt strftime -> "%Y-%m-%d %H:%M:%S"
         static std::string format_time(Timestamp t, std::string_view format);
+        static std::string format_localtime(Timestamp t, std::string_view format);
 
         static bool is_escape_sequence_open(int c, const char *authorized_open_escape_sequences = nullptr);
         static bool is_escape_sequence_close(int c, const char *authorized_close_escape_sequences = nullptr);

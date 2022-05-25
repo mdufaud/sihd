@@ -11,7 +11,7 @@
         { \
             return new class(name, parent); \
         } \
-    }
+    };
 # define SIHD_UTIL_NAMEDFACTORY_PREFIX "sihd_util_namedfactory_"
 
 namespace sihd::util

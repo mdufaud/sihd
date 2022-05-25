@@ -13,12 +13,12 @@ SteadyClock::~SteadyClock()
 {
 }
 
-time_t     SteadyClock::now()
+time_t     SteadyClock::now() const
 {
     return _clock.now().time_since_epoch().count();
 }
 
-bool    SteadyClock::is_steady()
+bool    SteadyClock::is_steady() const
 {
     return _clock.is_steady;
 }
@@ -31,12 +31,12 @@ SystemClock::~SystemClock()
 {
 }
 
-time_t     SystemClock::now()
+time_t     SystemClock::now() const
 {
     return _clock.now().time_since_epoch().count();
 }
 
-bool    SystemClock::is_steady()
+bool    SystemClock::is_steady() const
 {
     return _clock.is_steady;
 }

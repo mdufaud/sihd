@@ -169,7 +169,6 @@ bool    DevPlayer::run()
     // if no next record to be played - notify the end of player
     if (_last_record && _queue.empty())
         _channel_end_ptr->write<bool>(0, true);
-    SIHD_TRACE("TASK: " << _queue.size())
     return true;
 }
 
@@ -180,11 +179,12 @@ void    DevPlayer::handle(Collector<PlayableRecord> *collector)
     _queue.push(record);
     _first_timestamp = record.timestamp * (1 * (_first_timestamp < 0));
     time_t execute_at = _time_begin + (record.timestamp - _first_timestamp);
-    _waiting = true;
-    // wait tasks to be played as not to overflow the scheduler
-    while (_running && (_queue.size() > _records_queue_limit))
-        _waitable.infinite_wait();
-    _waiting = false;
+    {
+        ScopedModifier m(_waiting, true);
+        // wait tasks to be played as not to overflow the scheduler
+        while (_running && (_queue.size() > _records_queue_limit))
+            _waitable.infinite_wait();
+    }
     // calls DevPlayer::run to execute record at setted time
     if (_running)
         _scheduler_ptr->add_task(new Task(this, execute_at));

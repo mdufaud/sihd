@@ -45,11 +45,11 @@ class Scheduler: public Named, public IStoppableRunnable, public Configurable
         bool set_as_fast_as_possible(bool active);
 
         // number of overruns that occured after started
-        uint32_t overruns;
+        size_t overruns;
         // time after not running a task is considered an overrun
-        uint32_t overrun_at;
+        time_t overrun_at;
         // nanoseconds acceptable before a task may be run
-        uint32_t acceptable_nano;
+        time_t acceptable_nano;
 
     protected:
         bool run();

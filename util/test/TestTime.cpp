@@ -14,6 +14,7 @@ namespace test
         protected:
             TestTime()
             {
+                tzset();
                 sihd::util::LoggerManager::basic();
             }
 
@@ -52,6 +53,7 @@ namespace test
         EXPECT_GT(timestamp, Timestamp(timestamp - 1));
         EXPECT_GT(timestamp, timestamp - 1);
 
+        // operations
         timestamp += Time::seconds(1);
         timestamp += std::chrono::seconds(1);
         EXPECT_EQ(timestamp - std::chrono::seconds(1), std::chrono::seconds(3));
@@ -64,19 +66,87 @@ namespace test
         EXPECT_EQ(timestamp.hours(), 0);
         EXPECT_EQ(timestamp.days(), 0);
 
-        SIHD_LOG_DEBUG(timestamp.gmtime_str());
-        SIHD_LOG_DEBUG(timestamp.localtime_str());
+        // format
+        SIHD_LOG_DEBUG("Time offset");
+        SIHD_LOG_DEBUG(timestamp.timeoffset_str());
+        SIHD_LOG_DEBUG(timestamp.localtimeoffset_str());
 
+        // test conversion
         auto fun = [] (std::chrono::seconds sec) { return sec.count(); };
         EXPECT_EQ(fun(timestamp), 4);
 
+        // convert with clock
         std::chrono::system_clock clock;
 
         auto timepoint = clock.now();
-        Timestamp tclock(timepoint.time_since_epoch());
+        Timestamp tclock = Timestamp::from(timepoint);
         EXPECT_EQ(tclock, timepoint.time_since_epoch());
+        SIHD_LOG(debug, tclock.local_format());
 
-        SIHD_LOG(debug, tclock.calendar().str() << " - " << tclock.clocktime().str());
+        // calendar and clocktime
+        SIHD_LOG_DEBUG("From clocktime - flat time");
+        Timestamp ts({
+            .hour = 10,
+            .minute = 5,
+            .second = 1,
+        });
+        ClockTime clo = ts.clocktime();
+        EXPECT_EQ(clo.hour, 10);
+        EXPECT_EQ(clo.minute, 5);
+        EXPECT_EQ(clo.second, 1);
+        SIHD_LOG_DEBUG(ts.format());
+
+        SIHD_LOG_DEBUG("From calendar - local time");
+        ts = Timestamp({
+            .day = 1,
+            .month = 10,
+            .year = 2022
+        });
+        Calendar cal = ts.local_calendar();
+        EXPECT_EQ(cal.year, 2022);
+        EXPECT_EQ(cal.month, 10);
+        EXPECT_EQ(cal.day, 1);
+        SIHD_LOG_DEBUG(ts.local_format());
+
+        SIHD_LOG_DEBUG("From calendar and clocktime - local time");
+        ts = Timestamp({
+            .day = 1,
+            .month = 10,
+            .year = 2022
+        }, {
+            .hour = 10,
+            .minute = 5,
+            .second = 1,
+        });
+        cal = ts.local_calendar();
+        EXPECT_EQ(cal.year, 2022);
+        EXPECT_EQ(cal.month, 10);
+        EXPECT_EQ(cal.day, 1);
+        clo = ts.local_clocktime();
+        EXPECT_EQ(clo.hour, 10);
+        EXPECT_EQ(clo.minute, 5);
+        EXPECT_EQ(clo.second, 1);
+        SIHD_LOG_DEBUG(ts.local_format());
+
+        // interval
+        ts = Timestamp({
+            .hour = 10,
+            .minute = 5,
+            .second = 59,
+        });
+        EXPECT_TRUE(ts.in_interval(std::chrono::hours(10), std::chrono::minutes(6)));
+    }
+
+    TEST_F(TestTime, test_time_leap_year)
+    {
+        EXPECT_TRUE(Time::is_leap_year(2000));
+        EXPECT_TRUE(Time::is_leap_year(2024));
+        EXPECT_TRUE(Time::is_leap_year(2400));
+
+        EXPECT_FALSE(Time::is_leap_year(1800));
+        EXPECT_FALSE(Time::is_leap_year(1900));
+        EXPECT_FALSE(Time::is_leap_year(2100));
+        EXPECT_FALSE(Time::is_leap_year(2022));
     }
 
     TEST_F(TestTime, test_time_duration)

@@ -59,7 +59,7 @@ namespace test
 
     TEST_F(TestIpAddr, test_ipaddr_constructor)
     {
-        SIHD_TRACE("127.0.0.1 with no dns lookup");
+        SIHD_LOG(debug, "127.0.0.1 with no dns lookup");
         IpAddr addr_local("127.0.0.1", 0, false);
         EXPECT_EQ(addr_local.hostname(), "");
         this->dump_ip_lst(addr_local.ip_lst());
@@ -67,14 +67,14 @@ namespace test
         EXPECT_EQ(addr_local.protocol_ip_str(Ip::protocol("ip")), "127.0.0.1");
 
         // does not require internet
-        SIHD_TRACE("localhost with dns lookup");
+        SIHD_LOG(debug, "localhost with dns lookup");
         IpAddr addr_dns("localhost", true);
         EXPECT_EQ(addr_dns.hostname(), "localhost");
         this->dump_ip_lst(addr_dns.ip_lst());
         EXPECT_EQ(addr_dns.first_ipv4_str(), "127.0.0.1");
         EXPECT_EQ(addr_dns.protocol_ip_str(Ip::protocol("tcp")), "127.0.0.1");
 
-        SIHD_TRACE("127.0.0.1 with dns lookup");
+        SIHD_LOG(debug, "127.0.0.1 with dns lookup");
         IpAddr addr_dns_ip("127.0.0.1", true);
         EXPECT_EQ(addr_dns.hostname(), "localhost");
         this->dump_ip_lst(addr_dns.ip_lst());
@@ -87,8 +87,8 @@ namespace test
         EXPECT_EQ(IpAddr::fetch_ip_name("127.0.0.1"), "localhost");
         EXPECT_EQ(IpAddr::fetch_ip_name("google.com"), "");
         // requires internet
-        SIHD_TRACE(IpAddr::fetch_ip_name("216.58.215.46"));
-        SIHD_TRACE(IpAddr::fetch_ip_name("2a00:1450:4007:810::200e"));
+        SIHD_LOG(debug, IpAddr::fetch_ip_name("216.58.215.46"));
+        SIHD_LOG(debug, IpAddr::fetch_ip_name("2a00:1450:4007:810::200e"));
     }
 
     TEST_F(TestIpAddr, test_ipaddr_dns_lookup_google)
@@ -97,17 +97,17 @@ namespace test
         IpAddr google("google.com", true);
 
         this->dump_ip_lst(google.ip_lst());
-        SIHD_TRACE("Nb IPs: " << google.ip_count());
-        SIHD_TRACE("Hostname: " << google.hostname());
+        SIHD_LOG(debug, "Nb IPs: " << google.ip_count());
+        SIHD_LOG(debug, "Hostname: " << google.hostname());
         std::string google_proto_udp = google.protocol_ip_str("udp");
-        SIHD_TRACE("Google first IPV4: " << google.first_ipv4_str());
-        SIHD_TRACE("Google first IPV6: " << google.first_ipv6_str());
-        SIHD_TRACE("Google IP IPV4: " << google.protocol_ip_str("ip"));
-        SIHD_TRACE("Google UDP IPV4: " << google_proto_udp);
-        SIHD_TRACE("Google TCP IPV4: " << google.protocol_ip_str("tcp"));
-        SIHD_TRACE("Google sock stream IPV4: " << google.socktype_ip_str("stream"));
-        SIHD_TRACE("Google sock datagram IPV4: " << google.socktype_ip_str("datagram"));
-        SIHD_TRACE("Google sock raw IPV6: " << google.socktype_ip_str("raw", true));
+        SIHD_LOG(debug, "Google first IPV4: " << google.first_ipv4_str());
+        SIHD_LOG(debug, "Google first IPV6: " << google.first_ipv6_str());
+        SIHD_LOG(debug, "Google IP IPV4: " << google.protocol_ip_str("ip"));
+        SIHD_LOG(debug, "Google UDP IPV4: " << google_proto_udp);
+        SIHD_LOG(debug, "Google TCP IPV4: " << google.protocol_ip_str("tcp"));
+        SIHD_LOG(debug, "Google sock stream IPV4: " << google.socktype_ip_str("stream"));
+        SIHD_LOG(debug, "Google sock datagram IPV4: " << google.socktype_ip_str("datagram"));
+        SIHD_LOG(debug, "Google sock raw IPV6: " << google.socktype_ip_str("raw", true));
     }
 
     TEST_F(TestIpAddr, test_ipaddr_dns_lookup_error)
@@ -155,7 +155,8 @@ namespace test
         EXPECT_TRUE(same_addr.is_same_subnet(test1));
         EXPECT_FALSE(same_addr.is_same_subnet(test2));
 
-        SIHD_LOG(info, addr.dump_subnet());
+        SIHD_COUT(addr.dump_ip_lst());
+        SIHD_COUT(addr.dump_subnet());
 
         EXPECT_TRUE(memcmp(&addr.subnet(), &same_addr.subnet(), sizeof(IpAddr::Subnet)) == 0);
 
@@ -178,7 +179,7 @@ namespace test
         EXPECT_FALSE(localhost.set_subnet_mask("255.255.255.64"));
     }
 
-    TEST_F(TestIpAddr, test_ipaddr_v6)
+    TEST_F(TestIpAddr, test_ipaddr_ipv6)
     {
         IpAddr addr("2001:db8:abcd:0012:0000:0000:0000:0000");
         EXPECT_EQ(addr.first_ipv6_str(), "2001:db8:abcd:12::");

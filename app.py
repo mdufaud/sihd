@@ -225,7 +225,7 @@ defines = [
 ]
 
 ## mode specifics
-debug_flags = ["-g", "-O2"]
+debug_flags = ["-g", "-O1"]
 release_flags = ["-O3"]
 
 ## gcc specifics

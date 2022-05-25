@@ -117,31 +117,31 @@ namespace test
 
     TEST_F(TestStr, test_str_time2str)
     {
-        std::string time_str = Str::gmtime_str(Time::micro(123));
+        std::string time_str = Str::timeoffset_str(Time::micro(123));
         EXPECT_EQ(time_str, "+123us");
-        time_str = Str::gmtime_str(Time::milli(1));
+        time_str = Str::timeoffset_str(Time::milli(1));
         EXPECT_EQ(time_str, "+1ms:0us");
-        time_str = Str::gmtime_str(Time::sec(12) + Time::micro(12));
+        time_str = Str::timeoffset_str(Time::sec(12) + Time::micro(12));
         EXPECT_EQ(time_str, "+12s:0ms:12us");
-        time_str = Str::gmtime_str(Time::hours(12));
+        time_str = Str::timeoffset_str(Time::hours(12));
         EXPECT_EQ(time_str, "+12h:0m:0s:0ms:0us");
-        time_str = Str::gmtime_str(Time::hours(24));
+        time_str = Str::timeoffset_str(Time::hours(24));
         EXPECT_EQ(time_str, "+1d::0h:0m:0s:0ms:0us");
-        time_str = Str::gmtime_str(Time::days(24));
+        time_str = Str::timeoffset_str(Time::days(24));
         EXPECT_EQ(time_str, "+24d::0h:0m:0s:0ms:0us");
-        time_str = Str::gmtime_str(Time::days(31));
+        time_str = Str::timeoffset_str(Time::days(31));
         EXPECT_EQ(time_str, "+1m:0d::0h:0m:0s:0ms:0us");
-        time_str = Str::gmtime_str(Time::days(365));
+        time_str = Str::timeoffset_str(Time::days(365));
         EXPECT_EQ(time_str, "+1y:0m:0d::0h:0m:0s:0ms:0us");
-        time_str = Str::gmtime_str(Time::days(365) * 2);
+        time_str = Str::timeoffset_str(Time::days(365) * 2);
         EXPECT_EQ(time_str, "+2y:0m:0d::0h:0m:0s:0ms:0us");
 
-        time_str = Str::gmtime_str(-Time::sec(42));
+        time_str = Str::timeoffset_str(-Time::sec(42));
         EXPECT_EQ(time_str, "-42s:0ms:0us");
 
-        std::string nano_time_str = Str::gmtime_str(123, false, true);
+        std::string nano_time_str = Str::timeoffset_str(123, false, true);
         EXPECT_EQ(nano_time_str, "+0us:123ns");
-        nano_time_str = Str::gmtime_str(-123, true, true);
+        nano_time_str = Str::timeoffset_str(-123, true, true);
         EXPECT_EQ(nano_time_str, "-0us:123ns (-123)");
     }
 

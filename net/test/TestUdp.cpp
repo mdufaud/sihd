@@ -5,7 +5,6 @@
 #include <sihd/net/UdpReceiver.hpp>
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/util/Worker.hpp>
-#include <sihd/util/Task.hpp>
 #include <sihd/util/ObserverWaiter.hpp>
 
 namespace test

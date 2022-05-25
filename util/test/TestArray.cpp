@@ -112,12 +112,12 @@ namespace test
         i.resize(4);
         std::generate(i.begin(), i.end(), [n = 1] () mutable { return n++; });
         // {1, 2, 3, 4}
-        EXPECT_EQ(i.find(1), 0);
-        EXPECT_EQ(i.find(2), 1);
-        EXPECT_EQ(i.find(4), 3);
-        EXPECT_EQ(i.rfind(1), 0);
-        EXPECT_EQ(i.rfind(2), 1);
-        EXPECT_EQ(i.rfind(4), 3);
+        EXPECT_EQ(i.find(1), 0u);
+        EXPECT_EQ(i.find(2), 1u);
+        EXPECT_EQ(i.find(4), 3u);
+        EXPECT_EQ(i.rfind(1), 0u);
+        EXPECT_EQ(i.rfind(2), 1u);
+        EXPECT_EQ(i.rfind(4), 3u);
     }
 
     TEST_F(TestArray, test_array_iterator_algo)
@@ -513,12 +513,12 @@ namespace test
         arr_moved = std::move(arr);
         EXPECT_EQ(arr.data(), nullptr);
         EXPECT_EQ(arr_moved.data(), buffer_ptr);
-        EXPECT_EQ(arr_moved.size(), 3);
+        EXPECT_EQ(arr_moved.size(), 3u);
 
         ArrInt arr_move_constructor(std::move(arr_moved));
         EXPECT_EQ(arr_moved.data(), nullptr);
         EXPECT_EQ(arr_move_constructor.data(), buffer_ptr);
-        EXPECT_EQ(arr_move_constructor.size(), 3);
+        EXPECT_EQ(arr_move_constructor.size(), 3u);
     }
 
     TEST_F(TestArray, test_array_equal)

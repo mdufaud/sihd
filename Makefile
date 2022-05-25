@@ -210,6 +210,9 @@ stracetest: test
 
 ttest: stracetest
 
+roottest: DEBUGGER = sudo
+roottest: test
+
 .PHONY: test vtest gtest stest valgrindtest gdbtest santest
 
 # handles:

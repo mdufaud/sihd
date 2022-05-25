@@ -73,7 +73,7 @@ namespace test
     TEST_F(TestArrayView, test_arrayview_init)
     {
         // initializer list can work only when stack is scoped
-        EXPECT_EQ(TestArrayView::print_array({1, 2, 3}), 3);
+        EXPECT_EQ(TestArrayView::print_array({1, 2, 3}), 3u);
     }
 
     TEST_F(TestArrayView, test_arrayview_str)
@@ -106,7 +106,14 @@ namespace test
         EXPECT_EQ(view_str2.size(), 0u);
         EXPECT_TRUE(view_str2.is_equal(""));
 
-        EXPECT_EQ(TestArrayView::get_str_size("hello"), 5);
+        ArrChar arr_char(str);
+        ArrViewChar arr_view_char(arr_char);
+        EXPECT_TRUE(arr_char.is_equal(str));
+        EXPECT_TRUE(arr_char.is_equal(arr_view_char));
+        EXPECT_TRUE(arr_view_char.is_equal(arr_char));
+        EXPECT_TRUE(arr_view_char.is_equal(str));
+
+        EXPECT_EQ(TestArrayView::get_str_size("hello"), 5u);
     }
 
     TEST_F(TestArrayView, test_arrayview_buf)
@@ -119,7 +126,7 @@ namespace test
         EXPECT_EQ(view_int[1], 2);
         EXPECT_EQ(view_int[2], 3);
         EXPECT_TRUE(view_int.is_equal(buf, 3));
-        EXPECT_EQ(TestArrayView::get_size<int>({buf, 3}), 3);
+        EXPECT_EQ(TestArrayView::get_size<int>({buf, 3}), 3u);
         EXPECT_EQ(TestArrayView::get_byte_size({buf, 3 * sizeof(int)}), 3 * sizeof(int));
         view_int.remove_prefix(-1);
         ASSERT_EQ(view_int.size(), 0u);
@@ -134,6 +141,7 @@ namespace test
         ASSERT_EQ(view_int.size(), 4u);
         EXPECT_EQ(view_int.byte_size(), sizeof(int) * 4);
         EXPECT_TRUE(view_int.is_equal(arr_int));
+        EXPECT_TRUE(arr_int.is_equal(view_int));
         EXPECT_EQ(view_int[0], 1);
         EXPECT_EQ(view_int[1], 2);
         EXPECT_EQ(view_int[2], 3);
@@ -154,9 +162,9 @@ namespace test
         EXPECT_EQ(view_int[1], 2);
         EXPECT_EQ(view_int[2], 3);
         EXPECT_EQ(view_int[3], 4);
-        EXPECT_EQ(view_int.find(1), 0);
-        EXPECT_EQ(view_int.rfind(2), 1);
-        EXPECT_EQ(view_int.find(3), 2);
+        EXPECT_EQ(view_int.find(1), 0u);
+        EXPECT_EQ(view_int.rfind(2), 1u);
+        EXPECT_EQ(view_int.find(3), 2u);
         EXPECT_EQ(TestArrayView::get_size<int>(vec), vec.size());
     }
 }

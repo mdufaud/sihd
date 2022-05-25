@@ -23,9 +23,20 @@ template <typename T>
 class ArrayView: public IArrayView
 {
     public:
+        using value_type = T;
+        using size_type = size_t;
+        using pointer = T *;
+        using const_pointer = const T *;
+        using reference = T &;
+        using const_reference = const T &;
+
+        static constexpr size_t npos = Array<T>::npos;
+
+        static_assert(std::is_trivially_copyable_v<T>);
+
         ArrayView(const T *data, size_t size): _buf_ptr(data), _size(size) {}
         ArrayView(const std::vector<T> & vec): ArrayView(vec.data(), vec.size()) {}
-        ArrayView(const Array<T> & arr): ArrayView(arr.cdata(), arr.size()) {}
+        ArrayView(const Array<T> & arr): ArrayView(arr.data(), arr.size()) {}
         ArrayView(const ArrayView<T> & arr): ArrayView(arr.data(), arr.size()) {}
 
         // remove conversion with temporary allocation
@@ -46,12 +57,13 @@ class ArrayView: public IArrayView
         ArrayView(const std::string & str): ArrayView(str.data(), str.size()) {}
 
         // char specialization
-        // WARNING: using temporary std::string must only be used passed in functions,
-        // where scope allows std::string's buffer to live
+        // remove conversion with temporary allocation
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        ArrayView(std::string && str): ArrayView(str.data(), str.size()) {}
+        ArrayView(std::string && str) = delete;
 
-        // byte constructors
+        /*********************************************************************/
+        /* byte constructor */
+        /*********************************************************************/
 
         // make sure IArrayView size is divisible by type size.
         // ex: ArrayView<int8_t> of size 3 may not go into an ArrayView<int32_t> which will be size 0
@@ -59,7 +71,7 @@ class ArrayView: public IArrayView
 
         // make sure IArray size is divisible by type size.
         // ex: Array<int8_t> of size 3 may not go into an ArrayView<int32_t> which will be size 0
-        ArrayView(const IArray & arr): ArrayView((const T *)arr.cbuf(), arr.byte_size() / sizeof(T)) {}
+        ArrayView(const IArray & arr): ArrayView((const T *)arr.buf(), arr.byte_size() / sizeof(T)) {}
 
         // make sure buffer size is divisible by type size.
         // ex: buffer[3] may not go into an ArrayView<int32_t> which will be size 0
@@ -69,12 +81,18 @@ class ArrayView: public IArrayView
         // where scope allows std::initializer_list's buffer to live
         ArrayView(std::initializer_list<T> init): ArrayView(&(*init.begin()), init.size()) {}
 
-        // copy constructors
+        /*********************************************************************/
+        /* copy constructor */
+        /*********************************************************************/
 
         ArrayView(ArrayView<T> && other)
         {
             *this = std::move(other);
         }
+
+        /*********************************************************************/
+        /* operator= */
+        /*********************************************************************/
 
         ArrayView & operator=(const ArrayView<T> & other)
         {
@@ -100,7 +118,11 @@ class ArrayView: public IArrayView
 
         virtual ~ArrayView() {};
 
-        // IArrayView
+        /*********************************************************************/
+        /* information */
+        /*********************************************************************/
+
+        operator bool() const { return _buf_ptr != nullptr; }
 
         const uint8_t *buf() const { return (uint8_t *)_buf_ptr; }
 
@@ -111,10 +133,15 @@ class ArrayView: public IArrayView
 
         size_t size() const { return _size; }
         size_t byte_size() const { return _size * sizeof(T); }
+        bool empty() const { return _size == 0; }
 
         Type data_type() const { return Types::type<T>(); }
 
         const char *data_type_str() const { return Types::type_str(this->data_type()); }
+
+        /*********************************************************************/
+        /* comparison */
+        /*********************************************************************/
 
         bool is_same_type(const IArrayView & arr) const
         {
@@ -135,6 +162,10 @@ class ArrayView: public IArrayView
             return this->is_bytes_equal(arr.buf(), arr.byte_size(), byte_offset);
         }
 
+        /*********************************************************************/
+        /* copy_to */
+        /*********************************************************************/
+
         bool copy_to_bytes(void *buf, size_t size, size_t byte_offset = 0) const
         {
             if (size + byte_offset > this->byte_size())
@@ -143,22 +174,9 @@ class ArrayView: public IArrayView
             return true;
         }
 
-        ArrayView<T> & remove_prefix(size_t size)
-        {
-            if (size > _size)
-                size = _size;
-            _buf_ptr += size;
-            _size -= size;
-            return *this;
-        }
-
-        ArrayView<T> & remove_suffix(size_t size)
-        {
-            if (size > _size)
-                size = _size;
-            _size -= size;
-            return *this;
-        }
+        /*********************************************************************/
+        /* views */
+        /*********************************************************************/
 
         std::string hexdump(char delimiter = ' ') const
         {
@@ -213,6 +231,10 @@ class ArrayView: public IArrayView
                 return Str::hexdump(_buf_ptr, this->byte_size(), delimiter);
         }
 
+        /*********************************************************************/
+        /* to std containers */
+        /*********************************************************************/
+
         std::string cpp_str() const
         {
             return _buf_ptr != nullptr ? std::string((char *)_buf_ptr, this->byte_size()) : "";
@@ -223,9 +245,15 @@ class ArrayView: public IArrayView
             return _buf_ptr != nullptr ? std::string_view((char *)_buf_ptr, this->byte_size()) : "";
         }
 
-        // Class methods
+        /*********************************************************************/
+        /* class methods */
+        /*********************************************************************/
 
         const T *data() const { return _buf_ptr; }
+
+        /*********************************************************************/
+        /* to std containers */
+        /*********************************************************************/
 
         std::vector<T> cpp_vector() const
         {
@@ -243,6 +271,27 @@ class ArrayView: public IArrayView
             return arr;
         }
 
+        /*********************************************************************/
+        /* view change */
+        /*********************************************************************/
+
+        ArrayView<T> & remove_prefix(size_t size)
+        {
+            if (size > _size)
+                size = _size;
+            _buf_ptr += size;
+            _size -= size;
+            return *this;
+        }
+
+        ArrayView<T> & remove_suffix(size_t size)
+        {
+            if (size > _size)
+                size = _size;
+            _size -= size;
+            return *this;
+        }
+
         // "hello world".subview(6) -> "world"
         // "hello world".subview(0, 5) -> "hello"
         ArrayView<T> subview(size_t pos, size_t count = -1)
@@ -252,6 +301,10 @@ class ArrayView: public IArrayView
             count = std::min(count - pos, _size);
             return ArrayView<T>(this->data() + pos, count);
         }
+
+        /*********************************************************************/
+        /* is_equal */
+        /*********************************************************************/
 
         bool is_equal(ArrayView<T> arr, size_t offset = 0) const
         {
@@ -264,10 +317,18 @@ class ArrayView: public IArrayView
             return this->is_bytes_equal(arr, size * this->data_size(), offset * this->data_size());
         }
 
+        /*********************************************************************/
+        /* copy_to */
+        /*********************************************************************/
+
         bool copy_to(T *arr, size_t size, size_t offset = 0) const
         {
             return this->copy_to_bytes(arr, size * this->data_size(), offset * this->data_size());
         }
+
+        /*********************************************************************/
+        /* access */
+        /*********************************************************************/
 
         // data first value
         inline T front() const { return _buf_ptr[0]; }
@@ -286,8 +347,9 @@ class ArrayView: public IArrayView
         // access value arr[idx]
         inline T operator[](size_t idx) const { return _buf_ptr[idx]; }
 
-        // ArrayView<T> iterator
-
+        /*********************************************************************/
+        /* iterator */
+        /*********************************************************************/
         template <typename ITERATOR_TYPE>
         class ArrayIterator
         {
@@ -377,22 +439,18 @@ class ArrayView: public IArrayView
 
                 reference operator*()
                 {
-                    this->_check_pos(this->array_curr);
+                    if (this->array_curr < this->array_beg && this->array_curr > this->array_end)
+                        throw std::out_of_range("Array::iterator: iterator out of range");
                     return *this->array_curr;
                 }
 
                 size_t idx()
                 {
-                    this->_check_pos(this->array_curr);
+                    if (this->array_curr < this->array_beg && this->array_curr > this->array_end)
+                        return ArrayView<T>::npos;
                     return this->array_curr - this->array_beg;
                 }
 
-            private:
-                void _check_pos(pointer pos) const
-                {
-                    if (pos < this->array_beg && pos > this->array_end)
-                        throw std::out_of_range("Array::iterator: iterator out of range");
-                }
         };
 
         typedef ArrayIterator<const T> iterator;
@@ -400,9 +458,9 @@ class ArrayView: public IArrayView
         iterator begin() const { return iterator(this->data(), this->data(), this->data() + this->size()); }
         iterator end() const { return iterator(this->data(), this->data() + this->size(), this->data() + this->size()); }
 
-        // end of ArrayView<T> iterator
-
-        // ArrayView<T> reverse iterator
+        /*********************************************************************/
+        /* reverse iterator */
+        /*********************************************************************/
 
         template <typename ITERATOR_TYPE>
         class ReverseArrayIterator
@@ -493,21 +551,16 @@ class ArrayView: public IArrayView
 
                 reference operator*()
                 {
-                    this->_check_pos(this->array_curr);
+                    if (this->array_curr < this->array_beg && this->array_curr > this->array_end)
+                        throw std::out_of_range("Array::reverse_iterator: iterator out of range");
                     return *this->array_curr;
                 }
 
                 size_t idx()
                 {
-                    this->_check_pos(this->array_curr);
+                    if (this->array_curr < this->array_beg && this->array_curr > this->array_end)
+                        return ArrayView<T>::npos;
                     return this->array_curr - this->array_beg;
-                }
-
-            private:
-                void _check_pos(pointer pos) const
-                {
-                    if (pos < this->array_beg && pos > this->array_end)
-                        throw std::out_of_range("Array::reverse_iterator: iterator out of range");
                 }
         };
 
@@ -526,25 +579,23 @@ class ArrayView: public IArrayView
                                     this->data() + this->size());
         }
 
-        static constexpr size_t npos = size_t(-1);
-
-        // end of ArrayView<T> reverse iterator
+        /*********************************************************************/
+        /* iterator operations */
+        /*********************************************************************/
 
         size_t find(const T value) const
         {
-            iterator it = std::find(this->begin(), this->end(), value);
-            if (it == this->end())
-                return ArrayView<T>::npos;
-            return it.idx();
+            return std::find(this->begin(), this->end(), value).idx();
         }
 
         size_t rfind(const T value) const
         {
-            reverse_iterator it = std::find(this->rbegin(), this->rend(), value);
-            if (it == this->rend())
-                return ArrayView<T>::npos;
-            return it.idx();
+            return std::find(this->rbegin(), this->rend(), value).idx();
         }
+
+    /*********************************************************************/
+    /* attributes */
+    /*********************************************************************/
 
     protected:
         const T *_buf_ptr;

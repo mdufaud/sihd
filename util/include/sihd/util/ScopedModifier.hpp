@@ -10,22 +10,21 @@ template <typename T, typename V>
 class ScopedModifier
 {
     public:
-        ScopedModifier(T & val, V new_val): _ref(val)
+        ScopedModifier(T & val, V new_val): _ref(val), _old_val(val)
         {
-            _old_val = val;
             val = new_val;
         }
 
         ~ScopedModifier()
         {
-            _ref.get() = _old_val;
+            _ref = _old_val;
         }
 
     protected:
 
     private:
+        T & _ref;
         V _old_val;
-        std::reference_wrapper<T> _ref;
 
 };
 

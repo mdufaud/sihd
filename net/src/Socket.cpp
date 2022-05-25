@@ -97,6 +97,11 @@ void    Socket::_clear_socket_info()
 /* Static class utilities */
 /* ************************************************************************* */
 
+bool    Socket::set_socket_ttl(int socket, int ttl, bool ipv6)
+{
+    return sihd::util::OS::setsockopt(socket, ipv6 ? IPPROTO_IPV6 : IPPROTO_IP, IP_TTL, &ttl, sizeof(int));
+}
+
 bool    Socket::set_socket_reuseaddr(int socket, bool active)
 {
     int opt = active ? 1 : 0;
@@ -382,7 +387,7 @@ bool    Socket::send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util
             return ret;
         sent += ret;
     }
-    return sent;
+    return sent == view.size();
 }
 
 ssize_t     Socket::receive_from(sockaddr *addr, socklen_t *addr_len, void *data, size_t size)
@@ -408,7 +413,7 @@ ssize_t     Socket::send_to(const IpAddr & addr, sihd::util::ArrViewChar view)
     IpSockAddr ipsockaddr;
 
     if (addr.get_sockaddr(ipsockaddr, _type, _protocol) == false
-        && addr.get_first_sockaddr(ipsockaddr) == false)
+            && addr.get_first_sockaddr(ipsockaddr) == false)
         return false;
     return this->send_to(ipsockaddr.addr, ipsockaddr.addr_len, view);
 }
@@ -418,7 +423,7 @@ bool    Socket::send_all_to(const IpAddr & addr, sihd::util::ArrViewChar view)
     IpSockAddr ipsockaddr;
 
     if (addr.get_sockaddr(ipsockaddr, _type, _protocol) == false
-        && addr.get_first_sockaddr(ipsockaddr) == false)
+            && addr.get_first_sockaddr(ipsockaddr) == false)
         return false;
     return this->send_all_to(ipsockaddr.addr, ipsockaddr.addr_len, view);
 }

@@ -27,7 +27,7 @@ struct IcmpResponse
 class IcmpSender:   public sihd::util::Named,
                     public sihd::util::Configurable,
                     public sihd::util::IStoppableRunnable,
-                    public sihd::util::Observable<IcmpResponse>,
+                    public sihd::util::Observable<IcmpSender>,
                     public sihd::util::IHandler<sihd::util::Poll *>
 {
     public:
@@ -63,6 +63,7 @@ class IcmpSender:   public sihd::util::Named,
         bool socket_opened() { return _socket.is_open(); }
         const Socket & socket() const { return _socket; }
         const sihd::util::IClock *clock() const { return _clock_ptr; }
+        const IcmpResponse & response() const { return _icmp_response; }
 
     protected:
 

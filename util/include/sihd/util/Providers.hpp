@@ -30,7 +30,7 @@ class CLASSNAME: public sihd::util::AProvider<TYPE> \
         } \
  \
         virtual bool providing() const  { return _iterator != _iterable_ptr->end(); } \
-        virtual bool provider_empty() const  { return _iterator != _iterable_ptr->end(); } \
+        virtual bool provider_empty() const  { return _iterable_ptr->empty(); } \
  \
         void set_iterator(CONTAINER<TYPE> *iterator) \
         { \
@@ -40,8 +40,8 @@ class CLASSNAME: public sihd::util::AProvider<TYPE> \
         } \
  \
         void reset_index() { _iterator = _iterable_ptr->begin(); } \
- \
-        CONTAINER<TYPE> *iterable() { return _iterable_ptr; } \
+        CONTAINER<TYPE> *iterable() const { return _iterable_ptr; } \
+        typename CONTAINER<TYPE>::iterator iterator() const { return _iterator; } \
  \
     private: \
         typename CONTAINER<TYPE>::iterator _iterator; \

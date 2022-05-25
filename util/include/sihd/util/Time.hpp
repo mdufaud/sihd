@@ -125,6 +125,8 @@ class Time
         // timeval with nano resolution -> nano
         static time_t nano_tv(const struct timeval & tv);
 
+        static bool is_leap_year(int year);
+
     private:
         Time() {};
         ~Time() {};

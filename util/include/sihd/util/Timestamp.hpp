@@ -33,16 +33,43 @@
 namespace sihd::util
 {
 
+struct ClockTime
+{
+    // 0 - 23
+    int hour;
+    // 0 - 59
+    int minute;
+    // 0 - 59
+    int second;
+
+    std::string str() const;
+};
+
+struct Calendar
+{
+    // month day -> 1 - 31
+    int day;
+    // 1 - 12
+    int month;
+    // 0 - X
+    int year;
+
+    std::string str() const;
+};
+
 class Timestamp
 {
     public:
         Timestamp(time_t nano);
-        explicit Timestamp(std::chrono::nanoseconds duration);
-        explicit Timestamp(std::chrono::microseconds duration);
-        explicit Timestamp(std::chrono::milliseconds duration);
-        explicit Timestamp(std::chrono::seconds duration);
-        explicit Timestamp(std::chrono::minutes duration);
-        explicit Timestamp(std::chrono::hours duration);
+        Timestamp(ClockTime clocktime);
+        Timestamp(Calendar calendar);
+        Timestamp(Calendar calendar, ClockTime clocktime);
+        Timestamp(std::chrono::nanoseconds duration);
+        Timestamp(std::chrono::microseconds duration);
+        Timestamp(std::chrono::milliseconds duration);
+        Timestamp(std::chrono::seconds duration);
+        Timestamp(std::chrono::minutes duration);
+        Timestamp(std::chrono::hours duration);
         ~Timestamp();
 
         // std::chrono::duration templates
@@ -84,6 +111,8 @@ class Timestamp
             return Timestamp(Time::duration<T>(duration));
         }
 
+        bool is_leap_year() const;
+
         operator time_t() const { return _nano; }
         operator std::chrono::nanoseconds() const { return std::chrono::nanoseconds(_nano); }
         operator std::chrono::microseconds() const { return Time::to_duration<std::micro>(_nano); }
@@ -91,6 +120,9 @@ class Timestamp
         operator std::chrono::seconds() const { return Time::to_duration<std::ratio<1>>(_nano); }
         operator std::chrono::minutes() const { return Time::to_duration<std::ratio<60>>(_nano); }
         operator std::chrono::hours() const { return Time::to_duration<std::ratio<3600>>(_nano); }
+
+        // this >= from && this <= (from + offset)
+        bool in_interval(Timestamp from, Timestamp offset) const;
 
         template <typename T>
         std::chrono::duration<int64_t, T> duration() const
@@ -106,33 +138,17 @@ class Timestamp
         time_t hours() const { return Time::to_hours(_nano); }
         time_t days() const { return Time::to_days(_nano); }
 
-        std::string gmtime_str(bool total_parenthesis = false, bool nano_resolution = false) const;
-        std::string localtime_str(bool total_parenthesis = false, bool nano_resolution = false) const;
+        std::string timeoffset_str(bool total_parenthesis = false, bool nano_resolution = false) const;
+        std::string localtimeoffset_str(bool total_parenthesis = false, bool nano_resolution = false) const;
         // format strftime -> "%Y-%m-%d %H:%M:%S"
-        std::string format(std::string_view format) const;
+        std::string format(std::string_view format = "%d/%m/%Y %H:%M:%S") const;
+        std::string local_format(std::string_view format = "%d/%m/%Y %H:%M:%S") const;
 
         time_t get() const { return _nano; }
-        struct ClockTime
-        {
-            int second;
-            int minute;
-            int hour;
-
-            std::string str() const;
-        };
-
         ClockTime clocktime() const;
-
-        struct Calendar
-        {
-            int day;
-            int month;
-            int year;
-
-            std::string str() const;
-        };
-
         Calendar calendar() const;
+        ClockTime local_clocktime() const;
+        Calendar local_calendar() const;
 
     protected:
 

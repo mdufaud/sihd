@@ -10,13 +10,17 @@
 # if !defined(__SIHD_WINDOWS__)
 #  include <sys/types.h>
 #  include <sys/socket.h>
-#  include <netdb.h>
+#  include <netinet/in.h>
+#  include <netinet/ip_icmp.h>
+#  include <netinet/ip6.h>
+#  include <netinet/icmp6.h>
+#  include <netinet/tcp.h>
 #  include <arpa/inet.h>
 #  include <net/if.h>
 #  include <sys/un.h>
-#  include <netinet/tcp.h>
-#  include <fcntl.h>
+#  include <netdb.h>
 #  include <ifaddrs.h>
+#  include <fcntl.h>
 # else
 // shutdown function corresponding values unix -> windows
 #  define SHUT_RD SD_RECEIVE
@@ -33,6 +37,7 @@
 #  include <ws2def.h>
 #  include <winsock.h>
 #  include <ws2tcpip.h>
+#  include <ipmib.h>
 # endif
 
 namespace sihd::net

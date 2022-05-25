@@ -191,4 +191,9 @@ time_t  Time::tm(struct tm & tm)
     return mktime(&tm) * 1E9;
 }
 
+bool    Time::is_leap_year(int year)
+{
+    return year % 4 == 0 && (year % 400 == 0 || year % 100 != 0);
+}
+
 }

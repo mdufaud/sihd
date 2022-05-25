@@ -690,17 +690,17 @@ std::string  Str::remove_escape_sequences(std::string_view str, const char *auth
     return ret;
 }
 
-std::string Str::gmtime_str(Timestamp timestamp, bool total_parenthesis, bool nano_resolution)
+std::string Str::timeoffset_str(Timestamp timestamp, bool total_parenthesis, bool nano_resolution)
 {
-    return Str::_time_to_string(timestamp, total_parenthesis, nano_resolution, false);
+    return Str::_timeoffset_to_string(timestamp, total_parenthesis, nano_resolution, false);
 }
 
-std::string Str::localtime_str(Timestamp timestamp, bool total_parenthesis, bool nano_resolution)
+std::string Str::localtimeoffset_str(Timestamp timestamp, bool total_parenthesis, bool nano_resolution)
 {
-    return Str::_time_to_string(timestamp, total_parenthesis, nano_resolution, true);
+    return Str::_timeoffset_to_string(timestamp, total_parenthesis, nano_resolution, true);
 }
 
-std::string Str::_time_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime)
+std::string Str::_timeoffset_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime)
 {
     std::stringstream ss;
     struct tm tm = Time::to_tm(std::abs(nano), localtime);
@@ -733,11 +733,21 @@ std::string Str::_time_to_string(time_t nano, bool total_parenthesis, bool nano_
     return ss.str();
 }
 
-std::string     Str::format_time(Timestamp t, std::string_view format)
+std::string     Str::_format_time(time_t nano, std::string_view format, bool localtime)
 {
-    struct tm tm = Time::to_tm(t.get());
+    struct tm tm = Time::to_tm(nano, localtime);
     size_t ret = strftime(Str::g_buffer, Str::g_buffer_size, format.data(), &tm);
     return std::string(Str::g_buffer, ret);
+}
+
+std::string     Str::format_time(Timestamp t, std::string_view format)
+{
+    return Str::_format_time(t, format, false);
+}
+
+std::string     Str::format_localtime(Timestamp t, std::string_view format)
+{
+    return Str::_format_time(t, format, true);
 }
 
 }

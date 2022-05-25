@@ -90,7 +90,7 @@ namespace test
         SIHD_LOG(info, "Scheduler total tasks executed: " << this->ran);
         SIHD_LOG(info, "Scheduler total overruns: " << seq.overruns);
         // 10% miss maximum - generally is around 2%
-        EXPECT_LT(seq.overruns, (this->ran / 10));
+        EXPECT_LT(seq.overruns, (size_t)(this->ran / 10));
     }
 
     TEST_F(TestScheduler, test_sched_stop)

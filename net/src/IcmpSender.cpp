@@ -265,7 +265,7 @@ void    IcmpSender::_process_ipv4()
             _icmp_response.id = icmphdr->icmp_id;
             _icmp_response.seq = icmphdr->icmp_seq;
             _icmp_response.timestamp = (time_t)(*icmphdr->icmp_data);
-            this->notify_observers(&_icmp_response);
+            this->notify_observers(this);
         }
     }
 }

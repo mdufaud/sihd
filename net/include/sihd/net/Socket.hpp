@@ -49,14 +49,15 @@ class Socket
         static std::optional<IpAddr> socket_ip(int socket, bool ipv6 = false);
         static bool get_socket_infos(int socket, int *domain, int *type, int *protocol);
 
+        static bool set_socket_tcp_nodelay(int socket, bool active);
         static bool set_socket_blocking(int socket, bool active);
         static bool set_socket_reuseaddr(int socket, bool active);
         static bool set_socket_broadcast(int socket, bool active);
-        static bool set_socket_tcp_nodelay(int socket, bool active);
+        static bool bind_socket_to_device(int socket, std::string_view name);
+        static bool is_socket_tcp_nodelay(int socket);
         static bool is_socket_blocking(int socket);
         static bool is_socket_broadcast(int socket);
-        static bool is_socket_tcp_nodelay(int socket);
-        static bool bind_socket_to_device(int socket, std::string_view name);
+        static bool set_socket_ttl(int socket, int ttl, bool ipv6 = false);
 
         // Operations on internal socket //
 
@@ -67,10 +68,10 @@ class Socket
         bool set_reuseaddr(bool active) const { return Socket::set_socket_reuseaddr(_socket, active); }
         bool set_broadcast(bool active) const { return Socket::set_socket_broadcast(_socket, active); }
         bool bind_to_device(std::string_view name) const { return Socket::bind_socket_to_device(_socket, name); }
-
         bool is_tcp_nodelay() const { return Socket::is_socket_tcp_nodelay(_socket); }
         bool is_blocking() const { return Socket::is_socket_blocking(_socket); }
         bool is_broadcast() const { return Socket::is_socket_broadcast(_socket); }
+        bool set_ttl(int ttl) const { return Socket::set_socket_ttl(_socket, ttl, this->is_ipv6()); }
 
         bool open(std::string_view domain, std::string_view type, std::string_view protocol);
         bool open(int domain, int socket_type, int protocol);

@@ -168,6 +168,8 @@ class IpAddr
         std::string first_ipv6_str() const { return this->matching_ip_str(-1, -1, true); }
         std::string first_ip_str() const { return this->prefers_ipv6() ? this->first_ipv6_str() : this->first_ipv4_str(); }
 
+        std::string dump_ip_lst() const;
+
         // getters
         const std::string & host() const { return _host; }
         const std::string & hostname() const { return _hostname; }

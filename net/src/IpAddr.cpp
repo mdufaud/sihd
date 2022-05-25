@@ -192,15 +192,15 @@ void    IpAddr::_fill_subnet()
 
 std::string IpAddr::dump_subnet() const
 {
-    std::stringstream ss;
-    ss << "network id: " << IpAddr::ip_str(_subnet.netid) << std::endl
-        << "wildcard: " << IpAddr::ip_str(_subnet.wildcard) << std::endl
-        << "netmask: " << IpAddr::ip_str(_subnet.netmask) << std::endl
-        << "host min: " << IpAddr::ip_str(_subnet.hostmin) << std::endl
-        << "host max: " << IpAddr::ip_str(_subnet.hostmax) << std::endl
-        << "broadcast: " << IpAddr::ip_str(_subnet.broadcast) << std::endl
-        << "number of hosts: " << _subnet.hosts << std::endl;
-    return ss.str();
+    return Str::format("network id: %s\nwildcard: %s\nnetmask: %s\nhost min: %s\n"
+                        "host max: %s\nbroadcast: %s\nnumber of hosts: %u\n",
+                        IpAddr::ip_str(_subnet.netid).c_str(),
+                        IpAddr::ip_str(_subnet.wildcard).c_str(),
+                        IpAddr::ip_str(_subnet.netmask).c_str(),
+                        IpAddr::ip_str(_subnet.hostmin).c_str(),
+                        IpAddr::ip_str(_subnet.hostmax).c_str(),
+                        IpAddr::ip_str(_subnet.broadcast).c_str(),
+                        _subnet.hosts);
 }
 
 size_t  IpAddr::subnet_value() const
@@ -565,7 +565,7 @@ bool    IpAddr::do_lookup_dns()
 bool    IpAddr::get_sockaddr(IpSockAddr & ipsockaddr, int socktype, int protocol) const
 {
     IpAddr::_purge_ipsockaddr(ipsockaddr);
-    if (_prefers_ipv6 && this->get_sockaddr_in6(&ipsockaddr.addr_in6, socktype, protocol))
+    if (this->get_sockaddr_in6(&ipsockaddr.addr_in6, socktype, protocol))
     {
         ipsockaddr.type = AF_INET6;
         ipsockaddr.addr = (sockaddr *)&ipsockaddr.addr_in6;
@@ -700,6 +700,22 @@ void    IpAddr::_add_ip(const sockaddr_in & addr, int socktype, int protocol)
     IpAddr::IpEntry entry;
     IpAddr::_from_sockaddr(&entry, &addr, socktype, protocol);
     _lst_ip.push_back(entry);
+}
+
+std::string IpAddr::dump_ip_lst() const
+{
+    std::stringstream ss;
+    ss << "hostname: " << _hostname << "\n";
+    ss << "host: " << _host << "\n";
+    for (const IpEntry & entry: _lst_ip)
+    {
+        ss << Str::format("ipv%c %s %s: %s\n",
+                            (entry.ipv6 ? '6' : '4'),
+                            Ip::protocol_str(entry.protocol),
+                            Ip::socktype_str(entry.socktype),
+                            entry.ip().c_str());
+    }
+    return ss.str();
 }
 
 /* ************************************************************************* */
