@@ -63,7 +63,7 @@ namespace test
         {
             SIHD_LOG(debug, "Polled");
             auto events = poll->events();
-            for (Poll::PollEvent & event: events)
+            for (PollEvent & event: events)
             {
                 int fd = event.fd;
                 if (event.readable)
@@ -118,6 +118,13 @@ namespace test
 
         EXPECT_EQ(_write_count, 1);
         EXPECT_EQ(_read_count, 1);
+        EXPECT_EQ(_timedout, 1);
+
+        EXPECT_EQ(write(fd[1], "hello world", 11), 11);
+        res = poll.poll(10);
+        EXPECT_EQ(res, 1);
+        EXPECT_EQ(_write_count, 1);
+        EXPECT_EQ(_read_count, 2);
         EXPECT_EQ(_timedout, 1);
     }
 }

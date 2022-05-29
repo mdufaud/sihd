@@ -95,7 +95,7 @@ bool    Waitable::wait_loop(Timestamp nano_duration, uint32_t times)
     return timedout;
 }
 
-time_t  Waitable::wait_elapsed(Timestamp nano_duration)
+time_t  Waitable::wait_for_elapsed(Timestamp nano_duration)
 {
     if (nano_duration <= 0)
         return 0;

@@ -21,18 +21,18 @@
 namespace sihd::util
 {
 
+struct PollEvent
+{
+    int fd = -1;
+    bool readable = false;
+    bool writable = false;
+    bool error = false;
+    bool closed = false;
+};
+
 class Poll: public IStoppableRunnable, public Observable<Poll>
 {
     public:
-        struct PollEvent
-        {
-            int fd = -1;
-            bool readable = false;
-            bool writable = false;
-            bool error = false;
-            bool closed = false;
-        };
-
         Poll();
         Poll(int limit);
         virtual ~Poll();

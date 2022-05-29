@@ -29,11 +29,25 @@ namespace test
 
             virtual void SetUp()
             {
+                _seq = 1;
             }
 
             virtual void TearDown()
             {
             }
+
+            void send(IcmpSender & sender, std::string_view host)
+            {
+                time_t now = sihd::util::Clock::default_clock.now();
+                EXPECT_TRUE(sender.set_data({&now, sizeof(now)}));
+
+                sender.set_seq(_seq);
+                EXPECT_TRUE(sender.send_to({host, true}));
+                usleep(10E3);
+                ++_seq;
+            }
+
+            size_t _seq;
     };
 
     TEST_F(TestIcmp, test_icmp_ipv4)
@@ -44,36 +58,40 @@ namespace test
             GTEST_SKIP() << "Must be root or have capabilities to do the test";
 
         sender.set_echo();
-
-        sihd::util::ObserverWaiter obs(&sender);
+        sender.set_poll_timeout(1);
+        sender.set_id(getpid());
+        sender.set_ttl(64);
+        // default size for echo packets
+        sender.set_data_size(56);
 
         bool reached = false;
-        sihd::util::Handler<IcmpSender *> handler([&reached] (IcmpSender *sender)
+        sihd::util::Handler<IcmpSender *> handler([&] (IcmpSender *sender)
         {
             const IcmpResponse & response = sender->response();
+            ASSERT_EQ(response.size, 56);
+            time_t timestamp = ((time_t *)response.data)[0];
             reached = response.reached;
-            SIHD_LOG_DEBUG("code=%d type=%d ttl=%d id=%d seq=%d time=%ld",
+            SIHD_LOG_DEBUG("code=%d type=%d ttl=%d id=%d seq=%d time=%ld ms",
                             response.type,
                             response.code,
                             response.ttl,
                             response.id,
                             response.seq,
-                            sihd::util::Time::to_ms(sender->clock()->now() - response.timestamp));
+                            sihd::util::Time::to_ms(sihd::util::Clock::default_clock.now() - timestamp));
             // make a DNS lookup on client
             IpAddr client(response.client.host(), true);
             SIHD_LOG_DEBUG(client.hostname());
             SIHD_LOG_DEBUG(client.host());
         });
         sender.add_observer(&handler);
-        sender.set_poll_timeout(1);
 
         sihd::util::Worker worker(&sender);
         SIHD_LOG(debug, "Starting receiver");
-        EXPECT_TRUE(worker.start_sync_worker("receiver"));
+        ASSERT_TRUE(worker.start_sync_worker("receiver"));
 
-        EXPECT_TRUE(sender.send_to({"google.com", true}));
+        sihd::util::ObserverWaiter obs(&sender);
 
-        usleep(10E3);
+        this->send(sender, "google.com");
 
         sender.stop();
         EXPECT_TRUE(worker.stop_worker());

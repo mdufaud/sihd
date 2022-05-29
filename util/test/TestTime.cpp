@@ -191,6 +191,10 @@ namespace test
 
         EXPECT_EQ(Time::from_double(0.001), Time::ms(1));
         EXPECT_EQ(Time::from_double(1.324999), Time::sec(1) + Time::ms(324) + Time::micro(999));
+
+        EXPECT_EQ(Time::from_double_milliseconds(123.456), Time::ms(123) + Time::us(456));
+
+        EXPECT_NEAR(Time::to_double_milliseconds(Time::ms(123) + Time::us(456)), 123.456, 0.0001);
     }
 
     TEST_F(TestTime, test_time_timeval)

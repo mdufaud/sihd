@@ -44,6 +44,11 @@ double  Time::to_double(time_t nano)
     return nano / 1E9;
 }
 
+double  Time::to_double_milliseconds(time_t nano)
+{
+    return nano / 1E6;
+}
+
 double  Time::to_freq(time_t nano)
 {
     return (1 / (double)(nano / 1E9));
@@ -167,6 +172,13 @@ time_t  Time::from_double(double sec_milli)
     time_t sec = (time_t)sec_milli;
     time_t nano = (double)(sec_milli - sec) * 1E9;
     return Time::sec(sec) + nano;
+}
+
+time_t  Time::from_double_milliseconds(double milli_micro)
+{
+    time_t milliseconds = (time_t)milli_micro;
+    time_t nano = (double)(milli_micro - milliseconds) * 1E6;
+    return Time::milliseconds(milliseconds) + nano;
 }
 
 time_t  Time::freq(double hz)

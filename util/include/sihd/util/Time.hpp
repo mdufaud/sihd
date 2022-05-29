@@ -61,6 +61,7 @@ class Time
         static time_t to_days(time_t nano);
         // nano -> seconds,milliseconds
         static double to_double(time_t nano);
+        static double to_double_milliseconds(time_t nano);
         // nano -> hz
         static double to_freq(time_t nano);
         static constexpr auto to_hz = Time::to_freq;
@@ -104,6 +105,7 @@ class Time
         static constexpr auto hz = Time::freq;
         // seconds,milliseconds -> nano
         static time_t from_double(double sec_milli);
+        static time_t from_double_milliseconds(double milli_micro);
 
         // chrono -> nano
         template <typename T>

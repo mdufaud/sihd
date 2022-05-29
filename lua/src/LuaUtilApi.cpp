@@ -443,7 +443,7 @@ void    LuaUtilApi::load_threading(Vm & vm)
                     .addFunction("wait_until", +[] (Waitable *self, time_t nano) { return self->wait_until(nano); })
                     .addFunction("wait_for", +[] (Waitable *self, time_t nano) { return self->wait_for(nano); })
                     .addFunction("wait_loop", +[] (Waitable *self, time_t nano, uint32_t times) { return self->wait_loop(nano, times); })
-                    .addFunction("wait_elapsed", +[] (Waitable *self, time_t nano) { return self->wait_elapsed(nano); })
+                    .addFunction("wait_for_elapsed", +[] (Waitable *self, time_t nano) { return self->wait_for_elapsed(nano); })
                     .addFunction("cancel_loop", &Waitable::cancel_loop)
                 .endClass()
                 /**

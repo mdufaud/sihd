@@ -623,9 +623,9 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* copy_from */
         /*********************************************************************/
 
-        bool copy_from(const IArrayView & view)
+        bool copy_from(const IArrayView & view, size_t byte_offset = 0)
         {
-            return this->copy_from_bytes(view.buf(), view.byte_size());
+            return this->copy_from_bytes(view.buf(), view.byte_size(), byte_offset);
         }
 
         bool copy_from(const std::vector<T> & vec, size_t byte_offset = 0)

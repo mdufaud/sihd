@@ -35,7 +35,7 @@ class Waitable
         // cancel wait loop
         void cancel_loop();
         // wait for x nanoseconds -- returns time elapsed
-        time_t wait_elapsed(Timestamp t);
+        time_t wait_for_elapsed(Timestamp t);
 
     protected:
         std::mutex _mutex;

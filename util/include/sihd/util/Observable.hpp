@@ -58,9 +58,9 @@ class Observable: public IObservable<T>
         {
             {
                 std::lock_guard<std::mutex> rm_lock(_mutex_remove);
-                for (const auto & obs: _observers_to_remove)
+                for (const auto & obs_to_remove: _observers_to_remove)
                 {
-                    _observers.remove(obs);
+                    _observers.erase(std::find(_observers.begin(), _observers.end(), obs_to_remove));
                 }
                 _observers_to_remove.clear();
             }
@@ -74,7 +74,7 @@ class Observable: public IObservable<T>
     private:
         std::mutex _mutex;
         std::mutex _mutex_remove;
-        std::list<IHandler<T *> *> _observers;
+        std::vector<IHandler<T *> *> _observers;
         std::list<IHandler<T *> *> _observers_to_remove;
 };
 

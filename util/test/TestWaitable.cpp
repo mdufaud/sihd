@@ -42,7 +42,7 @@ namespace test
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
             waitable.notify(1);
         });
-        time_t elapsed = waitable.wait_elapsed(Time::milli(5));
+        time_t elapsed = waitable.wait_for_elapsed(Time::milli(5));
         t.join();
         EXPECT_EQ(Time::to_milli(elapsed), 2);
     }

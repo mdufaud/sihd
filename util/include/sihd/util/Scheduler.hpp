@@ -4,7 +4,6 @@
 # include <atomic>
 # include <list>
 # include <map>
-# include <thread>
 # include <sihd/util/Clocks.hpp>
 # include <sihd/util/Named.hpp>
 # include <sihd/util/Task.hpp>

@@ -252,8 +252,7 @@ int     Poll::poll(int milliseconds_timeout)
         ret = ::WSAPoll(_lst_fds.data(), _lst_fds.size(), milliseconds_timeout);
 #endif
     }
-    time_t spent = _clock.now() - before;
-    _last_poll_time = spent;
+    _last_poll_time = _clock.now() - before;
     this->_process(ret);
     return ret;
 }

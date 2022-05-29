@@ -220,7 +220,7 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("wait_until", &Waitable::wait_until, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("wait_for", &Waitable::wait_for, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("wait_loop", &Waitable::wait_loop, pybind11::call_guard<pybind11::gil_scoped_release>())
-        .def("wait_elapsed", &Waitable::wait_elapsed, pybind11::call_guard<pybind11::gil_scoped_release>());
+        .def("wait_for_elapsed", &Waitable::wait_for_elapsed, pybind11::call_guard<pybind11::gil_scoped_release>());
 
     pybind11::class_<Scheduler, Named, Configurable, SmartNodePtr<Scheduler>>(m_util, "Scheduler")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())

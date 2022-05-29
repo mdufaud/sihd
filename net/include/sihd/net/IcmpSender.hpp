@@ -15,13 +15,14 @@ namespace sihd::net
 struct IcmpResponse
 {
     IpAddr client;
-    bool reached;
+    void *data;
+    size_t size;
     int type;
     int code;
     int ttl;
     int id;
     int seq;
-    time_t timestamp;
+    bool reached;
 };
 
 class IcmpSender:   public sihd::util::Named,
@@ -39,14 +40,16 @@ class IcmpSender:   public sihd::util::Named,
         bool close();
 
         void set_echo();
-        bool set_ttl(int ttl);
         void set_type(int type);
         void set_code(int code);
+
+        bool set_ttl(int ttl);
         void set_id(pid_t id);
         void set_seq(int seq);
         bool set_data(sihd::util::ArrViewByte view);
+        bool set_data_size(size_t byte_size);
 
-        ssize_t send_to(const IpAddr & addr);
+        bool send_to(const IpAddr & addr);
 
         bool set_poll_timeout(int milliseconds);
         // poll for x milliseconds - returns true if socket is read
@@ -62,7 +65,6 @@ class IcmpSender:   public sihd::util::Named,
 
         bool socket_opened() { return _socket.is_open(); }
         const Socket & socket() const { return _socket; }
-        const sihd::util::IClock *clock() const { return _clock_ptr; }
         const IcmpResponse & response() const { return _icmp_response; }
 
     protected:
@@ -77,9 +79,6 @@ class IcmpSender:   public sihd::util::Named,
         void _process_ipv4();
         void _process_ipv6();
 
-        void _prepare_send();
-        void _after_send();
-
         uint16_t _in_cksum(uint16_t *addr, int len);
 
         Socket _socket;
@@ -87,7 +86,6 @@ class IcmpSender:   public sihd::util::Named,
         sihd::util::Poll _poll;
         sihd::util::ArrByte _array_rcv;
         sihd::util::ArrByte _array_send;
-        sihd::util::IClock *_clock_ptr;
 
         IcmpResponse _icmp_response;
 };
