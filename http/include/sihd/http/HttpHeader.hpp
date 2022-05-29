@@ -37,7 +37,7 @@ class HttpHeader
         const std::string & content_type() const { return _content_type; }
         const std::string & servername() const { return _server_name; }
 
-        u_char *buf() const { return (u_char *)_array.cbuf(); }
+        u_char *buf() const { return (u_char *)_array.buf(); }
         size_t size() const;
 
         static std::string build_content_type(std::string_view type, std::string_view encoding);

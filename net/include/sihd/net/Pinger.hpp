@@ -32,7 +32,6 @@ struct PingResult
 
 class Pinger:   public sihd::util::Named,
                 public sihd::util::Configurable,
-                // public sihd::util::Observable<IcmpSender>,
                 public sihd::util::IHandler<IcmpSender *>
 {
     public:
@@ -46,7 +45,9 @@ class Pinger:   public sihd::util::Named,
         bool open(bool ipv6 = false);
         bool open_unix();
 
-        bool ping(const IpAddr & client, size_t number);
+        // 0 is infinite pings
+        bool ping(const IpAddr & client, size_t number = 0);
+        bool is_running() const { return _running; }
         void stop();
 
         const PingResult & result() const { return _result; }

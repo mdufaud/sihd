@@ -138,12 +138,12 @@ bool    IcmpSender::send_to(const IpAddr & addr)
     if (_socket.is_ipv6())
     {
         icmp6()->icmp6_cksum = 0;
-        icmp6()->icmp6_cksum = this->_in_cksum((unsigned short *)icmp6(), _array_send.size());
+        icmp6()->icmp6_cksum = NetUtils::checksum((unsigned short *)icmp6(), _array_send.size());
     }
     else
     {
         icmp()->icmp_cksum = 0;
-        icmp()->icmp_cksum = this->_in_cksum((unsigned short *)icmp(), _array_send.size());
+        icmp()->icmp_cksum = NetUtils::checksum((unsigned short *)icmp(), _array_send.size());
     }
     return _socket.send_all_to(addr, _array_send);
 }
@@ -244,49 +244,14 @@ void    IcmpSender::_process_ipv4()
             // id is the same as original packet and it is our type
             _icmp_response.data = icmphdr->icmp_data;
             _icmp_response.size = _array_rcv.byte_size() - ((char *)icmphdr->icmp_data - (char *)_array_rcv.buf());
-
             _icmp_response.type = icmphdr->icmp_type;
             _icmp_response.code = icmphdr->icmp_code;
             _icmp_response.ttl = iphdr->ip_ttl;
             _icmp_response.id = ntohs(icmphdr->icmp_id);
             _icmp_response.seq = ntohs(icmphdr->icmp_seq);
-            _icmp_response.reached = (icmphdr->icmp_id == icmp()->icmp_id);
             this->notify_observers(this);
         }
     }
-}
-
-//Source code from the book "UNIX Network Programming"
-uint16_t IcmpSender::_in_cksum(uint16_t *addr, int len)
-{
-	int nleft = len;
-	uint32_t sum = 0;
-	uint16_t *w = addr;
-	uint16_t answer = 0;
-
-	/*
-	* Our algorithm is simple, using a 32 bit accumulator (sum), we add
-	* sequential 16 bit words to it, and at the end, fold back all the
-	* carry bits from the top 16 bits into the lower 16 bits.
-	*/
-	while (nleft > 1)
-	{
-		sum += *w++;
-		nleft -= 2;
-	}
-
-	/* 4mop ​​up an odd byte, if necessary */
-	if (nleft == 1)
-    {
-		*(unsigned char *)(&answer) = *(unsigned char *)w;
-		sum += answer;
-	}
-
-	/* 4add back carry outs from top 16 bits to low 16 bits */
-	sum = (sum >> 16) + (sum & 0xffff);/* add hi 16 to low 16 */
-	sum += (sum >> 16);/* add carry */
-	answer = ~sum;/* truncate to 16 bits */
-	return answer;
 }
 
 struct icmp     *IcmpSender::icmp()

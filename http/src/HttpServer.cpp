@@ -505,7 +505,7 @@ bool    HttpServer::_serve_webservice(HttpSession *session, WebService *webservi
         if (data.size() > 0)
         {
             // write body if there is
-            if (lws_write_http(session->wsi, data.cbuf(), data.size()) < 0)
+            if (lws_write_http(session->wsi, data.buf(), data.size()) < 0)
                 session->rc = -1;
         }
         return true;

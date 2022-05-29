@@ -55,7 +55,10 @@ namespace test
         IcmpSender sender("icmp-sender");
 
         if (sender.open_socket(false) == false)
-            GTEST_SKIP() << "Must be root or have capabilities to do the test";
+        {
+            GTEST_SKIP() << "Must be root or have capabilities to do the test\n"
+                << "execute command: 'sudo setcap cap_net_raw=pe " << OS::executable_path() << "'\n";
+        }
 
         sender.set_echo();
         sender.set_poll_timeout(1);
@@ -70,8 +73,8 @@ namespace test
             const IcmpResponse & response = sender->response();
             ASSERT_EQ(response.size, 56);
             time_t timestamp = ((time_t *)response.data)[0];
-            reached = response.reached;
-            SIHD_LOG_DEBUG("code=%d type=%d ttl=%d id=%d seq=%d time=%ld ms",
+            reached = response.id == getpid();
+            SIHD_LOG_DEBUG("code=%d type=%d ttl=%d id=%d seq=%d time=%ldms",
                             response.type,
                             response.code,
                             response.ttl,

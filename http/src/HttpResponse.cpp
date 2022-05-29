@@ -51,7 +51,7 @@ bool    HttpResponse::set_content(const sihd::util::IArray & data)
     this->_set_mime_type_if_not_set(Mime::MIME_APPLICATION_OCTET);
     if (_array.resize(data.byte_size()) == false)
         return false;
-    _array.copy_from_bytes(data.cbuf(), data.byte_size());
+    _array.copy_from_bytes(data.buf(), data.byte_size());
     return true;
 }
 

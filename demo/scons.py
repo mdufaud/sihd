@@ -31,6 +31,7 @@ if env["CXX"] == "em++":
 
 compile_sdl = os.getenv("sdl", None) == "1"
 
+env.build_bin("src/pinger_demo.cpp", bin_name = "ping_demo")
 env.build_bin("src/http_demo.cpp", bin_name = "http_demo")
 env.build_bin("src/pcap_demo.cpp", bin_name = "pcap_demo")
 env.build_bin("src/imgui_opengl3_glfw_demo.cpp", bin_name = "imgui_opengl3_glfw_demo")

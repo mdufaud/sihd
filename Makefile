@@ -185,35 +185,30 @@ test: build
 		cd - > /dev/null; \
 	)
 
-itest: TEST_DEFAULT_ARGS += 0>&-
-itest: test
+nointeract_test: TEST_DEFAULT_ARGS += 0>&-
+nointeract_test: test
+itest: nointeract_test
 
-valgrindtest: DEBUGGER_ARGS = --leak-check=full --show-leak-kinds=all --trace-children=no --track-origins=yes
-valgrindtest: DEBUGGER = valgrind
-valgrindtest: test
 
-vtest: valgrindtest
+valgrind_test: DEBUGGER_ARGS = --leak-check=full --show-leak-kinds=all --trace-children=no --track-origins=yes
+valgrind_test: DEBUGGER = valgrind
+valgrind_test: test
+vtest: valgrind_test
 
-gdbtest: DEBUGGER_ARGS = -ex=r --args
-gdbtest: DEBUGGER = gdb
-gdbtest: test
+gdb_test: DEBUGGER_ARGS = -ex=r --args
+gdb_test: DEBUGGER = gdb
+gdb_test: test
+gtest: gdb_test
 
-gtest: gdbtest
+san_test: asan = 1
+san_test: test
+stest: san_test
 
-santest: asan = 1
-santest: test
+strace_test: DEBUGGER = strace
+strace_test: test
+ttest: strace_test
 
-stest: santest
-
-stracetest: DEBUGGER = strace
-stracetest: test
-
-ttest: stracetest
-
-roottest: DEBUGGER = sudo
-roottest: test
-
-.PHONY: test vtest gtest stest valgrindtest gdbtest santest
+.PHONY: test vtest gtest stest valgrind_test gdb_test san_test
 
 # handles:
 #	make test
@@ -463,6 +458,8 @@ clean_cache:
 	@$(call mk_log_info,makefile,removing cache)
 	rm -rf $(HERE)/.build_cache
 
+cclean: clean_cache clean
+
 bclean:
 	@$(call mk_log_info,makefile,removing build)
 	rm -rf $(BUILD_ENTRY_PATH) $(DIST_PATH)
@@ -475,4 +472,4 @@ fclean: bclean
 	@find . -maxdepth 1 -name "*.scons*" -type d -exec rm -rf {} \;
 
 ### Makefile
-.PHONY: install confirm_install uninstall build verbose dist fclean clean clean_dist clean_dep
+.PHONY: install confirm_install uninstall build verbose dist fclean clean clean_dist clean_dep clean_cache cclean

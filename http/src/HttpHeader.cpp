@@ -21,8 +21,8 @@ HttpHeader::~HttpHeader()
 
 size_t  HttpHeader::size() const
 {
-    return _ptr == nullptr || _array.cbuf() == nullptr
-            ? 0 : _ptr - _array.cbuf();
+    return _ptr == nullptr || _array.buf() == nullptr
+            ? 0 : _ptr - _array.buf();
 }
 
 bool    HttpHeader::set_buffer_size(size_t size)

@@ -1,6 +1,8 @@
 #ifndef __SIHD_UTIL_TIME_HPP__
 # define __SIHD_UTIL_TIME_HPP__
 
+# include <sihd/util/platform.hpp>
+
 # include <chrono>
 # include <mutex>
 # include <time.h>
@@ -12,6 +14,9 @@ namespace sihd::util
 class Time
 {
     public:
+        static time_t get_timezone();
+        static std::string get_tzname();
+
         static void nsleep(time_t nano);
         static void usleep(time_t micro);
         static void msleep(time_t milli);

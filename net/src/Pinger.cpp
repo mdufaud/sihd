@@ -32,6 +32,7 @@ Pinger::Pinger(const std::string & name, sihd::util::Node *parent):
 
     _data.resize(ICMP_ECHO_REQUEST_LENGTH);
 
+    // set gibberish values like ping in packet
     char values = 10;
     size_t i = sizeof(time_t);
     while (i < ICMP_ECHO_REQUEST_LENGTH)
@@ -75,8 +76,9 @@ bool    Pinger::set_interval(time_t milliseconds_interval)
 void    Pinger::stop()
 {
     _stop = true;
-    while (_running.load())
-        _waitable.notify_all();
+    _waitable.notify_all();
+    Time::msleep(100);
+    _waitable.notify_all();
 }
 
 bool    Pinger::ping(const IpAddr & client, size_t number)
@@ -87,7 +89,7 @@ bool    Pinger::ping(const IpAddr & client, size_t number)
     memset(&_sums, 0, sizeof(InternalPingRes));
     memset(&_result, 0, sizeof(PingResult));
     _stop = false;
-    _sender.set_id(getpid());
+    _sender.set_id(OS::pid());
     _sender.set_ttl(_ttl);
 
     _result.time_start = _clock_ptr->now();
@@ -95,7 +97,7 @@ bool    Pinger::ping(const IpAddr & client, size_t number)
     time_t now = 0;
     bool ret = true;
     size_t i = 0;
-    while (_stop == false && i < number)
+    while (_stop == false && (number == 0 || i < number))
     {
         if (i > 0)
         {
@@ -138,7 +140,7 @@ bool    Pinger::ping(const IpAddr & client, size_t number)
 void    Pinger::handle(IcmpSender *sender)
 {
     const IcmpResponse & response = sender->response();
-    if (_current_seq != response.seq || getpid() != response.id)
+    if (_current_seq != response.seq || OS::pid() != response.id)
         return ;
     _received = true;
     _result.received += 1;

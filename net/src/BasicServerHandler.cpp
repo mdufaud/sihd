@@ -20,15 +20,8 @@ BasicServerHandler::~BasicServerHandler()
 {
     for (Client *client: _client_lst)
     {
-        this->_delete_client(client);
+        delete client;
     }
-}
-
-void    BasicServerHandler::_delete_client(Client *c)
-{
-    delete c->read_array;
-    delete c->write_array;
-    delete c;
 }
 
 void    BasicServerHandler::_reset()
@@ -57,9 +50,9 @@ bool    BasicServerHandler::set_max_clients(size_t max)
 
 bool    BasicServerHandler::send_to_client(Client *client, const sihd::util::IArray & arr)
 {
-    if (client != nullptr && client->write_array->copy_from_bytes(arr))
+    if (client != nullptr && client->write_array.copy_from_bytes(arr))
     {
-        client->write_array->resize(arr.byte_size());
+        client->write_array.resize(arr.byte_size());
         return this->server()->add_client_write(client->fd());
     }
     return false;
@@ -72,9 +65,9 @@ bool    BasicServerHandler::remove_client(Client *client)
         auto it = std::find(_client_lst.begin(), _client_lst.end(), client);
         if (it != _client_lst.end())
             _client_lst.erase(it);
-        this->_delete_client(client);
         this->server()->remove_client_read(client->fd());
         this->server()->remove_client_write(client->fd());
+        delete client;
     }
     return client != nullptr;
 }
@@ -123,8 +116,8 @@ void    BasicServerHandler::handle_new_client(INetServer *server)
             return ;
         }
         Client *client = new Client(socket);
-        client->read_array = new sihd::util::ArrByte(4096);
-        client->write_array = new sihd::util::ArrByte(4096);
+        client->read_array.reserve(4096);
+        client->write_array.reserve(4096);
         client->addr = addr;
         client->time_connected = _clock.now();
         // add client to internal listing
@@ -143,7 +136,7 @@ void    BasicServerHandler::handle_client_read(INetServer *server, int socket)
     Client *client = _client_map[socket];
     if (client != nullptr)
     {
-        ssize_t rcv = client->socket.receive(*client->read_array);
+        ssize_t rcv = client->socket.receive(client->read_array);
         client->error = (rcv < 0);
         client->disconnected = rcv == 0;
         _read_event_lst.push_back(client);
@@ -156,7 +149,7 @@ void    BasicServerHandler::handle_client_write(INetServer *server, int socket)
     Client *client = _client_map[socket];
     if (client != nullptr)
     {
-        bool success = client->socket.send_all(*client->write_array);
+        bool success = client->socket.send_all(client->write_array);
         client->error = !success;
         _write_event_lst.push_back(client);
         server->remove_client_write(socket);

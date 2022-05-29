@@ -28,8 +28,7 @@ namespace test::module
 using namespace sihd::util;
 using namespace sihd::pcap;
 
-SIHD_NEW_LOGGER("test::module");
-
+SIHD_NEW_LOGGER("demo");
 
 static std::string interfaces_test()
 {
@@ -56,7 +55,7 @@ static void sniffer_test(const std::string & interface_to_sniff)
     {
         // SIHD_TRACE(obj->array().hexdump());
         SIHD_LOG(info, obj->array().size());
-        std::cout << Str::hexdump_fmt(obj->array().cbuf(), obj->array().byte_size()) << std::endl;
+        std::cout << Str::hexdump_fmt(obj->array().buf(), obj->array().byte_size()) << std::endl;
     });
     pcap.add_observer(&obs);
     pcap.open(interface_to_sniff);

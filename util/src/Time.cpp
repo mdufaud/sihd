@@ -4,10 +4,46 @@
 
 #include <string.h>
 
+# if !defined(__SIHD_WINDOWS__)
+extern char *tzname[2];
+extern long timezone;
+# endif
+
 namespace sihd::util
 {
 
 std::mutex Time::_unsafe_c_mutex;
+
+time_t  Time::get_timezone()
+{
+# if !defined(__SIHD_WINDOWS__)
+    tzset();
+    return timezone;
+# else
+    long seconds = 0;
+    if (!_get_timezone(&seconds))
+        return seconds;
+    return 0;
+# endif
+}
+
+std::string Time::get_tzname()
+{
+# if !defined(__SIHD_WINDOWS__)
+    tzset();
+    return tzname[0];
+# else
+    std::string ret;
+    size_t tzname_size = 0;
+    if (!_get_tzname(&tzname_size, NULL, 0, 0))
+    {
+        ret.resize(tzname_size);
+        if (!_get_tzname(&tzname_size, ret.data(), tzname_size, 0))
+            return ret;
+    }
+    return "";
+# endif
+}
 
 void    Time::nsleep(time_t nano)
 {

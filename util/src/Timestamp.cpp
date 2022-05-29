@@ -2,8 +2,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Str.hpp>
 
-extern long timezone;
-
 namespace sihd::util
 {
 

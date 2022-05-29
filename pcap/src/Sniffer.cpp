@@ -168,7 +168,7 @@ const sihd::util::ArrByte & Sniffer::data() const
 
 bool    Sniffer::get_read_data(char **data, size_t *size) const
 {
-    *data = (char *)_array.cbuf();
+    *data = (char *)_array.buf();
     *size = _array.byte_size();
     return true;
 }

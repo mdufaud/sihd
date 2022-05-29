@@ -65,11 +65,11 @@ namespace test
             }
             for (BasicServerHandler::Client *client: bsh->read_activity())
             {
-                SIHD_LOG(info, "Client said: " << client->read_array->str(','));
+                SIHD_LOG(info, "Client said: " << client->read_array.str(','));
             }
             for (BasicServerHandler::Client *client: bsh->write_activity())
             {
-                SIHD_LOG(info, "Server wrote to client: " << client->write_array->str(','));
+                SIHD_LOG(info, "Server wrote to client: " << client->write_array.str(','));
             }
         });
         server_handler.add_observer(&handler);
@@ -91,7 +91,7 @@ namespace test
         if (server_handler.clients().size() == 1)
         {
             BasicServerHandler::Client *client = server_handler.clients()[0];
-            EXPECT_TRUE(client->read_array->is_bytes_equal(hello_world_arr));
+            EXPECT_TRUE(client->read_array.is_bytes_equal(hello_world_arr));
         }
 
         SIHD_LOG(debug, "Simulating 3 new connections");

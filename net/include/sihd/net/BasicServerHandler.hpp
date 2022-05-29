@@ -22,8 +22,6 @@ class BasicServerHandler:   public INetServerHandler,
             public:
                 Client(int sock):
                     socket(sock),
-                    read_array(nullptr),
-                    write_array(nullptr),
                     time_connected(0),
                     time_total(0),
                     error(false),
@@ -35,25 +33,18 @@ class BasicServerHandler:   public INetServerHandler,
                 int fd() { return socket.socket(); }
 
                 Socket socket;
-                sihd::util::ArrByte *read_array;
-                sihd::util::ArrByte *write_array;
+                sihd::util::ArrByte read_array;
+                sihd::util::ArrByte write_array;
                 IpAddr addr;
 
                 time_t time_connected;
-                time_t time_total; //todo
+                time_t time_total;
                 bool error;
                 bool disconnected;
         };
 
         BasicServerHandler();
         virtual ~BasicServerHandler();
-
-		void handle_no_activity(INetServer *server, time_t nano);
-		void handle_activity(INetServer *server, time_t nano);
-		void handle_new_client(INetServer *server);
-		void handle_client_read(INetServer *server, int socket);
-		void handle_client_write(INetServer *server, int socket);
-        void handle_after_activity(INetServer *server);
 
         bool set_max_clients(size_t max);
 
@@ -62,18 +53,25 @@ class BasicServerHandler:   public INetServerHandler,
         bool send_to_client(int socket, const sihd::util::IArray & arr);
         bool remove_client(int socket);
 
-        std::vector<Client *> & clients() { return _client_lst; }
-        std::vector<Client *> & read_activity() { return _read_event_lst; }
-        std::vector<Client *> & write_activity() { return _write_event_lst; }
-        std::vector<Client *> & new_clients() { return _connect_event_lst; }
-        time_t poll_time() { return _poll_time; }
+        const std::vector<Client *> & clients() const { return _client_lst; }
+        const std::vector<Client *> & read_activity() const { return _read_event_lst; }
+        const std::vector<Client *> & write_activity() const { return _write_event_lst; }
+        const std::vector<Client *> & new_clients() const { return _connect_event_lst; }
+        time_t poll_time() const { return _poll_time; }
         INetServer *server() { return _server; }
         Client *client(int socket) { return _client_map[socket]; }
+
+    protected:
+        void handle_no_activity(INetServer *server, time_t nano);
+		void handle_activity(INetServer *server, time_t nano);
+		void handle_new_client(INetServer *server);
+		void handle_client_read(INetServer *server, int socket);
+		void handle_client_write(INetServer *server, int socket);
+        void handle_after_activity(INetServer *server);
 
     private:
         void _reset();
         void _add_time_to_clients();
-        void _delete_client(Client *c);
 
         std::vector<Client *> _client_lst;
         std::map<int, Client *> _client_map;

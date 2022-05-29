@@ -16,6 +16,7 @@ namespace test
         protected:
             TestCLASS_NAME()
             {
+                sihd::util::LoggerManager::basic();
                 char *test_path = getenv("TEST_PATH");
                 _base_test_dir = sihd::util::FS::combine({
                     test_path == nullptr ? "unit_test" : test_path,
@@ -23,7 +24,6 @@ namespace test
                     "LOWER_CLASS_NAME"
                 });
                 _cwd = sihd::util::OS::cwd();
-                sihd::util::LoggerManager::basic();
                 sihd::util::FS::make_directories(_base_test_dir);
             }
 

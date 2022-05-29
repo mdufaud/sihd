@@ -22,7 +22,6 @@ struct IcmpResponse
     int ttl;
     int id;
     int seq;
-    bool reached;
 };
 
 class IcmpSender:   public sihd::util::Named,
@@ -78,8 +77,6 @@ class IcmpSender:   public sihd::util::Named,
         void _read_socket();
         void _process_ipv4();
         void _process_ipv6();
-
-        uint16_t _in_cksum(uint16_t *addr, int len);
 
         Socket _socket;
         std::mutex _poll_mutex;
