@@ -103,7 +103,7 @@ void    DevFilter::_rule_match(Channel *channel_out, const Rule *rule_ptr, int64
 void    DevFilter::_apply_rule(const sihd::core::Channel *channel_in, sihd::core::Channel *channel_out, const Rule *rule_ptr)
 {
     const sihd::util::IArray *array_in = channel_in->array();
-    sihd::util::Value in_value(array_in->cbuf_at(rule_ptr->trigger_idx), array_in->data_type());
+    sihd::util::Value in_value(array_in->buf_at(rule_ptr->trigger_idx), array_in->data_type());
     bool matched = false;
     switch (rule_ptr->type)
     {

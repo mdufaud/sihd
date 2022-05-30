@@ -3,6 +3,8 @@
 
 # include <sihd/util/IObservable.hpp>
 # include <sihd/util/IHandler.hpp>
+
+# include <vector>
 # include <list>
 # include <mutex>
 # include <algorithm>

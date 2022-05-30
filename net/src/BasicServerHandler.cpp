@@ -116,13 +116,14 @@ void    BasicServerHandler::handle_new_client(INetServer *server)
             return ;
         }
         Client *client = new Client(socket);
+        // add client to internal listing
+        _client_map[socket] = client;
+        _client_lst.push_back(client);
+        // fill client
         client->read_array.reserve(4096);
         client->write_array.reserve(4096);
         client->addr = addr;
         client->time_connected = _clock.now();
-        // add client to internal listing
-        _client_map[socket] = client;
-        _client_lst.push_back(client);
         // add client to new events
         _connect_event_lst.push_back(client);
         // add client socket to poll reading

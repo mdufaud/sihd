@@ -28,7 +28,6 @@ extlibs = {
     ## bindings
     "pybind11": "2.6.2",
     "lua": "5.3.5",
-    "sol2": "3.2.3",
     ## compressing utility
     "libzip": "1.7.3",
     ## other
@@ -44,55 +43,44 @@ modules = {
     },
     "core": {
         "depends": ['util'],
-        "add-depends-libs": True,
     },
     "net": {
         "depends": ['util'],
-        "add-depends-libs": True,
     },
     "zip": {
         "depends": ['util'],
-        "add-depends-libs": True,
         "use-extlibs": ['libzip'],
         "libs": ['zip'],
     },
     "ssh": {
         "depends": ['util'],
-        "add-depends-libs": True,
         "libs": ['ssh'],
     },
     "http": {
         "depends": ['net'],
-        "add-depends-libs": True,
         "use-extlibs": ['openssl', 'libcurl', 'libwebsockets'],
         "libs": ['curl', 'websockets', 'ssl', 'crypto'],
     },
     "pcap": {
         "depends": ['net'],
-        "add-depends-libs": True,
         "use-extlibs": ['libpcap'],
         "libs": ['pcap'],
     },
     "usb": {
         "depends": ['util'],
-        "add-depends-libs": True,
         "use-extlibs": ['libusb'],
         "libs": ['usb'],
     },
     "bt": {
         "depends": ['util'],
-        "add-depends-libs": True,
         "use-extlibs": ['libbluetooth'],
         "libs": ['bluetooth'],
     },
     "csv": {
         "depends": ['util'],
-        "add-depends-libs": True,
     },
     "imgui": {
-        # apt libmesa-dev for opengl
         "depends": ['util'],
-        "add-depends-libs": True,
         "use-extlibs": ['glfw', 'glew'],
         "linux-libs": ['glfw', 'GLEW', 'GL'],
         "windows-libs": [
@@ -118,13 +106,11 @@ modules = {
 conditionnal_modules = {
     "demo": {
         "depends": ['pcap', 'http', 'imgui'],
-        "add-depends-libs": True,
         "conditionnal-env": "demo",
     },
     "lua": {
         # apt liblua5.3-dev / pacman lua
         "depends": ['util'],
-        "add-depends-libs": True,
         "conditionnal-env": "lua",
         "conditionnal-depends": ['core', 'net', 'http'],
         "flags": ["-Wno-unused-parameter"],
@@ -134,13 +120,11 @@ conditionnal_modules = {
     },
     "luabin": {
         "depends": ['lua'],
-        "add-depends-libs": True,
         "conditionnal-env": "lua",
         "flags": ["-Wno-unused-parameter"],
     },
     "py": {
         "depends": ['util'],
-        "add-depends-libs": True,
         "use-extlibs": ['pybind11'],
         "conditionnal-env": "py",
         "conditionnal-depends": ['core', 'net', 'http'],
@@ -179,7 +163,7 @@ apt_packages = {
     "libzip": "libzip-dev",
     "libbluetooth": "libbluetooth-dev",
     "pybind11": "python3-pybind11",
-    "sol2": "",
+    # apt libmesa-dev for opengl
     "glfw": "libglfw3-dev",
     "glew": "libglew-dev",
     "sdl2": "libsdl2-dev",
@@ -206,7 +190,6 @@ pacman_packages = {
     "libzip": "libzip",
     "libbluetooth": "bluez",
     "pybind11": "pybind11",
-    "sol2": "",
     "glfw": "glfw",
     "glew": "glew",
     "sdl2": "sdl2",

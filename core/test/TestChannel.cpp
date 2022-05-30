@@ -35,7 +35,7 @@ namespace test
                 if (c->array()->data_type() == TYPE_INT)
                 {
                     const Array<int> *arr_int = ArrayUtil::cast_array<int>(c->array());
-                    const int *c_arr_int = arr_int->cdata();
+                    const int *c_arr_int = arr_int->data();
                     EXPECT_NO_THROW(
                         _at_val = arr_int->at(0);
                         _c_arr_val = c_arr_int[0];
