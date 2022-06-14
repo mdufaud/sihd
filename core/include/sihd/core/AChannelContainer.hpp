@@ -25,15 +25,11 @@ class AChannelContainer:    public sihd::util::Node,
         bool get_channel(const std::string & name, Channel **to_fill);
 
         // store channel configuration, when links are resolved, create the channel if unlinked or get the linked one
-        // size = 0 to not care about the channel size
-        Channel *add_unlinked_channel(const std::string & name, sihd::util::Type type, size_t size = 1);
-        // store channel configuration, when links are resolved, create the channel if unlinked or get the linked one
-        // size = 0 to not care about the channel size
-        Channel *add_unlinked_channel(const std::string & name, std::string_view type, size_t size = 1);
+        Channel *add_unlinked_channel(const std::string & name, sihd::util::Type type, size_t size = 1, bool check_match = true);
+        Channel *add_unlinked_channel(const std::string & name, std::string_view type, size_t size = 1, bool check_match = true);
 
-        // similar to add_child, creates immediately a channel
+        // creates a channel and adds it as a child
         Channel *add_channel(const std::string & name, sihd::util::Type type, size_t size = 1);
-        // similar to add_child, creates immediately a channel
         Channel *add_channel(const std::string & name, std::string_view type, size_t size = 1);
 
         bool observe_channel(const std::string & channel_name);
@@ -48,6 +44,7 @@ class AChannelContainer:    public sihd::util::Node,
         {
             sihd::util::Type type;
             size_t size;
+            bool match;
         };
         std::map<std::string, ChannelConfiguration> _channels_link;
         std::list<Channel *> _observed_channels;

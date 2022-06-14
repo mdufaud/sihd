@@ -44,15 +44,15 @@ class IArray
 
         // create new internal buffer
 
-        virtual bool from(const IArray & arr) = 0;
-        virtual bool from(const IArrayView & arr) = 0;
+        virtual bool from_bytes(const IArray & arr) = 0;
+        virtual bool from_bytes(const IArrayView & arr) = 0;
         virtual bool from_bytes(const void *buf, size_t byte_size) = 0;
         virtual bool from_str(std::string_view data, const char *delimiters) = 0;
 
         // copy data to internal buffer
 
-        virtual bool copy_from_bytes(const IArrayView & arr, size_t byte_offset = 0) = 0;
         virtual bool copy_from_bytes(const IArray & arr, size_t byte_offset = 0) = 0;
+        virtual bool copy_from_bytes(const IArrayView & arr, size_t byte_offset = 0) = 0;
         virtual bool copy_from_bytes(const void *buf, size_t byte_size, size_t byte_offset = 0) = 0;
 
         // copy to data from internal buffer

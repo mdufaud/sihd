@@ -1,12 +1,13 @@
 #ifndef __SIHD_UTIL_NODE_HPP__
 # define __SIHD_UTIL_NODE_HPP__
 
-# include <sihd/util/Named.hpp>
-# include <sihd/util/NamedFactory.hpp>
-# include <sihd/util/Str.hpp>
 # include <map>
 # include <exception>
 # include <memory>
+
+# include <sihd/util/Named.hpp>
+# include <sihd/util/NamedFactory.hpp>
+# include <sihd/util/Str.hpp>
 
 namespace sihd::util
 {
@@ -95,8 +96,8 @@ class Node: public Named
         virtual void delete_children();
 
         // Ownership
-        bool has_ownership(const Named *child);
-        bool has_ownership(const std::string & name);
+        bool has_ownership(const Named *child) const;
+        bool has_ownership(const std::string & name) const;
         bool set_child_ownership(const std::string & name, bool ownership);
         bool set_child_ownership(const Named *child, bool ownership);
 
@@ -110,8 +111,6 @@ class Node: public Named
             return nullptr;
         }
         Named *get_child(const std::string & name) const;
-        ChildEntry *get_child_entry(const std::string & name) const;
-        ChildEntry *get_child_entry(const Named *child) const;
 
         // Links
         bool is_link(const std::string & link) const;
@@ -154,6 +153,9 @@ class Node: public Named
         virtual void _add_tree_desc(std::stringstream & ss, const TreeOpts & opts, const Named *child) const;
 
     private:
+        ChildEntry *_get_child_entry(const std::string & name) const;
+        ChildEntry *_get_child_entry(const Named *child) const;
+
         std::vector<std::string> _children_keys;
         std::map<std::string, ChildEntry *> _children_map;
         std::map<std::string, std::string> _link_map;

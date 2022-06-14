@@ -127,9 +127,9 @@ bool    IcmpSender::set_data(sihd::util::ArrViewByte view)
 {
     bool ret;
     if (_socket.is_ipv6())
-        ret = _array_send.copy_from(view, offsetof(struct icmp6_hdr, icmp6_data8));
+        ret = _array_send.copy_from_bytes(view, offsetof(struct icmp6_hdr, icmp6_data8));
     else
-        ret = _array_send.copy_from(view, offsetof(struct icmp, icmp_data));
+        ret = _array_send.copy_from_bytes(view, offsetof(struct icmp, icmp_data));
     return ret;
 }
 

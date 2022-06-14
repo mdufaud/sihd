@@ -27,14 +27,32 @@ class Waitable
 
         void infinite_wait();
         time_t infinite_wait_elapsed();
+
         bool wait_until(Timestamp t);
-        // wait for x nanoseconds -- returns true if timed out
+
+        /**
+         * @brief wait a notification for a duration
+         *
+         * @param t duration to wait
+         * @return true if timedout
+         * @return false if notification came
+         */
         bool wait_for(Timestamp t);
-        // wait X notifications for a duration
-        bool wait_loop(Timestamp t, uint32_t times);
-        // cancel wait loop
+
+        /**
+         * @brief wait X notifications for a duration
+         *
+         * @param t total duration to wait
+         * @param times needed number of notify
+         * @return true if timedout
+         * @return false if all notifications came in time
+         */
+        bool wait_for_loop(Timestamp t, uint32_t times);
+
+        // cancel wait_for_loop
         void cancel_loop();
-        // wait for x nanoseconds -- returns time elapsed
+
+        // wait for duration -- returns time elapsed
         time_t wait_for_elapsed(Timestamp t);
 
     protected:

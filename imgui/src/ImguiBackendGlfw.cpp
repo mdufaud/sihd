@@ -6,6 +6,7 @@ namespace sihd::imgui
 
 SIHD_LOGGER;
 
+// TODO
 static void glfw_error_callback(int error, const char* description)
 {
     SIHD_LOG(error, "GLFW: " << description << " (" << error << ")");

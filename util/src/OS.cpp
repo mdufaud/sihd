@@ -1,8 +1,4 @@
-#include <sihd/util/OS.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/Runnable.hpp>
-#include <sihd/util/AtExit.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/platform.hpp>
 
 #include <vector>
 #include <algorithm>
@@ -15,6 +11,7 @@
 
 // for get_max_rss / peak_rss
 #if defined(__SIHD_WINDOWS__)
+# include <winsock2.h>
 # include <windows.h>
 # include <psapi.h>
 # include <debugapi.h>
@@ -48,10 +45,18 @@
 typedef void (*sighandler_t)(int);
 #endif
 
+#include <sihd/util/OS.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Runnable.hpp>
+#include <sihd/util/AtExit.hpp>
+#include <sihd/util/FS.hpp>
+
 #if !defined(__SIHD_UTIL_OS_DEFAULT_MAX_FDS__)
 // backup for max_fds
 # define __SIHD_UTIL_OS_DEFAULT_MAX_FDS__ 512
 #endif
+
+
 
 namespace sihd::util
 {
@@ -486,11 +491,11 @@ void *OS::load_lib(const std::string & lib_name)
     return handle;
 }
 
-void *OS::load_symbol(void *handle, const std::string & sym_name)
+void *OS::load_symbol(void *handle, std::string_view sym_name)
 {
     if (handle == nullptr)
         return nullptr;
-    return dlsym(handle, sym_name.c_str());
+    return dlsym(handle, sym_name.data());
 }
 
 std::string OS::lib_error()
@@ -505,7 +510,7 @@ bool OS::close_lib(void *handle)
     return dlclose(handle) == 0;
 }
 
-void *OS::load_symbol_unload_lib(const std::string & lib_name, const std::string & sym_name)
+void *OS::load_symbol_unload_lib(const std::string & lib_name, std::string_view sym_name)
 {
     void *handle = OS::load_lib(lib_name);
     if (handle == nullptr)
@@ -526,7 +531,7 @@ void *OS::load_symbol_unload_lib(const std::string & lib_name, const std::string
 
 #else
 
-void *OS::load_symbol_unload_lib(const std::string & lib_name, const std::string & sym_name)
+void *OS::load_symbol_unload_lib(const std::string & lib_name, std::string_view sym_name)
 {
     (void)lib_name;
     (void)sym_name;
@@ -547,13 +552,13 @@ void *OS::load_symbol_unload_lib(const std::string & lib_name, const std::string
  * memory use) measured in bytes, or zero if the value cannot be
  * determined on this OS.
  */
-size_t  OS::peak_rss()
+ssize_t OS::peak_rss()
 {
 #if defined(__SIHD_WINDOWS__)
 
     PROCESS_MEMORY_COUNTERS info;
     GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info));
-    return (size_t)info.PeakWorkingSetSize;
+    return (ssize_t)info.PeakWorkingSetSize;
 
 #elif defined(__SIHD_AIX__) || defined(__SIHD_SUN__)
 
@@ -562,16 +567,16 @@ size_t  OS::peak_rss()
     if ((fd = open("/proc/self/psinfo", O_RDONLY)) == -1)
     {
         SIHD_LOG(error, "OS: peak_rss open: " << strerror(errno));
-        return (size_t)0L;
+        return (ssize_t)-1L;
     }
     if (read(fd, &psinfo, sizeof(psinfo)) != sizeof(psinfo))
     {
         SIHD_LOG(error, "OS: peak_rss read: " << strerror(errno));
         close(fd);
-        return (size_t)0L;
+        return (ssize_t)-1L;
     }
     close(fd);
-    return (size_t)(psinfo.pr_rssize * 1024L);
+    return (ssize_t)(psinfo.pr_rssize * 1024L);
 
 #elif defined(__SIHD_LINUX__) || defined(__SIHD_APPLE__)
 
@@ -579,16 +584,16 @@ size_t  OS::peak_rss()
     if (getrusage(RUSAGE_SELF, &rusage) == -1)
     {
         SIHD_LOG(error, "OS: peak_rss getrusage: " << strerror(errno));
-        return (size_t)0L;
+        return (ssize_t)-1L;
     }
 # if defined(__SIHD_APPLE__)
-    return (size_t)rusage.ru_maxrss;
+    return (ssize_t)rusage.ru_maxrss;
 # else
-    return (size_t)(rusage.ru_maxrss * 1024L);
+    return (ssize_t)(rusage.ru_maxrss * 1024L);
 # endif
 
 #else
-    return (size_t)0L;
+    return (ssize_t)-1L;
 #endif
 }
 
@@ -596,13 +601,13 @@ size_t  OS::peak_rss()
  * Returns the current resident set size (physical memory use) measured
  * in bytes, or zero if the value cannot be determined on this OS.
  */
-size_t  OS::current_rss()
+ssize_t OS::current_rss()
 {
 #if defined(__SIHD_WINDOWS__)
 
     PROCESS_MEMORY_COUNTERS info;
     GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info));
-    return (size_t)info.WorkingSetSize;
+    return (ssize_t)info.WorkingSetSize;
 
 #elif defined(__SIHD_APPLE__)
 
@@ -611,9 +616,9 @@ size_t  OS::current_rss()
     if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &infoCount) != KERN_SUCCESS)
     {
         SIHD_LOG(error, "OS: current_rss task info");
-        return (size_t)0L;
+        return (ssize_t)-1L;
     }
-    return (size_t)info.resident_size;
+    return (ssize_t)info.resident_size;
 
 #elif defined(__SIHD_LINUX__)
 
@@ -622,19 +627,19 @@ size_t  OS::current_rss()
     if ((fp = fopen("/proc/self/statm", "r")) == NULL)
     {
         SIHD_LOG(error, "OS: current_rss fopen: " << strerror(errno));
-        return (size_t)0L;
+        return (ssize_t)-1L;
     }
     if (fscanf(fp, "%*s%ld", &rss) != 1)
     {
         fclose(fp);
         SIHD_LOG(error, "OS: current_rss fscanf: " << strerror(errno));
-        return (size_t)0L;
+        return (ssize_t)-1L;
     }
     fclose(fp);
-    return (size_t)rss * (size_t)sysconf(_SC_PAGESIZE);
+    return (ssize_t)rss * (ssize_t)sysconf(_SC_PAGESIZE);
 
 #else
-    return (size_t)0L;
+    return (ssize_t)-1L;
 #endif
 }
 

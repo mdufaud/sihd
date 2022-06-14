@@ -4,6 +4,8 @@ MAKEFILE_TOOLS_SCRIPTS = $(MAKEFILE_TOOLS)/scripts
 export MAKEFILE_TOOLS_TEMPLATES
 export MAKEFILE_TOOLS_SCRIPTS
 
+.PHONY: newmod # Generate a new module (<module_name>)
+
 ifeq ($(word 1, $(MAKECMDGOALS)), newmod)
 MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
 
@@ -14,6 +16,8 @@ newmod:
 $(MODULE_NAME):
 
 endif
+
+.PHONY: newtest # Generate a new c++ google test for module (<module_name> <test_name>)
 
 ifeq ($(word 1, $(MAKECMDGOALS)), newtest)
 MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
@@ -30,6 +34,7 @@ $(TEST_NAME):
 
 endif
 
+.PHONY: newclass # Generate a new c++ class for module (<module_name> <class_name>)
 
 ifeq ($(word 1, $(MAKECMDGOALS)), newclass)
 MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)
@@ -45,6 +50,8 @@ $(MODULE_NAME):
 $(CLASS_NAME):
 
 endif
+
+.PHONY: newinterface # Generate a new c++ interface for module (<module_name> <class_name>)
 
 ifeq ($(word 1, $(MAKECMDGOALS)), newinterface)
 MODULE_NAME=$(word 2, $(MAKECMDGOALS))$(m)

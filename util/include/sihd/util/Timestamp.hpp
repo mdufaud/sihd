@@ -36,11 +36,13 @@ namespace sihd::util
 struct ClockTime
 {
     // 0 - 23
-    int hour;
+    int hour = 0;
     // 0 - 59
-    int minute;
+    int minute = 0;
     // 0 - 59
-    int second;
+    int second = 0;
+    // 0 - 999
+    int millisecond = 0;
 
     std::string str() const;
 };
@@ -48,11 +50,11 @@ struct ClockTime
 struct Calendar
 {
     // month day -> 1 - 31
-    int day;
+    int day = 0;
     // 1 - 12
-    int month;
+    int month = 0;
     // 0 - X
-    int year;
+    int year = 0;
 
     std::string str() const;
 };

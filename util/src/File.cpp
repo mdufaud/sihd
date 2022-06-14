@@ -227,7 +227,7 @@ bool    File::eof() const
 
 int     File::fd() const
 {
-    return fileno(_file_ptr);
+    return  _file_ptr == nullptr ? -1 : fileno(_file_ptr);
 }
 
 int     File::error() const

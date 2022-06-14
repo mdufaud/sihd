@@ -14,6 +14,7 @@ Timestamp::Timestamp(ClockTime clocktime)
     _nano = Time::hours(clocktime.hour);
     _nano += Time::minutes(clocktime.minute);
     _nano += Time::seconds(clocktime.second);
+    _nano += Time::milliseconds(clocktime.millisecond);
 }
 
 Timestamp::Timestamp(Calendar calendar)
@@ -102,7 +103,8 @@ ClockTime   Timestamp::clocktime() const
     return {
         .hour = tm.tm_hour,
         .minute = tm.tm_min,
-        .second = tm.tm_sec
+        .second = tm.tm_sec,
+        .millisecond = (int)((_nano - (Time::to_seconds(_nano) * 1E9)) / 1E6),
     };
 }
 
@@ -122,7 +124,8 @@ ClockTime   Timestamp::local_clocktime() const
     return {
         .hour = tm.tm_hour,
         .minute = tm.tm_min,
-        .second = tm.tm_sec
+        .second = tm.tm_sec,
+        .millisecond = (int)((_nano - (Time::to_seconds(_nano) * 1E9)) / 1E6),
     };
 }
 
@@ -138,7 +141,7 @@ Calendar    Timestamp::local_calendar() const
 
 std::string     ClockTime::str() const
 {
-    return Str::format("%02d:%02d:%02d", hour, minute, second);
+    return Str::format("%02d:%02d:%02d:%d", hour, minute, second, millisecond);
 }
 
 std::string     Calendar::str() const

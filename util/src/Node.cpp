@@ -1,6 +1,7 @@
+#include <algorithm>
+
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Logger.hpp>
-#include <algorithm>
 
 #define MAX_LINK_RECURSION 20
 
@@ -64,7 +65,7 @@ bool    Node::add_child(const std::string & name, Named *child, bool ownership)
     return true;
 }
 
-Node::ChildEntry  *Node::get_child_entry(const Named *child) const
+Node::ChildEntry  *Node::_get_child_entry(const Named *child) const
 {
     for (const auto & pair: _children_map)
     {
@@ -74,21 +75,21 @@ Node::ChildEntry  *Node::get_child_entry(const Named *child) const
     return nullptr;
 }
 
-bool    Node::has_ownership(const Named *child)
+bool    Node::has_ownership(const Named *child) const
 {
-    ChildEntry *entry = this->get_child_entry(child);
+    ChildEntry *entry = this->_get_child_entry(child);
     return entry != nullptr && entry->ownership;
 }
 
-bool    Node::has_ownership(const std::string & name)
+bool    Node::has_ownership(const std::string & name) const
 {
-    ChildEntry *entry = this->get_child_entry(name);
+    ChildEntry *entry = this->_get_child_entry(name);
     return entry != nullptr && entry->ownership;
 }
 
 bool    Node::set_child_ownership(const Named *child, bool ownership)
 {
-    ChildEntry *entry = this->get_child_entry(child);
+    ChildEntry *entry = this->_get_child_entry(child);
     if (entry != nullptr)
         entry->ownership = ownership;
     return entry != nullptr;
@@ -96,13 +97,13 @@ bool    Node::set_child_ownership(const Named *child, bool ownership)
 
 bool    Node::set_child_ownership(const std::string & name, bool ownership)
 {
-    ChildEntry *entry = this->get_child_entry(name);
+    ChildEntry *entry = this->_get_child_entry(name);
     if (entry != nullptr)
         entry->ownership = ownership;
     return entry != nullptr;
 }
 
-Node::ChildEntry  *Node::get_child_entry(const std::string & name) const
+Node::ChildEntry  *Node::_get_child_entry(const std::string & name) const
 {
     auto it = _children_map.find(name);
     if (it != _children_map.end())
@@ -112,7 +113,7 @@ Node::ChildEntry  *Node::get_child_entry(const std::string & name) const
 
 Named   *Node::get_child(const std::string & name) const
 {
-    Node::ChildEntry *entry = this->get_child_entry(name);
+    Node::ChildEntry *entry = this->_get_child_entry(name);
     return entry != nullptr ? entry->obj : nullptr;
 }
 
@@ -123,7 +124,7 @@ bool    Node::delete_child(const Named *child)
 
 bool    Node::delete_child(const std::string & name)
 {
-    return this->_delete_child_entry(this->get_child_entry(name));
+    return this->_delete_child_entry(this->_get_child_entry(name));
 }
 
 bool    Node::_delete_child_entry(Node::ChildEntry *entry)
@@ -144,7 +145,7 @@ bool    Node::remove_child(const Named *child)
 
 bool    Node::remove_child(const std::string & name)
 {
-    return this->_remove_child_entry(this->get_child_entry(name));
+    return this->_remove_child_entry(this->_get_child_entry(name));
 }
 
 bool    Node::_remove_child_entry(Node::ChildEntry *entry)

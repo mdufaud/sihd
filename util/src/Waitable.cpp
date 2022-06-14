@@ -71,7 +71,7 @@ bool    Waitable::wait_for(Timestamp nano_duration)
     return _condition.wait_for(lock, std::chrono::nanoseconds(nano_duration)) == std::cv_status::timeout;
 }
 
-bool    Waitable::wait_loop(Timestamp nano_duration, uint32_t times)
+bool    Waitable::wait_for_loop(Timestamp nano_duration, uint32_t times)
 {
     if (nano_duration <= 0)
         return true;

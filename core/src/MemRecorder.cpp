@@ -93,7 +93,7 @@ bool    MemRecorder::provide(PlayableRecord *value)
 
 void    MemRecorder::handle(const std::string & name, const Channel *channel)
 {
-    this->add_record(name, channel->ctimestamp(), channel->array());
+    this->add_record(name, channel->timestamp(), channel->array());
 }
 
 std::string     MemRecorder::hexdump_records()

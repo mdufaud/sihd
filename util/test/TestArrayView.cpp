@@ -109,7 +109,7 @@ namespace test
         ArrChar arr_char(str);
         ArrViewChar arr_view_char(arr_char);
         EXPECT_TRUE(arr_char.is_equal(str));
-        EXPECT_TRUE(arr_char.is_equal(arr_view_char));
+        EXPECT_TRUE(arr_char.is_bytes_equal(arr_view_char));
         EXPECT_TRUE(arr_view_char.is_equal(arr_char));
         EXPECT_TRUE(arr_view_char.is_equal(str));
 
@@ -141,7 +141,7 @@ namespace test
         ASSERT_EQ(view_int.size(), 4u);
         EXPECT_EQ(view_int.byte_size(), sizeof(int) * 4);
         EXPECT_TRUE(view_int.is_equal(arr_int));
-        EXPECT_TRUE(arr_int.is_equal(view_int));
+        EXPECT_TRUE(arr_int.is_bytes_equal(view_int));
         EXPECT_EQ(view_int[0], 1);
         EXPECT_EQ(view_int[1], 2);
         EXPECT_EQ(view_int[2], 3);

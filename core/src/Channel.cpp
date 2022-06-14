@@ -78,7 +78,7 @@ Channel     *Channel::build(std::string_view configuration)
     return new Channel(name_it->second, type_it->second, val);
 }
 
-time_t     Channel::timestamp()
+Timestamp Channel::timestamp() const
 {
     std::lock_guard lock(_arr_mutex);
     return _timestamp;

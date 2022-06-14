@@ -28,10 +28,9 @@ enum Type
 
 class Types
 {
-    private:
-        ~Types() {};
-
     public:
+        Types() = delete;
+
         static size_t type_size(Type type);
         static const char *type_str(Type type);
         static Type from_str(std::string_view type);

@@ -115,6 +115,40 @@ namespace test
         EXPECT_EQ(escaped, "");
     }
 
+    TEST_F(TestStr, test_str_bytes)
+    {
+        EXPECT_EQ(Str::bytes_str(1), "1B");
+        EXPECT_EQ(Str::bytes_str(1001), "1001B");
+        EXPECT_EQ(Str::bytes_str(1024), "1K");
+        EXPECT_EQ(Str::bytes_str(1025), "1K");
+        EXPECT_EQ(Str::bytes_str(1024 + 1023), "1.9K");
+        EXPECT_EQ(Str::bytes_str(1024 * 1024), "1G");
+        EXPECT_EQ(Str::bytes_str((1024 * 1024) + (1024 * 1023)), "1.9G");
+        EXPECT_EQ(Str::bytes_str(1024 * 1024 * 1024), "1T");
+        EXPECT_EQ(Str::bytes_str((1024 * 1024 * 1024) + (1024 * 1024 * 1023)), "1.9T");
+    }
+
+    TEST_F(TestStr, test_str_container)
+    {
+        EXPECT_EQ(Str::container_map_str(std::map<std::string, int>{}), "{}");
+        EXPECT_EQ(Str::container_map_str(std::map<std::string, int>{
+            {"first", 1},
+        }), "{first: 1}");
+        EXPECT_EQ(Str::container_map_str(std::map<std::string, int>{
+            {"first", 1},
+            {"second", 2},
+        }), "{first: 1, second: 2}");
+        EXPECT_EQ(Str::container_map_str(std::map<int, int>{
+            {1, 42},
+            {2, 1337},
+        }), "{1: 42, 2: 1337}");
+
+        EXPECT_EQ(Str::container_list_str(std::vector<int>{}), "[]");
+        EXPECT_EQ(Str::container_list_str(std::vector<int>{1, 2, 3}), "[1, 2, 3]");
+        EXPECT_EQ(Str::container_list_str(std::vector<std::string>{"hi"}), "[hi]");
+        EXPECT_EQ(Str::container_list_str(std::array<std::string, 2>{"hi", "!"}), "[hi, !]");
+    }
+
     TEST_F(TestStr, test_str_time2str)
     {
         std::string time_str = Str::timeoffset_str(Time::micro(123));

@@ -750,4 +750,45 @@ std::string     Str::format_localtime(Timestamp t, std::string_view format)
     return Str::_format_time(t, format, true);
 }
 
+std::string     Str::bytes_str(ssize_t bytes, bool iec)
+{
+    constexpr ssize_t mbyte_si = 1000;
+    constexpr ssize_t gbyte_si = 1000 * 1000;
+    constexpr ssize_t tbyte_si = 1000 * 1000 * 1000;
+    constexpr ssize_t mbyte_iec = 1024;
+    constexpr ssize_t gbyte_iec = 1024 * 1024;
+    constexpr ssize_t tbyte_iec = 1024 * 1024 * 1024;
+
+    ssize_t mbyte = iec ? mbyte_iec : mbyte_si;
+    ssize_t gbyte = iec ? gbyte_iec : gbyte_si;
+    ssize_t tbyte = iec ? tbyte_iec : tbyte_si;
+
+    if (bytes < mbyte)
+        return std::to_string(bytes < 0 ? 0 : bytes) + "B";
+    else if (bytes < gbyte)
+    {
+        ssize_t rest = ((bytes % mbyte) / (float)mbyte) * 10;
+        if (rest > 0)
+            return Str::format("%ld.%ldK", bytes / mbyte, rest);
+        else
+            return Str::format("%ldK", bytes / mbyte);
+    }
+    else if (bytes < tbyte)
+    {
+        ssize_t rest = ((bytes % gbyte) / (float)gbyte) * 10;
+        if (rest > 0)
+            return Str::format("%ld.%ldG", bytes / gbyte, rest);
+        else
+            return Str::format("%ldG", bytes / gbyte);
+    }
+    else
+    {
+        ssize_t rest = ((bytes % tbyte) / (float)tbyte) * 10;
+        if (rest > 0)
+            return Str::format("%ld.%ldT", bytes / tbyte, rest);
+        else
+            return Str::format("%ldT", bytes / tbyte);
+    }
+}
+
 }

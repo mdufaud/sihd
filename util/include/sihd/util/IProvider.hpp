@@ -22,7 +22,7 @@ class IProvider
         // timed wait for a new data
         virtual bool provider_wait_data_for(time_t nano_duration) = 0;
         // lock the provider to get a provided data
-        virtual std::lock_guard<std::mutex> provider_lock_guard() = 0;
+        virtual std::lock_guard<std::mutex> provider_lock_guard() const = 0;
 };
 
 }

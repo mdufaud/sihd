@@ -1,7 +1,8 @@
+#include <algorithm>
+
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/BasicLogger.hpp>
 #include <sihd/util/ConsoleLogger.hpp>
-#include <algorithm>
 
 namespace sihd::util
 {
@@ -15,12 +16,12 @@ LoggerManager::~LoggerManager()
     this->remove_loggers();
 }
 
-std::list<ALogger *>::iterator  LoggerManager::_find(ALogger *logger)
+std::vector<ALogger *>::const_iterator  LoggerManager::_find(ALogger *logger) const
 {
-    return std::find(_loggers_lst.begin(), _loggers_lst.end(), logger);
+    return std::find(_loggers_lst.cbegin(), _loggers_lst.cend(), logger);
 }
 
-bool    LoggerManager::has_logger(ALogger *logger)
+bool    LoggerManager::has_logger(ALogger *logger) const
 {
     return this->_find(logger) != _loggers_lst.end();
 }

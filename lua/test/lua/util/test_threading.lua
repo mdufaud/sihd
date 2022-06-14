@@ -106,14 +106,14 @@ assert(stepworker:set_conf({ frequency = 1000.0 }))
 
 stepworker:start_sync_worker()
 -- 10 ms
-waitable:wait_loop(sihd.util.time.sec(1), 10)
+waitable:wait_for_loop(sihd.util.time.sec(1), 10)
 stepworker:pause_worker()
 
 sihd.util.time.msleep(10)
 
 stepworker:resume_worker()
 -- 10 ms
-waitable:wait_loop(sihd.util.time.sec(1), 10)
+waitable:wait_for_loop(sihd.util.time.sec(1), 10)
 stepworker:stop_worker()
 
 print("total steps: " .. steps)

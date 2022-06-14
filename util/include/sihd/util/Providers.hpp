@@ -68,7 +68,7 @@ class AProvider: public sihd::util::IProvider<TYPE>
             _waitable.infinite_wait();
         }
 
-        std::lock_guard<std::mutex> provider_lock_guard()
+        std::lock_guard<std::mutex> provider_lock_guard() const
         {
             return std::lock_guard(_mutex);
         }
@@ -79,7 +79,7 @@ class AProvider: public sihd::util::IProvider<TYPE>
 
     private:
         Waitable _waitable;
-        std::mutex _mutex;
+        mutable std::mutex _mutex;
 };
 
 __SIHD_ADD_ITERATOR_PROVIDER__(VectorProvider, std::vector);
@@ -92,11 +92,14 @@ template <typename TYPE>
 class FunctionProvider: public sihd::util::AProvider<TYPE>
 {
     public:
+        using ProviderMethod = std::function<bool (TYPE *)>;
+        using StatusMethod = std::function<bool ()>;
+
         FunctionProvider() {}
 
-        FunctionProvider(std::function<bool(TYPE *)> provider)
+        FunctionProvider(ProviderMethod provider)
         {
-            this->set_provider_function(provider);
+            this->set_provider_function(std::move(provider));
         }
 
         virtual ~FunctionProvider() {}
@@ -108,7 +111,7 @@ class FunctionProvider: public sihd::util::AProvider<TYPE>
 
         bool provider_empty() const
         {
-            return _provider_empty_method ? _provider_empty_method() : true;
+            return _provider_empty_method ? _provider_empty_method() : false;
         }
 
         bool providing() const
@@ -116,14 +119,14 @@ class FunctionProvider: public sihd::util::AProvider<TYPE>
             return _providing_method ? _providing_method() : true;
         }
 
-        void set_provider_function(std::function<bool(TYPE *)> & fun) { _provide_method = std::move(fun); }
-        void set_provider_empty_function(std::function<bool()> & fun) { _provider_empty_method = std::move(fun); }
-        void set_providing_function(std::function<bool()> & fun) { _providing_method = std::move(fun); }
+        void set_provider_function(ProviderMethod && fun) { _provide_method = std::move(fun); }
+        void set_provider_empty_function(StatusMethod && fun) { _provider_empty_method = std::move(fun); }
+        void set_providing_function(StatusMethod && fun) { _providing_method = std::move(fun); }
 
     private:
-        std::function<bool(TYPE *)> _provide_method;
-        std::function<bool()> _provider_empty_method;
-        std::function<bool()> _providing_method;
+        ProviderMethod _provide_method;
+        StatusMethod _provider_empty_method;
+        StatusMethod _providing_method;
 };
 
 

@@ -69,7 +69,7 @@ modules = {
     "usb": {
         "depends": ['util'],
         "use-extlibs": ['libusb'],
-        "libs": ['usb'],
+        "libs": ['usb-1.0'],
     },
     "bt": {
         "depends": ['util'],

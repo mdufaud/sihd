@@ -2,8 +2,11 @@
 # define __SIHD_UTIL_OS_HPP__
 
 # include <sihd/util/platform.hpp>
-# include <sihd/util/IRunnable.hpp>
-# include <sihd/util/IHandler.hpp>
+
+# include <string>
+# include <map>
+# include <list>
+# include <mutex>
 
 # include <signal.h>
 # include <sys/stat.h>
@@ -30,10 +33,8 @@ typedef unsigned int sihd_uid_t;
 
 # endif
 
-# include <string>
-# include <map>
-# include <list>
-# include <mutex>
+# include <sihd/util/IRunnable.hpp>
+# include <sihd/util/IHandler.hpp>
 
 namespace sihd::util
 {
@@ -41,6 +42,8 @@ namespace sihd::util
 class OS
 {
     public:
+        OS() = delete;
+
         static std::string signal_name(int sig);
 
         // adds a handler to be run when signal is catched
@@ -77,7 +80,7 @@ class OS
         static bool is_run_with_asan();
 
         // lib
-        static void *load_symbol_unload_lib(const std::string & lib_name, const std::string & sym_name);
+        static void *load_symbol_unload_lib(const std::string & lib_name, std::string_view sym_name);
 
         static pid_t pid();
         static bool kill(pid_t pid, int sig);
@@ -85,7 +88,7 @@ class OS
 # if !defined(__SIHD_WINDOWS__)
         static std::string lib_error();
         static void *load_lib(const std::string & lib_name);
-        static void *load_symbol(void *handle, const std::string & sym_name);
+        static void *load_symbol(void *handle, std::string_view sym_name);
         static bool close_lib(void *handle);
 # endif
 
@@ -94,17 +97,16 @@ class OS
         // prints formatted backtrace into file descriptor
         static ssize_t backtrace(int fd);
 
-        static size_t peak_rss();
-        static size_t current_rss();
+        // bytes
+        static ssize_t peak_rss();
+        // bytes
+        static ssize_t current_rss();
 
     protected:
         // called when signal is caught
         static void _signal_callback(int sig);
 
     private:
-        OS() {};
-        ~OS() {};
-
 # if !defined(__SIHD_WINDOWS__)
         static void *backtrace_buffer[];
 

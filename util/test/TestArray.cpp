@@ -342,15 +342,21 @@ namespace test
     TEST_F(TestArray, test_array_push_back)
     {
         Array<float> arr(4);
+        // capacity = 0
         arr.push_back(0.1);
+        // capacity = 1
         arr.push_back(0.2);
+        // capacity = 1 * 2 = 2
         arr.push_back(0.3);
+        // capacity = 2 * 2 = 4
         arr.push_back(0.4);
+        // capacity = 4
         EXPECT_EQ(arr.size(), 4ul);
-        EXPECT_GE(arr.capacity(), 4ul);
+        EXPECT_EQ(arr.capacity(), 4ul);
         arr.push_back({0.5, 0.6});
+        // capacity = 4 * 2 = 8
         ASSERT_EQ(arr.size(), 6ul);
-        EXPECT_GE(arr.capacity(), 6ul);
+        EXPECT_EQ(arr.capacity(), 8ul);
         EXPECT_FLOAT_EQ(arr[4], 0.5);
         EXPECT_FLOAT_EQ(arr[5], 0.6);
     }
@@ -385,7 +391,8 @@ namespace test
         SIHD_LOG(info, "Appending after limit");
         arr.push_back(arr8, 4);
         EXPECT_EQ(arr.size(), 24ul);
-        EXPECT_EQ(arr.capacity(), 24ul);
+        // capacity = 20 * 2 = 40
+        EXPECT_EQ(arr.capacity(), 40ul);
         this->test_array(arr);
     }
 
@@ -552,7 +559,7 @@ namespace test
         ArrByte buffer_byte;
         buffer_byte.resize(3);
         ArrFloat buffer_impossible_copy;
-        EXPECT_EQ(buffer_impossible_copy.from(buffer_byte), false);
+        EXPECT_EQ(buffer_impossible_copy.from_bytes(buffer_byte), false);
 
         ArrInt *buffer_clone = buffer.clone();
         EXPECT_EQ(buffer_clone->at(0), 13);

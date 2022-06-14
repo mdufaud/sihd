@@ -6,7 +6,7 @@
 # include <sihd/util/Named.hpp>
 # include <sihd/util/Observable.hpp>
 # include <sihd/util/Logger.hpp>
-# include <sihd/util/Time.hpp>
+# include <sihd/util/Timestamp.hpp>
 # include <sihd/util/Clocks.hpp>
 # include <mutex>
 # include <atomic>
@@ -43,9 +43,7 @@ class Channel:  public sihd::util::Named,
 
         void set_clock(sihd::util::IClock *clock);
         // get last write timestamp (thread safe)
-        time_t timestamp();
-        // get last write timestamp (not thread safe)
-        time_t ctimestamp() const { return _timestamp; };
+        sihd::util::Timestamp timestamp() const;
 
         // notifies all observers and prevent writing inside notification thread
         void notify();
@@ -57,6 +55,7 @@ class Channel:  public sihd::util::Named,
         void set_write_on_change(bool activate) { _write_change_only = activate; }
 
         const sihd::util::IArray *array() const { return _array_ptr; }
+
         template <typename T>
         const sihd::util::Array<T> *array() const
         {
@@ -115,10 +114,10 @@ class Channel:  public sihd::util::Named,
         time_t _timestamp;
 
         sihd::util::IArray *_array_ptr;
-        std::mutex _arr_mutex;
+        mutable std::mutex _arr_mutex;
 
         std::atomic<bool> _notifying;
-        std::mutex _notify_mutex;
+        mutable std::mutex _notify_mutex;
 
         bool _write_change_only;
 };

@@ -7,9 +7,16 @@ builder_helper = env["BUILDER_HELPER"]
 demo_etc_dir = Dir("etc").Dir("sihd").Dir("demo")
 
 if env["CXX"] == "em++":
-    # env.Append(CPPFLAGS = ["-s", "WASM=1"])
-    # env.build_bin(["src/emscripten_hello_world.cpp"], bin_name = "hello_world.html")
-    emscripten_imgui_env = env.Clone()
+    builder_helper.warning("To build demo with emscripten you need to get static external libraries")
+    builder_helper.warning("To get external libraries, use command: make dep mod demo compiler=em")
+
+    # must create specific env with just util as dependencies
+    emscripten_util_env = env.get_depends_env(depends = ["util"])
+    emscripten_util_env.Append(CPPFLAGS = ["-s", "WASM=1"])
+    emscripten_util_env.build_bin(["src/emscripten_hello_world.cpp"], bin_name = "hello_world.html")
+
+    # must create specific env with just util and imgui as dependencies as it does not compile with pcap/http
+    emscripten_imgui_env = env.get_depends_env(depends = ["util", "imgui"])
     emscripten_imgui_env.Replace(
         CPPFLAGS = [
             "-DIMGUI_DISABLE_FILE_FUNCTIONS",
@@ -26,18 +33,15 @@ if env["CXX"] == "em++":
         ],
     )
     emscripten_imgui_env.build_bin(["src/imgui_emscripten_sdl_demo.cpp"], bin_name = "imgui_emscripten_sdl_demo.html")
+else:
+    compile_sdl = os.getenv("sdl", None) == "1"
 
-    Return()
-
-compile_sdl = os.getenv("sdl", None) == "1"
-
-env.build_bin("src/pinger_demo.cpp", bin_name = "ping_demo")
-env.build_bin("src/http_demo.cpp", bin_name = "http_demo")
-env.build_bin("src/pcap_demo.cpp", bin_name = "pcap_demo")
-env.build_bin("src/imgui_opengl3_glfw_demo.cpp", bin_name = "imgui_opengl3_glfw_demo")
-if builder_helper.build_platform == "windows":
-    env.build_bin("src/imgui_win_d11_demo.cpp", bin_name = "imgui_win_d11_demo")
-    if compile_sdl:
-        env.build_bin("src/imgui_win_d11_sdl_demo.cpp", bin_name = "imgui_win_d11_sdl_demo")
-
+    env.build_bin("src/pinger_demo.cpp", bin_name = "ping_demo")
+    env.build_bin("src/http_demo.cpp", bin_name = "http_demo")
+    env.build_bin("src/pcap_demo.cpp", bin_name = "pcap_demo")
+    env.build_bin("src/imgui_opengl3_glfw_demo.cpp", bin_name = "imgui_opengl3_glfw_demo")
+    if builder_helper.build_platform == "windows":
+        env.build_bin("src/imgui_win_d11_demo.cpp", bin_name = "imgui_win_d11_demo")
+        if compile_sdl:
+            env.build_bin("src/imgui_win_d11_sdl_demo.cpp", bin_name = "imgui_win_d11_sdl_demo")
 Return()

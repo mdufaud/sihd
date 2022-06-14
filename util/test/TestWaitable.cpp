@@ -65,7 +65,7 @@ namespace test
                 ++i;
             }
         });
-        bool timeout = waitable.wait_loop(Time::milli(5), 3);
+        bool timeout = waitable.wait_for_loop(Time::milli(10), 3);
         t.join();
         EXPECT_EQ(timeout, false);
         EXPECT_EQ(Time::to_milli(clock.now() - now), 1);
@@ -89,7 +89,7 @@ namespace test
                 ++i;
             }
         });
-        bool timeout = waitable.wait_loop(Time::milli(5), 4);
+        bool timeout = waitable.wait_for_loop(Time::milli(5), 4);
         t.join();
         EXPECT_EQ(timeout, true);
         EXPECT_EQ(Time::to_milli(clock.now() - now), 5);

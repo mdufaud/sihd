@@ -43,6 +43,40 @@ class Str
         static std::string format_time(Timestamp t, std::string_view format);
         static std::string format_localtime(Timestamp t, std::string_view format);
 
+        // si -> 1K = 1000B
+        // iec -> 1K = 1024B
+        static std::string bytes_str(ssize_t bytes, bool iec = true);
+
+        template <typename T>
+        static std::string container_list_str(const T & container)
+        {
+            std::stringstream ss;
+            ss << "[";
+            for (auto it = container.begin(), first = it; it != container.end(); ++it)
+            {
+                if (it != first)
+                    ss << ", ";
+                ss << *it;
+            }
+            ss << "]";
+            return ss.str();
+        }
+
+        template <typename T>
+        static std::string container_map_str(const T & container)
+        {
+            std::stringstream ss;
+            ss << "{";
+            for (auto it = container.begin(), first = it; it != container.end(); ++it)
+            {
+                if (it != first)
+                    ss << ", ";
+                ss << it->first << ": " << it->second;
+            }
+            ss << "}";
+            return ss.str();
+        }
+
         static bool is_escape_sequence_open(int c, const char *authorized_open_escape_sequences = nullptr);
         static bool is_escape_sequence_close(int c, const char *authorized_close_escape_sequences = nullptr);
         /**

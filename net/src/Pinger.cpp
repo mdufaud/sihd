@@ -44,6 +44,7 @@ Pinger::Pinger(const std::string & name, sihd::util::Node *parent):
 
 Pinger::~Pinger()
 {
+    this->stop();
 }
 
 bool    Pinger::open_unix()
@@ -94,7 +95,6 @@ bool    Pinger::ping(const IpAddr & client, size_t number)
 
     _result.time_start = _clock_ptr->now();
 
-    time_t now = 0;
     bool ret = true;
     size_t i = 0;
     while (_stop == false && (number == 0 || i < number))
@@ -102,15 +102,15 @@ bool    Pinger::ping(const IpAddr & client, size_t number)
         if (i > 0)
         {
             // wait between pings
-            _waitable.wait_for(Time::milliseconds(_ping_ms_interval) - (_clock_ptr->now() - now));
+            _waitable.wait_for(Time::milliseconds(_ping_ms_interval) - (_clock_ptr->now() - _result.last_time_sent));
             if (_stop)
                 break ;
         }
         // set sequence number and packet timestamp
         _current_seq = i + 1;
         _sender.set_seq(_current_seq);
-        now = _clock_ptr->now();
-        _data.copy_from_bytes(&now, sizeof(time_t));
+        _result.last_time_sent = _clock_ptr->now();
+        _data.copy_from_bytes(&_result.last_time_sent, sizeof(time_t));
         _sender.set_data(_data);
         // send icmp echo
         ret = _sender.send_to(client);

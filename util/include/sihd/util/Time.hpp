@@ -1,12 +1,13 @@
 #ifndef __SIHD_UTIL_TIME_HPP__
 # define __SIHD_UTIL_TIME_HPP__
 
-# include <sihd/util/platform.hpp>
+# include <sys/time.h>
+# include <time.h>
 
 # include <chrono>
 # include <mutex>
-# include <time.h>
-# include <sys/time.h>
+
+# include <sihd/util/platform.hpp>
 
 namespace sihd::util
 {
@@ -14,6 +15,8 @@ namespace sihd::util
 class Time
 {
     public:
+        Time() = delete;
+
         static time_t get_timezone();
         static std::string get_tzname();
 
@@ -135,9 +138,6 @@ class Time
         static bool is_leap_year(int year);
 
     private:
-        Time() {};
-        ~Time() {};
-
         static std::mutex _unsafe_c_mutex;
 };
 

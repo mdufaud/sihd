@@ -36,7 +36,7 @@ class ObserverWaiter: public IHandler<T *>
         bool wait_for(time_t nano, uint32_t notifications = 1)
         {
             // waitable returns true when timed out
-            return _waitable.wait_loop(nano, notifications) == false;
+            return _waitable.wait_for_loop(nano, notifications) == false;
         }
 
         time_t notifications;

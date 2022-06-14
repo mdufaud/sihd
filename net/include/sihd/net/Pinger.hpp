@@ -18,6 +18,7 @@ namespace sihd::net
 struct PingResult
 {
     time_t time_start;
+    time_t last_time_sent;
     time_t time_end;
     int transmitted;
     int received;

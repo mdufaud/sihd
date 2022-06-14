@@ -50,19 +50,19 @@ bool    AChannelContainer::get_channel(const std::string & name, Channel **to_fi
     return true;
 }
 
-Channel *AChannelContainer::add_unlinked_channel(const std::string & name, sihd::util::Type type, size_t size)
+Channel *AChannelContainer::add_unlinked_channel(const std::string & name, sihd::util::Type type, size_t size, bool check_match)
 {
     if (this->is_link(name))
     {
-        _channels_link[name] = {type, size};
+        _channels_link[name] = {type, size, check_match};
         return nullptr;
     }
     return this->add_channel(name, type, size);
 }
 
-Channel *AChannelContainer::add_unlinked_channel(const std::string & name, std::string_view type, size_t size)
+Channel *AChannelContainer::add_unlinked_channel(const std::string & name, std::string_view type, size_t size, bool check_match)
 {
-    return this->add_unlinked_channel(name, sihd::util::Types::from_str(type), size);
+    return this->add_unlinked_channel(name, sihd::util::Types::from_str(type), size, check_match);
 }
 
 Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Type type, size_t size)
@@ -98,7 +98,7 @@ bool    AChannelContainer::_check_link(const std::string & name, Named *child)
     }
     bool ret = true;
     ChannelConfiguration conf = _channels_link[name];
-    if (conf.type != chan->array()->data_type())
+    if (conf.match && conf.type != chan->array()->data_type())
     {
         SIHD_LOG_ERROR("ChannelContainer: '%s' channel link size not same type '%s': '%s' != '%s'",
                     this->full_name().c_str(), name.c_str(),
@@ -106,7 +106,7 @@ bool    AChannelContainer::_check_link(const std::string & name, Named *child)
                     chan->array()->data_type_str());
         ret = false;
     }
-    if (conf.size > 0 && conf.size != chan->array()->size())
+    if (conf.match && conf.size != chan->array()->size())
     {
         SIHD_LOG_ERROR("ChannelContainer: '%s' channel link size not equal '%s': '%lu' != '%lu'",
                     this->full_name().c_str(), name.c_str(),

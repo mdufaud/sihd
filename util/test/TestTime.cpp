@@ -89,12 +89,24 @@ namespace test
             .hour = 10,
             .minute = 5,
             .second = 1,
+            .millisecond = 300,
         });
         ClockTime clo = ts.clocktime();
         EXPECT_EQ(clo.hour, 10);
         EXPECT_EQ(clo.minute, 5);
         EXPECT_EQ(clo.second, 1);
+        EXPECT_EQ(clo.millisecond, 300);
         SIHD_LOG_DEBUG(ts.format());
+
+        ts = Timestamp({
+            .second = 0,
+            .millisecond = 1,
+        });
+        clo = ts.clocktime();
+        EXPECT_EQ(clo.hour, 0);
+        EXPECT_EQ(clo.minute, 0);
+        EXPECT_EQ(clo.second, 0);
+        EXPECT_EQ(clo.millisecond, 1);
 
         SIHD_LOG_DEBUG("From calendar - local time");
         ts = Timestamp({

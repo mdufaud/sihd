@@ -38,7 +38,9 @@ class Socket
         Socket & operator=(const Socket & other) = delete;
 
         Socket & operator=(Socket && other);
+
         operator int() const { return _socket; }
+        operator bool() const { return this->is_open(); }
 
         // Class utilities for socket manipulation //
 

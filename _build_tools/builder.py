@@ -24,17 +24,43 @@ specific_platform_compilers = {
 }
 specific_compilers_platform = {v: k for k, v in specific_platform_compilers.items()}
 
+#https://gist.github.com/martin-ueding/4007035
+class TermColors(object):
+    """
+    Provides ANSI terminal color codes which are gathered via the ``tput``
+    utility. That way, they are portable. If there occurs any error with
+    ``tput``, all codes are initialized as an empty string.
+    :license: MIT
+    """
+    def __init__(self):
+        try:
+            self.bold = subprocess.check_output("tput bold".split()).decode()
+            self.reset = subprocess.check_output("tput sgr0".split()).decode()
+            self.blue = subprocess.check_output("tput setaf 4".split()).decode()
+            self.green = subprocess.check_output("tput setaf 2".split()).decode()
+            self.orange = subprocess.check_output("tput setaf 3".split()).decode()
+            self.red = subprocess.check_output("tput setaf 1".split()).decode()
+        except subprocess.CalledProcessError as e:
+            self.bold = ""
+            self.reset = ""
+            self.blue = ""
+            self.green = ""
+            self.orange = ""
+            self.red = ""
+
+term_colors = TermColors()
+
 def debug(*msg):
-    print("builder [debug]:", *msg)
+    print(term_colors.blue + "builder [debug]:", *msg, term_colors.reset)
 
 def info(*msg):
-    print("builder [info]:", *msg)
+    print(term_colors.green + "builder [info]:", *msg, term_colors.reset)
 
 def warning(*msg):
-    print("builder [warning]:", *msg)
+    print(term_colors.orange + "builder [warning]:", *msg, term_colors.reset)
 
 def error(*msg):
-    print("builder [error]:", *msg, file=sys.stderr)
+    print(term_colors.red + "builder [error]:", *msg, term_colors.reset, file=sys.stderr)
 
 ###############################################################################
 # from conans/client/tools/oss.py in https://github.com/conan-io
