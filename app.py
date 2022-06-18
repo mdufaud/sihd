@@ -23,6 +23,7 @@ extlibs = {
     "glew": "2.2.0",
     "glfw": "3.3.6",
     "ncurses": "6.2",
+    "pdcurses": "3.9",
     ## command line parser
     "replxx": "0.0.4",
     ## bindings
@@ -37,7 +38,7 @@ extlibs = {
 # modules descriptions
 modules = {
     "util": {
-        "use-extlibs": ['nlohmann_json'],
+        "extlibs": ['nlohmann_json'],
         "libs": ['pthread'],
         "linux-libs": ['dl', 'rt'],
     },
@@ -49,39 +50,48 @@ modules = {
     },
     "zip": {
         "depends": ['util'],
-        "use-extlibs": ['libzip'],
+        "extlibs": ['libzip'],
         "libs": ['zip'],
+    },
+    "curses": {
+        "depends": ['util'],
+        "linux-extlibs": ['ncurses'],
+        "windows-extlibs": ['pdcurses'],
+        "linux-libs": ['ncurses'],
+        "windows-libs": ['pdcurses'],
     },
     "ssh": {
         "depends": ['util'],
         "libs": ['ssh'],
+        "platforms": ["linux"]
     },
     "http": {
         "depends": ['net'],
-        "use-extlibs": ['openssl', 'libcurl', 'libwebsockets'],
+        "extlibs": ['openssl', 'libcurl', 'libwebsockets'],
         "libs": ['curl', 'websockets', 'ssl', 'crypto'],
     },
     "pcap": {
         "depends": ['net'],
-        "use-extlibs": ['libpcap'],
+        "extlibs": ['libpcap'],
         "libs": ['pcap'],
     },
     "usb": {
         "depends": ['util'],
-        "use-extlibs": ['libusb'],
+        "extlibs": ['libusb'],
         "libs": ['usb-1.0'],
     },
     "bt": {
         "depends": ['util'],
-        "use-extlibs": ['libbluetooth'],
+        "extlibs": ['libbluetooth'],
         "libs": ['bluetooth'],
+        "platforms": ["linux"]
     },
     "csv": {
         "depends": ['util'],
     },
     "imgui": {
         "depends": ['util'],
-        "use-extlibs": ['glfw', 'glew'],
+        "extlibs": ['glfw', 'glew'],
         "linux-libs": ['glfw', 'GLEW', 'GL'],
         "windows-libs": [
             "glfw3", "glew32", "opengl32",
@@ -125,7 +135,7 @@ conditionnal_modules = {
     },
     "py": {
         "depends": ['util'],
-        "use-extlibs": ['pybind11'],
+        "extlibs": ['pybind11'],
         "conditionnal-env": "py",
         "conditionnal-depends": ['core', 'net', 'http'],
         "clang-flags": ["-Wno-unused-command-line-argument"],
@@ -134,6 +144,7 @@ conditionnal_modules = {
             'python-config --cflags --ldflags --embed',
             'python3-config --cflags --ldflags --embed',
         ],
+        "platforms": ["linux"]
     }
 }
 
@@ -199,6 +210,12 @@ pacman_packages = {
 # compilation
 #############
 
+## mode specifics
+modes = ["debug", "release"]
+
+debug_flags = ["-g", "-O1"]
+release_flags = ["-O3"]
+
 ## general compilation parameters
 flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
 defines = [
@@ -206,10 +223,6 @@ defines = [
     "SIHD_VERSION_MINOR=" + version.split('.')[1],
     "SIHD_VERSION_PATCH=" + version.split('.')[2],
 ]
-
-## mode specifics
-debug_flags = ["-g", "-O1"]
-release_flags = ["-O3"]
 
 ## gcc specifics
 gcc_flags = [

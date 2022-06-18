@@ -1,4 +1,3 @@
-import platform
 # Time
 import time
 build_start_time = time.time()
@@ -13,20 +12,18 @@ import shutil
 from pprint import PrettyPrinter
 pp = PrettyPrinter(indent=2)
 
-# Loading app configuration and build tools, no bytecode for this
+# Loading app configuration no bytecode for this
 sys.dont_write_bytecode = True
 import app
+sys.dont_write_bytecode = False
 from _build_tools import modules as modules_helper
 from _build_tools import builder as builder_helper
-sys.dont_write_bytecode = False
 
 builder_helper.info("building {}".format(app.name))
 builder_helper.info("building to: {}".format(builder_helper.build_path))
 
-if builder_helper.verify_args() == False:
+if builder_helper.verify_args(app) == False:
     Exit(1)
-
-builder_helper.sanitize_app(app)
 
 ###############################################################################
 # Build settings
@@ -61,6 +58,17 @@ try:
 except RuntimeError as e:
     builder_helper.error(str(e))
     Exit(1)
+
+# Checking module availability on platforms
+deleted_modules = modules_helper.check_platform(build_modules, build_platform)
+for deleted_modules in deleted_modules:
+    builder_helper.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
+
+if deleted_modules:
+    modules_lst = [item for item in modules_lst if item not in deleted_modules]
+    if not modules_lst:
+        Exit(0)
+
 global_libs = getattr(app, "libs", [])
 global_platform_libs = getattr(app, "{}_libs".format(build_platform), [])
 if verbose:
@@ -151,10 +159,7 @@ if not distribution and \
         ],
     )
 
-if builder_helper.build_mode == "debug":
-    add_env_app_conf(base_env, "debug")
-elif builder_helper.build_mode == "release":
-    add_env_app_conf(base_env, "release")
+add_env_app_conf(base_env, builder_helper.build_mode)
 
 # CLANG build
 if compiler == "clang":
@@ -263,12 +268,8 @@ def _env_build_test(self, src, test_name=None, add_libs=[], **kwargs):
     test_env = self.Clone()
     test_env.Prepend(LIBS = add_libs)
     add_env_app_conf(test_env, "test")
-    if compiler == "clang":
-        add_env_app_conf(test_env, "clang_test")
-    elif compiler == "mingw":
-        add_env_app_conf(test_env, "mingw_test")
-    elif compiler == "gcc":
-        add_env_app_conf(test_env, "gcc_test")
+    add_env_app_conf(test_env, "{}_test".format(compiler))
+    add_env_app_conf(test_env, "{}_test".format(build_platform))
     test_path = os.path.join(builder_helper.build_test_path, "bin", test_name)
     return test_env.Program(test_path, src, **kwargs)
 
@@ -587,4 +588,4 @@ def after_build():
 
 atexit.register(after_build)
 
-builder_helper.info("starting scons build")
+builder_helper.info("starting scons build (took {:.3f} sec)".format(time.time() - build_start_time))

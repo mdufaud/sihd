@@ -93,7 +93,7 @@ def get_extlibs_versions(app, modules_extlibs):
                 ret[libname] = version
     return ret
 
-def get_modules_extlibs(app, modules):
+def get_modules_extlibs(app, modules, platform):
     """ Gets all libs versions needed by selected modules
         @param app the application configuration module
         @return dict as dict[libname] = version
@@ -101,7 +101,10 @@ def get_modules_extlibs(app, modules):
     modules_extlibs = set()
     # getting used libs for every modules
     for _, module in modules.items():
-        extlibs = module.get('use-extlibs', [])
+        extlibs = module.get('extlibs', [])
+        for extlib in extlibs:
+            modules_extlibs.add(extlib)
+        extlibs = module.get('{}-extlibs'.format(platform), [])
         for extlib in extlibs:
             modules_extlibs.add(extlib)
     # adding global libs + test_libs
@@ -195,6 +198,16 @@ def get_conditionnals_from_env(app):
         if cond_env is not None and os.getenv(cond_env, None) == "1":
             ret.append(key)
     return ret
+
+def check_platform(modules, platform):
+    to_remove = []
+    for name, conf in modules.items():
+        module_platforms = conf.get("platforms", None)
+        if module_platforms is not None and platform not in module_platforms:
+            to_remove.append(name)
+    for name in to_remove:
+        del modules[name]
+    return to_remove
 
 def build_modules_conf(app, specific_modules=[], conditionnals=[]):
     """ @brief build modules from application configuration

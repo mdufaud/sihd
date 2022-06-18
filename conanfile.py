@@ -14,10 +14,8 @@ from _build_tools import builder as builder_helper
 
 builder_helper.info("fetching external libraries for {}".format(app.name))
 
-if builder_helper.verify_args() == False:
+if builder_helper.verify_args(app) == False:
     exit(1)
-
-builder_helper.sanitize_app(app)
 
 modules_to_build = builder_helper.get_modules()
 modules_forced_to_build = builder_helper.get_force_build_modules()
@@ -26,6 +24,7 @@ modules_lst = modules_to_build.split(',')
 if modules_forced_to_build:
     modules_lst.extend(modules_forced_to_build.split(','))
 
+build_platform = builder_helper.build_platform
 verbose = builder_helper.build_verbose
 has_test = builder_helper.build_tests
 
@@ -41,6 +40,16 @@ if modules_to_build != "NONE":
     builder_helper.info("parsing modules")
 
     modules = modules_helper.build_modules_conf(app, specific_modules=modules_lst)
+
+    deleted_modules = modules_helper.check_platform(modules, build_platform)
+    for deleted_modules in deleted_modules:
+        builder_helper.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
+
+    if deleted_modules:
+        modules_lst = [item for item in modules_lst if item not in deleted_modules]
+        if not modules_lst:
+            exit(1)
+
     if verbose:
         builder_helper.debug("modules configuration: ")
         pp.pprint(modules)
@@ -48,7 +57,7 @@ if modules_to_build != "NONE":
 
     builder_helper.info("getting modules external libs")
 
-    extlibs.update(modules_helper.get_modules_extlibs(app, modules))
+    extlibs.update(modules_helper.get_modules_extlibs(app, modules, build_platform))
     if has_test and hasattr(app, "test_libs"):
         extlibs.update(modules_helper.get_extlibs_versions(app, app.test_libs))
 

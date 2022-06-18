@@ -19,7 +19,7 @@ echo "Building module $MODULE_NAME"
 mkdir -p $MODULE_NAME/src \
     $MODULE_NAME/test \
     $MODULE_NAME/include/$APP_NAME/$MODULE_NAME \
-    $MODULE_NAME/etc/$APP_NAME/$MODULE_NAME
+    $MODULE_NAME/etc/$APP_NAME/$MODULE_NAME \
     $MODULE_NAME/share/$APP_NAME/$MODULE_NAME
 
 if [ ! -f $MODULE_NAME/scons.py ]; then

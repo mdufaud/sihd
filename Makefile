@@ -208,6 +208,7 @@ list:
 # Test
 ########
 
+# app_module -> module
 get_module_name = $(word 2, $(subst _, , $(notdir $1)))
 
 TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)

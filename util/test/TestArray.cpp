@@ -583,13 +583,13 @@ namespace test
         std::vector<int> std_vec({4, 5, 6});
 
         Array<int> arr(std_arr);
-        EXPECT_EQ(arr.size(), 3);
+        EXPECT_EQ(arr.size(), 3u);
         EXPECT_EQ(arr.at(0), 1);
         EXPECT_EQ(arr.at(1), 2);
         EXPECT_EQ(arr.at(2), 3);
 
         Array<int> arr2(std_vec);
-        EXPECT_EQ(arr2.size(), 3);
+        EXPECT_EQ(arr2.size(), 3u);
         EXPECT_EQ(arr2.at(0), 4);
         EXPECT_EQ(arr2.at(1), 5);
         EXPECT_EQ(arr2.at(2), 6);

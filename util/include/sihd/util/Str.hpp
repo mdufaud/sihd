@@ -9,6 +9,8 @@
 # include <mutex>
 # include <map>
 # include <optional>
+
+# include <sihd/util/Container.hpp>
 # include <sihd/util/Num.hpp>
 # include <sihd/util/Timestamp.hpp>
 
@@ -48,8 +50,9 @@ class Str
         static std::string bytes_str(ssize_t bytes, bool iec = true);
 
         template <typename T>
-        static std::string container_list_str(const T & container)
+        static std::string container_str(const T & container, Container::disable_if_map<T> = 0)
         {
+            static_assert(Container::IsIterable<T>::value);
             std::stringstream ss;
             ss << "[";
             for (auto it = container.begin(), first = it; it != container.end(); ++it)
@@ -63,7 +66,7 @@ class Str
         }
 
         template <typename T>
-        static std::string container_map_str(const T & container)
+        static std::string container_str(const T & container, Container::enable_if_map<T> = 0)
         {
             std::stringstream ss;
             ss << "{";

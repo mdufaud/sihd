@@ -129,7 +129,7 @@ bool    SshCommand::wait(time_t timeout_nano, time_t milliseconds_poll_time)
 {
     if (_channel.is_open() == false)
         return true;
-    int r;
+    int r = 0;
     while (_stop == false && (r = _channel.exit_status()) == -1)
     {
         if (timeout_nano > 0)

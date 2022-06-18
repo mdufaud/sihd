@@ -6,6 +6,9 @@
 *.lib
 *.log
 *.ini
+
+*__pycache__*
+
 .scon*
 .vscode
 
