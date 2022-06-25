@@ -278,47 +278,6 @@ bool    OS::is_root()
 #endif
 }
 
-std::string OS::home_path()
-{
-#if defined(__SIHD_WINDOWS__)
-    return FS::combine(getenv("HOMEDRIVE"), getenv("HOMEPATH"));
-#else
-    return getenv("HOME");
-#endif
-}
-
-std::string OS::cwd()
-{
-    char cwd[PATH_MAX];
-
-    if (getcwd(cwd, sizeof(cwd)) != nullptr)
-        return std::string(cwd);
-    return "";
-}
-
-std::string OS::executable_path()
-{
-#if defined(__SIHD_WINDOWS__)
-    char path[MAX_PATH];
-    if (GetModuleFileName(NULL, path, MAX_PATH) != 0)
-        return path;
-#else
-    std::ifstream mapf("/proc/self/maps");
-    std::string line;
-    std::string path;
-    if (std::getline(mapf, line))
-    {
-        size_t idx = line.find("/");
-        if (idx != std::string::npos)
-        {
-            path = line.substr(idx);
-            return path;
-        }
-    }
-#endif
-    return ".";
-}
-
 // backtrace not available in windows / android
 
 #if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)

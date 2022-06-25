@@ -22,15 +22,7 @@ namespace test
         protected:
             TestHttpServer()
             {
-                char *test_path = getenv("TEST_PATH");
-                _base_test_dir = sihd::util::FS::combine({
-                    test_path == nullptr ? "unit_test" : test_path,
-                    "http",
-                    "httpserver"
-                });
-                _cwd = sihd::util::OS::cwd();
                 sihd::util::LoggerManager::basic();
-                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestHttpServer()
@@ -56,7 +48,7 @@ namespace test
             SimpleHttpServer(): HttpServer("http-server-test")
             {
                 // HttpServer protected call
-                this->_add_websocket(_protoname, this);
+                this->_add_websocket("proto-two", this);
                 _webservice = this->add_child<WebService>("web");
                 this->setup_webservice_entry_points();
             }
@@ -151,7 +143,6 @@ namespace test
             }
 
             // websocket
-            const char *_protoname = "proto-two";
             int _nopen = 0;
             int _nread = 0;
             int _nwrite = 0;

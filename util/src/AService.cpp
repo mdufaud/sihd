@@ -31,7 +31,9 @@ bool    AService::OP()\
         }\
     }\
     if (ret)\
+    {\
         this->notify_observers(this);\
+    }\
     return ret;\
 }\
 bool    AService::do_##OP()\

@@ -5,6 +5,7 @@
 # include <sihd/util/OS.hpp>
 # include <sihd/util/IArray.hpp>
 # include <sihd/util/ArrayView.hpp>
+
 # include <cstdio>
 # include <string>
 # include <optional>
@@ -34,8 +35,7 @@ class File
         virtual bool open(std::string_view path, std::string_view mode);
         virtual bool open_fd(int fd, std::string_view mode);
         virtual bool set_stream(FILE *stream, bool ownership);
-        // template must contain XXX
-        virtual bool open_tmp(std::string_view tmp_name_template, std::string_view mode);
+        virtual bool open_tmp(std::string_view prefix, std::string_view mode, std::string_view suffix = "");
         virtual bool open_tmpfile();
         virtual bool is_open() const;
         virtual bool close();

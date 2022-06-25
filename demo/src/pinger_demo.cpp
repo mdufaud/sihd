@@ -1,4 +1,5 @@
 #include <sihd/util/Handler.hpp>
+#include <sihd/util/FS.hpp>
 #include <sihd/net/Pinger.hpp>
 
 using namespace sihd::util;
@@ -14,7 +15,7 @@ int main(int argc, char **argv)
     if (pinger.open(false) == false)
     {
         log.error("Demo must have capabilities or be played with root perms");
-        log.notice(Str::format("For capabilities, execute linux command: 'sudo setcap cap_net_raw=pe %s'\n", OS::executable_path().c_str()));
+        log.notice(Str::format("For capabilities, execute linux command: 'sudo setcap cap_net_raw=pe %s'\n", FS::executable_path().c_str()));
         Time::sleep(5);
         return 1;
     }

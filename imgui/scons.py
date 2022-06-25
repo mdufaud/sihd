@@ -66,7 +66,7 @@ sihd_imgui_srcs.extend([
 
 ## Check for SDL2
 compile_sdl = os.getenv("sdl", None) == "1"
-compiling_with_emscripten = env["CXX"] == "em++"
+compiling_with_emscripten = builder_helper.build_compiler == "em"
 
 if compiling_with_emscripten:
     env.Append(
@@ -82,8 +82,8 @@ if compiling_with_emscripten:
         ],
     )
 elif compile_sdl:
-    # try pkg-config sdl2
-    if not env.parse_config("SDL2"):
+    # try loading lib config if installed on system
+    if not env.parse_config("sdl2-config --libs --cflags"):
         # try appending SDL2 from extlib repository
         extlib_sdl_dir = Dir(builder_helper.build_extlib_hdr_path).Dir("SDL2")
         env.Append(CPPPATH = [str(extlib_sdl_dir)])
@@ -108,10 +108,10 @@ imgui_env = env.Clone()
 # append path "imgui" and "imgui/backends"
 imgui_env.Append(CPPPATH = [str(imgui_dir), str(imgui_backends_dir)])
 
-imgui_lib = imgui_env.build_lib(imgui_srcs, lib_name = "imgui")
+imgui_lib = imgui_env.build_lib(imgui_srcs, name = "imgui")
 
 env.Prepend(LIBS = "imgui")
-lib = env.build_lib(sihd_imgui_srcs, lib_name = env['APP_MODULE_FORMAT_NAME'])
+lib = env.build_lib(sihd_imgui_srcs)
 test = env.build_test(sihd_imgui_tests, add_libs = [env['APP_MODULE_FORMAT_NAME']])
 
 Return('lib')

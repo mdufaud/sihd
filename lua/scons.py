@@ -39,7 +39,7 @@ for module in modules:
     if exists(str(test_file)):
         tests.append(test_file)
 
-lib = env.build_lib(srcs, lib_name = env['APP_MODULE_FORMAT_NAME'])
+lib = env.build_lib(srcs)
 test = env.build_test(tests, add_libs = [env['APP_MODULE_FORMAT_NAME']])
 
 Return('lib')

@@ -21,14 +21,6 @@ namespace test
             TestBtScan()
             {
                 sihd::util::LoggerManager::basic();
-                // char *test_path = getenv("TEST_PATH");
-                // _base_test_dir = sihd::util::FS::combine({
-                //     test_path == nullptr ? "unit_test" : test_path,
-                //     "bt",
-                //     "btscan"
-                // });
-                // _cwd = sihd::util::OS::cwd();
-                // sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestBtScan()
@@ -43,9 +35,6 @@ namespace test
             virtual void TearDown()
             {
             }
-
-            // std::string _cwd;
-            // std::string _base_test_dir;
     };
 
     TEST_F(TestBtScan, test_btscan)
@@ -84,17 +73,4 @@ namespace test
         free(ii);
         close(sock);
     }
-
-    // TEST_F(TestBtScan, test_btscan_interactive)
-    // {
-    //     if (sihd::util::Term::is_interactive() == false)
-    //         GTEST_SKIP_("requires interaction");
-    // }
-
-    // TEST_F(TestBtScan, test_btscan_file)
-    // {
-    //     std::string test_dir = sihd::util::FS::combine(_base_test_dir, "file");
-    //     sihd::util::FS::remove_directories(test_dir);
-    //     sihd::util::FS::make_directories(test_dir);
-    // }
 }

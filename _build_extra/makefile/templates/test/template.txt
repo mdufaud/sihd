@@ -3,6 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/FS.hpp>
 #include <sihd/util/OS.hpp>
+#include <sihd/util/TmpDir.hpp>
 #include <sihd/util/Term.hpp>
 #include <APP_NAME/MODULE_NAME/CLASS_NAME.hpp>
 
@@ -17,14 +18,6 @@ namespace test
             TestCLASS_NAME()
             {
                 sihd::util::LoggerManager::basic();
-                char *test_path = getenv("TEST_PATH");
-                _base_test_dir = sihd::util::FS::combine({
-                    test_path == nullptr ? "unit_test" : test_path,
-                    "MODULE_NAME",
-                    "LOWER_CLASS_NAME"
-                });
-                _cwd = sihd::util::OS::cwd();
-                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestCLASS_NAME()
@@ -39,9 +32,6 @@ namespace test
             virtual void TearDown()
             {
             }
-
-            std::string _cwd;
-            std::string _base_test_dir;
     };
 
     TEST_F(TestCLASS_NAME, test_LOWER_CLASS_NAME)
@@ -57,8 +47,6 @@ namespace test
 
     TEST_F(TestCLASS_NAME, test_LOWER_CLASS_NAME_file)
     {
-        std::string test_dir = sihd::util::FS::combine(_base_test_dir, "file");
-        sihd::util::FS::remove_directories(test_dir);
-        sihd::util::FS::make_directories(test_dir);
+        sihd::util::TmpDir tmp_dir;
     }
 }

@@ -27,7 +27,7 @@ Daemon::Daemon(const std::string & name, sihd::util::Node *parent):
     _working_dir_path = FS::sep_str();
     _pid_file_path = "/var/lock/" + this->name() + "_daemon.lock";
 #else
-    _working_dir_path = OS::home_path();
+    _working_dir_path = FS::home_path();
 #endif
     this->add_conf("uid", &Daemon::set_uid);
     this->add_conf("pid_file", &Daemon::set_pid_file_path);

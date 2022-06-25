@@ -4,6 +4,9 @@
 # include <iostream>
 # include <string>
 # include <string_view>
+
+# include <fmt/core.h>
+
 # include <sihd/util/Str.hpp>
 # include <sihd/util/LoggerManager.hpp>
 
@@ -23,16 +26,17 @@
     logger.log(sihd::util::LogLevel::level, __loss.str()); \
 }
 #  define SIHD_LOG(level, msg) SIHD_LOG_LEVEL(__sihd_logger__, level, msg);
-#  define SIHD_LOG_FORMAT(level, message, ...) __sihd_logger__.log(level, sihd::util::Str::format(message, ##__VA_ARGS__));
+#  define SIHD_LOGF(level, message, ...) __sihd_logger__.log(sihd::util::LogLevel::level, fmt::format(message, ##__VA_ARGS__));
+#  define SIHD_LOG_FORMAT(level, message, ...) __sihd_logger__.log(sihd::util::LogLevel::level, sihd::util::Str::format(message, ##__VA_ARGS__));
 
-#  define SIHD_LOG_EMERG(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::emergency, message, ##__VA_ARGS__);
-#  define SIHD_LOG_ALERT(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::alert, message, ##__VA_ARGS__);
-#  define SIHD_LOG_CRIT(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::critical, message, ##__VA_ARGS__);
-#  define SIHD_LOG_ERROR(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::error, message, ##__VA_ARGS__);
-#  define SIHD_LOG_WARN(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::warning, message, ##__VA_ARGS__);
-#  define SIHD_LOG_NOTICE(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::notice, message, ##__VA_ARGS__);
-#  define SIHD_LOG_INFO(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::info, message, ##__VA_ARGS__);
-#  define SIHD_LOG_DEBUG(message, ...) SIHD_LOG_FORMAT(sihd::util::LogLevel::debug, message, ##__VA_ARGS__);
+#  define SIHD_LOG_EMERG(message, ...) SIHD_LOG_FORMAT(emergency, message, ##__VA_ARGS__);
+#  define SIHD_LOG_ALERT(message, ...) SIHD_LOG_FORMAT(alert, message, ##__VA_ARGS__);
+#  define SIHD_LOG_CRIT(message, ...) SIHD_LOG_FORMAT(critical, message, ##__VA_ARGS__);
+#  define SIHD_LOG_ERROR(message, ...) SIHD_LOG_FORMAT(error, message, ##__VA_ARGS__);
+#  define SIHD_LOG_WARN(message, ...) SIHD_LOG_FORMAT(warning, message, ##__VA_ARGS__);
+#  define SIHD_LOG_NOTICE(message, ...) SIHD_LOG_FORMAT(notice, message, ##__VA_ARGS__);
+#  define SIHD_LOG_INFO(message, ...) SIHD_LOG_FORMAT(info, message, ##__VA_ARGS__);
+#  define SIHD_LOG_DEBUG(message, ...) SIHD_LOG_FORMAT(debug, message, ##__VA_ARGS__);
 
 #  define SIHD_LOGGER extern sihd::util::Logger __sihd_logger__;
 #  define SIHD_NEW_LOGGER(name) sihd::util::Logger __sihd_logger__(name);

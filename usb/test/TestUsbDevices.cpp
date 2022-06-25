@@ -48,14 +48,6 @@ namespace test
             TestUsbDevices()
             {
                 sihd::util::LoggerManager::basic();
-                // char *test_path = getenv("TEST_PATH");
-                // _base_test_dir = sihd::util::FS::combine({
-                //     test_path == nullptr ? "unit_test" : test_path,
-                //     "usb",
-                //     "usbdevices"
-                // });
-                // _cwd = sihd::util::OS::cwd();
-                // sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestUsbDevices()
@@ -70,9 +62,6 @@ namespace test
             virtual void TearDown()
             {
             }
-
-            // std::string _cwd;
-            // std::string _base_test_dir;
     };
 
     TEST_F(TestUsbDevices, test_usbdevices)
@@ -94,19 +83,4 @@ namespace test
 
         libusb_exit(NULL);
     }
-
-    /*
-    TEST_F(TestUsbDevices, test_usbdevices_interactive)
-    {
-        if (sihd::util::Term::is_interactive() == false)
-            GTEST_SKIP_("requires interaction");
-    }
-
-    TEST_F(TestUsbDevices, test_usbdevices_file)
-    {
-        std::string test_dir = sihd::util::FS::combine(_base_test_dir, "file");
-        sihd::util::FS::remove_directories(test_dir);
-        sihd::util::FS::make_directories(test_dir);
-    }
-    */
 }

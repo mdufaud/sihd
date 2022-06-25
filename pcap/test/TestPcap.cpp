@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/FS.hpp>
+#include <sihd/util/TmpDir.hpp>
 #include <sihd/pcap/PcapReader.hpp>
 #include <sihd/pcap/PcapWriter.hpp>
 
@@ -16,7 +17,6 @@ namespace test
             TestPcap()
             {
                 sihd::util::LoggerManager::basic();
-                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestPcap()
@@ -31,8 +31,6 @@ namespace test
             virtual void TearDown()
             {
             }
-
-            std::string _base_test_dir = sihd::util::FS::combine({getenv("TEST_PATH"), "pcap"});
     };
 
     TEST_F(TestPcap, test_pcap_reader)
@@ -66,10 +64,12 @@ namespace test
 
     TEST_F(TestPcap, test_pcap_writer)
     {
+        TmpDir tmp_dir;
+
         char hw[] = "hello world";
         PcapWriter writer("pcap-writer");
 
-        std::string path = FS::combine(_base_test_dir, "test.pcap");
+        std::string path = FS::combine(tmp_dir.path(), "test.pcap");
         SIHD_LOG(info, "Writing pcap: " << path);
 
         EXPECT_TRUE(writer.open(path, DLT_EN10MB));

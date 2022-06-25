@@ -70,10 +70,6 @@ class OS
 
         static bool is_root();
 
-        static std::string home_path();
-        static std::string executable_path();
-        static std::string cwd();
-
         // debuggers
         static bool is_run_by_debugger();
         static bool is_run_by_valgrind();

@@ -19,15 +19,7 @@ namespace test
         protected:
             TestOpenGL3_SDL()
             {
-                char *test_path = getenv("TEST_PATH");
-                _base_test_dir = sihd::util::FS::combine({
-                    test_path == nullptr ? "unit_test" : test_path,
-                    "imgui",
-                    "opengl3_sdl"
-                });
-                _cwd = sihd::util::OS::cwd();
                 sihd::util::LoggerManager::basic();
-                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestOpenGL3_SDL()

@@ -130,7 +130,7 @@ static void http_test()
             (void)sig;
             server.stop();
         }));
-        std::string root_path = FS::parent(FS::parent(OS::executable_path()));
+        std::string root_path = FS::parent(FS::parent(FS::executable_path()));
         std::string res_path = FS::combine({root_path, "etc", "sihd", "demo", "http_demo"});
         SIHD_LOG(info, "Root dir: " << res_path);
         server.set_root_dir(res_path);

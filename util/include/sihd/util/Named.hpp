@@ -24,6 +24,19 @@ class Named
         const std::string & name() const;
         Node *parent() const;
         const Node *cparent() const;
+
+        template <class C>
+        C *parent() const
+        {
+            return _parent_ptr != nullptr ? dynamic_cast<C *>(_parent_ptr) : nullptr;
+        }
+
+        template <class C>
+        const C *cparent() const
+        {
+            return _parent_ptr != nullptr ? dynamic_cast<C *>(_parent_ptr) : nullptr;
+        }
+
         std::string full_name() const;
         std::string class_name() const;
         virtual std::string description() const
@@ -40,7 +53,6 @@ class Named
 
         const Named *cfind(const Named *from, const std::string & path) const;
         const Named *cfind(const std::string & path) const;
-        const Node *cfind_node(const std::string & path) const;
         template <class C>
         const C *cfind(const std::string & path) const
         {
@@ -49,10 +61,10 @@ class Named
                 return dynamic_cast<const C *>(obj);
             return nullptr;
         }
+        const Node *cfind_node(const std::string & path) const;
 
         Named *find(Named *from, const std::string & path);
         Named *find(const std::string & path);
-        Node *find_node(const std::string & path);
         template <class C>
         C *find(const std::string & path)
         {
@@ -61,6 +73,7 @@ class Named
                 return dynamic_cast<C *>(obj);
             return nullptr;
         }
+        Node *find_node(const std::string & path);
 
         static char separator;
 

@@ -19,7 +19,6 @@ namespace test
             TestSshCommand()
             {
                 sihd::util::LoggerManager::basic();
-                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestSshCommand()
@@ -34,8 +33,6 @@ namespace test
             virtual void TearDown()
             {
             }
-
-            std::string _base_test_dir = sihd::util::FS::combine({getenv("TEST_PATH"), "ssh", "sshcommand"});
     };
 
     TEST_F(TestSshCommand, test_sshcommand_simple)

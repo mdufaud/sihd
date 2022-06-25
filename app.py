@@ -8,6 +8,7 @@ extlibs = {
     "gtest": "1.11.0",
     ## json parsing
     "nlohmann_json": "3.9.1",
+    "fmt": "8.1.1",
     ## http
     "libwebsockets": "4.3.0",
     "libcurl": "7.75.0",
@@ -22,10 +23,8 @@ extlibs = {
     "sdl": "2.0.18",
     "glew": "2.2.0",
     "glfw": "3.3.6",
-    "ncurses": "6.2",
+    "ncurses": "6.3",
     "pdcurses": "3.9",
-    ## command line parser
-    "replxx": "0.0.4",
     ## bindings
     "pybind11": "2.6.2",
     "lua": "5.3.5",
@@ -38,8 +37,8 @@ extlibs = {
 # modules descriptions
 modules = {
     "util": {
-        "extlibs": ['nlohmann_json'],
-        "libs": ['pthread'],
+        "extlibs": ['nlohmann_json', 'fmt'],
+        "libs": ['pthread', 'fmt'],
         "linux-libs": ['dl', 'rt'],
     },
     "core": {
@@ -56,8 +55,13 @@ modules = {
     "curses": {
         "depends": ['util'],
         "linux-extlibs": ['ncurses'],
+        "linux-libs": ['ncurses', 'ncursesw'],
+        # if lib is installed on system
+        "parse-configs": [
+            "ncursesw6-config --cflags --libs",
+            "ncurses6-config --cflags --libs",
+        ],
         "windows-extlibs": ['pdcurses'],
-        "linux-libs": ['ncurses'],
         "windows-libs": ['pdcurses'],
     },
     "ssh": {
@@ -74,11 +78,19 @@ modules = {
         "depends": ['net'],
         "extlibs": ['libpcap'],
         "libs": ['pcap'],
+        # if lib is installed on system
+        "parse-configs": [
+            "pcap-config --cflags --libs",
+        ],
     },
     "usb": {
         "depends": ['util'],
         "extlibs": ['libusb'],
         "libs": ['usb-1.0'],
+        # if lib is installed on system
+        "parse-configs": [
+            "libusb-config --cflags --libs",
+        ],
     },
     "bt": {
         "depends": ['util'],
@@ -90,6 +102,7 @@ modules = {
         "depends": ['util'],
     },
     "imgui": {
+        # sdl=1 to compile with SDL2
         "depends": ['util'],
         "extlibs": ['glfw', 'glew'],
         "linux-libs": ['glfw', 'GLEW', 'GL'],
@@ -165,6 +178,7 @@ contributors = ["azouiten <alexandre.zouiten1@gmail.com>"]
 apt_packages = {
     "gtest": "libgtest-dev",
     "nlohmann_json": "nlohmann-json3-dev",
+    "fmt": "libfmt-dev",
     "openssl": "openssl",
     "libcurl": "libcurl4-openssl-dev",
     "libwebsockets": "libwebsockets-dev",
@@ -192,6 +206,7 @@ pacman_source = "{name}-{version}::git+{git_url}#tag={version}".format(
 pacman_packages = {
     "gtest": "gtest",
     "nlohmann_json": "nlohmann-json",
+    "fmt": "fmt",
     "openssl": "openssl",
     "libcurl": "curl",
     "libwebsockets": "libwebsockets",
@@ -237,6 +252,9 @@ gcc_flags = [
     "-Wl,-z,defs",
     "-Wl,-z,now",
     "-Wl,-z,relro",
+    # hide pragma messages
+    "-ftrack-macro-expansion=0",
+    "-fno-diagnostics-show-caret",
 ]
 
 ## clang specifics

@@ -17,15 +17,7 @@ namespace test
         protected:
             TestSshShell()
             {
-                char *test_path = getenv("TEST_PATH");
-                _base_test_dir = sihd::util::FS::combine({
-                    test_path == nullptr ? "unit_test" : test_path,
-                    "ssh",
-                    "sshshell"
-                });
-                _cwd = sihd::util::OS::cwd();
                 sihd::util::LoggerManager::basic();
-                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestSshShell()
@@ -40,9 +32,6 @@ namespace test
             virtual void TearDown()
             {
             }
-
-            std::string _cwd;
-            std::string _base_test_dir;
     };
 
     TEST_F(TestSshShell, test_sshshell_interactive)

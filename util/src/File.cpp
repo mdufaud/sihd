@@ -1,7 +1,9 @@
 #include <sihd/util/File.hpp>
 #include <sihd/util/Logger.hpp>
+
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 
 namespace sihd::util
 {
@@ -164,30 +166,29 @@ bool    File::open_tmpfile()
     _file_ptr = tmpfile();
     if (_file_ptr == nullptr)
     {
-        SIHD_LOG(error, "File: could not open temporary file");
+        SIHD_LOG(error, "File: could not open temporary file: " << strerror(errno));
     }
     else
         _stream_ownership = true;
     return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
 }
 
-bool    File::open_tmp(std::string_view tmp_name_template, std::string_view mode)
+bool    File::open_tmp(std::string_view prefix, std::string_view mode, std::string_view suffix)
 {
     this->close();
-    char path[tmp_name_template.size()];
-    strcpy(path, tmp_name_template.data());
-    size_t x_count = 0;
-    size_t len = tmp_name_template.size();
-    size_t i = 0;
-    while (i < len)
+    const size_t path_size = prefix.size() + 6 + suffix.size();
+    if (path_size > PATH_MAX)
     {
-        x_count += (size_t)(path[i] == 'X');
-        ++i;
+        throw std::runtime_error(Str::format("Path too long: %lu", path_size));
     }
+    char path[path_size];
+    strcpy(path, prefix.data());
+    strcpy(path + prefix.size(), "XXXXXX");
+    strcpy(path + prefix.size() + 6, suffix.data());
 #if !defined(__SIHD_WINDOWS__)
-    int fd = mkstemps(path, x_count);
+    int fd = mkstemps(path, suffix.size());
 #else
-    int fd = _mktemp_s(path, x_count);
+    int fd = _mktemp_s(path, suffix.size());
 #endif
     if (fd < 0)
     {

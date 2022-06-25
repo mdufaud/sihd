@@ -19,7 +19,6 @@ namespace test
             TestSshSession()
             {
                 sihd::util::LoggerManager::basic();
-                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestSshSession()
@@ -34,8 +33,6 @@ namespace test
             virtual void TearDown()
             {
             }
-
-            std::string _base_test_dir = sihd::util::FS::combine({getenv("TEST_PATH"), "ssh", "sshsession"});
     };
 
     TEST_F(TestSshSession, test_sshsession_auth_key)

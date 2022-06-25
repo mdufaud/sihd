@@ -26,12 +26,81 @@ char FS::sep = '\\';
 char FS::sep = '/';
 # endif
 
+// utils
+
+std::string FS::tmp_path()
+{
+#if defined(__SIHD_WINDOWS__)
+    char path[PATH_MAX];
+
+    if (GetTempPath(sizeof(path), path) != 0)
+        return path;
+    return "";
+#else
+    const char *tmp_path;
+
+    (tmp_path = getenv("TMPDIR"))
+    || (tmp_path = getenv("TMP"))
+    || (tmp_path = getenv("TEMP"))
+    || (tmp_path = getenv("TMPDIR"));
+    return tmp_path != nullptr ? tmp_path : "/tmp";
+#endif
+}
+
+std::string FS::home_path()
+{
+#if defined(__SIHD_WINDOWS__)
+    return FS::combine(getenv("HOMEDRIVE"), getenv("HOMEPATH"));
+#else
+    return getenv("HOME");
+#endif
+}
+
+std::string FS::cwd()
+{
+    char cwd[PATH_MAX];
+
+    if (getcwd(cwd, sizeof(cwd)) != nullptr)
+        return std::string(cwd);
+    return "";
+}
+
+std::string FS::executable_path()
+{
+#if defined(__SIHD_WINDOWS__)
+    char path[MAX_PATH];
+    if (GetModuleFileName(NULL, path, MAX_PATH) != 0)
+        return path;
+#else
+    std::ifstream mapf("/proc/self/maps");
+    std::string line;
+    std::string path;
+    if (std::getline(mapf, line))
+    {
+        size_t idx = line.find("/");
+        if (idx != std::string::npos)
+        {
+            path = line.substr(idx);
+            return path;
+        }
+    }
+#endif
+    return ".";
+}
+
 // stat
 
 bool    FS::exists(std::string_view path)
 {
+    /*
     struct stat s;
     return OS::stat(path.data(), &s) == 0;
+    */
+#if defined(__SIHD_WINDOWS__)
+    return _access(path.data(), 0) == 0;
+#else
+    return access(path.data(), F_OK) == 0;
+#endif
 }
 
 bool    FS::is_file(std::string_view path)
@@ -58,7 +127,62 @@ size_t    FS::filesize(std::string_view path)
     return 0;
 }
 
+bool    FS::is_readable(std::string_view path)
+{
+#if defined(__SIHD_WINDOWS__)
+    return _access(path.data(), 04) == 0;
+#else
+    return access(path.data(), R_OK) == 0;
+#endif
+}
+
+bool    FS::is_writable(std::string_view path)
+{
+#if defined(__SIHD_WINDOWS__)
+    return _access(path.data(), 02) == 0;
+#else
+    return access(path.data(), W_OK) == 0;
+#endif
+}
+
+bool    FS::is_executable(std::string_view path)
+{
+#if defined(__SIHD_WINDOWS__)
+    return _access(path.data(), 04) == 0;
+#else
+    return access(path.data(), X_OK) == 0;
+#endif
+}
+
+
 // directories
+
+std::string FS::make_tmp_directory(std::string_view prefix)
+{
+    if (prefix.size() + 6 > PATH_MAX)
+    {
+        throw std::runtime_error(Str::format("Path too long: %lu", prefix.size() + 6));
+    }
+    char path[prefix.size() + 6];
+    path[0] = 0;
+    strcpy(path, prefix.data());
+#if defined(__SIHD_WINDOWS__)
+    char filename[PATH_MAX];
+    filename[0] = 0;
+    if (GetTempFileName(path, NULL, 0, filename) != 0)
+    {
+        std::string ret = FS::combine(path, filename);
+        if (FS::make_directory(ret))
+            return ret;
+    }
+#else
+
+    strcpy(path + prefix.size(), "XXXXXX");
+    if (mkdtemp(path) != nullptr)
+        return path;
+#endif
+    return "";
+}
 
 bool    FS::remove_directory(std::string_view path)
 {
@@ -333,6 +457,19 @@ std::string FS::_combine(std::string_view path1, std::string_view path2)
     ret.append(path1);
     ret.push_back(FS::sep);
     ret.append(path2);
+    return ret;
+}
+
+std::string FS::ensure_separation(std::string_view path)
+{
+    if (path.empty())
+        return "";
+    if (path.at(path.size() - 1) == FS::sep)
+        return std::string(path);
+    std::string ret;
+    ret.reserve(path.size() + 1);
+    ret.append(path);
+    ret += FS::sep;
     return ret;
 }
 

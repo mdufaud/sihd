@@ -137,6 +137,11 @@ base_env = Environment(
 if build_platform == "windows":
     base_env.Append(LIBPATH = builder_helper.build_extlib_bin_path)
 
+# add platform_[flags/defines/link/libs]
+add_env_app_conf(base_env, builder_helper.build_platform)
+# add mode_[flags/defines/link/libs]
+add_env_app_conf(base_env, builder_helper.build_mode)
+
 # Build output
 if not verbose:
     base_env.Replace(
@@ -159,8 +164,6 @@ if not distribution and \
         ],
     )
 
-add_env_app_conf(base_env, builder_helper.build_mode)
-
 # CLANG build
 if compiler == "clang":
     base_env.Replace(
@@ -179,7 +182,6 @@ if compiler == "clang":
             LINKFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"]
         )
     base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
-    add_env_app_conf(base_env, "clang")
 
 # MINGW build
 elif compiler == "mingw":
@@ -194,7 +196,6 @@ elif compiler == "mingw":
             SHLIBSUFFIX = ".dll",
             LIBPREFIX = "",
         )
-    add_env_app_conf(base_env, "mingw")
 # GCC build
 elif compiler == "gcc":
     base_env.Replace(
@@ -212,7 +213,6 @@ elif compiler == "gcc":
             CPPFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"],
             LINKFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"]
         )
-    add_env_app_conf(base_env, "gcc")
 # EMSCRIPTEN build
 elif compiler == "em":
     base_env.Replace(
@@ -221,7 +221,10 @@ elif compiler == "em":
         AR = "emar",
         RANLIB = "emranlib",
     )
-    add_env_app_conf(base_env, "em")
+
+# add compiler_[flags/defines/link/libs]
+add_env_app_conf(base_env, compiler)
+
 
 # Decides when to recompile - removing slow md5 in favor of timestamps
 Decider('timestamp-newer')
@@ -252,61 +255,60 @@ def add_targets(src):
 
 ## modules environnement methods
 
-def _env_parse_config(self, config):
-    """ Environment method to add pkg-config dynamically for a module """
-    return load_env_packages_config(self, [config])
-
-def _env_build_test(self, src, test_name=None, add_libs=[], **kwargs):
+def _env_build_test(self, src, name=None, add_libs=[], **kwargs):
     """ Environment method to build unit test binary for a module """
     if builder_helper.build_tests == False:
         return None
     if modules_to_build and self['APP_MODULE_NAME'] not in modules_to_build:
         return None
     add_targets(src)
-    if test_name is None:
-        test_name = self["APP_MODULE_FORMAT_NAME"]
+    if name is None:
+        name = self["APP_MODULE_FORMAT_NAME"]
     test_env = self.Clone()
     test_env.Prepend(LIBS = add_libs)
+    # add test_[flags/defines/link/libs]
     add_env_app_conf(test_env, "test")
+    # add compiler_test_[flags/defines/link/libs]
     add_env_app_conf(test_env, "{}_test".format(compiler))
+    # add platform_test_[flags/defines/link/libs]
     add_env_app_conf(test_env, "{}_test".format(build_platform))
-    test_path = os.path.join(builder_helper.build_test_path, "bin", test_name)
+    test_path = os.path.join(builder_helper.build_test_path, "bin", name)
     return test_env.Program(test_path, src, **kwargs)
 
-def _env_build_lib(self, src, lib_name=None, static=None, **kwargs):
+def _env_build_lib(self, src, name=None, static=None, **kwargs):
     """ Environment method to build a shared library for a module """
     global modules_generated_libs
     global modules_scons_libs
     add_targets(src)
     module_name = self["APP_MODULE_FORMAT_NAME"]
-    if lib_name is None:
-        lib_name = module_name
-    lib_path = os.path.join(builder_helper.build_lib_path, lib_name)
+    if name is None:
+        name = module_name
+    lib_path = os.path.join(builder_helper.build_lib_path, name)
     # no cache for symlinks renewal
     if (static is not None and static) or builder_helper.build_static_libs:
         lib = NoCache(self.StaticLibrary(lib_path, src, **kwargs))
     else:
         lib = NoCache(self.SharedLibrary(lib_path, src, **kwargs))
     module_name = self['APP_MODULE_NAME']
-    modules_generated_libs.setdefault(module_name, []).append(lib_name)
+    modules_generated_libs.setdefault(module_name, []).append(name)
     modules_scons_libs[module_name] = lib
     return lib
 
-def _env_build_bin(self, src, bin_name=None, add_libs=[], **kwargs):
+def _env_build_bin(self, src, name=None, add_libs=[], **kwargs):
     """ Environment method to build a binary for a module """
     global modules_generated_bins
     global modules_scons_bins
     add_targets(src)
-    if bin_name is None:
-        bin_name = self['APP_MODULE_FORMAT_NAME']
+    if name is None:
+        name = self['APP_MODULE_FORMAT_NAME']
     if compiler == "mingw":
-        bin_name += ".exe"
+        name += ".exe"
     bin_env = self.Clone()
     bin_env.Prepend(LIBS = add_libs)
-    bin_path = os.path.join(builder_helper.build_bin_path, bin_name)
+    bin_path = os.path.join(builder_helper.build_bin_path, name)
     bin = bin_env.Program(bin_path, src, **kwargs)
     module_name = self['APP_MODULE_NAME']
-    modules_generated_bins.setdefault(module_name, []).append(bin_name)
+    modules_generated_bins.setdefault(module_name, []).append(name)
     modules_scons_libs[module_name] = bin
     return bin
 
@@ -359,33 +361,41 @@ def _env_replace_in_build(self, to_replace, replace_dic):
 def _env_get_module_env(self, depends = []):
     return get_module_env(self["APP_MODULE_CONF"], depends)
 
+def _env_pkg_config(self, config):
+    """ Environment method to add pkg-config dynamically for a module """
+    return load_env_packages_config(self, [config])
+
+def _env_parse_config(self, config):
+    """ Environment method to add lib's binary-config dynamically for a module """
+    return parse_config_command(self, [config])
+
 # methods to build either test, lib or executable
 base_env.AddMethod(_env_build_lib, "build_lib")
 base_env.AddMethod(_env_build_bin, "build_bin")
 base_env.AddMethod(_env_build_test, "build_test")
+base_env.AddMethod(_env_pkg_config, "pkg_config")
 base_env.AddMethod(_env_parse_config, "parse_config")
 base_env.AddMethod(_env_replace_in_build, "build_replace")
 base_env.AddMethod(_env_git_clone, "git_clone")
 base_env.AddMethod(_env_get_module_env, "get_depends_env")
 
 ## build utilities
-
 def load_env_packages_config(env, *configs):
     """ Parse multiple pkg-configs: libraries/includes utilities """
-    if build_platform == "windows" or compiler == "em":
-        return False
-    return load_env_packages_specific_config(env, [
+    return parse_config_command(env, [
         "pkg-config {} --cflags --libs".format(config)
         for config in configs
     ])
 
-def load_env_packages_specific_config(env, *configs):
+def parse_config_command(env, *configs):
     """ Parse configs from binaries outputs """
+    if build_platform == "windows" or compiler == "em":
+        return False
     for config in configs:
         try:
             env.ParseConfig(config)
         except OSError as e:
-            builder_helper.warning("package {} not found".format(config))
+            builder_helper.warning("config '{}' not found".format(config))
 
 def copy_module_dir_into_build(module_name, dirname_to_copy):
     """ recursive copy of MODNAME/DIRNAME to build/DIRNAME """
@@ -410,6 +420,10 @@ def get_module_env(conf, depends = []):
     link = conf.get("link", [])
     platform_link = conf.get("{}-link".format(build_platform), [])
     compiler_link = conf.get("{}-link".format(compiler), [])
+    # add defines
+    defines = conf.get("defines", [])
+    platform_defines = conf.get("{}-defines".format(build_platform), [])
+    compiler_defines = conf.get("{}-defines".format(compiler), [])
     # add libs generated by parent modules
     depends_generated_libs = []
     for dep_modname in depends:
@@ -430,6 +444,8 @@ def get_module_env(conf, depends = []):
         CPPFLAGS = flags + platform_flags + compiler_flags,
         # adding specified link flags
         LINKFLAGS = link + platform_link + compiler_link,
+        # adding defines
+        CPPDEFINES = defines + platform_defines + compiler_defines,
         # module name
         APP_MODULE_NAME = modname,
         # formatted module name PROJNAME_MODULENAME
@@ -443,7 +459,7 @@ def get_module_env(conf, depends = []):
     load_env_packages_config(env, *package_configs)
     # use multiple binaries output to add libraries/includes path
     parse_configs = conf.get("parse-configs", [])
-    load_env_packages_specific_config(env, *parse_configs)
+    parse_config_command(env, *parse_configs)
     # transform LIBS configuration with parse-configs
     # to unique elements and reverse order to have good linkage
     final_lib = env['LIBS']
@@ -491,11 +507,12 @@ for conf in build_order:
     copy_module_dir_into_build(modname, "include")
     copy_module_dir_into_build(modname, "share")
     # read module's scons script file
+    module_format_name = env['APP_MODULE_FORMAT_NAME']
     module_dir = Dir(modname)
     built[modname] = SConscript(module_dir.File("scons.py"),
                                 variant_dir = os.path.join(builder_helper.build_obj_path, modname),
                                 duplicate = 0,
-                                exports = ['env'])
+                                exports = ['env', 'builder_helper', 'module_format_name'])
     # fill module configurations with what was actually used
     conf["libs"] = env['LIBS']
     conf["flags"] = env['CPPFLAGS']

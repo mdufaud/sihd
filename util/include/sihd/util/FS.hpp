@@ -12,13 +12,23 @@ namespace sihd::util
 class FS
 {
     public:
+        // utils
+        static std::string tmp_path();
+        static std::string home_path();
+        static std::string cwd();
+        static std::string executable_path();
+
         // stat
         static bool exists(std::string_view path);
         static bool is_file(std::string_view path);
         static bool is_dir(std::string_view path);
         static size_t filesize(std::string_view path);
+        static bool is_readable(std::string_view path);
+        static bool is_writable(std::string_view path);
+        static bool is_executable(std::string_view path);
 
         // directories
+        static std::string make_tmp_directory(std::string_view prefix = "");
         static bool remove_directory(std::string_view path);
         static bool remove_directories(std::string_view path);
         static bool make_directory(std::string_view path, mode_t mode = 0750);
@@ -41,6 +51,9 @@ class FS
         static std::string combine(const std::vector<std::string> & list);
         // if path2 is empty, it will append the separation character to path1
         static std::string combine(std::string_view path1, std::string_view path2);
+
+        // ensure separating char is at the end of path
+        static std::string ensure_separation(std::string_view path);
 
         // files
         static bool remove_file(std::string_view path);

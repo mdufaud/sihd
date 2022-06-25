@@ -18,15 +18,7 @@ namespace test
         protected:
             TestPyCoreApi()
             {
-                char *test_path = getenv("TEST_PATH");
-                _base_test_dir = sihd::util::FS::combine({
-                    test_path == nullptr ? "unit_test" : test_path,
-                    "py",
-                    "pycoreapi"
-                });
-                _cwd = sihd::util::OS::cwd();
                 sihd::util::LoggerManager::basic();
-                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestPyCoreApi()

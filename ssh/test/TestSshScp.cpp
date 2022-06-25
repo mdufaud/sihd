@@ -3,6 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/FS.hpp>
 #include <sihd/util/OS.hpp>
+#include <sihd/util/TmpDir.hpp>
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshScp.hpp>
 
@@ -17,7 +18,6 @@ namespace test
             TestSshScp()
             {
                 sihd::util::LoggerManager::basic();
-                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestSshScp()
@@ -33,12 +33,12 @@ namespace test
             {
             }
 
-            std::string _base_test_dir = sihd::util::FS::combine({getenv("TEST_PATH"), "ssh", "sshscp"});
+            TmpDir _tmp_dir;
     };
 
     TEST_F(TestSshScp, test_sshscp_push)
     {
-        std::string test_dir = FS::combine(_base_test_dir, "push");
+        std::string test_dir = FS::combine(_tmp_dir.path(), "push");
         FS::remove_directories(test_dir);
         FS::make_directories(test_dir);
 
@@ -77,7 +77,7 @@ namespace test
 
     TEST_F(TestSshScp, test_sshscp_pull)
     {
-        std::string test_dir = FS::combine(_base_test_dir, "pull");
+        std::string test_dir = FS::combine(_tmp_dir.path(), "pull");
         FS::remove_directories(test_dir);
         FS::make_directories(test_dir);
 
@@ -92,7 +92,7 @@ namespace test
 
         SshScp scp = session.make_scp();
 
-        std::string pull_from = FS::combine(OS::cwd(), "test/resources/file.txt");
+        std::string pull_from = FS::combine(FS::cwd(), "test/resources/file.txt");
         std::string pull_to = FS::combine(test_dir, "pulled_file.txt");
         EXPECT_TRUE(scp.pull_file(pull_from, pull_to));
     }

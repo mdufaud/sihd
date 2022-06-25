@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/FS.hpp>
+#include <sihd/util/TmpDir.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
 #include <sihd/ssh/SshSession.hpp>
@@ -17,15 +18,7 @@ namespace test
         protected:
             TestSftp()
             {
-                char *test_path = getenv("TEST_PATH");
-                _base_test_dir = sihd::util::FS::combine({
-                    test_path == nullptr ? "unit_test" : test_path,
-                    "ssh",
-                    "sftp"
-                });
-                _cwd = sihd::util::OS::cwd();
                 sihd::util::LoggerManager::basic();
-                sihd::util::FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestSftp()
@@ -40,14 +33,13 @@ namespace test
             virtual void TearDown()
             {
             }
-
-            std::string _cwd;
-            std::string _base_test_dir;
     };
 
     TEST_F(TestSftp, test_sftp)
     {
-        std::string test_dir = sihd::util::FS::combine(_base_test_dir, "mkdir");
+        TmpDir tmp_dir;
+
+        std::string test_dir = sihd::util::FS::combine(tmp_dir.path(), "mkdir");
         sihd::util::FS::remove_directories(test_dir);
         sihd::util::FS::make_directories(test_dir);
 
@@ -64,7 +56,7 @@ namespace test
         EXPECT_TRUE(FS::is_dir(test_dir + "/new_dir"));
 
         EXPECT_TRUE(sftp.send_file("test/resources/file.txt", test_dir + "/sent_file.txt"));
-        EXPECT_TRUE(sftp.get_file(_cwd + "/test/resources/file.txt", test_dir + "/recv_file.txt"));
+        EXPECT_TRUE(sftp.get_file(FS::cwd() + "/test/resources/file.txt", test_dir + "/recv_file.txt"));
         EXPECT_TRUE(FS::is_file(test_dir + "/sent_file.txt"));
         EXPECT_TRUE(FS::is_file(test_dir + "/recv_file.txt"));
         EXPECT_EQ(FS::filesize(test_dir + "/sent_file.txt"), FS::filesize("test/resources/file.txt"));
