@@ -90,10 +90,13 @@ class Node: public Named
         virtual bool remove_child(const Named *child);
         virtual bool remove_child(const std::string & name);
 
+        /*
         virtual bool delete_child(const Named *child);
         virtual bool delete_child(const std::string & name);
 
         virtual void delete_children();
+        */
+        virtual void remove_children();
 
         // Ownership
         bool has_ownership(const Named *child) const;
@@ -123,36 +126,33 @@ class Node: public Named
         std::string tree_str() const;
         std::string tree_desc_str() const;
         std::string tree_str(TreeOpts opts) const;
-        void print_tree() const;
-        void print_tree_desc() const;
-        void print_tree(TreeOpts opts) const;
 
         // Static
-        static Node *to_node(Named *child);
-        static const Node *to_cnode(const Named *child);
         static std::pair<std::string, std::string> parent_path(const std::string & path);
 
         const std::map<std::string, ChildEntry *> & children() const;
         const std::vector<std::string> & children_keys() const;
 
     protected:
-        virtual bool _remove_child_entry(ChildEntry *entry);
-        virtual bool _delete_child_entry(ChildEntry *entry);
+        virtual bool on_check_link(const std::string & name, Named *child);
+        virtual bool on_add_child(const std::string & name, Named *child);
+        virtual void on_remove_child(const std::string & name, Named *child);
 
-        virtual bool _check_link(const std::string & name, Named *child);
-
-        virtual void _tree_children(std::stringstream & ss, TreeOpts opts) const;
-        virtual void _iterate_tree_children(std::stringstream & ss,
+    private:
+        void _tree_children(std::stringstream & ss, TreeOpts opts) const;
+        void _iterate_tree_children(std::stringstream & ss,
                                                 TreeOpts & opts,
                                                 const std::string & indent) const;
-        virtual void _tree_child_desc(std::stringstream & ss,
+        void _tree_child_desc(std::stringstream & ss,
                                                 const TreeOpts & opts,
                                                 const std::string & indent,
                                                 const std::string & name,
                                                 const Named *child) const;
-        virtual void _add_tree_desc(std::stringstream & ss, const TreeOpts & opts, const Named *child) const;
+        void _add_tree_desc(std::stringstream & ss, const TreeOpts & opts, const Named *child) const;
 
-    private:
+        bool _remove_child_entry(ChildEntry *entry);
+        // bool _delete_child_entry(ChildEntry *entry);
+
         ChildEntry *_get_child_entry(const std::string & name) const;
         ChildEntry *_get_child_entry(const Named *child) const;
 

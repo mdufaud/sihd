@@ -3,23 +3,24 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/curses/Term.hpp>
 #include <sihd/curses/Window.hpp>
+#include <sihd/curses/CursesLogger.hpp>
 
 namespace test
 {
     SIHD_NEW_LOGGER("test");
 
+    using namespace sihd::util;
     using namespace sihd::curses;
+
     class TestWindow: public ::testing::Test
     {
         protected:
             TestWindow()
             {
-                sihd::util::LoggerManager::basic();
             }
 
             virtual ~TestWindow()
             {
-                sihd::util::LoggerManager::clear_loggers();
             }
 
             virtual void SetUp()
@@ -34,6 +35,7 @@ namespace test
     TEST_F(TestWindow, test_window)
     {
         Term term;
+        TmpLogger tmp(new CursesLogger(stdscr));
 
         Window root("root");
         Window *win1 = root.add_child<Window>("win1");
@@ -41,50 +43,73 @@ namespace test
         Window *win3 = root.add_child<Window>("win3");
 
         root.set_gui_conf({
-            .blocksize_y = 12,
-            .blocksize_x = 12,
+            .grid_y = 12,
+            .grid_x = 12,
         });
 
         win1->set_gui_conf({
-            .blocksize_y = 4,
-            .blocksize_x = 12
+            .grid_y = 4,
+            .grid_x = 12,
+            .padding = {
+                .left = 1,
+                .right = 1,
+                .top = 1,
+                .bottom = 1,
+            }
         });
-        win1->set_gui_conf({
-            .blocksize_y = 4,
-            .blocksize_x = 6
+        win2->set_gui_conf({
+            .grid_y = 4,
+            .grid_x = 5,
+            .grid_push = {
+                .right = 3,
+            },
+            .padding = {
+                .left = 1,
+                .right = 1,
+                .top = 1,
+                .bottom = 1,
+            }
         });
-        win1->set_gui_conf({
-            .blocksize_y = 4,
-            .blocksize_x = 6
+        win3->set_gui_conf({
+            .grid_y = 4,
+            .grid_x = 5,
+            /*
+            .grid_push = {
+                .left = 1,
+            },
+            */
+            .margin = {
+                .left = 1,
+                .top = 1,
+                .bottom = 1,
+            },
+            .padding = {
+                .left = 1,
+                .right = 1,
+                .top = 1,
+                .bottom = 1,
+            }
         });
 
-        root.init();
+        root.init_window();
 
-        {
-            auto [y, x] = win1->window_yx();
-            SIHD_LOG_INFO("win1: %d %d", y, x);
-        }
+        win1->win_write("win1 {}\n", 20);
+        win1->win_write("blbalblalbalblalballbalblalbalblalblalblalbalblalbalb {}\n", 1);
+        win1->win_write("win1 {} -", 2);
+        win1->win_write(" win1 {}\n", 3);
+        win1->win_border();
 
-        {
-            auto [y, x] = win2->window_yx();
-            SIHD_LOG_INFO("win2: %d %d", y, x);
-        }
+        win2->win_write("win2");
+        win2->win_write("win2\n\n");
+        win2->win_write("win2");
+        win2->win_write(" win2");
+        win2->win_write("---");
+        win2->win_border();
 
-        {
-            auto [y, x] = win3->window_yx();
-            SIHD_LOG_INFO("win3: %d %d", y, x);
-        }
+        win3->win_write("win3");
+        win3->win_border();
 
-        sleep(100);
-
-        win1->write("win1");
-        win1->refresh();
-
-        win2->write("win2");
-        win2->refresh();
-
-        win3->write("win3");
-        win3->refresh();
+        root.win_refresh();
 
         sleep(100);
     }

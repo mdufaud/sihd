@@ -44,7 +44,7 @@ bool    Runnable::run()
     return false;
 }
 
-bool    Runnable::has_method()
+bool    Runnable::has_method() const
 {
     return _run_fun ? true : false;
 }

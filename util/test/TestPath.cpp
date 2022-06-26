@@ -1,10 +1,12 @@
-#include <gtest/gtest.h>
-#include <iostream>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/Path.hpp>
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+
+#include <gtest/gtest.h>
+
+#include <sihd/util/TmpDir.hpp>
+#include <sihd/util/Path.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace test
 {
@@ -35,9 +37,10 @@ namespace test
 
     TEST_F(TestPath, test_path_get)
     {
-        std::filesystem::path test_path(getenv("TEST_PATH"));
+        TmpDir tmp_dir;
+
+        std::filesystem::path test_path(tmp_dir.path());
         test_path.append("test_path");
-        std::filesystem::remove_all(test_path);
         std::filesystem::path test_dir = test_path / "1" / "2";
         std::filesystem::create_directories(test_dir);
         auto test_file = test_dir / "file.txt";
@@ -56,6 +59,5 @@ namespace test
         EXPECT_EQ(Path::get("sihd-test", "file.txt"), "");
 
         SIHD_TRACE(Path::find("test/TestPath.cpp"));
-        std::filesystem::remove_all(test_path);
     }
 }

@@ -10,9 +10,9 @@ test = env.build_test(Glob('test/*.cpp'), add_libs = [env['APP_MODULE_FORMAT_NAM
 # bin = env.build_bin(Glob('src/*.cpp'), add_libs = [env['APP_MODULE_FORMAT_NAME']])
 
 binaries = []
-binaries.append(env.build_bin(Glob('src/rain.c'), name = "rain"))
-binaries.append(env.build_bin(Glob('src/test.c'), name = "test"))
-binaries.append(env.build_bin(Glob('src/worm.c'), name = "worm"))
-binaries.append(env.build_bin(Glob('src/xmas.c'), name = "xmas"))
+binaries.append(env.build_bin(Glob('src/bin/rain.c'), name = "rain"))
+binaries.append(env.build_bin(Glob('src/bin/test.c'), name = "test"))
+binaries.append(env.build_bin(Glob('src/bin/worm.c'), name = "worm"))
+binaries.append(env.build_bin(Glob('src/bin/xmas.c'), name = "xmas"))
 
 Return('binaries')

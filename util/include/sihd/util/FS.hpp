@@ -23,6 +23,7 @@ class FS
         static bool is_file(std::string_view path);
         static bool is_dir(std::string_view path);
         static size_t filesize(std::string_view path);
+        static time_t last_write(std::string_view path);
         static bool is_readable(std::string_view path);
         static bool is_writable(std::string_view path);
         static bool is_executable(std::string_view path);

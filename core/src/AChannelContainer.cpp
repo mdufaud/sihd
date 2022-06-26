@@ -87,7 +87,7 @@ Channel *AChannelContainer::add_channel(const std::string & name, std::string_vi
     return this->add_channel(name, sihd::util::Types::from_str(type), size);
 }
 
-bool    AChannelContainer::_check_link(const std::string & name, Named *child)
+bool    AChannelContainer::on_check_link(const std::string & name, Named *child)
 {
     Channel *chan = dynamic_cast<Channel *>(child);
     if (chan == nullptr)

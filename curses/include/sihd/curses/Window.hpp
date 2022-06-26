@@ -2,6 +2,8 @@
 # define __SIHD_CURSES_WINDOW_HPP__
 
 # include <curses.h>
+# include <stdarg.h>
+# include <fmt/core.h>
 
 # include <sihd/util/Node.hpp>
 # include <sihd/util/GuiBuilder.hpp>
@@ -17,31 +19,49 @@ class Window:   public sihd::util::Node
 
         bool set_gui_conf(const sihd::util::GuiBuilder::GuiConf & conf);
 
-        bool init();
+        bool init_window();
 
-        static std::pair<int, int> stdscr_max_yx();
+        std::pair<int, int> win_relative_yx() const;
+        std::pair<int, int> win_cursor_yx() const;
+        std::pair<int, int> win_yx() const;
+        std::pair<int, int> win_max_yx() const;
 
-        std::pair<int, int> window_relative_yx() const;
-        std::pair<int, int> window_cursor_yx() const;
-        std::pair<int, int> window_yx() const;
-        std::pair<int, int> window_max_yx() const;
+        void win_read();
 
-        void read();
-        void write(std::string_view s);
-        void erase() const;
-        void refresh() const;
-        void clear() const;
+        template <typename ...Args>
+        void win_write(std::string_view s, Args... args)
+        {
+            std::string fmt = fmt::format(s, args...);
+            return this->_win_write(fmt);
+        }
 
-        bool is_init() const { return _win_ptr != nullptr; }
+        void win_erase() const;
+        void win_refresh() const;
+        void win_clear() const;
+        void win_border() const;
+
+        bool is_window_init() const { return _win_ptr != nullptr; }
         const WINDOW *window() const { return _win_ptr; }
         WINDOW *window() { return _win_ptr; }
 
+        static std::pair<int, int> stdscr_max_yx();
+
     protected:
-        bool change_window(const sihd::util::GuiBuilder::Block & pos);
+        virtual bool on_add_child(const std::string & name, Named *child) override;
+        virtual void on_remove_child(const std::string & name, Named *child) override;
+
+        bool resize_window(const sihd::util::GuiBuilder::Block & pos);
+        void _win_write(std::string_view s) const;
+
         const sihd::util::GuiBuilder::GuiConf & gui_conf() const { return _gui_conf; }
 
     private:
+        void _move_cursor_padding(int line) const;
+
         WINDOW *_win_ptr;
+
+        std::vector<Window *> _subwindows;
+
         sihd::util::GuiBuilder _gui_builder;
         sihd::util::GuiBuilder::GuiConf _gui_conf;
 };

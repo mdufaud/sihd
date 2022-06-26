@@ -10,9 +10,9 @@ class Splitter
 {
     public:
         Splitter();
-        Splitter(int delimiter, const std::string & authorized_open_escape_sequences = "");
-        Splitter(const std::string & delimiter, const std::string & authorized_open_escape_sequences = "");
-        Splitter(int (*fun)(int), const std::string & authorized_open_escape_sequences = "");
+        Splitter(int delimiter, std::string_view authorized_open_escape_sequences = "");
+        Splitter(std::string_view delimiter, std::string_view authorized_open_escape_sequences = "");
+        Splitter(int (*fun)(int), std::string_view authorized_open_escape_sequences = "");
         virtual ~Splitter();
 
         void set_delimiter_method(int (*fun)(int));

@@ -62,6 +62,40 @@ class LoggerManager: public ALogFilterer
         std::mutex _mutex;
 };
 
+class TmpLogger
+{
+    public:
+        TmpLogger(ALogger *logger): _logger_ptr(logger)
+        {
+            LoggerManager::get()->add_logger(logger);
+        }
+
+        ~TmpLogger()
+        {
+            LoggerManager::get()->remove_logger(_logger_ptr);
+        };
+
+    private:
+        ALogger *_logger_ptr;
+};
+
+class TmpLoggerFilter
+{
+    public:
+        TmpLoggerFilter(ILoggerFilter *filter): _filter_ptr(filter)
+        {
+            LoggerManager::get()->add_filter(filter);
+        }
+
+        ~TmpLoggerFilter()
+        {
+            LoggerManager::get()->remove_filter(_filter_ptr);
+        };
+
+    private:
+        ILoggerFilter *_filter_ptr;
+};
+
 }
 
 #endif

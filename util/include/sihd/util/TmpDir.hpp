@@ -28,6 +28,8 @@ class TmpDir
             }
         };
 
+        operator bool() const { return _path.empty() == false; }
+
         const std::string & path() const { return _path; }
 
     private:

@@ -10,54 +10,63 @@ namespace sihd::util
 class GuiBuilder
 {
     public:
-        inline static const int max_blocksize_y = 12;
-        inline static const int max_blocksize_x = 12;
+        inline static const int grid_max_y = 12;
+        inline static const int grid_max_x = 12;
+
+        struct Directions
+        {
+            int left = 0;
+            int right = 0;
+            int top = 0;
+            int bottom = 0;
+        };
 
         struct GuiConf
         {
-            int blocksize_y = -1;
+            int grid_y = -1;
             int min_y = -1;
             int max_y = -1;
-            int blocksize_x = -1;
+
+            int grid_x = -1;
             int min_x = -1;
             int max_x = -1;
+
+            Directions grid_push = {};
+            Directions margin = {};
+            Directions padding = {};
+
+            bool visible = true;
+            bool hidden = false;
         };
 
         struct Block
         {
-            int y;
-            int x;
-            int max_y;
-            int max_x;
+            int y = 0;
+            int x = 0;
+            int max_y = 0;
+            int max_x = 0;
         };
 
         GuiBuilder();
-        GuiBuilder(int max_y, int max_x);
+        GuiBuilder(const Block & win);
         virtual ~GuiBuilder();
 
-        void set_window_size(int max_y, int max_x);
+        void set_window_size(const Block & win);
+        int get_y_from_gridsize(int gridsize) const;
+        int get_x_from_gridsize(int gridsize) const;
 
-        const Block & new_child(const GuiConf & conf);
-        void clear();
+        void add_subwindow(const GuiConf & conf);
+        void add_subwindows(const std::vector<GuiConf> & conf);
+        void clear_subwindows();
+        std::vector<Block> build_grid() const;
 
-        std::string dump() const;
+        static std::string conf_str(const std::vector<Block> & blocks);
 
     protected:
-        static int  _get_blocksize_y(int blocksize, int max_y);
-        static int  _get_blocksize_x(int blocksize, int max_x);
 
     private:
-        struct BlockLine
-        {
-            int begin_y;
-            int max_lines;
-            std::vector<Block> blocks;
-        };
-
-        int _max_x;
-        int _max_y;
-
-        std::vector<BlockLine> _block_lines;
+        Block _win;
+        std::vector<GuiConf> _subwindow_conf;
 };
 
 }

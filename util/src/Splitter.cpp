@@ -12,19 +12,19 @@ Splitter::Splitter(): _empty_delimitations(false), _compare_method(nullptr)
 {
 }
 
-Splitter::Splitter(int delimiter, const std::string & authorized_open_escape_sequences): Splitter()
+Splitter::Splitter(int delimiter, std::string_view authorized_open_escape_sequences): Splitter()
 {
     _delimiter = std::string(1, delimiter);
     _authorized_open_escape_sequences = authorized_open_escape_sequences;
 }
 
-Splitter::Splitter(const std::string & delimiter, const std::string & authorized_open_escape_sequences): Splitter()
+Splitter::Splitter(std::string_view delimiter, std::string_view authorized_open_escape_sequences): Splitter()
 {
     _delimiter = delimiter;
     _authorized_open_escape_sequences = authorized_open_escape_sequences;
 }
 
-Splitter::Splitter(int (*fun)(int), const std::string & authorized_open_escape_sequences): Splitter()
+Splitter::Splitter(int (*fun)(int), std::string_view authorized_open_escape_sequences): Splitter()
 {
     this->set_delimiter_method(fun);
     _authorized_open_escape_sequences = authorized_open_escape_sequences;

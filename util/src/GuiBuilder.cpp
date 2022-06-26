@@ -11,110 +11,155 @@ GuiBuilder::GuiBuilder()
 {
 }
 
-GuiBuilder::GuiBuilder(int max_y, int max_x)
+GuiBuilder::GuiBuilder(const Block & win)
 {
-    this->set_window_size(max_y, max_x);
+    this->set_window_size(win);
 }
 
 GuiBuilder::~GuiBuilder()
 {
 }
 
-void    GuiBuilder::set_window_size(int max_y, int max_x)
+void    GuiBuilder::clear_subwindows()
 {
-    _max_y = max_y;
-    _max_x = max_x;
+    _subwindow_conf.clear();
 }
 
-int GuiBuilder::_get_blocksize_x(int blocksize, int max_x)
+void    GuiBuilder::set_window_size(const Block & win)
 {
-    return max_x * (blocksize / (float)GuiBuilder::max_blocksize_x);
+    _win = win;
 }
 
-int GuiBuilder::_get_blocksize_y(int blocksize, int max_y)
+int GuiBuilder::get_x_from_gridsize(int gridsize) const
 {
-    return max_y * (blocksize / (float)GuiBuilder::max_blocksize_y);
+    gridsize = std::max(gridsize, 0);
+    gridsize = std::min(gridsize, GuiBuilder::grid_max_x);
+    return _win.max_x * (gridsize / (float)GuiBuilder::grid_max_x);
 }
 
-std::string     GuiBuilder::dump() const
+int GuiBuilder::get_y_from_gridsize(int gridsize) const
 {
-    std::stringstream ss;
-    for (auto i = 0u; i < _block_lines.size(); ++i)
+    gridsize = std::max(gridsize, 0);
+    gridsize = std::min(gridsize, GuiBuilder::grid_max_y);
+    return _win.max_y * (gridsize / (float)GuiBuilder::grid_max_y);
+}
+
+std::string     GuiBuilder::conf_str(const std::vector<Block> & blocks)
+{
+    std::string ret;
+    int last_x = std::numeric_limits<int>::max();
+    int last_y = std::numeric_limits<int>::min();
+    int line_count = 0;
+
+    size_t i = 0;
+    while (i < blocks.size())
     {
-        const BlockLine & blockline = _block_lines.at(i);
-        ss << "Line[" << i << "]:\n";
-        for (auto j = 0u; j < blockline.blocks.size(); ++j)
+        const Block & block = blocks.at(i);
+        if (last_x > block.x && last_y < block.y)
         {
-            const Block & block = blockline.blocks.at(j);
-            ss << "\tBlock[" << j << "]:"
-                " y: " << block.y
-                << " x: " << block.x
-                << " max_y: " << block.max_y
-                << " max_x: " << block.max_x
-                << "\n";
+            ret += fmt::format("Line[{}] y={}\n", line_count, block.y);
+            ++line_count;
+            last_x = block.x;
+            last_y = block.y;
         }
+        ret += fmt::format("\tBlock[{}] y={} x={} max_y={} max_x={}\n", i, block.y, block.x, block.max_y, block.max_x);
+        ++i;
     }
-    return ss.str();
+    return ret;
 }
 
-void    GuiBuilder::clear()
+void    GuiBuilder::add_subwindow(const GuiConf & conf)
 {
-    _block_lines.clear();
+    _subwindow_conf.push_back(conf);
 }
 
-const GuiBuilder::Block &   GuiBuilder::new_child(const GuiConf & conf)
+void    GuiBuilder::add_subwindows(const std::vector<GuiConf> & conf)
 {
-    int wanted_y = GuiBuilder::_get_blocksize_y(conf.blocksize_y, _max_y);
-    int wanted_x = GuiBuilder::_get_blocksize_x(conf.blocksize_x, _max_x);
+    _subwindow_conf.insert(_subwindow_conf.end(), conf.begin(), conf.end());
+}
 
-    if (_block_lines.empty())
+std::vector<GuiBuilder::Block>  GuiBuilder::build_grid() const
+{
+    int current_max_y = 0;
+    int current_y = _win.y;
+    int last_grid_right = 0;
+    std::vector<Block> ret;
+
+    for (const auto & conf: _subwindow_conf)
     {
-        // first block
-        BlockLine & new_block_line = _block_lines.emplace_back(BlockLine {
-            .begin_y = 0,
-            .max_lines = wanted_y,
-            .blocks = {}
-        });
-        new_block_line.blocks.emplace_back(Block {
-            .y = 0,
-            .x = 0,
-            .max_y = wanted_y,
-            .max_x = wanted_x,
-        });
-    }
-    else
-    {
-        BlockLine & current_block_line = _block_lines.back();
-        Block & last_block = current_block_line.blocks.back();
-        int remaining_x = _max_x - last_block.max_x;
-        if (wanted_x > remaining_x)
+        if (conf.hidden)
+            continue ;
+
+        int starting_y = this->get_y_from_gridsize(conf.grid_push.top);
+        starting_y += conf.margin.top;
+
+        int starting_x = this->get_x_from_gridsize(conf.grid_push.left);
+        starting_x += conf.margin.left;
+
+        int wanted_y = this->get_y_from_gridsize(conf.grid_y);
+        wanted_y -= (starting_y + conf.margin.bottom);
+
+        if (conf.max_y >= 0)
+            wanted_y = std::min(wanted_y, conf.max_y);
+        if (conf.min_y >= 0)
+            wanted_y = std::max(wanted_y, conf.min_y);
+
+
+        int wanted_x = this->get_x_from_gridsize(conf.grid_x);
+        wanted_x -= conf.margin.right;
+
+        if (conf.max_x >= 0)
+            wanted_x = std::min(wanted_x, conf.max_x);
+        if (conf.min_x >= 0)
+            wanted_x = std::max(wanted_x, conf.min_x);
+
+        if (ret.empty())
         {
-            // need a new line
-            BlockLine & new_block_line = _block_lines.emplace_back(BlockLine {
-                .begin_y = current_block_line.begin_y + current_block_line.max_lines,
-                .max_lines = wanted_y,
-                .blocks = {}
-            });
-            new_block_line.blocks.emplace_back(Block {
-                .y = new_block_line.begin_y,
-                .x = 0,
+            // first block
+            Block & new_block = ret.emplace_back(Block {
+                .y = current_y + starting_y,
+                .x = _win.x + starting_x,
                 .max_y = wanted_y,
                 .max_x = wanted_x,
             });
+            current_max_y = new_block.max_y;
         }
         else
         {
-            // can fit into line
-            current_block_line.max_lines = std::max(current_block_line.max_lines, wanted_y);
-            current_block_line.blocks.emplace_back(Block {
-                .y = current_block_line.begin_y,
-                .x = last_block.x + last_block.max_x,
-                .max_y = wanted_y,
-                .max_x = wanted_x,
-            });
+            Block & last_block = ret.back();
+            int remaining_x = (_win.max_x - _win.x) - (last_block.x + last_block.max_x);
+            if (last_grid_right)
+            {
+                remaining_x -= this->get_x_from_gridsize(last_grid_right);
+            }
+            if ((starting_x + wanted_x) > remaining_x)
+            {
+                current_y += current_max_y;
+                // need a new line
+                 Block & new_block = ret.emplace_back(Block {
+                    .y = current_y + starting_y,
+                    .x = _win.x + starting_x,
+                    .max_y = wanted_y,
+                    .max_x = wanted_x,
+                });
+                current_max_y = new_block.max_y;
+            }
+            else
+            {
+                // can fit into line
+                current_max_y = std::max(current_max_y, wanted_y);
+                ret.emplace_back(Block {
+                    .y = current_y + starting_y,
+                    .x = last_block.x + last_block.max_x + starting_x,
+                    .max_y = wanted_y,
+                    .max_x = wanted_x,
+                });
+            }
         }
+        // TODO grid bottom ?
+        last_grid_right = conf.grid_push.right;
     }
-    return _block_lines.back().blocks.back();
+    return ret;
 }
 
 

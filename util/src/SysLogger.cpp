@@ -6,10 +6,10 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-SysLogger::SysLogger(const std::string & progname, int options, int facility)
+SysLogger::SysLogger(std::string_view progname, int options, int facility)
 {
 #if !defined(__SIHD_WINDOWS__)
-    openlog(progname.c_str(), options, facility);
+    openlog(progname.data(), options, facility);
 #else
     (void)progname; (void)options; (void)facility;
 #endif

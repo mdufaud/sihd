@@ -29,59 +29,82 @@ namespace test
             }
     };
 
-    TEST_F(TestGuiBuilder, test_guibuilder)
+    TEST_F(TestGuiBuilder, test_guibuilder_simple)
     {
         constexpr int max_lines = 100;
         constexpr int max_cols = 150;
 
         GuiBuilder builder;
 
-        builder.set_window_size(max_lines, max_cols);
-
-        auto block = builder.new_child({
-            .blocksize_y = 3,
-            .blocksize_x = 12,
+        builder.set_window_size({
+            .max_y = max_lines,
+            .max_x = max_cols
         });
 
-        EXPECT_EQ(block.y, 0);
-        EXPECT_EQ(block.x, 0);
-        EXPECT_EQ(block.max_y, max_lines / 4);
-        EXPECT_EQ(block.max_x, max_cols);
+        builder.add_subwindow({
+            .grid_y = 3,
+            .grid_x = 12,
+        });
 
         // new line
 
-        block = builder.new_child({
-            .blocksize_y = 3,
-            .blocksize_x = 6,
+        builder.add_subwindow({
+            .grid_y = 3,
+            .grid_x = 6,
         });
 
-        EXPECT_EQ(block.y, max_lines / 4);
-        EXPECT_EQ(block.x, 0);
-        EXPECT_EQ(block.max_y, max_lines / 4);
-        EXPECT_EQ(block.max_x, max_cols / 2);
-
-        block = builder.new_child({
-            .blocksize_y = 3,
-            .blocksize_x = 6,
+        builder.add_subwindow({
+            .grid_y = 3,
+            .grid_x = 6,
         });
-
-        EXPECT_EQ(block.y, max_lines / 4);
-        EXPECT_EQ(block.x, max_cols / 2);
-        EXPECT_EQ(block.max_y, max_lines / 4);
-        EXPECT_EQ(block.max_x, max_cols / 2);
 
         // new line
 
-        block = builder.new_child({
-            .blocksize_y = 12,
-            .blocksize_x = 12,
+        builder.add_subwindow({
+            .grid_y = 12,
+            .grid_x = 12,
         });
 
-        EXPECT_EQ(block.y, (max_lines / 4) * 2);
-        EXPECT_EQ(block.x, 0);
-        EXPECT_EQ(block.max_y, max_lines);
-        EXPECT_EQ(block.max_x, max_cols);
+        auto blocks = builder.build_grid();
 
-        SIHD_COUT(builder.dump());
+        {
+            auto & block = blocks.at(0);
+
+            EXPECT_EQ(block.y, 0);
+            EXPECT_EQ(block.x, 0);
+            EXPECT_EQ(block.max_y, max_lines / 4);
+            EXPECT_EQ(block.max_x, max_cols);
+        }
+
+        {
+            // new line
+            auto & block = blocks.at(1);
+
+            EXPECT_EQ(block.y, max_lines / 4);
+            EXPECT_EQ(block.x, 0);
+            EXPECT_EQ(block.max_y, max_lines / 4);
+            EXPECT_EQ(block.max_x, max_cols / 2);
+        }
+
+        {
+            auto & block = blocks.at(2);
+
+            EXPECT_EQ(block.y, max_lines / 4);
+            EXPECT_EQ(block.x, max_cols / 2);
+            EXPECT_EQ(block.max_y, max_lines / 4);
+            EXPECT_EQ(block.max_x, max_cols / 2);
+        }
+
+        {
+            // new line
+            auto & block = blocks.at(3);
+
+            EXPECT_EQ(block.y, (max_lines / 4) * 2);
+            EXPECT_EQ(block.x, 0);
+            EXPECT_EQ(block.max_y, max_lines);
+            EXPECT_EQ(block.max_x, max_cols);
+        }
+
+        SIHD_COUT(GuiBuilder::conf_str(blocks));
     }
 }

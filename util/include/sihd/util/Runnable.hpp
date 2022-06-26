@@ -15,6 +15,11 @@ class Runnable: public IRunnable
         Runnable(std::function<bool ()> fun);
         virtual ~Runnable();
 
+        bool operator()()
+        {
+            return this->run();
+        };
+
         void set_runnable(IRunnable *runnable_ptr);
         void set_method(std::function<bool ()> fun);
 
@@ -27,7 +32,7 @@ class Runnable: public IRunnable
             };
         }
 
-        bool has_method();
+        bool has_method() const;
         bool run();
 
     protected:

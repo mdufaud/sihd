@@ -1,7 +1,3 @@
-#include <sihd/util/Str.hpp>
-#include <sihd/util/Splitter.hpp>
-#include <sihd/util/Time.hpp>
-
 #include <sstream>
 #include <cstdarg>
 #include <mutex>
@@ -11,6 +7,10 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h> // HUGE_VAL
+
+#include <sihd/util/Str.hpp>
+#include <sihd/util/Splitter.hpp>
+#include <sihd/util/Time.hpp>
 
 #ifndef SIHD_UTIL_STR_BUFFER
 # define SIHD_UTIL_STR_BUFFER 4096
@@ -176,12 +176,12 @@ std::string     Str::to_oct(uint64_t n)
     return Str::num_str(n, 8);
 }
 
-std::string     Str::num_str(int64_t num, uint16_t base)
+std::string     Str::num_str(uint64_t num, uint16_t base)
 {
     if (num == 0)
         return "0";
-    std::string ret;
     size_t i = Num::size(num, base);
+    std::string ret;
     ret.resize(i);
     while (num != 0)
     {

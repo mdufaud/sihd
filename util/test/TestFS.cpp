@@ -1,9 +1,10 @@
 #include <gtest/gtest.h>
 #include <iostream>
+#include <filesystem>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/FS.hpp>
 #include <sihd/util/Array.hpp>
-#include <filesystem>
 
 namespace test
 {
@@ -15,9 +16,6 @@ namespace test
             TestFS()
             {
                 sihd::util::LoggerManager::basic();
-                _test_path = getenv("TEST_PATH");
-                auto path = std::filesystem::path(_test_path) / "util_fs";
-                _base_test_dir = path.generic_string();
             }
 
             virtual ~TestFS()
@@ -27,13 +25,11 @@ namespace test
 
             virtual void SetUp()
             {
-                std::filesystem::create_directory(_base_test_dir);
             }
 
             virtual void TearDown()
             {
                 FS::sep = this->original_slash;
-                std::filesystem::remove_all(_base_test_dir);
             }
 
             bool    log_make_dirs(std::string path)
@@ -41,9 +37,6 @@ namespace test
                 SIHD_LOG(debug, "Making directory: " << path);
                 return FS::make_directories(path);
             }
-
-            std::string _base_test_dir;
-            std::string _test_path;
 
             char original_slash = FS::sep;
     };
@@ -126,10 +119,14 @@ namespace test
 
     TEST_F(TestFS, test_fs_creation)
     {
-        EXPECT_TRUE(FS::exists(_test_path));
-        EXPECT_TRUE(FS::is_dir(_test_path));
-        EXPECT_FALSE(FS::is_file(_test_path));
-        std::string sandbox_path = FS::combine({_base_test_dir, "creation"});
+        auto tmp_path = std::filesystem::temp_directory_path() / Str::to_hex(Num::rand());
+        ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
+        auto tmp_path_str = tmp_path.string();
+
+        EXPECT_TRUE(FS::exists(tmp_path_str));
+        EXPECT_TRUE(FS::is_dir(tmp_path_str));
+        EXPECT_FALSE(FS::is_file(tmp_path_str));
+        std::string sandbox_path = FS::combine({tmp_path_str, "creation"});
         EXPECT_TRUE(this->log_make_dirs(sandbox_path));
         EXPECT_TRUE(FS::exists(sandbox_path));
         EXPECT_TRUE(FS::is_dir(sandbox_path));
@@ -175,9 +172,12 @@ namespace test
 
     TEST_F(TestFS, test_fs_fast_io)
     {
+        auto tmp_path = std::filesystem::temp_directory_path() / Str::to_hex(Num::rand());
+        ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
+        std::string path = FS::combine({tmp_path, "io", "test.txt"});
+
         std::string file_content = "hello world\n";
-        std::string path = FS::combine({_base_test_dir, "io", "test.txt"});
-        EXPECT_TRUE(Str::ends_with(path, "test/util_fs/io/test.txt"));
+        EXPECT_TRUE(Str::ends_with(path, "/io/test.txt"));
         EXPECT_TRUE(this->log_make_dirs(FS::parent(path)));
         SIHD_LOG(info, "Writing file to: " << path);
         EXPECT_TRUE(FS::write(path, file_content));

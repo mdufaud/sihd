@@ -94,12 +94,12 @@ namespace test
         c.write(arr);
         EXPECT_EQ(_notified[&c], 1);
         EXPECT_NO_THROW(
-            EXPECT_DOUBLE_EQ(c.read<double>(0), 1.0);
-            EXPECT_DOUBLE_EQ(c.read<double>(1), 1.1);
-            EXPECT_DOUBLE_EQ(c.read<double>(2), 1.2);
-            EXPECT_DOUBLE_EQ(c.read<double>(3), 1.3);
-            EXPECT_DOUBLE_EQ(c.read<double>(4), 1.4);
-            EXPECT_DOUBLE_EQ(c.read<double>(5), 1.5);
+            {EXPECT_DOUBLE_EQ(c.read<double>(0), 1.0);}
+            {EXPECT_DOUBLE_EQ(c.read<double>(1), 1.1);}
+            {EXPECT_DOUBLE_EQ(c.read<double>(2), 1.2);}
+            {EXPECT_DOUBLE_EQ(c.read<double>(3), 1.3);}
+            {EXPECT_DOUBLE_EQ(c.read<double>(4), 1.4);}
+            {EXPECT_DOUBLE_EQ(c.read<double>(5), 1.5);}
         );
         c.write(arr);
         EXPECT_EQ(_notified[&c], 1);

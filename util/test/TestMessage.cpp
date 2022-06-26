@@ -42,7 +42,8 @@ namespace test
         EXPECT_TRUE(msg1.add_field<char>("str", 200));
         EXPECT_TRUE(msg1.finish());
 
-        msg1.print_tree_desc();
+        SIHD_COUT(msg1.tree_desc_str());
+
         EXPECT_EQ(msg1.field_byte_size(), sizeof(int) + 200 * sizeof(char));
 
         Message msg2("msg2");
@@ -54,7 +55,8 @@ namespace test
         EXPECT_TRUE(msg2.add_field("othermsg", msg1.clone()));
         EXPECT_TRUE(msg2.finish());
 
-        msg2.print_tree_desc();
+        SIHD_COUT(msg2.tree_desc_str());
+
         EXPECT_EQ(msg2.field_byte_size(), msg1.field_byte_size() * 2
             + sizeof(bool) + sizeof(short) * 2 + sizeof(double) * 2);
         //TODO
@@ -68,7 +70,9 @@ namespace test
         EXPECT_TRUE(msg.add_field<uint32_t>("uint", 2));
         EXPECT_TRUE(msg.add_field<float>("float", 5));
         EXPECT_TRUE(msg.finish());
-        msg.print_tree();
+
+        SIHD_COUT(msg.tree_str());
+
         EXPECT_EQ(msg.field_byte_size(), sizeof(bool) + sizeof(uint32_t) * 2 + sizeof(float) * 5);
 
         // Making a fake buffer to fill the message

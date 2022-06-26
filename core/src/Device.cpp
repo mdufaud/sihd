@@ -122,7 +122,7 @@ bool    Device::do_reset()
             return false;
         }
     }
-    this->delete_children();
+    this->remove_children();
     return this->on_reset();
 }
 

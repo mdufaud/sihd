@@ -33,6 +33,11 @@ class Handler: public IHandler<T...>
 
         virtual ~Handler() {};
 
+        void operator()(T... args)
+        {
+            this->handle(args...);
+        };
+
         void set_handler(IHandler<T...> *handler_ptr)
         {
             _handle_fun = [handler_ptr] (T... args)
@@ -61,7 +66,7 @@ class Handler: public IHandler<T...>
                 _handle_fun(args...);
         }
 
-        bool has_method()
+        bool has_method() const
         {
             return _handle_fun ? true : false;
         }

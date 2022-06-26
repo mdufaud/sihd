@@ -20,7 +20,7 @@ Node::Node(const std::string & name, Node *parent):
 
 Node::~Node()
 {
-    this->delete_children();
+    this->remove_children();
 }
 
 void    Node::add_child_unsafe(Named *child, bool ownership)
@@ -54,15 +54,19 @@ bool    Node::add_child(const std::string & name, Named *child, bool ownership)
                     this->full_name().c_str(), name.c_str());
         return false;
     }
-    if (child->parent() == nullptr)
-        child->set_parent(this);
-    ChildEntry *entry = new ChildEntry();
-    entry->name = name;
-    entry->obj = child;
-    entry->ownership = ownership;
-    _children_map[name] = entry;
-    _children_keys.push_back(name);
-    return true;
+    bool do_add = this->on_add_child(name, child);
+    if (do_add)
+    {
+        if (child->parent() == nullptr)
+            child->set_parent(this);
+        ChildEntry *entry = new ChildEntry();
+        entry->name = name;
+        entry->obj = child;
+        entry->ownership = ownership;
+        _children_map[name] = entry;
+        _children_keys.push_back(name);
+    }
+    return do_add;
 }
 
 Node::ChildEntry  *Node::_get_child_entry(const Named *child) const
@@ -117,6 +121,7 @@ Named   *Node::get_child(const std::string & name) const
     return entry != nullptr ? entry->obj : nullptr;
 }
 
+/*
 bool    Node::delete_child(const Named *child)
 {
     return this->delete_child(child->name());
@@ -137,6 +142,7 @@ bool    Node::_delete_child_entry(Node::ChildEntry *entry)
     }
     return this->_remove_child_entry(entry);
 }
+*/
 
 bool    Node::remove_child(const Named *child)
 {
@@ -152,6 +158,11 @@ bool    Node::_remove_child_entry(Node::ChildEntry *entry)
 {
     if (entry == nullptr)
         return false;
+    this->on_remove_child(entry->name, entry->obj);
+    if (entry->ownership && entry->obj != nullptr)
+    {
+        delete entry->obj;
+    }
     auto it = std::find(_children_keys.begin(), _children_keys.end(), entry->name);
     if (it != _children_keys.end())
         _children_keys.erase(it);
@@ -160,30 +171,16 @@ bool    Node::_remove_child_entry(Node::ChildEntry *entry)
     return true;
 }
 
-void    Node::delete_children()
+void    Node::remove_children()
 {
     for (auto it = _children_map.begin(); it != _children_map.end(); )
     {
         ChildEntry *entry = it->second;
         it = _children_map.erase(it);
-        this->_delete_child_entry(entry);
+        this->_remove_child_entry(entry);
     }
     _children_map.clear();
     _children_keys.clear();
-}
-
-Node  *Node::to_node(Named *child)
-{
-    if (child == nullptr)
-        return nullptr;
-    return dynamic_cast<Node *>(child);
-}
-
-const Node  *Node::to_cnode(const Named *child)
-{
-    if (child == nullptr)
-        return nullptr;
-    return dynamic_cast<const Node *>(child);
 }
 
 std::pair<std::string, std::string>     Node::parent_path(const std::string & path)
@@ -231,20 +228,37 @@ Named   *Node::resolve_link(const std::string & path, size_t recursion)
         throw Node::MaximumLinkRecursion();
     auto [parent_path, child_name] = this->parent_path(path);
     (void)child_name;
-    Node *parent = this->to_node(this->find(parent_path));
-    if (parent != nullptr)
+    Named *named = this->find(parent_path);
+    if (named != nullptr)
     {
-        parent->resolve_links(recursion + 1);
-        child = this->find(path);
+        Node *parent = dynamic_cast<Node *>(named);
+        if (parent != nullptr)
+        {
+            parent->resolve_links(recursion + 1);
+            child = this->find(path);
+        }
     }
     return child;
 }
 
-bool    Node::_check_link(const std::string & name, Named *child)
+bool    Node::on_check_link(const std::string & name, Named *child)
 {
     (void)name;
     (void)child;
     return true;
+}
+
+bool    Node::on_add_child(const std::string & name, Named *child)
+{
+    (void)name;
+    (void)child;
+    return true;
+}
+
+void    Node::on_remove_child(const std::string & name, Named *child)
+{
+    (void)name;
+    (void)child;
 }
 
 bool    Node::resolve_links(size_t recursion)
@@ -263,7 +277,7 @@ bool    Node::resolve_links(size_t recursion)
                         path.c_str());
             return false;
         }
-        if (this->_check_link(link, child))
+        if (this->on_check_link(link, child))
             this->add_child(link, child, false);
         else
             ret = false;
@@ -282,21 +296,6 @@ const std::vector<std::string> &    Node::children_keys() const
 }
 
 // TREE
-
-void    Node::print_tree() const
-{
-    std::cout << this->tree_str({}) << std::endl;
-}
-
-void    Node::print_tree_desc() const
-{
-    std::cout << this->tree_desc_str() << std::endl;
-}
-
-void    Node::print_tree(TreeOpts opts) const
-{
-    std::cout << this->tree_str(opts) << std::endl;
-}
 
 void    Node::_tree_child_desc(std::stringstream & ss,
                                     const TreeOpts & opts,

@@ -4,6 +4,7 @@
 #include <sihd/csv/CsvWriter.hpp>
 #include <sihd/csv/CsvReader.hpp>
 #include <sihd/util/FS.hpp>
+#include <sihd/util/TmpDir.hpp>
 
 namespace test
 {
@@ -16,7 +17,6 @@ namespace test
             TestCsv()
             {
                 sihd::util::LoggerManager::basic();
-                FS::make_directories(_base_test_dir);
             }
 
             virtual ~TestCsv()
@@ -31,14 +31,13 @@ namespace test
             virtual void TearDown()
             {
             }
-
-            std::string _base_test_dir = FS::combine({getenv("TEST_PATH"), "csv"});
-
     };
 
     TEST_F(TestCsv, test_csv_writer)
     {
-        std::string path = FS::combine(_base_test_dir, "test_write.csv");
+        TmpDir tmp_dir;
+
+        std::string path = FS::combine(tmp_dir.path(), "test_write.csv");
         CsvWriter writer("csv-writer");
 
         SIHD_LOG(info, "Writing csv: " << path);

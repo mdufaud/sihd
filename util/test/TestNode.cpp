@@ -41,7 +41,7 @@ namespace test
         parent->add_child(new Named("cousin2"), true);
         Named *cousin3 = parent->add_child<Named>("cousin3");
 
-        root.print_tree();
+        SIHD_COUT(root.tree_str());
 
         // Parent - child
         Named *child1 = root.find("child1");
@@ -52,8 +52,8 @@ namespace test
         EXPECT_EQ(child1->root(), &root);
 
         // Node casting
-        EXPECT_EQ(Node::to_node(root.get_child("parent")), parent);
-        EXPECT_EQ(Node::to_node(child3), nullptr);
+        EXPECT_EQ(dynamic_cast<Node *>(root.get_child("parent")), parent);
+        EXPECT_EQ(dynamic_cast<Node *>(child3), nullptr);
 
         // Find
         Named *found = root.find("parent.cousin1");
@@ -86,7 +86,7 @@ namespace test
         Node *uncle_node = other_family->add_child<Node>("uncle");
         Node *gp_node = older->add_child<Node>("grandparent");
 
-        root.print_tree();
+        SIHD_COUT(root.tree_str());
 
         parent_node->add_link("mychild1", "..origin.child1");
         uncle_node->add_link("mycousin1", "...parent.mychild1");
@@ -96,7 +96,7 @@ namespace test
 
         EXPECT_TRUE(gp_node->resolve_links());
 
-        root.print_tree();
+        SIHD_COUT(root.tree_str());
 
         EXPECT_EQ(parent_node->get_child("mychild1"), child1);
         EXPECT_EQ(uncle_node->get_child("mycousin1"), child1);

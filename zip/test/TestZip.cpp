@@ -5,6 +5,7 @@
 #include <sihd/zip/ZipReader.hpp>
 #include <sihd/util/FS.hpp>
 #include <sihd/util/Array.hpp>
+#include <sihd/util/TmpDir.hpp>
 
 namespace test
 {
@@ -17,8 +18,6 @@ namespace test
             TestZip()
             {
                 sihd::util::LoggerManager::basic();
-                _test_path = getenv("TEST_PATH");
-                _base_test_dir = sihd::util::FS::combine(_test_path, "zip");
             }
 
             virtual ~TestZip()
@@ -34,14 +33,13 @@ namespace test
             virtual void TearDown()
             {
             }
-
-            std::string _base_test_dir;
-            std::string _test_path;
     };
 
     TEST_F(TestZip, test_zip_writer)
     {
-        std::string zip_path = FS::combine(_base_test_dir, "to_zip.zip");
+        TmpDir tmp_dir;
+
+        std::string zip_path = FS::combine(tmp_dir.path(), "to_zip.zip");
         FS::remove_file(zip_path);
 
         ZipWriter writer("zip-writer");

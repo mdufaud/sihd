@@ -37,7 +37,7 @@ class AChannelContainer:    public sihd::util::Node,
         void remove_channels_observation();
 
     protected:
-        virtual bool _check_link(const std::string & name, sihd::util::Named *child) override;
+        virtual bool on_check_link(const std::string & name, sihd::util::Named *child) override;
 
     private:
         struct ChannelConfiguration

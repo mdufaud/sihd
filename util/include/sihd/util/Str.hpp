@@ -8,6 +8,7 @@
 # include <sstream>
 # include <mutex>
 # include <map>
+# include <map>
 # include <optional>
 
 # include <sihd/util/Container.hpp>
@@ -115,7 +116,7 @@ class Str
         static std::string to_dec(uint64_t n);
         static std::string to_oct(uint64_t n);
         static std::string addr_str(void *addr, size_t padding = 0);
-        static std::string num_str(int64_t num, uint16_t base);
+        static std::string num_str(uint64_t num, uint16_t base);
         static char num_to_char(size_t num);
         static std::string hexdump(const void *mem, size_t size, char delim = ' ');
         // formatted hexdump

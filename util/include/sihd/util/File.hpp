@@ -31,6 +31,7 @@ class File
 
         operator int() const { return this->fd(); }
         operator bool() const { return this->is_open(); }
+        operator FILE *() const { return _file_ptr; }
 
         virtual bool open(std::string_view path, std::string_view mode);
         virtual bool open_fd(int fd, std::string_view mode);

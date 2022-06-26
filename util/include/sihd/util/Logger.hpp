@@ -7,12 +7,14 @@
 
 # include <fmt/core.h>
 
+# include <sihd/util/macro.hpp>
 # include <sihd/util/Str.hpp>
 # include <sihd/util/LoggerManager.hpp>
 
 # ifdef SIHD_LOGGING_OFF
 #  define SIHD_LOG_FORMAT(level, message, ...)
 #  define SIHD_LOG_LEVEL(logger, level, msg)
+#  define SIHD_LOGF(level, message, ...)
 #  define SIHD_NEW_LOGGER(name)
 #  define SIHD_LOGGER
 #  define SIHD_COUT(msg)
@@ -44,8 +46,10 @@
 
 # if defined(SIHD_TRACE_OFF) || defined(SIHD_LOGGING_OFF)
 #  define SIHD_TRACE(msg)
+#  define SIHD_TRACEF(msg)
 # else
-#  define SIHD_TRACE(msg) SIHD_LOG(debug, "TRACE[" << __FILE__ << ":" << __LINE__ << "] " << msg);
+#  define SIHD_TRACE(msg) SIHD_LOG(debug, "TRACE[" __FILE__ ":"  __SIHD_STRINGIFY__(__LINE__) "] " << msg);
+#  define SIHD_TRACEF(msg, ...) SIHD_LOGF(debug, "TRACE[" __FILE__ ":"  __SIHD_STRINGIFY__(__LINE__) "] " msg, ##__VA_ARGS__);
 # endif
 
 namespace sihd::util

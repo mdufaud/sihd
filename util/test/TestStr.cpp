@@ -86,6 +86,15 @@ namespace test
             double _dval;
     };
 
+    TEST_F(TestStr, test_str_base)
+    {
+        EXPECT_EQ(Str::to_hex(9), "9");
+        EXPECT_EQ(Str::to_hex(10), "a");
+        EXPECT_EQ(Str::to_hex(16), "10");
+        EXPECT_EQ(Str::to_hex(1337), "539");
+        EXPECT_EQ(Str::to_hex(283654106644), "420b1a2e14");
+    }
+
     TEST_F(TestStr, test_str_remove_escape_char)
     {
         std::string escaped = Str::remove_escape_char("\\hello\\ world");

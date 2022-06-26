@@ -92,10 +92,6 @@ std::string FS::executable_path()
 
 bool    FS::exists(std::string_view path)
 {
-    /*
-    struct stat s;
-    return OS::stat(path.data(), &s) == 0;
-    */
 #if defined(__SIHD_WINDOWS__)
     return _access(path.data(), 0) == 0;
 #else
@@ -116,6 +112,14 @@ bool    FS::is_dir(std::string_view path)
     struct stat s;
     if (OS::stat(path.data(), &s) == 0)
         return s.st_mode & S_IFDIR;
+    return false;
+}
+
+time_t  FS::last_write(std::string_view path)
+{
+    struct stat s;
+    if (OS::stat(path.data(), &s) == 0)
+        return s.st_mtime;
     return false;
 }
 
