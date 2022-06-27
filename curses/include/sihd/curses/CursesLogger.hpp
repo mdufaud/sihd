@@ -2,7 +2,7 @@
 # define __SIHD_CURSES_CURSESLOGGER_HPP__
 
 # include <sihd/util/ALogger.hpp>
-# include <curses.h>
+# include <sihd/curses/Term.hpp>
 
 namespace sihd::curses
 {
@@ -10,7 +10,8 @@ namespace sihd::curses
 class CursesLogger: public sihd::util::ALogger
 {
     public:
-        CursesLogger(WINDOW *win);
+        // takes stdscr by default
+        CursesLogger(WINDOW *win = nullptr);
         virtual ~CursesLogger();
 
         virtual void log(const sihd::util::LogInfo & info, std::string_view msg) override;

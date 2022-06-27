@@ -3,7 +3,10 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/curses/Term.hpp>
 #include <sihd/curses/Window.hpp>
+#include <sihd/curses/WindowLogger.hpp>
 #include <sihd/curses/CursesLogger.hpp>
+
+#include <curses.h>
 
 namespace test
 {
@@ -35,12 +38,12 @@ namespace test
     TEST_F(TestWindow, test_window)
     {
         Term term;
-        TmpLogger tmp(new CursesLogger(stdscr));
+
+        ASSERT_TRUE(term.is_started());
 
         Window root("root");
-        Window *win1 = root.add_child<Window>("win1");
+        WindowLogger *win1 = root.add_child<WindowLogger>("win1");
         Window *win2 = root.add_child<Window>("win2");
-        Window *win3 = root.add_child<Window>("win3");
 
         root.set_gui_conf({
             .grid_y = 12,
@@ -48,69 +51,58 @@ namespace test
         });
 
         win1->set_gui_conf({
-            .grid_y = 4,
-            .grid_x = 12,
-            .padding = {
-                .left = 1,
-                .right = 1,
-                .top = 1,
-                .bottom = 1,
-            }
+            .grid_y = 12,
+            .grid_x = 6,
+            .padding = GuiBuilder::Directions::all(1)
         });
         win2->set_gui_conf({
-            .grid_y = 4,
-            .grid_x = 5,
+            .grid_y = 12,
+            .grid_x = 6,
             .grid_push = {
-                .right = 3,
+                .right = 100,
             },
-            .padding = {
-                .left = 1,
-                .right = 1,
-                .top = 1,
-                .bottom = 1,
-            }
-        });
-        win3->set_gui_conf({
-            .grid_y = 4,
-            .grid_x = 5,
-            /*
-            .grid_push = {
-                .left = 1,
-            },
-            */
-            .margin = {
-                .left = 1,
-                .top = 1,
-                .bottom = 1,
-            },
-            .padding = {
-                .left = 1,
-                .right = 1,
-                .top = 1,
-                .bottom = 1,
-            }
+            .padding = GuiBuilder::Directions::all(1)
         });
 
         root.init_window();
 
-        win1->win_write("win1 {}\n", 20);
-        win1->win_write("blbalblalbalblalballbalblalbalblalblalblalbalblalbalb {}\n", 1);
-        win1->win_write("win1 {} -", 2);
-        win1->win_write(" win1 {}\n", 3);
+        win1->set_win_scroll(true);
+        win1->set_keypad(true);
         win1->win_border();
 
         win2->win_write("win2");
         win2->win_write("win2\n\n");
         win2->win_write("win2");
-        win2->win_write(" win2");
-        win2->win_write("---");
+        win2->win_write("\nwin\n2");
         win2->win_border();
-
-        win3->win_write("win3");
-        win3->win_border();
 
         root.win_refresh();
 
-        sleep(100);
+        while (true)
+        {
+            auto key = win1->read();
+            switch (key)
+            {
+                case 'q':
+                    return ;
+                case KEY_UP:
+                    win1->win_border_clear();
+                    win1->win_scroll(1);
+                    win1->cursor_move_y(-1);
+                    break ;
+                case KEY_DOWN:
+                    win1->win_border_clear();
+                    win1->win_scroll(-1);
+                    win1->cursor_move_y(1);
+                    break ;
+                default:
+                {
+                    SIHD_LOGF(info, "key = {:d} ({:c})", key, key);
+                    break ;
+                }
+            }
+            win1->win_border();
+            root.win_refresh();
+        }
     }
 }

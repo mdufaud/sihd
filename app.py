@@ -8,7 +8,8 @@ extlibs = {
     "gtest": "1.11.0",
     ## json parsing
     "nlohmann_json": "3.9.1",
-    "fmt": "8.1.1",
+    #"fmt": "8.1.1",
+    "fmt": "7.1.3",
     ## http
     "libwebsockets": "4.3.0",
     "libcurl": "7.75.0",
@@ -38,6 +39,7 @@ extlibs = {
 modules = {
     "util": {
         "extlibs": ['nlohmann_json', 'fmt'],
+        "windows-defines": ["FMT_HEADER_ONLY"],
         "libs": ['pthread', 'fmt'],
         "linux-libs": ['dl', 'rt'],
     },
@@ -54,7 +56,7 @@ modules = {
     },
     "curses": {
         "depends": ['util'],
-        "linux-extlibs": ['ncurses'],
+        # "linux-extlibs": ['ncurses'],
         "linux-libs": ['ncurses', 'ncursesw'],
         # if lib is installed on system
         "parse-configs": [

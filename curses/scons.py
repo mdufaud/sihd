@@ -14,5 +14,6 @@ binaries.append(env.build_bin(Glob('src/bin/rain.c'), name = "rain"))
 binaries.append(env.build_bin(Glob('src/bin/test.c'), name = "test"))
 binaries.append(env.build_bin(Glob('src/bin/worm.c'), name = "worm"))
 binaries.append(env.build_bin(Glob('src/bin/xmas.c'), name = "xmas"))
+binaries.append(env.build_bin(Glob('src/bin/sihd.cpp'), name = "sihd_curses", add_libs = [module_format_name]))
 
 Return('binaries')

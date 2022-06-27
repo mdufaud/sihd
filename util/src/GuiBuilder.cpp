@@ -6,7 +6,6 @@ namespace sihd::util
 
 SIHD_LOGGER
 
-
 GuiBuilder::GuiBuilder()
 {
 }
@@ -162,5 +161,24 @@ std::vector<GuiBuilder::Block>  GuiBuilder::build_grid() const
     return ret;
 }
 
+GuiBuilder::Directions GuiBuilder::Directions::all(int val)
+{
+    return Directions {
+        .left = val,
+        .right = val,
+        .top = val,
+        .bottom = val,
+    };
+}
+
+GuiBuilder::Directions GuiBuilder::Directions::both(int left_right, int top_bottom)
+{
+    return Directions {
+        .left = left_right,
+        .right = left_right,
+        .top = top_bottom,
+        .bottom = top_bottom,
+    };
+}
 
 }

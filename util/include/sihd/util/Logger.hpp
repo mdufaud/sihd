@@ -5,7 +5,7 @@
 # include <string>
 # include <string_view>
 
-# include <fmt/core.h>
+# include <fmt/format.h>
 
 # include <sihd/util/macro.hpp>
 # include <sihd/util/Str.hpp>

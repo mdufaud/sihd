@@ -19,6 +19,9 @@ class GuiBuilder
             int right = 0;
             int top = 0;
             int bottom = 0;
+
+            static Directions all(int val);
+            static Directions both(int left_right, int top_bottom);
         };
 
         struct GuiConf
