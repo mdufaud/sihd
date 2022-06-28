@@ -20,29 +20,30 @@ specific_platform_compilers = {
 }
 specific_compilers_platform = {v: k for k, v in specific_platform_compilers.items()}
 
-#https://gist.github.com/martin-ueding/4007035
+_term_color_prefix = "\033["
 class TermColors(object):
-    """
-    Provides ANSI terminal color codes which are gathered via the ``tput``
-    utility. That way, they are portable. If there occurs any error with
-    ``tput``, all codes are initialized as an empty string.
-    :license: MIT
-    """
+
     def __init__(self):
-        try:
-            self.bold = subprocess.check_output("tput bold".split()).decode()
-            self.reset = subprocess.check_output("tput sgr0".split()).decode()
-            self.blue = subprocess.check_output("tput setaf 4".split()).decode()
-            self.green = subprocess.check_output("tput setaf 2".split()).decode()
-            self.orange = subprocess.check_output("tput setaf 3".split()).decode()
-            self.red = subprocess.check_output("tput setaf 1".split()).decode()
-        except subprocess.CalledProcessError as e:
-            self.bold = ""
+        if os.getenv("TERM"):
+            self.reset = "{}0m".format(_term_color_prefix)
+            self.blue = "{}0;34m".format(_term_color_prefix)
+            self.green = "{}0;32m".format(_term_color_prefix)
+            self.orange = "{}0;33m".format(_term_color_prefix)
+            self.red = "{}0;31m".format(_term_color_prefix)
+            self.bold_blue = "{}1;34m".format(_term_color_prefix)
+            self.bold_green = "{}1;32m".format(_term_color_prefix)
+            self.bold_orange = "{}1;33m".format(_term_color_prefix)
+            self.bold_red = "{}1;31m".format(_term_color_prefix)
+        else:
             self.reset = ""
             self.blue = ""
             self.green = ""
             self.orange = ""
             self.red = ""
+            self.bold_blue = ""
+            self.bold_green = ""
+            self.bold_orange = ""
+            self.bold_red = ""
 
 term_colors = TermColors()
 
