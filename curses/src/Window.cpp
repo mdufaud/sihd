@@ -54,43 +54,52 @@ void    Window::win_resize()
     Window *parent = this->parent<Window>();
     if (parent == nullptr)
     {
-        const auto & [stdscr_max_y, stdscr_max_x] = Window::stdscr_max_yx();
+# ifdef PDCURSES
+        resize_term(0, 0);
+        erase();
+# endif
+        this->win_erase();
         _gui_builder.set_window_size({
             .y = 0,
             .x = 0,
-            .max_y = stdscr_max_y,
-            .max_x = stdscr_max_x,
+            .max_y = LINES,
+            .max_x = COLS,
         });
-        //TODO y x
-        int max_y = _gui_builder.get_y_from_gridsize(_gui_conf.grid_y);
-        int max_x = _gui_builder.get_x_from_gridsize(_gui_conf.grid_x);
-        this->_resize_window({
-            .y = 0,
-            .x = 0,
+        const auto [max_y, max_x, y, x] = _gui_builder.grid_pos(_gui_conf);
+        this->_grid_move_window({
+            .y = y,
+            .x = x,
             .max_y = max_y,
             .max_x = max_x,
         });
     }
 }
 
-bool    Window::_resize_window(const sihd::util::GuiBuilder::Block & pos)
+bool    Window::_grid_move_window(const sihd::util::GuiBuilder::Block & pos)
 {
     _gui_builder.set_window_size(pos);
     const auto grid = _gui_builder.build_grid();
-    if (mvwin(_win_ptr, pos.y, pos.x) != OK)
-        return false;
     if (wresize(_win_ptr, pos.max_y, pos.max_x) != OK)
+    {
+        SIHD_LOGF(error, "Window {} cannot resize to y={} x={}", this->name(), pos.max_y, pos.max_x);
         return false;
+    }
+    if (mvwin(_win_ptr, pos.y, pos.x) != OK)
+    {
+        SIHD_LOGF(error, "Window {} cannot move to y={} x={}", this->name(), pos.y, pos.x);
+        return false;
+    }
+
     if (grid.empty() == false)
     {
         auto it = grid.begin();
         for (Window *subwindow: _subwindows)
         {
-            subwindow->_resize_window(*it);
+            subwindow->_grid_move_window(*it);
             ++it;
         }
     }
-    this->_move_cursors_begin_line(0);
+    this->cursor_reset();
     return true;
 }
 
@@ -120,11 +129,14 @@ bool    Window::init_window()
     return true;
 }
 
-bool    Window::_move_cursors_begin_line(int line) const
+bool    Window::_move_cursors_begin_line() const
 {
-    return wmove(_win_ptr,
-                    _gui_conf.padding.top + line,
-                    _gui_conf.padding.left) == OK;
+    auto [y, x] = this->win_cursor_yx();
+    auto [max_y, _] = this->win_max_yx();
+    y = std::max(y, _gui_conf.padding.top);
+    x = std::max(x, _gui_conf.padding.left);
+    y = std::min(max_y, y);
+    return wmove(_win_ptr, y, x) == OK;
 }
 
 void    Window::_win_write_padding(std::string_view s) const
@@ -133,14 +145,15 @@ void    Window::_win_write_padding(std::string_view s) const
     size_t linefeed_pos = s.find('\n');
     while (linefeed_pos != std::string::npos)
     {
-        waddnstr(_win_ptr, s.data() + curr_pos, linefeed_pos + 1);
-        auto [y, _] = this->win_cursor_yx();
-        this->_move_cursors_begin_line(y - 1);
+        waddnstr(_win_ptr, s.data() + curr_pos, ((linefeed_pos + 1) - curr_pos));
+        this->_move_cursors_begin_line();
         curr_pos = linefeed_pos + 1;
         linefeed_pos = s.find('\n', curr_pos);
     }
     if (curr_pos != s.size())
+    {
         waddstr(_win_ptr, s.data() + curr_pos);
+    }
 }
 
 void    Window::_win_write(std::string_view s) const
@@ -151,8 +164,9 @@ void    Window::_win_write(std::string_view s) const
         return ;
     if (s.size() > (size_t)max_width)
     {
-        auto column = TextFlow::Column(s.data()).width(max_width);
-        auto str = column.toString();
+        auto str = TextFlow::Column(std::string(s)).width(max_width).toString();
+        if (!s.empty() && s.at(s.size() - 1) == '\n')
+            str += "\n";
         this->_win_write_padding(str);
     }
     else
@@ -211,6 +225,11 @@ std::pair<int, int> Window::win_max_yx() const
     std::pair<int, int> ret;
     getmaxyx(_win_ptr, ret.first, ret.second);
     return ret;
+}
+
+bool    Window::cursor_reset() const
+{
+    return wmove(_win_ptr, _gui_conf.padding.top, _gui_conf.padding.left) == OK;
 }
 
 bool    Window::cursor_move_x(int cols) const

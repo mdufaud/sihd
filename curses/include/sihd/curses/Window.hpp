@@ -37,6 +37,7 @@ class Window:   public sihd::util::Node
         bool set_keypad(bool active) const;
         bool set_win_scroll(bool active) const;
 
+        bool cursor_reset() const;
         bool cursor_move_x(int cols) const;
         bool cursor_move_y(int lines) const;
         bool win_scroll(int lines) const;
@@ -59,12 +60,12 @@ class Window:   public sihd::util::Node
         virtual bool on_add_child(const std::string & name, Named *child) override;
         virtual void on_remove_child(const std::string & name, Named *child) override;
 
-        bool _resize_window(const sihd::util::GuiBuilder::Block & pos);
+        bool _grid_move_window(const sihd::util::GuiBuilder::Block & pos);
 
     private:
         void _win_write(std::string_view s) const;
         void _win_write_padding(std::string_view s) const;
-        bool _move_cursors_begin_line(int line) const;
+        bool _move_cursors_begin_line() const;
 
         WINDOW *_win_ptr;
 

@@ -1,6 +1,7 @@
 #include <sihd/curses/WindowLogger.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Term.hpp>
 
 namespace sihd::curses
 {
@@ -32,14 +33,38 @@ void    WindowLogger::Logger::log(const sihd::util::LogInfo & info, std::string_
 {
     if (_parent_ptr->is_window_init() == false)
         return ;
-    auto [yb, xb] = _parent_ptr->win_cursor_yx();
-    _parent_ptr->win_write("{}.{:09}\t[{}]\t{}\t{}\t{}\n",
-                            info.timestamp.tv_sec, info.timestamp.tv_nsec,
-                            info.thread_name,
-                            info.strlevel, info.source, msg, yb, xb, _parent_ptr->gui_conf().padding.left);
-    // auto [ya, xa] = _parent_ptr->win_cursor_yx();
-    // _parent_ptr->win_write("{}\t{}\t{}\n",
-    //                         info.strlevel, info.source, msg);
+    const char *level;
+
+    switch (info.level)
+    {
+        case sihd::util::LogLevel::emergency:
+            level = "EMER";
+            break ;
+        case sihd::util::LogLevel::alert:
+            level = "A";
+            break ;
+        case sihd::util::LogLevel::critical:
+            level = "C";
+            break ;
+        case sihd::util::LogLevel::error:
+            level = "E";
+            break ;
+        case sihd::util::LogLevel::warning:
+            level = "W";
+            break ;
+        case sihd::util::LogLevel::notice:
+            level = "N";
+            break ;
+        case sihd::util::LogLevel::info:
+            level = "I";
+            break ;
+        case sihd::util::LogLevel::debug:
+            level = "D";
+            break ;
+        default:
+            level = "-";
+    }
+    _parent_ptr->win_write("{} [{}] <{}> {}\n", level, info.thread_name.data(), info.source.data(), msg.data());
 }
 
 }

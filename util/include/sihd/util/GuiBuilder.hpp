@@ -2,6 +2,7 @@
 # define __SIHD_UTIL_GUIBUILDER_HPP__
 
 # include <vector>
+# include <array>
 # include <string>
 
 namespace sihd::util
@@ -57,6 +58,7 @@ class GuiBuilder
         void set_window_size(const Block & win);
         int get_y_from_gridsize(int gridsize) const;
         int get_x_from_gridsize(int gridsize) const;
+        std::array<int, 4> grid_pos(const GuiConf & conf) const;
 
         void add_subwindow(const GuiConf & conf);
         void add_subwindows(const std::vector<GuiConf> & conf);

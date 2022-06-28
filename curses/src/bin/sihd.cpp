@@ -35,9 +35,9 @@ int main()
     win2->set_gui_conf({
         .grid_y = 12,
         .grid_x = 6,
-        .grid_push = {
-            .right = 100,
-        },
+        // .grid_push = {
+        //     .right = 100,
+        // },
         .padding = GuiBuilder::Directions::all(1)
     });
 
@@ -47,10 +47,10 @@ int main()
     win1->set_keypad(true);
     win1->win_border();
 
-    win2->win_write("win2");
-    win2->win_write("win2\n\n");
-    win2->win_write("win2");
-    win2->win_write("\nwin\n2");
+    win2->win_write("nolinefeed");
+    win2->win_write(" + dual linefeed\n\nafter dual");
+    win2->win_write(" !");
+    win2->win_write("\nbetween\nafter");
     win2->win_border();
 
     root.win_refresh();
@@ -71,6 +71,14 @@ int main()
                 win1->win_border_clear();
                 win1->win_scroll(-1);
                 win1->cursor_move_y(1);
+                break ;
+            case KEY_RESIZE:
+                root.win_resize();
+                win2->win_write("nolinefeed");
+                win2->win_write(" + dual linefeed\n\nafter dual");
+                win2->win_write(" !");
+                win2->win_write("\nbetween\nafter");
+                win2->win_border();
                 break ;
             default:
             {

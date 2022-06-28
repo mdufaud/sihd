@@ -260,7 +260,10 @@ gcc_flags = [
 ]
 
 ## clang specifics
-clang_flags = ["-Werror", "-Wno-unused-command-line-argument"]
+clang_flags = [
+    "-Werror",
+    "-Wno-unused-command-line-argument"
+]
 clang_libs = ['stdc++', "libc++"]
 clang_defines = [
     'LLVM_ENABLE_EH=YES',

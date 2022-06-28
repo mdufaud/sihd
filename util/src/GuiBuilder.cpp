@@ -77,6 +77,35 @@ void    GuiBuilder::add_subwindows(const std::vector<GuiConf> & conf)
     _subwindow_conf.insert(_subwindow_conf.end(), conf.begin(), conf.end());
 }
 
+
+std::array<int, 4>  GuiBuilder::grid_pos(const GuiConf & conf) const
+{
+    int starting_y = this->get_y_from_gridsize(conf.grid_push.top);
+    starting_y += conf.margin.top;
+
+    int starting_x = this->get_x_from_gridsize(conf.grid_push.left);
+    starting_x += conf.margin.left;
+
+    int wanted_y = this->get_y_from_gridsize(conf.grid_y);
+    wanted_y -= (starting_y + conf.margin.bottom);
+
+    if (conf.max_y >= 0)
+        wanted_y = std::min(wanted_y, conf.max_y);
+    if (conf.min_y >= 0)
+        wanted_y = std::max(wanted_y, conf.min_y);
+
+
+    int wanted_x = this->get_x_from_gridsize(conf.grid_x);
+    wanted_x -= conf.margin.right;
+
+    if (conf.max_x >= 0)
+        wanted_x = std::min(wanted_x, conf.max_x);
+    if (conf.min_x >= 0)
+        wanted_x = std::max(wanted_x, conf.min_x);
+
+    return {wanted_y, wanted_x, starting_y, starting_x};
+}
+
 std::vector<GuiBuilder::Block>  GuiBuilder::build_grid() const
 {
     int current_max_y = 0;
@@ -89,28 +118,7 @@ std::vector<GuiBuilder::Block>  GuiBuilder::build_grid() const
         if (conf.hidden)
             continue ;
 
-        int starting_y = this->get_y_from_gridsize(conf.grid_push.top);
-        starting_y += conf.margin.top;
-
-        int starting_x = this->get_x_from_gridsize(conf.grid_push.left);
-        starting_x += conf.margin.left;
-
-        int wanted_y = this->get_y_from_gridsize(conf.grid_y);
-        wanted_y -= (starting_y + conf.margin.bottom);
-
-        if (conf.max_y >= 0)
-            wanted_y = std::min(wanted_y, conf.max_y);
-        if (conf.min_y >= 0)
-            wanted_y = std::max(wanted_y, conf.min_y);
-
-
-        int wanted_x = this->get_x_from_gridsize(conf.grid_x);
-        wanted_x -= conf.margin.right;
-
-        if (conf.max_x >= 0)
-            wanted_x = std::min(wanted_x, conf.max_x);
-        if (conf.min_x >= 0)
-            wanted_x = std::max(wanted_x, conf.min_x);
+        const auto [wanted_y, wanted_x, starting_y, starting_x] = grid_pos(conf);
 
         if (ret.empty())
         {
