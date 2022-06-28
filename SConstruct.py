@@ -593,8 +593,8 @@ def print_err(*args):
 def display_build_status(success, failures_message):
     if not success:
         print_err("==============================================================")
-        print_err("scons: BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
-        print_err(failures_message)
+        builder_helper.error("BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
+        builder_helper.error(failures_message)
         print_err("==============================================================")
     else:
         builder_helper.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
