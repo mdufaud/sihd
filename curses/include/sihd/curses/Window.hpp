@@ -5,7 +5,7 @@
 
 # include <sihd/util/Node.hpp>
 # include <sihd/util/GuiBuilder.hpp>
-# include <sihd/curses/Term.hpp>
+# include <sihd/curses/Curses.hpp>
 
 namespace sihd::curses
 {
@@ -73,6 +73,7 @@ class Window:   public sihd::util::Node
 
         sihd::util::GuiBuilder _gui_builder;
         sihd::util::GuiBuilder::GuiConf _gui_conf;
+        sihd::util::GuiBuilder::Block _block;
 };
 
 }

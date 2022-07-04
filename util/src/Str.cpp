@@ -8,6 +8,8 @@
 #include <errno.h>
 #include <math.h> // HUGE_VAL
 
+#include <fmt/format.h>
+
 #include <sihd/util/Str.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Time.hpp>
@@ -29,7 +31,7 @@ char Str::g_buffer[SIHD_UTIL_STR_BUFFER];
 // escapes sequences - must match
 const char Str::g_escapes_open[] = "\"'[({<";
 const char Str::g_escapes_close[] = "\"'])}>";
-char Str::g_escape_char = '\\';
+const char Str::g_escape_char = '\\';
 
 void    Str::append_sep(std::string & str, std::string_view append, std::string_view sep)
 {
@@ -789,6 +791,111 @@ std::string     Str::bytes_str(ssize_t bytes, bool iec)
         else
             return Str::format("%ldT", bytes / tbyte);
     }
+}
+
+std::string     Str::word_wrap(std::string_view s, size_t width, bool append_hyphen)
+{
+    if (width == 0)
+        return "";
+    if (width == 1)
+        append_hyphen = false;
+
+    std::string ret;
+    size_t i;
+    size_t curr_width;
+    size_t word_begin;
+    size_t word_end;
+    bool in_word;
+
+    ret.reserve(s.size() + (s.size() / width));
+    i = 0;
+    curr_width = 0;
+    word_begin = 0;
+    word_end = 0;
+    in_word = false;
+    while (i < s.size())
+    {
+        // fmt::print("c={}\n", s[i]);
+        bool should_add = false;
+        if (isspace(s[i]))
+        {
+            if (in_word)
+            {
+                // not in a word but was in a word last idx
+                word_end = i;
+                in_word = false;
+                should_add = true;
+            }
+        }
+        else /* isspace() == false */
+        {
+            if (in_word == false)
+            {
+                // in a word but was not in a word last idx
+                word_begin = i;
+                in_word = true;
+            }
+        }
+        const bool next_is_end = i + 1 >= s.size();
+        if (should_add || (in_word && next_is_end))
+        {
+            // not in a word but was in a word last idx
+            if (next_is_end)
+                word_end = i + 1;
+            size_t word_size = word_end - word_begin;
+
+            if (word_size > width)
+            {
+                // word too big
+                if (curr_width > 0)
+                    ret.append("\n");
+                size_t j = 0;
+                size_t add_size;
+                while (j < word_size)
+                {
+                    // -1 for '-' cut
+                    if (j + width >= word_size)
+                        add_size = word_size - j;
+                    else
+                        add_size = append_hyphen ? width - 1 : width;
+                    ret.append(s.data() + word_begin + j, add_size);
+                    if (j + add_size < word_size)
+                    {
+                        if (append_hyphen)
+                            ret.append("-\n");
+                        else
+                            ret.push_back('\n');
+                    }
+                    j += add_size;
+                    curr_width = add_size;
+                }
+            }
+            else if ((curr_width + word_size > width)
+                    || (curr_width > 0 && curr_width + word_size + 1 >= width))
+            {
+                ret.append("\n");
+                ret.append(s.data() + word_begin, word_size);
+                curr_width = word_size;
+            }
+            else
+            {
+                if (curr_width > 0)
+                {
+                    ret.push_back(' ');
+                    ++curr_width;
+                }
+                ret.append(s.data() + word_begin, word_size);
+                curr_width += word_size;
+            }
+        }
+        if (s[i] == '\n' && !next_is_end)
+        {
+            ret.push_back('\n');
+            curr_width = 0;
+        }
+        ++i;
+    }
+    return ret;
 }
 
 }

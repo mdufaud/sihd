@@ -22,27 +22,26 @@ class Named
         virtual ~Named();
 
         const std::string & name() const;
-        Node *parent() const;
-        const Node *cparent() const;
-
-        template <class C>
-        C *parent() const
-        {
-            return _parent_ptr != nullptr ? dynamic_cast<C *>(_parent_ptr) : nullptr;
-        }
-
-        template <class C>
-        const C *cparent() const
-        {
-            return _parent_ptr != nullptr ? dynamic_cast<C *>(_parent_ptr) : nullptr;
-        }
-
         std::string full_name() const;
         std::string class_name() const;
         virtual std::string description() const
         {
             return "";
         };
+
+        Node *parent() const;
+        const Node *cparent() const;
+
+        template <class C>
+        C *parent() const
+        {
+            return dynamic_cast<C *>(_parent_ptr);
+        }
+        template <class C>
+        const C *cparent() const
+        {
+            return dynamic_cast<const C *>(_parent_ptr);
+        }
 
         virtual bool set_parent(Node *parent);
         bool is_owned_by_parent() const;
@@ -56,10 +55,7 @@ class Named
         template <class C>
         const C *cfind(const std::string & path) const
         {
-            const Named *obj = this->cfind(path);
-            if (obj != nullptr)
-                return dynamic_cast<const C *>(obj);
-            return nullptr;
+            return dynamic_cast<const C *>(this->cfind(path));
         }
         const Node *cfind_node(const std::string & path) const;
 
@@ -68,10 +64,7 @@ class Named
         template <class C>
         C *find(const std::string & path)
         {
-            Named *obj = this->find(path);
-            if (obj != nullptr)
-                return dynamic_cast<C *>(obj);
-            return nullptr;
+            return dynamic_cast<C *>(this->find(path));
         }
         Node *find_node(const std::string & path);
 

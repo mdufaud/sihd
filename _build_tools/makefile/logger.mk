@@ -1,12 +1,12 @@
-ifneq (, $(shell which tput))
-_tput_red = `tput setaf 1`
-_tput_green = `tput setaf 2`
-_tput_yellow = `tput setaf 3`
-_tput_reset = `tput sgr0`
-_mk_tput_red = $(shell tput setaf 1)
-_mk_tput_green = $(shell tput setaf 2)
-_mk_tput_yellow = $(shell tput setaf 3)
-_mk_tput_reset = $(shell tput sgr0)
+ifneq (${TERM},)
+_tput_red = $(echo -e "\033[0;31m")
+_tput_green = $(echo -e "\033[0;32m")
+_tput_yellow = $(echo -e "\033[0;33m")
+_tput_reset = $(echo -e "\033[0m")
+_mk_tput_red = $(shell echo -e "\033[0;32m")
+_mk_tput_green = $(shell echo -e "\033[0;32m")
+_mk_tput_yellow = $(shell echo -e "\033[0;32m")
+_mk_tput_reset = $(shell echo -e "\033[0m")
 else
 _tput_red =
 _tput_green =

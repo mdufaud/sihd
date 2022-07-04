@@ -2,7 +2,7 @@
 # define __SIHD_CURSES_CURSESLOGGER_HPP__
 
 # include <sihd/util/ALogger.hpp>
-# include <sihd/curses/Term.hpp>
+# include <sihd/curses/Curses.hpp>
 
 namespace sihd::curses
 {
@@ -10,7 +10,7 @@ namespace sihd::curses
 class CursesLogger: public sihd::util::ALogger
 {
     public:
-        // takes stdscr by default
+        // takes stdscr by default if nullptr
         CursesLogger(WINDOW *win = nullptr);
         virtual ~CursesLogger();
 

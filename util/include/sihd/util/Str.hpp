@@ -34,7 +34,7 @@ class Str
     public:
         static const char g_escapes_open[];
         static const char g_escapes_close[];
-        static char g_escape_char;
+        static const char g_escape_char;
 
         static size_t hexdump_cols;
 
@@ -45,6 +45,8 @@ class Str
         // fmt strftime -> "%Y-%m-%d %H:%M:%S"
         static std::string format_time(Timestamp t, std::string_view format);
         static std::string format_localtime(Timestamp t, std::string_view format);
+
+        static std::string word_wrap(std::string_view s, size_t width, bool append_hyphen = true);
 
         // si -> 1K = 1000B
         // iec -> 1K = 1024B

@@ -86,6 +86,22 @@ namespace test
             double _dval;
     };
 
+    TEST_F(TestStr, test_str_word_wrap)
+    {
+        EXPECT_EQ(Str::word_wrap("abc", 10), "abc");
+        EXPECT_EQ(Str::word_wrap("  \ta  ", 1), "a");
+        EXPECT_EQ(Str::word_wrap("abc", 0), "");
+        EXPECT_EQ(Str::word_wrap("", 1), "");
+        EXPECT_EQ(Str::word_wrap("a\nbc", 2), "a\nbc");
+        EXPECT_EQ(Str::word_wrap("a b c", 1), "a\nb\nc");
+        EXPECT_EQ(Str::word_wrap("hello world", 5), "hello\nworld");
+        EXPECT_EQ(Str::word_wrap("hello world", 10), "hello\nworld");
+        EXPECT_EQ(Str::word_wrap("abc + def ghi", 10), "abc + def\nghi");
+        EXPECT_EQ(Str::word_wrap("iamfartoolong", 5), "iamf-\narto-\nolong");
+        EXPECT_EQ(Str::word_wrap("helloworld!!", 6), "hello-\nworld-\n!!");
+        EXPECT_EQ(Str::word_wrap("abc\n\ndef\nghi\n", 4), "abc\n\ndef\nghi\n");
+    }
+
     TEST_F(TestStr, test_str_base)
     {
         EXPECT_EQ(Str::to_hex(9), "9");

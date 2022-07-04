@@ -1,5 +1,5 @@
 #include <sihd/util/Logger.hpp>
-#include <sihd/curses/Term.hpp>
+#include <sihd/curses/Curses.hpp>
 #include <sihd/curses/Window.hpp>
 #include <sihd/curses/WindowLogger.hpp>
 #include <sihd/curses/CursesLogger.hpp>
@@ -13,9 +13,9 @@ using namespace sihd::curses;
 
 int main()
 {
-    Term term;
+    Curses curses;
 
-    if (term.is_started() == false)
+    if (curses.is_started() == false)
         return 1;
 
     Window root("root");

@@ -25,25 +25,25 @@ class TermColors(object):
 
     def __init__(self):
         if os.getenv("TERM"):
-            self.reset = "{}0m".format(_term_color_prefix)
-            self.blue = "{}0;34m".format(_term_color_prefix)
+            self.red = "{}0;31m".format(_term_color_prefix)
             self.green = "{}0;32m".format(_term_color_prefix)
             self.orange = "{}0;33m".format(_term_color_prefix)
-            self.red = "{}0;31m".format(_term_color_prefix)
-            self.bold_blue = "{}1;34m".format(_term_color_prefix)
+            self.blue = "{}0;34m".format(_term_color_prefix)
+            self.bold_red = "{}1;31m".format(_term_color_prefix)
             self.bold_green = "{}1;32m".format(_term_color_prefix)
             self.bold_orange = "{}1;33m".format(_term_color_prefix)
-            self.bold_red = "{}1;31m".format(_term_color_prefix)
+            self.bold_blue = "{}1;34m".format(_term_color_prefix)
+            self.reset = "{}0m".format(_term_color_prefix)
         else:
-            self.reset = ""
-            self.blue = ""
+            self.red = ""
             self.green = ""
             self.orange = ""
-            self.red = ""
-            self.bold_blue = ""
+            self.blue = ""
+            self.bold_red = ""
             self.bold_green = ""
             self.bold_orange = ""
-            self.bold_red = ""
+            self.bold_blue = ""
+            self.reset = ""
 
 term_colors = TermColors()
 

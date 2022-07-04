@@ -1,5 +1,5 @@
-#ifndef __SIHD_CURSES_TERM_HPP__
-# define __SIHD_CURSES_TERM_HPP__
+#ifndef __SIHD_CURSES_CURSES_HPP__
+# define __SIHD_CURSES_CURSES_HPP__
 
 # include <mutex>
 
@@ -16,11 +16,11 @@ typedef struct _win WINDOW;
 namespace sihd::curses
 {
 
-class Term
+class Curses
 {
     public:
-        Term(bool raw = false);
-        virtual ~Term();
+        Curses(bool raw = false);
+        virtual ~Curses();
 
         static bool refresh();
         static bool erase();

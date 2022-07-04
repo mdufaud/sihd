@@ -1,7 +1,5 @@
 #include <algorithm>
 
-#include <TextFlow.hpp>
-
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Splitter.hpp>
@@ -77,6 +75,7 @@ void    Window::win_resize()
 
 bool    Window::_grid_move_window(const sihd::util::GuiBuilder::Block & pos)
 {
+    _block = pos;
     _gui_builder.set_window_size(pos);
     const auto grid = _gui_builder.build_grid();
     if (wresize(_win_ptr, pos.max_y, pos.max_x) != OK)
@@ -165,6 +164,7 @@ void    Window::_win_write(std::string_view s) const
     if (s.size() > (size_t)max_width)
     {
         auto str = TextFlow::Column(std::string(s)).width(max_width).toString();
+        // auto str = Str::word_wrap(s, max_width - 1);
         if (!s.empty() && s.at(s.size() - 1) == '\n')
             str += "\n";
         this->_win_write_padding(str);
@@ -195,11 +195,18 @@ void    Window::on_remove_child(const std::string & name, Named *child)
 
 std::pair<int, int> Window::win_relative_yx() const
 {
-    int y;
-    int x;
+    Window *parent = this->parent<Window>();
+    if (parent != nullptr)
+    {
+        auto [parent_y, parent_x] = parent->win_yx();
+        return {_block.y - parent_y, parent_x - _block.x};
+    }
+    return this->win_yx();
+    // int y;
+    // int x;
 
-    getyx(_win_ptr, y, x);
-    return {y, x};
+    // getyx(_win_ptr, y, x);
+    // return {y, x};
 }
 
 std::pair<int, int> Window::win_cursor_yx() const
@@ -213,18 +220,22 @@ std::pair<int, int> Window::win_cursor_yx() const
 
 std::pair<int, int> Window::win_yx() const
 {
-    int y;
-    int x;
+    // int y;
+    // int x;
 
-    getbegyx(_win_ptr, y, x);
-    return {y, x};
+    // getbegyx(_win_ptr, y, x);
+    // return {y, x};
+    return {_block.y, _block.x};
 }
 
 std::pair<int, int> Window::win_max_yx() const
 {
+    /*
     std::pair<int, int> ret;
     getmaxyx(_win_ptr, ret.first, ret.second);
     return ret;
+    */
+    return {_block.y + _block.max_y, _block.x + _block.max_x};
 }
 
 bool    Window::cursor_reset() const

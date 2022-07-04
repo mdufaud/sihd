@@ -8,8 +8,8 @@ extlibs = {
     "gtest": "1.11.0",
     ## json parsing
     "nlohmann_json": "3.9.1",
-    #"fmt": "8.1.1",
     "fmt": "7.1.3",
+    "libuuid": "1.0.3",
     ## http
     "libwebsockets": "4.3.0",
     "libcurl": "7.75.0",
@@ -39,9 +39,11 @@ extlibs = {
 modules = {
     "util": {
         "extlibs": ['nlohmann_json', 'fmt'],
-        "windows-defines": ["FMT_HEADER_ONLY"],
+        "linux-extlibs": ['libuuid'],
         "libs": ['pthread', 'fmt'],
-        "linux-libs": ['dl', 'rt'],
+        "linux-libs": ['dl', 'rt', 'uuid'],
+        "windows-libs": ['rpcrt4'],
+        "windows-defines": ["FMT_HEADER_ONLY"],
     },
     "core": {
         "depends": ['util'],
@@ -181,6 +183,7 @@ apt_packages = {
     "gtest": "libgtest-dev",
     "nlohmann_json": "nlohmann-json3-dev",
     "fmt": "libfmt-dev",
+    "uuid": "uuid-dev",
     "openssl": "openssl",
     "libcurl": "libcurl4-openssl-dev",
     "libwebsockets": "libwebsockets-dev",
@@ -209,6 +212,7 @@ pacman_packages = {
     "gtest": "gtest",
     "nlohmann_json": "nlohmann-json",
     "fmt": "fmt",
+    "uuid": "util-linux-libs",
     "openssl": "openssl",
     "libcurl": "curl",
     "libwebsockets": "libwebsockets",

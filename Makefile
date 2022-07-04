@@ -201,6 +201,8 @@ get_mk_phony = $(shell grep '^.PHONY: .* \#' $1 | sed 's/\.PHONY: \(.*\) \# \(.*
 list:
 	@echo "Makefile targets:"
 	@- $(foreach MAKEFILE_PATH, $(MAKEFILE_LIST), \
+		echo ""; \
+		echo "$(MAKEFILE_PATH):"; \
 		grep '^.PHONY: .* \#' $(MAKEFILE_PATH) | sed 's/\.PHONY: \(.*\) \# \(.*\)/  \1: \2/' | expand -t20; \
 	)
 

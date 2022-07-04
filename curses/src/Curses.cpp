@@ -1,6 +1,6 @@
 # include <curses.h>
 
-#include <sihd/curses/Term.hpp>
+#include <sihd/curses/Curses.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace sihd::curses
@@ -8,51 +8,51 @@ namespace sihd::curses
 
 SIHD_NEW_LOGGER("sihd::curses");
 
-Term::Term(bool raw)
+Curses::Curses(bool raw)
 {
-    Term::start(raw);
+    Curses::start(raw);
 }
 
-Term::~Term()
+Curses::~Curses()
 {
-    Term::stop();
+    Curses::stop();
 }
 
-bool    Term::start(bool raw)
+bool    Curses::start(bool raw)
 {
-    std::lock_guard l(Term::_mutex);
-    if (Term::_started)
+    std::lock_guard l(Curses::_mutex);
+    if (Curses::_started)
         return true;
     if (::initscr() == nullptr)
     {
-        SIHD_LOG(error, "Term: initscr() error");
+        SIHD_LOG(error, "Curses: initscr() error");
         return false;
     }
-    Term::_started = true;
+    Curses::_started = true;
     // no char print
     if (::noecho() != OK)
     {
-        SIHD_LOG(error, "Term: noecho() error");
+        SIHD_LOG(error, "Curses: noecho() error");
         return false;
     }
     // no cursor invisible
     if (::curs_set(0) != OK)
     {
-        SIHD_LOG(error, "Term: curs_set(0) error");
+        SIHD_LOG(error, "Curses: curs_set(0) error");
         return false;
     }
     // curses will be able to make better use of the line-feed capability,
     // resulting in faster cursor motion and able to detect the return key.
     if (::nonl() != OK)
     {
-        SIHD_LOG(error, "Term: nonl() error");
+        SIHD_LOG(error, "Curses: nonl() error");
         return false;
     }
     if (::has_colors())
     {
         if (::start_color() != OK)
         {
-            SIHD_LOG(error, "Term: start_color() error");
+            SIHD_LOG(error, "Curses: start_color() error");
             return false;
         }
     }
@@ -61,7 +61,7 @@ bool    Term::start(bool raw)
     {
         if (::raw() != OK)
         {
-            SIHD_LOG(error, "Term: raw() error");
+            SIHD_LOG(error, "Curses: raw() error");
             return false;
         }
     }
@@ -69,52 +69,52 @@ bool    Term::start(bool raw)
     {
         if (::cbreak() != OK)
         {
-            SIHD_LOG(error, "Term: cbreak() error");
+            SIHD_LOG(error, "Curses: cbreak() error");
             return false;
         }
     }
     if (::refresh() != OK)
     {
-        SIHD_LOG(error, "Term: refresh() error");
+        SIHD_LOG(error, "Curses: refresh() error");
         return false;
     }
     return true;
 }
 
-bool    Term::is_started()
+bool    Curses::is_started()
 {
-    std::lock_guard l(Term::_mutex);
-    return Term::_started;
+    std::lock_guard l(Curses::_mutex);
+    return Curses::_started;
 }
 
-bool    Term::stop()
+bool    Curses::stop()
 {
-    std::lock_guard l(Term::_mutex);
-    if (Term::_started == false)
+    std::lock_guard l(Curses::_mutex);
+    if (Curses::_started == false)
         return true;
     standend();
     ::refresh();
     ::curs_set(1);
     if (::endwin() != OK)
     {
-        SIHD_LOG(error, "Term: endwin() error");
+        SIHD_LOG(error, "Curses: endwin() error");
         return false;
     }
-    Term::_started = false;
+    Curses::_started = false;
     return true;
 }
 
-bool    Term::refresh()
+bool    Curses::refresh()
 {
     return wrefresh(stdscr) == OK;
 }
 
-bool    Term::erase()
+bool    Curses::erase()
 {
     return werase(stdscr) == OK;
 }
 
-bool    Term::clear()
+bool    Curses::clear()
 {
     return wclear(stdscr) == OK;
 }
