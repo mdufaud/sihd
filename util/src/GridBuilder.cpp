@@ -1,4 +1,4 @@
-#include <sihd/util/GuiBuilder.hpp>
+#include <sihd/util/GridBuilder.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace sihd::util
@@ -6,44 +6,44 @@ namespace sihd::util
 
 SIHD_LOGGER
 
-GuiBuilder::GuiBuilder()
+GridBuilder::GridBuilder()
 {
 }
 
-GuiBuilder::GuiBuilder(const Block & win)
+GridBuilder::GridBuilder(const Block & win)
 {
     this->set_window_size(win);
 }
 
-GuiBuilder::~GuiBuilder()
+GridBuilder::~GridBuilder()
 {
 }
 
-void    GuiBuilder::clear_subwindows()
+void    GridBuilder::clear_subwindows()
 {
     _subwindow_conf.clear();
 }
 
-void    GuiBuilder::set_window_size(const Block & win)
+void    GridBuilder::set_window_size(const Block & win)
 {
     _win = win;
 }
 
-int GuiBuilder::get_x_from_gridsize(int gridsize) const
+int GridBuilder::get_x_from_gridsize(int gridsize) const
 {
     gridsize = std::max(gridsize, 0);
-    gridsize = std::min(gridsize, GuiBuilder::grid_max_x);
-    return _win.max_x * (gridsize / (float)GuiBuilder::grid_max_x);
+    gridsize = std::min(gridsize, GridBuilder::grid_max_x);
+    return _win.max_x * (gridsize / (float)GridBuilder::grid_max_x);
 }
 
-int GuiBuilder::get_y_from_gridsize(int gridsize) const
+int GridBuilder::get_y_from_gridsize(int gridsize) const
 {
     gridsize = std::max(gridsize, 0);
-    gridsize = std::min(gridsize, GuiBuilder::grid_max_y);
-    return _win.max_y * (gridsize / (float)GuiBuilder::grid_max_y);
+    gridsize = std::min(gridsize, GridBuilder::grid_max_y);
+    return _win.max_y * (gridsize / (float)GridBuilder::grid_max_y);
 }
 
-std::string     GuiBuilder::conf_str(const std::vector<Block> & blocks)
+std::string     GridBuilder::conf_str(const std::vector<Block> & blocks)
 {
     std::string ret;
     int last_x = std::numeric_limits<int>::max();
@@ -67,18 +67,18 @@ std::string     GuiBuilder::conf_str(const std::vector<Block> & blocks)
     return ret;
 }
 
-void    GuiBuilder::add_subwindow(const GuiConf & conf)
+void    GridBuilder::add_subwindow(const GuiConf & conf)
 {
     _subwindow_conf.push_back(conf);
 }
 
-void    GuiBuilder::add_subwindows(const std::vector<GuiConf> & conf)
+void    GridBuilder::add_subwindows(const std::vector<GuiConf> & conf)
 {
     _subwindow_conf.insert(_subwindow_conf.end(), conf.begin(), conf.end());
 }
 
 
-std::array<int, 4>  GuiBuilder::grid_pos(const GuiConf & conf) const
+std::array<int, 4>  GridBuilder::grid_pos(const GuiConf & conf) const
 {
     int starting_y = this->get_y_from_gridsize(conf.grid_push.top);
     starting_y += conf.margin.top;
@@ -106,7 +106,7 @@ std::array<int, 4>  GuiBuilder::grid_pos(const GuiConf & conf) const
     return {wanted_y, wanted_x, starting_y, starting_x};
 }
 
-std::vector<GuiBuilder::Block>  GuiBuilder::build_grid() const
+std::vector<GridBuilder::Block>  GridBuilder::build_grid() const
 {
     int current_max_y = 0;
     int current_y = _win.y;
@@ -167,26 +167,6 @@ std::vector<GuiBuilder::Block>  GuiBuilder::build_grid() const
         last_grid_right = conf.grid_push.right;
     }
     return ret;
-}
-
-GuiBuilder::Directions GuiBuilder::Directions::all(int val)
-{
-    return Directions {
-        .left = val,
-        .right = val,
-        .top = val,
-        .bottom = val,
-    };
-}
-
-GuiBuilder::Directions GuiBuilder::Directions::both(int left_right, int top_bottom)
-{
-    return Directions {
-        .left = left_right,
-        .right = left_right,
-        .top = top_bottom,
-        .bottom = top_bottom,
-    };
 }
 
 }

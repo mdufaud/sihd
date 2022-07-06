@@ -111,7 +111,7 @@ namespace test
         SIHD_LOG(info, "stream test: " << 1.23 << " - " << "hello");
         ASSERT_EQ(log_counter->msg, "stream test: 1.23 - hello");
 
-        SIHD_LOG_INFO("int test: %02d - %s", 2, "world");
+        SIHD_LOG_INFO("int test: {:02} - {}", 2, "world");
         ASSERT_EQ(log_counter->msg, "int test: 02 - world");
         ASSERT_EQ(log_counter->info, 3);
     }

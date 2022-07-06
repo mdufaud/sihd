@@ -120,8 +120,8 @@ bool    Message::_assign_field_array(IMessageField *field)
         __assign_arr_at += field->field_byte_size();
         if (__assign_arr_at > _total_size)
         {
-            SIHD_LOG_ERROR("Message: for %s total size %lu is inferior to calculated size %lu",
-                        this->name().c_str(), _total_size, __assign_arr_at);
+            SIHD_LOG_ERROR("Message: for {} total size {} is inferior to calculated size {}",
+                        this->name(), _total_size, __assign_arr_at);
             return false;
         }
     }

@@ -88,10 +88,14 @@ namespace test
 
     TEST_F(TestStr, test_str_word_wrap)
     {
-        EXPECT_EQ(Str::word_wrap("abc", 10), "abc");
-        EXPECT_EQ(Str::word_wrap("  \ta  ", 1), "a");
-        EXPECT_EQ(Str::word_wrap("abc", 0), "");
         EXPECT_EQ(Str::word_wrap("", 1), "");
+        EXPECT_EQ(Str::word_wrap("abc", 0), "");
+        EXPECT_EQ(Str::word_wrap("abc", 3), "abc");
+        EXPECT_EQ(Str::word_wrap("  \ta  ", 1), "a");
+        EXPECT_EQ(Str::word_wrap("abc", 3), "abc");
+        EXPECT_EQ(Str::word_wrap("abc", 2), "a-\nbc");
+        EXPECT_EQ(Str::word_wrap("ab c", 2), "ab\nc");
+        EXPECT_EQ(Str::word_wrap("ab c\n", 2), "ab\nc\n");
         EXPECT_EQ(Str::word_wrap("a\nbc", 2), "a\nbc");
         EXPECT_EQ(Str::word_wrap("a b c", 1), "a\nb\nc");
         EXPECT_EQ(Str::word_wrap("hello world", 5), "hello\nworld");
@@ -100,6 +104,50 @@ namespace test
         EXPECT_EQ(Str::word_wrap("iamfartoolong", 5), "iamf-\narto-\nolong");
         EXPECT_EQ(Str::word_wrap("helloworld!!", 6), "hello-\nworld-\n!!");
         EXPECT_EQ(Str::word_wrap("abc\n\ndef\nghi\n", 4), "abc\n\ndef\nghi\n");
+
+        const char *str = "The quick brown fox jumped over the lazy dog";
+
+        EXPECT_EQ(Str::word_wrap(str, 7), "The\n"
+                    "quick\n"
+                    "brown\n"
+                    "fox\n"
+                    "jumped\n"
+                    "over\n"
+                    "the\n"
+                    "lazy\n"
+                    "dog");
+        EXPECT_EQ(Str::word_wrap(str, 8), "The\n"
+                   "quick\n"
+                   "brown\n"
+                   "fox\n"
+                   "jumped\n"
+                   "over the\n"
+                   "lazy dog");
+        EXPECT_EQ(Str::word_wrap(str, 9), "The quick\n"
+                   "brown fox\n"
+                   "jumped\n"
+                   "over the\n"
+                   "lazy dog");
+        EXPECT_EQ(Str::word_wrap(str, 10), "The quick\n"
+                   "brown fox\n"
+                   "jumped\n"
+                   "over the\n"
+                   "lazy dog");
+
+        EXPECT_EQ(Str::word_wrap(str, 11), "The quick\n"
+                   "brown fox\n"
+                   "jumped over\n"
+                   "the lazy\n"
+                   "dog");
+
+        EXPECT_EQ(Str::word_wrap(str, 12), "The quick\n"
+                   "brown fox\n"
+                   "jumped over\n"
+                   "the lazy dog");
+
+        EXPECT_EQ(Str::word_wrap(str, 20), "The quick brown fox\n"
+                   "jumped over the lazy\n"
+                   "dog");
     }
 
     TEST_F(TestStr, test_str_base)

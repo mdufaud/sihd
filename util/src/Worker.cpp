@@ -33,7 +33,7 @@ bool    Worker::start_worker(std::string_view name)
         return true;
     if (_runnable_ptr == nullptr)
     {
-        SIHD_LOG_ERROR("Worker: cannot start worker '%s': nothing to run", name.data());
+        SIHD_LOG_ERROR("Worker: cannot start worker '{}': nothing to run", name);
         return false;
     }
     std::lock_guard l(_mutex_state);

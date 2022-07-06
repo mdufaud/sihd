@@ -53,7 +53,7 @@ namespace test
         win1->set_gui_conf({
             .grid_y = 12,
             .grid_x = 6,
-            .padding = GuiBuilder::Directions::all(1)
+            .padding = {1}
         });
         win2->set_gui_conf({
             .grid_y = 12,
@@ -61,7 +61,7 @@ namespace test
             // .grid_push = {
             //     .right = 100,
             // },
-            .padding = GuiBuilder::Directions::all(1)
+            .padding = {1}
         });
 
         root.init_window();
@@ -70,17 +70,18 @@ namespace test
         win2->set_keypad(true);
         win2->win_border();
 
-        win1->win_write("nolinefeed");
-        win1->win_write(" + dual linefeed\n\nafter dual");
+        win1->win_write("line1");
+        win1->win_write(" + still line1\n\nline3");
         win1->win_write(" !");
-        win1->win_write("\nbetween\nafter");
+        win1->win_write("\nline4\nline5\n");
+        win1->win_write("line6");
         win1->win_border();
 
         root.win_refresh();
 
         while (true)
         {
-            auto key = win1->read();
+            auto key = win2->read();
             switch (key)
             {
                 case 'q':
@@ -97,10 +98,11 @@ namespace test
                     break ;
                 case KEY_RESIZE:
                     root.win_resize();
-                    win1->win_write("nolinefeed");
-                    win1->win_write(" + dual linefeed\n\nafter dual");
+                    win1->win_write("line1");
+                    win1->win_write(" + still line1\n\nline3");
                     win1->win_write(" !");
-                    win1->win_write("\nbetween\nafter");
+                    win1->win_write("\nline4\nline5\n");
+                    win1->win_write("line6");
                     win1->win_border();
                     break ;
                 default:

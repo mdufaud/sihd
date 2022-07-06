@@ -30,7 +30,7 @@ int main()
     win1->set_gui_conf({
         .grid_y = 12,
         .grid_x = 6,
-        .padding = GuiBuilder::Directions::all(1)
+        .padding = {1}
     });
     win2->set_gui_conf({
         .grid_y = 12,
@@ -38,7 +38,7 @@ int main()
         // .grid_push = {
         //     .right = 100,
         // },
-        .padding = GuiBuilder::Directions::all(1)
+        .padding = {1}
     });
 
     root.init_window();

@@ -296,17 +296,17 @@ bool    DevFilter::Rule::parse(std::string_view conf_str)
     std::map<std::string, std::string> rule_conf_map = sihd::util::Str::parse_configuration(conf_str);
     if (rule_conf_map.find(CONF_KEY_CHANNEL_IN) == rule_conf_map.end())
     {
-        SIHD_LOG_ERROR("DevFilter: no channel input '%s' in configuration: %s", CONF_KEY_CHANNEL_IN, conf_str.data());
+        SIHD_LOG_ERROR("DevFilter: no channel input '{}' in configuration: {}", CONF_KEY_CHANNEL_IN, conf_str);
         return false;
     }
     if (rule_conf_map.find(CONF_KEY_CHANNEL_OUT) == rule_conf_map.end())
     {
-        SIHD_LOG_ERROR("DevFilter: no channel output '%s' in configuration: %s", CONF_KEY_CHANNEL_OUT, conf_str.data());
+        SIHD_LOG_ERROR("DevFilter: no channel output '{}' in configuration: {}", CONF_KEY_CHANNEL_OUT, conf_str);
         return false;
     }
     if (rule_conf_map.find(CONF_KEY_TRIGGER) == rule_conf_map.end())
     {
-        SIHD_LOG_ERROR("DevFilter: no trigger value '%s' in configuration: %s", CONF_KEY_TRIGGER, conf_str.data());
+        SIHD_LOG_ERROR("DevFilter: no trigger value '{}' in configuration: {}", CONF_KEY_TRIGGER, conf_str);
         return false;
     }
     this->channel_in = rule_conf_map.at(CONF_KEY_CHANNEL_IN);
@@ -322,7 +322,7 @@ bool    DevFilter::Rule::_parse_options_config(const std::map<std::string, std::
     {
         if (sihd::util::Str::convert_from_string<bool>(conf_map.at(CONF_KEY_MATCH), this->should_match) == false)
         {
-            SIHD_LOG_ERROR("DevFilter: conf error for '%s': %s", CONF_KEY_MATCH, conf_map.at(CONF_KEY_MATCH).c_str());
+            SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_MATCH, conf_map.at(CONF_KEY_MATCH));
             return false;
         }
     }
@@ -331,7 +331,7 @@ bool    DevFilter::Rule::_parse_options_config(const std::map<std::string, std::
         double delay;
         if (sihd::util::Str::convert_from_string<double>(conf_map.at(CONF_KEY_DELAY), delay) == false)
         {
-            SIHD_LOG_ERROR("DevFilter: conf error for '%s': %s", CONF_KEY_DELAY, conf_map.at(CONF_KEY_DELAY).c_str());
+            SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_DELAY, conf_map.at(CONF_KEY_DELAY));
             return false;
         }
         this->nano_delay = sihd::util::Time::from_double(delay);
@@ -482,8 +482,8 @@ bool    DevFilter::InternalRule::set(const DevFilter::Rule *conf, Channel *in, C
 {
     if (in == out)
     {
-        SIHD_LOG_ERROR("DevFilter: config error, channel input '%s' and output '%s' are the same",
-                        conf->channel_in.c_str(), conf->channel_out.c_str());
+        SIHD_LOG_ERROR("DevFilter: config error, channel input '{}' and output '{}' are the same",
+                        conf->channel_in, conf->channel_out);
         return false;
     }
     this->channel_in_ptr = in;
@@ -497,14 +497,14 @@ bool    DevFilter::InternalRule::verify()
     // check if index will be good
     if (rule_ptr->trigger_idx >= this->channel_in_ptr->array()->size())
     {
-        SIHD_LOG_ERROR("DevFilter: trigger index %lu is higher or equal than channel input '%s' size %lu",
-                        rule_ptr->trigger_idx, rule_ptr->channel_in.c_str(), this->channel_in_ptr->array()->size());
+        SIHD_LOG_ERROR("DevFilter: trigger index %lu is higher or equal than channel input '{}' size %lu",
+                        rule_ptr->trigger_idx, rule_ptr->channel_in, this->channel_in_ptr->array()->size());
         return false;
     }
     if (rule_ptr->write_idx >= this->channel_out_ptr->array()->size())
     {
-        SIHD_LOG_ERROR("DevFilter: write index %lu is higher or equal than channel output '%s' size %lu",
-                        rule_ptr->write_idx, rule_ptr->channel_out.c_str(), this->channel_out_ptr->array()->size());
+        SIHD_LOG_ERROR("DevFilter: write index %lu is higher or equal than channel output '{}' size %lu",
+                        rule_ptr->write_idx, rule_ptr->channel_out, this->channel_out_ptr->array()->size());
         return false;
     }
     bool in_array_is_float = this->channel_in_ptr->array()->data_type() == sihd::util::TYPE_FLOAT
@@ -512,8 +512,8 @@ bool    DevFilter::InternalRule::verify()
     // check if trigger value type against channel
     if (rule_ptr->trigger_value.is_float() && in_array_is_float == false)
     {
-        SIHD_LOG_ERROR("DevFilter: type error, trigger value is float and channel input '%s' is not a floating type",
-                        this->channel_in_ptr->name().c_str());
+        SIHD_LOG_ERROR("DevFilter: type error, trigger value is float and channel input '{}' is not a floating type",
+                        this->channel_in_ptr->name());
         return false;
     }
     // check write value type against channel
@@ -523,8 +523,8 @@ bool    DevFilter::InternalRule::verify()
             && ((rule_ptr->write_same_value && rule_ptr->trigger_value.is_float())
                 || (rule_ptr->write_same_value == false && rule_ptr->write_value.is_float())))
     {
-        SIHD_LOG_ERROR("DevFilter: type error, write value is float and channel output '%s' is not a floating type",
-                        this->channel_out_ptr->name().c_str());
+        SIHD_LOG_ERROR("DevFilter: type error, write value is float and channel output '{}' is not a floating type",
+                        this->channel_out_ptr->name());
         return false;
     }
     return true;

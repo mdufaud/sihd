@@ -50,8 +50,8 @@ bool    Node::add_child(const std::string & name, Named *child, bool ownership)
 {
     if (this->get_child(name) != nullptr)
     {
-        SIHD_LOG_WARN("Node: '%s' child '%s' already exists",
-                    this->full_name().c_str(), name.c_str());
+        SIHD_LOG_WARN("Node: '{}' child '{}' already exists",
+                    this->full_name(), name);
         return false;
     }
     bool do_add = this->on_add_child(name, child);
@@ -121,29 +121,6 @@ Named   *Node::get_child(const std::string & name) const
     return entry != nullptr ? entry->obj : nullptr;
 }
 
-/*
-bool    Node::delete_child(const Named *child)
-{
-    return this->delete_child(child->name());
-}
-
-bool    Node::delete_child(const std::string & name)
-{
-    return this->_delete_child_entry(this->_get_child_entry(name));
-}
-
-bool    Node::_delete_child_entry(Node::ChildEntry *entry)
-{
-    if (entry == nullptr)
-        return false;
-    if (entry->ownership && entry->obj != nullptr)
-    {
-        delete entry->obj;
-    }
-    return this->_remove_child_entry(entry);
-}
-*/
-
 bool    Node::remove_child(const Named *child)
 {
     return this->remove_child(child->name());
@@ -206,8 +183,7 @@ bool    Node::add_link(const std::string & link, const std::string & path)
 {
     if (_link_map.find(link) != _link_map.end())
     {
-        SIHD_LOG_WARN("Node: '%s' link '%s' already exists",
-                    this->full_name().c_str(), link.c_str());
+        SIHD_LOG_WARN("Node: '{}' link '{}' already exists", this->full_name(), link);
         return false;
     }
     _link_map[link] = path;
@@ -271,10 +247,10 @@ bool    Node::resolve_links(size_t recursion)
         child = this->resolve_link(path, recursion);
         if (child == nullptr)
         {
-            SIHD_LOG_ERROR("Node: '%s' could not resolve link '%s' => '%s'",
-                        this->full_name().c_str(),
-                        link.c_str(),
-                        path.c_str());
+            SIHD_LOG_ERROR("Node: '{}' could not resolve link '{}' => '{}'",
+                        this->full_name(),
+                        link,
+                        path);
             return false;
         }
         if (this->on_check_link(link, child))

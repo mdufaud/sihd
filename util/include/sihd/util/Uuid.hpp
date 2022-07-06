@@ -28,9 +28,7 @@ class Uuid
         bool operator==(const Uuid & other) const;
 
         bool is_null() const;
-
         std::string str() const;
-
         const uuid_t *uuid() const { return &_uuid; }
 
     protected:

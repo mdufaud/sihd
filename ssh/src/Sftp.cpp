@@ -78,7 +78,7 @@ bool    Sftp::send_file(std::string_view local_path, std::string_view remote_pat
         nwritten = sftp_write(remote_file.get(), buf, nread);
         if (nwritten != nread)
         {
-            SIHD_LOG_ERROR("Sftp: failed writing remote file: '%s' '%d != '%d'", remote_path.data(), nwritten, nread);
+            SIHD_LOG_ERROR("Sftp: failed writing remote file: '{}' '{} != '{}'", remote_path, nwritten, nread);
             ret = false;
             break ;
         }
@@ -117,7 +117,7 @@ bool    Sftp::get_file(std::string_view remote_path, std::string_view local_path
         nwritten = local_file.write(buf, nread);
         if (nwritten != nread)
         {
-            SIHD_LOG_ERROR("Sftp: failed writing local file: '%s' '%d != '%d'", local_path.data(), nwritten, nread);
+            SIHD_LOG_ERROR("Sftp: failed writing local file: '{}' '{} != '{}'", local_path, nwritten, nread);
             ret = false;
             break ;
         }
@@ -137,7 +137,7 @@ bool    Sftp::symlink(std::string_view from, std::string_view to)
 {
     int r = sftp_symlink(_sftp_session_ptr, from.data(), to.data());
     if (r != 0)
-        SIHD_LOG_ERROR("Sftp: failed to create symbolic link from '%s' to '%s' %s", from.data(), to.data(), this->error());
+        SIHD_LOG_ERROR("Sftp: failed to create symbolic link from '{}' to '{}' {}", from, to, this->error());
     return r == SSH_FX_OK;
 }
 
@@ -188,7 +188,7 @@ bool    Sftp::rename(std::string_view from, std::string_view to)
 {
     int r = sftp_rename(_sftp_session_ptr, from.data(), to.data());
     if (r != 0)
-        SIHD_LOG_ERROR("Sftp: failed to rename '%s' to '%s' %s", from.data(), to.data(), this->error());
+        SIHD_LOG_ERROR("Sftp: failed to rename '{}' to '{}' {}", from, to, this->error());
     return r == SSH_FX_OK;
 }
 

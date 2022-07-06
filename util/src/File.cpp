@@ -179,7 +179,7 @@ bool    File::open_tmp(std::string_view prefix, std::string_view mode, std::stri
     const size_t path_size = prefix.size() + 6 + suffix.size();
     if (path_size > PATH_MAX)
     {
-        throw std::runtime_error(Str::format("Path too long: %lu", path_size));
+        throw std::runtime_error(fmt::format("Path too long: {}", path_size));
     }
     char path[path_size];
     strcpy(path, prefix.data());

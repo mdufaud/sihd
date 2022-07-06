@@ -1,21 +1,21 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/GuiBuilder.hpp>
+#include <sihd/util/GridBuilder.hpp>
 #include <sihd/util/TmpDir.hpp>
 
 namespace test
 {
     using namespace sihd::util;
-    class TestGuiBuilder: public ::testing::Test
+    class TestGridBuilder: public ::testing::Test
     {
         protected:
-            TestGuiBuilder()
+            TestGridBuilder()
             {
                 sihd::util::LoggerManager::basic();
             }
 
-            virtual ~TestGuiBuilder()
+            virtual ~TestGridBuilder()
             {
                 sihd::util::LoggerManager::clear_loggers();
             }
@@ -29,12 +29,12 @@ namespace test
             }
     };
 
-    TEST_F(TestGuiBuilder, test_guibuilder_simple)
+    TEST_F(TestGridBuilder, test_guibuilder_simple)
     {
         constexpr int max_lines = 100;
         constexpr int max_cols = 150;
 
-        GuiBuilder builder;
+        GridBuilder builder;
 
         builder.set_window_size({
             .max_y = max_lines,
@@ -105,6 +105,6 @@ namespace test
             EXPECT_EQ(block.max_x, max_cols);
         }
 
-        SIHD_COUT(GuiBuilder::conf_str(blocks));
+        SIHD_COUT(GridBuilder::conf_str(blocks));
     }
 }

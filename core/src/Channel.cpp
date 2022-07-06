@@ -15,9 +15,9 @@ Channel::Channel(const std::string & name, Type type, size_t size, Node *parent)
     _array_ptr = ArrayUtil::create_from_type(type, size);
     if (_array_ptr == nullptr)
     {
-        throw std::invalid_argument(Str::format("Channel: no such type %s for channel %s",
+        throw std::invalid_argument(fmt::format("Channel: no such type {} for channel {}",
                                                     Types::type_str(type),
-                                                    this->name().c_str()));
+                                                    this->name()));
     }
     _array_ptr->resize(size);
     _notifying = false;
@@ -113,7 +113,7 @@ bool    Channel::write(const sihd::util::ArrViewByte & arr_view, size_t byte_off
         std::lock_guard lock(_arr_mutex);
         if (arr_view.byte_size() + byte_offset > _array_ptr->byte_size())
         {
-            SIHD_LOG_ERROR("Channel: cannot write %lu bytes at %lu offset into %lu bytes",
+            SIHD_LOG_ERROR("Channel: cannot write {} bytes at {} offset into {} bytes",
                             arr_view.byte_size(), byte_offset, _array_ptr->byte_size());
             return false;
         }

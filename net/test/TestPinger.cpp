@@ -40,7 +40,7 @@ namespace test
         if (pinger.open(false) == false)
         {
             GTEST_SKIP() << "Must be root or have capabilities to do the test\n"
-                << "execute command: 'sudo setcap cap_net_raw=pe " << OS::executable_path() << "'\n";
+                << "execute command: 'sudo setcap cap_net_raw=pe " << FS::executable_path() << "'\n";
         }
 
         pinger.set_interval(200);

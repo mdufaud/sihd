@@ -77,9 +77,11 @@ bool    Pinger::set_interval(time_t milliseconds_interval)
 void    Pinger::stop()
 {
     _stop = true;
-    _waitable.notify_all();
-    Time::msleep(100);
-    _waitable.notify_all();
+    while (_running)
+    {
+        _waitable.notify_all();
+        Time::msleep(1);
+    }
 }
 
 bool    Pinger::ping(const IpAddr & client, size_t number)
@@ -173,8 +175,8 @@ float   PingResult::packet_loss() const
 
 std::string PingResult::str() const
 {
-    return Str::format("%d packets transmitted, %d received, %.0f%% packet loss, time %.3lfms\n"
-                        "rtt min/avg/max/mdev = %.3lf/%.3lf/%.3lf/%.3lf ms",
+    return fmt::format("{} packets transmitted, {} received, {:.0}% packet loss, time {:.3f}ms\n"
+                        "rtt min/avg/max/mdev = {:.3f}/{:.3f}/{:.3f}/{:.3f} ms",
                         transmitted, received, this->packet_loss(),
                         Time::to_double_milliseconds(time_end - time_start),
                         Time::to_double_milliseconds(rtt_min),

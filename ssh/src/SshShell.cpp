@@ -109,7 +109,7 @@ bool    SshShell::read_loop()
                 nwritten = _channel.write(line, line_size);
                 if (nwritten != (int)line_size)
                 {
-                    SIHD_LOG_ERROR("SshShell: error writing to channel '%d' != '%d'", nwritten, (int)line_size);
+                    SIHD_LOG_ERROR("SshShell: error writing to channel '{}' != '{}'", nwritten, (int)line_size);
                     ret = false;
                     break ;
                 }

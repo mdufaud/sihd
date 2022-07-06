@@ -15,7 +15,7 @@ Timeit::Timeit(std::string_view fun_name)
 Timeit::~Timeit()
 {
     time_t now = _clock.now();
-    SIHD_LOG_DEBUG("Timeit[%s]: time %s", _fun_name.c_str(), Timestamp(now - _begin).timeoffset_str().c_str());
+    SIHD_LOG_DEBUG("Timeit[{}]: time {}", _fun_name, Timestamp(now - _begin).timeoffset_str());
 }
 
 }

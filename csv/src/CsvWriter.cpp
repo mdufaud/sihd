@@ -127,7 +127,7 @@ ssize_t CsvWriter::write(const char *data, size_t size)
     else
         ret += _file.write(data, size);
     if (ret < (ssize_t)size)
-        SIHD_LOG_ERROR("CsvWriter: write failed '%ld' < '%lu'", ret, size);
+        SIHD_LOG_ERROR("CsvWriter: write failed '{}' < '{}'", ret, size);
     _col += ret;
     _max_col = std::max(_max_col, _col);
     return ret;

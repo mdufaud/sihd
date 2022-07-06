@@ -187,7 +187,7 @@ namespace test
             result = buf;
         });
         EXPECT_TRUE(proc.start());
-        usleep(1000);
+        usleep(5000);
         proc.stdin_close();
         EXPECT_TRUE(proc.end());
         EXPECT_EQ(result, "11\n");

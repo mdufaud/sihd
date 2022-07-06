@@ -259,7 +259,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (byte_size % this->data_size() != 0)
             {
-                SIHD_LOG_DEBUG("Array::byte_reserve cannot reserve - %lu not divisible by data size %lu",
+                SIHD_LOG_DEBUG("Array::byte_reserve cannot reserve - {} not divisible by data size {}",
                                 byte_size, this->data_size());
                 return false;
             }
@@ -274,7 +274,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (byte_size % this->data_size() != 0)
             {
-                SIHD_LOG_DEBUG("Array::byte_resize cannot resize - %lu not divisible by data size %lu",
+                SIHD_LOG_DEBUG("Array::byte_resize cannot resize - {} not divisible by data size {}",
                                 byte_size, this->data_size());
                 return false;
             }
@@ -303,7 +303,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (byte_size % this->data_size() != 0)
             {
-                SIHD_LOG_DEBUG("Array::byte_reserve cannot reserve - %lu not divisible by data size %lu",
+                SIHD_LOG_DEBUG("Array::byte_reserve cannot reserve - {} not divisible by data size {}",
                                 byte_size, this->data_size());
                 return false;
             }
@@ -344,13 +344,13 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (byte_size % this->data_size() != 0)
             {
-                SIHD_LOG_DEBUG("Array::assign_bytes cannot assign buffer - size %lu not divisible by %lu",
+                SIHD_LOG_DEBUG("Array::assign_bytes cannot assign buffer - size {} not divisible by {}",
                                 byte_size, this->data_size());
                 return false;
             }
             if (byte_capacity % this->data_size() != 0)
             {
-                SIHD_LOG_DEBUG("Array::assign_bytes cannot assign buffer - capacity %lu not divisible by %lu",
+                SIHD_LOG_DEBUG("Array::assign_bytes cannot assign buffer - capacity {} not divisible by {}",
                                 byte_capacity, this->data_size());
                 return false;
             }
@@ -1270,7 +1270,7 @@ class ArrayUtil
         {
             if (starting_offset > distributing_array.byte_size())
             {
-                SIHD_LOG_DEBUG("ArrayUtil: starting offset is beyond distributing array size (%lu > %lu)",
+                SIHD_LOG_DEBUG("ArrayUtil: starting offset is beyond distributing array size ({} > {})",
                             starting_offset, distributing_array.byte_size());
                 return false;
             }
@@ -1279,7 +1279,7 @@ class ArrayUtil
                 total += pair.second * pair.first->data_size();
             if ((total + starting_offset) > distributing_array.byte_size())
             {
-                SIHD_LOG_DEBUG("ArrayUtil: total distribution exceed array size (%lu > %lu)",
+                SIHD_LOG_DEBUG("ArrayUtil: total distribution exceed array size ({} > {})",
                             total + starting_offset, distributing_array.byte_size());
                 return false;
             }
@@ -1360,7 +1360,7 @@ class ArrayUtil
             if ( ArrayUtil::read_array_into<T>(arr, idx, ret) == false)
             {
                 throw std::invalid_argument(
-                    Str::format("ArrayUtil::read_array cannot copy data from idx %lu into type '%s' (array type: '%s')",
+                    fmt::format("ArrayUtil::read_array cannot copy data from idx {} into type '{}' (array type: '{}')",
                                 idx,
                                 Types::str<T>(),
                                 arr.data_type_str())

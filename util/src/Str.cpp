@@ -815,7 +815,6 @@ std::string     Str::word_wrap(std::string_view s, size_t width, bool append_hyp
     in_word = false;
     while (i < s.size())
     {
-        // fmt::print("c={}\n", s[i]);
         bool should_add = false;
         if (isspace(s[i]))
         {
@@ -871,7 +870,7 @@ std::string     Str::word_wrap(std::string_view s, size_t width, bool append_hyp
                 }
             }
             else if ((curr_width + word_size > width)
-                    || (curr_width > 0 && curr_width + word_size + 1 >= width))
+                    || (curr_width > 0 && curr_width + word_size + 1 > width))
             {
                 ret.append("\n");
                 ret.append(s.data() + word_begin, word_size);

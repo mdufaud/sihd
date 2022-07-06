@@ -4,7 +4,7 @@
 # include <fmt/format.h>
 
 # include <sihd/util/Node.hpp>
-# include <sihd/util/GuiBuilder.hpp>
+# include <sihd/util/GridBuilder.hpp>
 # include <sihd/curses/Curses.hpp>
 
 namespace sihd::curses
@@ -16,7 +16,7 @@ class Window:   public sihd::util::Node
         Window(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~Window();
 
-        bool set_gui_conf(const sihd::util::GuiBuilder::GuiConf & conf);
+        bool set_gui_conf(const sihd::util::GridBuilder::GuiConf & conf);
 
         bool init_window();
 
@@ -54,13 +54,13 @@ class Window:   public sihd::util::Node
         WINDOW *window() { return _win_ptr; }
 
         static std::pair<int, int> stdscr_max_yx();
-        const sihd::util::GuiBuilder::GuiConf & gui_conf() const { return _gui_conf; }
+        const sihd::util::GridBuilder::GuiConf & gui_conf() const { return _gui_conf; }
 
     protected:
         virtual bool on_add_child(const std::string & name, Named *child) override;
         virtual void on_remove_child(const std::string & name, Named *child) override;
 
-        bool _grid_move_window(const sihd::util::GuiBuilder::Block & pos);
+        bool _grid_move_window(const sihd::util::GridBuilder::Block & pos);
 
     private:
         void _win_write(std::string_view s) const;
@@ -71,9 +71,9 @@ class Window:   public sihd::util::Node
 
         std::vector<Window *> _subwindows;
 
-        sihd::util::GuiBuilder _gui_builder;
-        sihd::util::GuiBuilder::GuiConf _gui_conf;
-        sihd::util::GuiBuilder::Block _block;
+        sihd::util::GridBuilder _gui_builder;
+        sihd::util::GridBuilder::GuiConf _gui_conf;
+        sihd::util::GridBuilder::Block _block;
 };
 
 }

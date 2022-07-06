@@ -1,5 +1,5 @@
-#ifndef __SIHD_UTIL_GUIBUILDER_HPP__
-# define __SIHD_UTIL_GUIBUILDER_HPP__
+#ifndef __SIHD_UTIL_GRIDBUILDER_HPP__
+# define __SIHD_UTIL_GRIDBUILDER_HPP__
 
 # include <vector>
 # include <array>
@@ -8,7 +8,7 @@
 namespace sihd::util
 {
 
-class GuiBuilder
+class GridBuilder
 {
     public:
         inline static const int grid_max_y = 12;
@@ -16,13 +16,18 @@ class GuiBuilder
 
         struct Directions
         {
+            Directions() {}
+            Directions(int all):
+                left(all), right(all), top(all), bottom(all) {}
+            Directions(int left_right, int top_bottom):
+                left(left_right), right(left_right), top(top_bottom), bottom(top_bottom) {}
+            Directions(int left, int right, int top, int bottom):
+                left(left), right(right), top(top), bottom(bottom) {}
+
             int left = 0;
             int right = 0;
             int top = 0;
             int bottom = 0;
-
-            static Directions all(int val);
-            static Directions both(int left_right, int top_bottom);
         };
 
         struct GuiConf
@@ -35,9 +40,9 @@ class GuiBuilder
             int min_x = -1;
             int max_x = -1;
 
-            Directions grid_push = {};
-            Directions margin = {};
-            Directions padding = {};
+            Directions grid_push = {0};
+            Directions margin = {0};
+            Directions padding = {0};
 
             bool visible = true;
             bool hidden = false;
@@ -51,9 +56,9 @@ class GuiBuilder
             int max_x = 0;
         };
 
-        GuiBuilder();
-        GuiBuilder(const Block & win);
-        virtual ~GuiBuilder();
+        GridBuilder();
+        GridBuilder(const Block & win);
+        virtual ~GridBuilder();
 
         void set_window_size(const Block & win);
         int get_y_from_gridsize(int gridsize) const;

@@ -29,18 +29,18 @@ Window::~Window()
     }
 }
 
-bool    Window::set_gui_conf(const sihd::util::GuiBuilder::GuiConf & conf)
+bool    Window::set_gui_conf(const sihd::util::GridBuilder::GuiConf & conf)
 {
-    if (conf.grid_x > sihd::util::GuiBuilder::grid_max_x)
+    if (conf.grid_x > sihd::util::GridBuilder::grid_max_x)
     {
         SIHD_LOG(error, "Window: blocksize x cannot be higher than "
-            <<  sihd::util::GuiBuilder::grid_max_x);
+            <<  sihd::util::GridBuilder::grid_max_x);
         return false;
     }
-    if (conf.grid_y > sihd::util::GuiBuilder::grid_max_y)
+    if (conf.grid_y > sihd::util::GridBuilder::grid_max_y)
     {
         SIHD_LOG(error, "Window: blocksize y cannot be higher than "
-            <<  sihd::util::GuiBuilder::grid_max_y);
+            <<  sihd::util::GridBuilder::grid_max_y);
         return false;
     }
     _gui_conf = conf;
@@ -73,7 +73,7 @@ void    Window::win_resize()
     }
 }
 
-bool    Window::_grid_move_window(const sihd::util::GuiBuilder::Block & pos)
+bool    Window::_grid_move_window(const sihd::util::GridBuilder::Block & pos)
 {
     _block = pos;
     _gui_builder.set_window_size(pos);
@@ -130,12 +130,8 @@ bool    Window::init_window()
 
 bool    Window::_move_cursors_begin_line() const
 {
-    auto [y, x] = this->win_cursor_yx();
-    auto [max_y, _] = this->win_max_yx();
-    y = std::max(y, _gui_conf.padding.top);
-    x = std::max(x, _gui_conf.padding.left);
-    y = std::min(max_y, y);
-    return wmove(_win_ptr, y, x) == OK;
+    auto [y, _] = this->win_cursor_yx();
+    return wmove(_win_ptr, y, _gui_conf.padding.left) == OK;
 }
 
 void    Window::_win_write_padding(std::string_view s) const
@@ -163,8 +159,7 @@ void    Window::_win_write(std::string_view s) const
         return ;
     if (s.size() > (size_t)max_width)
     {
-        auto str = TextFlow::Column(std::string(s)).width(max_width).toString();
-        // auto str = Str::word_wrap(s, max_width - 1);
+        std::string str = Str::word_wrap(s, max_width, false);
         if (!s.empty() && s.at(s.size() - 1) == '\n')
             str += "\n";
         this->_win_write_padding(str);
