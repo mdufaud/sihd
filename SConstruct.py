@@ -155,14 +155,24 @@ if not verbose:
         LINKCOMSTR = "linking object files into executable: $TARGET",
     )
 
-if not distribution and \
-        not compiler == "em":
+if not distribution and not compiler == "em":
     base_env.Append(
         RPATH = [
             os.path.abspath(builder_helper.build_lib_path),
             os.path.abspath(builder_helper.build_extlib_lib_path)
         ],
     )
+
+ccache = shutil.which("ccache") and "ccache " or ""
+if verbose and ccache:
+    builder_helper.info("using ccache at: {}".format(shutil.which("ccache")))
+
+if not ccache:
+    # Cache compile build with md5
+    scons_cache_path = '{}/.scons_cache'.format(builder_helper.build_root_path)
+    if verbose:
+        builder_helper.info("using scons cache at: {}".format(scons_cache_path))
+    CacheDir(scons_cache_path)
 
 # CLANG build
 if compiler == "clang":
@@ -200,9 +210,9 @@ elif compiler == "mingw":
 elif compiler == "gcc":
     base_env.Replace(
         # compiler for c
-        CC = "gcc",
+        CC = ccache + "gcc",
         # compiler for c++
-        CXX = "c++",
+        CXX = ccache + "c++",
         # static library archiver
         AR = "ar",
         # static library indexer
@@ -225,12 +235,12 @@ elif compiler == "em":
 # add compiler_[flags/defines/link/libs]
 add_env_app_conf(base_env, compiler)
 
+base_env.Tool('compilation_db')
+base_env["COMPILATIONDB_PATH_FILTER"] = "{}/*".format(builder_helper.build_path)
+base_env.CompilationDatabase()
 
 # Decides when to recompile - removing slow md5 in favor of timestamps
 Decider('timestamp-newer')
-
-# Cache compile build with md5
-CacheDir('{}/.build_cache'.format(builder_helper.build_root_path))
 
 ###############################################################################
 # Build

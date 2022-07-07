@@ -8,6 +8,8 @@
 *.ini
 
 *__pycache__*
+compile_commands.json
+
 
 .scon*
 .vscode

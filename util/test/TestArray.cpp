@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Array.hpp>
+#include <sihd/util/Profiling.hpp>
 
 namespace test
 {
@@ -44,6 +45,55 @@ namespace test
 
             IArray *_array_ptr;
     };
+
+    TEST_F(TestArray, test_array_perf)
+    {
+        constexpr int iterations = 50000;
+        std::vector<int> vec;
+        ArrInt arr;
+
+        {
+            Timeit it("vector push_back");
+            for (auto i = 0; i < iterations; ++i)
+                vec.push_back(i);
+        }
+        {
+            Timeit it("array push_back");
+            for (auto i = 0; i < iterations; ++i)
+                arr.push_back(i);
+        }
+        EXPECT_TRUE(arr.is_equal(vec));
+        {
+            Timeit it("vector access");
+            for (auto i = 0; i < iterations; ++i)
+                vec[i] = vec[i];
+        }
+        {
+            Timeit it("array access");
+            for (auto i = 0; i < iterations; ++i)
+                arr[i] = arr[i];
+        }
+        {
+            Timeit it("vector iter");
+            for (const auto & val: vec)
+                vec[0] = val;
+        }
+        {
+            Timeit it("array iter");
+            for (const auto & val: arr)
+                arr[0] = val;
+        }
+        {
+            Timeit it("vector copy");
+            for (auto i = 0; i < 100; ++i)
+                auto vec2 = vec;
+        }
+        {
+            Timeit it("array copy");
+            for (auto i = 0; i < 100; ++i)
+                auto arr2 = arr;
+        }
+    }
 
     TEST_F(TestArray, test_array_from_string)
     {

@@ -541,7 +541,7 @@ clean_dist:
 
 clean_cache:
 	@$(call mk_log_info,makefile,removing cache)
-	rm -rf $(HERE)/.build_cache
+	rm -rf $(HERE)/.scons_cache
 
 cclean: clean_cache clean
 
@@ -551,7 +551,8 @@ bclean:
 
 fclean: bclean clean_dist clean_cache
 	@$(call mk_log_info,makefile,removing remaining files)
-	@rm -f .sconsign.dblite
+	@rm -f $(HERE)/.sconsign.dblite
+	@rm -f $(HERE)/compile_commands.json
 	@find . -name "*vgcore*" -type f -exec rm -f {} \;
 	@find . -name "*.ini" -type f -exec rm -f {} \;
 	@find . -maxdepth 1 -name "*.scons*" -type d -exec rm -rf {} \;

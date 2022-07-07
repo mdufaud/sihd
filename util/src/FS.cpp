@@ -167,7 +167,7 @@ std::string FS::make_tmp_directory(std::string_view prefix)
     {
         throw std::runtime_error(Str::format("Path too long: %lu", prefix.size() + 6));
     }
-    char path[prefix.size() + 6];
+    char path[prefix.size() + 6 + 1];
     path[0] = 0;
     strcpy(path, prefix.data());
 #if defined(__SIHD_WINDOWS__)
