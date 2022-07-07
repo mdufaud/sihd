@@ -48,21 +48,29 @@ namespace test
 
     TEST_F(TestArray, test_array_perf)
     {
-        constexpr int iterations = 50000;
-        std::vector<int> vec;
-        ArrInt arr;
+        struct Test
+        {
+            int a;
+            int b;
+        };
+
+        Array<Test>::mult_resize_capacity = 2;
+        constexpr int iterations = 30000;
+        constexpr int ncopies = 100;
+        std::vector<Test> vec;
+        Array<Test> arr;
 
         {
             Timeit it("vector push_back");
             for (auto i = 0; i < iterations; ++i)
-                vec.push_back(i);
+                vec.push_back({i, i + 1});
         }
         {
             Timeit it("array push_back");
             for (auto i = 0; i < iterations; ++i)
-                arr.push_back(i);
+                arr.push_back({i, i + 1});
         }
-        EXPECT_TRUE(arr.is_equal(vec));
+        ASSERT_TRUE(arr.is_equal(vec));
         {
             Timeit it("vector access");
             for (auto i = 0; i < iterations; ++i)
@@ -85,12 +93,12 @@ namespace test
         }
         {
             Timeit it("vector copy");
-            for (auto i = 0; i < 100; ++i)
+            for (auto i = 0; i < ncopies; ++i)
                 auto vec2 = vec;
         }
         {
             Timeit it("array copy");
-            for (auto i = 0; i < 100; ++i)
+            for (auto i = 0; i < ncopies; ++i)
                 auto arr2 = arr;
         }
     }
@@ -662,6 +670,9 @@ namespace test
         EXPECT_EQ(arr[0].y, 1337);
 
         SIHD_LOG_DEBUG(arr.str(' '));
+
+        auto arr2 = arr;
+        EXPECT_TRUE(arr.is_equal(arr2));
     }
 
 }

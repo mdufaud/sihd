@@ -1138,12 +1138,14 @@ class Array: public IArray, public ICloneable<Array<T>>
     /* attributes */
     /*********************************************************************/
 
+    static size_t mult_resize_capacity;
+
     protected:
         bool _internal_reserve(size_t capacity, bool clear_mem = true)
         {
-            if (Array::mult_resize_capacity > 1 && _size > 0)
+            if (Array::mult_resize_capacity > 1 && _capacity > 0)
             {
-                size_t new_capacity = _size;
+                size_t new_capacity = _capacity;
                 while (new_capacity < capacity)
                 {
                     new_capacity = new_capacity * Array::mult_resize_capacity;
@@ -1154,7 +1156,7 @@ class Array: public IArray, public ICloneable<Array<T>>
             if (_buf_ptr == nullptr)
                 return false;
             if (clear_mem && capacity > _capacity)
-                memset(_buf_ptr + _size, 0, (capacity - _capacity) * sizeof(T));
+                memset(_buf_ptr + _capacity, 0, (capacity - _capacity) * sizeof(T));
             _size = std::min(_size, capacity);
             _capacity = capacity;
             _has_ownership = true;
@@ -1175,8 +1177,6 @@ class Array: public IArray, public ICloneable<Array<T>>
         size_t _capacity;
         // ownership of pointer
         bool _has_ownership;
-
-        static size_t mult_resize_capacity;
 };
 
 /*********************************************************************/
@@ -1352,7 +1352,8 @@ class ArrayUtil
         static T read_array(const IArray & arr, size_t idx)
         {
             T ret;
-            if ( ArrayUtil::read_array_into<T>(arr, idx, ret) == false)
+
+            if (ArrayUtil::read_array_into<T>(arr, idx, ret) == false)
             {
                 throw std::invalid_argument(
                     fmt::format("ArrayUtil::read_array cannot copy data from idx {} into type '{}' (array type: '{}')",
