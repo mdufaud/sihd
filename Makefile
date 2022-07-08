@@ -85,7 +85,7 @@ endif
 ############
 
 ifeq ($(j),)
-	j = $(UTILS_LOGICAL_CORE_NUMBER)
+	j = $$[ $(UTILS_LOGICAL_CORE_NUMBER) - 2 ]
 endif
 SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(j) $(SCONS_ARGS)
 
@@ -131,7 +131,7 @@ intro:
 	$(call mk_log_info,makefile,compiler = $(COMPILER))
 	$(call mk_log_info,makefile,arch = $(ARCH))
 	$(call mk_log_info,makefile,mode = $(COMPILE_MODE))
-	$(call mk_log_info,makefile,logical cores = $(UTILS_LOGICAL_CORE_NUMBER))
+	$(call mk_log_info,makefile,logical cores = $(UTILS_LOGICAL_CORE_NUMBER) ($(j) used))
 ifeq ($(ANDROID), true)
 	$(call mk_log_warning,makefile,android detected)
 endif
