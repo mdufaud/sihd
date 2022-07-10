@@ -1,4 +1,5 @@
 # Time
+from platform import platform
 import time
 build_start_time = time.time()
 # General utilities
@@ -29,8 +30,11 @@ if builder_helper.verify_args(app) == False:
 # Build settings
 ###############################################################################
 
+is_dry_run = bool(GetOption("no_exec"))
+
 modules_to_build = builder_helper.get_modules()
 modules_forced_to_build = builder_helper.get_force_build_modules()
+build_mode = builder_helper.get_compile_mode()
 
 modules_lst = modules_to_build.split(',')
 if modules_forced_to_build:
@@ -47,7 +51,7 @@ if verbose:
     builder_helper.info("platform: " + build_platform)
     builder_helper.info("compiler: " + compiler)
     builder_helper.info("arch: " + builder_helper.build_architecture)
-    builder_helper.info("mode: " + builder_helper.build_mode)
+    builder_helper.info("mode: " + build_mode)
     builder_helper.info("tests: " + (builder_helper.build_tests and "yes" or "no"))
     builder_helper.info("libraries: " + (builder_helper.build_static_libs and "static" or "shared"))
     builder_helper.info("address sanatizer: " + (builder_helper.build_asan and "yes" or "no"))
@@ -64,10 +68,11 @@ deleted_modules = modules_helper.check_platform(build_modules, build_platform)
 for deleted_modules in deleted_modules:
     builder_helper.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
 
-if deleted_modules:
-    modules_lst = [item for item in modules_lst if item not in deleted_modules]
-    if not modules_lst:
-        Exit(0)
+for deleted_module in deleted_modules:
+    del build_modules[deleted_module]
+
+if not build_modules:
+    Exit(0)
 
 global_libs = getattr(app, "libs", [])
 global_platform_libs = getattr(app, "{}_libs".format(build_platform), [])
@@ -82,6 +87,26 @@ if verbose:
         pp.pprint(global_platform_libs)
     print()
 
+pkg_manager_name = builder_helper.get_pkgdep()
+if pkg_manager_name:
+    try:
+        packages = modules_helper.get_modules_packages(app, pkg_manager_name, build_modules, build_platform)
+    except RuntimeError as e:
+        builder_helper.error(str(e))
+        Exit(1)
+    deps = set(packages.keys())
+    if builder_helper.build_tests:
+        deps.update(getattr(app, "test_extlibs", []))
+    builder_helper.info("dependencies:")
+    pp.pprint(deps)
+    deps_str = " ".join(deps)
+    builder_helper.info("install with:")
+    if pkg_manager_name == "pacman":
+        print("sudo pacman -Syu && sudo pacman -S {}".format(deps_str))
+    else:
+        print("sudo {} update && sudo {} install {}".format(pkg_manager_name, pkg_manager_name, deps_str))
+    Exit(0)
+
 ###############################################################################
 # Build compiling options
 ###############################################################################
@@ -95,9 +120,10 @@ def add_env_app_conf(env, key):
     }
     for envkey, to_concat in env_to_key.items():
         concat = key + to_concat
-        if hasattr(app, concat):
+        attr = getattr(app, concat, None)
+        if attr is not None:
             #prepends
-            env[envkey][:0] = getattr(app, concat)
+            env[envkey][:0] = attr
 
 build_dir = Dir(builder_helper.build_path)
 bin_dir = Dir(builder_helper.build_bin_path)
@@ -139,8 +165,9 @@ if build_platform == "windows":
 
 # add platform_[flags/defines/link/libs]
 add_env_app_conf(base_env, builder_helper.build_platform)
-# add mode_[flags/defines/link/libs]
-add_env_app_conf(base_env, builder_helper.build_mode)
+if build_mode:
+    # add mode_[flags/defines/link/libs]
+    add_env_app_conf(base_env, build_mode)
 
 # Build output
 if not verbose:
@@ -311,7 +338,7 @@ def _env_build_bin(self, src, name=None, add_libs=[], **kwargs):
     add_targets(src)
     if name is None:
         name = self['APP_MODULE_FORMAT_NAME']
-    if compiler == "mingw":
+    if build_platform == "windows":
         name += ".exe"
     bin_env = self.Clone()
     bin_env.Prepend(LIBS = add_libs)
@@ -337,7 +364,8 @@ def _env_git_clone(self, url, branch, dest, recursive = False):
         args.extend(['--branch', branch, '--depth', '1', url, dest])
         if verbose:
             builder_helper.info("git clone cmd: '{}'".format(" ".join(args)))
-        ret = subprocess.call(args) == 0
+        if not is_dry_run:
+            ret = subprocess.call(args) == 0
     if ret:
         modules_cloned_git_repositories.setdefault(modname, []).append(dest)
     return ret
@@ -366,7 +394,8 @@ def _env_replace_in_build(self, to_replace, replace_dic):
             builder_helper.warning("file to replace '{}' does not exists".format(file))
             continue
         builder_helper.debug("replacing file: " + file)
-        _sed_replace(file, replace_dic)
+        if not is_dry_run:
+            _sed_replace(file, replace_dic)
 
 def _env_get_module_env(self, **kwargs):
     return get_module_env(self["APP_MODULE_CONF"], **kwargs)
@@ -528,7 +557,12 @@ for conf in build_order:
     built[modname] = SConscript(module_dir.File("scons.py"),
                                 variant_dir = os.path.join(builder_helper.build_obj_path, modname),
                                 duplicate = 0,
-                                exports = ['env', 'builder_helper', 'module_format_name'])
+                                exports = [
+                                    'env',
+                                    'builder_helper',
+                                    'module_format_name',
+                                    'is_dry_run'
+                                ])
     # fill module configurations with what was actually used
     conf["libs"] = env['LIBS']
     conf["flags"] = env['CPPFLAGS']
@@ -612,6 +646,8 @@ def display_build_status(success, failures_message):
 def after_build():
     success, failures_message = build_status()
     display_build_status(success, failures_message)
+    if is_dry_run:
+        return
     if success and hasattr(app, "on_build_success"):
         app.on_build_success(build_modules, builder_helper)
     elif hasattr(app, "on_build_fail"):

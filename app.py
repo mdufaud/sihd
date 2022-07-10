@@ -183,7 +183,7 @@ apt_packages = {
     "gtest": "libgtest-dev",
     "nlohmann_json": "nlohmann-json3-dev",
     "fmt": "libfmt-dev",
-    "uuid": "uuid-dev",
+    "libuuid": "uuid-dev",
     "openssl": "openssl",
     "libcurl": "libcurl4-openssl-dev",
     "libwebsockets": "libwebsockets-dev",
@@ -212,7 +212,7 @@ pacman_packages = {
     "gtest": "gtest",
     "nlohmann_json": "nlohmann-json",
     "fmt": "fmt",
-    "uuid": "util-linux-libs",
+    "libuuid": "util-linux-libs",
     "openssl": "openssl",
     "libcurl": "curl",
     "libwebsockets": "libwebsockets",
@@ -231,7 +231,7 @@ pacman_packages = {
 # compilation
 #############
 
-## mode specifics
+## mode specifics - default is always debug
 modes = ["debug", "release"]
 
 debug_flags = ["-g", "-O1"]
@@ -282,6 +282,7 @@ mingw_libs = ['ws2_32', 'psapi', 'ucrt']
 mingw_defines = ["_WIN64", "_WIN32_WINNT=0x0600"]
 
 ## test specifics
+test_extlibs = ['gtest']
 test_libs = ['gtest', 'stdc++fs']
 
 #############

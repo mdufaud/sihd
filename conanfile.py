@@ -39,27 +39,34 @@ extlibs = {}
 if modules_to_build != "NONE":
     builder_helper.info("parsing modules")
 
-    modules = modules_helper.build_modules_conf(app, specific_modules=modules_lst)
+    # Get modules configuration for this build
+    try:
+        build_modules = modules_helper.build_modules_conf(app, specific_modules=modules_lst)
+    except RuntimeError as e:
+        builder_helper.error(str(e))
+        exit(1)
 
-    deleted_modules = modules_helper.check_platform(modules, build_platform)
+    # Checking module availability on platforms
+    deleted_modules = modules_helper.check_platform(build_modules, build_platform)
     for deleted_modules in deleted_modules:
         builder_helper.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
 
-    if deleted_modules:
-        modules_lst = [item for item in modules_lst if item not in deleted_modules]
-        if not modules_lst:
-            exit(1)
+    for deleted_module in deleted_modules:
+        del build_modules[deleted_module]
+
+    if not build_modules:
+        exit(0)
 
     if verbose:
         builder_helper.debug("modules configuration: ")
-        pp.pprint(modules)
+        pp.pprint(build_modules)
         print()
 
     builder_helper.info("getting modules external libs")
 
-    extlibs.update(modules_helper.get_modules_extlibs(app, modules, build_platform))
-    if has_test and hasattr(app, "test_libs"):
-        extlibs.update(modules_helper.get_extlibs_versions(app, app.test_libs))
+    extlibs.update(modules_helper.get_modules_extlibs(app, build_modules, build_platform))
+    if has_test and hasattr(app, "test_extlibs"):
+        extlibs.update(modules_helper.get_extlibs_versions(app, app.test_extlibs))
 
     if verbose:
         builder_helper.debug("modules external libs:")
@@ -85,7 +92,6 @@ print()
 post_treatment_libs = {
     "*lua.*": {"from": "lua.", "to": "lua5.3."}
 }
-current_filename = inspect.getframeinfo(inspect.currentframe()).filename
 extlib_path = builder_helper.build_extlib_path
 extlib_lib_path = builder_helper.build_extlib_lib_path
 extlib_hdr_path = builder_helper.build_extlib_hdr_path
@@ -122,8 +128,9 @@ def post_process():
     for match, opt in post_treatment_libs.items():
         pattern = os.path.join(extlib_lib_path, match)
         results = glob.glob(pattern)
-        builder_helper.info(pattern)
-        builder_helper.info(*results)
+        if results:
+            builder_helper.info(pattern)
+            builder_helper.info(*results)
         for result in results:
             link_path = result.replace(opt["from"], opt["to"])
             if os.path.exists(link_path):

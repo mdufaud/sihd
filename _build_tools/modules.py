@@ -82,9 +82,7 @@ def get_module_libs(modules, modname):
     return libs
 
 def get_extlibs_versions(app, modules_extlibs):
-    if not hasattr(app, "extlibs"):
-        return {}
-    extlibs = app.extlibs
+    extlibs = getattr(app, "extlibs", {})
     ret = {}
     # matching with extlibs
     for extlibname in modules_extlibs:
@@ -101,30 +99,22 @@ def get_modules_extlibs(app, modules, platform):
     modules_extlibs = set()
     # getting used libs for every modules
     for _, module in modules.items():
-        extlibs = module.get('extlibs', [])
-        for extlib in extlibs:
-            modules_extlibs.add(extlib)
-        extlibs = module.get('{}-extlibs'.format(platform), [])
-        for extlib in extlibs:
-            modules_extlibs.add(extlib)
-    # adding global libs + test_libs
-    for lib in (hasattr(app, "libs") and app.libs or []):
-        modules_extlibs.add(lib)
+        modules_extlibs.update(module.get('extlibs', []))
+        modules_extlibs.update(module.get('{}-extlibs'.format(platform), []))
     return get_extlibs_versions(app, modules_extlibs)
 
-def get_modules_packages(app, packet_manager_name, modules):
-    key = "{}_packages".format(packet_manager_name)
-    if not hasattr(app, key):
-        return {}
-    package_manager_conf = getattr(app, key)
-    modules_extlibs = get_modules_extlibs(app, modules)
+def get_modules_packages(app, packet_manager_name, modules, platform):
+    pkg_manager_conf_name = "{}_packages".format(packet_manager_name)
+    pkg_manager_conf = getattr(app, pkg_manager_conf_name, None)
+    if pkg_manager_conf is None:
+        raise RuntimeError("App configuration does not have a package manager conf named: '{}'".format(pkg_manager_conf_name))
+    modules_extlibs = get_modules_extlibs(app, modules, platform)
     ret = {}
     for libname, version in modules_extlibs.items():
-        if libname not in package_manager_conf:
+        package_libname = pkg_manager_conf.get(libname, None)
+        if package_libname is None:
             raise SystemExit("external library '{}' not declared in packet manager '{}'".format(libname, packet_manager_name))
-        package_libname = package_manager_conf[libname]
-        if package_libname:
-            ret[package_libname] = version
+        ret[package_libname] = version
     return ret
 
 def add_conditionnal_module(conditionnal_modules, modules, modname):
@@ -193,10 +183,11 @@ def get_conditionnals_from_env(app):
         @return list of module names
     """
     ret = []
-    for key, conf in app.conditionnal_modules.items():
-        cond_env = conf.get("conditionnal-env", None)
-        if cond_env is not None and os.getenv(cond_env, None) == "1":
-            ret.append(key)
+    if hasattr(app, "conditionnal_modules"):
+        for key, conf in app.conditionnal_modules.items():
+            cond_env = conf.get("conditionnal-env", None)
+            if cond_env is not None and os.getenv(cond_env, None) == "1":
+                ret.append(key)
     return ret
 
 def check_platform(modules, platform):

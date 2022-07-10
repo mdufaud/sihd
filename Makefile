@@ -18,6 +18,11 @@ SHELL := /bin/sh
 GREP := /usr/bin/grep
 endif
 
+MAKEARG_1 = $(word 1, $(MAKECMDGOALS))
+MAKEARG_2 = $(word 2, $(MAKECMDGOALS))
+MAKEARG_3 = $(word 3, $(MAKECMDGOALS))
+MAKEARG_4 = $(word 4, $(MAKECMDGOALS))
+
 ##############
 # Builder env
 ##############
@@ -121,21 +126,9 @@ export EXTLIB_LIB_PATH
 # Targets
 ##########
 
-.PHONY: all intro help
+.PHONY: all help
 
 all: build
-
-intro:
-	$(call mk_log_info,makefile,project: $(APP_NAME))
-	$(call mk_log_info,makefile,platform = $(PLATFORM))
-	$(call mk_log_info,makefile,compiler = $(COMPILER))
-	$(call mk_log_info,makefile,arch = $(ARCH))
-	$(call mk_log_info,makefile,mode = $(COMPILE_MODE))
-	$(call mk_log_info,makefile,logical cores = $(UTILS_LOGICAL_CORE_NUMBER) ($(j) used))
-ifeq ($(ANDROID), true)
-	$(call mk_log_warning,makefile,android detected)
-endif
-	@echo > /dev/null
 
 help:
 	$(call mk_log_info,makefile,list all targets: make list)
@@ -152,43 +145,23 @@ help:
 	$(call mk_log_info,makefile,build with emscripten: compiler=em)
 	@echo > /dev/null
 
-##################
-# Scons (builder)
-##################
+######################
+# Build infos
+######################
 
-.PHONY: build # Run scons builder ([mod <comma_separated_modules>])
+.PHONY: info # print build infos
 
-build: intro
-	$(call mk_log_info,makefile,starting build with command: $(SCONS_BUILD_CMD))
-	@cd $(HERE)
-	@verbose=$(verbose) \
-		modules=$(modules) \
-		test=$(test) \
-		dist=$(dist) \
-		mode=$(mode) \
-		asan=$(asan) \
-		$(SCONS_BUILD_CMD)
-
-.PHONY: build_debug # Run scons builder with scons debug
-
-build_debug: SCONS_ARGS = --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
-build_debug: SCONS_PREFIX = time
-build_debug: build
-
-.PHONY: build_verbose # Run scons builder with verbose
-
-build_verbose: verbose = 1
-build_verbose: build
-
-# make mod MODULE
-ifeq ($(word 1, $(MAKECMDGOALS)), mod)
-.PHONY: mod
-MODULES_NAME = $(word 2, $(MAKECMDGOALS))$(m)
-mod: modules = $(MODULES_NAME)
-mod: build
-$(MODULES_NAME):
+info:
+	$(call mk_log_info,makefile,project: $(APP_NAME))
+	$(call mk_log_info,makefile,platform = $(PLATFORM))
+	$(call mk_log_info,makefile,compiler = $(COMPILER))
+	$(call mk_log_info,makefile,arch = $(ARCH))
+	$(call mk_log_info,makefile,mode = $(COMPILE_MODE))
+	$(call mk_log_info,makefile,logical cores = $(UTILS_LOGICAL_CORE_NUMBER) ($(j) used))
+ifeq ($(ANDROID), true)
+	$(call mk_log_warning,makefile,android detected)
+endif
 	@echo > /dev/null
-endif # module
 
 ######################
 # List Makefile rules
@@ -206,17 +179,41 @@ list:
 		grep '^.PHONY: .* \#' $(MAKEFILE_PATH) | sed 's/\.PHONY: \(.*\) \# \(.*\)/  \1: \2/' | expand -t20; \
 	)
 
+##################
+# Scons (builder)
+##################
+
+.PHONY: build # Run scons builder ([mod <comma_separated_modules>])
+
+build:
+	@cd $(HERE)
+	$(eval BUILD_CMD_LINE = \
+			modules=$(modules) test=$(test) dist=$(dist) mode=$(mode) asan=$(asan) verbose=$(verbose) pkgdep=$(pkgdep))
+	@$(call echo_log_info,makefile,starting build with command: '$(SCONS_BUILD_CMD) $(BUILD_CMD_LINE)')
+	@$(BUILD_CMD_LINE) $(SCONS_BUILD_CMD)
+
+.PHONY: build_debug # Run scons builder with scons debug
+
+build_debug: SCONS_ARGS = --debug=count,duplicate,explain,findlibs,includes,memoizer,memory,objects,prepare,presub,stacktrace,time
+build_debug: SCONS_PREFIX = time
+build_debug: build
+
+.PHONY: build_dry # Run scons builder with expected build
+
+build_dry: SCONS_ARGS = --dry-run
+build_dry: build
+
+# make mod MODULE
+ifeq ($(MAKEARG_1), mod)
+.PHONY: mod
+MODULES_NAME = $(MAKEARG_2)$(m)
+mod: modules = $(MODULES_NAME)
+mod: build
+endif # module
+
 ########
 # Test
 ########
-
-# app_module -> module
-get_module_name = $(word 2, $(subst _, , $(notdir $1)))
-
-TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
-TEST_DEFAULT_ARGS =
-TEST_ARGS =
-DEBUGGER_ARGS =
 
 .PHONY: test # Build modules, tests and runs tests ([comma_separated_modules|all|ls] [filter] [repeat=x])
 .PHONY: stest san_test # Build and run tests with address sanatizer and runs tests
@@ -226,7 +223,15 @@ DEBUGGER_ARGS =
 .PHONY: ttest strace_test # Build and run tests with strace
 
 # find string 'test' in target
-ifneq ($(findstring test,$(word 1, $(MAKECMDGOALS))), )
+ifneq ($(findstring test,$(MAKEARG_1)), )
+
+TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
+TEST_DEFAULT_ARGS =
+TEST_ARGS =
+DEBUGGER_ARGS =
+
+# app_module -> module
+get_module_name = $(word 2, $(subst _, , $(notdir $1)))
 
 test: test = 1
 test: build
@@ -273,9 +278,9 @@ ttest: strace_test
 #	make test ls
 #	make test t=FILTER
 COMMA = ,
-MODULES_NAME = $(word 2, $(MAKECMDGOALS))$(m)
+MODULES_NAME = $(MAKEARG_2)$(m)
 MODULES_NAME_SPLIT = $(subst $(COMMA), ,$(MODULES_NAME))
-TEST_NAME = $(word 3, $(MAKECMDGOALS))$(t)
+TEST_NAME = $(MAKEARG_3)$(t)
 TEST_DEFAULT_ARGS += --gtest_death_test_style=threadsafe --gtest_shuffle
 
 ifeq ($(MODULES_NAME),all)
@@ -315,13 +320,14 @@ $(MODULES_NAME):
 	@echo > /dev/null
 $(TEST_NAME):
 	@echo > /dev/null
+
 endif #test
 
 ##################
 # Conan (extlibs)
 ##################
 
-ifeq ($(word 1, $(MAKECMDGOALS)), dep)
+ifeq ($(MAKEARG_1), dep)
 
 ifeq (, $(shell which conan))
 $(error "Makefile: no python-conan detected - it is needed to get dependencies for the project.")
@@ -329,42 +335,48 @@ endif
 
 .PHONY: dep # Run conan to get dependencies ([mod <comma_separated_modules>] [lib <libname>])
 
-dep: intro
+dep:
 	$(call mk_log_info,makefile,starting conan with command: $(CONAN_INSTALL))
 	@env test=$(test) verbose=$(verbose) modules=$(modules) libs=$(libs) $(CONAN_INSTALL)
 
 # make dep mod MODULE
-ifeq ($(word 2, $(MAKECMDGOALS)), mod)
-MODULES_NAME = $(word 3, $(MAKECMDGOALS))$(m)
+ifeq ($(MAKEARG_2), mod)
+MODULES_NAME = $(MAKEARG_3)$(m)
 dep: modules = $(MODULES_NAME)
 mod:
+	@echo > /dev/null
 $(MODULES_NAME):
 	@echo > /dev/null
 endif
 
 # make dep lib LIBNAME
-ifeq ($(word 2, $(MAKECMDGOALS)), lib)
-LIBS_NAME = $(word 3, $(MAKECMDGOALS))
+ifeq ($(MAKEARG_2), lib)
+LIBS_NAME = $(MAKEARG_3)
 dep: modules = NONE
 dep: libs = $(LIBS_NAME)
 mod:
+	@echo > /dev/null
 $(LIBS_NAME):
 	@echo > /dev/null
 endif
 
 # make dep test
-ifeq ($(word 2, $(MAKECMDGOALS)), test)
+ifeq ($(MAKEARG_2), test)
+dep: modules = NONE
 dep: test = 1
 test:
+	@echo > /dev/null
 endif
 
 # make dep build
-ifeq ($(word 2, $(MAKECMDGOALS)), build)
+ifeq ($(MAKEARG_2), build)
 dep: CONAN_ARGS = --build
 build:
+	@echo > /dev/null
 endif
 
 endif # dep
+
 
 .PHONY: checkdep_html # Run conan's HTML dependency tree
 
@@ -380,37 +392,35 @@ checkdep:
 # Distribution
 ###############
 
-# make dist*
-ifneq ($(findstring dist,$(word 1, $(MAKECMDGOALS))), )
+.PHONY: dist  # Compile and package build (tar/apt/pacman)
 
-# make dist* mod MODULE
-ifeq ($(word 2, $(MAKECMDGOALS)), mod)
+# make dist
+ifeq ($(MAKEARG_1), dist)
+
+MODULES_NAME = $(m)
+
+# make dist mod MODULE type
+ifeq ($(MAKEARG_2), mod)
 .PHONY: mod
-MODULES_NAME = $(word 3, $(MAKECMDGOALS))$(m)
+MODULES_NAME = $(MAKEARG_3)$(m)
+DIST_TYPE = $(MAKEARG_4)
+mod:
+	@echo > /dev/null
+else
+# make dist type
+DIST_TYPE = $(MAKEARG_2)
+endif
+
+dist: dist = $(DIST_TYPE)
+dist: mode = release
+dist: modules = $(MODULES_NAME)
+dist: build
+
 $(MODULES_NAME):
 	@echo > /dev/null
-endif # module
 
-.PHONY: dist_tar # Compile, archive and compress build
-
-dist_tar: dist = tar
-dist_tar: mode = release
-dist_tar: modules = $(MODULES_NAME)
-dist_tar: build
-
-.PHONY: dist_apt # Creates an apt package
-
-dist_apt: dist = apt
-dist_apt: mode = release
-dist_apt: modules = $(MODULES_NAME)
-dist_apt: build
-
-.PHONY: dist_pacman # Creates a pacman package
-
-dist_pacman: dist = pacman
-dist_pacman: mode = release
-dist_pacman: modules = $(MODULES_NAME)
-dist_pacman: build
+$(DIST_TYPE):
+	@echo > /dev/null
 
 endif # dist
 

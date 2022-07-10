@@ -2,7 +2,7 @@ import os
 import shutil
 from os.path import join, exists
 
-Import('env')
+Import('env', 'is_dry_run')
 
 ## Clone LuaBridge repository
 
@@ -19,7 +19,8 @@ luabridge_headers_dir = join(module_dir, "luabridge", "Source", "LuaBridge")
 build_include_dir = join(builder_helper.build_hdr_path, "LuaBridge")
 
 builder_helper.info("luabridge: copying headers to: " + build_include_dir)
-shutil.copytree(luabridge_headers_dir, build_include_dir, dirs_exist_ok = True)
+if not is_dry_run:
+    shutil.copytree(luabridge_headers_dir, build_include_dir, dirs_exist_ok = True)
 
 ## Compile files by modules
 
