@@ -3,8 +3,7 @@
 
 # define WHILE_SSH_AGAIN_AND_RETURN(method) {\
     int r;\
-    while ((r = method) == SSH_AGAIN)\
-        ;\
+    while ((r = method) == SSH_AGAIN) { ; }\
     return r == SSH_OK;\
 }
 

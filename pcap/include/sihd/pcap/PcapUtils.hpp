@@ -12,8 +12,9 @@ namespace sihd::pcap
 class PcapUtils
 {
     public:
-        static bool init(unsigned int opts = PCAP_CHAR_ENC_UTF_8);
+        static bool init(int opts = -1);
 
+        // TODO return IpAddr
         static bool lookupnet(std::string_view dev, bpf_u_int32 *ip, bpf_u_int32 *mask);
 
         static std::string status_str(int code);
@@ -32,6 +33,7 @@ class PcapUtils
     protected:
 
     private:
+        PcapUtils() {};
         ~PcapUtils() {};
 
         static bool _is_init;

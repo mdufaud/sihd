@@ -59,7 +59,6 @@ apt install g++
 **clang++ 6.0.0**
 
 ```shell
-# to install
 apt install clang libc++-dev libc++abi-dev llvm
 ```
 
@@ -96,6 +95,12 @@ make dep mod COMMA_SEPARATED_MODULES
 make dep platform=win
 ```
 
+### Get system external libraries list
+
+```shell
+scons pkgdep=[apt|pacman] test=[0|1] modules=COMMA_SEPARATED_MODULES
+```
+
 ---
 
 ## Build
@@ -106,7 +111,7 @@ To build binaries and compile shared libraries with scons
 make
 ```
 
-To compile single/multiple module.s
+To compile module.s
 
 ```shell
 make modules=COMMA_SEPARATED_MODULES

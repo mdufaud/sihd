@@ -561,6 +561,7 @@ int     HttpServer::_lws_websocket_callback(struct lws *wsi, enum lws_callback_r
                 SIHD_LOG(warning, "HttpServer: client connection error: " << error);
             break ;
         }
+#if defined(LWS_CALLBACK_CONNECTING)
         // Called before a socketfd is about to connect()
         case LWS_CALLBACK_CONNECTING:
         {
@@ -568,6 +569,7 @@ int     HttpServer::_lws_websocket_callback(struct lws *wsi, enum lws_callback_r
             SIHD_LOG(debug, "Callback connecting file descriptor: " << fd);
             break ;
         }
+#endif
         default:
             break ;
     }

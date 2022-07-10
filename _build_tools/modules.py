@@ -103,12 +103,11 @@ def get_modules_extlibs(app, modules, platform):
         modules_extlibs.update(module.get('{}-extlibs'.format(platform), []))
     return get_extlibs_versions(app, modules_extlibs)
 
-def get_modules_packages(app, packet_manager_name, modules, platform):
+def get_modules_packages(app, packet_manager_name, modules_extlibs):
     pkg_manager_conf_name = "{}_packages".format(packet_manager_name)
     pkg_manager_conf = getattr(app, pkg_manager_conf_name, None)
     if pkg_manager_conf is None:
         raise RuntimeError("App configuration does not have a package manager conf named: '{}'".format(pkg_manager_conf_name))
-    modules_extlibs = get_modules_extlibs(app, modules, platform)
     ret = {}
     for libname, version in modules_extlibs.items():
         package_libname = pkg_manager_conf.get(libname, None)

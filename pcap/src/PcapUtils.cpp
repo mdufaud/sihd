@@ -18,14 +18,25 @@ std::string PcapUtils::version()
     return pcap_lib_version();
 }
 
-bool    PcapUtils::init(unsigned int opts)
+bool    PcapUtils::init(int opts)
 {
     if (PcapUtils::_is_init)
         return true;
+#if defined(PCAP_CHAR_ENC_UTF_8)
+    if (opts < 0)
+        opts = PCAP_CHAR_ENC_UTF_8;
     char errbuf[PCAP_ERRBUF_SIZE];
     PcapUtils::_is_init = pcap_init(opts, errbuf) == 0;
     if (PcapUtils::_is_init == false)
         SIHD_LOG(error, "PcapUtils: " << errbuf);
+#else
+    (void)opts;
+# if defined(__SIHD_WINDOWS__)
+    PcapUtils::_is_init = pcap_wsockinit() == 0;
+# else
+    PcapUtils::_is_init = true;
+# endif
+#endif
     return PcapUtils::_is_init;
 }
 

@@ -107,7 +107,7 @@ namespace test
                     break ;
                 default:
                 {
-                    SIHD_LOGF(info, "key = {:d} ({:c})", key, key);
+                    SIHD_LOGF(info, "key = {} ({})", key, (char)key);
                     break ;
                 }
             }

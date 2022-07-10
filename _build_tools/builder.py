@@ -326,7 +326,8 @@ def create_tar_package(app):
 # APT
 def create_apt_package(app, modules):
     try:
-        dependencies = build_tools_modules.get_modules_packages(app, "apt", modules, build_platform)
+        modules_extlibs = build_tools_modules.get_modules_extlibs(app, modules, platform)
+        dependencies = build_tools_modules.get_modules_packages(app, "apt", modules_extlibs)
     except SystemExit as err:
         error(err)
         exit(1)
@@ -398,7 +399,8 @@ def create_apt_package(app, modules):
 # PACMAN
 def create_pacman_package(app, modules):
     try:
-        dependencies = build_tools_modules.get_modules_packages(app, "pacman", modules, build_platform)
+        modules_extlibs = build_tools_modules.get_modules_extlibs(app, modules, platform)
+        dependencies = build_tools_modules.get_modules_packages(app, "pacman", modules_extlibs)
     except SystemExit as err:
         error(err)
         exit(1)

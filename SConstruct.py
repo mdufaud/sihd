@@ -90,15 +90,17 @@ if verbose:
 pkg_manager_name = builder_helper.get_pkgdep()
 if pkg_manager_name:
     try:
-        packages = modules_helper.get_modules_packages(app, pkg_manager_name, build_modules, build_platform)
+        modules_extlibs = modules_helper.get_modules_extlibs(app, build_modules, build_platform)
+        packages = modules_helper.get_modules_packages(app, pkg_manager_name, modules_extlibs)
     except RuntimeError as e:
         builder_helper.error(str(e))
         Exit(1)
     deps = set(packages.keys())
     if builder_helper.build_tests:
-        deps.update(getattr(app, "test_extlibs", []))
-    builder_helper.info("dependencies:")
-    pp.pprint(deps)
+        test_extlibs = modules_helper.get_extlibs_versions(app, getattr(app, "test_extlibs", []))
+        test_packages = modules_helper.get_modules_packages(app, pkg_manager_name, test_extlibs)
+        deps.update(test_packages.keys())
+    builder_helper.info("dependencies: " + " ".join(deps))
     deps_str = " ".join(deps)
     builder_helper.info("install with:")
     if pkg_manager_name == "pacman":
@@ -201,17 +203,25 @@ if not ccache:
         builder_helper.info("using scons cache at: {}".format(scons_cache_path))
     CacheDir(scons_cache_path)
 
+num_jobs = GetOption("num_jobs")
+if num_jobs <= 1:
+    from multiprocessing import cpu_count
+    num_jobs = cpu_count()
+    if num_jobs > 3:
+        num_jobs -= 2
+    SetOption("num_jobs", num_jobs)
+
 # CLANG build
 if compiler == "clang":
     base_env.Replace(
         # compiler for c
-        CC = "clang",
+        CC = ccache + "clang",
         # compiler for c++
-        CXX = "clang++",
+        CXX = ccache + "clang++",
         # static library archiver
-        AR = "ar",
+        AR = ccache + "ar",
         # static library indexer
-        RANLIB = "ranlib",
+        RANLIB = ccache + "ranlib",
     )
     if builder_helper.build_asan:
         base_env.Append(
@@ -223,10 +233,10 @@ if compiler == "clang":
 # MINGW build
 elif compiler == "mingw":
     base_env.Replace(
-        CC = "x86_64-w64-mingw32-gcc",
-        CXX = "x86_64-w64-mingw32-g++",
-        AR = "x86_64-w64-mingw32-ar",
-        RANLIB = "x86_64-w64-mingw32-ranlib",
+        CC = ccache + "x86_64-w64-mingw32-gcc",
+        CXX = ccache + "x86_64-w64-mingw32-g++",
+        AR = ccache + "x86_64-w64-mingw32-ar",
+        RANLIB = ccache + "x86_64-w64-mingw32-ranlib",
     )
     if not builder_helper.build_static_libs:
         base_env.Replace(
@@ -241,9 +251,9 @@ elif compiler == "gcc":
         # compiler for c++
         CXX = ccache + "c++",
         # static library archiver
-        AR = "ar",
+        AR = ccache + "ar",
         # static library indexer
-        RANLIB = "ranlib",
+        RANLIB = ccache + "ranlib",
     )
     if builder_helper.build_asan:
         base_env.Append(
@@ -253,18 +263,21 @@ elif compiler == "gcc":
 # EMSCRIPTEN build
 elif compiler == "em":
     base_env.Replace(
-        CC = "emcc",
-        CXX = "em++",
-        AR = "emar",
-        RANLIB = "emranlib",
+        CC = ccache + "emcc",
+        CXX = ccache + "em++",
+        AR = ccache + "emar",
+        RANLIB = ccache + "emranlib",
     )
 
 # add compiler_[flags/defines/link/libs]
 add_env_app_conf(base_env, compiler)
 
-base_env.Tool('compilation_db')
-base_env["COMPILATIONDB_PATH_FILTER"] = "{}/*".format(builder_helper.build_path)
-base_env.CompilationDatabase()
+try:
+    base_env.Tool('compilation_db')
+    base_env["COMPILATIONDB_PATH_FILTER"] = "{}/*".format(builder_helper.build_path)
+    base_env.CompilationDatabase()
+except Exception as e:
+    pass
 
 # Decides when to recompile - removing slow md5 in favor of timestamps
 Decider('timestamp-newer')

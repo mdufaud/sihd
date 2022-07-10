@@ -108,6 +108,7 @@ if not is_dry_run:
 imgui_env = env.Clone()
 # append path "imgui" and "imgui/backends"
 imgui_env.Append(CPPPATH = [str(imgui_dir), str(imgui_backends_dir)])
+imgui_env.Append(CPPFLAGS = "-Wno-misleading-indentation")
 
 imgui_lib = imgui_env.build_lib(imgui_srcs, name = "imgui")
 

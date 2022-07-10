@@ -1,4 +1,5 @@
 #include <sihd/ssh/SshSession.hpp>
+#include <sihd/util/Str.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace sihd::ssh

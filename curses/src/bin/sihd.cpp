@@ -19,8 +19,8 @@ int main()
         return 1;
 
     Window root("root");
-    WindowLogger *win1 = root.add_child<WindowLogger>("win1");
-    Window *win2 = root.add_child<Window>("win2");
+    Window *win1 = root.add_child<Window>("win1");
+    WindowLogger *win2 = root.add_child<WindowLogger>("win2");
 
     root.set_gui_conf({
         .grid_y = 12,
@@ -43,50 +43,52 @@ int main()
 
     root.init_window();
 
-    win1->set_win_scroll(true);
-    win1->set_keypad(true);
-    win1->win_border();
-
-    win2->win_write("nolinefeed");
-    win2->win_write(" + dual linefeed\n\nafter dual");
-    win2->win_write(" !");
-    win2->win_write("\nbetween\nafter");
+    win2->set_win_scroll(true);
+    win2->set_keypad(true);
     win2->win_border();
+
+    win1->win_write("line1");
+    win1->win_write(" + still line1\n\nline3");
+    win1->win_write(" !");
+    win1->win_write("\nline4\nline5\n");
+    win1->win_write("line6");
+    win1->win_border();
 
     root.win_refresh();
 
     while (true)
     {
-        auto key = win1->read();
+        auto key = win2->read();
         switch (key)
         {
             case 'q':
                 return 0;
             case KEY_UP:
-                win1->win_border_clear();
-                win1->win_scroll(1);
-                win1->cursor_move_y(-1);
+                win2->win_border_clear();
+                win2->win_scroll(1);
+                win2->cursor_move_y(-1);
                 break ;
             case KEY_DOWN:
-                win1->win_border_clear();
-                win1->win_scroll(-1);
-                win1->cursor_move_y(1);
+                win2->win_border_clear();
+                win2->win_scroll(-1);
+                win2->cursor_move_y(1);
                 break ;
             case KEY_RESIZE:
                 root.win_resize();
-                win2->win_write("nolinefeed");
-                win2->win_write(" + dual linefeed\n\nafter dual");
-                win2->win_write(" !");
-                win2->win_write("\nbetween\nafter");
-                win2->win_border();
+                win1->win_write("line1");
+                win1->win_write(" + still line1\n\nline3");
+                win1->win_write(" !");
+                win1->win_write("\nline4\nline5\n");
+                win1->win_write("line6");
+                win1->win_border();
                 break ;
             default:
             {
-                SIHD_LOGF(info, "key = {:d} ({:c})", key, key);
+                SIHD_LOGF(info, "key = {} ({})", key, (char)key);
                 break ;
             }
         }
-        win1->win_border();
+        win2->win_border();
         root.win_refresh();
     }
     return 0;

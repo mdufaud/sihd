@@ -9,7 +9,6 @@ extlibs = {
     ## json parsing
     "nlohmann_json": "3.9.1",
     "fmt": "7.1.3",
-    "libuuid": "1.0.3",
     ## http
     "libwebsockets": "4.3.0",
     "libcurl": "7.75.0",
@@ -24,15 +23,19 @@ extlibs = {
     "sdl": "2.0.18",
     "glew": "2.2.0",
     "glfw": "3.3.6",
-    "ncurses": "6.3",
     "pdcurses": "3.9",
     ## bindings
     "pybind11": "2.6.2",
-    "lua": "5.3.5",
     ## compressing utility
     "libzip": "1.7.3",
     ## other
     "libjpeg": "9d",
+
+    # TODO not found/working on conan.io
+    "libuuid": "1.0.3",
+    "lua": "5.3.5",
+    "ncurses": "6.3",
+    "libbluetooth": "",
 }
 
 # modules descriptions
@@ -58,7 +61,7 @@ modules = {
     },
     "curses": {
         "depends": ['util'],
-        # "linux-extlibs": ['ncurses'],
+        "linux-extlibs": ['ncurses'],
         "linux-libs": ['ncurses', 'ncursesw'],
         # if lib is installed on system
         "parse-configs": [
@@ -90,7 +93,7 @@ modules = {
     "usb": {
         "depends": ['util'],
         "extlibs": ['libusb'],
-        "libs": ['usb-1.0'],
+        #"libs": ['usb-1.0'],
         # if lib is installed on system
         "parse-configs": [
             "libusb-config --cflags --libs",
@@ -137,6 +140,7 @@ conditionnal_modules = {
     },
     "lua": {
         # apt liblua5.3-dev / pacman lua
+        "extlibs": ['lua'],
         "depends": ['util'],
         "conditionnal-env": "lua",
         "conditionnal-depends": ['core', 'net', 'http'],
@@ -184,6 +188,7 @@ apt_packages = {
     "nlohmann_json": "nlohmann-json3-dev",
     "fmt": "libfmt-dev",
     "libuuid": "uuid-dev",
+    "ncurses": "libncurses-dev",
     "openssl": "openssl",
     "libcurl": "libcurl4-openssl-dev",
     "libwebsockets": "libwebsockets-dev",
@@ -197,6 +202,8 @@ apt_packages = {
     "glfw": "libglfw3-dev",
     "glew": "libglew-dev",
     "sdl2": "libsdl2-dev",
+    "lua": "liblua5.3-dev",
+    "libssh2": "libssh-dev",
 }
 
 # used to create PKGBUILD build command
@@ -213,6 +220,7 @@ pacman_packages = {
     "nlohmann_json": "nlohmann-json",
     "fmt": "fmt",
     "libuuid": "util-linux-libs",
+    "ncurses": "ncurses",
     "openssl": "openssl",
     "libcurl": "curl",
     "libwebsockets": "libwebsockets",
@@ -225,6 +233,8 @@ pacman_packages = {
     "glfw": "glfw",
     "glew": "glew",
     "sdl2": "sdl2",
+    "lua": "lua",
+    "libssh2": "libssh",
 }
 
 #############
