@@ -36,7 +36,7 @@ class DynMessage: public Message
         virtual IMessageField *clone() const override;
 
     protected:
-        std::vector<IMessageField *> _hidden_fields;
+        std::vector<const IMessageField *> _hidden_fields;
         std::unordered_map<std::string, std::vector<RuleCallback>> _rules;
 
     private:

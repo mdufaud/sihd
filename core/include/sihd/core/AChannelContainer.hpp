@@ -21,8 +21,42 @@ class AChannelContainer:    public sihd::util::Node,
         Channel *find_channel(const std::string & name);
         bool find_channel(const std::string & name, Channel **to_fill);
 
+        template <typename ...T>
+        std::array<Channel *, sizeof...(T)> find_channels(const T & ...args)
+        {
+            std::array<Channel *, sizeof...(T)> array;
+            int i = 0;
+
+            ([&]
+            {
+                array[i] = this->find_channel(args);
+                if (array[i] == nullptr)
+                    throw std::runtime_error(fmt::format("ChannelContainer: '{}' no such channel '{}'", this->full_name(), args));
+                ++i;
+            } (), ...);
+
+            return array;
+        }
+
         Channel *get_channel(const std::string & name);
         bool get_channel(const std::string & name, Channel **to_fill);
+
+        template <typename ...T>
+        std::array<Channel *, sizeof...(T)> get_channels(const T & ...args)
+        {
+            std::array<Channel *, sizeof...(T)> array;
+            int i = 0;
+
+            ([&]
+            {
+                array[i] = this->get_channel(args);
+                if (array[i] == nullptr)
+                    throw std::runtime_error(fmt::format("ChannelContainer: '{}' no such channel '{}'", this->full_name(), args));
+                ++i;
+            } (), ...);
+
+            return array;
+        }
 
         // store channel configuration, when links are resolved, create the channel if unlinked or get the linked one
         Channel *add_unlinked_channel(const std::string & name, sihd::util::Type type, size_t size = 1, bool check_match = true);

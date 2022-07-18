@@ -45,6 +45,15 @@ class Channel:  public sihd::util::Named,
         void set_write_on_change(bool activate) { _write_change_only = activate; }
         void set_clock(sihd::util::IClock *clock);
 
+        // Named
+        virtual std::string description() const override
+        {
+            if (_array_ptr == nullptr)
+                return "empty";
+            return fmt::format("{}[{}]", _array_ptr->data_type_str(), _array_ptr->size());
+        }
+
+        uint8_t *data() const { return _array_ptr->buf(); }
         const sihd::util::IArray *array() const { return _array_ptr; }
 
         template <typename T>

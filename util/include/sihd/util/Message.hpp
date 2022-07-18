@@ -24,6 +24,7 @@ class Message:  public Node,
         // IMessageField
         virtual size_t field_size() const override { return 1; }
         virtual size_t field_byte_size() const override { return _total_size; }
+        virtual Type field_type() const override { return Type::TYPE_BYTE; }
         virtual bool field_assign_buffer(void *buffer) override;
         virtual bool field_read_from(const void *buffer, size_t size) override;
         virtual bool field_write_to(void *buffer, size_t size) override;
