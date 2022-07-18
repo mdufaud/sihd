@@ -89,7 +89,7 @@ void    Channel::do_timestamp()
     _timestamp = _clock_ptr->now();
 }
 
-bool    Channel::copy_to(IArray & arr, size_t byte_offset)
+bool    Channel::copy_to(IArray & arr, size_t byte_offset) const
 {
     std::lock_guard lock(_arr_mutex);
     return arr.copy_from_bytes(*_array_ptr, byte_offset);

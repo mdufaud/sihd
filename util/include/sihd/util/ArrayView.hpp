@@ -152,9 +152,9 @@ class ArrayView: public IArrayView
         {
             if (byte_offset > this->byte_size())
                 return false;
-            if ((this->byte_size() - byte_offset) > size)
+            if ((this->byte_size() - byte_offset) < size)
                 return false;
-            return memcmp(this->buf() + byte_offset, buf, this->byte_size() - byte_offset) == 0;
+            return memcmp(this->buf() + byte_offset, buf, size) == 0;
         }
 
         bool is_bytes_equal(const IArrayView & arr, size_t byte_offset = 0) const
@@ -204,7 +204,7 @@ class ArrayView: public IArrayView
                 return s;
             }
             else
-                return Str::hexdump(_buf_ptr, this->byte_size());
+                return Str::hexdump(_buf_ptr, this->byte_size(), 0);
         }
 
         std::string str(char delimiter) const

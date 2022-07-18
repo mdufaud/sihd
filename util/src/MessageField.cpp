@@ -32,11 +32,17 @@ IMessageField   *MessageField::clone() const
     MessageField *cloned = new MessageField(this->name());
     const IArray *arr = this->array();
     if (arr != nullptr && cloned != nullptr)
-        cloned->build_array(arr->data_type(), arr->size());
+    {
+        if (!cloned->build_array(arr->data_type(), arr->size()))
+        {
+            delete cloned;
+            cloned = nullptr;
+        }
+    }
     return cloned;
 }
 
-bool    MessageField::assign_field_buffer(uint8_t *buffer)
+bool    MessageField::field_assign_buffer(void *buffer)
 {
     if (_size == 0 || _dt == TYPE_NONE || _array_ptr == nullptr)
     {
@@ -47,16 +53,16 @@ bool    MessageField::assign_field_buffer(uint8_t *buffer)
     return _array_ptr->assign_bytes(buffer, this->field_byte_size());
 }
 
-bool    MessageField::field_read_from(const uint8_t *buffer, size_t size)
+bool    MessageField::field_read_from(const void *buffer, size_t size)
 {
     return _array_ptr != nullptr && _array_ptr->copy_from_bytes(buffer, size);
 }
 
-bool    MessageField::field_write_to(uint8_t *buffer, size_t size)
+bool    MessageField::field_write_to(void *buffer, size_t size)
 {
     if (_array_ptr == nullptr)
         return false;
-    size = std::min(size, _array_ptr->size() * _array_ptr->data_size());
+    size = std::min(size, _array_ptr->byte_size());
     return memcpy(buffer, _array_ptr->buf(), size) != nullptr;
 }
 
@@ -66,4 +72,13 @@ void    MessageField::_delete_array()
         delete _array_ptr;
     _array_ptr = nullptr;
 }
+
+bool    MessageField::field_resize(size_t size)
+{
+    if (_array_ptr == nullptr || _array_ptr->resize(size) == false)
+        return false;
+    _size = size;
+    return true;
+}
+
 }

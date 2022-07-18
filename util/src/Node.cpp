@@ -181,17 +181,18 @@ bool    Node::is_link(const std::string & name) const
 
 bool    Node::add_link(const std::string & link, const std::string & path)
 {
-    if (_link_map.find(link) != _link_map.end())
+    if (_link_map.try_emplace(link, path).second == false)
     {
         SIHD_LOG_WARN("Node: '{}' link '{}' already exists", this->full_name(), link);
         return false;
     }
-    _link_map[link] = path;
+    _link_keys.push_back(link);
     return true;
 }
 
 bool    Node::remove_link(const std::string & link)
 {
+    _link_keys.erase(std::find(_link_keys.begin(), _link_keys.end(), link));
     return _link_map.erase(link) > 0;
 }
 
@@ -202,8 +203,7 @@ Named   *Node::resolve_link(const std::string & path, size_t recursion)
         return child;
     if (recursion == MAX_LINK_RECURSION)
         throw Node::MaximumLinkRecursion();
-    auto [parent_path, child_name] = this->parent_path(path);
-    (void)child_name;
+    const auto [parent_path, child_name] = this->parent_path(path);
     Named *named = this->find(parent_path);
     if (named != nullptr)
     {
@@ -242,8 +242,9 @@ bool    Node::resolve_links(size_t recursion)
     Named *child;
 
     bool ret = true;
-    for (auto & [link, path]: _link_map)
+    for (const auto & link: _link_keys)
     {
+        const auto & path = _link_map.at(link);
         child = this->resolve_link(path, recursion);
         if (child == nullptr)
         {

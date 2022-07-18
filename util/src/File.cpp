@@ -173,13 +173,14 @@ bool    File::open_tmpfile()
     return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
 }
 
-bool    File::open_tmp(std::string_view prefix, std::string_view mode, std::string_view suffix)
+bool    File::open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix)
 {
     this->close();
     const size_t path_size = prefix.size() + 6 + suffix.size();
     if (path_size > PATH_MAX)
     {
-        throw std::runtime_error(fmt::format("Path too long: {}", path_size));
+        SIHD_LOGF(error, "File: Path too long: {}", path_size);
+        return false;
     }
     char path[path_size];
     strcpy(path, prefix.data());
@@ -195,7 +196,7 @@ bool    File::open_tmp(std::string_view prefix, std::string_view mode, std::stri
         SIHD_LOG(error, "File: could not open temporary file: " << strerror(errno));
         return false;
     }
-    if (this->open_fd(fd, mode))
+    if (this->open_fd(fd, write_binary ? "wb" : "w"))
         _path = path;
     return this->is_open();
 }

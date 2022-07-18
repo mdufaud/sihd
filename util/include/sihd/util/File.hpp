@@ -36,7 +36,7 @@ class File
         virtual bool open(std::string_view path, std::string_view mode);
         virtual bool open_fd(int fd, std::string_view mode);
         virtual bool set_stream(FILE *stream, bool ownership);
-        virtual bool open_tmp(std::string_view prefix, std::string_view mode, std::string_view suffix = "");
+        virtual bool open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix = "");
         virtual bool open_tmpfile();
         virtual bool is_open() const;
         virtual bool close();

@@ -41,18 +41,9 @@ class Channel:  public sihd::util::Named,
         // "name=CHANNEL_NAME;type=CHANNEL_TYPE;size=CHANNEL_SIZE"
         static Channel *build(std::string_view configuration);
 
-        void set_clock(sihd::util::IClock *clock);
-        // get last write timestamp (thread safe)
-        sihd::util::Timestamp timestamp() const;
-
-        // notifies all observers and prevent writing inside notification thread
-        void notify();
-
-        // write internal timestamp with clock
-        void do_timestamp();
-
         // write and notify only if a change happened
         void set_write_on_change(bool activate) { _write_change_only = activate; }
+        void set_clock(sihd::util::IClock *clock);
 
         const sihd::util::IArray *array() const { return _array_ptr; }
 
@@ -74,21 +65,29 @@ class Channel:  public sihd::util::Named,
         template <typename T>
         bool is_same_type() const { return sihd::util::Types::is_same<T>(_array_ptr->data_type()); }
 
-        // copy internal array into arr
+        // get last write timestamp (thread safe)
+        sihd::util::Timestamp timestamp() const;
 
-        bool copy_to(sihd::util::IArray & arr, size_t byte_offset = 0);
+        // write internal timestamp with clock
+        void do_timestamp();
+
+        // notifies all observers and prevent writing inside notification thread
+        void notify();
+
+        // copy internal array into arr
+        bool copy_to(sihd::util::IArray & arr, size_t byte_offset = 0) const;
 
         // utility for reading
 
         template <typename T>
-        bool read_into(size_t idx, T & val)
+        bool read_into(size_t idx, T & val) const
         {
             std::lock_guard lock(_arr_mutex);
             return sihd::util::ArrayUtil::read_array_into<T>(_array_ptr, idx, val);
         }
 
         template <typename T>
-        T   read(size_t idx)
+        T   read(size_t idx) const
         {
             std::lock_guard lock(_arr_mutex);
             return sihd::util::ArrayUtil::read_array<T>(_array_ptr, idx);

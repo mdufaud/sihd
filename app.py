@@ -42,11 +42,10 @@ extlibs = {
 modules = {
     "util": {
         "extlibs": ['nlohmann_json', 'fmt'],
-        "linux-extlibs": ['libuuid'],
         "libs": ['pthread', 'fmt'],
         "linux-libs": ['dl', 'rt', 'uuid'],
         "windows-libs": ['rpcrt4'],
-        "windows-defines": ["FMT_HEADER_ONLY"],
+        "defines": ["FMT_HEADER_ONLY"],
     },
     "core": {
         "depends": ['util'],
@@ -278,7 +277,7 @@ clang_flags = [
     "-Werror",
     "-Wno-unused-command-line-argument"
 ]
-clang_libs = ['stdc++', "libc++"]
+clang_libs = ['stdc++']
 clang_defines = [
     'LLVM_ENABLE_EH=YES',
     'LLVM_ENABLE_RTTI=ON',

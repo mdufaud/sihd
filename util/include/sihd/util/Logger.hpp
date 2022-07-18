@@ -49,8 +49,8 @@
 #  define SIHD_TRACE(msg)
 #  define SIHD_TRACEF(msg)
 # else
-#  define SIHD_TRACE(msg) SIHD_LOG(debug, "TRACE[" __FILE__ ":"  __SIHD_STRINGIFY__(__LINE__) "] " << msg);
-#  define SIHD_TRACEF(msg, ...) SIHD_LOGF(debug, "TRACE[" __FILE__ ":"  __SIHD_STRINGIFY__(__LINE__) "] " msg, ##__VA_ARGS__);
+#  define SIHD_TRACE(msg) SIHD_LOG(debug, "TRACE[" __SIHD_LOC__ "] " << msg);
+#  define SIHD_TRACEF(msg, ...) SIHD_LOGF(debug, "TRACE[" __SIHD_LOC__ "] " msg, ##__VA_ARGS__);
 # endif
 
 namespace sihd::util

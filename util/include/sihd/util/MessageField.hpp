@@ -18,40 +18,44 @@ class MessageField: public Named,
         ~MessageField();
 
         // IMessageField
+        virtual size_t field_size() const override { return _size; }
         virtual size_t field_byte_size() const override { return _size * Types::type_size(_dt); }
-        virtual bool assign_field_buffer(uint8_t *buffer) override;
-        virtual bool field_read_from(const uint8_t *buffer, size_t size) override;
-        virtual bool field_write_to(uint8_t *buffer, size_t size) override;
+        virtual bool field_assign_buffer(void *buffer) override;
+        virtual bool field_read_from(const void *buffer, size_t size) override;
+        virtual bool field_write_to(void *buffer, size_t size) override;
+        virtual bool field_resize(size_t size) override;
         virtual bool is_finished() const override { return _array_ptr != nullptr; }
         virtual bool finish() override { return this->is_finished(); }
+
+        virtual bool build_array(Type dt, size_t size);
 
         // Named
         virtual std::string description() const override
         {
-            return fmt::format("{}[{}]", Types::type_str(_dt), _size);
+            return fmt::format("{}[{}]", Types::type_str(_dt), this->field_size());
         }
 
         // ICloneable
         virtual IMessageField *clone() const override;
 
         template <typename T>
-        T   read_value(size_t idx)
+        T   read_value(size_t idx) const
         {
             if (_array_ptr == nullptr)
                 throw std::logic_error("array is not built yet");
             return ArrayUtil::read_array<T>(*_array_ptr, idx);
         }
-        virtual bool build_array(Type dt, size_t size);
-        IArray *array() const { return _array_ptr; };
+
+        const IArray *array() const { return _array_ptr; }
 
     protected:
 
     private:
-        void    _delete_array();
+        void _delete_array();
 
-        Type   _dt;
-        size_t      _size;
-        IArray      *_array_ptr;
+        Type _dt;
+        size_t _size;
+        IArray *_array_ptr;
 };
 
 }

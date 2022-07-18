@@ -34,6 +34,32 @@ class Container
         template <typename T>
         using disable_if_map = typename std::enable_if_t<!IsMapContainer<T>::value, bool>;
 
+        template <typename T, typename V>
+        static bool contains(const std::vector<T> & vec, V value)
+        {
+            return std::find(vec.cbegin(), vec.cend(), value) != vec.cend();
+        }
+
+        template <typename T, typename V>
+        static bool erase(std::vector<T> & vec,V value)
+        {
+            const auto it = std::find(vec.begin(), vec.end(), value);
+            const bool ret = it != vec.end();
+            if (ret)
+                vec.erase(it);
+            return ret;
+        }
+
+        template <typename T, typename V>
+        static bool emplace_unique(std::vector<T> & vec, V value)
+        {
+            const auto it = std::find(vec.begin(), vec.end(), value);
+            const bool ret = it == vec.end();
+            if (ret)
+                vec.emplace_back(value);
+            return ret;
+        }
+
     private:
         Container() {};
 };

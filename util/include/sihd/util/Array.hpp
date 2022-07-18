@@ -341,9 +341,9 @@ class Array: public IArray, public ICloneable<Array<T>>
         {
             if (byte_offset > this->byte_size())
                 return false;
-            if ((this->byte_size() - byte_offset) > size)
+            if ((this->byte_size() - byte_offset) < size)
                 return false;
-            return memcmp(this->buf() + byte_offset, buf, this->byte_size() - byte_offset) == 0;
+            return memcmp(this->buf() + byte_offset, buf, size) == 0;
         }
 
         bool is_bytes_equal(const IArray & arr, size_t byte_offset = 0) const
@@ -664,11 +664,14 @@ class Array: public IArray, public ICloneable<Array<T>>
         // delete internal buffer if exists then sets it to array buf - does not take ownership
         bool assign(T *arr, size_t size, size_t capacity)
         {
-            this->delete_buffer();
-            _buf_ptr = arr;
-            _size = size;
-            _capacity = capacity;
-            _has_ownership = false;
+            if (arr != _buf_ptr)
+            {
+                this->delete_buffer();
+                _buf_ptr = arr;
+                _size = size;
+                _capacity = capacity;
+                _has_ownership = false;
+            }
             return true;
         }
 

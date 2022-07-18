@@ -73,11 +73,6 @@ bool    Curses::start(bool raw)
             return false;
         }
     }
-    if (::refresh() != OK)
-    {
-        SIHD_LOG(error, "Curses: refresh() error");
-        return false;
-    }
     return true;
 }
 
@@ -92,7 +87,7 @@ bool    Curses::stop()
     std::lock_guard l(Curses::_mutex);
     if (Curses::_started == false)
         return true;
-    standend();
+    wstandend(stdscr);
     ::refresh();
     ::curs_set(1);
     if (::endwin() != OK)

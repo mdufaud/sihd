@@ -158,6 +158,7 @@ class Node: public Named
 
         std::vector<std::string> _children_keys;
         std::map<std::string, ChildEntry *> _children_map;
+        std::vector<std::string> _link_keys;
         std::map<std::string, std::string> _link_map;
 };
 

@@ -490,11 +490,12 @@ namespace test
         EXPECT_EQ(Str::num_str(15, 16), "f");
         EXPECT_EQ(Str::num_str(255, 16), "ff");
         EXPECT_EQ(Str::hexdump(s.data(), s.length(), ','), "68,65,6c,6c,6f,20,77,6f,72,6c,64,20,2d,20,68,6f,77,20,61,72,65,20,79,6f,75");
+        Str::hexdump_cols = 8;
         std::string dump = Str::hexdump_fmt(s.data(), s.length());
         std::cout << dump << std::endl;
         Splitter splitter("\n");
         auto splits = splitter.split(dump);
-        EXPECT_EQ(splits.size(), 4u);
+        ASSERT_EQ(splits.size(), 4u);
         EXPECT_EQ(splits[0], "0x0:\t68 65 6c 6c 6f 20 77 6f   hello wo");
         EXPECT_EQ(splits[1], "0x8:\t72 6c 64 20 2d 20 68 6f   rld - ho");
         EXPECT_EQ(splits[2], "0x10:\t77 20 61 72 65 20 79 6f   w are yo");

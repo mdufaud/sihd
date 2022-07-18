@@ -130,7 +130,7 @@ bool    Window::init_window()
 
 bool    Window::_move_cursors_begin_line() const
 {
-    auto [y, _] = this->win_cursor_yx();
+    const auto [y, _] = this->win_cursor_yx();
     return wmove(_win_ptr, y, _gui_conf.padding.left) == OK;
 }
 
@@ -158,16 +158,9 @@ void    Window::_win_write(std::string_view s) const
     if (max_width <= 0)
         return ;
     if (s.size() > (size_t)max_width)
-    {
-        std::string str = Str::word_wrap(s, max_width, false);
-        if (!s.empty() && s.at(s.size() - 1) == '\n')
-            str += "\n";
-        this->_win_write_padding(str);
-    }
+        this->_win_write_padding(Str::word_wrap(s, max_width, false));
     else
-    {
         this->_win_write_padding(s);
-    }
 
 }
 
@@ -193,15 +186,11 @@ std::pair<int, int> Window::win_relative_yx() const
     Window *parent = this->parent<Window>();
     if (parent != nullptr)
     {
-        auto [parent_y, parent_x] = parent->win_yx();
-        return {_block.y - parent_y, parent_x - _block.x};
+        const auto [parent_y, parent_x] = parent->win_yx();
+        const auto [y, x] = this->win_yx();
+        return {y - parent_y, x - parent_x};
     }
     return this->win_yx();
-    // int y;
-    // int x;
-
-    // getyx(_win_ptr, y, x);
-    // return {y, x};
 }
 
 std::pair<int, int> Window::win_cursor_yx() const
@@ -215,22 +204,18 @@ std::pair<int, int> Window::win_cursor_yx() const
 
 std::pair<int, int> Window::win_yx() const
 {
-    // int y;
-    // int x;
+    int y;
+    int x;
 
-    // getbegyx(_win_ptr, y, x);
-    // return {y, x};
-    return {_block.y, _block.x};
+    getbegyx(_win_ptr, y, x);
+    return {y, x};
 }
 
 std::pair<int, int> Window::win_max_yx() const
 {
-    /*
     std::pair<int, int> ret;
     getmaxyx(_win_ptr, ret.first, ret.second);
     return ret;
-    */
-    return {_block.y + _block.max_y, _block.x + _block.max_x};
 }
 
 bool    Window::cursor_reset() const

@@ -14,6 +14,8 @@
 # include <sihd/util/Container.hpp>
 # include <sihd/util/Num.hpp>
 # include <sihd/util/Timestamp.hpp>
+# include <sihd/util/IArray.hpp>
+# include <sihd/util/IArrayView.hpp>
 
 namespace sihd::util
 {
@@ -120,8 +122,27 @@ class Str
         static std::string addr_str(void *addr, size_t padding = 0);
         static std::string num_str(uint64_t num, uint16_t base);
         static char num_to_char(size_t num);
-        static std::string hexdump(const void *mem, size_t size, char delim = ' ');
+
+        static std::string hexdump(const IArray & arr, char delim)
+        {
+            return Str::hexdump(arr.buf(), arr.byte_size(), delim);
+        }
+        static std::string hexdump(const IArrayView & arr, char delim)
+        {
+            return Str::hexdump(arr.buf(), arr.byte_size(), delim);
+        }
+        static std::string hexdump(const void *mem, size_t size, char delim);
+
         // formatted hexdump
+
+        static std::string hexdump_fmt(const IArray & arr)
+        {
+            return Str::hexdump_fmt(arr.buf(), arr.byte_size());
+        }
+        static std::string hexdump_fmt(const IArrayView & arr)
+        {
+            return Str::hexdump_fmt(arr.buf(), arr.byte_size());
+        }
         static std::string hexdump_fmt(const void *mem, size_t size);
 
         static bool is_digit(int c, uint16_t base = 10);
