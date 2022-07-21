@@ -1196,18 +1196,6 @@ typedef Array<uint64_t>   ArrULong;
 typedef Array<float>      ArrFloat;
 typedef Array<double>     ArrDouble;
 
-// template class Array<bool>;
-// extern template class Array<bool>;
-
-template class Array<char>;
-extern template class Array<char>;
-
-template class Array<int8_t>;
-extern template class Array<int8_t>;
-
-template class Array<int32_t>;
-extern template class Array<int32_t>;
-
 /*********************************************************************/
 /* array utils for array manipulations */
 /*********************************************************************/

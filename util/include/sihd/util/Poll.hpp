@@ -92,9 +92,6 @@ class Poll: public IStoppableRunnable, public Observable<Poll>
         bool _error;
 };
 
-template class IHandler<Poll *>;
-extern template class IHandler<Poll *>;
-
 }
 
 #endif

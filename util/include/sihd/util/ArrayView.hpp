@@ -616,18 +616,6 @@ typedef ArrayView<uint64_t>   ArrViewULong;
 typedef ArrayView<float>      ArrViewFloat;
 typedef ArrayView<double>     ArrViewDouble;
 
-// template class ArrayView<bool>;
-// extern template class ArrayView<bool>;
-
-template class ArrayView<int8_t>;
-extern template class ArrayView<int8_t>;
-
-template class ArrayView<char>;
-extern template class ArrayView<char>;
-
-template class ArrayView<int>;
-extern template class ArrayView<int>;
-
 }
 
 #endif
