@@ -1,8 +1,6 @@
 #ifndef __SIHD_UTIL_DYNMESSAGE_HPP__
 # define __SIHD_UTIL_DYNMESSAGE_HPP__
 
-# include <unordered_map>
-
 # include <sihd/util/Message.hpp>
 # include <sihd/util/forward.hpp>
 

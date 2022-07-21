@@ -3,6 +3,7 @@
 
 # include <string>
 # include <stdexcept>
+# include <unordered_map>
 
 # include <sihd/util/Types.hpp>
 # include <sihd/util/Array.hpp>
