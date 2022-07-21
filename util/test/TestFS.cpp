@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
+#include <fstream>
 #include <iostream>
 #include <filesystem>
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/FS.hpp>
 #include <sihd/util/Array.hpp>
+#include <sihd/util/Num.hpp>
 
 namespace test
 {

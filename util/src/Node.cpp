@@ -5,7 +5,6 @@
 
 #define MAX_LINK_RECURSION 20
 
-
 namespace sihd::util
 {
 
@@ -274,38 +273,38 @@ const std::vector<std::string> &    Node::children_keys() const
 
 // TREE
 
-void    Node::_tree_child_desc(std::stringstream & ss,
+void    Node::_tree_child_desc(std::string & s,
                                     const TreeOpts & opts,
                                     const std::string & indent,
                                     const std::string & name,
                                     const Named *child) const
 {
-    ss << indent << name;
+    s += fmt::format("{}{}", indent, name);
     Node *parent = child->parent();
     if (name != child->name())
-        ss << " => " << child->full_name();
+        s += fmt::format("  => {}", child->full_name());
     else if (parent != this)
-        ss << " -> " << child->full_name();
+        s += fmt::format("  -> {}", child->full_name());
 
-    ss << ": " << child->class_name();
-    this->_add_tree_desc(ss, opts, child);
-    ss << std::endl;
+    s += fmt::format(": {}", child->class_name());
+    this->_add_tree_desc(s, opts, child);
+    s += "\n";
     const Node *node = dynamic_cast<const Node *>(child);
     if (node != nullptr)
-        node->_tree_children(ss, opts);
+        node->_tree_children(s, opts);
 }
 
-void    Node::_iterate_tree_children(std::stringstream & ss, TreeOpts & opts, const std::string & indent) const
+void    Node::_iterate_tree_children(std::string & s, TreeOpts & opts, const std::string & indent) const
 {
     for (const std::string & name: _children_keys)
     {
         Named *child = this->get_child(name);
         if (child != nullptr)
-            this->_tree_child_desc(ss, opts, indent, name, child);
+            this->_tree_child_desc(s, opts, indent, name, child);
     }
 }
 
-void    Node::_tree_children(std::stringstream & ss, TreeOpts opts) const
+void    Node::_tree_children(std::string & s, TreeOpts opts) const
 {
     opts.current_recursion += 1;
     if (opts.max_recursion != 0 && opts.max_recursion == opts.current_recursion)
@@ -314,16 +313,16 @@ void    Node::_tree_children(std::stringstream & ss, TreeOpts opts) const
         return ;
     std::string indent(opts.indent, ' ');
     opts.indent += opts.indent_by_iter;
-    this->_iterate_tree_children(ss, opts, indent);
+    this->_iterate_tree_children(s, opts, indent);
 }
 
-void    Node::_add_tree_desc(std::stringstream & ss, const TreeOpts & opts, const Named *child) const
+void    Node::_add_tree_desc(std::string & s, const TreeOpts & opts, const Named *child) const
 {
     if (opts.description)
     {
         std::string desc = child->description();
         if (desc.empty() == false)
-            ss << " - " << desc;
+            s += fmt::format(" - {}", desc);
     }
 }
 
@@ -344,13 +343,17 @@ std::string     Node::tree_str(TreeOpts opts) const
     std::string indent(opts.indent, ' ');
     opts.indent += opts.indent_by_iter;
     opts.current_recursion = 0;
-    std::stringstream ss;
 
-    ss << indent << this->name() << ": " << this->class_name();
-    this->_add_tree_desc(ss, opts, this);
-    ss << std::endl;
-    this->_tree_children(ss, opts);
-    return ss.str();
+    std::string s = fmt::format("{}{}: {}", indent, this->name(), this->class_name());
+    this->_add_tree_desc(s, opts, this);
+    s += "\n";
+    this->_tree_children(s, opts);
+    return s;
+}
+
+Node::AlreadyHasChild::AlreadyHasChild(std::string_view name)
+{
+    this->ex = fmt::format("Child {} already exists", name);
 }
 
 }

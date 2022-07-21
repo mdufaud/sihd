@@ -1,11 +1,10 @@
 #ifndef __SIHD_UTIL_LINEREADER_HPP__
 # define __SIHD_UTIL_LINEREADER_HPP__
 
-# include <sihd/util/Node.hpp>
+# include <sihd/util/Named.hpp>
 # include <sihd/util/IReader.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/File.hpp>
-# include <queue>
 
 namespace sihd::util
 {

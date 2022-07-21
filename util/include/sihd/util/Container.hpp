@@ -1,7 +1,9 @@
 #ifndef __SIHD_UTIL_CONTAINER_HPP__
 # define __SIHD_UTIL_CONTAINER_HPP__
 
+# include <algorithm>
 # include <type_traits>
+# include <vector>
 
 namespace sihd::util
 {
@@ -35,13 +37,13 @@ class Container
         using disable_if_map = typename std::enable_if_t<!IsMapContainer<T>::value, bool>;
 
         template <typename T, typename V>
-        static bool contains(const T & container, V && value)
+        static bool contains(const T & container, const V & value)
         {
-            return std::find(container.cbegin(), container.cend(), value) != container.cend();
+            return std::find(container.begin(), container.end(), value) != container.end();
         }
 
         template <typename T, typename V>
-        static bool erase(std::vector<T> & container, V && value)
+        static bool erase(T & container, const V & value)
         {
             auto it = std::remove(container.begin(), container.end(), value);
             bool ret = it != container.end();
@@ -49,8 +51,8 @@ class Container
             return ret;
         }
 
-        template <typename T, typename V>
-        static bool emplace_unique(std::vector<T> & vec, V && value)
+        template <typename T>
+        static bool emplace_unique(std::vector<T> & vec, const T & value)
         {
             const auto it = std::find(vec.begin(), vec.end(), value);
             const bool ret = it == vec.end();

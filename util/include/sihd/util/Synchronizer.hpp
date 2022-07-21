@@ -1,8 +1,9 @@
 #ifndef __SIHD_UTIL_SYNCHRONIZER_HPP__
 # define __SIHD_UTIL_SYNCHRONIZER_HPP__
 
-# include <sihd/util/Waitable.hpp>
 # include <atomic>
+
+# include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
 {

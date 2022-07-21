@@ -1,19 +1,18 @@
 #ifndef __SIHD_UTIL_ARRAY_HPP__
 # define __SIHD_UTIL_ARRAY_HPP__
 
-# include <sihd/util/Logger.hpp>
-# include <sihd/util/IArray.hpp>
-# include <sihd/util/Splitter.hpp>
-# include <sihd/util/ICloneable.hpp>
+# include <string.h>
+# include <strings.h>
 
 # include <utility>
 # include <cstdint>
 # include <stdexcept>
-# include <memory>
 # include <algorithm>
 
-# include <string.h>
-# include <strings.h>
+# include <sihd/util/Logger.hpp>
+# include <sihd/util/IArray.hpp>
+# include <sihd/util/Splitter.hpp>
+# include <sihd/util/ICloneable.hpp>
 
 namespace sihd::util
 {
@@ -75,12 +74,6 @@ class Array: public IArray, public ICloneable<Array<T>>
         Array(const std::vector<T> & vec): Array()
         {
             this->push_back(vec);
-        }
-
-        template <size_t ARRAY_SIZE>
-        Array(const std::array<T, ARRAY_SIZE> & array): Array()
-        {
-            this->push_back(array);
         }
 
         /*********************************************************************/
@@ -628,14 +621,14 @@ class Array: public IArray, public ICloneable<Array<T>>
         /*********************************************************************/
 
         // delete internal buffer if exists then sets it to vector buf - does not take ownership
-        bool assign(const std::vector<T> & vec)
+        bool assign(std::vector<T> & vec)
         {
             return this->assign(vec.data(), vec.size());
         }
 
         // delete internal buffer if exists then sets it to array buf - does not take ownership
         template <size_t ARRAY_SIZE>
-        bool assign(const std::array<T, ARRAY_SIZE> & array)
+        bool assign(std::array<T, ARRAY_SIZE> & array)
         {
             return this->assign(array.data(), array.size());
         }
@@ -684,11 +677,11 @@ class Array: public IArray, public ICloneable<Array<T>>
             return this->push_back(vec.data(), vec.size());
         }
 
-        template <size_t ARRAY_SIZE>
-        bool push_back(const std::array<T, ARRAY_SIZE> & array)
-        {
-            return this->push_back(array.data(), array.size());
-        }
+        // template <size_t ARRAY_SIZE>
+        // bool push_back(const std::array<T, ARRAY_SIZE> & array)
+        // {
+        //     return this->push_back(array.data(), array.size());
+        // }
 
         // char specialization
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
@@ -1202,6 +1195,18 @@ typedef Array<int64_t>    ArrLong;
 typedef Array<uint64_t>   ArrULong;
 typedef Array<float>      ArrFloat;
 typedef Array<double>     ArrDouble;
+
+// template class Array<bool>;
+// extern template class Array<bool>;
+
+template class Array<char>;
+extern template class Array<char>;
+
+template class Array<int8_t>;
+extern template class Array<int8_t>;
+
+template class Array<int32_t>;
+extern template class Array<int32_t>;
 
 /*********************************************************************/
 /* array utils for array manipulations */

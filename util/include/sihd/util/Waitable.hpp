@@ -3,8 +3,8 @@
 
 # include <mutex>
 # include <condition_variable>
-# include <sihd/util/Clocks.hpp>
-# include <sihd/util/Timestamp.hpp>
+
+#include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
 {

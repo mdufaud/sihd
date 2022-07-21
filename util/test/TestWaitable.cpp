@@ -4,6 +4,7 @@
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Time.hpp>
+#include <sihd/util/Clocks.hpp>
 
 namespace test
 {

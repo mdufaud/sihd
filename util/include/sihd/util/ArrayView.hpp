@@ -1,9 +1,8 @@
 #ifndef __SIHD_UTIL_ARRAYVIEW_HPP__
 # define __SIHD_UTIL_ARRAYVIEW_HPP__
 
-# include <sihd/util/IArrayView.hpp>
-# include <sihd/util/Logger.hpp>
-# include <sihd/util/Array.hpp>
+# include <string.h>
+# include <strings.h>
 
 # include <utility>
 # include <cstdint>
@@ -11,8 +10,9 @@
 # include <memory>
 # include <algorithm>
 
-# include <string.h>
-# include <strings.h>
+# include <sihd/util/IArrayView.hpp>
+# include <sihd/util/Logger.hpp>
+# include <sihd/util/Array.hpp>
 
 namespace sihd::util
 {
@@ -615,6 +615,18 @@ typedef ArrayView<int64_t>    ArrViewLong;
 typedef ArrayView<uint64_t>   ArrViewULong;
 typedef ArrayView<float>      ArrViewFloat;
 typedef ArrayView<double>     ArrViewDouble;
+
+// template class ArrayView<bool>;
+// extern template class ArrayView<bool>;
+
+template class ArrayView<int8_t>;
+extern template class ArrayView<int8_t>;
+
+template class ArrayView<char>;
+extern template class ArrayView<char>;
+
+template class ArrayView<int>;
+extern template class ArrayView<int>;
 
 }
 

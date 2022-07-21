@@ -52,6 +52,8 @@ modules = {
     },
     "net": {
         "depends": ['util'],
+        "extlibs": ['openssl'],
+        "libs": ['ssl', 'crypto'],
     },
     "zip": {
         "depends": ['util'],

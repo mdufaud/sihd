@@ -4,16 +4,13 @@
 # include <atomic>
 # include <list>
 # include <map>
-# include <sihd/util/Clocks.hpp>
+
 # include <sihd/util/Named.hpp>
-# include <sihd/util/Task.hpp>
-# include <sihd/util/Logger.hpp>
-# include <sihd/util/Time.hpp>
-# include <sihd/util/Thread.hpp>
-# include <sihd/util/Configurable.hpp>
 # include <sihd/util/IStoppableRunnable.hpp>
+# include <sihd/util/Configurable.hpp>
+# include <sihd/util/Clocks.hpp>
 # include <sihd/util/Waitable.hpp>
-# include <sihd/util/ScopedModifier.hpp>
+# include <sihd/util/Task.hpp>
 
 namespace sihd::util
 {

@@ -1,6 +1,7 @@
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/util/Str.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/LineReader.hpp>
 
 namespace sihd::ssh
 {
@@ -183,9 +184,9 @@ SshSession::AuthState   SshSession::auth_interactive_keyboard()
         const char *name = ssh_userauth_kbdint_getname(_ssh_session_ptr);
         const char *instruction = ssh_userauth_kbdint_getinstruction(_ssh_session_ptr);
         if (name != nullptr && name[0])
-            std::cout << name << std::endl;
+            fmt::print("{}\n", name);
         if (instruction != nullptr && instruction[0])
-            std::cout << instruction << std::endl;
+            fmt::print("{}\n", instruction);
         int n = ssh_userauth_kbdint_getnprompts(_ssh_session_ptr);
         int i = 0;
         while (i < n)
@@ -194,10 +195,10 @@ SshSession::AuthState   SshSession::auth_interactive_keyboard()
             const char *prompt = ssh_userauth_kbdint_getprompt(_ssh_session_ptr, i, &echo);
             if (echo)
             {
-                std::cout << prompt;
+                fmt::print(prompt);
                 std::string answer;
-                std::cin >> answer;
-                if (ssh_userauth_kbdint_setanswer(_ssh_session_ptr, i, answer.data()) < 0)
+                sihd::util::LineReader::fast_read_line(answer, stdin, 4096);
+                if (ssh_userauth_kbdint_setanswer(_ssh_session_ptr, i, answer.c_str()) < 0)
                     return AuthState(SSH_AUTH_ERROR);
             }
             else

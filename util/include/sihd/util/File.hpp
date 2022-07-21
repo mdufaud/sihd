@@ -1,14 +1,15 @@
 #ifndef __SIHD_UTIL_FILE_HPP__
 # define __SIHD_UTIL_FILE_HPP__
 
-# include <sihd/util/platform.hpp>
-# include <sihd/util/OS.hpp>
-# include <sihd/util/IArray.hpp>
-# include <sihd/util/ArrayView.hpp>
-
 # include <cstdio>
 # include <string>
+# include <string_view>
 # include <optional>
+
+# include <sihd/util/platform.hpp>
+# include <sihd/util/ArrayView.hpp>
+
+struct stat;
 
 namespace sihd::util
 {

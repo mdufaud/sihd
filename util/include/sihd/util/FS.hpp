@@ -1,10 +1,11 @@
 #ifndef __SIHD_UTIL_FS_HPP__
 # define __SIHD_UTIL_FS_HPP__
 
+# include <optional>
+# include <initializer_list>
+
 # include <sihd/util/Str.hpp> // Str utils, vector, sstream, string
 # include <sihd/util/ArrayView.hpp>
-# include <optional>
-# include <fstream>
 
 namespace sihd::util
 {

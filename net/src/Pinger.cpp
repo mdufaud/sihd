@@ -1,8 +1,11 @@
-#include <sihd/net/Pinger.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Time.hpp>
+
+#include <sihd/net/Pinger.hpp>
 
 #define ICMP_ECHO_REQUEST_LENGTH 56
 namespace sihd::net

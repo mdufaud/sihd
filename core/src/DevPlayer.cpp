@@ -2,6 +2,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Splitter.hpp>
+#include <sihd/util/ScopedModifier.hpp>
+#include <sihd/util/Task.hpp>
 
 #define CHANNEL_PLAY "play"
 #define CHANNEL_END "end"

@@ -1,6 +1,7 @@
+#include <algorithm>
+
 #include <sihd/util/AtExit.hpp>
 #include <sihd/util/Logger.hpp>
-#include <algorithm>
 
 namespace sihd::util
 {
@@ -50,11 +51,11 @@ void    AtExit::exit_callback()
         }
         catch (const std::exception & e)
         {
-            std::cerr << "AtExit: error while running exit handler: " << e.what() << std::endl;
+           fmt::print(stderr, "AtExit: error while running exit handler: {}\n", e.what());
         }
         catch (...)
         {
-            std::cerr << "AtExit: error while running exit handler - non standard exception" << std::endl;
+           fmt::print(stderr, "AtExit: error while running exit handler - non standard exception\n");
         }
         delete runnable;
     }

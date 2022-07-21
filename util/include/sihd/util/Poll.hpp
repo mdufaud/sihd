@@ -1,15 +1,15 @@
 #ifndef __SIHD_UTIL_POLL_HPP__
 # define __SIHD_UTIL_POLL_HPP__
 
+# include <vector>
+# include <mutex>
+
 # include <sihd/util/platform.hpp>
 # include <sihd/util/Observable.hpp>
 # include <sihd/util/IStoppableRunnable.hpp>
 # include <sihd/util/IHandler.hpp>
 # include <sihd/util/Clocks.hpp>
 # include <sihd/util/OS.hpp>
-# include <sihd/util/Time.hpp>
-# include <vector>
-# include <mutex>
 
 # if !defined(__SIHD_WINDOWS__)
 #  include <sys/resource.h> //rlim_t
@@ -91,6 +91,9 @@ class Poll: public IStoppableRunnable, public Observable<Poll>
         bool _timedout;
         bool _error;
 };
+
+template class IHandler<Poll *>;
+extern template class IHandler<Poll *>;
 
 }
 

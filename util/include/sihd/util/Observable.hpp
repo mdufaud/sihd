@@ -1,13 +1,13 @@
 #ifndef __SIHD_UTIL_OBSERVABLE_HPP__
 # define __SIHD_UTIL_OBSERVABLE_HPP__
 
-# include <sihd/util/IObservable.hpp>
-# include <sihd/util/IHandler.hpp>
-
 # include <vector>
 # include <list>
 # include <mutex>
 # include <algorithm>
+
+# include <sihd/util/IObservable.hpp>
+# include <sihd/util/IHandler.hpp>
 
 namespace sihd::util
 {

@@ -2,9 +2,10 @@
 # define __SIHD_UTIL_CONFIGURABLE_HPP__
 
 # include <nlohmann/json.hpp>
+# include <functional>
+
 # include <sihd/util/Callback.hpp>
 # include <sihd/util/Logger.hpp>
-# include <functional>
 
 namespace sihd::util
 {

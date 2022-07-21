@@ -2,12 +2,12 @@
 # define __SIHD_UTIL_NODE_HPP__
 
 # include <map>
+# include <vector>
 # include <exception>
 # include <memory>
 
 # include <sihd/util/Named.hpp>
 # include <sihd/util/NamedFactory.hpp>
-# include <sihd/util/Str.hpp>
 
 namespace sihd::util
 {
@@ -18,10 +18,7 @@ class Node: public Named
         class AlreadyHasChild: public std::exception
         {
             public:
-                AlreadyHasChild(std::string name)
-                {
-                    this->ex = Str::format("Child %s already exists", name.c_str());
-                };
+                AlreadyHasChild(std::string_view name);
 
                 virtual const char *what() const throw()
                 {
@@ -139,16 +136,16 @@ class Node: public Named
         virtual void on_remove_child(const std::string & name, Named *child);
 
     private:
-        void _tree_children(std::stringstream & ss, TreeOpts opts) const;
-        void _iterate_tree_children(std::stringstream & ss,
+        void _tree_children(std::string & s, TreeOpts opts) const;
+        void _iterate_tree_children(std::string & s,
                                                 TreeOpts & opts,
                                                 const std::string & indent) const;
-        void _tree_child_desc(std::stringstream & ss,
+        void _tree_child_desc(std::string & s,
                                                 const TreeOpts & opts,
                                                 const std::string & indent,
                                                 const std::string & name,
                                                 const Named *child) const;
-        void _add_tree_desc(std::stringstream & ss, const TreeOpts & opts, const Named *child) const;
+        void _add_tree_desc(std::string & s, const TreeOpts & opts, const Named *child) const;
 
         bool _remove_child_entry(ChildEntry *entry);
         // bool _delete_child_entry(ChildEntry *entry);

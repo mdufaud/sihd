@@ -1,15 +1,15 @@
 #ifndef __SIHD_UTIL_PROCESS_HPP__
 # define __SIHD_UTIL_PROCESS_HPP__
 
+# include <signal.h>
+
+# include <functional>
+
 # include <sihd/util/platform.hpp>
-# include <sihd/util/Str.hpp>
 # include <sihd/util/IStoppableRunnable.hpp>
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Poll.hpp>
-# include <sihd/util/Handler.hpp>
-# include <functional>
-# include <optional>
-# include <signal.h>
+# include <sihd/util/IHandler.hpp>
 
 # if !defined(__SIHD_WINDOWS__) && !defined(__ANDROID__)
 #  include <spawn.h>
@@ -95,8 +95,6 @@ class Process: public IStoppableRunnable, public IHandler<Poll *>
         int signal_stop_number() const;
         int return_code() const;
 
-        // const std::optional<int> & status() const { return _status; }
-
         // get running process id
         pid_t pid() const { return _pid; };
 
@@ -123,7 +121,6 @@ class Process: public IStoppableRunnable, public IHandler<Poll *>
             int fd_write = -1;
             FileDescAction action = NONE;
             std::function<void(const char *, ssize_t)> fun;
-            //std::optional<std::reference_wrapper<std::string>> str_out;
             std::string path;
         };
 

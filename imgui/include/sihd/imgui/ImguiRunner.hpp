@@ -1,8 +1,10 @@
 #ifndef __SIHD_IMGUI_IMGUIRUNNER_HPP__
 # define __SIHD_IMGUI_IMGUIRUNNER_HPP__
 
+# include <mutex>
 # include <functional>
-# include <sihd/util/Node.hpp>
+
+# include <sihd/util/Named.hpp>
 # include <sihd/util/IStoppableRunnable.hpp>
 # include <sihd/imgui/IImguiRenderer.hpp>
 # include <sihd/imgui/IImguiBackend.hpp>

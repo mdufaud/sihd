@@ -4,6 +4,7 @@
 # include <sihd/core/Device.hpp>
 # include <sihd/util/Value.hpp>
 # include <sihd/util/Scheduler.hpp>
+# include <sihd/util/Task.hpp>
 
 namespace sihd::core
 {

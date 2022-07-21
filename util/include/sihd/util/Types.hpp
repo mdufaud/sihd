@@ -78,8 +78,19 @@ template <>
 Type    Types::type<float>();
 template <>
 Type    Types::type<double>();
-template <>
-Type    Types::type<std::string>();
+
+extern template Type Types::type<bool>();
+extern template Type Types::type<char>();
+extern template Type Types::type<int8_t>();
+extern template Type Types::type<uint8_t>();
+extern template Type Types::type<int16_t>();
+extern template Type Types::type<uint16_t>();
+extern template Type Types::type<int32_t>();
+extern template Type Types::type<uint32_t>();
+extern template Type Types::type<int64_t>();
+extern template Type Types::type<uint64_t>();
+extern template Type Types::type<float>();
+extern template Type Types::type<double>();
 
 }
 

@@ -6,9 +6,11 @@
 # include <set>
 # include <deque>
 # include <functional>
+
 # include <sihd/util/IProvider.hpp>
 # include <sihd/util/Array.hpp>
 # include <sihd/util/Waitable.hpp>
+# include <sihd/util/Timestamp.hpp>
 
 # define __SIHD_ADD_ITERATOR_PROVIDER__(CLASSNAME, CONTAINER) \
 template <typename TYPE> \

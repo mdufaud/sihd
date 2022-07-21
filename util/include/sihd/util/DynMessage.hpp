@@ -1,13 +1,8 @@
 #ifndef __SIHD_UTIL_DYNMESSAGE_HPP__
 # define __SIHD_UTIL_DYNMESSAGE_HPP__
 
-# include <sihd/util/Types.hpp>
-# include <sihd/util/Array.hpp>
-# include <sihd/util/Node.hpp>
-# include <sihd/util/Logger.hpp>
 # include <sihd/util/Message.hpp>
-# include <sihd/util/MessageField.hpp>
-# include <sihd/util/Node.hpp>
+# include <sihd/util/forward.hpp>
 
 namespace sihd::util
 {
@@ -36,7 +31,7 @@ class DynMessage: public Message
         virtual IMessageField *clone() const override;
 
     protected:
-        std::vector<const IMessageField *> _hidden_fields;
+        std::vector<IMessageField *> _hidden_fields;
         std::unordered_map<std::string, std::vector<RuleCallback>> _rules;
 
     private:

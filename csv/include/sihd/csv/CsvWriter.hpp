@@ -1,11 +1,10 @@
 #ifndef __SIHD_CSV_CSVWRITER_HPP__
 # define __SIHD_CSV_CSVWRITER_HPP__
 
-# include <sihd/util/Node.hpp>
+# include <sihd/util/Named.hpp>
 # include <sihd/util/Configurable.hpp>
-# include <sihd/util/File.hpp>
 # include <sihd/util/IWriter.hpp>
-# include <cstdio>
+# include <sihd/util/File.hpp>
 
 namespace sihd::csv
 {

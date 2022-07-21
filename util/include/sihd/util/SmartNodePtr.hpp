@@ -1,8 +1,9 @@
 #ifndef __SIHD_UTIL_SMARTNODEPTR_HPP__
 # define __SIHD_UTIL_SMARTNODEPTR_HPP__
 
-# include <sihd/util/Named.hpp>
 # include <memory>
+
+# include <sihd/util/Named.hpp>
 
 namespace sihd::util
 {

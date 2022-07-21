@@ -1,8 +1,10 @@
 #ifndef __SIHD_UTIL_IARRAYVIEW_HPP__
 # define __SIHD_UTIL_IARRAYVIEW_HPP__
 
-# include <sihd/util/Types.hpp>
 # include <string_view>
+# include <string>
+
+# include <sihd/util/Types.hpp>
 
 namespace sihd::util
 {

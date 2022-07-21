@@ -1,5 +1,6 @@
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Clocks.hpp>
 
 namespace sihd::util
 {

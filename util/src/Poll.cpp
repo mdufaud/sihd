@@ -1,6 +1,5 @@
 #include <sihd/util/Poll.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/OS.hpp>
 
 // sterror errno
 #include <string.h>

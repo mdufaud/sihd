@@ -1,16 +1,15 @@
 #ifndef __SIHD_NET_PINGER_HPP__
 # define __SIHD_NET_PINGER_HPP__
 
-# include <sihd/net/IcmpSender.hpp>
+# include <atomic>
 
 # include <sihd/util/Named.hpp>
 # include <sihd/util/Configurable.hpp>
-# include <sihd/util/IStoppableRunnable.hpp>
-# include <sihd/util/Handler.hpp>
+# include <sihd/util/IHandler.hpp>
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Poll.hpp>
 
-# include <atomic>
+# include <sihd/net/IcmpSender.hpp>
 
 namespace sihd::net
 {

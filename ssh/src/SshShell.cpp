@@ -54,7 +54,6 @@ bool    SshShell::open(bool x11)
 
 bool    SshShell::read_loop()
 {
-    bool ret = true;
     sihd::util::LineReader reader("stdin-reader");
     reader.set_stream(stdin, false);
     reader.set_read_buffsize(1);
@@ -65,6 +64,7 @@ bool    SshShell::read_loop()
     char buf[bufsize + 1];
     int nbytes;
     int nwritten;
+    bool ret = true;
 
     while (_channel.is_open() && _channel.is_eof() == false)
     {
@@ -97,7 +97,8 @@ bool    SshShell::read_loop()
             if (nbytes > 0)
             {
                 buf[nbytes] = 0;
-                std::cout << buf;
+                std::string_view view(buf, nbytes);
+                fmt::print("{}", view);
                 fflush(stdout);
             }
         }
@@ -121,7 +122,7 @@ bool    SshShell::read_loop()
                     SIHD_LOG(error, "SshShell: error reading stdin");
                     ret = false;
                 }
-                std::cout << std::endl;
+                fmt::print("\n");
                 break ;
             }
         }

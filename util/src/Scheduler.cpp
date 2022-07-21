@@ -1,5 +1,10 @@
 #include <sihd/util/Scheduler.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/ScopedModifier.hpp>
+#include <sihd/util/Thread.hpp>
+#include <sihd/util/Time.hpp>
+#include <sihd/util/Task.hpp>
 
 namespace sihd::util
 {

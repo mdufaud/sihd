@@ -4,7 +4,6 @@
 # include <sihd/util/LogInfo.hpp>
 # include <sihd/util/ILoggerFilter.hpp>
 # include <sihd/util/ALogFilterer.hpp>
-# include <sstream>
 
 namespace sihd::util
 {

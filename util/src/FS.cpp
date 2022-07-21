@@ -1,13 +1,15 @@
+#include <string.h> // strcmp
+#include <dirent.h> // DIR...
+#include <stdio.h> // remove
+
+#include <fstream>
+
 #include <sihd/util/FS.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/Splitter.hpp>
-
-#include <string.h> // strcmp
-#include <dirent.h> // DIR...
-#include <stdio.h> // remove
 
 # if defined(__SIHD_WINDOWS__)
 #  include <direct.h> // _mkdir _stat

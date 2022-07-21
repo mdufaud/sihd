@@ -1,5 +1,10 @@
 #include <sihd/util/StepWorker.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Timestamp.hpp>
+#include <sihd/util/Time.hpp>
+#include <sihd/util/Waitable.hpp>
+#include <sihd/util/ScopedModifier.hpp>
+#include <sihd/util/Clocks.hpp>
 
 namespace sihd::util
 {
@@ -25,6 +30,11 @@ bool    StepWorker::set_frequency(double frequency)
     }
     _sleep_time = Time::freq(frequency);
     return true;
+}
+
+double  StepWorker::frequency() const
+{
+    return Time::to_hz(_sleep_time);
 }
 
 bool    StepWorker::run()

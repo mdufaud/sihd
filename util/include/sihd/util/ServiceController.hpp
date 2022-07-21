@@ -49,6 +49,9 @@ class ServiceController:    public AService::IServiceController,
     private:
 };
 
+template class StateMachine<ServiceController::State, AService::Operation>;
+extern template class StateMachine<ServiceController::State, AService::Operation>;
+
 }
 
 #endif

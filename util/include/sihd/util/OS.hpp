@@ -33,7 +33,6 @@ typedef unsigned int sihd_uid_t;
 
 # endif
 
-# include <sihd/util/IRunnable.hpp>
 # include <sihd/util/IHandler.hpp>
 
 namespace sihd::util

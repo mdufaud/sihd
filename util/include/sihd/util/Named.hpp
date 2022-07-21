@@ -3,7 +3,6 @@
 
 # include <string>
 # include <string_view>
-# include <iostream>
 
 namespace sihd::util
 {

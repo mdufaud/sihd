@@ -1,6 +1,8 @@
+#include <unistd.h>
+
 #include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Logger.hpp>
-#include <unistd.h>
+#include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
 {

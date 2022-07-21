@@ -1,11 +1,11 @@
+#include <signal.h>
+#include <unistd.h>
+
 #include <sihd/util/Daemon.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/FileLogger.hpp>
-
-#include <signal.h>
-#include <unistd.h>
-// #include <fcntl.h> // open
+#include <sihd/util/FS.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <windows.h>

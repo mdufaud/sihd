@@ -1,5 +1,4 @@
 #include <sihd/util/Logger.hpp>
-#include <cstdarg>
 
 namespace sihd::util
 {

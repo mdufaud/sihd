@@ -1,8 +1,6 @@
 #ifndef __SIHD_UTIL_SCOPEDMODIFIER_HPP__
 # define __SIHD_UTIL_SCOPEDMODIFIER_HPP__
 
-# include <functional>
-
 namespace sihd::util
 {
 

@@ -30,7 +30,7 @@ namespace test
             }
     };
 
-    TEST_F(TestContainer, test_container)
+    TEST_F(TestContainer, test_container_vector)
     {
         std::vector<int> vec = {1, 2, 3, 4};
 

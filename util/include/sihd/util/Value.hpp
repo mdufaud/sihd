@@ -288,6 +288,19 @@ class Value
 template <>
 int Value::compare(const Value & val) const;
 
+extern template void Value::set<bool>(bool);
+extern template void Value::set<char>(char);
+extern template void Value::set<int8_t>(int8_t);
+extern template void Value::set<uint8_t>(uint8_t);
+extern template void Value::set<int16_t>(int16_t);
+extern template void Value::set<uint16_t>(uint16_t);
+extern template void Value::set<int32_t>(int32_t);
+extern template void Value::set<uint32_t>(uint32_t);
+extern template void Value::set<int64_t>(int64_t);
+extern template void Value::set<uint64_t>(uint64_t);
+extern template void Value::set<float>(float);
+extern template void Value::set<double>(double);
+
 // float
 
 template <>

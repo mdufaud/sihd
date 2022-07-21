@@ -1,9 +1,11 @@
 #ifndef __SIHD_UTIL_TIMESTAMP_HPP__
 # define __SIHD_UTIL_TIMESTAMP_HPP__
 
-# include <sihd/util/Time.hpp>
 # include <chrono>
 # include <string>
+
+# include <sihd/util/Time.hpp>
+
 
 # define __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(OP) \
     template <typename T> \

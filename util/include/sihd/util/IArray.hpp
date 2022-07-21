@@ -3,7 +3,6 @@
 
 # include <sihd/util/IArrayView.hpp>
 # include <sihd/util/Types.hpp>
-# include <string_view>
 
 namespace sihd::util
 {

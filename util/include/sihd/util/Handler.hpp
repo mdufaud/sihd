@@ -1,8 +1,9 @@
 #ifndef __SIHD_UTIL_HANDLER_HPP__
 # define __SIHD_UTIL_HANDLER_HPP__
 
-# include <sihd/util/IHandler.hpp>
 # include <functional>
+
+# include <sihd/util/IHandler.hpp>
 
 namespace sihd::util
 {

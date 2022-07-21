@@ -10,9 +10,13 @@
 
 #include <fmt/format.h>
 
+#include <sihd/util/Num.hpp>
 #include <sihd/util/Str.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Time.hpp>
+#include <sihd/util/Timestamp.hpp>
+#include <sihd/util/IArray.hpp>
+#include <sihd/util/IArrayView.hpp>
 
 #ifndef SIHD_UTIL_STR_BUFFER
 # define SIHD_UTIL_STR_BUFFER 4096
@@ -63,17 +67,17 @@ char    *Str::csub(std::string_view str, size_t from_idx, ssize_t size)
 
 std::string     Str::join(const std::vector<std::string> & join_lst, std::string_view join_with)
 {
-    std::stringstream ss;
+    std::string s;
     bool first = true;
     for (const auto & str: join_lst)
     {
         if (!first)
-            ss << join_with;
+            s += join_with;
         else
             first = false;
-        ss << str;
+        s += str;
     }
-    return ss.str();
+    return s;
 }
 
 std::string     Str::demangle(std::string_view name)
@@ -212,6 +216,24 @@ std::string     Str::addr_str(void *addr, size_t padding)
     }
     ret += num_str((size_t)addr, 16);
     return ret;
+}
+
+std::string     Str::hexdump(const IArray & arr, char delim)
+{
+    return Str::hexdump(arr.buf(), arr.byte_size(), delim);
+}
+std::string     Str::hexdump(const IArrayView & arr, char delim)
+{
+    return Str::hexdump(arr.buf(), arr.byte_size(), delim);
+}
+
+std::string     Str::hexdump_fmt(const IArray & arr)
+{
+    return Str::hexdump_fmt(arr.buf(), arr.byte_size());
+}
+std::string     Str::hexdump_fmt(const IArrayView & arr)
+{
+    return Str::hexdump_fmt(arr.buf(), arr.byte_size());
 }
 
 std::string     Str::hexdump(const void *mem, size_t size, char delim)
@@ -704,35 +726,35 @@ std::string Str::localtimeoffset_str(Timestamp timestamp, bool total_parenthesis
 
 std::string Str::_timeoffset_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime)
 {
-    std::stringstream ss;
+    std::string s;
     struct tm tm = Time::to_tm(std::abs(nano), localtime);
     bool next_step;
-    ss << (nano > 0 ? "+" : "-");
+    s += (nano > 0 ? "+" : "-");
     if ((next_step = tm.tm_year > 70))
-        ss << tm.tm_year - 70 << "y:";
+        s += fmt::format("{}y:", tm.tm_year - 70);
     if ((next_step = next_step || tm.tm_mon > 0))
-        ss << tm.tm_mon << "m:";
+        s += fmt::format("{}m:", tm.tm_mon);
     if ((next_step = next_step || (tm.tm_mday - 1) > 0))
-        ss << tm.tm_mday - 1 << "d::";
+        s += fmt::format("{}d::", tm.tm_mday - 1);
     if ((next_step = next_step || tm.tm_hour > 0))
-        ss << tm.tm_hour << "h:";
+        s += fmt::format("{}h:", tm.tm_hour);
     if ((next_step = next_step || tm.tm_min > 0))
-        ss << tm.tm_min << "m:";
+        s += fmt::format("{}m:", tm.tm_min);
     if ((next_step = next_step || tm.tm_sec > 0))
-        ss << tm.tm_sec << "s:";
+        s += fmt::format("{}s:", tm.tm_sec);
     time_t ms = Time::to_milli(nano) % (int)1E3;
     if ((next_step = next_step || ms > 0))
-        ss << ms << "ms:";
+        s += fmt::format("{}ms:", ms);
     time_t us = Time::to_micro(nano) % (int)1E3;
-    ss << us << "us";
+    s += fmt::format("{}us", us);
     if (nano_resolution)
     {
         time_t ns = std::abs(nano) % (int)1E3;
-        ss << ":" << ns << "ns";
+        s += fmt::format(":{}ns", ns);
     }
     if (total_parenthesis)
-        ss << " (" << nano << ")";
-    return ss.str();
+        s += fmt::format(" ({})", nano);
+    return s;
 }
 
 std::string     Str::_format_time(time_t nano, std::string_view format, bool localtime)
@@ -771,25 +793,25 @@ std::string     Str::bytes_str(ssize_t bytes, bool iec)
     {
         ssize_t rest = ((bytes % mbyte) / (float)mbyte) * 10;
         if (rest > 0)
-            return Str::format("%ld.%ldK", bytes / mbyte, rest);
+            return fmt::format("{}.{}K", bytes / mbyte, rest);
         else
-            return Str::format("%ldK", bytes / mbyte);
+            return fmt::format("{}K", bytes / mbyte);
     }
     else if (bytes < tbyte)
     {
         ssize_t rest = ((bytes % gbyte) / (float)gbyte) * 10;
         if (rest > 0)
-            return Str::format("%ld.%ldG", bytes / gbyte, rest);
+            return fmt::format("{}.{}G", bytes / gbyte, rest);
         else
-            return Str::format("%ldG", bytes / gbyte);
+            return fmt::format("{}G", bytes / gbyte);
     }
     else
     {
         ssize_t rest = ((bytes % tbyte) / (float)tbyte) * 10;
         if (rest > 0)
-            return Str::format("%ld.%ldT", bytes / tbyte, rest);
+            return fmt::format("{}.{}T", bytes / tbyte, rest);
         else
-            return Str::format("%ldT", bytes / tbyte);
+            return fmt::format("{}T", bytes / tbyte);
     }
 }
 

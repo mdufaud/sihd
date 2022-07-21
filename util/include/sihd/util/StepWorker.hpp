@@ -1,10 +1,12 @@
 #ifndef __SIHD_UTIL_STEPWORKER_HPP__
 # define __SIHD_UTIL_STEPWORKER_HPP__
 
+# include <atomic>
+
+# include <sihd/util/forward.hpp>
 # include <sihd/util/Worker.hpp>
 # include <sihd/util/ISteppable.hpp>
-# include <sihd/util/ScopedModifier.hpp>
-# include <atomic>
+# include <sihd/util/Clocks.hpp>
 
 namespace sihd::util
 {
@@ -21,7 +23,7 @@ class StepWorker: public Worker, protected ISteppable
         virtual void resume_worker();
 
         time_t nano_sleep_time() const { return _sleep_time; }
-        double frequency() const { return Time::to_hz(_sleep_time); };
+        double frequency() const;
 
     protected:
         virtual bool run() override;

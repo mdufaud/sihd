@@ -1,18 +1,15 @@
 #ifndef __SIHD_UTIL_STR_HPP__
 # define __SIHD_UTIL_STR_HPP__
 
-# include <iostream>
 # include <vector>
 # include <string>
 # include <string_view>
-# include <sstream>
 # include <mutex>
 # include <map>
-# include <map>
-# include <optional>
+
+# include <fmt/format.h>
 
 # include <sihd/util/Container.hpp>
-# include <sihd/util/Num.hpp>
 # include <sihd/util/Timestamp.hpp>
 # include <sihd/util/IArray.hpp>
 # include <sihd/util/IArrayView.hpp>
@@ -58,31 +55,25 @@ class Str
         static std::string container_str(const T & container, Container::disable_if_map<T> = 0)
         {
             static_assert(Container::IsIterable<T>::value);
-            std::stringstream ss;
-            ss << "[";
+            std::string s = "[";
             for (auto it = container.begin(), first = it; it != container.end(); ++it)
             {
-                if (it != first)
-                    ss << ", ";
-                ss << *it;
+                s += fmt::format("{}{}", it != first ? ", " : "", *it);
             }
-            ss << "]";
-            return ss.str();
+            s += "]";
+            return s;
         }
 
         template <typename T>
         static std::string container_str(const T & container, Container::enable_if_map<T> = 0)
         {
-            std::stringstream ss;
-            ss << "{";
+            std::string s = "{";
             for (auto it = container.begin(), first = it; it != container.end(); ++it)
             {
-                if (it != first)
-                    ss << ", ";
-                ss << it->first << ": " << it->second;
+                s += fmt::format("{}{}: {}", it != first ? ", " : "", it->first, it->second);
             }
-            ss << "}";
-            return ss.str();
+            s += "}";
+            return s;
         }
 
         static bool is_escape_sequence_open(int c, const char *authorized_open_escape_sequences = nullptr);
@@ -123,26 +114,14 @@ class Str
         static std::string num_str(uint64_t num, uint16_t base);
         static char num_to_char(size_t num);
 
-        static std::string hexdump(const IArray & arr, char delim)
-        {
-            return Str::hexdump(arr.buf(), arr.byte_size(), delim);
-        }
-        static std::string hexdump(const IArrayView & arr, char delim)
-        {
-            return Str::hexdump(arr.buf(), arr.byte_size(), delim);
-        }
+        static std::string hexdump(const IArray & arr, char delim);
+        static std::string hexdump(const IArrayView & arr, char delim);
         static std::string hexdump(const void *mem, size_t size, char delim);
 
         // formatted hexdump
 
-        static std::string hexdump_fmt(const IArray & arr)
-        {
-            return Str::hexdump_fmt(arr.buf(), arr.byte_size());
-        }
-        static std::string hexdump_fmt(const IArrayView & arr)
-        {
-            return Str::hexdump_fmt(arr.buf(), arr.byte_size());
-        }
+        static std::string hexdump_fmt(const IArray & arr);
+        static std::string hexdump_fmt(const IArrayView & arr);
         static std::string hexdump_fmt(const void *mem, size_t size);
 
         static bool is_digit(int c, uint16_t base = 10);

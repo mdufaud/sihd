@@ -1,10 +1,11 @@
 #ifndef __SIHD_UTIL_ATEXIT_HPP__
 # define __SIHD_UTIL_ATEXIT_HPP__
 
-# include <sihd/util/IRunnable.hpp>
 # include <mutex>
 # include <list>
 # include <cstdlib>
+
+# include <sihd/util/IRunnable.hpp>
 
 namespace sihd::util
 {
