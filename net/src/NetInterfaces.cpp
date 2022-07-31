@@ -131,7 +131,7 @@ const struct ifaddrs    *NetIFace::find(sockaddr_in6 addr_in6) const
         if (addr->ifa_addr->sa_family == AF_INET6)
         {
             cast = (struct sockaddr_in6 *)(addr->ifa_addr);
-            if (addr_in6.sin6_addr.s6_addr32 == cast->sin6_addr.s6_addr32)
+            if (memcmp(addr_in6.sin6_addr.s6_addr, cast->sin6_addr.s6_addr, 16) == 0)
                 return addr;
         }
     }

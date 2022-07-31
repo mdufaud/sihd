@@ -4,6 +4,8 @@
 # include <sihd/util/Message.hpp>
 # include <sihd/util/forward.hpp>
 
+# include <functional>
+
 namespace sihd::util
 {
 

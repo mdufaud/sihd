@@ -31,8 +31,8 @@ bool    ALogFilterer::remove_filter(ILoggerFilter *filter)
     auto it = this->_find(filter);
     if (it != _filters_lst.end())
     {
-        _filters_lst.erase(it);
         delete *it;
+        _filters_lst.erase(it);
     }
     return it != _filters_lst.end();
 }
