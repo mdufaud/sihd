@@ -6,9 +6,7 @@ ifeq (, $(shell which scons))
 $(error "Makefile: no python-scons detected - it is needed to build the project.")
 endif
 
-APP_NAME = sihd
 OS := $(shell uname)
-HERE := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 ifeq ($(OS),Linux)
 SHELL := /bin/bash
@@ -18,10 +16,21 @@ SHELL := /bin/sh
 GREP := /usr/bin/grep
 endif
 
+ifdef MAKE_DEBUG
+SHELL += -x
+endif
+
+ifndef MAKE_VERBOSE
+QUIET := @
+endif
+
 MAKEARG_1 := $(word 1, $(MAKECMDGOALS))
 MAKEARG_2 := $(word 2, $(MAKECMDGOALS))
 MAKEARG_3 := $(word 3, $(MAKECMDGOALS))
 MAKEARG_4 := $(word 4, $(MAKECMDGOALS))
+
+APP_NAME = sihd
+HERE := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 ##############
 # Builder env
@@ -143,7 +152,7 @@ help:
 	$(call mk_log_info,makefile,distribute app: dist=tar|apt|pacman)
 	$(call mk_log_info,makefile,build with clang: compiler=clang)
 	$(call mk_log_info,makefile,build with emscripten: compiler=em)
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 
 ######################
 # Build infos
@@ -161,7 +170,7 @@ info:
 ifeq ($(ANDROID), true)
 	$(call mk_log_warning,makefile,android detected)
 endif
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 
 ######################
 # List Makefile rules
@@ -172,8 +181,8 @@ get_mk_phony = $(shell grep '^.PHONY: .* \#' $1 | sed 's/\.PHONY: \(.*\) \# \(.*
 .PHONY: list # Generate list of targets with descriptions
 
 list:
-	@echo "Makefile targets"
-	@- $(foreach MAKEFILE_PATH, $(MAKEFILE_LIST), \
+	$(QUIET) echo "Makefile targets"
+	$(QUIET) - $(foreach MAKEFILE_PATH, $(MAKEFILE_LIST), \
 		echo ""; \
 		echo "$(MAKEFILE_PATH):"; \
 		grep '^.PHONY: .* \#' $(MAKEFILE_PATH) | sed 's/\.PHONY: \(.*\) \# \(.*\)/  \1: \2/' | expand -t20; \
@@ -186,11 +195,11 @@ list:
 .PHONY: build # Run scons builder ([mod <comma_separated_modules>])
 
 build:
-	@cd $(HERE)
+	$(QUIET) cd $(HERE)
 	$(eval BUILD_CMD_LINE = \
 			modules=$(modules) test=$(test) dist=$(dist) mode=$(mode) asan=$(asan) verbose=$(verbose) pkgdep=$(pkgdep))
-	@$(call echo_log_info,makefile,starting build with command: '$(SCONS_BUILD_CMD) $(BUILD_CMD_LINE)')
-	@$(BUILD_CMD_LINE) $(SCONS_BUILD_CMD)
+	$(QUIET) $(call echo_log_info,makefile,starting build with command: '$(SCONS_BUILD_CMD) $(BUILD_CMD_LINE)')
+	$(QUIET) $(BUILD_CMD_LINE) $(SCONS_BUILD_CMD)
 
 .PHONY: build_debug # Run scons builder with scons debug
 
@@ -235,9 +244,9 @@ get_module_name = $(word 2, $(subst _, , $(notdir $1)))
 
 test: test = 1
 test: build
-	@sh $(MAKEFILE_TOOLS)/scripts/generate_test_env.sh
+	$(QUIET) sh $(MAKEFILE_TOOLS)/scripts/generate_test_env.sh
 	$(call mk_log_info,makefile,starting tests in build: $(TEST_PATH))
-	@- $(foreach TEST_BIN, $(TEST_EXEC), \
+	$(QUIET) - $(foreach TEST_BIN, $(TEST_EXEC), \
 		$(eval TEST_CMD_LINE = \
 			env $(DEBUGGER) $(DEBUGGER_ARGS) $(TEST_BIN) $(TEST_DEFAULT_ARGS) $(TEST_ARGS)\
 		) \
@@ -317,9 +326,9 @@ test: modules = $(MODULES_NAME)
 endif
 
 $(MODULES_NAME):
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 $(TEST_NAME):
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 
 endif #test
 
@@ -337,16 +346,16 @@ endif
 
 dep:
 	$(call mk_log_info,makefile,starting conan with command: $(CONAN_INSTALL))
-	@env test=$(test) verbose=$(verbose) modules=$(modules) libs=$(libs) $(CONAN_INSTALL)
+	$(QUIET) env test=$(test) verbose=$(verbose) modules=$(modules) libs=$(libs) $(CONAN_INSTALL)
 
 # make dep mod MODULE
 ifeq ($(MAKEARG_2), mod)
 MODULES_NAME := $(MAKEARG_3)$(m)
 dep: modules = $(MODULES_NAME)
 mod:
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 $(MODULES_NAME):
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 endif
 
 # make dep lib LIBNAME
@@ -355,9 +364,9 @@ LIBS_NAME := $(MAKEARG_3)
 dep: modules = NONE
 dep: libs = $(LIBS_NAME)
 mod:
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 $(LIBS_NAME):
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 endif
 
 # make dep test
@@ -365,14 +374,14 @@ ifeq ($(MAKEARG_2), test)
 dep: modules = NONE
 dep: test = 1
 test:
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 endif
 
 # make dep build
 ifeq ($(MAKEARG_2), build)
 dep: CONAN_ARGS = --build
 build:
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 endif
 
 endif # dep
@@ -381,12 +390,12 @@ endif # dep
 .PHONY: checkdep_html # Run conan's HTML dependency tree
 
 checkdep_html:
-	@conan info . --graph=$(CONAN_PATH)/dep_tree.html
+	$(QUIET) conan info . --graph=$(CONAN_PATH)/dep_tree.html
 
 .PHONY: checkdep # Run conan's TXT dependency tree
 
 checkdep:
-	@conan info . --graph=$(CONAN_PATH)/dep_tree.txt && cat $(CONAN_PATH)/dep_tree.txt
+	$(QUIET) conan info . --graph=$(CONAN_PATH)/dep_tree.txt && cat $(CONAN_PATH)/dep_tree.txt
 
 ###############
 # Distribution
@@ -405,7 +414,7 @@ ifeq ($(MAKEARG_2), mod)
 MODULES_NAME := $(MAKEARG_3)$(m)
 DIST_TYPE := $(MAKEARG_4)
 mod:
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 else
 # make dist type
 DIST_TYPE = $(MAKEARG_2)
@@ -417,10 +426,10 @@ dist: modules = $(MODULES_NAME)
 dist: build
 
 $(MODULES_NAME):
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 
 $(DIST_TYPE):
-	@echo > /dev/null
+	$(QUIET) echo > /dev/null
 
 endif # dist
 
@@ -442,60 +451,60 @@ INSTALL_SHARE_DEST := $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/share$(INSTALL_INCLUDE
 .PHONY: confirm_install # List dirs to install and ask confirmation
 
 confirm_install:
-	@$(call mk_log_info,makefile,will install in: $(INSTALL_DESTDIR)$(INSTALL_PREFIX))
-	@$(call mk_log_info,makefile,change install directory with: INSTALL_DESTDIR)
-	@$(call mk_log_info,makefile,change default /usr/local with: INSTALL_PREFIX)
-	@echo -n "Please confirm installation directory [y/N] " && read answer && [ $${answer:-N} = y ]
+	$(QUIET) $(call mk_log_info,makefile,will install in: $(INSTALL_DESTDIR)$(INSTALL_PREFIX))
+	$(QUIET) $(call mk_log_info,makefile,change install directory with: INSTALL_DESTDIR)
+	$(QUIET) $(call mk_log_info,makefile,change default /usr/local with: INSTALL_PREFIX)
+	$(QUIET) echo -n "Please confirm installation directory [y/N] " && read answer && [ $${answer:-N} = y ]
 
 .PHONY: install # List dirs to install, ask confirmation and install on system and creates a file with path of all installed files
 
 install: confirm_install
-	@$(call mk_log_info,makefile,installed files can be found in: $(INSTALLED_FILES_DESTINATION))
-	@echo "# install date: `date "+%Y-%m-%d %H:%M:%S"`" > $(INSTALLED_FILES_DESTINATION)
+	$(QUIET) $(call mk_log_info,makefile,installed files can be found in: $(INSTALLED_FILES_DESTINATION))
+	$(QUIET) echo "# install date: `date "+%Y-%m-%d %H:%M:%S"`" > $(INSTALLED_FILES_DESTINATION)
 # install lib
-	@$(call echo_log_info,makefile,installing librairies: ${LIB_PATH} -> $(INSTALL_LIB_DEST))
-	@for path in `ls -A $(LIB_PATH) 2>/dev/null`; do \
+	$(QUIET) $(call echo_log_info,makefile,installing librairies: ${LIB_PATH} -> $(INSTALL_LIB_DEST))
+	$(QUIET) for path in `ls -A $(LIB_PATH) 2>/dev/null`; do \
 		dest=$(INSTALL_LIB_DEST)/$$path; \
 		install -D --compare --mode=755 "$(LIB_PATH)/$$path" "$$dest"; \
 		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
 	done
 # install bin
-	@$(call echo_log_info,makefile,installing binaries: ${BIN_PATH} -> $(INSTALL_BIN_DEST))
-	@for path in `ls -A $(BIN_PATH) 2>/dev/null`; do \
+	$(QUIET) $(call echo_log_info,makefile,installing binaries: ${BIN_PATH} -> $(INSTALL_BIN_DEST))
+	$(QUIET) for path in `ls -A $(BIN_PATH) 2>/dev/null`; do \
 		dest=$(INSTALL_BIN_DEST)/$$path; \
 		install -D --compare --mode=755 "$(BIN_PATH)/$$path" "$$dest"; \
 		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
 	done
 # getting all root directories of built resources for future removal
-	@for path in `ls -A $(ETC_PATH) 2>/dev/null`; do \
+	$(QUIET) for path in `ls -A $(ETC_PATH) 2>/dev/null`; do \
 		dest="$(INSTALL_ETC_DEST)/$$path"; \
 		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
 	done
 # install etc
-	@$(call echo_log_info,makefile,installing resources: ${ETC_PATH} -> $(INSTALL_ETC_DEST))
-	@for path in `find $(ETC_PATH) -type f 2>/dev/null | sed "s|${ETC_PATH}/||g"`; do \
+	$(QUIET) $(call echo_log_info,makefile,installing resources: ${ETC_PATH} -> $(INSTALL_ETC_DEST))
+	$(QUIET) for path in `find $(ETC_PATH) -type f 2>/dev/null | sed "s|${ETC_PATH}/||g"`; do \
 		dest="$(INSTALL_ETC_DEST)/$$path"; \
 		install -D --compare --mode=744 "$(ETC_PATH)/$$path" "$$dest"; \
 	done
 # getting all root directories of built includes for future removal
-	@for path in `ls -A $(INCLUDE_PATH) 2>/dev/null`; do \
+	$(QUIET) for path in `ls -A $(INCLUDE_PATH) 2>/dev/null`; do \
 		dest="$(INSTALL_INCLUDE_DEST)/$$path"; \
 		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
 	done
 # install headers
-	@$(call echo_log_info,makefile,installing headers: ${INCLUDE_PATH} -> $(INSTALL_INCLUDE_DEST))
-	@for path in `find $(INCLUDE_PATH) -type f 2>/dev/null | sed "s|${INCLUDE_PATH}/||g"`; do \
+	$(QUIET) $(call echo_log_info,makefile,installing headers: ${INCLUDE_PATH} -> $(INSTALL_INCLUDE_DEST))
+	$(QUIET) for path in `find $(INCLUDE_PATH) -type f 2>/dev/null | sed "s|${INCLUDE_PATH}/||g"`; do \
 		dest=$(INSTALL_INCLUDE_DEST)/$$path; \
 		install -D --compare --mode=744 "$(INCLUDE_PATH)/$$path" "$$dest"; \
 	done
 # getting all root directories of built share for future removal
-	@for path in `ls -A $(SHARE_PATH) 2>/dev/null`; do \
+	$(QUIET) for path in `ls -A $(SHARE_PATH) 2>/dev/null`; do \
 		dest="$(INSTALL_SHARE_DEST)/$$path"; \
 		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
 	done
 # install shared
-	@$(call echo_log_info,makefile,installing shared: ${SHARE_PATH} -> $(INSTALL_SHARE_DEST))
-	@for path in `find $(SHARE_PATH) -type f 2>/dev/null | sed "s|${SHARE_PATH}/||g"`; do \
+	$(QUIET) $(call echo_log_info,makefile,installing shared: ${SHARE_PATH} -> $(INSTALL_SHARE_DEST))
+	$(QUIET) for path in `find $(SHARE_PATH) -type f 2>/dev/null | sed "s|${SHARE_PATH}/||g"`; do \
 		dest=$(INSTALL_SHARE_DEST)/$$path; \
 		install -D --compare --mode=744 "$(SHARE_PATH)/$$path" "$$dest"; \
 	done
@@ -503,11 +512,11 @@ install: confirm_install
 .PHONY: uninstall # Read file with path of all installed files, asks for confirmation and removes every files
 
 uninstall:
-	@$(call mk_log_info,makefile,reading files to remove from: $(INSTALLED_FILES_DESTINATION))
+	$(QUIET) $(call mk_log_info,makefile,reading files to remove from: $(INSTALLED_FILES_DESTINATION))
 	$(eval INSTALLED_FILES = $(shell cat $(INSTALLED_FILES_DESTINATION) | tail -n +2))
-	@echo $(INSTALLED_FILES) | tr ' ' '\n'
-	@$(call echo_log_warning,makefile,those files will be removed)
-	@echo -n "Please confirm files removal [y/N] " && read answer && [ $${answer:-N} = y ]
+	$(QUIET) echo $(INSTALLED_FILES) | tr ' ' '\n'
+	$(QUIET) $(call echo_log_warning,makefile,those files will be removed)
+	$(QUIET) echo -n "Please confirm files removal [y/N] " && read answer && [ $${answer:-N} = y ]
 	rm -rf $(INSTALLED_FILES)
 	rm -f $(INSTALLED_FILES_DESTINATION)
 
@@ -533,7 +542,7 @@ serve:
 .PHONY: fclean # Remove everything
 
 clean:
-	@$(call mk_log_info,makefile,removing compilation build)
+	$(QUIET) $(call mk_log_info,makefile,removing compilation build)
 	rm -rf $(LIB_PATH)
 	rm -rf $(INCLUDE_PATH)
 	rm -rf $(TEST_PATH)
@@ -542,27 +551,27 @@ clean:
 	rm -rf $(ETC_PATH)
 
 clean_dep:
-	@$(call mk_log_info,makefile,removing dependencies)
+	$(QUIET) $(call mk_log_info,makefile,removing dependencies)
 	rm -rf $(CONAN_PATH) $(EXTLIB_PATH)
 
 clean_dist:
-	@$(call mk_log_info,makefile,removing distribution)
+	$(QUIET) $(call mk_log_info,makefile,removing distribution)
 	rm -rf $(DIST_PATH)
 
 clean_cache:
-	@$(call mk_log_info,makefile,removing cache)
+	$(QUIET) $(call mk_log_info,makefile,removing cache)
 	rm -rf $(HERE)/.scons_cache
 
 cclean: clean_cache clean
 
 bclean:
-	@$(call mk_log_info,makefile,removing build)
+	$(QUIET) $(call mk_log_info,makefile,removing build)
 	rm -rf $(BUILD_ENTRY_PATH) $(DIST_PATH)
 
 fclean: bclean clean_dist clean_cache
-	@$(call mk_log_info,makefile,removing remaining files)
-	@rm -f $(HERE)/.sconsign.dblite
-	@rm -f $(HERE)/compile_commands.json
-	@find . -name "*vgcore*" -type f -exec rm -f {} \;
-	@find . -name "*.ini" -type f -exec rm -f {} \;
-	@find . -maxdepth 1 -name "*.scons*" -type d -exec rm -rf {} \;
+	$(QUIET) $(call mk_log_info,makefile,removing remaining files)
+	$(QUIET) rm -f $(HERE)/.sconsign.dblite
+	$(QUIET) rm -f $(HERE)/compile_commands.json
+	$(QUIET) find . -name "*vgcore*" -type f -exec rm -f {} \;
+	$(QUIET) find . -name "*.ini" -type f -exec rm -f {} \;
+	$(QUIET) find . -maxdepth 1 -name "*.scons*" -type d -exec rm -rf {} \;

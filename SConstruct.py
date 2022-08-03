@@ -113,14 +113,14 @@ if pkg_manager_name:
 # Build compiling options
 ###############################################################################
 
+__env_to_key = {
+    "LIBS": "_libs",
+    "CPPFLAGS": "_flags",
+    "CPPDEFINES": "_defines",
+    "LINKFLAGS": "_link",
+}
 def add_env_app_conf(env, key):
-    env_to_key = {
-        "LIBS": "_libs",
-        "CPPFLAGS": "_flags",
-        "CPPDEFINES": "_defines",
-        "LINKFLAGS": "_link",
-    }
-    for envkey, to_concat in env_to_key.items():
+    for envkey, to_concat in __env_to_key.items():
         concat = key + to_concat
         attr = getattr(app, concat, None)
         if attr is not None:
@@ -139,12 +139,10 @@ base_env = Environment(
         'PATH': os.getenv("PATH"),
         'LIBPATH': os.getenv("LIBPATH")
     },
-    # c++ compile flags
-    CXXFLAGS = ["-std=c++17"],
     # c and c++ compile flags
-    CPPFLAGS = [] + (hasattr(app, 'flags') and app.flags or []),
+    CPPFLAGS = getattr(app, 'flags', []),
     # extra #define for inside the code
-    CPPDEFINES = [] + (hasattr(app, 'defines') and app.defines or []),
+    CPPDEFINES = getattr(app, 'defines', []),
     # link flags
     LINKFLAGS = [],
     # headers path
@@ -162,6 +160,7 @@ base_env = Environment(
     # lib version + automatic symbolic links
     SHLIBVERSION = app.version
 )
+
 if build_platform == "windows":
     base_env.Append(LIBPATH = builder_helper.build_extlib_bin_path)
 
@@ -282,14 +281,14 @@ except Exception as e:
 # Decides when to recompile - removing slow md5 in favor of timestamps
 Decider('timestamp-newer')
 
+
 ###############################################################################
 # Build
 ###############################################################################
 
 modules_generated_libs = {}
 modules_generated_bins = {}
-modules_scons_libs = {}
-modules_scons_bins = {}
+modules_generated_tests = {}
 modules_cloned_git_repositories = {}
 targets = []
 
@@ -323,16 +322,17 @@ def _env_build_test(self, src, name=None, add_libs=[], **kwargs):
     # add platform_test_[flags/defines/link/libs]
     add_env_app_conf(test_env, "{}_test".format(build_platform))
     test_path = os.path.join(builder_helper.build_test_path, "bin", name)
-    return test_env.Program(test_path, src, **kwargs)
+    test = test_env.Program(test_path, src, **kwargs)
+    module_name = self['APP_MODULE_NAME']
+    modules_generated_tests.setdefault(module_name, []).append(test_path)
+    return test
 
 def _env_build_lib(self, src, name=None, static=None, **kwargs):
     """ Environment method to build a shared library for a module """
     global modules_generated_libs
-    global modules_scons_libs
     add_targets(src)
-    module_name = self["APP_MODULE_FORMAT_NAME"]
     if name is None:
-        name = module_name
+        name = self["APP_MODULE_FORMAT_NAME"]
     lib_path = os.path.join(builder_helper.build_lib_path, name)
     # no cache for symlinks renewal
     if (static is not None and static) or builder_helper.build_static_libs:
@@ -341,13 +341,11 @@ def _env_build_lib(self, src, name=None, static=None, **kwargs):
         lib = NoCache(self.SharedLibrary(lib_path, src, **kwargs))
     module_name = self['APP_MODULE_NAME']
     modules_generated_libs.setdefault(module_name, []).append(name)
-    modules_scons_libs[module_name] = lib
     return lib
 
 def _env_build_bin(self, src, name=None, add_libs=[], **kwargs):
     """ Environment method to build a binary for a module """
     global modules_generated_bins
-    global modules_scons_bins
     add_targets(src)
     if name is None:
         name = self['APP_MODULE_FORMAT_NAME']
@@ -359,7 +357,6 @@ def _env_build_bin(self, src, name=None, add_libs=[], **kwargs):
     bin = bin_env.Program(bin_path, src, **kwargs)
     module_name = self['APP_MODULE_NAME']
     modules_generated_bins.setdefault(module_name, []).append(name)
-    modules_scons_libs[module_name] = bin
     return bin
 
 def _env_git_clone(self, url, branch, dest, recursive = False):

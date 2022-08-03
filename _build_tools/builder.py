@@ -13,7 +13,6 @@ except ImportError:
     from . import modules as build_tools_modules
 
 default_mode = "debug"
-
 default_compiler = os.getenv("COMPILER", "gcc")
 specific_platform_compilers = {
     "windows": "mingw"
@@ -484,6 +483,15 @@ def distribute_app(app, modules):
 
 ###############################################################################
 
+def print_all():
+    print(" ".join([
+        build_platform,
+        build_architecture,
+        build_mode,
+        build_compiler,
+        build_on_android and "true" or "false"
+    ]))
+
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         sys.exit(0)
@@ -498,5 +506,4 @@ if __name__ == '__main__':
     elif sys.argv[1] == "android":
         print(build_on_android and "true" or "false")
     elif sys.argv[1] == "all":
-        lst = [build_platform, build_architecture, build_mode, build_compiler, build_on_android and "true" or "false"]
-        print(" ".join(lst))
+        print_all()

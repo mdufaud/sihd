@@ -249,7 +249,7 @@ debug_flags = ["-g", "-O1"]
 release_flags = ["-O3"]
 
 ## general compilation parameters
-flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
+flags = ['-std=c++17', '-Wall', '-Wextra', '-pipe', '-fPIC']
 defines = [
     "SIHD_VERSION_MAJOR=" + version.split('.')[0],
     "SIHD_VERSION_MINOR=" + version.split('.')[1],
