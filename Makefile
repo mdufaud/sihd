@@ -8,7 +8,7 @@ endif
 
 APP_NAME = sihd
 OS := $(shell uname)
-HERE = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+HERE := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 ifeq ($(OS),Linux)
 SHELL := /bin/bash
@@ -18,60 +18,60 @@ SHELL := /bin/sh
 GREP := /usr/bin/grep
 endif
 
-MAKEARG_1 = $(word 1, $(MAKECMDGOALS))
-MAKEARG_2 = $(word 2, $(MAKECMDGOALS))
-MAKEARG_3 = $(word 3, $(MAKECMDGOALS))
-MAKEARG_4 = $(word 4, $(MAKECMDGOALS))
+MAKEARG_1 := $(word 1, $(MAKECMDGOALS))
+MAKEARG_2 := $(word 2, $(MAKECMDGOALS))
+MAKEARG_3 := $(word 3, $(MAKECMDGOALS))
+MAKEARG_4 := $(word 4, $(MAKECMDGOALS))
 
 ##############
 # Builder env
 ##############
 
-BUILD_TOOLS = $(HERE)/_build_tools
-MAKEFILE_TOOLS = $(BUILD_TOOLS)/makefile
+BUILD_TOOLS := $(HERE)/_build_tools
+MAKEFILE_TOOLS := $(BUILD_TOOLS)/makefile
 
-BUILD_EXTRA = $(HERE)/_build_extra
-MAKEFILE_EXTRA = $(BUILD_EXTRA)/makefile
+BUILD_EXTRA := $(HERE)/_build_extra
+MAKEFILE_EXTRA := $(BUILD_EXTRA)/makefile
 
-BUILDER = $(BUILD_TOOLS)/builder.py
+BUILDER := $(BUILD_TOOLS)/builder.py
 
-BUILDER_RESP = $(shell arch=$(arch) mode=$(mode) platform=$(platform) compiler=$(compiler) python3 $(BUILDER) all)
+BUILDER_RESP := $(shell arch=$(arch) mode=$(mode) platform=$(platform) compiler=$(compiler) python3 $(BUILDER) all)
 
-PLATFORM = $(word 1, $(BUILDER_RESP))
+PLATFORM := $(word 1, $(BUILDER_RESP))
 ifeq ($(PLATFORM),)
 $(error "Makefile: platform not found - cannot find build path")
 endif
 
-ARCH = $(word 2, $(BUILDER_RESP))
+ARCH := $(word 2, $(BUILDER_RESP))
 ifeq ($(ARCH),)
 $(error "Makefile: architecture not found - cannot find build path")
 endif
 
-COMPILE_MODE = $(word 3, $(BUILDER_RESP))
+COMPILE_MODE := $(word 3, $(BUILDER_RESP))
 ifeq ($(COMPILE_MODE),)
 $(error "Makefile: compilation mode not found - cannot find build path")
 endif
 
-COMPILER = $(word 4, $(BUILDER_RESP))
-ANDROID = $(word 5, $(BUILDER_RESP))
+COMPILER := $(word 4, $(BUILDER_RESP))
+ANDROID := $(word 5, $(BUILDER_RESP))
 
 ##########
 # Paths
 ##########
 
-BUILD_ENTRY_PATH = $(HERE)/build
-BUILD_PATH = $(BUILD_ENTRY_PATH)/$(PLATFORM)-$(ARCH)/$(COMPILE_MODE)
-EXTLIB_PATH = $(BUILD_PATH)/extlib
-EXTLIB_LIB_PATH = $(EXTLIB_PATH)/lib
-LIB_PATH = $(BUILD_PATH)/lib
-INCLUDE_PATH = $(BUILD_PATH)/include
-TEST_PATH = $(BUILD_PATH)/test
-TEST_BIN_PATH = $(TEST_PATH)/bin
-BIN_PATH = $(BUILD_PATH)/bin
-OBJ_PATH = $(BUILD_PATH)/obj
-ETC_PATH = $(BUILD_PATH)/etc
-SHARE_PATH = $(BUILD_PATH)/share
-DIST_PATH = $(HERE)/dist
+BUILD_ENTRY_PATH := $(HERE)/build
+BUILD_PATH := $(BUILD_ENTRY_PATH)/$(PLATFORM)-$(ARCH)/$(COMPILE_MODE)
+EXTLIB_PATH := $(BUILD_PATH)/extlib
+EXTLIB_LIB_PATH := $(EXTLIB_PATH)/lib
+LIB_PATH := $(BUILD_PATH)/lib
+INCLUDE_PATH := $(BUILD_PATH)/include
+TEST_PATH := $(BUILD_PATH)/test
+TEST_BIN_PATH := $(TEST_PATH)/bin
+BIN_PATH := $(BUILD_PATH)/bin
+OBJ_PATH := $(BUILD_PATH)/obj
+ETC_PATH := $(BUILD_PATH)/etc
+SHARE_PATH := $(BUILD_PATH)/share
+DIST_PATH := $(HERE)/dist
 
 ####################
 # Makefile includes
@@ -90,7 +90,7 @@ endif
 ############
 
 ifeq ($(j),)
-	j = $$[ $(UTILS_LOGICAL_CORE_NUMBER) - 2 ]
+	j := $$[ $(UTILS_LOGICAL_CORE_NUMBER) - 2 ]
 endif
 SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(j) $(SCONS_ARGS)
 
@@ -172,7 +172,7 @@ get_mk_phony = $(shell grep '^.PHONY: .* \#' $1 | sed 's/\.PHONY: \(.*\) \# \(.*
 .PHONY: list # Generate list of targets with descriptions
 
 list:
-	@echo "Makefile targets:"
+	@echo "Makefile targets"
 	@- $(foreach MAKEFILE_PATH, $(MAKEFILE_LIST), \
 		echo ""; \
 		echo "$(MAKEFILE_PATH):"; \
@@ -206,7 +206,7 @@ build_dry: build
 # make mod MODULE
 ifeq ($(MAKEARG_1), mod)
 .PHONY: mod
-MODULES_NAME = $(MAKEARG_2)$(m)
+MODULES_NAME := $(MAKEARG_2)$(m)
 mod: modules = $(MODULES_NAME)
 mod: build
 endif # module
@@ -225,7 +225,7 @@ endif # module
 # find string 'test' in target
 ifneq ($(findstring test,$(MAKEARG_1)), )
 
-TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
+TEST_EXEC := $(wildcard $(TEST_BIN_PATH)/*)
 TEST_DEFAULT_ARGS =
 TEST_ARGS =
 DEBUGGER_ARGS =
@@ -278,24 +278,24 @@ ttest: strace_test
 #	make test ls
 #	make test t=FILTER
 COMMA = ,
-MODULES_NAME = $(MAKEARG_2)$(m)
-MODULES_NAME_SPLIT = $(subst $(COMMA), ,$(MODULES_NAME))
-TEST_NAME = $(MAKEARG_3)$(t)
+MODULES_NAME := $(MAKEARG_2)$(m)
+MODULES_NAME_SPLIT := $(subst $(COMMA), ,$(MODULES_NAME))
+TEST_NAME := $(MAKEARG_3)$(t)
 TEST_DEFAULT_ARGS += --gtest_death_test_style=threadsafe --gtest_shuffle
 
 ifeq ($(MODULES_NAME),all)
-	TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
+	TEST_EXEC := $(wildcard $(TEST_BIN_PATH)/*)
 	MODULES_NAME =
 endif
 
 ifneq ($(MODULES_NAME), )
-	TEST_EXEC = $(foreach var, $(MODULES_NAME_SPLIT), $(TEST_BIN_PATH)/$(APP_NAME)_$(var))
+	TEST_EXEC := $(foreach var, $(MODULES_NAME_SPLIT), $(TEST_BIN_PATH)/$(APP_NAME)_$(var))
 endif
 
 # case: make test ls
 ifeq ($(MODULES_NAME),ls)
 ifeq ($(TEST_NAME), )
-	TEST_EXEC = $(wildcard $(TEST_BIN_PATH)/*)
+	TEST_EXEC := $(wildcard $(TEST_BIN_PATH)/*)
 	TEST_NAME = ls
 	MODULES_NAME =
 endif
@@ -341,7 +341,7 @@ dep:
 
 # make dep mod MODULE
 ifeq ($(MAKEARG_2), mod)
-MODULES_NAME = $(MAKEARG_3)$(m)
+MODULES_NAME := $(MAKEARG_3)$(m)
 dep: modules = $(MODULES_NAME)
 mod:
 	@echo > /dev/null
@@ -351,7 +351,7 @@ endif
 
 # make dep lib LIBNAME
 ifeq ($(MAKEARG_2), lib)
-LIBS_NAME = $(MAKEARG_3)
+LIBS_NAME := $(MAKEARG_3)
 dep: modules = NONE
 dep: libs = $(LIBS_NAME)
 mod:
@@ -397,13 +397,13 @@ checkdep:
 # make dist
 ifeq ($(MAKEARG_1), dist)
 
-MODULES_NAME = $(m)
+MODULES_NAME := $(m)
 
 # make dist mod MODULE type
 ifeq ($(MAKEARG_2), mod)
 .PHONY: mod
-MODULES_NAME = $(MAKEARG_3)$(m)
-DIST_TYPE = $(MAKEARG_4)
+MODULES_NAME := $(MAKEARG_3)$(m)
+DIST_TYPE := $(MAKEARG_4)
 mod:
 	@echo > /dev/null
 else
@@ -433,11 +433,11 @@ ifeq ($(INSTALL_PREFIX),)
 endif
 
 INSTALLED_FILES_DESTINATION := $(HERE)/.installed
-INSTALL_LIB_DEST = $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/lib$(INSTALL_LIBSUFFIX)
-INSTALL_BIN_DEST = $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/bin$(INSTALL_BINSUFFIX)
-INSTALL_ETC_DEST = $(INSTALL_DESTDIR)/etc$(INSTALL_ETCSUFFIX)
-INSTALL_INCLUDE_DEST = $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/include$(INSTALL_INCLUDESUFFIX)
-INSTALL_SHARE_DEST = $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/share$(INSTALL_INCLUDESUFFIX)
+INSTALL_LIB_DEST := $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/lib$(INSTALL_LIBSUFFIX)
+INSTALL_BIN_DEST := $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/bin$(INSTALL_BINSUFFIX)
+INSTALL_ETC_DEST := $(INSTALL_DESTDIR)/etc$(INSTALL_ETCSUFFIX)
+INSTALL_INCLUDE_DEST := $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/include$(INSTALL_INCLUDESUFFIX)
+INSTALL_SHARE_DEST := $(INSTALL_DESTDIR)$(INSTALL_PREFIX)/share$(INSTALL_INCLUDESUFFIX)
 
 .PHONY: confirm_install # List dirs to install and ask confirmation
 

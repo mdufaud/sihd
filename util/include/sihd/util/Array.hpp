@@ -76,6 +76,12 @@ class Array: public IArray, public ICloneable<Array<T>>
             this->push_back(vec);
         }
 
+        template <size_t SIZE>
+        Array(const std::array<T, SIZE> & arr): Array()
+        {
+            this->push_back(arr);
+        }
+
         /*********************************************************************/
         /* copy constructor */
         /*********************************************************************/
@@ -485,12 +491,12 @@ class Array: public IArray, public ICloneable<Array<T>>
                 : std::vector<T>();
         }
 
-        template <size_t ARRAY_SIZE>
-        std::array<T, ARRAY_SIZE> cpp_array() const
+        template <size_t SIZE>
+        std::array<T, SIZE> cpp_array() const
         {
-            std::array<T, ARRAY_SIZE> arr;
-            if (_buf_ptr != nullptr && _size >= ARRAY_SIZE)
-                memcpy(arr.data(), _buf_ptr, ARRAY_SIZE * this->data_size());
+            std::array<T, SIZE> arr;
+            if (_buf_ptr != nullptr && _size >= SIZE)
+                memcpy(arr.data(), _buf_ptr, SIZE * this->data_size());
             return arr;
         }
 
@@ -503,8 +509,8 @@ class Array: public IArray, public ICloneable<Array<T>>
             return this->is_equal(vec.data(), vec.size(), byte_offset);
         }
 
-        template <size_t ARRAY_SIZE>
-        bool is_equal(const std::array<T, ARRAY_SIZE> & array, size_t byte_offset = 0) const
+        template <size_t SIZE>
+        bool is_equal(const std::array<T, SIZE> & array, size_t byte_offset = 0) const
         {
             return this->is_equal(array.data(), array.size(), byte_offset);
         }
@@ -542,8 +548,8 @@ class Array: public IArray, public ICloneable<Array<T>>
             return this->from(vec.data(), vec.size());
         }
 
-        template <size_t ARRAY_SIZE>
-        bool from(const std::array<T, ARRAY_SIZE> & array)
+        template <size_t SIZE>
+        bool from(const std::array<T, SIZE> & array)
         {
             return this->from(array.data(), array.size());
         }
@@ -586,8 +592,8 @@ class Array: public IArray, public ICloneable<Array<T>>
             return this->copy_from(vec.data(), vec.size(), byte_offset);
         }
 
-        template <size_t ARRAY_SIZE>
-        bool copy_from(const std::array<T, ARRAY_SIZE> & array, size_t byte_offset = 0)
+        template <size_t SIZE>
+        bool copy_from(const std::array<T, SIZE> & array, size_t byte_offset = 0)
         {
             return this->copy_from(array.data(), array.size(), byte_offset);
         }
@@ -627,8 +633,8 @@ class Array: public IArray, public ICloneable<Array<T>>
         }
 
         // delete internal buffer if exists then sets it to array buf - does not take ownership
-        template <size_t ARRAY_SIZE>
-        bool assign(std::array<T, ARRAY_SIZE> & array)
+        template <size_t SIZE>
+        bool assign(std::array<T, SIZE> & array)
         {
             return this->assign(array.data(), array.size());
         }
@@ -677,11 +683,11 @@ class Array: public IArray, public ICloneable<Array<T>>
             return this->push_back(vec.data(), vec.size());
         }
 
-        // template <size_t ARRAY_SIZE>
-        // bool push_back(const std::array<T, ARRAY_SIZE> & array)
-        // {
-        //     return this->push_back(array.data(), array.size());
-        // }
+        template <size_t SIZE>
+        bool push_back(const std::array<T, SIZE> & array)
+        {
+            return this->push_back(array.data(), array.size());
+        }
 
         // char specialization
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
@@ -724,8 +730,8 @@ class Array: public IArray, public ICloneable<Array<T>>
             return this->push_front(vec.data(), vec.size());
         }
 
-        template <size_t ARRAY_SIZE>
-        bool push_front(const std::array<T, ARRAY_SIZE> & array)
+        template <size_t SIZE>
+        bool push_front(const std::array<T, SIZE> & array)
         {
             return this->push_front(array.data(), array.size());
         }

@@ -3,10 +3,10 @@ _color_red = \033[0;31m
 _color_green = \033[0;32m
 _color_yellow = \033[0;33m
 _color_reset = \033[0m
-_mk_color_red = $(shell echo -e "\033[0;31m")
-_mk_color_green = $(shell echo -e "\033[0;32m")
-_mk_color_yellow = $(shell echo -e "\033[0;33m")
-_mk_color_reset = $(shell echo -e "\033[0m")
+_mk_color_red := $(shell echo -e "\033[0;31m")
+_mk_color_green := $(shell echo -e "\033[0;32m")
+_mk_color_yellow := $(shell echo -e "\033[0;33m")
+_mk_color_reset := $(shell echo -e "\033[0m")
 else
 _color_red =
 _color_green =
