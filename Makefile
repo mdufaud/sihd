@@ -29,8 +29,8 @@ MAKEARG_2 := $(word 2, $(MAKECMDGOALS))
 MAKEARG_3 := $(word 3, $(MAKECMDGOALS))
 MAKEARG_4 := $(word 4, $(MAKECMDGOALS))
 
-APP_NAME = sihd
 HERE := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+APP_NAME := $(shell basename $(HERE))
 
 ##############
 # Builder env

@@ -76,7 +76,7 @@ if modules_to_build != "NONE":
 builder_helper.info("looking for manual external libs to fetch")
 
 more_libs = os.getenv("libs", "").split(",")
-app_external_libs = hasattr(app, "extlibs") and app.extlibs or {}
+app_external_libs = getattr(app, "extlibs", {})
 for libname in more_libs:
     if not libname:
         continue
@@ -89,9 +89,6 @@ for libname in more_libs:
 builder_helper.info("setting up conan")
 print()
 
-post_treatment_libs = {
-    "*lua.*": {"from": "lua.", "to": "lua5.3."}
-}
 extlib_path = builder_helper.build_extlib_path
 extlib_lib_path = builder_helper.build_extlib_lib_path
 extlib_hdr_path = builder_helper.build_extlib_hdr_path
@@ -109,7 +106,12 @@ class ConanAppDependencies(ConanFile):
     default_options = conan_options
 
     def requirements(self):
+        skip_libs = getattr(app, "conan_skip", [])
         for name, version in extlibs.items():
+            if name in skip_libs:
+                if verbose:
+                    builder_helper.info("skipping lib: " + name)
+                pass
             lib = "{}/{}".format(name, version)
             builder_helper.info("external lib to fetch: " + lib)
             self.requires(lib)
@@ -125,6 +127,7 @@ class ConanAppDependencies(ConanFile):
 
 def post_process():
     import glob
+    post_treatment_libs = getattr(app, "conan_post_process", {})
     for match, opt in post_treatment_libs.items():
         pattern = os.path.join(extlib_lib_path, match)
         results = glob.glob(pattern)

@@ -23,7 +23,7 @@ extlibs = {
     "sdl": "2.0.18",
     "glew": "2.2.0",
     "glfw": "3.3.6",
-    "pdcurses": "3.9",
+    "ftxui": "3.0.0",
     ## bindings
     "pybind11": "2.6.2",
     ## compressing utility
@@ -31,17 +31,24 @@ extlibs = {
     ## other
     "libjpeg": "9d",
 
+
     # TODO not found/working on conan.io
     "libuuid": "1.0.3",
     "lua": "5.3.5",
     "ncurses": "6.3",
+    "pdcurses": "3.9",
     "libbluetooth": "",
+}
+
+conan_skip = ["libuuid", "lua", "ncurses", "libbluetooth"]
+conan_post_process = {
+    "*lua.*": {"from": "lua.", "to": "lua5.3."}
 }
 
 # modules descriptions
 modules = {
     "util": {
-        "extlibs": ['nlohmann_json', 'fmt'],
+        "extlibs": ['nlohmann_json', 'fmt', 'libuuid'],
         "libs": ['pthread', 'fmt'],
         "linux-libs": ['dl', 'rt', 'uuid'],
         "windows-libs": ['rpcrt4'],
@@ -59,6 +66,15 @@ modules = {
         "depends": ['util'],
         "extlibs": ['libzip'],
         "libs": ['zip'],
+    },
+    "tui": {
+        "depends": ['util'],
+        "extlibs": ['ftxui'],
+        "libs": [
+            "ftxui-component",
+            "ftxui-dom",
+            "ftxui-screen",
+        ]
     },
     "curses": {
         "depends": ['util'],
@@ -249,7 +265,8 @@ debug_flags = ["-g", "-O1"]
 release_flags = ["-O3"]
 
 ## general compilation parameters
-flags = ['-std=c++17', '-Wall', '-Wextra', '-pipe', '-fPIC']
+cxx_flags = ['-std=c++17']
+flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
 defines = [
     "SIHD_VERSION_MAJOR=" + version.split('.')[0],
     "SIHD_VERSION_MINOR=" + version.split('.')[1],
