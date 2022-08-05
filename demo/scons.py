@@ -2,7 +2,7 @@ import os
 
 Import('env')
 
-builder_helper = env["BUILDER_HELPER"]
+builder_helper = env.builder_helper()
 
 demo_etc_dir = Dir("etc").Dir("sihd").Dir("demo")
 

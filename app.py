@@ -30,6 +30,8 @@ extlibs = {
     ## other
     "libjpeg": "9d",
 
+    # todo
+    "ftxui": "3.0.0",
     "libuuid": "1.0.3",
     "lua": "5.3.5",
     "ncurses": "6.3",
@@ -66,6 +68,7 @@ modules = {
         "libs": ['zip'],
     },
     "tui": {
+        "linux-extlibs": ['ftxui'],
         # compiling specifically with mingw
         "git-url": "https://github.com/ArthurSonzogni/FTXUI",
         "git-branch": "v3.0.0",

@@ -1,30 +1,23 @@
-import os
-import shutil
 from os.path import join, exists
 
-Import('env', 'is_dry_run')
+Import('env')
 
 ## Clone LuaBridge repository
 
-builder_helper = env["BUILDER_HELPER"]
-conf = env["APP_MODULE_CONF"]
+builder_helper = env.builder_helper()
+conf = env.module_conf()
 
 env.git_clone(conf["git-url"], conf["git-branch"], "luabridge")
 
 ## Copy LuaBridge headers into build
 
-module_dir = env["APP_MODULE_DIR"]
-luabridge_headers_dir = join(module_dir, "luabridge", "Source", "LuaBridge")
-
 build_include_dir = join(builder_helper.build_hdr_path, "LuaBridge")
-
 builder_helper.info("luabridge: copying headers to: " + build_include_dir)
-if not is_dry_run:
-    shutil.copytree(luabridge_headers_dir, build_include_dir, dirs_exist_ok = True)
+env.copy_into_build("luabridge/Source/LuaBridge", build_include_dir)
 
 ## Compile files by modules
 
-modules = env['APP_MODULES_BUILD']
+modules = env.modules_to_build()
 
 test_dir = Dir("test")
 src_dir = Dir("src")
@@ -41,6 +34,6 @@ for module in modules:
         tests.append(test_file)
 
 lib = env.build_lib(srcs)
-test = env.build_test(tests, add_libs = [env['APP_MODULE_FORMAT_NAME']])
+test = env.build_test(tests, add_libs = [env.module_format_name()])
 
 Return('lib')

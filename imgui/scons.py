@@ -1,6 +1,8 @@
 import os
 
-Import('env', 'builder_helper', 'is_dry_run')
+Import('env')
+
+builder_helper = env.builder_helper()
 
 conf = env["APP_MODULE_CONF"]
 
@@ -95,14 +97,11 @@ if compile_sdl or compiling_with_emscripten:
 ## Copy ImGui headers into build
 
 build_include_dir = builder_helper.build_hdr_path
-sihd_imgui_build_include_dir = Dir(build_include_dir).Dir("sihd").Dir("imgui")
+sihd_imgui_build_include_dir = "include/sihd/imgui"
 
-import shutil
 builder_helper.info("imgui: copying headers to: " + str(sihd_imgui_build_include_dir))
-if not is_dry_run:
-    os.makedirs(str(sihd_imgui_build_include_dir), exist_ok = True)
-    for header in imgui_headers:
-        shutil.copy(str(header), str(sihd_imgui_build_include_dir))
+for header in imgui_headers:
+    env.copy_into_build(header, "include/sihd/imgui")
 
 ## Build libimgui and libsihd_imgui
 imgui_env = env.Clone()

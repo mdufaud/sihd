@@ -1,62 +1,81 @@
-Import('env', 'builder_helper', 'module_format_name')
+Import('env')
 
-conf = env["APP_MODULE_CONF"]
+builder_helper = env.builder_helper()
 
-ft_env = env.Clone()
-ft_env.Append(
-    LIBS = ["pthread"],
-    CPPFLAGS = [
-        "-Wno-sign-compare",
-        "-Wno-pessimizing-move",
-        "-Wno-unused-function",
-    ],
-    CPPDEFINES = [
-        "UNICODE",
-        "_UNICODE",
-        "FTXUI_MICROSOFT_TERMINAL_FALLBACK=ON"
-    ],
-)
+#do_compile = builder_helper.build_platform == "windows" or builder_helper.is_android()
+do_compile = True
 
-cloned = ft_env.git_clone(conf["git-url"], conf["git-branch"], "FTXUI")
+if do_compile:
 
-src_dir = "FTXUI/src/ftxui"
+    ftxui_env = env.Clone()
+    ftxui_env.Append(
+        LIBS = ["pthread"],
+        CPPFLAGS = [
+            "-Wno-sign-compare",
+            "-Wno-pessimizing-move",
+            "-Wno-unused-function",
+        ],
+        CPPDEFINES = [
+            "UNICODE",
+            "_UNICODE",
+            "FTXUI_MICROSOFT_TERMINAL_FALLBACK=ON"
+        ],
+    )
 
-mingw_windows_replace = {"<Windows.h>": "<windows.h>"}
+    conf = env.module_conf()
+    cloned = ftxui_env.git_clone(conf["git-url"], conf["git-branch"], "FTXUI")
 
-ft_env.file_replace(src_dir + "/screen/screen.cpp", mingw_windows_replace)
-ft_env.file_replace(src_dir + "/screen/terminal.cpp", mingw_windows_replace)
-ft_env.file_replace(src_dir + "/component/screen_interactive.cpp", mingw_windows_replace)
+    ftxui_src_dir = "FTXUI/src/ftxui"
 
-screen_src_lst = Glob(src_dir + "/screen/*.cpp")
-dom_src_lst = Glob(src_dir + "/dom/*.cpp")
-component_src_lst = Glob(src_dir + "/component/*.cpp")
+    # change windows header for cross compiling
+    if builder_helper.build_platform == "windows":
+        mingw_windows_replace = {"<Windows.h>": "<windows.h>"}
+        for file in [
+            ftxui_src_dir + "/screen/screen.cpp",
+            ftxui_src_dir + "/screen/terminal.cpp",
+            ftxui_src_dir + "/component/screen_interactive.cpp"
+        ]:
+            if ftxui_env.find_in_file(file, "<Windows.h>"):
+                ftxui_env.file_replace(file, mingw_windows_replace)
 
-screen_src_lst = [src for src in screen_src_lst if str(src).find("_test") == -1]
-dom_src_lst = [src for src in dom_src_lst if str(src).find("_test") == -1]
-component_src_lst = [src for src in component_src_lst if str(src).find("_test") == -1]
+    # srcs files for every libs
+    ftxui_screen_src_lst = Glob(ftxui_src_dir + "/screen/*.cpp")
+    ftxui_dom_src_lst = Glob(ftxui_src_dir + "/dom/*.cpp")
+    ftxui_component_src_lst = Glob(ftxui_src_dir + "/component/*.cpp")
 
-ft_screen_env = ft_env.Clone()
-ft_dom_env = ft_env.Clone()
-ft_component_env = ft_env.Clone()
+    # remove google tests
+    ftxui_screen_src_lst = [src for src in ftxui_screen_src_lst if str(src).find("_test") == -1]
+    ftxui_dom_src_lst = [src for src in ftxui_dom_src_lst if str(src).find("_test") == -1]
+    ftxui_component_src_lst = [src for src in ftxui_component_src_lst if str(src).find("_test") == -1]
 
-ft_env.copy_into_build("FTXUI/include", "include")
+    # create environnements for creating the 3 libs
+    ft_screen_env = ftxui_env.Clone()
+    ft_dom_env = ftxui_env.Clone()
+    ft_component_env = ftxui_env.Clone()
 
-ft_env.copy_into_build(src_dir + "/screen/util.hpp", "include/ftxui/screen/util.hpp")
+    # copy includes to build
+    ftxui_env.copy_into_build("FTXUI/include", "include")
 
-ft_env.copy_into_build(src_dir + "/dom/box_helper.hpp", "include/ftxui/dom/box_helper.hpp")
-ft_env.copy_into_build(src_dir + "/dom/flexbox_helper.hpp", "include/ftxui/dom/flexbox_helper.hpp")
-ft_env.copy_into_build(src_dir + "/dom/node_decorator.hpp", "include/ftxui/dom/node_decorator.hpp")
+    ftxui_env.copy_into_build(ftxui_src_dir + "/screen/util.hpp", "include/ftxui/screen/util.hpp")
 
-ft_env.copy_into_build(src_dir + "/component/terminal_input_parser.hpp", "include/ftxui/component/terminal_input_parser.hpp")
+    ftxui_env.copy_into_build(ftxui_src_dir + "/dom/box_helper.hpp", "include/ftxui/dom/box_helper.hpp")
+    ftxui_env.copy_into_build(ftxui_src_dir + "/dom/flexbox_helper.hpp", "include/ftxui/dom/flexbox_helper.hpp")
+    ftxui_env.copy_into_build(ftxui_src_dir + "/dom/node_decorator.hpp", "include/ftxui/dom/node_decorator.hpp")
 
-ft_screen_env.build_lib(screen_src_lst, name = "ftxui-screen")
+    ftxui_env.copy_into_build(ftxui_src_dir + "/component/terminal_input_parser.hpp", "include/ftxui/component/terminal_input_parser.hpp")
 
-ft_dom_env.Prepend(LIBS = ["ftxui-screen"])
-ft_dom_env.build_lib(dom_src_lst, name = "ftxui-dom")
+    # build ftxui-screen
+    ft_screen_env.build_lib(ftxui_screen_src_lst, name = "ftxui-screen")
 
-ft_component_env.Prepend(LIBS = ["ftxui-screen", "ftxui-dom"])
-ft_component_env.build_lib(component_src_lst, name = "ftxui-component")
+    # build ftxui-dom
+    ft_dom_env.Prepend(LIBS = ["ftxui-screen"])
+    ft_dom_env.build_lib(ftxui_dom_src_lst, name = "ftxui-dom")
 
+    # build ftxui-component
+    ft_component_env.Prepend(LIBS = ["ftxui-screen", "ftxui-dom"])
+    ft_component_env.build_lib(ftxui_component_src_lst, name = "ftxui-component")
+
+# load created ftxui libs in env
 env.Prepend(LIBS = ["ftxui-screen", "ftxui-dom", "ftxui-component"])
 
 # build library from lib sources - not added to environnement
@@ -69,4 +88,3 @@ env.Prepend(LIBS = ["ftxui-screen", "ftxui-dom", "ftxui-component"])
 bin = env.build_bin(Glob('src/*.cpp'))
 
 # Return('lib')
-Return('bin')

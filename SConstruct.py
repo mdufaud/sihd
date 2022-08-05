@@ -8,6 +8,7 @@ import os
 import fileinput
 import subprocess
 import shutil
+import filecmp
 # Pretty utility for verbosis
 from pprint import PrettyPrinter
 pp = PrettyPrinter(indent=2)
@@ -160,8 +161,6 @@ base_env = Environment(
     APP_CONFIG = app,
     # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
-    # builder helper for sconscript
-    BUILDER_HELPER = builder_helper,
     # lib version + automatic symbolic links
     SHLIBVERSION = app.version
 )
@@ -362,13 +361,14 @@ def _env_build_bin(self, src, name=None, add_libs=[], **kwargs):
     bin_path = os.path.join(builder_helper.build_bin_path, name)
     bin = bin_env.Program(bin_path, src, **kwargs)
     module_name = self['APP_MODULE_NAME']
-    modules_generated_bins.setdefault(module_name, []).append(name)
+    modules_generated_bins.setdefault(module_name, []).append(bin_path)
     return bin
 
 def _env_git_clone(self, url, branch, dest, recursive = False):
     global modules_cloned_git_repositories
     modname = self['APP_MODULE_NAME']
-    dest = os.path.join(builder_helper.build_root_path, modname, dest)
+    if not os.path.isabs(dest):
+        dest = os.path.join(builder_helper.build_root_path, modname, dest)
     ret = True
     if os.path.isdir(dest):
         builder_helper.info("repository already cloned: {}".format(dest))
@@ -401,7 +401,8 @@ def _fileinput_replace(path, replace_dic):
 
 def _env_replace_in_file(self, path, dic):
     module_name = self['APP_MODULE_NAME']
-    path = os.path.join(builder_helper.build_root_path, module_name, path)
+    if not os.path.isabs(path):
+        path = os.path.join(builder_helper.build_root_path, module_name, path)
     builder_helper.debug("replacing file: " + path)
     if not is_dry_run:
         _fileinput_replace(path, dic)
@@ -433,6 +434,16 @@ def _env_parse_config(self, config):
     """ Environment method to add lib's binary-config dynamically for a module """
     return parse_config_command(self, [config])
 
+def _env_find_in_file(self, src, str):
+    module_name = self['APP_MODULE_NAME']
+    if not os.path.isabs(src):
+        src = os.path.join(builder_helper.build_root_path, module_name, src)
+    with open(src, 'r') as fd:
+        for line in fd:
+            if str in line:
+                return True
+    return False
+
 # methods to build either test, lib or executable
 base_env.AddMethod(_env_build_lib, "build_lib")
 base_env.AddMethod(_env_build_bin, "build_bin")
@@ -444,6 +455,14 @@ base_env.AddMethod(_env_git_clone, "git_clone")
 base_env.AddMethod(_env_get_module_env, "get_depends_env")
 base_env.AddMethod(_env_copy_into_build, "copy_into_build")
 base_env.AddMethod(_env_replace_in_file, "file_replace")
+base_env.AddMethod(_env_find_in_file, "find_in_file")
+base_env.AddMethod(lambda self: self['APP_MODULE_NAME'], "module_name")
+base_env.AddMethod(lambda self: self['APP_MODULE_FORMAT_NAME'], "module_format_name")
+base_env.AddMethod(lambda self: self['APP_MODULE_CONF'], "module_conf")
+base_env.AddMethod(lambda self: self['APP_MODULE_DIR'], "module_dir")
+base_env.AddMethod(lambda self: self['APP_MODULES_BUILD'], "modules_to_build")
+base_env.AddMethod(lambda self: builder_helper, "builder_helper")
+base_env.AddMethod(lambda self: is_dry_run, "is_dry_run")
 
 ## build utilities
 def load_env_packages_config(env, *configs):
@@ -470,7 +489,11 @@ def copy_module_res_into_build(module_name, src, dst, must_exist = True):
     if verbose:
         builder_helper.info("copying resources of module {}/{} -> build/{}".format(module_name, src, dst))
     if os.path.isfile(module_dir_input):
-        shutil.copyfile(module_dir_input, build_dir_output)
+        if os.path.isfile(build_dir_output) and filecmp.cmp(module_dir_input, build_dir_output):
+            # file is same
+            return
+        if not is_dry_run:
+            shutil.copy(module_dir_input, build_dir_output)
     elif os.path.isdir(module_dir_input):
         if not is_dry_run:
             shutil.copytree(module_dir_input, build_dir_output, dirs_exist_ok = True)
@@ -529,7 +552,7 @@ def get_module_env(conf, depends = [], append_depends_libs = True, append_depend
         APP_MODULE_FORMAT_NAME = module_format,
         # configuration of module for scons.py
         APP_MODULE_CONF = conf,
-        APP_MODULE_DIR = os.path.abspath(str(Dir(modname)))
+        APP_MODULE_DIR = os.path.join(builder_helper.build_root_path, modname)
     )
     # use multiple pkg-config output to add libraries/includes path
     package_configs = conf.get("pkg-configs", [])
@@ -589,12 +612,7 @@ for conf in build_order:
     built[modname] = SConscript(module_dir.File("scons.py"),
                                 variant_dir = os.path.join(builder_helper.build_obj_path, modname),
                                 duplicate = 0,
-                                exports = [
-                                    'env',
-                                    'builder_helper',
-                                    'module_format_name',
-                                    'is_dry_run'
-                                ])
+                                exports = ['env'])
     # fill module configurations with what was actually used
     conf["libs"] = env['LIBS']
     conf["flags"] = env['CPPFLAGS']
@@ -675,12 +693,23 @@ def display_build_status(success, failures_message):
     else:
         builder_helper.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
 
+def display_built():
+    for modname, binaries in modules_generated_bins.items():
+        builder_helper.info("module {} binaries:".format(modname))
+        for binpath in binaries:
+            builder_helper.info("\t{}".format(binpath))
+    for modname, tests in modules_generated_tests.items():
+        builder_helper.info("module {} tests:".format(modname))
+        for testpath in tests:
+            builder_helper.info("\t{}".format(testpath))
+
 def after_build():
     success, failures_message = build_status()
     display_build_status(success, failures_message)
     if is_dry_run:
         return
     if success and hasattr(app, "on_build_success"):
+        display_built()
         app.on_build_success(build_modules, builder_helper)
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules, builder_helper)
