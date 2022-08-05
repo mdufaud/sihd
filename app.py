@@ -23,7 +23,6 @@ extlibs = {
     "sdl": "2.0.18",
     "glew": "2.2.0",
     "glfw": "3.3.6",
-    "ftxui": "3.0.0",
     ## bindings
     "pybind11": "2.6.2",
     ## compressing utility
@@ -67,7 +66,6 @@ modules = {
         "libs": ['zip'],
     },
     "tui": {
-        "linux-extlibs": ['ftxui'],
         # compiling specifically with mingw
         "git-url": "https://github.com/ArthurSonzogni/FTXUI",
         "git-branch": "v3.0.0",
