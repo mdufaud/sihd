@@ -19,6 +19,7 @@ vgcore*
 build/*
 dist/*
 imgui/imgui
+tui/FTXUI
 lua/luabridge
 .installed
 .build_cache

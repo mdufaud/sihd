@@ -31,8 +31,6 @@ extlibs = {
     ## other
     "libjpeg": "9d",
 
-
-    # TODO not found/working on conan.io
     "libuuid": "1.0.3",
     "lua": "5.3.5",
     "ncurses": "6.3",
@@ -48,7 +46,8 @@ conan_post_process = {
 # modules descriptions
 modules = {
     "util": {
-        "extlibs": ['nlohmann_json', 'fmt', 'libuuid'],
+        "extlibs": ['nlohmann_json', 'fmt'],
+        "linux-extlibs": ['libuuid'],
         "libs": ['pthread', 'fmt'],
         "linux-libs": ['dl', 'rt', 'uuid'],
         "windows-libs": ['rpcrt4'],
@@ -68,13 +67,10 @@ modules = {
         "libs": ['zip'],
     },
     "tui": {
-        "depends": ['util'],
-        "extlibs": ['ftxui'],
-        "libs": [
-            "ftxui-component",
-            "ftxui-dom",
-            "ftxui-screen",
-        ]
+        "linux-extlibs": ['ftxui'],
+        # compiling specifically with mingw
+        "git-url": "https://github.com/ArthurSonzogni/FTXUI",
+        "git-branch": "v3.0.0",
     },
     "curses": {
         "depends": ['util'],

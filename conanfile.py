@@ -96,13 +96,15 @@ extlib_bin_path = builder_helper.build_extlib_bin_path
 extlib_etc_path = builder_helper.build_extlib_etc_path
 extlib_res_path = builder_helper.build_extlib_res_path
 
-conan_options = {'*:shared': builder_helper.build_static_libs == False}
+conan_options = {
+    '*:shared': builder_helper.build_static_libs == False,
+}
 if hasattr(app, "conan_options"):
     conan_options.update(app.conan_options)
 
 class ConanAppDependencies(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    generators = "gcc", "txt"
+    generators = "gcc", "txt", "CMakeDeps", "CMakeToolchain"
     default_options = conan_options
 
     def requirements(self):

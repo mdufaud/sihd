@@ -1,5 +1,4 @@
 # Time
-from platform import platform
 import time
 build_start_time = time.time()
 # General utilities
@@ -115,6 +114,8 @@ if pkg_manager_name:
 
 __env_to_key = {
     "LIBS": "_libs",
+    "CFLAGS": "_c_flags",
+    "CXXFLAGS": "_cxx_flags",
     "CPPFLAGS": "_flags",
     "CPPDEFINES": "_defines",
     "LINKFLAGS": "_link",
@@ -139,6 +140,10 @@ base_env = Environment(
         'PATH': os.getenv("PATH"),
         'LIBPATH': os.getenv("LIBPATH")
     },
+    # c compile flags
+    CFLAGS = getattr(app, 'c_flags', []),
+    # c++ compile flags
+    CXXFLAGS = getattr(app, 'cxx_flags', []),
     # c and c++ compile flags
     CPPFLAGS = getattr(app, 'flags', []),
     # extra #define for inside the code
@@ -160,9 +165,6 @@ base_env = Environment(
     # lib version + automatic symbolic links
     SHLIBVERSION = app.version
 )
-
-if build_platform == "windows":
-    base_env.Append(LIBPATH = builder_helper.build_extlib_bin_path)
 
 # add platform_[flags/defines/link/libs]
 add_env_app_conf(base_env, builder_helper.build_platform)
@@ -304,6 +306,10 @@ def add_targets(src):
 
 ## modules environnement methods
 
+def _env_copy_into_build(self, src, dst):
+    module_name = self['APP_MODULE_NAME']
+    copy_module_res_into_build(module_name, src, dst)
+
 def _env_build_test(self, src, name=None, add_libs=[], **kwargs):
     """ Environment method to build unit test binary for a module """
     if builder_helper.build_tests == False:
@@ -380,32 +386,41 @@ def _env_git_clone(self, url, branch, dest, recursive = False):
         modules_cloned_git_repositories.setdefault(modname, []).append(dest)
     return ret
 
-def _sed_replace(file, replace_dic):
+def _sed_replace(path, replace_dic):
+    if not os.path.isfile(path):
+        raise RuntimeError("File to replace {} does not exists".format(path))
     for key, value in replace_dic.items():
-        subprocess.call(['sed', '-i', 's/{}/{}/g'.format(key, value), file])
+        subprocess.call(['sed', '-i', 's/{}/{}/g'.format(key, value), path])
 
-def _fileinput_replace(file, replace_dic):
-    for line in fileinput.input(file, inplace=True):
+def _fileinput_replace(path, replace_dic):
+    if not os.path.isfile(path):
+        raise RuntimeError("File to replace {} does not exists".format(path))
+    for line in fileinput.input(path, inplace=True):
         for key, value in replace_dic.items():
             print(line.replace(key, value), end='')
 
+def _env_replace_in_file(self, path, dic):
+    module_name = self['APP_MODULE_NAME']
+    path = os.path.join(builder_helper.build_root_path, module_name, path)
+    builder_helper.debug("replacing file: " + path)
+    if not is_dry_run:
+        _fileinput_replace(path, dic)
+
 def _env_replace_in_build(self, to_replace, replace_dic):
-    true_replace = []
+    module_name = self['APP_MODULE_NAME']
+    files_to_replace = []
     for pattern in to_replace:
-        ret = glob.glob(os.path.join(str(build_dir), pattern), recursive = True)
+        ret = glob.glob(os.path.join(builder_helper.build_path, module_name, pattern), recursive = True)
         if ret:
-            true_replace += ret
+            files_to_replace += ret
         else:
-            true_replace.append(pattern)
+            files_to_replace.append(pattern)
     if verbose:
-        builder_helper.debug("replacing values in build files - {} files to replace".format(len(true_replace)))
-    for file in true_replace:
-        if os.path.isfile(file) == False:
-            builder_helper.warning("file to replace '{}' does not exists".format(file))
-            continue
-        builder_helper.debug("replacing file: " + file)
+        builder_helper.debug("replacing values in build files - {} files to replace".format(len(files_to_replace)))
+    for path in files_to_replace:
+        builder_helper.debug("replacing file: " + path)
         if not is_dry_run:
-            _sed_replace(file, replace_dic)
+            _sed_replace(path, replace_dic)
 
 def _env_get_module_env(self, **kwargs):
     return get_module_env(self["APP_MODULE_CONF"], **kwargs)
@@ -427,6 +442,8 @@ base_env.AddMethod(_env_parse_config, "parse_config")
 base_env.AddMethod(_env_replace_in_build, "build_replace")
 base_env.AddMethod(_env_git_clone, "git_clone")
 base_env.AddMethod(_env_get_module_env, "get_depends_env")
+base_env.AddMethod(_env_copy_into_build, "copy_into_build")
+base_env.AddMethod(_env_replace_in_file, "file_replace")
 
 ## build utilities
 def load_env_packages_config(env, *configs):
@@ -446,14 +463,19 @@ def parse_config_command(env, *configs):
         except OSError as e:
             builder_helper.warning("config '{}' not found".format(config))
 
-def copy_module_dir_into_build(module_name, dirname_to_copy):
+def copy_module_res_into_build(module_name, src, dst, must_exist = True):
     """ recursive copy of MODNAME/DIRNAME to build/DIRNAME """
-    module_dir_input = Dir(module_name).Dir(dirname_to_copy)
-    build_dir_output = build_dir.Dir(dirname_to_copy)
-    if os.path.isdir(str(module_dir_input)):
-        if verbose:
-            builder_helper.info("copying resources '{}' of module: {}".format(dirname_to_copy, module_name))
-        shutil.copytree(module_dir_input.get_abspath(), build_dir_output.get_abspath(), dirs_exist_ok = True)
+    module_dir_input = os.path.join(builder_helper.build_root_path, module_name, src)
+    build_dir_output = os.path.join(builder_helper.build_path, dst)
+    if verbose:
+        builder_helper.info("copying resources of module {}/{} -> build/{}".format(module_name, src, dst))
+    if os.path.isfile(module_dir_input):
+        shutil.copyfile(module_dir_input, build_dir_output)
+    elif os.path.isdir(module_dir_input):
+        if not is_dry_run:
+            shutil.copytree(module_dir_input, build_dir_output, dirs_exist_ok = True)
+    elif must_exist:
+        raise RuntimeError("for module {} resource {} not found".format(module_name, module_dir_input))
 
 def get_module_env(conf, depends = [], append_depends_libs = True, append_depends_defines = True):
     modname = conf["modname"]
@@ -487,7 +509,7 @@ def get_module_env(conf, depends = [], append_depends_libs = True, append_depend
     # Create a specific environment for the module
     env = base_env.Clone()
     # no need to add headers as they are copied to build
-    env.Prepend(
+    env.PrependUnique(
         # adding libraries
         LIBS = depends_generated_libs
                 + modules_helper.get_module_libs(build_modules, modname)
@@ -558,9 +580,9 @@ for conf in build_order:
             print("- needed specific packages configs")
             pp.pprint(parse_configs)
     # copy module/[etc|include|share] to build/[etc|include|share]
-    copy_module_dir_into_build(modname, "etc")
-    copy_module_dir_into_build(modname, "include")
-    copy_module_dir_into_build(modname, "share")
+    copy_module_res_into_build(modname, "etc", "etc", must_exist=False)
+    copy_module_res_into_build(modname, "include", "include", must_exist=False)
+    copy_module_res_into_build(modname, "share", "share", must_exist=False)
     # read module's scons script file
     module_format_name = env['APP_MODULE_FORMAT_NAME']
     module_dir = Dir(modname)
