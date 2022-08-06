@@ -84,7 +84,21 @@ env.Prepend(LIBS = ["ftxui-screen", "ftxui-dom", "ftxui-component"])
 # build unittest from test sources with newly created lib
 # test = env.build_test(Glob('test/*.cpp'), add_libs = [module_format_name])
 
+
 # build binary from bin sources with newly created lib
-bin = env.build_bin(Glob('src/*.cpp'))
+env.Append(
+    LIBS = ["pthread"],
+    CPPFLAGS = [
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-pessimizing-move",
+        "-Wno-unused-function",
+    ]
+)
+import os
+import sys
+for src in Glob('src/*.cpp'):
+    bin_name = os.path.basename(os.path.splitext(str(src))[0])
+    env.build_bin(src, name = bin_name)
 
 # Return('lib')
