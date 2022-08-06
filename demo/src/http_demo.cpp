@@ -148,6 +148,8 @@ int main()
     sihd::util::Str::hexdump_cols = 20;
     sihd::util::LoggerManager::basic();
     test::module::http_test();
+    if (sihd::util::OS::is_windows)
+        sihd::util::Time::sleep(5);
     return 0;
 }
 

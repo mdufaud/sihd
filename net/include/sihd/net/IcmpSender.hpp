@@ -62,6 +62,8 @@ class IcmpSender:   public sihd::util::Named,
         bool stop();
         bool is_running() const { return _poll.is_running(); }
 
+        // in ms
+        int poll_timeout() { return _poll.timeout(); }
         bool socket_opened() { return _socket.is_open(); }
         const Socket & socket() const { return _socket; }
         const IcmpResponse & response() const { return _icmp_response; }

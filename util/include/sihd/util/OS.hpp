@@ -97,6 +97,38 @@ class OS
         // bytes
         static ssize_t current_rss();
 
+#if defined(__SIHD_WINDOWS__)
+        static const bool is_windows = true;
+        static const bool is_unix = false;
+#else
+        static const bool is_windows = false;
+        static const bool is_unix = true;
+#endif
+
+#if defined(__SIHD_ANDROID__)
+        static const bool is_android = true;
+#else
+        static const bool is_android = false;
+#endif
+
+#if defined(__SIHD_APPLE__)
+        static const bool is_apple = true;
+#else
+        static const bool is_apple = false;
+#endif
+
+#if defined(__SIHD_IOS__)
+        static const bool is_ios = true;
+#else
+        static const bool is_ios = false;
+#endif
+
+#if defined(__EMSCRIPTEN__)
+        static const bool is_emscripten = true;
+#else
+        static const bool is_emscripten = false;
+#endif
+
     protected:
         // called when signal is caught
         static void _signal_callback(int sig);

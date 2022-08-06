@@ -8,7 +8,6 @@
 
 # include <sihd/util/Thread.hpp>
 
-
 namespace sihd::util
 {
 

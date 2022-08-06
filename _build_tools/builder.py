@@ -105,7 +105,7 @@ def get_arch():
             arch = ek2_architectures[arch]
         elif arch in architectures:
             arch = architectures[arch]
-    return __get_arg_or_env('arch', arch)
+    return get_opt('arch', arch)
 
 # from conans/conan/tools/gnu/get_gnu_triplet.py in https://github.com/conan-io
 
@@ -136,7 +136,7 @@ def _build_gnu_triplet(machine, vendor):
 
 ###############################################################################
 
-def __get_arg_or_env(argname, default_val=""):
+def get_opt(argname, default_val=""):
     arg_to_find = argname + "="
     for arg in sys.argv:
         idx = arg.find(arg_to_find)
@@ -148,7 +148,7 @@ def is_android():
     return "ANDROID_ARGUMENT" in os.environ
 
 def __get_platform():
-    env = __get_arg_or_env("platform", "")
+    env = get_opt("platform", "")
     build_platform = (env or platform.system()).lower()
     if "win" in build_platform:
         build_platform = "windows"
@@ -160,7 +160,7 @@ def get_compiler():
     backup_compiler = default_compiler
     if "arm" in arch:
         backup_compiler = "clang"
-    backup_compiler = __get_arg_or_env("compiler", backup_compiler)
+    backup_compiler = get_opt("compiler", backup_compiler)
     return specific_platform_compilers.get(build_platform, backup_compiler).lower()
 
 def get_platform():
@@ -169,32 +169,31 @@ def get_platform():
     return specific_compilers_platform.get(compiler, build_platform)
 
 def get_pkgdep():
-    return __get_arg_or_env("pkgdep", "")
+    return get_opt("pkgdep", "")
 
 def get_compile_mode():
-    return __get_arg_or_env("mode", default_mode).lower()
+    return get_opt("mode", default_mode).lower()
 
 def has_verbose():
-    return __get_arg_or_env("verbose", "") == "1"
+    return (get_opt("verbose", "") or get_opt("v", "")) == "1"
 
 def has_test():
-    return __get_arg_or_env("test", "") == "1"
+    return (get_opt("test", "") or get_opt("t", "")) == "1"
 
 def is_address_sanatizer():
-    return __get_arg_or_env("asan", "") == "1"
+    return get_opt("asan", "") == "1"
 
 def do_distribution():
-    return __get_arg_or_env("dist", "") != ""
+    return get_opt("dist", "") != ""
 
 def get_modules():
-    return __get_arg_or_env("modules", "")
+    return get_opt("modules", "") or get_opt("m", "")
 
 def get_force_build_modules():
-    return __get_arg_or_env("fmod", "")
-
+    return get_opt("fmod", "")
 
 def is_static_libs():
-    return __get_arg_or_env("static", "") == "1"
+    return get_opt("static", "") == "1"
 
 # compilation
 build_compiler = get_compiler()
@@ -326,7 +325,7 @@ def create_tar_package(app):
 def create_apt_package(app, modules):
     try:
         modules_extlibs = build_tools_modules.get_modules_extlibs(app, modules, platform)
-        dependencies = build_tools_modules.get_modules_packages(app, "apt", modules_extlibs)
+        dependencies, missing_dep = build_tools_modules.get_modules_packages(app, "apt", modules_extlibs)
     except SystemExit as err:
         error(err)
         exit(1)
@@ -399,7 +398,7 @@ def create_apt_package(app, modules):
 def create_pacman_package(app, modules):
     try:
         modules_extlibs = build_tools_modules.get_modules_extlibs(app, modules, platform)
-        dependencies = build_tools_modules.get_modules_packages(app, "pacman", modules_extlibs)
+        dependencies, missing_dep = build_tools_modules.get_modules_packages(app, "pacman", modules_extlibs)
     except SystemExit as err:
         error(err)
         exit(1)
@@ -442,16 +441,16 @@ def create_pacman_package(app, modules):
             '\tmake modules={modules} asan={asan} static={static} '
             'platform={platform} compiler={compiler} arch={arch} mode={mode} ')
         .format(
-            modules = __get_arg_or_env("modules"),
-            asan = __get_arg_or_env("asan", "0"),
-            static = __get_arg_or_env("static", "0"),
+            modules = get_opt("modules"),
+            asan = get_opt("asan", "0"),
+            static = get_opt("static", "0"),
             platform = build_platform,
             compiler = build_compiler,
             arch = build_architecture,
             mode = build_mode,
         ))
         if hasattr(app, "additionnal_build_env"):
-            fd.write(" ".join(["{}={}".format(k, __get_arg_or_env(k, "0")) for k in app.additionnal_build_env]))
+            fd.write(" ".join(["{}={}".format(k, get_opt(k, "0")) for k in app.additionnal_build_env]))
         fd.write('\n}\n')
         fd.write('\n')
         fd.write(('package() {{\n'
@@ -468,7 +467,7 @@ def create_pacman_package(app, modules):
     os.chdir(old_cwd)
 
 def distribute_app(app, modules):
-    dist_type = __get_arg_or_env("dist", None)
+    dist_type = get_opt("dist", None)
     if dist_type is None:
         raise SystemExit("cannot distribute app without its type")
     info("creating {} distribution for app {}".format(dist_type, app.name))

@@ -1,7 +1,5 @@
 Import('env')
 
-builder_helper = env.builder_helper()
-
 # build library from lib sources - not added to environnement
 lib = env.build_lib(Glob('src/*.cpp'), name = env.module_format_name())
 

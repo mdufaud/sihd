@@ -1,4 +1,5 @@
 # Time
+from posixpath import basename
 import time
 build_start_time = time.time()
 # General utilities
@@ -30,6 +31,7 @@ if builder_helper.verify_args(app) == False:
 # Build settings
 ###############################################################################
 
+# scons options
 is_dry_run = bool(GetOption("no_exec"))
 
 modules_to_build = builder_helper.get_modules()
@@ -91,14 +93,18 @@ pkg_manager_name = builder_helper.get_pkgdep()
 if pkg_manager_name:
     try:
         modules_extlibs = modules_helper.get_modules_extlibs(app, build_modules, build_platform)
-        packages = modules_helper.get_modules_packages(app, pkg_manager_name, modules_extlibs)
+        packages, missing_packages = modules_helper.get_modules_packages(app, pkg_manager_name, modules_extlibs)
+        for missing in missing_packages:
+            builder_helper.warning("external library '{}' not declared in packet manager '{}'".format(missing, pkg_manager_name))
     except RuntimeError as e:
         builder_helper.error(str(e))
         Exit(1)
     deps = set(packages.keys())
     if builder_helper.build_tests:
         test_extlibs = modules_helper.get_extlibs_versions(app, getattr(app, "test_extlibs", []))
-        test_packages = modules_helper.get_modules_packages(app, pkg_manager_name, test_extlibs)
+        test_packages, missing_test_packages = modules_helper.get_modules_packages(app, pkg_manager_name, test_extlibs)
+        for missing in missing_test_packages:
+            builder_helper.warning("external library '{}' not declared in packet manager '{}'".format(missing, pkg_manager_name))
         deps.update(test_packages.keys())
     builder_helper.info("dependencies: " + " ".join(deps))
     deps_str = " ".join(deps)
@@ -484,21 +490,28 @@ def parse_config_command(env, *configs):
 
 def copy_module_res_into_build(module_name, src, dst, must_exist = True):
     """ recursive copy of MODNAME/DIRNAME to build/DIRNAME """
-    module_dir_input = os.path.join(builder_helper.build_root_path, module_name, src)
-    build_dir_output = os.path.join(builder_helper.build_path, dst)
+    src = str(src)
+    dst = str(dst)
+    module_res = os.path.join(builder_helper.build_root_path, module_name, src)
+    build_output = os.path.join(builder_helper.build_path, dst)
     if verbose:
         builder_helper.info("copying resources of module {}/{} -> build/{}".format(module_name, src, dst))
-    if os.path.isfile(module_dir_input):
-        if os.path.isfile(build_dir_output) and filecmp.cmp(module_dir_input, build_dir_output):
+    if os.path.isfile(module_res):
+        compare_output_file = None
+        if os.path.isfile(build_output):
+            compare_output_file = build_output
+        elif os.path.isdir(build_output):
+            compare_output_file = os.path.join(build_output, os.path.basename(module_res))
+        if os.path.isfile(compare_output_file) and filecmp.cmp(module_res, compare_output_file):
             # file is same
             return
         if not is_dry_run:
-            shutil.copy(module_dir_input, build_dir_output)
-    elif os.path.isdir(module_dir_input):
+            shutil.copy(module_res, build_output)
+    elif os.path.isdir(module_res):
         if not is_dry_run:
-            shutil.copytree(module_dir_input, build_dir_output, dirs_exist_ok = True)
+            shutil.copytree(module_res, build_output, dirs_exist_ok = True)
     elif must_exist:
-        raise RuntimeError("for module {} resource {} not found".format(module_name, module_dir_input))
+        raise RuntimeError("for module {} resource {} not found".format(module_name, module_res))
 
 def get_module_env(conf, depends = [], append_depends_libs = True, append_depends_defines = True):
     modname = conf["modname"]
@@ -532,7 +545,7 @@ def get_module_env(conf, depends = [], append_depends_libs = True, append_depend
     # Create a specific environment for the module
     env = base_env.Clone()
     # no need to add headers as they are copied to build
-    env.PrependUnique(
+    env.Prepend(
         # adding libraries
         LIBS = depends_generated_libs
                 + modules_helper.get_module_libs(build_modules, modname)
@@ -570,6 +583,7 @@ def get_module_env(conf, depends = [], append_depends_libs = True, append_depend
     new_final_lib.reverse()
     env['LIBS'] = new_final_lib
     # remove duplicates while preserving order
+    env['CPPDEFINES'] = list(dict.fromkeys(env['CPPDEFINES']))
     env['CPPFLAGS'] = list(dict.fromkeys(env['CPPFLAGS']))
     env['LINKFLAGS'] = list(dict.fromkeys(env['LINKFLAGS']))
     return env
@@ -608,8 +622,7 @@ for conf in build_order:
     copy_module_res_into_build(modname, "share", "share", must_exist=False)
     # read module's scons script file
     module_format_name = env['APP_MODULE_FORMAT_NAME']
-    module_dir = Dir(modname)
-    built[modname] = SConscript(module_dir.File("scons.py"),
+    built[modname] = SConscript(Dir(modname).File("scons.py"),
                                 variant_dir = os.path.join(builder_helper.build_obj_path, modname),
                                 duplicate = 0,
                                 exports = ['env'])

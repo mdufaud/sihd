@@ -80,7 +80,7 @@ bool    Pinger::set_interval(time_t milliseconds_interval)
 void    Pinger::stop()
 {
     _stop = true;
-    while (_running)
+    for (int i = 0; _running && i < 3; ++i)
     {
         _waitable.notify_all();
         Time::msleep(1);

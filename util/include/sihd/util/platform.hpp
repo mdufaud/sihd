@@ -41,8 +41,10 @@
 
 #  include <TargetConditionals.h>
 #  if TARGET_IPHONE_SIMULATOR == 1
+#   define __SIHD_IOS__
 #   define __SIHD_PLATFORM__ "ios"
 #  elif TARGET_OS_IPHONE == 1
+#   define __SIHD_IOS__
 #   define __SIHD_PLATFORM__ "ios"
 #  elif TARGET_OS_MAC == 1
 #   define __SIHD_PLATFORM__ "osx"

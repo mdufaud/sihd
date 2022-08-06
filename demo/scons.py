@@ -6,7 +6,7 @@ builder_helper = env.builder_helper()
 
 demo_etc_dir = Dir("etc").Dir("sihd").Dir("demo")
 
-if env["CXX"] == "em++":
+if builder_helper.build_compiler == "em":
     builder_helper.warning("To build demo with emscripten you need to get static external libraries")
     builder_helper.warning("To get external libraries, use command: make dep mod demo compiler=em")
 
@@ -34,7 +34,7 @@ if env["CXX"] == "em++":
     )
     emscripten_imgui_env.build_bin(["src/imgui_emscripten_sdl_demo.cpp"], name = "imgui_emscripten_sdl_demo.html")
 else:
-    compile_sdl = os.getenv("sdl", None) == "1"
+    compile_sdl = builder_helper.get_opt("sdl", "") == "1"
 
     env.build_bin("src/pinger_demo.cpp", name = "ping_demo")
     env.build_bin("src/http_demo.cpp", name = "http_demo")

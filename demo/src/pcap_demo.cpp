@@ -9,6 +9,7 @@
 #include <sihd/util/Term.hpp>
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/Handler.hpp>
+#include <sihd/util/SigWaiter.hpp>
 
 #include <sihd/pcap/Sniffer.hpp>
 #include <sihd/pcap/PcapInterfaces.hpp>
@@ -53,29 +54,26 @@ static void sniffer_test(const std::string & interface_to_sniff)
     Sniffer pcap("pcap-sniffer");
     Handler<Sniffer *> obs([] (Sniffer *obj)
     {
-        // SIHD_TRACE(obj->array().hexdump());
-        SIHD_LOG(info, obj->array().size());
-        std::cout << Str::hexdump_fmt(obj->array().buf(), obj->array().byte_size()) << std::endl;
+        SIHD_LOGF(info, "Sniffed {} bytes", obj->array().size());
+        SIHD_COUT(Str::hexdump_fmt(obj->array().buf(), obj->array().byte_size()));
     });
     pcap.add_observer(&obs);
     pcap.open(interface_to_sniff);
-    if (pcap.is_open() == true)
+    if (pcap.is_open() == false)
+        return ;
+    // pcap.set_monitor(true);
+    // pcap.set_immediate(true);
+    pcap.set_promiscuous(false);
+    pcap.set_snaplen(2048);
+    pcap.set_timeout(512);
+    SIHD_LOG(info, "Activating packet capture");
+    pcap.activate();
+    if (pcap.is_active())
     {
-        // pcap.set_monitor(true);
-        // pcap.set_immediate(true);
-        pcap.set_promiscuous(false);
-        pcap.set_snaplen(2048);
-        pcap.set_timeout(512);
-        SIHD_LOG(info, "Activating packet capture");
-        pcap.activate();
-        if (pcap.is_active())
-        {
-            pcap.set_filter("portrange 0-2000");
-            // sniff once
-            pcap.sniff();
-            usleep(10E3);
-            pcap.close();
-        }
+        pcap.set_filter("portrange 0-2000");
+        // sniff once
+        pcap.sniff();
+        pcap.close();
     }
     SIHD_LOG(info, "Ending packet capture");
     std::cout << std::endl;
@@ -89,5 +87,7 @@ int main()
     sihd::util::LoggerManager::basic();
     std::string interface_to_sniff = test::module::interfaces_test();
     test::module::sniffer_test(interface_to_sniff);
+    if (sihd::util::OS::is_windows)
+        sihd::util::Time::sleep(5);
     return 0;
 }

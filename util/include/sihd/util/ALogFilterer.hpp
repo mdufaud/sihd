@@ -1,9 +1,10 @@
 #ifndef __SIHD_UTIL_ALOGFILTERER_HPP__
 # define __SIHD_UTIL_ALOGFILTERER_HPP__
 
+# include <list>
+
 # include <sihd/util/LogInfo.hpp>
 # include <sihd/util/ILoggerFilter.hpp>
-# include <list>
 
 namespace sihd::util
 {
