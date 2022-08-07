@@ -545,14 +545,14 @@ def get_module_env(conf, depends = [], append_depends_libs = True, append_depend
     # Create a specific environment for the module
     env = base_env.Clone()
     # no need to add headers as they are copied to build
-    env.Prepend(
+    env.PrependUnique(
         # adding libraries
         LIBS = depends_generated_libs
                 + modules_helper.get_module_libs(build_modules, modname)
                 + platform_libs
                 + compiler_libs,
     )
-    env.Append(
+    env.AppendUnique(
         # adding specified flags
         CPPFLAGS = flags + platform_flags + compiler_flags,
         # adding specified link flags
@@ -583,9 +583,9 @@ def get_module_env(conf, depends = [], append_depends_libs = True, append_depend
     new_final_lib.reverse()
     env['LIBS'] = new_final_lib
     # remove duplicates while preserving order
-    env['CPPDEFINES'] = list(dict.fromkeys(env['CPPDEFINES']))
-    env['CPPFLAGS'] = list(dict.fromkeys(env['CPPFLAGS']))
-    env['LINKFLAGS'] = list(dict.fromkeys(env['LINKFLAGS']))
+    # env['CPPDEFINES'] = list(set(env['CPPDEFINES']))
+    # env['CPPFLAGS'] = list(dict.fromkeys(env['CPPFLAGS']))
+    # env['LINKFLAGS'] = list(dict.fromkeys(env['LINKFLAGS']))
     return env
 
 ## building modules

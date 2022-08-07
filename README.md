@@ -8,31 +8,27 @@ Aimed to be a simple C++ library with some python and/or LUA bindings that gets,
 
 ## Dependencies
 
-### C++
+### C++ 17
 
 Used by core application.
 
-**version 17**
-
-### SCons
+### SCons 4.1.0
 
 Manages compilation rules with python3.
-
-**SCons version v4.1.0**
 
 ```shell
 apt install scons
 ```
 
-### Conan
+### Conan 1.35.0
+
+([Conan install doc](https://docs.conan.io/en/latest/installation.html))
 
 Pulls dependencies from https://conan.io/center/
 
 Not needed if dependencies are directly installed on the building system.
 
 Needed for Windows cross building to get DLLs or Emscripten building to get static libraries.
-
-**Conan version 1.35.0** ([Conan install doc](https://docs.conan.io/en/latest/installation.html))
 
 ```shell
 pip install conan
@@ -76,7 +72,7 @@ update-alternatives --config x86_64-w64-mingw32-g++
 apt install emscripten
 ```
 
-### External libraries
+## External libraries
 
 All dependencies are listed in [app.py file](app.py), only few are needed for each modules
 
@@ -95,7 +91,7 @@ make dep mod COMMA_SEPARATED_MODULES
 make dep platform=win
 ```
 
-### Get system external libraries list
+Get system external libraries list
 
 ```shell
 scons pkgdep=[apt|pacman] test=[0|1] modules=COMMA_SEPARATED_MODULES
@@ -114,8 +110,6 @@ make
 To compile module.s
 
 ```shell
-make modules=COMMA_SEPARATED_MODULES
-# or
 make mod COMMA_SEPARATED_MODULES
 ```
 
@@ -199,24 +193,22 @@ To compile and run tests
 ```shell
 # Run all tests
 make test
-# Run all module's tests
+# Run some modules tests
 make test COMMA_SEPARATED_MODULES
 ```
 
 List tests
 
 ```shell
-# For all
+# For all modules
 make test ls
-# For a single module
+# For some modules
 make test COMMA_SEPARATED_MODULES ls
 ```
 
 Filter tests
 
 ```shell
-make test m=COMMA_SEPARATED_MODULES t=FILTER
-# or
 make test COMMA_SEPARATED_MODULES FILTER
 ```
 

@@ -51,7 +51,7 @@ namespace test
         if (dev_id < 0 || sock < 0)
         {
             perror("opening socket");
-            exit(1);
+            return ;
         }
 
         len = 8;

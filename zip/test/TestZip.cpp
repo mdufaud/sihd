@@ -27,7 +27,6 @@ namespace test
 
             virtual void SetUp()
             {
-                sihd::util::FS::make_directory(_base_test_dir);
             }
 
             virtual void TearDown()

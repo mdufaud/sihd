@@ -107,11 +107,7 @@ modules = {
     "usb": {
         "depends": ['util'],
         "extlibs": ['libusb'],
-        #"libs": ['usb-1.0'],
-        # if lib is installed on system
-        "parse-configs": [
-            "libusb-config --cflags --libs",
-        ],
+        "libs": ['usb-1.0'],
     },
     "bt": {
         "depends": ['util'],
@@ -218,6 +214,7 @@ apt_packages = {
     "sdl2": "libsdl2-dev",
     "lua": "liblua5.3-dev",
     "libssh2": "libssh-dev",
+    "libusb": "libusb-dev"
 }
 
 # used to create PKGBUILD build command
@@ -249,6 +246,7 @@ pacman_packages = {
     "sdl2": "sdl2",
     "lua": "lua",
     "libssh2": "libssh",
+    "libusb": "libusb"
 }
 
 #############
