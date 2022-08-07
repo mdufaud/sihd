@@ -267,17 +267,16 @@ def verify_args(app):
 def copy_dll_to_bin():
     if not os.path.isdir(build_bin_path):
         return
-    libs_path = []
+    dll_paths = []
     if os.path.isdir(build_extlib_lib_path):
-        libs_path.extend(glob.glob(os.path.join(build_extlib_lib_path, "*.dll*")))
+        dll_paths.extend(glob.glob(os.path.join(build_extlib_lib_path, "*.dll*")))
     if os.path.isdir(build_lib_path):
-        libs_path.extend(glob.glob(os.path.join(build_lib_path, "*.dll*")))
-    for lib_path in libs_path:
-        #info("copying '" + lib_path + "' to bin")
-        into = os.path.join(build_bin_path, os.path.basename(lib_path))
-        if os.path.exists(into):
-            os.remove(into)
-        shutil.copyfile(lib_path, into)
+        dll_paths.extend(glob.glob(os.path.join(build_lib_path, "*.dll*")))
+    for dll_path in dll_paths:
+        dst = os.path.join(build_bin_path, os.path.basename(dll_path))
+        if os.path.exists(dst):
+            os.remove(dst)
+        shutil.copyfile(dll_path, dst)
 
 def finalize():
     if os.path.exists(build_last_link_path):

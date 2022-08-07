@@ -502,7 +502,7 @@ def copy_module_res_into_build(module_name, src, dst, must_exist = True):
             compare_output_file = build_output
         elif os.path.isdir(build_output):
             compare_output_file = os.path.join(build_output, os.path.basename(module_res))
-        if os.path.isfile(compare_output_file) and filecmp.cmp(module_res, compare_output_file):
+        if compare_output_file and os.path.isfile(compare_output_file) and filecmp.cmp(module_res, compare_output_file):
             # file is same
             return
         if not is_dry_run:
