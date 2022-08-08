@@ -20,10 +20,10 @@ class LoggerManager: public ALogFilterer
         bool has_logger(ALogger *logger) const;
         bool add_logger(ALogger *logger);
         bool remove_logger(ALogger *logger);
-        void remove_loggers();
+        void delete_loggers();
 
         template <typename T>
-        bool remove_logger_type()
+        bool delete_logger_type()
         {
             T *logcast;
             bool found = false;
@@ -50,7 +50,7 @@ class LoggerManager: public ALogFilterer
         static bool add(ALogger *logger);
         static bool remove(ALogger *logger);
         static bool filter(ILoggerFilter *filter);
-        static bool unfilter(ILoggerFilter *filter);
+        static bool remove_filter(ILoggerFilter *filter);
         static void clear_loggers();
         static void clear_filters();
 

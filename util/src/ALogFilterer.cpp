@@ -10,7 +10,7 @@ ALogFilterer::ALogFilterer()
 
 ALogFilterer::~ALogFilterer()
 {
-    this->remove_filters();
+    this->delete_filters();
 }
 
 bool    ALogFilterer::has_filter(ILoggerFilter *filter)
@@ -31,13 +31,12 @@ bool    ALogFilterer::remove_filter(ILoggerFilter *filter)
     auto it = this->_find(filter);
     if (it != _filters_lst.end())
     {
-        delete *it;
         _filters_lst.erase(it);
     }
     return it != _filters_lst.end();
 }
 
-void    ALogFilterer::remove_filters()
+void    ALogFilterer::delete_filters()
 {
     for (ILoggerFilter *filter : _filters_lst)
     {

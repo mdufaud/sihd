@@ -13,7 +13,7 @@ LoggerManager::LoggerManager()
 
 LoggerManager::~LoggerManager()
 {
-    this->remove_loggers();
+    this->delete_loggers();
 }
 
 std::vector<ALogger *>::const_iterator  LoggerManager::_find(ALogger *logger) const
@@ -42,12 +42,11 @@ bool    LoggerManager::remove_logger(ALogger *logger)
     if (it != _loggers_lst.end())
     {
         _loggers_lst.erase(it);
-        delete *it;
     }
     return it != _loggers_lst.end();
 }
 
-void    LoggerManager::remove_loggers()
+void    LoggerManager::delete_loggers()
 {
     std::lock_guard<std::mutex> l(_mutex);
     for (ALogger *logger : _loggers_lst)
@@ -93,19 +92,19 @@ bool    LoggerManager::filter(ILoggerFilter *filter)
     return get()->add_filter(filter);
 }
 
-bool    LoggerManager::unfilter(ILoggerFilter *filter)
+bool    LoggerManager::remove_filter(ILoggerFilter *filter)
 {
     return get()->remove_filter(filter);
 }
 
 void    LoggerManager::clear_loggers()
 {
-    get()->remove_loggers();
+    get()->delete_loggers();
 }
 
 void    LoggerManager::clear_filters()
 {
-    get()->remove_filters();
+    get()->delete_filters();
 }
 
 void    LoggerManager::basic(FILE *output, bool print_thread_id)

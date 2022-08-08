@@ -2,9 +2,8 @@ Import('env')
 
 builder_helper = env.builder_helper()
 
-#do_compile = builder_helper.build_platform == "windows" or builder_helper.is_android()
+# do_compile = builder_helper.build_platform == "windows" or builder_helper.is_android()
 do_compile = True
-
 if do_compile:
 
     ftxui_env = env.Clone()
@@ -79,10 +78,10 @@ if do_compile:
 env.Prepend(LIBS = ["ftxui-screen", "ftxui-dom", "ftxui-component"])
 
 # build library from lib sources - not added to environnement
-# lib = env.build_lib(Glob('src/*.cpp'), name = module_format_name)
+lib = env.build_lib(Glob('src/*.cpp'), name = env.module_format_name())
 
 # build unittest from test sources with newly created lib
-# test = env.build_test(Glob('test/*.cpp'), add_libs = [module_format_name])
+test = env.build_test(Glob('test/*.cpp'), add_libs = [env.module_format_name()])
 
 
 # build binary from bin sources with newly created lib
@@ -97,7 +96,7 @@ env.Append(
 )
 import os
 import sys
-for src in Glob('src/*.cpp'):
+for src in Glob('bin/*.cpp'):
     bin_name = os.path.basename(os.path.splitext(str(src))[0])
     env.build_bin(src, name = bin_name)
 

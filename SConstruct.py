@@ -582,10 +582,6 @@ def get_module_env(conf, depends = [], append_depends_libs = True, append_depend
             new_final_lib.append(el)
     new_final_lib.reverse()
     env['LIBS'] = new_final_lib
-    # remove duplicates while preserving order
-    # env['CPPDEFINES'] = list(set(env['CPPDEFINES']))
-    # env['CPPFLAGS'] = list(dict.fromkeys(env['CPPFLAGS']))
-    # env['LINKFLAGS'] = list(dict.fromkeys(env['LINKFLAGS']))
     return env
 
 ## building modules

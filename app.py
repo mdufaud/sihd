@@ -68,6 +68,7 @@ modules = {
         "libs": ['zip'],
     },
     "tui": {
+        "depends": ['util'],
         "linux-extlibs": ['ftxui'],
         # compiling specifically with mingw
         "git-url": "https://github.com/ArthurSonzogni/FTXUI",

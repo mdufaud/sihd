@@ -38,7 +38,7 @@ class ALogFilterer
             return found;
         }
 
-        void remove_filters();
+        void delete_filters();
         bool should_filter(const LogInfo & info, std::string_view msg);
 
     private:
