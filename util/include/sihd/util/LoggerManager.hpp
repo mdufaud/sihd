@@ -48,9 +48,9 @@ class LoggerManager: public ALogFilterer
         static void basic(FILE *output = stderr, bool print_thread_id = false);
         static void console();
         static bool add(ALogger *logger);
-        static bool remove(ALogger *logger);
+        static bool rm(ALogger *logger);
         static bool filter(ILoggerFilter *filter);
-        static bool remove_filter(ILoggerFilter *filter);
+        static bool rm_filter(ILoggerFilter *filter);
         static void clear_loggers();
         static void clear_filters();
 

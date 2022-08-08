@@ -82,7 +82,7 @@ bool    LoggerManager::add(ALogger *logger)
     return get()->add_logger(logger);
 }
 
-bool    LoggerManager::remove(ALogger *logger)
+bool    LoggerManager::rm(ALogger *logger)
 {
     return get()->remove_logger(logger);
 }
@@ -92,7 +92,7 @@ bool    LoggerManager::filter(ILoggerFilter *filter)
     return get()->add_filter(filter);
 }
 
-bool    LoggerManager::remove_filter(ILoggerFilter *filter)
+bool    LoggerManager::rm_filter(ILoggerFilter *filter)
 {
     return get()->remove_filter(filter);
 }
