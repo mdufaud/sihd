@@ -18,7 +18,7 @@ pp = PrettyPrinter(indent=2)
 sys.dont_write_bytecode = True
 import app
 sys.dont_write_bytecode = False
-from _build_tools import modules as modules_helper
+from _build_tools import builder, modules as modules_helper
 from _build_tools import builder as builder_helper
 
 builder_helper.info("building {}".format(app.name))
@@ -156,7 +156,7 @@ base_env = Environment(
     # extra #define for inside the code
     CPPDEFINES = getattr(app, 'defines', []),
     # link flags
-    LINKFLAGS = [],
+    LINKFLAGS = builder_helper.is_static_libs() and ["-static"] or [],
     # headers path
     CPPPATH = [builder_helper.build_hdr_path, builder_helper.build_extlib_hdr_path],
     # libraries path
@@ -170,12 +170,7 @@ base_env = Environment(
     # lib version + automatic symbolic links
     SHLIBVERSION = app.version
 )
-
-# add platform_[flags/defines/link/libs]
-add_env_app_conf(base_env, builder_helper.build_platform)
-if build_mode:
-    # add mode_[flags/defines/link/libs]
-    add_env_app_conf(base_env, build_mode)
+base_env.Append(CPPDEFINES = builder_helper.is_static_libs() and ["STATIC"] or [])
 
 # Build output
 if not verbose:
@@ -234,7 +229,10 @@ if compiler == "clang":
             CPPFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"],
             LINKFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"]
         )
-    base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
+    if builder_helper.is_static_libs():
+        base_env.ParseConfig("llvm-config --libs --system-libs --link-static")
+    else:
+        base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
 
 # MINGW build
 elif compiler == "mingw":
@@ -247,6 +245,7 @@ elif compiler == "mingw":
     if not builder_helper.build_static_libs:
         base_env.Replace(
             SHLIBSUFFIX = ".dll",
+            LIBSUFFIX = ".lib",
             LIBPREFIX = "",
         )
 # GCC build
@@ -274,6 +273,12 @@ elif compiler == "em":
         AR = ccache + "emar",
         RANLIB = ccache + "emranlib",
     )
+
+# add platform_[flags/defines/link/libs]
+add_env_app_conf(base_env, builder_helper.build_platform)
+if build_mode:
+    # add mode_[flags/defines/link/libs]
+    add_env_app_conf(base_env, build_mode)
 
 # add compiler_[flags/defines/link/libs]
 add_env_app_conf(base_env, compiler)

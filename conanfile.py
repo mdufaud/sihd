@@ -107,6 +107,9 @@ class ConanAppDependencies(ConanFile):
     generators = "gcc", "txt", "CMakeDeps", "CMakeToolchain"
     default_options = conan_options
 
+    def system_requirements(self):
+        pass
+
     def requirements(self):
         skip_libs = getattr(app, "conan_skip", [])
         for name, version in extlibs.items():

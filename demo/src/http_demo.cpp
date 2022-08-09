@@ -40,13 +40,13 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
 
         void setup_webservice_entry_points()
         {
-            _webservice->set_entry_point("get", [this] (const HttpRequest & req, HttpResponse & resp)
+            _webservice->set_entry_point("get", [] (const HttpRequest & req, HttpResponse & resp)
             {
                 SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
                 resp.set_content("hello get world");
             });
 
-            _webservice->set_entry_point("post", [this] (const HttpRequest & req, HttpResponse & resp)
+            _webservice->set_entry_point("post", [] (const HttpRequest & req, HttpResponse & resp)
             {
                 SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
                 if (req.content())
@@ -60,7 +60,7 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
             },
             HttpRequest::POST);
 
-            _webservice->set_entry_point("delete", [this] (const HttpRequest & req, HttpResponse & resp)
+            _webservice->set_entry_point("delete", [] (const HttpRequest & req, HttpResponse & resp)
             {
                 SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
                 resp.http_header().set_status(HTTP_STATUS_OK);
@@ -68,7 +68,7 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
             },
             HttpRequest::REQ_DELETE);
 
-            _webservice->set_entry_point("put", [this] (const HttpRequest & req, HttpResponse & resp)
+            _webservice->set_entry_point("put", [] (const HttpRequest & req, HttpResponse & resp)
             {
                 SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
                 if (req.content())

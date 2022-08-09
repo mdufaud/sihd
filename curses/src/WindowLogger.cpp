@@ -18,7 +18,7 @@ WindowLogger::WindowLogger(const std::string & name, sihd::util::Node *parent):
 
 WindowLogger::~WindowLogger()
 {
-    sihd::util::LoggerManager::remove(_logger_ptr);
+    sihd::util::LoggerManager::rm(_logger_ptr);
 }
 
 WindowLogger::Logger::Logger(Window *parent): _parent_ptr(parent)

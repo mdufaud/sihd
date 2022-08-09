@@ -13,6 +13,7 @@ if do_compile:
             "-Wno-sign-compare",
             "-Wno-pessimizing-move",
             "-Wno-unused-function",
+            "-Wno-return-type",
         ],
         CPPDEFINES = [
             "UNICODE",
@@ -75,7 +76,7 @@ if do_compile:
     ft_component_env.build_lib(ftxui_component_src_lst, name = "ftxui-component")
 
 # load created ftxui libs in env
-env.Prepend(LIBS = ["ftxui-screen", "ftxui-dom", "ftxui-component"])
+env.Prepend(LIBS = ["ftxui-component", "ftxui-dom", "ftxui-screen"])
 
 # build library from lib sources - not added to environnement
 lib = env.build_lib(Glob('src/*.cpp'), name = env.module_format_name())

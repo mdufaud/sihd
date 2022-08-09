@@ -435,19 +435,16 @@ bool    OS::is_run_by_debugger()
 
 void *OS::load_lib(const std::string & lib_name)
 {
-    std::vector<std::string> to_try = {
-        "lib" + lib_name + ".so",
-        lib_name + ".so",
-        lib_name,
-    };
-    void *handle = nullptr;
-    for (const std::string & lib : to_try)
-    {
-        handle = dlopen(lib.c_str(), RTLD_NOW);
-        if (handle != nullptr)
-            break ;
-    }
+#if !defined(STATIC)
+    void *handle;
+
+    handle = dlopen(("lib" + lib_name + ".so").c_str(), RTLD_NOW);
+    handle = handle != nullptr ? handle : dlopen((lib_name + ".so").c_str(), RTLD_NOW);
+    handle = handle != nullptr ? handle : dlopen(lib_name.c_str(), RTLD_NOW);
     return handle;
+#else
+    return nullptr;
+#endif
 }
 
 void *OS::load_symbol(void *handle, std::string_view sym_name)

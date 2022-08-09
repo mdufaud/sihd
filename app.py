@@ -48,11 +48,11 @@ conan_post_process = {
 modules = {
     "util": {
         "extlibs": ['nlohmann_json', 'fmt'],
+        "libs": ['pthread'],
         "linux-extlibs": ['libuuid'],
-        "libs": ['pthread', 'fmt'],
-        "linux-libs": ['dl', 'rt', 'uuid'],
+        "linux-libs": ['fmt', 'dl', 'rt', 'uuid'],
         "windows-libs": ['rpcrt4'],
-        "defines": ["FMT_HEADER_ONLY"],
+        "windows-defines": ["FMT_HEADER_ONLY"],
     },
     "core": {
         "depends": ['util'],
@@ -300,10 +300,14 @@ clang_defines = [
 
 ## mingw specifics
 mingw_flags = ["-Werror"]
-mingw_libs = ['ws2_32', 'psapi', 'ucrt']
+mingw_libs = ['ws2_32', 'psapi', 'ucrt', 'winpthread']
 # _WIN64 -> activates sihd functionnalities
 # _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
-mingw_defines = ["_WIN64", "_WIN32_WINNT=0x0600"]
+mingw_defines = [
+    "_WIN64",
+    "_WIN32_WINNT=0x0600",
+    "_ISOC99_SOURCE"
+]
 
 ## test specifics
 test_extlibs = ['gtest']
