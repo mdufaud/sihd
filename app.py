@@ -130,10 +130,6 @@ modules = {
 
 # conditionnal modules - activated only if compiled specifically or by env variable
 conditionnal_modules = {
-    # "demo": {
-    #     "depends": ['pcap', 'http', 'imgui'],
-    #     "conditionnal-env": "demo",
-    # },
     "lua": {
         # apt liblua5.3-dev / pacman lua
         "extlibs": ['lua'],
