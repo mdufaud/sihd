@@ -250,6 +250,30 @@ pacman_packages = {
     "libusb": "libusb"
 }
 
+yum_packages = {
+  "gtest": "gtest-devel",
+  "nlohmann_json": "json-devel",
+  "fmt": "fmt-devel",
+  "libuuid": "uuid-devel",
+  "ncurses": "ncurses-devel",
+  "openssl": "openssl",
+  "libcurl": "libcurl-devel",
+  "libwebsockets": "libwebsockets-devel",
+  "libpcap": "libpcap-devel",
+  "libssh": "ssh-devel",
+  "libusb": "libusb-devel",
+  "libzip": "libzip-devel",
+  "libbluetooth": "bluez-libs-devel",
+  "pybind11": "python3-pybind11",
+  # apt libmesa-devel for opengl
+  "glfw": "glfw-devel",
+  "glew": "glew-devel",
+  "sdl2": "sdl2-devel",
+  "lua": "lua5.3-devel",
+  "libssh2": "ssh-devel",
+  "libusb": "libusb-devel"
+}
+
 #############
 # compilation
 #############
