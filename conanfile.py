@@ -9,8 +9,8 @@ pp = PrettyPrinter(indent=2)
 
 sys.dont_write_bytecode = True
 import app
-from _build_tools import modules as modules_helper
-from _build_tools import builder as builder_helper
+from site_scons.scripts import modules as modules_helper
+from site_scons.scripts import builder as builder_helper
 
 builder_helper.info("fetching external libraries for {}".format(app.name))
 

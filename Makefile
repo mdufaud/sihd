@@ -1,5 +1,11 @@
-ifeq (, $(shell which python3))
-$(error "Makefile: no python3 detected - it is needed to build the project.")
+PYTHON_BIN := python3
+
+ifeq (, $(shell which $(PYTHON_BIN)))
+PYTHON_BIN := python
+endif
+
+ifeq (, $(shell which $(PYTHON_BIN)))
+$(error "Makefile: no python detected - it is needed to build the project.")
 endif
 
 ifeq (, $(shell which scons))
@@ -36,15 +42,16 @@ APP_NAME := $(shell basename $(HERE))
 # Builder env
 ##############
 
-BUILD_TOOLS := $(HERE)/_build_tools
+BUILD_TOOLS := $(HERE)/site_scons
 MAKEFILE_TOOLS := $(BUILD_TOOLS)/makefile
 
-BUILD_EXTRA := $(HERE)/_build_extra
-MAKEFILE_EXTRA := $(BUILD_EXTRA)/makefile
+BUILD_TOOLS_ADDON := $(BUILD_TOOLS)/addon
+MAKEFILE_TOOLS_ADDON := $(BUILD_TOOLS_ADDON)/makefile
 
-BUILDER := $(BUILD_TOOLS)/builder.py
+BUILD_SCRIPTS := $(BUILD_TOOLS)/scripts
+BUILDER := $(BUILD_SCRIPTS)/builder.py
 
-BUILDER_RESP := $(shell arch=$(arch) mode=$(mode) platform=$(platform) compiler=$(compiler) python3 $(BUILDER) all)
+BUILDER_RESP := $(shell arch=$(arch) mode=$(mode) platform=$(platform) compiler=$(compiler) $(PYTHON_BIN) $(BUILDER) all)
 
 PLATFORM := $(word 1, $(BUILDER_RESP))
 ifeq ($(PLATFORM),)
@@ -90,8 +97,8 @@ include $(MAKEFILE_TOOLS)/logger.mk
 include $(MAKEFILE_TOOLS)/utils.mk
 include $(MAKEFILE_TOOLS)/templates.mk
 
-ifneq ($(wildcard $(MAKEFILE_EXTRA)/extra.mk),)
-include $(MAKEFILE_EXTRA)/extra.mk
+ifneq ($(wildcard $(MAKEFILE_TOOLS_ADDON)/addon.mk),)
+include $(MAKEFILE_TOOLS_ADDON)/addon.mk
 endif
 
 ############
@@ -170,6 +177,7 @@ info:
 ifeq ($(ANDROID), true)
 	$(call mk_log_warning,makefile,android detected)
 endif
+	$(call mk_log_info,makefile,build: $(BUILD_PATH))
 	$(QUIET) echo > /dev/null
 
 ######################
@@ -527,7 +535,7 @@ uninstall:
 .PHONY: serve # Serve a python http.server on port $(PORT) (default: 8000)
 
 serve:
-	python3 -m http.server -d $(BIN_PATH) ${PORT}
+	$(PYTHON_BIN) -m http.server -d $(BIN_PATH) ${PORT}
 
 ##########
 # Cleanup

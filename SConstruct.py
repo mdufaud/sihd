@@ -1,5 +1,7 @@
+if GetOption("help"):
+    Return()
+
 # Time
-from posixpath import basename
 import time
 build_start_time = time.time()
 # General utilities
@@ -18,8 +20,8 @@ pp = PrettyPrinter(indent=2)
 sys.dont_write_bytecode = True
 import app
 sys.dont_write_bytecode = False
-from _build_tools import builder, modules as modules_helper
-from _build_tools import builder as builder_helper
+from site_scons.scripts import modules as modules_helper
+from site_scons.scripts import builder as builder_helper
 
 builder_helper.info("building {}".format(app.name))
 builder_helper.info("building to: {}".format(builder_helper.build_path))

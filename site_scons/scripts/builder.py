@@ -213,8 +213,8 @@ build_for_linux = build_platform == "linux"
 def get_gnu_triplet():
     return _build_gnu_triplet(build_architecture, build_platform)
 
-# path ROOT
-build_root_path = abspath(dirname(dirname(__file__)))
+# path ROOT -> root/site_scons/scripts/builder.py
+build_root_path = abspath(dirname(dirname(dirname(__file__))))
 
 # path DIST
 build_dist_path = join(build_root_path, "dist")

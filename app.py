@@ -8,7 +8,9 @@ extlibs = {
     "gtest": "1.11.0",
     ## json parsing
     "nlohmann_json": "3.9.1",
+    # util
     "fmt": "7.1.3",
+    "libuuid": "1.0.3",
     ## http
     "libwebsockets": "4.3.0",
     "libcurl": "7.75.0",
@@ -20,6 +22,7 @@ extlibs = {
     ## usb
     "libusb": "1.0.24",
     ## gui
+    "ftxui": "3.0.0",
     "sdl": "2.0.18",
     "glew": "2.2.0",
     "glfw": "3.3.6",
@@ -29,17 +32,11 @@ extlibs = {
     "libzip": "1.7.3",
     ## other
     "libjpeg": "9d",
-
-    # todo
-    "ftxui": "3.0.0",
-    "libuuid": "1.0.3",
     "lua": "5.3.5",
-    "ncurses": "6.3",
-    "pdcurses": "3.9",
     "libbluetooth": "",
 }
 
-conan_skip = ["libuuid", "lua", "ncurses", "libbluetooth"]
+conan_skip = ["libuuid", "lua", "libbluetooth"]
 conan_post_process = {
     "*lua.*": {"from": "lua.", "to": "lua5.3."}
 }
@@ -62,6 +59,20 @@ modules = {
         "extlibs": ['openssl'],
         "libs": ['ssl', 'crypto'],
     },
+    "http": {
+        "depends": ['net'],
+        "extlibs": ['libcurl', 'libwebsockets'],
+        "libs": ['websockets', 'curl'],
+    },
+    "pcap": {
+        "depends": ['net'],
+        "extlibs": ['libpcap'],
+        "libs": ['pcap'],
+        # if lib is installed on system
+        "parse-configs": [
+            "pcap-config --cflags --libs",
+        ],
+    },
     "zip": {
         "depends": ['util'],
         "extlibs": ['libzip'],
@@ -74,36 +85,10 @@ modules = {
         "git-url": "https://github.com/ArthurSonzogni/FTXUI",
         "git-branch": "v3.0.0",
     },
-    "curses": {
-        "depends": ['util'],
-        "linux-extlibs": ['ncurses'],
-        "linux-libs": ['ncurses', 'ncursesw'],
-        # if lib is installed on system
-        "parse-configs": [
-            "ncursesw6-config --cflags --libs",
-            "ncurses6-config --cflags --libs",
-        ],
-        "windows-extlibs": ['pdcurses'],
-        "windows-libs": ['pdcurses'],
-    },
     "ssh": {
         "depends": ['util'],
         "libs": ['ssh'],
         "platforms": ["linux"]
-    },
-    "http": {
-        "depends": ['net'],
-        "extlibs": ['openssl', 'libcurl', 'libwebsockets'],
-        "libs": ['curl', 'websockets', 'ssl', 'crypto'],
-    },
-    "pcap": {
-        "depends": ['net'],
-        "extlibs": ['libpcap'],
-        "libs": ['pcap'],
-        # if lib is installed on system
-        "parse-configs": [
-            "pcap-config --cflags --libs",
-        ],
     },
     "usb": {
         "depends": ['util'],
@@ -265,7 +250,6 @@ yum_packages = {
   "libzip": "libzip-devel",
   "libbluetooth": "bluez-libs-devel",
   "pybind11": "python3-pybind11",
-  # apt libmesa-devel for opengl
   "glfw": "glfw-devel",
   "glew": "glew-devel",
   "sdl2": "sdl2-devel",

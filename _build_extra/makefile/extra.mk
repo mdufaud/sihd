@@ -1,1 +1,0 @@
-include $(MAKEFILE_EXTRA)/templates.mk
