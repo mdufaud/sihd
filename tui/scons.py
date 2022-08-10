@@ -1,8 +1,8 @@
 Import('env')
 
-builder_helper = env.builder_helper()
+builder = env.builder()
 
-# do_compile = builder_helper.build_platform == "windows" or builder_helper.is_android()
+# do_compile = builder.build_platform == "windows" or builder.is_android()
 do_compile = True
 if do_compile:
 
@@ -28,7 +28,7 @@ if do_compile:
     ftxui_src_dir = "FTXUI/src/ftxui"
 
     # change windows header for cross compiling
-    if builder_helper.build_platform == "windows":
+    if builder.build_platform == "windows":
         mingw_windows_replace = {"<Windows.h>": "<windows.h>"}
         for file in [
             ftxui_src_dir + "/screen/screen.cpp",

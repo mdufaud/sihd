@@ -180,6 +180,9 @@ def has_verbose():
 def has_test():
     return (get_opt("test", "") or get_opt("t", "")) == "1"
 
+def has_demo():
+    return get_opt("demo", "") == "1"
+
 def is_address_sanatizer():
     return get_opt("asan", "") == "1"
 
@@ -202,6 +205,7 @@ build_mode = get_compile_mode()
 build_static_libs = is_static_libs()
 build_asan = is_address_sanatizer()
 build_tests = has_test()
+build_demo = has_demo()
 build_verbose = has_verbose()
 
 # platform
@@ -237,6 +241,7 @@ build_hdr_path = join(build_path, "include")
 build_etc_path = join(build_path, "etc")
 build_share_path = join(build_path, "share")
 build_test_path = join(build_path, "test")
+build_demo_path = join(build_path, "demo")
 build_obj_path = join(build_path, "obj")
 
 def verify_args(app):
@@ -265,18 +270,25 @@ def verify_args(app):
     return ret
 
 def copy_dll_to_bin():
-    if not os.path.isdir(build_bin_path):
-        return
     dll_paths = []
     if os.path.isdir(build_extlib_lib_path):
         dll_paths.extend(glob.glob(os.path.join(build_extlib_lib_path, "*.dll*")))
     if os.path.isdir(build_lib_path):
         dll_paths.extend(glob.glob(os.path.join(build_lib_path, "*.dll*")))
-    for dll_path in dll_paths:
-        dst = os.path.join(build_bin_path, os.path.basename(dll_path))
-        if os.path.exists(dst):
-            os.remove(dst)
-        shutil.copyfile(dll_path, dst)
+    if os.path.isdir(build_bin_path):
+        for dll_path in dll_paths:
+            dst = os.path.join(build_bin_path, os.path.basename(dll_path))
+            if os.path.exists(dst):
+                os.remove(dst)
+            shutil.copyfile(dll_path, dst)
+    if not build_demo:
+        return
+    if os.path.isdir(build_demo_path):
+        for dll_path in dll_paths:
+            dst = os.path.join(build_demo_path, os.path.basename(dll_path))
+            if os.path.exists(dst):
+                os.remove(dst)
+            shutil.copyfile(dll_path, dst)
 
 def finalize():
     if os.path.exists(build_last_link_path):

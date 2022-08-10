@@ -2,13 +2,13 @@ import os
 
 Import('env')
 
-builder_helper = env.builder_helper()
+builder = env.builder()
 
 demo_etc_dir = Dir("etc").Dir("sihd").Dir("demo")
 
-if builder_helper.build_compiler == "em":
-    builder_helper.warning("To build demo with emscripten you need to get static external libraries")
-    builder_helper.warning("To get external libraries, use command: make dep mod demo compiler=em")
+if builder.build_compiler == "em":
+    builder.warning("To build demo with emscripten you need to get static external libraries")
+    builder.warning("To get external libraries, use command: make dep mod demo compiler=em")
 
     # must create specific env with just util as dependencies
     emscripten_util_env = env.get_depends_env(depends = ["util"])
@@ -34,13 +34,13 @@ if builder_helper.build_compiler == "em":
     )
     emscripten_imgui_env.build_bin(["src/imgui_emscripten_sdl_demo.cpp"], name = "imgui_emscripten_sdl_demo.html")
 else:
-    compile_sdl = builder_helper.get_opt("sdl", "") == "1"
+    compile_sdl = builder.get_opt("sdl", "") == "1"
 
     env.build_bin("src/pinger_demo.cpp", name = "ping_demo")
     env.build_bin("src/http_demo.cpp", name = "http_demo")
     env.build_bin("src/pcap_demo.cpp", name = "pcap_demo")
     env.build_bin("src/imgui_opengl3_glfw_demo.cpp", name = "imgui_opengl3_glfw_demo")
-    if builder_helper.build_platform == "windows":
+    if builder.build_platform == "windows":
         env.build_bin("src/imgui_win_d11_demo.cpp", name = "imgui_win_d11_demo")
         if compile_sdl:
             env.build_bin("src/imgui_win_d11_sdl_demo.cpp", name = "imgui_win_d11_sdl_demo")

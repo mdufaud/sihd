@@ -574,7 +574,7 @@ cclean: clean_cache clean
 
 bclean:
 	$(QUIET) $(call mk_log_info,makefile,removing build)
-	rm -rf $(BUILD_ENTRY_PATH) $(DIST_PATH)
+	rm -rf $(BUILD_ENTRY_PATH)
 
 fclean: bclean clean_dist clean_cache
 	$(QUIET) $(call mk_log_info,makefile,removing remaining files)

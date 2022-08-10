@@ -130,10 +130,10 @@ modules = {
 
 # conditionnal modules - activated only if compiled specifically or by env variable
 conditionnal_modules = {
-    "demo": {
-        "depends": ['pcap', 'http', 'imgui'],
-        "conditionnal-env": "demo",
-    },
+    # "demo": {
+    #     "depends": ['pcap', 'http', 'imgui'],
+    #     "conditionnal-env": "demo",
+    # },
     "lua": {
         # apt liblua5.3-dev / pacman lua
         "extlibs": ['lua'],
@@ -334,7 +334,7 @@ def __get_python_libname():
                             shell = True, stdout = subprocess.PIPE)
     return proc.stdout.read().decode().strip()
 
-def on_build_success(build_modules, builder_helper):
+def on_build_success(build_modules, builder):
     if "py" not in build_modules:
         return
     # for pybind11 shared lib to be usable by python interpreter
@@ -345,7 +345,7 @@ def on_build_success(build_modules, builder_helper):
     import os
     import glob
     import shutil
-    lib_pattern = os.path.join(builder_helper.build_lib_path, "libsihd_py*.so*")
+    lib_pattern = os.path.join(builder.build_lib_path, "libsihd_py*.so*")
     for lib in glob.glob(lib_pattern):
         pybind11_compliant = lib.replace("libsihd_py", "sihd")
         pybind11_compliant = pybind11_compliant.replace(".so", python_libname)

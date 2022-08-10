@@ -1,2 +1,7 @@
-from scripts import modules as modules_helper
-from scripts import builder as builder_helper
+try:
+    import addon.scripts
+except ImportError:
+    pass
+
+from scripts import modules
+from scripts import builder

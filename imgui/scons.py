@@ -2,7 +2,7 @@ import os
 
 Import('env')
 
-builder_helper = env.builder_helper()
+builder = env.builder()
 
 conf = env["APP_MODULE_CONF"]
 
@@ -38,7 +38,7 @@ imgui_headers.extend([
 
 ## Windows directX
 
-if builder_helper.build_platform == "windows":
+if builder.build_platform == "windows":
     imgui_srcs.extend([
         imgui_backends_dir.File("imgui_impl_dx11.cpp"),
         imgui_backends_dir.File("imgui_impl_win32.cpp"),
@@ -64,8 +64,8 @@ sihd_imgui_srcs.extend([
 ])
 
 ## Check for SDL2
-compile_sdl = builder_helper.get_opt("sdl", "") == "1"
-compiling_with_emscripten = builder_helper.build_compiler == "em"
+compile_sdl = builder.get_opt("sdl", "") == "1"
+compiling_with_emscripten = builder.build_compiler == "em"
 
 if compiling_with_emscripten:
     env.Append(
@@ -84,7 +84,7 @@ elif compile_sdl:
     # try loading lib config if installed on system
     if not env.parse_config("sdl2-config --libs --cflags"):
         # try appending SDL2 from extlib repository
-        extlib_sdl_dir = Dir(builder_helper.build_extlib_hdr_path).Dir("SDL2")
+        extlib_sdl_dir = Dir(builder.build_extlib_hdr_path).Dir("SDL2")
         env.Append(CPPPATH = [str(extlib_sdl_dir)])
         env.Append(LIBS = ["SDL2"])
 
@@ -96,10 +96,10 @@ if compile_sdl or compiling_with_emscripten:
 
 ## Copy ImGui headers into build
 
-build_include_dir = builder_helper.build_hdr_path
+build_include_dir = builder.build_hdr_path
 sihd_imgui_build_include_dir = "include/sihd/imgui"
 
-builder_helper.info("imgui: copying headers to: " + str(sihd_imgui_build_include_dir))
+builder.info("imgui: copying headers to: " + str(sihd_imgui_build_include_dir))
 for header in imgui_headers:
     env.copy_into_build(header, "include/sihd/imgui")
 

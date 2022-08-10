@@ -20,13 +20,13 @@ pp = PrettyPrinter(indent=2)
 sys.dont_write_bytecode = True
 import app
 sys.dont_write_bytecode = False
-from site_scons.scripts import modules as modules_helper
-from site_scons.scripts import builder as builder_helper
+from site_scons.scripts import modules
+from site_scons.scripts import builder
 
-builder_helper.info("building {}".format(app.name))
-builder_helper.info("building to: {}".format(builder_helper.build_path))
+builder.info("building {}".format(app.name))
+builder.info("building to: {}".format(builder.build_path))
 
-if builder_helper.verify_args(app) == False:
+if builder.verify_args(app) == False:
     Exit(1)
 
 ###############################################################################
@@ -36,41 +36,41 @@ if builder_helper.verify_args(app) == False:
 # scons options
 is_dry_run = bool(GetOption("no_exec"))
 
-modules_to_build = builder_helper.get_modules()
-modules_forced_to_build = builder_helper.get_force_build_modules()
-build_mode = builder_helper.get_compile_mode()
+modules_to_build = builder.get_modules()
+modules_forced_to_build = builder.get_force_build_modules()
+build_mode = builder.get_compile_mode()
 
 modules_lst = modules_to_build.split(',')
 if modules_forced_to_build:
     modules_lst.extend(modules_forced_to_build.split(','))
 
-compiler = builder_helper.build_compiler
-build_platform = builder_helper.build_platform
+compiler = builder.build_compiler
+build_platform = builder.build_platform
 
-distribution = builder_helper.do_distribution()
-verbose = builder_helper.has_verbose()
+distribution = builder.do_distribution()
+verbose = builder.has_verbose()
 
 if verbose:
-    builder_helper.info("modules: {}".format(modules_lst or "all"))
-    builder_helper.info("platform: " + build_platform)
-    builder_helper.info("compiler: " + compiler)
-    builder_helper.info("arch: " + builder_helper.build_architecture)
-    builder_helper.info("mode: " + build_mode)
-    builder_helper.info("tests: " + (builder_helper.build_tests and "yes" or "no"))
-    builder_helper.info("libraries: " + (builder_helper.build_static_libs and "static" or "shared"))
-    builder_helper.info("address sanatizer: " + (builder_helper.build_asan and "yes" or "no"))
+    builder.info("modules: {}".format(modules_lst or "all"))
+    builder.info("platform: " + build_platform)
+    builder.info("compiler: " + compiler)
+    builder.info("arch: " + builder.build_architecture)
+    builder.info("mode: " + build_mode)
+    builder.info("tests: " + (builder.build_tests and "yes" or "no"))
+    builder.info("libraries: " + (builder.build_static_libs and "static" or "shared"))
+    builder.info("address sanatizer: " + (builder.build_asan and "yes" or "no"))
 
 # Get modules configuration for this build
 try:
-    build_modules = modules_helper.build_modules_conf(app, specific_modules=modules_lst)
+    build_modules = modules.build_modules_conf(app, specific_modules=modules_lst)
 except RuntimeError as e:
-    builder_helper.error(str(e))
+    builder.error(str(e))
     Exit(1)
 
 # Checking module availability on platforms
-deleted_modules = modules_helper.check_platform(build_modules, build_platform)
+deleted_modules = modules.check_platform(build_modules, build_platform)
 for deleted_modules in deleted_modules:
-    builder_helper.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
+    builder.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
 
 for deleted_module in deleted_modules:
     del build_modules[deleted_module]
@@ -81,36 +81,36 @@ if not build_modules:
 global_libs = getattr(app, "libs", [])
 global_platform_libs = getattr(app, "{}_libs".format(build_platform), [])
 if verbose:
-    builder_helper.debug("modules configuration:")
+    builder.debug("modules configuration:")
     pp.pprint(build_modules)
     if global_libs:
-        builder_helper.debug("libs:")
+        builder.debug("libs:")
         pp.pprint(global_libs)
     if global_platform_libs:
-        builder_helper.debug("{} libs:".format(build_platform))
+        builder.debug("{} libs:".format(build_platform))
         pp.pprint(global_platform_libs)
     print()
 
-pkg_manager_name = builder_helper.get_pkgdep()
+pkg_manager_name = builder.get_pkgdep()
 if pkg_manager_name:
     try:
-        modules_extlibs = modules_helper.get_modules_extlibs(app, build_modules, build_platform)
-        packages, missing_packages = modules_helper.get_modules_packages(app, pkg_manager_name, modules_extlibs)
+        modules_extlibs = modules.get_modules_extlibs(app, build_modules, build_platform)
+        packages, missing_packages = modules.get_modules_packages(app, pkg_manager_name, modules_extlibs)
         for missing in missing_packages:
-            builder_helper.warning("external library '{}' not declared in packet manager '{}'".format(missing, pkg_manager_name))
+            builder.warning("external library '{}' not declared in packet manager '{}'".format(missing, pkg_manager_name))
     except RuntimeError as e:
-        builder_helper.error(str(e))
+        builder.error(str(e))
         Exit(1)
     deps = set(packages.keys())
-    if builder_helper.build_tests:
-        test_extlibs = modules_helper.get_extlibs_versions(app, getattr(app, "test_extlibs", []))
-        test_packages, missing_test_packages = modules_helper.get_modules_packages(app, pkg_manager_name, test_extlibs)
+    if builder.build_tests:
+        test_extlibs = modules.get_extlibs_versions(app, getattr(app, "test_extlibs", []))
+        test_packages, missing_test_packages = modules.get_modules_packages(app, pkg_manager_name, test_extlibs)
         for missing in missing_test_packages:
-            builder_helper.warning("external library '{}' not declared in packet manager '{}'".format(missing, pkg_manager_name))
+            builder.warning("external library '{}' not declared in packet manager '{}'".format(missing, pkg_manager_name))
         deps.update(test_packages.keys())
-    builder_helper.info("dependencies: " + " ".join(deps))
+    builder.info("dependencies: " + " ".join(deps))
     deps_str = " ".join(deps)
-    builder_helper.info("install with:")
+    builder.info("install with:")
     if pkg_manager_name == "pacman":
         print("sudo pacman -Syu && sudo pacman -S {}".format(deps_str))
     else:
@@ -137,11 +137,11 @@ def add_env_app_conf(env, key):
             #prepends
             env[envkey][:0] = attr
 
-build_dir = Dir(builder_helper.build_path)
-bin_dir = Dir(builder_helper.build_bin_path)
-lib_dir = Dir(builder_helper.build_lib_path)
-extlib_dir = Dir(builder_helper.build_extlib_path)
-extlib_lib_dir = Dir(builder_helper.build_extlib_lib_path)
+build_dir = Dir(builder.build_path)
+bin_dir = Dir(builder.build_bin_path)
+lib_dir = Dir(builder.build_lib_path)
+extlib_dir = Dir(builder.build_extlib_path)
+extlib_lib_dir = Dir(builder.build_extlib_lib_path)
 
 base_env = Environment(
     # binaries path
@@ -158,11 +158,11 @@ base_env = Environment(
     # extra #define for inside the code
     CPPDEFINES = getattr(app, 'defines', []),
     # link flags
-    LINKFLAGS = builder_helper.is_static_libs() and ["-static"] or [],
+    LINKFLAGS = builder.is_static_libs() and ["-static"] or [],
     # headers path
-    CPPPATH = [builder_helper.build_hdr_path, builder_helper.build_extlib_hdr_path],
+    CPPPATH = [builder.build_hdr_path, builder.build_extlib_hdr_path],
     # libraries path
-    LIBPATH = [builder_helper.build_lib_path, builder_helper.build_extlib_lib_path],
+    LIBPATH = [builder.build_lib_path, builder.build_extlib_lib_path],
     # libraries name
     LIBS = global_platform_libs + global_libs,
     # app access
@@ -172,7 +172,7 @@ base_env = Environment(
     # lib version + automatic symbolic links
     SHLIBVERSION = app.version
 )
-base_env.Append(CPPDEFINES = builder_helper.is_static_libs() and ["STATIC"] or [])
+base_env.Append(CPPDEFINES = builder.is_static_libs() and ["STATIC"] or [])
 
 # Build output
 if not verbose:
@@ -190,20 +190,20 @@ if not verbose:
 if not distribution and not compiler == "em":
     base_env.Append(
         RPATH = [
-            os.path.abspath(builder_helper.build_lib_path),
-            os.path.abspath(builder_helper.build_extlib_lib_path)
+            os.path.abspath(builder.build_lib_path),
+            os.path.abspath(builder.build_extlib_lib_path)
         ],
     )
 
 ccache = shutil.which("ccache") and "ccache " or ""
 if verbose and ccache:
-    builder_helper.info("using ccache at: {}".format(shutil.which("ccache")))
+    builder.info("using ccache at: {}".format(shutil.which("ccache")))
 
 if not ccache:
     # Cache compile build with md5
-    scons_cache_path = '{}/.scons_cache'.format(builder_helper.build_root_path)
+    scons_cache_path = '{}/.scons_cache'.format(builder.build_root_path)
     if verbose:
-        builder_helper.info("using scons cache at: {}".format(scons_cache_path))
+        builder.info("using scons cache at: {}".format(scons_cache_path))
     CacheDir(scons_cache_path)
 
 num_jobs = GetOption("num_jobs")
@@ -226,12 +226,12 @@ if compiler == "clang":
         # static library indexer
         RANLIB = ccache + "ranlib",
     )
-    if builder_helper.build_asan:
+    if builder.build_asan:
         base_env.Append(
             CPPFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"],
             LINKFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"]
         )
-    if builder_helper.is_static_libs():
+    if builder.is_static_libs():
         base_env.ParseConfig("llvm-config --libs --system-libs --link-static")
     else:
         base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
@@ -244,7 +244,7 @@ elif compiler == "mingw":
         AR = ccache + "x86_64-w64-mingw32-ar",
         RANLIB = ccache + "x86_64-w64-mingw32-ranlib",
     )
-    if not builder_helper.build_static_libs:
+    if not builder.build_static_libs:
         base_env.Replace(
             SHLIBSUFFIX = ".dll",
             LIBSUFFIX = ".lib",
@@ -262,7 +262,7 @@ elif compiler == "gcc":
         # static library indexer
         RANLIB = ccache + "ranlib",
     )
-    if builder_helper.build_asan:
+    if builder.build_asan:
         base_env.Append(
             CPPFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"],
             LINKFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"]
@@ -277,7 +277,7 @@ elif compiler == "em":
     )
 
 # add platform_[flags/defines/link/libs]
-add_env_app_conf(base_env, builder_helper.build_platform)
+add_env_app_conf(base_env, builder.build_platform)
 if build_mode:
     # add mode_[flags/defines/link/libs]
     add_env_app_conf(base_env, build_mode)
@@ -287,7 +287,7 @@ add_env_app_conf(base_env, compiler)
 
 try:
     base_env.Tool('compilation_db')
-    base_env["COMPILATIONDB_PATH_FILTER"] = "{}/*".format(builder_helper.build_path)
+    base_env["COMPILATIONDB_PATH_FILTER"] = "{}/*".format(builder.build_path)
     base_env.CompilationDatabase()
 except Exception as e:
     pass
@@ -303,6 +303,7 @@ Decider('timestamp-newer')
 modules_generated_libs = {}
 modules_generated_bins = {}
 modules_generated_tests = {}
+modules_generated_demos = {}
 modules_cloned_git_repositories = {}
 targets = []
 
@@ -322,12 +323,40 @@ def _env_copy_into_build(self, src, dst):
     module_name = self['APP_MODULE_NAME']
     copy_module_res_into_build(module_name, src, dst)
 
-def _env_build_test(self, src, name=None, add_libs=[], **kwargs):
+def _env_file_basename(self, path):
+    return os.path.basename(os.path.splitext(str(path))[0])
+
+def _env_build_demo(self, src, name=None, add_libs=[], **kwargs):
     """ Environment method to build unit test binary for a module """
-    if builder_helper.build_tests == False:
+    if builder.build_demo == False:
         return None
     if modules_to_build and self['APP_MODULE_NAME'] not in modules_to_build:
         return None
+    global modules_generated_demos
+    add_targets(src)
+    if name is None:
+        name = self["APP_MODULE_FORMAT_NAME"]
+    demo_env = self.Clone()
+    demo_env.Prepend(LIBS = add_libs)
+    # add demo_[flags/defines/link/libs]
+    add_env_app_conf(demo_env, "demo")
+    # add compiler_demo_[flags/defines/link/libs]
+    add_env_app_conf(demo_env, "{}_demo".format(compiler))
+    # add platform_demo_[flags/defines/link/libs]
+    add_env_app_conf(demo_env, "{}_demo".format(build_platform))
+    demo_path = os.path.join(builder.build_demo_path, name)
+    demo = demo_env.Program(demo_path, src, **kwargs)
+    module_name = self['APP_MODULE_NAME']
+    modules_generated_demos.setdefault(module_name, []).append(demo_path)
+    return demo
+
+def _env_build_test(self, src, name=None, add_libs=[], **kwargs):
+    """ Environment method to build unit test binary for a module """
+    if builder.build_tests == False:
+        return None
+    if modules_to_build and self['APP_MODULE_NAME'] not in modules_to_build:
+        return None
+    global modules_generated_tests
     add_targets(src)
     if name is None:
         name = self["APP_MODULE_FORMAT_NAME"]
@@ -339,7 +368,7 @@ def _env_build_test(self, src, name=None, add_libs=[], **kwargs):
     add_env_app_conf(test_env, "{}_test".format(compiler))
     # add platform_test_[flags/defines/link/libs]
     add_env_app_conf(test_env, "{}_test".format(build_platform))
-    test_path = os.path.join(builder_helper.build_test_path, "bin", name)
+    test_path = os.path.join(builder.build_test_path, "bin", name)
     test = test_env.Program(test_path, src, **kwargs)
     module_name = self['APP_MODULE_NAME']
     modules_generated_tests.setdefault(module_name, []).append(test_path)
@@ -351,9 +380,9 @@ def _env_build_lib(self, src, name=None, static=None, **kwargs):
     add_targets(src)
     if name is None:
         name = self["APP_MODULE_FORMAT_NAME"]
-    lib_path = os.path.join(builder_helper.build_lib_path, name)
+    lib_path = os.path.join(builder.build_lib_path, name)
     # no cache for symlinks renewal
-    if (static is not None and static) or builder_helper.build_static_libs:
+    if (static is not None and static) or builder.build_static_libs:
         lib = NoCache(self.StaticLibrary(lib_path, src, **kwargs))
     else:
         lib = NoCache(self.SharedLibrary(lib_path, src, **kwargs))
@@ -371,7 +400,7 @@ def _env_build_bin(self, src, name=None, add_libs=[], **kwargs):
         name += ".exe"
     bin_env = self.Clone()
     bin_env.Prepend(LIBS = add_libs)
-    bin_path = os.path.join(builder_helper.build_bin_path, name)
+    bin_path = os.path.join(builder.build_bin_path, name)
     bin = bin_env.Program(bin_path, src, **kwargs)
     module_name = self['APP_MODULE_NAME']
     modules_generated_bins.setdefault(module_name, []).append(bin_path)
@@ -381,18 +410,18 @@ def _env_git_clone(self, url, branch, dest, recursive = False):
     global modules_cloned_git_repositories
     modname = self['APP_MODULE_NAME']
     if not os.path.isabs(dest):
-        dest = os.path.join(builder_helper.build_root_path, modname, dest)
+        dest = os.path.join(builder.build_root_path, modname, dest)
     ret = True
     if os.path.isdir(dest):
-        builder_helper.info("repository already cloned: {}".format(dest))
+        builder.info("repository already cloned: {}".format(dest))
     else:
-        builder_helper.info("cloning repository: {} -> {}".format(url, dest))
+        builder.info("cloning repository: {} -> {}".format(url, dest))
         args = ['git', 'clone']
         if recursive:
             args.append("--recursive")
         args.extend(['--branch', branch, '--depth', '1', url, dest])
         if verbose:
-            builder_helper.info("git clone cmd: '{}'".format(" ".join(args)))
+            builder.info("git clone cmd: '{}'".format(" ".join(args)))
         if not is_dry_run:
             ret = subprocess.call(args) == 0
     if ret:
@@ -415,8 +444,8 @@ def _fileinput_replace(path, replace_dic):
 def _env_replace_in_file(self, path, dic):
     module_name = self['APP_MODULE_NAME']
     if not os.path.isabs(path):
-        path = os.path.join(builder_helper.build_root_path, module_name, path)
-    builder_helper.debug("replacing file: " + path)
+        path = os.path.join(builder.build_root_path, module_name, path)
+    builder.debug("replacing file: " + path)
     if not is_dry_run:
         _fileinput_replace(path, dic)
 
@@ -424,15 +453,15 @@ def _env_replace_in_build(self, to_replace, replace_dic):
     module_name = self['APP_MODULE_NAME']
     files_to_replace = []
     for pattern in to_replace:
-        ret = glob.glob(os.path.join(builder_helper.build_path, module_name, pattern), recursive = True)
+        ret = glob.glob(os.path.join(builder.build_path, module_name, pattern), recursive = True)
         if ret:
             files_to_replace += ret
         else:
             files_to_replace.append(pattern)
     if verbose:
-        builder_helper.debug("replacing values in build files - {} files to replace".format(len(files_to_replace)))
+        builder.debug("replacing values in build files - {} files to replace".format(len(files_to_replace)))
     for path in files_to_replace:
-        builder_helper.debug("replacing file: " + path)
+        builder.debug("replacing file: " + path)
         if not is_dry_run:
             _sed_replace(path, replace_dic)
 
@@ -450,7 +479,7 @@ def _env_parse_config(self, config):
 def _env_find_in_file(self, src, str):
     module_name = self['APP_MODULE_NAME']
     if not os.path.isabs(src):
-        src = os.path.join(builder_helper.build_root_path, module_name, src)
+        src = os.path.join(builder.build_root_path, module_name, src)
     with open(src, 'r') as fd:
         for line in fd:
             if str in line:
@@ -461,6 +490,7 @@ def _env_find_in_file(self, src, str):
 base_env.AddMethod(_env_build_lib, "build_lib")
 base_env.AddMethod(_env_build_bin, "build_bin")
 base_env.AddMethod(_env_build_test, "build_test")
+base_env.AddMethod(_env_build_demo, "build_demo")
 base_env.AddMethod(_env_pkg_config, "pkg_config")
 base_env.AddMethod(_env_parse_config, "parse_config")
 base_env.AddMethod(_env_replace_in_build, "build_replace")
@@ -469,12 +499,13 @@ base_env.AddMethod(_env_get_module_env, "get_depends_env")
 base_env.AddMethod(_env_copy_into_build, "copy_into_build")
 base_env.AddMethod(_env_replace_in_file, "file_replace")
 base_env.AddMethod(_env_find_in_file, "find_in_file")
+base_env.AddMethod(_env_file_basename, "file_basename")
 base_env.AddMethod(lambda self: self['APP_MODULE_NAME'], "module_name")
 base_env.AddMethod(lambda self: self['APP_MODULE_FORMAT_NAME'], "module_format_name")
 base_env.AddMethod(lambda self: self['APP_MODULE_CONF'], "module_conf")
 base_env.AddMethod(lambda self: self['APP_MODULE_DIR'], "module_dir")
 base_env.AddMethod(lambda self: self['APP_MODULES_BUILD'], "modules_to_build")
-base_env.AddMethod(lambda self: builder_helper, "builder_helper")
+base_env.AddMethod(lambda self: builder, "builder")
 base_env.AddMethod(lambda self: is_dry_run, "is_dry_run")
 
 ## build utilities
@@ -493,16 +524,16 @@ def parse_config_command(env, *configs):
         try:
             env.ParseConfig(config)
         except OSError as e:
-            builder_helper.warning("config '{}' not found".format(config))
+            builder.warning("config '{}' not found".format(config))
 
 def copy_module_res_into_build(module_name, src, dst, must_exist = True):
     """ recursive copy of MODNAME/DIRNAME to build/DIRNAME """
     src = str(src)
     dst = str(dst)
-    module_res = os.path.join(builder_helper.build_root_path, module_name, src)
-    build_output = os.path.join(builder_helper.build_path, dst)
+    module_res = os.path.join(builder.build_root_path, module_name, src)
+    build_output = os.path.join(builder.build_path, dst)
     if verbose:
-        builder_helper.info("copying resources of module {}/{} -> build/{}".format(module_name, src, dst))
+        builder.info("copying resources of module {}/{} -> build/{}".format(module_name, src, dst))
     if os.path.isfile(module_res):
         compare_output_file = None
         if os.path.isfile(build_output):
@@ -555,7 +586,7 @@ def get_module_env(conf, depends = [], append_depends_libs = True, append_depend
     env.PrependUnique(
         # adding libraries
         LIBS = depends_generated_libs
-                + modules_helper.get_module_libs(build_modules, modname)
+                + modules.get_module_libs(build_modules, modname)
                 + platform_libs
                 + compiler_libs,
     )
@@ -572,7 +603,7 @@ def get_module_env(conf, depends = [], append_depends_libs = True, append_depend
         APP_MODULE_FORMAT_NAME = module_format,
         # configuration of module for scons.py
         APP_MODULE_CONF = conf,
-        APP_MODULE_DIR = os.path.join(builder_helper.build_root_path, modname)
+        APP_MODULE_DIR = os.path.join(builder.build_root_path, modname)
     )
     # use multiple pkg-config output to add libraries/includes path
     package_configs = conf.get("pkg-configs", [])
@@ -600,7 +631,7 @@ build_order.sort(key = lambda obj: len(obj["depends"]))
 built = {}
 for conf in build_order:
     modname = conf["modname"]
-    builder_helper.info("building module: {}".format(modname))
+    builder.info("building module: {}".format(modname))
     env = get_module_env(conf,
         depends = conf.get("original-depends", []),
         append_depends_libs=conf.get("add-depends-libs", True),
@@ -623,10 +654,14 @@ for conf in build_order:
     copy_module_res_into_build(modname, "etc", "etc", must_exist=False)
     copy_module_res_into_build(modname, "include", "include", must_exist=False)
     copy_module_res_into_build(modname, "share", "share", must_exist=False)
+    if builder.build_demo:
+        copy_module_res_into_build(modname, "demo/etc", "etc", must_exist=False)
+        copy_module_res_into_build(modname, "demo/include", "include", must_exist=False)
+        copy_module_res_into_build(modname, "demo/share", "share", must_exist=False)
     # read module's scons script file
     module_format_name = env['APP_MODULE_FORMAT_NAME']
     built[modname] = SConscript(Dir(modname).File("scons.py"),
-                                variant_dir = os.path.join(builder_helper.build_obj_path, modname),
+                                variant_dir = os.path.join(builder.build_obj_path, modname),
                                 duplicate = 0,
                                 exports = ['env'])
     # fill module configurations with what was actually used
@@ -660,7 +695,7 @@ try:
 
     Progress(progress_function, interval = 1)
 except (OSError, IOError) as e:
-    builder_helper.error("won't display progress - reason: " + str(e))
+    builder.error("won't display progress - reason: " + str(e))
 
 ###############################################################################
 # Scons after build
@@ -703,21 +738,27 @@ def print_err(*args):
 def display_build_status(success, failures_message):
     if not success:
         print_err("==============================================================")
-        builder_helper.error("BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
-        builder_helper.error(failures_message)
+        builder.error("BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
+        builder.error(failures_message)
         print_err("==============================================================")
     else:
-        builder_helper.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
+        builder.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
 
 def display_built():
     for modname, binaries in modules_generated_bins.items():
-        builder_helper.info("module {} binaries:".format(modname))
+        builder.info("module {} binaries:".format(modname))
         for binpath in binaries:
-            builder_helper.info("\t{}".format(binpath))
+            builder.info("\t{}".format(binpath))
+
+    for modname, demos in modules_generated_demos.items():
+        builder.info("module {} demos:".format(modname))
+        for demopath in demos:
+            builder.info("\t{}".format(demopath))
+
     for modname, tests in modules_generated_tests.items():
-        builder_helper.info("module {} tests:".format(modname))
+        builder.info("module {} tests:".format(modname))
         for testpath in tests:
-            builder_helper.info("\t{}".format(testpath))
+            builder.info("\t{}".format(testpath))
 
 def after_build():
     success, failures_message = build_status()
@@ -726,13 +767,13 @@ def after_build():
         return
     if success and hasattr(app, "on_build_success"):
         display_built()
-        app.on_build_success(build_modules, builder_helper)
+        app.on_build_success(build_modules, builder)
     elif hasattr(app, "on_build_fail"):
-        app.on_build_fail(build_modules, builder_helper)
-    builder_helper.finalize()
+        app.on_build_fail(build_modules, builder)
+    builder.finalize()
     if success and distribution:
-        builder_helper.distribute_app(app, build_modules)
+        builder.distribute_app(app, build_modules)
 
 atexit.register(after_build)
 
-builder_helper.info("starting scons build (took {:.3f} sec)".format(time.time() - build_start_time))
+builder.info("starting scons build (took {:.3f} sec)".format(time.time() - build_start_time))

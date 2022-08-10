@@ -9,47 +9,47 @@ pp = PrettyPrinter(indent=2)
 
 sys.dont_write_bytecode = True
 import app
-from site_scons.scripts import modules as modules_helper
-from site_scons.scripts import builder as builder_helper
+from site_scons.scripts import modules as modules
+from site_scons.scripts import builder as builder
 
-builder_helper.info("fetching external libraries for {}".format(app.name))
+builder.info("fetching external libraries for {}".format(app.name))
 
-if builder_helper.verify_args(app) == False:
+if builder.verify_args(app) == False:
     exit(1)
 
-modules_to_build = builder_helper.get_modules()
-modules_forced_to_build = builder_helper.get_force_build_modules()
+modules_to_build = builder.get_modules()
+modules_forced_to_build = builder.get_force_build_modules()
 
 modules_lst = modules_to_build.split(',')
 if modules_forced_to_build:
     modules_lst.extend(modules_forced_to_build.split(','))
 
-build_platform = builder_helper.build_platform
-verbose = builder_helper.build_verbose
-has_test = builder_helper.build_tests
+build_platform = builder.build_platform
+verbose = builder.build_verbose
+has_test = builder.build_tests
 
 if verbose:
     if modules_lst:
-        builder_helper.debug("getting libs from modules -> {}".format(modules_lst))
+        builder.debug("getting libs from modules -> {}".format(modules_lst))
     if has_test:
-        builder_helper.debug("including test libs")
+        builder.debug("including test libs")
 
 extlibs = {}
 
 if modules_to_build != "NONE":
-    builder_helper.info("parsing modules")
+    builder.info("parsing modules")
 
     # Get modules configuration for this build
     try:
-        build_modules = modules_helper.build_modules_conf(app, specific_modules=modules_lst)
+        build_modules = modules.build_modules_conf(app, specific_modules=modules_lst)
     except RuntimeError as e:
-        builder_helper.error(str(e))
+        builder.error(str(e))
         exit(1)
 
     # Checking module availability on platforms
-    deleted_modules = modules_helper.check_platform(build_modules, build_platform)
+    deleted_modules = modules.check_platform(build_modules, build_platform)
     for deleted_modules in deleted_modules:
-        builder_helper.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
+        builder.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
 
     for deleted_module in deleted_modules:
         del build_modules[deleted_module]
@@ -58,22 +58,22 @@ if modules_to_build != "NONE":
         exit(0)
 
     if verbose:
-        builder_helper.debug("modules configuration: ")
+        builder.debug("modules configuration: ")
         pp.pprint(build_modules)
         print()
 
-    builder_helper.info("getting modules external libs")
+    builder.info("getting modules external libs")
 
-    extlibs.update(modules_helper.get_modules_extlibs(app, build_modules, build_platform))
+    extlibs.update(modules.get_modules_extlibs(app, build_modules, build_platform))
     if has_test and hasattr(app, "test_extlibs"):
-        extlibs.update(modules_helper.get_extlibs_versions(app, app.test_extlibs))
+        extlibs.update(modules.get_extlibs_versions(app, app.test_extlibs))
 
     if verbose:
-        builder_helper.debug("modules external libs:")
+        builder.debug("modules external libs:")
         pp.pprint(extlibs)
         print()
 
-builder_helper.info("looking for manual external libs to fetch")
+builder.info("looking for manual external libs to fetch")
 
 more_libs = os.getenv("libs", "").split(",")
 app_external_libs = getattr(app, "extlibs", {})
@@ -81,23 +81,23 @@ for libname in more_libs:
     if not libname:
         continue
     if libname not in app_external_libs:
-        builder_helper.warning("no external lib named: " + libname)
+        builder.warning("no external lib named: " + libname)
     else:
-        builder_helper.info("added manual external lib: " + libname)
+        builder.info("added manual external lib: " + libname)
         extlibs[libname] = app_external_libs[libname]
 
-builder_helper.info("setting up conan")
+builder.info("setting up conan")
 print()
 
-extlib_path = builder_helper.build_extlib_path
-extlib_lib_path = builder_helper.build_extlib_lib_path
-extlib_hdr_path = builder_helper.build_extlib_hdr_path
-extlib_bin_path = builder_helper.build_extlib_bin_path
-extlib_etc_path = builder_helper.build_extlib_etc_path
-extlib_res_path = builder_helper.build_extlib_res_path
+extlib_path = builder.build_extlib_path
+extlib_lib_path = builder.build_extlib_lib_path
+extlib_hdr_path = builder.build_extlib_hdr_path
+extlib_bin_path = builder.build_extlib_bin_path
+extlib_etc_path = builder.build_extlib_etc_path
+extlib_res_path = builder.build_extlib_res_path
 
 conan_options = {
-    '*:shared': builder_helper.build_static_libs == False,
+    '*:shared': builder.build_static_libs == False,
 }
 if hasattr(app, "conan_options"):
     conan_options.update(app.conan_options)
@@ -115,10 +115,10 @@ class ConanAppDependencies(ConanFile):
         for name, version in extlibs.items():
             if name in skip_libs:
                 if verbose:
-                    builder_helper.info("skipping lib: " + name)
+                    builder.info("skipping lib: " + name)
                 pass
             lib = "{}/{}".format(name, version)
-            builder_helper.info("external lib to fetch: " + lib)
+            builder.info("external lib to fetch: " + lib)
             self.requires(lib)
         print("")
 
@@ -137,14 +137,14 @@ def post_process():
         pattern = os.path.join(extlib_lib_path, match)
         results = glob.glob(pattern)
         if results:
-            builder_helper.info(pattern)
-            builder_helper.info(*results)
+            builder.info(pattern)
+            builder.info(*results)
         for result in results:
             link_path = result.replace(opt["from"], opt["to"])
             if os.path.exists(link_path):
-                builder_helper.warning("removing symlink " + link_path)
+                builder.warning("removing symlink " + link_path)
                 os.remove(link_path)
-            builder_helper.info("adding symlink: {} -> {}".format(result, link_path))
+            builder.info("adding symlink: {} -> {}".format(result, link_path))
             os.symlink(result, link_path)
 
 atexit.register(post_process)
