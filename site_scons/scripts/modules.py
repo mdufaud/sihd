@@ -192,6 +192,9 @@ def get_conditionnals_from_env(app):
     return ret
 
 def check_platform(modules, platform):
+    """ @brief sanatize modules based on platform
+        @return modules to remove
+    """
     to_remove = []
     for name, conf in modules.items():
         module_platforms = conf.get("platforms", None)

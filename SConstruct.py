@@ -1,25 +1,27 @@
 if GetOption("help"):
     Return()
 
-# Time
-import time
-build_start_time = time.time()
 # General utilities
-import sys
 import glob
+import sys
 import os
+import time
 import fileinput
 import subprocess
 import shutil
-import filecmp
 # Pretty utility for verbosis
 from pprint import PrettyPrinter
 pp = PrettyPrinter(indent=2)
+
+###############################################################################
+# App settings
+###############################################################################
 
 # Loading app configuration no bytecode for this
 sys.dont_write_bytecode = True
 import app
 sys.dont_write_bytecode = False
+
 from site_scons.scripts import modules
 from site_scons.scripts import builder
 
@@ -30,15 +32,11 @@ if builder.verify_args(app) == False:
     Exit(1)
 
 ###############################################################################
-# Build settings
+# Modules setup
 ###############################################################################
-
-# scons options
-is_dry_run = bool(GetOption("no_exec"))
 
 modules_to_build = builder.get_modules()
 modules_forced_to_build = builder.get_force_build_modules()
-build_mode = builder.get_compile_mode()
 
 modules_lst = modules_to_build.split(',')
 if modules_forced_to_build:
@@ -47,6 +45,7 @@ if modules_forced_to_build:
 compiler = builder.build_compiler
 build_platform = builder.build_platform
 
+build_mode = builder.get_compile_mode()
 distribution = builder.do_distribution()
 verbose = builder.has_verbose()
 
@@ -78,18 +77,9 @@ for deleted_module in deleted_modules:
 if not build_modules:
     Exit(0)
 
-global_libs = getattr(app, "libs", [])
-global_platform_libs = getattr(app, "{}_libs".format(build_platform), [])
-if verbose:
-    builder.debug("modules configuration:")
-    pp.pprint(build_modules)
-    if global_libs:
-        builder.debug("libs:")
-        pp.pprint(global_libs)
-    if global_platform_libs:
-        builder.debug("{} libs:".format(build_platform))
-        pp.pprint(global_platform_libs)
-    print()
+###############################################################################
+# Package manager dependencies
+###############################################################################
 
 pkg_manager_name = builder.get_pkgdep()
 if pkg_manager_name:
@@ -118,30 +108,21 @@ if pkg_manager_name:
     Exit(0)
 
 ###############################################################################
-# Build compiling options
+# Build environnement
 ###############################################################################
 
-__env_to_key = {
-    "LIBS": "_libs",
-    "CFLAGS": "_c_flags",
-    "CXXFLAGS": "_cxx_flags",
-    "CPPFLAGS": "_flags",
-    "CPPDEFINES": "_defines",
-    "LINKFLAGS": "_link",
-}
-def add_env_app_conf(env, key):
-    for envkey, to_concat in __env_to_key.items():
-        concat = key + to_concat
-        attr = getattr(app, concat, None)
-        if attr is not None:
-            #prepends
-            env[envkey][:0] = attr
-
-build_dir = Dir(builder.build_path)
-bin_dir = Dir(builder.build_bin_path)
-lib_dir = Dir(builder.build_lib_path)
-extlib_dir = Dir(builder.build_extlib_path)
-extlib_lib_dir = Dir(builder.build_extlib_lib_path)
+global_libs = getattr(app, "libs", [])
+global_platform_libs = getattr(app, "{}_libs".format(build_platform), [])
+if verbose:
+    builder.debug("modules configuration:")
+    pp.pprint(build_modules)
+    if global_libs:
+        builder.debug("libs:")
+        pp.pprint(global_libs)
+    if global_platform_libs:
+        builder.debug("{} libs:".format(build_platform))
+        pp.pprint(global_platform_libs)
+    print()
 
 base_env = Environment(
     # binaries path
@@ -195,25 +176,22 @@ if not distribution and not compiler == "em":
         ],
     )
 
+###############################################################################
+# Compiler settings
+###############################################################################
+
 ccache = shutil.which("ccache") and "ccache " or ""
 if verbose and ccache:
     builder.info("using ccache at: {}".format(shutil.which("ccache")))
 
 if not ccache:
     # Cache compile build with md5
-    scons_cache_path = '{}/.scons_cache'.format(builder.build_root_path)
+    scons_cache_path = os.path.join(builder.build_root_path, '.scons_cache')
     if verbose:
         builder.info("using scons cache at: {}".format(scons_cache_path))
     CacheDir(scons_cache_path)
 
-num_jobs = GetOption("num_jobs")
-if num_jobs <= 1:
-    from multiprocessing import cpu_count
-    num_jobs = cpu_count()
-    if num_jobs > 3:
-        num_jobs -= 2
-    SetOption("num_jobs", num_jobs)
-
+compiler = builder.build_compiler
 # CLANG build
 if compiler == "clang":
     base_env.Replace(
@@ -277,17 +255,29 @@ elif compiler == "em":
     )
 
 # add platform_[flags/defines/link/libs]
-add_env_app_conf(base_env, builder.build_platform)
+add_env_app_conf(app, base_env, builder.build_platform)
 if build_mode:
     # add mode_[flags/defines/link/libs]
-    add_env_app_conf(base_env, build_mode)
+    add_env_app_conf(app, base_env, build_mode)
 
 # add compiler_[flags/defines/link/libs]
-add_env_app_conf(base_env, compiler)
+add_env_app_conf(app, base_env, compiler)
+
+###############################################################################
+# Scons options
+###############################################################################
+
+num_jobs = GetOption("num_jobs")
+if num_jobs <= 1:
+    from multiprocessing import cpu_count
+    num_jobs = cpu_count()
+    if num_jobs > 3:
+        num_jobs -= 2
+    SetOption("num_jobs", num_jobs)
 
 try:
     base_env.Tool('compilation_db')
-    base_env["COMPILATIONDB_PATH_FILTER"] = "{}/*".format(builder.build_path)
+    base_env["COMPILATIONDB_PATH_FILTER"] = os.path.join(builder.build_path, "*")
     base_env.CompilationDatabase()
 except Exception as e:
     pass
@@ -295,9 +285,8 @@ except Exception as e:
 # Decides when to recompile - removing slow md5 in favor of timestamps
 Decider('timestamp-newer')
 
-
 ###############################################################################
-# Build
+# Build setup
 ###############################################################################
 
 modules_generated_libs = {}
@@ -326,10 +315,11 @@ def _env_copy_into_build(self, src, dst):
 def _env_file_basename(self, path):
     return os.path.basename(os.path.splitext(str(path))[0])
 
-def _env_build_demo(self, src, name=None, add_libs=[], **kwargs):
+def _env_build_demo(self, src, name = None, add_libs = [], **kwargs):
     """ Environment method to build unit test binary for a module """
     if builder.build_demo == False:
         return None
+    # if modules are specified, demo is built only if specified by user and not automatically by dependencies
     if modules_to_build and self['APP_MODULE_NAME'] not in modules_to_build:
         return None
     global modules_generated_demos
@@ -339,21 +329,27 @@ def _env_build_demo(self, src, name=None, add_libs=[], **kwargs):
     demo_env = self.Clone()
     demo_env.Prepend(LIBS = add_libs)
     # add demo_[flags/defines/link/libs]
-    add_env_app_conf(demo_env, "demo")
+    add_env_app_conf(app, demo_env, "demo")
     # add compiler_demo_[flags/defines/link/libs]
-    add_env_app_conf(demo_env, "{}_demo".format(compiler))
+    add_env_app_conf(app, demo_env, "{}_demo".format(compiler))
     # add platform_demo_[flags/defines/link/libs]
-    add_env_app_conf(demo_env, "{}_demo".format(build_platform))
+    add_env_app_conf(app, demo_env, "{}_demo".format(build_platform))
     demo_path = os.path.join(builder.build_demo_path, name)
     demo = demo_env.Program(demo_path, src, **kwargs)
     module_name = self['APP_MODULE_NAME']
     modules_generated_demos.setdefault(module_name, []).append(demo_path)
     return demo
 
-def _env_build_test(self, src, name=None, add_libs=[], **kwargs):
+def _env_build_demos(self, srcs, **kwargs):
+    for src in srcs:
+        name = self.file_basename(src)
+        self.build_demo(src, name = name, **kwargs)
+
+def _env_build_test(self, src, name = None, add_libs = [], **kwargs):
     """ Environment method to build unit test binary for a module """
     if builder.build_tests == False:
         return None
+    # if modules are specified, test is built only if specified by user and not automatically by dependencies
     if modules_to_build and self['APP_MODULE_NAME'] not in modules_to_build:
         return None
     global modules_generated_tests
@@ -363,18 +359,18 @@ def _env_build_test(self, src, name=None, add_libs=[], **kwargs):
     test_env = self.Clone()
     test_env.Prepend(LIBS = add_libs)
     # add test_[flags/defines/link/libs]
-    add_env_app_conf(test_env, "test")
+    add_env_app_conf(app, test_env, "test")
     # add compiler_test_[flags/defines/link/libs]
-    add_env_app_conf(test_env, "{}_test".format(compiler))
+    add_env_app_conf(app, test_env, "{}_test".format(compiler))
     # add platform_test_[flags/defines/link/libs]
-    add_env_app_conf(test_env, "{}_test".format(build_platform))
+    add_env_app_conf(app, test_env, "{}_test".format(build_platform))
     test_path = os.path.join(builder.build_test_path, "bin", name)
     test = test_env.Program(test_path, src, **kwargs)
     module_name = self['APP_MODULE_NAME']
     modules_generated_tests.setdefault(module_name, []).append(test_path)
     return test
 
-def _env_build_lib(self, src, name=None, static=None, **kwargs):
+def _env_build_lib(self, src, name = None, static = None, **kwargs):
     """ Environment method to build a shared library for a module """
     global modules_generated_libs
     add_targets(src)
@@ -390,7 +386,7 @@ def _env_build_lib(self, src, name=None, static=None, **kwargs):
     modules_generated_libs.setdefault(module_name, []).append(name)
     return lib
 
-def _env_build_bin(self, src, name=None, add_libs=[], **kwargs):
+def _env_build_bin(self, src, name = None, add_libs = [], **kwargs):
     """ Environment method to build a binary for a module """
     global modules_generated_bins
     add_targets(src)
@@ -491,6 +487,7 @@ base_env.AddMethod(_env_build_lib, "build_lib")
 base_env.AddMethod(_env_build_bin, "build_bin")
 base_env.AddMethod(_env_build_test, "build_test")
 base_env.AddMethod(_env_build_demo, "build_demo")
+base_env.AddMethod(_env_build_demos, "build_demos")
 base_env.AddMethod(_env_pkg_config, "pkg_config")
 base_env.AddMethod(_env_parse_config, "parse_config")
 base_env.AddMethod(_env_replace_in_build, "build_replace")
@@ -507,49 +504,6 @@ base_env.AddMethod(lambda self: self['APP_MODULE_DIR'], "module_dir")
 base_env.AddMethod(lambda self: self['APP_MODULES_BUILD'], "modules_to_build")
 base_env.AddMethod(lambda self: builder, "builder")
 base_env.AddMethod(lambda self: is_dry_run, "is_dry_run")
-
-## build utilities
-def load_env_packages_config(env, *configs):
-    """ Parse multiple pkg-configs: libraries/includes utilities """
-    return parse_config_command(env, [
-        "pkg-config {} --cflags --libs".format(config)
-        for config in configs
-    ])
-
-def parse_config_command(env, *configs):
-    """ Parse configs from binaries outputs """
-    if build_platform == "windows" or compiler == "em":
-        return False
-    for config in configs:
-        try:
-            env.ParseConfig(config)
-        except OSError as e:
-            builder.warning("config '{}' not found".format(config))
-
-def copy_module_res_into_build(module_name, src, dst, must_exist = True):
-    """ recursive copy of MODNAME/DIRNAME to build/DIRNAME """
-    src = str(src)
-    dst = str(dst)
-    module_res = os.path.join(builder.build_root_path, module_name, src)
-    build_output = os.path.join(builder.build_path, dst)
-    if verbose:
-        builder.info("copying resources of module {}/{} -> build/{}".format(module_name, src, dst))
-    if os.path.isfile(module_res):
-        compare_output_file = None
-        if os.path.isfile(build_output):
-            compare_output_file = build_output
-        elif os.path.isdir(build_output):
-            compare_output_file = os.path.join(build_output, os.path.basename(module_res))
-        if compare_output_file and os.path.isfile(compare_output_file) and filecmp.cmp(module_res, compare_output_file):
-            # file is same
-            return
-        if not is_dry_run:
-            shutil.copy(module_res, build_output)
-    elif os.path.isdir(module_res):
-        if not is_dry_run:
-            shutil.copytree(module_res, build_output, dirs_exist_ok = True)
-    elif must_exist:
-        raise RuntimeError("for module {} resource {} not found".format(module_name, module_res))
 
 def get_module_env(conf, depends = [], append_depends_libs = True, append_depends_defines = True):
     modname = conf["modname"]
@@ -622,7 +576,9 @@ def get_module_env(conf, depends = [], append_depends_libs = True, append_depend
     env['LIBS'] = new_final_lib
     return env
 
-## building modules
+###############################################################################
+# Build
+###############################################################################
 
 # sorting build order by module dependencies size
 build_order = list(build_modules.values())
@@ -634,8 +590,8 @@ for conf in build_order:
     builder.info("building module: {}".format(modname))
     env = get_module_env(conf,
         depends = conf.get("original-depends", []),
-        append_depends_libs=conf.get("add-depends-libs", True),
-        append_depends_defines=conf.get("add-depends-defines", True))
+        append_depends_libs = conf.get("add-depends-libs", True),
+        append_depends_defines = conf.get("add-depends-defines", True))
     # some helpful debug when building
     if verbose:
         print("- needed libraries")
@@ -651,13 +607,13 @@ for conf in build_order:
             print("- needed specific packages configs")
             pp.pprint(parse_configs)
     # copy module/[etc|include|share] to build/[etc|include|share]
-    copy_module_res_into_build(modname, "etc", "etc", must_exist=False)
-    copy_module_res_into_build(modname, "include", "include", must_exist=False)
-    copy_module_res_into_build(modname, "share", "share", must_exist=False)
+    copy_module_res_into_build(modname, "etc", "etc", must_exist = False)
+    copy_module_res_into_build(modname, "include", "include", must_exist = False)
+    copy_module_res_into_build(modname, "share", "share", must_exist = False)
     if builder.build_demo:
-        copy_module_res_into_build(modname, "demo/etc", "etc", must_exist=False)
-        copy_module_res_into_build(modname, "demo/include", "include", must_exist=False)
-        copy_module_res_into_build(modname, "demo/share", "share", must_exist=False)
+        copy_module_res_into_build(modname, "demo/etc", "etc", must_exist = False)
+        copy_module_res_into_build(modname, "demo/include", "include", must_exist = False)
+        copy_module_res_into_build(modname, "demo/share", "share", must_exist = False)
     # read module's scons script file
     module_format_name = env['APP_MODULE_FORMAT_NAME']
     built[modname] = SConscript(Dir(modname).File("scons.py"),
@@ -683,7 +639,6 @@ try:
     node_count = 0
     node_count_max = len(targets)
     node_count_interval = 1
-    node_count_fname = str(base_env.Dir('#')) + '/.scons_node_count'
 
     def progress_function(node):
         if node not in targets:
@@ -703,47 +658,6 @@ except (OSError, IOError) as e:
 
 import atexit
 
-def build_failure_to_str(bf):
-    """ Convert an element of GetBuildFailures() to a string in a useful way """
-    import SCons.Errors
-    if bf is None: # unknown targets product None in list
-        return '(unknown tgt)'
-    elif isinstance(bf, SCons.Errors.StopError):
-        return str(bf)
-    elif bf.node:
-        return str(bf.node) + ': ' + bf.errstr
-    elif bf.filename:
-        return bf.filename + ': ' + bf.errstr
-    return 'unknown failure: ' + bf.errstr
-
-def build_status():
-    """ Convert the build status to a 2-tuple, (status, msg) """
-    from SCons.Script import GetBuildFailures
-    build_failures = GetBuildFailures()
-    if build_failures:
-        # bf is normally a list of build failures; if an element is None,
-        # it's because of a target that scons doesn't know anything about.
-        success = False
-        failures_message = "\n".join(["Failed building %s" % build_failure_to_str(x)
-                                        for x in build_failures if x is not None])
-    else:
-        # if bf is None, the build completed successfully.
-        success = True
-        failures_message = ''
-    return (success, failures_message)
-
-def print_err(*args):
-    print(*args, file=sys.stderr)
-
-def display_build_status(success, failures_message):
-    if not success:
-        print_err("==============================================================")
-        builder.error("BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
-        builder.error(failures_message)
-        print_err("==============================================================")
-    else:
-        builder.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
-
 def display_built():
     for modname, binaries in modules_generated_bins.items():
         builder.info("module {} binaries:".format(modname))
@@ -759,6 +673,15 @@ def display_built():
         builder.info("module {} tests:".format(modname))
         for testpath in tests:
             builder.info("\t{}".format(testpath))
+
+def display_build_status(success, failures_message):
+    if not success:
+        print_err("==============================================================")
+        builder.error("BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
+        builder.error(failures_message)
+        print_err("==============================================================")
+    else:
+        builder.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
 
 def after_build():
     success, failures_message = build_status()

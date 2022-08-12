@@ -13,6 +13,7 @@
         } \
     };
 # define SIHD_UTIL_NAMEDFACTORY_PREFIX "sihd_util_namedfactory_"
+# define SIHD_UTIL_FACTORY(class, name, parent) sihd_util_namedfactory_##class(name, parent);
 
 namespace sihd::util
 {

@@ -12,7 +12,7 @@ class Runnable: public IRunnable
     public:
         Runnable();
         Runnable(IRunnable *runnable_ptr);
-        Runnable(std::function<bool ()> fun);
+        Runnable(std::function<bool ()> && fun);
         virtual ~Runnable();
 
         bool operator()()

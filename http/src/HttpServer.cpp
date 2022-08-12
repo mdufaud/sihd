@@ -182,7 +182,7 @@ bool    HttpServer::run()
         _running = true;
     }
     _worker.start_worker(this->name() + "-callback");
-    while (_running == true && n >= 0)
+    while (_running && n >= 0)
         n = lws_service(_lws_context_ptr, 0);
     _worker.stop_worker();
     {

@@ -16,13 +16,13 @@
 
 #include <unistd.h> // usleep
 
-namespace test::module
+namespace demo
 {
 
 using namespace sihd::util;
 using namespace sihd::http;
 
-SIHD_NEW_LOGGER("test::module");
+SIHD_NEW_LOGGER("demo");
 
 class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebsocketHandler
 {
@@ -141,13 +141,13 @@ static void http_test()
         server.run();
 }
 
-} // end test::module
+} // end demo
 
 int main()
 {
     sihd::util::Str::hexdump_cols = 20;
     sihd::util::LoggerManager::basic();
-    test::module::http_test();
+    demo::http_test();
     if (sihd::util::OS::is_windows)
         sihd::util::Time::sleep(5);
     return 0;

@@ -15,7 +15,7 @@ Runnable::Runnable(IRunnable *runnable_ptr)
     this->set_runnable(runnable_ptr);
 }
 
-Runnable::Runnable(std::function<bool()> fun)
+Runnable::Runnable(std::function<bool()> && fun)
 {
     _run_fun = std::move(fun);
 }

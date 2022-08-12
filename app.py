@@ -162,6 +162,69 @@ conditionnal_modules = {
 }
 
 #############
+# compilation
+#############
+
+## mode specifics - default is always debug
+modes = ["debug", "release"]
+
+debug_flags = ["-g", "-O1"]
+release_flags = ["-O3"]
+
+## general compilation parameters
+cxx_flags = ['-std=c++17']
+flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
+defines = [
+    "SIHD_VERSION_MAJOR=" + version.split('.')[0],
+    "SIHD_VERSION_MINOR=" + version.split('.')[1],
+    "SIHD_VERSION_PATCH=" + version.split('.')[2],
+]
+
+## gcc specifics
+gcc_flags = [
+    "-Werror",
+    "-D_FORTIFY_SOURCE=2",
+    "-D_GLIBCXX_ASSERTIONS",
+    "-fasynchronous-unwind-tables",
+    "-fexceptions",
+    "-Wl,-pie",
+    "-fstack-protector",
+    "-fstack-protector-strong",
+    "-Wl,-z,defs",
+    "-Wl,-z,now",
+    "-Wl,-z,relro",
+    # hide pragma messages
+    "-ftrack-macro-expansion=0",
+    "-fno-diagnostics-show-caret",
+]
+
+## clang specifics
+clang_flags = [
+    "-Werror",
+    "-Wno-unused-command-line-argument"
+]
+clang_libs = ['stdc++']
+clang_defines = [
+    'LLVM_ENABLE_EH=YES',
+    'LLVM_ENABLE_RTTI=ON',
+]
+
+## mingw specifics
+mingw_flags = ["-Werror"]
+mingw_libs = ['ws2_32', 'psapi', 'ucrt', 'winpthread']
+# _WIN64 -> activates sihd functionnalities
+# _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
+mingw_defines = [
+    "_WIN64",
+    "_WIN32_WINNT=0x0600",
+    "_ISOC99_SOURCE"
+]
+
+## test specifics
+test_extlibs = ['gtest']
+test_libs = ['gtest', 'stdc++fs']
+
+#############
 # distribution
 #############
 
@@ -253,69 +316,6 @@ yum_packages = {
   "libssh2": "ssh-devel",
   "libusb": "libusb-devel"
 }
-
-#############
-# compilation
-#############
-
-## mode specifics - default is always debug
-modes = ["debug", "release"]
-
-debug_flags = ["-g", "-O1"]
-release_flags = ["-O3"]
-
-## general compilation parameters
-cxx_flags = ['-std=c++17']
-flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
-defines = [
-    "SIHD_VERSION_MAJOR=" + version.split('.')[0],
-    "SIHD_VERSION_MINOR=" + version.split('.')[1],
-    "SIHD_VERSION_PATCH=" + version.split('.')[2],
-]
-
-## gcc specifics
-gcc_flags = [
-    "-Werror",
-    "-D_FORTIFY_SOURCE=2",
-    "-D_GLIBCXX_ASSERTIONS",
-    "-fasynchronous-unwind-tables",
-    "-fexceptions",
-    "-Wl,-pie",
-    "-fstack-protector",
-    "-fstack-protector-strong",
-    "-Wl,-z,defs",
-    "-Wl,-z,now",
-    "-Wl,-z,relro",
-    # hide pragma messages
-    "-ftrack-macro-expansion=0",
-    "-fno-diagnostics-show-caret",
-]
-
-## clang specifics
-clang_flags = [
-    "-Werror",
-    "-Wno-unused-command-line-argument"
-]
-clang_libs = ['stdc++']
-clang_defines = [
-    'LLVM_ENABLE_EH=YES',
-    'LLVM_ENABLE_RTTI=ON',
-]
-
-## mingw specifics
-mingw_flags = ["-Werror"]
-mingw_libs = ['ws2_32', 'psapi', 'ucrt', 'winpthread']
-# _WIN64 -> activates sihd functionnalities
-# _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
-mingw_defines = [
-    "_WIN64",
-    "_WIN32_WINNT=0x0600",
-    "_ISOC99_SOURCE"
-]
-
-## test specifics
-test_extlibs = ['gtest']
-test_libs = ['gtest', 'stdc++fs']
 
 #############
 # after build

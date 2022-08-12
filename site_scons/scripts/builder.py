@@ -19,6 +19,10 @@ specific_platform_compilers = {
 }
 specific_compilers_platform = {v: k for k, v in specific_platform_compilers.items()}
 
+###############################################################################
+# Term colors
+###############################################################################
+
 _term_color_prefix = "\033["
 class TermColors(object):
 
@@ -46,6 +50,10 @@ class TermColors(object):
 
 term_colors = TermColors()
 
+###############################################################################
+# Build log
+###############################################################################
+
 def debug(*msg):
     print(term_colors.blue + "builder [debug]:", *msg, term_colors.reset)
 
@@ -59,7 +67,9 @@ def error(*msg):
     print(term_colors.red + "builder [error]:", *msg, term_colors.reset, file=sys.stderr)
 
 ###############################################################################
+# OS settings
 # from conans/client/tools/oss.py in https://github.com/conan-io
+###############################################################################
 
 architectures = {
     "ppc": "ppc32",
@@ -108,7 +118,6 @@ def get_arch():
     return get_opt('arch', arch)
 
 # from conans/conan/tools/gnu/get_gnu_triplet.py in https://github.com/conan-io
-
 def _build_gnu_triplet(machine, vendor):
     op_system = {
         "Windows": "w64-mingw32",
@@ -134,6 +143,8 @@ def _build_gnu_triplet(machine, vendor):
             op_system += "_ilp32"
     return "{}-{}".format(machine, op_system)
 
+###############################################################################
+# Build settings
 ###############################################################################
 
 def get_opt(argname, default_val=""):
@@ -198,6 +209,10 @@ def get_force_build_modules():
 def is_static_libs():
     return get_opt("static", "") == "1"
 
+###############################################################################
+# Build initialisation
+###############################################################################
+
 # compilation
 build_compiler = get_compiler()
 build_architecture = get_arch()
@@ -244,6 +259,10 @@ build_test_path = join(build_path, "test")
 build_demo_path = join(build_path, "demo")
 build_obj_path = join(build_path, "obj")
 
+###############################################################################
+# App settings sanatizer
+###############################################################################
+
 def verify_args(app):
     global build_static_libs
     ret = True
@@ -269,6 +288,10 @@ def verify_args(app):
             ret = False
     return ret
 
+###############################################################################
+# Windows utils
+###############################################################################
+
 def copy_dll_to_bin():
     dll_paths = []
     if os.path.isdir(build_extlib_lib_path):
@@ -290,6 +313,10 @@ def copy_dll_to_bin():
                 os.remove(dst)
             shutil.copyfile(dll_path, dst)
 
+###############################################################################
+# After build
+###############################################################################
+
 def finalize():
     if os.path.exists(build_last_link_path):
         os.remove(build_last_link_path)
@@ -298,10 +325,9 @@ def finalize():
         copy_dll_to_bin()
 
 ###############################################################################
-## Distribution
+# TAR distribution
 ###############################################################################
 
-# TAR
 def create_tar_package(app):
     os.makedirs(build_dist_path, exist_ok = True)
     tar_path = join(build_dist_path, "{}-{}.tar.gz".format(app.name, app.version))
@@ -332,7 +358,10 @@ def create_tar_package(app):
         if os.path.isdir(build_extlib_bin_path):
             tar.add(build_extlib_bin_path, arcname = os.path.basename(build_bin_path))
 
-# APT
+###############################################################################
+# APT distribution
+###############################################################################
+
 def create_apt_package(app, modules):
     try:
         modules_extlibs = build_tools_modules.get_modules_extlibs(app, modules, platform)
@@ -405,7 +434,10 @@ def create_apt_package(app, modules):
     else:
         error("dpkg-deb is missing")
 
-# PACMAN
+###############################################################################
+# PACMAN distribution
+###############################################################################
+
 def create_pacman_package(app, modules):
     try:
         modules_extlibs = build_tools_modules.get_modules_extlibs(app, modules, platform)
@@ -477,6 +509,10 @@ def create_pacman_package(app, modules):
     # change back to old directory
     os.chdir(old_cwd)
 
+###############################################################################
+# Distribution
+###############################################################################
+
 def distribute_app(app, modules):
     dist_type = get_opt("dist", None)
     if dist_type is None:
@@ -491,6 +527,8 @@ def distribute_app(app, modules):
     else:
         raise SystemExit("cannot distribute app type: {}".format(dist_type))
 
+###############################################################################
+# Python package command line utils
 ###############################################################################
 
 def print_all():
