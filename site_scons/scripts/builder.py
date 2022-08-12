@@ -266,9 +266,9 @@ build_obj_path = join(build_path, "obj")
 def verify_args(app):
     global build_static_libs
     ret = True
-    if build_platform not in ("windows", "linux"):
-        error("platform {} is not supported".format(build_platform))
-        ret = False
+    # if build_platform not in ("windows", "linux"):
+    #     error("platform {} is not supported".format(build_platform))
+    #     ret = False
     if build_compiler not in ("gcc", "clang", "mingw", "em"):
         error("compiler {} is not supported".format(build_compiler))
         ret = False
