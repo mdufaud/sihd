@@ -301,7 +301,7 @@ def verify_args(app):
 # Windows utils
 ###############################################################################
 
-def copy_dll_to_build(build_order):
+def copy_dll_to_build(modules_build_order):
     build_need_dll_path_lst = [build_bin_path]
     if build_demo:
         build_need_dll_path_lst.append(build_demo_path)
@@ -315,24 +315,31 @@ def copy_dll_to_build(build_order):
     if not do_copy:
         return
 
-    dll_search_path = [
+    dll_search_path_lst = [
         build_extlib_lib_path,
-        build_lib_path,
         "/mingw64"
+    ]
+    dll_forced_path_lst = [
+        build_lib_path
     ]
 
     dll_lst = set()
-    for conf in build_order:
+    for conf in modules_build_order:
         print(conf['libs'])
         for lib in conf['libs']:
             dll_lst.add(lib)
 
     dll_found = []
-    for search_path in dll_search_path:
+    for search_path in dll_search_path_lst:
         if not os.path.isdir(search_path):
             continue
         for dll_name in dll_lst:
             dll_found.extend(glob.glob(os.path.join(search_path, "*{}*.dll*".format(dll_name))))
+
+    for forced_path in dll_forced_path_lst:
+        if not os.path.isdir(forced_path):
+            continue
+        dll_found.extend(glob.glob(os.path.join(forced_path, "*.dll*")))
 
     for build_dll_path in build_need_dll_path_lst:
         if os.path.isdir(build_dll_path):

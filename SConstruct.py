@@ -217,7 +217,6 @@ elif compiler == "mingw":
         CXX = ccache + "x86_64-w64-mingw32-g++",
         AR = ccache + "x86_64-w64-mingw32-ar",
         RANLIB = ccache + "x86_64-w64-mingw32-ranlib",
-        SHLINK = ccache + "x86_64-w64-mingw32-ld",
     )
 # GCC build
 elif compiler == "gcc":
@@ -230,8 +229,6 @@ elif compiler == "gcc":
         AR = ccache + "ar",
         # static library indexer
         RANLIB = ccache + "ranlib",
-        # shared library linker
-        SHLINK = "ld"
     )
     if builder.build_asan:
         base_env.Append(
@@ -245,7 +242,6 @@ elif compiler == "em":
         CXX = ccache + "em++",
         AR = ccache + "emar",
         RANLIB = ccache + "emranlib",
-        SHLINK = "",
     )
 
 # General windows build
@@ -583,11 +579,11 @@ def get_module_env(conf, depends = [], append_depends_libs = True, append_depend
 ###############################################################################
 
 # sorting build order by module dependencies size
-build_order = list(build_modules.values())
-build_order.sort(key = lambda obj: len(obj["depends"]))
+modules_build_order = list(build_modules.values())
+modules_build_order.sort(key = lambda obj: len(obj["depends"]))
 # Configure env and call scons.py from every configured modules
 built = {}
-for conf in build_order:
+for conf in modules_build_order:
     modname = conf["modname"]
     builder.info("building module: {}".format(modname))
     env = get_module_env(conf,
@@ -696,7 +692,7 @@ def after_build():
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules, builder)
     builder.symlink_build()
-    builder.copy_dll_to_build(build_order)
+    builder.copy_dll_to_build(modules_build_order)
     if success and distribution:
         builder.distribute_app(app, build_modules)
 
