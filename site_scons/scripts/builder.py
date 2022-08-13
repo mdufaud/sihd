@@ -318,9 +318,10 @@ def copy_dll_to_bin():
 ###############################################################################
 
 def finalize():
-    if os.path.exists(build_last_link_path):
+    if os.path.isfile(build_last_link_path):
         os.remove(build_last_link_path)
-    os.symlink(build_path, build_last_link_path)
+    if not os.path.isfile(build_last_link_path):
+        os.symlink(build_path, build_last_link_path)
     if build_for_windows:
         copy_dll_to_bin()
 
