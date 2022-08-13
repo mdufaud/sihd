@@ -164,7 +164,7 @@ def is_msys():
 def __get_platform():
     env = get_opt("platform", "")
     build_platform = (env or platform.system()).lower()
-    if "win" in build_platform or "msys" in build_platform:
+    if "win" in build_platform:
         build_platform = "windows"
     return build_platform
 
