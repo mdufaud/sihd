@@ -222,12 +222,6 @@ elif compiler == "mingw":
         AR = ccache + "x86_64-w64-mingw32-ar",
         RANLIB = ccache + "x86_64-w64-mingw32-ranlib",
     )
-    if not builder.build_static_libs:
-        base_env.Replace(
-            SHLIBSUFFIX = ".dll",
-            LIBSUFFIX = ".lib",
-            LIBPREFIX = "",
-        )
 # GCC build
 elif compiler == "gcc":
     base_env.Replace(
@@ -252,6 +246,13 @@ elif compiler == "em":
         CXX = ccache + "em++",
         AR = ccache + "emar",
         RANLIB = ccache + "emranlib",
+    )
+
+if builder.build_for_windows:
+    base_env.Replace(
+        SHLIBSUFFIX = ".dll",
+        LIBSUFFIX = ".lib",
+        LIBPREFIX = "",
     )
 
 # add platform_[flags/defines/link/libs]

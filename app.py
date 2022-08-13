@@ -210,11 +210,11 @@ clang_defines = [
 ]
 
 ## mingw specifics
-mingw_flags = ["-Werror"]
-mingw_libs = ['ws2_32', 'psapi', 'ucrt', 'winpthread']
+windows_flags = ["-Werror"]
+windows_libs = ['ws2_32', 'psapi', 'ucrt', 'winpthread', 'ssp']
 # _WIN64 -> activates sihd functionnalities
 # _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
-mingw_defines = [
+windows_defines = [
     "_WIN64",
     "_WIN32_WINNT=0x0600",
     "_ISOC99_SOURCE"
