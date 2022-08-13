@@ -1,6 +1,10 @@
 #ifndef PLATFORM_H__
 # define PLATFORM_H__
 
+# if defined(__MSYS__)
+#  error Nope
+# endif
+
 # if defined(__EMSCRIPTEN__)
 #  define __SIHD_EMSCRIPTEN__
 # endif
@@ -11,8 +15,6 @@
 #  define __SIHD_PLATFORM__ "windows"
 
 # elif (defined(__linux__) || defined(__CYGWIN__) || defined(__linux) || defined(linux) || defined(__gnu_linux__) || defined(__EMSCRIPTEN__) || defined(__MSYS__))
-
-#pragma message "LINUX"
 
 #  define __SIHD_UNIX__
 #  define __SIHD_LINUX__
