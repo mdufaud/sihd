@@ -14,10 +14,6 @@ except ImportError:
 
 default_mode = "debug"
 default_compiler = os.getenv("COMPILER", "gcc")
-specific_platform_compilers = {
-    "windows": "mingw"
-}
-specific_compilers_platform = {v: k for k, v in specific_platform_compilers.items()}
 
 ###############################################################################
 # Term colors
@@ -159,28 +155,32 @@ def is_android():
     return "ANDROID_ARGUMENT" in os.environ
 
 def is_msys():
-    return "msys" in get_platform()
+    return "MSYSTEM" in os.environ and "MINGW" in os.getenv("MSYSTEM")
 
 def __get_platform():
     env = get_opt("platform", "")
     build_platform = (env or platform.system()).lower()
-    if "win" in build_platform:
+    if "win" in build_platform or is_msys():
         build_platform = "windows"
     return build_platform
 
 def get_compiler():
     arch = get_arch()
-    build_platform = __get_platform()
-    backup_compiler = default_compiler
+    compiler = default_compiler
     if "arm" in arch:
-        backup_compiler = "clang"
-    backup_compiler = get_opt("compiler", backup_compiler)
-    return specific_platform_compilers.get(build_platform, backup_compiler).lower()
+        compiler = "clang"
+    build_platform = __get_platform()
+    compiler = get_opt("compiler", compiler)
+    if build_platform == "windows" and not is_msys():
+        compiler = "mingw"
+    return compiler.lower()
 
 def get_platform():
     compiler = get_compiler()
     build_platform = __get_platform()
-    return specific_compilers_platform.get(compiler, build_platform)
+    if compiler == "mingw":
+        build_platform = "windows"
+    return build_platform
 
 def get_pkgdep():
     return get_opt("pkgdep", "")

@@ -407,9 +407,9 @@ std::string     IpAddr::ip_str(const sockaddr & addr)
     sockaddr_in6 addr_in6;
 
     if (IpAddr::to_sockaddr_in6(&addr_in6, addr, 0))
-        return IpAddr::ip_str(addr_in);
-    else if (IpAddr::to_sockaddr_in(&addr_in, addr, 0))
         return IpAddr::ip_str(addr_in6);
+    else if (IpAddr::to_sockaddr_in(&addr_in, addr, 0))
+        return IpAddr::ip_str(addr_in);
     return "";
 }
 
