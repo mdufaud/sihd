@@ -158,10 +158,13 @@ def get_opt(argname, default_val=""):
 def is_android():
     return "ANDROID_ARGUMENT" in os.environ
 
+def is_msys():
+    return "msys" in get_platform()
+
 def __get_platform():
     env = get_opt("platform", "")
     build_platform = (env or platform.system()).lower()
-    if "win" in build_platform:
+    if "win" in build_platform or "msys" in build_platform:
         build_platform = "windows"
     return build_platform
 
@@ -266,9 +269,6 @@ build_obj_path = join(build_path, "obj")
 def verify_args(app):
     global build_static_libs
     ret = True
-    # if build_platform not in ("windows", "linux"):
-    #     error("platform {} is not supported".format(build_platform))
-    #     ret = False
     if build_compiler not in ("gcc", "clang", "mingw", "em"):
         error("compiler {} is not supported".format(build_compiler))
         ret = False
@@ -320,7 +320,7 @@ def copy_dll_to_bin():
 def finalize():
     if os.path.isfile(build_last_link_path):
         os.remove(build_last_link_path)
-    if not os.path.isfile(build_last_link_path):
+    if not os.path.exists(build_last_link_path):
         os.symlink(build_path, build_last_link_path)
     if build_for_windows:
         copy_dll_to_bin()
