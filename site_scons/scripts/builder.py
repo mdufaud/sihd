@@ -319,13 +319,13 @@ def copy_dll_to_build(modules_build_order):
         build_extlib_lib_path,
         "/mingw64"
     ]
+
     dll_forced_path_lst = [
         build_lib_path
     ]
 
     dll_lst = set()
     for conf in modules_build_order:
-        print(conf['libs'])
         for lib in conf['libs']:
             dll_lst.add(lib)
 
@@ -334,12 +334,12 @@ def copy_dll_to_build(modules_build_order):
         if not os.path.isdir(search_path):
             continue
         for dll_name in dll_lst:
-            dll_found.extend(glob.glob(os.path.join(search_path, "*{}*.dll*".format(dll_name))))
+            dll_found.extend(glob.glob(os.path.join(search_path, "*{}*.dll".format(dll_name))))
 
     for forced_path in dll_forced_path_lst:
         if not os.path.isdir(forced_path):
             continue
-        dll_found.extend(glob.glob(os.path.join(forced_path, "*.dll*")))
+        dll_found.extend(glob.glob(os.path.join(forced_path, "*.dll")))
 
     for build_dll_path in build_need_dll_path_lst:
         if os.path.isdir(build_dll_path):

@@ -86,6 +86,7 @@ TEST_BIN_PATH := $(TEST_PATH)/bin
 BIN_PATH := $(BUILD_PATH)/bin
 OBJ_PATH := $(BUILD_PATH)/obj
 ETC_PATH := $(BUILD_PATH)/etc
+DEMO_PATH := $(BUILD_PATH)/demo
 SHARE_PATH := $(BUILD_PATH)/share
 DIST_PATH := $(HERE)/dist
 
@@ -551,12 +552,14 @@ serve:
 
 clean:
 	$(QUIET) $(call mk_log_info,makefile,removing compilation build)
-	rm -rf $(LIB_PATH)
-	rm -rf $(INCLUDE_PATH)
-	rm -rf $(TEST_PATH)
 	rm -rf $(OBJ_PATH)
-	rm -rf $(BIN_PATH)
+	rm -rf $(INCLUDE_PATH)
+	rm -rf $(LIB_PATH)
 	rm -rf $(ETC_PATH)
+	rm -rf $(SHARE_PATH)
+	rm -rf $(BIN_PATH)
+	rm -rf $(TEST_PATH)
+	rm -rf $(DEMO_PATH)
 
 clean_dep:
 	$(QUIET) $(call mk_log_info,makefile,removing dependencies)

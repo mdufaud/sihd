@@ -184,7 +184,6 @@ defines = [
 gcc_flags = [
     "-Werror",
     "-D_FORTIFY_SOURCE=2",
-    "-D_GLIBCXX_ASSERTIONS",
     "-fasynchronous-unwind-tables",
     "-fexceptions",
     "-Wl,-pie",
