@@ -128,7 +128,9 @@ static void http_test()
         OS::add_signal_handler(SIGINT, new Handler<int>([&server] (int sig)
         {
             (void)sig;
+            SIHD_LOG(info, "Stopping http server...");
             server.stop();
+            SIHD_LOG(info, "Stopped http server");
         }));
         std::string root_path = FS::parent(FS::parent(FS::executable_path()));
         std::string res_path = FS::combine({root_path, "etc", "sihd", "demo", "http_demo"});
@@ -148,8 +150,6 @@ int main()
     sihd::util::Str::hexdump_cols = 20;
     sihd::util::LoggerManager::basic();
     demo::http_test();
-    if (sihd::util::OS::is_windows)
-        sihd::util::Time::sleep(5);
     return 0;
 }
 

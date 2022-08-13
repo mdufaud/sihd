@@ -71,9 +71,6 @@ deleted_modules = modules.check_platform(build_modules, build_platform)
 for deleted_modules in deleted_modules:
     builder.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
 
-for deleted_module in deleted_modules:
-    del build_modules[deleted_module]
-
 if not build_modules:
     Exit(0)
 
