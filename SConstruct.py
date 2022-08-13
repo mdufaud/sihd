@@ -142,10 +142,6 @@ base_env = Environment(
     APP_MODULES_BUILD = build_modules.keys(),
 )
 
-pp.pprint(base_env.__dict__)
-
-print()
-
 if compiler != "mingw":
     base_env.Append(SHLIBVERSION = app.version)
 
