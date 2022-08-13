@@ -155,7 +155,10 @@ def is_android():
     return "ANDROID_ARGUMENT" in os.environ
 
 def is_msys():
-    return "MSYSTEM" in os.environ and "MINGW" in os.getenv("MSYSTEM")
+    return "MSYSTEM" in os.environ
+
+def is_msys_mingw():
+    return is_msys() and "MINGW" in os.getenv("MSYSTEM")
 
 def __get_platform():
     env = get_opt("platform", "")
@@ -269,7 +272,13 @@ build_obj_path = join(build_path, "obj")
 def verify_args(app):
     global build_static_libs
     ret = True
-    if build_compiler not in ("gcc", "clang", "mingw", "em"):
+    if is_msys() and not is_msys_mingw():
+        error("msys2 supported for mingw64 only")
+        ret = False
+    if build_compiler == "mingw":
+        error("please use msys2 instead of mingw")
+        ret = False
+    if build_compiler not in ("gcc", "clang", "em"):
         error("compiler {} is not supported".format(build_compiler))
         ret = False
     if hasattr(app, "modes") and build_mode not in app.modes:
@@ -292,38 +301,56 @@ def verify_args(app):
 # Windows utils
 ###############################################################################
 
-def copy_dll_to_bin():
-    dll_paths = []
-    if os.path.isdir(build_extlib_lib_path):
-        dll_paths.extend(glob.glob(os.path.join(build_extlib_lib_path, "*.dll*")))
-    if os.path.isdir(build_lib_path):
-        dll_paths.extend(glob.glob(os.path.join(build_lib_path, "*.dll*")))
-    if os.path.isdir(build_bin_path):
-        for dll_path in dll_paths:
-            dst = os.path.join(build_bin_path, os.path.basename(dll_path))
-            if os.path.exists(dst):
-                os.remove(dst)
-            shutil.copyfile(dll_path, dst)
-    if not build_demo:
+def copy_dll_to_build(build_order):
+    build_need_dll_path_lst = [build_bin_path]
+    if build_demo:
+        build_need_dll_path_lst.append(build_demo_path)
+
+    do_copy = False
+    for path in build_need_dll_path_lst:
+        if os.path.isdir(path):
+            do_copy = True
+            break
+
+    if not do_copy:
         return
-    if os.path.isdir(build_demo_path):
-        for dll_path in dll_paths:
-            dst = os.path.join(build_demo_path, os.path.basename(dll_path))
-            if os.path.exists(dst):
-                os.remove(dst)
-            shutil.copyfile(dll_path, dst)
+
+    dll_search_path = [
+        build_extlib_lib_path,
+        build_lib_path,
+        "/mingw64"
+    ]
+
+    dll_lst = set()
+    for conf in build_order:
+        print(conf['libs'])
+        for lib in conf['libs']:
+            dll_lst.add(lib)
+
+    dll_found = []
+    for search_path in dll_search_path:
+        if not os.path.isdir(search_path):
+            continue
+        for dll_name in dll_lst:
+            dll_found.extend(glob.glob(os.path.join(search_path, "*{}*.dll*".format(dll_name))))
+
+    for build_dll_path in build_need_dll_path_lst:
+        if os.path.isdir(build_dll_path):
+            for dll_src in dll_found:
+                dll_dst = os.path.join(build_dll_path, os.path.basename(dll_src))
+                if os.path.exists(dll_dst):
+                    os.remove(dll_dst)
+                shutil.copyfile(dll_src, dll_dst)
 
 ###############################################################################
 # After build
 ###############################################################################
 
-def finalize():
+def symlink_build():
     if os.path.isfile(build_last_link_path):
         os.remove(build_last_link_path)
     if not os.path.exists(build_last_link_path):
         os.symlink(build_path, build_last_link_path)
-    if build_for_windows:
-        copy_dll_to_bin()
 
 ###############################################################################
 # TAR distribution

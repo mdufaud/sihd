@@ -15,8 +15,7 @@ extlibs = {
     "libwebsockets": "4.3.0",
     "libcurl": "7.75.0",
     "openssl": "1.1.1l",
-    ## ssh
-    "libssh2": "1.9.0",
+    "libssh": "",
     ## pcap
     "libpcap": "1.10.1",
     ## usb
@@ -87,6 +86,7 @@ modules = {
     },
     "ssh": {
         "depends": ['util'],
+        "extlibs": ["libssh"],
         "libs": ['ssh'],
         "platforms": ["linux"]
     },
@@ -210,7 +210,9 @@ clang_defines = [
 ]
 
 ## mingw specifics
-windows_flags = ["-Werror"]
+mingw_flags = gcc_flags
+
+## windows specifics
 windows_libs = ['ws2_32', 'psapi', 'ucrt', 'winpthread', 'ssp']
 # _WIN64 -> activates sihd functionnalities
 # _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
@@ -243,7 +245,6 @@ apt_packages = {
     "nlohmann_json": "nlohmann-json3-dev",
     "fmt": "libfmt-dev",
     "libuuid": "uuid-dev",
-    "ncurses": "libncurses-dev",
     "openssl": "openssl",
     "libcurl": "libcurl4-openssl-dev",
     "libwebsockets": "libwebsockets-dev",
@@ -258,7 +259,6 @@ apt_packages = {
     "glew": "libglew-dev",
     "sdl2": "libsdl2-dev",
     "lua": "liblua5.3-dev",
-    "libssh2": "libssh-dev",
     "libusb": "libusb-dev"
 }
 
@@ -276,7 +276,6 @@ pacman_packages = {
     "nlohmann_json": "nlohmann-json",
     "fmt": "fmt",
     "libuuid": "util-linux-libs",
-    "ncurses": "ncurses",
     "openssl": "openssl",
     "libcurl": "curl",
     "libwebsockets": "libwebsockets",
@@ -290,7 +289,6 @@ pacman_packages = {
     "glew": "glew",
     "sdl2": "sdl2",
     "lua": "lua",
-    "libssh2": "libssh",
     "libusb": "libusb"
 }
 
@@ -299,7 +297,6 @@ yum_packages = {
   "nlohmann_json": "json-devel",
   "fmt": "fmt-devel",
   "libuuid": "uuid-devel",
-  "ncurses": "ncurses-devel",
   "openssl": "openssl",
   "libcurl": "libcurl-devel",
   "libwebsockets": "libwebsockets-devel",
@@ -313,8 +310,27 @@ yum_packages = {
   "glew": "glew-devel",
   "sdl2": "sdl2-devel",
   "lua": "lua5.3-devel",
-  "libssh2": "ssh-devel",
   "libusb": "libusb-devel"
+}
+
+__msys2_mingw = "mingw-w64-x86_64-"
+msys2_packages = {
+  "gtest": __msys2_mingw + "gtest",
+  "nlohmann_json": __msys2_mingw + "nlohmann-json",
+  "fmt": __msys2_mingw + "fmt",
+  "openssl": __msys2_mingw + "openssl",
+  "libcurl": __msys2_mingw + "curl",
+  "libwebsockets": __msys2_mingw + "libwebsockets",
+  "libpcap": __msys2_mingw + "libpcap",
+  "libssh": __msys2_mingw + "libssh",
+  "libusb": __msys2_mingw + "libusb",
+  "libzip": __msys2_mingw + "libzip",
+  "pybind11": __msys2_mingw + "pybind11",
+  "glfw": __msys2_mingw + "glfw",
+  "glew": __msys2_mingw + "glew",
+  "sdl2": __msys2_mingw + "SDL2",
+  "lua": __msys2_mingw + "lua",
+  "libusb": __msys2_mingw + "libusb",
 }
 
 #############

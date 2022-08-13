@@ -98,14 +98,9 @@ if pkg_manager_name:
         for missing in missing_test_packages:
             builder.warning("external library '{}' not declared in packet manager '{}'".format(missing, pkg_manager_name))
         deps.update(test_packages.keys())
-    builder.info("dependencies: " + " ".join(deps))
-    deps_str = " ".join(deps)
-    builder.info("install with:")
-    if pkg_manager_name == "pacman":
-        print("sudo pacman -Syu && sudo pacman -S {}".format(deps_str))
-    else:
-        print("sudo {} update && sudo {} install {}".format(pkg_manager_name, pkg_manager_name, deps_str))
-    Exit(0)
+    builder.info("dependencies:")
+    print(" ".join(deps))
+    Return()
 
 ###############################################################################
 # Build environnement
@@ -150,9 +145,11 @@ base_env = Environment(
     APP_CONFIG = app,
     # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
-    # lib version + automatic symbolic links
-    SHLIBVERSION = app.version
 )
+
+if compiler != "mingw":
+    base_env.Append(SHLIBVERSION = app.version)
+
 base_env.Append(CPPDEFINES = builder.is_static_libs() and ["STATIC"] or [])
 
 # Build output
@@ -168,7 +165,7 @@ if not verbose:
         LINKCOMSTR = "linking object files into executable: $TARGET",
     )
 
-if not distribution and not compiler == "em":
+if not distribution and not compiler == "em" and not compiler == "mingw":
     base_env.Append(
         RPATH = [
             os.path.abspath(builder.build_lib_path),
@@ -213,7 +210,6 @@ if compiler == "clang":
         base_env.ParseConfig("llvm-config --libs --system-libs --link-static")
     else:
         base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
-
 # MINGW build
 elif compiler == "mingw":
     base_env.Replace(
@@ -221,6 +217,7 @@ elif compiler == "mingw":
         CXX = ccache + "x86_64-w64-mingw32-g++",
         AR = ccache + "x86_64-w64-mingw32-ar",
         RANLIB = ccache + "x86_64-w64-mingw32-ranlib",
+        SHLINK = ccache + "x86_64-w64-mingw32-ld",
     )
 # GCC build
 elif compiler == "gcc":
@@ -233,6 +230,8 @@ elif compiler == "gcc":
         AR = ccache + "ar",
         # static library indexer
         RANLIB = ccache + "ranlib",
+        # shared library linker
+        SHLINK = "ld"
     )
     if builder.build_asan:
         base_env.Append(
@@ -246,8 +245,10 @@ elif compiler == "em":
         CXX = ccache + "em++",
         AR = ccache + "emar",
         RANLIB = ccache + "emranlib",
+        SHLINK = "",
     )
 
+# General windows build
 if builder.build_for_windows:
     base_env.Replace(
         SHLIBSUFFIX = ".dll",
@@ -694,7 +695,8 @@ def after_build():
         app.on_build_success(build_modules, builder)
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules, builder)
-    builder.finalize()
+    builder.symlink_build()
+    builder.copy_dll_to_build(build_order)
     if success and distribution:
         builder.distribute_app(app, build_modules)
 
