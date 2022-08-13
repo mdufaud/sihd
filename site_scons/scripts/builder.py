@@ -317,7 +317,7 @@ def copy_dll_to_build(modules_build_order):
 
     dll_search_path_lst = [
         build_extlib_lib_path,
-        "/mingw64"
+        "/mingw64/bin"
     ]
 
     dll_forced_path_lst = [
