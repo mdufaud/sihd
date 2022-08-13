@@ -131,23 +131,31 @@ base_env = Environment(
     # extra #define for inside the code
     CPPDEFINES = getattr(app, 'defines', []),
     # link flags
-    LINKFLAGS = builder.is_static_libs() and ["-static"] or [],
+    LINKFLAGS = getattr(app, 'link', []),
     # headers path
     CPPPATH = [builder.build_hdr_path, builder.build_extlib_hdr_path],
     # libraries path
     LIBPATH = [builder.build_lib_path, builder.build_extlib_lib_path],
     # libraries name
     LIBS = global_platform_libs + global_libs,
-    # app access
-    APP_CONFIG = app,
     # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
 )
 
+pp.pprint(base_env.__dict__)
+
+print()
+
 if compiler != "mingw":
     base_env.Append(SHLIBVERSION = app.version)
 
-base_env.Append(CPPDEFINES = builder.is_static_libs() and ["STATIC"] or [])
+
+if builder.is_static_libs():
+    base_env.Append(
+        CPPDEFINES = ["STATIC"],
+        LINKFLAGS = ['-static'],
+    )
+    base_env['LINKCOM'] = base_env['LINKCOM'].replace("$_LIBFLAGS", "-Wl,--whole-archive $_LIBFLAGS -Wl,--no-whole-archive")
 
 # Build output
 if not verbose:
@@ -215,6 +223,11 @@ elif compiler == "mingw":
         AR = ccache + "x86_64-w64-mingw32-ar",
         RANLIB = ccache + "x86_64-w64-mingw32-ranlib",
     )
+    base_env.Replace(
+        SHLIBSUFFIX = ".dll",
+        LIBSUFFIX = ".lib",
+        LIBPREFIX = "",
+    )
 # GCC build
 elif compiler == "gcc":
     base_env.Replace(
@@ -237,17 +250,16 @@ elif compiler == "em":
     base_env.Replace(
         CC = ccache + "emcc",
         CXX = ccache + "em++",
+        LINK = ccache + "emcc",
         AR = ccache + "emar",
         RANLIB = ccache + "emranlib",
     )
-
-# General windows build
-if builder.build_for_windows:
-    base_env.Replace(
-        SHLIBSUFFIX = ".dll",
-        LIBSUFFIX = ".lib",
-        LIBPREFIX = "",
-    )
+    emscripten_conf = os.path.join(os.getenv("HOME"), ".emscripten")
+    if os.path.isfile(emscripten_conf):
+        try:
+            exec(open(emscripten_conf).read())
+        except Exception as e:
+            builder.warning("could not execute emscripten configuration: " + emscripten_conf)
 
 # add platform_[flags/defines/link/libs]
 add_env_app_conf(app, base_env, builder.build_platform)
@@ -497,6 +509,7 @@ base_env.AddMethod(lambda self: self['APP_MODULE_FORMAT_NAME'], "module_format_n
 base_env.AddMethod(lambda self: self['APP_MODULE_CONF'], "module_conf")
 base_env.AddMethod(lambda self: self['APP_MODULE_DIR'], "module_dir")
 base_env.AddMethod(lambda self: self['APP_MODULES_BUILD'], "modules_to_build")
+base_env.AddMethod(lambda self: app, "app")
 base_env.AddMethod(lambda self: builder, "builder")
 base_env.AddMethod(lambda self: is_dry_run, "is_dry_run")
 

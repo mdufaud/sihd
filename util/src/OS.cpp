@@ -443,6 +443,7 @@ void *OS::load_lib(const std::string & lib_name)
     handle = handle != nullptr ? handle : dlopen(lib_name.c_str(), RTLD_NOW);
     return handle;
 #else
+    (void)lib_name;
     return nullptr;
 #endif
 }

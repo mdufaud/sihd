@@ -1,6 +1,8 @@
 #ifndef __SIHD_UTIL_FS_HPP__
 # define __SIHD_UTIL_FS_HPP__
 
+# include <sys/stat.h>
+
 # include <optional>
 # include <initializer_list>
 

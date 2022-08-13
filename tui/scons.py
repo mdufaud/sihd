@@ -5,7 +5,6 @@ builder = env.builder()
 # do_compile = builder.build_platform == "windows" or builder.is_android()
 do_compile = True
 if do_compile:
-
     ftxui_env = env.Clone()
     ftxui_env.Append(
         LIBS = ["pthread"],
@@ -81,11 +80,12 @@ env.Prepend(LIBS = ["ftxui-component", "ftxui-dom", "ftxui-screen"])
 # build library from lib sources - not added to environnement
 lib = env.build_lib(Glob('src/*.cpp'), name = env.module_format_name())
 
+env.build_demos(Glob("demo/*.cpp"), add_libs = [env.module_format_name()])
+
 # build unittest from test sources with newly created lib
 test = env.build_test(Glob('test/*.cpp'), add_libs = [env.module_format_name()])
 
-
-# build binary from bin sources with newly created lib
+# build ftxui examples
 env.Append(
     LIBS = ["pthread"],
     CPPFLAGS = [
@@ -95,10 +95,8 @@ env.Append(
         "-Wno-unused-function",
     ]
 )
+
 import os
-import sys
 for src in Glob('bin/*.cpp'):
     bin_name = os.path.basename(os.path.splitext(str(src))[0])
     env.build_bin(src, name = bin_name)
-
-# Return('lib')

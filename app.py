@@ -46,9 +46,10 @@ modules = {
         "extlibs": ['nlohmann_json', 'fmt'],
         "libs": ['pthread'],
         "linux-extlibs": ['libuuid'],
-        "linux-libs": ['fmt', 'dl', 'rt', 'uuid'],
+        "linux-libs": ['dl', 'rt', 'uuid'],
         "windows-libs": ['rpcrt4'],
         "windows-defines": ["FMT_HEADER_ONLY"],
+        "em-defines": ["FMT_HEADER_ONLY"],
     },
     "core": {
         "depends": ['util'],
@@ -122,7 +123,10 @@ modules = {
             # graphics device interface
             "gdi32"
         ],
-        "windows-flags": ["-Wno-cast-function-type"],
+        "windows-flags": [
+            "-Wno-cast-function-type",
+            "-Wno-stringop-overflow"
+        ],
         "git-url": "https://github.com/ocornut/imgui.git",
         "git-branch": "v1.86",
     },

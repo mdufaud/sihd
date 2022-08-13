@@ -182,7 +182,6 @@ bool    HttpServer::run()
         _running = true;
     }
     _worker.start_worker(this->name() + "-callback");
-    SIHD_LOG(debug, "HttpServer: started");
     while (_running && n >= 0)
         n = lws_service(_lws_context_ptr, 0);
     _worker.stop_worker();
@@ -195,7 +194,6 @@ bool    HttpServer::run()
         }
     }
     _waitable.notify_all();
-    SIHD_LOG(debug, "HttpServer: stopped");
     return true;
 }
 

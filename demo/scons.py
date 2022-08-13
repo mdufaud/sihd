@@ -36,12 +36,9 @@ if builder.build_compiler == "em":
 else:
     compile_sdl = builder.get_opt("sdl", "") == "1"
 
-    env.build_bin("src/pinger_demo.cpp", name = "ping_demo")
-    env.build_bin("src/http_demo.cpp", name = "http_demo")
-    env.build_bin("src/pcap_demo.cpp", name = "pcap_demo")
-    env.build_bin("src/imgui_opengl3_glfw_demo.cpp", name = "imgui_opengl3_glfw_demo")
+    env.build_demo("src/imgui_opengl3_glfw_demo.cpp", name = "imgui_opengl3_glfw_demo")
     if builder.build_platform == "windows":
-        env.build_bin("src/imgui_win_d11_demo.cpp", name = "imgui_win_d11_demo")
+        env.build_demo("src/imgui_win_d11_demo.cpp", name = "imgui_win_d11_demo")
         if compile_sdl:
-            env.build_bin("src/imgui_win_d11_sdl_demo.cpp", name = "imgui_win_d11_sdl_demo")
+            env.build_demo("src/imgui_win_d11_sdl_demo.cpp", name = "imgui_win_d11_sdl_demo")
 Return()

@@ -1,5 +1,3 @@
-import os
-
 Import('env')
 
 builder = env.builder()
@@ -113,6 +111,34 @@ imgui_lib = imgui_env.build_lib(imgui_srcs, name = "imgui")
 
 env.Prepend(LIBS = "imgui")
 lib = env.build_lib(sihd_imgui_srcs)
-test = env.build_test(sihd_imgui_tests, add_libs = [env['APP_MODULE_FORMAT_NAME']])
+
+# demo
+if builder.build_compiler == "em":
+    demo_etc_dir = Dir("etc").Dir("sihd").Dir("demo")
+    env.Replace(
+        CPPFLAGS = [
+            "-DIMGUI_DISABLE_FILE_FUNCTIONS",
+            "-s", "USE_SDL=2",
+        ],
+        LINKFLAGS = [
+            "--shell-file", str(demo_etc_dir.Dir("imgui_emscripten_sdl_demo").File("shell_minimal.html")),
+            "-s", "WASM=1",
+            "-s", "NO_FILESYSTEM=1",
+            "-s", "ALLOW_MEMORY_GROWTH=1",
+            "-s", "NO_EXIT_RUNTIME=0",
+            "-s", "ASSERTIONS=1",
+            "-s", "USE_SDL=2",
+        ],
+    )
+    env.build_demo(["demo/imgui_emscripten_sdl_demo.cpp"], name = "imgui_emscripten_sdl_demo.html")
+else:
+    env.build_demo("demo/imgui_opengl3_glfw_demo.cpp", name = "imgui_opengl3_glfw_demo", add_libs = [env.module_format_name()])
+    if builder.build_platform == "windows":
+        env.build_demo("demo/imgui_win_d11_demo.cpp", name = "imgui_win_d11_demo", add_libs = [env.module_format_name()])
+        if compile_sdl:
+            env.build_demo("demo/imgui_win_d11_sdl_demo.cpp", name = "imgui_win_d11_sdl_demo", add_libs = [env.module_format_name()])
+
+# test
+test = env.build_test(sihd_imgui_tests, add_libs = [env.module_format_name()])
 
 Return('lib')

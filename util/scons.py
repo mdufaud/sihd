@@ -1,11 +1,14 @@
 Import('env')
 
-app = env["APP_CONFIG"]
+builder = env.builder()
 
 lib = env.build_lib(Glob('src/*.cpp'))
 
-env.build_demos(Glob("demo/*.cpp"), add_libs = [env.module_format_name()])
+demo_ext = ""
+
+if builder.build_compiler == "em":
+    demo_ext = ".html"
+
+env.build_demo("demo/util_demo.cpp", name = "util_demo" + demo_ext, add_libs = [env.module_format_name()])
 
 test = env.build_test(Glob('test/*.cpp'), add_libs = [env.module_format_name()])
-
-Return("lib")

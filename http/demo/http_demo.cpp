@@ -150,6 +150,7 @@ int main()
     sihd::util::Str::hexdump_cols = 20;
     sihd::util::LoggerManager::basic();
     demo::http_test();
+    sihd::util::LoggerManager::clear_loggers();
     return 0;
 }
 
