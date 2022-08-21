@@ -10,45 +10,6 @@ SIHD_LOGGER;
 
 using namespace sihd::util;
 
-HttpRequest::HttpRequest(std::string_view path, RequestType request_type)
-{
-    _path = path;
-    _request_type = request_type;
-}
-
-HttpRequest::HttpRequest(std::string_view path, const std::vector<std::string> & uri_args, RequestType request_type):
-    HttpRequest(path, request_type)
-{
-    _uri_args_lst = uri_args;
-}
-
-HttpRequest::~HttpRequest()
-{
-}
-
-nlohmann::json  HttpRequest::content_as_json() const
-{
-    if (!_array)
-        return {};
-    return nlohmann::json::parse(_array.buf(), _array.buf() + _array.size(), nullptr, false);
-}
-
-
-bool    HttpRequest::has_content() const
-{
-    return _array;
-}
-
-void    HttpRequest::set_content(sihd::util::ArrViewChar data)
-{
-    _array.from_bytes(data);
-}
-
-std::string HttpRequest::type_str() const
-{
-    return HttpRequest::type_str(_request_type);
-}
-
 std::string HttpRequest::type_str(HttpRequest::RequestType type)
 {
     switch (type)
@@ -77,6 +38,44 @@ HttpRequest::RequestType    HttpRequest::type_from_str(std::string_view type)
     else if (Str::iequals(type, "delete"))
         return REQ_DELETE;
     return NONE;
+}
+
+HttpRequest::HttpRequest(std::string_view path, RequestType request_type)
+{
+    _path = path;
+    _request_type = request_type;
+}
+
+HttpRequest::HttpRequest(std::string_view path, const std::vector<std::string> & uri_args, RequestType request_type):
+    HttpRequest(path, request_type)
+{
+    _uri_args_lst = uri_args;
+}
+
+HttpRequest::~HttpRequest()
+{
+}
+
+void    HttpRequest::set_content(sihd::util::ArrViewChar data)
+{
+    _array.from_bytes(data);
+}
+
+nlohmann::json  HttpRequest::content_as_json() const
+{
+    if (!_array)
+        return {};
+    return nlohmann::json::parse(_array.buf(), _array.buf() + _array.size(), nullptr, false);
+}
+
+std::string HttpRequest::type_str() const
+{
+    return HttpRequest::type_str(_request_type);
+}
+
+bool    HttpRequest::has_content() const
+{
+    return _array;
 }
 
 }

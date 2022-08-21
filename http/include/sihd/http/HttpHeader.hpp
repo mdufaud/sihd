@@ -12,19 +12,19 @@ class HttpHeader
         HttpHeader();
         virtual ~HttpHeader();
 
-        void set_servername(std::string_view name);
+        HttpHeader & set_server_name(std::string_view name);
 
-        void set_status(uint32_t status);
-        void set_content_type(std::string_view type);
-        void set_content_size(size_t len);
-        void set_charset(std::string_view encoding);
+        HttpHeader & set_status(uint32_t status);
+        HttpHeader & set_content_type(std::string_view type);
+        HttpHeader & set_content_size(size_t len);
+        HttpHeader & set_charset(std::string_view encoding);
 
-        void set_status_content(uint32_t status, std::string_view content_type, size_t content_len);
+        HttpHeader & set_status_content(uint32_t status, std::string_view content_type, size_t content_len);
 
-        void set_header(const std::string & name, std::string_view value);
-        void remove_header(const std::string & name);
-        void set_header(const unsigned char *name, std::string_view value);
-        void remove_header(const unsigned char *name);
+        HttpHeader & set_header(const std::string & name, std::string_view value);
+        HttpHeader & remove_header(const std::string & name);
+        HttpHeader & set_header(const unsigned char *name, std::string_view value);
+        HttpHeader & remove_header(const unsigned char *name);
 
         uint32_t status() const { return _status; }
         size_t content_size() const { return _content_size; }

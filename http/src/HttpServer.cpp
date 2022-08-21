@@ -35,7 +35,7 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
     _worker.set_frequency(30);
 
     _http_header_array.resize(SIHD_HTTP_HEADERS_BUFSIZE);
-    _http_header.set_servername(this->name());
+    _http_header.set_server_name(this->name());
     _http_header.set_header(lws_token_to_string(WSI_TOKEN_HTTP_ACCESS_CONTROL_ALLOW_ORIGIN), "*");
     this->set_encoding("utf-8");
 
@@ -129,12 +129,11 @@ bool    HttpServer::set_404_path(std::string_view path)
     return true;
 }
 
-bool    HttpServer::set_servername(std::string_view name)
+bool    HttpServer::set_server_name(std::string_view name)
 {
-    _http_header.set_servername(name);
+    _http_header.set_server_name(name);
     return true;
 }
-
 
 bool    HttpServer::stop()
 {
@@ -495,7 +494,7 @@ bool    HttpServer::_serve_webservice(HttpSession *session, WebService *webservi
         return false;
     std::string rest_of_path(path_view.substr(first_slash_idx + 1));
     HttpResponse response(&_mime);
-    response.http_header().set_servername(_http_header.server_name());
+    response.http_header().set_server_name(_http_header.server_name());
     if (webservice->call(rest_of_path, request, response))
     {
         // webservice called

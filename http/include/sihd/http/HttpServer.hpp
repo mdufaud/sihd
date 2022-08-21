@@ -41,7 +41,7 @@ class HttpServer:   public sihd::util::Node,
         bool set_ssl_cert_path(std::string_view path);
         bool set_ssl_cert_key(std::string_view path);
         bool set_404_path(std::string_view path);
-        bool set_servername(std::string_view path);
+        bool set_server_name(std::string_view path);
 
         bool add_resource_path(const std::string & path);
         bool remove_resource_path(const std::string & path);
