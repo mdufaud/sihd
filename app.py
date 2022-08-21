@@ -172,7 +172,7 @@ conditionnal_modules = {
 ## mode specifics - default is always debug
 modes = ["debug", "release"]
 
-debug_flags = ["-g", "-O1"]
+debug_flags = ["-g", "-Og"]
 release_flags = ["-O3"]
 
 ## general compilation parameters
@@ -216,7 +216,7 @@ clang_defines = [
 mingw_flags = gcc_flags
 
 ## windows specifics
-windows_libs = ['ws2_32', 'psapi', 'ucrt', 'winpthread', 'ssp']
+windows_libs = ['ws2_32', 'psapi', 'ucrt', 'ssp']
 # _WIN64 -> activates sihd functionnalities
 # _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
 windows_defines = [

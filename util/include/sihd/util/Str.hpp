@@ -90,6 +90,7 @@ class Str
          * is_escaped_char(str, 2) == false
          */
         static bool is_escaped_char(const char *str, int index);
+        // '[' -> ']'
         static int closing_escape_of(int sequence);
         // [hello] -> 7
         static int closing_escape_index(const char *s, int index, const char *authorized_open_escape_sequences = nullptr);
@@ -106,6 +107,7 @@ class Str
         static std::string & to_upper(std::string & s);
         static std::string & to_lower(std::string & s);
         static std::string replace(std::string_view s, std::string_view from, std::string_view to);
+        static bool iequals(std::string_view s1, std::string_view s2);
 
         static std::string to_hex(uint64_t n);
         static std::string to_dec(uint64_t n);

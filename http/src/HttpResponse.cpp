@@ -1,5 +1,8 @@
-#include <sihd/http/HttpResponse.hpp>
+#include <libwebsockets.h>
+
 #include <sihd/util/Logger.hpp>
+
+#include <sihd/http/HttpResponse.hpp>
 
 namespace sihd::http
 {
@@ -27,28 +30,28 @@ void    HttpResponse::set_content_type_from_extension(const std::string & type)
         this->set_content_type(_mime_ptr->get(type));
 }
 
+
 bool    HttpResponse::set_json_content(const nlohmann::json & data)
 {
     this->_set_mime_type_if_not_set(Mime::MIME_APPLICATION_JSON);
     std::string json_string = data.dump();
-    if (_array.resize(json_string.size()) == false)
-        return false;
-    _array.copy_from_bytes((const uint8_t *)json_string.c_str(), json_string.size());
-    return true;
+    return this->set_content({json_string.c_str(), json_string.size()});
 }
 
-bool    HttpResponse::set_content(std::string_view str)
+bool    HttpResponse::set_plain_content(std::string_view str)
 {
     this->_set_mime_type_if_not_set(Mime::MIME_TEXT_PLAIN);
-    if (_array.resize(str.size()) == false)
-        return false;
-    _array.copy_from_bytes((const uint8_t *)str.data(), str.size());
-    return true;
+    return this->set_content(str);
 }
 
-bool    HttpResponse::set_content(const sihd::util::IArray & data)
+bool    HttpResponse::set_byte_content(sihd::util::ArrViewByte data)
 {
     this->_set_mime_type_if_not_set(Mime::MIME_APPLICATION_OCTET);
+    return this->set_content(data);
+}
+
+bool    HttpResponse::set_content(sihd::util::ArrViewChar data)
+{
     if (_array.resize(data.byte_size()) == false)
         return false;
     _array.copy_from_bytes(data.buf(), data.byte_size());

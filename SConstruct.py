@@ -142,17 +142,6 @@ base_env = Environment(
     APP_MODULES_BUILD = build_modules.keys(),
 )
 
-if compiler != "mingw":
-    base_env.Append(SHLIBVERSION = app.version)
-
-
-if builder.is_static_libs():
-    base_env.Append(
-        CPPDEFINES = ["STATIC"],
-        LINKFLAGS = ['-static'],
-    )
-    base_env['LINKCOM'] = base_env['LINKCOM'].replace("$_LIBFLAGS", "-Wl,--whole-archive $_LIBFLAGS -Wl,--no-whole-archive")
-
 # Build output
 if not verbose:
     base_env.Replace(
@@ -166,7 +155,8 @@ if not verbose:
         LINKCOMSTR = "linking object files into executable: $TARGET",
     )
 
-if not distribution and not compiler == "em" and not compiler == "mingw":
+if not distribution \
+    and not compiler in ("mingw", "em"):
     base_env.Append(
         RPATH = [
             os.path.abspath(builder.build_lib_path),
@@ -256,6 +246,18 @@ elif compiler == "em":
             exec(open(emscripten_conf).read())
         except Exception as e:
             builder.warning("could not execute emscripten configuration: " + emscripten_conf)
+
+if compiler != "mingw":
+    base_env.Replace(SHLIBVERSION = app.version)
+
+# TODO do better, search in build for static libraries path
+if builder.is_static_libs():
+    base_env.Append(
+        CPPDEFINES = ["STATIC"],
+        LINKFLAGS = ['-static'],
+    )
+    base_env['LINKCOM'] = base_env['LINKCOM'].replace("$_LIBFLAGS", "-Wl,--whole-archive $_LIBFLAGS -Wl,--no-whole-archive")
+
 
 # add platform_[flags/defines/link/libs]
 add_env_app_conf(app, base_env, builder.build_platform)

@@ -1,15 +1,6 @@
 #ifndef __SIHD_UTIL_ARRAYVIEW_HPP__
 # define __SIHD_UTIL_ARRAYVIEW_HPP__
 
-# include <string.h>
-# include <strings.h>
-
-# include <utility>
-# include <cstdint>
-# include <stdexcept>
-# include <memory>
-# include <algorithm>
-
 # include <sihd/util/IArrayView.hpp>
 # include <sihd/util/Logger.hpp>
 # include <sihd/util/Array.hpp>

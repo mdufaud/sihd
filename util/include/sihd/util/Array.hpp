@@ -9,10 +9,10 @@
 # include <stdexcept>
 # include <algorithm>
 
-# include <sihd/util/Logger.hpp>
 # include <sihd/util/IArray.hpp>
-# include <sihd/util/Splitter.hpp>
 # include <sihd/util/ICloneable.hpp>
+# include <sihd/util/Logger.hpp>
+# include <sihd/util/Splitter.hpp>
 
 namespace sihd::util
 {

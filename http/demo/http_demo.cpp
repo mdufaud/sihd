@@ -42,16 +42,16 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
         {
             _webservice->set_entry_point("get", [] (const HttpRequest & req, HttpResponse & resp)
             {
-                SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
-                resp.set_content("hello get world");
+                SIHD_LOG(info, req.type_str() << " request received");
+                resp.set_plain_content("hello get world");
             });
 
             _webservice->set_entry_point("post", [] (const HttpRequest & req, HttpResponse & resp)
             {
-                SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
-                if (req.content())
+                SIHD_LOG(info, req.type_str() << " request received");
+                if (req.has_content())
                 {
-                    std::string content = req.content()->cpp_str();
+                    std::string content = req.content().str();
                     SIHD_LOG(info, "Received POST body: " << content);
                     resp.http_header().set_status(HTTP_STATUS_OK);
                 }
@@ -62,7 +62,7 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
 
             _webservice->set_entry_point("delete", [] (const HttpRequest & req, HttpResponse & resp)
             {
-                SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
+                SIHD_LOG(info, req.type_str() << " request received");
                 resp.http_header().set_status(HTTP_STATUS_OK);
                 resp.set_json_content({"hello", "world"});
             },
@@ -70,10 +70,10 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
 
             _webservice->set_entry_point("put", [] (const HttpRequest & req, HttpResponse & resp)
             {
-                SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
-                if (req.content())
+                SIHD_LOG(info, req.type_str() << " request received");
+                if (req.has_content())
                 {
-                    std::string content = req.content()->cpp_str();
+                    std::string content = req.content().str();
                     SIHD_LOG(info, "Received PUT body: " << content);
                     resp.http_header().set_status(HTTP_STATUS_OK);
                 }
@@ -85,7 +85,7 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
 
         // IWebsocketHandler
 
-        void on_open(const char *protocol_name)
+        void on_open(std::string_view protocol_name)
         {
             SIHD_LOG(debug, "Opened websocket of protocol: " << protocol_name);
         };
@@ -97,13 +97,13 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
             return true;
         };
 
-        bool on_write(sihd::util::ArrChar & array, LwsWriteProtocol *protocol)
+        bool on_write(sihd::util::ArrChar & array, LwsWriteProtocol & protocol)
         {
             if (_client_wrote)
             {
                 _client_wrote = false;
                 const char hw[] = "hello world";
-                protocol->write_protocol = LWS_WRITE_TEXT;
+                protocol.write_protocol = LWS_WRITE_TEXT;
                 array.from(hw);
                 SIHD_LOG(debug, "Wrote back to client websocket: " << hw);
             }

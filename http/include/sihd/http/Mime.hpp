@@ -2,7 +2,7 @@
 # define __SIHD_HTTP_MIME_HPP__
 
 # include <string>
-# include <map>
+# include <unordered_map>
 
 namespace sihd::http
 {
@@ -25,59 +25,24 @@ class Mime
          */
         void add(const std::string & ext, std::string_view content_type);
 
-        /**
-         * text/plain
-         */
-        static const char *MIME_TEXT_PLAIN;
-        /**
-         * text/html
-         */
-        static const char *MIME_TEXT_HTML;
-        /**
-         * text/javascript
-         */
-        static const char *MIME_TEXT_JAVASCRIPT;
-        /**
-         * text/css
-         */
-        static const char *MIME_TEXT_CSS;
-        /**
-         * text/css
-         */
-        static const char *MIME_TEXT_CSV;
-        /**
-         * application/octet-stream
-         */
-        static const char *MIME_APPLICATION_OCTET;
-        /**
-         * application/javascript
-         */
-        static const char *MIME_APPLICATION_JAVASCRIPT;
-        /**
-         * application/x-tar
-         */
-        static const char *MIME_APPLICATION_TAR;
-        /**
-         * application/javascript
-         */
-        static const char *MIME_APPLICATION_JSON;
-        /**
-         * image/jpeg
-         */
-        static const char *MIME_IMAGE_JPEG;
-        /**
-         * image/png
-         */
-        static const char *MIME_IMAGE_PNG;
-        /**
-         * image/gif
-         */
-        static const char *MIME_IMAGE_GIF;
+        static constexpr const char *MIME_TEXT_PLAIN = "text/plain";
+        static constexpr const char *MIME_TEXT_HTML = "text/html";
+        static constexpr const char *MIME_TEXT_JAVASCRIPT = "text/javascript";
+        static constexpr const char *MIME_TEXT_CSS = "text/css";
+        static constexpr const char *MIME_TEXT_CSV = "text/csv";
+        static constexpr const char *MIME_APPLICATION_OCTET = "application/octet-stream";
+        static constexpr const char *MIME_APPLICATION_JAVASCRIPT = "application/javascript";
+        static constexpr const char *MIME_APPLICATION_TAR = "application/x-tar";
+        static constexpr const char *MIME_APPLICATION_JSON = "application/json";
+        static constexpr const char *MIME_IMAGE_JPEG = "image/jpeg";
+        static constexpr const char *MIME_IMAGE_PNG = "image/png";
+        static constexpr const char *MIME_IMAGE_GIF = "image/gif";
+        static constexpr const char *MIME_IMAGE_SVG = "image/svg+xml";
 
     protected:
 
     private:
-        std::map<std::string, std::string> _types;
+        std::unordered_map<std::string, std::string> _types;
 };
 
 }

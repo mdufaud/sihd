@@ -159,6 +159,13 @@ std::string     Str::replace(std::string_view s, std::string_view from, std::str
     return ret;
 }
 
+bool    Str::iequals(std::string_view s1, std::string_view s2)
+{
+    if (s1.size() != s2.size())
+        return false;
+    return strncasecmp(s1.data(), s2.data(), s1.size());
+}
+
 char    Str::num_to_char(size_t num)
 {
     if (num >= 10)

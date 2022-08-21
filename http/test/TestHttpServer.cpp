@@ -61,17 +61,17 @@ namespace test
             {
                 _webservice->set_entry_point("some_get", [this] (const HttpRequest & req, HttpResponse & resp)
                 {
-                    SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
-                    resp.set_content("hello get world");
+                    SIHD_LOG(info, req.type_str() << " request received");
+                    resp.set_plain_content("hello get world");
                     ++_nget;
                 });
 
                 _webservice->set_entry_point("some_post", [this] (const HttpRequest & req, HttpResponse & resp)
                 {
-                    SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
-                    if (req.content())
+                    SIHD_LOG(info, req.type_str() << " request received");
+                    if (req.has_content())
                     {
-                        _post_content = req.content()->cpp_str();
+                        _post_content = req.content().str();
                         SIHD_LOG(info, "Received POST body: " << _post_content);
                         resp.http_header().set_status(HTTP_STATUS_OK);
                         ++_npost;
@@ -83,7 +83,7 @@ namespace test
 
                 _webservice->set_entry_point("some_delete", [this] (const HttpRequest & req, HttpResponse & resp)
                 {
-                    SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
+                    SIHD_LOG(info, req.type_str() << " request received");
                     resp.http_header().set_status(HTTP_STATUS_OK);
                     resp.set_json_content({"hello", "world"});
                     ++_ndelete;
@@ -92,10 +92,10 @@ namespace test
 
                 _webservice->set_entry_point("some_put", [this] (const HttpRequest & req, HttpResponse & resp)
                 {
-                    SIHD_LOG(info, req.request_to_string(req.request_type()) << " request received");
-                    if (req.content())
+                    SIHD_LOG(info, req.type_str() << " request received");
+                    if (req.has_content())
                     {
-                        _post_content = req.content()->cpp_str();
+                        _post_content = req.content().str();
                         SIHD_LOG(info, "Received PUT body: " << _post_content);
                         resp.http_header().set_status(HTTP_STATUS_OK);
                         ++_nput;
@@ -108,7 +108,7 @@ namespace test
 
             // IWebsocketHandler
 
-            void on_open(const char *protocol_name)
+            void on_open(std::string_view protocol_name)
             {
                 SIHD_LOG(debug, "Opened websocket of protocol: " << protocol_name);
                 ++_nopen;
@@ -122,13 +122,13 @@ namespace test
                 return true;
             };
 
-            bool on_write(sihd::util::ArrChar & array, LwsWriteProtocol *protocol)
+            bool on_write(sihd::util::ArrChar & array, LwsWriteProtocol & protocol)
             {
                 if (_client_wrote)
                 {
                     _client_wrote = false;
                     const char hw[] = "hello world";
-                    protocol->write_protocol = LWS_WRITE_TEXT;
+                    protocol.write_protocol = LWS_WRITE_TEXT;
                     array.from(hw);
                     SIHD_LOG(debug, "Wrote back to client websocket: " << hw);
                     ++_nwrite;

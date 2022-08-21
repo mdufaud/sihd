@@ -1,11 +1,15 @@
 #ifndef __SIHD_UTIL_IARRAY_HPP__
 # define __SIHD_UTIL_IARRAY_HPP__
 
-# include <sihd/util/IArrayView.hpp>
+# include <string_view>
+# include <string>
+
 # include <sihd/util/Types.hpp>
 
 namespace sihd::util
 {
+
+class IArrayView;
 
 class IArray
 {

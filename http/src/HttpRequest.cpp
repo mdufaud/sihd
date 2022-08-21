@@ -1,15 +1,17 @@
+#include <sihd/util/Str.hpp>
+
 #include <sihd/http/HttpRequest.hpp>
 #include <sihd/util/Logger.hpp>
-#include <algorithm>
 
 namespace sihd::http
 {
 
 SIHD_LOGGER;
 
+using namespace sihd::util;
+
 HttpRequest::HttpRequest(std::string_view path, RequestType request_type)
 {
-    _array_content = nullptr;
     _path = path;
     _request_type = request_type;
 }
@@ -26,18 +28,28 @@ HttpRequest::~HttpRequest()
 
 nlohmann::json  HttpRequest::content_as_json() const
 {
-    nlohmann::json json = nlohmann::json::parse(_array_content->buf(),
-                                                _array_content->buf() + _array_content->size(),
-                                                nullptr, false);
-    return json;
+    if (!_array)
+        return {};
+    return nlohmann::json::parse(_array.buf(), _array.buf() + _array.size(), nullptr, false);
 }
 
-void    HttpRequest::set_content(sihd::util::IArray *array)
+
+bool    HttpRequest::has_content() const
 {
-    _array_content = array;
+    return _array;
 }
 
-std::string HttpRequest::request_to_string(HttpRequest::RequestType type)
+void    HttpRequest::set_content(sihd::util::ArrViewChar data)
+{
+    _array.from_bytes(data);
+}
+
+std::string HttpRequest::type_str() const
+{
+    return HttpRequest::type_str(_request_type);
+}
+
+std::string HttpRequest::type_str(HttpRequest::RequestType type)
 {
     switch (type)
     {
@@ -54,16 +66,15 @@ std::string HttpRequest::request_to_string(HttpRequest::RequestType type)
     }
 }
 
-HttpRequest::RequestType    HttpRequest::request_from_string(std::string type)
+HttpRequest::RequestType    HttpRequest::type_from_str(std::string_view type)
 {
-    std::transform(type.begin(), type.end(), type.begin(), ::tolower);
-    if (type == "get")
+    if (Str::iequals(type, "get"))
         return GET;
-    else if (type == "post")
+    else if (Str::iequals(type, "post"))
         return POST;
-    else if (type == "put")
+    else if (Str::iequals(type, "put"))
         return PUT;
-    else if (type == "delete")
+    else if (Str::iequals(type, "delete"))
         return REQ_DELETE;
     return NONE;
 }

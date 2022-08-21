@@ -173,7 +173,10 @@ class HttpServer:   public sihd::util::Node,
 
         std::vector<IWebsocketHandler *> _websocket_handler_lst;
         std::string _encoding;
+
         HttpHeader _http_header;
+        sihd::util::ArrUByte _http_header_array;
+
 
         std::string _404_page_path;
 

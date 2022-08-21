@@ -4,19 +4,6 @@
 namespace sihd::http
 {
 
-const char *Mime::MIME_TEXT_PLAIN = "text/plain";
-const char *Mime::MIME_TEXT_HTML = "text/html";
-const char *Mime::MIME_TEXT_JAVASCRIPT = "text/javascript";
-const char *Mime::MIME_TEXT_CSS = "text/css";
-const char *Mime::MIME_TEXT_CSV = "text/csv";
-const char *Mime::MIME_APPLICATION_OCTET = "application/octet-stream";
-const char *Mime::MIME_APPLICATION_JAVASCRIPT = "application/javascript";
-const char *Mime::MIME_APPLICATION_JSON = "application/json";
-const char *Mime::MIME_APPLICATION_TAR = "application/x-tar";
-const char *Mime::MIME_IMAGE_JPEG = "image/jpeg";
-const char *Mime::MIME_IMAGE_PNG = "image/png";
-const char *Mime::MIME_IMAGE_GIF = "image/gif";
-
 Mime::Mime()
 {
     _types["jpg"] = MIME_IMAGE_JPEG;
@@ -30,7 +17,7 @@ Mime::Mime()
     _types["csv"] = MIME_TEXT_CSV;
     _types["htm"] = MIME_TEXT_HTML;
     _types["html"] = MIME_TEXT_HTML;
-    _types["svg"] = "image/svg+xml";
+    _types["svg"] = MIME_IMAGE_SVG;
     _types["ico"] = "image/vnd.microsoft.icon";
     _types["otf"] = "application/x-font-otf";
     _types["ttf"] = "application/x-font-ttf";
