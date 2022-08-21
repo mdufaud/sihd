@@ -24,6 +24,10 @@ HttpHeader::HttpHeader()
 {
 }
 
+HttpHeader::HttpHeader(HeaderMap && headers): _headers(headers)
+{
+}
+
 HttpHeader::~HttpHeader()
 {
 }
@@ -93,6 +97,15 @@ HttpHeader &    HttpHeader::set_header(const unsigned char *name, std::string_vi
 HttpHeader &    HttpHeader::set_header(const std::string & name, std::string_view value)
 {
     _headers[name] = value;
+    return *this;
+}
+
+HttpHeader & HttpHeader::set_headers(HeaderMap && headers)
+{
+    for (const auto & [name, value]: headers)
+    {
+        _headers[name] = value;
+    }
     return *this;
 }
 

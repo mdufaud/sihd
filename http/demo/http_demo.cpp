@@ -1,5 +1,6 @@
-#include <sihd/util/platform.hpp>
+#include <unistd.h> // usleep
 
+#include <sihd/util/platform.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Str.hpp>
@@ -13,8 +14,6 @@
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/WebsocketHandler.hpp>
 #include <sihd/http/WebService.hpp>
-
-#include <unistd.h> // usleep
 
 namespace demo
 {
@@ -102,9 +101,11 @@ class SimpleHttpServer: public sihd::http::HttpServer, public sihd::http::IWebso
             if (_client_wrote)
             {
                 _client_wrote = false;
+
                 const char hw[] = "hello world";
-                protocol.write_protocol = LWS_WRITE_TEXT;
                 array.from(hw);
+
+                protocol.set_txt();
                 SIHD_LOG(debug, "Wrote back to client websocket: " << hw);
             }
             return true;

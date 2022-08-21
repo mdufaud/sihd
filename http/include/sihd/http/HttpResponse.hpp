@@ -3,7 +3,6 @@
 
 # include <nlohmann/json.hpp>
 
-# include <sihd/util/Array.hpp>
 # include <sihd/util/ArrayView.hpp>
 
 # include <sihd/http/Mime.hpp>

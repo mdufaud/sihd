@@ -1,5 +1,6 @@
-#include <sihd/http/Mime.hpp>
 #include <sihd/util/Logger.hpp>
+
+#include <sihd/http/Mime.hpp>
 
 namespace sihd::http
 {

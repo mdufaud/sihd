@@ -1,7 +1,8 @@
-#include <sihd/http/HttpServer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/FS.hpp>
+
+#include <sihd/http/HttpServer.hpp>
 
 #ifndef SIHD_HTTP_URI_BUFSIZE
 # define SIHD_HTTP_URI_BUFSIZE 256
@@ -41,6 +42,16 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
 
     _protocols_count = 0;
     this->_add_protocol("http-server", HttpServer::_global_http_lws_callback, sizeof(HttpSession), 0);
+
+    this->add_conf("encoding", &HttpServer::set_encoding);
+    this->add_conf("port", &HttpServer::set_port);
+    this->add_conf("root_dir", &HttpServer::set_root_dir);
+    this->add_conf("poll_frequency", &HttpServer::set_poll_frequency);
+    this->add_conf("ssl_cert_path", &HttpServer::set_ssl_cert_path);
+    this->add_conf("ssl_cert_key", &HttpServer::set_ssl_cert_key);
+    this->add_conf("404_path", &HttpServer::set_404_path);
+    this->add_conf("server_name", &HttpServer::set_server_name);
+    this->add_conf("resource_path", &HttpServer::add_resource_path);
 }
 
 HttpServer::~HttpServer()
@@ -391,7 +402,7 @@ int     HttpServer::_on_http_body_end(HttpSession *session)
     {
         // end of expected body
         session->request->set_content(*session->content);
-        WebService *webservice = this->_get_webservice_from_path(session->request->path());
+        WebService *webservice = this->_get_webservice_from_path(session->request->url());
         if (webservice != nullptr)
             rc = this->_serve_webservice(session, webservice, *session->request);
         session->clear_request();
@@ -486,13 +497,14 @@ bool    HttpServer::_check_webservices(HttpSession *session, std::string_view pa
 
 bool    HttpServer::_serve_webservice(HttpSession *session, WebService *webservice, const HttpRequest & request)
 {
-    std::string_view path_view = request.path();
+    std::string_view path_view = request.url();
     if (path_view[0] == '/')
         path_view.remove_prefix(1);
     size_t first_slash_idx = path_view.find('/');
     if (first_slash_idx == std::string_view::npos)
         return false;
     std::string rest_of_path(path_view.substr(first_slash_idx + 1));
+
     HttpResponse response(&_mime);
     response.http_header().set_server_name(_http_header.server_name());
     if (webservice->call(rest_of_path, request, response))
@@ -501,6 +513,7 @@ bool    HttpServer::_serve_webservice(HttpSession *session, WebService *webservi
         const ArrByte & data = response.content();
         HttpHeader & http_header_response = response.http_header();
         http_header_response.set_content_size(data.size());
+
         this->_send_http_headers(session->wsi, http_header_response);
         if (data.size() > 0)
         {
@@ -593,14 +606,17 @@ int     HttpServer::_on_websocket_write(IWebsocketHandler *handler, WebsocketSes
 {
     sihd::util::ArrChar arr_to_write;
     LwsWriteProtocol lws_proto;
-    lws_proto.write_protocol = LWS_WRITE_TEXT;
+    lws_proto.set_txt();
     bool ret = handler->on_write(arr_to_write, lws_proto);
     if (ret && arr_to_write.size() > 0)
     {
         sihd::util::ArrByte buffer;
         buffer.resize(arr_to_write.size() + LWS_PRE);
         memcpy(buffer.data() + LWS_PRE, arr_to_write.data(), arr_to_write.size());
-        int wrote = lws_write(session->wsi, (u_char *)(buffer.data() + LWS_PRE), arr_to_write.size(), lws_proto.write_protocol);
+        int wrote = lws_write(session->wsi,
+                                (u_char *)(buffer.data() + LWS_PRE),
+                                arr_to_write.size(),
+                                (enum lws_write_protocol)lws_proto.protocol);
         if (wrote < (int)arr_to_write.size())
             ret = false;
     }

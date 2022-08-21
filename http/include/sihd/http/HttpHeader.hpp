@@ -9,7 +9,10 @@ namespace sihd::http
 class HttpHeader
 {
     public:
+        using HeaderMap = std::unordered_map<std::string, std::string>;
+
         HttpHeader();
+        HttpHeader(HeaderMap && headers);
         virtual ~HttpHeader();
 
         HttpHeader & set_server_name(std::string_view name);
@@ -26,12 +29,15 @@ class HttpHeader
         HttpHeader & set_header(const unsigned char *name, std::string_view value);
         HttpHeader & remove_header(const unsigned char *name);
 
+        HttpHeader & set_headers(HeaderMap && headers);
+
+
         uint32_t status() const { return _status; }
         size_t content_size() const { return _content_size; }
         const std::string & encoding() const { return _encoding; }
         const std::string & content_type() const { return _content_type; }
         const std::string & server_name() const { return _server_name; }
-        const std::unordered_map<std::string, std::string> & headers() const { return _headers; }
+        const HeaderMap & headers() const { return _headers; }
 
         static std::string build_content_type(std::string_view type, std::string_view encoding = "");
 
@@ -43,7 +49,7 @@ class HttpHeader
         std::string _content_type;
         std::string _encoding;
         size_t _content_size;
-        std::unordered_map<std::string, std::string> _headers;
+        HeaderMap _headers;
 };
 
 }

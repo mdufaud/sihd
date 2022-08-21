@@ -4,17 +4,12 @@
 # include <string>
 # include <string_view>
 
-# include <libwebsockets.h>
-
 # include <sihd/util/Array.hpp>
+
+# include <sihd/http/LwsWriteProtocol.hpp>
 
 namespace sihd::http
 {
-
-struct LwsWriteProtocol
-{
-    enum lws_write_protocol write_protocol;
-};
 
 class IWebsocketHandler
 {

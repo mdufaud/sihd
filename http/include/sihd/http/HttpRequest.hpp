@@ -1,11 +1,6 @@
 #ifndef __SIHD_HTTP_HTTPREQUEST_HPP__
 # define __SIHD_HTTP_HTTPREQUEST_HPP__
 
-# include <string>
-# include <string_view>
-# include <vector>
-# include <map>
-
 # include <nlohmann/json.hpp>
 
 # include <sihd/util/Array.hpp>
@@ -26,8 +21,8 @@ class HttpRequest
             REQ_DELETE = 3,
         };
 
-        HttpRequest(std::string_view path, RequestType request_type = GET);
-        HttpRequest(std::string_view path, const std::vector<std::string> & uri_args, RequestType request_type = GET);
+        HttpRequest(std::string_view url, RequestType request_type = GET);
+        HttpRequest(std::string_view url, const std::vector<std::string> & uri_args, RequestType request_type = GET);
         virtual ~HttpRequest();
 
         static RequestType type_from_str(std::string_view type);
@@ -41,14 +36,15 @@ class HttpRequest
         nlohmann::json content_as_json() const;
 
         const sihd::util::ArrChar & content() const { return _array; }
-        const std::string & path() const { return _path; }
+        const std::string & url() const { return _url; }
+        const std::vector<std::string> & uri_args() const { return _uri_args_lst; }
         RequestType request_type() const { return _request_type; }
 
     protected:
 
     private:
         RequestType _request_type;
-        std::string _path;
+        std::string _url;
         std::vector<std::string> _uri_args_lst;
         sihd::util::ArrChar _array;
 };

@@ -1,5 +1,9 @@
 #include <gtest/gtest.h>
+
 #include <iostream>
+
+#include <libwebsockets.h>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Str.hpp>
 #include <sihd/util/FS.hpp>
@@ -126,12 +130,14 @@ namespace test
             {
                 if (_client_wrote)
                 {
-                    _client_wrote = false;
-                    const char hw[] = "hello world";
-                    protocol.write_protocol = LWS_WRITE_TEXT;
-                    array.from(hw);
-                    SIHD_LOG(debug, "Wrote back to client websocket: " << hw);
                     ++_nwrite;
+                    _client_wrote = false;
+
+                    const char hw[] = "hello world";
+                    array.from(hw);
+
+                    protocol.set_txt();
+                    SIHD_LOG(debug, "Wrote back to client websocket: " << hw);
                 }
                 return true;
             }

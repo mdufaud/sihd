@@ -1,6 +1,7 @@
-#include <sihd/http/WebService.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+
+#include <sihd/http/WebService.hpp>
 
 namespace sihd::http
 {

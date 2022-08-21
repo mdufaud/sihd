@@ -1,7 +1,6 @@
 #ifndef __SIHD_HTTP_HTTPSERVER_HPP__
 # define __SIHD_HTTP_HTTPSERVER_HPP__
 
-# include <mutex>
 # include <set>
 
 # include <libwebsockets.h>
@@ -11,7 +10,6 @@
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/StepWorker.hpp>
 # include <sihd/util/Waitable.hpp>
-# include <sihd/util/Array.hpp>
 # include <sihd/util/OS.hpp>
 
 # include <sihd/http/Mime.hpp>
@@ -28,7 +26,7 @@ SIHD_LOGGER;
 
 class HttpServer:   public sihd::util::Node,
                     public sihd::util::Configurable,
-                    public sihd::util::IRunnable
+                    public sihd::util::IStoppableRunnable
 {
     public:
         HttpServer(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -47,6 +45,7 @@ class HttpServer:   public sihd::util::Node,
         bool remove_resource_path(const std::string & path);
 
         virtual bool run();
+        bool is_running() const { return _running; }
         virtual bool stop();
 
         virtual bool get_resource_path(std::string_view path, std::string & res);
@@ -137,8 +136,9 @@ class HttpServer:   public sihd::util::Node,
         virtual bool _send_http_no_content(struct lws *wsi, int code);
         /*
             code = HTTP_STATUS_MOVED_PERMANENTLY || HTTP_STATUS_FOUND || HTTP_STATUS_SEE_OTHER || HTTP_STATUS_NOT_MODIFIED
+            default = 301 -> HTTP_STATUS_MOVED_PERMANENTLY
         */
-        virtual bool _send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code = HTTP_STATUS_MOVED_PERMANENTLY);
+        virtual bool _send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code = 301);
         virtual bool _send_404(struct lws *wsi, std::string_view html_404);
 
         virtual const char *_get_client_ip(struct lws *wsi);

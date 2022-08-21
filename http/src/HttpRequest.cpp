@@ -40,14 +40,14 @@ HttpRequest::RequestType    HttpRequest::type_from_str(std::string_view type)
     return NONE;
 }
 
-HttpRequest::HttpRequest(std::string_view path, RequestType request_type)
+HttpRequest::HttpRequest(std::string_view url, RequestType request_type)
 {
-    _path = path;
+    _url = url;
     _request_type = request_type;
 }
 
-HttpRequest::HttpRequest(std::string_view path, const std::vector<std::string> & uri_args, RequestType request_type):
-    HttpRequest(path, request_type)
+HttpRequest::HttpRequest(std::string_view url, const std::vector<std::string> & uri_args, RequestType request_type):
+    HttpRequest(url, request_type)
 {
     _uri_args_lst = uri_args;
 }
