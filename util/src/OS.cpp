@@ -341,7 +341,6 @@ static void *backtrace_buffer[SIHD_MAX_BACKTRACE_SIZE];
 
 ssize_t    OS::backtrace(int fd, size_t backtrace_size)
 {
-#if !defined(__SIHD_WINDOWS__)
     size_t wanted_size = std::min(backtrace_size, (size_t)SIHD_MAX_BACKTRACE_SIZE);
     size_t size = ::backtrace(backtrace_buffer, wanted_size);
     char **strings = (char **)backtrace_symbols(backtrace_buffer, size);
@@ -364,16 +363,14 @@ ssize_t    OS::backtrace(int fd, size_t backtrace_size)
     }
     free(strings);
     return size;
-#else
-    return -1;
-#endif
 }
 
 #else // no backtrace
 
-ssize_t    OS::backtrace(int fd)
+ssize_t    OS::backtrace(int fd, size_t backtrace_size)
 {
     (void)fd;
+    (void)backtrace_size;
     return -1;
 }
 
