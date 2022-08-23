@@ -44,9 +44,9 @@ conan_post_process = {
 modules = {
     "util": {
         "extlibs": ['nlohmann_json', 'fmt'],
-        "libs": ['pthread'],
+        "libs": ['pthread', 'fmt'],
         "linux-extlibs": ['libuuid'],
-        "linux-libs": ['fmt', 'dl', 'rt', 'uuid'],
+        "linux-libs": ['dl', 'rt', 'uuid'],
         "windows-libs": ['rpcrt4'],
         "em-defines": ["FMT_HEADER_ONLY"],
     },
