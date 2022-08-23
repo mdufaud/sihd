@@ -1,38 +1,46 @@
 #include <sihd/util/platform.hpp>
 
-#include <vector>
-#include <algorithm>
-
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
+#include <signal.h>
 
 // for get_max_rss / peak_rss
 #if defined(__SIHD_WINDOWS__)
+
 # include <winsock2.h>
 # include <windows.h>
 # include <psapi.h>
 # include <debugapi.h>
 # include <direct.h> // _stat
+
 #elif defined(__SIHD_UNIX__) || defined(__SIHD_APPLE__)
+
 # include <unistd.h>
 # include <sys/resource.h>
 # if defined(__SIHD_APPLE__)
 #  include <mach/mach.h>
 # endif
+
 #elif defined(__SIHD_AIX__) || defined(__SIHD_SUN__)
+
 # include <fcntl.h>
 # include <procfs.h>
+
 #endif
 
 #if defined(__SIHD_LINUX__)
+
+# include <dlfcn.h>
+# include <sys/ioctl.h>
 # include <sys/types.h>
 # include <sys/ptrace.h>
 # include <sys/wait.h>
 # include <sys/time.h>
 # include <fcntl.h>
+
 #endif
 
 // backtrace not available in windows / android
@@ -45,6 +53,9 @@
 typedef void (*sighandler_t)(int);
 #endif
 
+#include <vector>
+#include <algorithm>
+
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Runnable.hpp>
@@ -56,33 +67,38 @@ typedef void (*sighandler_t)(int);
 # define __SIHD_UTIL_OS_DEFAULT_MAX_FDS__ 512
 #endif
 
-
-
 namespace sihd::util
 {
 
+namespace
+{
+
+bool signal_used = false;
+std::mutex signal_mutex;
+std::map<int, std::list<IHandler<int> *>> map_signals_handlers;
+
+}
+
 SIHD_LOGGER;
 
-bool OS::signal_used = false;
-std::mutex OS::signal_mutex;
-std::map<int, std::list<IHandler<int> *>> OS::map_signals_handlers;
+
 
 bool    OS::clear_signal_handlers(int sig)
 {
-    std::lock_guard lock(OS::signal_mutex);
-    for (IHandler<int> *handler : OS::map_signals_handlers[sig])
+    std::lock_guard lock(signal_mutex);
+    for (IHandler<int> *handler : map_signals_handlers[sig])
     {
         delete handler;
     }
-    OS::map_signals_handlers[sig].clear();
+    map_signals_handlers[sig].clear();
     return unhandle_signal(sig);
 }
 
 bool    OS::clear_signal_handlers()
 {
-    std::lock_guard lock(OS::signal_mutex);
+    std::lock_guard lock(signal_mutex);
     bool ret = true;
-    for (auto & [sig, handlers_lst] : OS::map_signals_handlers)
+    for (auto & [sig, handlers_lst] : map_signals_handlers)
     {
         for (IHandler<int> *handler : handlers_lst)
         {
@@ -92,14 +108,14 @@ bool    OS::clear_signal_handlers()
         if (unhandle_signal(sig) == false)
             ret = false;
     }
-    OS::map_signals_handlers.clear();
+    map_signals_handlers.clear();
     return ret;
 }
 
 bool    OS::clear_signal_handler(int sig, IHandler<int> *runnable)
 {
-    std::lock_guard lock(OS::signal_mutex);
-    auto & lst = OS::map_signals_handlers[sig];
+    std::lock_guard lock(signal_mutex);
+    auto & lst = map_signals_handlers[sig];
     auto it = std::find(lst.begin(), lst.end(), runnable);
     if (it != lst.end())
     {
@@ -114,8 +130,8 @@ bool    OS::clear_signal_handler(int sig, IHandler<int> *runnable)
 void    OS::_signal_callback(int sig)
 {
     SIHD_LOG(debug, "Signal caught: " << OS::signal_name(sig));
-    std::lock_guard lock(OS::signal_mutex);
-    for (IHandler<int> *handler : OS::map_signals_handlers[sig])
+    std::lock_guard lock(signal_mutex);
+    for (IHandler<int> *handler : map_signals_handlers[sig])
     {
         handler->handle(sig);
     }
@@ -129,9 +145,9 @@ bool    OS::add_signal_handler(int sig, IHandler<int> *handler)
         SIHD_LOG(error, "Error handling signal: " << OS::signal_name(sig));
         return false;
     }
-    std::lock_guard lock(OS::signal_mutex);
-    OS::map_signals_handlers[sig].push_back(handler);
-    if (OS::signal_used == false)
+    std::lock_guard lock(signal_mutex);
+    map_signals_handlers[sig].push_back(handler);
+    if (signal_used == false)
     {
         AtExit::add_handler(new Runnable([] () -> bool
         {
@@ -139,7 +155,7 @@ bool    OS::add_signal_handler(int sig, IHandler<int> *handler)
             return true;
         }));
         AtExit::install();
-        OS::signal_used = true;
+        signal_used = true;
     }
     return true;
 }
@@ -271,8 +287,7 @@ bool    OS::getsockopt(int socket, int level, int optname, void *optval, socklen
 bool    OS::is_root()
 {
 #if defined(__SIHD_WINDOWS__)
-    //TODO
-    return false;
+    return geteuid() == 0;
 #else
     return getuid() == 0;
 #endif
@@ -290,10 +305,10 @@ bool    OS::is_root()
 #  define SIHD_DEFAULT_BACKTRACE_SIZE 15
 # endif
 
-void *OS::backtrace_buffer[SIHD_MAX_BACKTRACE_SIZE];
-int OS::backtrace_size = SIHD_DEFAULT_BACKTRACE_SIZE;
+namespace
+{
 
-ssize_t  OS::write(int fd, const char *s)
+ssize_t  write(int fd, const char *s)
 {
     int i = 0;
     while (s[i])
@@ -301,13 +316,13 @@ ssize_t  OS::write(int fd, const char *s)
     return ::write(fd, s, i);
 }
 
-ssize_t  OS::write_endl(int fd, const char *s)
+ssize_t  write_endl(int fd, const char *s)
 {
     ssize_t ret = write(fd, s);
     return ret + ::write(fd, "\n", 1);
 }
 
-ssize_t   OS::write_number(int fd, int number)
+ssize_t   write_number(int fd, int number)
 {
     char c;
     if (number < 10)
@@ -320,11 +335,15 @@ ssize_t   OS::write_number(int fd, int number)
     return ret + ::write(fd, &c, 1);
 }
 
-ssize_t    OS::backtrace(int fd)
+static void *backtrace_buffer[SIHD_MAX_BACKTRACE_SIZE];
+
+}
+
+ssize_t    OS::backtrace(int fd, size_t backtrace_size)
 {
-    size_t wanted_size = std::min(OS::backtrace_size, SIHD_MAX_BACKTRACE_SIZE);
-    size_t size = ::backtrace(OS::backtrace_buffer, wanted_size);
-    char **strings = (char **)backtrace_symbols(OS::backtrace_buffer, size);
+    size_t wanted_size = std::min(backtrace_size, (size_t)SIHD_MAX_BACKTRACE_SIZE);
+    size_t size = ::backtrace(backtrace_buffer, wanted_size);
+    char **strings = (char **)backtrace_symbols(backtrace_buffer, size);
     bool ret = write(fd, "backtrace (") > 0;
     ret = ret && write_number(fd, size) > 0;
     ret = ret && write_endl(fd, " calls)") > 0;
@@ -375,10 +394,10 @@ bool    OS::is_run_by_valgrind()
                 || strstr(ldpreload, "/vgpreload") != nullptr);
 }
 
-#if !defined(__SIHD_WINDOWS__)
 
 bool    OS::is_run_by_debugger()
 {
+#if !defined(__SIHD_WINDOWS__)
     // gdb check
     int pid = fork();
     int status;
@@ -418,24 +437,14 @@ bool    OS::is_run_by_debugger()
         res = WEXITSTATUS(status);
     }
     return res == 1;
-}
-
 #else
-
-bool    OS::is_run_by_debugger()
-{
     return IsDebuggerPresent();
-}
-
 #endif
-
-// dynlib
-
-#if !defined(__SIHD_WINDOWS__)
+}
 
 void *OS::load_lib(const std::string & lib_name)
 {
-#if !defined(STATIC)
+#if !defined(STATIC) && !defined(__SIHD_WINDOWS__)
     void *handle;
 
     handle = dlopen(("lib" + lib_name + ".so").c_str(), RTLD_NOW);
@@ -450,25 +459,41 @@ void *OS::load_lib(const std::string & lib_name)
 
 void *OS::load_symbol(void *handle, std::string_view sym_name)
 {
+#if !defined(STATIC) && !defined(__SIHD_WINDOWS__)
     if (handle == nullptr)
         return nullptr;
     return dlsym(handle, sym_name.data());
+#else
+    (void)handle;
+    (void)syn_name;
+    return nullptr;
+#endif
 }
 
 std::string OS::lib_error()
 {
+#if !defined(STATIC) && !defined(__SIHD_WINDOWS__)
     return dlerror();
+#else
+    return "";
+#endif
 }
 
 bool OS::close_lib(void *handle)
 {
+#if !defined(STATIC) && !defined(__SIHD_WINDOWS__)
     if (handle == nullptr)
         return false;
     return dlclose(handle) == 0;
+#else
+    (void)handle;
+    return false;
+#endif
 }
 
 void *OS::load_symbol_unload_lib(const std::string & lib_name, std::string_view sym_name)
 {
+#if !defined(STATIC) && !defined(__SIHD_WINDOWS__)
     void *handle = OS::load_lib(lib_name);
     if (handle == nullptr)
     {
@@ -484,18 +509,12 @@ void *OS::load_symbol_unload_lib(const std::string & lib_name, std::string_view 
     if (dlclose(handle) != 0)
         SIHD_LOG(warning, "OS: could not close lib handle: " << OS::lib_error());
     return sym_ptr;
-}
-
 #else
-
-void *OS::load_symbol_unload_lib(const std::string & lib_name, std::string_view sym_name)
-{
     (void)lib_name;
     (void)sym_name;
     return nullptr;
+#endif
 }
-
-#endif // end of shared lib
 
 /*
  * Author:  David Robert Nadeau

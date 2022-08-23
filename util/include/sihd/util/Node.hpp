@@ -4,9 +4,7 @@
 # include <map>
 # include <vector>
 # include <exception>
-# include <memory>
 
-# include <sihd/util/Named.hpp>
 # include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::util
@@ -15,28 +13,6 @@ namespace sihd::util
 class Node: public Named
 {
     public:
-        class AlreadyHasChild: public std::exception
-        {
-            public:
-                AlreadyHasChild(std::string_view name);
-
-                virtual const char *what() const throw()
-                {
-                    return ex.c_str();
-                };
-
-                std::string ex;
-        };
-
-        class MaximumLinkRecursion: public std::exception
-        {
-            public:
-                virtual const char *what() const throw()
-                {
-                    return "Maximum node link recursion";
-                }
-        };
-
         struct TreeOpts
         {
             size_t indent = 0;
@@ -53,21 +29,18 @@ class Node: public Named
             bool ownership;
         };
 
+        Node(const std::string & name, Node *parent = nullptr);
+
         Node() = delete;
         Node(const Node & other) = delete;
         Node & operator=(const Node & other) = delete;
         Node & operator=(Node && other) = delete;
-        Node(const std::string & name, Node *parent = nullptr);
+
         virtual ~Node();
 
         // Children
+        bool add_child(Named *child, bool take_ownership = true);
         virtual bool add_child(const std::string & name, Named *child, bool take_ownership = true);
-        virtual bool add_child(Named *child, bool take_ownership = true);
-
-        // release internal pointer and takes ownership
-        virtual bool add_child(std::unique_ptr<Named> & unique);
-        // takes internal pointer and use it with no ownership - careful about pointer lifetimes
-        virtual bool add_child(std::shared_ptr<Named> & shared);
 
         template <typename T>
         T *add_child(const std::string & name)
@@ -82,17 +55,11 @@ class Node: public Named
         }
 
         // unsafe -> throws
-        virtual void add_child_unsafe(Named *child, bool take_ownership = true);
+        void add_child_unsafe(Named *child, bool take_ownership = true);
 
-        virtual bool remove_child(const Named *child);
+        bool remove_child(const Named *child);
         virtual bool remove_child(const std::string & name);
 
-        /*
-        virtual bool delete_child(const Named *child);
-        virtual bool delete_child(const std::string & name);
-
-        virtual void delete_children();
-        */
         virtual void remove_children();
 
         // Ownership
@@ -120,35 +87,23 @@ class Node: public Named
         bool resolve_links(size_t recursion = 0);
 
         // Tree description
-        std::string tree_str() const;
-        std::string tree_desc_str() const;
+        std::string tree_str() const { return this->tree_str({}); };
         std::string tree_str(TreeOpts opts) const;
-
-        // Static
-        static std::pair<std::string, std::string> parent_path(const std::string & path);
+        std::string tree_desc_str() const;
 
         const std::map<std::string, ChildEntry *> & children() const;
         const std::vector<std::string> & children_keys() const;
 
     protected:
+        // Static
+        static std::pair<std::string, std::string> parent_path(const std::string & path);
+
         virtual bool on_check_link(const std::string & name, Named *child);
         virtual bool on_add_child(const std::string & name, Named *child);
         virtual void on_remove_child(const std::string & name, Named *child);
 
     private:
-        void _tree_children(std::string & s, TreeOpts opts) const;
-        void _iterate_tree_children(std::string & s,
-                                                TreeOpts & opts,
-                                                const std::string & indent) const;
-        void _tree_child_desc(std::string & s,
-                                                const TreeOpts & opts,
-                                                const std::string & indent,
-                                                const std::string & name,
-                                                const Named *child) const;
-        void _add_tree_desc(std::string & s, const TreeOpts & opts, const Named *child) const;
-
         bool _remove_child_entry(ChildEntry *entry);
-        // bool _delete_child_entry(ChildEntry *entry);
 
         ChildEntry *_get_child_entry(const std::string & name) const;
         ChildEntry *_get_child_entry(const Named *child) const;

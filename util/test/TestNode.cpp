@@ -109,7 +109,7 @@ namespace test
     {
         Node root("root");
         new Node("parent", &root);
-        EXPECT_THROW(Node("parent", &root), Node::AlreadyHasChild);
+        EXPECT_THROW(Node("parent", &root), std::invalid_argument);
         Named *n1 = new Named("test");
         Named *n2 = new Named("test");
         EXPECT_TRUE(root.add_child(n1, true));

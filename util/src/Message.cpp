@@ -1,4 +1,5 @@
 #include <sihd/util/Message.hpp>
+#include <sihd/util/MessageField.hpp>
 
 namespace sihd::util
 {

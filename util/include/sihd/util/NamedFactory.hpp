@@ -1,19 +1,7 @@
 #ifndef __SIHD_UTIL_NAMEDFACTORY_HPP__
 # define __SIHD_UTIL_NAMEDFACTORY_HPP__
 
-# include <sihd/util/Named.hpp>
 # include <sihd/util/SmartNodePtr.hpp>
-
-// creating a new known symbol to go around C++ class name mangling
-# define SIHD_UTIL_REGISTER_FACTORY(class) \
-    extern "C" { \
-        extern sihd::util::Named *sihd_util_namedfactory_##class(const std::string & name, sihd::util::Node *parent) \
-        { \
-            return new class(name, parent); \
-        } \
-    };
-# define SIHD_UTIL_NAMEDFACTORY_PREFIX "sihd_util_namedfactory_"
-# define SIHD_UTIL_FACTORY(class, name, parent) sihd_util_namedfactory_##class(name, parent);
 
 namespace sihd::util
 {
@@ -35,5 +23,16 @@ class NamedFactory
 };
 
 }
+
+// creating a new known symbol to go around C++ class name mangling
+# define SIHD_UTIL_REGISTER_FACTORY(class) \
+    extern "C" { \
+        extern sihd::util::Named *sihd_util_namedfactory_##class(const std::string & name, sihd::util::Node *parent) \
+        { \
+            return new class(name, parent); \
+        } \
+    };
+# define SIHD_UTIL_NAMEDFACTORY_PREFIX "sihd_util_namedfactory_"
+# define SIHD_UTIL_FACTORY(class, name, parent) sihd_util_namedfactory_##class(name, parent);
 
 #endif

@@ -1,7 +1,6 @@
 #ifndef __SIHD_UTIL_MESSAGE_HPP__
 # define __SIHD_UTIL_MESSAGE_HPP__
 
-# include <string>
 # include <stdexcept>
 # include <unordered_map>
 
@@ -10,7 +9,6 @@
 # include <sihd/util/Node.hpp>
 # include <sihd/util/Logger.hpp>
 # include <sihd/util/IMessageField.hpp>
-# include <sihd/util/MessageField.hpp>
 
 namespace sihd::util
 {
@@ -66,17 +64,17 @@ class Message:  public Node,
         const IArray *array() const { return &_arr; }
 
     protected:
-        virtual bool _add_field_size(IMessageField *field);
-        virtual bool _assign_field_array(IMessageField *field);
-
         ArrByte _arr;
         size_t _total_size;
         bool _finished;
+
         std::unordered_map<std::string, IMessageField *> _fields;
 
     private:
-        size_t __assign_arr_at;
+        bool _add_field_size(IMessageField *field);
+        bool _assign_field_array(IMessageField *field);
 
+        size_t __assign_arr_at;
 };
 
 }

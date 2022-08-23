@@ -1,10 +1,10 @@
 #ifndef __SIHD_UTIL_DYNMESSAGE_HPP__
 # define __SIHD_UTIL_DYNMESSAGE_HPP__
 
+# include <functional>
+
 # include <sihd/util/Message.hpp>
 # include <sihd/util/forward.hpp>
-
-# include <functional>
 
 namespace sihd::util
 {

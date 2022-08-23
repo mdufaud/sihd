@@ -1,10 +1,12 @@
+#include <string.h>
+
 #include <sihd/net/NetUtils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/OS.hpp>
-#include <string.h>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <net/if.h>
+# include <sys/ioctl.h>
 #endif
 
 namespace sihd::net

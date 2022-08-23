@@ -3,17 +3,75 @@
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Logger.hpp>
 
-#define MAX_LINK_RECURSION 20
+#ifndef SIHD_NODE_MAX_LINK_RECURSION
+# define SIHD_NODE_MAX_LINK_RECURSION 20
+#endif
 
 namespace sihd::util
 {
+
+namespace
+{
+
+void    add_node_informations(const Node *node, std::string & s, Node::TreeOpts opts);
+
+void    add_named_description(const Named *named, std::string & s, const Node::TreeOpts & opts)
+{
+    if (opts.description)
+    {
+        std::string desc = named->description();
+        if (desc.empty() == false)
+            s += fmt::format(" - {}", desc);
+    }
+}
+
+void    add_child_informations(const Node *node, const std::string & name, const Named *child,
+                                std::string & s, const Node::TreeOpts & opts, const std::string & indent)
+{
+    s += fmt::format("{}{}", indent, name);
+    Node *parent = child->parent();
+    if (name != child->name())
+        s += fmt::format("  => {}", child->full_name());
+    else if (parent != node)
+        s += fmt::format("  -> {}", child->full_name());
+
+    s += fmt::format(": {}", child->class_name());
+    add_named_description(child, s, opts);
+    s += "\n";
+    const Node *child_node = dynamic_cast<const Node *>(child);
+    if (child_node != nullptr)
+        add_node_informations(child_node, s, opts);
+}
+
+void    add_children_informations(const Node *node, std::string & s, Node::TreeOpts & opts, const std::string & indent)
+{
+    for (const std::string & name: node->children_keys())
+    {
+        Named *child = node->get_child(name);
+        if (child != nullptr)
+            add_child_informations(node, name, child, s, opts, indent);
+    }
+}
+
+void    add_node_informations(const Node *node, std::string & s, Node::TreeOpts opts)
+{
+    opts.current_recursion += 1;
+    if (opts.max_recursion != 0 && opts.max_recursion == opts.current_recursion)
+        return ;
+    if (node->children().size() == 0)
+        return ;
+    std::string indent(opts.indent, ' ');
+    opts.indent += opts.indent_by_iter;
+    add_children_informations(node, s, opts, indent);
+}
+
+}
 
 SIHD_UTIL_REGISTER_FACTORY(Node);
 
 SIHD_LOGGER;
 
-Node::Node(const std::string & name, Node *parent):
-    Named(name, parent)
+Node::Node(const std::string & name, Node *parent): Named(name, parent)
 {
 }
 
@@ -24,20 +82,8 @@ Node::~Node()
 
 void    Node::add_child_unsafe(Named *child, bool ownership)
 {
-    if (this->add_child(child->name(), child, ownership) == false)
-        throw Node::AlreadyHasChild(child->name());
-}
-
-bool    Node::add_child(std::unique_ptr<Named> & unique)
-{
-    Named *internal_ptr = unique.release();
-    return this->add_child(internal_ptr, true);
-}
-
-bool    Node::add_child(std::shared_ptr<Named> & shared)
-{
-    Named *internal_ptr = shared.get();
-    return this->add_child(internal_ptr, false);
+    if (this->add_child(child->name(), child, ownership) == false)\
+        throw std::invalid_argument(fmt::format("Node '{}' already has child '{}'", this->full_name(), child->name()));
 }
 
 bool    Node::add_child(Named *child, bool ownership)
@@ -49,8 +95,7 @@ bool    Node::add_child(const std::string & name, Named *child, bool ownership)
 {
     if (this->get_child(name) != nullptr)
     {
-        SIHD_LOG_WARN("Node: '{}' child '{}' already exists",
-                    this->full_name(), name);
+        SIHD_LOG_WARN("Node: '{}' child '{}' already exists", this->full_name(), name);
         return false;
     }
     bool do_add = this->on_add_child(name, child);
@@ -200,8 +245,8 @@ Named   *Node::resolve_link(const std::string & path, size_t recursion)
     Named *child = this->find(path);
     if (child != nullptr)
         return child;
-    if (recursion == MAX_LINK_RECURSION)
-        throw Node::MaximumLinkRecursion();
+    if (recursion == SIHD_NODE_MAX_LINK_RECURSION)
+        throw std::length_error("Maximum link recursion");
     const auto [parent_path, child_name] = this->parent_path(path);
     Named *named = this->find(parent_path);
     if (named != nullptr)
@@ -248,9 +293,7 @@ bool    Node::resolve_links(size_t recursion)
         if (child == nullptr)
         {
             SIHD_LOG_ERROR("Node: '{}' could not resolve link '{}' => '{}'",
-                        this->full_name(),
-                        link,
-                        path);
+                            this->full_name(), link, path);
             return false;
         }
         if (this->on_check_link(link, child))
@@ -271,66 +314,6 @@ const std::vector<std::string> &    Node::children_keys() const
     return _children_keys;
 }
 
-// TREE
-
-void    Node::_tree_child_desc(std::string & s,
-                                    const TreeOpts & opts,
-                                    const std::string & indent,
-                                    const std::string & name,
-                                    const Named *child) const
-{
-    s += fmt::format("{}{}", indent, name);
-    Node *parent = child->parent();
-    if (name != child->name())
-        s += fmt::format("  => {}", child->full_name());
-    else if (parent != this)
-        s += fmt::format("  -> {}", child->full_name());
-
-    s += fmt::format(": {}", child->class_name());
-    this->_add_tree_desc(s, opts, child);
-    s += "\n";
-    const Node *node = dynamic_cast<const Node *>(child);
-    if (node != nullptr)
-        node->_tree_children(s, opts);
-}
-
-void    Node::_iterate_tree_children(std::string & s, TreeOpts & opts, const std::string & indent) const
-{
-    for (const std::string & name: _children_keys)
-    {
-        Named *child = this->get_child(name);
-        if (child != nullptr)
-            this->_tree_child_desc(s, opts, indent, name, child);
-    }
-}
-
-void    Node::_tree_children(std::string & s, TreeOpts opts) const
-{
-    opts.current_recursion += 1;
-    if (opts.max_recursion != 0 && opts.max_recursion == opts.current_recursion)
-        return ;
-    if (_children_map.size() == 0)
-        return ;
-    std::string indent(opts.indent, ' ');
-    opts.indent += opts.indent_by_iter;
-    this->_iterate_tree_children(s, opts, indent);
-}
-
-void    Node::_add_tree_desc(std::string & s, const TreeOpts & opts, const Named *child) const
-{
-    if (opts.description)
-    {
-        std::string desc = child->description();
-        if (desc.empty() == false)
-            s += fmt::format(" - {}", desc);
-    }
-}
-
-std::string     Node::tree_str() const
-{
-    return this->tree_str({});
-}
-
 std::string     Node::tree_desc_str() const
 {
     TreeOpts opts;
@@ -345,15 +328,10 @@ std::string     Node::tree_str(TreeOpts opts) const
     opts.current_recursion = 0;
 
     std::string s = fmt::format("{}{}: {}", indent, this->name(), this->class_name());
-    this->_add_tree_desc(s, opts, this);
+    add_named_description(this, s, opts);
     s += "\n";
-    this->_tree_children(s, opts);
+    add_node_informations(this, s, opts);
     return s;
-}
-
-Node::AlreadyHasChild::AlreadyHasChild(std::string_view name)
-{
-    this->ex = fmt::format("Child {} already exists", name);
 }
 
 }

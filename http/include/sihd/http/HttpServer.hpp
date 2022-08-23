@@ -136,7 +136,7 @@ class HttpServer:   public sihd::util::Node,
         virtual bool _send_http_no_content(struct lws *wsi, int code);
         /*
             code = HTTP_STATUS_MOVED_PERMANENTLY || HTTP_STATUS_FOUND || HTTP_STATUS_SEE_OTHER || HTTP_STATUS_NOT_MODIFIED
-            default = 301 -> HTTP_STATUS_MOVED_PERMANENTLY
+            default = 301 HTTP_STATUS_MOVED_PERMANENTLY
         */
         virtual bool _send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code = 301);
         virtual bool _send_404(struct lws *wsi, std::string_view html_404);

@@ -316,7 +316,6 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
             SIHD_LOG(debug, "Callback check access rights");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
-            //SIHD_TRACE(args->p);
             break ;
         }
         case LWS_CALLBACK_PROCESS_HTML:
@@ -325,7 +324,6 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
              SIHD_LOG(debug, "Callback check process HTML");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
-            //SIHD_TRACE(args->p);
             break ;
         }
         case LWS_CALLBACK_ADD_HEADERS:
