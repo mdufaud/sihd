@@ -287,7 +287,7 @@ bool    OS::getsockopt(int socket, int level, int optname, void *optval, socklen
 bool    OS::is_root()
 {
 #if defined(__SIHD_WINDOWS__)
-    return geteuid() == 0;
+    return false;
 #else
     return getuid() == 0;
 #endif
@@ -341,6 +341,7 @@ static void *backtrace_buffer[SIHD_MAX_BACKTRACE_SIZE];
 
 ssize_t    OS::backtrace(int fd, size_t backtrace_size)
 {
+#if !defined(__SIHD_WINDOWS__)
     size_t wanted_size = std::min(backtrace_size, (size_t)SIHD_MAX_BACKTRACE_SIZE);
     size_t size = ::backtrace(backtrace_buffer, wanted_size);
     char **strings = (char **)backtrace_symbols(backtrace_buffer, size);
@@ -363,6 +364,9 @@ ssize_t    OS::backtrace(int fd, size_t backtrace_size)
     }
     free(strings);
     return size;
+#else
+    return -1;
+#endif
 }
 
 #else // no backtrace
@@ -465,7 +469,7 @@ void *OS::load_symbol(void *handle, std::string_view sym_name)
     return dlsym(handle, sym_name.data());
 #else
     (void)handle;
-    (void)syn_name;
+    (void)sym_name;
     return nullptr;
 #endif
 }
