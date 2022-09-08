@@ -79,8 +79,6 @@ modules = {
     },
     "tui": {
         "depends": ['util'],
-        "linux-extlibs": ['ftxui'],
-        # compiling specifically with mingw
         "git-url": "https://github.com/ArthurSonzogni/FTXUI",
         "git-branch": "v3.0.0",
     },
@@ -303,7 +301,7 @@ yum_packages = {
   "libcurl": "libcurl-devel",
   "libwebsockets": "libwebsockets-devel",
   "libpcap": "libpcap-devel",
-  "libssh": "ssh-devel",
+  "libssh": "libssh-devel",
   "libusb": "libusb-devel",
   "libzip": "libzip-devel",
   "libbluetooth": "bluez-libs-devel",

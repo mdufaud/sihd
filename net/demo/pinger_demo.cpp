@@ -1,3 +1,5 @@
+#include <signal.h>
+
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/FS.hpp>
 #include <sihd/net/Pinger.hpp>
