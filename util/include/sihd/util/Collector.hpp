@@ -32,20 +32,12 @@ class Collector:    public IStoppableRunnable,
             if (_running.exchange(true) == true)
                 return false;
             std::lock_guard l(_mutex);
-            while (_running)
+            while (_running && _provider_ptr->providing())
             {
-                // wait for state change or data
-                while (_running && _provider_ptr->providing() && _provider_ptr->provider_empty())
-                    _provider_ptr->provider_wait_data_for(_provider_wait_milliseconds);
-                // if either collector of provider stopped
-                if (_running == false || _provider_ptr->providing() == false)
-                    break ;
-                // lock and get data if not empty
-                {
-                    _provider_ptr->provider_lock_guard();
-                    if (_provider_ptr->provider_empty() == false && _provider_ptr->provide(&_data))
-                        this->notify_observers(this);
-                }
+                if (_provider_ptr->provide(&_data))
+                    this->notify_observers(this);
+                else
+                    _waitable.wait_for(_provider_nano_wait);
             }
             return true;
         }
@@ -58,6 +50,7 @@ class Collector:    public IStoppableRunnable,
         bool stop()
         {
             _running = false;
+            _waitable.notify(1);
             return true;
         }
 
@@ -69,33 +62,32 @@ class Collector:    public IStoppableRunnable,
 
         bool collect()
         {
-            if (_provider_ptr->providing())
+            if (_provider_ptr->providing() && _provider_ptr->provide(&_data))
             {
-                _provider_ptr->provider_lock_guard();
-                if (_provider_ptr->provider_empty() == false && _provider_ptr->provide(&_data))
-                {
-                    this->notify_observers();
-                    return true;
-                }
+                this->notify_observers();
+                return true;
             }
             return false;
         }
 
-        T & data() { return _data; }
+        T data() const { return _data; }
         IProvider<T> *provider() const { return _provider_ptr; }
-        time_t timeout_milliseconds() const { return sihd::util::Time::to_ms(_provider_wait_milliseconds); }
+        time_t timeout_milliseconds() const { return Time::to_ms(_provider_nano_wait); }
 
         void set_provider(IProvider<T> *ptr) { _provider_ptr = ptr; }
-        void set_timeout_milliseconds(time_t milli) { _provider_wait_milliseconds = sihd::util::Time::ms(milli); }
+        void set_timeout_milliseconds(time_t milli) { _provider_nano_wait = Time::ms(milli); }
 
     protected:
 
     private:
         T _data;
         IProvider<T> *_provider_ptr;
+
         std::atomic<bool> _running;
-        time_t _provider_wait_milliseconds;
+        time_t _provider_nano_wait;
+
         std::mutex _mutex;
+        Waitable _waitable;
 };
 
 }

@@ -40,7 +40,7 @@ namespace test
         int value;
         ArrInt array = {1, 2, 3};
 
-        ArrayProvider provider(&array);
+        ArrayProvider<int> provider(&array);
         EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, array.at(0));
         EXPECT_TRUE(provider.provide(&value));
@@ -121,7 +121,7 @@ namespace test
         EXPECT_EQ(value, lst.at(3));
 
         std::vector<int> lst2 = {10, 20};
-        provider.set_iterator(&lst2);
+        provider.set_container(&lst2);
         EXPECT_TRUE(provider.provide(&value));
         EXPECT_EQ(value, lst2.at(0));
         EXPECT_TRUE(provider.provide(&value));

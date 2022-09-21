@@ -69,7 +69,6 @@ namespace test
         arr_bool[2] = true;
         mem_recorder.add_record("bool", sihd::util::Time::milli(50), &arr_bool);
 
-
         std::cout << core.tree_desc_str() << std::endl;
         EXPECT_TRUE(core.init());
         std::cout << core.tree_desc_str() << std::endl;

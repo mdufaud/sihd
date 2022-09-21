@@ -12,7 +12,7 @@ namespace sihd::core
 {
 
 class MemRecorder:  public ACoreObject,
-                    public sihd::util::AProvider<PlayableRecord>,
+                    public sihd::util::IProvider<PlayableRecord>,
                     public sihd::util::IHandler<const std::string &, const Channel *>
 {
     public:
@@ -33,7 +33,6 @@ class MemRecorder:  public ACoreObject,
         void add_records(const std::vector<PlayableRecord> & records);
         void add_records(const std::list<PlayableRecord> & records);
 
-        bool provider_empty() const override;
         bool providing() const override;
         bool provide(PlayableRecord *value) override;
 
@@ -51,6 +50,7 @@ class MemRecorder:  public ACoreObject,
         bool _provides;
         bool _records;
         std::atomic<bool> _running;
+        mutable std::mutex _mutex;
         MapListRecordedValues _map_record;
         SortedRecordedValues _map_sorted_records;
 };

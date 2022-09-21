@@ -15,7 +15,7 @@ class Waitable
         Waitable();
         virtual ~Waitable();
 
-        void notify(int times);
+        void notify(int times = 1);
         void notify_all();
 
         template <class Predicate>

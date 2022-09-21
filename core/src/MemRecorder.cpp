@@ -57,24 +57,16 @@ void    MemRecorder::add_record(const std::string & name, time_t timestamp, cons
         _map_record[name].push_back({timestamp, arr});
     if (_provides)
     {
-        {
-            this->provider_lock_guard();
-            _map_sorted_records.insert(std::pair<time_t, PlayableRecord>(
-                timestamp, {name, timestamp, arr}
-            ));
-        }
-        this->_provider_notify();
+        auto lock = std::lock_guard(_mutex);
+        _map_sorted_records.insert(std::pair<time_t, PlayableRecord>(
+            timestamp, {name, timestamp, arr}
+        ));
     }
 }
 
 void    MemRecorder::add_record(const PlayableRecord & record)
 {
     this->add_record(record.name, record.timestamp, record.value);
-}
-
-bool    MemRecorder::provider_empty() const
-{
-    return _map_sorted_records.empty();
 }
 
 bool    MemRecorder::providing() const
@@ -84,7 +76,8 @@ bool    MemRecorder::providing() const
 
 bool    MemRecorder::provide(PlayableRecord *value)
 {
-    if (this->provider_empty())
+    auto lock = std::lock_guard(_mutex);
+    if (_map_sorted_records.empty())
         return false;
     *value = _map_sorted_records.begin()->second;
     _map_sorted_records.erase(_map_sorted_records.begin());
@@ -112,6 +105,7 @@ std::string     MemRecorder::hexdump_records()
 
 std::string     MemRecorder::hexdump_timeline(std::string_view separation_cols, char separation_data)
 {
+    auto lock = std::lock_guard(_mutex);
     std::stringstream ss;
     for (const auto & map_pair: _map_sorted_records)
     {
@@ -126,14 +120,12 @@ std::string     MemRecorder::hexdump_timeline(std::string_view separation_cols, 
 bool    MemRecorder::do_start()
 {
     _running = true;
-    this->_provider_notify_all();
     return true;
 }
 
 bool    MemRecorder::do_stop()
 {
     _running = false;
-    this->_provider_notify_all();
     return true;
 }
 
@@ -146,10 +138,9 @@ bool    MemRecorder::do_reset()
 void    MemRecorder::clear()
 {
     {
-        this->provider_lock_guard();
+        auto lock = std::lock_guard(_mutex);
         _map_sorted_records.clear();
     }
-    this->_provider_notify_all();
     for (const auto & pair: _map_record)
     {
         for (const RecordedValue & value: pair.second)

@@ -12,86 +12,74 @@
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Timestamp.hpp>
 
-# define __SIHD_ADD_ITERATOR_PROVIDER__(CLASSNAME, CONTAINER) \
-template <typename TYPE> \
-class CLASSNAME: public sihd::util::AProvider<TYPE> \
-{ \
-    public: \
-        CLASSNAME(CONTAINER<TYPE> *iterator = nullptr) { this->set_iterator(iterator); } \
-        virtual ~CLASSNAME() {} \
- \
-        bool provide(TYPE *value) \
-        { \
-            if (_iterator != _iterable_ptr->end()) \
-            { \
-                *value = *_iterator; \
-                ++_iterator; \
-                return true; \
-            } \
-            return false; \
-        } \
- \
-        virtual bool providing() const  { return _iterator != _iterable_ptr->end(); } \
-        virtual bool provider_empty() const  { return _iterable_ptr->empty(); } \
- \
-        void set_iterator(CONTAINER<TYPE> *iterator) \
-        { \
-            _iterable_ptr = iterator; \
-            if (iterator != nullptr) \
-                this->reset_index(); \
-        } \
- \
-        void reset_index() { _iterator = _iterable_ptr->begin(); } \
-        CONTAINER<TYPE> *iterable() const { return _iterable_ptr; } \
-        typename CONTAINER<TYPE>::iterator iterator() const { return _iterator; } \
- \
-    private: \
-        typename CONTAINER<TYPE>::iterator _iterator; \
-        CONTAINER<TYPE> *_iterable_ptr; \
-};
-
-
 namespace sihd::util
 {
 
-template <typename TYPE>
-class AProvider: public sihd::util::IProvider<TYPE>
+template <template <typename...> typename CONTAINER, typename TYPE>
+class Provider: public sihd::util::IProvider<TYPE>
 {
     public:
-        virtual ~AProvider() {}
+        Provider(CONTAINER<TYPE> *container_ptr = nullptr) { this->set_container(container_ptr); }
+        virtual ~Provider() {}
 
-        virtual bool provider_wait_data_for(time_t nano_duration)
+        bool provide(TYPE *value)
         {
-            return _waitable.wait_for(nano_duration) == false;
+            auto lock = std::lock_guard(_mutex);
+            if (_iterator != _container_ptr->end())
+            {
+                *value = *_iterator;
+                ++_iterator;
+                return true;
+            }
+            return false;
         }
 
-        virtual void provider_wait_data()
+        virtual bool providing() const
         {
-            _waitable.infinite_wait();
+            auto lock = std::lock_guard(_mutex);
+            return _iterator != _container_ptr->end();
         }
 
-        std::lock_guard<std::mutex> provider_lock_guard() const
+        void set_container(CONTAINER<TYPE> *iterator)
         {
-            return std::lock_guard(_mutex);
+            {
+                auto lock = std::lock_guard(_mutex);
+                _container_ptr = iterator;
+                if (iterator == nullptr)
+                    return ;
+            }
+            this->reset_index();
         }
 
-    protected:
-        void _provider_notify() { _waitable.notify(1); }
-        void _provider_notify_all() { _waitable.notify_all(); }
+        void reset_index()
+        {
+            auto lock = std::lock_guard(_mutex);
+            _iterator = _container_ptr->begin();
+        }
+
+        CONTAINER<TYPE> *container() const { return _container_ptr; }
+        typename CONTAINER<TYPE>::iterator iterator() const { return _iterator; }
 
     private:
-        Waitable _waitable;
         mutable std::mutex _mutex;
+        typename CONTAINER<TYPE>::iterator _iterator;
+        CONTAINER<TYPE> *_container_ptr;
+
 };
 
-__SIHD_ADD_ITERATOR_PROVIDER__(VectorProvider, std::vector);
-__SIHD_ADD_ITERATOR_PROVIDER__(ListProvider, std::list);
-__SIHD_ADD_ITERATOR_PROVIDER__(SetProvider, std::set);
-__SIHD_ADD_ITERATOR_PROVIDER__(DequeProvider, std::deque);
-__SIHD_ADD_ITERATOR_PROVIDER__(ArrayProvider, sihd::util::Array);
+template <typename T>
+using VectorProvider = Provider<std::vector, T>;
+template <typename T>
+using ListProvider = Provider<std::list, T>;
+template <typename T>
+using SetProvider = Provider<std::set, T>;
+template <typename T>
+using DequeProvider = Provider<std::deque, T>;
+template <typename T>
+using ArrayProvider = Provider<sihd::util::Array, T>;
 
 template <typename TYPE>
-class FunctionProvider: public sihd::util::AProvider<TYPE>
+class FunctionProvider: public sihd::util::IProvider<TYPE>
 {
     public:
         using ProviderMethod = std::function<bool (TYPE *)>;
@@ -111,23 +99,16 @@ class FunctionProvider: public sihd::util::AProvider<TYPE>
             return _provide_method(value);
         }
 
-        bool provider_empty() const
-        {
-            return _provider_empty_method ? _provider_empty_method() : false;
-        }
-
         bool providing() const
         {
             return _providing_method ? _providing_method() : true;
         }
 
         void set_provider_function(ProviderMethod && fun) { _provide_method = std::move(fun); }
-        void set_provider_empty_function(StatusMethod && fun) { _provider_empty_method = std::move(fun); }
         void set_providing_function(StatusMethod && fun) { _providing_method = std::move(fun); }
 
     private:
         ProviderMethod _provide_method;
-        StatusMethod _provider_empty_method;
         StatusMethod _providing_method;
 };
 

@@ -298,7 +298,7 @@ bool    OS::is_root()
 #if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 
 # ifndef SIHD_MAX_BACKTRACE_SIZE
-#  define SIHD_MAX_BACKTRACE_SIZE 100
+#  define SIHD_MAX_BACKTRACE_SIZE 50
 # endif
 
 # ifndef SIHD_DEFAULT_BACKTRACE_SIZE
