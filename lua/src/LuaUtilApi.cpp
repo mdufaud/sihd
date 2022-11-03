@@ -88,7 +88,7 @@ bool    LuaUtilApi::_configurable_recursive_set(Configurable *obj, const std::st
         }
         default:
         {
-            logger.error(Str::format("Configuration key '%s' type error", key.c_str()).c_str());
+            logger.error(fmt::format("Configuration key '{}' type error", key));
         }
     }
     return false;

@@ -52,7 +52,7 @@ namespace test
 
         SIHD_LOG(debug, Term::bold("bold"));
         SIHD_LOG(debug, Term::white_bg(" White bg "));
-        SIHD_LOG(debug, Term::fmt2(" White bg - red text ",
+        SIHD_LOG(debug, Term::fmt(" White bg - red text ",
                                     Term::Attr::WHITEBG,
                                     Term::Attr::RED2));
 

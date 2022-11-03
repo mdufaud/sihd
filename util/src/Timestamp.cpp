@@ -141,12 +141,12 @@ Calendar    Timestamp::local_calendar() const
 
 std::string     ClockTime::str() const
 {
-    return Str::format("%02d:%02d:%02d:%d", hour, minute, second, millisecond);
+    return fmt::sprintf("%02d:%02d:%02d:%d", hour, minute, second, millisecond);
 }
 
 std::string     Calendar::str() const
 {
-    return Str::format("%02d/%02d/%04d", day, month, year);
+    return fmt::sprintf("%02d/%02d/%04d", day, month, year);
 }
 
 bool    Timestamp::is_leap_year() const

@@ -7,6 +7,7 @@
 # include <iostream>
 
 # include <fmt/format.h>
+# include <fmt/printf.h>
 
 # include <sihd/util/macro.hpp>
 # include <sihd/util/LoggerManager.hpp>
@@ -31,7 +32,7 @@
 }
 #  define SIHD_LOG(level, msg) SIHD_LOG_LEVEL(__sihd_logger__, level, msg);
 #  define SIHD_LOGF(level, message, ...) __sihd_logger__.log(sihd::util::LogLevel::level, fmt::format(message, ##__VA_ARGS__));
-#  define SIHD_LOG_FORMAT(level, message, ...) __sihd_logger__.log(sihd::util::LogLevel::level, sihd::util::Str::format(message, ##__VA_ARGS__));
+#  define SIHD_LOG_FORMAT(level, message, ...) __sihd_logger__.log(sihd::util::LogLevel::level, fmt::sprintf(message, ##__VA_ARGS__));
 
 #  define SIHD_LOG_EMERG(message, ...) SIHD_LOGF(emergency, message, ##__VA_ARGS__);
 #  define SIHD_LOG_ALERT(message, ...) SIHD_LOGF(alert, message, ##__VA_ARGS__);

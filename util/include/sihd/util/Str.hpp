@@ -103,6 +103,24 @@ class Str
         static std::string join(const std::vector<std::string> & join_lst, std::string_view join_with = "");
         static std::string demangle(std::string_view name);
         static std::string format(std::string_view format, ...);
+
+        template <typename ...Args>
+        static std::string format_join(std::string_view sep, Args && ...args)
+        {
+            const size_t size = (sizeof...(Args) * sep.size());
+            char braces[size + 1];
+
+            uint i = 0;
+            while (i < size)
+            {
+                braces[i] = sep[i % sep.size()];
+                ++i;
+            }
+            braces[i] = '\0';
+
+            return fmt::vformat(std::string_view(braces, size), fmt::make_format_args(args...));
+        };
+
         static std::string trim(std::string_view s);
         static std::string & to_upper(std::string & s);
         static std::string & to_lower(std::string & s);

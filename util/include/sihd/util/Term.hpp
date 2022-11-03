@@ -86,14 +86,10 @@ class Term
             static const char *SCROLL_DOWN;
         };
 
-        static std::string fmt(std::string_view str, const char *attr)
-        {
-            return Str::format("%s%s%s", attr, str.data(), Attr::ENDC);
-        }
-
-        static std::string fmt2(std::string_view str, const char *attr, const char *attr2)
-        {
-            return Str::format("%s%s%s%s", attr, attr2, str.data(), Attr::ENDC);
+        template <typename ...Args>
+        static std::string fmt(std::string_view str, Args&&... args)
+        { 
+            return fmt::format("{}{}{}", Str::format_join("{}", args...), str, Attr::ENDC);
         }
 
         static std::string underline(std::string_view str) { return Term::fmt(str, Attr::UNDERLINE); }
@@ -104,7 +100,7 @@ class Term
         static std::string red(std::string_view str) { return Term::fmt(str, Attr::RED2); }
         static std::string green(std::string_view str) { return Term::fmt(str, Attr::GREEN2); }
 
-        static std::string white_bg(std::string_view str) { return Term::fmt2(str, Attr::WHITEBG, Attr::BLACK); }
+        static std::string white_bg(std::string_view str) { return Term::fmt(str, Attr::WHITEBG, Attr::BLACK); }
 
         static std::string move_cursor_up(int n);
         static std::string move_cursor_down(int n);

@@ -344,7 +344,7 @@ bool    PyUtilApi::_configurable_set_single_conf(sihd::util::Configurable *self,
         return self->set_conf_int(key, handle.cast<int64_t>());
     else if (PyFloat_Check(val))
         return self->set_conf_float(key, handle.cast<double>());
-    throw std::runtime_error(Str::format("configuration '%s' type error", key.c_str()).c_str());
+    throw std::runtime_error(fmt::format("configuration '{}' type error", key));
 }
 
 static void __attribute__ ((constructor)) premain()

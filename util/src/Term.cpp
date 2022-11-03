@@ -68,42 +68,42 @@ const char *Term::Attr::SCROLL_DOWN = ESC "T";
 
 std::string Term::move_cursor_up(int n)
 {
-    return Str::format(ESC "%dA", n);
+    return fmt::format(ESC "{}A", n);
 }
 
 std::string Term::move_cursor_down(int n)
 {
-    return Str::format(ESC "%dB", n);
+    return fmt::format(ESC "{}B", n);
 }
 
 std::string Term::move_cursor_right(int n)
 {
-    return Str::format(ESC "%dC", n);
+    return fmt::format(ESC "{}C", n);
 }
 
 std::string Term::move_cursor_left(int n)
 {
-    return Str::format(ESC "%dD", n);
+    return fmt::format(ESC "{}D", n);
 }
 
 std::string Term::next_line(int n)
 {
-    return Str::format(ESC "%dE", n);
+    return fmt::format(ESC "{}E", n);
 }
 
 std::string Term::prev_line(int n)
 {
-    return Str::format(ESC "%dF", n);
+    return fmt::format(ESC "{}F", n);
 }
 
 std::string Term::set_pos(int line, int col)
 {
-    return Str::format(ESC "%d;%dH", line, col);
+    return fmt::format(ESC "{};{}H", line, col);
 }
 
 std::string Term::set_col(int n)
 {
-    return Str::format(ESC "%dG", n);
+    return fmt::format(ESC "{}G", n);
 }
 
 }

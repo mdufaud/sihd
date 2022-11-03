@@ -192,14 +192,14 @@ void    IpAddr::_fill_subnet()
 
 std::string IpAddr::dump_subnet() const
 {
-    return Str::format("network id: %s\nwildcard: %s\nnetmask: %s\nhost min: %s\n"
-                        "host max: %s\nbroadcast: %s\nnumber of hosts: %u\n",
-                        IpAddr::ip_str(_subnet.netid).c_str(),
-                        IpAddr::ip_str(_subnet.wildcard).c_str(),
-                        IpAddr::ip_str(_subnet.netmask).c_str(),
-                        IpAddr::ip_str(_subnet.hostmin).c_str(),
-                        IpAddr::ip_str(_subnet.hostmax).c_str(),
-                        IpAddr::ip_str(_subnet.broadcast).c_str(),
+    return fmt::format("network id: {}\nwildcard: {}\nnetmask: {}\nhost min: {}\n"
+                        "host max: {}\nbroadcast: {}\nnumber of hosts: {}\n",
+                        IpAddr::ip_str(_subnet.netid),
+                        IpAddr::ip_str(_subnet.wildcard),
+                        IpAddr::ip_str(_subnet.netmask),
+                        IpAddr::ip_str(_subnet.hostmin),
+                        IpAddr::ip_str(_subnet.hostmax),
+                        IpAddr::ip_str(_subnet.broadcast),
                         _subnet.hosts);
 }
 
@@ -709,11 +709,11 @@ std::string IpAddr::dump_ip_lst() const
     ss << "host: " << _host << "\n";
     for (const IpEntry & entry: _lst_ip)
     {
-        ss << Str::format("ipv%c %s %s: %s\n",
+        ss << fmt::format("ipv{} {} {}: {}\n",
                             (entry.ipv6 ? '6' : '4'),
                             Ip::protocol_str(entry.protocol),
                             Ip::socktype_str(entry.socktype),
-                            entry.ip().c_str());
+                            entry.ip());
     }
     return ss.str();
 }

@@ -167,7 +167,7 @@ std::string FS::make_tmp_directory(std::string_view prefix)
 {
     if (prefix.size() + 6 > PATH_MAX)
     {
-        throw std::runtime_error(Str::format("Path too long: %lu", prefix.size() + 6));
+        throw std::runtime_error(fmt::format("Path too long: {}", prefix.size() + 6));
     }
     char path[prefix.size() + 6 + 1];
     path[0] = 0;
