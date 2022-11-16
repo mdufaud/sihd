@@ -81,8 +81,6 @@ std::map<int, std::list<IHandler<int> *>> map_signals_handlers;
 
 SIHD_LOGGER;
 
-
-
 bool    OS::clear_signal_handlers(int sig)
 {
     std::lock_guard lock(signal_mutex);
@@ -175,12 +173,10 @@ std::string OS::signal_name(int sig)
 {
 #if !defined(__SIHD_WINDOWS__)
     char *signame = strsignal(sig);
-    if (signame == nullptr)
-        return std::to_string(sig);
-    return signame;
-#else
-    return std::to_string(sig);
+    if (signame != nullptr)
+        return signame;
 #endif
+    return std::to_string(sig);
 }
 
 // utilities
