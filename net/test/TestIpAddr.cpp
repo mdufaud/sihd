@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/Ip.hpp>

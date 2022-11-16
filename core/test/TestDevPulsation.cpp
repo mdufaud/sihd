@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/core/Core.hpp>
 #include <sihd/core/ChannelWaiter.hpp>

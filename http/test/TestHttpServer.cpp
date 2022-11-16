@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <iostream>
-
 #include <libwebsockets.h>
 
 #include <sihd/util/Logger.hpp>

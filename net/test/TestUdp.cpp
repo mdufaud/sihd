@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/net/UdpSender.hpp>
 #include <sihd/net/UdpReceiver.hpp>
