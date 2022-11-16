@@ -44,7 +44,7 @@ static std::string interfaces_test()
             interface_to_sniff = iface.name();
         }
     }
-    std::cout << std::endl;
+    fmt::print("\n");
     return interface_to_sniff;
 }
 
@@ -54,7 +54,7 @@ static void sniffer_test(const std::string & interface_to_sniff)
     Sniffer pcap("pcap-sniffer");
     Handler<Sniffer *> obs([] (Sniffer *obj)
     {
-        SIHD_LOGF(info, "Sniffed {} bytes", obj->array().size());
+        SIHD_LOG(info, "Sniffed {} bytes", obj->array().size());
         SIHD_COUT(Str::hexdump_fmt(obj->array().buf(), obj->array().byte_size()));
     });
     pcap.add_observer(&obs);
@@ -76,7 +76,7 @@ static void sniffer_test(const std::string & interface_to_sniff)
         pcap.close();
     }
     SIHD_LOG(info, "Ending packet capture");
-    std::cout << std::endl;
+    fmt::print("\n");
 }
 
 } // end test::module

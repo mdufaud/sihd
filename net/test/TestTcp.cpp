@@ -60,16 +60,16 @@ namespace test
         {
             for (BasicServerHandler::Client *client: bsh->new_clients())
             {
-                SIHD_LOG(info, "Server new client: " << client->fd());
+                SIHD_LOG(info, "Server new client: {}", client->fd());
                 bsh->send_to_client(client, welcome_arr);
             }
             for (BasicServerHandler::Client *client: bsh->read_activity())
             {
-                SIHD_LOG(info, "Client said: " << client->read_array.str(','));
+                SIHD_LOG(info, "Client said: {}", client->read_array.str(','));
             }
             for (BasicServerHandler::Client *client: bsh->write_activity())
             {
-                SIHD_LOG(info, "Server wrote to client: " << client->write_array.str(','));
+                SIHD_LOG(info, "Server wrote to client: {}", client->write_array.str(','));
             }
         });
         server_handler.add_observer(&handler);
@@ -82,7 +82,7 @@ namespace test
 
         usleep(1000);
 
-        SIHD_LOG(debug, "Simulating a send from client: " << hello_world_arr.str());
+        SIHD_LOG(debug, "Simulating a send from client: {}", hello_world_arr.str());
         EXPECT_TRUE(client1.send_all(hello_world_arr));
 
         usleep(1000);
@@ -119,7 +119,7 @@ namespace test
         EXPECT_TRUE(server.stop_serving());
         EXPECT_TRUE(worker.stop_worker());
 
-        SIHD_LOG(debug, "Total observations: " << handler_waiter.notifications);
+        SIHD_LOG(debug, "Total observations: {}", handler_waiter.notifications);
         // should be lower than ~11 in general
         EXPECT_LT(handler_waiter.notifications, 15);
     }
@@ -156,7 +156,7 @@ namespace test
         sihd::util::Handler<INetReceiver *> handler([&recv] (INetReceiver *rcv)
         {
             rcv->receive(recv);
-            SIHD_LOG(debug, "Data received: " << recv.str() << " - " << recv.byte_size() << " bytes");
+            SIHD_LOG(debug, "Data received: {} - {} bytes", recv.str(), recv.byte_size());
         });
         client.add_observer(&handler);
         EXPECT_EQ(accepted.send(bye), (ssize_t)bye.size());

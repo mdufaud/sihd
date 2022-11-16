@@ -20,7 +20,7 @@ bool    SshShell::open(bool x11)
     ssh_channel channel_ptr = ssh_channel_new(_ssh_session_ptr);
     if (channel_ptr == nullptr)
     {
-        SIHD_LOG(error, "SshShell: failed to create a ssh channel: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshShell: failed to create a ssh channel: {}", ssh_get_error(_ssh_session_ptr));
         return false;
     }
     _channel.set_channel(channel_ptr);

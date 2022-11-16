@@ -53,26 +53,25 @@ Channel     *Channel::build(std::string_view configuration)
     auto name_it = map.find("name");
     if (name_it == map.end())
     {
-        SIHD_LOG(error, "Channel: cannot build from configuration '" << configuration << "' no name");
+        SIHD_LOG(error, "Channel: cannot build from configuration '{}' no name", configuration);
         return nullptr;
     }
     auto type_it = map.find("type");
     if (type_it == map.end())
     {
-        SIHD_LOG(error, "Channel: cannot build from configuration '" << configuration << "' no type");
+        SIHD_LOG(error, "Channel: cannot build from configuration '{}' no type", configuration);
         return nullptr;
     }
     auto size_it = map.find("size");
     if (size_it == map.end())
     {
-        SIHD_LOG(error, "Channel: cannot build from configuration '" << configuration << "' no size");
+        SIHD_LOG(error, "Channel: cannot build from configuration '{}' no size", configuration);
         return nullptr;
     }
     unsigned long val;
     if (Str::to_ulong(size_it->second, &val) == false)
     {
-        SIHD_LOG(error, "Channel: cannot build from configuration '" << configuration
-                    << "' size is either overflow or invalid");
+        SIHD_LOG(error, "Channel: cannot build from configuration '{}' size is either overflow or invalid", configuration);
         return nullptr;
     }
     return new Channel(name_it->second, type_it->second, val);

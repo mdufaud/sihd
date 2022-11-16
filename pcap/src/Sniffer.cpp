@@ -44,7 +44,7 @@ bool    Sniffer::open(const std::string & source)
     char errbuf[PCAP_ERRBUF_SIZE];
     _pcap_ptr = pcap_create(source.c_str(), errbuf);
     if (_pcap_ptr == nullptr)
-        SIHD_LOG(error, "Sniffer: " << errbuf);
+        SIHD_LOG(error, "Sniffer: {}", errbuf);
     return _pcap_ptr != nullptr;
 }
 
@@ -95,7 +95,7 @@ bool    Sniffer::run()
     int ret = pcap_loop(_pcap_ptr, _max_sniff, Sniffer::_callback, (u_char *)this);
     if (ret == PCAP_ERROR)
     {
-        SIHD_LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: {}", this->error());
     }
     else if (ret == PCAP_ERROR_BREAK)
     {
@@ -125,7 +125,7 @@ bool    Sniffer::sniff()
     int ret = pcap_dispatch(_pcap_ptr, _max_sniff, Sniffer::_callback, (u_char *)this);
     if (ret == PCAP_ERROR)
     {
-        SIHD_LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: {}", this->error());
     }
     else if (ret == PCAP_ERROR_BREAK)
     {
@@ -141,7 +141,7 @@ bool    Sniffer::read_next()
     int ret = pcap_next_ex(_pcap_ptr, &hdr, (const u_char **)(&data));
     if (ret == PCAP_ERROR)
     {
-        SIHD_LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: {}", this->error());
     }
     else if (ret >= 0)
         this->new_packet(hdr, data);
@@ -218,15 +218,15 @@ void    Sniffer::_log_if_error(int ret)
 {
     if (ret == PCAP_ERROR)
     {
-        SIHD_LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: {}", this->error());
     }
     else if (ret == PCAP_WARNING)
     {
-        SIHD_LOG(warning, "Sniffer: " << this->error());
+        SIHD_LOG(warning, "Sniffer: {}", this->error());
     }
     else if (ret != 0)
     {
-        SIHD_LOG(error, "Sniffer: " << PcapUtils::status_str(ret));
+        SIHD_LOG(error, "Sniffer: {}", PcapUtils::status_str(ret));
     }
 }
 
@@ -249,7 +249,7 @@ std::vector<int>    Sniffer::datalinks()
         pcap_free_datalinks(lst);
     }
     else
-        SIHD_LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: {}", this->error());
     return ret;
 }
 
@@ -270,7 +270,7 @@ std::vector<int>    Sniffer::timestamp_types()
         pcap_free_tstamp_types(lst);
     }
     else
-        SIHD_LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: {}", this->error());
     return ret;
 }
 
@@ -288,7 +288,7 @@ bool    Sniffer::is_nonblock()
     char errbuf[PCAP_ERRBUF_SIZE];
     int ret = pcap_getnonblock(_pcap_ptr, errbuf);
     if (ret < 0)
-        SIHD_LOG(error, "Sniffer: " << errbuf);
+        SIHD_LOG(error, "Sniffer: {}", errbuf);
     return ret == 1;
 }
 
@@ -343,13 +343,12 @@ bool    Sniffer::set_direction(std::string_view direction)
         dir =  PCAP_D_INOUT;
     else
     {
-        SIHD_LOG(error, "Sniffer: packet direction unknown: '" << direction
-                    << "' possible values are: in - out - both");
+        SIHD_LOG(error, "Sniffer: packet direction unknown: '{}' possible values are: in - out - both", direction);
         return false;
     }
     int ret = pcap_setdirection(_pcap_ptr, dir);
     if (ret != 0)
-        SIHD_LOG(error, "Sniffer: " << this->error());
+        SIHD_LOG(error, "Sniffer: {}", this->error());
     return ret == 0;
 }
 
@@ -448,7 +447,7 @@ bool    Sniffer::set_nonblock(bool block)
     char errbuf[PCAP_ERRBUF_SIZE];
     int ret = pcap_setnonblock(_pcap_ptr, (int)block, errbuf);
     if (ret != 0)
-        SIHD_LOG(error, "Sniffer: " << errbuf);
+        SIHD_LOG(error, "Sniffer: {}", errbuf);
     return ret == 0;
 }
 

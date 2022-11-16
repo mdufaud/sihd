@@ -9,7 +9,7 @@ SIHD_LOGGER;
 // TODO
 static void glfw_error_callback(int error, const char* description)
 {
-    SIHD_LOG(error, "GLFW: " << description << " (" << error << ")");
+    SIHD_LOG(error, "GLFW: {} ({})", description, error);
 }
 
 ImguiBackendGlfw::ImguiBackendGlfw(): _glfw_window_ptr(nullptr)

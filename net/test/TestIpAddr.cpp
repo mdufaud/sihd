@@ -31,7 +31,7 @@ namespace test
 
             void dump_dns(const IpAddr::DnsInfo & dns)
             {
-                SIHD_LOG(info, "hostname: " << dns.hostname);
+                SIHD_LOG(info, "hostname: {}", dns.hostname);
                 this->dump_ip_lst(dns.lst_ip);
             }
 
@@ -39,10 +39,11 @@ namespace test
             {
                 for (const IpAddr::IpEntry & info: lst_ip)
                 {
-                    SIHD_LOG(info, "ip: " << info.ip()
-                                << " - socket " << Ip::socktype_str(info.socktype)
-                                << " - proto " << Ip::protocol_str(info.protocol)
-                                << " - " << (info.ipv6 ? "ipv6" : "ipv4"));
+                    SIHD_LOG(info, "ip: {} - socket {} - proto {} - type {}",
+                            info.ip(),
+                            Ip::socktype_str(info.socktype),
+                            Ip::protocol_str(info.protocol),
+                            info.ipv6 ? "ipv6" : "ipv4");
                 }
             }
     };
@@ -97,17 +98,17 @@ namespace test
         IpAddr google("google.com", true);
 
         this->dump_ip_lst(google.ip_lst());
-        SIHD_LOG(debug, "Nb IPs: " << google.ip_count());
-        SIHD_LOG(debug, "Hostname: " << google.hostname());
+        SIHD_LOG(debug, "Nb IPs: {}", google.ip_count());
+        SIHD_LOG(debug, "Hostname: {}", google.hostname());
         std::string google_proto_udp = google.protocol_ip_str("udp");
-        SIHD_LOG(debug, "Google first IPV4: " << google.first_ipv4_str());
-        SIHD_LOG(debug, "Google first IPV6: " << google.first_ipv6_str());
-        SIHD_LOG(debug, "Google IP IPV4: " << google.protocol_ip_str("ip"));
-        SIHD_LOG(debug, "Google UDP IPV4: " << google_proto_udp);
-        SIHD_LOG(debug, "Google TCP IPV4: " << google.protocol_ip_str("tcp"));
-        SIHD_LOG(debug, "Google sock stream IPV4: " << google.socktype_ip_str("stream"));
-        SIHD_LOG(debug, "Google sock datagram IPV4: " << google.socktype_ip_str("datagram"));
-        SIHD_LOG(debug, "Google sock raw IPV6: " << google.socktype_ip_str("raw", true));
+        SIHD_LOG(debug, "Google first IPV4: {}", google.first_ipv4_str());
+        SIHD_LOG(debug, "Google first IPV6: {}", google.first_ipv6_str());
+        SIHD_LOG(debug, "Google IP IPV4: {}", google.protocol_ip_str("ip"));
+        SIHD_LOG(debug, "Google UDP IPV4: {}", google_proto_udp);
+        SIHD_LOG(debug, "Google TCP IPV4: {}", google.protocol_ip_str("tcp"));
+        SIHD_LOG(debug, "Google sock stream IPV4: {}", google.socktype_ip_str("stream"));
+        SIHD_LOG(debug, "Google sock datagram IPV4: {}", google.socktype_ip_str("datagram"));
+        SIHD_LOG(debug, "Google sock raw IPV6: {}", google.socktype_ip_str("raw", true));
     }
 
     TEST_F(TestIpAddr, test_ipaddr_dns_lookup_error)

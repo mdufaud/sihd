@@ -108,7 +108,7 @@ bool    File::_allocate_buffer_if_not_exists()
         _buf_ptr = new char[_buf_size];
         if (_buf_ptr == nullptr)
         {
-            SIHD_LOG(error, "File: could not allocate buffer: " << _buf_size);
+            SIHD_LOG(error, "File: could not allocate buffer: {}", _buf_size);
         }
         else
         {
@@ -126,7 +126,7 @@ bool    File::buff_stream()
         int ret = setvbuf(_file_ptr, _buf_ptr, _buf_mode, _buf_size);
         if (ret < 0)
         {
-            SIHD_LOG(error, "File: could not set stream buffer: " << strerror(errno));
+            SIHD_LOG(error, "File: could not set stream buffer: {}", strerror(errno));
             return false;
         }
     }
@@ -149,7 +149,7 @@ bool    File::open_fd(int fd, std::string_view mode)
     _file_ptr = fdopen(fd, mode.data());
     if (_file_ptr == nullptr)
     {
-        SIHD_LOG(error, "File: " << strerror(errno) << ": for file descriptor " << fd);
+        SIHD_LOG(error, "File: {}: for file descriptor {}", strerror(errno), fd);
     }
     else
         _stream_ownership = true;
@@ -169,7 +169,7 @@ bool    File::open_tmpfile()
     _file_ptr = tmpfile();
     if (_file_ptr == nullptr)
     {
-        SIHD_LOG(error, "File: could not open temporary file: " << strerror(errno));
+        SIHD_LOG(error, "File: could not open temporary file: {}", strerror(errno));
     }
     else
         _stream_ownership = true;
@@ -182,7 +182,7 @@ bool    File::open_tmp(std::string_view prefix, bool write_binary, std::string_v
     const size_t path_size = prefix.size() + 6 + suffix.size();
     if (path_size > PATH_MAX)
     {
-        SIHD_LOGF(error, "File: Path too long: {}", path_size);
+        SIHD_LOG(error, "File: Path too long: {}", path_size);
         return false;
     }
     char path[path_size];
@@ -196,7 +196,7 @@ bool    File::open_tmp(std::string_view prefix, bool write_binary, std::string_v
 #endif
     if (fd < 0)
     {
-        SIHD_LOG(error, "File: could not open temporary file: " << strerror(errno));
+        SIHD_LOG(error, "File: could not open temporary file: {}", strerror(errno));
         return false;
     }
     if (this->open_fd(fd, write_binary ? "wb" : "w"))
@@ -210,7 +210,7 @@ bool    File::open(std::string_view path, std::string_view mode)
     _file_ptr = fopen(path.data(), mode.data());
     if (_file_ptr == nullptr)
     {
-        SIHD_LOG(error, "File: " << strerror(errno) << ": " << path);
+        SIHD_LOG(error, "File: {}: {}", strerror(errno), path);
     }
     else
     {
@@ -249,7 +249,7 @@ bool    File::flush()
 {
     if (_file_ptr != nullptr && fflush(_file_ptr) != 0)
     {
-        SIHD_LOG(error, "File: could not flush file: " << strerror(errno));
+        SIHD_LOG(error, "File: could not flush file: {}", strerror(errno));
         return false;
     }
     return _file_ptr != nullptr;
@@ -261,7 +261,7 @@ bool    File::close()
     {
         if (_stream_ownership && fclose(_file_ptr) != 0)
         {
-            SIHD_LOG(error, "File: could not close file: " << strerror(errno));
+            SIHD_LOG(error, "File: could not close file: {}", strerror(errno));
             return false;
         }
         _file_ptr = nullptr;
@@ -317,7 +317,7 @@ long    File::tell()
 {
     long ret = ftell(_file_ptr);
     if (ret < 0)
-        SIHD_LOG(error, "File: tell: " << strerror(errno));
+        SIHD_LOG(error, "File: tell: {}", strerror(errno));
     return ret;
 }
 
@@ -340,7 +340,7 @@ bool    File::_seek(long offset, int origin)
 {
     int ret = fseek(_file_ptr, offset, origin);
     if (ret < 0)
-        SIHD_LOG(error, "File: seek: " << strerror(errno));
+        SIHD_LOG(error, "File: seek: {}", strerror(errno));
     return ret == 0;
 }
 

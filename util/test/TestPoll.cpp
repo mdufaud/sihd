@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Poll.hpp>
 #include <sihd/util/Handler.hpp>
@@ -68,23 +67,23 @@ namespace test
                 int fd = event.fd;
                 if (event.readable)
                 {
-                    SIHD_LOG(debug, "Reading in fd: " << fd);
+                    SIHD_LOG(debug, "Reading in fd: {}", fd);
                     int ret = read(fd, buffer, 20);
                     buffer[ret] = 0;
-                    SIHD_LOG(debug, "Read " << ret << " bytes: '" << buffer << "'");
+                    SIHD_LOG(debug, "Read {} bytes: '{}'", ret, buffer);
                     _read_count += 1;
                 }
                 if (event.writable)
                 {
-                    SIHD_LOG(debug, "Writing in fd: " << fd);
+                    SIHD_LOG(debug, "Writing in fd: {}", fd);
                     int ret = write(fd, "hello world", 11);
-                    SIHD_LOG(debug, "Wrote " << ret << " bytes: 'hello world'");
+                    SIHD_LOG(debug, "Wrote {} bytes: 'hello world'", ret);
                     _write_count += 1;
                 }
             }
             _timedout += (int)poll->polling_timeout();
-            SIHD_LOG(debug, "Time spent in poll: " << Time::to_micro(poll->polling_time())
-                        << " microsec (timed out ? " << poll->polling_timeout() << ")");
+            SIHD_LOG(debug, "Time spent in poll: {} microsec (timed out ? {})",
+                      Time::to_micro(poll->polling_time()), poll->polling_timeout());
         });
         poll.add_observer(&poll_handler);
 

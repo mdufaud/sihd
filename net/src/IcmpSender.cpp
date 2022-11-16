@@ -47,7 +47,7 @@ bool    IcmpSender::open_socket(bool ipv6)
     if (ret)
     {
         _socket.set_reuseaddr(true);
-        // TODO
+        #pragma message("TODO IcmpSender ipv6")
         /*
         if (ipv6)
         {

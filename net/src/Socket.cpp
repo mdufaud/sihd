@@ -53,11 +53,11 @@ Socket::Socket(int socket, std::string_view domain, std::string_view socket_type
     _type = Ip::socktype(socket_type);
     _protocol = Ip::protocol(protocol);
     if (_domain == -1)
-        SIHD_LOG(error, "Socket: domain unknown: " << domain);
+        SIHD_LOG(error, "Socket: domain unknown: {}", domain);
     if (_type == -1)
-        SIHD_LOG(error, "Socket: socket type unknown: " << socket_type);
+        SIHD_LOG(error, "Socket: socket type unknown: {}", socket_type);
     if (_protocol == -1)
-        SIHD_LOG(error, "Socket: protocol unknown: " << protocol);
+        SIHD_LOG(error, "Socket: protocol unknown: {}", protocol);
 }
 
 Socket::Socket(Socket && other)
@@ -211,11 +211,11 @@ bool    Socket::open(std::string_view domain, std::string_view type, std::string
     int socktype = Ip::socktype(type);
     int sockprotocol = Ip::protocol(protocol);
     if (sockdomain == -1)
-        SIHD_LOG(error, "Socket: domain unknown: " << domain);
+        SIHD_LOG(error, "Socket: domain unknown: {}", domain);
     if (socktype == -1)
-        SIHD_LOG(error, "Socket: socket type unknown: " << type);
+        SIHD_LOG(error, "Socket: socket type unknown: {}", type);
     if (sockprotocol == -1)
-        SIHD_LOG(error, "Socket: protocol unknown: " << protocol);
+        SIHD_LOG(error, "Socket: protocol unknown: {}", protocol);
     if (sockdomain >= 0 && socktype >= 0 && sockprotocol >= 0)
         return this->open(sockdomain, socktype, sockprotocol);
     return false;
@@ -227,7 +227,7 @@ bool    Socket::open(int domain, int type, int protocol)
         return false;
     _socket = ::socket(domain, type, protocol);
     if (_socket < 0)
-        SIHD_LOG(error, "Socket: " << strerror(errno));
+        SIHD_LOG(error, "Socket: {}", strerror(errno));
     _domain = domain;
     _type = type;
     _protocol = protocol;
@@ -241,7 +241,7 @@ bool    Socket::close()
     {
         ret = ::close(_socket) == 0;
         if (ret == false)
-            SIHD_LOG(error, "Socket: close error: " << strerror(errno));
+            SIHD_LOG(error, "Socket: close error: {}", strerror(errno));
         this->_clear_socket_info();
     }
     return ret;
@@ -255,7 +255,7 @@ bool    Socket::shutdown()
         ret = ::shutdown(_socket, SHUT_RDWR) == 0;
         // no error message if socket was not connected
         if (ret == false && errno != ENOTCONN)
-            SIHD_LOG(error, "Socket: shutdown error: " << strerror(errno));
+            SIHD_LOG(error, "Socket: shutdown error: {}", strerror(errno));
     }
     return ret;
 }
@@ -270,7 +270,7 @@ int     Socket::accept(sockaddr *addr, socklen_t *addr_len)
         throw std::runtime_error("Socket: cannot accept on a closed socket");
     int sock = ::accept(_socket, addr, addr_len);
     if (sock < 0)
-        SIHD_LOG(error, "Socket: accept error: " << strerror(errno));
+        SIHD_LOG(error, "Socket: accept error: {}", strerror(errno));
     return sock;
 }
 
@@ -280,7 +280,7 @@ bool    Socket::listen(uint16_t queue_size)
         throw std::runtime_error("Socket: cannot listen on a closed socket");
     if (::listen(_socket, queue_size) == -1)
     {
-        SIHD_LOG(error, "Socket: listen error: " << strerror(errno));
+        SIHD_LOG(error, "Socket: listen error: {}", strerror(errno));
         return false;
     }
     return true;
@@ -292,7 +292,7 @@ bool    Socket::bind(const sockaddr *addr, socklen_t addr_len)
         throw std::runtime_error("Socket: cannot bind on a closed socket");
     if (::bind(_socket, addr, addr_len) == -1)
     {
-        SIHD_LOG(error, "Socket: bind error: " << strerror(errno));
+        SIHD_LOG(error, "Socket: bind error: {}", strerror(errno));
         return false;
     }
     return true;
@@ -311,7 +311,7 @@ bool    Socket::connect(const sockaddr *addr, socklen_t addr_len)
             // EALREADY: socket is non blocking and a connect is already pending
             // no error print but not connected
             if (errno != EINPROGRESS && errno != EALREADY)
-                SIHD_LOG(error, "Socket: connect error: " << strerror(errno));
+                SIHD_LOG(error, "Socket: connect error: {}", strerror(errno));
             return false;
         }
     }
@@ -328,7 +328,7 @@ ssize_t     Socket::send(sihd::util::ArrViewChar view)
     ssize_t sent = ::send(_socket, (const char *)view.data(), view.size(), _send_flags);
 #endif
     if (sent < 0 && _verbose)
-        SIHD_LOG(warning, "Socket send error: " << strerror(errno));
+        SIHD_LOG(warning, "Socket send error: {}", strerror(errno));
     return sent;
 }
 
@@ -357,7 +357,7 @@ ssize_t     Socket::receive(void *data, size_t size)
     ssize_t rcv = ::recv(_socket, (char *)data, size, _rcv_flags);
 #endif
     if (rcv < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
-        SIHD_LOG(error, "Socket receive error: " << strerror(errno));
+        SIHD_LOG(error, "Socket receive error: {}", strerror(errno));
     return rcv;
 }
 
@@ -371,7 +371,7 @@ ssize_t     Socket::send_to(const sockaddr *addr, socklen_t addr_len, sihd::util
     ssize_t sent = ::sendto(_socket, (const char *)view.data(), view.size(), _send_flags, addr, addr_len);
 #endif
     if (sent < 0 && _verbose)
-        SIHD_LOG(warning, "Socket send_to error: " << strerror(errno));
+        SIHD_LOG(warning, "Socket send_to error: {}", strerror(errno));
     return sent;
 }
 
@@ -400,7 +400,7 @@ ssize_t     Socket::receive_from(sockaddr *addr, socklen_t *addr_len, void *data
     ssize_t rcv = ::recvfrom(_socket, (char *)data, size, _send_flags, addr, addr_len);
 #endif
     if (rcv < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
-        SIHD_LOG(error, "Socket receive_from error: " << strerror(errno));
+        SIHD_LOG(error, "Socket receive_from error: {}", strerror(errno));
     return rcv;
 }
 
@@ -573,7 +573,7 @@ bool    Socket::set_socket_blocking(int socket, bool active)
     int opts = ::fcntl(socket, F_GETFL);
     if (opts < 0)
     {
-        SIHD_LOG(error, "Socket: could not get fcntl: " << strerror(errno));
+        SIHD_LOG(error, "Socket: could not get fcntl: {}", strerror(errno));
         return false;
     }
     if (active)
@@ -582,7 +582,7 @@ bool    Socket::set_socket_blocking(int socket, bool active)
         opts &= ~O_NONBLOCK;
     opts = ::fcntl(socket, F_SETFL, opts);
     if (opts < 0)
-        SIHD_LOG(error, "Socket: could not set fcntl options: " << strerror(errno));
+        SIHD_LOG(error, "Socket: could not set fcntl options: {}", strerror(errno));
     return opts >= 0;
 }
 
@@ -593,7 +593,7 @@ bool    Socket::is_socket_blocking(int socket)
     int opts = ::fcntl(socket, F_GETFL);
     if (opts < 0)
     {
-        SIHD_LOG(error, "Socket: could not get fcntl: " << strerror(errno));
+        SIHD_LOG(error, "Socket: could not get fcntl: {}", strerror(errno));
         return false;
     }
     return opts & O_NONBLOCK;
@@ -619,7 +619,7 @@ bool    Socket::set_socket_blocking(int socket, bool active)
     unsigned long mode = active ? 0 : 1;
     if (sihd::util::OS::ioctl(socket, FIONBIO, &mode) != 0)
     {
-        SIHD_LOG(error, "Socket: could not set ioctl: " << strerror(errno));
+        SIHD_LOG(error, "Socket: could not set ioctl: {}", strerror(errno));
         return false;
     }
     return true;

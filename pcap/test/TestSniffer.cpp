@@ -37,7 +37,7 @@ namespace test
                 sihd::net::IpAddr ip(*addr);
 
                 if (!ip.empty())
-                    SIHD_LOG(debug, pre << ip.first_ip_str());
+                    SIHD_LOG(debug, "{} {}", pre, ip.first_ip_str());
             }
     };
 
@@ -47,16 +47,16 @@ namespace test
 
         for (const PcapIFace & iface: pcapif.ifaces())
         {
-            SIHD_LOG(debug, "Interface: " << iface.dump());
+            SIHD_LOG(debug, "Interface: {}", iface.dump());
             for (const auto & addr: iface.addresses())
             {
-                dump_ip("Addr: ", addr->addr);
+                dump_ip("Addr:", addr->addr);
                 if (addr->broadaddr)
-                    dump_ip("    broadcast: ", addr->broadaddr);
+                    dump_ip("    broadcast:", addr->broadaddr);
                 if (addr->dstaddr)
-                    dump_ip("    dst: ", addr->dstaddr);
+                    dump_ip("    dst:", addr->dstaddr);
                 if (addr->netmask)
-                    dump_ip("    netmask: ", addr->netmask);
+                    dump_ip("    netmask:", addr->netmask);
             }
         }
     }

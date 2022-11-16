@@ -60,6 +60,7 @@ void    ConsoleLogger::log(const LogInfo & info, std::string_view msg)
             level = "-";
             beg = Term::Attr::WHITE;
     }
+
     fprintf(stderr, "%s%s [%s] <%s> %s%s\n", beg, level, info.thread_name.data(), info.source.data(), msg.data(), end);
 }
 

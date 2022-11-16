@@ -49,7 +49,7 @@ namespace test
         sihd::util::Handler<INetReceiver *> handler([&receive_ret, &array_rcv] (INetReceiver *rcv)
         {
             receive_ret = rcv->receive(array_rcv);
-            SIHD_LOG(debug, "Data received: " << array_rcv.str(' ') << " - " << array_rcv.byte_size() << " bytes");
+            SIHD_LOG(debug, "Data received: {} - {} bytes", array_rcv.str(' '), array_rcv.byte_size());
         });
         receiver.add_observer(&handler);
         receiver.set_poll_timeout(1);
@@ -57,7 +57,7 @@ namespace test
         SIHD_LOG(debug, "Starting receiver");
         EXPECT_TRUE(worker.start_sync_worker("receiver"));
 
-        SIHD_LOG(debug, "Sending: " << array_send.str(',') << " (" << array_send.byte_size() << " bytes)");
+        SIHD_LOG(debug, "Sending: {} ({} bytes)", array_send.str(','), array_send.byte_size());
         EXPECT_EQ(sender.send(array_send), (ssize_t)array_send.byte_size());
 
         usleep(1000);
@@ -85,7 +85,7 @@ namespace test
         sihd::util::Handler<INetReceiver *> handler([&array_rcv] (INetReceiver *rcv)
         {
             rcv->receive(array_rcv);
-            SIHD_LOG(debug, "Data received: " << array_rcv.str() << " - " << array_rcv.byte_size() << " bytes");
+            SIHD_LOG(debug, "Data received: {} - {} bytes", array_rcv.str(), array_rcv.byte_size());
         });
         receiver.add_observer(&handler);
 

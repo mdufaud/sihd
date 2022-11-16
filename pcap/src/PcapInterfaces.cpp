@@ -89,7 +89,7 @@ bool    PcapInterfaces::find()
     char errbuf[PCAP_ERRBUF_SIZE];
     _code = pcap_findalldevs(&_interfaces_ptr, errbuf);
     if (_code != 0)
-        SIHD_LOG(error, "Interfaces: " << errbuf);
+        SIHD_LOG(error, "Interfaces: {}", errbuf);
     return _code == 0;
 }
 

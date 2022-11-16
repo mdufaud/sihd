@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Process.hpp>
 #include <sihd/util/FS.hpp>
@@ -202,7 +201,7 @@ namespace test
 
         std::string test_file = FS::combine(_tmp_dir.path(), "file_in_hello.txt");
 
-        SIHD_LOG(info, "Writing file for 'cat' input: " << test_file)
+        SIHD_LOG(info, "Writing file for 'cat' input: {}", test_file)
         EXPECT_TRUE(FS::write(test_file, "hello world"));
 
         if (Term::is_interactive() == false)
@@ -251,8 +250,8 @@ namespace test
         EXPECT_TRUE(proc.stdout_to_file(stdout_path));
         EXPECT_TRUE(proc.stderr_to_file(stderr_path));
 
-        SIHD_TRACE("Redirecting stdout to: " << stdout_path);
-        SIHD_TRACE("Redirecting stderr to: " << stderr_path);
+        SIHD_TRACE("Redirecting stdout to: {}", stdout_path);
+        SIHD_TRACE("Redirecting stderr to: {}", stderr_path);
 
         EXPECT_TRUE(proc.start());
         EXPECT_TRUE(proc.wait_any());
@@ -350,7 +349,7 @@ namespace test
         cat.wait_exit();
         EXPECT_FALSE(cat.has_exited());
         EXPECT_TRUE(cat.has_exited_by_signal());
-        SIHD_TRACE("Signal exit number: " << cat.signal_exit_number());
+        SIHD_TRACE("Signal exit number: {}", cat.signal_exit_number());
         EXPECT_EQ(cat.signal_exit_number(), SIGTERM);
     }
 
@@ -365,7 +364,7 @@ namespace test
         EXPECT_TRUE(cat.kill(SIGSTOP));
         cat.wait_stop();
         EXPECT_TRUE(cat.has_stopped_by_signal());
-        SIHD_TRACE("Signal stop number: " << cat.signal_stop_number());
+        SIHD_TRACE("Signal stop number: {}", cat.signal_stop_number());
         EXPECT_EQ(cat.signal_stop_number(), SIGSTOP);
 
         EXPECT_TRUE(cat.kill(SIGCONT));

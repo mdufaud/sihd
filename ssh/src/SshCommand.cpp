@@ -90,7 +90,7 @@ bool    SshCommand::_execute(std::string_view cmd, bool async)
     ssh_channel channel_ptr = ssh_channel_new(_ssh_session_ptr);
     if (channel_ptr == nullptr)
     {
-        SIHD_LOG(error, "SshCommand: failed to create a ssh channel: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshCommand: failed to create a ssh channel: {}", ssh_get_error(_ssh_session_ptr));
         return false;
     }
     _channel.set_channel(channel_ptr);
@@ -117,7 +117,7 @@ bool    SshCommand::_execute(std::string_view cmd, bool async)
     bool ret = _channel.request_exec(cmd);
     if (!ret)
     {
-        SIHD_LOG(error, "SshCommand: failed to execute command: " << cmd);
+        SIHD_LOG(error, "SshCommand: failed to execute command: {}", cmd);
         _channel.clear_channel();
     }
     else

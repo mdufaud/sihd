@@ -25,7 +25,7 @@ bool    DevSampler::set_frequency(double freq)
 {
     bool ret = _step_worker.set_frequency(freq);
     if (!ret)
-        SIHD_LOG(error, "DevSampler: cannot set frequency: " << freq);
+        SIHD_LOG(error, "DevSampler: cannot set frequency: {}", freq);
     return ret;
 }
 
@@ -36,8 +36,7 @@ bool    DevSampler::set_sample(std::string_view conf)
 
     if (splitted.size() != 2)
     {
-        SIHD_LOG(error, "DevSampler: wrong sampling configuration: '" << conf
-                << "' - expected CHANNEL_PATH_SAMPLE_OUT=CHANNEL_PATH_SAMPLE_IN");
+        SIHD_LOG(error, "DevSampler: wrong sampling configuration: '{}' - expected CHANNEL_PATH_SAMPLE_OUT=CHANNEL_PATH_SAMPLE_IN", conf);
         return false;
     }
     // splitted[0] = channel_path_out

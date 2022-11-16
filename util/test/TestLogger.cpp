@@ -1,6 +1,4 @@
 #include <gtest/gtest.h>
-#include <string>
-#include <iostream>
 #include <sihd/util/ALogger.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/BasicLogger.hpp>
@@ -108,8 +106,8 @@ namespace test
         SIHD_TRACE("TEST TRACE");
         ASSERT_EQ(log_counter->debug, 2);
 
-        SIHD_LOG(info, "stream test: " << 1.23 << " - " << "hello");
-        ASSERT_EQ(log_counter->msg, "stream test: 1.23 - hello");
+        SIHD_LOG(info, "fmt test: {} - {}", 1.23, "hello");
+        ASSERT_EQ(log_counter->msg, "fmt test: 1.23 - hello");
 
         SIHD_LOG_INFO("int test: {:02} - {}", 2, "world");
         ASSERT_EQ(log_counter->msg, "int test: 02 - world");

@@ -31,7 +31,7 @@ namespace test
 
             void handle(Channel *c)
             {
-                SIHD_TRACE(c->array()->data_type_str());
+                SIHD_TRACEF(c->array()->data_type_str());
                 if (c->array()->data_type() == TYPE_INT)
                 {
                     const Array<int> *arr_int = ArrayUtil::cast_array<int>(c->array());

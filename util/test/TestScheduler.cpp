@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Time.hpp>
@@ -44,8 +43,7 @@ namespace test
                     if ((usec < (this->should_run_every_us + this->delta_us)
                             && usec > (this->should_run_every_us - this->delta_us)) == false)
                     {
-                        SIHD_CERR("Overrun: " << usec << " usec since last run (max: "
-                                    << this->should_run_every_us + this->delta_us << " usec)");
+                        SIHD_CERR("Overrun: {} usec since last run (max: {} usec)", usec, this->should_run_every_us + this->delta_us);
                         this->good_freq = false;
                     }
                     _last += std::chrono::microseconds(this->should_run_every_us);
@@ -87,8 +85,8 @@ namespace test
         EXPECT_EQ(lambda_ran, 1);
         int expected_ran = Time::micro(sleep_time) / this->should_run_every_us;
         EXPECT_NEAR(this->ran, expected_ran, 3);
-        SIHD_LOG(info, "Scheduler total tasks executed: " << this->ran);
-        SIHD_LOG(info, "Scheduler total overruns: " << seq.overruns);
+        SIHD_LOG(info, "Scheduler total tasks executed: {}", this->ran);
+        SIHD_LOG(info, "Scheduler total overruns: {}", seq.overruns);
         // 10% miss maximum - generally is around 2%
         EXPECT_LT(seq.overruns, (size_t)(this->ran / 10));
     }
@@ -263,6 +261,6 @@ namespace test
         t1.join();
         t2.join();
         t3.join();
-        SIHD_LOG(debug, "Total executions: " << lambda_ran);
+        SIHD_LOG(debug, "Total executions: {}", lambda_ran);
     }
 }

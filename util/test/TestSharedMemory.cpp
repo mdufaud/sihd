@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/FS.hpp>
 #include <sihd/util/OS.hpp>
@@ -61,8 +60,8 @@ namespace test
             SIHD_LOG(debug, "--- parent attached ---");
             struct shmbuf *shmp = (struct shmbuf *)mem.data();
             EXPECT_NE(sem_wait(&shmp->sem1), -1);
-            SIHD_LOG(debug, "data[0] -> " << shmp->data[0]);
-            SIHD_LOG(debug, "data[1] -> " << shmp->data[1]);
+            SIHD_LOG(debug, "data[0] -> {}", shmp->data[0]);
+            SIHD_LOG(debug, "data[1] -> {}", shmp->data[1]);
             EXPECT_EQ(shmp->data[0], 42);
             EXPECT_EQ(shmp->data[1], 24);
             EXPECT_NE(sem_post(&shmp->sem2), -1);

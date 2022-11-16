@@ -48,7 +48,7 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_key_auto();
-        SIHD_LOG(info, "Auth status: " << auth.str());
+        SIHD_LOG(info, "Auth status: {}", auth.str());
         EXPECT_TRUE(auth.success());
 
         SshScp scp = session.make_scp();
@@ -87,7 +87,7 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_key_auto();
-        SIHD_LOG(info, "Auth status: " << auth.str());
+        SIHD_LOG(info, "Auth status: {}", auth.str());
         EXPECT_TRUE(auth.success());
 
         SshScp scp = session.make_scp();

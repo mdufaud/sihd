@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 
@@ -128,7 +127,7 @@ namespace test
         const char *cmd = "cmd (do 'something')   or don\\'t but[hurry up  mate]";
 
         splitter.set_escape_sequences("([");
-        SIHD_LOG(info, "Splitting command: '" << cmd << "'");
+        SIHD_LOG(info, "Splitting command: '{}'", cmd);
         std::vector<std::string> splits = splitter.split(cmd);
         for (const auto & split: splits)
         {
@@ -168,7 +167,7 @@ namespace test
 
         splitter.set_escape_sequences_all();
         const char *fullcmd = "'hello world  !'";
-        SIHD_LOG(info, "Splitting command: '" << fullcmd << "'");
+        SIHD_LOG(info, "Splitting command: '{}'", fullcmd);
         std::vector<std::string> full_split = splitter.split(fullcmd);
         for (const auto & split: full_split)
         {
@@ -181,7 +180,7 @@ namespace test
         }
 
         const char *unclosed_seq = "'hello world  !";
-        SIHD_LOG(info, "Splitting command: '" << unclosed_seq << "'");
+        SIHD_LOG(info, "Splitting command: '{}'", unclosed_seq);
         std::vector<std::string> unclosed_split = splitter.split(unclosed_seq);
         for (const auto & split: unclosed_split)
         {

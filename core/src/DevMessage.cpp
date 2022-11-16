@@ -49,7 +49,7 @@ void    DevMessage::_compute_output()
 {
     if (_msg_ptr->field_write_to(_channel_msg_out->data(), _channel_msg_out->byte_size()) == false)
     {
-        SIHD_LOGF(error, "DevMessage: cannot write message {}", _channel_msg_out->name());
+        SIHD_LOG(error, "DevMessage: cannot write message {}", _channel_msg_out->name());
         return ;
     }
     _channel_msg_out->notify();
@@ -61,7 +61,7 @@ void    DevMessage::_fill_channels_out()
     {
         if (field->field_write_to(ch_out->data(), ch_out->byte_size()) == false)
         {
-            SIHD_LOGF(error, "DevMessage: cannot write into channel {}", ch_out->name());
+            SIHD_LOG(error, "DevMessage: cannot write into channel {}", ch_out->name());
             return ;
         }
         ch_out->notify();
@@ -84,7 +84,7 @@ void    DevMessage::handle(sihd::core::Channel *channel)
     {
         if (_msg_ptr->field_read_from(channel->array()->buf(), channel->size()) == false)
         {
-            SIHD_LOGF(error, "DevMessage: cannot fill message from channel {}", _channel_msg_in->name());
+            SIHD_LOG(error, "DevMessage: cannot fill message from channel {}", _channel_msg_in->name());
             return ;
         }
         if (_trigger_mode == false)
@@ -100,7 +100,7 @@ void    DevMessage::handle(sihd::core::Channel *channel)
         IMessageField *field = it->second;
         if (field->field_read_from(channel->array()->buf(), channel->size()) == false)
         {
-            SIHD_LOGF(error, "DevMessage: cannot fill field from channel {}", channel->name());
+            SIHD_LOG(error, "DevMessage: cannot fill field from channel {}", channel->name());
             return ;
         }
         if (_trigger_mode == false)
@@ -108,7 +108,7 @@ void    DevMessage::handle(sihd::core::Channel *channel)
             Channel *ch_out = _fields_to_channel_out.at(field);
             if (field->field_write_to(ch_out->data(), ch_out->byte_size()) == false)
             {
-                SIHD_LOGF(error, "DevMessage: cannot write into channel {}", ch_out->name());
+                SIHD_LOG(error, "DevMessage: cannot write into channel {}", ch_out->name());
                 return ;
             }
             ch_out->notify();
@@ -127,12 +127,12 @@ bool    DevMessage::on_init()
     _msg_ptr = this->find<IMessageField>(_msg_path);
     if (_msg_ptr == nullptr)
     {
-        SIHD_LOGF(error, "DevMessage: no message at '{}'", _msg_path);
+        SIHD_LOG(error, "DevMessage: no message at '{}'", _msg_path);
         return false;
     }
     if (_msg_ptr->is_finished() == false)
     {
-        SIHD_LOGF(error, "DevMessage: message is not finished '{}'", _msg_path);
+        SIHD_LOG(error, "DevMessage: message is not finished '{}'", _msg_path);
         return false;
     }
     Node *msg_node = dynamic_cast<Node *>(_msg_ptr);

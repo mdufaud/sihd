@@ -40,7 +40,7 @@ namespace test
         std::string path = FS::combine(tmp_dir.path(), "test_write.csv");
         CsvWriter writer("csv-writer");
 
-        SIHD_LOG(info, "Writing csv: " << path);
+        SIHD_LOG(info, "Writing csv: {}", path);
         EXPECT_TRUE(writer.open(path));
         EXPECT_TRUE(writer.write_commentary(""));
         EXPECT_TRUE(writer.write_commentary("hello world"));
@@ -70,7 +70,7 @@ namespace test
         CsvReader reader("csv-reader");
         std::vector<std::string> values;
 
-        SIHD_LOG(info, "Reading csv: " << path);
+        SIHD_LOG(info, "Reading csv: {}", path);
         EXPECT_TRUE(reader.open(path));
         // must skip the two comments
         EXPECT_TRUE(reader.read_next());

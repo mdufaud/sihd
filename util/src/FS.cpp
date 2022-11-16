@@ -2,6 +2,7 @@
 #include <dirent.h> // DIR...
 #include <stdio.h> // remove
 
+#include <sstream>
 #include <fstream>
 
 #include <sihd/util/FS.hpp>
@@ -206,13 +207,13 @@ bool    FS::remove_directories(std::string_view path)
         {
             if (FS::remove_directory(*it) == false)
             {
-                SIHD_LOG(warning, "Files: cannot remove directory: " << *it);
+                SIHD_LOG(warning, "Files: cannot remove directory: {}", *it);
                 ret = false;
             }
         }
         else if (FS::remove_file(*it) == false)
         {
-            SIHD_LOG(warning, "Files: cannot remove file: " << *it);
+            SIHD_LOG(warning, "Files: cannot remove file: {}", *it);
             ret = false;
         }
     }

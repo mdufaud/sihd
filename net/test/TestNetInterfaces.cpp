@@ -41,8 +41,8 @@ namespace test
         {
             if (iface->name() == "lo")
                 lo = iface;
-            SIHD_LOG(debug, "Interface: " << iface->name() << " -> " << (iface->up() ? "up" : "down"));
-            SIHD_LOG(debug, "Total addresses: " << iface->addresses().size());
+            SIHD_LOG(debug, "Interface: {} -> {}", iface->name(), iface->up() ? "up" : "down");
+            SIHD_LOG(debug, "Total addresses: {}", iface->addresses().size());
             SIHD_LOG(debug, "--- IPV4 ---");
             const struct ifaddrs *ifaddr4 = iface->get_addr(AF_INET);
             if (ifaddr4)
@@ -54,10 +54,10 @@ namespace test
                 struct sockaddr_in broadcast;
                 IpAddr::fill_sockaddr_network_id(netid, *base, mask);
                 IpAddr::fill_sockaddr_broadcast(broadcast, *base, mask);
-                SIHD_LOG(debug, "Base ip: " << IpAddr::ip_str(*base));
-                SIHD_LOG(debug, "Netmask: " << IpAddr::ip_str(mask));
-                SIHD_LOG(debug, "Netid: " << IpAddr::ip_str(netid));
-                SIHD_LOG(debug, "Broadcast: " << IpAddr::ip_str(broadcast));
+                SIHD_LOG(debug, "Base ip: {}", IpAddr::ip_str(*base));
+                SIHD_LOG(debug, "Netmask: {}", IpAddr::ip_str(mask));
+                SIHD_LOG(debug, "Netid: {}", IpAddr::ip_str(netid));
+                SIHD_LOG(debug, "Broadcast: {}", IpAddr::ip_str(broadcast));
             }
             SIHD_LOG(debug, "--- IPV6 ---");
             const struct ifaddrs *ifaddr6 = iface->get_addr(AF_INET6);
@@ -70,10 +70,10 @@ namespace test
                 struct sockaddr_in6 broadcast;
                 IpAddr::fill_sockaddr_network_id(netid, *base, mask);
                 IpAddr::fill_sockaddr_broadcast(broadcast, *base, mask);
-                SIHD_LOG(debug, "Base ip: " << IpAddr::ip_str(*base));
-                SIHD_LOG(debug, "Netmask: " << IpAddr::ip_str(mask));
-                SIHD_LOG(debug, "Netid: " << IpAddr::ip_str(netid));
-                SIHD_LOG(debug, "Broadcast: " << IpAddr::ip_str(broadcast));
+                SIHD_LOG(debug, "Base ip: {}", IpAddr::ip_str(*base));
+                SIHD_LOG(debug, "Netmask: {}", IpAddr::ip_str(mask));
+                SIHD_LOG(debug, "Netid: {}", IpAddr::ip_str(netid));
+                SIHD_LOG(debug, "Broadcast: {}", IpAddr::ip_str(broadcast));
             }
             std::cout << std::endl;
         }

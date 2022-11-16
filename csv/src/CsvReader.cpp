@@ -33,7 +33,7 @@ bool    CsvReader::set_quote_value(int c)
 {
     if (sihd::util::Str::closing_escape_of(c) < 0)
     {
-        SIHD_LOG(error, "CsvReader: quote character '" << c << "' is not supported");
+        SIHD_LOG(error, "CsvReader: quote character '{}' is not supported", c);
         return false;
     }
     _quote = c;
@@ -103,7 +103,7 @@ bool    CsvReader::read_next()
     }
     // ret < 0 can mean an end of file
     if (ret < 0 && errno > 0)
-        SIHD_LOG(error, "CsvReader: read error: " << strerror(errno));
+        SIHD_LOG(error, "CsvReader: read error: {}", strerror(errno));
     return ret >= 0;
 }
 

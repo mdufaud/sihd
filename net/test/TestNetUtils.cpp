@@ -51,19 +51,19 @@ namespace test
         memset(&in, 0, sizeof(in));
 
         EXPECT_TRUE(NetUtils::get_interface_mac(sock, "lo", &in));
-        SIHD_LOG(debug, "Mac: " << IpAddr::ip_str(in));
+        SIHD_LOG(debug, "Mac: {}", IpAddr::ip_str(in));
         EXPECT_NE(IpAddr::ip_str(in), "");
 
         EXPECT_TRUE(NetUtils::get_interface_addr(sock, "lo", &in));
-        SIHD_LOG(debug, "Addr: " << IpAddr::ip_str(in));
+        SIHD_LOG(debug, "Addr: {}", IpAddr::ip_str(in));
         EXPECT_NE(IpAddr::ip_str(in), "");
 
         EXPECT_TRUE(NetUtils::get_interface_broadcast(sock, "lo", &in));
-        SIHD_LOG(debug, "Broadcast: " << IpAddr::ip_str(in));
+        SIHD_LOG(debug, "Broadcast: {}", IpAddr::ip_str(in));
         EXPECT_NE(IpAddr::ip_str(in), "");
 
         EXPECT_TRUE(NetUtils::get_interface_netmask(sock, "lo", &in));
-        SIHD_LOG(debug, "Netmask: " << IpAddr::ip_str(in));
+        SIHD_LOG(debug, "Netmask: {}", IpAddr::ip_str(in));
         EXPECT_NE(IpAddr::ip_str(in), "");
     }
 }

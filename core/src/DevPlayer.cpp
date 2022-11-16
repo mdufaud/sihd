@@ -60,7 +60,7 @@ bool    DevPlayer::set_provider_wait_time(time_t milliseconds)
 {
     if (milliseconds <= 0)
     {
-        SIHD_LOG(error, "DevPlayer: cannot wait for " << milliseconds << " milliseconds");
+        SIHD_LOG(error, "DevPlayer: cannot wait for {} milliseconds", milliseconds);
         return false;
     }
     _collector.set_timeout_milliseconds(milliseconds);
@@ -74,8 +74,7 @@ bool    DevPlayer::add_alias(std::string_view alias_conf)
 
     if (conf.size() != 2)
     {
-        SIHD_LOG(error, "DevReplayer: wrong alias configuration: '" << alias_conf
-                << "' - expected RECORD_CHANNEL_NAME=CHANNEL_PATH");
+        SIHD_LOG(error, "DevReplayer: wrong alias configuration: '{}' - expected RECORD_CHANNEL_NAME=CHANNEL_PATH", alias_conf);
         return false;
     }
     // conf[0] = record_channel_name
@@ -109,7 +108,7 @@ bool    DevPlayer::on_start()
     IProvider<PlayableRecord> *provider = this->find<IProvider<PlayableRecord>>(_provider_path);
     if (provider == nullptr)
     {
-        SIHD_LOG(error, "DevReplayer: could not find provider: " << _provider_path);
+        SIHD_LOG(error, "DevReplayer: could not find provider: {}", _provider_path);
         return false;
     }
     _collector.set_provider(provider);
@@ -128,8 +127,7 @@ bool    DevPlayer::on_start()
         channel_ptr = this->find<Channel>(pair.second);
         if (channel_ptr == nullptr)
         {
-            SIHD_LOG(error, "DevRecorder: channel to record '"
-                        << pair.first << "' not found: " << pair.second);
+            SIHD_LOG(error, "DevRecorder: channel to record '{}' not found: {}", pair.first, pair.second);
             return false;
         }
         _map_channels[pair.first] = channel_ptr;
@@ -165,7 +163,7 @@ bool    DevPlayer::run()
     if (c != nullptr)
         c->write(*record.value);
     else
-        SIHD_LOG(error, "DevPlayer: channel '" << record.name << "' not found");
+        SIHD_LOG(error, "DevPlayer: channel '{}' not found", record.name);
     // notify worker loop that a record has been played
     _waitable.notify(1);
     // if no next record to be played - notify the end of player

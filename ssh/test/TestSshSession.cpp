@@ -47,7 +47,7 @@ namespace test
         session.set_verbosity(SSH_LOG_PROTOCOL);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_key_file(FS::combine(home, ".ssh/id_rsa"));
-        SIHD_LOG(info, "Auth status: " << auth.str());
+        SIHD_LOG(info, "Auth status: {}", auth.str());
         EXPECT_TRUE(auth.success());
 
         session.disconnect();
@@ -55,7 +55,7 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         EXPECT_TRUE(session.connected());
         auth = session.auth_key_auto();
-        SIHD_LOG(info, "Auth status: " << auth.str());
+        SIHD_LOG(info, "Auth status: {}", auth.str());
         EXPECT_TRUE(auth.success());
     }
 
@@ -68,20 +68,20 @@ namespace test
             GTEST_SKIP_("need interactive keyboard");
 
         std::string host = "localhost";
-        SIHD_LOG(info, "Initiating keyboard password connection to @" << host);
+        SIHD_LOG(info, "Initiating keyboard password connection to @{}", host);
         SIHD_LOG(info, "If you don't want to, you can leave user empty to skip the test");
         std::string user;
         std::cout << "User: ";
         fflush(stdout);
         if (LineReader::fast_read_line(user, stdin) == false || user.empty())
             GTEST_SKIP_("no user input");
-        SIHD_LOG(info, "Connection to " << user << "@" << host);
+        SIHD_LOG(info, "Connection to {}@{}", user, host);
         SshSession session;
         GTEST_ASSERT_EQ(session.fast_connect(user, host, 22, SSH_LOG_PROTOCOL | SSH_LOG_DEBUG | SSH_LOG_PACKET | SSH_LOG_WARN), true);
         session.set_verbosity(SSH_LOG_PROTOCOL);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_interactive_keyboard();
-        SIHD_LOG(info, "Auth status: " << auth.str());
+        SIHD_LOG(info, "Auth status: {}", auth.str());
     }
 
     TEST_F(TestSshSession, test_sshsession_connect)

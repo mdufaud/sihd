@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Configurable.hpp>
 
@@ -33,7 +32,7 @@ namespace test
                 this->add_conf("list", &ConfigurableObj::set_list);
                 this->add_conf("json", &ConfigurableObj::set_json);
                 // Multiple args
-                this->add_conf<bool, int>("dual", [&] (bool b, int i) { SIHD_LOG(debug, b << " " << i); return true; });
+                this->add_conf<bool, int>("dual", [&] (bool b, int i) { SIHD_LOG(debug, "{} {}", b, i); return true; });
             }
 
             ~ConfigurableObj() {};

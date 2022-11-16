@@ -44,7 +44,7 @@ bool    Device::do_setup()
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->setup() == false)
         {
-            SIHD_LOG(error, "Device: " << this->name() << " could not setup service: " << name);
+            SIHD_LOG(error, "Device: {} could not setup service: {}", this->name(), name);
             return false;
         }
     }
@@ -58,7 +58,7 @@ bool    Device::do_init()
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->init() == false)
         {
-            SIHD_LOG(error, "Device: " << this->name() << " could not init service: " << name);
+            SIHD_LOG(error, "Device: {} could not init service: {}", this->name(), name);
             return false;
         }
     }
@@ -76,7 +76,7 @@ bool    Device::do_start()
         {
             if (service->start() == false)
             {
-                SIHD_LOG(error, "Device: " << this->name() << " could not start service: " << name);
+                SIHD_LOG(error, "Device: {} could not start service: {}", this->name(), name);
                 ret = false;
                 break ;
             }
@@ -104,7 +104,7 @@ bool    Device::do_stop()
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->stop() == false)
         {
-            SIHD_LOG(error, "Device: " << this->name() << " could not stop service: " << name);
+            SIHD_LOG(error, "Device: {} could not stop service: {}", this->name(), name);
             return false;
         }
     }
@@ -118,7 +118,7 @@ bool    Device::do_reset()
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->reset() == false)
         {
-            SIHD_LOG(error, "Device: " << this->name() << " could not reset service: " << name);
+            SIHD_LOG(error, "Device: {} could not reset service: {}", this->name(), name);
             return false;
         }
     }
