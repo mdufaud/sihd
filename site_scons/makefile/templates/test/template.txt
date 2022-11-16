@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <APP_NAME/MODULE_NAME/CLASS_NAME.hpp>
 
 namespace test
