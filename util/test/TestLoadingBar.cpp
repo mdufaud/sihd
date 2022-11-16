@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/LoadingBar.hpp>
 
 namespace test

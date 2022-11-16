@@ -39,7 +39,7 @@ bool    CsvWriter::set_quote_value(int c)
     if (_end_quote_c < 0)
     {
         _begin_quote_c = -1;
-        SIHD_LOG(error, "CsvWriter: quote character '" << c << "' is not supported");
+        SIHD_LOG(error, "CsvWriter: quote character '{}' is not supported", c);
         return false;
     }
     _begin_quote_c = c;

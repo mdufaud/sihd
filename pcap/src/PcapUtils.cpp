@@ -28,7 +28,7 @@ bool    PcapUtils::init(int opts)
     char errbuf[PCAP_ERRBUF_SIZE];
     PcapUtils::_is_init = pcap_init(opts, errbuf) == 0;
     if (PcapUtils::_is_init == false)
-        SIHD_LOG(error, "PcapUtils: " << errbuf);
+        SIHD_LOG(error, "PcapUtils: {}", errbuf);
 #else
     (void)opts;
 # if defined(__SIHD_WINDOWS__)
@@ -46,7 +46,7 @@ bool    PcapUtils::lookupnet(std::string_view dev, bpf_u_int32 *ip, bpf_u_int32 
 
     int ret = pcap_lookupnet(dev.data(), ip, mask, errbuf);
     if (ret != 0)
-        SIHD_LOG(error, "PcapUtils: " << errbuf);
+        SIHD_LOG(error, "PcapUtils: {}", errbuf);
     return ret;
 }
 

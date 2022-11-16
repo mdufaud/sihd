@@ -1,4 +1,3 @@
-#include <iostream>
 #include <fstream>
 #include <filesystem>
 
@@ -58,6 +57,6 @@ namespace test
         Path::clear("sihd-test");
         EXPECT_EQ(Path::get("sihd-test", "file.txt"), "");
 
-        SIHD_TRACE(Path::find("test/TestPath.cpp"));
+        SIHD_TRACEF(Path::find("test/TestPath.cpp"));
     }
 }

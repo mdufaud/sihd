@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/FS.hpp>
 #include <sihd/util/TmpDir.hpp>
@@ -38,7 +37,7 @@ namespace test
         PcapReader reader("pcap-reader");
 
         std::string path = "test/resources/tcp/anon.pcappng";
-        SIHD_LOG(info, "Reading pcap: " << path);
+        SIHD_LOG(info, "Reading pcap: {}", path);
 
         EXPECT_TRUE(reader.open(path));
         EXPECT_EQ(reader.snaplen(), 65535);
@@ -57,7 +56,7 @@ namespace test
             EXPECT_EQ(hdr->len, size);
             ++n;
         }
-        SIHD_TRACE(n << " packets read");
+        SIHD_TRACE("{} packets read", n);
         EXPECT_EQ(n, 35u);
         EXPECT_TRUE(reader.close());
     }
@@ -70,7 +69,7 @@ namespace test
         PcapWriter writer("pcap-writer");
 
         std::string path = FS::combine(tmp_dir.path(), "test.pcap");
-        SIHD_LOG(info, "Writing pcap: " << path);
+        SIHD_LOG(info, "Writing pcap: {}", path);
 
         EXPECT_TRUE(writer.open(path, DLT_EN10MB));
         EXPECT_EQ(writer.snaplen(), 65535);

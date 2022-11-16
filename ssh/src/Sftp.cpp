@@ -27,13 +27,13 @@ bool    Sftp::open()
     _sftp_session_ptr = sftp_new(_ssh_session_ptr);
     if (_sftp_session_ptr == nullptr)
     {
-        SIHD_LOG(error, "Sftp: failed to create sftp session: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "Sftp: failed to create sftp session: {}", ssh_get_error(_ssh_session_ptr));
         return false;
     }
     int r = sftp_init(_sftp_session_ptr);
     if (r != SSH_FX_OK)
     {
-        SIHD_LOG(error, "Sftp: failed to initialize sftp session: " << this->error());
+        SIHD_LOG(error, "Sftp: failed to initialize sftp session: {}", this->error());
         this->close();
         return false;
     }
@@ -59,7 +59,7 @@ bool    Sftp::send_file(std::string_view local_path, std::string_view remote_pat
     SftpFile remote_file(sftp_open(_sftp_session_ptr, remote_path.data(), flags, mode));
     if (remote_file.get() == nullptr)
     {
-        SIHD_LOG(error, "Sftp: failed to open remote file: '" << remote_path << "' " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "Sftp: failed to open remote file: '{}' {}", remote_path, ssh_get_error(_ssh_session_ptr));
         return false;
     }
     bool ret = true;
@@ -71,7 +71,7 @@ bool    Sftp::send_file(std::string_view local_path, std::string_view remote_pat
         nread = local_file.read(buf, SIHD_SSH_SFTP_BUFSIZE);
         if (nread < 0)
         {
-            SIHD_LOG(error, "Sftp: error reading local file: " << local_path);
+            SIHD_LOG(error, "Sftp: error reading local file: {}", local_path);
             ret = false;
             break ;
         }
@@ -96,7 +96,7 @@ bool    Sftp::get_file(std::string_view remote_path, std::string_view local_path
     SftpFile remote_file(sftp_open(_sftp_session_ptr, remote_path.data(), flags, 0));
     if (remote_file.get() == nullptr)
     {
-        SIHD_LOG(error, "Sftp: failed to open remote file: '" << remote_path << "' " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "Sftp: failed to open remote file: '{}' {}", remote_path, ssh_get_error(_ssh_session_ptr));
         return false;
     }
     bool ret = true;
@@ -108,7 +108,7 @@ bool    Sftp::get_file(std::string_view remote_path, std::string_view local_path
         nread = sftp_read(remote_file.get(), buf, SIHD_SSH_SFTP_BUFSIZE);
         if (nread < 0)
         {
-            SIHD_LOG(error, "Sftp: error reading remote file: " << remote_path);
+            SIHD_LOG(error, "Sftp: error reading remote file: {}", remote_path);
             ret = false;
             break ;
         }
@@ -129,7 +129,7 @@ bool    Sftp::mkdir(std::string_view path, mode_t mode)
 {
     int r = sftp_mkdir(_sftp_session_ptr, path.data(), mode);
     if (r != 0)
-        SIHD_LOG(error, "Sftp: failed to mkdir: '" << path << "' " << this->error());
+        SIHD_LOG(error, "Sftp: failed to mkdir: '{}' {}", path, this->error());
     return r == SSH_FX_OK;
 }
 
@@ -165,7 +165,7 @@ bool    Sftp::list_dir(std::string_view path, std::vector<SftpAttribute> & list)
     SftpDir dir(sftp_opendir(_sftp_session_ptr, path.data()));
     if (dir.get() == nullptr)
     {
-        SIHD_LOG(error, "Stfp: failed to open directory: " << path);
+        SIHD_LOG(error, "Stfp: failed to open directory: {}", path);
         return false;
     }
     while (true)
@@ -180,7 +180,7 @@ bool    Sftp::list_dir(std::string_view path, std::vector<SftpAttribute> & list)
     }
     bool ret = sftp_dir_eof(dir.get()) == 1;
     if (ret == false)
-        SIHD_LOG(error, "Sftp: cannot list directory: " << path);
+        SIHD_LOG(error, "Sftp: cannot list directory: {}", path);
     return ret;
 }
 
@@ -196,7 +196,7 @@ bool    Sftp::rm(std::string_view path)
 {
     int r = sftp_unlink(_sftp_session_ptr, path.data());
     if (r != 0)
-        SIHD_LOG(error, "Sftp: failed to remove: '" << path << "' " << this->error());
+        SIHD_LOG(error, "Sftp: failed to remove: '{}' {}", path, this->error());
     return r == SSH_FX_OK;
 }
 

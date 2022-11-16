@@ -77,7 +77,7 @@ bool    DynMessage::field_read_from(const void *buffer, size_t size)
             continue ;
         if (current + field->field_byte_size() > size)
         {
-            SIHD_LOGF(error, "DynMessage: read error - not enough size {} > {}",
+            SIHD_LOG(error, "DynMessage: read error - not enough size {} > {}",
                         current + field->field_byte_size(), size);
             return false;
         }
@@ -103,7 +103,7 @@ bool    DynMessage::field_write_to(void *buffer, size_t size)
         current += field->field_byte_size();
         if (current > size)
         {
-            SIHD_LOGF(error, "DynMessage: write error - not enough buffer size {} < {}", size, current);
+            SIHD_LOG(error, "DynMessage: write error - not enough buffer size {} < {}", size, current);
             return false;
         }
     }
@@ -115,7 +115,7 @@ bool    DynMessage::hide_field(const std::string & name, bool active)
     const auto it = _fields.find(name);
     if (it == _fields.end())
     {
-        SIHD_LOGF(error, "DynMessage: no such field to {} '{}'", active ? "hide" : "show", name);
+        SIHD_LOG(error, "DynMessage: no such field to {} '{}'", active ? "hide" : "show", name);
         return false;
     }
     if (active)
@@ -142,7 +142,7 @@ IMessageField *DynMessage::clone() const
             cloned->add_field(name, cloned_field);
         else
         {
-            SIHD_LOGF(error, "DynMessage: clone failed for field '{}'", name);
+            SIHD_LOG(error, "DynMessage: clone failed for field '{}'", name);
             error = true;
             break ;
         }

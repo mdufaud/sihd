@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Message.hpp>
 #include <sihd/util/MessageField.hpp>
 #include <sihd/util/DynMessage.hpp>
+
 namespace test
 {
     SIHD_LOGGER;

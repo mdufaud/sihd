@@ -15,7 +15,7 @@ SIHD_NEW_LOGGER("demo");
 void worker()
 {
     Runnable printer([] {
-        SIHD_LOGF(info, "time: {}", Timestamp(Clock::default_clock.now()).local_format());
+        SIHD_LOG(info, "time: {}", Timestamp(Clock::default_clock.now()).local_format());
         return true;
     });
 
@@ -31,7 +31,7 @@ void worker()
 
 void os()
 {
-    SIHD_LOGF(info, "pid: {}", OS::pid());
+    SIHD_LOG(info, "pid: {}", OS::pid());
 }
 
 }

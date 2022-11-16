@@ -33,7 +33,7 @@ bool    PcapWriter::set_datalink(int dtl)
 {
     if (PcapUtils::is_datalink(dtl) == false)
     {
-        SIHD_LOG(error, "PcapWriter: is not a datalink: " << dtl);
+        SIHD_LOG(error, "PcapWriter: is not a datalink: {}", dtl);
         return false;
     }
     _linktype = dtl;
@@ -68,7 +68,7 @@ bool    PcapWriter::open(std::string_view path)
     {
         if ((_pcap_dumper_ptr = pcap_dump_open(_pcap_ptr, path.data())) == nullptr)
         {
-            SIHD_LOG(error, "PcapWriter: can not open pcap for writing: " << path);
+            SIHD_LOG(error, "PcapWriter: can not open pcap for writing: {}", path);
             this->close();
         }
     }

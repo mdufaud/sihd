@@ -145,7 +145,7 @@ bool   Process::stdin_from_file(std::string_view path)
 {
     _stdin.fd_read = open(path.data(), O_RDONLY);
     if (_stdin.fd_read < 0)
-        SIHD_LOG(error, "Process: could not open file input: " << path);
+        SIHD_LOG(error, "Process: could not open file input: {}", path);
     return _stdin.fd_read >= 0;
 }
 
@@ -265,7 +265,7 @@ bool    Process::_fdw_to_file(FileDescWrapper & fdw, std::string_view path, bool
     if (fdw.fd_write >= 0)
         fdw.action = append ? FILE_APPEND : FILE;
     else
-        SIHD_LOG(error, "Process: could not open output file: " << path);
+        SIHD_LOG(error, "Process: could not open output file: {}", path);
     return fdw.fd_write >= 0;
 }
 
@@ -283,7 +283,7 @@ void    Process::_dup_close(int fd_from, int fd_to)
     {
         if (dup2(fd_from, fd_to) == -1)
         {
-            SIHD_LOG(error, "Process: could not duplicate fd: " << strerror(errno));
+            SIHD_LOG(error, "Process: could not duplicate fd: {}", strerror(errno));
         }
         this->_close(fd_from);
     }
@@ -295,7 +295,7 @@ void    Process::_close(int & fd)
         return ;
     if (close(fd) == -1)
     {
-        SIHD_LOG(error, "Process: could not close fd: " << strerror(errno));
+        SIHD_LOG(error, "Process: could not close fd: {}", strerror(errno));
     }
     else
         fd = -1;
@@ -413,7 +413,7 @@ bool    Process::_do_spawn()
     posix_spawn_file_actions_destroy(&actions);
     if (err != 0)
     {
-        SIHD_LOG(error, "Process: " << strerror(errno));
+        SIHD_LOG(error, "Process: {}", strerror(errno));
         return false;
     }
     _pid = pid;
@@ -546,7 +546,7 @@ bool    Process::kill(int sig)
     {
         ret = ::kill(this->pid(), sig) >= 0;
         if (!ret)
-            SIHD_LOG(error, "Process: could not kill: " << strerror(errno));
+            SIHD_LOG(error, "Process: could not kill: {}", strerror(errno));
     }
     return ret;
 }

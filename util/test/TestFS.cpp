@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <fstream>
-#include <iostream>
 #include <filesystem>
 
 #include <sihd/util/Logger.hpp>
@@ -36,7 +35,7 @@ namespace test
 
             bool    log_make_dirs(std::string path)
             {
-                SIHD_LOG(debug, "Making directory: " << path);
+                SIHD_LOG(debug, "Making directory: {}", path);
                 return FS::make_directories(path);
             }
 
@@ -149,14 +148,14 @@ namespace test
         std::vector<std::string> rec_children = FS::recursive_children(sandbox_path);
         for (const auto & child: rec_children)
         {
-            SIHD_LOG(debug, "recursive_children: " << child);
+            SIHD_LOG(debug, "recursive_children: {}", child);
         }
         EXPECT_EQ(rec_children.size(), 6u);
 
         std::vector<std::string> children = FS::children(FS::combine(sandbox_path, "path"));
         for (const auto & child: children)
         {
-            SIHD_LOG(debug, "children: " << child);
+            SIHD_LOG(debug, "children: {}", child);
         }
         EXPECT_EQ(children.size(), 2u);
 
@@ -181,7 +180,7 @@ namespace test
         std::string file_content = "hello world\n";
         EXPECT_TRUE(Str::ends_with(path, "/io/test.txt"));
         EXPECT_TRUE(this->log_make_dirs(FS::parent(path)));
-        SIHD_LOG(info, "Writing file to: " << path);
+        SIHD_LOG(info, "Writing file to: {}", path);
         EXPECT_TRUE(FS::write(path, file_content));
         EXPECT_EQ(FS::read_all(path), file_content);
         EXPECT_EQ(FS::read(path, 5), "hello");

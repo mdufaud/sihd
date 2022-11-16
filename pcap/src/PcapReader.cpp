@@ -38,7 +38,7 @@ bool    PcapReader::open(std::string_view path)
     _pcap_ptr = pcap_open_offline(path.data(), errbuf);
     if (_pcap_ptr == nullptr)
     {
-        SIHD_LOG(error, "PcapReader: " << errbuf << ": " << path);
+        SIHD_LOG(error, "PcapReader: {}: {}", errbuf, path);
         return false;
     }
     _precision = pcap_get_tstamp_precision(_pcap_ptr);
@@ -62,7 +62,7 @@ bool    PcapReader::_open_precision(const char *path, u_int precision)
     _pcap_ptr = pcap_open_offline_with_tstamp_precision(path, precision, errbuf);
     if (_pcap_ptr == nullptr)
     {
-        SIHD_LOG(error, "PcapReader: " << errbuf << ": " << path);
+        SIHD_LOG(error, "PcapReader: {}: {}", errbuf, path);
         return false;
     }
     _precision = pcap_get_tstamp_precision(_pcap_ptr);
@@ -76,7 +76,7 @@ bool    PcapReader::open(FILE *file)
     _pcap_ptr = pcap_fopen_offline(file, errbuf);
     if (_pcap_ptr == nullptr)
     {
-        SIHD_LOG(error, "PcapReader: " << errbuf);
+        SIHD_LOG(error, "PcapReader: {}", errbuf);
         return false;
     }
     _precision = pcap_get_tstamp_precision(_pcap_ptr);
@@ -100,7 +100,7 @@ bool    PcapReader::_open_precision(FILE *file, u_int precision)
     _pcap_ptr = pcap_fopen_offline_with_tstamp_precision(file, precision, errbuf);
     if (_pcap_ptr == nullptr)
     {
-        SIHD_LOG(error, "PcapReader: " << errbuf);
+        SIHD_LOG(error, "PcapReader: {}", errbuf);
         return false;
     }
     _precision = pcap_get_tstamp_precision(_pcap_ptr);
@@ -135,7 +135,7 @@ bool    PcapReader::read_next()
 {
     int ret = pcap_next_ex(_pcap_ptr, &_pkt_hdr_ptr, const_cast<const u_char **>(&_pkt_data_ptr));
     if (ret == PCAP_ERROR)
-        SIHD_LOG(error, "PcapReader: " << this->error());
+        SIHD_LOG(error, "PcapReader: {}", this->error());
     return ret >= 0;
 }
 

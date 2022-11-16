@@ -51,11 +51,11 @@ void    AtExit::exit_callback()
         }
         catch (const std::exception & e)
         {
-           fmt::print(stderr, "AtExit: error while running exit handler: {}\n", e.what());
+            SIHD_CERR("AtExit: error while running exit handler: {}\n", e.what());
         }
         catch (...)
         {
-           fmt::print(stderr, "AtExit: error while running exit handler - non standard exception\n");
+           SIHD_CERR("AtExit: error while running exit handler - non standard exception\n");
         }
         delete runnable;
     }

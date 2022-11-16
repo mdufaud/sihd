@@ -348,7 +348,7 @@ bool    DevFilter::Rule::_parse_trigger_config(const std::map<std::string, std::
     // conf -> trigger
     if (split_trigger.size() == 0 || split_trigger.size() > 2)
     {
-        SIHD_LOG(error, "DevFilter: trigger conf error: " << conf_trigger);
+        SIHD_LOG(error, "DevFilter: trigger conf error: {}", conf_trigger);
         return false;
     }
     if (split_trigger.size() == 1)
@@ -356,13 +356,13 @@ bool    DevFilter::Rule::_parse_trigger_config(const std::map<std::string, std::
         // conf -> trigger=value
         if (split_trigger[0].empty())
         {
-            SIHD_LOG(error, "DevFilter: trigger value empty: '" << conf_trigger << "'");
+            SIHD_LOG(error, "DevFilter: trigger value empty: '{}'", conf_trigger);
             return false;
         }
         this->trigger_idx = 0;
         if (this->trigger_value.from_any_string(split_trigger[0]) == false)
         {
-            SIHD_LOG(error, "DevFilter: cannot convert trigger value: " << split_trigger[0]);
+            SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_trigger[0]);
             return false;
         }
     }
@@ -371,18 +371,18 @@ bool    DevFilter::Rule::_parse_trigger_config(const std::map<std::string, std::
         // conf -> trigger=index:value
         if (split_trigger[0].empty() && split_trigger[1].empty())
         {
-            SIHD_LOG(error, "DevFilter: trigger idx and value empty: '" << conf_trigger << "'");
+            SIHD_LOG(error, "DevFilter: trigger idx and value empty: '{}'", conf_trigger);
             return false;
         }
         if (split_trigger[0].empty() == false
                 && sihd::util::Str::convert_from_string<size_t>(split_trigger[0], this->trigger_idx) == false)
         {
-            SIHD_LOG(error, "DevFilter: cannot convert trigger idx: " << split_trigger[0]);
+            SIHD_LOG(error, "DevFilter: cannot convert trigger idx: {}", split_trigger[0]);
             return false;
         }
         if (split_trigger[1].empty() == false && this->trigger_value.from_any_string(split_trigger[1]) == false)
         {
-            SIHD_LOG(error, "DevFilter: cannot convert trigger value: " << split_trigger[1]);
+            SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_trigger[1]);
             return false;
         }
     }
@@ -403,7 +403,7 @@ bool    DevFilter::Rule::_parse_write_config(const std::map<std::string, std::st
     std::vector<std::string> split_write = splitter.split(conf_write);
     if (split_write.size() == 0 || split_write.size() > 2)
     {
-        SIHD_LOG(error, "DevFilter: write conf error: " << conf_write);
+        SIHD_LOG(error, "DevFilter: write conf error: {}", conf_write);
         return false;
     }
     if (split_write.size() == 1)
@@ -411,14 +411,14 @@ bool    DevFilter::Rule::_parse_write_config(const std::map<std::string, std::st
         // conf -> write=value
         if (split_write[0].empty())
         {
-            SIHD_LOG(error, "DevFilter: write value empty: '" << conf_write << "'");
+            SIHD_LOG(error, "DevFilter: write value empty: '{}'", conf_write);
             return false;
         }
         this->write_idx = this->trigger_idx;
         this->write_same_value = false;
         if (this->write_value.from_any_string(split_write[0]) == false)
         {
-            SIHD_LOG(error, "DevFilter: cannot convert trigger value: " << split_write[0]);
+            SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_write[0]);
             return false;
         }
     }
@@ -427,19 +427,19 @@ bool    DevFilter::Rule::_parse_write_config(const std::map<std::string, std::st
         // conf -> write=index:value
         if (split_write[0].empty() && split_write[1].empty())
         {
-            SIHD_LOG(error, "DevFilter: write idx and value empty: '" << conf_write << "'");
+            SIHD_LOG(error, "DevFilter: write idx and value empty: '{}'", conf_write);
             return false;
         }
         if (split_write[0].empty() == false
                 && sihd::util::Str::convert_from_string<size_t>(split_write[0], this->write_idx) == false)
         {
-            SIHD_LOG(error, "DevFilter: cannot convert write idx: " << split_write[0]);
+            SIHD_LOG(error, "DevFilter: cannot convert write idx: {}", split_write[0]);
             return false;
         }
         this->write_same_value = split_write[1].empty();
         if (this->write_same_value == false && this->write_value.from_any_string(split_write[1]) == false)
         {
-            SIHD_LOG(error, "DevFilter: cannot convert write value: " << split_write[1]);
+            SIHD_LOG(error, "DevFilter: cannot convert write value: {}", split_write[1]);
             return false;
         }
     }

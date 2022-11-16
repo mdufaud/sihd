@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Handler.hpp>
@@ -67,9 +66,9 @@ namespace test
         size_t peak = OS::peak_rss();
         size_t current = OS::current_rss();
 
-        SIHD_LOG(info, "Peak rss: " << peak / (1024 * 1024) << " mb");
-        SIHD_LOG(info, "Current rss: " << current / (1024 * 1024) << " mb");
-        SIHD_LOG(info, "Max file descriptors: " << max_fds);
+        SIHD_LOG(info, "Peak rss: {} mb", peak / (1024 * 1024));
+        SIHD_LOG(info, "Current rss: {} mb", current / (1024 * 1024));
+        SIHD_LOG(info, "Max file descriptors: {}", max_fds);
 
         EXPECT_TRUE(peak > 0);
         EXPECT_TRUE(current > 0);

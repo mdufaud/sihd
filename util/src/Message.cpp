@@ -22,7 +22,7 @@ bool    Message::on_check_link(const std::string & name, Named *child)
 {
     IMessageField *field = dynamic_cast<IMessageField *>(child);
     if (field == nullptr)
-        SIHD_LOGF(error, "Message: cannot add child {} - is not a IMessageField", name);
+        SIHD_LOG(error, "Message: cannot add child {} - is not a IMessageField", name);
     return field != nullptr;
 }
 
@@ -107,7 +107,7 @@ bool    Message::add_field(const std::string & name, IMessageField *msg)
     Named *named = dynamic_cast<Named *>(msg);
     if (named == nullptr)
     {
-        SIHD_LOGF(error, "Message: cannot add '{}' as a child - not a Named object", name);
+        SIHD_LOG(error, "Message: cannot add '{}' as a child - not a Named object", name);
         return false;
     }
     return this->add_child(name, named, true) && this->_add_field_size(msg);
@@ -139,7 +139,7 @@ IMessageField *Message::clone() const
             cloned->add_field(name, cloned_field);
         else
         {
-            SIHD_LOGF(error, "Message: clone failed for field '{}'", name);
+            SIHD_LOG(error, "Message: clone failed for field '{}'", name);
             error = true;
             break ;
         }

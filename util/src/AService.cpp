@@ -26,7 +26,7 @@ bool    AService::OP()\
             Named *obj = dynamic_cast<Named *>(this);\
             if (obj != nullptr)\
             {\
-                SIHD_LOG(warning, "AService: cannot change the state of " << obj->name() << " to " #OP);\
+                SIHD_LOG(warning, "AService: cannot change the state of {} to " #OP, obj->name());\
             }\
         }\
     }\
@@ -36,6 +36,7 @@ bool    AService::OP()\
     }\
     return ret;\
 }\
+\
 bool    AService::do_##OP()\
 {\
     return true;\

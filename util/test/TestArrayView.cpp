@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -47,7 +46,7 @@ namespace test
             {
                 for (int i: view)
                 {
-                    SIHD_LOG(debug, i);
+                    SIHD_LOG(debug, "{}", i);
                 }
                 return view.size();
             }

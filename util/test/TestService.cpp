@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/AService.hpp>
 #include <sihd/util/ServiceController.hpp>
@@ -92,7 +91,7 @@ namespace test
             {
                 ++obs_changed;
                 auto machine = ctrl->statemachine;
-                SIHD_LOG(debug, "Service state: " << machine.state_name(machine.state()));
+                SIHD_LOG(debug, "Service state: {}", machine.state_name(machine.state()));
             }
 
             int obs_changed;

@@ -40,7 +40,7 @@ bool    SshSession::connect()
     while ((r = ssh_connect(_ssh_session_ptr)) == SSH_AGAIN)
         ;
     if (r != SSH_OK)
-        SIHD_LOG(error, "SshSession: connection failed: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshSession: connection failed: {}", ssh_get_error(_ssh_session_ptr));
     return r == SSH_OK;
 }
 
@@ -58,7 +58,7 @@ bool    SshSession::check_hostkey()
     int ret = ssh_get_server_publickey(_ssh_session_ptr, &pubkey_ptr);
     if (ret == SSH_ERROR)
     {
-        SIHD_LOG(error, "SshSession: failed to get public key: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshSession: failed to get public key: {}", ssh_get_error(_ssh_session_ptr));
         return false;
     }
     SshKey pubkey(pubkey_ptr);
@@ -66,7 +66,7 @@ bool    SshSession::check_hostkey()
     ret = ssh_get_publickey_hash(pubkey_ptr, SSH_PUBLICKEY_HASH_SHA1, &hash_ptr, &hash_len);
     if (ret == SSH_ERROR)
     {
-        SIHD_LOG(error, "SshSession: failed to get public key sha1 hash: " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshSession: failed to get public key sha1 hash: {}", ssh_get_error(_ssh_session_ptr));
         return false;
     }
     SshKeyHash hash_pubkey(hash_ptr);
@@ -82,12 +82,12 @@ bool    SshSession::check_hostkey()
         case SSH_KNOWN_HOSTS_UNKNOWN:
             // this->update_known_hosts();
   	        hexa = ssh_get_hexa(hash_ptr, hash_len);
-            SIHD_LOG(warning, "SshSession: host key unknown: " << hexa);
+            SIHD_LOG(warning, "SshSession: host key unknown: {}", hexa);
             free(hexa);
             return true;
         default:
   	        hexa = ssh_get_hexa(hash_ptr, hash_len);
-            SIHD_LOG(error, "SshSession: host key verification failed: " << hexa << " (code = " << state << ")");
+            SIHD_LOG(error, "SshSession: host key verification failed: {} (code = {})", hexa, state);
             break;
     }
 #else
@@ -100,12 +100,12 @@ bool    SshSession::check_hostkey()
         case SSH_SERVER_FILE_NOT_FOUND:
             // this->update_known_hosts();
             hexa = ssh_get_hexa(hash_ptr, hash_len);
-            SIHD_LOG(warning, "SshSession: host key unknown: " << hexa);
+            SIHD_LOG(warning, "SshSession: host key unknown: {}", hexa);
             free(hexa);
             return true;
         default:
   	        hexa = ssh_get_hexa(hash_ptr, hash_len);
-            SIHD_LOG(error, "SshSession: host key verification failed: " << hexa << " (code = " << state << ")");
+            SIHD_LOG(error, "SshSession: host key verification failed: {} (code = {})", hexa, state);
             free(hexa);
             break;
     }
@@ -152,7 +152,7 @@ SshSession::AuthState   SshSession::auth_key_file(std::string_view private_key_p
 
     if (key.import_privkey_file(private_key_path, passphrase))
         return this->auth_key(key);
-    SIHD_LOG(error, "SshSession: failed to get private key from: " << private_key_path);
+    SIHD_LOG(error, "SshSession: failed to get private key from: {}", private_key_path);
     return AuthState(SSH_AUTH_ERROR);
 }
 
@@ -162,7 +162,7 @@ SshSession::AuthState   SshSession::auth_key_try_file(std::string_view public_ke
 
     if (key.import_pubkey_file(public_key_path))
         return this->auth_key_try(key);
-    SIHD_LOG(error, "SshSession: failed to get public key from: " << public_key_path);
+    SIHD_LOG(error, "SshSession: failed to get public key from: {}", public_key_path);
     return AuthState(SSH_AUTH_ERROR);
 }
 
@@ -367,7 +367,7 @@ bool    SshSession::_set(const char *from, ssh_options_e option, const void *val
 {
     int r = ssh_options_set(_ssh_session_ptr, option, value);
     if (r != SSH_OK)
-        SIHD_LOG(error, "SshSession: can't set " << from << ": " << ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshSession: can't set {}: {}", from, ssh_get_error(_ssh_session_ptr));
     return r == SSH_OK;
 }
 

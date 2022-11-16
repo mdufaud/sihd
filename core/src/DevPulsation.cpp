@@ -41,7 +41,7 @@ bool    DevPulsation::set_frequency(double freq)
 {
     if (freq < 0)
     {
-        SIHD_LOG(error, "DevPulsation: impossible frequency: " << freq << " hz");
+        SIHD_LOG(error, "DevPulsation: impossible frequency: {} hz", freq);
         return false;
     }
     _frequency = freq;

@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/FS.hpp>
 #include <sihd/util/Handler.hpp>
@@ -43,7 +42,7 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_key_auto();
-        SIHD_LOG(info, "Auth status: " << auth.str());
+        SIHD_LOG(info, "Auth status: {}", auth.str());
         EXPECT_TRUE(auth.success());
 
         std::string stdout_str;
@@ -74,7 +73,7 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         EXPECT_TRUE(session.connected());
         auto auth = session.auth_key_auto();
-        SIHD_LOG(info, "Auth status: " << auth.str());
+        SIHD_LOG(info, "Auth status: {}", auth.str());
         EXPECT_TRUE(auth.success());
 
         std::string stdout_str;

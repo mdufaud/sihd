@@ -61,7 +61,7 @@ void    Daemon::_handle_sig(int sig)
 {
     if (sig == SIGTERM || sig == SIGSEGV)
     {
-        SIHD_LOG(info, "Daemon: exit signal received: " << OS::signal_name(sig));
+        SIHD_LOG(info, "Daemon: exit signal received: {}", OS::signal_name(sig));
         exit(0);
     }
 #if !defined(__SIHD_WINDOWS__)
@@ -72,7 +72,7 @@ void    Daemon::_handle_sig(int sig)
     }
 #else
 #endif
-    SIHD_LOG(info, "Daemon: signal received: " << OS::signal_name(sig));
+    SIHD_LOG(info, "Daemon: signal received: {}", OS::signal_name(sig));
 }
 
 bool    Daemon::_handle_signals()
@@ -140,7 +140,7 @@ bool    Daemon::run()
     pid_t pid = fork();
     if (pid < 0)
     {
-        SIHD_LOG(error, "Daemon: fork failed: " << strerror(errno));
+        SIHD_LOG(error, "Daemon: fork failed: {}", strerror(errno));
         return false;
     }
     else if (pid > 0)
@@ -151,13 +151,13 @@ bool    Daemon::run()
     pid_t sid = setsid();
     if (sid < 0)
     {
-        SIHD_LOG(error, "Daemon: setsid failed: " << strerror(errno));
+        SIHD_LOG(error, "Daemon: setsid failed: {}", strerror(errno));
         _exit(1);
     }
     // second fork (cannot take a controlling terminal)
     if ((pid = fork()) < 0)
     {
-        SIHD_LOG(error, "Daemon: second fork failed: " << strerror(errno));
+        SIHD_LOG(error, "Daemon: second fork failed: {}", strerror(errno));
         _exit(2);
     }
     if (pid > 0)
@@ -169,7 +169,7 @@ bool    Daemon::run()
     // change directory
     if (chdir(_working_dir_path.c_str()) < 0)
     {
-        SIHD_LOG(error, "Daemon: chdir failed: " << strerror(errno));
+        SIHD_LOG(error, "Daemon: chdir failed: {}", strerror(errno));
         _exit(3);
     }
     // change uid
@@ -178,11 +178,11 @@ bool    Daemon::run()
         // set right ownership to pid file
         if (chown(_pid_file_path.c_str(), _uid, 0) != 0)
         {
-            SIHD_LOG(warning, "Daemon: can't set pid file ownership to uid: " << _uid);
+            SIHD_LOG(warning, "Daemon: can't set pid file ownership to uid: {}", _uid);
         }
         if (setuid(_uid) != 0)
         {
-            SIHD_LOG(warning, "Daemon: can't set process ownership to uid: " << _uid);
+            SIHD_LOG(warning, "Daemon: can't set process ownership to uid: {}", _uid);
         }
     }
     // close file descriptors
@@ -202,11 +202,13 @@ bool    Daemon::run()
         SIHD_LOG(warning, "Daemon: could not open back stdin file number");
     }
     */
-    SIHD_LOG(info, "Daemon: started with pid: " << getpid());
+    SIHD_LOG(info, "Daemon: started with pid: {}", getpid());
     return true;
 }
 
 #else
+
+#pragma message("TODO windows")
 
 bool    Daemon::run()
 {
@@ -215,7 +217,7 @@ bool    Daemon::run()
     FreeConsole();
     if (chdir(_working_dir_path.c_str()) < 0)
     {
-        SIHD_LOG(error, "Daemon: chdir failed: " << strerror(errno));
+        SIHD_LOG(error, "Daemon: chdir failed: {}", strerror(errno));
         return false;
     }
     return true;

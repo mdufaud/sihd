@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/zip/ZipWriter.hpp>
 #include <sihd/zip/ZipReader.hpp>
@@ -46,12 +45,12 @@ namespace test
         EXPECT_TRUE(writer.set_aes_encryption(128));
         EXPECT_FALSE(writer.set_conf("aes", 10));
 
-        SIHD_LOG(info, "Creating zip archive: " << zip_path);
+        SIHD_LOG(info, "Creating zip archive: {}", zip_path);
         EXPECT_TRUE(writer.open(zip_path));
 
         // Adding fs directory
         std::string entry = "test/resources/to_zip";
-        SIHD_LOG(info, "Zipping: " << entry);
+        SIHD_LOG(info, "Zipping: {}", entry);
         EXPECT_TRUE(writer.fs_add(entry, "to_zip"));
 
         const char hw[] = "hello test world";
@@ -120,7 +119,7 @@ namespace test
         while (reader.read_next())
         {
             EXPECT_TRUE(reader.get_read_data(&data, &size));
-            SIHD_LOG(info, "Zip entry: " << data);
+            SIHD_LOG(info, "Zip entry: {}", data);
             if (reader.is_entry_directory())
             {
                 SIHD_LOG(info, "-> directory");
@@ -133,7 +132,7 @@ namespace test
                 {
                     // removing linefeed from text
                     data[size - 1] = 0;
-                    SIHD_LOG(info, "-> content: " << data);
+                    SIHD_LOG(info, "-> content: {}", data);
                 }
                 else
                     SIHD_LOG(info, "-> empty");
