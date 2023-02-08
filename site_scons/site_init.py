@@ -93,6 +93,55 @@ def copy_module_res_into_build(module_name, src, dst, must_exist = True):
 # Scons helpers
 ###############################################################################
 
+__node_count = 0
+__node_count_max = 0
+
+def build_add_progress_bar(targets, node_count_interval=1):
+    global __node_count
+    global __node_count_max
+
+    try:
+        screen = open('/dev/tty', 'w')
+        __node_count = 0
+        __node_count_max = len(targets)
+
+        def progress_function(node):
+            if node not in targets:
+                return
+            global __node_count
+            __node_count += 1
+            if __node_count_max > 0 :
+                screen.write('\r[%3d%%] ' % (__node_count * 100 / __node_count_max))
+
+        Progress(progress_function, interval = node_count_interval)
+    except (OSError, IOError) as e:
+        builder.error("won't display progress - reason: " + str(e))
+
+def build_print_built(binaries, demos, tests):
+    for modname, binpaths in binaries.items():
+        builder.info("module {} binaries:".format(modname))
+        for binpath in binpaths:
+            builder.info("\t{}".format(binpath))
+
+    for modname, demopaths in demos.items():
+        builder.info("module {} demos:".format(modname))
+        for demopath in demopaths:
+            builder.info("\t{}".format(demopath))
+
+    for modname, testpaths in tests.items():
+        builder.info("module {} tests:".format(modname))
+        for testpath in testpaths:
+            builder.info("\t{}".format(testpath))
+
+def build_print_status(success, failures_message):
+    if not success:
+        print_err("==============================================================")
+        builder.error("BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
+        builder.error(failures_message)
+        print_err("==============================================================")
+    else:
+        builder.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
+
 def build_failure_to_str(bf):
     """ Convert an element of GetBuildFailures() to a string in a useful way """
     import SCons.Errors

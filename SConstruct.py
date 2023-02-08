@@ -640,23 +640,7 @@ for conf in modules_build_order:
 # Scons progress build output
 ###############################################################################
 
-try:
-    screen = open('/dev/tty', 'w')
-    node_count = 0
-    node_count_max = len(targets)
-    node_count_interval = 1
-
-    def progress_function(node):
-        if node not in targets:
-            return
-        global node_count
-        node_count += 1
-        if node_count_max > 0 :
-            screen.write('\r[%3d%%] ' % (node_count * 100 / node_count_max))
-
-    Progress(progress_function, interval = 1)
-except (OSError, IOError) as e:
-    builder.error("won't display progress - reason: " + str(e))
+build_add_progress_bar(targets)
 
 ###############################################################################
 # Scons after build
@@ -664,38 +648,13 @@ except (OSError, IOError) as e:
 
 import atexit
 
-def display_built():
-    for modname, binaries in modules_generated_bins.items():
-        builder.info("module {} binaries:".format(modname))
-        for binpath in binaries:
-            builder.info("\t{}".format(binpath))
-
-    for modname, demos in modules_generated_demos.items():
-        builder.info("module {} demos:".format(modname))
-        for demopath in demos:
-            builder.info("\t{}".format(demopath))
-
-    for modname, tests in modules_generated_tests.items():
-        builder.info("module {} tests:".format(modname))
-        for testpath in tests:
-            builder.info("\t{}".format(testpath))
-
-def display_build_status(success, failures_message):
-    if not success:
-        print_err("==============================================================")
-        builder.error("BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
-        builder.error(failures_message)
-        print_err("==============================================================")
-    else:
-        builder.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
-
 def after_build():
     success, failures_message = build_status()
-    display_build_status(success, failures_message)
+    build_print_status(success, failures_message)
     if is_dry_run:
         return
     if success and hasattr(app, "on_build_success"):
-        display_built()
+        build_print_built(modules_generated_bins, modules_generated_demos, modules_generated_tests)
         app.on_build_success(build_modules, builder)
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules, builder)
