@@ -6,22 +6,24 @@
 #include <sihd/util/SigWaiter.hpp>
 #include <sihd/util/Runnable.hpp>
 
+#include <argparse/argparse.hpp>
+
 using namespace sihd::util;
 
 namespace demo {
 
 SIHD_NEW_LOGGER("demo");
 
-void worker()
+void worker(double frequency)
 {
     Runnable printer([] {
-        SIHD_LOG(info, "time: {}", Timestamp(Clock::default_clock.now()).local_format());
+        SIHD_LOG(info, "time: {}", Timestamp::now().local_format());
         return true;
     });
 
     StepWorker worker;
     worker.set_runnable(&printer);
-    worker.set_frequency(10);
+    worker.set_frequency(frequency);
     worker.start_sync_worker("worker");
 
     SigWaiter sigwait;
@@ -36,12 +38,28 @@ void os()
 
 }
 
-int main()
+int main(int argc, char **argv)
 {
+    argparse::ArgumentParser program("sihd_util_demo");
+
+    program.add_argument("--worker-frequency")
+      .help("Change the worker execution frequency in HZ")
+      .default_value(10.0)
+      .scan<'g', double>();
+
+    try {
+      program.parse_args(argc, argv);
+    }
+    catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      std::exit(1);
+    }
+
     LoggerManager::basic();
 
     demo::os();
-    demo::worker();
+    demo::worker(program.get<double>("worker-frequency"));
 
     LoggerManager::clear_loggers();
     return 0;

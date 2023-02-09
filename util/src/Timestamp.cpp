@@ -1,6 +1,7 @@
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Str.hpp>
+#include <sihd/util/Clocks.hpp>
 
 namespace sihd::util
 {
@@ -70,6 +71,11 @@ Timestamp::Timestamp(std::chrono::hours duration): _nano(Time::duration<std::rat
 
 Timestamp::~Timestamp()
 {
+}
+
+Timestamp Timestamp::now()
+{
+  return Timestamp(Clock::default_clock.now());
 }
 
 bool    Timestamp::in_interval(Timestamp from, Timestamp offset) const

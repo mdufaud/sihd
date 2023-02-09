@@ -11,12 +11,12 @@ if builder.build_compiler == "em":
     builder.warning("To get external libraries, use command: make dep mod demo compiler=em")
 
     # must create specific env with just util as dependencies
-    emscripten_util_env = env.get_depends_env(depends = ["util"])
+    emscripten_util_env = env.create_module_env(depends = ["util"])
     emscripten_util_env.Append(CPPFLAGS = ["-s", "WASM=1"])
     emscripten_util_env.build_bin(["src/emscripten_hello_world.cpp"], name = "hello_world.html")
 
     # must create specific env with just util and imgui as dependencies as it does not compile with pcap/http
-    emscripten_imgui_env = env.get_depends_env(depends = ["util", "imgui"])
+    emscripten_imgui_env = env.create_module_env(depends = ["util", "imgui"])
     emscripten_imgui_env.Replace(
         CPPFLAGS = [
             "-DIMGUI_DISABLE_FILE_FUNCTIONS",

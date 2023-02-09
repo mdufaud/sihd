@@ -115,6 +115,8 @@ class Timestamp
             return Timestamp(Time::duration<T>(duration));
         }
 
+        static Timestamp now();
+
         bool is_leap_year() const;
 
         operator time_t() const { return _nano; }
