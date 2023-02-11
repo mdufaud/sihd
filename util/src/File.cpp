@@ -370,9 +370,9 @@ ssize_t File::write(const char *str, size_t size)
     return ret;
 }
 
-ssize_t File::write(ArrViewChar view)
+ssize_t File::write(std::string_view view)
 {
-    return this->write(view.data(), view.byte_size());
+    return this->write(view.data(), view.size());
 }
 
 bool    File::write_char(int c)

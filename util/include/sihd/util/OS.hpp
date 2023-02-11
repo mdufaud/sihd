@@ -1,7 +1,7 @@
 #ifndef __SIHD_UTIL_OS_HPP__
 # define __SIHD_UTIL_OS_HPP__
 
-# include <sihd/util/platform.hpp>
+# include <sys/stat.h>
 
 # include <string>
 # include <string_view>
@@ -9,22 +9,19 @@
 # include <list>
 # include <mutex>
 
-# include <sys/stat.h>
+# include <sihd/util/platform.hpp>
 
 # if !defined(__SIHD_WINDOWS__)
 
-#  include <sys/resource.h>
-#  include <sys/socket.h>
+#  include <sys/socket.h> // socklen_t
+#  include <sys/resource.h> // rlim_t
 
 typedef rlim_t sihd_rlim_t;
 typedef uid_t sihd_uid_t;
 
 # else
 
-#  include <winsock2.h>
-#  include <ws2def.h>
-#  include <winsock.h>
-#  include <ws2tcpip.h>
+#  include <ws2tcpip.h> // socklen_t
 
 typedef unsigned long sihd_rlim_t;
 typedef unsigned int sihd_uid_t;

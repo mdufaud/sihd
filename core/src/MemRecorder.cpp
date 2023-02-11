@@ -1,3 +1,5 @@
+#include <nlohmann/json.hpp>
+
 #include <sihd/core/MemRecorder.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
@@ -91,30 +93,30 @@ void    MemRecorder::handle(const std::string & name, const Channel *channel)
 
 std::string     MemRecorder::hexdump_records()
 {
-    std::stringstream ss;
-    for (const auto & map_pair: _map_record)
+    std::string str;
+    for (const auto & [channel_name, recorded_values_lst]: _map_record)
     {
-        ss << "Channel " << map_pair.first << " (" << map_pair.second.size() << "):" << std::endl;
-        for (const RecordedValue & value: map_pair.second)
+        str += fmt::format("Channel {} ({}):\n", channel_name, recorded_values_lst.size());
+        for (const auto & [time, value]: recorded_values_lst)
         {
-            ss << value.first << ": " << value.second->hexdump(' ') << std::endl;
+            str += fmt::format("  {}: {}\n", time, value->hexdump(' '));
         }
     }
-    return ss.str();
+    return str;
 }
 
 std::string     MemRecorder::hexdump_timeline(std::string_view separation_cols, char separation_data)
 {
     auto lock = std::lock_guard(_mutex);
-    std::stringstream ss;
-    for (const auto & map_pair: _map_sorted_records)
+
+    std::string str;
+    for (const auto & [_, playable_record]: _map_sorted_records)
     {
-        ss << map_pair.second.name << separation_cols
-            << map_pair.second.timestamp << separation_cols
-            << map_pair.second.value->hexdump(separation_data)
-            << std::endl;
+        str += fmt::format("{}{}{}{}{}\n", playable_record.name,
+                            separation_cols, playable_record.timestamp,
+                            separation_cols, playable_record.value->hexdump(separation_data));
     }
-    return ss.str();
+    return str;
 }
 
 bool    MemRecorder::do_start()

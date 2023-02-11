@@ -4,7 +4,6 @@
 # include <sihd/util/Node.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/IRunnable.hpp>
-
 # include <sihd/util/Handler.hpp>
 # include <sihd/util/File.hpp>
 # include <sihd/util/OS.hpp>

@@ -2,14 +2,12 @@
 # define __SIHD_UTIL_STR_HPP__
 
 # include <vector>
-# include <string>
 # include <string_view>
 # include <mutex>
 # include <map>
 
 # include <fmt/format.h>
 
-# include <sihd/util/Container.hpp>
 # include <sihd/util/Timestamp.hpp>
 # include <sihd/util/IArray.hpp>
 # include <sihd/util/IArrayView.hpp>
@@ -51,31 +49,6 @@ class Str
         // iec -> 1K = 1024B
         static std::string bytes_str(ssize_t bytes, bool iec = true);
 
-        template <typename T>
-        static std::string container_str(const T & container, Container::disable_if_map<T> = 0)
-        {
-            static_assert(Container::IsIterable<T>::value);
-            std::string s = "[";
-            for (auto it = container.begin(), first = it; it != container.end(); ++it)
-            {
-                s += fmt::format("{}{}", it != first ? ", " : "", *it);
-            }
-            s += "]";
-            return s;
-        }
-
-        template <typename T>
-        static std::string container_str(const T & container, Container::enable_if_map<T> = 0)
-        {
-            std::string s = "{";
-            for (auto it = container.begin(), first = it; it != container.end(); ++it)
-            {
-                s += fmt::format("{}{}: {}", it != first ? ", " : "", it->first, it->second);
-            }
-            s += "}";
-            return s;
-        }
-
         static bool is_escape_sequence_open(int c, const char *authorized_open_escape_sequences = nullptr);
         static bool is_escape_sequence_close(int c, const char *authorized_close_escape_sequences = nullptr);
         /**
@@ -107,18 +80,33 @@ class Str
         template <typename ...Args>
         static std::string format_join(std::string_view sep, Args && ...args)
         {
-            const size_t size = (sizeof...(Args) * sep.size());
-            char braces[size + 1];
+            constexpr char brace[] = "{}";
+            constexpr int brace_size = sizeof(brace) - 1;
 
-            uint i = 0;
-            while (i < size)
+            if (sizeof...(Args) == 0)
+                return "";
+
+            // fun(sep, "a", "b", "c") -> {}sep{}sep{} -> a,b,c
+            const size_t number_of_sep = sizeof...(Args) - 1;
+            const size_t size = (sizeof...(Args) * brace_size) + (number_of_sep * sep.size());
+            char format_str[size + 1];
+            format_str[size] = 0;
+
+            int i = 0;
+            size_t current_sep = 0;
+            while (current_sep <= number_of_sep)
             {
-                braces[i] = sep[i % sep.size()];
-                ++i;
+                if (current_sep > 0)
+                {
+                    strncpy(format_str + i, sep.data(), sep.size());
+                    i += sep.size();
+                }
+                strcpy(format_str + i, brace);
+                i += brace_size;
+                ++current_sep;
             }
-            braces[i] = '\0';
 
-            return fmt::vformat(std::string_view(braces, size), fmt::make_format_args(args...));
+            return fmt::format(std::string_view(format_str, size), std::forward<Args>(args)...);
         };
 
         static std::string trim(std::string_view s);

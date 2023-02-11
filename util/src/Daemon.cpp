@@ -1,5 +1,6 @@
-#include <signal.h>
 #include <unistd.h>
+
+#include <csignal>
 
 #include <sihd/util/Daemon.hpp>
 #include <sihd/util/Logger.hpp>

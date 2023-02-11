@@ -61,6 +61,31 @@ class Container
             return ret;
         }
 
+        template <typename T>
+        static std::string container_str(const T & container, Container::disable_if_map<T> = 0)
+        {
+            static_assert(Container::IsIterable<T>::value);
+            std::string s = "[";
+            for (auto it = container.begin(), first = it; it != container.end(); ++it)
+            {
+                s += fmt::format("{}{}", it != first ? ", " : "", *it);
+            }
+            s += "]";
+            return s;
+        }
+
+        template <typename T>
+        static std::string container_str(const T & container, Container::enable_if_map<T> = 0)
+        {
+            std::string s = "{";
+            for (auto it = container.begin(), first = it; it != container.end(); ++it)
+            {
+                s += fmt::format("{}{}: {}", it != first ? ", " : "", it->first, it->second);
+            }
+            s += "}";
+            return s;
+        }
+
     private:
         Container() {};
 };

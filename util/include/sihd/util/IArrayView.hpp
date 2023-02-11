@@ -2,7 +2,6 @@
 # define __SIHD_UTIL_IARRAYVIEW_HPP__
 
 # include <string_view>
-# include <string>
 
 # include <sihd/util/Types.hpp>
 

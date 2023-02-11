@@ -1,7 +1,6 @@
 #ifndef __SIHD_UTIL_TIMESTAMP_HPP__
 # define __SIHD_UTIL_TIMESTAMP_HPP__
 
-# include <chrono>
 # include <string>
 
 # include <sihd/util/Time.hpp>

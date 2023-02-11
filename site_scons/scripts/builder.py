@@ -291,7 +291,7 @@ build_obj_path = join(build_path, "obj")
 # App settings sanatizer
 ###############################################################################
 
-allowed_compilers = ("gcc", "clang", "em")
+allowed_compilers = ("gcc", "clang", "em", "mingw")
 
 def verify_args(app):
     global build_static_libs

@@ -1,9 +1,9 @@
 #include <string.h> // strcmp
 #include <dirent.h> // DIR...
-#include <stdio.h> // remove
 
 #include <sstream>
 #include <fstream>
+#include <cstdio> // remove
 
 #include <sihd/util/FS.hpp>
 #include <sihd/util/Logger.hpp>
@@ -518,21 +518,21 @@ bool    FS::remove_file(std::string_view path)
     return remove(path.data()) == 0;
 }
 
-bool    FS::write(std::string_view path, ArrViewChar view, bool append)
+bool    FS::write(std::string_view path, std::string_view view, bool append)
 {
     File file(path, append ? "a" : "w");
 
     if (file.is_open())
-        return file.write(view) == (ssize_t)view.byte_size();
+        return file.write(view) == (ssize_t)view.size();
     return false;
 }
 
-bool    FS::write_binary(std::string_view path, ArrViewChar view, bool append)
+bool    FS::write_binary(std::string_view path, std::string_view view, bool append)
 {
     File file(path, append ? "ab" : "wb");
 
     if (file.is_open())
-        return file.write(view) == (ssize_t)view.byte_size();
+        return file.write(view) == (ssize_t)view.size();
     return -1;
 }
 

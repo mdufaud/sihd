@@ -48,6 +48,7 @@ modules = {
         "linux-extlibs": ['libuuid'],
         "linux-libs": ['dl', 'rt', 'uuid'],
         "windows-libs": ['rpcrt4'],
+        "windows-defines": ["FMT_HEADER_ONLY"],
         "em-defines": ["FMT_HEADER_ONLY"],
     },
     "core": {

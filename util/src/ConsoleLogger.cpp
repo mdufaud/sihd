@@ -1,7 +1,6 @@
 #include <sihd/util/ConsoleLogger.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Term.hpp>
-#include <sihd/util/platform.hpp>
 
 namespace sihd::util
 {

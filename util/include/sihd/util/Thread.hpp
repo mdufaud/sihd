@@ -1,12 +1,12 @@
 #ifndef __SIHD_UTIL_THREAD_HPP__
 # define __SIHD_UTIL_THREAD_HPP__
 
+# include <cstring>
 # include <thread>
 # include <string>
 # include <map>
 # include <mutex>
 
-# include <string.h>
 
 namespace sihd::util
 {

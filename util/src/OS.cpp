@@ -1,28 +1,22 @@
-#include <sihd/util/platform.hpp>
-
 #include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <limits.h>
-#include <signal.h>
+
+#include <sihd/util/platform.hpp>
 
 // for get_max_rss / peak_rss
 #if defined(__SIHD_WINDOWS__)
 
 # include <winsock2.h>
 # include <windows.h>
+# include <ws2def.h>
+# include <winsock.h>
+# include <winsock2.h>
 # include <psapi.h>
 # include <debugapi.h>
 # include <direct.h> // _stat
 
-#elif defined(__SIHD_UNIX__) || defined(__SIHD_APPLE__)
+#elif defined(__SIHD_APPLE__)
 
-# include <unistd.h>
-# include <sys/resource.h>
-# if defined(__SIHD_APPLE__)
-#  include <mach/mach.h>
-# endif
+# include <mach/mach.h>
 
 #elif defined(__SIHD_AIX__) || defined(__SIHD_SUN__)
 
@@ -53,6 +47,11 @@
 typedef void (*sighandler_t)(int);
 #endif
 
+#include <csignal>
+#include <climits>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
 #include <vector>
 #include <algorithm>
 

@@ -1,9 +1,8 @@
 #ifndef __SIHD_UTIL_LOGINFO_HPP__
 # define __SIHD_UTIL_LOGINFO_HPP__
 
-# include <time.h>
+# include <ctime>
 
-# include <string>
 # include <string_view>
 
 # include <sihd/util/Thread.hpp>

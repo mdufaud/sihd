@@ -1,13 +1,11 @@
 #ifndef __SIHD_UTIL_FS_HPP__
 # define __SIHD_UTIL_FS_HPP__
 
-# include <sys/stat.h>
-
 # include <optional>
 # include <initializer_list>
-
-# include <sihd/util/Str.hpp> // Str utils, vector, sstream, string
-# include <sihd/util/ArrayView.hpp>
+# include <string>
+# include <string_view>
+# include <vector>
 
 namespace sihd::util
 {
@@ -71,9 +69,9 @@ class FS
         static std::optional<std::string> read_all(std::string_view path);
 
         // fast binary write into file
-        static bool write_binary(std::string_view path, ArrViewChar view, bool append = false);
+        static bool write_binary(std::string_view path, std::string_view view, bool append = false);
         // fast write into file
-        static bool write(std::string_view path, ArrViewChar view, bool append = false);
+        static bool write(std::string_view path, std::string_view view, bool append = false);
 
         inline static std::string sep_str() { return std::string(1, FS::sep); };
         static char sep;

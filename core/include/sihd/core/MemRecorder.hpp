@@ -1,12 +1,13 @@
 #ifndef __SIHD_CORE_MEMRECORDER_HPP__
 # define __SIHD_CORE_MEMRECORDER_HPP__
 
+# include <nlohmann/json_fwd.hpp>
+
 # include <sihd/util/IHandler.hpp>
 # include <sihd/util/Providers.hpp>
 # include <sihd/core/Channel.hpp>
 # include <sihd/core/Records.hpp>
 # include <sihd/core/ACoreObject.hpp>
-# include <nlohmann/json.hpp>
 
 namespace sihd::core
 {

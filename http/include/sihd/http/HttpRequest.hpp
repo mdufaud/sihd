@@ -1,7 +1,7 @@
 #ifndef __SIHD_HTTP_HTTPREQUEST_HPP__
 # define __SIHD_HTTP_HTTPREQUEST_HPP__
 
-# include <nlohmann/json.hpp>
+# include <nlohmann/json_fwd.hpp>
 
 # include <sihd/util/Array.hpp>
 # include <sihd/util/ArrayView.hpp>

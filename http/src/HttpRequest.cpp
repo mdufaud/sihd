@@ -1,3 +1,5 @@
+#include <nlohmann/json.hpp>
+
 #include <sihd/util/Str.hpp>
 
 #include <sihd/http/HttpRequest.hpp>
