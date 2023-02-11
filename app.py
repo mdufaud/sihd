@@ -194,8 +194,8 @@ gcc_flags = [
     "-Wl,-z,now",
     "-Wl,-z,relro",
     # hide pragma messages
-    "-ftrack-macro-expansion=0",
-    "-fno-diagnostics-show-caret",
+    # "-ftrack-macro-expansion=0",
+    # "-fno-diagnostics-show-caret",
 ]
 
 ## clang specifics

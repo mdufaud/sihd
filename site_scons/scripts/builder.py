@@ -5,6 +5,7 @@ import glob
 import shutil
 import tarfile
 import subprocess
+import datetime
 from os.path import join, dirname, abspath
 sys.path.append(".")
 try:
@@ -50,17 +51,35 @@ term_colors = TermColors()
 # Build log
 ###############################################################################
 
+def __log(color, level, *msg, file=sys.stdout):
+    datestr = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{color}[{datestr}] builder [{level}]:", *msg, term_colors.reset, file=file)
+
 def debug(*msg):
-    print(term_colors.blue + "builder [debug]:", *msg, term_colors.reset)
+    __log(term_colors.blue, "debug", *msg)
 
 def info(*msg):
-    print(term_colors.green + "builder [info]:", *msg, term_colors.reset)
+    __log(term_colors.green, "info", *msg)
 
 def warning(*msg):
-    print(term_colors.orange + "builder [warning]:", *msg, term_colors.reset)
+    __log(term_colors.orange, "warning", *msg)
 
 def error(*msg):
-    print(term_colors.red + "builder [error]:", *msg, term_colors.reset, file=sys.stderr)
+    __log(term_colors.red, "error", *msg, )
+
+###############################################################################
+# Utils
+###############################################################################
+
+def safe_symlink(src, dst):
+    if not os.path.exists(src):
+        return False
+    if os.path.isfile(dst):
+        os.remove(dst)
+    if not os.path.exists(dst):
+        info(f"Linking {src} -> {dst}")
+        os.symlink(src, dst, target_is_directory=os.path.isdir(src))
+    return True
 
 ###############################################################################
 # OS settings
@@ -215,6 +234,9 @@ def get_force_build_modules():
 def is_static_libs():
     return get_opt("static", "") == "1"
 
+def force_git_clone():
+    return get_opt("fgit", "") == "1"
+
 ###############################################################################
 # Build initialisation
 ###############################################################################
@@ -247,7 +269,7 @@ build_dist_path = join(build_root_path, "dist")
 # path BUILD
 build_entry_path = join(build_root_path, "build")
 build_last_link_path = join(build_entry_path, "last")
-build_path = join(build_entry_path, "{}-{}".format(build_platform, build_architecture), build_mode)
+build_path = join(build_entry_path, f"{build_platform}-{build_architecture}", build_mode)
 
 build_extlib_path = join(build_path, "extlib")
 build_extlib_bin_path = join(build_extlib_path, "bin")
@@ -269,16 +291,18 @@ build_obj_path = join(build_path, "obj")
 # App settings sanatizer
 ###############################################################################
 
+allowed_compilers = ("gcc", "clang", "em")
+
 def verify_args(app):
     global build_static_libs
     ret = True
     if is_msys() and not is_msys_mingw():
         error("msys2 supported for mingw64 only")
         ret = False
-    if build_compiler == "mingw":
-        error("please use msys2 instead of mingw")
-        ret = False
-    if build_compiler not in ("gcc", "clang", "em"):
+    # if build_compiler == "mingw":
+    #     error("please use msys2 instead of mingw")
+    #     ret = False
+    if build_compiler not in allowed_compilers:
         error("compiler {} is not supported".format(build_compiler))
         ret = False
     if hasattr(app, "modes") and build_mode not in app.modes:
@@ -354,10 +378,7 @@ def copy_dll_to_build(modules_build_order):
 ###############################################################################
 
 def symlink_build():
-    if os.path.isfile(build_last_link_path):
-        os.remove(build_last_link_path)
-    if not os.path.exists(build_last_link_path):
-        os.symlink(build_path, build_last_link_path)
+    safe_symlink(build_path, build_last_link_path)
 
 ###############################################################################
 # TAR distribution

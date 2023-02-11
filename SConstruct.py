@@ -24,6 +24,7 @@ sys.dont_write_bytecode = False
 
 from site_scons.scripts import modules
 from site_scons.scripts import builder
+from site_scons.scripts import scons_utils
 
 builder.info("building {}".format(app.name))
 builder.info("building to: {}".format(builder.build_path))
@@ -140,6 +141,7 @@ base_env = Environment(
     LIBS = global_platform_libs + global_libs,
     # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
+    COMPILATIONDB_USE_ABSPATH = True
 )
 
 # Build output
@@ -260,17 +262,19 @@ if builder.is_static_libs():
 
 
 # add platform_[flags/defines/link/libs]
-add_env_app_conf(app, base_env, builder.build_platform)
+scons_utils.add_env_app_conf(app, base_env, builder.build_platform)
 if build_mode:
     # add mode_[flags/defines/link/libs]
-    add_env_app_conf(app, base_env, build_mode)
+    scons_utils.add_env_app_conf(app, base_env, build_mode)
 
 # add compiler_[flags/defines/link/libs]
-add_env_app_conf(app, base_env, compiler)
+scons_utils.add_env_app_conf(app, base_env, compiler)
 
 ###############################################################################
 # Scons options
 ###############################################################################
+
+is_dry_run = bool(GetOption("no_exec"))
 
 num_jobs = GetOption("num_jobs")
 if num_jobs <= 1:
@@ -280,10 +284,11 @@ if num_jobs <= 1:
         num_jobs -= 2
     SetOption("num_jobs", num_jobs)
 
+compilation_db_path = os.path.join(builder.build_path, "compile_commands.json")
 try:
     base_env.Tool('compilation_db')
-    base_env["COMPILATIONDB_PATH_FILTER"] = os.path.join(builder.build_path, "*")
-    base_env.CompilationDatabase()
+    base_env["COMPILATIONDB_PATH_FILTER"] = f"*[!{builder.build_path}].*"
+    base_env.CompilationDatabase(compilation_db_path)
 except Exception as e:
     pass
 
@@ -315,7 +320,7 @@ def add_targets(src):
 
 def _env_copy_into_build(self, src, dst):
     module_name = self['APP_MODULE_NAME']
-    copy_module_res_into_build(module_name, src, dst)
+    scons_utils.copy_module_res_into_build(module_name, src, dst, is_dry_run = is_dry_run)
 
 def _env_file_basename(self, path):
     return os.path.basename(os.path.splitext(str(path))[0])
@@ -334,11 +339,11 @@ def _env_build_demo(self, src, name = None, add_libs = [], **kwargs):
     demo_env = self.Clone()
     demo_env.Prepend(LIBS = add_libs)
     # add demo_[flags/defines/link/libs]
-    add_env_app_conf(app, demo_env, "demo")
+    scons_utils.add_env_app_conf(app, demo_env, "demo")
     # add compiler_demo_[flags/defines/link/libs]
-    add_env_app_conf(app, demo_env, "{}_demo".format(compiler))
+    scons_utils.add_env_app_conf(app, demo_env, "{}_demo".format(compiler))
     # add platform_demo_[flags/defines/link/libs]
-    add_env_app_conf(app, demo_env, "{}_demo".format(build_platform))
+    scons_utils.add_env_app_conf(app, demo_env, "{}_demo".format(build_platform))
     demo_path = os.path.join(builder.build_demo_path, name)
     demo = demo_env.Program(demo_path, src, **kwargs)
     module_name = self['APP_MODULE_NAME']
@@ -364,11 +369,11 @@ def _env_build_test(self, src, name = None, add_libs = [], **kwargs):
     test_env = self.Clone()
     test_env.Prepend(LIBS = add_libs)
     # add test_[flags/defines/link/libs]
-    add_env_app_conf(app, test_env, "test")
+    scons_utils.add_env_app_conf(app, test_env, "test")
     # add compiler_test_[flags/defines/link/libs]
-    add_env_app_conf(app, test_env, "{}_test".format(compiler))
+    scons_utils.add_env_app_conf(app, test_env, "{}_test".format(compiler))
     # add platform_test_[flags/defines/link/libs]
-    add_env_app_conf(app, test_env, "{}_test".format(build_platform))
+    scons_utils.add_env_app_conf(app, test_env, "{}_test".format(build_platform))
     test_path = os.path.join(builder.build_test_path, "bin", name)
     test = test_env.Program(test_path, src, **kwargs)
     module_name = self['APP_MODULE_NAME']
@@ -423,7 +428,7 @@ def _env_git_clone(self, url, branch, dest, recursive = False):
         args.extend(['--branch', branch, '--depth', '1', url, dest])
         if verbose:
             builder.info("git clone cmd: '{}'".format(" ".join(args)))
-        if not is_dry_run:
+        if not is_dry_run or builder.force_git_clone():
             ret = subprocess.call(args) == 0
     if ret:
         modules_cloned_git_repositories.setdefault(modname, []).append(dest)
@@ -466,16 +471,16 @@ def _env_replace_in_build(self, to_replace, replace_dic):
         if not is_dry_run:
             _sed_replace(path, replace_dic)
 
-def _env_get_module_env(self, **kwargs):
-    return get_module_env(self["APP_MODULE_CONF"], **kwargs)
+def _env_create_module_env(self, **kwargs):
+    return create_module_env(self["APP_MODULE_CONF"], **kwargs)
 
 def _env_pkg_config(self, config):
     """ Environment method to add pkg-config dynamically for a module """
-    return load_env_packages_config(self, [config])
+    return scons_utils.load_env_packages_config(self, [config])
 
 def _env_parse_config(self, config):
     """ Environment method to add lib's binary-config dynamically for a module """
-    return parse_config_command(self, [config])
+    return scons_utils.parse_config_command(self, [config])
 
 def _env_find_in_file(self, src, str):
     module_name = self['APP_MODULE_NAME']
@@ -487,7 +492,7 @@ def _env_find_in_file(self, src, str):
                 return True
     return False
 
-# methods to build either test, lib or executable
+# methods to build either libs, tests, demos or executables
 base_env.AddMethod(_env_build_lib, "build_lib")
 base_env.AddMethod(_env_build_bin, "build_bin")
 base_env.AddMethod(_env_build_test, "build_test")
@@ -497,7 +502,7 @@ base_env.AddMethod(_env_pkg_config, "pkg_config")
 base_env.AddMethod(_env_parse_config, "parse_config")
 base_env.AddMethod(_env_replace_in_build, "build_replace")
 base_env.AddMethod(_env_git_clone, "git_clone")
-base_env.AddMethod(_env_get_module_env, "get_depends_env")
+base_env.AddMethod(_env_create_module_env, "create_module_env")
 base_env.AddMethod(_env_copy_into_build, "copy_into_build")
 base_env.AddMethod(_env_replace_in_file, "file_replace")
 base_env.AddMethod(_env_find_in_file, "find_in_file")
@@ -511,7 +516,7 @@ base_env.AddMethod(lambda self: app, "app")
 base_env.AddMethod(lambda self: builder, "builder")
 base_env.AddMethod(lambda self: is_dry_run, "is_dry_run")
 
-def get_module_env(conf, depends = [], append_depends_libs = True, append_depends_defines = True):
+def create_module_env(conf, depends = [], append_depends_libs = True, append_depends_defines = True):
     modname = conf["modname"]
     module_format = "{}_{}".format(app.name, modname)
     # get platform dependent libs
@@ -567,10 +572,10 @@ def get_module_env(conf, depends = [], append_depends_libs = True, append_depend
     )
     # use multiple pkg-config output to add libraries/includes path
     package_configs = conf.get("pkg-configs", [])
-    load_env_packages_config(env, *package_configs)
+    scons_utils.load_env_packages_config(env, *package_configs)
     # use multiple binaries output to add libraries/includes path
     parse_configs = conf.get("parse-configs", [])
-    parse_config_command(env, *parse_configs)
+    scons_utils.parse_config_command(env, *parse_configs)
     # transform LIBS configuration with parse-configs
     # to unique elements and reverse order to have good linkage
     final_lib = env['LIBS']
@@ -594,7 +599,7 @@ built = {}
 for conf in modules_build_order:
     modname = conf["modname"]
     builder.info("building module: {}".format(modname))
-    env = get_module_env(conf,
+    env = create_module_env(conf,
         depends = conf.get("original-depends", []),
         append_depends_libs = conf.get("add-depends-libs", True),
         append_depends_defines = conf.get("add-depends-defines", True))
@@ -613,13 +618,13 @@ for conf in modules_build_order:
             print("- needed specific packages configs")
             pp.pprint(parse_configs)
     # copy module/[etc|include|share] to build/[etc|include|share]
-    copy_module_res_into_build(modname, "etc", "etc", must_exist = False)
-    copy_module_res_into_build(modname, "include", "include", must_exist = False)
-    copy_module_res_into_build(modname, "share", "share", must_exist = False)
+    scons_utils.copy_module_res_into_build(modname, "etc", "etc", must_exist = False, is_dry_run = is_dry_run)
+    scons_utils.copy_module_res_into_build(modname, "include", "include", must_exist = False, is_dry_run = is_dry_run)
+    scons_utils.copy_module_res_into_build(modname, "share", "share", must_exist = False, is_dry_run = is_dry_run)
     if builder.build_demo:
-        copy_module_res_into_build(modname, "demo/etc", "etc", must_exist = False)
-        copy_module_res_into_build(modname, "demo/include", "include", must_exist = False)
-        copy_module_res_into_build(modname, "demo/share", "share", must_exist = False)
+        scons_utils.copy_module_res_into_build(modname, "demo/etc", "etc", must_exist = False, is_dry_run = is_dry_run)
+        scons_utils.copy_module_res_into_build(modname, "demo/include", "include", must_exist = False, is_dry_run = is_dry_run)
+        scons_utils.copy_module_res_into_build(modname, "demo/share", "share", must_exist = False, is_dry_run = is_dry_run)
     # read module's scons script file
     module_format_name = env['APP_MODULE_FORMAT_NAME']
     built[modname] = SConscript(Dir(modname).File("scons.py"),
@@ -640,23 +645,12 @@ for conf in modules_build_order:
 # Scons progress build output
 ###############################################################################
 
-try:
-    screen = open('/dev/tty', 'w')
-    node_count = 0
-    node_count_max = len(targets)
-    node_count_interval = 1
+# scons_utils.build_add_progress_bar(targets)
 
-    def progress_function(node):
-        if node not in targets:
-            return
-        global node_count
-        node_count += 1
-        if node_count_max > 0 :
-            screen.write('\r[%3d%%] ' % (node_count * 100 / node_count_max))
+progress_bar_fun = scons_utils.get_progress_bar_function(targets)
+if progress_bar_fun:
+  Progress(progress_bar_fun, interval = 1)
 
-    Progress(progress_function, interval = 1)
-except (OSError, IOError) as e:
-    builder.error("won't display progress - reason: " + str(e))
 
 ###############################################################################
 # Scons after build
@@ -664,38 +658,13 @@ except (OSError, IOError) as e:
 
 import atexit
 
-def display_built():
-    for modname, binaries in modules_generated_bins.items():
-        builder.info("module {} binaries:".format(modname))
-        for binpath in binaries:
-            builder.info("\t{}".format(binpath))
-
-    for modname, demos in modules_generated_demos.items():
-        builder.info("module {} demos:".format(modname))
-        for demopath in demos:
-            builder.info("\t{}".format(demopath))
-
-    for modname, tests in modules_generated_tests.items():
-        builder.info("module {} tests:".format(modname))
-        for testpath in tests:
-            builder.info("\t{}".format(testpath))
-
-def display_build_status(success, failures_message):
-    if not success:
-        print_err("==============================================================")
-        builder.error("BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
-        builder.error(failures_message)
-        print_err("==============================================================")
-    else:
-        builder.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
-
 def after_build():
-    success, failures_message = build_status()
-    display_build_status(success, failures_message)
+    success, failures_message = scons_utils.build_status()
+    scons_utils.build_print_status(success, failures_message, build_start_time)
     if is_dry_run:
         return
     if success and hasattr(app, "on_build_success"):
-        display_built()
+        scons_utils.build_print_built(modules_generated_bins, modules_generated_demos, modules_generated_tests)
         app.on_build_success(build_modules, builder)
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules, builder)
@@ -703,6 +672,8 @@ def after_build():
     builder.copy_dll_to_build(modules_build_order)
     if success and distribution:
         builder.distribute_app(app, build_modules)
+    builder.safe_symlink(compilation_db_path, os.path.join(builder.build_entry_path, "compile_commands.json"))
+    
 
 atexit.register(after_build)
 
