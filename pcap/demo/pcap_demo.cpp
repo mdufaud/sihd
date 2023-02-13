@@ -88,6 +88,6 @@ int main()
     std::string interface_to_sniff = test::module::interfaces_test();
     test::module::sniffer_test(interface_to_sniff);
     if (sihd::util::OS::is_windows)
-        sihd::util::Time::sleep(5);
+        sihd::util::time::sleep(5);
     return 0;
 }

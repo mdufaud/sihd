@@ -109,7 +109,7 @@ ssize_t PcapWriter::write(const char *data, size_t size)
     pcap_pkthdr hdr;
     hdr.caplen = size;
     hdr.len = size;
-    hdr.ts = sihd::util::Time::to_tv(_clock_ptr->now());
+    hdr.ts = sihd::util::time::to_tv(_clock_ptr->now());
     pcap_dump((u_char *)_pcap_dumper_ptr, &hdr, (const u_char *)data);
     return size;
 }
@@ -119,7 +119,7 @@ ssize_t PcapWriter::write(const char *data, size_t size, time_t nano)
     pcap_pkthdr hdr;
     hdr.caplen = size;
     hdr.len = size;
-    hdr.ts = sihd::util::Time::to_tv(nano);
+    hdr.ts = sihd::util::time::to_tv(nano);
     pcap_dump((u_char *)_pcap_dumper_ptr, &hdr, (const u_char *)data);
     return size;
 }

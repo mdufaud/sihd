@@ -1,6 +1,6 @@
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Time.hpp>
+#include <sihd/util/time.hpp>
 #include <sihd/util/Thread.hpp>
 #include <sihd/util/ScopedModifier.hpp>
 

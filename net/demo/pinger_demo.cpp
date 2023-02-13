@@ -18,14 +18,14 @@ int main(int argc, char **argv)
         log.error("Demo must have capabilities or be played with root perms");
         log.notice(fmt::format("For capabilities, execute linux command: 'sudo setcap cap_net_raw=pe {}'\n", FS::executable_path()));
         if (OS::is_windows)
-            Time::sleep(5);
+            time::sleep(5);
         return 1;
     }
     if (argc < 1 || argc > 3)
     {
         log.info("usage: ./demo host [number of pings]");
         if (OS::is_windows)
-            Time::sleep(5);
+            time::sleep(5);
         return 1;
     }
 
@@ -37,14 +37,14 @@ int main(int argc, char **argv)
         {
             log.error("Number of pings is not a number");
             if (OS::is_windows)
-                Time::sleep(5);
+                time::sleep(5);
             return 1;
         }
         if (npings == 0)
         {
             log.error("No infinite ping allowed");
             if (OS::is_windows)
-                Time::sleep(5);
+                time::sleep(5);
             return 1;
         }
     }
@@ -65,13 +65,13 @@ int main(int argc, char **argv)
     {
         log.error(fmt::format("Cannot ping: {}", argv[1]));
         if (OS::is_windows)
-            Time::sleep(5);
+            time::sleep(5);
         return 1;
     }
 
     const auto & result = pinger.result();
     SIHD_COUT(result.str());
     if (OS::is_windows)
-        Time::sleep(5);
+        time::sleep(5);
     return 0;
 }

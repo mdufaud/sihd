@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include <nlohmann/json.hpp>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/core/MemRecorder.hpp>
 #include <sihd/core/DevRecorder.hpp>
@@ -59,14 +61,14 @@ namespace test
 
         sihd::util::ArrInt arr_int = {10, 0};
         sihd::util::ArrBool arr_bool = {false, false, false, false};
-        mem_recorder.add_record("int", sihd::util::Time::milli(10), &arr_int);
-        mem_recorder.add_record("bool", sihd::util::Time::milli(20), &arr_bool);
+        mem_recorder.add_record("int", sihd::util::time::milli(10), &arr_int);
+        mem_recorder.add_record("bool", sihd::util::time::milli(20), &arr_bool);
         arr_int[1] = 20;
-        mem_recorder.add_record("int", sihd::util::Time::milli(30), &arr_int);
+        mem_recorder.add_record("int", sihd::util::time::milli(30), &arr_int);
         arr_bool[0] = true;
-        mem_recorder.add_record("bool", sihd::util::Time::milli(40), &arr_bool);
+        mem_recorder.add_record("bool", sihd::util::time::milli(40), &arr_bool);
         arr_bool[2] = true;
-        mem_recorder.add_record("bool", sihd::util::Time::milli(50), &arr_bool);
+        mem_recorder.add_record("bool", sihd::util::time::milli(50), &arr_bool);
 
         std::cout << core.tree_desc_str() << std::endl;
         EXPECT_TRUE(core.init());
@@ -83,11 +85,11 @@ namespace test
         SIHD_LOG(debug, "Playing");
         play->write(0, true);
         SIHD_LOG(debug, "Sleeping");
-        sihd::util::Time::msleep(5);
+        sihd::util::time::msleep(5);
         SIHD_LOG(debug, "Stopping recorder");
         mem_recorder.stop();
         SIHD_LOG(debug, "Waiting the end");
-        EXPECT_TRUE(waiter.wait_for(sihd::util::Time::milli(60)));
+        EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(60)));
 
         EXPECT_TRUE(core.stop());
 

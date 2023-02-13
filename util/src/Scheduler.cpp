@@ -3,7 +3,7 @@
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/ScopedModifier.hpp>
 #include <sihd/util/Thread.hpp>
-#include <sihd/util/Time.hpp>
+#include <sihd/util/time.hpp>
 #include <sihd/util/Task.hpp>
 
 namespace sihd::util
@@ -16,7 +16,7 @@ SIHD_LOGGER;
 Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent)
 {
     _clock_ptr = &_default_clock;
-    overrun_at = Time::micro(300);
+    overrun_at = time::micro(300);
     acceptable_nano = 100;
     _next_run = 0;
     _running = false;

@@ -13,7 +13,7 @@
 #include <sihd/util/Num.hpp>
 #include <sihd/util/Str.hpp>
 #include <sihd/util/Splitter.hpp>
-#include <sihd/util/Time.hpp>
+#include <sihd/util/time.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/IArrayView.hpp>
@@ -734,7 +734,7 @@ std::string Str::localtimeoffset_str(Timestamp timestamp, bool total_parenthesis
 std::string Str::_timeoffset_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime)
 {
     std::string s;
-    struct tm tm = Time::to_tm(std::abs(nano), localtime);
+    struct tm tm = time::to_tm(std::abs(nano), localtime);
     bool next_step;
     s += (nano > 0 ? "+" : "-");
     if ((next_step = tm.tm_year > 70))
@@ -749,10 +749,10 @@ std::string Str::_timeoffset_to_string(time_t nano, bool total_parenthesis, bool
         s += fmt::format("{}m:", tm.tm_min);
     if ((next_step = next_step || tm.tm_sec > 0))
         s += fmt::format("{}s:", tm.tm_sec);
-    time_t ms = Time::to_milli(nano) % (int)1E3;
+    time_t ms = time::to_milli(nano) % (int)1E3;
     if ((next_step = next_step || ms > 0))
         s += fmt::format("{}ms:", ms);
-    time_t us = Time::to_micro(nano) % (int)1E3;
+    time_t us = time::to_micro(nano) % (int)1E3;
     s += fmt::format("{}us", us);
     if (nano_resolution)
     {
@@ -766,7 +766,7 @@ std::string Str::_timeoffset_to_string(time_t nano, bool total_parenthesis, bool
 
 std::string     Str::_format_time(time_t nano, std::string_view format, bool localtime)
 {
-    struct tm tm = Time::to_tm(nano, localtime);
+    struct tm tm = time::to_tm(nano, localtime);
     size_t ret = strftime(Str::g_buffer, Str::g_buffer_size, format.data(), &tm);
     return std::string(Str::g_buffer, ret);
 }

@@ -79,7 +79,7 @@ namespace test
                             response.ttl,
                             response.id,
                             response.seq,
-                            sihd::util::Time::to_ms(sihd::util::Clock::default_clock.now() - timestamp));
+                            sihd::util::time::to_ms(sihd::util::Clock::default_clock.now() - timestamp));
             // make a DNS lookup on client
             IpAddr client(response.client.host(), true);
             SIHD_LOG_DEBUG(client.hostname());

@@ -3,7 +3,7 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/Time.hpp>
+#include <sihd/util/time.hpp>
 
 #include <sihd/net/Pinger.hpp>
 
@@ -83,7 +83,7 @@ void    Pinger::stop()
     for (int i = 0; _running && i < 3; ++i)
     {
         _waitable.notify_all();
-        Time::msleep(1);
+        time::msleep(1);
     }
 }
 
@@ -107,7 +107,7 @@ bool    Pinger::ping(const IpAddr & client, size_t number)
         if (i > 0)
         {
             // wait between pings
-            _waitable.wait_for(Time::milliseconds(_ping_ms_interval) - (_clock_ptr->now() - _result.last_time_sent));
+            _waitable.wait_for(time::milliseconds(_ping_ms_interval) - (_clock_ptr->now() - _result.last_time_sent));
             if (_stop)
                 break ;
         }
@@ -181,11 +181,11 @@ std::string PingResult::str() const
     return fmt::format("{} packets transmitted, {} received, {:.0}% packet loss, time {:.3f}ms\n"
                         "rtt min/avg/max/mdev = {:.3f}/{:.3f}/{:.3f}/{:.3f} ms",
                         transmitted, received, this->packet_loss(),
-                        Time::to_double_milliseconds(time_end - time_start),
-                        Time::to_double_milliseconds(rtt_min),
-                        Time::to_double_milliseconds(rtt_avg),
-                        Time::to_double_milliseconds(rtt_max),
-                        Time::to_double_milliseconds(rtt_mdev));
+                        time::to_double_milliseconds(time_end - time_start),
+                        time::to_double_milliseconds(rtt_min),
+                        time::to_double_milliseconds(rtt_avg),
+                        time::to_double_milliseconds(rtt_max),
+                        time::to_double_milliseconds(rtt_mdev));
 }
 
 }

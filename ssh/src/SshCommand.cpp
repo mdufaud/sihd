@@ -1,6 +1,6 @@
 #include <sihd/ssh/SshCommand.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Time.hpp>
+#include <sihd/util/time.hpp>
 
 namespace sihd::ssh
 {
@@ -139,7 +139,7 @@ bool    SshCommand::wait(time_t timeout_nano, time_t milliseconds_poll_time)
             break ;
         }
         else
-            _waitable.wait_for(sihd::util::Time::milli(milliseconds_poll_time));
+            _waitable.wait_for(sihd::util::time::milli(milliseconds_poll_time));
     }
     if (r != -1)
         _channel.clear_channel();

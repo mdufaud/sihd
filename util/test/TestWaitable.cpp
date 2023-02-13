@@ -2,7 +2,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/OS.hpp>
-#include <sihd/util/Time.hpp>
+#include <sihd/util/time.hpp>
 #include <sihd/util/Clocks.hpp>
 
 namespace test
@@ -42,9 +42,9 @@ namespace test
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
             waitable.notify(1);
         });
-        time_t elapsed = waitable.wait_for_elapsed(Time::milli(5));
+        time_t elapsed = waitable.wait_for_elapsed(time::milli(5));
         t.join();
-        EXPECT_EQ(Time::to_milli(elapsed), 2);
+        EXPECT_EQ(time::to_milli(elapsed), 2);
     }
 
     TEST_F(TestWaitable, test_waitable_loop)
@@ -65,10 +65,10 @@ namespace test
                 ++i;
             }
         });
-        bool timeout = waitable.wait_for_loop(Time::milli(10), 3);
+        bool timeout = waitable.wait_for_loop(time::milli(10), 3);
         t.join();
         EXPECT_EQ(timeout, false);
-        EXPECT_EQ(Time::to_milli(clock.now() - now), 1);
+        EXPECT_EQ(time::to_milli(clock.now() - now), 1);
     }
 
     TEST_F(TestWaitable, test_waitable_loop_fail)
@@ -89,10 +89,10 @@ namespace test
                 ++i;
             }
         });
-        bool timeout = waitable.wait_for_loop(Time::milli(5), 4);
+        bool timeout = waitable.wait_for_loop(time::milli(5), 4);
         t.join();
         EXPECT_EQ(timeout, true);
-        EXPECT_EQ(Time::to_milli(clock.now() - now), 5);
+        EXPECT_EQ(time::to_milli(clock.now() - now), 5);
     }
 
 }

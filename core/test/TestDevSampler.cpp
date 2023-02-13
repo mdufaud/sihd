@@ -65,26 +65,26 @@ namespace test
 
         ChannelWaiter waiter(out_channel);
         ASSERT_TRUE(in_channel->write(ArrInt({0, 0, 1})));
-        waiter.wait_for(sihd::util::Time::sec(1));
+        waiter.wait_for(sihd::util::time::sec(1));
 
         ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
         ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
         ASSERT_TRUE(in_channel->write(ArrInt({3, 4, 5})));
-        waiter.wait_for(sihd::util::Time::sec(1));
+        waiter.wait_for(sihd::util::time::sec(1));
         EXPECT_EQ(out_channel->array()->str(','), "3,4,5");
         EXPECT_EQ(notif, 2);
 
         ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
         ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
         ASSERT_TRUE(in_channel->write(ArrInt({4, 5, 6})));
-        waiter.wait_for(sihd::util::Time::sec(1));
+        waiter.wait_for(sihd::util::time::sec(1));
         EXPECT_EQ(out_channel->array()->str(','), "4,5,6");
         EXPECT_EQ(notif, 3);
 
         ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
         ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
         ASSERT_TRUE(in_channel->write(ArrInt({5, 6, 7})));
-        waiter.wait_for(sihd::util::Time::sec(1));
+        waiter.wait_for(sihd::util::time::sec(1));
         EXPECT_EQ(out_channel->array()->str(','), "5,6,7");
         EXPECT_EQ(notif, 4);
     }

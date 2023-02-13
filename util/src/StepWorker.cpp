@@ -1,7 +1,7 @@
 #include <sihd/util/StepWorker.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/util/Time.hpp>
+#include <sihd/util/time.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/ScopedModifier.hpp>
 #include <sihd/util/Clocks.hpp>
@@ -28,13 +28,13 @@ bool    StepWorker::set_frequency(double frequency)
         SIHD_LOG(error, "StepWorker: frequency {} cannot be negative", frequency);
         return false;
     }
-    _sleep_time = Time::freq(frequency);
+    _sleep_time = time::freq(frequency);
     return true;
 }
 
 double  StepWorker::frequency() const
 {
-    return Time::to_hz(_sleep_time);
+    return time::to_hz(_sleep_time);
 }
 
 bool    StepWorker::run()

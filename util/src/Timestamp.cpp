@@ -10,12 +10,12 @@ Timestamp::Timestamp(time_t nano): _nano(nano)
 {
 }
 
-Timestamp::Timestamp(ClockTime clocktime)
+Timestamp::Timestamp(Clocktime clocktime)
 {
-    _nano = Time::hours(clocktime.hour);
-    _nano += Time::minutes(clocktime.minute);
-    _nano += Time::seconds(clocktime.second);
-    _nano += Time::milliseconds(clocktime.millisecond);
+    _nano = time::hours(clocktime.hour);
+    _nano += time::minutes(clocktime.minute);
+    _nano += time::seconds(clocktime.second);
+    _nano += time::milliseconds(clocktime.millisecond);
 }
 
 Timestamp::Timestamp(Calendar calendar)
@@ -27,10 +27,10 @@ Timestamp::Timestamp(Calendar calendar)
     tm.tm_mday = calendar.day;
     tm.tm_isdst = -1;
 
-    _nano = Time::seconds(mktime(&tm));
+    _nano = time::seconds(mktime(&tm));
 }
 
-Timestamp::Timestamp(Calendar calendar, ClockTime clocktime)
+Timestamp::Timestamp(Calendar calendar, Clocktime clocktime)
 {
     struct tm tm;
     memset(&tm, 0, sizeof(tm));
@@ -42,30 +42,30 @@ Timestamp::Timestamp(Calendar calendar, ClockTime clocktime)
     tm.tm_sec = clocktime.second;
     tm.tm_isdst = -1;
 
-    _nano = Time::seconds(mktime(&tm));
+    _nano = time::seconds(mktime(&tm));
 }
 
 Timestamp::Timestamp(std::chrono::nanoseconds duration): _nano(duration.count())
 {
 }
 
-Timestamp::Timestamp(std::chrono::microseconds duration): _nano(Time::duration<std::micro>(duration))
+Timestamp::Timestamp(std::chrono::microseconds duration): _nano(time::duration<std::micro>(duration))
 {
 }
 
-Timestamp::Timestamp(std::chrono::milliseconds duration): _nano(Time::duration<std::milli>(duration))
+Timestamp::Timestamp(std::chrono::milliseconds duration): _nano(time::duration<std::milli>(duration))
 {
 }
 
-Timestamp::Timestamp(std::chrono::seconds duration): _nano(Time::duration<std::ratio<1>>(duration))
+Timestamp::Timestamp(std::chrono::seconds duration): _nano(time::duration<std::ratio<1>>(duration))
 {
 }
 
-Timestamp::Timestamp(std::chrono::minutes duration): _nano(Time::duration<std::ratio<60>>(duration))
+Timestamp::Timestamp(std::chrono::minutes duration): _nano(time::duration<std::ratio<60>>(duration))
 {
 }
 
-Timestamp::Timestamp(std::chrono::hours duration): _nano(Time::duration<std::ratio<3600>>(duration))
+Timestamp::Timestamp(std::chrono::hours duration): _nano(time::duration<std::ratio<3600>>(duration))
 {
 }
 
@@ -103,20 +103,20 @@ std::string     Timestamp::local_format(std::string_view fmt) const
     return Str::format_localtime(std::abs(_nano), fmt);
 }
 
-ClockTime   Timestamp::clocktime() const
+Clocktime   Timestamp::clocktime() const
 {
-    struct tm tm = Time::to_tm(std::abs(_nano), false);
+    struct tm tm = time::to_tm(std::abs(_nano), false);
     return {
         .hour = tm.tm_hour,
         .minute = tm.tm_min,
         .second = tm.tm_sec,
-        .millisecond = (int)((_nano - (Time::to_seconds(_nano) * 1E9)) / 1E6),
+        .millisecond = (int)((_nano - (time::to_seconds(_nano) * 1E9)) / 1E6),
     };
 }
 
 Calendar    Timestamp::calendar() const
 {
-    struct tm tm = Time::to_tm(std::abs(_nano), false);
+    struct tm tm = time::to_tm(std::abs(_nano), false);
     return {
         .day = tm.tm_mday,
         .month = tm.tm_mon + 1,
@@ -124,20 +124,20 @@ Calendar    Timestamp::calendar() const
     };
 }
 
-ClockTime   Timestamp::local_clocktime() const
+Clocktime   Timestamp::local_clocktime() const
 {
-    struct tm tm = Time::to_tm(std::abs(_nano), true);
+    struct tm tm = time::to_tm(std::abs(_nano), true);
     return {
         .hour = tm.tm_hour,
         .minute = tm.tm_min,
         .second = tm.tm_sec,
-        .millisecond = (int)((_nano - (Time::to_seconds(_nano) * 1E9)) / 1E6),
+        .millisecond = (int)((_nano - (time::to_seconds(_nano) * 1E9)) / 1E6),
     };
 }
 
 Calendar    Timestamp::local_calendar() const
 {
-    struct tm tm = Time::to_tm(std::abs(_nano), true);
+    struct tm tm = time::to_tm(std::abs(_nano), true);
     return {
         .day = tm.tm_mday,
         .month = tm.tm_mon + 1,
@@ -145,7 +145,7 @@ Calendar    Timestamp::local_calendar() const
     };
 }
 
-std::string     ClockTime::str() const
+std::string     Clocktime::str() const
 {
     return fmt::sprintf("%02d:%02d:%02d:%d", hour, minute, second, millisecond);
 }
@@ -158,7 +158,7 @@ std::string     Calendar::str() const
 bool    Timestamp::is_leap_year() const
 {
     Calendar c = this->local_calendar();
-    return Time::is_leap_year(c.year);
+    return time::is_leap_year(c.year);
 }
 
 }

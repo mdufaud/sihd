@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Scheduler.hpp>
-#include <sihd/util/Time.hpp>
+#include <sihd/util/time.hpp>
 #include <sihd/util/OS.hpp>
 
 namespace test
@@ -68,7 +68,7 @@ namespace test
         Scheduler seq("seq");
         // most overruns are below 100 microseconds
         this->delta_us = 100;
-        seq.overrun_at = Time::micro(this->delta_us);
+        seq.overrun_at = time::micro(this->delta_us);
         int lambda_ran = 0;
         seq.add_task(new Task([&lambda_ran] () -> bool
         {
@@ -77,13 +77,13 @@ namespace test
         }, 0));
 
         this->should_run_every_us = 100;
-        seq.add_task(new Task(this, 0, Time::micro(this->should_run_every_us)));
+        seq.add_task(new Task(this, 0, time::micro(this->should_run_every_us)));
         seq.start();
         time_t sleep_time = 50;
         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
         seq.stop();
         EXPECT_EQ(lambda_ran, 1);
-        int expected_ran = Time::micro(sleep_time) / this->should_run_every_us;
+        int expected_ran = time::micro(sleep_time) / this->should_run_every_us;
         EXPECT_NEAR(this->ran, expected_ran, 3);
         SIHD_LOG(info, "Scheduler total tasks executed: {}", this->ran);
         SIHD_LOG(info, "Scheduler total overruns: {}", seq.overruns);
@@ -107,13 +107,13 @@ namespace test
             SIHD_TRACE("Should run once");
             ++ran;
             return true;
-        }, now + Time::milli(5)));
+        }, now + time::milli(5)));
         seq.add_task(new Task([&] () -> bool
         {
             SIHD_TRACE("Should not run");
             ++ran;
             return true;
-        }, now + Time::milli(10)));
+        }, now + time::milli(10)));
         seq.start();
         SIHD_TRACE("Before sleep");
         std::this_thread::sleep_for(std::chrono::milliseconds(4));
@@ -141,7 +141,7 @@ namespace test
         {
             ++lambda_ran;
             return true;
-        }, 0, Time::ms(should_run_every_ms)));
+        }, 0, time::ms(should_run_every_ms)));
         time_t sleep_ms = 10;
         seq.start();
         SIHD_LOG(debug, "Started scheduler");
@@ -189,11 +189,11 @@ namespace test
             return true;
         };
         time_t now = seq.now();
-        seq.add_task(new Task(fun, now + Time::milli(1)));
-        seq.add_task(new Task(fun, now + Time::milli(5)));
-        seq.add_task(new Task(fun, now + Time::milli(10)));
-        seq.add_task(new Task(fun, now + Time::milli(15)));
-        seq.add_task(new Task(fun, now + Time::milli(20)));
+        seq.add_task(new Task(fun, now + time::milli(1)));
+        seq.add_task(new Task(fun, now + time::milli(5)));
+        seq.add_task(new Task(fun, now + time::milli(10)));
+        seq.add_task(new Task(fun, now + time::milli(15)));
+        seq.add_task(new Task(fun, now + time::milli(20)));
         seq.set_as_fast_as_possible(true);
         seq.start();
         SIHD_LOG(debug, "Started scheduler");
@@ -236,10 +236,10 @@ namespace test
             int i = 0;
             while (i < 100)
             {
-                seq.add_task(new Task(fun, seq.now() + Time::us(100)));
-                seq.add_task(new Task(fun, seq.now() + Time::us(200)));
-                seq.add_task(new Task(fun, seq.now() + Time::us(300)));
-                seq.add_task(new Task(fun, seq.now() + Time::us(400)));
+                seq.add_task(new Task(fun, seq.now() + time::us(100)));
+                seq.add_task(new Task(fun, seq.now() + time::us(200)));
+                seq.add_task(new Task(fun, seq.now() + time::us(300)));
+                seq.add_task(new Task(fun, seq.now() + time::us(400)));
                 std::this_thread::sleep_for(std::chrono::microseconds(300));
                 ++i;
             }
@@ -249,7 +249,7 @@ namespace test
             int i = 0;
             while (i < 100)
             {
-                Task *t = new Task(fun, seq.now() + Time::seconds(303));
+                Task *t = new Task(fun, seq.now() + time::seconds(303));
                 seq.add_task(t);
                 std::this_thread::sleep_for(std::chrono::microseconds(500));
                 seq.remove_task(t);

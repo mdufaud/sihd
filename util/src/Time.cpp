@@ -2,19 +2,22 @@
 
 #include <cstring>
 
-#include <sihd/util/Time.hpp>
+#include <sihd/util/time.hpp>
 
 # if !defined(__SIHD_WINDOWS__)
 extern char *tzname[2];
 extern long timezone;
 # endif
 
-namespace sihd::util
+namespace sihd::util::time
 {
 
-std::mutex Time::_unsafe_c_mutex;
+namespace
+{
+std::mutex unsafe_c_mutex;
+}
 
-time_t  Time::get_timezone()
+time_t  get_timezone()
 {
 # if !defined(__SIHD_WINDOWS__)
     tzset();
@@ -27,7 +30,7 @@ time_t  Time::get_timezone()
 # endif
 }
 
-std::string Time::get_tzname()
+std::string get_tzname()
 {
 # if !defined(__SIHD_WINDOWS__)
     tzset();
@@ -45,52 +48,52 @@ std::string Time::get_tzname()
 # endif
 }
 
-void    Time::nsleep(time_t nano)
+void    nsleep(time_t nano)
 {
     std::this_thread::sleep_for(std::chrono::nanoseconds(nano));
 }
 
-void    Time::usleep(time_t micro)
+void    usleep(time_t micro)
 {
     std::this_thread::sleep_for(std::chrono::microseconds(micro));
 }
 
-void    Time::msleep(time_t milli)
+void    msleep(time_t milli)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(milli));
 }
 
-void    Time::sleep(time_t sec)
+void    sleep(time_t sec)
 {
     std::this_thread::sleep_for(std::chrono::seconds(sec));
 }
 
-double  Time::tv_to_double(const struct timeval & tv)
+double  tv_to_double(const struct timeval & tv)
 {
     return (double)tv.tv_sec + (tv.tv_usec / 1E6);
 }
 
-double  Time::nano_tv_to_double(const struct timeval & tv)
+double  nano_tv_to_double(const struct timeval & tv)
 {
     return (double)tv.tv_sec + (tv.tv_usec / 1E9);
 }
 
-double  Time::to_double(time_t nano)
+double  to_double(time_t nano)
 {
     return nano / 1E9;
 }
 
-double  Time::to_double_milliseconds(time_t nano)
+double  to_double_milliseconds(time_t nano)
 {
     return nano / 1E6;
 }
 
-double  Time::to_freq(time_t nano)
+double  to_freq(time_t nano)
 {
     return (1 / (double)(nano / 1E9));
 }
 
-struct timeval  Time::double_to_tv(double time)
+struct timeval  double_to_tv(double time)
 {
     struct timeval ret;
 
@@ -99,7 +102,7 @@ struct timeval  Time::double_to_tv(double time)
     return ret;
 }
 
-struct timeval  Time::double_to_nano_tv(double time)
+struct timeval  double_to_nano_tv(double time)
 {
     struct timeval ret;
 
@@ -108,7 +111,7 @@ struct timeval  Time::double_to_nano_tv(double time)
     return ret;
 }
 
-struct timeval  Time::milli_to_tv(time_t milliseconds)
+struct timeval  milli_to_tv(time_t milliseconds)
 {
     struct timeval ret;
 
@@ -117,7 +120,7 @@ struct timeval  Time::milli_to_tv(time_t milliseconds)
     return ret;
 }
 
-struct timeval  Time::to_tv(time_t nano)
+struct timeval  to_tv(time_t nano)
 {
     struct timeval ret;
 
@@ -126,7 +129,7 @@ struct timeval  Time::to_tv(time_t nano)
     return ret;
 }
 
-struct timeval  Time::to_nano_tv(time_t nano)
+struct timeval  to_nano_tv(time_t nano)
 {
     struct timeval ret;
 
@@ -135,111 +138,111 @@ struct timeval  Time::to_nano_tv(time_t nano)
     return ret;
 }
 
-struct tm Time::to_tm(time_t nano, bool localtime)
+struct tm to_tm(time_t nano, bool localtime)
 {
-    std::lock_guard l(_unsafe_c_mutex);
+    std::lock_guard l(unsafe_c_mutex);
     time_t sec = nano / 1E9;
     // make a copy
     return localtime ? *::localtime(&sec) : *::gmtime(&sec);
 }
 
-time_t  Time::to_micro(time_t nano)
+time_t  to_micro(time_t nano)
 {
     return nano / 1E3;
 }
 
-time_t  Time::to_milli(time_t nano)
+time_t  to_milli(time_t nano)
 {
     return nano / 1E6;
 }
 
-time_t  Time::to_sec(time_t nano)
+time_t  to_sec(time_t nano)
 {
     return nano / 1E9;
 }
 
-time_t  Time::to_min(time_t nano)
+time_t  to_min(time_t nano)
 {
     return to_sec(nano) / 60;
 }
 
-time_t  Time::to_hours(time_t nano)
+time_t  to_hours(time_t nano)
 {
     return to_min(nano) / 60;
 }
 
-time_t  Time::to_days(time_t nano)
+time_t  to_days(time_t nano)
 {
     return to_hours(nano) / 24;
 }
 
-time_t  Time::micro(time_t t)
+time_t  micro(time_t t)
 {
     return t * 1E3;
 }
 
-time_t  Time::milli(time_t t)
+time_t  milli(time_t t)
 {
     return t * 1E6;
 }
 
-time_t  Time::sec(time_t t)
+time_t  sec(time_t t)
 {
     return t * 1E9;
 }
 
-time_t  Time::min(time_t t)
+time_t  min(time_t t)
 {
     return sec(t) * 60;
 }
 
-time_t  Time::hours(time_t t)
+time_t  hours(time_t t)
 {
     return min(t) * 60;
 }
 
-time_t  Time::days(time_t t)
+time_t  days(time_t t)
 {
     return hours(t) * 24;
 }
 
-time_t  Time::from_double(double sec_milli)
+time_t  from_double(double sec_milli)
 {
     time_t sec = (time_t)sec_milli;
     time_t nano = (double)(sec_milli - sec) * 1E9;
-    return Time::sec(sec) + nano;
+    return time::sec(sec) + nano;
 }
 
-time_t  Time::from_double_milliseconds(double milli_micro)
+time_t  from_double_milliseconds(double milli_micro)
 {
     time_t milliseconds = (time_t)milli_micro;
     time_t nano = (double)(milli_micro - milliseconds) * 1E6;
-    return Time::milliseconds(milliseconds) + nano;
+    return time::milliseconds(milliseconds) + nano;
 }
 
-time_t  Time::freq(double hz)
+time_t  freq(double hz)
 {
     if (hz < 0.0)
         return 0;
     return (double)(1. / hz) * 1E9;
 }
 
-time_t  Time::tv(const struct timeval & tv)
+time_t  tv(const struct timeval & tv)
 {
     return (tv.tv_sec * 1E9) + (tv.tv_usec * 1E3);
 }
 
-time_t  Time::nano_tv(const struct timeval & tv)
+time_t  nano_tv(const struct timeval & tv)
 {
     return (tv.tv_sec * 1E9) + tv.tv_usec;
 }
 
-time_t  Time::tm(struct tm & tm)
+time_t  tm(struct tm & tm)
 {
     return mktime(&tm) * 1E9;
 }
 
-bool    Time::is_leap_year(int year)
+bool    is_leap_year(int year)
 {
     return year % 4 == 0 && (year % 400 == 0 || year % 100 != 0);
 }

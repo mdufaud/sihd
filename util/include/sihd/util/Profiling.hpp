@@ -2,7 +2,7 @@
 # define __SIHD_UTIL_PROFILING_HPP__
 
 # include <sihd/util/Clocks.hpp>
-# include <sihd/util/Time.hpp>
+# include <sihd/util/time.hpp>
 # include <sihd/util/Timestamp.hpp>
 # include <string_view>
 

@@ -281,7 +281,7 @@ DevFilter::Rule &   DevFilter::Rule::write_same(size_t idx)
 
 DevFilter::Rule &   DevFilter::Rule::delay(double delay)
 {
-    this->nano_delay = sihd::util::Time::from_double(delay);
+    this->nano_delay = sihd::util::time::from_double(delay);
     return *this;
 }
 
@@ -334,7 +334,7 @@ bool    DevFilter::Rule::_parse_options_config(const std::map<std::string, std::
             SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_DELAY, conf_map.at(CONF_KEY_DELAY));
             return false;
         }
-        this->nano_delay = sihd::util::Time::from_double(delay);
+        this->nano_delay = sihd::util::time::from_double(delay);
     }
     return true;
 }
