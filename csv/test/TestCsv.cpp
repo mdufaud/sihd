@@ -2,7 +2,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/csv/CsvWriter.hpp>
 #include <sihd/csv/CsvReader.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/TmpDir.hpp>
 
 namespace test
@@ -36,7 +36,7 @@ namespace test
     {
         TmpDir tmp_dir;
 
-        std::string path = FS::combine(tmp_dir.path(), "test_write.csv");
+        std::string path = fs::combine(tmp_dir.path(), "test_write.csv");
         CsvWriter writer("csv-writer");
 
         SIHD_LOG(info, "Writing csv: {}", path);
@@ -60,7 +60,7 @@ namespace test
         EXPECT_TRUE(writer.write_commentary("bye"));
         EXPECT_TRUE(writer.close());
 
-        EXPECT_TRUE(sihd::util::FS::are_equals(path, "test/resources/expected.csv"));
+        EXPECT_TRUE(sihd::util::fs::are_equals(path, "test/resources/expected.csv"));
     }
 
     TEST_F(TestCsv, test_csv_reader)

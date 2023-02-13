@@ -1,6 +1,6 @@
 #include <sihd/util/Path.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/Splitter.hpp>
 
 namespace sihd::util
@@ -49,8 +49,8 @@ std::string     Path::get(const std::string & url, const std::string & path)
 
 std::string     Path::get_from(const std::string & from, const std::string & path)
 {
-    std::string ret = FS::combine(from, path);
-    if (FS::exists(ret))
+    std::string ret = fs::combine(from, path);
+    if (fs::exists(ret))
         return ret;
     return "";
 }

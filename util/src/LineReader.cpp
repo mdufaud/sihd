@@ -1,7 +1,7 @@
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/Str.hpp>
+#include <sihd/util/str.hpp>
 #include <string.h>
 
 namespace sihd::util

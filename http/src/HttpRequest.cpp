@@ -1,6 +1,6 @@
 #include <nlohmann/json.hpp>
 
-#include <sihd/util/Str.hpp>
+#include <sihd/util/str.hpp>
 
 #include <sihd/http/HttpRequest.hpp>
 #include <sihd/util/Logger.hpp>
@@ -31,13 +31,13 @@ std::string HttpRequest::type_str(HttpRequest::RequestType type)
 
 HttpRequest::RequestType    HttpRequest::type_from_str(std::string_view type)
 {
-    if (Str::iequals(type, "get"))
+    if (str::iequals(type, "get"))
         return GET;
-    else if (Str::iequals(type, "post"))
+    else if (str::iequals(type, "post"))
         return POST;
-    else if (Str::iequals(type, "put"))
+    else if (str::iequals(type, "put"))
         return PUT;
-    else if (Str::iequals(type, "delete"))
+    else if (str::iequals(type, "delete"))
         return REQ_DELETE;
     return NONE;
 }

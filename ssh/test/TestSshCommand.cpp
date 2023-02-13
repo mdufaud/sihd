@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/time.hpp>

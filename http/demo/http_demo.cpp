@@ -3,8 +3,8 @@
 #include <sihd/util/platform.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Str.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/str.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
@@ -133,8 +133,8 @@ static void http_test()
             server.stop();
             SIHD_LOG(info, "Stopped http server");
         }));
-        std::string root_path = FS::parent(FS::parent(FS::executable_path()));
-        std::string res_path = FS::combine({root_path, "etc", "sihd", "demo", "http_demo"});
+        std::string root_path = fs::parent(fs::parent(fs::executable_path()));
+        std::string res_path = fs::combine({root_path, "etc", "sihd", "demo", "http_demo"});
         SIHD_LOG(info, "Root dir: {}", res_path);
         server.set_root_dir(res_path);
         server.set_port(3000);
@@ -148,7 +148,7 @@ static void http_test()
 
 int main()
 {
-    sihd::util::Str::hexdump_cols = 20;
+    sihd::util::str::hexdump_cols = 20;
     sihd::util::LoggerManager::basic();
     demo::http_test();
     sihd::util::LoggerManager::clear_loggers();

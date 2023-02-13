@@ -1,7 +1,7 @@
 #include <signal.h>
 
 #include <sihd/util/Handler.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/net/Pinger.hpp>
 
 using namespace sihd::util;
@@ -16,7 +16,7 @@ int main(int argc, char **argv)
     if (pinger.open(false) == false)
     {
         log.error("Demo must have capabilities or be played with root perms");
-        log.notice(fmt::format("For capabilities, execute linux command: 'sudo setcap cap_net_raw=pe {}'\n", FS::executable_path()));
+        log.notice(fmt::format("For capabilities, execute linux command: 'sudo setcap cap_net_raw=pe {}'\n", fs::executable_path()));
         if (OS::is_windows)
             time::sleep(5);
         return 1;
@@ -33,7 +33,7 @@ int main(int argc, char **argv)
     unsigned long npings = 10;
     if (argc == 3)
     {
-        if (Str::to_ulong(argv[2], &npings, 10) == false)
+        if (str::to_ulong(argv[2], &npings, 10) == false)
         {
             log.error("Number of pings is not a number");
             if (OS::is_windows)

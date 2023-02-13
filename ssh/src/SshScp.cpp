@@ -1,7 +1,7 @@
 #include <sihd/ssh/SshScp.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/File.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 
 #ifndef SIHD_SSH_SCP_BUFFSIZE
 # define SIHD_SSH_SCP_BUFFSIZE 4096
@@ -96,7 +96,7 @@ bool    SshScp::push_file(std::string_view local_path, std::string_view remote_p
     if (file.is_open() == false)
         return false;
     char buf[SIHD_SSH_SCP_BUFFSIZE + 1];
-    size_t size = sihd::util::FS::filesize(local_path);
+    size_t size = sihd::util::fs::filesize(local_path);
     if (max_size > 0)
         size = std::max(size, max_size);
 

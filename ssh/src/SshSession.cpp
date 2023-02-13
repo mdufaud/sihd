@@ -1,5 +1,5 @@
 #include <sihd/ssh/SshSession.hpp>
-#include <sihd/util/Str.hpp>
+#include <sihd/util/str.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LineReader.hpp>
 
@@ -377,15 +377,15 @@ std::string     SshSession::AuthMethods::str() const
         return "unknown";
     std::string ret;
     if (this->methods & SSH_AUTH_METHOD_NONE)
-        sihd::util::Str::append_sep(ret, "none");
+        sihd::util::str::append_sep(ret, "none");
     if (this->methods & SSH_AUTH_METHOD_PASSWORD)
-        sihd::util::Str::append_sep(ret, "password");
+        sihd::util::str::append_sep(ret, "password");
     if (this->methods & SSH_AUTH_METHOD_HOSTBASED)
-        sihd::util::Str::append_sep(ret, "hostbased");
+        sihd::util::str::append_sep(ret, "hostbased");
     if (this->methods & SSH_AUTH_METHOD_INTERACTIVE)
-        sihd::util::Str::append_sep(ret, "keyboard-interactive");
+        sihd::util::str::append_sep(ret, "keyboard-interactive");
     if (this->methods & SSH_AUTH_METHOD_GSSAPI_MIC)
-        sihd::util::Str::append_sep(ret, "gssapi");
+        sihd::util::str::append_sep(ret, "gssapi");
     return ret;
 }
 

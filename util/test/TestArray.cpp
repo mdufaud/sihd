@@ -263,7 +263,7 @@ namespace test
     {
         const char hw[] = "hello world";
         ArrChar arr(hw);
-        EXPECT_EQ(Str::hexdump(arr, ','), "68,65,6c,6c,6f,20,77,6f,72,6c,64");
+        EXPECT_EQ(str::hexdump(arr, ','), "68,65,6c,6c,6f,20,77,6f,72,6c,64");
         EXPECT_EQ(arr.str(), "hello world");
         EXPECT_TRUE(arr.is_equal("hello world"));
 

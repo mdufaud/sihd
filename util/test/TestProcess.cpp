@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Process.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/TmpDir.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
@@ -199,10 +199,10 @@ namespace test
         if (OS::is_run_by_valgrind())
             GTEST_SKIP() << "Buggy with valgrind";
 
-        std::string test_file = FS::combine(_tmp_dir.path(), "file_in_hello.txt");
+        std::string test_file = fs::combine(_tmp_dir.path(), "file_in_hello.txt");
 
         SIHD_LOG(info, "Writing file for 'cat' input: {}", test_file)
-        EXPECT_TRUE(FS::write(test_file, "hello world"));
+        EXPECT_TRUE(fs::write(test_file, "hello world"));
 
         if (Term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
@@ -220,24 +220,24 @@ namespace test
 
     TEST_F(TestProcess, test_process_file_out)
     {
-        std::string test_file = FS::combine(_tmp_dir.path(), "file_out_output.txt");
+        std::string test_file = fs::combine(_tmp_dir.path(), "file_out_output.txt");
 
         Process proc{"echo", "hello", "world"};
 
         EXPECT_TRUE(proc.stdout_to_file(test_file));
-        EXPECT_EQ(FS::read_all(test_file).value(), "");
+        EXPECT_EQ(fs::read_all(test_file).value(), "");
         EXPECT_TRUE(proc.start());
         EXPECT_TRUE(proc.wait_any());
         EXPECT_TRUE(proc.end());
-        EXPECT_EQ(FS::read_all(test_file).value(), "hello world\n");
+        EXPECT_EQ(fs::read_all(test_file).value(), "hello world\n");
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 0);
     }
 
     TEST_F(TestProcess, test_process_file_out_err)
     {
-        std::string stdout_path = FS::combine(_tmp_dir.path(), "file_out_err_stdout.txt");
-        std::string stderr_path = FS::combine(_tmp_dir.path(), "file_out_err_stderr.txt");
+        std::string stdout_path = fs::combine(_tmp_dir.path(), "file_out_err_stdout.txt");
+        std::string stderr_path = fs::combine(_tmp_dir.path(), "file_out_err_stderr.txt");
 
         Process proc([]() -> int {
             std::cout << "hello world";
@@ -260,8 +260,8 @@ namespace test
         EXPECT_TRUE(proc.has_exited());
         EXPECT_EQ(proc.return_code(), 1);
 
-        EXPECT_EQ(FS::read_all(stdout_path).value(), "hello world");
-        EXPECT_EQ(FS::read_all(stderr_path).value(), "nope");
+        EXPECT_EQ(fs::read_all(stdout_path).value(), "hello world");
+        EXPECT_EQ(fs::read_all(stderr_path).value(), "nope");
     }
 
     TEST_F(TestProcess, test_process_close)

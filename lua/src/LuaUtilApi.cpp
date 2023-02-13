@@ -8,8 +8,8 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Thread.hpp>
 #include <sihd/util/OS.hpp>
-#include <sihd/util/FS.hpp>
-#include <sihd/util/Str.hpp>
+#include <sihd/util/fs.hpp>
+#include <sihd/util/str.hpp>
 #include <sihd/util/Path.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Endian.hpp>
@@ -51,7 +51,7 @@ using namespace sihd::util;
 // logger used by lua code
 Logger LuaUtilApi::logger("sihd::lua");
 // from path/bin/exe.lua -> path/bin -> path
-std::string LuaUtilApi::dir = FS::parent(FS::parent(OS::executable_path()));
+std::string LuaUtilApi::dir = fs::parent(fs::parent(OS::executable_path()));
 
 SIHD_LOGGER;
 
@@ -253,35 +253,35 @@ void    LuaUtilApi::load_files(Vm & vm)
         .beginNamespace("sihd")
             .beginNamespace("util")
                 .beginNamespace("fs")
-                    .addFunction("exists", &FS::exists)
-                    .addFunction("is_file", &FS::is_file)
-                    .addFunction("is_dir", &FS::is_dir)
-                    .addFunction("filesize", &FS::filesize)
-                    .addFunction("remove_directory", &FS::remove_directory)
-                    .addFunction("remove_directories", &FS::remove_directories)
-                    .addFunction("make_directory", &FS::make_directory)
-                    .addFunction("make_directories", &FS::make_directories)
-                    .addFunction("children", &FS::children)
-                    .addFunction("recursive_children", &FS::recursive_children)
-                    .addFunction("is_absolute", &FS::is_absolute)
-                    .addFunction("normalize", &FS::normalize)
-                    .addFunction("trim_path", static_cast<std::string (*)(std::string_view, std::string_view)>(&FS::trim_path))
-                    .addFunction("parent", &FS::parent)
-                    .addFunction("filename", &FS::filename)
-                    .addFunction("extension", &FS::extension)
+                    .addFunction("exists", &fs::exists)
+                    .addFunction("is_file", &fs::is_file)
+                    .addFunction("is_dir", &fs::is_dir)
+                    .addFunction("filesize", &fs::filesize)
+                    .addFunction("remove_directory", &fs::remove_directory)
+                    .addFunction("remove_directories", &fs::remove_directories)
+                    .addFunction("make_directory", &fs::make_directory)
+                    .addFunction("make_directories", &fs::make_directories)
+                    .addFunction("children", &fs::children)
+                    .addFunction("recursive_children", &fs::recursive_children)
+                    .addFunction("is_absolute", &fs::is_absolute)
+                    .addFunction("normalize", &fs::normalize)
+                    .addFunction("trim_path", static_cast<std::string (*)(std::string_view, std::string_view)>(&fs::trim_path))
+                    .addFunction("parent", &fs::parent)
+                    .addFunction("filename", &fs::filename)
+                    .addFunction("extension", &fs::extension)
                     .addFunction("combine", +[] (luabridge::LuaRef arg1, luabridge::LuaRef arg2)
                     {
                         if (arg1.isTable())
                         {
                             std::string ret;
                             for (const auto & pair: luabridge::pairs(arg1))
-                                ret = FS::combine(ret, pair.second.cast<std::string>());
+                                ret = fs::combine(ret, pair.second.cast<std::string>());
                             return ret;
                         }
-                        return FS::combine(arg1.cast<std::string>(), arg2.cast<std::string>());
+                        return fs::combine(arg1.cast<std::string>(), arg2.cast<std::string>());
                     })
-                    .addFunction("remove_file", &FS::remove_file)
-                    .addFunction("are_equals", &FS::are_equals)
+                    .addFunction("remove_file", &fs::remove_file)
+                    .addFunction("are_equals", &fs::are_equals)
                 .endNamespace()
                 /**
                  * File
@@ -607,12 +607,12 @@ void    LuaUtilApi::load_tools(Vm & vm)
                     .addFunction("current_rss", &OS::current_rss)
                 .endNamespace()
                 .beginNamespace("str")
-                    .addFunction("timeoffset_str", &Str::timeoffset_str)
-                    .addFunction("localtimeoffset_str", &Str::localtimeoffset_str)
-                    .addFunction("trim", &Str::trim)
-                    .addFunction("replace", &Str::replace)
-                    .addFunction("starts_with", &Str::starts_with)
-                    .addFunction("ends_with", &Str::ends_with)
+                    .addFunction("timeoffset_str", &str::timeoffset_str)
+                    .addFunction("localtimeoffset_str", &str::localtimeoffset_str)
+                    .addFunction("trim", &str::trim)
+                    .addFunction("replace", &str::replace)
+                    .addFunction("starts_with", &str::starts_with)
+                    .addFunction("ends_with", &str::ends_with)
                     .addFunction("split", +[] (const std::string & str, const std::string & delimiter)
                     {
                         Splitter splitter(delimiter);

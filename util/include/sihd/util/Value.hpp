@@ -2,7 +2,7 @@
 # define __SIHD_UTIL_VALUE_HPP__
 
 # include <sihd/util/Types.hpp>
-# include <sihd/util/Str.hpp>
+# include <sihd/util/str.hpp>
 # include <sihd/util/Logger.hpp>
 # include <string.h>
 # include <limits>
@@ -69,7 +69,7 @@ class Value
         bool from_bool_string(const std::string & str)
         {
             bool val;
-            bool ret = Str::convert_from_string<bool>(str, val);
+            bool ret = str::convert_from_string<bool>(str, val);
             if (ret)
                 this->set<bool>(val);
             return ret;
@@ -78,7 +78,7 @@ class Value
         bool from_char_string(const std::string & str)
         {
             char val;
-            bool ret = Str::convert_from_string<char>(str, val);
+            bool ret = str::convert_from_string<char>(str, val);
             if (ret)
                 this->set<char>(val);
             return ret;
@@ -87,10 +87,10 @@ class Value
         bool from_int_string(const std::string & str)
         {
             bool ret = false;
-            if (Str::starts_with(str, "0b"))
-                ret = Str::convert_from_string<int64_t>(str.c_str() + 2, this->data, 2);
+            if (str::starts_with(str, "0b"))
+                ret = str::convert_from_string<int64_t>(str.c_str() + 2, this->data, 2);
             else
-                ret = Str::convert_from_string<int64_t>(str, this->data);
+                ret = str::convert_from_string<int64_t>(str, this->data);
             if (ret)
                 this->type = TYPE_LONG;
             return ret;
@@ -101,17 +101,17 @@ class Value
             if (str.find('.') == std::string::npos)
                 return false;
             bool ret = false;
-            if (Str::ends_with(str, "f"))
+            if (str::ends_with(str, "f"))
             {
                 float f;
-                ret = Str::convert_from_string<float>(str, f);
+                ret = str::convert_from_string<float>(str, f);
                 if (ret)
                     this->set<float>(f);
             }
             else
             {
                 double dbl;
-                ret = Str::convert_from_string<double>(str, dbl);
+                ret = str::convert_from_string<double>(str, dbl);
                 if (ret)
                     this->set<double>(dbl);
             }

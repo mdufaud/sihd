@@ -4,7 +4,7 @@
 # include <sihd/util/Node.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/IHandler.hpp>
-# include <sihd/util/Str.hpp>
+# include <sihd/util/str.hpp>
 # include <sihd/core/Channel.hpp>
 
 namespace sihd::core

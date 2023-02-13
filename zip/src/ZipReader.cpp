@@ -1,7 +1,7 @@
 #include <sihd/zip/ZipReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/File.hpp>
 
 namespace sihd::zip
@@ -300,7 +300,7 @@ bool    ZipReader::write_entry(std::string_view path, std::string_view password)
     bool ret = false;
     if (this->is_entry_directory())
     {
-        ret = FS::make_directory(path.data(), 0640);
+        ret = fs::make_directory(path.data(), 0640);
         if (!ret)
             SIHD_LOG(error, "ZipReader: could not write directory entry '{}' to: {}", _current_zip_entry.name, path);
         return ret;

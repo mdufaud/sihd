@@ -65,7 +65,7 @@ bool    Splitter::set_escape_sequences(std::string_view str)
 
 bool    Splitter::set_escape_sequences_all()
 {
-    _authorized_open_escape_sequences = Str::g_escapes_open;
+    _authorized_open_escape_sequences = str::escapes_open();
     return true;
 }
 
@@ -102,7 +102,7 @@ int     Splitter::count_tokens(const char *s) const
             ++count;
         while (s[i])
         {
-            int closed_at = Str::closing_escape_index(s, i, _authorized_open_escape_sequences.c_str());
+            int closed_at = str::closing_escape_index(s, i, _authorized_open_escape_sequences.c_str());
             // matched closure
             if (closed_at > 0)
                 i = closed_at;
@@ -142,7 +142,7 @@ std::string_view    Splitter::next_token(const char *s, int *idx) const
     int y = x;
     while (s[y])
     {
-        int closed_at = Str::closing_escape_index(s, y, _authorized_open_escape_sequences.c_str());
+        int closed_at = str::closing_escape_index(s, y, _authorized_open_escape_sequences.c_str());
         // matched closure
         if (closed_at > 0)
             y = closed_at;

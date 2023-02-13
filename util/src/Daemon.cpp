@@ -6,7 +6,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/FileLogger.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <windows.h>
@@ -25,10 +25,10 @@ Daemon::Daemon(const std::string & name, sihd::util::Node *parent):
     _signals_handled = false;
     _uid = 0;
 #if !defined(__SIHD_WINDOWS__)
-    _working_dir_path = FS::sep_str();
+    _working_dir_path = fs::sep_str();
     _pid_file_path = "/var/lock/" + this->name() + "_daemon.lock";
 #else
-    _working_dir_path = FS::home_path();
+    _working_dir_path = fs::home_path();
 #endif
     this->add_conf("uid", &Daemon::set_uid);
     this->add_conf("pid_file", &Daemon::set_pid_file_path);
@@ -100,7 +100,7 @@ void    Daemon::_remove_pid_file()
     {
         std::string path = _pid_file.path();
         _pid_file.close();
-        FS::remove_file(path);
+        fs::remove_file(path);
     }
 }
 
@@ -123,7 +123,7 @@ bool    Daemon::_write_pid_file()
 {
     if (_pid_file.is_open() == false)
         return false;
-    std::string towrite = Str::to_dec(getpid()) + "\n";
+    std::string towrite = str::to_dec(getpid()) + "\n";
     bool ret = _pid_file.write(towrite) == (ssize_t)towrite.size();
     if (ret == false)
         SIHD_LOG(error, "Daemon: failed to write pid file");

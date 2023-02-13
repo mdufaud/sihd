@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
 #include <sihd/lua/Vm.hpp>

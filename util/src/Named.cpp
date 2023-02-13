@@ -1,7 +1,7 @@
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Str.hpp>
+#include <sihd/util/str.hpp>
 #include <sihd/util/Splitter.hpp>
 
 namespace sihd::util
@@ -74,7 +74,7 @@ const Node  *Named::cparent() const
 
 std::string     Named::class_name() const
 {
-    return sihd::util::Str::demangle(typeid(*this).name());
+    return sihd::util::str::demangle(typeid(*this).name());
 }
 
 Node   *Named::root()

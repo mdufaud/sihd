@@ -1,7 +1,7 @@
 #ifndef __SIHD_UTIL_TMPDIR_HPP__
 # define __SIHD_UTIL_TMPDIR_HPP__
 
-# include <sihd/util/FS.hpp>
+# include <sihd/util/fs.hpp>
 
 namespace sihd::util
 {
@@ -11,20 +11,20 @@ class TmpDir
     public:
         TmpDir()
         {
-            _path = FS::make_tmp_directory(FS::ensure_separation(FS::tmp_path()));
+            _path = fs::make_tmp_directory(fs::ensure_separation(fs::tmp_path()));
         }
 
         TmpDir(std::string_view prefix)
         {
-            _path = FS::make_tmp_directory(prefix);
+            _path = fs::make_tmp_directory(prefix);
         }
 
         ~TmpDir()
         {
-            if (FS::is_dir(_path))
+            if (fs::is_dir(_path))
             {
-                if (FS::remove_directories(_path))
-                    FS::remove_directory(_path);
+                if (fs::remove_directories(_path))
+                    fs::remove_directory(_path);
             }
         };
 

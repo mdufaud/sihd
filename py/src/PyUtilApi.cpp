@@ -1,6 +1,6 @@
 #include <sihd/py/PyUtilApi.hpp>
 
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/OS.hpp>
 
 #include <sihd/util/Scheduler.hpp>
@@ -44,7 +44,7 @@ namespace sihd::py
 using namespace sihd::util;
 
 // from path/bin/exe.lua -> path/bin -> path
-std::string PyUtilApi::dir = FS::parent(FS::parent(OS::executable_path()));
+std::string PyUtilApi::dir = fs::parent(fs::parent(OS::executable_path()));
 
 // global api logger
 SIHD_NEW_LOGGER("sihd::py::api");

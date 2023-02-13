@@ -1,6 +1,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 
 #include <sihd/http/HttpServer.hpp>
 
@@ -87,7 +87,7 @@ bool    HttpServer::set_port(int port)
 
 bool    HttpServer::set_root_dir(std::string_view root_dir)
 {
-    bool ret = FS::is_dir(root_dir);
+    bool ret = fs::is_dir(root_dir);
     if (ret)
         _root_dir = root_dir;
     else
@@ -102,7 +102,7 @@ bool    HttpServer::set_poll_frequency(double freq)
 
 bool    HttpServer::set_ssl_cert_path(std::string_view path)
 {
-    bool ret = FS::is_file(path);
+    bool ret = fs::is_file(path);
     if (ret)
         _ssl_cert_path = path;
     else
@@ -112,7 +112,7 @@ bool    HttpServer::set_ssl_cert_path(std::string_view path)
 
 bool    HttpServer::set_ssl_cert_key(std::string_view path)
 {
-    bool ret = FS::is_file(path);
+    bool ret = fs::is_file(path);
     if (ret)
         _ssl_cert_key = path;
     else
@@ -212,8 +212,8 @@ bool    HttpServer::get_resource_path(std::string_view path, std::string & res)
 {
     std::string tmp_path = _root_dir;
     tmp_path.append(path.data(), path.size());
-    bool ret = FS::is_file(tmp_path);
-    if (!ret && (ret = FS::is_dir(path)))
+    bool ret = fs::is_file(tmp_path);
+    if (!ret && (ret = fs::is_dir(path)))
         tmp_path += "/index.html";
     if (!ret)
     {
@@ -221,7 +221,7 @@ bool    HttpServer::get_resource_path(std::string_view path, std::string & res)
         {
             tmp_path = resource_path;
             tmp_path.append(path.data(), path.size());
-            if ((ret = FS::exists(tmp_path)))
+            if ((ret = fs::exists(tmp_path)))
                 break ;
         }
     }
@@ -368,7 +368,7 @@ int     HttpServer::_on_http_request(HttpSession *session, std::string_view path
     std::string resource_path;
     if (this->get_resource_path(path, resource_path))
     {
-        std::string type = HttpHeader::build_content_type(_mime.get(FS::extension(resource_path)), _encoding);
+        std::string type = HttpHeader::build_content_type(_mime.get(fs::extension(resource_path)), _encoding);
         if (lws_serve_http_file(session->wsi, resource_path.c_str(), type.c_str(), nullptr, 0) < 0)
             rc = -1;
         session->should_complete_transaction = false;

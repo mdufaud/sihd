@@ -2,7 +2,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/zip/ZipWriter.hpp>
 #include <sihd/zip/ZipReader.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/TmpDir.hpp>
 
@@ -37,8 +37,8 @@ namespace test
     {
         TmpDir tmp_dir;
 
-        std::string zip_path = FS::combine(tmp_dir.path(), "to_zip.zip");
-        FS::remove_file(zip_path);
+        std::string zip_path = fs::combine(tmp_dir.path(), "to_zip.zip");
+        fs::remove_file(zip_path);
 
         ZipWriter writer("zip-writer");
 

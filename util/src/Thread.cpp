@@ -1,5 +1,5 @@
 #include <sihd/util/Thread.hpp>
-#include <sihd/util/Str.hpp>
+#include <sihd/util/str.hpp>
 #include <string>
 #include <sstream>
 
@@ -24,7 +24,7 @@ pthread_t   Thread::id()
 
 std::string     Thread::id_str(pthread_t id)
 {
-    return "0x" + Str::to_hex(id);
+    return "0x" + str::to_hex(id);
 }
 
 std::string     Thread::id_str()

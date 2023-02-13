@@ -1,7 +1,7 @@
 #include <sihd/csv/CsvWriter.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/Str.hpp>
+#include <sihd/util/str.hpp>
 #include <sihd/util/ArrayView.hpp>
 
 namespace sihd::csv
@@ -35,7 +35,7 @@ CsvWriter::~CsvWriter()
 
 bool    CsvWriter::set_quote_value(int c)
 {
-    _end_quote_c = sihd::util::Str::closing_escape_of(c);
+    _end_quote_c = sihd::util::str::closing_escape_of(c);
     if (_end_quote_c < 0)
     {
         _begin_quote_c = -1;

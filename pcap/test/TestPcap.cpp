@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/TmpDir.hpp>
 #include <sihd/pcap/PcapReader.hpp>
 #include <sihd/pcap/PcapWriter.hpp>
@@ -68,7 +68,7 @@ namespace test
         char hw[] = "hello world";
         PcapWriter writer("pcap-writer");
 
-        std::string path = FS::combine(tmp_dir.path(), "test.pcap");
+        std::string path = fs::combine(tmp_dir.path(), "test.pcap");
         SIHD_LOG(info, "Writing pcap: {}", path);
 
         EXPECT_TRUE(writer.open(path, DLT_EN10MB));
@@ -77,7 +77,7 @@ namespace test
         EXPECT_TRUE(writer.write(hw, sizeof(hw)));
         EXPECT_TRUE(writer.close());
 
-        std::string content = FS::read_all(path).value();
+        std::string content = fs::read_all(path).value();
         EXPECT_EQ(memcmp(content.c_str() + content.size() - sizeof(hw), hw, sizeof(hw)), 0);
     }
 }

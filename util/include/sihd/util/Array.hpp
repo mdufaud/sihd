@@ -220,7 +220,7 @@ class Array: public IArray, public ICloneable<Array<T>>
                 for (const std::string & split: splits)
                 {
                     T value;
-                    if (Str::convert_from_string<T>(split, value))
+                    if (str::convert_from_string<T>(split, value))
                         this->push_back(value);
                     else
                     {
@@ -371,7 +371,7 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         std::string hexdump(char delimiter = ' ') const
         {
-            return Str::hexdump(_buf_ptr, this->byte_size(), delimiter);
+            return str::hexdump(_buf_ptr, this->byte_size(), delimiter);
         }
 
         std::string str() const
@@ -395,7 +395,7 @@ class Array: public IArray, public ICloneable<Array<T>>
                 return s;
             }
             else
-                return Str::hexdump(_buf_ptr, this->byte_size(), 0);
+                return str::hexdump(_buf_ptr, this->byte_size(), 0);
         }
 
         std::string str(char delimiter) const
@@ -419,7 +419,7 @@ class Array: public IArray, public ICloneable<Array<T>>
                 return s;
             }
             else
-                return Str::hexdump(_buf_ptr, this->byte_size(), delimiter);
+                return str::hexdump(_buf_ptr, this->byte_size(), delimiter);
         }
 
         /*********************************************************************/

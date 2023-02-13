@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/TmpDir.hpp>
 #include <sihd/ssh/SshSession.hpp>
@@ -37,9 +37,9 @@ namespace test
 
     TEST_F(TestSshScp, test_sshscp_push)
     {
-        std::string test_dir = FS::combine(_tmp_dir.path(), "push");
-        FS::remove_directories(test_dir);
-        FS::make_directories(test_dir);
+        std::string test_dir = fs::combine(_tmp_dir.path(), "push");
+        fs::remove_directories(test_dir);
+        fs::make_directories(test_dir);
 
         std::string user = getenv("USER");
         SshSession session;
@@ -64,21 +64,21 @@ namespace test
         EXPECT_FALSE(scp.push_dir("pushed_dir2"));
         EXPECT_FALSE(scp.leave_dir());
 
-        EXPECT_TRUE(FS::is_file(FS::combine(test_dir, "pushed_file.txt")));
-        EXPECT_TRUE(FS::is_file(FS::combine(test_dir, "pushed_dir/pushed_file_in_dir.txt")));
-        EXPECT_TRUE(FS::is_file(FS::combine(test_dir, "pushed_file_not_in_dir.txt")));
+        EXPECT_TRUE(fs::is_file(fs::combine(test_dir, "pushed_file.txt")));
+        EXPECT_TRUE(fs::is_file(fs::combine(test_dir, "pushed_dir/pushed_file_in_dir.txt")));
+        EXPECT_TRUE(fs::is_file(fs::combine(test_dir, "pushed_file_not_in_dir.txt")));
 
-        EXPECT_EQ(FS::filesize(test_dir + "/pushed_file.txt"), FS::filesize("test/resources/file.txt"));
+        EXPECT_EQ(fs::filesize(test_dir + "/pushed_file.txt"), fs::filesize("test/resources/file.txt"));
 
-        EXPECT_FALSE(FS::is_file(FS::combine(test_dir, "pushed_file2.txt")));
-        EXPECT_FALSE(FS::is_dir(FS::combine(test_dir, "pushed_dir2")));
+        EXPECT_FALSE(fs::is_file(fs::combine(test_dir, "pushed_file2.txt")));
+        EXPECT_FALSE(fs::is_dir(fs::combine(test_dir, "pushed_dir2")));
     }
 
     TEST_F(TestSshScp, test_sshscp_pull)
     {
-        std::string test_dir = FS::combine(_tmp_dir.path(), "pull");
-        FS::remove_directories(test_dir);
-        FS::make_directories(test_dir);
+        std::string test_dir = fs::combine(_tmp_dir.path(), "pull");
+        fs::remove_directories(test_dir);
+        fs::make_directories(test_dir);
 
         std::string user = getenv("USER");
         SshSession session;
@@ -91,8 +91,8 @@ namespace test
 
         SshScp scp = session.make_scp();
 
-        std::string pull_from = FS::combine(FS::cwd(), "test/resources/file.txt");
-        std::string pull_to = FS::combine(test_dir, "pulled_file.txt");
+        std::string pull_from = fs::combine(fs::cwd(), "test/resources/file.txt");
+        std::string pull_to = fs::combine(test_dir, "pulled_file.txt");
         EXPECT_TRUE(scp.pull_file(pull_from, pull_to));
     }
 }

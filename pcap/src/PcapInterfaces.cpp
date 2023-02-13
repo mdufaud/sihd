@@ -1,6 +1,6 @@
 #include <sihd/pcap/PcapInterfaces.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Str.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::pcap
 {

@@ -1,7 +1,7 @@
 #include <sihd/csv/CsvReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/Str.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::csv
 {
@@ -31,7 +31,7 @@ CsvReader::~CsvReader()
 
 bool    CsvReader::set_quote_value(int c)
 {
-    if (sihd::util::Str::closing_escape_of(c) < 0)
+    if (sihd::util::str::closing_escape_of(c) < 0)
     {
         SIHD_LOG(error, "CsvReader: quote character '{}' is not supported", c);
         return false;
@@ -122,7 +122,7 @@ bool    CsvReader::read_timestamp(time_t *nano_timestamp) const
         return false;
     int offset = _line_size > 0 && _quote > 0 && _line_ptr[0] == _quote ? 1 : 0;
     std::string str = _line_ptr + offset;
-    return sihd::util::Str::to_long(str, (long *)nano_timestamp);
+    return sihd::util::str::to_long(str, (long *)nano_timestamp);
 }
 
 bool    CsvReader::get_read_data(std::vector<std::string> & values) const

@@ -293,7 +293,7 @@ DevFilter::Rule &   DevFilter::Rule::delay(time_t nano_delay)
 
 bool    DevFilter::Rule::parse(std::string_view conf_str)
 {
-    std::map<std::string, std::string> rule_conf_map = sihd::util::Str::parse_configuration(conf_str);
+    std::map<std::string, std::string> rule_conf_map = sihd::util::str::parse_configuration(conf_str);
     if (rule_conf_map.find(CONF_KEY_CHANNEL_IN) == rule_conf_map.end())
     {
         SIHD_LOG_ERROR("DevFilter: no channel input '{}' in configuration: {}", CONF_KEY_CHANNEL_IN, conf_str);
@@ -320,7 +320,7 @@ bool    DevFilter::Rule::_parse_options_config(const std::map<std::string, std::
 {
     if (conf_map.find(CONF_KEY_MATCH) != conf_map.end())
     {
-        if (sihd::util::Str::convert_from_string<bool>(conf_map.at(CONF_KEY_MATCH), this->should_match) == false)
+        if (sihd::util::str::convert_from_string<bool>(conf_map.at(CONF_KEY_MATCH), this->should_match) == false)
         {
             SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_MATCH, conf_map.at(CONF_KEY_MATCH));
             return false;
@@ -329,7 +329,7 @@ bool    DevFilter::Rule::_parse_options_config(const std::map<std::string, std::
     if (conf_map.find(CONF_KEY_DELAY) != conf_map.end())
     {
         double delay;
-        if (sihd::util::Str::convert_from_string<double>(conf_map.at(CONF_KEY_DELAY), delay) == false)
+        if (sihd::util::str::convert_from_string<double>(conf_map.at(CONF_KEY_DELAY), delay) == false)
         {
             SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_DELAY, conf_map.at(CONF_KEY_DELAY));
             return false;
@@ -375,7 +375,7 @@ bool    DevFilter::Rule::_parse_trigger_config(const std::map<std::string, std::
             return false;
         }
         if (split_trigger[0].empty() == false
-                && sihd::util::Str::convert_from_string<size_t>(split_trigger[0], this->trigger_idx) == false)
+                && sihd::util::str::convert_from_string<size_t>(split_trigger[0], this->trigger_idx) == false)
         {
             SIHD_LOG(error, "DevFilter: cannot convert trigger idx: {}", split_trigger[0]);
             return false;
@@ -431,7 +431,7 @@ bool    DevFilter::Rule::_parse_write_config(const std::map<std::string, std::st
             return false;
         }
         if (split_write[0].empty() == false
-                && sihd::util::Str::convert_from_string<size_t>(split_write[0], this->write_idx) == false)
+                && sihd::util::str::convert_from_string<size_t>(split_write[0], this->write_idx) == false)
         {
             SIHD_LOG(error, "DevFilter: cannot convert write idx: {}", split_write[0]);
             return false;

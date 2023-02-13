@@ -10,8 +10,8 @@
 
 #include <fmt/format.h>
 
-#include <sihd/util/Num.hpp>
-#include <sihd/util/Str.hpp>
+#include <sihd/util/num.hpp>
+#include <sihd/util/str.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/time.hpp>
 #include <sihd/util/Timestamp.hpp>
@@ -22,22 +22,75 @@
 # define SIHD_UTIL_STR_BUFFER 4096
 #endif
 
-namespace sihd::util
+namespace sihd::util::str
 {
 
-size_t Str::hexdump_cols = 8;
+namespace
+{
 
 // format
-std::mutex Str::g_buffer_mutex;
-const size_t Str::g_buffer_size = SIHD_UTIL_STR_BUFFER;
-char Str::g_buffer[SIHD_UTIL_STR_BUFFER];
+std::mutex buffer_mutex;
+const size_t buffer_size = SIHD_UTIL_STR_BUFFER;
+char buffer[SIHD_UTIL_STR_BUFFER];
 
-// escapes sequences - must match
-const char Str::g_escapes_open[] = "\"'[({<";
-const char Str::g_escapes_close[] = "\"'])}>";
-const char Str::g_escape_char = '\\';
+std::string _format_time(time_t nano, std::string_view format, bool localtime)
+{
+    struct tm tm = time::to_tm(nano, localtime);
+    size_t ret = strftime(buffer, buffer_size, format.data(), &tm);
+    return std::string(buffer, ret);
+}
 
-void    Str::append_sep(std::string & str, std::string_view append, std::string_view sep)
+std::string _timeoffset_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime)
+{
+    std::string s;
+    struct tm tm = time::to_tm(std::abs(nano), localtime);
+    bool next_step;
+    s += (nano > 0 ? "+" : "-");
+    if ((next_step = tm.tm_year > 70))
+        s += fmt::format("{}y:", tm.tm_year - 70);
+    if ((next_step = next_step || tm.tm_mon > 0))
+        s += fmt::format("{}m:", tm.tm_mon);
+    if ((next_step = next_step || (tm.tm_mday - 1) > 0))
+        s += fmt::format("{}d::", tm.tm_mday - 1);
+    if ((next_step = next_step || tm.tm_hour > 0))
+        s += fmt::format("{}h:", tm.tm_hour);
+    if ((next_step = next_step || tm.tm_min > 0))
+        s += fmt::format("{}m:", tm.tm_min);
+    if ((next_step = next_step || tm.tm_sec > 0))
+        s += fmt::format("{}s:", tm.tm_sec);
+    time_t ms = time::to_milli(nano) % (int)1E3;
+    if ((next_step = next_step || ms > 0))
+        s += fmt::format("{}ms:", ms);
+    time_t us = time::to_micro(nano) % (int)1E3;
+    s += fmt::format("{}us", us);
+    if (nano_resolution)
+    {
+        time_t ns = std::abs(nano) % (int)1E3;
+        s += fmt::format(":{}ns", ns);
+    }
+    if (total_parenthesis)
+        s += fmt::format(" ({})", nano);
+    return s;
+}
+
+}
+
+const char  *escapes_open()
+{
+    return "\"'[({<";
+}
+
+const char  *escapes_close()
+{
+    return "\"'])}>";
+}
+
+char    escape_char()
+{
+    return '\\';
+}
+
+void    append_sep(std::string & str, std::string_view append, std::string_view sep)
 {
     if (str.empty())
         str += append;
@@ -48,7 +101,7 @@ void    Str::append_sep(std::string & str, std::string_view append, std::string_
     }
 }
 
-char    *Str::csub(std::string_view str, size_t from_idx, ssize_t size)
+char    *csub(std::string_view str, size_t from_idx, ssize_t size)
 {
     if (size < 0)
         return nullptr;
@@ -65,7 +118,7 @@ char    *Str::csub(std::string_view str, size_t from_idx, ssize_t size)
     return ret;
 }
 
-std::string     Str::join(const std::vector<std::string> & join_lst, std::string_view join_with)
+std::string join(const std::vector<std::string> & join_lst, std::string_view join_with)
 {
     std::string s;
     bool first = true;
@@ -80,7 +133,7 @@ std::string     Str::join(const std::vector<std::string> & join_lst, std::string
     return s;
 }
 
-std::string     Str::demangle(std::string_view name)
+std::string demangle(std::string_view name)
 {
     int status = -1;
     char *ptr = abi::__cxa_demangle(name.data(), NULL, NULL, &status);
@@ -93,22 +146,22 @@ std::string     Str::demangle(std::string_view name)
     return name.data();
 }
 
-std::string     Str::format(std::string_view format, ...)
+std::string format(std::string_view format, ...)
 {
     std::string str;
     va_list args;
     va_start(args, format);
     {
-        std::lock_guard<std::mutex> l(g_buffer_mutex);
-        size_t ret = vsnprintf(g_buffer, g_buffer_size, format.data(), args);
-        ret = ret > g_buffer_size ? g_buffer_size : ret;
-        str.assign(g_buffer, ret);
+        std::lock_guard<std::mutex> l(buffer_mutex);
+        size_t ret = vsnprintf(buffer, buffer_size, format.data(), args);
+        ret = ret > buffer_size ? buffer_size : ret;
+        str.assign(buffer, ret);
     }
     va_end(args);
     return str;
 }
 
-std::string     Str::trim(std::string_view s)
+std::string trim(std::string_view s)
 {
     size_t len = s.size();
     size_t i = 0;
@@ -120,7 +173,7 @@ std::string     Str::trim(std::string_view s)
     return std::string(s.substr(i, j - i + 1));
 }
 
-std::string &   Str::to_upper(std::string & s)
+std::string &   to_upper(std::string & s)
 {
     size_t i = 0;
     while (s[i])
@@ -131,7 +184,7 @@ std::string &   Str::to_upper(std::string & s)
     return s;
 }
 
-std::string &   Str::to_lower(std::string & s)
+std::string &   to_lower(std::string & s)
 {
     size_t i = 0;
     while (s[i])
@@ -142,7 +195,7 @@ std::string &   Str::to_lower(std::string & s)
     return s;
 }
 
-std::string     Str::replace(std::string_view s, std::string_view from, std::string_view to)
+std::string replace(std::string_view s, std::string_view from, std::string_view to)
 {
     std::string ret;
     size_t i = s.find(from);
@@ -159,14 +212,14 @@ std::string     Str::replace(std::string_view s, std::string_view from, std::str
     return ret;
 }
 
-bool    Str::iequals(std::string_view s1, std::string_view s2)
+bool    iequals(std::string_view s1, std::string_view s2)
 {
     if (s1.size() != s2.size())
         return false;
     return strncasecmp(s1.data(), s2.data(), s1.size());
 }
 
-char    Str::num_to_char(size_t num)
+char    num_to_char(size_t num)
 {
     if (num >= 10)
         return 'a' + (num - 10);
@@ -174,26 +227,26 @@ char    Str::num_to_char(size_t num)
         return '0' + num;
 }
 
-std::string     Str::to_hex(uint64_t n)
+std::string to_hex(uint64_t n)
 {
-    return Str::num_str(n, 16);
+    return num_str(n, 16);
 }
 
-std::string     Str::to_dec(uint64_t n)
+std::string to_dec(uint64_t n)
 {
-    return Str::num_str(n, 10);
+    return num_str(n, 10);
 }
 
-std::string     Str::to_oct(uint64_t n)
+std::string to_oct(uint64_t n)
 {
-    return Str::num_str(n, 8);
+    return num_str(n, 8);
 }
 
-std::string     Str::num_str(uint64_t num, uint16_t base)
+std::string num_str(uint64_t num, uint16_t base)
 {
     if (num == 0)
         return "0";
-    size_t i = Num::size(num, base);
+    size_t i = num::size(num, base);
     std::string ret;
     ret.resize(i);
     while (num != 0)
@@ -208,9 +261,9 @@ std::string     Str::num_str(uint64_t num, uint16_t base)
     return ret;
 }
 
-std::string     Str::addr_str(void *addr, size_t padding)
+std::string addr_str(void *addr, size_t padding)
 {
-    size_t numsize = Num::size((size_t)addr, 16);
+    size_t numsize = num::size((size_t)addr, 16);
     ssize_t i = 0;
     ssize_t total_zero = padding - numsize;
     std::string ret;
@@ -225,25 +278,7 @@ std::string     Str::addr_str(void *addr, size_t padding)
     return ret;
 }
 
-std::string     Str::hexdump(const IArray & arr, char delim)
-{
-    return Str::hexdump(arr.buf(), arr.byte_size(), delim);
-}
-std::string     Str::hexdump(const IArrayView & arr, char delim)
-{
-    return Str::hexdump(arr.buf(), arr.byte_size(), delim);
-}
-
-std::string     Str::hexdump_fmt(const IArray & arr)
-{
-    return Str::hexdump_fmt(arr.buf(), arr.byte_size());
-}
-std::string     Str::hexdump_fmt(const IArrayView & arr)
-{
-    return Str::hexdump_fmt(arr.buf(), arr.byte_size());
-}
-
-std::string     Str::hexdump(const void *mem, size_t size, char delim)
+std::string hexdump(const void *mem, size_t size, char delim)
 {
     std::string ret;
     size_t i = 0;
@@ -260,13 +295,21 @@ std::string     Str::hexdump(const void *mem, size_t size, char delim)
     return ret;
 }
 
-std::string     Str::hexdump_fmt(const void *mem, size_t size)
+std::string hexdump(const IArray & arr, char delim)
 {
-    size_t i = 0;
-    size_t cols = Str::hexdump_cols;
-    size_t suppl = size % cols == 0 ? 0 : (cols - (size % cols));
-    std::string ret;
+    return hexdump(arr.buf(), arr.byte_size(), delim);
+}
+std::string hexdump(const IArrayView & arr, char delim)
+{
+    return hexdump(arr.buf(), arr.byte_size(), delim);
+}
 
+std::string hexdump_fmt(const void *mem, size_t size, size_t cols)
+{
+    std::string ret;
+    size_t suppl = size % cols == 0 ? 0 : (cols - (size % cols));
+
+    size_t i = 0;
     while (i < size + suppl)
     {
         if ((i % cols) == 0)
@@ -301,12 +344,21 @@ std::string     Str::hexdump_fmt(const void *mem, size_t size)
     return ret;
 }
 
-bool    Str::starts_with(std::string_view s, std::string_view start)
+std::string hexdump_fmt(const IArray & arr, size_t cols)
+{
+    return hexdump_fmt(arr.buf(), arr.byte_size(), cols);
+}
+std::string hexdump_fmt(const IArrayView & arr, size_t cols)
+{
+    return hexdump_fmt(arr.buf(), arr.byte_size(), cols);
+}
+
+bool    starts_with(std::string_view s, std::string_view start)
 {
     return strncmp(s.data(), start.data(), start.length()) == 0;
 }
 
-bool    Str::ends_with(std::string_view s, std::string_view end)
+bool    ends_with(std::string_view s, std::string_view end)
 {
     ssize_t ending = s.length() - end.length();
     if (ending < 0)
@@ -314,7 +366,7 @@ bool    Str::ends_with(std::string_view s, std::string_view end)
     return strncmp(s.data() + ending, end.data(), end.length()) == 0;
 }
 
-bool    Str::is_digit(int c, uint16_t base)
+bool    is_digit(int c, uint16_t base)
 {
     if (base <= 10)
         return base != 0 && c >= '0' && c <= '0' + (base - 1);
@@ -324,7 +376,7 @@ bool    Str::is_digit(int c, uint16_t base)
         || (c >= 'A' && c <= 'A' + (base - 1));
 }
 
-bool    Str::is_number(std::string_view s, uint16_t base)
+bool    is_number(std::string_view s, uint16_t base)
 {
     size_t i = 0;
     const char *data = s.data();
@@ -341,7 +393,7 @@ bool    Str::is_number(std::string_view s, uint16_t base)
     return true;
 }
 
-std::map<std::string, std::string>  Str::parse_configuration(std::string_view conf)
+std::map<std::string, std::string>  parse_configuration(std::string_view conf)
 {
     std::map<std::string, std::string> ret;
     Splitter splitter(";");
@@ -359,7 +411,7 @@ std::map<std::string, std::string>  Str::parse_configuration(std::string_view co
     return ret;
 }
 
-bool    Str::to_long(std::string_view str, long *ret, uint16_t base)
+bool    to_long(std::string_view str, long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
@@ -373,7 +425,7 @@ bool    Str::to_long(std::string_view str, long *ret, uint16_t base)
     return true;
 }
 
-bool   Str::to_ulong(std::string_view str, unsigned long *ret, uint16_t base)
+bool   to_ulong(std::string_view str, unsigned long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
@@ -387,7 +439,7 @@ bool   Str::to_ulong(std::string_view str, unsigned long *ret, uint16_t base)
     return true;
 }
 
-bool    Str::to_llong(std::string_view str, long long *ret, uint16_t base)
+bool    to_llong(std::string_view str, long long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
@@ -401,7 +453,7 @@ bool    Str::to_llong(std::string_view str, long long *ret, uint16_t base)
     return true;
 }
 
-bool   Str::to_ullong(std::string_view str, unsigned long long *ret, uint16_t base)
+bool   to_ullong(std::string_view str, unsigned long long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
@@ -415,7 +467,7 @@ bool   Str::to_ullong(std::string_view str, unsigned long long *ret, uint16_t ba
     return true;
 }
 
-bool    Str::to_double(std::string_view str, double *ret)
+bool    to_double(std::string_view str, double *ret)
 {
     errno = 0;
     char *endptr = NULL;
@@ -430,7 +482,7 @@ bool    Str::to_double(std::string_view str, double *ret)
 }
 
 template <>
-bool Str::convert_from_string<bool>(std::string_view str, bool & value, [[maybe_unused]] uint16_t base)
+bool convert_from_string<bool>(std::string_view str, bool & value, [[maybe_unused]] uint16_t base)
 {
     bool ret = false;
     if (str == "1")
@@ -446,7 +498,7 @@ bool Str::convert_from_string<bool>(std::string_view str, bool & value, [[maybe_
     if (!ret)
     {
         std::string lower(str);
-        Str::to_lower(lower);
+        to_lower(lower);
         if (str == "true")
         {
             value = true;
@@ -462,7 +514,7 @@ bool Str::convert_from_string<bool>(std::string_view str, bool & value, [[maybe_
 }
 
 template <>
-bool Str::convert_from_string<char>(std::string_view str, char & value, [[maybe_unused]] uint16_t base)
+bool convert_from_string<char>(std::string_view str, char & value, [[maybe_unused]] uint16_t base)
 {
     char c = 0;
     if (str.size() == 1)
@@ -477,161 +529,161 @@ bool Str::convert_from_string<char>(std::string_view str, char & value, [[maybe_
 }
 
 template <>
-bool Str::convert_from_string<int8_t>(std::string_view str, int8_t & value, uint16_t base)
+bool convert_from_string<int8_t>(std::string_view str, int8_t & value, uint16_t base)
 {
     long longval;
-    bool ret = Str::to_long(str, &longval, base);
+    bool ret = to_long(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
 }
 
 template <>
-bool Str::convert_from_string<int16_t>(std::string_view str, int16_t & value, uint16_t base)
+bool convert_from_string<int16_t>(std::string_view str, int16_t & value, uint16_t base)
 {
     long longval;
-    bool ret = Str::to_long(str, &longval, base);
+    bool ret = to_long(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
 }
 
 template <>
-bool Str::convert_from_string<int32_t>(std::string_view str, int32_t & value, uint16_t base)
+bool convert_from_string<int32_t>(std::string_view str, int32_t & value, uint16_t base)
 {
     long longval;
-    bool ret = Str::to_long(str, &longval, base);
+    bool ret = to_long(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
 }
 
 template <>
-bool Str::convert_from_string<int64_t>(std::string_view str, int64_t & value, uint16_t base)
+bool convert_from_string<int64_t>(std::string_view str, int64_t & value, uint16_t base)
 {
     long long longval;
-    bool ret = Str::to_llong(str, &longval, base);
+    bool ret = to_llong(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
 }
 
 template <>
-bool Str::convert_from_string<uint8_t>(std::string_view str, uint8_t & value, uint16_t base)
+bool convert_from_string<uint8_t>(std::string_view str, uint8_t & value, uint16_t base)
 {
     unsigned long longval;
-    bool ret = Str::to_ulong(str, &longval, base);
+    bool ret = to_ulong(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
 }
 
 template <>
-bool Str::convert_from_string<uint16_t>(std::string_view str, uint16_t & value, uint16_t base)
+bool convert_from_string<uint16_t>(std::string_view str, uint16_t & value, uint16_t base)
 {
     unsigned long longval;
-    bool ret = Str::to_ulong(str, &longval, base);
+    bool ret = to_ulong(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
 }
 
 template <>
-bool Str::convert_from_string<uint32_t>(std::string_view str, uint32_t & value, uint16_t base)
+bool convert_from_string<uint32_t>(std::string_view str, uint32_t & value, uint16_t base)
 {
     unsigned long longval;
-    bool ret = Str::to_ulong(str, &longval, base);
+    bool ret = to_ulong(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
 }
 
 template <>
-bool Str::convert_from_string<uint64_t>(std::string_view str, uint64_t & value, uint16_t base)
+bool convert_from_string<uint64_t>(std::string_view str, uint64_t & value, uint16_t base)
 {
     unsigned long long longval;
-    bool ret = Str::to_ullong(str, &longval, base);
+    bool ret = to_ullong(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
 }
 
 template <>
-bool Str::convert_from_string<float>(std::string_view str, float & value, [[maybe_unused]] uint16_t base)
+bool convert_from_string<float>(std::string_view str, float & value, [[maybe_unused]] uint16_t base)
 {
     double doubleval;
-    bool ret = Str::to_double(str, &doubleval);
+    bool ret = to_double(str, &doubleval);
     if (ret)
         value = doubleval;
     return ret;
 }
 
 template <>
-bool Str::convert_from_string<double>(std::string_view str, double & value, [[maybe_unused]] uint16_t base)
+bool convert_from_string<double>(std::string_view str, double & value, [[maybe_unused]] uint16_t base)
 {
     double doubleval;
-    bool ret = Str::to_double(str, &doubleval);
+    bool ret = to_double(str, &doubleval);
     if (ret)
         value = doubleval;
     return ret;
 }
 
-bool    Str::is_escape_sequence_open(int c, const char *authorized_open_escape_sequences)
+bool    is_escape_sequence_open(int c, const char *authorized_open_escape_sequences)
 {
-    const char *search_in = authorized_open_escape_sequences == nullptr ? g_escapes_open : authorized_open_escape_sequences;
+    const char *search_in = authorized_open_escape_sequences == nullptr ? escapes_open() : authorized_open_escape_sequences;
     return c > 0 && strchr(search_in, c) != nullptr;
 }
 
-bool    Str::is_escape_sequence_close(int c, const char *authorized_close_escape_sequences)
+bool    is_escape_sequence_close(int c, const char *authorized_close_escape_sequences)
 {
-    const char *search_in = authorized_close_escape_sequences == nullptr ? g_escapes_close : authorized_close_escape_sequences;
+    const char *search_in = authorized_close_escape_sequences == nullptr ? escapes_close() : authorized_close_escape_sequences;
     return c > 0 && strchr(search_in, c) != nullptr;
 }
 
-int     Str::closing_escape_of(int c)
+int     closing_escape_of(int c)
 {
-    const char *open_esc = strchr(g_escapes_open, c);
+    const char *open_esc = strchr(escapes_open(), c);
     if (open_esc != nullptr)
     {
-        size_t idx = open_esc - g_escapes_open;
-        return g_escapes_close[idx];
+        size_t idx = open_esc - escapes_open();
+        return escapes_close()[idx];
     }
     return -1;
 }
 
-bool    Str::is_escaped_char(const char *str, int index)
+bool    is_escaped_char(const char *str, int index)
 {
-    if (index > 0 && str[index - 1] == Str::g_escape_char)
+    if (index > 0 && str[index - 1] == escape_char())
     {
         // if escaped - the escape should not be escaped itself
-        if ((index - 2) < 0 || str[index - 2] != Str::g_escape_char)
+        if ((index - 2) < 0 || str[index - 2] != escape_char())
             return true;
     }
     return false;
 }
 
-int     Str::closing_escape_index(const char *str, int index, const char *authorized_open_escape_sequences)
+int     closing_escape_index(const char *str, int index, const char *authorized_open_escape_sequences)
 {
     int open_esc = str[index];
     if (authorized_open_escape_sequences != nullptr
         && strchr(authorized_open_escape_sequences, open_esc) == nullptr)
         return -1;
-    int close_esc = Str::closing_escape_of(open_esc);
+    int close_esc = closing_escape_of(open_esc);
     if (close_esc < 0)
         return -1;
-    if (Str::is_escaped_char(str, index))
+    if (is_escaped_char(str, index))
         return -1;
     int i = index + 1;
     while (str[i])
     {
-        if (str[i] == close_esc && Str::is_escaped_char(str, i) == false)
+        if (str[i] == close_esc && is_escaped_char(str, i) == false)
             return i + 1;
         ++i;
     }
     return -2;
 }
 
-std::string  Str::remove_escape_char(std::string_view str)
+std::string  remove_escape_char(std::string_view str)
 {
     std::string ret;
     const char *cstr = str.data();
@@ -665,7 +717,7 @@ std::string  Str::remove_escape_char(std::string_view str)
     return ret;
 }
 
-std::string  Str::remove_escape_sequences(std::string_view str, const char *authorized_open_escape_sequences)
+std::string  remove_escape_sequences(std::string_view str, const char *authorized_open_escape_sequences)
 {
     const char *cstr = str.data();
     std::string ret;
@@ -679,10 +731,10 @@ std::string  Str::remove_escape_sequences(std::string_view str, const char *auth
     while (i < len)
     {
         if (!in_seq
-            && Str::is_escape_sequence_open(cstr[i], authorized_open_escape_sequences)
-            && Str::is_escaped_char(cstr, i) == false)
+            && is_escape_sequence_open(cstr[i], authorized_open_escape_sequences)
+            && is_escaped_char(cstr, i) == false)
         {
-            current_seq = Str::closing_escape_of(cstr[i]);
+            current_seq = closing_escape_of(cstr[i]);
             ++count_sequences;
             in_seq = true;
         }
@@ -699,10 +751,10 @@ std::string  Str::remove_escape_sequences(std::string_view str, const char *auth
     while (i < len)
     {
         if (!in_seq
-            && Str::is_escape_sequence_open(cstr[i], authorized_open_escape_sequences)
-            && Str::is_escaped_char(cstr, i) == false)
+            && is_escape_sequence_open(cstr[i], authorized_open_escape_sequences)
+            && is_escaped_char(cstr, i) == false)
         {
-            current_seq = Str::closing_escape_of(cstr[i]);
+            current_seq = closing_escape_of(cstr[i]);
             ++i;
             in_seq = true;
         }
@@ -721,67 +773,27 @@ std::string  Str::remove_escape_sequences(std::string_view str, const char *auth
     return ret;
 }
 
-std::string Str::timeoffset_str(Timestamp timestamp, bool total_parenthesis, bool nano_resolution)
+std::string timeoffset_str(Timestamp timestamp, bool total_parenthesis, bool nano_resolution)
 {
-    return Str::_timeoffset_to_string(timestamp, total_parenthesis, nano_resolution, false);
+    return _timeoffset_to_string(timestamp, total_parenthesis, nano_resolution, false);
 }
 
-std::string Str::localtimeoffset_str(Timestamp timestamp, bool total_parenthesis, bool nano_resolution)
+std::string localtimeoffset_str(Timestamp timestamp, bool total_parenthesis, bool nano_resolution)
 {
-    return Str::_timeoffset_to_string(timestamp, total_parenthesis, nano_resolution, true);
+    return _timeoffset_to_string(timestamp, total_parenthesis, nano_resolution, true);
 }
 
-std::string Str::_timeoffset_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime)
+std::string format_time(Timestamp t, std::string_view format)
 {
-    std::string s;
-    struct tm tm = time::to_tm(std::abs(nano), localtime);
-    bool next_step;
-    s += (nano > 0 ? "+" : "-");
-    if ((next_step = tm.tm_year > 70))
-        s += fmt::format("{}y:", tm.tm_year - 70);
-    if ((next_step = next_step || tm.tm_mon > 0))
-        s += fmt::format("{}m:", tm.tm_mon);
-    if ((next_step = next_step || (tm.tm_mday - 1) > 0))
-        s += fmt::format("{}d::", tm.tm_mday - 1);
-    if ((next_step = next_step || tm.tm_hour > 0))
-        s += fmt::format("{}h:", tm.tm_hour);
-    if ((next_step = next_step || tm.tm_min > 0))
-        s += fmt::format("{}m:", tm.tm_min);
-    if ((next_step = next_step || tm.tm_sec > 0))
-        s += fmt::format("{}s:", tm.tm_sec);
-    time_t ms = time::to_milli(nano) % (int)1E3;
-    if ((next_step = next_step || ms > 0))
-        s += fmt::format("{}ms:", ms);
-    time_t us = time::to_micro(nano) % (int)1E3;
-    s += fmt::format("{}us", us);
-    if (nano_resolution)
-    {
-        time_t ns = std::abs(nano) % (int)1E3;
-        s += fmt::format(":{}ns", ns);
-    }
-    if (total_parenthesis)
-        s += fmt::format(" ({})", nano);
-    return s;
+    return _format_time(t, format, false);
 }
 
-std::string     Str::_format_time(time_t nano, std::string_view format, bool localtime)
+std::string format_localtime(Timestamp t, std::string_view format)
 {
-    struct tm tm = time::to_tm(nano, localtime);
-    size_t ret = strftime(Str::g_buffer, Str::g_buffer_size, format.data(), &tm);
-    return std::string(Str::g_buffer, ret);
+    return _format_time(t, format, true);
 }
 
-std::string     Str::format_time(Timestamp t, std::string_view format)
-{
-    return Str::_format_time(t, format, false);
-}
-
-std::string     Str::format_localtime(Timestamp t, std::string_view format)
-{
-    return Str::_format_time(t, format, true);
-}
-
-std::string     Str::bytes_str(ssize_t bytes, bool iec)
+std::string bytes_str(ssize_t bytes, bool iec)
 {
     constexpr ssize_t mbyte_si = 1000;
     constexpr ssize_t gbyte_si = 1000 * 1000;
@@ -822,7 +834,7 @@ std::string     Str::bytes_str(ssize_t bytes, bool iec)
     }
 }
 
-std::string     Str::word_wrap(std::string_view s, size_t width, bool append_hyphen)
+std::string word_wrap(std::string_view s, size_t width, bool append_hyphen)
 {
     if (width == 0)
         return "";

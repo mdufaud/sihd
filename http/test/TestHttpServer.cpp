@@ -3,8 +3,8 @@
 #include <libwebsockets.h>
 
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Str.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/str.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>

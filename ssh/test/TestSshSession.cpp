@@ -2,7 +2,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/File.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/Term.hpp>
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshChannel.hpp>
@@ -37,7 +37,7 @@ namespace test
     TEST_F(TestSshSession, test_sshsession_auth_key)
     {
         std::string home = getenv("HOME");
-        if (FS::is_file(FS::combine(home, ".ssh/id_rsa")) == false)
+        if (fs::is_file(fs::combine(home, ".ssh/id_rsa")) == false)
             GTEST_SKIP_("need ~/.ssh/id_rsa");
         std::string user = getenv("USER");
         SshSession session;
@@ -45,7 +45,7 @@ namespace test
         GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
         session.set_verbosity(SSH_LOG_PROTOCOL);
         EXPECT_TRUE(session.connected());
-        auto auth = session.auth_key_file(FS::combine(home, ".ssh/id_rsa"));
+        auto auth = session.auth_key_file(fs::combine(home, ".ssh/id_rsa"));
         SIHD_LOG(info, "Auth status: {}", auth.str());
         EXPECT_TRUE(auth.success());
 
@@ -61,7 +61,7 @@ namespace test
     TEST_F(TestSshSession, test_sshsession_auth_interactive_keyboard)
     {
         std::string home = getenv("HOME");
-        if (FS::is_dir(FS::combine(home, ".ssh")) == false)
+        if (fs::is_dir(fs::combine(home, ".ssh")) == false)
             GTEST_SKIP_("need ~/.ssh");
         if (Term::is_interactive() == false)
             GTEST_SKIP_("need interactive keyboard");
@@ -86,7 +86,7 @@ namespace test
     TEST_F(TestSshSession, test_sshsession_connect)
     {
         std::string home = getenv("HOME");
-        if (FS::is_dir(FS::combine(home, ".ssh")) == false)
+        if (fs::is_dir(fs::combine(home, ".ssh")) == false)
             GTEST_SKIP_("need ~/.ssh");
         std::string user = getenv("USER");
         SshSession session;

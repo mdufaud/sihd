@@ -1,7 +1,7 @@
 #ifndef __SIHD_UTIL_SPLITTER_HPP__
 # define __SIHD_UTIL_SPLITTER_HPP__
 
-#include <sihd/util/Str.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::util
 {

@@ -1,10 +1,10 @@
-#include <sihd/util/Num.hpp>
+#include <sihd/util/num.hpp>
 #include <random>
 
-namespace sihd::util
+namespace sihd::util::num
 {
 
-uint64_t    Num::rand(uint64_t from, uint64_t to)
+uint64_t    rand(uint64_t from, uint64_t to)
 {
     std::random_device dev;
     std::mt19937 rng(dev());
@@ -12,7 +12,7 @@ uint64_t    Num::rand(uint64_t from, uint64_t to)
     return dist(rng);
 }
 
-float    Num::frand(float from, float to)
+float   frand(float from, float to)
 {
     std::random_device dev;
     std::mt19937 rng(dev());
@@ -20,7 +20,7 @@ float    Num::frand(float from, float to)
     return dist(rng);
 }
 
-double    Num::drand(double from, double to)
+double  drand(double from, double to)
 {
     std::random_device dev;
     std::mt19937 rng(dev());
@@ -28,7 +28,7 @@ double    Num::drand(double from, double to)
     return dist(rng);
 }
 
-size_t  Num::size(uint64_t number, uint16_t base)
+size_t  size(uint64_t number, uint16_t base)
 {
     size_t ret = 0;
     while (number != 0)

@@ -1,6 +1,6 @@
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Str.hpp>
+#include <sihd/util/str.hpp>
 #include <sihd/util/Clocks.hpp>
 
 namespace sihd::util
@@ -85,22 +85,22 @@ bool    Timestamp::in_interval(Timestamp from, Timestamp offset) const
 
 std::string     Timestamp::timeoffset_str(bool total_parenthesis, bool nano_resolution) const
 {
-    return Str::timeoffset_str(_nano, total_parenthesis, nano_resolution);
+    return str::timeoffset_str(_nano, total_parenthesis, nano_resolution);
 }
 
 std::string     Timestamp::localtimeoffset_str(bool total_parenthesis, bool nano_resolution) const
 {
-    return Str::localtimeoffset_str(_nano, total_parenthesis, nano_resolution);
+    return str::localtimeoffset_str(_nano, total_parenthesis, nano_resolution);
 }
 
 std::string     Timestamp::format(std::string_view fmt) const
 {
-    return Str::format_time(std::abs(_nano), fmt);
+    return str::format_time(std::abs(_nano), fmt);
 }
 
 std::string     Timestamp::local_format(std::string_view fmt) const
 {
-    return Str::format_localtime(std::abs(_nano), fmt);
+    return str::format_localtime(std::abs(_nano), fmt);
 }
 
 Clocktime   Timestamp::clocktime() const

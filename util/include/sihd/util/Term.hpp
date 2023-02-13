@@ -4,7 +4,7 @@
 # include <stdio.h>
 # include <unistd.h>
 
-# include <sihd/util/Str.hpp>
+# include <sihd/util/str.hpp>
 
 namespace sihd::util
 {
@@ -90,7 +90,7 @@ class Term
         template <typename ...Args>
         static std::string fmt(std::string_view str, Args&&... args)
         {
-            return fmt::format("{}{}{}", Str::format_join("", std::forward<Args>(args)...), str, Attr::ENDC);
+            return fmt::format("{}{}{}", str::format_join("", std::forward<Args>(args)...), str, Attr::ENDC);
         }
 
         static std::string underline(std::string_view str) { return Term::fmt(str, Attr::UNDERLINE); }

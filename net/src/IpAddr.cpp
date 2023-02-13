@@ -1,6 +1,6 @@
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Str.hpp>
+#include <sihd/util/str.hpp>
 
 #include <strings.h>
 #include <string.h>
@@ -211,7 +211,7 @@ size_t  IpAddr::subnet_value() const
 bool    IpAddr::_netmask_from_str(std::string_view mask_value_str)
 {
     uint32_t mask_value;
-    if (!Str::is_number(mask_value_str) || !Str::convert_from_string<uint32_t>(mask_value_str, mask_value))
+    if (!str::is_number(mask_value_str) || !str::convert_from_string<uint32_t>(mask_value_str, mask_value))
     {
         SIHD_LOG(error, "IpAddr: not a subnet mask: {}", mask_value_str);
         return false;

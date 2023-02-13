@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/TmpDir.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
@@ -38,9 +38,9 @@ namespace test
     {
         TmpDir tmp_dir;
 
-        std::string test_dir = sihd::util::FS::combine(tmp_dir.path(), "mkdir");
-        sihd::util::FS::remove_directories(test_dir);
-        sihd::util::FS::make_directories(test_dir);
+        std::string test_dir = sihd::util::fs::combine(tmp_dir.path(), "mkdir");
+        sihd::util::fs::remove_directories(test_dir);
+        sihd::util::fs::make_directories(test_dir);
 
         std::string user = getenv("USER");
         SshSession session;
@@ -52,13 +52,13 @@ namespace test
         Sftp sftp = session.make_sftp();
         EXPECT_TRUE(sftp.open());
         EXPECT_TRUE(sftp.mkdir(test_dir + "/new_dir"));
-        EXPECT_TRUE(FS::is_dir(test_dir + "/new_dir"));
+        EXPECT_TRUE(fs::is_dir(test_dir + "/new_dir"));
 
         EXPECT_TRUE(sftp.send_file("test/resources/file.txt", test_dir + "/sent_file.txt"));
-        EXPECT_TRUE(sftp.get_file(FS::cwd() + "/test/resources/file.txt", test_dir + "/recv_file.txt"));
-        EXPECT_TRUE(FS::is_file(test_dir + "/sent_file.txt"));
-        EXPECT_TRUE(FS::is_file(test_dir + "/recv_file.txt"));
-        EXPECT_EQ(FS::filesize(test_dir + "/sent_file.txt"), FS::filesize("test/resources/file.txt"));
+        EXPECT_TRUE(sftp.get_file(fs::cwd() + "/test/resources/file.txt", test_dir + "/recv_file.txt"));
+        EXPECT_TRUE(fs::is_file(test_dir + "/sent_file.txt"));
+        EXPECT_TRUE(fs::is_file(test_dir + "/recv_file.txt"));
+        EXPECT_EQ(fs::filesize(test_dir + "/sent_file.txt"), fs::filesize("test/resources/file.txt"));
 
         std::vector<std::string> list;
         EXPECT_TRUE(sftp.list_dir_filenames(test_dir, list));
@@ -81,7 +81,7 @@ namespace test
         {
             if (attr.is_file())
             {
-                EXPECT_EQ(attr.size(), FS::filesize("test/resources/file.txt"));
+                EXPECT_EQ(attr.size(), fs::filesize("test/resources/file.txt"));
             }
             nlink += (int)attr.is_link();
             nregular += (int)attr.is_file();

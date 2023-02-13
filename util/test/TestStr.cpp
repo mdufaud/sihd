@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <sihd/util/Str.hpp>
+#include <sihd/util/str.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/time.hpp>
@@ -38,7 +38,7 @@ namespace test
             bool    test_long(const std::string & str, int base = 0)
             {
                 long val;
-                bool ret = Str::to_long(str, &val, base);
+                bool ret = str::to_long(str, &val, base);
                 SIHD_LOG(debug, "Test signed long (errno = {}) -> {}", errno, str);
                 if (ret)
                 {
@@ -53,7 +53,7 @@ namespace test
             bool    test_ulong(const std::string & str, int base = 0)
             {
                 unsigned long val;
-                bool ret = Str::to_ulong(str, &val, base);
+                bool ret = str::to_ulong(str, &val, base);
                 SIHD_LOG(debug, "Test unsigned long (errno = {}) -> {}", errno, str);
                 if (ret)
                 {
@@ -68,7 +68,7 @@ namespace test
             bool    test_double(const std::string & str)
             {
                 double val;
-                bool ret = Str::to_double(str, &val);
+                bool ret = str::to_double(str, &val);
                 SIHD_LOG(debug, "Test double (errno = {}) -> {}", errno, str);
                 if (ret)
                 {
@@ -87,26 +87,26 @@ namespace test
 
     TEST_F(TestStr, test_str_word_wrap)
     {
-        EXPECT_EQ(Str::word_wrap("", 1), "");
-        EXPECT_EQ(Str::word_wrap("abc", 0), "");
-        EXPECT_EQ(Str::word_wrap("abc", 3), "abc");
-        EXPECT_EQ(Str::word_wrap("  \ta  ", 1), "a");
-        EXPECT_EQ(Str::word_wrap("abc", 3), "abc");
-        EXPECT_EQ(Str::word_wrap("abc", 2), "a-\nbc");
-        EXPECT_EQ(Str::word_wrap("ab c", 2), "ab\nc");
-        EXPECT_EQ(Str::word_wrap("ab c\n", 2), "ab\nc\n");
-        EXPECT_EQ(Str::word_wrap("a\nbc", 2), "a\nbc");
-        EXPECT_EQ(Str::word_wrap("a b c", 1), "a\nb\nc");
-        EXPECT_EQ(Str::word_wrap("hello world", 5), "hello\nworld");
-        EXPECT_EQ(Str::word_wrap("hello world", 10), "hello\nworld");
-        EXPECT_EQ(Str::word_wrap("abc + def ghi", 10), "abc + def\nghi");
-        EXPECT_EQ(Str::word_wrap("iamfartoolong", 5), "iamf-\narto-\nolong");
-        EXPECT_EQ(Str::word_wrap("helloworld!!", 6), "hello-\nworld-\n!!");
-        EXPECT_EQ(Str::word_wrap("abc\n\ndef\nghi\n", 4), "abc\n\ndef\nghi\n");
+        EXPECT_EQ(str::word_wrap("", 1), "");
+        EXPECT_EQ(str::word_wrap("abc", 0), "");
+        EXPECT_EQ(str::word_wrap("abc", 3), "abc");
+        EXPECT_EQ(str::word_wrap("  \ta  ", 1), "a");
+        EXPECT_EQ(str::word_wrap("abc", 3), "abc");
+        EXPECT_EQ(str::word_wrap("abc", 2), "a-\nbc");
+        EXPECT_EQ(str::word_wrap("ab c", 2), "ab\nc");
+        EXPECT_EQ(str::word_wrap("ab c\n", 2), "ab\nc\n");
+        EXPECT_EQ(str::word_wrap("a\nbc", 2), "a\nbc");
+        EXPECT_EQ(str::word_wrap("a b c", 1), "a\nb\nc");
+        EXPECT_EQ(str::word_wrap("hello world", 5), "hello\nworld");
+        EXPECT_EQ(str::word_wrap("hello world", 10), "hello\nworld");
+        EXPECT_EQ(str::word_wrap("abc + def ghi", 10), "abc + def\nghi");
+        EXPECT_EQ(str::word_wrap("iamfartoolong", 5), "iamf-\narto-\nolong");
+        EXPECT_EQ(str::word_wrap("helloworld!!", 6), "hello-\nworld-\n!!");
+        EXPECT_EQ(str::word_wrap("abc\n\ndef\nghi\n", 4), "abc\n\ndef\nghi\n");
 
         const char *str = "The quick brown fox jumped over the lazy dog";
 
-        EXPECT_EQ(Str::word_wrap(str, 7), "The\n"
+        EXPECT_EQ(str::word_wrap(str, 7), "The\n"
                     "quick\n"
                     "brown\n"
                     "fox\n"
@@ -115,161 +115,161 @@ namespace test
                     "the\n"
                     "lazy\n"
                     "dog");
-        EXPECT_EQ(Str::word_wrap(str, 8), "The\n"
+        EXPECT_EQ(str::word_wrap(str, 8), "The\n"
                    "quick\n"
                    "brown\n"
                    "fox\n"
                    "jumped\n"
                    "over the\n"
                    "lazy dog");
-        EXPECT_EQ(Str::word_wrap(str, 9), "The quick\n"
+        EXPECT_EQ(str::word_wrap(str, 9), "The quick\n"
                    "brown fox\n"
                    "jumped\n"
                    "over the\n"
                    "lazy dog");
-        EXPECT_EQ(Str::word_wrap(str, 10), "The quick\n"
+        EXPECT_EQ(str::word_wrap(str, 10), "The quick\n"
                    "brown fox\n"
                    "jumped\n"
                    "over the\n"
                    "lazy dog");
 
-        EXPECT_EQ(Str::word_wrap(str, 11), "The quick\n"
+        EXPECT_EQ(str::word_wrap(str, 11), "The quick\n"
                    "brown fox\n"
                    "jumped over\n"
                    "the lazy\n"
                    "dog");
 
-        EXPECT_EQ(Str::word_wrap(str, 12), "The quick\n"
+        EXPECT_EQ(str::word_wrap(str, 12), "The quick\n"
                    "brown fox\n"
                    "jumped over\n"
                    "the lazy dog");
 
-        EXPECT_EQ(Str::word_wrap(str, 20), "The quick brown fox\n"
+        EXPECT_EQ(str::word_wrap(str, 20), "The quick brown fox\n"
                    "jumped over the lazy\n"
                    "dog");
     }
 
     TEST_F(TestStr, test_str_base)
     {
-        EXPECT_EQ(Str::to_hex(9), "9");
-        EXPECT_EQ(Str::to_hex(10), "a");
-        EXPECT_EQ(Str::to_hex(16), "10");
-        EXPECT_EQ(Str::to_hex(1337), "539");
-        EXPECT_EQ(Str::to_hex(283654106644), "420b1a2e14");
+        EXPECT_EQ(str::to_hex(9), "9");
+        EXPECT_EQ(str::to_hex(10), "a");
+        EXPECT_EQ(str::to_hex(16), "10");
+        EXPECT_EQ(str::to_hex(1337), "539");
+        EXPECT_EQ(str::to_hex(283654106644), "420b1a2e14");
     }
 
     TEST_F(TestStr, test_str_remove_escape_char)
     {
-        std::string escaped = Str::remove_escape_char("\\hello\\ world");
+        std::string escaped = str::remove_escape_char("\\hello\\ world");
         EXPECT_EQ(escaped, "hello world");
         EXPECT_EQ(escaped.size(), strlen("hello world"));
 
-        escaped = Str::remove_escape_char("\\\\hello\\\\ world");
+        escaped = str::remove_escape_char("\\\\hello\\\\ world");
         EXPECT_EQ(escaped, "\\hello\\ world");
 
-        escaped = Str::remove_escape_char("");
+        escaped = str::remove_escape_char("");
         EXPECT_EQ(escaped, "");
     }
 
     TEST_F(TestStr, test_str_remove_escape_sequences)
     {
-        std::string escaped = Str::remove_escape_sequences("'hello world'");
+        std::string escaped = str::remove_escape_sequences("'hello world'");
         EXPECT_EQ(escaped, "hello world");
         EXPECT_EQ(escaped.size(), strlen("hello world"));
 
-        escaped = Str::remove_escape_sequences("'hello '(world)'");
+        escaped = str::remove_escape_sequences("'hello '(world)'");
         EXPECT_EQ(escaped, "hello world");
-        escaped = Str::remove_escape_sequences("hello ''([world])");
+        escaped = str::remove_escape_sequences("hello ''([world])");
         EXPECT_EQ(escaped, "hello [world]");
-        escaped = Str::remove_escape_sequences("\\'hello \\'world");
+        escaped = str::remove_escape_sequences("\\'hello \\'world");
         EXPECT_EQ(escaped, "\\'hello \\'world");
-        escaped = Str::remove_escape_sequences("");
+        escaped = str::remove_escape_sequences("");
         EXPECT_EQ(escaped, "");
     }
 
     TEST_F(TestStr, test_str_bytes)
     {
-        EXPECT_EQ(Str::bytes_str(1), "1B");
-        EXPECT_EQ(Str::bytes_str(1001), "1001B");
-        EXPECT_EQ(Str::bytes_str(1024), "1K");
-        EXPECT_EQ(Str::bytes_str(1025), "1K");
-        EXPECT_EQ(Str::bytes_str(1024 + 1023), "1.9K");
-        EXPECT_EQ(Str::bytes_str(1024 * 1024), "1G");
-        EXPECT_EQ(Str::bytes_str((1024 * 1024) + (1024 * 1023)), "1.9G");
-        EXPECT_EQ(Str::bytes_str(1024 * 1024 * 1024), "1T");
-        EXPECT_EQ(Str::bytes_str((1024 * 1024 * 1024) + (1024 * 1024 * 1023)), "1.9T");
+        EXPECT_EQ(str::bytes_str(1), "1B");
+        EXPECT_EQ(str::bytes_str(1001), "1001B");
+        EXPECT_EQ(str::bytes_str(1024), "1K");
+        EXPECT_EQ(str::bytes_str(1025), "1K");
+        EXPECT_EQ(str::bytes_str(1024 + 1023), "1.9K");
+        EXPECT_EQ(str::bytes_str(1024 * 1024), "1G");
+        EXPECT_EQ(str::bytes_str((1024 * 1024) + (1024 * 1023)), "1.9G");
+        EXPECT_EQ(str::bytes_str(1024 * 1024 * 1024), "1T");
+        EXPECT_EQ(str::bytes_str((1024 * 1024 * 1024) + (1024 * 1024 * 1023)), "1.9T");
     }
 
     TEST_F(TestStr, test_str_format_join)
     {
-        EXPECT_EQ(Str::format_join(","), "");
-        EXPECT_EQ(Str::format_join(",", 1), "1");
-        EXPECT_EQ(Str::format_join(",", 1, 2), "1,2");
-        EXPECT_EQ(Str::format_join(" - ", 1, "abc", 3.14), "1 - abc - 3.14");
+        EXPECT_EQ(str::format_join(","), "");
+        EXPECT_EQ(str::format_join(",", 1), "1");
+        EXPECT_EQ(str::format_join(",", 1, 2), "1,2");
+        EXPECT_EQ(str::format_join(" - ", 1, "abc", 3.14), "1 - abc - 3.14");
     }
 
     TEST_F(TestStr, test_str_time2str)
     {
-        std::string time_str = Str::timeoffset_str(time::micro(123));
+        std::string time_str = str::timeoffset_str(time::micro(123));
         EXPECT_EQ(time_str, "+123us");
-        time_str = Str::timeoffset_str(time::milli(1));
+        time_str = str::timeoffset_str(time::milli(1));
         EXPECT_EQ(time_str, "+1ms:0us");
-        time_str = Str::timeoffset_str(time::sec(12) + time::micro(12));
+        time_str = str::timeoffset_str(time::sec(12) + time::micro(12));
         EXPECT_EQ(time_str, "+12s:0ms:12us");
-        time_str = Str::timeoffset_str(time::hours(12));
+        time_str = str::timeoffset_str(time::hours(12));
         EXPECT_EQ(time_str, "+12h:0m:0s:0ms:0us");
-        time_str = Str::timeoffset_str(time::hours(24));
+        time_str = str::timeoffset_str(time::hours(24));
         EXPECT_EQ(time_str, "+1d::0h:0m:0s:0ms:0us");
-        time_str = Str::timeoffset_str(time::days(24));
+        time_str = str::timeoffset_str(time::days(24));
         EXPECT_EQ(time_str, "+24d::0h:0m:0s:0ms:0us");
-        time_str = Str::timeoffset_str(time::days(31));
+        time_str = str::timeoffset_str(time::days(31));
         EXPECT_EQ(time_str, "+1m:0d::0h:0m:0s:0ms:0us");
-        time_str = Str::timeoffset_str(time::days(365));
+        time_str = str::timeoffset_str(time::days(365));
         EXPECT_EQ(time_str, "+1y:0m:0d::0h:0m:0s:0ms:0us");
-        time_str = Str::timeoffset_str(time::days(365) * 2);
+        time_str = str::timeoffset_str(time::days(365) * 2);
         EXPECT_EQ(time_str, "+2y:0m:0d::0h:0m:0s:0ms:0us");
 
-        time_str = Str::timeoffset_str(-time::sec(42));
+        time_str = str::timeoffset_str(-time::sec(42));
         EXPECT_EQ(time_str, "-42s:0ms:0us");
 
-        std::string nano_time_str = Str::timeoffset_str(123, false, true);
+        std::string nano_time_str = str::timeoffset_str(123, false, true);
         EXPECT_EQ(nano_time_str, "+0us:123ns");
-        nano_time_str = Str::timeoffset_str(-123, true, true);
+        nano_time_str = str::timeoffset_str(-123, true, true);
         EXPECT_EQ(nano_time_str, "-0us:123ns (-123)");
     }
 
     TEST_F(TestStr, test_str_escapes)
     {
-        EXPECT_TRUE(Str::is_escape_sequence_open('"'));
-        EXPECT_TRUE(Str::is_escape_sequence_open('\''));
-        EXPECT_TRUE(Str::is_escape_sequence_open('{'));
-        EXPECT_TRUE(Str::is_escape_sequence_open('('));
-        EXPECT_TRUE(Str::is_escape_sequence_open('['));
-        EXPECT_TRUE(Str::is_escape_sequence_open('<'));
+        EXPECT_TRUE(str::is_escape_sequence_open('"'));
+        EXPECT_TRUE(str::is_escape_sequence_open('\''));
+        EXPECT_TRUE(str::is_escape_sequence_open('{'));
+        EXPECT_TRUE(str::is_escape_sequence_open('('));
+        EXPECT_TRUE(str::is_escape_sequence_open('['));
+        EXPECT_TRUE(str::is_escape_sequence_open('<'));
 
-        EXPECT_TRUE(Str::is_escape_sequence_close('"'));
-        EXPECT_TRUE(Str::is_escape_sequence_close('\''));
-        EXPECT_TRUE(Str::is_escape_sequence_close('}'));
-        EXPECT_TRUE(Str::is_escape_sequence_close(')'));
-        EXPECT_TRUE(Str::is_escape_sequence_close(']'));
-        EXPECT_TRUE(Str::is_escape_sequence_close('>'));
+        EXPECT_TRUE(str::is_escape_sequence_close('"'));
+        EXPECT_TRUE(str::is_escape_sequence_close('\''));
+        EXPECT_TRUE(str::is_escape_sequence_close('}'));
+        EXPECT_TRUE(str::is_escape_sequence_close(')'));
+        EXPECT_TRUE(str::is_escape_sequence_close(']'));
+        EXPECT_TRUE(str::is_escape_sequence_close('>'));
 
-        EXPECT_EQ(Str::closing_escape_of('"'), '"');
-        EXPECT_EQ(Str::closing_escape_of('\''), '\'');
-        EXPECT_EQ(Str::closing_escape_of('{'), '}');
-        EXPECT_EQ(Str::closing_escape_of('('), ')');
-        EXPECT_EQ(Str::closing_escape_of('['), ']');
-        EXPECT_EQ(Str::closing_escape_of('<'), '>');
+        EXPECT_EQ(str::closing_escape_of('"'), '"');
+        EXPECT_EQ(str::closing_escape_of('\''), '\'');
+        EXPECT_EQ(str::closing_escape_of('{'), '}');
+        EXPECT_EQ(str::closing_escape_of('('), ')');
+        EXPECT_EQ(str::closing_escape_of('['), ']');
+        EXPECT_EQ(str::closing_escape_of('<'), '>');
 
         // \[hello  index[1] is '[' and escaped
-        EXPECT_TRUE(Str::is_escaped_char("\\[hello", 1));
-        EXPECT_FALSE(Str::is_escaped_char("\\[hello", 0));
-        EXPECT_FALSE(Str::is_escaped_char("\\[hello", 2));
+        EXPECT_TRUE(str::is_escaped_char("\\[hello", 1));
+        EXPECT_FALSE(str::is_escaped_char("\\[hello", 0));
+        EXPECT_FALSE(str::is_escaped_char("\\[hello", 2));
         // \\[hello  index[1] is '\' and escaped but '[' is not escaped
-        EXPECT_TRUE(Str::is_escaped_char("\\\\[hello", 1));
-        EXPECT_FALSE(Str::is_escaped_char("\\\\[hello", 0));
-        EXPECT_FALSE(Str::is_escaped_char("\\\\[hello", 2));
-        EXPECT_FALSE(Str::is_escaped_char("\\\\[hello", 3));
+        EXPECT_TRUE(str::is_escaped_char("\\\\[hello", 1));
+        EXPECT_FALSE(str::is_escaped_char("\\\\[hello", 0));
+        EXPECT_FALSE(str::is_escaped_char("\\\\[hello", 2));
+        EXPECT_FALSE(str::is_escaped_char("\\\\[hello", 3));
     }
 
     TEST_F(TestStr, test_str_from_string)
@@ -282,59 +282,59 @@ namespace test
         float f;
         double d;
 
-        EXPECT_FALSE(Str::convert_from_string<bool>("", b));
-        EXPECT_FALSE(Str::convert_from_string("", i16));
-        EXPECT_FALSE(Str::convert_from_string("", ui32));
-        EXPECT_FALSE(Str::convert_from_string("", i64));
-        EXPECT_FALSE(Str::convert_from_string("", f));
-        EXPECT_FALSE(Str::convert_from_string("", d));
+        EXPECT_FALSE(str::convert_from_string<bool>("", b));
+        EXPECT_FALSE(str::convert_from_string("", i16));
+        EXPECT_FALSE(str::convert_from_string("", ui32));
+        EXPECT_FALSE(str::convert_from_string("", i64));
+        EXPECT_FALSE(str::convert_from_string("", f));
+        EXPECT_FALSE(str::convert_from_string("", d));
 
-        EXPECT_TRUE(Str::convert_from_string<bool>("1", b));
+        EXPECT_TRUE(str::convert_from_string<bool>("1", b));
         EXPECT_EQ(b, true);
-        EXPECT_TRUE(Str::convert_from_string<bool>("0", b));
+        EXPECT_TRUE(str::convert_from_string<bool>("0", b));
         EXPECT_EQ(b, false);
-        EXPECT_TRUE(Str::convert_from_string<bool>("true", b));
+        EXPECT_TRUE(str::convert_from_string<bool>("true", b));
         EXPECT_EQ(b, true);
-        EXPECT_TRUE(Str::convert_from_string<bool>("false", b));
+        EXPECT_TRUE(str::convert_from_string<bool>("false", b));
         EXPECT_EQ(b, false);
-        EXPECT_FALSE(Str::convert_from_string<bool>("nope", b));
-        EXPECT_FALSE(Str::convert_from_string<bool>("T", b));
+        EXPECT_FALSE(str::convert_from_string<bool>("nope", b));
+        EXPECT_FALSE(str::convert_from_string<bool>("T", b));
 
-        EXPECT_TRUE(Str::convert_from_string("c", c));
+        EXPECT_TRUE(str::convert_from_string("c", c));
         EXPECT_EQ(c, 'c');
-        EXPECT_TRUE(Str::convert_from_string("A", c));
+        EXPECT_TRUE(str::convert_from_string("A", c));
         EXPECT_EQ(c, 'A');
-        EXPECT_FALSE(Str::convert_from_string("Abc", c));
+        EXPECT_FALSE(str::convert_from_string("Abc", c));
 
-        EXPECT_TRUE(Str::convert_from_string("123", i16));
+        EXPECT_TRUE(str::convert_from_string("123", i16));
         EXPECT_EQ(i16, 123);
-        EXPECT_TRUE(Str::convert_from_string("-321", i16));
+        EXPECT_TRUE(str::convert_from_string("-321", i16));
         EXPECT_EQ(i16, -321);
         // test overflow
-        EXPECT_TRUE(Str::convert_from_string("32768", i16));
+        EXPECT_TRUE(str::convert_from_string("32768", i16));
         EXPECT_EQ(i16, -32768);
 
-        EXPECT_TRUE(Str::convert_from_string("1000", ui32));
+        EXPECT_TRUE(str::convert_from_string("1000", ui32));
         EXPECT_EQ(ui32, 1000u);
-        EXPECT_TRUE(Str::convert_from_string("1000,hello world", ui32));
+        EXPECT_TRUE(str::convert_from_string("1000,hello world", ui32));
         EXPECT_EQ(ui32, 1000u);
         // test overflow
-        EXPECT_TRUE(Str::convert_from_string("-1", ui32));
+        EXPECT_TRUE(str::convert_from_string("-1", ui32));
         EXPECT_EQ(ui32, 4294967295u);
 
-        EXPECT_TRUE(Str::convert_from_string("100", i64));
+        EXPECT_TRUE(str::convert_from_string("100", i64));
         EXPECT_EQ(i64, 100);
-        EXPECT_TRUE(Str::convert_from_string("-1", i64));
+        EXPECT_TRUE(str::convert_from_string("-1", i64));
         EXPECT_EQ(i64, -1);
 
-        EXPECT_TRUE(Str::convert_from_string("0.1", f));
+        EXPECT_TRUE(str::convert_from_string("0.1", f));
         EXPECT_FLOAT_EQ(f, 0.1);
-        EXPECT_TRUE(Str::convert_from_string("123.456", f));
+        EXPECT_TRUE(str::convert_from_string("123.456", f));
         EXPECT_FLOAT_EQ(f, 123.456);
 
-        EXPECT_TRUE(Str::convert_from_string("0.01", d));
+        EXPECT_TRUE(str::convert_from_string("0.01", d));
         EXPECT_FLOAT_EQ(d, 0.01);
-        EXPECT_TRUE(Str::convert_from_string("123.456", d));
+        EXPECT_TRUE(str::convert_from_string("123.456", d));
         EXPECT_FLOAT_EQ(d, 123.456);
 
     }
@@ -394,90 +394,89 @@ namespace test
 
     TEST_F(TestStr, test_str_conf)
     {
-        std::map<std::string, std::string> conf = Str::parse_configuration("key=value;key2=value2");
+        std::map<std::string, std::string> conf = str::parse_configuration("key=value;key2=value2");
         EXPECT_TRUE(conf.find("key") != conf.end());
         EXPECT_TRUE(conf.find("key2") != conf.end());
         EXPECT_EQ(conf["key"], "value");
         EXPECT_EQ(conf["key2"], "value2");
 
-        conf = Str::parse_configuration("a=1;b=;c;");
+        conf = str::parse_configuration("a=1;b=;c;");
         EXPECT_TRUE(conf.find("a") != conf.end());
         EXPECT_TRUE(conf.find("b") != conf.end());
         EXPECT_TRUE(conf.find("c") == conf.end());
         EXPECT_EQ(conf["a"], "1");
         EXPECT_EQ(conf["b"], "");
 
-        conf = Str::parse_configuration("");
+        conf = str::parse_configuration("");
         EXPECT_EQ(conf.size(), 0u);
-        conf = Str::parse_configuration("a");
+        conf = str::parse_configuration("a");
         EXPECT_EQ(conf.size(), 0u);
     }
 
     TEST_F(TestStr, test_str_join)
     {
         std::string res;
-        res = Str::join({"hello", "world"}, ",");
+        res = str::join({"hello", "world"}, ",");
         EXPECT_EQ(res, "hello,world");
-        res = Str::join({"hello", "good", "world"}, " . ");
+        res = str::join({"hello", "good", "world"}, " . ");
         EXPECT_EQ(res, "hello . good . world");
-        res = Str::join({"", "", "sup"}, ",");
+        res = str::join({"", "", "sup"}, ",");
         EXPECT_EQ(res, ",,sup");
     }
 
     TEST_F(TestStr, test_str_format)
     {
-        std::string res = Str::format("%s -> %d", "hello", 1337);
+        std::string res = str::format("%s -> %d", "hello", 1337);
         EXPECT_EQ(res, "hello -> 1337");
-        std::string res2 = Str::format("%s: %d", "hello world", 10);
+        std::string res2 = str::format("%s: %d", "hello world", 10);
         EXPECT_EQ(res, "hello -> 1337");
         EXPECT_EQ(res2, "hello world: 10");
     }
 
     TEST_F(TestStr, test_str_demangle)
     {
-        std::string res = Str::demangle(typeid(*this).name());
+        std::string res = str::demangle(typeid(*this).name());
         SIHD_LOG(info, "Demangled: {}", res);
         EXPECT_EQ(res, "test::TestStr_test_str_demangle_Test");
     }
 
     TEST_F(TestStr, test_str_trim)
     {
-        EXPECT_EQ(Str::trim(""), "");
-        EXPECT_EQ(Str::trim("h"), "h");
-        EXPECT_EQ(Str::trim("h "), "h");
-        EXPECT_EQ(Str::trim(" h"), "h");
-        EXPECT_EQ(Str::trim(" \t hello  world      \t "), "hello  world");
+        EXPECT_EQ(str::trim(""), "");
+        EXPECT_EQ(str::trim("h"), "h");
+        EXPECT_EQ(str::trim("h "), "h");
+        EXPECT_EQ(str::trim(" h"), "h");
+        EXPECT_EQ(str::trim(" \t hello  world      \t "), "hello  world");
     }
 
     TEST_F(TestStr, test_str_lowerupper)
     {
         std::string s = "Hello World @123";
-        EXPECT_EQ(Str::to_lower(s), "hello world @123");
-        EXPECT_EQ(Str::to_upper(s), "HELLO WORLD @123");
+        EXPECT_EQ(str::to_lower(s), "hello world @123");
+        EXPECT_EQ(str::to_upper(s), "HELLO WORLD @123");
     }
 
     TEST_F(TestStr, test_str_replace)
     {
-        EXPECT_EQ(Str::replace("hello wurld", "wurld", "world"), "hello world");
-        EXPECT_EQ(Str::replace("its nope", "something", "other"), "its nope");
-        EXPECT_EQ(Str::replace("wibbly wobbly timy wimey stuff", "i", "iii"),
+        EXPECT_EQ(str::replace("hello wurld", "wurld", "world"), "hello world");
+        EXPECT_EQ(str::replace("its nope", "something", "other"), "its nope");
+        EXPECT_EQ(str::replace("wibbly wobbly timy wimey stuff", "i", "iii"),
                     "wiiibbly wobbly tiiimy wiiimey stuff");
-        EXPECT_EQ(Str::replace("heh ih", "h", "hhh"), "hhhehhh ihhh");
-        EXPECT_EQ(Str::replace("hello", "", ""), "hello");
+        EXPECT_EQ(str::replace("heh ih", "h", "hhh"), "hhhehhh ihhh");
+        EXPECT_EQ(str::replace("hello", "", ""), "hello");
     }
 
     TEST_F(TestStr, test_str_hexdump)
     {
         std::string s = "hello world - how are you";
-        SIHD_LOG(debug, Str::addr_str(s.data()));
-        EXPECT_EQ(Str::addr_str(0x0, 5), "0x00000");
-        EXPECT_EQ(Str::num_str(312, 10), "312");
-        EXPECT_EQ(Str::num_str(16, 16), "10");
-        EXPECT_EQ(Str::num_str(15, 16), "f");
-        EXPECT_EQ(Str::num_str(255, 16), "ff");
-        EXPECT_EQ(Str::hexdump(s.data(), s.length(), ','), "68,65,6c,6c,6f,20,77,6f,72,6c,64,20,2d,20,68,6f,77,20,61,72,65,20,79,6f,75");
-        Str::hexdump_cols = 8;
-        std::string dump = Str::hexdump_fmt(s.data(), s.length());
+        SIHD_LOG(debug, str::addr_str(s.data()));
+        EXPECT_EQ(str::addr_str(0x0, 5), "0x00000");
+        EXPECT_EQ(str::num_str(312, 10), "312");
+        EXPECT_EQ(str::num_str(16, 16), "10");
+        EXPECT_EQ(str::num_str(15, 16), "f");
+        EXPECT_EQ(str::num_str(255, 16), "ff");
+        EXPECT_EQ(str::hexdump(s.data(), s.length(), ','), "68,65,6c,6c,6f,20,77,6f,72,6c,64,20,2d,20,68,6f,77,20,61,72,65,20,79,6f,75");
+        std::string dump = str::hexdump_fmt(s.data(), s.length(), 8);
         std::cout << dump << std::endl;
         Splitter splitter("\n");
         auto splits = splitter.split(dump);
@@ -490,23 +489,23 @@ namespace test
 
     TEST_F(TestStr, test_str_with)
     {
-        EXPECT_TRUE(Str::starts_with("hello world", "hello"));
-        EXPECT_TRUE(Str::starts_with("hello world", "h"));
-        EXPECT_FALSE(Str::starts_with("hello world", "ello"));
-        EXPECT_FALSE(Str::starts_with("hello world", "world"));
+        EXPECT_TRUE(str::starts_with("hello world", "hello"));
+        EXPECT_TRUE(str::starts_with("hello world", "h"));
+        EXPECT_FALSE(str::starts_with("hello world", "ello"));
+        EXPECT_FALSE(str::starts_with("hello world", "world"));
 
-        EXPECT_TRUE(Str::ends_with("hello world", "world"));
-        EXPECT_TRUE(Str::ends_with("hello world", "d"));
-        EXPECT_FALSE(Str::ends_with("hello world", "worl"));
-        EXPECT_FALSE(Str::ends_with("hello world", "hello"));
+        EXPECT_TRUE(str::ends_with("hello world", "world"));
+        EXPECT_TRUE(str::ends_with("hello world", "d"));
+        EXPECT_FALSE(str::ends_with("hello world", "worl"));
+        EXPECT_FALSE(str::ends_with("hello world", "hello"));
 
-        EXPECT_FALSE(Str::starts_with("h", "he"));
-        EXPECT_FALSE(Str::ends_with("h", "hello"));
+        EXPECT_FALSE(str::starts_with("h", "he"));
+        EXPECT_FALSE(str::ends_with("h", "hello"));
     }
 
     TEST_F(TestStr, test_str_time_format)
     {
-        std::string fmt = Str::format_time(time::seconds(1) + time::minutes(2) + time::hours(3), "%X");
+        std::string fmt = str::format_time(time::seconds(1) + time::minutes(2) + time::hours(3), "%X");
         EXPECT_EQ(fmt, "03:02:01");
     }
 

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/OS.hpp>
 #include <sihd/util/Term.hpp>
 #include <sihd/core/DevFilter.hpp>

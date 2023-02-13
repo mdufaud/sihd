@@ -59,7 +59,7 @@ typedef void (*sighandler_t)(int);
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/AtExit.hpp>
-#include <sihd/util/FS.hpp>
+#include <sihd/util/fs.hpp>
 
 #if !defined(__SIHD_UTIL_OS_DEFAULT_MAX_FDS__)
 // backup for max_fds
