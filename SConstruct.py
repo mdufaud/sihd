@@ -287,9 +287,10 @@ if num_jobs <= 1:
 compilation_db_path = os.path.join(builder.build_path, "compile_commands.json")
 try:
     base_env.Tool('compilation_db')
-    base_env["COMPILATIONDB_PATH_FILTER"] = f"*[!{builder.build_path}].*"
+    # base_env["COMPILATIONDB_PATH_FILTER"] = f"*[!{builder.build_path}].*"
     base_env.CompilationDatabase(compilation_db_path)
 except Exception as e:
+    builder.warning(e)
     pass
 
 # Decides when to recompile - removing slow md5 in favor of timestamps
@@ -673,7 +674,7 @@ def after_build():
     if success and distribution:
         builder.distribute_app(app, build_modules)
     builder.safe_symlink(compilation_db_path, os.path.join(builder.build_entry_path, "compile_commands.json"))
-    
+
 
 atexit.register(after_build)
 

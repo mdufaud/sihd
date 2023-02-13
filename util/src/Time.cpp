@@ -1,8 +1,8 @@
-#include <sihd/util/Time.hpp>
-
 #include <thread>
 
-#include <string.h>
+#include <cstring>
+
+#include <sihd/util/Time.hpp>
 
 # if !defined(__SIHD_WINDOWS__)
 extern char *tzname[2];

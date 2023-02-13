@@ -74,7 +74,7 @@ def error(*msg):
 def safe_symlink(src, dst):
     if not os.path.exists(src):
         return False
-    if os.path.isfile(dst):
+    if os.path.islink(dst):
         os.remove(dst)
     if not os.path.exists(dst):
         info(f"Linking {src} -> {dst}")

@@ -1,7 +1,7 @@
 #include <sihd/util/DynMessage.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/Container.hpp>
+#include <sihd/util/container.hpp>
 
 namespace sihd::util
 {
@@ -120,15 +120,15 @@ bool    DynMessage::hide_field(const std::string & name, bool active)
         return false;
     }
     if (active)
-        return Container::emplace_unique(_hidden_fields, it->second);
+        return container::emplace_unique(_hidden_fields, it->second);
     else
-        return Container::erase(_hidden_fields, it->second);
+        return container::erase(_hidden_fields, it->second);
     return false;
 }
 
 bool    DynMessage::_is_hidden(const IMessageField *field) const
 {
-    return Container::contains(_hidden_fields, field);
+    return container::contains(_hidden_fields, field);
 }
 
 IMessageField *DynMessage::clone() const

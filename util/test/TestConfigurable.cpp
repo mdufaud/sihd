@@ -1,4 +1,7 @@
 #include <gtest/gtest.h>
+
+#include <nlohmann/json.hpp>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Configurable.hpp>
 
