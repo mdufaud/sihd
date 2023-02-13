@@ -112,7 +112,7 @@ void    Poll::resize(int nfds)
 bool    Poll::set_limit(int limit)
 {
     if (limit < 0)
-        _max_fds = OS::max_fds();
+        _max_fds = os::max_fds();
     else
         _max_fds = limit;
     return true;

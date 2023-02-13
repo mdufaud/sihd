@@ -99,39 +99,39 @@ void    Socket::_clear_socket_info()
 
 bool    Socket::set_socket_ttl(int socket, int ttl, bool ipv6)
 {
-    return sihd::util::OS::setsockopt(socket, ipv6 ? IPPROTO_IPV6 : IPPROTO_IP, IP_TTL, &ttl, sizeof(int));
+    return sihd::util::os::setsockopt(socket, ipv6 ? IPPROTO_IPV6 : IPPROTO_IP, IP_TTL, &ttl, sizeof(int));
 }
 
 bool    Socket::set_socket_reuseaddr(int socket, bool active)
 {
     int opt = active ? 1 : 0;
-    return sihd::util::OS::setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
+    return sihd::util::os::setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
 }
 
 bool    Socket::set_socket_broadcast(int socket, bool active)
 {
     int opt = active ? 1 : 0;
-    return sihd::util::OS::setsockopt(socket, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(int));
+    return sihd::util::os::setsockopt(socket, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(int));
 }
 
 bool    Socket::set_socket_tcp_nodelay(int socket, bool active)
 {
     int opt = (active ? 1 : 0);
-    return sihd::util::OS::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt), true);
+    return sihd::util::os::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt), true);
 }
 
 bool    Socket::is_socket_tcp_nodelay(int socket)
 {
     int opt;
     socklen_t len = sizeof(opt);
-    return sihd::util::OS::getsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, &len, true) && opt != 0;
+    return sihd::util::os::getsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, &len, true) && opt != 0;
 }
 
 bool    Socket::is_socket_broadcast(int socket)
 {
     int res;
     socklen_t length = sizeof(int);
-    return sihd::util::OS::getsockopt(socket, SOL_SOCKET, SO_BROADCAST, &res, &length, true) && res != 0;
+    return sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_BROADCAST, &res, &length, true) && res != 0;
 }
 
 bool    Socket::bind_socket_to_device(int socket, std::string_view name)
@@ -140,7 +140,7 @@ bool    Socket::bind_socket_to_device(int socket, std::string_view name)
     char device_name[IFNAMSIZ];
 
     strncpy(device_name, name.data(), std::min(name.size(), (size_t)IFNAMSIZ));
-    return sihd::util::OS::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name), true);
+    return sihd::util::os::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name), true);
 #else
     (void)socket;
     (void)name;
@@ -152,16 +152,16 @@ bool    Socket::get_socket_infos(int socket, int *domain, int *type, int *protoc
 {
 #if !defined (__SIHD_WINDOWS__)
     socklen_t length = sizeof(int);
-    bool found = sihd::util::OS::getsockopt(socket, SOL_SOCKET, SO_DOMAIN, domain, &length);
+    bool found = sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_DOMAIN, domain, &length);
     length = sizeof(int);
-    found = found && sihd::util::OS::getsockopt(socket, SOL_SOCKET, SO_TYPE, type, &length);
+    found = found && sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_TYPE, type, &length);
     length = sizeof(int);
-    found = found && sihd::util::OS::getsockopt(socket, SOL_SOCKET, SO_PROTOCOL, protocol, &length);
+    found = found && sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_PROTOCOL, protocol, &length);
     return found;
 #else
     CSADDR_INFO addrinfo;
     socklen_t length = sizeof(addrinfo);
-    bool found = sihd::util::OS::getsockopt(socket, SOL_SOCKET, SO_BSP_STATE, &addrinfo, &length);
+    bool found = sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_BSP_STATE, &addrinfo, &length);
     if (found)
     {
         *protocol = addrinfo.iProtocol;
@@ -617,7 +617,7 @@ bool    Socket::set_socket_blocking(int socket, bool active)
     if (socket < 0)
         throw std::runtime_error("Socket: cannot set blocking on a closed socket");
     unsigned long mode = active ? 0 : 1;
-    if (sihd::util::OS::ioctl(socket, FIONBIO, &mode) != 0)
+    if (sihd::util::os::ioctl(socket, FIONBIO, &mode) != 0)
     {
         SIHD_LOG(error, "Socket: could not set ioctl: {}", strerror(errno));
         return false;

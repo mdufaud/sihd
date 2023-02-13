@@ -17,14 +17,14 @@ int main(int argc, char **argv)
     {
         log.error("Demo must have capabilities or be played with root perms");
         log.notice(fmt::format("For capabilities, execute linux command: 'sudo setcap cap_net_raw=pe {}'\n", fs::executable_path()));
-        if (OS::is_windows)
+        if (os::is_windows)
             time::sleep(5);
         return 1;
     }
     if (argc < 1 || argc > 3)
     {
         log.info("usage: ./demo host [number of pings]");
-        if (OS::is_windows)
+        if (os::is_windows)
             time::sleep(5);
         return 1;
     }
@@ -36,14 +36,14 @@ int main(int argc, char **argv)
         if (str::to_ulong(argv[2], &npings, 10) == false)
         {
             log.error("Number of pings is not a number");
-            if (OS::is_windows)
+            if (os::is_windows)
                 time::sleep(5);
             return 1;
         }
         if (npings == 0)
         {
             log.error("No infinite ping allowed");
-            if (OS::is_windows)
+            if (os::is_windows)
                 time::sleep(5);
             return 1;
         }
@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 
     log.notice(fmt::format("Sending {} pings to {}", npings, host));
 
-    OS::add_signal_handler(SIGINT, new Handler<int>([&pinger, &log] (int sig)
+    os::add_signal_handler(SIGINT, new Handler<int>([&pinger, &log] (int sig)
     {
         (void)sig;
         log.notice("Stopping ping");
@@ -64,14 +64,14 @@ int main(int argc, char **argv)
     if (pinger.ping({host, true}, npings) == false)
     {
         log.error(fmt::format("Cannot ping: {}", argv[1]));
-        if (OS::is_windows)
+        if (os::is_windows)
             time::sleep(5);
         return 1;
     }
 
     const auto & result = pinger.result();
     SIHD_COUT(result.str());
-    if (OS::is_windows)
+    if (os::is_windows)
         time::sleep(5);
     return 0;
 }

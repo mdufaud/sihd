@@ -2,7 +2,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/time.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 
 namespace test
 {
@@ -62,7 +62,7 @@ namespace test
 
     TEST_F(TestScheduler, test_sched_perf)
     {
-        if (OS::is_run_by_valgrind())
+        if (os::is_run_by_valgrind())
             GTEST_SKIP() << "Perf under valgrind debugger is unthinkable";
 
         Scheduler seq("seq");
@@ -93,7 +93,7 @@ namespace test
 
     TEST_F(TestScheduler, test_sched_stop)
     {
-        if (OS::is_run_by_valgrind())
+        if (os::is_run_by_valgrind())
             GTEST_SKIP() << "Valgrind debugger doesn't hold up there";
 
         Scheduler seq("seq");
@@ -130,7 +130,7 @@ namespace test
 
     TEST_F(TestScheduler, test_sched_pause)
     {
-        if (OS::is_run_by_valgrind())
+        if (os::is_run_by_valgrind())
             GTEST_SKIP() << "Test is buggy under valgrind debugger";
         Scheduler seq("seq");
 
@@ -179,7 +179,7 @@ namespace test
 
     TEST_F(TestScheduler, test_sched_as_fast)
     {
-        if (OS::is_run_by_valgrind())
+        if (os::is_run_by_valgrind())
             GTEST_SKIP() << "Test is buggy under valgrind debugger";
         Scheduler seq("seq");
         int lambda_ran = 0;
@@ -205,7 +205,7 @@ namespace test
 
     TEST_F(TestScheduler, test_sched_burst)
     {
-        if (OS::is_run_by_valgrind())
+        if (os::is_run_by_valgrind())
             GTEST_SKIP() << "Test is buggy under valgrind debugger";
         Scheduler seq("seq");
         int lambda_ran = 0;

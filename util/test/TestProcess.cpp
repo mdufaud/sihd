@@ -3,7 +3,7 @@
 #include <sihd/util/Process.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/TmpDir.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/Term.hpp>
 #include <filesystem>
 
@@ -70,7 +70,7 @@ namespace test
     {
         if (Term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
-        if (OS::is_run_by_valgrind())
+        if (os::is_run_by_valgrind())
             GTEST_SKIP() << "Buggy with valgrind";
         std::vector<std::string> res;
         std::string output;
@@ -174,7 +174,7 @@ namespace test
     {
         if (Term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
-        if (OS::is_run_by_valgrind())
+        if (os::is_run_by_valgrind())
             GTEST_SKIP() << "Buggy with valgrind";
         Process proc{"wc", "-c"};
         std::string result;
@@ -196,7 +196,7 @@ namespace test
 
     TEST_F(TestProcess, test_process_file_in)
     {
-        if (OS::is_run_by_valgrind())
+        if (os::is_run_by_valgrind())
             GTEST_SKIP() << "Buggy with valgrind";
 
         std::string test_file = fs::combine(_tmp_dir.path(), "file_in_hello.txt");
@@ -402,7 +402,7 @@ namespace test
 
     TEST_F(TestProcess, test_process_bad_cmd)
     {
-        if (OS::is_run_by_valgrind())
+        if (os::is_run_by_valgrind())
             GTEST_SKIP() << "Buggy under valgrind";
         Process proc{"ellesse", "-la"};
 

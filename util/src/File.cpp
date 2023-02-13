@@ -2,7 +2,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/ArrayView.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 
 #include <string.h>
 #include <errno.h>
@@ -69,7 +69,7 @@ std::optional<struct stat>  File::stat()
     if (_file_ptr != nullptr)
     {
         struct stat stat;
-        if (OS::fstat(this->fd(), &stat, true))
+        if (os::fstat(this->fd(), &stat, true))
             return stat;
     }
     return std::nullopt;

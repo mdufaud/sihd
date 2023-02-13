@@ -3,7 +3,7 @@
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/StepWorker.hpp>
 #include <sihd/util/Task.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 
 namespace test
 {
@@ -51,7 +51,7 @@ namespace test
 
     TEST_F(TestWorker, test_stepworker_multiple)
     {
-        if (OS::is_run_by_valgrind())
+        if (os::is_run_by_valgrind())
             GTEST_SKIP() << "Buggy with valgrind";
         int ran = 0;
         Task task([&] () -> bool

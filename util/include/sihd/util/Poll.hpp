@@ -9,7 +9,7 @@
 # include <sihd/util/IStoppableRunnable.hpp>
 # include <sihd/util/IHandler.hpp>
 # include <sihd/util/Clocks.hpp>
-# include <sihd/util/OS.hpp>
+# include <sihd/util/os.hpp>
 
 # if !defined(__SIHD_WINDOWS__)
 #  include <sys/resource.h> //rlim_t

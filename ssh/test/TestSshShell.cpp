@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fs.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/Term.hpp>
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshShell.hpp>
@@ -37,7 +37,7 @@ namespace test
     {
         if (sihd::util::Term::is_interactive() == false)
             GTEST_SKIP_("requires interaction");
-        if (sihd::util::OS::is_run_by_valgrind())
+        if (sihd::util::os::is_run_by_valgrind())
             GTEST_SKIP_("no valgrind");
 
         std::string user = getenv("USER");

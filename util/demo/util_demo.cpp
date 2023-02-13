@@ -1,5 +1,5 @@
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/StepWorker.hpp>
@@ -33,7 +33,7 @@ void worker(double frequency)
 
 void os()
 {
-    SIHD_LOG(info, "pid: {}", OS::pid());
+    SIHD_LOG(info, "pid: {}", os::pid());
 }
 
 }

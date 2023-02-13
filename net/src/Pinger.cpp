@@ -95,7 +95,7 @@ bool    Pinger::ping(const IpAddr & client, size_t number)
     memset(&_sums, 0, sizeof(InternalPingRes));
     memset(&_result, 0, sizeof(PingResult));
     _stop = false;
-    _sender.set_id(OS::pid());
+    _sender.set_id(os::pid());
     _sender.set_ttl(_ttl);
 
     _result.time_start = _clock_ptr->now();
@@ -145,7 +145,7 @@ bool    Pinger::ping(const IpAddr & client, size_t number)
 void    Pinger::handle(IcmpSender *sender)
 {
     const IcmpResponse & response = sender->response();
-    if (_current_seq != response.seq || OS::pid() != response.id)
+    if (_current_seq != response.seq || os::pid() != response.id)
         return ;
     _received = true;
     _result.received += 1;

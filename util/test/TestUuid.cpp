@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fs.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/TmpDir.hpp>
 #include <sihd/util/Term.hpp>
 #include <sihd/util/Uuid.hpp>

@@ -53,7 +53,7 @@ bool    IcmpSender::open_socket(bool ipv6)
         {
             struct icmp6_filter filter;
             ICMP6_FILTER_SETBLOCKALL(&filter);
-            ret = sihd::util::OS::setsockopt(_socket, IPPROTO_ICMPV6, ICMP6_FILTER, (const void *)&filter, sizeof(filter));
+            ret = sihd::util::os::setsockopt(_socket, IPPROTO_ICMPV6, ICMP6_FILTER, (const void *)&filter, sizeof(filter));
         }
         */
     }

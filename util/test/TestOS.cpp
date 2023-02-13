@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/Handler.hpp>
 
 namespace test
@@ -23,7 +23,7 @@ namespace test
 
             virtual void SetUp()
             {
-                OS::clear_signal_handlers();
+                os::clear_signal_handlers();
             }
 
             virtual void TearDown()
@@ -41,7 +41,7 @@ namespace test
 
     TEST_F(TestOs, test_os_backtrace)
     {
-        ssize_t size = OS::backtrace(1);
+        ssize_t size = os::backtrace(1);
         EXPECT_GE(size, 1);
     }
 
@@ -50,21 +50,21 @@ namespace test
         this->ran = 0;
         int sig = SIGINT;
         Handler<int> handler = Handler<int>(this);
-        EXPECT_TRUE(OS::add_signal_handler(sig, &handler));
+        EXPECT_TRUE(os::add_signal_handler(sig, &handler));
         EXPECT_EQ(this->ran, 0);
         raise(sig);
         EXPECT_EQ(this->ran, 1);
         raise(sig);
         EXPECT_EQ(this->ran, 2);
-        EXPECT_TRUE(OS::clear_signal_handler(sig, &handler));
+        EXPECT_TRUE(os::clear_signal_handler(sig, &handler));
     }
 
     TEST_F(TestOs, test_os_resources)
     {
-        size_t max_fds = OS::max_fds();
+        size_t max_fds = os::max_fds();
         // in bytes
-        size_t peak = OS::peak_rss();
-        size_t current = OS::current_rss();
+        size_t peak = os::peak_rss();
+        size_t current = os::current_rss();
 
         SIHD_LOG(info, "Peak rss: {} mb", peak / (1024 * 1024));
         SIHD_LOG(info, "Current rss: {} mb", current / (1024 * 1024));

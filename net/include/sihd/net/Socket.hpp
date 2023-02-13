@@ -5,7 +5,7 @@
 # include <sihd/net/IpAddr.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/ArrayView.hpp>
-# include <sihd/util/OS.hpp>
+# include <sihd/util/os.hpp>
 
 # if !defined(__SIHD_WINDOWS__)
 #  include <netinet/tcp.h>

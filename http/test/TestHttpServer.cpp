@@ -6,7 +6,7 @@
 #include <sihd/util/str.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/File.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/Term.hpp>
 #include <sihd/util/Handler.hpp>
 
@@ -168,7 +168,7 @@ namespace test
             GTEST_SKIP_("requires interaction");
 
         SimpleHttpServer server;
-        OS::add_signal_handler(SIGINT, new Handler<int>([&server] (int sig)
+        os::add_signal_handler(SIGINT, new Handler<int>([&server] (int sig)
         {
             (void)sig;
             server.stop();

@@ -62,7 +62,7 @@ void    Daemon::_handle_sig(int sig)
 {
     if (sig == SIGTERM || sig == SIGSEGV)
     {
-        SIHD_LOG(info, "Daemon: exit signal received: {}", OS::signal_name(sig));
+        SIHD_LOG(info, "Daemon: exit signal received: {}", os::signal_name(sig));
         exit(0);
     }
 #if !defined(__SIHD_WINDOWS__)
@@ -73,7 +73,7 @@ void    Daemon::_handle_sig(int sig)
     }
 #else
 #endif
-    SIHD_LOG(info, "Daemon: signal received: {}", OS::signal_name(sig));
+    SIHD_LOG(info, "Daemon: signal received: {}", os::signal_name(sig));
 }
 
 bool    Daemon::_handle_signals()
@@ -86,7 +86,7 @@ bool    Daemon::_handle_signals()
     int i = 0;
     while (i < 64)
     {
-        if (OS::add_signal_handler(i, handler_ptr) == false)
+        if (os::add_signal_handler(i, handler_ptr) == false)
             ret = false;
         ++i;
     }

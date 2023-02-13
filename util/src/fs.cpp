@@ -8,7 +8,7 @@
 #include <sihd/util/fs.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/platform.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/Splitter.hpp>
 
@@ -168,7 +168,7 @@ bool    exists(std::string_view path)
 bool    is_file(std::string_view path)
 {
     struct stat s;
-    if (OS::stat(path.data(), &s) == 0)
+    if (os::stat(path.data(), &s) == 0)
         return s.st_mode & S_IFREG;
     return false;
 }
@@ -176,7 +176,7 @@ bool    is_file(std::string_view path)
 bool    is_dir(std::string_view path)
 {
     struct stat s;
-    if (OS::stat(path.data(), &s) == 0)
+    if (os::stat(path.data(), &s) == 0)
         return s.st_mode & S_IFDIR;
     return false;
 }
@@ -184,7 +184,7 @@ bool    is_dir(std::string_view path)
 time_t  last_write(std::string_view path)
 {
     struct stat s;
-    if (OS::stat(path.data(), &s) == 0)
+    if (os::stat(path.data(), &s) == 0)
         return s.st_mtime;
     return false;
 }
@@ -192,7 +192,7 @@ time_t  last_write(std::string_view path)
 size_t    filesize(std::string_view path)
 {
     struct stat s;
-    if (OS::stat(path.data(), &s) == 0)
+    if (os::stat(path.data(), &s) == 0)
         return s.st_size;
     return 0;
 }

@@ -10,7 +10,7 @@
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/StepWorker.hpp>
 # include <sihd/util/Waitable.hpp>
-# include <sihd/util/OS.hpp>
+# include <sihd/util/os.hpp>
 
 # include <sihd/http/Mime.hpp>
 # include <sihd/http/IWebsocketHandler.hpp>

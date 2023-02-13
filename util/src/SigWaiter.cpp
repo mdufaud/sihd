@@ -1,6 +1,6 @@
 #include <sihd/util/SigWaiter.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 
 namespace sihd::util
 {
@@ -9,13 +9,13 @@ SIHD_LOGGER;
 
 SigWaiter::SigWaiter(int sig): _sig(sig)
 {
-    OS::add_signal_handler(sig, this);
+    os::add_signal_handler(sig, this);
     _waitable.infinite_wait();
 }
 
 SigWaiter::~SigWaiter()
 {
-    OS::clear_signal_handler(_sig, this);
+    os::clear_signal_handler(_sig, this);
 }
 
 void    SigWaiter::handle(int sig)

@@ -55,7 +55,7 @@ typedef void (*sighandler_t)(int);
 #include <vector>
 #include <algorithm>
 
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/AtExit.hpp>
@@ -66,8 +66,10 @@ typedef void (*sighandler_t)(int);
 # define __SIHD_UTIL_OS_DEFAULT_MAX_FDS__ 512
 #endif
 
-namespace sihd::util
+namespace sihd::util::os
 {
+
+SIHD_NEW_LOGGER("sihd::util::os");
 
 namespace
 {
@@ -76,11 +78,19 @@ bool signal_used = false;
 std::mutex signal_mutex;
 std::map<int, std::list<IHandler<int> *>> map_signals_handlers;
 
+void    _signal_callback(int sig)
+{
+    SIHD_LOG(debug, "Signal caught: {}", signal_name(sig));
+    std::lock_guard lock(signal_mutex);
+    for (IHandler<int> *handler : map_signals_handlers[sig])
+    {
+        handler->handle(sig);
+    }
 }
 
-SIHD_LOGGER;
+}
 
-bool    OS::clear_signal_handlers(int sig)
+bool    clear_signal_handlers(int sig)
 {
     std::lock_guard lock(signal_mutex);
     for (IHandler<int> *handler : map_signals_handlers[sig])
@@ -91,7 +101,7 @@ bool    OS::clear_signal_handlers(int sig)
     return unhandle_signal(sig);
 }
 
-bool    OS::clear_signal_handlers()
+bool    clear_signal_handlers()
 {
     std::lock_guard lock(signal_mutex);
     bool ret = true;
@@ -109,7 +119,7 @@ bool    OS::clear_signal_handlers()
     return ret;
 }
 
-bool    OS::clear_signal_handler(int sig, IHandler<int> *runnable)
+bool    clear_signal_handler(int sig, IHandler<int> *runnable)
 {
     std::lock_guard lock(signal_mutex);
     auto & lst = map_signals_handlers[sig];
@@ -124,22 +134,12 @@ bool    OS::clear_signal_handler(int sig, IHandler<int> *runnable)
     return false;
 }
 
-void    OS::_signal_callback(int sig)
+bool    add_signal_handler(int sig, IHandler<int> *handler)
 {
-    SIHD_LOG(debug, "Signal caught: {}", OS::signal_name(sig));
-    std::lock_guard lock(signal_mutex);
-    for (IHandler<int> *handler : map_signals_handlers[sig])
-    {
-        handler->handle(sig);
-    }
-}
-
-bool    OS::add_signal_handler(int sig, IHandler<int> *handler)
-{
-    sighandler_t sighandler = signal(sig, OS::_signal_callback);
+    sighandler_t sighandler = signal(sig, _signal_callback);
     if (sighandler == SIG_ERR)
     {
-        SIHD_LOG(error, "Error handling signal: {}", OS::signal_name(sig));
+        SIHD_LOG(error, "Error handling signal: {}", signal_name(sig));
         return false;
     }
     std::lock_guard lock(signal_mutex);
@@ -148,7 +148,7 @@ bool    OS::add_signal_handler(int sig, IHandler<int> *handler)
     {
         AtExit::add_handler(new Runnable([] () -> bool
         {
-            OS::clear_signal_handlers();
+            clear_signal_handlers();
             return true;
         }));
         AtExit::install();
@@ -157,18 +157,18 @@ bool    OS::add_signal_handler(int sig, IHandler<int> *handler)
     return true;
 }
 
-bool    OS::unhandle_signal(int sig)
+bool    unhandle_signal(int sig)
 {
     sighandler_t handler = signal(sig, SIG_DFL);
     if (handler == SIG_ERR)
     {
-        SIHD_LOG(error, "Error removing signal: {}", OS::signal_name(sig));
+        SIHD_LOG(error, "Error removing signal: {}", signal_name(sig));
         return false;
     }
     return true;
 }
 
-std::string OS::signal_name(int sig)
+std::string signal_name(int sig)
 {
 #if !defined(__SIHD_WINDOWS__)
     char *signame = strsignal(sig);
@@ -180,7 +180,7 @@ std::string OS::signal_name(int sig)
 
 // utilities
 
-bool   OS::kill(pid_t pid, int sig)
+bool   kill(pid_t pid, int sig)
 {
 #if !defined(__SIHD_WINDOWS__)
     return ::kill(pid, sig) == 0;
@@ -191,7 +191,7 @@ bool   OS::kill(pid_t pid, int sig)
 #endif
 }
 
-pid_t   OS::pid()
+pid_t   pid()
 {
 #if !defined(__SIHD_WINDOWS__)
     return getpid();
@@ -200,7 +200,7 @@ pid_t   OS::pid()
 #endif
 }
 
-sihd_rlim_t OS::max_fds()
+sihd_rlim_t max_fds()
 {
 #if !defined(__SIHD_WINDOWS__)
     struct rlimit r;
@@ -215,7 +215,7 @@ sihd_rlim_t OS::max_fds()
 #endif
 }
 
-bool    OS::ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
+bool    ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
 {
 #if !defined(__SIHD_WINDOWS__)
     bool ret = ::ioctl(fd, request, arg_ptr) == 0;
@@ -227,7 +227,7 @@ bool    OS::ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
     return ret == 0;
 }
 
-bool    OS::stat(const char *pathname, struct stat *statbuf, bool logerror)
+bool    stat(const char *pathname, struct stat *statbuf, bool logerror)
 {
 #if !defined(__SIHD_WINDOWS__)
     bool ret = ::stat(pathname, statbuf) == 0;
@@ -239,7 +239,7 @@ bool    OS::stat(const char *pathname, struct stat *statbuf, bool logerror)
     return ret == 0;
 }
 
-bool    OS::fstat(int fd, struct stat *statbuf, bool logerror)
+bool    fstat(int fd, struct stat *statbuf, bool logerror)
 {
 #if !defined(__SIHD_WINDOWS__)
     bool ret = ::fstat(fd, statbuf) == 0;
@@ -251,7 +251,7 @@ bool    OS::fstat(int fd, struct stat *statbuf, bool logerror)
     return ret == 0;
 }
 
-bool    OS::setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror)
+bool    setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror)
 {
     if (socket < 0)
         throw std::runtime_error("OS: cannot setsockopt on a negative socket");
@@ -265,7 +265,7 @@ bool    OS::setsockopt(int socket, int level, int optname, const void *optval, s
     return ret;
 }
 
-bool    OS::getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror)
+bool    getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror)
 {
     if (socket < 0)
         throw std::runtime_error("OS: cannot getsockopt on a negative socket");
@@ -279,7 +279,7 @@ bool    OS::getsockopt(int socket, int level, int optname, void *optval, socklen
     return ret;
 }
 
-bool    OS::is_root()
+bool    is_root()
 {
 #if defined(__SIHD_WINDOWS__)
     return false;
@@ -334,7 +334,7 @@ static void *backtrace_buffer[SIHD_MAX_BACKTRACE_SIZE];
 
 }
 
-ssize_t    OS::backtrace(int fd, size_t backtrace_size)
+ssize_t    backtrace(int fd, size_t backtrace_size)
 {
     size_t wanted_size = std::min(backtrace_size, (size_t)SIHD_MAX_BACKTRACE_SIZE);
     size_t size = ::backtrace(backtrace_buffer, wanted_size);
@@ -362,7 +362,7 @@ ssize_t    OS::backtrace(int fd, size_t backtrace_size)
 
 #else // no backtrace
 
-ssize_t    OS::backtrace(int fd, size_t backtrace_size)
+ssize_t    backtrace(int fd, size_t backtrace_size)
 {
     (void)fd;
     (void)backtrace_size;
@@ -373,7 +373,7 @@ ssize_t    OS::backtrace(int fd, size_t backtrace_size)
 
 // debuggers
 
-bool    OS::is_run_with_asan()
+bool    is_run_with_asan()
 {
 #if defined(__SANITIZE_ADDRESS__)
     return true;
@@ -382,7 +382,7 @@ bool    OS::is_run_with_asan()
 #endif
 }
 
-bool    OS::is_run_by_valgrind()
+bool    is_run_by_valgrind()
 {
     char *ldpreload = getenv("LD_PRELOAD");
     return ldpreload != nullptr
@@ -391,7 +391,7 @@ bool    OS::is_run_by_valgrind()
 }
 
 
-bool    OS::is_run_by_debugger()
+bool    is_run_by_debugger()
 {
 #if !defined(__SIHD_WINDOWS__)
     // gdb check
@@ -438,7 +438,7 @@ bool    OS::is_run_by_debugger()
 #endif
 }
 
-void *OS::load_lib(const std::string & lib_name)
+void *load_lib(const std::string & lib_name)
 {
 #if !defined(STATIC) && !defined(__SIHD_WINDOWS__)
     void *handle;
@@ -453,7 +453,7 @@ void *OS::load_lib(const std::string & lib_name)
 #endif
 }
 
-void *OS::load_symbol(void *handle, std::string_view sym_name)
+void *load_symbol(void *handle, std::string_view sym_name)
 {
 #if !defined(STATIC) && !defined(__SIHD_WINDOWS__)
     if (handle == nullptr)
@@ -466,7 +466,7 @@ void *OS::load_symbol(void *handle, std::string_view sym_name)
 #endif
 }
 
-std::string OS::lib_error()
+std::string lib_error()
 {
 #if !defined(STATIC) && !defined(__SIHD_WINDOWS__)
     return dlerror();
@@ -475,7 +475,7 @@ std::string OS::lib_error()
 #endif
 }
 
-bool OS::close_lib(void *handle)
+bool close_lib(void *handle)
 {
 #if !defined(STATIC) && !defined(__SIHD_WINDOWS__)
     if (handle == nullptr)
@@ -487,23 +487,23 @@ bool OS::close_lib(void *handle)
 #endif
 }
 
-void *OS::load_symbol_unload_lib(const std::string & lib_name, std::string_view sym_name)
+void *load_symbol_unload_lib(const std::string & lib_name, std::string_view sym_name)
 {
 #if !defined(STATIC) && !defined(__SIHD_WINDOWS__)
-    void *handle = OS::load_lib(lib_name);
+    void *handle = load_lib(lib_name);
     if (handle == nullptr)
     {
-        SIHD_LOG(error, "OS: could not load library: {}", OS::lib_error());
+        SIHD_LOG(error, "OS: could not load library: {}", lib_error());
         return nullptr;
     }
-    void *sym_ptr = OS::load_symbol(handle, sym_name);
+    void *sym_ptr = load_symbol(handle, sym_name);
     if (sym_ptr == nullptr)
     {
-        SIHD_LOG(error, "OS: could not load symbol: {}", OS::lib_error());
+        SIHD_LOG(error, "OS: could not load symbol: {}", lib_error());
         return nullptr;
     }
     if (dlclose(handle) != 0)
-        SIHD_LOG(warning, "OS: could not close lib handle: {}", OS::lib_error());
+        SIHD_LOG(warning, "OS: could not close lib handle: {}", lib_error());
     return sym_ptr;
 #else
     (void)lib_name;
@@ -524,7 +524,7 @@ void *OS::load_symbol_unload_lib(const std::string & lib_name, std::string_view 
  * memory use) measured in bytes, or zero if the value cannot be
  * determined on this OS.
  */
-ssize_t OS::peak_rss()
+ssize_t peak_rss()
 {
 #if defined(__SIHD_WINDOWS__)
 
@@ -573,7 +573,7 @@ ssize_t OS::peak_rss()
  * Returns the current resident set size (physical memory use) measured
  * in bytes, or zero if the value cannot be determined on this OS.
  */
-ssize_t OS::current_rss()
+ssize_t current_rss()
 {
 #if defined(__SIHD_WINDOWS__)
 

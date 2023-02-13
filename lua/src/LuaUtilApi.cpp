@@ -7,7 +7,7 @@
 #include <sihd/util/time.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Thread.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/Path.hpp>
@@ -51,7 +51,7 @@ using namespace sihd::util;
 // logger used by lua code
 Logger LuaUtilApi::logger("sihd::lua");
 // from path/bin/exe.lua -> path/bin -> path
-std::string LuaUtilApi::dir = fs::parent(fs::parent(OS::executable_path()));
+std::string LuaUtilApi::dir = fs::parent(fs::parent(os::executable_path()));
 
 SIHD_LOGGER;
 
@@ -589,22 +589,22 @@ void    LuaUtilApi::load_tools(Vm & vm)
                     .addProperty("stdout", &LuaUtilApi::_get_int<STDOUT_FILENO>)
                     .addProperty("stderr", &LuaUtilApi::_get_int<STDERR_FILENO>)
                     .addProperty("backtrace_size",
-                        +[] () { return OS::backtrace_size; },
-                        +[] (int val) { OS::backtrace_size = val; })
-                    .addFunction("backtrace", &OS::backtrace)
-                    .addFunction("pid", &OS::pid)
-                    .addFunction("kill", &OS::kill)
-                    .addFunction("signal_name", &OS::signal_name)
-                    .addFunction("max_fds", &OS::max_fds)
-                    .addFunction("is_root", &OS::is_root)
-                    .addFunction("home_path", &OS::home_path)
-                    .addFunction("executable_path", &OS::executable_path)
-                    .addFunction("cwd", &OS::cwd)
-                    .addFunction("is_run_by_debugger", &OS::is_run_by_debugger)
-                    .addFunction("is_run_by_valgrind", &OS::is_run_by_valgrind)
-                    .addFunction("is_run_with_asan", &OS::is_run_with_asan)
-                    .addFunction("peak_rss", &OS::peak_rss)
-                    .addFunction("current_rss", &OS::current_rss)
+                        +[] () { return os::backtrace_size; },
+                        +[] (int val) { os::backtrace_size = val; })
+                    .addFunction("backtrace", &os::backtrace)
+                    .addFunction("pid", &os::pid)
+                    .addFunction("kill", &os::kill)
+                    .addFunction("signal_name", &os::signal_name)
+                    .addFunction("max_fds", &os::max_fds)
+                    .addFunction("is_root", &os::is_root)
+                    .addFunction("home_path", &os::home_path)
+                    .addFunction("executable_path", &os::executable_path)
+                    .addFunction("cwd", &os::cwd)
+                    .addFunction("is_run_by_debugger", &os::is_run_by_debugger)
+                    .addFunction("is_run_by_valgrind", &os::is_run_by_valgrind)
+                    .addFunction("is_run_with_asan", &os::is_run_with_asan)
+                    .addFunction("peak_rss", &os::peak_rss)
+                    .addFunction("current_rss", &os::current_rss)
                 .endNamespace()
                 .beginNamespace("str")
                     .addFunction("timeoffset_str", &str::timeoffset_str)

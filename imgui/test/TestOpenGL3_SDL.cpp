@@ -2,7 +2,7 @@
 #include <iostream>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fs.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/Term.hpp>
 
 #include <sihd/imgui/ImguiRunner.hpp>

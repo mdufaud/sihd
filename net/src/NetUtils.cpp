@@ -2,7 +2,7 @@
 
 #include <sihd/net/NetUtils.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/OS.hpp>
+#include <sihd/util/os.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <net/if.h>
@@ -54,7 +54,7 @@ int     NetUtils::interface_idx(int sock, std::string_view name)
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
     strncpy(iface.ifr_name, name.data(), IFNAMSIZ - 1);
-    if (sihd::util::OS::ioctl(sock, SIOCGIFINDEX, &iface, true) != 0)
+    if (sihd::util::os::ioctl(sock, SIOCGIFINDEX, &iface, true) != 0)
         return -1;
     return iface.ifr_ifindex;
 }
@@ -64,7 +64,7 @@ bool    NetUtils::get_interface_name(int sock, int idx, std::string & to_fill)
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
     iface.ifr_ifindex = idx;
-    if (sihd::util::OS::ioctl(sock, SIOCGIFNAME, &iface, true) != 0)
+    if (sihd::util::os::ioctl(sock, SIOCGIFNAME, &iface, true) != 0)
         return false;
     to_fill = iface.ifr_name;
     return true;
@@ -76,7 +76,7 @@ bool    NetUtils::get_interface_mac(int sock, std::string_view name, struct sock
     memset(&iface, 0, sizeof(struct ifreq));
     iface.ifr_addr.sa_family = to_fill->sa_family;
     strncpy(iface.ifr_name, name.data(), IFNAMSIZ - 1);
-    if (sihd::util::OS::ioctl(sock, SIOCGIFHWADDR, &iface, true) != 0)
+    if (sihd::util::os::ioctl(sock, SIOCGIFHWADDR, &iface, true) != 0)
         return false;
     memcpy(to_fill, &iface.ifr_hwaddr, sizeof(struct sockaddr));
     return true;
@@ -88,7 +88,7 @@ bool    NetUtils::get_interface_addr(int sock, std::string_view name, struct soc
     memset(&iface, 0, sizeof(struct ifreq));
     iface.ifr_addr.sa_family = to_fill->sa_family;
     strncpy(iface.ifr_name, name.data(), IFNAMSIZ - 1);
-    if (sihd::util::OS::ioctl(sock, SIOCGIFADDR, &iface, true) != 0)
+    if (sihd::util::os::ioctl(sock, SIOCGIFADDR, &iface, true) != 0)
         return false;
     memcpy(to_fill, &iface.ifr_addr, sizeof(struct sockaddr));
     return true;
@@ -100,7 +100,7 @@ bool    NetUtils::get_interface_broadcast(int sock, std::string_view name, struc
     memset(&iface, 0, sizeof(struct ifreq));
     iface.ifr_addr.sa_family = to_fill->sa_family;
     strncpy(iface.ifr_name, name.data(), IFNAMSIZ - 1);
-    if (sihd::util::OS::ioctl(sock, SIOCGIFBRDADDR, &iface, true) != 0)
+    if (sihd::util::os::ioctl(sock, SIOCGIFBRDADDR, &iface, true) != 0)
         return false;
     memcpy(to_fill, &iface.ifr_broadaddr, sizeof(struct sockaddr));
     return true;
@@ -112,7 +112,7 @@ bool    NetUtils::get_interface_netmask(int sock, std::string_view name, struct 
     memset(&iface, 0, sizeof(struct ifreq));
     iface.ifr_addr.sa_family = to_fill->sa_family;
     strncpy(iface.ifr_name, name.data(), IFNAMSIZ - 1);
-    if (sihd::util::OS::ioctl(sock, SIOCGIFNETMASK, &iface, true) != 0)
+    if (sihd::util::os::ioctl(sock, SIOCGIFNETMASK, &iface, true) != 0)
         return false;
     memcpy(to_fill, &iface.ifr_netmask, sizeof(struct sockaddr));
     return true;
