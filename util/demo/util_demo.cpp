@@ -42,11 +42,18 @@ int main(int argc, char **argv)
 {
     LoggerManager::basic();
 
-    cxxopts::Options options("tester", " - test basic options");
+    cxxopts::Options options(argv[0], "Testing utility for module util");
     options.add_options()
+      ("h,help", "Prints usage")
       ("f,worker-frequency", "Change the worker execution frequency in HZ", cxxopts::value<double>()->default_value("10.0"));
 
     auto result = options.parse(argc, argv);
+
+    if (result.count("help"))
+    {
+      fmt::print(options.help());
+      return 0;
+    }
 
     demo::os();
     demo::worker(result["worker-frequency"].as<double>());

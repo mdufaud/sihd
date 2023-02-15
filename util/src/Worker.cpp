@@ -1,7 +1,7 @@
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/time.hpp>
-#include <sihd/util/Thread.hpp>
+#include <sihd/util/thread.hpp>
 #include <sihd/util/ScopedModifier.hpp>
 
 namespace sihd::util
@@ -65,7 +65,7 @@ bool    Worker::start_sync_worker(std::string_view name)
 bool    Worker::_prepare_run()
 {
     ScopedModifier m(_running, true);
-    Thread::set_name(_worker_thread_name);
+    thread::set_name(_worker_thread_name);
     if (_synchro.to_sync() > 0)
         _synchro.sync();
     bool ret = this->run();

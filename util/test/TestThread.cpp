@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <sihd/util/Thread.hpp>
+#include <sihd/util/thread.hpp>
 
 namespace test
 {
@@ -25,21 +25,21 @@ namespace test
         public:
             void test()
             {
-                this->other_id = Thread::id();
-                Thread::set_name("another-thread");
-                this->other_name = Thread::name();
+                this->other_id = thread::id();
+                thread::set_name("another-thread");
+                this->other_name = thread::name();
             }
     };
 
     TEST_F(TestThread, test_thread_name)
     {
-        this->main_id = Thread::id();
-        EXPECT_EQ(Thread::name(), "main");
+        this->main_id = thread::id();
+        EXPECT_EQ(thread::name(), "main");
         std::thread t(&TestThread::test, this);
         t.join();
-        EXPECT_EQ(Thread::name(), "main");
+        EXPECT_EQ(thread::name(), "main");
         EXPECT_EQ(this->other_name, "another-thread");
-        EXPECT_FALSE(Thread::equals(this->other_id, this->main_id));
-        EXPECT_TRUE(Thread::equals(this->main_id,  Thread::id()));
+        EXPECT_FALSE(thread::equals(this->other_id, this->main_id));
+        EXPECT_TRUE(thread::equals(this->main_id,  thread::id()));
     }
 }

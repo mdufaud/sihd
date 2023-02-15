@@ -2,7 +2,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/ScopedModifier.hpp>
-#include <sihd/util/Thread.hpp>
+#include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
 #include <sihd/util/Task.hpp>
 
@@ -110,7 +110,7 @@ time_t  Scheduler::now() const
 
 bool    Scheduler::run()
 {
-    sihd::util::Thread::set_name(this->name());
+    sihd::util::thread::set_name(this->name());
     if (_clock_ptr == nullptr || _clock_ptr->start() == false)
         return false;
     _begin_run = _clock_ptr->now();

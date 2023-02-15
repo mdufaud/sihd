@@ -1,14 +1,15 @@
 #include <sihd/util/LogInfo.hpp>
 #include <array>
+#include <map>
 
 namespace sihd::util
 {
 
 LogInfo::LogInfo(const std::string & src, LogLevel lvl): source(src), level(lvl)
 {
-    this->thread_id = Thread::id();
-    this->thread_id_str = Thread::id_str(thread_id);
-    this->thread_name = Thread::name();
+    this->thread_id = thread::id();
+    this->thread_id_str = thread::id_str(thread_id);
+    this->thread_name = thread::name();
     this->strlevel = this->level_str(this->level);
     ::clock_gettime(CLOCK_REALTIME, &timestamp);
 }

@@ -6,7 +6,7 @@
 #include <sihd/util/Types.hpp>
 #include <sihd/util/time.hpp>
 #include <sihd/util/Clocks.hpp>
-#include <sihd/util/Thread.hpp>
+#include <sihd/util/thread.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/str.hpp>
@@ -579,10 +579,10 @@ void    LuaUtilApi::load_tools(Vm & vm)
                     .addFunction("hz", &time::freq)
                 .endNamespace()
                 .beginNamespace("thread")
-                    .addFunction("id", &Thread::id)
-                    .addFunction("id_str", static_cast<std::string (*)()>(&Thread::id_str))
-                    .addFunction("set_name", &Thread::set_name)
-                    .addFunction("name", &Thread::name)
+                    .addFunction("id", &thread::id)
+                    .addFunction("id_str", static_cast<std::string (*)()>(&thread::id_str))
+                    .addFunction("set_name", &thread::set_name)
+                    .addFunction("name", &thread::name)
                 .endNamespace()
                 .beginNamespace("os")
                     .addProperty("stdin", &LuaUtilApi::_get_int<STDIN_FILENO>)

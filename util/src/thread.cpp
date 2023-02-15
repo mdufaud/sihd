@@ -1,0 +1,69 @@
+#include <cstring>
+#include <map>
+#include <mutex>
+#include <sstream>
+
+#include <sihd/util/thread.hpp>
+#include <sihd/util/str.hpp>
+
+namespace sihd::util::thread
+{
+
+namespace
+{
+
+struct ComparePthreadKeys
+{
+    bool operator()(const pthread_t & id1, const pthread_t & id2) const
+    {
+        return memcmp(&id1, &id2, sizeof(pthread_t)) < 0;
+    }
+};
+
+pthread_t main_thread_id = id();
+std::mutex thread_mutex;
+std::map<pthread_t, std::string, ComparePthreadKeys> thread_map = {
+    {main_thread_id, "main"}
+};
+
+}
+
+pthread_t main()
+{
+  return main_thread_id;
+}
+
+bool  equals(const pthread_t & id1, const pthread_t & id2)
+{
+    return memcmp(&id1, &id2, sizeof(pthread_t)) == 0;
+}
+
+pthread_t id()
+{
+    return pthread_self();
+}
+
+std::string id_str(pthread_t id)
+{
+    return "0x" + str::to_hex(id);
+}
+
+void  set_name(const std::string & name)
+{
+    std::lock_guard lock(thread_mutex);
+    thread_map[id()] = name;
+}
+
+void  del_name()
+{
+    std::lock_guard lock(thread_mutex);
+    thread_map.erase(id());
+}
+
+const std::string & name()
+{
+    std::lock_guard lock(thread_mutex);
+    return thread_map[id()];
+}
+
+}

@@ -10,7 +10,7 @@
 #include <sihd/util/version.hpp>
 #include <sihd/util/Types.hpp>
 #include <sihd/util/time.hpp>
-#include <sihd/util/Thread.hpp>
+#include <sihd/util/thread.hpp>
 #include <sihd/util/Path.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/AService.hpp>
@@ -88,10 +88,10 @@ void    PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("from_str", &Types::from_str);
 
     m_util.def_submodule("thread", "sihd::util::Thread")
-        .def("id", &Thread::id)
-        .def("id_str", static_cast<std::string (*)()>(&Thread::id_str))
-        .def("set_name", &Thread::set_name)
-        .def("name", &Thread::name);
+        .def("id", &thread::id)
+        .def("id_str", static_cast<std::string (*)()>(&thread::id_str))
+        .def("set_name", &thread::set_name)
+        .def("name", &thread::name);
 
     m_util.def_submodule("path", "sihd::util::Path")
         .def("set", &Path::set)

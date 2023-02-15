@@ -5,7 +5,7 @@
 
 # include <string_view>
 
-# include <sihd/util/Thread.hpp>
+# include <sihd/util/thread.hpp>
 
 namespace sihd::util
 {
