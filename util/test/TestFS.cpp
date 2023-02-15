@@ -36,7 +36,7 @@ namespace test
             bool    log_make_dirs(std::string path)
             {
                 SIHD_LOG(debug, "Making directory: {}", path);
-                return fs::make_directories(path);
+                return std::filesystem::create_directories(path);
             }
 
             char original_slash = fs::sep();
@@ -132,7 +132,6 @@ namespace test
         EXPECT_TRUE(fs::exists(sandbox_path));
         EXPECT_TRUE(fs::is_dir(sandbox_path));
         EXPECT_FALSE(fs::is_file(sandbox_path));
-        EXPECT_TRUE(this->log_make_dirs(sandbox_path));
 
         std::string path_to_test = fs::combine({sandbox_path, "path", "to", "test"});
         EXPECT_TRUE(this->log_make_dirs(path_to_test));

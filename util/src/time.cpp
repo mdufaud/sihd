@@ -1,5 +1,6 @@
-#include <thread>
+#include <sys/time.h>
 
+#include <thread>
 #include <cstring>
 
 #include <sihd/util/time.hpp>

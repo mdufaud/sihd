@@ -34,8 +34,8 @@ bool is_executable(std::string_view path);
 std::string make_tmp_directory(std::string_view prefix = "");
 bool remove_directory(std::string_view path);
 bool remove_directories(std::string_view path);
-bool make_directory(std::string_view path, mode_t mode = 0750);
-bool make_directories(std::string_view path, mode_t mode = 0750);
+bool make_directory(std::string_view path, unsigned int mode = 0750);
+bool make_directories(std::string_view path, unsigned int mode = 0750);
 std::vector<std::string> children(std::string_view path);
 std::vector<std::string> recursive_children(std::string_view path);
 

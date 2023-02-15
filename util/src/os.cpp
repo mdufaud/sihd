@@ -31,14 +31,17 @@
 
 # include <dlfcn.h>
 # include <sys/ioctl.h>
-# include <sys/ptrace.h>
 # include <sys/wait.h>
 # include <sys/time.h>
 # include <fcntl.h>
 
+# if !defined(__SIHD_EMSCRIPTEN__)
+#  include <sys/ptrace.h>
+# endif
+
 #endif
 
-// backtrace not available in windows / android
+// backtrace not available in windows / android / emscripten
 #if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 # include <execinfo.h>
 #endif
@@ -396,7 +399,9 @@ bool    is_run_by_valgrind()
 
 bool    is_run_by_debugger()
 {
-#if !defined(__SIHD_WINDOWS__)
+#if defined(__SIHD_EMSCRIPTEN__)
+    return false;
+#elif !defined(__SIHD_WINDOWS__)
     // gdb check
     int pid = fork();
     int status;

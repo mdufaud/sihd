@@ -1,3 +1,5 @@
+#include <fmt/printf.h>
+
 #include <sihd/util/FileLogger.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -18,9 +20,9 @@ void    FileLogger::log(const LogInfo & info, std::string_view msg)
 {
 //SEC.NANO [THREAD] LEVEL SRC MSG
 #if defined(__SIHD_WINDOWS__)
-    fprintf(_file.file(), "%lld.%09ld\t[%s]\t%s\t%s\t%s\n",
+    fmt::fprintf(_file.file(), "%lld.%09ld\t[%s]\t%s\t%s\t%s\n",
 # else
-    fprintf(_file.file(), "%ld.%09ld\t[%s]\t%s\t%s\t%s\n",
+    fmt::fprintf(_file.file(), "%ld.%09ld\t[%s]\t%s\t%s\t%s\n",
 #endif
             info.timestamp.tv_sec, info.timestamp.tv_nsec,
             info.thread_name.data(),

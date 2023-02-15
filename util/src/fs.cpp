@@ -5,6 +5,7 @@
 #include <cstdio> // remove
 #include <sstream>
 #include <fstream>
+#include <filesystem>
 
 #include <sihd/util/fs.hpp>
 #include <sihd/util/Logger.hpp>
@@ -210,33 +211,13 @@ bool    is_executable(std::string_view path)
 
 std::string tmp_path()
 {
-#if defined(__SIHD_WINDOWS__)
-#pragma message("TODO")
-    return "";
-    // char path[PATH_MAX];
-
-    // if (GetTempPathW(sizeof(path), path) != 0)
-    //     return path;
-    // return "";
-#else
-    const char *tmp_path;
-
-    (tmp_path = getenv("TMPDIR"))
-    || (tmp_path = getenv("TMP"))
-    || (tmp_path = getenv("TEMP"))
-    || (tmp_path = getenv("TMPDIR"));
-    return tmp_path != nullptr ? tmp_path : "/tmp";
-#endif
+    return std::filesystem::temp_directory_path().string();
 }
 
 // directories
 
 std::string make_tmp_directory(std::string_view prefix)
 {
-#if defined(__SIHD_WINDOWS__)
-#pragma message("TODO")
-    return "";
-#endif
     if (prefix.size() + 6 > PATH_MAX)
     {
         throw std::runtime_error(fmt::format("Path too long: {}", prefix.size() + 6));
@@ -245,7 +226,6 @@ std::string make_tmp_directory(std::string_view prefix)
     path[0] = 0;
     strcpy(path, prefix.data());
 #if defined(__SIHD_WINDOWS__)
-    /*
     char filename[PATH_MAX];
     filename[0] = 0;
     if (GetTempFileName(path, NULL, 0, filename) != 0)
@@ -254,9 +234,7 @@ std::string make_tmp_directory(std::string_view prefix)
         if (make_directory(ret))
             return ret;
     }
-    */
 #else
-
     strcpy(path + prefix.size(), "XXXXXX");
     if (mkdtemp(path) != nullptr)
         return path;
@@ -293,7 +271,7 @@ bool    remove_directories(std::string_view path)
     return ret;
 }
 
-bool    make_directory(std::string_view path, mode_t mode)
+bool    make_directory(std::string_view path, unsigned int mode)
 {
     if (is_dir(path))
         return true;
@@ -305,7 +283,7 @@ bool    make_directory(std::string_view path, mode_t mode)
 # endif
 }
 
-bool    make_directories(std::string_view path, mode_t mode)
+bool    make_directories(std::string_view path, unsigned int mode)
 {
     bool ret = true;
     if (!path.empty())
@@ -329,27 +307,23 @@ bool    make_directories(std::string_view path, mode_t mode)
 
 #if defined(__SIHD_WINDOWS__)
 
-// TODO cannot link filesystem with mingw for the life of me
-
 std::vector<std::string>    children(std::string_view path)
 {
     std::vector<std::string> ret;
-    (void)path;
-    /*
-    for (const auto & dir_entry: filesystem::directory_iterator{path})
-        ret.push_back(dir_entry.path().generic_string());
-    */
+
+    for (const auto & dir_entry: std::filesystem::directory_iterator{path})
+        ret.push_back(dir_entry.path().string());
+
     return ret;
 }
 
 std::vector<std::string>    recursive_children(std::string_view path)
 {
     std::vector<std::string> ret;
-    (void)path;
-    /*
-    for (const auto & dir_entry: filesystem::recursive_directory_iterator{path})
-        ret.push_back(dir_entry.path().generic_string());
-    */
+
+    for (const auto & dir_entry: std::filesystem::recursive_directory_iterator{path})
+        ret.push_back(dir_entry.path().string());
+
     return ret;
 }
 
