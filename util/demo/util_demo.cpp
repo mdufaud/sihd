@@ -1,3 +1,5 @@
+#include <cxxopts.hpp>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/Clocks.hpp>
@@ -5,8 +7,6 @@
 #include <sihd/util/StepWorker.hpp>
 #include <sihd/util/SigWaiter.hpp>
 #include <sihd/util/Runnable.hpp>
-
-#include <cxxopts.hpp>
 
 using namespace sihd::util;
 

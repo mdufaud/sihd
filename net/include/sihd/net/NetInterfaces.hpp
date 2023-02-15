@@ -3,15 +3,13 @@
 
 # include <map>
 
-# include <sihd/util/platform.hpp>
-
 # include <sihd/net/utils.hpp>
 
 # if !defined(__SIHD_WINDOWS__)
 #  include <netinet/in.h> // sockaddr
-# else
-struct ifaddrs;
 # endif
+
+struct ifaddrs;
 
 namespace sihd::net
 {
