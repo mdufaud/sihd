@@ -68,11 +68,18 @@ def copy_module_res_into_build(module_name, src, dst, must_exist = True, is_dry_
         if not is_dry_run:
             shutil.copy(module_res, build_output)
     elif os.path.isdir(module_res):
-        if not is_dry_run:
+        if is_dry_run:
+            return
+        try:
             shutil.copytree(module_res, build_output, dirs_exist_ok = True)
+        except shutil.Error as exc:
+            errors = exc.args[0]
+            for error in errors:
+                src, dst, msg = error
+                builder.error(f"{src} - {dst} -> {msg}")
     elif must_exist:
         raise RuntimeError("for module {} resource {} not found".format(module_name, module_res))
-  
+
 
 ###############################################################################
 # Scons helpers

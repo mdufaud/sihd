@@ -619,13 +619,13 @@ for conf in modules_build_order:
             print("- needed specific packages configs")
             pp.pprint(parse_configs)
     # copy module/[etc|include|share] to build/[etc|include|share]
-    scons_utils.copy_module_res_into_build(modname, "etc", "etc", must_exist = False, is_dry_run = is_dry_run)
-    scons_utils.copy_module_res_into_build(modname, "include", "include", must_exist = False, is_dry_run = is_dry_run)
-    scons_utils.copy_module_res_into_build(modname, "share", "share", must_exist = False, is_dry_run = is_dry_run)
+    scons_utils.copy_module_res_into_build(modname, "etc", "etc", must_exist=False, is_dry_run=is_dry_run)
+    scons_utils.copy_module_res_into_build(modname, "include", "include", must_exist=False, is_dry_run=is_dry_run)
+    scons_utils.copy_module_res_into_build(modname, "share", "share", must_exist=False, is_dry_run=is_dry_run)
     if builder.build_demo:
-        scons_utils.copy_module_res_into_build(modname, "demo/etc", "etc", must_exist = False, is_dry_run = is_dry_run)
-        scons_utils.copy_module_res_into_build(modname, "demo/include", "include", must_exist = False, is_dry_run = is_dry_run)
-        scons_utils.copy_module_res_into_build(modname, "demo/share", "share", must_exist = False, is_dry_run = is_dry_run)
+        scons_utils.copy_module_res_into_build(modname, "demo/etc", "etc", must_exist=False, is_dry_run=is_dry_run)
+        scons_utils.copy_module_res_into_build(modname, "demo/include", "include", must_exist=False, is_dry_run=is_dry_run)
+        scons_utils.copy_module_res_into_build(modname, "demo/share", "share", must_exist=False, is_dry_run=is_dry_run)
     # read module's scons script file
     module_format_name = env['APP_MODULE_FORMAT_NAME']
     built[modname] = SConscript(Dir(modname).File("scons.py"),
