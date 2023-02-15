@@ -1,15 +1,16 @@
 #include <sihd/util/Profiling.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
 {
 
 SIHD_LOGGER;
 
-Timeit::Timeit(std::string_view fun_name)
+Timeit::Timeit(std::string && fun_name)
 {
     _begin = _clock.now();
-    _fun_name = fun_name;
+    _fun_name = std::move(fun_name);
 }
 
 Timeit::~Timeit()

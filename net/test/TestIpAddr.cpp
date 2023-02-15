@@ -1,7 +1,11 @@
+#include <netdb.h> // addrinfo
+
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
+
 #include <sihd/net/IpAddr.hpp>
-#include <sihd/net/Ip.hpp>
+#include <sihd/net/ip.hpp>
 
 namespace test
 {
@@ -40,8 +44,8 @@ namespace test
                 {
                     SIHD_LOG(info, "ip: {} - socket {} - proto {} - type {}",
                             info.ip(),
-                            Ip::socktype_str(info.socktype),
-                            Ip::protocol_str(info.protocol),
+                            ip::socktype_str(info.socktype),
+                            ip::protocol_str(info.protocol),
                             info.ipv6 ? "ipv6" : "ipv4");
                 }
             }
@@ -64,22 +68,38 @@ namespace test
         EXPECT_EQ(addr_local.hostname(), "");
         this->dump_ip_lst(addr_local.ip_lst());
         EXPECT_EQ(addr_local.first_ipv4_str(), "127.0.0.1");
-        EXPECT_EQ(addr_local.protocol_ip_str(Ip::protocol("ip")), "127.0.0.1");
+        EXPECT_EQ(addr_local.protocol_ip_str(ip::protocol("ip")), "127.0.0.1");
 
         // does not require internet
         SIHD_LOG(debug, "localhost with dns lookup");
         IpAddr addr_dns("localhost", true);
         EXPECT_EQ(addr_dns.hostname(), "localhost");
         this->dump_ip_lst(addr_dns.ip_lst());
-        EXPECT_EQ(addr_dns.first_ipv4_str(), "127.0.0.1");
-        EXPECT_EQ(addr_dns.protocol_ip_str(Ip::protocol("tcp")), "127.0.0.1");
+        if (addr_dns.ipv4_count() > 0)
+        {
+          EXPECT_EQ(addr_dns.first_ipv4_str(), "127.0.0.1");
+          EXPECT_EQ(addr_dns.protocol_ip_str(ip::protocol("tcp")), "127.0.0.1");
+        }
+        else
+        {
+          EXPECT_EQ(addr_dns.first_ipv6_str(), "::1");
+          EXPECT_EQ(addr_dns.protocol_ip_str(ip::protocol("tcp"), true), "::1"); 
+        }
 
         SIHD_LOG(debug, "127.0.0.1 with dns lookup");
         IpAddr addr_dns_ip("127.0.0.1", true);
         EXPECT_EQ(addr_dns.hostname(), "localhost");
         this->dump_ip_lst(addr_dns.ip_lst());
-        EXPECT_EQ(addr_dns.first_ipv4_str(), "127.0.0.1");
-        EXPECT_EQ(addr_dns.protocol_ip_str(Ip::protocol("tcp")), "127.0.0.1");
+        if (addr_dns.ipv4_count() > 0)
+        {
+          EXPECT_EQ(addr_dns.first_ipv4_str(), "127.0.0.1");
+          EXPECT_EQ(addr_dns.protocol_ip_str(ip::protocol("tcp")), "127.0.0.1");
+        }
+        else
+        {
+          EXPECT_EQ(addr_dns.first_ipv6_str(), "::1");
+          EXPECT_EQ(addr_dns.protocol_ip_str(ip::protocol("tcp"), true), "::1"); 
+        }
     }
 
     TEST_F(TestIpAddr, test_ipaddr_ip_name)
@@ -123,9 +143,11 @@ namespace test
         this->dump_dns(dns.value());
         IpAddr::DnsInfo & info = dns.value();
         EXPECT_EQ(info.hostname, "localhost");
-        EXPECT_TRUE(info.lst_ip.size() > 0);
-        EXPECT_EQ(info.lst_ip[0].ip(), "127.0.0.1");
-        EXPECT_EQ(info.lst_ip[0].ipv6, false);
+        ASSERT_TRUE(info.lst_ip.size() > 0);
+        if (info.lst_ip[0].ipv6)
+          EXPECT_EQ(info.lst_ip[0].ip(), "::1");
+        else
+          EXPECT_EQ(info.lst_ip[0].ip(), "127.0.0.1");
 
         dns = IpAddr::dns_lookup("127.0.0.1", true);
         EXPECT_TRUE(dns.has_value());

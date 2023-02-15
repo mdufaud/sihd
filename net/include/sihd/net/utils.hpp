@@ -2,94 +2,75 @@
 # define __SIHD_NET_NETUTILS_HPP__
 
 # include <sihd/util/platform.hpp>
-# include <vector>
 # include <string>
-# include <optional>
-# include <map>
+# include <string_view>
 
 # if !defined(__SIHD_WINDOWS__)
-#  include <sys/types.h>
-#  include <sys/socket.h>
-#  include <netinet/in.h>
-#  include <netinet/ip_icmp.h>
-#  include <netinet/ip6.h>
-#  include <netinet/icmp6.h>
-#  include <netinet/tcp.h>
-#  include <arpa/inet.h>
-#  include <net/if.h>
-#  include <sys/un.h>
-#  include <netdb.h>
-#  include <ifaddrs.h>
-#  include <fcntl.h>
+// #  include <sys/types.h>
+// #  include <sys/socket.h>
+// #  include <netinet/in.h>
+// #  include <netinet/ip_icmp.h>
+// #  include <netinet/ip6.h>
+// #  include <netinet/icmp6.h>
+// #  include <netinet/tcp.h>
+// #  include <arpa/inet.h>
+// #  include <net/if.h>
+// #  include <sys/un.h>
+// #  include <netdb.h>
+// #  include <ifaddrs.h>
+// #  include <fcntl.h>
 # else
 // shutdown function corresponding values unix -> windows
 #  define SHUT_RD SD_RECEIVE
 #  define SHUT_WR SD_SEND
 #  define SHUT_RDWR SD_BOTH
-// missing mingw getsockopt action
-#  ifndef SO_BSP_STATE
-#   define SO_BSP_STATE 0x1009
-#  endif
 // missing socket types
 #  define SOCK_SEQPACKET 5
 #  define SOCK_PACKET 10
-#  include <winsock2.h>
-#  include <ws2def.h>
-#  include <winsock.h>
-#  include <ws2tcpip.h>
-#  include <ipmib.h>
+// #  include <winsock2.h>
+// #  include <ws2def.h>
+// #  include <winsock.h>
+// #  include <ws2tcpip.h>
+// #  include <ipmib.h>
 
 # endif
 
-# include <sihd/util/Endian.hpp>
+struct sockaddr;
+struct sockaddr_in;
+struct sockaddr_in6;
 
-namespace sihd::net
+namespace sihd::net::utils
 {
 
-class NetUtils
-{
-    public:
-        static int interface_idx(int sock, std::string_view name);
-        static bool get_interface_name(int sock, int idx, std::string & to_fill);
-        static bool get_interface_mac(int sock, std::string_view name, struct sockaddr *to_fill);
-        static bool get_interface_addr(int sock, std::string_view name, struct sockaddr *to_fill);
-        static bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr *to_fill);
-        static bool get_interface_netmask(int sock, std::string_view name, struct sockaddr *to_fill);
+uint16_t checksum(uint16_t *addr, int len);
 
-        static bool get_interface_mac(int sock, std::string_view name, struct sockaddr_in *to_fill)
-            { return NetUtils::get_interface_mac(sock, name, (struct sockaddr *)to_fill); }
-        static bool get_interface_mac(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
-            { return NetUtils::get_interface_mac(sock, name, (struct sockaddr *)to_fill); }
+int interface_idx(int sock, std::string_view name);
+bool get_interface_name(int sock, int idx, std::string & to_fill);
 
-        static bool get_interface_addr(int sock, std::string_view name, struct sockaddr_in *to_fill)
-            { return NetUtils::get_interface_addr(sock, name, (struct sockaddr *)to_fill); }
-        static bool get_interface_addr(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
-            { return NetUtils::get_interface_addr(sock, name, (struct sockaddr *)to_fill); }
+bool get_interface_mac(int sock, std::string_view name, struct sockaddr *to_fill);
+bool get_interface_addr(int sock, std::string_view name, struct sockaddr *to_fill);
+bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr *to_fill);
+bool get_interface_netmask(int sock, std::string_view name, struct sockaddr *to_fill);
 
-        static bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr_in *to_fill)
-            { return NetUtils::get_interface_broadcast(sock, name, (struct sockaddr *)to_fill); }
-        static bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
-            { return NetUtils::get_interface_broadcast(sock, name, (struct sockaddr *)to_fill); }
+bool get_interface_mac(int sock, std::string_view name, struct sockaddr_in *to_fill);
+bool get_interface_mac(int sock, std::string_view name, struct sockaddr_in6 *to_fill);
 
-        static bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in *to_fill)
-            { return NetUtils::get_interface_netmask(sock, name, (struct sockaddr *)to_fill); }
-        static bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
-            { return NetUtils::get_interface_netmask(sock, name, (struct sockaddr *)to_fill); }
+bool get_interface_addr(int sock, std::string_view name, struct sockaddr_in *to_fill);
+bool get_interface_addr(int sock, std::string_view name, struct sockaddr_in6 *to_fill);
 
-        static uint16_t checksum(uint16_t *addr, int len);
+bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr_in *to_fill);
+bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr_in6 *to_fill);
 
-    protected:
-
-    private:
-        NetUtils() {};
-        ~NetUtils() {};
-};
+bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in *to_fill);
+bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in6 *to_fill);
 
 }
 
 // Icmp structures for Windows
 
 # if defined(__SIHD_WINDOWS__)
+
+#  include <winsock2.h>
 
 #  if !defined(__SIHD_WINDOWS_NET_IP_V4__)
 #   define __SIHD_WINDOWS_NET_IP_V4__

@@ -7,7 +7,7 @@
 #include <sihd/util/fs.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/os.hpp>
-#include <sihd/util/Term.hpp>
+#include <sihd/util/term.hpp>
 #include <sihd/util/Handler.hpp>
 
 #include <sihd/http/HttpServer.hpp>
@@ -164,7 +164,7 @@ namespace test
 
     TEST_F(TestHttpServer, test_httpserver)
     {
-        if (sihd::util::Term::is_interactive() == false)
+        if (sihd::util::term::is_interactive() == false)
             GTEST_SKIP_("requires interaction");
 
         SimpleHttpServer server;

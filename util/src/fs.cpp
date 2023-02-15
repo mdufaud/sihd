@@ -1,4 +1,5 @@
 #include <dirent.h> // DIR...
+#include <sys/stat.h>
 
 #include <cstring> // strcmp
 #include <cstdio> // remove
@@ -14,6 +15,8 @@
 
 # if defined(__SIHD_WINDOWS__)
 #  include <direct.h> // _mkdir _stat
+#  include <fileapi.h>
+#  include <libloaderapi.h>
 # else
 #  include <unistd.h>
 # endif
@@ -93,25 +96,6 @@ std::string sep_str()
 {
     return std::string(1, separator_char);
 };
-
-std::string tmp_path()
-{
-#if defined(__SIHD_WINDOWS__)
-    char path[PATH_MAX];
-
-    if (GetTempPath(sizeof(path), path) != 0)
-        return path;
-    return "";
-#else
-    const char *tmp_path;
-
-    (tmp_path = getenv("TMPDIR"))
-    || (tmp_path = getenv("TMP"))
-    || (tmp_path = getenv("TEMP"))
-    || (tmp_path = getenv("TMPDIR"));
-    return tmp_path != nullptr ? tmp_path : "/tmp";
-#endif
-}
 
 std::string home_path()
 {
@@ -224,11 +208,35 @@ bool    is_executable(std::string_view path)
 #endif
 }
 
+std::string tmp_path()
+{
+#if defined(__SIHD_WINDOWS__)
+#pragma message("TODO")
+    return "";
+    // char path[PATH_MAX];
+
+    // if (GetTempPathW(sizeof(path), path) != 0)
+    //     return path;
+    // return "";
+#else
+    const char *tmp_path;
+
+    (tmp_path = getenv("TMPDIR"))
+    || (tmp_path = getenv("TMP"))
+    || (tmp_path = getenv("TEMP"))
+    || (tmp_path = getenv("TMPDIR"));
+    return tmp_path != nullptr ? tmp_path : "/tmp";
+#endif
+}
 
 // directories
 
 std::string make_tmp_directory(std::string_view prefix)
 {
+#if defined(__SIHD_WINDOWS__)
+#pragma message("TODO")
+    return "";
+#endif
     if (prefix.size() + 6 > PATH_MAX)
     {
         throw std::runtime_error(fmt::format("Path too long: {}", prefix.size() + 6));
@@ -237,6 +245,7 @@ std::string make_tmp_directory(std::string_view prefix)
     path[0] = 0;
     strcpy(path, prefix.data());
 #if defined(__SIHD_WINDOWS__)
+    /*
     char filename[PATH_MAX];
     filename[0] = 0;
     if (GetTempFileName(path, NULL, 0, filename) != 0)
@@ -245,6 +254,7 @@ std::string make_tmp_directory(std::string_view prefix)
         if (make_directory(ret))
             return ret;
     }
+    */
 #else
 
     strcpy(path + prefix.size(), "XXXXXX");

@@ -1,9 +1,9 @@
+// sterror errno
+#include <cstring>
+#include <cerrno>
+
 #include <sihd/util/Poll.hpp>
 #include <sihd/util/Logger.hpp>
-
-// sterror errno
-#include <string.h>
-#include <errno.h>
 
 #if !defined(__SIHD_WINDOWS__)
 // getrlimit

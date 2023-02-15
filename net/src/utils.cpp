@@ -1,6 +1,5 @@
-#include <string.h>
+#include <cstring>
 
-#include <sihd/net/NetUtils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/os.hpp>
 
@@ -9,13 +8,15 @@
 # include <sys/ioctl.h>
 #endif
 
-namespace sihd::net
+#include <sihd/net/utils.hpp>
+
+namespace sihd::net::utils
 {
 
-SIHD_LOGGER;
+SIHD_NEW_LOGGER("sihd::net::utils");
 
 //Source code from the book "UNIX Network Programming"
-uint16_t    NetUtils::checksum(uint16_t *addr, int len)
+uint16_t  checksum(uint16_t *addr, int len)
 {
 	int nleft = len;
 	uint32_t sum = 0;
@@ -49,7 +50,7 @@ uint16_t    NetUtils::checksum(uint16_t *addr, int len)
 
 #if !defined(__SIHD_WINDOWS__)
 
-int     NetUtils::interface_idx(int sock, std::string_view name)
+int interface_idx(int sock, std::string_view name)
 {
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
@@ -59,7 +60,7 @@ int     NetUtils::interface_idx(int sock, std::string_view name)
     return iface.ifr_ifindex;
 }
 
-bool    NetUtils::get_interface_name(int sock, int idx, std::string & to_fill)
+bool  get_interface_name(int sock, int idx, std::string & to_fill)
 {
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
@@ -70,7 +71,7 @@ bool    NetUtils::get_interface_name(int sock, int idx, std::string & to_fill)
     return true;
 }
 
-bool    NetUtils::get_interface_mac(int sock, std::string_view name, struct sockaddr *to_fill)
+bool  get_interface_mac(int sock, std::string_view name, struct sockaddr *to_fill)
 {
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
@@ -82,7 +83,7 @@ bool    NetUtils::get_interface_mac(int sock, std::string_view name, struct sock
     return true;
 }
 
-bool    NetUtils::get_interface_addr(int sock, std::string_view name, struct sockaddr *to_fill)
+bool  get_interface_addr(int sock, std::string_view name, struct sockaddr *to_fill)
 {
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
@@ -94,7 +95,7 @@ bool    NetUtils::get_interface_addr(int sock, std::string_view name, struct soc
     return true;
 }
 
-bool    NetUtils::get_interface_broadcast(int sock, std::string_view name, struct sockaddr *to_fill)
+bool  get_interface_broadcast(int sock, std::string_view name, struct sockaddr *to_fill)
 {
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
@@ -106,7 +107,7 @@ bool    NetUtils::get_interface_broadcast(int sock, std::string_view name, struc
     return true;
 }
 
-bool    NetUtils::get_interface_netmask(int sock, std::string_view name, struct sockaddr *to_fill)
+bool  get_interface_netmask(int sock, std::string_view name, struct sockaddr *to_fill)
 {
     struct ifreq iface;
     memset(&iface, 0, sizeof(struct ifreq));
@@ -120,37 +121,76 @@ bool    NetUtils::get_interface_netmask(int sock, std::string_view name, struct 
 
 #else
 
-int     NetUtils::interface_idx(int sock, std::string_view name)
+int interface_idx(int sock, std::string_view name)
 {
     (void)sock;(void)name; return -1;
 }
 
-bool    NetUtils::get_interface_name(int sock, int idx, std::string & to_fill)
+bool  get_interface_name(int sock, int idx, std::string & to_fill)
 {
     (void)sock;(void)idx;(void)to_fill; return false;
 }
 
-bool    NetUtils::get_interface_mac(int sock, std::string_view name, struct sockaddr *to_fill)
+bool  get_interface_mac(int sock, std::string_view name, struct sockaddr *to_fill)
 {
     (void)sock;(void)name;(void)to_fill; return false;
 }
 
-bool    NetUtils::get_interface_addr(int sock, std::string_view name, struct sockaddr *to_fill)
+bool  get_interface_addr(int sock, std::string_view name, struct sockaddr *to_fill)
 {
     (void)sock;(void)name;(void)to_fill; return false;
 }
 
-bool    NetUtils::get_interface_broadcast(int sock, std::string_view name, struct sockaddr *to_fill)
+bool  get_interface_broadcast(int sock, std::string_view name, struct sockaddr *to_fill)
 {
     (void)sock;(void)name;(void)to_fill; return false;
 }
 
-bool    NetUtils::get_interface_netmask(int sock, std::string_view name, struct sockaddr *to_fill)
+bool  get_interface_netmask(int sock, std::string_view name, struct sockaddr *to_fill)
 {
     (void)sock;(void)name;(void)to_fill; return false;
 }
 
 #endif
 
+bool get_interface_mac(int sock, std::string_view name, struct sockaddr_in *to_fill)
+{
+  return get_interface_mac(sock, name, (struct sockaddr *)to_fill);
+}
+
+bool get_interface_mac(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
+{
+  return get_interface_mac(sock, name, (struct sockaddr *)to_fill);
+}
+
+bool get_interface_addr(int sock, std::string_view name, struct sockaddr_in *to_fill)
+{
+  return get_interface_addr(sock, name, (struct sockaddr *)to_fill);
+}
+
+bool get_interface_addr(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
+{
+  return get_interface_addr(sock, name, (struct sockaddr *)to_fill);
+}
+
+bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr_in *to_fill)
+{
+  return get_interface_broadcast(sock, name, (struct sockaddr *)to_fill);
+}
+
+bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
+{
+  return get_interface_broadcast(sock, name, (struct sockaddr *)to_fill);
+}
+
+bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in *to_fill)
+{
+  return get_interface_netmask(sock, name, (struct sockaddr *)to_fill);
+}
+
+bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
+{
+  return get_interface_netmask(sock, name, (struct sockaddr *)to_fill);
+}
 
 }

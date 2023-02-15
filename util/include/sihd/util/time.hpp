@@ -1,8 +1,6 @@
 #ifndef __SIHD_UTIL_TIME_HPP__
 # define __SIHD_UTIL_TIME_HPP__
 
-# include <sys/time.h>
-
 # include <chrono>
 # include <mutex>
 # include <ctime>

@@ -1,4 +1,6 @@
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <sihd/util/platform.hpp>
 
@@ -29,7 +31,6 @@
 
 # include <dlfcn.h>
 # include <sys/ioctl.h>
-# include <sys/types.h>
 # include <sys/ptrace.h>
 # include <sys/wait.h>
 # include <sys/time.h>
@@ -52,6 +53,8 @@ typedef void (*sighandler_t)(int);
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <vector>
+#include <map>
 #include <vector>
 #include <algorithm>
 
@@ -232,7 +235,7 @@ bool    stat(const char *pathname, struct stat *statbuf, bool logerror)
 #if !defined(__SIHD_WINDOWS__)
     bool ret = ::stat(pathname, statbuf) == 0;
 #else
-    bool ret = ::_stat(pathname, reinterpret_cast<struct _stat64i32 *>(statbuf)) == 0;
+    bool ret = ::_stat(pathname, reinterpret_cast<struct _stat *>(statbuf)) == 0;
 #endif
     if (!ret && logerror)
         SIHD_LOG(error, "OS: stat error: {}", strerror(errno));
@@ -244,14 +247,14 @@ bool    fstat(int fd, struct stat *statbuf, bool logerror)
 #if !defined(__SIHD_WINDOWS__)
     bool ret = ::fstat(fd, statbuf) == 0;
 #else
-    bool ret = ::_fstat(fd, reinterpret_cast<struct _stat64i32 *>(statbuf)) == 0;
+    bool ret = ::_fstat(fd, reinterpret_cast<struct _stat *>(statbuf)) == 0;
 #endif
     if (!ret && logerror)
         SIHD_LOG(error, "OS: fstat error: {}", strerror(errno));
     return ret == 0;
 }
 
-bool    setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror)
+bool    setsockopt(int socket, int level, int optname, const void *optval, sihd_socklen_t optlen, bool logerror)
 {
     if (socket < 0)
         throw std::runtime_error("OS: cannot setsockopt on a negative socket");
@@ -265,7 +268,7 @@ bool    setsockopt(int socket, int level, int optname, const void *optval, sockl
     return ret;
 }
 
-bool    getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror)
+bool    getsockopt(int socket, int level, int optname, void *optval, sihd_socklen_t *optlen, bool logerror)
 {
     if (socket < 0)
         throw std::runtime_error("OS: cannot getsockopt on a negative socket");

@@ -1,7 +1,17 @@
 #ifndef __SIHD_NET_NETINTERFACES_HPP__
 # define __SIHD_NET_NETINTERFACES_HPP__
 
-# include <sihd/net/NetUtils.hpp>
+# include <map>
+
+# include <sihd/util/platform.hpp>
+
+# include <sihd/net/utils.hpp>
+
+# if !defined(__SIHD_WINDOWS__)
+#  include <netinet/in.h> // sockaddr
+# else
+struct ifaddrs;
+# endif
 
 namespace sihd::net
 {
@@ -29,28 +39,28 @@ class NetIFace
         const std::vector<struct ifaddrs *> & addresses() const { return _addrs; }
 
         //Interface is running.
-        bool up() const { return _flags & IFF_UP; }
+        bool up() const;
         //Valid broadcast address set.
-        bool broadcast() const { return _flags & IFF_BROADCAST; }
-        bool loopback() const { return _flags & IFF_LOOPBACK; }
+        bool broadcast() const;
+        bool loopback() const;
         //Interface is a point-to-point link.
-        bool point2point() const { return _flags & IFF_POINTOPOINT; }
+        bool point2point() const;
         //Resources allocated.
-        bool running() const { return _flags & IFF_RUNNING; }
+        bool running() const;
         //No arp protocol, L2 destination address not set.
-        bool noarp() const { return _flags & IFF_NOARP; }
+        bool noarp() const;
         //Interface is in promiscuous mode.
-        bool promisc() const { return _flags & IFF_PROMISC; }
+        bool promisc() const;
         //Avoid use of trailers
-        bool notrailers() const { return _flags & IFF_NOTRAILERS; }
+        bool notrailers() const;
         //Master of a load balancing bundle.
-        bool master() const { return _flags & IFF_MASTER; }
+        bool master() const;
         //Slave of a load balancing bundle.
-        bool slave() const { return _flags & IFF_SLAVE; }
+        bool slave() const;
         //Receive all multicast packets.
-        bool all_multicast() const { return _flags & IFF_ALLMULTI; }
+        bool all_multicast() const;
         //Supports multicast
-        bool supports_multicast() const { return _flags & IFF_MULTICAST; }
+        bool supports_multicast() const;
 # endif
 
     private:

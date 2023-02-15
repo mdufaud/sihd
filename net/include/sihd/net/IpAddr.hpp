@@ -1,7 +1,21 @@
 #ifndef __SIHD_NET_IPADDR_HPP__
 # define __SIHD_NET_IPADDR_HPP__
 
-# include <sihd/net/Ip.hpp>
+# include <optional>
+# include <vector>
+
+# include <sihd/util/os.hpp>
+
+# include <sihd/net/ip.hpp>
+
+# if !defined(__SIHD_WINDOWS__)
+#  include <netinet/in.h> // sockaddr
+# else
+#  include <winsock2.h>
+#  include <ws2ipdef.h> // sockaddr_in6
+# endif
+
+struct addrinfo; // in #include <netdb.h>
 
 namespace sihd::net
 {
@@ -10,7 +24,7 @@ namespace sihd::net
 struct IpSockAddr
 {
     int type;
-    socklen_t addr_len;
+    sihd_socklen_t addr_len;
     sockaddr *addr;
     sockaddr_in addr_in;
     sockaddr_in6 addr_in6;
@@ -72,7 +86,7 @@ class IpAddr
         // do a DNS lookup to find every ip addr for every socket and every protocols
         static std::optional<DnsInfo> dns_lookup(std::string_view host, bool ipv6 = false);
         static std::string fetch_ip_name(std::string_view ip);
-        static std::string fetch_ip_name(sockaddr *addr, socklen_t addr_len);
+        static std::string fetch_ip_name(sockaddr *addr, sihd_socklen_t addr_len);
 
         // checks both ipv4 and ipv6
         static bool is_valid_ip(std::string_view ip);
@@ -170,14 +184,17 @@ class IpAddr
 
         std::string dump_ip_lst() const;
 
+        size_t ip_count() const { return _lst_ip.size(); }
+        size_t ipv4_count() const;
+        size_t ipv6_count() const;
+
         // getters
         const std::string & host() const { return _host; }
         const std::string & hostname() const { return _hostname; }
         int port() const { return _port; }
         bool dns_resolved() const { return _dns_resolved; }
         bool empty() const { return _lst_ip.empty(); }
-        size_t ip_count() const { return _lst_ip.size(); }
-        const std::vector<IpEntry> ip_lst() const { return _lst_ip; }
+        std::vector<IpEntry> ip_lst() const { return _lst_ip; }
 
     protected:
 
@@ -192,7 +209,7 @@ class IpAddr
         inline static void _purge_ipsockaddr(IpSockAddr & ipsockaddr);
 
         // go through saved ips to look for socktype/protocol in ipv4/ipv6
-        IpEntry *_get_ip_info(int socktype, int protocol, bool ipv6) const;
+        const IpEntry *_get_ip_info(int socktype, int protocol, bool ipv6) const;
 
         void _add_ip(const sockaddr_in & addr, int socktype, int protocol);
         void _add_ip(const sockaddr_in6 & addr, int socktype, int protocol);

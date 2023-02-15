@@ -5,11 +5,10 @@
 # include <mutex>
 
 # include <sihd/util/platform.hpp>
+# include <sihd/util/os.hpp>
 # include <sihd/util/Observable.hpp>
 # include <sihd/util/IStoppableRunnable.hpp>
-# include <sihd/util/IHandler.hpp>
 # include <sihd/util/Clocks.hpp>
-# include <sihd/util/os.hpp>
 
 # if !defined(__SIHD_WINDOWS__)
 #  include <sys/resource.h> //rlim_t

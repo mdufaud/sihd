@@ -10,7 +10,6 @@
 # include <sihd/util/IProvider.hpp>
 # include <sihd/util/Array.hpp>
 # include <sihd/util/Waitable.hpp>
-# include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
 {

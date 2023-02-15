@@ -3,7 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
-#include <sihd/util/Term.hpp>
+#include <sihd/util/term.hpp>
 
 #include <sihd/imgui/ImguiRunner.hpp>
 #include <sihd/imgui/ImguiRendererOpenGL.hpp>
@@ -41,7 +41,7 @@ namespace test
 
     TEST_F(TestOpenGL3_GLFW, test_simple_interactive)
     {
-        if (sihd::util::Term::is_interactive() == false)
+        if (sihd::util::term::is_interactive() == false)
             GTEST_SKIP_("requires interaction");
 
         ImguiRunner imgui("imgui-runner");

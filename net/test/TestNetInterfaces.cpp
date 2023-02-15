@@ -1,5 +1,10 @@
+#include <netdb.h> // addrinfo
+#include <ifaddrs.h> // getifaddrs
+
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
+
 #include <sihd/net/NetInterfaces.hpp>
 #include <sihd/net/IpAddr.hpp>
 

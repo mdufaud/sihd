@@ -1,6 +1,13 @@
-#include <sihd/net/IcmpSender.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+
+#include <sihd/net/utils.hpp>
+#include <sihd/net/IcmpSender.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <netinet/ip_icmp.h> // icmp macros
+# include <netinet/icmp6.h> // icmpv6 macros
+#endif
 
 namespace sihd::net
 {
@@ -138,12 +145,12 @@ bool    IcmpSender::send_to(const IpAddr & addr)
     if (_socket.is_ipv6())
     {
         icmp6()->icmp6_cksum = 0;
-        icmp6()->icmp6_cksum = NetUtils::checksum((unsigned short *)icmp6(), _array_send.size());
+        icmp6()->icmp6_cksum = utils::checksum((unsigned short *)icmp6(), _array_send.size());
     }
     else
     {
         icmp()->icmp_cksum = 0;
-        icmp()->icmp_cksum = NetUtils::checksum((unsigned short *)icmp(), _array_send.size());
+        icmp()->icmp_cksum = utils::checksum((unsigned short *)icmp(), _array_send.size());
     }
     return _socket.send_all_to(addr, _array_send);
 }

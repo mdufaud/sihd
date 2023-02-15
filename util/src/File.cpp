@@ -1,12 +1,14 @@
+#include <sys/stat.h>
+
+#include <cstring>
+#include <cerrno>
+#include <climits>
+
 #include <sihd/util/File.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/os.hpp>
-
-#include <string.h>
-#include <errno.h>
-#include <limits.h>
 
 namespace sihd::util
 {

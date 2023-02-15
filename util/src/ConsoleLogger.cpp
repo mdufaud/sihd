@@ -1,6 +1,8 @@
+#include <fmt/printf.h>
+
 #include <sihd/util/ConsoleLogger.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Term.hpp>
+#include <sihd/util/term.hpp>
 
 namespace sihd::util
 {
@@ -19,48 +21,48 @@ void    ConsoleLogger::log(const LogInfo & info, std::string_view msg)
 {
     const char *beg;
     const char *level;
-    const char *end = Term::Attr::ENDC;
+    const char *end = term::attr::ENDC;
 
     switch (info.level)
     {
         case LogLevel::emergency:
-            beg = Term::Attr::VIOLET;
+            beg = term::attr::VIOLET;
             level = "EMER";
             break ;
         case LogLevel::alert:
-            beg = Term::Attr::VIOLET;
+            beg = term::attr::VIOLET;
             level = "A";
             break ;
         case LogLevel::critical:
-            beg = Term::Attr::VIOLET2;
+            beg = term::attr::VIOLET2;
             level = "C";
             break ;
         case LogLevel::error:
-            beg = Term::Attr::RED2;
+            beg = term::attr::RED2;
             level = "E";
             break ;
         case LogLevel::warning:
-            beg = Term::Attr::YELLOW;
+            beg = term::attr::YELLOW;
             level = "W";
             break ;
         case LogLevel::notice:
-            beg = Term::Attr::CYAN;
+            beg = term::attr::CYAN;
             level = "N";
             break ;
         case LogLevel::info:
-            beg = Term::Attr::GREEN;
+            beg = term::attr::GREEN;
             level = "I";
             break ;
         case LogLevel::debug:
-            beg = Term::Attr::GREY;
+            beg = term::attr::GREY;
             level = "D";
             break ;
         default:
             level = "-";
-            beg = Term::Attr::WHITE;
+            beg = term::attr::WHITE;
     }
 
-    fprintf(stderr, "%s%s [%s] <%s> %s%s\n", beg, level, info.thread_name.data(), info.source.data(), msg.data(), end);
+    fmt::fprintf(stderr, "%s%s [%s] <%s> %s%s\n", beg, level, info.thread_name.data(), info.source.data(), msg.data(), end);
 }
 
 }

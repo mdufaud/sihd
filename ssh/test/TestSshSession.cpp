@@ -3,7 +3,7 @@
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/fs.hpp>
-#include <sihd/util/Term.hpp>
+#include <sihd/util/term.hpp>
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshChannel.hpp>
 
@@ -63,7 +63,7 @@ namespace test
         std::string home = getenv("HOME");
         if (fs::is_dir(fs::combine(home, ".ssh")) == false)
             GTEST_SKIP_("need ~/.ssh");
-        if (Term::is_interactive() == false)
+        if (term::is_interactive() == false)
             GTEST_SKIP_("need interactive keyboard");
 
         std::string host = "localhost";

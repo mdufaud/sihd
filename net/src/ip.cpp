@@ -1,19 +1,27 @@
-#include <sihd/net/Ip.hpp>
+#include <strings.h>
+
+#include <cstring>
+#include <cerrno>
+#include <map>
+
 #include <sihd/util/Logger.hpp>
 
-#include <strings.h>
-#include <string.h>
-#include <errno.h>
+#include <sihd/util/platform.hpp>
+#include <sihd/net/ip.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
+# include <sys/socket.h> // PF_UNIX...
+# include <netdb.h> // getprotobynumber, getprotobyname
+#else
+# include <sihd/net/utils.hpp>
 #endif
 
-namespace sihd::net
+namespace sihd::net::ip
 {
 
-SIHD_NEW_LOGGER("sihd::net");
+SIHD_NEW_LOGGER("sihd::net::ip");
 
-const char  *Ip::domain_str(int domain)
+const char  *domain_str(int domain)
 {
     switch (domain)
     {
@@ -46,7 +54,7 @@ const char  *Ip::domain_str(int domain)
     }
 }
 
-const char  *Ip::socktype_str(int socktype)
+const char  *socktype_str(int socktype)
 {
     switch (socktype)
     {
@@ -69,7 +77,7 @@ const char  *Ip::socktype_str(int socktype)
     }
 }
 
-const char  *Ip::protocol_str(int protocol)
+const char  *protocol_str(int protocol)
 {
     struct protoent *pe = getprotobynumber(protocol);
     if (pe == nullptr)
@@ -77,7 +85,7 @@ const char  *Ip::protocol_str(int protocol)
     return pe->p_name;
 }
 
-int     Ip::protocol(std::string_view name)
+int     protocol(std::string_view name)
 {
     struct protoent *pe = getprotobyname(name.data());
     if (pe == nullptr)
@@ -85,7 +93,7 @@ int     Ip::protocol(std::string_view name)
     return pe->p_proto;
 }
 
-int     Ip::domain(std::string_view name)
+int     domain(std::string_view name)
 {
     static std::map<std::string_view, int> domain_to_str = {
         {"unix", PF_UNIX}, {"ipv4", PF_INET}, {"ipv6", PF_INET6},
@@ -100,7 +108,7 @@ int     Ip::domain(std::string_view name)
     return it->second;
 }
 
-int     Ip::socktype(std::string_view name)
+int     socktype(std::string_view name)
 {
     static std::map<std::string_view, int> socktype_to_str = {
         {"udp", SOCK_DGRAM}, {"tcp", SOCK_STREAM},

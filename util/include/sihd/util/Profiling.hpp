@@ -1,10 +1,9 @@
 #ifndef __SIHD_UTIL_PROFILING_HPP__
 # define __SIHD_UTIL_PROFILING_HPP__
 
+# include <string>
+
 # include <sihd/util/Clocks.hpp>
-# include <sihd/util/time.hpp>
-# include <sihd/util/Timestamp.hpp>
-# include <string_view>
 
 namespace sihd::util
 {
@@ -12,7 +11,7 @@ namespace sihd::util
 class Timeit
 {
     public:
-        Timeit(std::string_view fun_name = "");
+        Timeit(std::string && fun_name);
         virtual ~Timeit();
 
     protected:

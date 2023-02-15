@@ -1,9 +1,25 @@
-#include <sihd/net/Socket.hpp>
+#include <unistd.h>
+
+#include <cerrno>
+#include <cstring>
+
 #include <sihd/util/Logger.hpp>
 
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
+#include <sihd/net/Socket.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <netinet/tcp.h> // tcp nodelay
+# include <sys/un.h> // unix sockets
+# include <fcntl.h> // fcntl
+# include <net/if.h> // IFNAMSIZ
+#else
+# include <ws2tcpip.h> // IP_TTL
+
+// missing mingw getsockopt action
+# ifndef SO_BSP_STATE
+#  define SO_BSP_STATE 0x1009
+# endif
+#endif
 
 namespace sihd::net
 {
@@ -49,9 +65,9 @@ Socket::Socket(int socket, int domain, int socket_type, int protocol): Socket()
 Socket::Socket(int socket, std::string_view domain, std::string_view socket_type, std::string_view protocol): Socket()
 {
     _socket = socket;
-    _domain = Ip::domain(domain);
-    _type = Ip::socktype(socket_type);
-    _protocol = Ip::protocol(protocol);
+    _domain = ip::domain(domain);
+    _type = ip::socktype(socket_type);
+    _protocol = ip::protocol(protocol);
     if (_domain == -1)
         SIHD_LOG(error, "Socket: domain unknown: {}", domain);
     if (_type == -1)
@@ -123,14 +139,14 @@ bool    Socket::set_socket_tcp_nodelay(int socket, bool active)
 bool    Socket::is_socket_tcp_nodelay(int socket)
 {
     int opt;
-    socklen_t len = sizeof(opt);
+    sihd_socklen_t len = sizeof(opt);
     return sihd::util::os::getsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, &len, true) && opt != 0;
 }
 
 bool    Socket::is_socket_broadcast(int socket)
 {
     int res;
-    socklen_t length = sizeof(int);
+    sihd_socklen_t length = sizeof(int);
     return sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_BROADCAST, &res, &length, true) && res != 0;
 }
 
@@ -151,7 +167,7 @@ bool    Socket::bind_socket_to_device(int socket, std::string_view name)
 bool    Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
 {
 #if !defined (__SIHD_WINDOWS__)
-    socklen_t length = sizeof(int);
+    sihd_socklen_t length = sizeof(int);
     bool found = sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_DOMAIN, domain, &length);
     length = sizeof(int);
     found = found && sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_TYPE, type, &length);
@@ -160,7 +176,7 @@ bool    Socket::get_socket_infos(int socket, int *domain, int *type, int *protoc
     return found;
 #else
     CSADDR_INFO addrinfo;
-    socklen_t length = sizeof(addrinfo);
+    sihd_socklen_t length = sizeof(addrinfo);
     bool found = sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_BSP_STATE, &addrinfo, &length);
     if (found)
     {
@@ -172,11 +188,11 @@ bool    Socket::get_socket_infos(int socket, int *domain, int *type, int *protoc
 #endif
 }
 
-bool    Socket::get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len)
+bool    Socket::get_socket_peername(int socket, sockaddr *addr, sihd_socklen_t *addr_len)
 {
     if (socket < 0)
         throw std::runtime_error("Socket: cannot get peer name on a negative socket");
-    socklen_t initial = *addr_len;
+    sihd_socklen_t initial = *addr_len;
     int ret = ::getpeername(socket, addr, addr_len);
     if (ret == -1)
         return false;
@@ -187,7 +203,7 @@ std::optional<IpAddr>   Socket::socket_ip(int socket, bool ipv6)
 {
     sockaddr_in addr_in;
     sockaddr_in6 addr_in6;
-    socklen_t len = sizeof(addr_in6);
+    sihd_socklen_t len = sizeof(addr_in6);
     if (ipv6 && Socket::get_socket_peername(socket, (sockaddr *)&addr_in6, &len))
         return IpAddr(addr_in6, false);
     len = sizeof(addr_in);
@@ -207,9 +223,9 @@ bool    Socket::get_infos()
 
 bool    Socket::open(std::string_view domain, std::string_view type, std::string_view protocol)
 {
-    int sockdomain = Ip::domain(domain);
-    int socktype = Ip::socktype(type);
-    int sockprotocol = Ip::protocol(protocol);
+    int sockdomain = ip::domain(domain);
+    int socktype = ip::socktype(type);
+    int sockprotocol = ip::protocol(protocol);
     if (sockdomain == -1)
         SIHD_LOG(error, "Socket: domain unknown: {}", domain);
     if (socktype == -1)
@@ -264,7 +280,7 @@ bool    Socket::shutdown()
 /* Socket sockaddr operations */
 /* ************************************************************************* */
 
-int     Socket::accept(sockaddr *addr, socklen_t *addr_len)
+int     Socket::accept(sockaddr *addr, sihd_socklen_t *addr_len)
 {
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot accept on a closed socket");
@@ -286,7 +302,7 @@ bool    Socket::listen(uint16_t queue_size)
     return true;
 }
 
-bool    Socket::bind(const sockaddr *addr, socklen_t addr_len)
+bool    Socket::bind(const sockaddr *addr, sihd_socklen_t addr_len)
 {
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot bind on a closed socket");
@@ -298,7 +314,7 @@ bool    Socket::bind(const sockaddr *addr, socklen_t addr_len)
     return true;
 }
 
-bool    Socket::connect(const sockaddr *addr, socklen_t addr_len)
+bool    Socket::connect(const sockaddr *addr, sihd_socklen_t addr_len)
 {
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot connect on a closed socket");
@@ -361,7 +377,7 @@ ssize_t     Socket::receive(void *data, size_t size)
     return rcv;
 }
 
-ssize_t     Socket::send_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrViewChar view)
+ssize_t     Socket::send_to(const sockaddr *addr, sihd_socklen_t addr_len, sihd::util::ArrViewChar view)
 {
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot send_to on a closed socket");
@@ -375,7 +391,7 @@ ssize_t     Socket::send_to(const sockaddr *addr, socklen_t addr_len, sihd::util
     return sent;
 }
 
-bool    Socket::send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrViewChar view)
+bool    Socket::send_all_to(const sockaddr *addr, sihd_socklen_t addr_len, sihd::util::ArrViewChar view)
 {
     ssize_t ret;
     size_t sent = 0;
@@ -390,7 +406,7 @@ bool    Socket::send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util
     return sent == view.size();
 }
 
-ssize_t     Socket::receive_from(sockaddr *addr, socklen_t *addr_len, void *data, size_t size)
+ssize_t     Socket::receive_from(sockaddr *addr, sihd_socklen_t *addr_len, void *data, size_t size)
 {
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot receive_from on a closed socket");
@@ -433,7 +449,7 @@ ssize_t     Socket::receive_from(IpAddr & ipaddr, void *data, size_t size)
     sockaddr *addr;
     sockaddr_in addr_in;
     sockaddr_in6 addr_in6;
-    socklen_t len;
+    sihd_socklen_t len;
     if (_domain == AF_INET6)
     {
         addr = (sockaddr *)&addr_in6;
@@ -475,7 +491,7 @@ int     Socket::accept(IpAddr & ipaddr)
     sockaddr *addr;
     sockaddr_in addr_in;
     sockaddr_in6 addr_in6;
-    socklen_t len;
+    sihd_socklen_t len;
     if (_domain == AF_INET6)
     {
         addr = (sockaddr *)&addr_in6;
@@ -546,7 +562,7 @@ ssize_t     Socket::receive_from_unix(std::string & path, void *data, size_t siz
     sockaddr_un addr;
     memset(&addr, 0, sizeof(sockaddr_un));
     addr.sun_family = AF_UNIX;
-    socklen_t addr_len = SUN_LEN(&addr);
+    sihd_socklen_t addr_len = SUN_LEN(&addr);
     ssize_t ret = this->receive_from((sockaddr *)&addr, &addr_len, data, size);
     if (ret > 0)
         path = addr.sun_path;
@@ -556,7 +572,7 @@ ssize_t     Socket::receive_from_unix(std::string & path, void *data, size_t siz
 std::string   Socket::unix_socket_peername(int socket)
 {
     sockaddr_un addr_un;
-    socklen_t len = sizeof(addr_un);
+    sihd_socklen_t len = sizeof(addr_un);
     if (Socket::get_socket_peername(socket, (sockaddr *)&addr_un, &len))
         return addr_un.sun_path;
     return "";

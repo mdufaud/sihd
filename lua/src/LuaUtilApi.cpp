@@ -13,7 +13,7 @@
 #include <sihd/util/Path.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Endian.hpp>
-#include <sihd/util/Term.hpp>
+#include <sihd/util/term.hpp>
 #include <sihd/util/AService.hpp>
 
 #include <sihd/util/Process.hpp>
@@ -629,7 +629,7 @@ void    LuaUtilApi::load_tools(Vm & vm)
                     .addFunction("find", &Path::find)
                 .endNamespace()
                 .beginNamespace("term")
-                    .addFunction("is_interactive", &Term::is_interactive)
+                    .addFunction("is_interactive", &term::is_interactive)
                 .endNamespace()
                 .beginNamespace("endian")
                     .addFunction("is_big", &LuaUtilApi::_is_endian<Endian::BIG>)

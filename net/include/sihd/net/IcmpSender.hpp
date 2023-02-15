@@ -7,7 +7,10 @@
 # include <sihd/util/Poll.hpp>
 
 # include <sihd/net/Socket.hpp>
-# include <sihd/net/Ip.hpp>
+# include <sihd/net/ip.hpp>
+
+struct icmp;
+struct icmp6_hdr;
 
 namespace sihd::net
 {

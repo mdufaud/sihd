@@ -4,7 +4,7 @@
 #include <sihd/util/fs.hpp>
 #include <sihd/util/TmpDir.hpp>
 #include <sihd/util/os.hpp>
-#include <sihd/util/Term.hpp>
+#include <sihd/util/term.hpp>
 #include <filesystem>
 
 #include <sihd/util/Worker.hpp>
@@ -41,7 +41,7 @@ namespace test
     /*
     TEST_F(TestProcess, test_process_interactive)
     {
-        if (Term::is_interactive() == false)
+        if (term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
         std::string output;
         Process proc{"cat"};
@@ -68,7 +68,7 @@ namespace test
 
     TEST_F(TestProcess, test_process_run)
     {
-        if (Term::is_interactive() == false)
+        if (term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
         if (os::is_run_by_valgrind())
             GTEST_SKIP() << "Buggy with valgrind";
@@ -151,7 +151,7 @@ namespace test
 
     TEST_F(TestProcess, test_process_in_cat)
     {
-        if (Term::is_interactive() == false)
+        if (term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
         Process proc{"cat"};
         std::string output;
@@ -172,7 +172,7 @@ namespace test
 
     TEST_F(TestProcess, test_process_in_wc)
     {
-        if (Term::is_interactive() == false)
+        if (term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
         if (os::is_run_by_valgrind())
             GTEST_SKIP() << "Buggy with valgrind";
@@ -204,7 +204,7 @@ namespace test
         SIHD_LOG(info, "Writing file for 'cat' input: {}", test_file)
         EXPECT_TRUE(fs::write(test_file, "hello world"));
 
-        if (Term::is_interactive() == false)
+        if (term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
 
         Process proc{"cat"};
@@ -275,7 +275,7 @@ namespace test
         // bad file descriptor
         EXPECT_EQ(ls.return_code(), 2);
 
-        if (Term::is_interactive() == false)
+        if (term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
         Process cat{"cat"};
         cat.stdin_close().stderr_close();
@@ -288,7 +288,7 @@ namespace test
 
     TEST_F(TestProcess, test_process_chain)
     {
-        if (Term::is_interactive() == false)
+        if (term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
         std::string output;
         Process echo{"echo", "hello world"};
@@ -339,7 +339,7 @@ namespace test
 
     TEST_F(TestProcess, test_process_signal_kill)
     {
-        if (Term::is_interactive() == false)
+        if (term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
         Process cat{"cat"};
 
@@ -355,7 +355,7 @@ namespace test
 
     TEST_F(TestProcess, test_process_signal_stop)
     {
-        if (Term::is_interactive() == false)
+        if (term::is_interactive() == false)
             GTEST_SKIP() << "Is an interactive test";
         Process cat{"cat"};
 

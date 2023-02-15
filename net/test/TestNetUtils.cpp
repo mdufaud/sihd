@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
-#include <sihd/util/Term.hpp>
-#include <sihd/net/NetUtils.hpp>
+#include <sihd/util/term.hpp>
+
+#include <sihd/net/utils.hpp>
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/Socket.hpp>
 
@@ -39,29 +41,29 @@ namespace test
         Socket sock;
 
         ASSERT_TRUE(sock.open(AF_INET, SOCK_DGRAM, 0));
-        int idx = NetUtils::interface_idx(sock, "lo");
+        int idx = utils::interface_idx(sock, "lo");
         ASSERT_GT(idx, -1);
         std::string name;
-        EXPECT_TRUE(NetUtils::get_interface_name(sock, idx, name));
+        EXPECT_TRUE(utils::get_interface_name(sock, idx, name));
         EXPECT_EQ(name, "lo");
 
         SIHD_LOG(debug, "Getting interface 'lo' addrs");
         struct sockaddr_in in;
         memset(&in, 0, sizeof(in));
 
-        EXPECT_TRUE(NetUtils::get_interface_mac(sock, "lo", &in));
+        EXPECT_TRUE(utils::get_interface_mac(sock, "lo", &in));
         SIHD_LOG(debug, "Mac: {}", IpAddr::ip_str(in));
         EXPECT_NE(IpAddr::ip_str(in), "");
 
-        EXPECT_TRUE(NetUtils::get_interface_addr(sock, "lo", &in));
+        EXPECT_TRUE(utils::get_interface_addr(sock, "lo", &in));
         SIHD_LOG(debug, "Addr: {}", IpAddr::ip_str(in));
         EXPECT_NE(IpAddr::ip_str(in), "");
 
-        EXPECT_TRUE(NetUtils::get_interface_broadcast(sock, "lo", &in));
+        EXPECT_TRUE(utils::get_interface_broadcast(sock, "lo", &in));
         SIHD_LOG(debug, "Broadcast: {}", IpAddr::ip_str(in));
         EXPECT_NE(IpAddr::ip_str(in), "");
 
-        EXPECT_TRUE(NetUtils::get_interface_netmask(sock, "lo", &in));
+        EXPECT_TRUE(utils::get_interface_netmask(sock, "lo", &in));
         SIHD_LOG(debug, "Netmask: {}", IpAddr::ip_str(in));
         EXPECT_NE(IpAddr::ip_str(in), "");
     }

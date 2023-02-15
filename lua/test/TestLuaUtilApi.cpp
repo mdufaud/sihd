@@ -3,7 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
-#include <sihd/util/Term.hpp>
+#include <sihd/util/term.hpp>
 #include <sihd/lua/Vm.hpp>
 #include <sihd/lua/LuaUtilApi.hpp>
 

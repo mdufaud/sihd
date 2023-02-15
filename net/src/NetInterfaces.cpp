@@ -1,5 +1,12 @@
-#include <sihd/net/NetInterfaces.hpp>
 #include <sihd/util/Logger.hpp>
+
+#include <sihd/net/NetInterfaces.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <sys/types.h> // getifaddrs
+# include <ifaddrs.h> // getifaddrs
+# include <net/if.h> // macros
+#endif
 
 namespace sihd::net
 {
@@ -158,6 +165,30 @@ bool    NetIFace::get_netmask(const struct ifaddrs *addr, in6_addr *ret) const
     }
     return false;
 }
+
+//Interface is running.
+bool  NetIFace::up() const { return _flags & IFF_UP; }
+//Valid broadcast address set.
+bool  NetIFace::broadcast() const { return _flags & IFF_BROADCAST; }
+bool  NetIFace::loopback() const { return _flags & IFF_LOOPBACK; }
+//Interface is a point-to-point link.
+bool  NetIFace::point2point() const { return _flags & IFF_POINTOPOINT; }
+//Resources allocated.
+bool  NetIFace::running() const { return _flags & IFF_RUNNING; }
+//No arp protocol, L2 destination address not set.
+bool  NetIFace::noarp() const { return _flags & IFF_NOARP; }
+//Interface is in promiscuous mode.
+bool  NetIFace::promisc() const { return _flags & IFF_PROMISC; }
+//Avoid use of trailers
+bool  NetIFace::notrailers() const { return _flags & IFF_NOTRAILERS; }
+//Master of a load balancing bundle.
+bool  NetIFace::master() const { return _flags & IFF_MASTER; }
+//Slave of a load balancing bundle.
+bool  NetIFace::slave() const { return _flags & IFF_SLAVE; }
+//Receive all multicast packets.
+bool  NetIFace::all_multicast() const { return _flags & IFF_ALLMULTI; }
+//Supports multicast
+bool  NetIFace::supports_multicast() const { return _flags & IFF_MULTICAST; }
 
 
 #endif

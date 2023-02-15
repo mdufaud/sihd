@@ -1,15 +1,14 @@
 #ifndef __SIHD_NET_SOCKET_HPP__
 # define __SIHD_NET_SOCKET_HPP__
 
-# include <sihd/net/Ip.hpp>
-# include <sihd/net/IpAddr.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/ArrayView.hpp>
+# include <sihd/util/platform.hpp>
 # include <sihd/util/os.hpp>
+# include <sihd/util/ArrayView.hpp> // TODO supprimer
+
+# include <sihd/net/ip.hpp>
+# include <sihd/net/IpAddr.hpp>
 
 # if !defined(__SIHD_WINDOWS__)
-#  include <netinet/tcp.h>
-#  include <fcntl.h>
 # else
 #  define SHUT_RD SD_RECEIVE
 #  define SHUT_WR SD_SEND
@@ -45,7 +44,7 @@ class Socket
         // Class utilities for socket manipulation //
 
         // returns true if getpeername worked and the provided addr_len is still the same
-        static bool get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len);
+        static bool get_socket_peername(int socket, sockaddr *addr, sihd_socklen_t *addr_len);
 
         // return an IpAdress from socket using get_socket_peername; if ipv6 is true, checks for an ipv6 addr first
         static std::optional<IpAddr> socket_ip(int socket, bool ipv6 = false);
@@ -90,7 +89,7 @@ class Socket
 
         bool listen(uint16_t queue_size);
         // fill addr and addr_len based on incoming connections
-        int accept(sockaddr *addr, socklen_t *addr_len);
+        int accept(sockaddr *addr, sihd_socklen_t *addr_len);
         int accept() { return this->accept(nullptr, nullptr); }
         int accept(IpAddr & ipaddr);
 
@@ -106,12 +105,12 @@ class Socket
         // Operations on IP adresses //
 
         // sockaddr
-        bool bind(const sockaddr *addr, socklen_t addr_len);
-        bool connect(const sockaddr *addr, socklen_t addr_len);
-        ssize_t send_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrViewChar view);
-        bool send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrViewChar view);
-        ssize_t receive_from(sockaddr *addr, socklen_t *addr_len, void *data, size_t size);
-        ssize_t receive_from(sockaddr *addr, socklen_t *addr_len, sihd::util::IArray & arr)
+        bool bind(const sockaddr *addr, sihd_socklen_t addr_len);
+        bool connect(const sockaddr *addr, sihd_socklen_t addr_len);
+        ssize_t send_to(const sockaddr *addr, sihd_socklen_t addr_len, sihd::util::ArrViewChar view);
+        bool send_all_to(const sockaddr *addr, sihd_socklen_t addr_len, sihd::util::ArrViewChar view);
+        ssize_t receive_from(sockaddr *addr, sihd_socklen_t *addr_len, void *data, size_t size);
+        ssize_t receive_from(sockaddr *addr, sihd_socklen_t *addr_len, sihd::util::IArray & arr)
             { return Socket::_adapt_array_size(arr, this->receive_from(addr, addr_len, arr.buf(), arr.byte_capacity())); }
 
         /*

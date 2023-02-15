@@ -1,12 +1,16 @@
+#include <netdb.h> // addrinfo
+
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
-#include <sihd/util/Term.hpp>
-#include <sihd/net/IcmpSender.hpp>
+#include <sihd/util/term.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/ObserverWaiter.hpp>
+
+#include <sihd/net/IcmpSender.hpp>
 
 namespace test
 {

@@ -1,17 +1,28 @@
-#include <sihd/net/IpAddr.hpp>
+#include <strings.h>
+
+#include <bitset>
+#include <cerrno>
+#include <cstring>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
-#include <strings.h>
-#include <string.h>
-#include <errno.h>
+#include <sihd/net/IpAddr.hpp>
 
-#include <bitset>
+#if !defined(__SIHD_WINDOWS__)
+# include <sys/socket.h> // getnameinfo
+# include <netdb.h> // getnameinfo
+# include <netinet/in.h> // sockaddr
+# include <arpa/inet.h> // inet_pton...
+#else
+# include <winsock2.h>
+# include <ws2tcpip.h> // addrinfo
+#endif
 
 namespace sihd::net
 {
 
-SIHD_LOGGER;
+SIHD_NEW_LOGGER("sihd::net");
 
 using namespace sihd::util;
 
@@ -562,6 +573,33 @@ bool    IpAddr::do_lookup_dns()
 /* Find ip */
 /* ************************************************************************* */
 
+size_t  IpAddr::ipv4_count() const
+{
+  size_t count = 0;
+
+  for (const auto & ip_entry: _lst_ip)
+  {
+    if (ip_entry.ipv6 == false)
+      ++count;
+  }
+
+  return count;
+}
+
+size_t  IpAddr::ipv6_count() const
+{
+  size_t count = 0;
+
+  for (const auto & ip_entry: _lst_ip)
+  {
+    if (ip_entry.ipv6)
+      ++count;
+  }
+
+  return count;
+}
+
+
 bool    IpAddr::get_sockaddr(IpSockAddr & ipsockaddr, int socktype, int protocol) const
 {
     IpAddr::_purge_ipsockaddr(ipsockaddr);
@@ -608,7 +646,7 @@ bool    IpAddr::get_sockaddr_in6(sockaddr_in6 *addr, int socktype, int protocol)
 
 std::string IpAddr::matching_ip_str(std::string_view socktype, std::string_view protocol, bool ipv6) const
 {
-    return this->matching_ip_str(Ip::socktype(socktype), Ip::protocol(protocol), ipv6);
+    return this->matching_ip_str(ip::socktype(socktype), ip::protocol(protocol), ipv6);
 }
 
 std::string IpAddr::matching_ip_str(int socktype, int protocol, bool ipv6) const
@@ -619,14 +657,14 @@ std::string IpAddr::matching_ip_str(int socktype, int protocol, bool ipv6) const
     return "";
 }
 
-IpAddr::IpEntry *IpAddr::_get_ip_info(int socktype, int protocol, bool ipv6) const
+const IpAddr::IpEntry *IpAddr::_get_ip_info(int socktype, int protocol, bool ipv6) const
 {
     for (const IpAddr::IpEntry & info: _lst_ip)
     {
         if (ipv6 != info.ipv6)
             continue ;
         if ((socktype < 0 || info.socktype == socktype) && (protocol < 0 || info.protocol == protocol))
-            return const_cast<IpAddr::IpEntry *>(&info);
+            return &info;
     }
     return nullptr;
 }
@@ -710,8 +748,8 @@ std::string IpAddr::dump_ip_lst() const
     {
         dump += fmt::format("ipv{} {} {}: {}\n",
                             (entry.ipv6 ? '6' : '4'),
-                            Ip::protocol_str(entry.protocol),
-                            Ip::socktype_str(entry.socktype),
+                            ip::protocol_str(entry.protocol),
+                            ip::socktype_str(entry.socktype),
                             entry.ip());
     }
     return dump;
