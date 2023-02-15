@@ -214,7 +214,8 @@ clang_defines = [
 mingw_flags = gcc_flags
 
 ## windows specifics
-windows_libs = ['ws2_32', 'psapi', 'ucrt', 'ssp']
+# windows_libs = ['psapi', 'ucrt', 'ssp', 'ws2_32']
+windows_libs = ['psapi', 'msvcr90', 'ssp', 'ws2_32']
 # _WIN64 -> activates sihd functionnalities
 # _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
 windows_defines = [

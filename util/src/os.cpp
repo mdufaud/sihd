@@ -366,7 +366,7 @@ ssize_t    backtrace(int fd, size_t backtrace_size)
 {
     (void)fd;
     (void)backtrace_size;
-    return -1;
+    return 0;
 }
 
 #endif // end of backtrace

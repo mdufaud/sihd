@@ -1,3 +1,5 @@
+#include <csignal>
+
 #include <sihd/util/SigWaiter.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/os.hpp>
@@ -7,8 +9,11 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-SigWaiter::SigWaiter(int sig): _sig(sig)
+SigWaiter::SigWaiter(int sig)
 {
+    if (sig == -1)
+      sig = SIGINT;
+    _sig = sig;
     os::add_signal_handler(sig, this);
     _waitable.infinite_wait();
 }

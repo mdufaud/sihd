@@ -248,6 +248,7 @@ Named   *Node::resolve_link(const std::string & path, size_t recursion)
     if (recursion == SIHD_NODE_MAX_LINK_RECURSION)
         throw std::length_error("Maximum link recursion");
     const auto [parent_path, child_name] = this->parent_path(path);
+    (void)child_name;
     Named *named = this->find(parent_path);
     if (named != nullptr)
     {

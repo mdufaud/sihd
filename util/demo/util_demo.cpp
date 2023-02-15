@@ -6,7 +6,7 @@
 #include <sihd/util/SigWaiter.hpp>
 #include <sihd/util/Runnable.hpp>
 
-#include <argparse/argparse.hpp>
+#include <cxxopts.hpp>
 
 using namespace sihd::util;
 
@@ -40,26 +40,16 @@ void os()
 
 int main(int argc, char **argv)
 {
-    argparse::ArgumentParser program("sihd_util_demo");
-
-    program.add_argument("--worker-frequency")
-      .help("Change the worker execution frequency in HZ")
-      .default_value(10.0)
-      .scan<'g', double>();
-
-    try {
-      program.parse_args(argc, argv);
-    }
-    catch (const std::runtime_error& err) {
-      std::cerr << err.what() << std::endl;
-      std::cerr << program;
-      std::exit(1);
-    }
-
     LoggerManager::basic();
 
+    cxxopts::Options options("tester", " - test basic options");
+    options.add_options()
+      ("f,worker-frequency", "Change the worker execution frequency in HZ", cxxopts::value<double>()->default_value("10.0"));
+
+    auto result = options.parse(argc, argv);
+
     demo::os();
-    demo::worker(program.get<double>("worker-frequency"));
+    demo::worker(result["worker-frequency"].as<double>());
 
     LoggerManager::clear_loggers();
     return 0;
