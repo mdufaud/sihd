@@ -191,6 +191,7 @@ bool   kill(pid_t pid, int sig)
 #if !defined(__SIHD_WINDOWS__)
     return ::kill(pid, sig) == 0;
 #else
+    #pragma message("TODO os::kill")
     (void)pid;
     (void)sig;
     return false;
@@ -288,6 +289,7 @@ bool    getsockopt(int socket, int level, int optname, void *optval, sihd_sockle
 bool    is_root()
 {
 #if defined(__SIHD_WINDOWS__)
+    #pragma message("TODO os::is_root")
     return false;
 #else
     return getuid() == 0;
@@ -368,6 +370,8 @@ ssize_t    backtrace(int fd, size_t backtrace_size)
 
 #else // no backtrace
 
+#pragma message("Backtrace is not supported for this platform")
+
 ssize_t    backtrace(int fd, size_t backtrace_size)
 {
     (void)fd;
@@ -378,15 +382,6 @@ ssize_t    backtrace(int fd, size_t backtrace_size)
 #endif // end of backtrace
 
 // debuggers
-
-bool    is_run_with_asan()
-{
-#if defined(__SANITIZE_ADDRESS__)
-    return true;
-#else
-    return false;
-#endif
-}
 
 bool    is_run_by_valgrind()
 {
@@ -456,6 +451,7 @@ void *load_lib(const std::string & lib_name)
     handle = handle != nullptr ? handle : dlopen(lib_name.c_str(), RTLD_NOW);
     return handle;
 #else
+    #pragma message("TODO")
     (void)lib_name;
     return nullptr;
 #endif
@@ -573,6 +569,7 @@ ssize_t peak_rss()
 # endif
 
 #else
+    #pragma message("os::peak_rss is not supported on this platform")
     return (ssize_t)-1L;
 #endif
 }
@@ -619,6 +616,7 @@ ssize_t current_rss()
     return (ssize_t)rss * (ssize_t)sysconf(_SC_PAGESIZE);
 
 #else
+    #pragma message("os::current_rss is not supported on this platform")
     return (ssize_t)-1L;
 #endif
 }

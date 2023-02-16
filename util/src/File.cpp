@@ -372,7 +372,7 @@ ssize_t File::write(const char *str, size_t size)
     return ret;
 }
 
-ssize_t File::write(std::string_view view)
+ssize_t File::write(ArrViewChar view)
 {
     return this->write(view.data(), view.size());
 }
@@ -387,6 +387,7 @@ ssize_t File::read_line(char **line, size_t *size)
 #if !defined(__SIHD_WINDOWS__)
     return getline(line, size, _file_ptr);
 #else
+    #pragma message("File::read_line is not supported on windows")
     *line = nullptr;
     *size = 0;
     return -1;
@@ -398,6 +399,7 @@ ssize_t File::read_line_delim(char **line, size_t *size, int delim)
 #if !defined(__SIHD_WINDOWS__)
     return getdelim(line, size, delim, _file_ptr);
 #else
+    #pragma message("File::read_line_delim is not supported on windows")
     *line = nullptr;
     *size = 0;
     (void)delim;

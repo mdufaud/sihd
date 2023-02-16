@@ -31,6 +31,7 @@ void    SysLogger::log(const LogInfo & info, std::string_view msg)
             info.thread_name.data(),
             info.strlevel, info.source.data(), msg.data());
 #else
+    #pragma message("TODO")
     (void)info; (void)msg;
 #endif
 }

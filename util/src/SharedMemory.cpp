@@ -124,6 +124,8 @@ bool    SharedMemory::clear()
 
 #else
 
+#pragma message("TODO")
+
 bool    SharedMemory::create(std::string_view id, size_t size, mode_t mode)
 {
     (void)id; (void)size; (void)mode;
