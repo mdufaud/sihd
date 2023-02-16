@@ -227,16 +227,20 @@ class Array: public IArray, public ICloneable<Array<T>>
                 Splitter splitter(delimiters);
                 const std::vector<std::string> splits = splitter.split(data);
                 this->resize(0);
+                if (splits.size() % sizeof(T) != 0)
+                    return false;
+                uint32_t idx = 0;
                 for (const std::string & split: splits)
                 {
                     constexpr uint16_t base = 16;
-                    short value;
-                    if (str::convert_from_string<T>(split, value, base) == false)
+                    uint8_t byte;
+                    if (str::convert_from_string<uint8_t>(split, byte, base) == false)
                         return false;
-                    // this->push_back(value);
-                    #pragma message("TODO")
+                    if (this->resize((idx / sizeof(T)) + 1) == false)
+                        return false;
+                    this->buf()[idx] = byte;
+                    ++idx;
                 }
-                return false;
             }
             return true;
         }

@@ -667,11 +667,24 @@ namespace test
         });
         EXPECT_EQ(arr[0].x, 42);
         EXPECT_EQ(arr[0].y, 1337);
+        EXPECT_EQ(arr.size(), 1UL);
 
         SIHD_LOG_DEBUG(arr.str(' '));
 
         auto arr2 = arr;
         EXPECT_TRUE(arr.is_equal(arr2));
+
+        EXPECT_EQ(arr.str(' '), "2a 00 00 00 39 05 00 00");
+        EXPECT_TRUE(arr.from_str("2a 00 00 00 39 05 00 00 2a 00 00 00 39 05 00 00", " "));
+
+        EXPECT_EQ(arr[0].x, 42);
+        EXPECT_EQ(arr[0].y, 1337);
+        EXPECT_EQ(arr[1].x, 42);
+        EXPECT_EQ(arr[1].y, 1337);
+        EXPECT_EQ(arr.size(), 2UL);
+
+        EXPECT_EQ(arr.str(' '), "2a 00 00 00 39 05 00 00 2a 00 00 00 39 05 00 00");
+
     }
 
 }
