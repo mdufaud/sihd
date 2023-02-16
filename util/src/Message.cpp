@@ -1,5 +1,6 @@
 #include <sihd/util/Message.hpp>
 #include <sihd/util/MessageField.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::util
 {
@@ -152,6 +153,11 @@ IMessageField *Message::clone() const
         cloned = nullptr;
     }
     return cloned;
+}
+
+std::string Message::description() const
+{
+    return fmt::format("{} bytes", this->field_byte_size());
 }
 
 }

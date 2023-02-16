@@ -7,7 +7,6 @@
 # include <sihd/util/Types.hpp>
 # include <sihd/util/Array.hpp>
 # include <sihd/util/Node.hpp>
-# include <sihd/util/Logger.hpp>
 # include <sihd/util/IMessageField.hpp>
 
 namespace sihd::util
@@ -56,10 +55,7 @@ class Message:  public Node,
          */
         virtual bool add_field(const std::string & name, IMessageField *field);
 
-        virtual std::string description() const override
-        {
-            return fmt::format("{} bytes", this->field_byte_size());
-        }
+        virtual std::string description() const override;
 
         const IArray *array() const { return &_arr; }
 

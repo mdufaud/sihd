@@ -9,6 +9,7 @@ extlibs = {
     ## json parsing
     "nlohmann_json": "3.9.1",
     # util
+    "cxxopts": "3.0.0",
     "fmt": "7.1.3",
     "libuuid": "1.0.3",
     ## http
@@ -43,7 +44,7 @@ conan_post_process = {
 # modules descriptions
 modules = {
     "util": {
-        "extlibs": ['nlohmann_json', 'fmt'],
+        "extlibs": ['nlohmann_json', 'fmt', 'cxxopts'],
         "libs": ['pthread', 'fmt'],
         "linux-extlibs": ['libuuid'],
         "linux-libs": ['dl', 'rt', 'uuid'],
@@ -81,7 +82,7 @@ modules = {
     "tui": {
         "depends": ['util'],
         "git-url": "https://github.com/ArthurSonzogni/FTXUI",
-        "git-branch": "v3.0.0",
+        "git-branch": f"v{extlibs['ftxui']}",
     },
     "ssh": {
         "depends": ['util'],
@@ -249,6 +250,7 @@ apt_packages = {
     "nlohmann_json": "nlohmann-json3-dev",
     "fmt": "libfmt-dev",
     "libuuid": "uuid-dev",
+    "cxxopts": "libcxxopts-dev",
     "openssl": "openssl",
     "libcurl": "libcurl4-openssl-dev",
     "libwebsockets": "libwebsockets-dev",
@@ -263,7 +265,7 @@ apt_packages = {
     "glew": "libglew-dev",
     "sdl2": "libsdl2-dev",
     "lua": "liblua5.3-dev",
-    "libusb": "libusb-dev"
+    "libusb": "libusb-dev",
 }
 
 # used to create PKGBUILD build command
@@ -280,6 +282,7 @@ pacman_packages = {
     "nlohmann_json": "nlohmann-json",
     "fmt": "fmt",
     "libuuid": "util-linux-libs",
+    "cxxopts": "cxxopts",
     "openssl": "openssl",
     "libcurl": "curl",
     "libwebsockets": "libwebsockets",
@@ -297,24 +300,25 @@ pacman_packages = {
 }
 
 yum_packages = {
-  "gtest": "gtest-devel",
-  "nlohmann_json": "json-devel",
-  "fmt": "fmt-devel",
-  "libuuid": "uuid-devel",
-  "openssl": "openssl",
-  "libcurl": "libcurl-devel",
-  "libwebsockets": "libwebsockets-devel",
-  "libpcap": "libpcap-devel",
-  "libssh": "libssh-devel",
-  "libusb": "libusb-devel",
-  "libzip": "libzip-devel",
-  "libbluetooth": "bluez-libs-devel",
-  "pybind11": "python3-pybind11",
-  "glfw": "glfw-devel",
-  "glew": "glew-devel",
-  "sdl2": "sdl2-devel",
-  "lua": "lua5.3-devel",
-  "libusb": "libusb-devel"
+    "gtest": "gtest-devel",
+    "nlohmann_json": "json-devel",
+    "fmt": "fmt-devel",
+    "libuuid": "uuid-devel",
+    "cxxopts": "cxxopts-devel",
+    "openssl": "openssl",
+    "libcurl": "libcurl-devel",
+    "libwebsockets": "libwebsockets-devel",
+    "libpcap": "libpcap-devel",
+    "libssh": "libssh-devel",
+    "libusb": "libusb-devel",
+    "libzip": "libzip-devel",
+    "libbluetooth": "bluez-libs-devel",
+    "pybind11": "python3-pybind11",
+    "glfw": "glfw-devel",
+    "glew": "glew-devel",
+    "sdl2": "sdl2-devel",
+    "lua": "lua5.3-devel",
+    "libusb": "libusb-devel",
 }
 
 __msys2_mingw = "mingw-w64-x86_64-"

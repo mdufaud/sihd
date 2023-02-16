@@ -6,12 +6,9 @@
 # include <functional>
 
 # include <sihd/util/Callback.hpp>
-# include <sihd/util/Logger.hpp>
 
 namespace sihd::util
 {
-
-SIHD_LOGGER;
 
 class Configurable
 {

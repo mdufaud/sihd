@@ -1,7 +1,6 @@
 #ifndef __SIHD_UTIL_MESSAGEFIELD_HPP__
 # define __SIHD_UTIL_MESSAGEFIELD_HPP__
 
-# include <sihd/util/Logger.hpp>
 # include <sihd/util/Types.hpp>
 # include <sihd/util/Array.hpp>
 # include <sihd/util/Named.hpp>
@@ -31,10 +30,7 @@ class MessageField: public Named,
         virtual bool build_array(Type dt, size_t size);
 
         // Named
-        virtual std::string description() const override
-        {
-            return fmt::format("{}[{}]", Types::type_str(_dt), this->field_size());
-        }
+        virtual std::string description() const override;
 
         // ICloneable
         virtual IMessageField *clone() const override;

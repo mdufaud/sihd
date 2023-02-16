@@ -84,4 +84,9 @@ bool    MessageField::field_resize(size_t size)
     return true;
 }
 
+std::string MessageField::description() const
+{
+    return fmt::format("{}[{}]", Types::type_str(_dt), this->field_size());
+}
+
 }
