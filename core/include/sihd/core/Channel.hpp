@@ -1,6 +1,9 @@
 #ifndef __SIHD_CORE_CHANNEL_HPP__
 # define __SIHD_CORE_CHANNEL_HPP__
 
+# include <mutex>
+# include <atomic>
+
 # include <sihd/util/Array.hpp>
 # include <sihd/util/ArrayView.hpp>
 # include <sihd/util/Named.hpp>
@@ -8,8 +11,7 @@
 # include <sihd/util/Logger.hpp>
 # include <sihd/util/Timestamp.hpp>
 # include <sihd/util/Clocks.hpp>
-# include <mutex>
-# include <atomic>
+
 
 namespace sihd::core
 {
@@ -46,12 +48,7 @@ class Channel:  public sihd::util::Named,
         void set_clock(sihd::util::IClock *clock);
 
         // Named
-        virtual std::string description() const override
-        {
-            if (_array_ptr == nullptr)
-                return "empty";
-            return fmt::format("{}[{}]", _array_ptr->data_type_str(), _array_ptr->size());
-        }
+        virtual std::string description() const override;
 
         uint8_t *data() const { return _array_ptr->buf(); }
         const sihd::util::IArray *array() const { return _array_ptr; }
@@ -107,10 +104,10 @@ class Channel:  public sihd::util::Named,
         bool write(const Channel & other);
 
         // utility for writing
-
         template <typename T>
         bool write(size_t idx, T value)
         {
+            static_assert(std::is_trivially_copyable_v<T>);
             return this->write({(const int8_t *)&value, sizeof(T)}, _array_ptr->byte_index(idx));
         }
 

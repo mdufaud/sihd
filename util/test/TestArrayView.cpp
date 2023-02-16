@@ -4,6 +4,8 @@
 
 namespace test
 {
+    SIHD_LOGGER;
+
     using namespace sihd::util;
     class TestArrayView: public ::testing::Test
     {

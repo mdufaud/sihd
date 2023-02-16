@@ -3,7 +3,7 @@
 
 # include <sihd/util/platform.hpp>
 # include <sihd/util/os.hpp>
-# include <sihd/util/ArrayView.hpp> // TODO supprimer
+# include <sihd/util/ArrayView.hpp>
 
 # include <sihd/net/ip.hpp>
 # include <sihd/net/IpAddr.hpp>
@@ -64,15 +64,15 @@ class Socket
 
         bool get_infos();
 
-        bool set_tcp_nodelay(bool active) const { return Socket::set_socket_tcp_nodelay(_socket, active); }
-        bool set_blocking(bool active) const { return Socket::set_socket_blocking(_socket, active); }
-        bool set_reuseaddr(bool active) const { return Socket::set_socket_reuseaddr(_socket, active); }
-        bool set_broadcast(bool active) const { return Socket::set_socket_broadcast(_socket, active); }
-        bool bind_to_device(std::string_view name) const { return Socket::bind_socket_to_device(_socket, name); }
-        bool is_tcp_nodelay() const { return Socket::is_socket_tcp_nodelay(_socket); }
-        bool is_blocking() const { return Socket::is_socket_blocking(_socket); }
-        bool is_broadcast() const { return Socket::is_socket_broadcast(_socket); }
-        bool set_ttl(int ttl) const { return Socket::set_socket_ttl(_socket, ttl, this->is_ipv6()); }
+        bool set_tcp_nodelay(bool active) const;
+        bool set_blocking(bool active) const;
+        bool set_reuseaddr(bool active) const;
+        bool set_broadcast(bool active) const;
+        bool bind_to_device(std::string_view name) const;
+        bool is_tcp_nodelay() const;
+        bool is_blocking() const;
+        bool is_broadcast() const;
+        bool set_ttl(int ttl) const;
 
         bool open(std::string_view domain, std::string_view type, std::string_view protocol);
         bool open(int domain, int socket_type, int protocol);
@@ -84,23 +84,18 @@ class Socket
         bool send_all(sihd::util::ArrViewChar view);
 
         ssize_t receive(void *data, size_t size);
-        ssize_t receive(sihd::util::IArray & arr)
-            { return Socket::_adapt_array_size(arr, this->receive(arr.buf(), arr.byte_capacity())); }
+        ssize_t receive(sihd::util::IArray & arr);
 
         bool listen(uint16_t queue_size);
         // fill addr and addr_len based on incoming connections
         int accept(sockaddr *addr, sihd_socklen_t *addr_len);
-        int accept() { return this->accept(nullptr, nullptr); }
+        int accept();
         int accept(IpAddr & ipaddr);
 
         // Utilities for internal socket //
 
-        std::optional<IpAddr> peeraddr(bool ipv6 = false) const { return Socket::socket_ip(_socket, ipv6); }
-        int local_port() const
-        {
-            auto opt_ip = this->peeraddr(true);
-            return opt_ip ? opt_ip.value().port() : -1;
-        }
+        std::optional<IpAddr> peeraddr(bool ipv6 = false) const;
+        int local_port() const;
 
         // Operations on IP adresses //
 
@@ -110,8 +105,7 @@ class Socket
         ssize_t send_to(const sockaddr *addr, sihd_socklen_t addr_len, sihd::util::ArrViewChar view);
         bool send_all_to(const sockaddr *addr, sihd_socklen_t addr_len, sihd::util::ArrViewChar view);
         ssize_t receive_from(sockaddr *addr, sihd_socklen_t *addr_len, void *data, size_t size);
-        ssize_t receive_from(sockaddr *addr, sihd_socklen_t *addr_len, sihd::util::IArray & arr)
-            { return Socket::_adapt_array_size(arr, this->receive_from(addr, addr_len, arr.buf(), arr.byte_capacity())); }
+        ssize_t receive_from(sockaddr *addr, sihd_socklen_t *addr_len, sihd::util::IArray & arr);
 
         /*
             sihd::net::IpAddr
@@ -122,8 +116,7 @@ class Socket
         ssize_t send_to(const IpAddr & addr, sihd::util::ArrViewChar view);
         bool send_all_to(const IpAddr & addr, sihd::util::ArrViewChar view);
         ssize_t receive_from(IpAddr & addr, void *data, size_t size);
-        ssize_t receive_from(IpAddr & addr, sihd::util::IArray & arr)
-            { return Socket::_adapt_array_size(arr, this->receive_from(addr, arr.buf(), arr.byte_capacity())); }
+        ssize_t receive_from(IpAddr & addr, sihd::util::IArray & arr);
 
         // Operations on unix sockets //
 
@@ -133,8 +126,7 @@ class Socket
         ssize_t send_to_unix(std::string_view path, sihd::util::ArrViewChar view);
         bool send_all_to_unix(std::string_view path, sihd::util::ArrViewChar view);
         ssize_t receive_from_unix(std::string & path, void *data, size_t size);
-        ssize_t receive_from_unix(std::string & path, sihd::util::IArray & arr)
-            { return Socket::_adapt_array_size(arr, this->receive_from_unix(path, arr.buf(), arr.byte_capacity())); }
+        ssize_t receive_from_unix(std::string & path, sihd::util::IArray & arr);
 
         // Configuration //
 
@@ -149,14 +141,10 @@ class Socket
         int protocol() const { return _protocol; }
         int socket() const { return _socket; }
 
-        bool is_ipv6() const { return _domain == AF_INET6; }
+        bool is_ipv6() const;
 
     protected:
-
-    private:
         void _clear_socket_info();
-        // returns sent value
-        static ssize_t _adapt_array_size(sihd::util::IArray & array, ssize_t sent);
 
         int _domain;
         int _type;

@@ -1,7 +1,6 @@
 #ifndef __SIHD_UTIL_DEVICE_HPP__
 # define __SIHD_UTIL_DEVICE_HPP__
 
-# include <sihd/util/Logger.hpp>
 # include <sihd/core/AChannelContainer.hpp>
 # include <sihd/core/ACoreService.hpp>
 

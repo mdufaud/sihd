@@ -616,7 +616,7 @@ namespace test
         ArrByte buffer_byte;
         buffer_byte.resize(3);
         ArrFloat buffer_impossible_copy;
-        EXPECT_EQ(buffer_impossible_copy.from_bytes(buffer_byte), false);
+        EXPECT_THROW(buffer_impossible_copy.from_bytes(buffer_byte), std::invalid_argument);
 
         ArrInt *buffer_clone = buffer.clone();
         EXPECT_EQ(buffer_clone->at(0), 13);

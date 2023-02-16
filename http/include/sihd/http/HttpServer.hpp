@@ -3,8 +3,6 @@
 
 # include <set>
 
-# include <libwebsockets.h>
-
 # include <sihd/util/Node.hpp>
 # include <sihd/util/IStoppableRunnable.hpp>
 # include <sihd/util/Configurable.hpp>
@@ -18,6 +16,13 @@
 # include <sihd/http/HttpRequest.hpp>
 # include <sihd/http/HttpResponse.hpp>
 # include <sihd/http/HttpHeader.hpp>
+
+// forward declarations of libwebsockets to prevent header leaking
+struct lws;
+struct lws_protocols;
+typedef int lws_callback_function(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
+struct lws_http_mount;
+struct lws_context;
 
 namespace sihd::http
 {
@@ -157,7 +162,7 @@ class HttpServer:   public sihd::util::Node,
             HttpServer *server;
         };
 
-        char _ip_buf[INET6_ADDRSTRLEN];
+        std::string _ip_buf;
         bool _running;
         int _port;
         std::string _root_dir;

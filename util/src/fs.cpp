@@ -211,7 +211,17 @@ bool    is_executable(std::string_view path)
 
 std::string tmp_path()
 {
+  #if defined(__SIHD_WINDOWS__)
     return std::filesystem::temp_directory_path().string();
+#else
+    const char *tmp_path;
+
+    (tmp_path = getenv("TMPDIR"))
+    || (tmp_path = getenv("TMP"))
+    || (tmp_path = getenv("TEMP"))
+    || (tmp_path = getenv("TMPDIR"));
+    return tmp_path != nullptr ? tmp_path : "/tmp";
+#endif
 }
 
 // directories

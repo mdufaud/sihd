@@ -1,3 +1,5 @@
+# include <libwebsockets.h>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/fs.hpp>
@@ -31,7 +33,7 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
     _lws_mount_ptr(nullptr), _lws_context_ptr(nullptr), _lws_protocols_ptr(nullptr),
     _polling_scheduler(this)
 {
-    _ip_buf[0] = 0;
+    _ip_buf.resize(INET6_ADDRSTRLEN);
     _worker.set_runnable(&_polling_scheduler);
     _worker.set_frequency(30);
 
@@ -630,7 +632,7 @@ int     HttpServer::_on_websocket_close(IWebsocketHandler *handler, WebsocketSes
 
 const char *HttpServer::_get_client_ip(struct lws *wsi)
 {
-    return lws_get_peer_simple(wsi, _ip_buf, INET6_ADDRSTRLEN);
+    return lws_get_peer_simple(wsi, _ip_buf.data(), INET6_ADDRSTRLEN);
 }
 
 std::vector<std::string>   HttpServer::_get_uri_args(struct lws *wsi)

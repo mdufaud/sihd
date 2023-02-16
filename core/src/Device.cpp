@@ -1,3 +1,5 @@
+#include <sihd/util/Logger.hpp>
+
 #include <sihd/core/Device.hpp>
 
 namespace sihd::core

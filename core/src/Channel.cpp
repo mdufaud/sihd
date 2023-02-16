@@ -135,4 +135,11 @@ void    Channel::notify()
     _notifying = false;
 }
 
+std::string Channel::description() const
+{
+    if (_array_ptr == nullptr)
+        return "empty";
+    return fmt::format("{}[{}]", _array_ptr->data_type_str(), _array_ptr->size());
+};
+
 }

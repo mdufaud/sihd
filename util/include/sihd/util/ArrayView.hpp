@@ -2,13 +2,10 @@
 # define __SIHD_UTIL_ARRAYVIEW_HPP__
 
 # include <sihd/util/IArrayView.hpp>
-# include <sihd/util/Logger.hpp>
 # include <sihd/util/Array.hpp>
 
 namespace sihd::util
 {
-
-SIHD_LOGGER;
 
 template <typename T>
 class ArrayView: public IArrayView

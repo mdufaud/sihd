@@ -1,5 +1,9 @@
 #include <unistd.h> // usleep
 
+#include <csignal>
+
+#include <libwebsockets.h>
+
 #include <sihd/util/platform.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Logger.hpp>
@@ -148,7 +152,6 @@ static void http_test()
 
 int main()
 {
-    sihd::util::str::hexdump_cols = 20;
     sihd::util::LoggerManager::basic();
     demo::http_test();
     sihd::util::LoggerManager::clear_loggers();

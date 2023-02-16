@@ -1,23 +1,21 @@
 #ifndef __SIHD_UTIL_ARRAY_HPP__
 # define __SIHD_UTIL_ARRAY_HPP__
 
-# include <string.h>
 # include <strings.h>
 
+# include <cstring>
 # include <utility>
 # include <cstdint>
 # include <stdexcept>
 # include <algorithm>
 
+# include <sihd/util/str.hpp>
 # include <sihd/util/IArray.hpp>
 # include <sihd/util/ICloneable.hpp>
-# include <sihd/util/Logger.hpp>
 # include <sihd/util/Splitter.hpp>
 
 namespace sihd::util
 {
-
-SIHD_LOGGER;
 
 template <typename T>
 class Array: public IArray, public ICloneable<Array<T>>
@@ -252,11 +250,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         bool from_bytes(const void *buf, size_t byte_size)
         {
             if (byte_size % sizeof(T) != 0)
-            {
-                SIHD_LOG_DEBUG("Array::byte_reserve cannot reserve - {} not divisible by data size {}",
-                                byte_size, sizeof(T));
-                return false;
-            }
+                throw std::invalid_argument(str::format("Array::from_bytes buffer - %lu not divisible by data size %lu", byte_size, sizeof(T)));
             return this->from((const T *)buf, byte_size / sizeof(T));
         }
 
@@ -267,11 +261,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         bool byte_resize(size_t byte_size)
         {
             if (byte_size % this->data_size() != 0)
-            {
-                SIHD_LOG_DEBUG("Array::byte_resize cannot resize - {} not divisible by data size {}",
-                                byte_size, this->data_size());
-                return false;
-            }
+                throw std::invalid_argument(str::format("Array::byte_resize cannot resize - %lu not divisible by data size %lu", byte_size, sizeof(T)));
             return this->resize(byte_size / this->data_size());
         }
 
@@ -292,11 +282,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         bool byte_reserve(size_t byte_size)
         {
             if (byte_size % this->data_size() != 0)
-            {
-                SIHD_LOG_DEBUG("Array::byte_reserve cannot reserve - {} not divisible by data size {}",
-                                byte_size, this->data_size());
-                return false;
-            }
+                throw std::invalid_argument(str::format("Array::byte_reserve cannot reserve - %lu not divisible by data size %lu", byte_size, sizeof(T)));
             return this->reserve(byte_size / this->data_size());
         }
 
@@ -318,17 +304,9 @@ class Array: public IArray, public ICloneable<Array<T>>
         bool assign_bytes(void *buf, size_t byte_size, size_t byte_capacity)
         {
             if (byte_size % this->data_size() != 0)
-            {
-                SIHD_LOG_DEBUG("Array::assign_bytes cannot assign buffer - size {} not divisible by {}",
-                                byte_size, this->data_size());
-                return false;
-            }
+                throw std::invalid_argument(str::format("Array::assign_bytes - size %lu not divisible by data size %lu", byte_size, sizeof(T)));
             if (byte_capacity % this->data_size() != 0)
-            {
-                SIHD_LOG_DEBUG("Array::assign_bytes cannot assign buffer - capacity {} not divisible by {}",
-                                byte_capacity, this->data_size());
-                return false;
-            }
+                throw std::invalid_argument(str::format("Array::assign_bytes - capacity %lu not divisible by data size %lu", byte_capacity, sizeof(T)));
             return this->assign((T *)buf, byte_size / this->data_size(), byte_capacity / this->data_size());
         }
 
@@ -1266,20 +1244,12 @@ class ArrayUtil
                                         size_t starting_offset = 0)
         {
             if (starting_offset > distributing_array.byte_size())
-            {
-                SIHD_LOG_DEBUG("ArrayUtil: starting offset is beyond distributing array size ({} > {})",
-                            starting_offset, distributing_array.byte_size());
-                return false;
-            }
+                throw std::invalid_argument(str::format("ArrayUtil: starting offset is beyond distributing array size (%lu > %lu)", starting_offset, distributing_array.byte_size()));
             size_t total = 0;
             for (const auto & pair: assigned_arrays)
                 total += pair.second * pair.first->data_size();
             if ((total + starting_offset) > distributing_array.byte_size())
-            {
-                SIHD_LOG_DEBUG("ArrayUtil: total distribution exceed array size ({} > {})",
-                            total + starting_offset, distributing_array.byte_size());
-                return false;
-            }
+                throw std::invalid_argument(str::format("ArrayUtil: total distribution exceed array size (%lu > %lu)", total + starting_offset, distributing_array.byte_size()));
             size_t distributed_byte_size;
             size_t offset_idx = starting_offset;
             for (const auto & pair: assigned_arrays)
@@ -1358,7 +1328,7 @@ class ArrayUtil
             if (ArrayUtil::read_array_into<T>(arr, idx, ret) == false)
             {
                 throw std::invalid_argument(
-                    fmt::format("ArrayUtil::read_array cannot copy data from idx {} into type '{}' (array type: '{}')",
+                    str::format("ArrayUtil::read_array cannot copy data from idx %lu into type '%s' (array type: '%s')",
                                 idx,
                                 Types::str<T>(),
                                 arr.data_type_str())

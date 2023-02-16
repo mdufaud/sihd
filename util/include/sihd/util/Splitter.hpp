@@ -1,7 +1,9 @@
 #ifndef __SIHD_UTIL_SPLITTER_HPP__
 # define __SIHD_UTIL_SPLITTER_HPP__
 
-#include <sihd/util/str.hpp>
+# include <string>
+# include <string_view>
+# include <vector>
 
 namespace sihd::util
 {

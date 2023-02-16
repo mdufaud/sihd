@@ -24,6 +24,18 @@
 namespace sihd::net
 {
 
+namespace
+{
+
+ssize_t _adapt_array_size(sihd::util::IArray & arr, ssize_t sent)
+{
+    if (sent >= 0 && (size_t)sent <= arr.byte_capacity() && (size_t)sent != arr.byte_size())
+       arr.byte_resize((size_t)sent);
+    return sent;
+}
+
+}
+
 SIHD_LOGGER;
 
 Socket::Socket()
@@ -212,6 +224,17 @@ std::optional<IpAddr>   Socket::socket_ip(int socket, bool ipv6)
     return std::nullopt;
 }
 
+std::optional<IpAddr>   Socket::peeraddr(bool ipv6) const
+{
+    return Socket::socket_ip(_socket, ipv6);
+}
+
+int     Socket::local_port() const
+{
+    auto opt_ip = this->peeraddr(true);
+    return opt_ip ? opt_ip.value().port() : -1;
+}
+
 /* ************************************************************************* */
 /* Socket open/close */
 /* ************************************************************************* */
@@ -220,6 +243,16 @@ bool    Socket::get_infos()
 {
     return _socket >= 0 && Socket::get_socket_infos(_socket, &_domain, &_type, &_protocol);
 }
+
+bool    Socket::set_tcp_nodelay(bool active) const { return Socket::set_socket_tcp_nodelay(_socket, active); }
+bool    Socket::set_blocking(bool active) const { return Socket::set_socket_blocking(_socket, active); }
+bool    Socket::set_reuseaddr(bool active) const { return Socket::set_socket_reuseaddr(_socket, active); }
+bool    Socket::set_broadcast(bool active) const { return Socket::set_socket_broadcast(_socket, active); }
+bool    Socket::bind_to_device(std::string_view name) const { return Socket::bind_socket_to_device(_socket, name); }
+bool    Socket::is_tcp_nodelay() const { return Socket::is_socket_tcp_nodelay(_socket); }
+bool    Socket::is_blocking() const { return Socket::is_socket_blocking(_socket); }
+bool    Socket::is_broadcast() const { return Socket::is_socket_broadcast(_socket); }
+bool    Socket::set_ttl(int ttl) const { return Socket::set_socket_ttl(_socket, ttl, this->is_ipv6()); }
 
 bool    Socket::open(std::string_view domain, std::string_view type, std::string_view protocol)
 {
@@ -377,6 +410,11 @@ ssize_t     Socket::receive(void *data, size_t size)
     return rcv;
 }
 
+ssize_t Socket::receive(sihd::util::IArray & arr)
+{
+    return _adapt_array_size(arr, this->receive(arr.buf(), arr.byte_capacity()));
+}
+
 ssize_t     Socket::send_to(const sockaddr *addr, sihd_socklen_t addr_len, sihd::util::ArrViewChar view)
 {
     if (this->is_open() == false)
@@ -418,6 +456,26 @@ ssize_t     Socket::receive_from(sockaddr *addr, sihd_socklen_t *addr_len, void 
     if (rcv < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
         SIHD_LOG(error, "Socket receive_from error: {}", strerror(errno));
     return rcv;
+}
+
+ssize_t     Socket::receive_from(sockaddr *addr, sihd_socklen_t *addr_len, sihd::util::IArray & arr)
+{
+    return _adapt_array_size(arr, this->receive_from(addr, addr_len, arr.buf(), arr.byte_capacity()));
+}
+
+ssize_t     Socket::receive_from(IpAddr & addr, sihd::util::IArray & arr)
+{
+    return _adapt_array_size(arr, this->receive_from(addr, arr.buf(), arr.byte_capacity()));
+}
+
+ssize_t     Socket::receive_from_unix(std::string & path, sihd::util::IArray & arr)
+{
+    return _adapt_array_size(arr, this->receive_from_unix(path, arr.buf(), arr.byte_capacity()));
+}
+
+bool    Socket::is_ipv6() const
+{
+    return _domain == AF_INET6;
 }
 
 /* ************************************************************************* */
@@ -506,6 +564,11 @@ int     Socket::accept(IpAddr & ipaddr)
     if (sock >= 0)
         ipaddr.from(*addr, len);
     return sock;
+}
+
+int     Socket::accept()
+{
+    return this->accept(nullptr, nullptr);
 }
 
 /* ************************************************************************* */
@@ -642,16 +705,5 @@ bool    Socket::set_socket_blocking(int socket, bool active)
 }
 
 #endif
-
-/* ************************************************************************* */
-/* Socket private utilities */
-/* ************************************************************************* */
-
-ssize_t     Socket::_adapt_array_size(sihd::util::IArray & arr, ssize_t sent)
-{
-    if (sent >= 0 && (size_t)sent <= arr.byte_capacity() && (size_t)sent != arr.byte_size())
-       arr.byte_resize((size_t)sent);
-    return sent;
-}
 
 }

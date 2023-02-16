@@ -117,13 +117,13 @@ class Timestamp
 
         bool is_leap_year() const;
 
-        operator time_t() const { return _nano; }
-        operator std::chrono::nanoseconds() const { return std::chrono::nanoseconds(_nano); }
-        operator std::chrono::microseconds() const { return time::to_duration<std::micro>(_nano); }
-        operator std::chrono::milliseconds() const { return time::to_duration<std::milli>(_nano); }
-        operator std::chrono::seconds() const { return time::to_duration<std::ratio<1>>(_nano); }
-        operator std::chrono::minutes() const { return time::to_duration<std::ratio<60>>(_nano); }
-        operator std::chrono::hours() const { return time::to_duration<std::ratio<3600>>(_nano); }
+        operator time_t() const;
+        operator std::chrono::nanoseconds() const;
+        operator std::chrono::microseconds() const;
+        operator std::chrono::milliseconds() const;
+        operator std::chrono::seconds() const;
+        operator std::chrono::minutes() const;
+        operator std::chrono::hours() const;
 
         // this >= from && this <= (from + offset)
         bool in_interval(Timestamp from, Timestamp offset) const;
@@ -134,13 +134,13 @@ class Timestamp
             return time::to_duration<T>(_nano);
         }
 
-        time_t nanoseconds() const { return _nano; }
-        time_t microseconds() const { return time::to_microseconds(_nano); }
-        time_t milliseconds() const { return time::to_milliseconds(_nano); }
-        time_t seconds() const { return time::to_seconds(_nano); }
-        time_t minutes() const { return time::to_minutes(_nano); }
-        time_t hours() const { return time::to_hours(_nano); }
-        time_t days() const { return time::to_days(_nano); }
+        time_t nanoseconds() const;
+        time_t microseconds() const;
+        time_t milliseconds() const;
+        time_t seconds() const;
+        time_t minutes() const;
+        time_t hours() const;
+        time_t days() const;
 
         std::string timeoffset_str(bool total_parenthesis = false, bool nano_resolution = false) const;
         std::string localtimeoffset_str(bool total_parenthesis = false, bool nano_resolution = false) const;

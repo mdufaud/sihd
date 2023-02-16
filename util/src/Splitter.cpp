@@ -1,12 +1,12 @@
-#include <sihd/util/Splitter.hpp>
-#include <sihd/util/Logger.hpp>
+#include <strings.h>
 
-#include <string.h>
+#include <cstring>
+
+#include <sihd/util/Splitter.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::util
 {
-
-SIHD_LOGGER;
 
 Splitter::Splitter(): _empty_delimitations(false), _compare_method(nullptr)
 {

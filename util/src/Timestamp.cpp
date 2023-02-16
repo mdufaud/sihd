@@ -161,4 +161,76 @@ bool    Timestamp::is_leap_year() const
     return time::is_leap_year(c.year);
 }
 
+Timestamp::operator time_t() const
+{
+    return _nano;
+}
+
+Timestamp::operator std::chrono::nanoseconds() const
+{
+    return std::chrono::nanoseconds(_nano);
+}
+
+Timestamp::operator std::chrono::microseconds() const
+{
+    return time::to_duration<std::micro>(_nano);
+}
+
+Timestamp::operator std::chrono::milliseconds() const
+{
+    return time::to_duration<std::milli>(_nano);
+}
+
+Timestamp::operator std::chrono::seconds() const
+{
+    return time::to_duration<std::ratio<1>>(_nano);
+}
+
+Timestamp::operator std::chrono::minutes() const
+{
+    return time::to_duration<std::ratio<60>>(_nano);
+}
+
+Timestamp::operator std::chrono::hours() const
+{
+    return time::to_duration<std::ratio<3600>>(_nano);
+}
+
+
+time_t  Timestamp::nanoseconds() const
+{
+    return _nano;
+}
+
+time_t  Timestamp::microseconds() const
+{
+    return time::to_microseconds(_nano);
+}
+
+time_t  Timestamp::milliseconds() const
+{
+    return time::to_milliseconds(_nano);
+}
+
+time_t  Timestamp::seconds() const
+{
+    return time::to_seconds(_nano);
+}
+
+time_t  Timestamp::minutes() const
+{
+    return time::to_minutes(_nano);
+}
+
+time_t  Timestamp::hours() const
+{
+    return time::to_hours(_nano);
+}
+
+time_t  Timestamp::days() const
+{
+    return time::to_days(_nano);
+}
+
+
 }

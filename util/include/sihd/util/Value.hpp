@@ -1,38 +1,26 @@
 #ifndef __SIHD_UTIL_VALUE_HPP__
 # define __SIHD_UTIL_VALUE_HPP__
 
+# include <limits>
+# include <cstring>
+
 # include <sihd/util/Types.hpp>
 # include <sihd/util/str.hpp>
-# include <sihd/util/Logger.hpp>
-# include <string.h>
-# include <limits>
 
 namespace sihd::util
 {
 
-SIHD_LOGGER;
-
 class Value
 {
     public:
-        Value(): type(TYPE_NONE), data(0) {}
+        Value();
 
-        Value(bool val) { this->set<bool>(val); }
-        Value(char val) { this->set<char>(val); }
-        Value(int8_t val) { this->set<int8_t>(val); }
-        Value(uint8_t val) { this->set<uint8_t>(val); }
-        Value(int16_t val) { this->set<int16_t>(val); }
-        Value(uint16_t val) { this->set<uint16_t>(val); }
-        Value(int32_t val) { this->set<int32_t>(val); }
-        Value(uint32_t val) { this->set<uint32_t>(val); }
-        Value(int64_t val) { this->set<int64_t>(val); }
-        Value(uint64_t val) { this->set<uint64_t>(val); }
-        Value(float val) { this->set<float>(val); }
-        Value(double val) { this->set<double>(val); }
+        template <typename T>
+        Value(T val) { this->set<T>(val); }
 
-        Value(const uint8_t *buf, Type type) { this->set(buf, type); }
+        Value(const uint8_t *buf, Type type);
 
-        virtual ~Value() {}
+        ~Value() = default;
 
         template <typename T>
         static Value create(const T & val)
@@ -42,13 +30,9 @@ class Value
             return ret;
         }
 
-        inline bool empty() const { return this->type == TYPE_NONE; }
+        bool empty() const;
 
-        void clear()
-        {
-            this->type = TYPE_NONE;
-            this->data = 0;
-        }
+        void clear();
 
         template <typename T>
         void set(T val)
@@ -59,97 +43,25 @@ class Value
             memcpy(&this->data, &val, sizeof(T));
         }
 
-        void set(const uint8_t *buf, Type type)
-        {
-            this->type = type;
-            this->data = 0;
-            memcpy(&this->data, buf, Types::type_size(type));
-        }
+        void set(const uint8_t *buf, Type type);
 
-        bool from_bool_string(const std::string & str)
-        {
-            bool val;
-            bool ret = str::convert_from_string<bool>(str, val);
-            if (ret)
-                this->set<bool>(val);
-            return ret;
-        }
+        bool from_bool_string(const std::string & str);
 
-        bool from_char_string(const std::string & str)
-        {
-            char val;
-            bool ret = str::convert_from_string<char>(str, val);
-            if (ret)
-                this->set<char>(val);
-            return ret;
-        }
+        bool from_char_string(const std::string & str);
 
-        bool from_int_string(const std::string & str)
-        {
-            bool ret = false;
-            if (str::starts_with(str, "0b"))
-                ret = str::convert_from_string<int64_t>(str.c_str() + 2, this->data, 2);
-            else
-                ret = str::convert_from_string<int64_t>(str, this->data);
-            if (ret)
-                this->type = TYPE_LONG;
-            return ret;
-        }
+        bool from_int_string(const std::string & str);
 
-        bool from_float_string(const std::string & str)
-        {
-            if (str.find('.') == std::string::npos)
-                return false;
-            bool ret = false;
-            if (str::ends_with(str, "f"))
-            {
-                float f;
-                ret = str::convert_from_string<float>(str, f);
-                if (ret)
-                    this->set<float>(f);
-            }
-            else
-            {
-                double dbl;
-                ret = str::convert_from_string<double>(str, dbl);
-                if (ret)
-                    this->set<double>(dbl);
-            }
-            return ret;
-        }
+        bool from_float_string(const std::string & str);
 
-        bool from_any_string(const std::string & str)
-        {
-            return this->from_float_string(str)
-                    || this->from_int_string(str)
-                    || this->from_bool_string(str)
-                    || this->from_char_string(str);
-        }
+        bool from_any_string(const std::string & str);
 
-        std::string str() const
-        {
-            if (this->type == TYPE_FLOAT)
-                return std::to_string(this->to_float());
-            else if (this->type == TYPE_DOUBLE)
-                return std::to_string(this->to_double());
-            return std::to_string(this->data);
-        }
+        std::string str() const;
 
-        inline bool is_float() const { return this->type == TYPE_FLOAT || this->type == TYPE_DOUBLE; }
+        bool is_float() const;
 
-        float to_float() const
-        {
-            float ret;
-            memcpy(&ret, &this->data, sizeof(float));
-            return ret;
-        }
+        float to_float() const;
 
-        double to_double() const
-        {
-            double ret;
-            memcpy(&ret, &this->data, sizeof(double));
-            return ret;
-        }
+        double to_double() const;
 
         template <typename T>
         int compare(const T & cmp_val) const
@@ -175,89 +87,10 @@ class Value
             return this->data < casted_cmp_val ? -1 : 1;
         }
 
-        int compare_float(float cmp_val) const
-        {
-            if (this->type == TYPE_FLOAT)
-            {
-                float epsilon = std::numeric_limits<float>::epsilon();
-                float float_val = this->to_float();
-                if (std::abs(float_val - cmp_val) < epsilon)
-                    return 0;
-                return (float_val + epsilon) < cmp_val ? -1 : 1;
-            }
-            else if (this->type == TYPE_DOUBLE)
-            {
-                float epsilon = std::numeric_limits<float>::epsilon();
-                double double_val = this->to_double();
-                double double_cmp_val = (double)cmp_val;
-                if (std::abs(double_val - double_cmp_val) < epsilon)
-                    return 0;
-                return (double_val + epsilon) < double_cmp_val ? -1 : 1;
-            }
-            return this->compare<float>(cmp_val);
-        }
-
-        int compare_double(double cmp_val) const
-        {
-            if (this->type == TYPE_FLOAT)
-            {
-                float epsilon = std::numeric_limits<float>::epsilon();
-                float float_val = this->to_float();
-                double double_val = (double)float_val;
-                if (std::abs(double_val - cmp_val) < epsilon)
-                    return 0;
-                return (double_val + epsilon) < cmp_val ? -1 : 1;
-            }
-            else if (this->type == TYPE_DOUBLE)
-            {
-                double epsilon = std::numeric_limits<double>::epsilon();
-                double double_val = this->to_double();
-                if (std::abs(double_val - cmp_val) < epsilon)
-                    return 0;
-                return (double_val + epsilon) < cmp_val ? -1 : 1;
-            }
-            return this->compare<double>(cmp_val);
-        }
-
-        int compare_float_epsilon(float cmp_val, float epsilon) const
-        {
-            if (this->type == TYPE_FLOAT)
-            {
-                float float_val = this->to_float();
-                if (std::abs(float_val - cmp_val) < epsilon)
-                    return 0;
-                return (float_val + epsilon) < cmp_val ? -1 : 1;
-            }
-            else if (this->type == TYPE_DOUBLE)
-            {
-                double double_val = this->to_double();
-                double double_cmp_val = (double)cmp_val;
-                if (std::abs(double_val - double_cmp_val) < epsilon)
-                    return 0;
-                return (double_val + epsilon) < double_cmp_val ? -1 : 1;
-            }
-            return this->compare<float>(cmp_val);
-        }
-
-        int compare_double_epsilon(double cmp_val, double epsilon) const
-        {
-            if (this->type == TYPE_FLOAT)
-            {
-                float float_val = this->to_float();
-                double double_val = (double)float_val;
-                if (std::abs(double_val - cmp_val) < epsilon)
-                    return 0;
-                return (double_val + epsilon) < cmp_val ? -1 : 1;
-            }
-            else if (this->type == TYPE_DOUBLE)
-            {
-                double double_val = this->to_double();
-                if (std::abs(double_val - cmp_val) < epsilon)
-                    return 0;
-                return (double_val + epsilon) < cmp_val ? -1 : 1;
-            }
-            return this->compare<double>(cmp_val);
-        }
+        int compare_float(float cmp_val) const;
+        int compare_double(double cmp_val) const;
+        int compare_float_epsilon(float cmp_val, float epsilon) const;
+        int compare_double_epsilon(double cmp_val, double epsilon) const;
 
         template <typename T>
         inline bool operator==(const T & val) { return this->compare<T>(val) == 0; }

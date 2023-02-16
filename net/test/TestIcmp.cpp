@@ -9,6 +9,7 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/ObserverWaiter.hpp>
+#include <sihd/util/ArrayView.hpp>
 
 #include <sihd/net/IcmpSender.hpp>
 

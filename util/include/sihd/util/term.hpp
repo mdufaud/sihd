@@ -4,7 +4,7 @@
 # include <stdio.h>
 # include <unistd.h>
 
-# include <sihd/util/str.hpp>
+# include <sihd/util/format.hpp>
 
 # define SIHD_TERM_ANSI_UNICODE_ESCAPE "\u001b"
 # define SIHD_TERM_ANSI_HEXA_ESCAPE "\x1B"
@@ -92,7 +92,7 @@ bool is_interactive();
 template <typename ...Args>
 std::string fmt(std::string_view str, Args&&... args)
 {
-    return fmt::format("{}{}{}", str::format_join("", std::forward<Args>(args)...), str, attr::ENDC);
+    return fmt::format("{}{}{}", format::join("", std::forward<Args>(args)...), str, attr::ENDC);
 }
 
 std::string underline(std::string_view str);

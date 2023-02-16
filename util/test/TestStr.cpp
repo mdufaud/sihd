@@ -1,12 +1,15 @@
+#include <climits>
+#include <cerrno>
+
 #include <gtest/gtest.h>
+
 #include <sihd/util/str.hpp>
+#include <sihd/util/format.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/time.hpp>
 
-#include <climits>
 
-#include <errno.h>
 
 namespace test
 {
@@ -200,12 +203,12 @@ namespace test
         EXPECT_EQ(str::bytes_str((1024 * 1024 * 1024) + (1024 * 1024 * 1023)), "1.9T");
     }
 
-    TEST_F(TestStr, test_str_format_join)
+    TEST_F(TestStr, test_format_join)
     {
-        EXPECT_EQ(str::format_join(","), "");
-        EXPECT_EQ(str::format_join(",", 1), "1");
-        EXPECT_EQ(str::format_join(",", 1, 2), "1,2");
-        EXPECT_EQ(str::format_join(" - ", 1, "abc", 3.14), "1 - abc - 3.14");
+        EXPECT_EQ(format::join(","), "");
+        EXPECT_EQ(format::join(",", 1), "1");
+        EXPECT_EQ(format::join(",", 1, 2), "1,2");
+        EXPECT_EQ(format::join(" - ", 1, "abc", 3.14), "1 - abc - 3.14");
     }
 
     TEST_F(TestStr, test_str_time2str)

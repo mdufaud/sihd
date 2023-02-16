@@ -1,8 +1,11 @@
 #include <sihd/util/MessageField.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::util
 {
+
+SIHD_LOGGER;
 
 SIHD_UTIL_REGISTER_FACTORY(MessageField);
 
