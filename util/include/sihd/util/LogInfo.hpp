@@ -3,6 +3,7 @@
 
 # include <ctime>
 
+# include <string>
 # include <string_view>
 
 # include <sihd/util/thread.hpp>

@@ -4,6 +4,8 @@
 
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/fs.hpp>
+#include <sihd/util/Logger.hpp>
+
 #include <sihd/net/Pinger.hpp>
 
 using namespace sihd::util;

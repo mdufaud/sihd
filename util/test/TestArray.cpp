@@ -169,12 +169,12 @@ namespace test
         i.resize(4);
         std::generate(i.begin(), i.end(), [n = 1] () mutable { return n++; });
         // {1, 2, 3, 4}
-        EXPECT_EQ(i.find(1), 0u);
-        EXPECT_EQ(i.find(2), 1u);
-        EXPECT_EQ(i.find(4), 3u);
-        EXPECT_EQ(i.rfind(1), 0u);
-        EXPECT_EQ(i.rfind(2), 1u);
-        EXPECT_EQ(i.rfind(4), 3u);
+        EXPECT_EQ(i.find(1).idx(), 0u);
+        EXPECT_EQ(i.find(2).idx(), 1u);
+        EXPECT_EQ(i.find(4).idx(), 3u);
+        EXPECT_EQ(i.rfind(1).idx(), 0u);
+        EXPECT_EQ(i.rfind(2).idx(), 1u);
+        EXPECT_EQ(i.rfind(4).idx(), 3u);
     }
 
     TEST_F(TestArray, test_array_iterator_algo)

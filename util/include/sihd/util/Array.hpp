@@ -210,7 +210,6 @@ class Array: public IArray, public ICloneable<Array<T>>
             if constexpr (std::is_fundamental_v<T>)
             {
                 // can be optimized with string views
-                bool ret = true;
                 Splitter splitter(delimiters);
                 const std::vector<std::string> splits = splitter.split(data);
                 this->reserve(splits.size());
@@ -218,23 +217,28 @@ class Array: public IArray, public ICloneable<Array<T>>
                 for (const std::string & split: splits)
                 {
                     T value;
-                    if (str::convert_from_string<T>(split, value))
-                        this->push_back(value);
-                    else
-                    {
-                        ret = false;
-                        break ;
-                    }
+                    if (str::convert_from_string<T>(split, value) == false)
+                        return false;
+                    this->push_back(value);
                 }
-                return ret;
             }
             else
             {
-                // TODO
-                (void)data;
-                (void)delimiters;
+                Splitter splitter(delimiters);
+                const std::vector<std::string> splits = splitter.split(data);
+                this->resize(0);
+                for (const std::string & split: splits)
+                {
+                    constexpr uint16_t base = 16;
+                    short value;
+                    if (str::convert_from_string<T>(split, value, base) == false)
+                        return false;
+                    // this->push_back(value);
+                    #pragma message("TODO")
+                }
                 return false;
             }
+            return true;
         }
 
         bool from_bytes(const IArrayView & arr)
@@ -1104,21 +1108,21 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* iterator operations */
         /*********************************************************************/
 
-        size_t find(const T value) const
+        auto find(const T & value) const
         {
-            return std::find(this->cbegin(), this->cend(), value).idx();
+            return std::find(this->cbegin(), this->cend(), value);
         }
 
-        size_t rfind(const T value) const
+        auto rfind(const T & value) const
         {
-            return std::find(this->crbegin(), this->crend(), value).idx();
+            return std::find(this->crbegin(), this->crend(), value);
         }
 
-    /*********************************************************************/
-    /* attributes */
-    /*********************************************************************/
+        /*********************************************************************/
+        /* attributes */
+        /*********************************************************************/
 
-    static size_t mult_resize_capacity;
+        static size_t mult_resize_capacity;
 
     protected:
         bool _internal_reserve(size_t capacity, bool clear_mem = true)
@@ -1311,6 +1315,7 @@ class ArrayUtil
         template <typename T>
         static bool read_array_into(const IArray & arr, size_t idx, T & val)
         {
+            static_assert(std::is_trivially_copyable_v<T>);
             return arr.copy_to_bytes(&val, sizeof(T), arr.byte_index(idx));
         }
 
@@ -1346,6 +1351,7 @@ class ArrayUtil
         template <typename T>
         static bool write_array(IArray & arr, size_t idx, T value)
         {
+            static_assert(std::is_trivially_copyable_v<T>);
             return arr.copy_from_bytes(&value, sizeof(T), arr.byte_index(idx));
         }
 

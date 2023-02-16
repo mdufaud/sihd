@@ -1,6 +1,7 @@
-#include <sihd/util/LogInfo.hpp>
 #include <array>
 #include <map>
+
+#include <sihd/util/LogInfo.hpp>
 
 namespace sihd::util
 {
