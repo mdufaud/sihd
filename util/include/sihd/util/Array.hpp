@@ -245,16 +245,19 @@ class Array: public IArray, public ICloneable<Array<T>>
             return true;
         }
 
+        // throws std::invalid_argument if byte size is not aligned with type size
         bool from_bytes(const IArrayView & arr)
         {
             return this->from_bytes(arr.buf(), arr.byte_size());
         }
 
+        // throws std::invalid_argument if byte size is not aligned with type size
         bool from_bytes(const IArray & arr)
         {
             return this->from_bytes(arr.buf(), arr.byte_size());
         }
 
+        // throws std::invalid_argument if byte size is not aligned with type size
         bool from_bytes(const void *buf, size_t byte_size)
         {
             if (byte_size % sizeof(T) != 0)
@@ -266,6 +269,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* resize */
         /*********************************************************************/
 
+        // throws std::invalid_argument if byte size is not aligned with type size
         bool byte_resize(size_t byte_size)
         {
             if (byte_size % this->data_size() != 0)
@@ -287,6 +291,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* reserve */
         /*********************************************************************/
 
+        // throws std::invalid_argument if byte size is not aligned with type size
         bool byte_reserve(size_t byte_size)
         {
             if (byte_size % this->data_size() != 0)
@@ -303,12 +308,14 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* assign */
         /*********************************************************************/
 
+        // throws std::invalid_argument if byte size is not aligned with type size
         bool assign_bytes(void *buf, size_t size)
         {
             return this->assign_bytes(buf, size, size);
         }
 
         // delete internal buffer if exists then sets it to bytes buffer buf - does not take ownership
+        // throws std::invalid_argument if byte size or capacity is not aligned with type size
         bool assign_bytes(void *buf, size_t byte_size, size_t byte_capacity)
         {
             if (byte_size % this->data_size() != 0)
@@ -827,7 +834,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         }
 
         // set value at idx - throws out_of_range
-        void set(size_t idx, T value)
+        void set(size_t idx, const T & value)
         {
             if (idx >= _size)
                 throw std::out_of_range("Array::set: index exceeds size");
@@ -1240,6 +1247,8 @@ class ArrayUtil
          *  float_array (4 bytes): size 2 [0x01 ... 0x09]
          *  short_array (2 bytes): size 1 [0x09 ... 0x0b]
          *
+         * throws std::invalid_argument if byte size is not aligned with the data size
+         * 
          * @param distributing_array the array containing the buffer to distribute to other arrays
          * @param assigned_arrays a vector of array-size pairs that will hold sequentially distributed pointer
          * @param starting_offset the starting byte offset of distributing_array starting byte distribution
@@ -1329,6 +1338,7 @@ class ArrayUtil
             return ArrayUtil::read_array_into<T>(*arr, idx, val);
         }
 
+        // throws std::invalid_argument if data cannot be read
         template <typename T>
         static T read_array(const IArray & arr, size_t idx)
         {

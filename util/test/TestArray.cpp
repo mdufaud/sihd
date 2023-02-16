@@ -684,7 +684,7 @@ namespace test
         EXPECT_EQ(arr.size(), 2UL);
 
         EXPECT_EQ(arr.str(' '), "2a 00 00 00 39 05 00 00 2a 00 00 00 39 05 00 00");
-
+        EXPECT_FALSE(arr.from_str("2a", " "));
     }
 
 }
