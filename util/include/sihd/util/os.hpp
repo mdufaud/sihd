@@ -57,7 +57,6 @@ bool is_root();
 // debuggers
 bool is_run_by_debugger();
 bool is_run_by_valgrind();
-bool is_run_with_asan();
 
 // lib
 void *load_symbol_unload_lib(const std::string & lib_name, std::string_view sym_name);
@@ -108,6 +107,12 @@ constexpr bool is_ios = false;
 constexpr bool is_emscripten = true;
 #else
 constexpr bool is_emscripten = false;
+#endif
+
+#if defined(__SANITIZE_ADDRESS__)
+constexpr bool is_run_with_asan = true;
+#else
+constexpr bool is_run_with_asan = false;
 #endif
 
 }
