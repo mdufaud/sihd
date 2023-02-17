@@ -44,7 +44,7 @@ class Socket
         // Class utilities for socket manipulation //
 
         // returns true if getpeername worked and the provided addr_len is still the same
-        static bool get_socket_peername(int socket, sockaddr *addr, sihd_socklen_t *addr_len);
+        static bool get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len);
 
         // return an IpAdress from socket using get_socket_peername; if ipv6 is true, checks for an ipv6 addr first
         static std::optional<IpAddr> socket_ip(int socket, bool ipv6 = false);
@@ -88,7 +88,7 @@ class Socket
 
         bool listen(uint16_t queue_size);
         // fill addr and addr_len based on incoming connections
-        int accept(sockaddr *addr, sihd_socklen_t *addr_len);
+        int accept(sockaddr *addr, socklen_t *addr_len);
         int accept();
         int accept(IpAddr & ipaddr);
 
@@ -100,12 +100,12 @@ class Socket
         // Operations on IP adresses //
 
         // sockaddr
-        bool bind(const sockaddr *addr, sihd_socklen_t addr_len);
-        bool connect(const sockaddr *addr, sihd_socklen_t addr_len);
-        ssize_t send_to(const sockaddr *addr, sihd_socklen_t addr_len, sihd::util::ArrViewChar view);
-        bool send_all_to(const sockaddr *addr, sihd_socklen_t addr_len, sihd::util::ArrViewChar view);
-        ssize_t receive_from(sockaddr *addr, sihd_socklen_t *addr_len, void *data, size_t size);
-        ssize_t receive_from(sockaddr *addr, sihd_socklen_t *addr_len, sihd::util::IArray & arr);
+        bool bind(const sockaddr *addr, socklen_t addr_len);
+        bool connect(const sockaddr *addr, socklen_t addr_len);
+        ssize_t send_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrViewChar view);
+        bool send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrViewChar view);
+        ssize_t receive_from(sockaddr *addr, socklen_t *addr_len, void *data, size_t size);
+        ssize_t receive_from(sockaddr *addr, socklen_t *addr_len, sihd::util::IArray & arr);
 
         /*
             sihd::net::IpAddr

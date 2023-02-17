@@ -82,7 +82,7 @@ class Poll: public IStoppableRunnable, public Observable<Poll>
         int _timeout_milliseconds;
 
         bool _running;
-        sihd_rlim_t _max_fds;
+        rlim_t _max_fds;
         std::vector<struct pollfd> _lst_fds;
         SystemClock _clock;
 

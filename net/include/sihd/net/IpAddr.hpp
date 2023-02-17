@@ -24,7 +24,7 @@ namespace sihd::net
 struct IpSockAddr
 {
     int type;
-    sihd_socklen_t addr_len;
+    socklen_t addr_len;
     sockaddr *addr;
     sockaddr_in addr_in;
     sockaddr_in6 addr_in6;
@@ -86,7 +86,7 @@ class IpAddr
         // do a DNS lookup to find every ip addr for every socket and every protocols
         static std::optional<DnsInfo> dns_lookup(std::string_view host, bool ipv6 = false);
         static std::string fetch_ip_name(std::string_view ip);
-        static std::string fetch_ip_name(sockaddr *addr, sihd_socklen_t addr_len);
+        static std::string fetch_ip_name(sockaddr *addr, socklen_t addr_len);
 
         // checks both ipv4 and ipv6
         static bool is_valid_ip(std::string_view ip);

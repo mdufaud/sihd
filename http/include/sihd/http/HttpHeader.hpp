@@ -1,6 +1,8 @@
 #ifndef __SIHD_HTTP_HTTPHEADER_HPP__
 # define __SIHD_HTTP_HTTPHEADER_HPP__
 
+# include <unordered_map>
+
 # include <sihd/util/Array.hpp>
 
 namespace sihd::http

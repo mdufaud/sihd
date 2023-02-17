@@ -1,7 +1,7 @@
 #ifndef __SIHD_UTIL_OS_HPP__
 # define __SIHD_UTIL_OS_HPP__
 
-# include <sys/types.h>
+# include <sys/types.h> // pid_t
 
 # include <string>
 # include <string_view>
@@ -13,13 +13,12 @@
 #  include <sys/socket.h> // socklen_t
 #  include <sys/resource.h> // rlim_t
 
-typedef socklen_t sihd_socklen_t;
-typedef rlim_t sihd_rlim_t;
-
 # else
 
-typedef int sihd_socklen_t;
-typedef unsigned long sihd_rlim_t;
+typedef int socklen_t;
+typedef unsigned long rlim_t;
+// missing mingw
+typedef unsigned int uid_t;
 
 # endif
 
@@ -47,10 +46,10 @@ bool ioctl(int fd, unsigned long request, void *arg_ptr = nullptr, bool logerror
 bool stat(const char *pathname, struct stat *statbuf, bool logerror = false);
 bool fstat(int fd, struct stat *statbuf, bool logerror = false);
 
-bool setsockopt(int socket, int level, int optname, const void *optval, sihd_socklen_t optlen, bool logerror = false);
-bool getsockopt(int socket, int level, int optname, void *optval, sihd_socklen_t *optlen, bool logerror = false);
+bool setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror = false);
+bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror = false);
 
-sihd_rlim_t max_fds();
+rlim_t max_fds();
 
 bool is_root();
 
