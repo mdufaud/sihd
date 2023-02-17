@@ -139,8 +139,6 @@ base_env = Environment(
     # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
     COMPILATIONDB_USE_ABSPATH = True,
-    # prevent stuff like cygwin toolchain in msys2
-    tools = ["gcc", "clang", "cc", "ar", "mingw"],
 )
 
 # Build output
@@ -185,13 +183,13 @@ compiler = builder.build_compiler
 if compiler == "clang":
     base_env.Replace(
         # compiler for c
-        CC = ccache + "clang",
+        CC = "clang",
         # compiler for c++
-        CXX = ccache + "clang++",
+        CXX = "clang++",
         # static library archiver
-        AR = ccache + "ar",
+        AR = "ar",
         # static library indexer
-        RANLIB = ccache + "ranlib",
+        RANLIB = "ranlib",
     )
     if builder.build_asan:
         base_env.Append(
@@ -205,10 +203,10 @@ if compiler == "clang":
 # MINGW build
 elif compiler == "mingw":
     base_env.Replace(
-        CC = ccache + "x86_64-w64-mingw32-gcc",
-        CXX = ccache + "x86_64-w64-mingw32-g++",
-        AR = ccache + "x86_64-w64-mingw32-ar",
-        RANLIB = ccache + "x86_64-w64-mingw32-ranlib",
+        CC = "x86_64-w64-mingw32-gcc",
+        CXX = "x86_64-w64-mingw32-g++",
+        AR = "x86_64-w64-mingw32-ar",
+        RANLIB = "x86_64-w64-mingw32-ranlib",
     )
     base_env.Replace(
         SHLIBSUFFIX = ".dll",
@@ -218,14 +216,10 @@ elif compiler == "mingw":
 # GCC build
 elif compiler == "gcc":
     base_env.Replace(
-        # compiler for c
-        CC = ccache + "gcc",
-        # compiler for c++
-        CXX = ccache + "c++",
-        # static library archiver
-        AR = ccache + "ar",
-        # static library indexer
-        RANLIB = ccache + "ranlib",
+        CC = "gcc",
+        CXX = "c++",
+        AR = "ar",
+        RANLIB = "ranlib",
     )
     if builder.build_asan:
         base_env.Append(
@@ -235,11 +229,11 @@ elif compiler == "gcc":
 # EMSCRIPTEN build
 elif compiler == "em":
     base_env.Replace(
-        CC = ccache + "emcc",
-        CXX = ccache + "em++",
-        LINK = ccache + "emcc",
-        AR = ccache + "emar",
-        RANLIB = ccache + "emranlib",
+        CC = "emcc",
+        CXX = "em++",
+        AR = "emar",
+        RANLIB = "emranlib",
+        LINK = "emcc",
     )
     emscripten_conf = os.path.join(os.getenv("HOME"), ".emscripten")
     if os.path.isfile(emscripten_conf):
@@ -247,6 +241,13 @@ elif compiler == "em":
             exec(open(emscripten_conf).read())
         except Exception as e:
             builder.warning("could not execute emscripten configuration: " + emscripten_conf)
+
+base_env.Prepend(
+    CC = ccache,
+    CXX = ccache,
+    AR = ccache,
+    RANLIB = ccache,
+)
 
 if compiler != "mingw":
     base_env.Replace(SHLIBVERSION = app.version)

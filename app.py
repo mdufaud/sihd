@@ -176,6 +176,7 @@ release_flags = ["-O3"]
 
 ## general compilation parameters
 cxx_flags = ['-std=c++17']
+
 flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
 defines = [
     "SIHD_VERSION_MAJOR=" + version.split('.')[0],
@@ -326,6 +327,7 @@ msys2_packages = {
   "gtest": __msys2_mingw + "gtest",
   "nlohmann_json": __msys2_mingw + "nlohmann-json",
   "fmt": __msys2_mingw + "fmt",
+  "cxxopts": __msys2_mingw + "cxxopts",
   "openssl": __msys2_mingw + "openssl",
   "libcurl": __msys2_mingw + "curl",
   "libwebsockets": __msys2_mingw + "libwebsockets",

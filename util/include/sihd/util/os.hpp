@@ -18,7 +18,8 @@
 typedef int socklen_t;
 typedef unsigned long rlim_t;
 // missing mingw
-typedef unsigned int uid_t;
+// int and not uint (libwebsockets)
+typedef int uid_t;
 
 # endif
 

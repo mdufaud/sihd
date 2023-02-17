@@ -85,9 +85,12 @@ static void sniffer_test(const std::string & interface_to_sniff)
 int main()
 {
     sihd::util::LoggerManager::basic();
+
     std::string interface_to_sniff = test::module::interfaces_test();
     test::module::sniffer_test(interface_to_sniff);
     if (sihd::util::os::is_windows)
         sihd::util::time::sleep(5);
+
+    sihd::util::LoggerManager::clear_loggers();
     return 0;
 }
