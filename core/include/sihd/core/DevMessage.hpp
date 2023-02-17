@@ -2,6 +2,7 @@
 # define __SIHD_CORE_DEVMESSAGE_HPP__
 
 # include <sihd/util/IMessageField.hpp>
+
 # include <sihd/core/Device.hpp>
 
 namespace sihd::core

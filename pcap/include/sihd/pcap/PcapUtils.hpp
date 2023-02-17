@@ -1,10 +1,12 @@
 #ifndef __SIHD_PCAP_PCAPUTILS_HPP__
 # define __SIHD_PCAP_PCAPUTILS_HPP__
 
-# include <sihd/util/platform.hpp>
-# include <pcap.h>
 # include <vector>
 # include <string>
+
+# include <pcap.h>
+
+# include <sihd/util/platform.hpp>
 
 namespace sihd::pcap
 {

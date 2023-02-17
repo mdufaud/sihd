@@ -1,5 +1,7 @@
-#include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/util/Logger.hpp>
+
+#include <sihd/core/Channel.hpp>
+#include <sihd/core/ChannelWaiter.hpp>
 
 namespace sihd::core
 {

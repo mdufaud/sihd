@@ -1,7 +1,11 @@
+#include <sihd/util/Logger.hpp>
+
 #include <sihd/core/AChannelContainer.hpp>
 
 namespace sihd::core
 {
+
+SIHD_LOGGER;
 
 using namespace sihd::util;
 

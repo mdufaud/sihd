@@ -16,7 +16,10 @@ class Value
         Value();
 
         template <typename T>
-        Value(T val) { this->set<T>(val); }
+        Value(T val)
+        {
+            this->set<T>(val);
+        }
 
         Value(const uint8_t *buf, Type type);
 

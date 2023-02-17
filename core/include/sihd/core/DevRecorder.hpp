@@ -1,10 +1,12 @@
 #ifndef __SIHD_CORE_DEVRECORDER_HPP__
 # define __SIHD_CORE_DEVRECORDER_HPP__
 
-# include <sihd/core/Device.hpp>
-# include <sihd/util/IHandler.hpp>
 # include <list>
 # include <set>
+
+# include <sihd/util/IHandler.hpp>
+
+# include <sihd/core/Device.hpp>
 
 namespace sihd::core
 {

@@ -4,19 +4,14 @@
 # include <mutex>
 # include <atomic>
 
-# include <sihd/util/Array.hpp>
 # include <sihd/util/ArrayView.hpp>
 # include <sihd/util/Named.hpp>
 # include <sihd/util/Observable.hpp>
-# include <sihd/util/Logger.hpp>
 # include <sihd/util/Timestamp.hpp>
 # include <sihd/util/Clocks.hpp>
 
-
 namespace sihd::core
 {
-
-SIHD_LOGGER;
 
 class Channel:  public sihd::util::Named,
                 public sihd::util::Observable<Channel>

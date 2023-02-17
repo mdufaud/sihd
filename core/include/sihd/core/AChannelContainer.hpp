@@ -5,6 +5,7 @@
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/IHandler.hpp>
 # include <sihd/util/str.hpp>
+
 # include <sihd/core/Channel.hpp>
 
 namespace sihd::core
@@ -31,7 +32,7 @@ class AChannelContainer:    public sihd::util::Node,
             {
                 array[i] = this->find_channel(args);
                 if (array[i] == nullptr)
-                    throw std::runtime_error(fmt::format("ChannelContainer: '{}' no such channel '{}'", this->full_name(), args));
+                    throw std::runtime_error(util::str::format("'%s'no such channel '%s'", this->full_name(), args));
                 ++i;
             } (), ...);
 
@@ -51,7 +52,7 @@ class AChannelContainer:    public sihd::util::Node,
             {
                 array[i] = this->get_channel(args);
                 if (array[i] == nullptr)
-                    throw std::runtime_error(fmt::format("ChannelContainer: '{}' no such channel '{}'", this->full_name(), args));
+                    throw std::runtime_error(util::str::format("'%s' no such channel '%s'", this->full_name(), args));
                 ++i;
             } (), ...);
 

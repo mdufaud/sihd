@@ -9,12 +9,7 @@ namespace sihd::util
 class TmpDir
 {
     public:
-        TmpDir()
-        {
-            _path = fs::make_tmp_directory(fs::ensure_separation(fs::tmp_path()));
-        }
-
-        TmpDir(std::string_view prefix)
+        TmpDir(std::string_view prefix = fs::ensure_separation(fs::tmp_path()))
         {
             _path = fs::make_tmp_directory(prefix);
         }

@@ -1,13 +1,16 @@
 #ifndef __SIHD_CORE_CHANNELWAITER_HPP__
 # define __SIHD_CORE_CHANNELWAITER_HPP__
 
+# include <atomic>
+
 # include <sihd/util/Waitable.hpp>
 
-# include <sihd/core/Channel.hpp>
 # include <sihd/core/ACoreObject.hpp>
 
 namespace sihd::core
 {
+
+class Channel;
 
 class ChannelWaiter: public ACoreObject
 {

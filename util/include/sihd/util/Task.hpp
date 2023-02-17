@@ -1,10 +1,11 @@
 #ifndef __SIHD_UTIL_TASK_HPP__
 # define __SIHD_UTIL_TASK_HPP__
 
-# include <sihd/util/IRunnable.hpp>
-# include <sihd/util/Timestamp.hpp>
 # include <functional>
 # include <ctime>
+
+# include <sihd/util/IRunnable.hpp>
+# include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
 {

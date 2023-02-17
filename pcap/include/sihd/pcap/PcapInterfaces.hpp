@@ -1,9 +1,10 @@
 #ifndef __SIHD_PCAP_PCAPINTERFACES_HPP__
 # define __SIHD_PCAP_PCAPINTERFACES_HPP__
 
-# include <sihd/pcap/PcapUtils.hpp>
 # include <string>
 # include <vector>
+
+# include <sihd/pcap/PcapUtils.hpp>
 
 namespace sihd::pcap
 {

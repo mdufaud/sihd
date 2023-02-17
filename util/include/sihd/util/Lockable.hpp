@@ -2,6 +2,7 @@
 # define __SIHD_UTIL_LOCKABLE_HPP__
 
 # include <mutex>
+
 # include <sihd/util/Clocks.hpp>
 
 namespace sihd::util

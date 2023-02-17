@@ -1,8 +1,7 @@
 #ifndef __SIHD_UTIL_LOADINGBAR_HPP__
 # define __SIHD_UTIL_LOADINGBAR_HPP__
 
-# include <stdio.h>
-
+# include <cstdio>
 # include <string>
 
 namespace sihd::util

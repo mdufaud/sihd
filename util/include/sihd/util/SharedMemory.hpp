@@ -1,10 +1,12 @@
 #ifndef __SIHD_UTIL_SHAREDMEMORY_HPP__
 # define __SIHD_UTIL_SHAREDMEMORY_HPP__
 
-# include <sihd/util/platform.hpp>
 # include <sys/stat.h>
+
 # include <string>
 # include <string_view>
+
+# include <sihd/util/platform.hpp>
 
 # if defined(__SIHD_EMSCRIPTEN__)
 #  define mode_t unsigned int

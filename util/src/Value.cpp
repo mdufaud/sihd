@@ -1,5 +1,4 @@
 #include <sihd/util/Value.hpp>
-#include <sihd/util/Logger.hpp>
 
 namespace sihd::util
 {

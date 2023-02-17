@@ -1,11 +1,13 @@
 #ifndef __SIHD_CORE_DEVSAMPLER_HPP__
 # define __SIHD_CORE_DEVSAMPLER_HPP__
 
-# include <sihd/core/Device.hpp>
+# include <set>
+
 # include <sihd/util/IRunnable.hpp>
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/StepWorker.hpp>
-# include <set>
+
+# include <sihd/core/Device.hpp>
 
 namespace sihd::core
 {
