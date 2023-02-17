@@ -41,7 +41,7 @@ Daemon::~Daemon()
     this->_remove_pid_file();
 }
 
-bool    Daemon::set_uid(sihd_uid_t uid)
+bool    Daemon::set_uid(uid_t uid)
 {
     _uid = uid;
     return true;

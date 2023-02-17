@@ -119,10 +119,7 @@ if verbose:
 
 base_env = Environment(
     # binaries path
-    ENV = {
-        'PATH': os.getenv("PATH"),
-        'LIBPATH': os.getenv("LIBPATH")
-    },
+    ENV = os.environ,
     # c compile flags
     CFLAGS = getattr(app, 'c_flags', []),
     # c++ compile flags
@@ -141,7 +138,9 @@ base_env = Environment(
     LIBS = global_platform_libs + global_libs,
     # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
-    COMPILATIONDB_USE_ABSPATH = True
+    COMPILATIONDB_USE_ABSPATH = True,
+    # prevent stuff like cygwin toolchain in msys2
+    tools = ["gcc", "clang", "cc", "ar", "mingw"],
 )
 
 # Build output

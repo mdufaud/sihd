@@ -1,6 +1,8 @@
 #ifndef __SIHD_UTIL_OS_HPP__
 # define __SIHD_UTIL_OS_HPP__
 
+# include <sys/types.h>
+
 # include <string>
 # include <string_view>
 
@@ -13,13 +15,11 @@
 
 typedef socklen_t sihd_socklen_t;
 typedef rlim_t sihd_rlim_t;
-typedef uid_t sihd_uid_t;
 
 # else
 
 typedef int sihd_socklen_t;
 typedef unsigned long sihd_rlim_t;
-typedef unsigned int sihd_uid_t;
 
 # endif
 

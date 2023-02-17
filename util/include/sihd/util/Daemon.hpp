@@ -19,7 +19,7 @@ class Daemon:   public sihd::util::Named,
         Daemon(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~Daemon();
 
-        bool set_uid(sihd_uid_t uid);
+        bool set_uid(uid_t uid);
         bool set_pid_file_path(std::string_view path);
         bool set_working_dir_path(std::string_view path);
 
@@ -28,7 +28,7 @@ class Daemon:   public sihd::util::Named,
         */
         bool run();
 
-        sihd_uid_t uid() const { return _uid; }
+        uid_t uid() const { return _uid; }
         const std::string & pid_file() const { return _pid_file_path; }
         const std::string & working_dir() const { return _working_dir_path; }
 
@@ -42,7 +42,7 @@ class Daemon:   public sihd::util::Named,
 
     private:
         bool _signals_handled;
-        sihd_uid_t _uid;
+        uid_t _uid;
         std::string _pid_file_path;
         std::string _working_dir_path;
         File _pid_file;
