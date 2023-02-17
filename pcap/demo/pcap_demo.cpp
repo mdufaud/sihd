@@ -54,8 +54,9 @@ static void sniffer_test(const std::string & interface_to_sniff)
     Sniffer pcap("pcap-sniffer");
     Handler<Sniffer *> obs([] (Sniffer *obj)
     {
+        constexpr size_t hexdump_cols = 20;
         SIHD_LOG(info, "Sniffed {} bytes", obj->array().size());
-        SIHD_COUT(str::hexdump_fmt(obj->array().buf(), obj->array().byte_size()));
+        SIHD_COUT(str::hexdump_fmt(obj->array().buf(), obj->array().byte_size(), hexdump_cols));
     });
     pcap.add_observer(&obs);
     pcap.open(interface_to_sniff);
@@ -83,7 +84,6 @@ static void sniffer_test(const std::string & interface_to_sniff)
 
 int main()
 {
-    sihd::util::str::hexdump_cols = 20;
     sihd::util::LoggerManager::basic();
     std::string interface_to_sniff = test::module::interfaces_test();
     test::module::sniffer_test(interface_to_sniff);

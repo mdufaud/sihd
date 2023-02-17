@@ -4,7 +4,8 @@
 # include <sihd/util/Node.hpp>
 # include <sihd/util/File.hpp>
 # include <sihd/util/IReader.hpp>
-# include <sihd/pcap/PcapUtils.hpp>
+
+# include <sihd/pcap/utils.hpp>
 
 namespace sihd::pcap
 {

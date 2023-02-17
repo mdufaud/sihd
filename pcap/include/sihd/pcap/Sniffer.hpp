@@ -7,7 +7,8 @@
 # include <sihd/util/Observable.hpp>
 # include <sihd/util/Array.hpp>
 # include <sihd/util/IReader.hpp>
-# include <sihd/pcap/PcapUtils.hpp>
+
+# include <sihd/pcap/utils.hpp>
 
 namespace sihd::pcap
 {

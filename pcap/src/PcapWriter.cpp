@@ -14,7 +14,7 @@ PcapWriter::PcapWriter(const std::string & name, sihd::util::Node *parent):
     _pcap_ptr(nullptr), _pcap_dumper_ptr(nullptr),
     _clock_ptr(&_default_clock), _linktype(0), _snaplen(65535)
 {
-    PcapUtils::init();
+    utils::init();
     this->add_conf("datalink", &PcapWriter::set_datalink);
     this->add_conf("snaplen", &PcapWriter::set_snaplen);
 }
@@ -31,7 +31,7 @@ const char  *PcapWriter::error()
 
 bool    PcapWriter::set_datalink(int dtl)
 {
-    if (PcapUtils::is_datalink(dtl) == false)
+    if (utils::is_datalink(dtl) == false)
     {
         SIHD_LOG(error, "PcapWriter: is not a datalink: {}", dtl);
         return false;

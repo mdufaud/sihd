@@ -16,7 +16,7 @@ PcapReader::PcapReader(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent), _ownership(true),
     _pcap_ptr(nullptr), _pkt_data_ptr(nullptr), _pkt_hdr_ptr(nullptr)
 {
-    PcapUtils::init();
+    utils::init();
 }
 
 PcapReader::~PcapReader()

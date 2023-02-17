@@ -691,6 +691,23 @@ ssize_t Socket::send_to_unix([[maybe_unused]] std::string_view path, [[maybe_unu
 bool Socket::send_all_to_unix([[maybe_unused]] std::string_view path, [[maybe_unused]] sihd::util::ArrViewChar view) { return false; }
 ssize_t Socket::receive_from_unix([[maybe_unused]] std::string & path, [[maybe_unused]] void *data, [[maybe_unused]] size_t size) { return -1; }
 
+bool    Socket::is_socket_blocking(int socket)
+{
+    if (socket < 0)
+        throw std::runtime_error("Socket: check blocking on a closed socket");
+    /// @note windows sockets are created in blocking mode by default
+    // currently on windows, there is no easy way to obtain the socket's current blocking mode since WSAIsBlocking was deprecated
+    unsigned long mode = 1;
+    bool set_blocking = util::os::ioctl(socket, FIONBIO, &mode);
+    if (set_blocking)
+    {
+        // put back non blocking
+        mode = 0;
+        return util::os::ioctl(socket, FIONBIO, &mode, true);
+    }
+    return set_blocking == false;
+}
+
 bool    Socket::set_socket_blocking(int socket, bool active)
 {
     if (socket < 0)

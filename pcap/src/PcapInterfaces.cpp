@@ -1,15 +1,16 @@
-#include <sihd/pcap/PcapInterfaces.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
+
+#include <sihd/pcap/PcapInterfaces.hpp>
 
 namespace sihd::pcap
 {
 
-SIHD_LOGGER;
+SIHD_NEW_LOGGER("sihd::pcap");
 
 PcapInterfaces::PcapInterfaces(): _code(0), _interfaces_ptr(nullptr)
 {
-    PcapUtils::init();
+    utils::init();
     this->find();
 }
 
@@ -100,7 +101,7 @@ bool    PcapInterfaces::error()
 
 std::string PcapInterfaces::status()
 {
-    return PcapUtils::status_str(_code);
+    return utils::status_str(_code);
 }
 
 // IFACE
@@ -161,5 +162,56 @@ std::string PcapIFace::dump() const
     ret += std::to_string(_addr.size()) + " addresses)";
     return ret;
 }
+
+std::string PcapIFace::name() const
+{
+    return _if_ptr->name;
+}
+
+std::string PcapIFace::description() const
+{
+    return _if_ptr->description;
+}
+
+bool    PcapIFace::loopback() const
+{
+    return _if_ptr->flags & PCAP_IF_LOOPBACK;
+}
+
+bool    PcapIFace::up() const
+{
+    return _if_ptr->flags & PCAP_IF_UP;
+}
+
+bool    PcapIFace::running() const
+{
+    return _if_ptr->flags & PCAP_IF_RUNNING;
+}
+
+bool    PcapIFace::wireless() const
+{
+    return _if_ptr->flags & PCAP_IF_WIRELESS;
+}
+
+bool    PcapIFace::connection_unknown() const
+{
+    return _if_ptr->flags & PCAP_IF_CONNECTION_STATUS_UNKNOWN;
+}
+
+bool    PcapIFace::connected() const
+{
+    return _if_ptr->flags & PCAP_IF_CONNECTION_STATUS_CONNECTED;
+}
+
+bool    PcapIFace::disconnected() const
+{
+    return _if_ptr->flags & PCAP_IF_CONNECTION_STATUS_DISCONNECTED;
+}
+
+bool    PcapIFace::can_be_connected() const
+{
+    return !(_if_ptr->flags & PCAP_IF_CONNECTION_STATUS_NOT_APPLICABLE);
+}
+
 
 }

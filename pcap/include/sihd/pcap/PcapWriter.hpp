@@ -6,7 +6,8 @@
 # include <sihd/util/Clocks.hpp>
 # include <sihd/util/IWriter.hpp>
 # include <sihd/util/time.hpp>
-# include <sihd/pcap/PcapUtils.hpp>
+
+# include <sihd/pcap/utils.hpp>
 
 namespace sihd::pcap
 {

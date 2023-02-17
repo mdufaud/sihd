@@ -15,7 +15,7 @@ Sniffer::Sniffer(const std::string & name, sihd::util::Node *parent):
     _max_sniff(-1), _timestamp_type(-1), _nano_precision(false),
     _pcap_ptr(nullptr), _pkt_nano_timestamp(0)
 {
-    PcapUtils::init();
+    utils::init();
     this->add_conf("max_sniff", &Sniffer::set_max_sniff);
     this->add_conf("linux_protocol", &Sniffer::set_linux_protocol);
     this->add_conf("promiscuous_mode", &Sniffer::set_promiscuous);
@@ -226,7 +226,7 @@ void    Sniffer::_log_if_error(int ret)
     }
     else if (ret != 0)
     {
-        SIHD_LOG(error, "Sniffer: {}", PcapUtils::status_str(ret));
+        SIHD_LOG(error, "Sniffer: {}", utils::status_str(ret));
     }
 }
 
@@ -321,8 +321,8 @@ int     Sniffer::datalink()
 
 bool    Sniffer::set_filter(std::string_view filter)
 {
-    // bpf_u_int32 netmask = PCAP_NETMASK_UNKNOWN
-    bpf_u_int32 netmask = 0;
+    bpf_u_int32 netmask = PCAP_NETMASK_UNKNOWN;
+    // bpf_u_int32 netmask = 0;
     bool optimize = true;
     struct bpf_program pcap_filter;
     int ret = pcap_compile(_pcap_ptr, &pcap_filter, filter.data(), (int)optimize, netmask);

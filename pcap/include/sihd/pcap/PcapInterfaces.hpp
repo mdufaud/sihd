@@ -4,7 +4,7 @@
 # include <string>
 # include <vector>
 
-# include <sihd/pcap/PcapUtils.hpp>
+# include <sihd/pcap/utils.hpp>
 
 namespace sihd::pcap
 {
@@ -16,17 +16,17 @@ class PcapIFace
         PcapIFace(pcap_if_t *ptr);
         ~PcapIFace();
 
-        std::string name() const { return _if_ptr->name; };
-        std::string description() const { return _if_ptr->description; };
+        std::string name() const;
+        std::string description() const;
 
-        bool loopback() const { return _if_ptr->flags & PCAP_IF_LOOPBACK; }
-        bool up() const { return _if_ptr->flags & PCAP_IF_UP; }
-        bool running() const { return _if_ptr->flags & PCAP_IF_RUNNING; }
-        bool wireless() const { return _if_ptr->flags & PCAP_IF_WIRELESS; }
-        bool connection_unknown() const { return _if_ptr->flags & PCAP_IF_CONNECTION_STATUS_UNKNOWN; }
-        bool connected() const { return _if_ptr->flags & PCAP_IF_CONNECTION_STATUS_CONNECTED; }
-        bool disconnected() const { return _if_ptr->flags & PCAP_IF_CONNECTION_STATUS_DISCONNECTED; }
-        bool can_be_connected() const { return !(_if_ptr->flags & PCAP_IF_CONNECTION_STATUS_NOT_APPLICABLE); }
+        bool loopback() const;
+        bool up() const;
+        bool running() const;
+        bool wireless() const;
+        bool connection_unknown() const;
+        bool connected() const;
+        bool disconnected() const;
+        bool can_be_connected() const;
 
         const std::vector<struct pcap_addr *> & addresses() const;
         std::string dump() const;
