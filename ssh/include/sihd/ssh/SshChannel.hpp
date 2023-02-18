@@ -1,10 +1,10 @@
 #ifndef __SIHD_SSH_SSHCHANNEL_HPP__
 # define __SIHD_SSH_SSHCHANNEL_HPP__
 
-# include <sihd/util/platform.hpp>
 # include <libssh/libssh.h>
-# include <string>
-# include <string_view>
+
+# include <sihd/util/ArrayView.hpp>
+# include <sihd/util/platform.hpp>
 
 namespace sihd::ssh
 {
@@ -53,6 +53,7 @@ class SshChannel
         int poll_timeout(int timeout_ms);
         int poll_timeout_stderr(int timeout_ms);
 
+#pragma message("TODO - change to IArray")
         int read(char *buffer, size_t size);
         int read_stderr(char *buffer, size_t size);
         int read_timeout(char *buffer, size_t size, int timeout_ms);
@@ -60,8 +61,8 @@ class SshChannel
         int read_nonblock(char *buffer, size_t size);
         int read_nonblock_stderr(char *buffer, size_t size);
 
-        int write(const char *buffer, size_t size);
-        int write_stderr(const char *buffer, size_t size);
+        int write(sihd::util::ArrCharView view);
+        int write_stderr(sihd::util::ArrCharView view);
 
         bool send_eof();
         bool is_eof();

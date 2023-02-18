@@ -1,7 +1,10 @@
 #include <gtest/gtest.h>
+
+#include <sihd/util/array_utils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Profiling.hpp>
+#include <sihd/util/container.hpp>
 
 namespace test
 {
@@ -104,7 +107,10 @@ namespace test
 
     TEST_F(TestArray, test_array_from_string)
     {
+        static_assert(traits::is_iterable<ArrInt>::value);
+
         ArrInt arr_int;
+
         EXPECT_TRUE(arr_int.from_str("10,20,30", ","));
         EXPECT_EQ(arr_int.size(), 3u);
         EXPECT_EQ(arr_int[0], 10);
@@ -169,12 +175,9 @@ namespace test
         i.resize(4);
         std::generate(i.begin(), i.end(), [n = 1] () mutable { return n++; });
         // {1, 2, 3, 4}
-        EXPECT_EQ(i.find(1).idx(), 0u);
-        EXPECT_EQ(i.find(2).idx(), 1u);
-        EXPECT_EQ(i.find(4).idx(), 3u);
-        EXPECT_EQ(i.rfind(1).idx(), 0u);
-        EXPECT_EQ(i.rfind(2).idx(), 1u);
-        EXPECT_EQ(i.rfind(4).idx(), 3u);
+        EXPECT_EQ(container::find(i, 1).idx(), 0u);
+        EXPECT_EQ(container::find(i, 2).idx(), 1u);
+        EXPECT_EQ(container::find(i, 4).idx(), 3u);
     }
 
     TEST_F(TestArray, test_array_iterator_algo)
@@ -626,12 +629,12 @@ namespace test
 
     TEST_F(TestArray, test_array_util_create)
     {
-        _array_ptr = ArrayUtil::create_from_type(TYPE_INT, 1);
+        _array_ptr = array_utils::create_from_type(TYPE_INT, 1);
         EXPECT_NE(_array_ptr, nullptr);
         _array_ptr->resize(1);
-        EXPECT_EQ(ArrayUtil::read_array<int>(_array_ptr, 0), 0);
-        EXPECT_TRUE(ArrayUtil::write_array<int>(_array_ptr, 0, 20));
-        EXPECT_EQ(ArrayUtil::read_array<int>(_array_ptr, 0), 20);
+        EXPECT_EQ(array_utils::read<int>(_array_ptr, 0), 0);
+        EXPECT_TRUE(array_utils::write<int>(_array_ptr, 0, 20));
+        EXPECT_EQ(array_utils::read<int>(_array_ptr, 0), 20);
     }
 
     TEST_F(TestArray, test_array_std)

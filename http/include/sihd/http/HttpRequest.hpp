@@ -30,7 +30,7 @@ class HttpRequest
         std::string type_str() const;
 
         bool has_content() const;
-        void set_content(sihd::util::ArrViewChar data);
+        void set_content(sihd::util::ArrCharView data);
 
         // check for json.is_discarded() for parsing error
         nlohmann::json content_as_json() const;

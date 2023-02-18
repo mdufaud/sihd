@@ -58,7 +58,7 @@ HttpRequest::~HttpRequest()
 {
 }
 
-void    HttpRequest::set_content(sihd::util::ArrViewChar data)
+void    HttpRequest::set_content(sihd::util::ArrCharView data)
 {
     _array.from_bytes(data);
 }

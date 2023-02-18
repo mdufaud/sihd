@@ -1,7 +1,8 @@
-#include <sihd/pcap/PcapReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/time.hpp>
+
+#include <sihd/pcap/PcapReader.hpp>
 
 namespace sihd::pcap
 {
@@ -139,12 +140,11 @@ bool    PcapReader::read_next()
     return ret >= 0;
 }
 
-bool    PcapReader::get_read_data(char **data, size_t *size) const
+bool    PcapReader::get_read_data(sihd::util::ArrCharView & view) const
 {
     if (_pkt_data_ptr == nullptr || _pkt_hdr_ptr == nullptr)
         return false;
-    *data = reinterpret_cast<char *>(_pkt_data_ptr);
-    *size = _pkt_hdr_ptr->len;
+    view = {reinterpret_cast<char *>(_pkt_data_ptr), _pkt_hdr_ptr->len};
     return true;
 }
 

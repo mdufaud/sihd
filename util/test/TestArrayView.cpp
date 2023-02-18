@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
+
+#include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/container.hpp>
 
 namespace test
 {
@@ -34,17 +37,17 @@ namespace test
                 return view.size();
             }
 
-            size_t get_byte_size(ArrViewByte view)
+            size_t get_byte_size(ArrByteView view)
             {
                 return view.size();
             }
 
-            size_t get_str_size(ArrViewChar view)
+            size_t get_str_size(ArrCharView view)
             {
                 return view.size();
             }
 
-            size_t print_array(ArrViewInt view)
+            size_t print_array(ArrIntView view)
             {
                 for (int i: view)
                 {
@@ -79,7 +82,7 @@ namespace test
 
     TEST_F(TestArrayView, test_arrayview_str)
     {
-        ArrViewChar view_str("hello world");
+        ArrCharView view_str("hello world");
 
         EXPECT_TRUE(view_str.is_equal("hello world"));
         EXPECT_EQ(view_str.str(), "hello world");
@@ -97,7 +100,7 @@ namespace test
         EXPECT_TRUE(view_str.is_equal(""));
 
         std::string str = "toto";
-        ArrViewChar view_str2(str);
+        ArrCharView view_str2(str);
         EXPECT_EQ(view_str2.size(), str.size());
         EXPECT_TRUE(view_str2.is_equal(str.data()));
         EXPECT_TRUE(view_str2.is_equal(view_str2));
@@ -108,7 +111,7 @@ namespace test
         EXPECT_TRUE(view_str2.is_equal(""));
 
         ArrChar arr_char(str);
-        ArrViewChar arr_view_char(arr_char);
+        ArrCharView arr_view_char(arr_char);
         EXPECT_TRUE(arr_char.is_equal(str));
         EXPECT_TRUE(arr_char.is_bytes_equal(arr_view_char));
         EXPECT_TRUE(arr_view_char.is_equal(arr_char));
@@ -163,9 +166,9 @@ namespace test
         EXPECT_EQ(view_int[1], 2);
         EXPECT_EQ(view_int[2], 3);
         EXPECT_EQ(view_int[3], 4);
-        EXPECT_EQ(view_int.find(1), 0u);
-        EXPECT_EQ(view_int.rfind(2), 1u);
-        EXPECT_EQ(view_int.find(3), 2u);
+        EXPECT_EQ(container::find(view_int, 1).idx(), 0u);
+        EXPECT_EQ(container::find(view_int, 2).idx(), 1u);
+        EXPECT_EQ(container::find(view_int, 3).idx(), 2u);
         EXPECT_EQ(TestArrayView::get_size<int>(vec), vec.size());
     }
 }

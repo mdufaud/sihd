@@ -256,14 +256,14 @@ int     SshChannel::read_nonblock_stderr(char *buffer, size_t size)
     return ret;
 }
 
-int     SshChannel::write(const char *buffer, size_t size)
+int     SshChannel::write(sihd::util::ArrCharView view)
 {
-    return ssh_channel_write(_ssh_channel_ptr, buffer, size);
+    return ssh_channel_write(_ssh_channel_ptr, view.data(), view.size());
 }
 
-int     SshChannel::write_stderr(const char *buffer, size_t size)
+int     SshChannel::write_stderr(sihd::util::ArrCharView view)
 {
-    return ssh_channel_write_stderr(_ssh_channel_ptr, buffer, size);
+    return ssh_channel_write_stderr(_ssh_channel_ptr, view.data(), view.size());
 }
 
 }

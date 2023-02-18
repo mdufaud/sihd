@@ -2,7 +2,6 @@
 # define __SIHD_UTIL_TIME_HPP__
 
 # include <chrono>
-# include <mutex>
 # include <ctime>
 
 # include <sihd/util/platform.hpp>

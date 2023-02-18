@@ -1,6 +1,7 @@
 #ifndef __SIHD_NET_PINGER_HPP__
 # define __SIHD_NET_PINGER_HPP__
 
+# include <memory>
 # include <atomic>
 
 # include <sihd/util/Named.hpp>
@@ -68,7 +69,7 @@ class Pinger:   public sihd::util::Named,
         sihd::util::Waitable _waitable;
         sihd::util::IClock *_clock_ptr;
 
-        sihd::util::ArrByte _data;
+        std::unique_ptr<sihd::util::ArrByte> _data_ptr;
         int _ttl;
         time_t _ping_ms_interval;
 

@@ -58,8 +58,8 @@ class TcpClient:    public INetReceiver,
 
         ssize_t receive(void *buf, size_t len);
 
-        ssize_t send(sihd::util::ArrViewChar view);
-        bool send_all(sihd::util::ArrViewChar view);
+        ssize_t send(sihd::util::ArrCharView view);
+        bool send_all(sihd::util::ArrCharView view);
 
         // to set blocking/broadcast
         const Socket & socket() const { return _socket; }

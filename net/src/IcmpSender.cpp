@@ -1,5 +1,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Array.hpp>
 
 #include <sihd/net/utils.hpp>
 #include <sihd/net/IcmpSender.hpp>
@@ -19,12 +20,15 @@ SIHD_LOGGER;
 IcmpSender::IcmpSender(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent)
 {
+    _array_rcv_ptr = std::make_unique<util::ArrByte>();
+    _array_send_ptr = std::make_unique<util::ArrByte>();
+
     _poll.set_timeout(1);
     _poll.set_limit(1);
     _poll.add_observer(this);
 
-    _array_rcv.resize(256);
-    _array_send.resize(ICMP_MINLEN);
+    _array_rcv_ptr->resize(256);
+    _array_send_ptr->resize(ICMP_MINLEN);
 
     this->add_conf("poll_timeout", &IcmpSender::set_poll_timeout);
 }
@@ -76,7 +80,7 @@ bool    IcmpSender::close()
 
 bool    IcmpSender::set_data_size(size_t byte_size)
 {
-    return _array_send.byte_resize(ICMP_MINLEN + byte_size);
+    return _array_send_ptr->byte_resize(ICMP_MINLEN + byte_size);
 }
 
 bool    IcmpSender::set_ttl(int ttl)
@@ -130,13 +134,13 @@ void    IcmpSender::set_seq(int seq)
         icmp6()->icmp6_seq = htons(seq);
 }
 
-bool    IcmpSender::set_data(sihd::util::ArrViewByte view)
+bool    IcmpSender::set_data(sihd::util::ArrByteView view)
 {
     bool ret;
     if (_socket.is_ipv6())
-        ret = _array_send.copy_from_bytes(view, offsetof(struct icmp6_hdr, icmp6_data8));
+        ret = _array_send_ptr->copy_from_bytes(view, offsetof(struct icmp6_hdr, icmp6_data8));
     else
-        ret = _array_send.copy_from_bytes(view, offsetof(struct icmp, icmp_data));
+        ret = _array_send_ptr->copy_from_bytes(view, offsetof(struct icmp, icmp_data));
     return ret;
 }
 
@@ -145,14 +149,14 @@ bool    IcmpSender::send_to(const IpAddr & addr)
     if (_socket.is_ipv6())
     {
         icmp6()->icmp6_cksum = 0;
-        icmp6()->icmp6_cksum = utils::checksum((unsigned short *)icmp6(), _array_send.size());
+        icmp6()->icmp6_cksum = utils::checksum((unsigned short *)icmp6(), _array_send_ptr->size());
     }
     else
     {
         icmp()->icmp_cksum = 0;
-        icmp()->icmp_cksum = utils::checksum((unsigned short *)icmp(), _array_send.size());
+        icmp()->icmp_cksum = utils::checksum((unsigned short *)icmp(), _array_send_ptr->size());
     }
-    return _socket.send_all_to(addr, _array_send);
+    return _socket.send_all_to(addr, *_array_send_ptr);
 }
 
 bool    IcmpSender::stop()
@@ -210,7 +214,7 @@ void    IcmpSender::handle(sihd::util::Poll *poll)
 void    IcmpSender::_read_socket()
 {
     _icmp_response.client.clear();
-    ssize_t ret = _socket.receive_from(_icmp_response.client, _array_rcv);
+    ssize_t ret = _socket.receive_from(_icmp_response.client, *_array_rcv_ptr);
     if (ret > 0)
     {
         if (_socket.is_ipv6())
@@ -227,7 +231,7 @@ void    IcmpSender::_process_ipv6()
 
 void    IcmpSender::_process_ipv4()
 {
-    struct ip *iphdr = (struct ip *)_array_rcv.buf();
+    struct ip *iphdr = (struct ip *)_array_rcv_ptr->buf();
     size_t iphdr_len = iphdr->ip_hl << 2;
     struct icmp *icmphdr = (struct icmp *)((char *)iphdr + iphdr_len);
 
@@ -250,7 +254,7 @@ void    IcmpSender::_process_ipv4()
             }
             // id is the same as original packet and it is our type
             _icmp_response.data = icmphdr->icmp_data;
-            _icmp_response.size = _array_rcv.byte_size() - ((char *)icmphdr->icmp_data - (char *)_array_rcv.buf());
+            _icmp_response.size = _array_rcv_ptr->byte_size() - ((char *)icmphdr->icmp_data - (char *)_array_rcv_ptr->buf());
             _icmp_response.type = icmphdr->icmp_type;
             _icmp_response.code = icmphdr->icmp_code;
             _icmp_response.ttl = iphdr->ip_ttl;
@@ -263,12 +267,12 @@ void    IcmpSender::_process_ipv4()
 
 struct icmp     *IcmpSender::icmp()
 {
-    return (struct icmp *)_array_send.buf();
+    return (struct icmp *)_array_send_ptr->buf();
 }
 
 struct icmp6_hdr    *IcmpSender::icmp6()
 {
-    return (struct icmp6_hdr *)_array_send.buf();
+    return (struct icmp6_hdr *)_array_send_ptr->buf();
 }
 
 }

@@ -11,8 +11,8 @@ class INetSender
     public:
         virtual ~INetSender() {};
 
-        virtual ssize_t send(sihd::util::ArrViewChar view) = 0;
-        virtual bool send_all(sihd::util::ArrViewChar view) = 0;
+        virtual ssize_t send(sihd::util::ArrCharView view) = 0;
+        virtual bool send_all(sihd::util::ArrCharView view) = 0;
         virtual bool close() = 0;
 };
 

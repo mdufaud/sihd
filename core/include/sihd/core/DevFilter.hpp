@@ -76,11 +76,6 @@ class DevFilter: public sihd::core::Device
                 // options
                 bool should_match;
                 time_t nano_delay;
-
-            private:
-                bool _parse_trigger_config(const std::map<std::string, std::string> & conf);
-                bool _parse_write_config(const std::map<std::string, std::string> & conf);
-                bool _parse_options_config(const std::map<std::string, std::string> & conf);
         };
 
         DevFilter(const std::string & name, sihd::util::Node *parent = nullptr);

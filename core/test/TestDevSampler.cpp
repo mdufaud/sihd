@@ -1,12 +1,15 @@
 #include <gtest/gtest.h>
+
+#include <sihd/core/DevSampler.hpp>
+#include <sihd/core/Core.hpp>
+#include <sihd/core/ChannelWaiter.hpp>
+
+#include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/Handler.hpp>
-#include <sihd/core/DevSampler.hpp>
-#include <sihd/core/Core.hpp>
-#include <sihd/core/ChannelWaiter.hpp>
 
 namespace test
 {

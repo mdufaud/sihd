@@ -1,9 +1,11 @@
 #ifndef __SIHD_SSH_SSHSHELL_HPP__
 # define __SIHD_SSH_SSHSHELL_HPP__
 
-# include <sihd/ssh/SshChannel.hpp>
 # include <libssh/libssh.h>
+
 # include <string>
+
+# include <sihd/ssh/SshChannel.hpp>
 
 namespace sihd::ssh
 {

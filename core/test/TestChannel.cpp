@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Array.hpp>
+
 #include <sihd/core/Channel.hpp>
 
 namespace test
@@ -33,7 +36,8 @@ namespace test
                 SIHD_TRACEF(c->array()->data_type_str());
                 if (c->array()->data_type() == TYPE_INT)
                 {
-                    const Array<int> *arr_int = ArrayUtil::cast_array<int>(c->array());
+                    const ArrInt *arr_int = dynamic_cast<const ArrInt *>(c->array());
+                    ASSERT_NE(arr_int, nullptr);
                     const int *c_arr_int = arr_int->data();
                     EXPECT_NO_THROW(
                         _at_val = arr_int->at(0);
@@ -116,7 +120,7 @@ namespace test
         EXPECT_THROW(Channel::build("name=test;type=inttt;size=2"), std::invalid_argument);
         Channel *c = nullptr;
         EXPECT_NO_THROW(c = Channel::build("name=chan;type=float;size=2"));
-        EXPECT_NE(c, nullptr);
+        ASSERT_NE(c, nullptr);
         EXPECT_EQ(c->name(), "chan");
         EXPECT_STREQ(c->array()->data_type_str(), "float");
         EXPECT_EQ(c->array()->size(), 2u);

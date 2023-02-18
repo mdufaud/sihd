@@ -1,3 +1,6 @@
+#include <cstring>
+#include <map>
+
 #include <sihd/util/Types.hpp>
 
 #define STR_TYPE_NONE "none"
@@ -14,9 +17,6 @@
 #define STR_TYPE_FLOAT "float"
 #define STR_TYPE_DOUBLE "double"
 #define STR_TYPE_OBJECT "object"
-
-#include <string.h>
-#include <iostream>
 
 namespace sihd::util
 {

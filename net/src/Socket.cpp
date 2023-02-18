@@ -367,7 +367,7 @@ bool    Socket::connect(const sockaddr *addr, socklen_t addr_len)
     return true;
 }
 
-ssize_t     Socket::send(sihd::util::ArrViewChar view)
+ssize_t     Socket::send(sihd::util::ArrCharView view)
 {
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot send on a closed socket");
@@ -381,7 +381,7 @@ ssize_t     Socket::send(sihd::util::ArrViewChar view)
     return sent;
 }
 
-bool    Socket::send_all(sihd::util::ArrViewChar view)
+bool    Socket::send_all(sihd::util::ArrCharView view)
 {
     ssize_t ret;
     size_t sent = 0;
@@ -415,7 +415,7 @@ ssize_t Socket::receive(sihd::util::IArray & arr)
     return _adapt_array_size(arr, this->receive(arr.buf(), arr.byte_capacity()));
 }
 
-ssize_t     Socket::send_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrViewChar view)
+ssize_t     Socket::send_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrCharView view)
 {
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot send_to on a closed socket");
@@ -429,7 +429,7 @@ ssize_t     Socket::send_to(const sockaddr *addr, socklen_t addr_len, sihd::util
     return sent;
 }
 
-bool    Socket::send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrViewChar view)
+bool    Socket::send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrCharView view)
 {
     ssize_t ret;
     size_t sent = 0;
@@ -482,7 +482,7 @@ bool    Socket::is_ipv6() const
 /* Socket IpAddr operations */
 /* ************************************************************************* */
 
-ssize_t     Socket::send_to(const IpAddr & addr, sihd::util::ArrViewChar view)
+ssize_t     Socket::send_to(const IpAddr & addr, sihd::util::ArrCharView view)
 {
     IpSockAddr ipsockaddr;
 
@@ -492,7 +492,7 @@ ssize_t     Socket::send_to(const IpAddr & addr, sihd::util::ArrViewChar view)
     return this->send_to(ipsockaddr.addr, ipsockaddr.addr_len, view);
 }
 
-bool    Socket::send_all_to(const IpAddr & addr, sihd::util::ArrViewChar view)
+bool    Socket::send_all_to(const IpAddr & addr, sihd::util::ArrCharView view)
 {
     IpSockAddr ipsockaddr;
 
@@ -593,7 +593,7 @@ bool        Socket::connect_unix(std::string_view path)
     return this->connect((sockaddr *)&addr, SUN_LEN(&addr));
 }
 
-ssize_t     Socket::send_to_unix(std::string_view path, sihd::util::ArrViewChar view)
+ssize_t     Socket::send_to_unix(std::string_view path, sihd::util::ArrCharView view)
 {
     sockaddr_un addr;
     addr.sun_family = AF_UNIX;
@@ -601,7 +601,7 @@ ssize_t     Socket::send_to_unix(std::string_view path, sihd::util::ArrViewChar 
     return this->send_to((sockaddr *)&addr, SUN_LEN(&addr), view);
 }
 
-bool    Socket::send_all_to_unix(std::string_view path, sihd::util::ArrViewChar view)
+bool    Socket::send_all_to_unix(std::string_view path, sihd::util::ArrCharView view)
 {
     ssize_t ret;
     size_t sent = 0;
@@ -687,8 +687,8 @@ bool    Socket::is_socket_blocking(int socket)
 std::string Socket::unix_socket_peername([[maybe_unused]] int socket) { return ""; }
 bool Socket::bind_unix([[maybe_unused]] std::string_view path) { return false; }
 bool Socket::connect_unix([[maybe_unused]] std::string_view path) { return false; }
-ssize_t Socket::send_to_unix([[maybe_unused]] std::string_view path, [[maybe_unused]] sihd::util::ArrViewChar view) { return -1; }
-bool Socket::send_all_to_unix([[maybe_unused]] std::string_view path, [[maybe_unused]] sihd::util::ArrViewChar view) { return false; }
+ssize_t Socket::send_to_unix([[maybe_unused]] std::string_view path, [[maybe_unused]] sihd::util::ArrCharView view) { return -1; }
+bool Socket::send_all_to_unix([[maybe_unused]] std::string_view path, [[maybe_unused]] sihd::util::ArrCharView view) { return false; }
 ssize_t Socket::receive_from_unix([[maybe_unused]] std::string & path, [[maybe_unused]] void *data, [[maybe_unused]] size_t size) { return -1; }
 
 bool    Socket::is_socket_blocking(int socket)

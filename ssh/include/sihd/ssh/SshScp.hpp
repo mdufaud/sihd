@@ -1,8 +1,9 @@
 #ifndef __SIHD_SSH_SSHSCP_HPP__
 # define __SIHD_SSH_SSHSCP_HPP__
 
-# include <libssh/libssh.h>
 # include <string>
+
+# include <libssh/libssh.h>
 
 namespace sihd::ssh
 {
@@ -15,6 +16,7 @@ class SshScp
 
         bool remote_opened();
         bool open_remote(std::string_view remote_path);
+#pragma message("TODO - change to ArrCharView")
         bool push_file_content(std::string_view remote_path, const char *buf,
                                 size_t size, int mode = 0644);
         bool push_file(std::string_view local_path, std::string_view remote_path,

@@ -146,9 +146,9 @@ bool    SshCommand::wait(time_t timeout_nano, time_t milliseconds_poll_time)
     return r != -1;
 }
 
-bool    SshCommand::input(const char *buf, size_t size)
+bool    SshCommand::input(sihd::util::ArrCharView view)
 {
-    return _channel.is_open() && _channel.write(buf, size);
+    return _channel.is_open() && _channel.write(view);
 }
 
 int    SshCommand::exit_status()

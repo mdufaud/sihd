@@ -30,11 +30,11 @@ class UdpSender:    public INetSender,
 
         bool close();
 
-        ssize_t send(sihd::util::ArrViewChar view);
-        bool send_all(sihd::util::ArrViewChar view);
+        ssize_t send(sihd::util::ArrCharView view);
+        bool send_all(sihd::util::ArrCharView view);
 
-        ssize_t send_to(const IpAddr & addr, sihd::util::ArrViewChar view);
-        bool send_to_all(const IpAddr & addr, sihd::util::ArrViewChar view);
+        ssize_t send_to(const IpAddr & addr, sihd::util::ArrCharView view);
+        bool send_to_all(const IpAddr & addr, sihd::util::ArrCharView view);
 
         const Socket & socket() const { return _socket; }
 

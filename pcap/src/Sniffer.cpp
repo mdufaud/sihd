@@ -1,7 +1,8 @@
-#include <sihd/pcap/Sniffer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/time.hpp>
+
+#include <sihd/pcap/Sniffer.hpp>
 
 namespace sihd::pcap
 {
@@ -166,10 +167,9 @@ const sihd::util::ArrByte & Sniffer::data() const
     return _array;
 }
 
-bool    Sniffer::get_read_data(char **data, size_t *size) const
+bool    Sniffer::get_read_data(sihd::util::ArrCharView & view) const
 {
-    *data = (char *)_array.buf();
-    *size = _array.byte_size();
+    view = {_array.buf(), _array.byte_size()};
     return true;
 }
 

@@ -3,7 +3,9 @@
 
 # include <list>
 # include <set>
+# include <memory>
 
+# include <sihd/util/forward.hpp>
 # include <sihd/util/IHandler.hpp>
 
 # include <sihd/core/Device.hpp>
@@ -44,7 +46,8 @@ class DevRecorder:   public sihd::core::Device
 
         bool _running;
         std::string _handler_path;
-        sihd::util::ArrUInt _records_array;
+        std::unique_ptr<sihd::util::ArrUInt> _records_array_ptr;
+        // sihd::util::ArrUInt _records_array;
         sihd::util::IHandler<const std::string &, const Channel *> *_handler_ptr;
 
         Channel *_channel_records_ptr;

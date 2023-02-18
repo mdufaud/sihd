@@ -4,6 +4,7 @@
 # include <mutex>
 # include <atomic>
 
+# include <sihd/util/array_utils.hpp>
 # include <sihd/util/ArrayView.hpp>
 # include <sihd/util/Named.hpp>
 # include <sihd/util/Observable.hpp>
@@ -48,12 +49,6 @@ class Channel:  public sihd::util::Named,
         uint8_t *data() const { return _array_ptr->buf(); }
         const sihd::util::IArray *array() const { return _array_ptr; }
 
-        template <typename T>
-        const sihd::util::Array<T> *array() const
-        {
-            return sihd::util::ArrayUtil::cast_array<T>(_array_ptr);
-        }
-
         size_t size() const { return _array_ptr->size(); }
         size_t byte_size() const { return _array_ptr->byte_size(); }
         size_t byte_index(size_t idx) const { return _array_ptr->byte_index(idx); }
@@ -84,18 +79,18 @@ class Channel:  public sihd::util::Named,
         bool read_into(size_t idx, T & val) const
         {
             std::lock_guard lock(_arr_mutex);
-            return sihd::util::ArrayUtil::read_array_into<T>(_array_ptr, idx, val);
+            return sihd::util::array_utils::read_into<T>(_array_ptr, idx, val);
         }
 
         template <typename T>
         T   read(size_t idx) const
         {
             std::lock_guard lock(_arr_mutex);
-            return sihd::util::ArrayUtil::read_array<T>(_array_ptr, idx);
+            return sihd::util::array_utils::read<T>(_array_ptr, idx);
         }
 
         // copy arr to internal array
-        bool write(const sihd::util::ArrViewByte & arr, size_t byte_offset = 0);
+        bool write(const sihd::util::ArrByteView & arr, size_t byte_offset = 0);
         bool write(const Channel & other);
 
         // utility for writing

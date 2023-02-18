@@ -41,7 +41,7 @@ class Sniffer:  public sihd::util::Named,
         // callback when packet is sniffed
         void new_packet(const struct pcap_pkthdr *h, const u_char *bytes);
         // get datas
-        bool get_read_data(char **data, size_t *size) const;
+        bool get_read_data(sihd::util::ArrCharView & view) const;
 		bool read_timestamp(time_t *nano_timestamp) const;
         const sihd::util::ArrByte & data() const;
 

@@ -2,7 +2,9 @@
 # define __SIHD_SSH_SSHSESSION_HPP__
 
 # include <memory>
+
 # include <libssh/libssh.h>
+
 # include <sihd/ssh/SshKey.hpp>
 # include <sihd/ssh/SshChannel.hpp>
 # include <sihd/ssh/SshScp.hpp>

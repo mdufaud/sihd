@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/TmpDir.hpp>
+
 #include <sihd/pcap/PcapReader.hpp>
 #include <sihd/pcap/PcapWriter.hpp>
 
@@ -46,14 +48,13 @@ namespace test
         EXPECT_EQ(reader.minor_version(), 0);
         EXPECT_EQ(reader.is_swapped(), false);
         EXPECT_NE(reader.file(), nullptr);
-        char *data;
-        size_t size;
+        sihd::util::ArrCharView view;
         size_t n = 0;
         while (reader.read_next())
         {
             const struct pcap_pkthdr *hdr = reader.packet_header();
-            EXPECT_TRUE(reader.get_read_data(&data, &size));
-            EXPECT_EQ(hdr->len, size);
+            EXPECT_TRUE(reader.get_read_data(view));
+            EXPECT_EQ(hdr->len, view.size());
             ++n;
         }
         SIHD_TRACE("{} packets read", n);

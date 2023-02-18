@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/time.hpp>
@@ -33,14 +34,15 @@ Pinger::Pinger(const std::string & name, sihd::util::Node *parent):
 
     _clock_ptr = &sihd::util::Clock::default_clock;
 
-    _data.resize(ICMP_ECHO_REQUEST_LENGTH);
+    _data_ptr = std::make_unique<sihd::util::ArrByte>();
+    _data_ptr->resize(ICMP_ECHO_REQUEST_LENGTH);
 
     // set gibberish values like ping in packet
     char values = 10;
     size_t i = sizeof(time_t);
     while (i < ICMP_ECHO_REQUEST_LENGTH)
     {
-        _data[i] = values++;
+        _data_ptr->get(i) = values++;
         ++i;
     }
 }
@@ -115,8 +117,8 @@ bool    Pinger::ping(const IpAddr & client, size_t number)
         _current_seq = i + 1;
         _sender.set_seq(_current_seq);
         _result.last_time_sent = _clock_ptr->now();
-        _data.copy_from_bytes(&_result.last_time_sent, sizeof(time_t));
-        _sender.set_data(_data);
+        _data_ptr->copy_from_bytes(&_result.last_time_sent, sizeof(time_t));
+        _sender.set_data(*_data_ptr);
         // send icmp echo
         ret = _sender.send_to(client);
         if (ret == false)

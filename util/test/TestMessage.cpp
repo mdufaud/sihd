@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+
+#include <sihd/util/array_utils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Message.hpp>
 #include <sihd/util/MessageField.hpp>
@@ -214,7 +216,7 @@ namespace test
         ArrFloat   farr;
 
         buf.resize(1 + 2 * sizeof(int) + 5 * sizeof(float));
-        EXPECT_TRUE(ArrayUtil::distribute_array(buf, { {&barr, 1}, {&iarr, 2}, {&farr, 5} }));
+        EXPECT_TRUE(array_utils::distribute_array(buf, { {&barr, 1}, {&iarr, 2}, {&farr, 5} }));
         barr[0] = true;
         for (size_t i = 0; i < iarr.size(); ++i)
             iarr[i] = 10 * i;

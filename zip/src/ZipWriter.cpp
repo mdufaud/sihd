@@ -1,7 +1,9 @@
-#include <sihd/zip/ZipWriter.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/fs.hpp>
+
+#include <sihd/zip/utils.hpp>
+#include <sihd/zip/ZipWriter.hpp>
 
 namespace sihd::zip
 {
@@ -79,7 +81,7 @@ bool    ZipWriter::open(std::string_view path, bool fails_if_exists, bool trunca
     this->close();
     _zip_ptr = zip_open(path.data(), flags, &error);
     if (_zip_ptr == nullptr)
-        SIHD_LOG(error, "ZipWriter: could not open zip: {}", ZipUtils::get_error(error));
+        SIHD_LOG(error, "ZipWriter: could not open zip: {}", utils::get_error(error));
     return _zip_ptr != nullptr;
 }
 
@@ -90,7 +92,7 @@ bool    ZipWriter::close()
     {
         ret = zip_close(_zip_ptr) == 0;
         if (!ret)
-            SIHD_LOG(error, "ZipWriter: could not close zip file: {}", ZipUtils::get_error(_zip_ptr));
+            SIHD_LOG(error, "ZipWriter: could not close zip file: {}", utils::get_error(_zip_ptr));
         _zip_ptr = nullptr;
     }
     return ret;
@@ -122,7 +124,7 @@ bool    ZipWriter::fs_add_dir(std::string_view path, std::string_view name)
         return false;
     if (this->add_dir(name) == false)
     {
-        SIHD_LOG(error, "ZipWriter: could not add directory to zip '{}' for: {}", ZipUtils::get_error(_zip_ptr), path);
+        SIHD_LOG(error, "ZipWriter: could not add directory to zip '{}' for: {}", utils::get_error(_zip_ptr), path);
         return false;
     }
     std::vector<std::string> children = fs::children(path);
@@ -136,14 +138,14 @@ bool    ZipWriter::fs_add_dir(std::string_view path, std::string_view name)
     return ret;
 }
 
-bool    ZipWriter::add_file(std::string_view name, sihd::util::ArrViewChar view)
+bool    ZipWriter::add_file(std::string_view name, sihd::util::ArrCharView view)
 {
     if (_zip_ptr == nullptr)
         return false;
     zip_source_t *source = zip_source_buffer(_zip_ptr, view.data(), view.byte_size(), 0);
     if (source == nullptr)
     {
-        SIHD_LOG(error, "ZipWriter: could not add file to zip '{}' for: {}", ZipUtils::get_error(_zip_ptr), name);
+        SIHD_LOG(error, "ZipWriter: could not add file to zip '{}' for: {}", utils::get_error(_zip_ptr), name);
         return false;
     }
     return this->_add_source(name, source);
@@ -156,7 +158,7 @@ bool    ZipWriter::fs_add_file(std::string_view path, std::string_view name)
     zip_source_t *source = zip_source_file(_zip_ptr, path.data(), 0, 0);
     if (source == nullptr)
     {
-        SIHD_LOG(error, "ZipWriter: could not add file to zip '{}' for: {}", ZipUtils::get_error(_zip_ptr), path);
+        SIHD_LOG(error, "ZipWriter: could not add file to zip '{}' for: {}", utils::get_error(_zip_ptr), path);
         return false;
     }
     return this->_add_source(name, source);
@@ -169,7 +171,7 @@ bool    ZipWriter::_add_source(std::string_view name, zip_source_t *source)
     int ret = zip_file_add(_zip_ptr, name.data(), source, ZIP_FL_ENC_UTF_8);
     if (ret < 0)
     {
-        SIHD_LOG(error, "ZipWriter: could not add file to zip '{}' for: {}", ZipUtils::get_error(_zip_ptr), name);
+        SIHD_LOG(error, "ZipWriter: could not add file to zip '{}' for: {}", utils::get_error(_zip_ptr), name);
         zip_source_free(source);
     }
     return ret >= 0;
@@ -181,7 +183,7 @@ bool    ZipWriter::encrypt(size_t index, std::string_view password)
         return false;
     bool ret = zip_file_set_encryption(_zip_ptr, index, _encryption_method, password.data()) >= 0;
     if (!ret)
-        SIHD_LOG(error, "ZipWriter: failed to set encryption on index '{}': {}", index, ZipUtils::get_error(_zip_ptr));
+        SIHD_LOG(error, "ZipWriter: failed to set encryption on index '{}': {}", index, utils::get_error(_zip_ptr));
     return ret;
 }
 

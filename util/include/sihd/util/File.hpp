@@ -73,7 +73,7 @@ class File
         // getdelim allocates line but you have to free it
         ssize_t read_line_delim(char **line, size_t *size, int delim);
 
-        ssize_t write(ArrViewChar view);
+        ssize_t write(ArrCharView view);
         bool write_char(int c);
 
         bool seek(long offset);

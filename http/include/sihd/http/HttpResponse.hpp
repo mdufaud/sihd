@@ -17,10 +17,10 @@ class HttpResponse
         HttpResponse(Mime *mimes = nullptr);
         virtual ~HttpResponse();
 
-        bool set_content(sihd::util::ArrViewChar data);
+        bool set_content(sihd::util::ArrCharView data);
 
         bool set_plain_content(std::string_view str);
-        bool set_byte_content(sihd::util::ArrViewByte data);
+        bool set_byte_content(sihd::util::ArrByteView data);
         bool set_json_content(const nlohmann::json & data);
 
         void set_content_type(std::string_view mime_type);

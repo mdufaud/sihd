@@ -1,4 +1,7 @@
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/StrConfiguration.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/array_utils.hpp>
 
 #include <sihd/core/Channel.hpp>
 
@@ -14,7 +17,7 @@ sihd::util::IClock *Channel::_default_channel_clock_ptr = &sihd::util::Clock::de
 Channel::Channel(const std::string & name, Type type, size_t size, Node *parent):
     Named(name, parent)
 {
-    _array_ptr = ArrayUtil::create_from_type(type, size);
+    _array_ptr = array_utils::create_from_type(type, size);
     if (_array_ptr == nullptr)
     {
         throw std::invalid_argument(fmt::format("Channel: no such type {} for channel {}",
@@ -51,32 +54,28 @@ Channel::~Channel()
 
 Channel     *Channel::build(std::string_view configuration)
 {
-    auto map = str::parse_configuration(configuration);
-    auto name_it = map.find("name");
-    if (name_it == map.end())
-    {
+    util::StrConfiguration conf(configuration);
+
+    auto [name, type, size] = conf.find_all("name", "type", "size");
+
+    if (name.has_value() == false)
         SIHD_LOG(error, "Channel: cannot build from configuration '{}' no name", configuration);
-        return nullptr;
-    }
-    auto type_it = map.find("type");
-    if (type_it == map.end())
-    {
+    if (type.has_value() == false)
         SIHD_LOG(error, "Channel: cannot build from configuration '{}' no type", configuration);
-        return nullptr;
-    }
-    auto size_it = map.find("size");
-    if (size_it == map.end())
-    {
+    if (size.has_value() == false)
         SIHD_LOG(error, "Channel: cannot build from configuration '{}' no size", configuration);
+
+    const bool good = name.has_value() && type.has_value() && size.has_value();
+    if (!good)
         return nullptr;
-    }
+
     unsigned long val;
-    if (str::to_ulong(size_it->second, &val) == false)
+    if (str::to_ulong(*size, &val) == false)
     {
         SIHD_LOG(error, "Channel: cannot build from configuration '{}' size is either overflow or invalid", configuration);
         return nullptr;
     }
-    return new Channel(name_it->second, type_it->second, val);
+    return new Channel(*name, *type, val);
 }
 
 Timestamp Channel::timestamp() const
@@ -102,13 +101,17 @@ bool    Channel::write(const Channel & other)
     return other_array != nullptr && this->write(*other_array);
 }
 
-bool    Channel::write(const sihd::util::ArrViewByte & arr_view, size_t byte_offset)
+bool    Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_offset)
 {
     if (_notifying)
     {
         SIHD_LOG(warning, "Channel: cannot write while notifying");
         return false;
     }
+
+    SIHD_TRACE("MY ARRAY: {}", _array_ptr->str());
+    SIHD_TRACE("OTHER ARRAY: {}", arr_view.str());
+
     bool ret = false;
     {
         std::lock_guard lock(_arr_mutex);

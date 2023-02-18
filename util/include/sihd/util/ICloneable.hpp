@@ -1,8 +1,6 @@
 #ifndef __SIHD_UTIL_ICLONABLE_HPP__
 # define __SIHD_UTIL_ICLONABLE_HPP__
 
-# include <memory>
-
 namespace sihd::util
 {
 

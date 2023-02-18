@@ -1,10 +1,7 @@
 #ifndef __SIHD_UTIL_STR_HPP__
 # define __SIHD_UTIL_STR_HPP__
 
-# include <vector>
 # include <string_view>
-# include <mutex>
-# include <map>
 
 # include <sihd/util/Timestamp.hpp>
 # include <sihd/util/IArray.hpp>
@@ -55,7 +52,7 @@ std::string remove_escape_sequences(std::string_view str, const char *authorized
 
 // clone str from_idx to size (or all the remaining str)
 char *csub(std::string_view str, size_t from_idx, ssize_t size = 0);
-std::string join(const std::vector<std::string> & join_lst, std::string_view join_with = "");
+
 std::string demangle(std::string_view name);
 std::string format(std::string_view format, ...);
 
@@ -86,8 +83,6 @@ bool is_digit(int c, uint16_t base = 10);
 bool is_number(std::string_view s, uint16_t base = 10);
 bool starts_with(std::string_view s, std::string_view start);
 bool ends_with(std::string_view s, std::string_view end);
-
-std::map<std::string, std::string> parse_configuration(std::string_view conf);
 
 bool to_long(std::string_view str, long *ret, uint16_t base = 0);
 bool to_ulong(std::string_view str, unsigned long *ret, uint16_t base = 0);

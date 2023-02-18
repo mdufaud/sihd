@@ -1,7 +1,8 @@
-#include <sihd/csv/CsvReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/str.hpp>
+
+#include <sihd/csv/CsvReader.hpp>
 
 namespace sihd::csv
 {
@@ -107,12 +108,11 @@ bool    CsvReader::read_next()
     return ret >= 0;
 }
 
-bool    CsvReader::get_read_data(char **data, size_t *size) const
+bool    CsvReader::get_read_data(sihd::util::ArrCharView & view) const
 {
     if (_line_ptr == nullptr)
         return false;
-    *data = _line_ptr;
-    *size = _line_size;
+    view = {_line_ptr, _line_size};
     return true;
 }
 

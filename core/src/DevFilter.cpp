@@ -1,6 +1,9 @@
-#include <sihd/core/DevFilter.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/StrConfiguration.hpp>
+#include <sihd/util/Splitter.hpp>
 #include <sihd/util/NamedFactory.hpp>
+
+#include <sihd/core/DevFilter.hpp>
 
 #define CONF_SETTINGS_DELIMITER ";"
 #define CONF_SETTER_DELIMITER "="
@@ -16,9 +19,151 @@
 namespace sihd::core
 {
 
-SIHD_UTIL_REGISTER_FACTORY(DevFilter)
-
 SIHD_LOGGER;
+
+namespace
+{
+
+bool    _parse_options_config(DevFilter::Rule & rule, const util::StrConfiguration & conf)
+{
+    auto [key_match, key_delay] = conf.find_all(CONF_KEY_MATCH, CONF_KEY_DELAY);
+
+    if (key_match.has_value())
+    {
+        if (sihd::util::str::convert_from_string<bool>(*key_match, rule.should_match) == false)
+        {
+            SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_MATCH, *key_match);
+            return false;
+        }
+    }
+    if (key_delay.has_value())
+    {
+        double delay;
+        if (sihd::util::str::convert_from_string<double>(*key_delay, delay) == false)
+        {
+            SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_DELAY, *key_delay);
+            return false;
+        }
+        rule.nano_delay = sihd::util::time::from_double(delay);
+    }
+    return true;
+}
+
+bool    _parse_trigger_config(DevFilter::Rule & rule, const util::StrConfiguration & conf)
+{
+    auto key_trigger = conf.find(CONF_KEY_TRIGGER);
+
+    sihd::util::Splitter splitter(":");
+    splitter.set_empty_delimitations(true);
+    std::vector<std::string> split_trigger = splitter.split(*key_trigger);
+
+    // conf -> trigger
+    if (split_trigger.size() == 0 || split_trigger.size() > 2)
+    {
+        SIHD_LOG(error, "DevFilter: trigger conf error: {}", *key_trigger);
+        return false;
+    }
+    if (split_trigger.size() == 1)
+    {
+        // conf -> trigger=value
+        if (split_trigger[0].empty())
+        {
+            SIHD_LOG(error, "DevFilter: trigger value empty: '{}'", *key_trigger);
+            return false;
+        }
+        rule.trigger_idx = 0;
+        if (rule.trigger_value.from_any_string(split_trigger[0]) == false)
+        {
+            SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_trigger[0]);
+            return false;
+        }
+    }
+    else
+    {
+        // conf -> trigger=index:value
+        if (split_trigger[0].empty() && split_trigger[1].empty())
+        {
+            SIHD_LOG(error, "DevFilter: trigger idx and value empty: '{}'", *key_trigger);
+            return false;
+        }
+        if (split_trigger[0].empty() == false
+                && sihd::util::str::convert_from_string<size_t>(split_trigger[0], rule.trigger_idx) == false)
+        {
+            SIHD_LOG(error, "DevFilter: cannot convert trigger idx: {}", split_trigger[0]);
+            return false;
+        }
+        if (split_trigger[1].empty() == false && rule.trigger_value.from_any_string(split_trigger[1]) == false)
+        {
+            SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_trigger[1]);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool    _parse_write_config(DevFilter::Rule & rule, const util::StrConfiguration & conf)
+{
+    auto key_write = conf.find(CONF_KEY_WRITE);
+
+    if (key_write.has_value() == false)
+    {
+        rule.write_idx = rule.trigger_idx;
+        rule.write_same_value = true;
+        return true;
+    }
+
+    sihd::util::Splitter splitter(":");
+    splitter.set_empty_delimitations(true);
+    std::vector<std::string> split_write = splitter.split(*key_write);
+
+    if (split_write.size() == 0 || split_write.size() > 2)
+    {
+        SIHD_LOG(error, "DevFilter: write conf error: {}", *key_write);
+        return false;
+    }
+    if (split_write.size() == 1)
+    {
+        // conf -> write=value
+        if (split_write[0].empty())
+        {
+            SIHD_LOG(error, "DevFilter: write value empty: '{}'", *key_write);
+            return false;
+        }
+        rule.write_idx = rule.trigger_idx;
+        rule.write_same_value = false;
+        if (rule.write_value.from_any_string(split_write[0]) == false)
+        {
+            SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_write[0]);
+            return false;
+        }
+    }
+    else
+    {
+        // conf -> write=index:value
+        if (split_write[0].empty() && split_write[1].empty())
+        {
+            SIHD_LOG(error, "DevFilter: write idx and value empty: '{}'", *key_write);
+            return false;
+        }
+        if (split_write[0].empty() == false
+                && sihd::util::str::convert_from_string<size_t>(split_write[0], rule.write_idx) == false)
+        {
+            SIHD_LOG(error, "DevFilter: cannot convert write idx: {}", split_write[0]);
+            return false;
+        }
+        rule.write_same_value = split_write[1].empty();
+        if (rule.write_same_value == false && rule.write_value.from_any_string(split_write[1]) == false)
+        {
+            SIHD_LOG(error, "DevFilter: cannot convert write value: {}", split_write[1]);
+            return false;
+        }
+    }
+    return true;
+}
+
+}
+
+SIHD_UTIL_REGISTER_FACTORY(DevFilter)
 
 DevFilter::DevFilter(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent), _running(false), _scheduler_ptr(nullptr), _rule_with_delay(false)
@@ -293,157 +438,27 @@ DevFilter::Rule &   DevFilter::Rule::delay(time_t nano_delay)
 
 bool    DevFilter::Rule::parse(std::string_view conf_str)
 {
-    std::map<std::string, std::string> rule_conf_map = sihd::util::str::parse_configuration(conf_str);
-    if (rule_conf_map.find(CONF_KEY_CHANNEL_IN) == rule_conf_map.end())
-    {
+    util::StrConfiguration conf(conf_str);
+
+    auto [channel_in_name, channel_out_name, channel_key_trigger]
+        = conf.find_all(CONF_KEY_CHANNEL_IN, CONF_KEY_CHANNEL_OUT, CONF_KEY_TRIGGER);
+
+    if (channel_in_name.has_value() == false)
         SIHD_LOG_ERROR("DevFilter: no channel input '{}' in configuration: {}", CONF_KEY_CHANNEL_IN, conf_str);
-        return false;
-    }
-    if (rule_conf_map.find(CONF_KEY_CHANNEL_OUT) == rule_conf_map.end())
-    {
+    if (channel_out_name.has_value() == false)
         SIHD_LOG_ERROR("DevFilter: no channel output '{}' in configuration: {}", CONF_KEY_CHANNEL_OUT, conf_str);
-        return false;
-    }
-    if (rule_conf_map.find(CONF_KEY_TRIGGER) == rule_conf_map.end())
-    {
+    if (channel_key_trigger.has_value())
         SIHD_LOG_ERROR("DevFilter: no trigger value '{}' in configuration: {}", CONF_KEY_TRIGGER, conf_str);
-        return false;
-    }
-    this->channel_in = rule_conf_map.at(CONF_KEY_CHANNEL_IN);
-    this->channel_out = rule_conf_map.at(CONF_KEY_CHANNEL_OUT);
-    return this->_parse_trigger_config(rule_conf_map)
-            && this->_parse_write_config(rule_conf_map)
-            && this->_parse_options_config(rule_conf_map);
-}
 
-bool    DevFilter::Rule::_parse_options_config(const std::map<std::string, std::string> & conf_map)
-{
-    if (conf_map.find(CONF_KEY_MATCH) != conf_map.end())
-    {
-        if (sihd::util::str::convert_from_string<bool>(conf_map.at(CONF_KEY_MATCH), this->should_match) == false)
-        {
-            SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_MATCH, conf_map.at(CONF_KEY_MATCH));
-            return false;
-        }
-    }
-    if (conf_map.find(CONF_KEY_DELAY) != conf_map.end())
-    {
-        double delay;
-        if (sihd::util::str::convert_from_string<double>(conf_map.at(CONF_KEY_DELAY), delay) == false)
-        {
-            SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_DELAY, conf_map.at(CONF_KEY_DELAY));
-            return false;
-        }
-        this->nano_delay = sihd::util::time::from_double(delay);
-    }
-    return true;
-}
-
-bool    DevFilter::Rule::_parse_trigger_config(const std::map<std::string, std::string> & conf_map)
-{
-    const std::string & conf_trigger = conf_map.at(CONF_KEY_TRIGGER);
-    sihd::util::Splitter splitter(":");
-    splitter.set_empty_delimitations(true);
-    std::vector<std::string> split_trigger = splitter.split(conf_trigger);
-    // conf -> trigger
-    if (split_trigger.size() == 0 || split_trigger.size() > 2)
-    {
-        SIHD_LOG(error, "DevFilter: trigger conf error: {}", conf_trigger);
+    const bool good = channel_in_name.has_value() && channel_out_name.has_value() && channel_key_trigger.has_value();
+    if (!good)
         return false;
-    }
-    if (split_trigger.size() == 1)
-    {
-        // conf -> trigger=value
-        if (split_trigger[0].empty())
-        {
-            SIHD_LOG(error, "DevFilter: trigger value empty: '{}'", conf_trigger);
-            return false;
-        }
-        this->trigger_idx = 0;
-        if (this->trigger_value.from_any_string(split_trigger[0]) == false)
-        {
-            SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_trigger[0]);
-            return false;
-        }
-    }
-    else
-    {
-        // conf -> trigger=index:value
-        if (split_trigger[0].empty() && split_trigger[1].empty())
-        {
-            SIHD_LOG(error, "DevFilter: trigger idx and value empty: '{}'", conf_trigger);
-            return false;
-        }
-        if (split_trigger[0].empty() == false
-                && sihd::util::str::convert_from_string<size_t>(split_trigger[0], this->trigger_idx) == false)
-        {
-            SIHD_LOG(error, "DevFilter: cannot convert trigger idx: {}", split_trigger[0]);
-            return false;
-        }
-        if (split_trigger[1].empty() == false && this->trigger_value.from_any_string(split_trigger[1]) == false)
-        {
-            SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_trigger[1]);
-            return false;
-        }
-    }
-    return true;
-}
 
-bool    DevFilter::Rule::_parse_write_config(const std::map<std::string, std::string> & conf_map)
-{
-    if (conf_map.find(CONF_KEY_WRITE) == conf_map.end())
-    {
-        this->write_idx = this->trigger_idx;
-        this->write_same_value = true;
-        return true;
-    }
-    const std::string & conf_write = conf_map.at(CONF_KEY_WRITE);
-    sihd::util::Splitter splitter(":");
-    splitter.set_empty_delimitations(true);
-    std::vector<std::string> split_write = splitter.split(conf_write);
-    if (split_write.size() == 0 || split_write.size() > 2)
-    {
-        SIHD_LOG(error, "DevFilter: write conf error: {}", conf_write);
-        return false;
-    }
-    if (split_write.size() == 1)
-    {
-        // conf -> write=value
-        if (split_write[0].empty())
-        {
-            SIHD_LOG(error, "DevFilter: write value empty: '{}'", conf_write);
-            return false;
-        }
-        this->write_idx = this->trigger_idx;
-        this->write_same_value = false;
-        if (this->write_value.from_any_string(split_write[0]) == false)
-        {
-            SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_write[0]);
-            return false;
-        }
-    }
-    else
-    {
-        // conf -> write=index:value
-        if (split_write[0].empty() && split_write[1].empty())
-        {
-            SIHD_LOG(error, "DevFilter: write idx and value empty: '{}'", conf_write);
-            return false;
-        }
-        if (split_write[0].empty() == false
-                && sihd::util::str::convert_from_string<size_t>(split_write[0], this->write_idx) == false)
-        {
-            SIHD_LOG(error, "DevFilter: cannot convert write idx: {}", split_write[0]);
-            return false;
-        }
-        this->write_same_value = split_write[1].empty();
-        if (this->write_same_value == false && this->write_value.from_any_string(split_write[1]) == false)
-        {
-            SIHD_LOG(error, "DevFilter: cannot convert write value: {}", split_write[1]);
-            return false;
-        }
-    }
-    return true;
+    this->channel_in = *channel_in_name;
+    this->channel_out = *channel_out_name;
+    return _parse_trigger_config(*this, conf)
+            && _parse_write_config(*this, conf)
+            && _parse_options_config(*this, conf);
 }
 
 /* ************************************************************************* */

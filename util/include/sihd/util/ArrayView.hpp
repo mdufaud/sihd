@@ -1,8 +1,13 @@
 #ifndef __SIHD_UTIL_ARRAYVIEW_HPP__
 # define __SIHD_UTIL_ARRAYVIEW_HPP__
 
+# include <string.h> // strlen
+
+# include <stdexcept> // out of range
+
+# include <sihd/util/str.hpp>
+# include <sihd/util/traits.hpp>
 # include <sihd/util/IArrayView.hpp>
-# include <sihd/util/Array.hpp>
 
 namespace sihd::util
 {
@@ -18,36 +23,32 @@ class ArrayView: public IArrayView
         using reference = T &;
         using const_reference = const T &;
 
-        static constexpr size_t npos = Array<T>::npos;
+        static constexpr size_t npos = size_t(-1);
 
         static_assert(std::is_trivially_copyable_v<T>);
 
+        ArrayView(): _buf_ptr(nullptr), _size(0) {}
         ArrayView(const T *data, size_t size): _buf_ptr(data), _size(size) {}
-        ArrayView(const std::vector<T> & vec): ArrayView(vec.data(), vec.size()) {}
-        ArrayView(const Array<T> & arr): ArrayView(arr.data(), arr.size()) {}
         ArrayView(const ArrayView<T> & arr): ArrayView(arr.data(), arr.size()) {}
 
-        // remove conversion with temporary allocation
-        ArrayView(const std::vector<T> && vec) = delete;
-        // remove conversion with temporary allocation
-        ArrayView(const Array<T> && arr) = delete;
+        // container specialization
+        // make sure Container::value_type size is divisible by type size.
+        // ex: vector<int8_t> of size 3 may not go into an ArrayView<int32_t> which will be size 0
+        template <
+            typename Container,
+            typename ValueType = typename Container::value_type,
+            traits::enable_if_iterable<Container> = 0
+        >
+        ArrayView(const Container & container):
+            ArrayView(container.data(), (container.size() * sizeof(ValueType)) / sizeof(T)) {}
+
+        // char specialization
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        ArrayView(std::string_view str): ArrayView(str.data(), str.size()) {}
 
         // char specialization
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
         ArrayView(const char *str): ArrayView(str, strlen(str)) {}
-
-        // char specialization
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        ArrayView(std::string_view view): ArrayView(view.data(), view.size()) {}
-
-        // char specialization
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        ArrayView(const std::string & str): ArrayView(str.data(), str.size()) {}
-
-        // char specialization
-        // remove conversion with temporary allocation
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        ArrayView(std::string && str) = delete;
 
         /*********************************************************************/
         /* byte constructor */
@@ -62,7 +63,7 @@ class ArrayView: public IArrayView
         ArrayView(const IArray & arr): ArrayView((const T *)arr.buf(), arr.byte_size() / sizeof(T)) {}
 
         // make sure buffer size is divisible by type size.
-        // ex: buffer[3] may not go into an ArrayView<int32_t> which will be size 0
+        // ex: int8_t[3] may not go into an ArrayView<int32_t> which will be size 0
         ArrayView(const void *data, size_t byte_size): ArrayView((const T *)data, byte_size) {}
 
         // WARNING: using braces initializer must only be used passed in functions,
@@ -111,6 +112,9 @@ class ArrayView: public IArrayView
         /*********************************************************************/
 
         operator bool() const { return _buf_ptr != nullptr; }
+
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        operator std::string() const { return std::string(data(), byte_size()); }
 
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
         operator std::string_view() const { return std::string_view(data(), byte_size()); }
@@ -243,26 +247,6 @@ class ArrayView: public IArrayView
         const T *data() const { return _buf_ptr; }
 
         /*********************************************************************/
-        /* to std containers */
-        /*********************************************************************/
-
-        std::vector<T> cpp_vector() const
-        {
-            return _buf_ptr != nullptr
-                ? std::vector<T>(_buf_ptr, _buf_ptr + _size)
-                : std::vector<T>();
-        }
-
-        template <size_t ARRAY_SIZE>
-        std::array<T, ARRAY_SIZE> cpp_array() const
-        {
-            std::array<T, ARRAY_SIZE> arr;
-            if (_buf_ptr != nullptr && _size >= ARRAY_SIZE)
-                memcpy(arr.data(), _buf_ptr, ARRAY_SIZE * this->data_size());
-            return arr;
-        }
-
-        /*********************************************************************/
         /* view change */
         /*********************************************************************/
 
@@ -296,6 +280,16 @@ class ArrayView: public IArrayView
         /*********************************************************************/
         /* is_equal */
         /*********************************************************************/
+
+        bool operator==(ArrayView<T> other) const
+        {
+            return this->is_equal(other);
+        }
+
+        bool operator!=(ArrayView<T> other) const
+        {
+            return !this->is_equal(other);
+        }
 
         bool is_equal(ArrayView<T> arr, size_t offset = 0) const
         {
@@ -570,20 +564,6 @@ class ArrayView: public IArrayView
                                     this->data() + this->size());
         }
 
-        /*********************************************************************/
-        /* iterator operations */
-        /*********************************************************************/
-
-        size_t find(const T value) const
-        {
-            return std::find(this->begin(), this->end(), value).idx();
-        }
-
-        size_t rfind(const T value) const
-        {
-            return std::find(this->rbegin(), this->rend(), value).idx();
-        }
-
     /*********************************************************************/
     /* attributes */
     /*********************************************************************/
@@ -594,18 +574,18 @@ class ArrayView: public IArrayView
 };
 
 // typedef for types
-typedef ArrayView<bool>       ArrViewBool;
-typedef ArrayView<char>       ArrViewChar;
-typedef ArrayView<int8_t>     ArrViewByte;
-typedef ArrayView<uint8_t>    ArrViewUByte;
-typedef ArrayView<int16_t>    ArrViewShort;
-typedef ArrayView<uint16_t>   ArrViewUShort;
-typedef ArrayView<int32_t>    ArrViewInt;
-typedef ArrayView<uint32_t>   ArrViewUInt;
-typedef ArrayView<int64_t>    ArrViewLong;
-typedef ArrayView<uint64_t>   ArrViewULong;
-typedef ArrayView<float>      ArrViewFloat;
-typedef ArrayView<double>     ArrViewDouble;
+typedef ArrayView<bool>       ArrBoolView;
+typedef ArrayView<char>       ArrCharView;
+typedef ArrayView<int8_t>     ArrByteView;
+typedef ArrayView<uint8_t>    ArrUByteView;
+typedef ArrayView<int16_t>    ArrShortView;
+typedef ArrayView<uint16_t>   ArrUShortView;
+typedef ArrayView<int32_t>    ArrIntView;
+typedef ArrayView<uint32_t>   ArrUIntView;
+typedef ArrayView<int64_t>    ArrLongView;
+typedef ArrayView<uint64_t>   ArrULongView;
+typedef ArrayView<float>      ArrFloatView;
+typedef ArrayView<double>     ArrDoubleView;
 
 }
 

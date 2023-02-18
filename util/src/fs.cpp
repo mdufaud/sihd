@@ -386,7 +386,7 @@ std::string normalize(std::string_view path)
             lst.push_back(split);
     }
     bool start_with_slash = path.size() > 0 && path[0] == separator_char;
-    std::string ret = str::join(lst, separator);
+    std::string ret = fmt::format("{}", fmt::join(lst, separator));
     if (start_with_slash)
         ret.insert(0, 1, separator_char);
     return ret;

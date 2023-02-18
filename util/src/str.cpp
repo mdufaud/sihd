@@ -1,12 +1,12 @@
-#include <sstream>
-#include <cstdarg>
-#include <mutex>
-#include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
-
 #include <cxxabi.h> // demangle
 #include <string.h>
 #include <errno.h>
 #include <math.h> // HUGE_VAL
+
+#include <sstream>
+#include <cstdarg>
+#include <mutex>
+#include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
 
 #include <fmt/format.h>
 
@@ -391,24 +391,6 @@ bool    is_number(std::string_view s, uint16_t base)
         ++i;
     }
     return true;
-}
-
-std::map<std::string, std::string>  parse_configuration(std::string_view conf)
-{
-    std::map<std::string, std::string> ret;
-    Splitter splitter(";");
-    auto split_pairs = splitter.split(conf);
-    for (const auto & pair: split_pairs)
-    {
-        size_t idx = pair.find_first_of('=');
-        if (idx != std::string::npos)
-        {
-            std::string key = pair.substr(0, idx);
-            std::string value = pair.substr(idx + 1, pair.size());
-            ret[key] = value;
-        }
-    }
-    return ret;
 }
 
 bool    to_long(std::string_view str, long *ret, uint16_t base)

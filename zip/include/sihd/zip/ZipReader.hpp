@@ -1,10 +1,11 @@
 #ifndef __SIHD_ZIP_ZIPREADER_HPP__
 # define __SIHD_ZIP_ZIPREADER_HPP__
 
+# include <zip.h>
+
 # include <sihd/util/Node.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/IReader.hpp>
-# include <sihd/zip/ZipUtils.hpp>
 # include <sihd/util/Array.hpp>
 
 namespace sihd::zip
@@ -33,7 +34,7 @@ class ZipReader:    public sihd::util::Named,
         void discard();
 
         bool read_next();
-		bool get_read_data(char **data, size_t *size) const;
+        bool get_read_data(sihd::util::ArrCharView & view) const;
 		bool read_timestamp(time_t *nano_timestamp) const;
 
         // modify zip entries
@@ -54,17 +55,13 @@ class ZipReader:    public sihd::util::Named,
 
     private:
         void _init();
-        void _delete_buffer();
         void _close_file();
-        bool _allocate_buffer_if_null();
 
         zip_t *_zip_ptr;
         bool _only_load_entries;
 
         // read buffer
-        char *_buf_ptr;
-        size_t _buf_total_size;
-        ssize_t _read_buf_size;
+        std::string _buf;
         // information on current zip
         size_t _total_entries;
         size_t _current_idx;

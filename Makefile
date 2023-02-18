@@ -1,5 +1,4 @@
 PYTHON_BIN := python3
-
 ifeq (, $(shell which $(PYTHON_BIN)))
 PYTHON_BIN := python
 endif
@@ -560,6 +559,7 @@ clean:
 	rm -rf $(BIN_PATH)
 	rm -rf $(TEST_PATH)
 	rm -rf $(DEMO_PATH)
+	rm $(BUILD_PATH)/compile_commands.json
 
 clean_dep:
 	$(QUIET) $(call mk_log_info,makefile,removing dependencies)
@@ -582,7 +582,6 @@ bclean:
 fclean: bclean clean_dist clean_cache
 	$(QUIET) $(call mk_log_info,makefile,removing remaining files)
 	$(QUIET) rm -f $(HERE)/.sconsign.dblite
-	$(QUIET) rm -f $(HERE)/compile_commands.json
 	$(QUIET) find . -name "*vgcore*" -type f -exec rm -f {} \;
 	$(QUIET) find . -name "*.ini" -type f -exec rm -f {} \;
 	$(QUIET) find . -maxdepth 1 -name "*.scons*" -type d -exec rm -rf {} \;

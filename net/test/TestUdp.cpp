@@ -1,10 +1,13 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Worker.hpp>
+#include <sihd/util/ObserverWaiter.hpp>
+#include <sihd/util/Array.hpp>
+
 #include <sihd/net/UdpSender.hpp>
 #include <sihd/net/UdpReceiver.hpp>
 #include <sihd/net/INetReceiver.hpp>
-#include <sihd/util/Worker.hpp>
-#include <sihd/util/ObserverWaiter.hpp>
 
 namespace test
 {

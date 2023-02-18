@@ -130,12 +130,12 @@ ssize_t TcpClient::receive(void *buf, size_t len)
     return ret;
 }
 
-ssize_t TcpClient::send(sihd::util::ArrViewChar view)
+ssize_t TcpClient::send(sihd::util::ArrCharView view)
 {
     return _socket.send(view);
 }
 
-bool    TcpClient::send_all(sihd::util::ArrViewChar view)
+bool    TcpClient::send_all(sihd::util::ArrCharView view)
 {
     return _socket.send_all(view);
 }

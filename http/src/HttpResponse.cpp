@@ -44,13 +44,13 @@ bool    HttpResponse::set_plain_content(std::string_view str)
     return this->set_content(str);
 }
 
-bool    HttpResponse::set_byte_content(sihd::util::ArrViewByte data)
+bool    HttpResponse::set_byte_content(sihd::util::ArrByteView data)
 {
     this->_set_mime_type_if_not_set(Mime::MIME_APPLICATION_OCTET);
     return this->set_content(data);
 }
 
-bool    HttpResponse::set_content(sihd::util::ArrViewChar data)
+bool    HttpResponse::set_content(sihd::util::ArrCharView data)
 {
     if (_array.resize(data.byte_size()) == false)
         return false;

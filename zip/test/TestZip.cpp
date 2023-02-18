@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
-#include <sihd/zip/ZipWriter.hpp>
-#include <sihd/zip/ZipReader.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/TmpDir.hpp>
+
+#include <sihd/zip/ZipWriter.hpp>
+#include <sihd/zip/ZipReader.hpp>
 
 namespace test
 {
@@ -71,30 +73,29 @@ namespace test
         EXPECT_TRUE(reader.open(zip_path));
         EXPECT_EQ(reader.count_entries(), 13u);
 
-        char *data;
-        size_t size;
+        sihd::util::ArrCharView view;
         std::string entry_name = "toto_entry";
         EXPECT_TRUE(reader.load_entry(entry_name));
         SIHD_LOG(info, "Trying to read entry without password");
         EXPECT_TRUE(reader.read_entry() == -1);
         SIHD_LOG(info, "Trying to read entry with password");
         EXPECT_TRUE(reader.read_entry(password) > 0);
-        EXPECT_TRUE(reader.get_read_data(&data, &size));
-        EXPECT_STREQ(data, hw);
+        EXPECT_TRUE(reader.get_read_data(view));
+        EXPECT_EQ(view, hw);
 
         SIHD_LOG(info, "Setting global password");
         EXPECT_TRUE(reader.set_conf_str("password", password));
         entry_name = "toto_entry2";
         EXPECT_TRUE(reader.load_entry(entry_name));
         EXPECT_TRUE(reader.read_entry() > 0);
-        EXPECT_TRUE(reader.get_read_data(&data, &size));
-        EXPECT_STREQ(data, hw);
+        EXPECT_TRUE(reader.get_read_data(view));
+        EXPECT_EQ(view, hw);
 
         entry_name = "to_zip/file.txt";
         EXPECT_TRUE(reader.load_entry(entry_name));
         EXPECT_TRUE(reader.read_entry() > 0);
-        EXPECT_TRUE(reader.get_read_data(&data, &size));
-        EXPECT_STREQ(data, "hello\n");
+        EXPECT_TRUE(reader.get_read_data(view));
+        EXPECT_EQ(view, "hello\n");
 
         EXPECT_TRUE(reader.close());
     }
@@ -102,8 +103,7 @@ namespace test
     TEST_F(TestZip, test_zip_reader)
     {
         std::string zip_path = "test/resources/to_read/to_zip.zip";
-        char *data;
-        size_t size;
+        sihd::util::ArrCharView view;
         ZipReader reader("zip-reader");
 
         EXPECT_TRUE(reader.open(zip_path));
@@ -111,15 +111,15 @@ namespace test
 
         std::string entry_name = "to_zip/file.txt";
         EXPECT_TRUE(reader.load_entry(entry_name));
-        EXPECT_TRUE(reader.read_entry());
-        EXPECT_TRUE(reader.get_read_data(&data, &size));
-        EXPECT_STREQ(data, "hello\n");
+        EXPECT_GT(reader.read_entry(), 0);
+        EXPECT_TRUE(reader.get_read_data(view));
+        EXPECT_STREQ(view.data(), "hello\n");
 
         reader.set_read_entry_names(true);
         while (reader.read_next())
         {
-            EXPECT_TRUE(reader.get_read_data(&data, &size));
-            SIHD_LOG(info, "Zip entry: {}", data);
+            EXPECT_TRUE(reader.get_read_data(view));
+            SIHD_LOG(info, "Zip entry: {}", view);
             if (reader.is_entry_directory())
             {
                 SIHD_LOG(info, "-> directory");
@@ -127,12 +127,12 @@ namespace test
             else
             {
                 EXPECT_TRUE(reader.read_entry() >= 0);
-                EXPECT_TRUE(reader.get_read_data(&data, &size));
-                if (size > 0)
+                EXPECT_TRUE(reader.get_read_data(view));
+                if (view.size() > 0)
                 {
                     // removing linefeed from text
-                    data[size - 1] = 0;
-                    SIHD_LOG(info, "-> content: {}", data);
+                    view.remove_suffix(1);
+                    SIHD_LOG(info, "-> content: {}", view);
                 }
                 else
                     SIHD_LOG(info, "-> empty");

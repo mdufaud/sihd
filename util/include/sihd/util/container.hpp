@@ -3,12 +3,19 @@
 
 # include <fmt/format.h>
 
+# include <algorithm>
 # include <vector>
 
 # include <sihd/util/traits.hpp>
 
 namespace sihd::util::container
 {
+
+template <typename Container, typename Value>
+auto find(Container & container, const Value & value)
+{
+    return std::find(container.begin(), container.end(), value);
+}
 
 template <typename Container, typename Value>
 bool contains(const Container & container, const Value & value)
@@ -19,7 +26,7 @@ bool contains(const Container & container, const Value & value)
 template <typename Container, typename Value>
 bool erase(Container & container, const Value & value)
 {
-    static_assert(traits::IsIterable<Container>::value, "Type must be iterable");
+    static_assert(traits::is_iterable<Container>::value, "Type must be iterable");
 
     auto it = std::remove(container.begin(), container.end(), value);
     bool ret = it != container.end();
@@ -40,7 +47,7 @@ bool emplace_unique(std::vector<T> & vec, const T & value)
 template <typename Container, typename Key, typename Value>
 Value get_or(const Container & container, const Key & key, const Value & default_value)
 {
-    static_assert(traits::IsIterable<Container>::value, "Type must be iterable");
+    static_assert(traits::is_iterable<Container>::value, "Type must be iterable");
     static_assert(std::is_convertible_v<typename Container::mapped_type, Value>, "Type mismatch in get_or");
 
     const auto it = container.find(key);
@@ -104,7 +111,7 @@ std::vector<typename Map::key_type> ordered_keys(const Map & map)
 template <typename T, traits::disable_if_map<T> = 0>
 std::string str(const T & container)
 {
-    static_assert(traits::IsIterable<T>::value);
+    static_assert(traits::is_iterable<T>::value);
     std::string s = "[";
     for (auto it = container.begin(), first = it; it != container.end(); ++it)
     {

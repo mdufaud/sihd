@@ -1,9 +1,7 @@
 #ifndef __SIHD_UTIL_DATATYPE_HPP__
 # define __SIHD_UTIL_DATATYPE_HPP__
 
-# include <string>
-# include <vector>
-# include <map>
+# include <string_view>
 
 namespace sihd::util
 {

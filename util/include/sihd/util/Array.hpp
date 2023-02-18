@@ -1,14 +1,12 @@
 #ifndef __SIHD_UTIL_ARRAY_HPP__
 # define __SIHD_UTIL_ARRAY_HPP__
 
-# include <strings.h>
+# include <cstring> // mem* str*
+# include <utility> // std::enable_if
+# include <cstdint> // int8_t
+# include <stdexcept> // out of range
 
-# include <cstring>
-# include <utility>
-# include <cstdint>
-# include <stdexcept>
-# include <algorithm>
-
+# include <sihd/util/traits.hpp>
 # include <sihd/util/str.hpp>
 # include <sihd/util/IArray.hpp>
 # include <sihd/util/ICloneable.hpp>
@@ -69,15 +67,10 @@ class Array: public IArray, public ICloneable<Array<T>>
             this->push_back(&(*it), list.size());
         }
 
-        Array(const std::vector<T> & vec): Array()
+        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        Array(const Container & container): Array()
         {
-            this->push_back(vec);
-        }
-
-        template <size_t SIZE>
-        Array(const std::array<T, SIZE> & arr): Array()
-        {
-            this->push_back(arr);
+            this->push_back(container);
         }
 
         /*********************************************************************/
@@ -474,50 +467,20 @@ class Array: public IArray, public ICloneable<Array<T>>
         }
 
         /*********************************************************************/
-        /* to std containers */
-        /*********************************************************************/
-
-        std::vector<T> cpp_vector() const
-        {
-            return _buf_ptr != nullptr
-                ? std::vector<T>(_buf_ptr, _buf_ptr + _size)
-                : std::vector<T>();
-        }
-
-        template <size_t SIZE>
-        std::array<T, SIZE> cpp_array() const
-        {
-            std::array<T, SIZE> arr;
-            if (_buf_ptr != nullptr && _size >= SIZE)
-                memcpy(arr.data(), _buf_ptr, SIZE * this->data_size());
-            return arr;
-        }
-
-        /*********************************************************************/
         /* is_equal */
         /*********************************************************************/
 
-        bool is_equal(const std::vector<T> & vec, size_t byte_offset = 0) const
+        // container specialization
+        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        bool is_equal(const Container & container, size_t byte_offset = 0) const
         {
-            return this->is_equal(vec.data(), vec.size(), byte_offset);
+            return this->is_equal(container.data(), container.size(), byte_offset);
         }
 
-        template <size_t SIZE>
-        bool is_equal(const std::array<T, SIZE> & array, size_t byte_offset = 0) const
-        {
-            return this->is_equal(array.data(), array.size(), byte_offset);
-        }
-
-        // char specialization
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        bool is_equal(std::string_view str, size_t byte_offset = 0) const
+        bool is_equal(std::string_view view, size_t byte_offset = 0) const
         {
-            return this->is_bytes_equal(str.data(), str.size(), byte_offset);
-        }
-
-        bool is_equal(const Array<T> & arr, size_t byte_offset = 0) const
-        {
-            return this->is_equal(arr.data(), arr.size(), byte_offset);
+            return this->is_equal(view.data(), view.size(), byte_offset);
         }
 
         bool is_equal(std::initializer_list<T> init, size_t byte_offset = 0) const
@@ -536,27 +499,16 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* from */
         /*********************************************************************/
 
-        bool from(const std::vector<T> & vec)
+        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        bool from(const Container & container)
         {
-            return this->from(vec.data(), vec.size());
+            return this->from(container.data(), container.size());
         }
 
-        template <size_t SIZE>
-        bool from(const std::array<T, SIZE> & array)
-        {
-            return this->from(array.data(), array.size());
-        }
-
-        // char specialization
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        bool from(std::string_view str)
+        bool from(std::string_view view)
         {
-            return this->from(str.data(), str.size());
-        }
-
-        bool from(const Array<T> & vec)
-        {
-            return this->from(vec.data(), vec.size());
+            return this->from(view.data(), view.size());
         }
 
         bool from(std::initializer_list<T> init)
@@ -580,15 +532,11 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* copy_from */
         /*********************************************************************/
 
-        bool copy_from(const std::vector<T> & vec, size_t byte_offset = 0)
+        // container specialization
+        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        bool copy_from(const Container & container, size_t byte_offset = 0)
         {
-            return this->copy_from(vec.data(), vec.size(), byte_offset);
-        }
-
-        template <size_t SIZE>
-        bool copy_from(const std::array<T, SIZE> & array, size_t byte_offset = 0)
-        {
-            return this->copy_from(array.data(), array.size(), byte_offset);
+            return this->copy_from(container.data(), container.size(), byte_offset);
         }
 
         // char specialization
@@ -596,11 +544,6 @@ class Array: public IArray, public ICloneable<Array<T>>
         bool copy_from(std::string_view view, size_t byte_offset = 0)
         {
             return this->copy_from(view.data(), view.size(), byte_offset);
-        }
-
-        bool copy_from(const Array<T> & vec, size_t byte_offset = 0)
-        {
-            return this->copy_from(vec.data(), vec.size(), byte_offset);
         }
 
         bool copy_from(std::initializer_list<T> init, size_t byte_offset = 0)
@@ -619,17 +562,12 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* assign */
         /*********************************************************************/
 
-        // delete internal buffer if exists then sets it to vector buf - does not take ownership
-        bool assign(std::vector<T> & vec)
+        // container specialization
+        // delete internal buffer if exists then sets it to container buf - does not take ownership
+        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        bool assign(Container & container)
         {
-            return this->assign(vec.data(), vec.size());
-        }
-
-        // delete internal buffer if exists then sets it to array buf - does not take ownership
-        template <size_t SIZE>
-        bool assign(std::array<T, SIZE> & array)
-        {
-            return this->assign(array.data(), array.size());
+            return this->assign(container.data(), container.size());
         }
 
         // char specialization
@@ -671,15 +609,10 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* push_back */
         /*********************************************************************/
 
-        bool push_back(const std::vector<T> & vec)
+        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        bool push_back(const Container & container)
         {
-            return this->push_back(vec.data(), vec.size());
-        }
-
-        template <size_t SIZE>
-        bool push_back(const std::array<T, SIZE> & array)
-        {
-            return this->push_back(array.data(), array.size());
+            return this->push_back(container.data(), container.size());
         }
 
         // char specialization
@@ -687,11 +620,6 @@ class Array: public IArray, public ICloneable<Array<T>>
         bool push_back(std::string_view str)
         {
             return this->push_back(str.data(), str.size());
-        }
-
-        bool push_back(const Array<T> & arr)
-        {
-            return this->push_back(arr.data(), arr.size());
         }
 
         bool push_back(std::initializer_list<T> init)
@@ -718,15 +646,10 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* push_front */
         /*********************************************************************/
 
-        bool push_front(const std::vector<T> & vec)
+        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        bool push_front(const Container & container)
         {
-            return this->push_front(vec.data(), vec.size());
-        }
-
-        template <size_t SIZE>
-        bool push_front(const std::array<T, SIZE> & array)
-        {
-            return this->push_front(array.data(), array.size());
+            return this->push_front(container.data(), container.size());
         }
 
         // char specialization
@@ -734,11 +657,6 @@ class Array: public IArray, public ICloneable<Array<T>>
         bool push_front(std::string_view str)
         {
             return this->push_front(str.data(), str.size());
-        }
-
-        bool push_front(const Array<T> & arr)
-        {
-            return this->push_front(arr.data(), arr.size());
         }
 
         bool push_front(std::initializer_list<T> init)
@@ -839,6 +757,13 @@ class Array: public IArray, public ICloneable<Array<T>>
             if (idx >= _size)
                 throw std::out_of_range("Array::set: index exceeds size");
             _buf_ptr[idx] = value;
+        }
+
+        T & get(size_t idx)
+        {
+            if (idx >= _size)
+                throw std::out_of_range("Array::get: index exceeds size");
+            return _buf_ptr[idx];
         }
 
         /*********************************************************************/
@@ -1116,24 +1041,52 @@ class Array: public IArray, public ICloneable<Array<T>>
         }
 
         /*********************************************************************/
-        /* iterator operations */
-        /*********************************************************************/
-
-        auto find(const T & value) const
-        {
-            return std::find(this->cbegin(), this->cend(), value);
-        }
-
-        auto rfind(const T & value) const
-        {
-            return std::find(this->crbegin(), this->crend(), value);
-        }
-
-        /*********************************************************************/
         /* attributes */
         /*********************************************************************/
 
         static size_t mult_resize_capacity;
+
+        /*********************************************************************/
+        /* utils */
+        /*********************************************************************/
+
+        template <typename NewType>
+        Array<NewType> *cast() const
+        {
+            return dynamic_cast<Array<NewType> *>(this);
+        }
+
+        template <typename NewType>
+        Array<NewType> *cast()
+        {
+            return dynamic_cast<Array<NewType> *>(this);
+        }
+
+        // returns a single allocated Array<MergedType> containing contiguous memory of every arrays of vector
+        template <typename MergedType>
+        static Array<MergedType> *merge_to_array(const std::vector<const IArray *> & arrays)
+        {
+            size_t total = 0;
+            for (const IArray *array: arrays)
+                total += array->byte_size();
+            Array<MergedType> *ret = new Array<MergedType>();
+            if (ret->resize(total * ret->data_size()) == false)
+            {
+                delete ret;
+                return nullptr;
+            }
+            size_t copy_idx = 0;
+            for (const IArray *array: arrays)
+            {
+                if (ret->copy_from_bytes(*array, copy_idx) == false)
+                {
+                    delete ret;
+                    return nullptr;
+                }
+                copy_idx += array->byte_size();
+            }
+            return ret;
+        }
 
     protected:
         bool _internal_reserve(size_t capacity, bool clear_mem = true)
@@ -1194,190 +1147,6 @@ typedef Array<int64_t>    ArrLong;
 typedef Array<uint64_t>   ArrULong;
 typedef Array<float>      ArrFloat;
 typedef Array<double>     ArrDouble;
-
-/*********************************************************************/
-/* array utils for array manipulations */
-/*********************************************************************/
-class ArrayUtil
-{
-    public:
-        static ArrByte *merge_to_byte_array(const std::vector<const IArray *> & arrays)
-        {
-            return ArrayUtil::merge_to_array<int8_t>(arrays);
-        }
-
-        static ArrUByte *merge_to_ubyte_array(const std::vector<const IArray *> & arrays)
-        {
-            return ArrayUtil::merge_to_array<uint8_t>(arrays);
-        }
-
-        // returns a single allocated Array<T> containing contiguous memory of every arrays of vector
-        template <typename T>
-        static Array<T> *merge_to_array(const std::vector<const IArray *> & arrays)
-        {
-            size_t total = 0;
-            for (const IArray *array: arrays)
-                total += array->byte_size();
-            Array<T> *ret = new Array<T>();
-            if (ret->resize(total * ret->data_size()) == false)
-            {
-                delete ret;
-                return nullptr;
-            }
-            size_t copy_idx = 0;
-            for (const IArray *array: arrays)
-            {
-                if (ret->copy_from_bytes(*array, copy_idx) == false)
-                {
-                    delete ret;
-                    return nullptr;
-                }
-                copy_idx += array->byte_size();
-            }
-            return ret;
-        }
-
-        /**
-         * @brief assign pointers of a distributing array to a list of arrays
-         *  distributing_array: size 11 bytes [0x00 ... 0x0b]
-         *  assigned_arrays: [ [float_array, 2], [short_array, 1] ]
-         *  starting_offset = 1
-         *
-         * outputs:
-         *  float_array (4 bytes): size 2 [0x01 ... 0x09]
-         *  short_array (2 bytes): size 1 [0x09 ... 0x0b]
-         *
-         * throws std::invalid_argument if byte size is not aligned with the data size
-         * 
-         * @param distributing_array the array containing the buffer to distribute to other arrays
-         * @param assigned_arrays a vector of array-size pairs that will hold sequentially distributed pointer
-         * @param starting_offset the starting byte offset of distributing_array starting byte distribution
-         * @return true distribution is done
-         * @return false either starting_offset is too high or distributing_array has not enough
-         *  capacity to fill assigned_arrays
-         */
-        static bool distribute_array(IArray & distributing_array,
-                                        const std::vector<std::pair<IArray *, size_t>> assigned_arrays,
-                                        size_t starting_offset = 0)
-        {
-            if (starting_offset > distributing_array.byte_size())
-                throw std::invalid_argument(str::format("ArrayUtil: starting offset is beyond distributing array size (%lu > %lu)", starting_offset, distributing_array.byte_size()));
-            size_t total = 0;
-            for (const auto & pair: assigned_arrays)
-                total += pair.second * pair.first->data_size();
-            if ((total + starting_offset) > distributing_array.byte_size())
-                throw std::invalid_argument(str::format("ArrayUtil: total distribution exceed array size (%lu > %lu)", total + starting_offset, distributing_array.byte_size()));
-            size_t distributed_byte_size;
-            size_t offset_idx = starting_offset;
-            for (const auto & pair: assigned_arrays)
-            {
-                distributed_byte_size = pair.second * pair.first->data_size();
-                if (pair.first->assign_bytes(distributing_array.buf() + offset_idx, distributed_byte_size) == false)
-                    return false;
-                offset_idx += distributed_byte_size;
-            }
-            return true;
-        }
-
-        static IArray *create_from_type(Type dt, size_t size = 0)
-        {
-            switch (dt)
-            {
-                case TYPE_BOOL:
-                    return new ArrBool(size);
-                case TYPE_CHAR:
-                    return new ArrChar(size);
-                case TYPE_BYTE:
-                    return new ArrByte(size);
-                case TYPE_UBYTE:
-                    return new ArrUByte(size);
-                case TYPE_SHORT:
-                    return new ArrShort(size);
-                case TYPE_USHORT:
-                    return new ArrUShort(size);
-                case TYPE_INT:
-                    return new ArrInt(size);
-                case TYPE_UINT:
-                    return new ArrUInt(size);
-                case TYPE_LONG:
-                    return new ArrLong(size);
-                case TYPE_ULONG:
-                    return new ArrULong(size);
-                case TYPE_FLOAT:
-                    return new ArrFloat(size);
-                case TYPE_DOUBLE:
-                    return new ArrDouble(size);
-                default:
-                    break ;
-            }
-            return nullptr;
-        }
-
-        template <typename T>
-        static inline Array<T> *cast_array(IArray *ptr)
-        {
-            return dynamic_cast<Array<T> *>(ptr);
-        }
-
-        template <typename T>
-        static inline const Array<T> *cast_array(const IArray *ptr)
-        {
-            return dynamic_cast<const Array<T> *>(ptr);
-        }
-
-        template <typename T>
-        static bool read_array_into(const IArray & arr, size_t idx, T & val)
-        {
-            static_assert(std::is_trivially_copyable_v<T>);
-            return arr.copy_to_bytes(&val, sizeof(T), arr.byte_index(idx));
-        }
-
-        template <typename T>
-        static bool read_array_into(const IArray *arr, size_t idx, T & val)
-        {
-            return ArrayUtil::read_array_into<T>(*arr, idx, val);
-        }
-
-        // throws std::invalid_argument if data cannot be read
-        template <typename T>
-        static T read_array(const IArray & arr, size_t idx)
-        {
-            T ret;
-
-            if (ArrayUtil::read_array_into<T>(arr, idx, ret) == false)
-            {
-                throw std::invalid_argument(
-                    str::format("ArrayUtil::read_array cannot copy data from idx %lu into type '%s' (array type: '%s')",
-                                idx,
-                                Types::str<T>(),
-                                arr.data_type_str())
-                );
-            }
-            return ret;
-        }
-
-        template <typename T>
-        static T read_array(const IArray *arr, size_t idx)
-        {
-            return ArrayUtil::read_array<T>(*arr, idx);
-        }
-
-        template <typename T>
-        static bool write_array(IArray & arr, size_t idx, T value)
-        {
-            static_assert(std::is_trivially_copyable_v<T>);
-            return arr.copy_from_bytes(&value, sizeof(T), arr.byte_index(idx));
-        }
-
-        template <typename T>
-        static bool write_array(IArray *arr, size_t idx, T value)
-        {
-            return ArrayUtil::write_array<T>(*arr, idx, value);
-        }
-
-    private:
-        ~ArrayUtil() {};
-};
 
 }
 

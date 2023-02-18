@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Array.hpp>
+
 #include <sihd/net/Socket.hpp>
 
 namespace test

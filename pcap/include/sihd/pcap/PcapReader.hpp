@@ -31,7 +31,7 @@ class PcapReader:   public sihd::util::Named, public sihd::util::IReaderTimestam
         // should check if file is_open before calling theses
 
         bool read_next();
-        bool get_read_data(char **data, size_t *size) const;
+        bool get_read_data(sihd::util::ArrCharView & view) const;
 		bool read_timestamp(time_t *nano_timestamp) const;
 
         const struct pcap_pkthdr *packet_header() const;

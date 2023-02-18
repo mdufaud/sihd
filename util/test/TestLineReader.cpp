@@ -46,8 +46,7 @@ namespace test
     TEST_F(TestLineReader, test_linereader_one_line)
     {
         LineReader reader("line-reader");
-        char *line;
-        size_t size;
+        ArrCharView view;
 
         std::string path = fs::combine(_tmp_dir.path(), "one_line.txt");
 
@@ -57,13 +56,10 @@ namespace test
         EXPECT_TRUE(reader.open(path));
         SIHD_LOG(info, "Reading");
         EXPECT_TRUE(reader.read_next());
-        EXPECT_TRUE(reader.get_read_data(&line, &size));
+        EXPECT_TRUE(reader.get_read_data(view));
         // EXPECT_EQ(size, strlen("hello world"));
-        EXPECT_NE(line, nullptr);
-        if (line != nullptr)
-        {
-            EXPECT_STREQ(line, "hello world");
-        }
+        ASSERT_TRUE(view);
+        EXPECT_EQ(view, "hello world");
         EXPECT_FALSE(reader.read_next());
         EXPECT_TRUE(reader.close());
 
@@ -74,13 +70,10 @@ namespace test
         EXPECT_TRUE(reader.open(path));
         SIHD_LOG(info, "Reading");
         EXPECT_TRUE(reader.read_next());
-        EXPECT_TRUE(reader.get_read_data(&line, &size));
+        EXPECT_TRUE(reader.get_read_data(view));
         // EXPECT_EQ(size, strlen("hello world"));
-        EXPECT_NE(line, nullptr);
-        if (line != nullptr)
-        {
-            EXPECT_STREQ(line, "hello world");
-        }
+        ASSERT_TRUE(view);
+        EXPECT_EQ(view, "hello world");
         EXPECT_FALSE(reader.read_next());
         EXPECT_TRUE(reader.close());
     }
@@ -88,8 +81,7 @@ namespace test
     TEST_F(TestLineReader, test_linereader_two_lines)
     {
         LineReader reader("line-reader");
-        char *line;
-        size_t size;
+        ArrCharView view;
 
         std::string path = fs::combine(_tmp_dir.path(), "two_lines.txt");
 
@@ -100,23 +92,17 @@ namespace test
 
         SIHD_LOG(info, "First read");
         EXPECT_TRUE(reader.read_next());
-        EXPECT_TRUE(reader.get_read_data(&line, &size));
+        EXPECT_TRUE(reader.get_read_data(view));
         // EXPECT_EQ(size, strlen("hello world"));
-        EXPECT_NE(line, nullptr);
-        if (line != nullptr)
-        {
-            EXPECT_STREQ(line, "hello world");
-        }
+        ASSERT_TRUE(view);
+        EXPECT_EQ(view, "hello world");
 
         SIHD_LOG(info, "Second read");
         EXPECT_TRUE(reader.read_next());
-        EXPECT_TRUE(reader.get_read_data(&line, &size));
+        EXPECT_TRUE(reader.get_read_data(view));
         // EXPECT_EQ(size, strlen("how are you"));
-        EXPECT_NE(line, nullptr);
-        if (line != nullptr)
-        {
-            EXPECT_STREQ(line, "how are you");
-        }
+        ASSERT_TRUE(view);
+        EXPECT_EQ(view, "how are you");
         EXPECT_FALSE(reader.read_next());
         EXPECT_FALSE(reader.read_next());
         EXPECT_TRUE(reader.close());
@@ -129,23 +115,17 @@ namespace test
 
         SIHD_LOG(info, "First read");
         EXPECT_TRUE(reader.read_next());
-        EXPECT_TRUE(reader.get_read_data(&line, &size));
+        EXPECT_TRUE(reader.get_read_data(view));
         // EXPECT_EQ(size, strlen("hello world"));
-        EXPECT_NE(line, nullptr);
-        if (line != nullptr)
-        {
-            EXPECT_STREQ(line, "hello world");
-        }
+        ASSERT_TRUE(view);
+        EXPECT_EQ(view, "hello world");
 
         SIHD_LOG(info, "Second read");
         EXPECT_TRUE(reader.read_next());
-        EXPECT_TRUE(reader.get_read_data(&line, &size));
+        EXPECT_TRUE(reader.get_read_data(view));
         // EXPECT_EQ(size, strlen("how are you"));
-        EXPECT_NE(line, nullptr);
-        if (line != nullptr)
-        {
-            EXPECT_STREQ(line, "how are you");
-        }
+        ASSERT_TRUE(view);
+        EXPECT_EQ(view, "how are you");
         EXPECT_FALSE(reader.read_next());
         EXPECT_FALSE(reader.read_next());
         EXPECT_TRUE(reader.close());
@@ -154,8 +134,7 @@ namespace test
     TEST_F(TestLineReader, test_linereader_multiple_feeds)
     {
         LineReader reader("line-reader");
-        char *line;
-        size_t size;
+        ArrCharView view;
 
         std::string path = fs::combine(_tmp_dir.path(), "multiple_feeds.txt");
 
@@ -166,43 +145,31 @@ namespace test
 
         SIHD_LOG(info, "First read");
         EXPECT_TRUE(reader.read_next());
-        EXPECT_TRUE(reader.get_read_data(&line, &size));
+        EXPECT_TRUE(reader.get_read_data(view));
         // EXPECT_EQ(size, strlen("hello world"));
-        EXPECT_NE(line, nullptr);
-        if (line != nullptr)
-        {
-            EXPECT_STREQ(line, "hello world");
-        }
+        ASSERT_TRUE(view);
+        EXPECT_EQ(view, "hello world");
 
         SIHD_LOG(info, "Second read");
         EXPECT_TRUE(reader.read_next());
-        EXPECT_TRUE(reader.get_read_data(&line, &size));
+        EXPECT_TRUE(reader.get_read_data(view));
         // EXPECT_EQ(size, strlen("!"));
-        EXPECT_NE(line, nullptr);
-        if (line != nullptr)
-        {
-            EXPECT_STREQ(line, "!");
-        }
+        ASSERT_TRUE(view);
+        EXPECT_EQ(view, "!");
 
         SIHD_LOG(info, "Third read");
         EXPECT_TRUE(reader.read_next());
-        EXPECT_TRUE(reader.get_read_data(&line, &size));
+        EXPECT_TRUE(reader.get_read_data(view));
         // EXPECT_EQ(size, 0u);
-        EXPECT_NE(line, nullptr);
-        if (line != nullptr)
-        {
-            EXPECT_STREQ(line, "");
-        }
+        ASSERT_TRUE(view);
+        EXPECT_EQ(view, "");
 
         SIHD_LOG(info, "Fourth read");
         EXPECT_TRUE(reader.read_next());
-        EXPECT_TRUE(reader.get_read_data(&line, &size));
+        EXPECT_TRUE(reader.get_read_data(view));
         // EXPECT_EQ(size, 0u);
-        EXPECT_NE(line, nullptr);
-        if (line != nullptr)
-        {
-            EXPECT_STREQ(line, "");
-        }
+        ASSERT_TRUE(view);
+        EXPECT_EQ(view, "");
         EXPECT_FALSE(reader.read_next());
         EXPECT_FALSE(reader.read_next());
         EXPECT_TRUE(reader.close());
@@ -224,8 +191,7 @@ namespace test
     TEST_F(TestLineReader, test_linereader_low_buffer)
     {
         LineReader reader("line-reader");
-        char *line;
-        size_t size;
+        ArrCharView view;
 
         std::string path = fs::combine(_tmp_dir.path(), "buffer_test.txt");
 
@@ -236,13 +202,10 @@ namespace test
         EXPECT_TRUE(reader.open(path));
         EXPECT_TRUE(reader.read_next());
         // test read
-        EXPECT_TRUE(reader.get_read_data(&line, &size));
+        EXPECT_TRUE(reader.get_read_data(view));
         // EXPECT_EQ(size, strlen("hello world"));
-        EXPECT_NE(line, nullptr);
-        if (line != nullptr)
-        {
-            EXPECT_STREQ(line, "hello world");
-        }
+        ASSERT_TRUE(view);
+        EXPECT_EQ(view, "hello world");
         EXPECT_TRUE(reader.read_next());
         EXPECT_TRUE(reader.read_next());
         EXPECT_FALSE(reader.read_next());
@@ -287,8 +250,7 @@ namespace test
         writer.close();
         size_t total_rl = 0;
         writer.open(path_line_reader, "w");
-        line = nullptr;
-        size = 0;
+        ArrCharView view;
         {
             Timeit it("line-reader");
             LineReader reader("line-reader");
@@ -297,9 +259,9 @@ namespace test
             reader.open(path_input);
             while (reader.read_next())
             {
-                reader.get_read_data(&line, &size);
-                writer.write(line);
-                total_rl += strlen(line);
+                reader.get_read_data(view);
+                writer.write(view);
+                total_rl += strlen(view.data());
             }
             reader.close();
         }

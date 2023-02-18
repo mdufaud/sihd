@@ -80,8 +80,8 @@ class Socket
         bool shutdown();
         bool is_open() const { return _socket >= 0; }
 
-        ssize_t send(sihd::util::ArrViewChar view);
-        bool send_all(sihd::util::ArrViewChar view);
+        ssize_t send(sihd::util::ArrCharView view);
+        bool send_all(sihd::util::ArrCharView view);
 
         ssize_t receive(void *data, size_t size);
         ssize_t receive(sihd::util::IArray & arr);
@@ -102,8 +102,8 @@ class Socket
         // sockaddr
         bool bind(const sockaddr *addr, socklen_t addr_len);
         bool connect(const sockaddr *addr, socklen_t addr_len);
-        ssize_t send_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrViewChar view);
-        bool send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrViewChar view);
+        ssize_t send_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrCharView view);
+        bool send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrCharView view);
         ssize_t receive_from(sockaddr *addr, socklen_t *addr_len, void *data, size_t size);
         ssize_t receive_from(sockaddr *addr, socklen_t *addr_len, sihd::util::IArray & arr);
 
@@ -113,8 +113,8 @@ class Socket
         bool bind(const IpAddr & addr);
         bool connect(const IpAddr & addr);
         // calls send_to_ip  or first IPV4 ip
-        ssize_t send_to(const IpAddr & addr, sihd::util::ArrViewChar view);
-        bool send_all_to(const IpAddr & addr, sihd::util::ArrViewChar view);
+        ssize_t send_to(const IpAddr & addr, sihd::util::ArrCharView view);
+        bool send_all_to(const IpAddr & addr, sihd::util::ArrCharView view);
         ssize_t receive_from(IpAddr & addr, void *data, size_t size);
         ssize_t receive_from(IpAddr & addr, sihd::util::IArray & arr);
 
@@ -123,8 +123,8 @@ class Socket
         static std::string unix_socket_peername(int socket);
         bool bind_unix(std::string_view path);
         bool connect_unix(std::string_view path);
-        ssize_t send_to_unix(std::string_view path, sihd::util::ArrViewChar view);
-        bool send_all_to_unix(std::string_view path, sihd::util::ArrViewChar view);
+        ssize_t send_to_unix(std::string_view path, sihd::util::ArrCharView view);
+        bool send_all_to_unix(std::string_view path, sihd::util::ArrCharView view);
         ssize_t receive_from_unix(std::string & path, void *data, size_t size);
         ssize_t receive_from_unix(std::string & path, sihd::util::IArray & arr);
 

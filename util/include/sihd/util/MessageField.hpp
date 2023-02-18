@@ -1,8 +1,8 @@
 #ifndef __SIHD_UTIL_MESSAGEFIELD_HPP__
 # define __SIHD_UTIL_MESSAGEFIELD_HPP__
 
+# include <sihd/util/array_utils.hpp>
 # include <sihd/util/Types.hpp>
-# include <sihd/util/Array.hpp>
 # include <sihd/util/Named.hpp>
 # include <sihd/util/IMessageField.hpp>
 
@@ -40,7 +40,7 @@ class MessageField: public Named,
         {
             if (_array_ptr == nullptr)
                 throw std::logic_error("array is not built yet");
-            return ArrayUtil::read_array<T>(*_array_ptr, idx);
+            return array_utils::read<T>(*_array_ptr, idx);
         }
 
         const IArray *array() const { return _array_ptr; }

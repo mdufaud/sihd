@@ -1,10 +1,13 @@
 #ifndef __SIHD_NET_ICMPSENDER_HPP__
 # define __SIHD_NET_ICMPSENDER_HPP__
 
+# include <memory>
+
 # include <sihd/util/Named.hpp>
 # include <sihd/util/Configurable.hpp>
 # include <sihd/util/IStoppableRunnable.hpp>
 # include <sihd/util/Poll.hpp>
+# include <sihd/util/forward.hpp>
 
 # include <sihd/net/Socket.hpp>
 # include <sihd/net/ip.hpp>
@@ -48,7 +51,7 @@ class IcmpSender:   public sihd::util::Named,
         bool set_ttl(int ttl);
         void set_id(pid_t id);
         void set_seq(int seq);
-        bool set_data(sihd::util::ArrViewByte view);
+        bool set_data(sihd::util::ArrByteView view);
         bool set_data_size(size_t byte_size);
 
         bool send_to(const IpAddr & addr);
@@ -86,8 +89,8 @@ class IcmpSender:   public sihd::util::Named,
         Socket _socket;
         std::mutex _poll_mutex;
         sihd::util::Poll _poll;
-        sihd::util::ArrByte _array_rcv;
-        sihd::util::ArrByte _array_send;
+        std::unique_ptr<sihd::util::ArrByte> _array_rcv_ptr;
+        std::unique_ptr<sihd::util::ArrByte> _array_send_ptr;
 
         IcmpResponse _icmp_response;
 };

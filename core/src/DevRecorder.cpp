@@ -1,8 +1,10 @@
-#include <sihd/core/DevRecorder.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/Splitter.hpp>
+#include <sihd/util/Array.hpp>
+
+#include <sihd/core/DevRecorder.hpp>
 
 #define CHANNEL_RECORDS "records"
 
@@ -16,7 +18,8 @@ SIHD_LOGGER;
 DevRecorder::DevRecorder(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent), _running(false), _channel_records_ptr(nullptr)
 {
-    _records_array.resize(1);
+    _records_array_ptr = std::make_unique<util::ArrUInt>();
+    _records_array_ptr->resize(1);
     this->add_conf("handler", &DevRecorder::set_handler);
     this->add_conf("record", &DevRecorder::add_record_channel);
     this->add_conf("unrecord", &DevRecorder::remove_recorded_channel);
@@ -62,8 +65,8 @@ void    DevRecorder::handle(sihd::core::Channel *channel)
 {
     std::string & alias = _map_channels[channel];
     _handler_ptr->handle(alias, channel);
-    _records_array[0] += 1;
-    _channel_records_ptr->write(_records_array);
+    _records_array_ptr->get(0) += 1;
+    _channel_records_ptr->write(*_records_array_ptr);
 }
 
 bool    DevRecorder::on_init()
@@ -112,7 +115,7 @@ bool    DevRecorder::on_stop()
 
 bool    DevRecorder::on_reset()
 {
-    _records_array[0] = 0;
+    _records_array_ptr->set(/* idx */ 0, /* value */ 0);
     _handler_ptr = nullptr;
     return true;
 }

@@ -38,18 +38,18 @@ typedef Array<double>     ArrDouble;
 template <typename T>
 class ArrayView;
 
-typedef ArrayView<bool>       ArrViewBool;
-typedef ArrayView<char>       ArrViewChar;
-typedef ArrayView<int8_t>     ArrViewByte;
-typedef ArrayView<uint8_t>    ArrViewUByte;
-typedef ArrayView<int16_t>    ArrViewShort;
-typedef ArrayView<uint16_t>   ArrViewUShort;
-typedef ArrayView<int32_t>    ArrViewInt;
-typedef ArrayView<uint32_t>   ArrViewUInt;
-typedef ArrayView<int64_t>    ArrViewLong;
-typedef ArrayView<uint64_t>   ArrViewULong;
-typedef ArrayView<float>      ArrViewFloat;
-typedef ArrayView<double>     ArrViewDouble;
+typedef ArrayView<bool>       ArrBoolView;
+typedef ArrayView<char>       ArrCharView;
+typedef ArrayView<int8_t>     ArrByteView;
+typedef ArrayView<uint8_t>    ArrUByteView;
+typedef ArrayView<int16_t>    ArrShortView;
+typedef ArrayView<uint16_t>   ArrUShortView;
+typedef ArrayView<int32_t>    ArrIntView;
+typedef ArrayView<uint32_t>   ArrUIntView;
+typedef ArrayView<int64_t>    ArrLongView;
+typedef ArrayView<uint64_t>   ArrULongView;
+typedef ArrayView<float>      ArrFloatView;
+typedef ArrayView<double>     ArrDoubleView;
 
 class Named;
 class Node;

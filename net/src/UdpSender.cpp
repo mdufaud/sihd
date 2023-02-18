@@ -49,22 +49,22 @@ bool    UdpSender::close()
     return _socket.close();
 }
 
-ssize_t UdpSender::send(sihd::util::ArrViewChar view)
+ssize_t UdpSender::send(sihd::util::ArrCharView view)
 {
     return _socket.send(view);
 }
 
-bool    UdpSender::send_all(sihd::util::ArrViewChar view)
+bool    UdpSender::send_all(sihd::util::ArrCharView view)
 {
     return _socket.send_all(view);
 }
 
-ssize_t UdpSender::send_to(const IpAddr & addr, sihd::util::ArrViewChar view)
+ssize_t UdpSender::send_to(const IpAddr & addr, sihd::util::ArrCharView view)
 {
     return _socket.send_to(addr, view);
 }
 
-bool    UdpSender::send_to_all(const IpAddr & addr, sihd::util::ArrViewChar view)
+bool    UdpSender::send_to_all(const IpAddr & addr, sihd::util::ArrCharView view)
 {
     return _socket.send_all_to(addr, view);
 }

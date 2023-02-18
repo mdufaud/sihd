@@ -1,8 +1,9 @@
+#include <string.h>
+
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/str.hpp>
-#include <string.h>
 
 namespace sihd::util
 {
@@ -160,11 +161,9 @@ bool    LineReader::read_next()
     return false;
 }
 
-bool    LineReader::get_read_data(char **data, size_t *size) const
+bool    LineReader::get_read_data(ArrCharView & view) const
 {
-    *data = _line_ptr;
-    if (size != nullptr)
-        *size = _line_size;
+    view = ArrCharView{_line_ptr, _line_size};
     return _line_ptr != nullptr;
 }
 
@@ -215,17 +214,16 @@ void    LineReader::_delete_buffers()
 bool    LineReader::fast_read_line(std::string & line, FILE *stream, size_t buffsize)
 {
     LineReader reader("reader");
-    char *line_ptr;
-    size_t size;
+    ArrCharView view;
 
     reader.set_read_buffsize(buffsize);
     if (reader.set_stream(stream, false))
     {
         if (reader.read_next())
         {
-            if (reader.get_read_data(&line_ptr, &size))
+            if (reader.get_read_data(view))
             {
-                line = line_ptr;
+                line = view;
                 return true;
             }
         }

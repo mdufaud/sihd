@@ -1,11 +1,15 @@
 #ifndef __SIHD_SSH_SSHCOMMAND_HPP__
 # define __SIHD_SSH_SSHCOMMAND_HPP__
 
-# include <sihd/ssh/SshChannel.hpp>
+# include <string_view>
+
+# include <libssh/callbacks.h>
+
 # include <sihd/util/IHandler.hpp>
 # include <sihd/util/Waitable.hpp>
-# include <libssh/callbacks.h>
-# include <string_view>
+# include <sihd/util/ArrayView.hpp>
+
+# include <sihd/ssh/SshChannel.hpp>
 
 namespace sihd::ssh
 {
@@ -18,7 +22,7 @@ class SshCommand
 
         bool execute(std::string_view cmd);
         bool execute_async(std::string_view cmd);
-        bool input(const char *buf, size_t size);
+        bool input(sihd::util::ArrCharView view);
         bool wait(time_t timeout_nano = 0, time_t milliseconds_poll_time = 1);
 
         sihd::util::IHandler<char *, size_t, bool> *output_handler;

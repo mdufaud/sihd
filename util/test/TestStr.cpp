@@ -8,8 +8,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/time.hpp>
-
-
+#include <sihd/util/StrConfiguration.hpp>
 
 namespace test
 {
@@ -395,36 +394,25 @@ namespace test
         EXPECT_FALSE(this->test_double("toto-1234.456"));
     }
 
-    TEST_F(TestStr, test_str_conf)
+    TEST_F(TestStr, test_strconfiguration)
     {
-        std::map<std::string, std::string> conf = str::parse_configuration("key=value;key2=value2");
-        EXPECT_TRUE(conf.find("key") != conf.end());
-        EXPECT_TRUE(conf.find("key2") != conf.end());
+        StrConfiguration conf("key=value;key2=value2");
+        EXPECT_TRUE(conf.has("key"));
+        EXPECT_TRUE(conf.has("key2"));
         EXPECT_EQ(conf["key"], "value");
         EXPECT_EQ(conf["key2"], "value2");
 
-        conf = str::parse_configuration("a=1;b=;c;");
-        EXPECT_TRUE(conf.find("a") != conf.end());
-        EXPECT_TRUE(conf.find("b") != conf.end());
-        EXPECT_TRUE(conf.find("c") == conf.end());
+        conf.parse_configuration("a=1;b=;c;");
+        EXPECT_TRUE(conf.has("a"));
+        EXPECT_TRUE(conf.has("b"));
+        EXPECT_FALSE(conf.has("c"));
         EXPECT_EQ(conf["a"], "1");
         EXPECT_EQ(conf["b"], "");
 
-        conf = str::parse_configuration("");
+        conf.parse_configuration("");
         EXPECT_EQ(conf.size(), 0u);
-        conf = str::parse_configuration("a");
+        conf.parse_configuration("a");
         EXPECT_EQ(conf.size(), 0u);
-    }
-
-    TEST_F(TestStr, test_str_join)
-    {
-        std::string res;
-        res = str::join({"hello", "world"}, ",");
-        EXPECT_EQ(res, "hello,world");
-        res = str::join({"hello", "good", "world"}, " . ");
-        EXPECT_EQ(res, "hello . good . world");
-        res = str::join({"", "", "sup"}, ",");
-        EXPECT_EQ(res, ",,sup");
     }
 
     TEST_F(TestStr, test_str_format)

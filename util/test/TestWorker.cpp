@@ -33,6 +33,8 @@ namespace test
 
     TEST_F(TestWorker, test_worker_simple)
     {
+        if (os::is_run_by_valgrind())
+            GTEST_SKIP() << "Buggy with valgrind";
         int ran = 0;
         Task task([&] () -> bool
         {
@@ -71,6 +73,8 @@ namespace test
 
     TEST_F(TestWorker, test_stepworker_once)
     {
+        if (os::is_run_by_valgrind())
+            GTEST_SKIP() << "Buggy with valgrind";
         int ran = 0;
         Task task([&] () -> bool
         {

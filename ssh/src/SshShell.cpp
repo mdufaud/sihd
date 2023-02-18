@@ -58,8 +58,7 @@ bool    SshShell::read_loop()
     reader.set_stream(stdin, false);
     reader.set_read_buffsize(1);
     reader.set_delimiter_in_line(true);
-    size_t line_size;
-    char *line;
+    sihd::util::ArrCharView view;
     size_t bufsize = 4096;
     char buf[bufsize + 1];
     int nbytes;
@@ -106,11 +105,11 @@ bool    SshShell::read_loop()
         {
             if (reader.read_next())
             {
-                reader.get_read_data(&line, &line_size);
-                nwritten = _channel.write(line, line_size);
-                if (nwritten != (int)line_size)
+                reader.get_read_data(view);
+                nwritten = _channel.write(view);
+                if (nwritten != (int)view.size())
                 {
-                    SIHD_LOG_ERROR("SshShell: error writing to channel '{}' != '{}'", nwritten, (int)line_size);
+                    SIHD_LOG_ERROR("SshShell: error writing to channel '{}' != '{}'", nwritten, view.size());
                     ret = false;
                     break ;
                 }

@@ -31,7 +31,7 @@ class LineReader:   public sihd::util::Named,
         bool set_stream(FILE *stream, bool ownership = false);
 
         bool read_next();
-        bool get_read_data(char **data, size_t *size) const;
+        bool get_read_data(ArrCharView & view) const;
 
         bool error() const { return _error; }
         size_t buffsize() const { return _read_buff_size; }
