@@ -1,8 +1,9 @@
 #include <nlohmann/json.hpp>
 
-#include <sihd/core/MemRecorder.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+
+#include <sihd/core/MemRecorder.hpp>
 
 namespace sihd::core
 {

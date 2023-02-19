@@ -14,14 +14,14 @@
 namespace sihd::util
 {
 
-template <template <typename...> typename CONTAINER, typename TYPE>
-class Provider: public sihd::util::IProvider<TYPE>
+template <template <typename...> typename Container, typename Type>
+class Provider: public sihd::util::IProvider<Type>
 {
     public:
-        Provider(CONTAINER<TYPE> *container_ptr = nullptr) { this->set_container(container_ptr); }
+        Provider(Container<Type> *container_ptr = nullptr) { this->set_container(container_ptr); }
         virtual ~Provider() {}
 
-        bool provide(TYPE *value)
+        bool provide(Type *value)
         {
             auto lock = std::lock_guard(_mutex);
             if (_iterator != _container_ptr->end())
@@ -39,7 +39,7 @@ class Provider: public sihd::util::IProvider<TYPE>
             return _iterator != _container_ptr->end();
         }
 
-        void set_container(CONTAINER<TYPE> *iterator)
+        void set_container(Container<Type> *iterator)
         {
             {
                 auto lock = std::lock_guard(_mutex);
@@ -56,13 +56,13 @@ class Provider: public sihd::util::IProvider<TYPE>
             _iterator = _container_ptr->begin();
         }
 
-        CONTAINER<TYPE> *container() const { return _container_ptr; }
-        typename CONTAINER<TYPE>::iterator iterator() const { return _iterator; }
+        Container<Type> *container() const { return _container_ptr; }
+        typename Container<Type>::iterator iterator() const { return _iterator; }
 
     private:
         mutable std::mutex _mutex;
-        typename CONTAINER<TYPE>::iterator _iterator;
-        CONTAINER<TYPE> *_container_ptr;
+        typename Container<Type>::iterator _iterator;
+        Container<Type> *_container_ptr;
 
 };
 
@@ -77,11 +77,11 @@ using DequeProvider = Provider<std::deque, T>;
 template <typename T>
 using ArrayProvider = Provider<sihd::util::Array, T>;
 
-template <typename TYPE>
-class FunctionProvider: public sihd::util::IProvider<TYPE>
+template <typename Type>
+class FunctionProvider: public sihd::util::IProvider<Type>
 {
     public:
-        using ProviderMethod = std::function<bool (TYPE *)>;
+        using ProviderMethod = std::function<bool (Type *)>;
         using StatusMethod = std::function<bool ()>;
 
         FunctionProvider() {}
@@ -93,7 +93,7 @@ class FunctionProvider: public sihd::util::IProvider<TYPE>
 
         virtual ~FunctionProvider() {}
 
-        bool provide(TYPE *value)
+        bool provide(Type *value)
         {
             return _provide_method(value);
         }

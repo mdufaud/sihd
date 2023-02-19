@@ -4,7 +4,7 @@
 # include <nlohmann/json_fwd.hpp>
 
 # include <sihd/util/IHandler.hpp>
-# include <sihd/util/Providers.hpp>
+# include <sihd/util/IProvider.hpp>
 
 # include <sihd/core/Channel.hpp>
 # include <sihd/core/Records.hpp>

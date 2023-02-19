@@ -2,6 +2,8 @@
 #include <nlohmann/json.hpp>
 
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Array.hpp>
+
 #include <sihd/core/MemRecorder.hpp>
 #include <sihd/core/DevRecorder.hpp>
 #include <sihd/core/DevPlayer.hpp>

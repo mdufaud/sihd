@@ -5,6 +5,7 @@
 # include <vector>
 # include <exception>
 
+# include <sihd/util/Named.hpp>
 # include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::util

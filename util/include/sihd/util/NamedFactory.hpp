@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_NAMEDFACTORY_HPP__
 # define __SIHD_UTIL_NAMEDFACTORY_HPP__
 
+# include <sihd/util/Named.hpp>
 # include <sihd/util/SmartNodePtr.hpp>
 
 namespace sihd::util

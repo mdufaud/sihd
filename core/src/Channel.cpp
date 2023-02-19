@@ -109,9 +109,6 @@ bool    Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_off
         return false;
     }
 
-    SIHD_TRACE("MY ARRAY: {}", _array_ptr->str());
-    SIHD_TRACE("OTHER ARRAY: {}", arr_view.str());
-
     bool ret = false;
     {
         std::lock_guard lock(_arr_mutex);

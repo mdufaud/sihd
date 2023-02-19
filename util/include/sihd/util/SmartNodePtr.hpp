@@ -3,8 +3,6 @@
 
 # include <memory>
 
-# include <sihd/util/Named.hpp>
-
 namespace sihd::util
 {
 
