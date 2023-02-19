@@ -29,9 +29,9 @@ class PcapWriter:   public sihd::util::Named,
         bool set_snaplen(int len);
         bool set_datalink(int dtl);
 
-        ssize_t write(const char *data, size_t size);
-        ssize_t write(const char *data, size_t size, time_t nano);
-        ssize_t write(const char *data, size_t size, time_t sec, time_t usec);
+        ssize_t write(sihd::util::ArrCharView view);
+        ssize_t write(sihd::util::ArrCharView view, sihd::util::Timestamp timestamp);
+        ssize_t write(sihd::util::ArrCharView view, time_t sec, time_t usec);
 
         FILE *file();
         int64_t pos();

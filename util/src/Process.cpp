@@ -1,17 +1,25 @@
+#include <signal.h>
+
 #include <sihd/util/Process.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/Timestamp.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-# include <string.h> // strerror
-# include <errno.h>
+
+# if !defined(__ANDROID__)
+#  include <spawn.h>
+# endif
+
 # include <unistd.h>
 # include <sys/wait.h>
 # include <sys/types.h>
 # include <sys/stat.h> // open
 # include <fcntl.h> // open
 
+# include <cstdio>
+# include <cstring> // strerror
+# include <cerrno>
 # include <stdexcept>
 # include <fstream>
 
@@ -27,6 +35,26 @@ namespace sihd::util
 {
 
 SIHD_LOGGER;
+
+namespace
+{
+#if !defined(__SIHD_ANDROID__)
+void    _add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_to)
+{
+    if (dup_from >= 0 && dup_to >= 0)
+    {
+        posix_spawn_file_actions_adddup2(actions, dup_from, dup_to);
+        posix_spawn_file_actions_addclose(actions, dup_from);
+    }
+}
+
+void    _add_close_action(posix_spawn_file_actions_t *actions, int fd)
+{
+    if (fd >= 0)
+        posix_spawn_file_actions_addclose(actions, fd);
+}
+#endif
+}
 
 Process::Process()
 {
@@ -365,21 +393,6 @@ void    Process::_do_fork()
 }
 
 #if !defined(__SIHD_ANDROID__)
-void    Process::_add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_to)
-{
-    if (dup_from >= 0 && dup_to >= 0)
-    {
-        posix_spawn_file_actions_adddup2(actions, dup_from, dup_to);
-        posix_spawn_file_actions_addclose(actions, dup_from);
-    }
-}
-
-void    Process::_add_close_action(posix_spawn_file_actions_t *actions, int fd)
-{
-    if (fd >= 0)
-        posix_spawn_file_actions_addclose(actions, fd);
-}
-
 bool    Process::_do_spawn()
 {
     pid_t pid;
@@ -387,25 +400,25 @@ bool    Process::_do_spawn()
 
     posix_spawn_file_actions_init(&actions);
     if (_stdin.action == CLOSE)
-        this->_add_close_action(&actions, STDIN_FILENO);
+        _add_close_action(&actions, STDIN_FILENO);
     else
     {
-        this->_add_dup_action(&actions, _stdin.fd_read, STDIN_FILENO);
-        this->_add_close_action(&actions, _stdin.fd_write);
+        _add_dup_action(&actions, _stdin.fd_read, STDIN_FILENO);
+        _add_close_action(&actions, _stdin.fd_write);
     }
     if (_stdout.action == CLOSE)
-        this->_add_close_action(&actions, STDOUT_FILENO);
+        _add_close_action(&actions, STDOUT_FILENO);
     else
     {
-        this->_add_dup_action(&actions, _stdout.fd_write, STDOUT_FILENO);
-        this->_add_close_action(&actions, _stdout.fd_read);
+        _add_dup_action(&actions, _stdout.fd_write, STDOUT_FILENO);
+        _add_close_action(&actions, _stdout.fd_read);
     }
     if (_stderr.action == CLOSE)
-        this->_add_close_action(&actions, STDERR_FILENO);
+        _add_close_action(&actions, STDERR_FILENO);
     else
     {
-        this->_add_dup_action(&actions, _stderr.fd_write, STDERR_FILENO);
-        this->_add_close_action(&actions, _stderr.fd_read);
+        _add_dup_action(&actions, _stderr.fd_write, STDERR_FILENO);
+        _add_close_action(&actions, _stderr.fd_read);
     }
     int err = posix_spawnp(&pid, _argv[0], &actions, nullptr,
                             const_cast<char * const *>(&(_argv[0])),
@@ -541,6 +554,8 @@ bool    Process::end()
 
 bool    Process::kill(int sig)
 {
+    if (sig < 0)
+        sig = SIGTERM;
     bool ret = this->is_running();
     if (ret)
     {

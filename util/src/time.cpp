@@ -122,12 +122,12 @@ struct timeval  milli_to_tv(time_t milliseconds)
     return ret;
 }
 
-struct timeval  to_tv(time_t nano)
+struct timeval  to_tv(time_t micro)
 {
     struct timeval ret;
 
-    ret.tv_sec = nano / 1E6;
-    ret.tv_usec = nano % (int)1E6;
+    ret.tv_sec = micro / 1E6;
+    ret.tv_usec = micro % (int)1E6;
     return ret;
 }
 

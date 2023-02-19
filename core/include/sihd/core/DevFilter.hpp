@@ -1,10 +1,11 @@
 #ifndef __SIHD_CORE_DEVFILTER_HPP__
 # define __SIHD_CORE_DEVFILTER_HPP__
 
-# include <sihd/core/Device.hpp>
 # include <sihd/util/Value.hpp>
 # include <sihd/util/Scheduler.hpp>
 # include <sihd/util/Task.hpp>
+
+# include <sihd/core/Device.hpp>
 
 namespace sihd::core
 {

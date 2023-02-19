@@ -142,6 +142,8 @@ class Timestamp
         time_t hours() const;
         time_t days() const;
 
+        struct timeval tv() const;
+
         std::string timeoffset_str(bool total_parenthesis = false, bool nano_resolution = false) const;
         std::string localtimeoffset_str(bool total_parenthesis = false, bool nano_resolution = false) const;
         // format strftime -> "%Y-%m-%d %H:%M:%S"

@@ -113,7 +113,7 @@ ssize_t CsvWriter::write_commentary(std::string_view value)
     return ret;
 }
 
-ssize_t CsvWriter::write(const char *data, size_t size)
+ssize_t CsvWriter::write(sihd::util::ArrCharView view)
 {
     ssize_t ret = 0;
     //,
@@ -122,39 +122,27 @@ ssize_t CsvWriter::write(const char *data, size_t size)
     //"
     if (_begin_quote_c > 0)
     {
-        ret += _file.write_char(_begin_quote_c);
-        ret += _file.write(data, size);
-        ret += _file.write_char(_end_quote_c);
+        ret += _file.write(fmt::format("{}{}{}", _begin_quote_c, view.str(), _end_quote_c));
     }
     else
-        ret += _file.write(data, size);
-    if (ret < (ssize_t)size)
-        SIHD_LOG_ERROR("CsvWriter: write failed '{}' < '{}'", ret, size);
+        ret += _file.write(view);
+    if (ret < (ssize_t)view.size())
+        SIHD_LOG_ERROR("CsvWriter: write failed '{}' < '{}'", ret, view.size());
     _col += ret;
     _max_col = std::max(_max_col, _col);
     return ret;
 }
 
-ssize_t CsvWriter::write(const char *data, size_t size, time_t nano_timestamp)
+ssize_t CsvWriter::write(sihd::util::ArrCharView view, sihd::util::Timestamp timestamp)
 {
-    return this->write(std::to_string(nano_timestamp))
-        + this->write(data, size)
+    return this->write(std::to_string(timestamp.nanoseconds()))
+        + this->write(view)
         + this->new_row();
 }
 
-ssize_t CsvWriter::write(std::string_view value)
+ssize_t CsvWriter::write(const std::vector<std::string> & values, sihd::util::Timestamp timestamp)
 {
-    return this->write(value.data(), value.size());
-}
-
-ssize_t CsvWriter::write(std::string_view value, time_t nano_timestamp)
-{
-    return this->write(value.data(), value.size(), nano_timestamp);
-}
-
-ssize_t CsvWriter::write(const std::vector<std::string> & values, time_t nano_timestamp)
-{
-    return this->write(std::to_string(nano_timestamp)) + this->write(values);
+    return this->write(std::to_string(timestamp.nanoseconds())) + this->write(values);
 }
 
 ssize_t CsvWriter::write(const std::vector<std::string> & values)
@@ -176,9 +164,9 @@ ssize_t CsvWriter::write_row(const std::vector<std::string> & values)
     return this->write(values) + (ssize_t)this->new_row();
 }
 
-ssize_t CsvWriter::write_row(const std::vector<std::string> & values, time_t nano_timestamp)
+ssize_t CsvWriter::write_row(const std::vector<std::string> & values, sihd::util::Timestamp timestamp)
 {
-    return this->write(std::to_string(nano_timestamp)) + this->write_row(values);
+    return this->write(std::to_string(timestamp.nanoseconds())) + this->write_row(values);
 }
 
 }

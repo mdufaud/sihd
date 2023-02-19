@@ -232,5 +232,10 @@ time_t  Timestamp::days() const
     return time::to_days(_nano);
 }
 
+struct timeval Timestamp::tv() const
+{
+    return time::to_nano_tv(_nano);
+}
+
 
 }

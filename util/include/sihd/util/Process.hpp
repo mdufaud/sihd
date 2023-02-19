@@ -1,8 +1,6 @@
 #ifndef __SIHD_UTIL_PROCESS_HPP__
 # define __SIHD_UTIL_PROCESS_HPP__
 
-# include <signal.h>
-
 # include <functional>
 
 # include <sihd/util/platform.hpp>
@@ -10,10 +8,6 @@
 # include <sihd/util/Waitable.hpp>
 # include <sihd/util/Poll.hpp>
 # include <sihd/util/IHandler.hpp>
-
-# if !defined(__SIHD_WINDOWS__) && !defined(__ANDROID__)
-#  include <spawn.h>
-# endif
 
 namespace sihd::util
 {
@@ -58,8 +52,8 @@ class Process: public IStoppableRunnable, public IHandler<Poll *>
         bool read_pipes();
         // you have to call end when you piped (calls wait())
         bool end();
-        // send signal to process
-        bool kill(int sig = SIGTERM);
+        // send signal to process - SIGTERM by default
+        bool kill(int sig = -1);
 
         Process & stdin_close();
         Process & stdin_from(const std::string & input);
@@ -142,9 +136,6 @@ class Process: public IStoppableRunnable, public IHandler<Poll *>
         int _exec_child();
 
 #if !defined(__SIHD_ANDROID__)
-        // spawn
-        void _add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_to);
-        void _add_close_action(posix_spawn_file_actions_t *actions, int fd);
         bool _do_spawn();
 #endif
         void _init_poll();

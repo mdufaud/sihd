@@ -1,7 +1,8 @@
 #ifndef __SIHD_UTIL_IWRITER_HPP__
 # define __SIHD_UTIL_IWRITER_HPP__
 
-# include <ArrayView.hpp>
+# include <sihd/util/ArrayView.hpp>
+# include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
 {
@@ -19,7 +20,7 @@ class IWriterTimestamp: public IWriter
 
     public:
         virtual ~IWriterTimestamp() {};
-		virtual ssize_t write(ArrCharView view, time_t nano_timestamp) = 0;
+		virtual ssize_t write(ArrCharView view, Timestamp timestamp) = 0;
 };
 
 }

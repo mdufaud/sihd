@@ -11,7 +11,7 @@ namespace sihd::csv
 
 class CsvWriter:    public sihd::util::Named,
                     public sihd::util::Configurable,
-                    public sihd::util::IWriter
+                    public sihd::util::IWriterTimestamp
 {
     public:
         CsvWriter(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -29,17 +29,14 @@ class CsvWriter:    public sihd::util::Named,
         ssize_t write_commentary(std::string_view commentary);
 
         // IWriterTimestamp
-		ssize_t write(const char *data, size_t size);
-		ssize_t write(const char *data, size_t size, time_t nano_timestamp);
-
-        ssize_t write(std::string_view value);
-        ssize_t write(std::string_view value, time_t nano_timestamp);
+		ssize_t write(sihd::util::ArrCharView view);
+		ssize_t write(sihd::util::ArrCharView view, sihd::util::Timestamp timestamp);
 
         ssize_t write(const std::vector<std::string> & values);
-        ssize_t write(const std::vector<std::string> & values, time_t nano_timestamp);
+        ssize_t write(const std::vector<std::string> & values, sihd::util::Timestamp timestamp);
 
         ssize_t write_row(const std::vector<std::string> & values);
-        ssize_t write_row(const std::vector<std::string> & values, time_t nano_timestamp);
+        ssize_t write_row(const std::vector<std::string> & values, sihd::util::Timestamp timestamp);
 
         int delimiter() const { return _delimiter; }
         int comment() const { return _comment; }

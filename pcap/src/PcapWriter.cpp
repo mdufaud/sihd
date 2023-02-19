@@ -104,35 +104,30 @@ FILE    *PcapWriter::file()
     return pcap_dump_file(_pcap_dumper_ptr);
 }
 
-ssize_t PcapWriter::write(const char *data, size_t size)
+ssize_t PcapWriter::write(sihd::util::ArrCharView view, sihd::util::Timestamp timestamp)
 {
     pcap_pkthdr hdr;
-    hdr.caplen = size;
-    hdr.len = size;
-    hdr.ts = sihd::util::time::to_tv(_clock_ptr->now());
-    pcap_dump((u_char *)_pcap_dumper_ptr, &hdr, (const u_char *)data);
-    return size;
+    hdr.caplen = view.size();
+    hdr.len = view.size();
+    hdr.ts = timestamp.tv();
+    pcap_dump((u_char *)_pcap_dumper_ptr, &hdr, (const u_char *)view.data());
+    return view.size();
 }
 
-ssize_t PcapWriter::write(const char *data, size_t size, time_t nano)
+ssize_t PcapWriter::write(sihd::util::ArrCharView view)
 {
-    pcap_pkthdr hdr;
-    hdr.caplen = size;
-    hdr.len = size;
-    hdr.ts = sihd::util::time::to_tv(nano);
-    pcap_dump((u_char *)_pcap_dumper_ptr, &hdr, (const u_char *)data);
-    return size;
+    return write(view, _clock_ptr->now());
 }
 
-ssize_t PcapWriter::write(const char *data, size_t size, time_t sec, time_t usec)
+ssize_t PcapWriter::write(sihd::util::ArrCharView view, time_t sec, time_t usec)
 {
     pcap_pkthdr hdr;
-    hdr.caplen = size;
-    hdr.len = size;
+    hdr.caplen = view.size();
+    hdr.len = view.size();
     hdr.ts.tv_sec = sec;
     hdr.ts.tv_usec = usec;
-    pcap_dump((u_char *)_pcap_dumper_ptr, &hdr, (const u_char *)data);
-    return size;
+    pcap_dump((u_char *)_pcap_dumper_ptr, &hdr, (const u_char *)view.data());
+    return view.size();
 }
 
 int64_t PcapWriter::pos()

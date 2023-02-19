@@ -3,8 +3,8 @@
 
 # include <stdexcept> // out of range
 # include <vector>
-# include <sihd/util/str.hpp>
 
+# include <sihd/util/str.hpp>
 # include <sihd/util/IArray.hpp>
 
 namespace sihd::util::array_utils
