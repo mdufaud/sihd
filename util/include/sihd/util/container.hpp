@@ -25,19 +25,20 @@ struct recursive_map_type
   using type = T;
 };
 
-template <typename T, int CurrentIdx, int ContainerSize>
+template <typename T, int CurrentKey, int TotalKeys>
 struct recursive_map_type<
     T,
-    CurrentIdx,
-    ContainerSize,
-    std::enable_if_t<(CurrentIdx < ContainerSize) && traits::is_map<T>::value>
+    CurrentKey,
+    TotalKeys,
+    std::enable_if_t<(CurrentKey < TotalKeys) && traits::is_map<T>::value>
 >
 {
     using map_value_type = typename T::mapped_type;
 
+    // if mapped type is a map, do a recursion else get type
     using type = std::conditional_t<
         traits::is_map<map_value_type>::value,
-        typename recursive_map_type<map_value_type, CurrentIdx + 1, ContainerSize>::type,
+        typename recursive_map_type<map_value_type, CurrentKey + 1, TotalKeys>::type,
         map_value_type
     >;
 };
@@ -49,6 +50,7 @@ struct recursive_map_type_helper
         using return_type = typename recursive_map_type<T, 0, sizeof...(Keys) + 1>::type;
 
     public:
+        // handle const type
         using type = std::conditional_t<std::is_const_v<T>, const return_type, return_type>;
 };
 
@@ -109,7 +111,7 @@ template <
 Type *recursive_map_search(Container & container, const Key & key, const Keys & ...keys)
 {
     const auto it = container.find(key);
-    const auto found = it != container.end();
+    const bool found = it != container.end();
 
     if constexpr (sizeof...(Keys) == 0)
         return found ? &(it->second) : nullptr;
