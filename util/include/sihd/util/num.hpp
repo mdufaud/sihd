@@ -1,9 +1,9 @@
 #ifndef __SIHD_UTIL_NUM_HPP__
 # define __SIHD_UTIL_NUM_HPP__
 
-# include <stdint.h>
 # include <sys/types.h>
 
+# include <cstdint>
 # include <limits>
 
 namespace sihd::util::num

@@ -57,6 +57,23 @@ namespace test
             }
     };
 
+    TEST_F(TestArrayView, test_arrayview_fundamental)
+    {
+        int val = 5;
+        ArrByteView view_int(val);
+        ASSERT_EQ(view_int.size(), sizeof(int));
+
+        int8_t *byte = (int8_t *)&val;
+        EXPECT_EQ(view_int[0], byte[0]);
+        EXPECT_EQ(view_int[1], byte[1]);
+        EXPECT_EQ(view_int[2], byte[2]);
+        EXPECT_EQ(view_int[3], byte[3]);
+
+        ArrByteView view_double(5.0);
+        // CANNOT ACCESS BECAUSE THE POINTER OF THE DOUBLE IS NOW LOST - BEWARE
+        ASSERT_EQ(view_double.size(), sizeof(double));
+    }
+
     TEST_F(TestArrayView, test_arrayview_struct)
     {
         struct Test
@@ -64,6 +81,17 @@ namespace test
             int x;
             int y;
         };
+
+        Test mono;
+        mono.x = 42;
+        mono.y = 1337;
+
+        ArrayView<Test> mono_view(mono);
+        EXPECT_EQ(mono_view[0].x, 42);
+        EXPECT_EQ(mono_view[0].y, 1337);
+
+        ArrByteView byte_mono_view(mono);
+        EXPECT_EQ(byte_mono_view.size(), sizeof(Test));
 
         Test arr[3];
         arr[0].x = 42;

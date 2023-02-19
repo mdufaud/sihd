@@ -10,12 +10,16 @@ class IMessageField;
 class IRunnable;
 class IReader;
 class IWriter;
+
 template <typename ...T>
 class IHandler;
+
 template <typename T>
 class IObservable;
+
 template <typename T>
 class IProvider;
+
 class ISteppable;
 class IStoppableRunnable;
 
@@ -66,5 +70,6 @@ class SystemClock;
 class SteadyClock;
 
 class Task;
+class Defer;
 
 }

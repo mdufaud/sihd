@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/util/TmpDir.hpp>
-#include <sihd/util/Path.hpp>
+#include <sihd/util/path.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace test
@@ -26,7 +26,7 @@ namespace test
 
             virtual void SetUp()
             {
-                Path::clear_all();
+                path::clear_all();
             }
 
             virtual void TearDown()
@@ -43,20 +43,20 @@ namespace test
         std::filesystem::path test_dir = test_path / "1" / "2";
         std::filesystem::create_directories(test_dir);
         auto test_file = test_dir / "file.txt";
-        std::ofstream file(test_file.generic_string());
+        std::ofstream file(test_file.string());
         file << "hello" << std::endl;
         file.close();
 
-        Path::set("", "");
-        Path::set("false-dir", "/does/not/exists");
-        Path::set("sihd-test", test_dir.generic_string());
-        EXPECT_EQ(Path::get("sihd-test", "file.txt"), test_dir / "file.txt");
-        EXPECT_EQ(Path::get("sihd-test://file.txt"), test_dir / "file.txt");
-        EXPECT_EQ(Path::find("file.txt"), test_dir / "file.txt");
+        path::set("", "");
+        path::set("false-dir", "/does/not/exists");
+        path::set("sihd-test", test_dir.string());
+        EXPECT_EQ(path::get("sihd-test", "file.txt"), test_dir / "file.txt");
+        EXPECT_EQ(path::get("sihd-test://file.txt"), test_dir / "file.txt");
+        EXPECT_EQ(path::find("file.txt"), test_dir / "file.txt");
 
-        Path::clear("sihd-test");
-        EXPECT_EQ(Path::get("sihd-test", "file.txt"), "");
+        path::clear("sihd-test");
+        EXPECT_EQ(path::get("sihd-test", "file.txt"), "");
 
-        SIHD_TRACEF(Path::find("test/TestPath.cpp"));
+        SIHD_TRACEF(path::find("test/TestPath.cpp"));
     }
 }

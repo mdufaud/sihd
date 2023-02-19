@@ -23,37 +23,34 @@ class CallbackManager
 
         void remove(const std::string & name)
         {
-            if (_callbacks.find(name) != _callbacks.end())
-            {
-                _callbacks.erase(name);
-            }
+            _callbacks.erase(name);
         }
 
         // Non-member functions binding
         template<typename R, typename ...Targs>
         void set(const std::string & name, R (*fun)(Targs...))
         {
-            _callbacks.insert(std::make_pair(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun](Targs... args)
+            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun](Targs... args)
             {
                 return (*fun)(args...);
-            }))));
+            })));
         }
 
         // Member functions binding
         template<typename C, typename R, typename ...Targs>
         void set(const std::string & name, C *obj, R (C::*fun)(Targs...))
         {
-            _callbacks.insert(std::make_pair(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun, obj](Targs... args)
+            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun, obj](Targs... args)
             {
                 return (obj->*fun)(args...);
-            }))));
+            })));
         }
 
         // std::function binding
         template<typename R, typename ...Targs>
         void set(const std::string & name, std::function<R (Targs...)> fun)
         {
-            _callbacks.insert(std::make_pair(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun)))));
+            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
         }
 
         // The entire signature of the lambda must be passed to this overload.
@@ -61,7 +58,7 @@ class CallbackManager
         void set(const std::string & name, Callable callable)
         {
             std::function<R (Targs...)> fun(callable);
-            _callbacks.insert(std::make_pair(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun)))));
+            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
         }
 
         // Calling

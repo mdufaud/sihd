@@ -28,11 +28,11 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         static constexpr size_t npos = size_t(-1);
 
+        // this array implementation relies on memcpy/memcmp
         static_assert(std::is_trivially_copyable_v<T>);
 
         Array()
         {
-            // this array implementation heavily relies on memcpy/memcmp
             _buf_ptr = nullptr;
             _size = 0;
             _capacity = 0;
@@ -67,7 +67,7 @@ class Array: public IArray, public ICloneable<Array<T>>
             this->push_back(&(*it), list.size());
         }
 
-        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
         Array(const Container & container): Array()
         {
             this->push_back(container);
@@ -471,7 +471,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         /*********************************************************************/
 
         // container specialization
-        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
         bool is_equal(const Container & container, size_t byte_offset = 0) const
         {
             return this->is_equal(container.data(), container.size(), byte_offset);
@@ -499,7 +499,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* from */
         /*********************************************************************/
 
-        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
         bool from(const Container & container)
         {
             return this->from(container.data(), container.size());
@@ -533,7 +533,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         /*********************************************************************/
 
         // container specialization
-        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
         bool copy_from(const Container & container, size_t byte_offset = 0)
         {
             return this->copy_from(container.data(), container.size(), byte_offset);
@@ -564,7 +564,7 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         // container specialization
         // delete internal buffer if exists then sets it to container buf - does not take ownership
-        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
         bool assign(Container & container)
         {
             return this->assign(container.data(), container.size());
@@ -609,7 +609,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* push_back */
         /*********************************************************************/
 
-        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
         bool push_back(const Container & container)
         {
             return this->push_back(container.data(), container.size());
@@ -646,7 +646,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         /* push_front */
         /*********************************************************************/
 
-        template <typename Container, traits::enable_if_iterable<Container> = 0>
+        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
         bool push_front(const Container & container)
         {
             return this->push_front(container.data(), container.size());

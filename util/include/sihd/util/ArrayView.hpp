@@ -25,10 +25,12 @@ class ArrayView: public IArrayView
 
         static constexpr size_t npos = size_t(-1);
 
+        // this array implementation relies on memcpy/memcmp
         static_assert(std::is_trivially_copyable_v<T>);
 
         ArrayView(): _buf_ptr(nullptr), _size(0) {}
         ArrayView(const T *data, size_t size): _buf_ptr(data), _size(size) {}
+        ArrayView(const T & val): ArrayView(&val, 1) {}
         ArrayView(const ArrayView<T> & arr): ArrayView(arr.data(), arr.size()) {}
 
         // container specialization
@@ -37,10 +39,19 @@ class ArrayView: public IArrayView
         template <
             typename Container,
             typename ValueType = typename Container::value_type,
-            traits::enable_if_iterable<Container> = 0
+            typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0
         >
         ArrayView(const Container & container):
             ArrayView(container.data(), (container.size() * sizeof(ValueType)) / sizeof(T)) {}
+
+        // fundamental & struct specializations
+        // make sure the fundamental type size is divisible by type size.
+        // ex: int8_t may not go into an ArrayView<int32_t> which will be size 0
+        template <
+            typename Fundamental,
+            std::enable_if_t<std::is_trivially_copyable_v<Fundamental> && !std::is_pointer_v<Fundamental>, bool> = 0
+        >
+        ArrayView(const Fundamental & value): ArrayView(&value, sizeof(Fundamental) / sizeof(T)) {}
 
         // char specialization
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>

@@ -4,6 +4,7 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fs.hpp>
+#include <sihd/util/File.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/num.hpp>
 

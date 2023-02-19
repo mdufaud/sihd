@@ -147,5 +147,11 @@ namespace test
         EXPECT_EQ(ret, 30);
 
         EXPECT_THROW(cbm.call("no_such_key"), std::out_of_range);
+
+        EXPECT_TRUE(cbm.exists("test_void_args"));
+        cbm.remove("test_void_args");
+        EXPECT_FALSE(cbm.exists("test_void_args"));
+
+        cbm.remove("no_such_key");
     }
 }

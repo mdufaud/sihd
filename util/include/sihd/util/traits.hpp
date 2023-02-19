@@ -13,23 +13,18 @@ template <typename T>
 struct is_iterable<T, std::void_t<decltype(std::declval<T>().begin()),
                                     decltype(std::declval<T>().end())>>: public std::true_type {};
 
-template <typename T>
-using enable_if_iterable = typename std::enable_if_t<is_iterable<T>::value, bool>;
+template <typename, typename = void>
+struct has_data_size: public std::false_type {};
 
 template <typename T>
-using disable_if_iterable = typename std::enable_if_t<!is_iterable<T>::value, bool>;
+struct has_data_size<T, std::void_t<decltype(std::declval<T>().data()),
+                                    decltype(std::declval<T>().size())>>: public std::true_type {};
 
 template <typename, typename = void>
 struct is_map: public std::false_type {};
 
 template <typename T>
 struct is_map<T, std::void_t<typename T::mapped_type>>: public std::true_type {};
-
-template <typename T>
-using enable_if_map = typename std::enable_if_t<is_map<T>::value, bool>;
-
-template <typename T>
-using disable_if_map = typename std::enable_if_t<!is_map<T>::value, bool>;
 
 }
 
