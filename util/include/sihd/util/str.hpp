@@ -1,11 +1,11 @@
 #ifndef __SIHD_UTIL_STR_HPP__
-# define __SIHD_UTIL_STR_HPP__
+#define __SIHD_UTIL_STR_HPP__
 
-# include <string_view>
+#include <string_view>
 
-# include <sihd/util/Timestamp.hpp>
-# include <sihd/util/IArray.hpp>
-# include <sihd/util/IArrayView.hpp>
+#include <sihd/util/IArray.hpp>
+#include <sihd/util/IArrayView.hpp>
+#include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util::str
 {
@@ -93,7 +93,7 @@ bool to_double(std::string_view str, double *ret);
 template <typename T>
 bool convert_from_string(std::string_view str, T & value, uint16_t base = 0);
 
-}
+} // namespace sihd::util::str
 
 namespace sihd::util
 {
@@ -134,6 +134,6 @@ bool str::convert_from_string<float>(std::string_view str, float & value, uint16
 template <>
 bool str::convert_from_string<double>(std::string_view str, double & value, uint16_t base);
 
-}
+} // namespace sihd::util
 
 #endif

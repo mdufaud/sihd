@@ -1,16 +1,17 @@
 #ifndef __SIHD_PCAP_PCAPREADER_HPP__
-# define __SIHD_PCAP_PCAPREADER_HPP__
+#define __SIHD_PCAP_PCAPREADER_HPP__
 
-# include <sihd/util/Node.hpp>
-# include <sihd/util/File.hpp>
-# include <sihd/util/IReader.hpp>
+#include <sihd/util/File.hpp>
+#include <sihd/util/IReader.hpp>
+#include <sihd/util/Node.hpp>
 
-# include <sihd/pcap/utils.hpp>
+#include <sihd/pcap/utils.hpp>
 
 namespace sihd::pcap
 {
 
-class PcapReader:   public sihd::util::Named, public sihd::util::IReaderTimestamp
+class PcapReader: public sihd::util::Named,
+                  public sihd::util::IReaderTimestamp
 {
     public:
         PcapReader(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -32,7 +33,7 @@ class PcapReader:   public sihd::util::Named, public sihd::util::IReaderTimestam
 
         bool read_next();
         bool get_read_data(sihd::util::ArrCharView & view) const;
-		bool read_timestamp(time_t *nano_timestamp) const;
+        bool read_timestamp(time_t *nano_timestamp) const;
 
         const struct pcap_pkthdr *packet_header() const;
 
@@ -59,6 +60,6 @@ class PcapReader:   public sihd::util::Named, public sihd::util::IReaderTimestam
         u_int _precision;
 };
 
-}
+} // namespace sihd::pcap
 
 #endif

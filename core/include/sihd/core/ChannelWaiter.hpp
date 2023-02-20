@@ -1,11 +1,11 @@
 #ifndef __SIHD_CORE_CHANNELWAITER_HPP__
-# define __SIHD_CORE_CHANNELWAITER_HPP__
+#define __SIHD_CORE_CHANNELWAITER_HPP__
 
-# include <atomic>
+#include <atomic>
 
-# include <sihd/util/Waitable.hpp>
+#include <sihd/util/Waitable.hpp>
 
-# include <sihd/core/ACoreObject.hpp>
+#include <sihd/core/ACoreObject.hpp>
 
 namespace sihd::core
 {
@@ -34,9 +34,8 @@ class ChannelWaiter: public ACoreObject
         Channel *_channel;
         sihd::util::Waitable _waitable;
         std::atomic<int> _count;
-
 };
 
-}
+} // namespace sihd::core
 
 #endif

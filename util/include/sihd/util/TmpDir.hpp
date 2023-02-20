@@ -1,8 +1,8 @@
 #ifndef __SIHD_UTIL_TMPDIR_HPP__
-# define __SIHD_UTIL_TMPDIR_HPP__
+#define __SIHD_UTIL_TMPDIR_HPP__
 
-# include <string>
-# include <string_view>
+#include <string>
+#include <string_view>
 
 namespace sihd::util
 {
@@ -25,6 +25,6 @@ class TmpDir
         std::string _path;
 };
 
-}
+} // namespace sihd::util
 
 #endif

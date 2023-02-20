@@ -1,5 +1,5 @@
 #ifndef __SIHD_UTIL_IOBSERVABLE_HPP__
-# define __SIHD_UTIL_IOBSERVABLE_HPP__
+#define __SIHD_UTIL_IOBSERVABLE_HPP__
 
 namespace sihd::util
 {
@@ -12,9 +12,8 @@ class IObservable
 
     protected:
         virtual void notify_observers(T *sender) = 0;
-
 };
 
-}
+} // namespace sihd::util
 
 #endif

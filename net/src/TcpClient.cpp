@@ -9,8 +9,7 @@ SIHD_UTIL_REGISTER_FACTORY(TcpClient)
 
 SIHD_LOGGER;
 
-TcpClient::TcpClient(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent)
+TcpClient::TcpClient(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
 {
     _connected = false;
     _poll.set_timeout(1);
@@ -19,53 +18,51 @@ TcpClient::TcpClient(const std::string & name, sihd::util::Node *parent):
     this->add_conf("poll_timeout", &TcpClient::set_poll_timeout);
 }
 
-TcpClient::~TcpClient()
-{
-}
+TcpClient::~TcpClient() {}
 
-bool    TcpClient::set_poll_timeout(int milliseconds)
+bool TcpClient::set_poll_timeout(int milliseconds)
 {
     _poll.set_timeout(milliseconds);
     return true;
 }
 
-bool    TcpClient::open_socket_unix()
+bool TcpClient::open_socket_unix()
 {
     if (_socket.is_open())
         return false;
     return _socket.open(AF_UNIX, SOCK_STREAM, IPPROTO_TCP);
 }
 
-bool    TcpClient::open_socket(bool ipv6)
+bool TcpClient::open_socket(bool ipv6)
 {
     if (_socket.is_open())
         return false;
     return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
 }
 
-bool    TcpClient::connect(const IpAddr & addr)
+bool TcpClient::connect(const IpAddr & addr)
 {
     _connected = _socket.connect(addr);
     return _connected;
 }
 
-bool    TcpClient::connect(std::string_view path)
+bool TcpClient::connect(std::string_view path)
 {
     _connected = _socket.connect_unix(path);
     return _connected;
 }
 
-bool    TcpClient::open_and_connect(const IpAddr & ip)
+bool TcpClient::open_and_connect(const IpAddr & ip)
 {
     return this->open_socket(ip.prefers_ipv6()) && this->connect(ip);
 }
 
-bool    TcpClient::open_unix_and_connect(std::string_view path)
+bool TcpClient::open_unix_and_connect(std::string_view path)
 {
     return this->open_socket_unix() && this->connect(path);
 }
 
-bool    TcpClient::close()
+bool TcpClient::close()
 {
     this->stop();
     _poll.clear_fds();
@@ -74,33 +71,33 @@ bool    TcpClient::close()
     return _socket.close();
 }
 
-bool    TcpClient::stop()
+bool TcpClient::stop()
 {
     _poll.stop();
     _poll.wait_stop();
     return true;
 }
 
-void    TcpClient::_setup_poll()
+void TcpClient::_setup_poll()
 {
     _poll.clear_fds();
     _poll.set_read_fd(_socket.socket());
 }
 
-bool    TcpClient::run()
+bool TcpClient::run()
 {
     this->_setup_poll();
     std::lock_guard lock(_poll_mutex);
     return _poll.run();
 }
 
-bool    TcpClient::poll(int milliseconds)
+bool TcpClient::poll(int milliseconds)
 {
     this->_setup_poll();
     return _poll.poll(milliseconds) > 0;
 }
 
-bool    TcpClient::poll()
+bool TcpClient::poll()
 {
     this->_setup_poll();
     return _poll.poll(_poll.timeout()) > 0;
@@ -135,12 +132,12 @@ ssize_t TcpClient::send(sihd::util::ArrCharView view)
     return _socket.send(view);
 }
 
-bool    TcpClient::send_all(sihd::util::ArrCharView view)
+bool TcpClient::send_all(sihd::util::ArrCharView view)
 {
     return _socket.send_all(view);
 }
 
-void    TcpClient::handle(sihd::util::Poll *poll)
+void TcpClient::handle(sihd::util::Poll *poll)
 {
     auto events = poll->events();
     if (events.size() > 0)
@@ -162,5 +159,4 @@ void    TcpClient::handle(sihd::util::Poll *poll)
     }
 }
 
-
-}
+} // namespace sihd::net

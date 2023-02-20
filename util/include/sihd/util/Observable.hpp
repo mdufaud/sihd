@@ -1,13 +1,13 @@
 #ifndef __SIHD_UTIL_OBSERVABLE_HPP__
-# define __SIHD_UTIL_OBSERVABLE_HPP__
+#define __SIHD_UTIL_OBSERVABLE_HPP__
 
-# include <vector>
-# include <list>
-# include <mutex>
-# include <algorithm>
+#include <algorithm>
+#include <list>
+#include <mutex>
+#include <vector>
 
-# include <sihd/util/IObservable.hpp>
-# include <sihd/util/IHandler.hpp>
+#include <sihd/util/IHandler.hpp>
+#include <sihd/util/IObservable.hpp>
 
 namespace sihd::util
 {
@@ -46,7 +46,7 @@ class Observable: public IObservable<T>
         OBS_TYPE *get_first_observer()
         {
             std::lock_guard<std::mutex> l(_mutex);
-            for (IHandler<T *> *observer: _observers)
+            for (IHandler<T *> *observer : _observers)
             {
                 OBS_TYPE *casted = dynamic_cast<OBS_TYPE *>(observer);
                 if (casted != nullptr)
@@ -60,14 +60,14 @@ class Observable: public IObservable<T>
         {
             {
                 std::lock_guard<std::mutex> rm_lock(_mutex_remove);
-                for (const auto & obs_to_remove: _observers_to_remove)
+                for (const auto & obs_to_remove : _observers_to_remove)
                 {
                     _observers.erase(std::find(_observers.begin(), _observers.end(), obs_to_remove));
                 }
                 _observers_to_remove.clear();
             }
             std::lock_guard<std::mutex> lock(_mutex);
-            for (const auto & obs: _observers)
+            for (const auto & obs : _observers)
             {
                 obs->handle(sender);
             }
@@ -80,6 +80,6 @@ class Observable: public IObservable<T>
         std::list<IHandler<T *> *> _observers_to_remove;
 };
 
-}
+} // namespace sihd::util
 
 #endif

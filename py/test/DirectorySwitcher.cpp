@@ -22,4 +22,4 @@ DirectorySwitcher::~DirectorySwitcher()
         chdir(_old_cwd.data());
 }
 
-}
+} // namespace test

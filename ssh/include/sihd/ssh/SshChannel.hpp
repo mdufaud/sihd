@@ -1,10 +1,10 @@
 #ifndef __SIHD_SSH_SSHCHANNEL_HPP__
-# define __SIHD_SSH_SSHCHANNEL_HPP__
+#define __SIHD_SSH_SSHCHANNEL_HPP__
 
-# include <libssh/libssh.h>
+#include <libssh/libssh.h>
 
-# include <sihd/util/ArrayView.hpp>
-# include <sihd/util/platform.hpp>
+#include <sihd/util/ArrayView.hpp>
+#include <sihd/util/platform.hpp>
 
 namespace sihd::ssh
 {
@@ -23,23 +23,23 @@ class SshChannel
         bool open_session();
         bool open_agent();
         bool open_x11(std::string_view addr, int port);
-        bool open_forward(std::string_view remotehost, int remoteport,
-                            std::string_view sourcehost, int localport);
+        bool open_forward(std::string_view remotehost, int remoteport, std::string_view sourcehost, int localport);
 #if LIBSSH_VERSION_MINOR > 7
         /*
         bool open_reverse_forward(std::string_view remotehost, int remoteport,
                                     std::string_view sourcehost, int localport);
         */
-        bool open_forward_unix(std::string_view remotepath,
-                                std::string_view sourcehost, int localport);
+        bool open_forward_unix(std::string_view remotepath, std::string_view sourcehost, int localport);
 #endif
         bool is_open();
         bool close();
 
         bool request_subsystem(std::string_view subsys);
         bool request_sftp();
-        bool request_x11(std::string_view protocol, std::string_view cookie,
-                            int screen_number = 0, bool single_connection = false);
+        bool request_x11(std::string_view protocol,
+                         std::string_view cookie,
+                         int screen_number = 0,
+                         bool single_connection = false);
         bool request_pty();
         bool change_pty_size(int cols, int rows);
         bool request_shell();
@@ -83,6 +83,6 @@ class SshChannel
         ssh_channel _ssh_channel_ptr;
 };
 
-}
+} // namespace sihd::ssh
 
 #endif

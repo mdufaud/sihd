@@ -1,12 +1,12 @@
 #ifndef __SIHD_UTIL_LOGGERMANAGER_HPP__
-# define __SIHD_UTIL_LOGGERMANAGER_HPP__
+#define __SIHD_UTIL_LOGGERMANAGER_HPP__
 
-# include <vector>
-# include <mutex>
+#include <mutex>
+#include <vector>
 
-# include <sihd/util/ALogger.hpp>
-# include <sihd/util/ALogFilterer.hpp>
-# include <sihd/util/LogInfo.hpp>
+#include <sihd/util/ALogFilterer.hpp>
+#include <sihd/util/ALogger.hpp>
+#include <sihd/util/LogInfo.hpp>
 
 namespace sihd::util
 {
@@ -65,15 +65,9 @@ class LoggerManager: public ALogFilterer
 class TmpLogger
 {
     public:
-        TmpLogger(ALogger *logger): _logger_ptr(logger)
-        {
-            LoggerManager::get()->add_logger(logger);
-        }
+        TmpLogger(ALogger *logger): _logger_ptr(logger) { LoggerManager::get()->add_logger(logger); }
 
-        ~TmpLogger()
-        {
-            LoggerManager::get()->remove_logger(_logger_ptr);
-        };
+        ~TmpLogger() { LoggerManager::get()->remove_logger(_logger_ptr); };
 
     private:
         ALogger *_logger_ptr;
@@ -82,20 +76,14 @@ class TmpLogger
 class TmpLoggerFilter
 {
     public:
-        TmpLoggerFilter(ILoggerFilter *filter): _filter_ptr(filter)
-        {
-            LoggerManager::get()->add_filter(filter);
-        }
+        TmpLoggerFilter(ILoggerFilter *filter): _filter_ptr(filter) { LoggerManager::get()->add_filter(filter); }
 
-        ~TmpLoggerFilter()
-        {
-            LoggerManager::get()->remove_filter(_filter_ptr);
-        };
+        ~TmpLoggerFilter() { LoggerManager::get()->remove_filter(_filter_ptr); };
 
     private:
         ILoggerFilter *_filter_ptr;
 };
 
-}
+} // namespace sihd::util
 
 #endif

@@ -1,14 +1,14 @@
 #ifndef __SIHD_LUA_LUACOREAPI_HPP__
-# define __SIHD_LUA_LUACOREAPI_HPP__
+#define __SIHD_LUA_LUACOREAPI_HPP__
 
-# include <sihd/lua/Vm.hpp>
-# include <sihd/lua/LuaUtilApi.hpp>
+#include <sihd/lua/LuaUtilApi.hpp>
+#include <sihd/lua/Vm.hpp>
 
-# include <sihd/util/Runnable.hpp>
+#include <sihd/util/Runnable.hpp>
 
-# include <sihd/core/Channel.hpp>
+#include <sihd/core/Channel.hpp>
 
-# include <queue>
+#include <queue>
 
 namespace sihd::lua
 {
@@ -35,13 +35,14 @@ class LuaCoreApi
             private:
                 struct LuaSingleChannelHandler
                 {
-                    LuaSingleChannelHandler(lua_State *state, luabridge::LuaRef ref):
-                        state(state), thread_runner(ref)
-                    {
-                    }
+                        LuaSingleChannelHandler(lua_State *state, luabridge::LuaRef ref):
+                            state(state),
+                            thread_runner(ref)
+                        {
+                        }
 
-                    lua_State *state;
-                    LuaUtilApi::LuaThreadRunner thread_runner;
+                        lua_State *state;
+                        LuaUtilApi::LuaThreadRunner thread_runner;
                 };
 
                 std::map<sihd::core::Channel *, LuaSingleChannelHandler> _map_handler;
@@ -55,9 +56,8 @@ class LuaCoreApi
         virtual ~LuaCoreApi() {}
 
         static LuaChannelHandler _channel_handler;
-
 };
 
-}
+} // namespace sihd::lua
 
 #endif

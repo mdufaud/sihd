@@ -1,5 +1,5 @@
-#include <sihd/util/Profiling.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Profiling.hpp>
 #include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
@@ -19,4 +19,4 @@ Timeit::~Timeit()
     SIHD_LOG_DEBUG("Timeit[{}]: time {}", _fun_name, Timestamp(now - _begin).timeoffset_str());
 }
 
-}
+} // namespace sihd::util

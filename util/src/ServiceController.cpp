@@ -3,7 +3,8 @@
 namespace sihd::util
 {
 
-ServiceController::ServiceController(const StateMachine<State, AService::Operation> & to_copy_statemachine): statemachine(NONE)
+ServiceController::ServiceController(const StateMachine<State, AService::Operation> & to_copy_statemachine):
+    statemachine(NONE)
 {
     statemachine.set_transitions_map(to_copy_statemachine.transitions_map());
     statemachine.set_states_names_map(to_copy_statemachine.states_names_map());
@@ -59,17 +60,17 @@ ServiceController::ServiceController(): statemachine(NONE)
     statemachine.set_event_name(AService::ERROR, "error");
 }
 
-void    ServiceController::optionnal_setup()
+void ServiceController::optionnal_setup()
 {
     statemachine.add_transition(NONE, AService::INIT, INITIALIZING);
 }
 
-void    ServiceController::optionnal_init()
+void ServiceController::optionnal_init()
 {
     statemachine.add_transition(NONE, AService::START, STARTING);
 }
 
-bool    ServiceController::op_start(AService::Operation op)
+bool ServiceController::op_start(AService::Operation op)
 {
     bool ret = statemachine.transition(op);
     if (ret)
@@ -77,7 +78,7 @@ bool    ServiceController::op_start(AService::Operation op)
     return ret;
 }
 
-bool    ServiceController::op_end(AService::Operation op, bool status)
+bool ServiceController::op_end(AService::Operation op, bool status)
 {
     (void)op;
     bool ret = statemachine.transition(status ? AService::SUCCESS : AService::ERROR);
@@ -85,7 +86,7 @@ bool    ServiceController::op_end(AService::Operation op, bool status)
     return ret;
 }
 
-const char  *ServiceController::state_str(State state)
+const char *ServiceController::state_str(State state)
 {
     switch (state)
     {
@@ -112,5 +113,4 @@ const char  *ServiceController::state_str(State state)
     }
 }
 
-
-}
+} // namespace sihd::util

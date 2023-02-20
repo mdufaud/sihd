@@ -1,7 +1,7 @@
 #ifndef __SIHD_UTIL_CLOCKS_HPP__
-# define __SIHD_UTIL_CLOCKS_HPP__
+#define __SIHD_UTIL_CLOCKS_HPP__
 
-# include <chrono>
+#include <chrono>
 
 namespace sihd::util
 {
@@ -16,7 +16,7 @@ class IClock
         virtual bool stop() = 0;
 };
 
-class SteadyClock:  public IClock
+class SteadyClock: public IClock
 {
     public:
         SteadyClock();
@@ -28,10 +28,10 @@ class SteadyClock:  public IClock
         virtual bool stop() { return true; };
 
     private:
-        std::chrono::steady_clock   _clock;
+        std::chrono::steady_clock _clock;
 };
 
-class SystemClock:  public IClock
+class SystemClock: public IClock
 {
     public:
         SystemClock();
@@ -43,7 +43,7 @@ class SystemClock:  public IClock
         virtual bool stop() { return true; };
 
     private:
-        std::chrono::system_clock   _clock;
+        std::chrono::system_clock _clock;
 };
 
 class Clock
@@ -56,6 +56,6 @@ class Clock
         static SystemClock default_clock;
 };
 
-}
+} // namespace sihd::util
 
 #endif

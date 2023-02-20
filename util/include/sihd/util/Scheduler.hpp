@@ -1,22 +1,24 @@
 #ifndef __SIHD_UTIL_SCHEDULER_HPP__
-# define __SIHD_UTIL_SCHEDULER_HPP__
+#define __SIHD_UTIL_SCHEDULER_HPP__
 
-# include <atomic>
-# include <list>
-# include <map>
-# include <thread>
+#include <atomic>
+#include <list>
+#include <map>
+#include <thread>
 
-# include <sihd/util/Named.hpp>
-# include <sihd/util/IStoppableRunnable.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/Clocks.hpp>
-# include <sihd/util/Waitable.hpp>
-# include <sihd/util/Task.hpp>
+#include <sihd/util/Clocks.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/IStoppableRunnable.hpp>
+#include <sihd/util/Named.hpp>
+#include <sihd/util/Task.hpp>
+#include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
 {
 
-class Scheduler: public Named, public IStoppableRunnable, public Configurable
+class Scheduler: public Named,
+                 public IStoppableRunnable,
+                 public Configurable
 {
     public:
         Scheduler(const std::string & name, Node *parent = nullptr);
@@ -78,6 +80,6 @@ class Scheduler: public Named, public IStoppableRunnable, public Configurable
         time_t _paused_time;
 };
 
-}
+} // namespace sihd::util
 
 #endif

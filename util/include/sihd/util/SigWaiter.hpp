@@ -1,5 +1,5 @@
 #ifndef __SIHD_UTIL_SIGWAITER_HPP__
-# define __SIHD_UTIL_SIGWAITER_HPP__
+#define __SIHD_UTIL_SIGWAITER_HPP__
 
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Waitable.hpp>
@@ -22,6 +22,6 @@ class SigWaiter: public IHandler<int>
         Waitable _waitable;
 };
 
-}
+} // namespace sihd::util
 
 #endif

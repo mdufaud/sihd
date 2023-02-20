@@ -1,16 +1,16 @@
 #ifndef __SIHD_NET_ICMPSENDER_HPP__
-# define __SIHD_NET_ICMPSENDER_HPP__
+#define __SIHD_NET_ICMPSENDER_HPP__
 
-# include <memory>
+#include <memory>
 
-# include <sihd/util/Named.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/IStoppableRunnable.hpp>
-# include <sihd/util/Poll.hpp>
-# include <sihd/util/forward.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/IStoppableRunnable.hpp>
+#include <sihd/util/Named.hpp>
+#include <sihd/util/Poll.hpp>
+#include <sihd/util/forward.hpp>
 
-# include <sihd/net/Socket.hpp>
-# include <sihd/net/ip.hpp>
+#include <sihd/net/Socket.hpp>
+#include <sihd/net/ip.hpp>
 
 struct icmp;
 struct icmp6_hdr;
@@ -20,21 +20,21 @@ namespace sihd::net
 
 struct IcmpResponse
 {
-    IpAddr client;
-    void *data;
-    size_t size;
-    int type;
-    int code;
-    int ttl;
-    int id;
-    int seq;
+        IpAddr client;
+        void *data;
+        size_t size;
+        int type;
+        int code;
+        int ttl;
+        int id;
+        int seq;
 };
 
-class IcmpSender:   public sihd::util::Named,
-                    public sihd::util::Configurable,
-                    public sihd::util::IStoppableRunnable,
-                    public sihd::util::Observable<IcmpSender>,
-                    public sihd::util::IHandler<sihd::util::Poll *>
+class IcmpSender: public sihd::util::Named,
+                  public sihd::util::Configurable,
+                  public sihd::util::IStoppableRunnable,
+                  public sihd::util::Observable<IcmpSender>,
+                  public sihd::util::IHandler<sihd::util::Poll *>
 {
     public:
         IcmpSender(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -95,6 +95,6 @@ class IcmpSender:   public sihd::util::Named,
         IcmpResponse _icmp_response;
 };
 
-}
+} // namespace sihd::net
 
 #endif

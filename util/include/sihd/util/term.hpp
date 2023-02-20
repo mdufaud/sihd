@@ -1,17 +1,17 @@
 #ifndef __SIHD_UTIL_TERM_HPP__
-# define __SIHD_UTIL_TERM_HPP__
+#define __SIHD_UTIL_TERM_HPP__
 
-# include <stdio.h>
-# include <unistd.h>
+#include <stdio.h>
+#include <unistd.h>
 
-# include <sihd/util/format.hpp>
+#include <sihd/util/format.hpp>
 
-# define SIHD_TERM_ANSI_UNICODE_ESCAPE "\u001b"
-# define SIHD_TERM_ANSI_HEXA_ESCAPE "\x1B"
-# define SIHD_TERM_ANSI_DECIMAL_ESCAPE "\27"
-# define SIHD_TERM_ANSI_OCTAL_ESCAPE "\033"
+#define SIHD_TERM_ANSI_UNICODE_ESCAPE "\u001b"
+#define SIHD_TERM_ANSI_HEXA_ESCAPE "\x1B"
+#define SIHD_TERM_ANSI_DECIMAL_ESCAPE "\27"
+#define SIHD_TERM_ANSI_OCTAL_ESCAPE "\033"
 
-# define __ESC SIHD_TERM_ANSI_OCTAL_ESCAPE
+#define __ESC SIHD_TERM_ANSI_OCTAL_ESCAPE
 
 namespace sihd::util::term
 {
@@ -31,17 +31,17 @@ inline constexpr const char *BLACK = __ESC "[30m";
 inline constexpr const char *RED = __ESC "[31m";
 inline constexpr const char *GREEN = __ESC "[32m";
 inline constexpr const char *YELLOW = __ESC "[33m";
-inline constexpr const char *BLUE  = __ESC "[34m";
+inline constexpr const char *BLUE = __ESC "[34m";
 inline constexpr const char *VIOLET = __ESC "[35m";
 inline constexpr const char *CYAN = __ESC "[36m";
 inline constexpr const char *WHITE = __ESC "[37m";
-inline constexpr const char *GREY  = __ESC "[90m";
+inline constexpr const char *GREY = __ESC "[90m";
 
 inline constexpr const char *BLACKBG = __ESC "[40m";
 inline constexpr const char *REDBG = __ESC "[41m";
 inline constexpr const char *GREENBG = __ESC "[42m";
 inline constexpr const char *YELLOWBG = __ESC "[43m";
-inline constexpr const char *BLUEBG  = __ESC "[44m";
+inline constexpr const char *BLUEBG = __ESC "[44m";
 inline constexpr const char *VIOLETBG = __ESC "[45m";
 inline constexpr const char *CYANBG = __ESC "[46m";
 inline constexpr const char *WHITEBG = __ESC "[47m";
@@ -50,7 +50,7 @@ inline constexpr const char *GREYBG = __ESC "[100m";
 inline constexpr const char *RED2 = __ESC "[91m";
 inline constexpr const char *GREEN2 = __ESC "[92m";
 inline constexpr const char *YELLOW2 = __ESC "[93m";
-inline constexpr const char *BLUE2  = __ESC "[94m";
+inline constexpr const char *BLUE2 = __ESC "[94m";
 inline constexpr const char *VIOLET2 = __ESC "[95m";
 inline constexpr const char *CYAN2 = __ESC "[96m";
 inline constexpr const char *WHITE2 = __ESC "[97m";
@@ -58,7 +58,7 @@ inline constexpr const char *WHITE2 = __ESC "[97m";
 inline constexpr const char *REDBG2 = __ESC "[101m";
 inline constexpr const char *GREENBG2 = __ESC "[102m";
 inline constexpr const char *YELLOWBG2 = __ESC "[103m";
-inline constexpr const char *BLUEBG2  = __ESC "[104m";
+inline constexpr const char *BLUEBG2 = __ESC "[104m";
 inline constexpr const char *VIOLETBG2 = __ESC "[105m";
 inline constexpr const char *CYANBG2 = __ESC "[106m";
 inline constexpr const char *WHITEBG2 = __ESC "[107m";
@@ -85,12 +85,12 @@ inline constexpr const char *RESTORE_CURSOR = __ESC "[u";
 inline constexpr const char *SCROLL_UP = __ESC "[S";
 inline constexpr const char *SCROLL_DOWN = __ESC "[T";
 
-}
+} // namespace attr
 
 bool is_interactive();
 
-template <typename ...Args>
-std::string fmt(std::string_view str, Args&&... args)
+template <typename... Args>
+std::string fmt(std::string_view str, Args &&...args)
 {
     return fmt::format("{}{}{}", format::join("", std::forward<Args>(args)...), str, attr::ENDC);
 }
@@ -116,8 +116,8 @@ std::string prev_line(int n);
 std::string set_pos(int line, int col);
 std::string set_col(int n);
 
-}
+} // namespace sihd::util::term
 
-# undef __ESC
+#undef __ESC
 
 #endif

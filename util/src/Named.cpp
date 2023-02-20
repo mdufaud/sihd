@@ -1,8 +1,8 @@
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Node.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/str.hpp>
 #include <sihd/util/Splitter.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::util
 {
@@ -19,11 +19,9 @@ Named::Named(const std::string & named, Node *parent)
         parent->add_child_unsafe(this);
 }
 
-Named::~Named()
-{
-}
+Named::~Named() {}
 
-bool    Named::set_parent_ownership(bool ownership)
+bool Named::set_parent_ownership(bool ownership)
 {
     Node *parent = this->parent();
     if (parent != nullptr)
@@ -31,14 +29,12 @@ bool    Named::set_parent_ownership(bool ownership)
     return false;
 }
 
-bool    Named::is_owned_by_parent() const
+bool Named::is_owned_by_parent() const
 {
-    return this->parent() != nullptr
-        ? this->parent()->has_ownership(this)
-        : false;
+    return this->parent() != nullptr ? this->parent()->has_ownership(this) : false;
 }
 
-bool    Named::set_parent(Node *parent)
+bool Named::set_parent(Node *parent)
 {
     if (_parent_ptr == nullptr)
         _parent_ptr = parent;
@@ -50,7 +46,7 @@ const std::string & Named::name() const
     return _name;
 }
 
-std::string     Named::full_name() const
+std::string Named::full_name() const
 {
     std::string ret = this->name();
     Node *parent = this->parent();
@@ -62,27 +58,27 @@ std::string     Named::full_name() const
     return ret;
 }
 
-Node  *Named::parent() const
+Node *Named::parent() const
 {
     return _parent_ptr;
 }
 
-const Node  *Named::cparent() const
+const Node *Named::cparent() const
 {
     return _parent_ptr;
 }
 
-std::string     Named::class_name() const
+std::string Named::class_name() const
 {
     return sihd::util::str::demangle(typeid(*this).name());
 }
 
-Node   *Named::root()
+Node *Named::root()
 {
     return const_cast<Node *>(const_cast<Named *>(this)->croot());
 }
 
-const Node   *Named::croot() const
+const Node *Named::croot() const
 {
     const Node *obj = this->parent();
 
@@ -94,28 +90,28 @@ const Node   *Named::croot() const
     {
         tmp = obj->parent();
         if (tmp == nullptr)
-            break ;
+            break;
         obj = tmp;
     }
     return obj;
 }
 
-Named   *Named::find(Named *from, const std::string & path)
+Named *Named::find(Named *from, const std::string & path)
 {
     return const_cast<Named *>(const_cast<Named *>(this)->cfind(const_cast<Named *>(from), path));
 }
 
-Named   *Named::find(const std::string & path)
+Named *Named::find(const std::string & path)
 {
     return const_cast<Named *>(const_cast<Named *>(this)->cfind(path));
 }
 
-Node    *Named::find_node(const std::string & path)
+Node *Named::find_node(const std::string & path)
 {
     return const_cast<Node *>(const_cast<Named *>(this)->cfind_node(path));
 }
 
-const Named   *Named::cfind(const Named *from, const std::string & path) const
+const Named *Named::cfind(const Named *from, const std::string & path) const
 {
     Splitter splitter(Named::separator);
     auto tokens = splitter.split(path);
@@ -134,7 +130,7 @@ const Named   *Named::cfind(const Named *from, const std::string & path) const
     return child;
 }
 
-const Named   *Named::cfind(const std::string & path) const
+const Named *Named::cfind(const std::string & path) const
 {
     const Named *current = nullptr;
     size_t i = 0;
@@ -161,9 +157,9 @@ const Named   *Named::cfind(const std::string & path) const
     return this->cfind(current, path);
 }
 
-const Node    *Named::cfind_node(const std::string & path) const
+const Node *Named::cfind_node(const std::string & path) const
 {
     return this->cfind<Node>(path);
 }
 
-}
+} // namespace sihd::util

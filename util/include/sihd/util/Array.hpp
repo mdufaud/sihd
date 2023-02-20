@@ -1,22 +1,23 @@
 #ifndef __SIHD_UTIL_ARRAY_HPP__
-# define __SIHD_UTIL_ARRAY_HPP__
+#define __SIHD_UTIL_ARRAY_HPP__
 
-# include <cstring> // mem* str*
-# include <utility> // std::enable_if
-# include <cstdint> // int8_t
-# include <stdexcept> // out of range
+#include <cstdint>   // int8_t
+#include <cstring>   // mem* str*
+#include <stdexcept> // out of range
+#include <utility>   // std::enable_if
 
-# include <sihd/util/traits.hpp>
-# include <sihd/util/str.hpp>
-# include <sihd/util/IArray.hpp>
-# include <sihd/util/ICloneable.hpp>
-# include <sihd/util/Splitter.hpp>
+#include <sihd/util/IArray.hpp>
+#include <sihd/util/ICloneable.hpp>
+#include <sihd/util/Splitter.hpp>
+#include <sihd/util/str.hpp>
+#include <sihd/util/traits.hpp>
 
 namespace sihd::util
 {
 
 template <typename T>
-class Array: public IArray, public ICloneable<Array<T>>
+class Array: public IArray,
+             public ICloneable<Array<T>>
 {
     public:
         using value_type = T;
@@ -78,15 +79,9 @@ class Array: public IArray, public ICloneable<Array<T>>
         /*********************************************************************/
 
         // you have to check for good memory allocation here
-        Array(const Array<T> & array): Array()
-        {
-            this->from(array);
-        }
+        Array(const Array<T> & array): Array() { this->from(array); }
 
-        Array(Array<T> && other): Array()
-        {
-            *this = std::move(other);
-        }
+        Array(Array<T> && other): Array() { *this = std::move(other); }
 
         /*********************************************************************/
         /* operator= */
@@ -121,10 +116,7 @@ class Array: public IArray, public ICloneable<Array<T>>
             return *this;
         };
 
-        virtual ~Array()
-        {
-            this->delete_buffer();
-        };
+        virtual ~Array() { this->delete_buffer(); };
 
         operator bool() const { return _buf_ptr != nullptr; }
 
@@ -207,7 +199,7 @@ class Array: public IArray, public ICloneable<Array<T>>
                 const std::vector<std::string> splits = splitter.split(data);
                 this->reserve(splits.size());
                 this->resize(0);
-                for (const std::string & split: splits)
+                for (const std::string & split : splits)
                 {
                     T value;
                     if (str::convert_from_string<T>(split, value) == false)
@@ -223,7 +215,7 @@ class Array: public IArray, public ICloneable<Array<T>>
                 if (splits.size() % sizeof(T) != 0)
                     return false;
                 uint32_t idx = 0;
-                for (const std::string & split: splits)
+                for (const std::string & split : splits)
                 {
                     constexpr uint16_t base = 16;
                     uint8_t byte;
@@ -239,22 +231,17 @@ class Array: public IArray, public ICloneable<Array<T>>
         }
 
         // throws std::invalid_argument if byte size is not aligned with type size
-        bool from_bytes(const IArrayView & arr)
-        {
-            return this->from_bytes(arr.buf(), arr.byte_size());
-        }
+        bool from_bytes(const IArrayView & arr) { return this->from_bytes(arr.buf(), arr.byte_size()); }
 
         // throws std::invalid_argument if byte size is not aligned with type size
-        bool from_bytes(const IArray & arr)
-        {
-            return this->from_bytes(arr.buf(), arr.byte_size());
-        }
+        bool from_bytes(const IArray & arr) { return this->from_bytes(arr.buf(), arr.byte_size()); }
 
         // throws std::invalid_argument if byte size is not aligned with type size
         bool from_bytes(const void *buf, size_t byte_size)
         {
             if (byte_size % sizeof(T) != 0)
-                throw std::invalid_argument(str::format("Array::from_bytes buffer - %lu not divisible by data size %lu", byte_size, sizeof(T)));
+                throw std::invalid_argument(
+                    str::format("Array::from_bytes buffer - %lu not divisible by data size %lu", byte_size, sizeof(T)));
             return this->from((const T *)buf, byte_size / sizeof(T));
         }
 
@@ -266,19 +253,16 @@ class Array: public IArray, public ICloneable<Array<T>>
         bool byte_resize(size_t byte_size)
         {
             if (byte_size % this->data_size() != 0)
-                throw std::invalid_argument(str::format("Array::byte_resize cannot resize - %lu not divisible by data size %lu", byte_size, sizeof(T)));
+                throw std::invalid_argument(
+                    str::format("Array::byte_resize cannot resize - %lu not divisible by data size %lu",
+                                byte_size,
+                                sizeof(T)));
             return this->resize(byte_size / this->data_size());
         }
 
-        bool resize(size_t size)
-        {
-            return this->_internal_resize(size, true);
-        }
+        bool resize(size_t size) { return this->_internal_resize(size, true); }
 
-        void clear()
-        {
-            this->resize(0);
-        }
+        void clear() { this->resize(0); }
 
         /*********************************************************************/
         /* reserve */
@@ -288,33 +272,34 @@ class Array: public IArray, public ICloneable<Array<T>>
         bool byte_reserve(size_t byte_size)
         {
             if (byte_size % this->data_size() != 0)
-                throw std::invalid_argument(str::format("Array::byte_reserve cannot reserve - %lu not divisible by data size %lu", byte_size, sizeof(T)));
+                throw std::invalid_argument(
+                    str::format("Array::byte_reserve cannot reserve - %lu not divisible by data size %lu",
+                                byte_size,
+                                sizeof(T)));
             return this->reserve(byte_size / this->data_size());
         }
 
-        bool reserve(size_t capacity)
-        {
-            return this->_internal_reserve(capacity, true);
-        }
+        bool reserve(size_t capacity) { return this->_internal_reserve(capacity, true); }
 
         /*********************************************************************/
         /* assign */
         /*********************************************************************/
 
         // throws std::invalid_argument if byte size is not aligned with type size
-        bool assign_bytes(void *buf, size_t size)
-        {
-            return this->assign_bytes(buf, size, size);
-        }
+        bool assign_bytes(void *buf, size_t size) { return this->assign_bytes(buf, size, size); }
 
         // delete internal buffer if exists then sets it to bytes buffer buf - does not take ownership
         // throws std::invalid_argument if byte size or capacity is not aligned with type size
         bool assign_bytes(void *buf, size_t byte_size, size_t byte_capacity)
         {
             if (byte_size % this->data_size() != 0)
-                throw std::invalid_argument(str::format("Array::assign_bytes - size %lu not divisible by data size %lu", byte_size, sizeof(T)));
+                throw std::invalid_argument(
+                    str::format("Array::assign_bytes - size %lu not divisible by data size %lu", byte_size, sizeof(T)));
             if (byte_capacity % this->data_size() != 0)
-                throw std::invalid_argument(str::format("Array::assign_bytes - capacity %lu not divisible by data size %lu", byte_capacity, sizeof(T)));
+                throw std::invalid_argument(
+                    str::format("Array::assign_bytes - capacity %lu not divisible by data size %lu",
+                                byte_capacity,
+                                sizeof(T)));
             return this->assign((T *)buf, byte_size / this->data_size(), byte_capacity / this->data_size());
         }
 
@@ -341,24 +326,15 @@ class Array: public IArray, public ICloneable<Array<T>>
             return this->is_bytes_equal(arr.buf(), arr.byte_size(), byte_offset);
         }
 
-        bool is_same_type(const IArray & arr) const
-        {
-            return this->data_type() == arr.data_type();
-        }
+        bool is_same_type(const IArray & arr) const { return this->data_type() == arr.data_type(); }
 
-        bool is_same_type(const IArrayView & arr) const
-        {
-            return this->data_type() == arr.data_type();
-        }
+        bool is_same_type(const IArrayView & arr) const { return this->data_type() == arr.data_type(); }
 
         /*********************************************************************/
         /* views */
         /*********************************************************************/
 
-        std::string hexdump(char delimiter = ' ') const
-        {
-            return str::hexdump(_buf_ptr, this->byte_size(), delimiter);
-        }
+        std::string hexdump(char delimiter = ' ') const { return str::hexdump(_buf_ptr, this->byte_size(), delimiter); }
 
         std::string str() const
         {
@@ -434,10 +410,7 @@ class Array: public IArray, public ICloneable<Array<T>>
             return cloned;
         }
 
-        IArray *clone_array() const
-        {
-            return this->clone();
-        }
+        IArray *clone_array() const { return this->clone(); }
 
         /*********************************************************************/
         /* class methods */
@@ -446,10 +419,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         T *data() { return _buf_ptr; }
         const T *data() const { return _buf_ptr; }
 
-        void set_buffer_ownership(bool active)
-        {
-            _has_ownership = active;
-        }
+        void set_buffer_ownership(bool active) { _has_ownership = active; }
 
         /*********************************************************************/
         /* buffer methods */
@@ -586,10 +556,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         }
 
         // delete internal buffer if exists then sets it to array buf - does not take ownership
-        bool assign(T *arr, size_t size)
-        {
-            return this->assign(arr, size, size);
-        }
+        bool assign(T *arr, size_t size) { return this->assign(arr, size, size); }
 
         // delete internal buffer if exists then sets it to array buf - does not take ownership
         bool assign(T *arr, size_t size, size_t capacity)
@@ -629,10 +596,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         }
 
         // push whole array buf of size at the end of the internal buffer
-        bool push_back(const T *buf, size_t size)
-        {
-            return this->insert(buf, size, _size);
-        }
+        bool push_back(const T *buf, size_t size) { return this->insert(buf, size, _size); }
 
         // push a single value at the end of the array
         bool push_back(const T & value)
@@ -666,16 +630,10 @@ class Array: public IArray, public ICloneable<Array<T>>
         }
 
         // push whole array buf of size at the front of the internal buffer
-        bool push_front(const T *buf, size_t size)
-        {
-            return this->insert(buf, size, 0);
-        }
+        bool push_front(const T *buf, size_t size) { return this->insert(buf, size, 0); }
 
         // push a single value at the beginning of the array
-        bool push_front(const T & value)
-        {
-            return this->insert(value, 0);
-        }
+        bool push_front(const T & value) { return this->insert(value, 0); }
 
         /*********************************************************************/
         /* modify */
@@ -697,9 +655,7 @@ class Array: public IArray, public ICloneable<Array<T>>
                 // no need to move if idx == _size
                 if (len_move > 0)
                 {
-                    memmove((uint8_t *)(_buf_ptr + (idx + size)),
-                            (uint8_t *)(_buf_ptr + idx),
-                            len_move);
+                    memmove((uint8_t *)(_buf_ptr + (idx + size)), (uint8_t *)(_buf_ptr + idx), len_move);
                     // -> {0, 1, _, _, _, 2, 3}
                 }
                 memcpy((uint8_t *)(_buf_ptr + idx), buf, size * this->data_size());
@@ -710,10 +666,7 @@ class Array: public IArray, public ICloneable<Array<T>>
             return _buf_ptr != nullptr;
         }
 
-        bool insert(const T & value, size_t idx)
-        {
-            return this->insert(&value, 1, idx);
-        }
+        bool insert(const T & value, size_t idx) { return this->insert(&value, 1, idx); }
 
         // remove value at idx and returns it
         T pop(size_t idx)
@@ -726,9 +679,7 @@ class Array: public IArray, public ICloneable<Array<T>>
             size_t len = (_size - (idx + 1)) * this->data_size();
 
             // moving all remaining buffer to current idx
-            memmove((uint8_t *)(_buf_ptr + idx),
-                    (uint8_t *)(_buf_ptr + idx + 1),
-                    len);
+            memmove((uint8_t *)(_buf_ptr + idx), (uint8_t *)(_buf_ptr + idx + 1), len);
             // -> {5, 15, 15}
 
             // set to 0 remaining of memory
@@ -746,10 +697,7 @@ class Array: public IArray, public ICloneable<Array<T>>
             return ret;
         }
 
-        T pop_front()
-        {
-            return pop(0);
-        }
+        T pop_front() { return pop(0); }
 
         // set value at idx - throws out_of_range
         void set(size_t idx, const T & value)
@@ -810,10 +758,18 @@ class Array: public IArray, public ICloneable<Array<T>>
                 pointer array_end;
 
                 ArrayIterator(pointer ptr_begin = nullptr, pointer ptr_curr = nullptr, pointer ptr_end = nullptr):
-                    array_beg(ptr_begin), array_curr(ptr_curr), array_end(ptr_end) {}
+                    array_beg(ptr_begin),
+                    array_curr(ptr_curr),
+                    array_end(ptr_end)
+                {
+                }
 
                 ArrayIterator(const ArrayIterator & other):
-                    array_beg(other.array_beg), array_curr(other.array_curr), array_end(other.array_end) {}
+                    array_beg(other.array_beg),
+                    array_curr(other.array_curr),
+                    array_end(other.array_end)
+                {
+                }
 
                 ArrayIterator & operator=(const ArrayIterator & other)
                 {
@@ -883,14 +839,14 @@ class Array: public IArray, public ICloneable<Array<T>>
 
                 reference operator*()
                 {
-                    if (this->array_curr < this->array_beg && this->array_curr > this->array_end)
+                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
                         throw std::out_of_range("Array::iterator: iterator out of range");
                     return *this->array_curr;
                 }
 
                 size_t idx()
                 {
-                    if (this->array_curr < this->array_beg && this->array_curr > this->array_end)
+                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
                         return Array<T>::npos;
                     return this->array_curr - this->array_beg;
                 }
@@ -902,8 +858,14 @@ class Array: public IArray, public ICloneable<Array<T>>
         iterator begin() { return iterator(this->data(), this->data(), this->data() + this->size()); }
         iterator end() { return iterator(this->data(), this->data() + this->size(), this->data() + this->size()); }
 
-        const_iterator cbegin() const { return const_iterator(this->data(), this->data(), this->data() + this->size()); }
-        const_iterator cend() const { return const_iterator(this->data(), this->data() + this->size(), this->data() + this->size()); }
+        const_iterator cbegin() const
+        {
+            return const_iterator(this->data(), this->data(), this->data() + this->size());
+        }
+        const_iterator cend() const
+        {
+            return const_iterator(this->data(), this->data() + this->size(), this->data() + this->size());
+        }
 
         /*********************************************************************/
         /* reverse iterator */
@@ -923,11 +885,21 @@ class Array: public IArray, public ICloneable<Array<T>>
                 pointer array_curr;
                 pointer array_end;
 
-                ReverseArrayIterator(pointer ptr_begin = nullptr, pointer ptr_curr = nullptr, pointer ptr_end = nullptr):
-                    array_beg(ptr_begin), array_curr(ptr_curr), array_end(ptr_end) {}
+                ReverseArrayIterator(pointer ptr_begin = nullptr,
+                                     pointer ptr_curr = nullptr,
+                                     pointer ptr_end = nullptr):
+                    array_beg(ptr_begin),
+                    array_curr(ptr_curr),
+                    array_end(ptr_end)
+                {
+                }
 
                 ReverseArrayIterator(const ReverseArrayIterator & other):
-                    array_beg(other.array_beg), array_curr(other.array_curr), array_end(other.array_end) {}
+                    array_beg(other.array_beg),
+                    array_curr(other.array_curr),
+                    array_end(other.array_end)
+                {
+                }
 
                 ReverseArrayIterator & operator=(const ReverseArrayIterator & other)
                 {
@@ -963,7 +935,10 @@ class Array: public IArray, public ICloneable<Array<T>>
                     return ret;
                 }
 
-                difference_type operator-(const ReverseArrayIterator & rhs) const { return rhs.array_curr - this->array_curr; }
+                difference_type operator-(const ReverseArrayIterator & rhs) const
+                {
+                    return rhs.array_curr - this->array_curr;
+                }
 
                 ReverseArrayIterator operator+(ssize_t i)
                 {
@@ -997,14 +972,14 @@ class Array: public IArray, public ICloneable<Array<T>>
 
                 reference operator*()
                 {
-                    if (this->array_curr < this->array_beg && this->array_curr > this->array_end)
+                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
                         throw std::out_of_range("Array::reverse_iterator: iterator out of range");
                     return *this->array_curr;
                 }
 
                 size_t idx()
                 {
-                    if (this->array_curr < this->array_beg && this->array_curr > this->array_end)
+                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
                         return Array<T>::npos;
                     return this->array_curr - this->array_beg;
                 }
@@ -1015,29 +990,21 @@ class Array: public IArray, public ICloneable<Array<T>>
 
         reverse_iterator rbegin()
         {
-            return reverse_iterator(this->data(),
-                                    this->data() + this->size() - 1,
-                                    this->data() + this->size());
+            return reverse_iterator(this->data(), this->data() + this->size() - 1, this->data() + this->size());
         }
         reverse_iterator rend()
         {
-            return reverse_iterator(this->data(),
-                                    this->data() - 1,
-                                    this->data() + this->size());
+            return reverse_iterator(this->data(), this->data() - 1, this->data() + this->size());
         }
 
         const_reverse_iterator crbegin() const
         {
-            return const_reverse_iterator(this->data(),
-                                            this->data() + this->size() - 1,
-                                            this->data() + this->size());
+            return const_reverse_iterator(this->data(), this->data() + this->size() - 1, this->data() + this->size());
         }
 
         const_reverse_iterator crend() const
         {
-            return const_reverse_iterator(this->data(),
-                                            this->data() - 1,
-                                            this->data() + this->size());
+            return const_reverse_iterator(this->data(), this->data() - 1, this->data() + this->size());
         }
 
         /*********************************************************************/
@@ -1067,7 +1034,7 @@ class Array: public IArray, public ICloneable<Array<T>>
         static Array<MergedType> *merge_to_array(const std::vector<const IArray *> & arrays)
         {
             size_t total = 0;
-            for (const IArray *array: arrays)
+            for (const IArray *array : arrays)
                 total += array->byte_size();
             Array<MergedType> *ret = new Array<MergedType>();
             if (ret->resize(total * ret->data_size()) == false)
@@ -1076,7 +1043,7 @@ class Array: public IArray, public ICloneable<Array<T>>
                 return nullptr;
             }
             size_t copy_idx = 0;
-            for (const IArray *array: arrays)
+            for (const IArray *array : arrays)
             {
                 if (ret->copy_from_bytes(*array, copy_idx) == false)
                 {
@@ -1135,19 +1102,19 @@ template <typename T>
 size_t Array<T>::mult_resize_capacity = 2;
 
 // typedef for types
-typedef Array<bool>       ArrBool;
-typedef Array<char>       ArrChar;
-typedef Array<int8_t>     ArrByte;
-typedef Array<uint8_t>    ArrUByte;
-typedef Array<int16_t>    ArrShort;
-typedef Array<uint16_t>   ArrUShort;
-typedef Array<int32_t>    ArrInt;
-typedef Array<uint32_t>   ArrUInt;
-typedef Array<int64_t>    ArrLong;
-typedef Array<uint64_t>   ArrULong;
-typedef Array<float>      ArrFloat;
-typedef Array<double>     ArrDouble;
+typedef Array<bool> ArrBool;
+typedef Array<char> ArrChar;
+typedef Array<int8_t> ArrByte;
+typedef Array<uint8_t> ArrUByte;
+typedef Array<int16_t> ArrShort;
+typedef Array<uint16_t> ArrUShort;
+typedef Array<int32_t> ArrInt;
+typedef Array<uint32_t> ArrUInt;
+typedef Array<int64_t> ArrLong;
+typedef Array<uint64_t> ArrULong;
+typedef Array<float> ArrFloat;
+typedef Array<double> ArrDouble;
 
-}
+} // namespace sihd::util
 
 #endif

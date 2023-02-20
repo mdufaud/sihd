@@ -21,17 +21,17 @@ ImguiRendererDirectX::~ImguiRendererDirectX()
     this->shutdown();
 }
 
-void    ImguiRendererDirectX::set_clear_color(ImVec4 *clear_color)
+void ImguiRendererDirectX::set_clear_color(ImVec4 *clear_color)
 {
     _clear_color_ptr = clear_color;
 }
 
-ImVec4  *ImguiRendererDirectX::get_clear_color()
+ImVec4 *ImguiRendererDirectX::get_clear_color()
 {
     return _clear_color_ptr;
 }
 
-bool    ImguiRendererDirectX::init(HWND window)
+bool ImguiRendererDirectX::init(HWND window)
 {
     if (_is_init)
     {
@@ -56,7 +56,7 @@ bool    ImguiRendererDirectX::init(HWND window)
     return ret;
 }
 
-void    ImguiRendererDirectX::resize(LPARAM lParam)
+void ImguiRendererDirectX::resize(LPARAM lParam)
 {
     if (_dx_device_ptr != nullptr)
     {
@@ -66,7 +66,7 @@ void    ImguiRendererDirectX::resize(LPARAM lParam)
     }
 }
 
-void    ImguiRendererDirectX::resize()
+void ImguiRendererDirectX::resize()
 {
     if (_dx_device_ptr != nullptr)
     {
@@ -76,19 +76,17 @@ void    ImguiRendererDirectX::resize()
     }
 }
 
-void    ImguiRendererDirectX::new_frame()
+void ImguiRendererDirectX::new_frame()
 {
     ImGui_ImplDX11_NewFrame();
 }
 
-void    ImguiRendererDirectX::render(ImDrawData *draw_data)
+void ImguiRendererDirectX::render(ImDrawData *draw_data)
 {
-    const float clear_color_with_alpha[4] = {
-        _clear_color_ptr->x * _clear_color_ptr->w,
-        _clear_color_ptr->y * _clear_color_ptr->w,
-        _clear_color_ptr->z * _clear_color_ptr->w,
-        _clear_color_ptr->w
-    };
+    const float clear_color_with_alpha[4] = {_clear_color_ptr->x * _clear_color_ptr->w,
+                                             _clear_color_ptr->y * _clear_color_ptr->w,
+                                             _clear_color_ptr->z * _clear_color_ptr->w,
+                                             _clear_color_ptr->w};
     _dx_device_context_ptr->OMSetRenderTargets(1, &_dx_main_render_target_view_ptr, nullptr);
     _dx_device_context_ptr->ClearRenderTargetView(_dx_main_render_target_view_ptr, clear_color_with_alpha);
     ImGui_ImplDX11_RenderDrawData(draw_data);
@@ -96,7 +94,7 @@ void    ImguiRendererDirectX::render(ImDrawData *draw_data)
     //_dx_swap_chain_ptr->Present(0, 0); // Present without vsync
 }
 
-void    ImguiRendererDirectX::shutdown()
+void ImguiRendererDirectX::shutdown()
 {
     if (_is_init)
     {
@@ -106,7 +104,7 @@ void    ImguiRendererDirectX::shutdown()
     this->_clean_dx();
 }
 
-bool    ImguiRendererDirectX::_create_dx_device(HWND window)
+bool ImguiRendererDirectX::_create_dx_device(HWND window)
 {
     // Setup swap chain
     DXGI_SWAP_CHAIN_DESC sd;
@@ -126,31 +124,39 @@ bool    ImguiRendererDirectX::_create_dx_device(HWND window)
     sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
     UINT createDeviceFlags = 0;
-    //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+    // createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     D3D_FEATURE_LEVEL featureLevel;
     const D3D_FEATURE_LEVEL featureLevelArray[2] = {
         D3D_FEATURE_LEVEL_11_0,
         D3D_FEATURE_LEVEL_10_0,
     };
-    if (D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE,
-                                        nullptr, createDeviceFlags, featureLevelArray,
-                                        2, D3D11_SDK_VERSION, &sd, &_dx_swap_chain_ptr,
-                                        &_dx_device_ptr, &featureLevel,
-                                        &_dx_device_context_ptr) != S_OK)
+    if (D3D11CreateDeviceAndSwapChain(nullptr,
+                                      D3D_DRIVER_TYPE_HARDWARE,
+                                      nullptr,
+                                      createDeviceFlags,
+                                      featureLevelArray,
+                                      2,
+                                      D3D11_SDK_VERSION,
+                                      &sd,
+                                      &_dx_swap_chain_ptr,
+                                      &_dx_device_ptr,
+                                      &featureLevel,
+                                      &_dx_device_context_ptr)
+        != S_OK)
         return false;
     this->_create_render_target();
     return true;
 }
 
-void    ImguiRendererDirectX::_create_render_target()
+void ImguiRendererDirectX::_create_render_target()
 {
-    ID3D11Texture2D* pBackBuffer;
+    ID3D11Texture2D *pBackBuffer;
     _dx_swap_chain_ptr->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
     _dx_device_ptr->CreateRenderTargetView(pBackBuffer, nullptr, &_dx_main_render_target_view_ptr);
     pBackBuffer->Release();
 }
 
-void    ImguiRendererDirectX::_clean_render_target()
+void ImguiRendererDirectX::_clean_render_target()
 {
     if (_dx_main_render_target_view_ptr)
     {
@@ -159,7 +165,7 @@ void    ImguiRendererDirectX::_clean_render_target()
     }
 }
 
-void    ImguiRendererDirectX::_clean_dx()
+void ImguiRendererDirectX::_clean_dx()
 {
     this->_clean_render_target();
     if (_dx_swap_chain_ptr != nullptr)
@@ -179,4 +185,4 @@ void    ImguiRendererDirectX::_clean_dx()
     }
 }
 
-}
+} // namespace sihd::imgui

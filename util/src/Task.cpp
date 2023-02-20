@@ -3,36 +3,37 @@
 namespace sihd::util
 {
 
-Task::Task(): run_at(0), resched_time(0), _runnable_ptr(nullptr)
-{
-}
+Task::Task(): run_at(0), resched_time(0), _runnable_ptr(nullptr) {}
 
 Task::Task(IRunnable *to_run, Timestamp run_at, Timestamp reschedule_every):
-    run_at(run_at), resched_time(reschedule_every), _runnable_ptr(to_run)
+    run_at(run_at),
+    resched_time(reschedule_every),
+    _runnable_ptr(to_run)
 {
 }
 
 Task::Task(std::function<bool(void)> fun, Timestamp run_at, Timestamp reschedule_every):
-    run_at(run_at), resched_time(reschedule_every), _runnable_ptr(nullptr), _run_method(std::move(fun))
+    run_at(run_at),
+    resched_time(reschedule_every),
+    _runnable_ptr(nullptr),
+    _run_method(std::move(fun))
 {
     _runnable_ptr = nullptr;
 }
 
-Task::~Task()
-{
-}
+Task::~Task() {}
 
-void    Task::set_method(std::function<bool(void)> fun)
+void Task::set_method(std::function<bool(void)> fun)
 {
     _run_method = std::move(fun);
 }
 
-void    Task::set_runnable(IRunnable *to_run)
+void Task::set_runnable(IRunnable *to_run)
 {
     _runnable_ptr = to_run;
 }
 
-bool    Task::run()
+bool Task::run()
 {
     if (_runnable_ptr != nullptr)
         return _runnable_ptr->run();
@@ -41,4 +42,4 @@ bool    Task::run()
     return false;
 }
 
-}
+} // namespace sihd::util

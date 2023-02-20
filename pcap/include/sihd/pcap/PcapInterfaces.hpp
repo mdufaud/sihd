@@ -1,17 +1,16 @@
 #ifndef __SIHD_PCAP_PCAPINTERFACES_HPP__
-# define __SIHD_PCAP_PCAPINTERFACES_HPP__
+#define __SIHD_PCAP_PCAPINTERFACES_HPP__
 
-# include <string>
-# include <vector>
+#include <string>
+#include <vector>
 
-# include <sihd/pcap/utils.hpp>
+#include <sihd/pcap/utils.hpp>
 
 namespace sihd::pcap
 {
 
 class PcapIFace
 {
-
     public:
         PcapIFace(pcap_if_t *ptr);
         ~PcapIFace();
@@ -59,9 +58,8 @@ class PcapInterfaces
 
         int _code;
         pcap_if_t *_interfaces_ptr;
-
 };
 
-}
+} // namespace sihd::pcap
 
 #endif

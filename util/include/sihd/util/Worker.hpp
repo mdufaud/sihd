@@ -1,14 +1,14 @@
 #ifndef __SIHD_UTIL_WORKER_HPP__
-# define __SIHD_UTIL_WORKER_HPP__
+#define __SIHD_UTIL_WORKER_HPP__
 
-# include <atomic>
-# include <thread>
-# include <mutex>
+#include <atomic>
+#include <mutex>
+#include <thread>
 
-# include <sihd/util/IRunnable.hpp>
-# include <sihd/util/Synchronizer.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/forward.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/IRunnable.hpp>
+#include <sihd/util/Synchronizer.hpp>
+#include <sihd/util/forward.hpp>
 
 namespace sihd::util
 {
@@ -18,7 +18,8 @@ namespace sihd::util
  *          though as a backup, can set a method to run
  *
  */
-class Worker: protected IRunnable, public Configurable
+class Worker: protected IRunnable,
+              public Configurable
 {
     public:
         Worker(IRunnable *runnable = nullptr);
@@ -29,14 +30,8 @@ class Worker: protected IRunnable, public Configurable
         virtual bool start_worker(std::string_view name);
         virtual bool start_sync_worker(std::string_view name);
         virtual bool stop_worker();
-        virtual bool is_worker_running() const
-        {
-            return _running;
-        }
-        virtual bool is_worker_started() const
-        {
-            return _started;
-        }
+        virtual bool is_worker_running() const { return _running; }
+        virtual bool is_worker_started() const { return _started; }
 
     protected:
         virtual bool run();
@@ -57,6 +52,6 @@ class Worker: protected IRunnable, public Configurable
         std::mutex _mutex_state;
 };
 
-}
+} // namespace sihd::util
 
 #endif

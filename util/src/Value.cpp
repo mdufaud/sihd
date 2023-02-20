@@ -3,9 +3,7 @@
 namespace sihd::util
 {
 
-Value::Value(): type(TYPE_NONE), data(0)
-{
-}
+Value::Value(): type(TYPE_NONE), data(0) {}
 
 Value::Value(const uint8_t *buf, Type type)
 {
@@ -84,10 +82,8 @@ bool Value::from_float_string(const std::string & str)
 
 bool Value::from_any_string(const std::string & str)
 {
-    return this->from_float_string(str)
-            || this->from_int_string(str)
-            || this->from_bool_string(str)
-            || this->from_char_string(str);
+    return this->from_float_string(str) || this->from_int_string(str) || this->from_bool_string(str)
+           || this->from_char_string(str);
 }
 
 std::string Value::str() const
@@ -99,7 +95,10 @@ std::string Value::str() const
     return std::to_string(this->data);
 }
 
-bool Value::is_float() const { return this->type == TYPE_FLOAT || this->type == TYPE_DOUBLE; }
+bool Value::is_float() const
+{
+    return this->type == TYPE_FLOAT || this->type == TYPE_DOUBLE;
+}
 
 float Value::to_float() const
 {
@@ -214,41 +213,77 @@ int Value::compare(const Value & val) const
 }
 
 template <>
-bool Value::operator==(const float & val) { return this->compare_float(val) == 0; }
+bool Value::operator==(const float & val)
+{
+    return this->compare_float(val) == 0;
+}
 
 template <>
-bool Value::operator!=(const float & val) { return this->compare_float(val) != 0; }
+bool Value::operator!=(const float & val)
+{
+    return this->compare_float(val) != 0;
+}
 
 template <>
-bool Value::operator>(const float & val) { return this->compare_float(val) > 0; }
+bool Value::operator>(const float & val)
+{
+    return this->compare_float(val) > 0;
+}
 
 template <>
-bool Value::operator>=(const float & val) { return this->compare_float(val) >= 0; }
+bool Value::operator>=(const float & val)
+{
+    return this->compare_float(val) >= 0;
+}
 
 template <>
-bool Value::operator<(const float & val) { return this->compare_float(val) < 0; }
+bool Value::operator<(const float & val)
+{
+    return this->compare_float(val) < 0;
+}
 
 template <>
-bool Value::operator<=(const float & val) { return this->compare_float(val) <= 0; }
+bool Value::operator<=(const float & val)
+{
+    return this->compare_float(val) <= 0;
+}
 
 // double
 
 template <>
-bool Value::operator==(const double & val) { return this->compare_double(val) == 0; }
-
-template <>
-bool Value::operator!=(const double & val) { return this->compare_double(val) != 0; }
-
-template <>
-bool Value::operator>(const double & val) { return this->compare_double(val) > 0; }
-
-template <>
-bool Value::operator>=(const double & val) { return this->compare_double(val) >= 0; }
-
-template <>
-bool Value::operator<(const double & val) { return this->compare_double(val) < 0; }
-
-template <>
-bool Value::operator<=(const double & val) { return this->compare_double(val) <= 0; }
-
+bool Value::operator==(const double & val)
+{
+    return this->compare_double(val) == 0;
 }
+
+template <>
+bool Value::operator!=(const double & val)
+{
+    return this->compare_double(val) != 0;
+}
+
+template <>
+bool Value::operator>(const double & val)
+{
+    return this->compare_double(val) > 0;
+}
+
+template <>
+bool Value::operator>=(const double & val)
+{
+    return this->compare_double(val) >= 0;
+}
+
+template <>
+bool Value::operator<(const double & val)
+{
+    return this->compare_double(val) < 0;
+}
+
+template <>
+bool Value::operator<=(const double & val)
+{
+    return this->compare_double(val) <= 0;
+}
+
+} // namespace sihd::util

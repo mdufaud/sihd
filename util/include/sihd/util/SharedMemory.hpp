@@ -1,16 +1,16 @@
 #ifndef __SIHD_UTIL_SHAREDMEMORY_HPP__
-# define __SIHD_UTIL_SHAREDMEMORY_HPP__
+#define __SIHD_UTIL_SHAREDMEMORY_HPP__
 
-# include <sys/stat.h>
+#include <sys/stat.h>
 
-# include <string>
-# include <string_view>
+#include <string>
+#include <string_view>
 
-# include <sihd/util/platform.hpp>
+#include <sihd/util/platform.hpp>
 
-# if defined(__SIHD_EMSCRIPTEN__)
-#  define mode_t unsigned int
-# endif
+#if defined(__SIHD_EMSCRIPTEN__)
+# define mode_t unsigned int
+#endif
 
 namespace sihd::util
 {
@@ -38,7 +38,6 @@ class SharedMemory
         bool creator() const { return _created; }
 
     protected:
-
     private:
 #if !defined(__SIHD_WINDOWS__)
         bool _create(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags);
@@ -51,10 +50,10 @@ class SharedMemory
         std::string _id;
 };
 
-}
+} // namespace sihd::util
 
-# if defined(__SIHD_EMSCRIPTEN__)
-#  undef mode_t
-# endif
+#if defined(__SIHD_EMSCRIPTEN__)
+# undef mode_t
+#endif
 
 #endif

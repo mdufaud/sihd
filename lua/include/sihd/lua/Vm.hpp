@@ -1,15 +1,15 @@
 #ifndef __SIHD_LUA_VM_HPP__
-# define __SIHD_LUA_VM_HPP__
+#define __SIHD_LUA_VM_HPP__
 
-# include <lua.h>
-# include <lauxlib.h>
-# include <lualib.h>
-# include <LuaBridge/LuaBridge.h>
+#include <LuaBridge/LuaBridge.h>
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
 
-# include <string>
-# include <string_view>
-# include <mutex>
-# include <map>
+#include <map>
+#include <mutex>
+#include <string>
+#include <string_view>
 
 namespace sihd::lua
 {
@@ -60,6 +60,7 @@ class Vm: public ILuaThreadStateHandler
         lua_State *lua_state() const { return _state_ptr; }
 
         static Vm *get_vm(lua_State *state);
+
     protected:
 
     private:
@@ -72,6 +73,6 @@ class Vm: public ILuaThreadStateHandler
         static std::map<lua_State *, Vm *> _map_vm;
 };
 
-}
+} // namespace sihd::lua
 
 #endif

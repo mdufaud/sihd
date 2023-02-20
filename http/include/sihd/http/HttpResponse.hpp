@@ -1,12 +1,12 @@
 #ifndef __SIHD_HTTP_HTTPRESPONSE_HPP__
-# define __SIHD_HTTP_HTTPRESPONSE_HPP__
+#define __SIHD_HTTP_HTTPRESPONSE_HPP__
 
-# include <nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
-# include <sihd/util/ArrayView.hpp>
+#include <sihd/util/ArrayView.hpp>
 
-# include <sihd/http/Mime.hpp>
-# include <sihd/http/HttpHeader.hpp>
+#include <sihd/http/HttpHeader.hpp>
+#include <sihd/http/Mime.hpp>
 
 namespace sihd::http
 {
@@ -41,6 +41,6 @@ class HttpResponse
         Mime *_mime_ptr;
 };
 
-}
+} // namespace sihd::http
 
 #endif

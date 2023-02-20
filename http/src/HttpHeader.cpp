@@ -20,49 +20,43 @@ std::string HttpHeader::build_content_type(std::string_view type, std::string_vi
     return ret;
 }
 
-HttpHeader::HttpHeader()
-{
-}
+HttpHeader::HttpHeader() {}
 
-HttpHeader::HttpHeader(HeaderMap && headers): _headers(headers)
-{
-}
+HttpHeader::HttpHeader(HeaderMap && headers): _headers(headers) {}
 
-HttpHeader::~HttpHeader()
-{
-}
+HttpHeader::~HttpHeader() {}
 
-HttpHeader &    HttpHeader::set_server_name(std::string_view name)
+HttpHeader & HttpHeader::set_server_name(std::string_view name)
 {
     _server_name = name;
     return *this;
 }
 
-HttpHeader &    HttpHeader::set_status(uint32_t status)
+HttpHeader & HttpHeader::set_status(uint32_t status)
 {
     _status = status;
     return *this;
 }
 
-HttpHeader &    HttpHeader::set_content_type(std::string_view type)
+HttpHeader & HttpHeader::set_content_type(std::string_view type)
 {
     _content_type = type;
     return *this;
 }
 
-HttpHeader &    HttpHeader::set_charset(std::string_view encoding)
+HttpHeader & HttpHeader::set_charset(std::string_view encoding)
 {
     _encoding = encoding;
     return *this;
 }
 
-HttpHeader &    HttpHeader::set_content_size(size_t len)
+HttpHeader & HttpHeader::set_content_size(size_t len)
 {
     _content_size = len;
     return *this;
 }
 
-HttpHeader &    HttpHeader::set_status_content(uint32_t status, std::string_view content_type, size_t content_len)
+HttpHeader & HttpHeader::set_status_content(uint32_t status, std::string_view content_type, size_t content_len)
 {
     this->set_status(status);
     this->set_content_type(content_type);
@@ -70,7 +64,7 @@ HttpHeader &    HttpHeader::set_status_content(uint32_t status, std::string_view
     return *this;
 }
 
-HttpHeader &    HttpHeader::remove_header(const std::string & name)
+HttpHeader & HttpHeader::remove_header(const std::string & name)
 {
     auto it = _headers.find(name);
     if (it != _headers.end())
@@ -78,7 +72,7 @@ HttpHeader &    HttpHeader::remove_header(const std::string & name)
     return *this;
 }
 
-HttpHeader &    HttpHeader::remove_header(const unsigned char *name)
+HttpHeader & HttpHeader::remove_header(const unsigned char *name)
 {
     if (name == nullptr)
         throw std::runtime_error("header is null");
@@ -86,7 +80,7 @@ HttpHeader &    HttpHeader::remove_header(const unsigned char *name)
     return *this;
 }
 
-HttpHeader &    HttpHeader::set_header(const unsigned char *name, std::string_view value)
+HttpHeader & HttpHeader::set_header(const unsigned char *name, std::string_view value)
 {
     if (name == nullptr)
         throw std::runtime_error("header is null");
@@ -94,7 +88,7 @@ HttpHeader &    HttpHeader::set_header(const unsigned char *name, std::string_vi
     return *this;
 }
 
-HttpHeader &    HttpHeader::set_header(const std::string & name, std::string_view value)
+HttpHeader & HttpHeader::set_header(const std::string & name, std::string_view value)
 {
     _headers[name] = value;
     return *this;
@@ -102,11 +96,11 @@ HttpHeader &    HttpHeader::set_header(const std::string & name, std::string_vie
 
 HttpHeader & HttpHeader::set_headers(HeaderMap && headers)
 {
-    for (const auto & [name, value]: headers)
+    for (const auto & [name, value] : headers)
     {
         _headers[name] = value;
     }
     return *this;
 }
 
-}
+} // namespace sihd::http

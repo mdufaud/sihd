@@ -1,11 +1,11 @@
 #ifndef __SIHD_UTIL_ATEXIT_HPP__
-# define __SIHD_UTIL_ATEXIT_HPP__
+#define __SIHD_UTIL_ATEXIT_HPP__
 
-# include <mutex>
-# include <list>
-# include <cstdlib>
+#include <cstdlib>
+#include <list>
+#include <mutex>
 
-# include <sihd/util/IRunnable.hpp>
+#include <sihd/util/IRunnable.hpp>
 
 namespace sihd::util
 {
@@ -32,10 +32,8 @@ class AtExit
         static void clear_handlers();
         // permits exit callback post-exit
         static bool install();
-
-
 };
 
-}
+} // namespace sihd::util
 
 #endif

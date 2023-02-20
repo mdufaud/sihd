@@ -1,11 +1,11 @@
 #ifndef __SIHD_UTIL_STRCONFIGURATION_HPP__
-# define __SIHD_UTIL_STRCONFIGURATION_HPP__
+#define __SIHD_UTIL_STRCONFIGURATION_HPP__
 
-# include <unordered_map>
-# include <string>
-# include <string_view>
-# include <optional>
-# include <array>
+#include <array>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <unordered_map>
 
 namespace sihd::util
 {
@@ -30,17 +30,18 @@ class StrConfiguration
 
         std::string str() const;
 
-        template <typename ...T>
-        std::array<std::optional<std::string>, sizeof...(T)> find_all(const T & ...args) const
+        template <typename... T>
+        std::array<std::optional<std::string>, sizeof...(T)> find_all(const T &...args) const
         {
             std::array<std::optional<std::string>, sizeof...(T)> array;
             int i = 0;
 
-            ([&]
-            {
-                array[i] = this->find(args);
-                ++i;
-            } (), ...);
+            (
+                [&] {
+                    array[i] = this->find(args);
+                    ++i;
+                }(),
+                ...);
 
             return array;
         }
@@ -51,6 +52,6 @@ class StrConfiguration
         std::unordered_map<std::string, std::string> _configuration;
 };
 
-}
+} // namespace sihd::util
 
 #endif

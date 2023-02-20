@@ -1,19 +1,18 @@
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <sihd/util/platform.hpp>
 
 // for get_max_rss / peak_rss
 #if defined(__SIHD_WINDOWS__)
 
-# include <winsock2.h>
-# include <windows.h>
-# include <ws2def.h>
-# include <winsock.h>
-# include <winsock2.h>
-# include <psapi.h>
 # include <debugapi.h>
 # include <direct.h> // _stat
+# include <psapi.h>
+# include <windows.h>
+# include <winsock.h>
+# include <winsock2.h>
+# include <ws2def.h>
 
 #elif defined(__SIHD_APPLE__)
 
@@ -29,10 +28,10 @@
 #if defined(__SIHD_LINUX__)
 
 # include <dlfcn.h>
-# include <sys/ioctl.h>
-# include <sys/wait.h>
-# include <sys/time.h>
 # include <fcntl.h>
+# include <sys/ioctl.h>
+# include <sys/time.h>
+# include <sys/wait.h>
 
 # if !defined(__SIHD_EMSCRIPTEN__)
 #  include <sys/ptrace.h>
@@ -50,21 +49,20 @@
 typedef void (*sighandler_t)(int);
 #endif
 
-#include <csignal>
+#include <algorithm>
 #include <climits>
-#include <cstdlib>
+#include <csignal>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
-#include <vector>
 #include <map>
 #include <vector>
-#include <algorithm>
 
-#include <sihd/util/os.hpp>
+#include <sihd/util/AtExit.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Runnable.hpp>
-#include <sihd/util/AtExit.hpp>
 #include <sihd/util/fs.hpp>
+#include <sihd/util/os.hpp>
 
 #if !defined(__SIHD_UTIL_OS_DEFAULT_MAX_FDS__)
 // backup for max_fds
@@ -83,7 +81,7 @@ bool signal_used = false;
 std::mutex signal_mutex;
 std::map<int, std::list<IHandler<int> *>> map_signals_handlers;
 
-void    _signal_callback(int sig)
+void _signal_callback(int sig)
 {
     SIHD_LOG(debug, "Signal caught: {}", signal_name(sig));
     std::lock_guard lock(signal_mutex);
@@ -93,9 +91,9 @@ void    _signal_callback(int sig)
     }
 }
 
-}
+} // namespace
 
-bool    clear_signal_handlers(int sig)
+bool clear_signal_handlers(int sig)
 {
     std::lock_guard lock(signal_mutex);
     for (IHandler<int> *handler : map_signals_handlers[sig])
@@ -106,7 +104,7 @@ bool    clear_signal_handlers(int sig)
     return unhandle_signal(sig);
 }
 
-bool    clear_signal_handlers()
+bool clear_signal_handlers()
 {
     std::lock_guard lock(signal_mutex);
     bool ret = true;
@@ -124,7 +122,7 @@ bool    clear_signal_handlers()
     return ret;
 }
 
-bool    clear_signal_handler(int sig, IHandler<int> *runnable)
+bool clear_signal_handler(int sig, IHandler<int> *runnable)
 {
     std::lock_guard lock(signal_mutex);
     auto & lst = map_signals_handlers[sig];
@@ -139,7 +137,7 @@ bool    clear_signal_handler(int sig, IHandler<int> *runnable)
     return false;
 }
 
-bool    add_signal_handler(int sig, IHandler<int> *handler)
+bool add_signal_handler(int sig, IHandler<int> *handler)
 {
     sighandler_t sighandler = signal(sig, _signal_callback);
     if (sighandler == SIG_ERR)
@@ -151,8 +149,7 @@ bool    add_signal_handler(int sig, IHandler<int> *handler)
     map_signals_handlers[sig].push_back(handler);
     if (signal_used == false)
     {
-        AtExit::add_handler(new Runnable([] () -> bool
-        {
+        AtExit::add_handler(new Runnable([]() -> bool {
             clear_signal_handlers();
             return true;
         }));
@@ -162,7 +159,7 @@ bool    add_signal_handler(int sig, IHandler<int> *handler)
     return true;
 }
 
-bool    unhandle_signal(int sig)
+bool unhandle_signal(int sig)
 {
     sighandler_t handler = signal(sig, SIG_DFL);
     if (handler == SIG_ERR)
@@ -185,19 +182,19 @@ std::string signal_name(int sig)
 
 // utilities
 
-bool   kill(pid_t pid, int sig)
+bool kill(pid_t pid, int sig)
 {
 #if !defined(__SIHD_WINDOWS__)
     return ::kill(pid, sig) == 0;
 #else
-    #pragma message("TODO os::kill")
+# pragma message("TODO os::kill")
     (void)pid;
     (void)sig;
     return false;
 #endif
 }
 
-pid_t   pid()
+pid_t pid()
 {
 #if !defined(__SIHD_WINDOWS__)
     return getpid();
@@ -221,7 +218,7 @@ rlim_t max_fds()
 #endif
 }
 
-bool    ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
+bool ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
 {
 #if !defined(__SIHD_WINDOWS__)
     bool ret = ::ioctl(fd, request, arg_ptr) == 0;
@@ -233,7 +230,7 @@ bool    ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
     return ret == 0;
 }
 
-bool    stat(const char *pathname, struct stat *statbuf, bool logerror)
+bool stat(const char *pathname, struct stat *statbuf, bool logerror)
 {
 #if !defined(__SIHD_WINDOWS__)
     bool ret = ::stat(pathname, statbuf) == 0;
@@ -245,7 +242,7 @@ bool    stat(const char *pathname, struct stat *statbuf, bool logerror)
     return ret == 0;
 }
 
-bool    fstat(int fd, struct stat *statbuf, bool logerror)
+bool fstat(int fd, struct stat *statbuf, bool logerror)
 {
 #if !defined(__SIHD_WINDOWS__)
     bool ret = ::fstat(fd, statbuf) == 0;
@@ -257,7 +254,7 @@ bool    fstat(int fd, struct stat *statbuf, bool logerror)
     return ret == 0;
 }
 
-bool    setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror)
+bool setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror)
 {
     if (socket < 0)
         throw std::runtime_error("OS: cannot setsockopt on a negative socket");
@@ -271,7 +268,7 @@ bool    setsockopt(int socket, int level, int optname, const void *optval, sockl
     return ret;
 }
 
-bool    getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror)
+bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror)
 {
     if (socket < 0)
         throw std::runtime_error("OS: cannot getsockopt on a negative socket");
@@ -285,10 +282,10 @@ bool    getsockopt(int socket, int level, int optname, void *optval, socklen_t *
     return ret;
 }
 
-bool    is_root()
+bool is_root()
 {
 #if defined(__SIHD_WINDOWS__)
-    #pragma message("TODO os::is_root")
+# pragma message("TODO os::is_root")
     return false;
 #else
     return getuid() == 0;
@@ -310,7 +307,7 @@ bool    is_root()
 namespace
 {
 
-ssize_t  write(int fd, const char *s)
+ssize_t write(int fd, const char *s)
 {
     int i = 0;
     while (s[i])
@@ -318,13 +315,13 @@ ssize_t  write(int fd, const char *s)
     return ::write(fd, s, i);
 }
 
-ssize_t  write_endl(int fd, const char *s)
+ssize_t write_endl(int fd, const char *s)
 {
     ssize_t ret = write(fd, s);
     return ret + ::write(fd, "\n", 1);
 }
 
-ssize_t   write_number(int fd, int number)
+ssize_t write_number(int fd, int number)
 {
     char c;
     if (number < 10)
@@ -339,9 +336,9 @@ ssize_t   write_number(int fd, int number)
 
 static void *backtrace_buffer[SIHD_MAX_BACKTRACE_SIZE];
 
-}
+} // namespace
 
-ssize_t    backtrace(int fd, size_t backtrace_size)
+ssize_t backtrace(int fd, size_t backtrace_size)
 {
     size_t wanted_size = std::min(backtrace_size, (size_t)SIHD_MAX_BACKTRACE_SIZE);
     size_t size = ::backtrace(backtrace_buffer, wanted_size);
@@ -369,9 +366,9 @@ ssize_t    backtrace(int fd, size_t backtrace_size)
 
 #else // no backtrace
 
-#pragma message("Backtrace is not supported for this platform")
+# pragma message("Backtrace is not supported for this platform")
 
-ssize_t    backtrace(int fd, size_t backtrace_size)
+ssize_t backtrace(int fd, size_t backtrace_size)
 {
     (void)fd;
     (void)backtrace_size;
@@ -382,16 +379,14 @@ ssize_t    backtrace(int fd, size_t backtrace_size)
 
 // debuggers
 
-bool    is_run_by_valgrind()
+bool is_run_by_valgrind()
 {
     char *ldpreload = getenv("LD_PRELOAD");
     return ldpreload != nullptr
-            && (strstr(ldpreload, "/valgrind/") != nullptr
-                || strstr(ldpreload, "/vgpreload") != nullptr);
+           && (strstr(ldpreload, "/valgrind/") != nullptr || strstr(ldpreload, "/vgpreload") != nullptr);
 }
 
-
-bool    is_run_by_debugger()
+bool is_run_by_debugger()
 {
 #if defined(__SIHD_EMSCRIPTEN__)
     return false;
@@ -450,7 +445,7 @@ void *load_lib(const std::string & lib_name)
     handle = handle != nullptr ? handle : dlopen(lib_name.c_str(), RTLD_NOW);
     return handle;
 #else
-    #pragma message("TODO")
+# pragma message("TODO")
     (void)lib_name;
     return nullptr;
 #endif
@@ -568,7 +563,7 @@ ssize_t peak_rss()
 # endif
 
 #else
-    #pragma message("os::peak_rss is not supported on this platform")
+# pragma message("os::peak_rss is not supported on this platform")
     return (ssize_t)-1L;
 #endif
 }
@@ -599,7 +594,7 @@ ssize_t current_rss()
 #elif defined(__SIHD_LINUX__)
 
     long rss = 0L;
-    FILE* fp = NULL;
+    FILE *fp = NULL;
     if ((fp = fopen("/proc/self/statm", "r")) == NULL)
     {
         SIHD_LOG(error, "OS: current_rss fopen: {}", strerror(errno));
@@ -615,9 +610,9 @@ ssize_t current_rss()
     return (ssize_t)rss * (ssize_t)sysconf(_SC_PAGESIZE);
 
 #else
-    #pragma message("os::current_rss is not supported on this platform")
+# pragma message("os::current_rss is not supported on this platform")
     return (ssize_t)-1L;
 #endif
 }
 
-}
+} // namespace sihd::util::os

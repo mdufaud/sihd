@@ -1,18 +1,18 @@
 #include <sihd/util/platform.hpp>
 
-#include <sihd/util/Node.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/str.hpp>
-#include <sihd/util/fs.hpp>
 #include <sihd/util/File.hpp>
-#include <sihd/util/os.hpp>
-#include <sihd/util/term.hpp>
-#include <sihd/util/Runnable.hpp>
 #include <sihd/util/Handler.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Node.hpp>
+#include <sihd/util/Runnable.hpp>
 #include <sihd/util/SigWaiter.hpp>
+#include <sihd/util/fs.hpp>
+#include <sihd/util/os.hpp>
+#include <sihd/util/str.hpp>
+#include <sihd/util/term.hpp>
 
-#include <sihd/pcap/Sniffer.hpp>
 #include <sihd/pcap/PcapInterfaces.hpp>
+#include <sihd/pcap/Sniffer.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 // prevents error: previous declaration as 'typedef long int suseconds_t'
@@ -36,7 +36,7 @@ static std::string interfaces_test()
     SIHD_LOG(info, "Net interfaces");
     std::string interface_to_sniff;
     PcapInterfaces ifaces;
-    for (const auto & iface: ifaces.ifaces())
+    for (const auto & iface : ifaces.ifaces())
     {
         SIHD_LOG(info, iface.dump());
         if (iface.up() && !iface.loopback())
@@ -52,8 +52,7 @@ static void sniffer_test(const std::string & interface_to_sniff)
 {
     SIHD_LOG(info, "Sniffing on eth0");
     Sniffer pcap("pcap-sniffer");
-    Handler<Sniffer *> obs([] (Sniffer *obj)
-    {
+    Handler<Sniffer *> obs([](Sniffer *obj) {
         constexpr size_t hexdump_cols = 20;
         SIHD_LOG(info, "Sniffed {} bytes", obj->array().size());
         SIHD_COUT(str::hexdump_fmt(obj->array().buf(), obj->array().byte_size(), hexdump_cols));
@@ -61,7 +60,7 @@ static void sniffer_test(const std::string & interface_to_sniff)
     pcap.add_observer(&obs);
     pcap.open(interface_to_sniff);
     if (pcap.is_open() == false)
-        return ;
+        return;
     // pcap.set_monitor(true);
     // pcap.set_immediate(true);
     pcap.set_promiscuous(false);
@@ -80,7 +79,7 @@ static void sniffer_test(const std::string & interface_to_sniff)
     fmt::print("\n");
 }
 
-} // end test::module
+} // namespace test::module
 
 int main()
 {

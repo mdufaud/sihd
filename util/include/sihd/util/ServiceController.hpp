@@ -1,14 +1,14 @@
 #ifndef __SIHD_UTIL_SERVICECONTROLLER_HPP__
-# define __SIHD_UTIL_SERVICECONTROLLER_HPP__
+#define __SIHD_UTIL_SERVICECONTROLLER_HPP__
 
-# include <sihd/util/AService.hpp>
-# include <sihd/util/StateMachine.hpp>
+#include <sihd/util/AService.hpp>
+#include <sihd/util/StateMachine.hpp>
 
 namespace sihd::util
 {
 
-class ServiceController:    public AService::IServiceController,
-                            public Observable<ServiceController>
+class ServiceController: public AService::IServiceController,
+                         public Observable<ServiceController>
 {
     public:
         enum State
@@ -32,10 +32,7 @@ class ServiceController:    public AService::IServiceController,
         virtual bool op_start(AService::Operation op);
         virtual bool op_end(AService::Operation op, bool status);
 
-        State state() const
-        {
-            return statemachine.state();
-        }
+        State state() const { return statemachine.state(); }
 
         void optionnal_setup();
         void optionnal_init();
@@ -45,10 +42,9 @@ class ServiceController:    public AService::IServiceController,
         StateMachine<State, AService::Operation> statemachine;
 
     protected:
-
     private:
 };
 
-}
+} // namespace sihd::util
 
 #endif

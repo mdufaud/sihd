@@ -1,27 +1,27 @@
 #ifndef __SIHD_NET_TCPCLIENT_HPP__
-# define __SIHD_NET_TCPCLIENT_HPP__
+#define __SIHD_NET_TCPCLIENT_HPP__
 
-# include <sihd/net/Socket.hpp>
-# include <sihd/net/INetReceiver.hpp>
-# include <sihd/net/INetSender.hpp>
-# include <sihd/util/IRunnable.hpp>
-# include <sihd/util/Named.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/Handler.hpp>
-# include <sihd/util/Waitable.hpp>
-# include <sihd/util/Poll.hpp>
-# include <sihd/util/Observable.hpp>
+#include <sihd/net/INetReceiver.hpp>
+#include <sihd/net/INetSender.hpp>
+#include <sihd/net/Socket.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/Handler.hpp>
+#include <sihd/util/IRunnable.hpp>
+#include <sihd/util/Named.hpp>
+#include <sihd/util/Observable.hpp>
+#include <sihd/util/Poll.hpp>
+#include <sihd/util/Waitable.hpp>
 
 namespace sihd::net
 {
 
-class TcpClient:    public INetReceiver,
-                    public INetSender,
-                    public sihd::util::Named,
-                    public sihd::util::Configurable,
-                    public sihd::util::IStoppableRunnable,
-                    public sihd::util::Observable<INetReceiver>,
-                    public sihd::util::IHandler<sihd::util::Poll *>
+class TcpClient: public INetReceiver,
+                 public INetSender,
+                 public sihd::util::Named,
+                 public sihd::util::Configurable,
+                 public sihd::util::IStoppableRunnable,
+                 public sihd::util::Observable<INetReceiver>,
+                 public sihd::util::IHandler<sihd::util::Poll *>
 {
     public:
         TcpClient(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -79,6 +79,6 @@ class TcpClient:    public INetReceiver,
         sihd::util::Poll _poll;
 };
 
-}
+} // namespace sihd::net
 
 #endif

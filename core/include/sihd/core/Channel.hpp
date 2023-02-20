@@ -1,37 +1,27 @@
 #ifndef __SIHD_CORE_CHANNEL_HPP__
-# define __SIHD_CORE_CHANNEL_HPP__
+#define __SIHD_CORE_CHANNEL_HPP__
 
-# include <mutex>
-# include <atomic>
+#include <atomic>
+#include <mutex>
 
-# include <sihd/util/array_utils.hpp>
-# include <sihd/util/ArrayView.hpp>
-# include <sihd/util/Named.hpp>
-# include <sihd/util/Observable.hpp>
-# include <sihd/util/Timestamp.hpp>
-# include <sihd/util/Clocks.hpp>
+#include <sihd/util/ArrayView.hpp>
+#include <sihd/util/Clocks.hpp>
+#include <sihd/util/Named.hpp>
+#include <sihd/util/Observable.hpp>
+#include <sihd/util/Timestamp.hpp>
+#include <sihd/util/array_utils.hpp>
 
 namespace sihd::core
 {
 
-class Channel:  public sihd::util::Named,
-                public sihd::util::Observable<Channel>
+class Channel: public sihd::util::Named,
+               public sihd::util::Observable<Channel>
 {
     public:
-        Channel(const std::string & name,
-                sihd::util::Type type,
-                size_t size,
-                sihd::util::Node *parent = nullptr);
-        Channel(const std::string & name,
-                sihd::util::Type type,
-                sihd::util::Node *parent = nullptr);
-        Channel(const std::string & name,
-                std::string_view type,
-                size_t size,
-                sihd::util::Node *parent = nullptr);
-        Channel(const std::string & name,
-                std::string_view type,
-                sihd::util::Node *parent = nullptr);
+        Channel(const std::string & name, sihd::util::Type type, size_t size, sihd::util::Node *parent = nullptr);
+        Channel(const std::string & name, sihd::util::Type type, sihd::util::Node *parent = nullptr);
+        Channel(const std::string & name, std::string_view type, size_t size, sihd::util::Node *parent = nullptr);
+        Channel(const std::string & name, std::string_view type, sihd::util::Node *parent = nullptr);
         virtual ~Channel();
 
         static sihd::util::IClock *default_clock() { return _default_channel_clock_ptr; }
@@ -59,7 +49,10 @@ class Channel:  public sihd::util::Named,
         bool is_same_type(const Channel *other) const { return _array_ptr->is_same_type(*other->array()); }
 
         template <typename T>
-        bool is_same_type() const { return sihd::util::Types::is_same<T>(_array_ptr->data_type()); }
+        bool is_same_type() const
+        {
+            return sihd::util::Types::is_same<T>(_array_ptr->data_type());
+        }
 
         // get last write timestamp (thread safe)
         sihd::util::Timestamp timestamp() const;
@@ -83,7 +76,7 @@ class Channel:  public sihd::util::Named,
         }
 
         template <typename T>
-        T   read(size_t idx) const
+        T read(size_t idx) const
         {
             std::lock_guard lock(_arr_mutex);
             return sihd::util::array_utils::read<T>(_array_ptr, idx);
@@ -117,6 +110,6 @@ class Channel:  public sihd::util::Named,
         bool _write_change_only;
 };
 
-}
+} // namespace sihd::core
 
 #endif

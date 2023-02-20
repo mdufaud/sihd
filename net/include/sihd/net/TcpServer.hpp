@@ -1,22 +1,22 @@
 #ifndef __SIHD_NET_TCPSERVER_HPP__
-# define __SIHD_NET_TCPSERVER_HPP__
+#define __SIHD_NET_TCPSERVER_HPP__
 
-# include <sihd/net/Socket.hpp>
-# include <sihd/net/INetServer.hpp>
-# include <sihd/net/INetServerHandler.hpp>
-# include <sihd/util/Named.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/IHandler.hpp>
-# include <sihd/util/Waitable.hpp>
-# include <sihd/util/Poll.hpp>
+#include <sihd/net/INetServer.hpp>
+#include <sihd/net/INetServerHandler.hpp>
+#include <sihd/net/Socket.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/IHandler.hpp>
+#include <sihd/util/Named.hpp>
+#include <sihd/util/Poll.hpp>
+#include <sihd/util/Waitable.hpp>
 
 namespace sihd::net
 {
 
-class TcpServer:    public INetServer,
-                    public sihd::util::Named,
-                    public sihd::util::Configurable,
-                    public sihd::util::IHandler<sihd::util::Poll *>
+class TcpServer: public INetServer,
+                 public sihd::util::Named,
+                 public sihd::util::Configurable,
+                 public sihd::util::IHandler<sihd::util::Poll *>
 {
     public:
         TcpServer(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -39,10 +39,10 @@ class TcpServer:    public INetServer,
         bool serve();
         bool stop_serving();
         int accept_client(IpAddr *client_ip = nullptr);
-		bool add_client_read(int socket);
-		bool add_client_write(int socket);
-		bool remove_client_read(int socket);
-		bool remove_client_write(int socket);
+        bool add_client_read(int socket);
+        bool add_client_write(int socket);
+        bool remove_client_read(int socket);
+        bool remove_client_write(int socket);
 
         // calls infinite polling
         bool run();
@@ -76,6 +76,6 @@ class TcpServer:    public INetServer,
         INetServerHandler *_server_handler_ptr;
 };
 
-}
+} // namespace sihd::net
 
 #endif

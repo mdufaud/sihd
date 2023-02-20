@@ -12,9 +12,14 @@ SIHD_UTIL_REGISTER_FACTORY(Sniffer)
 SIHD_LOGGER;
 
 Sniffer::Sniffer(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent), _active(false), _running(false),
-    _max_sniff(-1), _timestamp_type(-1), _nano_precision(false),
-    _pcap_ptr(nullptr), _pkt_nano_timestamp(0)
+    sihd::util::Named(name, parent),
+    _active(false),
+    _running(false),
+    _max_sniff(-1),
+    _timestamp_type(-1),
+    _nano_precision(false),
+    _pcap_ptr(nullptr),
+    _pkt_nano_timestamp(0)
 {
     utils::init();
     this->add_conf("max_sniff", &Sniffer::set_max_sniff);
@@ -40,7 +45,7 @@ Sniffer::~Sniffer()
     this->close();
 }
 
-bool    Sniffer::open(const std::string & source)
+bool Sniffer::open(const std::string & source)
 {
     char errbuf[PCAP_ERRBUF_SIZE];
     _pcap_ptr = pcap_create(source.c_str(), errbuf);
@@ -49,12 +54,12 @@ bool    Sniffer::open(const std::string & source)
     return _pcap_ptr != nullptr;
 }
 
-bool    Sniffer::is_open() const
+bool Sniffer::is_open() const
 {
     return _pcap_ptr != nullptr;
 }
 
-bool    Sniffer::close()
+bool Sniffer::close()
 {
     if (_pcap_ptr != nullptr)
     {
@@ -67,12 +72,12 @@ bool    Sniffer::close()
     return true;
 }
 
-bool    Sniffer::is_active() const
+bool Sniffer::is_active() const
 {
     return _active;
 }
 
-bool    Sniffer::activate()
+bool Sniffer::activate()
 {
     int ret = pcap_activate(_pcap_ptr);
     this->_log_if_error(ret);
@@ -82,13 +87,13 @@ bool    Sniffer::activate()
     return ret == 0;
 }
 
-void    Sniffer::_callback(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes)
+void Sniffer::_callback(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes)
 {
     Sniffer *obj = (Sniffer *)user;
     obj->new_packet(h, bytes);
 }
 
-bool    Sniffer::run()
+bool Sniffer::run()
 {
     if (_running)
         return true;
@@ -106,12 +111,12 @@ bool    Sniffer::run()
     return ret == 0;
 }
 
-bool    Sniffer::is_running() const
+bool Sniffer::is_running() const
 {
     return _running;
 }
 
-bool    Sniffer::stop()
+bool Sniffer::stop()
 {
     if (_running)
     {
@@ -121,7 +126,7 @@ bool    Sniffer::stop()
     return true;
 }
 
-bool    Sniffer::sniff()
+bool Sniffer::sniff()
 {
     int ret = pcap_dispatch(_pcap_ptr, _max_sniff, Sniffer::_callback, (u_char *)this);
     if (ret == PCAP_ERROR)
@@ -135,7 +140,7 @@ bool    Sniffer::sniff()
     return ret == 0;
 }
 
-bool    Sniffer::read_next()
+bool Sniffer::read_next()
 {
     struct pcap_pkthdr *hdr;
     u_char *data;
@@ -151,7 +156,7 @@ bool    Sniffer::read_next()
 
 // data retrieval
 
-void    Sniffer::new_packet(const struct pcap_pkthdr *h, const u_char *bytes)
+void Sniffer::new_packet(const struct pcap_pkthdr *h, const u_char *bytes)
 {
     if (_nano_precision)
         _pkt_nano_timestamp = sihd::util::time::nano_tv(h->ts);
@@ -167,13 +172,13 @@ const sihd::util::ArrByte & Sniffer::data() const
     return _array;
 }
 
-bool    Sniffer::get_read_data(sihd::util::ArrCharView & view) const
+bool Sniffer::get_read_data(sihd::util::ArrCharView & view) const
 {
     view = {_array.buf(), _array.byte_size()};
     return true;
 }
 
-bool    Sniffer::read_timestamp(time_t *nano_timestamp) const
+bool Sniffer::read_timestamp(time_t *nano_timestamp) const
 {
     *nano_timestamp = _pkt_nano_timestamp;
     return true;
@@ -181,7 +186,7 @@ bool    Sniffer::read_timestamp(time_t *nano_timestamp) const
 
 // polling utilities
 
-int     Sniffer::pollable_fd()
+int Sniffer::pollable_fd()
 {
 #if !defined(__SIHD_WINDOWS__)
     return pcap_get_selectable_fd(_pcap_ptr);
@@ -190,7 +195,7 @@ int     Sniffer::pollable_fd()
 #endif
 }
 
-const struct timeval    *Sniffer::poll_timeout()
+const struct timeval *Sniffer::poll_timeout()
 {
 #if !defined(__SIHD_WINDOWS__)
     return pcap_get_required_select_timeout(_pcap_ptr);
@@ -199,7 +204,7 @@ const struct timeval    *Sniffer::poll_timeout()
 #endif
 }
 
-const struct pcap_stat  *Sniffer::stats()
+const struct pcap_stat *Sniffer::stats()
 {
     if (pcap_stats(_pcap_ptr, &_pcap_stats) == 0)
         return &_pcap_stats;
@@ -209,12 +214,12 @@ const struct pcap_stat  *Sniffer::stats()
 
 // error utilities
 
-std::string     Sniffer::error()
+std::string Sniffer::error()
 {
     return pcap_geterr(_pcap_ptr);
 }
 
-void    Sniffer::_log_if_error(int ret)
+void Sniffer::_log_if_error(int ret)
 {
     if (ret == PCAP_ERROR)
     {
@@ -232,7 +237,7 @@ void    Sniffer::_log_if_error(int ret)
 
 // helpers
 
-std::vector<int>    Sniffer::datalinks()
+std::vector<int> Sniffer::datalinks()
 {
     std::vector<int> ret;
     int *lst = nullptr;
@@ -253,7 +258,7 @@ std::vector<int>    Sniffer::datalinks()
     return ret;
 }
 
-std::vector<int>    Sniffer::timestamp_types()
+std::vector<int> Sniffer::timestamp_types()
 {
     std::vector<int> ret;
     int *lst = nullptr;
@@ -276,14 +281,14 @@ std::vector<int>    Sniffer::timestamp_types()
 
 // getters
 
-bool    Sniffer::can_monitor()
+bool Sniffer::can_monitor()
 {
     int ret = pcap_can_set_rfmon(_pcap_ptr);
     this->_log_if_error(ret);
     return ret == 0;
 }
 
-bool    Sniffer::is_nonblock()
+bool Sniffer::is_nonblock()
 {
     char errbuf[PCAP_ERRBUF_SIZE];
     int ret = pcap_getnonblock(_pcap_ptr, errbuf);
@@ -292,34 +297,34 @@ bool    Sniffer::is_nonblock()
     return ret == 1;
 }
 
-bool    Sniffer::timestamp_nano()
+bool Sniffer::timestamp_nano()
 {
     return pcap_get_tstamp_precision(_pcap_ptr) == PCAP_TSTAMP_PRECISION_NANO;
 }
 
-bool    Sniffer::timestamp_micro()
+bool Sniffer::timestamp_micro()
 {
     return pcap_get_tstamp_precision(_pcap_ptr) == PCAP_TSTAMP_PRECISION_MICRO;
 }
 
-int     Sniffer::timestamp_type()
+int Sniffer::timestamp_type()
 {
     return _timestamp_type;
 }
 
-int     Sniffer::snaplen()
+int Sniffer::snaplen()
 {
     return pcap_snapshot(_pcap_ptr);
 }
 
-int     Sniffer::datalink()
+int Sniffer::datalink()
 {
     return pcap_datalink(_pcap_ptr);
 }
 
 // settings
 
-bool    Sniffer::set_filter(std::string_view filter)
+bool Sniffer::set_filter(std::string_view filter)
 {
     bpf_u_int32 netmask = PCAP_NETMASK_UNKNOWN;
     // bpf_u_int32 netmask = 0;
@@ -332,15 +337,15 @@ bool    Sniffer::set_filter(std::string_view filter)
     return ret == 0;
 }
 
-bool    Sniffer::set_direction(std::string_view direction)
+bool Sniffer::set_direction(std::string_view direction)
 {
     pcap_direction_t dir;
     if (direction == "in")
         dir = PCAP_D_IN;
     else if (direction == "out")
-        dir =  PCAP_D_OUT;
+        dir = PCAP_D_OUT;
     else if (direction == "both")
-        dir =  PCAP_D_INOUT;
+        dir = PCAP_D_INOUT;
     else
     {
         SIHD_LOG(error, "Sniffer: packet direction unknown: '{}' possible values are: in - out - both", direction);
@@ -352,13 +357,13 @@ bool    Sniffer::set_direction(std::string_view direction)
     return ret == 0;
 }
 
-bool    Sniffer::set_max_sniff(size_t n)
+bool Sniffer::set_max_sniff(size_t n)
 {
     _max_sniff = n;
     return true;
 }
 
-bool    Sniffer::set_linux_protocol(int protocol)
+bool Sniffer::set_linux_protocol(int protocol)
 {
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
     int ret = pcap_set_protocol_linux(_pcap_ptr, protocol);
@@ -372,7 +377,7 @@ bool    Sniffer::set_linux_protocol(int protocol)
 #endif
 }
 
-bool    Sniffer::set_promiscuous(bool active)
+bool Sniffer::set_promiscuous(bool active)
 {
     int ret = pcap_set_promisc(_pcap_ptr, (int)active);
     if (ret != 0)
@@ -380,7 +385,7 @@ bool    Sniffer::set_promiscuous(bool active)
     return ret == 0;
 }
 
-bool    Sniffer::set_monitor(bool active)
+bool Sniffer::set_monitor(bool active)
 {
     int ret = pcap_set_rfmon(_pcap_ptr, (int)active);
     if (ret != 0)
@@ -388,7 +393,7 @@ bool    Sniffer::set_monitor(bool active)
     return ret == 0;
 }
 
-bool    Sniffer::set_immediate(bool active)
+bool Sniffer::set_immediate(bool active)
 {
     int ret = pcap_set_immediate_mode(_pcap_ptr, (int)active);
     if (ret != 0)
@@ -396,7 +401,7 @@ bool    Sniffer::set_immediate(bool active)
     return ret == 0;
 }
 
-bool    Sniffer::set_buffer_size(int size)
+bool Sniffer::set_buffer_size(int size)
 {
     int ret = pcap_set_buffer_size(_pcap_ptr, size);
     if (ret != 0)
@@ -404,21 +409,21 @@ bool    Sniffer::set_buffer_size(int size)
     return ret == 0;
 }
 
-bool    Sniffer::set_datalink(int datalink)
+bool Sniffer::set_datalink(int datalink)
 {
     int ret = pcap_set_datalink(_pcap_ptr, datalink);
     this->_log_if_error(ret);
     return ret == 0;
 }
 
-bool    Sniffer::set_timestamp_type(int ts_type)
+bool Sniffer::set_timestamp_type(int ts_type)
 {
     int ret = pcap_set_tstamp_type(_pcap_ptr, ts_type);
     this->_log_if_error(ret);
     return ret == 0;
 }
 
-bool    Sniffer::set_timestamp_nano(bool active)
+bool Sniffer::set_timestamp_nano(bool active)
 {
     int ret = pcap_set_tstamp_precision(_pcap_ptr, active ? PCAP_TSTAMP_PRECISION_NANO : PCAP_TSTAMP_PRECISION_MICRO);
     this->_log_if_error(ret);
@@ -426,7 +431,7 @@ bool    Sniffer::set_timestamp_nano(bool active)
     return ret == 0;
 }
 
-bool    Sniffer::set_snaplen(int len)
+bool Sniffer::set_snaplen(int len)
 {
     int ret = pcap_set_snaplen(_pcap_ptr, len);
     if (ret != 0)
@@ -434,7 +439,7 @@ bool    Sniffer::set_snaplen(int len)
     return ret == 0;
 }
 
-bool    Sniffer::set_timeout(int ms)
+bool Sniffer::set_timeout(int ms)
 {
     int ret = pcap_set_timeout(_pcap_ptr, ms);
     if (ret != 0)
@@ -442,7 +447,7 @@ bool    Sniffer::set_timeout(int ms)
     return ret == 0;
 }
 
-bool    Sniffer::set_nonblock(bool block)
+bool Sniffer::set_nonblock(bool block)
 {
     char errbuf[PCAP_ERRBUF_SIZE];
     int ret = pcap_setnonblock(_pcap_ptr, (int)block, errbuf);
@@ -451,4 +456,4 @@ bool    Sniffer::set_nonblock(bool block)
     return ret == 0;
 }
 
-}
+} // namespace sihd::pcap

@@ -18,37 +18,37 @@ BasicServerHandler::BasicServerHandler()
 
 BasicServerHandler::~BasicServerHandler()
 {
-    for (Client *client: _client_lst)
+    for (Client *client : _client_lst)
     {
         delete client;
     }
 }
 
-void    BasicServerHandler::_reset()
+void BasicServerHandler::_reset()
 {
     _read_event_lst.clear();
     _write_event_lst.clear();
     _connect_event_lst.clear();
 }
 
-void    BasicServerHandler::_add_time_to_clients()
+void BasicServerHandler::_add_time_to_clients()
 {
     if (_last_time <= 0)
-        return ;
+        return;
     time_t t = _clock.now() - _last_time;
-    for (Client *client: _client_lst)
+    for (Client *client : _client_lst)
     {
         client->time_total += t;
     }
 }
 
-bool    BasicServerHandler::set_max_clients(size_t max)
+bool BasicServerHandler::set_max_clients(size_t max)
 {
     _max_clients = max;
     return true;
 }
 
-bool    BasicServerHandler::send_to_client(Client *client, const sihd::util::IArray & arr)
+bool BasicServerHandler::send_to_client(Client *client, const sihd::util::IArray & arr)
 {
     if (client != nullptr && client->write_array.copy_from_bytes(arr))
     {
@@ -58,7 +58,7 @@ bool    BasicServerHandler::send_to_client(Client *client, const sihd::util::IAr
     return false;
 }
 
-bool    BasicServerHandler::remove_client(Client *client)
+bool BasicServerHandler::remove_client(Client *client)
 {
     if (client != nullptr)
     {
@@ -72,21 +72,21 @@ bool    BasicServerHandler::remove_client(Client *client)
     return client != nullptr;
 }
 
-bool    BasicServerHandler::send_to_client(int socket, const sihd::util::IArray & arr)
+bool BasicServerHandler::send_to_client(int socket, const sihd::util::IArray & arr)
 {
     if (_client_map.find(socket) == _client_map.end())
         return false;
     return this->send_to_client(_client_map[socket], arr);
 }
 
-bool    BasicServerHandler::remove_client(int socket)
+bool BasicServerHandler::remove_client(int socket)
 {
     if (_client_map.find(socket) == _client_map.end())
         return false;
     return this->remove_client(_client_map[socket]);
 }
 
-void    BasicServerHandler::handle_no_activity([[maybe_unused]] INetServer *server, time_t nano)
+void BasicServerHandler::handle_no_activity([[maybe_unused]] INetServer *server, time_t nano)
 {
     if (_last_time <= 0)
         _last_time = _clock.now() + nano;
@@ -95,7 +95,7 @@ void    BasicServerHandler::handle_no_activity([[maybe_unused]] INetServer *serv
     _poll_time = nano;
 }
 
-void    BasicServerHandler::handle_activity([[maybe_unused]] INetServer *server, time_t nano)
+void BasicServerHandler::handle_activity([[maybe_unused]] INetServer *server, time_t nano)
 {
     if (_last_time <= 0)
         _last_time = _clock.now() + nano;
@@ -104,7 +104,7 @@ void    BasicServerHandler::handle_activity([[maybe_unused]] INetServer *server,
     _poll_time = nano;
 }
 
-void    BasicServerHandler::handle_new_client(INetServer *server)
+void BasicServerHandler::handle_new_client(INetServer *server)
 {
     IpAddr addr;
     int socket = server->accept_client(&addr);
@@ -113,7 +113,7 @@ void    BasicServerHandler::handle_new_client(INetServer *server)
         if (_client_lst.size() >= _max_clients)
         {
             close(socket);
-            return ;
+            return;
         }
         Client *client = new Client(socket);
         // add client to internal listing
@@ -131,7 +131,7 @@ void    BasicServerHandler::handle_new_client(INetServer *server)
     }
 }
 
-void    BasicServerHandler::handle_client_read(INetServer *server, int socket)
+void BasicServerHandler::handle_client_read(INetServer *server, int socket)
 {
     (void)server;
     Client *client = _client_map[socket];
@@ -144,7 +144,7 @@ void    BasicServerHandler::handle_client_read(INetServer *server, int socket)
     }
 }
 
-void    BasicServerHandler::handle_client_write(INetServer *server, int socket)
+void BasicServerHandler::handle_client_write(INetServer *server, int socket)
 {
     (void)server;
     Client *client = _client_map[socket];
@@ -157,10 +157,10 @@ void    BasicServerHandler::handle_client_write(INetServer *server, int socket)
     }
 }
 
-void    BasicServerHandler::handle_after_activity(INetServer *server)
+void BasicServerHandler::handle_after_activity(INetServer *server)
 {
     _server = server;
     this->notify_observers(this);
 }
 
-}
+} // namespace sihd::net

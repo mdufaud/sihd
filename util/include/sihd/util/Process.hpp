@@ -1,20 +1,21 @@
 #ifndef __SIHD_UTIL_PROCESS_HPP__
-# define __SIHD_UTIL_PROCESS_HPP__
+#define __SIHD_UTIL_PROCESS_HPP__
 
-# include <functional>
+#include <functional>
 
-# include <sihd/util/platform.hpp>
-# include <sihd/util/IStoppableRunnable.hpp>
-# include <sihd/util/Waitable.hpp>
-# include <sihd/util/Poll.hpp>
-# include <sihd/util/IHandler.hpp>
+#include <sihd/util/IHandler.hpp>
+#include <sihd/util/IStoppableRunnable.hpp>
+#include <sihd/util/Poll.hpp>
+#include <sihd/util/Waitable.hpp>
+#include <sihd/util/platform.hpp>
 
 namespace sihd::util
 {
 
-# if !defined(__SIHD_WINDOWS__)
+#if !defined(__SIHD_WINDOWS__)
 
-class Process: public IStoppableRunnable, public IHandler<Poll *>
+class Process: public IStoppableRunnable,
+               public IHandler<Poll *>
 {
     public:
         Process();
@@ -110,12 +111,13 @@ class Process: public IStoppableRunnable, public IHandler<Poll *>
             CLOSE,
         };
 
-        struct FileDescWrapper {
-            int fd_read = -1;
-            int fd_write = -1;
-            FileDescAction action = NONE;
-            std::function<void(const char *, ssize_t)> fun;
-            std::string path;
+        struct FileDescWrapper
+        {
+                int fd_read = -1;
+                int fd_write = -1;
+                FileDescAction action = NONE;
+                std::function<void(const char *, ssize_t)> fun;
+                std::string path;
         };
 
         // fd utilities
@@ -135,9 +137,9 @@ class Process: public IStoppableRunnable, public IHandler<Poll *>
         void _do_fork();
         int _exec_child();
 
-#if !defined(__SIHD_ANDROID__)
+# if !defined(__SIHD_ANDROID__)
         bool _do_spawn();
-#endif
+# endif
         void _init_poll();
         // fd redirections setting
         void _fdw_close(FileDescWrapper & fdw);
@@ -160,7 +162,7 @@ class Process: public IStoppableRunnable, public IHandler<Poll *>
         siginfo_t _info;
 };
 
-# else
+#else
 
 class Process
 {
@@ -169,8 +171,8 @@ class Process
         virtual ~Process() {};
 };
 
-# endif
+#endif
 
-}
+} // namespace sihd::util
 
 #endif

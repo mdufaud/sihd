@@ -1,11 +1,11 @@
 #ifndef __SIHD_UTIL_VALUE_HPP__
-# define __SIHD_UTIL_VALUE_HPP__
+#define __SIHD_UTIL_VALUE_HPP__
 
-# include <limits>
-# include <cstring>
+#include <cstring>
+#include <limits>
 
-# include <sihd/util/Types.hpp>
-# include <sihd/util/str.hpp>
+#include <sihd/util/Types.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::util
 {
@@ -96,22 +96,40 @@ class Value
         int compare_double_epsilon(double cmp_val, double epsilon) const;
 
         template <typename T>
-        inline bool operator==(const T & val) { return this->compare<T>(val) == 0; }
+        inline bool operator==(const T & val)
+        {
+            return this->compare<T>(val) == 0;
+        }
 
         template <typename T>
-        inline bool operator!=(const T & val) { return this->compare<T>(val) != 0; }
+        inline bool operator!=(const T & val)
+        {
+            return this->compare<T>(val) != 0;
+        }
 
         template <typename T>
-        inline bool operator>(const T & val) { return this->compare<T>(val) > 0; }
+        inline bool operator>(const T & val)
+        {
+            return this->compare<T>(val) > 0;
+        }
 
         template <typename T>
-        inline bool operator>=(const T & val) { return this->compare<T>(val) >= 0; }
+        inline bool operator>=(const T & val)
+        {
+            return this->compare<T>(val) >= 0;
+        }
 
         template <typename T>
-        inline bool operator<(const T & val) { return this->compare<T>(val) < 0; }
+        inline bool operator<(const T & val)
+        {
+            return this->compare<T>(val) < 0;
+        }
 
         template <typename T>
-        inline bool operator<=(const T & val) { return this->compare<T>(val) <= 0; }
+        inline bool operator<=(const T & val)
+        {
+            return this->compare<T>(val) <= 0;
+        }
 
         Type type;
         int64_t data;
@@ -164,6 +182,6 @@ bool Value::operator<(const double & val);
 template <>
 bool Value::operator<=(const double & val);
 
-}
+} // namespace sihd::util
 
 #endif

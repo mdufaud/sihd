@@ -1,13 +1,13 @@
 #ifndef __SIHD_UTIL_FILE_HPP__
-# define __SIHD_UTIL_FILE_HPP__
+#define __SIHD_UTIL_FILE_HPP__
 
-# include <cstdio>
-# include <string>
-# include <string_view>
-# include <optional>
+#include <cstdio>
+#include <optional>
+#include <string>
+#include <string_view>
 
-# include <sihd/util/platform.hpp>
-# include <sihd/util/ArrayView.hpp>
+#include <sihd/util/ArrayView.hpp>
+#include <sihd/util/platform.hpp>
 
 struct stat;
 
@@ -113,6 +113,6 @@ class File
         bool _stream_ownership;
 };
 
-}
+} // namespace sihd::util
 
 #endif

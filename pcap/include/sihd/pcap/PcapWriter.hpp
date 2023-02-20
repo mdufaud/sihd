@@ -1,20 +1,20 @@
 #ifndef __SIHD_PCAP_PCAPWRITER_HPP__
-# define __SIHD_PCAP_PCAPWRITER_HPP__
+#define __SIHD_PCAP_PCAPWRITER_HPP__
 
-# include <sihd/util/Node.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/Clocks.hpp>
-# include <sihd/util/IWriter.hpp>
-# include <sihd/util/time.hpp>
+#include <sihd/util/Clocks.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/IWriter.hpp>
+#include <sihd/util/Node.hpp>
+#include <sihd/util/time.hpp>
 
-# include <sihd/pcap/utils.hpp>
+#include <sihd/pcap/utils.hpp>
 
 namespace sihd::pcap
 {
 
-class PcapWriter:   public sihd::util::Named,
-                    public sihd::util::Configurable,
-                    public sihd::util::IWriterTimestamp
+class PcapWriter: public sihd::util::Named,
+                  public sihd::util::Configurable,
+                  public sihd::util::IWriterTimestamp
 {
     public:
         PcapWriter(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -53,9 +53,8 @@ class PcapWriter:   public sihd::util::Named,
         sihd::util::SystemClock _default_clock;
         int _linktype;
         int _snaplen;
-
 };
 
-}
+} // namespace sihd::pcap
 
 #endif

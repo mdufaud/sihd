@@ -2,8 +2,8 @@
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/fs.hpp>
 
-#include <sihd/zip/utils.hpp>
 #include <sihd/zip/ZipWriter.hpp>
+#include <sihd/zip/utils.hpp>
 
 namespace sihd::zip
 {
@@ -15,7 +15,8 @@ SIHD_LOGGER;
 using namespace sihd::util;
 
 ZipWriter::ZipWriter(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent), _zip_ptr(nullptr)
+    sihd::util::Named(name, parent),
+    _zip_ptr(nullptr)
 {
     this->no_encrypt();
     this->add_conf("aes", &ZipWriter::set_aes_encryption);
@@ -26,22 +27,22 @@ ZipWriter::~ZipWriter()
     this->close();
 }
 
-bool    ZipWriter::set_aes_encryption(int aes)
+bool ZipWriter::set_aes_encryption(int aes)
 {
     switch (aes)
     {
         case 0:
             this->no_encrypt();
-            break ;
+            break;
         case 128:
             this->encrypt_in_aes_128();
-            break ;
+            break;
         case 192:
             this->encrypt_in_aes_192();
-            break ;
+            break;
         case 256:
             this->encrypt_in_aes_256();
-            break ;
+            break;
         default:
             SIHD_LOG(error, "ZipWriter: no such encryption for AES: {}", aes);
             return false;
@@ -49,27 +50,27 @@ bool    ZipWriter::set_aes_encryption(int aes)
     return true;
 }
 
-void    ZipWriter::no_encrypt()
+void ZipWriter::no_encrypt()
 {
     _encryption_method = ZIP_EM_NONE;
 }
 
-void    ZipWriter::encrypt_in_aes_128()
+void ZipWriter::encrypt_in_aes_128()
 {
     _encryption_method = ZIP_EM_AES_128;
 }
 
-void    ZipWriter::encrypt_in_aes_192()
+void ZipWriter::encrypt_in_aes_192()
 {
     _encryption_method = ZIP_EM_AES_192;
 }
 
-void    ZipWriter::encrypt_in_aes_256()
+void ZipWriter::encrypt_in_aes_256()
 {
     _encryption_method = ZIP_EM_AES_256;
 }
 
-bool    ZipWriter::open(std::string_view path, bool fails_if_exists, bool truncate)
+bool ZipWriter::open(std::string_view path, bool fails_if_exists, bool truncate)
 {
     int flags = ZIP_CREATE;
     int error;
@@ -85,7 +86,7 @@ bool    ZipWriter::open(std::string_view path, bool fails_if_exists, bool trunca
     return _zip_ptr != nullptr;
 }
 
-bool    ZipWriter::close()
+bool ZipWriter::close()
 {
     bool ret = true;
     if (_zip_ptr != nullptr)
@@ -98,7 +99,7 @@ bool    ZipWriter::close()
     return ret;
 }
 
-bool    ZipWriter::add_dir(std::string_view name)
+bool ZipWriter::add_dir(std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -107,7 +108,7 @@ bool    ZipWriter::add_dir(std::string_view name)
     return true;
 }
 
-bool    ZipWriter::fs_add(std::string_view path, std::string_view name)
+bool ZipWriter::fs_add(std::string_view path, std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -118,7 +119,7 @@ bool    ZipWriter::fs_add(std::string_view path, std::string_view name)
     return false;
 }
 
-bool    ZipWriter::fs_add_dir(std::string_view path, std::string_view name)
+bool ZipWriter::fs_add_dir(std::string_view path, std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -129,16 +130,16 @@ bool    ZipWriter::fs_add_dir(std::string_view path, std::string_view name)
     }
     std::vector<std::string> children = fs::children(path);
     bool ret = true;
-    for (std::string_view child: children)
+    for (std::string_view child : children)
     {
         ret = this->fs_add(fs::combine(path, child), fs::combine(name, child));
         if (!ret)
-            break ;
+            break;
     }
     return ret;
 }
 
-bool    ZipWriter::add_file(std::string_view name, sihd::util::ArrCharView view)
+bool ZipWriter::add_file(std::string_view name, sihd::util::ArrCharView view)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -151,7 +152,7 @@ bool    ZipWriter::add_file(std::string_view name, sihd::util::ArrCharView view)
     return this->_add_source(name, source);
 }
 
-bool    ZipWriter::fs_add_file(std::string_view path, std::string_view name)
+bool ZipWriter::fs_add_file(std::string_view path, std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -164,7 +165,7 @@ bool    ZipWriter::fs_add_file(std::string_view path, std::string_view name)
     return this->_add_source(name, source);
 }
 
-bool    ZipWriter::_add_source(std::string_view name, zip_source_t *source)
+bool ZipWriter::_add_source(std::string_view name, zip_source_t *source)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -177,7 +178,7 @@ bool    ZipWriter::_add_source(std::string_view name, zip_source_t *source)
     return ret >= 0;
 }
 
-bool    ZipWriter::encrypt(size_t index, std::string_view password)
+bool ZipWriter::encrypt(size_t index, std::string_view password)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -187,7 +188,7 @@ bool    ZipWriter::encrypt(size_t index, std::string_view password)
     return ret;
 }
 
-bool    ZipWriter::encrypt_all(std::string_view password)
+bool ZipWriter::encrypt_all(std::string_view password)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -202,4 +203,4 @@ bool    ZipWriter::encrypt_all(std::string_view password)
     return true;
 }
 
-}
+} // namespace sihd::zip

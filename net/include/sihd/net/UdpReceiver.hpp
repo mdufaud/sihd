@@ -1,25 +1,25 @@
 #ifndef __SIHD_NET_UDPRECEIVER_HPP__
-# define __SIHD_NET_UDPRECEIVER_HPP__
+#define __SIHD_NET_UDPRECEIVER_HPP__
 
-# include <sihd/net/Socket.hpp>
-# include <sihd/net/INetReceiver.hpp>
+#include <sihd/net/INetReceiver.hpp>
+#include <sihd/net/Socket.hpp>
 
-# include <sihd/util/Named.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/IStoppableRunnable.hpp>
-# include <sihd/util/Handler.hpp>
-# include <sihd/util/Waitable.hpp>
-# include <sihd/util/Poll.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/Handler.hpp>
+#include <sihd/util/IStoppableRunnable.hpp>
+#include <sihd/util/Named.hpp>
+#include <sihd/util/Poll.hpp>
+#include <sihd/util/Waitable.hpp>
 
 namespace sihd::net
 {
 
-class UdpReceiver:  public INetReceiver,
-                    public sihd::util::Named,
-                    public sihd::util::Configurable,
-                    public sihd::util::IStoppableRunnable,
-                    public sihd::util::Observable<INetReceiver>,
-                    public sihd::util::IHandler<sihd::util::Poll *>
+class UdpReceiver: public INetReceiver,
+                   public sihd::util::Named,
+                   public sihd::util::Configurable,
+                   public sihd::util::IStoppableRunnable,
+                   public sihd::util::Observable<INetReceiver>,
+                   public sihd::util::IHandler<sihd::util::Poll *>
 {
     public:
         UdpReceiver(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -72,6 +72,6 @@ class UdpReceiver:  public INetReceiver,
         sihd::util::Poll _poll;
 };
 
-}
+} // namespace sihd::net
 
 #endif

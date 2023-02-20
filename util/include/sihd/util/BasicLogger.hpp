@@ -1,7 +1,7 @@
 #ifndef __SIHD_UTIL_BASICLOGGER_HPP__
-# define __SIHD_UTIL_BASICLOGGER_HPP__
+#define __SIHD_UTIL_BASICLOGGER_HPP__
 
-# include <sihd/util/ALogger.hpp>
+#include <sihd/util/ALogger.hpp>
 
 namespace sihd::util
 {
@@ -20,6 +20,6 @@ class BasicLogger: public ALogger
         FILE *_output;
 };
 
-}
+} // namespace sihd::util
 
 #endif

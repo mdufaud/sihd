@@ -1,17 +1,17 @@
 #ifndef __SIHD_UTIL_LINEREADER_HPP__
-# define __SIHD_UTIL_LINEREADER_HPP__
+#define __SIHD_UTIL_LINEREADER_HPP__
 
-# include <sihd/util/Named.hpp>
-# include <sihd/util/IReader.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/File.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/File.hpp>
+#include <sihd/util/IReader.hpp>
+#include <sihd/util/Named.hpp>
 
 namespace sihd::util
 {
 
-class LineReader:   public sihd::util::Named,
-                    public sihd::util::IReader,
-                    public sihd::util::Configurable
+class LineReader: public sihd::util::Named,
+                  public sihd::util::IReader,
+                  public sihd::util::Configurable
 {
     public:
         LineReader(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -67,6 +67,6 @@ class LineReader:   public sihd::util::Named,
         int _delimiter;
 };
 
-}
+} // namespace sihd::util
 
 #endif

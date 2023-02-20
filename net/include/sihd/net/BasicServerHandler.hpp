@@ -1,33 +1,26 @@
 #ifndef __SIHD_NET_BASICSERVERHANDLER_HPP__
-# define __SIHD_NET_BASICSERVERHANDLER_HPP__
+#define __SIHD_NET_BASICSERVERHANDLER_HPP__
 
-# include <sihd/net/INetServerHandler.hpp>
-# include <sihd/net/Socket.hpp>
-# include <sihd/net/IpAddr.hpp>
-# include <sihd/util/Array.hpp>
-# include <sihd/util/Clocks.hpp>
-# include <sihd/util/Observable.hpp>
-# include <sihd/util/Configurable.hpp>
+#include <sihd/net/INetServerHandler.hpp>
+#include <sihd/net/IpAddr.hpp>
+#include <sihd/net/Socket.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/Clocks.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/Observable.hpp>
 
 namespace sihd::net
 {
 
-class BasicServerHandler:   public INetServerHandler,
-                            public sihd::util::Configurable,
-                            public sihd::util::Observable<BasicServerHandler>
+class BasicServerHandler: public INetServerHandler,
+                          public sihd::util::Configurable,
+                          public sihd::util::Observable<BasicServerHandler>
 {
     public:
         class Client
         {
             public:
-                Client(int sock):
-                    socket(sock),
-                    time_connected(0),
-                    time_total(0),
-                    error(false),
-                    disconnected(false)
-                {
-                }
+                Client(int sock): socket(sock), time_connected(0), time_total(0), error(false), disconnected(false) {}
                 ~Client() {}
 
                 int fd() { return socket.socket(); }
@@ -63,10 +56,10 @@ class BasicServerHandler:   public INetServerHandler,
 
     protected:
         void handle_no_activity(INetServer *server, time_t nano);
-		void handle_activity(INetServer *server, time_t nano);
-		void handle_new_client(INetServer *server);
-		void handle_client_read(INetServer *server, int socket);
-		void handle_client_write(INetServer *server, int socket);
+        void handle_activity(INetServer *server, time_t nano);
+        void handle_new_client(INetServer *server);
+        void handle_client_read(INetServer *server, int socket);
+        void handle_client_write(INetServer *server, int socket);
         void handle_after_activity(INetServer *server);
 
     private:
@@ -87,6 +80,6 @@ class BasicServerHandler:   public INetServerHandler,
         size_t _max_clients;
 };
 
-}
+} // namespace sihd::net
 
 #endif

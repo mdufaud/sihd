@@ -13,7 +13,7 @@ namespace
 {
 std::mutex _init_mutex;
 bool _is_init = false;
-}
+} // namespace
 
 std::string status_str(int code)
 {
@@ -25,7 +25,7 @@ std::string version()
     return pcap_lib_version();
 }
 
-bool    init(int opts)
+bool init(int opts)
 {
     std::lock_guard l(_init_mutex);
     if (_is_init)
@@ -48,7 +48,7 @@ bool    init(int opts)
     return _is_init;
 }
 
-bool    lookupnet(std::string_view dev, bpf_u_int32 *ip, bpf_u_int32 *mask)
+bool lookupnet(std::string_view dev, bpf_u_int32 *ip, bpf_u_int32 *mask)
 {
     char errbuf[PCAP_ERRBUF_SIZE];
 
@@ -58,7 +58,7 @@ bool    lookupnet(std::string_view dev, bpf_u_int32 *ip, bpf_u_int32 *mask)
     return ret;
 }
 
-bool    is_datalink(int dtl)
+bool is_datalink(int dtl)
 {
     return pcap_datalink_val_to_name(dtl) != nullptr;
 }
@@ -73,12 +73,12 @@ std::string datalink_desc(int dtl)
     return pcap_datalink_val_to_description(dtl);
 }
 
-int     datalink(std::string_view dtl)
+int datalink(std::string_view dtl)
 {
     return pcap_datalink_name_to_val(dtl.data());
 }
 
-bool    is_timestamp_type(int ts)
+bool is_timestamp_type(int ts)
 {
     return pcap_tstamp_type_val_to_name(ts) != nullptr;
 }
@@ -93,9 +93,9 @@ std::string timestamp_type_desc(int ts)
     return pcap_tstamp_type_val_to_description(ts);
 }
 
-int     timestamp_type(std::string_view ts)
+int timestamp_type(std::string_view ts)
 {
     return pcap_tstamp_type_name_to_val(ts.data());
 }
 
-}
+} // namespace sihd::pcap::utils

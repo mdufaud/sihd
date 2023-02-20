@@ -1,7 +1,7 @@
 #include <fmt/format.h>
 
-#include <sihd/util/StrConfiguration.hpp>
 #include <sihd/util/Splitter.hpp>
+#include <sihd/util/StrConfiguration.hpp>
 
 namespace sihd::util
 {
@@ -11,12 +11,12 @@ StrConfiguration::StrConfiguration(std::string_view conf)
     this->parse_configuration(conf);
 }
 
-void    StrConfiguration::parse_configuration(std::string_view conf)
+void StrConfiguration::parse_configuration(std::string_view conf)
 {
     _configuration.clear();
     Splitter splitter(";");
     auto split_pairs = splitter.split(conf);
-    for (const auto & pair: split_pairs)
+    for (const auto & pair : split_pairs)
     {
         size_t idx = pair.find_first_of('=');
         if (idx != std::string::npos)
@@ -28,18 +28,17 @@ void    StrConfiguration::parse_configuration(std::string_view conf)
     }
 }
 
-
-size_t  StrConfiguration::size() const
+size_t StrConfiguration::size() const
 {
     return _configuration.size();
 }
 
-bool    StrConfiguration::has(const std::string & key) const
+bool StrConfiguration::has(const std::string & key) const
 {
     return _configuration.count(key) > 0;
 }
 
-std::optional<std::string>  StrConfiguration::find(const std::string & key) const
+std::optional<std::string> StrConfiguration::find(const std::string & key) const
 {
     const auto it = _configuration.find(key);
     if (it == _configuration.end())
@@ -65,7 +64,7 @@ std::string StrConfiguration::str() const
     bool first = true;
     std::string ret;
 
-    for (const auto & [key, value]: _configuration)
+    for (const auto & [key, value] : _configuration)
     {
         ret += fmt::format("{}{}={}", (first ? ";" : ""), key, value);
         first = false;
@@ -74,4 +73,4 @@ std::string StrConfiguration::str() const
     return ret;
 }
 
-}
+} // namespace sihd::util

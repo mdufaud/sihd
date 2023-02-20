@@ -19,7 +19,8 @@ SIHD_LOGGER;
 using namespace sihd::util;
 
 Pinger::Pinger(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent), _sender("icmp-sender")
+    sihd::util::Named(name, parent),
+    _sender("icmp-sender")
 {
     _sender.set_data_size(ICMP_ECHO_REQUEST_LENGTH);
     _sender.set_echo();
@@ -52,34 +53,34 @@ Pinger::~Pinger()
     this->stop();
 }
 
-bool    Pinger::open_unix()
+bool Pinger::open_unix()
 {
     return _sender.open_socket_unix();
 }
 
-bool    Pinger::open(bool ipv6)
+bool Pinger::open(bool ipv6)
 {
     return _sender.open_socket(ipv6);
 }
 
-bool    Pinger::set_ttl(int ttl)
+bool Pinger::set_ttl(int ttl)
 {
     _ttl = ttl;
     return true;
 }
 
-bool    Pinger::set_timeout(time_t milliseconds_interval)
+bool Pinger::set_timeout(time_t milliseconds_interval)
 {
     return _sender.set_poll_timeout(milliseconds_interval);
 }
 
-bool    Pinger::set_interval(time_t milliseconds_interval)
+bool Pinger::set_interval(time_t milliseconds_interval)
 {
     _ping_ms_interval = milliseconds_interval;
     return true;
 }
 
-void    Pinger::stop()
+void Pinger::stop()
 {
     _stop = true;
     for (int i = 0; _running && i < 3; ++i)
@@ -89,7 +90,7 @@ void    Pinger::stop()
     }
 }
 
-bool    Pinger::ping(const IpAddr & client, size_t number)
+bool Pinger::ping(const IpAddr & client, size_t number)
 {
     if (_running.exchange(true))
         return false;
@@ -111,7 +112,7 @@ bool    Pinger::ping(const IpAddr & client, size_t number)
             // wait between pings
             _waitable.wait_for(time::milliseconds(_ping_ms_interval) - (_clock_ptr->now() - _result.last_time_sent));
             if (_stop)
-                break ;
+                break;
         }
         // set sequence number and packet timestamp
         _current_seq = i + 1;
@@ -122,7 +123,7 @@ bool    Pinger::ping(const IpAddr & client, size_t number)
         // send icmp echo
         ret = _sender.send_to(client);
         if (ret == false)
-            break ;
+            break;
         _result.transmitted += 1;
         // wait until seq number is received by polling
         _received = false;
@@ -144,11 +145,11 @@ bool    Pinger::ping(const IpAddr & client, size_t number)
     return ret;
 }
 
-void    Pinger::handle(IcmpSender *sender)
+void Pinger::handle(IcmpSender *sender)
 {
     const IcmpResponse & response = sender->response();
     if (_current_seq != response.seq || os::pid() != response.id)
-        return ;
+        return;
     _received = true;
     _result.received += 1;
 
@@ -172,8 +173,7 @@ void    Pinger::handle(IcmpSender *sender)
     _sums.sum2 += (long long)triptime * (long long)triptime;
 }
 
-
-float   PingResult::packet_loss() const
+float PingResult::packet_loss() const
 {
     return transmitted > 0 ? ((float)((float)(transmitted - received) / (float)transmitted) * 100) : 0.0;
 }
@@ -181,13 +181,15 @@ float   PingResult::packet_loss() const
 std::string PingResult::str() const
 {
     return fmt::format("{} packets transmitted, {} received, {:.0}% packet loss, time {:.3f}ms\n"
-                        "rtt min/avg/max/mdev = {:.3f}/{:.3f}/{:.3f}/{:.3f} ms",
-                        transmitted, received, this->packet_loss(),
-                        time::to_double_milliseconds(time_end - time_start),
-                        time::to_double_milliseconds(rtt_min),
-                        time::to_double_milliseconds(rtt_avg),
-                        time::to_double_milliseconds(rtt_max),
-                        time::to_double_milliseconds(rtt_mdev));
+                       "rtt min/avg/max/mdev = {:.3f}/{:.3f}/{:.3f}/{:.3f} ms",
+                       transmitted,
+                       received,
+                       this->packet_loss(),
+                       time::to_double_milliseconds(time_end - time_start),
+                       time::to_double_milliseconds(rtt_min),
+                       time::to_double_milliseconds(rtt_avg),
+                       time::to_double_milliseconds(rtt_max),
+                       time::to_double_milliseconds(rtt_mdev));
 }
 
-}
+} // namespace sihd::net

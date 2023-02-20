@@ -1,8 +1,9 @@
 #ifndef __SIHD_UTIL_ENDIAN_HPP__
-# define __SIHD_UTIL_ENDIAN_HPP__
+#define __SIHD_UTIL_ENDIAN_HPP__
 
-# include <string>
-# include <sihd/util/portable_endian.h>
+#include <string>
+
+#include <sihd/util/portable_endian.h>
 
 namespace sihd::util
 {
@@ -146,6 +147,6 @@ int64_t Endian::convert_from<int64_t, Endian::LITTLE>(int64_t value);
 template <>
 int64_t Endian::convert_from<int64_t, Endian::BIG>(int64_t value);
 
-}
+} // namespace sihd::util
 
 #endif

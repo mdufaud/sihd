@@ -1,35 +1,35 @@
 #ifndef __SIHD_LUA_LUAUTILAPI_HPP__
-# define __SIHD_LUA_LUAUTILAPI_HPP__
+#define __SIHD_LUA_LUAUTILAPI_HPP__
 
-# include <sihd/lua/Vm.hpp>
+#include <sihd/lua/Vm.hpp>
 
-# include <sihd/util/Logger.hpp>
-# include <sihd/util/ServiceController.hpp>
-# include <sihd/util/SmartNodePtr.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/ServiceController.hpp>
+#include <sihd/util/SmartNodePtr.hpp>
 
-# include <sihd/util/Array.hpp>
-# include <sihd/util/Configurable.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/Configurable.hpp>
 
-# include <sihd/util/Task.hpp>
-# include <sihd/util/Scheduler.hpp>
-# include <sihd/util/Waitable.hpp>
-# include <sihd/util/Worker.hpp>
-# include <sihd/util/StepWorker.hpp>
+#include <sihd/util/Scheduler.hpp>
+#include <sihd/util/StepWorker.hpp>
+#include <sihd/util/Task.hpp>
+#include <sihd/util/Waitable.hpp>
+#include <sihd/util/Worker.hpp>
 
-# include <sihd/util/IHandler.hpp>
-# include <sihd/util/IReader.hpp>
-# include <sihd/util/IWriter.hpp>
+#include <sihd/util/IHandler.hpp>
+#include <sihd/util/IReader.hpp>
+#include <sihd/util/IWriter.hpp>
 
-# include <sihd/util/version.hpp>
-# include <sihd/util/platform.hpp>
-# include <sihd/util/Endian.hpp>
+#include <sihd/util/Endian.hpp>
+#include <sihd/util/platform.hpp>
+#include <sihd/util/version.hpp>
 
-#include <LuaBridge/Vector.h>
 #include <LuaBridge/Map.h>
 #include <LuaBridge/UnorderedMap.h>
+#include <LuaBridge/Vector.h>
 #include <LuaBridge/detail/Stack.h>
 
-# include <memory>
+#include <memory>
 
 namespace sihd::lua
 {
@@ -37,48 +37,37 @@ namespace sihd::lua
 template <typename T>
 struct EnumWrapper
 {
-    static typename std::enable_if<std::is_enum<T>::value, void>::type
-    push(lua_State *L, T value)
-    {
-        lua_pushnumber(L, static_cast<std::size_t>(value));
-    }
+        static typename std::enable_if<std::is_enum<T>::value, void>::type push(lua_State *L, T value)
+        {
+            lua_pushnumber(L, static_cast<std::size_t>(value));
+        }
 
-    static typename std::enable_if<std::is_enum<T>::value, T>::type
-    get(lua_State *L, int index)
-    {
-        return static_cast<T>(lua_tointeger(L, index));
-    }
+        static typename std::enable_if<std::is_enum<T>::value, T>::type get(lua_State *L, int index)
+        {
+            return static_cast<T>(lua_tointeger(L, index));
+        }
 };
 
-}
+} // namespace sihd::lua
 
 namespace luabridge
 {
-    // LuaBridge smart pointer management for Named/Node pattern
-    template <class C>
-    struct ContainerTraits<sihd::util::SmartNodePtr<C>>
-    {
+// LuaBridge smart pointer management for Named/Node pattern
+template <class C>
+struct ContainerTraits<sihd::util::SmartNodePtr<C>>
+{
         using Type = C;
 
-        static sihd::util::SmartNodePtr<C> construct(C* obj)
-        {
-            return obj;
-        }
+        static sihd::util::SmartNodePtr<C> construct(C *obj) { return obj; }
 
-        static C *get(sihd::util::SmartNodePtr<C> & obj)
-        {
-            return obj.get();
-        }
-    };
+        static C *get(sihd::util::SmartNodePtr<C> & obj) { return obj.get(); }
+};
 
-    // std::string_view as a pushable lua class
-    template <>
-    struct Stack<std::string_view>
-    {
-        static void push(lua_State *L, const std::string_view & str)
-        {
-            lua_pushlstring(L, str.data(), str.size());
-        }
+// std::string_view as a pushable lua class
+template <>
+struct Stack<std::string_view>
+{
+        static void push(lua_State *L, const std::string_view & str) { lua_pushlstring(L, str.data(), str.size()); }
 
         static std::string_view get(lua_State *L, int index)
         {
@@ -98,40 +87,31 @@ namespace luabridge
             return string;
         }
 
-        static bool isInstance(lua_State *L, int index)
-        {
-            return lua_type(L, index) == LUA_TSTRING;
-        }
-    };
-
-    // int8_t was missing ??
-    template <>
-    struct Stack<int8_t>
-    {
-        static void push(lua_State *L, int8_t value)
-        {
-            lua_pushnumber(L, static_cast<int8_t>(value));
-        }
-
-        static int8_t get(lua_State *L, int index)
-        {
-            return static_cast<int8_t>(lua_tointeger(L, index));
-        }
-    };
-
-    // enable enums in Lua
-
-    template <>
-    struct Stack<sihd::util::Type>: sihd::lua::EnumWrapper<sihd::util::Type>
-    {
-    };
-
-    template <>
-    struct Stack<sihd::util::ServiceController::State>: sihd::lua::EnumWrapper<sihd::util::ServiceController::State>
-    {
-    };
-
+        static bool isInstance(lua_State *L, int index) { return lua_type(L, index) == LUA_TSTRING; }
 };
+
+// int8_t was missing ??
+template <>
+struct Stack<int8_t>
+{
+        static void push(lua_State *L, int8_t value) { lua_pushnumber(L, static_cast<int8_t>(value)); }
+
+        static int8_t get(lua_State *L, int index) { return static_cast<int8_t>(lua_tointeger(L, index)); }
+};
+
+// enable enums in Lua
+
+template <>
+struct Stack<sihd::util::Type>: sihd::lua::EnumWrapper<sihd::util::Type>
+{
+};
+
+template <>
+struct Stack<sihd::util::ServiceController::State>: sihd::lua::EnumWrapper<sihd::util::ServiceController::State>
+{
+};
+
+}; // namespace luabridge
 
 namespace sihd::lua
 {
@@ -166,7 +146,7 @@ class LuaUtilApi
             if (tbl.isTable() == false)
                 luaL_error(state, "set_conf argument must be a table");
             bool ret = true;
-            for (const auto & pair: luabridge::pairs(tbl))
+            for (const auto & pair : luabridge::pairs(tbl))
             {
                 if (pair.first.isString() == false)
                     luaL_error(state, "set_conf keys must be strings");
@@ -203,14 +183,14 @@ class LuaUtilApi
 
                 void new_lua_state(lua_State *state);
 
-                template <typename ...T>
+                template <typename... T>
                 void call_lua_method_noret(T... args)
                 {
                     _fun(args...);
                 }
 
-                template <typename R, typename ...T>
-                R   call_lua_method(T... args)
+                template <typename R, typename... T>
+                R call_lua_method(T... args)
                 {
                     return _fun(args...);
                 }
@@ -220,7 +200,8 @@ class LuaUtilApi
                 luabridge::LuaRef _fun;
         };
 
-        class LuaTask: public sihd::util::Task, public LuaThreadRunner
+        class LuaTask: public sihd::util::Task,
+                       public LuaThreadRunner
         {
             public:
                 LuaTask(luabridge::LuaRef lua_ref, time_t timestamp_to_run = 0, time_t reschedule_every = 0);
@@ -229,7 +210,8 @@ class LuaUtilApi
                 bool run();
         };
 
-        class LuaRunnable: public sihd::util::IRunnable, public LuaThreadRunner
+        class LuaRunnable: public sihd::util::IRunnable,
+                           public LuaThreadRunner
         {
             public:
                 LuaRunnable(luabridge::LuaRef lua_ref);
@@ -238,8 +220,9 @@ class LuaUtilApi
                 bool run();
         };
 
-        template <typename ...T>
-        class LuaHandler: public sihd::util::IHandler<T...>, public LuaThreadRunner
+        template <typename... T>
+        class LuaHandler: public sihd::util::IHandler<T...>,
+                          public LuaThreadRunner
         {
             public:
                 LuaHandler(luabridge::LuaRef lua_ref): LuaThreadRunner(lua_ref) {}
@@ -247,10 +230,9 @@ class LuaUtilApi
 
                 void handle(T... args)
                 {
-                    //ISO C++03 14.2/4
+                    // ISO C++03 14.2/4
                     this->template call_lua_method<void, T...>(args...);
                 }
-
         };
 
         class LuaScheduler: public sihd::util::Scheduler
@@ -311,15 +293,9 @@ class LuaUtilApi
             return I;
         }
 
-        static constexpr const char *_get_version_str()
-        {
-            return SIHD_VERSION_STRING;
-        }
+        static constexpr const char *_get_version_str() { return SIHD_VERSION_STRING; }
 
-        static constexpr const char *_get_platform_str()
-        {
-            return __SIHD_PLATFORM__;
-        }
+        static constexpr const char *_get_platform_str() { return __SIHD_PLATFORM__; }
 
         template <sihd::util::Endian::Endianness E>
         static constexpr bool _is_endian()
@@ -344,7 +320,7 @@ class LuaUtilApi
             if (ref.isTable())
             {
                 array.reserve(ref.length());
-                for (const auto & pair: luabridge::pairs(ref))
+                for (const auto & pair : luabridge::pairs(ref))
                     array.push_back(pair.second.cast<T>());
             }
             else
@@ -367,7 +343,7 @@ class LuaUtilApi
             if (ref.isTable())
             {
                 self->reserve(self->size() + ref.length());
-                for (const auto & pair: luabridge::pairs(ref))
+                for (const auto & pair : luabridge::pairs(ref))
                     ret = ret && self->push_back(pair.second.cast<T>());
             }
             else
@@ -390,7 +366,7 @@ class LuaUtilApi
             if (ref.isTable())
             {
                 self->reserve(self->size() + ref.length());
-                for (const auto & pair: luabridge::pairs(ref))
+                for (const auto & pair : luabridge::pairs(ref))
                     ret = ret && self->push_front(pair.second.cast<T>());
             }
             else
@@ -416,7 +392,7 @@ class LuaUtilApi
                 return false;
             if ((size_t)ref.length() > (from_idx + self->size()))
                 return false;
-            for (const auto & pair: luabridge::pairs(ref))
+            for (const auto & pair : luabridge::pairs(ref))
             {
                 self->set(from_idx, pair.second.cast<T>());
                 ++from_idx;
@@ -440,7 +416,7 @@ class LuaUtilApi
             if (ref.isTable())
             {
                 self->reserve(self->size() + ref.length());
-                for (const auto & pair: luabridge::pairs(ref))
+                for (const auto & pair : luabridge::pairs(ref))
                     ret = ret && self->push_back(pair.second.cast<T>());
             }
             else
@@ -449,10 +425,10 @@ class LuaUtilApi
         }
 
         // Configurable's recursive setting
-        static bool _configurable_recursive_set(sihd::util::Configurable *obj, const std::string & key, luabridge::LuaRef ref);
-
+        static bool
+            _configurable_recursive_set(sihd::util::Configurable *obj, const std::string & key, luabridge::LuaRef ref);
 };
 
-}
+} // namespace sihd::lua
 
 #endif

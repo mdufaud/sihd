@@ -1,19 +1,19 @@
 #ifndef __SIHD_NET_SOCKET_HPP__
-# define __SIHD_NET_SOCKET_HPP__
+#define __SIHD_NET_SOCKET_HPP__
 
-# include <sihd/util/platform.hpp>
-# include <sihd/util/os.hpp>
-# include <sihd/util/ArrayView.hpp>
+#include <sihd/util/ArrayView.hpp>
+#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 
-# include <sihd/net/ip.hpp>
-# include <sihd/net/IpAddr.hpp>
+#include <sihd/net/IpAddr.hpp>
+#include <sihd/net/ip.hpp>
 
-# if !defined(__SIHD_WINDOWS__)
-# else
-#  define SHUT_RD SD_RECEIVE
-#  define SHUT_WR SD_SEND
-#  define SHUT_RDWR SD_BOTH
-# endif
+#if !defined(__SIHD_WINDOWS__)
+#else
+# define SHUT_RD SD_RECEIVE
+# define SHUT_WR SD_SEND
+# define SHUT_RDWR SD_BOTH
+#endif
 
 namespace sihd::net
 {
@@ -156,6 +156,6 @@ class Socket
         int _rcv_flags;
 };
 
-}
+} // namespace sihd::net
 
 #endif

@@ -1,6 +1,6 @@
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/Message.hpp>
 #include <sihd/util/MessageField.hpp>
-#include <sihd/util/Logger.hpp>
 
 namespace sihd::util
 {
@@ -15,11 +15,9 @@ Message::Message(const std::string & name, Node *parent): Node(name, parent)
     _finished = false;
 }
 
-Message::~Message()
-{
-}
+Message::~Message() {}
 
-bool    Message::on_check_link(const std::string & name, Named *child)
+bool Message::on_check_link(const std::string & name, Named *child)
 {
     IMessageField *field = dynamic_cast<IMessageField *>(child);
     if (field == nullptr)
@@ -27,7 +25,7 @@ bool    Message::on_check_link(const std::string & name, Named *child)
     return field != nullptr;
 }
 
-bool    Message::on_add_child(const std::string & name, Named *child)
+bool Message::on_add_child(const std::string & name, Named *child)
 {
     (void)name;
     IMessageField *field = dynamic_cast<IMessageField *>(child);
@@ -36,14 +34,14 @@ bool    Message::on_add_child(const std::string & name, Named *child)
     return field != nullptr;
 }
 
-void    Message::on_remove_child(const std::string & name, Named *child)
+void Message::on_remove_child(const std::string & name, Named *child)
 {
     IMessageField *field = dynamic_cast<IMessageField *>(child);
     if (field != nullptr)
         _fields.erase(name);
 }
 
-bool    Message::finish()
+bool Message::finish()
 {
     if (this->is_finished())
         return false;
@@ -53,13 +51,13 @@ bool    Message::finish()
     return true;
 }
 
-bool    Message::field_resize(size_t size)
+bool Message::field_resize(size_t size)
 {
     (void)size;
     return true;
 }
 
-bool    Message::_assign_field_array(IMessageField *field)
+bool Message::_assign_field_array(IMessageField *field)
 {
     bool ret = field->field_assign_buffer(_arr.buf() + __assign_arr_at);
     if (ret)
@@ -68,19 +66,21 @@ bool    Message::_assign_field_array(IMessageField *field)
         if (__assign_arr_at > _total_size)
         {
             SIHD_LOG_ERROR("Message: for {} total size {} is inferior to calculated size {}",
-                        this->name(), _total_size, __assign_arr_at);
+                           this->name(),
+                           _total_size,
+                           __assign_arr_at);
             return false;
         }
     }
     return ret;
 }
 
-bool    Message::field_assign_buffer(void *buffer)
+bool Message::field_assign_buffer(void *buffer)
 {
     if (_arr.assign_bytes(buffer, this->field_byte_size()) == false)
         return false;
     __assign_arr_at = 0;
-    for (const auto & name: this->children_keys())
+    for (const auto & name : this->children_keys())
     {
         IMessageField *field = _fields.at(name);
         if (this->_assign_field_array(field) == false)
@@ -92,18 +92,18 @@ bool    Message::field_assign_buffer(void *buffer)
     return true;
 }
 
-bool    Message::field_read_from(const void *buffer, size_t size)
+bool Message::field_read_from(const void *buffer, size_t size)
 {
     return _arr.copy_from_bytes(buffer, size);
 }
 
-bool    Message::field_write_to(void *buffer, size_t size)
+bool Message::field_write_to(void *buffer, size_t size)
 {
     size = std::min(size, _arr.size());
     return memcpy(buffer, _arr.buf(), size) != nullptr;
 }
 
-bool    Message::add_field(const std::string & name, IMessageField *msg)
+bool Message::add_field(const std::string & name, IMessageField *msg)
 {
     Named *named = dynamic_cast<Named *>(msg);
     if (named == nullptr)
@@ -114,7 +114,7 @@ bool    Message::add_field(const std::string & name, IMessageField *msg)
     return this->add_child(name, named, true) && this->_add_field_size(msg);
 }
 
-bool    Message::add_field(const std::string & name, Type dt, size_t size)
+bool Message::add_field(const std::string & name, Type dt, size_t size)
 {
     MessageField *field = this->add_child<MessageField>(name);
     bool ret = field != nullptr;
@@ -123,7 +123,7 @@ bool    Message::add_field(const std::string & name, Type dt, size_t size)
     return ret;
 }
 
-bool    Message::_add_field_size(IMessageField *field)
+bool Message::_add_field_size(IMessageField *field)
 {
     _total_size += field->field_byte_size();
     return true;
@@ -133,7 +133,7 @@ IMessageField *Message::clone() const
 {
     bool error = false;
     Message *cloned = new Message(this->name());
-    for (const auto & name: this->children_keys())
+    for (const auto & name : this->children_keys())
     {
         IMessageField *cloned_field = _fields.at(name)->clone();
         if (cloned_field != nullptr)
@@ -142,7 +142,7 @@ IMessageField *Message::clone() const
         {
             SIHD_LOG(error, "Message: clone failed for field '{}'", name);
             error = true;
-            break ;
+            break;
         }
     }
     if (!error && this->is_finished())
@@ -160,4 +160,4 @@ std::string Message::description() const
     return fmt::format("{} bytes", this->field_byte_size());
 }
 
-}
+} // namespace sihd::util

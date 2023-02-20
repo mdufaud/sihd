@@ -1,10 +1,10 @@
 #ifndef __SIHD_UTIL_DYNMESSAGE_HPP__
-# define __SIHD_UTIL_DYNMESSAGE_HPP__
+#define __SIHD_UTIL_DYNMESSAGE_HPP__
 
-# include <functional>
+#include <functional>
 
-# include <sihd/util/Message.hpp>
-# include <sihd/util/forward.hpp>
+#include <sihd/util/Message.hpp>
+#include <sihd/util/forward.hpp>
 
 namespace sihd::util
 {
@@ -12,7 +12,7 @@ namespace sihd::util
 class DynMessage: public Message
 {
     public:
-        using RuleCallback = std::function<void (DynMessage &, const IMessageField &)>;
+        using RuleCallback = std::function<void(DynMessage &, const IMessageField &)>;
 
         DynMessage(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~DynMessage();
@@ -43,6 +43,6 @@ class DynMessage: public Message
         size_t _total_dyn_size;
 };
 
-}
+} // namespace sihd::util
 
 #endif

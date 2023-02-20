@@ -12,22 +12,24 @@ FileLogger::FileLogger(const std::string & path, bool append)
     _file.open(path, append ? "a" : "w");
 }
 
-FileLogger::~FileLogger()
-{
-}
+FileLogger::~FileLogger() {}
 
-void    FileLogger::log(const LogInfo & info, std::string_view msg)
+void FileLogger::log(const LogInfo & info, std::string_view msg)
 {
-//SEC.NANO [THREAD] LEVEL SRC MSG
+// SEC.NANO [THREAD] LEVEL SRC MSG
 #if defined(__SIHD_WINDOWS__)
-    fmt::fprintf(_file.file(), "%lld.%09ld\t[%s]\t%s\t%s\t%s\n",
-# else
-    fmt::fprintf(_file.file(), "%ld.%09ld\t[%s]\t%s\t%s\t%s\n",
+    fmt::fprintf(_file.file(),
+                 "%lld.%09ld\t[%s]\t%s\t%s\t%s\n",
+#else
+    fmt::fprintf(_file.file(),
+                 "%ld.%09ld\t[%s]\t%s\t%s\t%s\n",
 #endif
-            info.timestamp.tv_sec, info.timestamp.tv_nsec,
-            info.thread_name.data(),
-            info.strlevel, info.source.data(), msg.data());
+                 info.timestamp.tv_sec,
+                 info.timestamp.tv_nsec,
+                 info.thread_name.data(),
+                 info.strlevel,
+                 info.source.data(),
+                 msg.data());
 }
 
-
-}
+} // namespace sihd::util

@@ -1,22 +1,23 @@
 #include <cxxopts.hpp>
 
+#include <sihd/util/Clocks.hpp>
+#include <sihd/util/Defer.hpp>
+#include <sihd/util/LineReader.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Runnable.hpp>
+#include <sihd/util/SigWaiter.hpp>
+#include <sihd/util/StepWorker.hpp>
+#include <sihd/util/Timestamp.hpp>
+#include <sihd/util/TmpDir.hpp>
+#include <sihd/util/Uuid.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/term.hpp>
-#include <sihd/util/Defer.hpp>
-#include <sihd/util/Clocks.hpp>
-#include <sihd/util/Timestamp.hpp>
-#include <sihd/util/StepWorker.hpp>
-#include <sihd/util/SigWaiter.hpp>
-#include <sihd/util/Runnable.hpp>
-#include <sihd/util/TmpDir.hpp>
-#include <sihd/util/Uuid.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/LineReader.hpp>
 
 using namespace sihd::util;
 
-namespace demo {
+namespace demo
+{
 
 SIHD_NEW_LOGGER("demo");
 
@@ -102,7 +103,7 @@ void read_line()
     fmt::print("\n");
 }
 
-}
+} // namespace demo
 
 int main(int argc, char **argv)
 {
@@ -114,16 +115,16 @@ int main(int argc, char **argv)
     Defer d([] { LoggerManager::clear_loggers(); });
 
     cxxopts::Options options(argv[0], "Testing utility for module util");
-    options.add_options()
-      ("h,help", "Prints usage")
-      ("f,worker-frequency", "Change the worker execution frequency in HZ", cxxopts::value<double>()->default_value("10.0"));
+    options.add_options()("h,help", "Prints usage")("f,worker-frequency",
+                                                    "Change the worker execution frequency in HZ",
+                                                    cxxopts::value<double>()->default_value("10.0"));
 
     auto result = options.parse(argc, argv);
 
     if (result.count("help"))
     {
-      fmt::print(options.help());
-      return 0;
+        fmt::print(options.help());
+        return 0;
     }
 
     demo::time();

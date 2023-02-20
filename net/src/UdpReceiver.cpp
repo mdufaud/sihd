@@ -9,8 +9,7 @@ SIHD_UTIL_REGISTER_FACTORY(UdpReceiver)
 
 SIHD_LOGGER;
 
-UdpReceiver::UdpReceiver(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent)
+UdpReceiver::UdpReceiver(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
 {
     _poll.set_timeout(1);
     _poll.set_limit(1);
@@ -23,20 +22,20 @@ UdpReceiver::~UdpReceiver()
     this->stop();
 }
 
-bool    UdpReceiver::set_poll_timeout(int milliseconds)
+bool UdpReceiver::set_poll_timeout(int milliseconds)
 {
     _poll.set_timeout(milliseconds);
     return true;
 }
 
-bool    UdpReceiver::open_socket_unix()
+bool UdpReceiver::open_socket_unix()
 {
     if (_socket.is_open())
         return false;
     return _socket.open(AF_UNIX, SOCK_DGRAM, IPPROTO_UDP);
 }
 
-bool    UdpReceiver::open_socket(bool ipv6)
+bool UdpReceiver::open_socket(bool ipv6)
 {
     if (_socket.is_open())
         return false;
@@ -46,72 +45,72 @@ bool    UdpReceiver::open_socket(bool ipv6)
     return ret;
 }
 
-bool    UdpReceiver::bind(const IpAddr & addr)
+bool UdpReceiver::bind(const IpAddr & addr)
 {
     return _socket.bind(addr);
 }
 
-bool    UdpReceiver::bind_unix(std::string_view path)
+bool UdpReceiver::bind_unix(std::string_view path)
 {
     return _socket.bind_unix(path);
 }
 
-bool    UdpReceiver::open_and_bind(const IpAddr & ip)
+bool UdpReceiver::open_and_bind(const IpAddr & ip)
 {
     return this->open_socket(ip.prefers_ipv6()) && this->bind(ip);
 }
 
-bool    UdpReceiver::open_and_bind(std::string_view ip, int port)
+bool UdpReceiver::open_and_bind(std::string_view ip, int port)
 {
     IpAddr addr(ip, port, true);
     return this->open_socket(addr.prefers_ipv6()) && this->bind(addr);
 }
 
-bool    UdpReceiver::open_unix_and_bind(std::string_view path)
+bool UdpReceiver::open_unix_and_bind(std::string_view path)
 {
     return this->open_socket_unix() && this->bind(path);
 }
 
-bool    UdpReceiver::close()
+bool UdpReceiver::close()
 {
     _poll.clear_fds();
     _socket.shutdown();
     return _socket.close();
 }
 
-bool    UdpReceiver::stop()
+bool UdpReceiver::stop()
 {
     _poll.stop();
     _poll.wait_stop();
     return true;
 }
 
-void    UdpReceiver::_setup_poll()
+void UdpReceiver::_setup_poll()
 {
     _poll.clear_fds();
     _poll.set_read_fd(_socket.socket());
 }
 
-bool    UdpReceiver::run()
+bool UdpReceiver::run()
 {
     this->_setup_poll();
     std::lock_guard lock(_poll_mutex);
     return _poll.run();
 }
 
-bool    UdpReceiver::poll(int milliseconds)
+bool UdpReceiver::poll(int milliseconds)
 {
     this->_setup_poll();
     return _poll.poll(milliseconds) > 0;
 }
 
-bool    UdpReceiver::poll()
+bool UdpReceiver::poll()
 {
     this->_setup_poll();
     return _poll.poll(_poll.timeout()) > 0;
 }
 
-void    UdpReceiver::handle(sihd::util::Poll *poll)
+void UdpReceiver::handle(sihd::util::Poll *poll)
 {
     auto events = poll->events();
     if (events.size() > 0)
@@ -151,5 +150,4 @@ ssize_t UdpReceiver::receive(IpAddr & addr, sihd::util::IArray & arr)
     return _socket.receive_from(addr, arr);
 }
 
-
-}
+} // namespace sihd::net

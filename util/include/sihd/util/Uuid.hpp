@@ -1,15 +1,15 @@
 #ifndef __SIHD_UTIL_UUID_HPP__
-# define __SIHD_UTIL_UUID_HPP__
+#define __SIHD_UTIL_UUID_HPP__
 
-# include <string_view>
+#include <string_view>
 
-# include <sihd/util/platform.hpp>
+#include <sihd/util/platform.hpp>
 
-# if defined(__SIHD_WINDOWS__)
-#  include <rpc.h>
-# else
-#  include <uuid/uuid.h>
-# endif
+#if defined(__SIHD_WINDOWS__)
+# include <rpc.h>
+#else
+# include <uuid/uuid.h>
+#endif
 
 namespace sihd::util
 {
@@ -41,6 +41,6 @@ class Uuid
         uuid_t _uuid;
 };
 
-}
+} // namespace sihd::util
 
 #endif

@@ -1,62 +1,66 @@
 #ifndef __SIHD_UTIL_TIMESTAMP_HPP__
-# define __SIHD_UTIL_TIMESTAMP_HPP__
+#define __SIHD_UTIL_TIMESTAMP_HPP__
 
-# include <string>
+#include <string>
 
-# include <sihd/util/time.hpp>
+#include <sihd/util/time.hpp>
 
-# define __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(OP) \
-    template <typename T> \
-    bool operator OP(std::chrono::duration<int64_t, T> duration) const \
-    { \
-        return _nano OP time::duration<T>(duration); \
-    }
+#define __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(OP)                                                           \
+ template <typename T>                                                                                                 \
+ bool operator OP(std::chrono::duration<int64_t, T> duration) const                                                    \
+ {                                                                                                                     \
+  return _nano OP time::duration<T>(duration);                                                                         \
+ }
 
-# define __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(OP) \
-    template <typename T> \
-    Timestamp operator OP(std::chrono::duration<int64_t, T> duration) \
-    { \
-        return Timestamp(_nano OP time::duration<T>(duration)); \
-    }
+#define __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(OP)                                                            \
+ template <typename T>                                                                                                 \
+ Timestamp operator OP(std::chrono::duration<int64_t, T> duration)                                                     \
+ {                                                                                                                     \
+  return Timestamp(_nano OP time::duration<T>(duration));                                                              \
+ }
 
-# define __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(OP) \
-    template <typename T> \
-    Timestamp & operator OP(std::chrono::duration<int64_t, T> duration) \
-    { \
-        _nano OP time::duration<T>(duration); \
-        return *this; \
-    }
+#define __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(OP)                                                                \
+ template <typename T>                                                                                                 \
+ Timestamp & operator OP(std::chrono::duration<int64_t, T> duration)                                                   \
+ {                                                                                                                     \
+  _nano OP time::duration<T>(duration);                                                                                \
+  return *this;                                                                                                        \
+ }
 
-# define __TMP_TIMESTAMP_ASSIGN_OPERATION__(OP) \
-    Timestamp & operator OP(time_t t) { _nano OP t; return *this; }
+#define __TMP_TIMESTAMP_ASSIGN_OPERATION__(OP)                                                                         \
+ Timestamp & operator OP(time_t t)                                                                                     \
+ {                                                                                                                     \
+  _nano OP t;                                                                                                          \
+  return *this;                                                                                                        \
+ }
 
 namespace sihd::util
 {
 
 struct Clocktime
 {
-    // 0 - 23
-    int hour = 0;
-    // 0 - 59
-    int minute = 0;
-    // 0 - 59
-    int second = 0;
-    // 0 - 999
-    int millisecond = 0;
+        // 0 - 23
+        int hour = 0;
+        // 0 - 59
+        int minute = 0;
+        // 0 - 59
+        int second = 0;
+        // 0 - 999
+        int millisecond = 0;
 
-    std::string str() const;
+        std::string str() const;
 };
 
 struct Calendar
 {
-    // month day -> 1 - 31
-    int day = 0;
-    // 1 - 12
-    int month = 0;
-    // 0 - X
-    int year = 0;
+        // month day -> 1 - 31
+        int day = 0;
+        // 1 - 12
+        int month = 0;
+        // 0 - X
+        int year = 0;
 
-    std::string str() const;
+        std::string str() const;
 };
 
 class Timestamp
@@ -151,6 +155,7 @@ class Timestamp
         std::string local_format(std::string_view format = "%d/%m/%Y %H:%M:%S") const;
 
         time_t get() const { return _nano; }
+
         Clocktime clocktime() const;
         Calendar calendar() const;
         Clocktime local_clocktime() const;
@@ -162,11 +167,11 @@ class Timestamp
         time_t _nano;
 };
 
-}
+} // namespace sihd::util
 
-# undef __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__
-# undef __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__
-# undef __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__
-# undef __TMP_TIMESTAMP_ASSIGN_OPERATION__
+#undef __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__
+#undef __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__
+#undef __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__
+#undef __TMP_TIMESTAMP_ASSIGN_OPERATION__
 
 #endif

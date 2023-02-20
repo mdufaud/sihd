@@ -1,9 +1,9 @@
 #ifndef __SIHD_UTIL_PROFILING_HPP__
-# define __SIHD_UTIL_PROFILING_HPP__
+#define __SIHD_UTIL_PROFILING_HPP__
 
-# include <string>
+#include <string>
 
-# include <sihd/util/Clocks.hpp>
+#include <sihd/util/Clocks.hpp>
 
 namespace sihd::util
 {
@@ -22,6 +22,6 @@ class Timeit
         SteadyClock _clock;
 };
 
-}
+} // namespace sihd::util
 
 #endif

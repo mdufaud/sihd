@@ -1,8 +1,8 @@
+#include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/str.hpp>
 #include <sihd/util/Splitter.hpp>
-#include <sihd/util/Array.hpp>
+#include <sihd/util/str.hpp>
 
 #include <sihd/core/DevRecorder.hpp>
 
@@ -16,7 +16,9 @@ SIHD_UTIL_REGISTER_FACTORY(DevRecorder)
 SIHD_LOGGER;
 
 DevRecorder::DevRecorder(const std::string & name, sihd::util::Node *parent):
-    sihd::core::Device(name, parent), _running(false), _channel_records_ptr(nullptr)
+    sihd::core::Device(name, parent),
+    _running(false),
+    _channel_records_ptr(nullptr)
 {
     _records_array_ptr = std::make_unique<util::ArrUInt>();
     _records_array_ptr->resize(1);
@@ -25,17 +27,15 @@ DevRecorder::DevRecorder(const std::string & name, sihd::util::Node *parent):
     this->add_conf("unrecord", &DevRecorder::remove_recorded_channel);
 }
 
-DevRecorder::~DevRecorder()
-{
-}
+DevRecorder::~DevRecorder() {}
 
-bool    DevRecorder::set_handler(std::string_view path)
+bool DevRecorder::set_handler(std::string_view path)
 {
     _handler_path = path;
     return true;
 }
 
-bool    DevRecorder::add_record_channel(std::string_view conf)
+bool DevRecorder::add_record_channel(std::string_view conf)
 {
     sihd::util::Splitter splitter("=");
     std::vector<std::string> split = splitter.split(conf);
@@ -48,7 +48,7 @@ bool    DevRecorder::add_record_channel(std::string_view conf)
     return true;
 }
 
-bool    DevRecorder::remove_recorded_channel(const std::string & alias)
+bool DevRecorder::remove_recorded_channel(const std::string & alias)
 {
     auto it = _map_channels_alias.find(alias);
     if (it != _map_channels_alias.end())
@@ -56,12 +56,12 @@ bool    DevRecorder::remove_recorded_channel(const std::string & alias)
     return true;
 }
 
-bool    DevRecorder::is_running() const
+bool DevRecorder::is_running() const
 {
     return _running;
 }
 
-void    DevRecorder::handle(sihd::core::Channel *channel)
+void DevRecorder::handle(sihd::core::Channel *channel)
 {
     std::string & alias = _map_channels[channel];
     _handler_ptr->handle(alias, channel);
@@ -69,7 +69,7 @@ void    DevRecorder::handle(sihd::core::Channel *channel)
     _channel_records_ptr->write(*_records_array_ptr);
 }
 
-bool    DevRecorder::on_init()
+bool DevRecorder::on_init()
 {
     _handler_ptr = this->find<sihd::util::IHandler<const std::string &, const Channel *>>(_handler_path);
     if (_handler_ptr == nullptr)
@@ -81,13 +81,13 @@ bool    DevRecorder::on_init()
     return true;
 }
 
-bool    DevRecorder::on_start()
+bool DevRecorder::on_start()
 {
     if (this->get_channel(CHANNEL_RECORDS, &_channel_records_ptr) == false)
         return false;
     // find channels and observe them
     Channel *channel_ptr;
-    for (const auto & pair: _map_channels_alias)
+    for (const auto & pair : _map_channels_alias)
     {
         channel_ptr = this->find<Channel>(pair.second);
         if (channel_ptr == nullptr)
@@ -102,7 +102,7 @@ bool    DevRecorder::on_start()
     return true;
 }
 
-bool    DevRecorder::on_stop()
+bool DevRecorder::on_stop()
 {
     {
         std::lock_guard l(_run_mutex);
@@ -113,11 +113,11 @@ bool    DevRecorder::on_stop()
     return true;
 }
 
-bool    DevRecorder::on_reset()
+bool DevRecorder::on_reset()
 {
     _records_array_ptr->set(/* idx */ 0, /* value */ 0);
     _handler_ptr = nullptr;
     return true;
 }
 
-}
+} // namespace sihd::core

@@ -9,8 +9,7 @@ SIHD_UTIL_REGISTER_FACTORY(Core)
 
 SIHD_LOGGER;
 
-Core::Core(const std::string & name, sihd::util::Node *parent):
-    sihd::core::Device(name, parent)
+Core::Core(const std::string & name, sihd::util::Node *parent): sihd::core::Device(name, parent)
 {
     _running = false;
     _is_reset = true;
@@ -24,28 +23,28 @@ Core::~Core()
         this->reset();
 }
 
-bool    Core::on_init()
+bool Core::on_init()
 {
     _is_reset = false;
     return true;
 }
 
-bool    Core::on_start()
+bool Core::on_start()
 {
     _running = true;
     return true;
 }
 
-bool    Core::on_stop()
+bool Core::on_stop()
 {
     _running = false;
     return true;
 }
 
-bool    Core::on_reset()
+bool Core::on_reset()
 {
     _is_reset = true;
     return true;
 }
 
-}
+} // namespace sihd::core

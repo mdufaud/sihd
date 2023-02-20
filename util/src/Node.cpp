@@ -1,7 +1,7 @@
 #include <algorithm>
 
-#include <sihd/util/Node.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Node.hpp>
 
 #ifndef SIHD_NODE_MAX_LINK_RECURSION
 # define SIHD_NODE_MAX_LINK_RECURSION 20
@@ -13,9 +13,9 @@ namespace sihd::util
 namespace
 {
 
-void    add_node_informations(const Node *node, std::string & s, Node::TreeOpts opts);
+void add_node_informations(const Node *node, std::string & s, Node::TreeOpts opts);
 
-void    add_named_description(const Named *named, std::string & s, const Node::TreeOpts & opts)
+void add_named_description(const Named *named, std::string & s, const Node::TreeOpts & opts)
 {
     if (opts.description)
     {
@@ -25,8 +25,12 @@ void    add_named_description(const Named *named, std::string & s, const Node::T
     }
 }
 
-void    add_child_informations(const Node *node, const std::string & name, const Named *child,
-                                std::string & s, const Node::TreeOpts & opts, const std::string & indent)
+void add_child_informations(const Node *node,
+                            const std::string & name,
+                            const Named *child,
+                            std::string & s,
+                            const Node::TreeOpts & opts,
+                            const std::string & indent)
 {
     s += fmt::format("{}{}", indent, name);
     Node *parent = child->parent();
@@ -43,9 +47,9 @@ void    add_child_informations(const Node *node, const std::string & name, const
         add_node_informations(child_node, s, opts);
 }
 
-void    add_children_informations(const Node *node, std::string & s, Node::TreeOpts & opts, const std::string & indent)
+void add_children_informations(const Node *node, std::string & s, Node::TreeOpts & opts, const std::string & indent)
 {
-    for (const std::string & name: node->children_keys())
+    for (const std::string & name : node->children_keys())
     {
         Named *child = node->get_child(name);
         if (child != nullptr)
@@ -53,45 +57,43 @@ void    add_children_informations(const Node *node, std::string & s, Node::TreeO
     }
 }
 
-void    add_node_informations(const Node *node, std::string & s, Node::TreeOpts opts)
+void add_node_informations(const Node *node, std::string & s, Node::TreeOpts opts)
 {
     opts.current_recursion += 1;
     if (opts.max_recursion != 0 && opts.max_recursion == opts.current_recursion)
-        return ;
+        return;
     if (node->children().size() == 0)
-        return ;
+        return;
     std::string indent(opts.indent, ' ');
     opts.indent += opts.indent_by_iter;
     add_children_informations(node, s, opts, indent);
 }
 
-}
+} // namespace
 
 SIHD_UTIL_REGISTER_FACTORY(Node);
 
 SIHD_LOGGER;
 
-Node::Node(const std::string & name, Node *parent): Named(name, parent)
-{
-}
+Node::Node(const std::string & name, Node *parent): Named(name, parent) {}
 
 Node::~Node()
 {
     this->remove_children();
 }
 
-void    Node::add_child_unsafe(Named *child, bool ownership)
+void Node::add_child_unsafe(Named *child, bool ownership)
 {
-    if (this->add_child(child->name(), child, ownership) == false)\
+    if (this->add_child(child->name(), child, ownership) == false)
         throw std::invalid_argument(fmt::format("Node '{}' already has child '{}'", this->full_name(), child->name()));
 }
 
-bool    Node::add_child(Named *child, bool ownership)
+bool Node::add_child(Named *child, bool ownership)
 {
     return this->add_child(child->name(), child, ownership);
 }
 
-bool    Node::add_child(const std::string & name, Named *child, bool ownership)
+bool Node::add_child(const std::string & name, Named *child, bool ownership)
 {
     if (this->get_child(name) != nullptr)
     {
@@ -113,9 +115,9 @@ bool    Node::add_child(const std::string & name, Named *child, bool ownership)
     return do_add;
 }
 
-Node::ChildEntry  *Node::_get_child_entry(const Named *child) const
+Node::ChildEntry *Node::_get_child_entry(const Named *child) const
 {
-    for (const auto & pair: _children_map)
+    for (const auto & pair : _children_map)
     {
         if (pair.second->obj == child)
             return pair.second;
@@ -123,19 +125,19 @@ Node::ChildEntry  *Node::_get_child_entry(const Named *child) const
     return nullptr;
 }
 
-bool    Node::has_ownership(const Named *child) const
+bool Node::has_ownership(const Named *child) const
 {
     ChildEntry *entry = this->_get_child_entry(child);
     return entry != nullptr && entry->ownership;
 }
 
-bool    Node::has_ownership(const std::string & name) const
+bool Node::has_ownership(const std::string & name) const
 {
     ChildEntry *entry = this->_get_child_entry(name);
     return entry != nullptr && entry->ownership;
 }
 
-bool    Node::set_child_ownership(const Named *child, bool ownership)
+bool Node::set_child_ownership(const Named *child, bool ownership)
 {
     ChildEntry *entry = this->_get_child_entry(child);
     if (entry != nullptr)
@@ -143,7 +145,7 @@ bool    Node::set_child_ownership(const Named *child, bool ownership)
     return entry != nullptr;
 }
 
-bool    Node::set_child_ownership(const std::string & name, bool ownership)
+bool Node::set_child_ownership(const std::string & name, bool ownership)
 {
     ChildEntry *entry = this->_get_child_entry(name);
     if (entry != nullptr)
@@ -151,7 +153,7 @@ bool    Node::set_child_ownership(const std::string & name, bool ownership)
     return entry != nullptr;
 }
 
-Node::ChildEntry  *Node::_get_child_entry(const std::string & name) const
+Node::ChildEntry *Node::_get_child_entry(const std::string & name) const
 {
     auto it = _children_map.find(name);
     if (it != _children_map.end())
@@ -159,23 +161,23 @@ Node::ChildEntry  *Node::_get_child_entry(const std::string & name) const
     return nullptr;
 }
 
-Named   *Node::get_child(const std::string & name) const
+Named *Node::get_child(const std::string & name) const
 {
     Node::ChildEntry *entry = this->_get_child_entry(name);
     return entry != nullptr ? entry->obj : nullptr;
 }
 
-bool    Node::remove_child(const Named *child)
+bool Node::remove_child(const Named *child)
 {
     return this->remove_child(child->name());
 }
 
-bool    Node::remove_child(const std::string & name)
+bool Node::remove_child(const std::string & name)
 {
     return this->_remove_child_entry(this->_get_child_entry(name));
 }
 
-bool    Node::_remove_child_entry(Node::ChildEntry *entry)
+bool Node::_remove_child_entry(Node::ChildEntry *entry)
 {
     if (entry == nullptr)
         return false;
@@ -192,9 +194,9 @@ bool    Node::_remove_child_entry(Node::ChildEntry *entry)
     return true;
 }
 
-void    Node::remove_children()
+void Node::remove_children()
 {
-    for (auto it = _children_map.begin(); it != _children_map.end(); )
+    for (auto it = _children_map.begin(); it != _children_map.end();)
     {
         ChildEntry *entry = it->second;
         it = _children_map.erase(it);
@@ -204,7 +206,7 @@ void    Node::remove_children()
     _children_keys.clear();
 }
 
-std::pair<std::string, std::string>     Node::parent_path(const std::string & path)
+std::pair<std::string, std::string> Node::parent_path(const std::string & path)
 {
     std::pair<std::string, std::string> ret;
     size_t idx = path.find_last_of(Named::separator);
@@ -218,12 +220,12 @@ std::pair<std::string, std::string>     Node::parent_path(const std::string & pa
     return ret;
 }
 
-bool    Node::is_link(const std::string & name) const
+bool Node::is_link(const std::string & name) const
 {
     return _link_map.count(name) > 0;
 }
 
-bool    Node::add_link(const std::string & link, const std::string & path)
+bool Node::add_link(const std::string & link, const std::string & path)
 {
     if (_link_map.try_emplace(link, path).second == false)
     {
@@ -234,13 +236,13 @@ bool    Node::add_link(const std::string & link, const std::string & path)
     return true;
 }
 
-bool    Node::remove_link(const std::string & link)
+bool Node::remove_link(const std::string & link)
 {
     _link_keys.erase(std::find(_link_keys.begin(), _link_keys.end(), link));
     return _link_map.erase(link) > 0;
 }
 
-Named   *Node::resolve_link(const std::string & path, size_t recursion)
+Named *Node::resolve_link(const std::string & path, size_t recursion)
 {
     Named *child = this->find(path);
     if (child != nullptr)
@@ -262,39 +264,38 @@ Named   *Node::resolve_link(const std::string & path, size_t recursion)
     return child;
 }
 
-bool    Node::on_check_link(const std::string & name, Named *child)
+bool Node::on_check_link(const std::string & name, Named *child)
 {
     (void)name;
     (void)child;
     return true;
 }
 
-bool    Node::on_add_child(const std::string & name, Named *child)
+bool Node::on_add_child(const std::string & name, Named *child)
 {
     (void)name;
     (void)child;
     return true;
 }
 
-void    Node::on_remove_child(const std::string & name, Named *child)
+void Node::on_remove_child(const std::string & name, Named *child)
 {
     (void)name;
     (void)child;
 }
 
-bool    Node::resolve_links(size_t recursion)
+bool Node::resolve_links(size_t recursion)
 {
     Named *child;
 
     bool ret = true;
-    for (const auto & link: _link_keys)
+    for (const auto & link : _link_keys)
     {
         const auto & path = _link_map.at(link);
         child = this->resolve_link(path, recursion);
         if (child == nullptr)
         {
-            SIHD_LOG_ERROR("Node: '{}' could not resolve link '{}' => '{}'",
-                            this->full_name(), link, path);
+            SIHD_LOG_ERROR("Node: '{}' could not resolve link '{}' => '{}'", this->full_name(), link, path);
             return false;
         }
         if (this->on_check_link(link, child))
@@ -305,24 +306,24 @@ bool    Node::resolve_links(size_t recursion)
     return ret;
 }
 
-const std::map<std::string, Node::ChildEntry *> &   Node::children() const
+const std::map<std::string, Node::ChildEntry *> & Node::children() const
 {
     return _children_map;
 }
 
-const std::vector<std::string> &    Node::children_keys() const
+const std::vector<std::string> & Node::children_keys() const
 {
     return _children_keys;
 }
 
-std::string     Node::tree_desc_str() const
+std::string Node::tree_desc_str() const
 {
     TreeOpts opts;
     opts.description = true;
     return this->tree_str(opts);
 }
 
-std::string     Node::tree_str(TreeOpts opts) const
+std::string Node::tree_str(TreeOpts opts) const
 {
     std::string indent(opts.indent, ' ');
     opts.indent += opts.indent_by_iter;
@@ -335,4 +336,4 @@ std::string     Node::tree_str(TreeOpts opts) const
     return s;
 }
 
-}
+} // namespace sihd::util

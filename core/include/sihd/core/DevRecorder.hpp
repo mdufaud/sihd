@@ -1,19 +1,19 @@
 #ifndef __SIHD_CORE_DEVRECORDER_HPP__
-# define __SIHD_CORE_DEVRECORDER_HPP__
+#define __SIHD_CORE_DEVRECORDER_HPP__
 
-# include <list>
-# include <set>
-# include <memory>
+#include <list>
+#include <memory>
+#include <set>
 
-# include <sihd/util/forward.hpp>
-# include <sihd/util/IHandler.hpp>
+#include <sihd/util/IHandler.hpp>
+#include <sihd/util/forward.hpp>
 
-# include <sihd/core/Device.hpp>
+#include <sihd/core/Device.hpp>
 
 namespace sihd::core
 {
 
-class DevRecorder:   public sihd::core::Device
+class DevRecorder: public sihd::core::Device
 {
     public:
         DevRecorder(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -51,9 +51,8 @@ class DevRecorder:   public sihd::core::Device
         sihd::util::IHandler<const std::string &, const Channel *> *_handler_ptr;
 
         Channel *_channel_records_ptr;
-
 };
 
-}
+} // namespace sihd::core
 
 #endif

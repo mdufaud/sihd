@@ -38,4 +38,4 @@ const std::string & TmpDir::path() const
     return _path;
 }
 
-}
+} // namespace sihd::util

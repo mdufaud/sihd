@@ -1,19 +1,19 @@
 #ifndef __SIHD_ZIP_ZIPREADER_HPP__
-# define __SIHD_ZIP_ZIPREADER_HPP__
+#define __SIHD_ZIP_ZIPREADER_HPP__
 
-# include <zip.h>
+#include <zip.h>
 
-# include <sihd/util/Node.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/IReader.hpp>
-# include <sihd/util/Array.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/IReader.hpp>
+#include <sihd/util/Node.hpp>
 
 namespace sihd::zip
 {
 
-class ZipReader:    public sihd::util::Named,
-                    public sihd::util::Configurable,
-                    public sihd::util::IReaderTimestamp
+class ZipReader: public sihd::util::Named,
+                 public sihd::util::Configurable,
+                 public sihd::util::IReaderTimestamp
 {
     public:
         ZipReader(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -35,7 +35,7 @@ class ZipReader:    public sihd::util::Named,
 
         bool read_next();
         bool get_read_data(sihd::util::ArrCharView & view) const;
-		bool read_timestamp(time_t *nano_timestamp) const;
+        bool read_timestamp(time_t *nano_timestamp) const;
 
         // modify zip entries
         bool remove(size_t index);
@@ -72,6 +72,6 @@ class ZipReader:    public sihd::util::Named,
         struct zip_file *_current_zip_file_ptr;
 };
 
-}
+} // namespace sihd::zip
 
 #endif

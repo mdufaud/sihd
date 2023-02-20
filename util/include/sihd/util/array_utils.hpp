@@ -1,11 +1,11 @@
 #ifndef __SIHD_UTIL_ARRAYUTILS_HPP__
-# define __SIHD_UTIL_ARRAYUTILS_HPP__
+#define __SIHD_UTIL_ARRAYUTILS_HPP__
 
-# include <stdexcept> // out of range
-# include <vector>
+#include <stdexcept> // out of range
+#include <vector>
 
-# include <sihd/util/str.hpp>
-# include <sihd/util/IArray.hpp>
+#include <sihd/util/IArray.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::util::array_utils
 {
@@ -30,8 +30,8 @@ namespace sihd::util::array_utils
  *  capacity to fill assigned_arrays
  */
 bool distribute_array(IArray & distributing_array,
-                        const std::vector<std::pair<IArray *, size_t>> assigned_arrays,
-                        size_t starting_offset = 0);
+                      const std::vector<std::pair<IArray *, size_t>> assigned_arrays,
+                      size_t starting_offset = 0);
 
 IArray *create_from_type(Type dt, size_t size = 0);
 
@@ -60,8 +60,7 @@ T read(const IArray & arr, size_t idx)
             str::format("array_utils::read cannot copy data from idx %lu into type '%s' (array type: '%s')",
                         idx,
                         Types::str<T>(),
-                        arr.data_type_str())
-        );
+                        arr.data_type_str()));
     }
     return ret;
 }
@@ -85,6 +84,6 @@ bool write(IArray *arr, size_t idx, T value)
     return array_utils::write<T>(*arr, idx, value);
 }
 
-}
+} // namespace sihd::util::array_utils
 
 #endif

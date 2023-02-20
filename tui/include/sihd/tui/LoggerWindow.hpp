@@ -1,9 +1,9 @@
 #ifndef __SIHD_TUI_LOGGERWINDOW_HPP__
-# define __SIHD_TUI_LOGGERWINDOW_HPP__
+#define __SIHD_TUI_LOGGERWINDOW_HPP__
 
-# include <ftxui/dom/node.hpp>
+#include <ftxui/dom/node.hpp>
 
-# include <sihd/util/ALogger.hpp>
+#include <sihd/util/ALogger.hpp>
 
 namespace sihd::tui
 {
@@ -25,6 +25,6 @@ class LoggerWindow: public sihd::util::ALogger
         std::list<std::string> _logs;
 };
 
-}
+} // namespace sihd::tui
 
 #endif

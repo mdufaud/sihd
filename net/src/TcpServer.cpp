@@ -1,7 +1,7 @@
 #include <sihd/net/TcpServer.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Task.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Task.hpp>
 
 namespace sihd::net
 {
@@ -13,8 +13,7 @@ SIHD_UTIL_REGISTER_FACTORY(TcpServer)
 
 SIHD_LOGGER;
 
-TcpServer::TcpServer(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent)
+TcpServer::TcpServer(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
 {
     _server_handler_ptr = nullptr;
     _poll.add_observer(this);
@@ -31,31 +30,31 @@ TcpServer::~TcpServer()
     this->stop_serving();
 }
 
-bool    TcpServer::set_queue_size(size_t size)
+bool TcpServer::set_queue_size(size_t size)
 {
     _queue_size = size;
     return true;
 }
 
-bool    TcpServer::set_poll_limit(int limit)
+bool TcpServer::set_poll_limit(int limit)
 {
     return _poll.set_limit(limit);
 }
 
-bool    TcpServer::set_poll_timeout(int milliseconds)
+bool TcpServer::set_poll_timeout(int milliseconds)
 {
     _poll.set_timeout(milliseconds);
     return true;
 }
 
-bool    TcpServer::open_socket_unix()
+bool TcpServer::open_socket_unix()
 {
     if (_socket.is_open())
         return false;
     return _socket.open(AF_UNIX, SOCK_STREAM, IPPROTO_TCP);
 }
 
-bool    TcpServer::open_socket(bool ipv6)
+bool TcpServer::open_socket(bool ipv6)
 {
     if (_socket.is_open())
         return false;
@@ -65,47 +64,47 @@ bool    TcpServer::open_socket(bool ipv6)
     return ret;
 }
 
-bool    TcpServer::bind(const IpAddr & addr)
+bool TcpServer::bind(const IpAddr & addr)
 {
     return _socket.bind(addr);
 }
 
-bool    TcpServer::open_and_bind(const IpAddr & ip)
+bool TcpServer::open_and_bind(const IpAddr & ip)
 {
     return this->open_socket(ip.prefers_ipv6()) && this->bind(ip);
 }
 
-bool    TcpServer::open_and_bind(std::string_view ip, int port)
+bool TcpServer::open_and_bind(std::string_view ip, int port)
 {
     IpAddr addr(ip, port, true);
     return this->open_socket(addr.prefers_ipv6()) && this->bind(addr);
 }
 
-bool    TcpServer::open_unix_and_bind(std::string_view path)
+bool TcpServer::open_unix_and_bind(std::string_view path)
 {
     return this->open_socket_unix() && this->bind(path);
 }
 
-bool    TcpServer::close()
+bool TcpServer::close()
 {
     this->stop_serving();
     return _socket.close();
 }
 
-void    TcpServer::set_server_handler(INetServerHandler *handler)
+void TcpServer::set_server_handler(INetServerHandler *handler)
 {
     if (_server_handler_ptr != nullptr)
         delete _server_handler_ptr;
     _server_handler_ptr = handler;
 }
 
-void    TcpServer::_setup_poll()
+void TcpServer::_setup_poll()
 {
     _poll.clear_fds();
     _poll.set_read_fd(_socket.socket());
 }
 
-bool    TcpServer::serve()
+bool TcpServer::serve()
 {
     bool ret = _poll.is_running();
     if (ret == false)
@@ -120,7 +119,7 @@ bool    TcpServer::serve()
     return ret;
 }
 
-bool    TcpServer::stop_serving()
+bool TcpServer::stop_serving()
 {
     bool running = _poll.is_running();
     if (running)
@@ -132,51 +131,51 @@ bool    TcpServer::stop_serving()
     return _poll.is_running() == false;
 }
 
-int     TcpServer::accept_client(IpAddr *client_ip)
+int TcpServer::accept_client(IpAddr *client_ip)
 {
     if (client_ip != nullptr)
         return _socket.accept(*client_ip);
     return _socket.accept();
 }
 
-bool    TcpServer::add_client_read(int socket)
+bool TcpServer::add_client_read(int socket)
 {
     return _poll.set_read_fd(socket);
 }
 
-bool    TcpServer::add_client_write(int socket)
+bool TcpServer::add_client_write(int socket)
 {
     return _poll.set_write_fd(socket);
 }
 
-bool    TcpServer::remove_client_read(int socket)
+bool TcpServer::remove_client_read(int socket)
 {
     return _poll.remove_read_fd(socket);
 }
 
-bool    TcpServer::remove_client_write(int socket)
+bool TcpServer::remove_client_write(int socket)
 {
     return _poll.remove_write_fd(socket);
 }
 
-bool    TcpServer::run()
+bool TcpServer::run()
 {
     return this->serve();
 }
 
-bool    TcpServer::stop()
+bool TcpServer::stop()
 {
     return this->stop_serving();
 }
 
-void    TcpServer::handle(sihd::util::Poll *poll)
+void TcpServer::handle(sihd::util::Poll *poll)
 {
     if (poll->polling_timeout())
         _server_handler_ptr->handle_no_activity(this, poll->polling_time());
     else
         _server_handler_ptr->handle_activity(this, poll->polling_time());
     auto events = poll->events();
-    for (const auto & event: events)
+    for (const auto & event : events)
     {
         if (event.fd == _socket.socket())
         {
@@ -185,7 +184,7 @@ void    TcpServer::handle(sihd::util::Poll *poll)
             else if (event.closed || event.error)
             {
                 this->stop();
-                break ;
+                break;
             }
         }
         else if (event.readable)
@@ -200,4 +199,4 @@ void    TcpServer::handle(sihd::util::Poll *poll)
     _server_handler_ptr->handle_after_activity(this);
 }
 
-}
+} // namespace sihd::net

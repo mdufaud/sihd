@@ -1,13 +1,13 @@
 #ifndef __SIHD_UTIL_ARRAYVIEW_HPP__
-# define __SIHD_UTIL_ARRAYVIEW_HPP__
+#define __SIHD_UTIL_ARRAYVIEW_HPP__
 
-# include <string.h> // strlen
+#include <string.h> // strlen
 
-# include <stdexcept> // out of range
+#include <stdexcept> // out of range
 
-# include <sihd/util/str.hpp>
-# include <sihd/util/traits.hpp>
-# include <sihd/util/IArrayView.hpp>
+#include <sihd/util/IArrayView.hpp>
+#include <sihd/util/str.hpp>
+#include <sihd/util/traits.hpp>
 
 namespace sihd::util
 {
@@ -36,30 +36,35 @@ class ArrayView: public IArrayView
         // container specialization
         // make sure Container::value_type size is divisible by type size.
         // ex: vector<int8_t> of size 3 may not go into an ArrayView<int32_t> which will be size 0
-        template <
-            typename Container,
-            typename ValueType = typename Container::value_type,
-            typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0
-        >
+        template <typename Container,
+                  typename ValueType = typename Container::value_type,
+                  typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
         ArrayView(const Container & container):
-            ArrayView(container.data(), (container.size() * sizeof(ValueType)) / sizeof(T)) {}
+            ArrayView(container.data(), (container.size() * sizeof(ValueType)) / sizeof(T))
+        {
+        }
 
         // fundamental & struct specializations
         // make sure the fundamental type size is divisible by type size.
         // ex: int8_t may not go into an ArrayView<int32_t> which will be size 0
-        template <
-            typename Fundamental,
-            std::enable_if_t<std::is_trivially_copyable_v<Fundamental> && !std::is_pointer_v<Fundamental>, bool> = 0
-        >
-        ArrayView(const Fundamental & value): ArrayView(&value, sizeof(Fundamental) / sizeof(T)) {}
+        template <typename Fundamental,
+                  std::enable_if_t<std::is_trivially_copyable_v<Fundamental> && !std::is_pointer_v<Fundamental>, bool>
+                  = 0>
+        ArrayView(const Fundamental & value): ArrayView(&value, sizeof(Fundamental) / sizeof(T))
+        {
+        }
 
         // char specialization
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        ArrayView(std::string_view str): ArrayView(str.data(), str.size()) {}
+        ArrayView(std::string_view str): ArrayView(str.data(), str.size())
+        {
+        }
 
         // char specialization
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        ArrayView(const char *str): ArrayView(str, strlen(str)) {}
+        ArrayView(const char *str): ArrayView(str, strlen(str))
+        {
+        }
 
         /*********************************************************************/
         /* byte constructor */
@@ -85,10 +90,7 @@ class ArrayView: public IArrayView
         /* copy constructor */
         /*********************************************************************/
 
-        ArrayView(ArrayView<T> && other)
-        {
-            *this = std::move(other);
-        }
+        ArrayView(ArrayView<T> && other) { *this = std::move(other); }
 
         /*********************************************************************/
         /* operator= */
@@ -125,10 +127,16 @@ class ArrayView: public IArrayView
         operator bool() const { return _buf_ptr != nullptr; }
 
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        operator std::string() const { return std::string(data(), byte_size()); }
+        operator std::string() const
+        {
+            return std::string(data(), byte_size());
+        }
 
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        operator std::string_view() const { return std::string_view(data(), byte_size()); }
+        operator std::string_view() const
+        {
+            return std::string_view(data(), byte_size());
+        }
 
         const uint8_t *buf() const { return (uint8_t *)_buf_ptr; }
 
@@ -149,10 +157,7 @@ class ArrayView: public IArrayView
         /* comparison */
         /*********************************************************************/
 
-        bool is_same_type(const IArrayView & arr) const
-        {
-            return this->data_type() == arr.data_type();
-        }
+        bool is_same_type(const IArrayView & arr) const { return this->data_type() == arr.data_type(); }
 
         bool is_bytes_equal(const void *buf, size_t size, size_t byte_offset = 0) const
         {
@@ -184,10 +189,7 @@ class ArrayView: public IArrayView
         /* views */
         /*********************************************************************/
 
-        std::string hexdump(char delimiter = ' ') const
-        {
-            return str::hexdump(_buf_ptr, this->byte_size(), delimiter);
-        }
+        std::string hexdump(char delimiter = ' ') const { return str::hexdump(_buf_ptr, this->byte_size(), delimiter); }
 
         std::string str() const
         {
@@ -292,15 +294,9 @@ class ArrayView: public IArrayView
         /* is_equal */
         /*********************************************************************/
 
-        bool operator==(ArrayView<T> other) const
-        {
-            return this->is_equal(other);
-        }
+        bool operator==(ArrayView<T> other) const { return this->is_equal(other); }
 
-        bool operator!=(ArrayView<T> other) const
-        {
-            return !this->is_equal(other);
-        }
+        bool operator!=(ArrayView<T> other) const { return !this->is_equal(other); }
 
         bool is_equal(ArrayView<T> arr, size_t offset = 0) const
         {
@@ -362,10 +358,18 @@ class ArrayView: public IArrayView
                 pointer array_end;
 
                 ArrayIterator(pointer ptr_begin = nullptr, pointer ptr_curr = nullptr, pointer ptr_end = nullptr):
-                    array_beg(ptr_begin), array_curr(ptr_curr), array_end(ptr_end) {}
+                    array_beg(ptr_begin),
+                    array_curr(ptr_curr),
+                    array_end(ptr_end)
+                {
+                }
 
                 ArrayIterator(const ArrayIterator & other):
-                    array_beg(other.array_beg), array_curr(other.array_curr), array_end(other.array_end) {}
+                    array_beg(other.array_beg),
+                    array_curr(other.array_curr),
+                    array_end(other.array_end)
+                {
+                }
 
                 ArrayIterator & operator=(const ArrayIterator & other)
                 {
@@ -435,24 +439,26 @@ class ArrayView: public IArrayView
 
                 reference operator*()
                 {
-                    if (this->array_curr < this->array_beg && this->array_curr > this->array_end)
+                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
                         throw std::out_of_range("Array::iterator: iterator out of range");
                     return *this->array_curr;
                 }
 
                 size_t idx()
                 {
-                    if (this->array_curr < this->array_beg && this->array_curr > this->array_end)
+                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
                         return ArrayView<T>::npos;
                     return this->array_curr - this->array_beg;
                 }
-
         };
 
         typedef ArrayIterator<const T> iterator;
 
         iterator begin() const { return iterator(this->data(), this->data(), this->data() + this->size()); }
-        iterator end() const { return iterator(this->data(), this->data() + this->size(), this->data() + this->size()); }
+        iterator end() const
+        {
+            return iterator(this->data(), this->data() + this->size(), this->data() + this->size());
+        }
 
         /*********************************************************************/
         /* reverse iterator */
@@ -473,11 +479,21 @@ class ArrayView: public IArrayView
                 pointer array_curr;
                 pointer array_end;
 
-                ReverseArrayIterator(pointer ptr_begin = nullptr, pointer ptr_curr = nullptr, pointer ptr_end = nullptr):
-                    array_beg(ptr_begin), array_curr(ptr_curr), array_end(ptr_end) {}
+                ReverseArrayIterator(pointer ptr_begin = nullptr,
+                                     pointer ptr_curr = nullptr,
+                                     pointer ptr_end = nullptr):
+                    array_beg(ptr_begin),
+                    array_curr(ptr_curr),
+                    array_end(ptr_end)
+                {
+                }
 
                 ReverseArrayIterator(const ReverseArrayIterator & other):
-                    array_beg(other.array_beg), array_curr(other.array_curr), array_end(other.array_end) {}
+                    array_beg(other.array_beg),
+                    array_curr(other.array_curr),
+                    array_end(other.array_end)
+                {
+                }
 
                 ReverseArrayIterator & operator=(const ReverseArrayIterator & other)
                 {
@@ -513,7 +529,10 @@ class ArrayView: public IArrayView
                     return ret;
                 }
 
-                difference_type operator-(const ReverseArrayIterator & rhs) const { return rhs.array_curr - this->array_curr; }
+                difference_type operator-(const ReverseArrayIterator & rhs) const
+                {
+                    return rhs.array_curr - this->array_curr;
+                }
 
                 ReverseArrayIterator operator+(ssize_t i)
                 {
@@ -547,14 +566,14 @@ class ArrayView: public IArrayView
 
                 reference operator*()
                 {
-                    if (this->array_curr < this->array_beg && this->array_curr > this->array_end)
+                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
                         throw std::out_of_range("Array::reverse_iterator: iterator out of range");
                     return *this->array_curr;
                 }
 
                 size_t idx()
                 {
-                    if (this->array_curr < this->array_beg && this->array_curr > this->array_end)
+                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
                         return ArrayView<T>::npos;
                     return this->array_curr - this->array_beg;
                 }
@@ -564,20 +583,16 @@ class ArrayView: public IArrayView
 
         reverse_iterator rbegin() const
         {
-            return reverse_iterator(this->data(),
-                                    this->data() + this->size() - 1,
-                                    this->data() + this->size());
+            return reverse_iterator(this->data(), this->data() + this->size() - 1, this->data() + this->size());
         }
         reverse_iterator rend() const
         {
-            return reverse_iterator(this->data(),
-                                    this->data() - 1,
-                                    this->data() + this->size());
+            return reverse_iterator(this->data(), this->data() - 1, this->data() + this->size());
         }
 
-    /*********************************************************************/
-    /* attributes */
-    /*********************************************************************/
+        /*********************************************************************/
+        /* attributes */
+        /*********************************************************************/
 
     protected:
         const T *_buf_ptr;
@@ -585,19 +600,19 @@ class ArrayView: public IArrayView
 };
 
 // typedef for types
-typedef ArrayView<bool>       ArrBoolView;
-typedef ArrayView<char>       ArrCharView;
-typedef ArrayView<int8_t>     ArrByteView;
-typedef ArrayView<uint8_t>    ArrUByteView;
-typedef ArrayView<int16_t>    ArrShortView;
-typedef ArrayView<uint16_t>   ArrUShortView;
-typedef ArrayView<int32_t>    ArrIntView;
-typedef ArrayView<uint32_t>   ArrUIntView;
-typedef ArrayView<int64_t>    ArrLongView;
-typedef ArrayView<uint64_t>   ArrULongView;
-typedef ArrayView<float>      ArrFloatView;
-typedef ArrayView<double>     ArrDoubleView;
+typedef ArrayView<bool> ArrBoolView;
+typedef ArrayView<char> ArrCharView;
+typedef ArrayView<int8_t> ArrByteView;
+typedef ArrayView<uint8_t> ArrUByteView;
+typedef ArrayView<int16_t> ArrShortView;
+typedef ArrayView<uint16_t> ArrUShortView;
+typedef ArrayView<int32_t> ArrIntView;
+typedef ArrayView<uint32_t> ArrUIntView;
+typedef ArrayView<int64_t> ArrLongView;
+typedef ArrayView<uint64_t> ArrULongView;
+typedef ArrayView<float> ArrFloatView;
+typedef ArrayView<double> ArrDoubleView;
 
-}
+} // namespace sihd::util
 
 #endif

@@ -1,10 +1,10 @@
-#include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Scheduler.hpp>
 #include <sihd/util/ScopedModifier.hpp>
+#include <sihd/util/Task.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
-#include <sihd/util/Task.hpp>
 
 namespace sihd::util
 {
@@ -34,23 +34,23 @@ Scheduler::~Scheduler()
     this->clear_tasks();
 }
 
-void    Scheduler::set_clock(IClock *ptr)
+void Scheduler::set_clock(IClock *ptr)
 {
     _clock_ptr = ptr;
 }
 
-IClock  *Scheduler::clock() const
+IClock *Scheduler::clock() const
 {
     return _clock_ptr;
 }
 
-bool    Scheduler::set_as_fast_as_possible(bool active)
+bool Scheduler::set_as_fast_as_possible(bool active)
 {
     _no_delay = active;
     return true;
 }
 
-bool    Scheduler::_wait_for_next_task()
+bool Scheduler::_wait_for_next_task()
 {
     ScopedModifier w(_waiting, true);
     {
@@ -67,12 +67,10 @@ bool    Scheduler::_wait_for_next_task()
         _waitable_task.infinite_wait();
     if (_running == false)
         return false;
-    return _no_delay
-        ? true
-        : _waitable_task.wait_for(_next_run - _clock_ptr->now() - this->acceptable_nano);
+    return _no_delay ? true : _waitable_task.wait_for(_next_run - _clock_ptr->now() - this->acceptable_nano);
 }
 
-Task    *Scheduler::_get_next_task(time_t time)
+Task *Scheduler::_get_next_task(time_t time)
 {
     std::lock_guard l(_mutex_task);
     Task *task = _task_map.begin()->second;
@@ -89,7 +87,7 @@ Task    *Scheduler::_get_next_task(time_t time)
     return task;
 }
 
-void    Scheduler::_play_task(Task *task, time_t now)
+void Scheduler::_play_task(Task *task, time_t now)
 {
     task->run();
     if (task->resched_time > 0)
@@ -103,12 +101,12 @@ void    Scheduler::_play_task(Task *task, time_t now)
         this->_add_to_delete_task(task);
 }
 
-time_t  Scheduler::now() const
+time_t Scheduler::now() const
 {
     return _clock_ptr != nullptr ? _clock_ptr->now() : 0;
 }
 
-bool    Scheduler::run()
+bool Scheduler::run()
 {
     sihd::util::thread::set_name(this->name());
     if (_clock_ptr == nullptr || _clock_ptr->start() == false)
@@ -135,12 +133,12 @@ bool    Scheduler::run()
     return true;
 }
 
-void    Scheduler::pause()
+void Scheduler::pause()
 {
     _paused = true;
 }
 
-void    Scheduler::resume()
+void Scheduler::resume()
 {
     _paused = false;
     // if in pause lock - try to notify wait until unlocked
@@ -148,7 +146,7 @@ void    Scheduler::resume()
         _waitable_pause.notify_all();
 }
 
-bool    Scheduler::start()
+bool Scheduler::start()
 {
     if (_running.exchange(true) == true)
         return true;
@@ -159,7 +157,7 @@ bool    Scheduler::start()
     return true;
 }
 
-bool    Scheduler::stop()
+bool Scheduler::stop()
 {
     if (_running.exchange(false) == false)
         return true;
@@ -176,12 +174,12 @@ bool    Scheduler::stop()
     return ret;
 }
 
-bool    Scheduler::is_running() const
+bool Scheduler::is_running() const
 {
     return _running;
 }
 
-void    Scheduler::add_task(Task *task)
+void Scheduler::add_task(Task *task)
 {
     std::lock_guard l(_mutex_task);
     _task_map.insert(std::pair<time_t, Task *>(task->run_at, task));
@@ -190,7 +188,7 @@ void    Scheduler::add_task(Task *task)
         _waitable_task.notify_all();
 }
 
-void    Scheduler::remove_task(Task *task)
+void Scheduler::remove_task(Task *task)
 {
     std::lock_guard l(_mutex_task);
     for (auto it = _task_map.begin(); it != _task_map.end(); ++it)
@@ -198,7 +196,7 @@ void    Scheduler::remove_task(Task *task)
         if (it->second != nullptr && it->second == task)
         {
             _task_map.erase(it);
-            break ;
+            break;
         }
     }
     _next_run = _task_map.begin()->first;
@@ -206,7 +204,7 @@ void    Scheduler::remove_task(Task *task)
         _waitable_task.notify_all();
 }
 
-void    Scheduler::clear_tasks()
+void Scheduler::clear_tasks()
 {
     this->_delete_tasks();
     std::lock_guard l(_mutex_task);
@@ -220,22 +218,22 @@ void    Scheduler::clear_tasks()
         _waitable_task.notify_all();
 }
 
-void    Scheduler::_add_to_delete_task(Task *task)
+void Scheduler::_add_to_delete_task(Task *task)
 {
     std::lock_guard l(_mutex_task);
     _task_rm_list.push_back(task);
 }
 
-void    Scheduler::_delete_tasks()
+void Scheduler::_delete_tasks()
 {
     std::lock_guard l(_mutex_task);
     for (Task *to_remove : _task_rm_list)
     {
         if (to_remove == nullptr)
-            continue ;
+            continue;
         delete to_remove;
     }
     _task_rm_list.clear();
 }
 
-}
+} // namespace sihd::util

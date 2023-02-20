@@ -1,27 +1,27 @@
 #ifndef __SIHD_SSH_SSHSESSION_HPP__
-# define __SIHD_SSH_SSHSESSION_HPP__
+#define __SIHD_SSH_SSHSESSION_HPP__
 
-# include <memory>
+#include <memory>
 
-# include <libssh/libssh.h>
+#include <libssh/libssh.h>
 
-# include <sihd/ssh/SshKey.hpp>
-# include <sihd/ssh/SshChannel.hpp>
-# include <sihd/ssh/SshScp.hpp>
-# include <sihd/ssh/SshCommand.hpp>
-# include <sihd/ssh/SshShell.hpp>
-# include <sihd/ssh/Sftp.hpp>
+#include <sihd/ssh/Sftp.hpp>
+#include <sihd/ssh/SshChannel.hpp>
+#include <sihd/ssh/SshCommand.hpp>
+#include <sihd/ssh/SshKey.hpp>
+#include <sihd/ssh/SshScp.hpp>
+#include <sihd/ssh/SshShell.hpp>
 
 namespace sihd::ssh
 {
 
 struct SshKeyHashDeleter
 {
-    void operator()(uint8_t *ptr)
-    {
-        if (ptr != nullptr)
-            ssh_clean_pubkey_hash(&ptr);
-    }
+        void operator()(uint8_t *ptr)
+        {
+            if (ptr != nullptr)
+                ssh_clean_pubkey_hash(&ptr);
+        }
 };
 
 using SshKeyHash = std::unique_ptr<uint8_t, SshKeyHashDeleter>;
@@ -49,35 +49,35 @@ class SshSession
 
         struct AuthMethods
         {
-            AuthMethods(int m): methods(m) {}
+                AuthMethods(int m): methods(m) {}
 
-            bool unknown() const { return methods == 0; }
-            bool none() const { return methods & SSH_AUTH_METHOD_NONE; }
-            bool password() const { return methods & SSH_AUTH_METHOD_PASSWORD; }
-            bool public_key() const { return methods & SSH_AUTH_METHOD_PUBLICKEY; }
-            bool host_based() const { return methods & SSH_AUTH_METHOD_HOSTBASED; }
-            bool interactive() const { return methods & SSH_AUTH_METHOD_INTERACTIVE; }
-            bool gss_api() const { return methods & SSH_AUTH_METHOD_GSSAPI_MIC; }
+                bool unknown() const { return methods == 0; }
+                bool none() const { return methods & SSH_AUTH_METHOD_NONE; }
+                bool password() const { return methods & SSH_AUTH_METHOD_PASSWORD; }
+                bool public_key() const { return methods & SSH_AUTH_METHOD_PUBLICKEY; }
+                bool host_based() const { return methods & SSH_AUTH_METHOD_HOSTBASED; }
+                bool interactive() const { return methods & SSH_AUTH_METHOD_INTERACTIVE; }
+                bool gss_api() const { return methods & SSH_AUTH_METHOD_GSSAPI_MIC; }
 
-            std::string str() const;
+                std::string str() const;
 
-            int methods;
+                int methods;
         };
         AuthMethods auth_methods();
 
         struct AuthState
         {
-            AuthState(int st): status(st) {}
+                AuthState(int st): status(st) {}
 
-            bool error() const { return status == SSH_AUTH_ERROR; }
-            bool denied() const { return status == SSH_AUTH_DENIED; }
-            bool partial() const { return status == SSH_AUTH_PARTIAL; }
-            bool success() const { return status == SSH_AUTH_SUCCESS; }
-            bool again() const { return status == SSH_AUTH_AGAIN; }
+                bool error() const { return status == SSH_AUTH_ERROR; }
+                bool denied() const { return status == SSH_AUTH_DENIED; }
+                bool partial() const { return status == SSH_AUTH_PARTIAL; }
+                bool success() const { return status == SSH_AUTH_SUCCESS; }
+                bool again() const { return status == SSH_AUTH_AGAIN; }
 
-            const char *str() const;
+                const char *str() const;
 
-            int status;
+                int status;
         };
         AuthState auth_none();
         AuthState auth_agent();
@@ -121,6 +121,6 @@ class SshSession
         bool _auth_none_once;
 };
 
-}
+} // namespace sihd::ssh
 
 #endif

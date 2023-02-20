@@ -1,19 +1,19 @@
 #ifndef __SIHD_UTIL_DAEMON_HPP__
-# define __SIHD_UTIL_DAEMON_HPP__
+#define __SIHD_UTIL_DAEMON_HPP__
 
-# include <sihd/util/Node.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/IRunnable.hpp>
-# include <sihd/util/Handler.hpp>
-# include <sihd/util/File.hpp>
-# include <sihd/util/os.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/File.hpp>
+#include <sihd/util/Handler.hpp>
+#include <sihd/util/IRunnable.hpp>
+#include <sihd/util/Node.hpp>
+#include <sihd/util/os.hpp>
 
 namespace sihd::util
 {
 
-class Daemon:   public sihd::util::Named,
-                public sihd::util::Configurable,
-                public sihd::util::IRunnable
+class Daemon: public sihd::util::Named,
+              public sihd::util::Configurable,
+              public sihd::util::IRunnable
 {
     public:
         Daemon(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -48,6 +48,6 @@ class Daemon:   public sihd::util::Named,
         File _pid_file;
 };
 
-}
+} // namespace sihd::util
 
 #endif

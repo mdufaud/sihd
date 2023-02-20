@@ -7,7 +7,7 @@ namespace sihd::imgui
 SIHD_LOGGER;
 
 // TODO
-static void glfw_error_callback(int error, const char* description)
+static void glfw_error_callback(int error, const char *description)
 {
     SIHD_LOG(error, "GLFW: {} ({})", description, error);
 }
@@ -23,7 +23,7 @@ ImguiBackendGlfw::~ImguiBackendGlfw()
     this->terminate();
 }
 
-bool    ImguiBackendGlfw::init_window(const std::string & name, size_t width, size_t height)
+bool ImguiBackendGlfw::init_window(const std::string & name, size_t width, size_t height)
 {
     if (_glfw_window_ptr != nullptr)
     {
@@ -34,7 +34,7 @@ bool    ImguiBackendGlfw::init_window(const std::string & name, size_t width, si
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return false;
-    // Decide GL+GLSL versions
+        // Decide GL+GLSL versions
 #if defined(IMGUI_IMPL_OPENGL_ES2)
     // GL ES 2.0 + GLSL 100
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
@@ -44,14 +44,14 @@ bool    ImguiBackendGlfw::init_window(const std::string & name, size_t width, si
     // GL 3.2 + GLSL 150
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // 3.2+ only
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);           // Required on Mac
 #else
     // GL 3.0 + GLSL 130
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
-    //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+    // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
 #endif
     // Create window with graphics context
     _glfw_window_ptr = glfwCreateWindow(width, height, name.c_str(), NULL, NULL);
@@ -62,7 +62,7 @@ bool    ImguiBackendGlfw::init_window(const std::string & name, size_t width, si
     return true;
 }
 
-bool    ImguiBackendGlfw::init_backend_opengl()
+bool ImguiBackendGlfw::init_backend_opengl()
 {
     if (_glfw_window_ptr == nullptr)
     {
@@ -73,22 +73,22 @@ bool    ImguiBackendGlfw::init_backend_opengl()
     return _is_init;
 }
 
-void    ImguiBackendGlfw::new_frame()
+void ImguiBackendGlfw::new_frame()
 {
     ImGui_ImplGlfw_NewFrame();
 }
 
-void    ImguiBackendGlfw::poll()
+void ImguiBackendGlfw::poll()
 {
     glfwPollEvents();
 }
 
-bool    ImguiBackendGlfw::should_close()
+bool ImguiBackendGlfw::should_close()
 {
     return glfwWindowShouldClose(_glfw_window_ptr);
 }
 
-void    ImguiBackendGlfw::pre_render()
+void ImguiBackendGlfw::pre_render()
 {
     int display_w;
     int display_h;
@@ -96,12 +96,12 @@ void    ImguiBackendGlfw::pre_render()
     glfwGetFramebufferSize(_glfw_window_ptr, &display_w, &display_h);
 }
 
-void    ImguiBackendGlfw::post_render()
+void ImguiBackendGlfw::post_render()
 {
     glfwSwapBuffers(_glfw_window_ptr);
 }
 
-void    ImguiBackendGlfw::shutdown()
+void ImguiBackendGlfw::shutdown()
 {
     if (_is_init)
     {
@@ -110,7 +110,7 @@ void    ImguiBackendGlfw::shutdown()
     }
 }
 
-void    ImguiBackendGlfw::terminate()
+void ImguiBackendGlfw::terminate()
 {
     if (_glfw_window_ptr != nullptr)
     {
@@ -120,4 +120,4 @@ void    ImguiBackendGlfw::terminate()
     }
 }
 
-}
+} // namespace sihd::imgui

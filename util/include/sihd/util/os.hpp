@@ -1,19 +1,19 @@
 #ifndef __SIHD_UTIL_OS_HPP__
-# define __SIHD_UTIL_OS_HPP__
+#define __SIHD_UTIL_OS_HPP__
 
-# include <sys/types.h> // pid_t
+#include <sys/types.h> // pid_t
 
-# include <string>
-# include <string_view>
+#include <string>
+#include <string_view>
 
-# include <sihd/util/platform.hpp>
+#include <sihd/util/platform.hpp>
 
-# if !defined(__SIHD_WINDOWS__)
+#if !defined(__SIHD_WINDOWS__)
 
-#  include <sys/socket.h> // socklen_t
-#  include <sys/resource.h> // rlim_t
+# include <sys/resource.h> // rlim_t
+# include <sys/socket.h>   // socklen_t
 
-# else
+#else
 
 typedef int socklen_t;
 typedef unsigned long rlim_t;
@@ -21,9 +21,9 @@ typedef unsigned long rlim_t;
 // int and not uint (libwebsockets)
 typedef int uid_t;
 
-# endif
+#endif
 
-# include <sihd/util/IHandler.hpp>
+#include <sihd/util/IHandler.hpp>
 
 namespace sihd::util::os
 {
@@ -120,6 +120,6 @@ constexpr bool is_run_with_asan = true;
 constexpr bool is_run_with_asan = false;
 #endif
 
-}
+} // namespace sihd::util::os
 
 #endif

@@ -1,12 +1,12 @@
 #ifndef __SIHD_UTIL_LOGINFO_HPP__
-# define __SIHD_UTIL_LOGINFO_HPP__
+#define __SIHD_UTIL_LOGINFO_HPP__
 
-# include <ctime>
+#include <ctime>
 
-# include <string>
-# include <string_view>
+#include <string>
+#include <string_view>
 
-# include <sihd/util/thread.hpp>
+#include <sihd/util/thread.hpp>
 
 namespace sihd::util
 {
@@ -15,13 +15,13 @@ enum LogLevel
 {
     none = 1000,
     emergency = 0, // A panic condition
-    alert, // A condition that should be corrected immediately, such as a corrupted system database
-    critical, // Hard device errors
+    alert,         // A condition that should be corrected immediately, such as a corrupted system database
+    critical,      // Hard device errors
     error,
     warning,
     notice, // Conditions that are not error conditions, but that may require special handling
-    info, // Confirmation that the program is working as expected
-    debug // Messages that contain information normally of use only when debugging a program
+    info,   // Confirmation that the program is working as expected
+    debug   // Messages that contain information normally of use only when debugging a program
 };
 
 class LogInfo
@@ -42,6 +42,6 @@ class LogInfo
         static LogLevel level_from_str(std::string_view level);
 };
 
-}
+} // namespace sihd::util
 
 #endif

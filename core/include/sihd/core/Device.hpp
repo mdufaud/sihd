@@ -1,22 +1,22 @@
 #ifndef __SIHD_UTIL_DEVICE_HPP__
-# define __SIHD_UTIL_DEVICE_HPP__
+#define __SIHD_UTIL_DEVICE_HPP__
 
-# include <sihd/core/AChannelContainer.hpp>
-# include <sihd/core/ACoreService.hpp>
+#include <sihd/core/AChannelContainer.hpp>
+#include <sihd/core/ACoreService.hpp>
 
 namespace sihd::core
 {
 
-class Device:   public AChannelContainer,
-                public ACoreService
+class Device: public AChannelContainer,
+              public ACoreService
 {
     public:
-        using ACoreService::setup;
         using ACoreService::init;
+        using ACoreService::is_running;
+        using ACoreService::reset;
+        using ACoreService::setup;
         using ACoreService::start;
         using ACoreService::stop;
-        using ACoreService::reset;
-        using ACoreService::is_running;
 
         Device(const std::string & name, Node *parent = nullptr);
         virtual ~Device();
@@ -45,9 +45,8 @@ class Device:   public AChannelContainer,
 
     private:
         static sihd::util::ServiceController _default_service_controller;
-
 };
 
-}
+} // namespace sihd::core
 
 #endif

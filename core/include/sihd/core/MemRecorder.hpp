@@ -1,21 +1,21 @@
 #ifndef __SIHD_CORE_MEMRECORDER_HPP__
-# define __SIHD_CORE_MEMRECORDER_HPP__
+#define __SIHD_CORE_MEMRECORDER_HPP__
 
-# include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json_fwd.hpp>
 
-# include <sihd/util/IHandler.hpp>
-# include <sihd/util/IProvider.hpp>
+#include <sihd/util/IHandler.hpp>
+#include <sihd/util/IProvider.hpp>
 
-# include <sihd/core/Channel.hpp>
-# include <sihd/core/Records.hpp>
-# include <sihd/core/ACoreObject.hpp>
+#include <sihd/core/ACoreObject.hpp>
+#include <sihd/core/Channel.hpp>
+#include <sihd/core/Records.hpp>
 
 namespace sihd::core
 {
 
-class MemRecorder:  public ACoreObject,
-                    public sihd::util::IProvider<PlayableRecord>,
-                    public sihd::util::IHandler<const std::string &, const Channel *>
+class MemRecorder: public ACoreObject,
+                   public sihd::util::IProvider<PlayableRecord>,
+                   public sihd::util::IHandler<const std::string &, const Channel *>
 {
     public:
         using ACoreObject::handle;
@@ -57,6 +57,6 @@ class MemRecorder:  public ACoreObject,
         SortedRecordedValues _map_sorted_records;
 };
 
-}
+} // namespace sihd::core
 
 #endif

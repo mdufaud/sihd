@@ -1,9 +1,9 @@
 #ifndef __SIHD_UTIL_SPLITTER_HPP__
-# define __SIHD_UTIL_SPLITTER_HPP__
+#define __SIHD_UTIL_SPLITTER_HPP__
 
-# include <string>
-# include <string_view>
-# include <vector>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace sihd::util
 {
@@ -49,6 +49,6 @@ class Splitter
         int (*_compare_method)(int c);
 };
 
-}
+} // namespace sihd::util
 
 #endif

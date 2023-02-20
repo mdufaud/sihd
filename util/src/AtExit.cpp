@@ -12,7 +12,7 @@ bool AtExit::installed = false;
 std::mutex AtExit::runnable_mutex;
 std::list<IRunnable *> AtExit::runnables;
 
-void    AtExit::add_handler(IRunnable *ptr)
+void AtExit::add_handler(IRunnable *ptr)
 {
     std::lock_guard lock(runnable_mutex);
     auto it = std::find(runnables.begin(), runnables.end(), ptr);
@@ -20,7 +20,7 @@ void    AtExit::add_handler(IRunnable *ptr)
         runnables.push_back(ptr);
 }
 
-void    AtExit::remove_handler(IRunnable *ptr)
+void AtExit::remove_handler(IRunnable *ptr)
 {
     std::lock_guard lock(runnable_mutex);
     auto it = std::find(runnables.begin(), runnables.end(), ptr);
@@ -28,10 +28,10 @@ void    AtExit::remove_handler(IRunnable *ptr)
         runnables.erase(it);
 }
 
-void    AtExit::clear_handlers()
+void AtExit::clear_handlers()
 {
     std::lock_guard lock(runnable_mutex);
-    for (IRunnable *runnable: runnables)
+    for (IRunnable *runnable : runnables)
     {
         delete runnable;
     }
@@ -39,11 +39,11 @@ void    AtExit::clear_handlers()
 }
 
 // logger's fprintf not called because stream are flushed clean after exit
-void    AtExit::exit_callback()
+void AtExit::exit_callback()
 {
     if (installed == false)
-        return ;
-    for (IRunnable *runnable: runnables)
+        return;
+    for (IRunnable *runnable : runnables)
     {
         try
         {
@@ -55,14 +55,14 @@ void    AtExit::exit_callback()
         }
         catch (...)
         {
-           SIHD_CERR("AtExit: error while running exit handler - non standard exception\n");
+            SIHD_CERR("AtExit: error while running exit handler - non standard exception\n");
         }
         delete runnable;
     }
     runnables.clear();
 }
 
-bool    AtExit::install()
+bool AtExit::install()
 {
     if (installed == false)
     {
@@ -77,4 +77,4 @@ bool    AtExit::install()
     return installed;
 }
 
-}
+} // namespace sihd::util

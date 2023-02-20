@@ -12,8 +12,7 @@ SIHD_UTIL_REGISTER_FACTORY(LineReader)
 
 SIHD_LOGGER;
 
-LineReader::LineReader(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent)
+LineReader::LineReader(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
 {
     _read_ptr = nullptr;
     _read_buff_size = 4096;
@@ -33,7 +32,7 @@ LineReader::~LineReader()
     this->_delete_buffers();
 }
 
-bool    LineReader::_init()
+bool LineReader::_init()
 {
     bool ret = _line_ptr != nullptr || this->_allocate_line();
     ret = ret && (_read_ptr != nullptr || this->_allocate_read_buffer());
@@ -42,19 +41,19 @@ bool    LineReader::_init()
     return ret;
 }
 
-bool    LineReader::set_delimiter_in_line(bool active)
+bool LineReader::set_delimiter_in_line(bool active)
 {
     _put_delimiter_in_line = active;
     return true;
 }
 
-bool    LineReader::set_delimiter(int c)
+bool LineReader::set_delimiter(int c)
 {
     _delimiter = c;
     return true;
 }
 
-bool    LineReader::set_read_buffsize(size_t buff)
+bool LineReader::set_read_buffsize(size_t buff)
 {
     if (_read_buff_size == buff)
         return true;
@@ -67,7 +66,7 @@ bool    LineReader::set_read_buffsize(size_t buff)
     return this->_allocate_read_buffer();
 }
 
-bool    LineReader::set_line_buffsize(size_t buff)
+bool LineReader::set_line_buffsize(size_t buff)
 {
     if (_line_buff_size == buff)
         return true;
@@ -80,28 +79,28 @@ bool    LineReader::set_line_buffsize(size_t buff)
     return this->_allocate_line();
 }
 
-bool    LineReader::open(std::string_view path)
+bool LineReader::open(std::string_view path)
 {
     return this->_init() && _file.open(path, "r");
 }
 
-bool    LineReader::set_stream(FILE *stream, bool ownership)
+bool LineReader::set_stream(FILE *stream, bool ownership)
 {
     return this->_init() && _file.set_stream(stream, ownership);
 }
 
-bool    LineReader::is_open() const
+bool LineReader::is_open() const
 {
     return _file.is_open();
 }
 
-bool    LineReader::close()
+bool LineReader::close()
 {
     this->_reset();
     return _file.close();
 }
 
-bool    LineReader::read_next()
+bool LineReader::read_next()
 {
     _line_ptr[0] = 0;
     size_t fill_idx = 0;
@@ -111,13 +110,11 @@ bool    LineReader::read_next()
         {
             // look for delimiter
             size_t copy_len = 0;
-            const char *match = (const char *)memchr(_read_ptr + _last_read_index,
-                                                        _delimiter,
-                                                        _read_size - _last_read_index);
+            const char *match
+                = (const char *)memchr(_read_ptr + _last_read_index, _delimiter, _read_size - _last_read_index);
             if (match != nullptr)
             {
-                copy_len = (match - (_read_ptr + _last_read_index))
-                            + (int)(_put_delimiter_in_line);
+                copy_len = (match - (_read_ptr + _last_read_index)) + (int)(_put_delimiter_in_line);
             }
             else
                 copy_len = _read_size - _last_read_index;
@@ -161,13 +158,13 @@ bool    LineReader::read_next()
     return false;
 }
 
-bool    LineReader::get_read_data(ArrCharView & view) const
+bool LineReader::get_read_data(ArrCharView & view) const
 {
-    view = ArrCharView{_line_ptr, _line_size};
+    view = ArrCharView {_line_ptr, _line_size};
     return _line_ptr != nullptr;
 }
 
-void    LineReader::_reset()
+void LineReader::_reset()
 {
     _error = false;
     _last_read_index = 0;
@@ -179,13 +176,13 @@ void    LineReader::_reset()
         _line_ptr[0] = 0;
 }
 
-bool    LineReader::_reallocate_line()
+bool LineReader::_reallocate_line()
 {
     _line_buff_size += _line_buff_step;
     return this->_allocate_line();
 }
 
-bool    LineReader::_allocate_line()
+bool LineReader::_allocate_line()
 {
     _line_ptr = (char *)realloc(_line_ptr, _line_buff_size + 1);
     if (_line_ptr == nullptr)
@@ -193,7 +190,7 @@ bool    LineReader::_allocate_line()
     return _line_ptr != nullptr;
 }
 
-bool    LineReader::_allocate_read_buffer()
+bool LineReader::_allocate_read_buffer()
 {
     _read_ptr = (char *)realloc(_read_ptr, _read_buff_size + 1);
     if (_read_ptr == nullptr)
@@ -201,7 +198,7 @@ bool    LineReader::_allocate_read_buffer()
     return _read_ptr != nullptr;
 }
 
-void    LineReader::_delete_buffers()
+void LineReader::_delete_buffers()
 {
     if (_line_ptr != nullptr)
         free(_line_ptr);
@@ -211,7 +208,7 @@ void    LineReader::_delete_buffers()
     _read_ptr = nullptr;
 }
 
-bool    LineReader::fast_read_line(std::string & line, FILE *stream, size_t buffsize)
+bool LineReader::fast_read_line(std::string & line, FILE *stream, size_t buffsize)
 {
     LineReader reader("reader");
     ArrCharView view;
@@ -231,4 +228,4 @@ bool    LineReader::fast_read_line(std::string & line, FILE *stream, size_t buff
     return false;
 }
 
-}
+} // namespace sihd::util

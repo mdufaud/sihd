@@ -1,7 +1,7 @@
 #include <sihd/ssh/SshSession.hpp>
-#include <sihd/util/str.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/util/LineReader.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::ssh
 {
@@ -20,7 +20,7 @@ SshSession::~SshSession()
     ssh_finalize();
 }
 
-bool    SshSession::fast_connect(std::string_view user, std::string_view host, int port, int verbosity)
+bool SshSession::fast_connect(std::string_view user, std::string_view host, int port, int verbosity)
 {
     this->delete_session();
     if (this->new_session() == false)
@@ -34,7 +34,7 @@ bool    SshSession::fast_connect(std::string_view user, std::string_view host, i
     return ret;
 }
 
-bool    SshSession::connect()
+bool SshSession::connect()
 {
     int r;
     while ((r = ssh_connect(_ssh_session_ptr)) == SSH_AGAIN)
@@ -44,16 +44,16 @@ bool    SshSession::connect()
     return r == SSH_OK;
 }
 
-bool    SshSession::connected()
+bool SshSession::connected()
 {
     return _ssh_session_ptr != nullptr && ssh_is_connected(_ssh_session_ptr);
 }
 
-bool    SshSession::check_hostkey()
+bool SshSession::check_hostkey()
 {
     uint8_t *hash_ptr = nullptr;
     size_t hash_len;
-	ssh_key_struct *pubkey_ptr = nullptr;
+    ssh_key_struct *pubkey_ptr = nullptr;
 
     int ret = ssh_get_server_publickey(_ssh_session_ptr, &pubkey_ptr);
     if (ret == SSH_ERROR)
@@ -81,12 +81,12 @@ bool    SshSession::check_hostkey()
         case SSH_KNOWN_HOSTS_NOT_FOUND:
         case SSH_KNOWN_HOSTS_UNKNOWN:
             // this->update_known_hosts();
-  	        hexa = ssh_get_hexa(hash_ptr, hash_len);
+            hexa = ssh_get_hexa(hash_ptr, hash_len);
             SIHD_LOG(warning, "SshSession: host key unknown: {}", hexa);
             free(hexa);
             return true;
         default:
-  	        hexa = ssh_get_hexa(hash_ptr, hash_len);
+            hexa = ssh_get_hexa(hash_ptr, hash_len);
             SIHD_LOG(error, "SshSession: host key verification failed: {} (code = {})", hexa, state);
             break;
     }
@@ -104,7 +104,7 @@ bool    SshSession::check_hostkey()
             free(hexa);
             return true;
         default:
-  	        hexa = ssh_get_hexa(hash_ptr, hash_len);
+            hexa = ssh_get_hexa(hash_ptr, hash_len);
             SIHD_LOG(error, "SshSession: host key verification failed: {} (code = {})", hexa, state);
             free(hexa);
             break;
@@ -120,33 +120,33 @@ SshSession::AuthMethods SshSession::auth_methods()
     return AuthMethods(ssh_userauth_list(_ssh_session_ptr, nullptr));
 }
 
-SshSession::AuthState   SshSession::auth_none()
+SshSession::AuthState SshSession::auth_none()
 {
     _auth_none_once = true;
     return AuthState(ssh_userauth_none(_ssh_session_ptr, nullptr));
 }
 
-SshSession::AuthState   SshSession::auth_agent()
+SshSession::AuthState SshSession::auth_agent()
 {
     return AuthState(ssh_userauth_agent(_ssh_session_ptr, nullptr));
 }
 
-SshSession::AuthState   SshSession::auth_gssapi()
+SshSession::AuthState SshSession::auth_gssapi()
 {
     return AuthState(ssh_userauth_gssapi(_ssh_session_ptr));
 }
 
-SshSession::AuthState   SshSession::auth_password(std::string_view password)
+SshSession::AuthState SshSession::auth_password(std::string_view password)
 {
     return AuthState(ssh_userauth_password(_ssh_session_ptr, nullptr, password.data()));
 }
 
-SshSession::AuthState   SshSession::auth_key_auto(const char *passphrase)
+SshSession::AuthState SshSession::auth_key_auto(const char *passphrase)
 {
     return AuthState(ssh_userauth_publickey_auto(_ssh_session_ptr, nullptr, passphrase));
 }
 
-SshSession::AuthState   SshSession::auth_key_file(std::string_view private_key_path, const char *passphrase)
+SshSession::AuthState SshSession::auth_key_file(std::string_view private_key_path, const char *passphrase)
 {
     SshKey key;
 
@@ -156,7 +156,7 @@ SshSession::AuthState   SshSession::auth_key_file(std::string_view private_key_p
     return AuthState(SSH_AUTH_ERROR);
 }
 
-SshSession::AuthState   SshSession::auth_key_try_file(std::string_view public_key_path)
+SshSession::AuthState SshSession::auth_key_try_file(std::string_view public_key_path)
 {
     SshKey key;
 
@@ -166,17 +166,17 @@ SshSession::AuthState   SshSession::auth_key_try_file(std::string_view public_ke
     return AuthState(SSH_AUTH_ERROR);
 }
 
-SshSession::AuthState   SshSession::auth_key(const SshKey & private_key)
+SshSession::AuthState SshSession::auth_key(const SshKey & private_key)
 {
     return AuthState(ssh_userauth_publickey(_ssh_session_ptr, nullptr, private_key.key()));
 }
 
-SshSession::AuthState   SshSession::auth_key_try(const SshKey & public_key)
+SshSession::AuthState SshSession::auth_key_try(const SshKey & public_key)
 {
     return AuthState(ssh_userauth_try_publickey(_ssh_session_ptr, nullptr, public_key.key()));
 }
 
-SshSession::AuthState   SshSession::auth_interactive_keyboard()
+SshSession::AuthState SshSession::auth_interactive_keyboard()
 {
     int r = ssh_userauth_kbdint(_ssh_session_ptr, NULL, NULL);
     while (r == SSH_AUTH_INFO)
@@ -217,32 +217,32 @@ SshSession::AuthState   SshSession::auth_interactive_keyboard()
     return AuthState(r);
 }
 
-bool    SshSession::set_user(std::string_view user)
+bool SshSession::set_user(std::string_view user)
 {
     return this->_set("user", SSH_OPTIONS_USER, user.data());
 }
 
-bool    SshSession::set_host(std::string_view host)
+bool SshSession::set_host(std::string_view host)
 {
     return this->_set("host", SSH_OPTIONS_HOST, host.data());
 }
 
-bool    SshSession::set_port(int port)
+bool SshSession::set_port(int port)
 {
     return this->_set("port", SSH_OPTIONS_PORT, &port);
 }
 
-bool    SshSession::set_verbosity(int verbosity)
+bool SshSession::set_verbosity(int verbosity)
 {
     return this->_set("verbosity", SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 }
 
-void    SshSession::set_blocking(bool active)
+void SshSession::set_blocking(bool active)
 {
     ssh_set_blocking(_ssh_session_ptr, (int)active);
 }
 
-bool    SshSession::update_known_hosts()
+bool SshSession::update_known_hosts()
 {
 #if LIBSSH_VERSION_MINOR > 7
     return ssh_session_update_known_hosts(_ssh_session_ptr) == SSH_OK;
@@ -251,7 +251,7 @@ bool    SshSession::update_known_hosts()
 #endif
 }
 
-bool    SshSession::known_hosts(std::string & hosts)
+bool SshSession::known_hosts(std::string & hosts)
 {
     char *hosts_ptr;
 #if LIBSSH_VERSION_MINOR > 7
@@ -273,17 +273,17 @@ bool    SshSession::known_hosts(std::string & hosts)
 #endif
 }
 
-void    SshSession::disconnect()
+void SshSession::disconnect()
 {
     ssh_disconnect(_ssh_session_ptr);
 }
 
-void    SshSession::silent_disconnect()
+void SshSession::silent_disconnect()
 {
     ssh_silent_disconnect(_ssh_session_ptr);
 }
 
-bool    SshSession::new_session()
+bool SshSession::new_session()
 {
     this->delete_session();
     _ssh_session_ptr = ssh_new();
@@ -292,7 +292,7 @@ bool    SshSession::new_session()
     return _ssh_session_ptr != nullptr;
 }
 
-void    SshSession::delete_session()
+void SshSession::delete_session()
 {
     if (_ssh_session_ptr != nullptr)
     {
@@ -303,12 +303,12 @@ void    SshSession::delete_session()
     }
 }
 
-const char  *SshSession::error() const
+const char *SshSession::error() const
 {
     return ssh_get_error(_ssh_session_ptr);
 }
 
-int     SshSession::error_code() const
+int SshSession::error_code() const
 {
     return ssh_get_error_code(_ssh_session_ptr);
 }
@@ -325,27 +325,27 @@ std::string SshSession::get_banner()
     return ret;
 }
 
-SshShell  SshSession::make_shell()
+SshShell SshSession::make_shell()
 {
     return SshShell(_ssh_session_ptr);
 }
 
-SshCommand  SshSession::make_command()
+SshCommand SshSession::make_command()
 {
     return SshCommand(_ssh_session_ptr);
 }
 
-SshScp  SshSession::make_scp()
+SshScp SshSession::make_scp()
 {
     return SshScp(_ssh_session_ptr);
 }
 
-Sftp  SshSession::make_sftp()
+Sftp SshSession::make_sftp()
 {
     return Sftp(_ssh_session_ptr);
 }
 
-bool    SshSession::make_channel(SshChannel & channel)
+bool SshSession::make_channel(SshChannel & channel)
 {
     ssh_channel channel_ptr = ssh_channel_new(_ssh_session_ptr);
     if (channel_ptr == nullptr)
@@ -358,12 +358,12 @@ bool    SshSession::make_channel(SshChannel & channel)
     return channel_ptr != nullptr;
 }
 
-bool    SshSession::make_channel_session(SshChannel & channel)
+bool SshSession::make_channel_session(SshChannel & channel)
 {
     return this->make_channel(channel) && channel.open_session();
 }
 
-bool    SshSession::_set(const char *from, ssh_options_e option, const void *value)
+bool SshSession::_set(const char *from, ssh_options_e option, const void *value)
 {
     int r = ssh_options_set(_ssh_session_ptr, option, value);
     if (r != SSH_OK)
@@ -371,7 +371,7 @@ bool    SshSession::_set(const char *from, ssh_options_e option, const void *val
     return r == SSH_OK;
 }
 
-std::string     SshSession::AuthMethods::str() const
+std::string SshSession::AuthMethods::str() const
 {
     if (this->methods == 0)
         return "unknown";
@@ -389,7 +389,7 @@ std::string     SshSession::AuthMethods::str() const
     return ret;
 }
 
-const char  *SshSession::AuthState::str() const
+const char *SshSession::AuthState::str() const
 {
     switch (this->status)
     {
@@ -408,4 +408,4 @@ const char  *SshSession::AuthState::str() const
     }
 }
 
-}
+} // namespace sihd::ssh

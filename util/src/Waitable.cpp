@@ -1,6 +1,6 @@
-#include <sihd/util/Waitable.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/util/Clocks.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
 {
@@ -20,18 +20,18 @@ Waitable::~Waitable()
     this->cancel_loop();
 }
 
-void    Waitable::cancel_loop()
+void Waitable::cancel_loop()
 {
     _stop_waiting = true;
     this->notify_all();
 }
 
-void    Waitable::notify_all()
+void Waitable::notify_all()
 {
     _condition.notify_all();
 }
 
-void    Waitable::notify(int times)
+void Waitable::notify(int times)
 {
     int i = 0;
     while (i < times)
@@ -41,13 +41,13 @@ void    Waitable::notify(int times)
     }
 }
 
-void    Waitable::infinite_wait()
+void Waitable::infinite_wait()
 {
     std::unique_lock lock(_mutex);
     _condition.wait(lock);
 }
 
-time_t  Waitable::infinite_wait_elapsed()
+time_t Waitable::infinite_wait_elapsed()
 {
     std::unique_lock lock(_mutex);
     SteadyClock clock;
@@ -56,7 +56,7 @@ time_t  Waitable::infinite_wait_elapsed()
     return clock.now() - now;
 }
 
-bool    Waitable::wait_until(Timestamp nano_timestamp)
+bool Waitable::wait_until(Timestamp nano_timestamp)
 {
     if (nano_timestamp <= 0)
         return true;
@@ -64,7 +64,7 @@ bool    Waitable::wait_until(Timestamp nano_timestamp)
     return _condition.wait_until(lock, system_clock::from_time_t(nano_timestamp)) == std::cv_status::timeout;
 }
 
-bool    Waitable::wait_for(Timestamp nano_duration)
+bool Waitable::wait_for(Timestamp nano_duration)
 {
     if (nano_duration <= 0)
         return true;
@@ -72,7 +72,7 @@ bool    Waitable::wait_for(Timestamp nano_duration)
     return _condition.wait_for(lock, std::chrono::nanoseconds(nano_duration)) == std::cv_status::timeout;
 }
 
-bool    Waitable::wait_for_loop(Timestamp nano_duration, uint32_t times)
+bool Waitable::wait_for_loop(Timestamp nano_duration, uint32_t times)
 {
     if (nano_duration <= 0)
         return true;
@@ -96,7 +96,7 @@ bool    Waitable::wait_for_loop(Timestamp nano_duration, uint32_t times)
     return timedout;
 }
 
-time_t  Waitable::wait_for_elapsed(Timestamp nano_duration)
+time_t Waitable::wait_for_elapsed(Timestamp nano_duration)
 {
     if (nano_duration <= 0)
         return 0;
@@ -106,4 +106,4 @@ time_t  Waitable::wait_for_elapsed(Timestamp nano_duration)
     return clock.now() - before;
 }
 
-}
+} // namespace sihd::util

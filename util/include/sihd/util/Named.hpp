@@ -1,8 +1,8 @@
 #ifndef __SIHD_UTIL_NAMED_HPP__
-# define __SIHD_UTIL_NAMED_HPP__
+#define __SIHD_UTIL_NAMED_HPP__
 
-# include <string>
-# include <string_view>
+#include <string>
+#include <string_view>
 
 namespace sihd::util
 {
@@ -23,10 +23,7 @@ class Named
         const std::string & name() const;
         std::string full_name() const;
         std::string class_name() const;
-        virtual std::string description() const
-        {
-            return "";
-        };
+        virtual std::string description() const { return ""; };
 
         Node *parent() const;
         const Node *cparent() const;
@@ -74,9 +71,8 @@ class Named
     private:
         Node *_parent_ptr;
         std::string _name;
-
 };
 
-}
+} // namespace sihd::util
 
 #endif

@@ -1,23 +1,23 @@
 #ifndef __SIHD_PCAP_SNIFFER_HPP__
-# define __SIHD_PCAP_SNIFFER_HPP__
+#define __SIHD_PCAP_SNIFFER_HPP__
 
-# include <sihd/util/Node.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/IStoppableRunnable.hpp>
-# include <sihd/util/Observable.hpp>
-# include <sihd/util/Array.hpp>
-# include <sihd/util/IReader.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/IReader.hpp>
+#include <sihd/util/IStoppableRunnable.hpp>
+#include <sihd/util/Node.hpp>
+#include <sihd/util/Observable.hpp>
 
-# include <sihd/pcap/utils.hpp>
+#include <sihd/pcap/utils.hpp>
 
 namespace sihd::pcap
 {
 
-class Sniffer:  public sihd::util::Named,
-                public sihd::util::Configurable,
-                public sihd::util::IReaderTimestamp,
-                public sihd::util::IStoppableRunnable,
-                public sihd::util::Observable<Sniffer>
+class Sniffer: public sihd::util::Named,
+               public sihd::util::Configurable,
+               public sihd::util::IReaderTimestamp,
+               public sihd::util::IStoppableRunnable,
+               public sihd::util::Observable<Sniffer>
 {
     public:
         Sniffer(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -42,7 +42,7 @@ class Sniffer:  public sihd::util::Named,
         void new_packet(const struct pcap_pkthdr *h, const u_char *bytes);
         // get datas
         bool get_read_data(sihd::util::ArrCharView & view) const;
-		bool read_timestamp(time_t *nano_timestamp) const;
+        bool read_timestamp(time_t *nano_timestamp) const;
         const sihd::util::ArrByte & data() const;
 
         // maximum pkts to sniff before stopping
@@ -108,6 +108,6 @@ class Sniffer:  public sihd::util::Named,
         sihd::util::ArrByte _array;
 };
 
-}
+} // namespace sihd::pcap
 
 #endif

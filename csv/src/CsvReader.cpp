@@ -11,8 +11,7 @@ SIHD_UTIL_REGISTER_FACTORY(CsvReader)
 
 SIHD_NEW_LOGGER("sihd::csv");
 
-CsvReader::CsvReader(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent)
+CsvReader::CsvReader(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
 {
     _line_size = 0;
     _line_ptr = nullptr;
@@ -30,7 +29,7 @@ CsvReader::~CsvReader()
     this->_free_line();
 }
 
-bool    CsvReader::set_quote_value(int c)
+bool CsvReader::set_quote_value(int c)
 {
     if (sihd::util::str::closing_escape_of(c) < 0)
     {
@@ -42,7 +41,7 @@ bool    CsvReader::set_quote_value(int c)
     return true;
 }
 
-bool    CsvReader::set_delimiter(int c)
+bool CsvReader::set_delimiter(int c)
 {
     if (std::isprint(c) == 0)
     {
@@ -53,7 +52,7 @@ bool    CsvReader::set_delimiter(int c)
     return true;
 }
 
-bool    CsvReader::set_commentary(int c)
+bool CsvReader::set_commentary(int c)
 {
     if (std::isprint(c))
     {
@@ -64,22 +63,22 @@ bool    CsvReader::set_commentary(int c)
     return false;
 }
 
-bool    CsvReader::open(std::string_view path)
+bool CsvReader::open(std::string_view path)
 {
     return _file.open(path, "r");
 }
 
-bool    CsvReader::is_open() const
+bool CsvReader::is_open() const
 {
     return _file.is_open();
 }
 
-bool    CsvReader::close()
+bool CsvReader::close()
 {
     return _file.close();
 }
 
-void    CsvReader::_free_line()
+void CsvReader::_free_line()
 {
     if (_line_ptr != nullptr)
     {
@@ -89,7 +88,7 @@ void    CsvReader::_free_line()
     }
 }
 
-bool    CsvReader::read_next()
+bool CsvReader::read_next()
 {
     if (_file.eof())
         return false;
@@ -99,7 +98,7 @@ bool    CsvReader::read_next()
         if (_line_ptr[0] != _comment && _line_ptr[0] != '\n')
         {
             _line_ptr[ret - 1] = 0;
-            break ;
+            break;
         }
     }
     // ret < 0 can mean an end of file
@@ -108,7 +107,7 @@ bool    CsvReader::read_next()
     return ret >= 0;
 }
 
-bool    CsvReader::get_read_data(sihd::util::ArrCharView & view) const
+bool CsvReader::get_read_data(sihd::util::ArrCharView & view) const
 {
     if (_line_ptr == nullptr)
         return false;
@@ -116,7 +115,7 @@ bool    CsvReader::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-bool    CsvReader::read_timestamp(time_t *nano_timestamp) const
+bool CsvReader::read_timestamp(time_t *nano_timestamp) const
 {
     if (_line_ptr == nullptr)
         return false;
@@ -125,7 +124,7 @@ bool    CsvReader::read_timestamp(time_t *nano_timestamp) const
     return sihd::util::str::to_long(str, (long *)nano_timestamp);
 }
 
-bool    CsvReader::get_read_data(std::vector<std::string> & values) const
+bool CsvReader::get_read_data(std::vector<std::string> & values) const
 {
     if (_line_ptr == nullptr)
         return false;
@@ -133,6 +132,4 @@ bool    CsvReader::get_read_data(std::vector<std::string> & values) const
     return true;
 }
 
-
-
-}
+} // namespace sihd::csv

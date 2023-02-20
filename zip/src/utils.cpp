@@ -17,4 +17,4 @@ std::string get_error(zip_t *ptr)
     return zip_strerror(ptr);
 }
 
-}
+} // namespace sihd::zip::utils

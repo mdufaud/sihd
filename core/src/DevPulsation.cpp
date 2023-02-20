@@ -3,8 +3,8 @@
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Task.hpp>
 
-# define CHANNEL_HEART "heartbeat"
-# define CHANNEL_ACTIVATE "activate"
+#define CHANNEL_HEART "heartbeat"
+#define CHANNEL_ACTIVATE "activate"
 
 namespace sihd::core
 {
@@ -32,12 +32,12 @@ DevPulsation::~DevPulsation()
     _scheduler.stop();
 }
 
-bool    DevPulsation::is_running() const
+bool DevPulsation::is_running() const
 {
     return _running;
 }
 
-bool    DevPulsation::set_frequency(double freq)
+bool DevPulsation::set_frequency(double freq)
 {
     if (freq < 0)
     {
@@ -48,7 +48,7 @@ bool    DevPulsation::set_frequency(double freq)
     return true;
 }
 
-void    DevPulsation::handle(sihd::core::Channel *c)
+void DevPulsation::handle(sihd::core::Channel *c)
 {
     if (c == _channel_activate_ptr)
     {
@@ -59,7 +59,7 @@ void    DevPulsation::handle(sihd::core::Channel *c)
     }
 }
 
-bool    DevPulsation::run()
+bool DevPulsation::run()
 {
     {
         std::lock_guard l(_mutex);
@@ -71,14 +71,14 @@ bool    DevPulsation::run()
     return true;
 }
 
-bool    DevPulsation::on_init()
+bool DevPulsation::on_init()
 {
     this->add_unlinked_channel(CHANNEL_HEART, sihd::util::TYPE_UINT, 1);
     this->add_unlinked_channel(CHANNEL_ACTIVATE, sihd::util::TYPE_BOOL, 1);
     return true;
 }
 
-bool    DevPulsation::on_start()
+bool DevPulsation::on_start()
 {
     if (_frequency == 0)
     {
@@ -103,7 +103,7 @@ bool    DevPulsation::on_start()
     return true;
 }
 
-bool    DevPulsation::on_stop()
+bool DevPulsation::on_stop()
 {
     {
         std::lock_guard l(_mutex);
@@ -117,10 +117,10 @@ bool    DevPulsation::on_stop()
     return true;
 }
 
-bool    DevPulsation::on_reset()
+bool DevPulsation::on_reset()
 {
     _scheduler.clear_tasks();
     return true;
 }
 
-}
+} // namespace sihd::core

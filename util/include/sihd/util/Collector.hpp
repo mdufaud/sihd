@@ -1,18 +1,18 @@
 #ifndef __SIHD_UTIL_COLLECTOR_HPP__
-# define __SIHD_UTIL_COLLECTOR_HPP__
+#define __SIHD_UTIL_COLLECTOR_HPP__
 
-# include <sihd/util/IProvider.hpp>
-# include <sihd/util/IStoppableRunnable.hpp>
-# include <sihd/util/Observable.hpp>
+#include <sihd/util/IProvider.hpp>
+#include <sihd/util/IStoppableRunnable.hpp>
+#include <sihd/util/Observable.hpp>
 
-# include <atomic>
+#include <atomic>
 
 namespace sihd::util
 {
 
 template <typename T>
-class Collector:    public IStoppableRunnable,
-                    public Observable<Collector<T>>
+class Collector: public IStoppableRunnable,
+                 public Observable<Collector<T>>
 {
     public:
         Collector(IProvider<T> *provider = nullptr, time_t milliseconds_timeout = 1):
@@ -22,10 +22,7 @@ class Collector:    public IStoppableRunnable,
             this->set_timeout_milliseconds(milliseconds_timeout);
         }
 
-        virtual ~Collector()
-        {
-            this->stop();
-        }
+        virtual ~Collector() { this->stop(); }
 
         bool run()
         {
@@ -42,10 +39,7 @@ class Collector:    public IStoppableRunnable,
             return true;
         }
 
-        bool is_running() const
-        {
-            return _running;
-        }
+        bool is_running() const { return _running; }
 
         bool stop()
         {
@@ -90,6 +84,6 @@ class Collector:    public IStoppableRunnable,
         Waitable _waitable;
 };
 
-}
+} // namespace sihd::util
 
 #endif

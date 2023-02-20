@@ -1,17 +1,17 @@
 #ifndef __SIHD_CSV_CSVWRITER_HPP__
-# define __SIHD_CSV_CSVWRITER_HPP__
+#define __SIHD_CSV_CSVWRITER_HPP__
 
-# include <sihd/util/Named.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/IWriter.hpp>
-# include <sihd/util/File.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/File.hpp>
+#include <sihd/util/IWriter.hpp>
+#include <sihd/util/Named.hpp>
 
 namespace sihd::csv
 {
 
-class CsvWriter:    public sihd::util::Named,
-                    public sihd::util::Configurable,
-                    public sihd::util::IWriterTimestamp
+class CsvWriter: public sihd::util::Named,
+                 public sihd::util::Configurable,
+                 public sihd::util::IWriterTimestamp
 {
     public:
         CsvWriter(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -29,8 +29,8 @@ class CsvWriter:    public sihd::util::Named,
         ssize_t write_commentary(std::string_view commentary);
 
         // IWriterTimestamp
-		ssize_t write(sihd::util::ArrCharView view);
-		ssize_t write(sihd::util::ArrCharView view, sihd::util::Timestamp timestamp);
+        ssize_t write(sihd::util::ArrCharView view);
+        ssize_t write(sihd::util::ArrCharView view, sihd::util::Timestamp timestamp);
 
         ssize_t write(const std::vector<std::string> & values);
         ssize_t write(const std::vector<std::string> & values, sihd::util::Timestamp timestamp);
@@ -63,6 +63,6 @@ class CsvWriter:    public sihd::util::Named,
         sihd::util::File _file;
 };
 
-}
+} // namespace sihd::csv
 
 #endif

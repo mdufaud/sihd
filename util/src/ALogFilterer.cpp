@@ -1,24 +1,22 @@
-#include <sihd/util/ALogFilterer.hpp>
 #include <algorithm>
+#include <sihd/util/ALogFilterer.hpp>
 
 namespace sihd::util
 {
 
-ALogFilterer::ALogFilterer()
-{
-}
+ALogFilterer::ALogFilterer() {}
 
 ALogFilterer::~ALogFilterer()
 {
     this->delete_filters();
 }
 
-bool    ALogFilterer::has_filter(ILoggerFilter *filter)
+bool ALogFilterer::has_filter(ILoggerFilter *filter)
 {
     return std::find(_filters_lst.begin(), _filters_lst.end(), filter) != _filters_lst.end();
 }
 
-bool    ALogFilterer::add_filter(ILoggerFilter *filter)
+bool ALogFilterer::add_filter(ILoggerFilter *filter)
 {
     bool has = this->has_filter(filter);
     if (!has)
@@ -26,7 +24,7 @@ bool    ALogFilterer::add_filter(ILoggerFilter *filter)
     return !has;
 }
 
-bool    ALogFilterer::remove_filter(ILoggerFilter *filter)
+bool ALogFilterer::remove_filter(ILoggerFilter *filter)
 {
     auto it = this->_find(filter);
     if (it != _filters_lst.end())
@@ -36,7 +34,7 @@ bool    ALogFilterer::remove_filter(ILoggerFilter *filter)
     return it != _filters_lst.end();
 }
 
-void    ALogFilterer::delete_filters()
+void ALogFilterer::delete_filters()
 {
     for (ILoggerFilter *filter : _filters_lst)
     {
@@ -45,7 +43,7 @@ void    ALogFilterer::delete_filters()
     _filters_lst.clear();
 }
 
-bool    ALogFilterer::should_filter(const LogInfo & info, std::string_view msg)
+bool ALogFilterer::should_filter(const LogInfo & info, std::string_view msg)
 {
     for (ILoggerFilter *filter : _filters_lst)
     {
@@ -55,9 +53,9 @@ bool    ALogFilterer::should_filter(const LogInfo & info, std::string_view msg)
     return false;
 }
 
-std::list<ILoggerFilter *>::iterator  ALogFilterer::_find(ILoggerFilter *filter)
+std::list<ILoggerFilter *>::iterator ALogFilterer::_find(ILoggerFilter *filter)
 {
     return std::find(_filters_lst.begin(), _filters_lst.end(), filter);
 }
 
-}
+} // namespace sihd::util

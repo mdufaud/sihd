@@ -1,14 +1,14 @@
 // sterror errno
-#include <cstring>
 #include <cerrno>
+#include <cstring>
 
-#include <sihd/util/Poll.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Poll.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 // getrlimit
-# include <sys/time.h>
 # include <sys/resource.h>
+# include <sys/time.h>
 #endif
 
 namespace sihd::util
@@ -33,7 +33,7 @@ Poll::~Poll()
     std::lock_guard lock(_run_mutex);
 }
 
-void    Poll::_init()
+void Poll::_init()
 {
     _running = false;
     _timeout_milliseconds = -1; // infinite block
@@ -43,7 +43,7 @@ void    Poll::_init()
     _error = false;
 }
 
-int     Poll::_get_or_add_fd(int fd)
+int Poll::_get_or_add_fd(int fd)
 {
     if (fd < 0)
         return -1;
@@ -58,7 +58,7 @@ int     Poll::_get_or_add_fd(int fd)
         if ((int)_lst_fds[i].fd == fd)
         {
             idx = i;
-            break ;
+            break;
         }
         // take first free fd
         if (idx < 0 && (int)_lst_fds[i].fd == -1)
@@ -78,7 +78,7 @@ int     Poll::_get_or_add_fd(int fd)
     return idx;
 }
 
-int    Poll::_get_fd_index(int fd)
+int Poll::_get_fd_index(int fd)
 {
     if (fd < 0)
         return -1;
@@ -92,10 +92,10 @@ int    Poll::_get_fd_index(int fd)
     return -1;
 }
 
-void    Poll::resize(int nfds)
+void Poll::resize(int nfds)
 {
     if (nfds < 0)
-        return ;
+        return;
     std::lock_guard lock(_fds_mutex);
     _lst_fds.resize(nfds);
     _lst_events.reserve(nfds);
@@ -109,7 +109,7 @@ void    Poll::resize(int nfds)
     }
 }
 
-bool    Poll::set_limit(int limit)
+bool Poll::set_limit(int limit)
 {
     if (limit < 0)
         _max_fds = os::max_fds();
@@ -118,13 +118,13 @@ bool    Poll::set_limit(int limit)
     return true;
 }
 
-void    Poll::clear_fds()
+void Poll::clear_fds()
 {
     std::lock_guard lock(_fds_mutex);
     _lst_fds.clear();
 }
 
-bool    Poll::clear_fd(int fd)
+bool Poll::clear_fd(int fd)
 {
     std::lock_guard lock(_fds_mutex);
     int idx = this->_get_fd_index(fd);
@@ -137,7 +137,7 @@ bool    Poll::clear_fd(int fd)
     return idx >= 0;
 }
 
-size_t  Poll::read_fds_size()
+size_t Poll::read_fds_size()
 {
     std::lock_guard lock(_fds_mutex);
     size_t ret = 0;
@@ -150,7 +150,7 @@ size_t  Poll::read_fds_size()
     return ret;
 }
 
-size_t  Poll::write_fds_size()
+size_t Poll::write_fds_size()
 {
     std::lock_guard lock(_fds_mutex);
     size_t ret = 0;
@@ -163,7 +163,7 @@ size_t  Poll::write_fds_size()
     return ret;
 }
 
-bool    Poll::set_read_fd(int fd)
+bool Poll::set_read_fd(int fd)
 {
     int idx = this->_get_or_add_fd(fd);
     if (idx >= 0)
@@ -174,7 +174,7 @@ bool    Poll::set_read_fd(int fd)
     return idx >= 0;
 }
 
-bool    Poll::set_write_fd(int fd)
+bool Poll::set_write_fd(int fd)
 {
     int idx = this->_get_or_add_fd(fd);
     if (idx >= 0)
@@ -185,7 +185,7 @@ bool    Poll::set_write_fd(int fd)
     return idx >= 0;
 }
 
-bool    Poll::remove_read_fd(int fd)
+bool Poll::remove_read_fd(int fd)
 {
     int idx = this->_get_or_add_fd(fd);
     if (idx >= 0)
@@ -195,7 +195,7 @@ bool    Poll::remove_read_fd(int fd)
     return idx >= 0;
 }
 
-bool    Poll::remove_write_fd(int fd)
+bool Poll::remove_write_fd(int fd)
 {
     int idx = this->_get_or_add_fd(fd);
     if (idx >= 0)
@@ -205,24 +205,24 @@ bool    Poll::remove_write_fd(int fd)
     return idx >= 0;
 }
 
-void    Poll::set_timeout(int milliseconds)
+void Poll::set_timeout(int milliseconds)
 {
     _timeout_milliseconds = milliseconds;
 }
 
-void    Poll::wait_stop()
+void Poll::wait_stop()
 {
     _running = false;
     std::lock_guard lock(_run_mutex);
 }
 
-bool    Poll::stop()
+bool Poll::stop()
 {
     _running = false;
     return true;
 }
 
-bool    Poll::run()
+bool Poll::run()
 {
     if (_running)
         return false;
@@ -239,7 +239,7 @@ bool    Poll::run()
     return ret >= 0;
 }
 
-int     Poll::poll(int milliseconds_timeout)
+int Poll::poll(int milliseconds_timeout)
 {
     time_t before = _clock.now();
     int ret;
@@ -256,7 +256,7 @@ int     Poll::poll(int milliseconds_timeout)
     return ret;
 }
 
-void    Poll::_process(int poll_return)
+void Poll::_process(int poll_return)
 {
     _lst_events.clear();
     _timedout = poll_return == 0;
@@ -288,4 +288,4 @@ void    Poll::_process(int poll_return)
     this->notify_observers(this);
 }
 
-}
+} // namespace sihd::util

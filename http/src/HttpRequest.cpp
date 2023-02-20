@@ -29,7 +29,7 @@ std::string HttpRequest::type_str(HttpRequest::RequestType type)
     }
 }
 
-HttpRequest::RequestType    HttpRequest::type_from_str(std::string_view type)
+HttpRequest::RequestType HttpRequest::type_from_str(std::string_view type)
 {
     if (str::iequals(type, "get"))
         return GET;
@@ -54,16 +54,14 @@ HttpRequest::HttpRequest(std::string_view url, const std::vector<std::string> & 
     _uri_args_lst = uri_args;
 }
 
-HttpRequest::~HttpRequest()
-{
-}
+HttpRequest::~HttpRequest() {}
 
-void    HttpRequest::set_content(sihd::util::ArrCharView data)
+void HttpRequest::set_content(sihd::util::ArrCharView data)
 {
     _array.from_bytes(data);
 }
 
-nlohmann::json  HttpRequest::content_as_json() const
+nlohmann::json HttpRequest::content_as_json() const
 {
     if (!_array)
         return {};
@@ -75,9 +73,9 @@ std::string HttpRequest::type_str() const
     return HttpRequest::type_str(_request_type);
 }
 
-bool    HttpRequest::has_content() const
+bool HttpRequest::has_content() const
 {
     return _array;
 }
 
-}
+} // namespace sihd::http

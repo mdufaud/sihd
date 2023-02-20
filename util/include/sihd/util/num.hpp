@@ -1,10 +1,10 @@
 #ifndef __SIHD_UTIL_NUM_HPP__
-# define __SIHD_UTIL_NUM_HPP__
+#define __SIHD_UTIL_NUM_HPP__
 
-# include <sys/types.h>
+#include <sys/types.h>
 
-# include <cstdint>
-# include <limits>
+#include <cstdint>
+#include <limits>
 
 namespace sihd::util::num
 {
@@ -15,6 +15,6 @@ double drand(double from = 0.0, double to = 1.0);
 
 size_t size(uint64_t number, uint16_t base);
 
-}
+} // namespace sihd::util::num
 
 #endif

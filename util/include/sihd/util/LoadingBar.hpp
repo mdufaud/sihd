@@ -1,8 +1,8 @@
 #ifndef __SIHD_UTIL_LOADINGBAR_HPP__
-# define __SIHD_UTIL_LOADINGBAR_HPP__
+#define __SIHD_UTIL_LOADINGBAR_HPP__
 
-# include <cstdio>
-# include <string>
+#include <cstdio>
+#include <string>
 
 namespace sihd::util
 {
@@ -53,6 +53,6 @@ class LoadingBar
         InternalPercentPos _percent_pos;
 };
 
-}
+} // namespace sihd::util
 
 #endif

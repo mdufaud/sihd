@@ -1,62 +1,46 @@
 #ifndef __SIHD_UTIL_HANDLER_HPP__
-# define __SIHD_UTIL_HANDLER_HPP__
+#define __SIHD_UTIL_HANDLER_HPP__
 
-# include <functional>
+#include <functional>
 
-# include <sihd/util/IHandler.hpp>
+#include <sihd/util/IHandler.hpp>
 
 namespace sihd::util
 {
 
-template <typename ...T>
+template <typename... T>
 class Handler: public IHandler<T...>
 {
     public:
-        Handler(std::function<void(T...)> fun)
-        {
-            _handle_fun = std::move(fun);
-        }
+        Handler(std::function<void(T...)> fun) { _handle_fun = std::move(fun); }
 
         template <typename C>
-        Handler(C* obj, void (C::*fun)(T...))
+        Handler(C *obj, void (C::*fun)(T...))
         {
             this->set_method(obj, fun);
         }
 
-        Handler(IHandler<T...> *handler_ptr)
-        {
-            this->set_handler(handler_ptr);
-        }
+        Handler(IHandler<T...> *handler_ptr) { this->set_handler(handler_ptr); }
 
-        Handler()
-        {
-        }
+        Handler() {}
 
         virtual ~Handler() {};
 
-        void operator()(T... args)
-        {
-            this->handle(args...);
-        };
+        void operator()(T... args) { this->handle(args...); };
 
         void set_handler(IHandler<T...> *handler_ptr)
         {
-            _handle_fun = [handler_ptr] (T... args)
-            {
+            _handle_fun = [handler_ptr](T... args) {
                 handler_ptr->handle(args...);
             };
         }
 
-        void set_method(std::function<void(T...)> fun)
-        {
-            _handle_fun = std::move(fun);
-        }
+        void set_method(std::function<void(T...)> fun) { _handle_fun = std::move(fun); }
 
         template <typename C>
-        void set_method(C* obj, void (C::*fun)(T...))
+        void set_method(C *obj, void (C::*fun)(T...))
         {
-            _handle_fun = [obj, fun] (T... args)
-            {
+            _handle_fun = [obj, fun](T... args) {
                 (obj->*fun)(args...);
             };
         }
@@ -67,10 +51,7 @@ class Handler: public IHandler<T...>
                 _handle_fun(args...);
         }
 
-        bool has_method() const
-        {
-            return _handle_fun ? true : false;
-        }
+        bool has_method() const { return _handle_fun ? true : false; }
 
     protected:
 
@@ -78,6 +59,6 @@ class Handler: public IHandler<T...>
         std::function<void(T...)> _handle_fun;
 };
 
-}
+} // namespace sihd::util
 
 #endif

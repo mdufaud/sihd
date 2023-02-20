@@ -9,15 +9,11 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-ConsoleLogger::ConsoleLogger()
-{
-}
+ConsoleLogger::ConsoleLogger() {}
 
-ConsoleLogger::~ConsoleLogger()
-{
-}
+ConsoleLogger::~ConsoleLogger() {}
 
-void    ConsoleLogger::log(const LogInfo & info, std::string_view msg)
+void ConsoleLogger::log(const LogInfo & info, std::string_view msg)
 {
     const char *beg;
     const char *level;
@@ -28,41 +24,48 @@ void    ConsoleLogger::log(const LogInfo & info, std::string_view msg)
         case LogLevel::emergency:
             beg = term::attr::VIOLET;
             level = "EMER";
-            break ;
+            break;
         case LogLevel::alert:
             beg = term::attr::VIOLET;
             level = "A";
-            break ;
+            break;
         case LogLevel::critical:
             beg = term::attr::VIOLET2;
             level = "C";
-            break ;
+            break;
         case LogLevel::error:
             beg = term::attr::RED2;
             level = "E";
-            break ;
+            break;
         case LogLevel::warning:
             beg = term::attr::YELLOW;
             level = "W";
-            break ;
+            break;
         case LogLevel::notice:
             beg = term::attr::CYAN;
             level = "N";
-            break ;
+            break;
         case LogLevel::info:
             beg = term::attr::GREEN;
             level = "I";
-            break ;
+            break;
         case LogLevel::debug:
             beg = term::attr::GREY;
             level = "D";
-            break ;
+            break;
         default:
             level = "-";
             beg = term::attr::WHITE;
     }
 
-    fmt::fprintf(stderr, "%s%s [%s] <%s> %s%s\n", beg, level, info.thread_name.data(), info.source.data(), msg.data(), end);
+    fmt::fprintf(stderr,
+                 "%s%s [%s] <%s> %s%s\n",
+                 beg,
+                 level,
+                 info.thread_name.data(),
+                 info.source.data(),
+                 msg.data(),
+                 end);
 }
 
-}
+} // namespace sihd::util

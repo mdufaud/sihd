@@ -1,9 +1,9 @@
 #ifndef __SIHD_UTIL_LOCKABLE_HPP__
-# define __SIHD_UTIL_LOCKABLE_HPP__
+#define __SIHD_UTIL_LOCKABLE_HPP__
 
-# include <mutex>
+#include <mutex>
 
-# include <sihd/util/Clocks.hpp>
+#include <sihd/util/Clocks.hpp>
 
 namespace sihd::util
 {
@@ -31,6 +31,6 @@ class Lockable
         std::unique_lock<std::timed_mutex> _unique_lock;
 };
 
-}
+} // namespace sihd::util
 
 #endif

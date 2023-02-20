@@ -1,11 +1,11 @@
 #ifndef __SIHD_PY_PYAPI_HPP__
-# define __SIHD_PY_PYAPI_HPP__
+#define __SIHD_PY_PYAPI_HPP__
 
-# include <pybind11/pybind11.h>
-# include <map>
-# include <string_view>
-# include <functional>
-# include <vector>
+#include <functional>
+#include <map>
+#include <pybind11/pybind11.h>
+#include <string_view>
+#include <vector>
 
 namespace sihd::py
 {
@@ -13,10 +13,10 @@ namespace sihd::py
 class PyApi
 {
     public:
-        class __attribute__ ((visibility("hidden"))) PyModule
+        class __attribute__((visibility("hidden"))) PyModule
         {
             public:
-                PyModule(pybind11::module_* module);
+                PyModule(pybind11::module_ *module);
                 ~PyModule();
 
                 bool load(std::string_view submodule_name);
@@ -35,16 +35,15 @@ class PyApi
         static void set_api_to_module(pybind11::module_ &);
 
         // api to be added before main()
-        static void add_api(std::string_view name, std::function<void (PyModule &)> f);
+        static void add_api(std::string_view name, std::function<void(PyModule &)> f);
 
     protected:
-        static std::map<std::string_view, std::function<void (PyModule &)>> api_lst;
+        static std::map<std::string_view, std::function<void(PyModule &)>> api_lst;
 
     private:
         virtual ~PyApi() {};
-
 };
 
-}
+} // namespace sihd::py
 
 #endif

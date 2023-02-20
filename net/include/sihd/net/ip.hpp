@@ -1,5 +1,5 @@
 #ifndef __SIHD_NET_IP_HPP__
-# define __SIHD_NET_IP_HPP__
+#define __SIHD_NET_IP_HPP__
 
 #include <string_view>
 
@@ -13,6 +13,6 @@ int protocol(std::string_view name);
 int domain(std::string_view name);
 int socktype(std::string_view name);
 
-}
+} // namespace sihd::net::ip
 
 #endif

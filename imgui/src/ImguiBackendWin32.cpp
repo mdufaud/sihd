@@ -7,7 +7,8 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 // Win32 message handler
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    sihd::imgui::ImguiBackendWin32 *backend_ptr = (sihd::imgui::ImguiBackendWin32 *)GetWindowLongPtr(hWnd, GWLP_USERDATA);
+    sihd::imgui::ImguiBackendWin32 *backend_ptr
+        = (sihd::imgui::ImguiBackendWin32 *)GetWindowLongPtr(hWnd, GWLP_USERDATA);
     if (backend_ptr != nullptr)
         return backend_ptr->handle_win32_msg_handler(hWnd, msg, wParam, lParam);
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
@@ -18,9 +19,7 @@ namespace sihd::imgui
 
 SIHD_LOGGER;
 
-ImguiBackendWin32::ImguiBackendWin32(): _is_init(false), _window(nullptr), _imgui_renderer_ptr(nullptr)
-{
-}
+ImguiBackendWin32::ImguiBackendWin32(): _is_init(false), _window(nullptr), _imgui_renderer_ptr(nullptr) {}
 
 ImguiBackendWin32::~ImguiBackendWin32()
 {
@@ -28,7 +27,7 @@ ImguiBackendWin32::~ImguiBackendWin32()
     this->terminate();
 }
 
-bool    ImguiBackendWin32::init_window(const std::string & name, size_t width, size_t height)
+bool ImguiBackendWin32::init_window(const std::string & name, size_t width, size_t height)
 {
     if (_window != nullptr)
     {
@@ -50,10 +49,18 @@ bool    ImguiBackendWin32::init_window(const std::string & name, size_t width, s
     _win_cls.lpszClassName = _T("sihd-imgui-backend-win32");
     _win_cls.hIconSm = NULL;
     ::RegisterClassEx(&_win_cls);
-    _window = ::CreateWindow(_win_cls.lpszClassName, _T(name.c_str()), WS_OVERLAPPEDWINDOW,
-                                // x - y - width - height
-                                100, 100, width, height,
-                                NULL, NULL, _win_cls.hInstance, this);
+    _window = ::CreateWindow(_win_cls.lpszClassName,
+                             _T(name.c_str()),
+                             WS_OVERLAPPEDWINDOW,
+                             // x - y - width - height
+                             100,
+                             100,
+                             width,
+                             height,
+                             NULL,
+                             NULL,
+                             _win_cls.hInstance,
+                             this);
     if (_window != nullptr)
     {
         ::SetWindowLongPtr(_window, GWLP_USERDATA, (LONG_PTR)this);
@@ -64,7 +71,7 @@ bool    ImguiBackendWin32::init_window(const std::string & name, size_t width, s
     return _window != nullptr;
 }
 
-bool    ImguiBackendWin32::init_backend()
+bool ImguiBackendWin32::init_backend()
 {
     if (_window == nullptr)
     {
@@ -79,7 +86,7 @@ bool    ImguiBackendWin32::init_backend()
     return _is_init;
 }
 
-void    ImguiBackendWin32::set_resize_renderer(IImguiRenderer *renderer)
+void ImguiBackendWin32::set_resize_renderer(IImguiRenderer *renderer)
 {
     _imgui_renderer_ptr = renderer;
 }
@@ -97,7 +104,7 @@ LRESULT ImguiBackendWin32::handle_win32_msg_handler(HWND hWnd, UINT msg, WPARAM 
         case WM_SYSCOMMAND:
             if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
                 return 0;
-            break ;
+            break;
         case WM_DESTROY:
             ::PostQuitMessage(0);
             return 0;
@@ -105,12 +112,12 @@ LRESULT ImguiBackendWin32::handle_win32_msg_handler(HWND hWnd, UINT msg, WPARAM 
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-void    ImguiBackendWin32::new_frame()
+void ImguiBackendWin32::new_frame()
 {
     ImGui_ImplWin32_NewFrame();
 }
 
-void    ImguiBackendWin32::poll()
+void ImguiBackendWin32::poll()
 {
     MSG msg;
     while (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
@@ -122,20 +129,16 @@ void    ImguiBackendWin32::poll()
     }
 }
 
-bool    ImguiBackendWin32::should_close()
+bool ImguiBackendWin32::should_close()
 {
     return _close;
 }
 
-void    ImguiBackendWin32::pre_render()
-{
-}
+void ImguiBackendWin32::pre_render() {}
 
-void    ImguiBackendWin32::post_render()
-{
-}
+void ImguiBackendWin32::post_render() {}
 
-void    ImguiBackendWin32::shutdown()
+void ImguiBackendWin32::shutdown()
 {
     if (_is_init)
     {
@@ -144,7 +147,7 @@ void    ImguiBackendWin32::shutdown()
     }
 }
 
-void    ImguiBackendWin32::terminate()
+void ImguiBackendWin32::terminate()
 {
     if (_window != nullptr)
     {
@@ -154,4 +157,4 @@ void    ImguiBackendWin32::terminate()
     }
 }
 
-}
+} // namespace sihd::imgui

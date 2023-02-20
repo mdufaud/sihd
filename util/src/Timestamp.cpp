@@ -1,14 +1,12 @@
-#include <sihd/util/Timestamp.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/str.hpp>
 #include <sihd/util/Clocks.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Timestamp.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::util
 {
 
-Timestamp::Timestamp(time_t nano): _nano(nano)
-{
-}
+Timestamp::Timestamp(time_t nano): _nano(nano) {}
 
 Timestamp::Timestamp(Clocktime clocktime)
 {
@@ -45,65 +43,51 @@ Timestamp::Timestamp(Calendar calendar, Clocktime clocktime)
     _nano = time::seconds(mktime(&tm));
 }
 
-Timestamp::Timestamp(std::chrono::nanoseconds duration): _nano(duration.count())
-{
-}
+Timestamp::Timestamp(std::chrono::nanoseconds duration): _nano(duration.count()) {}
 
-Timestamp::Timestamp(std::chrono::microseconds duration): _nano(time::duration<std::micro>(duration))
-{
-}
+Timestamp::Timestamp(std::chrono::microseconds duration): _nano(time::duration<std::micro>(duration)) {}
 
-Timestamp::Timestamp(std::chrono::milliseconds duration): _nano(time::duration<std::milli>(duration))
-{
-}
+Timestamp::Timestamp(std::chrono::milliseconds duration): _nano(time::duration<std::milli>(duration)) {}
 
-Timestamp::Timestamp(std::chrono::seconds duration): _nano(time::duration<std::ratio<1>>(duration))
-{
-}
+Timestamp::Timestamp(std::chrono::seconds duration): _nano(time::duration<std::ratio<1>>(duration)) {}
 
-Timestamp::Timestamp(std::chrono::minutes duration): _nano(time::duration<std::ratio<60>>(duration))
-{
-}
+Timestamp::Timestamp(std::chrono::minutes duration): _nano(time::duration<std::ratio<60>>(duration)) {}
 
-Timestamp::Timestamp(std::chrono::hours duration): _nano(time::duration<std::ratio<3600>>(duration))
-{
-}
+Timestamp::Timestamp(std::chrono::hours duration): _nano(time::duration<std::ratio<3600>>(duration)) {}
 
-Timestamp::~Timestamp()
-{
-}
+Timestamp::~Timestamp() {}
 
 Timestamp Timestamp::now()
 {
-  return Timestamp(Clock::default_clock.now());
+    return Timestamp(Clock::default_clock.now());
 }
 
-bool    Timestamp::in_interval(Timestamp from, Timestamp offset) const
+bool Timestamp::in_interval(Timestamp from, Timestamp offset) const
 {
     return _nano >= from.get() && _nano <= (from.get() + offset.get());
 }
 
-std::string     Timestamp::timeoffset_str(bool total_parenthesis, bool nano_resolution) const
+std::string Timestamp::timeoffset_str(bool total_parenthesis, bool nano_resolution) const
 {
     return str::timeoffset_str(_nano, total_parenthesis, nano_resolution);
 }
 
-std::string     Timestamp::localtimeoffset_str(bool total_parenthesis, bool nano_resolution) const
+std::string Timestamp::localtimeoffset_str(bool total_parenthesis, bool nano_resolution) const
 {
     return str::localtimeoffset_str(_nano, total_parenthesis, nano_resolution);
 }
 
-std::string     Timestamp::format(std::string_view fmt) const
+std::string Timestamp::format(std::string_view fmt) const
 {
     return str::format_time(std::abs(_nano), fmt);
 }
 
-std::string     Timestamp::local_format(std::string_view fmt) const
+std::string Timestamp::local_format(std::string_view fmt) const
 {
     return str::format_localtime(std::abs(_nano), fmt);
 }
 
-Clocktime   Timestamp::clocktime() const
+Clocktime Timestamp::clocktime() const
 {
     struct tm tm = time::to_tm(std::abs(_nano), false);
     return {
@@ -114,17 +98,13 @@ Clocktime   Timestamp::clocktime() const
     };
 }
 
-Calendar    Timestamp::calendar() const
+Calendar Timestamp::calendar() const
 {
     struct tm tm = time::to_tm(std::abs(_nano), false);
-    return {
-        .day = tm.tm_mday,
-        .month = tm.tm_mon + 1,
-        .year = tm.tm_year + 1900
-    };
+    return {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
 }
 
-Clocktime   Timestamp::local_clocktime() const
+Clocktime Timestamp::local_clocktime() const
 {
     struct tm tm = time::to_tm(std::abs(_nano), true);
     return {
@@ -135,27 +115,23 @@ Clocktime   Timestamp::local_clocktime() const
     };
 }
 
-Calendar    Timestamp::local_calendar() const
+Calendar Timestamp::local_calendar() const
 {
     struct tm tm = time::to_tm(std::abs(_nano), true);
-    return {
-        .day = tm.tm_mday,
-        .month = tm.tm_mon + 1,
-        .year = tm.tm_year + 1900
-    };
+    return {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
 }
 
-std::string     Clocktime::str() const
+std::string Clocktime::str() const
 {
     return fmt::sprintf("%02d:%02d:%02d:%d", hour, minute, second, millisecond);
 }
 
-std::string     Calendar::str() const
+std::string Calendar::str() const
 {
     return fmt::sprintf("%02d/%02d/%04d", day, month, year);
 }
 
-bool    Timestamp::is_leap_year() const
+bool Timestamp::is_leap_year() const
 {
     Calendar c = this->local_calendar();
     return time::is_leap_year(c.year);
@@ -196,38 +172,37 @@ Timestamp::operator std::chrono::hours() const
     return time::to_duration<std::ratio<3600>>(_nano);
 }
 
-
-time_t  Timestamp::nanoseconds() const
+time_t Timestamp::nanoseconds() const
 {
     return _nano;
 }
 
-time_t  Timestamp::microseconds() const
+time_t Timestamp::microseconds() const
 {
     return time::to_microseconds(_nano);
 }
 
-time_t  Timestamp::milliseconds() const
+time_t Timestamp::milliseconds() const
 {
     return time::to_milliseconds(_nano);
 }
 
-time_t  Timestamp::seconds() const
+time_t Timestamp::seconds() const
 {
     return time::to_seconds(_nano);
 }
 
-time_t  Timestamp::minutes() const
+time_t Timestamp::minutes() const
 {
     return time::to_minutes(_nano);
 }
 
-time_t  Timestamp::hours() const
+time_t Timestamp::hours() const
 {
     return time::to_hours(_nano);
 }
 
-time_t  Timestamp::days() const
+time_t Timestamp::days() const
 {
     return time::to_days(_nano);
 }
@@ -237,5 +212,4 @@ struct timeval Timestamp::tv() const
     return time::to_nano_tv(_nano);
 }
 
-
-}
+} // namespace sihd::util

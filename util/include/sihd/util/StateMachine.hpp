@@ -1,8 +1,8 @@
 #ifndef __SIHD_UTIL_STATEMACHINE_HPP__
-# define __SIHD_UTIL_STATEMACHINE_HPP__
+#define __SIHD_UTIL_STATEMACHINE_HPP__
 
-# include <map>
-# include <string>
+#include <map>
+#include <string>
 
 namespace sihd::util
 {
@@ -22,10 +22,7 @@ class StateMachine: public IStateMachine
         }
         virtual ~StateMachine() {};
 
-        void add_transition(STATE from, EVENT event, STATE into)
-        {
-            _transitions[from][event] = into;
-        }
+        void add_transition(STATE from, EVENT event, STATE into) { _transitions[from][event] = into; }
 
         bool transition(EVENT event)
         {
@@ -58,7 +55,10 @@ class StateMachine: public IStateMachine
         void set_state_name(STATE st, const std::string & name) { _states_name[st] = name; }
         void set_event_name(EVENT evt, const std::string & name) { _events_name[evt] = name; }
 
-        void set_transitions_map(const std::map<STATE, std::map<EVENT, STATE>> & transitions) { _transitions = transitions; }
+        void set_transitions_map(const std::map<STATE, std::map<EVENT, STATE>> & transitions)
+        {
+            _transitions = transitions;
+        }
         void set_states_names_map(const std::map<STATE, std::string> & states) { _states_name = states; }
         void set_events_names_map(const std::map<EVENT, std::string> & events) { _events_name = events; }
 
@@ -78,6 +78,6 @@ class StateMachine: public IStateMachine
         std::map<STATE, std::map<EVENT, STATE>> _transitions;
 };
 
-}
+} // namespace sihd::util
 
 #endif

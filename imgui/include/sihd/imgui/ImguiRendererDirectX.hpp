@@ -1,10 +1,10 @@
 #ifndef __SIHD_IMGUI_IMGUIRENDERERDIRECTX_HPP__
-# define __SIHD_IMGUI_IMGUIRENDERERDIRECTX_HPP__
+#define __SIHD_IMGUI_IMGUIRENDERERDIRECTX_HPP__
 
-# include <sihd/imgui/IImguiRenderer.hpp>
-# include <sihd/imgui/imgui_impl_dx11.h>
-# include <d3d11.h>
-# include <tchar.h>
+#include <d3d11.h>
+#include <sihd/imgui/IImguiRenderer.hpp>
+#include <sihd/imgui/imgui_impl_dx11.h>
+#include <tchar.h>
 
 namespace sihd::imgui
 {
@@ -19,8 +19,8 @@ class ImguiRendererDirectX: public sihd::imgui::IImguiRenderer
         bool init(HWND window);
 
         void new_frame();
-		void render(ImDrawData *draw_data);
-		void shutdown();
+        void render(ImDrawData *draw_data);
+        void shutdown();
 
         void resize(LPARAM lParam);
         void resize();
@@ -43,6 +43,6 @@ class ImguiRendererDirectX: public sihd::imgui::IImguiRenderer
         ImVec4 *_clear_color_ptr;
 };
 
-}
+} // namespace sihd::imgui
 
 #endif

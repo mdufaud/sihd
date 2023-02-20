@@ -1,26 +1,26 @@
 #ifndef __SIHD_CORE_ACOREOBJECT_HPP__
-# define __SIHD_CORE_ACOREOBJECT_HPP__
+#define __SIHD_CORE_ACOREOBJECT_HPP__
 
-# include <sihd/util/Node.hpp>
-# include <sihd/util/Configurable.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/Node.hpp>
 
-# include <sihd/core/ACoreService.hpp>
+#include <sihd/core/ACoreService.hpp>
 
 namespace sihd::core
 {
 
-class ACoreObject:  public sihd::util::Named,
-                    public sihd::util::Configurable,
-                    public sihd::util::IHandler<Channel *>,
-                    public ACoreService
+class ACoreObject: public sihd::util::Named,
+                   public sihd::util::Configurable,
+                   public sihd::util::IHandler<Channel *>,
+                   public ACoreService
 {
     public:
-        using ACoreService::setup;
         using ACoreService::init;
+        using ACoreService::is_running;
+        using ACoreService::reset;
+        using ACoreService::setup;
         using ACoreService::start;
         using ACoreService::stop;
-        using ACoreService::reset;
-        using ACoreService::is_running;
 
         ACoreObject(const std::string & name, sihd::util::Node *parent = nullptr): sihd::util::Named(name, parent) {}
         virtual ~ACoreObject() {}
@@ -33,6 +33,6 @@ class ACoreObject:  public sihd::util::Named,
         virtual void handle([[maybe_unused]] Channel *channel) override {};
 };
 
-}
+} // namespace sihd::core
 
 #endif

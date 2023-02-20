@@ -1,8 +1,8 @@
 #ifndef __SIHD_HTTP_MIME_HPP__
-# define __SIHD_HTTP_MIME_HPP__
+#define __SIHD_HTTP_MIME_HPP__
 
-# include <string>
-# include <unordered_map>
+#include <string>
+#include <unordered_map>
 
 namespace sihd::http
 {
@@ -45,6 +45,6 @@ class Mime
         std::unordered_map<std::string, std::string> _types;
 };
 
-}
+} // namespace sihd::http
 
 #endif

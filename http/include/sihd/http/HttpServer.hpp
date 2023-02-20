@@ -1,21 +1,21 @@
 #ifndef __SIHD_HTTP_HTTPSERVER_HPP__
-# define __SIHD_HTTP_HTTPSERVER_HPP__
+#define __SIHD_HTTP_HTTPSERVER_HPP__
 
-# include <set>
+#include <set>
 
-# include <sihd/util/Node.hpp>
-# include <sihd/util/IStoppableRunnable.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/StepWorker.hpp>
-# include <sihd/util/Waitable.hpp>
-# include <sihd/util/os.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/IStoppableRunnable.hpp>
+#include <sihd/util/Node.hpp>
+#include <sihd/util/StepWorker.hpp>
+#include <sihd/util/Waitable.hpp>
+#include <sihd/util/os.hpp>
 
-# include <sihd/http/Mime.hpp>
-# include <sihd/http/IWebsocketHandler.hpp>
-# include <sihd/http/WebService.hpp>
-# include <sihd/http/HttpRequest.hpp>
-# include <sihd/http/HttpResponse.hpp>
-# include <sihd/http/HttpHeader.hpp>
+#include <sihd/http/HttpHeader.hpp>
+#include <sihd/http/HttpRequest.hpp>
+#include <sihd/http/HttpResponse.hpp>
+#include <sihd/http/IWebsocketHandler.hpp>
+#include <sihd/http/Mime.hpp>
+#include <sihd/http/WebService.hpp>
 
 // forward declarations of libwebsockets to prevent header leaking
 struct lws;
@@ -29,9 +29,9 @@ namespace sihd::http
 
 SIHD_LOGGER;
 
-class HttpServer:   public sihd::util::Node,
-                    public sihd::util::Configurable,
-                    public sihd::util::IStoppableRunnable
+class HttpServer: public sihd::util::Node,
+                  public sihd::util::Configurable,
+                  public sihd::util::IStoppableRunnable
 {
     public:
         HttpServer(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -58,56 +58,60 @@ class HttpServer:   public sihd::util::Node,
     protected:
         struct HttpSession
         {
-            void clear_request()
-            {
-                if (request != nullptr)
+                void clear_request()
                 {
-                    delete request;
+                    if (request != nullptr)
+                    {
+                        delete request;
+                        request = nullptr;
+                    }
+                    if (content != nullptr)
+                    {
+                        delete content;
+                        content = nullptr;
+                    }
+                    content_size = 0;
+                }
+
+                void new_request()
+                {
                     request = nullptr;
-                }
-                if (content != nullptr)
-                {
-                    delete content;
                     content = nullptr;
+                    content_size = 0;
+                    should_complete_transaction = true;
                 }
-                content_size = 0;
-            }
 
-            void new_request()
-            {
-                request = nullptr;
-                content = nullptr;
-                content_size = 0;
-                should_complete_transaction = true;
-            }
-
-            // forward lws callback args
-            struct lws *wsi;
-            void *in;
-            size_t len;
-            int rc;
-            // current http request type
-            HttpRequest::RequestType request_type;
-            // current http body content
-            sihd::util::ArrUByte *content;
-            // current http body size
-            size_t content_size;
-            // current HttpRequest with uri args
-            HttpRequest *request;
-            // if true lws_http_transaction_completed will be called
-            bool should_complete_transaction;
+                // forward lws callback args
+                struct lws *wsi;
+                void *in;
+                size_t len;
+                int rc;
+                // current http request type
+                HttpRequest::RequestType request_type;
+                // current http body content
+                sihd::util::ArrUByte *content;
+                // current http body size
+                size_t content_size;
+                // current HttpRequest with uri args
+                HttpRequest *request;
+                // if true lws_http_transaction_completed will be called
+                bool should_complete_transaction;
         };
 
         struct WebsocketSession
         {
-            const lws_protocols *protocol;
-            struct lws *wsi;
-            void *in;
-            size_t len;
+                const lws_protocols *protocol;
+                struct lws *wsi;
+                void *in;
+                size_t len;
         };
 
         // http protocol callbacks
-        static int _global_http_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
+        static int _global_http_lws_callback(struct lws *wsi,
+                                             enum lws_callback_reasons reason,
+                                             void *user,
+                                             void *in,
+                                             size_t len);
         int _lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
 
         HttpRequest::RequestType _get_request_type(struct lws *wsi);
@@ -122,8 +126,16 @@ class HttpServer:   public sihd::util::Node,
         virtual bool _serve_webservice(HttpSession *session, WebService *webservice, const HttpRequest & request);
 
         // websocket protocol callbacks
-        static int _global_websocket_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
-        int _lws_websocket_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
+        static int _global_websocket_lws_callback(struct lws *wsi,
+                                                  enum lws_callback_reasons reason,
+                                                  void *user,
+                                                  void *in,
+                                                  size_t len);
+        int _lws_websocket_callback(struct lws *wsi,
+                                    enum lws_callback_reasons reason,
+                                    void *user,
+                                    void *in,
+                                    size_t len);
 
         virtual int _on_websocket_open(IWebsocketHandler *handler, WebsocketSession *session);
         virtual int _on_websocket_read(IWebsocketHandler *handler, WebsocketSession *session);
@@ -131,7 +143,10 @@ class HttpServer:   public sihd::util::Node,
         virtual int _on_websocket_close(IWebsocketHandler *handler, WebsocketSession *session);
 
         // protocols
-        virtual bool _add_protocol(const char *name, lws_callback_function *callback, size_t struct_size, size_t tx_packet_size = 0);
+        virtual bool _add_protocol(const char *name,
+                                   lws_callback_function *callback,
+                                   size_t struct_size,
+                                   size_t tx_packet_size = 0);
         virtual bool _add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size = 0);
 
         // polling protocols call
@@ -140,8 +155,8 @@ class HttpServer:   public sihd::util::Node,
         virtual bool _send_http_headers(struct lws *wsi, HttpHeader & header);
         virtual bool _send_http_no_content(struct lws *wsi, int code);
         /*
-            code = HTTP_STATUS_MOVED_PERMANENTLY || HTTP_STATUS_FOUND || HTTP_STATUS_SEE_OTHER || HTTP_STATUS_NOT_MODIFIED
-            default = 301 HTTP_STATUS_MOVED_PERMANENTLY
+            code = HTTP_STATUS_MOVED_PERMANENTLY || HTTP_STATUS_FOUND || HTTP_STATUS_SEE_OTHER ||
+           HTTP_STATUS_NOT_MODIFIED default = 301 HTTP_STATUS_MOVED_PERMANENTLY
         */
         virtual bool _send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code = 301);
         virtual bool _send_404(struct lws *wsi, std::string_view html_404);
@@ -154,12 +169,12 @@ class HttpServer:   public sihd::util::Node,
 
         struct LwsPollingScheduler: public sihd::util::IRunnable
         {
-            LwsPollingScheduler(HttpServer *server);
-            ~LwsPollingScheduler();
+                LwsPollingScheduler(HttpServer *server);
+                ~LwsPollingScheduler();
 
-            bool run();
+                bool run();
 
-            HttpServer *server;
+                HttpServer *server;
         };
 
         std::string _ip_buf;
@@ -182,7 +197,6 @@ class HttpServer:   public sihd::util::Node,
         HttpHeader _http_header;
         sihd::util::ArrUByte _http_header_array;
 
-
         std::string _404_page_path;
 
         // mimetype database
@@ -193,6 +207,6 @@ class HttpServer:   public sihd::util::Node,
         sihd::util::Waitable _waitable;
 };
 
-}
+} // namespace sihd::http
 
 #endif

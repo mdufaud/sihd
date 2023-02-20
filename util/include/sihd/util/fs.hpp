@@ -1,13 +1,13 @@
 #ifndef __SIHD_UTIL_FS_HPP__
-# define __SIHD_UTIL_FS_HPP__
+#define __SIHD_UTIL_FS_HPP__
 
-# include <optional>
-# include <initializer_list>
-# include <string>
-# include <string_view>
-# include <vector>
+#include <initializer_list>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
 
-# include <sihd/util/Timestamp.hpp>
+#include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util::fs
 {
@@ -76,6 +76,6 @@ bool write_binary(std::string_view path, std::string_view view, bool append = fa
 // fast write into file
 bool write(std::string_view path, std::string_view view, bool append = false);
 
-}
+} // namespace sihd::util::fs
 
 #endif

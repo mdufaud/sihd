@@ -1,7 +1,7 @@
 #ifndef __SIHD_UTIL_DATATYPE_HPP__
-# define __SIHD_UTIL_DATATYPE_HPP__
+#define __SIHD_UTIL_DATATYPE_HPP__
 
-# include <string_view>
+#include <string_view>
 
 namespace sihd::util
 {
@@ -53,29 +53,29 @@ class Types
 };
 
 template <>
-Type    Types::type<bool>();
+Type Types::type<bool>();
 template <>
-Type    Types::type<char>();
+Type Types::type<char>();
 template <>
-Type    Types::type<int8_t>();
+Type Types::type<int8_t>();
 template <>
-Type    Types::type<uint8_t>();
+Type Types::type<uint8_t>();
 template <>
-Type    Types::type<int16_t>();
+Type Types::type<int16_t>();
 template <>
-Type    Types::type<uint16_t>();
+Type Types::type<uint16_t>();
 template <>
-Type    Types::type<int32_t>();
+Type Types::type<int32_t>();
 template <>
-Type    Types::type<uint32_t>();
+Type Types::type<uint32_t>();
 template <>
-Type    Types::type<int64_t>();
+Type Types::type<int64_t>();
 template <>
-Type    Types::type<uint64_t>();
+Type Types::type<uint64_t>();
 template <>
-Type    Types::type<float>();
+Type Types::type<float>();
 template <>
-Type    Types::type<double>();
+Type Types::type<double>();
 
 extern template Type Types::type<bool>();
 extern template Type Types::type<char>();
@@ -90,6 +90,6 @@ extern template Type Types::type<uint64_t>();
 extern template Type Types::type<float>();
 extern template Type Types::type<double>();
 
-}
+} // namespace sihd::util
 
 #endif

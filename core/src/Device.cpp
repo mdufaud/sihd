@@ -13,7 +13,8 @@ SIHD_LOGGER;
 sihd::util::ServiceController Device::_default_service_controller;
 
 Device::Device(const std::string & name, Node *parent):
-    AChannelContainer(name, parent), _service_controller(_default_service_controller.statemachine)
+    AChannelContainer(name, parent),
+    _service_controller(_default_service_controller.statemachine)
 {
     _service_controller.optionnal_setup();
 }
@@ -29,19 +30,19 @@ Device::~Device()
     }
 }
 
-ServiceController::State    Device::device_state() const
+ServiceController::State Device::device_state() const
 {
     return _service_controller.state();
 }
 
-const char  *Device::device_state_str() const
+const char *Device::device_state_str() const
 {
     return ServiceController::state_str(this->device_state());
 }
 
-bool    Device::do_setup()
+bool Device::do_setup()
 {
-    for (auto & [name, entry]: this->children())
+    for (auto & [name, entry] : this->children())
     {
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->setup() == false)
@@ -53,9 +54,9 @@ bool    Device::do_setup()
     return this->on_setup();
 }
 
-bool    Device::do_init()
+bool Device::do_init()
 {
-    for (auto & [name, entry]: this->children())
+    for (auto & [name, entry] : this->children())
     {
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->init() == false)
@@ -67,11 +68,11 @@ bool    Device::do_init()
     return this->on_init();
 }
 
-bool    Device::do_start()
+bool Device::do_start()
 {
     bool ret = true;
     std::list<AService *> started_services;
-    for (auto & [name, entry]: this->children())
+    for (auto & [name, entry] : this->children())
     {
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr)
@@ -80,7 +81,7 @@ bool    Device::do_start()
             {
                 SIHD_LOG(error, "Device: {} could not start service: {}", this->name(), name);
                 ret = false;
-                break ;
+                break;
             }
             else
                 started_services.push_back(service);
@@ -90,7 +91,7 @@ bool    Device::do_start()
     if (ret == false)
     {
         // return started service to stop state if failed
-        for (AService *service: started_services)
+        for (AService *service : started_services)
         {
             service->stop();
         }
@@ -98,10 +99,10 @@ bool    Device::do_start()
     return ret && this->on_start();
 }
 
-bool    Device::do_stop()
+bool Device::do_stop()
 {
     this->remove_channels_observation();
-    for (auto & [name, entry]: this->children())
+    for (auto & [name, entry] : this->children())
     {
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->stop() == false)
@@ -113,9 +114,9 @@ bool    Device::do_stop()
     return this->on_stop();
 }
 
-bool    Device::do_reset()
+bool Device::do_reset()
 {
-    for (auto & [name, entry]: this->children())
+    for (auto & [name, entry] : this->children())
     {
         AService *service = dynamic_cast<AService *>(entry->obj);
         if (service != nullptr && service->reset() == false)
@@ -128,4 +129,4 @@ bool    Device::do_reset()
     return this->on_reset();
 }
 
-}
+} // namespace sihd::core

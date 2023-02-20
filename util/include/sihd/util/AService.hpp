@@ -1,7 +1,7 @@
 #ifndef __SIHD_UTIL_ASERVICE_HPP__
-# define __SIHD_UTIL_ASERVICE_HPP__
+#define __SIHD_UTIL_ASERVICE_HPP__
 
-# include <sihd/util/Observable.hpp>
+#include <sihd/util/Observable.hpp>
 
 namespace sihd::util
 {
@@ -46,6 +46,6 @@ class AService: public Observable<AService>
         virtual bool do_reset();
 };
 
-}
+} // namespace sihd::util
 
 #endif

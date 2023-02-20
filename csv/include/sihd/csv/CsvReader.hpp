@@ -1,18 +1,18 @@
 #ifndef __SIHD_CSV_CSVREADER_HPP__
-# define __SIHD_CSV_CSVREADER_HPP__
+#define __SIHD_CSV_CSVREADER_HPP__
 
-# include <sihd/util/Node.hpp>
-# include <sihd/util/File.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/IReader.hpp>
-# include <sihd/util/Splitter.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/File.hpp>
+#include <sihd/util/IReader.hpp>
+#include <sihd/util/Node.hpp>
+#include <sihd/util/Splitter.hpp>
 
 namespace sihd::csv
 {
 
-class CsvReader:    public sihd::util::Named,
-                    public sihd::util::Configurable,
-                    public sihd::util::IReaderTimestamp
+class CsvReader: public sihd::util::Named,
+                 public sihd::util::Configurable,
+                 public sihd::util::IReaderTimestamp
 {
     public:
         CsvReader(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -28,8 +28,8 @@ class CsvReader:    public sihd::util::Named,
 
         bool read_next();
         bool get_read_data(std::vector<std::string> & data) const;
-		bool get_read_data(sihd::util::ArrCharView & view) const;
-		bool read_timestamp(time_t *nano_timestamp) const;
+        bool get_read_data(sihd::util::ArrCharView & view) const;
+        bool read_timestamp(time_t *nano_timestamp) const;
 
         int comment() const { return _comment; }
 
@@ -50,6 +50,6 @@ class CsvReader:    public sihd::util::Named,
         sihd::util::File _file;
 };
 
-}
+} // namespace sihd::csv
 
 #endif

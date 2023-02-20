@@ -1,35 +1,36 @@
 #ifndef __SIHD_UTIL_POLL_HPP__
-# define __SIHD_UTIL_POLL_HPP__
+#define __SIHD_UTIL_POLL_HPP__
 
-# include <vector>
-# include <mutex>
+#include <mutex>
+#include <vector>
 
-# include <sihd/util/platform.hpp>
-# include <sihd/util/os.hpp>
-# include <sihd/util/Observable.hpp>
-# include <sihd/util/IStoppableRunnable.hpp>
-# include <sihd/util/Clocks.hpp>
+#include <sihd/util/Clocks.hpp>
+#include <sihd/util/IStoppableRunnable.hpp>
+#include <sihd/util/Observable.hpp>
+#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 
-# if !defined(__SIHD_WINDOWS__)
-#  include <sys/resource.h> //rlim_t
-#  include <poll.h> //pollfd
-# else
-#  include <winsock2.h>
-# endif
+#if !defined(__SIHD_WINDOWS__)
+# include <poll.h>         //pollfd
+# include <sys/resource.h> //rlim_t
+#else
+# include <winsock2.h>
+#endif
 
 namespace sihd::util
 {
 
 struct PollEvent
 {
-    int fd = -1;
-    bool readable = false;
-    bool writable = false;
-    bool error = false;
-    bool closed = false;
+        int fd = -1;
+        bool readable = false;
+        bool writable = false;
+        bool error = false;
+        bool closed = false;
 };
 
-class Poll: public IStoppableRunnable, public Observable<Poll>
+class Poll: public IStoppableRunnable,
+            public Observable<Poll>
 {
     public:
         Poll();
@@ -92,6 +93,6 @@ class Poll: public IStoppableRunnable, public Observable<Poll>
         bool _error;
 };
 
-}
+} // namespace sihd::util
 
 #endif

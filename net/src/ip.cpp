@@ -1,17 +1,17 @@
 #include <strings.h>
 
-#include <cstring>
 #include <cerrno>
+#include <cstring>
 #include <map>
 
 #include <sihd/util/Logger.hpp>
 
-#include <sihd/util/platform.hpp>
 #include <sihd/net/ip.hpp>
+#include <sihd/util/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
+# include <netdb.h>      // getprotobynumber, getprotobyname
 # include <sys/socket.h> // PF_UNIX...
-# include <netdb.h> // getprotobynumber, getprotobyname
 #else
 # include <sihd/net/utils.hpp>
 #endif
@@ -21,7 +21,7 @@ namespace sihd::net::ip
 
 SIHD_NEW_LOGGER("sihd::net::ip");
 
-const char  *domain_str(int domain)
+const char *domain_str(int domain)
 {
     switch (domain)
     {
@@ -54,7 +54,7 @@ const char  *domain_str(int domain)
     }
 }
 
-const char  *socktype_str(int socktype)
+const char *socktype_str(int socktype)
 {
     switch (socktype)
     {
@@ -77,7 +77,7 @@ const char  *socktype_str(int socktype)
     }
 }
 
-const char  *protocol_str(int protocol)
+const char *protocol_str(int protocol)
 {
     struct protoent *pe = getprotobynumber(protocol);
     if (pe == nullptr)
@@ -85,7 +85,7 @@ const char  *protocol_str(int protocol)
     return pe->p_name;
 }
 
-int     protocol(std::string_view name)
+int protocol(std::string_view name)
 {
     struct protoent *pe = getprotobyname(name.data());
     if (pe == nullptr)
@@ -93,10 +93,12 @@ int     protocol(std::string_view name)
     return pe->p_proto;
 }
 
-int     domain(std::string_view name)
+int domain(std::string_view name)
 {
     static std::map<std::string_view, int> domain_to_str = {
-        {"unix", PF_UNIX}, {"ipv4", PF_INET}, {"ipv6", PF_INET6},
+        {"unix", PF_UNIX},
+        {"ipv4", PF_INET},
+        {"ipv6", PF_INET6},
         /*
         {"ipx", PF_IPX}, {"netlink", PF_NETLINK}, {"x25", PF_X25}, {"ax25", PF_AX25},
         {"atmpvc", PF_ATMPVC}, {"appletalk", PF_APPLETALK}, {"packet", PF_PACKET},
@@ -108,12 +110,17 @@ int     domain(std::string_view name)
     return it->second;
 }
 
-int     socktype(std::string_view name)
+int socktype(std::string_view name)
 {
     static std::map<std::string_view, int> socktype_to_str = {
-        {"udp", SOCK_DGRAM}, {"tcp", SOCK_STREAM},
-        {"datagram", SOCK_DGRAM}, {"stream", SOCK_STREAM}, {"raw", SOCK_RAW},
-        {"seqpacket", SOCK_SEQPACKET}, {"rdm", SOCK_RDM}, {"packet", SOCK_PACKET},
+        {"udp", SOCK_DGRAM},
+        {"tcp", SOCK_STREAM},
+        {"datagram", SOCK_DGRAM},
+        {"stream", SOCK_STREAM},
+        {"raw", SOCK_RAW},
+        {"seqpacket", SOCK_SEQPACKET},
+        {"rdm", SOCK_RDM},
+        {"packet", SOCK_PACKET},
     };
     auto it = socktype_to_str.find(name);
     if (it == socktype_to_str.end())
@@ -121,4 +128,4 @@ int     socktype(std::string_view name)
     return it->second;
 }
 
-}
+} // namespace sihd::net::ip

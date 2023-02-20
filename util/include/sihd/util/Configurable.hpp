@@ -1,11 +1,11 @@
 #ifndef __SIHD_UTIL_CONFIGURABLE_HPP__
-# define __SIHD_UTIL_CONFIGURABLE_HPP__
+#define __SIHD_UTIL_CONFIGURABLE_HPP__
 
-# include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json_fwd.hpp>
 
-# include <functional>
+#include <functional>
 
-# include <sihd/util/Callback.hpp>
+#include <sihd/util/Callback.hpp>
 
 namespace sihd::util
 {
@@ -35,19 +35,19 @@ class Configurable
         };
 
         template <typename T>
-        void add_conf(const std::string & name, std::function<bool (T)> fun)
+        void add_conf(const std::string & name, std::function<bool(T)> fun)
         {
             _callbackManager.set<bool, T>(name, fun);
         };
 
         template <typename T1, typename T2>
-        void add_conf(const std::string & name, std::function<bool (T1, T2)> fun)
+        void add_conf(const std::string & name, std::function<bool(T1, T2)> fun)
         {
             _callbackManager.set<bool, T1, T2>(name, fun);
         };
 
         template <typename T1, typename T2, typename T3>
-        void add_conf(const std::string & name, std::function<bool (T1, T2, T3)> fun)
+        void add_conf(const std::string & name, std::function<bool(T1, T2, T3)> fun)
         {
             _callbackManager.set<bool, T1, T2, T3>(name, fun);
         };
@@ -58,7 +58,7 @@ class Configurable
             return _callbackManager.call<bool, T>(name);
         }
 
-        template <typename ...T>
+        template <typename... T>
         bool set_conf(const std::string & name, T... params)
         {
             return _callbackManager.call<bool, T...>(name, params...);
@@ -86,6 +86,6 @@ class Configurable
         bool _set_conf_json(const std::string & name, const nlohmann::json & val);
 };
 
-}
+} // namespace sihd::util
 
 #endif

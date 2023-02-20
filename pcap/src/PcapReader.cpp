@@ -14,8 +14,11 @@ SIHD_LOGGER;
 using namespace sihd::util;
 
 PcapReader::PcapReader(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent), _ownership(true),
-    _pcap_ptr(nullptr), _pkt_data_ptr(nullptr), _pkt_hdr_ptr(nullptr)
+    sihd::util::Named(name, parent),
+    _ownership(true),
+    _pcap_ptr(nullptr),
+    _pkt_data_ptr(nullptr),
+    _pkt_hdr_ptr(nullptr)
 {
     utils::init();
 }
@@ -25,14 +28,14 @@ PcapReader::~PcapReader()
     this->close();
 }
 
-void    PcapReader::set_pcap(pcap_t *pcap, bool ownership)
+void PcapReader::set_pcap(pcap_t *pcap, bool ownership)
 {
     this->close();
     _ownership = ownership;
     _pcap_ptr = pcap;
 }
 
-bool    PcapReader::open(std::string_view path)
+bool PcapReader::open(std::string_view path)
 {
     this->close();
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -46,17 +49,17 @@ bool    PcapReader::open(std::string_view path)
     return true;
 }
 
-bool    PcapReader::open_micro_precision(std::string_view path)
+bool PcapReader::open_micro_precision(std::string_view path)
 {
     return this->_open_precision(path.data(), PCAP_TSTAMP_PRECISION_MICRO);
 }
 
-bool    PcapReader::open_nano_precision(std::string_view path)
+bool PcapReader::open_nano_precision(std::string_view path)
 {
     return this->_open_precision(path.data(), PCAP_TSTAMP_PRECISION_NANO);
 }
 
-bool    PcapReader::_open_precision(const char *path, u_int precision)
+bool PcapReader::_open_precision(const char *path, u_int precision)
 {
     this->close();
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -70,7 +73,7 @@ bool    PcapReader::_open_precision(const char *path, u_int precision)
     return true;
 }
 
-bool    PcapReader::open(FILE *file)
+bool PcapReader::open(FILE *file)
 {
     this->close();
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -84,17 +87,17 @@ bool    PcapReader::open(FILE *file)
     return true;
 }
 
-bool    PcapReader::open_micro_precision(FILE *file)
+bool PcapReader::open_micro_precision(FILE *file)
 {
     return this->_open_precision(file, PCAP_TSTAMP_PRECISION_MICRO);
 }
 
-bool    PcapReader::open_nano_precision(FILE *file)
+bool PcapReader::open_nano_precision(FILE *file)
 {
     return this->_open_precision(file, PCAP_TSTAMP_PRECISION_NANO);
 }
 
-bool    PcapReader::_open_precision(FILE *file, u_int precision)
+bool PcapReader::_open_precision(FILE *file, u_int precision)
 {
     this->close();
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -108,12 +111,12 @@ bool    PcapReader::_open_precision(FILE *file, u_int precision)
     return true;
 }
 
-bool    PcapReader::is_open() const
+bool PcapReader::is_open() const
 {
     return _pcap_ptr != nullptr;
 }
 
-bool    PcapReader::close()
+bool PcapReader::close()
 {
     if (_pcap_ptr != nullptr)
     {
@@ -127,12 +130,12 @@ bool    PcapReader::close()
     return true;
 }
 
-FILE    *PcapReader::file()
+FILE *PcapReader::file()
 {
     return pcap_file(_pcap_ptr);
 }
 
-bool    PcapReader::read_next()
+bool PcapReader::read_next()
 {
     int ret = pcap_next_ex(_pcap_ptr, &_pkt_hdr_ptr, const_cast<const u_char **>(&_pkt_data_ptr));
     if (ret == PCAP_ERROR)
@@ -140,7 +143,7 @@ bool    PcapReader::read_next()
     return ret >= 0;
 }
 
-bool    PcapReader::get_read_data(sihd::util::ArrCharView & view) const
+bool PcapReader::get_read_data(sihd::util::ArrCharView & view) const
 {
     if (_pkt_data_ptr == nullptr || _pkt_hdr_ptr == nullptr)
         return false;
@@ -148,7 +151,7 @@ bool    PcapReader::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-bool    PcapReader::read_timestamp(time_t *nano_timestamp) const
+bool PcapReader::read_timestamp(time_t *nano_timestamp) const
 {
     if (_pkt_hdr_ptr == nullptr)
         return false;
@@ -159,39 +162,39 @@ bool    PcapReader::read_timestamp(time_t *nano_timestamp) const
     return true;
 }
 
-const struct pcap_pkthdr    *PcapReader::packet_header() const
+const struct pcap_pkthdr *PcapReader::packet_header() const
 {
     return _pkt_hdr_ptr;
 }
 
-std::string     PcapReader::error()
+std::string PcapReader::error()
 {
     return pcap_geterr(_pcap_ptr);
 }
 
-int     PcapReader::snaplen()
+int PcapReader::snaplen()
 {
     return pcap_snapshot(_pcap_ptr);
 }
 
-int     PcapReader::datalink()
+int PcapReader::datalink()
 {
     return pcap_datalink(_pcap_ptr);
 }
 
-int     PcapReader::major_version()
+int PcapReader::major_version()
 {
     return pcap_major_version(_pcap_ptr);
 }
 
-int     PcapReader::minor_version()
+int PcapReader::minor_version()
 {
     return pcap_minor_version(_pcap_ptr);
 }
 
-bool    PcapReader::is_swapped()
+bool PcapReader::is_swapped()
 {
     return pcap_is_swapped(_pcap_ptr) == 1;
 }
 
-}
+} // namespace sihd::pcap

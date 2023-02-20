@@ -1,10 +1,10 @@
 #ifndef __SIHD_UTIL_ALOGFILTERER_HPP__
-# define __SIHD_UTIL_ALOGFILTERER_HPP__
+#define __SIHD_UTIL_ALOGFILTERER_HPP__
 
-# include <list>
+#include <list>
 
-# include <sihd/util/LogInfo.hpp>
-# include <sihd/util/ILoggerFilter.hpp>
+#include <sihd/util/ILoggerFilter.hpp>
+#include <sihd/util/LogInfo.hpp>
 
 namespace sihd::util
 {
@@ -46,6 +46,6 @@ class ALogFilterer
         std::list<ILoggerFilter *> _filters_lst;
 };
 
-}
+} // namespace sihd::util
 
 #endif

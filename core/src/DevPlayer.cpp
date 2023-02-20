@@ -1,8 +1,8 @@
 #include <sihd/core/DevPlayer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/Splitter.hpp>
 #include <sihd/util/ScopedModifier.hpp>
+#include <sihd/util/Splitter.hpp>
 #include <sihd/util/Task.hpp>
 
 #define CHANNEL_PLAY "play"
@@ -35,28 +35,26 @@ DevPlayer::DevPlayer(const std::string & name, sihd::util::Node *parent):
     this->add_conf("alias", &DevPlayer::add_alias);
 }
 
-DevPlayer::~DevPlayer()
-{
-}
+DevPlayer::~DevPlayer() {}
 
-bool    DevPlayer::is_running() const
+bool DevPlayer::is_running() const
 {
     return _running;
 }
 
-bool    DevPlayer::set_scheduler_queue_size(size_t limit)
+bool DevPlayer::set_scheduler_queue_size(size_t limit)
 {
     _records_queue_limit = limit;
     return true;
 }
 
-bool    DevPlayer::set_provider(std::string_view path)
+bool DevPlayer::set_provider(std::string_view path)
 {
     _provider_path = path;
     return true;
 }
 
-bool    DevPlayer::set_provider_wait_time(time_t milliseconds)
+bool DevPlayer::set_provider_wait_time(time_t milliseconds)
 {
     if (milliseconds <= 0)
     {
@@ -67,14 +65,16 @@ bool    DevPlayer::set_provider_wait_time(time_t milliseconds)
     return true;
 }
 
-bool    DevPlayer::add_alias(std::string_view alias_conf)
+bool DevPlayer::add_alias(std::string_view alias_conf)
 {
     sihd::util::Splitter splitter("=");
     std::vector<std::string> conf = splitter.split(alias_conf);
 
     if (conf.size() != 2)
     {
-        SIHD_LOG(error, "DevReplayer: wrong alias configuration: '{}' - expected RECORD_CHANNEL_NAME=CHANNEL_PATH", alias_conf);
+        SIHD_LOG(error,
+                 "DevReplayer: wrong alias configuration: '{}' - expected RECORD_CHANNEL_NAME=CHANNEL_PATH",
+                 alias_conf);
         return false;
     }
     // conf[0] = record_channel_name
@@ -83,7 +83,7 @@ bool    DevPlayer::add_alias(std::string_view alias_conf)
     return true;
 }
 
-void    DevPlayer::handle(sihd::core::Channel *c)
+void DevPlayer::handle(sihd::core::Channel *c)
 {
     if (c == _channel_play_ptr)
     {
@@ -94,7 +94,7 @@ void    DevPlayer::handle(sihd::core::Channel *c)
     }
 }
 
-bool    DevPlayer::on_init()
+bool DevPlayer::on_init()
 {
     this->add_unlinked_channel(CHANNEL_PLAY, TYPE_BOOL, 1);
     this->add_unlinked_channel(CHANNEL_END, TYPE_BOOL, 1);
@@ -102,7 +102,7 @@ bool    DevPlayer::on_init()
     return true;
 }
 
-bool    DevPlayer::on_start()
+bool DevPlayer::on_start()
 {
     // provider
     IProvider<PlayableRecord> *provider = this->find<IProvider<PlayableRecord>>(_provider_path);
@@ -122,7 +122,7 @@ bool    DevPlayer::on_start()
     _channel_end_ptr->write<bool>(0, false);
     // channels to play to
     Channel *channel_ptr;
-    for (const auto & pair: _map_channels_alias)
+    for (const auto & pair : _map_channels_alias)
     {
         channel_ptr = this->find<Channel>(pair.second);
         if (channel_ptr == nullptr)
@@ -151,7 +151,7 @@ bool    DevPlayer::on_start()
     return true;
 }
 
-bool    DevPlayer::run()
+bool DevPlayer::run()
 {
     std::lock_guard l(_run_mutex);
     if (_running == false)
@@ -172,7 +172,7 @@ bool    DevPlayer::run()
     return true;
 }
 
-void    DevPlayer::handle(Collector<PlayableRecord> *collector)
+void DevPlayer::handle(Collector<PlayableRecord> *collector)
 {
     // called for each record with a lock on collector data
     PlayableRecord record = collector->data();
@@ -190,7 +190,7 @@ void    DevPlayer::handle(Collector<PlayableRecord> *collector)
         _scheduler_ptr->add_task(new Task(this, execute_at));
 }
 
-bool    DevPlayer::_worker_loop()
+bool DevPlayer::_worker_loop()
 {
     _time_begin = _scheduler_ptr->now();
     _first_timestamp = -1;
@@ -205,7 +205,7 @@ bool    DevPlayer::_worker_loop()
     return ret;
 }
 
-bool    DevPlayer::on_stop()
+bool DevPlayer::on_stop()
 {
     {
         std::lock_guard l(_run_mutex);
@@ -225,11 +225,11 @@ bool    DevPlayer::on_stop()
     return true;
 }
 
-bool    DevPlayer::on_reset()
+bool DevPlayer::on_reset()
 {
     _queue = std::queue<PlayableRecord>();
     _map_channels_alias.clear();
     return true;
 }
 
-}
+} // namespace sihd::core

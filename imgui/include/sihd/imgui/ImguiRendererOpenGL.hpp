@@ -1,9 +1,9 @@
 #ifndef __SIHD_IMGUI_IMGUIRENDEREROPENGL_HPP__
-# define __SIHD_IMGUI_IMGUIRENDEREROPENGL_HPP__
+#define __SIHD_IMGUI_IMGUIRENDEREROPENGL_HPP__
 
-# include <sihd/imgui/IImguiRenderer.hpp>
-# include <sihd/imgui/imgui_impl_opengl3.h>
-# include <GL/gl.h>
+#include <GL/gl.h>
+#include <sihd/imgui/IImguiRenderer.hpp>
+#include <sihd/imgui/imgui_impl_opengl3.h>
 
 namespace sihd::imgui
 {
@@ -18,8 +18,8 @@ class ImguiRendererOpenGL: public sihd::imgui::IImguiRenderer
         bool init(const char *glsl_version = nullptr);
 
         void new_frame();
-		void render(ImDrawData *draw_data);
-		void shutdown();
+        void render(ImDrawData *draw_data);
+        void shutdown();
         void resize();
 
         void set_clear_color(ImVec4 *clear_color);
@@ -32,6 +32,6 @@ class ImguiRendererOpenGL: public sihd::imgui::IImguiRenderer
         ImVec4 *_clear_color_ptr;
 };
 
-}
+} // namespace sihd::imgui
 
 #endif

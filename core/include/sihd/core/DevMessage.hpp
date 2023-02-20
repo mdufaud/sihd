@@ -1,14 +1,14 @@
 #ifndef __SIHD_CORE_DEVMESSAGE_HPP__
-# define __SIHD_CORE_DEVMESSAGE_HPP__
+#define __SIHD_CORE_DEVMESSAGE_HPP__
 
-# include <sihd/util/IMessageField.hpp>
+#include <sihd/util/IMessageField.hpp>
 
-# include <sihd/core/Device.hpp>
+#include <sihd/core/Device.hpp>
 
 namespace sihd::core
 {
 
-class DevMessage:   public sihd::core::Device
+class DevMessage: public sihd::core::Device
 {
     public:
         DevMessage(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -47,6 +47,6 @@ class DevMessage:   public sihd::core::Device
         Channel *_channel_trigger;
 };
 
-}
+} // namespace sihd::core
 
 #endif

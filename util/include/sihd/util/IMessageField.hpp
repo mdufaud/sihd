@@ -1,8 +1,8 @@
 #ifndef __SIHD_UTIL_IMESSAGEFIELD_HPP__
-# define __SIHD_UTIL_IMESSAGEFIELD_HPP__
+#define __SIHD_UTIL_IMESSAGEFIELD_HPP__
 
-# include <sihd/util/Types.hpp>
-# include <sihd/util/ICloneable.hpp>
+#include <sihd/util/ICloneable.hpp>
+#include <sihd/util/Types.hpp>
 
 namespace sihd::util
 {
@@ -21,6 +21,6 @@ class IMessageField: public ICloneable<IMessageField>
         virtual bool is_finished() const = 0;
         virtual bool finish() = 0;
 };
-}
+} // namespace sihd::util
 
 #endif

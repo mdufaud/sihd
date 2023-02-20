@@ -18,57 +18,57 @@ SIHD_LOGGER;
 using namespace sihd::util;
 
 DevMessage::DevMessage(const std::string & name, sihd::util::Node *parent):
-    sihd::core::Device(name, parent), _running(false), _trigger_mode(false)
+    sihd::core::Device(name, parent),
+    _running(false),
+    _trigger_mode(false)
 {
     this->add_conf("message", &DevMessage::set_message_path);
     this->add_conf("trigger_mode", &DevMessage::set_trigger_mode);
 }
 
-DevMessage::~DevMessage()
-{
-}
+DevMessage::~DevMessage() {}
 
-bool    DevMessage::set_message_path(std::string_view path)
+bool DevMessage::set_message_path(std::string_view path)
 {
     _msg_path = path;
     return true;
 }
 
-bool    DevMessage::set_trigger_mode(bool active)
+bool DevMessage::set_trigger_mode(bool active)
 {
     _trigger_mode = active;
     return true;
 }
 
-bool    DevMessage::is_running() const
+bool DevMessage::is_running() const
 {
     return _running;
 }
 
-void    DevMessage::_compute_output()
+void DevMessage::_compute_output()
 {
     if (_msg_ptr->field_write_to(_channel_msg_out->data(), _channel_msg_out->byte_size()) == false)
     {
         SIHD_LOG(error, "DevMessage: cannot write message {}", _channel_msg_out->name());
-        return ;
+        return;
     }
     _channel_msg_out->notify();
 }
 
-void    DevMessage::_fill_channels_out()
+void DevMessage::_fill_channels_out()
 {
-    for (const auto & [field, ch_out]: _fields_to_channel_out)
+    for (const auto & [field, ch_out] : _fields_to_channel_out)
     {
         if (field->field_write_to(ch_out->data(), ch_out->byte_size()) == false)
         {
             SIHD_LOG(error, "DevMessage: cannot write into channel {}", ch_out->name());
-            return ;
+            return;
         }
         ch_out->notify();
     }
 }
 
-void    DevMessage::handle(sihd::core::Channel *channel)
+void DevMessage::handle(sihd::core::Channel *channel)
 {
     if (channel == _channel_trigger)
     {
@@ -78,21 +78,21 @@ void    DevMessage::handle(sihd::core::Channel *channel)
             this->_compute_output();
         }
         _channel_msg_out->notify();
-        return ;
+        return;
     }
     else if (channel == _channel_msg_in)
     {
         if (_msg_ptr->field_read_from(channel->array()->buf(), channel->size()) == false)
         {
             SIHD_LOG(error, "DevMessage: cannot fill message from channel {}", _channel_msg_in->name());
-            return ;
+            return;
         }
         if (_trigger_mode == false)
         {
             this->_fill_channels_out();
             this->_compute_output();
         }
-        return ;
+        return;
     }
     const auto it = _channels_in_to_field.find(channel);
     if (it != _channels_in_to_field.end())
@@ -101,7 +101,7 @@ void    DevMessage::handle(sihd::core::Channel *channel)
         if (field->field_read_from(channel->array()->buf(), channel->size()) == false)
         {
             SIHD_LOG(error, "DevMessage: cannot fill field from channel {}", channel->name());
-            return ;
+            return;
         }
         if (_trigger_mode == false)
         {
@@ -109,7 +109,7 @@ void    DevMessage::handle(sihd::core::Channel *channel)
             if (field->field_write_to(ch_out->data(), ch_out->byte_size()) == false)
             {
                 SIHD_LOG(error, "DevMessage: cannot write into channel {}", ch_out->name());
-                return ;
+                return;
             }
             ch_out->notify();
             this->_compute_output();
@@ -117,12 +117,12 @@ void    DevMessage::handle(sihd::core::Channel *channel)
     }
 }
 
-bool    DevMessage::on_setup()
+bool DevMessage::on_setup()
 {
     return true;
 }
 
-bool    DevMessage::on_init()
+bool DevMessage::on_init()
 {
     _msg_ptr = this->find<IMessageField>(_msg_path);
     if (_msg_ptr == nullptr)
@@ -138,7 +138,7 @@ bool    DevMessage::on_init()
     Node *msg_node = dynamic_cast<Node *>(_msg_ptr);
     if (msg_node != nullptr)
     {
-        for (const auto & name: msg_node->children_keys())
+        for (const auto & name : msg_node->children_keys())
         {
             IMessageField *field_child = msg_node->find<IMessageField>(name);
             if (field_child != nullptr)
@@ -155,12 +155,12 @@ bool    DevMessage::on_init()
     return true;
 }
 
-bool    DevMessage::on_start()
+bool DevMessage::on_start()
 {
     Channel *c;
     bool ret = true;
 
-    for (const auto & [name, field]: _msg_fields)
+    for (const auto & [name, field] : _msg_fields)
     {
         std::string suffix_name = name + IN_SUFFIX;
 
@@ -189,13 +189,13 @@ bool    DevMessage::on_start()
     return ret;
 }
 
-bool    DevMessage::on_stop()
+bool DevMessage::on_stop()
 {
     _running = false;
     return true;
 }
 
-bool    DevMessage::on_reset()
+bool DevMessage::on_reset()
 {
     _msg_ptr = nullptr;
     _msg_fields.clear();
@@ -206,4 +206,4 @@ bool    DevMessage::on_reset()
     return true;
 }
 
-}
+} // namespace sihd::core

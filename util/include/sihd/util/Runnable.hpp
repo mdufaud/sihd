@@ -1,8 +1,8 @@
 #ifndef __SIHD_UTIL_RUNNABLE_HPP__
-# define __SIHD_UTIL_RUNNABLE_HPP__
+#define __SIHD_UTIL_RUNNABLE_HPP__
 
-# include <sihd/util/IRunnable.hpp>
-# include <functional>
+#include <functional>
+#include <sihd/util/IRunnable.hpp>
 
 namespace sihd::util
 {
@@ -12,22 +12,18 @@ class Runnable: public IRunnable
     public:
         Runnable();
         Runnable(IRunnable *runnable_ptr);
-        Runnable(std::function<bool ()> && fun);
+        Runnable(std::function<bool()> && fun);
         virtual ~Runnable();
 
-        bool operator()()
-        {
-            return this->run();
-        };
+        bool operator()() { return this->run(); };
 
         void set_runnable(IRunnable *runnable_ptr);
-        void set_method(std::function<bool ()> fun);
+        void set_method(std::function<bool()> fun);
 
         template <typename C>
-        void set_method(C* obj, bool (C::*fun)())
+        void set_method(C *obj, bool (C::*fun)())
         {
-            _run_fun = [obj, fun] () -> bool
-            {
+            _run_fun = [obj, fun]() -> bool {
                 return (obj->*fun)();
             };
         }
@@ -38,9 +34,9 @@ class Runnable: public IRunnable
     protected:
 
     private:
-        std::function<bool ()> _run_fun;
+        std::function<bool()> _run_fun;
 };
 
-}
+} // namespace sihd::util
 
 #endif

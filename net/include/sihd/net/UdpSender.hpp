@@ -1,17 +1,17 @@
 #ifndef __SIHD_NET_UDPSENDER_HPP__
-# define __SIHD_NET_UDPSENDER_HPP__
+#define __SIHD_NET_UDPSENDER_HPP__
 
-# include <sihd/util/Named.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/net/Socket.hpp>
-# include <sihd/net/INetSender.hpp>
+#include <sihd/net/INetSender.hpp>
+#include <sihd/net/Socket.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/Named.hpp>
 
 namespace sihd::net
 {
 
-class UdpSender:    public INetSender,
-                    public sihd::util::Named,
-                    public sihd::util::Configurable
+class UdpSender: public INetSender,
+                 public sihd::util::Named,
+                 public sihd::util::Configurable
 {
     public:
         UdpSender(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -41,9 +41,9 @@ class UdpSender:    public INetSender,
     protected:
 
     private:
-        Socket  _socket;
+        Socket _socket;
 };
 
-}
+} // namespace sihd::net
 
 #endif

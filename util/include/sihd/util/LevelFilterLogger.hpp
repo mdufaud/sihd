@@ -1,12 +1,12 @@
 #ifndef __SIHD_UTIL_LEVELFILTERLOGGER_HPP__
-# define __SIHD_UTIL_LEVELFILTERLOGGER_HPP__
+#define __SIHD_UTIL_LEVELFILTERLOGGER_HPP__
 
-# include <sihd/util/ILoggerFilter.hpp>
+#include <sihd/util/ILoggerFilter.hpp>
 
 namespace sihd::util
 {
 
-class LevelFilterLogger:    public ILoggerFilter
+class LevelFilterLogger: public ILoggerFilter
 {
     public:
         LevelFilterLogger(LogLevel min, bool match = false);
@@ -19,6 +19,6 @@ class LevelFilterLogger:    public ILoggerFilter
         bool match;
 };
 
-}
+} // namespace sihd::util
 
 #endif

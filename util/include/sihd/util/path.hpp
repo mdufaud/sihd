@@ -1,7 +1,7 @@
 #ifndef __SIHD_UTIL_PATH_HPP__
-# define __SIHD_UTIL_PATH_HPP__
+#define __SIHD_UTIL_PATH_HPP__
 
-# include <string>
+#include <string>
 
 namespace sihd::util::path
 {
@@ -16,6 +16,6 @@ std::string find(const std::string & path);
 
 std::string url_delimiter();
 
-}
+} // namespace sihd::util::path
 
 #endif

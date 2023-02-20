@@ -1,19 +1,19 @@
 #ifndef __SIHD_NET_IPADDR_HPP__
-# define __SIHD_NET_IPADDR_HPP__
+#define __SIHD_NET_IPADDR_HPP__
 
-# include <optional>
-# include <vector>
+#include <optional>
+#include <vector>
 
-# include <sihd/util/os.hpp>
+#include <sihd/util/os.hpp>
 
-# include <sihd/net/ip.hpp>
+#include <sihd/net/ip.hpp>
 
-# if !defined(__SIHD_WINDOWS__)
-#  include <netinet/in.h> // sockaddr
-# else
-#  include <winsock2.h>
-#  include <ws2ipdef.h> // sockaddr_in6
-# endif
+#if !defined(__SIHD_WINDOWS__)
+# include <netinet/in.h> // sockaddr
+#else
+# include <winsock2.h>
+# include <ws2ipdef.h> // sockaddr_in6
+#endif
 
 struct addrinfo; // in #include <netdb.h>
 
@@ -23,11 +23,11 @@ namespace sihd::net
 // permits easy ipv4 / ipv6 manipulation
 struct IpSockAddr
 {
-    int type;
-    socklen_t addr_len;
-    sockaddr *addr;
-    sockaddr_in addr_in;
-    sockaddr_in6 addr_in6;
+        int type;
+        socklen_t addr_len;
+        sockaddr *addr;
+        sockaddr_in addr_in;
+        sockaddr_in6 addr_in6;
 };
 
 class IpAddr
@@ -46,41 +46,38 @@ class IpAddr
 
         struct Subnet
         {
-            // number of hosts
-            unsigned int hosts;
-            // true network id
-            struct in_addr netid;
-            // netmask
-            struct in_addr netmask;
-            // lowest host
-            struct in_addr hostmin;
-            // highest host
-            struct in_addr hostmax;
-            // broadcast mask
-            struct in_addr broadcast;
-            // wildcard mask
-            struct in_addr wildcard;
+                // number of hosts
+                unsigned int hosts;
+                // true network id
+                struct in_addr netid;
+                // netmask
+                struct in_addr netmask;
+                // lowest host
+                struct in_addr hostmin;
+                // highest host
+                struct in_addr hostmax;
+                // broadcast mask
+                struct in_addr broadcast;
+                // wildcard mask
+                struct in_addr wildcard;
         };
 
         struct IpEntry
         {
-            bool ipv6;
-            int socktype;
-            int protocol;
-            in_addr addr;
-            in6_addr addr6;
+                bool ipv6;
+                int socktype;
+                int protocol;
+                in_addr addr;
+                in6_addr addr6;
 
-            std::string ip() const
-            {
-                return ipv6 ? IpAddr::ip_str(this->addr6) : IpAddr::ip_str(this->addr);
-            }
+                std::string ip() const { return ipv6 ? IpAddr::ip_str(this->addr6) : IpAddr::ip_str(this->addr); }
         };
 
         // dns lookup
         struct DnsInfo
         {
-            std::string hostname;
-            std::vector<IpEntry> lst_ip;
+                std::string hostname;
+                std::vector<IpEntry> lst_ip;
         };
 
         // do a DNS lookup to find every ip addr for every socket and every protocols
@@ -167,20 +164,35 @@ class IpAddr
         // returns string ip address
         std::string matching_ip_str(int socktype, int protocol, bool ipv6 = false) const;
         // returns string ip address for socket type
-        std::string socktype_ip_str(int socktype, bool ipv6 = false) const { return this->matching_ip_str(socktype, -1, ipv6); }
+        std::string socktype_ip_str(int socktype, bool ipv6 = false) const
+        {
+            return this->matching_ip_str(socktype, -1, ipv6);
+        }
         // returns string ip address for protocol
-        std::string protocol_ip_str(int protocol, bool ipv6 = false) const { return this->matching_ip_str(-1, protocol, ipv6); }
+        std::string protocol_ip_str(int protocol, bool ipv6 = false) const
+        {
+            return this->matching_ip_str(-1, protocol, ipv6);
+        }
 
         // returns string ip address
         std::string matching_ip_str(std::string_view socktype, std::string_view protocol, bool ipv6 = false) const;
         // returns string ip address for socket type
-        std::string socktype_ip_str(std::string_view socktype, bool ipv6 = false) const { return this->matching_ip_str(socktype, "", ipv6); }
+        std::string socktype_ip_str(std::string_view socktype, bool ipv6 = false) const
+        {
+            return this->matching_ip_str(socktype, "", ipv6);
+        }
         // returns string ip address for protocol
-        std::string protocol_ip_str(std::string_view protocol, bool ipv6 = false) const { return this->matching_ip_str("", protocol, ipv6); }
+        std::string protocol_ip_str(std::string_view protocol, bool ipv6 = false) const
+        {
+            return this->matching_ip_str("", protocol, ipv6);
+        }
 
         std::string first_ipv4_str() const { return this->matching_ip_str(-1, -1, false); }
         std::string first_ipv6_str() const { return this->matching_ip_str(-1, -1, true); }
-        std::string first_ip_str() const { return this->prefers_ipv6() ? this->first_ipv6_str() : this->first_ipv4_str(); }
+        std::string first_ip_str() const
+        {
+            return this->prefers_ipv6() ? this->first_ipv6_str() : this->first_ipv4_str();
+        }
 
         std::string dump_ip_lst() const;
 
@@ -235,6 +247,6 @@ class IpAddr
         Subnet _subnet;
 };
 
-}
+} // namespace sihd::net
 
 #endif

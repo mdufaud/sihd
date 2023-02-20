@@ -11,8 +11,11 @@ SIHD_LOGGER;
 
 PcapWriter::PcapWriter(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent),
-    _pcap_ptr(nullptr), _pcap_dumper_ptr(nullptr),
-    _clock_ptr(&_default_clock), _linktype(0), _snaplen(65535)
+    _pcap_ptr(nullptr),
+    _pcap_dumper_ptr(nullptr),
+    _clock_ptr(&_default_clock),
+    _linktype(0),
+    _snaplen(65535)
 {
     utils::init();
     this->add_conf("datalink", &PcapWriter::set_datalink);
@@ -24,12 +27,12 @@ PcapWriter::~PcapWriter()
     this->close();
 }
 
-const char  *PcapWriter::error()
+const char *PcapWriter::error()
 {
     return pcap_geterr(_pcap_ptr);
 }
 
-bool    PcapWriter::set_datalink(int dtl)
+bool PcapWriter::set_datalink(int dtl)
 {
     if (utils::is_datalink(dtl) == false)
     {
@@ -40,27 +43,27 @@ bool    PcapWriter::set_datalink(int dtl)
     return true;
 }
 
-bool    PcapWriter::set_snaplen(int len)
+bool PcapWriter::set_snaplen(int len)
 {
     _snaplen = len;
     return true;
 }
 
-bool    PcapWriter::open(std::string_view path, int datalink, int snaplen)
+bool PcapWriter::open(std::string_view path, int datalink, int snaplen)
 {
     if (this->set_datalink(datalink) && this->set_snaplen(snaplen))
         return this->open(path);
     return false;
 }
 
-bool    PcapWriter::open(std::string_view path, int datalink)
+bool PcapWriter::open(std::string_view path, int datalink)
 {
     if (this->set_datalink(datalink))
         return this->open(path);
     return false;
 }
 
-bool    PcapWriter::open(std::string_view path)
+bool PcapWriter::open(std::string_view path)
 {
     this->close();
     _pcap_ptr = pcap_open_dead(_linktype, _snaplen);
@@ -79,12 +82,12 @@ bool    PcapWriter::open(std::string_view path)
     return _pcap_dumper_ptr != nullptr;
 }
 
-bool    PcapWriter::is_open() const
+bool PcapWriter::is_open() const
 {
     return _pcap_ptr != nullptr;
 }
 
-bool    PcapWriter::close()
+bool PcapWriter::close()
 {
     if (_pcap_dumper_ptr != nullptr)
     {
@@ -99,7 +102,7 @@ bool    PcapWriter::close()
     return true;
 }
 
-FILE    *PcapWriter::file()
+FILE *PcapWriter::file()
 {
     return pcap_dump_file(_pcap_dumper_ptr);
 }
@@ -135,19 +138,19 @@ int64_t PcapWriter::pos()
     return pcap_dump_ftell64(_pcap_dumper_ptr);
 }
 
-bool    PcapWriter::flush()
+bool PcapWriter::flush()
 {
     return pcap_dump_flush(_pcap_dumper_ptr) == 0;
 }
 
-int     PcapWriter::snaplen()
+int PcapWriter::snaplen()
 {
     return pcap_snapshot(_pcap_ptr);
 }
 
-int     PcapWriter::datalink()
+int PcapWriter::datalink()
 {
     return pcap_datalink(_pcap_ptr);
 }
 
-}
+} // namespace sihd::pcap

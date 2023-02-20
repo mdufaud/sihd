@@ -1,8 +1,8 @@
-#include <sihd/util/Worker.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/time.hpp>
-#include <sihd/util/thread.hpp>
 #include <sihd/util/ScopedModifier.hpp>
+#include <sihd/util/Worker.hpp>
+#include <sihd/util/thread.hpp>
+#include <sihd/util/time.hpp>
 
 namespace sihd::util
 {
@@ -19,17 +19,17 @@ Worker::~Worker()
     this->stop_worker();
 }
 
-void    Worker::set_worker_detach(bool active)
+void Worker::set_worker_detach(bool active)
 {
     _detach = active;
 }
 
-void    Worker::set_runnable(IRunnable *runnable)
+void Worker::set_runnable(IRunnable *runnable)
 {
     _runnable_ptr = runnable;
 }
 
-bool    Worker::start_worker(std::string_view name)
+bool Worker::start_worker(std::string_view name)
 {
     if (_started.exchange(true) == true)
         return true;
@@ -50,7 +50,7 @@ bool    Worker::start_worker(std::string_view name)
     return ret;
 }
 
-bool    Worker::start_sync_worker(std::string_view name)
+bool Worker::start_sync_worker(std::string_view name)
 {
     if (_synchro.to_sync() > 0)
         return true;
@@ -62,7 +62,7 @@ bool    Worker::start_sync_worker(std::string_view name)
     return ret;
 }
 
-bool    Worker::_prepare_run()
+bool Worker::_prepare_run()
 {
     ScopedModifier m(_running, true);
     thread::set_name(_worker_thread_name);
@@ -72,12 +72,12 @@ bool    Worker::_prepare_run()
     return ret;
 }
 
-bool    Worker::run()
+bool Worker::run()
 {
     return _runnable_ptr->run();
 }
 
-bool    Worker::stop_worker()
+bool Worker::stop_worker()
 {
     if (_started.exchange(false) == false)
         return true;
@@ -88,14 +88,14 @@ bool    Worker::stop_worker()
     return ret;
 }
 
-bool    Worker::on_worker_start()
+bool Worker::on_worker_start()
 {
     return true;
 }
 
-bool    Worker::on_worker_stop()
+bool Worker::on_worker_stop()
 {
     return true;
 }
 
-}
+} // namespace sihd::util

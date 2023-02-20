@@ -8,15 +8,16 @@ namespace sihd::core
 
 SIHD_LOGGER;
 
-ChannelWaiter::ChannelWaiter(Channel *c):
-    ACoreObject("channel_waiter", nullptr), _channel(nullptr)
+ChannelWaiter::ChannelWaiter(Channel *c): ACoreObject("channel_waiter", nullptr), _channel(nullptr)
 {
     if (c != nullptr)
         this->set_channel(c);
 }
 
 ChannelWaiter::ChannelWaiter(const std::string & name, sihd::util::Node *parent):
-    ACoreObject(name, parent), _channel(nullptr), _count(0)
+    ACoreObject(name, parent),
+    _channel(nullptr),
+    _count(0)
 {
 }
 
@@ -25,13 +26,13 @@ ChannelWaiter::~ChannelWaiter()
     this->clear_channel();
 }
 
-bool    ChannelWaiter::do_stop()
+bool ChannelWaiter::do_stop()
 {
     this->clear_channel();
     return true;
 }
 
-void    ChannelWaiter::clear_channel()
+void ChannelWaiter::clear_channel()
 {
     _waitable.notify_all();
     if (_channel != nullptr)
@@ -40,7 +41,7 @@ void    ChannelWaiter::clear_channel()
     _channel = nullptr;
 }
 
-bool    ChannelWaiter::set_channel(Channel *channel)
+bool ChannelWaiter::set_channel(Channel *channel)
 {
     if (channel == nullptr)
     {
@@ -60,7 +61,7 @@ bool    ChannelWaiter::set_channel(Channel *channel)
     return true;
 }
 
-bool    ChannelWaiter::wait_for(time_t nano, uint32_t notifications)
+bool ChannelWaiter::wait_for(time_t nano, uint32_t notifications)
 {
     if (_channel == nullptr)
         return true;
@@ -68,10 +69,10 @@ bool    ChannelWaiter::wait_for(time_t nano, uint32_t notifications)
     return _waitable.wait_for_loop(nano, notifications) == false;
 }
 
-void    ChannelWaiter::handle([[maybe_unused]] Channel *channel)
+void ChannelWaiter::handle([[maybe_unused]] Channel *channel)
 {
     _count += 1;
     _waitable.notify(1);
 }
 
-}
+} // namespace sihd::core

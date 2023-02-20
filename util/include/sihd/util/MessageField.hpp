@@ -1,10 +1,10 @@
 #ifndef __SIHD_UTIL_MESSAGEFIELD_HPP__
-# define __SIHD_UTIL_MESSAGEFIELD_HPP__
+#define __SIHD_UTIL_MESSAGEFIELD_HPP__
 
-# include <sihd/util/array_utils.hpp>
-# include <sihd/util/Types.hpp>
-# include <sihd/util/Named.hpp>
-# include <sihd/util/IMessageField.hpp>
+#include <sihd/util/IMessageField.hpp>
+#include <sihd/util/Named.hpp>
+#include <sihd/util/Types.hpp>
+#include <sihd/util/array_utils.hpp>
 
 namespace sihd::util
 {
@@ -36,7 +36,7 @@ class MessageField: public Named,
         virtual IMessageField *clone() const override;
 
         template <typename T>
-        T   read_value(size_t idx) const
+        T read_value(size_t idx) const
         {
             if (_array_ptr == nullptr)
                 throw std::logic_error("array is not built yet");
@@ -55,6 +55,6 @@ class MessageField: public Named,
         IArray *_array_ptr;
 };
 
-}
+} // namespace sihd::util
 
 #endif

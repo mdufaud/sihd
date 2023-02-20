@@ -1,15 +1,15 @@
 #ifndef __SIHD_UTIL_PROVIDERS_HPP__
-# define __SIHD_UTIL_PROVIDERS_HPP__
+#define __SIHD_UTIL_PROVIDERS_HPP__
 
-# include <vector>
-# include <list>
-# include <set>
-# include <deque>
-# include <functional>
+#include <deque>
+#include <functional>
+#include <list>
+#include <set>
+#include <vector>
 
-# include <sihd/util/IProvider.hpp>
-# include <sihd/util/Array.hpp>
-# include <sihd/util/Waitable.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/IProvider.hpp>
+#include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
 {
@@ -45,7 +45,7 @@ class Provider: public sihd::util::IProvider<Type>
                 auto lock = std::lock_guard(_mutex);
                 _container_ptr = iterator;
                 if (iterator == nullptr)
-                    return ;
+                    return;
             }
             this->reset_index();
         }
@@ -63,7 +63,6 @@ class Provider: public sihd::util::IProvider<Type>
         mutable std::mutex _mutex;
         typename Container<Type>::iterator _iterator;
         Container<Type> *_container_ptr;
-
 };
 
 template <typename T>
@@ -81,27 +80,18 @@ template <typename Type>
 class FunctionProvider: public sihd::util::IProvider<Type>
 {
     public:
-        using ProviderMethod = std::function<bool (Type *)>;
-        using StatusMethod = std::function<bool ()>;
+        using ProviderMethod = std::function<bool(Type *)>;
+        using StatusMethod = std::function<bool()>;
 
         FunctionProvider() {}
 
-        FunctionProvider(ProviderMethod provider)
-        {
-            this->set_provider_function(std::move(provider));
-        }
+        FunctionProvider(ProviderMethod provider) { this->set_provider_function(std::move(provider)); }
 
         virtual ~FunctionProvider() {}
 
-        bool provide(Type *value)
-        {
-            return _provide_method(value);
-        }
+        bool provide(Type *value) { return _provide_method(value); }
 
-        bool providing() const
-        {
-            return _providing_method ? _providing_method() : true;
-        }
+        bool providing() const { return _providing_method ? _providing_method() : true; }
 
         void set_provider_function(ProviderMethod && fun) { _provide_method = std::move(fun); }
         void set_providing_function(StatusMethod && fun) { _providing_method = std::move(fun); }
@@ -111,7 +101,6 @@ class FunctionProvider: public sihd::util::IProvider<Type>
         StatusMethod _providing_method;
 };
 
-
-}
+} // namespace sihd::util
 
 #endif

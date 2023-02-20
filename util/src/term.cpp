@@ -8,19 +8,40 @@ bool is_interactive()
     return isatty(fileno(stdin));
 }
 
-std::string underline(std::string_view str) { return term::fmt(str, attr::UNDERLINE); }
+std::string underline(std::string_view str)
+{
+    return term::fmt(str, attr::UNDERLINE);
+}
 
-std::string bold(std::string_view str) { return term::fmt(str, attr::BOLD); }
+std::string bold(std::string_view str)
+{
+    return term::fmt(str, attr::BOLD);
+}
 
-std::string selected(std::string_view str) { return term::fmt(str, attr::SELECTED); }
+std::string selected(std::string_view str)
+{
+    return term::fmt(str, attr::SELECTED);
+}
 
-std::string blink(std::string_view str) { return term::fmt(str, attr::BLINK); }
+std::string blink(std::string_view str)
+{
+    return term::fmt(str, attr::BLINK);
+}
 
-std::string red(std::string_view str) { return term::fmt(str, attr::RED2); }
+std::string red(std::string_view str)
+{
+    return term::fmt(str, attr::RED2);
+}
 
-std::string green(std::string_view str) { return term::fmt(str, attr::GREEN2); }
+std::string green(std::string_view str)
+{
+    return term::fmt(str, attr::GREEN2);
+}
 
-std::string white_bg(std::string_view str) { return term::fmt(str, attr::WHITEBG, attr::BLACK); }
+std::string white_bg(std::string_view str)
+{
+    return term::fmt(str, attr::WHITEBG, attr::BLACK);
+}
 
 std::string move_cursor_up(int n)
 {
@@ -62,4 +83,4 @@ std::string set_col(int n)
     return fmt::format(SIHD_TERM_ANSI_OCTAL_ESCAPE "[{}G", n);
 }
 
-}
+} // namespace sihd::util::term

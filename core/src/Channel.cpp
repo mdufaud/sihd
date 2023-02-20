@@ -1,6 +1,6 @@
+#include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/StrConfiguration.hpp>
-#include <sihd/util/Array.hpp>
 #include <sihd/util/array_utils.hpp>
 
 #include <sihd/core/Channel.hpp>
@@ -14,15 +14,13 @@ SIHD_NEW_LOGGER("sihd::core");
 
 sihd::util::IClock *Channel::_default_channel_clock_ptr = &sihd::util::Clock::default_clock;
 
-Channel::Channel(const std::string & name, Type type, size_t size, Node *parent):
-    Named(name, parent)
+Channel::Channel(const std::string & name, Type type, size_t size, Node *parent): Named(name, parent)
 {
     _array_ptr = array_utils::create_from_type(type, size);
     if (_array_ptr == nullptr)
     {
-        throw std::invalid_argument(fmt::format("Channel: no such type {} for channel {}",
-                                                    Types::type_str(type),
-                                                    this->name()));
+        throw std::invalid_argument(
+            fmt::format("Channel: no such type {} for channel {}", Types::type_str(type), this->name()));
     }
     _array_ptr->resize(size);
     _notifying = false;
@@ -31,10 +29,7 @@ Channel::Channel(const std::string & name, Type type, size_t size, Node *parent)
     _clock_ptr = Channel::default_clock();
 }
 
-Channel::Channel(const std::string & name, Type type, Node *parent):
-    Channel(name, type, 1, parent)
-{
-}
+Channel::Channel(const std::string & name, Type type, Node *parent): Channel(name, type, 1, parent) {}
 
 Channel::Channel(const std::string & name, std::string_view type, size_t size, Node *parent):
     Channel(name, Types::from_str(type), size, parent)
@@ -52,7 +47,7 @@ Channel::~Channel()
         delete _array_ptr;
 }
 
-Channel     *Channel::build(std::string_view configuration)
+Channel *Channel::build(std::string_view configuration)
 {
     util::StrConfiguration conf(configuration);
 
@@ -72,7 +67,9 @@ Channel     *Channel::build(std::string_view configuration)
     unsigned long val;
     if (str::to_ulong(*size, &val) == false)
     {
-        SIHD_LOG(error, "Channel: cannot build from configuration '{}' size is either overflow or invalid", configuration);
+        SIHD_LOG(error,
+                 "Channel: cannot build from configuration '{}' size is either overflow or invalid",
+                 configuration);
         return nullptr;
     }
     return new Channel(*name, *type, val);
@@ -84,24 +81,24 @@ Timestamp Channel::timestamp() const
     return _timestamp;
 }
 
-void    Channel::do_timestamp()
+void Channel::do_timestamp()
 {
     _timestamp = _clock_ptr->now();
 }
 
-bool    Channel::copy_to(IArray & arr, size_t byte_offset) const
+bool Channel::copy_to(IArray & arr, size_t byte_offset) const
 {
     std::lock_guard lock(_arr_mutex);
     return arr.copy_from_bytes(*_array_ptr, byte_offset);
 }
 
-bool    Channel::write(const Channel & other)
+bool Channel::write(const Channel & other)
 {
     const IArray *other_array = other.array();
     return other_array != nullptr && this->write(*other_array);
 }
 
-bool    Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_offset)
+bool Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_offset)
 {
     if (_notifying)
     {
@@ -115,11 +112,12 @@ bool    Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_off
         if (arr_view.byte_size() + byte_offset > _array_ptr->byte_size())
         {
             SIHD_LOG_ERROR("Channel: cannot write {} bytes at {} offset into {} bytes",
-                            arr_view.byte_size(), byte_offset, _array_ptr->byte_size());
+                           arr_view.byte_size(),
+                           byte_offset,
+                           _array_ptr->byte_size());
             return false;
         }
-        if (_write_change_only
-                && _array_ptr->is_bytes_equal(arr_view.buf(), arr_view.byte_size(), byte_offset))
+        if (_write_change_only && _array_ptr->is_bytes_equal(arr_view.buf(), arr_view.byte_size(), byte_offset))
             return true;
         if ((ret = _array_ptr->copy_from_bytes(arr_view, byte_offset)))
             this->do_timestamp();
@@ -129,7 +127,7 @@ bool    Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_off
     return ret;
 }
 
-void    Channel::notify()
+void Channel::notify()
 {
     std::lock_guard lock(_notify_mutex);
     _notifying = true;
@@ -144,4 +142,4 @@ std::string Channel::description() const
     return fmt::format("{}[{}]", _array_ptr->data_type_str(), _array_ptr->size());
 };
 
-}
+} // namespace sihd::core

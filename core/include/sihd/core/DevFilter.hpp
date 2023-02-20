@@ -1,11 +1,11 @@
 #ifndef __SIHD_CORE_DEVFILTER_HPP__
-# define __SIHD_CORE_DEVFILTER_HPP__
+#define __SIHD_CORE_DEVFILTER_HPP__
 
-# include <sihd/util/Value.hpp>
-# include <sihd/util/Scheduler.hpp>
-# include <sihd/util/Task.hpp>
+#include <sihd/util/Scheduler.hpp>
+#include <sihd/util/Task.hpp>
+#include <sihd/util/Value.hpp>
 
-# include <sihd/core/Device.hpp>
+#include <sihd/core/Device.hpp>
 
 namespace sihd::core
 {
@@ -112,7 +112,11 @@ class DevFilter: public sihd::core::Device
         class DelayWriter: public sihd::util::Task
         {
             public:
-                DelayWriter(DevFilter *dev, Channel *channel_out, const Rule *rule_ptr, int64_t out_val, sihd::util::Scheduler *scheduler_ptr);
+                DelayWriter(DevFilter *dev,
+                            Channel *channel_out,
+                            const Rule *rule_ptr,
+                            int64_t out_val,
+                            sihd::util::Scheduler *scheduler_ptr);
                 ~DelayWriter();
 
                 bool run();
@@ -125,15 +129,15 @@ class DevFilter: public sihd::core::Device
 
         struct InternalRule
         {
-            InternalRule();
-            ~InternalRule();
+                InternalRule();
+                ~InternalRule();
 
-            bool set(const Rule *conf, Channel *in, Channel *out);
-            bool verify();
+                bool set(const Rule *conf, Channel *in, Channel *out);
+                bool verify();
 
-            Channel *channel_in_ptr;
-            Channel *channel_out_ptr;
-            const Rule *rule_ptr;
+                Channel *channel_in_ptr;
+                Channel *channel_out_ptr;
+                const Rule *rule_ptr;
         };
 
         bool _parse_conf(std::string_view conf, RuleType type);
@@ -147,6 +151,6 @@ class DevFilter: public sihd::core::Device
         bool _rule_with_delay;
 };
 
-}
+} // namespace sihd::core
 
 #endif

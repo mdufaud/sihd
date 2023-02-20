@@ -1,8 +1,8 @@
 #ifndef __SIHD_UTIL_FILELOGGER_HPP__
-# define __SIHD_UTIL_FILELOGGER_HPP__
+#define __SIHD_UTIL_FILELOGGER_HPP__
 
-# include <sihd/util/File.hpp>
-# include <sihd/util/ALogger.hpp>
+#include <sihd/util/ALogger.hpp>
+#include <sihd/util/File.hpp>
 
 namespace sihd::util
 {
@@ -24,6 +24,6 @@ class FileLogger: public ALogger
         File _file;
 };
 
-}
+} // namespace sihd::util
 
 #endif

@@ -1,7 +1,7 @@
 #include <sihd/imgui/ImguiRunner.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/platform.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
 # include <emscripten.h>
@@ -16,7 +16,8 @@ SIHD_NEW_LOGGER("sihd::imgui");
 
 ImguiRunner::ImguiRunner(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent),
-    _imgui_renderer_ptr(nullptr), _imgui_backend_ptr(nullptr)
+    _imgui_renderer_ptr(nullptr),
+    _imgui_backend_ptr(nullptr)
 {
     _running = false;
     _emscripten = false;
@@ -28,7 +29,7 @@ ImguiRunner::~ImguiRunner()
     this->stop();
 }
 
-void    ImguiRunner::_emscripten_loop(void *arg)
+void ImguiRunner::_emscripten_loop(void *arg)
 {
     if (arg != nullptr)
     {
@@ -37,7 +38,7 @@ void    ImguiRunner::_emscripten_loop(void *arg)
     }
 }
 
-bool    ImguiRunner::run()
+bool ImguiRunner::run()
 {
     {
         std::lock_guard l(_mutex);
@@ -58,7 +59,7 @@ bool    ImguiRunner::run()
     return _running;
 }
 
-bool    ImguiRunner::stop()
+bool ImguiRunner::stop()
 {
     {
         std::lock_guard l(_mutex);
@@ -69,12 +70,12 @@ bool    ImguiRunner::stop()
     return _running == false;
 }
 
-bool    ImguiRunner::is_running() const
+bool ImguiRunner::is_running() const
 {
     return _running;
 }
 
-bool    ImguiRunner::init_imgui()
+bool ImguiRunner::init_imgui()
 {
     IMGUI_CHECKVERSION();
     ImGuiContext *ctx = ImGui::CreateContext();
@@ -82,8 +83,8 @@ bool    ImguiRunner::init_imgui()
         return false;
     ImGuiIO & io = ImGui::GetIO();
     (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -92,7 +93,7 @@ bool    ImguiRunner::init_imgui()
     return true;
 }
 
-void    ImguiRunner::_loop_once()
+void ImguiRunner::_loop_once()
 {
     _imgui_backend_ptr->poll();
     _gui_running = _imgui_backend_ptr->should_close() == false;
@@ -104,7 +105,7 @@ void    ImguiRunner::_loop_once()
     }
 }
 
-void    ImguiRunner::_loop()
+void ImguiRunner::_loop()
 {
     _gui_running = true;
     while (_running && _gui_running)
@@ -112,7 +113,7 @@ void    ImguiRunner::_loop()
     this->_shutdown();
 }
 
-bool    ImguiRunner::_new_frame()
+bool ImguiRunner::_new_frame()
 {
     _imgui_renderer_ptr->new_frame();
     _imgui_backend_ptr->new_frame();
@@ -120,14 +121,14 @@ bool    ImguiRunner::_new_frame()
     return true;
 }
 
-bool    ImguiRunner::_build_frame()
+bool ImguiRunner::_build_frame()
 {
     if (_build_frame_method)
         return _build_frame_method();
     return false;
 }
 
-bool    ImguiRunner::_render()
+bool ImguiRunner::_render()
 {
     ImGui::Render();
     _imgui_backend_ptr->pre_render();
@@ -136,7 +137,7 @@ bool    ImguiRunner::_render()
     return true;
 }
 
-void    ImguiRunner::_shutdown()
+void ImguiRunner::_shutdown()
 {
     _imgui_backend_ptr->shutdown();
     _imgui_renderer_ptr->shutdown();
@@ -144,22 +145,22 @@ void    ImguiRunner::_shutdown()
     _imgui_backend_ptr->terminate();
 }
 
-void    ImguiRunner::set_renderer(IImguiRenderer *renderer)
+void ImguiRunner::set_renderer(IImguiRenderer *renderer)
 {
     _imgui_renderer_ptr = renderer;
 }
 
-void    ImguiRunner::set_backend(IImguiBackend *backend)
+void ImguiRunner::set_backend(IImguiBackend *backend)
 {
     _imgui_backend_ptr = backend;
 }
 
-void    ImguiRunner::set_build_frame(std::function<bool()> method)
+void ImguiRunner::set_build_frame(std::function<bool()> method)
 {
     _build_frame_method = std::move(method);
 }
 
-bool    ImguiRunner::set_emscripten(bool active)
+bool ImguiRunner::set_emscripten(bool active)
 {
 #if !defined(__SIHD_EMSCRIPTEN__)
     (void)active;
@@ -171,5 +172,4 @@ bool    ImguiRunner::set_emscripten(bool active)
 #endif
 }
 
-
-}
+} // namespace sihd::imgui

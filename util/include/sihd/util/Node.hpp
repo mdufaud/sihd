@@ -1,12 +1,12 @@
 #ifndef __SIHD_UTIL_NODE_HPP__
-# define __SIHD_UTIL_NODE_HPP__
+#define __SIHD_UTIL_NODE_HPP__
 
-# include <map>
-# include <vector>
-# include <exception>
+#include <exception>
+#include <map>
+#include <vector>
 
-# include <sihd/util/Named.hpp>
-# include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Named.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::util
 {
@@ -16,18 +16,18 @@ class Node: public Named
     public:
         struct TreeOpts
         {
-            size_t indent = 0;
-            size_t indent_by_iter = 2;
-            size_t current_recursion = 0;
-            size_t max_recursion = 0;
-            bool description = false;
+                size_t indent = 0;
+                size_t indent_by_iter = 2;
+                size_t current_recursion = 0;
+                size_t max_recursion = 0;
+                bool description = false;
         };
 
         struct ChildEntry
         {
-            std::string name;
-            Named *obj;
-            bool ownership;
+                std::string name;
+                Named *obj;
+                bool ownership;
         };
 
         Node(const std::string & name, Node *parent = nullptr);
@@ -115,6 +115,6 @@ class Node: public Named
         std::map<std::string, std::string> _link_map;
 };
 
-}
+} // namespace sihd::util
 
 #endif

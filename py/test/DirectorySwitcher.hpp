@@ -1,5 +1,5 @@
 #ifndef __SIHD_PY_DIRECTORYSWITCHER_HPP__
-# define __SIHD_PY_DIRECTORYSWITCHER_HPP__
+#define __SIHD_PY_DIRECTORYSWITCHER_HPP__
 
 #include <string>
 #include <string_view>
@@ -20,6 +20,6 @@ class DirectorySwitcher
         std::string _old_cwd;
 };
 
-}
+} // namespace test
 
 #endif

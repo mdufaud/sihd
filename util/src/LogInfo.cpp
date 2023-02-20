@@ -15,11 +15,9 @@ LogInfo::LogInfo(const std::string & src, LogLevel lvl): source(src), level(lvl)
     ::clock_gettime(CLOCK_REALTIME, &timestamp);
 }
 
-LogInfo::~LogInfo()
-{
-}
+LogInfo::~LogInfo() {}
 
-const char  *LogInfo::level_str(LogLevel level)
+const char *LogInfo::level_str(LogLevel level)
 {
     switch (level)
     {
@@ -44,22 +42,20 @@ const char  *LogInfo::level_str(LogLevel level)
     }
 }
 
-LogLevel    LogInfo::level_from_str(std::string_view level)
+LogLevel LogInfo::level_from_str(std::string_view level)
 {
-    static std::map<std::string_view, LogLevel> log_to_str = {
-        {"EMERGENCY", emergency},
-        {"ALERT", alert},
-        {"CRITICAL", critical},
-        {"ERROR", error},
-        {"WARNING", warning},
-        {"NOTICE", notice},
-        {"INFO", info},
-        {"DEBUG", debug}
-    };
+    static std::map<std::string_view, LogLevel> log_to_str = {{"EMERGENCY", emergency},
+                                                              {"ALERT", alert},
+                                                              {"CRITICAL", critical},
+                                                              {"ERROR", error},
+                                                              {"WARNING", warning},
+                                                              {"NOTICE", notice},
+                                                              {"INFO", info},
+                                                              {"DEBUG", debug}};
     auto it = log_to_str.find(level);
     if (it == log_to_str.end())
         return LogLevel::none;
     return it->second;
 }
 
-}
+} // namespace sihd::util

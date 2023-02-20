@@ -3,9 +3,9 @@
 
 #include <functional>
 #include <map>
+#include <memory>
 #include <stdexcept>
 #include <string>
-#include <memory>
 
 namespace sihd::util
 {
@@ -14,73 +14,66 @@ class CallbackManager
 {
     public:
         CallbackManager() {}
+
         ~CallbackManager() {}
 
-        bool exists(const std::string & name)
-        {
-            return _callbacks.find(name) != _callbacks.end();
-        }
+        bool exists(const std::string & name) { return _callbacks.find(name) != _callbacks.end(); }
 
-        void remove(const std::string & name)
-        {
-            _callbacks.erase(name);
-        }
+        void remove(const std::string & name) { _callbacks.erase(name); }
 
         // Non-member functions binding
-        template<typename R, typename ...Targs>
+        template <typename R, typename... Targs>
         void set(const std::string & name, R (*fun)(Targs...))
         {
-            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun](Targs... args)
-            {
-                return (*fun)(args...);
-            })));
+            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun](Targs... args) {
+                                   return (*fun)(args...);
+                               })));
         }
 
         // Member functions binding
-        template<typename C, typename R, typename ...Targs>
+        template <typename C, typename R, typename... Targs>
         void set(const std::string & name, C *obj, R (C::*fun)(Targs...))
         {
-            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun, obj](Targs... args)
-            {
-                return (obj->*fun)(args...);
-            })));
+            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun, obj](Targs... args) {
+                                   return (obj->*fun)(args...);
+                               })));
         }
 
         // std::function binding
-        template<typename R, typename ...Targs>
-        void set(const std::string & name, std::function<R (Targs...)> fun)
+        template <typename R, typename... Targs>
+        void set(const std::string & name, std::function<R(Targs...)> fun)
         {
             _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
         }
 
         // The entire signature of the lambda must be passed to this overload.
-        template<typename R, typename ...Targs, typename Callable>
+        template <typename R, typename... Targs, typename Callable>
         void set(const std::string & name, Callable callable)
         {
-            std::function<R (Targs...)> fun(callable);
+            std::function<R(Targs...)> fun(callable);
             _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
         }
 
         // Calling
-        template<typename ...Targs>
+        template <typename... Targs>
         void call(const std::string & name, Targs... args)
         {
             this->call_base<void, Targs...>(name, args...);
         }
 
-        template<typename R, typename ...Targs>
+        template <typename R, typename... Targs>
         R call(const std::string & name, Targs... args)
         {
             return this->call_base<R, Targs...>(name, args...);
         }
 
-        template<typename R>
+        template <typename R>
         R call(const std::string & name)
         {
             return this->call_base<R>(name);
         }
 
-        template<typename R, typename ...Targs>
+        template <typename R, typename... Targs>
         bool check_call_type(const std::string & name)
         {
             CallbackBase *cbase = _callbacks[name].get();
@@ -95,30 +88,25 @@ class CallbackManager
         {
             public:
                 CallbackBase() {}
+
                 virtual ~CallbackBase() {}
         };
 
-        template<typename R, typename ...Targs>
+        template <typename R, typename... Targs>
         class Callback: public CallbackBase
         {
             public:
-                Callback(std::function<R (Targs...)> && fun)
-                {
-                    _fun = std::move(fun);
-                }
+                Callback(std::function<R(Targs...)> && fun) { _fun = std::move(fun); }
 
                 ~Callback() {}
 
-                R call(Targs... args)
-                {
-                    return _fun(args...);
-                }
+                R call(Targs... args) { return _fun(args...); }
 
             private:
-                std::function<R (Targs...)> _fun;
+                std::function<R(Targs...)> _fun;
         };
 
-        template<typename R, typename ...Targs>
+        template <typename R, typename... Targs>
         R call_base(const std::string & name, Targs... args)
         {
             CallbackBase *cbase = _callbacks[name].get();
@@ -135,6 +123,6 @@ class CallbackManager
         std::map<std::string, std::unique_ptr<CallbackBase>> _callbacks;
 };
 
-}
+} // namespace sihd::util
 
 #endif

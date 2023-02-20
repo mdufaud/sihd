@@ -1,13 +1,13 @@
 #include <sys/stat.h>
 
-#include <cstring>
 #include <cerrno>
 #include <climits>
+#include <cstring>
 
-#include <sihd/util/File.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/IArray.hpp>
 #include <sihd/util/ArrayView.hpp>
+#include <sihd/util/File.hpp>
+#include <sihd/util/IArray.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/os.hpp>
 
 namespace sihd::util
@@ -51,7 +51,7 @@ File::~File()
     this->_delete_buffer();
 }
 
-File &  File::operator=(File && other)
+File & File::operator=(File && other)
 {
     _file_ptr = other._file_ptr;
     _path = std::move(other._path);
@@ -66,7 +66,7 @@ File &  File::operator=(File && other)
     return *this;
 }
 
-std::optional<struct stat>  File::stat()
+std::optional<struct stat> File::stat()
 {
     if (_file_ptr != nullptr)
     {
@@ -77,7 +77,7 @@ std::optional<struct stat>  File::stat()
     return std::nullopt;
 }
 
-bool    File::set_buffer_size(size_t size)
+bool File::set_buffer_size(size_t size)
 {
     if (_buf_size == size)
         return true;
@@ -88,22 +88,22 @@ bool    File::set_buffer_size(size_t size)
     return this->_allocate_buffer_if_not_exists();
 }
 
-void    File::set_no_buffering()
+void File::set_no_buffering()
 {
     _buf_mode = _IONBF;
 }
 
-void    File::set_buffering_line()
+void File::set_buffering_line()
 {
     _buf_mode = _IOLBF;
 }
 
-void    File::set_buffering_full()
+void File::set_buffering_full()
 {
     _buf_mode = _IOFBF;
 }
 
-bool    File::_allocate_buffer_if_not_exists()
+bool File::_allocate_buffer_if_not_exists()
 {
     if (_buf_ptr == nullptr)
     {
@@ -121,7 +121,7 @@ bool    File::_allocate_buffer_if_not_exists()
     return _buf_ptr != nullptr;
 }
 
-bool    File::buff_stream()
+bool File::buff_stream()
 {
     if (_file_ptr != nullptr)
     {
@@ -135,7 +135,7 @@ bool    File::buff_stream()
     return true;
 }
 
-void    File::_delete_buffer()
+void File::_delete_buffer()
 {
     if (_buf_ptr != nullptr)
     {
@@ -145,7 +145,7 @@ void    File::_delete_buffer()
     }
 }
 
-bool    File::open_fd(int fd, std::string_view mode)
+bool File::open_fd(int fd, std::string_view mode)
 {
     this->close();
     _file_ptr = fdopen(fd, mode.data());
@@ -158,14 +158,14 @@ bool    File::open_fd(int fd, std::string_view mode)
     return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
 }
 
-bool    File::set_stream(FILE *stream, bool ownership)
+bool File::set_stream(FILE *stream, bool ownership)
 {
     _file_ptr = stream;
     _stream_ownership = ownership;
     return true;
 }
 
-bool    File::open_tmpfile()
+bool File::open_tmpfile()
 {
     this->close();
     _file_ptr = tmpfile();
@@ -178,7 +178,7 @@ bool    File::open_tmpfile()
     return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
 }
 
-bool    File::open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix)
+bool File::open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix)
 {
     this->close();
     const size_t path_size = prefix.size() + 6 + suffix.size();
@@ -206,7 +206,7 @@ bool    File::open_tmp(std::string_view prefix, bool write_binary, std::string_v
     return this->is_open();
 }
 
-bool    File::open(std::string_view path, std::string_view mode)
+bool File::open(std::string_view path, std::string_view mode)
 {
     this->close();
     _file_ptr = fopen(path.data(), mode.data());
@@ -222,32 +222,32 @@ bool    File::open(std::string_view path, std::string_view mode)
     return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
 }
 
-bool    File::is_open() const
+bool File::is_open() const
 {
     return _file_ptr != nullptr;
 }
 
-bool    File::eof() const
+bool File::eof() const
 {
     return feof(_file_ptr) != 0;
 }
 
-int     File::fd() const
+int File::fd() const
 {
-    return  _file_ptr == nullptr ? -1 : fileno(_file_ptr);
+    return _file_ptr == nullptr ? -1 : fileno(_file_ptr);
 }
 
-int     File::error() const
+int File::error() const
 {
     return ferror(_file_ptr);
 }
 
-void    File::clear_errors()
+void File::clear_errors()
 {
     clearerr(_file_ptr);
 }
 
-bool    File::flush()
+bool File::flush()
 {
     if (_file_ptr != nullptr && fflush(_file_ptr) != 0)
     {
@@ -257,7 +257,7 @@ bool    File::flush()
     return _file_ptr != nullptr;
 }
 
-bool    File::close()
+bool File::close()
 {
     if (_file_ptr != nullptr)
     {
@@ -272,7 +272,7 @@ bool    File::close()
     return true;
 }
 
-long    File::filesize()
+long File::filesize()
 {
     long ret = -1;
     long current_offset = this->tell();
@@ -287,7 +287,7 @@ long    File::filesize()
     return ret;
 }
 
-void    File::lock()
+void File::lock()
 {
 #if !defined(__SIHD_WINDOWS__)
     flockfile(_file_ptr);
@@ -296,7 +296,7 @@ void    File::lock()
 #endif
 }
 
-bool    File::trylock()
+bool File::trylock()
 {
 #if !defined(__SIHD_WINDOWS__)
     return ftrylockfile(_file_ptr) == 0;
@@ -306,7 +306,7 @@ bool    File::trylock()
 #endif
 }
 
-void    File::unlock()
+void File::unlock()
 {
 #if !defined(__SIHD_WINDOWS__)
     funlockfile(_file_ptr);
@@ -315,7 +315,7 @@ void    File::unlock()
 #endif
 }
 
-long    File::tell()
+long File::tell()
 {
     long ret = ftell(_file_ptr);
     if (ret < 0)
@@ -323,22 +323,22 @@ long    File::tell()
     return ret;
 }
 
-bool    File::seek(long offset)
+bool File::seek(long offset)
 {
     return this->_seek(offset, SEEK_CUR);
 }
 
-bool    File::seek_begin(long offset)
+bool File::seek_begin(long offset)
 {
     return this->_seek(offset, SEEK_SET);
 }
 
-bool    File::seek_end(long offset)
+bool File::seek_end(long offset)
 {
     return this->_seek(offset, SEEK_END);
 }
 
-bool    File::_seek(long offset, int origin)
+bool File::_seek(long offset, int origin)
 {
     int ret = fseek(_file_ptr, offset, origin);
     if (ret < 0)
@@ -377,7 +377,7 @@ ssize_t File::write(ArrCharView view)
     return this->write(view.data(), view.size());
 }
 
-bool    File::write_char(int c)
+bool File::write_char(int c)
 {
     return fputc(c, _file_ptr) == c;
 }
@@ -387,7 +387,7 @@ ssize_t File::read_line(char **line, size_t *size)
 #if !defined(__SIHD_WINDOWS__)
     return getline(line, size, _file_ptr);
 #else
-    #pragma message("File::read_line is not supported on windows")
+# pragma message("File::read_line is not supported on windows")
     *line = nullptr;
     *size = 0;
     return -1;
@@ -399,7 +399,7 @@ ssize_t File::read_line_delim(char **line, size_t *size, int delim)
 #if !defined(__SIHD_WINDOWS__)
     return getdelim(line, size, delim, _file_ptr);
 #else
-    #pragma message("File::read_line_delim is not supported on windows")
+# pragma message("File::read_line_delim is not supported on windows")
     *line = nullptr;
     *size = 0;
     (void)delim;
@@ -407,4 +407,4 @@ ssize_t File::read_line_delim(char **line, size_t *size, int delim)
 #endif
 }
 
-}
+} // namespace sihd::util

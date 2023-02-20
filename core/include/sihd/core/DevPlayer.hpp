@@ -1,26 +1,25 @@
 #ifndef __SIHD_CORE_DEVPLAYER_HPP__
-# define __SIHD_CORE_DEVPLAYER_HPP__
+#define __SIHD_CORE_DEVPLAYER_HPP__
 
-# include <queue>
+#include <queue>
 
-# include <sihd/util/Scheduler.hpp>
-# include <sihd/util/Worker.hpp>
-# include <sihd/util/IProvider.hpp>
-# include <sihd/util/Collector.hpp>
-# include <sihd/util/IHandler.hpp>
-# include <sihd/util/Runnable.hpp>
+#include <sihd/util/Collector.hpp>
+#include <sihd/util/IHandler.hpp>
+#include <sihd/util/IProvider.hpp>
+#include <sihd/util/Runnable.hpp>
+#include <sihd/util/Scheduler.hpp>
+#include <sihd/util/Worker.hpp>
 
-# include <sihd/core/Device.hpp>
-# include <sihd/core/DevRecorder.hpp>
-# include <sihd/core/Records.hpp>
-
+#include <sihd/core/DevRecorder.hpp>
+#include <sihd/core/Device.hpp>
+#include <sihd/core/Records.hpp>
 
 namespace sihd::core
 {
 
-class DevPlayer:    public sihd::core::Device,
-                    public sihd::util::IHandler<sihd::util::Collector<PlayableRecord> *>,
-                    public sihd::util::IRunnable
+class DevPlayer: public sihd::core::Device,
+                 public sihd::util::IHandler<sihd::util::Collector<PlayableRecord> *>,
+                 public sihd::util::IRunnable
 {
     public:
         DevPlayer(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -81,6 +80,6 @@ class DevPlayer:    public sihd::core::Device,
         sihd::util::Runnable _runnable;
 };
 
-}
+} // namespace sihd::core
 
 #endif

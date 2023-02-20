@@ -1,9 +1,9 @@
 #ifndef __SIHD_UTIL_OBSERVERWAITER_HPP__
-# define __SIHD_UTIL_OBSERVERWAITER_HPP__
+#define __SIHD_UTIL_OBSERVERWAITER_HPP__
 
-# include <sihd/util/Observable.hpp>
-# include <sihd/util/IHandler.hpp>
-# include <sihd/util/Waitable.hpp>
+#include <sihd/util/IHandler.hpp>
+#include <sihd/util/Observable.hpp>
+#include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
 {
@@ -17,10 +17,7 @@ class ObserverWaiter: public IHandler<T *>
             notifications = 0;
             obs->add_observer(this);
         }
-        virtual ~ObserverWaiter()
-        {
-            _obs_ptr->remove_observer(this);
-        }
+        virtual ~ObserverWaiter() { _obs_ptr->remove_observer(this); }
 
         void handle([[maybe_unused]] T *obj)
         {
@@ -28,10 +25,7 @@ class ObserverWaiter: public IHandler<T *>
             _waitable.notify(1);
         }
 
-        void wait()
-        {
-            _waitable.infinite_wait();
-        }
+        void wait() { _waitable.infinite_wait(); }
 
         bool wait_for(time_t nano, uint32_t notifications = 1)
         {
@@ -48,6 +42,6 @@ class ObserverWaiter: public IHandler<T *>
         Waitable _waitable;
 };
 
-}
+} // namespace sihd::util
 
 #endif

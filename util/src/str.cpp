@@ -1,22 +1,22 @@
 #include <cxxabi.h> // demangle
-#include <string.h>
 #include <errno.h>
 #include <math.h> // HUGE_VAL
+#include <string.h>
 
-#include <sstream>
+#include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
 #include <cstdarg>
 #include <mutex>
-#include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
+#include <sstream>
 
 #include <fmt/format.h>
 
-#include <sihd/util/num.hpp>
-#include <sihd/util/str.hpp>
-#include <sihd/util/Splitter.hpp>
-#include <sihd/util/time.hpp>
-#include <sihd/util/Timestamp.hpp>
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/IArrayView.hpp>
+#include <sihd/util/Splitter.hpp>
+#include <sihd/util/Timestamp.hpp>
+#include <sihd/util/num.hpp>
+#include <sihd/util/str.hpp>
+#include <sihd/util/time.hpp>
 
 #ifndef SIHD_UTIL_STR_BUFFER
 # define SIHD_UTIL_STR_BUFFER 4096
@@ -73,24 +73,24 @@ std::string _timeoffset_to_string(time_t nano, bool total_parenthesis, bool nano
     return s;
 }
 
-}
+} // namespace
 
-const char  *escapes_open()
+const char *escapes_open()
 {
     return "\"'[({<";
 }
 
-const char  *escapes_close()
+const char *escapes_close()
 {
     return "\"'])}>";
 }
 
-char    escape_char()
+char escape_char()
 {
     return '\\';
 }
 
-void    append_sep(std::string & str, std::string_view append, std::string_view sep)
+void append_sep(std::string & str, std::string_view append, std::string_view sep)
 {
     if (str.empty())
         str += append;
@@ -101,7 +101,7 @@ void    append_sep(std::string & str, std::string_view append, std::string_view 
     }
 }
 
-char    *csub(std::string_view str, size_t from_idx, ssize_t size)
+char *csub(std::string_view str, size_t from_idx, ssize_t size)
 {
     if (size < 0)
         return nullptr;
@@ -122,7 +122,7 @@ std::string join(const std::vector<std::string> & join_lst, std::string_view joi
 {
     std::string s;
     bool first = true;
-    for (const auto & str: join_lst)
+    for (const auto & str : join_lst)
     {
         if (!first)
             s += join_with;
@@ -173,7 +173,7 @@ std::string trim(std::string_view s)
     return std::string(s.substr(i, j - i + 1));
 }
 
-std::string &   to_upper(std::string & s)
+std::string & to_upper(std::string & s)
 {
     size_t i = 0;
     while (s[i])
@@ -184,7 +184,7 @@ std::string &   to_upper(std::string & s)
     return s;
 }
 
-std::string &   to_lower(std::string & s)
+std::string & to_lower(std::string & s)
 {
     size_t i = 0;
     while (s[i])
@@ -212,14 +212,14 @@ std::string replace(std::string_view s, std::string_view from, std::string_view 
     return ret;
 }
 
-bool    iequals(std::string_view s1, std::string_view s2)
+bool iequals(std::string_view s1, std::string_view s2)
 {
     if (s1.size() != s2.size())
         return false;
     return strncasecmp(s1.data(), s2.data(), s1.size());
 }
 
-char    num_to_char(size_t num)
+char num_to_char(size_t num)
 {
     if (num >= 10)
         return 'a' + (num - 10);
@@ -353,12 +353,12 @@ std::string hexdump_fmt(const IArrayView & arr, size_t cols)
     return hexdump_fmt(arr.buf(), arr.byte_size(), cols);
 }
 
-bool    starts_with(std::string_view s, std::string_view start)
+bool starts_with(std::string_view s, std::string_view start)
 {
     return strncmp(s.data(), start.data(), start.length()) == 0;
 }
 
-bool    ends_with(std::string_view s, std::string_view end)
+bool ends_with(std::string_view s, std::string_view end)
 {
     ssize_t ending = s.length() - end.length();
     if (ending < 0)
@@ -366,34 +366,29 @@ bool    ends_with(std::string_view s, std::string_view end)
     return strncmp(s.data() + ending, end.data(), end.length()) == 0;
 }
 
-bool    is_digit(int c, uint16_t base)
+bool is_digit(int c, uint16_t base)
 {
     if (base <= 10)
         return base != 0 && c >= '0' && c <= '0' + (base - 1);
     base = base - 10;
-    return (c >= '0' && c <= '9')
-        || (c >= 'a' && c <= 'a' + (base - 1))
-        || (c >= 'A' && c <= 'A' + (base - 1));
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'a' + (base - 1)) || (c >= 'A' && c <= 'A' + (base - 1));
 }
 
-bool    is_number(std::string_view s, uint16_t base)
+bool is_number(std::string_view s, uint16_t base)
 {
     size_t i = 0;
     const char *data = s.data();
     size_t len = s.length();
     while (i < len)
     {
-        if (isspace(data[i]) == 0
-            && data[i] != '-'
-            && data[i] != '+'
-            && is_digit(data[i], base) == false)
+        if (isspace(data[i]) == 0 && data[i] != '-' && data[i] != '+' && is_digit(data[i], base) == false)
             return false;
         ++i;
     }
     return true;
 }
 
-bool    to_long(std::string_view str, long *ret, uint16_t base)
+bool to_long(std::string_view str, long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
@@ -407,7 +402,7 @@ bool    to_long(std::string_view str, long *ret, uint16_t base)
     return true;
 }
 
-bool   to_ulong(std::string_view str, unsigned long *ret, uint16_t base)
+bool to_ulong(std::string_view str, unsigned long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
@@ -421,7 +416,7 @@ bool   to_ulong(std::string_view str, unsigned long *ret, uint16_t base)
     return true;
 }
 
-bool    to_llong(std::string_view str, long long *ret, uint16_t base)
+bool to_llong(std::string_view str, long long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
@@ -435,7 +430,7 @@ bool    to_llong(std::string_view str, long long *ret, uint16_t base)
     return true;
 }
 
-bool   to_ullong(std::string_view str, unsigned long long *ret, uint16_t base)
+bool to_ullong(std::string_view str, unsigned long long *ret, uint16_t base)
 {
     errno = 0;
     char *endptr = NULL;
@@ -449,7 +444,7 @@ bool   to_ullong(std::string_view str, unsigned long long *ret, uint16_t base)
     return true;
 }
 
-bool    to_double(std::string_view str, double *ret)
+bool to_double(std::string_view str, double *ret)
 {
     errno = 0;
     char *endptr = NULL;
@@ -610,19 +605,21 @@ bool convert_from_string<double>(std::string_view str, double & value, [[maybe_u
     return ret;
 }
 
-bool    is_escape_sequence_open(int c, const char *authorized_open_escape_sequences)
+bool is_escape_sequence_open(int c, const char *authorized_open_escape_sequences)
 {
-    const char *search_in = authorized_open_escape_sequences == nullptr ? escapes_open() : authorized_open_escape_sequences;
+    const char *search_in
+        = authorized_open_escape_sequences == nullptr ? escapes_open() : authorized_open_escape_sequences;
     return c > 0 && strchr(search_in, c) != nullptr;
 }
 
-bool    is_escape_sequence_close(int c, const char *authorized_close_escape_sequences)
+bool is_escape_sequence_close(int c, const char *authorized_close_escape_sequences)
 {
-    const char *search_in = authorized_close_escape_sequences == nullptr ? escapes_close() : authorized_close_escape_sequences;
+    const char *search_in
+        = authorized_close_escape_sequences == nullptr ? escapes_close() : authorized_close_escape_sequences;
     return c > 0 && strchr(search_in, c) != nullptr;
 }
 
-int     closing_escape_of(int c)
+int closing_escape_of(int c)
 {
     const char *open_esc = strchr(escapes_open(), c);
     if (open_esc != nullptr)
@@ -633,7 +630,7 @@ int     closing_escape_of(int c)
     return -1;
 }
 
-bool    is_escaped_char(const char *str, int index)
+bool is_escaped_char(const char *str, int index)
 {
     if (index > 0 && str[index - 1] == escape_char())
     {
@@ -644,11 +641,10 @@ bool    is_escaped_char(const char *str, int index)
     return false;
 }
 
-int     closing_escape_index(const char *str, int index, const char *authorized_open_escape_sequences)
+int closing_escape_index(const char *str, int index, const char *authorized_open_escape_sequences)
 {
     int open_esc = str[index];
-    if (authorized_open_escape_sequences != nullptr
-        && strchr(authorized_open_escape_sequences, open_esc) == nullptr)
+    if (authorized_open_escape_sequences != nullptr && strchr(authorized_open_escape_sequences, open_esc) == nullptr)
         return -1;
     int close_esc = closing_escape_of(open_esc);
     if (close_esc < 0)
@@ -665,7 +661,7 @@ int     closing_escape_index(const char *str, int index, const char *authorized_
     return -2;
 }
 
-std::string  remove_escape_char(std::string_view str)
+std::string remove_escape_char(std::string_view str)
 {
     std::string ret;
     const char *cstr = str.data();
@@ -699,7 +695,7 @@ std::string  remove_escape_char(std::string_view str)
     return ret;
 }
 
-std::string  remove_escape_sequences(std::string_view str, const char *authorized_open_escape_sequences)
+std::string remove_escape_sequences(std::string_view str, const char *authorized_open_escape_sequences)
 {
     const char *cstr = str.data();
     std::string ret;
@@ -712,8 +708,7 @@ std::string  remove_escape_sequences(std::string_view str, const char *authorize
 
     while (i < len)
     {
-        if (!in_seq
-            && is_escape_sequence_open(cstr[i], authorized_open_escape_sequences)
+        if (!in_seq && is_escape_sequence_open(cstr[i], authorized_open_escape_sequences)
             && is_escaped_char(cstr, i) == false)
         {
             current_seq = closing_escape_of(cstr[i]);
@@ -732,8 +727,7 @@ std::string  remove_escape_sequences(std::string_view str, const char *authorize
     in_seq = false;
     while (i < len)
     {
-        if (!in_seq
-            && is_escape_sequence_open(cstr[i], authorized_open_escape_sequences)
+        if (!in_seq && is_escape_sequence_open(cstr[i], authorized_open_escape_sequences)
             && is_escaped_char(cstr, i) == false)
         {
             current_seq = closing_escape_of(cstr[i]);
@@ -895,8 +889,7 @@ std::string word_wrap(std::string_view s, size_t width, bool append_hyphen)
                     curr_width = add_size;
                 }
             }
-            else if ((curr_width + word_size > width)
-                    || (curr_width > 0 && curr_width + word_size + 1 > width))
+            else if ((curr_width + word_size > width) || (curr_width > 0 && curr_width + word_size + 1 > width))
             {
                 ret.append("\n");
                 ret.append(s.data() + word_begin, word_size);
@@ -923,4 +916,4 @@ std::string word_wrap(std::string_view s, size_t width, bool append_hyphen)
     return ret;
 }
 
-}
+} // namespace sihd::util::str

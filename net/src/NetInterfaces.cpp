@@ -3,9 +3,9 @@
 #include <sihd/net/NetInterfaces.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
+# include <ifaddrs.h>   // getifaddrs
+# include <net/if.h>    // macros
 # include <sys/types.h> // getifaddrs
-# include <ifaddrs.h> // getifaddrs
-# include <net/if.h> // macros
 #endif
 
 namespace sihd::net
@@ -27,7 +27,7 @@ NetInterfaces::~NetInterfaces()
     this->_free();
 }
 
-void    NetInterfaces::_free()
+void NetInterfaces::_free()
 {
 #if !defined(__SIHD_WINDOWS__)
     if (_addrs_ptr != nullptr)
@@ -40,12 +40,12 @@ void    NetInterfaces::_free()
 #endif
 }
 
-bool    NetInterfaces::error()
+bool NetInterfaces::error()
 {
     return _error;
 }
 
-bool    NetInterfaces::load()
+bool NetInterfaces::load()
 {
 #if !defined(__SIHD_WINDOWS__)
     struct ifaddrs *current;
@@ -69,22 +69,22 @@ bool    NetInterfaces::load()
 #endif
 }
 
-std::vector<std::string>    NetInterfaces::names()
+std::vector<std::string> NetInterfaces::names()
 {
     std::vector<std::string> ret;
     ret.reserve(_ifaces_map.size());
-    for (const auto & pair: _ifaces_map)
+    for (const auto & pair : _ifaces_map)
     {
         ret.push_back(pair.second.name());
     }
     return ret;
 }
 
-std::vector<NetIFace *>   NetInterfaces::ifaces()
+std::vector<NetIFace *> NetInterfaces::ifaces()
 {
     std::vector<NetIFace *> ret;
     ret.reserve(_ifaces_map.size());
-    for (auto & pair: _ifaces_map)
+    for (auto & pair : _ifaces_map)
     {
         ret.push_back(&pair.second);
     }
@@ -94,7 +94,7 @@ std::vector<NetIFace *>   NetInterfaces::ifaces()
 // NetIFace
 
 #if !defined(__SIHD_WINDOWS__)
-void    NetIFace::add(struct ifaddrs *addr)
+void NetIFace::add(struct ifaddrs *addr)
 {
     if (_name.empty())
     {
@@ -105,9 +105,9 @@ void    NetIFace::add(struct ifaddrs *addr)
     _addrs.push_back(addr);
 }
 
-const struct ifaddrs    *NetIFace::get_addr(int family) const
+const struct ifaddrs *NetIFace::get_addr(int family) const
 {
-    for (const struct ifaddrs *addr: _addrs)
+    for (const struct ifaddrs *addr : _addrs)
     {
         if (addr->ifa_addr->sa_family == family)
             return addr;
@@ -115,10 +115,10 @@ const struct ifaddrs    *NetIFace::get_addr(int family) const
     return nullptr;
 }
 
-const struct ifaddrs    *NetIFace::find(sockaddr_in addr_in) const
+const struct ifaddrs *NetIFace::find(sockaddr_in addr_in) const
 {
     struct sockaddr_in *cast;
-    for (const struct ifaddrs *addr: _addrs)
+    for (const struct ifaddrs *addr : _addrs)
     {
         if (addr->ifa_addr->sa_family == AF_INET)
         {
@@ -130,10 +130,10 @@ const struct ifaddrs    *NetIFace::find(sockaddr_in addr_in) const
     return nullptr;
 }
 
-const struct ifaddrs    *NetIFace::find(sockaddr_in6 addr_in6) const
+const struct ifaddrs *NetIFace::find(sockaddr_in6 addr_in6) const
 {
     struct sockaddr_in6 *cast;
-    for (const struct ifaddrs *addr: _addrs)
+    for (const struct ifaddrs *addr : _addrs)
     {
         if (addr->ifa_addr->sa_family == AF_INET6)
         {
@@ -145,7 +145,7 @@ const struct ifaddrs    *NetIFace::find(sockaddr_in6 addr_in6) const
     return nullptr;
 }
 
-bool    NetIFace::get_netmask(const struct ifaddrs *addr, in_addr *ret) const
+bool NetIFace::get_netmask(const struct ifaddrs *addr, in_addr *ret) const
 {
     if (addr->ifa_addr->sa_family == AF_INET)
     {
@@ -155,7 +155,7 @@ bool    NetIFace::get_netmask(const struct ifaddrs *addr, in_addr *ret) const
     return false;
 }
 
-bool    NetIFace::get_netmask(const struct ifaddrs *addr, in6_addr *ret) const
+bool NetIFace::get_netmask(const struct ifaddrs *addr, in6_addr *ret) const
 {
     if (addr->ifa_addr->sa_family == AF_INET6)
     {
@@ -166,31 +166,66 @@ bool    NetIFace::get_netmask(const struct ifaddrs *addr, in6_addr *ret) const
     return false;
 }
 
-//Interface is running.
-bool  NetIFace::up() const { return _flags & IFF_UP; }
-//Valid broadcast address set.
-bool  NetIFace::broadcast() const { return _flags & IFF_BROADCAST; }
-bool  NetIFace::loopback() const { return _flags & IFF_LOOPBACK; }
-//Interface is a point-to-point link.
-bool  NetIFace::point2point() const { return _flags & IFF_POINTOPOINT; }
-//Resources allocated.
-bool  NetIFace::running() const { return _flags & IFF_RUNNING; }
-//No arp protocol, L2 destination address not set.
-bool  NetIFace::noarp() const { return _flags & IFF_NOARP; }
-//Interface is in promiscuous mode.
-bool  NetIFace::promisc() const { return _flags & IFF_PROMISC; }
-//Avoid use of trailers
-bool  NetIFace::notrailers() const { return _flags & IFF_NOTRAILERS; }
-//Master of a load balancing bundle.
-bool  NetIFace::master() const { return _flags & IFF_MASTER; }
-//Slave of a load balancing bundle.
-bool  NetIFace::slave() const { return _flags & IFF_SLAVE; }
-//Receive all multicast packets.
-bool  NetIFace::all_multicast() const { return _flags & IFF_ALLMULTI; }
-//Supports multicast
-bool  NetIFace::supports_multicast() const { return _flags & IFF_MULTICAST; }
-
+// Interface is running.
+bool NetIFace::up() const
+{
+    return _flags & IFF_UP;
+}
+// Valid broadcast address set.
+bool NetIFace::broadcast() const
+{
+    return _flags & IFF_BROADCAST;
+}
+bool NetIFace::loopback() const
+{
+    return _flags & IFF_LOOPBACK;
+}
+// Interface is a point-to-point link.
+bool NetIFace::point2point() const
+{
+    return _flags & IFF_POINTOPOINT;
+}
+// Resources allocated.
+bool NetIFace::running() const
+{
+    return _flags & IFF_RUNNING;
+}
+// No arp protocol, L2 destination address not set.
+bool NetIFace::noarp() const
+{
+    return _flags & IFF_NOARP;
+}
+// Interface is in promiscuous mode.
+bool NetIFace::promisc() const
+{
+    return _flags & IFF_PROMISC;
+}
+// Avoid use of trailers
+bool NetIFace::notrailers() const
+{
+    return _flags & IFF_NOTRAILERS;
+}
+// Master of a load balancing bundle.
+bool NetIFace::master() const
+{
+    return _flags & IFF_MASTER;
+}
+// Slave of a load balancing bundle.
+bool NetIFace::slave() const
+{
+    return _flags & IFF_SLAVE;
+}
+// Receive all multicast packets.
+bool NetIFace::all_multicast() const
+{
+    return _flags & IFF_ALLMULTI;
+}
+// Supports multicast
+bool NetIFace::supports_multicast() const
+{
+    return _flags & IFF_MULTICAST;
+}
 
 #endif
 
-}
+} // namespace sihd::net

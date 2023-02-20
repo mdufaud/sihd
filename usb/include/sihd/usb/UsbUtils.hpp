@@ -1,5 +1,5 @@
 #ifndef __SIHD_USB_USBUTILS_HPP__
-# define __SIHD_USB_USBUTILS_HPP__
+#define __SIHD_USB_USBUTILS_HPP__
 
 namespace sihd::usb
 {
@@ -15,6 +15,6 @@ class UsbUtils
     private:
 };
 
-}
+} // namespace sihd::usb
 
 #endif

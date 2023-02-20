@@ -1,17 +1,17 @@
 #ifndef __SIHD_PY_PYUTILAPI_HPP__
-# define __SIHD_PY_PYUTILAPI_HPP__
+#define __SIHD_PY_PYUTILAPI_HPP__
 
-# include <sihd/py/PyApi.hpp>
+#include <sihd/py/PyApi.hpp>
 
-# include <sihd/util/SmartNodePtr.hpp>
-# include <sihd/util/Logger.hpp>
-# include <sihd/util/Task.hpp>
-# include <sihd/util/Array.hpp>
-# include <sihd/util/Node.hpp>
-# include <sihd/util/Configurable.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Node.hpp>
+#include <sihd/util/SmartNodePtr.hpp>
+#include <sihd/util/Task.hpp>
 
-# include <pybind11/chrono.h>
-# include <pybind11/stl.h>
+#include <pybind11/chrono.h>
+#include <pybind11/stl.h>
 
 PYBIND11_DECLARE_HOLDER_TYPE(T, sihd::util::SmartNodePtr<T>);
 
@@ -28,7 +28,7 @@ class PyUtilApi
 
         static void add_util_api(PyApi::PyModule & pymodule);
 
-        class __attribute__ ((visibility("hidden"))) PyTask: public sihd::util::Task
+        class __attribute__((visibility("hidden"))) PyTask: public sihd::util::Task
         {
             public:
                 PyTask(const pybind11::function & task, time_t timestamp_to_run = 0, time_t reschedule_every = 0);
@@ -41,11 +41,10 @@ class PyUtilApi
         };
 
     protected:
-        static bool _configurable_set_conf(sihd::util::Configurable *self,
-                                            const pybind11::kwargs & kwargs);
+        static bool _configurable_set_conf(sihd::util::Configurable *self, const pybind11::kwargs & kwargs);
         static bool _configurable_set_single_conf(sihd::util::Configurable *self,
-                                                    const std::string & key,
-                                                    const pybind11::handle & handle);
+                                                  const std::string & key,
+                                                  const pybind11::handle & handle);
 
         // Array utils
 
@@ -53,12 +52,12 @@ class PyUtilApi
         static bool _array_py_push_back_list(sihd::util::Array<T> & self, pybind11::list list)
         {
             bool ret = true;
-            for (const auto & item: list)
+            for (const auto & item : list)
             {
                 if (self.push_back(item.cast<T>()) == false)
                 {
                     ret = false;
-                    break ;
+                    break;
                 }
             }
             return ret;
@@ -68,12 +67,12 @@ class PyUtilApi
         static bool _array_py_push_back_tuple(sihd::util::Array<T> & self, pybind11::tuple tuple)
         {
             bool ret = true;
-            for (const auto & item: tuple)
+            for (const auto & item : tuple)
             {
                 if (self.push_back(item.cast<T>()) == false)
                 {
                     ret = false;
-                    break ;
+                    break;
                 }
             }
             return ret;
@@ -83,12 +82,12 @@ class PyUtilApi
         static bool _array_py_push_front_list(sihd::util::Array<T> & self, pybind11::list list)
         {
             bool ret = true;
-            for (const auto & item: list)
+            for (const auto & item : list)
             {
                 if (self.push_front(item.cast<T>()) == false)
                 {
                     ret = false;
-                    break ;
+                    break;
                 }
             }
             return ret;
@@ -98,12 +97,12 @@ class PyUtilApi
         static bool _array_py_push_front_tuple(sihd::util::Array<T> & self, pybind11::tuple tuple)
         {
             bool ret = true;
-            for (const auto & item: tuple)
+            for (const auto & item : tuple)
             {
                 if (self.push_front(item.cast<T>()) == false)
                 {
                     ret = false;
-                    break ;
+                    break;
                 }
             }
             return ret;
@@ -140,9 +139,8 @@ class PyUtilApi
 
     private:
         ~PyUtilApi() {};
-
 };
 
-}
+} // namespace sihd::py
 
 #endif

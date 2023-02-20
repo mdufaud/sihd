@@ -1,12 +1,12 @@
-#include <unistd.h>
 #include <sys/stat.h> //umask
+#include <unistd.h>
 
 #include <csignal>
 
 #include <sihd/util/Daemon.hpp>
+#include <sihd/util/FileLogger.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/FileLogger.hpp>
 #include <sihd/util/fs.hpp>
 
 #if defined(__SIHD_WINDOWS__)
@@ -20,8 +20,7 @@ SIHD_UTIL_REGISTER_FACTORY(Daemon)
 
 SIHD_LOGGER;
 
-Daemon::Daemon(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent)
+Daemon::Daemon(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
 {
     _signals_handled = false;
     _uid = 0;
@@ -41,25 +40,25 @@ Daemon::~Daemon()
     this->_remove_pid_file();
 }
 
-bool    Daemon::set_uid(uid_t uid)
+bool Daemon::set_uid(uid_t uid)
 {
     _uid = uid;
     return true;
 }
 
-bool    Daemon::set_pid_file_path(std::string_view path)
+bool Daemon::set_pid_file_path(std::string_view path)
 {
     _pid_file_path = path;
     return true;
 }
 
-bool    Daemon::set_working_dir_path(std::string_view path)
+bool Daemon::set_working_dir_path(std::string_view path)
 {
     _working_dir_path = path;
     return true;
 }
 
-void    Daemon::_handle_sig(int sig)
+void Daemon::_handle_sig(int sig)
 {
     if (sig == SIGTERM || sig == SIGSEGV)
     {
@@ -70,14 +69,14 @@ void    Daemon::_handle_sig(int sig)
     if (sig == SIGCHLD)
     {
         SIHD_LOG(debug, "Daemon: sigchild");
-        return ;
+        return;
     }
 #else
 #endif
     SIHD_LOG(info, "Daemon: signal received: {}", os::signal_name(sig));
 }
 
-bool    Daemon::_handle_signals()
+bool Daemon::_handle_signals()
 {
     if (_signals_handled)
         return true;
@@ -95,7 +94,7 @@ bool    Daemon::_handle_signals()
     return ret;
 }
 
-void    Daemon::_remove_pid_file()
+void Daemon::_remove_pid_file()
 {
     if (_pid_file.is_open())
     {
@@ -105,7 +104,7 @@ void    Daemon::_remove_pid_file()
     }
 }
 
-bool    Daemon::_lock_pid_file()
+bool Daemon::_lock_pid_file()
 {
     if (_pid_file.is_open() == true)
         return true;
@@ -120,7 +119,7 @@ bool    Daemon::_lock_pid_file()
     return true;
 }
 
-bool    Daemon::_write_pid_file()
+bool Daemon::_write_pid_file()
 {
     if (_pid_file.is_open() == false)
         return false;
@@ -133,7 +132,7 @@ bool    Daemon::_write_pid_file()
 
 #if !defined(__SIHD_WINDOWS__)
 
-bool    Daemon::run()
+bool Daemon::run()
 {
     // lock file
     if (_lock_pid_file() == false)
@@ -210,9 +209,9 @@ bool    Daemon::run()
 
 #else
 
-#pragma message("TODO windows")
+# pragma message("TODO windows")
 
-bool    Daemon::run()
+bool Daemon::run()
 {
     // TODO
     // maybe use windows services
@@ -227,4 +226,4 @@ bool    Daemon::run()
 
 #endif
 
-}
+} // namespace sihd::util

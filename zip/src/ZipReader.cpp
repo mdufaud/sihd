@@ -1,10 +1,10 @@
+#include <sihd/util/File.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/fs.hpp>
-#include <sihd/util/File.hpp>
 
-#include <sihd/zip/utils.hpp>
 #include <sihd/zip/ZipReader.hpp>
+#include <sihd/zip/utils.hpp>
 
 namespace sihd::zip
 {
@@ -16,7 +16,8 @@ SIHD_UTIL_REGISTER_FACTORY(ZipReader)
 using namespace sihd::util;
 
 ZipReader::ZipReader(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent), _zip_ptr(nullptr)
+    sihd::util::Named(name, parent),
+    _zip_ptr(nullptr)
 {
     _buf.reserve(4096);
     _only_load_entries = true;
@@ -31,7 +32,7 @@ ZipReader::~ZipReader()
     this->discard();
 }
 
-void    ZipReader::_close_file()
+void ZipReader::_close_file()
 {
     if (_current_zip_file_ptr != nullptr)
     {
@@ -41,7 +42,7 @@ void    ZipReader::_close_file()
     }
 }
 
-void    ZipReader::_init()
+void ZipReader::_init()
 {
     _total_entries = 0;
     _current_idx = 0;
@@ -51,13 +52,13 @@ void    ZipReader::_init()
     _buf.clear();
 }
 
-bool    ZipReader::set_read_entry_names(bool active)
+bool ZipReader::set_read_entry_names(bool active)
 {
     _only_load_entries = active;
     return true;
 }
 
-bool    ZipReader::set_password(std::string_view password)
+bool ZipReader::set_password(std::string_view password)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -69,7 +70,7 @@ bool    ZipReader::set_password(std::string_view password)
     return true;
 }
 
-bool    ZipReader::set_buffer_size(size_t size)
+bool ZipReader::set_buffer_size(size_t size)
 {
     if (size == 0)
     {
@@ -80,7 +81,7 @@ bool    ZipReader::set_buffer_size(size_t size)
     return true;
 }
 
-bool    ZipReader::open(std::string_view path, bool do_strict_checks)
+bool ZipReader::open(std::string_view path, bool do_strict_checks)
 {
     int flags = ZIP_RDONLY;
     int error;
@@ -99,7 +100,7 @@ bool    ZipReader::open(std::string_view path, bool do_strict_checks)
     return true;
 }
 
-void    ZipReader::discard()
+void ZipReader::discard()
 {
     if (_zip_ptr != nullptr)
     {
@@ -109,7 +110,7 @@ void    ZipReader::discard()
     }
 }
 
-bool    ZipReader::close()
+bool ZipReader::close()
 {
     bool ret = true;
     if (_zip_ptr != nullptr)
@@ -123,7 +124,7 @@ bool    ZipReader::close()
     return ret;
 }
 
-bool    ZipReader::remove(size_t index)
+bool ZipReader::remove(size_t index)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -135,7 +136,7 @@ bool    ZipReader::remove(size_t index)
     return true;
 }
 
-bool    ZipReader::rename(size_t index, std::string_view name)
+bool ZipReader::rename(size_t index, std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -147,7 +148,7 @@ bool    ZipReader::rename(size_t index, std::string_view name)
     return true;
 }
 
-bool    ZipReader::read_next()
+bool ZipReader::read_next()
 {
     if (_current_idx >= _total_entries)
         return false;
@@ -157,7 +158,7 @@ bool    ZipReader::read_next()
     if (_zip_reading_file == false)
     {
         ret = this->load_entry(_current_idx);
-        if (ret &&_only_load_entries)
+        if (ret && _only_load_entries)
         {
             if (_current_zip_entry.name != nullptr)
                 _buf = _current_zip_entry.name;
@@ -171,7 +172,7 @@ bool    ZipReader::read_next()
     return ret;
 }
 
-bool    ZipReader::get_read_data(sihd::util::ArrCharView & view) const
+bool ZipReader::get_read_data(sihd::util::ArrCharView & view) const
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -179,7 +180,7 @@ bool    ZipReader::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-bool    ZipReader::read_timestamp(time_t *nano_timestamp) const
+bool ZipReader::read_timestamp(time_t *nano_timestamp) const
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -187,7 +188,7 @@ bool    ZipReader::read_timestamp(time_t *nano_timestamp) const
     return true;
 }
 
-bool    ZipReader::load_entry(size_t idx)
+bool ZipReader::load_entry(size_t idx)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -200,7 +201,7 @@ bool    ZipReader::load_entry(size_t idx)
     return !_entry_error;
 }
 
-bool    ZipReader::load_entry(std::string_view name)
+bool ZipReader::load_entry(std::string_view name)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -220,7 +221,7 @@ const struct zip_stat *ZipReader::get_entry() const
     return _entry_error ? nullptr : &_current_zip_entry;
 }
 
-bool    ZipReader::is_entry_directory() const
+bool ZipReader::is_entry_directory() const
 {
     if (_zip_ptr == nullptr || _current_zip_entry.name == nullptr)
         return false;
@@ -230,7 +231,7 @@ bool    ZipReader::is_entry_directory() const
     return false;
 }
 
-ssize_t     ZipReader::read_entry(std::string_view password)
+ssize_t ZipReader::read_entry(std::string_view password)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -264,7 +265,7 @@ ssize_t     ZipReader::read_entry(std::string_view password)
     return ret;
 }
 
-bool    ZipReader::write_entry(std::string_view path, std::string_view password)
+bool ZipReader::write_entry(std::string_view path, std::string_view password)
 {
     if (_zip_ptr == nullptr)
         return false;
@@ -294,4 +295,4 @@ bool    ZipReader::write_entry(std::string_view path, std::string_view password)
     return ret;
 }
 
-}
+} // namespace sihd::zip

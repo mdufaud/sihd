@@ -1,36 +1,36 @@
 #ifndef __SIHD_SSH_SFTP_HPP__
-# define __SIHD_SSH_SFTP_HPP__
+#define __SIHD_SSH_SFTP_HPP__
 
-# include <libssh/libssh.h>
-# include <libssh/sftp.h>
-# include <vector>
-# include <string>
-# include <string_view>
-# include <memory>
+#include <libssh/libssh.h>
+#include <libssh/sftp.h>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace sihd::ssh
 {
 
 struct SftpFileDeleter
 {
-    void operator()(sftp_file_struct *ptr)
-    {
-        //TODO log error if ret != SSH_NO_ERROR
-        if (ptr != nullptr)
-            sftp_close(ptr);
-    }
+        void operator()(sftp_file_struct *ptr)
+        {
+            // TODO log error if ret != SSH_NO_ERROR
+            if (ptr != nullptr)
+                sftp_close(ptr);
+        }
 };
 
 using SftpFile = std::unique_ptr<sftp_file_struct, SftpFileDeleter>;
 
 struct SftpDirDeleter
 {
-    void operator()(sftp_dir_struct *ptr)
-    {
-        //TODO log error if ret != SSH_NO_ERROR
-        if (ptr != nullptr)
-            sftp_closedir(ptr);
-    }
+        void operator()(sftp_dir_struct *ptr)
+        {
+            // TODO log error if ret != SSH_NO_ERROR
+            if (ptr != nullptr)
+                sftp_closedir(ptr);
+        }
 };
 
 using SftpDir = std::unique_ptr<sftp_dir_struct, SftpDirDeleter>;
@@ -87,6 +87,6 @@ class Sftp
         sftp_session _sftp_session_ptr;
 };
 
-}
+} // namespace sihd::ssh
 
 #endif

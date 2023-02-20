@@ -1,19 +1,19 @@
 #ifndef __SIHD_CORE_DEVSAMPLER_HPP__
-# define __SIHD_CORE_DEVSAMPLER_HPP__
+#define __SIHD_CORE_DEVSAMPLER_HPP__
 
-# include <set>
+#include <set>
 
-# include <sihd/util/IRunnable.hpp>
-# include <sihd/util/Waitable.hpp>
-# include <sihd/util/StepWorker.hpp>
+#include <sihd/util/IRunnable.hpp>
+#include <sihd/util/StepWorker.hpp>
+#include <sihd/util/Waitable.hpp>
 
-# include <sihd/core/Device.hpp>
+#include <sihd/core/Device.hpp>
 
 namespace sihd::core
 {
 
-class DevSampler:   public sihd::core::Device,
-                    public sihd::util::IRunnable
+class DevSampler: public sihd::core::Device,
+                  public sihd::util::IRunnable
 {
     public:
         DevSampler(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -46,6 +46,6 @@ class DevSampler:   public sihd::core::Device,
         std::set<Channel *> _channels_sample_set;
 };
 
-}
+} // namespace sihd::core
 
 #endif

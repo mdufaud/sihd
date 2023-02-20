@@ -1,8 +1,8 @@
 #ifndef __SIHD_SSH_SSHKEY_HPP__
-# define __SIHD_SSH_SSHKEY_HPP__
+#define __SIHD_SSH_SSHKEY_HPP__
 
-# include <libssh/libssh.h>
-# include <string>
+#include <libssh/libssh.h>
+#include <string>
 
 namespace sihd::ssh
 {
@@ -52,6 +52,6 @@ class SshKey
         ssh_key _ssh_key_ptr;
 };
 
-}
+} // namespace sihd::ssh
 
 #endif

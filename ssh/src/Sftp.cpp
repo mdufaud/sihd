@@ -1,8 +1,8 @@
-#include <sihd/ssh/Sftp.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/File.hpp>
-#include <string.h>
 #include <fcntl.h>
+#include <sihd/ssh/Sftp.hpp>
+#include <sihd/util/File.hpp>
+#include <sihd/util/Logger.hpp>
+#include <string.h>
 
 #ifndef SIHD_SSH_SFTP_BUFSIZE
 # define SIHD_SSH_SFTP_BUFSIZE 4096
@@ -13,16 +13,14 @@ namespace sihd::ssh
 
 SIHD_LOGGER;
 
-Sftp::Sftp(ssh_session session): _ssh_session_ptr(session), _sftp_session_ptr(nullptr)
-{
-}
+Sftp::Sftp(ssh_session session): _ssh_session_ptr(session), _sftp_session_ptr(nullptr) {}
 
 Sftp::~Sftp()
 {
     this->close();
 }
 
-bool    Sftp::open()
+bool Sftp::open()
 {
     _sftp_session_ptr = sftp_new(_ssh_session_ptr);
     if (_sftp_session_ptr == nullptr)
@@ -40,7 +38,7 @@ bool    Sftp::open()
     return true;
 }
 
-void    Sftp::close()
+void Sftp::close()
 {
     if (_sftp_session_ptr != nullptr)
     {
@@ -49,7 +47,7 @@ void    Sftp::close()
     }
 }
 
-bool    Sftp::send_file(std::string_view local_path, std::string_view remote_path, mode_t mode)
+bool Sftp::send_file(std::string_view local_path, std::string_view remote_path, mode_t mode)
 {
     sihd::util::File local_file(local_path, "rb");
     if (local_file.is_open() == false)
@@ -73,20 +71,20 @@ bool    Sftp::send_file(std::string_view local_path, std::string_view remote_pat
         {
             SIHD_LOG(error, "Sftp: error reading local file: {}", local_path);
             ret = false;
-            break ;
+            break;
         }
         nwritten = sftp_write(remote_file.get(), buf, nread);
         if (nwritten != nread)
         {
             SIHD_LOG_ERROR("Sftp: failed writing remote file: '{}' '{} != '{}'", remote_path, nwritten, nread);
             ret = false;
-            break ;
+            break;
         }
     }
     return ret;
 }
 
-bool    Sftp::get_file(std::string_view remote_path, std::string_view local_path)
+bool Sftp::get_file(std::string_view remote_path, std::string_view local_path)
 {
     sihd::util::File local_file(local_path, "wb");
     if (local_file.is_open() == false)
@@ -110,22 +108,22 @@ bool    Sftp::get_file(std::string_view remote_path, std::string_view local_path
         {
             SIHD_LOG(error, "Sftp: error reading remote file: {}", remote_path);
             ret = false;
-            break ;
+            break;
         }
         if (nread == 0)
-            break ;
+            break;
         nwritten = local_file.write(buf, nread);
         if (nwritten != nread)
         {
             SIHD_LOG_ERROR("Sftp: failed writing local file: '{}' '{} != '{}'", local_path, nwritten, nread);
             ret = false;
-            break ;
+            break;
         }
     }
     return ret;
 }
 
-bool    Sftp::mkdir(std::string_view path, mode_t mode)
+bool Sftp::mkdir(std::string_view path, mode_t mode)
 {
     int r = sftp_mkdir(_sftp_session_ptr, path.data(), mode);
     if (r != 0)
@@ -133,7 +131,7 @@ bool    Sftp::mkdir(std::string_view path, mode_t mode)
     return r == SSH_FX_OK;
 }
 
-bool    Sftp::symlink(std::string_view from, std::string_view to)
+bool Sftp::symlink(std::string_view from, std::string_view to)
 {
     int r = sftp_symlink(_sftp_session_ptr, from.data(), to.data());
     if (r != 0)
@@ -141,12 +139,12 @@ bool    Sftp::symlink(std::string_view from, std::string_view to)
     return r == SSH_FX_OK;
 }
 
-bool    Sftp::list_dir_filenames(std::string_view path, std::vector<std::string> & list)
+bool Sftp::list_dir_filenames(std::string_view path, std::vector<std::string> & list)
 {
     std::vector<SftpAttribute> attrs;
     if (this->list_dir(path, attrs) == false)
         return false;
-    for (const SftpAttribute & attr: attrs)
+    for (const SftpAttribute & attr : attrs)
     {
         if (attr.is_dir())
         {
@@ -160,7 +158,7 @@ bool    Sftp::list_dir_filenames(std::string_view path, std::vector<std::string>
     return true;
 }
 
-bool    Sftp::list_dir(std::string_view path, std::vector<SftpAttribute> & list)
+bool Sftp::list_dir(std::string_view path, std::vector<SftpAttribute> & list)
 {
     SftpDir dir(sftp_opendir(_sftp_session_ptr, path.data()));
     if (dir.get() == nullptr)
@@ -172,10 +170,9 @@ bool    Sftp::list_dir(std::string_view path, std::vector<SftpAttribute> & list)
     {
         SftpAttribute attribute(sftp_readdir(_sftp_session_ptr, dir.get()));
         if (attribute.attr == nullptr)
-            break ;
-        if (strcmp(attribute.name(), ".") == 0
-            || strcmp(attribute.name(), "..") == 0)
-            continue ;
+            break;
+        if (strcmp(attribute.name(), ".") == 0 || strcmp(attribute.name(), "..") == 0)
+            continue;
         list.push_back(std::move(attribute));
     }
     bool ret = sftp_dir_eof(dir.get()) == 1;
@@ -184,7 +181,7 @@ bool    Sftp::list_dir(std::string_view path, std::vector<SftpAttribute> & list)
     return ret;
 }
 
-bool    Sftp::rename(std::string_view from, std::string_view to)
+bool Sftp::rename(std::string_view from, std::string_view to)
 {
     int r = sftp_rename(_sftp_session_ptr, from.data(), to.data());
     if (r != 0)
@@ -192,7 +189,7 @@ bool    Sftp::rename(std::string_view from, std::string_view to)
     return r == SSH_FX_OK;
 }
 
-bool    Sftp::rm(std::string_view path)
+bool Sftp::rm(std::string_view path)
 {
     int r = sftp_unlink(_sftp_session_ptr, path.data());
     if (r != 0)
@@ -200,12 +197,12 @@ bool    Sftp::rm(std::string_view path)
     return r == SSH_FX_OK;
 }
 
-int     Sftp::version()
+int Sftp::version()
 {
     return sftp_server_version(_sftp_session_ptr);
 }
 
-const char  *Sftp::error()
+const char *Sftp::error()
 {
     switch (sftp_get_error(_sftp_session_ptr))
     {
@@ -242,9 +239,7 @@ const char  *Sftp::error()
     }
 }
 
-SftpAttribute::SftpAttribute(sftp_attributes ptr): attr(ptr)
-{
-}
+SftpAttribute::SftpAttribute(sftp_attributes ptr): attr(ptr) {}
 
 SftpAttribute::SftpAttribute(SftpAttribute && sftp_attr)
 {
@@ -258,29 +253,29 @@ SftpAttribute::~SftpAttribute()
         sftp_attributes_free(attr);
 }
 
-const char  *SftpAttribute::name() const
+const char *SftpAttribute::name() const
 {
     return this->attr->name;
 }
 
-uint64_t    SftpAttribute::size() const
+uint64_t SftpAttribute::size() const
 {
     return this->attr->size;
 }
 
-bool    SftpAttribute::is_dir() const
+bool SftpAttribute::is_dir() const
 {
     return this->attr->type == SSH_FILEXFER_TYPE_DIRECTORY;
 }
 
-bool    SftpAttribute::is_file() const
+bool SftpAttribute::is_file() const
 {
     return this->attr->type == SSH_FILEXFER_TYPE_REGULAR;
 }
 
-bool    SftpAttribute::is_link() const
+bool SftpAttribute::is_link() const
 {
     return this->attr->type == SSH_FILEXFER_TYPE_SYMLINK;
 }
 
-}
+} // namespace sihd::ssh

@@ -1,16 +1,17 @@
 #ifndef __SIHD_ZIP_ZIPWRITER_HPP__
-# define __SIHD_ZIP_ZIPWRITER_HPP__
+#define __SIHD_ZIP_ZIPWRITER_HPP__
 
-# include <zip.h>
+#include <zip.h>
 
-# include <sihd/util/Node.hpp>
-# include <sihd/util/Configurable.hpp>
-# include <sihd/util/ArrayView.hpp>
+#include <sihd/util/ArrayView.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/Node.hpp>
 
 namespace sihd::zip
 {
 
-class ZipWriter: public sihd::util::Named, public sihd::util::Configurable
+class ZipWriter: public sihd::util::Named,
+                 public sihd::util::Configurable
 {
     public:
         ZipWriter(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -54,6 +55,6 @@ class ZipWriter: public sihd::util::Named, public sihd::util::Configurable
         short _encryption_method;
 };
 
-}
+} // namespace sihd::zip
 
 #endif

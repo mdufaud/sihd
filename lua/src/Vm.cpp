@@ -23,7 +23,7 @@ Vm::~Vm()
     this->close_state();
 }
 
-void    Vm::set_state(lua_State *state)
+void Vm::set_state(lua_State *state)
 {
     this->close_state();
     _state_ownership = false;
@@ -32,7 +32,7 @@ void    Vm::set_state(lua_State *state)
         Vm::_register_vm(state, this);
 }
 
-void    Vm::close_state()
+void Vm::close_state()
 {
     if (_state_ptr != nullptr)
     {
@@ -43,7 +43,7 @@ void    Vm::close_state()
     _state_ptr = nullptr;
 }
 
-bool    Vm::new_state()
+bool Vm::new_state()
 {
     this->close_state();
     _state_ptr = luaL_newstate();
@@ -56,12 +56,12 @@ bool    Vm::new_state()
     return _state_ptr != nullptr;
 }
 
-lua_State   *Vm::new_luathread()
+lua_State *Vm::new_luathread()
 {
     return lua_newthread(_state_ptr);
 }
 
-bool    Vm::new_thread(Vm & vm)
+bool Vm::new_thread(Vm & vm)
 {
     lua_State *thread_state = this->new_luathread();
     if (thread_state != nullptr)
@@ -69,28 +69,28 @@ bool    Vm::new_thread(Vm & vm)
     return thread_state != nullptr;
 }
 
-luabridge::LuaRef   Vm::new_table()
+luabridge::LuaRef Vm::new_table()
 {
     return luabridge::newTable(_state_ptr);
 }
 
-luabridge::LuaRef   Vm::get_ref(std::string_view name)
+luabridge::LuaRef Vm::get_ref(std::string_view name)
 {
     return luabridge::getGlobal(_state_ptr, name.data());
 }
 
-bool    Vm::ref_exists(std::string_view name)
+bool Vm::ref_exists(std::string_view name)
 {
     lua_getglobal(_state_ptr, name.data());
     return lua_isnil(_state_ptr, -1) == 0;
 }
 
-bool    Vm::refs_exists(const std::initializer_list<std::string_view> & lst)
+bool Vm::refs_exists(const std::initializer_list<std::string_view> & lst)
 {
     if (lst.size() == 0)
         return false;
     bool first = true;
-    for (const std::string_view & str: lst)
+    for (const std::string_view & str : lst)
     {
         if (first)
         {
@@ -113,12 +113,12 @@ bool    Vm::refs_exists(const std::initializer_list<std::string_view> & lst)
     return ret;
 }
 
-bool    Vm::do_file(std::string_view path)
+bool Vm::do_file(std::string_view path)
 {
     return luaL_dofile(_state_ptr, path.data()) == 0;
 }
 
-bool    Vm::do_string(std::string_view path)
+bool Vm::do_string(std::string_view path)
 {
     return luaL_dostring(_state_ptr, path.data()) == 0;
 }
@@ -128,12 +128,12 @@ std::string Vm::last_string()
     return lua_tostring(_state_ptr, -1);
 }
 
-void    Vm::print_stack(int max, FILE *output)
+void Vm::print_stack(int max, FILE *output)
 {
     fprintf(output, "%s", this->dump_stack(max).c_str());
 }
 
-std::string     Vm::dump_stack(int max)
+std::string Vm::dump_stack(int max)
 {
     if (_state_ptr == nullptr)
         return "";
@@ -150,19 +150,19 @@ std::string     Vm::dump_stack(int max)
         {
             case LUA_TNUMBER:
                 ss << lua_tonumber(_state_ptr, i);
-                break ;
+                break;
             case LUA_TSTRING:
                 ss << lua_tostring(_state_ptr, i);
-                break ;
+                break;
             case LUA_TBOOLEAN:
                 ss << (lua_toboolean(_state_ptr, i) ? "true" : "false");
-                break ;
+                break;
             case LUA_TNIL:
                 ss << "nil";
-                break ;
+                break;
             default:
                 ss << lua_topointer(_state_ptr, i);
-                break ;
+                break;
         }
         ss << " (" << luaL_typename(_state_ptr, i) << ")\n";
         ++i;
@@ -174,7 +174,7 @@ std::string     Vm::dump_stack(int max)
 /* Vm static methods */
 /* ************************************************************************* */
 
-Vm  *Vm::get_vm(lua_State *state)
+Vm *Vm::get_vm(lua_State *state)
 {
     auto it = Vm::_map_vm.find(state);
     if (it != Vm::_map_vm.end())
@@ -182,14 +182,14 @@ Vm  *Vm::get_vm(lua_State *state)
     return nullptr;
 }
 
-void    Vm::_register_vm(lua_State *state, Vm *vm)
+void Vm::_register_vm(lua_State *state, Vm *vm)
 {
     Vm::_map_vm[state] = vm;
 }
 
-void    Vm::_unregister_vm(lua_State *state)
+void Vm::_unregister_vm(lua_State *state)
 {
     Vm::_map_vm.erase(state);
 }
 
-}
+} // namespace sihd::lua

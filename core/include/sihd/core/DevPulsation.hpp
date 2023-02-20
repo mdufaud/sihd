@@ -1,10 +1,10 @@
 #ifndef __SIHD_CORE_DEVPULSATION_HPP__
-# define __SIHD_CORE_DEVPULSATION_HPP__
+#define __SIHD_CORE_DEVPULSATION_HPP__
 
-# include <sihd/util/Scheduler.hpp>
-# include <sihd/util/IRunnable.hpp>
+#include <sihd/util/IRunnable.hpp>
+#include <sihd/util/Scheduler.hpp>
 
-# include <sihd/core/Device.hpp>
+#include <sihd/core/Device.hpp>
 
 namespace sihd::core
 {
@@ -40,6 +40,6 @@ class DevPulsation: public sihd::core::Device,
         std::mutex _mutex;
 };
 
-}
+} // namespace sihd::core
 
 #endif

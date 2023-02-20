@@ -1,21 +1,17 @@
 #include <sihd/ssh/SshShell.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/util/LineReader.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::ssh
 {
 
 SIHD_LOGGER;
 
-SshShell::SshShell(ssh_session session): _ssh_session_ptr(session)
-{
-}
+SshShell::SshShell(ssh_session session): _ssh_session_ptr(session) {}
 
-SshShell::~SshShell()
-{
-}
+SshShell::~SshShell() {}
 
-bool    SshShell::open(bool x11)
+bool SshShell::open(bool x11)
 {
     ssh_channel channel_ptr = ssh_channel_new(_ssh_session_ptr);
     if (channel_ptr == nullptr)
@@ -52,7 +48,7 @@ bool    SshShell::open(bool x11)
     return ret;
 }
 
-bool    SshShell::read_loop()
+bool SshShell::read_loop()
 {
     sihd::util::LineReader reader("stdin-reader");
     reader.set_stream(stdin, false);
@@ -91,7 +87,7 @@ bool    SshShell::read_loop()
             {
                 SIHD_LOG(error, "SshShell: error reading channel");
                 ret = false;
-                break ;
+                break;
             }
             if (nbytes > 0)
             {
@@ -111,7 +107,7 @@ bool    SshShell::read_loop()
                 {
                     SIHD_LOG_ERROR("SshShell: error writing to channel '{}' != '{}'", nwritten, view.size());
                     ret = false;
-                    break ;
+                    break;
                 }
             }
             else
@@ -122,7 +118,7 @@ bool    SshShell::read_loop()
                     ret = false;
                 }
                 fmt::print("\n");
-                break ;
+                break;
             }
         }
     }
@@ -130,10 +126,9 @@ bool    SshShell::read_loop()
     return ret;
 }
 
-void    SshShell::close()
+void SshShell::close()
 {
     _channel.clear_channel();
 }
 
-
-}
+} // namespace sihd::ssh

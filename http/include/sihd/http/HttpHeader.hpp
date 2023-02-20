@@ -1,9 +1,9 @@
 #ifndef __SIHD_HTTP_HTTPHEADER_HPP__
-# define __SIHD_HTTP_HTTPHEADER_HPP__
+#define __SIHD_HTTP_HTTPHEADER_HPP__
 
-# include <unordered_map>
+#include <unordered_map>
 
-# include <sihd/util/Array.hpp>
+#include <sihd/util/Array.hpp>
 
 namespace sihd::http
 {
@@ -33,7 +33,6 @@ class HttpHeader
 
         HttpHeader & set_headers(HeaderMap && headers);
 
-
         uint32_t status() const { return _status; }
         size_t content_size() const { return _content_size; }
         const std::string & encoding() const { return _encoding; }
@@ -54,6 +53,6 @@ class HttpHeader
         HeaderMap _headers;
 };
 
-}
+} // namespace sihd::http
 
 #endif

@@ -8,17 +8,14 @@ SIHD_LOGGER;
 
 using namespace std::chrono;
 
-
-Lockable::Lockable(): _unique_lock(_mutex, std::defer_lock)
-{
-}
+Lockable::Lockable(): _unique_lock(_mutex, std::defer_lock) {}
 
 Lockable::~Lockable()
 {
     this->unlock();
 }
 
-bool    Lockable::infinite_lock()
+bool Lockable::infinite_lock()
 {
     try
     {
@@ -32,7 +29,7 @@ bool    Lockable::infinite_lock()
     return true;
 }
 
-bool    Lockable::lock()
+bool Lockable::lock()
 {
     try
     {
@@ -45,17 +42,17 @@ bool    Lockable::lock()
     return false;
 }
 
-bool    Lockable::lock_for(time_t nano_duration)
+bool Lockable::lock_for(time_t nano_duration)
 {
     return _unique_lock.try_lock_for(std::chrono::nanoseconds(nano_duration));
 }
 
-bool    Lockable::lock_until(time_t nano_timestamp)
+bool Lockable::lock_until(time_t nano_timestamp)
 {
     return _unique_lock.try_lock_until(system_clock::from_time_t(nano_timestamp));
 }
 
-time_t  Lockable::lock_elapsed(time_t nano_duration)
+time_t Lockable::lock_elapsed(time_t nano_duration)
 {
     SystemClock clock;
     time_t before = clock.now();
@@ -63,7 +60,7 @@ time_t  Lockable::lock_elapsed(time_t nano_duration)
     return clock.now() - before;
 }
 
-bool    Lockable::unlock()
+bool Lockable::unlock()
 {
     try
     {
@@ -77,4 +74,4 @@ bool    Lockable::unlock()
     return true;
 }
 
-}
+} // namespace sihd::util

@@ -1,9 +1,9 @@
 #ifndef __SIHD_UTIL_IARRAYVIEW_HPP__
-# define __SIHD_UTIL_IARRAYVIEW_HPP__
+#define __SIHD_UTIL_IARRAYVIEW_HPP__
 
-# include <string>
+#include <string>
 
-# include <sihd/util/Types.hpp>
+#include <sihd/util/Types.hpp>
 
 namespace sihd::util
 {
@@ -48,6 +48,6 @@ class IArrayView
         virtual std::string_view cpp_str_view() const = 0;
 };
 
-}
+} // namespace sihd::util
 
 #endif

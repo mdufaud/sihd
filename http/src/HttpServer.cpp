@@ -1,4 +1,4 @@
-# include <libwebsockets.h>
+#include <libwebsockets.h>
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
@@ -29,8 +29,11 @@ using namespace sihd::util;
 
 HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
     sihd::util::Node(name, parent),
-    _running(false), _port(0),
-    _lws_mount_ptr(nullptr), _lws_context_ptr(nullptr), _lws_protocols_ptr(nullptr),
+    _running(false),
+    _port(0),
+    _lws_mount_ptr(nullptr),
+    _lws_context_ptr(nullptr),
+    _lws_protocols_ptr(nullptr),
     _polling_scheduler(this)
 {
     _ip_buf.resize(INET6_ADDRSTRLEN);
@@ -74,20 +77,20 @@ HttpServer::~HttpServer()
     }
 }
 
-bool    HttpServer::set_encoding(std::string_view encoding)
+bool HttpServer::set_encoding(std::string_view encoding)
 {
     _http_header.set_charset(encoding);
     _encoding = encoding;
     return true;
 }
 
-bool    HttpServer::set_port(int port)
+bool HttpServer::set_port(int port)
 {
     _port = port;
     return true;
 }
 
-bool    HttpServer::set_root_dir(std::string_view root_dir)
+bool HttpServer::set_root_dir(std::string_view root_dir)
 {
     bool ret = fs::is_dir(root_dir);
     if (ret)
@@ -97,12 +100,12 @@ bool    HttpServer::set_root_dir(std::string_view root_dir)
     return ret;
 }
 
-bool    HttpServer::set_poll_frequency(double freq)
+bool HttpServer::set_poll_frequency(double freq)
 {
     return _worker.set_frequency(freq);
 }
 
-bool    HttpServer::set_ssl_cert_path(std::string_view path)
+bool HttpServer::set_ssl_cert_path(std::string_view path)
 {
     bool ret = fs::is_file(path);
     if (ret)
@@ -112,7 +115,7 @@ bool    HttpServer::set_ssl_cert_path(std::string_view path)
     return ret;
 }
 
-bool    HttpServer::set_ssl_cert_key(std::string_view path)
+bool HttpServer::set_ssl_cert_key(std::string_view path)
 {
     bool ret = fs::is_file(path);
     if (ret)
@@ -122,13 +125,13 @@ bool    HttpServer::set_ssl_cert_key(std::string_view path)
     return ret;
 }
 
-bool    HttpServer::add_resource_path(const std::string & path)
+bool HttpServer::add_resource_path(const std::string & path)
 {
     _resources_path.insert(path);
     return true;
 }
 
-bool    HttpServer::remove_resource_path(const std::string & path)
+bool HttpServer::remove_resource_path(const std::string & path)
 {
     auto it = _resources_path.find(path);
     if (it != _resources_path.end())
@@ -136,19 +139,19 @@ bool    HttpServer::remove_resource_path(const std::string & path)
     return true;
 }
 
-bool    HttpServer::set_404_path(std::string_view path)
+bool HttpServer::set_404_path(std::string_view path)
 {
     _404_page_path = path;
     return true;
 }
 
-bool    HttpServer::set_server_name(std::string_view name)
+bool HttpServer::set_server_name(std::string_view name)
 {
     _http_header.set_server_name(name);
     return true;
 }
 
-bool    HttpServer::stop()
+bool HttpServer::stop()
 {
     {
         std::lock_guard l(_mutex);
@@ -159,7 +162,7 @@ bool    HttpServer::stop()
     return true;
 }
 
-bool    HttpServer::run()
+bool HttpServer::run()
 {
     if (_running)
         return true;
@@ -210,7 +213,7 @@ bool    HttpServer::run()
     return true;
 }
 
-bool    HttpServer::get_resource_path(std::string_view path, std::string & res)
+bool HttpServer::get_resource_path(std::string_view path, std::string & res)
 {
     std::string tmp_path = _root_dir;
     tmp_path.append(path.data(), path.size());
@@ -219,12 +222,12 @@ bool    HttpServer::get_resource_path(std::string_view path, std::string & res)
         tmp_path += "/index.html";
     if (!ret)
     {
-        for (const std::string & resource_path: _resources_path)
+        for (const std::string & resource_path : _resources_path)
         {
             tmp_path = resource_path;
             tmp_path.append(path.data(), path.size());
             if ((ret = fs::exists(tmp_path)))
-                break ;
+                break;
         }
     }
     if (ret)
@@ -232,7 +235,7 @@ bool    HttpServer::get_resource_path(std::string_view path, std::string & res)
     return ret;
 }
 
-bool    HttpServer::_check_all_protocols()
+bool HttpServer::_check_all_protocols()
 {
     size_t i = 0;
     while (i < _protocols_count)
@@ -243,14 +246,17 @@ bool    HttpServer::_check_all_protocols()
     return i != 0;
 }
 
-int     HttpServer::_global_http_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
+int HttpServer::_global_http_lws_callback(struct lws *wsi,
+                                          enum lws_callback_reasons reason,
+                                          void *user,
+                                          void *in,
+                                          size_t len)
 {
     HttpServer *server = (HttpServer *)lws_context_user(lws_get_context(wsi));
     return server->_lws_http_callback(wsi, reason, user, in, len);
 }
 
-int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason,
-                                        void *user, void *in, size_t len)
+int HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
 {
     int rc = 0;
     HttpSession *session = (HttpSession *)user;
@@ -271,7 +277,7 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
                 lws_return_http_status(wsi, HTTP_STATUS_BAD_REQUEST, nullptr);
                 if (lws_http_transaction_completed(wsi))
                     rc = -1;
-                break ;
+                break;
             }
             session->new_request();
             session->request_type = this->_get_request_type(wsi);
@@ -282,13 +288,13 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
                 if (lws_http_transaction_completed(wsi))
                     rc = -1;
             }
-            break ;
+            break;
         }
         case LWS_CALLBACK_HTTP_BODY:
         {
             // the next `len` bytes data from the http request body HTTP connection is now available in `in`
             rc = this->_on_http_body(session, (const uint8_t *)in, (size_t)len);
-            break ;
+            break;
         }
         case LWS_CALLBACK_HTTP_BODY_COMPLETION:
         {
@@ -296,7 +302,7 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
             this->_on_http_body_end(session);
             if (lws_http_transaction_completed(wsi))
                 rc = -1;
-            break ;
+            break;
         }
         case LWS_CALLBACK_HTTP_FILE_COMPLETION:
         {
@@ -304,13 +310,13 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
             rc = this->_on_http_file_completion_end();
             if (lws_http_transaction_completed(wsi))
                 rc = -1;
-            break ;
+            break;
         }
         case LWS_CALLBACK_CLOSED_HTTP:
         {
             // when a HTTP (non-websocket) session ends
             rc = this->_on_http_request_end();
-            break ;
+            break;
         }
         case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
         {
@@ -318,15 +324,15 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
             SIHD_LOG(debug, "Callback check access rights");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
-            break ;
+            break;
         }
         case LWS_CALLBACK_PROCESS_HTML:
         {
             // This gives your user code a chance to mangle outgoing HTML
-             SIHD_LOG(debug, "Callback check process HTML");
+            SIHD_LOG(debug, "Callback check process HTML");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
-            break ;
+            break;
         }
         case LWS_CALLBACK_ADD_HEADERS:
         {
@@ -345,12 +351,12 @@ int     HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reason
             break;
         }
         default:
-            break ;
+            break;
     }
     return rc;
 }
 
-HttpRequest::RequestType    HttpServer::_get_request_type(struct lws *wsi)
+HttpRequest::RequestType HttpServer::_get_request_type(struct lws *wsi)
 {
     if (lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI))
         return HttpRequest::GET;
@@ -363,7 +369,7 @@ HttpRequest::RequestType    HttpServer::_get_request_type(struct lws *wsi)
     return HttpRequest::NONE;
 }
 
-int     HttpServer::_on_http_request(HttpSession *session, std::string_view path)
+int HttpServer::_on_http_request(HttpSession *session, std::string_view path)
 {
     SIHD_LOG(debug, "HttpServer: {} request: {}", HttpRequest::type_str(session->request_type), path);
     int rc = 0;
@@ -383,7 +389,7 @@ int     HttpServer::_on_http_request(HttpSession *session, std::string_view path
     return rc;
 }
 
-int     HttpServer::_on_http_body(HttpSession *session, const uint8_t *buf, size_t size)
+int HttpServer::_on_http_body(HttpSession *session, const uint8_t *buf, size_t size)
 {
     if (session->content != nullptr)
     {
@@ -395,7 +401,7 @@ int     HttpServer::_on_http_body(HttpSession *session, const uint8_t *buf, size
     return 0;
 }
 
-int     HttpServer::_on_http_body_end(HttpSession *session)
+int HttpServer::_on_http_body_end(HttpSession *session)
 {
     int rc = 0;
     if (session->request != nullptr && session->content != nullptr)
@@ -412,17 +418,17 @@ int     HttpServer::_on_http_body_end(HttpSession *session)
     return rc;
 }
 
-int     HttpServer::_on_http_request_end()
+int HttpServer::_on_http_request_end()
 {
     return 0;
 }
 
-int     HttpServer::_on_http_file_completion_end()
+int HttpServer::_on_http_file_completion_end()
 {
     return 0;
 }
 
-WebService  *HttpServer::_get_webservice_from_path(std::string_view path, std::string *webservice_name)
+WebService *HttpServer::_get_webservice_from_path(std::string_view path, std::string *webservice_name)
 {
     std::string_view path_view(path);
 
@@ -437,7 +443,7 @@ WebService  *HttpServer::_get_webservice_from_path(std::string_view path, std::s
     return this->get_child<WebService>(name);
 }
 
-bool    HttpServer::_check_webservices(HttpSession *session, std::string_view path)
+bool HttpServer::_check_webservices(HttpSession *session, std::string_view path)
 {
     std::string webservice_name;
     WebService *webservice = this->_get_webservice_from_path(path, &webservice_name);
@@ -448,7 +454,10 @@ bool    HttpServer::_check_webservices(HttpSession *session, std::string_view pa
     {
         // check if there will be only header or request body
         char content_header[SIHD_HTTP_CONTENT_HEADER_BUFSIZE + 1];
-        ssize_t hdr_len = lws_hdr_copy(session->wsi, content_header, SIHD_HTTP_CONTENT_HEADER_BUFSIZE, WSI_TOKEN_HTTP_CONTENT_LENGTH);
+        ssize_t hdr_len = lws_hdr_copy(session->wsi,
+                                       content_header,
+                                       SIHD_HTTP_CONTENT_HEADER_BUFSIZE,
+                                       WSI_TOKEN_HTTP_CONTENT_LENGTH);
         ret = hdr_len >= 0;
         if (hdr_len >= 0)
             content_header[hdr_len] = 0;
@@ -460,9 +469,9 @@ bool    HttpServer::_check_webservices(HttpSession *session, std::string_view pa
             if (content_length_header_size == 0)
             {
                 // no 'body' coming - call webservice now
-                this->_serve_webservice(session, webservice,
-                                        HttpRequest(path, this->_get_uri_args(session->wsi),
-                                        session->request_type));
+                this->_serve_webservice(session,
+                                        webservice,
+                                        HttpRequest(path, this->_get_uri_args(session->wsi), session->request_type));
             }
             else
             {
@@ -488,14 +497,14 @@ bool    HttpServer::_check_webservices(HttpSession *session, std::string_view pa
     else
     {
         // HttpRequest is GET or DELETE
-        this->_serve_webservice(session, webservice,
-                                HttpRequest(path, this->_get_uri_args(session->wsi),
-                                session->request_type));
+        this->_serve_webservice(session,
+                                webservice,
+                                HttpRequest(path, this->_get_uri_args(session->wsi), session->request_type));
     }
     return ret;
 }
 
-bool    HttpServer::_serve_webservice(HttpSession *session, WebService *webservice, const HttpRequest & request)
+bool HttpServer::_serve_webservice(HttpSession *session, WebService *webservice, const HttpRequest & request)
 {
     std::string_view path_view = request.url();
     if (path_view[0] == '/')
@@ -526,13 +535,21 @@ bool    HttpServer::_serve_webservice(HttpSession *session, WebService *webservi
     return false;
 }
 
-int     HttpServer::_global_websocket_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
+int HttpServer::_global_websocket_lws_callback(struct lws *wsi,
+                                               enum lws_callback_reasons reason,
+                                               void *user,
+                                               void *in,
+                                               size_t len)
 {
     HttpServer *server = (HttpServer *)lws_context_user(lws_get_context(wsi));
     return server->_lws_websocket_callback(wsi, reason, user, in, len);
 }
 
-int     HttpServer::_lws_websocket_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
+int HttpServer::_lws_websocket_callback(struct lws *wsi,
+                                        enum lws_callback_reasons reason,
+                                        void *user,
+                                        void *in,
+                                        size_t len)
 {
     int rc = 0;
     IWebsocketHandler *handler = nullptr;
@@ -550,29 +567,29 @@ int     HttpServer::_lws_websocket_callback(struct lws *wsi, enum lws_callback_r
         case LWS_CALLBACK_ESTABLISHED:
         {
             rc = this->_on_websocket_open(handler, session);
-            break ;
+            break;
         }
         case LWS_CALLBACK_SERVER_WRITEABLE:
         {
             rc = this->_on_websocket_write(handler, session);
-            break ;
+            break;
         }
         case LWS_CALLBACK_RECEIVE:
         {
             rc = this->_on_websocket_read(handler, session);
-            break ;
+            break;
         }
         case LWS_CALLBACK_CLOSED:
         {
             rc = this->_on_websocket_close(handler, session);
-            break ;
+            break;
         }
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
             const char *error = (const char *)in;
             if (error != nullptr)
                 SIHD_LOG(warning, "HttpServer: client connection error: {}", error);
-            break ;
+            break;
         }
 #if defined(LWS_CALLBACK_CONNECTING)
         // Called before a socketfd is about to connect()
@@ -580,29 +597,29 @@ int     HttpServer::_lws_websocket_callback(struct lws *wsi, enum lws_callback_r
         {
             lws_sockfd_type *fd = (lws_sockfd_type *)in;
             SIHD_LOG(debug, "Callback connecting file descriptor: {}", fd);
-            break ;
+            break;
         }
 #endif
         default:
-            break ;
+            break;
     }
     return rc;
 }
 
-int     HttpServer::_on_websocket_open(IWebsocketHandler *handler, WebsocketSession *session)
+int HttpServer::_on_websocket_open(IWebsocketHandler *handler, WebsocketSession *session)
 {
     handler->on_open(session->protocol->name);
     return 0;
 }
 
-int     HttpServer::_on_websocket_read(IWebsocketHandler *handler, WebsocketSession *session)
+int HttpServer::_on_websocket_read(IWebsocketHandler *handler, WebsocketSession *session)
 {
     sihd::util::ArrChar arr;
     arr.assign_bytes((uint8_t *)session->in, session->len);
     return handler->on_read(arr) ? 0 : -1;
 }
 
-int     HttpServer::_on_websocket_write(IWebsocketHandler *handler, WebsocketSession *session)
+int HttpServer::_on_websocket_write(IWebsocketHandler *handler, WebsocketSession *session)
 {
     sihd::util::ArrChar arr_to_write;
     LwsWriteProtocol lws_proto;
@@ -614,16 +631,16 @@ int     HttpServer::_on_websocket_write(IWebsocketHandler *handler, WebsocketSes
         buffer.resize(arr_to_write.size() + LWS_PRE);
         memcpy(buffer.data() + LWS_PRE, arr_to_write.data(), arr_to_write.size());
         int wrote = lws_write(session->wsi,
-                                (u_char *)(buffer.data() + LWS_PRE),
-                                arr_to_write.size(),
-                                (enum lws_write_protocol)lws_proto.protocol);
+                              (u_char *)(buffer.data() + LWS_PRE),
+                              arr_to_write.size(),
+                              (enum lws_write_protocol)lws_proto.protocol);
         if (wrote < (int)arr_to_write.size())
             ret = false;
     }
     return ret ? 0 : -1;
 }
 
-int     HttpServer::_on_websocket_close(IWebsocketHandler *handler, WebsocketSession *session)
+int HttpServer::_on_websocket_close(IWebsocketHandler *handler, WebsocketSession *session)
 {
     (void)session;
     handler->on_close();
@@ -635,7 +652,7 @@ const char *HttpServer::_get_client_ip(struct lws *wsi)
     return lws_get_peer_simple(wsi, _ip_buf.data(), INET6_ADDRSTRLEN);
 }
 
-std::vector<std::string>   HttpServer::_get_uri_args(struct lws *wsi)
+std::vector<std::string> HttpServer::_get_uri_args(struct lws *wsi)
 {
     if (wsi == nullptr)
         return {};
@@ -650,20 +667,20 @@ std::vector<std::string>   HttpServer::_get_uri_args(struct lws *wsi)
     return ret;
 }
 
-bool    HttpServer::_send_404(struct lws *wsi, std::string_view html_404)
+bool HttpServer::_send_404(struct lws *wsi, std::string_view html_404)
 {
     _http_header.set_status_content(HTTP_STATUS_NOT_FOUND, _mime.get("html"), html_404.size());
     this->_send_http_headers(wsi, _http_header);
     return lws_write_http(wsi, html_404.data(), html_404.size()) == (int)html_404.size();
 }
 
-bool    HttpServer::_send_http_no_content(struct lws *wsi, int code)
+bool HttpServer::_send_http_no_content(struct lws *wsi, int code)
 {
     _http_header.set_status_content(code, _mime.get("html"), 0);
     return this->_send_http_headers(wsi, _http_header);
 }
 
-bool    HttpServer::_send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code)
+bool HttpServer::_send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code)
 {
     _http_header.set_status_content(code, _mime.get("html"), 0);
     _http_header.set_header(lws_token_to_string(WSI_TOKEN_HTTP_LOCATION), redirect_path);
@@ -672,7 +689,7 @@ bool    HttpServer::_send_http_redirect(struct lws *wsi, std::string_view redire
     return ret;
 }
 
-bool    HttpServer::_send_http_headers(struct lws *wsi, HttpHeader & header)
+bool HttpServer::_send_http_headers(struct lws *wsi, HttpHeader & header)
 {
     int rc;
     u_char *ptr = (u_char *)_http_header_array.buf();
@@ -684,9 +701,7 @@ bool    HttpServer::_send_http_headers(struct lws *wsi, HttpHeader & header)
         SIHD_LOG(error, "HttpHeader: cannot set status");
     // CONTENT TYPE
     std::string type = HttpHeader::build_content_type(header.content_type(), _encoding);
-    rc = lws_add_http_header_by_token(wsi, WSI_TOKEN_HTTP_CONTENT_TYPE,
-                                        (u_char *)type.c_str(),
-                                        type.size(), &ptr, end);
+    rc = lws_add_http_header_by_token(wsi, WSI_TOKEN_HTTP_CONTENT_TYPE, (u_char *)type.c_str(), type.size(), &ptr, end);
     if (rc)
         SIHD_LOG(error, "HttpHeader: cannot set content-type");
     // CONTENT LENGTH
@@ -696,19 +711,19 @@ bool    HttpServer::_send_http_headers(struct lws *wsi, HttpHeader & header)
     // SERVER NAME
     if (header.server_name().empty() == false)
     {
-        rc = lws_add_http_header_by_token(wsi, WSI_TOKEN_HTTP_SERVER,
-                                            (u_char *)header.server_name().c_str(),
-                                            header.server_name().size(),
-                                            &ptr, end);
+        rc = lws_add_http_header_by_token(wsi,
+                                          WSI_TOKEN_HTTP_SERVER,
+                                          (u_char *)header.server_name().c_str(),
+                                          header.server_name().size(),
+                                          &ptr,
+                                          end);
         if (rc)
             SIHD_LOG(error, "HttpHeader: cannot set server name");
     }
     // HEADERS
-    for (const auto & [name, value]: header.headers())
+    for (const auto & [name, value] : header.headers())
     {
-        rc = lws_add_http_header_by_name(wsi, (u_char *)name.c_str(),
-                                            (u_char *)value.c_str(),
-                                            value.size(), &ptr, end);
+        rc = lws_add_http_header_by_name(wsi, (u_char *)name.c_str(), (u_char *)value.c_str(), value.size(), &ptr, end);
         if (rc)
             SIHD_LOG(error, "HttpHeader: cannot set header '{}'", name);
     }
@@ -718,7 +733,7 @@ bool    HttpServer::_send_http_headers(struct lws *wsi, HttpHeader & header)
         SIHD_LOG(error, "HttpHeader: cannot finalize HTTP headers");
     *ptr = 0;
     // calculate header size
-    size_t write_size =  ptr - _http_header_array.buf();
+    size_t write_size = ptr - _http_header_array.buf();
     if (rc != 0)
         return false;
     if (lws_write(wsi, _http_header_array.buf(), write_size, LWS_WRITE_HTTP_HEADERS) != (int)write_size)
@@ -729,8 +744,10 @@ bool    HttpServer::_send_http_headers(struct lws *wsi, HttpHeader & header)
     return true;
 }
 
-bool    HttpServer::_add_protocol(const char *name, lws_callback_function *callback,
-                                     size_t struct_size, size_t tx_packet_size)
+bool HttpServer::_add_protocol(const char *name,
+                               lws_callback_function *callback,
+                               size_t struct_size,
+                               size_t tx_packet_size)
 {
     ++_protocols_count;
     _lws_protocols_ptr = (lws_protocols *)realloc(_lws_protocols_ptr, sizeof(lws_protocols) * (_protocols_count + 1));
@@ -754,10 +771,12 @@ bool    HttpServer::_add_protocol(const char *name, lws_callback_function *callb
     return _lws_protocols_ptr != nullptr;
 }
 
-bool    HttpServer::_add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size)
+bool HttpServer::_add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size)
 {
-    bool ret = this->_add_protocol(name, HttpServer::_global_websocket_lws_callback,
-                                    sizeof(WebsocketSession), tx_packet_size);
+    bool ret = this->_add_protocol(name,
+                                   HttpServer::_global_websocket_lws_callback,
+                                   sizeof(WebsocketSession),
+                                   tx_packet_size);
     if (ret)
     {
         _websocket_handler_lst.resize(_protocols_count);
@@ -766,18 +785,14 @@ bool    HttpServer::_add_websocket(const char *name, IWebsocketHandler *handler,
     return ret;
 }
 
-HttpServer::LwsPollingScheduler::LwsPollingScheduler(HttpServer *srv): server(srv)
-{
-}
+HttpServer::LwsPollingScheduler::LwsPollingScheduler(HttpServer *srv): server(srv) {}
 
-HttpServer::LwsPollingScheduler::~LwsPollingScheduler()
-{
-}
+HttpServer::LwsPollingScheduler::~LwsPollingScheduler() {}
 
-bool    HttpServer::LwsPollingScheduler::run()
+bool HttpServer::LwsPollingScheduler::run()
 {
     this->server->_check_all_protocols();
     return true;
 }
 
-}
+} // namespace sihd::http

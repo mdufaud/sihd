@@ -1,5 +1,5 @@
-#include <sihd/util/SysLogger.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/SysLogger.hpp>
 
 namespace sihd::util
 {
@@ -11,7 +11,9 @@ SysLogger::SysLogger(std::string_view progname, int options, int facility)
 #if !defined(__SIHD_WINDOWS__)
     openlog(progname.data(), options, facility);
 #else
-    (void)progname; (void)options; (void)facility;
+    (void)progname;
+    (void)options;
+    (void)facility;
 #endif
 }
 
@@ -22,18 +24,23 @@ SysLogger::~SysLogger()
 #endif
 }
 
-void    SysLogger::log(const LogInfo & info, std::string_view msg)
+void SysLogger::log(const LogInfo & info, std::string_view msg)
 {
 #if !defined(__SIHD_WINDOWS__)
     // loglevel is done same as syslog
-    syslog(info.level, "%ld.%09ld\t[%s]\t%s\t%s\t%s\n",
-            info.timestamp.tv_sec, info.timestamp.tv_nsec,
-            info.thread_name.data(),
-            info.strlevel, info.source.data(), msg.data());
+    syslog(info.level,
+           "%ld.%09ld\t[%s]\t%s\t%s\t%s\n",
+           info.timestamp.tv_sec,
+           info.timestamp.tv_nsec,
+           info.thread_name.data(),
+           info.strlevel,
+           info.source.data(),
+           msg.data());
 #else
-    #pragma message("TODO")
-    (void)info; (void)msg;
+# pragma message("TODO")
+    (void)info;
+    (void)msg;
 #endif
 }
 
-}
+} // namespace sihd::util

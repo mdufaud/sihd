@@ -1,8 +1,8 @@
 #ifndef __SIHD_UTIL_WAITABLE_HPP__
-# define __SIHD_UTIL_WAITABLE_HPP__
+#define __SIHD_UTIL_WAITABLE_HPP__
 
-# include <mutex>
-# include <condition_variable>
+#include <condition_variable>
+#include <mutex>
 
 #include <sihd/util/Timestamp.hpp>
 
@@ -61,6 +61,6 @@ class Waitable
         bool _stop_waiting;
 };
 
-}
+} // namespace sihd::util
 
 #endif

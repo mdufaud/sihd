@@ -1,14 +1,14 @@
 #ifndef __SIHD_UTIL_ALOGGER_HPP__
-# define __SIHD_UTIL_ALOGGER_HPP__
+#define __SIHD_UTIL_ALOGGER_HPP__
 
-# include <sihd/util/LogInfo.hpp>
-# include <sihd/util/ILoggerFilter.hpp>
-# include <sihd/util/ALogFilterer.hpp>
+#include <sihd/util/ALogFilterer.hpp>
+#include <sihd/util/ILoggerFilter.hpp>
+#include <sihd/util/LogInfo.hpp>
 
 namespace sihd::util
 {
 
-class ALogger:  public ALogFilterer
+class ALogger: public ALogFilterer
 {
     public:
         ALogger() {};
@@ -19,6 +19,6 @@ class ALogger:  public ALogFilterer
     private:
 };
 
-}
+} // namespace sihd::util
 
 #endif

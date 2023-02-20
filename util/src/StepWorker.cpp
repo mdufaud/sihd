@@ -1,10 +1,10 @@
-#include <sihd/util/StepWorker.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/Timestamp.hpp>
-#include <sihd/util/time.hpp>
-#include <sihd/util/Waitable.hpp>
-#include <sihd/util/ScopedModifier.hpp>
 #include <sihd/util/Clocks.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/ScopedModifier.hpp>
+#include <sihd/util/StepWorker.hpp>
+#include <sihd/util/Timestamp.hpp>
+#include <sihd/util/Waitable.hpp>
+#include <sihd/util/time.hpp>
 
 namespace sihd::util
 {
@@ -21,7 +21,7 @@ StepWorker::~StepWorker()
     this->stop_worker();
 }
 
-bool    StepWorker::set_frequency(double frequency)
+bool StepWorker::set_frequency(double frequency)
 {
     if (frequency <= 0.0)
     {
@@ -32,12 +32,12 @@ bool    StepWorker::set_frequency(double frequency)
     return true;
 }
 
-double  StepWorker::frequency() const
+double StepWorker::frequency() const
 {
     return time::to_hz(_sleep_time);
 }
 
-bool    StepWorker::run()
+bool StepWorker::run()
 {
     bool ret = true;
     time_t now = 0;
@@ -51,7 +51,7 @@ bool    StepWorker::run()
     {
         now = _clock.now();
         if ((ret = this->step()) == false)
-            break ;
+            break;
         after = _clock.now();
         ScopedModifier m(_pausing, true);
         _pause_waitable.wait_for(_sleep_time - (after - now));
@@ -61,24 +61,24 @@ bool    StepWorker::run()
     return ret;
 }
 
-void    StepWorker::resume_worker()
+void StepWorker::resume_worker()
 {
     _pause = false;
     while (_pausing.load() == true)
         _pause_waitable.notify_all();
 }
 
-void    StepWorker::pause_worker()
+void StepWorker::pause_worker()
 {
     _pause = true;
 }
 
-bool    StepWorker::step()
+bool StepWorker::step()
 {
     return Worker::run();
 }
 
-bool    StepWorker::on_worker_start()
+bool StepWorker::on_worker_start()
 {
     if (_sleep_time == 0)
     {
@@ -88,10 +88,10 @@ bool    StepWorker::on_worker_start()
     return true;
 }
 
-bool    StepWorker::on_worker_stop()
+bool StepWorker::on_worker_stop()
 {
     this->resume_worker();
     return true;
 }
 
-}
+} // namespace sihd::util

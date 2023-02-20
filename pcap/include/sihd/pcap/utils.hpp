@@ -1,12 +1,12 @@
 #ifndef __SIHD_PCAP_PCAPUTILS_HPP__
-# define __SIHD_PCAP_PCAPUTILS_HPP__
+#define __SIHD_PCAP_PCAPUTILS_HPP__
 
-# include <vector>
-# include <string>
+#include <string>
+#include <vector>
 
-# include <pcap.h>
+#include <pcap.h>
 
-# include <sihd/util/platform.hpp>
+#include <sihd/util/platform.hpp>
 
 namespace sihd::pcap::utils
 {
@@ -29,6 +29,6 @@ std::string datalink_str(int dtl);
 std::string datalink_desc(int dtl);
 int datalink(std::string_view dtl);
 
-}
+} // namespace sihd::pcap::utils
 
 #endif

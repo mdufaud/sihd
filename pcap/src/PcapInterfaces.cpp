@@ -19,7 +19,7 @@ PcapInterfaces::~PcapInterfaces()
     this->_free();
 }
 
-void    PcapInterfaces::_free()
+void PcapInterfaces::_free()
 {
     if (_interfaces_ptr != nullptr)
     {
@@ -28,7 +28,7 @@ void    PcapInterfaces::_free()
     }
 }
 
-struct pcap_addr    *PcapInterfaces::pcap_addr(std::string_view name)
+struct pcap_addr *PcapInterfaces::pcap_addr(std::string_view name)
 {
     pcap_if_t *tmp = _interfaces_ptr;
     struct pcap_addr *addr = nullptr;
@@ -37,14 +37,14 @@ struct pcap_addr    *PcapInterfaces::pcap_addr(std::string_view name)
         if (name == tmp->name)
         {
             addr = tmp->addresses;
-            break ;
+            break;
         }
         tmp = tmp->next;
     }
     return addr;
 }
 
-std::vector<PcapIFace>    PcapInterfaces::ifaces()
+std::vector<PcapIFace> PcapInterfaces::ifaces()
 {
     std::vector<PcapIFace> ret;
     pcap_if_t *tmp = _interfaces_ptr;
@@ -64,7 +64,7 @@ std::vector<PcapIFace>    PcapInterfaces::ifaces()
     return ret;
 }
 
-std::vector<std::string>    PcapInterfaces::names()
+std::vector<std::string> PcapInterfaces::names()
 {
     std::vector<std::string> ret;
     pcap_if_t *tmp = _interfaces_ptr;
@@ -84,7 +84,7 @@ std::vector<std::string>    PcapInterfaces::names()
     return ret;
 }
 
-bool    PcapInterfaces::find()
+bool PcapInterfaces::find()
 {
     this->_free();
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -94,7 +94,7 @@ bool    PcapInterfaces::find()
     return _code == 0;
 }
 
-bool    PcapInterfaces::error()
+bool PcapInterfaces::error()
 {
     return _code != 0;
 }
@@ -124,9 +124,7 @@ PcapIFace::PcapIFace(pcap_if_t *ptr): _if_ptr(ptr)
     }
 }
 
-PcapIFace::~PcapIFace()
-{
-}
+PcapIFace::~PcapIFace() {}
 
 const std::vector<struct pcap_addr *> & PcapIFace::addresses() const
 {
@@ -173,45 +171,44 @@ std::string PcapIFace::description() const
     return _if_ptr->description;
 }
 
-bool    PcapIFace::loopback() const
+bool PcapIFace::loopback() const
 {
     return _if_ptr->flags & PCAP_IF_LOOPBACK;
 }
 
-bool    PcapIFace::up() const
+bool PcapIFace::up() const
 {
     return _if_ptr->flags & PCAP_IF_UP;
 }
 
-bool    PcapIFace::running() const
+bool PcapIFace::running() const
 {
     return _if_ptr->flags & PCAP_IF_RUNNING;
 }
 
-bool    PcapIFace::wireless() const
+bool PcapIFace::wireless() const
 {
     return _if_ptr->flags & PCAP_IF_WIRELESS;
 }
 
-bool    PcapIFace::connection_unknown() const
+bool PcapIFace::connection_unknown() const
 {
     return _if_ptr->flags & PCAP_IF_CONNECTION_STATUS_UNKNOWN;
 }
 
-bool    PcapIFace::connected() const
+bool PcapIFace::connected() const
 {
     return _if_ptr->flags & PCAP_IF_CONNECTION_STATUS_CONNECTED;
 }
 
-bool    PcapIFace::disconnected() const
+bool PcapIFace::disconnected() const
 {
     return _if_ptr->flags & PCAP_IF_CONNECTION_STATUS_DISCONNECTED;
 }
 
-bool    PcapIFace::can_be_connected() const
+bool PcapIFace::can_be_connected() const
 {
     return !(_if_ptr->flags & PCAP_IF_CONNECTION_STATUS_NOT_APPLICABLE);
 }
 
-
-}
+} // namespace sihd::pcap

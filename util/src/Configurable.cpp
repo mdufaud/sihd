@@ -5,57 +5,6 @@
 namespace sihd::util
 {
 
-bool Configurable::set_conf_float(const std::string & name, double param)
-{
-    try
-    {
-        return _callbackManager.call<bool, double>(name, param);
-    }
-    catch (const std::invalid_argument & e)
-    {
-        return _callbackManager.call<bool, float>(name, (float)param);
-    }
-}
-
-bool Configurable::set_conf_int(const std::string & name, int64_t param)
-{
-    try { return _callbackManager.call<bool, int64_t>(name, param); }
-    catch (const std::invalid_argument & e) {}
-    try { return _callbackManager.call<bool, uint64_t>(name, param); }
-    catch (const std::invalid_argument & e) {}
-    try { return _callbackManager.call<bool, int32_t>(name, param); }
-    catch (const std::invalid_argument & e) {}
-    try { return _callbackManager.call<bool, uint32_t>(name, param); }
-    catch (const std::invalid_argument & e) {}
-    try { return _callbackManager.call<bool, int16_t>(name, param); }
-    catch (const std::invalid_argument & e) {}
-    try { return _callbackManager.call<bool, uint16_t>(name, param); }
-    catch (const std::invalid_argument & e) {}
-    try { return _callbackManager.call<bool, int8_t>(name, param); }
-    catch (const std::invalid_argument & e) {}
-
-    return _callbackManager.call<bool, uint8_t>(name, param);
-}
-
-bool Configurable::set_conf_str(const std::string & name, const std::string & param)
-{
-    try { return _callbackManager.call<bool, const std::string &>(name, param); }
-    catch (const std::invalid_argument & e) {}
-    try { return _callbackManager.call<bool, std::string_view>(name, param); }
-    catch (const std::invalid_argument & e) {}
-    return _callbackManager.call<bool, const char *>(name, param.c_str());
-}
-
-bool Configurable::set_conf_str(const std::string & name, std::string_view param)
-{
-    try { return _callbackManager.call<bool, std::string_view>(name, param); }
-    catch (const std::invalid_argument & e) {}
-    try { return _callbackManager.call<bool, const char *>(name, param.data()); }
-    catch (const std::invalid_argument & e) {}
-    std::string str(param.data(), param.size());
-    return this->set_conf_str(name, str);
-}
-
 bool Configurable::set_conf_str(const std::string & name, const char *param)
 {
     std::string_view str_view(param);
@@ -109,9 +58,120 @@ bool Configurable::set_conf(const nlohmann::json & json)
 
 bool Configurable::_set_conf_json(const std::string & name, const nlohmann::json & val)
 {
-    try { return _callbackManager.call<bool, const nlohmann::json &>(name, val); }
-    catch (const std::invalid_argument & e) {}
+    try
+    {
+        return _callbackManager.call<bool, const nlohmann::json &>(name, val);
+    }
+    catch (const std::invalid_argument & e)
+    {
+    }
     return _callbackManager.call<bool, const nlohmann::json>(name, val);
 }
 
+bool Configurable::set_conf_float(const std::string & name, double param)
+{
+    try
+    {
+        return _callbackManager.call<bool, double>(name, param);
+    }
+    catch (const std::invalid_argument & e)
+    {
+        return _callbackManager.call<bool, float>(name, (float)param);
+    }
 }
+
+bool Configurable::set_conf_int(const std::string & name, int64_t param)
+{
+    try
+    {
+        return _callbackManager.call<bool, int64_t>(name, param);
+    }
+    catch (const std::invalid_argument & e)
+    {
+    }
+    try
+    {
+        return _callbackManager.call<bool, uint64_t>(name, param);
+    }
+    catch (const std::invalid_argument & e)
+    {
+    }
+    try
+    {
+        return _callbackManager.call<bool, int32_t>(name, param);
+    }
+    catch (const std::invalid_argument & e)
+    {
+    }
+    try
+    {
+        return _callbackManager.call<bool, uint32_t>(name, param);
+    }
+    catch (const std::invalid_argument & e)
+    {
+    }
+    try
+    {
+        return _callbackManager.call<bool, int16_t>(name, param);
+    }
+    catch (const std::invalid_argument & e)
+    {
+    }
+    try
+    {
+        return _callbackManager.call<bool, uint16_t>(name, param);
+    }
+    catch (const std::invalid_argument & e)
+    {
+    }
+    try
+    {
+        return _callbackManager.call<bool, int8_t>(name, param);
+    }
+    catch (const std::invalid_argument & e)
+    {
+    }
+
+    return _callbackManager.call<bool, uint8_t>(name, param);
+}
+
+bool Configurable::set_conf_str(const std::string & name, const std::string & param)
+{
+    try
+    {
+        return _callbackManager.call<bool, const std::string &>(name, param);
+    }
+    catch (const std::invalid_argument & e)
+    {
+    }
+    try
+    {
+        return _callbackManager.call<bool, std::string_view>(name, param);
+    }
+    catch (const std::invalid_argument & e)
+    {
+    }
+    return _callbackManager.call<bool, const char *>(name, param.c_str());
+}
+
+bool Configurable::set_conf_str(const std::string & name, std::string_view param)
+{
+    try
+    {
+        return _callbackManager.call<bool, std::string_view>(name, param);
+    }
+    catch (const std::invalid_argument & e)
+    {
+    }
+    try
+    {
+        return _callbackManager.call<bool, const char *>(name, param.data());
+    }
+    catch (const std::invalid_argument & e)
+    {
+    }
+    std::string str(param.data(), param.size());
+    return this->set_conf_str(name, str);
+}
+
+} // namespace sihd::util

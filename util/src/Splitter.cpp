@@ -8,9 +8,7 @@
 namespace sihd::util
 {
 
-Splitter::Splitter(): _empty_delimitations(false), _compare_method(nullptr)
-{
-}
+Splitter::Splitter(): _empty_delimitations(false), _compare_method(nullptr) {}
 
 Splitter::Splitter(int delimiter, std::string_view authorized_open_escape_sequences): Splitter()
 {
@@ -30,46 +28,44 @@ Splitter::Splitter(int (*fun)(int), std::string_view authorized_open_escape_sequ
     _authorized_open_escape_sequences = authorized_open_escape_sequences;
 }
 
-Splitter::~Splitter()
-{
-}
+Splitter::~Splitter() {}
 
-bool    Splitter::set_delimiter(std::string_view str)
+bool Splitter::set_delimiter(std::string_view str)
 {
     _delimiter = str;
     return true;
 }
 
-bool    Splitter::set_delimiter_spaces()
+bool Splitter::set_delimiter_spaces()
 {
     this->set_delimiter_method(&std::isspace);
     return true;
 }
 
-void    Splitter::set_delimiter_method(int (*fun)(int))
+void Splitter::set_delimiter_method(int (*fun)(int))
 {
     _compare_method = fun;
 }
 
-bool    Splitter::set_empty_delimitations(bool active)
+bool Splitter::set_empty_delimitations(bool active)
 {
     _empty_delimitations = active;
     return true;
 }
 
-bool    Splitter::set_escape_sequences(std::string_view str)
+bool Splitter::set_escape_sequences(std::string_view str)
 {
     _authorized_open_escape_sequences = str;
     return true;
 }
 
-bool    Splitter::set_escape_sequences_all()
+bool Splitter::set_escape_sequences_all()
 {
     _authorized_open_escape_sequences = str::escapes_open();
     return true;
 }
 
-int     Splitter::_get_delimiter_offset(const char *s) const
+int Splitter::_get_delimiter_offset(const char *s) const
 {
     if (_compare_method != nullptr && _compare_method(s[0]) != 0)
         return 1;
@@ -78,7 +74,7 @@ int     Splitter::_get_delimiter_offset(const char *s) const
     return -1;
 }
 
-int     Splitter::count_tokens(const char *s) const
+int Splitter::count_tokens(const char *s) const
 {
     int delimiter_count;
     int delimiter_offset;
@@ -110,14 +106,14 @@ int     Splitter::count_tokens(const char *s) const
             else if (closed_at == -2)
             {
                 i = -1;
-                break ;
+                break;
             }
             // not a closing escape
             else
             {
                 // while not a delimiter found
                 if (this->_get_delimiter_offset(s + i) > 0)
-                    break ;
+                    break;
                 ++i;
             }
         }
@@ -125,7 +121,7 @@ int     Splitter::count_tokens(const char *s) const
     return count;
 }
 
-std::string_view    Splitter::next_token(const char *s, int *idx) const
+std::string_view Splitter::next_token(const char *s, int *idx) const
 {
     int x = *idx;
     int delimiter_offset;
@@ -150,13 +146,13 @@ std::string_view    Splitter::next_token(const char *s, int *idx) const
         else if (closed_at == -2)
         {
             y = strlen(s);
-            break ;
+            break;
         }
         // not a closing escape
         else
         {
             if (this->_get_delimiter_offset(s + y) > 0)
-                break ;
+                break;
             ++y;
         }
     }
@@ -164,9 +160,9 @@ std::string_view    Splitter::next_token(const char *s, int *idx) const
     return std::string_view(s + x, std::max(0, y - x));
 }
 
-std::vector<std::string>    Splitter::split(std::string_view str) const
+std::vector<std::string> Splitter::split(std::string_view str) const
 {
-   if (_delimiter.empty() && _compare_method == nullptr)
+    if (_delimiter.empty() && _compare_method == nullptr)
         return {std::string(str.data(), str.size())};
     const char *s = str.data();
     int tokens = this->count_tokens(s);
@@ -180,9 +176,9 @@ std::vector<std::string>    Splitter::split(std::string_view str) const
     return ret;
 }
 
-std::vector<std::string_view>   Splitter::split_view(std::string_view str) const
+std::vector<std::string_view> Splitter::split_view(std::string_view str) const
 {
-   if (_delimiter.empty() && _compare_method == nullptr)
+    if (_delimiter.empty() && _compare_method == nullptr)
         return {str};
     const char *s = str.data();
     int tokens = this->count_tokens(s);
@@ -196,4 +192,4 @@ std::vector<std::string_view>   Splitter::split_view(std::string_view str) const
     return ret;
 }
 
-}
+} // namespace sihd::util

@@ -1,11 +1,11 @@
 #ifndef __SIHD_SSH_SSHSHELL_HPP__
-# define __SIHD_SSH_SSHSHELL_HPP__
+#define __SIHD_SSH_SSHSHELL_HPP__
 
-# include <libssh/libssh.h>
+#include <libssh/libssh.h>
 
-# include <string>
+#include <string>
 
-# include <sihd/ssh/SshChannel.hpp>
+#include <sihd/ssh/SshChannel.hpp>
 
 namespace sihd::ssh
 {
@@ -27,9 +27,8 @@ class SshShell
     private:
         ssh_session _ssh_session_ptr;
         SshChannel _channel;
-
 };
 
-}
+} // namespace sihd::ssh
 
 #endif

@@ -1,13 +1,13 @@
 #ifndef __SIHD_UTIL_FMT_HPP__
-# define __SIHD_UTIL_FMT_HPP__
+#define __SIHD_UTIL_FMT_HPP__
 
-# include <fmt/format.h>
+#include <fmt/format.h>
 
 namespace sihd::util::format
 {
 
-template <typename ...Args>
-std::string join(std::string_view sep, Args && ...args)
+template <typename... Args>
+std::string join(std::string_view sep, Args &&...args)
 {
     constexpr char brace[] = "{}";
     constexpr int brace_size = sizeof(brace) - 1;
@@ -39,6 +39,6 @@ std::string join(std::string_view sep, Args && ...args)
     return fmt::format(std::string_view(format_str, size), std::forward<Args>(args)...);
 };
 
-}
+} // namespace sihd::util::format
 
 #endif

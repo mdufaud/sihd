@@ -1,12 +1,12 @@
 #ifndef __SIHD_IMGUI_IMGUIBACKENDWIN32_HPP__
-# define __SIHD_IMGUI_IMGUIBACKENDWIN32_HPP__
+#define __SIHD_IMGUI_IMGUIBACKENDWIN32_HPP__
 
-# include <sihd/imgui/IImguiBackend.hpp>
-# include <sihd/imgui/IImguiRenderer.hpp>
-# include <sihd/imgui/ImguiRendererDirectX.hpp>
-# include <sihd/imgui/imgui_impl_win32.h>
-# include <tchar.h>
-# include <string>
+#include <sihd/imgui/IImguiBackend.hpp>
+#include <sihd/imgui/IImguiRenderer.hpp>
+#include <sihd/imgui/ImguiRendererDirectX.hpp>
+#include <sihd/imgui/imgui_impl_win32.h>
+#include <string>
+#include <tchar.h>
 
 namespace sihd::imgui
 {
@@ -23,11 +23,11 @@ class ImguiBackendWin32: public sihd::imgui::IImguiBackend
 
         void new_frame();
         bool should_close();
-		void poll();
-		void pre_render();
-		void post_render();
-		void shutdown();
-		void terminate();
+        void poll();
+        void pre_render();
+        void post_render();
+        void shutdown();
+        void terminate();
 
         LRESULT handle_win32_msg_handler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -46,6 +46,6 @@ class ImguiBackendWin32: public sihd::imgui::IImguiBackend
         IImguiRenderer *_imgui_renderer_ptr;
 };
 
-}
+} // namespace sihd::imgui
 
 #endif

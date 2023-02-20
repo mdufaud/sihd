@@ -1,8 +1,8 @@
 #include <sihd/csv/CsvWriter.hpp>
+#include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/str.hpp>
-#include <sihd/util/ArrayView.hpp>
 
 namespace sihd::csv
 {
@@ -11,8 +11,7 @@ SIHD_UTIL_REGISTER_FACTORY(CsvWriter)
 
 SIHD_LOGGER;
 
-CsvWriter::CsvWriter(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent)
+CsvWriter::CsvWriter(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
 {
     _delimiter = ',';
     _comment = '#';
@@ -29,11 +28,9 @@ CsvWriter::CsvWriter(const std::string & name, sihd::util::Node *parent):
     this->add_conf("comment", &CsvWriter::set_commentary);
 }
 
-CsvWriter::~CsvWriter()
-{
-}
+CsvWriter::~CsvWriter() {}
 
-bool    CsvWriter::set_quote_value(int c)
+bool CsvWriter::set_quote_value(int c)
 {
     _end_quote_c = sihd::util::str::closing_escape_of(c);
     if (_end_quote_c < 0)
@@ -46,7 +43,7 @@ bool    CsvWriter::set_quote_value(int c)
     return true;
 }
 
-bool    CsvWriter::set_delimiter(int c)
+bool CsvWriter::set_delimiter(int c)
 {
     if (std::isprint(c))
     {
@@ -57,7 +54,7 @@ bool    CsvWriter::set_delimiter(int c)
     return false;
 }
 
-bool    CsvWriter::set_commentary(int c)
+bool CsvWriter::set_commentary(int c)
 {
     if (std::isprint(c))
     {
@@ -68,7 +65,7 @@ bool    CsvWriter::set_commentary(int c)
     return false;
 }
 
-bool    CsvWriter::open(std::string_view path, bool append)
+bool CsvWriter::open(std::string_view path, bool append)
 {
     _col = 0;
     _row = 0;
@@ -78,17 +75,17 @@ bool    CsvWriter::open(std::string_view path, bool append)
     return false;
 }
 
-bool    CsvWriter::is_open() const
+bool CsvWriter::is_open() const
 {
     return _file.is_open();
 }
 
-bool    CsvWriter::close()
+bool CsvWriter::close()
 {
     return _file.close();
 }
 
-bool    CsvWriter::new_row()
+bool CsvWriter::new_row()
 {
     if (_file.write_char(_line_feed) == false)
     {
@@ -135,9 +132,7 @@ ssize_t CsvWriter::write(sihd::util::ArrCharView view)
 
 ssize_t CsvWriter::write(sihd::util::ArrCharView view, sihd::util::Timestamp timestamp)
 {
-    return this->write(std::to_string(timestamp.nanoseconds()))
-        + this->write(view)
-        + this->new_row();
+    return this->write(std::to_string(timestamp.nanoseconds())) + this->write(view) + this->new_row();
 }
 
 ssize_t CsvWriter::write(const std::vector<std::string> & values, sihd::util::Timestamp timestamp)
@@ -149,11 +144,11 @@ ssize_t CsvWriter::write(const std::vector<std::string> & values)
 {
     ssize_t ret = 0;
     ssize_t wrote;
-    for (const std::string & value: values)
+    for (const std::string & value : values)
     {
         wrote = this->write(value);
         if (wrote < 0)
-            break ;
+            break;
         ret += wrote;
     }
     return ret;
@@ -169,4 +164,4 @@ ssize_t CsvWriter::write_row(const std::vector<std::string> & values, sihd::util
     return this->write(std::to_string(timestamp.nanoseconds())) + this->write_row(values);
 }
 
-}
+} // namespace sihd::csv

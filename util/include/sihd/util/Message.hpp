@@ -1,19 +1,19 @@
 #ifndef __SIHD_UTIL_MESSAGE_HPP__
-# define __SIHD_UTIL_MESSAGE_HPP__
+#define __SIHD_UTIL_MESSAGE_HPP__
 
-# include <stdexcept>
-# include <unordered_map>
+#include <stdexcept>
+#include <unordered_map>
 
-# include <sihd/util/Types.hpp>
-# include <sihd/util/Array.hpp>
-# include <sihd/util/Node.hpp>
-# include <sihd/util/IMessageField.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/IMessageField.hpp>
+#include <sihd/util/Node.hpp>
+#include <sihd/util/Types.hpp>
 
 namespace sihd::util
 {
 
-class Message:  public Node,
-                public IMessageField
+class Message: public Node,
+               public IMessageField
 {
     public:
         Message(const std::string & name, Node *parent = nullptr);
@@ -73,6 +73,6 @@ class Message:  public Node,
         size_t __assign_arr_at;
 };
 
-}
+} // namespace sihd::util
 
 #endif

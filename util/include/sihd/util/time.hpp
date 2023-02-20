@@ -1,8 +1,8 @@
 #ifndef __SIHD_UTIL_TIME_HPP__
-# define __SIHD_UTIL_TIME_HPP__
+#define __SIHD_UTIL_TIME_HPP__
 
-# include <chrono>
-# include <ctime>
+#include <chrono>
+#include <ctime>
 
 namespace sihd::util::time
 {
@@ -34,9 +34,9 @@ struct timeval to_tv(time_t micro);
 struct timeval to_nano_tv(time_t nano);
 
 /*
-* nano -> statically allocated nano, other call to localtime/gmtime erase previous result
-* may be nullptr if year cannot be contained
-*/
+ * nano -> statically allocated nano, other call to localtime/gmtime erase previous result
+ * may be nullptr if year cannot be contained
+ */
 struct tm to_tm(time_t nano, bool localtime = false);
 
 // nano -> micro
@@ -73,10 +73,10 @@ constexpr std::chrono::duration<int64_t, T> to_duration(time_t nano)
     // milliseconds -> nano / 1E6   = nano / (1E9 / 1E3) / 1
     // nano -> nano / 1             = nano / (1E9 / 1E9) / 1
     // min -> (nano / 1E9) / 60     = nano / (1E9 / 1) / 60
-    return std::chrono::duration<int64_t, T>((nano
-        / (std::chrono::duration<int64_t, std::nano>::period::den
-            / std::chrono::duration<int64_t, T>::period::den))
-                / std::chrono::duration<int64_t, T>::period::num);
+    return std::chrono::duration<int64_t, T>(
+        (nano
+         / (std::chrono::duration<int64_t, std::nano>::period::den / std::chrono::duration<int64_t, T>::period::den))
+        / std::chrono::duration<int64_t, T>::period::num);
 }
 
 // micro -> nano
@@ -113,9 +113,8 @@ constexpr time_t duration(std::chrono::duration<int64_t, T> duration)
     // nano -> count() * 1          == count() * (1E9 / 1E9) * 1
     // min -> count() * 1E9 * 60    == count() * (1E9 / 1) * 60
     return (duration.count()
-        * (std::chrono::duration<int64_t, std::nano>::period::den
-            / std::chrono::duration<int64_t, T>::period::den))
-                * std::chrono::duration<int64_t, T>::period::num;
+            * (std::chrono::duration<int64_t, std::nano>::period::den / std::chrono::duration<int64_t, T>::period::den))
+           * std::chrono::duration<int64_t, T>::period::num;
 }
 
 // tm struct -> nano
@@ -127,6 +126,6 @@ time_t nano_tv(const struct timeval & tv);
 
 bool is_leap_year(int year);
 
-}
+} // namespace sihd::util::time
 
 #endif
