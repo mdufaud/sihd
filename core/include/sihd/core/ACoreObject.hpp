@@ -5,6 +5,7 @@
 #include <sihd/util/Node.hpp>
 
 #include <sihd/core/ACoreService.hpp>
+#include <sihd/core/Channel.hpp>
 
 namespace sihd::core
 {

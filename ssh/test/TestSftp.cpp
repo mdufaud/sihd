@@ -40,7 +40,7 @@ TEST_F(TestSftp, test_sftp)
     EXPECT_TRUE(session.auth_key_auto().success());
 
     Sftp sftp = session.make_sftp();
-    EXPECT_TRUE(sftp.open());
+    ASSERT_TRUE(sftp.open());
     EXPECT_TRUE(sftp.mkdir(test_dir + "/new_dir"));
     EXPECT_TRUE(fs::is_dir(test_dir + "/new_dir"));
 

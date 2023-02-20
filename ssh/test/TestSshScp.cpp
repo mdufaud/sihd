@@ -35,14 +35,14 @@ TEST_F(TestSshScp, test_sshscp_push)
     SshSession session;
 
     GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
-    EXPECT_TRUE(session.connected());
+    ASSERT_TRUE(session.connected());
     auto auth = session.auth_key_auto();
     SIHD_LOG(info, "Auth status: {}", auth.str());
-    EXPECT_TRUE(auth.success());
+    ASSERT_TRUE(auth.success());
 
     SshScp scp = session.make_scp();
 
-    EXPECT_TRUE(scp.open_remote(test_dir));
+    ASSERT_TRUE(scp.open_remote(test_dir));
     EXPECT_TRUE(scp.push_file("test/resources/file.txt", "pushed_file.txt"));
     EXPECT_TRUE(scp.push_dir("pushed_dir"));
     EXPECT_TRUE(scp.push_file("test/resources/file.txt", "pushed_file_in_dir.txt"));
@@ -74,10 +74,10 @@ TEST_F(TestSshScp, test_sshscp_pull)
     SshSession session;
 
     GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
-    EXPECT_TRUE(session.connected());
+    ASSERT_TRUE(session.connected());
     auto auth = session.auth_key_auto();
     SIHD_LOG(info, "Auth status: {}", auth.str());
-    EXPECT_TRUE(auth.success());
+    ASSERT_TRUE(auth.success());
 
     SshScp scp = session.make_scp();
 

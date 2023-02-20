@@ -1,11 +1,12 @@
 #ifndef __SIHD_UTIL_COLLECTOR_HPP__
 #define __SIHD_UTIL_COLLECTOR_HPP__
 
+#include <atomic>
+
 #include <sihd/util/IProvider.hpp>
 #include <sihd/util/IStoppableRunnable.hpp>
 #include <sihd/util/Observable.hpp>
-
-#include <atomic>
+#include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
 {
