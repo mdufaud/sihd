@@ -11,13 +11,13 @@ class TmpDir
 {
     public:
         // creates a directory in constructor
-        TmpDir(std::string_view path);
-        // automatically get a tmp path prefix
         TmpDir();
         // deletes the directory in destructor
         ~TmpDir();
 
         operator bool() const;
+        operator std::string() const;
+        operator std::string_view() const;
 
         const std::string & path() const;
 

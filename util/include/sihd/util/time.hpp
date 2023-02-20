@@ -4,8 +4,6 @@
 # include <chrono>
 # include <ctime>
 
-# include <sihd/util/platform.hpp>
-
 namespace sihd::util::time
 {
 

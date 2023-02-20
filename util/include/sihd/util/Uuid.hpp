@@ -25,6 +25,7 @@ class Uuid
 
         operator bool() const { return !this->is_null(); }
 
+        Uuid & operator=(const Uuid & other);
         bool operator==(const Uuid & other) const;
 
         bool is_null() const;
@@ -35,6 +36,7 @@ class Uuid
 
     private:
         void _clear();
+        void _copy(const uuid_t *uuid);
 
         uuid_t _uuid;
 };

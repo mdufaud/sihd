@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include <sihd/util/time.hpp>
+#include <sihd/util/platform.hpp>
 
 # if !defined(__SIHD_WINDOWS__)
 extern char *tzname[2];

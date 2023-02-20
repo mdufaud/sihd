@@ -221,15 +221,15 @@ namespace test
         time_str = str::timeoffset_str(time::hours(12));
         EXPECT_EQ(time_str, "+12h:0m:0s:0ms:0us");
         time_str = str::timeoffset_str(time::hours(24));
-        EXPECT_EQ(time_str, "+1d::0h:0m:0s:0ms:0us");
+        EXPECT_EQ(time_str, "+1d 0h:0m:0s:0ms:0us");
         time_str = str::timeoffset_str(time::days(24));
-        EXPECT_EQ(time_str, "+24d::0h:0m:0s:0ms:0us");
+        EXPECT_EQ(time_str, "+24d 0h:0m:0s:0ms:0us");
         time_str = str::timeoffset_str(time::days(31));
-        EXPECT_EQ(time_str, "+1m:0d::0h:0m:0s:0ms:0us");
+        EXPECT_EQ(time_str, "+1m:0d 0h:0m:0s:0ms:0us");
         time_str = str::timeoffset_str(time::days(365));
-        EXPECT_EQ(time_str, "+1y:0m:0d::0h:0m:0s:0ms:0us");
+        EXPECT_EQ(time_str, "+1y:0m:0d 0h:0m:0s:0ms:0us");
         time_str = str::timeoffset_str(time::days(365) * 2);
-        EXPECT_EQ(time_str, "+2y:0m:0d::0h:0m:0s:0ms:0us");
+        EXPECT_EQ(time_str, "+2y:0m:0d 0h:0m:0s:0ms:0us");
 
         time_str = str::timeoffset_str(-time::sec(42));
         EXPECT_EQ(time_str, "-42s:0ms:0us");

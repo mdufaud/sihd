@@ -51,7 +51,7 @@ std::string _timeoffset_to_string(time_t nano, bool total_parenthesis, bool nano
     if ((next_step = next_step || tm.tm_mon > 0))
         s += fmt::format("{}m:", tm.tm_mon);
     if ((next_step = next_step || (tm.tm_mday - 1) > 0))
-        s += fmt::format("{}d::", tm.tm_mday - 1);
+        s += fmt::format("{}d ", tm.tm_mday - 1);
     if ((next_step = next_step || tm.tm_hour > 0))
         s += fmt::format("{}h:", tm.tm_hour);
     if ((next_step = next_step || tm.tm_min > 0))
@@ -783,6 +783,9 @@ std::string bytes_str(ssize_t bytes, bool iec)
     constexpr ssize_t mbyte_iec = 1024;
     constexpr ssize_t gbyte_iec = 1024 * 1024;
     constexpr ssize_t tbyte_iec = 1024 * 1024 * 1024;
+
+    if (bytes < 0)
+        return "";
 
     ssize_t mbyte = iec ? mbyte_iec : mbyte_si;
     ssize_t gbyte = iec ? gbyte_iec : gbyte_si;

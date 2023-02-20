@@ -4,14 +4,9 @@
 namespace sihd::util
 {
 
-TmpDir::TmpDir(std::string_view path)
+TmpDir::TmpDir()
 {
-    if (path.empty() == false)
-        _path = fs::make_tmp_directory(path);
-}
-
-TmpDir::TmpDir(): TmpDir(fs::ensure_separation(fs::tmp_path()))
-{
+    _path = fs::make_tmp_directory(fs::ensure_separation(fs::tmp_path()));
 }
 
 TmpDir::~TmpDir()
@@ -26,6 +21,16 @@ TmpDir::~TmpDir()
 TmpDir::operator bool() const
 {
     return _path.empty() == false;
+}
+
+TmpDir::operator std::string() const
+{
+    return _path;
+}
+
+TmpDir::operator std::string_view() const
+{
+    return std::string_view(_path);
 }
 
 const std::string & TmpDir::path() const

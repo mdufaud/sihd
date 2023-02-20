@@ -7,6 +7,8 @@
 # include <string_view>
 # include <vector>
 
+# include <sihd/util/Timestamp.hpp>
+
 namespace sihd::util::fs
 {
 
@@ -25,7 +27,7 @@ bool exists(std::string_view path);
 bool is_file(std::string_view path);
 bool is_dir(std::string_view path);
 size_t filesize(std::string_view path);
-time_t last_write(std::string_view path);
+Timestamp last_write(std::string_view path);
 bool is_readable(std::string_view path);
 bool is_writable(std::string_view path);
 bool is_executable(std::string_view path);

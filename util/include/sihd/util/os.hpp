@@ -50,9 +50,8 @@ bool fstat(int fd, struct stat *statbuf, bool logerror = false);
 bool setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror = false);
 bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror = false);
 
-rlim_t max_fds();
-
 bool is_root();
+rlim_t max_fds();
 
 // debuggers
 bool is_run_by_debugger();
@@ -76,6 +75,12 @@ ssize_t backtrace(int fd, size_t backtrace_size = -1);
 ssize_t peak_rss();
 // bytes
 ssize_t current_rss();
+
+#if defined(STATIC)
+constexpr bool is_statically_linked = true;
+#else
+constexpr bool is_statically_linked = false;
+#endif
 
 #if defined(__SIHD_WINDOWS__)
 constexpr bool is_windows = true;

@@ -123,9 +123,18 @@ std::string executable_path()
     if (GetModuleFileName(NULL, path, MAX_PATH) != 0)
         return path;
 #else
+    std::string path;
+    try
+    {
+        path = std::filesystem::canonical("/proc/self/exe");
+        if (path.empty() == false)
+            return path;
+    }
+    catch ([[ maybe_unused ]] const std::filesystem::filesystem_error & e)
+    {
+    }
     std::ifstream mapf("/proc/self/maps");
     std::string line;
-    std::string path;
     if (std::getline(mapf, line))
     {
         size_t idx = line.find("/");
@@ -166,11 +175,11 @@ bool    is_dir(std::string_view path)
     return false;
 }
 
-time_t  last_write(std::string_view path)
+Timestamp  last_write(std::string_view path)
 {
     struct stat s;
     if (os::stat(path.data(), &s) == 0)
-        return s.st_mtime;
+        return Timestamp(time::seconds(s.st_mtime));
     return false;
 }
 
@@ -228,23 +237,17 @@ std::string tmp_path()
 
 std::string make_tmp_directory(std::string_view prefix)
 {
+#if defined(__SIHD_WINDOWS__)
+    (void)prefix;
+    std::string path = std::tmpnam(nullptr);
+    if (make_directory(path))
+        return path;
+#else
     if (prefix.size() + 6 > PATH_MAX)
-    {
-        throw std::runtime_error(fmt::format("Path too long: {}", prefix.size() + 6));
-    }
+        throw std::runtime_error(fmt::format("Path too long: {}", prefix));
     char path[prefix.size() + 6 + 1];
     path[0] = 0;
     strcpy(path, prefix.data());
-#if defined(__SIHD_WINDOWS__)
-    char filename[PATH_MAX];
-    filename[0] = 0;
-    if (GetTempFileName(path, NULL, 0, filename) != 0)
-    {
-        std::string ret = combine(path, filename);
-        if (make_directory(ret))
-            return ret;
-    }
-#else
     strcpy(path + prefix.size(), "XXXXXX");
     if (mkdtemp(path) != nullptr)
         return path;
@@ -285,6 +288,8 @@ bool    make_directory(std::string_view path, unsigned int mode)
 {
     if (is_dir(path))
         return true;
+    if (path.empty())
+        return false;
 # if defined(__SIHD_WINDOWS__)
     (void)mode;
     return _mkdir(path.data()) == 0;
