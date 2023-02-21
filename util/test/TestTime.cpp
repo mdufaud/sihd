@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/fs.hpp>
@@ -11,11 +12,7 @@ using namespace sihd::util;
 class TestTime: public ::testing::Test
 {
     protected:
-        TestTime()
-        {
-            tzset();
-            sihd::util::LoggerManager::basic();
-        }
+        TestTime() { sihd::util::LoggerManager::basic(); }
 
         virtual ~TestTime() { sihd::util::LoggerManager::clear_loggers(); }
 
@@ -23,6 +20,69 @@ class TestTime: public ::testing::Test
 
         virtual void TearDown() {}
 };
+
+TEST_F(TestTime, test_time_timestamp_modulo)
+{
+    Timestamp ts_mod({.hour = 1, .minute = 35, .second = 2});
+    auto clocktime = ts_mod.clocktime();
+    EXPECT_EQ(clocktime.hour, 1);
+    EXPECT_EQ(clocktime.minute, 35);
+    EXPECT_EQ(clocktime.second, 2);
+
+    auto clocktime_mod_10 = ts_mod.modulo_min(10).clocktime();
+    EXPECT_EQ(clocktime_mod_10.hour, 1);
+    EXPECT_EQ(clocktime_mod_10.minute, 30);
+    EXPECT_EQ(clocktime_mod_10.second, 0);
+
+    auto clocktime_mod_60 = ts_mod.modulo_min(60).clocktime();
+    EXPECT_EQ(clocktime_mod_60.hour, 1);
+    EXPECT_EQ(clocktime_mod_60.minute, 0);
+    EXPECT_EQ(clocktime_mod_60.second, 0);
+}
+
+TEST_F(TestTime, test_time_timestamp_from_str)
+{
+    auto conversion = Timestamp::from_str("2022-02-01", "%Y-%m-%d");
+    ASSERT_TRUE(conversion.has_value());
+
+    Timestamp ts_conv = *conversion;
+    auto conv_calendar = ts_conv.calendar();
+    EXPECT_EQ(conv_calendar.year, 2022);
+    EXPECT_EQ(conv_calendar.month, 2);
+    EXPECT_EQ(conv_calendar.day, 1);
+    auto conv_clocktime = ts_conv.clocktime();
+    EXPECT_EQ(conv_clocktime.hour, 0);
+    EXPECT_EQ(conv_clocktime.minute, 0);
+    EXPECT_EQ(conv_clocktime.second, 0);
+
+    conversion = Timestamp::from_str("2000-12-31 10-09-08", "%Y-%m-%d %H-%M-%S");
+    ASSERT_TRUE(conversion.has_value());
+
+    ts_conv = *conversion;
+    conv_calendar = ts_conv.calendar();
+    EXPECT_EQ(conv_calendar.year, 2000);
+    EXPECT_EQ(conv_calendar.month, 12);
+    EXPECT_EQ(conv_calendar.day, 31);
+    conv_clocktime = ts_conv.clocktime();
+    EXPECT_EQ(conv_clocktime.hour, 10);
+    EXPECT_EQ(conv_clocktime.minute, 9);
+    EXPECT_EQ(conv_clocktime.second, 8);
+}
+
+TEST_F(TestTime, test_time_timestamp_strings)
+{
+    Timestamp ts(1);
+
+    SIHD_LOG(debug, "Time now: {}", ts.str());
+    SIHD_LOG(debug, "Time local: {}", ts.local_str());
+    SIHD_LOG(debug, "Time day: {}", ts.day_str());
+    SIHD_LOG(debug, "Time sec: {}", ts.sec_str());
+    SIHD_LOG(debug, "Time zone: {}", ts.zone_str());
+
+    EXPECT_EQ(ts.str(), "1970/01/01 00:00:00");
+    EXPECT_EQ(ts.sec_str(), "1970/01/01 00:00:00");
+    EXPECT_EQ(ts.day_str(), "1970-01-01");
+}
 
 TEST_F(TestTime, test_time_timestamp)
 {
@@ -75,7 +135,6 @@ TEST_F(TestTime, test_time_timestamp)
     auto timepoint = clock.now();
     Timestamp tclock = Timestamp(timepoint);
     EXPECT_EQ(tclock, timepoint.time_since_epoch());
-    SIHD_LOG(debug, tclock.str());
 
     // calendar and clocktime
     SIHD_LOG_DEBUG("From clocktime - flat time");
@@ -90,7 +149,7 @@ TEST_F(TestTime, test_time_timestamp)
     EXPECT_EQ(clo.minute, 5);
     EXPECT_EQ(clo.second, 1);
     EXPECT_EQ(clo.millisecond, 300);
-    SIHD_LOG_DEBUG(ts.str());
+    SIHD_LOG_DEBUG("Should be hour=10 min=5 sec=1 ms=300: {}", ts.str());
 
     ts = Timestamp({
         .second = 0,
@@ -108,7 +167,7 @@ TEST_F(TestTime, test_time_timestamp)
     EXPECT_EQ(cal.year, 2022);
     EXPECT_EQ(cal.month, 10);
     EXPECT_EQ(cal.day, 1);
-    SIHD_LOG_DEBUG(ts.str());
+    SIHD_LOG_DEBUG("Should be year=2022 mon=10 day=1: {}", ts.local_str());
 
     SIHD_LOG_DEBUG("From calendar and clocktime - local time");
     ts = Timestamp({.day = 1, .month = 10, .year = 2022},
@@ -125,7 +184,7 @@ TEST_F(TestTime, test_time_timestamp)
     EXPECT_EQ(clo.hour, 10);
     EXPECT_EQ(clo.minute, 5);
     EXPECT_EQ(clo.second, 1);
-    SIHD_LOG_DEBUG(ts.str());
+    SIHD_LOG_DEBUG("Should be year=2022 mon=10 day=1 hour=10 min=5 sec=1: {}", ts.local_str());
 
     // interval
     ts = Timestamp({
@@ -134,6 +193,7 @@ TEST_F(TestTime, test_time_timestamp)
         .second = 59,
     });
     EXPECT_TRUE(ts.in_interval(std::chrono::hours(10), std::chrono::minutes(6)));
+    EXPECT_FALSE(ts.in_interval(std::chrono::hours(9), std::chrono::minutes(6)));
 }
 
 TEST_F(TestTime, test_time_leap_year)

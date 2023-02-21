@@ -1,5 +1,5 @@
-#ifndef PLATFORM_H__
-#define PLATFORM_H__
+#ifndef __SIHD_UTIL_PLATFORM_H__
+#define __SIHD_UTIL_PLATFORM_H__
 
 #if defined(__EMSCRIPTEN__)
 # define __SIHD_EMSCRIPTEN__

@@ -1,5 +1,6 @@
 #include <sys/time.h>
 
+#include <atomic>
 #include <cstring>
 #include <mutex>
 #include <thread>
@@ -17,13 +18,15 @@ namespace sihd::util::time
 
 namespace
 {
+std::atomic<bool> tz_is_set = false;
 std::mutex unsafe_c_mutex;
-}
+} // namespace
 
 time_t get_timezone()
 {
 #if !defined(__SIHD_WINDOWS__)
-    tzset();
+    if (tz_is_set.exchange(true))
+        tzset();
     return timezone;
 #else
     long seconds = 0;
@@ -33,18 +36,19 @@ time_t get_timezone()
 #endif
 }
 
-std::string get_tzname()
+std::string get_timezone_name()
 {
 #if !defined(__SIHD_WINDOWS__)
-    tzset();
+    if (tz_is_set.exchange(true))
+        tzset();
     return tzname[0];
 #else
     std::string ret;
     size_t tzname_size = 0;
-    if (!_get_tzname(&tzname_size, NULL, 0, 0))
+    if (!_get_timezone_name(&tzname_size, NULL, 0, 0))
     {
         ret.resize(tzname_size);
-        if (!_get_tzname(&tzname_size, ret.data(), tzname_size, 0))
+        if (!_get_timezone_name(&tzname_size, ret.data(), tzname_size, 0))
             return ret;
     }
     return "";
@@ -243,6 +247,11 @@ time_t nano_tv(const struct timeval & tv)
 time_t tm(struct tm & tm)
 {
     return mktime(&tm) * 1E9;
+}
+
+time_t local_tm(struct tm & tm)
+{
+    return (mktime(&tm) - get_timezone()) * 1E9;
 }
 
 bool is_leap_year(int year)

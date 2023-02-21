@@ -33,19 +33,19 @@ std::mutex buffer_mutex;
 const size_t buffer_size = SIHD_UTIL_STR_BUFFER;
 char buffer[SIHD_UTIL_STR_BUFFER];
 
-std::string _format_time(time_t nano, std::string_view format, bool localtime)
+std::string _format_time(Timestamp timestamp, std::string_view format, bool localtime)
 {
-    struct tm tm = time::to_tm(nano, localtime);
+    struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
     size_t ret = strftime(buffer, buffer_size, format.data(), &tm);
     return std::string(buffer, ret);
 }
 
-std::string _timeoffset_to_string(time_t nano, bool total_parenthesis, bool nano_resolution, bool localtime)
+std::string _timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bool nano_resolution, bool localtime)
 {
     std::string s;
-    struct tm tm = time::to_tm(std::abs(nano), localtime);
+    struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
     bool next_step;
-    s += (nano > 0 ? "+" : "-");
+    s += (timestamp > 0 ? "+" : "-");
     if ((next_step = tm.tm_year > 70))
         s += fmt::format("{}y:", tm.tm_year - 70);
     if ((next_step = next_step || tm.tm_mon > 0))
@@ -58,18 +58,18 @@ std::string _timeoffset_to_string(time_t nano, bool total_parenthesis, bool nano
         s += fmt::format("{}m:", tm.tm_min);
     if ((next_step = next_step || tm.tm_sec > 0))
         s += fmt::format("{}s:", tm.tm_sec);
-    time_t ms = time::to_milli(nano) % (int)1E3;
+    time_t ms = time::to_milli(timestamp) % (int)1E3;
     if ((next_step = next_step || ms > 0))
         s += fmt::format("{}ms:", ms);
-    time_t us = time::to_micro(nano) % (int)1E3;
+    time_t us = time::to_micro(timestamp) % (int)1E3;
     s += fmt::format("{}us", us);
     if (nano_resolution)
     {
-        time_t ns = std::abs(nano) % (int)1E3;
+        time_t ns = std::abs(timestamp) % (int)1E3;
         s += fmt::format(":{}ns", ns);
     }
     if (total_parenthesis)
-        s += fmt::format(" ({})", nano);
+        s += fmt::format(" ({})", timestamp);
     return s;
 }
 
@@ -771,46 +771,53 @@ std::string format_localtime(Timestamp t, std::string_view format)
 
 std::string bytes_str(ssize_t bytes, bool iec)
 {
-    constexpr ssize_t mbyte_si = 1000;
-    constexpr ssize_t gbyte_si = 1000 * 1000;
-    constexpr ssize_t tbyte_si = 1000 * 1000 * 1000;
-    constexpr ssize_t mbyte_iec = 1024;
-    constexpr ssize_t gbyte_iec = 1024 * 1024;
-    constexpr ssize_t tbyte_iec = 1024 * 1024 * 1024;
+    constexpr ssize_t kbyte_si = 1000;
+    constexpr ssize_t mbyte_si = kbyte_si * 1000;
+    constexpr ssize_t gbyte_si = mbyte_si * 1000;
+    constexpr ssize_t tbyte_si = gbyte_si * 1000;
+    constexpr ssize_t kbyte_iec = 1024;
+    constexpr ssize_t mbyte_iec = kbyte_iec * 1024;
+    constexpr ssize_t gbyte_iec = mbyte_iec * 1024;
+    constexpr ssize_t tbyte_iec = gbyte_iec * 1024;
 
     if (bytes < 0)
         return "";
 
+    ssize_t kbyte = iec ? kbyte_iec : kbyte_si;
     ssize_t mbyte = iec ? mbyte_iec : mbyte_si;
     ssize_t gbyte = iec ? gbyte_iec : gbyte_si;
     ssize_t tbyte = iec ? tbyte_iec : tbyte_si;
 
-    if (bytes < mbyte)
+    char scale_key;
+    ssize_t current_scale;
+
+    if (bytes < kbyte)
         return std::to_string(bytes < 0 ? 0 : bytes) + "B";
+    else if (bytes < mbyte)
+    {
+        scale_key = 'K';
+        current_scale = kbyte;
+    }
     else if (bytes < gbyte)
     {
-        ssize_t rest = ((bytes % mbyte) / (float)mbyte) * 10;
-        if (rest > 0)
-            return fmt::format("{}.{}K", bytes / mbyte, rest);
-        else
-            return fmt::format("{}K", bytes / mbyte);
+        scale_key = 'M';
+        current_scale = mbyte;
     }
     else if (bytes < tbyte)
     {
-        ssize_t rest = ((bytes % gbyte) / (float)gbyte) * 10;
-        if (rest > 0)
-            return fmt::format("{}.{}G", bytes / gbyte, rest);
-        else
-            return fmt::format("{}G", bytes / gbyte);
+        scale_key = 'G';
+        current_scale = gbyte;
     }
     else
     {
-        ssize_t rest = ((bytes % tbyte) / (float)tbyte) * 10;
-        if (rest > 0)
-            return fmt::format("{}.{}T", bytes / tbyte, rest);
-        else
-            return fmt::format("{}T", bytes / tbyte);
+        scale_key = 'T';
+        current_scale = tbyte;
     }
+
+    ssize_t rest = ((bytes % current_scale) / (float)current_scale) * 10;
+    if (rest > 0)
+        return fmt::format("{}.{}{}", bytes / current_scale, rest, scale_key);
+    return fmt::format("{}{}", bytes / current_scale, scale_key);
 }
 
 std::string word_wrap(std::string_view s, size_t width, bool append_hyphen)

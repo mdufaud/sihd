@@ -8,7 +8,7 @@ namespace sihd::util::time
 {
 
 time_t get_timezone();
-std::string get_tzname();
+std::string get_timezone_name();
 
 void nsleep(time_t nano);
 void usleep(time_t micro);
@@ -119,6 +119,8 @@ constexpr time_t duration(std::chrono::duration<int64_t, T> duration)
 
 // tm struct -> nano
 time_t tm(struct tm & tm);
+// tm struct -> nano
+time_t local_tm(struct tm & tm);
 // timeval with micro resolution -> nano
 time_t tv(const struct timeval & tv);
 // timeval with nano resolution -> nano

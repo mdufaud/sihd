@@ -55,9 +55,14 @@ void os()
 
 void time()
 {
-    SIHD_LOG(info, "Today's time: {}", Timestamp::now().str());
-    SIHD_LOG(info, "Today's date: {}", Timestamp::now().str_day());
-    SIHD_LOG(info, "Date 2000/04/01 from string: {}", Timestamp::from_local_str("2000/04/01", "%Y/%m/%d")->str());
+    Timestamp today = Timestamp::now();
+    SIHD_LOG(info, "Today's day: {}", today.local_day_str());
+    SIHD_LOG(info, "Today's time: {}", today.local_sec_str());
+    SIHD_LOG(info, "Today's hour: {}", today.local_clocktime().hour);
+    SIHD_LOG(info, "Today's zoned hour: {}", today.zone_str());
+    SIHD_LOG(info, "From string date '2000/04/01': {}", Timestamp::from_str("2000/04/01", "%Y/%m/%d")->str());
+    SIHD_LOG(info, "Timezone name: {}", time::get_timezone_name());
+    SIHD_LOG(info, "Timezone offset: {}", time::get_timezone());
     fmt::print("\n");
 }
 

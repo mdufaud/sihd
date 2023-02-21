@@ -1,5 +1,5 @@
-#include <date/date.h>
-#include <date/tz.h> // current_zone
+#include <iomanip>
+#include <locale>
 
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
@@ -8,26 +8,6 @@
 
 namespace sihd::util
 {
-
-namespace
-{
-
-const date::time_zone *_get_cached_current_zone()
-{
-    // cache it (expensive call that will not change during the program runtime)
-    static const date::time_zone *current_zone = date::current_zone();
-    return current_zone;
-}
-
-std::chrono::system_clock::duration _get_local_offset(const std::chrono::system_clock::time_point & time_point)
-{
-    return time_point.time_since_epoch()
-           - date::make_zoned(_get_cached_current_zone(), time_point).get_local_time().time_since_epoch();
-}
-
-} // namespace
-
-const std::string_view Timestamp::default_format = "%Y/%m/%d %H:%M:%S";
 
 Timestamp::Timestamp(time_t nano): _nano(nano) {}
 
@@ -100,52 +80,66 @@ std::string Timestamp::localtimeoffset_str(bool total_parenthesis, bool nano_res
     return str::localtimeoffset_str(_nano, total_parenthesis, nano_resolution);
 }
 
-std::string Timestamp::format(std::string_view fmt) const
+std::string Timestamp::format(std::string_view format) const
 {
-    return str::format_time(std::abs(_nano), fmt);
+    return str::format_time(std::abs(_nano), format);
 }
 
-std::string Timestamp::local_format(std::string_view fmt) const
+std::string Timestamp::local_format(std::string_view format) const
 {
-    return str::format_localtime(std::abs(_nano), fmt);
+    return str::format_localtime(std::abs(_nano), format);
 }
 
-std::string Timestamp::str(bool is_local) const
+std::string Timestamp::sec_str(std::string_view format) const
 {
-    return is_local ? this->format(default_format) : this->local_format(default_format);
+    return str::format_time(this->floor<std::chrono::seconds>(), format);
 }
 
-std::string Timestamp::str_day(bool is_local) const
+std::string Timestamp::local_sec_str(std::string_view format) const
 {
-    return is_local ? this->format("%Y/%m/%d") : this->local_format("%Y/%m/%d");
+    return str::format_localtime(this->floor<std::chrono::seconds>(), format);
 }
 
-std::optional<Timestamp> Timestamp::from_str(std::string_view date_str, std::string_view fmt)
+std::string Timestamp::day_str(std::string_view format) const
 {
-    std::istringstream ss {date_str.data()};
-
-    std::chrono::system_clock::time_point time_point;
-    ss >> date::parse(fmt.data(), time_point);
-
-    if (ss.fail())
-        return std::nullopt;
-
-    return Timestamp {time_point};
+    return str::format_time(this->floor<date::days>(), format);
 }
 
-std::optional<Timestamp> Timestamp::from_local_str(std::string_view date_str, std::string_view fmt)
+std::string Timestamp::local_day_str(std::string_view format) const
 {
-    std::istringstream ss {date_str.data()};
+    return str::format_localtime(this->floor<date::days>(), format);
+}
 
-    std::chrono::system_clock::time_point time_point;
-    ss >> date::parse(fmt.data(), time_point);
+std::string Timestamp::str() const
+{
+    return this->format(default_format);
+}
 
-    if (ss.fail())
-        return std::nullopt;
+std::string Timestamp::local_str() const
+{
+    return this->local_format(default_format);
+}
 
-    time_point += _get_local_offset(time_point);
+std::string Timestamp::zone_str() const
+{
+    // make_zoned to use %z
+    return this->local_format(default_zone_format);
+}
 
-    return Timestamp {time_point};
+Timestamp Timestamp::floor_day() const
+{
+    return {std::chrono::floor<date::days>(this->timepoint())};
+}
+
+Timestamp Timestamp::modulo_min(uint32_t minutes) const
+{
+    if (minutes > 60)
+        throw std::invalid_argument(fmt::format("modulo minutes must be inferior or equal to 60 - was {}", minutes));
+
+    const int now_minutes = this->clocktime().minute;
+    const uint32_t interval = (now_minutes / minutes) * minutes;
+
+    return this->floor<std::chrono::hours>() + std::chrono::minutes(interval);
 }
 
 Clocktime Timestamp::clocktime() const
@@ -180,6 +174,20 @@ Calendar Timestamp::local_calendar() const
 {
     struct tm tm = time::to_tm(std::abs(_nano), true);
     return {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
+}
+
+std::optional<Timestamp> Timestamp::from_str(std::string_view date_str, std::string_view format)
+{
+    struct tm t = {};
+    std::istringstream ss {date_str.data()};
+
+    ss.imbue(std::locale(""));
+    ss >> std::get_time(&t, format.data());
+
+    if (ss.fail())
+        return std::nullopt;
+
+    return Timestamp {time::local_tm(t)};
 }
 
 std::string Clocktime::str() const
@@ -271,6 +279,16 @@ time_t Timestamp::days() const
 struct timeval Timestamp::tv() const
 {
     return time::to_nano_tv(_nano);
+}
+
+struct tm Timestamp::tm() const
+{
+    return time::to_tm(std::abs(_nano), false);
+}
+
+struct tm Timestamp::local_tm() const
+{
+    return time::to_tm(std::abs(_nano), true);
 }
 
 } // namespace sihd::util

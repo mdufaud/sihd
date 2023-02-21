@@ -51,8 +51,6 @@ modules = {
         "windows-libs": ['rpcrt4'],
         "windows-defines": ["FMT_HEADER_ONLY"],
         "em-defines": ["FMT_HEADER_ONLY"],
-        "git-url": "https://github.com/HowardHinnant/date.git",
-        "git-branch": "v3.0.1"
     },
     "core": {
         "depends": ['util'],
@@ -171,9 +169,10 @@ conditionnal_modules = {
 #############
 
 # mode specifics - default is always debug
-modes = ["debug", "release"]
+modes = ["debug", "fast", "release"]
 
 debug_flags = ["-g", "-Og"]
+fast_flags = ["-O0"]
 release_flags = ["-O3"]
 
 # general compilation parameters
@@ -221,13 +220,20 @@ mingw_flags = gcc_flags
 em_link = ["--emrun"]
 
 # windows specifics
-windows_libs = ['psapi', 'ucrt', 'ssp', 'ws2_32']
+windows_libs = [
+    'psapi',
+    'ucrt',
+    'ssp',
+    'ws2_32'
+]
 # _WIN64 -> activates sihd functionnalities
 # _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
+# NTDDI_VERSION -> activates higher version of WIN functionnalities (mingw)
 windows_defines = [
     "_WIN64",
     "_WIN32_WINNT=0x0600",
-    "_ISOC99_SOURCE"
+    "NTDDI_VERSION=0x06000000",
+    "_ISOC99_SOURCE",
 ]
 
 # test specifics

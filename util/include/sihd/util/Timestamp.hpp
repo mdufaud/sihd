@@ -39,6 +39,16 @@
 namespace sihd::util
 {
 
+namespace date
+{
+
+using days = std::chrono::duration<int64_t, std::ratio<86400>>;
+using weeks = std::chrono::duration<int64_t, std::ratio<604800>>;
+using months = std::chrono::duration<int64_t, std::ratio<2629746>>;
+using years = std::chrono::duration<int64_t, std::ratio<31556952>>;
+
+} // namespace date
+
 struct Clocktime
 {
         // 0 - 23
@@ -65,11 +75,13 @@ struct Calendar
         std::string str() const;
 };
 
+inline constexpr const char *default_format = "%Y/%m/%d %H:%M:%S";
+inline constexpr const char *default_day_format = "%Y-%m-%d";
+inline constexpr const char *default_zone_format = "%FT%T%z";
+
 class Timestamp
 {
     public:
-        static const std::string_view default_format;
-
         Timestamp(time_t nano);
         Timestamp(Clocktime clocktime);
         Timestamp(Calendar calendar);
@@ -125,8 +137,6 @@ class Timestamp
         static Timestamp now();
 
         static std::optional<Timestamp> from_str(std::string_view date_str, std::string_view format = default_format);
-        static std::optional<Timestamp> from_local_str(std::string_view date_str,
-                                                       std::string_view format = default_format);
 
         bool is_leap_year() const;
 
@@ -141,10 +151,16 @@ class Timestamp
         // this >= from && this <= (from + offset)
         bool in_interval(Timestamp from, Timestamp offset) const;
 
-        template <typename T>
-        std::chrono::duration<int64_t, T> duration() const
+        template <typename Ratio = std::nano>
+        std::chrono::duration<int64_t, Ratio> duration() const
         {
-            return time::to_duration<T>(_nano);
+            return time::to_duration<Ratio>(_nano);
+        }
+
+        template <typename Clock = std::chrono::system_clock>
+        std::chrono::time_point<Clock> timepoint() const
+        {
+            return std::chrono::time_point<Clock>(this->duration<std::nano>());
         }
 
         time_t nanoseconds() const;
@@ -156,6 +172,8 @@ class Timestamp
         time_t days() const;
 
         struct timeval tv() const;
+        struct tm tm() const;
+        struct tm local_tm() const;
 
         std::string timeoffset_str(bool total_parenthesis = false, bool nano_resolution = false) const;
         std::string localtimeoffset_str(bool total_parenthesis = false, bool nano_resolution = false) const;
@@ -163,8 +181,30 @@ class Timestamp
         std::string format(std::string_view format) const;
         std::string local_format(std::string_view format) const;
 
-        std::string str(bool is_local = false) const;
-        std::string str_day(bool is_local = false) const;
+        // uses default_format
+        std::string str() const;
+        std::string local_str() const;
+
+        // uses default_zone_format
+        std::string zone_str() const;
+
+        // floored to second value
+        std::string sec_str(std::string_view format = default_format) const;
+        // floored to second value
+        std::string local_sec_str(std::string_view format = default_format) const;
+
+        // used default_day_format + floored value
+        std::string day_str(std::string_view format = default_day_format) const;
+        // default_day_format + floored value
+        std::string local_day_str(std::string_view format = default_day_format) const;
+
+        template <typename T>
+        Timestamp floor() const
+        {
+            return Timestamp(std::chrono::floor<T>(this->timepoint()));
+        }
+        Timestamp floor_day() const;
+        Timestamp modulo_min(uint32_t minutes) const;
 
         time_t get() const { return _nano; }
 

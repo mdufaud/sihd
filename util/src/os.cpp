@@ -9,10 +9,12 @@
 # include <debugapi.h>
 # include <direct.h> // _stat
 # include <psapi.h>
-# include <windows.h>
-# include <winsock.h>
 # include <winsock2.h>
+
+# include <winsock.h>
 # include <ws2def.h>
+
+# include <windows.h>
 
 #elif defined(__SIHD_APPLE__)
 

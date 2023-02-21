@@ -193,10 +193,15 @@ TEST_F(TestStr, test_str_bytes)
     EXPECT_EQ(str::bytes_str(1024), "1K");
     EXPECT_EQ(str::bytes_str(1025), "1K");
     EXPECT_EQ(str::bytes_str(1024 + 1023), "1.9K");
-    EXPECT_EQ(str::bytes_str(1024 * 1024), "1G");
-    EXPECT_EQ(str::bytes_str((1024 * 1024) + (1024 * 1023)), "1.9G");
-    EXPECT_EQ(str::bytes_str(1024 * 1024 * 1024), "1T");
-    EXPECT_EQ(str::bytes_str((1024 * 1024 * 1024) + (1024 * 1024 * 1023)), "1.9T");
+    ssize_t mbyte = 1024L * 1024L;
+    EXPECT_EQ(str::bytes_str(mbyte), "1M");
+    EXPECT_EQ(str::bytes_str((mbyte) + (mbyte - 1024)), "1.9M");
+    ssize_t gbyte = 1024L * 1024L * 1024L;
+    EXPECT_EQ(str::bytes_str(gbyte), "1G");
+    EXPECT_EQ(str::bytes_str((gbyte) + (gbyte - mbyte)), "1.9G");
+    ssize_t tbyte = 1024L * 1024L * 1024L * 1024L;
+    EXPECT_EQ(str::bytes_str(tbyte), "1T");
+    EXPECT_EQ(str::bytes_str((tbyte) + (tbyte - gbyte)), "1.9T");
 }
 
 TEST_F(TestStr, test_format_join)
