@@ -122,9 +122,11 @@ int main(int argc, char **argv)
     Defer d([] { LoggerManager::clear_loggers(); });
 
     cxxopts::Options options(argv[0], "Testing utility for module util");
-    options.add_options()("h,help", "Prints usage")("f,worker-frequency",
-                                                    "Change the worker execution frequency in HZ",
-                                                    cxxopts::value<double>()->default_value("10.0"));
+    // clang-format off
+    options.add_options()
+        ("h,help", "Prints usage")
+        ("f,worker-frequency", "Change the worker execution frequency in HZ", cxxopts::value<double>()->default_value("10.0"));
+    // clang-format on
 
     auto result = options.parse(argc, argv);
 
