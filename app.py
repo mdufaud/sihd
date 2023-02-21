@@ -4,33 +4,33 @@ git_url = "https://github.com/mdufaud/sihd.git"
 
 # external libs versions
 extlibs = {
-    ## unit test
+    # unit test
     "gtest": "1.11.0",
-    ## json parsing
+    # json parsing
     "nlohmann_json": "3.9.1",
     # util
     "cxxopts": "3.0.0",
     "fmt": "7.1.3",
     "libuuid": "1.0.3",
-    ## http
+    # http
     "libwebsockets": "4.3.0",
     "libcurl": "7.75.0",
     "openssl": "1.1.1l",
     "libssh": "",
-    ## pcap
+    # pcap
     "libpcap": "1.10.1",
-    ## usb
+    # usb
     "libusb": "1.0.24",
-    ## gui
+    # gui
     "ftxui": "3.0.0",
     "sdl": "2.0.18",
     "glew": "2.2.0",
     "glfw": "3.3.6",
-    ## bindings
+    # bindings
     "pybind11": "2.6.2",
-    ## compressing utility
+    # compressing utility
     "libzip": "1.7.3",
-    ## other
+    # other
     "libjpeg": "9d",
     "lua": "5.3.5",
     "libbluetooth": "",
@@ -45,12 +45,14 @@ conan_post_process = {
 modules = {
     "util": {
         "extlibs": ['nlohmann_json', 'fmt', 'cxxopts'],
-        "libs": ['pthread', 'fmt'],
+        "libs": ['pthread', 'fmt', 'stdc++fs'],
         "linux-extlibs": ['libuuid'],
         "linux-libs": ['dl', 'rt', 'uuid'],
         "windows-libs": ['rpcrt4'],
         "windows-defines": ["FMT_HEADER_ONLY"],
         "em-defines": ["FMT_HEADER_ONLY"],
+        "git-url": "https://github.com/HowardHinnant/date.git",
+        "git-branch": "v3.0.1"
     },
     "core": {
         "depends": ['util'],
@@ -168,13 +170,13 @@ conditionnal_modules = {
 # compilation
 #############
 
-## mode specifics - default is always debug
+# mode specifics - default is always debug
 modes = ["debug", "release"]
 
 debug_flags = ["-g", "-Og"]
 release_flags = ["-O3"]
 
-## general compilation parameters
+# general compilation parameters
 cxx_flags = ['-std=c++17']
 
 flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
@@ -184,7 +186,7 @@ defines = [
     "SIHD_VERSION_PATCH=" + version.split('.')[2],
 ]
 
-## gcc specifics
+# gcc specifics
 gcc_flags = [
     "-Werror",
     "-D_FORTIFY_SOURCE=2",
@@ -201,7 +203,7 @@ gcc_flags = [
     # "-fno-diagnostics-show-caret",
 ]
 
-## clang specifics
+# clang specifics
 clang_flags = [
     "-Werror",
     "-Wno-unused-command-line-argument"
@@ -212,13 +214,13 @@ clang_defines = [
     'LLVM_ENABLE_RTTI=ON',
 ]
 
-## mingw specifics
+# mingw specifics
 mingw_flags = gcc_flags
 
-## emscripten specifics
+# emscripten specifics
 em_link = ["--emrun"]
 
-## windows specifics
+# windows specifics
 windows_libs = ['psapi', 'ucrt', 'ssp', 'ws2_32']
 # _WIN64 -> activates sihd functionnalities
 # _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
@@ -228,7 +230,7 @@ windows_defines = [
     "_ISOC99_SOURCE"
 ]
 
-## test specifics
+# test specifics
 test_extlibs = ['gtest']
 test_libs = ['gtest', 'stdc++fs']
 
@@ -273,9 +275,9 @@ apt_packages = {
 additionnal_build_env = ['py', 'lua', 'sdl']
 # source to clone and build
 pacman_source = "{name}-{version}::git+{git_url}#tag={version}".format(
-    name = name,
-    version = version,
-    git_url = git_url,
+    name=name,
+    version=version,
+    git_url=git_url,
 )
 # packages equivalent to build PKGBUILD dependencies
 pacman_packages = {
@@ -324,23 +326,23 @@ yum_packages = {
 
 __msys2_mingw = "mingw-w64-x86_64-"
 msys2_packages = {
-  "gtest": __msys2_mingw + "gtest",
-  "nlohmann_json": __msys2_mingw + "nlohmann-json",
-  "fmt": __msys2_mingw + "fmt",
-  "cxxopts": __msys2_mingw + "cxxopts",
-  "openssl": __msys2_mingw + "openssl",
-  "libcurl": __msys2_mingw + "curl",
-  "libwebsockets": __msys2_mingw + "libwebsockets",
-  "libpcap": __msys2_mingw + "libpcap",
-  "libssh": __msys2_mingw + "libssh",
-  "libusb": __msys2_mingw + "libusb",
-  "libzip": __msys2_mingw + "libzip",
-  "pybind11": __msys2_mingw + "pybind11",
-  "glfw": __msys2_mingw + "glfw",
-  "glew": __msys2_mingw + "glew",
-  "sdl2": __msys2_mingw + "SDL2",
-  "lua": __msys2_mingw + "lua",
-  "libusb": __msys2_mingw + "libusb",
+    "gtest": __msys2_mingw + "gtest",
+    "nlohmann_json": __msys2_mingw + "nlohmann-json",
+    "fmt": __msys2_mingw + "fmt",
+    "cxxopts": __msys2_mingw + "cxxopts",
+    "openssl": __msys2_mingw + "openssl",
+    "libcurl": __msys2_mingw + "curl",
+    "libwebsockets": __msys2_mingw + "libwebsockets",
+    "libpcap": __msys2_mingw + "libpcap",
+    "libssh": __msys2_mingw + "libssh",
+    "libusb": __msys2_mingw + "libusb",
+    "libzip": __msys2_mingw + "libzip",
+    "pybind11": __msys2_mingw + "pybind11",
+    "glfw": __msys2_mingw + "glfw",
+    "glew": __msys2_mingw + "glew",
+    "sdl2": __msys2_mingw + "SDL2",
+    "lua": __msys2_mingw + "lua",
+    "libusb": __msys2_mingw + "libusb",
 }
 
 #############
@@ -350,11 +352,14 @@ msys2_packages = {
 # linux extension is something like -> cpython-3Xm-x86_64-linux-gnu.so
 # windows extension -> cp3X-win_amd64.pyd
 # though python cannot be used with mingw
+
+
 def __get_python_libname():
     import subprocess
     proc = subprocess.Popen("python3-config --extension-suffix",
-                            shell = True, stdout = subprocess.PIPE)
+                            shell=True, stdout=subprocess.PIPE)
     return proc.stdout.read().decode().strip()
+
 
 def on_build_success(build_modules, builder):
     if "py" not in build_modules:

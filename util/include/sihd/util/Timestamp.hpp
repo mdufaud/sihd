@@ -1,7 +1,9 @@
 #ifndef __SIHD_UTIL_TIMESTAMP_HPP__
 #define __SIHD_UTIL_TIMESTAMP_HPP__
 
+#include <optional>
 #include <string>
+#include <string_view>
 
 #include <sihd/util/time.hpp>
 
@@ -66,6 +68,8 @@ struct Calendar
 class Timestamp
 {
     public:
+        static const std::string_view default_format;
+
         Timestamp(time_t nano);
         Timestamp(Clocktime clocktime);
         Timestamp(Calendar calendar);
@@ -76,6 +80,19 @@ class Timestamp
         Timestamp(std::chrono::seconds duration);
         Timestamp(std::chrono::minutes duration);
         Timestamp(std::chrono::hours duration);
+
+        template <typename T>
+        Timestamp(std::chrono::time_point<T> timepoint)
+        {
+            _nano = timepoint.time_since_epoch().count();
+        }
+
+        template <typename T>
+        Timestamp(std::chrono::duration<int64_t, T> duration)
+        {
+            _nano = time::duration<T>(duration);
+        }
+
         ~Timestamp();
 
         // std::chrono::duration templates
@@ -105,19 +122,11 @@ class Timestamp
         __TMP_TIMESTAMP_ASSIGN_OPERATION__(/=);
         __TMP_TIMESTAMP_ASSIGN_OPERATION__(%=);
 
-        template <typename T>
-        static Timestamp from(std::chrono::time_point<T> timepoint)
-        {
-            return Timestamp(timepoint.time_since_epoch().count());
-        }
-
-        template <typename T>
-        static Timestamp from(std::chrono::duration<int64_t, T> duration)
-        {
-            return Timestamp(time::duration<T>(duration));
-        }
-
         static Timestamp now();
+
+        static std::optional<Timestamp> from_str(std::string_view date_str, std::string_view format = default_format);
+        static std::optional<Timestamp> from_local_str(std::string_view date_str,
+                                                       std::string_view format = default_format);
 
         bool is_leap_year() const;
 
@@ -150,9 +159,12 @@ class Timestamp
 
         std::string timeoffset_str(bool total_parenthesis = false, bool nano_resolution = false) const;
         std::string localtimeoffset_str(bool total_parenthesis = false, bool nano_resolution = false) const;
-        // format strftime -> "%Y-%m-%d %H:%M:%S"
-        std::string format(std::string_view format = "%d/%m/%Y %H:%M:%S") const;
-        std::string local_format(std::string_view format = "%d/%m/%Y %H:%M:%S") const;
+
+        std::string format(std::string_view format) const;
+        std::string local_format(std::string_view format) const;
+
+        std::string str(bool is_local = false) const;
+        std::string str_day(bool is_local = false) const;
 
         time_t get() const { return _nano; }
 

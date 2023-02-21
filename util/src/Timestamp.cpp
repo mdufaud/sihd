@@ -1,3 +1,6 @@
+#include <date/date.h>
+#include <date/tz.h> // current_zone
+
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
@@ -5,6 +8,26 @@
 
 namespace sihd::util
 {
+
+namespace
+{
+
+const date::time_zone *_get_cached_current_zone()
+{
+    // cache it (expensive call that will not change during the program runtime)
+    static const date::time_zone *current_zone = date::current_zone();
+    return current_zone;
+}
+
+std::chrono::system_clock::duration _get_local_offset(const std::chrono::system_clock::time_point & time_point)
+{
+    return time_point.time_since_epoch()
+           - date::make_zoned(_get_cached_current_zone(), time_point).get_local_time().time_since_epoch();
+}
+
+} // namespace
+
+const std::string_view Timestamp::default_format = "%Y/%m/%d %H:%M:%S";
 
 Timestamp::Timestamp(time_t nano): _nano(nano) {}
 
@@ -85,6 +108,44 @@ std::string Timestamp::format(std::string_view fmt) const
 std::string Timestamp::local_format(std::string_view fmt) const
 {
     return str::format_localtime(std::abs(_nano), fmt);
+}
+
+std::string Timestamp::str(bool is_local) const
+{
+    return is_local ? this->format(default_format) : this->local_format(default_format);
+}
+
+std::string Timestamp::str_day(bool is_local) const
+{
+    return is_local ? this->format("%Y/%m/%d") : this->local_format("%Y/%m/%d");
+}
+
+std::optional<Timestamp> Timestamp::from_str(std::string_view date_str, std::string_view fmt)
+{
+    std::istringstream ss {date_str.data()};
+
+    std::chrono::system_clock::time_point time_point;
+    ss >> date::parse(fmt.data(), time_point);
+
+    if (ss.fail())
+        return std::nullopt;
+
+    return Timestamp {time_point};
+}
+
+std::optional<Timestamp> Timestamp::from_local_str(std::string_view date_str, std::string_view fmt)
+{
+    std::istringstream ss {date_str.data()};
+
+    std::chrono::system_clock::time_point time_point;
+    ss >> date::parse(fmt.data(), time_point);
+
+    if (ss.fail())
+        return std::nullopt;
+
+    time_point += _get_local_offset(time_point);
+
+    return Timestamp {time_point};
 }
 
 Clocktime Timestamp::clocktime() const

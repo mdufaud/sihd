@@ -73,9 +73,9 @@ TEST_F(TestTime, test_time_timestamp)
     std::chrono::system_clock clock;
 
     auto timepoint = clock.now();
-    Timestamp tclock = Timestamp::from(timepoint);
+    Timestamp tclock = Timestamp(timepoint);
     EXPECT_EQ(tclock, timepoint.time_since_epoch());
-    SIHD_LOG(debug, tclock.local_format());
+    SIHD_LOG(debug, tclock.str());
 
     // calendar and clocktime
     SIHD_LOG_DEBUG("From clocktime - flat time");
@@ -90,7 +90,7 @@ TEST_F(TestTime, test_time_timestamp)
     EXPECT_EQ(clo.minute, 5);
     EXPECT_EQ(clo.second, 1);
     EXPECT_EQ(clo.millisecond, 300);
-    SIHD_LOG_DEBUG(ts.format());
+    SIHD_LOG_DEBUG(ts.str());
 
     ts = Timestamp({
         .second = 0,
@@ -108,7 +108,7 @@ TEST_F(TestTime, test_time_timestamp)
     EXPECT_EQ(cal.year, 2022);
     EXPECT_EQ(cal.month, 10);
     EXPECT_EQ(cal.day, 1);
-    SIHD_LOG_DEBUG(ts.local_format());
+    SIHD_LOG_DEBUG(ts.str());
 
     SIHD_LOG_DEBUG("From calendar and clocktime - local time");
     ts = Timestamp({.day = 1, .month = 10, .year = 2022},
@@ -125,7 +125,7 @@ TEST_F(TestTime, test_time_timestamp)
     EXPECT_EQ(clo.hour, 10);
     EXPECT_EQ(clo.minute, 5);
     EXPECT_EQ(clo.second, 1);
-    SIHD_LOG_DEBUG(ts.local_format());
+    SIHD_LOG_DEBUG(ts.str());
 
     // interval
     ts = Timestamp({

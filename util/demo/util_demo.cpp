@@ -55,7 +55,9 @@ void os()
 
 void time()
 {
-    SIHD_LOG(info, "Today's date: {}", Timestamp::now().local_format());
+    SIHD_LOG(info, "Today's time: {}", Timestamp::now().str());
+    SIHD_LOG(info, "Today's date: {}", Timestamp::now().str_day());
+    SIHD_LOG(info, "Date 2000/04/01 from string: {}", Timestamp::from_local_str("2000/04/01", "%Y/%m/%d")->str());
     fmt::print("\n");
 }
 
@@ -74,7 +76,7 @@ void fs()
         SIHD_LOG(info, "is_file: {}", fs::is_file(tmp));
         SIHD_LOG(info, "is_dir: {}", fs::is_dir(tmp));
         SIHD_LOG(info, "filesize: {}", fs::filesize(tmp));
-        SIHD_LOG(info, "last_write: {}", fs::last_write(tmp).local_format());
+        SIHD_LOG(info, "last_write: {}", fs::last_write(tmp).str());
         SIHD_LOG(info, "is_readable: {}", fs::is_readable(tmp));
         SIHD_LOG(info, "is_writable: {}", fs::is_writable(tmp));
         SIHD_LOG(info, "is_executable: {}", fs::is_executable(tmp));

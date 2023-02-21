@@ -2,7 +2,6 @@ Import('env')
 
 builder = env.builder()
 
-# do_compile = builder.build_platform == "windows" or builder.is_android()
 do_compile = True
 if do_compile:
     ftxui_env = env.Clone()

@@ -1,11 +1,27 @@
 Import('env')
 
 builder = env.builder()
+conf = env.module_conf()
+
+date_env = env.Clone()
+date_env.Append(
+    CPPDEFINES = [
+        "HAS_REMOTE_API=0",
+        "AUTO_DOWNLOAD=0",
+        "USE_OS_TZDB"
+    ]
+)
+
+cloned = date_env.git_clone(conf["git-url"], conf["git-branch"], "date")
+
+date_env.copy_into_build("date/include", "include")
+date_env.build_lib(["date/src/tz.cpp"], name = "date")
+
+env.Prepend(LIBS = ["date"])
 
 lib = env.build_lib(Glob('src/*.cpp'))
 
 demo_ext = ""
-
 if builder.build_compiler == "em":
     env.Append(CPPFLAGS = ["-s", "WASM=1"])
     demo_ext = ".html"

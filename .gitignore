@@ -21,6 +21,8 @@ dist/*
 imgui/imgui
 tui/FTXUI
 lua/luabridge
+util/date
+
 .installed
 .build_cache
 .cache
