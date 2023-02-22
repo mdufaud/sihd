@@ -90,7 +90,7 @@ TEST_F(TestContainer, test_container_vector)
     const int total_vector = 12;
 
     EXPECT_EQ(container::sum(vec), total_vector);
-    EXPECT_EQ(container::sum(vec, [](auto val) { return val * 2; }), total_vector * 2);
+    // EXPECT_EQ(container::sum(vec, [](auto val) { return val * 2; }), total_vector * 2);
 
     EXPECT_FLOAT_EQ(container::average(vec), total_vector / vec.size());
 

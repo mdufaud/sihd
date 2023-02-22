@@ -48,16 +48,6 @@ Timestamp::Timestamp(Calendar calendar, Clocktime clocktime)
 
 Timestamp::Timestamp(std::chrono::nanoseconds duration): _nano(duration.count()) {}
 
-Timestamp::Timestamp(std::chrono::microseconds duration): _nano(time::duration<std::micro>(duration)) {}
-
-Timestamp::Timestamp(std::chrono::milliseconds duration): _nano(time::duration<std::milli>(duration)) {}
-
-Timestamp::Timestamp(std::chrono::seconds duration): _nano(time::duration<std::ratio<1>>(duration)) {}
-
-Timestamp::Timestamp(std::chrono::minutes duration): _nano(time::duration<std::ratio<60>>(duration)) {}
-
-Timestamp::Timestamp(std::chrono::hours duration): _nano(time::duration<std::ratio<3600>>(duration)) {}
-
 Timestamp::~Timestamp() {}
 
 Timestamp Timestamp::now()

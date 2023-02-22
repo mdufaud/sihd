@@ -49,6 +49,7 @@ modules = {
         "linux-extlibs": ['libuuid'],
         "linux-libs": ['dl', 'rt', 'uuid'],
         "windows-libs": ['rpcrt4'],
+        "static-defines": ["FMT_HEADER_ONLY"],
         "windows-defines": ["FMT_HEADER_ONLY"],
         "em-defines": ["FMT_HEADER_ONLY"],
     },
@@ -171,9 +172,13 @@ conditionnal_modules = {
 # mode specifics - default is always debug
 modes = ["debug", "fast", "release"]
 
-debug_flags = ["-g", "-Og"]
+_default_flags = [
+    "-D_FORTIFY_SOURCE=2"
+]
+
+debug_flags = _default_flags + ["-g", "-Og"]
 fast_flags = ["-O0"]
-release_flags = ["-O3"]
+release_flags = _default_flags + ["-O3"]
 
 # general compilation parameters
 cxx_flags = ['-std=c++17']
@@ -188,7 +193,6 @@ defines = [
 # gcc specifics
 gcc_flags = [
     "-Werror",
-    "-D_FORTIFY_SOURCE=2",
     "-fasynchronous-unwind-tables",
     "-fexceptions",
     "-Wl,-pie",

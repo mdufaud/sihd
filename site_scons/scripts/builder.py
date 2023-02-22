@@ -77,7 +77,7 @@ def safe_symlink(src, dst):
     if os.path.islink(dst):
         os.remove(dst)
     if not os.path.exists(dst):
-        info(f"Linking {src} -> {dst}")
+        info(f"linking {src} -> {dst}")
         os.symlink(src, dst, target_is_directory=os.path.isdir(src))
     return True
 

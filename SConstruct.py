@@ -261,14 +261,25 @@ if builder.is_static_libs():
     base_env['LINKCOM'] = base_env['LINKCOM'].replace("$_LIBFLAGS", "-Wl,--whole-archive $_LIBFLAGS -Wl,--no-whole-archive")
 
 
-# add platform_[flags/defines/link/libs]
-scons_utils.add_env_app_conf(app, base_env, builder.build_platform)
-if build_mode:
-    # add mode_[flags/defines/link/libs]
-    scons_utils.add_env_app_conf(app, base_env, build_mode)
+def __log_add_env_app_conf(*keys):
+    if verbose:
+        key = "-".join(keys)
+        builder.debug(f"looking for app configuration: {key}")
+    scons_utils.add_env_app_conf(app, base_env, *keys)
 
-# add compiler_[flags/defines/link/libs]
-scons_utils.add_env_app_conf(app, base_env, compiler)
+# add $platform-[flags/defines/link/libs]
+__log_add_env_app_conf(build_platform)
+# add $mode-[flags/defines/link/libs]
+__log_add_env_app_conf(build_mode)
+# add $compiler-[flags/defines/link/libs]
+__log_add_env_app_conf(compiler)
+
+# add $platform-$mode-[flags/defines/link/libs]
+__log_add_env_app_conf(build_platform, build_mode)
+# add $platform-$compiler-[flags/defines/link/libs]
+__log_add_env_app_conf(build_platform, compiler)
+# add $platform-$compiler-$mode-[flags/defines/link/libs]
+__log_add_env_app_conf(build_platform, compiler, build_mode)
 
 ###############################################################################
 # Scons options
@@ -349,6 +360,8 @@ def _env_build_demo(self, src, name = None, add_libs = [], **kwargs):
     demo = demo_env.Program(demo_path, src, **kwargs)
     module_name = self['APP_MODULE_NAME']
     modules_generated_demos.setdefault(module_name, []).append(demo_path)
+    if verbose:
+        builder.debug(f"module {module_name} registered demo: {demo_path}")
     return demo
 
 def _env_build_demos(self, srcs, **kwargs):
@@ -379,6 +392,8 @@ def _env_build_test(self, src, name = None, add_libs = [], **kwargs):
     test = test_env.Program(test_path, src, **kwargs)
     module_name = self['APP_MODULE_NAME']
     modules_generated_tests.setdefault(module_name, []).append(test_path)
+    if verbose:
+        builder.debug(f"module {module_name} registered test: {test_path}")
     return test
 
 def _env_build_lib(self, src, name = None, static = None, **kwargs):
@@ -395,6 +410,8 @@ def _env_build_lib(self, src, name = None, static = None, **kwargs):
         lib = NoCache(self.SharedLibrary(lib_path, src, **kwargs))
     module_name = self['APP_MODULE_NAME']
     modules_generated_libs.setdefault(module_name, []).append(name)
+    if verbose:
+        builder.debug(f"module {module_name} registered lib: {lib_path}")
     return lib
 
 def _env_build_bin(self, src, name = None, add_libs = [], **kwargs):
@@ -411,6 +428,8 @@ def _env_build_bin(self, src, name = None, add_libs = [], **kwargs):
     bin = bin_env.Program(bin_path, src, **kwargs)
     module_name = self['APP_MODULE_NAME']
     modules_generated_bins.setdefault(module_name, []).append(bin_path)
+    if verbose:
+        builder.debug(f"module {module_name} registered bin: {bin_path}")
     return bin
 
 def _env_git_clone(self, url, branch, dest, recursive = False):
@@ -517,24 +536,43 @@ base_env.AddMethod(lambda self: app, "app")
 base_env.AddMethod(lambda self: builder, "builder")
 base_env.AddMethod(lambda self: is_dry_run, "is_dry_run")
 
+__options = [
+    build_platform,
+    f"mode-{build_mode}",
+    compiler
+]
+if builder.build_static_libs:
+    to_append = ["static"]
+    for option in __options:
+        to_append.append(f"{option}-static")
+    __options += to_append
+
+if verbose:
+    builder.debug(f"options to look for in the modules:")
+    pp.pprint([ [ f"{option}-{key}" for option in __options ] for key in ("libs", "flags", "link", "defines")])
+
+def get_compilation_options(conf, key):
+    ret = []
+    for option in __options:
+        ret += conf.get(f"{option}-{key}", [])
+    return ret
+
 def create_module_env(conf, depends = [], append_depends_libs = True, append_depends_defines = True):
     modname = conf["modname"]
     module_format = "{}_{}".format(app.name, modname)
     # get platform dependent libs
-    platform_libs = conf.get("{}-libs".format(build_platform), [])
-    compiler_libs = conf.get("{}-libs".format(compiler), [])
+    libs = modules.get_module_libs(build_modules, modname)
+    libs += get_compilation_options(conf, "libs")
     # add flag
     flags = conf.get("flags", [])
-    platform_flags = conf.get("{}-flags".format(build_platform), [])
-    compiler_flags = conf.get("{}-flags".format(compiler), [])
+    flags += get_compilation_options(conf, "flags")
     # add linkflags
     link = conf.get("link", [])
-    platform_link = conf.get("{}-link".format(build_platform), [])
-    compiler_link = conf.get("{}-link".format(compiler), [])
+    link += get_compilation_options(conf, "link")
     # add defines
     defines = conf.get("defines", [])
-    platform_defines = conf.get("{}-defines".format(build_platform), [])
-    compiler_defines = conf.get("{}-defines".format(compiler), [])
+    defines += get_compilation_options(conf, "defines")
+
     # add libs generated by parent modules
     depends_generated_libs = []
     depends_defines = []
@@ -551,18 +589,15 @@ def create_module_env(conf, depends = [], append_depends_libs = True, append_dep
     # no need to add headers as they are copied to build
     env.PrependUnique(
         # adding libraries
-        LIBS = depends_generated_libs
-                + modules.get_module_libs(build_modules, modname)
-                + platform_libs
-                + compiler_libs,
+        LIBS = depends_generated_libs + libs
     )
     env.AppendUnique(
         # adding specified flags
-        CPPFLAGS = flags + platform_flags + compiler_flags,
+        CPPFLAGS = flags,
         # adding specified link flags
-        LINKFLAGS = link + platform_link + compiler_link,
+        LINKFLAGS = link,
         # adding defines
-        CPPDEFINES = defines + platform_defines + compiler_defines + depends_defines,
+        CPPDEFINES = defines + depends_defines,
         # module name
         APP_MODULE_NAME = modname,
         # formatted module name PROJNAME_MODULENAME
@@ -606,17 +641,17 @@ for conf in modules_build_order:
         append_depends_defines = conf.get("add-depends-defines", True))
     # some helpful debug when building
     if verbose:
-        print("- needed libraries")
+        builder.debug("needed libraries:")
         pp.pprint([ str(s) for s in env['LIBS'] ])
-        print("- needed headers")
+        builder.debug("needed headers:")
         pp.pprint([ str(s) for s in env['CPPPATH'] ])
         package_configs = conf.get("pkg-configs", [])
         if package_configs:
-            print("- needed packages configs")
+            builder.debug("needed packages configs")
             pp.pprint(package_configs)
         parse_configs = conf.get("parse-configs", [])
         if parse_configs:
-            print("- needed specific packages configs")
+            builder.debug("needed specific packages configs")
             pp.pprint(parse_configs)
     # copy module/[etc|include|share] to build/[etc|include|share]
     scons_utils.copy_module_res_into_build(modname, "etc", "etc", must_exist=False, is_dry_run=is_dry_run)
@@ -639,8 +674,11 @@ for conf in modules_build_order:
     conf["defines"] = env["CPPDEFINES"]
     # update added paths
     base_env["CPPPATH"] = list(set(env["CPPPATH"]))
-    if verbose:
+    if verbose and len(modules_build_order) > 1:
         print("")
+
+if verbose:
+    builder.debug(f"total targets registered: {len(targets)}")
 
 ###############################################################################
 # Scons progress build output

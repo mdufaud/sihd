@@ -87,11 +87,6 @@ class Timestamp
         Timestamp(Calendar calendar);
         Timestamp(Calendar calendar, Clocktime clocktime);
         Timestamp(std::chrono::nanoseconds duration);
-        Timestamp(std::chrono::microseconds duration);
-        Timestamp(std::chrono::milliseconds duration);
-        Timestamp(std::chrono::seconds duration);
-        Timestamp(std::chrono::minutes duration);
-        Timestamp(std::chrono::hours duration);
 
         template <typename T>
         Timestamp(std::chrono::time_point<T> timepoint)
@@ -99,10 +94,10 @@ class Timestamp
             _nano = timepoint.time_since_epoch().count();
         }
 
-        template <typename T>
-        Timestamp(std::chrono::duration<int64_t, T> duration)
+        template <typename Ratio>
+        Timestamp(std::chrono::duration<int64_t, Ratio> duration)
         {
-            _nano = time::duration<T>(duration);
+            _nano = time::duration<Ratio>(duration);
         }
 
         ~Timestamp();
@@ -201,7 +196,9 @@ class Timestamp
         template <typename T>
         Timestamp floor() const
         {
-            return Timestamp(std::chrono::floor<T>(this->timepoint()).time_since_epoch().count());
+            const auto timepoint = this->timepoint();
+            const auto floored_timepoint = std::chrono::floor<T>(timepoint);
+            return Timestamp(floored_timepoint);
         }
         Timestamp floor_day() const;
         Timestamp modulo_min(uint32_t minutes) const;

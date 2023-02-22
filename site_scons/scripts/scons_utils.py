@@ -23,7 +23,8 @@ __env_to_key = {
     "LINKFLAGS": "_link",
 }
 
-def add_env_app_conf(app, env, key):
+def add_env_app_conf(app, env, *keys):
+    key = "-".join(keys)
     for envkey, to_concat in __env_to_key.items():
         concat = key + to_concat
         attr = getattr(app, concat, None)
