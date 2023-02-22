@@ -128,7 +128,7 @@ std::string Timestamp::zone_str() const
 
 Timestamp Timestamp::floor_day() const
 {
-    return {std::chrono::floor<date::days>(this->timepoint())};
+    return this->floor<date::days>();
 }
 
 Timestamp Timestamp::modulo_min(uint32_t minutes) const
