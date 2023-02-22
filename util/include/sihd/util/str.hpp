@@ -26,7 +26,7 @@ std::string word_wrap(std::string_view s, size_t width, bool append_hyphen = tru
 
 // si -> 1K = 1000B
 // iec -> 1K = 1024B
-std::string bytes_str(ssize_t bytes, bool iec = true);
+std::string bytes_str(int64_t bytes, bool iec = true);
 
 bool is_escape_sequence_open(int c, const char *authorized_open_escape_sequences = nullptr);
 bool is_escape_sequence_close(int c, const char *authorized_close_escape_sequences = nullptr);

@@ -51,6 +51,7 @@ distribution = builder.do_distribution()
 verbose = builder.has_verbose()
 
 libtype = builder.build_static_libs and "static" or "dyn"
+bin_ext = builder.build_compiler == "em" and ".html" or (build_platform == "windows" and ".exe" or "")
 
 if verbose:
     builder.info("modules: {}".format(modules_lst or "all"))
@@ -347,8 +348,7 @@ def _env_build_demo(self, src, name, add_libs = [], **kwargs):
     for app_conf in default_app_conf_to_get:
         scons_utils.add_env_app_conf(app, demo_env, "demo", app_conf)
 
-    if build_platform == "windows":
-        name += ".exe"
+    name += bin_ext
     demo_path = os.path.join(builder.build_demo_path, name)
     demo = demo_env.Program(demo_path, src, **kwargs)
 
@@ -383,6 +383,7 @@ def _env_build_test(self, src, name = None, add_libs = [], **kwargs):
 
     if name is None:
         name = self["APP_MODULE_FORMAT_NAME"]
+    name += bin_ext
     test_path = os.path.join(builder.build_test_path, "bin", name)
     test = test_env.Program(test_path, src, **kwargs)
 
@@ -425,8 +426,8 @@ def _env_build_bin(self, src, name = None, add_libs = [], **kwargs):
 
     if name is None:
         name = self['APP_MODULE_FORMAT_NAME']
-    if build_platform == "windows":
-        name += ".exe"
+
+    name += bin_ext
     bin_path = os.path.join(builder.build_bin_path, name)
     bin = bin_env.Program(bin_path, src, **kwargs)
 

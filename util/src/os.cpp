@@ -587,10 +587,7 @@ ssize_t current_rss()
     struct mach_task_basic_info info;
     mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
     if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &infoCount) != KERN_SUCCESS)
-    {
-        SIHD_LOG(error, "OS: current_rss task info");
         return (ssize_t)-1L;
-    }
     return (ssize_t)info.resident_size;
 
 #elif defined(__SIHD_LINUX__)
@@ -598,14 +595,10 @@ ssize_t current_rss()
     long rss = 0L;
     FILE *fp = NULL;
     if ((fp = fopen("/proc/self/statm", "r")) == NULL)
-    {
-        SIHD_LOG(error, "OS: current_rss fopen: {}", strerror(errno));
         return (ssize_t)-1L;
-    }
     if (fscanf(fp, "%*s%ld", &rss) != 1)
     {
         fclose(fp);
-        SIHD_LOG(error, "OS: current_rss fscanf: {}", strerror(errno));
         return (ssize_t)-1L;
     }
     fclose(fp);

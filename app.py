@@ -52,18 +52,20 @@ modules = {
     "util": {
         "extlibs": ['nlohmann_json', 'fmt', 'cxxopts'],
         "linux-extlibs": ['libuuid'],
-        "libs": ['pthread', 'stdc++fs'], # threading and std::filesystem
+        "libs": ['pthread'], # threading
         "linux-libs": [
             'dl', # dl_open...
             'rt', # shm_open...
-            'uuid'
+            'uuid',
+            'stdc++fs'
         ],
-        "windows-libs": ['rpcrt4'],
+        "windows-libs": ['rpcrt4', 'stdc++fs'],
         # only link dynamically fmt when no cross compiling
         "linux-dyn-libs": ['fmt'],
         # fmt from headers for cross compile or static linkage
         "static-defines": ["FMT_HEADER_ONLY"],
         "windows-defines": ["FMT_HEADER_ONLY"],
+        "em-link": ["-sFORCE_FILESYSTEM"],
         "em-defines": ["FMT_HEADER_ONLY"],
     },
     "core": {

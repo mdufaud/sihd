@@ -1,5 +1,8 @@
+#include <sys/time.h>
+
 #include <iomanip>
 #include <locale>
+#include <sstream>
 
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
@@ -129,7 +132,7 @@ Timestamp Timestamp::modulo_min(uint32_t minutes) const
     const int now_minutes = this->clocktime().minute;
     const uint32_t interval = (now_minutes / minutes) * minutes;
 
-    return this->floor<std::chrono::hours>() + std::chrono::minutes(interval);
+    return this->floor<std::chrono::hours>() + time::minutes(interval);
 }
 
 Clocktime Timestamp::clocktime() const

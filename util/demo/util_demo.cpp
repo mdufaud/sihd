@@ -140,7 +140,8 @@ int main(int argc, char **argv)
     demo::os();
     demo::fs();
     demo::uuid();
-    demo::worker(result["worker-frequency"].as<double>());
+    if constexpr (os::is_emscripten == false)
+        demo::worker(result["worker-frequency"].as<double>());
     demo::read_line();
 
     fmt::print("Press Ctrl + c to exit\n");

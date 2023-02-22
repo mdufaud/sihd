@@ -769,27 +769,27 @@ std::string format_localtime(Timestamp t, std::string_view format)
     return _format_time(t, format, true);
 }
 
-std::string bytes_str(ssize_t bytes, bool iec)
+std::string bytes_str(int64_t bytes, bool iec)
 {
-    constexpr ssize_t kbyte_si = 1000;
-    constexpr ssize_t mbyte_si = kbyte_si * 1000;
-    constexpr ssize_t gbyte_si = mbyte_si * 1000;
-    constexpr ssize_t tbyte_si = gbyte_si * 1000;
-    constexpr ssize_t kbyte_iec = 1024;
-    constexpr ssize_t mbyte_iec = kbyte_iec * 1024;
-    constexpr ssize_t gbyte_iec = mbyte_iec * 1024;
-    constexpr ssize_t tbyte_iec = gbyte_iec * 1024;
+    constexpr int64_t kbyte_si = 1000;
+    constexpr int64_t mbyte_si = kbyte_si * 1000;
+    constexpr int64_t gbyte_si = mbyte_si * 1000;
+    constexpr int64_t tbyte_si = gbyte_si * 1000;
+    constexpr int64_t kbyte_iec = 1024;
+    constexpr int64_t mbyte_iec = kbyte_iec * 1024;
+    constexpr int64_t gbyte_iec = mbyte_iec * 1024;
+    constexpr int64_t tbyte_iec = gbyte_iec * 1024;
 
     if (bytes < 0)
         return "";
 
-    ssize_t kbyte = iec ? kbyte_iec : kbyte_si;
-    ssize_t mbyte = iec ? mbyte_iec : mbyte_si;
-    ssize_t gbyte = iec ? gbyte_iec : gbyte_si;
-    ssize_t tbyte = iec ? tbyte_iec : tbyte_si;
+    int64_t kbyte = iec ? kbyte_iec : kbyte_si;
+    int64_t mbyte = iec ? mbyte_iec : mbyte_si;
+    int64_t gbyte = iec ? gbyte_iec : gbyte_si;
+    int64_t tbyte = iec ? tbyte_iec : tbyte_si;
 
     char scale_key;
-    ssize_t current_scale;
+    int64_t current_scale;
 
     if (bytes < kbyte)
         return std::to_string(bytes < 0 ? 0 : bytes) + "B";

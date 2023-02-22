@@ -66,9 +66,9 @@ struct Clocktime
 struct Calendar
 {
         // month day -> 1 - 31
-        int day = 0;
+        int day = 1;
         // 1 - 12
-        int month = 0;
+        int month = 1;
         // 0 - X
         int year = 0;
 
@@ -193,12 +193,10 @@ class Timestamp
         // default_day_format + floored value
         std::string local_day_str(std::string_view format = default_day_format) const;
 
-        template <typename T>
+        template <typename Ratio, typename Clock = std::chrono::system_clock>
         Timestamp floor() const
         {
-            const auto timepoint = this->timepoint();
-            const auto floored_timepoint = std::chrono::floor<T>(timepoint);
-            return Timestamp(floored_timepoint);
+            return Timestamp(std::chrono::floor<Ratio>(this->timepoint<Clock>()).time_since_epoch());
         }
         Timestamp floor_day() const;
         Timestamp modulo_min(uint32_t minutes) const;
