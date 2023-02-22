@@ -201,7 +201,7 @@ class Timestamp
         template <typename T>
         Timestamp floor() const
         {
-            return Timestamp(std::chrono::floor<T>(this->timepoint()));
+            return Timestamp(std::chrono::floor<T>(this->timepoint()).time_since_epoch().count());
         }
         Timestamp floor_day() const;
         Timestamp modulo_min(uint32_t minutes) const;
