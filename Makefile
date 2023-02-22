@@ -341,6 +341,28 @@ $(TEST_NAME):
 endif #test
 
 ##################
+# Extlibs
+##################
+
+.PHONY: pkgdep # List dependencies for registered package manager
+
+ifeq ($(MAKEARG_1), pkgdep)
+
+PKG_MANAGER_NAME := $(MAKEARG_2)
+
+ifeq ($(PKG_MANAGER_NAME),)
+$(error "Makefile: must provide a package manager name")
+endif
+
+pkgdep: pkgdep = $(PKG_MANAGER_NAME)
+pkgdep: build
+
+$(PKG_MANAGER_NAME):
+	$(QUIET) echo > /dev/null
+
+endif
+
+##################
 # Conan (extlibs)
 ##################
 
