@@ -220,7 +220,7 @@ bool LineReader::fast_read_line(std::string & line, FILE *stream, size_t buffsiz
         {
             if (reader.get_read_data(view))
             {
-                line = view;
+                line.assign(view.data(), view.size());
                 return true;
             }
         }

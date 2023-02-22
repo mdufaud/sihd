@@ -26,17 +26,16 @@ class AChannelContainer: public sihd::util::Node,
         std::array<Channel *, sizeof...(T)> find_channels(const T &...args)
         {
             std::array<Channel *, sizeof...(T)> array;
-            int i = 0;
 
-            (
-                [&] {
-                    array[i] = this->find_channel(args);
-                    if (array[i] == nullptr)
-                        throw std::runtime_error(
-                            util::str::format("'%s'no such channel '%s'", this->full_name(), args));
-                    ++i;
-                }(),
-                ...);
+            int i = 0;
+            auto finder = [&array, &i, this](const auto & arg) {
+                array[i] = this->find_channel(arg);
+                if (array[i] == nullptr)
+                    throw std::runtime_error(util::str::format("'%s'no such channel '%s'", this->full_name(), arg));
+                ++i;
+            };
+
+            (finder(args), ...);
 
             return array;
         }

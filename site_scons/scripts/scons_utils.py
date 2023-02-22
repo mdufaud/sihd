@@ -24,7 +24,9 @@ __env_to_key = {
 }
 
 def add_env_app_conf(app, env, *keys):
-    key = "-".join(keys)
+    key = "_".join(keys)
+    if builder.build_verbose:
+        builder.debug(f"adding env app conf: {key}")
     for envkey, to_concat in __env_to_key.items():
         concat = key + to_concat
         attr = getattr(app, concat, None)

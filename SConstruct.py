@@ -50,6 +50,8 @@ build_mode = builder.get_compile_mode()
 distribution = builder.do_distribution()
 verbose = builder.has_verbose()
 
+libtype = builder.build_static_libs and "static" or "dyn"
+
 if verbose:
     builder.info("modules: {}".format(modules_lst or "all"))
     builder.info("platform: " + build_platform)
@@ -252,34 +254,26 @@ base_env.Prepend(
 if compiler != "mingw":
     base_env.Replace(SHLIBVERSION = app.version)
 
-# TODO do better, search in build for static libraries path
-if builder.is_static_libs():
-    base_env.Append(
-        CPPDEFINES = ["STATIC"],
-        LINKFLAGS = ['-static'],
-    )
-    base_env['LINKCOM'] = base_env['LINKCOM'].replace("$_LIBFLAGS", "-Wl,--whole-archive $_LIBFLAGS -Wl,--no-whole-archive")
-
-
-def __log_add_env_app_conf(*keys):
-    if verbose:
-        key = "-".join(keys)
-        builder.debug(f"looking for app configuration: {key}")
-    scons_utils.add_env_app_conf(app, base_env, *keys)
-
 # add $platform-[flags/defines/link/libs]
-__log_add_env_app_conf(build_platform)
+# add $libtype-[flags/defines/link/libs]
 # add $mode-[flags/defines/link/libs]
-__log_add_env_app_conf(build_mode)
 # add $compiler-[flags/defines/link/libs]
-__log_add_env_app_conf(compiler)
+# add $platform--[flags/defines/link/libs]
 
-# add $platform-$mode-[flags/defines/link/libs]
-__log_add_env_app_conf(build_platform, build_mode)
-# add $platform-$compiler-[flags/defines/link/libs]
-__log_add_env_app_conf(build_platform, compiler)
-# add $platform-$compiler-$mode-[flags/defines/link/libs]
-__log_add_env_app_conf(build_platform, compiler, build_mode)
+if verbose:
+    builder.debug(f"looking for app configurations:")
+
+default_app_conf_to_get = (build_platform, libtype, build_mode, compiler)
+
+def add_combinaison_app_conf_to_env(env):
+    for idx, app_config in enumerate(default_app_conf_to_get, start=1):
+        keys = [app_config]
+        scons_utils.add_env_app_conf(app, env, *keys)
+        for sub_app_config in default_app_conf_to_get[idx:]:
+            keys.append(sub_app_config)
+            scons_utils.add_env_app_conf(app, env, *keys)
+
+add_combinaison_app_conf_to_env(base_env)
 
 ###############################################################################
 # Scons options
@@ -337,31 +331,33 @@ def _env_copy_into_build(self, src, dst):
 def _env_file_basename(self, path):
     return os.path.basename(os.path.splitext(str(path))[0])
 
-def _env_build_demo(self, src, name = None, add_libs = [], **kwargs):
+def _env_build_demo(self, src, name, add_libs = [], **kwargs):
     """ Environment method to build unit test binary for a module """
     if builder.build_demo == False:
         return None
+    module_name = self['APP_MODULE_NAME']
+    
     # if modules are specified, demo is built only if specified by user and not automatically by dependencies
-    if modules_to_build and self['APP_MODULE_NAME'] not in modules_to_build:
+    if modules_to_build and module_name not in modules_to_build:
         return None
-    global modules_generated_demos
-    add_targets(src)
-    if name is None:
-        name = self["APP_MODULE_FORMAT_NAME"]
+
     demo_env = self.Clone()
     demo_env.Prepend(LIBS = add_libs)
-    # add demo_[flags/defines/link/libs]
     scons_utils.add_env_app_conf(app, demo_env, "demo")
-    # add compiler_demo_[flags/defines/link/libs]
-    scons_utils.add_env_app_conf(app, demo_env, "{}_demo".format(compiler))
-    # add platform_demo_[flags/defines/link/libs]
-    scons_utils.add_env_app_conf(app, demo_env, "{}_demo".format(build_platform))
+    for app_conf in default_app_conf_to_get:
+        scons_utils.add_env_app_conf(app, demo_env, "demo", app_conf)
+
+    if build_platform == "windows":
+        name += ".exe"
     demo_path = os.path.join(builder.build_demo_path, name)
     demo = demo_env.Program(demo_path, src, **kwargs)
-    module_name = self['APP_MODULE_NAME']
+
+    add_targets(src)
+
+    global modules_generated_demos
     modules_generated_demos.setdefault(module_name, []).append(demo_path)
     if verbose:
-        builder.debug(f"module {module_name} registered demo: {demo_path}")
+        builder.debug(f"module '{module_name}' registered demo: {demo_path}")
     return demo
 
 def _env_build_demos(self, srcs, **kwargs):
@@ -373,63 +369,73 @@ def _env_build_test(self, src, name = None, add_libs = [], **kwargs):
     """ Environment method to build unit test binary for a module """
     if builder.build_tests == False:
         return None
+    module_name = self['APP_MODULE_NAME']
+
     # if modules are specified, test is built only if specified by user and not automatically by dependencies
-    if modules_to_build and self['APP_MODULE_NAME'] not in modules_to_build:
+    if modules_to_build and module_name not in modules_to_build:
         return None
-    global modules_generated_tests
-    add_targets(src)
-    if name is None:
-        name = self["APP_MODULE_FORMAT_NAME"]
+
     test_env = self.Clone()
     test_env.Prepend(LIBS = add_libs)
-    # add test_[flags/defines/link/libs]
     scons_utils.add_env_app_conf(app, test_env, "test")
-    # add compiler_test_[flags/defines/link/libs]
-    scons_utils.add_env_app_conf(app, test_env, "{}_test".format(compiler))
-    # add platform_test_[flags/defines/link/libs]
-    scons_utils.add_env_app_conf(app, test_env, "{}_test".format(build_platform))
+    for app_conf in default_app_conf_to_get:
+        scons_utils.add_env_app_conf(app, test_env, "test", app_conf)
+
+    if name is None:
+        name = self["APP_MODULE_FORMAT_NAME"]
     test_path = os.path.join(builder.build_test_path, "bin", name)
     test = test_env.Program(test_path, src, **kwargs)
-    module_name = self['APP_MODULE_NAME']
+
+    add_targets(src)
+
+    global modules_generated_tests
     modules_generated_tests.setdefault(module_name, []).append(test_path)
     if verbose:
-        builder.debug(f"module {module_name} registered test: {test_path}")
+        builder.debug(f"module '{module_name}' registered test: {test_path}")
     return test
 
 def _env_build_lib(self, src, name = None, static = None, **kwargs):
     """ Environment method to build a shared library for a module """
-    global modules_generated_libs
-    add_targets(src)
+    module_name = self['APP_MODULE_NAME']
+
     if name is None:
         name = self["APP_MODULE_FORMAT_NAME"]
     lib_path = os.path.join(builder.build_lib_path, name)
+
     # no cache for symlinks renewal
     if (static is not None and static) or builder.build_static_libs:
         lib = NoCache(self.StaticLibrary(lib_path, src, **kwargs))
     else:
         lib = NoCache(self.SharedLibrary(lib_path, src, **kwargs))
-    module_name = self['APP_MODULE_NAME']
+
+    add_targets(src)
+
+    global modules_generated_libs
     modules_generated_libs.setdefault(module_name, []).append(name)
     if verbose:
-        builder.debug(f"module {module_name} registered lib: {lib_path}")
+        builder.debug(f"module '{module_name}' registered lib: {name}")
     return lib
 
 def _env_build_bin(self, src, name = None, add_libs = [], **kwargs):
     """ Environment method to build a binary for a module """
-    global modules_generated_bins
-    add_targets(src)
+    module_name = self['APP_MODULE_NAME']
+
+    bin_env = self.Clone()
+    bin_env.Prepend(LIBS = add_libs)
+
     if name is None:
         name = self['APP_MODULE_FORMAT_NAME']
     if build_platform == "windows":
         name += ".exe"
-    bin_env = self.Clone()
-    bin_env.Prepend(LIBS = add_libs)
     bin_path = os.path.join(builder.build_bin_path, name)
     bin = bin_env.Program(bin_path, src, **kwargs)
-    module_name = self['APP_MODULE_NAME']
+
+    add_targets(src)
+
+    global modules_generated_bins
     modules_generated_bins.setdefault(module_name, []).append(bin_path)
     if verbose:
-        builder.debug(f"module {module_name} registered bin: {bin_path}")
+        builder.debug(f"module '{module_name}' registered bin: {bin_path}")
     return bin
 
 def _env_git_clone(self, url, branch, dest, recursive = False):
@@ -512,6 +518,11 @@ def _env_find_in_file(self, src, str):
                 return True
     return False
 
+def _env_filter_files(self, files_lst, filter_lst):
+    def _filter_fun(file):
+        return os.path.basename(str(file)) not in filter_lst
+    return list(filter(_filter_fun, files_lst))
+
 # methods to build either libs, tests, demos or executables
 base_env.AddMethod(_env_build_lib, "build_lib")
 base_env.AddMethod(_env_build_bin, "build_bin")
@@ -527,6 +538,7 @@ base_env.AddMethod(_env_copy_into_build, "copy_into_build")
 base_env.AddMethod(_env_replace_in_file, "file_replace")
 base_env.AddMethod(_env_find_in_file, "find_in_file")
 base_env.AddMethod(_env_file_basename, "file_basename")
+base_env.AddMethod(_env_filter_files, "filter_files")
 base_env.AddMethod(lambda self: self['APP_MODULE_NAME'], "module_name")
 base_env.AddMethod(lambda self: self['APP_MODULE_FORMAT_NAME'], "module_format_name")
 base_env.AddMethod(lambda self: self['APP_MODULE_CONF'], "module_conf")
@@ -536,24 +548,29 @@ base_env.AddMethod(lambda self: app, "app")
 base_env.AddMethod(lambda self: builder, "builder")
 base_env.AddMethod(lambda self: is_dry_run, "is_dry_run")
 
-__options = [
+modules_options = [
+    libtype,
     build_platform,
     f"mode-{build_mode}",
-    compiler
+    compiler,
 ]
-if builder.build_static_libs:
-    to_append = ["static"]
-    for option in __options:
-        to_append.append(f"{option}-static")
-    __options += to_append
+
+def _add_lib_type_to_modules_options():
+    global modules_options
+    to_append = []
+    for option in modules_options:
+        to_append.append(f"{option}-{libtype}")
+    modules_options += to_append
+
+_add_lib_type_to_modules_options()
 
 if verbose:
-    builder.debug(f"options to look for in the modules:")
-    pp.pprint([ [ f"{option}-{key}" for option in __options ] for key in ("libs", "flags", "link", "defines")])
+    builder.debug(f"will look for modules options:")
+    pp.pprint([ [ f"{option}-{key}" for option in modules_options ] for key in ("libs", "flags", "link", "defines")])
 
 def get_compilation_options(conf, key):
     ret = []
-    for option in __options:
+    for option in modules_options:
         ret += conf.get(f"{option}-{key}", [])
     return ret
 

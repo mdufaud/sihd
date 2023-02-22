@@ -24,25 +24,21 @@ std::mutex unsafe_c_mutex;
 
 time_t get_timezone()
 {
-#if !defined(__SIHD_WINDOWS__)
-    if (tz_is_set.exchange(true))
-        tzset();
-    return timezone;
-#else
+#if defined(__SIHD_WINDOWS__)
     long seconds = 0;
     if (!_get_timezone(&seconds))
         return seconds;
     return 0;
+#else
+    if (tz_is_set.exchange(true))
+        tzset();
+    return timezone;
 #endif
 }
 
 std::string get_timezone_name()
 {
-#if !defined(__SIHD_WINDOWS__)
-    if (tz_is_set.exchange(true))
-        tzset();
-    return tzname[0];
-#else
+#if defined(__SIHD_WINDOWS__)
     std::string ret;
     size_t tzname_size = 0;
     if (!_get_timezone_name(&tzname_size, NULL, 0, 0))
@@ -52,6 +48,10 @@ std::string get_timezone_name()
             return ret;
     }
     return "";
+#else
+    if (tz_is_set.exchange(true))
+        tzset();
+    return tzname[0];
 #endif
 }
 

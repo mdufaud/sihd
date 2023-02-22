@@ -2,7 +2,10 @@ name = 'sihd'
 version = "0.1.0"
 git_url = "https://github.com/mdufaud/sihd.git"
 
-# external libs versions
+###############################################################################
+# external libs
+###############################################################################
+
 extlibs = {
     # unit test
     "gtest": "1.11.0",
@@ -41,14 +44,24 @@ conan_post_process = {
     "*lua.*": {"from": "lua.", "to": "lua5.3."}
 }
 
-# modules descriptions
+###############################################################################
+# modules
+###############################################################################
+
 modules = {
     "util": {
         "extlibs": ['nlohmann_json', 'fmt', 'cxxopts'],
-        "libs": ['pthread', 'fmt', 'stdc++fs'],
         "linux-extlibs": ['libuuid'],
-        "linux-libs": ['dl', 'rt', 'uuid'],
+        "libs": ['pthread', 'stdc++fs'], # threading and std::filesystem
+        "linux-libs": [
+            'dl', # dl_open...
+            'rt', # shm_open...
+            'uuid'
+        ],
         "windows-libs": ['rpcrt4'],
+        # only link dynamically fmt when no cross compiling
+        "linux-dyn-libs": ['fmt'],
+        # fmt from headers for cross compile or static linkage
         "static-defines": ["FMT_HEADER_ONLY"],
         "windows-defines": ["FMT_HEADER_ONLY"],
         "em-defines": ["FMT_HEADER_ONLY"],
@@ -132,7 +145,7 @@ modules = {
     },
 }
 
-# conditionnal modules - activated only if compiled specifically or by env variable
+# conditionnal modules - activated only if compiled explicitly or by env variable
 conditionnal_modules = {
     "lua": {
         # apt liblua5.3-dev / pacman lua
@@ -165,11 +178,22 @@ conditionnal_modules = {
     }
 }
 
-#############
+###############################################################################
 # compilation
-#############
+###############################################################################
 
-# mode specifics - default is always debug
+## general compilation parameters
+
+flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
+defines = [
+    "SIHD_VERSION_MAJOR=" + version.split('.')[0],
+    "SIHD_VERSION_MINOR=" + version.split('.')[1],
+    "SIHD_VERSION_PATCH=" + version.split('.')[2],
+]
+cxx_flags = ['-std=c++17']
+static_defines = ['STATIC']
+
+## mode specifics - default is always debug
 modes = ["debug", "fast", "release"]
 
 _default_flags = [
@@ -180,17 +204,8 @@ debug_flags = _default_flags + ["-g", "-Og"]
 fast_flags = ["-O0"]
 release_flags = _default_flags + ["-O3"]
 
-# general compilation parameters
-cxx_flags = ['-std=c++17']
+## gcc specifics
 
-flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
-defines = [
-    "SIHD_VERSION_MAJOR=" + version.split('.')[0],
-    "SIHD_VERSION_MINOR=" + version.split('.')[1],
-    "SIHD_VERSION_PATCH=" + version.split('.')[2],
-]
-
-# gcc specifics
 gcc_flags = [
     "-Werror",
     "-fasynchronous-unwind-tables",
@@ -206,7 +221,8 @@ gcc_flags = [
     # "-fno-diagnostics-show-caret",
 ]
 
-# clang specifics
+## clang specifics
+
 clang_flags = [
     "-Werror",
     "-Wno-unused-command-line-argument"
@@ -217,18 +233,21 @@ clang_defines = [
     'LLVM_ENABLE_RTTI=ON',
 ]
 
-# mingw specifics
+## mingw specifics
+
 mingw_flags = gcc_flags
 
-# emscripten specifics
+## emscripten specifics
+
 em_link = ["--emrun"]
 
-# windows specifics
+## windows specifics
+
 windows_libs = [
-    'psapi',
+    'psapi', # GetModuleFileName
     'ucrt',
-    'ssp',
-    'ws2_32'
+    'ssp', # winsock
+    'ws2_32' # windows api
 ]
 # _WIN64 -> activates sihd functionnalities
 # _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
@@ -240,13 +259,14 @@ windows_defines = [
     "_ISOC99_SOURCE",
 ]
 
-# test specifics
-test_extlibs = ['gtest']
-test_libs = ['gtest', 'stdc++fs']
+## test specifics
 
-#############
+test_extlibs = ['gtest']
+test_libs = ['gtest']
+
+###############################################################################
 # distribution
-#############
+###############################################################################
 
 description = "Simple Input Handler Displayer"
 license = "GPL3"
@@ -256,6 +276,8 @@ architecture = "any"
 multi_architecture = "same"
 maintainers = ["mdufaud <maxence_dufaud@hotmail.fr>"]
 contributors = ["azouiten <alexandre.zouiten1@gmail.com>"]
+
+## APT
 
 # packages equivalent to build DEBIAN/control dependencies
 apt_packages = {
@@ -280,6 +302,8 @@ apt_packages = {
     "lua": "liblua5.3-dev",
     "libusb": "libusb-dev",
 }
+
+## PACMAN
 
 # used to create PKGBUILD build command
 additionnal_build_env = ['py', 'lua', 'sdl']
@@ -312,6 +336,8 @@ pacman_packages = {
     "libusb": "libusb"
 }
 
+## YUM
+
 yum_packages = {
     "gtest": "gtest-devel",
     "nlohmann_json": "json-devel",
@@ -334,6 +360,8 @@ yum_packages = {
     "libusb": "libusb-devel",
 }
 
+## MSYS2
+
 __msys2_mingw = "mingw-w64-x86_64-"
 msys2_packages = {
     "gtest": __msys2_mingw + "gtest",
@@ -355,9 +383,9 @@ msys2_packages = {
     "libusb": __msys2_mingw + "libusb",
 }
 
-#############
+###############################################################################
 # after build
-#############
+###############################################################################
 
 # linux extension is something like -> cpython-3Xm-x86_64-linux-gnu.so
 # windows extension -> cp3X-win_amd64.pyd

@@ -3,7 +3,9 @@ Import('env')
 builder = env.builder()
 conf = env.module_conf()
 
-lib = env.build_lib(Glob('src/*.cpp'))
+srcs = Glob('src/*.cpp')
+
+lib = env.build_lib(srcs)
 
 demo_ext = ""
 if builder.build_compiler == "em":

@@ -403,6 +403,10 @@ TEST_F(TestStr, test_strconfiguration)
     EXPECT_EQ(conf["key"], "value");
     EXPECT_EQ(conf["key2"], "value2");
 
+    auto [key, key2] = conf.find_all("key", "key2");
+    EXPECT_TRUE(key.has_value());
+    EXPECT_TRUE(key2.has_value());
+
     conf.parse_configuration("a=1;b=;c;");
     EXPECT_TRUE(conf.has("a"));
     EXPECT_TRUE(conf.has("b"));

@@ -34,14 +34,14 @@ class StrConfiguration
         std::array<std::optional<std::string>, sizeof...(T)> find_all(const T &...args) const
         {
             std::array<std::optional<std::string>, sizeof...(T)> array;
-            int i = 0;
 
-            (
-                [&] {
-                    array[i] = this->find(args);
-                    ++i;
-                }(),
-                ...);
+            int i = 0;
+            auto finder = [&array, &i, this](const auto & arg) {
+                array[i] = this->find(arg);
+                ++i;
+            };
+
+            (finder(args), ...);
 
             return array;
         }
