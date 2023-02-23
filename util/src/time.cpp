@@ -41,10 +41,10 @@ std::string get_timezone_name()
 #if defined(__SIHD_WINDOWS__)
     std::string ret;
     size_t tzname_size = 0;
-    if (!_get_timezone_name(&tzname_size, NULL, 0, 0))
+    if (!_get_tzname(&tzname_size, NULL, 0, 0))
     {
         ret.resize(tzname_size);
-        if (!_get_timezone_name(&tzname_size, ret.data(), tzname_size, 0))
+        if (!_get_tzname(&tzname_size, ret.data(), tzname_size, 0))
             return ret;
     }
     return "";

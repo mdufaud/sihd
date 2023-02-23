@@ -4,6 +4,8 @@
 #include <chrono>
 #include <ctime>
 
+#include <sihd/util/traits.hpp>
+
 namespace sihd::util::time
 {
 
@@ -105,16 +107,22 @@ static constexpr auto hz = freq;
 time_t from_double(double sec_milli);
 time_t from_double_milliseconds(double milli_micro);
 
-// chrono -> nano
-template <typename T>
-constexpr time_t duration(std::chrono::duration<int64_t, T> duration)
+// duration -> nano
+template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
+constexpr time_t duration(Duration duration)
 {
     // seconds -> count() * 1E9     == count() * (1E9 / 1) * 1
     // nano -> count() * 1          == count() * (1E9 / 1E9) * 1
     // min -> count() * 1E9 * 60    == count() * (1E9 / 1) * 60
-    return (duration.count()
-            * (std::chrono::duration<int64_t, std::nano>::period::den / std::chrono::duration<int64_t, T>::period::den))
-           * std::chrono::duration<int64_t, T>::period::num;
+    return (duration.count() * (std::chrono::duration<int64_t, std::nano>::period::den / Duration::period::den))
+           * Duration::period::num;
+}
+
+// timepoint -> nano
+template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
+constexpr time_t floor(time_t val)
+{
+    return val - (val % time::duration<Duration>(Duration {1}));
 }
 
 // tm struct -> nano

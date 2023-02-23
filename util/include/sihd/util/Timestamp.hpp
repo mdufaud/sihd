@@ -8,24 +8,24 @@
 #include <sihd/util/time.hpp>
 
 #define __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(OP)                                                           \
- template <typename T>                                                                                                 \
- bool operator OP(std::chrono::duration<int64_t, T> duration) const                                                    \
+ template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>               \
+ bool operator OP(Duration duration) const                                                                             \
  {                                                                                                                     \
-  return _nano OP time::duration<T>(duration);                                                                         \
+  return _nano OP time::duration<Duration>(duration);                                                                  \
  }
 
 #define __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(OP)                                                            \
- template <typename T>                                                                                                 \
- Timestamp operator OP(std::chrono::duration<int64_t, T> duration)                                                     \
+ template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>               \
+ Timestamp operator OP(Duration duration)                                                                              \
  {                                                                                                                     \
-  return Timestamp(_nano OP time::duration<T>(duration));                                                              \
+  return Timestamp(_nano OP time::duration<Duration>(duration));                                                       \
  }
 
 #define __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(OP)                                                                \
- template <typename T>                                                                                                 \
- Timestamp & operator OP(std::chrono::duration<int64_t, T> duration)                                                   \
+ template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>               \
+ Timestamp & operator OP(Duration duration)                                                                            \
  {                                                                                                                     \
-  _nano OP time::duration<T>(duration);                                                                                \
+  _nano OP time::duration<Duration>(duration);                                                                         \
   return *this;                                                                                                        \
  }
 
@@ -94,10 +94,10 @@ class Timestamp
             _nano = timepoint.time_since_epoch().count();
         }
 
-        template <typename Ratio>
-        Timestamp(std::chrono::duration<int64_t, Ratio> duration)
+        template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
+        Timestamp(Duration duration)
         {
-            _nano = time::duration<Ratio>(duration);
+            _nano = time::duration(duration);
         }
 
         ~Timestamp();
@@ -152,12 +152,6 @@ class Timestamp
             return time::to_duration<Ratio>(_nano);
         }
 
-        template <typename Clock = std::chrono::system_clock>
-        std::chrono::time_point<Clock> timepoint() const
-        {
-            return std::chrono::time_point<Clock>(this->duration<std::nano>());
-        }
-
         time_t nanoseconds() const;
         time_t microseconds() const;
         time_t milliseconds() const;
@@ -193,10 +187,10 @@ class Timestamp
         // default_day_format + floored value
         std::string local_day_str(std::string_view format = default_day_format) const;
 
-        template <typename Ratio, typename Clock = std::chrono::system_clock>
+        template <typename Ratio>
         Timestamp floor() const
         {
-            return Timestamp(std::chrono::floor<Ratio>(this->timepoint<Clock>()).time_since_epoch());
+            return Timestamp(time::floor<Ratio>(_nano));
         }
         Timestamp floor_day() const;
         Timestamp modulo_min(uint32_t minutes) const;

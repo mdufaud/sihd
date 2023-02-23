@@ -57,8 +57,8 @@ modules = {
             'dl', # dl_open...
             'rt', # shm_open...
             'uuid',
-            'stdc++fs'
         ],
+        "linux-dyn-libs": ['stdc++fs'], # no emscripten trick
         "windows-libs": ['rpcrt4', 'stdc++fs'],
         # only link dynamically fmt when no cross compiling
         "linux-dyn-libs": ['fmt'],

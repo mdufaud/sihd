@@ -38,6 +38,16 @@ struct is_map<T, std::void_t<typename T::mapped_type>>: public std::true_type
 {
 };
 
+template <typename, typename = void>
+struct is_duration: public std::false_type
+{
+};
+
+template <typename T>
+struct is_duration<T, std::void_t<typename T::period>>: public std::true_type
+{
+};
+
 } // namespace sihd::util::traits
 
 #endif
