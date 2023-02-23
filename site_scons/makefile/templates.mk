@@ -14,6 +14,7 @@ newmod:
 
 # for no 'no rules to make...'
 $(MODULE_NAME):
+	$(QUIET) echo > /dev/null
 
 endif
 
@@ -28,9 +29,11 @@ newtest:
 
 # for no 'no rules to make...'
 $(MODULE_NAME):
+	$(QUIET) echo > /dev/null
 
 # for no 'no rules to make...'
 $(TEST_NAME):
+	$(QUIET) echo > /dev/null
 
 endif
 
@@ -45,9 +48,11 @@ newclass:
 
 # for no 'no rules to make...'
 $(MODULE_NAME):
+	$(QUIET) echo > /dev/null
 
 # for no 'no rules to make...'
 $(CLASS_NAME):
+	$(QUIET) echo > /dev/null
 
 endif
 
@@ -62,8 +67,10 @@ newinterface:
 
 # for no 'no rules to make...'
 $(MODULE_NAME):
+	$(QUIET) echo > /dev/null
 
 # for no 'no rules to make...'
 $(CLASS_NAME):
+	$(QUIET) echo > /dev/null
 
 endif

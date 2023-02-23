@@ -171,12 +171,11 @@ template <typename Container,
           typename std::enable_if_t<traits::is_iterable<Container>::value, bool> = 0>
 Type sum(const Container & container, const Predicate & predicate = details::return_same_predicate)
 {
-    return std::accumulate(container.begin(),
-                           container.end(),
-                           Type {},
-                           [&container, &predicate](auto accumulated, const auto & val) {
-                               return std::move(accumulated) + predicate(val);
-                           });
+    return std::accumulate(
+        container.begin(),
+        container.end(),
+        Type {},
+        [&predicate](auto accumulated, const auto & val) { return std::move(accumulated) + predicate(val); });
 }
 
 template <typename Container,

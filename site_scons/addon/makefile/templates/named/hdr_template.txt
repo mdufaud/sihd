@@ -6,7 +6,7 @@
 namespace APP_NAME::MODULE_NAME
 {
 
-class CLASS_NAME:   public sihd::util::Named
+class CLASS_NAME: public sihd::util::Named
 {
     public:
         CLASS_NAME(const std::string & name, sihd::util::Node *parent = nullptr);

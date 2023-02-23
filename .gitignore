@@ -1,28 +1,37 @@
+# built file extensions
 *.so
 *.o
 *.os
 *.dll
 *.a
 *.lib
+
+# outputs
 *.log
+
+# configurations
 *.ini
 
+# python compilation
 *__pycache__*
-compile_commands.json
 
-
-.scon*
+# vs code user configuration
 .vscode
 
+# valgrind core dump
 vgcore*
 
-build/*
-dist/*
+# modules specific
 imgui/imgui
 tui/FTXUI
 lua/luabridge
-util/date
 
+# build specific
+build/*
+dist/*
 .installed
 .build_cache
 .cache
+
+# scons
+.scon*

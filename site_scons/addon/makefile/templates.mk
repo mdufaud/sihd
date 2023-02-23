@@ -12,9 +12,10 @@ newdevice:
 
 # for no 'no rules to make...'
 $(MODULE_NAME):
+	$(QUIET) echo > /dev/null
 
-# for no 'no rules to make...'
 $(CLASS_NAME):
+	$(QUIET) echo > /dev/null
 
 endif
 
@@ -27,11 +28,11 @@ CLASS_NAME := $(word 3, $(MAKECMDGOALS))$(c)
 newnamedclass:
 	@bash $(MAKEFILE_ADDON_SCRIPTS)/make_named_class.sh $(APP_NAME) $(MODULE_NAME) $(CLASS_NAME)
 
-# for no 'no rules to make...'
 $(MODULE_NAME):
+	$(QUIET) echo > /dev/null
 
-# for no 'no rules to make...'
 $(CLASS_NAME):
+	$(QUIET) echo > /dev/null
 
 endif
 
@@ -43,11 +44,5 @@ TEST_NAME := $(word 3, $(MAKECMDGOALS))$(t)
 
 newsihdtest:
 	@bash $(MAKEFILE_ADDON_SCRIPTS)/make_sihd_test.sh $(APP_NAME) $(MODULE_NAME) $(TEST_NAME)
-
-# for no 'no rules to make...'
-$(MODULE_NAME):
-
-# for no 'no rules to make...'
-$(TEST_NAME):
 
 endif

@@ -335,6 +335,7 @@ endif
 
 $(MODULES_NAME):
 	$(QUIET) echo > /dev/null
+
 $(TEST_NAME):
 	$(QUIET) echo > /dev/null
 

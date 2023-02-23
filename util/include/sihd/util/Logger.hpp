@@ -10,7 +10,7 @@
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/macro.hpp>
 
-#ifdef SIHD_LOGGING_OFF
+#if SIHD_LOGGING_OFF
 # define SIHD_NEW_LOGGER(name)
 # define SIHD_LOGGER
 # define SIHD_LOG_FORMAT(level, message, ...)
@@ -39,7 +39,7 @@
 # define SIHD_NEW_LOGGER(name) sihd::util::Logger __sihd_logger__(name);
 #endif
 
-#if defined(SIHD_TRACE_OFF) || defined(SIHD_LOGGING_OFF)
+#if SIHD_TRACE_OFF || SIHD_LOGGING_OFF
 # define SIHD_TRACE(message)
 # define SIHD_TRACEF(message)
 #else

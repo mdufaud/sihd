@@ -12,44 +12,45 @@
 
 namespace test
 {
-    SIHD_LOGGER;
-    using namespace APP_NAME::MODULE_NAME;
-    using namespace sihd::util;
-    class TestCLASS_NAME: public ::testing::Test
-    {
-        protected:
-            TestCLASS_NAME()
-            {
-                sihd::util::LoggerManager::basic();
-            }
+SIHD_LOGGER;
+using namespace APP_NAME::MODULE_NAME;
+using namespace sihd::util;
+class TestCLASS_NAME: public ::testing::Test
+{
+    protected:
+        TestCLASS_NAME()
+        {
+            sihd::util::LoggerManager::basic();
+        }
 
-            virtual ~TestCLASS_NAME()
-            {
-                sihd::util::LoggerManager::clear_loggers();
-            }
+        virtual ~TestCLASS_NAME()
+        {
+            sihd::util::LoggerManager::clear_loggers();
+        }
 
-            virtual void SetUp()
-            {
-            }
+        virtual void SetUp()
+        {
+        }
 
-            virtual void TearDown()
-            {
-            }
-    };
+        virtual void TearDown()
+        {
+        }
+};
 
-    TEST_F(TestCLASS_NAME, test_LOWER_CLASS_NAME)
-    {
-        EXPECT_EQ(true, true);
-    }
+TEST_F(TestCLASS_NAME, test_LOWER_CLASS_NAME)
+{
+    EXPECT_EQ(true, true);
+}
 
-    TEST_F(TestCLASS_NAME, test_LOWER_CLASS_NAME_interactive)
-    {
-        if (sihd::util::term::is_interactive() == false)
-            GTEST_SKIP_("requires interaction");
-    }
+TEST_F(TestCLASS_NAME, test_LOWER_CLASS_NAME_interactive)
+{
+    if (sihd::util::term::is_interactive() == false)
+        GTEST_SKIP_("requires interaction");
+}
 
-    TEST_F(TestCLASS_NAME, test_LOWER_CLASS_NAME_file)
-    {
-        sihd::util::TmpDir tmp_dir;
-    }
+TEST_F(TestCLASS_NAME, test_LOWER_CLASS_NAME_file)
+{
+    sihd::util::TmpDir tmp_dir;
+}
+
 }

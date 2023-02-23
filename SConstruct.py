@@ -560,7 +560,8 @@ def _add_lib_type_to_modules_options():
     global modules_options
     to_append = []
     for option in modules_options:
-        to_append.append(f"{option}-{libtype}")
+        if option != libtype:
+            to_append.append(f"{option}-{libtype}")
     modules_options += to_append
 
 _add_lib_type_to_modules_options()
@@ -572,7 +573,8 @@ if verbose:
 def get_compilation_options(conf, key):
     ret = []
     for option in modules_options:
-        ret += conf.get(f"{option}-{key}", [])
+        val = conf.get(f"{option}-{key}", [])
+        ret += val
     return ret
 
 def create_module_env(conf, depends = [], append_depends_libs = True, append_depends_defines = True):
@@ -581,6 +583,7 @@ def create_module_env(conf, depends = [], append_depends_libs = True, append_dep
     # get platform dependent libs
     libs = modules.get_module_libs(build_modules, modname)
     libs += get_compilation_options(conf, "libs")
+    print(libs)
     # add flag
     flags = conf.get("flags", [])
     flags += get_compilation_options(conf, "flags")
