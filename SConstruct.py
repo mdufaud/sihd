@@ -583,7 +583,6 @@ def create_module_env(conf, depends = [], append_depends_libs = True, append_dep
     # get platform dependent libs
     libs = modules.get_module_libs(build_modules, modname)
     libs += get_compilation_options(conf, "libs")
-    print(libs)
     # add flag
     flags = conf.get("flags", [])
     flags += get_compilation_options(conf, "flags")

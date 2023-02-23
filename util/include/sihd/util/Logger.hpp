@@ -7,17 +7,22 @@
 #include <fmt/format.h>
 #include <fmt/printf.h>
 
+#include <sihd/util/Location.hpp>
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/macro.hpp>
 
 #if SIHD_LOGGING_OFF
+
 # define SIHD_NEW_LOGGER(name)
 # define SIHD_LOGGER
 # define SIHD_LOG_FORMAT(level, message, ...)
 # define SIHD_LOG(logger, level, message)
 # define SIHD_CERR(message)
 # define SIHD_COUT(message)
+# define SIHD_TRACE(message)
+
 #else
+
 # define SIHD_COUT(message, ...) fmt::print(message, ##__VA_ARGS__);
 # define SIHD_COUTF(message, ...) fmt::print(#message " = {}\n", message);
 # define SIHD_CERR(message, ...) fmt::print(stderr, message, ##__VA_ARGS__);
@@ -37,15 +42,15 @@
 
 # define SIHD_LOGGER extern sihd::util::Logger __sihd_logger__;
 # define SIHD_NEW_LOGGER(name) sihd::util::Logger __sihd_logger__(name);
-#endif
 
-#if SIHD_TRACE_OFF || SIHD_LOGGING_OFF
-# define SIHD_TRACE(message)
-# define SIHD_TRACEF(message)
-#else
-# define SIHD_TRACE(message, ...) SIHD_LOG(debug, "TRACE[" __SIHD_LOC__ "] " message, ##__VA_ARGS__);
-# define SIHD_TRACEF(message) SIHD_TRACE(#message " = {}", message);
-# define SIHD_TRACE_FORMAT(message, ...) SIHD_LOG_FORMAT(debug, "TRACE[" __SIHD_LOC__ "] " message, ##__VA_ARGS__);
+# if SIHD_TRACE_OFF
+#  define SIHD_TRACE(message)
+# else
+#  define SIHD_TRACE(message, ...) SIHD_LOG(debug, "TRACE[" __SIHD_LOC__ "] " message, ##__VA_ARGS__);
+#  define SIHD_TRACEF(message) SIHD_TRACE(#message " = {}", message);
+#  define SIHD_TRACE_FORMAT(message, ...) SIHD_LOG_FORMAT(debug, "TRACE[" __SIHD_LOC__ "] " message, ##__VA_ARGS__);
+# endif
+
 #endif
 
 namespace sihd::util
