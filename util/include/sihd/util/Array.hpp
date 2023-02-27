@@ -118,11 +118,23 @@ class Array: public IArray,
 
         virtual ~Array() { this->delete_buffer(); };
 
-        operator bool() const { return _buf_ptr != nullptr; }
-
         /*********************************************************************/
         /* information */
         /*********************************************************************/
+
+        operator bool() const { return _buf_ptr != nullptr; }
+
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        operator std::string() const
+        {
+            return std::string(this->data(), this->byte_size());
+        }
+
+        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
+        operator std::string_view() const
+        {
+            return std::string_view(this->data(), this->byte_size());
+        }
 
         uint8_t *buf() { return (uint8_t *)_buf_ptr; }
         const uint8_t *buf() const { return (uint8_t *)_buf_ptr; }
@@ -390,12 +402,12 @@ class Array: public IArray,
 
         std::string cpp_str() const
         {
-            return _buf_ptr != nullptr ? std::string((char *)_buf_ptr, this->byte_size()) : "";
+            return _buf_ptr != nullptr ? std::string((const char *)_buf_ptr, this->byte_size()) : "";
         }
 
         std::string_view cpp_str_view() const
         {
-            return _buf_ptr != nullptr ? std::string_view((char *)_buf_ptr, this->byte_size()) : "";
+            return _buf_ptr != nullptr ? std::string_view((const char *)_buf_ptr, this->byte_size()) : "";
         }
 
         /*********************************************************************/

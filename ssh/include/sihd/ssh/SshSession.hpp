@@ -1,8 +1,7 @@
 #ifndef __SIHD_SSH_SSHSESSION_HPP__
 #define __SIHD_SSH_SSHSESSION_HPP__
 
-#include <memory>
-
+#pragma message("TODO forward enum")
 #include <libssh/libssh.h>
 
 #include <sihd/ssh/Sftp.hpp>
@@ -14,17 +13,6 @@
 
 namespace sihd::ssh
 {
-
-struct SshKeyHashDeleter
-{
-        void operator()(uint8_t *ptr)
-        {
-            if (ptr != nullptr)
-                ssh_clean_pubkey_hash(&ptr);
-        }
-};
-
-using SshKeyHash = std::unique_ptr<uint8_t, SshKeyHashDeleter>;
 
 class SshSession
 {
@@ -51,13 +39,13 @@ class SshSession
         {
                 AuthMethods(int m): methods(m) {}
 
-                bool unknown() const { return methods == 0; }
-                bool none() const { return methods & SSH_AUTH_METHOD_NONE; }
-                bool password() const { return methods & SSH_AUTH_METHOD_PASSWORD; }
-                bool public_key() const { return methods & SSH_AUTH_METHOD_PUBLICKEY; }
-                bool host_based() const { return methods & SSH_AUTH_METHOD_HOSTBASED; }
-                bool interactive() const { return methods & SSH_AUTH_METHOD_INTERACTIVE; }
-                bool gss_api() const { return methods & SSH_AUTH_METHOD_GSSAPI_MIC; }
+                bool unknown() const;
+                bool none() const;
+                bool password() const;
+                bool public_key() const;
+                bool host_based() const;
+                bool interactive() const;
+                bool gss_api() const;
 
                 std::string str() const;
 
@@ -69,11 +57,11 @@ class SshSession
         {
                 AuthState(int st): status(st) {}
 
-                bool error() const { return status == SSH_AUTH_ERROR; }
-                bool denied() const { return status == SSH_AUTH_DENIED; }
-                bool partial() const { return status == SSH_AUTH_PARTIAL; }
-                bool success() const { return status == SSH_AUTH_SUCCESS; }
-                bool again() const { return status == SSH_AUTH_AGAIN; }
+                bool error() const;
+                bool denied() const;
+                bool partial() const;
+                bool success() const;
+                bool again() const;
 
                 const char *str() const;
 
@@ -107,17 +95,17 @@ class SshSession
 
         std::string get_banner();
 
-        ssh_session session() const { return _ssh_session_ptr; }
+        ssh_session_struct *session() const { return _ssh_session_ptr; }
         const char *error() const;
         int error_code() const;
 
     protected:
 
     private:
-        bool _set(const char *from, ssh_options_e option, const void *value);
+        bool _set(const char *from, enum ssh_options_e option, const void *value);
         bool _init_scp(SshScp & scp);
 
-        ssh_session _ssh_session_ptr;
+        ssh_session_struct *_ssh_session_ptr;
         bool _auth_none_once;
 };
 

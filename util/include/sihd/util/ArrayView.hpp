@@ -129,13 +129,13 @@ class ArrayView: public IArrayView
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
         operator std::string() const
         {
-            return std::string(data(), byte_size());
+            return std::string(this->data(), this->byte_size());
         }
 
         template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
         operator std::string_view() const
         {
-            return std::string_view(data(), byte_size());
+            return std::string_view(this->data(), this->byte_size());
         }
 
         const uint8_t *buf() const { return (uint8_t *)_buf_ptr; }
@@ -245,12 +245,12 @@ class ArrayView: public IArrayView
 
         std::string cpp_str() const
         {
-            return _buf_ptr != nullptr ? std::string((char *)_buf_ptr, this->byte_size()) : "";
+            return _buf_ptr != nullptr ? std::string((const char *)_buf_ptr, this->byte_size()) : "";
         }
 
         std::string_view cpp_str_view() const
         {
-            return _buf_ptr != nullptr ? std::string_view((char *)_buf_ptr, this->byte_size()) : "";
+            return _buf_ptr != nullptr ? std::string_view((const char *)_buf_ptr, this->byte_size()) : "";
         }
 
         /*********************************************************************/

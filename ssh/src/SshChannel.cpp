@@ -1,4 +1,7 @@
+#include <libssh/libssh.h>
+
 #include <sihd/ssh/SshChannel.hpp>
+
 #include <sihd/util/Logger.hpp>
 
 #define WHILE_SSH_AGAIN_AND_RETURN(method)                                                                             \
@@ -16,7 +19,7 @@ namespace sihd::ssh
 
 SIHD_LOGGER;
 
-SshChannel::SshChannel(ssh_channel channel): _ssh_channel_ptr(channel) {}
+SshChannel::SshChannel(ssh_channel_struct *channel): _ssh_channel_ptr(channel) {}
 
 SshChannel::~SshChannel()
 {
@@ -34,7 +37,7 @@ void SshChannel::clear_channel()
     }
 }
 
-void SshChannel::set_channel(ssh_channel channel)
+void SshChannel::set_channel(ssh_channel_struct *channel)
 {
     this->clear_channel();
     _ssh_channel_ptr = channel;
@@ -164,7 +167,7 @@ void SshChannel::set_blocking(bool active)
     ssh_channel_set_blocking(_ssh_channel_ptr, (int)active);
 }
 
-ssh_session SshChannel::session() const
+ssh_session_struct *SshChannel::session() const
 {
     return ssh_channel_get_session(_ssh_channel_ptr);
 }
@@ -212,51 +215,45 @@ bool SshChannel::is_eof()
     return ssh_channel_is_eof(_ssh_channel_ptr) != 0;
 }
 
-int SshChannel::read(char *buffer, size_t size)
+int SshChannel::read(sihd::util::IArray & array)
 {
-    int ret = ssh_channel_read(_ssh_channel_ptr, buffer, size, 0);
-    if (ret >= 0)
-        buffer[ret] = 0;
+    int ret = ssh_channel_read(_ssh_channel_ptr, array.buf(), array.byte_capacity(), 0);
+    array.byte_resize(std::max(0, ret));
     return ret;
 }
 
-int SshChannel::read_stderr(char *buffer, size_t size)
+int SshChannel::read_stderr(sihd::util::IArray & array)
 {
-    int ret = ssh_channel_read(_ssh_channel_ptr, buffer, size, 1);
-    if (ret >= 0)
-        buffer[ret] = 0;
+    int ret = ssh_channel_read(_ssh_channel_ptr, array.buf(), array.byte_capacity(), 1);
+    array.byte_resize(std::max(0, ret));
     return ret;
 }
 
-int SshChannel::read_timeout(char *buffer, size_t size, int timeout_ms)
+int SshChannel::read_timeout(sihd::util::IArray & array, int timeout_ms)
 {
-    int ret = ssh_channel_read_timeout(_ssh_channel_ptr, buffer, size, 0, timeout_ms);
-    if (ret >= 0)
-        buffer[ret] = 0;
+    int ret = ssh_channel_read_timeout(_ssh_channel_ptr, array.buf(), array.byte_capacity(), 0, timeout_ms);
+    array.byte_resize(std::max(0, ret));
     return ret;
 }
 
-int SshChannel::read_timeout_stderr(char *buffer, size_t size, int timeout_ms)
+int SshChannel::read_timeout_stderr(sihd::util::IArray & array, int timeout_ms)
 {
-    int ret = ssh_channel_read_timeout(_ssh_channel_ptr, buffer, size, 1, timeout_ms);
-    if (ret >= 0)
-        buffer[ret] = 0;
+    int ret = ssh_channel_read_timeout(_ssh_channel_ptr, array.buf(), array.byte_capacity(), 1, timeout_ms);
+    array.byte_resize(std::max(0, ret));
     return ret;
 }
 
-int SshChannel::read_nonblock(char *buffer, size_t size)
+int SshChannel::read_nonblock(sihd::util::IArray & array)
 {
-    int ret = ssh_channel_read_nonblocking(_ssh_channel_ptr, buffer, size, 0);
-    if (ret >= 0)
-        buffer[ret] = 0;
+    int ret = ssh_channel_read_nonblocking(_ssh_channel_ptr, array.buf(), array.byte_capacity(), 0);
+    array.byte_resize(std::max(0, ret));
     return ret;
 }
 
-int SshChannel::read_nonblock_stderr(char *buffer, size_t size)
+int SshChannel::read_nonblock_stderr(sihd::util::IArray & array)
 {
-    int ret = ssh_channel_read_nonblocking(_ssh_channel_ptr, buffer, size, 1);
-    if (ret >= 0)
-        buffer[ret] = 0;
+    int ret = ssh_channel_read_nonblocking(_ssh_channel_ptr, array.buf(), array.byte_capacity(), 1);
+    array.byte_resize(std::max(0, ret));
     return ret;
 }
 

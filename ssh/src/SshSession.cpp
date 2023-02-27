@@ -1,10 +1,31 @@
-#include <sihd/ssh/SshSession.hpp>
+#include <memory>
+
+#include <libssh/libssh.h>
+
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
+#include <sihd/ssh/SshSession.hpp>
+
 namespace sihd::ssh
 {
+
+namespace
+{
+
+struct SshKeyHashDeleter
+{
+        void operator()(uint8_t *ptr)
+        {
+            if (ptr != nullptr)
+                ssh_clean_pubkey_hash(&ptr);
+        }
+};
+
+using SshKeyHash = std::unique_ptr<uint8_t, SshKeyHashDeleter>;
+
+} // namespace
 
 SIHD_LOGGER;
 
@@ -389,6 +410,41 @@ std::string SshSession::AuthMethods::str() const
     return ret;
 }
 
+bool SshSession::AuthMethods::unknown() const
+{
+    return methods == 0;
+}
+
+bool SshSession::AuthMethods::none() const
+{
+    return methods & SSH_AUTH_METHOD_NONE;
+}
+
+bool SshSession::AuthMethods::password() const
+{
+    return methods & SSH_AUTH_METHOD_PASSWORD;
+}
+
+bool SshSession::AuthMethods::public_key() const
+{
+    return methods & SSH_AUTH_METHOD_PUBLICKEY;
+}
+
+bool SshSession::AuthMethods::host_based() const
+{
+    return methods & SSH_AUTH_METHOD_HOSTBASED;
+}
+
+bool SshSession::AuthMethods::interactive() const
+{
+    return methods & SSH_AUTH_METHOD_INTERACTIVE;
+}
+
+bool SshSession::AuthMethods::gss_api() const
+{
+    return methods & SSH_AUTH_METHOD_GSSAPI_MIC;
+}
+
 const char *SshSession::AuthState::str() const
 {
     switch (this->status)
@@ -406,6 +462,31 @@ const char *SshSession::AuthState::str() const
         default:
             return "unknown";
     }
+}
+
+bool SshSession::AuthState::error() const
+{
+    return status == SSH_AUTH_ERROR;
+}
+
+bool SshSession::AuthState::denied() const
+{
+    return status == SSH_AUTH_DENIED;
+}
+
+bool SshSession::AuthState::partial() const
+{
+    return status == SSH_AUTH_PARTIAL;
+}
+
+bool SshSession::AuthState::success() const
+{
+    return status == SSH_AUTH_SUCCESS;
+}
+
+bool SshSession::AuthState::again() const
+{
+    return status == SSH_AUTH_AGAIN;
 }
 
 } // namespace sihd::ssh

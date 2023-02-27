@@ -1,19 +1,22 @@
-#include <sihd/ssh/SshKey.hpp>
+#include <libssh/libssh.h>
+
 #include <sihd/util/Logger.hpp>
+
+#include <sihd/ssh/SshKey.hpp>
 
 namespace sihd::ssh
 {
 
 SIHD_NEW_LOGGER("sihd::ssh");
 
-SshKey::SshKey(ssh_key key): _ssh_key_ptr(key) {}
+SshKey::SshKey(ssh_key_struct *key): _ssh_key_ptr(key) {}
 
 SshKey::~SshKey()
 {
     this->clear_key();
 }
 
-void SshKey::set_key(ssh_key key)
+void SshKey::set_key(ssh_key_struct *key)
 {
     this->clear_key();
     _ssh_key_ptr = key;

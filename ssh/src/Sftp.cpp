@@ -1,8 +1,14 @@
 #include <fcntl.h>
-#include <sihd/ssh/Sftp.hpp>
+
+#include <cstring>
+
+#include <libssh/libssh.h>
+#include <libssh/sftp.h>
+
 #include <sihd/util/File.hpp>
 #include <sihd/util/Logger.hpp>
-#include <string.h>
+
+#include <sihd/ssh/Sftp.hpp>
 
 #ifndef SIHD_SSH_SFTP_BUFSIZE
 # define SIHD_SSH_SFTP_BUFSIZE 4096
@@ -11,9 +17,38 @@
 namespace sihd::ssh
 {
 
+namespace
+{
+
+struct SftpFileDeleter
+{
+        void operator()(sftp_file_struct *ptr)
+        {
+            // TODO log error if ret != SSH_NO_ERROR
+            if (ptr != nullptr)
+                sftp_close(ptr);
+        }
+};
+
+using SftpFile = std::unique_ptr<sftp_file_struct, SftpFileDeleter>;
+
+struct SftpDirDeleter
+{
+        void operator()(sftp_dir_struct *ptr)
+        {
+            // TODO log error if ret != SSH_NO_ERROR
+            if (ptr != nullptr)
+                sftp_closedir(ptr);
+        }
+};
+
+using SftpDir = std::unique_ptr<sftp_dir_struct, SftpDirDeleter>;
+
+} // namespace
+
 SIHD_LOGGER;
 
-Sftp::Sftp(ssh_session session): _ssh_session_ptr(session), _sftp_session_ptr(nullptr) {}
+Sftp::Sftp(ssh_session_struct *session): _ssh_session_ptr(session), _sftp_session_ptr(nullptr) {}
 
 Sftp::~Sftp()
 {
@@ -239,7 +274,7 @@ const char *Sftp::error()
     }
 }
 
-SftpAttribute::SftpAttribute(sftp_attributes ptr): attr(ptr) {}
+SftpAttribute::SftpAttribute(sftp_attributes_struct *ptr): attr(ptr) {}
 
 SftpAttribute::SftpAttribute(SftpAttribute && sftp_attr)
 {

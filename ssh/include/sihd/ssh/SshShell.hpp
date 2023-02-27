@@ -1,11 +1,11 @@
 #ifndef __SIHD_SSH_SSHSHELL_HPP__
 #define __SIHD_SSH_SSHSHELL_HPP__
 
-#include <libssh/libssh.h>
-
 #include <string>
 
 #include <sihd/ssh/SshChannel.hpp>
+
+struct ssh_session_struct;
 
 namespace sihd::ssh
 {
@@ -13,8 +13,11 @@ namespace sihd::ssh
 class SshShell
 {
     public:
-        SshShell(ssh_session session);
+        SshShell(ssh_session_struct *session);
         virtual ~SshShell();
+
+        SshShell(const SshShell & other) = delete;
+        SshShell & operator=(const SshShell &) = delete;
 
         bool open(bool x11 = false);
         void close();
@@ -25,7 +28,7 @@ class SshShell
     protected:
 
     private:
-        ssh_session _ssh_session_ptr;
+        ssh_session_struct *_ssh_session_ptr;
         SshChannel _channel;
 };
 

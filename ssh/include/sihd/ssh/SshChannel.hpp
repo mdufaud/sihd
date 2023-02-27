@@ -1,10 +1,12 @@
 #ifndef __SIHD_SSH_SSHCHANNEL_HPP__
 #define __SIHD_SSH_SSHCHANNEL_HPP__
 
-#include <libssh/libssh.h>
-
 #include <sihd/util/ArrayView.hpp>
+#include <sihd/util/IArray.hpp>
 #include <sihd/util/platform.hpp>
+
+struct ssh_channel_struct;
+struct ssh_session_struct;
 
 namespace sihd::ssh
 {
@@ -12,10 +14,10 @@ namespace sihd::ssh
 class SshChannel
 {
     public:
-        SshChannel(ssh_channel channel = nullptr);
+        SshChannel(ssh_channel_struct *channel = nullptr);
         virtual ~SshChannel();
 
-        void set_channel(ssh_channel channel);
+        void set_channel(ssh_channel_struct *channel);
         void clear_channel();
 
         void set_blocking(bool active);
@@ -53,13 +55,12 @@ class SshChannel
         int poll_timeout(int timeout_ms);
         int poll_timeout_stderr(int timeout_ms);
 
-#pragma message("TODO - change to IArray")
-        int read(char *buffer, size_t size);
-        int read_stderr(char *buffer, size_t size);
-        int read_timeout(char *buffer, size_t size, int timeout_ms);
-        int read_timeout_stderr(char *buffer, size_t size, int timeout_ms);
-        int read_nonblock(char *buffer, size_t size);
-        int read_nonblock_stderr(char *buffer, size_t size);
+        int read(sihd::util::IArray & array);
+        int read_stderr(sihd::util::IArray & array);
+        int read_timeout(sihd::util::IArray & array, int timeout_ms);
+        int read_timeout_stderr(sihd::util::IArray & array, int timeout_ms);
+        int read_nonblock(sihd::util::IArray & array);
+        int read_nonblock_stderr(sihd::util::IArray & array);
 
         int write(sihd::util::ArrCharView view);
         int write_stderr(sihd::util::ArrCharView view);
@@ -72,15 +73,15 @@ class SshChannel
 
         int exit_status();
 
-        ssh_channel channel() const { return _ssh_channel_ptr; }
-        ssh_session session() const;
+        ssh_channel_struct *channel() const { return _ssh_channel_ptr; }
+        ssh_session_struct *session() const;
 
     protected:
 
     private:
         void _init_channel_if_none();
 
-        ssh_channel _ssh_channel_ptr;
+        ssh_channel_struct *_ssh_channel_ptr;
 };
 
 } // namespace sihd::ssh

@@ -1,8 +1,12 @@
 #ifndef __SIHD_SSH_SSHKEY_HPP__
 #define __SIHD_SSH_SSHKEY_HPP__
 
-#include <libssh/libssh.h>
 #include <string>
+
+#pragma message("TODO forward enum")
+#include <libssh/libssh.h>
+
+struct ssh_key_struct;
 
 namespace sihd::ssh
 {
@@ -10,7 +14,7 @@ namespace sihd::ssh
 class SshKey
 {
     public:
-        SshKey(ssh_key key = nullptr);
+        SshKey(ssh_key_struct *key = nullptr);
         virtual ~SshKey();
 
         static enum ssh_keytypes_e type_from_name(std::string_view name);
@@ -38,10 +42,10 @@ class SshKey
         enum ssh_keytypes_e type() const;
         bool is_public() const;
         bool is_private() const;
-        ssh_key key() const { return _ssh_key_ptr; }
+        ssh_key_struct *key() const { return _ssh_key_ptr; }
 
         // takes ownership
-        void set_key(ssh_key key);
+        void set_key(ssh_key_struct *key);
         void clear_key();
 
     protected:
@@ -49,7 +53,7 @@ class SshKey
     private:
         void _new_key();
 
-        ssh_key _ssh_key_ptr;
+        ssh_key_struct *_ssh_key_ptr;
 };
 
 } // namespace sihd::ssh

@@ -1,46 +1,28 @@
 #ifndef __SIHD_SSH_SFTP_HPP__
 #define __SIHD_SSH_SFTP_HPP__
 
-#include <libssh/libssh.h>
-#include <libssh/sftp.h>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
 
+struct sftp_file_struct;
+struct sftp_attributes_struct;
+struct ssh_session_struct;
+struct sftp_session_struct;
+
 namespace sihd::ssh
 {
-
-struct SftpFileDeleter
-{
-        void operator()(sftp_file_struct *ptr)
-        {
-            // TODO log error if ret != SSH_NO_ERROR
-            if (ptr != nullptr)
-                sftp_close(ptr);
-        }
-};
-
-using SftpFile = std::unique_ptr<sftp_file_struct, SftpFileDeleter>;
-
-struct SftpDirDeleter
-{
-        void operator()(sftp_dir_struct *ptr)
-        {
-            // TODO log error if ret != SSH_NO_ERROR
-            if (ptr != nullptr)
-                sftp_closedir(ptr);
-        }
-};
-
-using SftpDir = std::unique_ptr<sftp_dir_struct, SftpDirDeleter>;
 
 class SftpAttribute
 {
     public:
-        SftpAttribute(sftp_attributes ptr);
+        SftpAttribute(sftp_attributes_struct *ptr);
         SftpAttribute(SftpAttribute && sftp_attr);
         ~SftpAttribute();
+
+        SftpAttribute(const SftpAttribute & other) = delete;
+        SftpAttribute & operator=(const SftpAttribute &) = delete;
 
         const char *name() const;
         bool is_dir() const;
@@ -48,14 +30,17 @@ class SftpAttribute
         bool is_link() const;
         uint64_t size() const;
 
-        sftp_attributes attr;
+        sftp_attributes_struct *attr;
 };
 
 class Sftp
 {
     public:
-        Sftp(ssh_session session);
+        Sftp(ssh_session_struct *session);
         virtual ~Sftp();
+
+        Sftp(const Sftp & other) = delete;
+        Sftp & operator=(const Sftp &) = delete;
 
         bool open();
         void close();
@@ -83,8 +68,8 @@ class Sftp
     protected:
 
     private:
-        ssh_session _ssh_session_ptr;
-        sftp_session _sftp_session_ptr;
+        ssh_session_struct *_ssh_session_ptr;
+        sftp_session_struct *_sftp_session_ptr;
 };
 
 } // namespace sihd::ssh

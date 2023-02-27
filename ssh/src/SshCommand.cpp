@@ -1,14 +1,17 @@
-#include <sihd/ssh/SshCommand.hpp>
+#include <libssh/callbacks.h>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/time.hpp>
+
+#include <sihd/ssh/SshCommand.hpp>
 
 namespace sihd::ssh
 {
 
 SIHD_LOGGER;
 
-int SshCommand::ssh_command_channel_data_callback(ssh_session session,
-                                                  ssh_channel channel,
+int SshCommand::ssh_command_channel_data_callback(ssh_session_struct *session,
+                                                  ssh_channel_struct *channel,
                                                   void *data,
                                                   uint32_t len,
                                                   int is_stderr,
@@ -21,8 +24,8 @@ int SshCommand::ssh_command_channel_data_callback(ssh_session session,
     return (int)len;
 }
 
-void SshCommand::ssh_command_exit_signal_callback(ssh_session session,
-                                                  ssh_channel channel,
+void SshCommand::ssh_command_exit_signal_callback(ssh_session_struct *session,
+                                                  ssh_channel_struct *channel,
                                                   const char *signal,
                                                   int core,
                                                   const char *errmsg,
@@ -36,8 +39,8 @@ void SshCommand::ssh_command_exit_signal_callback(ssh_session session,
     sshcommand->_callback_exit_signal(signal, core, errmsg);
 }
 
-void SshCommand::ssh_command_exit_status_callback(ssh_session session,
-                                                  ssh_channel channel,
+void SshCommand::ssh_command_exit_status_callback(ssh_session_struct *session,
+                                                  ssh_channel_struct *channel,
                                                   int exit_status,
                                                   void *userdata)
 {
@@ -47,9 +50,10 @@ void SshCommand::ssh_command_exit_status_callback(ssh_session session,
     sshcommand->_callback_exit_status(exit_status);
 }
 
-SshCommand::SshCommand(ssh_session session): output_handler(nullptr), _ssh_session_ptr(session), _stop(false)
+SshCommand::SshCommand(ssh_session_struct *session): output_handler(nullptr), _ssh_session_ptr(session), _stop(false)
 {
     this->_reset_command_status();
+    _ssh_callbacks_ptr = std::make_unique<struct ssh_channel_callbacks_struct>();
 }
 
 SshCommand::~SshCommand()
@@ -111,13 +115,13 @@ bool SshCommand::_execute(std::string_view cmd, bool async)
         _channel.clear_channel();
         return false;
     }
-    memset(&_ssh_callbacks, 0, sizeof(_ssh_callbacks));
-    _ssh_callbacks.userdata = (void *)this;
-    _ssh_callbacks.channel_data_function = SshCommand::ssh_command_channel_data_callback;
-    _ssh_callbacks.channel_exit_signal_function = SshCommand::ssh_command_exit_signal_callback;
-    _ssh_callbacks.channel_exit_status_function = SshCommand::ssh_command_exit_status_callback;
-    ssh_callbacks_init(&_ssh_callbacks);
-    if (ssh_set_channel_callbacks(_channel.channel(), &_ssh_callbacks) != SSH_OK)
+    memset(_ssh_callbacks_ptr.get(), 0, sizeof(struct ssh_channel_callbacks_struct));
+    _ssh_callbacks_ptr->userdata = (void *)this;
+    _ssh_callbacks_ptr->channel_data_function = SshCommand::ssh_command_channel_data_callback;
+    _ssh_callbacks_ptr->channel_exit_signal_function = SshCommand::ssh_command_exit_signal_callback;
+    _ssh_callbacks_ptr->channel_exit_status_function = SshCommand::ssh_command_exit_status_callback;
+    ssh_callbacks_init(_ssh_callbacks_ptr.get());
+    if (ssh_set_channel_callbacks(_channel.channel(), _ssh_callbacks_ptr.get()) != SSH_OK)
     {
         SIHD_LOG(error, "SshCommand: failed to set callbacks to the channel");
         _channel.clear_channel();

@@ -1,13 +1,17 @@
-#include <sihd/ssh/SshShell.hpp>
+#include <libssh/libssh.h>
+
+#include <sihd/util/Array.hpp>
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
+
+#include <sihd/ssh/SshShell.hpp>
 
 namespace sihd::ssh
 {
 
 SIHD_LOGGER;
 
-SshShell::SshShell(ssh_session session): _ssh_session_ptr(session) {}
+SshShell::SshShell(ssh_session_struct *session): _ssh_session_ptr(session) {}
 
 SshShell::~SshShell() {}
 
@@ -55,8 +59,8 @@ bool SshShell::read_loop()
     reader.set_read_buffsize(1);
     reader.set_delimiter_in_line(true);
     sihd::util::ArrCharView view;
-    size_t bufsize = 4096;
-    char buf[bufsize + 1];
+    sihd::util::ArrChar buf;
+    buf.reserve(4096);
     int nbytes;
     int nwritten;
     bool ret = true;
@@ -82,17 +86,17 @@ bool SshShell::read_loop()
 
         if (out_channels[0] != nullptr)
         {
-            nbytes = _channel.read(buf, bufsize);
+            nbytes = _channel.read(buf);
             if (nbytes < 0)
             {
-                SIHD_LOG(error, "SshShell: error reading channel");
-                ret = false;
+                // might be just user typed $> exit
+                // SIHD_LOG(error, "SshShell: error reading channel");
+                // ret = false;
                 break;
             }
             if (nbytes > 0)
             {
-                buf[nbytes] = 0;
-                std::string_view view(buf, nbytes);
+                std::string_view view = buf;
                 fmt::print("{}", view);
                 fflush(stdout);
             }

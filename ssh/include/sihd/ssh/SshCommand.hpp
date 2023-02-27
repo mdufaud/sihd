@@ -1,9 +1,8 @@
 #ifndef __SIHD_SSH_SSHCOMMAND_HPP__
 #define __SIHD_SSH_SSHCOMMAND_HPP__
 
+#include <memory>
 #include <string_view>
-
-#include <libssh/callbacks.h>
 
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/IHandler.hpp>
@@ -11,14 +10,21 @@
 
 #include <sihd/ssh/SshChannel.hpp>
 
+struct ssh_channel_callbacks_struct;
+struct ssh_channel_struct;
+struct ssh_session_struct;
+
 namespace sihd::ssh
 {
 
 class SshCommand
 {
     public:
-        SshCommand(ssh_session session);
+        SshCommand(ssh_session_struct *session);
         virtual ~SshCommand();
+
+        SshCommand(const SshCommand & other) = delete;
+        SshCommand & operator=(const SshCommand &) = delete;
 
         bool execute(std::string_view cmd);
         bool execute_async(std::string_view cmd);
@@ -39,21 +45,23 @@ class SshCommand
         void _callback_exit_signal(const char *signal, int core, const char *errmsg);
         void _callback_channel_output(char *buf, size_t size, bool is_stderr);
 
-        static int ssh_command_channel_data_callback(ssh_session session,
-                                                     ssh_channel channel,
+        static int ssh_command_channel_data_callback(ssh_session_struct *session,
+                                                     ssh_channel_struct *channel,
                                                      void *data,
                                                      uint32_t len,
                                                      int is_stderr,
                                                      void *userdata);
-        static void ssh_command_exit_signal_callback(ssh_session session,
-                                                     ssh_channel channel,
+        static void ssh_command_exit_signal_callback(ssh_session_struct *session,
+                                                     ssh_channel_struct *channel,
                                                      const char *signal,
                                                      int core,
                                                      const char *errmsg,
                                                      const char *lang,
                                                      void *userdata);
-        static void
-            ssh_command_exit_status_callback(ssh_session session, ssh_channel channel, int exit_status, void *userdata);
+        static void ssh_command_exit_status_callback(ssh_session_struct *session,
+                                                     ssh_channel_struct *channel,
+                                                     int exit_status,
+                                                     void *userdata);
 
     private:
         bool _execute(std::string_view cmd, bool async);
@@ -67,12 +75,12 @@ class SshCommand
                 std::string err_msg;
         };
         CommandStatus _command_status;
-        struct ssh_channel_callbacks_struct _ssh_callbacks;
+        std::unique_ptr<struct ssh_channel_callbacks_struct> _ssh_callbacks_ptr;
 
         SshChannel _channel;
         sihd::util::Waitable _waitable;
 
-        ssh_session _ssh_session_ptr;
+        ssh_session_struct *_ssh_session_ptr;
         bool _stop;
 };
 
