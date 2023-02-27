@@ -1,9 +1,6 @@
 #ifndef __SIHD_SSH_SSHSESSION_HPP__
 #define __SIHD_SSH_SSHSESSION_HPP__
 
-#pragma message("TODO forward enum")
-#include <libssh/libssh.h>
-
 #include <sihd/ssh/Sftp.hpp>
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshCommand.hpp>
@@ -102,7 +99,6 @@ class SshSession
     protected:
 
     private:
-        bool _set(const char *from, enum ssh_options_e option, const void *value);
         bool _init_scp(SshScp & scp);
 
         ssh_session_struct *_ssh_session_ptr;

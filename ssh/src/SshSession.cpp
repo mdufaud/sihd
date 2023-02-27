@@ -11,6 +11,8 @@
 namespace sihd::ssh
 {
 
+SIHD_LOGGER;
+
 namespace
 {
 
@@ -25,9 +27,15 @@ struct SshKeyHashDeleter
 
 using SshKeyHash = std::unique_ptr<uint8_t, SshKeyHashDeleter>;
 
-} // namespace
+bool anon_ssh_options_set(ssh_session_struct *session, const char *from, ssh_options_e option, const void *value)
+{
+    int r = ssh_options_set(session, option, value);
+    if (r != SSH_OK)
+        SIHD_LOG(error, "SshSession: can't set {}: {}", from, ssh_get_error(session));
+    return r == SSH_OK;
+}
 
-SIHD_LOGGER;
+} // namespace
 
 SshSession::SshSession(): _ssh_session_ptr()
 {
@@ -240,22 +248,22 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
 
 bool SshSession::set_user(std::string_view user)
 {
-    return this->_set("user", SSH_OPTIONS_USER, user.data());
+    return anon_ssh_options_set(_ssh_session_ptr, "user", SSH_OPTIONS_USER, user.data());
 }
 
 bool SshSession::set_host(std::string_view host)
 {
-    return this->_set("host", SSH_OPTIONS_HOST, host.data());
+    return anon_ssh_options_set(_ssh_session_ptr, "host", SSH_OPTIONS_HOST, host.data());
 }
 
 bool SshSession::set_port(int port)
 {
-    return this->_set("port", SSH_OPTIONS_PORT, &port);
+    return anon_ssh_options_set(_ssh_session_ptr, "port", SSH_OPTIONS_PORT, &port);
 }
 
 bool SshSession::set_verbosity(int verbosity)
 {
-    return this->_set("verbosity", SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
+    return anon_ssh_options_set(_ssh_session_ptr, "verbosity", SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 }
 
 void SshSession::set_blocking(bool active)
@@ -382,14 +390,6 @@ bool SshSession::make_channel(SshChannel & channel)
 bool SshSession::make_channel_session(SshChannel & channel)
 {
     return this->make_channel(channel) && channel.open_session();
-}
-
-bool SshSession::_set(const char *from, ssh_options_e option, const void *value)
-{
-    int r = ssh_options_set(_ssh_session_ptr, option, value);
-    if (r != SSH_OK)
-        SIHD_LOG(error, "SshSession: can't set {}: {}", from, ssh_get_error(_ssh_session_ptr));
-    return r == SSH_OK;
 }
 
 std::string SshSession::AuthMethods::str() const
