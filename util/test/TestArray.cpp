@@ -2,9 +2,9 @@
 
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Profiling.hpp>
 #include <sihd/util/array_utils.hpp>
 #include <sihd/util/container.hpp>
+#include <sihd/util/profiling.hpp>
 
 namespace test
 {
@@ -53,16 +53,28 @@ TEST_F(TestArray, test_array_perf)
     std::vector<Test> vec;
     Array<Test> arr;
 
+    Perf perf_vector("vector");
+    Perf perf_array("array");
     {
         Timeit it("vector push_back");
         for (auto i = 0; i < iterations; ++i)
+        {
+            perf_vector.begin();
             vec.push_back({i, i + 1});
+            perf_vector.end();
+        }
     }
     {
         Timeit it("array push_back");
         for (auto i = 0; i < iterations; ++i)
+        {
+            perf_array.begin();
             arr.push_back({i, i + 1});
+            perf_array.end();
+        }
     }
+    perf_vector.log();
+    perf_array.log();
     ASSERT_TRUE(arr.is_equal(vec));
     {
         Timeit it("vector access");

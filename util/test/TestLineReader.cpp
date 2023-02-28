@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Profiling.hpp>
 #include <sihd/util/TmpDir.hpp>
 #include <sihd/util/fs.hpp>
+#include <sihd/util/profiling.hpp>
 
 namespace test
 {

@@ -45,7 +45,7 @@ std::string _timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, b
     std::string s;
     struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
     bool next_step;
-    s += (timestamp > 0 ? "+" : "-");
+    s += (timestamp >= 0 ? "+" : "-");
     if ((next_step = tm.tm_year > 70))
         s += fmt::format("{}y:", tm.tm_year - 70);
     if ((next_step = next_step || tm.tm_mon > 0))

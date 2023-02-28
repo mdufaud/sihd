@@ -5,6 +5,8 @@
 #include <mutex>
 #include <thread>
 
+#include <fmt/format.h> /////////////////////////
+
 #include <sihd/util/platform.hpp>
 #include <sihd/util/time.hpp>
 
@@ -19,7 +21,6 @@ namespace sihd::util::time
 namespace
 {
 std::atomic<bool> tz_is_set = false;
-std::mutex unsafe_c_mutex;
 } // namespace
 
 time_t get_timezone()
@@ -147,10 +148,18 @@ struct timeval to_nano_tv(time_t nano)
 
 struct tm to_tm(time_t nano, bool localtime)
 {
-    std::lock_guard l(unsafe_c_mutex);
     time_t sec = nano / 1E9;
-    // make a copy
-    return localtime ? *::localtime(&sec) : *::gmtime(&sec);
+    // _r is non rentrant
+    struct tm result;
+    if (localtime)
+    {
+        if (tz_is_set.exchange(true))
+            tzset();
+        ::localtime_r(&sec, &result);
+    }
+    else
+        ::gmtime_r(&sec, &result);
+    return result;
 }
 
 time_t to_micro(time_t nano)

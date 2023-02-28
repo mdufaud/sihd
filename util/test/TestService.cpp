@@ -3,7 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ServiceController.hpp>
 
-#include <sihd/util/Profiling.hpp>
+#include <sihd/util/profiling.hpp>
 
 namespace test
 {

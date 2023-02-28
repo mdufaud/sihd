@@ -58,7 +58,10 @@ modules = {
             'rt', # shm_open...
             'uuid',
         ],
-        "windows-libs": ['rpcrt4', 'stdc++fs'],
+        "windows-libs": [
+            'rpcrt4',
+            'stdc++fs' # no emscripten trick
+        ],
         # only link dynamically fmt when no cross compiling
         "linux-dyn-libs": [
             'fmt', # get from sys lib only when compiling dynamically on linux
