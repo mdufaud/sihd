@@ -9,6 +9,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Runnable.hpp>
+#include <sihd/util/SigWatcher.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/platform.hpp>
@@ -128,12 +129,14 @@ class SimpleHttpServer: public sihd::http::HttpServer,
 static void http_test()
 {
     SimpleHttpServer server;
-    os::add_signal_handler(SIGINT, new Handler<int>([&server](int sig) {
-                               (void)sig;
-                               SIHD_LOG(info, "Stopping http server...");
-                               server.stop();
-                               SIHD_LOG(info, "Stopped http server");
-                           }));
+
+    sihd::util::SigWatcher watcher({SIGINT}, [&server](int sig) {
+        (void)sig;
+        SIHD_LOG(info, "Stopping http server...");
+        server.stop();
+        SIHD_LOG(info, "Stopped http server");
+    });
+
     std::string root_path = fs::parent(fs::parent(fs::executable_path()));
     std::string res_path = fs::combine({root_path, "etc", "sihd", "demo", "http_demo"});
     SIHD_LOG(info, "Root dir: {}", res_path);

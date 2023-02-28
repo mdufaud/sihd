@@ -1,25 +1,33 @@
 #ifndef __SIHD_UTIL_SIGWAITER_HPP__
 #define __SIHD_UTIL_SIGWAITER_HPP__
 
-#include <sihd/util/IHandler.hpp>
-#include <sihd/util/Waitable.hpp>
+#include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
 {
 
-class SigWaiter: public IHandler<int>
+class SigWaiter
 {
     public:
-        // SIGINT by default
-        SigWaiter(int sig = -1);
-        virtual ~SigWaiter();
+        struct Conf
+        {
+                int sig = -1;
+                Timestamp polling_frequency = std::chrono::milliseconds(2);
+                Timestamp timeout = 0;
+        };
+
+    public:
+        SigWaiter();
+        SigWaiter(const Conf & conf);
+        ~SigWaiter();
+
+        bool received_signal() const;
 
     protected:
-        void handle(int sig);
 
     private:
         int _sig;
-        Waitable _waitable;
+        bool _received_signal;
 };
 
 } // namespace sihd::util

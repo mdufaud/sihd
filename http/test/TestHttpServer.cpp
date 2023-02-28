@@ -5,6 +5,7 @@
 #include <sihd/util/File.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/SigWatcher.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/str.hpp>
@@ -159,10 +160,13 @@ TEST_F(TestHttpServer, test_httpserver)
         GTEST_SKIP_("requires interaction");
 
     SimpleHttpServer server;
-    os::add_signal_handler(SIGINT, new Handler<int>([&server](int sig) {
-                               (void)sig;
-                               server.stop();
-                           }));
+
+    sihd::util::SigWatcher watcher({SIGINT}, [&server](int sig) {
+        SIHD_LOG(info, "Caught signal - stopping web server");
+        (void)sig;
+        server.stop();
+    });
+
     server.set_root_dir("test/resources/mount_point");
     server.set_port(3000);
     SIHD_LOG(info, "=========================================================");

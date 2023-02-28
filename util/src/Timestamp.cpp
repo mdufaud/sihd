@@ -211,27 +211,27 @@ Timestamp::operator std::chrono::nanoseconds() const
 
 Timestamp::operator std::chrono::microseconds() const
 {
-    return time::to_duration<std::micro>(_nano);
+    return time::to_duration<std::chrono::microseconds>(_nano);
 }
 
 Timestamp::operator std::chrono::milliseconds() const
 {
-    return time::to_duration<std::milli>(_nano);
+    return time::to_duration<std::chrono::milliseconds>(_nano);
 }
 
 Timestamp::operator std::chrono::seconds() const
 {
-    return time::to_duration<std::ratio<1>>(_nano);
+    return time::to_duration<std::chrono::seconds>(_nano);
 }
 
 Timestamp::operator std::chrono::minutes() const
 {
-    return time::to_duration<std::ratio<60>>(_nano);
+    return time::to_duration<std::chrono::minutes>(_nano);
 }
 
 Timestamp::operator std::chrono::hours() const
 {
-    return time::to_duration<std::ratio<3600>>(_nano);
+    return time::to_duration<std::chrono::hours>(_nano);
 }
 
 time_t Timestamp::nanoseconds() const

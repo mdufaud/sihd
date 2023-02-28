@@ -23,24 +23,8 @@ typedef int uid_t;
 
 #endif
 
-#include <sihd/util/IHandler.hpp>
-
 namespace sihd::util::os
 {
-
-std::string signal_name(int sig);
-
-// adds a handler to be run when signal is catched
-bool add_signal_handler(int sig, IHandler<int> *handler);
-// remove and deletes all handlers attached to this signal
-bool clear_signal_handlers(int sig);
-// remove and deletes all handlers
-bool clear_signal_handlers();
-// remove a single handler - if you have the ptr to remove the handler, means you can delete it
-bool clear_signal_handler(int sig, IHandler<int> *handler);
-
-// set signal handling to default - already taken care of, do not call
-bool unhandle_signal(int sig);
 
 // syscalls linux - windows
 bool ioctl(int fd, unsigned long request, void *arg_ptr = nullptr, bool logerror = false);
@@ -61,7 +45,6 @@ bool is_run_by_valgrind();
 void *load_symbol_unload_lib(const std::string & lib_name, std::string_view sym_name);
 
 pid_t pid();
-bool kill(pid_t pid, int sig);
 
 void *load_lib(const std::string & lib_name);
 void *load_symbol(void *handle, std::string_view sym_name);

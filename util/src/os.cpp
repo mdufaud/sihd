@@ -53,16 +53,11 @@ typedef void (*sighandler_t)(int);
 
 #include <algorithm>
 #include <climits>
-#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <map>
-#include <vector>
 
-#include <sihd/util/AtExit.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Runnable.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
 
@@ -75,126 +70,6 @@ namespace sihd::util::os
 {
 
 SIHD_NEW_LOGGER("sihd::util::os");
-
-namespace
-{
-
-bool signal_used = false;
-std::mutex signal_mutex;
-std::map<int, std::list<IHandler<int> *>> map_signals_handlers;
-
-void _signal_callback(int sig)
-{
-    SIHD_LOG(debug, "Signal caught: {}", signal_name(sig));
-    std::lock_guard lock(signal_mutex);
-    for (IHandler<int> *handler : map_signals_handlers[sig])
-    {
-        handler->handle(sig);
-    }
-}
-
-} // namespace
-
-bool clear_signal_handlers(int sig)
-{
-    std::lock_guard lock(signal_mutex);
-    for (IHandler<int> *handler : map_signals_handlers[sig])
-    {
-        delete handler;
-    }
-    map_signals_handlers[sig].clear();
-    return unhandle_signal(sig);
-}
-
-bool clear_signal_handlers()
-{
-    std::lock_guard lock(signal_mutex);
-    bool ret = true;
-    for (auto & [sig, handlers_lst] : map_signals_handlers)
-    {
-        for (IHandler<int> *handler : handlers_lst)
-        {
-            delete handler;
-        }
-        handlers_lst.clear();
-        if (unhandle_signal(sig) == false)
-            ret = false;
-    }
-    map_signals_handlers.clear();
-    return ret;
-}
-
-bool clear_signal_handler(int sig, IHandler<int> *runnable)
-{
-    std::lock_guard lock(signal_mutex);
-    auto & lst = map_signals_handlers[sig];
-    auto it = std::find(lst.begin(), lst.end(), runnable);
-    if (it != lst.end())
-    {
-        lst.erase(it);
-        if (lst.empty())
-            return unhandle_signal(sig);
-        return true;
-    }
-    return false;
-}
-
-bool add_signal_handler(int sig, IHandler<int> *handler)
-{
-    sighandler_t sighandler = signal(sig, _signal_callback);
-    if (sighandler == SIG_ERR)
-    {
-        SIHD_LOG(error, "Error handling signal: {}", signal_name(sig));
-        return false;
-    }
-    std::lock_guard lock(signal_mutex);
-    map_signals_handlers[sig].push_back(handler);
-    if (signal_used == false)
-    {
-        AtExit::add_handler(new Runnable([]() -> bool {
-            clear_signal_handlers();
-            return true;
-        }));
-        AtExit::install();
-        signal_used = true;
-    }
-    return true;
-}
-
-bool unhandle_signal(int sig)
-{
-    sighandler_t handler = signal(sig, SIG_DFL);
-    if (handler == SIG_ERR)
-    {
-        SIHD_LOG(error, "Error removing signal: {}", signal_name(sig));
-        return false;
-    }
-    return true;
-}
-
-std::string signal_name(int sig)
-{
-#if !defined(__SIHD_WINDOWS__)
-    char *signame = strsignal(sig);
-    if (signame != nullptr)
-        return signame;
-#endif
-    return std::to_string(sig);
-}
-
-// utilities
-
-bool kill(pid_t pid, int sig)
-{
-#if !defined(__SIHD_WINDOWS__)
-    return ::kill(pid, sig) == 0;
-#else
-# pragma message("TODO os::kill")
-    (void)pid;
-    (void)sig;
-    return false;
-#endif
-}
 
 pid_t pid()
 {

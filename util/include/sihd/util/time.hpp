@@ -68,17 +68,15 @@ static constexpr auto to_hz = to_freq;
 static constexpr auto to_frequency = to_freq;
 
 // chrono -> nano
-template <typename T>
-constexpr std::chrono::duration<int64_t, T> to_duration(time_t nano)
+template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
+constexpr Duration to_duration(time_t nano)
 {
     // seconds -> nano / 1E9        = nano / (1E9 / 1) / 1
     // milliseconds -> nano / 1E6   = nano / (1E9 / 1E3) / 1
     // nano -> nano / 1             = nano / (1E9 / 1E9) / 1
     // min -> (nano / 1E9) / 60     = nano / (1E9 / 1) / 60
-    return std::chrono::duration<int64_t, T>(
-        (nano
-         / (std::chrono::duration<int64_t, std::nano>::period::den / std::chrono::duration<int64_t, T>::period::den))
-        / std::chrono::duration<int64_t, T>::period::num);
+    return Duration((nano / (std::chrono::duration<int64_t, std::nano>::period::den / Duration::period::den))
+                    / Duration::period::num);
 }
 
 // micro -> nano

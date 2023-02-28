@@ -146,10 +146,10 @@ class Timestamp
         // this >= from && this <= (from + offset)
         bool in_interval(Timestamp from, Timestamp offset) const;
 
-        template <typename Ratio = std::nano>
-        std::chrono::duration<int64_t, Ratio> duration() const
+        template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
+        Duration duration() const
         {
-            return time::to_duration<Ratio>(_nano);
+            return time::to_duration<Duration>(_nano);
         }
 
         time_t nanoseconds() const;

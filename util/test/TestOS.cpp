@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <sihd/util/Handler.hpp>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/os.hpp>
 
@@ -7,45 +7,22 @@ namespace test
 {
 SIHD_LOGGER;
 using namespace sihd::util;
-class TestOs: public ::testing::Test,
-              public IHandler<int>
+class TestOs: public ::testing::Test
 {
     protected:
         TestOs() { sihd::util::LoggerManager::basic(); }
 
         virtual ~TestOs() { sihd::util::LoggerManager::clear_loggers(); }
 
-        virtual void SetUp() { os::clear_signal_handlers(); }
+        virtual void SetUp() {}
 
         virtual void TearDown() {}
-
-        void handle(int sig)
-        {
-            (void)sig;
-            ++ran;
-        }
-
-        int ran = 0;
 };
 
 TEST_F(TestOs, test_os_backtrace)
 {
     ssize_t size = os::backtrace(1);
     EXPECT_GE(size, 1);
-}
-
-TEST_F(TestOs, test_os_signal)
-{
-    this->ran = 0;
-    int sig = SIGINT;
-    Handler<int> handler = Handler<int>(this);
-    EXPECT_TRUE(os::add_signal_handler(sig, &handler));
-    EXPECT_EQ(this->ran, 0);
-    raise(sig);
-    EXPECT_EQ(this->ran, 1);
-    raise(sig);
-    EXPECT_EQ(this->ran, 2);
-    EXPECT_TRUE(os::clear_signal_handler(sig, &handler));
 }
 
 TEST_F(TestOs, test_os_resources)

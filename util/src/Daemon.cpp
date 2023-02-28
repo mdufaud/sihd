@@ -8,6 +8,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/fs.hpp>
+#include <sihd/util/signal.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <windows.h>
@@ -58,38 +59,19 @@ bool Daemon::set_working_dir_path(std::string_view path)
     return true;
 }
 
-void Daemon::_handle_sig(int sig)
-{
-    if (sig == SIGTERM || sig == SIGSEGV)
-    {
-        SIHD_LOG(info, "Daemon: exit signal received: {}", os::signal_name(sig));
-        exit(0);
-    }
-#if !defined(__SIHD_WINDOWS__)
-    if (sig == SIGCHLD)
-    {
-        SIHD_LOG(debug, "Daemon: sigchild");
-        return;
-    }
-#else
-#endif
-    SIHD_LOG(info, "Daemon: signal received: {}", os::signal_name(sig));
-}
-
 bool Daemon::_handle_signals()
 {
     if (_signals_handled)
         return true;
-    // will get deleted by OS
-    IHandler<int> *handler_ptr = new Handler<int>(this, &Daemon::_handle_sig);
     bool ret = true;
-    int i = 0;
-    while (i < 64)
+    int sig = 1;
+    while (sig < 65)
     {
-        if (os::add_signal_handler(i, handler_ptr) == false)
+        if (signal::handle(sig) == false)
             ret = false;
-        ++i;
+        ++sig;
     }
+    signal::set_exit_config({.on_dump = true, .log_signal = true, .exit_with_sig_number = false});
     _signals_handled = true;
     return ret;
 }

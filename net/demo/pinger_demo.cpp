@@ -4,6 +4,7 @@
 
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/SigWatcher.hpp>
 #include <sihd/util/fs.hpp>
 
 #include <sihd/net/Pinger.hpp>
@@ -50,11 +51,11 @@ int main(int argc, char **argv)
 
     log.notice(fmt::format("Sending {} pings to {}", npings, host));
 
-    os::add_signal_handler(SIGINT, new Handler<int>([&pinger, &log](int sig) {
-                               (void)sig;
-                               log.notice("Stopping ping");
-                               pinger.stop();
-                           }));
+    sihd::util::SigWatcher watcher({SIGINT}, [&pinger, &log](int sig) {
+        (void)sig;
+        log.notice("Stopping ping");
+        pinger.stop();
+    });
 
     log.notice("Press ctrl+C to stop or wait until all pings are done");
 

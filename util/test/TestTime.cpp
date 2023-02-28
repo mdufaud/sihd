@@ -210,16 +210,16 @@ TEST_F(TestTime, test_time_leap_year)
 
 TEST_F(TestTime, test_time_duration)
 {
-    std::chrono::nanoseconds chrono_nano = time::to_duration<std::nano>(123);
+    std::chrono::nanoseconds chrono_nano = time::to_duration<std::chrono::nanoseconds>(123);
     EXPECT_EQ(chrono_nano.count(), 123);
 
-    std::chrono::milliseconds chrono_milli = time::to_duration<std::milli>(time::milliseconds(456));
+    std::chrono::milliseconds chrono_milli = time::to_duration<std::chrono::milliseconds>(time::milliseconds(456));
     EXPECT_EQ(chrono_milli.count(), 456);
 
-    std::chrono::seconds chrono_seconds = time::to_duration<std::ratio<1>>(time::seconds(789));
+    std::chrono::seconds chrono_seconds = time::to_duration<std::chrono::seconds>(time::seconds(789));
     EXPECT_EQ(chrono_seconds.count(), 789);
 
-    std::chrono::minutes chrono_min = time::to_duration<std::ratio<60>>(time::minutes(10));
+    std::chrono::minutes chrono_min = time::to_duration<std::chrono::minutes>(time::minutes(10));
     EXPECT_EQ(chrono_min.count(), 10);
 
     EXPECT_EQ(time::duration(std::chrono::nanoseconds(2)), 2);

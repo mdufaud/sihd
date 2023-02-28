@@ -27,14 +27,6 @@ TEST_NAME := $(MAKEARG_3)$(t)
 newtest:
 	@bash $(MAKEFILE_TOOLS_SCRIPTS)/make_test.sh $(APP_NAME) $(MODULE_NAME) $(TEST_NAME)
 
-# for no 'no rules to make...'
-$(MODULE_NAME):
-	$(QUIET) echo > /dev/null
-
-# for no 'no rules to make...'
-$(TEST_NAME):
-	$(QUIET) echo > /dev/null
-
 endif
 
 .PHONY: newclass # Generate a new c++ class for module (<module_name> <class_name>)
