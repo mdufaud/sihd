@@ -1,13 +1,11 @@
 #ifndef __SIHD_UTIL_FILE_HPP__
 #define __SIHD_UTIL_FILE_HPP__
 
-#include <cstdio>
 #include <optional>
 #include <string>
 #include <string_view>
 
 #include <sihd/util/ArrayView.hpp>
-#include <sihd/util/platform.hpp>
 
 struct stat;
 
@@ -22,7 +20,7 @@ class File
         File(FILE *stream, bool ownership);
         File(std::string_view path, std::string_view mode);
         File(File && other);
-        virtual ~File();
+        ~File();
 
         // don't like hidden behavior so i prefer deleting copy operators
         File(const File & other) = delete;
@@ -34,13 +32,13 @@ class File
         operator bool() const { return this->is_open(); }
         operator FILE *() const { return _file_ptr; }
 
-        virtual bool open(std::string_view path, std::string_view mode);
-        virtual bool open_fd(int fd, std::string_view mode);
-        virtual bool set_stream(FILE *stream, bool ownership);
-        virtual bool open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix = "");
-        virtual bool open_tmpfile();
-        virtual bool is_open() const;
-        virtual bool close();
+        bool open(std::string_view path, std::string_view mode);
+        bool open_fd(int fd, std::string_view mode);
+        bool set_stream(FILE *stream, bool ownership);
+        bool open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix = "");
+        bool open_tmpfile();
+        bool is_open() const;
+        bool close();
 
         // if size == 0 -> buffer is null
         bool set_buffer_size(size_t size);
@@ -55,26 +53,34 @@ class File
         bool buff_stream();
         // write changes to disk
         bool flush();
+        bool flush_unlocked();
 
         // internal file descriptor
         int fd() const;
+        int fd_unlocked() const;
 
         // error checking
-        virtual bool eof() const;
-        virtual int error() const;
-        virtual void clear_errors();
+        bool eof() const;
+        bool eof_unlocked() const;
+        int error() const;
+        int error_unlocked() const;
+        void clear_errors();
 
-        virtual ssize_t write(const char *str, size_t size);
-        virtual ssize_t read(char *buf, size_t size);
-
-        ssize_t read(IArray & array);
-        // getline allocates line but you have to free it
-        ssize_t read_line(char **line, size_t *size);
-        // getdelim allocates line but you have to free it
-        ssize_t read_line_delim(char **line, size_t *size, int delim);
-
+        ssize_t write(const char *str, size_t size);
         ssize_t write(ArrCharView view);
         bool write_char(int c);
+
+        ssize_t write_unlocked(const char *str, size_t size);
+        ssize_t write_unlocked(ArrCharView view);
+        bool write_char_unlocked(int c);
+
+        ssize_t read(char *buf, size_t size);
+        ssize_t read(IArray & array);
+
+        // getline allocates line and you have to free it
+        ssize_t read_line(char **line, size_t *size);
+        // getdelim allocates line and you have to free it
+        ssize_t read_line_delim(char **line, size_t *size, int delim);
 
         bool seek(long offset);
         bool seek_begin(long offset);

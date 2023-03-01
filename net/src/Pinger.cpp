@@ -125,8 +125,8 @@ bool Pinger::ping(const IpAddr & client, size_t number)
             break;
         _result.transmitted += 1;
         // wait until seq number is received by polling
-        _received = false;
-        while (_stop == false && _received == false && _sender.poll())
+        _received_icmp_response = false;
+        while (_stop == false && _received_icmp_response == false && _sender.poll())
             ;
         ++i;
     }
@@ -141,13 +141,15 @@ void Pinger::handle(IcmpSender *sender)
     const IcmpResponse & response = sender->response();
     if (_current_seq != response.seq || os::pid() != response.id)
         return;
-    _received = true;
+    _received_icmp_response = true;
 
     const time_t timestamp = ((time_t *)response.data)[0];
     const time_t now = _clock_ptr->now();
     const time_t triptime = now - timestamp;
 
-    _result.stat.add_sample(triptime);
+    _result.received++;
+    _result.last_time_received = now;
+    _result.rtt.add_sample(triptime);
 
     _last_icmp_reponse = response;
     _last_triptime = triptime;
@@ -159,14 +161,16 @@ void PingResult::clear()
 {
     time_start = 0;
     last_time_sent = 0;
+    last_time_received = 0;
     time_end = 0;
     transmitted = 0;
-    stat.clear();
+    received = 0;
+    rtt.clear();
 }
 
 float PingResult::packet_loss() const
 {
-    return transmitted > 0 ? ((float)((float)(transmitted - stat.samples) / (float)transmitted) * 100) : 0.0;
+    return transmitted > 0 ? ((float)((float)(transmitted - rtt.samples) / (float)transmitted) * 100) : 0.0;
 }
 
 std::string PingResult::str() const
@@ -174,13 +178,13 @@ std::string PingResult::str() const
     return fmt::format("{} packets transmitted, {} received, {:.0}% packet loss, time {:.3f}ms\n"
                        "rtt min/avg/max/mdev = {:.3f}/{:.3f}/{:.3f}/{:.3f} ms",
                        transmitted,
-                       stat.samples,
+                       rtt.samples,
                        this->packet_loss(),
                        time::to_double_milliseconds(time_end - time_start),
-                       time::to_double_milliseconds(stat.min),
-                       time::to_double_milliseconds(stat.average()),
-                       time::to_double_milliseconds(stat.max),
-                       time::to_double_milliseconds(stat.standard_deviation()));
+                       time::to_double_milliseconds(rtt.min),
+                       time::to_double_milliseconds(rtt.average()),
+                       time::to_double_milliseconds(rtt.max),
+                       time::to_double_milliseconds(rtt.standard_deviation()));
 }
 
 } // namespace sihd::net

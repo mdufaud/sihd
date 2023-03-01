@@ -5,7 +5,9 @@
 #include <functional>
 #include <thread>
 
+#include <sihd/util/SigHandler.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
 {
@@ -15,7 +17,7 @@ class SigWatcher
     public:
         using Callback = std::function<void(int)>;
 
-        SigWatcher(const std::vector<int> watch_signals,
+        SigWatcher(const std::vector<int> signals,
                    const Callback & callback,
                    Timestamp polling_frequency = std::chrono::milliseconds(100));
         ~SigWatcher();
@@ -25,11 +27,15 @@ class SigWatcher
     protected:
 
     private:
-        int _watch_signals(Timestamp polling_frequency) const;
+        int _watch_signals(Timestamp polling_frequency);
 
         std::thread _thread;
         std::vector<int> _signals;
         std::atomic<bool> _stop;
+
+        std::vector<SigHandler> _sighandlers;
+
+        Waitable _waitable;
 };
 
 } // namespace sihd::util

@@ -71,7 +71,11 @@ bool Daemon::_handle_signals()
             ret = false;
         ++sig;
     }
-    signal::set_exit_config({.on_dump = true, .log_signal = true, .exit_with_sig_number = false});
+    signal::set_exit_config({.on_stop = false,
+                             .on_termination = false,
+                             .on_dump = true,
+                             .log_signal = true,
+                             .exit_with_sig_number = false});
     _signals_handled = true;
     return ret;
 }

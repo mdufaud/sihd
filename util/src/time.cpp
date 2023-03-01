@@ -21,6 +21,10 @@ namespace sihd::util::time
 namespace
 {
 std::atomic<bool> tz_is_set = false;
+
+#if defined(__SIHD_WINDOWS__)
+std::mutex unsafe_c_mutex;
+#endif
 } // namespace
 
 time_t get_timezone()
@@ -149,7 +153,12 @@ struct timeval to_nano_tv(time_t nano)
 struct tm to_tm(time_t nano, bool localtime)
 {
     time_t sec = nano / 1E9;
-    // _r is non rentrant
+#if defined(__SIHD_WINDOWS__)
+    std::lock_guard l(unsafe_c_mutex);
+    // make a copy
+    return localtime ? *::localtime(&sec) : *::gmtime(&sec);
+#else
+    // localtime/gmtime_r is non rentrant
     struct tm result;
     if (localtime)
     {
@@ -160,6 +169,7 @@ struct tm to_tm(time_t nano, bool localtime)
     else
         ::gmtime_r(&sec, &result);
     return result;
+#endif
 }
 
 time_t to_micro(time_t nano)

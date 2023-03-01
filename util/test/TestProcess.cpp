@@ -79,26 +79,29 @@ TEST_F(TestProcess, test_process_run)
     });
     Worker worker(&task);
     worker.start_sync_worker("proc");
-    usleep(1000);
-    EXPECT_FALSE(res.empty());
-    if (!res.empty())
-    {
-        EXPECT_EQ(res.back(), "hello");
-        proc.stdin_from("world");
-        usleep(1000);
-        EXPECT_EQ(res.back(), "world");
-        proc.stdin_from("how");
-        usleep(1000);
-        EXPECT_EQ(res.back(), "how");
-        proc.stdin_from("are");
-        usleep(1000);
-        EXPECT_EQ(res.back(), "are");
-        proc.stdin_from("you");
-        usleep(1000);
-        proc.stop();
-        worker.stop_worker();
-        EXPECT_EQ(res.back(), "you");
-    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(15));
+
+    ASSERT_FALSE(res.empty());
+    EXPECT_EQ(res.back(), "hello");
+
+    proc.stdin_from("world");
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    EXPECT_EQ(res.back(), "world");
+
+    proc.stdin_from("how");
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    EXPECT_EQ(res.back(), "how");
+
+    proc.stdin_from("are");
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    EXPECT_EQ(res.back(), "are");
+
+    proc.stdin_from("you");
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    proc.stop();
+    worker.stop_worker();
+    EXPECT_EQ(res.back(), "you");
 }
 
 TEST_F(TestProcess, test_process_simple)
@@ -173,7 +176,7 @@ TEST_F(TestProcess, test_process_in_wc)
         result = buf;
     });
     EXPECT_TRUE(proc.start());
-    usleep(5000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
     proc.stdin_close();
     EXPECT_TRUE(proc.end());
     EXPECT_EQ(result, "11\n");
@@ -199,6 +202,7 @@ TEST_F(TestProcess, test_process_file_in)
     EXPECT_TRUE(proc.stdin_from_file(test_file));
     proc.stdout_to(output);
     EXPECT_TRUE(proc.start());
+    EXPECT_TRUE(proc.wait_any());
     EXPECT_TRUE(proc.end());
     EXPECT_EQ(output, "hello world");
     EXPECT_TRUE(proc.has_exited());
@@ -331,7 +335,7 @@ TEST_F(TestProcess, test_process_signal_kill)
     Process cat {"cat"};
 
     EXPECT_TRUE(cat.start());
-    usleep(3000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
     EXPECT_TRUE(cat.kill(SIGTERM));
     cat.wait_exit();
     EXPECT_FALSE(cat.has_exited());
@@ -347,7 +351,7 @@ TEST_F(TestProcess, test_process_signal_stop)
     Process cat {"cat"};
 
     EXPECT_TRUE(cat.start());
-    usleep(3000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
     EXPECT_TRUE(cat.kill(SIGSTOP));
     cat.wait_stop();
     EXPECT_TRUE(cat.has_stopped_by_signal());

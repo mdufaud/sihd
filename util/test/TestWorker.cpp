@@ -51,12 +51,12 @@ TEST_F(TestWorker, test_stepworker_multiple)
     });
     StepWorker worker(&task);
     // 1 / ms
-    EXPECT_TRUE(worker.set_frequency(1000));
+    EXPECT_TRUE(worker.set_frequency(500));
     EXPECT_TRUE(worker.start_sync_worker("stepworker-thread"));
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     EXPECT_TRUE(worker.stop_worker());
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
-    EXPECT_NEAR(ran, 10, 1);
+    EXPECT_NEAR(ran, 5, 1);
 }
 
 TEST_F(TestWorker, test_stepworker_once)

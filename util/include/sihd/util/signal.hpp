@@ -45,11 +45,13 @@ bool should_stop();
 void reset_received(int sig);
 void reset_all_received();
 
-void set_exit_config(SigExitConfig config);
+void set_exit_config(const SigExitConfig & config);
 
 bool kill(pid_t pid, int sig);
 
 std::string name(int sig);
+
+std::string status_str();
 
 } // namespace sihd::util::signal
 

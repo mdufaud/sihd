@@ -1,7 +1,8 @@
-#include <fmt/printf.h>
+#include <fmt/format.h>
 
 #include <sihd/util/ConsoleLogger.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 namespace sihd::util
@@ -58,14 +59,20 @@ void ConsoleLogger::log(const LogInfo & info, std::string_view msg)
             beg = term::attr::WHITE;
     }
 
-    fmt::fprintf(stderr,
-                 "%s%s [%s] <%s> %s%s\n",
-                 beg,
-                 level,
-                 info.thread_name.data(),
-                 info.source.data(),
-                 msg.data(),
-                 end);
+    std::string fmt_msg = fmt::format("{}{} [{}] <{}> {}{}\n",
+                                      beg,
+                                      level,
+                                      info.thread_name.data(),
+                                      info.source.data(),
+                                      msg.data(),
+                                      end);
+
+#if defined(__SIHD_WINDOWS__)
+    fwrite(fmt_msg.c_str(), sizeof(char), fmt_msg.size(), stderr);
+#else
+    // enable writing in signal callback
+    fwrite_unlocked(fmt_msg.c_str(), sizeof(char), fmt_msg.size(), stderr);
+#endif
 }
 
 } // namespace sihd::util

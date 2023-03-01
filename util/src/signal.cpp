@@ -4,11 +4,16 @@
 
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Timestamp.hpp>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/signal.hpp>
 
 #define FIRST_SIG 1
 #define LAST_SIG 64
+
+#if defined(__SIHD_WINDOWS__)
+typedef void (*sighandler_t)(int);
+#endif
 
 namespace sihd::util::signal
 {
@@ -44,12 +49,8 @@ void _check_exit_config(int sig)
     exit(0);
 }
 
-void _signal_callback(int sig)
+void _set_signal_received(int sig)
 {
-    last_signal_received = sig;
-
-    _check_exit_config(sig);
-
     sig = sig - 1;
     if (sig >= 0 && (size_t)sig < signals_status.size())
     {
@@ -60,9 +61,29 @@ void _signal_callback(int sig)
     }
 }
 
+void _reset_signal(int sig)
+{
+    sig = sig - 1;
+    if (sig >= 0 && (size_t)sig < signals_status.size())
+    {
+        auto & status = signals_status.at(sig);
+
+        status.received = 0;
+        status.time_received = -1;
+    }
+}
+
+void _signal_callback(int sig)
+{
+    // there must be no mutex lock or anything outside of: man signal-safety
+    last_signal_received = sig;
+    _check_exit_config(sig);
+    _set_signal_received(sig);
+}
+
 } // namespace
 
-void set_exit_config(SigExitConfig config)
+void set_exit_config(const SigExitConfig & config)
 {
     exit_config = config;
 }
@@ -71,11 +92,13 @@ bool is_category_stop(int sig)
 {
     switch (sig)
     {
+#if !defined(__SIHD_WINDOWS__)
         case SIGSTOP:
         case SIGTSTP:
         case SIGTTIN:
         case SIGTTOU:
             return true;
+#endif
         default:
             return false;
     }
@@ -85,17 +108,19 @@ bool is_category_termination(int sig)
 {
     switch (sig)
     {
+        case SIGTERM:
+        case SIGINT:
+#if !defined(__SIHD_WINDOWS__)
         case SIGALRM:
         case SIGHUP:
-        case SIGINT:
         case SIGKILL:
         case SIGPIPE:
         case SIGPOLL:
         case SIGPROF:
-        case SIGTERM:
         case SIGUSR1:
         case SIGUSR2:
         case SIGVTALRM:
+#endif
             return true;
         default:
             return false;
@@ -107,15 +132,17 @@ bool is_category_dump(int sig)
     switch (sig)
     {
         case SIGABRT:
+        case SIGILL:
+        case SIGSEGV:
+#if !defined(__SIHD_WINDOWS__)
         case SIGBUS:
         case SIGFPE:
-        case SIGILL:
         case SIGQUIT:
-        case SIGSEGV:
         case SIGSYS:
         case SIGTRAP:
         case SIGXCPU:
         case SIGXFSZ:
+#endif
             return true;
         default:
             return false;
@@ -124,6 +151,14 @@ bool is_category_dump(int sig)
 
 bool handle(int sig)
 {
+#if defined(__SIHD_WINDOWS__)
+    sighandler_t previous_handler = ::signal(sig, _signal_callback);
+    if (previous_handler == SIG_ERR)
+    {
+        SIHD_LOG(error, "Error handling signal '{}': {}", sig, strerror(errno));
+        return false;
+    }
+#else
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_flags = SA_RESTART; // Process resume what it was doing before the interruption
@@ -132,14 +167,23 @@ bool handle(int sig)
 
     if (sigaction(sig, &sa, nullptr) != 0)
     {
-        SIHD_LOG(error, "Sigaction failed: {}", signal::name(sig));
+        SIHD_LOG(error, "Error handling signal '{}': {}", sig, strerror(errno));
         return false;
     }
+#endif
     return true;
 }
 
 bool unhandle(int sig)
 {
+#if defined(__SIHD_WINDOWS__)
+    sighandler_t previous_handler = ::signal(sig, SIG_DFL);
+    if (previous_handler == SIG_ERR)
+    {
+        SIHD_LOG(error, "Error unhandling signal '{}': {}", sig, strerror(errno));
+        return false;
+    }
+#else
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = SIG_DFL;
@@ -147,9 +191,10 @@ bool unhandle(int sig)
 
     if (sigaction(sig, &sa, nullptr) != 0)
     {
-        SIHD_LOG(error, "Sigaction failed: {}", signal::name(sig));
+        SIHD_LOG(error, "Error unhandling signal '{}': {}", sig, strerror(errno));
         return false;
     }
+#endif
     return true;
 }
 
@@ -214,11 +259,7 @@ bool should_stop()
 
 void reset_received(int sig)
 {
-    auto status = signal::status(sig);
-    if (status.has_value() == false)
-        return;
-    status->received = 0;
-    status->time_received = -1;
+    _reset_signal(sig);
 }
 
 void reset_all_received()
@@ -251,6 +292,32 @@ std::string name(int sig)
         return signame;
 #endif
     return std::to_string(sig);
+}
+
+std::string status_str()
+{
+    std::string ret;
+
+    for (int sig = FIRST_SIG; sig <= LAST_SIG; ++sig)
+    {
+        const auto status = signal::status(sig);
+        if (status.has_value())
+        {
+            if (status->received > 0)
+            {
+                ret += fmt::format("{} -> {} ({})\n",
+                                   signal::name(sig),
+                                   status->received,
+                                   Timestamp(status->time_received).day_str());
+            }
+        }
+        else
+        {
+            ret += fmt::format("{} -> unknown\n", signal::name(sig));
+        }
+    }
+
+    return ret;
 }
 
 SigStatus::operator bool() const

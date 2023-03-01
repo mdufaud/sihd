@@ -79,6 +79,17 @@ bool erase(Container & container, const Value & value)
     return ret;
 }
 
+template <typename Container, typename Predicate>
+bool erase_if(Container & container, const Predicate & predicate)
+{
+    static_assert(traits::is_iterable<Container>::value, "Type must be iterable");
+
+    auto it = std::remove_if(container.begin(), container.end(), predicate);
+    bool ret = it != container.end();
+    container.erase(it, container.end());
+    return ret;
+}
+
 template <typename T>
 bool emplace_unique(std::vector<T> & vec, const T & value)
 {

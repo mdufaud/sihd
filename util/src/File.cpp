@@ -9,6 +9,16 @@
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
+
+#if defined(__SIHD_WINDOWS__)
+# define fwrite_unlocked fwrite
+# define fputc_unlocked fputc
+# define feof_unlocked feof
+# define ferror_unlocked ferror
+# define fileno_unlocked fileno
+# define fflush_unlocked fflush
+#endif
 
 namespace sihd::util
 {
@@ -232,14 +242,29 @@ bool File::eof() const
     return feof(_file_ptr) != 0;
 }
 
+bool File::eof_unlocked() const
+{
+    return feof_unlocked(_file_ptr) != 0;
+}
+
 int File::fd() const
 {
     return _file_ptr == nullptr ? -1 : fileno(_file_ptr);
 }
 
+int File::fd_unlocked() const
+{
+    return _file_ptr == nullptr ? -1 : fileno_unlocked(_file_ptr);
+}
+
 int File::error() const
 {
     return ferror(_file_ptr);
+}
+
+int File::error_unlocked() const
+{
+    return ferror_unlocked(_file_ptr);
 }
 
 void File::clear_errors()
@@ -250,6 +275,16 @@ void File::clear_errors()
 bool File::flush()
 {
     if (_file_ptr != nullptr && fflush(_file_ptr) != 0)
+    {
+        SIHD_LOG(error, "File: could not flush file: {}", strerror(errno));
+        return false;
+    }
+    return _file_ptr != nullptr;
+}
+
+bool File::flush_unlocked()
+{
+    if (_file_ptr != nullptr && fflush_unlocked(_file_ptr) != 0)
     {
         SIHD_LOG(error, "File: could not flush file: {}", strerror(errno));
         return false;
@@ -380,6 +415,24 @@ ssize_t File::write(ArrCharView view)
 bool File::write_char(int c)
 {
     return fputc(c, _file_ptr) == c;
+}
+
+ssize_t File::write_unlocked(const char *str, size_t size)
+{
+    size_t ret = fwrite_unlocked(str, sizeof(char), size, _file_ptr);
+    if (this->error())
+        return -1;
+    return ret;
+}
+
+ssize_t File::write_unlocked(ArrCharView view)
+{
+    return this->write(view.data(), view.size());
+}
+
+bool File::write_char_unlocked(int c)
+{
+    return fputc_unlocked(c, _file_ptr) == c;
 }
 
 ssize_t File::read_line(char **line, size_t *size)

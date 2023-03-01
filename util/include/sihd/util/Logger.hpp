@@ -26,10 +26,10 @@
 # define SIHD_COUT(message, ...) fmt::print(message, ##__VA_ARGS__);
 # define SIHD_COUTF(message, ...) fmt::print(#message " = {}\n", message);
 # define SIHD_CERR(message, ...) fmt::print(stderr, message, ##__VA_ARGS__);
-# define SIHD_LOG(level, message, ...)                                                                                 \
-  __sihd_logger__.log(sihd::util::LogLevel::level, fmt::format(message, ##__VA_ARGS__));
-# define SIHD_LOG_FORMAT(level, message, ...)                                                                          \
-  __sihd_logger__.log(sihd::util::LogLevel::level, fmt::sprintf(message, ##__VA_ARGS__));
+# define SIHD_LOG_LVL(level, message, ...) __sihd_logger__.log(level, fmt::format(message, ##__VA_ARGS__));
+# define SIHD_LOG_LVL_FORMAT(level, message, ...) __sihd_logger__.log(level, fmt::sprintf(message, ##__VA_ARGS__));
+# define SIHD_LOG(level, message, ...) SIHD_LOG_LVL(sihd::util::LogLevel::level, message, ##__VA_ARGS__)
+# define SIHD_LOG_FORMAT(level, message, ...) SIHD_LOG_LVL_FORMAT(sihd::util::LogLevel::level, message, ##__VA_ARGS__)
 
 # define SIHD_LOG_EMERG(message, ...) SIHD_LOG(emergency, message, ##__VA_ARGS__);
 # define SIHD_LOG_ALERT(message, ...) SIHD_LOG(alert, message, ##__VA_ARGS__);

@@ -2,7 +2,6 @@
 #define __SIHD_UTIL_NAMEDFACTORY_HPP__
 
 #include <sihd/util/Named.hpp>
-#include <sihd/util/SmartNodePtr.hpp>
 
 namespace sihd::util
 {
@@ -10,17 +9,14 @@ namespace sihd::util
 class NamedFactory
 {
     public:
+        NamedFactory() = delete;
+        ~NamedFactory() = delete;
+
         // read dynamic library libname to search for classname and creates and returns it from name/parent
         static Named *load(const std::string & libname,
                            const std::string & classname,
                            const std::string & name,
                            Node *parent = nullptr);
-
-    protected:
-
-    private:
-        NamedFactory() {};
-        virtual ~NamedFactory() {};
 };
 
 } // namespace sihd::util

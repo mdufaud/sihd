@@ -15,6 +15,12 @@ double drand(double from = 0.0, double to = 1.0);
 
 size_t size(uint64_t number, uint16_t base);
 
+template <typename T>
+bool near(const T & value, const T & expected, const T & abs_error)
+{
+    return std::abs(value - expected) <= std::abs(abs_error);
+}
+
 } // namespace sihd::util::num
 
 #endif

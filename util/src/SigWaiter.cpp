@@ -2,6 +2,7 @@
 
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/SigHandler.hpp>
 #include <sihd/util/SigWaiter.hpp>
 #include <sihd/util/signal.hpp>
 
@@ -19,7 +20,8 @@ SigWaiter::SigWaiter(const Conf & conf): _received_signal(false)
     SteadyClock clock;
     const time_t begin = has_timeout ? clock.now() : 0;
 
-    if (signal::handle(_sig) == true)
+    SigHandler sighandler(_sig);
+    if (sighandler.is_handling())
     {
         while (true)
         {
@@ -39,10 +41,7 @@ SigWaiter::SigWaiter(const Conf & conf): _received_signal(false)
 
 SigWaiter::SigWaiter(): SigWaiter(SigWaiter::Conf()) {}
 
-SigWaiter::~SigWaiter()
-{
-    signal::unhandle(_sig);
-}
+SigWaiter::~SigWaiter() {}
 
 bool SigWaiter::received_signal() const
 {

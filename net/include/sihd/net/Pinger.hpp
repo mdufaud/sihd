@@ -20,10 +20,12 @@ struct PingResult
 {
         time_t time_start;
         time_t last_time_sent;
+        time_t last_time_received;
         time_t time_end;
-        int transmitted;
 
-        sihd::util::Stat<int64_t> stat;
+        int transmitted;
+        int received;
+        sihd::util::Stat<int64_t> rtt;
 
         void clear();
         float packet_loss() const;
@@ -71,7 +73,7 @@ class Pinger: public sihd::util::Named,
 
         std::atomic<bool> _running;
         std::atomic<bool> _stop;
-        bool _received;
+        bool _received_icmp_response;
         int _current_seq;
         PingResult _result;
 

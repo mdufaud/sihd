@@ -13,7 +13,7 @@ Timeit::~Timeit()
 {
     constexpr bool show_total_parenthesis = false;
 
-    const time_t duration = std::max(0L, _clock.now() - _begin);
+    const time_t duration = std::max(time_t {0}, _clock.now() - _begin);
     const bool show_nano = duration < time::micro(1);
 
     SIHD_LOG(debug, "Time<{}>: {}", _fun_name, Timestamp(duration).timeoffset_str(show_total_parenthesis, show_nano));
@@ -33,7 +33,7 @@ void Perf::end()
     if (_begin == 0)
         throw std::runtime_error("Cannot call end() before calling begin()");
 
-    const time_t diff = std::max(0L, _clock.now() - _begin);
+    const time_t diff = std::max(time_t {0}, _clock.now() - _begin);
 
     _stat.add_sample(diff);
 }
