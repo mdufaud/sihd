@@ -108,7 +108,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
             {
                 _client_wrote = false;
 
-                const char hw[] = "hello world";
+                std::string hw("hello world");
                 array.from(hw);
 
                 protocol.set_txt();
@@ -119,9 +119,9 @@ class SimpleHttpServer: public sihd::http::HttpServer,
 
         void on_close() { SIHD_LOG(debug, "Closed websocket"); }
 
+        bool _client_wrote = false;
         // websocket
         WebsocketHandler _websocket_handler;
-        bool _client_wrote = false;
         // webservice
         WebService *_webservice;
 };

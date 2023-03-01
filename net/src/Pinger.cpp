@@ -95,8 +95,7 @@ bool Pinger::ping(const IpAddr & client, size_t number)
     if (_running.exchange(true))
         return false;
     // setup ping
-    memset(&_sums, 0, sizeof(InternalPingRes));
-    memset(&_result, 0, sizeof(PingResult));
+    _result.clear();
     _stop = false;
     _sender.set_id(os::pid());
     _sender.set_ttl(_ttl);
@@ -133,14 +132,6 @@ bool Pinger::ping(const IpAddr & client, size_t number)
     }
     _result.time_end = _clock_ptr->now();
 
-    // standard deviation
-    if (_result.received > 0)
-    {
-        long long tmp_sum = _sums.sum / _result.received;
-        long long tmp_sum2 = _sums.sum2 / _result.received;
-        _result.rtt_mdev = sqrt(tmp_sum2 - tmp_sum * tmp_sum);
-    }
-
     _running = false;
     return ret;
 }
@@ -151,31 +142,31 @@ void Pinger::handle(IcmpSender *sender)
     if (_current_seq != response.seq || os::pid() != response.id)
         return;
     _received = true;
-    _result.received += 1;
 
-    time_t timestamp = ((time_t *)response.data)[0];
-    time_t now = _clock_ptr->now();
-    int triptime = now - timestamp;
+    const time_t timestamp = ((time_t *)response.data)[0];
+    const time_t now = _clock_ptr->now();
+    const time_t triptime = now - timestamp;
 
-    if (_result.received == 1)
-    {
-        _result.rtt_max = triptime;
-        _result.rtt_avg = triptime;
-        _result.rtt_min = triptime;
-    }
-    else
-    {
-        _result.rtt_min = std::min(triptime, _result.rtt_min);
-        _result.rtt_avg = _result.rtt_avg + ((triptime - _result.rtt_avg) / _result.received);
-        _result.rtt_max = std::max(triptime, _result.rtt_max);
-    }
-    _sums.sum += triptime;
-    _sums.sum2 += (long long)triptime * (long long)triptime;
+    _result.stat.add_sample(triptime);
+
+    _last_icmp_reponse = response;
+    _last_triptime = triptime;
+
+    this->notify_observers(this);
+}
+
+void PingResult::clear()
+{
+    time_start = 0;
+    last_time_sent = 0;
+    time_end = 0;
+    transmitted = 0;
+    stat.clear();
 }
 
 float PingResult::packet_loss() const
 {
-    return transmitted > 0 ? ((float)((float)(transmitted - received) / (float)transmitted) * 100) : 0.0;
+    return transmitted > 0 ? ((float)((float)(transmitted - stat.samples) / (float)transmitted) * 100) : 0.0;
 }
 
 std::string PingResult::str() const
@@ -183,13 +174,13 @@ std::string PingResult::str() const
     return fmt::format("{} packets transmitted, {} received, {:.0}% packet loss, time {:.3f}ms\n"
                        "rtt min/avg/max/mdev = {:.3f}/{:.3f}/{:.3f}/{:.3f} ms",
                        transmitted,
-                       received,
+                       stat.samples,
                        this->packet_loss(),
                        time::to_double_milliseconds(time_end - time_start),
-                       time::to_double_milliseconds(rtt_min),
-                       time::to_double_milliseconds(rtt_avg),
-                       time::to_double_milliseconds(rtt_max),
-                       time::to_double_milliseconds(rtt_mdev));
+                       time::to_double_milliseconds(stat.min),
+                       time::to_double_milliseconds(stat.average()),
+                       time::to_double_milliseconds(stat.max),
+                       time::to_double_milliseconds(stat.standard_deviation()));
 }
 
 } // namespace sihd::net

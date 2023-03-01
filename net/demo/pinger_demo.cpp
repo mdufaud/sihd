@@ -17,12 +17,12 @@ int main(int argc, char **argv)
     sihd::util::LoggerManager::console();
 
     cxxopts::Options options(argv[0], "Testing ping of module net");
-    options.add_options()("h,help", "Prints usage")(
-        "host",
-        "Host to ping",
-        cxxopts::value<std::string>()->default_value(
-            "google.com"))("pings", "Number of pings to send", cxxopts::value<int>()->default_value("10"));
-
+    // clang-format off
+    options.add_options()
+        ("h,help", "Prints usage")
+        ("host", "Host to ping", cxxopts::value<std::string>()->default_value("google.com"))
+        ("pings", "Number of pings to send", cxxopts::value<int>()->default_value("10"));
+    // clang-format on
     options.parse_positional({"host", "pings"});
 
     auto args = options.parse(argc, argv);
@@ -59,21 +59,35 @@ int main(int argc, char **argv)
 
     log.notice("Press ctrl+C to stop or wait until all pings are done");
 
-    constexpr bool do_dns_lookup = true;
+    sihd::util::Handler<Pinger *> handler([&log](Pinger *pinger) {
+        const IcmpResponse & icmp_response = pinger->last_icmp_reponse();
+        const sihd::util::Timestamp & triptime = pinger->last_triptime();
+
+        log.info(fmt::format("{} bytes from {}: icmp_seq={} ttl={} time={}",
+                             icmp_response.size,
+                             icmp_response.client.host(),
+                             icmp_response.seq,
+                             icmp_response.ttl,
+                             triptime.timeoffset_str()));
+    });
+    pinger.add_observer(&handler);
+
     constexpr time_t interval_ms = 200;
-
     pinger.set_interval(interval_ms);
-    if (pinger.ping(IpAddr {host, do_dns_lookup}, npings) == false)
-    {
-        log.error(fmt::format("Cannot ping: {}", argv[1]));
-        if (os::is_windows)
-            time::sleep(5);
-        return 1;
-    }
 
-    const auto & result = pinger.result();
-    SIHD_COUT(result.str() + "\n");
-    if (os::is_windows)
+    constexpr bool do_dns_lookup = true;
+    const bool success = pinger.ping(IpAddr {host, do_dns_lookup}, npings);
+
+    if (success)
+    {
+        const auto & result = pinger.result();
+        SIHD_COUT(result.str() + "\n");
+    }
+    else
+        log.error(fmt::format("Cannot ping: {}", argv[1]));
+
+    if constexpr (os::is_windows)
         time::sleep(5);
-    return 0;
+
+    return success ? 0 : 1;
 }

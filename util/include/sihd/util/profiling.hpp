@@ -5,6 +5,7 @@
 
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Location.hpp>
+#include <sihd/util/Stat.hpp>
 
 namespace sihd::util
 {
@@ -26,20 +27,6 @@ class Timeit
 class Perf
 {
     public:
-        struct Stat
-        {
-                size_t samples = 0;
-                time_t min = 0;
-                time_t sum = 0;
-                time_t square = 0;
-                time_t max = 0;
-
-                time_t average() const;
-                time_t variance() const;
-                time_t standard_deviation() const;
-        };
-
-    public:
         Perf(const char *fun_name);
         ~Perf();
 
@@ -48,7 +35,7 @@ class Perf
 
         void log() const;
 
-        Stat stat() const { return _stat; };
+        const Stat<time_t> & stat() const { return _stat; };
 
     protected:
 
@@ -56,7 +43,7 @@ class Perf
         SteadyClock _clock;
         const char *_fun_name;
         time_t _begin;
-        Stat _stat;
+        Stat<time_t> _stat;
 };
 
 } // namespace sihd::util

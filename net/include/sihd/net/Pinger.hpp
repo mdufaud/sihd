@@ -8,6 +8,7 @@
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Poll.hpp>
+#include <sihd/util/Stat.hpp>
 #include <sihd/util/Waitable.hpp>
 
 #include <sihd/net/IcmpSender.hpp>
@@ -21,18 +22,17 @@ struct PingResult
         time_t last_time_sent;
         time_t time_end;
         int transmitted;
-        int received;
-        int rtt_min;
-        int rtt_avg;
-        int rtt_max;
-        int rtt_mdev;
 
+        sihd::util::Stat<int64_t> stat;
+
+        void clear();
         float packet_loss() const;
         std::string str() const;
 };
 
 class Pinger: public sihd::util::Named,
               public sihd::util::Configurable,
+              public sihd::util::Observable<Pinger>,
               public sihd::util::IHandler<IcmpSender *>
 {
     public:
@@ -52,17 +52,13 @@ class Pinger: public sihd::util::Named,
         void stop();
 
         const PingResult & result() const { return _result; }
+        sihd::util::Timestamp last_triptime() const { return _last_triptime; }
+        const IcmpResponse & last_icmp_reponse() const { return _last_icmp_reponse; }
 
     protected:
         void handle(IcmpSender *sender);
 
     private:
-        struct InternalPingRes
-        {
-                long long sum;
-                long long sum2;
-        };
-
         void _fill_giberish();
 
         IcmpSender _sender;
@@ -78,7 +74,9 @@ class Pinger: public sihd::util::Named,
         bool _received;
         int _current_seq;
         PingResult _result;
-        InternalPingRes _sums;
+
+        IcmpResponse _last_icmp_reponse;
+        time_t _last_triptime;
 };
 
 } // namespace sihd::net

@@ -224,7 +224,7 @@ void IcmpSender::_read_socket()
 
 void IcmpSender::_process_ipv6()
 {
-    // TODO
+#pragma message("TODO handle ipv6")
 }
 
 void IcmpSender::_process_ipv4()
@@ -256,6 +256,7 @@ void IcmpSender::_process_ipv4()
             _icmp_response.ttl = iphdr->ip_ttl;
             _icmp_response.id = ntohs(icmphdr->icmp_id);
             _icmp_response.seq = ntohs(icmphdr->icmp_seq);
+
             this->notify_observers(this);
         }
     }
