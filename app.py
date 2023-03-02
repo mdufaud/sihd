@@ -58,25 +58,25 @@ modules = {
             'rt', # shm_open...
             'uuid',
         ],
-        "windows-libs": [
-            'rpcrt4',
-            'stdc++fs' # no emscripten trick
-        ],
         # only link dynamically fmt when no cross compiling
         "linux-dyn-libs": [
             'fmt', # get from sys lib only when compiling dynamically on linux
             'stdc++fs' # no emscripten trick
         ],
-        # fmt from headers for cross compile or static linkage
-        "static-defines": ["FMT_HEADER_ONLY"],
-        "windows-defines": ["FMT_HEADER_ONLY"],
-        "em-flags": ["-pthread"],
+        "static-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
+        "windows-libs": [
+            'rpcrt4',
+            'stdc++fs' # no emscripten trick
+        ],
+        "windows-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
+        "em-flags": ["-pthread"], # enable threads
         "em-link": [
-            "-sUSE_PTHREADS",
-            "-sFORCE_FILESYSTEM",
-            "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency",
-            "-sPROXY_TO_PTHREAD"],
-        "em-defines": ["FMT_HEADER_ONLY"],
+            "-sFORCE_FILESYSTEM", # use filesystem
+            "-sUSE_PTHREADS", # enable threads
+            "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
+            "-sPROXY_TO_PTHREAD" # main is a navigator thread
+        ],
+        "em-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
     },
     "core": {
         "depends": ['util'],

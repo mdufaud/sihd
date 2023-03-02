@@ -119,11 +119,10 @@ void read_line()
 
 int main(int argc, char **argv)
 {
-    tzset();
     if (term::is_interactive() && os::is_unix && !os::is_emscripten)
         LoggerManager::console();
     else
-        LoggerManager::basic(stdout);
+        LoggerManager::basic(os::is_emscripten ? stdout : stderr);
 
     Defer d([] { LoggerManager::clear_loggers(); });
 
