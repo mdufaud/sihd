@@ -70,7 +70,12 @@ modules = {
         # fmt from headers for cross compile or static linkage
         "static-defines": ["FMT_HEADER_ONLY"],
         "windows-defines": ["FMT_HEADER_ONLY"],
-        "em-link": ["-sFORCE_FILESYSTEM"],
+        "em-flags": ["-pthread"],
+        "em-link": [
+            "-sUSE_PTHREADS",
+            "-sFORCE_FILESYSTEM",
+            "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency",
+            "-sPROXY_TO_PTHREAD"],
         "em-defines": ["FMT_HEADER_ONLY"],
     },
     "core": {

@@ -14,6 +14,10 @@
 #include <sihd/util/os.hpp>
 #include <sihd/util/term.hpp>
 
+#if defined(__SIHD_EMSCRIPTEN__)
+# include "emscripten.h"
+#endif
+
 using namespace sihd::util;
 
 namespace demo
@@ -63,6 +67,7 @@ void time()
     SIHD_LOG(info, "From string date '2000/04/01': {}", Timestamp::from_str("2000/04/01", "%Y/%m/%d")->str());
     SIHD_LOG(info, "Timezone name: {}", time::get_timezone_name());
     SIHD_LOG(info, "Timezone offset: {}", time::get_timezone());
+
     fmt::print("\n");
 }
 
@@ -81,7 +86,7 @@ void fs()
         SIHD_LOG(info, "is_file: {}", fs::is_file(tmp));
         SIHD_LOG(info, "is_dir: {}", fs::is_dir(tmp));
         SIHD_LOG(info, "filesize: {}", fs::filesize(tmp));
-        SIHD_LOG(info, "last_write: {}", fs::last_write(tmp).str());
+        SIHD_LOG(info, "last_write: {}", fs::last_write(tmp).local_str());
         SIHD_LOG(info, "is_readable: {}", fs::is_readable(tmp));
         SIHD_LOG(info, "is_writable: {}", fs::is_writable(tmp));
         SIHD_LOG(info, "is_executable: {}", fs::is_executable(tmp));
@@ -114,10 +119,11 @@ void read_line()
 
 int main(int argc, char **argv)
 {
-    if (term::is_interactive() && os::is_unix)
+    tzset();
+    if (term::is_interactive() && os::is_unix && !os::is_emscripten)
         LoggerManager::console();
     else
-        LoggerManager::basic();
+        LoggerManager::basic(stdout);
 
     Defer d([] { LoggerManager::clear_loggers(); });
 
@@ -140,12 +146,16 @@ int main(int argc, char **argv)
     demo::os();
     demo::fs();
     demo::uuid();
-    if constexpr (os::is_emscripten == false)
-        demo::worker(result["worker-frequency"].as<double>());
-    demo::read_line();
 
-    fmt::print("Press Ctrl + c to exit\n");
-    SigWaiter waiter;
+    demo::worker(result["worker-frequency"].as<double>());
+
+    if constexpr (os::is_emscripten == false)
+    {
+        demo::read_line();
+
+        fmt::print("Press Ctrl + c to exit\n");
+        SigWaiter waiter;
+    }
 
     return 0;
 }

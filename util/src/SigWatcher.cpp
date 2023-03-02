@@ -65,8 +65,6 @@ int SigWatcher::_watch_signals(Timestamp polling_frequency)
 {
     thread::set_name("sig_watcher");
 
-    const std::chrono::nanoseconds sleep_duration = polling_frequency;
-
     while (_stop == false)
     {
         for (int signal : _signals)

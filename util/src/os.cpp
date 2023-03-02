@@ -82,6 +82,10 @@ pid_t pid()
 
 rlim_t max_fds()
 {
+    if constexpr (os::is_emscripten)
+    {
+        return __SIHD_UTIL_OS_DEFAULT_MAX_FDS__;
+    }
 #if !defined(__SIHD_WINDOWS__)
     struct rlimit r;
     if (getrlimit(RLIMIT_NOFILE, &r) == -1)
@@ -401,6 +405,10 @@ void *load_symbol_unload_lib(const std::string & lib_name, std::string_view sym_
  */
 ssize_t peak_rss()
 {
+    if constexpr (os::is_emscripten)
+    {
+        return -1L;
+    }
 #if defined(__SIHD_WINDOWS__)
 
     PROCESS_MEMORY_COUNTERS info;
@@ -451,6 +459,10 @@ ssize_t peak_rss()
  */
 ssize_t current_rss()
 {
+    if constexpr (os::is_emscripten)
+    {
+        return -1L;
+    }
 #if defined(__SIHD_WINDOWS__)
 
     PROCESS_MEMORY_COUNTERS info;
