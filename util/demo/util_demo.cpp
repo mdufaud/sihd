@@ -119,13 +119,6 @@ void read_line()
 
 int main(int argc, char **argv)
 {
-    if (term::is_interactive() && os::is_unix && !os::is_emscripten)
-        LoggerManager::console();
-    else
-        LoggerManager::basic(os::is_emscripten ? stdout : stderr);
-
-    Defer d([] { LoggerManager::clear_loggers(); });
-
     cxxopts::Options options(argv[0], "Testing utility for module util");
     // clang-format off
     options.add_options()
@@ -140,6 +133,13 @@ int main(int argc, char **argv)
         fmt::print(options.help());
         return 0;
     }
+
+    if (term::is_interactive() && os::is_unix && !os::is_emscripten)
+        LoggerManager::console();
+    else
+        LoggerManager::basic(os::is_emscripten ? stdout : stderr);
+
+    Defer d([] { LoggerManager::clear_loggers(); });
 
     demo::time();
     demo::os();

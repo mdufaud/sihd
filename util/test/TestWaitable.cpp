@@ -38,6 +38,50 @@ TEST_F(TestWaitable, test_waitable_elapsed)
     EXPECT_NEAR(time::to_milli(elapsed), 4, 2);
 }
 
+TEST_F(TestWaitable, test_waitable_until_predicate)
+{
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
+
+    SteadyClock clock;
+    Waitable waitable;
+    int max_calls = 4;
+    int calls = 0;
+
+    Timestamp timeout = std::chrono::milliseconds(6);
+    Timestamp poll_frequency = std::chrono::milliseconds(1);
+
+    time_t before = clock.now();
+    Timestamp elapsed = waitable.infinite_wait_until_predicate(
+        [&calls, max_calls] {
+            ++calls;
+            return calls == max_calls;
+        },
+        poll_frequency);
+    time_t after = clock.now();
+
+    Timestamp calculated_elapsed = after - before;
+
+    EXPECT_EQ(calls, max_calls);
+    EXPECT_LT(elapsed, timeout);
+    EXPECT_LT(calculated_elapsed, timeout);
+
+    max_calls = 100;
+    before = clock.now();
+    elapsed = waitable.wait_until_predicate(
+        timeout,
+        [&calls, max_calls] {
+            ++calls;
+            return calls == max_calls;
+        },
+        poll_frequency);
+    after = clock.now();
+    calculated_elapsed = after - before;
+
+    EXPECT_GE(elapsed, timeout);
+    EXPECT_GE(calculated_elapsed, timeout);
+}
+
 TEST_F(TestWaitable, test_waitable_loop)
 {
     if (os::is_run_by_valgrind())

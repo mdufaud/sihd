@@ -33,11 +33,9 @@ void Waitable::notify_all()
 
 void Waitable::notify(int times)
 {
-    int i = 0;
-    while (i < times)
+    for (int i = 0; i < times; ++i)
     {
         _condition.notify_one();
-        ++i;
     }
 }
 
@@ -47,13 +45,13 @@ void Waitable::infinite_wait()
     _condition.wait(lock);
 }
 
-time_t Waitable::infinite_wait_elapsed()
+Timestamp Waitable::infinite_wait_elapsed()
 {
     std::unique_lock lock(_mutex);
     SteadyClock clock;
     time_t now = clock.now();
     _condition.wait(lock);
-    return clock.now() - now;
+    return Timestamp(clock.now() - now);
 }
 
 bool Waitable::wait_until(Timestamp nano_timestamp)
@@ -84,7 +82,7 @@ bool Waitable::wait_for_loop(Timestamp nano_duration, uint32_t times)
     bool timedout = false;
 
     uint32_t i = 0;
-    while (i < times && now < until && _stop_waiting == false)
+    while (_stop_waiting == false && i < times && now < until)
     {
         timedout = this->wait_for(nano_duration);
         now = clock.now();
@@ -96,14 +94,15 @@ bool Waitable::wait_for_loop(Timestamp nano_duration, uint32_t times)
     return timedout;
 }
 
-time_t Waitable::wait_for_elapsed(Timestamp nano_duration)
+Timestamp Waitable::wait_for_elapsed(Timestamp nano_duration)
 {
     if (nano_duration <= 0)
         return 0;
+
     SteadyClock clock;
     time_t before = clock.now();
     this->wait_for(nano_duration);
-    return clock.now() - before;
+    return Timestamp(clock.now() - before);
 }
 
 } // namespace sihd::util
