@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Named.hpp>
+#include <sihd/util/Node.hpp>
 
 namespace test
 {
@@ -29,7 +30,7 @@ TEST_F(TestNamed, test_named_find)
 {
     Named named("obj");
     EXPECT_EQ(named.find("."), &named);
-    EXPECT_EQ(named.find_node("."), nullptr);
+    EXPECT_EQ(named.find<Node>("."), nullptr);
     EXPECT_EQ(named.find(".."), nullptr);
     EXPECT_EQ(named.find("/"), nullptr);
 }

@@ -9,28 +9,28 @@
 
 #define __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(OP)                                                           \
  template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>               \
- bool operator OP(Duration duration) const                                                                             \
+ constexpr bool operator OP(Duration duration) const                                                                   \
  {                                                                                                                     \
   return _nano OP time::duration<Duration>(duration);                                                                  \
  }
 
 #define __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(OP)                                                            \
  template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>               \
- Timestamp operator OP(Duration duration)                                                                              \
+ constexpr Timestamp operator OP(Duration duration)                                                                    \
  {                                                                                                                     \
   return Timestamp(_nano OP time::duration<Duration>(duration));                                                       \
  }
 
 #define __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(OP)                                                                \
  template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>               \
- Timestamp & operator OP(Duration duration)                                                                            \
+ constexpr Timestamp & operator OP(Duration duration)                                                                  \
  {                                                                                                                     \
   _nano OP time::duration<Duration>(duration);                                                                         \
   return *this;                                                                                                        \
  }
 
 #define __TMP_TIMESTAMP_ASSIGN_OPERATION__(OP)                                                                         \
- Timestamp & operator OP(time_t t)                                                                                     \
+ constexpr Timestamp & operator OP(time_t t)                                                                           \
  {                                                                                                                     \
   _nano OP t;                                                                                                          \
   return *this;                                                                                                        \
@@ -38,16 +38,6 @@
 
 namespace sihd::util
 {
-
-namespace date
-{
-
-using days = std::chrono::duration<int64_t, std::ratio<86400>>;
-using weeks = std::chrono::duration<int64_t, std::ratio<604800>>;
-using months = std::chrono::duration<int64_t, std::ratio<2629746>>;
-using years = std::chrono::duration<int64_t, std::ratio<31556952>>;
-
-} // namespace date
 
 struct Clocktime
 {
@@ -82,25 +72,24 @@ inline constexpr const char *default_zone_format = "%FT%T%z";
 class Timestamp
 {
     public:
-        Timestamp(time_t nano);
-        Timestamp(Clocktime clocktime);
+        constexpr Timestamp(time_t nano): _nano(nano) {};
+        constexpr Timestamp(std::chrono::nanoseconds duration): _nano(duration.count()) {};
+        constexpr Timestamp(Clocktime clocktime): _nano(0)
+        {
+            _nano = time::hours(clocktime.hour);
+            _nano += time::minutes(clocktime.minute);
+            _nano += time::seconds(clocktime.second);
+            _nano += time::milliseconds(clocktime.millisecond);
+        };
+
         Timestamp(Calendar calendar);
         Timestamp(Calendar calendar, Clocktime clocktime);
-        Timestamp(std::chrono::nanoseconds duration);
 
         template <typename T>
-        Timestamp(std::chrono::time_point<T> timepoint)
-        {
-            _nano = timepoint.time_since_epoch().count();
-        }
+        constexpr Timestamp(std::chrono::time_point<T> timepoint): _nano(timepoint.time_since_epoch().count()) {};
 
         template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
-        Timestamp(Duration duration)
-        {
-            _nano = time::duration(duration);
-        }
-
-        ~Timestamp();
+        constexpr Timestamp(Duration duration): _nano(time::duration(duration)) {};
 
         // std::chrono::duration templates
         __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(==);
@@ -135,7 +124,7 @@ class Timestamp
 
         bool is_leap_year() const;
 
-        operator time_t() const;
+        constexpr operator time_t() const { return _nano; }
         operator std::chrono::nanoseconds() const;
         operator std::chrono::microseconds() const;
         operator std::chrono::milliseconds() const;
@@ -147,7 +136,7 @@ class Timestamp
         bool in_interval(Timestamp from, Timestamp offset) const;
 
         template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
-        Duration duration() const
+        constexpr Duration duration() const
         {
             return time::to_duration<Duration>(_nano);
         }
@@ -188,14 +177,14 @@ class Timestamp
         std::string local_day_str(std::string_view format = default_day_format) const;
 
         template <typename Ratio>
-        Timestamp floor() const
+        constexpr Timestamp floor() const
         {
             return Timestamp(time::floor<Ratio>(_nano));
         }
         Timestamp floor_day() const;
         Timestamp modulo_min(uint32_t minutes) const;
 
-        time_t get() const { return _nano; }
+        constexpr time_t get() const { return _nano; }
 
         Clocktime clocktime() const;
         Calendar calendar() const;

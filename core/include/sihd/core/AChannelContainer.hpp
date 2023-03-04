@@ -22,45 +22,8 @@ class AChannelContainer: public sihd::util::Node,
         Channel *find_channel(const std::string & name);
         bool find_channel(const std::string & name, Channel **to_fill);
 
-        template <typename... T>
-        std::array<Channel *, sizeof...(T)> find_channels(const T &...args)
-        {
-            std::array<Channel *, sizeof...(T)> array;
-
-            int i = 0;
-            auto finder = [&array, &i, this](const auto & arg) {
-                array[i] = this->find_channel(arg);
-                if (array[i] == nullptr)
-                    throw std::runtime_error(util::str::format("'%s'no such channel '%s'", this->full_name(), arg));
-                ++i;
-            };
-
-            (finder(args), ...);
-
-            return array;
-        }
-
         Channel *get_channel(const std::string & name);
         bool get_channel(const std::string & name, Channel **to_fill);
-
-        template <typename... T>
-        std::array<Channel *, sizeof...(T)> get_channels(const T &...args)
-        {
-            std::array<Channel *, sizeof...(T)> array;
-            int i = 0;
-
-            (
-                [&] {
-                    array[i] = this->get_channel(args);
-                    if (array[i] == nullptr)
-                        throw std::runtime_error(
-                            util::str::format("'%s' no such channel '%s'", this->full_name(), args));
-                    ++i;
-                }(),
-                ...);
-
-            return array;
-        }
 
         // store channel configuration, when links are resolved, create the channel if unlinked or get the linked one
         Channel *add_unlinked_channel(const std::string & name,

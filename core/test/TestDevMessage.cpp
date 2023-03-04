@@ -63,15 +63,15 @@ TEST_F(TestDevMessage, test_devmessage)
           ch_buffer_in,
           ch_buffer_out,
           ch_trigger]
-        = dev->get_channels("active_in",
-                            "size_in",
-                            "str_in",
-                            "active_out",
-                            "size_out",
-                            "str_out",
-                            "buffer_in",
-                            "buffer_out",
-                            "trigger");
+        = dev->get_all_child<Channel>("active_in",
+                                      "size_in",
+                                      "str_in",
+                                      "active_out",
+                                      "size_out",
+                                      "str_out",
+                                      "buffer_in",
+                                      "buffer_out",
+                                      "trigger");
 
     ASSERT_EQ(ch_active_in->size(), 1);
     ASSERT_EQ(ch_size_in->size(), 1);

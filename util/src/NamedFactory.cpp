@@ -2,6 +2,8 @@
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/os.hpp>
 
+#define SIHD_UTIL_NAMEDFACTORY_PREFIX "sihd_util_namedfactory_"
+
 namespace sihd::util
 {
 

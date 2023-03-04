@@ -3,10 +3,24 @@
 
 #include <chrono>
 #include <ctime>
+#include <string>
 
 #include <sihd/util/traits.hpp>
 
-namespace sihd::util::time
+namespace sihd::util
+{
+
+namespace date
+{
+
+using days = std::chrono::duration<int64_t, std::ratio<86400>>;
+using weeks = std::chrono::duration<int64_t, std::ratio<604800>>;
+using months = std::chrono::duration<int64_t, std::ratio<2629746>>;
+using years = std::chrono::duration<int64_t, std::ratio<31556952>>;
+
+} // namespace date
+
+namespace time
 {
 
 time_t get_timezone();
@@ -80,25 +94,48 @@ constexpr Duration to_duration(time_t nano)
 }
 
 // micro -> nano
-time_t micro(time_t micro);
+constexpr time_t micro(time_t micro)
+{
+    return micro * 1E3;
+}
 static constexpr auto us = micro;
 static constexpr auto microseconds = micro;
 // milli -> nano
-time_t milli(time_t milli);
+constexpr time_t milli(time_t milli)
+{
+    return milli * 1E6;
+}
 static constexpr auto ms = milli;
 static constexpr auto milliseconds = milli;
 // sec -> nano
-time_t sec(time_t sec);
+constexpr time_t sec(time_t sec)
+{
+    return sec * 1E9;
+}
 static constexpr auto seconds = sec;
 // min -> nano
-time_t min(time_t min);
+constexpr time_t min(time_t min)
+{
+    return sec(min) * 60;
+}
 static constexpr auto minutes = min;
 // hour -> nano
-time_t hours(time_t hour);
+constexpr time_t hours(time_t hour)
+{
+    return min(hour) * 60;
+}
 // day -> nano
-time_t days(time_t day);
+constexpr time_t days(time_t day)
+{
+    return hours(day) * 24;
+}
 // hz -> nano
-time_t freq(double hz);
+constexpr time_t freq(double hz)
+{
+    if (hz < 0.0)
+        return 0;
+    return (double)(1. / hz) * 1E9;
+}
 static constexpr auto frequency = freq;
 static constexpr auto hz = freq;
 // seconds,milliseconds -> nano
@@ -134,6 +171,8 @@ time_t nano_tv(const struct timeval & tv);
 
 bool is_leap_year(int year);
 
-} // namespace sihd::util::time
+} // namespace time
+
+} // namespace sihd::util
 
 #endif

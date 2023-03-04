@@ -202,36 +202,6 @@ time_t to_days(time_t nano)
     return to_hours(nano) / 24;
 }
 
-time_t micro(time_t t)
-{
-    return t * 1E3;
-}
-
-time_t milli(time_t t)
-{
-    return t * 1E6;
-}
-
-time_t sec(time_t t)
-{
-    return t * 1E9;
-}
-
-time_t min(time_t t)
-{
-    return sec(t) * 60;
-}
-
-time_t hours(time_t t)
-{
-    return min(t) * 60;
-}
-
-time_t days(time_t t)
-{
-    return hours(t) * 24;
-}
-
 time_t from_double(double sec_milli)
 {
     time_t sec = (time_t)sec_milli;
@@ -244,13 +214,6 @@ time_t from_double_milliseconds(double milli_micro)
     time_t milliseconds = (time_t)milli_micro;
     time_t nano = (double)(milli_micro - milliseconds) * 1E6;
     return time::milliseconds(milliseconds) + nano;
-}
-
-time_t freq(double hz)
-{
-    if (hz < 0.0)
-        return 0;
-    return (double)(1. / hz) * 1E9;
 }
 
 time_t tv(const struct timeval & tv)

@@ -2,7 +2,7 @@
 #define __SIHD_UTIL_NODE_HPP__
 
 #include <exception>
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 #include <sihd/util/Named.hpp>
@@ -69,16 +69,57 @@ class Node: public Named
         bool set_child_ownership(const std::string & name, bool ownership);
         bool set_child_ownership(const Named *child, bool ownership);
 
-        // Find
         template <class C>
-        C *get_child(const std::string & name) const
+        C *get_child(const std::string & name)
         {
             Named *obj = this->get_child(name);
             if (obj != nullptr)
                 return dynamic_cast<C *>(obj);
             return nullptr;
         }
-        Named *get_child(const std::string & name) const;
+        Named *get_child(const std::string & name);
+
+        template <typename Type = Named, typename... Keys>
+        std::array<Type *, sizeof...(Keys)> get_all_child(const Keys &...args)
+        {
+            std::array<Type *, sizeof...(Keys)> array;
+
+            int i = 0;
+            const auto finder = [&array, &i, this](const auto & arg) {
+                array[i] = this->get_child<Type>(arg);
+                ++i;
+            };
+
+            (finder(args), ...);
+
+            return array;
+        }
+
+        template <class C>
+        const C *cget_child(const std::string & name) const
+        {
+            const Named *obj = this->cget_child(name);
+            if (obj != nullptr)
+                return dynamic_cast<const C *>(obj);
+            return nullptr;
+        }
+        const Named *cget_child(const std::string & name) const;
+
+        template <typename Type = Named, typename... Keys>
+        std::array<const Type *, sizeof...(Keys)> cget_all_child(const Keys &...args) const
+        {
+            std::array<const Type *, sizeof...(Keys)> array;
+
+            int i = 0;
+            const auto finder = [&array, &i, this](const auto & arg) {
+                array[i] = this->cget_child<Type>(arg);
+                ++i;
+            };
+
+            (finder(args), ...);
+
+            return array;
+        }
 
         // Links
         bool is_link(const std::string & link) const;
@@ -92,7 +133,7 @@ class Node: public Named
         std::string tree_str(TreeOpts opts) const;
         std::string tree_desc_str() const;
 
-        const std::map<std::string, ChildEntry *> & children() const;
+        const std::unordered_map<std::string, ChildEntry *> & children() const;
         const std::vector<std::string> & children_keys() const;
 
     protected:
@@ -110,9 +151,9 @@ class Node: public Named
         ChildEntry *_get_child_entry(const Named *child) const;
 
         std::vector<std::string> _children_keys;
-        std::map<std::string, ChildEntry *> _children_map;
+        std::unordered_map<std::string, ChildEntry *> _children_map;
         std::vector<std::string> _link_keys;
-        std::map<std::string, std::string> _link_map;
+        std::unordered_map<std::string, std::string> _link_map;
 };
 
 } // namespace sihd::util

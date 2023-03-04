@@ -33,7 +33,7 @@ void add_child_informations(const Node *node,
                             const std::string & indent)
 {
     s += fmt::format("{}{}", indent, name);
-    Node *parent = child->parent();
+    const Node *parent = child->cparent();
     if (name != child->name())
         s += fmt::format("  => {}", child->full_name());
     else if (parent != node)
@@ -51,7 +51,7 @@ void add_children_informations(const Node *node, std::string & s, Node::TreeOpts
 {
     for (const std::string & name : node->children_keys())
     {
-        Named *child = node->get_child(name);
+        const Named *child = node->cget_child(name);
         if (child != nullptr)
             add_child_informations(node, name, child, s, opts, indent);
     }
@@ -161,7 +161,12 @@ Node::ChildEntry *Node::_get_child_entry(const std::string & name) const
     return nullptr;
 }
 
-Named *Node::get_child(const std::string & name) const
+Named *Node::get_child(const std::string & name)
+{
+    return const_cast<Named *>(this->cget_child(name));
+}
+
+const Named *Node::cget_child(const std::string & name) const
 {
     Node::ChildEntry *entry = this->_get_child_entry(name);
     return entry != nullptr ? entry->obj : nullptr;
@@ -306,7 +311,7 @@ bool Node::resolve_links(size_t recursion)
     return ret;
 }
 
-const std::map<std::string, Node::ChildEntry *> & Node::children() const
+const std::unordered_map<std::string, Node::ChildEntry *> & Node::children() const
 {
     return _children_map;
 }

@@ -20,21 +20,30 @@ class TestNode: public ::testing::Test
 
 TEST_F(TestNode, test_node_tree)
 {
+    constexpr bool get_pointer_ownership = true;
+
     Node root("root");
-    root.add_child(new Named("child1"), true);
-    root.add_child(new Named("child2"), true);
+    root.add_child(new Named("child1"), get_pointer_ownership);
+    root.add_child(new Named("child2"), get_pointer_ownership);
     Named *child3 = new Named("child3", &root);
     Node *parent = new Node("parent");
-    root.add_child(parent, true);
-    parent->add_child(new Named("cousin1"), true);
-    parent->add_child(new Named("cousin2"), true);
+    root.add_child(parent, get_pointer_ownership);
+    parent->add_child(new Named("cousin1"), get_pointer_ownership);
+    parent->add_child(new Named("cousin2"), get_pointer_ownership);
     Named *cousin3 = parent->add_child<Named>("cousin3");
 
     SIHD_COUT(root.tree_str());
 
     // Parent - child
-    Named *child1 = root.find("child1");
+    // Named *child1 = root.find("child1");
+
+    auto [child1, child2] = root.find_all("child1", "child2");
+
+    EXPECT_NE(child2, nullptr);
+    EXPECT_NE(root.find("child1"), nullptr);
+
     ASSERT_NE(child1, nullptr);
+
     EXPECT_EQ(child1->name(), "child1");
     EXPECT_EQ(root.get_child("child3"), child3);
     EXPECT_EQ(parent->parent(), &root);
@@ -53,7 +62,7 @@ TEST_F(TestNode, test_node_tree)
     EXPECT_EQ(found, root.find(".parent.cousin1"));
     EXPECT_EQ(found, parent->find("..parent.cousin1"));
     EXPECT_EQ(&root, child3->find(".."));
-    EXPECT_EQ(&root, child3->find_node(".."));
+    EXPECT_EQ(&root, child3->find<Node>(".."));
 
     // Root
     EXPECT_EQ(parent->root(), &root);
@@ -74,6 +83,14 @@ TEST_F(TestNode, test_node_links)
     Node *parent_node = root.add_child<Node>("parent");
     Node *uncle_node = other_family->add_child<Node>("uncle");
     Node *gp_node = older->add_child<Node>("grandparent");
+
+    auto [tmp_origin, tmp_parent] = root.get_all_child<Node>("origin", "parent");
+    EXPECT_EQ(tmp_origin, origin);
+    EXPECT_EQ(tmp_parent, parent_node);
+
+    auto [tmp_gp, tmp_uncle] = root.find_all<Node>("older.grandparent", "other_family.uncle");
+    EXPECT_EQ(tmp_uncle, uncle_node);
+    EXPECT_EQ(tmp_gp, gp_node);
 
     SIHD_COUT(root.tree_str());
 

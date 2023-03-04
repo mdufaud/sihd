@@ -6,12 +6,29 @@ import shutil
 import tarfile
 import subprocess
 import datetime
+
 from os.path import join, dirname, abspath
-sys.path.append(".")
+
+# append to python path parent build dir
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
+
 try:
     import modules as build_tools_modules
 except ImportError:
     from . import modules as build_tools_modules
+
+try:
+    from addon import default_build
+
+    env_keys = [item for item in dir(default_build) if not item.startswith("__")]
+    for env_key in env_keys:
+        if env_key not in os.environ:
+            continue
+        value = getattr(default_build, env_key)
+        os.environ[env_key] = str(value)
+
+except ImportError:
+    raise
 
 default_mode = "debug"
 default_compiler = os.getenv("COMPILER", "gcc")
@@ -260,7 +277,7 @@ build_for_linux = build_platform == "linux"
 def get_gnu_triplet():
     return _build_gnu_triplet(build_architecture, build_platform)
 
-# path ROOT -> root/site_scons/scripts/builder.py
+# path ROOT -> root/site_scons/builder.py
 build_root_path = abspath(dirname(dirname(dirname(__file__))))
 
 # path DIST
@@ -587,15 +604,6 @@ def distribute_app(app, modules):
 # Python package command line utils
 ###############################################################################
 
-def print_all():
-    print(" ".join([
-        build_platform,
-        build_architecture,
-        build_mode,
-        build_compiler,
-        build_on_android and "true" or "false"
-    ]))
-
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         sys.exit(0)
@@ -610,4 +618,10 @@ if __name__ == '__main__':
     elif sys.argv[1] == "android":
         print(build_on_android and "true" or "false")
     elif sys.argv[1] == "all":
-        print_all()
+        print(" ".join([
+            build_platform,
+            build_architecture,
+            build_mode,
+            build_compiler,
+            build_on_android and "true" or "false"
+        ]))

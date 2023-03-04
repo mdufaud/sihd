@@ -12,16 +12,6 @@
 namespace sihd::util
 {
 
-Timestamp::Timestamp(time_t nano): _nano(nano) {}
-
-Timestamp::Timestamp(Clocktime clocktime)
-{
-    _nano = time::hours(clocktime.hour);
-    _nano += time::minutes(clocktime.minute);
-    _nano += time::seconds(clocktime.second);
-    _nano += time::milliseconds(clocktime.millisecond);
-}
-
 Timestamp::Timestamp(Calendar calendar)
 {
     struct tm tm;
@@ -48,10 +38,6 @@ Timestamp::Timestamp(Calendar calendar, Clocktime clocktime)
 
     _nano = time::seconds(mktime(&tm));
 }
-
-Timestamp::Timestamp(std::chrono::nanoseconds duration): _nano(duration.count()) {}
-
-Timestamp::~Timestamp() {}
 
 Timestamp Timestamp::now()
 {
@@ -197,11 +183,6 @@ bool Timestamp::is_leap_year() const
 {
     Calendar c = this->local_calendar();
     return time::is_leap_year(c.year);
-}
-
-Timestamp::operator time_t() const
-{
-    return _nano;
 }
 
 Timestamp::operator std::chrono::nanoseconds() const
