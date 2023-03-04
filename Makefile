@@ -42,10 +42,6 @@ APP_NAME := $(shell basename $(HERE))
 ##############
 
 BUILD_TOOLS := $(HERE)/site_scons
-MAKEFILE_TOOLS := $(BUILD_TOOLS)/makefile
-
-BUILD_TOOLS_ADDON := $(BUILD_TOOLS)/addon
-MAKEFILE_TOOLS_ADDON := $(BUILD_TOOLS_ADDON)/makefile
 
 BUILD_SCRIPTS := $(BUILD_TOOLS)/scripts
 BUILDER := $(BUILD_SCRIPTS)/builder.py
@@ -69,13 +65,13 @@ endif
 
 COMPILER := $(word 4, $(BUILDER_RESP))
 ANDROID := $(word 5, $(BUILDER_RESP))
+BUILD_PATH := $(word 6, $(BUILDER_RESP))
 
 ##########
 # Paths
 ##########
 
 BUILD_ENTRY_PATH := $(HERE)/build
-BUILD_PATH := $(BUILD_ENTRY_PATH)/$(PLATFORM)-$(ARCH)/$(COMPILE_MODE)
 EXTLIB_PATH := $(BUILD_PATH)/extlib
 EXTLIB_LIB_PATH := $(EXTLIB_PATH)/lib
 LIB_PATH := $(BUILD_PATH)/lib
@@ -93,9 +89,14 @@ DIST_PATH := $(HERE)/dist
 # Makefile includes
 ####################
 
+MAKEFILE_TOOLS := $(BUILD_TOOLS)/makefile
+
 include $(MAKEFILE_TOOLS)/logger.mk
 include $(MAKEFILE_TOOLS)/utils.mk
 include $(MAKEFILE_TOOLS)/templates.mk
+
+BUILD_TOOLS_ADDON := $(BUILD_TOOLS)/addon
+MAKEFILE_TOOLS_ADDON := $(BUILD_TOOLS_ADDON)/makefile
 
 ifneq ($(wildcard $(MAKEFILE_TOOLS_ADDON)/addon.mk),)
 include $(MAKEFILE_TOOLS_ADDON)/addon.mk
@@ -114,9 +115,9 @@ SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(j) $(SCONS_ARGS)
 # Conan env
 ############
 
-CONAN_PATH = $(BUILD_PATH)/conan
-CONAN_PROFILES_PATH = $(BUILD_TOOLS)/conan_profiles
-CONAN_PROFILE = $(CONAN_PROFILES_PATH)/$(ARCH)/$(COMPILER).txt
+CONAN_PATH := $(BUILD_PATH)/conan
+CONAN_PROFILES_PATH := $(BUILD_TOOLS)/conan_profiles
+CONAN_PROFILE := $(CONAN_PROFILES_PATH)/$(ARCH)/$(COMPILER).txt
 CONAN_PROFILE_ARG =
 CONAN_INSTALL = conan install $(HERE) -if $(CONAN_PATH) $(CONAN_INSTALL_PATH) $(CONAN_PROFILE_ARG) $(CONAN_ARGS)
 # checking platform env to select a conan profile

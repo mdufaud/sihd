@@ -69,24 +69,24 @@ class Node: public Named
         bool set_child_ownership(const std::string & name, bool ownership);
         bool set_child_ownership(const Named *child, bool ownership);
 
-        template <class C>
-        C *get_child(const std::string & name)
+        template <class ChildType>
+        ChildType *get_child(const std::string & name)
         {
             Named *obj = this->get_child(name);
             if (obj != nullptr)
-                return dynamic_cast<C *>(obj);
+                return dynamic_cast<ChildType *>(obj);
             return nullptr;
         }
         Named *get_child(const std::string & name);
 
-        template <typename Type = Named, typename... Keys>
-        std::array<Type *, sizeof...(Keys)> get_all_child(const Keys &...args)
+        template <class ChildType = Named, typename... Keys>
+        std::array<ChildType *, sizeof...(Keys)> get_all_child(const Keys &...args)
         {
-            std::array<Type *, sizeof...(Keys)> array;
+            std::array<ChildType *, sizeof...(Keys)> array;
 
             int i = 0;
             const auto finder = [&array, &i, this](const auto & arg) {
-                array[i] = this->get_child<Type>(arg);
+                array[i] = this->get_child<ChildType>(arg);
                 ++i;
             };
 
@@ -95,30 +95,41 @@ class Node: public Named
             return array;
         }
 
-        template <class C>
-        const C *cget_child(const std::string & name) const
+        template <class ChildType>
+        const ChildType *cget_child(const std::string & name) const
         {
             const Named *obj = this->cget_child(name);
             if (obj != nullptr)
-                return dynamic_cast<const C *>(obj);
+                return dynamic_cast<const ChildType *>(obj);
             return nullptr;
         }
         const Named *cget_child(const std::string & name) const;
 
-        template <typename Type = Named, typename... Keys>
-        std::array<const Type *, sizeof...(Keys)> cget_all_child(const Keys &...args) const
+        template <class ChildType = Named, typename... Keys>
+        std::array<const ChildType *, sizeof...(Keys)> cget_all_child(const Keys &...args) const
         {
-            std::array<const Type *, sizeof...(Keys)> array;
+            std::array<const ChildType *, sizeof...(Keys)> array;
 
             int i = 0;
             const auto finder = [&array, &i, this](const auto & arg) {
-                array[i] = this->cget_child<Type>(arg);
+                array[i] = this->cget_child<ChildType>(arg);
                 ++i;
             };
 
             (finder(args), ...);
 
             return array;
+        }
+
+        template <typename ChildType, typename Predicate>
+        void execute_children(Predicate p)
+        {
+            for (const auto & [_, entry] : _children_map)
+            {
+                ChildType *child = dynamic_cast<ChildType *>(entry->obj);
+                if (child != nullptr)
+                    p(child);
+            }
         }
 
         // Links

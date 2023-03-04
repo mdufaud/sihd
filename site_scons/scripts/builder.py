@@ -12,23 +12,23 @@ from os.path import join, dirname, abspath
 # append to python path parent build dir
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
-try:
-    import modules as build_tools_modules
-except ImportError:
-    from . import modules as build_tools_modules
+from scripts import modules as build_tools_modules
 
+# import default env configuration
 try:
     from addon import default_build
 
     env_keys = [item for item in dir(default_build) if not item.startswith("__")]
     for env_key in env_keys:
-        if env_key not in os.environ:
-            continue
-        value = getattr(default_build, env_key)
-        os.environ[env_key] = str(value)
+        if os.getenv(env_key, "") == "":
+            value = getattr(default_build, env_key)
+            os.environ[env_key] = str(value)
 
 except ImportError:
-    raise
+    pass
+
+# remove python path manipulation
+sys.path.pop()
 
 default_mode = "debug"
 default_compiler = os.getenv("COMPILER", "gcc")
@@ -42,15 +42,15 @@ class TermColors(object):
 
     def __init__(self):
         if os.getenv("TERM"):
-            self.red = "{}0;31m".format(_term_color_prefix)
-            self.green = "{}0;32m".format(_term_color_prefix)
-            self.orange = "{}0;33m".format(_term_color_prefix)
-            self.blue = "{}0;34m".format(_term_color_prefix)
-            self.bold_red = "{}1;31m".format(_term_color_prefix)
-            self.bold_green = "{}1;32m".format(_term_color_prefix)
-            self.bold_orange = "{}1;33m".format(_term_color_prefix)
-            self.bold_blue = "{}1;34m".format(_term_color_prefix)
-            self.reset = "{}0m".format(_term_color_prefix)
+            self.red = f"{_term_color_prefix}0;31m"
+            self.green = f"{_term_color_prefix}0;32m"
+            self.orange = f"{_term_color_prefix}0;33m"
+            self.blue = f"{_term_color_prefix}0;34m"
+            self.bold_red = f"{_term_color_prefix}1;31m"
+            self.bold_green = f"{_term_color_prefix}1;32m"
+            self.bold_orange = f"{_term_color_prefix}1;33m"
+            self.bold_blue = f"{_term_color_prefix}1;34m"
+            self.reset = f"{_term_color_prefix}0m"
         else:
             self.red = ""
             self.green = ""
@@ -280,13 +280,14 @@ def get_gnu_triplet():
 # path ROOT -> root/site_scons/builder.py
 build_root_path = abspath(dirname(dirname(dirname(__file__))))
 
-# path DIST
+# distribution path next to root
 build_dist_path = join(build_root_path, "dist")
-
-# path BUILD
+# build dir path next to root
 build_entry_path = join(build_root_path, "build")
+# last build link path
 build_last_link_path = join(build_entry_path, "last")
-build_path = join(build_entry_path, f"{build_platform}-{build_architecture}", build_mode)
+# build full path
+build_path = join(build_entry_path, f"{build_platform}-{build_architecture}", build_compiler, build_mode)
 
 build_extlib_path = join(build_path, "extlib")
 build_extlib_bin_path = join(build_extlib_path, "bin")
@@ -617,11 +618,14 @@ if __name__ == '__main__':
         print(build_mode)
     elif sys.argv[1] == "android":
         print(build_on_android and "true" or "false")
+    elif sys.argv[1] == "path":
+        print(build_path)
     elif sys.argv[1] == "all":
         print(" ".join([
             build_platform,
             build_architecture,
             build_mode,
             build_compiler,
-            build_on_android and "true" or "false"
+            build_on_android and "true" or "false",
+            build_path
         ]))

@@ -32,11 +32,13 @@ TEST_F(TestNode, test_node_tree)
     parent->add_child(new Named("cousin2"), get_pointer_ownership);
     Named *cousin3 = parent->add_child<Named>("cousin3");
 
+    Node *parent_found = nullptr;
+    root.execute_children<Node>([&parent_found](Node *child) { parent_found = child; });
+    EXPECT_EQ(parent_found, parent);
+
     SIHD_COUT(root.tree_str());
 
     // Parent - child
-    // Named *child1 = root.find("child1");
-
     auto [child1, child2] = root.find_all("child1", "child2");
 
     EXPECT_NE(child2, nullptr);

@@ -61,12 +61,16 @@ modules = {
         # only link dynamically fmt when no cross compiling
         "linux-dyn-libs": [
             'fmt', # get from sys lib only when compiling dynamically on linux
-            'stdc++fs' # no emscripten trick
+            'stdc++fs'
         ],
         "static-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
         "windows-libs": [
-            'rpcrt4',
-            'stdc++fs' # no emscripten trick
+            'rpcrt4', # Uuid
+            'psapi', # GetModuleFileName/GetProcessMemoryInfo
+            'ucrt', # timezone
+            'ssp', # winsock
+            'ws2_32', # windows api
+            'stdc++fs'
         ],
         "windows-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
         "em-flags": ["-pthread"], # enable threads
@@ -255,12 +259,6 @@ em_link = ["--emrun"]
 
 ## windows specifics
 
-windows_libs = [
-    'psapi', # GetModuleFileName
-    'ucrt',
-    'ssp', # winsock
-    'ws2_32' # windows api
-]
 # _WIN64 -> activates sihd functionnalities
 # _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
 # NTDDI_VERSION -> activates higher version of WIN functionnalities (mingw)
@@ -376,23 +374,23 @@ yum_packages = {
 
 __msys2_mingw = "mingw-w64-x86_64-"
 msys2_packages = {
-    "gtest": __msys2_mingw + "gtest",
-    "nlohmann_json": __msys2_mingw + "nlohmann-json",
-    "fmt": __msys2_mingw + "fmt",
-    "cxxopts": __msys2_mingw + "cxxopts",
-    "openssl": __msys2_mingw + "openssl",
-    "libcurl": __msys2_mingw + "curl",
-    "libwebsockets": __msys2_mingw + "libwebsockets",
-    "libpcap": __msys2_mingw + "libpcap",
-    "libssh": __msys2_mingw + "libssh",
-    "libusb": __msys2_mingw + "libusb",
-    "libzip": __msys2_mingw + "libzip",
-    "pybind11": __msys2_mingw + "pybind11",
-    "glfw": __msys2_mingw + "glfw",
-    "glew": __msys2_mingw + "glew",
-    "sdl2": __msys2_mingw + "SDL2",
-    "lua": __msys2_mingw + "lua",
-    "libusb": __msys2_mingw + "libusb",
+    "gtest": f"{__msys2_mingw}gtest",
+    "nlohmann_json": f"{__msys2_mingw}nlohmann-json",
+    "fmt": f"{__msys2_mingw}fmt",
+    "cxxopts": f"{__msys2_mingw}cxxopts",
+    "openssl": f"{__msys2_mingw}openssl",
+    "libcurl": f"{__msys2_mingw}curl",
+    "libwebsockets": f"{__msys2_mingw}libwebsockets",
+    "libpcap": f"{__msys2_mingw}libpcap",
+    "libssh": f"{__msys2_mingw}libssh",
+    "libusb": f"{__msys2_mingw}libusb",
+    "libzip": f"{__msys2_mingw}libzip",
+    "pybind11": f"{__msys2_mingw}pybind11",
+    "glfw": f"{__msys2_mingw}glfw",
+    "glew": f"{__msys2_mingw}glew",
+    "sdl2": f"{__msys2_mingw}SDL2",
+    "lua": f"{__msys2_mingw}lua",
+    "libusb": f"{__msys2_mingw}libusb",
 }
 
 ###############################################################################
