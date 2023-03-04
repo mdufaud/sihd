@@ -376,20 +376,21 @@ def copy_dll_to_build(modules_build_order):
         if not os.path.isdir(search_path):
             continue
         for dll_name in dll_lst:
-            dll_found.extend(glob.glob(os.path.join(search_path, "*{}*.dll".format(dll_name))))
+            dll_found.extend(glob.glob(os.path.join(search_path, "*{}*.dll*".format(dll_name))))
 
     for forced_path in dll_forced_path_lst:
         if not os.path.isdir(forced_path):
             continue
-        dll_found.extend(glob.glob(os.path.join(forced_path, "*.dll")))
+        dll_found.extend(glob.glob(os.path.join(forced_path, "*.dll*")))
 
     for build_dll_path in build_need_dll_path_lst:
-        if os.path.isdir(build_dll_path):
-            for dll_src in dll_found:
-                dll_dst = os.path.join(build_dll_path, os.path.basename(dll_src))
-                if os.path.exists(dll_dst):
-                    os.remove(dll_dst)
-                shutil.copyfile(dll_src, dll_dst)
+        if not os.path.isdir(build_dll_path):
+            continue
+        for dll_src in dll_found:
+            dll_dst = os.path.join(build_dll_path, os.path.basename(dll_src))
+            if os.path.exists(dll_dst):
+                os.remove(dll_dst)
+            shutil.copyfile(dll_src, dll_dst)
 
 ###############################################################################
 # After build

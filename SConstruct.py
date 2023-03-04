@@ -142,6 +142,25 @@ base_env = Environment(
     # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
     COMPILATIONDB_USE_ABSPATH = True,
+    # scons tools
+    tools = [
+        # general utils
+        'tar',
+        'zip',
+        'textfile',
+        # linux c compiler
+        'gcc',
+        'cc',
+        # linux c++ compiler
+        'g++',
+        'cxx',
+        # linux assembly compiler
+        'nasm',
+        # linux linker
+        'gnulink',
+        # linux static archiver
+        'ar'
+    ]
 )
 
 # Build output
@@ -337,7 +356,7 @@ def _env_build_demo(self, src, name, add_libs = [], **kwargs):
     if builder.build_demo == False:
         return None
     module_name = self['APP_MODULE_NAME']
-    
+
     # if modules are specified, demo is built only if specified by user and not automatically by dependencies
     if modules_to_build and module_name not in modules_to_build:
         return None
