@@ -154,6 +154,7 @@ int main(int argc, char **argv)
 
         fmt::print("Press Ctrl + c to exit\n");
         SigWaiter waiter;
+        fmt::print("Exiting...\n");
     }
 
     return 0;

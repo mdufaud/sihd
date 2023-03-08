@@ -155,9 +155,9 @@ bool HttpServer::stop()
 {
     {
         std::lock_guard l(_mutex);
-        if (_running == false)
-            return true;
         _running = false;
+        if (_lws_context_ptr != nullptr)
+            lws_cancel_service(_lws_context_ptr);
     }
     return true;
 }
