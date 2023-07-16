@@ -267,50 +267,41 @@ bool is_run_by_valgrind()
            && (strstr(ldpreload, "/valgrind/") != nullptr || strstr(ldpreload, "/vgpreload") != nullptr);
 }
 
+// https://stackoverflow.com/questions/3596781/how-to-detect-if-the-current-process-is-being-run-by-gdb
+
 bool is_run_by_debugger()
 {
 #if defined(__SIHD_EMSCRIPTEN__)
     return false;
 #elif !defined(__SIHD_WINDOWS__)
-    // gdb check
-    int pid = fork();
-    int status;
-    int res = -1;
+    char buf[4096];
 
-    if (pid == -1)
-    {
-        SIHD_LOG(error, "OS: fork error: {}", strerror(errno));
+    const int status_fd = open("/proc/self/status", O_RDONLY);
+    if (status_fd == -1)
         return false;
-    }
-    if (pid == 0)
+
+    const ssize_t num_read = read(status_fd, buf, sizeof(buf) - 1);
+    close(status_fd);
+
+    if (num_read <= 0)
+        return false;
+
+    buf[num_read] = '\0';
+    constexpr char tracerPidString[] = "TracerPid:";
+    const auto tracer_pid_ptr = strstr(buf, tracerPidString);
+    if (!tracer_pid_ptr)
+        return false;
+
+    for (const char *characterPtr = tracer_pid_ptr + sizeof(tracerPidString) - 1; characterPtr <= buf + num_read;
+         ++characterPtr)
     {
-        int ppid = getppid();
-        /* Child */
-        if (ptrace(PTRACE_ATTACH, ppid, NULL, NULL) == 0)
-        {
-            /* Wait for the parent to stop and continue it */
-            waitpid(ppid, NULL, 0);
-            ptrace(PTRACE_CONT, NULL, NULL);
-
-            /* Detach */
-            ptrace(PTRACE_DETACH, getppid(), NULL, NULL);
-
-            /* We were the tracers, so gdb is not present */
-            res = 0;
-        }
+        if (isspace(*characterPtr))
+            continue;
         else
-        {
-            /* Trace failed so gdb is present */
-            res = 1;
-        }
-        exit(res);
+            return isdigit(*characterPtr) != 0 && *characterPtr != '0';
     }
-    else
-    {
-        waitpid(pid, &status, 0);
-        res = WEXITSTATUS(status);
-    }
-    return res == 1;
+
+    return false;
 #else
     return IsDebuggerPresent();
 #endif
