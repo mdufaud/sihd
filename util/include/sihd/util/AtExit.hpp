@@ -7,33 +7,22 @@
 
 #include <sihd/util/IRunnable.hpp>
 
-namespace sihd::util
+namespace sihd::util::atexit
 {
 
-class AtExit
-{
-    private:
-        AtExit() {};
-        ~AtExit() {};
+// actual exit callback post-exit - calls handlers and deletes them
+// you should not use it manually
+void exit_callback();
 
-        static bool installed;
-        static std::mutex runnable_mutex;
-        static std::list<IRunnable *> runnables;
+// adds handler to be run post-exit
+void add_handler(IRunnable *ptr);
+// remove handler and does NOT delete it
+void remove_handler(IRunnable *ptr);
+// remove all handlers and deletes them
+void clear_handlers();
+// permits exit callback post-exit
+bool install();
 
-        // actual goodbye callback - calls handlers post-exit and deletes them
-        static void exit_callback();
-
-    public:
-        // adds handler to be run post-exit
-        static void add_handler(IRunnable *ptr);
-        // remove handler and does NOT delete it
-        static void remove_handler(IRunnable *ptr);
-        // remove all handlers and deletes them
-        static void clear_handlers();
-        // permits exit callback post-exit
-        static bool install();
-};
-
-} // namespace sihd::util
+} // namespace sihd::util::atexit
 
 #endif

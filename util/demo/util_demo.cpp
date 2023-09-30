@@ -27,18 +27,18 @@ SIHD_NEW_LOGGER("demo");
 
 void worker(double frequency)
 {
-    Waitable waiter;
-
     Runnable printer([] {
         SIHD_LOG(info, "Time since epoch: {}", Timestamp::now().timeoffset_str());
         return true;
     });
 
     StepWorker worker;
+
     worker.set_runnable(&printer);
     worker.set_frequency(frequency);
     worker.start_sync_worker("worker");
 
+    Waitable waiter;
     waiter.wait_for(std::chrono::seconds(1));
 
     worker.stop_worker();
@@ -60,13 +60,13 @@ void os()
 void time()
 {
     Timestamp today = Timestamp::now();
-    SIHD_LOG(info, "Today's day: {}", today.local_day_str());
-    SIHD_LOG(info, "Today's time: {}", today.local_sec_str());
-    SIHD_LOG(info, "Today's hour: {}", today.local_clocktime().hour);
-    SIHD_LOG(info, "Today's zoned hour: {}", today.zone_str());
-    SIHD_LOG(info, "From string date '2000/04/01': {}", Timestamp::from_str("2000/04/01", "%Y/%m/%d")->str());
-    SIHD_LOG(info, "Timezone name: {}", time::get_timezone_name());
-    SIHD_LOG(info, "Timezone offset: {}", time::get_timezone());
+    SIHD_LOG(info, "today's day: {}", today.local_day_str());
+    SIHD_LOG(info, "today's time: {}", today.local_sec_str());
+    SIHD_LOG(info, "today's hour: {}", today.local_clocktime().hour);
+    SIHD_LOG(info, "today's zoned hour: {}", today.zone_str());
+    SIHD_LOG(info, "from string date '2000/04/01': {}", Timestamp::from_str("2000/04/01", "%Y/%m/%d")->str());
+    SIHD_LOG(info, "timezone name: {}", time::get_timezone_name());
+    SIHD_LOG(info, "timezone offset: {}", time::get_timezone());
 
     fmt::print("\n");
 }

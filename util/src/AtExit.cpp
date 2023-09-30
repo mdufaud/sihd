@@ -3,16 +3,19 @@
 #include <sihd/util/AtExit.hpp>
 #include <sihd/util/Logger.hpp>
 
-namespace sihd::util
+namespace sihd::util::atexit
 {
 
-SIHD_LOGGER;
+namespace
+{
 
-bool AtExit::installed = false;
-std::mutex AtExit::runnable_mutex;
-std::list<IRunnable *> AtExit::runnables;
+bool installed = false;
+std::mutex runnable_mutex;
+std::list<IRunnable *> runnables;
 
-void AtExit::add_handler(IRunnable *ptr)
+} // namespace
+
+void add_handler(IRunnable *ptr)
 {
     std::lock_guard lock(runnable_mutex);
     auto it = std::find(runnables.begin(), runnables.end(), ptr);
@@ -20,7 +23,7 @@ void AtExit::add_handler(IRunnable *ptr)
         runnables.push_back(ptr);
 }
 
-void AtExit::remove_handler(IRunnable *ptr)
+void remove_handler(IRunnable *ptr)
 {
     std::lock_guard lock(runnable_mutex);
     auto it = std::find(runnables.begin(), runnables.end(), ptr);
@@ -28,7 +31,7 @@ void AtExit::remove_handler(IRunnable *ptr)
         runnables.erase(it);
 }
 
-void AtExit::clear_handlers()
+void clear_handlers()
 {
     std::lock_guard lock(runnable_mutex);
     for (IRunnable *runnable : runnables)
@@ -39,7 +42,7 @@ void AtExit::clear_handlers()
 }
 
 // logger's fprintf not called because stream are flushed clean after exit
-void AtExit::exit_callback()
+void exit_callback()
 {
     if (installed == false)
         return;
@@ -62,19 +65,16 @@ void AtExit::exit_callback()
     runnables.clear();
 }
 
-bool AtExit::install()
+bool install()
 {
     if (installed == false)
     {
         int ret = std::atexit(exit_callback);
         if (ret != 0)
-        {
-            SIHD_LOG(error, "AtExit: cannot install atexit handler");
             return false;
-        }
         installed = true;
     }
     return installed;
 }
 
-} // namespace sihd::util
+} // namespace sihd::util::atexit

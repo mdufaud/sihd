@@ -13,7 +13,7 @@
 
 using namespace ftxui;
 
-static std::string Stringify(Event event)
+static std::string stringify(Event event)
 {
     std::string out;
     for (auto & it : event.input())
@@ -107,7 +107,7 @@ TEST_F(TestLogger, test_tui_cmd)
     });
 
     component |= ftxui::CatchEvent([&](ftxui::Event event) {
-        SIHD_LOG(info, Stringify(event));
+        SIHD_LOG(info, stringify(event));
         return true;
     });
 

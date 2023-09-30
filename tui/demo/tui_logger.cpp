@@ -10,7 +10,7 @@
 
 using namespace ftxui;
 
-static std::string Stringify(Event event)
+static std::string stringify(Event event)
 {
     std::string out;
     for (auto & it : event.input())
@@ -77,7 +77,7 @@ int main()
     using namespace sihd::tui;
 
     Logger logger("tui-demo");
-    LoggerWindow logger_win(13);
+    LoggerWindow logger_win(/* max_logs= */ 13);
     TmpLogger tmp_logger(&logger_win);
 
     auto screen = ftxui::ScreenInteractive::TerminalOutput();
@@ -90,7 +90,7 @@ int main()
     });
 
     component |= ftxui::CatchEvent([&](ftxui::Event event) {
-        logger.info(Stringify(event));
+        logger.info(stringify(event));
         return true;
     });
 
