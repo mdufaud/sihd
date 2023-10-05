@@ -50,7 +50,7 @@ class Process: public IStoppableRunnable,
         // wait for process
         bool wait_any(int options = 0);
         // read pipes
-        bool read_pipes();
+        bool read_pipes(int milliseconds_timeout = 1);
         // you have to call end when you piped (calls wait())
         bool end();
         // send signal to process - SIGTERM by default

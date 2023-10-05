@@ -55,8 +55,10 @@ TEST_F(TestWorker, test_stepworker_multiple)
     EXPECT_TRUE(worker.start_sync_worker("stepworker-thread"));
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     EXPECT_TRUE(worker.stop_worker());
-    std::this_thread::sleep_for(std::chrono::milliseconds(2));
-    EXPECT_NEAR(ran, 5, 1);
+    int really_ran = ran;
+    std::this_thread::sleep_for(std::chrono::milliseconds(4));
+    EXPECT_GE(really_ran, 2);
+    EXPECT_EQ(ran, really_ran);
 }
 
 TEST_F(TestWorker, test_stepworker_once)

@@ -69,7 +69,7 @@ std::string _timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, b
         s += fmt::format(":{}ns", ns);
     }
     if (total_parenthesis)
-        s += fmt::format(" ({})", timestamp);
+        s += fmt::format(" ({})", timestamp.nanoseconds());
     return s;
 }
 

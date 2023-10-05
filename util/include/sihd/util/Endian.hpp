@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_ENDIAN_HPP__
 #define __SIHD_UTIL_ENDIAN_HPP__
 
+#include <cstdint>
 #include <string>
 
 #include <sihd/util/portable_endian.h>

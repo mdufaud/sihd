@@ -517,9 +517,9 @@ bool Process::_process_fd_out(FileDescWrapper & fdw)
     return true;
 }
 
-bool Process::read_pipes()
+bool Process::read_pipes(int milliseconds_timeout)
 {
-    return _poll.is_running() == false && _poll.fds_size() > 0 && _poll.poll(1) > 0;
+    return _poll.is_running() == false && _poll.fds_size() > 0 && _poll.poll(milliseconds_timeout) > 0;
 }
 
 bool Process::end()
@@ -528,6 +528,7 @@ bool Process::end()
     this->_close(_stdin.fd_write);
     this->_close(_stdout.fd_read);
     this->_close(_stderr.fd_read);
+
     bool running = this->is_running();
     int tries = 3;
     while (running && tries > 0)

@@ -68,8 +68,8 @@ TEST_F(TestProcess, test_process_run)
 
     proc.stdin_from("hello")
         .stdout_to([&res](const char *buf, [[maybe_unused]] size_t size) {
-            SIHD_LOG(debug, buf);
             res.push_back(buf);
+            SIHD_LOG(debug, buf);
         })
         .stderr_close();
 
@@ -80,25 +80,28 @@ TEST_F(TestProcess, test_process_run)
     Worker worker(&task);
     worker.start_sync_worker("proc");
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(15));
+    // waiting cat process to boot
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
     ASSERT_FALSE(res.empty());
     EXPECT_EQ(res.back(), "hello");
 
+    auto cat_write_plus_polling_time = std::chrono::milliseconds(15);
+
     proc.stdin_from("world");
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    std::this_thread::sleep_for(cat_write_plus_polling_time);
     EXPECT_EQ(res.back(), "world");
 
     proc.stdin_from("how");
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    std::this_thread::sleep_for(cat_write_plus_polling_time);
     EXPECT_EQ(res.back(), "how");
 
     proc.stdin_from("are");
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    std::this_thread::sleep_for(cat_write_plus_polling_time);
     EXPECT_EQ(res.back(), "are");
 
     proc.stdin_from("you");
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    std::this_thread::sleep_for(cat_write_plus_polling_time);
     proc.stop();
     worker.stop_worker();
     EXPECT_EQ(res.back(), "you");
@@ -150,13 +153,27 @@ TEST_F(TestProcess, test_process_in_cat)
     proc.stdin_from("hello world");
     proc.stdout_to(output);
     EXPECT_TRUE(proc.start());
+
+    // cat starting time
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
     proc.stdin_from("1");
     proc.stdin_from("2");
-    proc.read_pipes();
+
+    constexpr int ms_timeout = 20;
+
+    // reading stdout
+    proc.read_pipes(ms_timeout);
+    // maybe there is '2' to read
+    proc.read_pipes(ms_timeout);
+
     EXPECT_EQ(output, "hello world12");
+
     proc.stdin_from("3");
-    EXPECT_TRUE(proc.end());
+    proc.read_pipes(ms_timeout);
     EXPECT_EQ(output, "hello world123");
+
+    EXPECT_TRUE(proc.end());
     EXPECT_TRUE(proc.has_exited());
     EXPECT_EQ(proc.return_code(), 0);
 }
@@ -167,6 +184,7 @@ TEST_F(TestProcess, test_process_in_wc)
         GTEST_SKIP() << "Is an interactive test";
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
+
     Process proc {"wc", "-c"};
     std::string result;
 
@@ -175,9 +193,18 @@ TEST_F(TestProcess, test_process_in_wc)
         (void)size;
         result = buf;
     });
+
     EXPECT_TRUE(proc.start());
+
+    // wc boot time
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+    // close stdin to get wc output
     proc.stdin_close();
+
+    // wait for wc to process the pipe closing and quit
+    proc.wait_any();
+
     EXPECT_TRUE(proc.end());
     EXPECT_EQ(result, "11\n");
     EXPECT_TRUE(proc.has_exited());
@@ -271,6 +298,10 @@ TEST_F(TestProcess, test_process_close)
     Process cat {"cat"};
     cat.stdin_close().stderr_close();
     EXPECT_TRUE(cat.start());
+
+    // wait cat boot
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
     EXPECT_TRUE(cat.end());
     EXPECT_TRUE(cat.has_exited());
     // bad file descriptor
@@ -296,6 +327,10 @@ TEST_F(TestProcess, test_process_chain)
 
     EXPECT_TRUE(echo.wait_any());
     EXPECT_TRUE(echo.end());
+
+    // wait for wc to process the pipe closing
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
     EXPECT_TRUE(wc.wait_any());
     EXPECT_TRUE(wc.end());
     EXPECT_TRUE(cat.end());

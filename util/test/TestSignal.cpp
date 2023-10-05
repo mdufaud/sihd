@@ -77,14 +77,15 @@ TEST_F(TestSignal, test_signal_waiter)
 
 TEST_F(TestSignal, test_signal_watcher)
 {
+    const std::vector<int> signals = {SIGINT};
     const Timestamp polling_frequency = std::chrono::milliseconds(1);
     int sig = -1;
 
     SigWatcher watcher(
-        {SIGINT, 10000},
+        signals,
         [&sig](int signal_found) {
-            SIHD_LOG(debug, "Watcher found signal {}", signal_found);
             sig = signal_found;
+            SIHD_LOG(debug, "Watcher found signal {}", signal_found);
         },
         polling_frequency);
 
@@ -92,7 +93,7 @@ TEST_F(TestSignal, test_signal_watcher)
 
     raise(SIGINT);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    std::this_thread::sleep_for(std::chrono::milliseconds(15));
 
     EXPECT_EQ(sig, SIGINT);
 }

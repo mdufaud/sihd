@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_DATATYPE_HPP__
 #define __SIHD_UTIL_DATATYPE_HPP__
 
+#include <cstdint>
 #include <string_view>
 
 namespace sihd::util

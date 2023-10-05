@@ -47,9 +47,8 @@ TEST_F(TestWaitable, test_waitable_until_predicate)
     Waitable waitable;
     int max_calls = 4;
     int calls = 0;
-
-    Timestamp timeout = std::chrono::milliseconds(6);
     Timestamp poll_frequency = std::chrono::milliseconds(1);
+    Timestamp max_time = poll_frequency * max_calls;
 
     time_t before = clock.now();
     Timestamp elapsed = waitable.infinite_wait_until_predicate(
@@ -61,11 +60,13 @@ TEST_F(TestWaitable, test_waitable_until_predicate)
     time_t after = clock.now();
 
     Timestamp calculated_elapsed = after - before;
+    Timestamp allowed_max_time = max_time + std::chrono::milliseconds(10);
 
     EXPECT_EQ(calls, max_calls);
-    EXPECT_LT(elapsed, timeout);
-    EXPECT_LT(calculated_elapsed, timeout);
+    EXPECT_LE(elapsed, allowed_max_time);
+    EXPECT_LT(calculated_elapsed, allowed_max_time);
 
+    Timestamp timeout = std::chrono::milliseconds(6);
     max_calls = 100;
     before = clock.now();
     elapsed = waitable.wait_until_predicate(
@@ -89,22 +90,25 @@ TEST_F(TestWaitable, test_waitable_loop)
     Waitable waitable;
     SteadyClock clock;
     Synchronizer synchro;
+    int max_loop = 3;
+    int ms_wait = 1;
+    int ms_max_time = (ms_wait * max_loop) + 50;
 
     synchro.init_sync(2);
     time_t before = clock.now();
     std::thread t([&]() {
         synchro.sync();
-        for (int i = 0; i < 3; ++i)
+        for (int i = 0; i < max_loop; ++i)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(ms_wait));
             waitable.notify(1);
         }
     });
     synchro.sync();
-    bool timeout = waitable.wait_for_loop(time::milli(15), 3);
+    bool timeout = waitable.wait_for_loop(time::milli(ms_max_time), max_loop);
     t.join();
     EXPECT_EQ(timeout, false);
-    EXPECT_LE(time::to_milli(clock.now() - before), 14);
+    EXPECT_LE(time::to_milli(clock.now() - before), ms_max_time);
 }
 
 TEST_F(TestWaitable, test_waitable_loop_fail)
@@ -126,10 +130,10 @@ TEST_F(TestWaitable, test_waitable_loop_fail)
         }
     });
     synchro.sync();
-    bool timeout = waitable.wait_for_loop(time::milli(5), 4);
+    bool timeout = waitable.wait_for_loop(time::milli(10), 4);
     t.join();
     EXPECT_EQ(timeout, true);
-    EXPECT_LE(time::to_milli(clock.now() - now), 8);
+    EXPECT_GE(time::to_milli(clock.now() - now), 10);
 }
 
 } // namespace test

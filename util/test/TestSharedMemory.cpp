@@ -40,18 +40,20 @@ TEST_F(TestSharedMemory, test_sharedmemory)
     if (pid != 0)
     {
         SIHD_LOG(debug, "--- begin of parent ---");
-        usleep(1E4);
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
         SIHD_LOG(debug, "--- parent attaching ---");
         // no attach_read_only with semaphores - it segfaults
         SharedMemory mem;
         ASSERT_TRUE(mem.attach("/id", sizeof(shmbuf)));
         ASSERT_NE(mem.data(), nullptr);
-
         SIHD_LOG(debug, "--- parent attached ---");
+
+        SIHD_LOG(debug, "--- parent reading shared memory ---");
         struct shmbuf *shmp = (struct shmbuf *)mem.data();
         EXPECT_NE(sem_wait(&shmp->sem1), -1);
-        SIHD_LOG(debug, "data[0] -> {}", shmp->data[0]);
-        SIHD_LOG(debug, "data[1] -> {}", shmp->data[1]);
+        SIHD_LOG(debug, "[parent] data[0] -> {}", shmp->data[0]);
+        SIHD_LOG(debug, "[parent] data[1] -> {}", shmp->data[1]);
         EXPECT_EQ(shmp->data[0], 42);
         EXPECT_EQ(shmp->data[1], 24);
         EXPECT_NE(sem_post(&shmp->sem2), -1);
@@ -71,12 +73,11 @@ TEST_F(TestSharedMemory, test_sharedmemory)
         struct shmbuf *shmp = (struct shmbuf *)mem.data();
         ASSERT_NE(sem_init(&shmp->sem1, 1, 0), -1);
         ASSERT_NE(sem_init(&shmp->sem2, 1, 0), -1);
+        SIHD_LOG(debug, "--- child writing data ---");
         shmp->data[0] = 42;
         shmp->data[1] = 24;
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
         EXPECT_NE(sem_post(&shmp->sem1), -1);
+
         SIHD_LOG(debug, "--- child wrote data - waiting for parent to read it ---");
         EXPECT_NE(sem_wait(&shmp->sem2), -1);
 
