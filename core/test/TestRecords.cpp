@@ -35,7 +35,6 @@ TEST_F(TestRecords, test_records_dev_player)
     Channel *bool_channel = core.add_channel("bool_channel", sihd::util::TYPE_BOOL, 4);
 
     MemRecorder mem_recorder("mem_recorder", &core);
-    EXPECT_TRUE(mem_recorder.set_conf("provider", true));
     mem_recorder.set_parent_ownership(false);
 
     DevPlayer dev_replayer("dev_replayer", &core);
@@ -51,14 +50,15 @@ TEST_F(TestRecords, test_records_dev_player)
 
     sihd::util::ArrInt arr_int = {10, 0};
     sihd::util::ArrBool arr_bool = {false, false, false, false};
-    mem_recorder.add_record("int", sihd::util::time::milli(10), &arr_int);
-    mem_recorder.add_record("bool", sihd::util::time::milli(20), &arr_bool);
+    mem_recorder.add_record("int", sihd::util::time::milli(5), &arr_int);
+    mem_recorder.add_record("bool", sihd::util::time::milli(10), &arr_bool);
     arr_int[1] = 20;
-    mem_recorder.add_record("int", sihd::util::time::milli(30), &arr_int);
+    mem_recorder.add_record("int", sihd::util::time::milli(15), &arr_int);
     arr_bool[0] = true;
-    mem_recorder.add_record("bool", sihd::util::time::milli(40), &arr_bool);
+    mem_recorder.add_record("bool", sihd::util::time::milli(20), &arr_bool);
     arr_bool[2] = true;
-    mem_recorder.add_record("bool", sihd::util::time::milli(50), &arr_bool);
+    arr_bool[3] = true;
+    mem_recorder.add_record("bool", sihd::util::time::milli(25), &arr_bool);
 
     std::cout << core.tree_desc_str() << std::endl;
     EXPECT_TRUE(core.init());
@@ -71,17 +71,23 @@ TEST_F(TestRecords, test_records_dev_player)
 
     EXPECT_TRUE(core.start());
 
-    ChannelWaiter waiter(end);
+    while (!mem_recorder.empty())
+        sihd::util::time::msleep(1);
+
+    SIHD_LOG(debug, "Stopping recorder");
+    // stop recorder to stop dev player loop and signal ending on channel
+    mem_recorder.stop();
+
     SIHD_LOG(debug, "Playing");
     play->write(0, true);
-    SIHD_LOG(debug, "Sleeping");
-    sihd::util::time::msleep(5);
-    SIHD_LOG(debug, "Stopping recorder");
-    mem_recorder.stop();
+
     SIHD_LOG(debug, "Waiting the end");
-    EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(60)));
+    ChannelWaiter waiter(end);
+    EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(50)));
 
     EXPECT_TRUE(core.stop());
+
+    SIHD_LOG(debug, "Ended");
 
     EXPECT_EQ(int_channel->read<int>(0), 10);
     EXPECT_EQ(int_channel->read<int>(1), 20);
@@ -89,7 +95,7 @@ TEST_F(TestRecords, test_records_dev_player)
     EXPECT_EQ(bool_channel->read<bool>(0), true);
     EXPECT_EQ(bool_channel->read<bool>(1), false);
     EXPECT_EQ(bool_channel->read<bool>(2), true);
-    EXPECT_EQ(bool_channel->read<bool>(3), false);
+    EXPECT_EQ(bool_channel->read<bool>(3), true);
 }
 
 TEST_F(TestRecords, test_records_dev_recorder)
@@ -103,7 +109,6 @@ TEST_F(TestRecords, test_records_dev_recorder)
     core.add_channel("char_channel", sihd::util::TYPE_CHAR, 10);
 
     MemRecorder mem_recorder("mem_recorder", &core);
-    EXPECT_TRUE(mem_recorder.set_conf("provider", true));
     mem_recorder.set_parent_ownership(false);
 
     DevRecorder dev_recorder("dev_recorder", &core);
@@ -144,7 +149,7 @@ TEST_F(TestRecords, test_records_dev_recorder)
     EXPECT_TRUE(core.stop());
 
     // verify recording
-    const MapListRecordedValues & map = mem_recorder.recorded_values();
+    const MapListRecordedValues & map = mem_recorder.make_recorded_values();
     const SortedRecordedValues & sorted_map = mem_recorder.sorted_recorded_values();
 
     time_t last_timestamp = -1;
@@ -157,8 +162,8 @@ TEST_F(TestRecords, test_records_dev_recorder)
     }
 
     SIHD_LOG(debug, "Printing dev recorder total values");
+    std::cout << mem_recorder.hexdump_recorded_values(map) << std::endl;
     std::cout << mem_recorder.hexdump_records() << std::endl;
-    std::cout << mem_recorder.hexdump_timeline() << std::endl;
 
     EXPECT_TRUE(map.find("int") != map.end());
     EXPECT_TRUE(map.find("bool") != map.end());

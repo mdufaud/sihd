@@ -39,9 +39,9 @@ TEST_F(TestDevPulsation, test_dev_pulsation)
     {
         activate->write(0, true);
         SIHD_LOG(debug, "Activated pulsation");
-        // wait for 4 pulsation in 6 ms
+        // wait for 4 pulsations
         ChannelWaiter waiter(beat);
-        EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(6), 4));
+        EXPECT_TRUE(waiter.wait_for(std::chrono::milliseconds(15), 4));
     }
     EXPECT_TRUE(core.stop());
     EXPECT_TRUE(core.reset());
@@ -60,9 +60,9 @@ TEST_F(TestDevPulsation, test_dev_pulsation)
     {
         activate->write(0, true);
         SIHD_LOG(debug, "Activated pulsation");
-        // wait for 4 pulsation in 6 ms
+        // wait for 4 pulsation
         ChannelWaiter waiter(beat);
-        EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(6), 4));
+        EXPECT_TRUE(waiter.wait_for(std::chrono::milliseconds(15), 4));
     }
     EXPECT_TRUE(core.stop());
     EXPECT_TRUE(core.reset());

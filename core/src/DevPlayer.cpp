@@ -98,8 +98,8 @@ bool DevPlayer::on_init()
 {
     this->add_unlinked_channel(CHANNEL_PLAY, TYPE_BOOL, 1);
     this->add_unlinked_channel(CHANNEL_END, TYPE_BOOL, 1);
-    _scheduler_ptr = this->add_child<Scheduler>("scheduler");
-    return true;
+    _scheduler_ptr = std::make_unique<Scheduler>(this->name() + ".scheduler");
+    return _scheduler_ptr != nullptr;
 }
 
 bool DevPlayer::on_start()
@@ -141,24 +141,30 @@ bool DevPlayer::on_start()
         return false;
     }
     // start thread
-    if (_worker.start_worker(this->name()) == false)
+    _running = true;
+    if (_worker.start_sync_worker(this->name()) == false)
     {
+        _running = false;
         _scheduler_ptr->stop();
         SIHD_LOG(error, "DevReplayer: could not start worker");
-        return false;
     }
-    _running = true;
-    return true;
+    return _running;
 }
 
 bool DevPlayer::run()
 {
+    SIHD_LOG_ERROR("NEW PLAY");
     std::lock_guard l(_run_mutex);
     if (_running == false)
         return false;
+
+    PlayableRecord record;
     // get first record in queue and write record in channel
-    PlayableRecord & record = _queue.front();
-    _queue.pop();
+    {
+        std::lock_guard l(_queue_mutex);
+        record = _queue.front();
+        _queue.pop();
+    }
     Channel *c = _map_channels[record.name];
     if (c != nullptr)
         c->write(*record.value);
@@ -166,17 +172,23 @@ bool DevPlayer::run()
         SIHD_LOG(error, "DevPlayer: channel '{}' not found", record.name);
     // notify worker loop that a record has been played
     _waitable.notify(1);
-    // if no next record to be played - notify the end of player
-    if (_last_record && _queue.empty())
-        _channel_end_ptr->write<bool>(0, true);
+    if (_last_record)
+        this->_provider_ended();
     return true;
 }
 
 void DevPlayer::handle(Collector<PlayableRecord> *collector)
 {
+    SIHD_LOG_ERROR("NEW RECORD");
     // called for each record with a lock on collector data
-    PlayableRecord record = collector->data();
-    _queue.push(record);
+    PlayableRecord record;
+    {
+        std::lock_guard l(_queue_mutex);
+        if (_last_record)
+            return;
+        record = collector->data();
+        _queue.push(record);
+    }
     _first_timestamp = record.timestamp * (1 * (_first_timestamp < 0));
     time_t execute_at = _time_begin + (record.timestamp - _first_timestamp);
     {
@@ -188,21 +200,47 @@ void DevPlayer::handle(Collector<PlayableRecord> *collector)
     // calls DevPlayer::run to execute record at setted time
     if (_running)
         _scheduler_ptr->add_task(new Task(this, execute_at));
+    SIHD_LOG_ERROR("BOOKED RECORD");
 }
 
 bool DevPlayer::_worker_loop()
 {
+    SIHD_LOG(debug, "Begin loop");
     _time_begin = _scheduler_ptr->now();
-    _first_timestamp = -1;
-    _last_record = false;
-    // run collector loop which calls DevPlayer::handle for each record
-    bool ret = _collector.run();
-    // last record to be played in scheduler thread can have no next record
-    _last_record = true;
+    while (_running)
+    {
+        if (_collector.can_collect() == false)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            continue;
+        }
+
+        _channel_end_ptr->write<bool>(0, false);
+        _first_timestamp = -1;
+        _last_record = false;
+
+        SIHD_LOG(debug, "Begin of collector");
+
+        // run collector loop which calls DevPlayer::handle for each record
+        _collector.run();
+
+        SIHD_LOG(debug, "End of collector");
+
+        // last record to be played in scheduler thread can have no next record
+        _last_record = true;
+
+        this->_provider_ended();
+    }
+    SIHD_LOG(debug, "Exiting loop");
+    return true;
+}
+
+void DevPlayer::_provider_ended()
+{
+    std::lock_guard l(_queue_mutex);
     // if no task in queue - notify end of player
     if (_queue.empty())
         _channel_end_ptr->write<bool>(0, true);
-    return ret;
 }
 
 bool DevPlayer::on_stop()
@@ -228,6 +266,7 @@ bool DevPlayer::on_stop()
 bool DevPlayer::on_reset()
 {
     _queue = std::queue<PlayableRecord>();
+    _scheduler_ptr.reset();
     _map_channels_alias.clear();
     return true;
 }

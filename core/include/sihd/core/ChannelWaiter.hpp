@@ -21,7 +21,7 @@ class ChannelWaiter: public ACoreObject
 
         bool set_channel(Channel *c);
         void clear_channel();
-        bool wait_for(time_t nano, uint32_t notifications = 1);
+        bool wait_for(sihd::util::Timestamp nano_duration, uint32_t notifications = 1);
 
         int notifications() const { return _count.load(); }
 

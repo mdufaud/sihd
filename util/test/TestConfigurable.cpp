@@ -10,6 +10,14 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::util;
 
+class EmptyConfigurableObj: public Configurable
+{
+    public:
+        EmptyConfigurableObj() {}
+
+        ~EmptyConfigurableObj() {};
+};
+
 class ConfigurableObj: public Configurable
 {
     public:
@@ -207,50 +215,56 @@ TEST_F(TestConfigurable, test_configurable_json)
 
 TEST_F(TestConfigurable, test_configurable_class)
 {
+    EmptyConfigurableObj empty_obj;
+
+    EXPECT_THROW(empty_obj.set_conf("no-existo", false), std::out_of_range);
+
     ConfigurableObj obj;
 
-    obj.set_conf("dual", false, 10);
+    EXPECT_THROW(obj.set_conf("no-existo", false), std::out_of_range);
+
+    EXPECT_TRUE(obj.set_conf("dual", false, 10));
 
     EXPECT_EQ(obj.bool_val, false);
-    obj.set_conf("bool", true);
+    EXPECT_TRUE(obj.set_conf("bool", true));
     EXPECT_EQ(obj.bool_val, true);
 
     // Default template is int
     EXPECT_EQ(obj.int_val, 0);
-    obj.set_conf("int", 20);
+    EXPECT_TRUE(obj.set_conf("int", 20));
     EXPECT_EQ(obj.int_val, 20);
 
     // Try catch for good type
     EXPECT_EQ(obj.char_val, 0);
-    obj.set_conf_int("char", 'a');
+    EXPECT_TRUE(obj.set_conf_int("char", 'a'));
     EXPECT_EQ(obj.char_val, 'a');
 
     EXPECT_EQ(obj.uchar_val, 0);
-    obj.set_conf_int("uchar", -1);
+    EXPECT_TRUE(obj.set_conf_int("uchar", -1));
     EXPECT_EQ(obj.uchar_val, 255);
 
     EXPECT_EQ(obj.short_val, 0);
-    obj.set_conf_int("short", -32769);
+    EXPECT_TRUE(obj.set_conf_int("short", -32769));
     EXPECT_EQ(obj.short_val, 32767);
 
     EXPECT_EQ(obj.ushort_val, 0);
-    obj.set_conf_int("ushort", -1);
+    EXPECT_TRUE(obj.set_conf_int("ushort", -1));
     EXPECT_EQ(obj.ushort_val, 65535);
 
     EXPECT_EQ(obj.int_val, 20);
-    obj.set_conf_int("int", -123);
+    EXPECT_TRUE(obj.set_conf_int("int", -123));
     EXPECT_EQ(obj.int_val, -123);
 
     EXPECT_EQ(obj.uint_val, 0u);
-    obj.set_conf_int("uint", -1);
+    EXPECT_TRUE(obj.set_conf_int("uint", -1));
     EXPECT_EQ(obj.uint_val, 4294967295);
 
     EXPECT_EQ(obj.long_val, 0l);
-    obj.set_conf_int("long", __LONG_LONG_MAX__);
+    EXPECT_TRUE(obj.set_conf_int("long", __LONG_LONG_MAX__));
     EXPECT_EQ(obj.long_val, __LONG_LONG_MAX__);
 
     EXPECT_EQ(obj.ulong_val, 0ul);
-    obj.set_conf_int("ulong", -1);
+    EXPECT_TRUE(obj.set_conf_int("ulong", -1));
     EXPECT_EQ(obj.ulong_val, 18446744073709551615ul);
 
     // Floats

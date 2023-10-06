@@ -15,27 +15,11 @@ SIHD_LOGGER;
 MemRecorder::MemRecorder(const std::string & name, sihd::util::Node *parent): ACoreObject(name, parent)
 {
     _running = false;
-    _records = true;
-    _provides = false;
-    this->add_conf("provider", &MemRecorder::set_provider);
-    this->add_conf("recorder", &MemRecorder::set_recorder);
 }
 
 MemRecorder::~MemRecorder()
 {
     this->clear();
-}
-
-bool MemRecorder::set_provider(bool active)
-{
-    _provides = active;
-    return true;
-}
-
-bool MemRecorder::set_recorder(bool active)
-{
-    _records = active;
-    return true;
 }
 
 void MemRecorder::add_records(const std::vector<PlayableRecord> & records)
@@ -50,23 +34,22 @@ void MemRecorder::add_records(const std::list<PlayableRecord> & records)
         this->add_record(record);
 }
 
-void MemRecorder::add_record(const std::string & name, time_t timestamp, const sihd::util::IArray *array)
+void MemRecorder::add_record(const std::string & name, sihd::util::Timestamp timestamp, const sihd::util::IArray *array)
 {
-    if (!_records && !_provides)
-        return;
     sihd::util::IArray *arr = array->clone_array();
-    if (_records)
-        _map_record[name].push_back({timestamp, arr});
-    if (_provides)
-    {
-        auto lock = std::lock_guard(_mutex);
-        _map_sorted_records.insert(std::pair<time_t, PlayableRecord>(timestamp, {name, timestamp, arr}));
-    }
+    std::lock_guard l(_mutex);
+    _map_sorted_records.insert(std::pair<time_t, PlayableRecord>(timestamp.nanoseconds(), {name, timestamp, arr}));
 }
 
 void MemRecorder::add_record(const PlayableRecord & record)
 {
     this->add_record(record.name, record.timestamp, record.value);
+}
+
+bool MemRecorder::empty() const
+{
+    std::lock_guard l(_mutex);
+    return _map_sorted_records.empty();
 }
 
 bool MemRecorder::providing() const
@@ -76,7 +59,7 @@ bool MemRecorder::providing() const
 
 bool MemRecorder::provide(PlayableRecord *value)
 {
-    auto lock = std::lock_guard(_mutex);
+    std::lock_guard l(_mutex);
     if (_map_sorted_records.empty())
         return false;
     *value = _map_sorted_records.begin()->second;
@@ -89,10 +72,21 @@ void MemRecorder::handle(const std::string & name, const Channel *channel)
     this->add_record(name, channel->timestamp(), channel->array());
 }
 
-std::string MemRecorder::hexdump_records()
+MapListRecordedValues MemRecorder::make_recorded_values()
+{
+    MapListRecordedValues map_record;
+    std::lock_guard l(_mutex);
+    for (const auto & [_, playable_record] : _map_sorted_records)
+    {
+        map_record[playable_record.name].push_back({playable_record.timestamp, playable_record.value});
+    }
+    return map_record;
+}
+
+std::string MemRecorder::hexdump_recorded_values(const MapListRecordedValues & recorded_values)
 {
     std::string str;
-    for (const auto & [channel_name, recorded_values_lst] : _map_record)
+    for (const auto & [channel_name, recorded_values_lst] : recorded_values)
     {
         str += fmt::format("Channel {} ({}):\n", channel_name, recorded_values_lst.size());
         for (const auto & [time, value] : recorded_values_lst)
@@ -103,11 +97,11 @@ std::string MemRecorder::hexdump_records()
     return str;
 }
 
-std::string MemRecorder::hexdump_timeline(std::string_view separation_cols, char separation_data)
+std::string MemRecorder::hexdump_records(std::string_view separation_cols, char separation_data)
 {
-    auto lock = std::lock_guard(_mutex);
-
     std::string str;
+    std::lock_guard l(_mutex);
+
     for (const auto & [_, playable_record] : _map_sorted_records)
     {
         str += fmt::format("{}{}{}{}{}\n",
@@ -140,18 +134,12 @@ bool MemRecorder::do_reset()
 
 void MemRecorder::clear()
 {
+    std::lock_guard l(_mutex);
+    for (const auto & [_, record] : _map_sorted_records)
     {
-        auto lock = std::lock_guard(_mutex);
-        _map_sorted_records.clear();
+        delete record.value;
     }
-    for (const auto & pair : _map_record)
-    {
-        for (const RecordedValue & value : pair.second)
-        {
-            delete value.second;
-        }
-    }
-    _map_record.clear();
+    _map_sorted_records.clear();
 }
 
 } // namespace sihd::core

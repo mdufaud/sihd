@@ -58,9 +58,8 @@ class TestScheduler: public ::testing::Test,
 
 TEST_F(TestScheduler, test_sched_perf)
 {
-    GTEST_SKIP() << "Perf under valgrind debugger is unthinkable";
-    // if (os::is_run_by_valgrind())
-    //     GTEST_SKIP() << "Perf under valgrind debugger is unthinkable";
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Perf under valgrind debugger is unthinkable";
 
     Scheduler seq("seq");
 

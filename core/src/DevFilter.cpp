@@ -448,7 +448,7 @@ bool DevFilter::Rule::parse(std::string_view conf_str)
         SIHD_LOG_ERROR("DevFilter: no channel input '{}' in configuration: {}", CONF_KEY_CHANNEL_IN, conf_str);
     if (channel_out_name.has_value() == false)
         SIHD_LOG_ERROR("DevFilter: no channel output '{}' in configuration: {}", CONF_KEY_CHANNEL_OUT, conf_str);
-    if (channel_key_trigger.has_value())
+    if (channel_key_trigger.has_value() == false)
         SIHD_LOG_ERROR("DevFilter: no trigger value '{}' in configuration: {}", CONF_KEY_TRIGGER, conf_str);
 
     const bool good = channel_in_name.has_value() && channel_out_name.has_value() && channel_key_trigger.has_value();

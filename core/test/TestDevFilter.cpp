@@ -131,9 +131,9 @@ TEST_F(TestDevFilter, test_devfilter_float)
                             .trigger(0, 3.14f)
                             .out("..out_channel")
                             .write(0, 0x1)
-                            .delay(time::ms(2)));
+                            .delay(time::ms(5)));
     ASSERT_TRUE(dev_ptr->set_conf_str("filter_equal",
-                                      "in=..in_channel;out=..out_channel;trigger=6.28f;write=0b101;delay=0.002"));
+                                      "in=..in_channel;out=..out_channel;trigger=6.28f;write=0b101;delay=0.01"));
 
     core.add_channel("in_channel", "float");
     core.add_channel("out_channel", "int");
@@ -152,17 +152,20 @@ TEST_F(TestDevFilter, test_devfilter_float)
     EXPECT_EQ(out_channel->read<int>(0), 0);
     in_channel->write<float>(0, 3.15f);
     EXPECT_EQ(out_channel->read<int>(0), 0);
+    // delay -> 5ms
+    EXPECT_EQ(out_channel->read<int>(0), 0);
     in_channel->write<float>(0, 3.14f);
+    std::this_thread::sleep_for(std::chrono::milliseconds(3));
     EXPECT_EQ(out_channel->read<int>(0), 0);
-    usleep(1900);
-    EXPECT_EQ(out_channel->read<int>(0), 0);
-    usleep(300);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     EXPECT_EQ(out_channel->read<int>(0), 1);
 
-    in_channel->write<float>(0, 6.28f);
+    // delay -> 0.01 = 10ms
     EXPECT_EQ(out_channel->read<int>(0), 1);
-    // delay -> 0.002 = 1000hz -> 2ms
-    usleep(2300);
+    in_channel->write<float>(0, 6.28f);
+    std::this_thread::sleep_for(std::chrono::milliseconds(3));
+    EXPECT_EQ(out_channel->read<int>(0), 1);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     EXPECT_EQ(out_channel->read<int>(0), 0b101);
 }
 

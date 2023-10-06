@@ -47,6 +47,7 @@ class DevPlayer: public sihd::core::Device,
 
     private:
         bool _worker_loop();
+        void _provider_ended();
 
         std::atomic<bool> _waiting;
         bool _running;
@@ -55,10 +56,11 @@ class DevPlayer: public sihd::core::Device,
         std::string _provider_path;
 
         std::mutex _run_mutex;
+        std::mutex _queue_mutex;
 
         Channel *_channel_play_ptr;
         Channel *_channel_end_ptr;
-        sihd::util::Scheduler *_scheduler_ptr;
+        std::unique_ptr<sihd::util::Scheduler> _scheduler_ptr;
 
         // channels to write records to
         std::map<std::string, Channel *> _map_channels;

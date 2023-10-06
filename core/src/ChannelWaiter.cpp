@@ -61,12 +61,12 @@ bool ChannelWaiter::set_channel(Channel *channel)
     return true;
 }
 
-bool ChannelWaiter::wait_for(time_t nano, uint32_t notifications)
+bool ChannelWaiter::wait_for(sihd::util::Timestamp nano_duration, uint32_t notifications)
 {
     if (_channel == nullptr)
         return true;
     // waitable returns true when timed out
-    return _waitable.wait_for_loop(nano, notifications) == false;
+    return _waitable.wait_for_loop(nano_duration, notifications) == false;
 }
 
 void ChannelWaiter::handle([[maybe_unused]] Channel *channel)

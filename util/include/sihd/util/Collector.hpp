@@ -1,6 +1,8 @@
 #ifndef __SIHD_UTIL_COLLECTOR_HPP__
 #define __SIHD_UTIL_COLLECTOR_HPP__
 
+#include <fmt/format.h>
+
 #include <atomic>
 
 #include <sihd/util/IProvider.hpp>
@@ -29,6 +31,7 @@ class Collector: public IStoppableRunnable,
         {
             if (_running.exchange(true) == true)
                 return false;
+            fmt::print("RUNNING\n");
             std::lock_guard l(_mutex);
             while (_running && _provider_ptr->providing())
             {
@@ -37,10 +40,13 @@ class Collector: public IStoppableRunnable,
                 else
                     _waitable.wait_for(_provider_nano_wait);
             }
+            fmt::print("ENDED {} / {}\n", _running.load(), _provider_ptr->providing());
             return true;
         }
 
         bool is_running() const { return _running; }
+
+        bool can_collect() const { return _provider_ptr != nullptr && _provider_ptr->providing(); }
 
         bool stop()
         {

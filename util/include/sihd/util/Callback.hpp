@@ -76,10 +76,10 @@ class CallbackManager
         template <typename R, typename... Targs>
         bool check_call_type(const std::string & name)
         {
-            CallbackBase *cbase = _callbacks[name].get();
-            if (cbase == nullptr)
+            auto iter = _callbacks.find(name);
+            if (iter == _callbacks.end() || !iter->second)
                 return false;
-            return dynamic_cast<Callback<R, Targs...> *>(cbase) != nullptr;
+            return dynamic_cast<Callback<R, Targs...> *>(iter->second.get()) != nullptr;
         }
 
     private:
@@ -109,13 +109,13 @@ class CallbackManager
         template <typename R, typename... Targs>
         R call_base(const std::string & name, Targs... args)
         {
-            CallbackBase *cbase = _callbacks[name].get();
-            if (cbase == nullptr)
-                throw std::out_of_range("No callback named '" + name + "'.");
+            auto iter = _callbacks.find(name);
+            if (iter == _callbacks.end() || !iter->second)
+                throw std::out_of_range("No callback named '" + name + "'");
 
-            Callback<R, Targs...> *cb = dynamic_cast<Callback<R, Targs...> *>(cbase);
+            Callback<R, Targs...> *cb = dynamic_cast<Callback<R, Targs...> *>(iter->second.get());
             if (cb == nullptr)
-                throw std::invalid_argument("Cast error for callback '" + name + "', check signature.");
+                throw std::invalid_argument("Cast error for callback '" + name + "', check signature");
 
             return cb->call(args...);
         }

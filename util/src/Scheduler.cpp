@@ -184,7 +184,7 @@ void Scheduler::add_task(Task *task)
     std::lock_guard l(_mutex_task);
     _task_map.insert(std::pair<time_t, Task *>(task->run_at, task));
     _next_run = _task_map.begin()->first;
-    while (_waiting.load() == true)
+    while (_paused.load() == false && _waiting.load() == true)
         _waitable_task.notify_all();
 }
 

@@ -27,33 +27,28 @@ class MemRecorder: public ACoreObject,
         bool do_stop() override;
         bool do_reset() override;
 
-        bool set_provider(bool active);
-        bool set_recorder(bool active);
-
         void add_record(const PlayableRecord & record);
-        void add_record(const std::string & name, time_t timestamp, const sihd::util::IArray *array);
+        void add_record(const std::string & name, sihd::util::Timestamp timestamp, const sihd::util::IArray *array);
         void add_records(const std::vector<PlayableRecord> & records);
         void add_records(const std::list<PlayableRecord> & records);
 
+        bool empty() const;
         bool providing() const override;
         bool provide(PlayableRecord *value) override;
 
-        std::string hexdump_records();
-        std::string hexdump_timeline(std::string_view separation_cols = "\t", char separation_data = ' ');
+        const SortedRecordedValues & sorted_recorded_values() const { return _map_sorted_records; }
+        std::string hexdump_records(std::string_view separation_cols = "\t", char separation_data = ' ');
         void clear();
 
-        const MapListRecordedValues recorded_values() const { return _map_record; }
-        const SortedRecordedValues sorted_recorded_values() const { return _map_sorted_records; }
+        MapListRecordedValues make_recorded_values();
+        static std::string hexdump_recorded_values(const MapListRecordedValues & recorded_values);
 
     protected:
         void handle(const std::string & name, const Channel *array) override;
 
     private:
-        bool _provides;
-        bool _records;
         std::atomic<bool> _running;
         mutable std::mutex _mutex;
-        MapListRecordedValues _map_record;
         SortedRecordedValues _map_sorted_records;
 };
 
