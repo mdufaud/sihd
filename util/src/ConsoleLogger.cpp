@@ -67,12 +67,7 @@ void ConsoleLogger::log(const LogInfo & info, std::string_view msg)
                                       msg.data(),
                                       end);
 
-#if defined(__SIHD_WINDOWS__)
     fwrite(fmt_msg.c_str(), sizeof(char), fmt_msg.size(), stderr);
-#else
-    // enable writing in signal callback
-    fwrite_unlocked(fmt_msg.c_str(), sizeof(char), fmt_msg.size(), stderr);
-#endif
 }
 
 } // namespace sihd::util

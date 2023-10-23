@@ -27,12 +27,7 @@ void BasicLogger::log(const LogInfo & info, std::string_view msg)
                            info.strlevel,
                            info.source.data(),
                            msg.data());
-#if defined(__SIHD_WINDOWS__)
     fwrite(fmt_msg.c_str(), sizeof(char), fmt_msg.size(), _output);
-#else
-    // enable writing in signal callback
-    fwrite_unlocked(fmt_msg.c_str(), sizeof(char), fmt_msg.size(), _output);
-#endif
 }
 
 } // namespace sihd::util
