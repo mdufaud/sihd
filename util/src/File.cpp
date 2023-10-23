@@ -11,7 +11,7 @@
 #include <sihd/util/os.hpp>
 #include <sihd/util/platform.hpp>
 
-#if defined(__SIHD_WINDOWS__)
+#if defined(__SIHD_WINDOWS__) or defined(__SIHD_ANDROID__)
 # define fwrite_unlocked fwrite
 # define fputc_unlocked fputc
 # define feof_unlocked feof
