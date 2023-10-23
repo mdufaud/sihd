@@ -1,3 +1,4 @@
+#include <sihd/util/Clocks.hpp>
 #include <sihd/util/Lockable.hpp>
 #include <sihd/util/Logger.hpp>
 

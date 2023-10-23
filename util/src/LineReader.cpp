@@ -8,23 +8,32 @@
 namespace sihd::util
 {
 
-SIHD_UTIL_REGISTER_FACTORY(LineReader)
-
 SIHD_LOGGER;
 
-LineReader::LineReader(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
+LineReader::LineReader():
+    _read_buff_size(4096),
+    _read_ptr(nullptr),
+    _line_buff_size(512),
+    _line_buff_step(512),
+    _line_ptr(nullptr),
+    _put_delimiter_in_line(false),
+    _delimiter('\n')
 {
-    _read_ptr = nullptr;
-    _read_buff_size = 4096;
-    _line_ptr = nullptr;
-    _line_buff_step = 512;
-    _line_buff_size = _line_buff_step;
-    _put_delimiter_in_line = false;
-    _delimiter = '\n';
-    this->add_conf("delimiter_in_line", &LineReader::set_delimiter_in_line);
-    this->add_conf("delimiter", &LineReader::set_delimiter);
-    this->add_conf("read_size", &LineReader::set_read_buffsize);
-    this->add_conf("line_size", &LineReader::set_line_buffsize);
+}
+
+LineReader::LineReader(std::string_view path): LineReader()
+{
+    this->open(path);
+}
+
+LineReader::LineReader(int fd): LineReader()
+{
+    this->open_fd(fd);
+}
+
+LineReader::LineReader(FILE *stream, bool ownership): LineReader()
+{
+    this->set_stream(stream, ownership);
 }
 
 LineReader::~LineReader()
@@ -82,6 +91,11 @@ bool LineReader::set_line_buffsize(size_t buff)
 bool LineReader::open(std::string_view path)
 {
     return this->_init() && _file.open(path, "r");
+}
+
+bool LineReader::open_fd(int fd)
+{
+    return this->_init() && _file.open_fd(fd, "r");
 }
 
 bool LineReader::set_stream(FILE *stream, bool ownership)
@@ -210,7 +224,7 @@ void LineReader::_delete_buffers()
 
 bool LineReader::fast_read_line(std::string & line, FILE *stream, size_t buffsize)
 {
-    LineReader reader("reader");
+    LineReader reader;
     ArrCharView view;
 
     reader.set_read_buffsize(buffsize);

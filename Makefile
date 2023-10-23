@@ -261,8 +261,12 @@ test: build
 		) \
 		$(eval TEST_MODULE_NAME = $(call get_module_name, $(TEST_BIN))) \
 		cd $(HERE)/$(TEST_MODULE_NAME); \
-		echo testing module: $(TEST_MODULE_NAME); \
-		echo test command: $(TEST_CMD_LINE); \
+		echo "" ;\
+		echo "###################################################################################" ; \
+		echo "# testing module: $(TEST_MODULE_NAME)" ; \
+		echo "# test command: $(TEST_CMD_LINE)" ; \
+		echo "###################################################################################" ; \
+		echo "" ;\
 		$(TEST_CMD_LINE); \
 		cd - > /dev/null; \
 	)

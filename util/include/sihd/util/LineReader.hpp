@@ -1,20 +1,19 @@
 #ifndef __SIHD_UTIL_LINEREADER_HPP__
 #define __SIHD_UTIL_LINEREADER_HPP__
 
-#include <sihd/util/Configurable.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/IReader.hpp>
-#include <sihd/util/Named.hpp>
 
 namespace sihd::util
 {
 
-class LineReader: public sihd::util::Named,
-                  public sihd::util::IReader,
-                  public sihd::util::Configurable
+class LineReader: public sihd::util::IReader
 {
     public:
-        LineReader(const std::string & name, sihd::util::Node *parent = nullptr);
+        LineReader();
+        LineReader(std::string_view path);
+        LineReader(int fd);
+        LineReader(FILE *stream, bool ownership);
         virtual ~LineReader();
 
         static bool fast_read_line(std::string & line, FILE *stream = stdin, size_t buffsize = 1);
@@ -25,10 +24,10 @@ class LineReader: public sihd::util::Named,
         bool set_delimiter(int c);
 
         bool open(std::string_view path);
+        bool open_fd(int fd);
+        bool set_stream(FILE *stream, bool ownership = false);
         bool is_open() const;
         bool close();
-
-        bool set_stream(FILE *stream, bool ownership = false);
 
         bool read_next();
         bool get_read_data(ArrCharView & view) const;
@@ -42,14 +41,13 @@ class LineReader: public sihd::util::Named,
 
     private:
         bool _init();
-
-        sihd::util::File _file;
-
         bool _allocate_read_buffer();
         bool _allocate_line();
         bool _reallocate_line();
         void _reset();
         void _delete_buffers();
+
+        sihd::util::File _file;
 
         size_t _read_buff_size;
         char *_read_ptr;

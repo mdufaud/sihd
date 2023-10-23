@@ -61,7 +61,7 @@ bool DevPlayer::set_provider_wait_time(time_t milliseconds)
         SIHD_LOG(error, "DevPlayer: cannot wait for {} milliseconds", milliseconds);
         return false;
     }
-    _collector.set_timeout_milliseconds(milliseconds);
+    _collector.set_timeout(milliseconds);
     return true;
 }
 
@@ -142,7 +142,7 @@ bool DevPlayer::on_start()
     }
     // start thread
     _running = true;
-    if (_worker.start_sync_worker(this->name()) == false)
+    if (_worker.start_worker(this->name()) == false)
     {
         _running = false;
         _scheduler_ptr->stop();
@@ -153,7 +153,6 @@ bool DevPlayer::on_start()
 
 bool DevPlayer::run()
 {
-    SIHD_LOG_ERROR("NEW PLAY");
     std::lock_guard l(_run_mutex);
     if (_running == false)
         return false;
@@ -179,7 +178,6 @@ bool DevPlayer::run()
 
 void DevPlayer::handle(Collector<PlayableRecord> *collector)
 {
-    SIHD_LOG_ERROR("NEW RECORD");
     // called for each record with a lock on collector data
     PlayableRecord record;
     {
@@ -200,38 +198,19 @@ void DevPlayer::handle(Collector<PlayableRecord> *collector)
     // calls DevPlayer::run to execute record at setted time
     if (_running)
         _scheduler_ptr->add_task(new Task(this, execute_at));
-    SIHD_LOG_ERROR("BOOKED RECORD");
 }
 
 bool DevPlayer::_worker_loop()
 {
-    SIHD_LOG(debug, "Begin loop");
     _time_begin = _scheduler_ptr->now();
-    while (_running)
-    {
-        if (_collector.can_collect() == false)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            continue;
-        }
-
-        _channel_end_ptr->write<bool>(0, false);
-        _first_timestamp = -1;
-        _last_record = false;
-
-        SIHD_LOG(debug, "Begin of collector");
-
-        // run collector loop which calls DevPlayer::handle for each record
-        _collector.run();
-
-        SIHD_LOG(debug, "End of collector");
-
-        // last record to be played in scheduler thread can have no next record
-        _last_record = true;
-
-        this->_provider_ended();
-    }
-    SIHD_LOG(debug, "Exiting loop");
+    _channel_end_ptr->write<bool>(0, false);
+    _first_timestamp = -1;
+    _last_record = false;
+    // run collector loop which calls DevPlayer::handle for each record
+    _collector.run();
+    // last record to be played in scheduler thread can have no next record
+    _last_record = true;
+    this->_provider_ended();
     return true;
 }
 

@@ -3,8 +3,6 @@
 
 #include <mutex>
 
-#include <sihd/util/Clocks.hpp>
-
 namespace sihd::util
 {
 

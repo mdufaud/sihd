@@ -1,8 +1,6 @@
 #ifndef __SIHD_UTIL_COLLECTOR_HPP__
 #define __SIHD_UTIL_COLLECTOR_HPP__
 
-#include <fmt/format.h>
-
 #include <atomic>
 
 #include <sihd/util/IProvider.hpp>
@@ -18,11 +16,11 @@ class Collector: public IStoppableRunnable,
                  public Observable<Collector<T>>
 {
     public:
-        Collector(IProvider<T> *provider = nullptr, time_t milliseconds_timeout = 1):
+        Collector(IProvider<T> *provider = nullptr, sihd::util::Timestamp duration = std::chrono::milliseconds(1)):
             _provider_ptr(provider),
-            _running(false)
+            _running(false),
+            _wait_duration(duration)
         {
-            this->set_timeout_milliseconds(milliseconds_timeout);
         }
 
         virtual ~Collector() { this->stop(); }
@@ -31,22 +29,18 @@ class Collector: public IStoppableRunnable,
         {
             if (_running.exchange(true) == true)
                 return false;
-            fmt::print("RUNNING\n");
             std::lock_guard l(_mutex);
             while (_running && _provider_ptr->providing())
             {
                 if (_provider_ptr->provide(&_data))
                     this->notify_observers(this);
                 else
-                    _waitable.wait_for(_provider_nano_wait);
+                    _waitable.wait_for(_wait_duration);
             }
-            fmt::print("ENDED {} / {}\n", _running.load(), _provider_ptr->providing());
             return true;
         }
 
         bool is_running() const { return _running; }
-
-        bool can_collect() const { return _provider_ptr != nullptr && _provider_ptr->providing(); }
 
         bool stop()
         {
@@ -61,6 +55,8 @@ class Collector: public IStoppableRunnable,
             std::lock_guard l(_mutex);
         }
 
+        bool can_collect() const { return _provider_ptr != nullptr && _provider_ptr->providing(); }
+
         bool collect()
         {
             if (_provider_ptr->providing() && _provider_ptr->provide(&_data))
@@ -73,10 +69,10 @@ class Collector: public IStoppableRunnable,
 
         T data() const { return _data; }
         IProvider<T> *provider() const { return _provider_ptr; }
-        time_t timeout_milliseconds() const { return time::to_ms(_provider_nano_wait); }
+        sihd::util::Timestamp timeout_duration() const { return _wait_duration; }
 
         void set_provider(IProvider<T> *ptr) { _provider_ptr = ptr; }
-        void set_timeout_milliseconds(time_t milli) { _provider_nano_wait = time::ms(milli); }
+        void set_timeout(sihd::util::Timestamp duration) { _wait_duration = duration; }
 
     protected:
 
@@ -85,7 +81,7 @@ class Collector: public IStoppableRunnable,
         IProvider<T> *_provider_ptr;
 
         std::atomic<bool> _running;
-        time_t _provider_nano_wait;
+        sihd::util::Timestamp _wait_duration;
 
         std::mutex _mutex;
         Waitable _waitable;

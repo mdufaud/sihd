@@ -8,78 +8,57 @@
 #include "ftxui/component/screen_interactive.hpp" // for ScreenInteractive
 #include "ftxui/dom/elements.hpp"                 // for text, vbox, window, Element, Elements
 
-#include <sihd/tui/LoggerWindow.hpp>
+#include <sihd/tui/LoggerComponent.hpp>
 #include <sihd/util/Logger.hpp>
-
-using namespace ftxui;
-
-static std::string stringify(Event event)
-{
-    std::string out;
-    for (auto & it : event.input())
-        out += " " + std::to_string((unsigned int)it);
-
-    out = "(" + out + " ) -> ";
-    if (event.is_character())
-    {
-        out += "character(" + event.character() + ")";
-    }
-    else if (event.is_mouse())
-    {
-        out += "mouse";
-        switch (event.mouse().button)
-        {
-            case Mouse::Left:
-                out += "_left";
-                break;
-            case Mouse::Middle:
-                out += "_middle";
-                break;
-            case Mouse::Right:
-                out += "_right";
-                break;
-            case Mouse::None:
-                out += "_none";
-                break;
-            case Mouse::WheelUp:
-                out += "_wheel_up";
-                break;
-            case Mouse::WheelDown:
-                out += "_wheel_down";
-                break;
-        }
-        switch (event.mouse().motion)
-        {
-            case Mouse::Pressed:
-                out += "_pressed";
-                break;
-            case Mouse::Released:
-                out += "_released";
-                break;
-        }
-        if (event.mouse().control)
-            out += "_control";
-        if (event.mouse().shift)
-            out += "_shift";
-        if (event.mouse().meta)
-            out += "_meta";
-
-        out += "(" + //
-               std::to_string(event.mouse().x) + "," + std::to_string(event.mouse().y) + ")";
-    }
-    else
-    {
-        out += "(special)";
-    }
-    return out;
-}
+#include <sihd/util/num.hpp>
+#include <sihd/util/os.hpp>
+#include <sihd/util/str.hpp>
 
 namespace test
 {
+
 SIHD_NEW_LOGGER("test");
 
 using namespace sihd::util;
 using namespace sihd::tui;
+using namespace ftxui;
+
+void randomize_log()
+{
+    auto rand = num::rand(0, 7);
+    switch (rand)
+    {
+        case 0:
+            SIHD_LOG(emergency, "EMERGENCY !!!");
+            break;
+        case 1:
+            SIHD_LOG(alert, "ALERT !!");
+            break;
+        case 2:
+            SIHD_LOG(critical, "CRITICAL !");
+            break;
+        case 3:
+            SIHD_LOG(error, "Donec at cursus tellus, quis consequat lacus");
+            break;
+        case 4:
+            SIHD_LOG(
+                warning,
+                "Maecenas non fermentum arcu, non finibus lectus. Vestibulum quis viverra leo. Aliquam pellentesque sagittis turpis non scelerisque");
+            break;
+        case 5:
+            SIHD_LOG(
+                notice,
+                "Quisque malesuada eros quis imperdiet molestie. Curabitur dui nunc, lacinia nec molestie vitae, vulputate vitae ligula");
+            break;
+        case 6:
+            SIHD_LOG(info, fmt::format("Current memory: {}", str::bytes_str(os::current_rss())));
+            break;
+        case 7:
+            SIHD_LOG(debug, "Lorem ipsum dolor sit amet, consectetur adipiscing elit");
+            break;
+    }
+}
+
 class TestLogger: public ::testing::Test
 {
     protected:
@@ -94,23 +73,31 @@ class TestLogger: public ::testing::Test
 
 TEST_F(TestLogger, test_tui_cmd)
 {
-    LoggerWindow logger(13);
-    TmpLogger tmp_logger(&logger);
+    using namespace sihd::util;
+    using namespace sihd::tui;
 
-    auto screen = ftxui::ScreenInteractive::TerminalOutput();
-
-    auto component = ftxui::Renderer([&] {
-        return logger.create(ftxui::text("logger") | hcenter | bold) | size(WIDTH, EQUAL, 100)
-               | size(HEIGHT, EQUAL, 15);
-        // | bgcolor(Color::HSV(1 * 25, 255, 255))
-        // | color(Color::Black);
+    auto container = LoggerComponent(LoggerOptions {
+        .max_logs = 200,
+        .scroll_to_last_log = true,
     });
 
-    component |= ftxui::CatchEvent([&](ftxui::Event event) {
-        SIHD_LOG(info, stringify(event));
-        return true;
+    container |= ftxui::CatchEvent([&](ftxui::Event event) {
+        if (event.character() == "L")
+        {
+            randomize_log();
+            return true;
+        }
+        return false;
     });
 
-    screen.Loop(component);
+    auto renderer = ftxui::Renderer(container, [&] {
+        return window(text("logger") | hcenter | bold, container->Render()) | size(WIDTH, EQUAL, 100)
+               | size(HEIGHT, EQUAL, 20);
+    });
+
+    SIHD_LOG(info, "Press 'L' to generate logs");
+
+    auto screen = ftxui::ScreenInteractive::FitComponent();
+    screen.Loop(renderer);
 }
 } // namespace test

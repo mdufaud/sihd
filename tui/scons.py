@@ -55,6 +55,7 @@ if do_compile:
     ftxui_env.copy_into_build("FTXUI/include", "include")
 
     ftxui_env.copy_into_build(ftxui_src_dir + "/screen/util.hpp", "include/ftxui/screen/util.hpp")
+    ftxui_env.copy_into_build(ftxui_src_dir + "/screen/string_internal.hpp", "include/ftxui/screen/string_internal.hpp")
 
     ftxui_env.copy_into_build(ftxui_src_dir + "/dom/box_helper.hpp", "include/ftxui/dom/box_helper.hpp")
     ftxui_env.copy_into_build(ftxui_src_dir + "/dom/flexbox_helper.hpp", "include/ftxui/dom/flexbox_helper.hpp")

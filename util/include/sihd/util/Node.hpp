@@ -121,12 +121,13 @@ class Node: public Named
             return array;
         }
 
+        // preserves child order
         template <typename ChildType, typename Predicate>
         void execute_children(Predicate p)
         {
-            for (const auto & [_, entry] : _children_map)
+            for (const std::string & child_name : this->children_keys())
             {
-                ChildType *child = dynamic_cast<ChildType *>(entry->obj);
+                ChildType *child = dynamic_cast<ChildType *>(this->get_child(child_name));
                 if (child != nullptr)
                     p(child);
             }

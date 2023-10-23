@@ -12,10 +12,15 @@ LogInfo::LogInfo(const std::string & src, LogLevel lvl): source(src), level(lvl)
     this->thread_id_str = thread::id_str(thread_id);
     this->thread_name = thread::name();
     this->strlevel = this->level_str(this->level);
-    ::clock_gettime(CLOCK_REALTIME, &timestamp);
+    ::clock_gettime(CLOCK_REALTIME, &timespec);
 }
 
 LogInfo::~LogInfo() {}
+
+Timestamp LogInfo::timestamp() const
+{
+    return Timestamp(this->timespec);
+}
 
 const char *LogInfo::level_str(LogLevel level)
 {

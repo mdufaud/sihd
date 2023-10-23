@@ -38,7 +38,7 @@ class TestLineReader: public ::testing::Test
 
 TEST_F(TestLineReader, test_linereader_one_line)
 {
-    LineReader reader("line-reader");
+    LineReader reader;
     ArrCharView view;
 
     std::string path = fs::combine(_tmp_dir.path(), "one_line.txt");
@@ -73,7 +73,7 @@ TEST_F(TestLineReader, test_linereader_one_line)
 
 TEST_F(TestLineReader, test_linereader_two_lines)
 {
-    LineReader reader("line-reader");
+    LineReader reader;
     ArrCharView view;
 
     std::string path = fs::combine(_tmp_dir.path(), "two_lines.txt");
@@ -126,7 +126,7 @@ TEST_F(TestLineReader, test_linereader_two_lines)
 
 TEST_F(TestLineReader, test_linereader_multiple_feeds)
 {
-    LineReader reader("line-reader");
+    LineReader reader;
     ArrCharView view;
 
     std::string path = fs::combine(_tmp_dir.path(), "multiple_feeds.txt");
@@ -170,7 +170,7 @@ TEST_F(TestLineReader, test_linereader_multiple_feeds)
 
 TEST_F(TestLineReader, test_linereader_none)
 {
-    LineReader reader("line-reader");
+    LineReader reader;
     std::string path = fs::combine(_tmp_dir.path(), "nothing.txt");
 
     SIHD_LOG(info, "Writing test file: {}", path);
@@ -183,7 +183,7 @@ TEST_F(TestLineReader, test_linereader_none)
 
 TEST_F(TestLineReader, test_linereader_low_buffer)
 {
-    LineReader reader("line-reader");
+    LineReader reader;
     ArrCharView view;
 
     std::string path = fs::combine(_tmp_dir.path(), "buffer_test.txt");
@@ -246,10 +246,9 @@ TEST_F(TestLineReader, test_linereader_perf)
     ArrCharView view;
     {
         Timeit it("line-reader");
-        LineReader reader("line-reader");
+        LineReader reader(path_input);
         // reader.set_read_buffsize(4096 * 4);
         reader.set_delimiter_in_line(true);
-        reader.open(path_input);
         while (reader.read_next())
         {
             reader.get_read_data(view);

@@ -73,7 +73,7 @@ class Timestamp
 {
     public:
         constexpr Timestamp(time_t nano): _nano(nano) {};
-        constexpr Timestamp(std::chrono::nanoseconds duration): _nano(duration.count()) {};
+        constexpr Timestamp(timespec ts): _nano(ts.tv_nsec + time::sec(ts.tv_sec)) {};
         constexpr Timestamp(Clocktime clocktime): _nano(0)
         {
             _nano = time::hours(clocktime.hour);
@@ -82,14 +82,14 @@ class Timestamp
             _nano += time::milliseconds(clocktime.millisecond);
         };
 
-        Timestamp(Calendar calendar);
-        Timestamp(Calendar calendar, Clocktime clocktime);
-
         template <typename T>
         constexpr Timestamp(std::chrono::time_point<T> timepoint): _nano(timepoint.time_since_epoch().count()) {};
 
         template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
         constexpr Timestamp(Duration duration): _nano(time::duration(duration)) {};
+
+        Timestamp(Calendar calendar);
+        Timestamp(Calendar calendar, Clocktime clocktime);
 
         // std::chrono::duration templates
         __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(==);
@@ -121,8 +121,6 @@ class Timestamp
         static Timestamp now();
 
         static std::optional<Timestamp> from_str(std::string_view date_str, std::string_view format = default_format);
-
-        bool is_leap_year() const;
 
         constexpr operator time_t() const { return _nano; }
         operator std::chrono::nanoseconds() const;
@@ -175,6 +173,8 @@ class Timestamp
         std::string day_str(std::string_view format = default_day_format) const;
         // default_day_format + floored value
         std::string local_day_str(std::string_view format = default_day_format) const;
+
+        bool is_leap_year() const;
 
         template <typename Ratio>
         constexpr Timestamp floor() const

@@ -25,7 +25,7 @@ extlibs = {
     # usb
     "libusb": "1.0.24",
     # gui
-    "ftxui": "3.0.0",
+    "ftxui": "5.0.0",
     "sdl": "2.0.18",
     "glew": "2.2.0",
     "glfw": "3.3.6",

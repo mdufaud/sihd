@@ -33,7 +33,6 @@ TEST_F(TestDevSampler, test_devsampler)
     Core core;
 
     DevSampler *dev_ptr = core.add_child<DevSampler>("sampler");
-    // 1000hz = 1000/s = 1ms
     ASSERT_TRUE(dev_ptr->set_conf("frequency", 100.0));
     ASSERT_TRUE(dev_ptr->set_conf_str("sample", "..out_channel=..in_channel"));
 
@@ -58,6 +57,8 @@ TEST_F(TestDevSampler, test_devsampler)
     ChannelWaiter waiter(out_channel);
     ASSERT_TRUE(in_channel->write(ArrInt({0, 0, 1})));
     waiter.wait_for(sihd::util::time::sec(1));
+    EXPECT_EQ(out_channel->array()->str(','), "0,0,1");
+    EXPECT_EQ(notif, 1);
 
     ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
     ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));

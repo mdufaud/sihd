@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 
+#include <sihd/util/Timestamp.hpp>
 #include <sihd/util/thread.hpp>
 
 namespace sihd::util
@@ -36,10 +37,11 @@ class LogInfo
         pthread_t thread_id;
         std::string thread_id_str;
         std::string_view thread_name;
-        struct timespec timestamp;
+        struct timespec timespec;
 
         static const char *level_str(LogLevel level);
         static LogLevel level_from_str(std::string_view level);
+        Timestamp timestamp() const;
 };
 
 } // namespace sihd::util

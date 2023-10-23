@@ -24,8 +24,8 @@ void FileLogger::log(const LogInfo & info, std::string_view msg)
 #else
     fmt_msg = fmt::sprintf("%ld.%09ld\t[%s]\t%s\t%s\t%s\n",
 #endif
-                           info.timestamp.tv_sec,
-                           info.timestamp.tv_nsec,
+                           info.timespec.tv_sec,
+                           info.timespec.tv_nsec,
                            info.thread_name.data(),
                            info.strlevel,
                            info.source.data(),

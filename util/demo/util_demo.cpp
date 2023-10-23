@@ -28,7 +28,7 @@ SIHD_NEW_LOGGER("demo");
 void worker(double frequency)
 {
     Runnable printer([] {
-        SIHD_LOG(info, "Time since epoch: {}", Timestamp::now().timeoffset_str());
+        SIHD_LOG(info, "time since epoch: {}", Timestamp::now().timeoffset_str());
         return true;
     });
 
@@ -98,9 +98,9 @@ void fs()
 void uuid()
 {
     Uuid id;
-    SIHD_LOG(info, "Uuid: {}", id.str());
+    SIHD_LOG(info, "uuid: {}", id.str());
     id = Uuid();
-    SIHD_LOG(info, "Uuid2: {}", id.str());
+    SIHD_LOG(info, "uuid2: {}", id.str());
     fmt::print("\n");
 }
 

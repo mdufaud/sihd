@@ -27,13 +27,13 @@ class ObserverWaiter: public IHandler<T *>
 
         void wait() { _waitable.infinite_wait(); }
 
-        bool wait_for(time_t nano, uint32_t notifications = 1)
+        bool wait_for(sihd::util::Timestamp duration, uint32_t notifications = 1)
         {
             // waitable returns true when timed out
-            return _waitable.wait_for_loop(nano, notifications) == false;
+            return _waitable.wait_for_loop(duration, notifications) == false;
         }
 
-        time_t notifications;
+        uint32_t notifications;
 
     protected:
 
