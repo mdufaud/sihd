@@ -18,7 +18,8 @@ class Synchronizer
         void sync();
         void reset();
 
-        int32_t to_sync() const { return _wanted_count.load(); }
+        int32_t current_sync() const { return _sync_count.load(); }
+        int32_t total_sync() const { return _wanted_count.load(); }
 
     protected:
 

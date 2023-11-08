@@ -49,7 +49,6 @@ class DevPlayer: public sihd::core::Device,
         bool _worker_loop();
         void _provider_ended();
 
-        std::atomic<bool> _waiting;
         bool _running;
         std::atomic<bool> _last_record;
         size_t _records_queue_limit;

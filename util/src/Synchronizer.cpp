@@ -30,13 +30,14 @@ void Synchronizer::sync()
 {
     if (_sync_count.fetch_add(1) + 1 >= _wanted_count)
     {
+        // the last thread to sync
         --_sync_count;
         while (_sync_count.load() > 0)
             _waitable.notify_all();
     }
     else
     {
-        _waitable.infinite_wait();
+        _waitable.wait();
         --_sync_count;
     }
 }

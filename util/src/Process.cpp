@@ -476,13 +476,13 @@ bool Process::start()
 bool Process::wait_process_end(time_t nano_duration)
 {
     if (this->is_running())
-        return _waitable.wait_for(nano_duration) == false;
+        return _waitable.wait_for(nano_duration, [this] { return this->is_running() == false; }) == false;
     return true;
 }
 
 bool Process::_read_fd(int fd, std::function<void(const char *, ssize_t)> fun)
 {
-    char buffer[SIHD_PROCESS_READ_BUFFER_SIZE];
+    char buffer[SIHD_PROCESS_READ_BUFFER_SIZE + 1];
     ssize_t ret;
 
     ret = read(fd, &buffer, SIHD_PROCESS_READ_BUFFER_SIZE);
@@ -529,24 +529,21 @@ bool Process::end()
     this->_close(_stdout.fd_read);
     this->_close(_stderr.fd_read);
 
-    bool running = this->is_running();
     int tries = 3;
-    while (running && tries > 0)
+    while (this->is_running() && tries > 0)
     {
         this->wait_any(WNOHANG);
-        running = this->is_running();
-        if (running == false)
+        if (this->is_running() == false)
             break;
         --tries;
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    if (running)
+    if (this->is_running())
     {
         this->kill(SIGKILL);
         this->wait_exit();
-        running = this->is_running();
     }
-    return running == false;
+    return this->is_running() == false;
 }
 
 bool Process::kill(int sig)

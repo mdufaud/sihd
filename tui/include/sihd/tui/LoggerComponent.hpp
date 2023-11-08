@@ -13,7 +13,7 @@ struct LoggerOptions
         bool add_bar = true;
 };
 
-ftxui::Component LoggerComponent(LoggerOptions options);
+ftxui::Component LoggerComponent(LoggerOptions && options);
 
 } // namespace sihd::tui
 

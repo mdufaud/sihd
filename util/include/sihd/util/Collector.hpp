@@ -35,7 +35,7 @@ class Collector: public IStoppableRunnable,
                 if (_provider_ptr->provide(&_data))
                     this->notify_observers(this);
                 else
-                    _waitable.wait_for(_wait_duration);
+                    _waitable.wait_for(_wait_duration, [this] { return _running == false; });
             }
             return true;
         }

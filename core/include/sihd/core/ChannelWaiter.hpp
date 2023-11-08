@@ -33,7 +33,7 @@ class ChannelWaiter: public ACoreObject
 
         Channel *_channel;
         sihd::util::Waitable _waitable;
-        std::atomic<int> _count;
+        std::atomic<uint32_t> _count;
 };
 
 } // namespace sihd::core

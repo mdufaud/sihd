@@ -1,7 +1,6 @@
 #include <sihd/core/DevPlayer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/ScopedModifier.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Task.hpp>
 
@@ -19,7 +18,6 @@ using namespace sihd::util;
 
 DevPlayer::DevPlayer(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
-    _waiting(false),
     _running(false),
     _channel_play_ptr(nullptr),
     _channel_end_ptr(nullptr)
@@ -189,12 +187,9 @@ void DevPlayer::handle(Collector<PlayableRecord> *collector)
     }
     _first_timestamp = record.timestamp * (1 * (_first_timestamp < 0));
     time_t execute_at = _time_begin + (record.timestamp - _first_timestamp);
-    {
-        ScopedModifier m(_waiting, true);
-        // wait tasks to be played as not to overflow the scheduler
-        while (_running && (_queue.size() > _records_queue_limit))
-            _waitable.infinite_wait();
-    }
+
+    _waitable.wait([this] { return _running == false || (_queue.size() > _records_queue_limit) == false; });
+
     // calls DevPlayer::run to execute record at setted time
     if (_running)
         _scheduler_ptr->add_task(new Task(this, execute_at));
@@ -228,8 +223,7 @@ bool DevPlayer::on_stop()
         std::lock_guard l(_run_mutex);
         _running = false;
     }
-    while (_waiting.load())
-        _waitable.notify_all();
+    _waitable.notify_all();
     if (_worker.stop_worker() == false)
         SIHD_LOG(error, "DevReplayer: could not stop worker");
     if (_scheduler_ptr->stop() == false)

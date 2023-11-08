@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <mutex>
 
+#include <sihd/util/Hourglass.hpp>
 #include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
@@ -18,79 +19,88 @@ class Waitable
         void notify(int times = 1);
         void notify_all();
 
-        // predicate must return false to keep notifying
-        template <class Predicate>
-        void notify_until_predicate(Predicate p, Timestamp wait_time, uint32_t max_notifications = 0)
-        {
-            uint32_t notifications = 0;
-
-            while (p() == false && (max_notifications == 0 || notifications < max_notifications))
-            {
-                this->notify(1);
-                ++notifications;
-                time::nsleep(wait_time);
-            }
-        }
-
         // predicate must return false to keep waiting
         template <class Predicate>
-        void wait_predicate(Predicate p)
+        void wait(Predicate pred_stop_waiting)
         {
             std::unique_lock lock(_mutex);
-            _condition.wait(lock, p);
+            _condition.wait(lock, pred_stop_waiting);
         }
 
         // predicate must return false to keep waiting
         template <class Predicate>
-        Timestamp wait_until_predicate(Timestamp timeout,
-                                       Predicate p,
-                                       Timestamp poll_frequency = std::chrono::milliseconds(1))
+        Timestamp wait_elapsed(Predicate pred_stop_waiting)
         {
-            time_t total_waited = 0;
-
-            while (_stop_waiting == false && p() == false && (timeout < 0 || total_waited < timeout))
-            {
-                total_waited += this->wait_for_elapsed(poll_frequency);
-            }
-
-            return {total_waited};
+            Hourglass hg;
+            this->wait(pred_stop_waiting);
+            return hg.mesure();
         }
 
+        // predicate must return false to keep waiting
         template <class Predicate>
-        Timestamp infinite_wait_until_predicate(Predicate p, Timestamp poll_frequency = std::chrono::milliseconds(1))
+        bool wait_for(Timestamp duration, Predicate pred_stop_waiting)
         {
-            return this->wait_until_predicate(-1, std::move(p), poll_frequency);
+            std::unique_lock lock(_mutex);
+            return _condition.wait_for(lock, std::chrono::nanoseconds(duration), pred_stop_waiting);
         }
 
-        void infinite_wait();
-        Timestamp infinite_wait_elapsed();
+        // predicate must return false to keep waiting
+        template <class Predicate>
+        Timestamp wait_for_elapsed(Timestamp duration, Predicate pred_stop_waiting)
+        {
+            Hourglass hg;
+            this->wait_for(duration, pred_stop_waiting);
+            return hg.mesure();
+        }
 
-        bool wait_until(Timestamp t);
+        // predicate must return false to keep waiting
+        template <class Predicate>
+        bool wait_until(Timestamp timestamp, Predicate pred_stop_waiting)
+        {
+            std::unique_lock lock(_mutex);
+            return _condition.wait_until(lock,
+                                         std::chrono::system_clock::time_point(std::chrono::nanoseconds(timestamp)),
+                                         pred_stop_waiting);
+        }
+
+        // predicate must return false to keep waiting
+        template <class Predicate>
+        Timestamp wait_until_elapsed(Timestamp timestamp, Predicate pred_stop_waiting)
+        {
+            Hourglass hg;
+            this->wait_until(timestamp, pred_stop_waiting);
+            return hg.mesure();
+        }
+
+        void wait();
+
+        /**
+         * @brief wait a notification until a timestamp is reached
+         *
+         * @param timestamp timestamp to reach
+         * @return true if timedout
+         * @return false if notification came
+         */
+        bool wait_until(Timestamp timestamp);
 
         /**
          * @brief wait a notification for a duration
          *
-         * @param t duration to wait
+         * @param duration duration to wait
          * @return true if timedout
          * @return false if notification came
          */
-        bool wait_for(Timestamp t);
-
-        /**
-         * @brief wait X notifications for a duration
-         *
-         * @param t total duration to wait
-         * @param times needed number of notify
-         * @return true if timedout
-         * @return false if all notifications came in time
-         */
-        bool wait_for_loop(Timestamp t, uint32_t times);
+        bool wait_for(Timestamp duration);
 
         // cancel wait_for_loop
         void cancel_loop();
 
+        // waits - returns time elapsed
+        Timestamp wait_elapsed();
+        // waits until timestamp - returns time elapsed
+        Timestamp wait_until_elapsed(Timestamp timestamp);
         // wait for duration -- returns time elapsed
-        Timestamp wait_for_elapsed(Timestamp t);
+        Timestamp wait_for_elapsed(Timestamp duration);
 
     protected:
         std::mutex _mutex;

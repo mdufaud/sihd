@@ -47,7 +47,7 @@ class Scheduler: public Named,
         size_t overruns;
         // time after not running a task is considered an overrun
         time_t overrun_at;
-        // nanoseconds acceptable before a task may be run
+        // nanoseconds acceptable before a task may be run ahead of time
         time_t acceptable_nano;
 
     protected:
@@ -61,14 +61,11 @@ class Scheduler: public Named,
 
         std::atomic<bool> _running;
         std::atomic<bool> _paused;
-        std::atomic<bool> _waiting;
-        std::atomic<bool> _pausing;
         IClock *_clock_ptr;
         std::thread _thread;
         time_t _next_run;
         time_t _begin_run;
         std::mutex _mutex_task;
-        std::mutex _mutex_state;
         std::mutex _mutex_play;
         Waitable _waitable_task;
         Waitable _waitable_pause;

@@ -1,4 +1,3 @@
-#include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Waitable.hpp>
 
@@ -39,70 +38,44 @@ void Waitable::notify(int times)
     }
 }
 
-void Waitable::infinite_wait()
+void Waitable::wait()
 {
     std::unique_lock lock(_mutex);
     _condition.wait(lock);
 }
 
-Timestamp Waitable::infinite_wait_elapsed()
+bool Waitable::wait_until(Timestamp timestamp)
 {
     std::unique_lock lock(_mutex);
-    SteadyClock clock;
-    time_t now = clock.now();
-    _condition.wait(lock);
-    return Timestamp(clock.now() - now);
+    return _condition.wait_until(lock, std::chrono::system_clock::time_point(std::chrono::nanoseconds(timestamp)))
+           == std::cv_status::timeout;
 }
 
-bool Waitable::wait_until(Timestamp nano_timestamp)
+bool Waitable::wait_for(Timestamp duration)
 {
-    if (nano_timestamp <= 0)
-        return true;
     std::unique_lock lock(_mutex);
-    return _condition.wait_until(lock, system_clock::from_time_t(nano_timestamp)) == std::cv_status::timeout;
+    return _condition.wait_for(lock, std::chrono::nanoseconds(duration)) == std::cv_status::timeout;
 }
 
-bool Waitable::wait_for(Timestamp nano_duration)
+Timestamp Waitable::wait_elapsed()
 {
-    if (nano_duration <= 0)
-        return true;
-    std::unique_lock lock(_mutex);
-    return _condition.wait_for(lock, std::chrono::nanoseconds(nano_duration)) == std::cv_status::timeout;
+    Hourglass hg;
+    this->wait();
+    return hg.mesure();
 }
 
-bool Waitable::wait_for_loop(Timestamp nano_duration, uint32_t times)
+Timestamp Waitable::wait_until_elapsed(Timestamp timestamp)
 {
-    if (nano_duration <= 0)
-        return true;
-
-    SteadyClock clock;
-    time_t now = clock.now();
-    time_t last = now;
-    time_t until = now + nano_duration;
-    bool timedout = false;
-
-    uint32_t i = 0;
-    while (_stop_waiting == false && i < times && now < until)
-    {
-        timedout = this->wait_for(nano_duration);
-        now = clock.now();
-        nano_duration -= (now - last);
-        last = now;
-        ++i;
-    }
-    _stop_waiting = false;
-    return timedout;
+    Hourglass hg;
+    this->wait_until(timestamp);
+    return hg.mesure();
 }
 
-Timestamp Waitable::wait_for_elapsed(Timestamp nano_duration)
+Timestamp Waitable::wait_for_elapsed(Timestamp duration)
 {
-    if (nano_duration <= 0)
-        return 0;
-
-    SteadyClock clock;
-    time_t before = clock.now();
-    this->wait_for(nano_duration);
-    return Timestamp(clock.now() - before);
+    Hourglass hg;
+    this->wait_for(duration);
+    return hg.mesure();
 }
 
 } // namespace sihd::util

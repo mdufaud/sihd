@@ -7,7 +7,6 @@
 #include <fmt/format.h>
 #include <fmt/printf.h>
 
-#include <sihd/util/Location.hpp>
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/macro.hpp>
 

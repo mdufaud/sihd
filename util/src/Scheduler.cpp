@@ -1,7 +1,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Scheduler.hpp>
-#include <sihd/util/ScopedModifier.hpp>
 #include <sihd/util/Task.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
@@ -21,8 +20,6 @@ Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent
     _next_run = 0;
     _running = false;
     _paused = false;
-    _waiting = false;
-    _pausing = false;
     _no_delay = false;
     _paused_time = 0;
     this->add_conf("as_fast_as_possible", &Scheduler::set_as_fast_as_possible);
@@ -36,6 +33,8 @@ Scheduler::~Scheduler()
 
 void Scheduler::set_clock(IClock *ptr)
 {
+    if (_running.load())
+        throw std::logic_error("Cannot set a clock while the scheduler is running");
     _clock_ptr = ptr;
 }
 
@@ -46,25 +45,21 @@ IClock *Scheduler::clock() const
 
 bool Scheduler::set_as_fast_as_possible(bool active)
 {
+    if (_running.load())
+        throw std::logic_error("Cannot set 'as fast as possible' mode while running");
     _no_delay = active;
     return true;
 }
 
 bool Scheduler::_wait_for_next_task()
 {
-    ScopedModifier w(_waiting, true);
+    if (_paused)
     {
-        if (_paused)
-        {
-            ScopedModifier p(_pausing, true);
-            time_t before = _clock_ptr->now();
-            while (_running && _paused)
-                _waitable_pause.infinite_wait();
-            _paused_time += (_clock_ptr->now() - before);
-        }
+        time_t before = _clock_ptr->now();
+        _waitable_pause.wait([this] { return _running == false || _paused == false; });
+        _paused_time += (_clock_ptr->now() - before);
     }
-    while (_running && _task_map.empty())
-        _waitable_task.infinite_wait();
+    _waitable_task.wait([this] { return _running == false || _task_map.empty() == false; });
     if (_running == false)
         return false;
     return _no_delay ? true : _waitable_task.wait_for(_next_run - _clock_ptr->now() - this->acceptable_nano);
@@ -79,7 +74,7 @@ Task *Scheduler::_get_next_task(time_t time)
     time_t diff = (task->run_at + _paused_time) - time;
     if (task->run_at > 0 && -diff > (time_t)this->overrun_at)
         this->overruns += 1;
-    // play task if near the time to be played or if no delay
+    // play task if near the time to be played or if in no delay mode
     if ((diff - this->acceptable_nano) <= 0 || _no_delay)
         _task_map.erase(_task_map.begin());
     else
@@ -141,17 +136,14 @@ void Scheduler::pause()
 void Scheduler::resume()
 {
     _paused = false;
-    // if in pause lock - try to notify wait until unlocked
-    while (_pausing.load() == true)
-        _waitable_pause.notify_all();
+    _waitable_pause.notify();
 }
 
 bool Scheduler::start()
 {
     if (_running.exchange(true) == true)
         return true;
-    std::lock_guard l(_mutex_state);
-    overruns = 0;
+    this->overruns = 0;
     _paused_time = 0;
     _thread = std::thread(&Scheduler::run, this);
     return true;
@@ -161,13 +153,9 @@ bool Scheduler::stop()
 {
     if (_running.exchange(false) == false)
         return true;
-    std::lock_guard l(_mutex_state);
     _paused = false;
-    while (_waiting.load() == true)
-    {
-        _waitable_pause.notify_all();
-        _waitable_task.notify_all();
-    }
+    _waitable_pause.notify();
+    _waitable_task.notify();
     bool ret = _clock_ptr != nullptr && _clock_ptr->stop();
     if (_thread.joinable())
         _thread.join();
@@ -184,8 +172,7 @@ void Scheduler::add_task(Task *task)
     std::lock_guard l(_mutex_task);
     _task_map.insert(std::pair<time_t, Task *>(task->run_at, task));
     _next_run = _task_map.begin()->first;
-    while (_paused.load() == false && _waiting.load() == true)
-        _waitable_task.notify_all();
+    _waitable_task.notify();
 }
 
 void Scheduler::remove_task(Task *task)
@@ -200,8 +187,7 @@ void Scheduler::remove_task(Task *task)
         }
     }
     _next_run = _task_map.begin()->first;
-    while (_waiting.load() == true)
-        _waitable_task.notify_all();
+    _waitable_task.notify();
 }
 
 void Scheduler::clear_tasks()
@@ -214,8 +200,7 @@ void Scheduler::clear_tasks()
             delete pair.second;
     }
     _task_map.clear();
-    while (_waiting.load() == true)
-        _waitable_task.notify_all();
+    _waitable_task.notify();
 }
 
 void Scheduler::_add_to_delete_task(Task *task)

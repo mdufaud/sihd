@@ -33,7 +33,6 @@ class StepWorker: public Worker,
         virtual bool on_worker_stop() override;
 
         std::atomic<bool> _pause;
-        std::atomic<bool> _pausing;
         time_t _sleep_time;
         SteadyClock _clock;
         Waitable _pause_waitable;

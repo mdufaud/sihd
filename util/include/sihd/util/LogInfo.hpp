@@ -16,13 +16,15 @@ enum LogLevel
 {
     none = 1000,
     emergency = 0, // A panic condition
-    alert,         // A condition that should be corrected immediately, such as a corrupted system database
-    critical,      // Hard device errors
-    error,
-    warning,
-    notice, // Conditions that are not error conditions, but that may require special handling
-    info,   // Confirmation that the program is working as expected
-    debug   // Messages that contain information normally of use only when debugging a program
+    alert = 1,     // A condition that should be corrected immediately, such as a corrupted system database
+    critical = 2,  // Hard device errors
+    error = 3,     //  Errors that are fatal to the operation, but not the service or application (can't open a required
+                   //  file, missing data, etc.) Solving these types of errors will usually require user intervention.
+    warning = 4, // Anything that can potentially cause application oddities, but for which the system is automatically
+                 // recovering from (e.g., retrying an operation, missing secondary data, etc.)
+    notice = 5,  // Conditions that are not error conditions, but that may require special handling
+    info = 6,    // Confirmation that the program is working as expected
+    debug = 7    // Messages that contain information normally of use only when debugging a program
 };
 
 class LogInfo

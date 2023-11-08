@@ -10,7 +10,6 @@
 #include <sihd/util/ALogger.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerManager.hpp>
-#include <sihd/util/Timestamp.hpp>
 
 namespace sihd::tui
 {
@@ -24,7 +23,7 @@ class LoggerBase: public ComponentBase,
                   public sihd::util::ALogger
 {
     public:
-        LoggerBase(LoggerOptions options): _options(std::move(options))
+        LoggerBase(LoggerOptions && options): _options(std::move(options))
         {
             sihd::util::LoggerManager::get()->add_logger(this);
             make_bar();
@@ -71,11 +70,11 @@ class LoggerBase: public ComponentBase,
 
             _bar.renderer = Renderer(_bar.container, [this] {
                 return hbox({
-                    _bar.container_btn_scroll->Render(),
-                    separator(),
                     _bar.container_search->Render() | size(HEIGHT, EQUAL, 1) | flex_grow,
                     separator(),
                     _bar.container_level_filter->Render(),
+                    separator(),
+                    _bar.container_btn_scroll->Render(),
                 });
             });
 
@@ -153,6 +152,7 @@ class LoggerBase: public ComponentBase,
 
             if (_options.add_bar)
             {
+                // TODO replace with dbox
                 return vbox({
                     _bar.renderer->Render(),
                     separator(),
@@ -183,7 +183,7 @@ class LoggerBase: public ComponentBase,
             else
                 return ComponentBase::OnEvent(event);
 
-            _focused_log = std::max(0l, std::min((ssize_t)_saved_logs.size() - 1, _focused_log));
+            _focused_log = std::max((ssize_t)0, std::min((ssize_t)_saved_logs.size() - 1, _focused_log));
             return true;
         }
 
@@ -247,7 +247,7 @@ class LoggerBase: public ComponentBase,
             if (_saved_logs.size() >= _options.max_logs)
             {
                 _saved_logs.pop_front();
-                _focused_log = std::max(0l, _focused_log - 1);
+                _focused_log = std::max((ssize_t)0, _focused_log - 1);
             }
 
             _saved_logs.emplace_back(SavedLog {
@@ -270,7 +270,7 @@ class LoggerBase: public ComponentBase,
 
 } // namespace
 
-ftxui::Component LoggerComponent(LoggerOptions options)
+ftxui::Component LoggerComponent(LoggerOptions && options)
 {
     return Make<LoggerBase>(std::move(options));
 }

@@ -52,7 +52,7 @@ bool Worker::start_worker(std::string_view name)
 
 bool Worker::start_sync_worker(std::string_view name)
 {
-    if (_synchro.to_sync() > 0)
+    if (_synchro.total_sync() > 0)
         return true;
     _synchro.init_sync(2);
     bool ret = this->start_worker(name);
@@ -66,7 +66,7 @@ bool Worker::_prepare_run()
 {
     ScopedModifier m(_running, true);
     thread::set_name(_worker_thread_name);
-    if (_synchro.to_sync() > 0)
+    if (_synchro.total_sync() > 0)
         _synchro.sync();
     bool ret = this->run();
     return ret;
