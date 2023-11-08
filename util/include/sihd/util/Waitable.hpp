@@ -4,7 +4,7 @@
 #include <condition_variable>
 #include <mutex>
 
-#include <sihd/util/Hourglass.hpp>
+#include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
@@ -31,9 +31,9 @@ class Waitable
         template <class Predicate>
         Timestamp wait_elapsed(Predicate pred_stop_waiting)
         {
-            Hourglass hg;
+            Stopwatch watch;
             this->wait(pred_stop_waiting);
-            return hg.mesure();
+            return watch.time();
         }
 
         // predicate must return false to keep waiting
@@ -48,9 +48,9 @@ class Waitable
         template <class Predicate>
         Timestamp wait_for_elapsed(Timestamp duration, Predicate pred_stop_waiting)
         {
-            Hourglass hg;
+            Stopwatch watch;
             this->wait_for(duration, pred_stop_waiting);
-            return hg.mesure();
+            return watch.time();
         }
 
         // predicate must return false to keep waiting
@@ -67,9 +67,9 @@ class Waitable
         template <class Predicate>
         Timestamp wait_until_elapsed(Timestamp timestamp, Predicate pred_stop_waiting)
         {
-            Hourglass hg;
+            Stopwatch watch;
             this->wait_until(timestamp, pred_stop_waiting);
-            return hg.mesure();
+            return watch.time();
         }
 
         void wait();

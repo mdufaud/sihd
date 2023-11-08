@@ -59,23 +59,23 @@ bool Waitable::wait_for(Timestamp duration)
 
 Timestamp Waitable::wait_elapsed()
 {
-    Hourglass hg;
+    Stopwatch hg;
     this->wait();
-    return hg.mesure();
+    return hg.time();
 }
 
 Timestamp Waitable::wait_until_elapsed(Timestamp timestamp)
 {
-    Hourglass hg;
+    Stopwatch hg;
     this->wait_until(timestamp);
-    return hg.mesure();
+    return hg.time();
 }
 
 Timestamp Waitable::wait_for_elapsed(Timestamp duration)
 {
-    Hourglass hg;
+    Stopwatch hg;
     this->wait_for(duration);
-    return hg.mesure();
+    return hg.time();
 }
 
 } // namespace sihd::util

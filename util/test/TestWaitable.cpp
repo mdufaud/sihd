@@ -87,7 +87,7 @@ TEST_F(TestWaitable, test_waitable_until)
     });
     synchro.sync();
 
-    Hourglass hg;
+    Stopwatch hg;
     bool condition_ok = waitable.wait_until(clock.now() + time::ms(5), [&data] { return data == true; });
     EXPECT_TRUE(condition_ok);
 

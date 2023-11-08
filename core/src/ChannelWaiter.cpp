@@ -65,7 +65,7 @@ bool ChannelWaiter::wait_for(sihd::util::Timestamp nano_duration, uint32_t notif
 {
     if (_channel == nullptr)
         return true;
-    uint32_t total = _count.load() + notifications;
+    const uint32_t total = _count.load() + notifications;
     // waitable returns true when timed out
     return _waitable.wait_for(nano_duration, [this, total] { return _count.load() >= total; });
 }
