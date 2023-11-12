@@ -107,9 +107,9 @@ TEST_F(TestTcp, test_tcp_server)
     EXPECT_TRUE(server.stop_serving());
     EXPECT_TRUE(worker.stop_worker());
 
-    SIHD_LOG(debug, "Total observations: {}", handler_waiter.notifications);
+    SIHD_LOG(debug, "Total observations: {}", handler_waiter.notifications());
     // should be lower than ~11 in general
-    EXPECT_LT(handler_waiter.notifications, 15);
+    EXPECT_LT(handler_waiter.notifications(), 15);
 }
 
 TEST_F(TestTcp, test_tcp_client)
