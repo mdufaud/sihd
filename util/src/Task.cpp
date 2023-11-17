@@ -1,3 +1,5 @@
+#include <stdexcept>
+
 #include <sihd/util/Task.hpp>
 
 namespace sihd::util

@@ -295,7 +295,7 @@ TEST_F(TestScheduler, test_sched_burst)
     t1.join();
     t2.join();
     t3.join();
-    SIHD_LOG(debug, "Total executions: {}", lambda_ran);
+    SIHD_LOG(debug, "Total executions: {}", lambda_ran.load());
 }
 
 } // namespace test

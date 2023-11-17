@@ -178,7 +178,7 @@ float PingResult::packet_loss() const
 
 std::string PingResult::str() const
 {
-    return fmt::format("{} packets transmitted, {} received, {:.0}% packet loss, time {:.3f}ms\n"
+    return fmt::format("{} packets transmitted, {} received, {:.0f}% packet loss, time {:.3f}ms\n"
                        "rtt min/avg/max/mdev = {:.3f}/{:.3f}/{:.3f}/{:.3f} ms",
                        transmitted,
                        rtt.samples,
