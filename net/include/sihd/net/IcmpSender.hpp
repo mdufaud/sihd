@@ -23,11 +23,11 @@ struct IcmpResponse
         IpAddr client;
         void *data;
         size_t size;
-        int type;
-        int code;
-        int ttl;
-        int id;
-        int seq;
+        uint8_t type;
+        uint8_t code;
+        uint8_t ttl;
+        uint16_t id;
+        uint16_t seq;
 };
 
 class IcmpSender: public sihd::util::Named,

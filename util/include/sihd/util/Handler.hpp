@@ -12,7 +12,13 @@ template <typename... T>
 class Handler: public IHandler<T...>
 {
     public:
-        Handler(std::function<void(T...)> fun) { _handle_fun = std::move(fun); }
+        Handler() {}
+
+        template <typename Function>
+        Handler(Function && fun)
+        {
+            this->set_method(std::move(fun));
+        }
 
         template <typename C>
         Handler(C *obj, void (C::*fun)(T...))
@@ -22,11 +28,7 @@ class Handler: public IHandler<T...>
 
         Handler(IHandler<T...> *handler_ptr) { this->set_handler(handler_ptr); }
 
-        Handler() {}
-
         virtual ~Handler() {};
-
-        void operator()(T... args) { this->handle(args...); };
 
         void set_handler(IHandler<T...> *handler_ptr)
         {
@@ -35,7 +37,11 @@ class Handler: public IHandler<T...>
             };
         }
 
-        void set_method(std::function<void(T...)> fun) { _handle_fun = std::move(fun); }
+        template <typename Function>
+        void set_method(Function && fun)
+        {
+            _handle_fun = std::move(fun);
+        }
 
         template <typename C>
         void set_method(C *obj, void (C::*fun)(T...))
@@ -50,6 +56,8 @@ class Handler: public IHandler<T...>
             if (_handle_fun)
                 _handle_fun(args...);
         }
+
+        void operator()(T... args) { this->handle(args...); };
 
         bool has_method() const { return _handle_fun ? true : false; }
 

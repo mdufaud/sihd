@@ -56,12 +56,14 @@ bool StepWorker::run()
 
 void StepWorker::resume_worker()
 {
+    auto l = _pause_waitable.guard();
     _pause = false;
     _pause_waitable.notify_all();
 }
 
 void StepWorker::pause_worker()
 {
+    auto l = _pause_waitable.guard();
     _pause = true;
 }
 

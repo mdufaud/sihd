@@ -56,25 +56,65 @@ class TestScheduler: public ::testing::Test,
         steady_clock _clock;
 };
 
+TEST_F(TestScheduler, test_sched_order)
+{
+    Scheduler sched("sched");
+
+    Timestamp task_first = 0;
+    Timestamp task_second = 0;
+    Timestamp task_third = 0;
+
+    sched.add_task(new Task(
+        [&] {
+            task_second = sched.now();
+            return true;
+        },
+        {.run_in = std::chrono::microseconds(200)}));
+
+    sched.add_task(new Task(
+        [&] {
+            task_third = sched.now();
+            return true;
+        },
+        {.run_in = std::chrono::microseconds(300)}));
+
+    sched.add_task(new Task(
+        [&] {
+            task_first = sched.now();
+            return true;
+        },
+        {.run_in = std::chrono::microseconds(100)}));
+
+    sched.start_sync();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+    sched.stop();
+
+    EXPECT_LT(task_first, task_second);
+    EXPECT_LT(task_second, task_third);
+}
+
 TEST_F(TestScheduler, test_sched_perf)
 {
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Perf under valgrind debugger is unthinkable";
 
-    Scheduler seq("seq");
+    Scheduler sched("sched");
 
     // most overruns are below 100 microseconds
     this->delta_us = 100;
-    seq.overrun_at = time::micro(this->delta_us);
+    sched.overrun_at = time::micro(this->delta_us);
 
     this->should_run_every_us = 100;
-    seq.add_task(new Task(this, 0, std::chrono::microseconds(this->should_run_every_us)));
-    seq.start();
+    sched.add_task(new Task(this, {.reschedule_time = std::chrono::microseconds(this->should_run_every_us)}));
+
+    sched.start_sync();
 
     constexpr time_t sleep_time = 50;
     std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
 
-    seq.stop();
+    sched.stop();
 
     const int expected_run = time::micro(sleep_time) / this->should_run_every_us;
     const int minimum_run = expected_run / 2;
@@ -87,149 +127,136 @@ TEST_F(TestScheduler, test_sched_perf)
     const int expected_overruns = this->ran / 10;
     SIHD_LOG_LVL(level,
                  "Scheduler overruns: total={} test_calculated={} (expected less than {})",
-                 seq.overruns,
+                 sched.overruns,
                  overruns,
                  expected_overruns);
 
-    EXPECT_LE(seq.overruns, minimum_run);
+    EXPECT_LE(sched.overruns, minimum_run);
     EXPECT_GT(this->ran, minimum_run);
 }
 
 TEST_F(TestScheduler, test_sched_stop)
 {
-    if (os::is_run_by_valgrind())
-        GTEST_SKIP() << "Valgrind debugger doesn't hold up there";
-
-    Scheduler seq("seq");
+    Scheduler sched("sched");
 
     int ran = 0;
-    time_t now = seq.now();
-    seq.add_task(new Task(
+    sched.add_task(new Task(
         [&]() -> bool {
             SIHD_TRACE("Should run once");
             ++ran;
             return true;
         },
-        now + time::milli(5)));
-    seq.add_task(new Task(
+        {.run_in = time::milli(5)}));
+    sched.add_task(new Task(
         [&]() -> bool {
             SIHD_TRACE("Should not run");
             ++ran;
             return true;
         },
-        now + time::milli(20)));
-    seq.start();
+        {.run_in = time::milli(20)}));
+    sched.start_sync();
     SIHD_TRACE("Before sleep");
     std::this_thread::sleep_for(std::chrono::milliseconds(3));
     EXPECT_EQ(ran, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     EXPECT_EQ(ran, 1);
-    seq.stop();
+    sched.stop();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     EXPECT_EQ(ran, 1);
 }
 
 TEST_F(TestScheduler, test_sched_pause)
 {
-    if (os::is_run_by_valgrind())
-        GTEST_SKIP() << "Test is buggy under valgrind debugger";
-
     constexpr time_t should_run_every_ms = 15;
     constexpr time_t sleep_ms = should_run_every_ms + 10;
 
-    Scheduler seq("seq");
+    Scheduler sched("sched");
 
     int lambda_ran = 0;
-    seq.add_task(new Task(
+    sched.add_task(new Task(
         [&lambda_ran]() -> bool {
             ++lambda_ran;
             return true;
         },
-        0,
-        time::ms(should_run_every_ms)));
-    seq.start();
+        {.reschedule_time = time::ms(should_run_every_ms)}));
+    sched.start_sync();
     SIHD_LOG(debug, "Started scheduler");
     std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
 
     SIHD_LOG(debug, "Pausing scheduler");
-    seq.pause();
+    sched.pause();
     SIHD_LOG(debug, "Paused scheduler");
     EXPECT_GE(lambda_ran, (sleep_ms / should_run_every_ms));
     std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
 
     EXPECT_GE(lambda_ran, (sleep_ms / should_run_every_ms));
     SIHD_LOG(debug, "Resuming scheduler");
-    seq.resume();
+    sched.resume();
     SIHD_LOG(debug, "Resumed scheduler");
     std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
 
     SIHD_LOG(debug, "Pausing scheduler");
-    seq.pause();
+    sched.pause();
     SIHD_LOG(debug, "Paused scheduler");
     EXPECT_GE(lambda_ran, ((2 * sleep_ms) / should_run_every_ms));
     std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
 
     EXPECT_GE(lambda_ran, ((2 * sleep_ms) / should_run_every_ms));
     SIHD_LOG(debug, "Resuming scheduler");
-    seq.resume();
+    sched.resume();
     SIHD_LOG(debug, "Resumed scheduler");
     std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
 
     SIHD_LOG(debug, "Stopping scheduler");
-    seq.stop();
+    sched.stop();
     SIHD_LOG(debug, "Stopped scheduler");
     EXPECT_GE(lambda_ran, ((3 * sleep_ms) / should_run_every_ms));
 }
 
 TEST_F(TestScheduler, test_sched_as_fast)
 {
-    if (os::is_run_by_valgrind())
-        GTEST_SKIP() << "Test is buggy under valgrind debugger";
-    Scheduler seq("seq");
+    Scheduler sched("sched");
     int lambda_ran = 0;
     std::function<bool()> fun = [&lambda_ran]() -> bool {
         ++lambda_ran;
         return true;
     };
-    time_t now = seq.now();
-    seq.add_task(new Task(fun, now + time::milli(5)));
-    seq.add_task(new Task(fun, now + time::milli(20)));
-    seq.add_task(new Task(fun, now + time::milli(30)));
-    seq.add_task(new Task(fun, now + time::milli(40)));
-    seq.add_task(new Task(fun, now + time::milli(50)));
-    seq.set_as_fast_as_possible(true);
-    seq.start();
+    sched.add_task(new Task(fun, {.run_in = time::milli(5)}));
+    sched.add_task(new Task(fun, {.run_in = time::milli(20)}));
+    sched.add_task(new Task(fun, {.run_in = time::milli(30)}));
+    sched.add_task(new Task(fun, {.run_in = time::milli(40)}));
+    sched.add_task(new Task(fun, {.run_in = time::milli(50)}));
+    sched.set_as_fast_as_possible(true);
+    sched.start_sync();
     SIHD_LOG(debug, "Started scheduler");
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    seq.stop();
+    sched.stop();
     SIHD_LOG(debug, "Stopped scheduler");
     EXPECT_EQ(lambda_ran, 5);
 }
 
 TEST_F(TestScheduler, test_sched_burst)
 {
-    if (os::is_run_by_valgrind())
-        GTEST_SKIP() << "Test is buggy under valgrind debugger";
-    Scheduler seq("seq");
-    int lambda_ran = 0;
+    Scheduler sched("sched");
+    std::atomic<int> lambda_ran = 0;
     std::function<bool()> fun = [&lambda_ran]() -> bool {
         ++lambda_ran;
         return true;
     };
     // repeat task as fast as possible
-    seq.add_task(new Task(fun, 0, 1));
+    sched.add_task(new Task(fun, {.reschedule_time = 1}));
     // spam state change
     std::thread t1([&]() {
         int i = 0;
         while (i < 100)
         {
-            seq.start();
+            sched.start_sync();
             std::this_thread::sleep_for(std::chrono::microseconds(200));
-            seq.pause();
+            sched.pause();
             std::this_thread::sleep_for(std::chrono::microseconds(200));
-            seq.resume();
+            sched.resume();
             std::this_thread::sleep_for(std::chrono::microseconds(200));
-            seq.stop();
+            sched.stop();
             ++i;
         }
     });
@@ -238,10 +265,10 @@ TEST_F(TestScheduler, test_sched_burst)
         int i = 0;
         while (i < 100)
         {
-            seq.add_task(new Task(fun, seq.now() + time::us(100)));
-            seq.add_task(new Task(fun, seq.now() + time::us(200)));
-            seq.add_task(new Task(fun, seq.now() + time::us(300)));
-            seq.add_task(new Task(fun, seq.now() + time::us(400)));
+            sched.add_task(new Task(fun, {.run_in = time::us(100)}));
+            sched.add_task(new Task(fun, {.run_in = time::us(200)}));
+            sched.add_task(new Task(fun, {.run_in = time::us(300)}));
+            sched.add_task(new Task(fun, {.run_in = time::us(400)}));
             std::this_thread::sleep_for(std::chrono::microseconds(300));
             ++i;
         }
@@ -251,10 +278,15 @@ TEST_F(TestScheduler, test_sched_burst)
         int i = 0;
         while (i < 100)
         {
-            Task *t = new Task(fun, seq.now() + time::seconds(303));
-            seq.add_task(t);
+            Task *t = new Task(
+                [] {
+                    SIHD_LOG_ERROR("Should not be played ever");
+                    return false;
+                },
+                {.run_in = time::seconds(303)});
+            sched.add_task(t);
             std::this_thread::sleep_for(std::chrono::microseconds(500));
-            seq.remove_task(t);
+            ASSERT_TRUE(sched.remove_task(t));
             delete t;
             ++i;
         }
@@ -265,4 +297,5 @@ TEST_F(TestScheduler, test_sched_burst)
     t3.join();
     SIHD_LOG(debug, "Total executions: {}", lambda_ran);
 }
+
 } // namespace test

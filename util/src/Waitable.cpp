@@ -8,10 +8,7 @@ SIHD_LOGGER;
 
 using namespace std::chrono;
 
-Waitable::Waitable()
-{
-    _stop_waiting = false;
-}
+Waitable::Waitable() {}
 
 Waitable::~Waitable()
 {
@@ -21,7 +18,6 @@ Waitable::~Waitable()
 
 void Waitable::cancel_loop()
 {
-    _stop_waiting = true;
     this->notify_all();
 }
 
@@ -76,6 +72,16 @@ Timestamp Waitable::wait_for_elapsed(Timestamp duration)
     Stopwatch hg;
     this->wait_for(duration);
     return hg.time();
+}
+
+std::mutex & Waitable::mutex()
+{
+    return _mutex;
+}
+
+std::lock_guard<std::mutex> Waitable::guard()
+{
+    return std::lock_guard(_mutex);
 }
 
 } // namespace sihd::util

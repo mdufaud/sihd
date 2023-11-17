@@ -71,6 +71,7 @@ bool IcmpSender::open_socket(bool ipv6)
 
 bool IcmpSender::close()
 {
+    _poll.stop();
     _poll.clear_fds();
     _socket.shutdown();
     return _socket.close();
@@ -103,33 +104,33 @@ void IcmpSender::set_echo()
 void IcmpSender::set_type(int type)
 {
     if (_socket.is_ipv6())
-        icmp()->icmp_type = type;
-    else
         icmp6()->icmp6_type = type;
+    else
+        icmp()->icmp_type = type;
 }
 
 void IcmpSender::set_code(int code)
 {
     if (_socket.is_ipv6())
-        icmp()->icmp_code = code;
-    else
         icmp6()->icmp6_code = code;
+    else
+        icmp()->icmp_code = code;
 }
 
 void IcmpSender::set_id(pid_t id)
 {
     if (_socket.is_ipv6())
-        icmp()->icmp_id = htons(id);
-    else
         icmp6()->icmp6_id = htons(id);
+    else
+        icmp()->icmp_id = htons(id);
 }
 
 void IcmpSender::set_seq(int seq)
 {
     if (_socket.is_ipv6())
-        icmp()->icmp_seq = htons(seq);
-    else
         icmp6()->icmp6_seq = htons(seq);
+    else
+        icmp()->icmp_seq = htons(seq);
 }
 
 bool IcmpSender::set_data(sihd::util::ArrByteView view)
@@ -148,11 +149,15 @@ bool IcmpSender::send_to(const IpAddr & addr)
     {
         icmp6()->icmp6_cksum = 0;
         icmp6()->icmp6_cksum = utils::checksum((unsigned short *)icmp6(), _array_send_ptr->size());
+        if (icmp6()->icmp6_cksum == 0)
+            icmp6()->icmp6_cksum = 0xffff;
     }
     else
     {
         icmp()->icmp_cksum = 0;
         icmp()->icmp_cksum = utils::checksum((unsigned short *)icmp(), _array_send_ptr->size());
+        if (icmp()->icmp_cksum == 0)
+            icmp()->icmp_cksum = 0xffff;
     }
     return _socket.send_all_to(addr, *_array_send_ptr);
 }
@@ -235,8 +240,6 @@ void IcmpSender::_process_ipv4()
 
     if (iphdr->ip_p == IPPROTO_ICMP)
     {
-        // SIHD_TRACE("TYPE: " << (int)icmphdr->icmp_type);
-        // SIHD_TRACE("CODE: " << (int)icmphdr->icmp_code);
         if (icmphdr->icmp_type == ICMP_ECHOREPLY || icmphdr->icmp_type == ICMP_ECHO
             || (icmphdr->icmp_type == ICMP_TIME_EXCEEDED && icmphdr->icmp_code == ICMP_TIMXCEED_INTRANS))
         {

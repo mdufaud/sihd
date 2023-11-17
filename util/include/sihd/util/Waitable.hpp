@@ -102,10 +102,12 @@ class Waitable
         // wait for duration -- returns time elapsed
         Timestamp wait_for_elapsed(Timestamp duration);
 
+        std::mutex & mutex();
+        std::lock_guard<std::mutex> guard();
+
     protected:
         std::mutex _mutex;
         std::condition_variable _condition;
-        bool _stop_waiting;
 };
 
 } // namespace sihd::util

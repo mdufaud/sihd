@@ -1,8 +1,12 @@
+#include <utility>
+
 #include <gtest/gtest.h>
+
+#include <sihd/util/Clocks.hpp>
+#include <sihd/util/Decorator.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Observable.hpp>
-#include <utility>
 
 namespace test
 {
@@ -37,7 +41,7 @@ class TestObservable: public ::testing::Test,
         void handle(SomeObservable *obs)
         {
             this->val = obs->get_val();
-            obs->remove_observer(this);
+            obs->remove_observer_inside_notification(this);
         }
 
         int val = 0;
@@ -45,31 +49,69 @@ class TestObservable: public ::testing::Test,
 
 TEST_F(TestObservable, test_obs_inheritance)
 {
-    SomeObservable obj;
-    obj.val = 1337;
-    obj.add_observer(this);
+    SomeObservable observable;
+    observable.val = 1337;
+    observable.add_observer(this);
+    observable.add_observer(this);
+    observable.add_observer(this);
+    observable.add_observer(this);
     EXPECT_EQ(this->val, 0);
-    obj.notify();
-    EXPECT_EQ(this->val, obj.val);
+    observable.notify();
+    EXPECT_EQ(this->val, observable.val);
 
-    obj.val = 424242;
-    obj.notify();
+    observable.val = 424242;
+    observable.notify();
     EXPECT_EQ(this->val, 1337);
 }
 
 TEST_F(TestObservable, test_obs_lambda)
 {
-    SomeObservable obj;
-    obj.val = 1337;
+    SomeObservable observable;
+    observable.val = 1337;
     int val = 0;
     Handler<SomeObservable *> handler([&](SomeObservable *obs) -> void { val = obs->get_val(); });
     EXPECT_EQ(val, 0);
-    obj.add_observer(&handler);
-    obj.notify();
+    observable.add_observer(&handler);
+    observable.notify();
     EXPECT_EQ(val, 1337);
-    obj.val = 4242;
-    obj.remove_observer(&handler);
-    obj.notify();
+    observable.val = 4242;
+    observable.remove_observer(&handler);
+    observable.notify();
     EXPECT_EQ(val, 1337);
 }
+
+TEST_F(TestObservable, test_obs_decorator)
+{
+    SteadyClock clock;
+    SomeObservable observable;
+    Timestamp ts_begin(0);
+    Timestamp ts_handler(0);
+    Timestamp ts_end(0);
+
+    Decorator<SomeObservable> decorator;
+
+    Handler<SomeObservable *> handler([&]([[maybe_unused]] SomeObservable *obs) { ts_handler = clock.now(); });
+    observable.add_observer(&handler);
+
+    decorator.decorate(&observable);
+
+    decorator.set_handler_begin([&ts_begin, &clock](auto) { ts_begin = clock.now(); });
+    decorator.set_handler_end([&ts_end, &clock](auto) { ts_end = clock.now(); });
+
+    EXPECT_EQ(ts_handler, ts_begin);
+    EXPECT_EQ(ts_handler, ts_end);
+
+    observable.notify();
+
+    EXPECT_LT(ts_begin, ts_handler);
+    EXPECT_LT(ts_handler, ts_end);
+
+    decorator.reset();
+
+    observable.notify();
+
+    EXPECT_LT(ts_begin, ts_handler);
+    EXPECT_LT(ts_end, ts_handler);
+}
+
 } // namespace test

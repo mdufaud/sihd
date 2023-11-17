@@ -264,7 +264,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("clear_tasks", &Scheduler::clear_tasks, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def_readonly("overruns", &Scheduler::overruns)
         .def_readwrite("overrun_at", &Scheduler::overrun_at)
-        .def_readwrite("acceptable_nano", &Scheduler::acceptable_nano);
+        .def_readwrite("acceptable_task_preplay_ns_time", &Scheduler::acceptable_task_preplay_ns_time);
 
     pybind11::class_<IArray>(m_util, "IArray")
         .def("size", &IArray::size)

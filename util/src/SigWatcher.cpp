@@ -3,12 +3,10 @@
 #include <sihd/util/signal.hpp>
 #include <sihd/util/thread.hpp>
 
-#include <fmt/format.h>
-
 namespace sihd::util
 {
 
-SigWatcher::SigWatcher(const std::vector<int> signals, const Callback & callback, Timestamp polling_frequency):
+SigWatcher::SigWatcher(const std::vector<int> signals, Callback && callback, Timestamp polling_frequency):
     _signals(signals),
     _stop(false)
 {
@@ -17,7 +15,7 @@ SigWatcher::SigWatcher(const std::vector<int> signals, const Callback & callback
     _sighandlers.reserve(_signals.size());
     for (const int & signal : _signals)
     {
-        auto & sighandler = _sighandlers.emplace_back(SigHandler());
+        auto & sighandler = _sighandlers.emplace_back();
         if (sighandler.handle(signal) == false)
         {
             signals_to_unwatch.emplace_back(signal);
@@ -48,17 +46,18 @@ SigWatcher::~SigWatcher()
 
 void SigWatcher::stop()
 {
-    if (_stop.exchange(true))
-        return;
+    {
+        auto l = _waitable.guard();
+        if (_stop.exchange(true))
+            return;
+        _waitable.notify();
+    }
 
     // unhandle signals
     _sighandlers.clear();
 
-    _waitable.notify_all();
     if (_thread.joinable())
-    {
         _thread.join();
-    }
 }
 
 int SigWatcher::_watch_signals(Timestamp polling_frequency)
@@ -74,8 +73,7 @@ int SigWatcher::_watch_signals(Timestamp polling_frequency)
                 return signal;
         }
 
-        if (_stop == false)
-            _waitable.wait_for(polling_frequency);
+        _waitable.wait_for(polling_frequency, [this] { return _stop == true; });
     }
     return -1;
 }

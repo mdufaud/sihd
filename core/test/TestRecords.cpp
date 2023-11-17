@@ -36,6 +36,7 @@ TEST_F(TestRecords, test_records_dev_player)
 
     MemRecorder mem_recorder("mem_recorder", &core);
     mem_recorder.set_parent_ownership(false);
+    EXPECT_TRUE(mem_recorder.set_stop_providing_when_empty(true));
 
     DevPlayer dev_replayer("dev_replayer", &core);
     dev_replayer.set_parent_ownership(false);
@@ -70,13 +71,6 @@ TEST_F(TestRecords, test_records_dev_player)
     ASSERT_NE(play, nullptr);
 
     EXPECT_TRUE(core.start());
-
-    while (!mem_recorder.empty())
-        sihd::util::time::msleep(1);
-
-    SIHD_LOG(debug, "Stopping recorder");
-    // stop recorder to stop dev player loop and signal ending on channel
-    mem_recorder.stop();
 
     SIHD_LOG(debug, "Playing");
     play->write(0, true);

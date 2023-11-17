@@ -5,6 +5,26 @@
 namespace sihd::util
 {
 
+namespace
+{
+
+bool do_print(FILE *file_ptr, std::string_view str)
+{
+    return fwrite(str.data(), sizeof(char), str.size(), file_ptr) == str.size();
+}
+
+bool do_flush(FILE *file_ptr)
+{
+    return fflush(file_ptr) == 0;
+}
+
+bool do_return_begin_of_line(FILE *file_ptr)
+{
+    return do_print(file_ptr, "\r");
+}
+
+} // namespace
+
 LoadingBar::LoadingBar(size_t width, size_t total, FILE *output):
     _width(width),
     _current(0),
@@ -16,16 +36,15 @@ LoadingBar::LoadingBar(size_t width, size_t total, FILE *output):
 
 LoadingBar::~LoadingBar() {}
 
-bool LoadingBar::add_progress(size_t progress)
+void LoadingBar::add_progress(size_t progress)
 {
     _current += progress;
     _current = std::min(_current, _total);
-    return this->_return_begin_of_line() && this->_print_bar() && this->_flush();
 }
 
-bool LoadingBar::_return_begin_of_line() const
+bool LoadingBar::print() const
 {
-    return this->_print("\r");
+    return do_return_begin_of_line(_file_ptr) && this->_print_bar() && do_flush(_file_ptr);
 }
 
 bool LoadingBar::_print_bar() const
@@ -37,17 +56,7 @@ bool LoadingBar::_print_bar() const
     else if (_percent_pos == right)
         bar_str = fmt::format("{} {}", bar_str, this->progress_str());
 
-    return this->_print(bar_str);
-}
-
-bool LoadingBar::_flush() const
-{
-    return fflush(_file_ptr) == 0;
-}
-
-bool LoadingBar::_print(std::string_view str) const
-{
-    return fwrite(str.data(), sizeof(char), str.size(), _file_ptr) == str.size();
+    return do_print(_file_ptr, bar_str);
 }
 
 std::string LoadingBar::loading_bar_str() const

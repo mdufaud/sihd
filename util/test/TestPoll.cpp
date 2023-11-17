@@ -2,7 +2,6 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Poll.hpp>
-#include <sihd/util/Task.hpp>
 
 namespace test
 {

@@ -475,9 +475,7 @@ bool Process::start()
 
 bool Process::wait_process_end(time_t nano_duration)
 {
-    if (this->is_running())
-        return _waitable.wait_for(nano_duration, [this] { return this->is_running() == false; }) == false;
-    return true;
+    return _waitable.wait_for(nano_duration, [this] { return this->is_running() == false; });
 }
 
 bool Process::_read_fd(int fd, std::function<void(const char *, ssize_t)> fun)

@@ -23,6 +23,8 @@ class MemRecorder: public ACoreObject,
         MemRecorder(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~MemRecorder();
 
+        bool set_stop_providing_when_empty(bool active);
+
         bool do_start() override;
         bool do_stop() override;
         bool do_reset() override;
@@ -36,17 +38,22 @@ class MemRecorder: public ACoreObject,
         bool providing() const override;
         bool provide(PlayableRecord *value) override;
 
+        bool is_running() const override;
+
         const SortedRecordedValues & sorted_recorded_values() const { return _map_sorted_records; }
         std::string hexdump_records(std::string_view separation_cols = "\t", char separation_data = ' ');
-        void clear();
 
-        MapListRecordedValues make_recorded_values();
+        MapListRecordedValues make_recorded_values() const;
         static std::string hexdump_recorded_values(const MapListRecordedValues & recorded_values);
+
+        void clear();
 
     protected:
         void handle(const std::string & name, const Channel *array) override;
 
     private:
+        bool _stop_providing_when_empty;
+        std::atomic<bool> _providing;
         std::atomic<bool> _running;
         mutable std::mutex _mutex;
         SortedRecordedValues _map_sorted_records;

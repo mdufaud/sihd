@@ -192,7 +192,7 @@ void DevPlayer::handle(Collector<PlayableRecord> *collector)
 
     // calls DevPlayer::run to execute record at setted time
     if (_running)
-        _scheduler_ptr->add_task(new Task(this, execute_at));
+        _scheduler_ptr->add_task(new Task(this, {.run_at = execute_at}));
 }
 
 bool DevPlayer::_worker_loop()

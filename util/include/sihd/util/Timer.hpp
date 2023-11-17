@@ -16,7 +16,7 @@ class Timer
     public:
         using Callback = std::function<void()>;
 
-        Timer(const Callback & callback, Timestamp timeout);
+        Timer(Callback && callback, Timestamp timeout);
         ~Timer();
 
         void cancel();

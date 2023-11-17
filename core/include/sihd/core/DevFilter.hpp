@@ -112,11 +112,7 @@ class DevFilter: public sihd::core::Device
         class DelayWriter: public sihd::util::Task
         {
             public:
-                DelayWriter(DevFilter *dev,
-                            Channel *channel_out,
-                            const Rule *rule_ptr,
-                            int64_t out_val,
-                            sihd::util::Scheduler *scheduler_ptr);
+                DelayWriter(DevFilter *dev, Channel *channel_out, const Rule *rule_ptr, int64_t out_val);
                 ~DelayWriter();
 
                 bool run();

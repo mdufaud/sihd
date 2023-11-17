@@ -401,9 +401,9 @@ void LuaUtilApi::load_threading(Vm & vm)
             +[](const LuaScheduler *self) { return self->overrun_at; },
             +[](LuaScheduler *self, uint32_t val) { self->overrun_at = val; })
         .addProperty(
-            "acceptable_nano",
-            +[](const LuaScheduler *self) { return self->acceptable_nano; },
-            +[](LuaScheduler *self, uint32_t val) { self->acceptable_nano = val; })
+            "acceptable_task_preplay_ns_time",
+            +[](const LuaScheduler *self) { return self->acceptable_task_preplay_ns_time; },
+            +[](LuaScheduler *self, uint32_t val) { self->acceptable_task_preplay_ns_time = val; })
         // LuaScheduler
         .addFunction("start",
                      std::function<bool(LuaScheduler *, lua_State *)>(+[](LuaScheduler *self, lua_State *state) {

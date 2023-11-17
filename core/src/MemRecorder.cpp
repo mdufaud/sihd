@@ -15,11 +15,20 @@ SIHD_LOGGER;
 MemRecorder::MemRecorder(const std::string & name, sihd::util::Node *parent): ACoreObject(name, parent)
 {
     _running = false;
+    _providing = false;
+    _stop_providing_when_empty = false;
+    this->add_conf("stop_providing_when_empty", &MemRecorder::set_stop_providing_when_empty);
 }
 
 MemRecorder::~MemRecorder()
 {
     this->clear();
+}
+
+bool MemRecorder::set_stop_providing_when_empty(bool active)
+{
+    _stop_providing_when_empty = active;
+    return true;
 }
 
 void MemRecorder::add_records(const std::vector<PlayableRecord> & records)
@@ -54,7 +63,7 @@ bool MemRecorder::empty() const
 
 bool MemRecorder::providing() const
 {
-    return _running;
+    return _providing;
 }
 
 bool MemRecorder::provide(PlayableRecord *value)
@@ -64,6 +73,8 @@ bool MemRecorder::provide(PlayableRecord *value)
         return false;
     *value = _map_sorted_records.begin()->second;
     _map_sorted_records.erase(_map_sorted_records.begin());
+    if (_stop_providing_when_empty && _map_sorted_records.empty())
+        _providing = false;
     return true;
 }
 
@@ -72,13 +83,13 @@ void MemRecorder::handle(const std::string & name, const Channel *channel)
     this->add_record(name, channel->timestamp(), channel->array());
 }
 
-MapListRecordedValues MemRecorder::make_recorded_values()
+MapListRecordedValues MemRecorder::make_recorded_values() const
 {
-    MapListRecordedValues map_record;
     std::lock_guard l(_mutex);
+    MapListRecordedValues map_record;
     for (const auto & [_, playable_record] : _map_sorted_records)
     {
-        map_record[playable_record.name].push_back({playable_record.timestamp, playable_record.value});
+        map_record[playable_record.name].emplace_back(playable_record.timestamp, playable_record.value);
     }
     return map_record;
 }
@@ -117,11 +128,13 @@ std::string MemRecorder::hexdump_records(std::string_view separation_cols, char 
 bool MemRecorder::do_start()
 {
     _running = true;
+    _providing = true;
     return true;
 }
 
 bool MemRecorder::do_stop()
 {
+    _providing = false;
     _running = false;
     return true;
 }
@@ -130,6 +143,11 @@ bool MemRecorder::do_reset()
 {
     this->clear();
     return true;
+}
+
+bool MemRecorder::is_running() const
+{
+    return _running;
 }
 
 void MemRecorder::clear()

@@ -82,7 +82,10 @@ bool Pinger::set_interval(time_t milliseconds_interval)
 
 void Pinger::stop()
 {
+    _sender.stop();
+    auto l = _waitable.guard();
     _stop = true;
+    _waitable.notify();
 }
 
 bool Pinger::ping(const IpAddr & client, size_t number)
@@ -103,8 +106,10 @@ bool Pinger::ping(const IpAddr & client, size_t number)
     {
         if (i > 0)
         {
+            const time_t time_spent_sending_last_ping = _clock_ptr->now() - _result.last_time_sent;
             // wait between pings
-            _waitable.wait_for(time::milliseconds(_ping_ms_interval) - (_clock_ptr->now() - _result.last_time_sent));
+            _waitable.wait_for(time::milliseconds(_ping_ms_interval) - time_spent_sending_last_ping,
+                               [this] { return _stop.load(); });
             if (_stop)
                 break;
         }
@@ -117,7 +122,10 @@ bool Pinger::ping(const IpAddr & client, size_t number)
         // send icmp echo
         ret = _sender.send_to(client);
         if (ret == false)
+        {
+            SIHD_LOG_ERROR("Pinger: failed sending to client {}", client.hostname());
             break;
+        }
         _result.transmitted += 1;
         // wait until seq number is received by polling
         _received_icmp_response = false;

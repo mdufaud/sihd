@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
+
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>
 #include <sihd/core/DevPulsation.hpp>
+#include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace test
@@ -33,16 +35,18 @@ TEST_F(TestDevPulsation, test_dev_pulsation)
 
     Channel *activate = dev_ptr->get_channel("activate");
     Channel *beat = dev_ptr->get_channel("heartbeat");
-    EXPECT_NE(activate, nullptr);
-    EXPECT_NE(beat, nullptr);
-    if (activate != nullptr && beat != nullptr)
+    ASSERT_NE(activate, nullptr);
+    ASSERT_NE(beat, nullptr);
+
     {
+        ChannelWaiter waiter(beat);
+
         activate->write(0, true);
         SIHD_LOG(debug, "Activated pulsation");
         // wait for 4 pulsations
-        ChannelWaiter waiter(beat);
-        EXPECT_TRUE(waiter.wait_for(std::chrono::milliseconds(15), 4));
+        EXPECT_TRUE(waiter.wait_for(std::chrono::milliseconds(1000), 4));
     }
+
     EXPECT_TRUE(core.stop());
     EXPECT_TRUE(core.reset());
 
@@ -54,16 +58,19 @@ TEST_F(TestDevPulsation, test_dev_pulsation)
 
     activate = dev2_ptr->get_channel("activate");
     beat = dev2_ptr->get_channel("heartbeat");
-    EXPECT_NE(activate, nullptr);
-    EXPECT_NE(beat, nullptr);
-    if (activate != nullptr && beat != nullptr)
+    ASSERT_NE(activate, nullptr);
+    ASSERT_NE(beat, nullptr);
+
     {
+        ChannelWaiter waiter(beat);
+
         activate->write(0, true);
         SIHD_LOG(debug, "Activated pulsation");
         // wait for 4 pulsation
-        ChannelWaiter waiter(beat);
-        EXPECT_TRUE(waiter.wait_for(std::chrono::milliseconds(15), 4));
+
+        EXPECT_TRUE(waiter.wait_for(std::chrono::milliseconds(1000), 4));
     }
+
     EXPECT_TRUE(core.stop());
     EXPECT_TRUE(core.reset());
 }

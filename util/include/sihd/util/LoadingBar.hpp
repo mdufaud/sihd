@@ -26,24 +26,22 @@ class LoadingBar
         void set_width(size_t width) { _width = width; }
         void set_total(size_t total) { _total = total; }
 
-        bool add_progress(size_t progress);
+        void add_progress(size_t progress);
         void reset_progress() { _current = 0; }
 
         size_t width() const { return _width; }
         size_t total() const { return _total; }
         float progress() const { return _current / float(_total); }
 
+        bool print() const;
+
     protected:
         std::string progress_str() const;
         std::string loading_bar_str() const;
 
-        virtual bool _return_begin_of_line() const;
         virtual bool _print_bar() const;
-        virtual bool _flush() const;
 
     private:
-        bool _print(std::string_view str) const;
-
         size_t _width;
         size_t _current;
         size_t _total;

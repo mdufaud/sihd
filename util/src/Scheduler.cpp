@@ -2,6 +2,7 @@
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Task.hpp>
+#include <sihd/util/container.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
 
@@ -14,14 +15,15 @@ SIHD_LOGGER;
 
 Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent)
 {
-    _clock_ptr = &_default_clock;
     overrun_at = time::micro(300);
-    acceptable_nano = 100;
+    acceptable_task_preplay_ns_time = 100;
+    _clock_ptr = &_default_clock;
     _next_run = 0;
+    _paused_time_at = 0;
     _running = false;
     _paused = false;
     _no_delay = false;
-    _paused_time = 0;
+    _tasks_prepared = false;
     this->add_conf("as_fast_as_possible", &Scheduler::set_as_fast_as_possible);
 }
 
@@ -43,6 +45,11 @@ IClock *Scheduler::clock() const
     return _clock_ptr;
 }
 
+time_t Scheduler::now() const
+{
+    return _clock_ptr != nullptr ? _clock_ptr->now() : 0;
+}
+
 bool Scheduler::set_as_fast_as_possible(bool active)
 {
     if (_running.load())
@@ -51,31 +58,31 @@ bool Scheduler::set_as_fast_as_possible(bool active)
     return true;
 }
 
-bool Scheduler::_wait_for_next_task()
+void Scheduler::_wait_for_next_task()
 {
-    if (_paused)
-    {
-        time_t before = _clock_ptr->now();
-        _waitable_pause.wait([this] { return _running == false || _paused == false; });
-        _paused_time += (_clock_ptr->now() - before);
-    }
+    // wait for resume if paused
+    _waitable_pause.wait([this] { return _running == false || _paused == false; });
+    // wait for new task if empty
     _waitable_task.wait([this] { return _running == false || _task_map.empty() == false; });
-    if (_running == false)
-        return false;
-    return _no_delay ? true : _waitable_task.wait_for(_next_run - _clock_ptr->now() - this->acceptable_nano);
+
+    if (_no_delay)
+        return;
+
+    // wait until most recent task to play
+    _waitable_task.wait_for(_next_run - _clock_ptr->now(), [this] { return _running == false; });
 }
 
-Task *Scheduler::_get_next_task(time_t time)
+Task *Scheduler::_get_playable_task(time_t now)
 {
-    std::lock_guard l(_mutex_task);
+    auto l = _waitable_task.guard();
     Task *task = _task_map.begin()->second;
-    // difference between the time the task should have been played at (+paused time)
-    // and current time
-    time_t diff = (task->run_at + _paused_time) - time;
-    if (task->run_at > 0 && -diff > (time_t)this->overrun_at)
+
+    time_t diff = task->run_at - now;
+    if (task->run_at > 0 && -diff > this->overrun_at)
         this->overruns += 1;
+
     // play task if near the time to be played or if in no delay mode
-    if ((diff - this->acceptable_nano) <= 0 || _no_delay)
+    if (_no_delay || (diff - this->acceptable_task_preplay_ns_time) <= 0)
         _task_map.erase(_task_map.begin());
     else
         task = nullptr;
@@ -85,29 +92,56 @@ Task *Scheduler::_get_next_task(time_t time)
 void Scheduler::_play_task(Task *task, time_t now)
 {
     task->run();
-    if (task->resched_time > 0)
+    if (task->reschedule_time > 0)
     {
         if (task->run_at == 0)
             task->run_at = now;
-        task->run_at += task->resched_time;
-        this->add_task(task);
+        task->run_at += task->reschedule_time;
+
+        {
+            auto l = _waitable_task.guard();
+            this->_unprotected_add_task_to_map(task);
+        }
     }
     else
-        this->_add_to_delete_task(task);
+        this->_add_task_to_trash(task);
 }
 
-time_t Scheduler::now() const
+void Scheduler::_prepare_tasks()
 {
-    return _clock_ptr != nullptr ? _clock_ptr->now() : 0;
+    auto l = _waitable_task.guard();
+    for (Task *task : _tasks_to_add)
+    {
+        if (task->run_in > 0)
+        {
+            task->run_at = _begin_run + task->run_in;
+        }
+        _task_map.emplace(task->run_at, task);
+    }
+
+    if (_task_map.empty() == false)
+        _next_run = _task_map.begin()->first;
+
+    _tasks_to_add.clear();
+    _tasks_prepared = true;
 }
 
 bool Scheduler::run()
 {
     sihd::util::thread::set_name(this->name());
+
+    if (_sync.total_sync() > 0)
+        _sync.sync();
+
     if (_clock_ptr == nullptr || _clock_ptr->start() == false)
         return false;
+
     _begin_run = _clock_ptr->now();
+
+    this->_prepare_tasks();
+
     time_t now = _begin_run;
+
     Task *task = nullptr;
     while (_running)
     {
@@ -116,25 +150,63 @@ bool Scheduler::run()
         {
             now = _clock_ptr->now();
             // returns most urgent task to play
-            task = this->_get_next_task(now);
+            task = this->_get_playable_task(now);
             // run and reschedule or add to delete list
             if (task != nullptr)
                 this->_play_task(task, now);
             // delete tasks in delete list
-            this->_delete_tasks();
+            this->_delete_trashed_tasks();
         }
     }
-    _begin_run = 0;
+
     return true;
 }
 
 void Scheduler::pause()
 {
+    auto l = _waitable_pause.guard();
+    if (_paused)
+        return;
     _paused = true;
+    _paused_time_at = this->now();
+}
+
+void Scheduler::_resume_tasks()
+{
+    if (_paused_time_at == 0)
+        return;
+
+    auto l = _waitable_task.guard();
+
+    if (_tasks_prepared == false)
+        return;
+
+    const time_t paused_time = this->now() - std::max(_begin_run, _paused_time_at);
+    _paused_time_at = 0;
+
+    std::multimap<time_t, Task *> new_task_map;
+    for (auto & [_, task] : _task_map)
+    {
+        if (task->run_in > 0)
+        {
+            task->run_at += paused_time;
+        }
+        new_task_map.emplace(task->run_at, task);
+    }
+    _task_map.swap(new_task_map);
+    if (_task_map.empty() == false)
+        _next_run = _task_map.begin()->first;
 }
 
 void Scheduler::resume()
 {
+    auto l = _waitable_pause.guard();
+
+    if (_paused == false)
+        return;
+
+    this->_resume_tasks();
+
     _paused = false;
     _waitable_pause.notify();
 }
@@ -144,18 +216,36 @@ bool Scheduler::start()
     if (_running.exchange(true) == true)
         return true;
     this->overruns = 0;
-    _paused_time = 0;
     _thread = std::thread(&Scheduler::run, this);
     return true;
+}
+
+bool Scheduler::start_sync()
+{
+    if (_sync.total_sync() > 0)
+        return true;
+    _sync.init_sync(2);
+    const bool ret = this->start();
+    if (ret)
+        _sync.sync();
+    _sync.reset();
+    return ret;
 }
 
 bool Scheduler::stop()
 {
     if (_running.exchange(false) == false)
         return true;
-    _paused = false;
-    _waitable_pause.notify();
-    _waitable_task.notify();
+    {
+        auto l = _waitable_pause.guard();
+        _paused = false;
+        _waitable_pause.notify();
+    }
+    {
+        auto l = _waitable_task.guard();
+        _begin_run = 0;
+        _waitable_task.notify();
+    }
     bool ret = _clock_ptr != nullptr && _clock_ptr->stop();
     if (_thread.joinable())
         _thread.join();
@@ -167,58 +257,89 @@ bool Scheduler::is_running() const
     return _running;
 }
 
-void Scheduler::add_task(Task *task)
+void Scheduler::_unprotected_add_task_to_map(Task *task)
 {
-    std::lock_guard l(_mutex_task);
-    _task_map.insert(std::pair<time_t, Task *>(task->run_at, task));
+    _task_map.emplace(task->run_at, task);
     _next_run = _task_map.begin()->first;
-    _waitable_task.notify();
 }
 
-void Scheduler::remove_task(Task *task)
+void Scheduler::add_task(Task *task)
 {
-    std::lock_guard l(_mutex_task);
-    for (auto it = _task_map.begin(); it != _task_map.end(); ++it)
+    auto l = _waitable_task.guard();
+
+    if (_tasks_prepared)
     {
-        if (it->second != nullptr && it->second == task)
-        {
-            _task_map.erase(it);
-            break;
-        }
+        if (task->run_in > 0)
+            task->run_at = this->now() + task->run_in;
+        this->_unprotected_add_task_to_map(task);
+        _waitable_task.notify();
     }
+    else
+    {
+        _tasks_to_add.push_back(task);
+    }
+}
+
+bool Scheduler::remove_task(Task *task)
+{
+    auto l = _waitable_task.guard();
+
+    bool found = false;
+
+    const auto task_it = container::find(_tasks_to_add, task);
+    found = task_it != _tasks_to_add.end();
+    if (found)
+        _tasks_to_add.erase(task_it);
+
+    const auto map_it = container::find_if(_task_map, [&task](const auto & pair) { return task == pair.second; });
+    found |= map_it != _task_map.end();
+    if (found)
+        _task_map.erase(map_it);
+
     _next_run = _task_map.begin()->first;
     _waitable_task.notify();
+    return found;
 }
 
 void Scheduler::clear_tasks()
 {
-    this->_delete_tasks();
-    std::lock_guard l(_mutex_task);
-    for (auto & pair : _task_map)
+    this->_delete_trashed_tasks();
+
+    auto l = _waitable_task.guard();
+
+    for (Task *task : _tasks_to_add)
     {
-        if (pair.second != nullptr)
-            delete pair.second;
+        if (task != nullptr)
+            delete task;
+    }
+    _tasks_to_add.clear();
+
+    for (auto & [_, task] : _task_map)
+    {
+        if (task != nullptr)
+            delete task;
     }
     _task_map.clear();
+
     _waitable_task.notify();
 }
 
-void Scheduler::_add_to_delete_task(Task *task)
+void Scheduler::_add_task_to_trash(Task *task)
 {
-    std::lock_guard l(_mutex_task);
-    _task_rm_list.push_back(task);
+    auto l = _waitable_task.guard();
+    _trash_task_list.push_back(task);
 }
 
-void Scheduler::_delete_tasks()
+void Scheduler::_delete_trashed_tasks()
 {
-    std::lock_guard l(_mutex_task);
-    for (Task *to_remove : _task_rm_list)
+    auto l = _waitable_task.guard();
+    for (Task *to_remove : _trash_task_list)
     {
         if (to_remove == nullptr)
             continue;
         delete to_remove;
     }
-    _task_rm_list.clear();
+    _trash_task_list.clear();
 }
 
 } // namespace sihd::util

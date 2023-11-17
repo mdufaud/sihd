@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/LoadingBar.hpp>
+#include <sihd/util/time.hpp>
 
 namespace test
 {
@@ -19,14 +21,15 @@ class TestLoadingBar: public ::testing::Test
 TEST_F(TestLoadingBar, test_loadingbar)
 {
     constexpr size_t width = 20;
+    constexpr size_t total = 100;
 
-    LoadingBar bar(width, 100);
+    LoadingBar bar(width, total);
 
     bar.set_percent_pos_right();
-    bar.add_progress(0);
     for (size_t i = 0; i < 100; ++i)
     {
-        ASSERT_TRUE(bar.add_progress(1));
+        bar.add_progress(1);
+        ASSERT_TRUE(bar.print());
     }
     std::cout << std::endl;
 }

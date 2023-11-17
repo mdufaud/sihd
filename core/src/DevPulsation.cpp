@@ -53,9 +53,13 @@ void DevPulsation::handle(sihd::core::Channel *c)
     if (c == _channel_activate_ptr)
     {
         if (c->read<bool>(0) == true)
+        {
             _scheduler.resume();
+        }
         else
+        {
             _scheduler.pause();
+        }
     }
 }
 
@@ -66,8 +70,8 @@ bool DevPulsation::run()
         if (_running == false)
             return false;
     }
-    _channel_heartbeat_ptr->write<uint32_t>(0, _beats);
     ++_beats;
+    _channel_heartbeat_ptr->write<uint32_t>(0, _beats);
     return true;
 }
 
@@ -87,14 +91,16 @@ bool DevPulsation::on_start()
     }
     if (!this->get_channel(CHANNEL_HEART, &_channel_heartbeat_ptr))
         return false;
-    _beats = _channel_heartbeat_ptr->read<uint32_t>(0) + 1;
+    _beats = _channel_heartbeat_ptr->read<uint32_t>(0);
+
     if (!this->get_channel(CHANNEL_ACTIVATE, &_channel_activate_ptr))
         return false;
     this->observe_channel(_channel_activate_ptr);
     if (_channel_activate_ptr->read<bool>(0) == false)
         _scheduler.pause();
+
     _scheduler.clear_tasks();
-    _scheduler.add_task(new sihd::util::Task(this, 0, sihd::util::time::freq(_frequency)));
+    _scheduler.add_task(new sihd::util::Task(this, {.reschedule_time = sihd::util::time::freq(_frequency)}));
     if (_scheduler.start() == false)
     {
         SIHD_LOG(error, "DevPulsation: could not start scheduler");

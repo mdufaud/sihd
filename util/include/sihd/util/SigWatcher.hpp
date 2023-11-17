@@ -18,7 +18,7 @@ class SigWatcher
         using Callback = std::function<void(int)>;
 
         SigWatcher(const std::vector<int> signals,
-                   const Callback & callback,
+                   Callback && callback,
                    Timestamp polling_frequency = std::chrono::milliseconds(100));
         ~SigWatcher();
 

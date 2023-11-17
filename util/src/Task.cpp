@@ -3,22 +3,25 @@
 namespace sihd::util
 {
 
-Task::Task(): run_at(0), resched_time(0), _runnable_ptr(nullptr) {}
-
-Task::Task(IRunnable *to_run, Timestamp run_at, Timestamp reschedule_every):
-    run_at(run_at),
-    resched_time(reschedule_every),
-    _runnable_ptr(to_run)
+Task::Task(TaskOptions options):
+    run_at(options.run_at),
+    run_in(options.run_in),
+    reschedule_time(options.reschedule_time),
+    _runnable_ptr(nullptr)
 {
+    if (run_at > 0 && run_in > 0)
+        throw std::logic_error(
+            "Cannot have a task running at specific time and running in a specific duration at once");
 }
 
-Task::Task(std::function<bool(void)> fun, Timestamp run_at, Timestamp reschedule_every):
-    run_at(run_at),
-    resched_time(reschedule_every),
-    _runnable_ptr(nullptr),
-    _run_method(std::move(fun))
+Task::Task(IRunnable *to_run, TaskOptions options): Task(options)
 {
-    _runnable_ptr = nullptr;
+    _runnable_ptr = to_run;
+}
+
+Task::Task(std::function<bool(void)> fun, TaskOptions options): Task(options)
+{
+    _run_method = std::move(fun);
 }
 
 Task::~Task() {}

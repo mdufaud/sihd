@@ -86,6 +86,8 @@ int main(int argc, char **argv)
     else
         log.error(fmt::format("Cannot ping: {}", argv[1]));
 
+    pinger.remove_observer(&handler);
+
     if constexpr (os::is_windows)
         time::sleep(5);
 

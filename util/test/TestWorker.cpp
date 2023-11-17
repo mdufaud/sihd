@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Runnable.hpp>
 #include <sihd/util/StepWorker.hpp>
-#include <sihd/util/Task.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/os.hpp>
 
@@ -26,12 +26,12 @@ TEST_F(TestWorker, test_worker_simple)
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
     int ran = 0;
-    Task task([&]() -> bool {
+    Runnable runnable([&]() -> bool {
         ++ran;
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         return true;
     });
-    Worker worker(&task);
+    Worker worker(&runnable);
     EXPECT_TRUE(worker.start_sync_worker("worker-thread"));
     EXPECT_TRUE(worker.stop_worker());
     EXPECT_EQ(ran, 1);
@@ -45,11 +45,11 @@ TEST_F(TestWorker, test_stepworker_multiple)
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
     int ran = 0;
-    Task task([&]() -> bool {
+    Runnable runnable([&]() -> bool {
         ++ran;
         return true;
     });
-    StepWorker worker(&task);
+    StepWorker worker(&runnable);
     // 1 / ms
     EXPECT_TRUE(worker.set_frequency(500));
     EXPECT_TRUE(worker.start_sync_worker("stepworker-thread"));
@@ -66,11 +66,11 @@ TEST_F(TestWorker, test_stepworker_once)
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
     int ran = 0;
-    Task task([&]() -> bool {
+    Runnable runnable([&]() -> bool {
         ++ran;
         return true;
     });
-    StepWorker worker(&task);
+    StepWorker worker(&runnable);
     // 10 hz
     EXPECT_TRUE(worker.set_frequency(0.1));
     EXPECT_TRUE(worker.start_sync_worker("stepworker-thread"));

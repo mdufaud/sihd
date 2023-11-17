@@ -16,7 +16,7 @@ class Collector: public IStoppableRunnable,
                  public Observable<Collector<T>>
 {
     public:
-        Collector(IProvider<T> *provider = nullptr, sihd::util::Timestamp duration = std::chrono::milliseconds(1)):
+        Collector(IProvider<T> *provider = nullptr, Timestamp duration = std::chrono::milliseconds(1)):
             _provider_ptr(provider),
             _running(false),
             _wait_duration(duration)
@@ -40,12 +40,11 @@ class Collector: public IStoppableRunnable,
             return true;
         }
 
-        bool is_running() const { return _running; }
-
         bool stop()
         {
+            auto l = _waitable.guard();
             _running = false;
-            _waitable.notify(1);
+            _waitable.notify();
             return true;
         }
 
@@ -54,6 +53,8 @@ class Collector: public IStoppableRunnable,
             this->stop();
             std::lock_guard l(_mutex);
         }
+
+        bool is_running() const { return _running; }
 
         bool can_collect() const { return _provider_ptr != nullptr && _provider_ptr->providing(); }
 
@@ -69,10 +70,10 @@ class Collector: public IStoppableRunnable,
 
         T data() const { return _data; }
         IProvider<T> *provider() const { return _provider_ptr; }
-        sihd::util::Timestamp timeout_duration() const { return _wait_duration; }
+        Timestamp timeout_duration() const { return _wait_duration; }
 
         void set_provider(IProvider<T> *ptr) { _provider_ptr = ptr; }
-        void set_timeout(sihd::util::Timestamp duration) { _wait_duration = duration; }
+        void set_timeout(Timestamp duration) { _wait_duration = duration; }
 
     protected:
 
@@ -81,7 +82,7 @@ class Collector: public IStoppableRunnable,
         IProvider<T> *_provider_ptr;
 
         std::atomic<bool> _running;
-        sihd::util::Timestamp _wait_duration;
+        Timestamp _wait_duration;
 
         std::mutex _mutex;
         Waitable _waitable;

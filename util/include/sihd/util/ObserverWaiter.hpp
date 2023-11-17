@@ -1,6 +1,8 @@
 #ifndef __SIHD_UTIL_OBSERVERWAITER_HPP__
 #define __SIHD_UTIL_OBSERVERWAITER_HPP__
 
+#include <atomic>
+
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/Waitable.hpp>
@@ -12,39 +14,42 @@ template <typename T>
 class ObserverWaiter: public IHandler<T *>
 {
     public:
-        ObserverWaiter(Observable<T> *obs = nullptr): _count(0), _obs_ptr(obs)
+        ObserverWaiter(Observable<T> *obs = nullptr): _count(0), _obs_ptr(nullptr)
         {
-            if (_obs_ptr != nullptr)
-                _obs_ptr->add_observer(this);
+            if (this->observe(obs) == false)
+                throw std::runtime_error("Error while adding observer");
         }
         virtual ~ObserverWaiter() { this->clear(); }
 
         void clear()
         {
+            auto l = _waitable.guard();
             if (_obs_ptr != nullptr)
             {
                 _obs_ptr->remove_observer(this);
                 _obs_ptr = nullptr;
             }
-            _waitable.notify_all();
             _count = 0;
+            _waitable.notify_all();
         }
 
         bool observe(Observable<T> *obs)
         {
             if (obs == nullptr)
                 return false;
-            if (_obs_ptr == obs)
-                return true;
-            this->clear();
-            if (obs->add_observer(this) == false)
-                return false;
-            _obs_ptr = obs;
+            if (_obs_ptr != obs)
+            {
+                this->clear();
+                if (obs->add_observer(this) == false)
+                    return false;
+                _obs_ptr = obs;
+            }
             return true;
         }
 
         void handle([[maybe_unused]] T *obj)
         {
+            auto l = _waitable.guard();
             ++_count;
             _waitable.notify(1);
         }
@@ -61,6 +66,8 @@ class ObserverWaiter: public IHandler<T *>
             return _waitable.wait_for(duration,
                                       [this, total] { return _obs_ptr == nullptr || _count.load() >= total; });
         }
+
+        Observable<T> *observing() const { return _obs_ptr; }
 
         uint32_t notifications() const { return _count.load(); }
 

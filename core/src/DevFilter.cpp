@@ -286,7 +286,7 @@ void DevFilter::_apply_rule(const sihd::core::Channel *channel_in,
     {
         int64_t out_val = rule_ptr->write_same_value ? in_value.data : rule_ptr->write_value.data;
         if (rule_ptr->nano_delay > 0 && _scheduler_ptr != nullptr)
-            _scheduler_ptr->add_task(new DelayWriter(this, channel_out, rule_ptr, out_val, _scheduler_ptr));
+            _scheduler_ptr->add_task(new DelayWriter(this, channel_out, rule_ptr, out_val));
         else
             this->_rule_match(channel_out, rule_ptr, out_val);
     }
@@ -464,12 +464,8 @@ bool DevFilter::Rule::parse(std::string_view conf_str)
 /* DevFilter::DelayWriter */
 /* ************************************************************************* */
 
-DevFilter::DelayWriter::DelayWriter(DevFilter *dev,
-                                    Channel *channel_out,
-                                    const Rule *rule_ptr,
-                                    int64_t out_val,
-                                    sihd::util::Scheduler *scheduler_ptr):
-    sihd::util::Task(this, scheduler_ptr->now() + rule_ptr->nano_delay, 0),
+DevFilter::DelayWriter::DelayWriter(DevFilter *dev, Channel *channel_out, const Rule *rule_ptr, int64_t out_val):
+    sihd::util::Task(this, {.run_in = rule_ptr->nano_delay}),
     dev(dev),
     channel_out(channel_out),
     rule_ptr(rule_ptr),

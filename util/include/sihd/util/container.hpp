@@ -62,6 +62,12 @@ auto find(Container & container, const Value & value)
     return std::find(container.begin(), container.end(), value);
 }
 
+template <typename Container, typename Predicate>
+auto find_if(Container & container, const Predicate & predicate)
+{
+    return std::find_if(container.begin(), container.end(), predicate);
+}
+
 template <typename Container, typename Value>
 bool contains(const Container & container, const Value & value)
 {

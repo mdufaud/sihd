@@ -45,10 +45,12 @@ struct Stat
             max = SampleType {};
         }
 
-        SampleType average() const { return sum / samples; }
+        SampleType average() const { return samples == 0 ? SampleType {} : sum / samples; }
 
         SampleType variance() const
         {
+            if (samples == 0)
+                return SampleType {};
             const SampleType average = this->average();
             return (square / samples) - (average * average);
         }
