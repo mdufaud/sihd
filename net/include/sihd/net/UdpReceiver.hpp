@@ -9,7 +9,6 @@
 #include <sihd/util/IStoppableRunnable.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Poll.hpp>
-#include <sihd/util/Waitable.hpp>
 
 namespace sihd::net
 {

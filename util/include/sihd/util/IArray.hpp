@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_IARRAY_HPP__
 #define __SIHD_UTIL_IARRAY_HPP__
 
+#include <memory>
 #include <string_view>
 
 #include <sihd/util/Types.hpp>
@@ -86,6 +87,10 @@ class IArray
         virtual std::string cpp_str() const = 0;
         virtual std::string_view cpp_str_view() const = 0;
 };
+
+typedef std::unique_ptr<IArray> IArrayUnique;
+typedef std::shared_ptr<IArray> IArrayShared;
+typedef std::weak_ptr<IArray> IArrayWeak;
 
 } // namespace sihd::util
 

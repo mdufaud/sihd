@@ -593,15 +593,15 @@ TEST_F(TestArray, test_array_move)
 
 TEST_F(TestArray, test_array_equal)
 {
-    ArrInt arr_int({1, 2, 3});
+    ArrayUnique<int> arr_int = std::make_unique<Array<int>>(Array<int> {1, 2, 3});
     int tbl_all[3] = {1, 2, 3};
     int tbl_two[2] = {2, 3};
 
-    EXPECT_TRUE(arr_int.is_equal(arr_int));
-    EXPECT_TRUE(arr_int.is_equal({1, 2, 3}));
-    EXPECT_TRUE(arr_int.is_equal({2, 3}, 1));
-    EXPECT_TRUE(arr_int.is_bytes_equal((const uint8_t *)tbl_all, 3 * sizeof(int)));
-    EXPECT_TRUE(arr_int.is_bytes_equal((const uint8_t *)tbl_two, 2 * sizeof(int), 1 * sizeof(int)));
+    EXPECT_TRUE(arr_int->is_equal(*arr_int));
+    EXPECT_TRUE(arr_int->is_equal({1, 2, 3}));
+    EXPECT_TRUE(arr_int->is_equal({2, 3}, 1));
+    EXPECT_TRUE(arr_int->is_bytes_equal((const uint8_t *)tbl_all, 3 * sizeof(int)));
+    EXPECT_TRUE(arr_int->is_bytes_equal((const uint8_t *)tbl_two, 2 * sizeof(int), 1 * sizeof(int)));
 }
 
 TEST_F(TestArray, test_array_from)

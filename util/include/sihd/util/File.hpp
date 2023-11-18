@@ -36,6 +36,8 @@ class File
         bool open_fd(int fd, std::string_view mode);
         bool set_stream(FILE *stream, bool ownership);
         bool open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix = "");
+        // open with setted buffer_size
+        bool open_mem(std::string_view mode, std::string_view put_in_buffer = "");
         bool open_tmpfile();
         bool is_open() const;
         bool close();

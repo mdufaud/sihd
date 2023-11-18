@@ -1127,6 +1127,13 @@ typedef Array<uint64_t> ArrULong;
 typedef Array<float> ArrFloat;
 typedef Array<double> ArrDouble;
 
+template <typename T>
+using ArrayUnique = std::unique_ptr<Array<T>>;
+template <typename T>
+using ArrayShared = std::shared_ptr<Array<T>>;
+template <typename T>
+using ArrayWeak = std::weak_ptr<Array<T>>;
+
 } // namespace sihd::util
 
 #endif

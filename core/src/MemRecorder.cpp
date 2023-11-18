@@ -31,6 +31,18 @@ bool MemRecorder::set_stop_providing_when_empty(bool active)
     return true;
 }
 
+void MemRecorder::add_record(const std::string & name, sihd::util::Timestamp timestamp, const sihd::util::IArray *array)
+{
+    sihd::util::IArrayShared arr(array->clone_array());
+    std::lock_guard l(_mutex);
+    _map_sorted_records.insert(std::pair<time_t, PlayableRecord>(timestamp.nanoseconds(), {name, timestamp, arr}));
+}
+
+void MemRecorder::add_record(const PlayableRecord & record)
+{
+    this->add_record(record.name, record.timestamp, record.value.get());
+}
+
 void MemRecorder::add_records(const std::vector<PlayableRecord> & records)
 {
     for (const PlayableRecord & record : records)
@@ -41,18 +53,6 @@ void MemRecorder::add_records(const std::list<PlayableRecord> & records)
 {
     for (const PlayableRecord & record : records)
         this->add_record(record);
-}
-
-void MemRecorder::add_record(const std::string & name, sihd::util::Timestamp timestamp, const sihd::util::IArray *array)
-{
-    sihd::util::IArray *arr = array->clone_array();
-    std::lock_guard l(_mutex);
-    _map_sorted_records.insert(std::pair<time_t, PlayableRecord>(timestamp.nanoseconds(), {name, timestamp, arr}));
-}
-
-void MemRecorder::add_record(const PlayableRecord & record)
-{
-    this->add_record(record.name, record.timestamp, record.value);
 }
 
 bool MemRecorder::empty() const
@@ -66,12 +66,12 @@ bool MemRecorder::providing() const
     return _providing;
 }
 
-bool MemRecorder::provide(PlayableRecord *value)
+bool MemRecorder::provide(PlayableRecord *record)
 {
     std::lock_guard l(_mutex);
     if (_map_sorted_records.empty())
         return false;
-    *value = _map_sorted_records.begin()->second;
+    *record = _map_sorted_records.begin()->second;
     _map_sorted_records.erase(_map_sorted_records.begin());
     if (_stop_providing_when_empty && _map_sorted_records.empty())
         _providing = false;
@@ -153,10 +153,6 @@ bool MemRecorder::is_running() const
 void MemRecorder::clear()
 {
     std::lock_guard l(_mutex);
-    for (const auto & [_, record] : _map_sorted_records)
-    {
-        delete record.value;
-    }
     _map_sorted_records.clear();
 }
 

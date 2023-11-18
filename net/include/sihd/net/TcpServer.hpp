@@ -58,8 +58,6 @@ class TcpServer: public INetServer,
 
         // to set blocking/broadcast
         const Socket & socket() const { return _socket; }
-        // waitable is notified when a packet comes
-        sihd::util::Waitable & waitable() { return _waitable; }
         size_t queue_size() const { return _queue_size; }
 
     protected:
@@ -72,7 +70,6 @@ class TcpServer: public INetServer,
         size_t _queue_size;
         std::mutex _poll_mutex;
         sihd::util::Poll _poll;
-        sihd::util::Waitable _waitable;
         INetServerHandler *_server_handler_ptr;
 };
 

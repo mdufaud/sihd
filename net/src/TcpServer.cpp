@@ -120,13 +120,11 @@ bool TcpServer::serve()
 
 bool TcpServer::stop_serving()
 {
-    bool running = _poll.is_running();
-    if (running)
+    if (_poll.is_running())
     {
         _poll.wait_stop();
         _socket.shutdown();
     }
-    _waitable.notify_all();
     return _poll.is_running() == false;
 }
 

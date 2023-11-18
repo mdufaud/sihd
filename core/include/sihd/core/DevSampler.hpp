@@ -5,7 +5,6 @@
 
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/StepWorker.hpp>
-#include <sihd/util/Waitable.hpp>
 
 #include <sihd/core/Device.hpp>
 

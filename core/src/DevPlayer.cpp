@@ -22,7 +22,7 @@ DevPlayer::DevPlayer(const std::string & name, sihd::util::Node *parent):
     _channel_play_ptr(nullptr),
     _channel_end_ptr(nullptr)
 {
-    _runnable.set_method(this, &DevPlayer::_worker_loop);
+    _runnable.set_method(this, &DevPlayer::_main_loop);
     _worker.set_runnable(&_runnable);
     _collector.add_observer(this);
     this->set_provider_wait_time(10);
@@ -155,20 +155,19 @@ bool DevPlayer::run()
     if (_running == false)
         return false;
 
-    PlayableRecord record;
-    // get first record in queue and write record in channel
-    {
-        std::lock_guard l(_queue_mutex);
-        record = _queue.front();
-        _queue.pop();
-    }
+    PlayableRecord record = _safe_queue.front();
+    _safe_queue.pop();
+
     Channel *c = _map_channels[record.name];
     if (c != nullptr)
-        c->write(*record.value);
+        c->write(*record.value.get());
     else
         SIHD_LOG(error, "DevPlayer: channel '{}' not found", record.name);
-    // notify worker loop that a record has been played
-    _waitable.notify(1);
+
+    {
+        auto l = _waitable.guard();
+        _waitable.notify();
+    }
     if (_last_record)
         this->_provider_ended();
     return true;
@@ -176,30 +175,27 @@ bool DevPlayer::run()
 
 void DevPlayer::handle(Collector<PlayableRecord> *collector)
 {
-    // called for each record with a lock on collector data
-    PlayableRecord record;
-    {
-        std::lock_guard l(_queue_mutex);
-        if (_last_record)
-            return;
-        record = collector->data();
-        _queue.push(record);
-    }
-    _first_timestamp = record.timestamp * (1 * (_first_timestamp < 0));
-    time_t execute_at = _time_begin + (record.timestamp - _first_timestamp);
+    if (_last_record)
+        return;
 
-    _waitable.wait([this] { return _running == false || (_queue.size() > _records_queue_limit) == false; });
+    PlayableRecord record = collector->data();
+    _safe_queue.push(record);
+
+    if (_first_timestamp.has_value() == false)
+        _first_timestamp = record.timestamp;
+
+    _waitable.wait([this] { return _running == false || _safe_queue.size() <= _records_queue_limit; });
+    if (_running == false)
+        return;
 
     // calls DevPlayer::run to execute record at setted time
-    if (_running)
-        _scheduler_ptr->add_task(new Task(this, {.run_at = execute_at}));
+    _scheduler_ptr->add_task(new Task(this, {.run_in = record.timestamp - _first_timestamp.value()}));
 }
 
-bool DevPlayer::_worker_loop()
+bool DevPlayer::_main_loop()
 {
-    _time_begin = _scheduler_ptr->now();
     _channel_end_ptr->write<bool>(0, false);
-    _first_timestamp = -1;
+    _first_timestamp.reset();
     _last_record = false;
     // run collector loop which calls DevPlayer::handle for each record
     _collector.run();
@@ -211,9 +207,8 @@ bool DevPlayer::_worker_loop()
 
 void DevPlayer::_provider_ended()
 {
-    std::lock_guard l(_queue_mutex);
     // if no task in queue - notify end of player
-    if (_queue.empty())
+    if (_safe_queue.empty())
         _channel_end_ptr->write<bool>(0, true);
 }
 
@@ -223,7 +218,10 @@ bool DevPlayer::on_stop()
         std::lock_guard l(_run_mutex);
         _running = false;
     }
-    _waitable.notify_all();
+    {
+        auto l = _waitable.guard();
+        _waitable.notify();
+    }
     if (_worker.stop_worker() == false)
         SIHD_LOG(error, "DevReplayer: could not stop worker");
     if (_scheduler_ptr->stop() == false)
@@ -238,7 +236,7 @@ bool DevPlayer::on_stop()
 
 bool DevPlayer::on_reset()
 {
-    _queue = std::queue<PlayableRecord>();
+    _safe_queue.clear();
     _scheduler_ptr.reset();
     _map_channels_alias.clear();
     return true;

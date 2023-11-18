@@ -1,7 +1,9 @@
 #include <cxxopts.hpp>
 
+#include <sihd/util/Array.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Defer.hpp>
+#include <sihd/util/File.hpp>
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Runnable.hpp>
@@ -11,6 +13,7 @@
 #include <sihd/util/TmpDir.hpp>
 #include <sihd/util/Uuid.hpp>
 #include <sihd/util/fs.hpp>
+#include <sihd/util/macro.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/term.hpp>
 
@@ -115,6 +118,35 @@ void read_line()
     fmt::print("\n");
 }
 
+void file_mem_write()
+{
+    File file;
+    file.set_buffer_size(128);
+    SIHD_DIE_FALSE(file.open_mem("r+"));
+
+    ssize_t write_size = file.write("hello world !");
+    file.seek_begin(0);
+
+    ArrChar str(128);
+    ssize_t read_size = file.read(str);
+
+    SIHD_LOG(info, "Memory file wrote {} and read {} with content: {}", write_size, read_size, str);
+    fmt::print("\n");
+}
+
+void file_mem_read()
+{
+    File file;
+    file.set_buffer_size(128);
+    SIHD_DIE_FALSE(file.open_mem("r", "hello world !"));
+
+    ArrChar str(128);
+    ssize_t read_size = file.read(str);
+
+    SIHD_LOG(info, "Memory file read {} with content: {}", read_size, str);
+    fmt::print("\n");
+}
+
 } // namespace demo
 
 int main(int argc, char **argv)
@@ -145,6 +177,8 @@ int main(int argc, char **argv)
     demo::os();
     demo::fs();
     demo::uuid();
+    demo::file_mem_read();
+    demo::file_mem_write();
 
     demo::worker(result["worker-frequency"].as<double>());
 

@@ -176,8 +176,8 @@ TEST_F(TestRecords, test_records_dev_recorder)
     EXPECT_TRUE(lst.back().first > lst.front().first);
 
     // values
-    sihd::util::IArray *front_array = lst.front().second;
-    sihd::util::ArrInt *front_int_array = dynamic_cast<sihd::util::ArrInt *>(front_array);
+    sihd::util::IArrayShared front_array = lst.front().second;
+    sihd::util::ArrInt *front_int_array = dynamic_cast<sihd::util::ArrInt *>(front_array.get());
     EXPECT_NE(front_int_array, nullptr);
     if (front_int_array != nullptr)
     {
@@ -185,8 +185,8 @@ TEST_F(TestRecords, test_records_dev_recorder)
         EXPECT_EQ(front_int_array->at(1), 0);
     }
 
-    sihd::util::IArray *back_array = lst.back().second;
-    sihd::util::ArrInt *back_int_array = dynamic_cast<sihd::util::ArrInt *>(back_array);
+    sihd::util::IArrayShared back_array = lst.back().second;
+    sihd::util::ArrInt *back_int_array = dynamic_cast<sihd::util::ArrInt *>(back_array.get());
     EXPECT_NE(back_int_array, nullptr);
     if (back_int_array != nullptr)
     {

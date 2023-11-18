@@ -99,7 +99,6 @@ bool DevPulsation::on_start()
     if (_channel_activate_ptr->read<bool>(0) == false)
         _scheduler.pause();
 
-    _scheduler.clear_tasks();
     _scheduler.add_task(new sihd::util::Task(this, {.reschedule_time = sihd::util::time::freq(_frequency)}));
     if (_scheduler.start() == false)
     {

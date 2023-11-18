@@ -7,6 +7,7 @@
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/IProvider.hpp>
 #include <sihd/util/Runnable.hpp>
+#include <sihd/util/SafeQueue.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Worker.hpp>
 
@@ -46,7 +47,7 @@ class DevPlayer: public sihd::core::Device,
         bool on_reset() override;
 
     private:
-        bool _worker_loop();
+        bool _main_loop();
         void _provider_ended();
 
         bool _running;
@@ -55,7 +56,6 @@ class DevPlayer: public sihd::core::Device,
         std::string _provider_path;
 
         std::mutex _run_mutex;
-        std::mutex _queue_mutex;
 
         Channel *_channel_play_ptr;
         Channel *_channel_end_ptr;
@@ -66,11 +66,10 @@ class DevPlayer: public sihd::core::Device,
         // channels to write configuration
         std::map<std::string, std::string> _map_channels_alias;
 
-        time_t _time_begin;
-        time_t _first_timestamp;
+        std::optional<time_t> _first_timestamp;
 
         // queue to pass data between scheduler thread and worker thread
-        std::queue<PlayableRecord> _queue;
+        sihd::util::SafeQueue<PlayableRecord> _safe_queue;
         // notifies scheduler task has played
         sihd::util::Waitable _waitable;
         // provider reading thread

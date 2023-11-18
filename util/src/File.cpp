@@ -20,6 +20,14 @@
 # define fflush_unlocked fflush
 #endif
 
+#if defined(__SIHD_WINDOWS__)
+# include <fcntl.h>
+# include <io.h>
+# include <share.h>
+# include <sys/stat.h>
+# include <windows.h>
+#endif
+
 namespace sihd::util
 {
 
@@ -157,7 +165,8 @@ void File::_delete_buffer()
 
 bool File::open_fd(int fd, std::string_view mode)
 {
-    this->close();
+    if (this->close() == false)
+        return false;
     _file_ptr = fdopen(fd, mode.data());
     if (_file_ptr == nullptr)
     {
@@ -170,6 +179,8 @@ bool File::open_fd(int fd, std::string_view mode)
 
 bool File::set_stream(FILE *stream, bool ownership)
 {
+    if (this->close() == false)
+        return false;
     _file_ptr = stream;
     _stream_ownership = ownership;
     return true;
@@ -177,7 +188,8 @@ bool File::set_stream(FILE *stream, bool ownership)
 
 bool File::open_tmpfile()
 {
-    this->close();
+    if (this->close() == false)
+        return false;
     _file_ptr = tmpfile();
     if (_file_ptr == nullptr)
     {
@@ -190,7 +202,8 @@ bool File::open_tmpfile()
 
 bool File::open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix)
 {
-    this->close();
+    if (this->close() == false)
+        return false;
     const size_t path_size = prefix.size() + 6 + suffix.size();
     if (path_size > PATH_MAX)
     {
@@ -218,7 +231,8 @@ bool File::open_tmp(std::string_view prefix, bool write_binary, std::string_view
 
 bool File::open(std::string_view path, std::string_view mode)
 {
-    this->close();
+    if (this->close() == false)
+        return false;
     _file_ptr = fopen(path.data(), mode.data());
     if (_file_ptr == nullptr)
     {
@@ -350,6 +364,73 @@ void File::unlock()
 #endif
 }
 
+bool File::open_mem(std::string_view mode, std::string_view put_in_buffer)
+{
+    if (this->_allocate_buffer_if_not_exists() == false)
+        return false;
+
+    if (put_in_buffer.empty() == false)
+    {
+        const size_t max_len = std::min(_buf_size, put_in_buffer.size());
+
+        _buf_ptr[0] = 0;
+        strncpy(_buf_ptr, put_in_buffer.data(), max_len);
+
+        if (max_len < _buf_size)
+            memset(_buf_ptr + max_len, 0, _buf_size - max_len);
+    }
+    else
+    {
+        memset(_buf_ptr, 0, _buf_size);
+    }
+
+    FILE *stream;
+#if defined(__SIHD_WINDOWS__)
+    // https://github.com/Arryboom/fmemopen_windows
+    int fd;
+    char tp[MAX_PATH - 13];
+    char fn[MAX_PATH + 1];
+    int *pfd = &fd;
+    int retner = -1;
+    char tfname[] = "MemTF_";
+    if (!GetTempPathA(sizeof(tp), tp))
+        return false;
+    if (!GetTempFileNameA(tp, tfname, 0, fn))
+        return false;
+    retner = _sopen_s(pfd,
+                      fn,
+                      _O_CREAT | _O_SHORT_LIVED | _O_TEMPORARY | _O_RDWR | _O_BINARY | _O_NOINHERIT,
+                      _SH_DENYRW,
+                      _S_IREAD | _S_IWRITE);
+    if (retner != 0)
+        return false;
+    if (fd == -1)
+        return false;
+
+    if (_write(fd, _buf_ptr, _buf_size) != (ssize_t)_buf_size)
+    {
+        SIHD_LOG(error, "File: _write: {}", strerror(errno));
+        _close(fd);
+        return false;
+    }
+
+    stream = _fdopen(fd, mode.data());
+    if (!stream)
+    {
+        _close(fd);
+        return false;
+    }
+    /*File descriptors passed into _fdopen are owned by the returned FILE * stream. If _fdopen is successful, do not
+     * call _close on the file descriptor.Calling fclose on the returned FILE * also closes the file descriptor.*/
+    rewind(stream);
+#else
+    stream = fmemopen(_buf_ptr, _buf_size, mode.data());
+    if (stream == nullptr)
+        return false;
+#endif
+    return this->set_stream(stream, true);
+}
+
 long File::tell()
 {
     long ret = ftell(_file_ptr);
@@ -394,8 +475,8 @@ ssize_t File::read(char *buf, size_t size)
 ssize_t File::read(IArray & array)
 {
     ssize_t ret = this->read(reinterpret_cast<char *>(array.buf()), array.byte_capacity());
-    if (ret >= 0)
-        array.byte_resize((size_t)ret);
+    if (ret >= 0 && array.byte_resize((size_t)ret) == false)
+        return -1;
     return ret;
 }
 
