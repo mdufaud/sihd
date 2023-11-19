@@ -38,6 +38,7 @@ Splitter::Splitter(SplitterOptions options): _empty_delimitations(false)
         this->set_delimiter_method(options.delimiter_method);
 
     this->set_empty_delimitations(options.empty_delimitations);
+    this->set_escape_sequences(options.open_escape_sequences);
 }
 
 Splitter::Splitter(int delimiter): Splitter()
@@ -66,7 +67,7 @@ bool Splitter::set_delimiter(std::string_view str)
 
 bool Splitter::set_delimiter_spaces()
 {
-    this->set_delimiter_method(&isspace);
+    this->set_delimiter_method(SplitterOptions::delimiter_spaces());
     return true;
 }
 
@@ -89,7 +90,7 @@ bool Splitter::set_escape_sequences(std::string_view str)
 
 bool Splitter::set_escape_sequences_all()
 {
-    _authorized_open_escape_sequences = str::escapes_open();
+    _authorized_open_escape_sequences = SplitterOptions::all_open_escape_sequences();
     return true;
 }
 
