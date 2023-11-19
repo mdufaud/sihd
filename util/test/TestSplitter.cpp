@@ -29,7 +29,7 @@ TEST_F(TestSplitter, test_splitter_method)
     EXPECT_EQ(split1[1], "world");
     EXPECT_EQ(split1[2], "!");
 
-    splitter.set_delimiter_method(&std::isspace);
+    splitter.set_delimiter_method(&isspace);
     std::vector<std::string> split2 = splitter.split("\thello  \r  world\f \v !\n");
     EXPECT_EQ(split2.size(), 3u);
     EXPECT_EQ(split2[0], "hello");

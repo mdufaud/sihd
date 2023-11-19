@@ -61,8 +61,7 @@ bool Cli::load_history(std::string_view path)
     if (reader.is_open() == false)
         return false;
 
-    Splitter history_splitter;
-    history_splitter.set_delimiter(" ");
+    Splitter history_splitter(" ");
 
     ArrCharView line;
     while (reader.read_next())

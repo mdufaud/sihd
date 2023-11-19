@@ -10,22 +10,22 @@
 namespace sihd::util
 {
 
+struct TaskOptions
+{
+        static TaskOptions none() { return TaskOptions {}; }
+        // MUTUALLY EXCLUSIVE WITH RUN_IN
+        // precise timestamp to run task at
+        Timestamp run_at = 0;
+        // MUTUALLY EXCLUSIVE WITH RUN_AT
+        // task to run in a certain duration
+        Timestamp run_in = 0;
+        // reschedule task based on previous time
+        Timestamp reschedule_time = 0;
+};
+
 class Task: public IRunnable
 {
     public:
-        struct TaskOptions
-        {
-                static TaskOptions none() { return TaskOptions {}; }
-                // MUTUALLY EXCLUSIVE WITH RUN_IN
-                // precise timestamp to run task at
-                Timestamp run_at = 0;
-                // MUTUALLY EXCLUSIVE WITH RUN_AT
-                // task to run in a certain duration
-                Timestamp run_in = 0;
-                // reschedule task based on previous time
-                Timestamp reschedule_time = 0;
-        };
-
         Task(TaskOptions options = TaskOptions::none());
         Task(IRunnable *to_run, TaskOptions options = TaskOptions::none());
         Task(std::function<bool(void)> fun, TaskOptions options = TaskOptions::none());

@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_SPLITTER_HPP__
 #define __SIHD_UTIL_SPLITTER_HPP__
 
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -8,18 +9,36 @@
 namespace sihd::util
 {
 
+using SplitterDelimiterMethod = std::function<int(int)>;
+
+struct SplitterOptions
+{
+        int delimiter_char = 0;
+        std::string_view delimiter_str = "";
+        SplitterDelimiterMethod delimiter_method = {};
+
+        std::string_view open_escape_sequences = "";
+        bool empty_delimitations = false;
+
+        static SplitterDelimiterMethod delimiter_spaces();
+        static std::string_view all_open_escape_sequences();
+
+        static SplitterOptions none() { return SplitterOptions {}; }
+};
+
 class Splitter
 {
     public:
-        Splitter();
-        Splitter(int delimiter, std::string_view authorized_open_escape_sequences = "");
-        Splitter(std::string_view delimiter, std::string_view authorized_open_escape_sequences = "");
-        Splitter(int (*fun)(int), std::string_view authorized_open_escape_sequences = "");
+
+        Splitter(SplitterOptions options = SplitterOptions::none());
+        Splitter(int delimiter);
+        Splitter(std::string_view delimiter);
         virtual ~Splitter();
 
-        void set_delimiter_method(int (*fun)(int));
+        void set_delimiter_method(SplitterDelimiterMethod method);
 
         bool set_empty_delimitations(bool active);
+        bool set_delimiter_char(int delimiter);
         bool set_delimiter(std::string_view delimiter);
         bool set_delimiter_spaces();
         bool set_escape_sequences(std::string_view sequences);
@@ -46,7 +65,8 @@ class Splitter
         // a series of opening sequences like '(' that'll ignore split when between an opening and closing sequence
         std::string _authorized_open_escape_sequences;
         // a method to match delimiter - overrides delimiter
-        int (*_compare_method)(int c);
+        // int (*_compare_method)(int c);
+        SplitterDelimiterMethod _compare_method;
 };
 
 } // namespace sihd::util

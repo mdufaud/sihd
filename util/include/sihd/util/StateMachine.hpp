@@ -11,25 +11,25 @@ class IStateMachine
 {
 };
 
-template <typename STATE, typename EVENT>
+template <typename State, typename Event>
 class StateMachine: public IStateMachine
 {
     public:
-        StateMachine(STATE initial)
+        StateMachine(State initial)
         {
-            _last_event = EVENT();
+            _last_event = Event();
             _state = initial;
         }
         virtual ~StateMachine() {};
 
-        void add_transition(STATE from, EVENT event, STATE into) { _transitions[from][event] = into; }
+        void add_transition(State from, Event event, State into) { _transitions[from][event] = into; }
 
-        bool transition(EVENT event)
+        bool transition(Event event)
         {
             bool ret = _transitions.find(_state) != _transitions.end();
             if (ret)
             {
-                std::map<EVENT, STATE> & evt_map = _transitions[_state];
+                std::map<Event, State> & evt_map = _transitions[_state];
                 ret = evt_map.find(event) != evt_map.end();
                 if (ret)
                 {
@@ -40,42 +40,42 @@ class StateMachine: public IStateMachine
             return ret;
         }
 
-        STATE state() const { return _state; }
-        EVENT last_event() const { return _last_event; }
-        std::string state_name(STATE st) const
+        State state() const { return _state; }
+        Event last_event() const { return _last_event; }
+        std::string state_name(State st) const
         {
             auto it = _states_name.find(st);
             return it == _states_name.end() ? "" : it->second;
         }
-        std::string event_name(EVENT evt) const
+        std::string event_name(Event evt) const
         {
             auto it = _events_name.find(evt);
             return it == _events_name.end() ? "" : it->second;
         }
-        void set_state_name(STATE st, const std::string & name) { _states_name[st] = name; }
-        void set_event_name(EVENT evt, const std::string & name) { _events_name[evt] = name; }
+        void set_state_name(State st, const std::string & name) { _states_name[st] = name; }
+        void set_event_name(Event evt, const std::string & name) { _events_name[evt] = name; }
 
-        void set_transitions_map(const std::map<STATE, std::map<EVENT, STATE>> & transitions)
+        void set_transitions_map(const std::map<State, std::map<Event, State>> & transitions)
         {
             _transitions = transitions;
         }
-        void set_states_names_map(const std::map<STATE, std::string> & states) { _states_name = states; }
-        void set_events_names_map(const std::map<EVENT, std::string> & events) { _events_name = events; }
+        void set_states_names_map(const std::map<State, std::string> & states) { _states_name = states; }
+        void set_events_names_map(const std::map<Event, std::string> & events) { _events_name = events; }
 
-        const std::map<STATE, std::map<EVENT, STATE>> & transitions_map() const { return _transitions; }
-        const std::map<STATE, std::string> & states_names_map() const { return _states_name; }
-        const std::map<EVENT, std::string> & events_names_map() const { return _events_name; }
+        const std::map<State, std::map<Event, State>> & transitions_map() const { return _transitions; }
+        const std::map<State, std::string> & states_names_map() const { return _states_name; }
+        const std::map<Event, std::string> & events_names_map() const { return _events_name; }
 
     protected:
 
     private:
-        STATE _state;
-        std::map<STATE, std::string> _states_name;
+        State _state;
+        std::map<State, std::string> _states_name;
 
-        EVENT _last_event;
-        std::map<EVENT, std::string> _events_name;
+        Event _last_event;
+        std::map<Event, std::string> _events_name;
 
-        std::map<STATE, std::map<EVENT, STATE>> _transitions;
+        std::map<State, std::map<Event, State>> _transitions;
 };
 
 } // namespace sihd::util

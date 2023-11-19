@@ -202,7 +202,7 @@ class Array: public IArray,
             return this->push_back(data);
         }
 
-        bool from_str(std::string_view data, const char *delimiters)
+        bool from_str(std::string_view data, std::string_view delimiters)
         {
             if constexpr (std::is_fundamental_v<T>)
             {
@@ -754,16 +754,16 @@ class Array: public IArray,
         /* iterator */
         /*********************************************************************/
 
-        template <typename ITERATOR_TYPE>
+        template <typename IteratorType>
         class ArrayIterator
         {
             public:
                 // Iterator traits - typedefs and types required to be STL compliant
                 using iterator_category = std::random_access_iterator_tag;
                 using difference_type = std::ptrdiff_t;
-                using value_type = ITERATOR_TYPE;
-                using pointer = ITERATOR_TYPE *;
-                using reference = ITERATOR_TYPE &;
+                using value_type = IteratorType;
+                using pointer = IteratorType *;
+                using reference = IteratorType &;
 
                 pointer array_beg;
                 pointer array_curr;
@@ -882,16 +882,16 @@ class Array: public IArray,
         /*********************************************************************/
         /* reverse iterator */
         /*********************************************************************/
-        template <typename ITERATOR_TYPE>
+        template <typename IteratorType>
         class ReverseArrayIterator
         {
             public:
                 // Iterator traits - typedefs and types required to be STL compliant
                 using iterator_category = std::random_access_iterator_tag;
                 using difference_type = std::ptrdiff_t;
-                using value_type = ITERATOR_TYPE;
-                using pointer = ITERATOR_TYPE *;
-                using reference = ITERATOR_TYPE &;
+                using value_type = IteratorType;
+                using pointer = IteratorType *;
+                using reference = IteratorType &;
 
                 pointer array_beg;
                 pointer array_curr;

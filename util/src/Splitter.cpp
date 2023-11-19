@@ -1,34 +1,62 @@
 #include <strings.h>
 
+#include <cctype>
 #include <cstring>
 
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/str.hpp>
+#include <sihd/util/tools.hpp>
 
 namespace sihd::util
 {
 
-Splitter::Splitter(): _empty_delimitations(false), _compare_method(nullptr) {}
-
-Splitter::Splitter(int delimiter, std::string_view authorized_open_escape_sequences): Splitter()
+SplitterDelimiterMethod SplitterOptions::delimiter_spaces()
 {
-    _delimiter = std::string(1, delimiter);
-    _authorized_open_escape_sequences = authorized_open_escape_sequences;
+    return &isspace;
 }
 
-Splitter::Splitter(std::string_view delimiter, std::string_view authorized_open_escape_sequences): Splitter()
+std::string_view SplitterOptions::all_open_escape_sequences()
 {
-    _delimiter = delimiter;
-    _authorized_open_escape_sequences = authorized_open_escape_sequences;
+    return str::escapes_open();
 }
 
-Splitter::Splitter(int (*fun)(int), std::string_view authorized_open_escape_sequences): Splitter()
+Splitter::Splitter(SplitterOptions options): _empty_delimitations(false)
 {
-    this->set_delimiter_method(fun);
-    _authorized_open_escape_sequences = authorized_open_escape_sequences;
+    if (sihd::util::tools::maximum_one_true(options.delimiter_char != 0,
+                                            options.delimiter_str.size() > 0,
+                                            options.delimiter_method != nullptr)
+        == false)
+    {
+        throw std::logic_error("Cannot have two delimiter types");
+    }
+
+    if (options.delimiter_char != 0)
+        this->set_delimiter_char(options.delimiter_char);
+    else if (options.delimiter_str.size() > 0)
+        this->set_delimiter(options.delimiter_str);
+    else if (options.delimiter_method)
+        this->set_delimiter_method(options.delimiter_method);
+
+    this->set_empty_delimitations(options.empty_delimitations);
+}
+
+Splitter::Splitter(int delimiter): Splitter()
+{
+    this->set_delimiter_char(delimiter);
+}
+
+Splitter::Splitter(std::string_view delimiter): Splitter()
+{
+    this->set_delimiter(delimiter);
 }
 
 Splitter::~Splitter() {}
+
+bool Splitter::set_delimiter_char(int delimiter)
+{
+    _delimiter = std::string(1, delimiter);
+    return true;
+}
 
 bool Splitter::set_delimiter(std::string_view str)
 {
@@ -38,13 +66,13 @@ bool Splitter::set_delimiter(std::string_view str)
 
 bool Splitter::set_delimiter_spaces()
 {
-    this->set_delimiter_method(&std::isspace);
+    this->set_delimiter_method(&isspace);
     return true;
 }
 
-void Splitter::set_delimiter_method(int (*fun)(int))
+void Splitter::set_delimiter_method(SplitterDelimiterMethod method)
 {
-    _compare_method = fun;
+    _compare_method = std::move(method);
 }
 
 bool Splitter::set_empty_delimitations(bool active)
@@ -67,7 +95,7 @@ bool Splitter::set_escape_sequences_all()
 
 int Splitter::_get_delimiter_offset(const char *s) const
 {
-    if (_compare_method != nullptr && _compare_method(s[0]) != 0)
+    if (_compare_method && _compare_method(s[0]) != 0)
         return 1;
     else if (strncmp(s, _delimiter.c_str(), _delimiter.size()) == 0)
         return (int)_delimiter.size();
@@ -162,7 +190,7 @@ std::string_view Splitter::next_token(const char *s, int *idx) const
 
 std::vector<std::string> Splitter::split(std::string_view str) const
 {
-    if (_delimiter.empty() && _compare_method == nullptr)
+    if (_delimiter.empty() && !_compare_method)
         return {std::string(str.data(), str.size())};
     const char *s = str.data();
     int tokens = this->count_tokens(s);
@@ -178,7 +206,7 @@ std::vector<std::string> Splitter::split(std::string_view str) const
 
 std::vector<std::string_view> Splitter::split_view(std::string_view str) const
 {
-    if (_delimiter.empty() && _compare_method == nullptr)
+    if (_delimiter.empty() && !_compare_method)
         return {str};
     const char *s = str.data();
     int tokens = this->count_tokens(s);

@@ -342,16 +342,16 @@ class ArrayView: public IArrayView
         /*********************************************************************/
         /* iterator */
         /*********************************************************************/
-        template <typename ITERATOR_TYPE>
+        template <typename IteratorType>
         class ArrayIterator
         {
             public:
                 // Iterator traits - typedefs and types required to be STL compliant
                 using iterator_category = std::random_access_iterator_tag;
                 using difference_type = std::ptrdiff_t;
-                using value_type = ITERATOR_TYPE;
-                using pointer = ITERATOR_TYPE *;
-                using reference = ITERATOR_TYPE &;
+                using value_type = IteratorType;
+                using pointer = IteratorType *;
+                using reference = IteratorType &;
 
                 pointer array_beg;
                 pointer array_curr;
@@ -464,16 +464,16 @@ class ArrayView: public IArrayView
         /* reverse iterator */
         /*********************************************************************/
 
-        template <typename ITERATOR_TYPE>
+        template <typename IteratorType>
         class ReverseArrayIterator
         {
             public:
                 // Iterator traits - typedefs and types required to be STL compliant
                 using iterator_category = std::random_access_iterator_tag;
                 using difference_type = std::ptrdiff_t;
-                using value_type = ITERATOR_TYPE;
-                using pointer = ITERATOR_TYPE *;
-                using reference = ITERATOR_TYPE &;
+                using value_type = IteratorType;
+                using pointer = IteratorType *;
+                using reference = IteratorType &;
 
                 pointer array_beg;
                 pointer array_curr;

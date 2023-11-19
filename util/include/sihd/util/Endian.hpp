@@ -42,10 +42,10 @@ class Endian
 
         /* Convert to native endianness */
 
-        template <typename T, Endianness ENDIAN>
+        template <typename T, Endianness Endian>
         static T convert(T from)
         {
-            return convert<T, ENDIAN>(from);
+            return convert<T, Endian>(from);
         }
 
         template <typename T>
@@ -71,7 +71,7 @@ class Endian
         }
 
         // error if trying to convert from non defined templates
-        template <typename T, Endianness ENDIAN>
+        template <typename T, Endianness Endian>
         static T convert_from(T from);
 };
 
