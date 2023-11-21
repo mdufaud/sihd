@@ -60,15 +60,24 @@ int main(int argc, char **argv)
     log.notice("Press ctrl+C to stop or wait until all pings are done");
 
     sihd::util::Handler<Pinger *> handler([&log](Pinger *pinger) {
-        const IcmpResponse & icmp_response = pinger->last_icmp_reponse();
-        const sihd::util::Timestamp & triptime = pinger->last_triptime();
+        const PingEvent & event = pinger->event();
 
-        log.info(fmt::format("{} bytes from {}: icmp_seq={} ttl={} time={}",
-                             icmp_response.size,
-                             icmp_response.client.host(),
-                             icmp_response.seq,
-                             icmp_response.ttl,
-                             triptime.timeoffset_str()));
+        if (event.sent)
+            log.debug("sent ping");
+        else if (event.received)
+        {
+            const IcmpResponse & icmp_response = event.icmp_response;
+            log.info(fmt::format("{} bytes from {}: icmp_seq={} ttl={} time={}",
+                                 icmp_response.size,
+                                 icmp_response.client.host(),
+                                 icmp_response.seq,
+                                 icmp_response.ttl,
+                                 event.trip_time.timeoffset_str()));
+        }
+        else if (event.timeout)
+        {
+            log.warning("ping timed out");
+        }
     });
     pinger.add_observer(&handler);
 

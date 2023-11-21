@@ -112,11 +112,10 @@ TEST_F(TestSplitter, test_splitter_delimiter)
 
 TEST_F(TestSplitter, test_splitter_escapes)
 {
-    Splitter splitter(" ");
+    Splitter splitter({.delimiter_str = " ", .open_escape_sequences = "(["});
 
     const char *cmd = "cmd (do 'something')   or don\\'t but[hurry up  mate]";
 
-    splitter.set_escape_sequences("([");
     SIHD_LOG(info, "Splitting command: '{}'", cmd);
     std::vector<std::string> splits = splitter.split(cmd);
     for (const auto & split : splits)
@@ -134,7 +133,7 @@ TEST_F(TestSplitter, test_splitter_escapes)
     }
     std::cout << std::endl;
 
-    splitter.set_escape_sequences("(");
+    splitter.set_open_escape_sequences("(");
     SIHD_LOG(info, "Same string but with restriction on (");
     std::vector<std::string> splits_with_restriction = splitter.split(cmd);
     for (const auto & split : splits_with_restriction)

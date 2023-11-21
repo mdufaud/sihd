@@ -37,7 +37,7 @@ bool CsvReader::set_quote_value(int c)
         return false;
     }
     _quote = c;
-    _splitter.set_escape_sequences((char *)&c);
+    _splitter.set_open_escape_sequences((char *)&c);
     return true;
 }
 

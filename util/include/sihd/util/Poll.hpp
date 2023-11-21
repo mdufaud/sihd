@@ -20,6 +20,8 @@
 namespace sihd::util
 {
 
+class Poll;
+
 struct PollEvent
 {
         int fd = -1;

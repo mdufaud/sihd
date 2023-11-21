@@ -20,7 +20,7 @@ std::string_view SplitterOptions::all_open_escape_sequences()
     return str::escapes_open();
 }
 
-Splitter::Splitter(SplitterOptions options): _empty_delimitations(false)
+Splitter::Splitter(const SplitterOptions & options): _empty_delimitations(false)
 {
     if (sihd::util::tools::maximum_one_true(options.delimiter_char != 0,
                                             options.delimiter_str.size() > 0,
@@ -38,7 +38,7 @@ Splitter::Splitter(SplitterOptions options): _empty_delimitations(false)
         this->set_delimiter_method(options.delimiter_method);
 
     this->set_empty_delimitations(options.empty_delimitations);
-    this->set_escape_sequences(options.open_escape_sequences);
+    this->set_open_escape_sequences(options.open_escape_sequences);
 }
 
 Splitter::Splitter(int delimiter): Splitter()
@@ -82,7 +82,7 @@ bool Splitter::set_empty_delimitations(bool active)
     return true;
 }
 
-bool Splitter::set_escape_sequences(std::string_view str)
+bool Splitter::set_open_escape_sequences(std::string_view str)
 {
     _authorized_open_escape_sequences = str;
     return true;

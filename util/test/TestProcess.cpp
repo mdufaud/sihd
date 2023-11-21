@@ -65,9 +65,11 @@ TEST_F(TestProcess, test_process_run)
     std::vector<std::string> res;
     std::string output;
     Process proc {"cat"};
+    Waitable waitable;
 
     proc.stdin_from("hello")
-        .stdout_to([&res](const char *buf, [[maybe_unused]] size_t size) {
+        .stdout_to([&res, &waitable](const char *buf, [[maybe_unused]] size_t size) {
+            auto l = waitable.guard();
             res.push_back(buf);
             SIHD_LOG(debug, buf);
         })
@@ -89,19 +91,19 @@ TEST_F(TestProcess, test_process_run)
     auto cat_write_plus_polling_time = std::chrono::milliseconds(15);
 
     proc.stdin_from("world");
-    std::this_thread::sleep_for(cat_write_plus_polling_time);
+    waitable.wait_for(cat_write_plus_polling_time);
     EXPECT_EQ(res.back(), "world");
 
     proc.stdin_from("how");
-    std::this_thread::sleep_for(cat_write_plus_polling_time);
+    waitable.wait_for(cat_write_plus_polling_time);
     EXPECT_EQ(res.back(), "how");
 
     proc.stdin_from("are");
-    std::this_thread::sleep_for(cat_write_plus_polling_time);
+    waitable.wait_for(cat_write_plus_polling_time);
     EXPECT_EQ(res.back(), "are");
 
     proc.stdin_from("you");
-    std::this_thread::sleep_for(cat_write_plus_polling_time);
+    waitable.wait_for(cat_write_plus_polling_time);
     proc.stop();
     worker.stop_worker();
     EXPECT_EQ(res.back(), "you");

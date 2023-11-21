@@ -30,7 +30,7 @@ class Splitter
 {
     public:
 
-        Splitter(SplitterOptions options = SplitterOptions::none());
+        Splitter(const SplitterOptions & options = SplitterOptions::none());
         Splitter(int delimiter);
         Splitter(std::string_view delimiter);
         virtual ~Splitter();
@@ -40,8 +40,10 @@ class Splitter
         bool set_empty_delimitations(bool active);
         bool set_delimiter_char(int delimiter);
         bool set_delimiter(std::string_view delimiter);
+        // uses std::isspace as a delimiter method
         bool set_delimiter_spaces();
-        bool set_escape_sequences(std::string_view sequences);
+        bool set_open_escape_sequences(std::string_view sequences);
+        // uses sihd::util::str::all_open_escape_sequences to handle escape sequences
         bool set_escape_sequences_all();
 
         std::vector<std::string> split(std::string_view str) const;

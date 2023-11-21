@@ -151,7 +151,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("set_empty_delimitations", &Splitter::set_empty_delimitations)
         .def("set_delimiter", &Splitter::set_delimiter)
         .def("set_delimiter_spaces", &Splitter::set_delimiter_spaces)
-        .def("set_escape_sequences", &Splitter::set_escape_sequences)
+        .def("set_open_escape_sequences", &Splitter::set_open_escape_sequences)
         .def("set_escape_sequences_all", &Splitter::set_escape_sequences_all)
         .def("split", &Splitter::split)
         .def("count_tokens", &Splitter::count_tokens);

@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_PROCESS_HPP__
 #define __SIHD_UTIL_PROCESS_HPP__
 
+#include <atomic>
 #include <functional>
 
 #include <sihd/util/IHandler.hpp>
@@ -37,7 +38,7 @@ class Process: public IStoppableRunnable,
         bool run();
         bool is_running() const;
         bool stop();
-        bool wait_process_end(time_t nano_duration = 0);
+        bool wait_process_end(Timestamp nano_duration = 0);
 
         // wait for process
         bool wait(int options);
@@ -134,8 +135,7 @@ class Process: public IStoppableRunnable,
         bool _process_fd_out(FileDescWrapper & fdw);
 
         // spawn but for a function
-        void _do_fork();
-        int _exec_child();
+        bool _do_fork();
 
 # if !defined(__SIHD_ANDROID__)
         bool _do_spawn();
@@ -150,14 +150,17 @@ class Process: public IStoppableRunnable,
 
         void handle(Poll *poll);
 
+        std::atomic<bool> _started;
         pid_t _pid;
         FileDescWrapper _stdin;
         FileDescWrapper _stdout;
         FileDescWrapper _stderr;
         std::vector<const char *> _argv;
         std::function<int()> _fun_to_execute;
-        std::mutex _mutex;
+        std::mutex _mutex_run;
+        mutable std::mutex _mutex_info;
         Waitable _waitable;
+        Waitable _waitable_start;
         Poll _poll;
         siginfo_t _info;
 };

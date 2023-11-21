@@ -33,7 +33,7 @@ TEST_F(TestPinger, test_pinger)
     }
 
     pinger.set_interval(200);
-    EXPECT_TRUE(pinger.ping({"8.8.8.8"}, 10));
+    ASSERT_TRUE(pinger.ping({"8.8.8.8"}, 10));
 
     auto result = pinger.result();
     SIHD_COUT(result.str());

@@ -93,6 +93,7 @@ bool Pinger::ping(const IpAddr & client, size_t number)
     if (_running.exchange(true))
         return false;
     // setup ping
+    this->_clear_event();
     _result.clear();
     _stop = false;
     _sender.set_id(os::pid());
@@ -113,6 +114,7 @@ bool Pinger::ping(const IpAddr & client, size_t number)
             if (_stop)
                 break;
         }
+
         // set sequence number and packet timestamp
         _current_seq = i + 1;
         _sender.set_seq(_current_seq);
@@ -127,16 +129,27 @@ bool Pinger::ping(const IpAddr & client, size_t number)
             break;
         }
         _result.transmitted += 1;
+        this->_notify_send();
+
         // wait until seq number is received by polling
         _received_icmp_response = false;
         while (_stop == false && _received_icmp_response == false && _sender.poll())
             ;
+        if (_received_icmp_response == false)
+            this->_notify_timeout();
         ++i;
     }
     _result.time_end = _clock_ptr->now();
 
     _running = false;
     return ret;
+}
+
+void Pinger::_notify_send()
+{
+    _event.sent = true;
+    this->notify_observers(this);
+    this->_clear_event();
 }
 
 void Pinger::handle(IcmpSender *sender)
@@ -154,10 +167,24 @@ void Pinger::handle(IcmpSender *sender)
     _result.last_time_received = now;
     _result.rtt.add_sample(triptime);
 
-    _last_icmp_reponse = response;
-    _last_triptime = triptime;
+    _event.received = true;
+    _event.icmp_response = response;
+    _event.trip_time = triptime;
 
     this->notify_observers(this);
+    this->_clear_event();
+}
+
+void Pinger::_notify_timeout()
+{
+    _event.timeout = true;
+    this->notify_observers(this);
+    this->_clear_event();
+}
+
+void Pinger::_clear_event()
+{
+    _event = PingEvent {};
 }
 
 void PingResult::clear()

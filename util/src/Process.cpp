@@ -58,6 +58,7 @@ void _add_close_action(posix_spawn_file_actions_t *actions, int fd)
 
 Process::Process()
 {
+    _started = false;
     _pid = -1;
     _poll.set_timeout(1);
     _poll.add_observer(this);
@@ -100,6 +101,8 @@ void Process::reset()
 {
     this->end();
     _pid = -1;
+    _started = false;
+    std::lock_guard l(_mutex_info);
     memset(&_info, 0, sizeof(siginfo_t));
 }
 
@@ -107,7 +110,6 @@ void Process::_clear_fdw(FileDescWrapper & fdw)
 {
     fdw.action = NONE;
     fdw.fun = nullptr;
-    // fdw.str_out.reset();
     fdw.path.clear();
 }
 
@@ -340,29 +342,23 @@ std::pair<int, int> Process::_pipe()
 
 void Process::_add_pipe(FileDescWrapper & fdw)
 {
-    if (fdw.fd_write == -1)
-    {
-        std::pair<int, int> pipe = this->_pipe();
-
-        fdw.fd_read = pipe.first;
-        fdw.fd_write = pipe.second;
-    }
+    if (fdw.fd_write != -1)
+        return;
+    auto [fd_read, fd_write] = this->_pipe();
+    fdw.fd_read = fd_read;
+    fdw.fd_write = fd_write;
 }
 
 // Execution
 
-int Process::_exec_child()
-{
-    if (_fun_to_execute)
-        return _fun_to_execute();
-    return execvp(_argv[0], const_cast<char *const *>(&(_argv[0])));
-}
-
-void Process::_do_fork()
+bool Process::_do_fork()
 {
     pid_t pid;
     if ((pid = fork()) < 0)
-        throw std::runtime_error("Fork failed");
+    {
+        SIHD_LOG(error, "Process: fork failed");
+        return false;
+    }
     if (pid == 0)
     {
         if (_stdin.action == CLOSE)
@@ -386,9 +382,15 @@ void Process::_do_fork()
             this->_dup_close(_stderr.fd_write, STDERR_FILENO);
             this->_close(_stderr.fd_read);
         }
-        exit(this->_exec_child());
+        int status = 0;
+        if (_fun_to_execute)
+            status = _fun_to_execute();
+        else
+            status = execvp(_argv[0], const_cast<char *const *>(&(_argv[0])));
+        exit(status);
     }
     _pid = pid;
+    return true;
 }
 
 # if !defined(__SIHD_ANDROID__)
@@ -454,26 +456,30 @@ bool Process::start()
         return false;
     }
     this->_init_poll();
+    bool success = false;
     if (_fun_to_execute)
-        this->_do_fork();
+        success = this->_do_fork();
     else
     {
         if (_argv.back() != NULL)
             _argv.push_back(NULL);
 # if !defined(__SIHD_ANDROID__)
-        if (this->_do_spawn() == false)
-            return false;
+        success = this->_do_spawn();
 # else
-        this->_do_fork();
+        success = this->_do_fork();
 # endif
     }
-    this->_close(_stdin.fd_read);
-    this->_close(_stdout.fd_write);
-    this->_close(_stderr.fd_write);
-    return true;
+    if (success)
+    {
+        this->_close(_stdin.fd_read);
+        this->_close(_stdout.fd_write);
+        this->_close(_stderr.fd_write);
+    }
+    _started = success;
+    return success;
 }
 
-bool Process::wait_process_end(time_t nano_duration)
+bool Process::wait_process_end(Timestamp nano_duration)
 {
     return _waitable.wait_for(nano_duration, [this] { return this->is_running() == false; });
 }
@@ -594,7 +600,7 @@ void Process::handle(Poll *poll)
 
 bool Process::run()
 {
-    std::lock_guard l(_mutex);
+    std::lock_guard l(_mutex_run);
     bool ret = this->start();
     if (ret && _poll.max_fds() > 0)
         _poll.run();
@@ -603,22 +609,20 @@ bool Process::run()
 
 bool Process::stop()
 {
-    bool ret = this->is_running();
-    if (ret)
-    {
-        _poll.stop();
-        this->end();
-        std::lock_guard l(_mutex);
-        this->reset();
-    }
-    return ret;
+    if (this->is_running() == false)
+        return false;
+    _poll.stop();
+    this->end();
+    std::lock_guard l(_mutex_run);
+    this->reset();
+    return true;
 }
 
 // Check process
 
 bool Process::is_running() const
 {
-    return _pid >= 0;
+    return _started;
 }
 
 bool Process::wait_exit(int options)
@@ -643,60 +647,76 @@ bool Process::wait_any(int options)
 
 bool Process::wait(int options)
 {
-    if (this->is_running())
-    {
-        if (waitid(P_PID, _pid, &_info, options) >= 0)
-        {
-            if (this->has_exited() || this->has_exited_by_signal())
-            {
-                _pid = -1;
-                _waitable.notify_all();
-            }
-            return true;
-        }
+    if (this->is_running() == false)
         return false;
+    int ret;
+    {
+        std::lock_guard l(_mutex_info);
+        ret = waitid(P_PID, _pid, &_info, options);
+    }
+    if (ret >= 0)
+    {
+        if (this->has_exited() || this->has_exited_by_signal())
+        {
+            auto l = _waitable.guard();
+            _started = false;
+            _pid = -1;
+            _waitable.notify_all();
+        }
+        return true;
     }
     return false;
 }
 
 bool Process::has_exited() const
 {
+    std::lock_guard l(_mutex_info);
     return _info.si_code == CLD_EXITED;
 }
 
 bool Process::has_core_dumped() const
 {
+    std::lock_guard l(_mutex_info);
     return _info.si_code == CLD_DUMPED;
 }
 
 bool Process::has_stopped_by_signal() const
 {
+    std::lock_guard l(_mutex_info);
     return _info.si_code == CLD_STOPPED;
 }
 
 bool Process::has_exited_by_signal() const
 {
+    std::lock_guard l(_mutex_info);
     return _info.si_code == CLD_KILLED;
 }
 
 bool Process::has_continued() const
 {
+    std::lock_guard l(_mutex_info);
     return _info.si_code == CLD_CONTINUED;
 }
 
 int Process::signal_exit_number() const
 {
-    return this->has_exited_by_signal() ? _info.si_status : -1;
+    const bool cond = this->has_exited_by_signal();
+    std::lock_guard l(_mutex_info);
+    return cond ? _info.si_status : -1;
 }
 
 int Process::signal_stop_number() const
 {
-    return this->has_stopped_by_signal() ? _info.si_status : -1;
+    const bool cond = this->has_stopped_by_signal();
+    std::lock_guard l(_mutex_info);
+    return cond ? _info.si_status : -1;
 }
 
 int Process::return_code() const
 {
-    return this->has_exited() ? _info.si_status : -1;
+    const bool cond = this->has_exited();
+    std::lock_guard l(_mutex_info);
+    return cond ? _info.si_status : -1;
 }
 
 } // namespace sihd::util

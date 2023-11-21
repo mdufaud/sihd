@@ -16,6 +16,18 @@
 namespace sihd::net
 {
 
+class Pinger;
+
+struct PingEvent
+{
+        bool sent = false;
+        bool received = false;
+        bool timeout = false;
+
+        sihd::util::Timestamp trip_time = 0;
+        IcmpResponse icmp_response = {};
+};
+
 struct PingResult
 {
         time_t time_start;
@@ -53,15 +65,16 @@ class Pinger: public sihd::util::Named,
         bool is_running() const { return _running; }
         void stop();
 
+        const PingEvent & event() const { return _event; }
         const PingResult & result() const { return _result; }
-        sihd::util::Timestamp last_triptime() const { return _last_triptime; }
-        const IcmpResponse & last_icmp_reponse() const { return _last_icmp_reponse; }
 
     protected:
         void handle(IcmpSender *sender);
 
     private:
-        void _fill_giberish();
+        void _notify_send();
+        void _notify_timeout();
+        void _clear_event();
 
         IcmpSender _sender;
         sihd::util::Waitable _waitable;
@@ -76,9 +89,7 @@ class Pinger: public sihd::util::Named,
         bool _received_icmp_response;
         int _current_seq;
         PingResult _result;
-
-        IcmpResponse _last_icmp_reponse;
-        time_t _last_triptime;
+        PingEvent _event;
 };
 
 } // namespace sihd::net
