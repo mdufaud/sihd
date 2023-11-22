@@ -2,7 +2,7 @@
 #define __SIHD_CORE_DEVPULSATION_HPP__
 
 #include <sihd/util/IRunnable.hpp>
-#include <sihd/util/Scheduler.hpp>
+#include <sihd/util/StepWorker.hpp>
 
 #include <sihd/core/Device.hpp>
 
@@ -32,9 +32,8 @@ class DevPulsation: public sihd::core::Device,
 
     private:
         bool _running;
-        double _frequency;
         uint32_t _beats;
-        sihd::util::Scheduler _scheduler;
+        sihd::util::StepWorker _step_worker;
         Channel *_channel_heartbeat_ptr;
         Channel *_channel_activate_ptr;
         std::mutex _mutex;

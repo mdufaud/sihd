@@ -18,18 +18,16 @@ SIHD_LOGGER;
 DevPulsation::DevPulsation(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
     _running(false),
-    _frequency(0.0),
-    _scheduler("scheduler", this),
+    _step_worker(this),
     _channel_heartbeat_ptr(nullptr),
     _channel_activate_ptr(nullptr)
 {
-    _scheduler.set_parent_ownership(false);
     this->add_conf("frequency", &DevPulsation::set_frequency);
 }
 
 DevPulsation::~DevPulsation()
 {
-    _scheduler.stop();
+    _step_worker.stop_worker();
 }
 
 bool DevPulsation::is_running() const
@@ -39,13 +37,7 @@ bool DevPulsation::is_running() const
 
 bool DevPulsation::set_frequency(double freq)
 {
-    if (freq < 0)
-    {
-        SIHD_LOG(error, "DevPulsation: impossible frequency: {} hz", freq);
-        return false;
-    }
-    _frequency = freq;
-    return true;
+    return _step_worker.set_frequency(freq);
 }
 
 void DevPulsation::handle(sihd::core::Channel *c)
@@ -54,11 +46,11 @@ void DevPulsation::handle(sihd::core::Channel *c)
     {
         if (c->read<bool>(0) == true)
         {
-            _scheduler.resume();
+            _step_worker.resume_worker();
         }
         else
         {
-            _scheduler.pause();
+            _step_worker.pause_worker();
         }
     }
 }
@@ -84,7 +76,7 @@ bool DevPulsation::on_init()
 
 bool DevPulsation::on_start()
 {
-    if (_frequency == 0)
+    if (_step_worker.frequency() == 0.0)
     {
         SIHD_LOG(error, "DevPulsation: cannot start without a frequency configured");
         return false;
@@ -97,12 +89,11 @@ bool DevPulsation::on_start()
         return false;
     this->observe_channel(_channel_activate_ptr);
     if (_channel_activate_ptr->read<bool>(0) == false)
-        _scheduler.pause();
+        _step_worker.pause_worker();
 
-    _scheduler.add_task(new sihd::util::Task(this, {.reschedule_time = sihd::util::time::freq(_frequency)}));
-    if (_scheduler.start() == false)
+    if (_step_worker.start_worker(this->name()) == false)
     {
-        SIHD_LOG(error, "DevPulsation: could not start scheduler");
+        SIHD_LOG(error, "DevPulsation: could not start");
         return false;
     }
     _running = true;
@@ -115,9 +106,9 @@ bool DevPulsation::on_stop()
         std::lock_guard l(_mutex);
         _running = false;
     }
-    if (_scheduler.stop() == false)
+    if (_step_worker.stop_worker() == false)
     {
-        SIHD_LOG(error, "DevPulsation: could not stop scheduler");
+        SIHD_LOG(error, "DevPulsation: could not stop");
         return false;
     }
     return true;
@@ -125,7 +116,6 @@ bool DevPulsation::on_stop()
 
 bool DevPulsation::on_reset()
 {
-    _scheduler.clear_tasks();
     return true;
 }
 

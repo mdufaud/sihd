@@ -33,13 +33,16 @@ bool Worker::start_worker(std::string_view name)
 {
     if (_started.exchange(true) == true)
         return true;
+
     if (_runnable_ptr == nullptr)
     {
+        _started = false;
         SIHD_LOG_ERROR("Worker: cannot start worker '{}': nothing to run", name);
         return false;
     }
-    std::lock_guard l(_mutex_state);
+
     bool ret = this->on_worker_start();
+
     if (ret)
     {
         _worker_thread_name = name;
@@ -47,6 +50,8 @@ bool Worker::start_worker(std::string_view name)
         if (_detach)
             _worker_thread.detach();
     }
+
+    _started = ret;
     return ret;
 }
 
@@ -81,7 +86,6 @@ bool Worker::stop_worker()
 {
     if (_started.exchange(false) == false)
         return true;
-    std::lock_guard l(_mutex_state);
     bool ret = this->on_worker_stop();
     if (_worker_thread.joinable())
         _worker_thread.join();

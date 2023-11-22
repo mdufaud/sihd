@@ -14,8 +14,7 @@ namespace sihd::util
 {
 
 /**
- * @brief Kinda meant to be inherited and change step method
- *          though as a backup, can set a method to run
+ * @brief A simple thread controller starting a Runnable in a named thread
  *
  */
 class Worker: protected IRunnable,
@@ -49,7 +48,6 @@ class Worker: protected IRunnable,
         bool _detach;
         Synchronizer _synchro;
         std::thread _worker_thread;
-        std::mutex _mutex_state;
 };
 
 } // namespace sihd::util
