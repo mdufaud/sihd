@@ -27,8 +27,6 @@ struct lws_context;
 namespace sihd::http
 {
 
-SIHD_LOGGER;
-
 class HttpServer: public sihd::util::Node,
                   public sihd::util::Configurable,
                   public sihd::util::IStoppableRunnable
@@ -52,6 +50,7 @@ class HttpServer: public sihd::util::Node,
         virtual bool run();
         bool is_running() const { return _running; }
         virtual bool stop();
+        virtual void wait_stop();
 
         virtual bool get_resource_path(std::string_view path, std::string & res);
 
@@ -123,7 +122,7 @@ class HttpServer: public sihd::util::Node,
         virtual int _on_http_file_completion_end();
 
         virtual bool _check_webservices(HttpSession *session, std::string_view path);
-        virtual bool _serve_webservice(HttpSession *session, WebService *webservice, const HttpRequest & request);
+        virtual bool _serve_webservice(HttpSession *session, WebService *webservice, HttpRequest & request);
 
         // websocket protocol callbacks
         static int _global_websocket_lws_callback(struct lws *wsi,
@@ -152,7 +151,7 @@ class HttpServer: public sihd::util::Node,
         // polling protocols call
         virtual bool _check_all_protocols();
 
-        virtual bool _send_http_headers(struct lws *wsi, HttpHeader & header);
+        virtual bool _send_http_headers(struct lws *wsi, HttpResponse & response);
         virtual bool _send_http_no_content(struct lws *wsi, int code);
         /*
             code = HTTP_STATUS_MOVED_PERMANENTLY || HTTP_STATUS_FOUND || HTTP_STATUS_SEE_OTHER ||
@@ -161,7 +160,8 @@ class HttpServer: public sihd::util::Node,
         virtual bool _send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code = 301);
         virtual bool _send_404(struct lws *wsi, std::string_view html_404);
 
-        virtual const char *_get_client_ip(struct lws *wsi);
+        std::optional<std::string> _get_header(struct lws *wsi, enum lws_token_indexes idx);
+        std::string _get_client_ip(struct lws *wsi);
         std::vector<std::string> _get_uri_args(struct lws *wsi);
 
     private:
@@ -177,8 +177,8 @@ class HttpServer: public sihd::util::Node,
                 HttpServer *server;
         };
 
-        std::string _ip_buf;
-        bool _running;
+        std::atomic<bool> _running;
+        std::atomic<bool> _stop;
         int _port;
         std::string _root_dir;
         std::set<std::string> _resources_path;
@@ -194,7 +194,7 @@ class HttpServer: public sihd::util::Node,
         std::vector<IWebsocketHandler *> _websocket_handler_lst;
         std::string _encoding;
 
-        HttpHeader _http_header;
+        HttpResponse _http_response;
         sihd::util::ArrUByte _http_header_array;
 
         std::string _404_page_path;

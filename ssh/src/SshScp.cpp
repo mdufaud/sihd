@@ -94,7 +94,7 @@ bool SshScp::push_file(std::string_view local_path, std::string_view remote_path
     if (file.is_open() == false)
         return false;
     char buf[SIHD_SSH_SCP_BUFFSIZE + 1];
-    size_t size = sihd::util::fs::filesize(local_path);
+    size_t size = sihd::util::fs::file_size(local_path);
     if (max_size > 0)
         size = std::max(size, max_size);
 

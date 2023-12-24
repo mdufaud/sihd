@@ -321,7 +321,7 @@ bool File::close()
     return true;
 }
 
-long File::filesize()
+long File::file_size()
 {
     long ret = -1;
     long current_offset = this->tell();

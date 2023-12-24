@@ -342,7 +342,7 @@ void LuaUtilApi::load_files(Vm & vm)
         .addFunction("flush", &File::flush)
         .addFunction("fd", &File::fd)
         .addFunction("path", &File::path)
-        .addFunction("filesize", &File::filesize)
+        .addFunction("filesize", &File::file_size)
         // lock
         .addFunction("lock", &File::lock)
         .addFunction("trylock", &File::trylock)

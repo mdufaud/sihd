@@ -1,19 +1,20 @@
 #include <gtest/gtest.h>
-
 #include <libwebsockets.h>
+#include <nlohmann/json.hpp>
 
+#include <sihd/http/HttpSender.hpp>
+#include <sihd/http/HttpServer.hpp>
+#include <sihd/http/WebService.hpp>
+#include <sihd/http/WebsocketHandler.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/SigWatcher.hpp>
+#include <sihd/util/TmpDir.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
-
-#include <sihd/http/HttpServer.hpp>
-#include <sihd/http/WebService.hpp>
-#include <sihd/http/WebsocketHandler.hpp>
 
 namespace test
 {
@@ -65,11 +66,11 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                     {
                         _post_content = req.content().str();
                         SIHD_LOG(info, "Received POST body: {}", _post_content);
-                        resp.http_header().set_status(HTTP_STATUS_OK);
+                        resp.set_status(HTTP_STATUS_OK);
                         ++_npost;
                     }
                     else
-                        resp.http_header().set_status(HTTP_STATUS_BAD_REQUEST);
+                        resp.set_status(HTTP_STATUS_BAD_REQUEST);
                 },
                 HttpRequest::POST);
 
@@ -77,11 +78,11 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                 "some_delete",
                 [this](const HttpRequest & req, HttpResponse & resp) {
                     SIHD_LOG(info, "{} request received", req.type_str());
-                    resp.http_header().set_status(HTTP_STATUS_OK);
+                    resp.set_status(HTTP_STATUS_OK);
                     resp.set_json_content({"hello", "world"});
                     ++_ndelete;
                 },
-                HttpRequest::REQ_DELETE);
+                HttpRequest::DELETE);
 
             _webservice->set_entry_point(
                 "some_put",
@@ -91,11 +92,11 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                     {
                         _post_content = req.content().str();
                         SIHD_LOG(info, "Received PUT body: {}", _post_content);
-                        resp.http_header().set_status(HTTP_STATUS_OK);
+                        resp.set_status(HTTP_STATUS_OK);
                         ++_nput;
                     }
                     else
-                        resp.http_header().set_status(HTTP_STATUS_BAD_REQUEST);
+                        resp.set_status(HTTP_STATUS_BAD_REQUEST);
                 },
                 HttpRequest::PUT);
         }
@@ -154,12 +155,72 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         std::string _post_content;
 };
 
-TEST_F(TestHttpServer, test_httpserver)
+TEST_F(TestHttpServer, test_httpserver_auto)
+{
+    SimpleHttpServer server;
+    server.set_root_dir("test/resources/mount_point");
+    server.set_port(3000);
+
+    Worker worker([&server] {
+        server.run();
+        return true;
+    });
+    ASSERT_TRUE(worker.start_sync_worker("server-thread"));
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    const CurlOptions options = {
+        .verbose = true,
+        .ssl_verify_peer = false,
+        .ssl_verify_host = false,
+        .upload_progress =
+            [&](long dltotal, long dlnow, long ultotal, long ulnow) {
+                if (dltotal)
+                    fmt::print("download: {}/{} bytes\n", dlnow, dltotal);
+                if (ultotal)
+                    fmt::print("upload: {}/{} bytes\n", ulnow, ultotal);
+                return true;
+            },
+    };
+
+    auto get_resp_opt = HttpSender::get("localhost:3000/web/some_get", options);
+    if (get_resp_opt)
+        fmt::print("{}", get_resp_opt->content().cpp_str());
+
+    auto post_resp_opt = HttpSender::post("localhost:3000/web/some_post", "hello world", options);
+    if (post_resp_opt)
+        fmt::print("{}", post_resp_opt->content().cpp_str());
+
+    TmpDir tmpdir;
+    std::string tmpfile_path = fs::combine(tmpdir.path(), "test_file.txt");
+    fs::write(tmpfile_path, "hello world");
+
+    // auto put_resp_opt = HttpSender::put("localhost:3000/web/some_put", tmpfile_path, options);
+    // if (put_resp_opt)
+    //     fmt::print("{}", put_resp_opt->content().cpp_str());
+
+    auto delete_resp_opt = HttpSender::del("localhost:3000/web/some_delete", options);
+    if (delete_resp_opt)
+        fmt::print("{}", delete_resp_opt->content().cpp_str());
+
+    server.stop();
+    server.wait_stop();
+
+    EXPECT_EQ(server._nget, 1);
+    EXPECT_EQ(server._npost, 1);
+    EXPECT_EQ(server._post_content, "hello world");
+    // EXPECT_EQ(server._nput, 1);
+    EXPECT_EQ(server._ndelete, 1);
+} // namespace test
+
+TEST_F(TestHttpServer, test_httpserver_websockets)
 {
     if (sihd::util::term::is_interactive() == false)
         GTEST_SKIP_("requires interaction");
 
     SimpleHttpServer server;
+    server.set_root_dir("test/resources/mount_point");
+    server.set_port(3000);
 
     sihd::util::SigWatcher watcher({SIGINT}, [&server](int sig) {
         SIHD_LOG(info, "Caught signal - stopping web server");
@@ -167,20 +228,22 @@ TEST_F(TestHttpServer, test_httpserver)
         server.stop();
     });
 
-    server.set_root_dir("test/resources/mount_point");
-    server.set_port(3000);
     SIHD_LOG(info, "=========================================================");
-    SIHD_LOG(info, "Open web browser at localhost:3000");
+    SIHD_LOG(info, "Open web browser at localhost:3000 then close it");
     SIHD_LOG(info, "=========================================================");
+
     server.run();
-    EXPECT_GT(server._nopen, 0);
-    EXPECT_GT(server._nread, 0);
-    EXPECT_GT(server._nwrite, 0);
-    EXPECT_GT(server._nclosed, 0);
+
     //
     EXPECT_GT(server._nget, 0);
     EXPECT_GT(server._npost, 0);
     EXPECT_GT(server._nput, 0);
     EXPECT_GT(server._ndelete, 0);
+
+    EXPECT_GT(server._nopen, 0);
+    EXPECT_GT(server._nread, 0);
+    EXPECT_GT(server._nwrite, 0);
+    EXPECT_GT(server._nclosed, 0);
 }
+
 } // namespace test

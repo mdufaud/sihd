@@ -1,4 +1,5 @@
 #include <libwebsockets.h>
+#include <nlohmann/json.hpp>
 
 #include <sihd/util/Logger.hpp>
 
@@ -9,10 +10,9 @@ namespace sihd::http
 
 SIHD_LOGGER;
 
-HttpResponse::HttpResponse(Mime *mimes): _mime_ptr(mimes)
+HttpResponse::HttpResponse(Mime *mimes): _status(HTTP_STATUS_OK), _mime_ptr(mimes)
 {
-    _http_header.set_status(HTTP_STATUS_OK);
-    _http_header.set_charset("utf-8");
+    _http_header.set_accept_charset("utf-8");
 }
 
 HttpResponse::~HttpResponse() {}
@@ -45,6 +45,11 @@ bool HttpResponse::set_byte_content(sihd::util::ArrByteView data)
 {
     this->_set_mime_type_if_not_set(Mime::MIME_APPLICATION_OCTET);
     return this->set_content(data);
+}
+
+void HttpResponse::set_status(uint status)
+{
+    _status = status;
 }
 
 bool HttpResponse::set_content(sihd::util::ArrCharView data)

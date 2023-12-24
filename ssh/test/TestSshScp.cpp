@@ -58,7 +58,7 @@ TEST_F(TestSshScp, test_sshscp_push)
     EXPECT_TRUE(fs::is_file(fs::combine(test_dir, "pushed_dir/pushed_file_in_dir.txt")));
     EXPECT_TRUE(fs::is_file(fs::combine(test_dir, "pushed_file_not_in_dir.txt")));
 
-    EXPECT_EQ(fs::filesize(test_dir + "/pushed_file.txt"), fs::filesize("test/resources/file.txt"));
+    EXPECT_EQ(fs::file_size(test_dir + "/pushed_file.txt"), fs::file_size("test/resources/file.txt"));
 
     EXPECT_FALSE(fs::is_file(fs::combine(test_dir, "pushed_file2.txt")));
     EXPECT_FALSE(fs::is_dir(fs::combine(test_dir, "pushed_dir2")));

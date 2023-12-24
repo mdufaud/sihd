@@ -26,7 +26,7 @@ std::string executable_path();
 bool exists(std::string_view path);
 bool is_file(std::string_view path);
 bool is_dir(std::string_view path);
-size_t filesize(std::string_view path);
+size_t file_size(std::string_view path);
 Timestamp last_write(std::string_view path);
 bool is_readable(std::string_view path);
 bool is_writable(std::string_view path);

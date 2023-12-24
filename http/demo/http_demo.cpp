@@ -70,7 +70,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                     resp.http_header().set_status(HTTP_STATUS_OK);
                     resp.set_json_content({"hello", "world"});
                 },
-                HttpRequest::REQ_DELETE);
+                HttpRequest::DELETE);
 
             _webservice->set_entry_point(
                 "put",

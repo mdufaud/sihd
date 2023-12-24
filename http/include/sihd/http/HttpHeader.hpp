@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 
+#include <sihd/http/Mime.hpp>
 #include <sihd/util/Array.hpp>
 
 namespace sihd::http
@@ -17,39 +18,34 @@ class HttpHeader
         HttpHeader(HeaderMap && headers);
         virtual ~HttpHeader();
 
-        HttpHeader & set_server_name(std::string_view name);
-
-        HttpHeader & set_status(uint32_t status);
+        HttpHeader & set_server(std::string_view name);
         HttpHeader & set_content_type(std::string_view type);
-        HttpHeader & set_content_size(size_t len);
-        HttpHeader & set_charset(std::string_view encoding);
-
-        HttpHeader & set_status_content(uint32_t status, std::string_view content_type, size_t content_len);
-
-        HttpHeader & set_header(const std::string & name, std::string_view value);
-        HttpHeader & remove_header(const std::string & name);
-        HttpHeader & set_header(const unsigned char *name, std::string_view value);
-        HttpHeader & remove_header(const unsigned char *name);
+        HttpHeader & set_content_length(size_t len);
+        HttpHeader & set_accept_charset(std::string_view charset);
+        HttpHeader & set_accept(std::string_view mime_type);
 
         HttpHeader & set_headers(HeaderMap && headers);
+        HttpHeader & set_header(const std::string & name, std::string_view value);
+        HttpHeader & set_header(const unsigned char *name, std::string_view value);
+        bool add_header_from_str(std::string_view header_str);
 
-        uint32_t status() const { return _status; }
-        size_t content_size() const { return _content_size; }
-        const std::string & encoding() const { return _encoding; }
-        const std::string & content_type() const { return _content_type; }
-        const std::string & server_name() const { return _server_name; }
+        HttpHeader & remove_header(const std::string & name);
+        HttpHeader & remove_header(const unsigned char *name);
+
+        size_t content_length() const;
+        std::string_view accept_charset() const;
+        std::string_view content_type() const;
+        std::string_view server() const;
+
         const HeaderMap & headers() const { return _headers; }
+        std::string_view find(const std::string & header_name) const;
+        const std::string & get(const std::string & header_name) const { return _headers.at(header_name); }
 
-        static std::string build_content_type(std::string_view type, std::string_view encoding = "");
+        static std::string build_content_type(std::string_view type, std::string_view charset = "");
 
     protected:
 
     private:
-        std::string _server_name;
-        uint32_t _status;
-        std::string _content_type;
-        std::string _encoding;
-        size_t _content_size;
         HeaderMap _headers;
 };
 

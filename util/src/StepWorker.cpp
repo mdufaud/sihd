@@ -10,9 +10,19 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-StepWorker::StepWorker(IRunnable *runnable): Worker(runnable), _pause(false), _sleep_time(0)
+StepWorker::StepWorker(): Worker(), _pause(false), _sleep_time(0)
 {
     this->add_conf("frequency", &StepWorker::set_frequency);
+}
+
+StepWorker::StepWorker(IRunnable *runnable): StepWorker()
+{
+    this->set_runnable(runnable);
+}
+
+StepWorker::StepWorker(std::function<bool()> method): StepWorker()
+{
+    this->set_method(method);
 }
 
 StepWorker::~StepWorker()

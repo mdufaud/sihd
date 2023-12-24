@@ -3,6 +3,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace sihd::http
 {
@@ -38,6 +39,12 @@ class Mime
         static constexpr const char *MIME_IMAGE_PNG = "image/png";
         static constexpr const char *MIME_IMAGE_GIF = "image/gif";
         static constexpr const char *MIME_IMAGE_SVG = "image/svg+xml";
+        static constexpr const char *MIME_ANY = "*/*";
+
+        static std::string make_mime(std::string_view mime_type,
+                                     std::string_view sub_type,
+                                     const std::vector<std::string> & sub_type_suffixes = {},
+                                     float q_factor_weighting = 0.0);
 
     protected:
 

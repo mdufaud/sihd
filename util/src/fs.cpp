@@ -185,7 +185,7 @@ Timestamp last_write(std::string_view path)
     return false;
 }
 
-size_t filesize(std::string_view path)
+size_t file_size(std::string_view path)
 {
     struct stat s;
     if (os::stat(path.data(), &s) == 0)

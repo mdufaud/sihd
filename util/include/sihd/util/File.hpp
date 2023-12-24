@@ -88,7 +88,7 @@ class File
         bool seek_begin(long offset);
         bool seek_end(long offset);
         long tell();
-        long filesize();
+        long file_size();
 
         void lock();
         bool trylock();

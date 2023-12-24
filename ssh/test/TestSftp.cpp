@@ -48,7 +48,7 @@ TEST_F(TestSftp, test_sftp)
     EXPECT_TRUE(sftp.get_file(fs::cwd() + "/test/resources/file.txt", test_dir + "/recv_file.txt"));
     EXPECT_TRUE(fs::is_file(test_dir + "/sent_file.txt"));
     EXPECT_TRUE(fs::is_file(test_dir + "/recv_file.txt"));
-    EXPECT_EQ(fs::filesize(test_dir + "/sent_file.txt"), fs::filesize("test/resources/file.txt"));
+    EXPECT_EQ(fs::file_size(test_dir + "/sent_file.txt"), fs::file_size("test/resources/file.txt"));
 
     std::vector<std::string> list;
     EXPECT_TRUE(sftp.list_dir_filenames(test_dir, list));
@@ -71,7 +71,7 @@ TEST_F(TestSftp, test_sftp)
     {
         if (attr.is_file())
         {
-            EXPECT_EQ(attr.size(), fs::filesize("test/resources/file.txt"));
+            EXPECT_EQ(attr.size(), fs::file_size("test/resources/file.txt"));
         }
         nlink += (int)attr.is_link();
         nregular += (int)attr.is_file();

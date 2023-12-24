@@ -9,9 +9,16 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-Worker::Worker(IRunnable *runnable): _runnable_ptr(nullptr), _started(false), _running(false), _detach(false)
+Worker::Worker(): _started(false), _running(false), _detach(false) {}
+
+Worker::Worker(IRunnable *runnable): Worker()
 {
     this->set_runnable(runnable);
+}
+
+Worker::Worker(std::function<bool()> method): Worker()
+{
+    this->set_method(method);
 }
 
 Worker::~Worker()
@@ -24,9 +31,16 @@ void Worker::set_worker_detach(bool active)
     _detach = active;
 }
 
+void Worker::set_method(std::function<bool()> method)
+{
+    _run_method = std::move(method);
+}
+
 void Worker::set_runnable(IRunnable *runnable)
 {
-    _runnable_ptr = runnable;
+    _run_method = [runnable] {
+        return runnable->run();
+    };
 }
 
 bool Worker::start_worker(std::string_view name)
@@ -34,7 +48,7 @@ bool Worker::start_worker(std::string_view name)
     if (_started.exchange(true) == true)
         return true;
 
-    if (_runnable_ptr == nullptr)
+    if (!_run_method)
     {
         _started = false;
         SIHD_LOG_ERROR("Worker: cannot start worker '{}': nothing to run", name);
@@ -79,7 +93,7 @@ bool Worker::_prepare_run()
 
 bool Worker::run()
 {
-    return _runnable_ptr->run();
+    return _run_method();
 }
 
 bool Worker::stop_worker()

@@ -22,7 +22,7 @@ std::string HttpRequest::type_str(HttpRequest::RequestType type)
             return "POST";
         case PUT:
             return "PUT";
-        case REQ_DELETE:
+        case DELETE:
             return "DELETE";
         default:
             return "NONE";
@@ -38,7 +38,7 @@ HttpRequest::RequestType HttpRequest::type_from_str(std::string_view type)
     else if (str::iequals(type, "put"))
         return PUT;
     else if (str::iequals(type, "delete"))
-        return REQ_DELETE;
+        return DELETE;
     return NONE;
 }
 
@@ -59,6 +59,11 @@ HttpRequest::~HttpRequest() {}
 void HttpRequest::set_content(sihd::util::ArrCharView data)
 {
     _array.from_bytes(data);
+}
+
+void HttpRequest::set_client_ip(const std::string & ip)
+{
+    _ip = ip;
 }
 
 nlohmann::json HttpRequest::content_as_json() const

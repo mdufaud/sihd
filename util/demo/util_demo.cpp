@@ -88,7 +88,7 @@ void fs()
         SIHD_LOG(info, "exists: {}", fs::exists(tmp));
         SIHD_LOG(info, "is_file: {}", fs::is_file(tmp));
         SIHD_LOG(info, "is_dir: {}", fs::is_dir(tmp));
-        SIHD_LOG(info, "filesize: {}", fs::filesize(tmp));
+        SIHD_LOG(info, "file_size: {}", fs::file_size(tmp));
         SIHD_LOG(info, "last_write: {}", fs::last_write(tmp).local_str());
         SIHD_LOG(info, "is_readable: {}", fs::is_readable(tmp));
         SIHD_LOG(info, "is_writable: {}", fs::is_writable(tmp));

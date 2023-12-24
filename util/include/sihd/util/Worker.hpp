@@ -21,10 +21,13 @@ class Worker: protected IRunnable,
               public Configurable
 {
     public:
-        Worker(IRunnable *runnable = nullptr);
+        Worker();
+        Worker(IRunnable *runnable);
+        Worker(std::function<bool()> method);
         virtual ~Worker();
 
         void set_worker_detach(bool active);
+        virtual void set_method(std::function<bool()> method);
         virtual void set_runnable(IRunnable *runnable);
         virtual bool start_worker(std::string_view name);
         virtual bool start_sync_worker(std::string_view name);
@@ -41,7 +44,7 @@ class Worker: protected IRunnable,
 
     private:
         std::string _worker_thread_name;
-        IRunnable *_runnable_ptr;
+        std::function<bool()> _run_method;
 
         std::atomic<bool> _started;
         std::atomic<bool> _running;

@@ -15,7 +15,9 @@ class StepWorker: public Worker,
                   protected ISteppable
 {
     public:
-        StepWorker(IRunnable *runnable = nullptr);
+        StepWorker();
+        StepWorker(IRunnable *runnable);
+        StepWorker(std::function<bool()> method);
         virtual ~StepWorker();
 
         bool set_frequency(double freq);
