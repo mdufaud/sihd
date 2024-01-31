@@ -13,15 +13,19 @@ using SplitterDelimiterMethod = std::function<int(int)>;
 
 struct SplitterOptions
 {
+        int escape_char = '\\';
+        // choose one of the three delimiter types
         int delimiter_char = 0;
+        // choose one of the three delimiter types
         std::string_view delimiter_str = "";
+        // choose one of the three delimiter types
         SplitterDelimiterMethod delimiter_method = {};
 
         std::string_view open_escape_sequences = "";
         bool empty_delimitations = false;
 
         static SplitterDelimiterMethod delimiter_spaces();
-        static std::string_view all_open_escape_sequences();
+        static std::string_view all_encloses();
 
         static SplitterOptions none() { return SplitterOptions {}; }
 };
@@ -37,14 +41,15 @@ class Splitter
 
         void set_delimiter_method(SplitterDelimiterMethod method);
 
-        bool set_empty_delimitations(bool active);
-        bool set_delimiter_char(int delimiter);
-        bool set_delimiter(std::string_view delimiter);
+        void set_escape_char(int escape_char);
+        void set_empty_delimitations(bool active);
+        void set_delimiter_char(int delimiter);
+        void set_delimiter(std::string_view delimiter);
         // uses std::isspace as a delimiter method
-        bool set_delimiter_spaces();
-        bool set_open_escape_sequences(std::string_view sequences);
-        // uses sihd::util::str::all_open_escape_sequences to handle escape sequences
-        bool set_escape_sequences_all();
+        void set_delimiter_spaces();
+        void set_open_escape_sequences(std::string_view sequences);
+        // uses sihd::util::str::encloses_start to handle escape sequences
+        void set_escape_sequences_all();
 
         std::vector<std::string> split(std::string_view str) const;
         std::vector<std::string_view> split_view(std::string_view str) const;
@@ -60,6 +65,7 @@ class Splitter
         // return the size of the delimiter matching the string c or -1
         int _get_delimiter_offset(const char *c) const;
 
+        int _escape_char;
         // if two delimiters must make an empty token
         bool _empty_delimitations;
         // a delimiter string to split on

@@ -62,7 +62,7 @@ TEST_F(TestSshSession, test_sshsession_auth_interactive_keyboard)
     std::string user;
     std::cout << "User: ";
     fflush(stdout);
-    if (LineReader::fast_read_line(user, stdin) == false || user.empty())
+    if (LineReader::fast_read_stdin(user) == false || user.empty())
         GTEST_SKIP_("no user input");
     SIHD_LOG(info, "Connection to {}@{}", user, host);
     SshSession session;

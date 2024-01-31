@@ -2,6 +2,7 @@
 #define __SIHD_UTIL_ALOGFILTERER_HPP__
 
 #include <list>
+#include <mutex>
 
 #include <sihd/util/ILoggerFilter.hpp>
 #include <sihd/util/LogInfo.hpp>
@@ -15,13 +16,14 @@ class ALogFilterer
         ALogFilterer();
         virtual ~ALogFilterer();
 
-        bool has_filter(ILoggerFilter *filter);
+        bool has_filter(ILoggerFilter *filter) const;
         bool add_filter(ILoggerFilter *filter);
         bool remove_filter(ILoggerFilter *filter);
 
         template <typename T>
         bool remove_filter_type()
         {
+            std::lock_guard<std::mutex> l(_mutex);
             T *filtercast;
             bool found = false;
             auto it = _filters_lst.begin();
@@ -39,11 +41,11 @@ class ALogFilterer
         }
 
         void delete_filters();
-        bool should_filter(const LogInfo & info, std::string_view msg);
+        bool should_filter(const LogInfo & info, std::string_view msg) const;
 
     private:
-        std::list<ILoggerFilter *>::iterator _find(ILoggerFilter *filter);
         std::list<ILoggerFilter *> _filters_lst;
+        mutable std::mutex _mutex;
 };
 
 } // namespace sihd::util

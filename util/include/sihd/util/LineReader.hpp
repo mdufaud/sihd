@@ -10,13 +10,27 @@ namespace sihd::util
 class LineReader: public sihd::util::IReader
 {
     public:
-        LineReader();
-        LineReader(std::string_view path);
-        LineReader(int fd);
-        LineReader(FILE *stream, bool ownership);
+        struct LineReaderOptions
+        {
+                size_t read_buffsize = 4096;
+                size_t line_buffsize = 512;
+                bool delimiter_in_line = false;
+                int delimiter = '\n';
+
+                static LineReaderOptions none() { return LineReaderOptions {}; }
+        };
+
+        LineReader(const LineReaderOptions & options = LineReaderOptions::none());
+        LineReader(std::string_view path, const LineReaderOptions & options = LineReaderOptions::none());
+        LineReader(int fd, const LineReaderOptions & options = LineReaderOptions::none());
+        LineReader(FILE *stream, bool ownership, const LineReaderOptions & options = LineReaderOptions::none());
         virtual ~LineReader();
 
-        static bool fast_read_line(std::string & line, FILE *stream = stdin, size_t buffsize = 1);
+        static bool fast_read_line(std::string & line,
+                                   FILE *stream = stdin,
+                                   const LineReaderOptions & options = LineReaderOptions::none());
+
+        static bool fast_read_stdin(std::string & line, LineReaderOptions options = LineReaderOptions::none());
 
         bool set_read_buffsize(size_t buffsize);
         bool set_line_buffsize(size_t buffsize);

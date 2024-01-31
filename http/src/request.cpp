@@ -1,7 +1,7 @@
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
-#include <sihd/http/HttpSender.hpp>
+#include <sihd/http/request.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/Logger.hpp>
@@ -270,7 +270,7 @@ struct CurlRequest
 
 using namespace sihd::util;
 
-std::optional<HttpResponse> HttpSender::get(std::string_view url, const CurlOptions & options)
+std::optional<HttpResponse> get(std::string_view url, const CurlOptions & options)
 {
     CurlRequest curl;
 
@@ -282,14 +282,13 @@ std::optional<HttpResponse> HttpSender::get(std::string_view url, const CurlOpti
     }
     catch (const std::runtime_error & error)
     {
-        SIHD_LOG(error, "HttpResponse: GET request {}", error.what());
+        SIHD_LOG(error, "GET request {}", error.what());
     }
 
     return std::nullopt;
 }
 
-std::optional<HttpResponse>
-    HttpSender::post(std::string_view url, sihd::util::ArrCharView data_view, const CurlOptions & options)
+std::optional<HttpResponse> post(std::string_view url, sihd::util::ArrCharView data_view, const CurlOptions & options)
 {
     CurlRequest curl;
 
@@ -311,14 +310,13 @@ std::optional<HttpResponse>
     }
     catch (const std::runtime_error & error)
     {
-        SIHD_LOG(error, "HttpResponse: POST request {}", error.what());
+        SIHD_LOG(error, "POST request {}", error.what());
     }
 
     return std::nullopt;
 }
 
-std::optional<HttpResponse>
-    HttpSender::put(std::string_view url, std::string_view file_path, const CurlOptions & options)
+std::optional<HttpResponse> put(std::string_view url, std::string_view file_path, const CurlOptions & options)
 {
     CurlRequest curl;
 
@@ -339,13 +337,13 @@ std::optional<HttpResponse>
     }
     catch (const std::runtime_error & error)
     {
-        SIHD_LOG(error, "HttpResponse: PUT request {}", error.what());
+        SIHD_LOG(error, "PUT request {}", error.what());
     }
 
     return std::nullopt;
 }
 
-std::optional<HttpResponse> HttpSender::del(std::string_view url, const CurlOptions & options)
+std::optional<HttpResponse> del(std::string_view url, const CurlOptions & options)
 {
     CurlRequest curl;
 
@@ -357,7 +355,7 @@ std::optional<HttpResponse> HttpSender::del(std::string_view url, const CurlOpti
     }
     catch (const std::runtime_error & error)
     {
-        SIHD_LOG(error, "HttpResponse: DELETE request {}", error.what());
+        SIHD_LOG(error, "DELETE request {}", error.what());
     }
 
     return std::nullopt;

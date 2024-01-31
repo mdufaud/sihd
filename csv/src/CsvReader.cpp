@@ -7,39 +7,47 @@
 namespace sihd::csv
 {
 
-SIHD_UTIL_REGISTER_FACTORY(CsvReader)
-
 SIHD_NEW_LOGGER("sihd::csv");
 
-CsvReader::CsvReader(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
+using namespace sihd::util;
+
+namespace
 {
-    _line_size = 0;
-    _line_ptr = nullptr;
+
+int count_unescaped_quotes(std::string_view view)
+{
+    int idx = 0;
+    int count = 0;
+
+    while (view.size() > 0)
+    {
+        idx = str::find_char_not_escaped(view.data(), '"', '"');
+        if (idx < 0)
+            break;
+        view = view.substr(idx + 1);
+        ++count;
+    }
+
+    return count;
+}
+
+} // namespace
+
+CsvReader::CsvReader()
+{
+    this->_reset_line();
+
     _comment = '#';
+
     _splitter.set_delimiter(",");
     _splitter.set_empty_delimitations(true);
-    _file.set_no_buffering();
-    this->add_conf("quote", &CsvReader::set_quote_value);
-    this->add_conf("delimiter", &CsvReader::set_delimiter);
-    this->add_conf("comment", &CsvReader::set_commentary);
+    _splitter.set_open_escape_sequences("\"");
+
+    _line_reader.set_read_buffsize(4096);
+    _line_reader.set_delimiter_in_line(true);
 }
 
-CsvReader::~CsvReader()
-{
-    this->_free_line();
-}
-
-bool CsvReader::set_quote_value(int c)
-{
-    if (sihd::util::str::closing_escape_of(c) < 0)
-    {
-        SIHD_LOG(error, "CsvReader: quote character '{}' is not supported", c);
-        return false;
-    }
-    _quote = c;
-    _splitter.set_open_escape_sequences((char *)&c);
-    return true;
-}
+CsvReader::~CsvReader() {}
 
 bool CsvReader::set_delimiter(int c)
 {
@@ -48,7 +56,8 @@ bool CsvReader::set_delimiter(int c)
         SIHD_LOG(error, "CsvReader: delimiter is not a printable character");
         return false;
     }
-    _splitter.set_delimiter((char *)&c);
+    _delimiter = c;
+    _splitter.set_delimiter((char *)&_delimiter);
     return true;
 }
 
@@ -63,73 +72,133 @@ bool CsvReader::set_commentary(int c)
     return false;
 }
 
+void CsvReader::set_timestamp_col(size_t n)
+{
+    _timestamp_col = n;
+}
+
+void CsvReader::set_timestamp_format(std::string format)
+{
+    _timestamp_fmt = std::move(format);
+}
+
 bool CsvReader::open(std::string_view path)
 {
-    return _file.open(path, "r");
+    this->_reset_line();
+    return _line_reader.open(path);
 }
 
 bool CsvReader::is_open() const
 {
-    return _file.is_open();
+    return _line_reader.is_open();
 }
 
 bool CsvReader::close()
 {
-    return _file.close();
+    this->_reset_line();
+    return _line_reader.close();
 }
 
-void CsvReader::_free_line()
+void CsvReader::_reset_line()
 {
-    if (_line_ptr != nullptr)
-    {
-        free(_line_ptr);
-        _line_ptr = nullptr;
-        _line_size = 0;
-    }
+    _has_data = false;
+    _line.clear();
+    _csv_cols.clear();
 }
 
 bool CsvReader::read_next()
 {
-    if (_file.eof())
-        return false;
-    ssize_t ret;
-    while ((ret = _file.read_line(&_line_ptr, &_line_size)) > 0)
+    this->_reset_line();
+    while (_line_reader.read_next())
     {
-        if (_line_ptr[0] != _comment && _line_ptr[0] != '\n')
+        ArrCharView view;
+        _line_reader.get_read_data(view);
+
+        // always empty lines
+        if (view.empty())
+            continue;
+
+        const bool searching_for_end_quote = _line.empty() == false;
+        const bool is_commentary = !searching_for_end_quote && view[0] == _comment;
+        const bool is_unecessary_spaces = !searching_for_end_quote && str::is_all_spaces(view);
+
+        // skip spaces or linefeed only if we are not searching for an end quote
+        if (is_commentary || is_unecessary_spaces)
+            continue;
+
+        _line += view.data();
+
+        const bool number_of_quotes_are_odd = count_unescaped_quotes(view) % 2;
+        const bool quotes_are_even = searching_for_end_quote ? number_of_quotes_are_odd : !number_of_quotes_are_odd;
+
+        if (quotes_are_even)
         {
-            _line_ptr[ret - 1] = 0;
-            break;
+            // remove last linefeed
+            _line[_line.size() - 1] = 0;
+            _has_data = true;
+            return true;
         }
     }
-    // ret < 0 can mean an end of file
-    if (ret < 0 && errno > 0)
-        SIHD_LOG(error, "CsvReader: read error: {}", strerror(errno));
-    return ret >= 0;
+    return false;
 }
 
 bool CsvReader::get_read_data(sihd::util::ArrCharView & view) const
 {
-    if (_line_ptr == nullptr)
+    if (_has_data == false)
         return false;
-    view = {_line_ptr, _line_size};
+    view = _line;
     return true;
 }
 
-bool CsvReader::read_timestamp(time_t *nano_timestamp) const
+bool CsvReader::get_read_timestamp(time_t *nano_timestamp) const
 {
-    if (_line_ptr == nullptr)
+    if (_has_data == false || _timestamp_col < 0)
         return false;
-    int offset = _line_size > 0 && _quote > 0 && _line_ptr[0] == _quote ? 1 : 0;
-    std::string str = _line_ptr + offset;
-    return sihd::util::str::to_long(str, (long *)nano_timestamp);
+
+    const auto & columns = this->columns();
+
+    if ((int)columns.size() < _timestamp_col)
+    {
+        return false;
+    }
+
+    const auto & time_str = columns.at(_timestamp_col);
+
+    if (_timestamp_fmt.empty())
+    {
+        return sihd::util::str::to_long(time_str, (long *)nano_timestamp);
+    }
+    else
+    {
+        auto opt_timestamp = Timestamp::from_str(time_str, _timestamp_fmt);
+        if (opt_timestamp)
+        {
+            *nano_timestamp = opt_timestamp->nanoseconds();
+            return true;
+        }
+        else
+        {
+            SIHD_LOG(error,
+                     "CsvReader: cannot process timestamp value '{}' with format '{}'",
+                     _timestamp_fmt,
+                     time_str);
+        }
+    }
+
+    return false;
 }
 
-bool CsvReader::get_read_data(std::vector<std::string> & values) const
+const std::vector<std::string> & CsvReader::columns() const
 {
-    if (_line_ptr == nullptr)
-        return false;
-    values = _splitter.split(_line_ptr);
-    return true;
+    if (_has_data && _csv_cols.empty())
+    {
+        _csv_cols = _splitter.split(_line);
+        for (auto & col : _csv_cols)
+        {
+            col = str::remove_escape_char(col, '"');
+        }
+    }
+    return _csv_cols;
 }
 
 } // namespace sihd::csv

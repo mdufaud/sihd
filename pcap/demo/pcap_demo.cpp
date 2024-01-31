@@ -90,6 +90,5 @@ int main()
     if (sihd::util::os::is_windows)
         sihd::util::time::sleep(5);
 
-    sihd::util::LoggerManager::clear_loggers();
     return 0;
 }

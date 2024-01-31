@@ -226,7 +226,7 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
             {
                 fmt::print(prompt);
                 std::string answer;
-                sihd::util::LineReader::fast_read_line(answer, stdin, 4096);
+                sihd::util::LineReader::fast_read_stdin(answer);
                 if (ssh_userauth_kbdint_setanswer(_ssh_session_ptr, i, answer.c_str()) < 0)
                     return AuthState(SSH_AUTH_ERROR);
             }

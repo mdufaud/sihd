@@ -26,9 +26,9 @@ struct TaskOptions
 class Task: public IRunnable
 {
     public:
-        Task(TaskOptions options = TaskOptions::none());
-        Task(IRunnable *to_run, TaskOptions options = TaskOptions::none());
-        Task(std::function<bool(void)> fun, TaskOptions options = TaskOptions::none());
+        Task(const TaskOptions & options = TaskOptions::none());
+        Task(IRunnable *to_run, const TaskOptions & options = TaskOptions::none());
+        Task(std::function<bool(void)> fun, const TaskOptions & options = TaskOptions::none());
         virtual ~Task();
 
         bool run();

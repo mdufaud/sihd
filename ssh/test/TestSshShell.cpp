@@ -38,9 +38,9 @@ TEST_F(TestSshShell, test_sshshell_interactive)
 
     SshShell shell = session.make_shell();
     ASSERT_TRUE(shell.open(true));
-    SIHD_COUT("=========================================================");
+    SIHD_COUT("=========================================================\n");
     SIHD_LOG(debug, "Shell opened: type 'exit' to exit session");
-    SIHD_COUT("=========================================================");
+    SIHD_COUT("=========================================================\n");
     ASSERT_TRUE(shell.read_loop());
 }
 } // namespace test

@@ -77,6 +77,7 @@ class File
         bool write_char_unlocked(int c);
 
         ssize_t read(char *buf, size_t size);
+        ssize_t read(std::string & str);
         ssize_t read(IArray & array);
 
         // getline allocates line and you have to free it

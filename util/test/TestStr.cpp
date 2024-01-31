@@ -157,6 +157,38 @@ TEST_F(TestStr, test_str_base)
     EXPECT_EQ(str::to_hex(283654106644), "420b1a2e14");
 }
 
+TEST_F(TestStr, test_str_find_escape)
+{
+    EXPECT_EQ(str::find_char_not_escaped("hello ?", '?'), 6);
+    EXPECT_EQ(str::find_char_not_escaped("hello \\?", '?'), -1);
+    EXPECT_EQ(str::find_char_not_escaped("hello \\\\?", '?'), 8);
+    EXPECT_EQ(str::find_char_not_escaped("hello \\??", '?'), 8);
+    EXPECT_EQ(str::find_char_not_escaped("hello \\? ?", '?'), 9);
+    EXPECT_EQ(str::find_char_not_escaped("\\??", '?'), 2);
+    EXPECT_EQ(str::find_char_not_escaped("\\", '?'), -1);
+    EXPECT_EQ(str::find_char_not_escaped("", ' '), -1);
+}
+
+TEST_F(TestStr, test_str_find_enclose)
+{
+    EXPECT_EQ(str::find_str_not_enclosed("hello world", "world"), 6);
+    EXPECT_EQ(str::find_str_not_enclosed("hello world", ""), 0);
+    EXPECT_EQ(str::find_str_not_enclosed("hello world", "h"), 0);
+    EXPECT_EQ(str::find_str_not_enclosed("hello world", "e"), 1);
+
+    EXPECT_EQ(str::find_str_not_enclosed("hello world", "z"), -1);
+    EXPECT_EQ(str::find_str_not_enclosed("hello world", "world2"), -1);
+
+    EXPECT_EQ(str::find_str_not_enclosed("hello 'world'", "world", "'"), -1);
+    EXPECT_EQ(str::find_str_not_enclosed("hello [world] world", "world", "["), 14);
+    EXPECT_EQ(str::find_str_not_enclosed("hello {world} world", "world", "{"), 14);
+
+    EXPECT_EQ(str::find_str_not_enclosed("hello {world} world", "world2", "{"), -1);
+
+    EXPECT_EQ(str::find_str_not_enclosed("hello world\n", "\n"), 11);
+    EXPECT_EQ(str::find_str_not_enclosed("hello [world\n", "\n", "["), -1);
+}
+
 TEST_F(TestStr, test_str_remove_escape_char)
 {
     std::string escaped = str::remove_escape_char("\\hello\\ world");
@@ -172,17 +204,17 @@ TEST_F(TestStr, test_str_remove_escape_char)
 
 TEST_F(TestStr, test_str_remove_escape_sequences)
 {
-    std::string escaped = str::remove_escape_sequences("'hello world'");
+    std::string escaped = str::remove_enclosing("'hello world'");
     EXPECT_EQ(escaped, "hello world");
     EXPECT_EQ(escaped.size(), strlen("hello world"));
 
-    escaped = str::remove_escape_sequences("'hello '(world)'");
+    escaped = str::remove_enclosing("'hello '(world)'");
     EXPECT_EQ(escaped, "hello world");
-    escaped = str::remove_escape_sequences("hello ''([world])");
+    escaped = str::remove_enclosing("hello ''([world])");
     EXPECT_EQ(escaped, "hello [world]");
-    escaped = str::remove_escape_sequences("\\'hello \\'world");
+    escaped = str::remove_enclosing("\\'hello \\'world");
     EXPECT_EQ(escaped, "\\'hello \\'world");
-    escaped = str::remove_escape_sequences("");
+    escaped = str::remove_enclosing("");
     EXPECT_EQ(escaped, "");
 }
 
@@ -244,26 +276,26 @@ TEST_F(TestStr, test_str_time2str)
 
 TEST_F(TestStr, test_str_escapes)
 {
-    EXPECT_TRUE(str::is_escape_sequence_open('"'));
-    EXPECT_TRUE(str::is_escape_sequence_open('\''));
-    EXPECT_TRUE(str::is_escape_sequence_open('{'));
-    EXPECT_TRUE(str::is_escape_sequence_open('('));
-    EXPECT_TRUE(str::is_escape_sequence_open('['));
-    EXPECT_TRUE(str::is_escape_sequence_open('<'));
+    EXPECT_TRUE(str::is_char_enclose_start('"'));
+    EXPECT_TRUE(str::is_char_enclose_start('\''));
+    EXPECT_TRUE(str::is_char_enclose_start('{'));
+    EXPECT_TRUE(str::is_char_enclose_start('('));
+    EXPECT_TRUE(str::is_char_enclose_start('['));
+    EXPECT_TRUE(str::is_char_enclose_start('<'));
 
-    EXPECT_TRUE(str::is_escape_sequence_close('"'));
-    EXPECT_TRUE(str::is_escape_sequence_close('\''));
-    EXPECT_TRUE(str::is_escape_sequence_close('}'));
-    EXPECT_TRUE(str::is_escape_sequence_close(')'));
-    EXPECT_TRUE(str::is_escape_sequence_close(']'));
-    EXPECT_TRUE(str::is_escape_sequence_close('>'));
+    EXPECT_TRUE(str::is_char_enclose_stop('"'));
+    EXPECT_TRUE(str::is_char_enclose_stop('\''));
+    EXPECT_TRUE(str::is_char_enclose_stop('}'));
+    EXPECT_TRUE(str::is_char_enclose_stop(')'));
+    EXPECT_TRUE(str::is_char_enclose_stop(']'));
+    EXPECT_TRUE(str::is_char_enclose_stop('>'));
 
-    EXPECT_EQ(str::closing_escape_of('"'), '"');
-    EXPECT_EQ(str::closing_escape_of('\''), '\'');
-    EXPECT_EQ(str::closing_escape_of('{'), '}');
-    EXPECT_EQ(str::closing_escape_of('('), ')');
-    EXPECT_EQ(str::closing_escape_of('['), ']');
-    EXPECT_EQ(str::closing_escape_of('<'), '>');
+    EXPECT_EQ(str::stopping_enclose_of('"'), '"');
+    EXPECT_EQ(str::stopping_enclose_of('\''), '\'');
+    EXPECT_EQ(str::stopping_enclose_of('{'), '}');
+    EXPECT_EQ(str::stopping_enclose_of('('), ')');
+    EXPECT_EQ(str::stopping_enclose_of('['), ']');
+    EXPECT_EQ(str::stopping_enclose_of('<'), '>');
 
     // \[hello  index[1] is '[' and escaped
     EXPECT_TRUE(str::is_escaped_char("\\[hello", 1));
@@ -442,6 +474,10 @@ TEST_F(TestStr, test_str_trim)
     EXPECT_EQ(str::trim("h"), "h");
     EXPECT_EQ(str::trim("h "), "h");
     EXPECT_EQ(str::trim(" h"), "h");
+    EXPECT_EQ(str::ltrim("     h"), "h");
+    EXPECT_EQ(str::ltrim("     h "), "h ");
+    EXPECT_EQ(str::rtrim("h       "), "h");
+    EXPECT_EQ(str::rtrim(" h       "), " h");
     EXPECT_EQ(str::trim(" \t hello  world      \t "), "hello  world");
 }
 

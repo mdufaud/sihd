@@ -9,6 +9,9 @@
 namespace sihd::util
 {
 
+// These functions convert the byte encoding of integer values from the byte order that the current CPU (the "host")
+// uses, to and from little-endian and big-endian byte order.
+
 class Endian
 {
     private:
@@ -40,7 +43,7 @@ class Endian
         template <typename T>
         static T swap(T value);
 
-        /* Convert to native endianness */
+        /* Convert from little or big-endian order to host byte order */
 
         template <typename T, Endianness Endian>
         static T convert(T from)
@@ -58,7 +61,7 @@ class Endian
             return value;
         }
 
-        /* Convert from native to endianness */
+        /* Convert from host byte order to little or big-endian order */
 
         template <typename T>
         static T convert_from(T value, Endianness endian)
@@ -72,7 +75,7 @@ class Endian
 
         // error if trying to convert from non defined templates
         template <typename T, Endianness Endian>
-        static T convert_from(T from);
+        static T convert_from(T value);
 };
 
 template <>
@@ -93,6 +96,8 @@ float Endian::swap<float>(float ret);
 
 template <>
 double Endian::swap<double>(double ret);
+
+// convert from little or big-endian order to host byte order.
 
 template <>
 uint16_t Endian::convert<uint16_t, Endian::LITTLE>(uint16_t value);
@@ -120,6 +125,8 @@ template <>
 int64_t Endian::convert<int64_t, Endian::LITTLE>(int64_t value);
 template <>
 int64_t Endian::convert<int64_t, Endian::BIG>(int64_t value);
+
+// convert from host byte order to little or big-endian order
 
 template <>
 uint16_t Endian::convert_from<uint16_t, Endian::LITTLE>(uint16_t value);

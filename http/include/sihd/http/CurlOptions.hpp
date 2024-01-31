@@ -1,5 +1,5 @@
-#ifndef __SIHD_HTTP_HTTPOPTIONS_HPP__
-#define __SIHD_HTTP_HTTPOPTIONS_HPP__
+#ifndef __SIHD_HTTP_CURLOPTIONS_HPP__
+#define __SIHD_HTTP_CURLOPTIONS_HPP__
 
 #include <cstdint>
 #include <functional>
@@ -35,7 +35,7 @@ struct CurlOptions
         std::optional<CurlFileOptions> file = {};
         std::map<std::string, std::string> form_parameters = {};
 
-        // double dltotal, double dlnow, double ultotal, double ulnow
+        // long dltotal, long dlnow, long ultotal, long ulnow
         // dltotal is the total number of bytes libcurl expects to download in this transfer.
         // dlnow is the number of bytes downloaded so far.
         // ultotal is the total number of bytes libcurl expects to upload in this transfer.

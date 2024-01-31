@@ -1,5 +1,5 @@
-#include <algorithm>
 #include <sihd/util/ALogFilterer.hpp>
+#include <sihd/util/container.hpp>
 
 namespace sihd::util
 {
@@ -11,31 +11,27 @@ ALogFilterer::~ALogFilterer()
     this->delete_filters();
 }
 
-bool ALogFilterer::has_filter(ILoggerFilter *filter)
+bool ALogFilterer::has_filter(ILoggerFilter *filter) const
 {
-    return std::find(_filters_lst.begin(), _filters_lst.end(), filter) != _filters_lst.end();
+    std::lock_guard<std::mutex> l(_mutex);
+    return container::contains(_filters_lst, filter);
 }
 
 bool ALogFilterer::add_filter(ILoggerFilter *filter)
 {
-    bool has = this->has_filter(filter);
-    if (!has)
-        _filters_lst.push_back(filter);
-    return !has;
+    std::lock_guard<std::mutex> l(_mutex);
+    return container::emplace_back_unique(_filters_lst, filter);
 }
 
 bool ALogFilterer::remove_filter(ILoggerFilter *filter)
 {
-    auto it = this->_find(filter);
-    if (it != _filters_lst.end())
-    {
-        _filters_lst.erase(it);
-    }
-    return it != _filters_lst.end();
+    std::lock_guard<std::mutex> l(_mutex);
+    return container::erase(_filters_lst, filter);
 }
 
 void ALogFilterer::delete_filters()
 {
+    std::lock_guard<std::mutex> l(_mutex);
     for (ILoggerFilter *filter : _filters_lst)
     {
         delete filter;
@@ -43,19 +39,15 @@ void ALogFilterer::delete_filters()
     _filters_lst.clear();
 }
 
-bool ALogFilterer::should_filter(const LogInfo & info, std::string_view msg)
+bool ALogFilterer::should_filter(const LogInfo & info, std::string_view msg) const
 {
+    std::lock_guard<std::mutex> l(_mutex);
     for (ILoggerFilter *filter : _filters_lst)
     {
         if (filter->filter(info, msg))
             return true;
     }
     return false;
-}
-
-std::list<ILoggerFilter *>::iterator ALogFilterer::_find(ILoggerFilter *filter)
-{
-    return std::find(_filters_lst.begin(), _filters_lst.end(), filter);
 }
 
 } // namespace sihd::util

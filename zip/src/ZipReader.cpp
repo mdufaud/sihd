@@ -180,7 +180,7 @@ bool ZipReader::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-bool ZipReader::read_timestamp(time_t *nano_timestamp) const
+bool ZipReader::get_read_timestamp(time_t *nano_timestamp) const
 {
     if (_zip_ptr == nullptr)
         return false;

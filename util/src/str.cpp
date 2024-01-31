@@ -6,6 +6,7 @@
 #include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
 #include <cstdarg>
 #include <mutex>
+#include <random>
 #include <sstream>
 
 #include <fmt/format.h>
@@ -74,21 +75,6 @@ std::string _timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, b
 }
 
 } // namespace
-
-const char *escapes_open()
-{
-    return "\"'[({<";
-}
-
-const char *escapes_close()
-{
-    return "\"'])}>";
-}
-
-char escape_char()
-{
-    return '\\';
-}
 
 void append_sep(std::string & str, std::string_view append, std::string_view sep)
 {
@@ -161,16 +147,31 @@ std::string format(std::string_view format, ...)
     return str;
 }
 
-std::string trim(std::string_view s)
+bool is_all_spaces(std::string_view s)
+{
+    return std::all_of(s.begin(), s.end(), isspace);
+}
+
+std::string_view rtrim(std::string_view s)
+{
+    size_t j = s.size();
+    while (j > 0 && std::isspace(s[--j]))
+        ;
+    return s.substr(0, j + 1);
+}
+
+std::string_view ltrim(std::string_view s)
 {
     size_t len = s.size();
     size_t i = 0;
     while (i < len && std::isspace(s[i]))
         ++i;
-    size_t j = len;
-    while (j > 0 && std::isspace(s[--j]))
-        ;
-    return std::string(s.substr(i, j - i + 1));
+    return s.substr(i);
+}
+
+std::string_view trim(std::string_view s)
+{
+    return ltrim(rtrim(s));
 }
 
 std::string & to_upper(std::string & s)
@@ -605,63 +606,74 @@ bool convert_from_string<double>(std::string_view str, double & value, [[maybe_u
     return ret;
 }
 
-bool is_escape_sequence_open(int c, const char *authorized_open_escape_sequences)
+bool is_char_enclose_start(int c, const char *authorized_start_enclose)
 {
-    const char *search_in
-        = authorized_open_escape_sequences == nullptr ? escapes_open() : authorized_open_escape_sequences;
-    return c > 0 && strchr(search_in, c) != nullptr;
+    return c > 0 && strchr(authorized_start_enclose, c) != nullptr;
 }
 
-bool is_escape_sequence_close(int c, const char *authorized_close_escape_sequences)
+bool is_char_enclose_stop(int c, const char *authorized_stop_enclose)
 {
-    const char *search_in
-        = authorized_close_escape_sequences == nullptr ? escapes_close() : authorized_close_escape_sequences;
-    return c > 0 && strchr(search_in, c) != nullptr;
+    return c > 0 && strchr(authorized_stop_enclose, c) != nullptr;
 }
 
-int closing_escape_of(int c)
+int stopping_enclose_of(int c)
 {
-    const char *open_esc = strchr(escapes_open(), c);
+    const char *open_esc = strchr(encloses_start(), c);
     if (open_esc != nullptr)
     {
-        size_t idx = open_esc - escapes_open();
-        return escapes_close()[idx];
+        size_t idx = open_esc - encloses_start();
+        return encloses_stop()[idx];
     }
     return -1;
 }
 
-bool is_escaped_char(const char *str, int index)
+bool is_escaped_char(const char *str, int index, int escape)
 {
-    if (index > 0 && str[index - 1] == escape_char())
+    if (index > 0 && str[index - 1] == escape)
     {
         // if escaped - the escape should not be escaped itself
-        if ((index - 2) < 0 || str[index - 2] != escape_char())
+        if ((index - 2) < 0 || str[index - 2] != escape)
             return true;
     }
     return false;
 }
 
-int closing_escape_index(const char *str, int index, const char *authorized_open_escape_sequences)
+int find_char_not_escaped(const char *str, int char_to_find, int escape)
+{
+    const char *find = str;
+    size_t diff = 0;
+
+    while ((find = strchr(find, char_to_find)) != nullptr)
+    {
+        diff = (size_t)(find - str);
+        if (is_escaped_char(str, diff, escape) == false)
+            return diff;
+        ++find;
+    }
+    return -1;
+}
+
+int stopping_enclose_index(const char *str, int index, const char *authorized_start_enclose, int escape)
 {
     int open_esc = str[index];
-    if (authorized_open_escape_sequences != nullptr && strchr(authorized_open_escape_sequences, open_esc) == nullptr)
+    if (authorized_start_enclose != nullptr && strchr(authorized_start_enclose, open_esc) == nullptr)
         return -1;
-    int close_esc = closing_escape_of(open_esc);
+    int close_esc = stopping_enclose_of(open_esc);
     if (close_esc < 0)
         return -1;
-    if (is_escaped_char(str, index))
+    if (is_escaped_char(str, index, escape))
         return -1;
     int i = index + 1;
     while (str[i])
     {
-        if (str[i] == close_esc && is_escaped_char(str, i) == false)
+        if (str[i] == close_esc && is_escaped_char(str, i, escape) == false)
             return i + 1;
         ++i;
     }
     return -2;
 }
 
-std::string remove_escape_char(std::string_view str)
+std::string remove_escape_char(std::string_view str, int escape)
 {
     std::string ret;
     const char *cstr = str.data();
@@ -672,7 +684,7 @@ std::string remove_escape_char(std::string_view str)
 
     while (i < len)
     {
-        if (cstr[i] == '\\')
+        if (cstr[i] == escape)
         {
             ++count_escapes;
             ++i;
@@ -683,7 +695,7 @@ std::string remove_escape_char(std::string_view str)
     i = 0;
     while (i < len)
     {
-        if (cstr[i] == '\\')
+        if (cstr[i] == escape)
             ++i;
         if (i < len)
         {
@@ -695,7 +707,7 @@ std::string remove_escape_char(std::string_view str)
     return ret;
 }
 
-std::string remove_escape_sequences(std::string_view str, const char *authorized_open_escape_sequences)
+std::string remove_enclosing(std::string_view str, const char *authorized_start_enclose, int escape)
 {
     const char *cstr = str.data();
     std::string ret;
@@ -708,10 +720,10 @@ std::string remove_escape_sequences(std::string_view str, const char *authorized
 
     while (i < len)
     {
-        if (!in_seq && is_escape_sequence_open(cstr[i], authorized_open_escape_sequences)
-            && is_escaped_char(cstr, i) == false)
+        if (!in_seq && is_char_enclose_start(cstr[i], authorized_start_enclose)
+            && is_escaped_char(cstr, i, escape) == false)
         {
-            current_seq = closing_escape_of(cstr[i]);
+            current_seq = stopping_enclose_of(cstr[i]);
             ++count_sequences;
             in_seq = true;
         }
@@ -727,10 +739,10 @@ std::string remove_escape_sequences(std::string_view str, const char *authorized
     in_seq = false;
     while (i < len)
     {
-        if (!in_seq && is_escape_sequence_open(cstr[i], authorized_open_escape_sequences)
-            && is_escaped_char(cstr, i) == false)
+        if (!in_seq && is_char_enclose_start(cstr[i], authorized_start_enclose)
+            && is_escaped_char(cstr, i, escape) == false)
         {
-            current_seq = closing_escape_of(cstr[i]);
+            current_seq = stopping_enclose_of(cstr[i]);
             ++i;
             in_seq = true;
         }
@@ -747,6 +759,36 @@ std::string remove_escape_sequences(std::string_view str, const char *authorized
         }
     }
     return ret;
+}
+
+int find_str_not_enclosed(std::string_view origin,
+                          std::string_view to_find,
+                          const char *authorized_start_enclose,
+                          int escape)
+{
+    size_t i = 0;
+    while (i < origin.size())
+    {
+        int closed_at = stopping_enclose_index(origin.data(), i, authorized_start_enclose, escape);
+        if (closed_at > 0)
+        {
+            // matched closure - skip it
+            i = closed_at;
+        }
+        else if (closed_at == -2)
+        {
+            // never ends - not possible to find a string not escaped here
+            return -1;
+        }
+        else
+        {
+            // not a closing escape
+            if (origin.compare(i, to_find.size(), to_find) == 0)
+                return i;
+            ++i;
+        }
+    }
+    return -1;
 }
 
 std::string timeoffset_str(Timestamp timestamp, bool total_parenthesis, bool nano_resolution)
@@ -921,6 +963,22 @@ std::string word_wrap(std::string_view s, size_t width, bool append_hyphen)
         ++i;
     }
     return ret;
+}
+
+std::string generate_random(size_t size)
+{
+    static const char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n\t ()[]{}'123456789!@#$%^&*_+";
+
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_int_distribution<uint64_t> dist(0, sizeof(charset) - 1);
+
+    std::string str;
+    str.resize(size);
+    for (size_t i = 0; i < size; ++i)
+        str[i] = charset[dist(rng) % (sizeof(charset) - 1)];
+    str[size] = 0;
+    return str;
 }
 
 } // namespace sihd::util::str

@@ -2,10 +2,10 @@
 #include <libwebsockets.h>
 #include <nlohmann/json.hpp>
 
-#include <sihd/http/HttpSender.hpp>
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/WebService.hpp>
 #include <sihd/http/WebsocketHandler.hpp>
+#include <sihd/http/request.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
@@ -183,23 +183,22 @@ TEST_F(TestHttpServer, test_httpserver_auto)
             },
     };
 
-    auto get_resp_opt = HttpSender::get("localhost:3000/web/some_get", options);
+    auto get_resp_opt = get("localhost:3000/web/some_get", options);
     if (get_resp_opt)
         fmt::print("{}", get_resp_opt->content().cpp_str());
 
-    auto post_resp_opt = HttpSender::post("localhost:3000/web/some_post", "hello world", options);
+    auto post_resp_opt = post("localhost:3000/web/some_post", "hello world", options);
     if (post_resp_opt)
         fmt::print("{}", post_resp_opt->content().cpp_str());
 
-    TmpDir tmpdir;
-    std::string tmpfile_path = fs::combine(tmpdir.path(), "test_file.txt");
-    fs::write(tmpfile_path, "hello world");
-
-    // auto put_resp_opt = HttpSender::put("localhost:3000/web/some_put", tmpfile_path, options);
+    // TmpDir tmpdir;
+    // std::string tmpfile_path = fs::combine(tmpdir.path(), "test_file.txt");
+    // fs::write(tmpfile_path, "hello world");
+    // auto put_resp_opt = put("localhost:3000/web/some_put", tmpfile_path, options);
     // if (put_resp_opt)
     //     fmt::print("{}", put_resp_opt->content().cpp_str());
 
-    auto delete_resp_opt = HttpSender::del("localhost:3000/web/some_delete", options);
+    auto delete_resp_opt = del("localhost:3000/web/some_delete", options);
     if (delete_resp_opt)
         fmt::print("{}", delete_resp_opt->content().cpp_str());
 

@@ -5,10 +5,13 @@
 ##
 ###################
 #
-hello,world,,!,
+hello,"world","",,!,
+          
+1,-2,3000,4.2
 
-1,2,3,4
-
-[the],[fox,' is, here],[,crap,],
+"the","multiline, test
+ 
+# cannot comment here
+ is done",",bye,""",
 ##
-#
+#`

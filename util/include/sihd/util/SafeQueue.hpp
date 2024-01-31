@@ -53,7 +53,7 @@ class SafeQueue
             std::unique_lock lock(_mutex);
 
             if (_queue.empty() || _terminated)
-                return {};
+                return std::nullopt;
 
             T ret = std::move(_queue.front());
             _queue.pop();

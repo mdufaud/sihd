@@ -113,7 +113,7 @@ void read_line()
         return;
     fmt::print("Say something: ");
     std::string input;
-    LineReader::fast_read_line(input);
+    LineReader::fast_read_stdin(input);
     fmt::print("You said: '{}'\n", input);
     fmt::print("\n");
 }
@@ -170,8 +170,6 @@ int main(int argc, char **argv)
         LoggerManager::console();
     else
         LoggerManager::basic(os::is_emscripten ? stdout : stderr);
-
-    Defer d([] { LoggerManager::clear_loggers(); });
 
     demo::time();
     demo::os();

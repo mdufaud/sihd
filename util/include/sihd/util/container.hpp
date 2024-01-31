@@ -106,6 +106,26 @@ bool emplace_unique(std::vector<T> & vec, const T & value)
     return ret;
 }
 
+template <typename Container, typename T>
+bool emplace_back_unique(Container & container, const T & value)
+{
+    const auto it = std::find(container.begin(), container.end(), value);
+    const bool ret = it == container.end();
+    if (ret)
+        container.emplace_back(value);
+    return ret;
+}
+
+template <typename Container, typename T>
+bool emplace_front_unique(Container & container, const T & value)
+{
+    const auto it = std::find(container.begin(), container.end(), value);
+    const bool ret = it == container.end();
+    if (ret)
+        container.emplace_front(value);
+    return ret;
+}
+
 template <typename Container, typename Key, typename Value>
 Value get_or(const Container & container, const Key & key, const Value & default_value)
 {

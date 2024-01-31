@@ -8,28 +8,28 @@
 #include <sihd/util/os.hpp>
 #include <sihd/util/term.hpp>
 
-#include <sihd/http/HttpSender.hpp>
+#include <sihd/http/request.hpp>
 
 namespace test
 {
 SIHD_LOGGER;
-using namespace sihd::http;
+using namespace sihd;
 using namespace sihd::util;
-class TestHttpSender: public ::testing::Test
+class TestRequest: public ::testing::Test
 {
     protected:
-        TestHttpSender() { sihd::util::LoggerManager::basic(); }
+        TestRequest() { sihd::util::LoggerManager::basic(); }
 
-        virtual ~TestHttpSender() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestRequest() { sihd::util::LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
         virtual void TearDown() {}
 };
 
-TEST_F(TestHttpSender, test_httpsender)
+TEST_F(TestRequest, test_http_request)
 {
-    auto http_response_opt = HttpSender::get("https://www.google.com");
+    auto http_response_opt = http::get("https://www.google.com");
 
     ASSERT_TRUE(http_response_opt.has_value());
     ASSERT_EQ(http_response_opt->status(), 200);

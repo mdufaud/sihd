@@ -56,49 +56,55 @@ TEST_F(TestCsv, test_csv_writer)
 TEST_F(TestCsv, test_csv_reader)
 {
     std::string path = "test/resources/to_read.csv";
-    CsvReader reader("csv-reader");
-    std::vector<std::string> values;
+    CsvReader reader;
 
     SIHD_LOG(info, "Reading csv: {}", path);
     EXPECT_TRUE(reader.open(path));
-    // must skip the two comments
+    // must skip the comments
     EXPECT_TRUE(reader.read_next());
-    EXPECT_TRUE(reader.get_read_data(values));
 
-    EXPECT_EQ(values.size(), 5u);
-    if (values.size() == 5)
+    const auto & values1 = reader.columns();
+    fmt::print("first values: '{}'\n", fmt::join(values1, ","));
+
+    EXPECT_EQ(values1.size(), 6u);
+    if (values1.size() == 6)
     {
-        EXPECT_EQ(values[0], "hello");
-        EXPECT_EQ(values[1], "world");
-        EXPECT_EQ(values[2], "");
-        EXPECT_EQ(values[3], "!");
-        // EXPECT_EQ(values[4], "");
+        EXPECT_EQ(values1[0], "hello");
+        EXPECT_EQ(values1[1], "world");
+        EXPECT_EQ(values1[2], "\"");
+        EXPECT_EQ(values1[3], "");
+        EXPECT_EQ(values1[4], "!");
+        EXPECT_EQ(values1[5], "");
     }
 
     EXPECT_TRUE(reader.read_next());
-    EXPECT_TRUE(reader.get_read_data(values));
 
-    EXPECT_EQ(values.size(), 4u);
-    if (values.size() == 4)
+    const auto & values2 = reader.columns();
+    fmt::print("second values: '{}'\n", fmt::join(values2, ","));
+
+    EXPECT_EQ(values2.size(), 4u);
+    if (values2.size() == 4)
     {
-        EXPECT_EQ(values[0], "1");
-        EXPECT_EQ(values[1], "2");
-        EXPECT_EQ(values[2], "3");
-        EXPECT_EQ(values[3], "4");
+        EXPECT_EQ(values2[0], "1");
+        EXPECT_EQ(values2[1], "-2");
+        EXPECT_EQ(values2[2], "3000");
+        EXPECT_EQ(values2[3], "4.2");
     }
 
     EXPECT_TRUE(reader.read_next());
-    EXPECT_TRUE(reader.set_quote_value('['));
-    EXPECT_TRUE(reader.get_read_data(values));
 
-    EXPECT_EQ(values.size(), 4u);
-    if (values.size() == 4)
+    const auto & values3 = reader.columns();
+    fmt::print("third values: '{}'\n", fmt::join(values3, ","));
+
+    EXPECT_EQ(values3.size(), 4u);
+    if (values3.size() == 4)
     {
-        EXPECT_EQ(values[0], "[the]");
-        EXPECT_EQ(values[1], "[fox,' is, here]");
-        EXPECT_EQ(values[2], "[,crap,]");
-        EXPECT_EQ(values[3], "");
+        EXPECT_EQ(values3[0], "the");
+        EXPECT_EQ(values3[1], "multiline, test\n \n# cannot comment here\n is done");
+        EXPECT_EQ(values3[2], ",bye,\"");
+        EXPECT_EQ(values3[3], "");
     }
+
     EXPECT_FALSE(reader.read_next());
     EXPECT_TRUE(reader.close());
 }

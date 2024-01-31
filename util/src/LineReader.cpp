@@ -10,28 +10,29 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-LineReader::LineReader():
-    _read_buff_size(4096),
+LineReader::LineReader(const LineReaderOptions & options):
+    _read_buff_size(options.read_buffsize),
     _read_ptr(nullptr),
-    _line_buff_size(512),
-    _line_buff_step(512),
+    _line_buff_size(options.line_buffsize),
+    _line_buff_step(options.line_buffsize),
     _line_ptr(nullptr),
-    _put_delimiter_in_line(false),
-    _delimiter('\n')
+    _error(false),
+    _put_delimiter_in_line(options.delimiter_in_line),
+    _delimiter(options.delimiter)
 {
 }
 
-LineReader::LineReader(std::string_view path): LineReader()
+LineReader::LineReader(std::string_view path, const LineReaderOptions & options): LineReader(options)
 {
     this->open(path);
 }
 
-LineReader::LineReader(int fd): LineReader()
+LineReader::LineReader(int fd, const LineReaderOptions & options): LineReader(options)
 {
     this->open_fd(fd);
 }
 
-LineReader::LineReader(FILE *stream, bool ownership): LineReader()
+LineReader::LineReader(FILE *stream, bool ownership, const LineReaderOptions & options): LineReader(options)
 {
     this->set_stream(stream, ownership);
 }
@@ -151,7 +152,7 @@ bool LineReader::read_next()
         // new read buffer
         _read_size = _file.read(_read_ptr, _read_buff_size);
         _last_read_index = 0;
-        // exit if read error ofc
+        // exit if read error
         if (_read_size == -1)
         {
             _error = true;
@@ -222,22 +223,29 @@ void LineReader::_delete_buffers()
     _read_ptr = nullptr;
 }
 
-bool LineReader::fast_read_line(std::string & line, FILE *stream, size_t buffsize)
+bool LineReader::fast_read_line(std::string & line, FILE *stream, const LineReaderOptions & options)
 {
-    LineReader reader;
     ArrCharView view;
+    LineReader reader(options);
 
-    reader.set_read_buffsize(buffsize);
-    if (reader.set_stream(stream, false))
+    if (reader.set_stream(stream, false) && reader.read_next() && reader.get_read_data(view))
     {
-        if (reader.read_next())
-        {
-            if (reader.get_read_data(view))
-            {
-                line.assign(view.data(), view.size());
-                return true;
-            }
-        }
+        line.assign(view.data(), view.size());
+        return true;
+    }
+    return false;
+}
+
+bool LineReader::fast_read_stdin(std::string & line, LineReaderOptions options)
+{
+    ArrCharView view;
+    options.read_buffsize = 1;
+    LineReader reader(options);
+
+    if (reader.set_stream(stdin, false) && reader.read_next() && reader.get_read_data(view))
+    {
+        line.assign(view.data(), view.size());
+        return true;
     }
     return false;
 }

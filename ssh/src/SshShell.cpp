@@ -54,16 +54,17 @@ bool SshShell::open(bool x11)
 
 bool SshShell::read_loop()
 {
-    sihd::util::LineReader reader("stdin-reader");
-    reader.set_stream(stdin, false);
-    reader.set_read_buffsize(1);
-    reader.set_delimiter_in_line(true);
-    sihd::util::ArrCharView view;
-    sihd::util::ArrChar buf;
-    buf.reserve(4096);
     int nbytes;
     int nwritten;
     bool ret = true;
+    sihd::util::ArrCharView view;
+    sihd::util::ArrChar buf;
+    buf.reserve(4096);
+    sihd::util::LineReader reader({
+        .read_buffsize = 1,
+        .delimiter_in_line = true,
+    });
+    reader.set_stream(stdin, false);
 
     while (_channel.is_open() && _channel.is_eof() == false)
     {

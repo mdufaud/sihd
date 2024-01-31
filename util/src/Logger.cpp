@@ -51,7 +51,7 @@ void Logger::debug(std::string_view msg)
 
 void Logger::log(LogLevel level, std::string_view msg)
 {
-    LoggerManager::get()->log(name, level, msg);
+    LoggerManager::log(name, level, msg);
 }
 
 } // namespace sihd::util

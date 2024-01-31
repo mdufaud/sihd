@@ -24,15 +24,6 @@ class TestLineReader: public ::testing::Test
 
         virtual void TearDown() {}
 
-        void gen_random(char *s, size_t size)
-        {
-            static const char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n\t ()[]{}'";
-
-            for (size_t i = 0; i < size; ++i)
-                s[i] = charset[rand() % (sizeof(charset) - 1)];
-            s[size] = 0;
-        }
-
         TmpDir _tmp_dir;
 };
 
@@ -50,7 +41,6 @@ TEST_F(TestLineReader, test_linereader_one_line)
     SIHD_LOG(info, "Reading");
     EXPECT_TRUE(reader.read_next());
     EXPECT_TRUE(reader.get_read_data(view));
-    // EXPECT_EQ(size, strlen("hello world"));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
     EXPECT_FALSE(reader.read_next());
@@ -64,7 +54,6 @@ TEST_F(TestLineReader, test_linereader_one_line)
     SIHD_LOG(info, "Reading");
     EXPECT_TRUE(reader.read_next());
     EXPECT_TRUE(reader.get_read_data(view));
-    // EXPECT_EQ(size, strlen("hello world"));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
     EXPECT_FALSE(reader.read_next());
@@ -86,14 +75,12 @@ TEST_F(TestLineReader, test_linereader_two_lines)
     SIHD_LOG(info, "First read");
     EXPECT_TRUE(reader.read_next());
     EXPECT_TRUE(reader.get_read_data(view));
-    // EXPECT_EQ(size, strlen("hello world"));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
 
     SIHD_LOG(info, "Second read");
     EXPECT_TRUE(reader.read_next());
     EXPECT_TRUE(reader.get_read_data(view));
-    // EXPECT_EQ(size, strlen("how are you"));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "how are you");
     EXPECT_FALSE(reader.read_next());
@@ -109,14 +96,12 @@ TEST_F(TestLineReader, test_linereader_two_lines)
     SIHD_LOG(info, "First read");
     EXPECT_TRUE(reader.read_next());
     EXPECT_TRUE(reader.get_read_data(view));
-    // EXPECT_EQ(size, strlen("hello world"));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
 
     SIHD_LOG(info, "Second read");
     EXPECT_TRUE(reader.read_next());
     EXPECT_TRUE(reader.get_read_data(view));
-    // EXPECT_EQ(size, strlen("how are you"));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "how are you");
     EXPECT_FALSE(reader.read_next());
@@ -139,28 +124,24 @@ TEST_F(TestLineReader, test_linereader_multiple_feeds)
     SIHD_LOG(info, "First read");
     EXPECT_TRUE(reader.read_next());
     EXPECT_TRUE(reader.get_read_data(view));
-    // EXPECT_EQ(size, strlen("hello world"));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
 
     SIHD_LOG(info, "Second read");
     EXPECT_TRUE(reader.read_next());
     EXPECT_TRUE(reader.get_read_data(view));
-    // EXPECT_EQ(size, strlen("!"));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "!");
 
     SIHD_LOG(info, "Third read");
     EXPECT_TRUE(reader.read_next());
     EXPECT_TRUE(reader.get_read_data(view));
-    // EXPECT_EQ(size, 0u);
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "");
 
     SIHD_LOG(info, "Fourth read");
     EXPECT_TRUE(reader.read_next());
     EXPECT_TRUE(reader.get_read_data(view));
-    // EXPECT_EQ(size, 0u);
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "");
     EXPECT_FALSE(reader.read_next());
@@ -196,7 +177,6 @@ TEST_F(TestLineReader, test_linereader_low_buffer)
     EXPECT_TRUE(reader.read_next());
     // test read
     EXPECT_TRUE(reader.get_read_data(view));
-    // EXPECT_EQ(size, strlen("hello world"));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
     EXPECT_TRUE(reader.read_next());
@@ -207,20 +187,21 @@ TEST_F(TestLineReader, test_linereader_low_buffer)
 
 TEST_F(TestLineReader, test_linereader_perf)
 {
-    size_t filesize = 4096 * 25;
-    char filecontent[filesize + 1];
-    this->gen_random(filecontent, filesize);
+    size_t filesize = 4096 * 70;
+    std::string random_str = str::generate_random(filesize);
 
     std::string path_input = fs::combine(_tmp_dir.path(), "perf_filegen.txt");
     std::string path_file = fs::combine(_tmp_dir.path(), "perf_compare_file.txt");
     std::string path_line_reader = fs::combine(_tmp_dir.path(), "perf_compare_line_reader.txt");
+    std::string path_line_reader_no_memory = fs::combine(_tmp_dir.path(), "perf_compare_line_reader_no_memory.txt");
 
     SIHD_LOG(info, "Input: {}", path_input);
     SIHD_LOG(info, "Output file: {}", path_file);
     SIHD_LOG(info, "Output line reader: {}", path_line_reader);
+    SIHD_LOG(info, "Output line reader 2: {}", path_line_reader_no_memory);
 
     File writer(path_input, "w");
-    writer.write(filecontent, filesize);
+    writer.write(random_str);
     writer.close();
 
     char *line = nullptr;
@@ -241,26 +222,53 @@ TEST_F(TestLineReader, test_linereader_perf)
         file.close();
     }
     writer.close();
+
     size_t total_rl = 0;
     writer.open(path_line_reader, "w");
     ArrCharView view;
     {
         Timeit it("line-reader");
-        LineReader reader(path_input);
-        // reader.set_read_buffsize(4096 * 4);
-        reader.set_delimiter_in_line(true);
+        LineReader reader(path_input,
+                          {
+                              .read_buffsize = 4096,
+                              .delimiter_in_line = true,
+                          });
         while (reader.read_next())
         {
             reader.get_read_data(view);
             writer.write(view);
-            total_rl += strlen(view.data());
+            total_rl += view.size();
         }
         reader.close();
     }
     writer.close();
-    EXPECT_EQ(total_rl, total_file);
+
+    size_t total_rl_no_memory = 0;
+    writer.open(path_line_reader_no_memory, "w");
+    {
+        Timeit it("line-reader-2");
+        File file(path_input, "r");
+        std::string line;
+        LineReader::LineReaderOptions options = {
+            // must read one by one because there is no memory of last read
+            .read_buffsize = 1,
+            .delimiter_in_line = true,
+        };
+        while (LineReader::fast_read_line(line, file.file(), options))
+        {
+            writer.write(line);
+            total_rl_no_memory += line.size();
+        }
+    }
+    writer.close();
+
     EXPECT_TRUE(fs::are_equals(path_input, path_file));
+
+    EXPECT_EQ(total_rl, total_file);
     EXPECT_TRUE(fs::are_equals(path_input, path_line_reader));
+
+    EXPECT_EQ(total_rl_no_memory, total_file);
+    EXPECT_TRUE(fs::are_equals(path_input, path_line_reader_no_memory));
 }
 
 } // namespace test

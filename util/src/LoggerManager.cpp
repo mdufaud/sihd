@@ -1,8 +1,7 @@
-#include <algorithm>
-
 #include <sihd/util/BasicLogger.hpp>
 #include <sihd/util/ConsoleLogger.hpp>
 #include <sihd/util/LoggerManager.hpp>
+#include <sihd/util/container.hpp>
 
 namespace sihd::util
 {
@@ -14,34 +13,22 @@ LoggerManager::~LoggerManager()
     this->delete_loggers();
 }
 
-std::vector<ALogger *>::const_iterator LoggerManager::_find(ALogger *logger) const
-{
-    return std::find(_loggers_lst.cbegin(), _loggers_lst.cend(), logger);
-}
-
 bool LoggerManager::has_logger(ALogger *logger) const
 {
-    return this->_find(logger) != _loggers_lst.end();
+    std::lock_guard<std::mutex> l(_mutex);
+    return container::contains(_loggers_lst, logger);
 }
 
 bool LoggerManager::add_logger(ALogger *logger)
 {
     std::lock_guard<std::mutex> l(_mutex);
-    bool has = this->has_logger(logger);
-    if (!has)
-        _loggers_lst.push_back(logger);
-    return !has;
+    return container::emplace_unique(_loggers_lst, logger);
 }
 
 bool LoggerManager::remove_logger(ALogger *logger)
 {
     std::lock_guard<std::mutex> l(_mutex);
-    auto it = this->_find(logger);
-    if (it != _loggers_lst.end())
-    {
-        _loggers_lst.erase(it);
-    }
-    return it != _loggers_lst.end();
+    return container::erase(_loggers_lst, logger);
 }
 
 void LoggerManager::delete_loggers()
@@ -54,7 +41,7 @@ void LoggerManager::delete_loggers()
     _loggers_lst.clear();
 }
 
-void LoggerManager::log(const std::string & src, LogLevel level, std::string_view msg)
+void LoggerManager::_filter_and_log(const std::string & src, LogLevel level, std::string_view msg)
 {
     std::lock_guard<std::mutex> l(_mutex);
     LogInfo info(src, level);
@@ -70,49 +57,55 @@ void LoggerManager::log(const std::string & src, LogLevel level, std::string_vie
 }
 
 LoggerManager LoggerManager::_g_singleton;
+
 LoggerManager *LoggerManager::get()
 {
     return &_g_singleton;
 }
 
+void LoggerManager::log(const std::string & src, LogLevel level, std::string_view msg)
+{
+    return _g_singleton._filter_and_log(src, level, msg);
+}
+
 bool LoggerManager::add(ALogger *logger)
 {
-    return get()->add_logger(logger);
+    return _g_singleton.add_logger(logger);
 }
 
 bool LoggerManager::rm(ALogger *logger)
 {
-    return get()->remove_logger(logger);
+    return _g_singleton.remove_logger(logger);
 }
 
 bool LoggerManager::filter(ILoggerFilter *filter)
 {
-    return get()->add_filter(filter);
+    return _g_singleton.add_filter(filter);
 }
 
 bool LoggerManager::rm_filter(ILoggerFilter *filter)
 {
-    return get()->remove_filter(filter);
+    return _g_singleton.remove_filter(filter);
 }
 
 void LoggerManager::clear_loggers()
 {
-    get()->delete_loggers();
+    _g_singleton.delete_loggers();
 }
 
 void LoggerManager::clear_filters()
 {
-    get()->delete_filters();
+    _g_singleton.delete_filters();
 }
 
 void LoggerManager::basic(FILE *output, bool print_thread_id)
 {
-    get()->add_logger(new BasicLogger(output, print_thread_id));
+    _g_singleton.add_logger(new BasicLogger(output, print_thread_id));
 }
 
 void LoggerManager::console()
 {
-    get()->add_logger(new ConsoleLogger());
+    _g_singleton.add_logger(new ConsoleLogger());
 }
 
 } // namespace sihd::util

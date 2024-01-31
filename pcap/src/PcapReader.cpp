@@ -151,7 +151,7 @@ bool PcapReader::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-bool PcapReader::read_timestamp(time_t *nano_timestamp) const
+bool PcapReader::get_read_timestamp(time_t *nano_timestamp) const
 {
     if (_pkt_hdr_ptr == nullptr)
         return false;

@@ -25,6 +25,7 @@ class LoggerManager: public ALogFilterer
         template <typename T>
         bool delete_logger_type()
         {
+            std::lock_guard<std::mutex> l(_mutex);
             T *logcast;
             bool found = false;
             auto it = _loggers_lst.begin();
@@ -41,10 +42,9 @@ class LoggerManager: public ALogFilterer
             return found;
         }
 
-        void log(const std::string & src, LogLevel level, std::string_view msg);
-
         static LoggerManager *get();
 
+        static void log(const std::string & src, LogLevel level, std::string_view msg);
         static void basic(FILE *output = stderr, bool print_thread_id = false);
         static void console();
         static bool add(ALogger *logger);
@@ -54,20 +54,21 @@ class LoggerManager: public ALogFilterer
         static void clear_loggers();
         static void clear_filters();
 
+    protected:
+        void _filter_and_log(const std::string & src, LogLevel level, std::string_view msg);
+
     private:
         static LoggerManager _g_singleton;
-
-        std::vector<ALogger *>::const_iterator _find(ALogger *logger) const;
         std::vector<ALogger *> _loggers_lst;
-        std::mutex _mutex;
+        mutable std::mutex _mutex;
 };
 
 class TmpLogger
 {
     public:
-        TmpLogger(ALogger *logger): _logger_ptr(logger) { LoggerManager::get()->add_logger(logger); }
+        TmpLogger(ALogger *logger): _logger_ptr(logger) { LoggerManager::add(logger); }
 
-        ~TmpLogger() { LoggerManager::get()->remove_logger(_logger_ptr); };
+        ~TmpLogger() { LoggerManager::rm(_logger_ptr); };
 
     private:
         ALogger *_logger_ptr;
@@ -76,9 +77,9 @@ class TmpLogger
 class TmpLoggerFilter
 {
     public:
-        TmpLoggerFilter(ILoggerFilter *filter): _filter_ptr(filter) { LoggerManager::get()->add_filter(filter); }
+        TmpLoggerFilter(ILoggerFilter *filter): _filter_ptr(filter) { LoggerManager::filter(filter); }
 
-        ~TmpLoggerFilter() { LoggerManager::get()->remove_filter(_filter_ptr); };
+        ~TmpLoggerFilter() { LoggerManager::rm_filter(_filter_ptr); };
 
     private:
         ILoggerFilter *_filter_ptr;

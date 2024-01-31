@@ -15,9 +15,9 @@ SplitterDelimiterMethod SplitterOptions::delimiter_spaces()
     return &isspace;
 }
 
-std::string_view SplitterOptions::all_open_escape_sequences()
+std::string_view SplitterOptions::all_encloses()
 {
-    return str::escapes_open();
+    return str::encloses_start();
 }
 
 Splitter::Splitter(const SplitterOptions & options): _empty_delimitations(false)
@@ -29,6 +29,8 @@ Splitter::Splitter(const SplitterOptions & options): _empty_delimitations(false)
     {
         throw std::logic_error("Cannot have two delimiter types");
     }
+
+    this->set_escape_char(options.escape_char);
 
     if (options.delimiter_char != 0)
         this->set_delimiter_char(options.delimiter_char);
@@ -53,22 +55,19 @@ Splitter::Splitter(std::string_view delimiter): Splitter()
 
 Splitter::~Splitter() {}
 
-bool Splitter::set_delimiter_char(int delimiter)
+void Splitter::set_delimiter_char(int delimiter)
 {
     _delimiter = std::string(1, delimiter);
-    return true;
 }
 
-bool Splitter::set_delimiter(std::string_view str)
+void Splitter::set_delimiter(std::string_view str)
 {
     _delimiter = str;
-    return true;
 }
 
-bool Splitter::set_delimiter_spaces()
+void Splitter::set_delimiter_spaces()
 {
     this->set_delimiter_method(SplitterOptions::delimiter_spaces());
-    return true;
 }
 
 void Splitter::set_delimiter_method(SplitterDelimiterMethod method)
@@ -76,22 +75,24 @@ void Splitter::set_delimiter_method(SplitterDelimiterMethod method)
     _compare_method = std::move(method);
 }
 
-bool Splitter::set_empty_delimitations(bool active)
+void Splitter::set_escape_char(int escape_char)
+{
+    _escape_char = escape_char;
+}
+
+void Splitter::set_empty_delimitations(bool active)
 {
     _empty_delimitations = active;
-    return true;
 }
 
-bool Splitter::set_open_escape_sequences(std::string_view str)
+void Splitter::set_open_escape_sequences(std::string_view str)
 {
     _authorized_open_escape_sequences = str;
-    return true;
 }
 
-bool Splitter::set_escape_sequences_all()
+void Splitter::set_escape_sequences_all()
 {
-    _authorized_open_escape_sequences = SplitterOptions::all_open_escape_sequences();
-    return true;
+    _authorized_open_escape_sequences = SplitterOptions::all_encloses();
 }
 
 int Splitter::_get_delimiter_offset(const char *s) const
@@ -127,7 +128,7 @@ int Splitter::count_tokens(const char *s) const
             ++count;
         while (s[i])
         {
-            int closed_at = str::closing_escape_index(s, i, _authorized_open_escape_sequences.c_str());
+            int closed_at = str::stopping_enclose_index(s, i, _authorized_open_escape_sequences.c_str(), _escape_char);
             // matched closure
             if (closed_at > 0)
                 i = closed_at;
@@ -167,7 +168,7 @@ std::string_view Splitter::next_token(const char *s, int *idx) const
     int y = x;
     while (s[y])
     {
-        int closed_at = str::closing_escape_index(s, y, _authorized_open_escape_sequences.c_str());
+        int closed_at = str::stopping_enclose_index(s, y, _authorized_open_escape_sequences.c_str(), _escape_char);
         // matched closure
         if (closed_at > 0)
             y = closed_at;
