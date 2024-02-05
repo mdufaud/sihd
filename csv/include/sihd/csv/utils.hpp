@@ -39,9 +39,9 @@ bool same_number_of_columns(const std::vector<std::string> & columns_tags,
 
 // get a string from rows/columns
 template <typename... Args>
-std::string csv_to_string(const std::vector<std::string> & columns_tags,
-                          const std::vector<std::tuple<Args...>> & rows,
-                          int delimiter = ',')
+std::string csv_to_str(const std::vector<std::string> & columns_tags,
+                       const std::vector<std::tuple<Args...>> & rows,
+                       int delimiter = ',')
 {
     std::string line;
 
@@ -70,7 +70,8 @@ bool write_csv(std::string_view path,
     std::string line = fmt::format("{}", fmt::join(columns_tags, (const char *)&delimiter));
     ssize_t wrote = writer.write_row(line);
 
-    if (wrote != (ssize_t)line.size())
+    // add newline to it
+    if (wrote != (ssize_t)line.size() + 1)
     {
         SIHD_LOG_ERROR("Failed write on CSV '{}' on header '{}'", path, line);
         success = false;
@@ -81,7 +82,8 @@ bool write_csv(std::string_view path,
         line = fmt::format("{}", fmt::join(row, (const char *)&delimiter));
         wrote = writer.write_row(line);
 
-        if (wrote != (ssize_t)line.size())
+        // add newline to it
+        if (wrote != (ssize_t)line.size() + 1)
         {
             SIHD_LOG_ERROR("Failed write on CSV '{}' on line '{}'", path, line);
             success = false;

@@ -58,16 +58,20 @@ TEST_F(TestCsv, test_csv_utils_tuple)
 
     const std::vector<std::string> columns = {"number", "string", "float", "char"};
 
+    const std::vector<std::string> expected_line_1 {"1", "one", "1.1", "1"};
+
+    const auto csv_str = csv_to_str(columns, datas);
+    EXPECT_EQ(csv_str, "number,string,float,char\n1,one,1.1,1\n");
+
     TmpDir tmp_dir;
     const std::string path = fmt::format("{}/{}", tmp_dir.path(), "test_tuple.csv");
 
-    write_csv(path, columns, datas);
+    ASSERT_TRUE(write_csv(path, columns, datas));
 
     auto csv_data = read_csv(path, true);
     ASSERT_TRUE(csv_data);
     ASSERT_EQ(csv_data->size(), 1);
-    const std::vector<std::string> expected {"1", "one", "1.1", "1"};
-    EXPECT_EQ(csv_data->at(0), expected);
+    EXPECT_EQ(csv_data->at(0), expected_line_1);
 }
 
 TEST_F(TestCsv, test_csv_writer)
@@ -109,7 +113,8 @@ TEST_F(TestCsv, test_csv_reader)
     // must skip the comments
     EXPECT_TRUE(reader.read_next());
 
-    const auto & values1 = reader.columns();
+    // copy values as they will change at next read
+    const auto values1 = reader.columns();
     fmt::print("first values: '{}'\n", fmt::join(values1, ","));
 
     EXPECT_EQ(values1.size(), 6u);
@@ -125,7 +130,8 @@ TEST_F(TestCsv, test_csv_reader)
 
     EXPECT_TRUE(reader.read_next());
 
-    const auto & values2 = reader.columns();
+    // copy values as they will change at next read
+    const auto values2 = reader.columns();
     fmt::print("second values: '{}'\n", fmt::join(values2, ","));
 
     EXPECT_EQ(values2.size(), 4u);
@@ -139,7 +145,8 @@ TEST_F(TestCsv, test_csv_reader)
 
     EXPECT_TRUE(reader.read_next());
 
-    const auto & values3 = reader.columns();
+    // copy values as they will change at next read
+    const auto values3 = reader.columns();
     fmt::print("third values: '{}'\n", fmt::join(values3, ","));
 
     EXPECT_EQ(values3.size(), 4u);
