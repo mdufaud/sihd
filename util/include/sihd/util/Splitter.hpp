@@ -55,9 +55,9 @@ class Splitter
         std::vector<std::string_view> split_view(std::string_view str) const;
 
         // count number of tokens to return
-        int count_tokens(const char *s) const;
+        int count_tokens(std::string_view view) const;
         // return the next token and updates the index
-        std::string_view next_token(const char *s, int *idx) const;
+        std::string_view next_token(std::string_view view, int *idx) const;
 
     protected:
 

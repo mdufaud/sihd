@@ -36,16 +36,17 @@ char buffer[SIHD_UTIL_STR_BUFFER];
 
 std::string _format_time(Timestamp timestamp, std::string_view format, bool localtime)
 {
-    struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
-    size_t ret = strftime(buffer, buffer_size, format.data(), &tm);
+    const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
+    const size_t ret = strftime(buffer, buffer_size, format.data(), &tm);
     return std::string(buffer, ret);
 }
 
 std::string _timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bool nano_resolution, bool localtime)
 {
+    const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
     std::string s;
-    struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
     bool next_step;
+
     s += (timestamp >= 0 ? "+" : "-");
     if ((next_step = tm.tm_year > 70))
         s += fmt::format("{}y:", tm.tm_year - 70);
@@ -94,6 +95,7 @@ char *csub(std::string_view str, size_t from_idx, ssize_t size)
     char *ret = new char[size + 1];
     size_t idx_src = from_idx;
     size_t idx_dst = 0;
+
     while (idx_dst < (size_t)size && str[idx_src])
     {
         ret[idx_dst] = str[idx_src];
@@ -108,6 +110,7 @@ std::string join(const std::vector<std::string> & join_lst, std::string_view joi
 {
     std::string s;
     bool first = true;
+
     for (const auto & str : join_lst)
     {
         if (!first)
@@ -123,6 +126,7 @@ std::string demangle(std::string_view name)
 {
     int status = -1;
     char *ptr = abi::__cxa_demangle(name.data(), NULL, NULL, &status);
+
     if (status == 0)
     {
         std::string ret = ptr;
@@ -136,6 +140,7 @@ std::string format(std::string_view format, ...)
 {
     std::string str;
     va_list args;
+
     va_start(args, format);
     {
         std::lock_guard<std::mutex> l(buffer_mutex);
@@ -155,6 +160,7 @@ bool is_all_spaces(std::string_view s)
 std::string_view rtrim(std::string_view s)
 {
     size_t j = s.size();
+
     while (j > 0 && std::isspace(s[--j]))
         ;
     return s.substr(0, j + 1);
@@ -162,8 +168,9 @@ std::string_view rtrim(std::string_view s)
 
 std::string_view ltrim(std::string_view s)
 {
-    size_t len = s.size();
+    const size_t len = s.size();
     size_t i = 0;
+
     while (i < len && std::isspace(s[i]))
         ++i;
     return s.substr(i);
@@ -177,6 +184,7 @@ std::string_view trim(std::string_view s)
 std::string & to_upper(std::string & s)
 {
     size_t i = 0;
+
     while (s[i])
     {
         s[i] = ::toupper(s[i]);
@@ -188,6 +196,7 @@ std::string & to_upper(std::string & s)
 std::string & to_lower(std::string & s)
 {
     size_t i = 0;
+
     while (s[i])
     {
         s[i] = ::tolower(s[i]);
@@ -201,6 +210,7 @@ std::string replace(std::string_view s, std::string_view from, std::string_view 
     std::string ret;
     size_t i = s.find(from);
     size_t last = 0;
+
     while (i != std::string::npos)
     {
         ret += s.substr(last, i - last);
@@ -249,6 +259,7 @@ std::string num_str(uint64_t num, uint16_t base)
         return "0";
     size_t i = num::size(num, base);
     std::string ret;
+
     ret.resize(i);
     while (num != 0)
     {
@@ -264,10 +275,11 @@ std::string num_str(uint64_t num, uint16_t base)
 
 std::string addr_str(void *addr, size_t padding)
 {
-    size_t numsize = num::size((size_t)addr, 16);
+    const size_t numsize = num::size((size_t)addr, 16);
+    const ssize_t total_zero = padding - numsize;
     ssize_t i = 0;
-    ssize_t total_zero = padding - numsize;
     std::string ret;
+
     ret.reserve(2 + numsize + total_zero);
     ret = "0x";
     while (i < total_zero)
@@ -283,6 +295,7 @@ std::string hexdump(const void *mem, size_t size, char delim)
 {
     std::string ret;
     size_t i = 0;
+
     while (i < size)
     {
         uint16_t hex = 0xFF & ((char *)mem)[i];
@@ -307,8 +320,8 @@ std::string hexdump(const IArrayView & arr, char delim)
 
 std::string hexdump_fmt(const void *mem, size_t size, size_t cols)
 {
+    const size_t suppl = size % cols == 0 ? 0 : (cols - (size % cols));
     std::string ret;
-    size_t suppl = size % cols == 0 ? 0 : (cols - (size % cols));
 
     size_t i = 0;
     while (i < size + suppl)
@@ -361,7 +374,7 @@ bool starts_with(std::string_view s, std::string_view start)
 
 bool ends_with(std::string_view s, std::string_view end)
 {
-    ssize_t ending = s.length() - end.length();
+    const ssize_t ending = s.length() - end.length();
     if (ending < 0)
         return false;
     return strncmp(s.data() + ending, end.data(), end.length()) == 0;
@@ -379,7 +392,7 @@ bool is_number(std::string_view s, uint16_t base)
 {
     size_t i = 0;
     const char *data = s.data();
-    size_t len = s.length();
+    const size_t len = s.length();
     while (i < len)
     {
         if (isspace(data[i]) == 0 && data[i] != '-' && data[i] != '+' && is_digit(data[i], base) == false)
@@ -510,7 +523,7 @@ template <>
 bool convert_from_string<int8_t>(std::string_view str, int8_t & value, uint16_t base)
 {
     long longval;
-    bool ret = to_long(str, &longval, base);
+    const bool ret = to_long(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
@@ -520,7 +533,7 @@ template <>
 bool convert_from_string<int16_t>(std::string_view str, int16_t & value, uint16_t base)
 {
     long longval;
-    bool ret = to_long(str, &longval, base);
+    const bool ret = to_long(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
@@ -530,7 +543,7 @@ template <>
 bool convert_from_string<int32_t>(std::string_view str, int32_t & value, uint16_t base)
 {
     long longval;
-    bool ret = to_long(str, &longval, base);
+    const bool ret = to_long(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
@@ -540,7 +553,7 @@ template <>
 bool convert_from_string<int64_t>(std::string_view str, int64_t & value, uint16_t base)
 {
     long long longval;
-    bool ret = to_llong(str, &longval, base);
+    const bool ret = to_llong(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
@@ -550,7 +563,7 @@ template <>
 bool convert_from_string<uint8_t>(std::string_view str, uint8_t & value, uint16_t base)
 {
     unsigned long longval;
-    bool ret = to_ulong(str, &longval, base);
+    const bool ret = to_ulong(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
@@ -560,7 +573,7 @@ template <>
 bool convert_from_string<uint16_t>(std::string_view str, uint16_t & value, uint16_t base)
 {
     unsigned long longval;
-    bool ret = to_ulong(str, &longval, base);
+    const bool ret = to_ulong(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
@@ -570,7 +583,7 @@ template <>
 bool convert_from_string<uint32_t>(std::string_view str, uint32_t & value, uint16_t base)
 {
     unsigned long longval;
-    bool ret = to_ulong(str, &longval, base);
+    const bool ret = to_ulong(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
@@ -580,7 +593,7 @@ template <>
 bool convert_from_string<uint64_t>(std::string_view str, uint64_t & value, uint16_t base)
 {
     unsigned long long longval;
-    bool ret = to_ullong(str, &longval, base);
+    const bool ret = to_ullong(str, &longval, base);
     if (ret)
         value = longval;
     return ret;
@@ -590,7 +603,7 @@ template <>
 bool convert_from_string<float>(std::string_view str, float & value, [[maybe_unused]] uint16_t base)
 {
     double doubleval;
-    bool ret = to_double(str, &doubleval);
+    const bool ret = to_double(str, &doubleval);
     if (ret)
         value = doubleval;
     return ret;
@@ -600,7 +613,7 @@ template <>
 bool convert_from_string<double>(std::string_view str, double & value, [[maybe_unused]] uint16_t base)
 {
     double doubleval;
-    bool ret = to_double(str, &doubleval);
+    const bool ret = to_double(str, &doubleval);
     if (ret)
         value = doubleval;
     return ret;
@@ -629,45 +642,47 @@ int stopping_enclose_of(int c)
 
 bool is_escaped_char(const char *str, int index, int escape)
 {
-    if (index > 0 && str[index - 1] == escape)
-    {
-        // if escaped - the escape should not be escaped itself
-        if ((index - 2) < 0 || str[index - 2] != escape)
-            return true;
-    }
-    return false;
+    const bool is_escaped = index > 0 && str[index - 1] == escape;
+    const bool is_escape_escaped = index > 1 && str[index - 2] == escape;
+    return is_escaped && !is_escape_escaped;
 }
 
-int find_char_not_escaped(const char *str, int char_to_find, int escape)
+int find_char_not_escaped(std::string_view view, int char_to_find, int escape)
 {
-    const char *find = str;
-    size_t diff = 0;
+    size_t idx = 0;
 
-    while ((find = strchr(find, char_to_find)) != nullptr)
+    while ((idx = view.find(char_to_find, idx)) != std::string_view::npos)
     {
-        diff = (size_t)(find - str);
-        if (is_escaped_char(str, diff, escape) == false)
-            return diff;
-        ++find;
+        if (is_escaped_char(view.data(), idx, escape) == false)
+            return idx;
+        ++idx;
     }
     return -1;
 }
 
-int stopping_enclose_index(const char *str, int index, const char *authorized_start_enclose, int escape)
+int stopping_enclose_index(std::string_view view, int index, const char *authorized_start_enclose, int escape)
 {
-    int open_esc = str[index];
-    if (authorized_start_enclose != nullptr && strchr(authorized_start_enclose, open_esc) == nullptr)
+    const int open_esc = view[index];
+    if (view[0] == 0 || (authorized_start_enclose != nullptr && strchr(authorized_start_enclose, open_esc) == nullptr))
         return -1;
-    int close_esc = stopping_enclose_of(open_esc);
-    if (close_esc < 0)
+
+    const int stopping_enclose = stopping_enclose_of(open_esc);
+    const bool is_an_escape
+        = escape == stopping_enclose && ((size_t)index + 1 < view.size() && view[index + 1] == stopping_enclose);
+
+    if (stopping_enclose < 0 || is_an_escape || is_escaped_char(view.data(), index, escape))
         return -1;
-    if (is_escaped_char(str, index, escape))
-        return -1;
-    int i = index + 1;
-    while (str[i])
+
+    size_t i = index + 1;
+    while (i < view.size())
     {
-        if (str[i] == close_esc && is_escaped_char(str, i, escape) == false)
-            return i + 1;
+        if (view[i] == stopping_enclose)
+        {
+            const bool is_an_escape
+                = escape == stopping_enclose && (i + 1 < view.size() && view[i + 1] == stopping_enclose);
+            if (!is_an_escape && is_escaped_char(view.data(), i, escape) == false)
+                return i + 1;
+        }
         ++i;
     }
     return -2;
@@ -675,16 +690,15 @@ int stopping_enclose_index(const char *str, int index, const char *authorized_st
 
 std::string remove_escape_char(std::string_view str, int escape)
 {
-    std::string ret;
-    const char *cstr = str.data();
-    size_t len = str.size();
+    const size_t len = str.size();
     size_t count_escapes = 0;
     size_t i = 0;
     size_t j = 0;
+    std::string ret;
 
     while (i < len)
     {
-        if (cstr[i] == escape)
+        if (str[i] == escape)
         {
             ++count_escapes;
             ++i;
@@ -695,11 +709,11 @@ std::string remove_escape_char(std::string_view str, int escape)
     i = 0;
     while (i < len)
     {
-        if (cstr[i] == escape)
+        if (str[i] == escape)
             ++i;
         if (i < len)
         {
-            ret[j] = cstr[i];
+            ret[j] = str[i];
             ++i;
             ++j;
         }
@@ -709,25 +723,24 @@ std::string remove_escape_char(std::string_view str, int escape)
 
 std::string remove_enclosing(std::string_view str, const char *authorized_start_enclose, int escape)
 {
-    const char *cstr = str.data();
-    std::string ret;
-    size_t len = str.size();
+    const size_t len = str.size();
     size_t count_sequences = 0;
     size_t j = 0;
     size_t i = 0;
-    int current_seq;
     bool in_seq = false;
+    int current_seq;
+    std::string ret;
 
     while (i < len)
     {
-        if (!in_seq && is_char_enclose_start(cstr[i], authorized_start_enclose)
-            && is_escaped_char(cstr, i, escape) == false)
+        if (!in_seq && is_char_enclose_start(str[i], authorized_start_enclose)
+            && is_escaped_char(str.data(), i, escape) == false)
         {
-            current_seq = stopping_enclose_of(cstr[i]);
+            current_seq = stopping_enclose_of(str[i]);
             ++count_sequences;
             in_seq = true;
         }
-        else if (in_seq && cstr[i] == current_seq)
+        else if (in_seq && str[i] == current_seq)
         {
             ++count_sequences;
             in_seq = false;
@@ -739,21 +752,21 @@ std::string remove_enclosing(std::string_view str, const char *authorized_start_
     in_seq = false;
     while (i < len)
     {
-        if (!in_seq && is_char_enclose_start(cstr[i], authorized_start_enclose)
-            && is_escaped_char(cstr, i, escape) == false)
+        if (!in_seq && is_char_enclose_start(str[i], authorized_start_enclose)
+            && is_escaped_char(str.data(), i, escape) == false)
         {
-            current_seq = stopping_enclose_of(cstr[i]);
+            current_seq = stopping_enclose_of(str[i]);
             ++i;
             in_seq = true;
         }
-        else if (in_seq && cstr[i] == current_seq)
+        else if (in_seq && str[i] == current_seq)
         {
             ++i;
             in_seq = false;
         }
         else
         {
-            ret[j] = cstr[i];
+            ret[j] = str[i];
             ++j;
             ++i;
         }
@@ -767,6 +780,7 @@ int find_str_not_enclosed(std::string_view origin,
                           int escape)
 {
     size_t i = 0;
+
     while (i < origin.size())
     {
         int closed_at = stopping_enclose_index(origin.data(), i, authorized_start_enclose, escape);

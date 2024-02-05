@@ -37,7 +37,7 @@ File::File()
 {
     _file_ptr = nullptr;
     _buf_ptr = nullptr;
-    _buf_size = 4096;
+    _buf_size = 0;
     // default is new line buffering
     _buf_mode = _IOLBF;
     _stream_ownership = true;
@@ -123,7 +123,7 @@ void File::set_buffering_full()
 
 bool File::_allocate_buffer_if_not_exists()
 {
-    if (_buf_ptr == nullptr)
+    if (_buf_ptr == nullptr && _buf_size > 0)
     {
         _buf_ptr = new char[_buf_size];
         if (_buf_ptr == nullptr)
@@ -136,12 +136,13 @@ bool File::_allocate_buffer_if_not_exists()
             _buf_ptr[_buf_size - 1] = 0;
         }
     }
-    return _buf_ptr != nullptr;
+    return _buf_size == 0 || _buf_ptr != nullptr;
 }
 
 bool File::buff_stream()
 {
-    if (_file_ptr != nullptr)
+    this->_allocate_buffer_if_not_exists();
+    if (_file_ptr != nullptr && _buf_ptr != nullptr)
     {
         int ret = setvbuf(_file_ptr, _buf_ptr, _buf_mode, _buf_size);
         if (ret < 0)
@@ -174,7 +175,7 @@ bool File::open_fd(int fd, std::string_view mode)
     }
     else
         _stream_ownership = true;
-    return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
+    return _file_ptr != nullptr;
 }
 
 bool File::set_stream(FILE *stream, bool ownership)
@@ -197,7 +198,7 @@ bool File::open_tmpfile()
     }
     else
         _stream_ownership = true;
-    return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
+    return _file_ptr != nullptr;
 }
 
 bool File::open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix)
@@ -243,7 +244,7 @@ bool File::open(std::string_view path, std::string_view mode)
         _path = path;
         _stream_ownership = true;
     }
-    return _file_ptr != nullptr && this->_allocate_buffer_if_not_exists();
+    return _file_ptr != nullptr;
 }
 
 bool File::is_open() const

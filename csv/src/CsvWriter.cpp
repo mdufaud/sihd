@@ -2,16 +2,17 @@
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/container.hpp>
 #include <sihd/util/str.hpp>
 
 namespace sihd::csv
 {
 
-SIHD_UTIL_REGISTER_FACTORY(CsvWriter)
+using namespace sihd::util;
 
 SIHD_LOGGER;
 
-CsvWriter::CsvWriter(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
+CsvWriter::CsvWriter()
 {
     _delimiter = ',';
     _comment = '#';
@@ -19,29 +20,16 @@ CsvWriter::CsvWriter(const std::string & name, sihd::util::Node *parent): sihd::
     _col = 0;
     _row = 0;
     _max_col = 0;
-    _begin_quote_c = -1;
-    _end_quote_c = -1;
     _file.set_buffering_line();
     _file.set_buffer_size(4096);
-    this->add_conf("quote", &CsvWriter::set_quote_value);
-    this->add_conf("delimiter", &CsvWriter::set_delimiter);
-    this->add_conf("comment", &CsvWriter::set_commentary);
+}
+
+CsvWriter::CsvWriter(std::string_view path, bool append): CsvWriter()
+{
+    this->open(path, append);
 }
 
 CsvWriter::~CsvWriter() {}
-
-bool CsvWriter::set_quote_value(int c)
-{
-    _end_quote_c = sihd::util::str::stopping_enclose_of(c);
-    if (_end_quote_c < 0)
-    {
-        _begin_quote_c = -1;
-        SIHD_LOG(error, "CsvWriter: quote character '{}' is not supported", c);
-        return false;
-    }
-    _begin_quote_c = c;
-    return true;
-}
 
 bool CsvWriter::set_delimiter(int c)
 {
@@ -97,16 +85,16 @@ bool CsvWriter::new_row()
     return true;
 }
 
-ssize_t CsvWriter::write_commentary(std::string_view value)
+ssize_t CsvWriter::write_commentary(std::string_view comment)
 {
     ssize_t ret = 0;
     if (_col > 0)
         ret = (ssize_t)this->new_row();
     ret += (ssize_t)_file.write_char(_comment);
-    ret += _file.write(value);
+    ret += _file.write(comment);
     ret += (ssize_t)this->new_row();
-    if (ret < (ssize_t)(value.size() + 2))
-        SIHD_LOG(error, "CsvWriter: failed to write commentary");
+    if (ret < (ssize_t)(comment.size() + 2))
+        SIHD_LOG_ERROR("CsvWriter: commentary write failed '{}' < '{}'", ret, comment.size());
     return ret;
 }
 
@@ -116,13 +104,7 @@ ssize_t CsvWriter::write(sihd::util::ArrCharView view)
     //,
     if (_col > 0)
         ret = (ssize_t)_file.write_char(_delimiter);
-    //"
-    if (_begin_quote_c > 0)
-    {
-        ret += _file.write(fmt::format("{}{}{}", _begin_quote_c, view.str(), _end_quote_c));
-    }
-    else
-        ret += _file.write(view);
+    ret += _file.write(view);
     if (ret < (ssize_t)view.size())
         SIHD_LOG_ERROR("CsvWriter: write failed '{}' < '{}'", ret, view.size());
     _col += ret;
@@ -130,14 +112,9 @@ ssize_t CsvWriter::write(sihd::util::ArrCharView view)
     return ret;
 }
 
-ssize_t CsvWriter::write(sihd::util::ArrCharView view, sihd::util::Timestamp timestamp)
+ssize_t CsvWriter::write_row(sihd::util::ArrCharView view)
 {
-    return this->write(std::to_string(timestamp.nanoseconds())) + this->write(view) + this->new_row();
-}
-
-ssize_t CsvWriter::write(const std::vector<std::string> & values, sihd::util::Timestamp timestamp)
-{
-    return this->write(std::to_string(timestamp.nanoseconds())) + this->write(values);
+    return this->write(view) + (ssize_t)this->new_row();
 }
 
 ssize_t CsvWriter::write(const std::vector<std::string> & values)
@@ -157,11 +134,6 @@ ssize_t CsvWriter::write(const std::vector<std::string> & values)
 ssize_t CsvWriter::write_row(const std::vector<std::string> & values)
 {
     return this->write(values) + (ssize_t)this->new_row();
-}
-
-ssize_t CsvWriter::write_row(const std::vector<std::string> & values, sihd::util::Timestamp timestamp)
-{
-    return this->write(std::to_string(timestamp.nanoseconds())) + this->write_row(values);
 }
 
 } // namespace sihd::csv

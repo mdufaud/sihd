@@ -32,7 +32,9 @@ class File
         operator bool() const { return this->is_open(); }
         operator FILE *() const { return _file_ptr; }
 
+        // mode = r/w/a - r+/w+/a+ - rb/wb/ab - rb+/wb+/ab+
         bool open(std::string_view path, std::string_view mode);
+        // mode = r/w/a - r+/w+/a+ - rb/wb/ab - rb+/wb+/ab+
         bool open_fd(int fd, std::string_view mode);
         bool set_stream(FILE *stream, bool ownership);
         bool open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix = "");
@@ -50,9 +52,9 @@ class File
         void set_buffering_line();
         // line buffering (flush when newline)
         void set_buffering_full();
-
-        // apply buff mode to stream
+        // apply buff mode to current stream
         bool buff_stream();
+
         // write changes to disk
         bool flush();
         bool flush_unlocked();
@@ -112,7 +114,6 @@ class File
         bool _seek(long offset, int origin);
         void _delete_buffer();
         bool _allocate_buffer_if_not_exists();
-        bool _set_buffer_to_stream();
 
         FILE *_file_ptr;
         std::string _path;

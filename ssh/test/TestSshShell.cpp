@@ -35,6 +35,7 @@ TEST_F(TestSshShell, test_sshshell_interactive)
 
     GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
     EXPECT_TRUE(session.auth_key_auto().success());
+    session.set_verbosity(SSH_LOG_PROTOCOL);
 
     SshShell shell = session.make_shell();
     ASSERT_TRUE(shell.open(true));

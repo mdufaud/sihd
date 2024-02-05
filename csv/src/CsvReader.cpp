@@ -47,6 +47,11 @@ CsvReader::CsvReader()
     _line_reader.set_delimiter_in_line(true);
 }
 
+CsvReader::CsvReader(std::string_view path): CsvReader()
+{
+    this->open(path);
+}
+
 CsvReader::~CsvReader() {}
 
 bool CsvReader::set_delimiter(int c)

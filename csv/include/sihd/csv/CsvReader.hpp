@@ -13,6 +13,7 @@ class CsvReader: public sihd::util::IReaderTimestamp
 {
     public:
         CsvReader();
+        CsvReader(std::string_view path);
         virtual ~CsvReader();
 
         bool set_delimiter(int c);

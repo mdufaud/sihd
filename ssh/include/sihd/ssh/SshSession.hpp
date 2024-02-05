@@ -22,7 +22,13 @@ class SshSession
         bool set_user(std::string_view user);
         bool set_host(std::string_view host);
         bool set_port(int port);
-        // verbosity = SSH_LOG_NOLOG, SSH_LOG_WARNING, SSH_LOG_PROTOCOL, SSH_LOG_PACKET, SSH_LOG_FUNCTIONS
+        /**
+         * No logging at all = 0;
+         * Only warnings = 1;
+         * High level protocol information = 2;
+         * Lower level protocol infomations, packet level = 3;
+         * Every function path = 4;
+         */
         bool set_verbosity(int verbosity);
         void set_blocking(bool active);
 

@@ -276,6 +276,19 @@ TEST_F(TestStr, test_str_time2str)
 
 TEST_F(TestStr, test_str_escapes)
 {
+    // \[hello  index[1] is '[' and escaped
+    EXPECT_TRUE(str::is_escaped_char("\\[hello", 1));
+    EXPECT_FALSE(str::is_escaped_char("\\[hello", 0));
+    EXPECT_FALSE(str::is_escaped_char("\\[hello", 2));
+    // \\[hello  index[1] is '\' and escaped but '[' is not escaped
+    EXPECT_TRUE(str::is_escaped_char("\\\\[hello", 1));
+    EXPECT_FALSE(str::is_escaped_char("\\\\[hello", 0));
+    EXPECT_FALSE(str::is_escaped_char("\\\\[hello", 2));
+    EXPECT_FALSE(str::is_escaped_char("\\\\[hello", 3));
+}
+
+TEST_F(TestStr, test_str_enclosures)
+{
     EXPECT_TRUE(str::is_char_enclose_start('"'));
     EXPECT_TRUE(str::is_char_enclose_start('\''));
     EXPECT_TRUE(str::is_char_enclose_start('{'));
@@ -297,15 +310,23 @@ TEST_F(TestStr, test_str_escapes)
     EXPECT_EQ(str::stopping_enclose_of('['), ']');
     EXPECT_EQ(str::stopping_enclose_of('<'), '>');
 
-    // \[hello  index[1] is '[' and escaped
-    EXPECT_TRUE(str::is_escaped_char("\\[hello", 1));
-    EXPECT_FALSE(str::is_escaped_char("\\[hello", 0));
-    EXPECT_FALSE(str::is_escaped_char("\\[hello", 2));
-    // \\[hello  index[1] is '\' and escaped but '[' is not escaped
-    EXPECT_TRUE(str::is_escaped_char("\\\\[hello", 1));
-    EXPECT_FALSE(str::is_escaped_char("\\\\[hello", 0));
-    EXPECT_FALSE(str::is_escaped_char("\\\\[hello", 2));
-    EXPECT_FALSE(str::is_escaped_char("\\\\[hello", 3));
+    EXPECT_EQ(str::stopping_enclose_index("'hello'", 0, "'"), 7);
+    EXPECT_EQ(str::stopping_enclose_index("'hello'", 0, "'", '\''), 7);
+    // not an enclosure
+    EXPECT_EQ(str::stopping_enclose_index("", 0, "'", '\''), -1);
+    // not an enclosure
+    EXPECT_EQ(str::stopping_enclose_index("hello", 0, "'", '\''), -1);
+    // never ends
+    EXPECT_EQ(str::stopping_enclose_index("'hello\\'", 0, "'"), -2);
+    EXPECT_EQ(str::stopping_enclose_index("'hello", 0, "'", '\''), -2);
+    // ending is escaped, never ends
+    EXPECT_EQ(str::stopping_enclose_index("'hello''", 0, "'", '\''), -2);
+    // pointing to an escape
+    EXPECT_EQ(str::stopping_enclose_index("'hello''", 6, "'", '\''), -1);
+    // pointing to an escaped escape
+    EXPECT_EQ(str::stopping_enclose_index("'hello''", 7, "'", '\''), -1);
+    // never ends
+    EXPECT_EQ(str::stopping_enclose_index("'hello'''", 8, "'", '\''), -2);
 }
 
 TEST_F(TestStr, test_str_from_string)

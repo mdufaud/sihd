@@ -51,7 +51,7 @@ int stopping_enclose_of(int starting_enclose);
 //   -> -1 (s[0] is not a closing escape)
 // stopping_enclose_index("[hello", 0, "[")
 //   -> -2 (s[0] has no end to an enclose)
-int stopping_enclose_index(const char *s,
+int stopping_enclose_index(std::string_view view,
                            int index,
                            const char *authorized_start_enclose = encloses_start(),
                            int escape = escape_char());
@@ -61,7 +61,7 @@ int stopping_enclose_index(const char *s,
  * find_char_not_escaped("hello \\?", '?') -> -1
  * find_char_not_escaped("hello \\\\?", '?') -> 8
  */
-int find_char_not_escaped(const char *str, int char_to_find, int escape = escape_char());
+int find_char_not_escaped(std::string_view view, int char_to_find, int escape = escape_char());
 
 int find_str_not_enclosed(std::string_view origin,
                           std::string_view to_find,

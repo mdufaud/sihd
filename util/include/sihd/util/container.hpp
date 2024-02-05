@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <tuple>
 #include <vector>
 
 #include <sihd/util/traits.hpp>
@@ -224,6 +225,14 @@ double average(const Container & container, const Predicate & predicate = detail
         return 0.;
 
     return static_cast<double>(sum(container, predicate)) / std::distance(container.begin(), container.end());
+}
+
+template <int... Columns, typename Tuple>
+void sort_tuple(std::vector<Tuple> & tuples)
+{
+    std::sort(tuples.begin(), tuples.end(), [](const auto & lhs, const auto & rhs) {
+        return std::make_tuple(std::get<Columns>(lhs)...) < std::make_tuple(std::get<Columns>(rhs)...);
+    });
 }
 
 } // namespace sihd::util::container

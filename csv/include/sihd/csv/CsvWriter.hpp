@@ -1,23 +1,21 @@
 #ifndef __SIHD_CSV_CSVWRITER_HPP__
 #define __SIHD_CSV_CSVWRITER_HPP__
 
-#include <sihd/util/Configurable.hpp>
+#include <vector>
+
 #include <sihd/util/File.hpp>
 #include <sihd/util/IWriter.hpp>
-#include <sihd/util/Named.hpp>
 
 namespace sihd::csv
 {
 
-class CsvWriter: public sihd::util::Named,
-                 public sihd::util::Configurable,
-                 public sihd::util::IWriterTimestamp
+class CsvWriter: public sihd::util::IWriter
 {
     public:
-        CsvWriter(const std::string & name, sihd::util::Node *parent = nullptr);
+        CsvWriter();
+        CsvWriter(std::string_view path, bool append = false);
         virtual ~CsvWriter();
 
-        bool set_quote_value(int c);
         bool set_delimiter(int c);
         bool set_commentary(int c);
 
@@ -25,18 +23,13 @@ class CsvWriter: public sihd::util::Named,
         bool is_open() const;
         bool close();
 
-        bool new_row();
+        ssize_t write(sihd::util::ArrCharView view);
+        ssize_t write_row(sihd::util::ArrCharView view);
+        ssize_t write(const std::vector<std::string> & values);
+        ssize_t write_row(const std::vector<std::string> & values);
         ssize_t write_commentary(std::string_view commentary);
 
-        // IWriterTimestamp
-        ssize_t write(sihd::util::ArrCharView view);
-        ssize_t write(sihd::util::ArrCharView view, sihd::util::Timestamp timestamp);
-
-        ssize_t write(const std::vector<std::string> & values);
-        ssize_t write(const std::vector<std::string> & values, sihd::util::Timestamp timestamp);
-
-        ssize_t write_row(const std::vector<std::string> & values);
-        ssize_t write_row(const std::vector<std::string> & values, sihd::util::Timestamp timestamp);
+        bool new_row();
 
         int delimiter() const { return _delimiter; }
         int comment() const { return _comment; }
@@ -56,9 +49,6 @@ class CsvWriter: public sihd::util::Named,
         int _delimiter;
         int _comment;
         int _line_feed;
-
-        char _begin_quote_c;
-        char _end_quote_c;
 
         sihd::util::File _file;
 };

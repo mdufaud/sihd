@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <sihd/csv/CsvReader.hpp>
 #include <sihd/csv/CsvWriter.hpp>
+#include <sihd/csv/utils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/TmpDir.hpp>
 #include <sihd/util/fs.hpp>
@@ -22,12 +23,59 @@ class TestCsv: public ::testing::Test
         virtual void TearDown() {}
 };
 
+TEST_F(TestCsv, test_csv_utils_from_string)
+{
+    const std::string content = "1,2,,3,4\n"
+                                "#commentary !\n"
+                                "sup,hello world,bye\n"
+                                "\"sup\nnl\",hello\"\"world\"\",bye\"\"\n"
+                                "5,6\n"
+                                "7.8,9.10\n";
+    const std::vector<std::vector<std::string>> expected {
+        {"1", "2", "", "3", "4"},
+        {"sup", "hello world", "bye"},
+        {"sup\nnl", "hello\"world\"", "bye\""},
+        {"5", "6"},
+        {"7.8", "9.10"},
+    };
+
+    auto csv_lines = sihd::csv::csv_from_string(content, false, ',', '#');
+
+    for (const auto & columns : csv_lines)
+    {
+        fmt::print("line: '{}'\n", fmt::join(columns, ","));
+    }
+
+    EXPECT_EQ(csv_lines, expected);
+}
+
+TEST_F(TestCsv, test_csv_utils_tuple)
+{
+    using Data = std::tuple<int, std::string, float, char>;
+
+    std::vector<Data> datas;
+    datas.emplace_back(std::make_tuple(1, "one", 1.1, '1'));
+
+    const std::vector<std::string> columns = {"number", "string", "float", "char"};
+
+    TmpDir tmp_dir;
+    const std::string path = fmt::format("{}/{}", tmp_dir.path(), "test_tuple.csv");
+
+    write_csv(path, columns, datas);
+
+    auto csv_data = read_csv(path, true);
+    ASSERT_TRUE(csv_data);
+    ASSERT_EQ(csv_data->size(), 1);
+    const std::vector<std::string> expected {"1", "one", "1.1", "1"};
+    EXPECT_EQ(csv_data->at(0), expected);
+}
+
 TEST_F(TestCsv, test_csv_writer)
 {
     TmpDir tmp_dir;
 
     std::string path = fs::combine(tmp_dir.path(), "test_write.csv");
-    CsvWriter writer("csv-writer");
+    CsvWriter writer;
 
     SIHD_LOG(info, "Writing csv: {}", path);
     EXPECT_TRUE(writer.open(path));
@@ -41,14 +89,12 @@ TEST_F(TestCsv, test_csv_writer)
     EXPECT_TRUE(writer.new_row());
     EXPECT_TRUE(writer.write({"1", "2", "3"}));
     EXPECT_TRUE(writer.write_row({"4", "5"}));
-    EXPECT_TRUE(writer.write("hello world", 1234));
-    EXPECT_TRUE(writer.set_quote_value('"'));
-    EXPECT_TRUE(writer.write("hello world", 1234));
-    EXPECT_TRUE(writer.set_quote_value('('));
-    EXPECT_TRUE(writer.write("hello world", 1234));
     EXPECT_TRUE(writer.new_row());
+    EXPECT_TRUE(writer.write_row(escape_str("hello \"world\"")));
     EXPECT_TRUE(writer.write_commentary("bye"));
     EXPECT_TRUE(writer.close());
+
+    fmt::print("{}\n", fs::read_all(path).value());
 
     EXPECT_TRUE(sihd::util::fs::are_equals(path, "test/resources/expected.csv"));
 }
@@ -107,5 +153,12 @@ TEST_F(TestCsv, test_csv_reader)
 
     EXPECT_FALSE(reader.read_next());
     EXPECT_TRUE(reader.close());
+
+    auto csv_data = read_csv(path, false);
+    ASSERT_TRUE(csv_data);
+    ASSERT_EQ(csv_data->size(), 3);
+    EXPECT_EQ(csv_data->at(0), values1);
+    EXPECT_EQ(csv_data->at(1), values2);
+    EXPECT_EQ(csv_data->at(2), values3);
 }
 } // namespace test

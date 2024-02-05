@@ -173,6 +173,21 @@ class ArrayView: public IArrayView
             return this->is_bytes_equal(arr.buf(), arr.byte_size(), byte_offset);
         }
 
+        bool operator==(ArrayView<T> other) const { return this->is_equal(other); }
+
+        bool operator!=(ArrayView<T> other) const { return !this->is_equal(other); }
+
+        bool is_equal(ArrayView<T> arr, size_t offset = 0) const
+        {
+            return this->is_equal(arr.data(), arr.size(), offset);
+        }
+
+        // compares memory from internal buffer and array of size
+        bool is_equal(const T *arr, size_t size, size_t offset = 0) const
+        {
+            return this->is_bytes_equal(arr, size * this->data_size(), offset * this->data_size());
+        }
+
         /*********************************************************************/
         /* copy_to */
         /*********************************************************************/
@@ -183,6 +198,11 @@ class ArrayView: public IArrayView
                 return false;
             memcpy(buf, this->buf() + byte_offset, size);
             return true;
+        }
+
+        bool copy_to(T *arr, size_t size, size_t offset = 0) const
+        {
+            return this->copy_to_bytes(arr, size * this->data_size(), offset * this->data_size());
         }
 
         /*********************************************************************/
@@ -254,12 +274,6 @@ class ArrayView: public IArrayView
         }
 
         /*********************************************************************/
-        /* class methods */
-        /*********************************************************************/
-
-        const T *data() const { return _buf_ptr; }
-
-        /*********************************************************************/
         /* view change */
         /*********************************************************************/
 
@@ -291,34 +305,6 @@ class ArrayView: public IArrayView
         }
 
         /*********************************************************************/
-        /* is_equal */
-        /*********************************************************************/
-
-        bool operator==(ArrayView<T> other) const { return this->is_equal(other); }
-
-        bool operator!=(ArrayView<T> other) const { return !this->is_equal(other); }
-
-        bool is_equal(ArrayView<T> arr, size_t offset = 0) const
-        {
-            return this->is_equal(arr.data(), arr.size(), offset);
-        }
-
-        // compares memory from internal buffer and array of size
-        bool is_equal(const T *arr, size_t size, size_t offset = 0) const
-        {
-            return this->is_bytes_equal(arr, size * this->data_size(), offset * this->data_size());
-        }
-
-        /*********************************************************************/
-        /* copy_to */
-        /*********************************************************************/
-
-        bool copy_to(T *arr, size_t size, size_t offset = 0) const
-        {
-            return this->copy_to_bytes(arr, size * this->data_size(), offset * this->data_size());
-        }
-
-        /*********************************************************************/
         /* access */
         /*********************************************************************/
 
@@ -339,9 +325,12 @@ class ArrayView: public IArrayView
         // access value arr[idx]
         inline T operator[](size_t idx) const { return _buf_ptr[idx]; }
 
+        const T *data() const { return _buf_ptr; }
+
         /*********************************************************************/
         /* iterator */
         /*********************************************************************/
+
         template <typename IteratorType>
         class ArrayIterator
         {
