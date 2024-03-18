@@ -72,7 +72,7 @@ inline constexpr const char *default_zone_format = "%FT%T%z";
 class Timestamp
 {
     public:
-        constexpr Timestamp(time_t nano): _nano(nano) {};
+        constexpr Timestamp(time_t nano = 0): _nano(nano) {};
         constexpr Timestamp(timespec ts): _nano(ts.tv_nsec + time::sec(ts.tv_sec)) {};
         constexpr Timestamp(Clocktime clocktime): _nano(0)
         {

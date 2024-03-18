@@ -2,8 +2,10 @@
 #include <sihd/csv/utils.hpp>
 #include <sihd/util/str.hpp>
 
-namespace sihd::csv
+namespace sihd::csv::utils
 {
+
+SIHD_NEW_LOGGER("sihd::csv::utils");
 
 std::string escape_str(std::string_view view)
 {
@@ -83,4 +85,4 @@ std::optional<CsvData> read_csv(std::string_view path, bool remove_header, int d
     return ret;
 }
 
-} // namespace sihd::csv
+} // namespace sihd::csv::utils

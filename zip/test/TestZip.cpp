@@ -5,8 +5,9 @@
 #include <sihd/util/TmpDir.hpp>
 #include <sihd/util/fs.hpp>
 
-#include <sihd/zip/ZipReader.hpp>
-#include <sihd/zip/ZipWriter.hpp>
+#include <sihd/zip/ZipFile.hpp>
+
+#include <sihd/util/Process.hpp>
 
 namespace test
 {
@@ -25,110 +26,57 @@ class TestZip: public ::testing::Test
         virtual void TearDown() {}
 };
 
-TEST_F(TestZip, test_zip_writer)
+TEST_F(TestZip, test_zip)
 {
     TmpDir tmp_dir;
 
     std::string zip_path = fs::combine(tmp_dir.path(), "to_zip.zip");
     fs::remove_file(zip_path);
 
-    ZipWriter writer("zip-writer");
+    SIHD_LOG_INFO("{}", zip_path);
 
-    EXPECT_TRUE(writer.set_aes_encryption(128));
-    EXPECT_FALSE(writer.set_conf("aes", 10));
+    ZipFile zip(zip_path);
 
-    SIHD_LOG(info, "Creating zip archive: {}", zip_path);
-    EXPECT_TRUE(writer.open(zip_path));
+    ASSERT_TRUE(zip.is_open());
 
-    // Adding fs directory
-    std::string entry = "test/resources/to_zip";
-    SIHD_LOG(info, "Zipping: {}", entry);
-    EXPECT_TRUE(writer.fs_add(entry, "to_zip"));
+    EXPECT_TRUE(zip.comment_archive("tis an archive"));
 
-    const char hw[] = "hello test world";
-    // Adding array entry
-    EXPECT_TRUE(writer.add_file("toto_entry", hw));
-    EXPECT_TRUE(writer.add_file("toto_entry2", hw));
+    EXPECT_TRUE(zip.add_dir("hello"));
+    EXPECT_EQ(zip.count_entries(), 1);
 
-    const char *password = "toto";
+    EXPECT_TRUE(zip.add_file("hello/world", "hello world !"));
+    EXPECT_FALSE(zip.add_file("hello/world", "nope"));
 
-    EXPECT_TRUE(writer.encrypt_all(password));
-    EXPECT_TRUE(writer.close());
+    EXPECT_TRUE(zip.load_entry("hello/world"));
+    EXPECT_TRUE(zip.rename_entry("hello/renamed"));
+    EXPECT_TRUE(zip.modify_entry_time(Calendar {.day = 21, .month = 2, .year = 2000}));
+    EXPECT_TRUE(zip.comment_entry("tis an entry"));
 
-    // Test reading
-    ZipReader reader("zip-reader");
+    EXPECT_TRUE(zip.load_entry("hello/"));
+    EXPECT_TRUE(zip.is_entry_directory());
+    EXPECT_EQ(zip.count_entries(), 2);
 
-    EXPECT_FALSE(reader.set_conf_str("password", password));
+    EXPECT_TRUE(zip.add_file("hello/world", "hi !"));
+    EXPECT_TRUE(zip.load_entry("hello/world"));
+    EXPECT_TRUE(zip.replace_entry("tis a replacement of content"));
+    EXPECT_EQ(zip.count_entries(), 3);
 
-    EXPECT_TRUE(reader.open(zip_path));
-    EXPECT_EQ(reader.count_entries(), 13u);
+    EXPECT_TRUE(zip.add_dir("to"));
+    EXPECT_TRUE(zip.add_file("to/remove", ""));
+    EXPECT_EQ(zip.count_entries(), 5);
+    EXPECT_TRUE(zip.load_entry("to/"));
+    EXPECT_TRUE(zip.remove_entry());
+    EXPECT_TRUE(zip.load_entry("to/remove"));
+    EXPECT_TRUE(zip.remove_entry());
+    EXPECT_EQ(zip.count_entries(), 5);
 
-    sihd::util::ArrCharView view;
-    std::string entry_name = "toto_entry";
-    EXPECT_TRUE(reader.load_entry(entry_name));
-    SIHD_LOG(info, "Trying to read entry without password");
-    EXPECT_TRUE(reader.read_entry() == -1);
-    SIHD_LOG(info, "Trying to read entry with password");
-    EXPECT_TRUE(reader.read_entry(password) > 0);
-    EXPECT_TRUE(reader.get_read_data(view));
-    EXPECT_EQ(view, hw);
+    EXPECT_EQ(zip.count_original_entries(), 0);
 
-    SIHD_LOG(info, "Setting global password");
-    EXPECT_TRUE(reader.set_conf_str("password", password));
-    entry_name = "toto_entry2";
-    EXPECT_TRUE(reader.load_entry(entry_name));
-    EXPECT_TRUE(reader.read_entry() > 0);
-    EXPECT_TRUE(reader.get_read_data(view));
-    EXPECT_EQ(view, hw);
+    ASSERT_TRUE(zip.close());
 
-    entry_name = "to_zip/file.txt";
-    EXPECT_TRUE(reader.load_entry(entry_name));
-    EXPECT_TRUE(reader.read_entry() > 0);
-    EXPECT_TRUE(reader.get_read_data(view));
-    EXPECT_EQ(view, "hello\n");
-
-    EXPECT_TRUE(reader.close());
+    Process("unzip", "-vl", zip_path).run();
+    Process("ls").run();
+    Process("ls", "-la").run();
 }
 
-TEST_F(TestZip, test_zip_reader)
-{
-    std::string zip_path = "test/resources/to_read/to_zip.zip";
-    sihd::util::ArrCharView view;
-    ZipReader reader("zip-reader");
-
-    EXPECT_TRUE(reader.open(zip_path));
-    EXPECT_EQ(reader.count_entries(), 14u);
-
-    std::string entry_name = "to_zip/file.txt";
-    EXPECT_TRUE(reader.load_entry(entry_name));
-    EXPECT_GT(reader.read_entry(), 0);
-    EXPECT_TRUE(reader.get_read_data(view));
-    EXPECT_STREQ(view.data(), "hello\n");
-
-    reader.set_read_entry_names(true);
-    while (reader.read_next())
-    {
-        EXPECT_TRUE(reader.get_read_data(view));
-        SIHD_LOG(info, "Zip entry: {}", view);
-        if (reader.is_entry_directory())
-        {
-            SIHD_LOG(info, "-> directory");
-        }
-        else
-        {
-            EXPECT_TRUE(reader.read_entry() >= 0);
-            EXPECT_TRUE(reader.get_read_data(view));
-            if (view.size() > 0)
-            {
-                // removing linefeed from text
-                view.remove_suffix(1);
-                SIHD_LOG(info, "-> content: {}", view);
-            }
-            else
-                SIHD_LOG(info, "-> empty");
-        }
-    }
-
-    EXPECT_TRUE(reader.close());
-}
 } // namespace test

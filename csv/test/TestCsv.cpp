@@ -39,7 +39,7 @@ TEST_F(TestCsv, test_csv_utils_from_string)
         {"7.8", "9.10"},
     };
 
-    auto csv_lines = sihd::csv::csv_from_string(content, false, ',', '#');
+    auto csv_lines = utils::csv_from_string(content, false, ',', '#');
 
     for (const auto & columns : csv_lines)
     {
@@ -60,15 +60,15 @@ TEST_F(TestCsv, test_csv_utils_tuple)
 
     const std::vector<std::string> expected_line_1 {"1", "one", "1.1", "1"};
 
-    const auto csv_str = csv_to_str(columns, datas);
+    const auto csv_str = utils::csv_to_str(columns, datas);
     EXPECT_EQ(csv_str, "number,string,float,char\n1,one,1.1,1\n");
 
     TmpDir tmp_dir;
     const std::string path = fmt::format("{}/{}", tmp_dir.path(), "test_tuple.csv");
 
-    ASSERT_TRUE(write_csv(path, columns, datas));
+    ASSERT_TRUE(utils::write_csv(path, columns, datas));
 
-    auto csv_data = read_csv(path, true);
+    const auto csv_data = utils::read_csv(path, true);
     ASSERT_TRUE(csv_data);
     ASSERT_EQ(csv_data->size(), 1);
     EXPECT_EQ(csv_data->at(0), expected_line_1);
@@ -94,7 +94,7 @@ TEST_F(TestCsv, test_csv_writer)
     EXPECT_TRUE(writer.write({"1", "2", "3"}));
     EXPECT_TRUE(writer.write_row({"4", "5"}));
     EXPECT_TRUE(writer.new_row());
-    EXPECT_TRUE(writer.write_row(escape_str("hello \"world\"")));
+    EXPECT_TRUE(writer.write_row(utils::escape_str("hello \"world\"")));
     EXPECT_TRUE(writer.write_commentary("bye"));
     EXPECT_TRUE(writer.close());
 
@@ -161,7 +161,7 @@ TEST_F(TestCsv, test_csv_reader)
     EXPECT_FALSE(reader.read_next());
     EXPECT_TRUE(reader.close());
 
-    auto csv_data = read_csv(path, false);
+    auto csv_data = utils::read_csv(path, false);
     ASSERT_TRUE(csv_data);
     ASSERT_EQ(csv_data->size(), 3);
     EXPECT_EQ(csv_data->at(0), values1);

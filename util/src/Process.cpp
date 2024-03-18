@@ -73,12 +73,16 @@ Process::Process(std::function<int()> fun): Process()
 
 Process::Process(const std::vector<std::string> & args): Process()
 {
-    _argv.reserve(args.size() + 1);
-    for (const std::string & arg : args)
-        _argv.push_back(arg.c_str());
+    _argv = args;
 }
 
 Process::Process(std::initializer_list<const char *> args): Process()
+{
+    _argv.reserve(args.size() + 1);
+    std::copy(args.begin(), args.end(), std::back_inserter(_argv));
+}
+
+Process::Process(std::initializer_list<std::string> args): Process()
 {
     _argv.reserve(args.size() + 1);
     std::copy(args.begin(), args.end(), std::back_inserter(_argv));
@@ -134,19 +138,13 @@ void Process::clear_argv()
 
 Process & Process::add_argv(const std::string & arg)
 {
-    if (_argv.size() > 0 && _argv.back() == NULL)
-        _argv.pop_back();
-    _argv.push_back(arg.c_str());
+    _argv.push_back(arg);
     return *this;
 }
 
 Process & Process::add_argv(const std::vector<std::string> & args)
 {
-    if (_argv.size() > 0 && _argv.back() == NULL)
-        _argv.pop_back();
-    _argv.reserve(_argv.size() + args.size() + 1);
-    for (const std::string & arg : args)
-        _argv.push_back(arg.c_str());
+    _argv.insert(_argv.end(), args.begin(), args.end());
     return *this;
 }
 
@@ -351,7 +349,7 @@ void Process::_add_pipe(FileDescWrapper & fdw)
 
 // Execution
 
-bool Process::_do_fork()
+bool Process::_do_fork(const char **argv)
 {
     pid_t pid;
     if ((pid = fork()) < 0)
@@ -386,7 +384,7 @@ bool Process::_do_fork()
         if (_fun_to_execute)
             status = _fun_to_execute();
         else
-            status = execvp(_argv[0], const_cast<char *const *>(&(_argv[0])));
+            status = execvp(argv[0], const_cast<char *const *>(&(argv[0])));
         exit(status);
     }
     _pid = pid;
@@ -394,7 +392,7 @@ bool Process::_do_fork()
 }
 
 # if !defined(__SIHD_ANDROID__)
-bool Process::_do_spawn()
+bool Process::_do_spawn(const char **argv)
 {
     pid_t pid;
     posix_spawn_file_actions_t actions;
@@ -421,7 +419,7 @@ bool Process::_do_spawn()
         _add_dup_action(&actions, _stderr.fd_write, STDERR_FILENO);
         _add_close_action(&actions, _stderr.fd_read);
     }
-    int err = posix_spawnp(&pid, _argv[0], &actions, nullptr, const_cast<char *const *>(&(_argv[0])), nullptr);
+    int err = posix_spawnp(&pid, argv[0], &actions, nullptr, const_cast<char *const *>(&(argv[0])), nullptr);
     posix_spawn_file_actions_destroy(&actions);
     if (err != 0)
     {
@@ -456,17 +454,25 @@ bool Process::start()
         return false;
     }
     this->_init_poll();
+
+    const char *c_argv[_argv.size() + 1];
+    const char **tmp = c_argv;
+    for (const std::string & arg : _argv)
+    {
+        *tmp = arg.c_str();
+        ++tmp;
+    }
+    *tmp = nullptr;
+
     bool success = false;
     if (_fun_to_execute)
-        success = this->_do_fork();
+        success = this->_do_fork(c_argv);
     else
     {
-        if (_argv.back() != NULL)
-            _argv.push_back(NULL);
 # if !defined(__SIHD_ANDROID__)
-        success = this->_do_spawn();
+        success = this->_do_spawn(c_argv);
 # else
-        success = this->_do_fork();
+        success = this->_do_fork(c_argv);
 # endif
     }
     if (success)

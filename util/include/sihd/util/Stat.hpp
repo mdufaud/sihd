@@ -12,10 +12,10 @@ template <typename SampleType>
 struct Stat
 {
         size_t samples = 0;
-        SampleType min = {};
-        SampleType sum = {};
-        SampleType square = {};
-        SampleType max = {};
+        SampleType min = SampleType {};
+        SampleType sum = SampleType {};
+        SampleType square = SampleType {};
+        SampleType max = SampleType {};
 
         void add_sample(const SampleType & sample)
         {
@@ -45,7 +45,7 @@ struct Stat
             max = SampleType {};
         }
 
-        SampleType average() const { return samples == 0 ? SampleType {} : sum / samples; }
+        SampleType average() const { return samples == 0 ? SampleType {} : static_cast<SampleType>(sum / samples); }
 
         SampleType variance() const
         {

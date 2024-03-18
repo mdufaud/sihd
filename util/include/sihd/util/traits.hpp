@@ -48,6 +48,22 @@ struct is_duration<T, std::void_t<typename T::period>>: public std::true_type
 {
 };
 
+template <class T, class U>
+using is_same_uncvref
+    = std::is_same<std::remove_cv_t<std::remove_reference_t<T>>, std::remove_cv_t<std::remove_reference_t<U>>>;
+
+template <typename T, typename... U>
+using are_all_same = std::integral_constant<bool, (... && std::is_same_v<T, U>)>;
+
+template <typename T, typename... U>
+using are_all_same_decay = std::integral_constant<bool, (... && std::is_same_v<T, std::decay_t<U>>)>;
+
+template <typename To, typename... From>
+using are_all_convertible = std::integral_constant<bool, (... && std::is_convertible_v<From, To>)>;
+
+template <typename T, typename... Args>
+using are_all_constructible = std::integral_constant<bool, (... && std::is_constructible_v<T, Args>)>;
+
 } // namespace sihd::util::traits
 
 #endif

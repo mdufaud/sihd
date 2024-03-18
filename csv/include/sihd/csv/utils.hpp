@@ -10,7 +10,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/traits.hpp>
 
-namespace sihd::csv
+namespace sihd::csv::utils
 {
 
 SIHD_LOGGER;
@@ -94,6 +94,6 @@ bool write_csv(std::string_view path,
     return success;
 }
 
-} // namespace sihd::csv
+} // namespace sihd::csv::utils
 
 #endif

@@ -9,6 +9,7 @@
 #include <sihd/util/Poll.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/platform.hpp>
+#include <sihd/util/traits.hpp>
 
 namespace sihd::util
 {
@@ -22,10 +23,26 @@ class Process: public IStoppableRunnable,
         Process();
         Process(std::function<int()> fun);
         Process(const std::vector<std::string> & args);
+        Process(std::initializer_list<std::string> args);
         Process(std::initializer_list<const char *> args);
-        virtual ~Process();
 
         Process(const Process &) = delete;
+        Process(Process &&) = delete;
+
+        template <typename... Args,
+                  typename = typename std::enable_if_t<traits::are_all_constructible<std::string, Args...>::value>>
+        Process(const Args &...args)
+        {
+            _argv.reserve(sizeof...(Args));
+
+            const auto filler = [this](const auto & arg) {
+                _argv.emplace_back(arg);
+            };
+
+            (filler(args), ...);
+        }
+
+        virtual ~Process();
 
         // reset so you can run again
         void reset();
@@ -95,7 +112,7 @@ class Process: public IStoppableRunnable,
         pid_t pid() const { return _pid; };
 
         // get setted argv
-        const std::vector<const char *> & argv() const { return _argv; }
+        const std::vector<std::string> & argv() const { return _argv; }
 
         // check if process will execute fork + exit(fun())
         bool runs_function() const { return _fun_to_execute ? true : false; }
@@ -135,10 +152,10 @@ class Process: public IStoppableRunnable,
         bool _process_fd_out(FileDescWrapper & fdw);
 
         // spawn but for a function
-        bool _do_fork();
+        bool _do_fork(const char **argv);
 
 # if !defined(__SIHD_ANDROID__)
-        bool _do_spawn();
+        bool _do_spawn(const char **argv);
 # endif
         void _init_poll();
         // fd redirections setting
@@ -155,7 +172,7 @@ class Process: public IStoppableRunnable,
         FileDescWrapper _stdin;
         FileDescWrapper _stdout;
         FileDescWrapper _stderr;
-        std::vector<const char *> _argv;
+        std::vector<std::string> _argv;
         std::function<int()> _fun_to_execute;
         std::mutex _mutex_run;
         mutable std::mutex _mutex_info;
