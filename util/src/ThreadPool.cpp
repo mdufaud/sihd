@@ -13,7 +13,7 @@ ThreadPool::ThreadPool(std::string_view name, size_t number_of_threads): _name(n
     _threads.reserve(number_of_threads);
     for (size_t i = 0; i < number_of_threads; ++i)
     {
-        _threads.emplace_back(std::make_unique<Thread>(fmt::format("{}::thread-{}", name, i), _jobs));
+        _threads.emplace_back(std::make_unique<Thread>(fmt::format("{}[{}]", name, i + 1), _jobs));
     }
 }
 
@@ -71,6 +71,7 @@ void ThreadPool::Thread::_loop()
     while (!_stop)
     {
         Job job;
+
         try
         {
             job = _jobs.pop();
@@ -80,11 +81,11 @@ void ThreadPool::Thread::_loop()
             break;
         }
 
-        Stopwatch watch;
+        _stopwatch.reset();
         job();
         {
             std::lock_guard l(_stat_mutex);
-            _jobs_stat.add_sample(watch.time());
+            _jobs_stat.add_sample(_stopwatch.time());
         }
     }
 }

@@ -22,8 +22,14 @@ class ThreadPool
     public:
         using Job = std::function<void()>;
 
-        template <typename Func, typename... Args>
-        using JobReturnType = typename std::invoke_result_t<Func, Args...>;
+        template <typename Function, typename... Args>
+        using CallableReturnType = typename std::invoke_result_t<Function, Args...>;
+
+        template <typename T>
+        using VoidOrVectorReturnType = typename std::conditional_t<std::is_void_v<T>, void, std::vector<T>>;
+
+        template <typename Function>
+        using CompleteAllJobsReturnType = VoidOrVectorReturnType<CallableReturnType<Function, size_t>>;
 
         struct Thread
         {
@@ -40,6 +46,7 @@ class ThreadPool
                 bool _stop;
                 SafeQueue<Job> & _jobs;
                 Stat<Timestamp> _jobs_stat;
+                Stopwatch _stopwatch;
                 std::thread _thread;
                 mutable std::mutex _stat_mutex;
         };
@@ -48,9 +55,10 @@ class ThreadPool
         ~ThreadPool();
 
         template <typename Function>
-        std::future<JobReturnType<Function>> add_job(Function && function)
+        std::future<CallableReturnType<Function>> add_job(Function && function)
         {
-            using PackedTask = std::packaged_task<JobReturnType<Function>()>;
+            // wrap a callable target with std::packaged_task
+            using PackedTask = std::packaged_task<CallableReturnType<Function>()>;
 
             auto packed_task = std::make_shared<PackedTask>(std::forward<Function>(function));
             auto future = packed_task->get_future();
@@ -58,7 +66,41 @@ class ThreadPool
             return future;
         }
 
+        template <typename Function>
+        CompleteAllJobsReturnType<Function> complete_all_jobs(size_t number_of_jobs, Function && function)
+        {
+            using ReturnType = CallableReturnType<Function, size_t>;
+
+            std::vector<std::future<ReturnType>> futures;
+            futures.reserve(number_of_jobs);
+
+            for (size_t i = 0; i < number_of_jobs; ++i)
+            {
+                futures.emplace_back(this->add_job([function, i] { return function(i); }));
+            }
+
+            for (auto & future : futures)
+            {
+                if (future.valid())
+                    future.wait();
+            }
+
+            if constexpr (!std::is_void_v<ReturnType>)
+            {
+                std::vector<ReturnType> results;
+                results.reserve(number_of_jobs);
+                for (auto & future : futures)
+                {
+                    results.emplace_back(future.get());
+                }
+                return results;
+            }
+        }
+
+        // stop all jobs from being processed then kill all threads
         void stop();
+        // wait for all jobs to be read by threads, does not ensure the job is done though
+        // you have to use future.wait() from add_job
         void wait_all_jobs() const;
         size_t remaining_jobs() const;
         std::vector<Stat<Timestamp>> stats() const;

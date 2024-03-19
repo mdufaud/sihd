@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <cstring>
+#include <stdexcept>
 
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/str.hpp>
