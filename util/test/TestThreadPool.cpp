@@ -34,11 +34,19 @@ TEST_F(TestThreadPool, test_threadpool_spam)
 
     ThreadPool pool("thread_pool", 4);
 
+    auto future = pool.add_job([] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        return 42;
+    });
+
     std::atomic<int> count = 0;
     for (size_t i = 0; i < total_jobs; ++i)
     {
         pool.add_job([&count] { ++count; });
     }
+
+    future.wait();
+    EXPECT_EQ(future.get(), 42);
 
     pool.wait_all_jobs();
     pool.stop();
@@ -53,7 +61,7 @@ TEST_F(TestThreadPool, test_threadpool_spam)
     }
 
     const auto samples = container::sum(stats, [](const auto & stat) { return stat.samples; });
-    EXPECT_EQ(samples, total_jobs);
+    EXPECT_EQ(samples, total_jobs + 1);
 }
 
 TEST_F(TestThreadPool, test_threadpool_future)
@@ -65,16 +73,16 @@ TEST_F(TestThreadPool, test_threadpool_future)
 
     ThreadPool pool("thread_pool", 4);
 
-    std::vector<size_t> results = pool.complete_all_jobs(1000, [&to_fill](size_t thread_n) {
-        to_fill[thread_n] = thread_n * 2;
-        return thread_n;
-    });
+    pool.complete_all_jobs(total_jobs, [&to_fill](size_t thread_n) { to_fill[thread_n] = thread_n; });
+
+    std::vector<size_t> results
+        = pool.complete_all_jobs(total_jobs, [&to_fill](size_t thread_n) { return thread_n * 2; });
 
     ASSERT_EQ(to_fill.size(), results.size());
 
     for (size_t i = 0; i < results.size(); ++i)
     {
-        ASSERT_EQ(to_fill[i], results[i] * 2);
+        ASSERT_EQ(to_fill[i], results[i] / 2);
     }
 }
 

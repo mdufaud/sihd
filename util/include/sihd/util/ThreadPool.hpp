@@ -22,15 +22,6 @@ class ThreadPool
     public:
         using Job = std::function<void()>;
 
-        template <typename Function, typename... Args>
-        using CallableReturnType = typename std::invoke_result_t<Function, Args...>;
-
-        template <typename T>
-        using VoidOrVectorReturnType = typename std::conditional_t<std::is_void_v<T>, void, std::vector<T>>;
-
-        template <typename Function>
-        using CompleteAllJobsReturnType = VoidOrVectorReturnType<CallableReturnType<Function, size_t>>;
-
         struct Thread
         {
             public:
@@ -54,17 +45,25 @@ class ThreadPool
         ThreadPool(std::string_view name, size_t number_of_threads);
         ~ThreadPool();
 
+        template <typename Function, typename... Args>
+        using CallableReturnType = typename std::invoke_result_t<Function, Args...>;
+
         template <typename Function>
         std::future<CallableReturnType<Function>> add_job(Function && function)
         {
             // wrap a callable target with std::packaged_task
-            using PackedTask = std::packaged_task<CallableReturnType<Function>()>;
+            using PackagedTask = std::packaged_task<CallableReturnType<Function>()>;
 
-            auto packed_task = std::make_shared<PackedTask>(std::forward<Function>(function));
-            auto future = packed_task->get_future();
+            auto packed_task = std::make_shared<PackagedTask>(std::forward<Function>(function));
             _jobs.push([this, packed_task] { (*packed_task)(); });
-            return future;
+            return packed_task->get_future();
         }
+
+        template <typename T>
+        using VoidOrVectorReturnType = typename std::conditional_t<std::is_void_v<T>, void, std::vector<T>>;
+
+        template <typename Function>
+        using CompleteAllJobsReturnType = VoidOrVectorReturnType<CallableReturnType<Function, size_t>>;
 
         template <typename Function>
         CompleteAllJobsReturnType<Function> complete_all_jobs(size_t number_of_jobs, Function && function)
@@ -102,6 +101,7 @@ class ThreadPool
         // wait for all jobs to be read by threads, does not ensure the job is done though
         // you have to use future.wait() from add_job
         void wait_all_jobs() const;
+
         size_t remaining_jobs() const;
         std::vector<Stat<Timestamp>> stats() const;
 
