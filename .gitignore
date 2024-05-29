@@ -1,0 +1,37 @@
+# built file extensions
+*.so
+*.o
+*.os
+*.dll
+*.a
+*.lib
+
+# outputs
+*.log
+
+# configurations
+*.ini
+
+# python compilation
+*__pycache__*
+
+# vs code user configuration
+.vscode
+
+# valgrind core dump
+vgcore*
+
+# modules specific
+imgui/imgui
+tui/FTXUI
+lua/luabridge
+
+# build specific
+build/*
+dist/*
+.installed
+.build_cache
+.cache
+
+# scons
+.scon*

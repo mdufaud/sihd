@@ -1,0 +1,22 @@
+#ifndef __APP_NAME_UPPER_MODULE_NAME_UPPER_CLASS_NAME_UPPER_HPP__
+# define __APP_NAME_UPPER_MODULE_NAME_UPPER_CLASS_NAME_UPPER_HPP__
+
+# include <sihd/util/Node.hpp>
+
+namespace APP_NAME::MODULE_NAME
+{
+
+class CLASS_NAME: public sihd::util::Named
+{
+    public:
+        CLASS_NAME(const std::string & name, sihd::util::Node *parent = nullptr);
+        virtual ~CLASS_NAME();
+
+    protected:
+
+    private:
+};
+
+}
+
+#endif

@@ -1,0 +1,181 @@
+Language: Cpp
+
+ColumnLimit: 120
+
+# Force pointers to the type for C++.
+DerivePointerAlignment: false
+PointerAlignment: Right
+ReferenceAlignment: Middle
+
+IndentWidth: 4
+# ConstructorInitializerIndentWidth: 4
+# AccessModifierOffset: 4
+# ContinuationIndentWidth: 4
+IndentAccessModifiers: true
+IndentCaseBlocks: false
+IndentCaseLabels: true
+IndentExternBlock: false
+IndentGotoLabels: true
+IndentRequiresClause: true
+IndentWrappedFunctionNames: true
+
+IndentPPDirectives: AfterHash
+PPIndentWidth: 1
+
+# someLongFunction(argument1,
+#                  argument2);
+AlignAfterOpenBracket: Align
+
+# int aaa = bbbbbbbbbbbbbbb
+#           + ccccccccccccccc;
+AlignOperands: true
+BreakBeforeBinaryOperators: true
+
+AlignTrailingComments: true
+# AlignTrailingComments:
+#   Kind: Always
+#   OverEmptyLines: 2
+
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+AllowShortBlocksOnASingleLine: Empty
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Inline
+AllowShortLoopsOnASingleLine: false
+
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: Yes
+
+BinPackArguments: false
+BinPackParameters: false
+
+BitFieldColonSpacing: After
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  # Opening brace under case label
+  AfterCaseLabel: true
+  # Class brace opens on the same line as the class name
+  AfterClass: true
+  # Braces are under control statement
+  AfterControlStatement: Always
+  # Braces are under enum
+  AfterEnum: true
+  # Braces are under function prototype
+  AfterFunction: true
+  # Braces are under namespace
+  AfterNamespace: true
+  # Braces are under struct keyword
+  AfterStruct: true
+  # Braces are under union keyword
+  AfterUnion: true
+  # Braces are under extern keyword
+  AfterExternBlock: true
+  # Braces are under catch keyword
+  BeforeCatch: true
+  # else keyword is placed under if close brace
+  BeforeElse: true
+  BeforeLambdaBody: false
+  # Do not place a trailing while loop below the close brace
+  BeforeWhile: true
+  # Do not indent wrapped braces
+  IndentBraces: false
+  # Empty function body braces are on multiple lines
+  SplitEmptyFunction: true
+  # Empty class/struct/union body braces are on multiple lines
+  SplitEmptyRecord: true
+  # empty namespace body braces are on multiple lines
+  SplitEmptyNamespace: true
+
+  # BreakAfterAttributes: Always
+  # BreakArrays: false
+
+  # BreakBeforeBinaryOperators: NonAssignment
+
+BreakBeforeConceptDeclarations: Always
+
+# BreakBeforeInlineASMColon: OnlyMultiline
+
+BreakBeforeTernaryOperators: true
+
+BreakConstructorInitializers: AfterColon
+
+BreakInheritanceList: AfterComma
+
+BreakStringLiterals: false
+
+Cpp11BracedListStyle: true
+
+EmptyLineAfterAccessModifier: Leave
+EmptyLineBeforeAccessModifier: Always
+
+FixNamespaceComments: true
+
+IncludeBlocks: Preserve
+
+# InsertNewlineAtEOF: false
+
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+LambdaBodyIndentation: Signature
+
+MaxEmptyLinesToKeep: 1
+
+NamespaceIndentation: None
+
+PackConstructorInitializers: CurrentLine
+
+QualifierAlignment: Left
+
+# QualifierOrder: ['inline', 'static', 'type', 'const', 'volatile']
+
+ReflowComments: true
+
+RequiresClausePosition: OwnLine
+
+# meh
+# SeparateDefinitionBlocks: Always
+
+SortIncludes: CaseSensitive
+
+SortUsingDeclarations: true
+
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceAroundPointerQualifiers: After
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: true
+SpaceBeforeCtorInitializerColon: false
+SpaceBeforeInheritanceColon: false
+SpaceBeforeParens: true
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: Never
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: false
+
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: -1
+
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+Standard: c++17
+
+TabWidth: 4
+UseTab: Never

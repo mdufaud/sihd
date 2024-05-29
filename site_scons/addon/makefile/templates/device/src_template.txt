@@ -1,0 +1,59 @@
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
+
+#include <APP_NAME/MODULE_NAME/CLASS_NAME.hpp>
+
+namespace APP_NAME::MODULE_NAME
+{
+
+SIHD_LOGGER;
+
+SIHD_UTIL_REGISTER_FACTORY(CLASS_NAME)
+
+CLASS_NAME::CLASS_NAME(const std::string & name, sihd::util::Node *parent):
+    sihd::core::Device(name, parent), _running(false)
+{
+}
+
+CLASS_NAME::~CLASS_NAME()
+{
+}
+
+bool    CLASS_NAME::is_running() const
+{
+    return _running;
+}
+
+void    CLASS_NAME::handle(sihd::core::Channel *channel)
+{
+    (void)channel;
+}
+
+bool    CLASS_NAME::on_setup()
+{
+    return true;
+}
+
+bool    CLASS_NAME::on_init()
+{
+    return true;
+}
+
+bool    CLASS_NAME::on_start()
+{
+    _running = true;
+    return true;
+}
+
+bool    CLASS_NAME::on_stop()
+{
+    _running = false;
+    return true;
+}
+
+bool    CLASS_NAME::on_reset()
+{
+    return true;
+}
+
+}
