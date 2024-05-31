@@ -206,7 +206,7 @@ bool File::open_tmp(std::string_view prefix, bool write_binary, std::string_view
     if (this->close() == false)
         return false;
     const size_t path_size = prefix.size() + 6 + suffix.size();
-    if (path_size > PATH_MAX)
+    if (path_size >= PATH_MAX)
     {
         SIHD_LOG(error, "File: Path too long: {}", path_size);
         return false;

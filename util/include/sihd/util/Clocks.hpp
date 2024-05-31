@@ -22,10 +22,10 @@ class SteadyClock: public IClock
         SteadyClock() = default;
         ~SteadyClock() = default;
 
-        virtual time_t now() const;
-        virtual bool is_steady() const;
-        virtual bool start() { return true; };
-        virtual bool stop() { return true; };
+        time_t now() const;
+        bool is_steady() const;
+        bool start() { return true; };
+        bool stop() { return true; };
 
     private:
         std::chrono::steady_clock _clock;
@@ -37,10 +37,10 @@ class SystemClock: public IClock
         SystemClock() = default;
         ~SystemClock() = default;
 
-        virtual time_t now() const;
-        virtual bool is_steady() const;
-        virtual bool start() { return true; };
-        virtual bool stop() { return true; };
+        time_t now() const;
+        bool is_steady() const;
+        bool start() { return true; };
+        bool stop() { return true; };
 
     private:
         std::chrono::system_clock _clock;

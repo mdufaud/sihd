@@ -19,7 +19,7 @@ class LoadingBar
 
     public:
         LoadingBar(size_t width = 10, size_t total = 0, FILE *output = stdout);
-        virtual ~LoadingBar();
+        ~LoadingBar();
 
         void set_percent_pos_left() { _percent_pos = left; }
         void set_percent_pos_right() { _percent_pos = right; };
@@ -39,7 +39,7 @@ class LoadingBar
         std::string progress_str() const;
         std::string loading_bar_str() const;
 
-        virtual bool _print_bar() const;
+        bool print_bar() const;
 
     private:
         size_t _width;

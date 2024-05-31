@@ -13,8 +13,8 @@ namespace sihd::util
 class Configurable
 {
     public:
-        Configurable() {};
-        virtual ~Configurable() {};
+        Configurable() = default;
+        virtual ~Configurable() = default;
 
         template <class C, typename T>
         void add_conf(const std::string & name, bool (C::*method)(T))

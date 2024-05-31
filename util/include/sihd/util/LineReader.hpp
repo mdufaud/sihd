@@ -24,7 +24,7 @@ class LineReader: public sihd::util::IReader
         LineReader(std::string_view path, const LineReaderOptions & options = LineReaderOptions::none());
         LineReader(int fd, const LineReaderOptions & options = LineReaderOptions::none());
         LineReader(FILE *stream, bool ownership, const LineReaderOptions & options = LineReaderOptions::none());
-        virtual ~LineReader();
+        ~LineReader();
 
         static bool fast_read_line(std::string & line,
                                    FILE *stream = stdin,

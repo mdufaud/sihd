@@ -24,25 +24,21 @@ class Scheduler: public Named,
 {
     public:
         Scheduler(const std::string & name, Node *parent = nullptr);
-        virtual ~Scheduler();
-
-        // virtual bool start();
-        // bool start_sync();
-        // virtual bool stop();
+        ~Scheduler();
 
         bool is_running() const override;
 
-        virtual void pause();
-        virtual void resume();
+        void pause();
+        void resume();
 
         /**
          * If a task has a run_at set, it will be played at this exact time, if the scheduler is paused and resumed past
          * that timestamp, it will be played as soon as possible.
          * If a task has a run_in set, it will be played relative to the scheduler's unpaused run time
          */
-        virtual void add_task(Task *t);
-        virtual bool remove_task(Task *t);
-        virtual void clear_tasks();
+        void add_task(Task *t);
+        bool remove_task(Task *t);
+        void clear_tasks();
 
         time_t now() const;
 
@@ -59,9 +55,9 @@ class Scheduler: public Named,
         time_t acceptable_task_preplay_ns_time;
 
     protected:
-        virtual bool run();
-        virtual bool on_start() override;
-        virtual bool on_stop() override;
+        bool run();
+        bool on_start() override;
+        bool on_stop() override;
 
         Waitable _waitable_task;
         std::vector<Task *> _tasks_to_add;

@@ -10,9 +10,9 @@ class BasicLogger: public ALogger
 {
     public:
         BasicLogger(FILE *output = stderr, bool print_thread_id = false);
-        virtual ~BasicLogger();
+        ~BasicLogger();
 
-        virtual void log(const LogInfo & info, std::string_view msg) override;
+        void log(const LogInfo & info, std::string_view msg) override;
 
         bool print_thread_id;
 

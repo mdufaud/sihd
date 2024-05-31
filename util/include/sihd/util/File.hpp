@@ -22,7 +22,7 @@ class File
         File(File && other);
         ~File();
 
-        // don't like hidden behavior so i prefer deleting copy operators
+        // don't like hidden behavior - deleting copy operators
         File(const File & other) = delete;
         File & operator=(const File & other) = delete;
 

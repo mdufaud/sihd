@@ -36,7 +36,7 @@ class Poll: public Observable<Poll>,
     public:
         Poll();
         Poll(int limit);
-        virtual ~Poll();
+        ~Poll();
 
         // can size the poll array in advance
         void resize(int nfds);

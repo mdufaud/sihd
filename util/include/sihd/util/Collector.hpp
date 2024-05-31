@@ -25,7 +25,7 @@ class Collector: public Observable<Collector<T>>,
         {
         }
 
-        virtual ~Collector()
+        ~Collector()
         {
             if (this->is_running())
             {

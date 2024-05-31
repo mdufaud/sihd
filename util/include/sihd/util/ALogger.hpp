@@ -11,8 +11,8 @@ namespace sihd::util
 class ALogger: public ALogFilterer
 {
     public:
-        ALogger() {};
-        virtual ~ALogger() {};
+        ALogger() = default;
+        virtual ~ALogger() = default;
 
         virtual void log(const LogInfo & info, std::string_view msg) = 0;
 

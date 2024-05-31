@@ -14,7 +14,7 @@ class IArrayView;
 class IArray
 {
     public:
-        virtual ~IArray() {};
+        virtual ~IArray() = default;
 
         // informations
 

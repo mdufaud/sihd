@@ -164,7 +164,7 @@ const std::vector<std::string> & FileWatcher::changed() const
 
 size_t FileWatcher::watch_size() const
 {
-    return _file_watch_ptr->last.size();
+    return _file_watch_ptr->last.size() + (size_t)_file_watch_ptr->path_exists;
 }
 
 bool FileWatcher::run()

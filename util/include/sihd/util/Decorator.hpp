@@ -19,7 +19,7 @@ class Decorator
                 throw std::runtime_error("Error while trying to decorate");
         }
 
-        virtual ~Decorator() {}
+        ~Decorator() {}
 
         bool decorate(Observable<T> *obs)
         {

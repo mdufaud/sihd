@@ -118,7 +118,7 @@ class Array: public IArray,
             return *this;
         };
 
-        virtual ~Array() { this->delete_buffer(); };
+        ~Array() { this->delete_buffer(); };
 
         /*********************************************************************/
         /* information */

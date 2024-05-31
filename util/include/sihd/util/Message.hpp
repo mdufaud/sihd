@@ -17,7 +17,7 @@ class Message: public Node,
 {
     public:
         Message(const std::string & name, Node *parent = nullptr);
-        virtual ~Message();
+        virtual ~Message() = default;
 
         // IMessageField
         virtual size_t field_size() const override { return 1; }

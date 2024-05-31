@@ -10,7 +10,8 @@ namespace sihd::util
 class IMessageField: public ICloneable<IMessageField>
 {
     public:
-        virtual ~IMessageField() {};
+        virtual ~IMessageField() = default;
+
         virtual Type field_type() const = 0;
         virtual size_t field_size() const = 0;
         virtual size_t field_byte_size() const = 0;

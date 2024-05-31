@@ -43,7 +43,7 @@ class Process: public IHandler<Poll *>,
             (filler(args), ...);
         }
 
-        virtual ~Process();
+        ~Process();
 
         // reset so you can run again
         void reset_proc();
@@ -187,8 +187,8 @@ class Process: public IHandler<Poll *>,
 class Process
 {
     public:
-        Process() {};
-        virtual ~Process() {};
+        Process() = default;
+        ~Process() = default;
 };
 
 #endif

@@ -12,7 +12,7 @@ class Synchronizer
 {
     public:
         Synchronizer();
-        virtual ~Synchronizer();
+        ~Synchronizer();
 
         bool init_sync(int32_t total);
         void sync();

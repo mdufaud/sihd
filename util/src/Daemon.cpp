@@ -82,24 +82,27 @@ bool Daemon::_handle_signals()
 
 void Daemon::_remove_pid_file()
 {
-    if (_pid_file.is_open())
+    File & file = _pid_file_mutex.file();
+    if (file.is_open())
     {
-        std::string path = _pid_file.path();
-        _pid_file.close();
+        std::string path = file.path();
+        file.close();
         fs::remove_file(path);
     }
 }
 
 bool Daemon::_lock_pid_file()
 {
-    if (_pid_file.is_open() == true)
+    if (_lock.owns_lock())
         return true;
-    if (_pid_file.open(_pid_file_path, "w") == false)
-        return false;
-    if (_pid_file.trylock() == false)
+
+    FileMutex tmp(_pid_file_path, true);
+    _pid_file_mutex = std::move(tmp);
+
+    _lock = std::unique_lock(_pid_file_mutex);
+    if (_lock.try_lock() == false)
     {
         SIHD_LOG(error, "Daemon: cannot lock file");
-        _pid_file.close();
         return false;
     }
     return true;
@@ -107,12 +110,16 @@ bool Daemon::_lock_pid_file()
 
 bool Daemon::_write_pid_file()
 {
-    if (_pid_file.is_open() == false)
+    File & file = _pid_file_mutex.file();
+
+    if (file.is_open() == false)
         return false;
+
     std::string towrite = str::to_dec(getpid()) + "\n";
-    bool ret = _pid_file.write(towrite) == (ssize_t)towrite.size();
+    bool ret = file.write(towrite) == (ssize_t)towrite.size();
     if (ret == false)
         SIHD_LOG(error, "Daemon: failed to write pid file");
+
     return ret;
 }
 

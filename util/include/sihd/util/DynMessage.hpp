@@ -15,7 +15,7 @@ class DynMessage: public Message
         using RuleCallback = std::function<void(DynMessage &, const IMessageField &)>;
 
         DynMessage(const std::string & name, sihd::util::Node *parent = nullptr);
-        virtual ~DynMessage();
+        virtual ~DynMessage() = default;
 
         virtual size_t field_byte_size() const override { return _total_dyn_size; };
         virtual bool finish() override;

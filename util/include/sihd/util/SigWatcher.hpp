@@ -25,7 +25,7 @@ class SigWatcher: public Named,
         using Callback = std::function<void(int)>;
 
         SigWatcher(const std::string & name, Node *parent = nullptr);
-        virtual ~SigWatcher();
+        ~SigWatcher();
 
         bool set_polling_frequency(double hz);
 
@@ -43,9 +43,9 @@ class SigWatcher: public Named,
         const std::vector<int> & catched_signals() const { return _signals_to_handle; };
 
     protected:
-        virtual bool on_start() override;
-        virtual bool on_stop() override;
-        virtual bool run() override;
+        bool on_start() override;
+        bool on_stop() override;
+        bool run() override;
 
     private:
         struct SigControl

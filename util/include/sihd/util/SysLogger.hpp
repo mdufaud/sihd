@@ -19,9 +19,9 @@ class SysLogger: public ALogger
 #else
         SysLogger(std::string_view progname, int facility = 0, int options = 0);
 #endif
-        virtual ~SysLogger();
+        ~SysLogger();
 
-        virtual void log(const LogInfo & info, std::string_view msg) override;
+        void log(const LogInfo & info, std::string_view msg) override;
 
     protected:
 

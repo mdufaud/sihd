@@ -44,10 +44,10 @@ void LoadingBar::add_progress(size_t progress)
 
 bool LoadingBar::print() const
 {
-    return do_return_begin_of_line(_file_ptr) && this->_print_bar() && do_flush(_file_ptr);
+    return do_return_begin_of_line(_file_ptr) && this->print_bar() && do_flush(_file_ptr);
 }
 
-bool LoadingBar::_print_bar() const
+bool LoadingBar::print_bar() const
 {
     std::string bar_str = this->loading_bar_str();
 

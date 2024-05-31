@@ -20,7 +20,7 @@ class CmdInterpreter
 
         CmdInterpreter() = default;
         CmdInterpreter(const CmdMap & map, const Splitter & splitter = {});
-        virtual ~CmdInterpreter() = default;
+        ~CmdInterpreter() = default;
 
         void set_cmd(const std::string & cmd, CmdFun && fun);
         void set_splitter(const Splitter & splitter);

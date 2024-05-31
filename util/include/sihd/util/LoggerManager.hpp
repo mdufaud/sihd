@@ -15,7 +15,7 @@ class LoggerManager: public ALogFilterer
 {
     public:
         LoggerManager();
-        virtual ~LoggerManager();
+        ~LoggerManager();
 
         bool has_logger(ALogger *logger) const;
         bool add_logger(ALogger *logger);

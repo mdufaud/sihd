@@ -14,7 +14,7 @@ class Waitable
 {
     public:
         Waitable();
-        virtual ~Waitable();
+        ~Waitable();
 
         void notify(int times = 1);
         void notify_all();

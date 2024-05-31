@@ -37,7 +37,7 @@ class Splitter
         Splitter(const SplitterOptions & options = SplitterOptions::none());
         Splitter(int delimiter);
         Splitter(std::string_view delimiter);
-        virtual ~Splitter();
+        ~Splitter();
 
         void set_delimiter_method(SplitterDelimiterMethod method);
 

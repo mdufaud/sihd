@@ -14,7 +14,7 @@ class MessageField: public Named,
 {
     public:
         MessageField(const std::string & name, Node *parent = nullptr);
-        ~MessageField();
+        virtual ~MessageField();
 
         // IMessageField
         virtual size_t field_size() const override { return _size; }

@@ -1,8 +1,10 @@
 #ifndef __SIHD_UTIL_DAEMON_HPP__
 #define __SIHD_UTIL_DAEMON_HPP__
 
+#include <mutex>
+
 #include <sihd/util/Configurable.hpp>
-#include <sihd/util/File.hpp>
+#include <sihd/util/FileMutex.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Node.hpp>
@@ -17,7 +19,7 @@ class Daemon: public sihd::util::Named,
 {
     public:
         Daemon(const std::string & name, sihd::util::Node *parent = nullptr);
-        virtual ~Daemon();
+        ~Daemon();
 
         bool set_uid(uid_t uid);
         bool set_pid_file_path(std::string_view path);
@@ -32,20 +34,18 @@ class Daemon: public sihd::util::Named,
         const std::string & pid_file() const { return _pid_file_path; }
         const std::string & working_dir() const { return _working_dir_path; }
 
-    protected:
+    private:
         bool _lock_pid_file();
         bool _write_pid_file();
         void _remove_pid_file();
-
-        void _handle_sig(int sig);
         bool _handle_signals();
 
-    private:
         bool _signals_handled;
         uid_t _uid;
         std::string _pid_file_path;
         std::string _working_dir_path;
-        File _pid_file;
+        FileMutex _pid_file_mutex;
+        std::unique_lock<FileMutex> _lock;
 };
 
 } // namespace sihd::util

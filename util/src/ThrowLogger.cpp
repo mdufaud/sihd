@@ -16,10 +16,6 @@ const LogInfo & ThrowLogger::Exception::log_info() const
     return _log_info;
 }
 
-ThrowLogger::ThrowLogger() {}
-
-ThrowLogger::~ThrowLogger() {}
-
 void ThrowLogger::log([[maybe_unused]] const LogInfo & info, std::string_view msg)
 {
     throw Exception(info, msg);

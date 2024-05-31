@@ -28,7 +28,7 @@ class Handler: public IHandler<T...>
 
         Handler(IHandler<T...> *handler_ptr) { this->set_handler(handler_ptr); }
 
-        virtual ~Handler() {};
+        ~Handler() = default;
 
         void set_handler(IHandler<T...> *handler_ptr)
         {

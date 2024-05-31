@@ -15,8 +15,6 @@ Message::Message(const std::string & name, Node *parent): Node(name, parent)
     _finished = false;
 }
 
-Message::~Message() {}
-
 bool Message::on_check_link(const std::string & name, Named *child)
 {
     IMessageField *field = dynamic_cast<IMessageField *>(child);

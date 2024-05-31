@@ -15,8 +15,6 @@ DynMessage::DynMessage(const std::string & name, sihd::util::Node *parent): sihd
     _total_dyn_size = 0;
 }
 
-DynMessage::~DynMessage() {}
-
 bool DynMessage::finish()
 {
     if (this->is_finished())

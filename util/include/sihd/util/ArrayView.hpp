@@ -118,7 +118,7 @@ class ArrayView: public IArrayView
             return *this;
         };
 
-        virtual ~ArrayView() {};
+        ~ArrayView() = default;
 
         /*********************************************************************/
         /* information */

@@ -19,7 +19,7 @@ class Provider: public sihd::util::IProvider<Type>
 {
     public:
         Provider(Container<Type> *container_ptr = nullptr) { this->set_container(container_ptr); }
-        virtual ~Provider() {}
+        ~Provider() = default;
 
         bool provide(Type *value)
         {
@@ -33,7 +33,7 @@ class Provider: public sihd::util::IProvider<Type>
             return false;
         }
 
-        virtual bool providing() const
+        bool providing() const
         {
             std::lock_guard l(_mutex);
             return _iterator != _container_ptr->end();
@@ -83,11 +83,11 @@ class FunctionProvider: public sihd::util::IProvider<Type>
         using ProviderMethod = std::function<bool(Type *)>;
         using StatusMethod = std::function<bool()>;
 
-        FunctionProvider() {}
+        FunctionProvider() = default;
 
         FunctionProvider(ProviderMethod provider) { this->set_provider_function(std::move(provider)); }
 
-        virtual ~FunctionProvider() {}
+        ~FunctionProvider() = default;
 
         bool provide(Type *value) { return _provide_method(value); }
 

@@ -9,7 +9,7 @@ namespace sihd::util
 class ILoggerFilter
 {
     public:
-        virtual ~ILoggerFilter() {};
+        virtual ~ILoggerFilter() = default;
         virtual bool filter(const LogInfo & info, std::string_view msg) = 0;
 };
 

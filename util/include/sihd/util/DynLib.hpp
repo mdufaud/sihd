@@ -12,7 +12,7 @@ class DynLib
     public:
         DynLib();
         DynLib(std::string_view lib_name);
-        virtual ~DynLib();
+        ~DynLib();
 
         bool open(std::string_view lib_name);
 

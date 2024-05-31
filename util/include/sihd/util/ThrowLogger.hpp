@@ -17,17 +17,17 @@ class ThrowLogger: public ALogger
                 Exception(const LogInfo & info, std::string_view msg);
 
                 const LogInfo & log_info() const;
-                virtual const char *what() const noexcept;
+                const char *what() const noexcept;
 
             private:
                 LogInfo _log_info;
                 std::string _msg;
         };
 
-        ThrowLogger();
-        virtual ~ThrowLogger();
+        ThrowLogger() = default;
+        ~ThrowLogger() = default;
 
-        virtual void log(const LogInfo & info, std::string_view msg) override;
+        void log(const LogInfo & info, std::string_view msg) override;
 
     protected:
 
