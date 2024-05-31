@@ -201,13 +201,14 @@ TEST_F(TestLineReader, test_linereader_perf)
     SIHD_LOG(info, "Output line reader 2: {}", path_line_reader_no_memory);
 
     File writer(path_input, "w");
-    writer.write(random_str);
-    writer.close();
+    ASSERT_TRUE(writer.is_open());
+    ASSERT_TRUE(writer.write(random_str) == (ssize_t)random_str.size());
+    ASSERT_TRUE(writer.close());
 
     char *line = nullptr;
     size_t size = 0;
     size_t total_file = 0;
-    writer.open(path_file, "w");
+    ASSERT_TRUE(writer.open(path_file, "w"));
     {
         Timeit t("file");
         File file;
@@ -219,12 +220,12 @@ TEST_F(TestLineReader, test_linereader_perf)
         }
         // important - getdelim allocates line but you have to free it
         free(line);
-        file.close();
+        ASSERT_TRUE(file.close());
     }
-    writer.close();
+    ASSERT_TRUE(writer.close());
 
     size_t total_rl = 0;
-    writer.open(path_line_reader, "w");
+    ASSERT_TRUE(writer.open(path_line_reader, "w"));
     ArrCharView view;
     {
         Timeit it("line-reader");
@@ -233,21 +234,23 @@ TEST_F(TestLineReader, test_linereader_perf)
                               .read_buffsize = 4096,
                               .delimiter_in_line = true,
                           });
+        ASSERT_TRUE(reader.is_open());
         while (reader.read_next())
         {
             reader.get_read_data(view);
             writer.write(view);
             total_rl += view.size();
         }
-        reader.close();
+        ASSERT_TRUE(reader.close());
     }
-    writer.close();
+    ASSERT_TRUE(writer.close());
 
     size_t total_rl_no_memory = 0;
-    writer.open(path_line_reader_no_memory, "w");
+    ASSERT_TRUE(writer.open(path_line_reader_no_memory, "w"));
     {
         Timeit it("line-reader-2");
         File file(path_input, "r");
+        ASSERT_TRUE(file.is_open());
         std::string line;
         LineReader::LineReaderOptions options = {
             // must read one by one because there is no memory of last read
@@ -260,7 +263,7 @@ TEST_F(TestLineReader, test_linereader_perf)
             total_rl_no_memory += line.size();
         }
     }
-    writer.close();
+    ASSERT_TRUE(writer.close());
 
     EXPECT_TRUE(fs::are_equals(path_input, path_file));
 

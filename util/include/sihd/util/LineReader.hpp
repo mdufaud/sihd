@@ -57,7 +57,7 @@ class LineReader: public sihd::util::IReader
         bool _init();
         bool _allocate_read_buffer();
         bool _allocate_line();
-        bool _reallocate_line();
+        bool _reallocate_line(size_t needed);
         void _reset();
         void _delete_buffers();
 
@@ -67,7 +67,7 @@ class LineReader: public sihd::util::IReader
         char *_read_ptr;
 
         size_t _line_buff_size;
-        size_t _line_buff_step;
+
         size_t _line_size;
         char *_line_ptr;
 

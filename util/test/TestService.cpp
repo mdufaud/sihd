@@ -18,16 +18,16 @@ class FakeThreadedService: public ThreadedService
         FakeThreadedService() { this->set_service_nb_thread(1); };
         ~FakeThreadedService() { this->stop(); }
 
-        virtual bool on_start() override
+        bool on_start() override
         {
             thread = std::thread([this] {
-                this->notify_service_thread_started();
                 started = true;
+                this->notify_service_thread_started();
             });
             return true;
         }
 
-        virtual bool on_stop() override
+        bool on_stop() override
         {
             started = false;
             if (thread.joinable())
@@ -35,7 +35,7 @@ class FakeThreadedService: public ThreadedService
             return true;
         }
 
-        virtual bool is_running() const override { return started; }
+        bool is_running() const override { return started; }
 
         bool started = false;
         std::thread thread;
@@ -50,17 +50,17 @@ class FakeBlockingService: public BlockingService
             this->service_wait_stop();
         }
 
-        virtual bool on_start() override
+        bool on_start() override
         {
             started = true;
             return true;
         }
-        virtual bool on_stop() override
+        bool on_stop() override
         {
             started = false;
             return true;
         }
-        virtual bool is_running() const override { return started; }
+        bool is_running() const override { return started; }
 
         bool started = false;
 };
@@ -74,29 +74,29 @@ class FakeService: public AService
         int n_stop = 0;
         int n_reset = 0;
 
-        virtual bool is_running() const { return n_start > 0; }
+        bool is_running() const { return n_start > 0; }
 
-        virtual bool do_setup()
+        bool do_setup()
         {
             ++n_setup;
             return true;
         }
-        virtual bool do_init()
+        bool do_init()
         {
             ++n_init;
             return true;
         }
-        virtual bool do_start()
+        bool do_start()
         {
             ++n_start;
             return true;
         }
-        virtual bool do_stop()
+        bool do_stop()
         {
             ++n_stop;
             return true;
         }
-        virtual bool do_reset()
+        bool do_reset()
         {
             ++n_reset;
             return true;
@@ -107,7 +107,7 @@ class FakeServiceWithController: public FakeService
 {
     public:
         ServiceController ctrl;
-        virtual IServiceController *service_ctrl() override { return &ctrl; };
+        IServiceController *service_ctrl() override { return &ctrl; };
 };
 
 class TestService: public ::testing::Test,

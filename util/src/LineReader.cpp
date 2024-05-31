@@ -14,8 +14,10 @@ LineReader::LineReader(const LineReaderOptions & options):
     _read_buff_size(options.read_buffsize),
     _read_ptr(nullptr),
     _line_buff_size(options.line_buffsize),
-    _line_buff_step(options.line_buffsize),
+    _line_size(0),
     _line_ptr(nullptr),
+    _last_read_index(0),
+    _read_size(0),
     _error(false),
     _put_delimiter_in_line(options.delimiter_in_line),
     _delimiter(options.delimiter)
@@ -134,8 +136,8 @@ bool LineReader::read_next()
             else
                 copy_len = _read_size - _last_read_index;
             // if length to copy is too much for line buffer - reallocate
-            if (fill_idx + copy_len >= _line_buff_size)
-                this->_reallocate_line();
+            if ((fill_idx + copy_len) >= _line_buff_size)
+                this->_reallocate_line(fill_idx + copy_len);
             // copy from into line either full read buffer or just matching part
             memcpy(_line_ptr + fill_idx, _read_ptr + _last_read_index, copy_len);
             // prepare next loop/call
@@ -158,7 +160,7 @@ bool LineReader::read_next()
             _error = true;
             return false;
         }
-        _read_ptr[_read_buff_size] = 0;
+        _read_ptr[_read_size] = 0;
         // end
         if (_read_size == 0)
         {
@@ -191,9 +193,9 @@ void LineReader::_reset()
         _line_ptr[0] = 0;
 }
 
-bool LineReader::_reallocate_line()
+bool LineReader::_reallocate_line(size_t needed)
 {
-    _line_buff_size += _line_buff_step;
+    _line_buff_size = needed;
     return this->_allocate_line();
 }
 
