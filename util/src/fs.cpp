@@ -31,7 +31,7 @@ namespace
 {
 
 #if defined(__SIHD_WINDOWS__)
-char separator_char = '\\';
+char g_separator_char = '\\';
 #else
 char g_separator_char = '/';
 #endif
@@ -540,8 +540,8 @@ std::string ensure_separation(std::string_view path)
 bool is_absolute(std::string_view path)
 {
 #if defined(__SIHD_WINDOWS__)
-    return (path.length() > 1 && path[0] == separator_char && path[1] == separator_char)
-           || (path.length() > 2 && path[1] == ':' && path[2] == separator_char);
+    return (path.length() > 1 && path[0] == g_separator_char && path[1] == g_separator_char)
+           || (path.length() > 2 && path[1] == ':' && path[2] == g_separator_char);
 #else
     return path.length() > 0 && path[0] == g_separator_char;
 #endif

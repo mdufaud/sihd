@@ -3,6 +3,7 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Defer.hpp>
+#include <sihd/util/DynLib.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
@@ -107,6 +108,32 @@ void uuid()
     fmt::print("\n");
 }
 
+void dynlib()
+{
+    DynLib lib;
+
+    if (lib.open("sihd_util"))
+    {
+        SIHD_LOG_INFO("Opened DLL sihd_util");
+
+        void *handle = lib.load("sihd_util_namedfactory_Node");
+        if (handle != nullptr)
+            SIHD_LOG_INFO("Handle found in DLL");
+
+        lib.close();
+    }
+}
+
+void clipboard()
+{
+    auto opt_str = os::get_clipboard();
+    if (opt_str)
+        SIHD_LOG_INFO("You have '{}' in you clipboard\n", *opt_str);
+
+    if (os::set_clipboard("love you"))
+        SIHD_LOG_INFO("Setted 'love you' in your clipboard\n");
+}
+
 void read_line()
 {
     if (term::is_interactive() == false)
@@ -175,8 +202,10 @@ int main(int argc, char **argv)
     demo::os();
     demo::fs();
     demo::uuid();
+    demo::dynlib();
     demo::file_mem_read();
     demo::file_mem_write();
+    demo::clipboard();
 
     demo::worker(result["worker-frequency"].as<double>());
 

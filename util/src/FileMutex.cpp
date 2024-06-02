@@ -80,7 +80,8 @@ void FileMutex::lock()
     // LOCK_SH = 0, LOCK_EX = LOCKFILE_EXCLUSIVE_LOCK, LOCK_NB = LOCKFILE_FAIL_IMMEDIATELY
     HANDLE handle = (HANDLE)_get_osfhandle(_file.fd());
     const DWORD allBitsSet = ~DWORD(0);
-    _OVERLAPPED overlapped = {0};
+    _OVERLAPPED overlapped;
+    memset(&overlapped, 0, sizeof(_OVERLAPPED));
     if (!LockFileEx(handle, LOCKFILE_EXCLUSIVE_LOCK, 0, allBitsSet, allBitsSet, &overlapped))
     {
         throw std::runtime_error("LockFileEx failed with error " + std::to_string(GetLastError()));
@@ -97,7 +98,8 @@ bool FileMutex::try_lock()
 #else
     HANDLE handle = (HANDLE)_get_osfhandle(_file.fd());
     const DWORD allBitsSet = ~DWORD(0);
-    _OVERLAPPED overlapped = {0};
+    _OVERLAPPED overlapped;
+    memset(&overlapped, 0, sizeof(_OVERLAPPED));
     return LockFileEx(handle,
                       LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
                       0,
@@ -116,7 +118,8 @@ void FileMutex::unlock()
 #else
     HANDLE handle = (HANDLE)_get_osfhandle(_file.fd());
     const DWORD allBitsSet = ~DWORD(0);
-    _OVERLAPPED overlapped = {0};
+    _OVERLAPPED overlapped;
+    memset(&overlapped, 0, sizeof(_OVERLAPPED));
     if (!UnlockFileEx(handle, 0, allBitsSet, allBitsSet, &overlapped))
     {
         throw std::runtime_error("UnlockFileEx failed with error " + std::to_string(GetLastError()));
@@ -133,7 +136,8 @@ void FileMutex::lock_shared()
 #else
     HANDLE handle = (HANDLE)_get_osfhandle(_file.fd());
     const DWORD allBitsSet = ~DWORD(0);
-    _OVERLAPPED overlapped = {0};
+    _OVERLAPPED overlapped;
+    memset(&overlapped, 0, sizeof(_OVERLAPPED));
     if (!LockFileEx(handle, 0, 0, allBitsSet, allBitsSet, &overlapped))
     {
         throw std::runtime_error("LockFileEx failed with error " + std::to_string(GetLastError()));
@@ -150,7 +154,7 @@ bool FileMutex::try_lock_shared()
 #else
     HANDLE handle = (HANDLE)_get_osfhandle(_file.fd());
     const DWORD allBitsSet = ~DWORD(0);
-    _OVERLAPPED overlapped = {0};
+    _OVERLAPPED overlapped;
     return LockFileEx(handle, LOCKFILE_FAIL_IMMEDIATELY, 0, allBitsSet, allBitsSet, &overlapped);
 #endif
 }

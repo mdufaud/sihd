@@ -62,7 +62,7 @@ sihd_imgui_srcs.extend([
 ])
 
 ## Check for SDL2
-compile_sdl = builder.get_opt("sdl", "") == "1"
+compile_sdl = builder.is_opt("sdl")
 compiling_with_emscripten = builder.build_compiler == "em"
 
 if compiling_with_emscripten:

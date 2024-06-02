@@ -3,6 +3,7 @@
 
 #include <sys/types.h> // pid_t
 
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -45,6 +46,9 @@ pid_t pid();
 
 // prints formatted backtrace into file descriptor
 ssize_t backtrace(int fd, size_t backtrace_size = -1);
+
+bool set_clipboard(std::string_view str);
+std::optional<std::string> get_clipboard();
 
 // bytes
 ssize_t peak_rss();
