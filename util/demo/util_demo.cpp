@@ -71,7 +71,6 @@ void time()
     SIHD_LOG(info, "from string date '2000/04/01': {}", Timestamp::from_str("2000/04/01", "%Y/%m/%d")->str());
     SIHD_LOG(info, "timezone name: {}", time::get_timezone_name());
     SIHD_LOG(info, "timezone offset: {}", time::get_timezone());
-
     fmt::print("\n");
 }
 
@@ -95,7 +94,6 @@ void fs()
         SIHD_LOG(info, "is_writable: {}", fs::is_writable(tmp));
         SIHD_LOG(info, "is_executable: {}", fs::is_executable(tmp));
     }
-
     fmt::print("\n");
 }
 
@@ -122,6 +120,7 @@ void dynlib()
 
         lib.close();
     }
+    fmt::print("\n");
 }
 
 void clipboard()
@@ -132,6 +131,7 @@ void clipboard()
 
     if (os::set_clipboard("love you"))
         SIHD_LOG_INFO("Setted 'love you' in your clipboard\n");
+    fmt::print("\n");
 }
 
 void read_line()

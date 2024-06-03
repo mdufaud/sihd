@@ -52,9 +52,12 @@ conan_post_process = {
 
 modules = {
     "util": {
-        "extlibs": ['nlohmann_json', 'fmt', 'cxxopts'],
-        "linux-extlibs": ['libuuid'],
+        # x11=1 to compile with X11
+        # wayland=1 to compile with wayland
         "libs": ['pthread'], # threading
+        "extlibs": ['nlohmann_json', 'fmt', 'cxxopts'],
+        "static-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
+        "linux-extlibs": ['libuuid'],
         "linux-libs": [
             'dl', # dl_open...
             'rt', # shm_open...
@@ -65,7 +68,6 @@ modules = {
             'fmt', # get from sys lib only when compiling dynamically on linux
             'stdc++fs'
         ],
-        "static-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
         "windows-libs": [
             'rpcrt4', # Uuid
             'psapi', # GetModuleFileName/GetProcessMemoryInfo
@@ -321,12 +323,14 @@ apt_packages = {
     "sdl2": "libsdl2-dev",
     "lua": "liblua5.3-dev",
     "libusb": "libusb-dev",
+    "x11": "libx11-dev",
+    "wayland": "libwayland-dev",
 }
 
 ## PACMAN
 
 # used to create PKGBUILD build command
-additionnal_build_env = ['py', 'lua', 'sdl']
+additionnal_build_env = ['py', 'lua', 'sdl', 'x11', 'wayland']
 # source to clone and build
 pacman_source = "{name}-{version}::git+{git_url}#tag={version}".format(
     name=name,
@@ -353,7 +357,9 @@ pacman_packages = {
     "glew": "glew",
     "sdl2": "sdl2",
     "lua": "lua",
-    "libusb": "libusb"
+    "libusb": "libusb",
+    "x11": "libx11",
+    "wayland": "wayland",
 }
 
 ## YUM
@@ -378,6 +384,8 @@ yum_packages = {
     "sdl2": "sdl2-devel",
     "lua": "lua5.3-devel",
     "libusb": "libusb-devel",
+    "x11": "libx11-devel",
+    "wayland": "libwayland-devel",
 }
 
 ## MSYS2
@@ -401,6 +409,8 @@ msys2_packages = {
     "sdl2": f"{__msys2_mingw}SDL2",
     "lua": f"{__msys2_mingw}lua",
     "libusb": f"{__msys2_mingw}libusb",
+    "x11": f"{__msys2_mingw}libx11",
+    "wayland": f"{__msys2_mingw}wayland",
 }
 
 ###############################################################################

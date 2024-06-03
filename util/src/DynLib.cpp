@@ -124,7 +124,7 @@ bool DynLib::close()
 
     if (this->is_open())
     {
-#if !defined(STATIC) && !defined(__SIHD_WINDOWS__)
+#if !defined(__SIHD_WINDOWS__)
         ret = dlclose(_handle) == 0;
 #else
         ret = FreeLibrary((HMODULE)_handle);
