@@ -1136,6 +1136,12 @@ using ArrayShared = std::shared_ptr<Array<T>>;
 template <typename T>
 using ArrayWeak = std::weak_ptr<Array<T>>;
 
+template <typename T>
+std::string_view format_as(const Array<T> & arr)
+{
+    return arr.cpp_str_view();
+}
+
 } // namespace sihd::util
 
 #endif

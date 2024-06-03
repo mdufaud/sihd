@@ -602,6 +602,12 @@ typedef ArrayView<uint64_t> ArrULongView;
 typedef ArrayView<float> ArrFloatView;
 typedef ArrayView<double> ArrDoubleView;
 
+template <typename T>
+std::string_view format_as(const ArrayView<T> & view)
+{
+    return view.cpp_str_view();
+}
+
 } // namespace sihd::util
 
 #endif
