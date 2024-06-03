@@ -13,6 +13,7 @@
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/TmpDir.hpp>
 #include <sihd/util/Uuid.hpp>
+#include <sihd/util/clipboard.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/macro.hpp>
 #include <sihd/util/os.hpp>
@@ -125,11 +126,11 @@ void dynlib()
 
 void clipboard()
 {
-    auto opt_str = os::get_clipboard();
+    auto opt_str = clipboard::get();
     if (opt_str)
         SIHD_LOG_INFO("You have '{}' in you clipboard\n", *opt_str);
 
-    if (os::set_clipboard("love you"))
+    if (clipboard::set("love you"))
         SIHD_LOG_INFO("Setted 'love you' in your clipboard\n");
     fmt::print("\n");
 }
