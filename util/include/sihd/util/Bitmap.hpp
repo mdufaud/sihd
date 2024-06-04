@@ -40,10 +40,12 @@ class Bitmap
         using Pixels = std::vector<uint8_t>;
 
         Bitmap();
-        Bitmap(size_t width, size_t height);
+        // only implemented with 32 and 24 bit per pixel
+        Bitmap(size_t width, size_t height, uint8_t bit_per_pixel = 32);
         ~Bitmap() = default;
 
-        void create(size_t width, size_t height);
+        // only implemented with 32 and 24 bit per pixel
+        void create(size_t width, size_t height, uint8_t bit_per_pixel = 32);
         void fill(Pixel pixel);
         void clear();
 
