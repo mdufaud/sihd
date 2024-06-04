@@ -15,8 +15,8 @@ namespace sihd::util
 class Endian
 {
     private:
-        Endian() {};
-        ~Endian() {};
+        Endian() = default;
+        ~Endian() = default;
 
     public:
         enum Endianness

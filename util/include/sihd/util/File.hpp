@@ -70,15 +70,15 @@ class File
         int error_unlocked() const;
         void clear_errors();
 
-        ssize_t write(const char *str, size_t size);
+        ssize_t write(const void *data, size_t size);
         ssize_t write(ArrCharView view);
         bool write_char(int c);
 
-        ssize_t write_unlocked(const char *str, size_t size);
+        ssize_t write_unlocked(const void *data, size_t size);
         ssize_t write_unlocked(ArrCharView view);
         bool write_char_unlocked(int c);
 
-        ssize_t read(char *buf, size_t size);
+        ssize_t read(void *buf, size_t size);
         ssize_t read(std::string & str);
         ssize_t read(IArray & array);
 

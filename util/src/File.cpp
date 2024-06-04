@@ -463,7 +463,7 @@ bool File::_seek(long offset, int origin)
     return ret == 0;
 }
 
-ssize_t File::read(char *buf, size_t size)
+ssize_t File::read(void *buf, size_t size)
 {
     if (this->eof())
         return 0;
@@ -490,12 +490,12 @@ ssize_t File::read(IArray & array)
     return ret;
 }
 
-ssize_t File::write(const char *str, size_t size)
+ssize_t File::write(const void *data, size_t size)
 {
-    size_t ret = fwrite(str, sizeof(char), size, _file_ptr);
+    size_t ret = fwrite(data, sizeof(char), size, _file_ptr);
     if (this->error())
         return -1;
-    return ret;
+    return (ssize_t)ret;
 }
 
 ssize_t File::write(ArrCharView view)
@@ -508,12 +508,12 @@ bool File::write_char(int c)
     return fputc(c, _file_ptr) == c;
 }
 
-ssize_t File::write_unlocked(const char *str, size_t size)
+ssize_t File::write_unlocked(const void *data, size_t size)
 {
-    size_t ret = fwrite_unlocked(str, sizeof(char), size, _file_ptr);
+    size_t ret = fwrite_unlocked(data, sizeof(char), size, _file_ptr);
     if (this->error())
         return -1;
-    return ret;
+    return (ssize_t)ret;
 }
 
 ssize_t File::write_unlocked(ArrCharView view)

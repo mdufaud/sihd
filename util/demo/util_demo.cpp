@@ -1,6 +1,7 @@
 #include <cxxopts.hpp>
 
 #include <sihd/util/Array.hpp>
+#include <sihd/util/Bitmap.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/DynLib.hpp>
@@ -124,17 +125,6 @@ void dynlib()
     fmt::print("\n");
 }
 
-void clipboard()
-{
-    auto opt_str = clipboard::get();
-    if (opt_str)
-        SIHD_LOG_INFO("You have '{}' in you clipboard\n", *opt_str);
-
-    if (clipboard::set("love you"))
-        SIHD_LOG_INFO("Setted 'love you' in your clipboard\n");
-    fmt::print("\n");
-}
-
 void read_line()
 {
     if (term::is_interactive() == false)
@@ -175,6 +165,62 @@ void file_mem_read()
     fmt::print("\n");
 }
 
+void clipboard()
+{
+    auto opt_str = clipboard::get();
+    if (opt_str)
+    {
+        SIHD_LOG_INFO("You have '{}' in you clipboard", *opt_str);
+    }
+    else
+    {
+        SIHD_LOG_ERROR("Could not get clipboard data");
+    }
+
+    if (clipboard::set("love you"))
+    {
+        SIHD_LOG_INFO("Setted 'love you' in your clipboard");
+    }
+    else
+    {
+        SIHD_LOG_ERROR("Could not set clipboard");
+    }
+
+    fmt::print("\n");
+}
+
+void bitmap()
+{
+    SIHD_LOG_INFO("Testing bitmaps");
+
+    constexpr size_t width = 1024;
+    constexpr size_t height = 1024;
+
+    Bitmap bm(width, height);
+
+    Pixel p;
+
+    p.alpha = 0;
+    p.red = 200;
+    p.blue = 0;
+    p.green = 0;
+
+    bm.fill(p);
+
+    TmpDir tmp;
+
+    std::string first_bmp = fs::combine(tmp.path(), "toto.bmp");
+    std::string second_bmp = fs::combine(tmp.path(), "toto2.bmp");
+
+    bm.save_bmp(first_bmp);
+
+    Bitmap bm2;
+    bm2.read_bmp(first_bmp);
+    bm2.save_bmp(second_bmp);
+
+    SIHD_TRACEF(fs::are_equals(first_bmp, second_bmp));
+}
+
 } // namespace demo
 
 int main(int argc, char **argv)
@@ -207,6 +253,7 @@ int main(int argc, char **argv)
     demo::file_mem_read();
     demo::file_mem_write();
     demo::clipboard();
+    demo::bitmap();
 
     demo::worker(result["worker-frequency"].as<double>());
 
