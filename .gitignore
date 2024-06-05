@@ -21,6 +21,9 @@
 # valgrind core dump
 vgcore*
 
+# outputs
+*.bmp
+
 # modules specific
 imgui/imgui
 tui/FTXUI

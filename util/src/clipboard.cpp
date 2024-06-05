@@ -50,7 +50,7 @@ bool x11_set_clipboard([[maybe_unused]] std::string_view str)
         SIHD_LOG(error, "could not open X display");
         return false;
     }
-    Defer d([&] { XCloseDisplay(display); });
+    Defer d([&display] { XCloseDisplay(display); });
 
     screen = DefaultScreen(display);
     window = XCreateSimpleWindow(display,
@@ -195,7 +195,7 @@ std::optional<std::string> x11_get_clipboard()
         SIHD_LOG(error, "could not open X display");
         return std::nullopt;
     }
-    Defer d([&] { XCloseDisplay(display); });
+    Defer d([&display] { XCloseDisplay(display); });
 
     screen = DefaultScreen(display);
     root = RootWindow(display, screen);

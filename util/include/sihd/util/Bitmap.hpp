@@ -32,6 +32,15 @@ union Pixel
         constexpr Pixel(uint32_t val): value(val) {}
 
         constexpr operator uint32_t() const { return value; }
+
+        static Pixel rgb(uint8_t red, uint8_t green, uint8_t blue)
+        {
+            Pixel p;
+            p.red = red;
+            p.green = green;
+            p.blue = blue;
+            return p;
+        }
 };
 
 class Bitmap

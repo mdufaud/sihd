@@ -18,6 +18,7 @@
 #include <sihd/util/fs.hpp>
 #include <sihd/util/macro.hpp>
 #include <sihd/util/os.hpp>
+#include <sihd/util/screenshot.hpp>
 #include <sihd/util/term.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
@@ -222,6 +223,21 @@ void bitmap()
     fmt::print("\n");
 }
 
+void screenshot()
+{
+    Bitmap bitmap;
+
+    if (screenshot::take_focus(bitmap))
+    {
+        bitmap.save_bmp("focused_screen.bmp");
+    }
+
+    if (screenshot::take_all(bitmap))
+    {
+        bitmap.save_bmp("all_screen.bmp");
+    }
+}
+
 } // namespace demo
 
 int main(int argc, char **argv)
@@ -255,6 +271,7 @@ int main(int argc, char **argv)
     demo::file_mem_write();
     demo::clipboard();
     demo::bitmap();
+    demo::screenshot();
 
     demo::worker(result["worker-frequency"].as<double>());
 
