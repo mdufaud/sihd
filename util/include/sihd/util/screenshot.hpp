@@ -9,6 +9,7 @@ namespace sihd::util::screenshot
 {
 
 bool take_all(Bitmap & bm);
+bool take_under_cursor(Bitmap & bm);
 bool take_focus(Bitmap & bm);
 
 bool take(Bitmap & bm, std::string_view name);

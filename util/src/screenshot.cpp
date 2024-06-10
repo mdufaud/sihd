@@ -77,7 +77,7 @@ bool take(Bitmap & bm, [[maybe_unused]] std::string_view name)
     Display *display = XOpenDisplay(nullptr);
     if (display == nullptr)
     {
-        SIHD_LOG(error, "could not open X display");
+        SIHD_LOG(error, "could not open X11 display");
         return false;
     }
     Defer d([&display] { XCloseDisplay(display); });
@@ -128,6 +128,8 @@ bool take(Bitmap & bm, [[maybe_unused]] std::string_view name)
         }
     }
 
+    XFree(list_win);
+
     if (!found)
     {
         return false;
@@ -139,7 +141,7 @@ bool take(Bitmap & bm, [[maybe_unused]] std::string_view name)
     XImage *image = XGetImage(display, named_window, 0, 0, width, height, AllPlanes, ZPixmap);
     if (image == nullptr)
     {
-        SIHD_LOG(error, "could not get image");
+        SIHD_LOG(error, "could not get X11 image");
         return false;
     }
 
@@ -165,7 +167,67 @@ bool take_focus(Bitmap & bm)
     Display *display = XOpenDisplay(nullptr);
     if (display == nullptr)
     {
-        SIHD_LOG(error, "could not open X display");
+        SIHD_LOG(error, "could not open X11 display");
+        return false;
+    }
+    Defer d([&display] { XCloseDisplay(display); });
+
+    Window child;
+    int revert_to_return;
+    XGetInputFocus(display, &child, &revert_to_return);
+
+    if (child == 0 || child == 1)
+    {
+        SIHD_LOG(error, "no X11 focused window");
+        return false;
+    }
+
+    XWindowAttributes gwa;
+    if (XGetWindowAttributes(display, child, &gwa) == False)
+    {
+        SIHD_LOG(error, "could not open X11 window attributes");
+        return false;
+    }
+
+    if (!check_x11_window_readable(gwa))
+    {
+        return false;
+    }
+
+    const int width = gwa.width;
+    const int height = gwa.height;
+
+    XImage *image = XGetImage(display, child, 0, 0, width, height, AllPlanes, ZPixmap);
+    if (image == nullptr)
+    {
+        SIHD_LOG(error, "could not get X11 image");
+        return false;
+    }
+
+    try
+    {
+        create_x11_screenshot(bm, width, height, image);
+    }
+    catch (const std::exception & e)
+    {
+        SIHD_LOG(error, "{}", e.what());
+        return false;
+    }
+
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool take_under_cursor(Bitmap & bm)
+{
+    bm.clear();
+#if defined(SIHD_COMPILE_WITH_X11)
+    Display *display = XOpenDisplay(nullptr);
+    if (display == nullptr)
+    {
+        SIHD_LOG(error, "could not open X11 display");
         return false;
     }
     Defer d([&display] { XCloseDisplay(display); });
@@ -183,28 +245,19 @@ bool take_focus(Bitmap & bm)
 
     if (child == 0)
     {
-        SIHD_LOG(error, "no pointer");
-    }
-
-    // int revert_to_return;
-    // XGetInputFocus(display, &child, &revert_to_return);
-
-    if (child == 0)
-    {
-        SIHD_LOG(error, "no focus");
+        SIHD_LOG(error, "no X11 window under cursor");
         return false;
     }
 
     XWindowAttributes gwa;
     if (XGetWindowAttributes(display, child, &gwa) == False)
     {
-        SIHD_LOG(error, "could not open window attributes");
+        SIHD_LOG(error, "could not open X11 window attributes");
         return false;
     }
 
     if (!check_x11_window_readable(gwa))
     {
-        SIHD_LOG(error, "could not window not readable");
         return false;
     }
 
@@ -214,7 +267,7 @@ bool take_focus(Bitmap & bm)
     XImage *image = XGetImage(display, child, 0, 0, width, height, AllPlanes, ZPixmap);
     if (image == nullptr)
     {
-        SIHD_LOG(error, "could not get image");
+        SIHD_LOG(error, "could not get X11 image");
         return false;
     }
 
@@ -241,7 +294,7 @@ bool take_all(Bitmap & bm)
     Display *display = XOpenDisplay(nullptr);
     if (display == nullptr)
     {
-        SIHD_LOG(error, "could not open X display");
+        SIHD_LOG(error, "could not open X11 display");
         return false;
     }
     Defer d([&display] { XCloseDisplay(display); });
@@ -251,7 +304,7 @@ bool take_all(Bitmap & bm)
     XWindowAttributes gwa;
     if (XGetWindowAttributes(display, root, &gwa) == False)
     {
-        SIHD_LOG(error, "could not open window attributes");
+        SIHD_LOG(error, "could not open X11 window attributes");
         return false;
     }
 
@@ -266,7 +319,7 @@ bool take_all(Bitmap & bm)
     XImage *image = XGetImage(display, root, 0, 0, width, height, AllPlanes, ZPixmap);
     if (image == nullptr)
     {
-        SIHD_LOG(error, "could not get image");
+        SIHD_LOG(error, "could not get X11 image");
         return false;
     }
 

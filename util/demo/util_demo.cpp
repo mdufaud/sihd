@@ -227,9 +227,14 @@ void screenshot()
 {
     Bitmap bitmap;
 
+    if (screenshot::take_under_cursor(bitmap))
+    {
+        bitmap.save_bmp("cursor_screen.bmp");
+    }
+
     if (screenshot::take_focus(bitmap))
     {
-        bitmap.save_bmp("focused_screen.bmp");
+        bitmap.save_bmp("focus_screen.bmp");
     }
 
     if (screenshot::take_all(bitmap))
