@@ -38,3 +38,11 @@ dist/*
 
 # scons
 .scon*
+
+# venv
+.venv
+.venv/*
+
+# vcpkg
+.vcpkg
+.vcpkg/*

@@ -68,7 +68,7 @@ term_colors = TermColors()
 # Build log
 ###############################################################################
 
-def __log(color, level, *msg, file=sys.stdout):
+def __log(color, level, *msg, file=sys.stderr):
     datestr = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"{color}[{datestr}] builder [{level}]:", *msg, term_colors.reset, file=file)
 
@@ -317,6 +317,8 @@ build_share_path = join(build_path, "share")
 build_test_path = join(build_path, "test")
 build_demo_path = join(build_path, "demo")
 build_obj_path = join(build_path, "obj")
+
+libs_type = "static" if is_static_libs() else "dynamic"
 
 ###############################################################################
 # App settings sanatizer
@@ -634,6 +636,8 @@ if __name__ == '__main__':
         print(build_on_android and "true" or "false")
     elif sys.argv[1] == "path":
         print(build_path)
+    elif sys.argv[1] == "static":
+        print(libs_type)
     elif sys.argv[1] == "all":
         print(" ".join([
             build_platform,
@@ -641,5 +645,5 @@ if __name__ == '__main__':
             build_mode,
             build_compiler,
             build_on_android and "true" or "false",
-            build_path
+            build_path,
         ]))

@@ -70,7 +70,7 @@ void create_x11_screenshot(Bitmap & bm, size_t width, size_t height, XImage *ima
 
 } // namespace
 
-bool take(Bitmap & bm, std::string_view name)
+bool take(Bitmap & bm, [[maybe_unused]] std::string_view name)
 {
     bm.clear();
 #if defined(SIHD_COMPILE_WITH_X11)

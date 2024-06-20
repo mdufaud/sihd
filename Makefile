@@ -3,6 +3,11 @@ ifeq (, $(shell which $(PYTHON_BIN)))
 PYTHON_BIN := python
 endif
 
+PIP_BIN := pip3
+ifeq (, $(shell which $(PIP_BIN)))
+PIP_BIN := pip
+endif
+
 ifeq (, $(shell which $(PYTHON_BIN)))
 $(error "Makefile: no python detected - it is needed to build the project.")
 endif
@@ -103,6 +108,12 @@ include $(MAKEFILE_TOOLS_ADDON)/addon.mk
 endif
 
 ############
+# Venv
+############
+
+VENV_PATH := $(HERE)/.venv
+
+############
 # Scons env
 ############
 
@@ -124,6 +135,13 @@ CONAN_INSTALL = conan install $(HERE) -if $(CONAN_PATH) $(CONAN_INSTALL_PATH) $(
 ifneq ("$(wildcard $(CONAN_PROFILE))", "")
 	CONAN_PROFILE_ARG = --profile $(CONAN_PROFILE)
 endif
+
+############
+# VCPKG
+############
+
+VCPKG_PATH := $(HERE)/.vcpkg
+VCPKG_BIN := $(VCPKG_PATH)/vcpkg
 
 #########
 # Exports
@@ -175,6 +193,7 @@ info:
 	$(call mk_log_info,makefile,arch = $(ARCH))
 	$(call mk_log_info,makefile,mode = $(COMPILE_MODE))
 	$(call mk_log_info,makefile,logical cores = $(UTILS_LOGICAL_CORE_NUMBER) ($(j) used))
+	$(call mk_log_info,makefile,libs: $(LIB_TYPE))
 ifeq ($(ANDROID), true)
 	$(call mk_log_warning,makefile,android detected)
 endif
@@ -194,6 +213,26 @@ list:
 		echo "$(MAKEFILE_PATH):"; \
 		grep '^.PHONY: .* \#' $(MAKEFILE_PATH) | sed 's/\.PHONY: \(.*\) \# \(.*\)/  \1: \2/' | expand -t20; \
 	)
+
+##################
+# Venv
+##################
+
+.PHONY: venv # Go into a python virtual environnement
+
+venv:
+ifeq ($(VIRTUAL_ENV), )
+	$(PYTHON_BIN) -m venv $(VENV_PATH)
+	$(QUIET) echo "Start with:"
+	$(QUIET) echo "$> source `basename $(VENV_PATH)`/bin/activate"
+	$(QUIET) echo "End with:"
+	$(QUIET) echo "$> deactivate"
+endif
+
+.PHONY: setup # Install scons in venv
+
+setup: venv
+	(source $(VENV_PATH)/bin/activate && $(PIP_BIN) install scons)
 
 ##################
 # Scons (builder)
@@ -352,7 +391,7 @@ $(MODULES_NAME):
 $(TEST_NAME):
 	$(QUIET) echo > /dev/null
 
-endif #test
+endif # test
 
 ##################
 # Extlibs
@@ -374,7 +413,34 @@ pkgdep: build
 $(PKG_MANAGER_NAME):
 	$(QUIET) echo > /dev/null
 
+endif # pkgdep
+
+##################
+# VCPKG (extlibs)
+##################
+
+ifeq ($(MAKEARG_1), vcpkg)
+
+.PHONY: vcpkg # Run vcpkg to get dependencies
+
+deploy:
+	$(QUIET) if [ ! -d "$(VCPKG_PATH)" ]; then git clone https://github.com/microsoft/vcpkg $(VCPKG_PATH); fi
+	$(QUIET) if [ ! -f "$(VCPKG_BIN)" ]; then $(VCPKG_PATH)/bootstrap-vcpkg.sh -disableMetrics; fi
+
+vcpkg: deploy
+	$(QUIET) echo > /dev/null
+
+ifeq ($(MAKEARG_2), install)
+
+install: deploy
+	$(VCPKG_BIN) install $(MAKEARG_3)
+
 endif
+
+ifeq ($(MAKEARG_2), mod)
+endif # mod
+
+endif # vcpkg
 
 ##################
 # Conan (extlibs)
@@ -430,7 +496,6 @@ endif
 
 endif # dep
 
-
 .PHONY: checkdep_html # Run conan's HTML dependency tree
 
 checkdep_html:
@@ -480,6 +545,8 @@ endif # dist
 ##########
 # Install
 ##########
+
+ifeq ($(MAKEARG_1), install)
 
 ifeq ($(INSTALL_PREFIX),)
     INSTALL_PREFIX := /usr/local
@@ -553,6 +620,10 @@ install: confirm_install
 		install -D --compare --mode=744 "$(SHARE_PATH)/$$path" "$$dest"; \
 	done
 
+endif # install
+
+ifeq ($(MAKEARG_1), uninstall)
+
 .PHONY: uninstall # Read file with path of all installed files, asks for confirmation and removes every files
 
 uninstall:
@@ -563,6 +634,9 @@ uninstall:
 	$(QUIET) echo -n "Please confirm files removal [y/N] " && read answer && [ $${answer:-N} = y ]
 	rm -rf $(INSTALLED_FILES)
 	rm -f $(INSTALLED_FILES_DESTINATION)
+
+endif # uninstall
+
 
 ##########
 # Serve
