@@ -142,6 +142,7 @@ endif
 
 VCPKG_PATH := $(HERE)/.vcpkg
 VCPKG_BIN := $(VCPKG_PATH)/vcpkg
+VCPKG_SCRIPT := $(HERE)/vcpkg.py
 
 #########
 # Exports
@@ -419,26 +420,53 @@ endif # pkgdep
 # VCPKG (extlibs)
 ##################
 
-ifeq ($(MAKEARG_1), vcpkg)
-
 .PHONY: vcpkg # Run vcpkg to get dependencies
+
+vcpkg:
+	$(QUIET) echo > /dev/null
+
+ifeq ($(MAKEARG_1), vcpkg)
 
 deploy:
 	$(QUIET) if [ ! -d "$(VCPKG_PATH)" ]; then git clone https://github.com/microsoft/vcpkg $(VCPKG_PATH); fi
 	$(QUIET) if [ ! -f "$(VCPKG_BIN)" ]; then $(VCPKG_PATH)/bootstrap-vcpkg.sh -disableMetrics; fi
 
-vcpkg: deploy
-	$(QUIET) echo > /dev/null
-
-ifeq ($(MAKEARG_2), install)
-
-install: deploy
-	$(VCPKG_BIN) install $(MAKEARG_3)
-
+ifeq ($(MAKEARG_2), fetch)
+.PHONY: fetch
+fetch: deploy
+	$(QUIET) $(PYTHON_BIN) $(VCPKG_SCRIPT) fetch
 endif
 
 ifeq ($(MAKEARG_2), mod)
+MODULES_NAME := $(MAKEARG_3),$(m)
+mod: modules = $(MODULES_NAME)
+mod: fetch
+	$(QUIET) echo > /dev/null
 endif # mod
+
+ifeq ($(MAKEARG_2), list)
+.PHONY: list
+list: deploy
+	$(QUIET) $(PYTHON_BIN) $(VCPKG_SCRIPT) list
+endif
+
+ifeq ($(MAKEARG_2), install)
+.PHONY: install
+install: deploy
+	$(VCPKG_BIN) install $(MAKEARG_3)
+endif
+
+ifeq ($(MAKEARG_2), search)
+.PHONY: search
+search: deploy
+	$(VCPKG_BIN) search $(MAKEARG_3) --x-full-desc
+endif
+
+ifeq ($(MAKEARG_2), update)
+.PHONY: update
+update: deploy
+	cd $(VCPKG_PATH) && git pull && $(VCPKG_BIN) update
+endif
 
 endif # vcpkg
 

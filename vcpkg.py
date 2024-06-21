@@ -1,6 +1,6 @@
-import os
 import sys
 import json
+import os
 
 from pprint import PrettyPrinter
 pp = PrettyPrinter(indent=2)
@@ -10,7 +10,11 @@ import app
 from site_scons.scripts import modules as modules
 from site_scons.scripts import builder as builder
 
-builder.info("fetching external libraries for {}".format(app.name))
+vcpkg_dir_path = os.path.join(builder.build_root_path, ".vcpkg")
+vcpkg_bin_path = os.path.join(vcpkg_dir_path, "vcpkg")
+
+vcpkg_build_path = os.path.join(builder.build_path, "vcpkg")
+vcpkg_build_manifest_path = os.path.join(vcpkg_build_path, "vcpkg.json")
 
 if builder.verify_args(app) == False:
     exit(1)
@@ -32,11 +36,10 @@ if verbose:
     if has_test:
         builder.debug("including test libs")
 
+skip_libs = getattr(app, "extlibs_skip", [])
 extlibs = {}
 
 if modules_to_build != "NONE":
-    builder.info("parsing modules")
-
     # Get modules configuration for this build
     try:
         build_modules = modules.build_modules_conf(app, specific_modules=modules_lst)
@@ -57,26 +60,106 @@ if modules_to_build != "NONE":
         pp.pprint(build_modules)
         print()
 
-    builder.info("getting modules external libs")
-
     extlibs.update(modules.get_modules_extlibs(app, build_modules, build_platform))
     if has_test and hasattr(app, "test_extlibs"):
         extlibs.update(modules.get_extlibs_versions(app, app.test_extlibs))
+
+    for skip_lib in skip_libs:
+        if skip_lib in extlibs:
+            del extlibs[skip_lib]
 
     if verbose:
         builder.debug("modules external libs:")
         pp.pprint(extlibs)
         print()
 
-print(json.dumps({
-    "dependencies": [
-        "fmt"
-    ],
-    "builtin-baseline": "7977f0a771e64e9811d32aa30d9a247e09c39b2e",
-    "overrides": [
-        {
-            "name": "fmt",
-            "version": "7.1.3"
-        },
-    ],
-}))
+def build_vcpkg_triplet():
+    vcpkg_triplet = ""
+    if builder.build_architecture == "x86_64":
+        vcpkg_triplet = "x64"
+    else:
+        vcpkg_triplet = builder.build_architecture
+    if builder.build_platform == "windows":
+        vcpkg_triplet += f"-mingw"
+    else:
+        vcpkg_triplet += f"-{builder.build_platform}"
+    if builder.build_static_libs:
+        vcpkg_triplet += "-static"
+    else:
+        vcpkg_triplet += "-dynamic"
+    return vcpkg_triplet
+
+vcpkg_triplet = build_vcpkg_triplet()
+
+def build_vcpkg_manifest():
+    vcpkg_baseline = "7977f0a771e64e9811d32aa30d9a247e09c39b2e"
+    if hasattr(app, "vcpkg_baseline"):
+        vcpkg_baseline = app.vcpkg_baseline
+    vcpkg_manifest = {
+        "builtin-baseline": f"{vcpkg_baseline}",
+        "dependencies": [
+        ],
+        "overrides": [
+        ],
+    }
+    def add_dependency(name, version):
+        vcpkg_manifest["dependencies"].append(name)
+        vcpkg_manifest["overrides"].append({
+            "name": name,
+            "version": version
+        })
+    for libname, libversion in extlibs.items():
+        add_dependency(libname, libversion)
+    return vcpkg_manifest
+
+def write_vcpkg_manifest(vcpkg_manifest):
+    os.makedirs(vcpkg_build_path, exist_ok=True)
+    with open(vcpkg_build_manifest_path, "w") as fd:
+        json.dump(vcpkg_manifest, fd, indent=2)
+
+def __check_vcpkg():
+    if os.path.exists(vcpkg_bin_path) is False:
+        builder.error(f"VCPKG path does not exist: {vcpkg_bin_path}")
+        builder.error(f"Deploy VCPKG with: make vcpkg deploy")
+        raise RuntimeError("No VCPKG installed")
+
+def execute_vcpkg_install():
+    __check_vcpkg()
+    import subprocess
+    args = (vcpkg_bin_path, "install", f"--triplet={vcpkg_triplet}")
+    proc = subprocess.run(args, cwd=vcpkg_build_path, timeout=(60.0 * len(extlibs)))
+    return proc.returncode
+
+def execute_vcpkg_depend_info():
+    __check_vcpkg()
+    import subprocess
+    args = [vcpkg_bin_path, "depend-info"] + list(extlibs.keys())
+    args += [f"--triplet={vcpkg_triplet}", "--format=tree", "--max-recurse=-1"]
+    proc = subprocess.run(args, cwd=vcpkg_build_path)
+    return proc.returncode
+
+def execute_vcpkg_list():
+    __check_vcpkg()
+    import subprocess
+    args = (vcpkg_bin_path, "list", f"--triplet={vcpkg_triplet}")
+    proc = subprocess.run(args, cwd=vcpkg_build_path)
+    return proc.returncode
+
+def link_to_extlibs():
+    downloaded_path = os.path.join(vcpkg_build_path, "vcpkg_installed", vcpkg_triplet)
+    if os.path.exists(downloaded_path):
+        import shutil
+        shutil.copytree(downloaded_path, builder.build_extlib_path, dirs_exist_ok = True)
+
+if __name__ == "__main__":
+    vcpkg_manifest = build_vcpkg_manifest()
+    write_vcpkg_manifest(vcpkg_manifest)
+    if "fetch" in sys.argv:
+        builder.info("fetching external libraries for {}".format(app.name))
+        return_code = execute_vcpkg_install()
+        link_to_extlibs()
+        sys.exit(return_code)
+    elif "list" in sys.argv:
+        execute_vcpkg_list()
+    elif "info" in sys.argv:
+        execute_vcpkg_depend_info()

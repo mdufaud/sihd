@@ -113,7 +113,7 @@ class ConanAppDependencies(ConanFile):
         pass
 
     def requirements(self):
-        skip_libs = getattr(app, "conan_skip", [])
+        skip_libs = getattr(app, "extlibs_skip", [])
         for name, version in extlibs.items():
             if name in skip_libs:
                 if verbose:

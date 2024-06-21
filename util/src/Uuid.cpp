@@ -6,7 +6,15 @@
 #if defined(__SIHD_WINDOWS__)
 # include <rpc.h>
 #else
-# include <uuid/uuid.h>
+# if defined __has_include
+#  if __has_include(<uuid.h>)
+#   include <uuid.h>
+#  elif __has_include(<uuid/uuid.h>)
+#   include <uuid/uuid.h>
+#  endif
+# else
+#  include <uuid.h>
+# endif
 #endif
 
 namespace sihd::util

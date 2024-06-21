@@ -12,20 +12,20 @@ extlibs = {
     # unit test
     "gtest": "1.11.0",
     # json parsing
-    "nlohmann_json": "3.9.1",
+    "nlohmann-json": "3.9.1",
     # util
     "cxxopts": "3.0.0",
     "fmt": "7.1.3",
     "libuuid": "1.0.3",
     # http
     "libwebsockets": "4.3.0",
-    "libcurl": "7.87.0",
-    "openssl": "1.1.1w",
+    "curl": "7.87.0",
+    "openssl": "1.1.1n",
     "libssh": "",
     # pcap
     "libpcap": "1.10.1",
     # usb
-    "libusb": "1.0.24",
+    "libusb": "1.0.27",
     # gui
     "ftxui": "5.0.0",
     "sdl": "2.0.18",
@@ -41,7 +41,10 @@ extlibs = {
     "libbluetooth": "",
 }
 
-conan_skip = ["libuuid", "lua", "libbluetooth"]
+extlibs_skip = ["libbluetooth", "glfw"]
+
+vcpkg_baseline = "7977f0a771e64e9811d32aa30d9a247e09c39b2e"
+
 conan_post_process = {
     "*lua.*": {"from": "lua.", "to": "lua5.3."}
 }
@@ -55,7 +58,7 @@ modules = {
         # x11=1 to compile with X11
         # wayland=1 to compile with wayland
         "libs": ['pthread'], # threading
-        "extlibs": ['nlohmann_json', 'fmt', 'cxxopts'],
+        "extlibs": ['nlohmann-json', 'fmt', 'cxxopts'],
         "static-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
         "linux-extlibs": ['libuuid'],
         "linux-libs": [
@@ -97,7 +100,7 @@ modules = {
     },
     "http": {
         "depends": ['net'],
-        "extlibs": ['libcurl', 'libwebsockets'],
+        "extlibs": ['curl', 'libwebsockets'],
         "libs": ['websockets', 'curl'],
     },
     "pcap": {
@@ -116,8 +119,8 @@ modules = {
     },
     "tui": {
         "depends": ['util'],
-        "git-url": "https://github.com/ArthurSonzogni/FTXUI",
-        "git-branch": f"v{extlibs['ftxui']}",
+        "extlibs": ['ftxui'],
+        "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
     },
     # "ssh": {
     #     "depends": ['util'],
@@ -222,7 +225,7 @@ static_defines = ['STATIC']
 modes = ["debug", "fast", "size", "release"]
 
 _default_flags = [
-    "-D_FORTIFY_SOURCE=2"
+    "-D_FORTIFY_SOURCE=2",
 ]
 
 debug_flags = _default_flags + ["-g", "-Og"]
@@ -242,6 +245,7 @@ gcc_flags = [
     "-Wl,-z,defs",
     "-Wl,-z,now",
     "-Wl,-z,relro",
+    "-Wno-unknown-pragmas",
     # hide pragma messages
     # "-ftrack-macro-expansion=0",
     # "-fno-diagnostics-show-caret",
@@ -305,12 +309,12 @@ contributors = ["azouiten <alexandre.zouiten1@gmail.com>"]
 # packages equivalent to build DEBIAN/control dependencies
 apt_packages = {
     "gtest": "libgtest-dev",
-    "nlohmann_json": "nlohmann-json3-dev",
+    "nlohmann-json": "nlohmann-json3-dev",
     "fmt": "libfmt-dev",
     "libuuid": "uuid-dev",
     "cxxopts": "libcxxopts-dev",
     "openssl": "openssl",
-    "libcurl": "libcurl4-openssl-dev",
+    "curl": "libcurl4-openssl-dev",
     "libwebsockets": "libwebsockets-dev",
     "libpcap": "libpcap-dev",
     "libssh": "libssh-dev",
@@ -341,12 +345,12 @@ pacman_source = "{name}-{version}::git+{git_url}#tag={version}".format(
 # packages equivalent to build PKGBUILD dependencies
 pacman_packages = {
     "gtest": "gtest",
-    "nlohmann_json": "nlohmann-json",
+    "nlohmann-json": "nlohmann-json",
     "fmt": "fmt",
     "libuuid": "util-linux-libs",
     "cxxopts": "cxxopts",
     "openssl": "openssl",
-    "libcurl": "curl",
+    "curl": "curl",
     "libwebsockets": "libwebsockets",
     "libpcap": "libpcap",
     "libssh": "libssh",
@@ -367,12 +371,12 @@ pacman_packages = {
 
 yum_packages = {
     "gtest": "gtest-devel",
-    "nlohmann_json": "json-devel",
+    "nlohmann-json": "json-devel",
     "fmt": "fmt-devel",
     "libuuid": "uuid-devel",
     "cxxopts": "cxxopts-devel",
     "openssl": "openssl",
-    "libcurl": "libcurl-devel",
+    "curl": "libcurl-devel",
     "libwebsockets": "libwebsockets-devel",
     "libpcap": "libpcap-devel",
     "libssh": "libssh-devel",
@@ -394,11 +398,11 @@ yum_packages = {
 __msys2_mingw = "mingw-w64-x86_64-"
 msys2_packages = {
     "gtest": f"{__msys2_mingw}gtest",
-    "nlohmann_json": f"{__msys2_mingw}nlohmann-json",
+    "nlohmann-json": f"{__msys2_mingw}nlohmann-json",
     "fmt": f"{__msys2_mingw}fmt",
     "cxxopts": f"{__msys2_mingw}cxxopts",
     "openssl": f"{__msys2_mingw}openssl",
-    "libcurl": f"{__msys2_mingw}curl",
+    "curl": f"{__msys2_mingw}curl",
     "libwebsockets": f"{__msys2_mingw}libwebsockets",
     "libpcap": f"{__msys2_mingw}libpcap",
     "libssh": f"{__msys2_mingw}libssh",
