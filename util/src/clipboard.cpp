@@ -3,16 +3,12 @@
 #include <sihd/util/clipboard.hpp>
 #include <sihd/util/platform.hpp>
 
-#if defined(__SIHD_LINUX__)
+#if defined(SIHD_COMPILE_WITH_X11)
+# include <X11/Xlib.h>
+#endif
 
-# if defined(SIHD_COMPILE_WITH_X11)
-#  include <X11/Xlib.h>
-# endif
-
-# if defined(SIHD_COMPILE_WITH_WAYLAND)
-#  include <wayland-client.h>
-# endif
-
+#if defined(SIHD_COMPILE_WITH_WAYLAND)
+# include <wayland-client.h>
 #endif
 
 #if defined(__SIHD_WINDOWS__)
@@ -27,18 +23,16 @@ SIHD_NEW_LOGGER("sihd::util::clipboard");
 namespace
 {
 
-#if !defined(__SIHD_WINDOWS__)
-
 bool wayland_set_clipboard([[maybe_unused]] std::string_view str)
 {
-# if defined(SIHD_COMPILE_WITH_WAYLAND)
-# endif
+#if defined(SIHD_COMPILE_WITH_WAYLAND)
+#endif
     return false;
 }
 
 bool x11_set_clipboard([[maybe_unused]] std::string_view str)
 {
-# if defined(SIHD_COMPILE_WITH_X11)
+#if defined(SIHD_COMPILE_WITH_X11)
     Display *display;
     int screen;
     Window window;
@@ -168,20 +162,75 @@ bool x11_set_clipboard([[maybe_unused]] std::string_view str)
                 return false;
         }
     }
-# endif
+#endif
     return false;
+}
+
+bool windows_set_clipboard([[maybe_unused]] std::string_view str)
+{
+#if defined(__SIHD_WINDOWS__)
+    int characterCount;
+    HANDLE object;
+    WCHAR *buffer;
+
+    characterCount = MultiByteToWideChar(CP_UTF8, 0, str.data(), -1, NULL, 0);
+    if (!characterCount)
+        return false;
+
+    object = GlobalAlloc(GMEM_MOVEABLE, characterCount * sizeof(WCHAR));
+    if (!object)
+    {
+        SIHD_LOG(error, "failed to allocate clipboard win32 handle");
+        return false;
+    }
+
+    buffer = (WCHAR *)GlobalLock(object);
+    if (!buffer)
+    {
+        SIHD_LOG(error, "failed to lock win32 handle");
+        GlobalFree(object);
+        return false;
+    }
+
+    MultiByteToWideChar(CP_UTF8, 0, str.data(), -1, buffer, characterCount);
+    GlobalUnlock(object);
+
+    // NOTE: Retry clipboard opening a few times as some other application may have it
+    //       open and also the Windows Clipboard History reads it after each update
+    int tries = 0;
+    while (!OpenClipboard(0))
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        tries++;
+
+        if (tries == 3)
+        {
+            SIHD_LOG(error, "failed to open win32 clipboard");
+            GlobalFree(object);
+            return false;
+        }
+    }
+
+    EmptyClipboard();
+    SetClipboardData(CF_UNICODETEXT, object);
+    CloseClipboard();
+
+    return true;
+#else
+    return false;
+#endif
 }
 
 std::optional<std::string> wayland_get_clipboard()
 {
-# if defined(SIHD_COMPILE_WITH_WAYLAND)
-# endif
+#if defined(SIHD_COMPILE_WITH_WAYLAND)
+#endif
     return std::nullopt;
 }
 
 std::optional<std::string> x11_get_clipboard()
 {
-# if defined(SIHD_COMPILE_WITH_X11)
+#if defined(SIHD_COMPILE_WITH_X11)
     Display *display;
     Window owner, target_window, root;
     int screen;
@@ -290,70 +339,11 @@ std::optional<std::string> x11_get_clipboard()
                 break;
         }
     }
-# endif
+#endif
     return std::nullopt;
 }
 
-#endif
-
-} // namespace
-
-bool set(std::string_view str)
-{
-#if defined(__SIHD_WINDOWS__)
-    int characterCount;
-    HANDLE object;
-    WCHAR *buffer;
-
-    characterCount = MultiByteToWideChar(CP_UTF8, 0, str.data(), -1, NULL, 0);
-    if (!characterCount)
-        return false;
-
-    object = GlobalAlloc(GMEM_MOVEABLE, characterCount * sizeof(WCHAR));
-    if (!object)
-    {
-        SIHD_LOG(error, "failed to allocate clipboard win32 handle");
-        return false;
-    }
-
-    buffer = (WCHAR *)GlobalLock(object);
-    if (!buffer)
-    {
-        SIHD_LOG(error, "failed to lock win32 handle");
-        GlobalFree(object);
-        return false;
-    }
-
-    MultiByteToWideChar(CP_UTF8, 0, str.data(), -1, buffer, characterCount);
-    GlobalUnlock(object);
-
-    // NOTE: Retry clipboard opening a few times as some other application may have it
-    //       open and also the Windows Clipboard History reads it after each update
-    int tries = 0;
-    while (!OpenClipboard(0))
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        tries++;
-
-        if (tries == 3)
-        {
-            SIHD_LOG(error, "failed to open win32 clipboard");
-            GlobalFree(object);
-            return false;
-        }
-    }
-
-    EmptyClipboard();
-    SetClipboardData(CF_UNICODETEXT, object);
-    CloseClipboard();
-
-    return true;
-#else
-    return x11_set_clipboard(str) || wayland_set_clipboard(str);
-#endif
-}
-
-std::optional<std::string> get()
+std::optional<std::string> windows_get_clipboard()
 {
 #if defined(__SIHD_WINDOWS__)
     HANDLE object;
@@ -397,11 +387,28 @@ std::optional<std::string> get()
 
     return std::string(ws.begin(), ws.end());
 #else
-    std::optional<std::string> opt_str = x11_get_clipboard();
-    if (!opt_str)
-        opt_str = wayland_get_clipboard();
-    return opt_str;
+    return std::nullopt;
 #endif
+}
+
+} // namespace
+
+bool set(std::string_view str)
+{
+    return windows_set_clipboard(str) || x11_set_clipboard(str) || wayland_set_clipboard(str);
+}
+
+std::optional<std::string> get()
+{
+    std::optional<std::string> ret;
+
+    ret = windows_get_clipboard();
+    if (!ret.has_value())
+        ret = x11_get_clipboard();
+    if (!ret.has_value())
+        ret = wayland_get_clipboard();
+
+    return ret;
 }
 
 } // namespace sihd::util::clipboard

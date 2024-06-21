@@ -19,8 +19,8 @@ extlibs = {
     "libuuid": "1.0.3",
     # http
     "libwebsockets": "4.3.0",
-    "libcurl": "7.75.0",
-    "openssl": "1.1.1l",
+    "libcurl": "7.87.0",
+    "openssl": "1.1.1w",
     "libssh": "",
     # pcap
     "libpcap": "1.10.1",
@@ -74,6 +74,7 @@ modules = {
             'ucrt', # timezone
             'ssp', # winsock
             'ws2_32', # windows api
+            'gdi32', # wingdi
             'stdc++fs'
         ],
         "windows-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib

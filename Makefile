@@ -130,7 +130,7 @@ CONAN_PATH := $(BUILD_PATH)/conan
 CONAN_PROFILES_PATH := $(BUILD_TOOLS)/conan_profiles
 CONAN_PROFILE := $(CONAN_PROFILES_PATH)/$(ARCH)/$(COMPILER).txt
 CONAN_PROFILE_ARG =
-CONAN_INSTALL = conan install $(HERE) -if $(CONAN_PATH) $(CONAN_INSTALL_PATH) $(CONAN_PROFILE_ARG) $(CONAN_ARGS)
+CONAN_INSTALL = conan install $(HERE) --output-folder $(CONAN_PATH) $(CONAN_INSTALL_PATH) $(CONAN_PROFILE_ARG) $(CONAN_ARGS)
 # checking platform env to select a conan profile
 ifneq ("$(wildcard $(CONAN_PROFILE))", "")
 	CONAN_PROFILE_ARG = --profile $(CONAN_PROFILE)

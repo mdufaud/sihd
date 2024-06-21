@@ -39,7 +39,7 @@ dist/*
 # scons
 .scon*
 
-# venv
+# python venv
 .venv
 .venv/*
 

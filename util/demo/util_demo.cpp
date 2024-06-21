@@ -232,12 +232,12 @@ void screenshot()
         bitmap.save_bmp("cursor_screen.bmp");
     }
 
-    if (screenshot::take_focus(bitmap))
+    if (screenshot::take_focused(bitmap))
     {
         bitmap.save_bmp("focus_screen.bmp");
     }
 
-    if (screenshot::take_all(bitmap))
+    if (screenshot::take_screen(bitmap))
     {
         bitmap.save_bmp("all_screen.bmp");
     }

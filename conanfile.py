@@ -1,4 +1,3 @@
-from conans import ConanFile
 import os
 import sys
 import atexit
@@ -51,9 +50,6 @@ if modules_to_build != "NONE":
     for deleted_modules in deleted_modules:
         builder.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
 
-    for deleted_module in deleted_modules:
-        del build_modules[deleted_module]
-
     if not build_modules:
         exit(0)
 
@@ -102,9 +98,15 @@ conan_options = {
 if hasattr(app, "conan_options"):
     conan_options.update(app.conan_options)
 
+try:
+    from conans import ConanFile
+except ImportError:
+    from conan import ConanFile
+    from conan.tools.files import copy
+
 class ConanAppDependencies(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    generators = "gcc", "txt", "CMakeDeps", "CMakeToolchain"
+    generators = []
     default_options = conan_options
 
     def system_requirements(self):
@@ -129,6 +131,19 @@ class ConanAppDependencies(ConanFile):
         self.copy("*", dst = extlib_bin_path, src = "bin")
         self.copy("*", dst = extlib_etc_path, src = "etc")
         self.copy("*", dst = extlib_res_path, src = "res")
+
+    def generate(self):
+        for dep in self.dependencies.values():
+            for include_dir in dep.cpp_info.includedirs:
+                copy(self, "*", include_dir, extlib_hdr_path)
+            for bin_dir in dep.cpp_info.bindirs:
+                copy(self, "*", bin_dir, extlib_bin_path)
+            for lib_dir in dep.cpp_info.libdirs:
+                copy(self, "*", lib_dir, extlib_lib_path)
+            for res_dir in dep.cpp_info.resdirs:
+                copy(self, "*", res_dir, extlib_res_path)
+            for libs in dep.cpp_info.libs:
+                copy(self, "*", libs, extlib_lib_path)
 
 def post_process():
     import glob

@@ -490,6 +490,7 @@ TEST_F(TestStr, test_str_demangle)
     std::string res = str::demangle(typeid(*this).name());
     SIHD_LOG(info, "Demangled: {}", res);
     EXPECT_EQ(res, "test::TestStr_test_str_demangle_Test");
+    EXPECT_EQ(res, str::demangle_type_name(*this));
 }
 
 TEST_F(TestStr, test_str_trim)

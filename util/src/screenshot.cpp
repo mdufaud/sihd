@@ -3,13 +3,15 @@
 #include <sihd/util/platform.hpp>
 #include <sihd/util/screenshot.hpp>
 
-#if defined(__SIHD_LINUX__)
+#if defined(SIHD_COMPILE_WITH_X11)
+# include <X11/Xlib.h>
+# include <X11/Xutil.h>
+#endif
 
-# if defined(SIHD_COMPILE_WITH_X11)
-#  include <X11/Xlib.h>
-#  include <X11/Xutil.h>
-# endif
-
+#if defined(__SIHD_WINDOWS__)
+# include <windows.h>
+# include <wingdi.h>
+# include <winuser.h>
 #endif
 
 namespace sihd::util::screenshot
@@ -22,7 +24,20 @@ namespace
 
 #if defined(SIHD_COMPILE_WITH_X11)
 
-bool check_x11_window_readable(XWindowAttributes gwa)
+struct X11Display
+{
+        X11Display() { this->display = XOpenDisplay(nullptr); };
+
+        ~X11Display()
+        {
+            if (this->display != nullptr)
+                XCloseDisplay(this->display);
+        };
+
+        Display *display;
+};
+
+bool x11_is_window_readable(XWindowAttributes gwa)
 {
     SIHD_TRACEF(gwa.map_installed);
     SIHD_TRACEF(InputOutput);
@@ -39,80 +54,109 @@ bool check_x11_window_readable(XWindowAttributes gwa)
     return gwa.c_class == InputOutput && gwa.map_state == IsViewable && gwa.map_installed == 0;
 }
 
-void create_x11_screenshot(Bitmap & bm, size_t width, size_t height, XImage *image)
+bool x11_image_to_bitmap(Bitmap & bm, size_t width, size_t height, XImage *image)
 {
-    bm.create(width, height, image->bits_per_pixel);
-
-    const unsigned long red_mask = image->red_mask;
-    const unsigned long green_mask = image->green_mask;
-    const unsigned long blue_mask = image->blue_mask;
-
-    unsigned long pixel;
-    unsigned char blue;
-    unsigned char green;
-    unsigned char red;
-
-    for (size_t x = 0; x < width; x++)
+    try
     {
-        for (size_t y = 0; y < height; y++)
+        bm.create(width, height, image->bits_per_pixel);
+
+        const unsigned long red_mask = image->red_mask;
+        const unsigned long green_mask = image->green_mask;
+        const unsigned long blue_mask = image->blue_mask;
+
+        unsigned long pixel;
+        unsigned char blue;
+        unsigned char green;
+        unsigned char red;
+
+        for (size_t x = 0; x < width; x++)
         {
-            pixel = XGetPixel(image, x, y);
+            for (size_t y = 0; y < height; y++)
+            {
+                pixel = XGetPixel(image, x, y);
 
-            blue = pixel & blue_mask;
-            green = (pixel & green_mask) >> 8;
-            red = (pixel & red_mask) >> 16;
+                blue = pixel & blue_mask;
+                green = (pixel & green_mask) >> 8;
+                red = (pixel & red_mask) >> 16;
 
-            bm.set(x, y, Pixel::rgb(red, green, blue));
+                bm.set(x, y, Pixel::rgb(red, green, blue));
+            }
         }
+        return true;
+    }
+    catch (const std::exception & e)
+    {
+        SIHD_LOG(error, "{}", e.what());
+        return false;
     }
 }
+
+bool x11_screenshot_window(Bitmap & bm, Display *display, Window window)
+{
+    if (window == 0)
+        return false;
+
+    XWindowAttributes gwa;
+    if (XGetWindowAttributes(display, window, &gwa) == False)
+    {
+        return false;
+    }
+
+    if (!x11_is_window_readable(gwa))
+    {
+        return false;
+    }
+
+    const int width = gwa.width;
+    const int height = gwa.height;
+
+    XImage *image = XGetImage(display, window, 0, 0, width, height, AllPlanes, ZPixmap);
+    if (image == nullptr)
+    {
+        return false;
+    }
+
+    return x11_image_to_bitmap(bm, width, height, image);
+}
+
 #endif
 
 } // namespace
 
-bool take(Bitmap & bm, [[maybe_unused]] std::string_view name)
+bool take_window_name(Bitmap & bm, std::string_view name)
 {
+    (void)name;
     bm.clear();
 #if defined(SIHD_COMPILE_WITH_X11)
-    Display *display = XOpenDisplay(nullptr);
-    if (display == nullptr)
-    {
-        SIHD_LOG(error, "could not open X11 display");
-        return false;
-    }
-    Defer d([&display] { XCloseDisplay(display); });
+    X11Display x11;
 
-    Window root = DefaultRootWindow(display);
+    Window root = DefaultRootWindow(x11.display);
 
     XWindowAttributes gwa;
     Window named_window;
-
     Window root_win;
     Window parent_win;
     Window *list_win;
     unsigned int nchildren;
-    if (XQueryTree(display, root, &root_win, &parent_win, &list_win, &nchildren) == False)
+    if (XQueryTree(x11.display, root, &root_win, &parent_win, &list_win, &nchildren) == False)
     {
         return false;
     }
+
+    Defer d([&list_win] { XFree(list_win); });
 
     bool found = false;
     for (unsigned int i = 0; i < nchildren; ++i)
     {
         Window tmp = list_win[i];
 
-        if (XGetWindowAttributes(display, tmp, &gwa) == False)
-        {
+        if (XGetWindowAttributes(x11.display, tmp, &gwa) == False)
             continue;
-        }
-
-        if (!check_x11_window_readable(gwa))
-        {
+        if (x11_is_window_readable(gwa) == false)
             continue;
-        }
 
         char *window_name = NULL;
-        if (XFetchName(display, tmp, &window_name) == True)
+        if (XFetchName(x11.display, tmp, &window_name) == True)
         {
             if (window_name != nullptr && name == window_name)
             {
@@ -123,220 +167,77 @@ bool take(Bitmap & bm, [[maybe_unused]] std::string_view name)
         }
 
         if (found)
-        {
             break;
-        }
     }
 
-    XFree(list_win);
+    if (found)
+        return x11_screenshot_window(bm, x11.display, named_window);
 
-    if (!found)
-    {
-        return false;
-    }
-
-    const int width = gwa.width;
-    const int height = gwa.height;
-
-    XImage *image = XGetImage(display, named_window, 0, 0, width, height, AllPlanes, ZPixmap);
-    if (image == nullptr)
-    {
-        SIHD_LOG(error, "could not get X11 image");
-        return false;
-    }
-
-    try
-    {
-        create_x11_screenshot(bm, width, height, image);
-    }
-    catch (const std::exception & e)
-    {
-        return false;
-    }
-
-    return true;
-#else
-    return false;
 #endif
+    return false;
 }
 
-bool take_focus(Bitmap & bm)
+bool take_focused(Bitmap & bm)
 {
     bm.clear();
 #if defined(SIHD_COMPILE_WITH_X11)
-    Display *display = XOpenDisplay(nullptr);
-    if (display == nullptr)
-    {
-        SIHD_LOG(error, "could not open X11 display");
-        return false;
-    }
-    Defer d([&display] { XCloseDisplay(display); });
+    X11Display x11;
 
     Window child;
     int revert_to_return;
-    XGetInputFocus(display, &child, &revert_to_return);
+    XGetInputFocus(x11.display, &child, &revert_to_return);
 
     if (child == 0 || child == 1)
-    {
-        SIHD_LOG(error, "no X11 focused window");
         return false;
-    }
 
-    XWindowAttributes gwa;
-    if (XGetWindowAttributes(display, child, &gwa) == False)
-    {
-        SIHD_LOG(error, "could not open X11 window attributes");
-        return false;
-    }
-
-    if (!check_x11_window_readable(gwa))
-    {
-        return false;
-    }
-
-    const int width = gwa.width;
-    const int height = gwa.height;
-
-    XImage *image = XGetImage(display, child, 0, 0, width, height, AllPlanes, ZPixmap);
-    if (image == nullptr)
-    {
-        SIHD_LOG(error, "could not get X11 image");
-        return false;
-    }
-
-    try
-    {
-        create_x11_screenshot(bm, width, height, image);
-    }
-    catch (const std::exception & e)
-    {
-        SIHD_LOG(error, "{}", e.what());
-        return false;
-    }
-
-    return true;
-#else
-    return false;
+    return x11_screenshot_window(bm, x11.display, child);
 #endif
+    return false;
 }
 
 bool take_under_cursor(Bitmap & bm)
 {
     bm.clear();
 #if defined(SIHD_COMPILE_WITH_X11)
-    Display *display = XOpenDisplay(nullptr);
-    if (display == nullptr)
-    {
-        SIHD_LOG(error, "could not open X11 display");
-        return false;
-    }
-    Defer d([&display] { XCloseDisplay(display); });
+    X11Display x11;
 
-    Window root = DefaultRootWindow(display);
+    Window root = DefaultRootWindow(x11.display);
 
     Window child, root_win;
     int root_x, root_y, win_x, win_y;
     unsigned int mask_return;
-    if (!XQueryPointer(display, root, &root_win, &child, &root_x, &root_y, &win_x, &win_y, &mask_return))
-    {
-        SIHD_LOG(error, "XQueryPointer failed");
-        return false;
-    }
-
-    if (child == 0)
-    {
-        SIHD_LOG(error, "no X11 window under cursor");
-        return false;
-    }
-
-    XWindowAttributes gwa;
-    if (XGetWindowAttributes(display, child, &gwa) == False)
-    {
-        SIHD_LOG(error, "could not open X11 window attributes");
-        return false;
-    }
-
-    if (!check_x11_window_readable(gwa))
+    if (!XQueryPointer(x11.display, root, &root_win, &child, &root_x, &root_y, &win_x, &win_y, &mask_return))
     {
         return false;
     }
 
-    const int width = gwa.width;
-    const int height = gwa.height;
-
-    XImage *image = XGetImage(display, child, 0, 0, width, height, AllPlanes, ZPixmap);
-    if (image == nullptr)
-    {
-        SIHD_LOG(error, "could not get X11 image");
-        return false;
-    }
-
-    try
-    {
-        create_x11_screenshot(bm, width, height, image);
-    }
-    catch (const std::exception & e)
-    {
-        SIHD_LOG(error, "{}", e.what());
-        return false;
-    }
-
-    return true;
-#else
-    return false;
+    return x11_screenshot_window(bm, x11.display, child);
 #endif
+    return false;
 }
 
-bool take_all(Bitmap & bm)
+bool take_screen(Bitmap & bm)
 {
     bm.clear();
 #if defined(SIHD_COMPILE_WITH_X11)
-    Display *display = XOpenDisplay(nullptr);
-    if (display == nullptr)
-    {
-        SIHD_LOG(error, "could not open X11 display");
-        return false;
-    }
-    Defer d([&display] { XCloseDisplay(display); });
+    X11Display x11;
+    Window root = DefaultRootWindow(x11.display);
+    return x11_screenshot_window(bm, x11.display, root);
+#elif defined(__SIHD_WINDOWS__)
+    int nScreenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int nScreenHeight = GetSystemMetrics(SM_CYSCREEN);
+    HWND hDesktopWnd = GetDesktopWindow();
+    HDC hDesktopDC = GetDC(hDesktopWnd);
+    HDC hCaptureDC = CreateCompatibleDC(hDesktopDC);
+    HBITMAP hCaptureBitmap = CreateCompatibleBitmap(hDesktopDC, nScreenWidth, nScreenHeight);
+    SelectObject(hCaptureDC, hCaptureBitmap);
+    BitBlt(hCaptureDC, 0, 0, nScreenWidth, nScreenHeight, hDesktopDC, 0, 0, SRCCOPY | CAPTUREBLT);
 
-    Window root = DefaultRootWindow(display);
-
-    XWindowAttributes gwa;
-    if (XGetWindowAttributes(display, root, &gwa) == False)
-    {
-        SIHD_LOG(error, "could not open X11 window attributes");
-        return false;
-    }
-
-    if (!check_x11_window_readable(gwa))
-    {
-        return false;
-    }
-
-    const int width = gwa.width;
-    const int height = gwa.height;
-
-    XImage *image = XGetImage(display, root, 0, 0, width, height, AllPlanes, ZPixmap);
-    if (image == nullptr)
-    {
-        SIHD_LOG(error, "could not get X11 image");
-        return false;
-    }
-
-    try
-    {
-        create_x11_screenshot(bm, width, height, image);
-    }
-    catch (const std::exception & e)
-    {
-        SIHD_LOG(error, "{}", e.what());
-        return false;
-    }
-
-    return true;
-#else
-    return false;
+    ReleaseDC(hDesktopWnd, hDesktopDC);
+    DeleteDC(hCaptureDC);
+    DeleteObject(hCaptureBitmap);
 #endif
+    return false;
 }
 
 } // namespace sihd::util::screenshot

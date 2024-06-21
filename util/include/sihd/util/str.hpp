@@ -3,6 +3,7 @@
 
 #include <string>
 #include <string_view>
+#include <typeinfo>
 #include <vector>
 
 #include <sihd/util/IArray.hpp>
@@ -97,6 +98,12 @@ std::string generate_random(size_t size);
 char *csub(std::string_view str, size_t from_idx, ssize_t size = 0);
 
 std::string demangle(std::string_view name);
+template <typename T>
+std::string demangle_type_name(const T & type)
+{
+    return str::demangle(typeid(type).name());
+}
+
 std::string format(std::string_view format, ...);
 
 bool is_all_spaces(std::string_view s);
