@@ -147,6 +147,9 @@ Process::Process()
     _poll.add_observer(this);
     _poll.set_service_wait_stop(true);
 
+    _code = 0;
+    _status = 0;
+
     this->open_mode = SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE;
 
     this->clear();
@@ -176,8 +179,7 @@ Process::Process(std::initializer_list<std::string> args): Process()
 
 Process::~Process()
 {
-    if (this->is_process_running())
-        this->end();
+    this->terminate();
     if (this->is_running())
     {
         this->stop();
@@ -187,14 +189,15 @@ Process::~Process()
 
 void Process::reset_proc()
 {
-    this->end();
+    this->terminate();
 
     _pid = -1;
     _started = false;
 
     {
         std::lock_guard l(_mutex_info);
-        memset(&_info, 0, sizeof(siginfo_t));
+        _code = 0;
+        _status = 0;
     }
 }
 
@@ -554,7 +557,7 @@ bool Process::read_pipes(int milliseconds_timeout)
     return _poll.is_running() == false && _poll.fds_size() > 0 && _poll.poll(milliseconds_timeout) > 0;
 }
 
-bool Process::end()
+bool Process::terminate()
 {
     this->read_pipes();
 
@@ -680,7 +683,10 @@ bool Process::wait(int options)
     int ret;
     {
         std::lock_guard l(_mutex_info);
-        ret = waitid(P_PID, _pid, &_info, options);
+        siginfo_t info;
+        ret = waitid(P_PID, _pid, &info, options);
+        _code = info.si_code;
+        _status = info.si_status;
     }
     bool has_exited = false;
     if (ret >= 0)
@@ -701,7 +707,7 @@ bool Process::wait(int options)
     if (has_exited)
     {
         auto l = _waitable.guard();
-        _started = false;
+        _started.store(false);
         _pid = -1;
         _waitable.notify_all();
     }
@@ -711,52 +717,52 @@ bool Process::wait(int options)
 bool Process::has_exited() const
 {
     std::lock_guard l(_mutex_info);
-    return _info.si_code == CLD_EXITED;
+    return _code == CLD_EXITED;
 }
 
 bool Process::has_core_dumped() const
 {
     std::lock_guard l(_mutex_info);
-    return _info.si_code == CLD_DUMPED;
+    return _code == CLD_DUMPED;
 }
 
 bool Process::has_stopped_by_signal() const
 {
     std::lock_guard l(_mutex_info);
-    return _info.si_code == CLD_STOPPED;
+    return _code == CLD_STOPPED;
 }
 
 bool Process::has_exited_by_signal() const
 {
     std::lock_guard l(_mutex_info);
-    return _info.si_code == CLD_KILLED;
+    return _code == CLD_KILLED;
 }
 
 bool Process::has_continued() const
 {
     std::lock_guard l(_mutex_info);
-    return _info.si_code == CLD_CONTINUED;
+    return _code == CLD_CONTINUED;
 }
 
 int Process::signal_exit_number() const
 {
     const bool cond = this->has_exited_by_signal();
     std::lock_guard l(_mutex_info);
-    return cond ? _info.si_status : -1;
+    return cond ? _status : -1;
 }
 
 int Process::signal_stop_number() const
 {
     const bool cond = this->has_stopped_by_signal();
     std::lock_guard l(_mutex_info);
-    return cond ? _info.si_status : -1;
+    return cond ? _status : -1;
 }
 
 int Process::return_code() const
 {
     const bool cond = this->has_exited();
     std::lock_guard l(_mutex_info);
-    return cond ? _info.si_status : -1;
+    return cond ? _status : -1;
 }
 
 } // namespace sihd::util

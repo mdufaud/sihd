@@ -6,14 +6,12 @@
 
 #include <sihd/imgui/IImguiBackend.hpp>
 #include <sihd/imgui/IImguiRenderer.hpp>
-#include <sihd/util/IStoppableRunnable.hpp>
 #include <sihd/util/Named.hpp>
 
 namespace sihd::imgui
 {
 
-class ImguiRunner: public sihd::util::Named,
-                   public sihd::util::IStoppableRunnable
+class ImguiRunner: public sihd::util::Named
 {
     public:
         ImguiRunner(const std::string & name, sihd::util::Node *parent = nullptr);

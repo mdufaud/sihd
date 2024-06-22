@@ -26,7 +26,6 @@ vgcore*
 
 # modules specific
 imgui/imgui
-tui/FTXUI
 lua/luabridge
 
 # build specific

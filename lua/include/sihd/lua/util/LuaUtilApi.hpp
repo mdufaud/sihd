@@ -254,7 +254,7 @@ class LuaUtilApi
                 ~LuaWorker();
 
                 void set_state(lua_State *state);
-                bool start_worker(const std::string_view name) override;
+                bool start_worker(std::string_view name);
 
             private:
                 lua_State *_state_ptr;
@@ -268,7 +268,7 @@ class LuaUtilApi
                 ~LuaStepWorker();
 
                 void set_state(lua_State *state);
-                bool start_worker(const std::string_view name) override;
+                bool start_worker(std::string_view name);
 
             private:
                 lua_State *_state_ptr;

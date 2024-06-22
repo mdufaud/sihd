@@ -28,11 +28,11 @@ class Worker: protected IRunnable
         void set_worker_detach(bool active);
         void set_method(std::function<bool()> method);
         void set_runnable(IRunnable *runnable);
-        bool start_worker(std::string_view name);
-        bool start_sync_worker(std::string_view name);
-        bool stop_worker();
-        bool is_worker_running() const { return _running; }
-        bool is_worker_started() const { return _started; }
+        virtual bool start_worker(std::string_view name);
+        virtual bool start_sync_worker(std::string_view name);
+        virtual bool stop_worker();
+        virtual bool is_worker_running() const { return _running; }
+        virtual bool is_worker_started() const { return _started; }
 
     protected:
         virtual bool run();

@@ -1,14 +1,15 @@
 #ifndef __SIHD_IMGUI_IMGUIBACKENDGLFW_HPP__
 #define __SIHD_IMGUI_IMGUIBACKENDGLFW_HPP__
 
-#include <sihd/imgui/IImguiBackend.hpp>
-#include <sihd/imgui/imgui_impl_glfw.h>
+#include <string>
+
+#include <GLFW/glfw3.h> // Will drag system OpenGL headers
+#include <imgui_impl_glfw.h>
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 # include <GLES2/gl2.h>
 #endif
-#include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
-#include <string>
+#include <sihd/imgui/IImguiBackend.hpp>
 
 namespace sihd::imgui
 {

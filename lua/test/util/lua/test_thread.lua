@@ -24,7 +24,7 @@ local before = sched:now()
 sched:start()
 
 local root = sihd.util.Node("root", nil)
-for i = 1,100 do
+for i = 1, 100 do
     sihd.util.Named("named" .. i, root)
 end
 
@@ -106,7 +106,7 @@ local stepworker = sihd.util.StepWorker(function()
     return true
 end)
 -- 1ms
-assert(stepworker:set_conf({ frequency = 1000.0 }))
+assert(stepworker:set_frequency(1000.0))
 
 stepworker:start_sync_worker()
 -- 10 ms

@@ -142,7 +142,10 @@ endif
 
 VCPKG_PATH := $(HERE)/.vcpkg
 VCPKG_BIN := $(VCPKG_PATH)/vcpkg
-VCPKG_SCRIPT := $(HERE)/vcpkg.py
+VCPKG_SCRIPT_PATH := $(HERE)/vcpkg.py
+VCPKG_ACTION := fetch
+
+VCPKG_SCRIPT = $(PYTHON_BIN) $(VCPKG_SCRIPT_PATH) $(VCPKG_ACTION)
 
 #########
 # Exports
@@ -194,7 +197,6 @@ info:
 	$(call mk_log_info,makefile,arch = $(ARCH))
 	$(call mk_log_info,makefile,mode = $(COMPILE_MODE))
 	$(call mk_log_info,makefile,logical cores = $(UTILS_LOGICAL_CORE_NUMBER) ($(j) used))
-	$(call mk_log_info,makefile,libs: $(LIB_TYPE))
 ifeq ($(ANDROID), true)
 	$(call mk_log_warning,makefile,android detected)
 endif
@@ -275,48 +277,91 @@ endif # module
 .PHONY: stest san_test # Build and run tests with address sanatizer and runs tests
 .PHONY: itest nointeract_test # Build and run tests with stdin closed
 .PHONY: vtest valgrind_test # Build and run tests with valgrind debugger
+.PHONY: ltest valgrind_leak_test # Build and run tests with valgrind leak checking debugger
 .PHONY: gtest gdb_test # Build and run tests with gdb debugger
 .PHONY: ttest strace_test # Build and run tests with strace
 
 # find string 'test' in target
 ifneq ($(findstring test,$(MAKEARG_1)), )
 
-TEST_EXEC := $(wildcard $(TEST_BIN_PATH)/*)
-TEST_DEFAULT_ARGS =
-TEST_ARGS =
-DEBUGGER_ARGS =
+# --gtest_color=(yes|no|auto) (Enable/disable colored output. The default is auto)
+# --gtest_brief=1 (Only print test failures.)
+# --gtest_recreate_environments_when_repeating
+# --gtest_list_tests
+# --gtest_also_run_disabled_tests
+# --gtest_output=(json|xml)[:DIRECTORY_PATH/|:FILE_PATH]
+# --gtest_stream_result_to=HOST:PORT
+# --gtest_catch_exceptions=0
+# --gtest_break_on_failure
+TEST_ARGS :=
+TEST_CMD := test
+DEBUGGER :=
+DEBUGGER_ARGS :=
 
-# app_module -> module
-get_module_name = $(word 2, $(subst _, , $(notdir $1)))
+# handles:
+#	make test
+#	make test MODULE FILTER
+#	make test MODULE ls
+#	make test ls
+#	make test t=FILTER
+MODULES_NAME := $(MAKEARG_2),$(m)
+TEST_NAME := $(MAKEARG_3)$(t)
+
+ifeq ($(MODULES_NAME),all)
+	MODULES_NAME :=
+endif
+
+# case: make test ls
+ifeq ($(MAKEARG_2),ls)
+ifeq ($(TEST_NAME), )
+	TEST_CMD := list
+	MODULES_NAME :=
+endif
+endif
+
+# case: make test MODULE ls
+ifeq ($(MAKEARG_3),ls)
+	TEST_CMD := list
+endif
+
+ifeq ($(TEST_CMD),list)
+ls:
+	$(QUIET) echo > /dev/null
+endif
+
+ifneq ($(MODULES_NAME), )
+test: modules = $(MODULES_NAME)
+endif
+
+COMMA := ,
+MODULES_NAME_SPLIT := $(subst $(COMMA), ,$(MODULES_NAME))
 
 test: test = 1
 test: build
-	$(QUIET) sh $(MAKEFILE_TOOLS)/scripts/generate_test_env.sh
 	$(call mk_log_info,makefile,starting tests in build: $(TEST_PATH))
-	$(QUIET) - $(foreach TEST_BIN, $(TEST_EXEC), \
-		$(eval TEST_CMD_LINE = \
-			env $(DEBUGGER) $(DEBUGGER_ARGS) $(TEST_BIN) $(TEST_DEFAULT_ARGS) $(TEST_ARGS)\
-		) \
-		$(eval TEST_MODULE_NAME = $(call get_module_name, $(TEST_BIN))) \
-		cd $(HERE)/$(TEST_MODULE_NAME); \
-		echo "" ;\
-		echo "###################################################################################" ; \
-		echo "# testing module: $(TEST_MODULE_NAME)" ; \
-		echo "# test command: $(TEST_CMD_LINE)" ; \
-		echo "###################################################################################" ; \
-		echo "" ;\
-		$(TEST_CMD_LINE); \
-		cd - > /dev/null; \
-	)
+	$(QUIET) bash $(MAKEFILE_TOOLS)/scripts/generate_test_env.sh
+	$(QUIET) env TEST_BIN_PATH="$(TEST_BIN_PATH)" \
+					HERE="$(HERE)" \
+					bash $(MAKEFILE_TOOLS)/scripts/generate_test_executor.sh
+	$(QUIET) env DEBUGGER="$(DEBUGGER)" \
+					DEBUGGER_ARGS="$(DEBUGGER_ARGS)" \
+					TEST_ARGS="$(TEST_ARGS)" \
+					REPEAT="$(repeat)" \
+					bash $(TEST_PATH)/execute_tests.sh $(TEST_CMD) "$(MODULES_NAME_SPLIT)"
 
 nointeract_test: TEST_DEFAULT_ARGS += 0>&-
 nointeract_test: test
 itest: nointeract_test
 
-valgrind_test: DEBUGGER_ARGS = --leak-check=full --show-leak-kinds=all --trace-children=no --track-origins=yes
+valgrind_test: DEBUGGER_ARGS = --trace-children=no --track-origins=no --show-leak-kinds=definite
 valgrind_test: DEBUGGER = valgrind
 valgrind_test: test
 vtest: valgrind_test
+
+valgrind_leak_test: DEBUGGER_ARGS = --leak-check=full --show-leak-kinds=all --trace-children=no --track-origins=yes
+valgrind_leak_test: DEBUGGER = valgrind
+valgrind_leak_test: test
+ltest: valgrind_leak_test
 
 gdb_test: DEBUGGER_ARGS = -ex=r --args
 gdb_test: DEBUGGER = gdb
@@ -330,61 +375,6 @@ stest: san_test
 strace_test: DEBUGGER = strace
 strace_test: test
 ttest: strace_test
-
-# handles:
-#	make test
-#	make test MODULE FILTER
-#	make test MODULE ls
-#	make test ls
-#	make test t=FILTER
-COMMA = ,
-MODULES_NAME := $(MAKEARG_2),$(m)
-MODULES_NAME_SPLIT := $(subst $(COMMA), ,$(MODULES_NAME))
-TEST_NAME := $(MAKEARG_3)$(t)
-
-# --gtest_color=(yes|no|auto) (Enable/disable colored output. The default is auto)
-# --gtest_brief=1 (Only print test failures.)
-# --gtest_recreate_environments_when_repeating
-# --gtest_list_tests
-# --gtest_also_run_disabled_tests
-# --gtest_output=(json|xml)[:DIRECTORY_PATH/|:FILE_PATH]
-# --gtest_stream_result_to=HOST:PORT
-# --gtest_catch_exceptions=0
-# --gtest_break_on_failure
-TEST_DEFAULT_ARGS += --gtest_death_test_style=threadsafe --gtest_shuffle
-
-ifeq ($(MODULES_NAME),all)
-	TEST_EXEC := $(wildcard $(TEST_BIN_PATH)/*)
-	MODULES_NAME =
-endif
-
-ifneq ($(MODULES_NAME), )
-	TEST_EXEC := $(foreach var, $(MODULES_NAME_SPLIT), $(TEST_BIN_PATH)/$(APP_NAME)_$(var))
-endif
-
-# case: make test ls
-ifeq ($(MODULES_NAME),ls)
-ifeq ($(TEST_NAME), )
-	TEST_EXEC := $(wildcard $(TEST_BIN_PATH)/*)
-	TEST_NAME = ls
-	MODULES_NAME =
-endif
-endif
-
-# ls to list tests, else filter tests
-ifeq ($(TEST_NAME),ls)
-	TEST_DEFAULT_ARGS += --gtest_list_tests
-else
-	TEST_DEFAULT_ARGS += --gtest_filter="*$(TEST_NAME)*"
-endif
-
-ifneq ($(repeat), )
-	TEST_DEFAULT_ARGS += --gtest_repeat="$(repeat)" --gtest_throw_on_failure
-endif
-
-ifneq ($(MODULES_NAME), )
-test: modules = $(MODULES_NAME)
-endif
 
 $(MODULES_NAME):
 	$(QUIET) echo > /dev/null
@@ -420,119 +410,52 @@ endif # pkgdep
 # VCPKG (extlibs)
 ##################
 
-.PHONY: vcpkg # Run vcpkg to get dependencies
+.PHONY: vcpkg_deploy
 
-vcpkg:
-	$(QUIET) echo > /dev/null
-
-ifeq ($(MAKEARG_1), vcpkg)
-
-deploy:
+vcpkg_deploy:
 	$(QUIET) if [ ! -d "$(VCPKG_PATH)" ]; then git clone https://github.com/microsoft/vcpkg $(VCPKG_PATH); fi
 	$(QUIET) if [ ! -f "$(VCPKG_BIN)" ]; then $(VCPKG_PATH)/bootstrap-vcpkg.sh -disableMetrics; fi
 
-ifeq ($(MAKEARG_2), fetch)
-.PHONY: fetch
-fetch: deploy
-	$(QUIET) $(PYTHON_BIN) $(VCPKG_SCRIPT) fetch
-endif
+.PHONY: dep # Run vcpkg to get dependencies
 
-ifeq ($(MAKEARG_2), mod)
-MODULES_NAME := $(MAKEARG_3),$(m)
-mod: modules = $(MODULES_NAME)
-mod: fetch
-	$(QUIET) echo > /dev/null
-endif # mod
-
-ifeq ($(MAKEARG_2), list)
-.PHONY: list
-list: deploy
-	$(QUIET) $(PYTHON_BIN) $(VCPKG_SCRIPT) list
-endif
-
-ifeq ($(MAKEARG_2), install)
-.PHONY: install
-install: deploy
-	$(VCPKG_BIN) install $(MAKEARG_3)
-endif
-
-ifeq ($(MAKEARG_2), search)
-.PHONY: search
-search: deploy
-	$(VCPKG_BIN) search $(MAKEARG_3) --x-full-desc
-endif
-
-ifeq ($(MAKEARG_2), update)
-.PHONY: update
-update: deploy
-	cd $(VCPKG_PATH) && git pull && $(VCPKG_BIN) update
-endif
-
-endif # vcpkg
-
-##################
-# Conan (extlibs)
-##################
+dep: vcpkg_deploy
+	$(QUIET) env test=$(test) verbose=$(verbose) modules=$(modules) $(VCPKG_SCRIPT)
 
 ifeq ($(MAKEARG_1), dep)
 
-ifeq (, $(shell which conan))
-$(error "Makefile: no python-conan detected - it is needed to get dependencies for the project.")
-endif
-
-.PHONY: dep # Run conan to get dependencies ([mod <comma_separated_modules>] [lib <libname>])
-
-dep:
-	$(call mk_log_info,makefile,starting conan with command: $(CONAN_INSTALL))
-	$(QUIET) env test=$(test) verbose=$(verbose) modules=$(modules) libs=$(libs) $(CONAN_INSTALL)
-
-# make dep mod MODULE
 ifeq ($(MAKEARG_2), mod)
+VCPKG_ACTION := fetch
 MODULES_NAME := $(MAKEARG_3),$(m)
 dep: modules = $(MODULES_NAME)
 mod:
 	$(QUIET) echo > /dev/null
-$(MODULES_NAME):
+endif
+
+ifeq ($(MAKEARG_2), list)
+VCPKG_ACTION := list
+list: dep
 	$(QUIET) echo > /dev/null
 endif
 
-# make dep lib LIBNAME
-ifeq ($(MAKEARG_2), lib)
-LIBS_NAME := $(MAKEARG_3)
-dep: modules = NONE
-dep: libs = $(LIBS_NAME)
-mod:
-	$(QUIET) echo > /dev/null
-$(LIBS_NAME):
-	$(QUIET) echo > /dev/null
+ifeq ($(MAKEARG_2), install)
+VCPKG_ACTION :=
+install: vcpkg_deploy
+	$(VCPKG_BIN) install $(MAKEARG_3)
 endif
 
-# make dep test
-ifeq ($(MAKEARG_2), test)
-dep: modules = NONE
-dep: test = 1
-test:
-	$(QUIET) echo > /dev/null
+ifeq ($(MAKEARG_2), search)
+VCPKG_ACTION :=
+search: vcpkg_deploy
+	$(VCPKG_BIN) search $(MAKEARG_3) --x-full-desc
 endif
 
-# make dep build
-ifeq ($(MAKEARG_2), build)
-dep: CONAN_ARGS = --build
-build:
-	$(QUIET) echo > /dev/null
+ifeq ($(MAKEARG_2), update)
+VCPKG_ACTION :=
+update: vcpkg_deploy
+	cd $(VCPKG_PATH) && git pull && $(VCPKG_BIN) update
 endif
 
 endif # dep
-
-.PHONY: checkdep_html # Run conan's HTML dependency tree
-
-checkdep_html:
-	$(QUIET) conan info . --graph=$(CONAN_PATH)/dep_tree.html
-
-.PHONY: checkdep # Run conan's TXT dependency tree
-
-checkdep:
-	$(QUIET) conan info . --graph=$(CONAN_PATH)/dep_tree.txt && cat $(CONAN_PATH)/dep_tree.txt
 
 ###############
 # Distribution
@@ -701,7 +624,7 @@ clean:
 
 clean_dep:
 	$(QUIET) $(call mk_log_info,makefile,removing dependencies)
-	rm -rf $(CONAN_PATH) $(EXTLIB_PATH)
+	rm -rf $(VCPKG_PATH) $(EXTLIB_PATH)
 
 clean_dist:
 	$(QUIET) $(call mk_log_info,makefile,removing distribution)

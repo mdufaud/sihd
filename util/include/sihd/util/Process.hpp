@@ -72,7 +72,7 @@ class Process: public IHandler<Poll *>,
          * Tries and wait for the process to finish, then kills it if it does not
          * Call this when piped processes (calls wait())
          */
-        bool end();
+        bool terminate();
         // send signal to process - SIGTERM by default
         bool kill(int sig = -1);
 
@@ -179,7 +179,8 @@ class Process: public IHandler<Poll *>,
         Waitable _waitable;
         Waitable _waitable_start;
         Poll _poll;
-        siginfo_t _info;
+        int _status;
+        int _code;
 };
 
 #else

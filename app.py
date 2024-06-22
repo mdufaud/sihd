@@ -30,24 +30,31 @@ extlibs = {
     "ftxui": "5.0.0",
     "sdl": "2.0.18",
     "glew": "2.2.0",
-    "glfw": "3.3.6",
+    "glfw3": "3.4",
+    "imgui": "1.90.7",
     # bindings
     "pybind11": "2.6.2",
     # compressing utility
     "libzip": "1.7.3",
     # other
     "libjpeg": "9d",
-    "lua": "5.3.5",
+    "lua": "5.3.5-5",
+    "luabridge": "2.8",
     "libbluetooth": "",
 }
 
-extlibs_skip = ["libbluetooth", "glfw"]
+# glfw need libxi-dev libxinerama-dev libxcursor-dev xorg libglu1-mesa pkg-config
+extlibs_features = {
+    "imgui": ["glfw-binding", "opengl3-binding"]
+}
+
+extlibs_features_windows = {
+    "imgui": ["win32-binding", "dx11-binding"]
+}
+
+extlibs_skip = ["libbluetooth"]
 
 vcpkg_baseline = "7977f0a771e64e9811d32aa30d9a247e09c39b2e"
-
-conan_post_process = {
-    "*lua.*": {"from": "lua.", "to": "lua5.3."}
-}
 
 ###############################################################################
 # modules
@@ -148,10 +155,10 @@ modules = {
     "imgui": {
         # sdl=1 to compile with SDL2
         "depends": ['util'],
-        "extlibs": ['glfw', 'glew'],
+        "extlibs": ['imgui', 'glfw3', 'glew'],
         "linux-libs": ['glfw', 'GLEW', 'GL'],
         "windows-libs": [
-            "glfw3", "glew32", "opengl32",
+            "glfw3dll", "glew32", "opengl32",
             # desktop window manager api
             "dwmapi",
             # direct x11
@@ -163,12 +170,6 @@ modules = {
             # graphics device interface
             "gdi32"
         ],
-        "windows-flags": [
-            "-Wno-cast-function-type",
-            "-Wno-stringop-overflow"
-        ],
-        "git-url": "https://github.com/ocornut/imgui.git",
-        "git-branch": "v1.86",
     },
 }
 
@@ -176,10 +177,10 @@ modules = {
 conditionnal_modules = {
     "lua": {
         # apt liblua5.3-dev / pacman lua
-        "extlibs": ['lua'],
+        "extlibs": ['lua', 'luabridge'],
         "depends": ['util'],
         "conditionnal-env": "lua",
-        "conditionnal-depends": ['core', 'net', 'http'],
+        "conditionnal-depends": ['core'],
         "flags": ["-Wno-unused-parameter"],
         "pkg-configs": ["lua-5.3", "lua53"],
         "git-url": "git@github.com:kunitoki/LuaBridge3.git",
@@ -194,7 +195,7 @@ conditionnal_modules = {
         "depends": ['util'],
         "extlibs": ['pybind11'],
         "conditionnal-env": "py",
-        "conditionnal-depends": ['core', 'net', 'http'],
+        "conditionnal-depends": ['core'],
         "clang-flags": ["-Wno-unused-command-line-argument"],
         # pip install python-config
         "parse-configs": [
@@ -323,7 +324,7 @@ apt_packages = {
     "libbluetooth": "libbluetooth-dev",
     "pybind11": "python3-pybind11",
     # apt libmesa-dev for opengl
-    "glfw": "libglfw3-dev",
+    "glfw3": "libglfw3-dev",
     "glew": "libglew-dev",
     "sdl2": "libsdl2-dev",
     "lua": "liblua5.3-dev",
@@ -358,7 +359,7 @@ pacman_packages = {
     "libzip": "libzip",
     "libbluetooth": "bluez",
     "pybind11": "pybind11",
-    "glfw": "glfw",
+    "glfw3": "glfw",
     "glew": "glew",
     "sdl2": "sdl2",
     "lua": "lua",
@@ -384,7 +385,7 @@ yum_packages = {
     "libzip": "libzip-devel",
     "libbluetooth": "bluez-libs-devel",
     "pybind11": "python3-pybind11",
-    "glfw": "glfw-devel",
+    "glfw3": "glfw-devel",
     "glew": "glew-devel",
     "sdl2": "sdl2-devel",
     "lua": "lua5.3-devel",
@@ -409,7 +410,7 @@ msys2_packages = {
     "libusb": f"{__msys2_mingw}libusb",
     "libzip": f"{__msys2_mingw}libzip",
     "pybind11": f"{__msys2_mingw}pybind11",
-    "glfw": f"{__msys2_mingw}glfw",
+    "glfw3": f"{__msys2_mingw}glfw",
     "glew": f"{__msys2_mingw}glew",
     "sdl2": f"{__msys2_mingw}SDL2",
     "lua": f"{__msys2_mingw}lua",

@@ -58,6 +58,8 @@ class TestScheduler: public ::testing::Test,
 
 TEST_F(TestScheduler, test_sched_order)
 {
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
     Scheduler sched("sched");
 
     Timestamp task_first = 0;
@@ -139,6 +141,8 @@ TEST_F(TestScheduler, test_sched_perf)
 
 TEST_F(TestScheduler, test_sched_stop)
 {
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
     Scheduler sched("sched");
 
     int ran = 0;
@@ -170,6 +174,8 @@ TEST_F(TestScheduler, test_sched_stop)
 
 TEST_F(TestScheduler, test_sched_pause)
 {
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
     constexpr time_t should_run_every_ms = 15;
     constexpr time_t sleep_ms = should_run_every_ms + 10;
 
@@ -219,6 +225,8 @@ TEST_F(TestScheduler, test_sched_pause)
 
 TEST_F(TestScheduler, test_sched_as_fast)
 {
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
     Scheduler sched("sched");
     int lambda_ran = 0;
     std::function<bool()> fun = [&lambda_ran]() -> bool {
@@ -242,6 +250,8 @@ TEST_F(TestScheduler, test_sched_as_fast)
 
 TEST_F(TestScheduler, test_sched_burst)
 {
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
     Scheduler sched("sched");
     sched.set_start_synchronised(true);
     std::atomic<int> lambda_ran = 0;

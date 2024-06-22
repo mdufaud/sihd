@@ -2,8 +2,8 @@
 #define __SIHD_IMGUI_IMGUIRENDEREROPENGL_HPP__
 
 #include <GL/gl.h>
+#include <imgui_impl_opengl3.h>
 #include <sihd/imgui/IImguiRenderer.hpp>
-#include <sihd/imgui/imgui_impl_opengl3.h>
 
 namespace sihd::imgui
 {

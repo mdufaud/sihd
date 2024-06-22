@@ -50,13 +50,13 @@ TEST_F(TestProcess, test_process_interactive)
     Worker worker(&task);
     EXPECT_TRUE(worker.start_sync_worker("proc"));
     SIHD_LOG(debug, "Kill cat process with ctrl + d")
-    EXPECT_TRUE(proc.wait_process_end(time::sec(10)));
+    EXPECT_TRUE(proc.wait_process_terminate(time::sec(10)));
     proc.stop();
     worker.stop_worker();
 }
 */
 
-TEST_F(TestProcess, test_process_run)
+TEST_F(TestProcess, test_process_service)
 {
     if (term::is_interactive() == false)
         GTEST_SKIP() << "Is an interactive test";
@@ -130,7 +130,7 @@ TEST_F(TestProcess, test_process_out)
     EXPECT_TRUE(proc.execute());
     EXPECT_EQ(output, "");
     EXPECT_TRUE(proc.wait_any());
-    EXPECT_TRUE(proc.end());
+    EXPECT_TRUE(proc.terminate());
     EXPECT_EQ(output, "hello world\n");
 
     output.clear();
@@ -138,7 +138,7 @@ TEST_F(TestProcess, test_process_out)
     proc.stdout_to(output);
     EXPECT_TRUE(proc.execute());
     EXPECT_TRUE(proc.wait_any());
-    EXPECT_TRUE(proc.end());
+    EXPECT_TRUE(proc.terminate());
     EXPECT_EQ(output, "hello world\n");
 
     EXPECT_TRUE(proc.has_exited());
@@ -175,7 +175,7 @@ TEST_F(TestProcess, test_process_in_cat)
     proc.read_pipes(ms_timeout);
     EXPECT_EQ(output, "hello world123");
 
-    EXPECT_TRUE(proc.end());
+    EXPECT_TRUE(proc.terminate());
     EXPECT_TRUE(proc.has_exited());
     EXPECT_EQ(proc.return_code(), 0);
 }
@@ -204,7 +204,7 @@ TEST_F(TestProcess, test_process_in_wc)
     // wait for wc to process the pipe closing and quit
     proc.wait_any();
 
-    EXPECT_TRUE(proc.end());
+    EXPECT_TRUE(proc.terminate());
     EXPECT_EQ(result, "11\n");
     EXPECT_TRUE(proc.has_exited());
     EXPECT_EQ(proc.return_code(), 0);
@@ -229,7 +229,7 @@ TEST_F(TestProcess, test_process_file_in)
     proc.stdout_to(output);
     EXPECT_TRUE(proc.execute());
     EXPECT_TRUE(proc.wait_any());
-    EXPECT_TRUE(proc.end());
+    EXPECT_TRUE(proc.terminate());
     EXPECT_EQ(output, "hello world");
     EXPECT_TRUE(proc.has_exited());
     EXPECT_EQ(proc.return_code(), 0);
@@ -245,7 +245,7 @@ TEST_F(TestProcess, test_process_file_out)
     EXPECT_EQ(fs::read_all(test_file).value(), "");
     EXPECT_TRUE(proc.execute());
     EXPECT_TRUE(proc.wait_any());
-    EXPECT_TRUE(proc.end());
+    EXPECT_TRUE(proc.terminate());
     EXPECT_EQ(fs::read_all(test_file).value(), "hello world\n");
     EXPECT_TRUE(proc.has_exited());
     EXPECT_EQ(proc.return_code(), 0);
@@ -272,7 +272,7 @@ TEST_F(TestProcess, test_process_file_out_err)
 
     EXPECT_TRUE(proc.execute());
     EXPECT_TRUE(proc.wait_any());
-    EXPECT_TRUE(proc.end());
+    EXPECT_TRUE(proc.terminate());
 
     EXPECT_TRUE(proc.has_exited());
     EXPECT_EQ(proc.return_code(), 1);
@@ -287,7 +287,7 @@ TEST_F(TestProcess, test_process_close)
     ls.stdout_close().stderr_close();
     EXPECT_TRUE(ls.execute());
     ls.wait_exit();
-    EXPECT_TRUE(ls.end());
+    EXPECT_TRUE(ls.terminate());
     EXPECT_TRUE(ls.has_exited());
     // bad file descriptor
     EXPECT_EQ(ls.return_code(), 2);
@@ -301,7 +301,7 @@ TEST_F(TestProcess, test_process_close)
     // wait cat boot
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-    EXPECT_TRUE(cat.end());
+    EXPECT_TRUE(cat.terminate());
     EXPECT_TRUE(cat.has_exited());
     // bad file descriptor
     EXPECT_EQ(cat.return_code(), 1);
@@ -325,14 +325,14 @@ TEST_F(TestProcess, test_process_chain)
     EXPECT_TRUE(cat.execute());
 
     EXPECT_TRUE(echo.wait_any());
-    EXPECT_TRUE(echo.end());
+    EXPECT_TRUE(echo.terminate());
 
     // wait for wc to process the pipe closing
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
     EXPECT_TRUE(wc.wait_any());
-    EXPECT_TRUE(wc.end());
-    EXPECT_TRUE(cat.end());
+    EXPECT_TRUE(wc.terminate());
+    EXPECT_TRUE(cat.terminate());
 
     EXPECT_EQ(output, "12$\n");
 
@@ -354,9 +354,9 @@ TEST_F(TestProcess, test_process_stderr)
     ls.stderr_to(output);
     EXPECT_TRUE(ls.execute());
     ls.wait_exit();
-    EXPECT_TRUE(ls.end());
-    EXPECT_TRUE(ls.end());
-    EXPECT_TRUE(ls.end());
+    EXPECT_TRUE(ls.terminate());
+    EXPECT_TRUE(ls.terminate());
+    EXPECT_TRUE(ls.terminate());
     EXPECT_EQ(output, "ls: cannot access '/bli/blah/blouh': No such file or directory\n");
     EXPECT_TRUE(ls.has_exited());
     EXPECT_EQ(ls.return_code(), 2);
@@ -416,7 +416,7 @@ TEST_F(TestProcess, test_process_fun)
 
     EXPECT_TRUE(proc.execute());
     EXPECT_TRUE(proc.wait_any());
-    EXPECT_TRUE(proc.end());
+    EXPECT_TRUE(proc.terminate());
 
     EXPECT_TRUE(proc.has_exited());
     EXPECT_EQ(proc.return_code(), 1);

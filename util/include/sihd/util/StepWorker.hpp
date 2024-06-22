@@ -26,8 +26,8 @@ class StepWorker: public Worker,
         void set_callback_setup(Callback && fun);
         void set_callback_teardown(Callback && fun);
 
-        void pause_worker();
-        void resume_worker();
+        virtual void pause_worker();
+        virtual void resume_worker();
 
         time_t nano_sleep_time() const { return _sleep_time; }
         double frequency() const;

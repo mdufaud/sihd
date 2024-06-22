@@ -9,7 +9,7 @@ def fun():
     i += 1
 
 assert(sched.set_conf(
-    as_fast_as_possible = False,
+    no_delay = False,
 ))
 
 sched.add_task(fun, run_in=0, reschedule_time=sihd.util.time.ms(10))

@@ -102,11 +102,25 @@ def build_vcpkg_manifest():
         "overrides": [
         ],
     }
+
+    features = getattr(app, "extlibs_features", {})
+    for name, feature_list in getattr(app, f"extlibs_features_{builder.build_platform}", {}).items():
+        if name in features:
+            features[name].extend(feature_list)
+        else:
+            features[name] = feature_list
+
     def add_dependency(name, version):
-        vcpkg_manifest["dependencies"].append(name)
+        if name in features:
+            vcpkg_manifest["dependencies"].append({
+                "name": name,
+                "features": features.get(name)
+            })
+        else:
+            vcpkg_manifest["dependencies"].append(name)
         vcpkg_manifest["overrides"].append({
             "name": name,
-            "version": version
+            "version": version,
         })
     for libname, libversion in extlibs.items():
         add_dependency(libname, libversion)
@@ -116,6 +130,7 @@ def write_vcpkg_manifest(vcpkg_manifest):
     os.makedirs(vcpkg_build_path, exist_ok=True)
     with open(vcpkg_build_manifest_path, "w") as fd:
         json.dump(vcpkg_manifest, fd, indent=2)
+    builder.info(f"Wrote vcpkg manifest at: {vcpkg_build_manifest_path}")
 
 def __check_vcpkg():
     if os.path.exists(vcpkg_bin_path) is False:
@@ -126,7 +141,7 @@ def __check_vcpkg():
 def execute_vcpkg_install():
     __check_vcpkg()
     import subprocess
-    args = (vcpkg_bin_path, "install", f"--triplet={vcpkg_triplet}")
+    args = [vcpkg_bin_path, "install", f"--triplet={vcpkg_triplet}"]
     proc = subprocess.run(args, cwd=vcpkg_build_path, timeout=(60.0 * len(extlibs)))
     return proc.returncode
 
@@ -148,8 +163,10 @@ def execute_vcpkg_list():
 def link_to_extlibs():
     downloaded_path = os.path.join(vcpkg_build_path, "vcpkg_installed", vcpkg_triplet)
     if os.path.exists(downloaded_path):
-        import shutil
-        shutil.copytree(downloaded_path, builder.build_extlib_path, dirs_exist_ok = True)
+        # remove existing link:
+        if os.path.exists(builder.build_extlib_path):
+            os.unlink(builder.build_extlib_path)
+        os.symlink(downloaded_path, builder.build_extlib_path, target_is_directory=True)
 
 if __name__ == "__main__":
     vcpkg_manifest = build_vcpkg_manifest()

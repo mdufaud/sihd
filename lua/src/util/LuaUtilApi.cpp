@@ -107,7 +107,7 @@ void LuaUtilApi::load_process(Vm & vm)
         /**
          * Process
          */
-        .deriveClass<Process, IStoppableRunnable>("Process")
+        .deriveClass<Process, BlockingService>("Process")
         .addConstructor<void (*)()>()
         .addFunction(
             "add_argv",
@@ -135,10 +135,10 @@ void LuaUtilApi::load_process(Vm & vm)
             +[](Process *self, luabridge::LuaRef ref, lua_State *state) {
                 if (ref.isFunction() == false)
                     luaL_error(state, "stdout_to argument must a function callback");
-                self->stdout_to([ref](const char *buf, size_t size) {
+                self->stdout_to([ref](std::string_view output) {
                     try
                     {
-                        ref(buf, size);
+                        ref(output);
                     }
                     catch (const luabridge::LuaException & e)
                     {
@@ -160,10 +160,10 @@ void LuaUtilApi::load_process(Vm & vm)
             +[](Process *self, luabridge::LuaRef ref, lua_State *state) {
                 if (ref.isFunction() == false)
                     luaL_error(state, "stderr_to argument must a function callback");
-                self->stderr_to([ref](const char *buf, size_t size) {
+                self->stderr_to([ref](std::string_view output) {
                     try
                     {
-                        ref(buf, size);
+                        ref(output);
                     }
                     catch (const luabridge::LuaException & e)
                     {
@@ -180,19 +180,21 @@ void LuaUtilApi::load_process(Vm & vm)
         .addFunction("stderr_to_file", &Process::stderr_to_file)
         .addFunction("stderr_close", &Process::stderr_close)
         // start - restart
-        .addFunction("start", &Process::start)
+        .addFunction("execute", &Process::execute)
         .addFunction("clear", &Process::clear)
-        .addFunction("reset", &Process::reset)
+        .addFunction("reset_proc", &Process::reset_proc)
         // wait
         .addFunction("wait", &Process::wait)
         .addFunction("wait_exit", &Process::wait_exit)
         .addFunction("wait_stop", &Process::wait_stop)
         .addFunction("wait_continue", &Process::wait_continue)
-        .addFunction("wait_any", &Process::wait_any)
+        .addFunction(
+            "wait_any",
+            +[](Process *self) { self->wait_any(0); })
         // manual pipe process
         .addFunction("read_pipes", &Process::read_pipes)
         // end execution
-        .addFunction("end_process", &Process::end)
+        .addFunction("terminate", &Process::terminate)
         .addFunction("kill", &Process::kill)
         // post execution
         .addFunction("has_exited", &Process::has_exited)
@@ -389,7 +391,6 @@ void LuaUtilApi::load_threading(Vm & vm)
         // Configurable
         .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<LuaScheduler>)
         // Scheduler
-        .addFunction("stop", static_cast<bool (LuaScheduler::*)()>(&Scheduler::stop))
         .addFunction("is_running", static_cast<bool (LuaScheduler::*)() const>(&Scheduler::is_running))
         .addFunction("pause", static_cast<void (LuaScheduler::*)()>(&Scheduler::pause))
         .addFunction("resume", static_cast<void (LuaScheduler::*)()>(&Scheduler::resume))
@@ -415,6 +416,7 @@ void LuaUtilApi::load_threading(Vm & vm)
                          self->set_state(state);
                          return self->start();
                      }))
+        .addFunction("stop", static_cast<bool (LuaScheduler::*)()>(&Scheduler::stop))
         .addFunction(
             "add_task",
             +[](LuaScheduler *self, luabridge::LuaRef tbl, lua_State *state) {
@@ -475,7 +477,6 @@ void LuaUtilApi::load_threading(Vm & vm)
          */
         .beginClass<LuaWorker>("Worker")
         .addConstructor<void (*)(luabridge::LuaRef ref)>()
-        .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<LuaWorker>)
         .addFunction("start_worker",
                      std::function<bool(LuaWorker *, const std::string &, lua_State *)>(
                          [](LuaWorker *self, const std::string & name, lua_State *state) {
@@ -494,7 +495,7 @@ void LuaUtilApi::load_threading(Vm & vm)
         .endClass()
         .beginClass<LuaStepWorker>("StepWorker")
         .addConstructor<void (*)(luabridge::LuaRef ref)>()
-        .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<LuaStepWorker>)
+        .addFunction("set_frequency", static_cast<bool (LuaStepWorker::*)(double)>(&StepWorker::set_frequency))
         .addFunction("start_worker",
                      std::function<bool(LuaStepWorker *, const std::string &, lua_State *)>(
                          [](LuaStepWorker *self, const std::string & name, lua_State *state) {
@@ -510,7 +511,6 @@ void LuaUtilApi::load_threading(Vm & vm)
         .addFunction("stop_worker", static_cast<bool (LuaStepWorker::*)()>(&Worker::stop_worker))
         .addFunction("is_worker_running", static_cast<bool (LuaStepWorker::*)() const>(&Worker::is_worker_running))
         .addFunction("is_worker_started", static_cast<bool (LuaStepWorker::*)() const>(&Worker::is_worker_started))
-        .addFunction("set_frequency", static_cast<bool (LuaStepWorker::*)(double)>(&StepWorker::set_frequency))
         .addFunction("pause_worker", static_cast<void (LuaStepWorker::*)()>(&StepWorker::pause_worker))
         .addFunction("resume_worker", static_cast<void (LuaStepWorker::*)()>(&StepWorker::resume_worker))
         .addFunction("nano_sleep_time", static_cast<time_t (LuaStepWorker::*)() const>(&StepWorker::nano_sleep_time))
@@ -824,9 +824,12 @@ void LuaUtilApi::load_base(Vm & vm)
         .beginClass<IRunnable>("IRunnable")
         .addFunction("run", &IRunnable::run)
         .endClass()
-        .deriveClass<IStoppableRunnable, IRunnable>("IStoppableRunnable")
-        .addFunction("is_running", &IStoppableRunnable::is_running)
-        .addFunction("stop", &IStoppableRunnable::stop)
+        .deriveClass<BlockingService, AService>("BlockingService")
+        .addFunction("is_running", &BlockingService::is_running)
+        .addFunction("set_service_wait_stop", &BlockingService::set_service_wait_stop)
+        .endClass()
+        .deriveClass<ThreadedService, AService>("ThreadedService")
+        .addFunction("set_start_synchronised", &ThreadedService::set_start_synchronised)
         .endClass()
         .endNamespace()
         .endNamespace();

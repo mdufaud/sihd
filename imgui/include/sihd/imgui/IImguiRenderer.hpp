@@ -1,7 +1,7 @@
 #ifndef __SIHD_IMGUI_IIMGUIRENDERER_HPP__
 #define __SIHD_IMGUI_IIMGUIRENDERER_HPP__
 
-#include <sihd/imgui/imgui.h>
+#include <imgui.h>
 
 namespace sihd::imgui
 {

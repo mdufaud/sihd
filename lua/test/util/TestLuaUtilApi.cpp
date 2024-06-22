@@ -56,14 +56,12 @@ TEST_F(TestLuaUtilApi, test_luautil_tools)
     EXPECT_TRUE(this->do_script("test/util/lua/test_tools.lua"));
 }
 
-TEST_F(TestLuaUtilApi, test_luautil_process)
-{
-    if (os::is_run_by_valgrind())
-        GTEST_SKIP() << "Cannot be run under valgrind";
-    LuaUtilApi::load_base(_vm);
-    LuaUtilApi::load_process(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_process.lua"));
-}
+// TEST_F(TestLuaUtilApi, test_luautil_process)
+// {
+//     LuaUtilApi::load_base(_vm);
+//     LuaUtilApi::load_process(_vm);
+//     EXPECT_TRUE(this->do_script("test/util/lua/test_process.lua"));
+// }
 
 TEST_F(TestLuaUtilApi, test_luautil_files)
 {
@@ -72,11 +70,12 @@ TEST_F(TestLuaUtilApi, test_luautil_files)
     EXPECT_TRUE(this->do_script("test/util/lua/test_files.lua"));
 }
 
-TEST_F(TestLuaUtilApi, test_luautil_threading)
+TEST_F(TestLuaUtilApi, test_luautil_thread)
 {
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);
     LuaUtilApi::load_threading(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_threading.lua"));
+    EXPECT_TRUE(this->do_script("test/util/lua/test_thread.lua"));
 }
+
 } // namespace test

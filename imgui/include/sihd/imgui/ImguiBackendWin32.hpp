@@ -1,12 +1,15 @@
 #ifndef __SIHD_IMGUI_IMGUIBACKENDWIN32_HPP__
 #define __SIHD_IMGUI_IMGUIBACKENDWIN32_HPP__
 
+#include <tchar.h>
+
+#include <string>
+
+#include <imgui_impl_win32.h>
+
 #include <sihd/imgui/IImguiBackend.hpp>
 #include <sihd/imgui/IImguiRenderer.hpp>
 #include <sihd/imgui/ImguiRendererDirectX.hpp>
-#include <sihd/imgui/imgui_impl_win32.h>
-#include <string>
-#include <tchar.h>
 
 namespace sihd::imgui
 {

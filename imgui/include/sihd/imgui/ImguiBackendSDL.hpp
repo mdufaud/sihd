@@ -2,9 +2,10 @@
 #define __SIHD_IMGUI_IMGUIBACKENDSDL_HPP__
 
 #include <SDL.h>
+#include <imgui_impl_sdl.h>
+
 #include <sihd/imgui/IImguiBackend.hpp>
 #include <sihd/imgui/IImguiRenderer.hpp>
-#include <sihd/imgui/imgui_impl_sdl.h>
 #include <sihd/util/platform.hpp>
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 # include <SDL_opengles2.h>
