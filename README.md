@@ -14,24 +14,16 @@ Used by core application.
 
 ### SCons 4.1.0
 
-Manages compilation rules with python3.
+Manages compilation rules with python.
 
 ```shell
 apt install scons
 ```
 
-### Conan 1.35.0
-
-([Conan install doc](https://docs.conan.io/en/latest/installation.html))
-
-Pulls dependencies from https://conan.io/center/
-
-Not needed if dependencies are directly installed on the building system.
-
-Needed for Windows cross building to get DLLs or Emscripten building to get static libraries.
+or
 
 ```shell
-pip install conan
+pip install scons
 ```
 
 ### python-pip
@@ -42,7 +34,29 @@ If conan is installed from python-pip, don't forget to add to ~/.bashrc:
 export PATH=$PATH:$HOME/.local/bin
 ```
 
-To find conan binary from python-pip binaries folder.
+To find binary from python-pip binaries folder.
+
+### VCPKG
+
+Not needed if dependencies are directly installed on the building system.
+
+Needed for Windows cross building to get DLLs or Emscripten building to get static libraries.
+
+```shell
+make dep
+```
+
+```shell
+make dep mod COMMA_SEPARATED_MODULES
+```
+
+Will install vcpkg inside the repository
+
+#### Using MSYS2
+
+```shell
+pacman -S --needed git mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-gcc
+```
 
 ### Compilers
 
@@ -83,8 +97,6 @@ Get dependencies from conan.io center if not installed on your system
 make dep
 # to be able to run unit tests
 make dep test=1
-# to get depencencies compiled with clang
-make dep compiler=clang
 # to get dependencies for single/multiple module.s
 make dep mod COMMA_SEPARATED_MODULES
 # to get windows dll dependencies
@@ -155,33 +167,11 @@ make mod core,lua
 
 ## Demo
 
-Get dependencies (skippable step)
+Create demo for each for the compiled module
 
 ```shell
-make dep mod demo
-```
-
-Build demo
-
-```shell
-make mod demo
-```
-
-Execute demo binaries in: **build/last/bin**
-
-
-### Windows demo
-
-```shell
-make dep mod demo platform=win
-make mod demo platform=win
-```
-
-### Emscripten demo
-
-```shell
-make dep mod demo compiler=em
-make mod demo compiler=em
+make dep mod util demo=1
+make mod util demo=1
 ```
 
 ---

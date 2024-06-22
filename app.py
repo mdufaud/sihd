@@ -31,7 +31,7 @@ extlibs = {
     "sdl": "2.0.18",
     "glew": "2.2.0",
     "glfw3": "3.4",
-    "imgui": "1.90.7",
+    "imgui": "1.86",
     # bindings
     "pybind11": "2.6.2",
     # compressing utility

@@ -13,6 +13,9 @@ from site_scons.scripts import builder as builder
 vcpkg_dir_path = os.path.join(builder.build_root_path, ".vcpkg")
 vcpkg_bin_path = os.path.join(vcpkg_dir_path, "vcpkg")
 
+if builder.is_msys():
+    vcpkg_bin_path += ".exe"
+
 vcpkg_build_path = os.path.join(builder.build_path, "vcpkg")
 vcpkg_build_manifest_path = os.path.join(vcpkg_build_path, "vcpkg.json")
 
@@ -142,6 +145,8 @@ def execute_vcpkg_install():
     __check_vcpkg()
     import subprocess
     args = [vcpkg_bin_path, "install", f"--triplet={vcpkg_triplet}"]
+    if builder.is_msys():
+        args += ["--host-triplet=x64-mingw-dynamic"]
     proc = subprocess.run(args, cwd=vcpkg_build_path, timeout=(60.0 * len(extlibs)))
     return proc.returncode
 
@@ -174,7 +179,8 @@ if __name__ == "__main__":
     if "fetch" in sys.argv:
         builder.info("fetching external libraries for {}".format(app.name))
         return_code = execute_vcpkg_install()
-        link_to_extlibs()
+        if return_code == 0:
+            link_to_extlibs()
         sys.exit(return_code)
     elif "list" in sys.argv:
         execute_vcpkg_list()

@@ -95,7 +95,10 @@ def safe_symlink(src, dst):
         os.remove(dst)
     if not os.path.exists(dst):
         info(f"linking {src} -> {dst}")
-        os.symlink(src, dst, target_is_directory=os.path.isdir(src))
+        if is_msys():
+            shutil.copy(src, dst)
+        else:
+            os.symlink(src, dst, target_is_directory=os.path.isdir(src))
     return True
 
 ###############################################################################
@@ -108,6 +111,7 @@ architectures = {
     "sparc64": "sparcv9",
     "aarch64": "armv8",
     "arm64": "armv8",
+    "AMD64": "x86_64",
     "64": "x86_64",
     "86": "x86",
     "arm": "armv6",

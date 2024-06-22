@@ -273,7 +273,7 @@ base_env.Prepend(
     RANLIB = ccache,
 )
 
-if compiler != "mingw":
+if compiler != "mingw" and not builder.is_msys():
     base_env.Replace(SHLIBVERSION = app.version)
 
 # add $platform-[flags/defines/link/libs]
