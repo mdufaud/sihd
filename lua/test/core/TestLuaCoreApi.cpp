@@ -30,6 +30,7 @@ class TestLuaCoreApi: public ::testing::Test
 
         bool do_script(const std::string & path)
         {
+            SIHD_LOG_INFO("Starting LUA test: {}", path);
             bool ret = _vm.do_file(path);
             if (ret == false)
                 SIHD_LOG(error, "Lua error: {}", _vm.last_string());

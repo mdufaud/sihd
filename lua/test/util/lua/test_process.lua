@@ -2,7 +2,7 @@ local echo = sihd.util.Process()
 echo:add_argv({ "echo", "hello world" })
 
 echo:execute()
-echo:wait_any()
+echo:wait_any(0)
 assert(echo:has_exited())
 assert(echo:return_code(), 0)
 

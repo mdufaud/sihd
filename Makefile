@@ -347,7 +347,7 @@ test: build
 					DEBUGGER_ARGS="$(DEBUGGER_ARGS)" \
 					TEST_ARGS="$(TEST_ARGS)" \
 					REPEAT="$(repeat)" \
-					bash $(TEST_PATH)/execute_tests.sh $(TEST_CMD) "$(MODULES_NAME_SPLIT)"
+					bash $(TEST_PATH)/execute_tests.sh $(TEST_CMD) "$(MODULES_NAME_SPLIT)" "$(TEST_NAME)"
 
 nointeract_test: TEST_DEFAULT_ARGS += 0>&-
 nointeract_test: test

@@ -39,7 +39,7 @@ extlibs = {
     # other
     "libjpeg": "9d",
     "lua": "5.3.5-5",
-    "luabridge": "2.8",
+    "luabridge3": "3.0-rc3",
     "libbluetooth": "",
 }
 
@@ -177,14 +177,12 @@ modules = {
 conditionnal_modules = {
     "lua": {
         # apt liblua5.3-dev / pacman lua
-        "extlibs": ['lua', 'luabridge'],
+        "extlibs": ['lua', 'luabridge3'],
         "depends": ['util'],
         "conditionnal-env": "lua",
         "conditionnal-depends": ['core'],
-        "flags": ["-Wno-unused-parameter"],
+        "flags": ["-Wno-unused-parameter", "-Wno-unused-but-set-parameter"],
         "pkg-configs": ["lua-5.3", "lua53"],
-        "git-url": "git@github.com:kunitoki/LuaBridge3.git",
-        "git-branch": "2.6",
     },
     "luabin": {
         "depends": ['lua'],

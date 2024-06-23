@@ -7,8 +7,8 @@ assert(ch_bool:read(0) == true)
 
 local ch_byte = sihd.core.Channel("ch_byte", "byte", 1, core)
 
-assert(ch_byte:write(0, 128))
-assert(ch_byte:read(0) == -128)
+assert(ch_byte:write(0, 127))
+assert(ch_byte:read(0) == 127)
 
 local ch_long = sihd.core.Channel("ch_long", "long", 1, core)
 

@@ -25,10 +25,11 @@ class TestLuaUtilApi: public ::testing::Test
             ASSERT_NE(_vm.lua_state(), nullptr);
         }
 
-        virtual void TearDown() {}
+        virtual void TearDown() { _vm.close_state(); }
 
         bool do_script(const std::string & path)
         {
+            SIHD_LOG_INFO("Starting LUA test: {}", path);
             bool ret = _vm.do_file(path);
             if (ret == false)
                 SIHD_LOG(error, "Lua error: {}", _vm.last_string());
@@ -52,16 +53,17 @@ TEST_F(TestLuaUtilApi, test_luautil_array)
 
 TEST_F(TestLuaUtilApi, test_luautil_tools)
 {
+    LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);
     EXPECT_TRUE(this->do_script("test/util/lua/test_tools.lua"));
 }
 
-// TEST_F(TestLuaUtilApi, test_luautil_process)
-// {
-//     LuaUtilApi::load_base(_vm);
-//     LuaUtilApi::load_process(_vm);
-//     EXPECT_TRUE(this->do_script("test/util/lua/test_process.lua"));
-// }
+TEST_F(TestLuaUtilApi, test_luautil_process)
+{
+    LuaUtilApi::load_base(_vm);
+    LuaUtilApi::load_process(_vm);
+    // EXPECT_TRUE(this->do_script("test/util/lua/test_process.lua"));
+}
 
 TEST_F(TestLuaUtilApi, test_luautil_files)
 {

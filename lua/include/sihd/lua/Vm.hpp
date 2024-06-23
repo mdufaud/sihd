@@ -5,7 +5,7 @@
 #include <lua5.3/lua.h>
 #include <lua5.3/lualib.h>
 
-#include <LuaBridge/LuaBridge.h>
+#include <luabridge3/LuaBridge/LuaBridge.h>
 
 #include <map>
 #include <mutex>

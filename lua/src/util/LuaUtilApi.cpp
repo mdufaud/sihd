@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include <regex>
 
 #include <sihd/lua/util/LuaUtilApi.hpp>
@@ -27,12 +29,10 @@
 
 #include <sihd/util/SharedMemory.hpp>
 
-#include <unistd.h>
-
 #define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType)                                                                 \
  .deriveClass<ArrType, IArray>(#ArrType)                                                                               \
-     .addConstructor<void (*)()>()                                                                                     \
      .addStaticFunction("new", &LuaUtilApi::_array_lua_new<PrimitiveType>)                                             \
+     .addConstructor<void (*)()>()                                                                                     \
      .addFunction("clone", &ArrType::clone)                                                                            \
      .addFunction("push_back", &LuaUtilApi::_array_lua_push_back<PrimitiveType>)                                       \
      .addFunction("push_front", &LuaUtilApi::_array_lua_push_front<PrimitiveType>)                                     \
@@ -66,7 +66,7 @@ bool LuaUtilApi::_configurable_recursive_set(Configurable *obj, const std::strin
     {
         case LUA_TBOOLEAN:
         {
-            return obj->set_conf<bool>(key, ref.cast<bool>());
+            return obj->set_conf<bool>(key, static_cast<bool>(ref));
         }
         case LUA_TTABLE:
         {
@@ -79,17 +79,17 @@ bool LuaUtilApi::_configurable_recursive_set(Configurable *obj, const std::strin
         {
             try
             {
-                return obj->set_conf_float(key, ref.cast<double>());
+                return obj->set_conf_float(key, static_cast<double>(ref));
             }
             catch (const std::invalid_argument & e)
             {
-                return obj->set_conf_int(key, ref.cast<int64_t>());
+                return obj->set_conf_int(key, static_cast<int64_t>(ref));
             }
             return false;
         }
         case LUA_TSTRING:
         {
-            return obj->set_conf_str(key, ref.cast<std::string>());
+            return obj->set_conf_str(key, std::string(ref));
         }
         default:
         {
@@ -113,9 +113,9 @@ void LuaUtilApi::load_process(Vm & vm)
             "add_argv",
             +[](Process *self, luabridge::LuaRef ref, lua_State *state) {
                 if (ref.isString())
-                    self->add_argv(ref.cast<std::string>());
+                    self->add_argv(std::string(ref));
                 else if (ref.isTable())
-                    self->add_argv(ref.cast<std::vector<std::string>>());
+                    self->add_argv(std::vector<std::string>(ref));
                 else
                     luaL_error(state, "add_argv argument must be either a string or a string table");
             })
@@ -188,9 +188,7 @@ void LuaUtilApi::load_process(Vm & vm)
         .addFunction("wait_exit", &Process::wait_exit)
         .addFunction("wait_stop", &Process::wait_stop)
         .addFunction("wait_continue", &Process::wait_continue)
-        .addFunction(
-            "wait_any",
-            +[](Process *self) { self->wait_any(0); })
+        .addFunction("wait_any", &Process::wait_any)
         // manual pipe process
         .addFunction("read_pipes", &Process::read_pipes)
         // end execution
@@ -219,21 +217,21 @@ void LuaUtilApi::load_process(Vm & vm)
             +[](SharedMemory *self, const std::string & id, size_t size, luabridge::LuaRef ref) {
                 if (ref.isNil())
                     return self->create(id, size);
-                return self->create(id, size, ref.cast<mode_t>());
+                return self->create(id, size, static_cast<mode_t>(ref));
             })
         .addFunction(
             "attach",
             +[](SharedMemory *self, const std::string & id, size_t size, luabridge::LuaRef ref) {
                 if (ref.isNil())
                     return self->attach(id, size);
-                return self->attach(id, size, ref.cast<mode_t>());
+                return self->attach(id, size, static_cast<mode_t>(ref));
             })
         .addFunction(
             "attach_read_only",
             +[](SharedMemory *self, const std::string & id, size_t size, luabridge::LuaRef ref) {
                 if (ref.isNil())
                     return self->attach_read_only(id, size);
-                return self->attach_read_only(id, size, ref.cast<mode_t>());
+                return self->attach_read_only(id, size, static_cast<mode_t>(ref));
             })
         .addFunction(
             "data",
@@ -282,10 +280,10 @@ void LuaUtilApi::load_files(Vm & vm)
                 {
                     std::string ret;
                     for (const auto & pair : luabridge::pairs(arg1))
-                        ret = fs::combine(ret, pair.second.cast<std::string>());
+                        ret = fs::combine(ret, std::string(pair.second));
                     return ret;
                 }
-                return fs::combine(arg1.cast<std::string>(), arg2.cast<std::string>());
+                return fs::combine(std::string(arg1), std::string(arg2));
             })
         .addFunction("remove_file", &fs::remove_file)
         .addFunction("are_equals", &fs::are_equals)
@@ -319,7 +317,7 @@ void LuaUtilApi::load_files(Vm & vm)
                 char *line = nullptr;
                 size_t size = 0;
                 if (ref.isNil() == false)
-                    ret = self->read_line_delim(&line, &size, ref.cast<std::string>()[0]);
+                    ret = self->read_line_delim(&line, &size, std::string(ref)[0]);
                 else
                     ret = self->read_line(&line, &size);
                 if (ret >= 0)
@@ -341,7 +339,7 @@ void LuaUtilApi::load_files(Vm & vm)
             +[](File *self, const std::string & str, luabridge::LuaRef ref) {
                 std::string_view view(str);
                 if (ref.isNumber())
-                    view.remove_suffix(ref.cast<size_t>());
+                    view.remove_suffix(static_cast<size_t>(ref));
                 return self->write(view);
             })
         // test cases
@@ -387,7 +385,7 @@ void LuaUtilApi::load_threading(Vm & vm)
          * Scheduler
          */
         .deriveClass<LuaScheduler, Named>("Scheduler")
-        .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<LuaScheduler>>()
+        .addConstructorFrom<SmartNodePtr<LuaScheduler>, void(const std::string &, Node *)>()
         // Configurable
         .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<LuaScheduler>)
         // Scheduler
@@ -430,17 +428,17 @@ void LuaUtilApi::load_threading(Vm & vm)
                 time_t timestamp_to_run_at = 0;
                 luabridge::LuaRef run_at = tbl["run_at"];
                 if (run_at.isNumber())
-                    timestamp_to_run_at = run_at.cast<time_t>();
+                    timestamp_to_run_at = static_cast<mode_t>(run_at);
 
                 time_t timestamp_to_run_in = 0;
                 luabridge::LuaRef run_in = tbl["run_in"];
                 if (run_in.isNumber())
-                    timestamp_to_run_in = run_in.cast<time_t>();
+                    timestamp_to_run_in = static_cast<mode_t>(run_in);
 
                 time_t reschedule_time = 0;
                 luabridge::LuaRef reschedule = tbl["reschedule_time"];
                 if (reschedule.isNumber())
-                    reschedule_time = reschedule.cast<time_t>();
+                    reschedule_time = static_cast<time_t>(reschedule);
 
                 LuaTask *task_ptr = new LuaTask(lua_fun,
                                                 util::TaskOptions {.run_at = timestamp_to_run_at,
@@ -538,11 +536,6 @@ void LuaUtilApi::load_tools(Vm & vm)
                 return ret;
             })
         /**
-         * Properties
-         */
-        .addProperty("platform", &LuaUtilApi::_get_platform_str)
-        .addVariable("clock", &Clock::default_clock)
-        /**
          * Clock
          */
         .beginClass<IClock>("IClock")
@@ -550,11 +543,16 @@ void LuaUtilApi::load_tools(Vm & vm)
         .addFunction("is_steady", &IClock::is_steady)
         .endClass()
         .deriveClass<SystemClock, IClock>("SystemClock")
-        .addConstructor<void (*)()>()
         .endClass()
         .deriveClass<SteadyClock, IClock>("SteadyClock")
-        .addConstructor<void (*)()>()
         .endClass()
+        .addVariable("clock", &Clock::default_clock)
+        /**
+         * Properties
+         */
+        .addProperty(
+            "platform",
+            +[] { return __SIHD_PLATFORM__; })
         /**
          * Splitter
          */
@@ -568,6 +566,9 @@ void LuaUtilApi::load_tools(Vm & vm)
         .addFunction("split", &Splitter::split)
         .addFunction("count_tokens", &Splitter::count_tokens)
         .endClass()
+        /**
+         * Timestamp
+         */
         .beginClass<Timestamp>("Timestamp")
         .addConstructor<void (*)(time_t)>()
         .addFunction("get", &Timestamp::get)
@@ -621,31 +622,39 @@ void LuaUtilApi::load_tools(Vm & vm)
         .addFunction("days", &time::days)
         .addFunction("from_double", &time::from_double)
         .addFunction("hz", &time::freq)
-        .endNamespace()
+        .endNamespace() // time
         .beginNamespace("thread")
         .addFunction("id", &thread::id)
         .addFunction("id_str", thread::id_str)
         .addFunction("set_name", &thread::set_name)
         .addFunction("name", &thread::name)
-        .endNamespace()
+        .endNamespace() // thread
         .beginNamespace("signal")
         .addFunction("kill", &signal::kill)
         .addFunction("name", &signal::name)
-        .endNamespace()
+        .endNamespace() // signal
         .beginNamespace("os")
-        .addProperty("stdin", &LuaUtilApi::_get_int<STDIN_FILENO>)
-        .addProperty("stdout", &LuaUtilApi::_get_int<STDOUT_FILENO>)
-        .addProperty("stderr", &LuaUtilApi::_get_int<STDERR_FILENO>)
+        .addProperty(
+            "stdin",
+            +[] { return STDIN_FILENO; })
+        .addProperty(
+            "stdout",
+            +[] { return STDOUT_FILENO; })
+        .addProperty(
+            "stderr",
+            +[] { return STDERR_FILENO; })
         .addFunction("backtrace", &os::backtrace)
         .addFunction("pid", &os::pid)
         .addFunction("max_fds", &os::max_fds)
         .addFunction("is_root", &os::is_root)
         .addFunction("is_run_by_debugger", &os::is_run_by_debugger)
         .addFunction("is_run_by_valgrind", &os::is_run_by_valgrind)
-        .addProperty("is_run_with_asan", &LuaUtilApi::_get_bool<os::is_run_with_asan>)
+        .addProperty(
+            "is_run_with_asan",
+            +[] { return os::is_run_with_asan; })
         .addFunction("peak_rss", &os::peak_rss)
         .addFunction("current_rss", &os::current_rss)
-        .endNamespace()
+        .endNamespace() // os
         .beginNamespace("str")
         .addFunction("timeoffset_str", &str::timeoffset_str)
         .addFunction("localtimeoffset_str", &str::localtimeoffset_str)
@@ -659,7 +668,7 @@ void LuaUtilApi::load_tools(Vm & vm)
                 Splitter splitter(delimiter);
                 return splitter.split(str);
             })
-        .endNamespace()
+        .endNamespace() // str
         .beginNamespace("path")
         .addFunction("set", &path::set)
         .addFunction("clear", &path::clear)
@@ -668,16 +677,20 @@ void LuaUtilApi::load_tools(Vm & vm)
         .addFunction("get_from_url", static_cast<std::string (*)(const std::string &, const std::string &)>(&path::get))
         .addFunction("get_from_path", &path::get_from)
         .addFunction("find", &path::find)
-        .endNamespace()
+        .endNamespace() // path
         .beginNamespace("term")
         .addFunction("is_interactive", &term::is_interactive)
-        .endNamespace()
+        .endNamespace() // term
         .beginNamespace("endian")
-        .addFunction("is_big", &LuaUtilApi::_is_endian<Endian::BIG>)
-        .addFunction("is_little", &LuaUtilApi::_is_endian<Endian::LITTLE>)
-        .endNamespace()
-        .endNamespace()
-        .endNamespace();
+        .addFunction(
+            "is_big",
+            +[] { return sihd::util::Endian::endian() == Endian::BIG; })
+        .addFunction(
+            "is_little",
+            +[] { return sihd::util::Endian::endian() == Endian::LITTLE; })
+        .endNamespace()  // edian
+        .endNamespace()  // util
+        .endNamespace(); // sihd
 }
 
 void LuaUtilApi::load_base(Vm & vm)
@@ -686,12 +699,22 @@ void LuaUtilApi::load_base(Vm & vm)
         return;
     luabridge::getGlobalNamespace(vm.lua_state())
         .beginNamespace("sihd")
-        .addProperty("dir", &g_exe_dir, false)
-        .addProperty("version", &LuaUtilApi::_get_version_str)
-        .addProperty("version_num", &LuaUtilApi::_get_int<SIHD_VERSION_NUM>)
-        .addProperty("version_major", &LuaUtilApi::_get_int<SIHD_VERSION_MAJOR>)
-        .addProperty("version_minor", &LuaUtilApi::_get_int<SIHD_VERSION_MINOR>)
-        .addProperty("version_patch", &LuaUtilApi::_get_int<SIHD_VERSION_PATCH>)
+        .addVariable("dir", &g_exe_dir)
+        .addProperty(
+            "version",
+            +[]() { return SIHD_VERSION_STRING; })
+        .addProperty(
+            "version_num",
+            +[]() { return SIHD_VERSION_NUM; })
+        .addProperty(
+            "version_major",
+            +[]() { return SIHD_VERSION_MAJOR; })
+        .addProperty(
+            "version_minor",
+            +[]() { return SIHD_VERSION_MINOR; })
+        .addProperty(
+            "version_patch",
+            +[]() { return SIHD_VERSION_PATCH; })
         .beginNamespace("util")
         .beginNamespace("log")
         .addFunction(
@@ -728,7 +751,7 @@ void LuaUtilApi::load_base(Vm & vm)
         .addProperty("ownership", &Node::ChildEntry::ownership)
         .endClass()
         .beginClass<Named>("Named")
-        .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<Named>>()
+        .addConstructorFrom<SmartNodePtr<Named>, void(const std::string &, Node *)>()
         .addProperty(
             "c_ptr",
             +[](const Named *self) -> int64_t { return (int64_t)self; })
@@ -743,9 +766,15 @@ void LuaUtilApi::load_base(Vm & vm)
         .addFunction(
             "__eq",
             +[](const Named *self, const Named *other) -> bool { return self == other; })
+        .addIndexMetaMethod([](Named & self, const luabridge::LuaRef & key, lua_State *L) {
+            Named *res = self.find(key.tostring());
+            if (res == nullptr)
+                return luabridge::LuaRef(L, luabridge::LuaNil()); // or luaL_error("Failed lookup of key !")
+            return luabridge::LuaRef(L, res);
+        })
         .endClass()
         .deriveClass<Node, Named>("Node")
-        .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<Node>>()
+        .addConstructorFrom<SmartNodePtr<Node>, void(const std::string &, Node *)>()
         .addFunction("get_child", static_cast<Named *(Node::*)(const std::string &)>(&Node::get_child))
         .addFunction(
             "add_child",
@@ -771,6 +800,22 @@ void LuaUtilApi::load_base(Vm & vm)
         /**
          * Array
          */
+        // .beginNamespace("Type")
+        // .addVariable("NONE", Type::TYPE_NONE)
+        // .addVariable("BOOL", Type::TYPE_BOOL)
+        // .addVariable("CHAR", Type::TYPE_CHAR)
+        // .addVariable("BYTE", Type::TYPE_BYTE)
+        // .addVariable("UBYTE", Type::TYPE_UBYTE)
+        // .addVariable("SHORT", Type::TYPE_SHORT)
+        // .addVariable("USHORT", Type::TYPE_USHORT)
+        // .addVariable("INT", Type::TYPE_INT)
+        // .addVariable("UINT", Type::TYPE_UINT)
+        // .addVariable("LONG", Type::TYPE_LONG)
+        // .addVariable("ULONG", Type::TYPE_ULONG)
+        // .addVariable("FLOAT", Type::TYPE_FLOAT)
+        // .addVariable("DOUBLE", Type::TYPE_DOUBLE)
+        // .addVariable("OBJECT", Type::TYPE_OBJECT)
+        // .endNamespace()
         .beginNamespace("types")
         .addFunction("type_size", &Types::type_size)
         .addFunction("type_str", &Types::type_str)
@@ -793,7 +838,7 @@ void LuaUtilApi::load_base(Vm & vm)
             +[](IArray *self, luabridge::LuaRef ref) {
                 if (ref.isNil())
                     return self->str();
-                return self->str(ref.cast<char>());
+                return self->str(static_cast<char>(ref));
             })
         .addFunction("clear", &IArray::clear)
         // .addFunction("is_same_type", static_cast<bool (IArray::*)(const IArray &) const>(&IArray::is_same_type))

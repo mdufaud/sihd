@@ -24,10 +24,9 @@
 #include <sihd/util/platform.hpp>
 #include <sihd/util/version.hpp>
 
-#include <LuaBridge/Map.h>
-#include <LuaBridge/UnorderedMap.h>
-#include <LuaBridge/Vector.h>
-#include <LuaBridge/detail/Stack.h>
+#include <luabridge3/LuaBridge/Map.h>
+#include <luabridge3/LuaBridge/UnorderedMap.h>
+#include <luabridge3/LuaBridge/Vector.h>
 
 #include <memory>
 
@@ -52,6 +51,7 @@ struct EnumWrapper
 
 namespace luabridge
 {
+
 // LuaBridge smart pointer management for Named/Node pattern
 template <class C>
 struct ContainerTraits<sihd::util::SmartNodePtr<C>>
@@ -63,55 +63,43 @@ struct ContainerTraits<sihd::util::SmartNodePtr<C>>
         static C *get(sihd::util::SmartNodePtr<C> & obj) { return obj.get(); }
 };
 
-// std::string_view as a pushable lua class
-template <>
-struct Stack<std::string_view>
-{
-        static void push(lua_State *L, const std::string_view & str) { lua_pushlstring(L, str.data(), str.size()); }
-
-        static std::string_view get(lua_State *L, int index)
-        {
-            size_t len;
-            if (lua_type(L, index) == LUA_TSTRING)
-            {
-                const char *str = lua_tolstring(L, index, &len);
-                return std::string_view(str, len);
-            }
-            // Lua reference manual:
-            // If the value is a number, then lua_tolstring also changes the actual value in the stack to a string.
-            //(This change confuses lua_next when lua_tolstring is applied to keys during a table traversal.)
-            lua_pushvalue(L, index);
-            const char *str = lua_tolstring(L, -1, &len);
-            std::string_view string(str, len);
-            lua_pop(L, 1); // Pop the temporary string
-            return string;
-        }
-
-        static bool isInstance(lua_State *L, int index) { return lua_type(L, index) == LUA_TSTRING; }
-};
-
-// int8_t was missing ??
-template <>
-struct Stack<int8_t>
-{
-        static void push(lua_State *L, int8_t value) { lua_pushnumber(L, static_cast<int8_t>(value)); }
-
-        static int8_t get(lua_State *L, int index) { return static_cast<int8_t>(lua_tointeger(L, index)); }
-};
+}; // namespace luabridge
 
 // enable enums in Lua
-
 template <>
-struct Stack<sihd::util::Type>: sihd::lua::EnumWrapper<sihd::util::Type>
+struct luabridge::Stack<sihd::util::Type>: luabridge::Enum<sihd::util::Type,
+                                                           sihd::util::Type::TYPE_NONE,
+                                                           sihd::util::Type::TYPE_BOOL,
+                                                           sihd::util::Type::TYPE_CHAR,
+                                                           sihd::util::Type::TYPE_BYTE,
+                                                           sihd::util::Type::TYPE_UBYTE,
+                                                           sihd::util::Type::TYPE_SHORT,
+                                                           sihd::util::Type::TYPE_USHORT,
+                                                           sihd::util::Type::TYPE_INT,
+                                                           sihd::util::Type::TYPE_UINT,
+                                                           sihd::util::Type::TYPE_LONG,
+                                                           sihd::util::Type::TYPE_ULONG,
+                                                           sihd::util::Type::TYPE_FLOAT,
+                                                           sihd::util::Type::TYPE_DOUBLE,
+                                                           sihd::util::Type::TYPE_OBJECT>
 {
 };
 
 template <>
-struct Stack<sihd::util::ServiceController::State>: sihd::lua::EnumWrapper<sihd::util::ServiceController::State>
+struct luabridge::Stack<sihd::util::ServiceController::State>
+    : luabridge::Enum<sihd::util::ServiceController::State,
+                      sihd::util::ServiceController::State::NONE,
+                      sihd::util::ServiceController::State::CONFIGURING,
+                      sihd::util::ServiceController::State::CONFIGURED,
+                      sihd::util::ServiceController::State::INITIALIZING,
+                      sihd::util::ServiceController::State::STARTING,
+                      sihd::util::ServiceController::State::RUNNING,
+                      sihd::util::ServiceController::State::STOPPING,
+                      sihd::util::ServiceController::State::STOPPED,
+                      sihd::util::ServiceController::State::RESETTING,
+                      sihd::util::ServiceController::State::ERROR>
 {
 };
-
-}; // namespace luabridge
 
 namespace sihd::lua
 {
@@ -145,7 +133,7 @@ class LuaUtilApi
             {
                 if (pair.first.isString() == false)
                     luaL_error(state, "set_conf keys must be strings");
-                std::string key = pair.first.cast<std::string>();
+                std::string key = std::string(pair.first);
                 ret = LuaUtilApi::_configurable_recursive_set(self, key, pair.second) && ret;
             }
             return ret;
@@ -185,7 +173,7 @@ class LuaUtilApi
                 template <typename R, typename... T>
                 R call_lua_method(T... args)
                 {
-                    return _fun(args...);
+                    return R(_fun(args...));
                 }
 
             private:
@@ -276,32 +264,8 @@ class LuaUtilApi
         };
 
     private:
-        LuaUtilApi() {};
-        virtual ~LuaUtilApi() {};
-
-        // used because no variables or const can be set into namespaces
-        template <int I>
-        static constexpr int _get_int()
-        {
-            return I;
-        }
-
-        // used because no variables or const can be set into namespaces
-        template <bool B>
-        static constexpr bool _get_bool()
-        {
-            return B;
-        }
-
-        static constexpr const char *_get_version_str() { return SIHD_VERSION_STRING; }
-
-        static constexpr const char *_get_platform_str() { return __SIHD_PLATFORM__; }
-
-        template <sihd::util::Endian::Endianness E>
-        static constexpr bool _is_endian()
-        {
-            return sihd::util::Endian::endian() == E;
-        }
+        LuaUtilApi() = delete;
+        ~LuaUtilApi() = delete;
 
         // Array utils
 
@@ -313,7 +277,7 @@ class LuaUtilApi
             {
                 if (ref.isString())
                 {
-                    array.from(ref.cast<std::string>());
+                    array.from(std::string(ref));
                     return array;
                 }
             }
@@ -321,7 +285,7 @@ class LuaUtilApi
             {
                 array.reserve(ref.length());
                 for (const auto & pair : luabridge::pairs(ref))
-                    array.push_back(pair.second.cast<T>());
+                    array.push_back(T(pair.second));
             }
             else
                 luaL_error(state, "Array new argument must be a table");
@@ -336,7 +300,7 @@ class LuaUtilApi
             {
                 if (ref.isString())
                 {
-                    self->push_back(ref.cast<std::string>());
+                    self->push_back(std::string(ref));
                     return true;
                 }
             }
@@ -344,10 +308,10 @@ class LuaUtilApi
             {
                 self->reserve(self->size() + ref.length());
                 for (const auto & pair : luabridge::pairs(ref))
-                    ret = ret && self->push_back(pair.second.cast<T>());
+                    ret = ret && self->push_back(T(pair.second));
             }
             else
-                ret = self->push_back(ref.cast<T>());
+                ret = self->push_back(T(ref));
             return ret;
         }
 
@@ -359,7 +323,7 @@ class LuaUtilApi
             {
                 if (ref.isString())
                 {
-                    self->push_front(ref.cast<std::string>());
+                    self->push_front(std::string(ref));
                     return true;
                 }
             }
@@ -367,10 +331,10 @@ class LuaUtilApi
             {
                 self->reserve(self->size() + ref.length());
                 for (const auto & pair : luabridge::pairs(ref))
-                    ret = ret && self->push_front(pair.second.cast<T>());
+                    ret = ret && self->push_front(T(pair.second));
             }
             else
-                ret = self->push_front(ref.cast<T>());
+                ret = self->push_front(T(ref));
             return ret;
         }
 
@@ -379,12 +343,12 @@ class LuaUtilApi
         {
             size_t from_idx = 0;
             if (from_ref.isNil() == false)
-                from_idx = from_ref.cast<size_t>();
+                from_idx = static_cast<size_t>(from_ref);
             if constexpr (std::is_same_v<T, char>)
             {
                 if (ref.isString())
                 {
-                    self->copy_from(ref.cast<std::string>(), from_idx);
+                    self->copy_from(std::string(ref), from_idx);
                     return true;
                 }
             }
@@ -394,7 +358,7 @@ class LuaUtilApi
                 return false;
             for (const auto & pair : luabridge::pairs(ref))
             {
-                self->set(from_idx, pair.second.cast<T>());
+                self->set(from_idx, T(pair.second));
                 ++from_idx;
             }
             return true;
@@ -408,7 +372,7 @@ class LuaUtilApi
             {
                 if (ref.isString())
                 {
-                    self->from(ref.cast<std::string>());
+                    self->from(std::string(ref));
                     return true;
                 }
             }
@@ -417,10 +381,10 @@ class LuaUtilApi
             {
                 self->reserve(self->size() + ref.length());
                 for (const auto & pair : luabridge::pairs(ref))
-                    ret = ret && self->push_back(pair.second.cast<T>());
+                    ret = ret && self->push_back(T(pair.second));
             }
             else
-                ret = self->push_back(ref.cast<T>());
+                ret = self->push_back(T(ref));
             return ret;
         }
 

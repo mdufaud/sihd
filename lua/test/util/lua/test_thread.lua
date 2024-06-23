@@ -108,7 +108,7 @@ end)
 -- 1ms
 assert(stepworker:set_frequency(1000.0))
 
-stepworker:start_sync_worker()
+stepworker:start_sync_worker("stepworker")
 -- 10 ms
 local timestamp = sihd.util.Timestamp(sihd.util.time.sec(1))
 waitable:wait_for(timestamp)

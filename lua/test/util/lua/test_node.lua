@@ -28,3 +28,9 @@ assert(children_tbl["toto"].obj:name() == "second_child")
 local children_keys = root:children_keys()
 assert(children_keys[1] == "child")
 assert(children_keys[2] == "toto")
+
+local subparent = sihd.util.Node("subparent", root)
+local subchild = sihd.util.Node("subchild", subparent)
+
+assert(root.subparent:parent().subparent.subchild == subchild)
+assert(root.doesnotexist == nil)

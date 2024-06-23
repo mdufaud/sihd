@@ -52,10 +52,10 @@ void LuaCoreApi::load(Vm & vm)
         .addFunction("device_state_str", &Device::device_state_str)
         .endClass()
         .deriveClass<Core, Device>("Core")
-        .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<Core>>()
+        .addConstructorFrom<SmartNodePtr<Core>, void(const std::string &, Node *)>()
         .endClass()
         .deriveClass<Channel, sihd::util::Named>("Channel")
-        .addConstructor<void (*)(const std::string &, const std::string &, size_t, Node *), SmartNodePtr<Channel>>()
+        .addConstructorFrom<SmartNodePtr<Channel>, void(const std::string &, const std::string &, size_t, Node *)>()
         .addFunction("set_write_on_change", &Channel::set_write_on_change)
         .addFunction("notify", &Channel::notify)
         .addFunction("timestamp", &Channel::timestamp)
@@ -92,29 +92,29 @@ void LuaCoreApi::load(Vm & vm)
                 switch (self->array()->data_type())
                 {
                     case TYPE_BOOL:
-                        return self->write<bool>(idx, arg.cast<bool>());
+                        return self->write<bool>(idx, static_cast<bool>(arg));
                     case TYPE_CHAR:
-                        return self->write<char>(idx, arg.cast<char>());
+                        return self->write<char>(idx, static_cast<char>(arg));
                     case TYPE_BYTE:
-                        return self->write<int8_t>(idx, arg.cast<int8_t>());
+                        return self->write<int8_t>(idx, static_cast<int8_t>(arg));
                     case TYPE_UBYTE:
-                        return self->write<uint8_t>(idx, arg.cast<uint8_t>());
+                        return self->write<uint8_t>(idx, static_cast<uint8_t>(arg));
                     case TYPE_SHORT:
-                        return self->write<int16_t>(idx, arg.cast<int16_t>());
+                        return self->write<int16_t>(idx, static_cast<int16_t>(arg));
                     case TYPE_USHORT:
-                        return self->write<uint16_t>(idx, arg.cast<uint16_t>());
+                        return self->write<uint16_t>(idx, static_cast<uint16_t>(arg));
                     case TYPE_INT:
-                        return self->write<int32_t>(idx, arg.cast<int32_t>());
+                        return self->write<int32_t>(idx, static_cast<int32_t>(arg));
                     case TYPE_UINT:
-                        return self->write<uint32_t>(idx, arg.cast<uint32_t>());
+                        return self->write<uint32_t>(idx, static_cast<uint32_t>(arg));
                     case TYPE_LONG:
-                        return self->write<int64_t>(idx, arg.cast<int64_t>());
+                        return self->write<int64_t>(idx, static_cast<int64_t>(arg));
                     case TYPE_ULONG:
-                        return self->write<uint64_t>(idx, arg.cast<uint64_t>());
+                        return self->write<uint64_t>(idx, static_cast<uint64_t>(arg));
                     case TYPE_FLOAT:
-                        return self->write<float>(idx, arg.cast<float>());
+                        return self->write<float>(idx, static_cast<float>(arg));
                     case TYPE_DOUBLE:
-                        return self->write<double>(idx, arg.cast<double>());
+                        return self->write<double>(idx, static_cast<double>(arg));
                     default:
                         return false;
                 }
@@ -188,19 +188,19 @@ void LuaCoreApi::load(Vm & vm)
         .addFunction("notifications", &sihd::util::ObserverWaiter<Channel>::notifications)
         .endClass()
         .deriveClass<DevFilter, Device>("DevFilter")
-        .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<DevFilter>>()
+        .addConstructorFrom<SmartNodePtr<DevFilter>, void(const std::string &, Node *)>()
         .endClass()
         .deriveClass<DevPulsation, Device>("DevPulsation")
-        .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<DevPulsation>>()
+        .addConstructorFrom<SmartNodePtr<DevPulsation>, void(const std::string &, Node *)>()
         .endClass()
         .deriveClass<DevSampler, Device>("DevSampler")
-        .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<DevSampler>>()
+        .addConstructorFrom<SmartNodePtr<DevSampler>, void(const std::string &, Node *)>()
         .endClass()
         .deriveClass<DevPlayer, Device>("DevPlayer")
-        .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<DevPlayer>>()
+        .addConstructorFrom<SmartNodePtr<DevPlayer>, void(const std::string &, Node *)>()
         .endClass()
         .deriveClass<DevRecorder, Device>("DevRecorder")
-        .addConstructor<void (*)(const std::string &, Node *), SmartNodePtr<DevRecorder>>()
+        .addConstructorFrom<SmartNodePtr<DevRecorder>, void(const std::string &, Node *)>()
         .endClass()
         .endNamespace()
         .endNamespace();
