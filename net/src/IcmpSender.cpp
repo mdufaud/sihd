@@ -25,6 +25,7 @@ IcmpSender::IcmpSender(const std::string & name, sihd::util::Node *parent): sihd
     _poll.set_timeout(1);
     _poll.set_limit(1);
     _poll.add_observer(this);
+    _poll.set_service_wait_stop(true);
 
     _array_rcv_ptr->resize(256);
     _array_send_ptr->resize(ICMP_MINLEN);
@@ -32,7 +33,12 @@ IcmpSender::IcmpSender(const std::string & name, sihd::util::Node *parent): sihd
     this->add_conf("poll_timeout", &IcmpSender::set_poll_timeout);
 }
 
-IcmpSender::~IcmpSender() {}
+IcmpSender::~IcmpSender()
+{
+    if (this->is_running())
+        this->stop();
+    this->close();
+}
 
 bool IcmpSender::set_poll_timeout(int milliseconds)
 {
@@ -71,8 +77,6 @@ bool IcmpSender::open_socket(bool ipv6)
 
 bool IcmpSender::close()
 {
-    _poll.stop();
-    _poll.clear_fds();
     _socket.shutdown();
     return _socket.close();
 }
@@ -162,10 +166,10 @@ bool IcmpSender::send_to(const IpAddr & addr)
     return _socket.send_all_to(addr, *_array_send_ptr);
 }
 
-bool IcmpSender::stop()
+bool IcmpSender::on_stop()
 {
     _poll.stop();
-    _poll.wait_stop();
+    _poll.clear_fds();
     return true;
 }
 
@@ -175,11 +179,11 @@ void IcmpSender::_setup_poll()
     _poll.set_read_fd(_socket.socket());
 }
 
-bool IcmpSender::run()
+bool IcmpSender::on_start()
 {
     this->_setup_poll();
     std::lock_guard lock(_poll_mutex);
-    return _poll.run();
+    return _poll.start();
 }
 
 bool IcmpSender::poll(int milliseconds)

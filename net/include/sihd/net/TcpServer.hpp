@@ -35,20 +35,13 @@ class TcpServer: public INetServer,
 
         bool close();
 
-        // inetserver
-        bool serve();
-        bool stop_serving();
         int accept_client(IpAddr *client_ip = nullptr);
         bool add_client_read(int socket);
         bool add_client_write(int socket);
         bool remove_client_read(int socket);
         bool remove_client_write(int socket);
 
-        // calls infinite polling
-        bool run();
-        // ends infinite polling
-        bool stop();
-        bool is_running() const { return _poll.is_running(); }
+        bool is_running() const override { return _poll.is_running(); }
 
         bool set_queue_size(size_t size);
         bool set_poll_timeout(int milliseconds);
@@ -61,7 +54,9 @@ class TcpServer: public INetServer,
         size_t queue_size() const { return _queue_size; }
 
     protected:
-        void handle(sihd::util::Poll *poll);
+        void handle(sihd::util::Poll *poll) override;
+        bool on_start() override;
+        bool on_stop() override;
 
     private:
         void _setup_poll();

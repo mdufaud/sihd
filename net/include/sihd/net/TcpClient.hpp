@@ -45,11 +45,8 @@ class TcpClient: public INetReceiver,
         bool poll(int milliseconds);
         // poll once with configured timeout
         bool poll();
-        // calls infinite polling
-        bool run();
-        // stop polling
-        bool stop();
-        bool is_running() const { return _poll.is_running(); }
+
+        bool is_running() const override { return _poll.is_running(); }
 
         ssize_t receive(IpAddr & addr, sihd::util::IArray & arr);
         ssize_t receive(sihd::util::IArray & arr);
@@ -65,9 +62,11 @@ class TcpClient: public INetReceiver,
         const IpAddr & client_addr() const { return _client_addr; }
 
     protected:
+        void handle(sihd::util::Poll *poll) override;
+        bool on_start() override;
+        bool on_stop() override;
 
     private:
-        void handle(sihd::util::Poll *poll);
         void _setup_poll();
 
         Socket _socket;

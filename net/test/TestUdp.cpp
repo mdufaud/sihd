@@ -44,7 +44,7 @@ TEST_F(TestUdp, test_udp_receiver_run)
     });
     receiver.add_observer(&handler);
     receiver.set_poll_timeout(1);
-    sihd::util::Worker worker(&receiver);
+    sihd::util::Worker worker([&receiver] { return receiver.start(); });
     SIHD_LOG(debug, "Starting receiver");
     EXPECT_TRUE(worker.start_sync_worker("receiver"));
 

@@ -8,6 +8,7 @@
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Observable.hpp>
+#include <sihd/util/Timestamp.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/platform.hpp>
 

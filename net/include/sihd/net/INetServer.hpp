@@ -11,13 +11,11 @@ class INetServer: public sihd::util::ABlockingService
 {
     public:
         virtual ~INetServer() {};
-        virtual bool serve() = 0;
         virtual int accept_client(IpAddr *client_ip = nullptr) = 0;
         virtual bool add_client_read(int socket) = 0;
         virtual bool add_client_write(int socket) = 0;
         virtual bool remove_client_read(int socket) = 0;
         virtual bool remove_client_write(int socket) = 0;
-        virtual bool stop_serving() = 0;
 };
 
 } // namespace sihd::net

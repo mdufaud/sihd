@@ -80,7 +80,7 @@ TEST_F(TestIcmp, test_icmp_ipv4)
     });
     sender.add_observer(&handler);
 
-    sihd::util::Worker worker(&sender);
+    sihd::util::Worker worker([&sender] { return sender.start(); });
     SIHD_LOG(debug, "Starting receiver");
     ASSERT_TRUE(worker.start_sync_worker("receiver"));
 

@@ -30,9 +30,7 @@ class Sniffer: public sihd::util::Named,
         bool activate();
         bool is_active() const;
 
-        bool run();
-        bool is_running() const;
-        bool stop();
+        bool is_running() const override;
 
         // sniff bufferful of packets from a pcap_t open for a live capture then leave
         bool sniff();
@@ -91,6 +89,9 @@ class Sniffer: public sihd::util::Named,
 
     protected:
         static void _callback(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes);
+
+        bool on_start() override;
+        bool on_stop() override;
 
     private:
         void _log_if_error(int ret);

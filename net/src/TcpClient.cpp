@@ -15,10 +15,15 @@ TcpClient::TcpClient(const std::string & name, sihd::util::Node *parent): sihd::
     _poll.set_timeout(1);
     _poll.set_limit(1);
     _poll.add_observer(this);
+    _poll.set_service_wait_stop(true);
     this->add_conf("poll_timeout", &TcpClient::set_poll_timeout);
 }
 
-TcpClient::~TcpClient() {}
+TcpClient::~TcpClient()
+{
+    if (this->is_running())
+        this->stop();
+}
 
 bool TcpClient::set_poll_timeout(int milliseconds)
 {
@@ -64,17 +69,15 @@ bool TcpClient::open_unix_and_connect(std::string_view path)
 
 bool TcpClient::close()
 {
-    this->stop();
-    _poll.clear_fds();
     _socket.shutdown();
     _connected = false;
     return _socket.close();
 }
 
-bool TcpClient::stop()
+bool TcpClient::on_stop()
 {
     _poll.stop();
-    _poll.wait_stop();
+    _poll.clear_fds();
     return true;
 }
 
@@ -84,11 +87,11 @@ void TcpClient::_setup_poll()
     _poll.set_read_fd(_socket.socket());
 }
 
-bool TcpClient::run()
+bool TcpClient::on_start()
 {
     this->_setup_poll();
     std::lock_guard lock(_poll_mutex);
-    return _poll.run();
+    return _poll.start();
 }
 
 bool TcpClient::poll(int milliseconds)

@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <sihd/net/BasicServerHandler.hpp>
 #include <sihd/net/TcpClient.hpp>
 #include <sihd/net/TcpServer.hpp>
@@ -62,7 +63,7 @@ TEST_F(TestTcp, test_tcp_server)
     });
     server_handler.add_observer(&handler);
 
-    Worker worker(&server);
+    Worker worker([&server] { return server.start(); });
     EXPECT_TRUE(worker.start_sync_worker("tcp-server"));
 
     SIHD_LOG(debug, "Simulating a new connection");
@@ -104,7 +105,7 @@ TEST_F(TestTcp, test_tcp_server)
     }
 
     SIHD_LOG(debug, "Stop serving");
-    EXPECT_TRUE(server.stop_serving());
+    EXPECT_TRUE(server.stop());
     EXPECT_TRUE(worker.stop_worker());
 
     SIHD_LOG(debug, "Total observations: {}", observer_count.notifications());

@@ -93,10 +93,8 @@ void Sniffer::_callback(u_char *user, const struct pcap_pkthdr *h, const u_char 
     obj->new_packet(h, bytes);
 }
 
-bool Sniffer::run()
+bool Sniffer::on_start()
 {
-    if (_running)
-        return true;
     _running = true;
     int ret = pcap_loop(_pcap_ptr, _max_sniff, Sniffer::_callback, (u_char *)this);
     if (ret == PCAP_ERROR)
@@ -116,13 +114,10 @@ bool Sniffer::is_running() const
     return _running;
 }
 
-bool Sniffer::stop()
+bool Sniffer::on_stop()
 {
-    if (_running)
-    {
-        pcap_breakloop(_pcap_ptr);
-        _running = false;
-    }
+    pcap_breakloop(_pcap_ptr);
+    _running = false;
     return true;
 }
 

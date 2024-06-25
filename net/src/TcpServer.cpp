@@ -15,10 +15,13 @@ SIHD_LOGGER;
 TcpServer::TcpServer(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
 {
     _server_handler_ptr = nullptr;
+    _poll.set_service_wait_stop(true);
     _poll.add_observer(this);
+
     this->set_queue_size(50);
     this->set_poll_timeout(10);
     this->set_poll_limit(10);
+
     this->add_conf("queue_size", &TcpServer::set_queue_size);
     this->add_conf("poll_timeout", &TcpServer::set_poll_timeout);
     this->add_conf("poll_limit", &TcpServer::set_poll_limit);
@@ -26,7 +29,8 @@ TcpServer::TcpServer(const std::string & name, sihd::util::Node *parent): sihd::
 
 TcpServer::~TcpServer()
 {
-    this->stop_serving();
+    if (this->is_running())
+        this->stop();
 }
 
 bool TcpServer::set_queue_size(size_t size)
@@ -86,7 +90,7 @@ bool TcpServer::open_unix_and_bind(std::string_view path)
 
 bool TcpServer::close()
 {
-    this->stop_serving();
+    _socket.shutdown();
     return _socket.close();
 }
 
@@ -101,31 +105,6 @@ void TcpServer::_setup_poll()
 {
     _poll.clear_fds();
     _poll.set_read_fd(_socket.socket());
-}
-
-bool TcpServer::serve()
-{
-    bool ret = _poll.is_running();
-    if (ret == false)
-    {
-        this->_setup_poll();
-        ret = _server_handler_ptr != nullptr;
-        if (!ret)
-            SIHD_LOG(error, "TcpServer: cannot serve without a server handler");
-        ret = ret && _socket.listen(this->queue_size());
-        ret = ret && _poll.run();
-    }
-    return ret;
-}
-
-bool TcpServer::stop_serving()
-{
-    if (_poll.is_running())
-    {
-        _poll.wait_stop();
-        _socket.shutdown();
-    }
-    return _poll.is_running() == false;
 }
 
 int TcpServer::accept_client(IpAddr *client_ip)
@@ -155,14 +134,26 @@ bool TcpServer::remove_client_write(int socket)
     return _poll.rm_write_fd(socket);
 }
 
-bool TcpServer::run()
+bool TcpServer::on_start()
 {
-    return this->serve();
+    bool ret = _poll.is_running();
+    if (ret == false)
+    {
+        this->_setup_poll();
+        ret = _server_handler_ptr != nullptr;
+        if (!ret)
+            SIHD_LOG(error, "TcpServer: cannot serve without a server handler");
+        ret = ret && _socket.listen(this->queue_size());
+        ret = ret && _poll.start();
+    }
+    return ret;
 }
 
-bool TcpServer::stop()
+bool TcpServer::on_stop()
 {
-    return this->stop_serving();
+    _poll.stop();
+    _poll.clear_fds();
+    return true;
 }
 
 void TcpServer::handle(sihd::util::Poll *poll)

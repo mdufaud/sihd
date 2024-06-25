@@ -14,12 +14,14 @@ UdpReceiver::UdpReceiver(const std::string & name, sihd::util::Node *parent): si
     _poll.set_timeout(1);
     _poll.set_limit(1);
     _poll.add_observer(this);
+    _poll.set_service_wait_stop(true);
     this->add_conf("poll_timeout", &UdpReceiver::set_poll_timeout);
 }
 
 UdpReceiver::~UdpReceiver()
 {
-    this->stop();
+    if (this->is_running())
+        this->stop();
 }
 
 bool UdpReceiver::set_poll_timeout(int milliseconds)
@@ -73,15 +75,14 @@ bool UdpReceiver::open_unix_and_bind(std::string_view path)
 
 bool UdpReceiver::close()
 {
-    _poll.clear_fds();
     _socket.shutdown();
     return _socket.close();
 }
 
-bool UdpReceiver::stop()
+bool UdpReceiver::on_stop()
 {
     _poll.stop();
-    _poll.wait_stop();
+    _poll.clear_fds();
     return true;
 }
 
@@ -91,11 +92,11 @@ void UdpReceiver::_setup_poll()
     _poll.set_read_fd(_socket.socket());
 }
 
-bool UdpReceiver::run()
+bool UdpReceiver::on_start()
 {
     this->_setup_poll();
     std::lock_guard lock(_poll_mutex);
-    return _poll.run();
+    return _poll.start();
 }
 
 bool UdpReceiver::poll(int milliseconds)

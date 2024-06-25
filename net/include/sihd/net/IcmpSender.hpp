@@ -62,11 +62,7 @@ class IcmpSender: public sihd::util::Named,
         // poll once with configured timeout
         bool poll();
 
-        // calls infinite polling
-        bool run();
-        // stop polling
-        bool stop();
-        bool is_running() const { return _poll.is_running(); }
+        bool is_running() const override { return _poll.is_running(); }
 
         // in ms
         int poll_timeout() { return _poll.timeout(); }
@@ -75,12 +71,14 @@ class IcmpSender: public sihd::util::Named,
         const IcmpResponse & response() const { return _icmp_response; }
 
     protected:
+        void handle(sihd::util::Poll *poll) override;
+        bool on_start() override;
+        bool on_stop() override;
 
     private:
         struct icmp *icmp();
         struct icmp6_hdr *icmp6();
 
-        void handle(sihd::util::Poll *poll);
         void _setup_poll();
         void _read_socket();
         void _process_ipv4();
