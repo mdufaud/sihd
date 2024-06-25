@@ -51,8 +51,6 @@ class UdpReceiver: public INetReceiver,
         // poll once with configured timeout
         bool poll();
 
-        bool is_running() const override { return _poll.is_running(); }
-
         // to set blocking/broadcast
         const Socket & socket() const { return _socket; }
 

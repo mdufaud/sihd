@@ -62,8 +62,6 @@ class IcmpSender: public sihd::util::Named,
         // poll once with configured timeout
         bool poll();
 
-        bool is_running() const override { return _poll.is_running(); }
-
         // in ms
         int poll_timeout() { return _poll.timeout(); }
         bool socket_opened() { return _socket.is_open(); }

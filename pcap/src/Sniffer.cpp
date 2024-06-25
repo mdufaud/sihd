@@ -14,7 +14,6 @@ SIHD_LOGGER;
 Sniffer::Sniffer(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent),
     _active(false),
-    _running(false),
     _max_sniff(-1),
     _timestamp_type(-1),
     _nano_precision(false),
@@ -67,7 +66,6 @@ bool Sniffer::close()
         _pcap_ptr = nullptr;
     }
     _active = false;
-    _running = false;
     _nano_precision = false;
     return true;
 }
@@ -95,7 +93,6 @@ void Sniffer::_callback(u_char *user, const struct pcap_pkthdr *h, const u_char 
 
 bool Sniffer::on_start()
 {
-    _running = true;
     int ret = pcap_loop(_pcap_ptr, _max_sniff, Sniffer::_callback, (u_char *)this);
     if (ret == PCAP_ERROR)
     {
@@ -105,19 +102,12 @@ bool Sniffer::on_start()
     {
         SIHD_LOG(warning, "Sniffer: broke loop before the total packet count was read");
     }
-    _running = false;
     return ret == 0;
-}
-
-bool Sniffer::is_running() const
-{
-    return _running;
 }
 
 bool Sniffer::on_stop()
 {
     pcap_breakloop(_pcap_ptr);
-    _running = false;
     return true;
 }
 

@@ -46,8 +46,6 @@ class TcpClient: public INetReceiver,
         // poll once with configured timeout
         bool poll();
 
-        bool is_running() const override { return _poll.is_running(); }
-
         ssize_t receive(IpAddr & addr, sihd::util::IArray & arr);
         ssize_t receive(sihd::util::IArray & arr);
 

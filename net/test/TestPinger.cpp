@@ -33,7 +33,11 @@ TEST_F(TestPinger, test_pinger)
     }
 
     pinger.set_interval(200);
-    ASSERT_TRUE(pinger.ping({"8.8.8.8"}, 10));
+    pinger.set_ping_count(10);
+    pinger.set_client({"8.8.8.8"});
+
+    ASSERT_TRUE(pinger.start());
+    ASSERT_TRUE(pinger.stop());
 
     auto result = pinger.result();
     SIHD_COUT(result.str());

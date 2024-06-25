@@ -51,17 +51,24 @@ int main(int argc, char **argv)
 
     log.notice(fmt::format("Sending {} pings to {}", npings, host));
 
-    sihd::util::SigWatcher watcher({.signals = {SIGINT}, .callback = [&pinger, &log](int sig) {
-                                        (void)sig;
-                                        log.notice("Stopping ping");
-                                        pinger.stop();
-                                    }});
+    sihd::util::SigWatcher watcher("signal-watcher");
 
-    watcher.start("signal-watcher");
+    watcher.add_signal(SIGINT);
+    watcher.set_polling_frequency(5);
+
+    Handler<SigWatcher *> sig_handler([&log, &pinger](SigWatcher *watcher) {
+        auto & catched_signals = watcher->catched_signals();
+        if (catched_signals.empty())
+            return;
+        log.notice("Stopping ping");
+        pinger.stop();
+    });
+    watcher.add_observer(&sig_handler);
+    watcher.start();
 
     log.notice("Press ctrl+C to stop or wait until all pings are done");
 
-    sihd::util::Handler<Pinger *> handler([&log](Pinger *pinger) {
+    sihd::util::Handler<Pinger *> ping_handler([&log](Pinger *pinger) {
         const PingEvent & event = pinger->event();
 
         if (event.sent)
@@ -81,13 +88,18 @@ int main(int argc, char **argv)
             log.warning("ping timed out");
         }
     });
-    pinger.add_observer(&handler);
+    pinger.add_observer(&ping_handler);
 
     constexpr time_t interval_ms = 200;
     pinger.set_interval(interval_ms);
 
     constexpr bool do_dns_lookup = true;
-    const bool success = pinger.ping(IpAddr {host, do_dns_lookup}, npings);
+
+    pinger.set_client(IpAddr {host, do_dns_lookup});
+    pinger.set_ping_count(npings);
+
+    const bool success = pinger.start();
+    pinger.stop();
 
     if (success)
     {
@@ -96,8 +108,6 @@ int main(int argc, char **argv)
     }
     else
         log.error(fmt::format("Cannot ping: {}", argv[1]));
-
-    pinger.remove_observer(&handler);
 
     if constexpr (os::is_windows)
         time::sleep(5);

@@ -41,8 +41,6 @@ class TcpServer: public INetServer,
         bool remove_client_read(int socket);
         bool remove_client_write(int socket);
 
-        bool is_running() const override { return _poll.is_running(); }
-
         bool set_queue_size(size_t size);
         bool set_poll_timeout(int milliseconds);
         bool set_poll_limit(int limit);

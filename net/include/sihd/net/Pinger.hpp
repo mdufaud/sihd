@@ -4,6 +4,7 @@
 #include <atomic>
 #include <memory>
 
+#include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Named.hpp>
@@ -44,6 +45,7 @@ struct PingResult
 
 class Pinger: public sihd::util::Named,
               public sihd::util::Configurable,
+              public sihd::util::ABlockingService,
               public sihd::util::Observable<Pinger>,
               public sihd::util::IHandler<IcmpSender *>
 {
@@ -54,14 +56,11 @@ class Pinger: public sihd::util::Named,
         bool set_ttl(int ttl);
         bool set_timeout(time_t milliseconds_timeout);
         bool set_interval(time_t milliseconds_interval);
+        bool set_client(const IpAddr & client);
+        bool set_ping_count(size_t n);
 
         bool open(bool ipv6 = false);
         bool open_unix();
-
-        // 0 is infinite pings
-        bool ping(const IpAddr & client, size_t number = 0);
-        bool is_running() const { return _running; }
-        void stop();
 
         // filled when sending, receiving or timeout - call in observable
         const PingEvent & event() const { return _event; }
@@ -70,12 +69,18 @@ class Pinger: public sihd::util::Named,
         const PingResult & result() const { return _result; }
 
     protected:
-        void handle(IcmpSender *sender);
+        void handle(IcmpSender *sender) override;
+
+        bool on_start() override;
+        bool on_stop() override;
 
     private:
         void _notify_send();
         void _notify_timeout();
         void _clear_event();
+
+        IpAddr _client;
+        size_t _ping_count;
 
         IcmpSender _sender;
         sihd::util::Waitable _waitable;
@@ -85,7 +90,6 @@ class Pinger: public sihd::util::Named,
         int _ttl;
         time_t _ping_ms_interval;
 
-        std::atomic<bool> _running;
         std::atomic<bool> _stop;
         bool _received_icmp_response;
         int _current_seq;

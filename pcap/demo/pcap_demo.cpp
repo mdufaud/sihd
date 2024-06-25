@@ -1,3 +1,5 @@
+#include <fmt/format.h>
+
 #include <sihd/util/platform.hpp>
 
 #include <sihd/util/File.hpp>
@@ -20,8 +22,6 @@
 // have a way to not typedef based on this define
 # define LWS_HAVE_SUSECONDS_T
 #endif
-
-#include <unistd.h> // usleep
 
 namespace test::module
 {
@@ -55,7 +55,7 @@ static void sniffer_test(const std::string & interface_to_sniff)
     Handler<Sniffer *> obs([](Sniffer *obj) {
         constexpr size_t hexdump_cols = 20;
         SIHD_LOG(info, "Sniffed {} bytes", obj->array().size());
-        SIHD_COUT(str::hexdump_fmt(obj->array().buf(), obj->array().byte_size(), hexdump_cols));
+        SIHD_COUT("{}\n", str::hexdump_fmt(obj->array().buf(), obj->array().byte_size(), hexdump_cols));
     });
     pcap.add_observer(&obs);
     pcap.open(interface_to_sniff);

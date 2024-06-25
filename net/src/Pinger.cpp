@@ -22,12 +22,13 @@ Pinger::Pinger(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent),
     _sender("icmp-sender")
 {
+    _ping_count = 0;
+
     _sender.set_data_size(ICMP_ECHO_REQUEST_LENGTH);
     _sender.set_echo();
     _sender.add_observer(this);
 
     _stop = false;
-    _running = false;
 
     _ttl = 64;
     _ping_ms_interval = 1000;
@@ -46,11 +47,18 @@ Pinger::Pinger(const std::string & name, sihd::util::Node *parent):
         _data_ptr->get(i) = values++;
         ++i;
     }
+
+    this->add_conf("ttl", &Pinger::set_ttl);
+    this->add_conf("timeout", &Pinger::set_timeout);
+    this->add_conf("interval", &Pinger::set_interval);
+    this->add_conf("ping_count", &Pinger::set_ping_count);
+    this->add_conf<std::string_view>("client", [this](std::string_view host) { return this->set_client(host); });
 }
 
 Pinger::~Pinger()
 {
-    this->stop();
+    if (this->is_running())
+        this->stop();
 }
 
 bool Pinger::open_unix()
@@ -61,6 +69,18 @@ bool Pinger::open_unix()
 bool Pinger::open(bool ipv6)
 {
     return _sender.open_socket(ipv6);
+}
+
+bool Pinger::set_ping_count(size_t n)
+{
+    _ping_count = n;
+    return true;
+}
+
+bool Pinger::set_client(const IpAddr & client)
+{
+    _client = client;
+    return true;
 }
 
 bool Pinger::set_ttl(int ttl)
@@ -80,18 +100,17 @@ bool Pinger::set_interval(time_t milliseconds_interval)
     return true;
 }
 
-void Pinger::stop()
+bool Pinger::on_stop()
 {
-    _sender.stop();
+    _sender.close();
     auto l = _waitable.guard();
     _stop = true;
     _waitable.notify();
+    return true;
 }
 
-bool Pinger::ping(const IpAddr & client, size_t number)
+bool Pinger::on_start()
 {
-    if (_running.exchange(true))
-        return false;
     // setup ping
     this->_clear_event();
     _result.clear();
@@ -103,7 +122,7 @@ bool Pinger::ping(const IpAddr & client, size_t number)
 
     bool ret = true;
     size_t i = 0;
-    while (_stop == false && (number == 0 || i < number))
+    while (_stop == false && (_ping_count == 0 || i < _ping_count))
     {
         if (i > 0)
         {
@@ -122,10 +141,10 @@ bool Pinger::ping(const IpAddr & client, size_t number)
         _data_ptr->copy_from_bytes(&_result.last_time_sent, sizeof(time_t));
         _sender.set_data(*_data_ptr);
         // send icmp echo
-        ret = _sender.send_to(client);
+        ret = _sender.send_to(_client);
         if (ret == false)
         {
-            SIHD_LOG_ERROR("Pinger: failed sending to client {}", client.hostname());
+            SIHD_LOG_ERROR("Pinger: failed sending to client {}", _client.hostname());
             break;
         }
         _result.transmitted += 1;
@@ -140,8 +159,6 @@ bool Pinger::ping(const IpAddr & client, size_t number)
         ++i;
     }
     _result.time_end = _clock_ptr->now();
-
-    _running = false;
     return ret;
 }
 
