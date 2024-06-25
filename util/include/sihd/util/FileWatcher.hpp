@@ -4,16 +4,16 @@
 #include <string>
 #include <string_view>
 
+#include <sihd/util/AThreadedService.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/StepWorker.hpp>
-#include <sihd/util/ThreadedService.hpp>
 
 namespace sihd::util
 {
 
 class FileWatcher: public Named,
-                   public ThreadedService,
+                   public AThreadedService,
                    public Configurable,
                    public sihd::util::Observable<FileWatcher>,
                    public sihd::util::IRunnable

@@ -5,7 +5,7 @@
 #include <csignal>
 #include <functional>
 
-#include <sihd/util/BlockingService.hpp>
+#include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Poll.hpp>
 #include <sihd/util/Waitable.hpp>
@@ -18,7 +18,7 @@ namespace sihd::util
 #if !defined(__SIHD_WINDOWS__)
 
 class Process: public IHandler<Poll *>,
-               public BlockingService
+               public ABlockingService
 {
     public:
         Process();

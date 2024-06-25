@@ -1,5 +1,5 @@
-#ifndef __SIHD_UTIL_BLOCKINGSERVICE_HPP__
-#define __SIHD_UTIL_BLOCKINGSERVICE_HPP__
+#ifndef __SIHD_UTIL_ABLOCKINGSERVICE_HPP__
+#define __SIHD_UTIL_ABLOCKINGSERVICE_HPP__
 
 #include <mutex>
 
@@ -9,11 +9,11 @@
 namespace sihd::util
 {
 
-class BlockingService: public sihd::util::AService
+class ABlockingService: public sihd::util::AService
 {
     public:
-        BlockingService();
-        virtual ~BlockingService() = default;
+        ABlockingService();
+        virtual ~ABlockingService() = default;
 
         void set_service_wait_stop(bool active);
 

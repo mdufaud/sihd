@@ -8,11 +8,11 @@
 namespace sihd::util
 {
 
-class ThreadedService: public sihd::util::AService
+class AThreadedService: public sihd::util::AService
 {
     public:
-        ThreadedService();
-        virtual ~ThreadedService();
+        AThreadedService();
+        virtual ~AThreadedService();
 
         // only if service started a thread
         void set_start_synchronised(bool active);

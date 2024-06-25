@@ -7,19 +7,19 @@
 #include <queue>
 #include <thread>
 
+#include <sihd/util/AThreadedService.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Task.hpp>
-#include <sihd/util/ThreadedService.hpp>
 #include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
 {
 
 class Scheduler: public Named,
-                 public ThreadedService,
+                 public AThreadedService,
                  public Configurable
 {
     public:

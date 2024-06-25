@@ -1,21 +1,21 @@
-#include <sihd/util/BlockingService.hpp>
+#include <sihd/util/ABlockingService.hpp>
 
 namespace sihd::util
 {
 
-BlockingService::BlockingService(): _running(false), _wait_stop(true) {}
+ABlockingService::ABlockingService(): _running(false), _wait_stop(true) {}
 
-void BlockingService::set_service_wait_stop(bool active)
+void ABlockingService::set_service_wait_stop(bool active)
 {
     _wait_stop = active;
 }
 
-bool BlockingService::is_running() const
+bool ABlockingService::is_running() const
 {
     return _running;
 }
 
-bool BlockingService::do_start()
+bool ABlockingService::do_start()
 {
     std::lock_guard l(_running_mutex);
     _running = true;
@@ -24,7 +24,7 @@ bool BlockingService::do_start()
     return ret;
 }
 
-bool BlockingService::do_stop()
+bool ABlockingService::do_stop()
 {
     bool ret = this->on_stop();
     if (_wait_stop)
@@ -32,7 +32,7 @@ bool BlockingService::do_stop()
     return ret;
 }
 
-void BlockingService::service_wait_stop() const
+void ABlockingService::service_wait_stop() const
 {
     std::lock_guard l(_running_mutex);
 }

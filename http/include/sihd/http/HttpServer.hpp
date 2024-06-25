@@ -3,8 +3,8 @@
 
 #include <set>
 
+#include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
-#include <sihd/util/IStoppableRunnable.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/StepWorker.hpp>
 #include <sihd/util/Waitable.hpp>
@@ -29,7 +29,7 @@ namespace sihd::http
 
 class HttpServer: public sihd::util::Node,
                   public sihd::util::Configurable,
-                  public sihd::util::IStoppableRunnable
+                  public sihd::util::ABlockingService
 {
     public:
         HttpServer(const std::string & name, sihd::util::Node *parent = nullptr);

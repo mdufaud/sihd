@@ -2,12 +2,12 @@
 #define __SIHD_NET_INETSERVER_HPP__
 
 #include <sihd/net/IpAddr.hpp>
-#include <sihd/util/IStoppableRunnable.hpp>
+#include <sihd/util/ABlockingService.hpp>
 
 namespace sihd::net
 {
 
-class INetServer: public sihd::util::IStoppableRunnable
+class INetServer: public sihd::util::ABlockingService
 {
     public:
         virtual ~INetServer() {};

@@ -30,21 +30,21 @@
 #include <sihd/util/SharedMemory.hpp>
 
 #define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType)                                                                 \
- .deriveClass<ArrType, IArray>(#ArrType)                                                                               \
-     .addStaticFunction("new", &LuaUtilApi::_array_lua_new<PrimitiveType>)                                             \
-     .addConstructor<void (*)()>()                                                                                     \
-     .addFunction("clone", &ArrType::clone)                                                                            \
-     .addFunction("push_back", &LuaUtilApi::_array_lua_push_back<PrimitiveType>)                                       \
-     .addFunction("push_front", &LuaUtilApi::_array_lua_push_front<PrimitiveType>)                                     \
-     .addFunction("copy_from", &LuaUtilApi::_array_lua_copy_table<PrimitiveType>)                                      \
-     .addFunction("from", &LuaUtilApi::_array_lua_from<PrimitiveType>)                                                 \
-     .addFunction("pop", &ArrType::pop)                                                                                \
-     .addFunction("front", &ArrType::front)                                                                            \
-     .addFunction("back", &ArrType::back)                                                                              \
-     .addFunction("at", &ArrType::at)                                                                                  \
-     .addFunction("set", &ArrType::set)                                                                                \
-     .addFunction("__len", &ArrType::size)                                                                             \
-     .endClass()
+    .deriveClass<ArrType, IArray>(#ArrType)                                                                            \
+        .addStaticFunction("new", &LuaUtilApi::_array_lua_new<PrimitiveType>)                                          \
+        .addConstructor<void (*)()>()                                                                                  \
+        .addFunction("clone", &ArrType::clone)                                                                         \
+        .addFunction("push_back", &LuaUtilApi::_array_lua_push_back<PrimitiveType>)                                    \
+        .addFunction("push_front", &LuaUtilApi::_array_lua_push_front<PrimitiveType>)                                  \
+        .addFunction("copy_from", &LuaUtilApi::_array_lua_copy_table<PrimitiveType>)                                   \
+        .addFunction("from", &LuaUtilApi::_array_lua_from<PrimitiveType>)                                              \
+        .addFunction("pop", &ArrType::pop)                                                                             \
+        .addFunction("front", &ArrType::front)                                                                         \
+        .addFunction("back", &ArrType::back)                                                                           \
+        .addFunction("at", &ArrType::at)                                                                               \
+        .addFunction("set", &ArrType::set)                                                                             \
+        .addFunction("__len", &ArrType::size)                                                                          \
+        .endClass()
 
 namespace sihd::lua
 {
@@ -107,7 +107,7 @@ void LuaUtilApi::load_process(Vm & vm)
         /**
          * Process
          */
-        .deriveClass<Process, BlockingService>("Process")
+        .deriveClass<Process, ABlockingService>("Process")
         .addConstructor<void (*)()>()
         .addFunction(
             "add_argv",
@@ -869,12 +869,12 @@ void LuaUtilApi::load_base(Vm & vm)
         .beginClass<IRunnable>("IRunnable")
         .addFunction("run", &IRunnable::run)
         .endClass()
-        .deriveClass<BlockingService, AService>("BlockingService")
-        .addFunction("is_running", &BlockingService::is_running)
-        .addFunction("set_service_wait_stop", &BlockingService::set_service_wait_stop)
+        .deriveClass<ABlockingService, AService>("ABlockingService")
+        .addFunction("is_running", &ABlockingService::is_running)
+        .addFunction("set_service_wait_stop", &ABlockingService::set_service_wait_stop)
         .endClass()
-        .deriveClass<ThreadedService, AService>("ThreadedService")
-        .addFunction("set_start_synchronised", &ThreadedService::set_start_synchronised)
+        .deriveClass<AThreadedService, AService>("AThreadedService")
+        .addFunction("set_start_synchronised", &AThreadedService::set_start_synchronised)
         .endClass()
         .endNamespace()
         .endNamespace();

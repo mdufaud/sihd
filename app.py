@@ -217,7 +217,7 @@ defines = [
     "SIHD_VERSION_PATCH=" + version.split('.')[2],
 ]
 cxx_flags = ['-std=c++17']
-static_defines = ['STATIC']
+static_defines = ['SIHD_STATIC']
 
 ## mode specifics
 # default is always debug unless specified in site_scons/addon/default_build.py

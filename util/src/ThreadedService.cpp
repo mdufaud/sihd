@@ -1,23 +1,23 @@
-#include <sihd/util/ThreadedService.hpp>
+#include <sihd/util/AThreadedService.hpp>
 
 namespace sihd::util
 {
 
-ThreadedService::ThreadedService(): _number_of_threads(1), _start_synchronised(false) {}
+AThreadedService::AThreadedService(): _number_of_threads(1), _start_synchronised(false) {}
 
-ThreadedService::~ThreadedService() {}
+AThreadedService::~AThreadedService() {}
 
-void ThreadedService::set_service_nb_thread(uint8_t n)
+void AThreadedService::set_service_nb_thread(uint8_t n)
 {
     _number_of_threads = n;
 }
 
-void ThreadedService::set_start_synchronised(bool active)
+void AThreadedService::set_start_synchronised(bool active)
 {
     _start_synchronised = active;
 }
 
-bool ThreadedService::do_start()
+bool AThreadedService::do_start()
 {
     bool ret;
 
@@ -35,12 +35,12 @@ bool ThreadedService::do_start()
     return ret;
 }
 
-bool ThreadedService::do_stop()
+bool AThreadedService::do_stop()
 {
     return this->on_stop();
 }
 
-void ThreadedService::notify_service_thread_started()
+void AThreadedService::notify_service_thread_started()
 {
     if (_synchro.total_sync() > 0)
         _synchro.sync();

@@ -1,10 +1,10 @@
 #ifndef __SIHD_PCAP_SNIFFER_HPP__
 #define __SIHD_PCAP_SNIFFER_HPP__
 
+#include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IReader.hpp>
-#include <sihd/util/IStoppableRunnable.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Observable.hpp>
 
@@ -16,7 +16,7 @@ namespace sihd::pcap
 class Sniffer: public sihd::util::Named,
                public sihd::util::Configurable,
                public sihd::util::IReaderTimestamp,
-               public sihd::util::IStoppableRunnable,
+               public sihd::util::ABlockingService,
                public sihd::util::Observable<Sniffer>
 {
     public:

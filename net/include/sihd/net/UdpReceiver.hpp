@@ -4,9 +4,9 @@
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/Socket.hpp>
 
+#include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Handler.hpp>
-#include <sihd/util/IStoppableRunnable.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Poll.hpp>
 
@@ -16,7 +16,7 @@ namespace sihd::net
 class UdpReceiver: public INetReceiver,
                    public sihd::util::Named,
                    public sihd::util::Configurable,
-                   public sihd::util::IStoppableRunnable,
+                   public sihd::util::ABlockingService,
                    public sihd::util::Observable<INetReceiver>,
                    public sihd::util::IHandler<sihd::util::Poll *>
 {

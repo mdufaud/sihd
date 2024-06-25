@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
+#include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/AService.hpp>
-#include <sihd/util/BlockingService.hpp>
+#include <sihd/util/AThreadedService.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ServiceController.hpp>
-#include <sihd/util/ThreadedService.hpp>
 
 #include <sihd/util/profiling.hpp>
 
@@ -12,7 +12,7 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::util;
 
-class FakeThreadedService: public ThreadedService
+class FakeThreadedService: public AThreadedService
 {
     public:
         FakeThreadedService() { this->set_service_nb_thread(1); };
@@ -41,7 +41,7 @@ class FakeThreadedService: public ThreadedService
         std::thread thread;
 };
 
-class FakeBlockingService: public BlockingService
+class FakeBlockingService: public ABlockingService
 {
     public:
         ~FakeBlockingService()

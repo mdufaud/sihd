@@ -3,8 +3,8 @@
 
 #include <memory>
 
+#include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
-#include <sihd/util/IStoppableRunnable.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Poll.hpp>
 #include <sihd/util/forward.hpp>
@@ -32,7 +32,7 @@ struct IcmpResponse
 
 class IcmpSender: public sihd::util::Named,
                   public sihd::util::Configurable,
-                  public sihd::util::IStoppableRunnable,
+                  public sihd::util::ABlockingService,
                   public sihd::util::Observable<IcmpSender>,
                   public sihd::util::IHandler<sihd::util::Poll *>
 {

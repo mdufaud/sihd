@@ -1,8 +1,9 @@
 #ifndef __SIHD_NET_INETSERVERHANDLER_HPP__
 #define __SIHD_NET_INETSERVERHANDLER_HPP__
 
-#include <sihd/net/INetServer.hpp>
 #include <time.h>
+
+#include <sihd/net/INetServer.hpp>
 
 namespace sihd::net
 {

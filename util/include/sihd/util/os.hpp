@@ -52,7 +52,7 @@ ssize_t peak_rss();
 // bytes
 ssize_t current_rss();
 
-#if defined(STATIC)
+#if defined(SIHD_STATIC)
 constexpr bool is_statically_linked = true;
 #else
 constexpr bool is_statically_linked = false;

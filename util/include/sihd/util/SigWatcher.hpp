@@ -5,10 +5,10 @@
 #include <functional>
 #include <thread>
 
+#include <sihd/util/AThreadedService.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/SigHandler.hpp>
 #include <sihd/util/StepWorker.hpp>
-#include <sihd/util/ThreadedService.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/Waitable.hpp>
 
@@ -16,7 +16,7 @@ namespace sihd::util
 {
 
 class SigWatcher: public Named,
-                  public ThreadedService,
+                  public AThreadedService,
                   public Configurable,
                   public Observable<SigWatcher>,
                   protected IRunnable

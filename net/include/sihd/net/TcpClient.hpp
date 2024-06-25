@@ -4,6 +4,7 @@
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/INetSender.hpp>
 #include <sihd/net/Socket.hpp>
+#include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/IRunnable.hpp>
@@ -19,7 +20,7 @@ class TcpClient: public INetReceiver,
                  public INetSender,
                  public sihd::util::Named,
                  public sihd::util::Configurable,
-                 public sihd::util::IStoppableRunnable,
+                 public sihd::util::ABlockingService,
                  public sihd::util::Observable<INetReceiver>,
                  public sihd::util::IHandler<sihd::util::Poll *>
 {

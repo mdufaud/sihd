@@ -5,7 +5,7 @@
 #include <mutex>
 #include <vector>
 
-#include <sihd/util/BlockingService.hpp>
+#include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/os.hpp>
@@ -31,7 +31,7 @@ struct PollEvent
 };
 
 class Poll: public Observable<Poll>,
-            public BlockingService
+            public ABlockingService
 {
     public:
         Poll();

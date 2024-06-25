@@ -3,7 +3,7 @@
 
 #include <atomic>
 
-#include <sihd/util/BlockingService.hpp>
+#include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/IProvider.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/Waitable.hpp>
@@ -15,7 +15,7 @@ namespace sihd::util
 
 template <typename T>
 class Collector: public Observable<Collector<T>>,
-                 public BlockingService
+                 public ABlockingService
 {
     public:
         Collector(IProvider<T> *provider = nullptr, Timestamp duration = std::chrono::milliseconds(1)):
