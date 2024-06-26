@@ -2,9 +2,12 @@
 #define __SIHD_ZIP_ZIP_HPP__
 
 #include <string_view>
+#include <vector>
 
 namespace sihd::zip
 {
+
+std::vector<std::string> list_entries(std::string_view archive_path);
 
 bool zip(std::string_view root_dir_path, std::string_view archive_path);
 

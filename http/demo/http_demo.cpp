@@ -1,6 +1,7 @@
 #include <unistd.h> // usleep
 
 #include <csignal>
+#include <nlohmann/json.hpp>
 
 #include <libwebsockets.h>
 
@@ -34,7 +35,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
     public:
         SimpleHttpServer(): HttpServer("simple-http-server")
         {
-            this->_add_websocket("websocket-protocol", this);
+            this->add_websocket("websocket-protocol", this);
             _webservice = this->add_child<WebService>("webservice");
             this->setup_webservice_entry_points();
         }
@@ -56,10 +57,10 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                     {
                         std::string content = req.content().str();
                         SIHD_LOG(info, "Received POST body: {}", content);
-                        resp.http_header().set_status(HTTP_STATUS_OK);
+                        resp.set_status(HTTP_STATUS_OK);
                     }
                     else
-                        resp.http_header().set_status(HTTP_STATUS_BAD_REQUEST);
+                        resp.set_status(HTTP_STATUS_BAD_REQUEST);
                 },
                 HttpRequest::POST);
 
@@ -67,7 +68,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                 "delete",
                 [](const HttpRequest & req, HttpResponse & resp) {
                     SIHD_LOG(info, "{} request received", req.type_str());
-                    resp.http_header().set_status(HTTP_STATUS_OK);
+                    resp.set_status(HTTP_STATUS_OK);
                     resp.set_json_content({"hello", "world"});
                 },
                 HttpRequest::DELETE);
@@ -80,10 +81,10 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                     {
                         std::string content = req.content().str();
                         SIHD_LOG(info, "Received PUT body: {}", content);
-                        resp.http_header().set_status(HTTP_STATUS_OK);
+                        resp.set_status(HTTP_STATUS_OK);
                     }
                     else
-                        resp.http_header().set_status(HTTP_STATUS_BAD_REQUEST);
+                        resp.set_status(HTTP_STATUS_BAD_REQUEST);
                 },
                 HttpRequest::PUT);
         }
@@ -130,13 +131,21 @@ static void http_test()
 {
     SimpleHttpServer server;
 
-    sihd::util::SigWatcher watcher({.signals = {SIGINT}, .callback = [&server](int sig) {
-                                        (void)sig;
-                                        SIHD_LOG(info, "Stopping http server...");
-                                        server.stop();
-                                        SIHD_LOG(info, "Stopped http server");
-                                    }});
-    watcher.start("signal-watcher");
+    sihd::util::SigWatcher watcher("signal-watcher");
+
+    watcher.add_signal(SIGINT);
+    watcher.set_polling_frequency(5);
+
+    Handler<SigWatcher *> sig_handler([&server](SigWatcher *watcher) {
+        auto & catched_signals = watcher->catched_signals();
+        if (catched_signals.empty())
+            return;
+        SIHD_LOG(info, "Stopping http server...");
+        server.stop();
+        SIHD_LOG(info, "Stopped http server");
+    });
+    watcher.add_observer(&sig_handler);
+    watcher.start();
 
     std::string root_path = fs::parent(fs::parent(fs::executable_path()));
     std::string res_path = fs::combine({root_path, "etc", "sihd", "demo", "http_demo"});
@@ -146,7 +155,7 @@ static void http_test()
     SIHD_LOG(info, "=========================================================");
     SIHD_LOG(info, "Open web browser at localhost:3000");
     SIHD_LOG(info, "=========================================================");
-    server.run();
+    server.start();
 }
 
 } // namespace demo

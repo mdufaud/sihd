@@ -21,16 +21,13 @@ extlibs = {
     "libwebsockets": "4.3.0",
     "curl": "7.87.0",
     "openssl": "1.1.1n",
-    "libssh": "",
+    "libssh": "0.10.5",
     # pcap
     "libpcap": "1.10.1",
     # usb
     "libusb": "1.0.27",
     # gui
     "ftxui": "5.0.0",
-    "sdl": "2.0.18",
-    "glew": "2.2.0",
-    "glfw3": "3.4",
     "imgui": "1.86",
     # bindings
     "pybind11": "2.6.2",
@@ -129,12 +126,12 @@ modules = {
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
     },
-    # "ssh": {
-    #     "depends": ['util'],
-    #     "extlibs": ["libssh"],
-    #     "libs": ['ssh'],
-    #     "platforms": ["linux"]
-    # },
+    "ssh": {
+        "depends": ['util'],
+        "extlibs": ["libssh"],
+        "libs": ['ssh'],
+        "platforms": ["linux"]
+    },
     "usb": {
         "depends": ['util'],
         "extlibs": ['libusb'],
@@ -155,7 +152,7 @@ modules = {
     "imgui": {
         # sdl=1 to compile with SDL2
         "depends": ['util'],
-        "extlibs": ['imgui', 'glfw3', 'glew'],
+        "extlibs": ['imgui'],
         "linux-libs": ['glfw', 'GLEW', 'GL'],
         "windows-libs": [
             "glfw3dll", "glew32", "opengl32",

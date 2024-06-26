@@ -43,7 +43,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         SimpleHttpServer(): HttpServer("http-server-test")
         {
             // HttpServer protected call
-            this->_add_websocket("proto-two", this);
+            this->add_websocket("proto-two", this);
             _webservice = this->add_child<WebService>("web");
             this->setup_webservice_entry_points();
         }
