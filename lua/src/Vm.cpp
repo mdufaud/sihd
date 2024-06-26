@@ -145,7 +145,8 @@ bool Vm::do_string(std::string_view path)
 
 std::string Vm::last_string()
 {
-    return lua_tostring(_state_ptr, -1);
+    const char *ret = lua_tostring(_state_ptr, -1);
+    return ret == nullptr ? std::string() : std::string(ret);
 }
 
 void Vm::print_stack(int max, FILE *output)

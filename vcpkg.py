@@ -144,7 +144,7 @@ def __check_vcpkg():
 def execute_vcpkg_install():
     __check_vcpkg()
     import subprocess
-    args = [vcpkg_bin_path, "install", f"--triplet={vcpkg_triplet}"]
+    args = [vcpkg_bin_path, "install", f"--triplet={vcpkg_triplet}", "--allow-unsupported"]
     if builder.is_msys():
         args += ["--host-triplet=x64-mingw-dynamic"]
     proc = subprocess.run(args, cwd=vcpkg_build_path, timeout=(60.0 * len(extlibs)))

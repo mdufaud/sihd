@@ -123,20 +123,6 @@ endif
 SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(j) $(SCONS_ARGS)
 
 ############
-# Conan env
-############
-
-CONAN_PATH := $(BUILD_PATH)/conan
-CONAN_PROFILES_PATH := $(BUILD_TOOLS)/conan_profiles
-CONAN_PROFILE := $(CONAN_PROFILES_PATH)/$(ARCH)/$(COMPILER).txt
-CONAN_PROFILE_ARG =
-CONAN_INSTALL = conan install $(HERE) --output-folder $(CONAN_PATH) $(CONAN_INSTALL_PATH) $(CONAN_PROFILE_ARG) $(CONAN_ARGS)
-# checking platform env to select a conan profile
-ifneq ("$(wildcard $(CONAN_PROFILE))", "")
-	CONAN_PROFILE_ARG = --profile $(CONAN_PROFILE)
-endif
-
-############
 # VCPKG
 ############
 
@@ -620,11 +606,11 @@ clean:
 	rm -rf $(BIN_PATH)
 	rm -rf $(TEST_PATH)
 	rm -rf $(DEMO_PATH)
-	rm $(BUILD_PATH)/compile_commands.json
+	rm -f $(BUILD_PATH)/compile_commands.json
 
 clean_dep:
 	$(QUIET) $(call mk_log_info,makefile,removing dependencies)
-	rm -rf $(VCPKG_PATH) $(EXTLIB_PATH)
+	rm -rf $(VCPKG_PATH)
 
 clean_dist:
 	$(QUIET) $(call mk_log_info,makefile,removing distribution)
@@ -640,6 +626,6 @@ clean_build:
 	$(QUIET) $(call mk_log_info,makefile,removing build)
 	rm -rf $(BUILD_ENTRY_PATH)
 
-fclean: clean_build clean_dist clean_cache
+fclean: clean_build clean_dist clean_cache clean_dep
 	$(QUIET) $(call mk_log_info,makefile,removing remaining files)
 	$(QUIET) rm -f $(HERE)/.sconsign.dblite

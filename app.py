@@ -130,7 +130,6 @@ modules = {
         "depends": ['util'],
         "extlibs": ["libssh"],
         "libs": ['ssh'],
-        "platforms": ["linux"]
     },
     "usb": {
         "depends": ['util'],

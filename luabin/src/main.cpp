@@ -1,6 +1,7 @@
 #include <iostream>
+
+#include <sihd/lua/Vm.hpp>
 #include <sihd/lua/util/LuaUtilApi.hpp>
-// #include <sol/sol.hpp>
 
 using namespace sihd::util;
 using namespace sihd::lua;
@@ -9,30 +10,27 @@ using namespace sihd::lua;
 
 int main(void)
 {
-    LoggerManager::basic();
+    Vm vm;
 
-    // sol::state lua;
-    // // For print etc...
-    // lua.open_libraries(sol::lib::base, sol::lib::package, sol::lib::os, sol::lib::string);
-    // sihd::lua::LuaUtilApi::load(lua);
+    LuaUtilApi::load_base(vm);
 
-    // lua.script("package.path = sihd.dir .. '/etc/sihd/lua/?.lua;' .. package.path");
-    // lua.script("require 'luabin.preload'");
+    vm.do_string("package.path = sihd.dir .. '/etc/sihd/lua/?.lua;' .. package.path");
+    vm.do_string("require 'luabin.preload'");
 
-    // std::string line;
-    // std::cout << PROMPT;
-    // while (std::getline(std::cin, line))
-    // {
-    //     try
-    //     {
-    //         lua.script(line);
-    //     }
-    //     catch (const std::exception & e)
-    //     {
-    //         LuaUtilApi::logger.log(error, e.what());
-    //     }
-    //     std::cout << PROMPT;
-    // }
-    // std::cout << std::endl;
+    std::string line;
+    std::cout << PROMPT;
+    while (std::getline(std::cin, line))
+    {
+        try
+        {
+            vm.do_string(line);
+        }
+        catch (const std::exception & e)
+        {
+            std::cerr << e.what() << std::endl;
+        }
+        std::cout << PROMPT;
+    }
+    std::cout << std::endl;
     return 0;
 }

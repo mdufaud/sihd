@@ -1,4 +1,4 @@
-sihd.table_print = function(tbl)
+table_print = function(tbl)
     if type(tbl) ~= "table" then
         return
     end
