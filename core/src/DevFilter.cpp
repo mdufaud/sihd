@@ -356,11 +356,6 @@ bool DevFilter::on_stop()
         std::lock_guard l(_run_mutex);
         _running = false;
     }
-    if (_scheduler_ptr != nullptr && _scheduler_ptr->stop() == false)
-    {
-        SIHD_LOG(error, "DevFilter: could not stop scheduler");
-        return false;
-    }
     _rules_map.clear();
     return true;
 }
