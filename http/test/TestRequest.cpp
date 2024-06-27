@@ -38,7 +38,7 @@ TEST_F(TestRequest, test_http_request)
     {
         fmt::print("{}: {}\n", header, value);
     }
-    fmt::print("{}\n", http_response_opt->content().cpp_str());
+    fmt::print("Body size: {}\n", http_response_opt->content().size());
 }
 
 } // namespace test

@@ -383,7 +383,7 @@ int HttpServer::on_http_request(HttpSession *session, std::string_view path)
     std::string resource_path;
     if (this->get_resource_path(path, resource_path))
     {
-        std::string type = HttpHeader::build_content_type(_mime.get(fs::extension(resource_path)), _encoding);
+        std::string type = fmt::format("{}; charset={}", _mime.get(fs::extension(resource_path)), _encoding);
         if (lws_serve_http_file(session->wsi, resource_path.c_str(), type.c_str(), nullptr, 0) < 0)
             rc = -1;
         session->should_complete_transaction = false;
@@ -694,7 +694,7 @@ std::vector<std::string> HttpServer::get_uri_args(struct lws *wsi)
 bool HttpServer::send_404(struct lws *wsi, std::string_view html_404)
 {
     _http_response.set_status(HTTP_STATUS_NOT_FOUND);
-    _http_response.http_header().set_content_type(_mime.get("html"));
+    _http_response.http_header().set_content_type(_mime.get("html"), _encoding);
     _http_response.http_header().set_content_length(html_404.size());
     this->send_http_headers(wsi, _http_response);
     return lws_write_http(wsi, html_404.data(), html_404.size()) == (int)html_404.size();
@@ -703,7 +703,7 @@ bool HttpServer::send_404(struct lws *wsi, std::string_view html_404)
 bool HttpServer::send_http_no_content(struct lws *wsi, int code)
 {
     _http_response.set_status(code);
-    _http_response.http_header().set_content_type(_mime.get("html"));
+    _http_response.http_header().set_content_type(_mime.get("html"), _encoding);
     _http_response.http_header().set_content_length(0);
     return this->send_http_headers(wsi, _http_response);
 }
@@ -711,7 +711,7 @@ bool HttpServer::send_http_no_content(struct lws *wsi, int code)
 bool HttpServer::send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code)
 {
     _http_response.set_status(code);
-    _http_response.http_header().set_content_type(_mime.get("html"));
+    _http_response.http_header().set_content_type(_mime.get("html"), _encoding);
     _http_response.http_header().set_content_length(0);
     _http_response.http_header().set_header(lws_token_to_string(WSI_TOKEN_HTTP_LOCATION), redirect_path);
     bool ret = this->send_http_headers(wsi, _http_response);
@@ -731,28 +731,6 @@ bool HttpServer::send_http_headers(struct lws *wsi, HttpResponse & response)
     rc = lws_add_http_header_status(wsi, response.status(), &ptr, end);
     if (rc)
         SIHD_LOG(error, "HttpHeader: cannot set status");
-    // CONTENT TYPE
-    std::string type = HttpHeader::build_content_type(headers.content_type(), _encoding);
-    rc = lws_add_http_header_by_token(wsi, WSI_TOKEN_HTTP_CONTENT_TYPE, (u_char *)type.c_str(), type.size(), &ptr, end);
-    if (rc)
-        SIHD_LOG(error, "HttpHeader: cannot set content-type");
-    // CONTENT LENGTH
-    rc = lws_add_http_header_content_length(wsi, headers.content_length(), &ptr, end);
-    if (rc)
-        SIHD_LOG(error, "HttpHeader: cannot set content-length");
-    // SERVER NAME
-    std::string_view server_name = headers.server();
-    if (server_name.empty() == false)
-    {
-        rc = lws_add_http_header_by_token(wsi,
-                                          WSI_TOKEN_HTTP_SERVER,
-                                          (u_char *)server_name.data(),
-                                          server_name.size(),
-                                          &ptr,
-                                          end);
-        if (rc)
-            SIHD_LOG(error, "HttpHeader: cannot set server name");
-    }
     // HEADERS
     for (const auto & [name, value] : headers.headers())
     {

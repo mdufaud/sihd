@@ -18,8 +18,10 @@ class HttpHeader
         HttpHeader(HeaderMap && headers);
         virtual ~HttpHeader();
 
+        HttpHeader & set_default_content_encoding(std::string_view encoding);
         HttpHeader & set_server(std::string_view name);
         HttpHeader & set_content_type(std::string_view type);
+        HttpHeader & set_content_type(std::string_view type, std::string_view charset);
         HttpHeader & set_content_length(size_t len);
         HttpHeader & set_accept_charset(std::string_view charset);
         HttpHeader & set_accept(std::string_view mime_type);
@@ -40,8 +42,6 @@ class HttpHeader
         const HeaderMap & headers() const { return _headers; }
         std::string_view find(const std::string & header_name) const;
         const std::string & get(const std::string & header_name) const { return _headers.at(header_name); }
-
-        static std::string build_content_type(std::string_view type, std::string_view charset = "");
 
     protected:
 

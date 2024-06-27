@@ -19,7 +19,7 @@ HttpResponse::~HttpResponse() {}
 
 void HttpResponse::set_content_type(std::string_view mime_type)
 {
-    _http_header.set_content_type(mime_type);
+    _http_header.set_content_type(mime_type, "utf-8");
 }
 
 void HttpResponse::set_content_type_from_extension(const std::string & type)

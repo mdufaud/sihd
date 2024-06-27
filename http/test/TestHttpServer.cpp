@@ -162,7 +162,7 @@ TEST_F(TestHttpServer, test_httpserver_auto)
     server.set_port(3000);
 
     Worker worker([&server] {
-        server.run();
+        server.start();
         return true;
     });
     ASSERT_TRUE(worker.start_sync_worker("server-thread"));
@@ -183,27 +183,31 @@ TEST_F(TestHttpServer, test_httpserver_auto)
             },
     };
 
-    auto get_resp_opt = get("localhost:3000/web/some_get", options);
+    SIHD_LOG(info, "GET request");
+    auto get_resp_opt = sihd::http::get("localhost:3000/web/some_get", options);
     if (get_resp_opt)
         fmt::print("{}", get_resp_opt->content().cpp_str());
 
-    auto post_resp_opt = post("localhost:3000/web/some_post", "hello world", options);
+    SIHD_LOG(info, "POST request");
+    auto post_resp_opt = sihd::http::post("localhost:3000/web/some_post", "hello world", options);
     if (post_resp_opt)
         fmt::print("{}", post_resp_opt->content().cpp_str());
 
+    // SIHD_LOG(info, "PUT request");
     // TmpDir tmpdir;
     // std::string tmpfile_path = fs::combine(tmpdir.path(), "test_file.txt");
     // fs::write(tmpfile_path, "hello world");
-    // auto put_resp_opt = put("localhost:3000/web/some_put", tmpfile_path, options);
+    // auto put_resp_opt = sihd::http::put("localhost:3000/web/some_put", tmpfile_path, options);
     // if (put_resp_opt)
     //     fmt::print("{}", put_resp_opt->content().cpp_str());
 
-    auto delete_resp_opt = del("localhost:3000/web/some_delete", options);
+    SIHD_LOG(info, "DELETE request");
+    auto delete_resp_opt = sihd::http::del("localhost:3000/web/some_delete", options);
     if (delete_resp_opt)
         fmt::print("{}", delete_resp_opt->content().cpp_str());
 
+    server.set_service_wait_stop(true);
     server.stop();
-    server.wait_stop();
 
     EXPECT_EQ(server._nget, 1);
     EXPECT_EQ(server._npost, 1);
@@ -221,18 +225,27 @@ TEST_F(TestHttpServer, test_httpserver_websockets)
     server.set_root_dir("test/resources/mount_point");
     server.set_port(3000);
 
-    sihd::util::SigWatcher watcher({.signals = {SIGINT}, .callback = [&server](int sig) {
-                                        SIHD_LOG(info, "Caught signal - stopping web server");
-                                        (void)sig;
-                                        server.stop();
-                                    }});
-    watcher.start("signal-watcher");
+    sihd::util::SigWatcher watcher("signal-watcher");
+
+    watcher.add_signal(SIGINT);
+    watcher.set_polling_frequency(5);
+
+    Handler<SigWatcher *> sig_handler([&server](SigWatcher *watcher) {
+        auto & catched_signals = watcher->catched_signals();
+        if (catched_signals.empty())
+            return;
+        SIHD_LOG(info, "Stopping http server...");
+        server.stop();
+        SIHD_LOG(info, "Stopped http server");
+    });
+    watcher.add_observer(&sig_handler);
+    watcher.start();
 
     SIHD_LOG(info, "=========================================================");
     SIHD_LOG(info, "Open web browser at localhost:3000 then close it");
     SIHD_LOG(info, "=========================================================");
 
-    server.run();
+    server.start();
 
     //
     EXPECT_GT(server._nget, 0);
