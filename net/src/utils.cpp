@@ -213,33 +213,33 @@ bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in6 
     return get_interface_netmask(sock, name, (struct sockaddr *)to_fill);
 }
 
-void fill_sockaddr_network_id(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask)
+void fill_sockaddr_network_id(const struct sockaddr_in *src, in_addr mask, struct sockaddr_in *to_fill)
 {
-    memcpy(&dst, &src, sizeof(struct sockaddr_in));
-    dst.sin_addr.s_addr = src.sin_addr.s_addr & mask.s_addr;
+    memcpy(to_fill, src, sizeof(struct sockaddr_in));
+    to_fill->sin_addr.s_addr = src->sin_addr.s_addr & mask.s_addr;
 }
 
-void fill_sockaddr_network_id(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask)
+void fill_sockaddr_network_id(const struct sockaddr_in6 *src, in6_addr mask, struct sockaddr_in6 *to_fill)
 {
-    memcpy(&dst, &src, sizeof(struct sockaddr_in6));
+    memcpy(to_fill, src, sizeof(struct sockaddr_in6));
     for (int i = 0; i < 16; ++i)
     {
-        dst.sin6_addr.s6_addr[i] = src.sin6_addr.s6_addr[i] & mask.s6_addr[i];
+        to_fill->sin6_addr.s6_addr[i] = src->sin6_addr.s6_addr[i] & mask.s6_addr[i];
     }
 }
 
-void fill_sockaddr_broadcast(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask)
+void fill_sockaddr_broadcast(const struct sockaddr_in *src, in_addr mask, struct sockaddr_in *to_fill)
 {
-    memcpy(&dst, &src, sizeof(struct sockaddr_in));
-    dst.sin_addr.s_addr = src.sin_addr.s_addr | ~(mask.s_addr);
+    memcpy(to_fill, src, sizeof(struct sockaddr_in));
+    to_fill->sin_addr.s_addr = src->sin_addr.s_addr | ~(mask.s_addr);
 }
 
-void fill_sockaddr_broadcast(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask)
+void fill_sockaddr_broadcast(const struct sockaddr_in6 *src, in6_addr mask, struct sockaddr_in6 *to_fill)
 {
-    memcpy(&dst, &src, sizeof(struct sockaddr_in6));
+    memcpy(to_fill, src, sizeof(struct sockaddr_in6));
     for (int i = 0; i < 16; ++i)
     {
-        dst.sin6_addr.s6_addr[i] = src.sin6_addr.s6_addr[i] | ~(mask.s6_addr[i]);
+        to_fill->sin6_addr.s6_addr[i] = src->sin6_addr.s6_addr[i] | ~(mask.s6_addr[i]);
     }
 }
 

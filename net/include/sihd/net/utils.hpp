@@ -45,10 +45,10 @@ bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr_in
 bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in *to_fill);
 bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in6 *to_fill);
 
-void fill_sockaddr_network_id(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask);
-void fill_sockaddr_network_id(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask);
-void fill_sockaddr_broadcast(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask);
-void fill_sockaddr_broadcast(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask);
+void fill_sockaddr_network_id(const struct sockaddr_in *src, in_addr mask, struct sockaddr_in *to_fill);
+void fill_sockaddr_network_id(const struct sockaddr_in6 *src, in6_addr mask, struct sockaddr_in6 *to_fill);
+void fill_sockaddr_broadcast(const struct sockaddr_in *src, in_addr mask, struct sockaddr_in *to_fill);
+void fill_sockaddr_broadcast(const struct sockaddr_in6 *src, in6_addr mask, struct sockaddr_in6 *to_fill);
 
 } // namespace sihd::net::utils
 

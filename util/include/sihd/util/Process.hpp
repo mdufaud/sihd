@@ -132,9 +132,9 @@ class Process: public IHandler<Poll *>,
         enum FileDescAction
         {
             None,
-            FILE,
-            FILE_APPEND,
-            CLOSE,
+            File,
+            FileAppend,
+            Close,
         };
 
         struct FileDescWrapper

@@ -358,7 +358,7 @@ bool Process::stderr_to_file(std::string_view path, bool append)
 
 void Process::_fdw_close(FileDescWrapper & fdw)
 {
-    fdw.action = CLOSE;
+    fdw.action = Close;
     safe_close(fdw.fd_read);
     safe_close(fdw.fd_write);
     fdw.fun = nullptr;
@@ -389,7 +389,7 @@ bool Process::_fdw_to_file(FileDescWrapper & fdw, std::string_view path, bool ap
     fdw.fun = nullptr;
     fdw.fd_write = open(path.data(), O_WRONLY | O_CREAT | (append ? O_APPEND : 0), this->open_mode);
     if (fdw.fd_write >= 0)
-        fdw.action = append ? FILE_APPEND : FILE;
+        fdw.action = append ? FileAppend : File;
     else
         SIHD_LOG(error, "Process: could not open output file: {}", path);
     return fdw.fd_write >= 0;
@@ -418,21 +418,21 @@ bool Process::_do_fork(const std::vector<const char *> & argv)
     }
     if (pid == 0)
     {
-        if (_stdin.action == CLOSE)
+        if (_stdin.action == Close)
             close(STDIN_FILENO);
         else
         {
             dup_close(_stdin.fd_read, STDIN_FILENO);
             safe_close(_stdin.fd_write);
         }
-        if (_stdout.action == CLOSE)
+        if (_stdout.action == Close)
             close(STDOUT_FILENO);
         else
         {
             dup_close(_stdout.fd_write, STDOUT_FILENO);
             safe_close(_stdout.fd_read);
         }
-        if (_stderr.action == CLOSE)
+        if (_stderr.action == Close)
             close(STDERR_FILENO);
         else
         {
@@ -457,21 +457,21 @@ bool Process::_do_spawn(const std::vector<const char *> & argv)
     posix_spawn_file_actions_t actions;
 
     posix_spawn_file_actions_init(&actions);
-    if (_stdin.action == CLOSE)
+    if (_stdin.action == Close)
         add_close_action(&actions, STDIN_FILENO);
     else
     {
         add_dup_action(&actions, _stdin.fd_read, STDIN_FILENO);
         add_close_action(&actions, _stdin.fd_write);
     }
-    if (_stdout.action == CLOSE)
+    if (_stdout.action == Close)
         add_close_action(&actions, STDOUT_FILENO);
     else
     {
         add_dup_action(&actions, _stdout.fd_write, STDOUT_FILENO);
         add_close_action(&actions, _stdout.fd_read);
     }
-    if (_stderr.action == CLOSE)
+    if (_stderr.action == Close)
         add_close_action(&actions, STDERR_FILENO);
     else
     {
@@ -545,8 +545,8 @@ bool Process::_process_fd_out(FileDescWrapper & fdw)
 {
     if (fdw.fd_read < 0)
         return true;
-    if (fdw.action == FILE || fdw.action == FILE_APPEND)
-        return write_into_file(fdw.fd_read, fdw.path, fdw.action == FILE_APPEND);
+    if (fdw.action == File || fdw.action == FileAppend)
+        return write_into_file(fdw.fd_read, fdw.path, fdw.action == FileAppend);
     else if (fdw.fun)
         return read_fd_callback(fdw.fd_read, fdw.fun);
     return true;

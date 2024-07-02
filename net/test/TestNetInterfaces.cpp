@@ -47,8 +47,8 @@ TEST_F(TestNetInterfaces, test_netinterfaces)
             struct sockaddr_in *base = (struct sockaddr_in *)(ifaddr4->ifa_addr);
             struct sockaddr_in netid;
             struct sockaddr_in broadcast;
-            utils::fill_sockaddr_network_id(netid, *base, mask);
-            utils::fill_sockaddr_broadcast(broadcast, *base, mask);
+            utils::fill_sockaddr_network_id(base, mask, &netid);
+            utils::fill_sockaddr_broadcast(base, mask, &broadcast);
             SIHD_LOG(debug, "Base ip: {}", ip::to_str(base));
             SIHD_LOG(debug, "Netmask: {}", ip::to_str(&mask));
             SIHD_LOG(debug, "Netid: {}", ip::to_str(&netid));
@@ -63,8 +63,8 @@ TEST_F(TestNetInterfaces, test_netinterfaces)
             struct sockaddr_in6 *base = (struct sockaddr_in6 *)(ifaddr6->ifa_addr);
             struct sockaddr_in6 netid;
             struct sockaddr_in6 broadcast;
-            utils::fill_sockaddr_network_id(netid, *base, mask);
-            utils::fill_sockaddr_broadcast(broadcast, *base, mask);
+            utils::fill_sockaddr_network_id(base, mask, &netid);
+            utils::fill_sockaddr_broadcast(base, mask, &broadcast);
             SIHD_LOG(debug, "Base ip: {}", ip::to_str(base));
             SIHD_LOG(debug, "Netmask: {}", ip::to_str(&mask));
             SIHD_LOG(debug, "Netid: {}", ip::to_str(&netid));
