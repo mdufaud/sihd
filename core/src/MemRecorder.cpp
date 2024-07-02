@@ -115,11 +115,10 @@ std::string MemRecorder::hexdump_records(std::string_view separation_cols, char 
 
     for (const auto & [_, playable_record] : _map_sorted_records)
     {
-        str += fmt::format("{}{}{}{}{}\n",
+        str += fmt::format("{0}{1}{2}{1}{3}\n",
                            playable_record.name,
                            separation_cols,
                            playable_record.timestamp,
-                           separation_cols,
                            playable_record.value->hexdump(separation_data));
     }
     return str;

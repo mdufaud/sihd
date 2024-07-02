@@ -41,7 +41,7 @@ class MemRecorder: public ACoreObject,
         bool is_running() const override;
 
         const SortedRecordedValues & sorted_recorded_values() const { return _map_sorted_records; }
-        std::string hexdump_records(std::string_view separation_cols = "\t", char separation_data = ' ');
+        std::string hexdump_records(std::string_view separation_cols = " ", char separation_data = ' ');
 
         MapListRecordedValues make_recorded_values() const;
         static std::string hexdump_recorded_values(const MapListRecordedValues & recorded_values);
