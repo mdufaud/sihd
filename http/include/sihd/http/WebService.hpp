@@ -19,11 +19,11 @@ class WebService: public sihd::util::Named
         virtual bool call(const std::string & path, const HttpRequest & request, HttpResponse & response);
         void set_entry_point(const std::string & path,
                              std::function<void(const HttpRequest &, HttpResponse &)> fun,
-                             HttpRequest::RequestType type = HttpRequest::GET);
+                             HttpRequest::RequestType type = HttpRequest::Get);
         template <class C>
         void set_entry_point(const std::string & path,
                              void (C::*method)(const HttpRequest &, HttpResponse &),
-                             HttpRequest::RequestType type = HttpRequest::GET)
+                             HttpRequest::RequestType type = HttpRequest::Get)
         {
             _callback_manager_map[type].set<C, void, const HttpRequest &, HttpResponse &>(path,
                                                                                           dynamic_cast<C *>(this),

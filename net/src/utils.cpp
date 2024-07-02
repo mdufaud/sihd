@@ -1,14 +1,17 @@
 #include <cstring>
 
+#include <sihd/net/utils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <net/if.h>
+# include <netinet/in.h> // sockaddr
 # include <sys/ioctl.h>
+#else
+# include <winsock2.h>
 #endif
-
-#include <sihd/net/utils.hpp>
 
 namespace sihd::net::utils
 {
@@ -208,6 +211,36 @@ bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in *
 bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in6 *to_fill)
 {
     return get_interface_netmask(sock, name, (struct sockaddr *)to_fill);
+}
+
+void fill_sockaddr_network_id(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask)
+{
+    memcpy(&dst, &src, sizeof(struct sockaddr_in));
+    dst.sin_addr.s_addr = src.sin_addr.s_addr & mask.s_addr;
+}
+
+void fill_sockaddr_network_id(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask)
+{
+    memcpy(&dst, &src, sizeof(struct sockaddr_in6));
+    for (int i = 0; i < 16; ++i)
+    {
+        dst.sin6_addr.s6_addr[i] = src.sin6_addr.s6_addr[i] & mask.s6_addr[i];
+    }
+}
+
+void fill_sockaddr_broadcast(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask)
+{
+    memcpy(&dst, &src, sizeof(struct sockaddr_in));
+    dst.sin_addr.s_addr = src.sin_addr.s_addr | ~(mask.s_addr);
+}
+
+void fill_sockaddr_broadcast(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask)
+{
+    memcpy(&dst, &src, sizeof(struct sockaddr_in6));
+    for (int i = 0; i < 16; ++i)
+    {
+        dst.sin6_addr.s6_addr[i] = src.sin6_addr.s6_addr[i] | ~(mask.s6_addr[i]);
+    }
 }
 
 } // namespace sihd::net::utils

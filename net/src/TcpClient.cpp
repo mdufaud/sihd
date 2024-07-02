@@ -59,7 +59,7 @@ bool TcpClient::connect(std::string_view path)
 
 bool TcpClient::open_and_connect(const IpAddr & ip)
 {
-    return this->open_socket(ip.prefers_ipv6()) && this->connect(ip);
+    return this->open_socket(ip.is_ipv6()) && this->connect(ip);
 }
 
 bool TcpClient::open_unix_and_connect(std::string_view path)

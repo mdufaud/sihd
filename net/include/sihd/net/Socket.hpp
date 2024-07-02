@@ -141,6 +141,9 @@ class Socket
         int protocol() const { return _protocol; }
         int socket() const { return _socket; }
 
+        bool is_unix() const;
+        bool is_ip() const;
+        bool is_ipv4() const;
         bool is_ipv6() const;
 
     protected:

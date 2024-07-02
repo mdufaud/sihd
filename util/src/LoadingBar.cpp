@@ -30,7 +30,7 @@ LoadingBar::LoadingBar(size_t width, size_t total, FILE *output):
     _current(0),
     _total(total),
     _file_ptr(output),
-    _percent_pos(none)
+    _percent_pos(None)
 {
 }
 
@@ -51,9 +51,9 @@ bool LoadingBar::print_bar() const
 {
     std::string bar_str = this->loading_bar_str();
 
-    if (_percent_pos == left)
+    if (_percent_pos == Left)
         bar_str = fmt::format("{} {}", this->progress_str(), bar_str);
-    else if (_percent_pos == right)
+    else if (_percent_pos == Right)
         bar_str = fmt::format("{} {}", bar_str, this->progress_str());
 
     return do_print(_file_ptr, bar_str);

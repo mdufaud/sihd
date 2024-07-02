@@ -114,7 +114,7 @@ TEST_F(TestUdp, test_udp_sendrcv_broadcast)
 
     IpAddr iprcv;
     receiver.receive(iprcv, array_rcv);
-    EXPECT_EQ(iprcv.first_ipv4_str(), "127.0.0.1");
+    EXPECT_EQ(iprcv.str(), "127.0.0.1");
 
     EXPECT_TRUE(array_rcv.is_equal(helloworld));
     EXPECT_EQ(array_rcv.size(), strlen(helloworld));

@@ -21,7 +21,7 @@ enum State
     BEFORE_EVT1,
     DONE_EVT1,
     DONE_EVT2,
-    ERROR,
+    Error,
 };
 
 class TestStateMachine: public ::testing::Test
@@ -46,14 +46,14 @@ class TestStateMachine: public ::testing::Test
             machine.set_state_name(State::BEFORE_EVT1, "BEFORE_EVT1");
             machine.set_state_name(State::DONE_EVT1, "DONE_EVT1");
             machine.set_state_name(State::DONE_EVT2, "DONE_EVT2");
-            machine.set_state_name(State::ERROR, "ERROR");
+            machine.set_state_name(State::Error, "Error");
         }
 
         void add_transitions(StateMachine<State, Event> & machine)
         {
             // first -> evt1 -> done_evt1
             machine.add_transition(State::FIRST, Event::EVT1, State::BEFORE_EVT1);
-            machine.add_transition(State::BEFORE_EVT1, Event::EVT_ERROR, State::ERROR);
+            machine.add_transition(State::BEFORE_EVT1, Event::EVT_ERROR, State::Error);
             machine.add_transition(State::BEFORE_EVT1, Event::EVT_SUCCESS, State::DONE_EVT1);
 
             // done_evt1 -> evt2 -> done_evt2
@@ -85,7 +85,7 @@ TEST_F(TestStateMachine, test_statemachine_transitions)
     // EVT1 -> EVT_ERROR -> error state
     EXPECT_TRUE(first_machine.transition(EVT_ERROR));
     EXPECT_EQ(first_machine.last_event(), EVT_ERROR);
-    EXPECT_EQ(first_machine.state(), State::ERROR);
+    EXPECT_EQ(first_machine.state(), State::Error);
 
     // let's get back to before it failed
     StateMachine<State, Event> evt1_machine(BEFORE_EVT1);
@@ -118,6 +118,6 @@ TEST_F(TestStateMachine, test_statemachine_naming)
     EXPECT_EQ(machine.state_name(State::BEFORE_EVT1), "BEFORE_EVT1");
     EXPECT_EQ(machine.state_name(State::DONE_EVT1), "DONE_EVT1");
     EXPECT_EQ(machine.state_name(State::DONE_EVT2), "DONE_EVT2");
-    EXPECT_EQ(machine.state_name(State::ERROR), "ERROR");
+    EXPECT_EQ(machine.state_name(State::Error), "Error");
 }
 } // namespace test

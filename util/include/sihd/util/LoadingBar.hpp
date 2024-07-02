@@ -12,17 +12,17 @@ class LoadingBar
     private:
         enum InternalPercentPos
         {
-            none,
-            left,
-            right
+            None,
+            Left,
+            Right
         };
 
     public:
         LoadingBar(size_t width = 10, size_t total = 0, FILE *output = stdout);
         ~LoadingBar();
 
-        void set_percent_pos_left() { _percent_pos = left; }
-        void set_percent_pos_right() { _percent_pos = right; };
+        void set_percent_pos_left() { _percent_pos = Left; }
+        void set_percent_pos_right() { _percent_pos = Right; };
         void set_width(size_t width) { _width = width; }
         void set_total(size_t total) { _total = total; }
 

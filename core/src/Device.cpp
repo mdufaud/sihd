@@ -23,9 +23,9 @@ Device::~Device()
 {
     if (this->parent() == nullptr)
     {
-        if (_default_service_controller.statemachine.last_event() == AService::START)
+        if (_default_service_controller.statemachine.last_event() == AService::Start)
             this->stop();
-        if (_default_service_controller.statemachine.last_event() == AService::STOP)
+        if (_default_service_controller.statemachine.last_event() == AService::Stop)
             this->reset();
     }
 }

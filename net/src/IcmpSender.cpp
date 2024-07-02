@@ -220,7 +220,7 @@ void IcmpSender::handle(sihd::util::Poll *poll)
 
 void IcmpSender::_read_socket()
 {
-    _icmp_response.client.clear();
+    _icmp_response.client = IpAddr();
     ssize_t ret = _socket.receive_from(_icmp_response.client, *_array_rcv_ptr);
     if (ret > 0)
     {

@@ -202,42 +202,42 @@ void DevFilter::set_filter(const Rule & rule)
 
 bool DevFilter::set_filter_equal(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, EQUAL);
+    return this->_parse_conf(rule_str, Equal);
 }
 
 bool DevFilter::set_filter_superior(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, SUPERIOR);
+    return this->_parse_conf(rule_str, Superior);
 }
 
 bool DevFilter::set_filter_superior_equal(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, SUPERIOR_EQUAL);
+    return this->_parse_conf(rule_str, SuperiorEqual);
 }
 
 bool DevFilter::set_filter_inferior(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, INFERIOR);
+    return this->_parse_conf(rule_str, Inferior);
 }
 
 bool DevFilter::set_filter_inferior_equal(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, INFERIOR_EQUAL);
+    return this->_parse_conf(rule_str, InferiorEqual);
 }
 
 bool DevFilter::set_filter_byte_and(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, BYTE_AND);
+    return this->_parse_conf(rule_str, ByteAnd);
 }
 
 bool DevFilter::set_filter_byte_or(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, BYTE_OR);
+    return this->_parse_conf(rule_str, ByteOr);
 }
 
 bool DevFilter::set_filter_byte_xor(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, BYTE_XOR);
+    return this->_parse_conf(rule_str, ByteXor);
 }
 
 void DevFilter::_rule_match(Channel *channel_out, const Rule *rule_ptr, int64_t out_val)
@@ -255,28 +255,28 @@ void DevFilter::_apply_rule(const sihd::core::Channel *channel_in,
     bool matched = false;
     switch (rule_ptr->type)
     {
-        case EQUAL:
+        case Equal:
             matched = in_value == rule_ptr->trigger_value;
             break;
-        case SUPERIOR:
+        case Superior:
             matched = in_value > rule_ptr->trigger_value;
             break;
-        case SUPERIOR_EQUAL:
+        case SuperiorEqual:
             matched = in_value >= rule_ptr->trigger_value;
             break;
-        case INFERIOR:
+        case Inferior:
             matched = in_value < rule_ptr->trigger_value;
             break;
-        case INFERIOR_EQUAL:
+        case InferiorEqual:
             matched = in_value <= rule_ptr->trigger_value;
             break;
-        case BYTE_AND:
+        case ByteAnd:
             matched = in_value.data & rule_ptr->trigger_value.data;
             break;
-        case BYTE_OR:
+        case ByteOr:
             matched = in_value.data | rule_ptr->trigger_value.data;
             break;
-        case BYTE_XOR:
+        case ByteXor:
             matched = in_value.data ^ rule_ptr->trigger_value.data;
             break;
         default:

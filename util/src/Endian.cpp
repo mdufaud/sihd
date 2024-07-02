@@ -7,9 +7,9 @@ std::string Endian::type_str(Endianness type)
 {
     switch (type)
     {
-        case BIG:
+        case Big:
             return "big";
-        case LITTLE:
+        case Little:
             return "little";
         default:
             return "unknown";
@@ -112,127 +112,127 @@ double Endian::swap<double>(double ret)
 }
 
 template <>
-uint16_t Endian::convert<uint16_t, Endian::LITTLE>(uint16_t value)
+uint16_t Endian::convert<uint16_t, Endian::Little>(uint16_t value)
 {
     return le16toh(value);
 }
 template <>
-uint16_t Endian::convert<uint16_t, Endian::BIG>(uint16_t value)
+uint16_t Endian::convert<uint16_t, Endian::Big>(uint16_t value)
 {
     return be16toh(value);
 }
 template <>
-int16_t Endian::convert<int16_t, Endian::LITTLE>(int16_t value)
+int16_t Endian::convert<int16_t, Endian::Little>(int16_t value)
 {
     return le16toh(value);
 }
 template <>
-int16_t Endian::convert<int16_t, Endian::BIG>(int16_t value)
+int16_t Endian::convert<int16_t, Endian::Big>(int16_t value)
 {
     return be16toh(value);
 }
 
 template <>
-uint32_t Endian::convert<uint32_t, Endian::LITTLE>(uint32_t value)
+uint32_t Endian::convert<uint32_t, Endian::Little>(uint32_t value)
 {
     return le32toh(value);
 }
 template <>
-uint32_t Endian::convert<uint32_t, Endian::BIG>(uint32_t value)
+uint32_t Endian::convert<uint32_t, Endian::Big>(uint32_t value)
 {
     return be32toh(value);
 }
 template <>
-int32_t Endian::convert<int32_t, Endian::LITTLE>(int32_t value)
+int32_t Endian::convert<int32_t, Endian::Little>(int32_t value)
 {
     return le32toh(value);
 }
 template <>
-int32_t Endian::convert<int32_t, Endian::BIG>(int32_t value)
+int32_t Endian::convert<int32_t, Endian::Big>(int32_t value)
 {
     return be32toh(value);
 }
 
 template <>
-uint64_t Endian::convert<uint64_t, Endian::LITTLE>(uint64_t value)
+uint64_t Endian::convert<uint64_t, Endian::Little>(uint64_t value)
 {
     return le64toh(value);
 }
 template <>
-uint64_t Endian::convert<uint64_t, Endian::BIG>(uint64_t value)
+uint64_t Endian::convert<uint64_t, Endian::Big>(uint64_t value)
 {
     return be64toh(value);
 }
 template <>
-int64_t Endian::convert<int64_t, Endian::LITTLE>(int64_t value)
+int64_t Endian::convert<int64_t, Endian::Little>(int64_t value)
 {
     return le64toh(value);
 }
 template <>
-int64_t Endian::convert<int64_t, Endian::BIG>(int64_t value)
+int64_t Endian::convert<int64_t, Endian::Big>(int64_t value)
 {
     return be64toh(value);
 }
 
 template <>
-uint16_t Endian::convert_from<uint16_t, Endian::LITTLE>(uint16_t value)
+uint16_t Endian::convert_from<uint16_t, Endian::Little>(uint16_t value)
 {
     return htole16(value);
 }
 template <>
-uint16_t Endian::convert_from<uint16_t, Endian::BIG>(uint16_t value)
+uint16_t Endian::convert_from<uint16_t, Endian::Big>(uint16_t value)
 {
     return htobe16(value);
 }
 template <>
-int16_t Endian::convert_from<int16_t, Endian::LITTLE>(int16_t value)
+int16_t Endian::convert_from<int16_t, Endian::Little>(int16_t value)
 {
     return htole16(value);
 }
 template <>
-int16_t Endian::convert_from<int16_t, Endian::BIG>(int16_t value)
+int16_t Endian::convert_from<int16_t, Endian::Big>(int16_t value)
 {
     return htobe16(value);
 }
 
 template <>
-uint32_t Endian::convert_from<uint32_t, Endian::LITTLE>(uint32_t value)
+uint32_t Endian::convert_from<uint32_t, Endian::Little>(uint32_t value)
 {
     return htole32(value);
 }
 template <>
-uint32_t Endian::convert_from<uint32_t, Endian::BIG>(uint32_t value)
+uint32_t Endian::convert_from<uint32_t, Endian::Big>(uint32_t value)
 {
     return htobe32(value);
 }
 template <>
-int32_t Endian::convert_from<int32_t, Endian::LITTLE>(int32_t value)
+int32_t Endian::convert_from<int32_t, Endian::Little>(int32_t value)
 {
     return htole32(value);
 }
 template <>
-int32_t Endian::convert_from<int32_t, Endian::BIG>(int32_t value)
+int32_t Endian::convert_from<int32_t, Endian::Big>(int32_t value)
 {
     return htobe32(value);
 }
 
 template <>
-uint64_t Endian::convert_from<uint64_t, Endian::LITTLE>(uint64_t value)
+uint64_t Endian::convert_from<uint64_t, Endian::Little>(uint64_t value)
 {
     return htole64(value);
 }
 template <>
-uint64_t Endian::convert_from<uint64_t, Endian::BIG>(uint64_t value)
+uint64_t Endian::convert_from<uint64_t, Endian::Big>(uint64_t value)
 {
     return htobe64(value);
 }
 template <>
-int64_t Endian::convert_from<int64_t, Endian::LITTLE>(int64_t value)
+int64_t Endian::convert_from<int64_t, Endian::Little>(int64_t value)
 {
     return htole64(value);
 }
 template <>
-int64_t Endian::convert_from<int64_t, Endian::BIG>(int64_t value)
+int64_t Endian::convert_from<int64_t, Endian::Big>(int64_t value)
 {
     return htobe64(value);
 }

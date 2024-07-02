@@ -14,9 +14,9 @@ class BlockingServiceController: public sihd::util::AService::IServiceController
 
         enum State
         {
-            RUNNING,
-            STOPPED,
-            ERROR,
+            Running,
+            Stopped,
+            Error,
         };
 
         virtual bool op_start(AService::Operation op);

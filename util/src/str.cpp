@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <string.h>
 
+#include <algorithm>
 #include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
 #include <cmath>   // HUGE_VAL
 #include <cstdarg>

@@ -10,10 +10,13 @@
 #include <sihd/util/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
+# include <arpa/inet.h>  // inet_pton...
 # include <netdb.h>      // getprotobynumber, getprotobyname
-# include <sys/socket.h> // PF_UNIX...
+# include <netinet/in.h> // struct inX_addr
 #else
 # include <sihd/net/utils.hpp>
+# include <winsock2.h>
+# include <ws2tcpip.h> // addrinfo
 #endif
 
 namespace sihd::net::ip
@@ -126,6 +129,54 @@ int socktype(std::string_view name)
     if (it == socktype_to_str.end())
         return -1;
     return it->second;
+}
+
+bool is_valid_ipv4(std::string_view ip)
+{
+    struct sockaddr_in sa;
+    return inet_pton(AF_INET, ip.data(), &(sa.sin_addr)) == 1;
+}
+
+bool is_valid_ipv6(std::string_view ip)
+{
+    struct sockaddr_in6 sa;
+    return inet_pton(AF_INET6, ip.data(), &(sa.sin6_addr)) == 1;
+}
+
+bool is_valid_ip(std::string_view ip)
+{
+    return is_valid_ipv4(ip) || is_valid_ipv6(ip);
+}
+
+std::string to_str(const sockaddr *addr)
+{
+    if (addr->sa_family == AF_INET)
+        return to_str((const sockaddr_in *)addr);
+    else if (addr->sa_family == AF_INET6)
+        return to_str((const sockaddr_in6 *)addr);
+    return "";
+}
+
+std::string to_str(const sockaddr_in *addr_in)
+{
+    return to_str(&addr_in->sin_addr);
+}
+
+std::string to_str(const sockaddr_in6 *addr_in)
+{
+    return to_str(&addr_in->sin6_addr);
+}
+
+std::string to_str(const in_addr *addr_in)
+{
+    char buffer[INET_ADDRSTRLEN] = {0};
+    return inet_ntop(AF_INET, (const void *)(addr_in), buffer, INET_ADDRSTRLEN);
+}
+
+std::string to_str(const in6_addr *addr_in)
+{
+    char buffer[INET6_ADDRSTRLEN] = {0};
+    return inet_ntop(AF_INET6, (const void *)(addr_in), buffer, INET6_ADDRSTRLEN);
 }
 
 } // namespace sihd::net::ip

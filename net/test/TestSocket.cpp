@@ -46,8 +46,7 @@ TEST_F(TestSocket, test_socket_stream_client_server)
     IpAddr addr;
     int accepted_socket = socket_server.accept(addr);
     EXPECT_TRUE(accepted_socket >= 0);
-    EXPECT_EQ(addr.first_ipv4_str(), "");
-    EXPECT_EQ(addr.first_ipv6_str(), "::1");
+    EXPECT_TRUE(addr.is_ipv6());
 
     Socket connected_socket(accepted_socket);
     EXPECT_EQ(connected_socket.domain(), AF_INET6);

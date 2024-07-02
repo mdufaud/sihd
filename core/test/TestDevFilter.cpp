@@ -56,7 +56,7 @@ TEST_F(TestDevFilter, test_devfilter_superior)
     Core core;
 
     DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
-    dev_ptr->set_filter(DevFilter::Rule(DevFilter::SUPERIOR)
+    dev_ptr->set_filter(DevFilter::Rule(DevFilter::Superior)
                             .in("..in_channel")
                             .trigger<int>(1, 10)
                             .out("..out_channel")
@@ -128,7 +128,7 @@ TEST_F(TestDevFilter, test_devfilter_float)
     Core core;
 
     DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
-    dev_ptr->set_filter(DevFilter::Rule(DevFilter::EQUAL)
+    dev_ptr->set_filter(DevFilter::Rule(DevFilter::Equal)
                             .in("..in_channel")
                             .trigger(0, 3.14f)
                             .out("..out_channel")

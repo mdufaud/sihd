@@ -131,7 +131,7 @@ class Process: public IHandler<Poll *>,
     private:
         enum FileDescAction
         {
-            NONE,
+            None,
             FILE,
             FILE_APPEND,
             CLOSE,
@@ -141,7 +141,7 @@ class Process: public IHandler<Poll *>,
         {
                 int fd_read = -1;
                 int fd_write = -1;
-                FileDescAction action = NONE;
+                FileDescAction action = None;
                 std::function<void(std::string_view)> fun;
                 std::string path;
         };

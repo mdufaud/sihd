@@ -4,70 +4,70 @@ namespace sihd::util
 {
 
 ServiceController::ServiceController(const StateMachine<State, AService::Operation> & to_copy_statemachine):
-    statemachine(NONE)
+    statemachine(None)
 {
     statemachine.set_transitions_map(to_copy_statemachine.transitions_map());
     statemachine.set_states_names_map(to_copy_statemachine.states_names_map());
     statemachine.set_events_names_map(to_copy_statemachine.events_names_map());
 }
 
-ServiceController::ServiceController(): statemachine(NONE)
+ServiceController::ServiceController(): statemachine(None)
 {
     // none -> setup -> configured
-    statemachine.add_transition(NONE, AService::SETUP, CONFIGURING);
-    statemachine.add_transition(CONFIGURING, AService::ERROR, ERROR);
-    statemachine.add_transition(CONFIGURING, AService::SUCCESS, CONFIGURED);
+    statemachine.add_transition(None, AService::Setup, Configuring);
+    statemachine.add_transition(Configuring, AService::Error, Error);
+    statemachine.add_transition(Configuring, AService::Success, Configured);
 
     // configured -> init -> stopped
-    statemachine.add_transition(CONFIGURED, AService::INIT, INITIALIZING);
-    statemachine.add_transition(INITIALIZING, AService::ERROR, ERROR);
-    statemachine.add_transition(INITIALIZING, AService::SUCCESS, STOPPED);
+    statemachine.add_transition(Configured, AService::Init, Initializing);
+    statemachine.add_transition(Initializing, AService::Error, Error);
+    statemachine.add_transition(Initializing, AService::Success, Stopped);
 
     // stopped -> start -> running
-    statemachine.add_transition(STOPPED, AService::START, STARTING);
-    statemachine.add_transition(STARTING, AService::ERROR, ERROR);
-    statemachine.add_transition(STARTING, AService::SUCCESS, RUNNING);
+    statemachine.add_transition(Stopped, AService::Start, Starting);
+    statemachine.add_transition(Starting, AService::Error, Error);
+    statemachine.add_transition(Starting, AService::Success, Running);
 
     // running -> stop -> stopped
-    statemachine.add_transition(RUNNING, AService::STOP, STOPPING);
-    statemachine.add_transition(STOPPING, AService::ERROR, ERROR);
-    statemachine.add_transition(STOPPING, AService::SUCCESS, STOPPED);
+    statemachine.add_transition(Running, AService::Stop, Stopping);
+    statemachine.add_transition(Stopping, AService::Error, Error);
+    statemachine.add_transition(Stopping, AService::Success, Stopped);
 
     // configured -> reset -> none
-    statemachine.add_transition(CONFIGURED, AService::RESET, RESETTING);
+    statemachine.add_transition(Configured, AService::Reset, Resetting);
 
     // stopped -> reset -> none
-    statemachine.add_transition(STOPPED, AService::RESET, RESETTING);
-    statemachine.add_transition(RESETTING, AService::ERROR, ERROR);
-    statemachine.add_transition(RESETTING, AService::SUCCESS, NONE);
+    statemachine.add_transition(Stopped, AService::Reset, Resetting);
+    statemachine.add_transition(Resetting, AService::Error, Error);
+    statemachine.add_transition(Resetting, AService::Success, None);
 
-    statemachine.set_state_name(NONE, "none");
-    statemachine.set_state_name(CONFIGURING, "configuring");
-    statemachine.set_state_name(CONFIGURED, "configured");
-    statemachine.set_state_name(INITIALIZING, "initializing");
-    statemachine.set_state_name(STARTING, "starting");
-    statemachine.set_state_name(RUNNING, "running");
-    statemachine.set_state_name(STOPPING, "stopping");
-    statemachine.set_state_name(STOPPED, "stopped");
-    statemachine.set_state_name(RESETTING, "resetting");
+    statemachine.set_state_name(None, "none");
+    statemachine.set_state_name(Configuring, "configuring");
+    statemachine.set_state_name(Configured, "configured");
+    statemachine.set_state_name(Initializing, "initializing");
+    statemachine.set_state_name(Starting, "starting");
+    statemachine.set_state_name(Running, "running");
+    statemachine.set_state_name(Stopping, "stopping");
+    statemachine.set_state_name(Stopped, "stopped");
+    statemachine.set_state_name(Resetting, "resetting");
 
-    statemachine.set_event_name(AService::SETUP, "setup");
-    statemachine.set_event_name(AService::INIT, "init");
-    statemachine.set_event_name(AService::START, "start");
-    statemachine.set_event_name(AService::STOP, "stop");
-    statemachine.set_event_name(AService::RESET, "reset");
-    statemachine.set_event_name(AService::SUCCESS, "success");
-    statemachine.set_event_name(AService::ERROR, "error");
+    statemachine.set_event_name(AService::Setup, "setup");
+    statemachine.set_event_name(AService::Init, "init");
+    statemachine.set_event_name(AService::Start, "start");
+    statemachine.set_event_name(AService::Stop, "stop");
+    statemachine.set_event_name(AService::Reset, "reset");
+    statemachine.set_event_name(AService::Success, "success");
+    statemachine.set_event_name(AService::Error, "error");
 }
 
 void ServiceController::optional_setup()
 {
-    statemachine.add_transition(NONE, AService::INIT, INITIALIZING);
+    statemachine.add_transition(None, AService::Init, Initializing);
 }
 
 void ServiceController::optional_init()
 {
-    statemachine.add_transition(NONE, AService::START, STARTING);
+    statemachine.add_transition(None, AService::Start, Starting);
 }
 
 bool ServiceController::op_start(AService::Operation op)
@@ -87,7 +87,7 @@ bool ServiceController::op_end([[maybe_unused]] AService::Operation op, bool sta
     bool ret;
     {
         std::lock_guard l(_state_mutex);
-        ret = statemachine.transition(status ? AService::SUCCESS : AService::ERROR);
+        ret = statemachine.transition(status ? AService::Success : AService::Error);
     }
     this->notify_observers(this);
     return ret;
@@ -97,23 +97,23 @@ const char *ServiceController::state_str(State state)
 {
     switch (state)
     {
-        case CONFIGURING:
+        case Configuring:
             return "configuring";
-        case CONFIGURED:
+        case Configured:
             return "configured";
-        case INITIALIZING:
+        case Initializing:
             return "initializing";
-        case STARTING:
+        case Starting:
             return "starting";
-        case RUNNING:
+        case Running:
             return "running";
-        case STOPPING:
+        case Stopping:
             return "stopping";
-        case STOPPED:
+        case Stopped:
             return "stopped";
-        case RESETTING:
+        case Resetting:
             return "resetting";
-        case ERROR:
+        case Error:
             return "error";
         default:
             return "none";

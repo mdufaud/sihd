@@ -30,7 +30,7 @@ bool UdpSender::connect(const IpAddr & addr)
 
 bool UdpSender::open_and_connect(const IpAddr & ip)
 {
-    return this->open_socket(ip.prefers_ipv6()) && this->connect(ip);
+    return this->open_socket(ip.is_ipv6()) && this->connect(ip);
 }
 
 bool UdpSender::open_unix_and_connect(std::string_view path)

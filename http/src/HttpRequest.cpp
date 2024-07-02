@@ -16,30 +16,30 @@ std::string HttpRequest::type_str(HttpRequest::RequestType type)
 {
     switch (type)
     {
-        case GET:
+        case Get:
             return "GET";
-        case POST:
+        case Post:
             return "POST";
-        case PUT:
+        case Put:
             return "PUT";
-        case DELETE:
+        case Delete:
             return "DELETE";
         default:
-            return "NONE";
+            return "None";
     }
 }
 
 HttpRequest::RequestType HttpRequest::type_from_str(std::string_view type)
 {
     if (str::iequals(type, "get"))
-        return GET;
+        return Get;
     else if (str::iequals(type, "post"))
-        return POST;
+        return Post;
     else if (str::iequals(type, "put"))
-        return PUT;
+        return Put;
     else if (str::iequals(type, "delete"))
-        return DELETE;
-    return NONE;
+        return Delete;
+    return None;
 }
 
 HttpRequest::HttpRequest(std::string_view url, RequestType request_type)

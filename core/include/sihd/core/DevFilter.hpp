@@ -15,15 +15,15 @@ class DevFilter: public sihd::core::Device
     public:
         enum RuleType
         {
-            NONE,
-            EQUAL,
-            SUPERIOR,
-            SUPERIOR_EQUAL,
-            INFERIOR,
-            INFERIOR_EQUAL,
-            BYTE_AND,
-            BYTE_OR,
-            BYTE_XOR,
+            None,
+            Equal,
+            Superior,
+            SuperiorEqual,
+            Inferior,
+            InferiorEqual,
+            ByteAnd,
+            ByteOr,
+            ByteXor,
         };
 
         class Rule

@@ -5,7 +5,7 @@ namespace sihd::util
 
 BlockingServiceController::BlockingServiceController()
 {
-    current_state = STOPPED;
+    current_state = Stopped;
 }
 
 bool BlockingServiceController::op_start(AService::Operation op)
@@ -13,17 +13,17 @@ bool BlockingServiceController::op_start(AService::Operation op)
     std::lock_guard l(_state_mutex);
     switch (op)
     {
-        case AService::Operation::START:
-            if (current_state == STOPPED || current_state == ERROR)
+        case AService::Operation::Start:
+            if (current_state == Stopped || current_state == Error)
             {
-                current_state = RUNNING;
+                current_state = Running;
                 return true;
             }
             return false;
-        case AService::Operation::STOP:
-            if (current_state == RUNNING)
+        case AService::Operation::Stop:
+            if (current_state == Running)
             {
-                current_state = STOPPED;
+                current_state = Stopped;
                 return true;
             }
             return false;
@@ -38,11 +38,11 @@ bool BlockingServiceController::op_end(AService::Operation op, bool status)
     std::lock_guard l(_state_mutex);
     switch (op)
     {
-        case AService::Operation::START:
-            current_state = status ? RUNNING : ERROR;
+        case AService::Operation::Start:
+            current_state = status ? Running : Error;
             break;
-        case AService::Operation::STOP:
-            current_state = status ? STOPPED : ERROR;
+        case AService::Operation::Stop:
+            current_state = status ? Stopped : Error;
             break;
         default:
             break;

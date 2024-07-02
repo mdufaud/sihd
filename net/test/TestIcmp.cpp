@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <sihd/net/IcmpSender.hpp>
+#include <sihd/net/dns.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
@@ -10,8 +12,6 @@
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/term.hpp>
-
-#include <sihd/net/IcmpSender.hpp>
 
 namespace test
 {
@@ -74,9 +74,9 @@ TEST_F(TestIcmp, test_icmp_ipv4)
                        response.seq,
                        sihd::util::time::to_ms(sihd::util::Clock::default_clock.now() - timestamp));
         // make a DNS lookup on client
-        IpAddr client(response.client.host(), true);
-        SIHD_LOG_DEBUG(client.hostname());
-        SIHD_LOG_DEBUG(client.host());
+        auto dns = dns::lookup(response.client.str());
+        SIHD_LOG_DEBUG(dns.hostname);
+        SIHD_LOG_DEBUG(dns.host);
     });
     sender.add_observer(&handler);
 

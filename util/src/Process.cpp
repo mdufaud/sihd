@@ -204,7 +204,7 @@ void Process::reset_proc()
 void Process::clear()
 {
     constexpr auto reset_fwd = [](FileDescWrapper & fdw) {
-        fdw.action = NONE;
+        fdw.action = None;
         fdw.fun = nullptr;
         fdw.path.clear();
     };

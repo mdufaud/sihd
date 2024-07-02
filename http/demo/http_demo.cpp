@@ -62,7 +62,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                     else
                         resp.set_status(HTTP_STATUS_BAD_REQUEST);
                 },
-                HttpRequest::POST);
+                HttpRequest::Post);
 
             _webservice->set_entry_point(
                 "delete",
@@ -71,7 +71,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                     resp.set_status(HTTP_STATUS_OK);
                     resp.set_json_content({"hello", "world"});
                 },
-                HttpRequest::DELETE);
+                HttpRequest::Delete);
 
             _webservice->set_entry_point(
                 "put",
@@ -86,7 +86,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                     else
                         resp.set_status(HTTP_STATUS_BAD_REQUEST);
                 },
-                HttpRequest::PUT);
+                HttpRequest::Put);
         }
 
         // IWebsocketHandler

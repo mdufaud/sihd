@@ -684,10 +684,10 @@ void LuaUtilApi::load_tools(Vm & vm)
         .beginNamespace("endian")
         .addFunction(
             "is_big",
-            +[] { return sihd::util::Endian::endian() == Endian::BIG; })
+            +[] { return sihd::util::Endian::endian() == Endian::Big; })
         .addFunction(
             "is_little",
-            +[] { return sihd::util::Endian::endian() == Endian::LITTLE; })
+            +[] { return sihd::util::Endian::endian() == Endian::Little; })
         .endNamespace()  // edian
         .endNamespace()  // util
         .endNamespace(); // sihd

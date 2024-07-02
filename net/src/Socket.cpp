@@ -3,9 +3,8 @@
 #include <cerrno>
 #include <cstring>
 
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/net/Socket.hpp>
+#include <sihd/util/Logger.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <fcntl.h>       // fcntl
@@ -217,10 +216,10 @@ std::optional<IpAddr> Socket::socket_ip(int socket, bool ipv6)
     sockaddr_in6 addr_in6;
     socklen_t len = sizeof(addr_in6);
     if (ipv6 && Socket::get_socket_peername(socket, (sockaddr *)&addr_in6, &len))
-        return IpAddr(addr_in6, false);
+        return IpAddr(addr_in6);
     len = sizeof(addr_in);
     if (Socket::get_socket_peername(socket, (sockaddr *)&addr_in, &len))
-        return IpAddr(addr_in, false);
+        return IpAddr(addr_in);
     return std::nullopt;
 }
 
@@ -500,6 +499,25 @@ ssize_t Socket::receive_from_unix(std::string & path, sihd::util::IArray & arr)
     return _adapt_array_size(arr, this->receive_from_unix(path, arr.buf(), arr.byte_capacity()));
 }
 
+bool Socket::is_unix() const
+{
+#if !defined(__SIHD_WINDOWS__)
+    return _domain == AF_UNIX;
+#else
+    return false;
+#endif
+}
+
+bool Socket::is_ip() const
+{
+    return this->is_ipv4() || this->is_ipv6();
+}
+
+bool Socket::is_ipv4() const
+{
+    return _domain == AF_INET;
+}
+
 bool Socket::is_ipv6() const
 {
     return _domain == AF_INET6;
@@ -511,20 +529,12 @@ bool Socket::is_ipv6() const
 
 ssize_t Socket::send_to(const IpAddr & addr, sihd::util::ArrCharView view)
 {
-    IpSockAddr ipsockaddr;
-
-    if (addr.get_sockaddr(ipsockaddr, _type, _protocol) == false && addr.get_first_sockaddr(ipsockaddr) == false)
-        return false;
-    return this->send_to(ipsockaddr.addr, ipsockaddr.addr_len, view);
+    return this->send_to(&addr.addr(), addr.addr_len(), view);
 }
 
 bool Socket::send_all_to(const IpAddr & addr, sihd::util::ArrCharView view)
 {
-    IpSockAddr ipsockaddr;
-
-    if (addr.get_sockaddr(ipsockaddr, _type, _protocol) == false && addr.get_first_sockaddr(ipsockaddr) == false)
-        return false;
-    return this->send_all_to(ipsockaddr.addr, ipsockaddr.addr_len, view);
+    return this->send_all_to(&addr.addr(), addr.addr_len(), view);
 }
 
 ssize_t Socket::receive_from(IpAddr & ipaddr, void *data, size_t size)
@@ -536,35 +546,27 @@ ssize_t Socket::receive_from(IpAddr & ipaddr, void *data, size_t size)
     if (_domain == AF_INET6)
     {
         addr = (sockaddr *)&addr_in6;
-        len = sizeof(addr_in6);
+        len = sizeof(struct sockaddr_in6);
     }
     else
     {
         addr = (sockaddr *)&addr_in;
-        len = sizeof(addr_in);
+        len = sizeof(struct sockaddr_in);
     }
     int sock = this->receive_from(addr, &len, data, size);
     if (sock >= 0)
-        ipaddr.from(*addr, len);
+        ipaddr = IpAddr(*addr, len);
     return sock;
 }
 
 bool Socket::bind(const IpAddr & addr)
 {
-    IpSockAddr ipsockaddr;
-
-    if (addr.get_sockaddr(ipsockaddr, _type, _protocol) == false && addr.get_first_sockaddr(ipsockaddr) == false)
-        return false;
-    return this->bind(ipsockaddr.addr, ipsockaddr.addr_len);
+    return this->bind(&addr.addr(), addr.addr_len());
 }
 
 bool Socket::connect(const IpAddr & addr)
 {
-    IpSockAddr ipsockaddr;
-
-    if (addr.get_sockaddr(ipsockaddr, _type, _protocol) == false && addr.get_first_sockaddr(ipsockaddr) == false)
-        return false;
-    return this->connect(ipsockaddr.addr, ipsockaddr.addr_len);
+    return this->connect(&addr.addr(), addr.addr_len());
 }
 
 int Socket::accept(IpAddr & ipaddr)
@@ -576,16 +578,16 @@ int Socket::accept(IpAddr & ipaddr)
     if (_domain == AF_INET6)
     {
         addr = (sockaddr *)&addr_in6;
-        len = sizeof(addr_in6);
+        len = sizeof(struct sockaddr_in6);
     }
     else
     {
         addr = (sockaddr *)&addr_in;
-        len = sizeof(addr_in);
+        len = sizeof(struct sockaddr_in);
     }
     int sock = this->accept(addr, &len);
     if (sock >= 0)
-        ipaddr.from(*addr, len);
+        ipaddr = IpAddr(*addr, len);
     return sock;
 }
 

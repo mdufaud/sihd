@@ -59,13 +59,13 @@ bool UdpReceiver::bind_unix(std::string_view path)
 
 bool UdpReceiver::open_and_bind(const IpAddr & ip)
 {
-    return this->open_socket(ip.prefers_ipv6()) && this->bind(ip);
+    return this->open_socket(ip.is_ipv6()) && this->bind(ip);
 }
 
 bool UdpReceiver::open_and_bind(std::string_view ip, int port)
 {
-    IpAddr addr(ip, port, true);
-    return this->open_socket(addr.prefers_ipv6()) && this->bind(addr);
+    IpAddr addr(ip, port);
+    return this->open_socket(addr.is_ipv6()) && this->bind(addr);
 }
 
 bool UdpReceiver::open_unix_and_bind(std::string_view path)

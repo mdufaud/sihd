@@ -16,11 +16,11 @@ class ThreadedServiceController: public sihd::util::AService::IServiceController
 
         enum State
         {
-            STARTING,
-            RUNNING,
-            STOPPING,
-            STOPPED,
-            ERROR,
+            Starting,
+            Running,
+            Stopping,
+            Stopped,
+            Error,
         };
 
         virtual bool op_start(AService::Operation op);

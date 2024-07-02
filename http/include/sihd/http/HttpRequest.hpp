@@ -14,15 +14,15 @@ class HttpRequest
     public:
         enum RequestType
         {
-            NONE = -1,
-            POST = 0,
-            GET = 1,
-            PUT = 2,
-            DELETE = 3,
+            None = -1,
+            Post = 0,
+            Get = 1,
+            Put = 2,
+            Delete = 3,
         };
 
-        HttpRequest(std::string_view url, RequestType request_type = GET);
-        HttpRequest(std::string_view url, const std::vector<std::string> & uri_args, RequestType request_type = GET);
+        HttpRequest(std::string_view url, RequestType request_type = Get);
+        HttpRequest(std::string_view url, const std::vector<std::string> & uri_args, RequestType request_type = Get);
         virtual ~HttpRequest();
 
         static RequestType type_from_str(std::string_view type);

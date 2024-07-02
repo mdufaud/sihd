@@ -366,14 +366,14 @@ int HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons re
 HttpRequest::RequestType HttpServer::get_request_type(struct lws *wsi)
 {
     if (lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI))
-        return HttpRequest::GET;
+        return HttpRequest::Get;
     if (lws_hdr_total_length(wsi, WSI_TOKEN_POST_URI))
-        return HttpRequest::POST;
+        return HttpRequest::Post;
     else if (lws_hdr_total_length(wsi, WSI_TOKEN_PUT_URI))
-        return HttpRequest::PUT;
+        return HttpRequest::Put;
     else if (lws_hdr_total_length(wsi, WSI_TOKEN_DELETE_URI))
-        return HttpRequest::DELETE;
-    return HttpRequest::NONE;
+        return HttpRequest::Delete;
+    return HttpRequest::None;
 }
 
 int HttpServer::on_http_request(HttpSession *session, std::string_view path)
@@ -475,7 +475,7 @@ bool HttpServer::check_webservices(HttpSession *session, std::string_view path)
     WebService *webservice = this->_get_webservice_from_path(path, &webservice_name);
     if (webservice == nullptr)
         return false;
-    if (session->request_type == HttpRequest::POST || session->request_type == HttpRequest::PUT)
+    if (session->request_type == HttpRequest::Post || session->request_type == HttpRequest::Put)
     {
         // check if there will be only header or request body
         auto content_length_header_opt = this->get_header(session->wsi, WSI_TOKEN_HTTP_CONTENT_LENGTH);

@@ -15,13 +15,13 @@ class AService
 
         enum Operation
         {
-            SETUP = 0,
-            INIT,
-            START,
-            STOP,
-            RESET,
-            SUCCESS = 254,
-            ERROR = 255,
+            Setup = 0,
+            Init,
+            Start,
+            Stop,
+            Reset,
+            Success = 254,
+            Error = 255,
         };
 
         class IServiceController

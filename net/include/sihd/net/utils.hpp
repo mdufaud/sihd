@@ -1,11 +1,13 @@
 #ifndef __SIHD_NET_NETUTILS_HPP__
 #define __SIHD_NET_NETUTILS_HPP__
 
-#include <sihd/util/platform.hpp>
 #include <string>
 #include <string_view>
 
+#include <sihd/util/platform.hpp>
+
 #if !defined(__SIHD_WINDOWS__)
+# include <netinet/in.h> // sockaddr
 #else
 // shutdown function corresponding values unix -> windows
 # define SHUT_RD SD_RECEIVE
@@ -14,11 +16,9 @@
 // missing socket types
 # define SOCK_SEQPACKET 5
 # define SOCK_PACKET 10
+# include <winsock2.h>
+# include <ws2ipdef.h> // sockaddr_in6
 #endif
-
-struct sockaddr;
-struct sockaddr_in;
-struct sockaddr_in6;
 
 namespace sihd::net::utils
 {
@@ -44,6 +44,11 @@ bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr_in
 
 bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in *to_fill);
 bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in6 *to_fill);
+
+void fill_sockaddr_network_id(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask);
+void fill_sockaddr_network_id(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask);
+void fill_sockaddr_broadcast(struct sockaddr_in & dst, struct sockaddr_in & src, in_addr mask);
+void fill_sockaddr_broadcast(struct sockaddr_in6 & dst, struct sockaddr_in6 & src, in6_addr mask);
 
 } // namespace sihd::net::utils
 
@@ -290,13 +295,13 @@ struct icmp6_hdr
 #  define ICMP6_PARAMPROB_NEXTHEADER 1 /* unrecognized Next Header */
 #  define ICMP6_PARAMPROB_OPTION 2     /* unrecognized IPv6 option */
 
-#  define ICMP6_FILTER_WILLPASS(type, filterp) ((((filterp)->icmp6_filt[(type) >> 5]) & (1 << ((type)&31))) == 0)
+#  define ICMP6_FILTER_WILLPASS(type, filterp) ((((filterp)->icmp6_filt[(type) >> 5]) & (1 << ((type) & 31))) == 0)
 
-#  define ICMP6_FILTER_WILLBLOCK(type, filterp) ((((filterp)->icmp6_filt[(type) >> 5]) & (1 << ((type)&31))) != 0)
+#  define ICMP6_FILTER_WILLBLOCK(type, filterp) ((((filterp)->icmp6_filt[(type) >> 5]) & (1 << ((type) & 31))) != 0)
 
-#  define ICMP6_FILTER_SETPASS(type, filterp) ((((filterp)->icmp6_filt[(type) >> 5]) &= ~(1 << ((type)&31))))
+#  define ICMP6_FILTER_SETPASS(type, filterp) ((((filterp)->icmp6_filt[(type) >> 5]) &= ~(1 << ((type) & 31))))
 
-#  define ICMP6_FILTER_SETBLOCK(type, filterp) ((((filterp)->icmp6_filt[(type) >> 5]) |= (1 << ((type)&31))))
+#  define ICMP6_FILTER_SETBLOCK(type, filterp) ((((filterp)->icmp6_filt[(type) >> 5]) |= (1 << ((type) & 31))))
 
 #  define ICMP6_FILTER_SETPASSALL(filterp) memset(filterp, 0, sizeof(struct icmp6_filter));
 

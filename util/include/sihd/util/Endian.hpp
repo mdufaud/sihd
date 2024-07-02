@@ -21,19 +21,19 @@ class Endian
     public:
         enum Endianness
         {
-            UNKNOWN,
-            LITTLE,
-            BIG,
+            Unknown,
+            Little,
+            Big,
         };
 
         static constexpr Endianness endian()
         {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-            return LITTLE;
+            return Little;
 #elif __BYTE_ORDER == __BIG_ENDIAN
-            return BIG;
+            return Big;
 #else
-            return UNKNOWN;
+            return Unknown;
 #endif
         }
         static std::string type_str(Endianness type);
@@ -54,10 +54,10 @@ class Endian
         template <typename T>
         static T convert(T value, Endianness endian)
         {
-            if (endian == LITTLE)
-                return convert<T, LITTLE>(value);
-            else if (endian == BIG)
-                return convert<T, BIG>(value);
+            if (endian == Little)
+                return convert<T, Little>(value);
+            else if (endian == Big)
+                return convert<T, Big>(value);
             return value;
         }
 
@@ -66,10 +66,10 @@ class Endian
         template <typename T>
         static T convert_from(T value, Endianness endian)
         {
-            if (endian == LITTLE)
-                return convert_from<T, LITTLE>(value);
-            else if (endian == BIG)
-                return convert_from<T, BIG>(value);
+            if (endian == Little)
+                return convert_from<T, Little>(value);
+            else if (endian == Big)
+                return convert_from<T, Big>(value);
             return value;
         }
 
@@ -100,60 +100,60 @@ double Endian::swap<double>(double ret);
 // convert from little or big-endian order to host byte order.
 
 template <>
-uint16_t Endian::convert<uint16_t, Endian::LITTLE>(uint16_t value);
+uint16_t Endian::convert<uint16_t, Endian::Little>(uint16_t value);
 template <>
-uint16_t Endian::convert<uint16_t, Endian::BIG>(uint16_t value);
+uint16_t Endian::convert<uint16_t, Endian::Big>(uint16_t value);
 template <>
-int16_t Endian::convert<int16_t, Endian::LITTLE>(int16_t value);
+int16_t Endian::convert<int16_t, Endian::Little>(int16_t value);
 template <>
-int16_t Endian::convert<int16_t, Endian::BIG>(int16_t value);
+int16_t Endian::convert<int16_t, Endian::Big>(int16_t value);
 
 template <>
-uint32_t Endian::convert<uint32_t, Endian::LITTLE>(uint32_t value);
+uint32_t Endian::convert<uint32_t, Endian::Little>(uint32_t value);
 template <>
-uint32_t Endian::convert<uint32_t, Endian::BIG>(uint32_t value);
+uint32_t Endian::convert<uint32_t, Endian::Big>(uint32_t value);
 template <>
-int32_t Endian::convert<int32_t, Endian::LITTLE>(int32_t value);
+int32_t Endian::convert<int32_t, Endian::Little>(int32_t value);
 template <>
-int32_t Endian::convert<int32_t, Endian::BIG>(int32_t value);
+int32_t Endian::convert<int32_t, Endian::Big>(int32_t value);
 
 template <>
-uint64_t Endian::convert<uint64_t, Endian::LITTLE>(uint64_t value);
+uint64_t Endian::convert<uint64_t, Endian::Little>(uint64_t value);
 template <>
-uint64_t Endian::convert<uint64_t, Endian::BIG>(uint64_t value);
+uint64_t Endian::convert<uint64_t, Endian::Big>(uint64_t value);
 template <>
-int64_t Endian::convert<int64_t, Endian::LITTLE>(int64_t value);
+int64_t Endian::convert<int64_t, Endian::Little>(int64_t value);
 template <>
-int64_t Endian::convert<int64_t, Endian::BIG>(int64_t value);
+int64_t Endian::convert<int64_t, Endian::Big>(int64_t value);
 
 // convert from host byte order to little or big-endian order
 
 template <>
-uint16_t Endian::convert_from<uint16_t, Endian::LITTLE>(uint16_t value);
+uint16_t Endian::convert_from<uint16_t, Endian::Little>(uint16_t value);
 template <>
-uint16_t Endian::convert_from<uint16_t, Endian::BIG>(uint16_t value);
+uint16_t Endian::convert_from<uint16_t, Endian::Big>(uint16_t value);
 template <>
-int16_t Endian::convert_from<int16_t, Endian::LITTLE>(int16_t value);
+int16_t Endian::convert_from<int16_t, Endian::Little>(int16_t value);
 template <>
-int16_t Endian::convert_from<int16_t, Endian::BIG>(int16_t value);
+int16_t Endian::convert_from<int16_t, Endian::Big>(int16_t value);
 
 template <>
-uint32_t Endian::convert_from<uint32_t, Endian::LITTLE>(uint32_t value);
+uint32_t Endian::convert_from<uint32_t, Endian::Little>(uint32_t value);
 template <>
-uint32_t Endian::convert_from<uint32_t, Endian::BIG>(uint32_t value);
+uint32_t Endian::convert_from<uint32_t, Endian::Big>(uint32_t value);
 template <>
-int32_t Endian::convert_from<int32_t, Endian::LITTLE>(int32_t value);
+int32_t Endian::convert_from<int32_t, Endian::Little>(int32_t value);
 template <>
-int32_t Endian::convert_from<int32_t, Endian::BIG>(int32_t value);
+int32_t Endian::convert_from<int32_t, Endian::Big>(int32_t value);
 
 template <>
-uint64_t Endian::convert_from<uint64_t, Endian::LITTLE>(uint64_t value);
+uint64_t Endian::convert_from<uint64_t, Endian::Little>(uint64_t value);
 template <>
-uint64_t Endian::convert_from<uint64_t, Endian::BIG>(uint64_t value);
+uint64_t Endian::convert_from<uint64_t, Endian::Big>(uint64_t value);
 template <>
-int64_t Endian::convert_from<int64_t, Endian::LITTLE>(int64_t value);
+int64_t Endian::convert_from<int64_t, Endian::Little>(int64_t value);
 template <>
-int64_t Endian::convert_from<int64_t, Endian::BIG>(int64_t value);
+int64_t Endian::convert_from<int64_t, Endian::Big>(int64_t value);
 
 } // namespace sihd::util
 

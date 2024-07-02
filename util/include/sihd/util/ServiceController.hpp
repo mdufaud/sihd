@@ -15,16 +15,16 @@ class ServiceController: public AService::IServiceController,
     public:
         enum State
         {
-            NONE = 0,
-            CONFIGURING,
-            CONFIGURED,
-            INITIALIZING,
-            STARTING,
-            RUNNING,
-            STOPPING,
-            STOPPED,
-            RESETTING,
-            ERROR = 255,
+            None = 0,
+            Configuring,
+            Configured,
+            Initializing,
+            Starting,
+            Running,
+            Stopping,
+            Stopped,
+            Resetting,
+            Error = 255,
         };
 
         ServiceController();
