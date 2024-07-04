@@ -4,23 +4,24 @@
 #include <cstring>
 #include <map>
 
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/net/ip.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/platform.hpp>
+#include <sihd/util/str.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <arpa/inet.h>  // inet_pton...
 # include <netdb.h>      // getprotobynumber, getprotobyname
 # include <netinet/in.h> // struct inX_addr
 #else
-# include <sihd/net/utils.hpp>
 # include <winsock2.h>
 # include <ws2tcpip.h> // addrinfo
 #endif
 
 namespace sihd::net::ip
 {
+
+using namespace sihd::util;
 
 SIHD_NEW_LOGGER("sihd::net::ip");
 
@@ -177,6 +178,22 @@ std::string to_str(const in6_addr *addr_in)
 {
     char buffer[INET6_ADDRSTRLEN] = {0};
     return inet_ntop(AF_INET6, (const void *)(addr_in), buffer, INET6_ADDRSTRLEN);
+}
+
+uint32_t to_netmask(uint32_t value)
+{
+    return ntohl(0xffffffff << (32 - value));
+}
+
+//  A valid netmask cannot have a zero with a one to the right of it. All zeros must have another zero to the right of
+//  it or be bit 0. must apply htonl if mask is in host byte order
+bool is_valid_netmask(uint32_t mask)
+{
+    if (mask == 0)
+        return false;
+    uint32_t y = ~mask;
+    uint32_t z = y + 1;
+    return (z & y) == 0;
 }
 
 } // namespace sihd::net::ip

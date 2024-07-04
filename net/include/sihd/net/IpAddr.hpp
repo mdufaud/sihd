@@ -63,7 +63,7 @@ class IpAddr
         size_t addr_len() const;
         uint16_t port() const;
 
-        std::string fetch_name() const;
+        bool fetch_hostname();
 
         std::string str() const;
         const std::string & hostname() const;

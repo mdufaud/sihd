@@ -1,54 +1,12 @@
 #ifndef __SIHD_NET_NETUTILS_HPP__
 #define __SIHD_NET_NETUTILS_HPP__
 
-#include <string>
-#include <string_view>
-
-#include <sihd/util/platform.hpp>
-
-#if !defined(__SIHD_WINDOWS__)
-# include <netinet/in.h> // sockaddr
-#else
-// shutdown function corresponding values unix -> windows
-# define SHUT_RD SD_RECEIVE
-# define SHUT_WR SD_SEND
-# define SHUT_RDWR SD_BOTH
-// missing socket types
-# define SOCK_SEQPACKET 5
-# define SOCK_PACKET 10
-# include <winsock2.h>
-# include <ws2ipdef.h> // sockaddr_in6
-#endif
+#include <cstdint>
 
 namespace sihd::net::utils
 {
 
 uint16_t checksum(uint16_t *addr, int len);
-
-int interface_idx(int sock, std::string_view name);
-bool get_interface_name(int sock, int idx, std::string & to_fill);
-
-bool get_interface_mac(int sock, std::string_view name, struct sockaddr *to_fill);
-bool get_interface_addr(int sock, std::string_view name, struct sockaddr *to_fill);
-bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr *to_fill);
-bool get_interface_netmask(int sock, std::string_view name, struct sockaddr *to_fill);
-
-bool get_interface_mac(int sock, std::string_view name, struct sockaddr_in *to_fill);
-bool get_interface_mac(int sock, std::string_view name, struct sockaddr_in6 *to_fill);
-
-bool get_interface_addr(int sock, std::string_view name, struct sockaddr_in *to_fill);
-bool get_interface_addr(int sock, std::string_view name, struct sockaddr_in6 *to_fill);
-
-bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr_in *to_fill);
-bool get_interface_broadcast(int sock, std::string_view name, struct sockaddr_in6 *to_fill);
-
-bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in *to_fill);
-bool get_interface_netmask(int sock, std::string_view name, struct sockaddr_in6 *to_fill);
-
-void fill_sockaddr_network_id(const struct sockaddr_in *src, in_addr mask, struct sockaddr_in *to_fill);
-void fill_sockaddr_network_id(const struct sockaddr_in6 *src, in6_addr mask, struct sockaddr_in6 *to_fill);
-void fill_sockaddr_broadcast(const struct sockaddr_in *src, in_addr mask, struct sockaddr_in *to_fill);
-void fill_sockaddr_broadcast(const struct sockaddr_in6 *src, in6_addr mask, struct sockaddr_in6 *to_fill);
 
 } // namespace sihd::net::utils
 

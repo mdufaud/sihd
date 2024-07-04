@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/net/IpAddr.hpp>
-#include <sihd/net/NetInterfaces.hpp>
+#include <sihd/net/NetInterface.hpp>
 #include <sihd/net/ip.hpp>
 #include <sihd/net/utils.hpp>
 #include <sihd/util/Logger.hpp>
@@ -13,70 +13,69 @@ namespace test
 {
 SIHD_LOGGER;
 using namespace sihd::net;
-class TestNetInterfaces: public ::testing::Test
+class TestNetInterface: public ::testing::Test
 {
     protected:
-        TestNetInterfaces() { sihd::util::LoggerManager::basic(); }
+        TestNetInterface() { sihd::util::LoggerManager::basic(); }
 
-        virtual ~TestNetInterfaces() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestNetInterface() { sihd::util::LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
         virtual void TearDown() {}
 };
 
-TEST_F(TestNetInterfaces, test_netinterfaces)
+TEST_F(TestNetInterface, test_netinterface)
 {
-    NetInterfaces ifs;
-    NetIFace *lo = nullptr;
+    auto opt_interfaces = NetInterface::get_all_interfaces();
+    ASSERT_TRUE(opt_interfaces.has_value());
+    ASSERT_FALSE(opt_interfaces->empty());
+    // loopback should be here
+    ASSERT_TRUE(opt_interfaces->find("lo") != opt_interfaces->end());
 
-    EXPECT_FALSE(ifs.error());
-    std::vector<NetIFace *> ifaces = ifs.ifaces();
-    for (NetIFace *iface : ifaces)
+    for (const auto & [name, netif] : *opt_interfaces)
     {
-        if (iface->name() == "lo")
-            lo = iface;
-        SIHD_LOG(debug, "Interface: {} -> {}", iface->name(), iface->up() ? "up" : "down");
-        SIHD_LOG(debug, "Total addresses: {}", iface->addresses().size());
-        SIHD_LOG(debug, "--- IPV4 ---");
-        const struct ifaddrs *ifaddr4 = iface->get_addr(AF_INET);
-        if (ifaddr4)
+        fmt::print("{} [{}] {}", name, netif.mac_addr(), netif.up() ? "up" : "down");
+        if (netif.running())
+            fmt::print(" running");
+        if (netif.noarp())
+            fmt::print(" noarp");
+        if (netif.promisc())
+            fmt::print(" promisc");
+        if (netif.notrailers())
+            fmt::print(" notrailers");
+        if (netif.master())
+            fmt::print(" master");
+        if (netif.slave())
+            fmt::print(" slave");
+        if (netif.all_multicast())
+            fmt::print(" all_multicast");
+        if (netif.supports_multicast())
+            fmt::print(" supports_multicast");
+        if (netif.loopback())
+            fmt::print(" loopback");
+        fmt::printf("\n");
+        if (netif.addr4().has_ip())
         {
-            in_addr mask;
-            EXPECT_TRUE(iface->get_netmask(ifaddr4, &mask));
-            struct sockaddr_in *base = (struct sockaddr_in *)(ifaddr4->ifa_addr);
-            struct sockaddr_in netid;
-            struct sockaddr_in broadcast;
-            utils::fill_sockaddr_network_id(base, mask, &netid);
-            utils::fill_sockaddr_broadcast(base, mask, &broadcast);
-            SIHD_LOG(debug, "Base ip: {}", ip::to_str(base));
-            SIHD_LOG(debug, "Netmask: {}", ip::to_str(&mask));
-            SIHD_LOG(debug, "Netid: {}", ip::to_str(&netid));
-            SIHD_LOG(debug, "Broadcast: {}", ip::to_str(&broadcast));
+            fmt::print("  IPV4:\n");
+            fmt::print("    addr: {}\n", netif.addr4().str());
+            fmt::print("    netmask: {}\n", netif.netmask4().str());
+            if (netif.broadcast() || netif.point2point())
+            {
+                fmt::print("    {}: {}\n", netif.broadcast() ? "broadcast" : "point2point", netif.extra_addr4().str());
+            }
         }
-        SIHD_LOG(debug, "--- IPV6 ---");
-        const struct ifaddrs *ifaddr6 = iface->get_addr(AF_INET6);
-        if (ifaddr6)
+        if (netif.addr6().has_ip())
         {
-            in6_addr mask;
-            EXPECT_TRUE(iface->get_netmask(ifaddr6, &mask));
-            struct sockaddr_in6 *base = (struct sockaddr_in6 *)(ifaddr6->ifa_addr);
-            struct sockaddr_in6 netid;
-            struct sockaddr_in6 broadcast;
-            utils::fill_sockaddr_network_id(base, mask, &netid);
-            utils::fill_sockaddr_broadcast(base, mask, &broadcast);
-            SIHD_LOG(debug, "Base ip: {}", ip::to_str(base));
-            SIHD_LOG(debug, "Netmask: {}", ip::to_str(&mask));
-            SIHD_LOG(debug, "Netid: {}", ip::to_str(&netid));
-            SIHD_LOG(debug, "Broadcast: {}", ip::to_str(&broadcast));
+            fmt::print("  IPV6:\n");
+            fmt::print("    addr: {}\n", netif.addr6().str());
+            fmt::print("    netmask: {}\n", netif.netmask4().str());
+            if (netif.broadcast() || netif.point2point())
+            {
+                fmt::print("    {}: {}\n", netif.broadcast() ? "broadcast" : "point2point", netif.extra_addr6().str());
+            }
         }
-        std::cout << std::endl;
-    }
-    EXPECT_TRUE(ifaces.size() > 0);
-    EXPECT_NE(lo, nullptr);
-    if (lo != nullptr)
-    {
-        EXPECT_TRUE(lo->loopback());
     }
 }
+
 } // namespace test

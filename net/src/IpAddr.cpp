@@ -35,7 +35,17 @@ using namespace sihd::net;
 namespace
 {
 
-// TODO to ip.hpp
+uint32_t netmask_value_from_str(std::string_view mask_value_str)
+{
+    uint32_t mask_value;
+    if (!str::is_number(mask_value_str) || !str::convert_from_string<uint32_t>(mask_value_str, mask_value))
+    {
+        SIHD_LOG(error, "IpAddr: not a subnet mask: {}", mask_value_str);
+        return -1;
+    }
+    return mask_value;
+}
+
 bool to_sockaddr_in(sockaddr_in *addr, std::string_view ip, int port = 0)
 {
     int ret = inet_pton(AF_INET, ip.data(), &addr->sin_addr);
@@ -52,7 +62,6 @@ bool to_sockaddr_in(sockaddr_in *addr, std::string_view ip, int port = 0)
     return true;
 }
 
-// TODO to ip.hpp
 bool to_sockaddr_in6(sockaddr_in6 *addr, std::string_view ip, int port = 0)
 {
     int ret = inet_pton(AF_INET6, ip.data(), &addr->sin6_addr);
@@ -67,36 +76,6 @@ bool to_sockaddr_in6(sockaddr_in6 *addr, std::string_view ip, int port = 0)
     addr->sin6_family = AF_INET6;
     addr->sin6_port = htons(port);
     return true;
-}
-
-// TODO to ip.hpp
-uint32_t to_netmask(uint32_t value)
-{
-    return ntohl(0xffffffff << (32 - value));
-}
-
-// TODO to ip.hpp
-//  A valid netmask cannot have a zero with a one to the right of it. All zeros must have another zero to the right of
-//  it or be bit 0. must apply htonl if mask is in host byte order
-bool is_valid_netmask(uint32_t mask)
-{
-    if (mask == 0)
-        return false;
-    uint32_t y = ~mask;
-    uint32_t z = y + 1;
-    return (z & y) == 0;
-}
-
-// TODO to ip.hpp
-uint32_t netmask_value_from_str(std::string_view mask_value_str)
-{
-    uint32_t mask_value;
-    if (!str::is_number(mask_value_str) || !str::convert_from_string<uint32_t>(mask_value_str, mask_value))
-    {
-        SIHD_LOG(error, "IpAddr: not a subnet mask: {}", mask_value_str);
-        return -1;
-    }
-    return mask_value;
 }
 
 }; // namespace
@@ -206,7 +185,7 @@ bool IpAddr::set_subnet_mask(std::string_view mask)
     struct sockaddr_in sockaddr_mask;
     if (to_sockaddr_in(&sockaddr_mask, mask))
     {
-        if (is_valid_netmask(htonl(sockaddr_mask.sin_addr.s_addr)) == false)
+        if (ip::is_valid_netmask(htonl(sockaddr_mask.sin_addr.s_addr)) == false)
         {
             SIHD_LOG(error, "IpAddr: not a valid mask: {}", mask);
             return false;
@@ -225,7 +204,7 @@ Subnet IpAddr::subnet() const
 
     if (this->has_subnet())
     {
-        ret.netmask.s_addr = to_netmask(_netmask_value);
+        ret.netmask.s_addr = ip::to_netmask(_netmask_value);
         ret.netid.s_addr = _addr.sockaddr_in.sin_addr.s_addr & ret.netmask.s_addr;
         ret.wildcard.s_addr = ~ret.netmask.s_addr;
         ret.broadcast.s_addr = ret.netid.s_addr | ret.wildcard.s_addr;
@@ -264,8 +243,8 @@ uint32_t IpAddr::subnet_value() const
 
 bool IpAddr::set_subnet_mask(uint32_t mask_value)
 {
-    uint32_t actual_mask = to_netmask(mask_value);
-    if (is_valid_netmask(htonl(actual_mask)) == false)
+    uint32_t actual_mask = ip::to_netmask(mask_value);
+    if (ip::is_valid_netmask(htonl(actual_mask)) == false)
     {
         SIHD_LOG(error, "IpAddr: not a valid mask: {}", mask_value);
         return false;
@@ -293,7 +272,7 @@ bool IpAddr::is_same_subnet(const sockaddr_in & other_addr) const
     struct in_addr netmask;
     struct in_addr netid;
 
-    netmask.s_addr = to_netmask(_netmask_value);
+    netmask.s_addr = ip::to_netmask(_netmask_value);
     netid.s_addr = _addr.sockaddr_in.sin_addr.s_addr & netmask.s_addr;
 
     return (other_addr.sin_addr.s_addr & netmask.s_addr) == (netid.s_addr & netmask.s_addr);
@@ -335,22 +314,24 @@ const std::string & IpAddr::hostname() const
     return _hostname;
 }
 
-std::string IpAddr::fetch_name() const
+bool IpAddr::fetch_hostname()
 {
     if (!this->has_ip())
         throw std::invalid_argument("cannot fetch name of IpAddr with no ip");
 
     const size_t addr_len = this->is_ipv6() ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
 
-    char host[NI_MAXHOST];
-    const int flags = NI_NAMEREQD;
-    const int ret = ::getnameinfo(&_addr.sockaddr, addr_len, host, NI_MAXHOST, nullptr, 0, flags);
+    char hostname[NI_MAXHOST];
+    const int flags = NI_NAMEREQD | NI_NOFQDN;
+    const int ret = ::getnameinfo(&_addr.sockaddr, addr_len, hostname, NI_MAXHOST, nullptr, 0, flags);
     if (ret != 0)
     {
-        SIHD_LOG(error, "getnameinfo error: {}", gai_strerror(ret));
-        return "";
+        SIHD_LOG(error, "IpAddr: getnameinfo error: {}", gai_strerror(ret));
+        return false;
     }
-    return host;
+
+    this->set_hostname(hostname);
+    return true;
 }
 
 size_t IpAddr::addr_len() const

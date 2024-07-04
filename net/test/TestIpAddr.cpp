@@ -35,11 +35,24 @@ TEST_F(TestIpAddr, test_ipaddr_ip_valid)
 
 TEST_F(TestIpAddr, test_ipaddr_ip_name)
 {
-    EXPECT_EQ(IpAddr("127.0.0.1").fetch_name(), "localhost");
-    EXPECT_THROW(IpAddr("google.com").fetch_name(), std::invalid_argument);
+    IpAddr localhost("127.0.0.1");
+    localhost.fetch_hostname();
+    EXPECT_EQ(localhost.hostname(), "localhost");
+
+    // no valid ip inside
+    EXPECT_THROW(IpAddr("google.com").fetch_hostname(), std::invalid_argument);
+
     // requires internet
-    SIHD_LOG(debug, IpAddr("216.58.215.46").fetch_name());
-    SIHD_LOG(debug, IpAddr("2a00:1450:4007:810::200e").fetch_name());
+    IpAddr addr1("216.58.215.46");
+    if (addr1.fetch_hostname())
+    {
+        SIHD_LOG(debug, addr1.hostname());
+    }
+    IpAddr addr2("2a00:1450:4007:810::200e");
+    if (addr2.fetch_hostname())
+    {
+        SIHD_LOG(debug, addr2.hostname());
+    }
 }
 
 TEST_F(TestIpAddr, test_ipaddr_dns_lookup_google)
@@ -49,17 +62,6 @@ TEST_F(TestIpAddr, test_ipaddr_dns_lookup_google)
 
     SIHD_LOG(debug, "Nb IPs: {}", dns.results.size());
     fmt::print("{}\n", dns.dump());
-
-    //     SIHD_LOG(debug, "Hostname: {}", dns.host);
-    //     std::string google_proto_udp = google.protocol_ip_str("udp");
-    //     SIHD_LOG(debug, "Google first IPV4: {}", google.first_ipv4_str());
-    //     SIHD_LOG(debug, "Google first IPV6: {}", google.first_ipv6_str());
-    //     SIHD_LOG(debug, "Google IP IPV4: {}", google.protocol_ip_str("ip"));
-    //     SIHD_LOG(debug, "Google UDP IPV4: {}", google_proto_udp);
-    //     SIHD_LOG(debug, "Google TCP IPV4: {}", google.protocol_ip_str("tcp"));
-    //     SIHD_LOG(debug, "Google sock stream IPV4: {}", google.socktype_ip_str("stream"));
-    //     SIHD_LOG(debug, "Google sock datagram IPV4: {}", google.socktype_ip_str("datagram"));
-    //     SIHD_LOG(debug, "Google sock raw IPV6: {}", google.socktype_ip_str("raw", true));
 }
 
 TEST_F(TestIpAddr, test_ipaddr_dns_lookup_error)
