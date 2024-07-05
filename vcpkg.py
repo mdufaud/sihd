@@ -169,6 +169,8 @@ def link_to_extlibs():
     downloaded_path = os.path.join(vcpkg_build_path, "vcpkg_installed", vcpkg_triplet)
     if os.path.exists(downloaded_path):
         # remove existing link:
+        if os.path.islink(builder.build_extlib_path):
+            os.unlink(builder.build_extlib_path)
         if os.path.exists(builder.build_extlib_path):
             os.unlink(builder.build_extlib_path)
         os.symlink(downloaded_path, builder.build_extlib_path, target_is_directory=True)

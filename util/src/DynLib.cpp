@@ -20,9 +20,10 @@ namespace
 
 std::string get_error()
 {
-#if !defined(__SIHD_WINDOWS__)
+#if !defined(SIHD_STATIC)
+# if !defined(__SIHD_WINDOWS__)
     return dlerror();
-#else
+# else
     // Get the error message ID, if any.
     DWORD errorMessageID = ::GetLastError();
     if (errorMessageID == 0)
@@ -51,20 +52,25 @@ std::string get_error()
     LocalFree(messageBuffer);
 
     return message;
+# endif
+#else
+    return "";
 #endif
 }
 
+#if !defined(SIHD_STATIC)
 bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)
 {
-#if !defined(__SIHD_WINDOWS__)
+# if !defined(__SIHD_WINDOWS__)
     *handle = dlopen(lib_name.c_str(), RTLD_NOW);
-#else
+# else
     *handle = LoadLibrary(lib_name.c_str());
-#endif
+# endif
     if (*handle != nullptr)
         fill = std::move(lib_name);
     return *handle != nullptr;
 }
+#endif
 
 } // namespace
 
@@ -84,21 +90,26 @@ DynLib::~DynLib()
 
 bool DynLib::open(std::string_view lib_name)
 {
+#if !defined(SIHD_STATIC)
     this->close();
     std::string test_lib_name;
 
-#if !defined(__SIHD_WINDOWS__)
+# if !defined(__SIHD_WINDOWS__)
     try_load_lib(fmt::format("lib{}.so", lib_name), &_handle, _name)
         || try_load_lib(fmt::format("{}.so", lib_name), &_handle, _name)
         || try_load_lib(fmt::format("{}", lib_name), &_handle, _name);
-#else
+# else
     try_load_lib(fmt::format("lib{}.dll", lib_name), &_handle, _name)
         || try_load_lib(fmt::format("{}.dll", lib_name), &_handle, _name)
         || try_load_lib(fmt::format("{}", lib_name), &_handle, _name);
-#endif
+# endif
     if (_handle == nullptr)
         SIHD_LOG(error, "DynLib: {}", get_error());
     return _handle != nullptr;
+#else
+    (void)lib_name;
+    return false;
+#endif
 }
 
 void *DynLib::load(std::string_view symbol_name)

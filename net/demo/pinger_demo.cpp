@@ -78,7 +78,7 @@ int main(int argc, char **argv)
             const IcmpResponse & icmp_response = event.icmp_response;
             log.info(fmt::format("{} bytes from {}: icmp_seq={} ttl={} time={}",
                                  icmp_response.size,
-                                 icmp_response.client.host(),
+                                 icmp_response.client.hostname(),
                                  icmp_response.seq,
                                  icmp_response.ttl,
                                  event.trip_time.timeoffset_str()));

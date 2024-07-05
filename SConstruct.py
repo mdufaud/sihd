@@ -250,6 +250,10 @@ elif compiler == "gcc":
             CPPFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"],
             LINKFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"]
         )
+    if builder.is_static_libs():
+        base_env.Append(
+            LINKFLAGS = ["-static", "-static-libgcc", "-static-libstdc++"]
+        )
 # EMSCRIPTEN build
 elif compiler == "em":
     base_env.Replace(
