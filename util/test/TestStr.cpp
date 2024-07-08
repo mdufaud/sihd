@@ -77,6 +77,37 @@ class TestStr: public ::testing::Test
         double _dval;
 };
 
+TEST_F(TestStr, test_str_split_pair)
+{
+    auto pair = str::split_pair("TOTO=titi", "=");
+    EXPECT_EQ(pair.first, "TOTO");
+    EXPECT_EQ(pair.second, "titi");
+
+    pair = str::split_pair("TOTO=titi", ";");
+    EXPECT_EQ(pair.first, "TOTO=titi");
+    EXPECT_EQ(pair.second, "");
+
+    pair = str::split_pair("TOTO=titi", "");
+    EXPECT_EQ(pair.first, "TOTO=titi");
+    EXPECT_EQ(pair.second, "");
+
+    pair = str::split_pair("TOTO=", "=");
+    EXPECT_EQ(pair.first, "TOTO");
+    EXPECT_EQ(pair.second, "");
+
+    pair = str::split_pair("=", "=");
+    EXPECT_EQ(pair.first, "");
+    EXPECT_EQ(pair.second, "");
+
+    pair = str::split_pair("", "=");
+    EXPECT_EQ(pair.first, "");
+    EXPECT_EQ(pair.second, "");
+
+    pair = str::split_pair("TOTO=titi=tata", "=");
+    EXPECT_EQ(pair.first, "TOTO");
+    EXPECT_EQ(pair.second, "titi=tata");
+}
+
 TEST_F(TestStr, test_str_word_wrap)
 {
     EXPECT_EQ(str::word_wrap("", 1), "");

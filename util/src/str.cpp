@@ -80,6 +80,23 @@ std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bo
 
 } // namespace
 
+std::pair<std::string, std::string> split_pair(std::string_view str, std::string_view delimiter)
+{
+    std::pair<std::string, std::string> ret;
+
+    size_t idx = str.find_first_of(delimiter);
+    if (idx == std::string_view::npos)
+    {
+        ret.first = str;
+    }
+    else
+    {
+        ret.first = std::string(str.data(), idx);
+        ret.second = str.substr(idx + delimiter.length());
+    }
+    return ret;
+}
+
 void append_sep(std::string & str, std::string_view append, std::string_view sep)
 {
     if (str.empty())

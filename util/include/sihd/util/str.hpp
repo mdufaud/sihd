@@ -4,6 +4,7 @@
 #include <string>
 #include <string_view>
 #include <typeinfo>
+#include <utility>
 #include <vector>
 
 #include <sihd/util/IArray.hpp>
@@ -119,6 +120,8 @@ std::string join(const std::vector<std::string_view> & list, std::string_view jo
 std::string_view ltrim(std::string_view s);
 std::string_view rtrim(std::string_view s);
 std::string_view trim(std::string_view s);
+
+std::pair<std::string, std::string> split_pair(std::string_view str, std::string_view delimiter);
 
 std::string & to_upper(std::string & s);
 std::string & to_lower(std::string & s);
