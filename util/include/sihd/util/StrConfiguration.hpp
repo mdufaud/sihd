@@ -18,6 +18,7 @@ class StrConfiguration
 
         void parse_configuration(std::string_view conf);
 
+        bool empty() const;
         size_t size() const;
         bool has(const std::string & key) const;
         std::optional<std::string> find(const std::string & key) const;
@@ -26,7 +27,7 @@ class StrConfiguration
         std::string operator[](const std::string & key) const;
 
         // throws out of range if not found
-        std::string get(const std::string & key) const;
+        const std::string & get(const std::string & key) const;
 
         std::string str() const;
 

@@ -2,6 +2,7 @@
 
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/StrConfiguration.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::util
 {
@@ -14,18 +15,25 @@ StrConfiguration::StrConfiguration(std::string_view conf)
 void StrConfiguration::parse_configuration(std::string_view conf)
 {
     _configuration.clear();
+
+    if (conf.empty())
+        return;
+
     Splitter splitter(";");
-    auto split_pairs = splitter.split(conf);
-    for (const auto & pair : split_pairs)
+    std::vector<std::string> conf_list = splitter.split(conf);
+    for (const std::string & conf : conf_list)
     {
-        size_t idx = pair.find_first_of('=');
-        if (idx != std::string::npos)
+        auto [key, value] = str::split_pair(conf, "=");
+        if (!value.empty())
         {
-            std::string key = pair.substr(0, idx);
-            std::string value = pair.substr(idx + 1, pair.size());
-            _configuration[key] = value;
+            _configuration.emplace(std::move(key), std::move(value));
         }
     }
+}
+
+bool StrConfiguration::empty() const
+{
+    return _configuration.empty();
 }
 
 size_t StrConfiguration::size() const
@@ -51,12 +59,12 @@ std::string StrConfiguration::operator[](const std::string & key) const
     return this->find(key).value_or("");
 }
 
-std::string StrConfiguration::get(const std::string & key) const
+const std::string & StrConfiguration::get(const std::string & key) const
 {
-    const auto found = this->find(key);
-    if (found.has_value() == false)
+    const auto it = _configuration.find(key);
+    if (it == _configuration.end())
         throw std::out_of_range(fmt::format("StrConfiguration::get key not found: '{}'", key));
-    return *found;
+    return it->second;
 }
 
 std::string StrConfiguration::str() const

@@ -496,15 +496,19 @@ TEST_F(TestStr, test_strconfiguration)
 
     conf.parse_configuration("a=1;b=;c;");
     EXPECT_TRUE(conf.has("a"));
-    EXPECT_TRUE(conf.has("b"));
+    EXPECT_FALSE(conf.has("b"));
     EXPECT_FALSE(conf.has("c"));
     EXPECT_EQ(conf["a"], "1");
     EXPECT_EQ(conf["b"], "");
+    EXPECT_EQ(conf.get("a"), "1");
+    EXPECT_THROW(conf.get("b"), std::out_of_range);
 
     conf.parse_configuration("");
     EXPECT_EQ(conf.size(), 0u);
+    EXPECT_TRUE(conf.empty());
     conf.parse_configuration("a");
     EXPECT_EQ(conf.size(), 0u);
+    EXPECT_TRUE(conf.empty());
 }
 
 TEST_F(TestStr, test_str_format)
