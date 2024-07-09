@@ -405,9 +405,20 @@ TEST_F(TestProcess, test_process_fun)
 {
     Process proc([]() -> int {
         std::cout << "hello world";
+
+        for (int i = 0; ::environ[i] != nullptr; ++i)
+        {
+            std::cout << environ[i] << std::endl;
+        }
+
+        char *env = getenv("TOTO");
+        if (env != nullptr)
+            std::cout << " " << env;
         std::cerr << "nope";
         return 1;
     });
+
+    proc.set_environ("TOTO", "titi");
 
     std::string out;
     std::string err;
@@ -421,7 +432,7 @@ TEST_F(TestProcess, test_process_fun)
     EXPECT_TRUE(proc.has_exited());
     EXPECT_EQ(proc.return_code(), 1);
 
-    EXPECT_EQ(out, "hello world");
+    EXPECT_EQ(out, "hello world titi");
     EXPECT_EQ(err, "nope");
 }
 

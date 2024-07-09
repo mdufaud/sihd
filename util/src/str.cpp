@@ -11,6 +11,7 @@
 #include <sstream>
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/IArrayView.hpp>
@@ -387,19 +388,25 @@ std::string join(const std::vector<std::string_view> & list, std::string_view jo
     return fmt::format("{}", fmt::join(list, join_str));
 }
 
-bool starts_with(std::string_view s, std::string_view start)
+bool starts_with(std::string_view s, std::string_view start, std::string_view suffix)
 {
-    if (start.length() > s.length())
+    if (start.length() > (s.length() + suffix.length()))
         return false;
-    return strncmp(s.data(), start.data(), start.length()) == 0;
+    const bool success = strncmp(s.data(), start.data(), start.length()) == 0;
+    if (suffix.empty())
+        return success;
+    return success && strncmp(s.data() + start.length(), suffix.data(), suffix.length()) == 0;
 }
 
-bool ends_with(std::string_view s, std::string_view end)
+bool ends_with(std::string_view s, std::string_view end, std::string_view prefix)
 {
-    const ssize_t ending = s.length() - end.length();
+    const ssize_t ending = s.length() - (end.length() + prefix.length());
     if (ending < 0)
         return false;
-    return strncmp(s.data() + ending, end.data(), end.length()) == 0;
+    const bool success = strncmp(s.data() + ending + prefix.length(), end.data(), end.length()) == 0;
+    if (prefix.empty())
+        return success;
+    return success && strncmp(s.data() + ending, prefix.data(), prefix.length()) == 0;
 }
 
 bool is_digit(int c, uint16_t base)

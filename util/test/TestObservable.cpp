@@ -41,10 +41,12 @@ class TestObservable: public ::testing::Test,
         void handle(SomeObservable *obs)
         {
             this->val = obs->get_val();
-            obs->remove_observer_inside_notification(this);
+            obs->remove_observer(this);
+            ++called;
         }
 
         int val = 0;
+        int called = 0;
 };
 
 TEST_F(TestObservable, test_obs_inheritance)
@@ -52,16 +54,21 @@ TEST_F(TestObservable, test_obs_inheritance)
     SomeObservable observable;
     observable.val = 1337;
     observable.add_observer(this);
+    // should be ignored
     observable.add_observer(this);
     observable.add_observer(this);
     observable.add_observer(this);
     EXPECT_EQ(this->val, 0);
+    EXPECT_EQ(this->called, 0);
     observable.notify();
+    EXPECT_EQ(this->val, 1337);
     EXPECT_EQ(this->val, observable.val);
+    EXPECT_EQ(this->called, 1);
 
     observable.val = 424242;
     observable.notify();
     EXPECT_EQ(this->val, 1337);
+    EXPECT_EQ(this->called, 1);
 }
 
 TEST_F(TestObservable, test_obs_lambda)
@@ -70,10 +77,11 @@ TEST_F(TestObservable, test_obs_lambda)
     observable.val = 1337;
     int val = 0;
     Handler<SomeObservable *> handler([&](SomeObservable *obs) -> void { val = obs->get_val(); });
-    EXPECT_EQ(val, 0);
     observable.add_observer(&handler);
+    EXPECT_EQ(val, 0);
     observable.notify();
     EXPECT_EQ(val, 1337);
+
     observable.val = 4242;
     observable.remove_observer(&handler);
     observable.notify();

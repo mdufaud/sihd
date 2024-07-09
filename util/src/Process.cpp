@@ -3,6 +3,7 @@
 #include <sihd/util/Process.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/os.hpp>
+#include <sihd/util/str.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 
@@ -30,6 +31,11 @@
 #  define SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE 0740
 # endif
 
+extern "C"
+{
+extern char **environ;
+}
+
 namespace sihd::util
 {
 
@@ -38,6 +44,8 @@ SIHD_LOGGER;
 namespace
 {
 # if !defined(__SIHD_ANDROID__)
+
+void build_function_environ(const std::vector<std::string> &) {}
 
 void add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_to)
 {
@@ -201,8 +209,22 @@ void Process::reset_proc()
     }
 }
 
+void Process::load_environ(const char **env)
+{
+    int i = 0;
+    while (env && env[i] != nullptr)
+    {
+        _environ.emplace_back(env[i]);
+        ++i;
+    }
+}
+
 void Process::clear()
 {
+    _environ.clear();
+
+    this->load_environ(const_cast<const char **>(::environ));
+
     constexpr auto reset_fwd = [](FileDescWrapper & fdw) {
         fdw.action = None;
         fdw.fun = nullptr;
@@ -408,7 +430,7 @@ void Process::_add_pipe(FileDescWrapper & fdw)
 
 // Execution
 
-bool Process::_do_fork(const std::vector<const char *> & argv)
+bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector<const char *> & env)
 {
     pid_t pid;
     if ((pid = fork()) < 0)
@@ -441,9 +463,12 @@ bool Process::_do_fork(const std::vector<const char *> & argv)
         }
         int status = 0;
         if (_fun_to_execute)
+        {
+            build_function_environ(env);
             status = _fun_to_execute();
+        }
         else
-            status = execvp(argv[0], const_cast<char *const *>(&(argv[0])));
+            status = execvpe(argv[0], const_cast<char *const *>(&(argv[0])), const_cast<char *const *>(&(env[0])));
         exit(status);
     }
     _pid = pid;
@@ -451,7 +476,7 @@ bool Process::_do_fork(const std::vector<const char *> & argv)
 }
 
 # if !defined(__SIHD_ANDROID__)
-bool Process::_do_spawn(const std::vector<const char *> & argv)
+bool Process::_do_spawn(const std::vector<const char *> & argv, const std::vector<const char *> & env)
 {
     pid_t pid;
     posix_spawn_file_actions_t actions;
@@ -478,7 +503,12 @@ bool Process::_do_spawn(const std::vector<const char *> & argv)
         add_dup_action(&actions, _stderr.fd_write, STDERR_FILENO);
         add_close_action(&actions, _stderr.fd_read);
     }
-    int err = posix_spawnp(&pid, argv[0], &actions, nullptr, const_cast<char *const *>(&(argv[0])), nullptr);
+    int err = posix_spawnp(&pid,
+                           argv[0],
+                           &actions,
+                           nullptr,
+                           const_cast<char *const *>(&(argv[0])),
+                           const_cast<char *const *>(&(env[0])));
     posix_spawn_file_actions_destroy(&actions);
     if (err != 0)
     {
@@ -513,15 +543,23 @@ bool Process::execute()
     }
     c_argv.emplace_back(nullptr);
 
+    std::vector<const char *> c_environ;
+    c_environ.reserve(_environ.size() + 1);
+    for (const std::string & env : _environ)
+    {
+        c_environ.emplace_back(env.c_str());
+    }
+    c_environ.emplace_back(nullptr);
+
     bool success = false;
     if (_fun_to_execute)
-        success = this->_do_fork(c_argv);
+        success = this->_do_fork(c_argv, c_environ);
     else
     {
 # if !defined(__SIHD_ANDROID__)
-        success = this->_do_spawn(c_argv);
+        success = this->_do_spawn(c_argv, c_environ);
 # else
-        success = this->_do_fork(c_argv);
+        success = this->_do_fork(c_argv, c_environ);
 # endif
     }
 
@@ -596,6 +634,19 @@ bool Process::kill(int sig)
             SIHD_LOG(error, "Process: could not kill: {}", strerror(errno));
     }
     return ret;
+}
+
+void Process::set_environ(std::string_view key, std::string_view value)
+{
+    for (std::string & environ : _environ)
+    {
+        if (str::starts_with(environ, key, "="))
+        {
+            environ = fmt::format("{}={}", key, value);
+            return;
+        }
+    }
+    _environ.emplace_back(fmt::format("{}={}", key, value));
 }
 
 // Run

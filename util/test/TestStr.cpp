@@ -628,6 +628,14 @@ TEST_F(TestStr, test_str_with)
 
     EXPECT_FALSE(str::starts_with("h", "he"));
     EXPECT_FALSE(str::ends_with("h", "hello"));
+
+    EXPECT_TRUE(str::starts_with("TOTO=", "TOTO", "="));
+    EXPECT_TRUE(str::starts_with("TOTO=titi", "TOTO", "="));
+    EXPECT_FALSE(str::starts_with("TOTO=", "TOTO", "!"));
+
+    EXPECT_TRUE(str::ends_with("TOTO=titi", "titi", "="));
+    EXPECT_TRUE(str::ends_with("=titi", "titi", "="));
+    EXPECT_FALSE(str::ends_with("TOTO=titi", "titi", "!"));
 }
 
 TEST_F(TestStr, test_str_time_format)

@@ -110,8 +110,8 @@ std::string format(std::string_view format, ...);
 bool is_all_spaces(std::string_view s);
 bool is_digit(int c, uint16_t base = 10);
 bool is_number(std::string_view s, uint16_t base = 10);
-bool starts_with(std::string_view s, std::string_view start);
-bool ends_with(std::string_view s, std::string_view end);
+bool starts_with(std::string_view s, std::string_view start, std::string_view suffix = "");
+bool ends_with(std::string_view s, std::string_view end, std::string_view prefix = "");
 
 std::vector<std::string> split(std::string_view str);
 std::string join(const std::vector<std::string> & list, std::string_view join_str = "\n");

@@ -21,7 +21,7 @@ class Observable: public IObservable<T>
 
         bool add_observer(IHandler<T *> *obs, bool add_to_front = false)
         {
-            std::lock_guard<std::mutex> l(_mutex);
+            std::lock_guard l(_mutex);
 
             const bool is_already_observer
                 = std::find(_observers.cbegin(), _observers.cend(), obs) != _observers.cend();
@@ -35,36 +35,29 @@ class Observable: public IObservable<T>
             return true;
         }
 
-        void remove_observer_inside_notification(IHandler<T *> *obs)
-        {
-            std::lock_guard<std::mutex> l(_mutex_remove);
-            _observers_to_remove.emplace_back(obs);
-        }
-
         void remove_observer(IHandler<T *> *obs)
         {
-            std::lock_guard<std::mutex> l(_mutex);
-            this->_delete_observer(obs);
+            std::lock_guard l(_mutex);
+            _observers_to_remove.emplace_back(obs);
         }
 
         bool is_observer(IHandler<T *> *obs) const
         {
-            std::lock_guard<std::mutex> l(_mutex);
+            std::lock_guard l(_mutex);
             return std::find(_observers.cbegin(), _observers.cend(), obs) != _observers.cend();
         }
 
     protected:
         virtual void notify_observers(T *sender)
         {
+            std::lock_guard lock(_mutex);
+            for (const auto & obs_to_remove : _observers_to_remove)
             {
-                std::lock_guard<std::mutex> rm_lock(_mutex_remove);
-                for (const auto & obs_to_remove : _observers_to_remove)
-                {
-                    this->_delete_observer(obs_to_remove);
-                }
-                _observers_to_remove.clear();
+                const auto it = std::find(_observers.begin(), _observers.end(), obs_to_remove);
+                if (it != _observers.end())
+                    _observers.erase(it);
             }
-            std::lock_guard<std::mutex> lock(_mutex);
+            _observers_to_remove.clear();
             for (const auto & obs : _observers)
             {
                 obs->handle(sender);
@@ -72,15 +65,7 @@ class Observable: public IObservable<T>
         }
 
     private:
-        void _delete_observer(IHandler<T *> *obs)
-        {
-            const auto it = std::find(_observers.begin(), _observers.end(), obs);
-            if (it != _observers.end())
-                _observers.erase(it);
-        }
-
-        mutable std::mutex _mutex;
-        std::mutex _mutex_remove;
+        mutable std::recursive_mutex _mutex;
         std::vector<IHandler<T *> *> _observers;
         std::list<IHandler<T *> *> _observers_to_remove;
 };

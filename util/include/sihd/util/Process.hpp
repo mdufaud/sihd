@@ -101,6 +101,9 @@ class Process: public IHandler<Poll *>,
         Process & set_function(std::nullptr_t);
         Process & set_function(std::function<int()> fun);
 
+        void load_environ(const char **env);
+        void set_environ(std::string_view key, std::string_view value);
+
         bool has_exited() const;
         bool has_core_dumped() const;
         bool has_stopped_by_signal() const;
@@ -115,6 +118,7 @@ class Process: public IHandler<Poll *>,
 
         // get setted argv
         const std::vector<std::string> & argv() const { return _argv; }
+        const std::vector<std::string> & environ() const { return _environ; }
 
         // check if process will execute fork + exit(fun())
         bool runs_function() const { return _fun_to_execute ? true : false; }
@@ -153,10 +157,10 @@ class Process: public IHandler<Poll *>,
         bool _process_fd_out(FileDescWrapper & fdw);
 
         // spawn but for a function
-        bool _do_fork(const std::vector<const char *> & argv);
+        bool _do_fork(const std::vector<const char *> & argv, const std::vector<const char *> & env);
 
 # if !defined(__SIHD_ANDROID__)
-        bool _do_spawn(const std::vector<const char *> & argv);
+        bool _do_spawn(const std::vector<const char *> & argv, const std::vector<const char *> & env);
 # endif
         // fd redirections setting
         void _fdw_close(FileDescWrapper & fdw);
@@ -174,6 +178,7 @@ class Process: public IHandler<Poll *>,
         FileDescWrapper _stdout;
         FileDescWrapper _stderr;
         std::vector<std::string> _argv;
+        std::vector<std::string> _environ;
         std::function<int()> _fun_to_execute;
         mutable std::mutex _mutex_info;
         Waitable _waitable;
