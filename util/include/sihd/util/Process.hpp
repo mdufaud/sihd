@@ -101,8 +101,12 @@ class Process: public IHandler<Poll *>,
         Process & set_function(std::nullptr_t);
         Process & set_function(std::function<int()> fun);
 
-        void load_environ(const char **env);
-        void set_environ(std::string_view key, std::string_view value);
+        void environ_clear();
+        void environ_load(const char **env);
+        void environ_load(const std::vector<std::string> & env);
+        void environ_set(std::string_view key, std::string_view value);
+        bool environ_rm(std::string_view key);
+        std::optional<std::string> environ_get(std::string_view key) const;
 
         bool has_exited() const;
         bool has_core_dumped() const;

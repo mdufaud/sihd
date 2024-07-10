@@ -24,7 +24,7 @@ void StrConfiguration::parse_configuration(std::string_view conf)
     for (const std::string & conf : conf_list)
     {
         auto [key, value] = str::split_pair(conf, "=");
-        if (!value.empty())
+        if (!key.empty())
         {
             _configuration.emplace(std::move(key), std::move(value));
         }

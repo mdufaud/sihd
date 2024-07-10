@@ -81,20 +81,30 @@ std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bo
 
 } // namespace
 
+std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str, std::string_view delimiter)
+{
+    std::pair<std::string_view, std::string_view> ret;
+
+    size_t idx = str.find_first_of(delimiter);
+    if (idx != std::string_view::npos)
+    {
+        ret.first = str.substr(0, idx);
+        ret.second = str.substr(idx + delimiter.length());
+    }
+    return ret;
+}
+
 std::pair<std::string, std::string> split_pair(std::string_view str, std::string_view delimiter)
 {
     std::pair<std::string, std::string> ret;
 
-    size_t idx = str.find_first_of(delimiter);
-    if (idx == std::string_view::npos)
+    auto [key, value] = split_pair_view(str, delimiter);
+    if (!key.empty())
     {
-        ret.first = str;
+        ret.first = key;
+        ret.second = value;
     }
-    else
-    {
-        ret.first = std::string(str.data(), idx);
-        ret.second = str.substr(idx + delimiter.length());
-    }
+
     return ret;
 }
 
@@ -376,6 +386,32 @@ std::vector<std::string> hexdump_fmt(const IArray & arr, size_t cols)
 std::vector<std::string> hexdump_fmt(const IArrayView & arr, size_t cols)
 {
     return hexdump_fmt(arr.buf(), arr.byte_size(), cols);
+}
+
+bool print(std::string_view str)
+{
+    try
+    {
+        fmt::print("{}", str);
+    }
+    catch (const std::system_error &)
+    {
+        return false;
+    }
+    return true;
+}
+
+bool println(std::string_view str)
+{
+    try
+    {
+        fmt::print("{}\n", str);
+    }
+    catch (const std::system_error &)
+    {
+        return false;
+    }
+    return true;
 }
 
 std::string join(const std::vector<std::string> & list, std::string_view join_str)

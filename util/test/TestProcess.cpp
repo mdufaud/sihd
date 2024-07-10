@@ -405,20 +405,25 @@ TEST_F(TestProcess, test_process_fun)
 {
     Process proc([]() -> int {
         std::cout << "hello world";
-
-        for (int i = 0; ::environ[i] != nullptr; ++i)
-        {
-            std::cout << environ[i] << std::endl;
-        }
-
         char *env = getenv("TOTO");
         if (env != nullptr)
             std::cout << " " << env;
+
+        env = getenv("TO_REMOVE");
+        if (env != nullptr)
+            std::cerr << "= FAILED TO REMOVE ENV VAR = ";
+
         std::cerr << "nope";
         return 1;
     });
 
-    proc.set_environ("TOTO", "titi");
+    proc.environ_set("TOTO", "tata");
+    EXPECT_EQ(proc.environ_get("TOTO").value_or(""), "tata");
+    proc.environ_load({"TOTO=titi"});
+    EXPECT_EQ(proc.environ_get("TOTO").value_or(""), "titi");
+
+    proc.environ_set("TO_REMOVE", "-");
+    proc.environ_rm("TO_REMOVE");
 
     std::string out;
     std::string err;

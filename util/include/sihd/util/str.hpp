@@ -95,6 +95,9 @@ std::string bytes_str(int64_t bytes, bool iec = true);
 
 std::string generate_random(size_t size);
 
+bool print(std::string_view str);
+bool println(std::string_view str);
+
 // clone str from_idx to size (or all the remaining str)
 char *csub(std::string_view str, size_t from_idx, ssize_t size = 0);
 
@@ -114,14 +117,15 @@ bool starts_with(std::string_view s, std::string_view start, std::string_view su
 bool ends_with(std::string_view s, std::string_view end, std::string_view prefix = "");
 
 std::vector<std::string> split(std::string_view str);
+std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str, std::string_view delimiter);
+std::pair<std::string, std::string> split_pair(std::string_view str, std::string_view delimiter);
+
 std::string join(const std::vector<std::string> & list, std::string_view join_str = "\n");
 std::string join(const std::vector<std::string_view> & list, std::string_view join_str = "\n");
 
 std::string_view ltrim(std::string_view s);
 std::string_view rtrim(std::string_view s);
 std::string_view trim(std::string_view s);
-
-std::pair<std::string, std::string> split_pair(std::string_view str, std::string_view delimiter);
 
 std::string & to_upper(std::string & s);
 std::string & to_lower(std::string & s);

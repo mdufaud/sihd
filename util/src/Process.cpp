@@ -2,6 +2,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Process.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/container.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/str.hpp>
 
@@ -45,7 +46,22 @@ namespace
 {
 # if !defined(__SIHD_ANDROID__)
 
-void build_function_environ(const std::vector<std::string> &) {}
+auto get_in_env(const std::vector<std::string> & env, std::string_view key)
+{
+    return container::find_if(env, [&key](const std::string & env) { return str::starts_with(env, key, "="); });
+}
+
+void build_function_environ(const std::vector<const char *> & env)
+{
+    for (const char *keyval : env)
+    {
+        if (keyval == nullptr)
+            continue;
+        auto [key, val] = str::split_pair(keyval, "=");
+        if (!key.empty())
+            setenv(key.c_str(), val.empty() ? "" : val.c_str(), 1);
+    }
+}
 
 void add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_to)
 {
@@ -209,21 +225,84 @@ void Process::reset_proc()
     }
 }
 
-void Process::load_environ(const char **env)
+void Process::environ_clear()
 {
-    int i = 0;
-    while (env && env[i] != nullptr)
+    _environ.clear();
+}
+
+void Process::environ_load(const std::vector<std::string> & environ)
+{
+    for (const std::string & env : environ)
     {
-        _environ.emplace_back(env[i]);
+        auto [key, value] = str::split_pair_view(env, "=");
+        if (key.empty())
+            continue;
+
+        auto it = get_in_env(_environ, key);
+        if (it != _environ.end())
+            _environ.erase(it);
+        _environ.emplace_back(env);
+    }
+}
+
+void Process::environ_load(const char **environ)
+{
+    if (environ == nullptr)
+        return;
+    int i = 0;
+    while (environ[i] != nullptr)
+    {
+        auto [key, value] = str::split_pair_view(environ[i], "=");
+        if (key.empty())
+            continue;
+
+        auto it = get_in_env(_environ, key);
+        if (it != _environ.end())
+            _environ.erase(it);
+        _environ.emplace_back(environ[i]);
         ++i;
     }
 }
 
+void Process::environ_set(std::string_view key, std::string_view value)
+{
+    std::string keyval = fmt::format("{}={}", key, value);
+    for (std::string & environ : _environ)
+    {
+        if (str::starts_with(environ, key, "="))
+        {
+            environ = std::move(keyval);
+            return;
+        }
+    }
+    _environ.emplace_back(std::move(keyval));
+}
+
+std::optional<std::string> Process::environ_get(std::string_view key) const
+{
+    const auto it = get_in_env(_environ, key);
+    if (it != _environ.end())
+    {
+        auto [_, value] = str::split_pair_view(*it, "=");
+        return std::string(value);
+    }
+    return std::nullopt;
+}
+
+bool Process::environ_rm(std::string_view key)
+{
+    auto it = get_in_env(_environ, key);
+    if (it != _environ.end())
+    {
+        _environ.erase(it);
+    }
+    return it != _environ.end();
+}
+
 void Process::clear()
 {
-    _environ.clear();
-
-    this->load_environ(const_cast<const char **>(::environ));
+    this->environ_clear();
+    this->environ_load(const_cast<const char **>(::environ));
 
     constexpr auto reset_fwd = [](FileDescWrapper & fdw) {
         fdw.action = None;
@@ -634,19 +713,6 @@ bool Process::kill(int sig)
             SIHD_LOG(error, "Process: could not kill: {}", strerror(errno));
     }
     return ret;
-}
-
-void Process::set_environ(std::string_view key, std::string_view value)
-{
-    for (std::string & environ : _environ)
-    {
-        if (str::starts_with(environ, key, "="))
-        {
-            environ = fmt::format("{}={}", key, value);
-            return;
-        }
-    }
-    _environ.emplace_back(fmt::format("{}={}", key, value));
 }
 
 // Run
