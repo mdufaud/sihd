@@ -214,12 +214,19 @@ std::optional<IpAddr> Socket::socket_ip(int socket, bool ipv6)
 {
     sockaddr_in addr_in;
     sockaddr_in6 addr_in6;
-    socklen_t len = sizeof(addr_in6);
-    if (ipv6 && Socket::get_socket_peername(socket, (sockaddr *)&addr_in6, &len))
-        return IpAddr(addr_in6);
-    len = sizeof(addr_in);
-    if (Socket::get_socket_peername(socket, (sockaddr *)&addr_in, &len))
-        return IpAddr(addr_in);
+    socklen_t len;
+    if (ipv6)
+    {
+        len = sizeof(addr_in6);
+        if (Socket::get_socket_peername(socket, (sockaddr *)&addr_in6, &len))
+            return IpAddr(addr_in6);
+    }
+    else
+    {
+        len = sizeof(addr_in);
+        if (Socket::get_socket_peername(socket, (sockaddr *)&addr_in, &len))
+            return IpAddr(addr_in);
+    }
     return std::nullopt;
 }
 

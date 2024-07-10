@@ -405,6 +405,7 @@ TEST_F(TestProcess, test_process_fun)
 {
     Process proc([]() -> int {
         std::cout << "hello world";
+
         char *env = getenv("TOTO");
         if (env != nullptr)
             std::cout << " " << env;

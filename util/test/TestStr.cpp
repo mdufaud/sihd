@@ -79,31 +79,35 @@ class TestStr: public ::testing::Test
 
 TEST_F(TestStr, test_str_split_pair)
 {
-    auto pair = str::split_pair("TOTO=titi", "=");
+    auto pair = str::split_pair_view("TOTO=titi", "=");
     EXPECT_EQ(pair.first, "TOTO");
     EXPECT_EQ(pair.second, "titi");
 
-    pair = str::split_pair("TOTO=titi", ";");
+    auto pair_allocated = str::split_pair("TOTO=titi", "=");
+    EXPECT_EQ(pair_allocated.first, "TOTO");
+    EXPECT_EQ(pair_allocated.second, "titi");
+
+    pair = str::split_pair_view("TOTO=titi", ";");
     EXPECT_EQ(pair.first, "");
     EXPECT_EQ(pair.second, "");
 
-    pair = str::split_pair("TOTO=titi", "");
+    pair = str::split_pair_view("TOTO=titi", "");
     EXPECT_EQ(pair.first, "");
     EXPECT_EQ(pair.second, "");
 
-    pair = str::split_pair("TOTO=", "=");
+    pair = str::split_pair_view("TOTO=", "=");
     EXPECT_EQ(pair.first, "TOTO");
     EXPECT_EQ(pair.second, "");
 
-    pair = str::split_pair("=", "=");
+    pair = str::split_pair_view("=", "=");
     EXPECT_EQ(pair.first, "");
     EXPECT_EQ(pair.second, "");
 
-    pair = str::split_pair("", "=");
+    pair = str::split_pair_view("", "=");
     EXPECT_EQ(pair.first, "");
     EXPECT_EQ(pair.second, "");
 
-    pair = str::split_pair("TOTO=titi=tata", "=");
+    pair = str::split_pair_view("TOTO=titi=tata", "=");
     EXPECT_EQ(pair.first, "TOTO");
     EXPECT_EQ(pair.second, "titi=tata");
 }
