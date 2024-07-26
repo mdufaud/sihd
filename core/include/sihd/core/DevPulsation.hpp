@@ -31,12 +31,10 @@ class DevPulsation: public sihd::core::Device,
         bool on_reset() override;
 
     private:
-        bool _running;
         uint32_t _beats;
         sihd::util::StepWorker _step_worker;
         Channel *_channel_heartbeat_ptr;
         Channel *_channel_activate_ptr;
-        std::mutex _mutex;
 };
 
 } // namespace sihd::core

@@ -280,16 +280,20 @@ bool Scheduler::remove_task(Task *task)
     bool found = false;
 
     const auto task_it = container::find(_tasks_to_add, task);
-    found = task_it != _tasks_to_add.end();
-    if (found)
+    if (task_it != _tasks_to_add.end())
+    {
         _tasks_to_add.erase(task_it);
+        found = true;
+    }
 
     const auto map_it = container::find_if(_task_map, [&task](const auto & pair) { return task == pair.second; });
-    found |= map_it != _task_map.end();
-    if (found)
+    if (map_it != _task_map.end())
+    {
         _task_map.erase(map_it);
+        found = true;
+        _next_run = _task_map.begin()->first;
+    }
 
-    _next_run = _task_map.begin()->first;
     _waitable_task.notify();
     return found;
 }

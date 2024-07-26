@@ -320,11 +320,7 @@ std::string name(int sig)
 #if !defined(__SIHD_WINDOWS__)
     char *signame = strsignal(sig);
     if (signame != nullptr)
-    {
-        std::string ret = signame;
-        free(signame);
-        return ret;
-    }
+        return std::string(signame);
 #endif
     return std::to_string(sig);
 }

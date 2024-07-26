@@ -17,7 +17,6 @@ SIHD_LOGGER;
 
 DevPulsation::DevPulsation(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
-    _running(false),
     _step_worker(this),
     _channel_heartbeat_ptr(nullptr),
     _channel_activate_ptr(nullptr)
@@ -32,7 +31,7 @@ DevPulsation::~DevPulsation()
 
 bool DevPulsation::is_running() const
 {
-    return _running;
+    return _step_worker.is_worker_running();
 }
 
 bool DevPulsation::set_frequency(double freq)
@@ -57,11 +56,6 @@ void DevPulsation::handle(sihd::core::Channel *c)
 
 bool DevPulsation::run()
 {
-    {
-        std::lock_guard l(_mutex);
-        if (_running == false)
-            return false;
-    }
     ++_beats;
     _channel_heartbeat_ptr->write<uint32_t>(0, _beats);
     return true;
@@ -96,16 +90,11 @@ bool DevPulsation::on_start()
         SIHD_LOG(error, "DevPulsation: could not start");
         return false;
     }
-    _running = true;
     return true;
 }
 
 bool DevPulsation::on_stop()
 {
-    {
-        std::lock_guard l(_mutex);
-        _running = false;
-    }
     if (_step_worker.stop_worker() == false)
     {
         SIHD_LOG(error, "DevPulsation: could not stop");

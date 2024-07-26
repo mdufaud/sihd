@@ -19,9 +19,9 @@ using namespace sihd::util;
 class TestDevSampler: public ::testing::Test
 {
     protected:
-        TestDevSampler() { sihd::util::LoggerManager::basic(); }
+        TestDevSampler() { LoggerManager::basic(); }
 
-        virtual ~TestDevSampler() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestDevSampler() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -44,42 +44,55 @@ TEST_F(TestDevSampler, test_devsampler)
 
     Channel *in_channel = core.get_channel("in_channel");
     Channel *out_channel = core.get_channel("out_channel");
+    Channel *sample_channel = dev_ptr->get_channel("sample");
     ASSERT_NE(in_channel, nullptr);
     ASSERT_NE(out_channel, nullptr);
+    ASSERT_NE(sample_channel, nullptr);
 
-    int notif = 0;
-    sihd::util::Handler<Channel *> counter([&notif](Channel *c) {
+    int out_channel_notif = 0;
+    Handler<Channel *> out_channel_counter([&out_channel_notif](Channel *c) {
         (void)c;
-        ++notif;
+        ++out_channel_notif;
     });
-    out_channel->add_observer(&counter);
+    out_channel->add_observer(&out_channel_counter);
 
-    ChannelWaiter waiter(out_channel);
+    int sample_channel_notif = 0;
+    Handler<Channel *> sample_channel_counter([&sample_channel_notif](Channel *c) {
+        (void)c;
+        ++sample_channel_notif;
+    });
+    sample_channel->add_observer(&sample_channel_counter);
+
+    ChannelWaiter out_channel_waiter(out_channel);
+    ChannelWaiter sample_channel_waiter(sample_channel);
+
     ASSERT_TRUE(in_channel->write(ArrInt({0, 0, 1})));
-    waiter.wait_for(sihd::util::time::sec(1));
+    EXPECT_TRUE(out_channel_waiter.prev_wait_for(time::sec(1)));
     EXPECT_EQ(out_channel->array()->str(','), "0,0,1");
-    EXPECT_EQ(notif, 1);
+    EXPECT_EQ(out_channel_notif, 1);
 
     ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
     ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
     ASSERT_TRUE(in_channel->write(ArrInt({3, 4, 5})));
-    waiter.wait_for(sihd::util::time::sec(1));
+    EXPECT_TRUE(out_channel_waiter.prev_wait_for(time::sec(1)));
     EXPECT_EQ(out_channel->array()->str(','), "3,4,5");
-    EXPECT_EQ(notif, 2);
+    EXPECT_EQ(out_channel_notif, 2);
 
     ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
     ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
     ASSERT_TRUE(in_channel->write(ArrInt({4, 5, 6})));
-    waiter.wait_for(sihd::util::time::sec(1));
+    EXPECT_TRUE(out_channel_waiter.prev_wait_for(time::sec(1)));
     EXPECT_EQ(out_channel->array()->str(','), "4,5,6");
-    EXPECT_EQ(notif, 3);
+    EXPECT_EQ(out_channel_notif, 3);
 
     ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
     ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
     ASSERT_TRUE(in_channel->write(ArrInt({5, 6, 7})));
-    waiter.wait_for(sihd::util::time::sec(1));
+    EXPECT_TRUE(out_channel_waiter.prev_wait_for(time::sec(1)));
     EXPECT_EQ(out_channel->array()->str(','), "5,6,7");
-    EXPECT_EQ(notif, 4);
+    EXPECT_EQ(out_channel_notif, 4);
+
+    ASSERT_TRUE(core.stop());
 }
 
 } // namespace test

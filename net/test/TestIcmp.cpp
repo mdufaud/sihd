@@ -7,7 +7,6 @@
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/ObserverWaiter.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
@@ -83,8 +82,6 @@ TEST_F(TestIcmp, test_icmp_ipv4)
     sihd::util::Worker worker([&sender] { return sender.start(); });
     SIHD_LOG(debug, "Starting receiver");
     ASSERT_TRUE(worker.start_sync_worker("receiver"));
-
-    sihd::util::ObserverWaiter obs(&sender);
 
     this->send(sender, "google.com");
 

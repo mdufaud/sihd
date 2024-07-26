@@ -10,14 +10,21 @@
 namespace sihd::util
 {
 
-class Waitable
+template <typename Mutex, typename ConditionVariable>
+class WaitableImpl
 {
     public:
-        Waitable();
-        ~Waitable();
+        WaitableImpl() = default;
+        ~WaitableImpl() = default;
 
-        void notify(int times = 1);
-        void notify_all();
+        void notify(int times = 1)
+        {
+            for (int i = 0; i < times; ++i)
+            {
+                _condition.notify_one();
+            }
+        }
+        void notify_all() { _condition.notify_all(); }
 
         // predicate must return false to keep waiting
         template <class Predicate>
@@ -36,7 +43,7 @@ class Waitable
             return watch.time();
         }
 
-        // predicate must return false to keep waiting
+        // predicate must return false to keep waiting - return the last value of the predicate
         template <class Predicate>
         bool wait_for(Timestamp duration, Predicate pred_stop_waiting)
         {
@@ -53,7 +60,7 @@ class Waitable
             return watch.time();
         }
 
-        // predicate must return false to keep waiting
+        // predicate must return false to keep waiting - return the last value of the predicate
         template <class Predicate>
         bool wait_until(Timestamp timestamp, Predicate pred_stop_waiting)
         {
@@ -72,7 +79,11 @@ class Waitable
             return watch.time();
         }
 
-        void wait();
+        void wait()
+        {
+            std::unique_lock lock(_mutex);
+            _condition.wait(lock);
+        }
 
         /**
          * @brief wait a notification until a timestamp is reached
@@ -81,7 +92,13 @@ class Waitable
          * @return true if timedout
          * @return false if notification came
          */
-        bool wait_until(Timestamp timestamp);
+        bool wait_until(Timestamp timestamp)
+        {
+            std::unique_lock lock(_mutex);
+            return _condition.wait_until(lock,
+                                         std::chrono::system_clock::time_point(std::chrono::nanoseconds(timestamp)))
+                   == std::cv_status::timeout;
+        }
 
         /**
          * @brief wait a notification for a duration
@@ -90,25 +107,44 @@ class Waitable
          * @return true if timedout
          * @return false if notification came
          */
-        bool wait_for(Timestamp duration);
-
-        // cancel wait_for_loop
-        void cancel_loop();
+        bool wait_for(Timestamp duration)
+        {
+            std::unique_lock lock(_mutex);
+            return _condition.wait_for(lock, std::chrono::nanoseconds(duration)) == std::cv_status::timeout;
+        }
 
         // waits - returns time elapsed
-        Timestamp wait_elapsed();
+        Timestamp wait_elapsed()
+        {
+            Stopwatch hg;
+            this->wait();
+            return hg.time();
+        }
         // waits until timestamp - returns time elapsed
-        Timestamp wait_until_elapsed(Timestamp timestamp);
+        Timestamp wait_until_elapsed(Timestamp timestamp)
+        {
+            Stopwatch hg;
+            this->wait_until(timestamp);
+            return hg.time();
+        }
         // wait for duration -- returns time elapsed
-        Timestamp wait_for_elapsed(Timestamp duration);
+        Timestamp wait_for_elapsed(Timestamp duration)
+        {
+            Stopwatch hg;
+            this->wait_for(duration);
+            return hg.time();
+        }
 
-        std::mutex & mutex();
-        std::lock_guard<std::mutex> guard();
+        Mutex & mutex() { return _mutex; }
+        std::lock_guard<Mutex> guard() { return std::lock_guard(_mutex); }
 
     protected:
-        std::mutex _mutex;
-        std::condition_variable _condition;
+        Mutex _mutex;
+        ConditionVariable _condition;
 };
+
+using Waitable = WaitableImpl<std::mutex, std::condition_variable>;
+using WaitableRecursive = WaitableImpl<std::recursive_mutex, std::condition_variable_any>;
 
 } // namespace sihd::util
 

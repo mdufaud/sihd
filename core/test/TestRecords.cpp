@@ -72,12 +72,13 @@ TEST_F(TestRecords, test_records_dev_player)
 
     EXPECT_TRUE(core.start());
 
+    ChannelWaiter waiter(end);
+
     SIHD_LOG(debug, "Playing");
     play->write(0, true);
 
     SIHD_LOG(debug, "Waiting the end");
-    ChannelWaiter waiter(end);
-    EXPECT_TRUE(waiter.wait_for(sihd::util::time::milli(50)));
+    EXPECT_TRUE(waiter.wait_for_nb(sihd::util::time::milli(50), 1));
 
     EXPECT_TRUE(core.stop());
 

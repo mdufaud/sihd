@@ -36,10 +36,9 @@ class DevSampler: public sihd::core::Device,
         bool on_reset() override;
 
     private:
-        bool _running;
-        std::mutex _run_mutex;
         std::mutex _set_mutex;
         sihd::util::StepWorker _step_worker;
+        Channel *_channel_sample;
         std::map<Channel *, Channel *> _channels_map;
         std::map<std::string, std::string> _conf_map;
         std::set<Channel *> _channels_sample_set;

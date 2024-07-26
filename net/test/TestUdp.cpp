@@ -2,7 +2,6 @@
 
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/ObserverWaiter.hpp>
 #include <sihd/util/Worker.hpp>
 
 #include <sihd/net/INetReceiver.hpp>
@@ -34,8 +33,6 @@ TEST_F(TestUdp, test_udp_receiver_run)
 
     EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4242}));
     EXPECT_TRUE(receiver.open_and_bind({"127.0.0.1", 4242}));
-
-    sihd::util::ObserverWaiter obs(&receiver);
 
     ssize_t receive_ret = -1;
     sihd::util::Handler<INetReceiver *> handler([&receive_ret, &array_rcv](INetReceiver *rcv) {

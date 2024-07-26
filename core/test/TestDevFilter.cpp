@@ -160,17 +160,17 @@ TEST_F(TestDevFilter, test_devfilter_float)
     // delay -> 5ms
     EXPECT_EQ(out_channel->read<int>(0), 0);
     in_channel->write<float>(0, 3.14f);
-    EXPECT_FALSE(waiter.wait_for(std::chrono::milliseconds(3)));
+    EXPECT_FALSE(waiter.prev_wait_for(std::chrono::milliseconds(3)));
     EXPECT_EQ(out_channel->read<int>(0), 0);
-    EXPECT_TRUE(waiter.wait_for(std::chrono::milliseconds(10)));
+    EXPECT_TRUE(waiter.prev_wait_for(std::chrono::milliseconds(10)));
     EXPECT_EQ(out_channel->read<int>(0), 1);
 
     // delay -> 0.01 = 10ms
     EXPECT_EQ(out_channel->read<int>(0), 1);
     in_channel->write<float>(0, 6.28f);
-    EXPECT_FALSE(waiter.wait_for(std::chrono::milliseconds(3)));
+    EXPECT_FALSE(waiter.prev_wait_for(std::chrono::milliseconds(3)));
     EXPECT_EQ(out_channel->read<int>(0), 1);
-    EXPECT_TRUE(waiter.wait_for(std::chrono::milliseconds(10)));
+    EXPECT_TRUE(waiter.prev_wait_for(std::chrono::milliseconds(10)));
     EXPECT_EQ(out_channel->read<int>(0), 0b101);
 }
 

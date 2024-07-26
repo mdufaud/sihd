@@ -4,6 +4,8 @@
 
 #include <sihd/core/DevSampler.hpp>
 
+#define CHANNEL_SAMPLE "sample"
+
 namespace sihd::core
 {
 
@@ -13,7 +15,7 @@ SIHD_LOGGER;
 
 DevSampler::DevSampler(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
-    _running(false)
+    _channel_sample(nullptr)
 {
     _step_worker.set_runnable(this);
     this->add_conf("frequency", &DevSampler::set_frequency);
@@ -51,7 +53,7 @@ bool DevSampler::set_sample(std::string_view conf)
 
 bool DevSampler::is_running() const
 {
-    return _running;
+    return _step_worker.is_worker_running();
 }
 
 void DevSampler::handle(sihd::core::Channel *channel)
@@ -70,6 +72,9 @@ bool DevSampler::on_setup()
 
 bool DevSampler::on_init()
 {
+    Channel *sample = this->add_unlinked_channel(CHANNEL_SAMPLE, sihd::util::TYPE_BOOL, 1);
+    if (sample != nullptr)
+        sample->set_write_on_change(false);
     return true;
 }
 
@@ -80,6 +85,8 @@ bool DevSampler::on_start()
     Channel *channel_out;
 
     ret = true;
+    if (!this->get_channel(CHANNEL_SAMPLE, &_channel_sample))
+        return false;
     for (const auto & [channel_out_path, channel_in_path] : _conf_map)
     {
         if (this->find_channel(channel_in_path, &channel_in) && this->find_channel(channel_out_path, &channel_out))
@@ -91,12 +98,11 @@ bool DevSampler::on_start()
         else
             ret = false;
     }
-    if (ret && _step_worker.start_worker(this->name()) == false)
+    if (ret && _step_worker.start_sync_worker(this->name()) == false)
     {
         SIHD_LOG(error, "DevSampler: could not start worker");
         return false;
     }
-    _running = ret;
     return ret;
 }
 
@@ -107,9 +113,6 @@ bool DevSampler::run()
         channels to sample to may have long processing of time and taking mutex ownership
         means missing notifications
     */
-    std::lock_guard l(_run_mutex);
-    if (_running == false)
-        return false;
     std::set<Channel *> channels_set;
     {
         std::lock_guard l(_set_mutex);
@@ -120,17 +123,18 @@ bool DevSampler::run()
     for (Channel *channel_in : channels_set)
     {
         channel_out = _channels_map[channel_in];
-        channel_out->write(*channel_in);
+        if (channel_out->write(*channel_in) == false)
+        {
+            SIHD_LOG(error, "DevSampler: Could not sample into: {}", channel_out->name());
+        }
     }
+    if (channels_set.size() > 0)
+        _channel_sample->write(0, true);
     return true;
 }
 
 bool DevSampler::on_stop()
 {
-    {
-        std::lock_guard l(_run_mutex);
-        _running = false;
-    }
     if (_step_worker.stop_worker() == false)
         SIHD_LOG(error, "DevSampler: could not stop worker");
     _channels_map.clear();
