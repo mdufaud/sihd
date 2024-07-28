@@ -62,7 +62,6 @@ class MessageField;
 class Message;
 class DynMessage;
 
-class Waitable;
 class Synchronizer;
 
 class SystemClock;
