@@ -229,17 +229,23 @@ void screenshot()
 
     if (screenshot::take_under_cursor(bitmap))
     {
-        bitmap.save_bmp("cursor_screen.bmp");
+        std::string path = fs::combine(fs::tmp_path(), "take_under_cursor.bmp");
+        if (bitmap.save_bmp(path))
+            SIHD_LOG(notice, "Saved bitmap to: {}", path);
     }
 
     if (screenshot::take_focused(bitmap))
     {
-        bitmap.save_bmp("focus_screen.bmp");
+        std::string path = fs::combine(fs::tmp_path(), "take_focused.bmp");
+        if (bitmap.save_bmp(path))
+            SIHD_LOG(notice, "Saved bitmap to: {}", path);
     }
 
     if (screenshot::take_screen(bitmap))
     {
-        bitmap.save_bmp("all_screen.bmp");
+        std::string path = fs::combine(fs::tmp_path(), "take_screen.bmp");
+        if (bitmap.save_bmp(path))
+            SIHD_LOG(notice, "Saved bitmap to: {}", path);
     }
 }
 

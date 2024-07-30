@@ -228,7 +228,31 @@ bool Sftp::rm(std::string_view path)
 {
     int r = sftp_unlink(_sftp_session_ptr, path.data());
     if (r != 0)
-        SIHD_LOG(error, "Sftp: failed to remove: '{}' {}", path, this->error());
+        SIHD_LOG(error, "Sftp: failed to remove '{}': {}", path, this->error());
+    return r == SSH_FX_OK;
+}
+
+bool Sftp::rmdir(std::string_view path)
+{
+    int r = sftp_rmdir(_sftp_session_ptr, path.data());
+    if (r != 0)
+        SIHD_LOG(error, "Sftp: failed to remove directory '{}': {}", path, this->error());
+    return r == SSH_FX_OK;
+}
+
+bool Sftp::chmod(std::string_view path, mode_t mode)
+{
+    int r = sftp_chmod(_sftp_session_ptr, path.data(), mode);
+    if (r != 0)
+        SIHD_LOG(error, "Sftp: failed to change permission '{}' ({}):  {}", path, mode, this->error());
+    return r == SSH_FX_OK;
+}
+
+bool Sftp::chown(std::string_view path, uid_t owner, gid_t group)
+{
+    int r = sftp_chown(_sftp_session_ptr, path.data(), owner, group);
+    if (r != 0)
+        SIHD_LOG(error, "Sftp: failed to change group '{}' ({}:{}):  {}", path, owner, group, this->error());
     return r == SSH_FX_OK;
 }
 

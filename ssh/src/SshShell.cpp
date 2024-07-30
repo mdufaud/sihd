@@ -9,6 +9,8 @@
 namespace sihd::ssh
 {
 
+using namespace sihd::util;
+
 SIHD_LOGGER;
 
 SshShell::SshShell(ssh_session_struct *session): _ssh_session_ptr(session) {}
@@ -32,7 +34,17 @@ bool SshShell::open(bool x11)
         SIHD_LOG(error, "SshShell: failed to request a ssh pty");
         ret = false;
     }
-    if (ret && _channel.change_pty_size(80, 24) == false)
+
+    long columns;
+    const char *env_columns = getenv("COLUMNS");
+    if (env_columns == nullptr || str::to_long(env_columns, &columns, 10) == false || columns <= 0)
+        columns = 80;
+    long rows;
+    const char *env_rows = getenv("LINES");
+    if (env_rows == nullptr || str::to_long(env_rows, &rows, 10) == false || rows <= 0)
+        rows = 24;
+
+    if (ret && _channel.change_pty_size(columns, rows) == false)
     {
         SIHD_LOG(error, "SshShell: failed to change pty size");
         ret = false;

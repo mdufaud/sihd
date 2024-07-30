@@ -364,11 +364,6 @@ SshCommand SshSession::make_command()
     return SshCommand(_ssh_session_ptr);
 }
 
-SshScp SshSession::make_scp()
-{
-    return SshScp(_ssh_session_ptr);
-}
-
 Sftp SshSession::make_sftp()
 {
     return Sftp(_ssh_session_ptr);

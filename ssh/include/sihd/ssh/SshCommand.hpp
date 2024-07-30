@@ -21,7 +21,7 @@ class SshCommand
 {
     public:
         SshCommand(ssh_session_struct *session);
-        virtual ~SshCommand();
+        ~SshCommand();
 
         SshCommand(const SshCommand & other) = delete;
         SshCommand & operator=(const SshCommand &) = delete;

@@ -15,7 +15,7 @@ class SshChannel
 {
     public:
         SshChannel(ssh_channel_struct *channel = nullptr);
-        virtual ~SshChannel();
+        ~SshChannel();
 
         void set_channel(ssh_channel_struct *channel);
         void clear_channel();

@@ -14,7 +14,7 @@ class SshShell
 {
     public:
         SshShell(ssh_session_struct *session);
-        virtual ~SshShell();
+        ~SshShell();
 
         SshShell(const SshShell & other) = delete;
         SshShell & operator=(const SshShell &) = delete;

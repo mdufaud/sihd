@@ -5,7 +5,6 @@
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshCommand.hpp>
 #include <sihd/ssh/SshKey.hpp>
-#include <sihd/ssh/SshScp.hpp>
 #include <sihd/ssh/SshShell.hpp>
 
 namespace sihd::ssh
@@ -91,7 +90,6 @@ class SshSession
         bool make_channel(SshChannel & channel);
         bool make_channel_session(SshChannel & channel);
 
-        SshScp make_scp();
         SshCommand make_command();
         SshShell make_shell();
         Sftp make_sftp();
@@ -105,7 +103,6 @@ class SshSession
     protected:
 
     private:
-        bool _init_scp(SshScp & scp);
 
         ssh_session_struct *_ssh_session_ptr;
         bool _auth_none_once;

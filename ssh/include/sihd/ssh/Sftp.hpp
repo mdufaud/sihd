@@ -37,7 +37,7 @@ class Sftp
 {
     public:
         Sftp(ssh_session_struct *session);
-        virtual ~Sftp();
+        ~Sftp();
 
         Sftp(const Sftp & other) = delete;
         Sftp & operator=(const Sftp &) = delete;

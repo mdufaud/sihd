@@ -148,10 +148,13 @@ void TcpClient::handle(sihd::util::Poll *poll)
         auto event = events[0];
         if (event.fd == _socket.socket())
         {
-            if (event.readable || event.closed)
+            if (event.readable)
             {
-                if (event.closed)
-                    _connected = false;
+                this->notify_observers(this);
+            }
+            else if (event.closed)
+            {
+                _connected = false;
                 this->notify_observers(this);
             }
             else if (event.error)

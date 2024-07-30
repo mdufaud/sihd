@@ -26,7 +26,7 @@ class TestSniffer: public ::testing::Test
             sihd::net::IpAddr ip(*addr);
 
             if (!ip.empty())
-                SIHD_LOG(debug, "{} {}", pre, ip.first_ip_str());
+                SIHD_LOG(debug, "{} {}", pre, ip.str());
         }
 };
 

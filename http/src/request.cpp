@@ -79,9 +79,7 @@ struct CurlRequest
 {
         CURL *handle = nullptr;
         curl_slist *header = nullptr;
-#pragma message("TODO deprecated curl httppost")
-        // curl_httppost *post = nullptr;
-        curl_httppost *last_post = nullptr;
+        curl_mime *mime = nullptr;
         ProgressCallbackWrapper progress_callback_wrapper;
 
         CurlRequest() = default;
@@ -91,9 +89,8 @@ struct CurlRequest
                 curl_easy_cleanup(handle);
             if (header != nullptr)
                 curl_slist_free_all(header);
-#pragma message("TODO deprecated curl_formfree")
-            // if (post != nullptr)
-            //     curl_formfree(post);
+            if (mime != nullptr)
+                curl_mime_free(mime);
         }
 
         bool init()
@@ -148,41 +145,42 @@ struct CurlRequest
             return final_url;
         }
 
+        void add_filestream_to_form(const std::string & form_name,
+                                    const std::string & file_name,
+                                    const std::string & file_path)
+        {
+            if (mime == nullptr)
+                mime = curl_mime_init(handle);
+            curl_mimepart *part = curl_mime_addpart(mime);
+            curl_mime_name(part, form_name.c_str());
+            // will read the file while transfering
+            curl_mime_filedata(part, file_path.c_str());
+            if (file_name.empty() == false)
+                curl_mime_filename(part, file_name.c_str());
+        }
+
         void add_file_to_form(const std::string & form_name,
                               const std::string & file_name,
                               const std::vector<uint8_t> & data)
         {
-#pragma message("TODO deprecated add_file_to_form")
-            (void)form_name;
-            (void)file_name;
-            (void)data;
-            // curl_formadd(&post,
-            //              &last_post,
-            //              CURLFORM_COPYNAME,
-            //              form_name.c_str(),
-            //              CURLFORM_BUFFER,
-            //              file_name.c_str(),
-            //              CURLFORM_BUFFERPTR,
-            //              data.data(),
-            //              CURLFORM_BUFFERLENGTH,
-            //              data.size(),
-            //              CURLFORM_END);
+            if (mime == nullptr)
+                mime = curl_mime_init(handle);
+            curl_mimepart *part = curl_mime_addpart(mime);
+            curl_mime_name(part, form_name.c_str());
+            curl_mime_filename(part, file_name.c_str());
+            curl_mime_data(part, (const char *)data.data(), data.size());
         }
 
         void add_form(const std::map<std::string, std::string> & form_parameters)
         {
-            (void)form_parameters;
-#pragma message("TODO deprecated add_file_to_form")
-            // for (const auto & [name, data] : form_parameters)
-            // {
-            //     curl_formadd(&post,
-            //                  &last_post,
-            //                  CURLFORM_COPYNAME,
-            //                  name.data(),
-            //                  CURLFORM_COPYCONTENTS,
-            //                  data.data(),
-            //                  CURLFORM_END);
-            // }
+            if (mime == nullptr)
+                mime = curl_mime_init(handle);
+            for (const auto & [name, data] : form_parameters)
+            {
+                curl_mimepart *part = curl_mime_addpart(mime);
+                curl_mime_name(part, name.c_str());
+                curl_mime_data(part, data.c_str(), data.size());
+            }
         }
 
         HttpResponse send_request(std::string_view url, const CurlOptions & options)
@@ -252,9 +250,8 @@ struct CurlRequest
             this->set(CURLOPT_HTTPHEADER, header);
 
             // Add form
-#pragma message("TODO deprecated add form")
-            // if (post != nullptr)
-            //     this->set(CURLOPT_HTTPPOST, post);
+            if (mime != nullptr)
+                this->set(CURLOPT_MIMEPOST, mime);
 
             this->perform_request();
 
@@ -313,7 +310,12 @@ std::optional<HttpResponse> post(std::string_view url, sihd::util::ArrCharView d
             curl.add_form(options.form_parameters);
 
         if (options.file.has_value())
-            curl.add_file_to_form(options.file->form_name, options.file->file_name, options.file->data);
+        {
+            if (options.file->data.empty() == false)
+                curl.add_file_to_form(options.file->form_name, options.file->file_name, options.file->data);
+            else if (options.file->file_path.empty() == false)
+                curl.add_filestream_to_form(options.file->form_name, options.file->file_name, options.file->file_path);
+        }
 
         return curl.send_request(url, options);
     }

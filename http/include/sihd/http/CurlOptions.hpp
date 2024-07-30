@@ -14,6 +14,7 @@ namespace sihd::http
 struct CurlFileOptions
 {
         std::string form_name;
+        std::string file_path;
         std::string file_name;
         std::vector<uint8_t> data;
 };
