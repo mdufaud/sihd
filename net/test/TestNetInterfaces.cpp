@@ -1,6 +1,3 @@
-#include <ifaddrs.h> // getifaddrs
-#include <netdb.h>   // addrinfo
-
 #include <gtest/gtest.h>
 
 #include <sihd/net/IpAddr.hpp>
