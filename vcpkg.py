@@ -77,19 +77,22 @@ if modules_to_build != "NONE":
         print()
 
 def build_vcpkg_triplet():
-    vcpkg_triplet = ""
-    if builder.build_architecture == "x86_64":
-        vcpkg_triplet = "x64"
-    else:
-        vcpkg_triplet = builder.build_architecture
-    if builder.build_platform == "windows":
-        vcpkg_triplet += f"-mingw"
-    else:
-        vcpkg_triplet += f"-{builder.build_platform}"
-    if builder.build_static_libs:
-        vcpkg_triplet += "-static"
-    else:
-        vcpkg_triplet += "-dynamic"
+    vcpkg_triplet = builder.get_opt("triplet", "")
+
+    if len(vcpkg_triplet) == 0:
+        if builder.build_architecture == "x86_64":
+            vcpkg_triplet = "x64"
+        else:
+            vcpkg_triplet = builder.build_architecture
+        if builder.build_platform == "windows":
+            vcpkg_triplet += f"-mingw"
+        else:
+            vcpkg_triplet += f"-{builder.build_platform}"
+        if builder.build_static_libs:
+            vcpkg_triplet += "-static"
+        else:
+            vcpkg_triplet += "-dynamic"
+
     return vcpkg_triplet
 
 vcpkg_triplet = build_vcpkg_triplet()

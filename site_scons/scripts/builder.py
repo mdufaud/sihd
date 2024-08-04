@@ -107,39 +107,12 @@ def safe_symlink(src, dst):
 ###############################################################################
 
 architectures = {
-    "ppc": "ppc32",
-    "sparc64": "sparcv9",
-    "aarch64": "armv8",
-    "arm64": "armv8",
+    "aarch64": "arm64",
     "AMD64": "x86_64",
     "64": "x86_64",
     "86": "x86",
-    "arm": "armv6",
-    "sun4v": "sparc"
+    "arm": "arm64",
 }
-
-ek2_architectures = {
-    "E1C+": "e2k-v4",  # Elbrus 1C+ and Elbrus 1CK
-    "E2C+": "e2k-v2",  # Elbrus 2CM
-    "E2C+DSP": "e2k-v2",  # Elbrus 2C+
-    "E2C3": "e2k-v6",  # Elbrus 2C3
-    "E2S": "e2k-v3",  # Elbrus 2S (aka Elbrus 4C)
-    "E8C": "e2k-v4",  # Elbrus 8C and Elbrus 8C1
-    "E8C2": "e2k-v5",  # Elbrus 8C2 (aka Elbrus 8CB)
-    "E12C": "e2k-v6",  # Elbrus 12C
-    "E16C": "e2k-v6",  # Elbrus 16C
-    "E32C": "e2k-v7",  # Elbrus 32C
-}
-
-def get_solaris_arch():
-    # under intel solaris, platform.machine()=='i86pc' so we need to handle
-    # it early to suport 64-bit
-    processor = platform.processor()
-    kernel_bitness, elf = platform.architecture()
-    if "sparc" in processor:
-        return "sparcv9" if kernel_bitness == "64bit" else "sparc"
-    elif "i386" in processor:
-        return "x86_64" if kernel_bitness == "64bit" else "x86"
 
 def get_arch():
     plat = __get_platform()
@@ -147,9 +120,7 @@ def get_arch():
         arch = get_solaris_arch()
     else:
         arch = platform.machine()
-        if "ek2" in arch:
-            arch = ek2_architectures[arch]
-        elif arch in architectures:
+        if arch in architectures:
             arch = architectures[arch]
     return get_opt('arch', arch)
 
