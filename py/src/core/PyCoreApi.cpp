@@ -275,7 +275,7 @@ void PyCoreApi::PyChannelHandler::handle(Channel *channel)
         auto it = g_single_channel_handler_map.find(channel);
         if (it == g_single_channel_handler_map.end())
         {
-            channel->remove_observer_inside_notification(&g_channel_handler);
+            channel->remove_observer(&g_channel_handler);
             return;
         }
         fun = it->second.fun;

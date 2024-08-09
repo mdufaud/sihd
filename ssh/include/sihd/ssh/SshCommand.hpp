@@ -31,7 +31,7 @@ class SshCommand
         bool input(sihd::util::ArrCharView view);
         bool wait(time_t timeout_nano = 0, time_t milliseconds_poll_time = 1);
 
-        sihd::util::IHandler<char *, size_t, bool> *output_handler;
+        sihd::util::IHandler<std::string_view, bool> *output_handler;
 
         SshChannel & channel() { return _channel; }
 

@@ -58,7 +58,9 @@ SshCommand::SshCommand(ssh_session_struct *session): output_handler(nullptr), _s
 
 SshCommand::~SshCommand()
 {
+    auto l = _waitable.guard();
     _stop = true;
+    _waitable.notify_all();
 }
 
 void SshCommand::_reset_command_status()
@@ -71,18 +73,21 @@ void SshCommand::_reset_command_status()
 
 void SshCommand::_callback_channel_output(char *buf, size_t size, bool is_stderr)
 {
-    if (this->output_handler != nullptr)
-        this->output_handler->handle(buf, size, is_stderr);
+    if (buf == nullptr || this->output_handler == nullptr)
+        return;
+    this->output_handler->handle(std::string_view {buf, size}, is_stderr);
 }
 
 void SshCommand::_callback_exit_status(int exit_status)
 {
+    auto l = _waitable.guard();
     _command_status.exit_status = exit_status;
     _waitable.notify_all();
 }
 
 void SshCommand::_callback_exit_signal(const char *signal, int core, const char *errmsg)
 {
+    auto l = _waitable.guard();
     _command_status.signal_str = signal;
     _command_status.err_msg = errmsg;
     _command_status.core_dumped = core != 0;
@@ -148,12 +153,12 @@ bool SshCommand::wait(time_t timeout_nano, time_t milliseconds_poll_time)
     {
         if (timeout_nano > 0)
         {
-            _waitable.wait_for(timeout_nano);
+            _waitable.wait_for(timeout_nano, [this] { return _stop; });
             r = _channel.exit_status();
             break;
         }
         else
-            _waitable.wait_for(sihd::util::time::milli(milliseconds_poll_time));
+            _waitable.wait_for(sihd::util::time::milliseconds(milliseconds_poll_time), [this] { return _stop; });
     }
     if (r != -1)
         _channel.clear_channel();

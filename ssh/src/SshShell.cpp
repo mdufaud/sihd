@@ -69,14 +69,17 @@ bool SshShell::read_loop()
     int nbytes;
     int nwritten;
     bool ret = true;
+
     sihd::util::ArrCharView view;
     sihd::util::ArrChar buf;
-    buf.reserve(4096);
+    if (!buf.reserve(4096))
+        return false;
+
     sihd::util::LineReader reader({
         .read_buffsize = 1,
         .delimiter_in_line = true,
     });
-    reader.set_stream(stdin, false);
+    reader.set_stream(stdin);
 
     while (_channel.is_open() && _channel.is_eof() == false)
     {
@@ -99,19 +102,35 @@ bool SshShell::read_loop()
 
         if (out_channels[0] != nullptr)
         {
-            nbytes = _channel.read(buf);
-            if (nbytes < 0)
+            if (_channel.poll())
             {
-                // might be just user typed $> exit
-                // SIHD_LOG(error, "SshShell: error reading channel");
-                // ret = false;
-                break;
+                nbytes = _channel.read(buf);
+                if (nbytes < 0)
+                {
+                    // might be just user typed $> exit
+                    break;
+                }
+                if (nbytes > 0)
+                {
+                    std::string_view view(buf.data(), nbytes);
+                    fmt::print(stdout, "{}", buf);
+                    fflush(stdout);
+                }
             }
-            if (nbytes > 0)
+            if (_channel.poll_stderr())
             {
-                std::string_view view = buf;
-                fmt::print("{}", view);
-                fflush(stdout);
+                nbytes = _channel.read_stderr(buf);
+                if (nbytes < 0)
+                {
+                    // might be just user typed $> exit
+                    break;
+                }
+                if (nbytes > 0)
+                {
+                    std::string_view view(buf.data(), nbytes);
+                    fmt::print(stderr, "{}", buf);
+                    fflush(stderr);
+                }
             }
         }
         if (FD_ISSET(0, &fds))
@@ -139,6 +158,8 @@ bool SshShell::read_loop()
             }
         }
     }
+    if (!ret)
+        _channel.send_eof();
     _channel.clear_channel();
     return ret;
 }

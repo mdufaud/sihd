@@ -75,6 +75,12 @@ bool contains(const Container & container, const Value & value)
     return std::find(container.begin(), container.end(), value) != container.end();
 }
 
+template <typename Container, typename Predicate>
+void sort(Container & container, const Predicate & predicate)
+{
+    std::sort(container.begin(), container.end(), predicate);
+}
+
 template <typename Container, typename Value>
 bool erase(Container & container, const Value & value)
 {

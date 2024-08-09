@@ -37,9 +37,8 @@ TEST_F(TestSshCommand, test_sshcommand_simple)
 
     std::string stdout_str;
     std::string stderr_str;
-    sihd::util::Handler<char *, size_t, bool> test_output_handler(
-        [&stdout_str, &stderr_str](char *buf, size_t size, bool is_stderr) {
-            buf[size] = 0;
+    sihd::util::Handler<std::string_view, bool> test_output_handler(
+        [&stdout_str, &stderr_str](std::string_view buf, bool is_stderr) {
             if (is_stderr)
                 stderr_str += buf;
             else
@@ -67,9 +66,8 @@ TEST_F(TestSshCommand, test_sshcommand_async)
 
     std::string stdout_str;
     std::string stderr_str;
-    sihd::util::Handler<char *, size_t, bool> test_output_handler(
-        [&stdout_str, &stderr_str](char *buf, size_t size, bool is_stderr) {
-            buf[size] = 0;
+    sihd::util::Handler<std::string_view, bool> test_output_handler(
+        [&stdout_str, &stderr_str](std::string_view buf, bool is_stderr) {
             if (is_stderr)
                 stderr_str += buf;
             else

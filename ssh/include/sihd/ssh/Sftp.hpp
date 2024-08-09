@@ -14,23 +14,29 @@ struct sftp_session_struct;
 namespace sihd::ssh
 {
 
+struct SftpExtension
+{
+        std::string name;
+        std::string data; // version most of the time
+};
+
 class SftpAttribute
 {
     public:
-        SftpAttribute(sftp_attributes_struct *ptr);
-        SftpAttribute(SftpAttribute && sftp_attr);
+        SftpAttribute(std::string_view name, uint8_t type, size_t size);
         ~SftpAttribute();
 
-        SftpAttribute(const SftpAttribute & other) = delete;
-        SftpAttribute & operator=(const SftpAttribute &) = delete;
-
-        const char *name() const;
+        const std::string & name() const;
         bool is_dir() const;
         bool is_file() const;
         bool is_link() const;
+        uint8_t type() const;
         uint64_t size() const;
 
-        sftp_attributes_struct *attr;
+    private:
+        std::string _name;
+        uint8_t _type;
+        size_t _size;
 };
 
 class Sftp
@@ -43,10 +49,13 @@ class Sftp
         Sftp & operator=(const Sftp &) = delete;
 
         bool open();
+        bool is_open() const;
         void close();
 
         bool mkdir(std::string_view path, mode_t mode = 0755);
         bool symlink(std::string_view from, std::string_view to);
+
+        std::string readlink(std::string_view path);
 
         bool send_file(std::string_view local_path, std::string_view remote_path, mode_t mode = 0644);
         bool get_file(std::string_view remote_path, std::string_view local_path);
@@ -60,6 +69,8 @@ class Sftp
 
         bool rmdir(std::string_view path);
         bool rm(std::string_view path);
+
+        std::vector<SftpExtension> extensions();
 
         int version();
 

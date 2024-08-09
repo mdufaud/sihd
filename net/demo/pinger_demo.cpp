@@ -12,6 +12,8 @@
 using namespace sihd::util;
 using namespace sihd::net;
 
+SIHD_NEW_LOGGER("ping-demo");
+
 int main(int argc, char **argv)
 {
     sihd::util::LoggerManager::console();
@@ -33,14 +35,14 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    Logger log("demo");
     Pinger pinger("pinger");
 
     if (pinger.open(false) == false)
     {
-        log.error("Demo must have capabilities or be played with root perms");
-        log.notice(fmt::format("For capabilities, execute linux command: 'sudo setcap cap_net_raw=pe {}'\n",
-                               fs::executable_path()));
+        SIHD_LOG(error, "Demo must have capabilities or be played with root perms");
+        SIHD_LOG(notice,
+                 "For capabilities, execute linux command: 'sudo setcap cap_net_raw=pe {}'\n",
+                 fs::executable_path());
         if (os::is_windows)
             time::sleep(5);
         return 1;
@@ -49,49 +51,55 @@ int main(int argc, char **argv)
     const int npings = args["pings"].as<int>();
     const std::string host = args["host"].as<std::string>();
 
-    log.notice(fmt::format("Sending {} pings to {}", npings, host));
+    SIHD_LOG(notice, "Sending {} pings to {}", npings, host);
 
     sihd::util::SigWatcher watcher("signal-watcher");
 
     watcher.add_signal(SIGINT);
     watcher.set_polling_frequency(5);
 
-    Handler<SigWatcher *> sig_handler([&log, &pinger](SigWatcher *watcher) {
+    Handler<SigWatcher *> sig_handler([&pinger](SigWatcher *watcher) {
         auto & catched_signals = watcher->catched_signals();
         if (catched_signals.empty())
             return;
-        log.notice("Stopping ping");
+        SIHD_LOG(notice, "Stopping ping");
         pinger.stop();
     });
     watcher.add_observer(&sig_handler);
     watcher.start();
 
-    log.notice("Press ctrl+C to stop or wait until all pings are done");
+    SIHD_LOG(notice, "Press ctrl+C to stop or wait until all pings are done");
 
-    sihd::util::Handler<Pinger *> ping_handler([&log](Pinger *pinger) {
+    sihd::util::Handler<Pinger *> ping_handler([](Pinger *pinger) {
         const PingEvent & event = pinger->event();
 
         if (event.sent)
-            log.debug("sent ping");
+        {
+            SIHD_LOG(debug, "sent ping");
+        }
         else if (event.received)
         {
             const IcmpResponse & icmp_response = event.icmp_response;
-            log.info(fmt::format("{} bytes from {}: icmp_seq={} ttl={} time={}",
-                                 icmp_response.size,
-                                 icmp_response.client.hostname(),
-                                 icmp_response.seq,
-                                 icmp_response.ttl,
-                                 event.trip_time.timeoffset_str()));
+            SIHD_LOG(info,
+                     "{} bytes from {}: icmp_seq={} ttl={} time={}",
+                     icmp_response.size,
+                     icmp_response.client.hostname(),
+                     icmp_response.seq,
+                     icmp_response.ttl,
+                     event.trip_time.timeoffset_str());
         }
         else if (event.timeout)
         {
-            log.warning("ping timed out");
+            SIHD_LOG(warning, "ping timed out");
         }
     });
     pinger.add_observer(&ping_handler);
 
     constexpr time_t interval_ms = 200;
     pinger.set_interval(interval_ms);
+
+    constexpr time_t timeout_ms = 1000;
+    pinger.set_timeout(timeout_ms);
 
     constexpr bool do_dns_lookup = true;
 
@@ -107,7 +115,7 @@ int main(int argc, char **argv)
         SIHD_COUT(result.str() + "\n");
     }
     else
-        log.error(fmt::format("Cannot ping: {}", argv[1]));
+        SIHD_LOG(error, "Cannot ping: {}", host);
 
     if constexpr (os::is_windows)
         time::sleep(5);

@@ -30,7 +30,7 @@ struct SftpFileDeleter
         }
 };
 
-using SftpFile = std::unique_ptr<sftp_file_struct, SftpFileDeleter>;
+using SftpFilePtr = std::unique_ptr<sftp_file_struct, SftpFileDeleter>;
 
 struct SftpDirDeleter
 {
@@ -42,7 +42,19 @@ struct SftpDirDeleter
         }
 };
 
-using SftpDir = std::unique_ptr<sftp_dir_struct, SftpDirDeleter>;
+using SftpDirPtr = std::unique_ptr<sftp_dir_struct, SftpDirDeleter>;
+
+struct SftpAttributeDeleter
+{
+        void operator()(sftp_attributes_struct *ptr)
+        {
+            // TODO log error if ret != SSH_NO_ERROR
+            if (ptr != nullptr)
+                sftp_attributes_free(ptr);
+        }
+};
+
+using SftpAttributePtr = std::unique_ptr<sftp_attributes_struct, SftpAttributeDeleter>;
 
 } // namespace
 
@@ -73,6 +85,11 @@ bool Sftp::open()
     return true;
 }
 
+bool Sftp::is_open() const
+{
+    return _sftp_session_ptr != nullptr;
+}
+
 void Sftp::close()
 {
     if (_sftp_session_ptr != nullptr)
@@ -89,7 +106,7 @@ bool Sftp::send_file(std::string_view local_path, std::string_view remote_path, 
         return false;
 
     int flags = O_WRONLY | O_CREAT | O_TRUNC;
-    SftpFile remote_file(sftp_open(_sftp_session_ptr, remote_path.data(), flags, mode));
+    SftpFilePtr remote_file(sftp_open(_sftp_session_ptr, remote_path.data(), flags, mode));
     if (remote_file.get() == nullptr)
     {
         SIHD_LOG(error, "Sftp: failed to open remote file: '{}' {}", remote_path, ssh_get_error(_ssh_session_ptr));
@@ -126,7 +143,7 @@ bool Sftp::get_file(std::string_view remote_path, std::string_view local_path)
         return false;
 
     int flags = O_RDONLY;
-    SftpFile remote_file(sftp_open(_sftp_session_ptr, remote_path.data(), flags, 0));
+    SftpFilePtr remote_file(sftp_open(_sftp_session_ptr, remote_path.data(), flags, 0));
     if (remote_file.get() == nullptr)
     {
         SIHD_LOG(error, "Sftp: failed to open remote file: '{}' {}", remote_path, ssh_get_error(_ssh_session_ptr));
@@ -183,19 +200,19 @@ bool Sftp::list_dir_filenames(std::string_view path, std::vector<std::string> & 
     {
         if (attr.is_dir())
         {
-            std::string name = attr.name();
+            std::string name(attr.name());
             name += "/";
             list.push_back(std::move(name));
         }
         else
-            list.push_back(attr.name());
+            list.push_back(std::string(attr.name()));
     }
     return true;
 }
 
 bool Sftp::list_dir(std::string_view path, std::vector<SftpAttribute> & list)
 {
-    SftpDir dir(sftp_opendir(_sftp_session_ptr, path.data()));
+    SftpDirPtr dir(sftp_opendir(_sftp_session_ptr, path.data()));
     if (dir.get() == nullptr)
     {
         SIHD_LOG(error, "Stfp: failed to open directory: {}", path);
@@ -203,17 +220,25 @@ bool Sftp::list_dir(std::string_view path, std::vector<SftpAttribute> & list)
     }
     while (true)
     {
-        SftpAttribute attribute(sftp_readdir(_sftp_session_ptr, dir.get()));
-        if (attribute.attr == nullptr)
+        SftpAttributePtr attr(sftp_readdir(_sftp_session_ptr, dir.get()));
+        if (attr.get() == nullptr)
             break;
-        if (strcmp(attribute.name(), ".") == 0 || strcmp(attribute.name(), "..") == 0)
+        if (attr->name == nullptr || strcmp(attr->name, ".") == 0 || strcmp(attr->name, "..") == 0)
             continue;
-        list.push_back(std::move(attribute));
+        list.emplace_back(attr->name, attr->type, attr->size);
     }
     bool ret = sftp_dir_eof(dir.get()) == 1;
     if (ret == false)
         SIHD_LOG(error, "Sftp: cannot list directory: {}", path);
     return ret;
+}
+
+std::string Sftp::readlink(std::string_view path)
+{
+    char *ret = sftp_readlink(_sftp_session_ptr, path.data());
+    if (ret == nullptr)
+        return "";
+    return std::string(ret);
 }
 
 bool Sftp::rename(std::string_view from, std::string_view to)
@@ -261,6 +286,24 @@ int Sftp::version()
     return sftp_server_version(_sftp_session_ptr);
 }
 
+std::vector<SftpExtension> Sftp::extensions()
+{
+    std::vector<SftpExtension> ret;
+    int extensions_nb = sftp_extensions_get_count(_sftp_session_ptr);
+    int i = 0;
+    while (i < extensions_nb)
+    {
+        const char *extname = sftp_extensions_get_name(_sftp_session_ptr, i);
+        const char *data = sftp_extensions_get_data(_sftp_session_ptr, i);
+        SftpExtension ext;
+        ext.name = extname;
+        ext.data = data;
+        ret.emplace_back(std::move(ext));
+        ++i;
+    }
+    return ret;
+}
+
 const char *Sftp::error()
 {
     switch (sftp_get_error(_sftp_session_ptr))
@@ -298,43 +341,43 @@ const char *Sftp::error()
     }
 }
 
-SftpAttribute::SftpAttribute(sftp_attributes_struct *ptr): attr(ptr) {}
-
-SftpAttribute::SftpAttribute(SftpAttribute && sftp_attr)
+SftpAttribute::SftpAttribute(std::string_view name, uint8_t type, size_t size)
 {
-    this->attr = sftp_attr.attr;
-    sftp_attr.attr = nullptr;
+    _name = name;
+    _size = size;
+    _type = type;
 }
 
-SftpAttribute::~SftpAttribute()
-{
-    if (attr != nullptr)
-        sftp_attributes_free(attr);
-}
+SftpAttribute::~SftpAttribute() {}
 
-const char *SftpAttribute::name() const
+const std::string & SftpAttribute::name() const
 {
-    return this->attr->name;
+    return _name;
 }
 
 uint64_t SftpAttribute::size() const
 {
-    return this->attr->size;
+    return _size;
 }
 
 bool SftpAttribute::is_dir() const
 {
-    return this->attr->type == SSH_FILEXFER_TYPE_DIRECTORY;
+    return _type == SSH_FILEXFER_TYPE_DIRECTORY;
 }
 
 bool SftpAttribute::is_file() const
 {
-    return this->attr->type == SSH_FILEXFER_TYPE_REGULAR;
+    return _type == SSH_FILEXFER_TYPE_REGULAR;
 }
 
 bool SftpAttribute::is_link() const
 {
-    return this->attr->type == SSH_FILEXFER_TYPE_SYMLINK;
+    return _type == SSH_FILEXFER_TYPE_SYMLINK;
+}
+
+uint8_t SftpAttribute::type() const
+{
+    return _type;
 }
 
 } // namespace sihd::ssh
