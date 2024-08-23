@@ -46,8 +46,7 @@ bool TcpServer::set_poll_limit(int limit)
 
 bool TcpServer::set_poll_timeout(int milliseconds)
 {
-    _poll.set_timeout(milliseconds);
-    return true;
+    return _poll.set_timeout(milliseconds);
 }
 
 bool TcpServer::open_socket_unix()

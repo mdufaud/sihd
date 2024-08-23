@@ -45,7 +45,10 @@ class IpAddr
         IpAddr(const sockaddr & addr);
         IpAddr(const sockaddr_in & addr);
         IpAddr(const sockaddr_in6 & addr);
-        virtual ~IpAddr();
+        IpAddr(const IpAddr & addr);
+        ~IpAddr() = default;
+
+        IpAddr & operator=(const IpAddr & addr);
 
         // build IpAddr from localhost
         static IpAddr localhost(int port, bool ipv6 = false);
@@ -95,7 +98,6 @@ class IpAddr
 
         std::string _hostname;
         int _port;
-
         SockAddr _addr;
         uint32_t _netmask_value;
 };

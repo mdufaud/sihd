@@ -26,8 +26,7 @@ UdpReceiver::~UdpReceiver()
 
 bool UdpReceiver::set_poll_timeout(int milliseconds)
 {
-    _poll.set_timeout(milliseconds);
-    return true;
+    return _poll.set_timeout(milliseconds);
 }
 
 bool UdpReceiver::open_socket_unix()

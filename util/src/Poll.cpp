@@ -210,9 +210,12 @@ bool Poll::rm_write_fd(int fd)
     return idx >= 0;
 }
 
-void Poll::set_timeout(int milliseconds)
+bool Poll::set_timeout(int milliseconds)
 {
+    if (milliseconds < 0)
+        return false;
     _timeout_milliseconds = milliseconds;
+    return true;
 }
 
 bool Poll::on_stop()

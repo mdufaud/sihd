@@ -6,8 +6,10 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/SigWatcher.hpp>
 #include <sihd/util/fs.hpp>
+#include <sihd/util/macro.hpp>
 
 #include <sihd/net/Pinger.hpp>
+#include <sihd/net/dns.hpp>
 
 using namespace sihd::util;
 using namespace sihd::net;
@@ -22,6 +24,8 @@ int main(int argc, char **argv)
     // clang-format off
     options.add_options()
         ("h,help", "Prints usage")
+        ("t,timeout", "Timeout in ms", cxxopts::value<int>()->default_value("1000"))
+        ("i,interval", "Interval in ms", cxxopts::value<int>()->default_value("200"))
         ("host", "Host to ping", cxxopts::value<std::string>()->default_value("google.com"))
         ("pings", "Number of pings to send", cxxopts::value<int>()->default_value("10"));
     // clang-format on
@@ -32,7 +36,7 @@ int main(int argc, char **argv)
     if (args.count("help"))
     {
         fmt::print(options.help());
-        return 0;
+        return EXIT_SUCCESS;
     }
 
     Pinger pinger("pinger");
@@ -45,13 +49,19 @@ int main(int argc, char **argv)
                  fs::executable_path());
         if (os::is_windows)
             time::sleep(5);
-        return 1;
+        return EXIT_FAILURE;
     }
 
     const int npings = args["pings"].as<int>();
     const std::string host = args["host"].as<std::string>();
+    const IpAddr hostaddr = dns::find(host);
 
-    SIHD_LOG(notice, "Sending {} pings to {}", npings, host);
+    if (hostaddr.empty())
+    {
+        return EXIT_FAILURE;
+    }
+
+    SIHD_LOG(notice, "Sending {} pings to {} ({})", npings, host, hostaddr.str());
 
     sihd::util::SigWatcher watcher("signal-watcher");
 
@@ -95,16 +105,10 @@ int main(int argc, char **argv)
     });
     pinger.add_observer(&ping_handler);
 
-    constexpr time_t interval_ms = 200;
-    pinger.set_interval(interval_ms);
-
-    constexpr time_t timeout_ms = 1000;
-    pinger.set_timeout(timeout_ms);
-
-    constexpr bool do_dns_lookup = true;
-
-    pinger.set_client(IpAddr {host, do_dns_lookup});
-    pinger.set_ping_count(npings);
+    SIHD_DIE_FALSE(pinger.set_interval(args["interval"].as<int>()));
+    SIHD_DIE_FALSE(pinger.set_timeout(args["timeout"].as<int>()));
+    SIHD_DIE_FALSE(pinger.set_client(hostaddr));
+    SIHD_DIE_FALSE(pinger.set_ping_count(npings));
 
     const bool success = pinger.start();
     pinger.stop();
@@ -120,5 +124,5 @@ int main(int argc, char **argv)
     if constexpr (os::is_windows)
         time::sleep(5);
 
-    return success ? 0 : 1;
+    return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }

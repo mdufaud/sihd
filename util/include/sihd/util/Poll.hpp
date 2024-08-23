@@ -50,7 +50,7 @@ class Poll: public Observable<Poll>,
         bool set_write_fd(int fd);
         bool rm_read_fd(int fd);
         bool rm_write_fd(int fd);
-        void set_timeout(int milliseconds);
+        bool set_timeout(int milliseconds);
 
         // returns number of polleable fds
         int poll(int milliseconds_timeout = -1);

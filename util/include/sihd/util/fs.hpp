@@ -82,6 +82,8 @@ bool write_binary(std::string_view path, std::string_view view, bool append = fa
 // fast write into file
 bool write(std::string_view path, std::string_view view, bool append = false);
 
+bool chdir(std::string_view path);
+
 } // namespace sihd::util::fs
 
 #endif

@@ -3,6 +3,7 @@
 #include <sihd/util/Process.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/container.hpp>
+#include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/str.hpp>
 
@@ -299,6 +300,21 @@ bool Process::environ_rm(std::string_view key)
     return it != _environ.end();
 }
 
+void Process::set_chroot(std::string_view path)
+{
+    _chroot = path;
+}
+
+void Process::set_chdir(std::string_view path)
+{
+    _chdir = path;
+}
+
+void Process::set_force_fork(bool active)
+{
+    _force_fork = active;
+}
+
 void Process::clear()
 {
     this->environ_clear();
@@ -514,11 +530,17 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector
     pid_t pid;
     if ((pid = fork()) < 0)
     {
-        SIHD_LOG(error, "Process: fork failed");
+        SIHD_LOG(error, "Process: fork failed: {}", strerror(errno));
         return false;
     }
     if (pid == 0)
     {
+        if (!_chroot.empty())
+            chroot(_chroot.c_str());
+
+        if (!_chdir.empty())
+            fs::chdir(_chdir.c_str());
+
         if (_stdin.action == Close)
             close(STDIN_FILENO);
         else
@@ -561,6 +583,10 @@ bool Process::_do_spawn(const std::vector<const char *> & argv, const std::vecto
     posix_spawn_file_actions_t actions;
 
     posix_spawn_file_actions_init(&actions);
+
+    if (!_chdir.empty())
+        posix_spawn_file_actions_addchdir_np(&actions, _chdir.c_str());
+
     if (_stdin.action == Close)
         add_close_action(&actions, STDIN_FILENO);
     else
@@ -604,7 +630,7 @@ bool Process::execute()
     if (this->is_process_running() || _executing.exchange(true) == true)
         return false;
 
-    Defer d([this] { _executing = false; });
+    Defer d([this] { _executing.store(false); });
 
     if (!_fun_to_execute && _argv.size() == 0)
     {
@@ -636,7 +662,10 @@ bool Process::execute()
     else
     {
 # if !defined(__SIHD_ANDROID__)
-        success = this->_do_spawn(c_argv, c_environ);
+        if (_force_fork)
+            success = this->_do_fork(c_argv, c_environ);
+        else
+            success = this->_do_spawn(c_argv, c_environ);
 # else
         success = this->_do_fork(c_argv, c_environ);
 # endif

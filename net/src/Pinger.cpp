@@ -85,6 +85,8 @@ bool Pinger::set_client(const IpAddr & client)
 
 bool Pinger::set_ttl(int ttl)
 {
+    if (ttl < 0)
+        return false;
     _ttl = ttl;
     return true;
 }
@@ -96,6 +98,8 @@ bool Pinger::set_timeout(time_t milliseconds_interval)
 
 bool Pinger::set_interval(time_t milliseconds_interval)
 {
+    if (milliseconds_interval < 0)
+        return false;
     _ping_ms_interval = milliseconds_interval;
     return true;
 }

@@ -52,6 +52,8 @@ ssize_t peak_rss();
 // bytes
 ssize_t current_rss();
 
+bool exists_in_path(std::string_view binary_name);
+
 #if defined(SIHD_STATIC)
 constexpr bool is_statically_linked = true;
 #else

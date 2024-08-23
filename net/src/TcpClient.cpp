@@ -27,8 +27,7 @@ TcpClient::~TcpClient()
 
 bool TcpClient::set_poll_timeout(int milliseconds)
 {
-    _poll.set_timeout(milliseconds);
-    return true;
+    return _poll.set_timeout(milliseconds);
 }
 
 bool TcpClient::open_socket_unix()

@@ -148,7 +148,26 @@ IpAddr::IpAddr(const sockaddr_in & addr): IpAddr(reinterpret_cast<const sockaddr
 
 IpAddr::IpAddr(const sockaddr_in6 & addr): IpAddr(reinterpret_cast<const sockaddr &>(addr), sizeof(sockaddr_in6)) {}
 
-IpAddr::~IpAddr() {}
+IpAddr::IpAddr(const IpAddr & addr): IpAddr()
+{
+    *this = addr;
+}
+
+IpAddr & IpAddr::operator=(const IpAddr & addr)
+{
+    this->_hostname = addr._hostname;
+    this->_port = addr._port;
+    if (addr._addr.sockaddr.sa_family == AF_INET)
+    {
+        memcpy(&this->_addr.sockaddr, &addr._addr.sockaddr, sizeof(struct sockaddr_in));
+    }
+    else if (addr._addr.sockaddr.sa_family == AF_INET6)
+    {
+        memcpy(&this->_addr.sockaddr, &addr._addr.sockaddr, sizeof(struct sockaddr_in6));
+    }
+    this->_netmask_value = addr._netmask_value;
+    return *this;
+}
 
 void IpAddr::set_hostname(std::string_view hostname)
 {

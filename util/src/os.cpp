@@ -58,6 +58,7 @@ typedef void (*sighandler_t)(int);
 #include <cstring>
 
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Splitter.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
 
@@ -411,6 +412,22 @@ ssize_t current_rss()
 # pragma message("os::current_rss is not supported on this platform")
     return (ssize_t)-1L;
 #endif
+}
+
+bool exists_in_path(std::string_view binary_name)
+{
+    const char *path = getenv("PATH");
+    if (path == nullptr)
+        return false;
+
+    Splitter splitter(":");
+    for (const std::string & subpath : splitter.split(path))
+    {
+        if (fs::is_executable(fs::combine(subpath, binary_name)))
+            return true;
+    }
+
+    return false;
 }
 
 } // namespace sihd::util::os

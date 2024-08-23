@@ -42,7 +42,7 @@ bool ask_dns(std::string_view host, std::function<bool(const IpAddr &, int, int)
 
     if ((ret = getaddrinfo(host.data(), NULL, &hints, &results)) != 0)
     {
-        SIHD_LOG(error, "getaddrinfo error '{}': {}", host, gai_strerror(ret));
+        SIHD_LOG(error, "'{}': {}", host, gai_strerror(ret));
         return false;
     }
 

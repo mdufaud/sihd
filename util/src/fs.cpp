@@ -676,4 +676,13 @@ ssize_t read_binary(std::string_view path, char *buf, size_t size)
     return ret;
 }
 
+bool chdir(std::string_view path)
+{
+#if defined(__SIHD_WINDOWS__)
+    return ::_chdir(path.data()) == 0;
+#else
+    return ::chdir(path.data()) == 0;
+#endif
+}
+
 } // namespace sihd::util::fs

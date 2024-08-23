@@ -9,6 +9,7 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
+#include <sihd/util/Process.hpp>
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/SigWatcher.hpp>
 #include <sihd/util/fs.hpp>

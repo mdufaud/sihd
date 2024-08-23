@@ -27,9 +27,6 @@ class Process: public IHandler<Poll *>,
         Process(std::initializer_list<std::string> args);
         Process(std::initializer_list<const char *> args);
 
-        Process(const Process &) = delete;
-        Process(Process &&) = delete;
-
         template <typename... Args,
                   typename = typename std::enable_if_t<traits::are_all_constructible<std::string, Args...>::value>>
         Process(const Args &...args): Process()
@@ -108,6 +105,11 @@ class Process: public IHandler<Poll *>,
         bool environ_rm(std::string_view key);
         std::optional<std::string> environ_get(std::string_view key) const;
 
+        // need admin rights and work only with forks
+        void set_chroot(std::string_view path);
+        void set_chdir(std::string_view path);
+        void set_force_fork(bool active);
+
         bool has_exited() const;
         bool has_core_dumped() const;
         bool has_stopped_by_signal() const;
@@ -183,6 +185,9 @@ class Process: public IHandler<Poll *>,
         FileDescWrapper _stderr;
         std::vector<std::string> _argv;
         std::vector<std::string> _environ;
+        std::string _chroot;
+        std::string _chdir;
+        bool _force_fork;
         std::function<int()> _fun_to_execute;
         mutable std::mutex _mutex_info;
         Waitable _waitable;
