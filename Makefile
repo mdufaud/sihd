@@ -610,7 +610,9 @@ clean:
 
 clean_dep:
 	$(QUIET) $(call mk_log_info,makefile,removing dependencies)
-	rm -rf $(VCPKG_PATH)
+	rm -rf $(VCPKG_PATH)/packages
+	rm -rf $(BUILD_ENTRY_PATH)/vcpkg
+	rm -f $(EXTLIB_PATH)
 
 clean_dist:
 	$(QUIET) $(call mk_log_info,makefile,removing distribution)
