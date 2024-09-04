@@ -105,7 +105,13 @@ modules = {
     "http": {
         "depends": ['net'],
         "extlibs": ['curl', 'libwebsockets'],
-        "libs": ['websockets', 'curl'],
+        "libs": [
+            'websockets',
+            'curl',
+            'z',
+            'cap',
+            'uv'
+        ],
     },
     "pcap": {
         "depends": ['net'],

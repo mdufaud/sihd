@@ -55,12 +55,11 @@ static void sniffer_test(const std::string & interface_to_sniff)
     Handler<Sniffer *> obs([](Sniffer *obj) {
         constexpr size_t hexdump_cols = 20;
         SIHD_LOG(info, "Sniffed {} bytes", obj->array().size());
-        SIHD_COUT("{}\n", str::hexdump_fmt(obj->array().buf(), obj->array().byte_size(), hexdump_cols));
+        SIHD_COUT("{}\n", fmt::join(str::hexdump_fmt(obj->array().buf(), obj->array().byte_size(), hexdump_cols), ","));
     });
-    pcap.add_observer(&obs);
-    pcap.open(interface_to_sniff);
-    if (pcap.is_open() == false)
+    if (!pcap.open(interface_to_sniff))
         return;
+    pcap.add_observer(&obs);
     // pcap.set_monitor(true);
     // pcap.set_immediate(true);
     pcap.set_promiscuous(false);
