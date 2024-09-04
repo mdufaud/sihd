@@ -1,4 +1,5 @@
 #include <cxxopts.hpp>
+#include <fmt/format.h>
 
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Bitmap.hpp>

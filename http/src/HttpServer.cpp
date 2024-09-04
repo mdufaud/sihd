@@ -165,6 +165,12 @@ bool HttpServer::on_stop()
 
 bool HttpServer::on_start()
 {
+    if (!fs::chdir(_root_dir))
+    {
+        SIHD_LOG(error, "HttpServer: could not change directory to: {}", _root_dir);
+        return false;
+    }
+
     _stop = false;
 
     struct lws_context_creation_info lws_info;
@@ -218,24 +224,32 @@ bool HttpServer::on_start()
 
 bool HttpServer::get_resource_path(std::string_view path, std::string & res)
 {
-    std::string tmp_path = _root_dir;
-    tmp_path.append(path.data(), path.size());
-    bool ret = fs::is_file(tmp_path);
-    if (!ret && (ret = fs::is_dir(path)))
-        tmp_path += "/index.html";
-    if (!ret)
+    if (path.size() > 0 && path[0] == '/')
+        path = path.substr(1);
+
+    if (!path.empty() && fs::is_file(path))
     {
-        for (const std::string & resource_path : _resources_path)
+        res = std::string(path);
+        return true;
+    }
+
+    if (path.empty() || fs::is_dir(path))
+    {
+        res = fs::combine(path, "index.html");
+        return true;
+    }
+
+    for (const std::string & resource_path : _resources_path)
+    {
+        std::string tmp_path = fs::combine(path, resource_path);
+        if (fs::exists(tmp_path))
         {
-            tmp_path = resource_path;
-            tmp_path.append(path.data(), path.size());
-            if ((ret = fs::exists(tmp_path)))
-                break;
+            res = std::move(tmp_path);
+            return true;
         }
     }
-    if (ret)
-        res = tmp_path;
-    return ret;
+
+    return false;
 }
 
 bool HttpServer::check_all_protocols()
@@ -284,8 +298,7 @@ int HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons re
             }
             session->new_request();
             session->request_type = this->get_request_type(wsi);
-            std::string path((char *)session->in);
-            rc = this->on_http_request(session, path);
+            rc = this->on_http_request(session, (char *)session->in);
             if (session->should_complete_transaction)
             {
                 if (lws_http_transaction_completed(wsi))
@@ -324,7 +337,7 @@ int HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons re
         case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
         {
             // This gives the user code a chance to forbid an http access
-            SIHD_LOG(debug, "Callback check access rights");
+            SIHD_LOG(debug, "HttpServer: Callback check access rights");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
             break;
@@ -332,7 +345,7 @@ int HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons re
         case LWS_CALLBACK_PROCESS_HTML:
         {
             // This gives your user code a chance to mangle outgoing HTML
-            SIHD_LOG(debug, "Callback check process HTML");
+            SIHD_LOG(debug, "HttpServer: Callback check process HTML");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
             break;
@@ -340,7 +353,7 @@ int HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons re
         case LWS_CALLBACK_ADD_HEADERS:
         {
             // This gives your user code a chance to add headers to a server transaction bound to your protocol
-            SIHD_LOG(debug, "Callback add header callback");
+            SIHD_LOG(debug, "HttpServer: Callback add header callback");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
             /*
@@ -353,8 +366,35 @@ int HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons re
             */
             break;
         }
+        case LWS_CALLBACK_LOCK_POLL:
+        {
+            /*
+             * lock mutex to protect pollfd state
+             * called before any other POLL related callback
+             */
+            break;
+        }
+        case LWS_CALLBACK_UNLOCK_POLL:
+        {
+            /*
+             * unlock mutex to protect pollfd state when
+             * called after any other POLL related callback
+             */
+            break;
+        }
         case LWS_CALLBACK_WSI_DESTROY:
         {
+            // called multiple times for a single client
+            break;
+        }
+        case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
+        {
+            char client_name[128];
+            char client_ip[INET6_ADDRSTRLEN];
+            lws_get_peer_addresses(wsi, (int)(long)in, client_name, sizeof(client_name), client_ip, sizeof(client_ip));
+            SIHD_LOG(debug, "HttpServer: received client connect from {} ({})", client_name, client_ip);
+            // send non 0 to refuse connection
+            rc = 0;
             break;
         }
         default:
@@ -610,6 +650,11 @@ int HttpServer::_lws_websocket_callback(struct lws *wsi,
             const char *error = (const char *)in;
             if (error != nullptr)
                 SIHD_LOG(warning, "HttpServer: client connection error: {}", error);
+            break;
+        }
+        case LWS_CALLBACK_RECEIVE_PONG:
+        {
+            SIHD_LOG(debug, "HttpServer: received pong callback");
             break;
         }
 #if defined(LWS_CALLBACK_CONNECTING)

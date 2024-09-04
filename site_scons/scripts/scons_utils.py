@@ -31,7 +31,9 @@ def add_env_app_conf(app, env, *keys):
         attr = getattr(app, concat, None)
         if attr is not None:
             #prepends
-            env[envkey][:0] = attr
+            # env[envkey][:0] = attr
+            #append
+            env[envkey].append(attr)
 
 def load_env_packages_config(env, *configs):
     """ Parse multiple pkg-configs: libraries/includes utilities """

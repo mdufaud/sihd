@@ -253,7 +253,8 @@ if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
 
 clang_flags = [
     "-Werror",
-    "-Wno-unused-command-line-argument"
+    "-Wno-unused-command-line-argument",
+    "-Wno-unknown-pragmas",
 ]
 clang_libs = ['stdc++']
 clang_defines = [

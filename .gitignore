@@ -21,6 +21,9 @@
 # valgrind core dump
 vgcore*
 
+# gdb
+.gdb*
+
 # outputs
 *.bmp
 

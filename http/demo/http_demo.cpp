@@ -154,7 +154,7 @@ static void http_test()
     server.set_root_dir(res_path);
     server.set_port(3000);
     SIHD_LOG(info, "=========================================================");
-    SIHD_LOG(info, "Open web browser at localhost:3000");
+    SIHD_LOG(info, "Open web browser at http://localhost:3000");
     SIHD_LOG(info, "=========================================================");
     server.start();
 }

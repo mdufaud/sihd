@@ -86,6 +86,7 @@ TEST_F(TestLogger, test_logger_basic)
     ASSERT_EQ(log_counter->msg, "error");
     log.critical("critical");
     ASSERT_EQ(log_counter->msg, "critical");
+    log.emergency("emergency");
     ASSERT_TRUE(this->has_logged_every_levels());
 }
 

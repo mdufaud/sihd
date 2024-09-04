@@ -360,7 +360,11 @@ def copy_dll_to_build(modules_build_order):
     dll_lst = set()
     for conf in modules_build_order:
         for lib in conf['libs']:
-            dll_lst.add(lib)
+            if isinstance(lib, list):
+                for el in lib:
+                    dll_lst.add(el)
+            else:
+                dll_lst.add(lib)
 
     dll_found = []
     for search_path in dll_search_path_lst:

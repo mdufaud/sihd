@@ -536,10 +536,22 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector
     if (pid == 0)
     {
         if (!_chroot.empty())
-            chroot(_chroot.c_str());
+        {
+            if (chroot(_chroot.c_str()) != 0)
+            {
+                SIHD_LOG(error, "Process: chroot failed: {}", strerror(errno));
+                _exit(2);
+            }
+        }
 
         if (!_chdir.empty())
-            fs::chdir(_chdir.c_str());
+        {
+            if (!fs::chdir(_chdir.c_str()))
+            {
+                SIHD_LOG(error, "Process: chdir failed: {}", strerror(errno));
+                _exit(3);
+            }
+        }
 
         if (_stdin.action == Close)
             close(STDIN_FILENO);
@@ -570,7 +582,7 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector
         }
         else
             status = execvpe(argv[0], const_cast<char *const *>(&(argv[0])), const_cast<char *const *>(&(env[0])));
-        exit(status);
+        _exit(status);
     }
     _pid = pid;
     return true;
