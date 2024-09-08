@@ -88,10 +88,11 @@ def build_vcpkg_triplet():
             vcpkg_triplet += f"-mingw"
         else:
             vcpkg_triplet += f"-{builder.build_platform}"
-        if builder.build_static_libs:
-            vcpkg_triplet += "-static"
-        else:
-            vcpkg_triplet += "-dynamic"
+        if not builder.is_android():
+            if builder.build_static_libs:
+                vcpkg_triplet += "-static"
+            else:
+                vcpkg_triplet += "-dynamic"
 
     return vcpkg_triplet
 
@@ -146,25 +147,40 @@ def __check_vcpkg():
 
 def execute_vcpkg_install():
     __check_vcpkg()
-    import subprocess
+    copy_env = os.environ.copy()
     args = [vcpkg_bin_path, "install", f"--triplet={vcpkg_triplet}", "--allow-unsupported"]
+
     if builder.is_msys():
         args += ["--host-triplet=x64-mingw-dynamic"]
-    proc = subprocess.run(args, cwd=vcpkg_build_path, timeout=(60.0 * len(extlibs)))
+
+    if "arm" in vcpkg_triplet:
+        copy_env["VCPKG_FORCE_SYSTEM_BINARIES"] = "1"
+        def check_bins(list):
+            import shutil
+            ret = True
+            for name in list:
+                if not shutil.which(name):
+                    builder.error(f"Binary {name} is not present but needed")
+                    ret = False
+            return ret
+        assert(check_bins(["cmake", "ninja", "pkg-config"]))
+
+    import subprocess
+    proc = subprocess.run(args, cwd=vcpkg_build_path, timeout=(60.0 * len(extlibs)), env=copy_env)
     return proc.returncode
 
 def execute_vcpkg_depend_info():
     __check_vcpkg()
-    import subprocess
     args = [vcpkg_bin_path, "depend-info"] + list(extlibs.keys())
     args += [f"--triplet={vcpkg_triplet}", "--format=tree", "--max-recurse=-1"]
+    import subprocess
     proc = subprocess.run(args, cwd=vcpkg_build_path)
     return proc.returncode
 
 def execute_vcpkg_list():
     __check_vcpkg()
-    import subprocess
     args = (vcpkg_bin_path, "list", f"--triplet={vcpkg_triplet}")
+    import subprocess
     proc = subprocess.run(args, cwd=vcpkg_build_path)
     return proc.returncode
 

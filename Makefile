@@ -12,10 +12,6 @@ ifeq (, $(shell which $(PYTHON_BIN)))
 $(error "Makefile: no python detected - it is needed to build the project.")
 endif
 
-ifeq (, $(shell which scons))
-$(error "Makefile: no python-scons detected - it is needed to build the project.")
-endif
-
 OS := $(shell uname)
 
 ifeq ($(OS),Linux)
@@ -156,7 +152,7 @@ export EXTLIB_LIB_PATH
 all: build
 
 help:
-	$(call mk_log_info,makefile,list all targets: make list)
+	$(call mk_log_info,makefile,list all targets: make targets)
 	$(call mk_log_info,makefile,build modules: make)
 	$(call mk_log_info,makefile,get dependencies: make dep)
 	$(call mk_log_info,makefile,build and run tests: make test)
@@ -193,9 +189,9 @@ endif
 # List Makefile rules
 ######################
 
-.PHONY: list # Generate list of targets with descriptions
+.PHONY: targets # Generate list of targets with descriptions
 
-list:
+targets:
 	$(QUIET) echo "Makefile targets"
 	$(QUIET) - $(foreach MAKEFILE_PATH, $(MAKEFILE_LIST), \
 		echo ""; \
