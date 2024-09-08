@@ -88,7 +88,8 @@ def build_vcpkg_triplet():
             vcpkg_triplet += f"-mingw"
         else:
             vcpkg_triplet += f"-{builder.build_platform}"
-        if not builder.is_android():
+        # no community triplet for static/dynamic here
+        if vcpkg_triplet != "arm64-linux":
             if builder.build_static_libs:
                 vcpkg_triplet += "-static"
             else:
