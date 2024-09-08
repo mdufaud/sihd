@@ -115,9 +115,9 @@ class Process: public IHandler<Poll *>,
         bool has_stopped_by_signal() const;
         bool has_exited_by_signal() const;
         bool has_continued() const;
-        int signal_exit_number() const;
-        int signal_stop_number() const;
-        int return_code() const;
+        uint8_t signal_exit_number() const;
+        uint8_t signal_stop_number() const;
+        uint8_t return_code() const;
 
         // get running process id
         pid_t pid() const { return _pid; };

@@ -62,7 +62,7 @@ TEST_F(TestIcmp, test_icmp_ipv4)
     bool reached = false;
     sihd::util::Handler<IcmpSender *> handler([&](IcmpSender *sender) {
         const IcmpResponse & response = sender->response();
-        ASSERT_EQ(response.size, 56);
+        ASSERT_EQ(response.size, 56u);
         time_t timestamp = ((time_t *)response.data)[0];
         reached = response.id == getpid();
         SIHD_LOG_DEBUG("code={} type={} ttl={} id={} seq={} time={}ms",

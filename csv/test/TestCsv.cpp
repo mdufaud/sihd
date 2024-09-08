@@ -70,7 +70,7 @@ TEST_F(TestCsv, test_csv_utils_tuple)
 
     const auto csv_data = utils::read_csv(path, true);
     ASSERT_TRUE(csv_data);
-    ASSERT_EQ(csv_data->size(), 1);
+    ASSERT_EQ(csv_data->size(), 1u);
     EXPECT_EQ(csv_data->at(0), expected_line_1);
 }
 
@@ -163,7 +163,7 @@ TEST_F(TestCsv, test_csv_reader)
 
     auto csv_data = utils::read_csv(path, false);
     ASSERT_TRUE(csv_data);
-    ASSERT_EQ(csv_data->size(), 3);
+    ASSERT_EQ(csv_data->size(), 3u);
     EXPECT_EQ(csv_data->at(0), values1);
     EXPECT_EQ(csv_data->at(1), values2);
     EXPECT_EQ(csv_data->at(2), values3);

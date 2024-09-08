@@ -167,6 +167,7 @@ Process::Process()
 {
     _started = false;
     _executing = false;
+    _force_fork = false;
     _pid = -1;
     _poll.set_timeout(1);
     _poll.add_observer(this);
@@ -902,21 +903,21 @@ bool Process::has_continued() const
     return _code == CLD_CONTINUED;
 }
 
-int Process::signal_exit_number() const
+uint8_t Process::signal_exit_number() const
 {
     const bool cond = this->has_exited_by_signal();
     std::lock_guard l(_mutex_info);
     return cond ? _status : -1;
 }
 
-int Process::signal_stop_number() const
+uint8_t Process::signal_stop_number() const
 {
     const bool cond = this->has_stopped_by_signal();
     std::lock_guard l(_mutex_info);
     return cond ? _status : -1;
 }
 
-int Process::return_code() const
+uint8_t Process::return_code() const
 {
     const bool cond = this->has_exited();
     std::lock_guard l(_mutex_info);

@@ -52,7 +52,7 @@ TEST_F(TestThreadPool, test_threadpool_spam)
     pool.stop();
 
     SIHD_LOG_INFO("Total: {}", count.load());
-    EXPECT_EQ(count.load(), total_jobs);
+    EXPECT_EQ(count.load(), (int)total_jobs);
 
     auto stats = pool.stats();
     for (size_t i = 0; i < stats.size(); i++)

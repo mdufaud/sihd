@@ -23,9 +23,9 @@ TEST_F(TestNum, test_num)
     constexpr uint16_t base10 = 10;
     constexpr uint16_t base16 = 16;
 
-    EXPECT_EQ(num::size(0b10001, base2), 5);
-    EXPECT_EQ(num::size(1000, base10), 4);
-    EXPECT_EQ(num::size(0xFF, base16), 2);
+    EXPECT_EQ(num::size(0b10001, base2), 5u);
+    EXPECT_EQ(num::size(1000, base10), 4u);
+    EXPECT_EQ(num::size(0xFF, base16), 2u);
 
     EXPECT_TRUE(num::near(5, 5, 0));
     EXPECT_TRUE(num::near(5, 5, 1));

@@ -86,7 +86,7 @@ TEST_F(TestZipFile, test_zip_write_read)
     EXPECT_TRUE(zip_reader.load_entry("hello/world"));
     EXPECT_FALSE(zip_reader.is_entry_directory());
     zip_reader.set_buffer_size(200);
-    EXPECT_EQ(zip_reader.read_entry(), replacement_string.size());
+    EXPECT_EQ(zip_reader.read_entry(), (ssize_t)replacement_string.size());
     EXPECT_TRUE(zip_reader.get_read_data(view));
     EXPECT_EQ(view.str(), replacement_string);
     EXPECT_EQ(zip_reader.read_entry(), 0);

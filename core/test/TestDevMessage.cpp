@@ -73,13 +73,13 @@ TEST_F(TestDevMessage, test_devmessage)
                                       "buffer_out",
                                       "trigger");
 
-    ASSERT_EQ(ch_active_in->size(), 1);
-    ASSERT_EQ(ch_size_in->size(), 1);
-    ASSERT_EQ(ch_str_in->size(), 20);
-    ASSERT_EQ(ch_active_out->size(), 1);
-    ASSERT_EQ(ch_buffer_in->size(), 25);
-    ASSERT_EQ(ch_buffer_out->size(), 25);
-    ASSERT_EQ(ch_trigger->size(), 1);
+    ASSERT_EQ(ch_active_in->size(), 1u);
+    ASSERT_EQ(ch_size_in->size(), 1u);
+    ASSERT_EQ(ch_str_in->size(), 20u);
+    ASSERT_EQ(ch_active_out->size(), 1u);
+    ASSERT_EQ(ch_buffer_in->size(), 25u);
+    ASSERT_EQ(ch_buffer_out->size(), 25u);
+    ASSERT_EQ(ch_trigger->size(), 1u);
 
     EXPECT_EQ(ch_size_out->read<int>(0), 0);
     EXPECT_TRUE(ch_size_in->write(0, 10));

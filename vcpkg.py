@@ -84,10 +84,12 @@ def build_vcpkg_triplet():
             vcpkg_triplet = "x64"
         else:
             vcpkg_triplet = builder.build_architecture
+
         if builder.build_platform == "windows":
             vcpkg_triplet += f"-mingw"
         else:
             vcpkg_triplet += f"-{builder.build_platform}"
+
         # no community triplet for static/dynamic here
         if vcpkg_triplet != "arm64-linux":
             if builder.build_static_libs:
@@ -167,7 +169,7 @@ def execute_vcpkg_install():
         assert(check_bins(["cmake", "ninja", "pkg-config"]))
 
     import subprocess
-    proc = subprocess.run(args, cwd=vcpkg_build_path, timeout=(60.0 * len(extlibs)), env=copy_env)
+    proc = subprocess.run(args, cwd=vcpkg_build_path, timeout=(120.0 * len(extlibs)), env=copy_env)
     return proc.returncode
 
 def execute_vcpkg_depend_info():

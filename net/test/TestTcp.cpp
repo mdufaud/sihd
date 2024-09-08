@@ -110,7 +110,7 @@ TEST_F(TestTcp, test_tcp_server)
 
     SIHD_LOG(debug, "Total observations: {}", observer_count.notifications());
     // should be lower than ~11 in general
-    EXPECT_LT(observer_count.notifications(), 15);
+    EXPECT_LT(observer_count.notifications(), 15u);
 }
 
 TEST_F(TestTcp, test_tcp_client)

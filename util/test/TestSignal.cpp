@@ -114,7 +114,7 @@ TEST_F(TestSignal, test_signal_tmp)
 
     auto sig_status = signal::status(sig);
     ASSERT_TRUE(sig_status);
-    EXPECT_EQ(sig_status->received, 0);
+    EXPECT_EQ(sig_status->received, 0u);
 
     SigHandler handler;
 
@@ -124,7 +124,7 @@ TEST_F(TestSignal, test_signal_tmp)
 
     sig_status = signal::status(sig);
     ASSERT_TRUE(sig_status);
-    EXPECT_EQ(sig_status->received, 1);
+    EXPECT_EQ(sig_status->received, 1u);
 
     handler.unhandle();
 
@@ -132,7 +132,7 @@ TEST_F(TestSignal, test_signal_tmp)
 
     sig_status = signal::status(sig);
     ASSERT_TRUE(sig_status);
-    EXPECT_EQ(sig_status->received, 1);
+    EXPECT_EQ(sig_status->received, 1u);
 
     signal::handle(sig);
 
@@ -143,7 +143,7 @@ TEST_F(TestSignal, test_signal_tmp)
 
         sig_status = signal::status(sig);
         ASSERT_TRUE(sig_status);
-        EXPECT_EQ(sig_status->received, 2);
+        EXPECT_EQ(sig_status->received, 2u);
     }
 
     // still handling signal
@@ -154,7 +154,7 @@ TEST_F(TestSignal, test_signal_tmp)
 
     sig_status = signal::status(sig);
     ASSERT_TRUE(sig_status);
-    EXPECT_EQ(sig_status->received, 3);
+    EXPECT_EQ(sig_status->received, 3u);
 }
 
 } // namespace test

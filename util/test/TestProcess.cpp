@@ -447,9 +447,22 @@ TEST_F(TestProcess, test_process_bad_cmd)
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy under valgrind";
     Process proc {"ellesse", "-la"};
-
     EXPECT_FALSE(proc.execute());
     EXPECT_FALSE(proc.wait_any());
+    EXPECT_EQ(proc.return_code(), 255);
+
+    // Try with fork
+
+    EXPECT_TRUE(proc.reset());
+    proc.set_force_fork(true);
+
+    // with fork you cannot know at the fork time if the binary is found or not
+    // fork succeeded
+    EXPECT_TRUE(proc.execute());
+    // wait for child process fork to end
+    EXPECT_TRUE(proc.wait_any());
+    // the exit status
+    EXPECT_EQ(proc.return_code(), 255);
 }
 
 } // namespace test

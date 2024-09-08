@@ -77,14 +77,14 @@ TEST_F(TestUdp, test_udp_sendrcv_connect)
     receiver.add_observer(&handler);
 
     const char helloworld[] = "hello world";
-    EXPECT_EQ(sender.send(helloworld), strlen(helloworld));
-    EXPECT_EQ(receiver.receive(array_rcv), strlen(helloworld));
+    EXPECT_EQ(sender.send(helloworld), (ssize_t)strlen(helloworld));
+    EXPECT_EQ(receiver.receive(array_rcv), (ssize_t)strlen(helloworld));
 
     EXPECT_TRUE(array_rcv.is_equal(helloworld));
     EXPECT_EQ(array_rcv.size(), strlen(helloworld));
 
     const char hello[] = "hello";
-    EXPECT_EQ(sender.send(hello), strlen(hello));
+    EXPECT_EQ(sender.send(hello), (ssize_t)strlen(hello));
     EXPECT_TRUE(receiver.poll(10));
 
     EXPECT_TRUE(array_rcv.is_equal(hello));
@@ -107,7 +107,7 @@ TEST_F(TestUdp, test_udp_sendrcv_broadcast)
     EXPECT_TRUE(receiver.socket_opened());
 
     // send to broadcast ip
-    EXPECT_EQ(sender.send_to({"127.255.255.255", 4242}, helloworld), strlen(helloworld));
+    EXPECT_EQ(sender.send_to({"127.255.255.255", 4242}, helloworld), (ssize_t)strlen(helloworld));
 
     IpAddr iprcv;
     receiver.receive(iprcv, array_rcv);

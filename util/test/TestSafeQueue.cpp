@@ -61,16 +61,16 @@ TEST_F(TestSafeQueue, test_safequeue_space)
 
     ASSERT_TRUE(queue.empty());
     EXPECT_TRUE(queue.push(1, maximum_queue_size));
-    EXPECT_EQ(queue.size(), 1);
+    EXPECT_EQ(queue.size(), 1u);
     EXPECT_TRUE(queue.push(2, maximum_queue_size));
-    EXPECT_EQ(queue.size(), 2);
+    EXPECT_EQ(queue.size(), 2u);
     EXPECT_TRUE(queue.push(3, maximum_queue_size));
-    EXPECT_EQ(queue.size(), 3);
+    EXPECT_EQ(queue.size(), 3u);
     EXPECT_EQ(queue.front(), 1);
     EXPECT_EQ(queue.back(), 3);
 
     EXPECT_FALSE(queue.push(4, maximum_queue_size));
-    EXPECT_EQ(queue.size(), 3);
+    EXPECT_EQ(queue.size(), 3u);
     EXPECT_EQ(queue.back(), 3);
 
     fmt::print("Starting thread waiting for space to write to queue\n");
@@ -89,7 +89,7 @@ TEST_F(TestSafeQueue, test_safequeue_space)
 
     fmt::print("Thread joined\n");
 
-    EXPECT_EQ(queue.size(), 3);
+    EXPECT_EQ(queue.size(), 3u);
     EXPECT_EQ(queue.front(), 2);
     EXPECT_EQ(queue.back(), 42);
 }
@@ -116,7 +116,7 @@ TEST_F(TestSafeQueue, test_safequeue_pushpop)
         queue.push(42, max_queue_size);
     }
 
-    EXPECT_EQ(queue.size(), 10);
+    EXPECT_EQ(queue.size(), 10u);
 }
 
 TEST_F(TestSafeQueue, test_safequeue_spam)
@@ -130,7 +130,7 @@ TEST_F(TestSafeQueue, test_safequeue_spam)
     t2.join();
     t1.join();
 
-    EXPECT_EQ(queue.size(), 300);
+    EXPECT_EQ(queue.size(), 300u);
 
     size_t ft_count = 0;
     size_t leet_count = 0;
@@ -147,10 +147,10 @@ TEST_F(TestSafeQueue, test_safequeue_spam)
             blazeit_count++;
     }
 
-    EXPECT_EQ(queue.size(), 0);
-    EXPECT_EQ(ft_count, 100);
-    EXPECT_EQ(leet_count, 100);
-    EXPECT_EQ(blazeit_count, 100);
+    EXPECT_EQ(queue.size(), 0u);
+    EXPECT_EQ(ft_count, 100u);
+    EXPECT_EQ(leet_count, 100u);
+    EXPECT_EQ(blazeit_count, 100u);
 
     std::thread t4(write_number, std::ref(queue), 42, 200);
     std::thread t5(write_number, std::ref(queue), 1337, 200);
@@ -159,7 +159,7 @@ TEST_F(TestSafeQueue, test_safequeue_spam)
     t5.join();
     t4.join();
 
-    EXPECT_EQ(queue.size(), 600);
+    EXPECT_EQ(queue.size(), 600u);
 
     std::thread t7(pop_all, std::ref(queue));
     std::thread t8(pop_all, std::ref(queue));
@@ -168,7 +168,7 @@ TEST_F(TestSafeQueue, test_safequeue_spam)
     t8.join();
     t7.join();
 
-    EXPECT_EQ(queue.size(), 0);
+    EXPECT_EQ(queue.size(), 0u);
 }
 
 } // namespace test

@@ -11,7 +11,6 @@
 #include <sstream>
 
 #include <fmt/format.h>
-#include <fmt/ranges.h>
 
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/IArrayView.hpp>

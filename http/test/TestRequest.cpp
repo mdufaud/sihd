@@ -32,7 +32,7 @@ TEST_F(TestRequest, test_http_request)
     auto http_response_opt = http::get("https://www.google.com");
 
     ASSERT_TRUE(http_response_opt.has_value());
-    ASSERT_EQ(http_response_opt->status(), 200);
+    ASSERT_EQ(http_response_opt->status(), 200u);
 
     for (const auto & [header, value] : http_response_opt->http_header().headers())
     {
