@@ -228,7 +228,8 @@ setup: venv
 build:
 	$(QUIET) cd $(HERE)
 	$(eval BUILD_CMD_LINE = \
-			modules=$(modules) test=$(test) dist=$(dist) mode=$(mode) asan=$(asan) verbose=$(verbose) pkgdep=$(pkgdep))
+			modules=$(modules) test=$(test) dist=$(dist) mode=$(mode) \
+			asan=$(asan) verbose=$(verbose) pkgdep=$(pkgdep) demo=$(demo))
 	$(QUIET) $(call echo_log_info,makefile,starting build with command: '$(SCONS_BUILD_CMD) $(BUILD_CMD_LINE)')
 	$(QUIET) $(BUILD_CMD_LINE) $(SCONS_BUILD_CMD)
 
@@ -387,6 +388,27 @@ $(PKG_MANAGER_NAME):
 	$(QUIET) echo > /dev/null
 
 endif # pkgdep
+
+##################
+# Demo
+##################
+
+.PHONY: demo
+
+ifeq ($(MAKEARG_1), demo)
+
+demo: demo = 1
+demo: build
+
+ifeq ($(MAKEARG_2), mod)
+MODULES_NAME := $(MAKEARG_3),$(m)
+demo: modules = $(MODULES_NAME)
+mod:
+	$(QUIET) echo > /dev/null
+endif
+
+endif
+
 
 ##################
 # VCPKG (extlibs)
@@ -606,9 +628,9 @@ clean:
 
 clean_dep:
 	$(QUIET) $(call mk_log_info,makefile,removing dependencies)
-	rm -rf $(VCPKG_PATH)/packages
-	rm -rf $(BUILD_ENTRY_PATH)/vcpkg
+	rm -rf $(BUILD_PATH)/vcpkg
 	rm -f $(EXTLIB_PATH)
+	rm -rf $(VCPKG_PATH)/packages
 
 clean_dist:
 	$(QUIET) $(call mk_log_info,makefile,removing distribution)
