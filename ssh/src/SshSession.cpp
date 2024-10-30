@@ -224,7 +224,7 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
             const char *prompt = ssh_userauth_kbdint_getprompt(_ssh_session_ptr, i, &echo);
             if (echo)
             {
-                fmt::print(prompt);
+                fmt::print("{}", prompt);
                 std::string answer;
                 sihd::util::LineReader::fast_read_stdin(answer);
                 if (ssh_userauth_kbdint_setanswer(_ssh_session_ptr, i, answer.c_str()) < 0)

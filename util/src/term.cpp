@@ -1,7 +1,19 @@
+#include <fmt/format.h>
+
 #include <sihd/util/term.hpp>
 
 namespace sihd::util::term
 {
+
+std::string fmt(std::string_view str, const char *attr)
+{
+    return fmt::format("{}{}{}", attr, str, attr::ENDC);
+}
+
+std::string fmt(std::string_view str, const char *attr1, const char *attr2)
+{
+    return fmt::format("{}{}{}{}", attr1, attr2, str, attr::ENDC);
+}
 
 bool is_interactive()
 {

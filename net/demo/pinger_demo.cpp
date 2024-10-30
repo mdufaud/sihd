@@ -116,7 +116,7 @@ int main(int argc, char **argv)
     if (success)
     {
         const auto & result = pinger.result();
-        SIHD_COUT(result.str() + "\n");
+        SIHD_COUT("{}\n", result.str());
     }
     else
         SIHD_LOG(error, "Cannot ping: {}", host);

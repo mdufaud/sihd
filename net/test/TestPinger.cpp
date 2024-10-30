@@ -40,7 +40,7 @@ TEST_F(TestPinger, test_pinger)
     ASSERT_TRUE(pinger.stop());
 
     auto result = pinger.result();
-    SIHD_COUT(result.str());
+    SIHD_COUT("{}\n", result.str());
 
     EXPECT_EQ(result.transmitted, 10);
     EXPECT_EQ(result.received, 10);

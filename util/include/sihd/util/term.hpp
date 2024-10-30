@@ -4,7 +4,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <sihd/util/format.hpp>
+#include <string>
+#include <string_view>
 
 #define SIHD_TERM_ANSI_UNICODE_ESCAPE "\u001b"
 #define SIHD_TERM_ANSI_HEXA_ESCAPE "\x1B"
@@ -89,11 +90,8 @@ inline constexpr const char *SCROLL_DOWN = __ESC "[T";
 
 bool is_interactive();
 
-template <typename... Args>
-std::string fmt(std::string_view str, Args &&...args)
-{
-    return fmt::format("{}{}{}", format::join("", std::forward<Args>(args)...), str, attr::ENDC);
-}
+std::string fmt(std::string_view str, const char *attr);
+std::string fmt(std::string_view str, const char *attr1, const char *attr2);
 
 std::string underline(std::string_view str);
 std::string bold(std::string_view str);

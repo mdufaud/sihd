@@ -42,11 +42,12 @@ extlibs = {
 
 # glfw need libxi-dev libxinerama-dev libxcursor-dev xorg libglu1-mesa pkg-config
 extlibs_features = {
-    "imgui": ["glfw-binding", "opengl3-binding"]
+    "imgui": ["glfw-binding", "opengl3-binding"],
+    "libusb": ["udev"],
 }
 
 extlibs_features_windows = {
-    "imgui": ["win32-binding", "dx11-binding"]
+    "imgui": ["win32-binding", "dx11-binding"],
 }
 
 extlibs_skip = ["libbluetooth"]
@@ -140,7 +141,7 @@ modules = {
     "usb": {
         "depends": ['util'],
         "extlibs": ['libusb'],
-        "libs": ['udev'],
+        # "libs": ['udev'],
         "parse-configs": [
             "pkg-config libusb-1.0 --cflags --libs",
         ],
@@ -218,7 +219,7 @@ defines = [
     "SIHD_VERSION_MINOR=" + version.split('.')[1],
     "SIHD_VERSION_PATCH=" + version.split('.')[2],
 ]
-cxx_flags = ['-std=c++17']
+cxx_flags = ['-std=c++20']
 static_defines = ['SIHD_STATIC']
 
 ## mode specifics

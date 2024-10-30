@@ -41,7 +41,7 @@ class HttpHeader
 
         const HeaderMap & headers() const { return _headers; }
         std::string_view find(const std::string & header_name) const;
-        const std::string & get(const std::string & header_name) const { return _headers.at(header_name); }
+        const std::string & get(const std::string & header_name) const;
 
     protected:
 

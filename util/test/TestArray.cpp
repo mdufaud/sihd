@@ -119,12 +119,12 @@ TEST_F(TestArray, test_array_from_string)
     EXPECT_EQ(arr_int[0], 10);
     EXPECT_EQ(arr_int[1], 20);
     EXPECT_EQ(arr_int[2], 30);
-    SIHD_LOG(debug, arr_int.str(','));
+    SIHD_LOG(debug, "{}", arr_int.str(','));
 
     ArrInt arr2;
     EXPECT_TRUE(arr2.from_str(arr_int.str(','), ","));
     EXPECT_TRUE(arr2.is_equal(arr_int));
-    SIHD_LOG(debug, arr2.str(','));
+    SIHD_LOG(debug, "{}", arr2.str(','));
 
     EXPECT_FALSE(arr_int.from_str("a,b,c", ","));
     EXPECT_EQ(arr_int.size(), 0u);
@@ -136,12 +136,12 @@ TEST_F(TestArray, test_array_from_string)
     EXPECT_FLOAT_EQ(arr_float[1], 22.1);
     EXPECT_FLOAT_EQ(arr_float[2], 33.2);
     EXPECT_FLOAT_EQ(arr_float[3], 44.3);
-    SIHD_LOG(debug, arr_float.str(','));
+    SIHD_LOG(debug, "{}", arr_float.str(','));
 
     ArrChar arr_str;
     arr_str.from_str("hello world");
     EXPECT_EQ(arr_str.str(), "hello world");
-    SIHD_LOG(debug, arr_str.str());
+    SIHD_LOG(debug, "{}", arr_str.str());
 }
 
 TEST_F(TestArray, test_array_iterator_for)
@@ -393,7 +393,7 @@ TEST_F(TestArray, test_array_push_front)
     EXPECT_EQ(arr[2], 10);
 
     arr.push_front({-10, -5});
-    SIHD_LOG(debug, arr.str(' '));
+    SIHD_LOG(debug, "{}", arr.str(' '));
     ASSERT_EQ(arr.size(), 5u);
     EXPECT_EQ(arr[0], -10);
     EXPECT_EQ(arr[1], -5);
@@ -675,7 +675,7 @@ TEST_F(TestArray, test_array_struct)
     EXPECT_EQ(arr[0].y, 1337);
     EXPECT_EQ(arr.size(), 1UL);
 
-    SIHD_LOG_DEBUG(arr.str(' '));
+    SIHD_LOG_DEBUG("{}", arr.str(' '));
 
     auto arr2 = arr;
     EXPECT_TRUE(arr.is_equal(arr2));

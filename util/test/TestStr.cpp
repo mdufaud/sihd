@@ -6,7 +6,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/StrConfiguration.hpp>
-#include <sihd/util/format.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
 
@@ -272,14 +271,6 @@ TEST_F(TestStr, test_str_bytes)
     ssize_t tbyte = 1024L * 1024L * 1024L * 1024L;
     EXPECT_EQ(str::bytes_str(tbyte), "1T");
     EXPECT_EQ(str::bytes_str((tbyte) + (tbyte - gbyte)), "1.9T");
-}
-
-TEST_F(TestStr, test_format_join)
-{
-    EXPECT_EQ(format::join(","), "");
-    EXPECT_EQ(format::join(",", 1), "1");
-    EXPECT_EQ(format::join(",", 1, 2), "1,2");
-    EXPECT_EQ(format::join(" - ", 1, "abc", 3.14), "1 - abc - 3.14");
 }
 
 TEST_F(TestStr, test_str_time2str)

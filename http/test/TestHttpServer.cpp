@@ -137,6 +137,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         {
             SIHD_LOG(debug, "Closed websocket");
             ++_nclosed;
+            this->request_stop();
         }
 
         // websocket

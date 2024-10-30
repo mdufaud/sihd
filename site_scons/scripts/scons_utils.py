@@ -33,7 +33,10 @@ def add_env_app_conf(app, env, *keys):
             #prepends
             # env[envkey][:0] = attr
             #append
-            env[envkey].append(attr)
+            if isinstance(attr, list):
+                env[envkey].extend(attr)
+            else:
+                env[envkey].append(attr)
 
 def load_env_packages_config(env, *configs):
     """ Parse multiple pkg-configs: libraries/includes utilities """

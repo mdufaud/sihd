@@ -120,8 +120,8 @@ TEST_F(TestTime, test_time_timestamp)
 
     // format
     SIHD_LOG_DEBUG("Time offset");
-    SIHD_LOG_DEBUG(timestamp.timeoffset_str());
-    SIHD_LOG_DEBUG(timestamp.localtimeoffset_str());
+    SIHD_LOG_DEBUG("{}", timestamp.timeoffset_str());
+    SIHD_LOG_DEBUG("{}", timestamp.localtimeoffset_str());
 
     // test conversion
     auto fun = [](std::chrono::seconds sec) {

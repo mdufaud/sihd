@@ -44,6 +44,8 @@ class HttpServer: public sihd::util::Node,
         bool set_404_path(std::string_view path);
         bool set_server_name(std::string_view path);
 
+        void request_stop();
+
         bool add_resource_path(const std::string & path);
         bool remove_resource_path(const std::string & path);
 
@@ -178,6 +180,7 @@ class HttpServer: public sihd::util::Node,
         std::atomic<bool> _stop;
         int _port;
         std::string _root_dir;
+        std::string _old_dir;
         std::set<std::string> _resources_path;
         std::string _ssl_cert_path;
         std::string _ssl_cert_key;

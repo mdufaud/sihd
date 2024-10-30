@@ -152,6 +152,11 @@ bool HttpServer::set_server_name(std::string_view name)
     return true;
 }
 
+void HttpServer::request_stop()
+{
+    _stop = true;
+}
+
 bool HttpServer::on_stop()
 {
     _stop = true;
@@ -165,13 +170,28 @@ bool HttpServer::on_stop()
 
 bool HttpServer::on_start()
 {
-    if (!fs::chdir(_root_dir))
+    if (!_root_dir.empty())
     {
-        SIHD_LOG(error, "HttpServer: could not change directory to: {}", _root_dir);
-        return false;
+        _old_dir = fs::cwd();
+        if (!fs::chdir(_root_dir))
+        {
+            SIHD_LOG(error, "HttpServer: could not change directory to: {}", _root_dir);
+            return false;
+        }
     }
 
     _stop = false;
+
+    Defer put_old_dir_back([this] {
+        if (!_old_dir.empty())
+        {
+            if (!fs::chdir(_old_dir))
+            {
+                SIHD_LOG(error, "HttpServer: could not return to directory: {}", _old_dir);
+            }
+            _old_dir.clear();
+        }
+    });
 
     struct lws_context_creation_info lws_info;
     memset(&lws_info, 0, sizeof(lws_context_creation_info));

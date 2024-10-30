@@ -36,7 +36,7 @@ TEST_F(TestNode, test_node_tree)
     root.execute_children<Node>([&parent_found](Node *child) { parent_found = child; });
     EXPECT_EQ(parent_found, parent);
 
-    SIHD_COUT(root.tree_str());
+    SIHD_COUT("{}\n", root.tree_str());
 
     // Parent - child
     auto [child1, child2] = root.find_all("child1", "child2");
@@ -94,7 +94,7 @@ TEST_F(TestNode, test_node_links)
     EXPECT_EQ(tmp_uncle, uncle_node);
     EXPECT_EQ(tmp_gp, gp_node);
 
-    SIHD_COUT(root.tree_str());
+    SIHD_COUT("{}\n", root.tree_str());
 
     parent_node->add_link("mychild1", "..origin.child1");
     uncle_node->add_link("mycousin1", "...parent.mychild1");
@@ -104,7 +104,7 @@ TEST_F(TestNode, test_node_links)
 
     EXPECT_TRUE(gp_node->resolve_links());
 
-    SIHD_COUT(root.tree_str());
+    SIHD_COUT("{}\n", root.tree_str());
 
     EXPECT_EQ(parent_node->get_child("mychild1"), child1);
     EXPECT_EQ(uncle_node->get_child("mycousin1"), child1);

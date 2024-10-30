@@ -346,7 +346,7 @@ valgrind_leak_test: DEBUGGER = valgrind
 valgrind_leak_test: test
 ltest: valgrind_leak_test
 
-gdb_test: DEBUGGER_ARGS = -ex=r --args
+gdb_test: DEBUGGER_ARGS = --args
 gdb_test: DEBUGGER = gdb
 gdb_test: test
 gtest: gdb_test

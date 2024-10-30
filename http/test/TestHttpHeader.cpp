@@ -40,7 +40,7 @@ TEST_F(TestHttpHeader, test_httpheader)
 
     EXPECT_TRUE(header.add_header_from_str("Accept2: a"));
 
-    EXPECT_EQ(header.get("Accept"), "text/html");
+    EXPECT_EQ(header.get("accept"), "text/html");
     EXPECT_EQ(header.find("Accept2"), "a");
     EXPECT_EQ(header.find("Accept3"), "");
 }

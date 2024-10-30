@@ -120,7 +120,7 @@ TEST_F(TestSplitter, test_splitter_escapes)
     std::vector<std::string> splits = splitter.split(cmd);
     for (const auto & split : splits)
     {
-        SIHD_LOG(debug, split);
+        SIHD_LOG(debug, "{}", split);
     }
     EXPECT_EQ(splits.size(), 5u);
     if (splits.size() == 5)
@@ -138,7 +138,7 @@ TEST_F(TestSplitter, test_splitter_escapes)
     std::vector<std::string> splits_with_restriction = splitter.split(cmd);
     for (const auto & split : splits_with_restriction)
     {
-        SIHD_LOG(debug, split);
+        SIHD_LOG(debug, "{}", split);
     }
     EXPECT_EQ(splits_with_restriction.size(), 7u);
     if (splits_with_restriction.size() == 7)
@@ -160,7 +160,7 @@ TEST_F(TestSplitter, test_splitter_escapes)
     std::vector<std::string> full_split = splitter.split(fullcmd);
     for (const auto & split : full_split)
     {
-        SIHD_LOG(debug, split);
+        SIHD_LOG(debug, "{}", split);
     }
     EXPECT_EQ(full_split.size(), 1u);
     if (full_split.size() == 1)
@@ -173,7 +173,7 @@ TEST_F(TestSplitter, test_splitter_escapes)
     std::vector<std::string> unclosed_split = splitter.split(unclosed_seq);
     for (const auto & split : unclosed_split)
     {
-        SIHD_LOG(debug, split);
+        SIHD_LOG(debug, "{}", split);
     }
     EXPECT_EQ(unclosed_split.size(), 1u);
     if (unclosed_split.size() == 1)

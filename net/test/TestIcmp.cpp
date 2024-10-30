@@ -74,8 +74,8 @@ TEST_F(TestIcmp, test_icmp_ipv4)
                        sihd::util::time::to_ms(sihd::util::Clock::default_clock.now() - timestamp));
         // make a DNS lookup on client
         auto dns = dns::lookup(response.client.str());
-        SIHD_LOG_DEBUG(dns.hostname);
-        SIHD_LOG_DEBUG(dns.host);
+        SIHD_LOG_DEBUG("{}", dns.hostname);
+        SIHD_LOG_DEBUG("{}", dns.host);
     });
     sender.add_observer(&handler);
 

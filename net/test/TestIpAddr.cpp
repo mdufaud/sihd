@@ -46,12 +46,12 @@ TEST_F(TestIpAddr, test_ipaddr_ip_name)
     IpAddr addr1("216.58.215.46");
     if (addr1.fetch_hostname())
     {
-        SIHD_LOG(debug, addr1.hostname());
+        SIHD_LOG(debug, "{}", addr1.hostname());
     }
     IpAddr addr2("2a00:1450:4007:810::200e");
     if (addr2.fetch_hostname())
     {
-        SIHD_LOG(debug, addr2.hostname());
+        SIHD_LOG(debug, "{}", addr2.hostname());
     }
 }
 
@@ -108,8 +108,7 @@ TEST_F(TestIpAddr, test_ipaddr_subnet)
     EXPECT_TRUE(same_addr.is_same_subnet(test1));
     EXPECT_FALSE(same_addr.is_same_subnet(test2));
 
-    // SIHD_COUT(addr.dump_ip_lst());
-    SIHD_COUT(addr.dump_subnet());
+    SIHD_COUT("{}\n", addr.dump_subnet());
 
     EXPECT_EQ(addr.subnet_value(), same_addr.subnet_value());
 

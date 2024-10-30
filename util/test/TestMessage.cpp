@@ -53,7 +53,7 @@ TEST_F(TestMessage, test_dynmessage)
 
     EXPECT_TRUE(msg1.finish());
 
-    SIHD_COUT(msg1.tree_desc_str());
+    SIHD_COUT("{}\n", msg1.tree_desc_str());
 
     s_msg1 test;
     test.active = false;
@@ -85,7 +85,7 @@ TEST_F(TestMessage, test_dynmessage)
 
     ASSERT_EQ(msg1.field_byte_size(), sizeof(buffer));
 
-    SIHD_COUT(msg1.tree_desc_str());
+    SIHD_COUT("{}\n", msg1.tree_desc_str());
 
     EXPECT_EQ(activefield->read_value<bool>(0), true);
     EXPECT_EQ(sizefield->read_value<int>(0), (int)sizeof(hw));
@@ -106,7 +106,7 @@ TEST_F(TestMessage, test_message_waterfall)
     EXPECT_TRUE(msg1.add_field<char>("str", 200));
     EXPECT_TRUE(msg1.finish());
 
-    SIHD_COUT(msg1.tree_desc_str());
+    SIHD_COUT("{}\n", msg1.tree_desc_str());
 
     EXPECT_EQ(msg1.field_byte_size(), sizeof(int) + 200 * sizeof(char));
     EXPECT_EQ(msg1.field_byte_size(), sizeof(s_msg1));
@@ -129,7 +129,7 @@ TEST_F(TestMessage, test_message_waterfall)
     EXPECT_TRUE(msg2.add_field("othermsg", msg1.clone()));
     EXPECT_TRUE(msg2.finish());
 
-    SIHD_COUT(msg2.tree_desc_str());
+    SIHD_COUT("{}\n", msg2.tree_desc_str());
 
     EXPECT_EQ(msg2.field_byte_size(), msg1.field_byte_size() * 2 + sizeof(bool) + sizeof(double) * 2 + sizeof(short));
 
@@ -192,7 +192,7 @@ TEST_F(TestMessage, test_message_simple)
     EXPECT_TRUE(msg.add_field<float>("float", 5));
     EXPECT_TRUE(msg.finish());
 
-    SIHD_COUT(msg.tree_str());
+    SIHD_COUT("{}\n", msg.tree_str());
 
     EXPECT_EQ(msg.field_byte_size(), sizeof(bool) + sizeof(uint32_t) * 2 + sizeof(float) * 5);
 

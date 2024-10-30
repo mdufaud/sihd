@@ -58,7 +58,7 @@ TEST_F(TestSftp, test_sftp)
     EXPECT_TRUE(std::find(list.begin(), list.end(), "new_dir/") != list.end());
     for (const std::string & name : list)
     {
-        SIHD_LOG(debug, name);
+        SIHD_LOG(debug, "{}", name);
     }
 
     std::vector<SftpAttribute> attrs;

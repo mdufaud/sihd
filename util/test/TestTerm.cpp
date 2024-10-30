@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
+
 #include <iostream>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/term.hpp>
 
@@ -23,26 +25,26 @@ TEST_F(TestTerm, test_term_colors)
 {
     if (term::is_interactive() == false)
         GTEST_SKIP();
-    SIHD_LOG(debug, term::fmt("BLACK", term::attr::BLACK));
-    SIHD_LOG(debug, term::fmt("RED", term::attr::RED));
-    SIHD_LOG(debug, term::fmt("GREEN", term::attr::GREEN));
-    SIHD_LOG(debug, term::fmt("YELLOW", term::attr::YELLOW));
-    SIHD_LOG(debug, term::fmt("BLUE", term::attr::BLUE));
-    SIHD_LOG(debug, term::fmt("VIOLET", term::attr::VIOLET));
-    SIHD_LOG(debug, term::fmt("CYAN", term::attr::CYAN));
-    SIHD_LOG(debug, term::fmt("WHITE", term::attr::WHITE));
-    SIHD_LOG(debug, term::fmt("GREY", term::attr::GREY));
-    SIHD_LOG(debug, term::fmt("RED2", term::attr::RED2));
-    SIHD_LOG(debug, term::fmt("GREEN2", term::attr::GREEN2));
-    SIHD_LOG(debug, term::fmt("YELLOW2", term::attr::YELLOW2));
-    SIHD_LOG(debug, term::fmt("BLUE2", term::attr::BLUE2));
-    SIHD_LOG(debug, term::fmt("VIOLET2", term::attr::VIOLET2));
-    SIHD_LOG(debug, term::fmt("CYAN2", term::attr::CYAN2));
-    SIHD_LOG(debug, term::fmt("WHITE2", term::attr::WHITE2));
+    SIHD_LOG(debug, "{}", term::fmt("BLACK", term::attr::BLACK));
+    SIHD_LOG(debug, "{}", term::fmt("RED", term::attr::RED));
+    SIHD_LOG(debug, "{}", term::fmt("GREEN", term::attr::GREEN));
+    SIHD_LOG(debug, "{}", term::fmt("YELLOW", term::attr::YELLOW));
+    SIHD_LOG(debug, "{}", term::fmt("BLUE", term::attr::BLUE));
+    SIHD_LOG(debug, "{}", term::fmt("VIOLET", term::attr::VIOLET));
+    SIHD_LOG(debug, "{}", term::fmt("CYAN", term::attr::CYAN));
+    SIHD_LOG(debug, "{}", term::fmt("WHITE", term::attr::WHITE));
+    SIHD_LOG(debug, "{}", term::fmt("GREY", term::attr::GREY));
+    SIHD_LOG(debug, "{}", term::fmt("RED2", term::attr::RED2));
+    SIHD_LOG(debug, "{}", term::fmt("GREEN2", term::attr::GREEN2));
+    SIHD_LOG(debug, "{}", term::fmt("YELLOW2", term::attr::YELLOW2));
+    SIHD_LOG(debug, "{}", term::fmt("BLUE2", term::attr::BLUE2));
+    SIHD_LOG(debug, "{}", term::fmt("VIOLET2", term::attr::VIOLET2));
+    SIHD_LOG(debug, "{}", term::fmt("CYAN2", term::attr::CYAN2));
+    SIHD_LOG(debug, "{}", term::fmt("WHITE2", term::attr::WHITE2));
 
-    SIHD_LOG(debug, term::bold("bold"));
-    SIHD_LOG(debug, term::white_bg(" White bg "));
-    SIHD_LOG(debug, term::fmt(" White bg - red text ", term::attr::WHITEBG, term::attr::RED2));
+    SIHD_LOG(debug, "{}", term::bold("bold"));
+    SIHD_LOG(debug, "{}", term::white_bg(" White bg "));
+    SIHD_LOG(debug, "{}", term::fmt(" White bg - red text ", term::attr::WHITEBG, term::attr::RED2));
 
     std::cout << "Testing terminal attrs" << std::endl
               << "======================================================" << std::endl

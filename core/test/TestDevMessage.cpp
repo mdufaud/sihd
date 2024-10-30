@@ -52,7 +52,7 @@ TEST_F(TestDevMessage, test_devmessage)
     ASSERT_TRUE(core.init());
     ASSERT_TRUE(core.start());
 
-    SIHD_COUT(core.tree_desc_str());
+    SIHD_COUT("{}", core.tree_desc_str());
 
     auto [ch_active_in,
           ch_size_in,
