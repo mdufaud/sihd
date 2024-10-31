@@ -141,7 +141,7 @@ modules = {
     "usb": {
         "depends": ['util'],
         "extlibs": ['libusb'],
-        # "libs": ['udev'],
+        "libs": ['udev'],
         "parse-configs": [
             "pkg-config libusb-1.0 --cflags --libs",
         ],

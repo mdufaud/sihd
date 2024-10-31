@@ -365,7 +365,7 @@ def _env_build_demo(self, src, name, add_libs = [], **kwargs):
     module_name = self['APP_MODULE_NAME']
 
     # if modules are specified, demo is built only if specified by user and not automatically by dependencies
-    if modules_to_build and module_name not in modules_to_build:
+    if modules_lst and module_name not in modules_lst:
         return None
 
     demo_env = self.Clone()
@@ -398,7 +398,7 @@ def _env_build_test(self, src, name = None, add_libs = [], **kwargs):
     module_name = self['APP_MODULE_NAME']
 
     # if modules are specified, test is built only if specified by user and not automatically by dependencies
-    if modules_to_build and module_name not in modules_to_build:
+    if modules_lst and module_name not in modules_lst:
         return None
 
     test_env = self.Clone()

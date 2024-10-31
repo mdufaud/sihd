@@ -277,7 +277,8 @@ ifneq ($(findstring test,$(MAKEARG_1)), )
 # --gtest_catch_exceptions=0
 # --gtest_break_on_failure
 TEST_ARGS :=
-TEST_CMD := test
+TEST_ACTION := test
+TEST_SCRIPT_ARGS :=
 DEBUGGER :=
 DEBUGGER_ARGS :=
 
@@ -288,7 +289,7 @@ DEBUGGER_ARGS :=
 #	make test ls
 #	make test t=FILTER
 MODULES_NAME := $(MAKEARG_2),$(m)
-TEST_NAME := $(MAKEARG_3)$(t)
+TEST_NAME_FILTER := $(MAKEARG_3)$(t)
 
 ifeq ($(MODULES_NAME),all)
 	MODULES_NAME :=
@@ -296,18 +297,18 @@ endif
 
 # case: make test ls
 ifeq ($(MAKEARG_2),ls)
-ifeq ($(TEST_NAME), )
-	TEST_CMD := list
+ifeq ($(TEST_NAME_FILTER), )
+	TEST_ACTION := list
 	MODULES_NAME :=
 endif
 endif
 
 # case: make test MODULE ls
 ifeq ($(MAKEARG_3),ls)
-	TEST_CMD := list
+	TEST_ACTION := list
 endif
 
-ifeq ($(TEST_CMD),list)
+ifeq ($(TEST_ACTION),list)
 ls:
 	$(QUIET) echo > /dev/null
 endif
@@ -330,9 +331,9 @@ test: build
 					DEBUGGER_ARGS="$(DEBUGGER_ARGS)" \
 					TEST_ARGS="$(TEST_ARGS)" \
 					REPEAT="$(repeat)" \
-					bash $(TEST_PATH)/execute_tests.sh $(TEST_CMD) "$(MODULES_NAME_SPLIT)" "$(TEST_NAME)"
+					bash $(TEST_PATH)/execute_tests.sh "$(TEST_ACTION)" "$(MODULES_NAME_SPLIT)" "$(TEST_NAME_FILTER)" $(TEST_SCRIPT_ARGS)
 
-nointeract_test: TEST_DEFAULT_ARGS += 0>&-
+nointeract_test: TEST_SCRIPT_ARGS += 0>&-
 nointeract_test: test
 itest: nointeract_test
 
@@ -362,7 +363,7 @@ ttest: strace_test
 $(MODULES_NAME):
 	$(QUIET) echo > /dev/null
 
-$(TEST_NAME):
+$(TEST_NAME_FILTER):
 	$(QUIET) echo > /dev/null
 
 endif # test

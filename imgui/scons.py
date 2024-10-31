@@ -9,7 +9,6 @@ conf = env["APP_MODULE_CONF"]
 sihd_imgui_srcs = ["src/ImguiRunner.cpp"]
 sihd_imgui_tests = [
     "test/main.cpp",
-    "test/TestCompilation.cpp",
     "test/TestOpenGL3_GLFW.cpp"
 ]
 

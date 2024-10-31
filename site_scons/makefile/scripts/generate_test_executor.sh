@@ -6,11 +6,12 @@ generate_test()
 (
     cd $TEST_PATH
     cat << EOF > $executor_name
+#!/bin/bash
 cd $TEST_PATH
 source .env
 
 module_list="\$2"
-if [ -z "\$module_list" ]; then
+if [ -z "\${module_list// }" ] || [ "\${module_list// }" = "all" ]; then
     module_list=\$(cd $TEST_BIN_PATH && ls)
     module_list="\${module_list//${APP_NAME}_/}"
 fi
@@ -68,7 +69,7 @@ case \$1 in
         list_tests
         ;;
     *)
-        return 1
+        false
         ;;
 esac
 
@@ -77,3 +78,4 @@ EOF
 
 echo "generating test executor in: $TEST_PATH/$executor_name"
 generate_test
+chmod +x $TEST_PATH/$executor_name
