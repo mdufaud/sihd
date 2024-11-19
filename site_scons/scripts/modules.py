@@ -71,13 +71,14 @@ def resolve_modules_dependencies(modules):
         # Get dependency tree
         __rec_fill_module_real_depends(modules, name, conf)
 
-def get_module_libs(modules, modname):
+def get_module_libs(modules, modname, add_depends_libs = False):
     conf = modules[modname]
     libs = []
-    for dep in conf["depends"]:
-        dep_conf = modules[dep]
-        dep_libs = dep_conf.get('libs', [])
-        libs[:0] = dep_libs
+    if add_depends_libs:
+        for dep in conf["depends"]:
+            dep_conf = modules[dep]
+            dep_libs = dep_conf.get('libs', [])
+            libs[:0] = dep_libs
     libs[:0] = conf['libs']
     return libs
 

@@ -65,6 +65,7 @@ modules = {
         "libs": ['pthread'], # threading
         "extlibs": ['nlohmann-json', 'fmt', 'cxxopts'],
         "static-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
+        # === Linux specific ===
         "linux-extlibs": ['libuuid'],
         "linux-libs": [
             'dl', # dl_open...
@@ -76,6 +77,7 @@ modules = {
             'fmt', # get from sys lib only when compiling dynamically on linux
             'stdc++fs'
         ],
+        # === Windows specific ===
         "windows-libs": [
             'rpcrt4', # Uuid
             'psapi', # GetModuleFileName/GetProcessMemoryInfo
@@ -86,6 +88,7 @@ modules = {
             'stdc++fs'
         ],
         "windows-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
+        # === Emscripten specific ===
         "em-flags": ["-pthread"], # enable threads
         "em-link": [
             "-sFORCE_FILESYSTEM", # use filesystem
@@ -97,11 +100,15 @@ modules = {
     },
     "core": {
         "depends": ['util'],
+        "linux-dyn-libs": ['fmt'],
+        "inherit-depends-defines": True,
     },
     "net": {
         "depends": ['util'],
         "extlibs": ['openssl'],
         "libs": ['ssl', 'crypto'],
+        "linux-dyn-libs": ['fmt'],
+        "inherit-depends-defines": True,
     },
     "http": {
         "depends": ['net'],
@@ -113,6 +120,7 @@ modules = {
             'cap',
             'uv'
         ],
+        "linux-dyn-libs": ['fmt'],
     },
     "pcap": {
         "depends": ['net'],
@@ -122,6 +130,7 @@ modules = {
         "parse-configs": [
             "pcap-config --cflags --libs",
         ],
+        "linux-dyn-libs": ['fmt'],
     },
     "zip": {
         "depends": ['util'],
@@ -132,11 +141,13 @@ modules = {
         "depends": ['util'],
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
+        "linux-dyn-libs": ['fmt'],
     },
     "ssh": {
         "depends": ['util'],
         "extlibs": ["libssh"],
         "libs": ['ssh'],
+        "linux-dyn-libs": ['fmt'],
     },
     "usb": {
         "depends": ['util'],
@@ -147,13 +158,14 @@ modules = {
         ],
     },
     "bt": {
+        "platforms": ["linux"],
         "depends": ['util'],
         "extlibs": ['libbluetooth'],
         "libs": ['bluetooth'],
-        "platforms": ["linux"]
     },
     "csv": {
         "depends": ['util'],
+        "linux-dyn-libs": ['fmt'],
     },
     "imgui": {
         # sdl=1 to compile with SDL2
@@ -193,6 +205,7 @@ conditionnal_modules = {
         "flags": ["-Wno-unused-parameter"],
     },
     "py": {
+        "platforms": ["linux"],
         "depends": ['util'],
         "extlibs": ['pybind11'],
         "conditionnal-env": "py",
@@ -203,7 +216,6 @@ conditionnal_modules = {
             'python-config --cflags --ldflags --embed',
             'python3-config --cflags --ldflags --embed',
         ],
-        "platforms": ["linux"]
     }
 }
 

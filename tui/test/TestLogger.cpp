@@ -13,6 +13,7 @@
 #include <sihd/util/num.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/str.hpp>
+#include <sihd/util/term.hpp>
 
 namespace test
 {
@@ -73,6 +74,9 @@ class TestLogger: public ::testing::Test
 
 TEST_F(TestLogger, test_tui_cmd)
 {
+    if (sihd::util::term::is_interactive() == false)
+        GTEST_SKIP_("requires interaction");
+
     using namespace sihd::util;
     using namespace sihd::tui;
 
