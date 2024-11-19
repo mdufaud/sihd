@@ -187,6 +187,11 @@ if not distribution \
         ],
     )
 
+if build_platform == "windows":
+    base_env.Append(
+        LIBPATH = [builder.build_extlib_bin_path]
+    )
+
 ###############################################################################
 # Compiler settings
 ###############################################################################

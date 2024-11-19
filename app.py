@@ -101,14 +101,16 @@ modules = {
     "core": {
         "depends": ['util'],
         "linux-dyn-libs": ['fmt'],
-        "inherit-depends-defines": True,
     },
     "net": {
         "depends": ['util'],
         "extlibs": ['openssl'],
         "libs": ['ssl', 'crypto'],
         "linux-dyn-libs": ['fmt'],
-        "inherit-depends-defines": True,
+        "windows-libs": [
+            'ssp', # winsock
+            'ws2_32', # windows api
+        ],
     },
     "http": {
         "depends": ['net'],
@@ -142,6 +144,7 @@ modules = {
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
         "linux-dyn-libs": ['fmt'],
+        "windows-libs": ['ssp']
     },
     "ssh": {
         "depends": ['util'],
@@ -171,9 +174,11 @@ modules = {
         # sdl=1 to compile with SDL2
         "depends": ['util'],
         "extlibs": ['imgui'],
+        "libs": ["imgui"],
         "linux-libs": ['glfw', 'GLEW', 'GL'],
         "windows-libs": [
-            "glfw3dll", "glew32", "opengl32",
+            "glfw3",
+            "opengl32",
             # desktop window manager api
             "dwmapi",
             # direct x11
@@ -183,7 +188,9 @@ modules = {
             # directx graphics infrastructure
             "dxgi",
             # graphics device interface
-            "gdi32"
+            "gdi32",
+            # winsock
+            'ssp',
         ],
     },
 }
