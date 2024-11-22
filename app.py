@@ -117,14 +117,16 @@ modules = {
     },
     "http": {
         "depends": ['net'],
-        "extlibs": ['curl', 'libwebsockets', 'libcap', 'libuv', 'zlib'],
+        "extlibs": ['openssl', 'curl', 'libwebsockets', 'libuv', 'zlib'],
+        "linux-extlibs": ["libcap"],
         "libs": [
             'websockets',
             'curl',
             'z',
-            'cap',
-            'uv'
+            'uv',
+            'ssl'
         ],
+        "linux-libs": ["cap"],
         "linux-dyn-libs": ['fmt'],
     },
     "pcap": {
