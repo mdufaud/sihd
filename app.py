@@ -124,7 +124,8 @@ modules = {
             'curl',
             'z',
             'uv',
-            'ssl'
+            'ssl',
+            'crypto',
         ],
         "linux-libs": ["cap"],
         "linux-dyn-libs": ['fmt'],
