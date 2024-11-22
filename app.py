@@ -22,7 +22,7 @@ extlibs = {
     "curl": "7.87.0",
     "openssl": "1.1.1n",
     "libssh": "0.10.5",
-    "libcap": "2.71",
+    "libcap": "2.70",
     "libuv": "1.49.2",
     "zlib": "1.3.1",
     # pcap
