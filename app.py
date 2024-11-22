@@ -22,6 +22,9 @@ extlibs = {
     "curl": "7.87.0",
     "openssl": "1.1.1n",
     "libssh": "0.10.5",
+    "libcap": "2.71",
+    "libuv": "1.49.2",
+    "zlib": "1.3.1",
     # pcap
     "libpcap": "1.10.1",
     # usb
@@ -114,7 +117,7 @@ modules = {
     },
     "http": {
         "depends": ['net'],
-        "extlibs": ['curl', 'libwebsockets'],
+        "extlibs": ['curl', 'libwebsockets', 'libcap', 'libuv', 'zlib'],
         "libs": [
             'websockets',
             'curl',
