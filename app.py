@@ -23,7 +23,7 @@ extlibs = {
     "openssl": "1.1.1n",
     "libssh": "0.10.5",
     "libcap": "2.70",
-    "libuv": "1.49.2",
+    "libuv": "1.48.0",
     "zlib": "1.3.1",
     # pcap
     "libpcap": "1.10.1",
