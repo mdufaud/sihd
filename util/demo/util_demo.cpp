@@ -265,7 +265,7 @@ int main(int argc, char **argv)
 
     if (result.count("help"))
     {
-        fmt::print(options.help());
+        fmt::print("{}\n", options.help());
         return 0;
     }
 

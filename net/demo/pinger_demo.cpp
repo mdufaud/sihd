@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 
     if (args.count("help"))
     {
-        fmt::print(options.help());
+        fmt::print("{}\n", options.help());
         return EXIT_SUCCESS;
     }
 

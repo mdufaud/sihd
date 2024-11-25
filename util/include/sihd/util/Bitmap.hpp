@@ -58,6 +58,7 @@ class Bitmap
         void fill(Pixel pixel);
         void clear();
 
+        void set(uint8_t *data, size_t size);
         void set(size_t row, size_t line, Pixel pixel);
         Pixel get(size_t row, size_t line) const;
         bool is_accessible(size_t row, size_t line) const;

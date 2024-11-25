@@ -117,7 +117,13 @@ modules = {
     },
     "http": {
         "depends": ['net'],
-        "extlibs": ['openssl', 'curl', 'libwebsockets', 'libuv', 'zlib'],
+        "extlibs": [
+            'libwebsockets',
+            'curl',
+            'zlib',
+            'libuv',
+            'openssl',
+        ],
         "linux-extlibs": ["libcap"],
         "libs": [
             'websockets',

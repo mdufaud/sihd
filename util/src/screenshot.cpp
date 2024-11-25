@@ -39,18 +39,18 @@ struct X11Display
 
 bool x11_is_window_readable(XWindowAttributes gwa)
 {
-    SIHD_TRACEF(gwa.map_installed);
-    SIHD_TRACEF(InputOutput);
-    SIHD_TRACEF(InputOnly);
-    SIHD_TRACEF(gwa.c_class);
-    SIHD_TRACEF(gwa.x);
-    SIHD_TRACEF(gwa.y);
-    SIHD_TRACEF(gwa.width);
-    SIHD_TRACEF(gwa.height);
-    SIHD_TRACEF(gwa.backing_store);
-    SIHD_TRACEF(gwa.depth);
-    SIHD_TRACEF(gwa.root);
-    SIHD_TRACEF(gwa.map_state);
+    // SIHD_TRACEF(gwa.map_installed);
+    // SIHD_TRACEF(InputOutput);
+    // SIHD_TRACEF(InputOnly);
+    // SIHD_TRACEF(gwa.c_class);
+    // SIHD_TRACEF(gwa.x);
+    // SIHD_TRACEF(gwa.y);
+    // SIHD_TRACEF(gwa.width);
+    // SIHD_TRACEF(gwa.height);
+    // SIHD_TRACEF(gwa.backing_store);
+    // SIHD_TRACEF(gwa.depth);
+    // SIHD_TRACEF(gwa.root);
+    // SIHD_TRACEF(gwa.map_state);
     return gwa.c_class == InputOutput && gwa.map_state == IsViewable && gwa.map_installed == 0;
 }
 
@@ -121,11 +121,82 @@ bool x11_screenshot_window(Bitmap & bm, Display *display, Window window)
 
 #endif
 
+#if defined(__SIHD_WINDOWS__)
+
+bool take_screen_from_window(Bitmap & bm, HWND window)
+{
+    bool ret = false;
+    if (window)
+    {
+        HDC hdcScreen = GetDC(window);
+        if (hdcScreen)
+        {
+            HDC hdcCompatible = CreateCompatibleDC(hdcScreen);
+            if (hdcCompatible)
+            {
+                int nScreenWidth = GetSystemMetrics(SM_CXSCREEN);
+                int nScreenHeight = GetSystemMetrics(SM_CYSCREEN);
+                HBITMAP hBmp = CreateCompatibleBitmap(hdcScreen, nScreenWidth, nScreenHeight);
+                if (hBmp)
+                {
+                    HGDIOBJ hOldBmp = SelectObject(hdcCompatible, hBmp);
+                    BOOL bOK = BitBlt(hdcCompatible,
+                                      0,
+                                      0,
+                                      nScreenWidth,
+                                      nScreenHeight,
+                                      hdcScreen,
+                                      0,
+                                      0,
+                                      SRCCOPY | CAPTUREBLT);
+                    if (bOK)
+                    {
+                        SelectObject(hdcCompatible, hOldBmp); // always select the previously selected object once done
+
+                        BITMAPINFO MyBMInfo;
+                        memset(&MyBMInfo, 0, sizeof(MyBMInfo));
+                        MyBMInfo.bmiHeader.biSize = sizeof(MyBMInfo.bmiHeader);
+
+                        // Get the BITMAPINFO structure from the bitmap
+                        GetDIBits(hdcScreen, hBmp, 0, 0, NULL, &MyBMInfo, DIB_RGB_COLORS);
+
+                        // create the bitmap buffer
+                        char *lpPixels = new char[MyBMInfo.bmiHeader.biSizeImage];
+
+                        MyBMInfo.bmiHeader.biCompression = BI_RGB;
+                        MyBMInfo.bmiHeader.biBitCount = 24;
+
+                        // get the actual bitmap buffer
+                        GetDIBits(hdcScreen,
+                                  hBmp,
+                                  0,
+                                  MyBMInfo.bmiHeader.biHeight,
+                                  (LPVOID)lpPixels,
+                                  &MyBMInfo,
+                                  DIB_RGB_COLORS);
+
+                        bm.create(nScreenWidth, nScreenHeight, 24);
+                        bm.set((uint8_t *)lpPixels, MyBMInfo.bmiHeader.biSizeImage);
+
+                        delete lpPixels;
+                        ret = true;
+                    }
+                    DeleteObject(hBmp);
+                }
+                DeleteDC(hdcCompatible);
+            }
+        }
+        ReleaseDC(window, hdcScreen);
+    }
+    return ret;
+}
+
+#endif
+
 } // namespace
 
-bool take_window_name(Bitmap & bm, std::string_view name)
+bool take_window_name(Bitmap & bm, [[maybe_unused]] std::string_view name)
 {
-    (void)name;
     bm.clear();
 #if defined(SIHD_COMPILE_WITH_X11)
     X11Display x11;
@@ -173,6 +244,9 @@ bool take_window_name(Bitmap & bm, std::string_view name)
     if (found)
         return x11_screenshot_window(bm, x11.display, named_window);
 
+#elif defined(__SIHD_WINDOWS__)
+    HWND active_window = FindWindowA(nullptr, name.data());
+    return take_screen_from_window(bm, active_window);
 #endif
     return false;
 }
@@ -191,6 +265,9 @@ bool take_focused(Bitmap & bm)
         return false;
 
     return x11_screenshot_window(bm, x11.display, child);
+#elif defined(__SIHD_WINDOWS__)
+    HWND foreground_window = GetForegroundWindow();
+    return take_screen_from_window(bm, foreground_window);
 #endif
     return false;
 }
@@ -212,6 +289,12 @@ bool take_under_cursor(Bitmap & bm)
     }
 
     return x11_screenshot_window(bm, x11.display, child);
+#elif defined(__SIHD_WINDOWS__)
+    POINT pt;
+    HWND window;
+    GetCursorPos(&pt);
+    window = WindowFromPoint(pt);
+    return take_screen_from_window(bm, window);
 #endif
     return false;
 }
@@ -224,18 +307,8 @@ bool take_screen(Bitmap & bm)
     Window root = DefaultRootWindow(x11.display);
     return x11_screenshot_window(bm, x11.display, root);
 #elif defined(__SIHD_WINDOWS__)
-    int nScreenWidth = GetSystemMetrics(SM_CXSCREEN);
-    int nScreenHeight = GetSystemMetrics(SM_CYSCREEN);
     HWND hDesktopWnd = GetDesktopWindow();
-    HDC hDesktopDC = GetDC(hDesktopWnd);
-    HDC hCaptureDC = CreateCompatibleDC(hDesktopDC);
-    HBITMAP hCaptureBitmap = CreateCompatibleBitmap(hDesktopDC, nScreenWidth, nScreenHeight);
-    SelectObject(hCaptureDC, hCaptureBitmap);
-    BitBlt(hCaptureDC, 0, 0, nScreenWidth, nScreenHeight, hDesktopDC, 0, 0, SRCCOPY | CAPTUREBLT);
-
-    ReleaseDC(hDesktopWnd, hDesktopDC);
-    DeleteDC(hCaptureDC);
-    DeleteObject(hCaptureBitmap);
+    return take_screen_from_window(bm, hDesktopWnd);
 #endif
     return false;
 }

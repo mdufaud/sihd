@@ -126,6 +126,15 @@ Pixel Bitmap::get(size_t row, size_t line) const
     return ret;
 }
 
+void Bitmap::set(uint8_t *data, size_t size)
+{
+    if (size > _data.size())
+    {
+        throw std::invalid_argument(fmt::format("pixels data ({}) is out of bounds (pixels[{}])", size, _data.size()));
+    }
+    memcpy(_data.data(), data, size);
+}
+
 void Bitmap::set(size_t row, size_t line, Pixel pixel)
 {
     if (!this->is_accessible(row, line))
