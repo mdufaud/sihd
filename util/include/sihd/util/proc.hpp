@@ -4,6 +4,7 @@
 #include <functional>
 #include <future>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <sihd/util/Timestamp.hpp>
@@ -13,7 +14,7 @@ namespace sihd::util::proc
 
 struct Options
 {
-        Timestamp timeout = 0;
+        Timestamp timeout = -1;
         std::string to_stdin = {};
         std::function<void(std::string_view)> stdout_callback = {};
         std::function<void(std::string_view)> stderr_callback = {};

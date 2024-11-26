@@ -8,7 +8,7 @@
 #endif
 
 #if defined(SIHD_COMPILE_WITH_WAYLAND)
-# include <wayland-client.h>
+# include <sihd/util/proc.hpp>
 #endif
 
 #if defined(__SIHD_WINDOWS__)
@@ -26,6 +26,16 @@ namespace
 bool wayland_set_clipboard([[maybe_unused]] std::string_view str)
 {
 #if defined(SIHD_COMPILE_WITH_WAYLAND)
+    proc::Options options({.timeout = std::chrono::milliseconds(200)});
+    std::vector<std::string> args;
+    args.reserve(2);
+    args.emplace_back("wl-copy");
+    args.emplace_back(str);
+    auto exit_code = proc::execute(args, options);
+    auto status = exit_code.wait_for(std::chrono::milliseconds(100));
+    if (status == std::future_status::timeout)
+        return false;
+    return exit_code.get() == 0;
 #endif
     return false;
 }
@@ -224,6 +234,17 @@ bool windows_set_clipboard([[maybe_unused]] std::string_view str)
 std::optional<std::string> wayland_get_clipboard()
 {
 #if defined(SIHD_COMPILE_WITH_WAYLAND)
+    std::string clipboard;
+    proc::Options options(
+        {.timeout = std::chrono::milliseconds(200), .stdout_callback = [&clipboard](std::string_view stdout_str) {
+             clipboard += stdout_str;
+         }});
+    auto exit_code = proc::execute({"wl-paste", "--type", "text"}, options);
+    auto status = exit_code.wait_for(std::chrono::milliseconds(100));
+    if (status != std::future_status::timeout && exit_code.get() == 0)
+    {
+        return clipboard;
+    }
 #endif
     return std::nullopt;
 }
