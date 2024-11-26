@@ -71,7 +71,7 @@ int get_or_add_fd(std::vector<struct pollfd> & lst_fds, int fd, rlim_t max_fds)
 
 Poll::Poll()
 {
-    _running = false;
+    _stop = false;
     _timeout_milliseconds = -1; // infinite block
     _max_fds = 0;
     _last_poll_time = 0;
@@ -220,7 +220,7 @@ bool Poll::set_timeout(int milliseconds)
 
 bool Poll::on_stop()
 {
-    _running = false;
+    _stop = true;
     return true;
 }
 
@@ -231,9 +231,9 @@ bool Poll::on_start()
         SIHD_LOG(error, "Poll: cannot start polling without a timeout");
         return false;
     }
-    _running = true;
+    _stop = false;
     int ret = 0;
-    while (ret >= 0 && _running)
+    while (ret >= 0 && _stop == false)
         ret = this->poll(_timeout_milliseconds);
     return ret >= 0;
 }

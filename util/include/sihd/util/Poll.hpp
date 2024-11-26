@@ -76,7 +76,7 @@ class Poll: public Observable<Poll>,
         void process_poll_results(int poll_return);
 
     private:
-        bool _running;
+        bool _stop;
         int _timeout_milliseconds;
 
         mutable std::mutex _fds_mutex;

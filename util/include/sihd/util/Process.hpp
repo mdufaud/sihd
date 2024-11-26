@@ -61,6 +61,7 @@ class Process: public IHandler<Poll *>,
         bool wait_continue(int options = 0);
         // wait for process
         bool wait_any(int options = 0);
+        bool can_read_pipes() const;
         // read pipes to call the callbacks on pipes
         bool read_pipes(int milliseconds_timeout = 1);
         /**
@@ -73,10 +74,15 @@ class Process: public IHandler<Poll *>,
         // send signal to process - SIGTERM by default
         bool kill(int sig = -1);
 
+        /**
+         * Setup pipes
+         */
         Process & stdin_close();
         Process & stdin_from(const std::string & input);
         Process & stdin_from(int fd);
         bool stdin_from_file(std::string_view path);
+        // Close stdin pipe after execution so that the process do not hang
+        Process & stdin_close_after_exec(bool activate);
 
         Process & stdout_close();
         Process & stdout_to(std::function<void(std::string_view)> fun);
@@ -183,6 +189,7 @@ class Process: public IHandler<Poll *>,
         FileDescWrapper _stdin;
         FileDescWrapper _stdout;
         FileDescWrapper _stderr;
+        bool _close_stdin_after_exec;
         std::vector<std::string> _argv;
         std::vector<std::string> _environ;
         std::string _chroot;

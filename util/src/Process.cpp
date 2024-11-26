@@ -165,11 +165,12 @@ void init_poller(sihd::util::Poll & poll, int stdout_fd, int stderr_fd)
 
 Process::Process()
 {
-    _started = false;
+    _started.store(false);
     _executing = false;
     _force_fork = false;
+    _close_stdin_after_exec = false;
     _pid = -1;
-    _poll.set_timeout(1);
+    _poll.set_timeout(5);
     _poll.add_observer(this);
     _poll.set_service_wait_stop(true);
 
@@ -218,7 +219,7 @@ void Process::reset_proc()
     this->terminate();
 
     _pid = -1;
-    _started = false;
+    _started.store(false);
 
     {
         std::lock_guard l(_mutex_info);
@@ -392,6 +393,12 @@ bool Process::stdin_from_file(std::string_view path)
     if (_stdin.fd_read < 0)
         SIHD_LOG(error, "Process: could not open file input: {}", path);
     return _stdin.fd_read >= 0;
+}
+
+Process & Process::stdin_close_after_exec(bool activate)
+{
+    _close_stdin_after_exec = activate;
+    return *this;
 }
 
 // Pipe stdout
@@ -691,7 +698,12 @@ bool Process::execute()
         safe_close(_stderr.fd_write);
     }
 
-    _started = success;
+    if (_close_stdin_after_exec)
+    {
+        safe_close(_stdin.fd_write);
+    }
+
+    _started.store(success);
     return success;
 }
 
@@ -711,9 +723,14 @@ bool Process::_process_fd_out(FileDescWrapper & fdw)
     return true;
 }
 
+bool Process::can_read_pipes() const
+{
+    return _poll.is_running() == false && _poll.fds_size() > 0;
+}
+
 bool Process::read_pipes(int milliseconds_timeout)
 {
-    return _poll.is_running() == false && _poll.fds_size() > 0 && _poll.poll(milliseconds_timeout) > 0;
+    return this->can_read_pipes() && _poll.poll(milliseconds_timeout) > 0;
 }
 
 bool Process::terminate()
@@ -723,6 +740,9 @@ bool Process::terminate()
     safe_close(_stdin.fd_write);
     safe_close(_stdout.fd_read);
     safe_close(_stderr.fd_read);
+
+    _poll.stop();
+    _poll.clear_fds();
 
     int tries = 3;
     while (this->is_process_running() && tries > 0)
@@ -795,8 +815,8 @@ bool Process::on_start()
 {
     bool ret = this->execute();
 
-    if (_poll.max_fds() > 0)
-        return ret && _poll.start();
+    if (ret && _poll.max_fds() > 0)
+        _poll.start();
 
     return ret;
 }

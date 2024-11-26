@@ -8,6 +8,7 @@
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
+#include <sihd/util/proc.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
@@ -463,6 +464,61 @@ TEST_F(TestProcess, test_process_bad_cmd)
     EXPECT_TRUE(proc.wait_any());
     // the exit status
     EXPECT_EQ(proc.return_code(), 255);
+}
+
+TEST_F(TestProcess, test_process_exec_simple)
+{
+    auto exit_code = proc::execute({"echo", "hello", "world"});
+    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(100)), std::future_status::ready);
+    ASSERT_EQ(exit_code.get(), 0);
+}
+
+TEST_F(TestProcess, test_process_exec_stdout)
+{
+    std::string printed;
+    proc::Options options({.stdout_callback = [&printed](std::string_view stdout_str) {
+        printed += stdout_str;
+    }});
+    auto exit_code = proc::execute({"echo", "hello", "world"}, options);
+    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(100)), std::future_status::ready);
+    ASSERT_EQ(exit_code.get(), 0);
+    EXPECT_EQ(printed, "hello world\n");
+}
+
+TEST_F(TestProcess, test_process_exec_stderr)
+{
+    std::string printed;
+    proc::Options options({.stderr_callback = [&printed](std::string_view stderr_str) {
+        printed += stderr_str;
+    }});
+    auto exit_code = proc::execute({"ls", "/there/is/nothing/here"}, options);
+    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(100)), std::future_status::ready);
+    ASSERT_EQ(exit_code.get(), 2);
+    EXPECT_EQ(printed, "ls: cannot access '/there/is/nothing/here': No such file or directory\n");
+}
+
+TEST_F(TestProcess, test_process_exec_stdin)
+{
+    std::string stdin_input = "hello world";
+    std::string printed;
+    proc::Options options({.timeout = std::chrono::milliseconds(100),
+                           .to_stdin = stdin_input,
+                           .stdout_callback = [&printed](std::string_view stdout_str) {
+                               printed += stdout_str;
+                           }});
+    auto exit_code = proc::execute({"cat"}, options);
+    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(200)), std::future_status::ready);
+    ASSERT_EQ(exit_code.get(), 0);
+    EXPECT_EQ(printed, "hello world");
+}
+
+TEST_F(TestProcess, test_process_exec_timeout)
+{
+    proc::Options options({.timeout = std::chrono::milliseconds(60)});
+    auto exit_code = proc::execute({"cat"}, options);
+    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(30)), std::future_status::timeout);
+    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(60)), std::future_status::ready);
+    ASSERT_EQ(exit_code.get(), 255);
 }
 
 } // namespace test
