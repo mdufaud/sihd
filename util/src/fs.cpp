@@ -636,12 +636,16 @@ bool write_binary(std::string_view path, std::string_view view, bool append)
     return -1;
 }
 
-std::optional<std::string> read(std::string_view path, size_t size)
+std::optional<std::string> read(std::string_view path, size_t size, long offset)
 {
     File file(path, "r");
 
     if (file.is_open())
     {
+        if (offset > 0)
+            file.seek_begin(offset);
+        else if (offset < 0)
+            file.seek_end(-offset);
         char buf[size + 1];
         ssize_t ret;
         if ((ret = file.read(buf, size)) > 0)

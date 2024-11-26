@@ -200,7 +200,7 @@ bool windows_set_clipboard([[maybe_unused]] std::string_view str)
     int tries = 0;
     while (!OpenClipboard(0))
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
         tries++;
 
         if (tries == 3)

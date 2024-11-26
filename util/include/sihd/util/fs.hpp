@@ -73,7 +73,9 @@ std::optional<std::string> read_link(std::string_view path);
 // fast read from file
 ssize_t read_binary(std::string_view path, char *buf, size_t size);
 // fast string read from file
-std::optional<std::string> read(std::string_view path, size_t size);
+// offset > 0 : seek from beginning
+// offset < 0 : seek from end
+std::optional<std::string> read(std::string_view path, size_t size, long offset = 0);
 // fast all file read
 std::optional<std::string> read_all(std::string_view path);
 
