@@ -299,9 +299,30 @@ bool IpAddr::is_same_subnet(const sockaddr_in & other_addr) const
 
 bool IpAddr::is_same_subnet(const sockaddr_in6 & addr) const
 {
-#pragma message("TODO handle ipv6 same subnet")
-    (void)addr;
-    return false;
+    struct in6_addr mask;
+    struct in6_addr masked_addr1;
+    struct in6_addr masked_addr2;
+
+    // Create the subnet mask
+    memset(&mask, 0, sizeof(mask));
+    for (uint32_t i = 0; i < _netmask_value / 8; i++)
+    {
+        mask.s6_addr[i] = 0xFF;
+    }
+    if (_netmask_value % 8 != 0)
+    {
+        mask.s6_addr[_netmask_value / 8] = (uint8_t)(0xFF << (8 - (_netmask_value % 8)));
+    }
+
+    // Apply the subnet mask to both addresses
+    for (int i = 0; i < 16; i++)
+    {
+        masked_addr1.s6_addr[i] = _addr.sockaddr_in6.sin6_addr.s6_addr[i] & mask.s6_addr[i];
+        masked_addr2.s6_addr[i] = addr.sin6_addr.s6_addr[i] & mask.s6_addr[i];
+    }
+
+    // Compare the masked addresses
+    return memcmp(&masked_addr1, &masked_addr2, sizeof(masked_addr1)) == 0;
 }
 
 const struct sockaddr & IpAddr::addr() const

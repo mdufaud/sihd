@@ -90,6 +90,28 @@ TEST_F(TestIpAddr, test_ipaddr_dns_lookup_local)
     EXPECT_EQ(dns.results.at(0).addr.is_ipv6(), false);
 }
 
+TEST_F(TestIpAddr, test_ipaddr6_subnet)
+{
+    IpAddr test1("2001:db8::1/64");
+    IpAddr test2("2001:db8::2");
+    IpAddr test3("2001:db8::1::1");
+
+    EXPECT_TRUE(test1.is_same_subnet(test2));
+    EXPECT_FALSE(test1.is_same_subnet(test3));
+
+    IpAddr test4("2001:db8:1::1/48");
+    IpAddr test5("2001:db8:1:2::1");
+    IpAddr test6("2001:db8:2::1");
+    EXPECT_TRUE(test4.is_same_subnet(test5));
+    EXPECT_FALSE(test4.is_same_subnet(test6));
+
+    IpAddr test8("2001:db8::1/128");
+    IpAddr test9("2001:db8::1/128");
+    IpAddr test10("2001:db8::2/128");
+    EXPECT_TRUE(test8.is_same_subnet(test9));
+    EXPECT_FALSE(test8.is_same_subnet(test10));
+}
+
 TEST_F(TestIpAddr, test_ipaddr_subnet)
 {
     IpAddr addr("192.168.10.0/24");
