@@ -6,7 +6,8 @@
 #include <sihd/net/utils.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-# include <netinet/icmp6.h>   // icmpv6 macros
+# include <netinet/icmp6.h> // icmpv6 macros
+# include <netinet/ip6.h>
 # include <netinet/ip_icmp.h> // icmp macros
 #endif
 
@@ -60,16 +61,17 @@ bool IcmpSender::open_socket(bool ipv6)
     if (ret)
     {
         _socket.set_reuseaddr(true);
-#pragma message("TODO IcmpSender ipv6")
-        /*
         if (ipv6)
         {
             struct icmp6_filter filter;
             ICMP6_FILTER_SETBLOCKALL(&filter);
-            ret = sihd::util::os::setsockopt(_socket, IPPROTO_ICMPV6, ICMP6_FILTER, (const void *)&filter,
-        sizeof(filter));
+            ICMP6_FILTER_SETPASS(ICMP6_ECHO_REPLY, &filter);
+            ret = sihd::util::os::setsockopt(_socket,
+                                             IPPROTO_ICMPV6,
+                                             ICMP6_FILTER,
+                                             (const void *)&filter,
+                                             sizeof(filter));
         }
-        */
     }
     return ret;
 }
@@ -232,7 +234,35 @@ void IcmpSender::_read_socket()
 
 void IcmpSender::_process_ipv6()
 {
-#pragma message("TODO handle ipv6")
+    struct ip6_hdr *ip6hdr = (struct ip6_hdr *)_array_rcv_ptr->buf();
+    size_t ip6hdr_len = sizeof(struct ip6_hdr);
+    struct icmp6_hdr *icmp6hdr = (struct icmp6_hdr *)((char *)ip6hdr + ip6hdr_len);
+
+    if (ip6hdr->ip6_nxt == IPPROTO_ICMPV6)
+    {
+        if (icmp6hdr->icmp6_type == ICMP6_ECHO_REPLY || icmp6hdr->icmp6_type == ICMP6_ECHO_REQUEST
+            || (icmp6hdr->icmp6_type == ICMP6_TIME_EXCEEDED && icmp6hdr->icmp6_code == ICMP6_TIME_EXCEED_TRANSIT))
+        {
+            if (icmp6hdr->icmp6_type == ICMP6_TIME_EXCEEDED && icmp6hdr->icmp6_code == ICMP6_TIME_EXCEED_TRANSIT)
+            {
+                // get original packet
+                ip6hdr = (struct ip6_hdr *)((char *)icmp6hdr + sizeof(struct icmp6_hdr));
+                ip6hdr_len = sizeof(struct ip6_hdr);
+                icmp6hdr = (struct icmp6_hdr *)((char *)ip6hdr + ip6hdr_len);
+            }
+            // id is the same as original packet and it is our type
+            _icmp_response.data = (char *)(icmp6hdr + 1);
+            _icmp_response.size
+                = _array_rcv_ptr->byte_size() - ((char *)(icmp6hdr + 1) - (char *)_array_rcv_ptr->buf());
+            _icmp_response.type = icmp6hdr->icmp6_type;
+            _icmp_response.code = icmp6hdr->icmp6_code;
+            _icmp_response.ttl = ip6hdr->ip6_hlim;
+            _icmp_response.id = ntohs(icmp6hdr->icmp6_id);
+            _icmp_response.seq = ntohs(icmp6hdr->icmp6_seq);
+
+            this->notify_observers(this);
+        }
+    }
 }
 
 void IcmpSender::_process_ipv4()

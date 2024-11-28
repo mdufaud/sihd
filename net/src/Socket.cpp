@@ -12,8 +12,8 @@
 # include <netinet/tcp.h> // tcp nodelay
 # include <sys/un.h>      // unix sockets
 #else
-# include <ws2tcpip.h> // IP_TTL
-
+# include <afunix.h>   // AF_UNIX
+# include <ws2tcpip.h> // IP_TTL SUN_LEN
 // missing mingw getsockopt action
 # ifndef SO_BSP_STATE
 #  define SO_BSP_STATE 0x1009
@@ -193,7 +193,8 @@ bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
     {
         *protocol = addrinfo.iProtocol;
         *type = addrinfo.iSocketType;
-        *domain = AF_INET; // TODO look for a getsockopt
+        length = sizeof(*domain);
+        sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_DOMAIN, domain, &length);
     }
     return found;
 #endif
@@ -607,8 +608,6 @@ int Socket::accept()
 /* Socket UNIX operations */
 /* ************************************************************************* */
 
-#if !defined(__SIHD_WINDOWS__)
-
 bool Socket::bind_unix(std::string_view path)
 {
     sockaddr_un addr;
@@ -677,6 +676,8 @@ std::string Socket::unix_socket_peername(int socket)
 /* Socket (unix) utilities operations */
 /* ************************************************************************* */
 
+#if !defined(__SIHD_WINDOWS__)
+
 bool Socket::set_socket_blocking(int socket, bool active)
 {
     if (socket < 0)
@@ -715,33 +716,6 @@ bool Socket::is_socket_blocking(int socket)
 /* ************************************************************************* */
 /* Socket windows operations */
 /* ************************************************************************* */
-
-std::string Socket::unix_socket_peername([[maybe_unused]] int socket)
-{
-    return "";
-}
-bool Socket::bind_unix([[maybe_unused]] std::string_view path)
-{
-    return false;
-}
-bool Socket::connect_unix([[maybe_unused]] std::string_view path)
-{
-    return false;
-}
-ssize_t Socket::send_to_unix([[maybe_unused]] std::string_view path, [[maybe_unused]] sihd::util::ArrCharView view)
-{
-    return -1;
-}
-bool Socket::send_all_to_unix([[maybe_unused]] std::string_view path, [[maybe_unused]] sihd::util::ArrCharView view)
-{
-    return false;
-}
-ssize_t Socket::receive_from_unix([[maybe_unused]] std::string & path,
-                                  [[maybe_unused]] void *data,
-                                  [[maybe_unused]] size_t size)
-{
-    return -1;
-}
 
 bool Socket::is_socket_blocking(int socket)
 {
