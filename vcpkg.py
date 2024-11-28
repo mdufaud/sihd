@@ -168,6 +168,8 @@ def execute_vcpkg_install():
             return ret
         assert(check_bins(["cmake", "ninja", "pkg-config"]))
 
+    if verbose:
+        builder.debug(f"executing '{args}' in '{vcpkg_build_path}'")
     import subprocess
     proc = subprocess.run(args, cwd=vcpkg_build_path, timeout=(120.0 * len(extlibs)), env=copy_env)
     return proc.returncode
@@ -176,6 +178,8 @@ def execute_vcpkg_depend_info():
     __check_vcpkg()
     args = [vcpkg_bin_path, "depend-info"] + list(extlibs.keys())
     args += [f"--triplet={vcpkg_triplet}", "--format=tree", "--max-recurse=-1"]
+    if verbose:
+        builder.debug(f"executing '{args}' in '{vcpkg_build_path}'")
     import subprocess
     proc = subprocess.run(args, cwd=vcpkg_build_path)
     return proc.returncode
@@ -183,6 +187,8 @@ def execute_vcpkg_depend_info():
 def execute_vcpkg_list():
     __check_vcpkg()
     args = (vcpkg_bin_path, "list", f"--triplet={vcpkg_triplet}")
+    if verbose:
+        builder.debug(f"executing '{args}' in '{vcpkg_build_path}'")
     import subprocess
     proc = subprocess.run(args, cwd=vcpkg_build_path)
     return proc.returncode
