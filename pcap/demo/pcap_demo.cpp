@@ -55,7 +55,8 @@ static void sniffer_test(const std::string & interface_to_sniff)
     Handler<Sniffer *> obs([](Sniffer *obj) {
         constexpr size_t hexdump_cols = 20;
         SIHD_LOG(info, "Sniffed {} bytes", obj->array().size());
-        SIHD_COUT("{}\n", fmt::join(str::hexdump_fmt(obj->array().buf(), obj->array().byte_size(), hexdump_cols), ","));
+        const auto lines = str::hexdump_fmt(obj->array().buf(), obj->array().byte_size(), hexdump_cols);
+        SIHD_COUT("{}\n", fmt::join(lines, "\n"));
     });
     if (!pcap.open(interface_to_sniff))
         return;
