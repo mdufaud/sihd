@@ -178,7 +178,7 @@ bool take_screen_from_window(Bitmap & bm, HWND window)
                         bm.create(nScreenWidth, nScreenHeight, 24);
                         bm.set((uint8_t *)lpPixels, MyBMInfo.bmiHeader.biSizeImage);
 
-                        delete lpPixels;
+                        delete[] lpPixels;
                         ret = true;
                     }
                     DeleteObject(hBmp);

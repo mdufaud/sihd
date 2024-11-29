@@ -9,6 +9,8 @@
 namespace sihd::util::proc
 {
 
+#if !defined(__SIHD_WINDOWS__)
+
 namespace
 {
 
@@ -91,5 +93,15 @@ std::future<int> execute(const std::vector<std::string> & args, const Options & 
 
     return exit_code;
 }
+
+#else
+
+std::future<int> execute([[maybe_unused]] const std::vector<std::string> & args,
+                         [[maybe_unused]] const Options & options)
+{
+    return {};
+}
+
+#endif
 
 } // namespace sihd::util::proc

@@ -242,6 +242,10 @@ elif compiler == "mingw":
         LIBSUFFIX = ".lib",
         LIBPREFIX = "",
     )
+    if builder.is_static_libs():
+        base_env.Append(
+            LINKFLAGS = ["-static", "-static-libgcc", "-static-libstdc++"]
+        )
 # GCC build
 elif compiler == "gcc":
     base_env.Replace(

@@ -18,7 +18,7 @@ extlibs = {
     "fmt": "7.1.3",
     "libuuid": "1.0.3",
     # http
-    "libwebsockets": "4.3.0",
+    "libwebsockets": "4.3.3",
     "curl": "7.87.0",
     "openssl": "1.1.1n",
     "libssh": "0.10.5",
