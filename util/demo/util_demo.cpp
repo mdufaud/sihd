@@ -228,6 +228,7 @@ void screenshot()
 {
     Bitmap bitmap;
 
+    SIHD_LOG_INFO("Trying to take a screenshot of the window under your cursor");
     if (screenshot::take_under_cursor(bitmap))
     {
         std::string path = fs::combine(fs::tmp_path(), "take_under_cursor.bmp");
@@ -235,6 +236,7 @@ void screenshot()
             SIHD_LOG(notice, "Saved bitmap to: {}", path);
     }
 
+    SIHD_LOG_INFO("Trying to take a screenshot of the focused window");
     if (screenshot::take_focused(bitmap))
     {
         std::string path = fs::combine(fs::tmp_path(), "take_focused.bmp");
@@ -242,6 +244,7 @@ void screenshot()
             SIHD_LOG(notice, "Saved bitmap to: {}", path);
     }
 
+    SIHD_LOG_INFO("Trying to take a screenshot of the window under your entire screen");
     if (screenshot::take_screen(bitmap))
     {
         std::string path = fs::combine(fs::tmp_path(), "take_screen.bmp");

@@ -39,18 +39,21 @@ struct X11Display
 
 bool x11_is_window_readable(XWindowAttributes gwa)
 {
-    // SIHD_TRACEF(gwa.map_installed);
-    // SIHD_TRACEF(InputOutput);
-    // SIHD_TRACEF(InputOnly);
-    // SIHD_TRACEF(gwa.c_class);
-    // SIHD_TRACEF(gwa.x);
-    // SIHD_TRACEF(gwa.y);
-    // SIHD_TRACEF(gwa.width);
-    // SIHD_TRACEF(gwa.height);
-    // SIHD_TRACEF(gwa.backing_store);
-    // SIHD_TRACEF(gwa.depth);
-    // SIHD_TRACEF(gwa.root);
-    // SIHD_TRACEF(gwa.map_state);
+    SIHD_TRACEF(gwa.map_installed);
+    SIHD_TRACEF(InputOutput);
+    SIHD_TRACEF(InputOnly);
+    SIHD_TRACEF(gwa.c_class);
+    SIHD_TRACEF(IsUnmapped);
+    SIHD_TRACEF(IsUnviewable);
+    SIHD_TRACEF(IsViewable);
+    SIHD_TRACEF(gwa.map_state);
+    SIHD_TRACEF(gwa.x);
+    SIHD_TRACEF(gwa.y);
+    SIHD_TRACEF(gwa.width);
+    SIHD_TRACEF(gwa.height);
+    SIHD_TRACEF(gwa.backing_store);
+    SIHD_TRACEF(gwa.depth);
+    SIHD_TRACEF(gwa.root);
     return gwa.c_class == InputOutput && gwa.map_state == IsViewable && gwa.map_installed == 0;
 }
 
@@ -69,9 +72,9 @@ bool x11_image_to_bitmap(Bitmap & bm, size_t width, size_t height, XImage *image
         unsigned char green;
         unsigned char red;
 
-        for (size_t x = 0; x < width; x++)
+        for (size_t y = 0; y < height; y++)
         {
-            for (size_t y = 0; y < height; y++)
+            for (size_t x = 0; x < width; x++)
             {
                 pixel = XGetPixel(image, x, y);
 
@@ -110,7 +113,7 @@ bool x11_screenshot_window(Bitmap & bm, Display *display, Window window)
     const int width = gwa.width;
     const int height = gwa.height;
 
-    XImage *image = XGetImage(display, window, 0, 0, width, height, AllPlanes, ZPixmap);
+    XImage *image = XGetImage(display, window, 0, 0, 1024, 786, AllPlanes, ZPixmap);
     if (image == nullptr)
     {
         return false;
@@ -200,50 +203,51 @@ bool take_window_name(Bitmap & bm, [[maybe_unused]] std::string_view name)
     bm.clear();
 #if defined(SIHD_COMPILE_WITH_X11)
     X11Display x11;
-
-    Window root = DefaultRootWindow(x11.display);
-
-    XWindowAttributes gwa;
-    Window named_window;
-    Window root_win;
-    Window parent_win;
-    Window *list_win;
-    unsigned int nchildren;
-    if (XQueryTree(x11.display, root, &root_win, &parent_win, &list_win, &nchildren) == False)
+    if (x11.display)
     {
-        return false;
-    }
+        Window root = DefaultRootWindow(x11.display);
 
-    Defer d([&list_win] { XFree(list_win); });
-
-    bool found = false;
-    for (unsigned int i = 0; i < nchildren; ++i)
-    {
-        Window tmp = list_win[i];
-
-        if (XGetWindowAttributes(x11.display, tmp, &gwa) == False)
-            continue;
-        if (x11_is_window_readable(gwa) == false)
-            continue;
-
-        char *window_name = NULL;
-        if (XFetchName(x11.display, tmp, &window_name) == True)
+        XWindowAttributes gwa;
+        Window named_window;
+        Window root_win;
+        Window parent_win;
+        Window *list_win;
+        unsigned int nchildren;
+        if (XQueryTree(x11.display, root, &root_win, &parent_win, &list_win, &nchildren) == False)
         {
-            if (window_name != nullptr && name == window_name)
+            return false;
+        }
+
+        Defer d([&list_win] { XFree(list_win); });
+
+        bool found = false;
+        for (unsigned int i = 0; i < nchildren; ++i)
+        {
+            Window tmp = list_win[i];
+
+            if (XGetWindowAttributes(x11.display, tmp, &gwa) == False)
+                continue;
+            if (x11_is_window_readable(gwa) == false)
+                continue;
+
+            char *window_name = NULL;
+            if (XFetchName(x11.display, tmp, &window_name) == True)
             {
-                named_window = tmp;
-                found = true;
+                if (window_name != nullptr && name == window_name)
+                {
+                    named_window = tmp;
+                    found = true;
+                }
+                XFree(window_name);
             }
-            XFree(window_name);
+
+            if (found)
+                break;
         }
 
         if (found)
-            break;
+            return x11_screenshot_window(bm, x11.display, named_window);
     }
-
-    if (found)
-        return x11_screenshot_window(bm, x11.display, named_window);
-
 #elif defined(__SIHD_WINDOWS__)
     HWND active_window = FindWindowA(nullptr, name.data());
     return take_screen_from_window(bm, active_window);
@@ -256,15 +260,17 @@ bool take_focused(Bitmap & bm)
     bm.clear();
 #if defined(SIHD_COMPILE_WITH_X11)
     X11Display x11;
+    if (x11.display)
+    {
+        Window child;
+        int revert_to_return;
+        XGetInputFocus(x11.display, &child, &revert_to_return);
 
-    Window child;
-    int revert_to_return;
-    XGetInputFocus(x11.display, &child, &revert_to_return);
+        if (child == 0 || child == 1)
+            return false;
 
-    if (child == 0 || child == 1)
-        return false;
-
-    return x11_screenshot_window(bm, x11.display, child);
+        return x11_screenshot_window(bm, x11.display, child);
+    }
 #elif defined(__SIHD_WINDOWS__)
     HWND foreground_window = GetForegroundWindow();
     return take_screen_from_window(bm, foreground_window);
@@ -277,18 +283,20 @@ bool take_under_cursor(Bitmap & bm)
     bm.clear();
 #if defined(SIHD_COMPILE_WITH_X11)
     X11Display x11;
-
-    Window root = DefaultRootWindow(x11.display);
-
-    Window child, root_win;
-    int root_x, root_y, win_x, win_y;
-    unsigned int mask_return;
-    if (!XQueryPointer(x11.display, root, &root_win, &child, &root_x, &root_y, &win_x, &win_y, &mask_return))
+    if (x11.display)
     {
-        return false;
-    }
+        Window root = DefaultRootWindow(x11.display);
 
-    return x11_screenshot_window(bm, x11.display, child);
+        Window child, root_win;
+        int root_x, root_y, win_x, win_y;
+        unsigned int mask_return;
+        if (!XQueryPointer(x11.display, root, &root_win, &child, &root_x, &root_y, &win_x, &win_y, &mask_return))
+        {
+            return false;
+        }
+
+        return x11_screenshot_window(bm, x11.display, child);
+    }
 #elif defined(__SIHD_WINDOWS__)
     POINT pt;
     HWND window;
@@ -304,8 +312,11 @@ bool take_screen(Bitmap & bm)
     bm.clear();
 #if defined(SIHD_COMPILE_WITH_X11)
     X11Display x11;
-    Window root = DefaultRootWindow(x11.display);
-    return x11_screenshot_window(bm, x11.display, root);
+    if (x11.display)
+    {
+        Window root = DefaultRootWindow(x11.display);
+        return x11_screenshot_window(bm, x11.display, root);
+    }
 #elif defined(__SIHD_WINDOWS__)
     HWND hDesktopWnd = GetDesktopWindow();
     return take_screen_from_window(bm, hDesktopWnd);
