@@ -1,6 +1,7 @@
 #ifndef __SIHD_NET_IPADDR_HPP__
 #define __SIHD_NET_IPADDR_HPP__
 
+#include <cstdint>
 #include <optional>
 #include <vector>
 

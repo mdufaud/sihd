@@ -18,6 +18,10 @@
 # ifndef SO_BSP_STATE
 #  define SO_BSP_STATE 0x1009
 # endif
+
+/* Evaluate to actual length of the `sockaddr_un' structure.  */
+# define SUN_LEN(ptr) (offsetof(struct sockaddr_un, sun_path) + strlen((ptr)->sun_path))
+
 #endif
 
 namespace sihd::net
@@ -193,8 +197,7 @@ bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
     {
         *protocol = addrinfo.iProtocol;
         *type = addrinfo.iSocketType;
-        length = sizeof(*domain);
-        sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_DOMAIN, domain, &length);
+        *domain = AF_INET;
     }
     return found;
 #endif

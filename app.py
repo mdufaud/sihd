@@ -113,6 +113,8 @@ modules = {
         "windows-libs": [
             'ssp', # winsock
             'ws2_32', # windows api
+            'ucrt', # timezone
+            'psapi', # GetModuleFileName/GetProcessMemoryInfo
         ],
     },
     "http": {

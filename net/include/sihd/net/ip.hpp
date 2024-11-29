@@ -1,13 +1,13 @@
 #ifndef __SIHD_NET_IP_HPP__
 #define __SIHD_NET_IP_HPP__
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 
 #include <sihd/util/platform.hpp>
 
-#if !defined(__SIHD_WINDOWS__)
-#else
+#if defined(__SIHD_WINDOWS__)
 // shutdown function corresponding values unix -> windows
 # define SHUT_RD SD_RECEIVE
 # define SHUT_WR SD_SEND

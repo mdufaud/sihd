@@ -96,6 +96,7 @@ def safe_symlink(src, dst):
     if not os.path.exists(dst):
         info(f"linking {src} -> {dst}")
         if is_msys():
+            #shutil.copyfile(src, dst)
             shutil.copy(src, dst)
         else:
             os.symlink(src, dst, target_is_directory=os.path.isdir(src))
@@ -108,7 +109,7 @@ def safe_symlink(src, dst):
 
 architectures = {
     "aarch64": "arm64",
-    "AMD64": "x86_64",
+    "amd64": "x86_64",
     "64": "x86_64",
     "86": "x86",
     "arm": "arm64",
@@ -117,9 +118,10 @@ architectures = {
 def get_arch():
     plat = __get_platform()
     if plat == "sunos":
+        # TODO
         arch = get_solaris_arch()
     else:
-        arch = platform.machine()
+        arch = platform.machine().lower()
         if arch in architectures:
             arch = architectures[arch]
     return get_opt('arch', arch)
