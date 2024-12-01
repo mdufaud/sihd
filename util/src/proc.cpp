@@ -41,9 +41,9 @@ void configure_process(std::shared_ptr<Process> & proc_ptr, const Options & opti
         proc_ptr->stderr_close();
 
     if (options.purge_env)
-        proc_ptr->environ_clear();
+        proc_ptr->env_clear();
     if (!options.env.empty())
-        proc_ptr->environ_load(options.env);
+        proc_ptr->env_load(options.env);
 }
 
 int do_execute(std::shared_ptr<Process> proc_ptr, Timestamp max_timeout)

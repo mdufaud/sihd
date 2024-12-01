@@ -419,13 +419,13 @@ TEST_F(TestProcess, test_process_fun)
         return 1;
     });
 
-    proc.environ_set("TOTO", "tata");
-    EXPECT_EQ(proc.environ_get("TOTO").value_or(""), "tata");
-    proc.environ_load({"TOTO=titi"});
-    EXPECT_EQ(proc.environ_get("TOTO").value_or(""), "titi");
+    proc.env_set("TOTO", "tata");
+    EXPECT_EQ(proc.env_get("TOTO").value_or(""), "tata");
+    proc.env_load({"TOTO=titi"});
+    EXPECT_EQ(proc.env_get("TOTO").value_or(""), "titi");
 
-    proc.environ_set("TO_REMOVE", "-");
-    proc.environ_rm("TO_REMOVE");
+    proc.env_set("TO_REMOVE", "-");
+    proc.env_rm("TO_REMOVE");
 
     std::string out;
     std::string err;

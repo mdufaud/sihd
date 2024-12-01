@@ -67,7 +67,7 @@ modules = {
         # wayland=1 to compile with wayland
         "libs": ['pthread'], # threading
         "extlibs": ['nlohmann-json', 'fmt', 'cxxopts'],
-        "static-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
+        "defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
         # === Linux specific ===
         "linux-extlibs": ['libuuid'],
         "linux-libs": [
@@ -75,9 +75,7 @@ modules = {
             'rt', # shm_open...
             'uuid',
         ],
-        # only link dynamically fmt when no cross compiling
         "linux-dyn-libs": [
-            'fmt', # get from sys lib only when compiling dynamically on linux
             'stdc++fs'
         ],
         # === Windows specific ===
@@ -90,7 +88,6 @@ modules = {
             'gdi32', # wingdi
             'stdc++fs'
         ],
-        "windows-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
         # === Emscripten specific ===
         "em-flags": ["-pthread"], # enable threads
         "em-link": [
@@ -99,17 +96,14 @@ modules = {
             "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
             "-sPROXY_TO_PTHREAD" # main is a navigator thread
         ],
-        "em-defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
     },
     "core": {
         "depends": ['util'],
-        "linux-dyn-libs": ['fmt'],
     },
     "net": {
         "depends": ['util'],
         "extlibs": ['openssl'],
         "libs": ['ssl', 'crypto'],
-        "linux-dyn-libs": ['fmt'],
         "windows-libs": [
             'ssp', # winsock
             'ws2_32', # windows api
@@ -136,7 +130,6 @@ modules = {
             'crypto',
         ],
         "linux-libs": ["cap"],
-        "linux-dyn-libs": ['fmt'],
     },
     "pcap": {
         "depends": ['net'],
@@ -146,7 +139,6 @@ modules = {
         "parse-configs": [
             "pcap-config --cflags --libs",
         ],
-        "linux-dyn-libs": ['fmt'],
     },
     "zip": {
         "depends": ['util'],
@@ -157,14 +149,12 @@ modules = {
         "depends": ['util'],
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
-        "linux-dyn-libs": ['fmt'],
         "windows-libs": ['ssp']
     },
     "ssh": {
         "depends": ['util'],
         "extlibs": ["libssh"],
         "libs": ['ssh'],
-        "linux-dyn-libs": ['fmt'],
     },
     "usb": {
         "depends": ['util'],
@@ -182,7 +172,6 @@ modules = {
     },
     "csv": {
         "depends": ['util'],
-        "linux-dyn-libs": ['fmt'],
     },
     "imgui": {
         # sdl=1 to compile with SDL2

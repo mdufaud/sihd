@@ -15,8 +15,6 @@
 namespace sihd::util
 {
 
-#if !defined(__SIHD_WINDOWS__)
-
 class Process: public IHandler<Poll *>,
                public ABlockingService
 {
@@ -104,12 +102,12 @@ class Process: public IHandler<Poll *>,
         Process & set_function(std::nullptr_t);
         Process & set_function(std::function<int()> fun);
 
-        void environ_clear();
-        void environ_load(const char **env);
-        void environ_load(const std::vector<std::string> & env);
-        void environ_set(std::string_view key, std::string_view value);
-        bool environ_rm(std::string_view key);
-        std::optional<std::string> environ_get(std::string_view key) const;
+        void env_clear();
+        void env_load(const char **to_load_environ);
+        void env_load(const std::vector<std::string> & to_load_environ);
+        void env_set(std::string_view key, std::string_view value);
+        bool env_rm(std::string_view key);
+        std::optional<std::string> env_get(std::string_view key) const;
 
         // need admin rights and work only with forks
         void set_chroot(std::string_view path);
@@ -130,7 +128,7 @@ class Process: public IHandler<Poll *>,
 
         // get setted argv
         const std::vector<std::string> & argv() const { return _argv; }
-        const std::vector<std::string> & environ() const { return _environ; }
+        const std::vector<std::string> & env() const { return _environment; }
 
         // check if process will execute fork + exit(fun())
         bool runs_function() const { return _fun_to_execute ? true : false; }
@@ -145,53 +143,22 @@ class Process: public IHandler<Poll *>,
         bool wait_process_end(Timestamp nano_duration = 0);
 
     private:
-        enum FileDescAction
-        {
-            None,
-            File,
-            FileAppend,
-            Close,
-        };
-
-        struct FileDescWrapper
-        {
-                int fd_read = -1;
-                int fd_write = -1;
-                FileDescAction action = None;
-                std::function<void(std::string_view)> fun;
-                std::string path;
-        };
-
-        // fd utilities
-        void _add_pipe(FileDescWrapper & fdw);
-
-        // process fds once child process executed
-        bool _process_fd_out(FileDescWrapper & fdw);
-
-        // spawn but for a function
-        bool _do_fork(const std::vector<const char *> & argv, const std::vector<const char *> & env);
-
-# if !defined(__SIHD_ANDROID__)
-        bool _do_spawn(const std::vector<const char *> & argv, const std::vector<const char *> & env);
-# endif
-        // fd redirections setting
-        void _fdw_close(FileDescWrapper & fdw);
-        void _fdw_to(FileDescWrapper & fdw, std::function<void(std::string_view)> && fun);
-        void _fdw_to(FileDescWrapper & fdw, std::string & output);
-        void _fdw_to(FileDescWrapper & fdw, int fd);
-        bool _fdw_to_file(FileDescWrapper & fdw, std::string_view path, bool append);
+        struct PipeWrapper;
 
         void handle(Poll *poll) override;
+
+        bool _do_fork(const std::vector<const char *> & argv, const std::vector<const char *> & env);
+#if !defined(__SIHD_ANDROID__)
+        bool _do_spawn(const std::vector<const char *> & argv, const std::vector<const char *> & env);
+#endif
 
         std::atomic<bool> _started;
         std::atomic<bool> _executing;
         pid_t _pid;
-        FileDescWrapper _stdin;
-        FileDescWrapper _stdout;
-        FileDescWrapper _stderr;
         bool _close_stdin_after_exec;
+        std::unique_ptr<PipeWrapper> _pipe_wrapper;
         std::vector<std::string> _argv;
-        std::vector<std::string> _environ;
+        std::vector<std::string> _environment;
         std::string _chroot;
         std::string _chdir;
         bool _force_fork;
@@ -203,17 +170,6 @@ class Process: public IHandler<Poll *>,
         int _status;
         int _code;
 };
-
-#else
-
-class Process
-{
-    public:
-        Process() = default;
-        ~Process() = default;
-};
-
-#endif
 
 } // namespace sihd::util
 

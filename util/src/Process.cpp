@@ -17,21 +17,24 @@
 # include <sys/stat.h> // open
 # include <sys/types.h>
 # include <sys/wait.h>
+
 # include <unistd.h>
 
-# include <cerrno>
-# include <cstdio>
-# include <cstring> // strerror
-# include <fstream>
-# include <stdexcept>
+#endif
 
-# ifndef SIHD_PROCESS_READ_BUFFER_SIZE
-#  define SIHD_PROCESS_READ_BUFFER_SIZE 2048
-# endif
+#include <cerrno>
+#include <cstdio>
+#include <cstring> // strerror
+#include <fstream>
+#include <stdexcept>
 
-# ifndef SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE
-#  define SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE 0740
-# endif
+#ifndef SIHD_PROCESS_READ_BUFFER_SIZE
+# define SIHD_PROCESS_READ_BUFFER_SIZE 2048
+#endif
+
+#ifndef SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE
+# define SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE 0740
+#endif
 
 extern "C"
 {
@@ -43,26 +46,21 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
+/**
+ * Functions helper
+ */
+
 namespace
 {
-# if !defined(__SIHD_ANDROID__)
 
 auto get_in_env(const std::vector<std::string> & env, std::string_view key)
 {
     return container::find_if(env, [&key](const std::string & env) { return str::starts_with(env, key, "="); });
 }
 
-void build_function_environ(const std::vector<const char *> & env)
-{
-    for (const char *keyval : env)
-    {
-        if (keyval == nullptr)
-            continue;
-        auto [key, val] = str::split_pair(keyval, "=");
-        if (!key.empty())
-            setenv(key.c_str(), val.empty() ? "" : val.c_str(), 1);
-    }
-}
+#if !defined(__SIHD_WINDOWS__)
+
+# if !defined(__SIHD_ANDROID__) // no spawn on android
 
 void add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_to)
 {
@@ -79,6 +77,22 @@ void add_close_action(posix_spawn_file_actions_t *actions, int fd)
         posix_spawn_file_actions_addclose(actions, fd);
 }
 
+# endif // __SIHD_ANDROID__
+
+void build_fork_environ(const std::vector<const char *> & env)
+{
+    for (const char *keyval : env)
+    {
+        if (keyval == nullptr)
+            continue;
+        auto [key, val] = str::split_pair(keyval, "=");
+        if (!key.empty())
+        {
+            setenv(key.c_str(), val.empty() ? "" : val.c_str(), 1);
+        }
+    }
+}
+
 std::pair<int, int> make_pipe()
 {
     int fd[2];
@@ -88,8 +102,6 @@ std::pair<int, int> make_pipe()
     // read - write;
     return std::make_pair(fd[0], fd[1]);
 }
-
-# endif
 
 bool read_fd_callback(int fd, std::function<void(std::string_view)> fun)
 {
@@ -148,6 +160,8 @@ void dup_close(int fd_from, int fd_to)
     safe_close(fd_from);
 }
 
+#endif // __SIHD_WINDOWS__
+
 void init_poller(sihd::util::Poll & poll, int stdout_fd, int stderr_fd)
 {
     poll.stop();
@@ -163,8 +177,131 @@ void init_poller(sihd::util::Poll & poll, int stdout_fd, int stderr_fd)
 
 } // namespace
 
+/**
+ * Wrapper PIPE
+ */
+
+namespace
+{
+
+enum FileDescAction
+{
+    None,
+    File,
+    FileAppend,
+    Close,
+};
+
+struct StdFdWrapper
+{
+        int fd_read = -1;
+        int fd_write = -1;
+        FileDescAction action = None;
+        std::function<void(std::string_view)> fun;
+        std::string path;
+
+        // fd utilities
+        void add_pipe();
+        // process fds once child process executed
+        bool process_fd_out();
+
+        // fd redirections setting
+        void close();
+        void redirect_to(std::function<void(std::string_view)> && fun);
+        void redirect_to(std::string & output);
+        void redirect_to(int fd);
+        bool redirect_to_file(std::string_view path, bool append, mode_t open_mode);
+        void reset();
+};
+
+void StdFdWrapper::add_pipe()
+{
+    if (this->fd_write != -1)
+        return;
+    auto [fd_read, fd_write] = make_pipe();
+    this->fd_read = fd_read;
+    this->fd_write = fd_write;
+}
+
+bool StdFdWrapper::process_fd_out()
+{
+    if (this->fd_read < 0)
+        return true;
+    if (this->action == File || this->action == FileAppend)
+        return write_into_file(this->fd_read, this->path, this->action == FileAppend);
+    else if (this->fun)
+        return read_fd_callback(this->fd_read, this->fun);
+    return true;
+}
+
+void StdFdWrapper::reset()
+{
+    this->action = None;
+    this->fun = nullptr;
+    this->path.clear();
+}
+
+void StdFdWrapper::close()
+{
+    this->action = Close;
+    safe_close(this->fd_read);
+    safe_close(this->fd_write);
+    this->fun = nullptr;
+}
+
+void StdFdWrapper::redirect_to(std::function<void(std::string_view)> && fun)
+{
+    this->add_pipe();
+    this->fun = std::move(fun);
+}
+
+void StdFdWrapper::redirect_to(std::string & output)
+{
+    this->add_pipe();
+    this->fun = [&output](std::string_view buffer) {
+        output.append(buffer);
+    };
+}
+
+void StdFdWrapper::redirect_to(int fd)
+{
+    this->fun = nullptr;
+    this->fd_write = fd;
+}
+
+bool StdFdWrapper::redirect_to_file(std::string_view path, bool append, mode_t open_mode)
+{
+    this->fun = nullptr;
+    this->fd_write = open(path.data(), O_WRONLY | O_CREAT | (append ? O_APPEND : 0), open_mode);
+    if (this->fd_write >= 0)
+        this->action = append ? FileAppend : File;
+    else
+        SIHD_LOG(error, "Process: could not open output file: {}", path);
+    return this->fd_write >= 0;
+}
+
+} // namespace
+
+struct Process::PipeWrapper
+{
+        StdFdWrapper std_in;
+        StdFdWrapper std_out;
+        StdFdWrapper std_err;
+
+        void reset();
+};
+
+void Process::PipeWrapper::reset()
+{
+    std_in.reset();
+    std_out.reset();
+    std_err.reset();
+}
+
 Process::Process()
 {
+    _pipe_wrapper = std::make_unique<PipeWrapper>();
+
     _started.store(false);
     _executing = false;
     _force_fork = false;
@@ -228,63 +365,63 @@ void Process::reset_proc()
     }
 }
 
-void Process::environ_clear()
+void Process::env_clear()
 {
-    _environ.clear();
+    _environment.clear();
 }
 
-void Process::environ_load(const std::vector<std::string> & environ)
+void Process::env_load(const std::vector<std::string> & to_load_environ)
 {
-    for (const std::string & env : environ)
+    for (const std::string & env : to_load_environ)
     {
         auto [key, value] = str::split_pair_view(env, "=");
         if (key.empty())
             continue;
 
-        auto it = get_in_env(_environ, key);
-        if (it != _environ.end())
-            _environ.erase(it);
-        _environ.emplace_back(env);
+        auto it = get_in_env(_environment, key);
+        if (it != _environment.end())
+            _environment.erase(it);
+        _environment.emplace_back(env);
     }
 }
 
-void Process::environ_load(const char **environ)
+void Process::env_load(const char **to_load_environ)
 {
-    if (environ == nullptr)
+    if (to_load_environ == nullptr)
         return;
     int i = 0;
-    while (environ[i] != nullptr)
+    while (to_load_environ[i] != nullptr)
     {
-        auto [key, value] = str::split_pair_view(environ[i], "=");
+        auto [key, value] = str::split_pair_view(to_load_environ[i], "=");
         if (key.empty())
             continue;
 
-        auto it = get_in_env(_environ, key);
-        if (it != _environ.end())
-            _environ.erase(it);
-        _environ.emplace_back(environ[i]);
+        auto it = get_in_env(_environment, key);
+        if (it != _environment.end())
+            _environment.erase(it);
+        _environment.emplace_back(to_load_environ[i]);
         ++i;
     }
 }
 
-void Process::environ_set(std::string_view key, std::string_view value)
+void Process::env_set(std::string_view key, std::string_view value)
 {
     std::string keyval = fmt::format("{}={}", key, value);
-    for (std::string & environ : _environ)
+    for (std::string & env : _environment)
     {
-        if (str::starts_with(environ, key, "="))
+        if (str::starts_with(env, key, "="))
         {
-            environ = std::move(keyval);
+            env = std::move(keyval);
             return;
         }
     }
-    _environ.emplace_back(std::move(keyval));
+    _environment.emplace_back(std::move(keyval));
 }
 
-std::optional<std::string> Process::environ_get(std::string_view key) const
+std::optional<std::string> Process::env_get(std::string_view key) const
 {
-    const auto it = get_in_env(_environ, key);
-    if (it != _environ.end())
+    const auto it = get_in_env(_environment, key);
+    if (it != _environment.end())
     {
         auto [_, value] = str::split_pair_view(*it, "=");
         return std::string(value);
@@ -292,14 +429,14 @@ std::optional<std::string> Process::environ_get(std::string_view key) const
     return std::nullopt;
 }
 
-bool Process::environ_rm(std::string_view key)
+bool Process::env_rm(std::string_view key)
 {
-    auto it = get_in_env(_environ, key);
-    if (it != _environ.end())
+    auto it = get_in_env(_environment, key);
+    if (it != _environment.end())
     {
-        _environ.erase(it);
+        _environment.erase(it);
     }
-    return it != _environ.end();
+    return it != _environment.end();
 }
 
 void Process::set_chroot(std::string_view path)
@@ -319,20 +456,10 @@ void Process::set_force_fork(bool active)
 
 void Process::clear()
 {
-    this->environ_clear();
-    this->environ_load(const_cast<const char **>(::environ));
-
-    constexpr auto reset_fwd = [](FileDescWrapper & fdw) {
-        fdw.action = None;
-        fdw.fun = nullptr;
-        fdw.path.clear();
-    };
-
+    this->env_clear();
+    this->env_load(const_cast<const char **>(::environ));
     this->reset_proc();
-
-    reset_fwd(_stdin);
-    reset_fwd(_stdout);
-    reset_fwd(_stderr);
+    _pipe_wrapper->reset();
 }
 
 // Argv
@@ -370,29 +497,29 @@ Process & Process::add_argv(const std::vector<std::string> & args)
 
 Process & Process::stdin_close()
 {
-    this->_fdw_close(_stdin);
+    _pipe_wrapper->std_in.close();
     return *this;
 }
 
 Process & Process::stdin_from(const std::string & input)
 {
-    this->_add_pipe(_stdin);
-    write_into_fd(_stdin.fd_write, input);
+    _pipe_wrapper->std_in.add_pipe();
+    write_into_fd(_pipe_wrapper->std_in.fd_write, input);
     return *this;
 }
 
 Process & Process::stdin_from(int fd)
 {
-    _stdin.fd_read = fd;
+    _pipe_wrapper->std_in.fd_read = fd;
     return *this;
 }
 
 bool Process::stdin_from_file(std::string_view path)
 {
-    _stdin.fd_read = open(path.data(), O_RDONLY);
-    if (_stdin.fd_read < 0)
+    _pipe_wrapper->std_in.fd_read = open(path.data(), O_RDONLY);
+    if (_pipe_wrapper->std_in.fd_read < 0)
         SIHD_LOG(error, "Process: could not open file input: {}", path);
-    return _stdin.fd_read >= 0;
+    return _pipe_wrapper->std_in.fd_read >= 0;
 }
 
 Process & Process::stdin_close_after_exec(bool activate)
@@ -405,130 +532,78 @@ Process & Process::stdin_close_after_exec(bool activate)
 
 Process & Process::stdout_close()
 {
-    this->_fdw_close(_stdout);
+    _pipe_wrapper->std_out.close();
     return *this;
 }
 
 Process & Process::stdout_to(std::function<void(std::string_view)> fun)
 {
-    this->_fdw_to(_stdout, std::move(fun));
+    _pipe_wrapper->std_out.redirect_to(std::move(fun));
     return *this;
 }
 
 Process & Process::stdout_to(std::string & output)
 {
-    this->_fdw_to(_stdout, output);
+    _pipe_wrapper->std_out.redirect_to(output);
     return *this;
 }
 
 Process & Process::stdout_to(int fd)
 {
-    this->_fdw_to(_stdout, fd);
+    _pipe_wrapper->std_out.redirect_to(fd);
     return *this;
 }
 
 Process & Process::stdout_to(Process & proc)
 {
-    this->_add_pipe(_stdout);
-    proc.stdin_from(_stdout.fd_read);
-    _stdout.fd_read = -1;
+    _pipe_wrapper->std_out.add_pipe();
+    proc.stdin_from(_pipe_wrapper->std_out.fd_read);
+    _pipe_wrapper->std_out.fd_read = -1;
     return *this;
 }
 
 bool Process::stdout_to_file(std::string_view path, bool append)
 {
-    return this->_fdw_to_file(_stdout, path, append);
+    return _pipe_wrapper->std_out.redirect_to_file(path, append, this->open_mode);
 }
 
 // Pipe stderr
 
 Process & Process::stderr_close()
 {
-    this->_fdw_close(_stderr);
+    _pipe_wrapper->std_err.close();
     return *this;
 }
 
 Process & Process::stderr_to(std::function<void(std::string_view)> fun)
 {
-    this->_fdw_to(_stderr, std::move(fun));
+    _pipe_wrapper->std_err.redirect_to(std::move(fun));
     return *this;
 }
 
 Process & Process::stderr_to(std::string & output)
 {
-    this->_fdw_to(_stderr, output);
+    _pipe_wrapper->std_err.redirect_to(output);
     return *this;
 }
 
 Process & Process::stderr_to(int fd)
 {
-    this->_fdw_to(_stderr, fd);
+    _pipe_wrapper->std_err.redirect_to(fd);
     return *this;
 }
 
 Process & Process::stderr_to(Process & proc)
 {
-    this->_add_pipe(_stderr);
-    proc.stdin_from(_stderr.fd_read);
-    _stderr.fd_read = -1;
+    _pipe_wrapper->std_err.add_pipe();
+    proc.stdin_from(_pipe_wrapper->std_err.fd_read);
+    _pipe_wrapper->std_err.fd_read = -1;
     return *this;
 }
 
 bool Process::stderr_to_file(std::string_view path, bool append)
 {
-    return this->_fdw_to_file(_stderr, path, append);
-}
-
-// Private fdw setters
-
-void Process::_fdw_close(FileDescWrapper & fdw)
-{
-    fdw.action = Close;
-    safe_close(fdw.fd_read);
-    safe_close(fdw.fd_write);
-    fdw.fun = nullptr;
-}
-
-void Process::_fdw_to(FileDescWrapper & fdw, std::function<void(std::string_view)> && fun)
-{
-    this->_add_pipe(fdw);
-    fdw.fun = std::move(fun);
-}
-
-void Process::_fdw_to(FileDescWrapper & fdw, std::string & output)
-{
-    this->_add_pipe(fdw);
-    fdw.fun = [&output](std::string_view buffer) {
-        output.append(buffer);
-    };
-}
-
-void Process::_fdw_to(FileDescWrapper & fdw, int fd)
-{
-    fdw.fun = nullptr;
-    fdw.fd_write = fd;
-}
-
-bool Process::_fdw_to_file(FileDescWrapper & fdw, std::string_view path, bool append)
-{
-    fdw.fun = nullptr;
-    fdw.fd_write = open(path.data(), O_WRONLY | O_CREAT | (append ? O_APPEND : 0), this->open_mode);
-    if (fdw.fd_write >= 0)
-        fdw.action = append ? FileAppend : File;
-    else
-        SIHD_LOG(error, "Process: could not open output file: {}", path);
-    return fdw.fd_write >= 0;
-}
-
-// Private stuff
-
-void Process::_add_pipe(FileDescWrapper & fdw)
-{
-    if (fdw.fd_write != -1)
-        return;
-    auto [fd_read, fd_write] = make_pipe();
-    fdw.fd_read = fd_read;
-    fdw.fd_write = fd_write;
+    return _pipe_wrapper->std_err.redirect_to_file(path, append, this->open_mode);
 }
 
 // Execution
@@ -561,31 +636,31 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector
             }
         }
 
-        if (_stdin.action == Close)
+        if (_pipe_wrapper->std_in.action == Close)
             close(STDIN_FILENO);
         else
         {
-            dup_close(_stdin.fd_read, STDIN_FILENO);
-            safe_close(_stdin.fd_write);
+            dup_close(_pipe_wrapper->std_in.fd_read, STDIN_FILENO);
+            safe_close(_pipe_wrapper->std_in.fd_write);
         }
-        if (_stdout.action == Close)
+        if (_pipe_wrapper->std_out.action == Close)
             close(STDOUT_FILENO);
         else
         {
-            dup_close(_stdout.fd_write, STDOUT_FILENO);
-            safe_close(_stdout.fd_read);
+            dup_close(_pipe_wrapper->std_out.fd_write, STDOUT_FILENO);
+            safe_close(_pipe_wrapper->std_out.fd_read);
         }
-        if (_stderr.action == Close)
+        if (_pipe_wrapper->std_err.action == Close)
             close(STDERR_FILENO);
         else
         {
-            dup_close(_stderr.fd_write, STDERR_FILENO);
-            safe_close(_stderr.fd_read);
+            dup_close(_pipe_wrapper->std_err.fd_write, STDERR_FILENO);
+            safe_close(_pipe_wrapper->std_err.fd_read);
         }
         int status = 0;
         if (_fun_to_execute)
         {
-            build_function_environ(env);
+            build_fork_environ(env);
             status = _fun_to_execute();
         }
         else
@@ -596,7 +671,7 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector
     return true;
 }
 
-# if !defined(__SIHD_ANDROID__)
+#if !defined(__SIHD_ANDROID__)
 bool Process::_do_spawn(const std::vector<const char *> & argv, const std::vector<const char *> & env)
 {
     pid_t pid;
@@ -607,26 +682,26 @@ bool Process::_do_spawn(const std::vector<const char *> & argv, const std::vecto
     if (!_chdir.empty())
         posix_spawn_file_actions_addchdir_np(&actions, _chdir.c_str());
 
-    if (_stdin.action == Close)
+    if (_pipe_wrapper->std_in.action == Close)
         add_close_action(&actions, STDIN_FILENO);
     else
     {
-        add_dup_action(&actions, _stdin.fd_read, STDIN_FILENO);
-        add_close_action(&actions, _stdin.fd_write);
+        add_dup_action(&actions, _pipe_wrapper->std_in.fd_read, STDIN_FILENO);
+        add_close_action(&actions, _pipe_wrapper->std_in.fd_write);
     }
-    if (_stdout.action == Close)
+    if (_pipe_wrapper->std_out.action == Close)
         add_close_action(&actions, STDOUT_FILENO);
     else
     {
-        add_dup_action(&actions, _stdout.fd_write, STDOUT_FILENO);
-        add_close_action(&actions, _stdout.fd_read);
+        add_dup_action(&actions, _pipe_wrapper->std_out.fd_write, STDOUT_FILENO);
+        add_close_action(&actions, _pipe_wrapper->std_out.fd_read);
     }
-    if (_stderr.action == Close)
+    if (_pipe_wrapper->std_err.action == Close)
         add_close_action(&actions, STDERR_FILENO);
     else
     {
-        add_dup_action(&actions, _stderr.fd_write, STDERR_FILENO);
-        add_close_action(&actions, _stderr.fd_read);
+        add_dup_action(&actions, _pipe_wrapper->std_err.fd_write, STDERR_FILENO);
+        add_close_action(&actions, _pipe_wrapper->std_err.fd_read);
     }
     int err = posix_spawnp(&pid,
                            argv[0],
@@ -643,7 +718,7 @@ bool Process::_do_spawn(const std::vector<const char *> & argv, const std::vecto
     _pid = pid;
     return true;
 }
-# endif
+#endif
 
 bool Process::execute()
 {
@@ -658,7 +733,7 @@ bool Process::execute()
         return false;
     }
 
-    init_poller(_poll, _stdout.fd_read, _stderr.fd_read);
+    init_poller(_poll, _pipe_wrapper->std_out.fd_read, _pipe_wrapper->std_err.fd_read);
 
     std::vector<const char *> c_argv;
     c_argv.reserve(_argv.size() + 1);
@@ -669,8 +744,8 @@ bool Process::execute()
     c_argv.emplace_back(nullptr);
 
     std::vector<const char *> c_environ;
-    c_environ.reserve(_environ.size() + 1);
-    for (const std::string & env : _environ)
+    c_environ.reserve(_environment.size() + 1);
+    for (const std::string & env : _environment)
     {
         c_environ.emplace_back(env.c_str());
     }
@@ -681,26 +756,26 @@ bool Process::execute()
         success = this->_do_fork(c_argv, c_environ);
     else
     {
-# if !defined(__SIHD_ANDROID__)
+#if !defined(__SIHD_ANDROID__)
         if (_force_fork)
             success = this->_do_fork(c_argv, c_environ);
         else
             success = this->_do_spawn(c_argv, c_environ);
-# else
+#else
         success = this->_do_fork(c_argv, c_environ);
-# endif
+#endif
     }
 
     if (success)
     {
-        safe_close(_stdin.fd_read);
-        safe_close(_stdout.fd_write);
-        safe_close(_stderr.fd_write);
+        safe_close(_pipe_wrapper->std_in.fd_read);
+        safe_close(_pipe_wrapper->std_out.fd_write);
+        safe_close(_pipe_wrapper->std_err.fd_write);
     }
 
     if (_close_stdin_after_exec)
     {
-        safe_close(_stdin.fd_write);
+        safe_close(_pipe_wrapper->std_in.fd_write);
     }
 
     _started.store(success);
@@ -710,17 +785,6 @@ bool Process::execute()
 bool Process::wait_process_end(Timestamp nano_duration)
 {
     return _waitable.wait_for(nano_duration, [this] { return this->is_process_running() == false; });
-}
-
-bool Process::_process_fd_out(FileDescWrapper & fdw)
-{
-    if (fdw.fd_read < 0)
-        return true;
-    if (fdw.action == File || fdw.action == FileAppend)
-        return write_into_file(fdw.fd_read, fdw.path, fdw.action == FileAppend);
-    else if (fdw.fun)
-        return read_fd_callback(fdw.fd_read, fdw.fun);
-    return true;
 }
 
 bool Process::can_read_pipes() const
@@ -737,9 +801,9 @@ bool Process::terminate()
 {
     this->read_pipes();
 
-    safe_close(_stdin.fd_write);
-    safe_close(_stdout.fd_read);
-    safe_close(_stderr.fd_read);
+    safe_close(_pipe_wrapper->std_in.fd_write);
+    safe_close(_pipe_wrapper->std_out.fd_read);
+    safe_close(_pipe_wrapper->std_err.fd_read);
 
     _poll.stop();
     _poll.clear_fds();
@@ -785,20 +849,20 @@ void Process::handle(Poll *poll)
     for (auto & event : events)
     {
         int fd = event.fd;
-        if (fd == _stdout.fd_read)
+        if (fd == _pipe_wrapper->std_out.fd_read)
         {
-            if (!event.readable || this->_process_fd_out(_stdout) == false)
+            if (!event.readable || _pipe_wrapper->std_out.process_fd_out() == false)
             {
                 poll->clear_fd(fd);
-                safe_close(_stdout.fd_read);
+                safe_close(_pipe_wrapper->std_out.fd_read);
             }
         }
-        else if (fd == _stderr.fd_read)
+        else if (fd == _pipe_wrapper->std_err.fd_read)
         {
-            if (!event.readable || this->_process_fd_out(_stderr) == false)
+            if (!event.readable || _pipe_wrapper->std_err.process_fd_out() == false)
             {
                 poll->clear_fd(fd);
-                safe_close(_stderr.fd_read);
+                safe_close(_pipe_wrapper->std_err.fd_read);
             }
         }
     }
@@ -945,9 +1009,3 @@ uint8_t Process::return_code() const
 }
 
 } // namespace sihd::util
-
-#else
-
-# pragma message("TODO")
-
-#endif
