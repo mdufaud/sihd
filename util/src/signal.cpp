@@ -12,6 +12,7 @@
 #define LAST_SIG 64
 
 #if defined(__SIHD_WINDOWS__)
+# include <windows.h>
 typedef void (*sighandler_t)(int);
 #endif
 
@@ -308,10 +309,15 @@ bool kill(pid_t pid, int sig)
 #if !defined(__SIHD_WINDOWS__)
     return ::kill(pid, sig) == 0;
 #else
-# pragma message("TODO os::kill")
-    (void)pid;
-    (void)sig;
-    return false;
+    HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+    if (hProcess == nullptr)
+        return false;
+
+    bool success = TerminateProcess(hProcess, sig);
+
+    CloseHandle(hProcess);
+
+    return success;
 #endif
 }
 
