@@ -167,10 +167,7 @@ bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *opt
 bool is_root()
 {
 #if defined(__SIHD_WINDOWS__)
-    BOOL is_admin = FALSE;
-    DWORD dwError = ERROR_SUCCESS;
     HANDLE hToken = NULL;
-
     // Open the process token.
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
     {
@@ -180,7 +177,6 @@ bool is_root()
     // Retrieve the token elevation information.
     TOKEN_ELEVATION elevation;
     DWORD dwSize;
-
     if (!GetTokenInformation(hToken, TokenElevation, &elevation, sizeof(elevation), &dwSize))
     {
         CloseHandle(hToken);
