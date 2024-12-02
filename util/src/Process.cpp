@@ -104,7 +104,7 @@ std::pair<int, int> make_pipe()
     return std::make_pair(fd[0], fd[1]);
 }
 
-bool read_pipe_callback(int fd, std::function<void(std::string_view)> fun)
+bool read_pipe_into_callback(int fd, std::function<void(std::string_view)> fun)
 {
     char buffer[SIHD_PROCESS_READ_BUFFER_SIZE + 1];
     ssize_t ret;
@@ -149,7 +149,7 @@ void dup_close(int fd_from, int fd_to)
     safe_close(fd_from);
 }
 
-bool write_into_file(int fd, std::string & path, bool append)
+bool read_pipe_into_file(int fd, std::string & path, bool append)
 {
     std::ofstream file(path, append ? std::ostream::app : std::ostream::out);
 
@@ -158,7 +158,7 @@ bool write_into_file(int fd, std::string & path, bool append)
     };
     if (!file.is_open() || !file.good())
         return false;
-    return read_pipe_callback(fd, fun);
+    return read_pipe_into_callback(fd, fun);
 }
 
 void init_poller(sihd::util::Poll & poll, int stdout_fd, int stderr_fd)
@@ -198,6 +198,7 @@ std::pair<HANDLE, HANDLE> make_pipe()
         throw std::runtime_error("Cannot make pipe: SetHandleInformation");
     }
 
+    // enables peeking pipe
     DWORD mode = PIPE_NOWAIT;
     if (!SetNamedPipeHandleState(rd, &mode, NULL, NULL))
     {
@@ -224,7 +225,7 @@ void safe_close(HANDLE & fd)
     }
 }
 
-bool read_pipe_callback(HANDLE fd, std::function<void(std::string_view)> fun)
+bool read_pipe_into_callback(HANDLE fd, std::function<void(std::string_view)> fun)
 {
     DWORD total_bytes_avail;
     DWORD bytes_left;
@@ -252,7 +253,7 @@ bool write_into_pipe(HANDLE fd, const std::string & str)
     return success && written == (ssize_t)str.size();
 }
 
-bool write_into_file(HANDLE fd, std::string & path, bool append)
+bool read_pipe_into_file(HANDLE fd, std::string & path, bool append)
 {
     std::ofstream file(path, append ? std::ostream::app : std::ostream::out);
 
@@ -261,7 +262,7 @@ bool write_into_file(HANDLE fd, std::string & path, bool append)
     };
     if (!file.is_open() || !file.good())
         return false;
-    return read_pipe_callback(fd, fun);
+    return read_pipe_into_callback(fd, fun);
 }
 
 #endif // Difference LINUX / WINDOWS
@@ -299,7 +300,7 @@ struct StdFdWrapper
         // fd utilities
         void add_pipe();
         // process fds once child process executed
-        bool process_fd_out();
+        bool process_read_pipe();
 
         // fd redirections setting
         void close();
@@ -333,7 +334,7 @@ void StdFdWrapper::add_pipe()
     this->fd_write = fd_write;
 }
 
-bool StdFdWrapper::process_fd_out()
+bool StdFdWrapper::process_read_pipe()
 {
 #if !defined(__SIHD_WINDOWS__)
     if (this->fd_read < 0)
@@ -342,9 +343,9 @@ bool StdFdWrapper::process_fd_out()
 #endif
         return true;
     if (this->action == File || this->action == FileAppend)
-        return write_into_file(this->fd_read, this->path, this->action == FileAppend);
+        return read_pipe_into_file(this->fd_read, this->path, this->action == FileAppend);
     else if (this->fun)
-        return read_pipe_callback(this->fd_read, this->fun);
+        return read_pipe_into_callback(this->fd_read, this->fun);
     return true;
 }
 
@@ -1174,8 +1175,8 @@ bool Process::read_pipes(int milliseconds_timeout)
     bool timed_out = false;
     while (!timed_out)
     {
-        _impl->pipe.std_out.process_fd_out();
-        _impl->pipe.std_err.process_fd_out();
+        _impl->pipe.std_out.process_read_pipe();
+        _impl->pipe.std_err.process_read_pipe();
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         timed_out = (clock.now() - begin) >= timeout;
     }
@@ -1249,7 +1250,7 @@ void Process::handle(Poll *poll)
         int fd = event.fd;
         if (fd == _impl->pipe.std_out.fd_read)
         {
-            if (!event.readable || _impl->pipe.std_out.process_fd_out() == false)
+            if (!event.readable || _impl->pipe.std_out.process_read_pipe() == false)
             {
                 poll->clear_fd(fd);
                 safe_close(_impl->pipe.std_out.fd_read);
@@ -1257,7 +1258,7 @@ void Process::handle(Poll *poll)
         }
         else if (fd == _impl->pipe.std_err.fd_read)
         {
-            if (!event.readable || _impl->pipe.std_err.process_fd_out() == false)
+            if (!event.readable || _impl->pipe.std_err.process_read_pipe() == false)
             {
                 poll->clear_fd(fd);
                 safe_close(_impl->pipe.std_err.fd_read);
