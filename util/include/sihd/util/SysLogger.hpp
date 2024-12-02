@@ -6,6 +6,8 @@
 
 #if !defined(__SIHD_WINDOWS__)
 # include <syslog.h>
+#else
+# include <handleapi.h>
 #endif
 
 namespace sihd::util
@@ -26,6 +28,9 @@ class SysLogger: public ALogger
     protected:
 
     private:
+#if defined(__SIHD_WINDOWS__)
+        HANDLE _handle;
+#endif
 };
 
 } // namespace sihd::util

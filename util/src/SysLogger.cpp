@@ -1,6 +1,12 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/SysLogger.hpp>
 
+#if defined(__SIHD_WINDOWS__)
+# include <exception>
+# include <fmt/format.h>
+# include <windows.h>
+#endif
+
 namespace sihd::util
 {
 
@@ -11,7 +17,11 @@ SysLogger::SysLogger(std::string_view progname, int options, int facility)
 #if !defined(__SIHD_WINDOWS__)
     openlog(progname.data(), options, facility);
 #else
-    (void)progname;
+    _handle = RegisterEventSource(NULL, progname.data());
+    if (_handle == nullptr)
+    {
+        throw std::runtime_error(fmt::format("Syslogger could not RegisterEventSource: {}", GetLastError()));
+    }
     (void)options;
     (void)facility;
 #endif
@@ -21,6 +31,8 @@ SysLogger::~SysLogger()
 {
 #if !defined(__SIHD_WINDOWS__)
     closelog();
+#else
+    DeregisterEventSource(_handle);
 #endif
 }
 
@@ -37,9 +49,39 @@ void SysLogger::log(const LogInfo & info, std::string_view msg)
            info.source.data(),
            msg.data());
 #else
-# pragma message("TODO")
-    (void)info;
-    (void)msg;
+    WORD type;
+    switch (info.level)
+    {
+        case LogLevel::emergency:
+        case LogLevel::alert:
+        case LogLevel::critical:
+        case LogLevel::error:
+            type = EVENTLOG_ERROR_TYPE;
+            break;
+        case LogLevel::warning:
+            type = EVENTLOG_WARNING_TYPE;
+            break;
+        case LogLevel::notice:
+        case LogLevel::info:
+        case LogLevel::debug:
+            type = EVENTLOG_INFORMATION_TYPE;
+            break;
+        default:
+            type = EVENTLOG_AUDIT_SUCCESS;
+    }
+    WORD category = static_cast<WORD>(info.level);
+    if (!ReportEvent(_handle,                // Event log handle
+                     type,                   // Event type
+                     category,               // Event category
+                     0x1000,                 // Event identifier
+                     NULL,                   // No security identifier
+                     1,                      // Number of strings
+                     0,                      // No binary data
+                     (LPCSTR *)(msg.data()), // Array of strings
+                     NULL))                  // No binary data
+    {
+        throw std::runtime_error(fmt::format("Syslogger could not register event: {}", GetLastError()));
+    }
 #endif
 }
 
