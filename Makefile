@@ -229,7 +229,7 @@ build:
 	$(QUIET) cd $(HERE)
 	$(eval BUILD_CMD_LINE = \
 			modules=$(modules) test=$(test) dist=$(dist) mode=$(mode) \
-			asan=$(asan) verbose=$(verbose) pkgdep=$(pkgdep) demo=$(demo))
+			asan=$(asan) verbose=$(verbose) pkgdep=$(pkgdep) demo=$(demo) nocache=$(nocache))
 	$(QUIET) $(call echo_log_info,makefile,starting build with command: '$(SCONS_BUILD_CMD) $(BUILD_CMD_LINE)')
 	$(QUIET) $(BUILD_CMD_LINE) $(SCONS_BUILD_CMD)
 

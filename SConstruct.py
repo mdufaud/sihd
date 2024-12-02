@@ -196,7 +196,9 @@ if build_platform == "windows":
 # Compiler settings
 ###############################################################################
 
-ccache = shutil.which("ccache") and "ccache " or ""
+ccache = ""
+if not builder.is_opt("nocache"):
+    ccache = shutil.which("ccache") and "ccache " or ""
 if verbose and ccache:
     builder.info("using ccache at: {}".format(shutil.which("ccache")))
 

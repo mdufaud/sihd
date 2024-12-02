@@ -309,14 +309,11 @@ bool kill(pid_t pid, int sig)
 #if !defined(__SIHD_WINDOWS__)
     return ::kill(pid, sig) == 0;
 #else
-    HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
-    if (hProcess == nullptr)
+    HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+    if (handle == nullptr)
         return false;
-
-    bool success = TerminateProcess(hProcess, sig);
-
-    CloseHandle(hProcess);
-
+    const bool success = TerminateProcess(handle, sig);
+    CloseHandle(handle);
     return success;
 #endif
 }

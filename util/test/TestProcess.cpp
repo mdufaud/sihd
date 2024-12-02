@@ -518,6 +518,7 @@ TEST_F(TestProcess, test_process_exec_timeout)
     auto exit_code = proc::execute({"cat"}, options);
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(30)), std::future_status::timeout);
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(60)), std::future_status::ready);
+    // kill by signal SIGTERM (9)
     ASSERT_EQ(exit_code.get(), 255);
 }
 

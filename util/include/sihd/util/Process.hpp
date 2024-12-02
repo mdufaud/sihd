@@ -19,6 +19,14 @@ class Process: public IHandler<Poll *>,
                public ABlockingService
 {
     public:
+#if !defined(__SIHD_WINDOWS__)
+        using FileDescType = int;
+        using ReturnCodeType = uint8_t;
+#else
+        using FileDescType = HANDLE;
+        using ReturnCodeType = DWORD;
+#endif
+
         Process();
         Process(std::function<int()> fun);
         Process(const std::vector<std::string> & args);
@@ -50,15 +58,10 @@ class Process: public IHandler<Poll *>,
         bool is_process_running() const;
 
         // wait for process
-        bool wait(int options);
-        // wait for process
-        bool wait_exit(int options = 0);
-        // wait for process
-        bool wait_stop(int options = 0);
-        // wait for process
-        bool wait_continue(int options = 0);
-        // wait for process
-        bool wait_any(int options = 0);
+        bool wait(int options = 0);
+        // wait for process but do not hang
+        bool wait_no_hang();
+
         bool can_read_pipes() const;
         // read pipes to call the callbacks on pipes
         bool read_pipes(int milliseconds_timeout = 1);
@@ -77,23 +80,23 @@ class Process: public IHandler<Poll *>,
          */
         Process & stdin_close();
         Process & stdin_from(const std::string & input);
-        Process & stdin_from(int fd);
         bool stdin_from_file(std::string_view path);
+        Process & stdin_from(FileDescType fd);
         // Close stdin pipe after execution so that the process do not hang
         Process & stdin_close_after_exec(bool activate);
 
         Process & stdout_close();
         Process & stdout_to(std::function<void(std::string_view)> fun);
         Process & stdout_to(std::string & output);
-        Process & stdout_to(int fd);
         Process & stdout_to(Process & proc);
+        Process & stdout_to(FileDescType fd);
         bool stdout_to_file(std::string_view path, bool append = false);
 
         Process & stderr_close();
         Process & stderr_to(std::function<void(std::string_view)> fun);
         Process & stderr_to(std::string & output);
-        Process & stderr_to(int fd);
         Process & stderr_to(Process & proc);
+        Process & stderr_to(FileDescType fd);
         bool stderr_to_file(std::string_view path, bool append = false);
 
         void clear_argv();
@@ -109,10 +112,25 @@ class Process: public IHandler<Poll *>,
         bool env_rm(std::string_view key);
         std::optional<std::string> env_get(std::string_view key) const;
 
+        void set_chdir(std::string_view path);
+
+#if !defined(__SIHD_WINDOWS__)
+        // LINUX only methods
+
         // need admin rights and work only with forks
         void set_chroot(std::string_view path);
-        void set_chdir(std::string_view path);
+
+        // use fork instead of spawn
         void set_force_fork(bool active);
+
+        // wait for process - report dead child
+        bool wait_exit(int options = 0);
+        // wait for process - report stopped child
+        bool wait_stop(int options = 0);
+        // wait for process - report continued child
+        bool wait_continue(int options = 0);
+        // wait for process
+        bool wait_any(int options = 0);
 
         bool has_exited() const;
         bool has_core_dumped() const;
@@ -121,10 +139,18 @@ class Process: public IHandler<Poll *>,
         bool has_continued() const;
         uint8_t signal_exit_number() const;
         uint8_t signal_stop_number() const;
-        uint8_t return_code() const;
 
         // get running process id
-        pid_t pid() const { return _pid; };
+        pid_t pid() const;
+#else
+        // get running process id
+        DWORD pid() const;
+        // get running process handle
+        HANDLE process() const;
+#endif
+
+        ReturnCodeType return_code() const;
+        bool has_terminated() const;
 
         // get setted argv
         const std::vector<std::string> & argv() const { return _argv; }
@@ -143,32 +169,27 @@ class Process: public IHandler<Poll *>,
         bool wait_process_end(Timestamp nano_duration = 0);
 
     private:
-        struct PipeWrapper;
+        struct Impl;
 
         void handle(Poll *poll) override;
 
+        bool _do_execute(const std::vector<const char *> & argv, const std::vector<const char *> & env);
         bool _do_fork(const std::vector<const char *> & argv, const std::vector<const char *> & env);
-#if !defined(__SIHD_ANDROID__)
         bool _do_spawn(const std::vector<const char *> & argv, const std::vector<const char *> & env);
-#endif
+        bool _do_child_process(const std::vector<const char *> & argv, const std::vector<const char *> & env);
 
         std::atomic<bool> _started;
         std::atomic<bool> _executing;
-        pid_t _pid;
         bool _close_stdin_after_exec;
-        std::unique_ptr<PipeWrapper> _pipe_wrapper;
+        std::unique_ptr<Impl> _impl;
         std::vector<std::string> _argv;
         std::vector<std::string> _environment;
         std::string _chroot;
         std::string _chdir;
         bool _force_fork;
         std::function<int()> _fun_to_execute;
-        mutable std::mutex _mutex_info;
         Waitable _waitable;
-        Waitable _waitable_start;
         Poll _poll;
-        int _status;
-        int _code;
 };
 
 } // namespace sihd::util

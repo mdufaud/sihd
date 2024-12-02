@@ -5,11 +5,10 @@
 
 #include <sihd/util/Process.hpp>
 #include <sihd/util/proc.hpp>
+#include <sihd/util/thread.hpp>
 
 namespace sihd::util::proc
 {
-
-#if !defined(__SIHD_WINDOWS__)
 
 namespace
 {
@@ -63,18 +62,25 @@ int do_execute(std::shared_ptr<Process> proc_ptr, Timestamp max_timeout)
         // ensure reading the stdout/stderr
         if (has_to_poll)
             proc_ptr->read_pipes(poll_timeout_ms);
-        // check the process status - break the loop if exited
+            // check the process status - break the loop if exited
+#if !defined(__SIHD_WINDOWS__)
         proc_ptr->wait_any(WNOHANG);
-        if (proc_ptr->has_exited())
+#else
+        proc_ptr->wait(poll_timeout_ms);
+#endif
+        if (proc_ptr->has_terminated())
+        {
             break;
+        }
         // if there is no polling then there is no sleep - be easy in the processor
         if (has_to_poll == false)
+        {
             std::this_thread::sleep_for(std::chrono::milliseconds(poll_timeout_ms));
+        }
         // check if the timeout is reached
         if (max_timeout > 0)
             timed_out = (clock.now() - begin) >= max_timeout;
     }
-    fmt::print("timeout: {}\n", timed_out);
     proc_ptr->terminate();
     return static_cast<int>(proc_ptr->return_code());
 }
@@ -88,20 +94,11 @@ std::future<int> execute(const std::vector<std::string> & args, const Options & 
     configure_process(proc_ptr, options);
 
     std::future<int> exit_code = std::async(std::launch::async, [proc_ptr, timeout = options.timeout] {
+        thread::set_name("proc::execute");
         return do_execute(proc_ptr, timeout);
     });
 
     return exit_code;
 }
-
-#else
-
-std::future<int> execute([[maybe_unused]] const std::vector<std::string> & args,
-                         [[maybe_unused]] const Options & options)
-{
-    return {};
-}
-
-#endif
 
 } // namespace sihd::util::proc

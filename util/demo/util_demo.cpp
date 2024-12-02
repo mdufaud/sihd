@@ -19,6 +19,7 @@
 #include <sihd/util/fs.hpp>
 #include <sihd/util/macro.hpp>
 #include <sihd/util/os.hpp>
+#include <sihd/util/proc.hpp>
 #include <sihd/util/screenshot.hpp>
 #include <sihd/util/term.hpp>
 
@@ -253,6 +254,46 @@ void screenshot()
     }
 }
 
+void process()
+{
+    std::vector<std::string> args;
+    proc::Options options({.timeout = std::chrono::milliseconds(100)});
+    options.stdout_callback = [](std::string_view stdout_str) {
+        fmt::print("=========================\n");
+        fmt::print("STDOUT: {}\n", stdout_str);
+        fmt::print("=========================\n");
+    };
+    options.stderr_callback = [](std::string_view stderr_str) {
+        fmt::print("=========================\n");
+        fmt::print("STDERR: {}\n", stderr_str);
+        fmt::print("=========================\n");
+    };
+
+    if constexpr (os::is_unix)
+    {
+        args.push_back("ls");
+    }
+
+    if constexpr (os::is_windows)
+    {
+        args.push_back("cmd.exe");
+        args.push_back("/c");
+        args.push_back("dir");
+    }
+
+    SIHD_LOG(info, "Executing: {}", fmt::join(args, " "));
+    auto exit_code = proc::execute(args, options);
+
+    if (exit_code.wait_for(std::chrono::milliseconds(200)) == std::future_status::ready)
+    {
+        SIHD_LOG(info, "Exit code: {}", exit_code.get());
+    }
+    else
+    {
+        SIHD_LOG(error, "Process timeout");
+    }
+}
+
 } // namespace demo
 
 int main(int argc, char **argv)
@@ -287,6 +328,7 @@ int main(int argc, char **argv)
     demo::clipboard();
     demo::bitmap();
     demo::screenshot();
+    demo::process();
 
     demo::worker(result["worker-frequency"].as<double>());
 
