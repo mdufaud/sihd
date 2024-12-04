@@ -20,7 +20,7 @@ using namespace sihd::py;
 class TestPyUtilApi: public ::testing::Test
 {
     protected:
-        TestPyUtilApi() { sihd::util::LoggerManager::basic(); }
+        TestPyUtilApi() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestPyUtilApi() { sihd::util::LoggerManager::clear_loggers(); }
 

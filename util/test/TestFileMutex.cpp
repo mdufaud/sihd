@@ -20,7 +20,7 @@ using namespace sihd::util;
 class TestFileMutex: public ::testing::Test
 {
     protected:
-        TestFileMutex() { sihd::util::LoggerManager::basic(); }
+        TestFileMutex() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestFileMutex() { sihd::util::LoggerManager::clear_loggers(); }
 

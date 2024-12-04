@@ -18,7 +18,7 @@ using namespace sihd::util;
 class TestProcess: public ::testing::Test
 {
     protected:
-        TestProcess() { sihd::util::LoggerManager::basic(); }
+        TestProcess() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestProcess() { sihd::util::LoggerManager::clear_loggers(); }
 

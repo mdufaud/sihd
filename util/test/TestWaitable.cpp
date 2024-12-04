@@ -14,7 +14,7 @@ using namespace sihd::util;
 class TestWaitable: public ::testing::Test
 {
     protected:
-        TestWaitable() { sihd::util::LoggerManager::basic(); }
+        TestWaitable() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestWaitable() { sihd::util::LoggerManager::clear_loggers(); }
 

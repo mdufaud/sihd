@@ -83,7 +83,7 @@ static void sniffer_test(const std::string & interface_to_sniff)
 
 int main()
 {
-    sihd::util::LoggerManager::basic();
+    sihd::util::LoggerManager::stream();
 
     std::string interface_to_sniff = test::module::interfaces_test();
     test::module::sniffer_test(interface_to_sniff);

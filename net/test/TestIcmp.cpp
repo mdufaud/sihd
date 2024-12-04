@@ -21,7 +21,7 @@ using namespace sihd::util;
 class TestIcmp: public ::testing::Test
 {
     protected:
-        TestIcmp() { sihd::util::LoggerManager::basic(); }
+        TestIcmp() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestIcmp() { sihd::util::LoggerManager::clear_loggers(); }
 

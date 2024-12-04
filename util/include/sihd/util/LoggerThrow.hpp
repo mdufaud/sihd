@@ -1,5 +1,5 @@
-#ifndef __SIHD_UTIL_THROWLOGGER_HPP__
-#define __SIHD_UTIL_THROWLOGGER_HPP__
+#ifndef __SIHD_UTIL_LOGGERTHROW_HPP__
+#define __SIHD_UTIL_LOGGERTHROW_HPP__
 
 #include <exception>
 
@@ -8,7 +8,7 @@
 namespace sihd::util
 {
 
-class ThrowLogger: public ALogger
+class LoggerThrow: public ALogger
 {
     public:
         class Exception: public std::exception
@@ -24,8 +24,8 @@ class ThrowLogger: public ALogger
                 std::string _msg;
         };
 
-        ThrowLogger() = default;
-        ~ThrowLogger() = default;
+        LoggerThrow() = default;
+        ~LoggerThrow() = default;
 
         void log(const LogInfo & info, std::string_view msg) override;
 

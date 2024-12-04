@@ -13,7 +13,7 @@ using namespace sihd::util;
 class TestPinger: public ::testing::Test
 {
     protected:
-        TestPinger() { sihd::util::LoggerManager::basic(); }
+        TestPinger() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestPinger() { sihd::util::LoggerManager::clear_loggers(); }
 

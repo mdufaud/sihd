@@ -15,7 +15,7 @@ using namespace sihd::util;
 class TestSignal: public ::testing::Test
 {
     protected:
-        TestSignal() { sihd::util::LoggerManager::basic(); }
+        TestSignal() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestSignal() { sihd::util::LoggerManager::clear_loggers(); }
 

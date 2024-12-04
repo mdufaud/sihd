@@ -15,7 +15,7 @@ using namespace sihd::util;
 class TestFS: public ::testing::Test
 {
     protected:
-        TestFS() { sihd::util::LoggerManager::basic(); }
+        TestFS() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestFS() { sihd::util::LoggerManager::clear_loggers(); }
 

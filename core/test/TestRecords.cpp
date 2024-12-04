@@ -18,7 +18,7 @@ using namespace sihd::util;
 class TestRecords: public ::testing::Test
 {
     protected:
-        TestRecords() { sihd::util::LoggerManager::basic(); }
+        TestRecords() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestRecords() { sihd::util::LoggerManager::clear_loggers(); }
 

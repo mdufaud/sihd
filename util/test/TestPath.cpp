@@ -14,7 +14,7 @@ using namespace sihd::util;
 class TestPath: public ::testing::Test
 {
     protected:
-        TestPath() { sihd::util::LoggerManager::basic(); }
+        TestPath() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestPath() { sihd::util::LoggerManager::clear_loggers(); }
 

@@ -163,7 +163,7 @@ static void http_test()
 
 int main()
 {
-    sihd::util::LoggerManager::basic();
+    sihd::util::LoggerManager::stream();
     demo::http_test();
     sihd::util::LoggerManager::clear_loggers();
     return 0;

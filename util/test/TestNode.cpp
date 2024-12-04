@@ -9,7 +9,7 @@ using namespace sihd::util;
 class TestNode: public ::testing::Test
 {
     protected:
-        TestNode() { sihd::util::LoggerManager::basic(); }
+        TestNode() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestNode() { sihd::util::LoggerManager::clear_loggers(); }
 

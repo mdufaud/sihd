@@ -30,7 +30,7 @@ class TestObservable: public ::testing::Test,
                       public IHandler<SomeObservable *>
 {
     protected:
-        TestObservable() { sihd::util::LoggerManager::basic(); }
+        TestObservable() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestObservable() { sihd::util::LoggerManager::clear_loggers(); }
 

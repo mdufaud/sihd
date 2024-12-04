@@ -1,17 +1,17 @@
-#include <sihd/util/SourceFilterLogger.hpp>
+#include <sihd/util/LoggerFilterSource.hpp>
 
 namespace sihd::util
 {
 
-SourceFilterLogger::SourceFilterLogger(const std::string & source, bool match_only):
+LoggerFilterSource::LoggerFilterSource(const std::string & source, bool match_only):
     source(source),
     match_only(match_only)
 {
 }
 
-SourceFilterLogger::~SourceFilterLogger() {}
+LoggerFilterSource::~LoggerFilterSource() {}
 
-bool SourceFilterLogger::filter(const LogInfo & info, std::string_view msg)
+bool LoggerFilterSource::filter(const LogInfo & info, std::string_view msg)
 {
     (void)msg;
     return this->match_only ? info.source.find(this->source) == std::string::npos

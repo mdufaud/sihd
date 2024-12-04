@@ -1,16 +1,16 @@
 #include <fmt/printf.h>
 
-#include <sihd/util/BasicLogger.hpp>
+#include <sihd/util/LoggerStream.hpp>
 #include <sihd/util/platform.hpp>
 
 namespace sihd::util
 {
 
-BasicLogger::BasicLogger(FILE *output, bool print_thread_id): print_thread_id(print_thread_id), _output(output) {}
+LoggerStream::LoggerStream(FILE *output, bool print_thread_id): print_thread_id(print_thread_id), _output(output) {}
 
-BasicLogger::~BasicLogger() {}
+LoggerStream::~LoggerStream() {}
 
-void BasicLogger::log(const LogInfo & info, std::string_view msg)
+void LoggerStream::log(const LogInfo & info, std::string_view msg)
 {
     std::string fmt_msg;
 

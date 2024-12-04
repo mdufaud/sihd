@@ -14,7 +14,7 @@ using namespace sihd::util;
 class TestCsv: public ::testing::Test
 {
     protected:
-        TestCsv() { sihd::util::LoggerManager::basic(); }
+        TestCsv() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestCsv() { sihd::util::LoggerManager::clear_loggers(); }
 

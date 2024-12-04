@@ -10,7 +10,7 @@ using namespace sihd::imgui;
 
 int main()
 {
-    LoggerManager::basic();
+    LoggerManager::stream();
 
     ImguiRunner imgui("imgui-runner");
     if (!imgui.init_imgui())

@@ -14,7 +14,7 @@ using namespace sihd::net;
 class TestIpAddr: public ::testing::Test
 {
     protected:
-        TestIpAddr() { sihd::util::LoggerManager::basic(); }
+        TestIpAddr() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestIpAddr() { sihd::util::LoggerManager::clear_loggers(); }
 

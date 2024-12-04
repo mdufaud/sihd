@@ -1,9 +1,9 @@
-#include <sihd/util/BasicLogger.hpp>
-#include <sihd/util/ConsoleLogger.hpp>
-#include <sihd/util/LevelFilterLogger.hpp>
+#include <sihd/util/LoggerConsole.hpp>
+#include <sihd/util/LoggerFilterLevel.hpp>
+#include <sihd/util/LoggerFilterSource.hpp>
 #include <sihd/util/LoggerManager.hpp>
-#include <sihd/util/SourceFilterLogger.hpp>
-#include <sihd/util/ThrowLogger.hpp>
+#include <sihd/util/LoggerStream.hpp>
+#include <sihd/util/LoggerThrow.hpp>
 #include <sihd/util/container.hpp>
 
 namespace sihd::util
@@ -101,28 +101,28 @@ void LoggerManager::clear_filters()
     _g_singleton.delete_filters();
 }
 
-void LoggerManager::basic(FILE *output, bool print_thread_id)
+void LoggerManager::stream(FILE *output, bool print_thread_id)
 {
-    LoggerManager::add(new BasicLogger(output, print_thread_id));
+    LoggerManager::add(new LoggerStream(output, print_thread_id));
 }
 
 void LoggerManager::console()
 {
-    LoggerManager::add(new ConsoleLogger());
+    LoggerManager::add(new LoggerConsole());
 }
 
 void LoggerManager::thrower(LogLevel filter_level, const std::string & filter_source)
 {
-    ThrowLogger *logger = new ThrowLogger();
+    LoggerThrow *logger = new LoggerThrow();
     if (filter_level != LogLevel::none)
     {
         constexpr bool match = false;
-        logger->add_filter(new LevelFilterLogger(filter_level, match));
+        logger->add_filter(new LoggerFilterLevel(filter_level, match));
     }
     if (filter_source.empty() == false)
     {
         constexpr bool match_only = false;
-        logger->add_filter(new SourceFilterLogger(filter_source, match_only));
+        logger->add_filter(new LoggerFilterSource(filter_source, match_only));
     }
     LoggerManager::add(logger);
 }

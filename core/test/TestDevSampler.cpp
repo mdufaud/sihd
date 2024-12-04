@@ -19,7 +19,7 @@ using namespace sihd::util;
 class TestDevSampler: public ::testing::Test
 {
     protected:
-        TestDevSampler() { LoggerManager::basic(); }
+        TestDevSampler() { LoggerManager::stream(); }
 
         virtual ~TestDevSampler() { LoggerManager::clear_loggers(); }
 

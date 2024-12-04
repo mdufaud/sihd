@@ -1,5 +1,5 @@
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/SysLogger.hpp>
+#include <sihd/util/LoggerSystem.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <exception>
@@ -12,7 +12,7 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-SysLogger::SysLogger(std::string_view progname, int options, int facility)
+LoggerSystem::LoggerSystem(std::string_view progname, int options, int facility)
 {
 #if !defined(__SIHD_WINDOWS__)
     openlog(progname.data(), options, facility);
@@ -27,7 +27,7 @@ SysLogger::SysLogger(std::string_view progname, int options, int facility)
 #endif
 }
 
-SysLogger::~SysLogger()
+LoggerSystem::~LoggerSystem()
 {
 #if !defined(__SIHD_WINDOWS__)
     closelog();
@@ -36,7 +36,7 @@ SysLogger::~SysLogger()
 #endif
 }
 
-void SysLogger::log(const LogInfo & info, std::string_view msg)
+void LoggerSystem::log(const LogInfo & info, std::string_view msg)
 {
 #if !defined(__SIHD_WINDOWS__)
     // loglevel is done same as syslog

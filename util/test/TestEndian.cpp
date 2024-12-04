@@ -9,7 +9,7 @@ using namespace sihd::util;
 class TestEndian: public ::testing::Test
 {
     protected:
-        TestEndian() { sihd::util::LoggerManager::basic(); }
+        TestEndian() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestEndian() { sihd::util::LoggerManager::clear_loggers(); }
 

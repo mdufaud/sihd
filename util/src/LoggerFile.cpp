@@ -1,21 +1,24 @@
 #include <fmt/printf.h>
 
-#include <sihd/util/FileLogger.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/LoggerFile.hpp>
 
 namespace sihd::util
 {
 
-FileLogger::FileLogger(const std::string & path, bool append)
+LoggerFile::LoggerFile(const std::string & path, bool append)
 {
     _file.buffering_line();
     _file.open(path, append ? "a" : "w");
 }
 
-FileLogger::~FileLogger() {}
+LoggerFile::~LoggerFile() {}
 
-void FileLogger::log(const LogInfo & info, std::string_view msg)
+void LoggerFile::log(const LogInfo & info, std::string_view msg)
 {
+    if (!_file.is_open())
+        return;
+
     std::string fmt_msg;
 
 // SEC.NANO [THREAD] LEVEL SRC MSG

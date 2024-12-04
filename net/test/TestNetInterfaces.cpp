@@ -13,7 +13,7 @@ using namespace sihd::net;
 class TestNetInterface: public ::testing::Test
 {
     protected:
-        TestNetInterface() { sihd::util::LoggerManager::basic(); }
+        TestNetInterface() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestNetInterface() { sihd::util::LoggerManager::clear_loggers(); }
 

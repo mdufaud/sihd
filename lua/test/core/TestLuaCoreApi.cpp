@@ -16,7 +16,7 @@ using namespace sihd::util;
 class TestLuaCoreApi: public ::testing::Test
 {
     protected:
-        TestLuaCoreApi() { sihd::util::LoggerManager::basic(); }
+        TestLuaCoreApi() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestLuaCoreApi() { sihd::util::LoggerManager::clear_loggers(); }
 

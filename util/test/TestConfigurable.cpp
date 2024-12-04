@@ -162,7 +162,7 @@ class ConfigurableObj: public Configurable
 class TestConfigurable: public ::testing::Test
 {
     protected:
-        TestConfigurable() { sihd::util::LoggerManager::basic(); }
+        TestConfigurable() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestConfigurable() { sihd::util::LoggerManager::clear_loggers(); }
 

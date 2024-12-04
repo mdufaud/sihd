@@ -13,7 +13,7 @@ using namespace sihd::util;
 class TestArray: public ::testing::Test
 {
     protected:
-        TestArray() { sihd::util::LoggerManager::basic(); }
+        TestArray() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestArray() { sihd::util::LoggerManager::clear_loggers(); }
 

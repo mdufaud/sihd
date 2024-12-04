@@ -22,7 +22,7 @@ using namespace sihd::util;
 class TestSharedMemory: public ::testing::Test
 {
     protected:
-        TestSharedMemory() { sihd::util::LoggerManager::basic(); }
+        TestSharedMemory() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestSharedMemory() { sihd::util::LoggerManager::clear_loggers(); }
 

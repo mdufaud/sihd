@@ -20,7 +20,7 @@ using namespace sihd::util;
 class TestZip: public ::testing::Test
 {
     protected:
-        TestZip() { sihd::util::LoggerManager::basic(); }
+        TestZip() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestZip() { sihd::util::LoggerManager::clear_loggers(); }
 

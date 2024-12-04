@@ -32,7 +32,7 @@ int ret_args(int a, int b)
 class TestCallback: public ::testing::Test
 {
     protected:
-        TestCallback() { sihd::util::LoggerManager::basic(); }
+        TestCallback() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestCallback() { sihd::util::LoggerManager::clear_loggers(); }
 

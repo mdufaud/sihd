@@ -10,7 +10,7 @@ using namespace sihd::core;
 class TestDevice: public ::testing::Test
 {
     protected:
-        TestDevice() { sihd::util::LoggerManager::basic(); }
+        TestDevice() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestDevice() { sihd::util::LoggerManager::clear_loggers(); }
 

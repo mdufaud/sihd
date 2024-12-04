@@ -14,7 +14,7 @@ using namespace sihd::util;
 class TestSshShell: public ::testing::Test
 {
     protected:
-        TestSshShell() { sihd::util::LoggerManager::basic(); }
+        TestSshShell() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestSshShell() { sihd::util::LoggerManager::clear_loggers(); }
 

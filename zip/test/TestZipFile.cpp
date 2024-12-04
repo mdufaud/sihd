@@ -17,7 +17,7 @@ using namespace sihd::util;
 class TestZipFile: public ::testing::Test
 {
     protected:
-        TestZipFile() { sihd::util::LoggerManager::basic(); }
+        TestZipFile() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestZipFile() { sihd::util::LoggerManager::clear_loggers(); }
 

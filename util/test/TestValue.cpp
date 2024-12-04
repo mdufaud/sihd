@@ -13,7 +13,7 @@ using namespace sihd::util;
 class TestValue: public ::testing::Test
 {
     protected:
-        TestValue() { sihd::util::LoggerManager::basic(); }
+        TestValue() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestValue() { sihd::util::LoggerManager::clear_loggers(); }
 

@@ -17,7 +17,7 @@ using namespace sihd::util;
 class TestDevMessage: public ::testing::Test
 {
     protected:
-        TestDevMessage() { sihd::util::LoggerManager::basic(); }
+        TestDevMessage() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestDevMessage() { sihd::util::LoggerManager::clear_loggers(); }
 

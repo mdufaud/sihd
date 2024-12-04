@@ -24,7 +24,7 @@ using namespace sihd::util;
 class TestHttpServer: public ::testing::Test
 {
     protected:
-        TestHttpServer() { sihd::util::LoggerManager::basic(); }
+        TestHttpServer() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestHttpServer() { sihd::util::LoggerManager::clear_loggers(); }
 

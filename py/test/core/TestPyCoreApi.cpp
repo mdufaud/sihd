@@ -19,7 +19,7 @@ using namespace sihd::py;
 class TestPyCoreApi: public ::testing::Test
 {
     protected:
-        TestPyCoreApi() { sihd::util::LoggerManager::basic(); }
+        TestPyCoreApi() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestPyCoreApi() { sihd::util::LoggerManager::clear_loggers(); }
 

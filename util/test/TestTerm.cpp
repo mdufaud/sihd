@@ -12,7 +12,7 @@ using namespace sihd::util;
 class TestTerm: public ::testing::Test
 {
     protected:
-        TestTerm() { sihd::util::LoggerManager::basic(); }
+        TestTerm() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestTerm() { sihd::util::LoggerManager::clear_loggers(); }
 

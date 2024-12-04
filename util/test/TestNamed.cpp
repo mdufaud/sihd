@@ -10,7 +10,7 @@ using namespace sihd::util;
 class TestNamed: public ::testing::Test
 {
     protected:
-        TestNamed() { sihd::util::LoggerManager::basic(); }
+        TestNamed() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestNamed() { sihd::util::LoggerManager::clear_loggers(); }
 

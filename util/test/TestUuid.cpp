@@ -14,7 +14,7 @@ using namespace sihd::util;
 class TestUuid: public ::testing::Test
 {
     protected:
-        TestUuid() { sihd::util::LoggerManager::basic(); }
+        TestUuid() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestUuid() { sihd::util::LoggerManager::clear_loggers(); }
 

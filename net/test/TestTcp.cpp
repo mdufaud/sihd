@@ -15,7 +15,7 @@ using namespace sihd::net;
 class TestTcp: public ::testing::Test
 {
     protected:
-        TestTcp() { sihd::util::LoggerManager::basic(); }
+        TestTcp() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestTcp() { sihd::util::LoggerManager::clear_loggers(); }
 

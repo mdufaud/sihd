@@ -15,7 +15,7 @@ using namespace sihd::util;
 class TestPcap: public ::testing::Test
 {
     protected:
-        TestPcap() { sihd::util::LoggerManager::basic(); }
+        TestPcap() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestPcap() { sihd::util::LoggerManager::clear_loggers(); }
 

@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 #include <sihd/util/ALogger.hpp>
-#include <sihd/util/BasicLogger.hpp>
-#include <sihd/util/LevelFilterLogger.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/SourceFilterLogger.hpp>
+#include <sihd/util/LoggerBasic.hpp>
+#include <sihd/util/LoggerFilterLevel.hpp>
+#include <sihd/util/LoggerFilterSource.hpp>
 
 namespace test
 {
@@ -72,7 +72,7 @@ TEST_F(TestLogger, test_logger_basic)
 {
     Logger log("test::logger");
 
-    LoggerManager::add(new BasicLogger());
+    LoggerManager::add(new LoggerStream());
     log.log(sihd::util::LogLevel::info, "test");
     ASSERT_EQ(log_counter->src, "test::logger");
     ASSERT_EQ(log_counter->msg, "test");
@@ -92,7 +92,7 @@ TEST_F(TestLogger, test_logger_basic)
 
 TEST_F(TestLogger, test_logger_macros)
 {
-    LoggerManager::add(new BasicLogger());
+    LoggerManager::add(new LoggerStream());
     SIHD_LOG(debug, "DEBUG");
     SIHD_LOG(info, "INFO");
     SIHD_LOG(warning, "WARNING");
@@ -114,10 +114,10 @@ TEST_F(TestLogger, test_logger_macros)
 
 TEST_F(TestLogger, test_logger_filters)
 {
-    auto logger = new BasicLogger(stderr, true);
+    auto logger = new LoggerStream(stderr, true);
     LoggerManager::add(logger);
-    logger->add_filter(new LevelFilterLogger(LogLevel::warning));
-    log_counter->add_filter(new LevelFilterLogger(LogLevel::warning));
+    logger->add_filter(new LoggerFilterLevel(LogLevel::warning));
+    log_counter->add_filter(new LoggerFilterLevel(LogLevel::warning));
     SIHD_LOG(error, "Should print");
     ASSERT_EQ(log_counter->error, 1);
     SIHD_LOG(warning, "Should print");
@@ -129,19 +129,19 @@ TEST_F(TestLogger, test_logger_filters)
     logger->delete_filters();
     log_counter->delete_filters();
 
-    LoggerManager::filter(new LevelFilterLogger("CRITICAL"));
+    LoggerManager::filter(new LoggerFilterLevel("CRITICAL"));
     SIHD_LOG(critical, "Should print");
     ASSERT_EQ(log_counter->critical, 1);
     SIHD_LOG(error, "Should not print");
     ASSERT_EQ(log_counter->error, 1);
     LoggerManager::clear_filters();
 
-    LoggerManager::filter(new SourceFilterLogger("test"));
+    LoggerManager::filter(new LoggerFilterSource("test"));
     SIHD_LOG(critical, "Should not print");
     ASSERT_EQ(log_counter->critical, 1);
     LoggerManager::clear_filters();
 
-    LoggerManager::filter(new SourceFilterLogger("other"));
+    LoggerManager::filter(new LoggerFilterSource("other"));
     SIHD_LOG(debug, "Should print");
     ASSERT_EQ(log_counter->debug, 1);
 }

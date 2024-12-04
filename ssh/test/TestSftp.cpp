@@ -15,7 +15,7 @@ using namespace sihd::util;
 class TestSftp: public ::testing::Test
 {
     protected:
-        TestSftp() { sihd::util::LoggerManager::basic(); }
+        TestSftp() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestSftp() { sihd::util::LoggerManager::clear_loggers(); }
 

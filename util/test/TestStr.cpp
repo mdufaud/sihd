@@ -18,7 +18,7 @@ SIHD_LOGGER;
 class TestStr: public ::testing::Test
 {
     protected:
-        TestStr() { sihd::util::LoggerManager::basic(); }
+        TestStr() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestStr() { sihd::util::LoggerManager::clear_loggers(); }
 

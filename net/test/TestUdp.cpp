@@ -15,7 +15,7 @@ using namespace sihd::net;
 class TestUdp: public ::testing::Test
 {
     protected:
-        TestUdp() { sihd::util::LoggerManager::basic(); }
+        TestUdp() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestUdp() { sihd::util::LoggerManager::clear_loggers(); }
 

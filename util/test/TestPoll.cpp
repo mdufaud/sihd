@@ -10,7 +10,7 @@ using namespace sihd::util;
 class TestPoll: public ::testing::Test
 {
     protected:
-        TestPoll() { sihd::util::LoggerManager::basic(); }
+        TestPoll() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestPoll() { sihd::util::LoggerManager::clear_loggers(); }
 

@@ -1,7 +1,7 @@
 #include <fmt/format.h>
 
-#include <sihd/util/ConsoleLogger.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/LoggerConsole.hpp>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
@@ -10,11 +10,11 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-ConsoleLogger::ConsoleLogger() {}
+LoggerConsole::LoggerConsole() {}
 
-ConsoleLogger::~ConsoleLogger() {}
+LoggerConsole::~LoggerConsole() {}
 
-void ConsoleLogger::log(const LogInfo & info, std::string_view msg)
+void LoggerConsole::log(const LogInfo & info, std::string_view msg)
 {
     const char *beg;
     const char *level;

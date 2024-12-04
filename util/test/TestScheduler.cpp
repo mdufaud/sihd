@@ -15,7 +15,7 @@ class TestScheduler: public ::testing::Test,
                      public IRunnable
 {
     protected:
-        TestScheduler() { sihd::util::LoggerManager::basic(); }
+        TestScheduler() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestScheduler() { sihd::util::LoggerManager::clear_loggers(); }
 

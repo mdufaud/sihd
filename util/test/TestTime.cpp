@@ -12,7 +12,7 @@ using namespace sihd::util;
 class TestTime: public ::testing::Test
 {
     protected:
-        TestTime() { sihd::util::LoggerManager::basic(); }
+        TestTime() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestTime() { sihd::util::LoggerManager::clear_loggers(); }
 

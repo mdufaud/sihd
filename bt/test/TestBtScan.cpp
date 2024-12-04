@@ -18,7 +18,7 @@ using namespace sihd::util;
 class TestBtScan: public ::testing::Test
 {
     protected:
-        TestBtScan() { sihd::util::LoggerManager::basic(); }
+        TestBtScan() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestBtScan() { sihd::util::LoggerManager::clear_loggers(); }
 

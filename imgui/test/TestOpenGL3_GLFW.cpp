@@ -17,7 +17,7 @@ using namespace sihd::util;
 class TestOpenGL3_GLFW: public ::testing::Test
 {
     protected:
-        TestOpenGL3_GLFW() { sihd::util::LoggerManager::basic(); }
+        TestOpenGL3_GLFW() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestOpenGL3_GLFW() { sihd::util::LoggerManager::clear_loggers(); }
 

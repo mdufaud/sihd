@@ -13,7 +13,7 @@ using namespace sihd::util;
 class TestSniffer: public ::testing::Test
 {
     protected:
-        TestSniffer() { sihd::util::LoggerManager::basic(); }
+        TestSniffer() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestSniffer() { sihd::util::LoggerManager::clear_loggers(); }
 

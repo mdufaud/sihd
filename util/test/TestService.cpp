@@ -115,7 +115,7 @@ class TestService: public ::testing::Test,
                    public IHandler<ServiceController *>
 {
     protected:
-        TestService() { sihd::util::LoggerManager::basic(); }
+        TestService() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestService() { sihd::util::LoggerManager::clear_loggers(); }
 

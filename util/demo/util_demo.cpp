@@ -316,7 +316,7 @@ int main(int argc, char **argv)
     if (term::is_interactive() && os::is_unix && !os::is_emscripten)
         LoggerManager::console();
     else
-        LoggerManager::basic(os::is_emscripten ? stdout : stderr);
+        LoggerManager::stream(os::is_emscripten ? stdout : stderr);
 
     demo::time();
     demo::os();

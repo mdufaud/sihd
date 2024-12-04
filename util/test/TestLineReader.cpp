@@ -14,7 +14,7 @@ class TestLineReader: public ::testing::Test
     protected:
         TestLineReader()
         {
-            sihd::util::LoggerManager::basic();
+            sihd::util::LoggerManager::stream();
             ::srand(::time(NULL));
         }
 

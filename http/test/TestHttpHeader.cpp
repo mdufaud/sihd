@@ -18,7 +18,7 @@ using namespace sihd::util;
 class TestHttpHeader: public ::testing::Test
 {
     protected:
-        TestHttpHeader() { sihd::util::LoggerManager::basic(); }
+        TestHttpHeader() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestHttpHeader() { sihd::util::LoggerManager::clear_loggers(); }
 

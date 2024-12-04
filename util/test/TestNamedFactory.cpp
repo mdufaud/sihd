@@ -11,7 +11,7 @@ using namespace sihd::util;
 class TestNamedFactory: public ::testing::Test
 {
     protected:
-        TestNamedFactory() { sihd::util::LoggerManager::basic(); }
+        TestNamedFactory() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestNamedFactory() { sihd::util::LoggerManager::clear_loggers(); }
 

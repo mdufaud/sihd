@@ -16,7 +16,7 @@ using namespace sihd::util;
 class TestDevFilter: public ::testing::Test
 {
     protected:
-        TestDevFilter() { sihd::util::LoggerManager::basic(); }
+        TestDevFilter() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestDevFilter() { sihd::util::LoggerManager::clear_loggers(); }
 

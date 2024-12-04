@@ -9,7 +9,7 @@ using namespace sihd::util;
 class TestSplitter: public ::testing::Test
 {
     protected:
-        TestSplitter() { sihd::util::LoggerManager::basic(); }
+        TestSplitter() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestSplitter() { sihd::util::LoggerManager::clear_loggers(); }
 

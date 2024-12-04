@@ -15,7 +15,7 @@ using namespace sihd::util;
 class TestProviders: public ::testing::Test
 {
     protected:
-        TestProviders() { sihd::util::LoggerManager::basic(); }
+        TestProviders() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestProviders() { sihd::util::LoggerManager::clear_loggers(); }
 

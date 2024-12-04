@@ -12,7 +12,7 @@ using namespace sihd::net;
 class TestSocket: public ::testing::Test
 {
     protected:
-        TestSocket() { sihd::util::LoggerManager::basic(); }
+        TestSocket() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestSocket() { sihd::util::LoggerManager::clear_loggers(); }
 

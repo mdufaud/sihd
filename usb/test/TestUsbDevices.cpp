@@ -300,7 +300,7 @@ using namespace sihd::util;
 class TestUsbDevices: public ::testing::Test
 {
     protected:
-        TestUsbDevices() { sihd::util::LoggerManager::basic(); }
+        TestUsbDevices() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestUsbDevices() { sihd::util::LoggerManager::clear_loggers(); }
 

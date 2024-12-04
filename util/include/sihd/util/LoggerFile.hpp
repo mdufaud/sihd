@@ -1,5 +1,5 @@
-#ifndef __SIHD_UTIL_FILELOGGER_HPP__
-#define __SIHD_UTIL_FILELOGGER_HPP__
+#ifndef __SIHD_UTIL_LOGGERFILE_HPP__
+#define __SIHD_UTIL_LOGGERFILE_HPP__
 
 #include <sihd/util/ALogger.hpp>
 #include <sihd/util/File.hpp>
@@ -7,11 +7,11 @@
 namespace sihd::util
 {
 
-class FileLogger: public ALogger
+class LoggerFile: public ALogger
 {
     public:
-        FileLogger(const std::string & path, bool append = true);
-        virtual ~FileLogger();
+        LoggerFile(const std::string & path, bool append = true);
+        virtual ~LoggerFile();
 
         virtual void log(const LogInfo & info, std::string_view msg) override;
 

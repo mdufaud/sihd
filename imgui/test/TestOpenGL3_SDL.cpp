@@ -17,7 +17,7 @@ using namespace sihd::util;
 class TestOpenGL3_SDL: public ::testing::Test
 {
     protected:
-        TestOpenGL3_SDL() { sihd::util::LoggerManager::basic(); }
+        TestOpenGL3_SDL() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestOpenGL3_SDL() { sihd::util::LoggerManager::clear_loggers(); }
 

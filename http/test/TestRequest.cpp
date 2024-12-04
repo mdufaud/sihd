@@ -18,7 +18,7 @@ using namespace sihd::util;
 class TestRequest: public ::testing::Test
 {
     protected:
-        TestRequest() { sihd::util::LoggerManager::basic(); }
+        TestRequest() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestRequest() { sihd::util::LoggerManager::clear_loggers(); }
 

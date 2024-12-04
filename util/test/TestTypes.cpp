@@ -9,7 +9,7 @@ using namespace sihd::util;
 class TestTypes: public ::testing::Test
 {
     protected:
-        TestTypes() { sihd::util::LoggerManager::basic(); }
+        TestTypes() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestTypes() { sihd::util::LoggerManager::clear_loggers(); }
 

@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     if (term::is_interactive() && os::is_unix && !os::is_emscripten)
         LoggerManager::console();
     else
-        LoggerManager::basic();
+        LoggerManager::stream();
 
     SshSession session;
     const std::string user = result["user"].as<std::string>();

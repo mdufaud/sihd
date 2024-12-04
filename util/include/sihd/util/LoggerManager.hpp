@@ -46,7 +46,7 @@ class LoggerManager: public ALogFilterer
 
         static void log(const std::string & src, LogLevel level, std::string_view msg);
 
-        static void basic(FILE *output = stderr, bool print_thread_id = false);
+        static void stream(FILE *output = stderr, bool print_thread_id = false);
         static void console();
         static void thrower(LogLevel filter_level = LogLevel::none, const std::string & filter_source = "");
 

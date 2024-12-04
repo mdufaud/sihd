@@ -13,7 +13,7 @@ using namespace sihd::core;
 class TestDevPulsation: public ::testing::Test
 {
     protected:
-        TestDevPulsation() { sihd::util::LoggerManager::basic(); }
+        TestDevPulsation() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestDevPulsation() { sihd::util::LoggerManager::clear_loggers(); }
 

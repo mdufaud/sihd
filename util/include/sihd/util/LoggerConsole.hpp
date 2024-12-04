@@ -1,16 +1,16 @@
-#ifndef __SIHD_UTIL_CONSOLELOGGER_HPP__
-#define __SIHD_UTIL_CONSOLELOGGER_HPP__
+#ifndef __SIHD_UTIL_LOGGERCONSOLE_HPP__
+#define __SIHD_UTIL_LOGGERCONSOLE_HPP__
 
 #include <sihd/util/ALogger.hpp>
 
 namespace sihd::util
 {
 
-class ConsoleLogger: public ALogger
+class LoggerConsole: public ALogger
 {
     public:
-        ConsoleLogger();
-        virtual ~ConsoleLogger();
+        LoggerConsole();
+        virtual ~LoggerConsole();
 
         virtual void log(const LogInfo & info, std::string_view msg) override;
 

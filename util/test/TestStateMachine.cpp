@@ -27,7 +27,7 @@ enum State
 class TestStateMachine: public ::testing::Test
 {
     protected:
-        TestStateMachine() { sihd::util::LoggerManager::basic(); }
+        TestStateMachine() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestStateMachine() { sihd::util::LoggerManager::clear_loggers(); }
 
