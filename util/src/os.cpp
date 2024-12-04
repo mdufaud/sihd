@@ -14,6 +14,8 @@
 # include <winsock.h>
 # include <ws2def.h>
 
+# include <dbghelp.h> // backtrace
+
 # include <windows.h>
 
 #elif defined(__SIHD_APPLE__)
@@ -191,18 +193,21 @@ bool is_root()
 
 // backtrace not available in windows / android
 
-#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
+#ifndef SIHD_MAX_BACKTRACE_SIZE
+# define SIHD_MAX_BACKTRACE_SIZE 50
+#endif
 
-# ifndef SIHD_MAX_BACKTRACE_SIZE
-#  define SIHD_MAX_BACKTRACE_SIZE 50
-# endif
-
-# ifndef SIHD_DEFAULT_BACKTRACE_SIZE
-#  define SIHD_DEFAULT_BACKTRACE_SIZE 15
-# endif
+#ifndef SIHD_DEFAULT_BACKTRACE_SIZE
+# define SIHD_DEFAULT_BACKTRACE_SIZE 15
+#endif
 
 namespace
 {
+
+std::mutex g_backtrace_mutex;
+void *g_backtrace_buffer[SIHD_MAX_BACKTRACE_SIZE];
+
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 
 ssize_t write(int fd, const char *s)
 {
@@ -231,15 +236,18 @@ ssize_t write_number(int fd, int number)
     return ret + ::write(fd, &c, 1);
 }
 
-static void *backtrace_buffer[SIHD_MAX_BACKTRACE_SIZE];
+#endif
 
 } // namespace
 
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
+
 ssize_t backtrace(int fd, size_t backtrace_size)
 {
-    size_t wanted_size = std::min(backtrace_size, (size_t)SIHD_MAX_BACKTRACE_SIZE);
-    size_t size = ::backtrace(backtrace_buffer, wanted_size);
-    char **strings = (char **)backtrace_symbols(backtrace_buffer, size);
+    std::lock_guard l(g_backtrace_mutex);
+    const size_t wanted_size = std::min(backtrace_size, (size_t)SIHD_MAX_BACKTRACE_SIZE);
+    const size_t size = ::backtrace(g_backtrace_buffer, wanted_size);
+    char **strings = (char **)backtrace_symbols(g_backtrace_buffer, size);
     bool ret = write(fd, "backtrace (") > 0;
     ret = ret && write_number(fd, size) > 0;
     ret = ret && write_endl(fd, " calls)") > 0;
@@ -253,12 +261,75 @@ ssize_t backtrace(int fd, size_t backtrace_size)
     {
         ret = ret && write(fd, "[") > 0;
         ret = ret && write_number(fd, i) > 0;
-        ret = ret && write(fd, "]\t--> ") > 0;
+        // no allocation allowed and less write if possible
+        if (size >= 100)
+        {
+            if (i < 10)
+                ret = ret && write(fd, "]   ") > 0;
+            else if (i < 100)
+                ret = ret && write(fd, "]  ") > 0;
+            else
+                ret = ret && write(fd, "] ") > 0;
+        }
+        else if (size >= 10)
+        {
+            if (i < 10)
+                ret = ret && write(fd, "]  ") > 0;
+            else
+                ret = ret && write(fd, "] ") > 0;
+        }
+        else
+        {
+            ret = ret && write(fd, "] ") > 0;
+        }
         ret = ret && write_endl(fd, strings[i]) > 0;
         ++i;
     }
     free(strings);
     return size;
+}
+
+#elif defined(__SIHD_WINDOWS__)
+
+ssize_t backtrace(int fd, size_t backtrace_size)
+{
+    std::lock_guard l(g_backtrace_mutex);
+
+    HANDLE handle = (HANDLE)_get_osfhandle(fd);
+    if (handle == nullptr)
+        return -1;
+
+    unsigned int i;
+    unsigned short frames;
+    SYMBOL_INFO *symbol;
+    HANDLE process;
+
+    process = GetCurrentProcess();
+
+    SymInitialize(process, NULL, TRUE);
+
+    const size_t wanted_size = std::min(backtrace_size, (size_t)SIHD_MAX_BACKTRACE_SIZE);
+    frames = CaptureStackBackTrace(0, wanted_size, g_backtrace_buffer, NULL);
+    if (frames == 0)
+        return -1;
+    symbol = (SYMBOL_INFO *)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
+    if (symbol == nullptr)
+        return -1;
+    symbol->MaxNameLen = 255;
+    symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+
+    std::string str = fmt::format("backtrace ({} calls)\n", frames);
+    WriteFile(handle, str.c_str(), str.size(), NULL, NULL);
+    for (i = 0; i < frames; i++)
+    {
+        if (SymFromAddr(process, (DWORD64)(g_backtrace_buffer[i]), 0, symbol))
+            str = fmt::sprintf("[%i] %s [0x%0llX]\n", frames - i - 1, symbol->Name, symbol->Address);
+        else
+            str = fmt::sprintf("[%i] ??? []\n", frames - i - 1);
+        WriteFile(handle, str.c_str(), str.size(), NULL, NULL);
+    }
+    free(symbol);
+    return (ssize_t)frames;
 }
 
 #else // no backtrace
@@ -283,13 +354,12 @@ bool is_run_by_valgrind()
            && (strstr(ldpreload, "/valgrind/") != nullptr || strstr(ldpreload, "/vgpreload") != nullptr);
 }
 
-// https://stackoverflow.com/questions/3596781/how-to-detect-if-the-current-process-is-being-run-by-gdb
-
 bool is_run_by_debugger()
 {
 #if defined(__SIHD_EMSCRIPTEN__)
     return false;
 #elif !defined(__SIHD_WINDOWS__)
+    // https://stackoverflow.com/questions/3596781/how-to-detect-if-the-current-process-is-being-run-by-gdb
     char buf[4096];
 
     const int status_fd = open("/proc/self/status", O_RDONLY);

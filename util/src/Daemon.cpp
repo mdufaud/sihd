@@ -4,8 +4,8 @@
 #include <csignal>
 
 #include <sihd/util/Daemon.hpp>
-#include <sihd/util/FileLogger.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/LoggerFile.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/signal.hpp>

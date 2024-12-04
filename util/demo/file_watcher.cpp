@@ -1,10 +1,10 @@
 #include <cxxopts.hpp>
 #include <fmt/format.h>
 
-#include <sihd/util/BasicLogger.hpp>
 #include <sihd/util/FileWatcher.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/LoggerStream.hpp>
 #include <sihd/util/SigWaiter.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/str.hpp>

@@ -252,6 +252,7 @@ void screenshot()
         if (bitmap.save_bmp(path))
             SIHD_LOG(notice, "Saved bitmap to: {}", path);
     }
+    fmt::print("\n");
 }
 
 void process()
@@ -260,18 +261,21 @@ void process()
     proc::Options options({.timeout = std::chrono::milliseconds(100)});
     options.stdout_callback = [](std::string_view stdout_str) {
         fmt::print("=========================\n");
-        fmt::print("STDOUT: {}\n", stdout_str);
+        fmt::print("STDOUT:\n");
+        fmt::print("{}\n", stdout_str);
         fmt::print("=========================\n");
     };
     options.stderr_callback = [](std::string_view stderr_str) {
         fmt::print("=========================\n");
-        fmt::print("STDERR: {}\n", stderr_str);
+        fmt::print("STDERR:\n", stderr_str);
+        fmt::print("{}\n", stderr_str);
         fmt::print("=========================\n");
     };
 
     if constexpr (os::is_unix)
     {
         args.push_back("ls");
+        args.push_back("-l");
     }
 
     if constexpr (os::is_windows)
@@ -292,6 +296,13 @@ void process()
     {
         SIHD_LOG(error, "Process timeout");
     }
+    fmt::print("\n");
+}
+
+void backtrace()
+{
+    os::backtrace(1, 20);
+    fmt::print("\n");
 }
 
 } // namespace demo
@@ -329,6 +340,7 @@ int main(int argc, char **argv)
     demo::bitmap();
     demo::screenshot();
     demo::process();
+    demo::backtrace();
 
     demo::worker(result["worker-frequency"].as<double>());
 
