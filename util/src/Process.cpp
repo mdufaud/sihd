@@ -976,7 +976,7 @@ bool Process::_do_spawn(const std::vector<const char *> & argv, const std::vecto
     posix_spawn_file_actions_destroy(&actions);
     if (err != 0)
     {
-        SIHD_LOG(error, "Process: {}", strerror(errno));
+        SIHD_LOG(error, "Process: '{}': {}", argv[0], strerror(errno));
         return false;
     }
     _impl->process_watcher.pid = pid;
@@ -1090,7 +1090,7 @@ bool Process::execute()
 
     if (!_fun_to_execute && _argv.size() == 0)
     {
-        SIHD_LOG(error, "Process: Could not run process, no argv");
+        SIHD_LOG(error, "Process: Could not run process with no arguments");
         return false;
     }
 

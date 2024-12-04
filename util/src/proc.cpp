@@ -47,8 +47,8 @@ void configure_process(std::shared_ptr<Process> & proc_ptr, const Options & opti
 
 int do_execute(std::shared_ptr<Process> proc_ptr, Timestamp max_timeout)
 {
-    SteadyClock clock;
     constexpr int poll_timeout_ms = 10;
+    SteadyClock clock;
 
     // if process failed to execute return -1
     if (!proc_ptr->execute())
@@ -61,8 +61,10 @@ int do_execute(std::shared_ptr<Process> proc_ptr, Timestamp max_timeout)
     {
         // ensure reading the stdout/stderr
         if (has_to_poll)
+        {
             proc_ptr->read_pipes(poll_timeout_ms);
-            // check the process status - break the loop if exited
+        }
+        // check the process status - break the loop if exited
 #if !defined(__SIHD_WINDOWS__)
         proc_ptr->wait_any(WNOHANG);
 #else

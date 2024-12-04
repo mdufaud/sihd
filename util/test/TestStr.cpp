@@ -76,6 +76,21 @@ class TestStr: public ::testing::Test
         double _dval;
 };
 
+TEST_F(TestStr, test_str_search)
+{
+    const auto results = str::search({"paydays", "day", "moonday", "sunday", "survey"}, "sunday");
+    for (const auto & result : results)
+    {
+        fmt::print("{} - {}\n", result.first, result.second);
+    }
+    ASSERT_EQ(results.size(), 5u);
+    ASSERT_EQ(results[0].second, "sunday");
+    ASSERT_EQ(results[1].second, "survey");
+    ASSERT_EQ(results[2].second, "moonday");
+    ASSERT_EQ(results[3].second, "day");
+    ASSERT_EQ(results[4].second, "paydays");
+}
+
 TEST_F(TestStr, test_str_split_pair)
 {
     auto pair = str::split_pair_view("TOTO=titi", "=");

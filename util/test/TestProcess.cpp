@@ -526,7 +526,15 @@ TEST_F(TestProcess, test_process_exec_not_found)
 {
     auto exit_code = proc::execute({"not-a-binary-that-exists"});
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(200)), std::future_status::ready);
-    ASSERT_EQ(exit_code.get(), 255);
+    if (os::is_run_by_valgrind())
+    {
+        // Value 127 is returned by /bin/sh when the given command is not found within your PATH
+        ASSERT_EQ(exit_code.get(), 127);
+    }
+    else
+    {
+        ASSERT_EQ(exit_code.get(), 255);
+    }
 }
 
 } // namespace test

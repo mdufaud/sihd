@@ -25,7 +25,6 @@ bool Message::on_check_link(const std::string & name, Named *child)
 
 bool Message::on_add_child(const std::string & name, Named *child)
 {
-    (void)name;
     IMessageField *field = dynamic_cast<IMessageField *>(child);
     if (field != nullptr)
         _fields[name] = field;

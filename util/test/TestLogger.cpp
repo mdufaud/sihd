@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 #include <sihd/util/ALogger.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/LoggerBasic.hpp>
 #include <sihd/util/LoggerFilterLevel.hpp>
 #include <sihd/util/LoggerFilterSource.hpp>
+#include <sihd/util/LoggerStream.hpp>
 
 namespace test
 {

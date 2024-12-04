@@ -149,6 +149,9 @@ std::vector<std::string> hexdump_fmt(const IArray & arr, size_t cols = 8);
 std::vector<std::string> hexdump_fmt(const IArrayView & arr, size_t cols = 8);
 std::vector<std::string> hexdump_fmt(const void *mem, size_t size, size_t cols = 8);
 
+std::vector<std::pair<size_t, std::string>> search(const std::vector<std::string> & list,
+                                                   const std::string & selection);
+
 std::vector<std::string>
     to_columns(const std::vector<std::string> & words, size_t max_col_size, std::string_view join_with = " ");
 

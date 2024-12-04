@@ -35,6 +35,52 @@ std::mutex g_buffer_mutex;
 const size_t g_buffer_size = SIHD_UTIL_STR_BUFFER;
 char g_buffer[SIHD_UTIL_STR_BUFFER];
 
+size_t levenshtein_distance(std::string_view source,
+                            std::string_view target,
+                            size_t insert_cost = 3,
+                            size_t delete_cost = 4,
+                            size_t replace_cost = 2)
+{
+    // https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance
+    if (source.size() > target.size())
+    {
+        return levenshtein_distance(target, source, delete_cost, insert_cost, replace_cost);
+    }
+
+    const size_t min_size = source.size();
+    const size_t max_size = target.size();
+    std::vector<size_t> lev_dist(min_size + 1);
+
+    lev_dist[0] = 0;
+    for (size_t i = 1; i <= min_size; ++i)
+    {
+        lev_dist[i] = lev_dist[i - 1] + delete_cost;
+    }
+
+    for (size_t j = 1; j <= max_size; ++j)
+    {
+        size_t previous_diagonal = lev_dist[0], previous_diagonal_save;
+        lev_dist[0] += insert_cost;
+
+        for (size_t i = 1; i <= min_size; ++i)
+        {
+            previous_diagonal_save = lev_dist[i];
+            if (source[i - 1] == target[j - 1])
+            {
+                lev_dist[i] = previous_diagonal;
+            }
+            else
+            {
+                lev_dist[i] = std::min(std::min(lev_dist[i - 1] + delete_cost, lev_dist[i] + insert_cost),
+                                       previous_diagonal + replace_cost);
+            }
+            previous_diagonal = previous_diagonal_save;
+        }
+    }
+
+    return lev_dist[min_size];
+}
+
 std::string format_time(Timestamp timestamp, std::string_view format, bool localtime)
 {
     const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
@@ -1177,6 +1223,18 @@ std::vector<std::string>
         ++line_index;
     }
 
+    return ret;
+}
+
+std::vector<std::pair<size_t, std::string>> search(const std::vector<std::string> & list, const std::string & selection)
+{
+    std::vector<std::pair<size_t, std::string>> ret;
+    ret.reserve(list.size());
+    for (const auto & str : list)
+    {
+        ret.emplace_back(levenshtein_distance(str, selection), str);
+    }
+    std::sort(ret.begin(), ret.end(), [](const auto & pair1, const auto & pair2) { return pair1.first < pair2.first; });
     return ret;
 }
 
