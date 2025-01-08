@@ -274,7 +274,7 @@ void Poll::process_poll_results(int poll_return)
             {
                 PollEvent evt;
                 evt.fd = fd;
-                evt.closed = revt & POLLHUP;
+                evt.closed = revt & (POLLHUP | POLLRDHUP);
                 evt.error = revt & (POLLNVAL | POLLERR);
                 evt.readable = revt & (POLLIN | POLLPRI);
                 evt.writable = revt & POLLOUT;
