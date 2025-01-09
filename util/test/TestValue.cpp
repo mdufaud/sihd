@@ -27,8 +27,8 @@ TEST_F(TestValue, test_value_compare)
     Value v5(5);
     Value v10(10);
     Value v10_same(10);
-    Value v11_float(11.2);
-    Value v11_float_same(11.2);
+    Value v11_float(11.2f);
+    Value v11_float_same(11.2f);
 
     EXPECT_TRUE(v10 > v5);
     EXPECT_TRUE(v10 != v5);

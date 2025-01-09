@@ -22,19 +22,9 @@ class Value
         }
 
         Value(const uint8_t *buf, Type type);
-
         ~Value() = default;
 
-        template <typename T>
-        static Value create(const T & val)
-        {
-            Value ret;
-            ret.set<T>(val);
-            return ret;
-        }
-
         bool empty() const;
-
         void clear();
 
         template <typename T>
@@ -42,29 +32,20 @@ class Value
         {
             static_assert(std::is_fundamental<T>::value);
             this->type = Types::type<T>();
-            this->data = 0;
-            memcpy(&this->data, &val, sizeof(T));
+            this->data.n = val;
         }
 
         void set(const uint8_t *buf, Type type);
 
         bool from_bool_string(const std::string & str);
-
         bool from_char_string(const std::string & str);
-
         bool from_int_string(const std::string & str);
-
         bool from_float_string(const std::string & str);
-
         bool from_any_string(const std::string & str);
 
         std::string str() const;
 
         bool is_float() const;
-
-        float to_float() const;
-
-        double to_double() const;
 
         template <typename T>
         int compare(const T & cmp_val) const
@@ -73,21 +54,19 @@ class Value
             int64_t casted_cmp_val = cmp_val;
             if (this->type == TYPE_FLOAT)
             {
-                float float_val = this->to_float();
-                if (float_val == casted_cmp_val)
+                if (this->data.f == casted_cmp_val)
                     return 0;
-                return float_val < casted_cmp_val ? -1 : 1;
+                return this->data.f < casted_cmp_val ? -1 : 1;
             }
             else if (this->type == TYPE_DOUBLE)
             {
-                double double_val = this->to_double();
-                if (double_val == casted_cmp_val)
+                if (this->data.d == casted_cmp_val)
                     return 0;
-                return double_val < casted_cmp_val ? -1 : 1;
+                return this->data.d < casted_cmp_val ? -1 : 1;
             }
-            if (this->data == casted_cmp_val)
+            if (this->data.n == casted_cmp_val)
                 return 0;
-            return this->data < casted_cmp_val ? -1 : 1;
+            return this->data.n < casted_cmp_val ? -1 : 1;
         }
 
         int compare_float(float cmp_val) const;
@@ -132,12 +111,33 @@ class Value
         }
 
         Type type;
-        int64_t data;
+
+        union PrimitiveTypeHolder
+        {
+                int64_t n;
+                float f;
+                double d;
+        };
+        PrimitiveTypeHolder data;
 
     protected:
 
     private:
 };
+
+template <>
+void Value::set(float val)
+{
+    this->type = Type::TYPE_FLOAT;
+    this->data.f = val;
+}
+
+template <>
+void Value::set(double val)
+{
+    this->type = Type::TYPE_DOUBLE;
+    this->data.d = val;
+}
 
 template <>
 int Value::compare(const Value & val) const;
