@@ -20,10 +20,9 @@ namespace sihd::util::time
 
 namespace
 {
-std::atomic<bool> g_tz_is_set = false;
 
-#if defined(__SIHD_WINDOWS__)
-std::mutex unsafe_c_mutex;
+#if !defined(__SIHD_WINDOWS__)
+std::atomic<bool> g_tz_is_set = false;
 #endif
 } // namespace
 
@@ -154,6 +153,7 @@ struct tm to_tm(time_t nano, bool localtime)
 {
     time_t sec = nano / 1E9;
 #if defined(__SIHD_WINDOWS__)
+    static std::mutex unsafe_c_mutex;
     std::lock_guard l(unsafe_c_mutex);
     // make a copy
     return localtime ? *::localtime(&sec) : *::gmtime(&sec);

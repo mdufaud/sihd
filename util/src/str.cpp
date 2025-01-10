@@ -30,11 +30,6 @@ namespace sihd::util::str
 namespace
 {
 
-// format
-std::mutex g_buffer_mutex;
-const size_t g_buffer_size = SIHD_UTIL_STR_BUFFER;
-char g_buffer[SIHD_UTIL_STR_BUFFER];
-
 size_t levenshtein_distance(std::string_view source,
                             std::string_view target,
                             size_t insert_cost = 3,
@@ -83,11 +78,15 @@ size_t levenshtein_distance(std::string_view source,
 
 std::string format_time(Timestamp timestamp, std::string_view format, bool localtime)
 {
+    constexpr size_t buffer_size = SIHD_UTIL_STR_BUFFER;
+    static char buffer[SIHD_UTIL_STR_BUFFER];
+    static std::mutex buffer_mutex;
+
     const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
 
-    std::lock_guard<std::mutex> l(g_buffer_mutex);
-    const size_t ret = strftime(g_buffer, g_buffer_size, format.data(), &tm);
-    return std::string(g_buffer, ret);
+    std::lock_guard<std::mutex> l(buffer_mutex);
+    const size_t ret = strftime(buffer, buffer_size, format.data(), &tm);
+    return std::string(buffer, ret);
 }
 
 std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bool nano_resolution, bool localtime)
@@ -198,15 +197,19 @@ std::string demangle(std::string_view name)
 
 std::string format(std::string_view format, ...)
 {
+    constexpr size_t buffer_size = SIHD_UTIL_STR_BUFFER;
+    static char buffer[buffer_size];
+    static std::mutex buffer_mutex;
+
     std::string str;
     va_list args;
 
     va_start(args, format);
     {
-        std::lock_guard<std::mutex> l(g_buffer_mutex);
-        size_t ret = vsnprintf(g_buffer, g_buffer_size, format.data(), args);
-        ret = ret > g_buffer_size ? g_buffer_size : ret;
-        str.assign(g_buffer, ret);
+        std::lock_guard<std::mutex> l(buffer_mutex);
+        size_t ret = vsnprintf(buffer, buffer_size, format.data(), args);
+        ret = ret > buffer_size ? buffer_size : ret;
+        str.assign(buffer, ret);
     }
     va_end(args);
     return str;

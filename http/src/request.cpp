@@ -29,14 +29,14 @@ struct CurlHandler
         ~CurlHandler() { curl_global_cleanup(); }
 };
 
-static std::mutex g_curl_mutex;
-static std::unique_ptr<CurlHandler> g_curl_handler;
-
 void init_first_curl()
 {
-    std::lock_guard l(g_curl_mutex);
-    if (g_curl_handler.get() == nullptr)
-        g_curl_handler = std::make_unique<CurlHandler>();
+    static std::unique_ptr<CurlHandler> curl_handler;
+    static std::mutex curl_mutex;
+
+    std::lock_guard l(curl_mutex);
+    if (curl_handler.get() == nullptr)
+        curl_handler = std::make_unique<CurlHandler>();
 }
 
 size_t curl_content_callback(char *ptr, size_t size, size_t nmemb, void *userdata)

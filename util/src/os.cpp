@@ -204,9 +204,6 @@ bool is_root()
 namespace
 {
 
-std::mutex g_backtrace_mutex;
-void *g_backtrace_buffer[SIHD_MAX_BACKTRACE_SIZE];
-
 #if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 
 ssize_t write(int fd, const char *s)
@@ -244,10 +241,14 @@ ssize_t write_number(int fd, int number)
 
 ssize_t backtrace(int fd, size_t backtrace_size)
 {
-    std::lock_guard l(g_backtrace_mutex);
-    const size_t wanted_size = std::min(backtrace_size, (size_t)SIHD_MAX_BACKTRACE_SIZE);
-    const size_t size = ::backtrace(g_backtrace_buffer, wanted_size);
-    char **strings = (char **)backtrace_symbols(g_backtrace_buffer, size);
+    constexpr size_t buffer_size = SIHD_MAX_BACKTRACE_SIZE;
+    static void *buffer[buffer_size];
+    static std::mutex buffer_mutex;
+
+    std::lock_guard l(buffer_mutex);
+    const size_t wanted_size = std::min(backtrace_size, buffer_size);
+    const size_t size = ::backtrace(buffer, wanted_size);
+    char **strings = (char **)backtrace_symbols(buffer, size);
     bool ret = write(fd, "backtrace (") > 0;
     ret = ret && write_number(fd, size) > 0;
     ret = ret && write_endl(fd, " calls)") > 0;
@@ -293,7 +294,9 @@ ssize_t backtrace(int fd, size_t backtrace_size)
 
 ssize_t backtrace(int fd, size_t backtrace_size)
 {
-    std::lock_guard l(g_backtrace_mutex);
+    constexpr size_t buffer_size = SIHD_MAX_BACKTRACE_SIZE;
+    static void *buffer[buffer_size];
+    static std::mutex buffer_mutex;
 
     HANDLE handle = (HANDLE)_get_osfhandle(fd);
     if (handle == nullptr)
@@ -308,8 +311,9 @@ ssize_t backtrace(int fd, size_t backtrace_size)
 
     SymInitialize(process, NULL, TRUE);
 
-    const size_t wanted_size = std::min(backtrace_size, (size_t)SIHD_MAX_BACKTRACE_SIZE);
-    frames = CaptureStackBackTrace(0, wanted_size, g_backtrace_buffer, NULL);
+    std::lock_guard l(buffer_mutex);
+    const size_t wanted_size = std::min(backtrace_size, buffer_size);
+    frames = CaptureStackBackTrace(0, wanted_size, buffer, NULL);
     if (frames == 0)
         return -1;
     symbol = (SYMBOL_INFO *)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
@@ -322,7 +326,7 @@ ssize_t backtrace(int fd, size_t backtrace_size)
     WriteFile(handle, str.c_str(), str.size(), NULL, NULL);
     for (i = 0; i < frames; i++)
     {
-        if (SymFromAddr(process, (DWORD64)(g_backtrace_buffer[i]), 0, symbol))
+        if (SymFromAddr(process, (DWORD64)(buffer[i]), 0, symbol))
             str = fmt::sprintf("[%i] %s [0x%0llX]\n", frames - i - 1, symbol->Name, symbol->Address);
         else
             str = fmt::sprintf("[%i] ??? []\n", frames - i - 1);
