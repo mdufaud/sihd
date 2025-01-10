@@ -50,7 +50,7 @@ class DevFilter: public sihd::core::Device
                 Rule & trigger(size_t idx, T val)
                 {
                     this->trigger_idx = idx;
-                    this->trigger_value.set<T>(val);
+                    this->trigger_value = val;
                     return *this;
                 }
 
@@ -59,7 +59,7 @@ class DevFilter: public sihd::core::Device
                 {
                     this->write_idx = idx;
                     this->write_same_value = false;
-                    this->write_value.set<T>(val);
+                    this->write_value = val;
                     return *this;
                 }
 

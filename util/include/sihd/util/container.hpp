@@ -253,7 +253,7 @@ std::vector<ReturnType> transform_if(const Container & container, Predicate && p
     {
         if (pred(elem))
         {
-            output.push_back(transform(elem));
+            output.emplace_back(transform(elem));
         }
     }
 

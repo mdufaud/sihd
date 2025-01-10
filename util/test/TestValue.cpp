@@ -22,12 +22,29 @@ class TestValue: public ::testing::Test
         virtual void TearDown() {}
 };
 
+TEST_F(TestValue, test_value_str)
+{
+    Value val;
+
+    val = Value::from_any_string("0x200");
+    EXPECT_FALSE(val.empty());
+    EXPECT_EQ(val.str(), "512");
+
+    val = Value::from_any_string("0b10");
+    EXPECT_FALSE(val.empty());
+    EXPECT_EQ(val.str(), "2");
+
+    val = Value::from_any_string("-1");
+    EXPECT_FALSE(val.empty());
+    EXPECT_EQ(val.str(), "-1");
+}
+
 TEST_F(TestValue, test_value_compare)
 {
     Value v5(5);
     Value v10(10);
-    Value v10_same(10);
-    Value v11_float(11.2f);
+    Value v10_same = 10;
+    Value v11_float = 11.2f;
     Value v11_float_same(11.2f);
 
     EXPECT_TRUE(v10 > v5);
@@ -52,30 +69,31 @@ TEST_F(TestValue, test_value_compare)
 
 TEST_F(TestValue, test_value_float)
 {
-    Value valf(3.124f);
+    Value val(3.124f);
 
-    EXPECT_TRUE(valf > 3.123f);
-    EXPECT_TRUE(valf > 3.123);
-    EXPECT_TRUE(valf == 3.124f);
-    EXPECT_TRUE(valf == 3.124);
-    EXPECT_TRUE(valf < 3.125f);
-    EXPECT_TRUE(valf < 3.125);
+    EXPECT_TRUE(val > 3.123f);
+    EXPECT_TRUE(val > 3.123);
+    EXPECT_TRUE(val == 3.124f);
+    EXPECT_TRUE(val == 3.124);
+    EXPECT_TRUE(val < 3.125f);
+    EXPECT_TRUE(val < 3.125);
 
-    EXPECT_TRUE(valf < 4);
-    EXPECT_TRUE(valf > 3);
+    EXPECT_TRUE(val < 4);
+    EXPECT_TRUE(val > 3);
 
-    Value vald(6.28);
+    // double
+    val = 6.28;
 
-    EXPECT_TRUE(vald > 6.27);
-    EXPECT_TRUE(vald > 6.27f);
-    EXPECT_TRUE(vald == 6.28);
+    EXPECT_TRUE(val > 6.27);
+    EXPECT_TRUE(val > 6.27f);
+    EXPECT_TRUE(val == 6.28);
     // comparing to float requires higher epsilon than machine's
-    EXPECT_TRUE(vald.compare_float_epsilon(6.28f, 0.00001) == 0);
-    EXPECT_TRUE(vald < 6.29);
-    EXPECT_TRUE(vald < 6.29f);
+    EXPECT_TRUE(val.compare_float_epsilon(6.28f, 0.00001) == 0);
+    EXPECT_TRUE(val < 6.29);
+    EXPECT_TRUE(val < 6.29f);
 
-    EXPECT_TRUE(vald < 7);
-    EXPECT_TRUE(vald > 6);
+    EXPECT_TRUE(val < 7);
+    EXPECT_TRUE(val > 6);
 }
 
 TEST_F(TestValue, test_value_max)
@@ -96,24 +114,24 @@ TEST_F(TestValue, test_value)
     int64_t test64 = 64;
 
     Value val;
-    val.set(true);
+    val = true;
     EXPECT_TRUE(val == true);
     EXPECT_TRUE(val != false);
-    val.set('c');
+    val = 'c';
     EXPECT_TRUE(val == 'c');
     EXPECT_TRUE(val > 'b');
     EXPECT_TRUE(val < 'd');
-    val.set(test8);
+    val = test8;
     EXPECT_TRUE(val == test8);
     EXPECT_TRUE(val < test16);
     EXPECT_TRUE(val <= test16);
     EXPECT_FALSE(val > test16);
     EXPECT_FALSE(val >= test16);
-    val.set(test16);
+    val = test16;
     EXPECT_TRUE(val == test16);
-    val.set(test32);
+    val = test32;
     EXPECT_TRUE(val == test32);
-    val.set(test64);
+    val = test64;
     EXPECT_TRUE(val == test64);
 }
 

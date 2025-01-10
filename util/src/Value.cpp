@@ -7,7 +7,9 @@ Value::Value(): type(TYPE_NONE), data({.n = 0}) {}
 
 Value::Value(const uint8_t *buf, Type type)
 {
-    this->set(buf, type);
+    this->type = type;
+    this->data.n = 0;
+    memcpy(&this->data.n, buf, Types::type_size(type));
 }
 
 bool Value::empty() const
@@ -21,69 +23,95 @@ void Value::clear()
     this->data.n = 0;
 }
 
-void Value::set(const uint8_t *buf, Type type)
-{
-    this->type = type;
-    this->data.n = 0;
-    memcpy(&this->data.n, buf, Types::type_size(type));
-}
-
-bool Value::from_bool_string(const std::string & str)
+Value Value::from_bool_string(const std::string & str)
 {
     bool val;
-    bool ret = str::convert_from_string<bool>(str, val);
-    if (ret)
-        this->set<bool>(val);
-    return ret;
+    if (str::convert_from_string<bool>(str, val))
+        return Value(val);
+    return {};
 }
 
-bool Value::from_char_string(const std::string & str)
+Value Value::from_char_string(const std::string & str)
 {
     char val;
-    bool ret = str::convert_from_string<char>(str, val);
-    if (ret)
-        this->set<char>(val);
-    return ret;
+    if (str::convert_from_string<char>(str, val))
+        return Value(val);
+    return {};
 }
 
-bool Value::from_int_string(const std::string & str)
+Value Value::from_int_string(const std::string & str)
 {
-    bool ret = false;
+    constexpr uint16_t binary_base = 2;
+    constexpr uint16_t decimal_base = 10;
+    constexpr uint16_t hexa_base = 16;
+
+    uint16_t base = decimal_base;
+    uint8_t prefix_size = 0;
+    bool is_signed = true;
+
     if (str::starts_with(str, "0b"))
-        ret = str::convert_from_string<int64_t>(str.c_str() + 2, this->data.n, 2);
+    {
+        prefix_size = 2;
+        base = binary_base;
+    }
+    else if (str::starts_with(str, "0x"))
+    {
+        prefix_size = 2;
+        base = hexa_base;
+    }
+    else if (str::starts_with(str, "u"))
+    {
+        is_signed = false;
+        prefix_size = 1;
+    }
+
+    if (is_signed)
+    {
+        int64_t val;
+        if (str::convert_from_string<int64_t>(str.c_str() + prefix_size, val, base))
+            return Value(val);
+    }
     else
-        ret = str::convert_from_string<int64_t>(str, this->data.n);
-    if (ret)
-        this->type = TYPE_LONG;
-    return ret;
+    {
+        uint64_t val;
+        if (str::convert_from_string<uint64_t>(str.c_str() + prefix_size, val, base))
+            return Value(val);
+    }
+
+    return {};
 }
 
-bool Value::from_float_string(const std::string & str)
+Value Value::from_float_string(const std::string & str)
 {
     if (str.find('.') == std::string::npos)
-        return false;
-    bool ret = false;
+        return {};
     if (str::ends_with(str, "f"))
     {
         float f;
-        ret = str::convert_from_string<float>(str, f);
-        if (ret)
-            this->set<float>(f);
+        if (str::convert_from_string<float>(str, f))
+            return Value(f);
     }
     else
     {
         double dbl;
-        ret = str::convert_from_string<double>(str, dbl);
-        if (ret)
-            this->set<double>(dbl);
+        if (str::convert_from_string<double>(str, dbl))
+            return Value(dbl);
     }
-    return ret;
+    return {};
 }
 
-bool Value::from_any_string(const std::string & str)
+Value Value::from_any_string(const std::string & str)
 {
-    return this->from_float_string(str) || this->from_int_string(str) || this->from_bool_string(str)
-           || this->from_char_string(str);
+    Value ret;
+
+    ret = Value::from_float_string(str);
+    if (ret.empty())
+        ret = Value::from_int_string(str);
+    if (ret.empty())
+        ret = Value::from_bool_string(str);
+    if (ret.empty())
+        ret = Value::from_char_string(str);
+    return ret;
 }
 
 std::string Value::str() const

@@ -18,33 +18,35 @@ class Value
         template <typename T>
         Value(T val)
         {
-            this->set<T>(val);
-        }
-
-        Value(const uint8_t *buf, Type type);
-        ~Value() = default;
-
-        bool empty() const;
-        void clear();
-
-        template <typename T>
-        void set(T val)
-        {
             static_assert(std::is_fundamental<T>::value);
             this->type = Types::type<T>();
             this->data.n = val;
         }
 
-        void set(const uint8_t *buf, Type type);
+        Value(float val)
+        {
+            this->type = Type::TYPE_FLOAT;
+            this->data.f = val;
+        }
 
-        bool from_bool_string(const std::string & str);
-        bool from_char_string(const std::string & str);
-        bool from_int_string(const std::string & str);
-        bool from_float_string(const std::string & str);
-        bool from_any_string(const std::string & str);
+        Value(double val)
+        {
+            this->type = Type::TYPE_DOUBLE;
+            this->data.d = val;
+        }
 
+        Value(const uint8_t *buf, Type type);
+        ~Value() = default;
+
+        static Value from_bool_string(const std::string & str);
+        static Value from_char_string(const std::string & str);
+        static Value from_int_string(const std::string & str);
+        static Value from_float_string(const std::string & str);
+        static Value from_any_string(const std::string & str);
+
+        bool empty() const;
+        void clear();
         std::string str() const;
-
         bool is_float() const;
 
         template <typename T>
@@ -73,6 +75,13 @@ class Value
         int compare_double(double cmp_val) const;
         int compare_float_epsilon(float cmp_val, float epsilon) const;
         int compare_double_epsilon(double cmp_val, double epsilon) const;
+
+        template <typename T>
+        inline Value & operator=(const T & val)
+        {
+            *this = Value(val);
+            return *this;
+        }
 
         template <typename T>
         inline bool operator==(const T & val)
@@ -114,7 +123,15 @@ class Value
 
         union PrimitiveTypeHolder
         {
+                char c;
+                int8_t b;
+                uint8_t ub;
+                int16_t s;
+                uint16_t us;
+                int32_t i;
+                uint32_t ui;
                 int64_t n;
+                uint64_t un;
                 float f;
                 double d;
         };
@@ -124,20 +141,6 @@ class Value
 
     private:
 };
-
-template <>
-void Value::set(float val)
-{
-    this->type = Type::TYPE_FLOAT;
-    this->data.f = val;
-}
-
-template <>
-void Value::set(double val)
-{
-    this->type = Type::TYPE_DOUBLE;
-    this->data.d = val;
-}
 
 template <>
 int Value::compare(const Value & val) const;

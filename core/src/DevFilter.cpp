@@ -30,7 +30,7 @@ bool parse_options_config(DevFilter::Rule & rule, const util::StrConfiguration &
 
     if (key_match.has_value())
     {
-        if (sihd::util::str::convert_from_string<bool>(*key_match, rule.should_match) == false)
+        if (util::str::convert_from_string<bool>(*key_match, rule.should_match) == false)
         {
             SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_MATCH, *key_match);
             return false;
@@ -39,7 +39,7 @@ bool parse_options_config(DevFilter::Rule & rule, const util::StrConfiguration &
     if (key_delay.has_value())
     {
         double delay;
-        if (sihd::util::str::convert_from_string<double>(*key_delay, delay) == false)
+        if (util::str::convert_from_string<double>(*key_delay, delay) == false)
         {
             SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_DELAY, *key_delay);
             return false;
@@ -72,7 +72,8 @@ bool parse_trigger_config(DevFilter::Rule & rule, const util::StrConfiguration &
             return false;
         }
         rule.trigger_idx = 0;
-        if (rule.trigger_value.from_any_string(split_trigger[0]) == false)
+        rule.trigger_value = util::Value::from_any_string(split_trigger[0]);
+        if (rule.trigger_value.empty())
         {
             SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_trigger[0]);
             return false;
@@ -87,15 +88,19 @@ bool parse_trigger_config(DevFilter::Rule & rule, const util::StrConfiguration &
             return false;
         }
         if (split_trigger[0].empty() == false
-            && sihd::util::str::convert_from_string<size_t>(split_trigger[0], rule.trigger_idx) == false)
+            && util::str::convert_from_string<size_t>(split_trigger[0], rule.trigger_idx) == false)
         {
             SIHD_LOG(error, "DevFilter: cannot convert trigger idx: {}", split_trigger[0]);
             return false;
         }
-        if (split_trigger[1].empty() == false && rule.trigger_value.from_any_string(split_trigger[1]) == false)
+        if (split_trigger[1].empty() == false)
         {
-            SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_trigger[1]);
-            return false;
+            rule.trigger_value = util::Value::from_any_string(split_trigger[1]);
+            if (rule.trigger_value.empty())
+            {
+                SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_trigger[1]);
+                return false;
+            }
         }
     }
     return true;
@@ -131,7 +136,8 @@ bool parse_write_config(DevFilter::Rule & rule, const util::StrConfiguration & c
         }
         rule.write_idx = rule.trigger_idx;
         rule.write_same_value = false;
-        if (rule.write_value.from_any_string(split_write[0]) == false)
+        rule.write_value = util::Value::from_any_string(split_write[0]);
+        if (rule.write_value.empty())
         {
             SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_write[0]);
             return false;
@@ -146,16 +152,20 @@ bool parse_write_config(DevFilter::Rule & rule, const util::StrConfiguration & c
             return false;
         }
         if (split_write[0].empty() == false
-            && sihd::util::str::convert_from_string<size_t>(split_write[0], rule.write_idx) == false)
+            && util::str::convert_from_string<size_t>(split_write[0], rule.write_idx) == false)
         {
             SIHD_LOG(error, "DevFilter: cannot convert write idx: {}", split_write[0]);
             return false;
         }
         rule.write_same_value = split_write[1].empty();
-        if (rule.write_same_value == false && rule.write_value.from_any_string(split_write[1]) == false)
+        if (rule.write_same_value == false)
         {
-            SIHD_LOG(error, "DevFilter: cannot convert write value: {}", split_write[1]);
-            return false;
+            rule.write_value = util::Value::from_any_string(split_write[1]);
+            if (rule.write_value.empty())
+            {
+                SIHD_LOG(error, "DevFilter: cannot convert write value: {}", split_write[1]);
+                return false;
+            }
         }
     }
     return true;
@@ -271,20 +281,20 @@ void DevFilter::_apply_rule(const sihd::core::Channel *channel_in,
             matched = in_value <= rule_ptr->trigger_value;
             break;
         case ByteAnd:
-            matched = in_value.data & rule_ptr->trigger_value.data;
+            matched = in_value.data.n & rule_ptr->trigger_value.data.n;
             break;
         case ByteOr:
-            matched = in_value.data | rule_ptr->trigger_value.data;
+            matched = in_value.data.n | rule_ptr->trigger_value.data.n;
             break;
         case ByteXor:
-            matched = in_value.data ^ rule_ptr->trigger_value.data;
+            matched = in_value.data.n ^ rule_ptr->trigger_value.data.n;
             break;
         default:
             break;
     }
     if (rule_ptr->should_match == matched)
     {
-        int64_t out_val = rule_ptr->write_same_value ? in_value.data : rule_ptr->write_value.data;
+        int64_t out_val = rule_ptr->write_same_value ? in_value.data.n : rule_ptr->write_value.data.n;
         if (rule_ptr->nano_delay > 0 && _scheduler_ptr != nullptr)
             _scheduler_ptr->add_task(new DelayWriter(this, channel_out, rule_ptr, out_val));
         else
