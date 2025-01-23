@@ -46,6 +46,6 @@ TEST_F(TestPath, test_path_get)
     path::clear("sihd-test");
     EXPECT_EQ(path::get("sihd-test", "file.txt"), "");
 
-    SIHD_TRACEF(path::find("test/TestPath.cpp"));
+    SIHD_TRACEV(path::find("test/TestPath.cpp"));
 }
 } // namespace test

@@ -39,21 +39,21 @@ struct X11Display
 
 bool x11_is_window_readable(XWindowAttributes gwa)
 {
-    SIHD_TRACEF(gwa.map_installed);
-    SIHD_TRACEF(InputOutput);
-    SIHD_TRACEF(InputOnly);
-    SIHD_TRACEF(gwa.c_class);
-    SIHD_TRACEF(IsUnmapped);
-    SIHD_TRACEF(IsUnviewable);
-    SIHD_TRACEF(IsViewable);
-    SIHD_TRACEF(gwa.map_state);
-    SIHD_TRACEF(gwa.x);
-    SIHD_TRACEF(gwa.y);
-    SIHD_TRACEF(gwa.width);
-    SIHD_TRACEF(gwa.height);
-    SIHD_TRACEF(gwa.backing_store);
-    SIHD_TRACEF(gwa.depth);
-    SIHD_TRACEF(gwa.root);
+    SIHD_TRACEV(gwa.map_installed);
+    SIHD_TRACEV(InputOutput);
+    SIHD_TRACEV(InputOnly);
+    SIHD_TRACEV(gwa.c_class);
+    SIHD_TRACEV(IsUnmapped);
+    SIHD_TRACEV(IsUnviewable);
+    SIHD_TRACEV(IsViewable);
+    SIHD_TRACEV(gwa.map_state);
+    SIHD_TRACEV(gwa.x);
+    SIHD_TRACEV(gwa.y);
+    SIHD_TRACEV(gwa.width);
+    SIHD_TRACEV(gwa.height);
+    SIHD_TRACEV(gwa.backing_store);
+    SIHD_TRACEV(gwa.depth);
+    SIHD_TRACEV(gwa.root);
     return gwa.c_class == InputOutput && gwa.map_state == IsViewable && gwa.map_installed == 0;
 }
 

@@ -259,11 +259,12 @@ std::string make_tmp_directory(std::string_view prefix)
 #else
     if (prefix.size() + 6 > PATH_MAX)
         throw std::runtime_error(fmt::format("Path too long: {}", prefix));
-    char path[prefix.size() + 6 + 1];
-    path[0] = 0;
-    strcpy(path, prefix.data());
-    strcpy(path + prefix.size(), "XXXXXX");
-    if (mkdtemp(path) != nullptr)
+
+    std::string path;
+    path.reserve(prefix.size() + 6 + 1);
+    path += prefix;
+    path += "XXXXXX";
+    if (mkdtemp(path.data()) != nullptr)
         return path;
 #endif
     return "";
@@ -600,7 +601,7 @@ bool are_equals(std::string_view path1, std::string_view path2)
         return false;
 
     ssize_t read_count;
-    size_t buffer_size = 4096;
+    constexpr size_t buffer_size = 4096;
     char buffer1[buffer_size];
     char buffer2[buffer_size];
     while ((read_count = file1.read(buffer1, buffer_size)) > 0)
@@ -640,20 +641,22 @@ std::optional<std::string> read(std::string_view path, size_t size, long offset)
 {
     File file(path, "r");
 
-    if (file.is_open())
+    if (!file.is_open())
+        return std::nullopt;
+
+    if (offset > 0)
+        file.seek_begin(offset);
+    else if (offset < 0)
+        file.seek_end(-offset);
+
+    ssize_t ret;
+    std::string str;
+    if ((ret = file.read(str, size)) > 0)
     {
-        if (offset > 0)
-            file.seek_begin(offset);
-        else if (offset < 0)
-            file.seek_end(-offset);
-        char buf[size + 1];
-        ssize_t ret;
-        if ((ret = file.read(buf, size)) > 0)
-        {
-            buf[ret] = 0;
-            return std::string(buf, ret);
-        }
+        str[ret] = 0;
+        return str;
     }
+
     return std::nullopt;
 }
 

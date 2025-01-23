@@ -221,7 +221,7 @@ void bitmap()
     bm2.read_bmp(first_bmp);
     bm2.save_bmp(second_bmp);
 
-    SIHD_TRACEF(fs::are_equals(first_bmp, second_bmp));
+    SIHD_TRACEV(fs::are_equals(first_bmp, second_bmp));
     fmt::print("\n");
 }
 

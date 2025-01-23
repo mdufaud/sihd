@@ -79,7 +79,9 @@ class File
         bool write_char_unlocked(int c);
 
         ssize_t read(void *buf, size_t size);
-        ssize_t read(std::string & str);
+        // read to string, because of short string optimization we can't use capacity()
+        ssize_t read(std::string & str, size_t size);
+        // read into Array using it's capacity()
         ssize_t read(IArray & array);
 
         ssize_t read_line(char **line, size_t *size);

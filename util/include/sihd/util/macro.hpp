@@ -8,11 +8,11 @@
 #define __SIHD_TODO__ __SIHD_LOC__ " [TODO] "
 
 #define SIHD_DIE_NE(res, expected)                                                                                     \
- if ((res) != (expected))                                                                                              \
- {                                                                                                                     \
-  throw std::runtime_error(__SIHD_LOC__                                                                                \
-                           " death on '" __SIHD_STRINGIFY__(res) "' != '" __SIHD_STRINGIFY__(expected) "'");           \
- }
+    if ((res) != (expected))                                                                                           \
+    {                                                                                                                  \
+        throw std::runtime_error(__SIHD_LOC__                                                                          \
+                                 " death on '" __SIHD_STRINGIFY__(res) "' != '" __SIHD_STRINGIFY__(expected) "'");     \
+    }
 
 #define SIHD_DIE_FALSE(res) SIHD_DIE_NE(res, true)
 

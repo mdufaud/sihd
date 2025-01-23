@@ -473,12 +473,14 @@ ssize_t File::read(void *buf, size_t size)
     return (ssize_t)ret;
 }
 
-ssize_t File::read(std::string & str)
+ssize_t File::read(std::string & str, size_t size)
 {
-    ssize_t ret = this->read(reinterpret_cast<char *>(str.data()), str.capacity());
+    str.resize(size);
+    ssize_t ret = this->read(reinterpret_cast<char *>(str.data()), size);
     if (ret >= 0)
-        return -1;
-    str.resize((size_t)ret);
+        str.resize((size_t)ret);
+    else
+        str.resize(0);
     return ret;
 }
 
@@ -486,7 +488,10 @@ ssize_t File::read(IArray & array)
 {
     ssize_t ret = this->read(reinterpret_cast<char *>(array.buf()), array.byte_capacity());
     if (ret >= 0 && array.byte_resize((size_t)ret) == false)
+    {
+        array.byte_resize(0);
         return -1;
+    }
     return ret;
 }
 

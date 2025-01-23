@@ -24,7 +24,7 @@ class TestChannel: public ::testing::Test,
 
         void handle(Channel *c)
         {
-            SIHD_TRACEF(c->array()->data_type_str());
+            SIHD_TRACEV(c->array()->data_type_str());
             if (c->array()->data_type() == TYPE_INT)
             {
                 const ArrInt *arr_int = dynamic_cast<const ArrInt *>(c->array());

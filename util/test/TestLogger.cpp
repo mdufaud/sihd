@@ -101,7 +101,7 @@ TEST_F(TestLogger, test_logger_macros)
     ASSERT_TRUE(this->has_logged_every_levels());
     ASSERT_EQ(log_counter->src, "test");
 
-    SIHD_TRACE("TEST TRACE");
+    SIHD_TRACEL("TEST TRACE");
     ASSERT_EQ(log_counter->debug, 2);
 
     SIHD_LOG(info, "fmt test: {} - {}", 1.23, "hello");
