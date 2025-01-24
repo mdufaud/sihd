@@ -274,7 +274,11 @@ void Poll::process_poll_results(int poll_return)
             {
                 PollEvent evt;
                 evt.fd = fd;
+#if defined(__SIHD_WINDOWS__)
+                evt.closed = revt & (POLLHUP);
+#else
                 evt.closed = revt & (POLLHUP | POLLRDHUP);
+#endif
                 evt.error = revt & (POLLNVAL | POLLERR);
                 evt.readable = revt & (POLLIN | POLLPRI);
                 evt.writable = revt & POLLOUT;
