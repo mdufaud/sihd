@@ -84,17 +84,6 @@ File & File::operator=(File && other)
     return *this;
 }
 
-std::optional<struct stat> File::stat()
-{
-    if (_file_ptr != nullptr)
-    {
-        struct stat stat;
-        if (os::fstat(this->fd(), &stat, true))
-            return stat;
-    }
-    return std::nullopt;
-}
-
 bool File::set_buffer_size(size_t size)
 {
     if (_buf_size == size)

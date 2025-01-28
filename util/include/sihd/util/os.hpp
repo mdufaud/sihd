@@ -29,8 +29,6 @@ namespace sihd::util::os
 
 // syscalls linux - windows
 bool ioctl(int fd, unsigned long request, void *arg_ptr = nullptr, bool logerror = false);
-bool stat(const char *pathname, struct stat *statbuf, bool logerror = false);
-bool fstat(int fd, struct stat *statbuf, bool logerror = false);
 
 bool setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror = false);
 bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror = false);

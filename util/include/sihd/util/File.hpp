@@ -100,8 +100,6 @@ class File
         FILE *file() { return _file_ptr; }
         const std::string & path() const { return _path; }
 
-        std::optional<struct stat> stat();
-
         const char *buf() const { return _buf_ptr; }
         size_t buf_size() const { return _buf_size; }
         bool buffering_line() const { return _buf_mode == _IOLBF; }

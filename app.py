@@ -86,7 +86,7 @@ modules = {
             'ssp', # winsock
             'ws2_32', # windows api
             'gdi32', # wingdi
-            'imagehlp',
+            'imagehlp', # backtrace
             'stdc++fs'
         ],
         # === Emscripten specific ===

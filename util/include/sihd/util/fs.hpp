@@ -26,11 +26,29 @@ std::string executable_path();
 bool exists(std::string_view path);
 bool is_file(std::string_view path);
 bool is_dir(std::string_view path);
-size_t file_size(std::string_view path);
+std::optional<size_t> file_size(std::string_view path);
 Timestamp last_write(std::string_view path);
 bool is_readable(std::string_view path);
 bool is_writable(std::string_view path);
 bool is_executable(std::string_view path);
+
+struct Perms
+{
+        bool readable = false;
+        bool writable = false;
+        bool executable = false;
+};
+
+struct Stat
+{
+        bool exists = false;
+        Perms perms = {};
+        size_t file_size = 0;
+        Timestamp last_write = 0;
+};
+
+Stat stat(std::string_view path);
+Stat fstat(int fd);
 
 // directories
 std::string make_tmp_directory(std::string_view prefix = "");

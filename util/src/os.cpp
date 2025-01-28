@@ -114,30 +114,6 @@ bool ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
     return ret == 0;
 }
 
-bool stat(const char *pathname, struct stat *statbuf, bool logerror)
-{
-#if !defined(__SIHD_WINDOWS__)
-    bool ret = ::stat(pathname, statbuf) == 0;
-#else
-    bool ret = ::_stat(pathname, reinterpret_cast<struct _stat *>(statbuf)) == 0;
-#endif
-    if (!ret && logerror)
-        SIHD_LOG(error, "OS: stat error: {}", strerror(errno));
-    return ret == 0;
-}
-
-bool fstat(int fd, struct stat *statbuf, bool logerror)
-{
-#if !defined(__SIHD_WINDOWS__)
-    bool ret = ::fstat(fd, statbuf) == 0;
-#else
-    bool ret = ::_fstat(fd, reinterpret_cast<struct _stat *>(statbuf)) == 0;
-#endif
-    if (!ret && logerror)
-        SIHD_LOG(error, "OS: fstat error: {}", strerror(errno));
-    return ret == 0;
-}
-
 bool setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror)
 {
     if (socket < 0)

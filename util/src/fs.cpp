@@ -83,6 +83,18 @@ void _get_recursive_children(std::string_view path,
     }
 }
 
+Stat stat_from_c(struct stat & statbuf)
+{
+    Stat ret;
+    ret.exists = true;
+    ret.perms = Perms {.readable = bool(statbuf.st_mode & S_IRUSR),
+                       .writable = bool(statbuf.st_mode & S_IWUSR),
+                       .executable = bool(statbuf.st_mode & S_IXUSR)};
+    ret.file_size = statbuf.st_size;
+    ret.last_write = Timestamp(time::seconds(statbuf.st_mtime));
+    return ret;
+}
+
 #endif
 
 } // namespace
@@ -169,34 +181,32 @@ bool exists(std::string_view path)
 
 bool is_file(std::string_view path)
 {
-    struct stat s;
-    if (os::stat(path.data(), &s) == 0)
-        return s.st_mode & S_IFREG;
-    return false;
+    std::error_code ec;
+    return std::filesystem::status(path, ec).type() == std::filesystem::file_type::regular;
 }
 
 bool is_dir(std::string_view path)
 {
-    struct stat s;
-    if (os::stat(path.data(), &s) == 0)
-        return s.st_mode & S_IFDIR;
-    return false;
+    std::error_code ec;
+    return std::filesystem::status(path, ec).type() == std::filesystem::file_type::directory;
 }
 
 Timestamp last_write(std::string_view path)
 {
-    struct stat s;
-    if (os::stat(path.data(), &s) == 0)
-        return Timestamp(time::seconds(s.st_mtime));
-    return false;
+    std::error_code ec;
+    auto ret = std::filesystem::last_write_time(path, ec);
+    if (ec)
+        return -1;
+    return ret.time_since_epoch().count();
 }
 
-size_t file_size(std::string_view path)
+std::optional<size_t> file_size(std::string_view path)
 {
-    struct stat s;
-    if (os::stat(path.data(), &s) == 0)
-        return s.st_size;
-    return 0;
+    std::error_code ec;
+    auto ret = std::filesystem::file_size(path, ec);
+    if (ec)
+        return std::nullopt;
+    return ret;
 }
 
 bool is_readable(std::string_view path)
@@ -226,6 +236,34 @@ bool is_executable(std::string_view path)
 #endif
 }
 
+Stat stat(std::string_view path)
+{
+    struct stat statbuf;
+#if !defined(__SIHD_WINDOWS__)
+    bool success = ::stat(path.data(), &statbuf) == 0;
+#else
+    bool success = ::_stat(path.data(), reinterpret_cast<struct _stat *>(&statbuf)) == 0;
+#endif
+    if (success == false)
+        return Stat {.exists = false};
+    return stat_from_c(statbuf);
+}
+
+Stat fstat(int fd)
+{
+    struct stat statbuf;
+#if !defined(__SIHD_WINDOWS__)
+    bool ret = ::fstat(fd, &statbuf) == 0;
+#else
+    bool ret = ::_fstat(fd, reinterpret_cast<struct _stat *>(&statbuf)) == 0;
+#endif
+    if (ret == false)
+        return Stat {.exists = false};
+    return stat_from_c(statbuf);
+}
+
+// directories
+
 std::string tmp_path()
 {
 #if defined(__SIHD_WINDOWS__)
@@ -246,8 +284,6 @@ std::string tmp_path()
     return tmp_path != nullptr ? tmp_path : "/tmp";
 #endif
 }
-
-// directories
 
 std::string make_tmp_directory(std::string_view prefix)
 {
