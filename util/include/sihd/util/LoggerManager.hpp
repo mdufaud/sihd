@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_LOGGERMANAGER_HPP__
 #define __SIHD_UTIL_LOGGERMANAGER_HPP__
 
+#include <cstdio>
 #include <mutex>
 #include <vector>
 

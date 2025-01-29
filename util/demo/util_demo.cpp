@@ -93,7 +93,7 @@ void fs()
         SIHD_LOG(info, "exists: {}", fs::exists(tmp));
         SIHD_LOG(info, "is_file: {}", fs::is_file(tmp));
         SIHD_LOG(info, "is_dir: {}", fs::is_dir(tmp));
-        SIHD_LOG(info, "file_size: {}", fs::file_size(tmp));
+        SIHD_LOG(info, "file_size: {}", fs::file_size(tmp).value_or(0));
         SIHD_LOG(info, "last_write: {}", fs::last_write(tmp).local_str());
         SIHD_LOG(info, "is_readable: {}", fs::is_readable(tmp));
         SIHD_LOG(info, "is_writable: {}", fs::is_writable(tmp));
@@ -257,6 +257,11 @@ void screenshot()
 
 void process()
 {
+#if defined(__SIHD_WINDOWS__)
+    SetConsoleOutputCP(CP_UTF8);
+    setvbuf(stdout, nullptr, _IOFBF, 1000);
+#endif
+
     std::vector<std::string> args;
     proc::Options options({.timeout = std::chrono::milliseconds(100)});
     options.stdout_callback = [](std::string_view stdout_str) {
@@ -267,7 +272,7 @@ void process()
     };
     options.stderr_callback = [](std::string_view stderr_str) {
         fmt::print("=========================\n");
-        fmt::print("STDERR:\n", stderr_str);
+        fmt::print("STDERR:\n");
         fmt::print("{}\n", stderr_str);
         fmt::print("=========================\n");
     };
@@ -288,7 +293,7 @@ void process()
     SIHD_LOG(info, "Executing: {}", fmt::join(args, " "));
     auto exit_code = proc::execute(args, options);
 
-    if (exit_code.wait_for(std::chrono::milliseconds(200)) == std::future_status::ready)
+    if (exit_code.wait_for(std::chrono::milliseconds(500)) == std::future_status::ready)
     {
         SIHD_LOG(info, "Exit code: {}", exit_code.get());
     }
@@ -324,7 +329,7 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    if (term::is_interactive() && os::is_unix && !os::is_emscripten)
+    if (term::is_interactive() && !os::is_emscripten)
         LoggerManager::console();
     else
         LoggerManager::stream(os::is_emscripten ? stdout : stderr);

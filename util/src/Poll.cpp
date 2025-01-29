@@ -288,7 +288,10 @@ void Poll::process_poll_results(int poll_return)
             ++i;
         }
     }
-    this->notify_observers(this);
+    if (!_lst_events.empty())
+    {
+        this->notify_observers(this);
+    }
 }
 
 } // namespace sihd::util

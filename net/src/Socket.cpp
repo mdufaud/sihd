@@ -2,6 +2,7 @@
 
 #include <cerrno>
 #include <cstring>
+#include <stdexcept>
 
 #include <sihd/net/Socket.hpp>
 #include <sihd/util/Logger.hpp>

@@ -1,6 +1,8 @@
 #ifndef __SIHD_UTIL_SIGHANDLER_HPP__
 #define __SIHD_UTIL_SIGHANDLER_HPP__
 
+#include <signal.h>
+
 namespace sihd::util
 {
 

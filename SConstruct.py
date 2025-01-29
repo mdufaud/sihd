@@ -337,7 +337,9 @@ if compile_commands:
         pass
 
 # Decides when to recompile - removing slow md5 in favor of timestamps
-Decider('timestamp-newer')
+# Decider('timestamp-newer')
+# Decider('MD5')
+Decider('MD5-timestamp')
 
 ###############################################################################
 # Build setup

@@ -18,20 +18,34 @@ class TestSplitter: public ::testing::Test
         virtual void TearDown() {}
 };
 
+TEST_F(TestSplitter, test_splitter_from_view)
+{
+    std::string_view s = "toto;titi;tata";
+    // "toto;titi;tata"
+    s.remove_suffix(5);
+    // "toto;titi"
+
+    Splitter splitter(";");
+    std::vector<std::string_view> split = splitter.split_view(s);
+    ASSERT_EQ(split.size(), 2u);
+    EXPECT_EQ(split[0], "toto");
+    EXPECT_EQ(split[1], "titi");
+}
+
 TEST_F(TestSplitter, test_splitter_method)
 {
     Splitter splitter;
 
     splitter.set_delimiter_spaces();
     std::vector<std::string> split1 = splitter.split("\thello  \r  world\f \v !\n");
-    EXPECT_EQ(split1.size(), 3u);
+    ASSERT_EQ(split1.size(), 3u);
     EXPECT_EQ(split1[0], "hello");
     EXPECT_EQ(split1[1], "world");
     EXPECT_EQ(split1[2], "!");
 
     splitter.set_delimiter_method(&isspace);
     std::vector<std::string> split2 = splitter.split("\thello  \r  world\f \v !\n");
-    EXPECT_EQ(split2.size(), 3u);
+    ASSERT_EQ(split2.size(), 3u);
     EXPECT_EQ(split2[0], "hello");
     EXPECT_EQ(split2[1], "world");
     EXPECT_EQ(split2[2], "!");
@@ -41,37 +55,28 @@ TEST_F(TestSplitter, test_splitter_empty)
 {
     Splitter splitter(",");
     std::vector<std::string> split1 = splitter.split("1,2,,,");
-    EXPECT_EQ(split1.size(), 2u);
-    if (split1.size() >= 2)
-    {
-        EXPECT_EQ(split1[0], "1");
-        EXPECT_EQ(split1[1], "2");
-    }
+    ASSERT_EQ(split1.size(), 2u);
+    EXPECT_EQ(split1[0], "1");
+    EXPECT_EQ(split1[1], "2");
 
     splitter.set_empty_delimitations(true);
     std::vector<std::string> split2 = splitter.split("1,2,,,");
-    EXPECT_EQ(split2.size(), 5u);
-    if (split2.size() >= 5)
-    {
-        EXPECT_EQ(split2[0], "1");
-        EXPECT_EQ(split2[1], "2");
-        EXPECT_EQ(split2[2], "");
-        EXPECT_EQ(split2[3], "");
-        EXPECT_EQ(split2[4], "");
-    }
+    ASSERT_EQ(split2.size(), 5u);
+    EXPECT_EQ(split2[0], "1");
+    EXPECT_EQ(split2[1], "2");
+    EXPECT_EQ(split2[2], "");
+    EXPECT_EQ(split2[3], "");
+    EXPECT_EQ(split2[4], "");
 
     std::vector<std::string> split3 = splitter.split("1,2,,4,,,6");
-    EXPECT_EQ(split3.size(), 7u);
-    if (split3.size() >= 7)
-    {
-        EXPECT_EQ(split3[0], "1");
-        EXPECT_EQ(split3[1], "2");
-        EXPECT_EQ(split3[2], "");
-        EXPECT_EQ(split3[3], "4");
-        EXPECT_EQ(split3[4], "");
-        EXPECT_EQ(split3[5], "");
-        EXPECT_EQ(split3[6], "6");
-    }
+    ASSERT_EQ(split3.size(), 7u);
+    EXPECT_EQ(split3[0], "1");
+    EXPECT_EQ(split3[1], "2");
+    EXPECT_EQ(split3[2], "");
+    EXPECT_EQ(split3[3], "4");
+    EXPECT_EQ(split3[4], "");
+    EXPECT_EQ(split3[5], "");
+    EXPECT_EQ(split3[6], "6");
 }
 
 TEST_F(TestSplitter, test_splitter_delimiter)
@@ -79,17 +84,17 @@ TEST_F(TestSplitter, test_splitter_delimiter)
     Splitter splitter(" ");
 
     std::vector<std::string> split1 = splitter.split("hello world");
-    EXPECT_EQ(split1.size(), 2u);
+    ASSERT_EQ(split1.size(), 2u);
     EXPECT_EQ(split1[0], "hello");
     EXPECT_EQ(split1[1], "world");
     std::vector<std::string> split2 = splitter.split(" hello  world ");
-    EXPECT_EQ(split2.size(), 2u);
+    ASSERT_EQ(split2.size(), 2u);
     EXPECT_EQ(split2[0], "hello");
     EXPECT_EQ(split2[1], "world");
 
     splitter.set_delimiter("lo");
     std::vector<std::string> split3 = splitter.split("hell");
-    EXPECT_EQ(split3.size(), 1u);
+    ASSERT_EQ(split3.size(), 1u);
     EXPECT_EQ(split3[0], "hell");
 
     splitter.set_delimiter("hell");
@@ -98,15 +103,15 @@ TEST_F(TestSplitter, test_splitter_delimiter)
 
     splitter.set_delimiter("");
     std::vector<std::string> split5 = splitter.split("");
-    EXPECT_EQ(split5.size(), 1u);
+    ASSERT_EQ(split5.size(), 1u);
     EXPECT_EQ(split5[0], "");
     std::vector<std::string> split6 = splitter.split("hello");
-    EXPECT_EQ(split6.size(), 1u);
+    ASSERT_EQ(split6.size(), 1u);
     EXPECT_EQ(split6[0], "hello");
 
     splitter.set_delimiter("=");
     std::vector<std::string> split7 = splitter.split("key=");
-    EXPECT_EQ(split7.size(), 1u);
+    ASSERT_EQ(split7.size(), 1u);
     EXPECT_EQ(split7[0], "key");
 }
 

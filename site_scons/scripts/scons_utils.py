@@ -56,16 +56,16 @@ def parse_config_command(env, *configs):
         except OSError as e:
             builder.warning("config '{}' not found".format(config))
 
-def __do_copy(src, dst, *, follow_symlinks=True):
-    do_copy = True
-    if os.path.isfile(dst):
-        src_mtime = os.path.getmtime(src)
-        dst_mtime = os.path.getmtime(dst)
-        if dst_mtime > src_mtime:
-            do_copy = False
-    if do_copy:
-        return shutil.copy2(src, dst, follow_symlinks=follow_symlinks)
-    return dst
+# def __do_copy(src, dst, *, follow_symlinks=True):
+#     do_copy = True
+#     if os.path.isfile(dst):
+#         src_mtime = os.path.getmtime(src)
+#         dst_mtime = os.path.getmtime(dst)
+#         if dst_mtime > src_mtime:
+#             do_copy = False
+#     if do_copy:
+#         return shutil.copy2(src, dst, follow_symlinks=follow_symlinks)
+#     return dst
 
 def copy_module_res_into_build(module_name, src, dst, must_exist = True, is_dry_run = False):
     """ recursive copy of MODNAME/DIRNAME to build/DIRNAME """
@@ -77,12 +77,14 @@ def copy_module_res_into_build(module_name, src, dst, must_exist = True, is_dry_
         builder.info("copying resources of module {}/{} -> build/{}".format(module_name, src, dst))
     if os.path.isfile(module_res):
         if not is_dry_run:
-            __do_copy(module_res, build_output)
+            # __do_copy(module_res, build_output)
+            shutil.copy2(module_res, build_output)
     elif os.path.isdir(module_res):
         if is_dry_run:
             return
         try:
-            shutil.copytree(module_res, build_output, copy_function=__do_copy, dirs_exist_ok = True)
+            # shutil.copytree(module_res, build_output, copy_function=__do_copy, dirs_exist_ok = True)
+            shutil.copytree(module_res, build_output, dirs_exist_ok = True)
         except shutil.Error as exc:
             errors = exc.args[0]
             for error in errors:

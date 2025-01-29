@@ -1,6 +1,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <stdexcept>
+
 #include <sihd/util/platform.hpp>
 
 // for get_max_rss / peak_rss
@@ -230,7 +232,7 @@ ssize_t backtrace(int fd, size_t backtrace_size)
     ret = ret && write_endl(fd, " calls)") > 0;
     if (strings == nullptr)
     {
-        ret = ret && write_endl(fd, "Error while getting backtrace symbols");
+        write_endl(fd, "Error while getting backtrace symbols");
         return -1;
     }
     uint32_t i = 0;

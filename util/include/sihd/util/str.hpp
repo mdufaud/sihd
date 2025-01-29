@@ -14,69 +14,12 @@
 namespace sihd::util::str
 {
 
-constexpr const char *encloses_start()
-{
-    return "\"'[({<";
-}
+std::wstring to_wstr(std::string_view view);
+std::u32string to_u32str(std::string_view view);
 
-constexpr const char *encloses_stop()
-{
-    return "\"'])}>";
-}
-
-constexpr int escape_char()
-{
-    return '\\';
-}
-
-// simple wrapped find
-bool is_char_enclose_start(int c, const char *authorized_start_enclose = encloses_start());
-// simple wrapped find
-bool is_char_enclose_stop(int c, const char *authorized_stop_enclose = encloses_stop());
-
-/**
- * @brief check if a char is escaped by calculating an impair number of escape '\' before the char
- *  must give the beginning pointer of string and the index of the actual char
- *
- *  example:
- * is_escaped_char("\[hello", 1) == true
- * is_escaped_char("\\[hello", 1) == true
- * is_escaped_char("\\[hello", 2) == false
- */
-bool is_escaped_char(const char *str, int index, int escape = escape_char());
-
-// stopping_enclose_of('[') -> ']'
-int stopping_enclose_of(int starting_enclose);
-
-// returns the index of the next char after the enclose
-// stopping_enclose_index("[hello] world", 0, "[")
-//   -> 7  ---------------------^
-// stopping_enclose_index("hello", 0, "[")
-//   -> -1 (s[0] is not a closing escape)
-// stopping_enclose_index("[hello", 0, "[")
-//   -> -2 (s[0] has no end to an enclose)
-int stopping_enclose_index(std::string_view view,
-                           int index,
-                           const char *authorized_start_enclose = encloses_start(),
-                           int escape = escape_char());
-
-/**
- * find_char_not_escaped("hello ?", '?') -> 6
- * find_char_not_escaped("hello \\?", '?') -> -1
- * find_char_not_escaped("hello \\\\?", '?') -> 8
- */
-int find_char_not_escaped(std::string_view view, int char_to_find, int escape = escape_char());
-
-int find_str_not_enclosed(std::string_view origin,
-                          std::string_view to_find,
-                          const char *authorized_start_enclose = encloses_start(),
-                          int escape = escape_char());
-// remove_escape_char("hello \\? \\\\?") -> "hello ? \\?"
-std::string remove_escape_char(std::string_view str, int escape = escape_char());
-// remove_enclosing("hello 'world' \\'!\\'") -> "hello world '!'"
-std::string remove_enclosing(std::string_view str,
-                             const char *authorized_start_enclose = encloses_start(),
-                             int escape = escape_char());
+bool regex_match(std::string_view str, const std::string & pattern);
+std::vector<std::string> regex_search(std::string_view str, const std::string & pattern);
+std::string regex_replace(const std::string & str, const std::string & pattern, const std::string & replace);
 
 void append_sep(std::string & str, std::string_view append, std::string_view sep = ",");
 
@@ -160,6 +103,70 @@ bool to_ulong(std::string_view str, unsigned long *ret, uint16_t base = 0);
 bool to_llong(std::string_view str, long long *ret, uint16_t base = 0);
 bool to_ullong(std::string_view str, unsigned long long *ret, uint16_t base = 0);
 bool to_double(std::string_view str, double *ret);
+
+constexpr const char *encloses_start()
+{
+    return "\"'[({<";
+}
+
+constexpr const char *encloses_stop()
+{
+    return "\"'])}>";
+}
+
+constexpr int escape_char()
+{
+    return '\\';
+}
+
+// simple wrapped find
+bool is_char_enclose_start(int c, const char *authorized_start_enclose = encloses_start());
+// simple wrapped find
+bool is_char_enclose_stop(int c, const char *authorized_stop_enclose = encloses_stop());
+
+/**
+ * @brief check if a char is escaped by calculating an impair number of escape '\' before the char
+ *  must give the beginning pointer of string and the index of the actual char
+ *
+ *  example:
+ * is_escaped_char("\[hello", 1) == true
+ * is_escaped_char("\\[hello", 1) == true
+ * is_escaped_char("\\[hello", 2) == false
+ */
+bool is_escaped_char(const char *str, int index, int escape = escape_char());
+
+// stopping_enclose_of('[') -> ']'
+int stopping_enclose_of(int starting_enclose);
+
+// returns the index of the next char after the enclose
+// stopping_enclose_index("[hello] world", 0, "[")
+//   -> 7  ---------------------^
+// stopping_enclose_index("hello", 0, "[")
+//   -> -1 (s[0] is not a closing escape)
+// stopping_enclose_index("[hello", 0, "[")
+//   -> -2 (s[0] has no end to an enclose)
+int stopping_enclose_index(std::string_view view,
+                           int index,
+                           const char *authorized_start_enclose = encloses_start(),
+                           int escape = escape_char());
+
+/**
+ * find_char_not_escaped("hello ?", '?') -> 6
+ * find_char_not_escaped("hello \\?", '?') -> -1
+ * find_char_not_escaped("hello \\\\?", '?') -> 8
+ */
+int find_char_not_escaped(std::string_view view, int char_to_find, int escape = escape_char());
+
+int find_str_not_enclosed(std::string_view origin,
+                          std::string_view to_find,
+                          const char *authorized_start_enclose = encloses_start(),
+                          int escape = escape_char());
+// remove_escape_char("hello \\? \\\\?") -> "hello ? \\?"
+std::string remove_escape_char(std::string_view str, int escape = escape_char());
+// remove_enclosing("hello 'world' \\'!\\'") -> "hello world '!'"
+std::string remove_enclosing(std::string_view str,
+                             const char *authorized_start_enclose = encloses_start(),
+                             int escape = escape_char());
 
 template <typename T>
 bool convert_from_string(std::string_view str, T & value, uint16_t base = 0);

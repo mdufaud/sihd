@@ -76,6 +76,93 @@ class TestStr: public ::testing::Test
         double _dval;
 };
 
+TEST_F(TestStr, test_str_to_u32str)
+{
+    std::u32string u32str = str::to_u32str("hello world");
+    EXPECT_EQ(u32str, U"hello world");
+
+    u32str = str::to_u32str("こんにちは");
+    EXPECT_EQ(u32str, U"こんにちは");
+
+    u32str = str::to_u32str("");
+    EXPECT_EQ(u32str, U"");
+}
+
+TEST_F(TestStr, test_str_to_wstr)
+{
+    std::wstring wstr = str::to_wstr("hello world");
+    EXPECT_EQ(wstr, L"hello world");
+
+    wstr = str::to_wstr("こんにちは");
+    EXPECT_EQ(wstr, L"こんにちは");
+
+    wstr = str::to_wstr("");
+    EXPECT_EQ(wstr, L"");
+}
+
+TEST_F(TestStr, test_str_regex_replace)
+{
+    EXPECT_EQ(str::regex_replace("hello world", "world", "universe"), "hello universe");
+    EXPECT_EQ(str::regex_replace("hello world", "o", "0"), "hell0 w0rld");
+    EXPECT_EQ(str::regex_replace("hello world", "l+", "L"), "heLo worLd");
+    EXPECT_EQ(str::regex_replace("123-456-7890", "\\d{3}", "XXX"), "XXX-XXX-XXX0");
+    EXPECT_EQ(str::regex_replace("hello world", "z", "Z"), "hello world"); // No match
+    EXPECT_EQ(str::regex_replace("hello world", "(hello) (world)", "$2 $1"), "world hello");
+}
+
+TEST_F(TestStr, test_str_regex_match)
+{
+    EXPECT_TRUE(str::regex_match("hello world", "hello world"));
+    EXPECT_FALSE(str::regex_match("hello world", "hello"));
+    EXPECT_TRUE(str::regex_match("hello world", ".*world"));
+    EXPECT_TRUE(str::regex_match("hello world", ".*world$"));
+    EXPECT_TRUE(str::regex_match("hello world", "^hello.*"));
+    EXPECT_FALSE(str::regex_match("hello world", "^world"));
+    EXPECT_TRUE(str::regex_match("123-456-7890", "\\d{3}-\\d{3}-\\d{4}"));
+    EXPECT_FALSE(str::regex_match("123-456-7890", "\\d{4}-\\d{3}-\\d{4}"));
+}
+
+TEST_F(TestStr, test_str_regex_search)
+{
+    std::vector<std::string> results;
+
+    results = str::regex_search("hello world", "hello");
+    ASSERT_EQ(results.size(), 1u);
+    EXPECT_EQ(results[0], "hello");
+
+    results = str::regex_search("hello world", "world");
+    ASSERT_EQ(results.size(), 1u);
+    EXPECT_EQ(results[0], "world");
+
+    results = str::regex_search("hello world", "o");
+    ASSERT_EQ(results.size(), 2u);
+    EXPECT_EQ(results[0], "o");
+    EXPECT_EQ(results[1], "o");
+
+    results = str::regex_search("hello world", "l+");
+    ASSERT_EQ(results.size(), 2u);
+    EXPECT_EQ(results[0], "ll");
+    EXPECT_EQ(results[1], "l");
+
+    results = str::regex_search("hello world", "z");
+    ASSERT_TRUE(results.empty());
+
+    results = str::regex_search("The quick brown fox jumps over the lazy dog", "\\b\\w{4}\\b");
+    ASSERT_EQ(results.size(), 2u);
+    EXPECT_EQ(results[0], "over");
+    EXPECT_EQ(results[1], "lazy");
+
+    results = str::regex_search("The quick brown fox jumps over the lazy dog", "(\\b\\w{3}\\b)|(\\b\\w{5}\\b)");
+    ASSERT_EQ(results.size(), 7u);
+    EXPECT_EQ(results[0], "The");
+    EXPECT_EQ(results[1], "quick");
+    EXPECT_EQ(results[2], "brown");
+    EXPECT_EQ(results[3], "fox");
+    EXPECT_EQ(results[4], "jumps");
+    EXPECT_EQ(results[5], "the");
+    EXPECT_EQ(results[6], "dog");
+}
+
 TEST_F(TestStr, test_str_search)
 {
     const auto results = str::search({"paydays", "day", "moonday", "sunday", "survey"}, "sunday");
@@ -84,11 +171,11 @@ TEST_F(TestStr, test_str_search)
         fmt::print("{} - {}\n", result.first, result.second);
     }
     ASSERT_EQ(results.size(), 5u);
-    ASSERT_EQ(results[0].second, "sunday");
-    ASSERT_EQ(results[1].second, "survey");
-    ASSERT_EQ(results[2].second, "moonday");
-    ASSERT_EQ(results[3].second, "day");
-    ASSERT_EQ(results[4].second, "paydays");
+    EXPECT_EQ(results[0].second, "sunday");
+    EXPECT_EQ(results[1].second, "survey");
+    EXPECT_EQ(results[2].second, "moonday");
+    EXPECT_EQ(results[3].second, "day");
+    EXPECT_EQ(results[4].second, "paydays");
 }
 
 TEST_F(TestStr, test_str_split_pair)

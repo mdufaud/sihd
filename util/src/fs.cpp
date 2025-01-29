@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 
 #include <sihd/util/File.hpp>
 #include <sihd/util/Logger.hpp>

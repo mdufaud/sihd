@@ -1,3 +1,5 @@
+#include <stdexcept>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/profiling.hpp>

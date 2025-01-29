@@ -32,6 +32,7 @@ bool is_readable(std::string_view path);
 bool is_writable(std::string_view path);
 bool is_executable(std::string_view path);
 
+// permissions
 std::string permission_to_str(unsigned int mode);
 unsigned int permission_from_str(std::string_view mode);
 bool permission_add(std::string_view path, unsigned int mode);

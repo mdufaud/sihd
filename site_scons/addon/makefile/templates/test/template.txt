@@ -20,7 +20,7 @@ class TestCLASS_NAME: public ::testing::Test
     protected:
         TestCLASS_NAME()
         {
-            sihd::util::LoggerManager::basic();
+            sihd::util::LoggerManager::stream();
         }
 
         virtual ~TestCLASS_NAME()

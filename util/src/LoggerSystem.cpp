@@ -2,8 +2,8 @@
 #include <sihd/util/LoggerSystem.hpp>
 
 #if defined(__SIHD_WINDOWS__)
-# include <exception>
 # include <fmt/format.h>
+# include <stdexcept>
 # include <windows.h>
 #endif
 

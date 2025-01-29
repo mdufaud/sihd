@@ -5,9 +5,12 @@
 #include <algorithm>
 #include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
 #include <cmath>   // HUGE_VAL
+#include <codecvt>
 #include <cstdarg>
+#include <locale>
 #include <mutex>
 #include <random>
+#include <regex>
 #include <sstream>
 
 #include <fmt/format.h>
@@ -124,6 +127,45 @@ std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bo
 }
 
 } // namespace
+
+std::wstring to_wstr(std::string_view view)
+{
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return converter.from_bytes(view.data(), view.data() + view.size());
+}
+
+std::u32string to_u32str(std::string_view view)
+{
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
+    return converter.from_bytes(view.data(), view.data() + view.size());
+}
+
+bool regex_match(std::string_view str, const std::string & pattern)
+{
+    std::regex regex_pattern(pattern);
+    return std::regex_match(str.begin(), str.end(), regex_pattern);
+}
+
+std::vector<std::string> regex_search(std::string_view str, const std::string & pattern)
+{
+    std::regex regex_pattern(pattern);
+    std::smatch match;
+    std::vector<std::string> matches;
+
+    std::string s(str);
+    while (std::regex_search(s, match, regex_pattern))
+    {
+        matches.push_back(match.str());
+        s = match.suffix().str();
+    }
+    return matches;
+}
+
+std::string regex_replace(const std::string & str, const std::string & pattern, const std::string & replace)
+{
+    std::regex regex_pattern(pattern);
+    return std::regex_replace(str, regex_pattern, replace);
+}
 
 std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str, std::string_view delimiter)
 {

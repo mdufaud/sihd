@@ -1,8 +1,10 @@
+#include <stdexcept>
+
+#include <fmt/format.h>
+
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/FileMutex.hpp>
 #include <sihd/util/platform.hpp>
-
-#include <fmt/format.h>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <sys/file.h>

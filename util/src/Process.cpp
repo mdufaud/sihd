@@ -1,12 +1,4 @@
-#include <sihd/util/Defer.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/Process.hpp>
-#include <sihd/util/Timestamp.hpp>
-#include <sihd/util/container.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
-#include <sihd/util/signal.hpp>
-#include <sihd/util/str.hpp>
+#include <sihd/util/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 
@@ -36,6 +28,16 @@
 #ifndef SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE
 # define SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE 0740
 #endif
+
+#include <sihd/util/Defer.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Process.hpp>
+#include <sihd/util/Timestamp.hpp>
+#include <sihd/util/container.hpp>
+#include <sihd/util/fs.hpp>
+#include <sihd/util/os.hpp>
+#include <sihd/util/signal.hpp>
+#include <sihd/util/str.hpp>
 
 extern "C"
 {

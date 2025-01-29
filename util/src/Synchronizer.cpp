@@ -1,5 +1,7 @@
 #include <unistd.h>
 
+#include <stdexcept>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Waitable.hpp>
