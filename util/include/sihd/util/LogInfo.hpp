@@ -27,9 +27,8 @@ enum class LogLevel
     debug = 7    // Messages that contain information normally of use only when debugging a program
 };
 
-class LogInfo
+struct LogInfo
 {
-    public:
         LogInfo(const std::string & source, LogLevel level);
         ~LogInfo();
 
