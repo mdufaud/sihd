@@ -83,19 +83,16 @@ void _get_recursive_children(std::string_view path,
     }
 }
 
-Stat stat_from_c(struct stat & statbuf)
-{
-    Stat ret;
-    ret.exists = true;
-    ret.perms = Perms {.readable = bool(statbuf.st_mode & S_IRUSR),
-                       .writable = bool(statbuf.st_mode & S_IWUSR),
-                       .executable = bool(statbuf.st_mode & S_IXUSR)};
-    ret.file_size = statbuf.st_size;
-    ret.last_write = Timestamp(time::seconds(statbuf.st_mtime));
-    return ret;
-}
-
 #endif
+
+bool internal_set_perm(std::string_view path, unsigned int mode, std::filesystem::perm_options option)
+{
+    std::error_code ec;
+    std::filesystem::permissions(path, static_cast<std::filesystem::perms>(mode), option, ec);
+    if (ec)
+        SIHD_LOG(error, "{}", ec.message());
+    return !ec;
+}
 
 } // namespace
 
@@ -182,22 +179,28 @@ bool exists(std::string_view path)
 bool is_file(std::string_view path)
 {
     std::error_code ec;
-    return std::filesystem::status(path, ec).type() == std::filesystem::file_type::regular;
+    const bool success = std::filesystem::status(path, ec).type() == std::filesystem::file_type::regular;
+    if (ec)
+        SIHD_LOG(error, "{}", ec.message());
+    return !ec && success;
 }
 
 bool is_dir(std::string_view path)
 {
     std::error_code ec;
-    return std::filesystem::status(path, ec).type() == std::filesystem::file_type::directory;
+    const bool success = std::filesystem::status(path, ec).type() == std::filesystem::file_type::directory;
+    if (ec)
+        SIHD_LOG(error, "{}", ec.message());
+    return !ec && success;
 }
 
 Timestamp last_write(std::string_view path)
 {
     std::error_code ec;
-    auto ret = std::filesystem::last_write_time(path, ec);
+    auto last_write_time = std::filesystem::last_write_time(path, ec);
     if (ec)
-        return -1;
-    return ret.time_since_epoch().count();
+        SIHD_LOG(error, "{}", ec.message());
+    return ec ? -1 : last_write_time.time_since_epoch().count();
 }
 
 std::optional<size_t> file_size(std::string_view path)
@@ -236,30 +239,72 @@ bool is_executable(std::string_view path)
 #endif
 }
 
-Stat stat(std::string_view path)
+std::string permission_to_str(unsigned int mode)
 {
-    struct stat statbuf;
-#if !defined(__SIHD_WINDOWS__)
-    bool success = ::stat(path.data(), &statbuf) == 0;
-#else
-    bool success = ::_stat(path.data(), reinterpret_cast<struct _stat *>(&statbuf)) == 0;
-#endif
-    if (success == false)
-        return Stat {.exists = false};
-    return stat_from_c(statbuf);
+    using std::filesystem::perms;
+    perms p = static_cast<perms>(mode);
+    std::string ret;
+    ret.reserve(9); // in case there is no short string opt ?
+    ret += (p & perms::owner_read) == perms::none ? "-" : "r";
+    ret += (p & perms::owner_write) == perms::none ? "-" : "w";
+    ret += (p & perms::owner_exec) == perms::none ? "-" : "x";
+    ret += (p & perms::group_read) == perms::none ? "-" : "r";
+    ret += (p & perms::group_write) == perms::none ? "-" : "w";
+    ret += (p & perms::group_exec) == perms::none ? "-" : "x";
+    ret += (p & perms::others_read) == perms::none ? "-" : "r";
+    ret += (p & perms::others_write) == perms::none ? "-" : "w";
+    ret += (p & perms::others_exec) == perms::none ? "-" : "x";
+    return ret;
 }
 
-Stat fstat(int fd)
+unsigned int permission_from_str(std::string_view mode)
 {
-    struct stat statbuf;
-#if !defined(__SIHD_WINDOWS__)
-    bool ret = ::fstat(fd, &statbuf) == 0;
-#else
-    bool ret = ::_fstat(fd, reinterpret_cast<struct _stat *>(&statbuf)) == 0;
-#endif
-    if (ret == false)
-        return Stat {.exists = false};
-    return stat_from_c(statbuf);
+    using std::filesystem::perms;
+    const size_t mode_size = mode.size();
+    perms p = perms::none;
+    if (mode_size > 0 && mode[0] == 'r')
+        p |= perms::owner_read;
+    if (mode_size > 1 && mode[1] == 'w')
+        p |= perms::owner_write;
+    if (mode_size > 2 && mode[2] == 'x')
+        p |= perms::owner_exec;
+    if (mode_size > 3 && mode[3] == 'r')
+        p |= perms::group_read;
+    if (mode_size > 4 && mode[4] == 'w')
+        p |= perms::group_write;
+    if (mode_size > 5 && mode[5] == 'x')
+        p |= perms::group_exec;
+    if (mode_size > 6 && mode[6] == 'r')
+        p |= perms::others_read;
+    if (mode_size > 7 && mode[7] == 'w')
+        p |= perms::others_write;
+    if (mode_size > 8 && mode[8] == 'x')
+        p |= perms::others_exec;
+    return static_cast<unsigned int>(p);
+}
+
+bool permission_add(std::string_view path, unsigned int mode)
+{
+    return internal_set_perm(path, mode, std::filesystem::perm_options::add);
+}
+
+bool permission_rm(std::string_view path, unsigned int mode)
+{
+    return internal_set_perm(path, mode, std::filesystem::perm_options::remove);
+}
+
+bool permission_set(std::string_view path, unsigned int mode)
+{
+    return internal_set_perm(path, mode, std::filesystem::perm_options::replace);
+}
+
+unsigned int permission_get(std::string_view path)
+{
+    std::error_code ec;
+    auto p = std::filesystem::status(path, ec).permissions();
+    if (ec)
+        SIHD_LOG(error, "{}", ec.message());
+    return ec ? 0 : static_cast<unsigned int>(p);
 }
 
 // directories
@@ -322,13 +367,13 @@ bool remove_directories(std::string_view path)
         {
             if (remove_directory(*it) == false)
             {
-                SIHD_LOG(warning, "Files: cannot remove directory: {}", *it);
+                SIHD_LOG(warning, "cannot remove directory: {}", *it);
                 ret = false;
             }
         }
         else if (remove_file(*it) == false)
         {
-            SIHD_LOG(warning, "Files: cannot remove file: {}", *it);
+            SIHD_LOG(warning, "cannot remove file: {}", *it);
             ret = false;
         }
     }
@@ -590,9 +635,9 @@ std::optional<std::string> read_link(std::string_view path)
 {
     std::error_code ec;
     std::filesystem::path link_path = std::filesystem::read_symlink(path, ec);
-    if (ec.value() != 0)
+    if (ec)
     {
-        SIHD_LOG(error, "Files: {}", ec.message());
+        SIHD_LOG(error, "{}", ec.message());
         return std::nullopt;
     }
     return {link_path.string()};
@@ -602,8 +647,8 @@ bool make_file_link(std::string_view target, std::string_view link)
 {
     std::error_code ec;
     std::filesystem::create_symlink(target, link, ec);
-    if (ec.value() != 0)
-        SIHD_LOG(error, "Files: {}", ec.message());
+    if (ec)
+        SIHD_LOG(error, "{}", ec.message());
     return ec.value() == 0;
 }
 
@@ -611,8 +656,8 @@ bool make_dir_link(std::string_view target, std::string_view link)
 {
     std::error_code ec;
     std::filesystem::create_directory_symlink(target, link, ec);
-    if (ec.value() != 0)
-        SIHD_LOG(error, "Files: {}", ec.message());
+    if (ec)
+        SIHD_LOG(error, "{}", ec.message());
     return ec.value() == 0;
 }
 
@@ -620,8 +665,8 @@ bool make_hard_link(std::string_view target, std::string_view link)
 {
     std::error_code ec;
     std::filesystem::create_hard_link(target, link, ec);
-    if (ec.value() != 0)
-        SIHD_LOG(error, "Files: {}", ec.message());
+    if (ec)
+        SIHD_LOG(error, "{}", ec.message());
     return ec.value() == 0;
 }
 

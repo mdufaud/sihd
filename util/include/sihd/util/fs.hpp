@@ -32,23 +32,12 @@ bool is_readable(std::string_view path);
 bool is_writable(std::string_view path);
 bool is_executable(std::string_view path);
 
-struct Perms
-{
-        bool readable = false;
-        bool writable = false;
-        bool executable = false;
-};
-
-struct Stat
-{
-        bool exists = false;
-        Perms perms = {};
-        size_t file_size = 0;
-        Timestamp last_write = 0;
-};
-
-Stat stat(std::string_view path);
-Stat fstat(int fd);
+std::string permission_to_str(unsigned int mode);
+unsigned int permission_from_str(std::string_view mode);
+bool permission_add(std::string_view path, unsigned int mode);
+bool permission_rm(std::string_view path, unsigned int mode);
+bool permission_set(std::string_view path, unsigned int mode);
+unsigned int permission_get(std::string_view path);
 
 // directories
 std::string make_tmp_directory(std::string_view prefix = "");

@@ -83,6 +83,10 @@ TEST_F(TestPathManager, test_pathmanager_get)
 
     EXPECT_EQ(path_manager.find("file.txt"), test_file_path.string());
 
+    std::filesystem::permissions(test_file_path,
+                                 std::filesystem::perms::owner_all,
+                                 std::filesystem::perm_options::replace);
+
     path_manager.clear();
 
     // Test find order and findall with twin

@@ -185,4 +185,27 @@ TEST_F(TestFS, test_fs_fast_io)
     EXPECT_EQ(fs::read_all("/there/is/no/path.txt"), std::nullopt);
 }
 
+TEST_F(TestFS, test_fs_permission)
+{
+    auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
+    ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
+    std::string path = fs::combine({tmp_path, "permission"});
+    std::ofstream ofs(path);
+    ofs << "\n";
+    ofs.close();
+    EXPECT_TRUE(fs::is_readable(path));
+    EXPECT_TRUE(fs::is_writable(path));
+    EXPECT_FALSE(fs::is_executable(path));
+
+    EXPECT_TRUE(fs::permission_set(path, 0700));
+    EXPECT_TRUE(fs::is_executable(path));
+    EXPECT_EQ(fs::permission_get(path), 0700);
+
+    EXPECT_EQ(fs::permission_to_str(0750), "rwxr-x---");
+    EXPECT_EQ(fs::permission_from_str("rwxr-x---"), 0750);
+
+    EXPECT_TRUE(fs::permission_set(path, fs::permission_from_str("rwxr-x-w-")));
+    EXPECT_EQ(fs::permission_get(path), 0752);
+}
+
 } // namespace test
