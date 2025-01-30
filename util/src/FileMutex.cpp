@@ -4,6 +4,7 @@
 
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/FileMutex.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
@@ -86,7 +87,7 @@ void FileMutex::lock()
     memset(&overlapped, 0, sizeof(_OVERLAPPED));
     if (!LockFileEx(handle, LOCKFILE_EXCLUSIVE_LOCK, 0, allBitsSet, allBitsSet, &overlapped))
     {
-        throw std::runtime_error("LockFileEx failed with error " + std::to_string(GetLastError()));
+        throw std::runtime_error(os::last_error_str());
     }
 #endif
 }
@@ -124,7 +125,7 @@ void FileMutex::unlock()
     memset(&overlapped, 0, sizeof(_OVERLAPPED));
     if (!UnlockFileEx(handle, 0, allBitsSet, allBitsSet, &overlapped))
     {
-        throw std::runtime_error("UnlockFileEx failed with error " + std::to_string(GetLastError()));
+        throw std::runtime_error(os::last_error_str());
     }
 #endif
 }
@@ -142,7 +143,7 @@ void FileMutex::lock_shared()
     memset(&overlapped, 0, sizeof(_OVERLAPPED));
     if (!LockFileEx(handle, 0, 0, allBitsSet, allBitsSet, &overlapped))
     {
-        throw std::runtime_error("LockFileEx failed with error " + std::to_string(GetLastError()));
+        throw std::runtime_error(os::last_error_str());
     }
 #endif
 }

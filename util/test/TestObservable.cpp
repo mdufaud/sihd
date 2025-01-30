@@ -49,6 +49,70 @@ class TestObservable: public ::testing::Test,
         int called = 0;
 };
 
+TEST_F(TestObservable, test_obs_multiple)
+{
+    Handler<SomeObservable *> handler_add_one([&](SomeObservable *obs) -> void {
+        obs->val++;
+        SIHD_TRACE("adding 1");
+    });
+    Handler<SomeObservable *> handler_add_two([&](SomeObservable *obs) -> void {
+        SIHD_TRACE("adding 2");
+        obs->val += 2;
+    });
+    Handler<SomeObservable *> handler_add_three([&](SomeObservable *obs) -> void {
+        SIHD_TRACE("adding 3");
+        obs->val += 3;
+    });
+
+    SomeObservable observable;
+    observable.add_observer(&handler_add_one);
+    observable.add_observer(&handler_add_two);
+    observable.add_observer(&handler_add_three);
+
+    EXPECT_EQ(observable.val, 0);
+    observable.notify();
+    EXPECT_EQ(observable.val, 6);
+
+    Handler<SomeObservable *> handler_remover_one([&](SomeObservable *obs) -> void {
+        SIHD_TRACE("removing 1");
+        obs->remove_observer(&handler_add_one);
+        obs->val = -10;
+    });
+    Handler<SomeObservable *> handler_remover_two([&](SomeObservable *obs) -> void {
+        SIHD_TRACE("removing 2");
+        obs->remove_observer(&handler_add_two);
+        if (obs->val == -10)
+            obs->val = 1337;
+        SIHD_TRACE("removing 3");
+        obs->remove_observer(&handler_add_three);
+    });
+
+    constexpr bool add_to_front = true;
+    observable.add_observer(&handler_remover_two, add_to_front);
+    observable.add_observer(&handler_remover_one, add_to_front);
+
+    observable.val = 0;
+    observable.notify();
+    EXPECT_EQ(observable.val, 1337);
+
+    observable.remove_observer(&handler_remover_two);
+    observable.remove_observer(&handler_remover_one);
+
+    Handler<SomeObservable *> handler_adder([&](SomeObservable *obs) -> void {
+        SIHD_TRACE("adding all back");
+        obs->add_observer(&handler_add_one);
+        obs->add_observer(&handler_add_two);
+        obs->add_observer(&handler_add_three);
+        SIHD_TRACE("removing self");
+        obs->remove_observer(&handler_adder);
+    });
+    observable.add_observer(&handler_adder);
+
+    observable.val = 0;
+    observable.notify();
+    EXPECT_EQ(observable.val, 6);
+}
+
 TEST_F(TestObservable, test_obs_inheritance)
 {
     SomeObservable observable;

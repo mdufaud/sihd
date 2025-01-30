@@ -37,6 +37,18 @@ char g_separator_char = '\\';
 char g_separator_char = '/';
 #endif
 
+bool _is_file_type(std::string_view path, std::filesystem::file_type expected_type)
+{
+    std::error_code ec;
+    auto status = std::filesystem::status(path, ec);
+    if (ec)
+    {
+        SIHD_LOG(error, "{}", ec.message());
+        return false;
+    }
+    return status.type() == expected_type;
+}
+
 std::string _combine(std::string_view path1, std::string_view path2)
 {
     if (path1.empty())
@@ -177,42 +189,6 @@ bool exists(std::string_view path)
 #endif
 }
 
-bool is_file(std::string_view path)
-{
-    std::error_code ec;
-    const bool success = std::filesystem::status(path, ec).type() == std::filesystem::file_type::regular;
-    if (ec)
-        SIHD_LOG(error, "{}", ec.message());
-    return !ec && success;
-}
-
-bool is_dir(std::string_view path)
-{
-    std::error_code ec;
-    const bool success = std::filesystem::status(path, ec).type() == std::filesystem::file_type::directory;
-    if (ec)
-        SIHD_LOG(error, "{}", ec.message());
-    return !ec && success;
-}
-
-Timestamp last_write(std::string_view path)
-{
-    std::error_code ec;
-    auto last_write_time = std::filesystem::last_write_time(path, ec);
-    if (ec)
-        SIHD_LOG(error, "{}", ec.message());
-    return ec ? -1 : last_write_time.time_since_epoch().count();
-}
-
-std::optional<size_t> file_size(std::string_view path)
-{
-    std::error_code ec;
-    auto ret = std::filesystem::file_size(path, ec);
-    if (ec)
-        return std::nullopt;
-    return ret;
-}
-
 bool is_readable(std::string_view path)
 {
 #if defined(__SIHD_WINDOWS__)
@@ -238,6 +214,62 @@ bool is_executable(std::string_view path)
 #else
     return access(path.data(), X_OK) == 0;
 #endif
+}
+
+bool is_file(std::string_view path)
+{
+    return _is_file_type(path, std::filesystem::file_type::regular);
+}
+
+bool is_dir(std::string_view path)
+{
+    return _is_file_type(path, std::filesystem::file_type::directory);
+}
+
+bool is_symlink(std::string_view path)
+{
+    return _is_file_type(path, std::filesystem::file_type::symlink);
+}
+
+bool is_socket(std::string_view path)
+{
+    return _is_file_type(path, std::filesystem::file_type::socket);
+}
+
+bool is_block(std::string_view path)
+{
+    return _is_file_type(path, std::filesystem::file_type::block);
+}
+
+bool is_character(std::string_view path)
+{
+    return _is_file_type(path, std::filesystem::file_type::character);
+}
+
+bool is_fifo(std::string_view path)
+{
+    return _is_file_type(path, std::filesystem::file_type::fifo);
+}
+
+Timestamp last_write(std::string_view path)
+{
+    std::error_code ec;
+    auto last_write_time = std::filesystem::last_write_time(path, ec);
+    if (ec)
+    {
+        SIHD_LOG(error, "{}", ec.message());
+        return -1;
+    }
+    return last_write_time.time_since_epoch().count();
+}
+
+std::optional<size_t> file_size(std::string_view path)
+{
+    std::error_code ec;
+    auto fs = std::filesystem::file_size(path, ec);
+    if (ec)
+        return std::nullopt;
+    return fs;
 }
 
 std::string permission_to_str(unsigned int mode)

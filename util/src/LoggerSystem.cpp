@@ -1,5 +1,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerSystem.hpp>
+#include <sihd/util/os.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <fmt/format.h>
@@ -20,7 +21,7 @@ LoggerSystem::LoggerSystem(std::string_view progname, int options, int facility)
     _handle = RegisterEventSource(NULL, progname.data());
     if (_handle == nullptr)
     {
-        throw std::runtime_error(fmt::format("Syslogger could not RegisterEventSource: {}", GetLastError()));
+        throw std::runtime_error(fmt::format("Syslogger could not RegisterEventSource: {}", os::last_error_str()));
     }
     (void)options;
     (void)facility;
@@ -87,7 +88,7 @@ void LoggerSystem::log(const LogInfo & info, std::string_view msg)
                      (LPCSTR *)(report_str.c_str()), // Array of strings
                      NULL))                          // No binary data
     {
-        throw std::runtime_error(fmt::format("Syslogger could not register event: {}", GetLastError()));
+        throw std::runtime_error(fmt::format("Syslogger could not register event: {}", os::last_error_str()));
     }
 #endif
 }

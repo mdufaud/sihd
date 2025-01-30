@@ -23,22 +23,26 @@ class Observable: public IObservable<T>
         {
             std::lock_guard l(_mutex);
 
-            const bool is_already_observer
-                = std::find(_observers.cbegin(), _observers.cend(), obs) != _observers.cend();
-            if (is_already_observer)
-                return true;
+            if (this->is_observer(obs))
+                return false;
 
             if (add_to_front)
                 _observers.emplace(_observers.begin(), obs);
             else
-                _observers.emplace_back(obs);
+                _observers.emplace(_observers.end(), obs);
+
             return true;
         }
 
         void remove_observer(IHandler<T *> *obs)
         {
             std::lock_guard l(_mutex);
-            _observers_to_remove.emplace_back(obs);
+            if (_current_observer == obs)
+            {
+                _remove_current_observer = true;
+                return;
+            }
+            _observers.erase(std::find(_observers.begin(), _observers.end(), obs));
         }
 
         bool is_observer(IHandler<T *> *obs) const
@@ -51,23 +55,29 @@ class Observable: public IObservable<T>
         virtual void notify_observers(T *sender)
         {
             std::lock_guard lock(_mutex);
-            for (const auto & obs_to_remove : _observers_to_remove)
+            auto it = _observers.begin();
+            while (it != _observers.end())
             {
-                const auto it = std::find(_observers.begin(), _observers.end(), obs_to_remove);
-                if (it != _observers.end())
-                    _observers.erase(it);
+                _current_observer = (*it);
+                _current_observer->handle(sender);
+                if (_remove_current_observer)
+                {
+                    _remove_current_observer = false;
+                    it = _observers.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
             }
-            _observers_to_remove.clear();
-            for (const auto & obs : _observers)
-            {
-                obs->handle(sender);
-            }
+            _current_observer = nullptr;
         }
 
     private:
         mutable std::recursive_mutex _mutex;
-        std::vector<IHandler<T *> *> _observers;
-        std::list<IHandler<T *> *> _observers_to_remove;
+        bool _remove_current_observer {false};
+        IHandler<T *> *_current_observer {nullptr};
+        std::list<IHandler<T *> *> _observers;
 };
 
 } // namespace sihd::util

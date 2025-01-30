@@ -1,11 +1,10 @@
 #ifndef __SIHD_UTIL_BITMAP_HPP__
 #define __SIHD_UTIL_BITMAP_HPP__
 
+#include <bit>
 #include <cstdint>
 #include <string_view>
 #include <vector>
-
-#include <sihd/util/portable_endian.h>
 
 namespace sihd::util
 {

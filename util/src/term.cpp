@@ -1,9 +1,22 @@
 #include <fmt/format.h>
 
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
+
+#if defined(__SIHD_WINDOWS__)
+# include <windows.h>
+#endif
 
 namespace sihd::util::term
 {
+
+void set_output_utf8()
+{
+#if defined(__SIHD_WINDOWS__)
+    SetConsoleOutputCP(CP_UTF8);
+    setvbuf(stdout, nullptr, _IOFBF, 1000);
+#endif
+}
 
 std::string fmt(std::string_view str, const char *attr)
 {

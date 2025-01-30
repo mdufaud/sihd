@@ -39,13 +39,13 @@ TEST_F(TestFileWatcher, test_filewatcher_file)
 
     std::filesystem::path test_file = test_path / "file.txt";
 
-    FileWatcher fw(test_path.string(), [](FileWatcherEvent) {});
+    FileWatcher fw(test_path.string());
 
     std::ofstream file(test_file);
     file << "hello\n";
     file.close();
 
-    fw.poll();
+    fw.check_for_changes();
 }
 
 } // namespace test

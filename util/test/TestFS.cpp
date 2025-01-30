@@ -206,7 +206,7 @@ TEST_F(TestFS, test_fs_permission)
     EXPECT_TRUE(fs::permission_add(path, fs::permission_from_str("---r---w-")));
     EXPECT_EQ(fs::permission_get(path), 0342);
 
-    EXPECT_EQ(fs::permission_to_str(0750), "rwxr-x");
+    EXPECT_EQ(fs::permission_to_str(0750), "rwxr-x---");
     EXPECT_EQ(fs::permission_from_str("rwxr-x"), 0750);
 
     EXPECT_TRUE(fs::permission_set(path, fs::permission_from_str("rwxr-x-w-")));

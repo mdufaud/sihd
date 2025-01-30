@@ -88,6 +88,8 @@ inline constexpr const char *SCROLL_DOWN = __ESC "[T";
 
 } // namespace attr
 
+void set_output_utf8();
+
 bool is_interactive();
 
 std::string fmt(std::string_view str, const char *attr);

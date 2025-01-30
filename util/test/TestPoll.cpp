@@ -53,8 +53,7 @@ TEST_F(TestPoll, test_poll)
 
     Handler<Poll *> poll_handler([this, &buffer](Poll *poll) {
         SIHD_LOG(debug, "Polled");
-        auto events = poll->events();
-        for (PollEvent & event : events)
+        for (const PollEvent & event : poll->events())
         {
             int fd = event.fd;
             if (event.readable)
@@ -81,8 +80,10 @@ TEST_F(TestPoll, test_poll)
     });
     poll.add_observer(&poll_handler);
 
+    constexpr int timeout_milliseconds = 10;
+
     // first write from writing end of pipe
-    int res = poll.poll(10);
+    int res = poll.poll(timeout_milliseconds);
     // expect the write fd
     EXPECT_EQ(res, 1);
     // clearing the write fd so it does not write again
@@ -95,7 +96,7 @@ TEST_F(TestPoll, test_poll)
     EXPECT_EQ(_timedout, 0);
 
     // read from reading end of pipe
-    res = poll.poll(10);
+    res = poll.poll(timeout_milliseconds);
     // expect the read fd
     EXPECT_EQ(res, 1);
 
@@ -106,7 +107,7 @@ TEST_F(TestPoll, test_poll)
     EXPECT_EQ(_timedout, 0);
 
     // expect timeout
-    res = poll.poll(10);
+    res = poll.poll(timeout_milliseconds);
     EXPECT_EQ(res, 0);
 
     EXPECT_EQ(_write_count, 1);
@@ -114,7 +115,7 @@ TEST_F(TestPoll, test_poll)
     EXPECT_EQ(_timedout, 1);
 
     EXPECT_EQ(write(fd[1], "hello world", 11), 11);
-    res = poll.poll(10);
+    res = poll.poll(timeout_milliseconds);
     EXPECT_EQ(res, 1);
     EXPECT_EQ(_write_count, 1);
     EXPECT_EQ(_read_count, 2);

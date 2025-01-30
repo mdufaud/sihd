@@ -288,10 +288,8 @@ void Poll::process_poll_results(int poll_return)
             ++i;
         }
     }
-    if (!_lst_events.empty())
-    {
-        this->notify_observers(this);
-    }
+    // also notify the timeout
+    this->notify_observers(this);
 }
 
 } // namespace sihd::util

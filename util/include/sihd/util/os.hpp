@@ -27,6 +27,8 @@ typedef int uid_t;
 namespace sihd::util::os
 {
 
+std::string last_error_str();
+
 // syscalls linux - windows
 bool ioctl(int fd, unsigned long request, void *arg_ptr = nullptr, bool logerror = false);
 

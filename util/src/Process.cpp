@@ -489,7 +489,7 @@ void ProcessWatcher::check_status(int options)
         }
         else
         {
-            SIHD_LOG_ERROR("Process: GetExitCodeProcess: {}", GetLastError());
+            SIHD_LOG_ERROR("Process: GetExitCodeProcess: {}", os::last_error_str());
         }
     }
     else if (result == WAIT_TIMEOUT)
@@ -499,7 +499,7 @@ void ProcessWatcher::check_status(int options)
     }
     else
     {
-        SIHD_LOG_ERROR("Process: WaitForSingleObject: {}", GetLastError());
+        SIHD_LOG_ERROR("Process: WaitForSingleObject: {}", os::last_error_str());
     }
 #endif
 }
@@ -1324,7 +1324,7 @@ bool Process::is_process_running() const
 bool Process::wait_no_hang()
 {
 #if !defined(__SIHD_WINDOWS__)
-    return this->wait(WNOHANG);
+    return this->wait(WEXITED | WNOHANG);
 #else
     constexpr DWORD timeout_ms = 5;
     return this->wait(timeout_ms);

@@ -2,6 +2,7 @@
 #define __SIHD_UTIL_RUNNABLE_HPP__
 
 #include <functional>
+
 #include <sihd/util/IRunnable.hpp>
 
 namespace sihd::util

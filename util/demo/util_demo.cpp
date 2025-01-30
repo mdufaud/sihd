@@ -257,11 +257,6 @@ void screenshot()
 
 void process()
 {
-#if defined(__SIHD_WINDOWS__)
-    SetConsoleOutputCP(CP_UTF8);
-    setvbuf(stdout, nullptr, _IOFBF, 1000);
-#endif
-
     std::vector<std::string> args;
     proc::Options options({.timeout = std::chrono::milliseconds(100)});
     options.stdout_callback = [](std::string_view stdout_str) {
@@ -285,6 +280,7 @@ void process()
 
     if constexpr (os::is_windows)
     {
+        term::set_output_utf8();
         args.push_back("cmd.exe");
         args.push_back("/c");
         args.push_back("dir");
