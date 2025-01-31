@@ -43,13 +43,18 @@ struct FileWatcherEvent
 class FileWatcher: public sihd::util::Observable<FileWatcher>
 {
     public:
-        FileWatcher() = default; // does nothing
+        FileWatcher();
         FileWatcher(std::string_view path);
         virtual ~FileWatcher();
 
-        const std::vector<FileWatcherEvent> & events() const;
+        bool watch(std::string_view path);
+        bool unwatch(std::string_view path);
+        bool is_watching(std::string_view path) const;
+        void clear();
 
         bool check_for_changes(int milliseconds_timeout = 0);
+
+        const std::vector<FileWatcherEvent> & events() const;
 
     protected:
 

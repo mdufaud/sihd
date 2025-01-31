@@ -66,22 +66,20 @@ int main(int argc, char **argv)
         }
     });
 
-    try
+    const std::string & watch_path = result["path"].as<std::string>();
+    FileWatcher fw;
+    if (!fw.watch(watch_path))
     {
-        const std::string & watch_path = result["path"].as<std::string>();
-        FileWatcher fw(watch_path);
-        fw.add_observer(&handler);
-
-        SigHandler sig_handler(SIGINT);
-        while (!stop && !signal::termination_received())
-        {
-            constexpr int timeout_milliseconds = 100;
-            fw.check_for_changes(timeout_milliseconds);
-        }
+        SIHD_LOG(error, "Failed to watch: {}", watch_path);
+        return 1;
     }
-    catch (const std::invalid_argument & e)
+    fw.add_observer(&handler);
+
+    SigHandler sig_handler(SIGINT);
+    while (!stop && !signal::termination_received())
     {
-        SIHD_LOG(error, "Error: {}", e.what());
+        constexpr int timeout_milliseconds = 500;
+        fw.check_for_changes(timeout_milliseconds);
     }
 
     return 0;
