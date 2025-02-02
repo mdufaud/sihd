@@ -61,7 +61,7 @@ int main(int argc, char **argv)
     while (!signal::termination_received())
     {
         time::sleep_t(sleep_for);
-        fpoller.check_for_changes();
+        fpoller.run();
     }
 
     log.info(fmt::format("stopped watching: {} files", fpoller.watch_size()));

@@ -73,13 +73,14 @@ int main(int argc, char **argv)
         SIHD_LOG(error, "Failed to watch: {}", watch_path);
         return 1;
     }
+    constexpr int timeout_milliseconds = 500;
+    fw.set_run_timeout(timeout_milliseconds);
     fw.add_observer(&handler);
 
     SigHandler sig_handler(SIGINT);
     while (!stop && !signal::termination_received())
     {
-        constexpr int timeout_milliseconds = 500;
-        fw.check_for_changes(timeout_milliseconds);
+        fw.run();
     }
 
     return 0;

@@ -157,7 +157,7 @@ bool FilePoller::watch(std::string_view path, size_t max_depth)
     return true;
 }
 
-bool FilePoller::check_for_changes()
+bool FilePoller::run()
 {
     if (_impl->watch_path.empty())
         return false;

@@ -498,6 +498,7 @@ FileWatcher::FileWatcher()
 {
     _impl = std::make_unique<FileWatcher::Impl>(_events);
     _impl->init();
+    _run_timeout_milliseconds = 100;
 };
 
 FileWatcher::FileWatcher(std::string_view path): FileWatcher()
@@ -508,17 +509,27 @@ FileWatcher::FileWatcher(std::string_view path): FileWatcher()
     }
 }
 
+FileWatcher::FileWatcher(std::string_view path, int run_timeout_milliseconds): FileWatcher(path)
+{
+    this->set_run_timeout(run_timeout_milliseconds);
+}
+
+FileWatcher::~FileWatcher() {}
+
+void FileWatcher::set_run_timeout(int milliseconds)
+{
+    _run_timeout_milliseconds = milliseconds;
+}
+
 const std::vector<FileWatcherEvent> & FileWatcher::events() const
 {
     return _events;
 }
 
-FileWatcher::~FileWatcher() {}
-
-bool FileWatcher::check_for_changes(int milliseconds_timeout)
+bool FileWatcher::run()
 {
     _events.clear();
-    const bool success = _impl->poll_new_events(milliseconds_timeout);
+    const bool success = _impl->poll_new_events(_run_timeout_milliseconds);
     if (success)
         this->notify_observers(this);
     return success;

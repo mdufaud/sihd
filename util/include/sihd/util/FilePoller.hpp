@@ -4,15 +4,14 @@
 #include <string>
 #include <string_view>
 
-#include <sihd/util/AThreadedService.hpp>
-#include <sihd/util/Named.hpp>
+#include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Observable.hpp>
-#include <sihd/util/StepWorker.hpp>
 
 namespace sihd::util
 {
 
-class FilePoller: public sihd::util::Observable<FilePoller>
+class FilePoller: public sihd::util::Observable<FilePoller>,
+                  public sihd::util::IRunnable
 {
     public:
         FilePoller();
@@ -22,7 +21,7 @@ class FilePoller: public sihd::util::Observable<FilePoller>
         bool watch(std::string_view path, size_t max_depth);
         void unwatch();
 
-        bool check_for_changes();
+        bool run() override;
 
         const std::vector<std::string> & created() const;
         const std::vector<std::string> & removed() const;
