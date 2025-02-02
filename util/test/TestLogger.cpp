@@ -1,8 +1,7 @@
 #include <gtest/gtest.h>
 #include <sihd/util/ALogger.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/LoggerFilterLevel.hpp>
-#include <sihd/util/LoggerFilterSource.hpp>
+#include <sihd/util/LoggerFilter.hpp>
 #include <sihd/util/LoggerStream.hpp>
 
 namespace test
@@ -112,37 +111,111 @@ TEST_F(TestLogger, test_logger_macros)
     ASSERT_EQ(log_counter->info, 3);
 }
 
-TEST_F(TestLogger, test_logger_filters)
+TEST_F(TestLogger, test_logger_filter_message)
 {
-    auto logger = new LoggerStream(stderr, true);
-    LoggerManager::add(logger);
-    logger->add_filter(new LoggerFilterLevel(LogLevel::warning));
-    log_counter->add_filter(new LoggerFilterLevel(LogLevel::warning));
-    SIHD_LOG(error, "Should print");
-    ASSERT_EQ(log_counter->error, 1);
-    SIHD_LOG(warning, "Should print");
-    ASSERT_EQ(log_counter->warning, 1);
-    SIHD_LOG(info, "Should not print");
-    ASSERT_EQ(log_counter->info, 0);
-    SIHD_LOG(debug, "Should not print");
-    ASSERT_EQ(log_counter->debug, 0);
-    logger->delete_filters();
+    LoggerManager::filter(new LoggerFilter({
+        .message_regex = ".*not.*",
+    }));
+    SIHD_LOG(info, "Should count");
+    EXPECT_EQ(log_counter->info, 1);
+    SIHD_LOG(info, "Should not count");
+    EXPECT_EQ(log_counter->info, 1);
+
+    LoggerManager::filter(new LoggerFilter({
+        .message_regex = "^Hello.*",
+    }));
+    SIHD_LOG(info, "Hello world");
+    EXPECT_EQ(log_counter->info, 1);
+    SIHD_LOG(info, "hello world");
+    EXPECT_EQ(log_counter->info, 2);
+}
+
+TEST_F(TestLogger, test_logger_filter_thread)
+{
+    // test filter all threads except main
+
+    LoggerManager::filter(new LoggerFilter({
+        .thread_ne = thread::id(),
+    }));
+    SIHD_LOG(info, "Should count");
+    EXPECT_EQ(log_counter->info, 1);
+
+    std::jthread thread1([]() { SIHD_LOG(warning, "Should not count"); });
+    thread1.join();
+    EXPECT_EQ(log_counter->warning, 0);
+
+    LoggerManager::clear_filters();
+
+    // test filter main thread id
+
+    LoggerManager::filter(new LoggerFilter({
+        .thread_eq = thread::id(),
+    }));
+    SIHD_LOG(error, "Should not count");
+    EXPECT_EQ(log_counter->error, 0);
+
+    std::jthread thread2([]() { SIHD_LOG(critical, "Should count"); });
+    thread2.join();
+    EXPECT_EQ(log_counter->critical, 1);
+
+    LoggerManager::clear_filters();
+
+    // test filter thread named main or titi
+
+    LoggerManager::filter(new LoggerFilter({
+        .thread_regex = "^(main|titi)$",
+    }));
+    SIHD_LOG(debug, "Should not count");
+    EXPECT_EQ(log_counter->debug, 0);
+
+    std::jthread thread3([]() {
+        thread::set_name("toto");
+        SIHD_LOG(debug, "Should count");
+        thread::set_name("titi");
+        SIHD_LOG(debug, "Should not count");
+    });
+    thread3.join();
+    EXPECT_EQ(log_counter->debug, 1);
+}
+
+TEST_F(TestLogger, test_logger_filter_source)
+{
+    LoggerManager::filter(new LoggerFilter({
+        .source_regex = "^test",
+    }));
+    SIHD_LOG(critical, "Should not count");
+    EXPECT_EQ(log_counter->critical, 0);
+    LoggerManager::clear_filters();
+
+    LoggerManager::filter(new LoggerFilter({
+        .source_regex = "other",
+    }));
+    SIHD_LOG(debug, "Should count");
+    EXPECT_EQ(log_counter->debug, 1);
+}
+
+TEST_F(TestLogger, test_logger_filter_level)
+{
+    log_counter->add_filter(new LoggerFilter({
+        .level_lower = LogLevel::warning,
+    }));
+    SIHD_LOG(error, "Should count");
+    EXPECT_EQ(log_counter->error, 1);
+    SIHD_LOG(warning, "Should count");
+    EXPECT_EQ(log_counter->warning, 1);
+    SIHD_LOG(info, "Should not count");
+    EXPECT_EQ(log_counter->info, 0);
+    SIHD_LOG(debug, "Should not count");
+    EXPECT_EQ(log_counter->debug, 0);
     log_counter->delete_filters();
 
-    LoggerManager::filter(new LoggerFilterLevel("CRITICAL"));
-    SIHD_LOG(critical, "Should print");
-    ASSERT_EQ(log_counter->critical, 1);
-    SIHD_LOG(error, "Should not print");
-    ASSERT_EQ(log_counter->error, 1);
-    LoggerManager::clear_filters();
-
-    LoggerManager::filter(new LoggerFilterSource("test"));
-    SIHD_LOG(critical, "Should not print");
-    ASSERT_EQ(log_counter->critical, 1);
-    LoggerManager::clear_filters();
-
-    LoggerManager::filter(new LoggerFilterSource("other"));
-    SIHD_LOG(debug, "Should print");
-    ASSERT_EQ(log_counter->debug, 1);
+    LoggerManager::filter(new LoggerFilter({
+        .level_lower = LogLevel::critical,
+    }));
+    SIHD_LOG(critical, "Should count");
+    EXPECT_EQ(log_counter->critical, 1);
+    SIHD_LOG(error, "Should not count");
+    EXPECT_EQ(log_counter->error, 1);
 }
+
 } // namespace test

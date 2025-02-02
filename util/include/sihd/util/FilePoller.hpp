@@ -12,42 +12,30 @@
 namespace sihd::util
 {
 
-class FilePoller: public Named,
-                  public AThreadedService,
-                  public Configurable,
-                  public sihd::util::Observable<FilePoller>,
-                  public sihd::util::IRunnable
+class FilePoller: public sihd::util::Observable<FilePoller>
 {
     public:
-        FilePoller(const std::string & name, Node *parent = nullptr);
+        FilePoller();
+        FilePoller(std::string_view path, size_t max_depth);
         virtual ~FilePoller();
 
-        bool set_path(std::string_view path);
-        bool set_max_depth(size_t depth);
-        bool set_polling_frequency(double hz);
+        bool watch(std::string_view path, size_t max_depth);
+        void unwatch();
 
-        bool is_running() const override;
+        bool check_for_changes();
 
         const std::vector<std::string> & created() const;
         const std::vector<std::string> & removed() const;
         const std::vector<std::string> & changed() const;
 
         size_t watch_size() const;
-        const std::string & watch_path() const { return _watch_path; }
+        const std::string & watch_path() const;
 
     protected:
-        bool on_start() override;
-        bool on_stop() override;
-        bool run() override;
 
     private:
-        struct FileWatch;
-
-        std::unique_ptr<FileWatch> _file_watch_ptr;
-
-        StepWorker _step_worker;
-        std::string _watch_path;
-        uint32_t _max_depth;
+        struct Impl;
+        std::unique_ptr<Impl> _impl;
 };
 
 } // namespace sihd::util

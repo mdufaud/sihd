@@ -3,11 +3,13 @@
 
 #include <cstdio>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 #include <sihd/util/ALogFilterer.hpp>
 #include <sihd/util/ALogger.hpp>
 #include <sihd/util/LogInfo.hpp>
+#include <sihd/util/LoggerFilter.hpp>
 
 namespace sihd::util
 {
@@ -47,9 +49,11 @@ class LoggerManager: public ALogFilterer
 
         static void log(const std::string & src, LogLevel level, std::string_view msg);
 
-        static void stream(FILE *output = stderr, bool print_thread_id = false);
-        static void console();
-        static void thrower(LogLevel filter_level = LogLevel::none, const std::string & filter_source = "");
+        static void stream(FILE *output = stderr,
+                           bool print_thread_id = false,
+                           std::optional<LoggerFilter::Options> options = std::nullopt);
+        static void console(std::optional<LoggerFilter::Options> options = std::nullopt);
+        static void thrower(std::optional<LoggerFilter::Options> options = std::nullopt);
 
         static bool add(ALogger *logger);
         static bool rm(ALogger *logger);

@@ -265,4 +265,14 @@ struct tm Timestamp::local_tm() const
     return time::to_tm(std::abs(_nano), true);
 }
 
+namespace time
+{
+
+void sleep_t(Timestamp ts)
+{
+    std::this_thread::sleep_for(std::chrono::nanoseconds(ts.nanoseconds()));
+}
+
+} // namespace time
+
 } // namespace sihd::util

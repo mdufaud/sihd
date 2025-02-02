@@ -8,33 +8,33 @@
 #include <sihd/util/time.hpp>
 
 #define __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(OP)                                                           \
- template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>               \
- constexpr bool operator OP(Duration duration) const                                                                   \
- {                                                                                                                     \
-  return _nano OP time::duration<Duration>(duration);                                                                  \
- }
+    template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>            \
+    constexpr bool operator OP(Duration duration) const                                                                \
+    {                                                                                                                  \
+        return _nano OP time::duration<Duration>(duration);                                                            \
+    }
 
 #define __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(OP)                                                            \
- template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>               \
- constexpr Timestamp operator OP(Duration duration)                                                                    \
- {                                                                                                                     \
-  return Timestamp(_nano OP time::duration<Duration>(duration));                                                       \
- }
+    template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>            \
+    constexpr Timestamp operator OP(Duration duration)                                                                 \
+    {                                                                                                                  \
+        return Timestamp(_nano OP time::duration<Duration>(duration));                                                 \
+    }
 
 #define __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(OP)                                                                \
- template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>               \
- constexpr Timestamp & operator OP(Duration duration)                                                                  \
- {                                                                                                                     \
-  _nano OP time::duration<Duration>(duration);                                                                         \
-  return *this;                                                                                                        \
- }
+    template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>            \
+    constexpr Timestamp & operator OP(Duration duration)                                                               \
+    {                                                                                                                  \
+        _nano OP time::duration<Duration>(duration);                                                                   \
+        return *this;                                                                                                  \
+    }
 
 #define __TMP_TIMESTAMP_ASSIGN_OPERATION__(OP)                                                                         \
- constexpr Timestamp & operator OP(time_t t)                                                                           \
- {                                                                                                                     \
-  _nano OP t;                                                                                                          \
-  return *this;                                                                                                        \
- }
+    constexpr Timestamp & operator OP(time_t t)                                                                        \
+    {                                                                                                                  \
+        _nano OP t;                                                                                                    \
+        return *this;                                                                                                  \
+    }
 
 namespace sihd::util
 {
@@ -197,6 +197,13 @@ class Timestamp
     private:
         time_t _nano;
 };
+
+namespace time
+{
+
+void sleep_t(Timestamp ts);
+
+} // namespace time
 
 } // namespace sihd::util
 

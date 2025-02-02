@@ -1,6 +1,3 @@
-#include <sys/stat.h>
-#include <unistd.h>
-
 #include <stdexcept>
 
 #include <sihd/util/platform.hpp>
@@ -9,7 +6,6 @@
 #if defined(__SIHD_WINDOWS__)
 
 # include <debugapi.h>
-# include <direct.h> // _stat
 # include <psapi.h>
 # include <winsock2.h>
 
@@ -38,6 +34,7 @@
 # include <sys/ioctl.h>
 # include <sys/time.h>
 # include <sys/wait.h>
+# include <unistd.h>
 
 # if !defined(__SIHD_EMSCRIPTEN__)
 #  include <sys/ptrace.h>

@@ -1,6 +1,4 @@
 #include <sihd/util/LoggerConsole.hpp>
-#include <sihd/util/LoggerFilterLevel.hpp>
-#include <sihd/util/LoggerFilterSource.hpp>
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/LoggerStream.hpp>
 #include <sihd/util/LoggerThrow.hpp>
@@ -101,29 +99,27 @@ void LoggerManager::clear_filters()
     _g_singleton.delete_filters();
 }
 
-void LoggerManager::stream(FILE *output, bool print_thread_id)
+void LoggerManager::stream(FILE *output, bool print_thread_id, std::optional<LoggerFilter::Options> options)
 {
-    LoggerManager::add(new LoggerStream(output, print_thread_id));
+    LoggerStream *logger = new LoggerStream(output, print_thread_id);
+    if (options.has_value())
+        logger->add_filter(new LoggerFilter(*options));
+    LoggerManager::add(logger);
 }
 
-void LoggerManager::console()
+void LoggerManager::console(std::optional<LoggerFilter::Options> options)
 {
-    LoggerManager::add(new LoggerConsole());
+    LoggerConsole *logger = new LoggerConsole();
+    if (options.has_value())
+        logger->add_filter(new LoggerFilter(*options));
+    LoggerManager::add(logger);
 }
 
-void LoggerManager::thrower(LogLevel filter_level, const std::string & filter_source)
+void LoggerManager::thrower(std::optional<LoggerFilter::Options> options)
 {
     LoggerThrow *logger = new LoggerThrow();
-    if (filter_level != LogLevel::none)
-    {
-        constexpr bool match = false;
-        logger->add_filter(new LoggerFilterLevel(filter_level, match));
-    }
-    if (filter_source.empty() == false)
-    {
-        constexpr bool match_only = false;
-        logger->add_filter(new LoggerFilterSource(filter_source, match_only));
-    }
+    if (options.has_value())
+        logger->add_filter(new LoggerFilter(*options));
     LoggerManager::add(logger);
 }
 

@@ -43,7 +43,7 @@ bool _is_file_type(std::string_view path, std::filesystem::file_type expected_ty
     auto status = std::filesystem::status(path, ec);
     if (ec)
     {
-        SIHD_LOG(error, "{}", ec.message());
+        SIHD_LOG(error, "status: {}", ec.message());
         return false;
     }
     return status.type() == expected_type;
@@ -103,8 +103,17 @@ bool internal_set_perm(std::string_view path, unsigned int mode, std::filesystem
     std::error_code ec;
     std::filesystem::permissions(path, static_cast<std::filesystem::perms>(mode), option, ec);
     if (ec)
-        SIHD_LOG(error, "{}", ec.message());
+        SIHD_LOG(error, "permissions: {}", ec.message());
     return !ec;
+}
+
+bool do_stat(std::string_view path, struct stat *s)
+{
+#if defined(__SIHD_WINDOWS__)
+    return ::_stat(path.data(), reinterpret_cast<struct _stat *>(s)) == 0;
+#else
+    return ::stat(path.data(), s) == 0;
+#endif
 }
 
 } // namespace
@@ -253,23 +262,14 @@ bool is_fifo(std::string_view path)
 
 Timestamp last_write(std::string_view path)
 {
-    std::error_code ec;
-    auto last_write_time = std::filesystem::last_write_time(path, ec);
-    if (ec)
-    {
-        SIHD_LOG(error, "{}", ec.message());
-        return -1;
-    }
-    return last_write_time.time_since_epoch().count();
+    struct stat s;
+    return do_stat(path.data(), &s) ? Timestamp(time::seconds(s.st_mtime)) : Timestamp {};
 }
 
 std::optional<size_t> file_size(std::string_view path)
 {
-    std::error_code ec;
-    auto fs = std::filesystem::file_size(path, ec);
-    if (ec)
-        return std::nullopt;
-    return fs;
+    struct stat s;
+    return do_stat(path.data(), &s) ? s.st_size : std::optional<size_t> {};
 }
 
 std::string permission_to_str(unsigned int mode)
@@ -336,7 +336,7 @@ unsigned int permission_get(std::string_view path)
     std::error_code ec;
     auto p = std::filesystem::status(path, ec).permissions();
     if (ec)
-        SIHD_LOG(error, "{}", ec.message());
+        SIHD_LOG(error, "permission_get: {}", ec.message());
     return ec ? 0 : static_cast<unsigned int>(p);
 }
 
@@ -372,7 +372,7 @@ std::string make_tmp_directory(std::string_view prefix)
         return path;
 #else
     if (prefix.size() + 6 > PATH_MAX)
-        throw std::runtime_error(fmt::format("Path too long: {}", prefix));
+        throw std::runtime_error(fmt::format("make_tmp_directory: path too long: {}", prefix));
 
     std::string path;
     path.reserve(prefix.size() + 6 + 1);
@@ -670,7 +670,7 @@ std::optional<std::string> read_link(std::string_view path)
     std::filesystem::path link_path = std::filesystem::read_symlink(path, ec);
     if (ec)
     {
-        SIHD_LOG(error, "{}", ec.message());
+        SIHD_LOG(error, "read_link: {}", ec.message());
         return std::nullopt;
     }
     return {link_path.string()};
@@ -681,7 +681,7 @@ bool make_file_link(std::string_view target, std::string_view link)
     std::error_code ec;
     std::filesystem::create_symlink(target, link, ec);
     if (ec)
-        SIHD_LOG(error, "{}", ec.message());
+        SIHD_LOG(error, "make_file_link: {}", ec.message());
     return ec.value() == 0;
 }
 
@@ -690,7 +690,7 @@ bool make_dir_link(std::string_view target, std::string_view link)
     std::error_code ec;
     std::filesystem::create_directory_symlink(target, link, ec);
     if (ec)
-        SIHD_LOG(error, "{}", ec.message());
+        SIHD_LOG(error, "make_dir_link: {}", ec.message());
     return ec.value() == 0;
 }
 
@@ -699,7 +699,7 @@ bool make_hard_link(std::string_view target, std::string_view link)
     std::error_code ec;
     std::filesystem::create_hard_link(target, link, ec);
     if (ec)
-        SIHD_LOG(error, "{}", ec.message());
+        SIHD_LOG(error, "make_hard_link: {}", ec.message());
     return ec.value() == 0;
 }
 

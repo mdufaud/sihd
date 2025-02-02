@@ -17,8 +17,8 @@ class LoggerFilter: public ILoggerFilter
                 pthread_t thread_eq = 0;
                 pthread_t thread_ne = 0;
                 LogLevel level_eq = LogLevel::none;
-                LogLevel level_gt = LogLevel::none;
-                LogLevel level_lt = LogLevel::none;
+                LogLevel level_higher = LogLevel::none;
+                LogLevel level_lower = LogLevel::none;
         };
 
         LoggerFilter(const Options & options);
