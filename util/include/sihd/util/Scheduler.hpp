@@ -7,7 +7,7 @@
 #include <queue>
 #include <thread>
 
-#include <sihd/util/AThreadedService.hpp>
+#include <sihd/util/AWorkerService.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Named.hpp>
@@ -19,14 +19,12 @@ namespace sihd::util
 {
 
 class Scheduler: public Named,
-                 public AThreadedService,
+                 public AWorkerService,
                  public Configurable
 {
     public:
         Scheduler(const std::string & name, Node *parent = nullptr);
         ~Scheduler();
-
-        bool is_running() const override;
 
         void pause();
         void resume();
@@ -55,9 +53,8 @@ class Scheduler: public Named,
         time_t acceptable_task_preplay_ns_time;
 
     protected:
-        bool run();
-        bool on_start() override;
-        bool on_stop() override;
+        bool on_work_start() override;
+        bool on_work_stop() override;
 
         Waitable _waitable_task;
         std::vector<Task *> _tasks_to_add;
@@ -76,10 +73,7 @@ class Scheduler: public Named,
         void _resume_tasks();
 
         IClock *_clock_ptr;
-        std::thread _thread;
-
         time_t _paused_time_at;
-        std::atomic<bool> _running;
         std::atomic<bool> _paused;
         Waitable _waitable_pause;
 

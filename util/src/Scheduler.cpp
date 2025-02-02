@@ -13,7 +13,7 @@ SIHD_UTIL_REGISTER_FACTORY(Scheduler);
 
 SIHD_LOGGER;
 
-Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent), AThreadedService(name)
+Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent), AWorkerService(name)
 {
     overrun_at = time::micro(300);
     acceptable_task_preplay_ns_time = 100;
@@ -22,12 +22,9 @@ Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent
 
     _next_run = 0;
     _paused_time_at = 0;
-    _running = false;
     _paused = false;
     _no_delay = false;
     _tasks_prepared = false;
-
-    this->set_service_nb_thread(1);
 
     this->add_conf("no_delay", &Scheduler::set_no_delay);
 }
@@ -41,7 +38,7 @@ Scheduler::~Scheduler()
 
 void Scheduler::set_clock(IClock *ptr)
 {
-    if (_running.load())
+    if (this->is_running())
         throw std::logic_error("Cannot set a clock while the scheduler is running");
     _clock_ptr = ptr;
 }
@@ -58,7 +55,7 @@ time_t Scheduler::now() const
 
 bool Scheduler::set_no_delay(bool active)
 {
-    if (_running.load())
+    if (this->is_running())
         throw std::logic_error("Cannot set 'as fast as possible' mode while running");
     _no_delay = active;
     return true;
@@ -67,15 +64,15 @@ bool Scheduler::set_no_delay(bool active)
 void Scheduler::_wait_for_next_task()
 {
     // wait for resume if paused
-    _waitable_pause.wait([this] { return _running == false || _paused == false; });
+    _waitable_pause.wait([this] { return this->stop_requested || _paused == false; });
     // wait for new task if empty
-    _waitable_task.wait([this] { return _running == false || _task_map.empty() == false; });
+    _waitable_task.wait([this] { return this->stop_requested || _task_map.empty() == false; });
 
     if (_no_delay)
         return;
 
     // wait until most recent task to play
-    _waitable_task.wait_for(_next_run - _clock_ptr->now(), [this] { return _running == false; });
+    _waitable_task.wait_for(_next_run - _clock_ptr->now(), [this] { return this->stop_requested.load(); });
 }
 
 Task *Scheduler::_get_playable_task(time_t now)
@@ -132,14 +129,12 @@ void Scheduler::_prepare_tasks()
     _tasks_prepared = true;
 }
 
-bool Scheduler::run()
+bool Scheduler::on_work_start()
 {
-    sihd::util::thread::set_name(this->name());
-
-    this->notify_service_thread_started();
-
     if (_clock_ptr == nullptr || _clock_ptr->start() == false)
         return false;
+
+    this->overruns = 0;
 
     _begin_run = _clock_ptr->now();
 
@@ -148,10 +143,10 @@ bool Scheduler::run()
     time_t now = _begin_run;
 
     Task *task = nullptr;
-    while (_running)
+    while (this->stop_requested == false)
     {
         this->_wait_for_next_task();
-        if (_running && _paused == false)
+        if (this->stop_requested == false && _paused == false)
         {
             now = _clock_ptr->now();
             // returns most urgent task to play
@@ -216,19 +211,8 @@ void Scheduler::resume()
     _waitable_pause.notify();
 }
 
-bool Scheduler::on_start()
+bool Scheduler::on_work_stop()
 {
-    if (_running.exchange(true) == true)
-        return true;
-    this->overruns = 0;
-    _thread = std::thread(&Scheduler::run, this);
-    return true;
-}
-
-bool Scheduler::on_stop()
-{
-    if (_running.exchange(false) == false)
-        return true;
     {
         auto l = _waitable_pause.guard();
         _paused = false;
@@ -239,15 +223,9 @@ bool Scheduler::on_stop()
         _begin_run = 0;
         _waitable_task.notify();
     }
-    bool ret = _clock_ptr != nullptr && _clock_ptr->stop();
-    if (_thread.joinable())
-        _thread.join();
-    return ret;
-}
-
-bool Scheduler::is_running() const
-{
-    return _running;
+    if (_clock_ptr != nullptr)
+        _clock_ptr->stop();
+    return true;
 }
 
 void Scheduler::_unprotected_add_task_to_map(Task *task)

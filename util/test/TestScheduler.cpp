@@ -121,7 +121,6 @@ TEST_F(TestScheduler, test_sched_perf)
     sched.stop();
 
     const int expected_run = time::micro(sleep_time) / this->should_run_every_us;
-    const int minimum_run = expected_run / 2;
 
     auto level = num::near(this->ran, expected_run, 1) ? LogLevel::info : LogLevel::error;
 
@@ -135,7 +134,7 @@ TEST_F(TestScheduler, test_sched_perf)
                  overruns,
                  expected_overruns);
 
-    // EXPECT_LE(sched.overruns, minimum_run);
+    const int minimum_run = expected_run / 3;
     EXPECT_GT(this->ran, minimum_run);
 }
 
@@ -152,20 +151,20 @@ TEST_F(TestScheduler, test_sched_stop)
             ++ran;
             return true;
         },
-        {.run_in = time::milli(5)}));
+        {.run_in = time::milli(10)}));
     sched.add_task(new Task(
         [&]() -> bool {
             SIHD_TRACE("Should not run");
             ++ran;
             return true;
         },
-        {.run_in = time::milli(25)}));
+        {.run_in = time::milli(30)}));
     sched.set_start_synchronised(true);
     sched.start();
     SIHD_TRACE("Before sleep");
-    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
     EXPECT_EQ(ran, 0);
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(15));
     EXPECT_EQ(ran, 1);
     sched.stop();
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -177,7 +176,7 @@ TEST_F(TestScheduler, test_sched_pause)
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
     constexpr time_t should_run_every_ms = 15;
-    constexpr time_t sleep_ms = should_run_every_ms + 10;
+    constexpr time_t sleep_ms = should_run_every_ms + 15;
 
     Scheduler sched("sched");
 

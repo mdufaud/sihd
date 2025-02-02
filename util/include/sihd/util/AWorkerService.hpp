@@ -1,6 +1,8 @@
 #ifndef __SIHD_UTIL_AWORKERSERVICE_HPP__
 #define __SIHD_UTIL_AWORKERSERVICE_HPP__
 
+#include <atomic>
+
 #include <sihd/util/AThreadedService.hpp>
 #include <sihd/util/Worker.hpp>
 
@@ -17,8 +19,6 @@ class AWorkerService: public AThreadedService,
         virtual bool is_running() const override;
 
     protected:
-        bool is_work_stop_requested() const;
-
         virtual bool on_start() override;
         virtual bool on_stop() override;
         bool run() override;
@@ -26,8 +26,9 @@ class AWorkerService: public AThreadedService,
         virtual bool on_work_start() = 0;
         virtual bool on_work_stop() = 0;
 
+        std::atomic<bool> stop_requested;
+
     private:
-        bool _stop_requested;
         Worker _worker;
 };
 
