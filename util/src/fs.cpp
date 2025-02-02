@@ -43,7 +43,7 @@ bool _is_file_type(std::string_view path, std::filesystem::file_type expected_ty
     auto status = std::filesystem::status(path, ec);
     if (ec)
     {
-        SIHD_LOG(error, "status: {}", ec.message());
+        SIHD_LOG(error, "status: {}: {}", ec.message(), path);
         return false;
     }
     return status.type() == expected_type;
@@ -103,7 +103,7 @@ bool internal_set_perm(std::string_view path, unsigned int mode, std::filesystem
     std::error_code ec;
     std::filesystem::permissions(path, static_cast<std::filesystem::perms>(mode), option, ec);
     if (ec)
-        SIHD_LOG(error, "permissions: {}", ec.message());
+        SIHD_LOG(error, "permissions: {}: {}", ec.message(), path);
     return !ec;
 }
 
@@ -336,7 +336,7 @@ unsigned int permission_get(std::string_view path)
     std::error_code ec;
     auto p = std::filesystem::status(path, ec).permissions();
     if (ec)
-        SIHD_LOG(error, "permission_get: {}", ec.message());
+        SIHD_LOG(error, "permission_get: {}: {}", ec.message(), path);
     return ec ? 0 : static_cast<unsigned int>(p);
 }
 
@@ -670,7 +670,7 @@ std::optional<std::string> read_link(std::string_view path)
     std::filesystem::path link_path = std::filesystem::read_symlink(path, ec);
     if (ec)
     {
-        SIHD_LOG(error, "read_link: {}", ec.message());
+        SIHD_LOG(error, "read_link: {}: {}", ec.message(), path);
         return std::nullopt;
     }
     return {link_path.string()};
@@ -681,7 +681,7 @@ bool make_file_link(std::string_view target, std::string_view link)
     std::error_code ec;
     std::filesystem::create_symlink(target, link, ec);
     if (ec)
-        SIHD_LOG(error, "make_file_link: {}", ec.message());
+        SIHD_LOG(error, "make_file_link: {}: {}", ec.message(), path);
     return ec.value() == 0;
 }
 
@@ -690,7 +690,7 @@ bool make_dir_link(std::string_view target, std::string_view link)
     std::error_code ec;
     std::filesystem::create_directory_symlink(target, link, ec);
     if (ec)
-        SIHD_LOG(error, "make_dir_link: {}", ec.message());
+        SIHD_LOG(error, "make_dir_link: {}: {}", ec.message(), path);
     return ec.value() == 0;
 }
 
@@ -699,7 +699,7 @@ bool make_hard_link(std::string_view target, std::string_view link)
     std::error_code ec;
     std::filesystem::create_hard_link(target, link, ec);
     if (ec)
-        SIHD_LOG(error, "make_hard_link: {}", ec.message());
+        SIHD_LOG(error, "make_hard_link: {}: {}", ec.message(), path);
     return ec.value() == 0;
 }
 
