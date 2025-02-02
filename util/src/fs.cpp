@@ -681,7 +681,7 @@ bool make_file_link(std::string_view target, std::string_view link)
     std::error_code ec;
     std::filesystem::create_symlink(target, link, ec);
     if (ec)
-        SIHD_LOG(error, "make_file_link: {}: {}", ec.message(), path);
+        SIHD_LOG(error, "make_file_link: {}: {} -> {}", ec.message(), target, link);
     return ec.value() == 0;
 }
 
@@ -690,7 +690,7 @@ bool make_dir_link(std::string_view target, std::string_view link)
     std::error_code ec;
     std::filesystem::create_directory_symlink(target, link, ec);
     if (ec)
-        SIHD_LOG(error, "make_dir_link: {}: {}", ec.message(), path);
+        SIHD_LOG(error, "make_dir_link: {}: {} -> {}", ec.message(), target, link);
     return ec.value() == 0;
 }
 
@@ -699,7 +699,7 @@ bool make_hard_link(std::string_view target, std::string_view link)
     std::error_code ec;
     std::filesystem::create_hard_link(target, link, ec);
     if (ec)
-        SIHD_LOG(error, "make_hard_link: {}: {}", ec.message(), path);
+        SIHD_LOG(error, "make_hard_link: {}: {} -> {}", ec.message(), target, link);
     return ec.value() == 0;
 }
 

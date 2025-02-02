@@ -8,41 +8,17 @@
 namespace sihd::util
 {
 
-SigWatcher::SigWatcher(const std::string & name, Node *parent): Named(name, parent)
+SigWatcher::SigWatcher(const std::string & name, Node *parent): Named(name, parent), AStepWorkerService(name)
 {
-    this->set_service_nb_thread(1);
+    this->set_step_frequency(1.0);
 
-    _step_worker.set_runnable(this);
-    _step_worker.set_frequency(1.0);
-    _step_worker.set_callback_setup([this] { this->notify_service_thread_started(); });
-
-    this->add_conf("polling_frequency", &SigWatcher::set_polling_frequency);
+    this->add_conf("polling_frequency", &SigWatcher::set_step_frequency);
 }
 
 SigWatcher::~SigWatcher()
 {
     if (this->is_running())
         this->stop();
-}
-
-bool SigWatcher::set_polling_frequency(double hz)
-{
-    return _step_worker.set_frequency(hz);
-}
-
-bool SigWatcher::on_start()
-{
-    return _step_worker.start_worker(this->name());
-}
-
-bool SigWatcher::on_stop()
-{
-    return _step_worker.stop_worker();
-}
-
-bool SigWatcher::is_running() const
-{
-    return _step_worker.is_worker_running();
 }
 
 bool SigWatcher::add_signal(int sig)
@@ -99,7 +75,12 @@ bool SigWatcher::call_previous_handler(int sig)
     return found;
 }
 
-bool SigWatcher::run()
+bool SigWatcher::on_work_setup()
+{
+    return true;
+}
+
+bool SigWatcher::on_work_start()
 {
     {
         std::lock_guard l(_mutex);
@@ -124,6 +105,16 @@ bool SigWatcher::run()
         _signals_to_handle.clear();
     }
 
+    return true;
+}
+
+bool SigWatcher::on_work_stop()
+{
+    return true;
+}
+
+bool SigWatcher::on_work_teardown()
+{
     return true;
 }
 

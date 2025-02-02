@@ -15,7 +15,7 @@ using namespace sihd::util;
 class FakeThreadedService: public AThreadedService
 {
     public:
-        FakeThreadedService() { this->set_service_nb_thread(1); };
+        FakeThreadedService(): AThreadedService("FakeThreadedService") { this->set_service_nb_thread(1); };
         ~FakeThreadedService() { this->stop(); }
 
         bool on_start() override

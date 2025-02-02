@@ -11,7 +11,7 @@ namespace sihd::util
 class AThreadedService: public sihd::util::AService
 {
     public:
-        AThreadedService();
+        AThreadedService(std::string_view name);
         virtual ~AThreadedService();
 
         // only if service started a thread
@@ -30,10 +30,13 @@ class AThreadedService: public sihd::util::AService
         // if service starts a thread - call this as soon as thread is started
         void notify_service_thread_started();
 
+        const std::string & thread_name() const;
+
         ThreadedServiceController _service_controller;
 
     private:
         Synchronizer _synchro;
+        std::string _thread_name;
         uint8_t _number_of_threads;
         bool _start_synchronised;
 };

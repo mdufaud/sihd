@@ -3,7 +3,12 @@
 namespace sihd::util
 {
 
-AThreadedService::AThreadedService(): _number_of_threads(1), _start_synchronised(false) {}
+AThreadedService::AThreadedService(std::string_view thread_name):
+    _thread_name(thread_name),
+    _number_of_threads(1),
+    _start_synchronised(false)
+{
+}
 
 AThreadedService::~AThreadedService() {}
 
@@ -44,6 +49,11 @@ void AThreadedService::notify_service_thread_started()
 {
     if (_synchro.total_sync() > 0)
         _synchro.sync();
+}
+
+const std::string & AThreadedService::thread_name() const
+{
+    return _thread_name;
 }
 
 } // namespace sihd::util

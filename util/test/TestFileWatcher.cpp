@@ -45,7 +45,7 @@ TEST_F(TestFileWatcher, test_filewatcher_file)
     file << "hello\n";
     file.close();
 
-    fw.check_for_changes();
+    fw.run();
 }
 
 } // namespace test

@@ -13,7 +13,7 @@ SIHD_UTIL_REGISTER_FACTORY(Scheduler);
 
 SIHD_LOGGER;
 
-Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent)
+Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent), AThreadedService(name)
 {
     overrun_at = time::micro(300);
     acceptable_task_preplay_ns_time = 100;

@@ -5,7 +5,7 @@
 #include <functional>
 #include <thread>
 
-#include <sihd/util/AThreadedService.hpp>
+#include <sihd/util/AStepWorkerService.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/SigHandler.hpp>
 #include <sihd/util/StepWorker.hpp>
@@ -16,10 +16,9 @@ namespace sihd::util
 {
 
 class SigWatcher: public Named,
-                  public AThreadedService,
+                  public AStepWorkerService,
                   public Configurable,
-                  public Observable<SigWatcher>,
-                  protected IRunnable
+                  public Observable<SigWatcher>
 {
     public:
         using Callback = std::function<void(int)>;
@@ -27,15 +26,11 @@ class SigWatcher: public Named,
         SigWatcher(const std::string & name, Node *parent = nullptr);
         ~SigWatcher();
 
-        bool set_polling_frequency(double hz);
-
         bool add_signal(int sig);
         bool rm_signal(int sig);
 
         bool add_signals(const std::vector<int> & signals);
         bool rm_signals(const std::vector<int> & signals);
-
-        bool is_running() const override;
 
         bool call_previous_handler(int sig);
 
@@ -43,9 +38,10 @@ class SigWatcher: public Named,
         const std::vector<int> & catched_signals() const { return _signals_to_handle; };
 
     protected:
-        bool on_start() override;
-        bool on_stop() override;
-        bool run() override;
+        bool on_work_setup() override;
+        bool on_work_start() override;
+        bool on_work_stop() override;
+        bool on_work_teardown() override;
 
     private:
         struct SigControl
@@ -53,8 +49,6 @@ class SigWatcher: public Named,
                 SigHandler sig_handler;
                 size_t last_received;
         };
-
-        StepWorker _step_worker;
 
         std::mutex _mutex;
         std::vector<SigControl> _sig_controllers;

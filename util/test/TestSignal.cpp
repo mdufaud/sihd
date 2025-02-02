@@ -87,7 +87,7 @@ TEST_F(TestSignal, test_signal_watcher)
     SigWatcher watcher("sigint-watcher-test");
 
     watcher.add_signal(SIGUSR1);
-    watcher.set_polling_frequency(30);
+    watcher.set_step_frequency(30);
 
     Handler<SigWatcher *> handler([&sig](SigWatcher *watcher) {
         auto & catched_signals = watcher->catched_signals();
