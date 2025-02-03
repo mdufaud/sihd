@@ -774,6 +774,24 @@ std::optional<std::string> read(std::string_view path, size_t size, long offset)
     return std::nullopt;
 }
 
+std::optional<std::string> read_line(std::string_view path, size_t line_number)
+{
+    std::ifstream file(path.data(), std::ifstream::in);
+    if (file.is_open())
+    {
+        std::string line;
+        size_t i = 0;
+        while (i <= line_number)
+        {
+            if (file.eof() || file.bad() || !std::getline(file, line))
+                return std::nullopt;
+            ++i;
+        }
+        return line;
+    }
+    return std::nullopt;
+}
+
 std::optional<std::string> read_all(std::string_view path)
 {
     std::ifstream file(path.data(), std::ifstream::in);
