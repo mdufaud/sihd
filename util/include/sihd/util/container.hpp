@@ -26,16 +26,13 @@ struct recursive_map_type
         using type = T;
 };
 
-template <typename T, int CurrentKey, int TotalKeys>
-struct recursive_map_type<T,
-                          CurrentKey,
-                          TotalKeys,
-                          std::enable_if_t<(CurrentKey < TotalKeys) && traits::is_map<T>::value>>
+template <traits::Map T, int CurrentKey, int TotalKeys>
+struct recursive_map_type<T, CurrentKey, TotalKeys, std::enable_if_t<(CurrentKey < TotalKeys)>>
 {
         using map_value_type = typename T::mapped_type;
 
         // if mapped type is a map, do a recursion else get type
-        using type = std::conditional_t<traits::is_map<map_value_type>::value,
+        using type = std::conditional_t<traits::Map<map_value_type>,
                                         typename recursive_map_type<map_value_type, CurrentKey + 1, TotalKeys>::type,
                                         map_value_type>;
 };
@@ -81,22 +78,18 @@ void sort(Container & container, const Predicate & predicate)
     std::sort(container.begin(), container.end(), predicate);
 }
 
-template <typename Container, typename Value>
+template <traits::Iterable Container, typename Value>
 bool erase(Container & container, const Value & value)
 {
-    static_assert(traits::is_iterable<Container>::value, "Type must be iterable");
-
     auto it = std::remove(container.begin(), container.end(), value);
     bool ret = it != container.end();
     container.erase(it, container.end());
     return ret;
 }
 
-template <typename Container, typename Predicate>
+template <traits::Iterable Container, typename Predicate>
 bool erase_if(Container & container, const Predicate & predicate)
 {
-    static_assert(traits::is_iterable<Container>::value, "Type must be iterable");
-
     auto it = std::remove_if(container.begin(), container.end(), predicate);
     bool ret = it != container.end();
     container.erase(it, container.end());
@@ -133,21 +126,19 @@ bool emplace_front_unique(Container & container, const T & value)
     return ret;
 }
 
-template <typename Container, typename Key, typename Value>
+template <traits::Iterable Container, typename Key, typename Value>
 Value get_or(const Container & container, const Key & key, const Value & default_value)
 {
-    static_assert(traits::is_iterable<Container>::value, "Type must be iterable");
     static_assert(std::is_convertible_v<typename Container::mapped_type, Value>, "Type mismatch in get_or");
 
     const auto it = container.find(key);
     return it != container.end() ? it->second : default_value;
 }
 
-template <typename Container,
+template <traits::Map Container,
           typename Key,
           typename... Keys,
-          typename Type = typename details::recursive_map_type_helper<Container, Keys...>::type,
-          typename std::enable_if_t<traits::is_map<Container>::value, bool> = 0>
+          typename Type = typename details::recursive_map_type_helper<Container, Keys...>::type>
 Type *recursive_map_search(Container & container, const Key & key, const Keys &...keys)
 {
     const auto it = container.find(key);
@@ -180,10 +171,9 @@ auto & recursive_get(Container & container, const Key & key, const Keys &...keys
     }
 }
 
-template <typename Container,
+template <traits::Map Container,
           typename Predicate = decltype(std::less<typename Container::key_type>()),
-          typename KeyType = typename Container::key_type,
-          typename std::enable_if_t<traits::is_map<Container>::value, bool> = 0>
+          typename KeyType = typename Container::key_type>
 std::vector<KeyType> ordered_keys(const Container & map, const Predicate & pred = std::less<KeyType>())
 {
     std::vector<KeyType> ret;
@@ -197,10 +187,7 @@ std::vector<KeyType> ordered_keys(const Container & map, const Predicate & pred 
     return ret;
 }
 
-template <typename ContainerTo,
-          typename ContainerFrom,
-          typename std::enable_if_t<traits::is_iterable<ContainerTo>::value, bool> = 0,
-          typename std::enable_if_t<traits::is_iterable<ContainerFrom>::value, bool> = 0>
+template <traits::Iterable ContainerTo, traits::Iterable ContainerFrom>
 void insert_at_end(ContainerTo & to, ContainerFrom && from)
 {
     if constexpr (std::is_rvalue_reference_v<decltype(from)>)
@@ -209,10 +196,9 @@ void insert_at_end(ContainerTo & to, ContainerFrom && from)
         to.insert(to.end(), from.begin(), from.end());
 }
 
-template <typename Container,
+template <traits::Iterable Container,
           typename Predicate = decltype(details::return_same_predicate),
-          typename Type = typename details::predicate_return_value_type<Predicate, Container>,
-          typename std::enable_if_t<traits::is_iterable<Container>::value, bool> = 0>
+          typename Type = typename details::predicate_return_value_type<Predicate, Container>>
 Type sum(const Container & container, const Predicate & predicate = details::return_same_predicate)
 {
     return std::accumulate(
@@ -222,9 +208,7 @@ Type sum(const Container & container, const Predicate & predicate = details::ret
         [&predicate](auto accumulated, const auto & val) { return std::move(accumulated) + predicate(val); });
 }
 
-template <typename Container,
-          typename Predicate = decltype(details::return_same_predicate),
-          typename std::enable_if_t<traits::is_iterable<Container>::value, bool> = 0>
+template <traits::Iterable Container, typename Predicate = decltype(details::return_same_predicate)>
 double average(const Container & container, const Predicate & predicate = details::return_same_predicate)
 {
     if (container.begin() == container.end())
@@ -241,7 +225,7 @@ void sort_tuple(std::vector<Tuple> & tuples)
     });
 }
 
-template <typename Container,
+template <traits::Iterable Container,
           typename Predicate,
           typename Transform,
           typename ReturnType = typename details::predicate_return_value_type<Transform, Container>>

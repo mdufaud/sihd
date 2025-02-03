@@ -28,6 +28,8 @@ TEST_F(TestContainer, test_container_map)
         {"b", 2},
     };
 
+    static_assert((traits::Iterable<Map>));
+
     std::vector<std::string> ordered_keys {"a", "b", "c"};
 
     std::sort(ordered_keys.begin(), ordered_keys.end(), std::less<std::string>());

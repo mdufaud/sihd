@@ -20,6 +20,7 @@ std::u32string to_u32str(std::string_view view);
 bool regex_match(std::string_view str, const std::string & pattern);
 std::vector<std::string> regex_search(std::string_view str, const std::string & pattern);
 std::string regex_replace(const std::string & str, const std::string & pattern, const std::string & replace);
+std::vector<std::string> regex_filter(const std::vector<std::string> & input, const std::string & pattern);
 
 void append_sep(std::string & str, std::string_view append, std::string_view sep = ",");
 

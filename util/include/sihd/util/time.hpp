@@ -82,7 +82,7 @@ static constexpr auto to_hz = to_freq;
 static constexpr auto to_frequency = to_freq;
 
 // chrono -> nano
-template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
+template <traits::Duration Duration>
 constexpr Duration to_duration(time_t nano)
 {
     // seconds -> nano / 1E9        = nano / (1E9 / 1) / 1
@@ -143,7 +143,7 @@ time_t from_double(double sec_milli);
 time_t from_double_milliseconds(double milli_micro);
 
 // duration -> nano
-template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
+template <traits::Duration Duration>
 constexpr time_t duration(Duration duration)
 {
     // seconds -> count() * 1E9     == count() * (1E9 / 1) * 1
@@ -154,7 +154,7 @@ constexpr time_t duration(Duration duration)
 }
 
 // timepoint -> nano
-template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
+template <traits::Duration Duration>
 constexpr time_t floor(time_t val)
 {
     return val - (val % time::duration<Duration>(Duration {1}));

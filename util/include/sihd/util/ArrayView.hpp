@@ -12,7 +12,8 @@
 namespace sihd::util
 {
 
-template <typename T>
+// this array implementation relies on memcpy/memcmp
+template <traits::TriviallyCopyable T>
 class ArrayView: public IArrayView
 {
     public:
@@ -25,9 +26,6 @@ class ArrayView: public IArrayView
 
         static constexpr size_t npos = size_t(-1);
 
-        // this array implementation relies on memcpy/memcmp
-        static_assert(std::is_trivially_copyable_v<T>);
-
         ArrayView(): _buf_ptr(nullptr), _size(0) {}
         ArrayView(const T *data, size_t size): _buf_ptr(data), _size(size) {}
         ArrayView(const T & val): ArrayView(&val, 1) {}
@@ -36,9 +34,7 @@ class ArrayView: public IArrayView
         // container specialization
         // make sure Container::value_type size is divisible by type size.
         // ex: vector<int8_t> of size 3 may not go into an ArrayView<int32_t> which will be size 0
-        template <typename Container,
-                  typename ValueType = typename Container::value_type,
-                  typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
+        template <traits::HasDataSize Container, typename ValueType = typename Container::value_type>
         ArrayView(const Container & container):
             ArrayView(container.data(), (container.size() * sizeof(ValueType)) / sizeof(T))
         {

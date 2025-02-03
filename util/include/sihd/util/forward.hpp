@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sihd/util/traits.hpp>
+
 namespace sihd::util
 {
 
@@ -22,7 +24,7 @@ class IProvider;
 
 class ISteppable;
 
-template <typename T>
+template <traits::TriviallyCopyable T>
 class Array;
 
 typedef Array<bool> ArrBool;
@@ -38,7 +40,7 @@ typedef Array<uint64_t> ArrULong;
 typedef Array<float> ArrFloat;
 typedef Array<double> ArrDouble;
 
-template <typename T>
+template <traits::TriviallyCopyable T>
 class ArrayView;
 
 typedef ArrayView<bool> ArrBoolView;

@@ -110,8 +110,6 @@ TEST_F(TestArray, test_array_perf)
 
 TEST_F(TestArray, test_array_from_string)
 {
-    static_assert(traits::is_iterable<ArrInt>::value);
-
     ArrInt arr_int;
 
     EXPECT_TRUE(arr_int.from_str("10,20,30", ","));

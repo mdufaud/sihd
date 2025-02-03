@@ -167,6 +167,16 @@ std::string regex_replace(const std::string & str, const std::string & pattern, 
     return std::regex_replace(str, regex_pattern, replace);
 }
 
+std::vector<std::string> regex_filter(const std::vector<std::string> & input, const std::string & pattern)
+{
+    std::regex regex_pattern(pattern);
+    std::vector<std::string> output;
+    std::copy_if(input.begin(), input.end(), std::back_inserter(output), [&](const std::string & str) {
+        return std::regex_search(str, regex_pattern);
+    });
+    return output;
+}
+
 std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str, std::string_view delimiter)
 {
     std::pair<std::string_view, std::string_view> ret;

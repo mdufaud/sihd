@@ -100,6 +100,30 @@ TEST_F(TestStr, test_str_to_wstr)
     EXPECT_EQ(wstr, L"");
 }
 
+TEST_F(TestStr, test_str_regex_filter)
+{
+    std::vector<std::string> input = {"apple", "banana", "cherry", "date", "elderberry", "fig", "grape"};
+    std::vector<std::string> filtered = str::regex_filter(input, "a.*e");
+    std::vector<std::string> expected = {"apple", "date", "grape"};
+
+    EXPECT_EQ(filtered, expected);
+
+    filtered = str::regex_filter(input, "b.*a");
+    expected = {"banana"};
+
+    EXPECT_EQ(filtered, expected);
+
+    filtered = str::regex_filter(input, ".*r.*y$");
+    expected = {"cherry", "elderberry"};
+
+    EXPECT_EQ(filtered, expected);
+
+    filtered = str::regex_filter(input, "z.*");
+    expected = {};
+
+    EXPECT_EQ(filtered, expected);
+}
+
 TEST_F(TestStr, test_str_regex_replace)
 {
     EXPECT_EQ(str::regex_replace("hello world", "world", "universe"), "hello universe");

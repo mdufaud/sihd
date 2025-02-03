@@ -15,7 +15,8 @@
 namespace sihd::util
 {
 
-template <typename T>
+// this array implementation relies on memcpy/memcmp
+template <traits::TriviallyCopyable T>
 class Array: public IArray,
              public ICloneable<Array<T>>
 {
@@ -28,9 +29,6 @@ class Array: public IArray,
         using const_reference = const T &;
 
         static constexpr size_t npos = size_t(-1);
-
-        // this array implementation relies on memcpy/memcmp
-        static_assert(std::is_trivially_copyable_v<T>);
 
         Array()
         {
@@ -68,7 +66,7 @@ class Array: public IArray,
             this->push_back(&(*it), list.size());
         }
 
-        template <typename Container, typename std::enable_if_t<traits::is_iterable<Container>::value, bool> = 0>
+        template <traits::Iterable Container>
         Array(const Container & container): Array()
         {
             this->reserve(std::distance(std::begin(container), std::end(container)));
@@ -455,7 +453,7 @@ class Array: public IArray,
         /*********************************************************************/
 
         // container specialization
-        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
+        template <traits::HasDataSize Container>
         bool is_equal(const Container & container, size_t byte_offset = 0) const
         {
             return this->is_equal(container.data(), container.size(), byte_offset);
@@ -483,7 +481,7 @@ class Array: public IArray,
         /* from */
         /*********************************************************************/
 
-        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
+        template <traits::HasDataSize Container>
         bool from(const Container & container)
         {
             return this->from(container.data(), container.size());
@@ -517,7 +515,7 @@ class Array: public IArray,
         /*********************************************************************/
 
         // container specialization
-        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
+        template <traits::HasDataSize Container>
         bool copy_from(const Container & container, size_t byte_offset = 0)
         {
             return this->copy_from(container.data(), container.size(), byte_offset);
@@ -548,7 +546,7 @@ class Array: public IArray,
 
         // container specialization
         // delete internal buffer if exists then sets it to container buf - does not take ownership
-        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
+        template <traits::HasDataSize Container>
         bool assign(Container & container)
         {
             return this->assign(container.data(), container.size());
@@ -590,7 +588,7 @@ class Array: public IArray,
         /* push_back */
         /*********************************************************************/
 
-        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
+        template <traits::HasDataSize Container>
         bool push_back(const Container & container)
         {
             return this->push_back(container.data(), container.size());
@@ -624,7 +622,7 @@ class Array: public IArray,
         /* push_front */
         /*********************************************************************/
 
-        template <typename Container, typename std::enable_if_t<traits::has_data_size<Container>::value, bool> = 0>
+        template <traits::HasDataSize Container>
         bool push_front(const Container & container)
         {
             return this->push_front(container.data(), container.size());

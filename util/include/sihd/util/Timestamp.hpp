@@ -8,21 +8,21 @@
 #include <sihd/util/time.hpp>
 
 #define __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(OP)                                                           \
-    template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>            \
+    template <traits::Duration Duration>                                                                               \
     constexpr bool operator OP(Duration duration) const                                                                \
     {                                                                                                                  \
         return _nano OP time::duration<Duration>(duration);                                                            \
     }
 
 #define __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(OP)                                                            \
-    template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>            \
+    template <traits::Duration Duration>                                                                               \
     constexpr Timestamp operator OP(Duration duration)                                                                 \
     {                                                                                                                  \
         return Timestamp(_nano OP time::duration<Duration>(duration));                                                 \
     }
 
 #define __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(OP)                                                                \
-    template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>            \
+    template <traits::Duration Duration>                                                                               \
     constexpr Timestamp & operator OP(Duration duration)                                                               \
     {                                                                                                                  \
         _nano OP time::duration<Duration>(duration);                                                                   \
@@ -85,7 +85,7 @@ class Timestamp
         template <typename T>
         constexpr Timestamp(std::chrono::time_point<T> timepoint): _nano(timepoint.time_since_epoch().count()) {};
 
-        template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
+        template <traits::Duration Duration>
         constexpr Timestamp(Duration duration): _nano(time::duration(duration)) {};
 
         Timestamp(Calendar calendar);
@@ -133,7 +133,7 @@ class Timestamp
         // this >= from && this <= (from + offset)
         bool in_interval(Timestamp from, Timestamp offset) const;
 
-        template <typename Duration, typename std::enable_if_t<traits::is_duration<Duration>::value, bool> = 0>
+        template <traits::Duration Duration>
         constexpr Duration duration() const
         {
             return time::to_duration<Duration>(_nano);
