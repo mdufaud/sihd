@@ -206,36 +206,34 @@ void ProcessInfo::Impl::load_cmdline()
     if (status != 0)
         return;
     PPEB ppeb = pbi.PebBaseAddress;
-    PPEB ppebCopy = (PPEB)malloc(sizeof(PEB));
-    BOOL result = ReadProcessMemory(this->process_handle, ppeb, ppebCopy, sizeof(PEB), NULL);
+    PEB pebCopy;
+    BOOL result = ReadProcessMemory(this->process_handle, ppeb, &pebCopy, sizeof(PEB), NULL);
     if (!result)
         return;
 
-    PRTL_USER_PROCESS_PARAMETERS pRtlProcParam = ppebCopy->ProcessParameters;
-    PRTL_USER_PROCESS_PARAMETERS pRtlProcParamCopy
-        = (PRTL_USER_PROCESS_PARAMETERS)malloc(sizeof(RTL_USER_PROCESS_PARAMETERS));
+    PRTL_USER_PROCESS_PARAMETERS pRtlProcParam = pebCopy.ProcessParameters;
+    RTL_USER_PROCESS_PARAMETERS pRtlProcParamCopy;
     result = ReadProcessMemory(this->process_handle,
                                pRtlProcParam,
-                               pRtlProcParamCopy,
+                               &pRtlProcParamCopy,
                                sizeof(RTL_USER_PROCESS_PARAMETERS),
                                NULL);
     if (!result)
         return;
-    PWSTR wBuffer = pRtlProcParamCopy->CommandLine.Buffer;
-    USHORT len = pRtlProcParamCopy->CommandLine.Length;
+    PWSTR wBuffer = pRtlProcParamCopy.CommandLine.Buffer;
+    USHORT len = pRtlProcParamCopy.CommandLine.Length;
     PWSTR wBufferCopy = (PWSTR)malloc(len);
     result = ReadProcessMemory(this->process_handle,
                                wBuffer,
                                wBufferCopy, // command line goes here
                                len,
                                NULL);
-    if (!result)
-        return;
-    std::wstring wstr(wBufferCopy, len / sizeof(WCHAR));
+    if (result)
+    {
+        std::wstring wstr(wBufferCopy, len / sizeof(WCHAR));
+        this->cmd_line = str::split(str::to_str(wstr), ' ');
+    }
     free(wBufferCopy);
-    free(pRtlProcParamCopy);
-    free(ppebCopy);
-    this->cmd_line = str::split(str::to_str(wstr), ' ');
 #else
     auto line_opt = fs::read_all(fmt::format("/proc/{}/cmdline", this->pid));
     this->cmd_line = line_opt.has_value() ? str::split(*line_opt, '\0') : std::vector<std::string> {};
