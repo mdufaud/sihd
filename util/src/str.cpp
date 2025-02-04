@@ -128,6 +128,12 @@ std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bo
 
 } // namespace
 
+std::string to_str(std::wstring_view view)
+{
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return converter.to_bytes(view.data(), view.data() + view.size());
+}
+
 std::wstring to_wstr(std::string_view view)
 {
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
@@ -175,6 +181,27 @@ std::vector<std::string> regex_filter(const std::vector<std::string> & input, co
         return std::regex_search(str, regex_pattern);
     });
     return output;
+}
+
+std::vector<std::string> split(std::string_view str)
+{
+    Splitter splitter;
+    splitter.set_delimiter_spaces();
+    return splitter.split(str);
+}
+
+std::vector<std::string> split(std::string_view str, char delimiter)
+{
+    Splitter splitter;
+    splitter.set_delimiter_char(delimiter);
+    return splitter.split(str);
+}
+
+std::vector<std::string> split(std::string_view str, std::string_view delimiter)
+{
+    Splitter splitter;
+    splitter.set_delimiter(delimiter);
+    return splitter.split(str);
 }
 
 std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str, std::string_view delimiter)
@@ -827,8 +854,11 @@ int find_char_not_escaped(std::string_view view, int char_to_find, int escape)
 
 int stopping_enclose_index(std::string_view view, int index, const char *authorized_start_enclose, int escape)
 {
+    if (index >= (int)view.size())
+        return -1;
+
     const int open_esc = view[index];
-    if (view[0] == 0 || (authorized_start_enclose != nullptr && strchr(authorized_start_enclose, open_esc) == nullptr))
+    if (authorized_start_enclose != nullptr && strchr(authorized_start_enclose, open_esc) == nullptr)
         return -1;
 
     const int stopping_enclose = stopping_enclose_of(open_esc);
@@ -1171,13 +1201,6 @@ std::string wrap(std::string_view s, size_t max_width, std::string_view end_with
         return std::string(s.data(), s.size());
 
     return fmt::format("{}{}", std::string_view(s.data(), max_width - end_with.size()), end_with);
-}
-
-std::vector<std::string> split(std::string_view str)
-{
-    Splitter splitter;
-    splitter.set_delimiter_spaces();
-    return splitter.split(str);
 }
 
 std::vector<std::string>

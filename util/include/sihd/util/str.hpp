@@ -14,6 +14,7 @@
 namespace sihd::util::str
 {
 
+std::string to_str(std::wstring_view view);
 std::wstring to_wstr(std::string_view view);
 std::u32string to_u32str(std::string_view view);
 
@@ -61,6 +62,8 @@ bool starts_with(std::string_view s, std::string_view start, std::string_view su
 bool ends_with(std::string_view s, std::string_view end, std::string_view prefix = "");
 
 std::vector<std::string> split(std::string_view str);
+std::vector<std::string> split(std::string_view str, char delimiter);
+std::vector<std::string> split(std::string_view str, std::string_view delimiter);
 std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str, std::string_view delimiter);
 std::pair<std::string, std::string> split_pair(std::string_view str, std::string_view delimiter);
 

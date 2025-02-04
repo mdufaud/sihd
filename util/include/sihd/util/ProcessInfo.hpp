@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <sihd/util/ArrayView.hpp>
+#include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
 {
@@ -15,10 +16,13 @@ class ProcessInfo
 {
     public:
         ProcessInfo(int pid);
+        // exact name match
         ProcessInfo(std::string_view name);
-        virtual ~ProcessInfo();
+        ProcessInfo(const sihd::util::ProcessInfo & process_info);
+        ~ProcessInfo();
 
-        bool reload();
+        static std::vector<ProcessInfo> get_all_process_from_name(const std::string & regex);
+
         bool is_alive() const;
 
         int pid() const;
@@ -27,6 +31,7 @@ class ProcessInfo
         const std::string & exe_path() const;
         const std::vector<std::string> & cmd_line() const;
         const std::vector<std::string> & env() const;
+        Timestamp creation_time() const;
 
         bool write_into_stdin(ArrCharView view) const;
 

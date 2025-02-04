@@ -113,11 +113,11 @@ int Splitter::count_tokens(std::string_view view) const
     int delimiter_offset;
     int count = 0;
     int i = 0;
-    while (i >= 0 && i < (int)size && s[i])
+    while (i >= 0 && i < (int)size)
     {
         // pass all delimiters
         delimiter_count = 0;
-        while (s[i] && (delimiter_offset = this->_get_delimiter_offset(s + i)) > 0)
+        while (i < (int)size && (delimiter_offset = this->_get_delimiter_offset(s + i)) > 0)
         {
             // add another room for token if two delimiters or more follows
             if (_empty_delimitations && delimiter_count > 0)
@@ -127,9 +127,9 @@ int Splitter::count_tokens(std::string_view view) const
         }
         // add a room for a token after a delimitation if it is not the end of the string
         // or it ended by a delimiter
-        if (s[i] || (_empty_delimitations && delimiter_count > 0))
+        if (i < (int)size || (_empty_delimitations && delimiter_count > 0))
             ++count;
-        while (s[i])
+        while (i < (int)size)
         {
             int closed_at = str::stopping_enclose_index(s, i, _authorized_open_escape_sequences.c_str(), _escape_char);
             // matched closure
@@ -160,7 +160,7 @@ std::string_view Splitter::next_token(std::string_view view, int *idx) const
     const size_t size = view.size();
     int x = *idx;
     int delimiter_offset;
-    while (x < (int)size && s[x] && (delimiter_offset = this->_get_delimiter_offset(s + x)) > 0)
+    while (x < (int)size && (delimiter_offset = this->_get_delimiter_offset(s + x)) > 0)
     {
         // if there is two delimiters following, return empty token
         if (_empty_delimitations && x != *idx)
@@ -171,7 +171,7 @@ std::string_view Splitter::next_token(std::string_view view, int *idx) const
         x = x + delimiter_offset;
     }
     int y = x;
-    while (y < (int)size && s[y])
+    while (y < (int)size)
     {
         int closed_at = str::stopping_enclose_index(s, y, _authorized_open_escape_sequences.c_str(), _escape_char);
         // matched closure

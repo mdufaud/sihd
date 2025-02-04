@@ -1110,7 +1110,7 @@ class Array: public IArray,
 /* static attributes */
 /*********************************************************************/
 
-template <typename T>
+template <traits::TriviallyCopyable T>
 size_t Array<T>::mult_resize_capacity = 2;
 
 // typedef for types
@@ -1127,14 +1127,14 @@ typedef Array<uint64_t> ArrULong;
 typedef Array<float> ArrFloat;
 typedef Array<double> ArrDouble;
 
-template <typename T>
+template <traits::TriviallyCopyable T>
 using ArrayUnique = std::unique_ptr<Array<T>>;
-template <typename T>
+template <traits::TriviallyCopyable T>
 using ArrayShared = std::shared_ptr<Array<T>>;
-template <typename T>
+template <traits::TriviallyCopyable T>
 using ArrayWeak = std::weak_ptr<Array<T>>;
 
-template <typename T>
+template <traits::TriviallyCopyable T>
 std::string_view format_as(const Array<T> & arr)
 {
     return arr.cpp_str_view();

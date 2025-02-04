@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 
+#include <sihd/util/Timestamp.hpp>
 #include <sihd/util/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
@@ -34,6 +35,8 @@ bool ioctl(int fd, unsigned long request, void *arg_ptr = nullptr, bool logerror
 
 bool setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror = false);
 bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror = false);
+
+Timestamp boot_time();
 
 bool is_root();
 rlim_t max_fds();

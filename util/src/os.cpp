@@ -1,6 +1,7 @@
 #include <stdexcept>
 
 #include <sihd/util/platform.hpp>
+#include <sihd/util/str.hpp>
 
 // for get_max_rss / peak_rss
 #if defined(__SIHD_WINDOWS__)
@@ -13,6 +14,8 @@
 # include <ws2def.h>
 
 # include <dbghelp.h> // backtrace
+
+# include <winternl.h>
 
 # include <windows.h>
 
@@ -169,6 +172,56 @@ bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *opt
     if (!ret && logerror)
         SIHD_LOG(error, "OS: getsockopt error: {}", strerror(errno));
     return ret;
+}
+
+Timestamp boot_time()
+{
+    static Timestamp boot_timestamp = 0;
+    if (boot_timestamp == 0)
+    {
+#if defined(__SIHD_WINDOWS__)
+        auto uptime = std::chrono::milliseconds(GetTickCount64());
+        typedef struct _SYSTEM_TIMEOFDAY_INFORMATION
+        {
+                LARGE_INTEGER BootTime;
+                LARGE_INTEGER CurrentTime;
+                LARGE_INTEGER TimeZoneBias;
+                ULONG TimeZoneId;
+                ULONG Reserved;
+                ULONGLONG BootTimeBias;
+                ULONGLONG SleepTimeBias;
+        } SYSTEM_TIMEOFDAY_INFORMATION;
+
+        SYSTEM_TIMEOFDAY_INFORMATION sysInfo;
+        NTSTATUS status = NtQuerySystemInformation(SystemTimeOfDayInformation, &sysInfo, sizeof(sysInfo), NULL);
+        if (status != 0)
+        {
+            return Timestamp {};
+        }
+
+        ULONGLONG epoch_time = (sysInfo.BootTime.QuadPart - 116444736000000000ULL) * 100;
+        boot_timestamp = Timestamp(epoch_time);
+#else
+        auto content_opt = fs::read_all("/proc/stat");
+        if (content_opt.has_value())
+        {
+            std::string & content = *content_opt;
+            auto pos = content.find("btime");
+            if (pos != content.npos)
+            {
+                std::string_view btime_line(content.data() + pos, content.size() - pos);
+                btime_line.remove_prefix(btime_line.find_first_of(' ') + 1);
+                btime_line = btime_line.substr(0, btime_line.find('\n'));
+                time_t btime;
+                if (str::to_long(btime_line, &btime))
+                {
+                    boot_timestamp = Timestamp(std::chrono::seconds(btime));
+                }
+            }
+        }
+#endif
+    }
+    return boot_timestamp;
 }
 
 bool is_root()

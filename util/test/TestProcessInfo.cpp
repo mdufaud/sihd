@@ -33,7 +33,10 @@ TEST_F(TestProcessInfo, test_processinfo)
 
     SIHD_TRACEV(pi.pid());
     SIHD_TRACEV(pi.name());
-    // SIHD_TRACEV(pi.exe_path());
+    SIHD_TRACEV(pi.cwd());
+    SIHD_TRACEV(pi.exe_path());
+    SIHD_TRACEV(fmt::join(pi.cmd_line(), " "));
+    SIHD_TRACEV(fmt::join(pi.env(), "\n"));
 }
 
 } // namespace test
