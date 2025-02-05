@@ -189,8 +189,7 @@ bool ProcessInfo::Impl::still_exists()
     if (this->process_handle != INVALID_HANDLE_VALUE)
         CloseHandle(this->process_handle);
     this->process_handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, this->pid);
-    if (this->process_handle == INVALID_HANDLE_VALUE)
-        return false;
+    return this->process_handle != INVALID_HANDLE_VALUE;
 #else
     return proc_exists(this->pid);
 #endif
