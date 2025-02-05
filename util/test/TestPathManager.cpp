@@ -99,7 +99,7 @@ TEST_F(TestPathManager, test_pathmanager_get)
     EXPECT_EQ(path_manager.find("twin"), test_path_parent_twin.string());
 
     std::vector<std::string> all_twins = path_manager.find_all("twin");
-    ASSERT_EQ(all_twins.size(), 2);
+    ASSERT_EQ(all_twins.size(), 2U);
     EXPECT_EQ(all_twins[0], test_path_parent_twin.string());
     EXPECT_EQ(all_twins[1], test_path_twin.string());
 }

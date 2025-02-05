@@ -199,18 +199,18 @@ TEST_F(TestFS, test_fs_permission)
 
     EXPECT_TRUE(fs::permission_set(path, 0700));
     EXPECT_TRUE(fs::is_executable(path));
-    EXPECT_EQ(fs::permission_get(path), 0700);
+    EXPECT_EQ(fs::permission_get(path), 0700U);
 
     EXPECT_TRUE(fs::permission_rm(path, fs::permission_from_str("r--")));
-    EXPECT_EQ(fs::permission_get(path), 0300);
+    EXPECT_EQ(fs::permission_get(path), 0300U);
     EXPECT_TRUE(fs::permission_add(path, fs::permission_from_str("---r---w-")));
-    EXPECT_EQ(fs::permission_get(path), 0342);
+    EXPECT_EQ(fs::permission_get(path), 0342U);
 
     EXPECT_EQ(fs::permission_to_str(0750), "rwxr-x---");
-    EXPECT_EQ(fs::permission_from_str("rwxr-x"), 0750);
+    EXPECT_EQ(fs::permission_from_str("rwxr-x"), 0750U);
 
     EXPECT_TRUE(fs::permission_set(path, fs::permission_from_str("rwxr-x-w-")));
-    EXPECT_EQ(fs::permission_get(path), 0752);
+    EXPECT_EQ(fs::permission_get(path), 0752U);
 }
 
 } // namespace test
