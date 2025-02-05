@@ -1,7 +1,6 @@
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/clipboard.hpp>
-#include <sihd/util/platform.hpp>
 
 #if defined(SIHD_COMPILE_WITH_X11)
 # include <X11/Xlib.h>

@@ -8,7 +8,7 @@ Aimed to be a simple C++ library with some python and/or LUA bindings that gets,
 
 ## Dependencies
 
-### C++ 17
+### C++ 20
 
 Used by core application.
 
@@ -17,18 +17,14 @@ Used by core application.
 Manages compilation rules with python.
 
 ```shell
+# recommended
+apt install python3-pip
+pip install scons
+# or
 apt install scons
 ```
 
-or
-
-```shell
-pip install scons
-```
-
-### python-pip
-
-If conan is installed from python-pip, don't forget to add to ~/.bashrc:
+If scons is installed from python-pip, don't forget to add to ~/.bashrc:
 
 ```shell
 export PATH=$PATH:$HOME/.local/bin
@@ -36,23 +32,48 @@ export PATH=$PATH:$HOME/.local/bin
 
 To find binary from python-pip binaries folder.
 
-### VCPKG
+### VCPKG (external libraries)
 
-Not needed if dependencies are directly installed on the building system.
+All dependencies are listed in [app.py file](app.py), only few are needed for each modules
 
-Needed for Windows cross building to get DLLs or Emscripten building to get static libraries.
+#### Install globally on your system
+
+This step is not needed if dependencies are directly installed on the building system and you don't need cross compiling.
 
 ```shell
+# prints system external libraries list for a specific package manager
+scons pkgdep=[apt|pacman] test=[0|1] modules=COMMA_SEPARATED_MODULES
+```
+
+#### Compile locally for architecture/cross building
+
+Needed for Windows cross building or Emscripten building to get static libraries or if you don't want to install libraries on your system.
+
+
+
+```shell
+# needed by vcpkg
+apt install curl zip unzip tar cmake ninja-build
+```
+
+Installs vcpkg inside the repository (no leaking in your system)
+
+```shell
+# to get all dependencies for every modules
 make dep
-```
-
-```shell
+# to be able to run unit tests
+make dep test=1
+# to get dependencies for single/multiple module.s
 make dep mod COMMA_SEPARATED_MODULES
+# to get windows dll dependencies
+make dep platform=win
+# for lua/python bindings
+make dep lua=1 python=1
 ```
-
-Will install vcpkg inside the repository
 
 #### Using MSYS2
+
+If you want to compile for windows using MSYS2
 
 ```shell
 pacman -S --needed git mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-gcc
@@ -60,19 +81,19 @@ pacman -S --needed git mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x
 
 ### Compilers
 
-**g++ 7.5.0**
+**g++ 11.4.0**
 
 ```shell
 apt install g++
 ```
 
-**clang++ 6.0.0**
+**clang++ 18.1.3**
 
 ```shell
 apt install clang libc++-dev libc++abi-dev llvm
 ```
 
-**g++-mingw 7.3-posix**
+**g++-mingw 13-posix**
 
 ```shell
 apt install g++-mingw-w64-x86-64
@@ -86,29 +107,6 @@ update-alternatives --config x86_64-w64-mingw32-g++
 apt install emscripten
 ```
 
-## External libraries
-
-All dependencies are listed in [app.py file](app.py), only few are needed for each modules
-
-Get dependencies from conan.io center if not installed on your system
-
-```shell
-# to get all dependencies for every modules
-make dep
-# to be able to run unit tests
-make dep test=1
-# to get dependencies for single/multiple module.s
-make dep mod COMMA_SEPARATED_MODULES
-# to get windows dll dependencies
-make dep platform=win
-```
-
-Get system external libraries list
-
-```shell
-scons pkgdep=[apt|pacman] test=[0|1] modules=COMMA_SEPARATED_MODULES
-```
-
 ---
 
 ## Build
@@ -119,25 +117,34 @@ To build binaries and compile shared libraries with scons
 make
 ```
 
-To compile module.s
+To compile specific module.s
 
 ```shell
 make mod COMMA_SEPARATED_MODULES
 ```
 
-Add to command line for:
-- static libraries: "static=1"
-- address sanatizer: "asan=1"
-- no debug symbols: "mode=release"
-- use clang compiler: "compiler=clang"
-- use mingw compiler: "compiler=mingw"
-- use emscripten compiler: "compiler=em" (automatically builds with static libraries)
+Flavours (you can mix them mostly)
+
+```shell
+# static libraries
+make static=1
+# address sanatizer
+make asan=1
+# no debug symbols
+make mode=release
+# build with clang
+make compiler=clang
+# build with emscripten (automatically builds with static libraries)
+make compiler=em
+# build for windows
+make platform=win
+```
 
 ### Python bindings build
 
 **python-3.6.7**
 
-It is recommended to install it on your system with a packet manager: python3-dev
+It is recommended to install it on your system with a package manager: `python3-dev`
 
 Add to your command line "py=1"
 
@@ -153,7 +160,7 @@ make mod core,py
 
 **lua-5.3.5**
 
-It is recommended to install it on your system with a packet manager: lua5.3-dev
+It is recommended to install it on your system with a package manager: `lua5.3-dev`
 
 Add to your command line "lua=1"
 
@@ -170,8 +177,8 @@ make mod core,lua
 Create demo for each for the compiled module
 
 ```shell
-make dep mod util demo=1
-make mod util demo=1
+make dep mod COMMA_SEPARATED_MODULES demo=1
+make demo mod COMMA_SEPARATED_MODULES
 ```
 
 ---
@@ -196,10 +203,33 @@ make test ls
 make test COMMA_SEPARATED_MODULES ls
 ```
 
-Filter tests
+Launch only specific tests
 
 ```shell
 make test COMMA_SEPARATED_MODULES FILTER
+```
+
+Repeat tests
+
+```shell
+make test repeat=NUMBER
+```
+
+Execute non interactive tests
+
+```shell
+make itest
+```
+
+Debug tests
+
+```shell
+# gdb
+make gtest
+# valgrind
+make vtest
+# compiled with libasan
+make stest
 ```
 
 ---

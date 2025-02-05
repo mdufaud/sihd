@@ -1,6 +1,5 @@
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/screenshot.hpp>
 
 #if defined(SIHD_COMPILE_WITH_X11)

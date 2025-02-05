@@ -337,9 +337,15 @@ int main(int argc, char **argv)
     demo::dynlib();
     demo::file_mem_read();
     demo::file_mem_write();
-    demo::clipboard();
+    if constexpr (clipboard::usable)
+    {
+        demo::clipboard();
+    }
     demo::bitmap();
-    demo::screenshot();
+    if constexpr (screenshot::usable)
+    {
+        demo::screenshot();
+    }
     demo::process();
     demo::backtrace();
 

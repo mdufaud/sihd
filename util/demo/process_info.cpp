@@ -12,6 +12,23 @@ using namespace sihd::util;
 
 SIHD_NEW_LOGGER("demo");
 
+void do_dump_env(bool do_dump, const std::vector<std::string> & env)
+{
+    if (do_dump)
+    {
+        if (env.size() > 0)
+        {
+            SIHD_LOG(info, "env: ");
+            for (const std::string & env : env)
+            {
+                SIHD_LOG(info, "  {}", env);
+            }
+        }
+    }
+    else if (env.size() > 0)
+        SIHD_LOG(info, "env: {} ...", env.front());
+}
+
 int main(int argc, char **argv)
 {
     if constexpr (os::is_windows)
@@ -25,7 +42,9 @@ int main(int argc, char **argv)
     options.add_options()
         ("h,help", "Prints usage")
         ("p,process", "Dump process info by name", cxxopts::value<std::string>())
-        ("i,id", "Dump process info by id", cxxopts::value<int>());
+        ("i,id", "Dump process info by id", cxxopts::value<int>())
+        ("e,env", "Dump process full env", cxxopts::value<bool>()->default_value("false"))
+    ;
     // clang-format on
 
     cxxopts::ParseResult result = options.parse(argc, argv);
@@ -37,6 +56,8 @@ int main(int argc, char **argv)
     }
 
     LoggerManager::console();
+
+    const bool dump_env = result["env"].as<bool>();
 
     if (result.count("process"))
     {
@@ -51,8 +72,7 @@ int main(int argc, char **argv)
             }
             SIHD_LOG(info, "exe_path: {}", process.exe_path());
             SIHD_LOG(info, "cmd_line: {}", fmt::join(process.cmd_line(), " "));
-            if (process.env().size() > 0)
-                SIHD_LOG(info, "env: {} ...", process.env().front());
+            do_dump_env(dump_env, process.env());
             SIHD_LOG(notice, "---");
         }
     }
@@ -64,11 +84,7 @@ int main(int argc, char **argv)
         SIHD_LOG(info, "cwd: {}", process.cwd());
         SIHD_LOG(info, "exe_path: {}", process.exe_path());
         SIHD_LOG(info, "cmd_line: {}", fmt::join(process.cmd_line(), " "));
-        SIHD_LOG(info, "env: ");
-        for (const std::string & env : process.env())
-        {
-            SIHD_LOG(info, "  {}", env);
-        }
+        do_dump_env(dump_env, process.env());
     }
 
     return 0;

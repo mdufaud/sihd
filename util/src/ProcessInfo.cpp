@@ -20,6 +20,50 @@
 
 # include <tchar.h>
 
+# define _RTL_DRIVE_LETTER_CURDIR_ENV                                                                                  \
+     struct                                                                                                            \
+     {                                                                                                                 \
+             WORD Flags;                                                                                               \
+             WORD Length;                                                                                              \
+             ULONG TimeStamp;                                                                                          \
+             STRING DosPath;                                                                                           \
+     }
+
+# define _RTL_USER_PROCESS_PARAMETERS_ENV                                                                              \
+     struct                                                                                                            \
+     {                                                                                                                 \
+             ULONG MaximumLength;                                                                                      \
+             ULONG Length;                                                                                             \
+             ULONG Flags;                                                                                              \
+             ULONG DebugFlags;                                                                                         \
+             PVOID ConsoleHandle;                                                                                      \
+             ULONG ConsoleFlags;                                                                                       \
+             PVOID StdInputHandle;                                                                                     \
+             PVOID StdOutputHandle;                                                                                    \
+             PVOID StdErrorHandle;                                                                                     \
+             UNICODE_STRING CurrentDirectoryPath;                                                                      \
+             PVOID CurrentDirectoryHandle;                                                                             \
+             UNICODE_STRING DllPath;                                                                                   \
+             UNICODE_STRING ImagePathName;                                                                             \
+             UNICODE_STRING CommandLine;                                                                               \
+             PVOID Environment;                                                                                        \
+             ULONG StartingPositionLeft;                                                                               \
+             ULONG StartingPositionTop;                                                                                \
+             ULONG Width;                                                                                              \
+             ULONG Height;                                                                                             \
+             ULONG CharWidth;                                                                                          \
+             ULONG CharHeight;                                                                                         \
+             ULONG ConsoleTextAttributes;                                                                              \
+             ULONG WindowFlags;                                                                                        \
+             ULONG ShowWindowFlags;                                                                                    \
+             UNICODE_STRING WindowTitle;                                                                               \
+             UNICODE_STRING DesktopName;                                                                               \
+             UNICODE_STRING ShellInfo;                                                                                 \
+             UNICODE_STRING RuntimeData;                                                                               \
+             _RTL_DRIVE_LETTER_CURDIR_ENV DLCurrentDirectory[32];                                                      \
+             ULONG EnvironmentSize;                                                                                    \
+     }
+
 #else
 #endif
 
@@ -30,9 +74,7 @@ SIHD_LOGGER;
 namespace
 {
 
-#if defined(__SIHD_WINDOWS__)
-
-#else
+#if !defined(__SIHD_WINDOWS__)
 
 bool proc_exists(int pid)
 {
@@ -57,14 +99,13 @@ std::string get_process_name_from_pid(int pid)
 void list_processes(std::function<bool(std::string_view, int)> predicate)
 {
 #if defined(__SIHD_WINDOWS__)
-    HANDLE process_snap;
-    PROCESSENTRY32 pe32;
-    process_snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    HANDLE process_snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (process_snap == INVALID_HANDLE_VALUE)
     {
         return;
     }
 
+    PROCESSENTRY32 pe32;
     pe32.dwSize = sizeof(PROCESSENTRY32);
     if (!Process32First(process_snap, &pe32))
     {
@@ -119,6 +160,8 @@ struct ProcessInfo::Impl
         int find_from_pid(std::string_view name);
         bool load(int pid);
 
+        bool still_exists();
+
         void load_process_name();
         void load_cmdline();
         void load_env();
@@ -139,6 +182,19 @@ struct ProcessInfo::Impl
         std::vector<std::string> cmd_line;
         Timestamp creation_time;
 };
+
+bool ProcessInfo::Impl::still_exists()
+{
+#if defined(__SIHD_WINDOWS__)
+    if (this->process_handle != INVALID_HANDLE_VALUE)
+        CloseHandle(this->process_handle);
+    this->process_handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, this->pid);
+    if (this->process_handle == INVALID_HANDLE_VALUE)
+        return false;
+#else
+    return proc_exists(this->pid);
+#endif
+}
 
 int ProcessInfo::Impl::find_from_pid(std::string_view name)
 {
@@ -243,6 +299,40 @@ void ProcessInfo::Impl::load_cmdline()
 void ProcessInfo::Impl::load_env()
 {
 #if defined(__SIHD_WINDOWS__)
+    // https://stackoverflow.com/questions/1202653/check-for-environment-variable-in-another-process
+    PROCESS_BASIC_INFORMATION pbi;
+    ULONG returnLength;
+    NTSTATUS status
+        = NtQueryInformationProcess(this->process_handle, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength);
+    if (!NT_SUCCESS(status))
+    {
+        return;
+    }
+
+    PEB peb;
+    SIZE_T bytesRead;
+    if (!ReadProcessMemory(this->process_handle, pbi.PebBaseAddress, &peb, sizeof(peb), &bytesRead))
+    {
+        return;
+    }
+
+    _RTL_USER_PROCESS_PARAMETERS_ENV procParams;
+    if (!ReadProcessMemory(this->process_handle, peb.ProcessParameters, &procParams, sizeof(procParams), &bytesRead))
+    {
+        return;
+    }
+
+    PVOID buffer = procParams.Environment;
+    ULONG length = procParams.EnvironmentSize;
+    std::wstring wstr;
+    wstr.resize(length / 2 + 1);
+    if (!ReadProcessMemory(this->process_handle, buffer, wstr.data(), length, &bytesRead))
+    {
+        return;
+    }
+    wstr[length / 2] = 0;
+    std::string str = str::to_str(wstr);
+    this->env = str::split(str, '\0');
 #else
     auto line_opt = fs::read_all(fmt::format("/proc/{}/environ", this->pid));
     this->env = line_opt.has_value() ? str::split(*line_opt, '\0') : std::vector<std::string> {};

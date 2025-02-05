@@ -519,7 +519,7 @@ bool print(std::string_view str)
 {
     try
     {
-        fmt::print("{}", str);
+        fmt::print("{:.{}}", str, str.size());
     }
     catch (const std::system_error &)
     {
@@ -532,7 +532,7 @@ bool println(std::string_view str)
 {
     try
     {
-        fmt::print("{}\n", str);
+        fmt::print("{:.{}}\n", str, str.size());
     }
     catch (const std::system_error &)
     {
