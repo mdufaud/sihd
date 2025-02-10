@@ -53,6 +53,9 @@
 // for usage of sighandler_t in windows
 #if defined(__SIHD_WINDOWS__)
 typedef void (*sighandler_t)(int);
+
+using _NtQuerySystemInformation = NTSTATUS(WINAPI *)(SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG);
+
 #endif
 
 #include <algorithm>
@@ -73,7 +76,6 @@ typedef void (*sighandler_t)(int);
 
 namespace sihd::util::os
 {
-
 SIHD_NEW_LOGGER("sihd::util::os");
 
 std::string last_error_str()
@@ -193,7 +195,14 @@ Timestamp boot_time()
         } SYSTEM_TIMEOFDAY_INFORMATION;
 
         SYSTEM_TIMEOFDAY_INFORMATION sysInfo;
-        NTSTATUS status = NtQuerySystemInformation(SystemTimeOfDayInformation, &sysInfo, sizeof(sysInfo), NULL);
+
+        void *ptr = (void *)GetProcAddress(GetModuleHandle("ntdll"), "NtQuerySystemInformation");
+        if (ptr == nullptr)
+            return Timestamp {};
+        _NtQuerySystemInformation fct = reinterpret_cast<_NtQuerySystemInformation>(ptr);
+        if (fct == nullptr)
+            return Timestamp {};
+        NTSTATUS status = fct(SystemTimeOfDayInformation, &sysInfo, sizeof(sysInfo), NULL);
         if (status != 0)
         {
             return Timestamp {};

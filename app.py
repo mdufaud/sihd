@@ -86,7 +86,6 @@ modules = {
             'ws2_32', # windows api
             'gdi32', # wingdi
             'imagehlp', # backtrace
-            'ntdll', # NtQueryInformationProcess
             'stdc++fs'
         ],
         # === Emscripten specific ===

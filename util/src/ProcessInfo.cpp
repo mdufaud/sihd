@@ -20,6 +20,12 @@
 
 # include <tchar.h>
 
+using _NtQueryInformationProcess = NTSTATUS(WINAPI *)(HANDLE ProcessHandle,
+                                                      PROCESSINFOCLASS SystemInformationClass,
+                                                      PVOID SystemInformation,
+                                                      ULONG SystemInformationLength,
+                                                      PULONG ReturnLength);
+
 struct WindowsDriveLetterCurDir
 {
         WORD Flags;
@@ -79,7 +85,14 @@ bool read_process_memory(HANDLE & handle, WindowsUserProcessInfos & procParams)
     // https://stackoverflow.com/questions/1202653/check-for-environment-variable-in-another-process
     PROCESS_BASIC_INFORMATION pbi;
     ULONG returnLength;
-    NTSTATUS status = NtQueryInformationProcess(handle, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength);
+
+    void *ptr = (void *)GetProcAddress(GetModuleHandle("ntdll"), "NtQueryInformationProcess");
+    if (ptr == nullptr)
+        return false;
+    _NtQueryInformationProcess fct = reinterpret_cast<_NtQueryInformationProcess>(ptr);
+    if (fct == nullptr)
+        return false;
+    NTSTATUS status = fct(handle, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength);
     if (!NT_SUCCESS(status))
         return false;
 
