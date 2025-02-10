@@ -78,10 +78,12 @@ std::string PathManager::find(std::string_view search, std::string_view mode_str
 {
     std::lock_guard lock(_mutex);
     std::string result_str;
-    std::find_if(_path_lst.begin(), _path_lst.end(), [&search, &mode_str, &result_str](const std::string & path) {
-        return check_if_match(path, search, mode_str, result_str);
-    });
-    return result_str;
+    for (const auto & path : _path_lst)
+    {
+        if (check_if_match(path, search, mode_str, result_str))
+            return result_str;
+    }
+    return "";
 }
 
 void PathManager::push_back(std::string_view path_item)
