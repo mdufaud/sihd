@@ -47,7 +47,7 @@ bool HttpResponse::set_byte_content(sihd::util::ArrByteView data)
     return this->set_content(data);
 }
 
-void HttpResponse::set_status(uint status)
+void HttpResponse::set_status(uint32_t status)
 {
     _status = status;
 }
