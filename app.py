@@ -99,9 +99,11 @@ modules = {
     },
     "core": {
         "depends": ['util'],
+        "inherit-depends-libs": True,
     },
     "ipc": {
         "depends": ['util'],
+        "inherit-depends-libs": True,
         "linux-libs": [
             'rt', # shm_open...
         ],
@@ -111,18 +113,18 @@ modules = {
     },
     "net": {
         "depends": ['util'],
+        "inherit-depends-libs": True,
         "extlibs": ['openssl'],
         "libs": ['ssl', 'crypto'],
-        "inherit-depends-libs": True,
     },
     "http": {
         "depends": ['net'],
+        "inherit-depends-libs": True,
         "extlibs": [
             'libwebsockets',
             'curl',
             'zlib',
             'libuv',
-            'openssl',
         ],
         "linux-extlibs": ["libcap"],
         "libs": [
@@ -130,13 +132,12 @@ modules = {
             'curl',
             'z',
             'uv',
-            'ssl',
-            'crypto',
         ],
         "linux-libs": ["cap"],
     },
     "pcap": {
         "depends": ['net'],
+        "inherit-depends-libs": True,
         "extlibs": ['libpcap'],
         "libs": ['pcap'],
         # if lib is installed on system
@@ -146,22 +147,26 @@ modules = {
     },
     "zip": {
         "depends": ['util'],
+        "inherit-depends-libs": True,
         "extlibs": ['libzip'],
         "libs": ['zip'],
     },
     "tui": {
         "depends": ['util'],
+        "inherit-depends-libs": True,
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
         "inherit-depends-libs": True,
     },
     "ssh": {
         "depends": ['util'],
+        "inherit-depends-libs": True,
         "extlibs": ["libssh"],
         "libs": ['ssh'],
     },
     "usb": {
         "depends": ['util'],
+        "inherit-depends-libs": True,
         "extlibs": ['libusb'],
         "libs": ['udev'],
         "parse-configs": [
