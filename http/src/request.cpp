@@ -139,7 +139,7 @@ struct CurlRequest
                                                const std::map<std::string, std::string> & parameters)
         {
             std::string final_url(url);
-            uint i = 0U;
+            uint32_t i = 0U;
             for (const auto & [key, val] : parameters)
             {
                 final_url = fmt::format("{}{}{}={}", final_url, i++ == 0 ? "?" : "&", key, val);
