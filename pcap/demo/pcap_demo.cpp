@@ -38,7 +38,7 @@ static std::string interfaces_test()
     PcapInterfaces ifaces;
     for (const auto & iface : ifaces.ifaces())
     {
-        SIHD_LOG(info, iface.dump());
+        SIHD_LOG(info, "{}", iface.dump());
         if (iface.up() && !iface.loopback())
         {
             interface_to_sniff = iface.name();
