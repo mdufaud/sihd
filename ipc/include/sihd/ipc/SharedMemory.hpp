@@ -1,7 +1,7 @@
-#ifndef __SIHD_UTIL_SHAREDMEMORY_HPP__
-#define __SIHD_UTIL_SHAREDMEMORY_HPP__
+#ifndef __SIHD_IPC_SHAREDMEMORY_HPP__
+#define __SIHD_IPC_SHAREDMEMORY_HPP__
 
-#include <sys/stat.h>
+#include <sys/stat.h> // mode_t
 
 #include <string>
 #include <string_view>
@@ -12,7 +12,7 @@
 # define mode_t unsigned int
 #endif
 
-namespace sihd::util
+namespace sihd::ipc
 {
 
 class SharedMemory
@@ -47,7 +47,7 @@ class SharedMemory
         std::string _id;
 };
 
-} // namespace sihd::util
+} // namespace sihd::ipc
 
 #if defined(__SIHD_EMSCRIPTEN__)
 # undef mode_t

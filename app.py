@@ -72,7 +72,6 @@ modules = {
         "linux-extlibs": ['libuuid'],
         "linux-libs": [
             'dl', # dl_open...
-            'rt', # shm_open...
             'uuid',
         ],
         "linux-dyn-libs": [
@@ -101,6 +100,15 @@ modules = {
     },
     "core": {
         "depends": ['util'],
+    },
+    "ipc": {
+        "depends": ['util'],
+        "linux-libs": [
+            'rt', # shm_open...
+        ],
+        "windows-dyn-libs": [
+            'ucrt', # timezone
+        ],
     },
     "net": {
         "depends": ['util'],

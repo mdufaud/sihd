@@ -4,9 +4,12 @@
 # include <dlfcn.h>
 #endif
 #if defined(__SIHD_WINDOWS__)
+# include <sihd/util/os.hpp>
+
 # include <errhandlingapi.h>
 # include <libloaderapi.h>
 # include <windows.h>
+
 #endif
 
 #include <sihd/util/DynLib.hpp>

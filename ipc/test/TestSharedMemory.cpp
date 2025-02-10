@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/SharedMemory.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/term.hpp>
+
+#include <sihd/ipc/SharedMemory.hpp>
 
 #include <semaphore.h>
 #define BUF_SIZE 2
@@ -16,9 +18,9 @@ struct shmbuf
 
 namespace test
 {
-SIHD_LOGGER;
+SIHD_NEW_LOGGER("test");
 using namespace sihd::util;
-using namespace sihd::util;
+using namespace sihd::ipc;
 class TestSharedMemory: public ::testing::Test
 {
     protected:

@@ -1,5 +1,5 @@
+#include <sihd/ipc/SharedMemory.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/SharedMemory.hpp>
 
 // ftruncate
 #include <unistd.h>
@@ -9,17 +9,15 @@
 #if !defined(__SIHD_WINDOWS__)
 // shm_open shm_unlink
 # include <sys/mman.h>
-// For mode constants
-# include <sys/stat.h>
 #endif
 
 // For O_* constants
 #include <fcntl.h>
 
-namespace sihd::util
+namespace sihd::ipc
 {
 
-SIHD_LOGGER;
+SIHD_NEW_LOGGER("sihd::ipc");
 
 namespace
 {
@@ -207,4 +205,4 @@ bool SharedMemory::clear()
 
 #endif
 
-} // namespace sihd::util
+} // namespace sihd::ipc
