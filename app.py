@@ -55,7 +55,7 @@ extlibs_features_windows = {
 
 extlibs_skip = ["libbluetooth"]
 
-vcpkg_baseline = "7977f0a771e64e9811d32aa30d9a247e09c39b2e"
+vcpkg_baseline = "cd124b84feb0c02a24a2d90981e8358fdee0e077"
 
 ###############################################################################
 # modules
@@ -83,7 +83,7 @@ modules = {
             'psapi', # GetModuleFileName/GetProcessMemoryInfo
             'ucrt', # timezone
             'ssp', # winsock
-            'ws2_32', # windows api
+            'ws2_32', # windows socket api
             'gdi32', # wingdi
             'imagehlp', # backtrace
             'stdc++fs'
@@ -113,12 +113,7 @@ modules = {
         "depends": ['util'],
         "extlibs": ['openssl'],
         "libs": ['ssl', 'crypto'],
-        "windows-libs": [
-            'ssp', # winsock
-            'ws2_32', # windows api
-            'ucrt', # timezone
-            'psapi', # GetModuleFileName/GetProcessMemoryInfo
-        ],
+        "inherit-depends-libs": True,
     },
     "http": {
         "depends": ['net'],
@@ -158,7 +153,7 @@ modules = {
         "depends": ['util'],
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
-        "windows-libs": ['ssp']
+        "inherit-depends-libs": True,
     },
     "ssh": {
         "depends": ['util'],

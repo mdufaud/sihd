@@ -199,15 +199,15 @@ if build_platform == "windows":
 ccache = ""
 if not builder.is_opt("nocache"):
     ccache = shutil.which("ccache") and "ccache " or ""
-if verbose and ccache:
-    builder.info("using ccache at: {}".format(shutil.which("ccache")))
+    if verbose and ccache:
+        builder.info("using ccache at: {}".format(shutil.which("ccache")))
 
-if not ccache:
-    # Cache compile build with md5
-    scons_cache_path = os.path.join(builder.build_root_path, '.scons_cache')
-    if verbose:
-        builder.info("using scons cache at: {}".format(scons_cache_path))
-    CacheDir(scons_cache_path)
+    if not ccache:
+        # Cache compile build with md5
+        scons_cache_path = os.path.join(builder.build_root_path, '.scons_cache')
+        if verbose:
+            builder.info("using scons cache at: {}".format(scons_cache_path))
+        CacheDir(scons_cache_path)
 
 compiler = builder.build_compiler
 # CLANG build
