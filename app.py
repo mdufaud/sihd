@@ -61,6 +61,8 @@ vcpkg_baseline = "cd124b84feb0c02a24a2d90981e8358fdee0e077"
 # modules
 ###############################################################################
 
+# ! never add libucrt with mingw
+
 modules = {
     "util": {
         # x11=1 to compile with X11
@@ -81,7 +83,6 @@ modules = {
         "windows-libs": [
             'rpcrt4', # Uuid
             'psapi', # GetModuleFileName/GetProcessMemoryInfo
-            'ucrt', # timezone
             'ssp', # winsock
             'ws2_32', # windows socket api
             'gdi32', # wingdi
@@ -156,7 +157,6 @@ modules = {
         "inherit-depends-libs": True,
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
-        "inherit-depends-libs": True,
     },
     "ssh": {
         "depends": ['util'],

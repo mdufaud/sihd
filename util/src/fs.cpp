@@ -42,10 +42,7 @@ bool _is_file_type(std::string_view path, std::filesystem::file_type expected_ty
     std::error_code ec;
     auto status = std::filesystem::status(path, ec);
     if (ec)
-    {
-        SIHD_LOG(debug, "status: {}: {}", ec.message(), path);
         return false;
-    }
     return status.type() == expected_type;
 }
 
@@ -367,9 +364,21 @@ std::string make_tmp_directory(std::string_view prefix)
 {
 #if defined(__SIHD_WINDOWS__)
     (void)prefix;
-    std::string path = std::tmpnam(nullptr);
-    if (make_directory(path))
-        return path;
+    std::error_code ec;
+    auto tmp_path = std::filesystem::temp_directory_path(ec);
+    if (!ec)
+    {
+        char name[L_tmpnam];
+        if (std::tmpnam(name))
+        {
+            std::string_view tmp_name = name;
+            tmp_name.remove_prefix(1);
+            tmp_path /= tmp_name;
+            std::string path = tmp_path.string();
+            if (make_directory(path))
+                return path;
+        }
+    }
 #else
     if (prefix.size() + 6 > PATH_MAX)
         throw std::runtime_error(fmt::format("make_tmp_directory: path too long: {}", prefix));

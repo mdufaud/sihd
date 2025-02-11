@@ -1,18 +1,19 @@
 #include <sys/time.h>
 
 #include <atomic>
+#include <codecvt>
 #include <cstring>
 #include <mutex>
 #include <thread>
-
-#include <fmt/format.h> /////////////////////////
 
 #include <sihd/util/platform.hpp>
 #include <sihd/util/time.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-extern char *tzname[2];
+extern char *tzname[2]; // 0 is standard and 1 is daylight saving
 extern long timezone;
+#else
+# include <timezoneapi.h>
 #endif
 
 namespace sihd::util::time
@@ -29,9 +30,11 @@ std::atomic<bool> g_tz_is_set = false;
 time_t get_timezone()
 {
 #if defined(__SIHD_WINDOWS__)
-    long seconds = 0;
-    if (!_get_timezone(&seconds))
-        return seconds;
+    TIME_ZONE_INFORMATION tzi;
+
+    DWORD dwRet = GetTimeZoneInformation(&tzi);
+    if (dwRet != TIME_ZONE_ID_INVALID)
+        return tzi.Bias * 60;
     return 0;
 #else
     if (g_tz_is_set.exchange(true))
@@ -43,14 +46,13 @@ time_t get_timezone()
 std::string get_timezone_name()
 {
 #if defined(__SIHD_WINDOWS__)
-    std::string ret;
-    size_t tzname_size = 0;
-    if (!_get_tzname(&tzname_size, NULL, 0, 0))
-    {
-        ret.resize(tzname_size);
-        if (!_get_tzname(&tzname_size, ret.data(), tzname_size, 0))
-            return ret;
-    }
+    TIME_ZONE_INFORMATION tzi;
+
+    DWORD dwRet = GetTimeZoneInformation(&tzi);
+    if (dwRet == TIME_ZONE_ID_STANDARD)
+        return std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(tzi.StandardName);
+    else if (dwRet == TIME_ZONE_ID_DAYLIGHT)
+        return std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(tzi.DaylightName);
     return "";
 #else
     if (g_tz_is_set.exchange(true))

@@ -72,7 +72,11 @@ void time()
     SIHD_LOG(info, "today's day: {}", today.local_day_str());
     SIHD_LOG(info, "today's time: {}", today.local_sec_str());
     SIHD_LOG(info, "today's hour: {}", today.local_clocktime().hour);
-    SIHD_LOG(info, "today's zoned hour: {}", today.zone_str());
+    if constexpr (!os::is_windows)
+    {
+        // no %z in windows
+        SIHD_LOG(info, "today's zoned hour: {}", today.zone_str());
+    }
     SIHD_LOG(info, "from string date '2000/04/01': {}", Timestamp::from_str("2000/04/01", "%Y/%m/%d")->str());
     SIHD_LOG(info, "timezone name: {}", time::get_timezone_name());
     SIHD_LOG(info, "timezone offset: {}", time::get_timezone());
