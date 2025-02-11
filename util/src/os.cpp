@@ -253,8 +253,8 @@ Timestamp boot_time()
                 std::string_view btime_line(content.data() + pos, content.size() - pos);
                 btime_line.remove_prefix(btime_line.find_first_of(' ') + 1);
                 btime_line = btime_line.substr(0, btime_line.find('\n'));
-                time_t btime;
-                if (str::to_long(btime_line, &btime))
+                long long btime;
+                if (str::to_llong(btime_line, &btime))
                 {
                     boot_timestamp = Timestamp(std::chrono::seconds(btime));
                 }

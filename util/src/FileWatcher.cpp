@@ -17,12 +17,20 @@
 
 #else
 
-# define EVENT_SIZE (sizeof(struct inotify_event))
-# define EVENT_BUFFER_LEN (5 * (EVENT_SIZE + NAME_MAX))
+# if !defined(__SIHD_EMSCRIPTEN__)
+#  define INOTIFY_ENABLED
+# endif
 
-# include <sys/inotify.h>
-# include <sys/ioctl.h>
-# include <unistd.h>
+# if defined(INOTIFY_ENABLED)
+#  define EVENT_SIZE (sizeof(struct inotify_event))
+#  define EVENT_BUFFER_LEN (5 * (EVENT_SIZE + NAME_MAX))
+
+// no inotify with emscripten
+#  include <sys/inotify.h>
+#  include <sys/ioctl.h>
+#  include <unistd.h>
+# endif
+
 #endif
 
 namespace sihd::util
@@ -55,7 +63,7 @@ std::string FileWatcherEvent::type_str() const
     }
 }
 
-#if defined(__SIHD_WINDOWS__)
+#if defined(__SIHD_WINDOWS__) or !defined(INOTIFY_ENABLED)
 struct FileWatcher::Impl
 #else
 struct FileWatcher::Impl: public sihd::util::IHandler<sihd::util::Poll *>
@@ -80,10 +88,12 @@ struct FileWatcher::Impl: public sihd::util::IHandler<sihd::util::Poll *>
                         memcpy(&overlapped, &other.overlapped, sizeof(overlapped));
                         memset(&other.overlapped, 0, sizeof(other.overlapped));
 #else
+# if defined(INOTIFY_ENABLED)
                         inotify_fd = other.inotify_fd;
                         watch_fd = other.watch_fd;
                         old_filename = std::move(other.old_filename);
                         other.watch_fd = -1;
+# endif
 #endif
                     }
                     return *this;
@@ -96,13 +106,20 @@ struct FileWatcher::Impl: public sihd::util::IHandler<sihd::util::Poll *>
                 HANDLE handle = INVALID_HANDLE_VALUE;
                 OVERLAPPED overlapped;
 #else
+# if defined(INOTIFY_ENABLED)
                 int inotify_fd = -1;
                 int watch_fd = -1;
                 std::string old_filename;
+# endif
 #endif
         };
 
-        Impl(std::vector<FileWatcherEvent> & events): _events(events) { _buffer.resize(EVENT_BUFFER_LEN); }
+        Impl(std::vector<FileWatcherEvent> & events): _events(events)
+        {
+#if defined(INOTIFY_ENABLED)
+            _buffer.resize(EVENT_BUFFER_LEN);
+#endif
+        }
         ~Impl() { this->terminate(); }
 
         std::string _buffer;
@@ -112,7 +129,9 @@ struct FileWatcher::Impl: public sihd::util::IHandler<sihd::util::Poll *>
         int _inotify_fd = -1;
         Poll _poll;
 
+# if defined(INOTIFY_ENABLED)
         void handle(Poll *poll);
+# endif
 #endif
         std::vector<Watcher> _watchers;
 
@@ -314,16 +333,19 @@ FileWatcher::Impl::Watcher::Watcher() {}
 
 void FileWatcher::Impl::Watcher::close()
 {
+# if defined(INOTIFY_ENABLED)
     if (watch_fd >= 0 && inotify_fd >= 0)
     {
         inotify_rm_watch(inotify_fd, watch_fd);
         watch_fd = -1;
         inotify_fd = -1;
     }
+# endif
 }
 
 void FileWatcher::Impl::init()
 {
+# if defined(INOTIFY_ENABLED)
     _inotify_fd = inotify_init();
     if (_inotify_fd < 0)
     {
@@ -332,10 +354,12 @@ void FileWatcher::Impl::init()
     _poll.set_limit(1);
     _poll.set_read_fd(_inotify_fd);
     _poll.add_observer(this);
+# endif
 }
 
 bool FileWatcher::Impl::add_watch(std::string_view path)
 {
+# if defined(INOTIFY_ENABLED)
     if (this->is_watching(path))
         return true;
 
@@ -352,15 +376,25 @@ bool FileWatcher::Impl::add_watch(std::string_view path)
     _watchers.emplace_back(std::move(watcher));
 
     return true;
+# else
+    (void)path;
+    return false;
+# endif
 }
 
 bool FileWatcher::Impl::poll_new_events(int milliseconds_timeout)
 {
+# if defined(INOTIFY_ENABLED)
     return _inotify_fd >= 0 && _poll.poll(milliseconds_timeout) > 0;
+# else
+    (void)milliseconds_timeout;
+    return false;
+# endif
 }
 
 void FileWatcher::Impl::terminate()
 {
+# if defined(INOTIFY_ENABLED)
     _watchers.clear();
     if (_inotify_fd >= 0)
     {
@@ -368,8 +402,10 @@ void FileWatcher::Impl::terminate()
         close(_inotify_fd);
         _inotify_fd = -1;
     }
+# endif
 }
 
+# if defined(INOTIFY_ENABLED)
 void FileWatcher::Impl::handle(Poll *poll)
 {
     for (const auto & event : poll->events())
@@ -491,6 +527,7 @@ void FileWatcher::Impl::handle(Poll *poll)
         }
     }
 }
+# endif
 
 #endif // LINUX
 

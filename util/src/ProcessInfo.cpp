@@ -69,6 +69,9 @@ struct WindowsUserProcessInfos
 };
 
 #else
+
+# include <unistd.h>
+
 #endif
 
 namespace sihd::util

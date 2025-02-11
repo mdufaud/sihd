@@ -89,7 +89,7 @@ constexpr bool is_ios = true;
 constexpr bool is_ios = false;
 #endif
 
-#if defined(__EMSCRIPTEN__)
+#if defined(__SIHD_EMSCRIPTEN__)
 constexpr bool is_emscripten = true;
 #else
 constexpr bool is_emscripten = false;

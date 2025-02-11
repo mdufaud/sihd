@@ -60,6 +60,7 @@ if verbose:
     builder.info("platform: " + build_platform)
     builder.info("compiler: " + compiler)
     builder.info("arch: " + builder.build_architecture)
+    builder.info("machine: " + builder.build_machine)
     builder.info("mode: " + build_mode)
     builder.info("tests: " + (builder.build_tests and "yes" or "no"))
     builder.info("libraries: " + (builder.build_static_libs and "static" or "shared"))
@@ -212,6 +213,17 @@ if not builder.is_opt("nocache"):
 compiler = builder.build_compiler
 # CLANG build
 if compiler == "clang":
+    if builder.is_cross_building:
+        base_env.Append(
+            CPPFLAGS = [f"--target={builder.get_gnu_triplet()}"],
+            LINKFLAGS = [f"--target={builder.get_gnu_triplet()}"],
+        )
+    elif builder.build_architecture == "32":
+        base_env.Append(
+            CPPFLAGS = ["-m32"],
+            LINKFLAGS = ["-m32"]
+        )
+
     base_env.Replace(
         # compiler for c
         CC = "clang",
@@ -233,11 +245,12 @@ if compiler == "clang":
         base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
 # MINGW build
 elif compiler == "mingw":
+    prefix = "x86_64-w64-mingw32-"
     base_env.Replace(
-        CC = "x86_64-w64-mingw32-gcc",
-        CXX = "x86_64-w64-mingw32-g++",
-        AR = "x86_64-w64-mingw32-ar",
-        RANLIB = "x86_64-w64-mingw32-ranlib",
+        CC = prefix + "gcc",
+        CXX = prefix + "c++",
+        AR = prefix + "ar",
+        RANLIB = prefix + "ranlib",
     )
     base_env.Replace(
         SHLIBSUFFIX = ".dll",
@@ -250,11 +263,32 @@ elif compiler == "mingw":
         )
 # GCC build
 elif compiler == "gcc":
+    prefix = ""
+
+    if builder.is_cross_building:
+        if builder.build_machine == "x86_64":
+            prefix = "x86_64-linux-gnu-"
+        elif builder.build_machine == "arm":
+            # hardfloat
+            prefix = "arm-linux-gnueabihf-"
+        elif builder.build_machine == "arm64":
+            prefix = "aarch64-linux-gnu-"
+        elif builder.build_machine == "riscv64":
+            prefix = "riscv64-linux-gnu-"
+        elif builder.build_machine == "riscv32":
+            prefix = "riscv32-linux-gnu-"
+    else:
+        if builder.build_architecture == "32":
+            base_env.Append(
+                CPPFLAGS = ["-m32"],
+                LINKFLAGS = ["-m32"]
+            )
+
     base_env.Replace(
-        CC = "gcc",
-        CXX = "c++",
-        AR = "ar",
-        RANLIB = "ranlib",
+        CC = prefix + "gcc",
+        CXX = prefix + "g++",
+        AR = prefix + "ar",
+        RANLIB = prefix + "ranlib",
     )
     if builder.build_asan:
         base_env.Append(
@@ -274,6 +308,7 @@ elif compiler == "em":
         RANLIB = "emranlib",
         LINK = "emcc",
     )
+    
     emscripten_conf = os.path.join(os.getenv("HOME"), ".emscripten")
     if os.path.isfile(emscripten_conf):
         try:

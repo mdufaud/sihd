@@ -107,6 +107,15 @@ update-alternatives --config x86_64-w64-mingw32-g++
 apt install emscripten
 ```
 
+```shell
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+./emsdk install latest
+./emsdk activate latest
+# add to bashrc
+source ./emsdk_env.sh
+```
+
 ---
 
 ## Build
@@ -178,7 +187,7 @@ Create demo for each for the compiled module
 
 ```shell
 make dep mod COMMA_SEPARATED_MODULES demo=1
-make demo mod COMMA_SEPARATED_MODULES
+make demo COMMA_SEPARATED_MODULES
 ```
 
 ---

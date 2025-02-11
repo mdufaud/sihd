@@ -2,8 +2,9 @@
 
 #if !defined(__SIHD_WINDOWS__)
 
-# if !defined(__ANDROID__)
+# if !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 #  include <spawn.h>
+#  define ENABLE_SPAWN
 # endif
 
 # include <fcntl.h>    // open
@@ -63,7 +64,7 @@ auto get_in_env(const std::vector<std::string> & env, std::string_view key)
 
 #if !defined(__SIHD_WINDOWS__)
 
-# if !defined(__SIHD_ANDROID__) // no spawn on android
+# if defined(ENABLE_SPAWN)
 
 void add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_to)
 {
@@ -80,7 +81,7 @@ void add_close_action(posix_spawn_file_actions_t *actions, int fd)
         posix_spawn_file_actions_addclose(actions, fd);
 }
 
-# endif // __SIHD_ANDROID__
+# endif // ENABLE_SPAWN
 
 void setup_environ_in_child_process(const std::vector<const char *> & env)
 {
@@ -935,7 +936,7 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector
 
 bool Process::_do_spawn(const std::vector<const char *> & argv, const std::vector<const char *> & env)
 {
-#if defined(__SIHD_ANDROID__) || defined(__SIHD_WINDOWS__)
+#if !defined(ENABLE_SPAWN)
     (void)argv;
     (void)env;
     return false;
@@ -1070,16 +1071,17 @@ bool Process::_do_child_process(const std::vector<const char *> & argv, const st
 
 bool Process::_do_execute(const std::vector<const char *> & argv, const std::vector<const char *> & env)
 {
-#if defined(__SIHD_ANDROID__)
-    init_poller(_poll, _impl->pipe.std_out.fd_read, _impl->pipe.std_err.fd_read);
-    return this->_do_fork(argv, env);
-#elif defined(__SIHD_WINDOWS__)
+#if defined(__SIHD_WINDOWS__)
     return this->_do_child_process(argv, env);
 #else
     init_poller(_poll, _impl->pipe.std_out.fd_read, _impl->pipe.std_err.fd_read);
+# if defined(ENABLE_SPAWN)
     if (_fun_to_execute || _force_fork)
         return this->_do_fork(argv, env);
     return this->_do_spawn(argv, env);
+# else
+    return this->_do_fork(argv, env);
+# endif
 #endif
 }
 

@@ -102,46 +102,59 @@ def safe_symlink(src, dst):
             os.symlink(src, dst, target_is_directory=os.path.isdir(src))
     return True
 
+def get_host_architecture():
+    arch = platform.architecture()[0]
+    if "64" in arch:
+        return "64"
+    elif "32" in arch:
+        return "32"
+
+def __get_machine(machine):
+    return {
+        "aarch64": "arm64",
+        "amd64": "x86_64",
+    }.get(machine, machine)
+
+def get_host_machine():
+    return __get_machine(platform.machine().lower())
+
+def get_architecture():
+    machine_to_arch = {
+        "arm": "32",
+        "i386": "32"
+    }.get(get_opt('machine', None), None)
+    if machine_to_arch is not None:
+        return machine_to_arch
+    return get_opt('arch', get_host_architecture())
+
+def get_machine():
+    machine = get_opt('machine', get_host_machine())
+    if get_opt('arch', None) == "32":
+        machine = {
+            "arm64": "arm",
+        }.get(machine, machine)
+    return __get_machine(machine)
+
 ###############################################################################
 # OS settings
 # from conans/client/tools/oss.py in https://github.com/conan-io
 ###############################################################################
-
-architectures = {
-    "aarch64": "arm64",
-    "amd64": "x86_64",
-    "64": "x86_64",
-    "86": "x86",
-    "arm": "arm64",
-}
-
-def get_arch():
-    plat = __get_platform()
-    if plat == "sunos":
-        # TODO
-        arch = get_solaris_arch()
-    else:
-        arch = platform.machine().lower()
-        if arch in architectures:
-            arch = architectures[arch]
-    return get_opt('arch', arch)
-
 # from conans/conan/tools/gnu/get_gnu_triplet.py in https://github.com/conan-io
 def _build_gnu_triplet(machine, vendor):
     op_system = {
-        "Windows": "w64-mingw32",
-        "Linux": "linux-gnu",
-        "Darwin": "apple-darwin",
-        "Android": "linux-android",
-        "Macos": "apple-darwin",
-        "iOS": "apple-ios",
-        "watchOS": "apple-watchos",
-        "tvOS": "apple-tvos",
+        "windows": "w64-mingw32",
+        "linux": "linux-gnu",
+        "darwin": "apple-darwin",
+        "android": "linux-android",
+        "macos": "apple-darwin",
+        "ios": "apple-ios",
+        "watchos": "apple-watchos",
+        "tvos": "apple-tvos",
         # NOTE: it technically must be "asmjs-unknown-emscripten" or
         # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
-        "Emscripten": "local-emscripten",
-        "AIX": "ibm-aix",
-        "Neutrino": "nto-qnx"
+        "emscripten": "local-emscripten",
+        "aix": "ibm-aix",
+        "neutrino": "nto-qnx"
     }.get(vendor, vendor)
     if vendor in ("linux", "android"):
         if "arm" in machine and "armv8" not in machine:
@@ -168,7 +181,7 @@ def is_opt(argname, default_val=""):
     ret = get_opt(argname, default_val)
     return ret == "1" or ret.lower() == "true"
 
-def is_android():
+def is_termux():
     return "ANDROID_ARGUMENT" in os.environ
 
 def is_msys():
@@ -185,12 +198,10 @@ def __get_platform():
     return build_platform
 
 def get_compiler():
-    arch = get_arch()
-    compiler = default_compiler
-    if "arm" in arch:
-        compiler = "clang"
     build_platform = __get_platform()
-    compiler = get_opt("compiler", compiler)
+    compiler = get_opt("compiler", default_compiler)
+    if is_termux():
+        compiler = "clang"
     if build_platform == "windows" and not is_msys():
         compiler = "mingw"
     return compiler.lower()
@@ -250,7 +261,11 @@ def force_git_clone():
 
 # compilation
 build_compiler = get_compiler()
-build_architecture = get_arch()
+host_architecture = get_host_architecture()
+build_architecture = get_architecture()
+host_machine = get_host_machine()
+build_machine = get_machine()
+is_cross_building = host_machine != build_machine
 build_mode = get_compile_mode()
 build_static_libs = is_static_libs()
 build_asan = is_address_sanatizer()
@@ -260,12 +275,12 @@ build_verbose = has_verbose()
 
 # platform
 build_platform = get_platform()
-build_on_android = is_android()
+build_on_android = is_termux()
 build_for_windows = build_platform == "windows"
 build_for_linux = build_platform == "linux"
 
 def get_gnu_triplet():
-    return _build_gnu_triplet(build_architecture, build_platform)
+    return _build_gnu_triplet(build_machine, build_platform)
 
 # path ROOT -> root/site_scons/builder.py
 build_root_path = abspath(dirname(dirname(dirname(__file__))))
@@ -277,7 +292,7 @@ build_entry_path = join(build_root_path, "build")
 # last build link path
 build_last_link_path = join(build_entry_path, "last")
 # build full path
-build_path = join(build_entry_path, f"{build_platform}-{build_architecture}", build_compiler, build_mode)
+build_path = join(build_entry_path, f"{build_platform}-{build_machine}-{build_architecture}", build_compiler, build_mode)
 
 build_extlib_path = join(build_path, "extlib")
 build_extlib_bin_path = join(build_extlib_path, "bin")
@@ -554,7 +569,7 @@ def create_pacman_package(app, modules):
             '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
             '\tmake fclean\n'
             '\tmake modules={modules} asan={asan} static={static} '
-            'platform={platform} compiler={compiler} arch={arch} mode={mode} ')
+            'platform={platform} compiler={compiler} arch={arch} machine={machine} mode={mode} ')
         .format(
             modules = get_opt("modules"),
             asan = get_opt("asan", "0"),
@@ -562,6 +577,7 @@ def create_pacman_package(app, modules):
             platform = build_platform,
             compiler = build_compiler,
             arch = build_architecture,
+            machine = build_machine,
             mode = build_mode,
         ))
         if hasattr(app, "additionnal_build_env"):
@@ -571,11 +587,12 @@ def create_pacman_package(app, modules):
         fd.write(('package() {{\n'
             '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
             '\tmake install INSTALL_DESTDIR="${{pkgdir}}" INSTALL_PREFIX="/usr" '
-            'platform={platform} compiler={compiler} arch={arch} mode={mode}\n'
+            'platform={platform} compiler={compiler} arch={arch} machine={machine} mode={mode}\n'
         '}}\n').format(
             platform = build_platform,
             compiler = build_compiler,
             arch = build_architecture,
+            machine = build_machine,
             mode = build_mode,
         ))
     # change back to old directory
@@ -612,6 +629,8 @@ if __name__ == '__main__':
         print(build_platform)
     elif sys.argv[1] == "arch":
         print(build_architecture)
+    elif sys.argv[1] == "machine":
+        print(build_machine)
     elif sys.argv[1] == "mode":
         print(build_mode)
     elif sys.argv[1] == "android":
@@ -620,12 +639,16 @@ if __name__ == '__main__':
         print(build_path)
     elif sys.argv[1] == "static":
         print(libs_type)
+    elif sys.argv[1] == "triplet":
+        print(get_gnu_triplet())
     elif sys.argv[1] == "all":
         print(" ".join([
             build_platform,
-            build_architecture,
+            build_machine,
             build_mode,
+            build_architecture,
             build_compiler,
+            get_gnu_triplet(),
             build_on_android and "true" or "false",
             build_path,
         ]))

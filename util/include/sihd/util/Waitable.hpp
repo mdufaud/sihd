@@ -6,6 +6,7 @@
 
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/os.hpp>
 
 namespace sihd::util
 {
@@ -65,9 +66,16 @@ class WaitableImpl
         bool wait_until(Timestamp timestamp, Predicate pred_stop_waiting)
         {
             std::unique_lock lock(_mutex);
+#if defined(__SIHD_EMSCRIPTEN__)
+            // emscripten clock is microseconds
+            return _condition.wait_until(lock,
+                                         std::chrono::system_clock::time_point(std::chrono::microseconds(timestamp)),
+                                         pred_stop_waiting);
+#else
             return _condition.wait_until(lock,
                                          std::chrono::system_clock::time_point(std::chrono::nanoseconds(timestamp)),
                                          pred_stop_waiting);
+#endif
         }
 
         // predicate must return false to keep waiting
@@ -95,9 +103,16 @@ class WaitableImpl
         bool wait_until(Timestamp timestamp)
         {
             std::unique_lock lock(_mutex);
+            // emscripten clock is microseconds
+#if defined(__SIHD_EMSCRIPTEN__)
+            return _condition.wait_until(lock,
+                                         std::chrono::system_clock::time_point(std::chrono::microseconds(timestamp)))
+                   == std::cv_status::timeout;
+#else
             return _condition.wait_until(lock,
                                          std::chrono::system_clock::time_point(std::chrono::nanoseconds(timestamp)))
                    == std::cv_status::timeout;
+#endif
         }
 
         /**

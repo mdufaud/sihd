@@ -90,12 +90,17 @@ modules = {
             'stdc++fs'
         ],
         # === Emscripten specific ===
-        "em-flags": ["-pthread"], # enable threads
+        "em-flags": [
+            "-pthread", # enable threads
+            "-Wno-deprecated-literal-operator",
+            "-Wno-unknown-pragmas",
+            "-Wno-deprecated-declarations",
+        ],
         "em-link": [
             "-sFORCE_FILESYSTEM", # use filesystem
             "-sUSE_PTHREADS", # enable threads
             "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
-            "-sPROXY_TO_PTHREAD" # main is a navigator thread
+            "-sPROXY_TO_PTHREAD", # main is a navigator thread
         ],
     },
     "core": {

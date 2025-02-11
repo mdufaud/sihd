@@ -77,25 +77,96 @@ if modules_to_build != "NONE":
         print()
 
 def build_vcpkg_triplet():
-    vcpkg_triplet = builder.get_opt("triplet", "")
+    """
+    Built-in Triplets:
+        x64-android          x64-linux            x64-uwp              arm64-windows
+        arm64-android        x64-windows          arm64-uwp            x64-osx
+        x86-windows          arm64-osx            arm-neon-android     x64-windows-static
 
-    if len(vcpkg_triplet) == 0:
-        if builder.build_architecture == "x86_64":
-            vcpkg_triplet = "x64"
-        else:
-            vcpkg_triplet = builder.build_architecture
+    Community Triplets:
+        x64-xbox-xboxone      arm-android                   x64-osx-dynamic             loongarch32-linux-release
+        x64-ios               arm-uwp-static-md             arm-uwp                     x86-ios
+        loongarch64-linux     arm64-windows-static-release  x86-uwp-static-md           arm64-uwp-static-md
+        arm64-windows-static  x86-android                   arm64-mingw-dynamic         arm64ec-windows
+        arm-mingw-static      x64-uwp-static-md             s390x-linux-release         x86-windows-static-md
+        ppc64le-linux-release arm64-linux                   riscv32-linux-release       x86-windows-v120
+        arm64-ios             x64-windows-static-md-release armv6-android               x86-mingw-dynamic
+        x86-windows-static    x64-windows-static-release    loongarch64-linux-release   x86-mingw-static
+        arm64-osx-dynamic     wasm32-emscripten             x64-xbox-scarlett-static    x64-mingw-static
+        x64-xbox-scarlett     x64-linux-release             arm-windows-static          x64-xbox-xboxone-static
+        x64-linux-dynamic     x64-osx-release               arm64-ios-simulator-release riscv32-linux
+        arm-linux             x64-freebsd                   arm-linux-release           ppc64le-linux
+        arm64-ios-simulator   x86-uwp                       arm-ios                     x64-windows-static-md
+        arm64-mingw-static    mips64-linux                  riscv64-linux-release       arm64-windows-static-md
+        arm64-linux-release   x86-freebsd                   x64-windows-release         s390x-linux
+        arm64-ios-release     x86-linux                     x64-openbsd                 arm-windows
+        x64-mingw-dynamic     arm-mingw-dynamic             arm64-osx-release           loongarch32-linux
+        riscv64-linux
+    """
+    vcpkg_triplet = builder.get_opt("triplet", None)
+
+    if vcpkg_triplet is None:
+        builtin_triplets = [
+            "x64-android", "x64-linux", "x64-uwp", "arm64-windows",
+            "arm64-android", "x64-windows", "arm64-uwp", "x64-osx",
+            "x86-windows", "arm64-osx", "arm-neon-android", "x64-windows-static"
+        ]
+        community_triplets = [
+            "x64-xbox-xboxone", "arm-android", "x64-osx-dynamic", "loongarch32-linux-release",
+            "x64-ios", "arm-uwp-static-md", "arm-uwp", "x86-ios",
+            "loongarch64-linux", "arm64-windows-static-release", "x86-uwp-static-md", "arm64-uwp-static-md",
+            "arm64-windows-static", "x86-android", "arm64-mingw-dynamic", "arm64ec-windows",
+            "arm-mingw-static", "x64-uwp-static-md", "s390x-linux-release", "x86-windows-static-md",
+            "ppc64le-linux-release", "arm64-linux", "riscv32-linux-release", "x86-windows-v120",
+            "arm64-ios", "x64-windows-static-md-release", "armv6-android", "x86-mingw-dynamic",
+            "x86-windows-static", "x64-windows-static-release", "loongarch64-linux-release", "x86-mingw-static",
+            "arm64-osx-dynamic", "wasm32-emscripten", "x64-xbox-scarlett-static", "x64-mingw-static",
+            "x64-xbox-scarlett", "x64-linux-release", "arm-windows-static", "x64-xbox-xboxone-static",
+            "x64-linux-dynamic", "x64-osx-release", "arm64-ios-simulator-release", "riscv32-linux",
+            "arm-linux", "x64-freebsd", "arm-linux-release", "ppc64le-linux",
+            "arm64-ios-simulator", "x86-uwp", "arm-ios", "x64-windows-static-md",
+            "arm64-mingw-static", "mips64-linux", "riscv64-linux-release", "arm64-windows-static-md",
+            "arm64-linux-release", "x86-freebsd", "x64-windows-release", "s390x-linux",
+            "arm64-ios-release", "x86-linux", "x64-openbsd", "arm-windows",
+            "x64-mingw-dynamic", "arm-mingw-dynamic", "arm64-osx-release", "loongarch32-linux",
+            "riscv64-linux"
+        ]
+
+        vcpkg_machine = builder.build_machine
+        vcpkg_platform = builder.build_platform
+        vcpkg_liblink = "static" if builder.build_static_libs else "dynamic"
+        vcpkg_mode = builder.build_mode
+
+        if builder.build_compiler == "em":
+            vcpkg_machine = "wasm32"
+            vcpkg_platform = "emscripten"
+    
+        if vcpkg_machine == "x86_64":
+            if builder.build_architecture == "64":
+                vcpkg_machine = "x64"
+            elif builder.build_architecture == "32":
+                vcpkg_machine = "x86"
+
+        if vcpkg_machine == "aarch64":
+            if builder.build_architecture == "64":
+                vcpkg_machine = "arm64"
+            elif builder.build_architecture == "32":
+                vcpkg_machine = "arm"
 
         if builder.build_platform == "windows":
-            vcpkg_triplet += f"-mingw"
-        else:
-            vcpkg_triplet += f"-{builder.build_platform}"
+            vcpkg_platform = "mingw"
 
-        # no community triplet for static/dynamic here
-        if vcpkg_triplet != "arm64-linux":
-            if builder.build_static_libs:
-                vcpkg_triplet += "-static"
-            else:
-                vcpkg_triplet += "-dynamic"
+    triplet_tries = [
+        f"{vcpkg_machine}-{vcpkg_platform}-{vcpkg_liblink}-{vcpkg_mode}",
+        f"{vcpkg_machine}-{vcpkg_platform}-{vcpkg_liblink}",
+        f"{vcpkg_machine}-{vcpkg_platform}-{vcpkg_mode}",
+        f"{vcpkg_machine}-{vcpkg_platform}"
+    ]
+
+    for triplet_try in triplet_tries:
+        if triplet_try in builtin_triplets or triplet_try in community_triplets:
+            vcpkg_triplet = triplet_try
+            break
 
     return vcpkg_triplet
 

@@ -334,29 +334,39 @@ int main(int argc, char **argv)
     else
         LoggerManager::stream(os::is_emscripten ? stdout : stderr);
 
-    demo::time();
-    demo::os();
-    demo::fs();
-    demo::uuid();
-    demo::dynlib();
-    demo::file_mem_read();
-    demo::file_mem_write();
-    if constexpr (clipboard::usable)
+    if constexpr (os::is_emscripten)
     {
-        demo::clipboard();
+        demo::time();
+        demo::os();
+        demo::fs();
+        demo::uuid();
+        demo::dynlib();
+        demo::file_mem_read();
+        demo::file_mem_write();
     }
-    demo::bitmap();
-    if constexpr (screenshot::usable)
+    else
     {
-        demo::screenshot();
-    }
-    demo::process();
-    demo::backtrace();
+        demo::time();
+        demo::os();
+        demo::fs();
+        demo::uuid();
+        demo::dynlib();
+        demo::file_mem_read();
+        demo::file_mem_write();
+        if constexpr (clipboard::usable)
+        {
+            demo::clipboard();
+        }
+        demo::bitmap();
+        if constexpr (screenshot::usable)
+        {
+            demo::screenshot();
+        }
+        demo::process();
+        demo::backtrace();
 
-    demo::worker(result["worker-frequency"].as<double>());
+        demo::worker(result["worker-frequency"].as<double>());
 
-    if constexpr (os::is_emscripten == false)
-    {
         demo::read_line();
 
         fmt::print("Press Ctrl + c to exit\n");

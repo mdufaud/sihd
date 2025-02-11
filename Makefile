@@ -47,16 +47,16 @@ BUILD_TOOLS := $(HERE)/site_scons
 BUILD_SCRIPTS := $(BUILD_TOOLS)/scripts
 BUILDER := $(BUILD_SCRIPTS)/builder.py
 
-BUILDER_RESP := $(shell arch=$(arch) mode=$(mode) platform=$(platform) compiler=$(compiler) $(PYTHON_BIN) $(BUILDER) all)
+BUILDER_RESP := $(shell machine=$(machine) arch=$(arch) mode=$(mode) platform=$(platform) compiler=$(compiler) $(PYTHON_BIN) $(BUILDER) all)
 
 PLATFORM := $(word 1, $(BUILDER_RESP))
 ifeq ($(PLATFORM),)
 $(error "Makefile: platform not found - cannot find build path")
 endif
 
-ARCH := $(word 2, $(BUILDER_RESP))
-ifeq ($(ARCH),)
-$(error "Makefile: architecture not found - cannot find build path")
+MACHINE := $(word 2, $(BUILDER_RESP))
+ifeq ($(MACHINE),)
+$(error "Makefile: machine not found - cannot find build path")
 endif
 
 COMPILE_MODE := $(word 3, $(BUILDER_RESP))
@@ -64,9 +64,12 @@ ifeq ($(COMPILE_MODE),)
 $(error "Makefile: compilation mode not found - cannot find build path")
 endif
 
-COMPILER := $(word 4, $(BUILDER_RESP))
-ANDROID := $(word 5, $(BUILDER_RESP))
-BUILD_PATH := $(word 6, $(BUILDER_RESP))
+ARCH := $(word 4, $(BUILDER_RESP))
+
+COMPILER := $(word 5, $(BUILDER_RESP))
+GNU_TRIPLET := $(word 6, $(BUILDER_RESP))
+ANDROID := $(word 7, $(BUILDER_RESP))
+BUILD_PATH := $(word 8, $(BUILDER_RESP))
 
 ##########
 # Paths
@@ -176,7 +179,9 @@ info:
 	$(call mk_log_info,makefile,project: $(APP_NAME))
 	$(call mk_log_info,makefile,platform = $(PLATFORM))
 	$(call mk_log_info,makefile,compiler = $(COMPILER))
+	$(call mk_log_info,makefile,machine = $(MACHINE))
 	$(call mk_log_info,makefile,arch = $(ARCH))
+	$(call mk_log_info,makefile,gnu_triplet = $(GNU_TRIPLET))
 	$(call mk_log_info,makefile,mode = $(COMPILE_MODE))
 	$(call mk_log_info,makefile,logical cores = $(UTILS_LOGICAL_CORE_NUMBER) ($(j) used))
 ifeq ($(ANDROID), true)
@@ -398,15 +403,10 @@ endif # pkgdep
 
 ifeq ($(MAKEARG_1), demo)
 
+MODULES_NAME := $(MAKEARG_2),$(m)
+demo: modules = $(MODULES_NAME)
 demo: demo = 1
 demo: build
-
-ifeq ($(MAKEARG_2), mod)
-MODULES_NAME := $(MAKEARG_3),$(m)
-demo: modules = $(MODULES_NAME)
-mod:
-	$(QUIET) echo > /dev/null
-endif
 
 endif
 
@@ -598,10 +598,14 @@ endif # uninstall
 # Serve
 ##########
 
-.PHONY: serve # Serve a python http.server on port $(PORT) (default: 8000)
+.PHONY: serve_bin # Serve a python http.server on port $(PORT) (default: 8000)
+.PHONY: serve_demo # Serve a python http.server on port $(PORT) (default: 8000)
 
-serve:
+serve_bin:
 	$(PYTHON_BIN) -m http.server -d $(BIN_PATH) ${PORT}
+
+serve_demo:
+	$(PYTHON_BIN) -m http.server -d $(DEMO_PATH) ${PORT}
 
 ##########
 # Cleanup

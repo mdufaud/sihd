@@ -236,7 +236,7 @@ bool Bitmap::read_bmp(std::string_view path)
         file.seek(offset_to_pixels);
     }
 
-    success = success && file.read(_data.data(), bitmap_info_hdr.image_size) == bitmap_info_hdr.image_size;
+    success = success && file.read(_data.data(), bitmap_info_hdr.image_size) == (ssize_t)bitmap_info_hdr.image_size;
 
     if (!success)
         this->clear();
