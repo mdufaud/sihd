@@ -9,7 +9,7 @@ Value::Value(const uint8_t *buf, Type type)
 {
     this->type = type;
     this->data.n = 0;
-    memcpy(&this->data.n, buf, Types::type_size(type));
+    memcpy(&this->data.n, buf, type::size(type));
 }
 
 bool Value::empty() const

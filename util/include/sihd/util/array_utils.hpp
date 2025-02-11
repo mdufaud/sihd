@@ -59,7 +59,7 @@ T read(const IArray & arr, size_t idx)
         throw std::invalid_argument(
             str::format("array_utils::read cannot copy data from idx %lu into type '%s' (array type: '%s')",
                         idx,
-                        Types::str<T>(),
+                        type::str<T>(),
                         arr.data_type_str()));
     }
     return ret;

@@ -4,7 +4,7 @@
 #include <memory>
 #include <string_view>
 
-#include <sihd/util/Types.hpp>
+#include <sihd/util/type.hpp>
 
 namespace sihd::util
 {

@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include <sihd/util/Types.hpp>
+#include <sihd/util/type.hpp>
 
 namespace sihd::util
 {

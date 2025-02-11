@@ -3,8 +3,8 @@
 
 #include <sihd/util/IMessageField.hpp>
 #include <sihd/util/Named.hpp>
-#include <sihd/util/Types.hpp>
 #include <sihd/util/array_utils.hpp>
+#include <sihd/util/type.hpp>
 
 namespace sihd::util
 {
@@ -18,7 +18,7 @@ class MessageField: public Named,
 
         // IMessageField
         virtual size_t field_size() const override { return _size; }
-        virtual size_t field_byte_size() const override { return _size * Types::type_size(_dt); }
+        virtual size_t field_byte_size() const override { return _size * type::size(_dt); }
         virtual Type field_type() const override { return _dt; }
         virtual bool field_assign_buffer(void *buffer) override;
         virtual bool field_read_from(const void *buffer, size_t size) override;

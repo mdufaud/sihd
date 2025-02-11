@@ -13,7 +13,6 @@
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/util/Types.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/path.hpp>
@@ -22,6 +21,7 @@
 #include <sihd/util/term.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
+#include <sihd/util/type.hpp>
 
 #include <sihd/util/Process.hpp>
 
@@ -817,9 +817,9 @@ void LuaUtilApi::load_base(Vm & vm)
         // .addVariable("OBJECT", Type::TYPE_OBJECT)
         // .endNamespace()
         .beginNamespace("types")
-        .addFunction("type_size", &Types::type_size)
-        .addFunction("type_str", &Types::type_str)
-        .addFunction("from_str", &Types::from_str)
+        .addFunction("type_size", &type::size)
+        .addFunction("type_str", &type::str)
+        .addFunction("from_str", &type::from_str)
         .endNamespace()
         .beginClass<IArray>("IArray")
         .addFunction("size", &IArray::size)

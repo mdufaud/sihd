@@ -10,33 +10,33 @@
 #include <sihd/util/AService.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/ServiceController.hpp>
-#include <sihd/util/Types.hpp>
 #include <sihd/util/path.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
+#include <sihd/util/type.hpp>
 #include <sihd/util/version.hpp>
 
 #define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType)                                                                 \
- pybind11::class_<ArrType, IArray>(m_util, #ArrType)                                                                   \
-     .def(pybind11::init<>())                                                                                          \
-     .def(pybind11::init<size_t>())                                                                                    \
-     .def(pybind11::init<const std::vector<PrimitiveType>>())                                                          \
-     .def("clone", &ArrType::clone)                                                                                    \
-     .def("push_back", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_back))                     \
-     .def("push_back", &PyUtilApi::_array_py_push_back_list<PrimitiveType>)                                            \
-     .def("push_back", &PyUtilApi::_array_py_push_back_tuple<PrimitiveType>)                                           \
-     .def("push_front", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_front))                   \
-     .def("push_front", &PyUtilApi::_array_py_push_front_list<PrimitiveType>)                                          \
-     .def("push_front", &PyUtilApi::_array_py_push_front_tuple<PrimitiveType>)                                         \
-     .def("pop", &ArrType::pop)                                                                                        \
-     .def("front", &ArrType::front)                                                                                    \
-     .def("back", &ArrType::back)                                                                                      \
-     .def("at", &ArrType::at)                                                                                          \
-     .def("__setitem__", &ArrType::set)                                                                                \
-     .def("__getitem__", &PyUtilApi::_array_py_getitem<PrimitiveType>)                                                 \
-     .def("__contains__", &PyUtilApi::_array_py_contains<PrimitiveType>)                                               \
-     .def("__reversed__", &PyUtilApi::_array_py_reversed<PrimitiveType>)                                               \
-     .def("__iter__", &PyUtilApi::_array_py_iter<PrimitiveType>, pybind11::keep_alive<0, 1>());
+    pybind11::class_<ArrType, IArray>(m_util, #ArrType)                                                                \
+        .def(pybind11::init<>())                                                                                       \
+        .def(pybind11::init<size_t>())                                                                                 \
+        .def(pybind11::init<const std::vector<PrimitiveType>>())                                                       \
+        .def("clone", &ArrType::clone)                                                                                 \
+        .def("push_back", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_back))                  \
+        .def("push_back", &PyUtilApi::_array_py_push_back_list<PrimitiveType>)                                         \
+        .def("push_back", &PyUtilApi::_array_py_push_back_tuple<PrimitiveType>)                                        \
+        .def("push_front", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_front))                \
+        .def("push_front", &PyUtilApi::_array_py_push_front_list<PrimitiveType>)                                       \
+        .def("push_front", &PyUtilApi::_array_py_push_front_tuple<PrimitiveType>)                                      \
+        .def("pop", &ArrType::pop)                                                                                     \
+        .def("front", &ArrType::front)                                                                                 \
+        .def("back", &ArrType::back)                                                                                   \
+        .def("at", &ArrType::at)                                                                                       \
+        .def("__setitem__", &ArrType::set)                                                                             \
+        .def("__getitem__", &PyUtilApi::_array_py_getitem<PrimitiveType>)                                              \
+        .def("__contains__", &PyUtilApi::_array_py_contains<PrimitiveType>)                                            \
+        .def("__reversed__", &PyUtilApi::_array_py_reversed<PrimitiveType>)                                            \
+        .def("__iter__", &PyUtilApi::_array_py_iter<PrimitiveType>, pybind11::keep_alive<0, 1>());
 
 namespace sihd::py
 {
@@ -100,9 +100,9 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
             pybind11::call_guard<pybind11::gil_scoped_release>());
 
     m_util.def_submodule("types", "sihd::util::Types")
-        .def("type_size", &Types::type_size)
-        .def("type_str", &Types::type_str)
-        .def("from_str", &Types::from_str);
+        .def("type_size", &type::size)
+        .def("type_str", &type::str)
+        .def("from_str", &type::from_str);
 
     m_util.def_submodule("thread", "sihd::util::Thread")
         .def("id", &thread::id)

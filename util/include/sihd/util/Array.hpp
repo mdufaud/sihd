@@ -153,8 +153,8 @@ class Array: public IArray,
         size_t capacity() const { return _capacity; }
         size_t byte_capacity() const { return _capacity * sizeof(T); }
 
-        Type data_type() const { return Types::type<T>(); }
-        const char *data_type_str() const { return Types::type_str(this->data_type()); }
+        Type data_type() const { return type::from<T>(); }
+        const char *data_type_str() const { return type::str(this->data_type()); }
 
         /*********************************************************************/
         /* copy_from */

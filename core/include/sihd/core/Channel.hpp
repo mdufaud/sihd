@@ -51,7 +51,7 @@ class Channel: public sihd::util::Named,
         template <typename T>
         bool is_same_type() const
         {
-            return sihd::util::Types::is_same<T>(_array_ptr->data_type());
+            return sihd::util::type::is_same<T>(_array_ptr->data_type());
         }
 
         // get last write timestamp (thread safe)

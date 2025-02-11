@@ -110,6 +110,8 @@ std::string last_error_str()
 
 #if defined(__SIHD_WINDOWS__)
 
+# pragma message("TODO - make better")
+
 struct Wsa
 {
         Wsa()

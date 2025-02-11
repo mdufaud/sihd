@@ -411,7 +411,7 @@ int HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons re
         {
             char client_name[128];
             char client_ip[INET6_ADDRSTRLEN];
-            lws_sockfd_type fd = (lws_sockfd_type)in;
+            lws_sockfd_type fd = (size_t)in;
             lws_get_peer_addresses(wsi, fd, client_name, sizeof(client_name), client_ip, sizeof(client_ip));
             SIHD_LOG(debug, "HttpServer: received client connect from {} ({})", client_name, client_ip);
             // send non 0 to refuse connection

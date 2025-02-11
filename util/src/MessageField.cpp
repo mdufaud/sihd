@@ -86,7 +86,7 @@ bool MessageField::field_resize(size_t size)
 
 std::string MessageField::description() const
 {
-    return fmt::format("{}[{}]", Types::type_str(_dt), this->field_size());
+    return fmt::format("{}[{}]", type::str(_dt), this->field_size());
 }
 
 } // namespace sihd::util

@@ -2,7 +2,7 @@
 #define __SIHD_UTIL_IMESSAGEFIELD_HPP__
 
 #include <sihd/util/ICloneable.hpp>
-#include <sihd/util/Types.hpp>
+#include <sihd/util/type.hpp>
 
 namespace sihd::util
 {

@@ -20,7 +20,7 @@ Channel::Channel(const std::string & name, Type type, size_t size, Node *parent)
     if (_array_ptr == nullptr)
     {
         throw std::invalid_argument(
-            fmt::format("Channel: no such type {} for channel {}", Types::type_str(type), this->name()));
+            fmt::format("Channel: no such type {} for channel {}", type::str(type), this->name()));
     }
     _array_ptr->resize(size);
     _notifying = false;
@@ -32,12 +32,12 @@ Channel::Channel(const std::string & name, Type type, size_t size, Node *parent)
 Channel::Channel(const std::string & name, Type type, Node *parent): Channel(name, type, 1, parent) {}
 
 Channel::Channel(const std::string & name, std::string_view type, size_t size, Node *parent):
-    Channel(name, Types::from_str(type), size, parent)
+    Channel(name, type::from_str(type), size, parent)
 {
 }
 
 Channel::Channel(const std::string & name, std::string_view type, Node *parent):
-    Channel(name, Types::from_str(type), 1, parent)
+    Channel(name, type::from_str(type), 1, parent)
 {
 }
 

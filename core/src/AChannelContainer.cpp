@@ -68,7 +68,7 @@ Channel *AChannelContainer::add_unlinked_channel(const std::string & name,
                                                  size_t size,
                                                  bool check_match)
 {
-    return this->add_unlinked_channel(name, sihd::util::Types::from_str(type), size, check_match);
+    return this->add_unlinked_channel(name, sihd::util::type::from_str(type), size, check_match);
 }
 
 Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Type type, size_t size)
@@ -90,7 +90,7 @@ Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Ty
 
 Channel *AChannelContainer::add_channel(const std::string & name, std::string_view type, size_t size)
 {
-    return this->add_channel(name, sihd::util::Types::from_str(type), size);
+    return this->add_channel(name, sihd::util::type::from_str(type), size);
 }
 
 bool AChannelContainer::on_check_link(const std::string & name, Named *child)
@@ -109,7 +109,7 @@ bool AChannelContainer::on_check_link(const std::string & name, Named *child)
         SIHD_LOG_ERROR("ChannelContainer: '{}' channel link size not same type '{}': '{}' != '{}'",
                        this->full_name(),
                        name,
-                       sihd::util::Types::type_str(conf.type),
+                       sihd::util::type::str(conf.type),
                        chan->array()->data_type_str());
         ret = false;
     }

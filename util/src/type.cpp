@@ -1,7 +1,7 @@
 #include <cstring>
 #include <map>
 
-#include <sihd/util/Types.hpp>
+#include <sihd/util/type.hpp>
 
 #define STR_TYPE_NONE "none"
 #define STR_TYPE_BOOL "bool"
@@ -18,30 +18,30 @@
 #define STR_TYPE_DOUBLE "double"
 #define STR_TYPE_OBJECT "object"
 
-namespace sihd::util
+namespace sihd::util::type
 {
 
-Type Types::from_str(std::string_view type)
+sihd::util::Type from_str(std::string_view type)
 {
-    static std::map<std::string_view, Type> str_to_type = {{STR_TYPE_NONE, TYPE_NONE},
-                                                           {STR_TYPE_BOOL, TYPE_BOOL},
-                                                           {STR_TYPE_CHAR, TYPE_CHAR},
-                                                           {STR_TYPE_BYTE, TYPE_BYTE},
-                                                           {STR_TYPE_UBYTE, TYPE_UBYTE},
-                                                           {STR_TYPE_SHORT, TYPE_SHORT},
-                                                           {STR_TYPE_USHORT, TYPE_USHORT},
-                                                           {STR_TYPE_INT, TYPE_INT},
-                                                           {STR_TYPE_UINT, TYPE_UINT},
-                                                           {STR_TYPE_LONG, TYPE_LONG},
-                                                           {STR_TYPE_ULONG, TYPE_ULONG},
-                                                           {STR_TYPE_FLOAT, TYPE_FLOAT},
-                                                           {STR_TYPE_DOUBLE, TYPE_DOUBLE},
-                                                           {STR_TYPE_OBJECT, TYPE_OBJECT}};
+    static std::map<std::string_view, sihd::util::Type> str_to_type = {{STR_TYPE_NONE, TYPE_NONE},
+                                                                       {STR_TYPE_BOOL, TYPE_BOOL},
+                                                                       {STR_TYPE_CHAR, TYPE_CHAR},
+                                                                       {STR_TYPE_BYTE, TYPE_BYTE},
+                                                                       {STR_TYPE_UBYTE, TYPE_UBYTE},
+                                                                       {STR_TYPE_SHORT, TYPE_SHORT},
+                                                                       {STR_TYPE_USHORT, TYPE_USHORT},
+                                                                       {STR_TYPE_INT, TYPE_INT},
+                                                                       {STR_TYPE_UINT, TYPE_UINT},
+                                                                       {STR_TYPE_LONG, TYPE_LONG},
+                                                                       {STR_TYPE_ULONG, TYPE_ULONG},
+                                                                       {STR_TYPE_FLOAT, TYPE_FLOAT},
+                                                                       {STR_TYPE_DOUBLE, TYPE_DOUBLE},
+                                                                       {STR_TYPE_OBJECT, TYPE_OBJECT}};
     auto it = str_to_type.find(type);
     return it == str_to_type.end() ? TYPE_NONE : it->second;
 }
 
-const char *Types::type_str(Type type)
+const char *str(sihd::util::Type type)
 {
     switch (type)
     {
@@ -79,7 +79,7 @@ const char *Types::type_str(Type type)
     return "unknown";
 }
 
-size_t Types::type_size(Type type)
+size_t size(sihd::util::Type type)
 {
     switch (type)
     {
@@ -114,75 +114,75 @@ size_t Types::type_size(Type type)
 }
 
 template <>
-Type Types::type<bool>()
+sihd::util::Type from<bool>()
 {
     return TYPE_BOOL;
 };
 
 template <>
-Type Types::type<char>()
+sihd::util::Type from<char>()
 {
     return TYPE_CHAR;
 };
 
 template <>
-Type Types::type<int8_t>()
+sihd::util::Type from<int8_t>()
 {
     return TYPE_BYTE;
 };
 
 template <>
-Type Types::type<uint8_t>()
+sihd::util::Type from<uint8_t>()
 {
     return TYPE_UBYTE;
 };
 
 template <>
-Type Types::type<int16_t>()
+sihd::util::Type from<int16_t>()
 {
     return TYPE_SHORT;
 };
 
 template <>
-Type Types::type<uint16_t>()
+sihd::util::Type from<uint16_t>()
 {
     return TYPE_USHORT;
 };
 
 template <>
-Type Types::type<int32_t>()
+sihd::util::Type from<int32_t>()
 {
     return TYPE_INT;
 };
 
 template <>
-Type Types::type<uint32_t>()
+sihd::util::Type from<uint32_t>()
 {
     return TYPE_UINT;
 };
 
 template <>
-Type Types::type<int64_t>()
+sihd::util::Type from<int64_t>()
 {
     return TYPE_LONG;
 };
 
 template <>
-Type Types::type<uint64_t>()
+sihd::util::Type from<uint64_t>()
 {
     return TYPE_ULONG;
 };
 
 template <>
-Type Types::type<float>()
+sihd::util::Type from<float>()
 {
     return TYPE_FLOAT;
 };
 
 template <>
-Type Types::type<double>()
+sihd::util::Type from<double>()
 {
     return TYPE_DOUBLE;
 };
 
-} // namespace sihd::util
+} // namespace sihd::util::type

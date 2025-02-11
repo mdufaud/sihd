@@ -4,8 +4,8 @@
 #include <cstring>
 #include <limits>
 
-#include <sihd/util/Types.hpp>
 #include <sihd/util/str.hpp>
+#include <sihd/util/type.hpp>
 
 namespace sihd::util
 {
@@ -19,7 +19,7 @@ class Value
         Value(T val)
         {
             static_assert(std::is_fundamental<T>::value);
-            this->type = Types::type<T>();
+            this->type = type::from<T>();
             this->data.n = val;
         }
 

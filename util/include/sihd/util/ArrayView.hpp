@@ -145,9 +145,9 @@ class ArrayView: public IArrayView
         size_t byte_size() const { return _size * sizeof(T); }
         bool empty() const { return _size == 0; }
 
-        Type data_type() const { return Types::type<T>(); }
+        Type data_type() const { return type::from<T>(); }
 
-        const char *data_type_str() const { return Types::type_str(this->data_type()); }
+        const char *data_type_str() const { return type::str(this->data_type()); }
 
         /*********************************************************************/
         /* comparison */
