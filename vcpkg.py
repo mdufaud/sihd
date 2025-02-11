@@ -10,12 +10,14 @@ import app
 from site_scons.scripts import modules as modules
 from site_scons.scripts import builder as builder
 
-vcpkg_dir_path = os.path.join(builder.build_root_path, ".vcpkg")
-vcpkg_bin_path = os.path.join(vcpkg_dir_path, "vcpkg")
 
-if builder.is_msys():
-    vcpkg_bin_path += ".exe"
-
+vcpkg_bin_path = os.getenv("VCPKG_PATH", None)
+if vcpkg_bin_path is None:
+    vcpkg_dir_path = os.path.join(builder.build_root_path, ".vcpkg")
+    vcpkg_bin_path = os.path.join(vcpkg_dir_path, "vcpkg")
+    if builder.is_msys():
+        vcpkg_bin_path += ".exe"
+        
 vcpkg_build_path = os.path.join(builder.build_path, "vcpkg")
 vcpkg_build_manifest_path = os.path.join(vcpkg_build_path, "vcpkg.json")
 
@@ -223,6 +225,12 @@ def execute_vcpkg_install():
     __check_vcpkg()
     copy_env = os.environ.copy()
     args = [vcpkg_bin_path, "install", f"--triplet={vcpkg_triplet}", "--allow-unsupported"]
+
+    if copy_env.get("VCPKG_DEFAULT_BINARY_CACHE", None) is None:
+        vcpkg_archive_path = os.path.join(vcpkg_dir_path, "archives")
+        copy_env["VCPKG_DEFAULT_BINARY_CACHE"] = vcpkg_archive_path
+        if not os.path.isdir(vcpkg_archive_path):
+            os.makedirs(vcpkg_archive_path)
 
     if builder.is_msys():
         args += ["--host-triplet=x64-mingw-dynamic"]

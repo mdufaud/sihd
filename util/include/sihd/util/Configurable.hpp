@@ -76,8 +76,6 @@ class Configurable
 
         bool set_conf(const std::string & key, const nlohmann::json & val);
 
-        bool set_conf(const nlohmann::json && json);
-
         bool set_conf(const nlohmann::json & json);
 
     private:

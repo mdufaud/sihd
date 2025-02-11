@@ -229,7 +229,7 @@ TEST_F(TestHttpServer, test_httpserver_websockets)
     sihd::util::SigWatcher watcher("signal-watcher");
 
     watcher.add_signal(SIGINT);
-    watcher.set_polling_frequency(5);
+    watcher.set_step_frequency(5);
 
     Handler<SigWatcher *> sig_handler([&server](SigWatcher *watcher) {
         auto & catched_signals = watcher->catched_signals();

@@ -31,6 +31,8 @@ int main(int argc, char **argv)
         ("p,path", "Watch path for changes", cxxopts::value<std::string>());
     // clang-format on
 
+    options.parse_positional({"path"});
+
     cxxopts::ParseResult result = options.parse(argc, argv);
 
     if (result.count("help"))

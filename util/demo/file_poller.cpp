@@ -30,6 +30,8 @@ int main(int argc, char **argv)
         ("t,time", "Execute x times per seconds", cxxopts::value<double>()->default_value("0.5"));
     // clang-format on
 
+    options.parse_positional({"path", "depth"});
+
     cxxopts::ParseResult result = options.parse(argc, argv);
 
     if (result.count("help"))

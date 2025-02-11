@@ -7,6 +7,10 @@
 #  define ENABLE_SPAWN
 # endif
 
+# if !defined(__SIHD_EMSCRIPTEN__)
+#  define ENABLE_FORK
+# endif
+
 # include <fcntl.h>    // open
 # include <sys/stat.h> // open
 # include <sys/types.h>
@@ -64,6 +68,20 @@ auto get_in_env(const std::vector<std::string> & env, std::string_view key)
 
 #if !defined(__SIHD_WINDOWS__)
 
+void safe_close(int & fd)
+{
+    if (fd == -1)
+        return;
+    if (close(fd) == -1)
+    {
+        SIHD_LOG(error, "Process: could not close fd: {}", strerror(errno));
+    }
+    else
+    {
+        fd = -1;
+    }
+}
+
 # if defined(ENABLE_SPAWN)
 
 void add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_to)
@@ -83,6 +101,8 @@ void add_close_action(posix_spawn_file_actions_t *actions, int fd)
 
 # endif // ENABLE_SPAWN
 
+# if defined(ENABLE_FORK)
+
 void setup_environ_in_child_process(const std::vector<const char *> & env)
 {
     for (const char *keyval : env)
@@ -96,6 +116,19 @@ void setup_environ_in_child_process(const std::vector<const char *> & env)
         }
     }
 }
+
+void dup_close(int fd_from, int fd_to)
+{
+    if (fd_from < 0)
+        return;
+    if (dup2(fd_from, fd_to) == -1)
+    {
+        SIHD_LOG(error, "Process: could not duplicate fd: {}", strerror(errno));
+    }
+    safe_close(fd_from);
+}
+
+# endif // ENABLE_FORK
 
 std::pair<int, int> make_pipe()
 {
@@ -125,31 +158,6 @@ bool write_into_pipe(int fd, const std::string & str)
 {
     ssize_t ret = write(fd, str.c_str(), str.size());
     return ret >= 0 && ret == (ssize_t)str.size();
-}
-
-void safe_close(int & fd)
-{
-    if (fd == -1)
-        return;
-    if (close(fd) == -1)
-    {
-        SIHD_LOG(error, "Process: could not close fd: {}", strerror(errno));
-    }
-    else
-    {
-        fd = -1;
-    }
-}
-
-void dup_close(int fd_from, int fd_to)
-{
-    if (fd_from < 0)
-        return;
-    if (dup2(fd_from, fd_to) == -1)
-    {
-        SIHD_LOG(error, "Process: could not duplicate fd: {}", strerror(errno));
-    }
-    safe_close(fd_from);
 }
 
 bool read_pipe_into_file(int fd, std::string & path, bool append)
@@ -867,7 +875,7 @@ bool Process::stderr_to_file(std::string_view path, bool append)
 
 bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector<const char *> & env)
 {
-#if defined(__SIHD_WINDOWS__)
+#if defined(__SIHD_WINDOWS__) || !defined(ENABLE_FORK)
     (void)argv;
     (void)env;
     return false;

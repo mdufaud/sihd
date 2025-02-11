@@ -337,13 +337,16 @@ def verify_args(app):
         if build_asan:
             error("cannot use address sanitizer with mingw")
             ret = False
-    elif build_compiler == "em":
         if not build_static_libs:
-            warning("not supported Emscripten without static libs - switching to static libs")
+            warning("not supported Mingw without static libs - switching to static libs")
             build_static_libs = True
+    elif build_compiler == "em":
         if build_asan:
             error("cannot use address sanitizer with emscripten")
             ret = False
+        if not build_static_libs:
+            warning("not supported Emscripten without static libs - switching to static libs")
+            build_static_libs = True
     return ret
 
 ###############################################################################

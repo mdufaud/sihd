@@ -86,7 +86,7 @@ modules = {
             'ssp', # winsock
             'ws2_32', # windows socket api
             'gdi32', # wingdi
-            'imagehlp', # backtrace
+            'imagehlp', # backtrace / SymFromAddr
             'stdc++fs'
         ],
         # === Emscripten specific ===
@@ -105,23 +105,22 @@ modules = {
     },
     "core": {
         "depends": ['util'],
-        "inherit-depends-libs": True,
+        "inherit-depends-defines": True,
     },
     "ipc": {
         "depends": ['util'],
-        "inherit-depends-libs": True,
-        "linux-libs": [
-            'rt', # shm_open...
-        ],
-        "windows-dyn-libs": [
-            'ucrt', # timezone
-        ],
+        "inherit-depends-defines": True,
     },
     "net": {
         "depends": ['util'],
-        "inherit-depends-libs": True,
         "extlibs": ['openssl'],
         "libs": ['ssl', 'crypto'],
+        "windows-libs": [
+            'psapi', # GetModuleFileName/GetProcessMemoryInfo
+            'ssp', # winsock
+            'imagehlp', # backtrace / SymFromAddr
+            'ws2_32', # windows socket api
+        ],
     },
     "http": {
         "depends": ['net'],
@@ -208,6 +207,27 @@ modules = {
             "gdi32",
             # winsock
             'ssp',
+        ],
+        "em-flags": [
+            # "-DIMGUI_DISABLE_FILE_FUNCTIONS",
+        ],
+        "em-link": [
+            "-sFORCE_FILESYSTEM", # use filesystem
+            "-sUSE_PTHREADS", # enable threads
+            "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
+            "-sPROXY_TO_PTHREAD", # main is a navigator thread
+            "-sUSE_GLFW=3",
+            # "-sUSE_SDL=2",
+            "-sWASM=1",
+            "-sOFFSCREENCANVAS_SUPPORT=1",
+            "-sOFFSCREEN_FRAMEBUFFER=1",
+            # "-sNO_FILESYSTEM=1",
+            # "-sALLOW_MEMORY_GROWTH=1",
+            "-sNO_EXIT_RUNTIME=0",
+            "-sASSERTIONS=1",
+            "-sDISABLE_EXCEPTION_CATCHING=1",
+            # "-sSAFE_HEAP=1",
+            # "-sOFFSCREEN_FRAMEBUFFER=1"
         ],
     },
 }

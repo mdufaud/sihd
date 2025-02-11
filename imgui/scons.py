@@ -29,6 +29,14 @@ compiling_with_emscripten = builder.build_compiler == "em"
 
 lib = env.build_lib(sihd_imgui_srcs)
 
+if builder.build_compiler == "em":
+    demo_etc_dir = Dir("demo").Dir("etc").Dir("sihd").Dir("demo")
+    env.Append(
+        LINKFLAGS = [
+            "--shell-file", str(demo_etc_dir.Dir("imgui_demo").File("shell_minimal.html")),
+        ]
+    )
+
 if builder.build_platform == "windows":
     env.build_demo("demo/imgui_win_d11_demo.cpp", name = "imgui_win_d11_demo", add_libs = [env.module_format_name()])
     if compile_sdl:

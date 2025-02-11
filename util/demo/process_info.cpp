@@ -47,6 +47,8 @@ int main(int argc, char **argv)
     ;
     // clang-format on
 
+    options.parse_positional({"process"});
+
     cxxopts::ParseResult result = options.parse(argc, argv);
 
     if (result.count("help"))
@@ -55,7 +57,7 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    LoggerManager::console();
+    LoggerManager::console(LoggerFilter::Options {.level_lower = LogLevel::info});
 
     const bool dump_env = result["env"].as<bool>();
 

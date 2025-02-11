@@ -334,41 +334,33 @@ int main(int argc, char **argv)
     else
         LoggerManager::stream(os::is_emscripten ? stdout : stderr);
 
+    demo::time();
+    demo::os();
+    demo::fs();
+    demo::uuid();
+    demo::dynlib();
+    demo::file_mem_read();
+    demo::file_mem_write();
+    demo::bitmap();
+    demo::backtrace();
+    demo::worker(result["worker-frequency"].as<double>());
+
     if constexpr (os::is_emscripten)
     {
-        demo::time();
-        demo::os();
-        demo::fs();
-        demo::uuid();
-        demo::dynlib();
-        demo::file_mem_read();
-        demo::file_mem_write();
+        demo::read_line();
     }
     else
     {
-        demo::time();
-        demo::os();
-        demo::fs();
-        demo::uuid();
-        demo::dynlib();
-        demo::file_mem_read();
-        demo::file_mem_write();
         if constexpr (clipboard::usable)
         {
             demo::clipboard();
         }
-        demo::bitmap();
         if constexpr (screenshot::usable)
         {
             demo::screenshot();
         }
         demo::process();
-        demo::backtrace();
-
-        demo::worker(result["worker-frequency"].as<double>());
-
         demo::read_line();
-
         fmt::print("Press Ctrl + c to exit\n");
         SigWaiter waiter;
         fmt::print("Exiting...\n");

@@ -38,11 +38,6 @@ bool Configurable::set_conf(const std::string & key, const nlohmann::json & val)
     return false;
 }
 
-bool Configurable::set_conf(const nlohmann::json && json)
-{
-    return this->set_conf(json);
-}
-
 bool Configurable::set_conf(const nlohmann::json & json)
 {
     if (json.is_object() == false || json.is_null())

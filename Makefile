@@ -601,6 +601,10 @@ endif # uninstall
 .PHONY: serve_bin # Serve a python http.server on port $(PORT) (default: 8000)
 .PHONY: serve_demo # Serve a python http.server on port $(PORT) (default: 8000)
 
+# TODO add
+# Cross-Origin-Opener-Policy: same-origin
+# Cross-Origin-Embedder-Policy: require-corp
+
 serve_bin:
 	$(PYTHON_BIN) -m http.server -d $(BIN_PATH) ${PORT}
 

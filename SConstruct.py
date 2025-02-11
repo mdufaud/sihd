@@ -239,7 +239,7 @@ if compiler == "clang":
             CPPFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"],
             LINKFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"]
         )
-    if builder.is_static_libs():
+    if builder.build_static_libs:
         base_env.ParseConfig("llvm-config --libs --system-libs --link-static")
     else:
         base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
@@ -257,7 +257,7 @@ elif compiler == "mingw":
         LIBSUFFIX = ".lib",
         LIBPREFIX = "",
     )
-    if builder.is_static_libs():
+    if builder.build_static_libs:
         base_env.Append(
             LINKFLAGS = ["-static", "-static-libgcc", "-static-libstdc++"]
         )
@@ -295,7 +295,7 @@ elif compiler == "gcc":
             CPPFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"],
             LINKFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"]
         )
-    if builder.is_static_libs():
+    if builder.build_static_libs:
         base_env.Append(
             LINKFLAGS = ["-static", "-static-libgcc", "-static-libstdc++"]
         )
