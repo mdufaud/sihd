@@ -36,14 +36,13 @@ class UdpReceiver: public INetReceiver,
         bool open_and_bind(std::string_view ip, int port);
         bool open_unix_and_bind(std::string_view path);
 
-        bool close();
-
         ssize_t receive(void *buf, size_t len);
-        ssize_t receive(sihd::util::IArray & arr);
+        ssize_t receive(IpAddr & addr, void *buf, size_t len);
 
         // INetReceiver
-        ssize_t receive(IpAddr & addr, void *buf, size_t len);
-        ssize_t receive(IpAddr & addr, sihd::util::IArray & arr);
+        bool close() override;
+        ssize_t receive(sihd::util::IArray & arr) override;
+        ssize_t receive(IpAddr & addr, sihd::util::IArray & arr) override;
 
         bool set_poll_timeout(int milliseconds);
         // poll for x milliseconds - returns true if socket is read

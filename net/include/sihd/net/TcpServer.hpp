@@ -36,11 +36,12 @@ class TcpServer: public INetServer,
 
         bool close();
 
-        int accept_client(IpAddr *client_ip = nullptr);
-        bool add_client_read(int socket);
-        bool add_client_write(int socket);
-        bool remove_client_read(int socket);
-        bool remove_client_write(int socket);
+        // INetServer
+        int accept_client(IpAddr *client_ip = nullptr) override;
+        bool add_client_read(int socket) override;
+        bool add_client_write(int socket) override;
+        bool remove_client_read(int socket) override;
+        bool remove_client_write(int socket) override;
 
         bool set_queue_size(size_t size);
         bool set_poll_timeout(int milliseconds);

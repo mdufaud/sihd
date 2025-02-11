@@ -33,12 +33,12 @@ class Sniffer: public sihd::util::Named,
         // sniff bufferful of packets from a pcap_t open for a live capture then leave
         bool sniff();
         // sniff one packet
-        bool read_next();
+        bool read_next() override;
         // callback when packet is sniffed
         void new_packet(const struct pcap_pkthdr *h, const u_char *bytes);
         // get datas
-        bool get_read_data(sihd::util::ArrCharView & view) const;
-        bool get_read_timestamp(time_t *nano_timestamp) const;
+        bool get_read_data(sihd::util::ArrCharView & view) const override;
+        bool get_read_timestamp(time_t *nano_timestamp) const override;
         const sihd::util::ArrByte & data() const;
 
         // maximum pkts to sniff before stopping

@@ -31,8 +31,7 @@ std::optional<CsvData>
 
 // check if tuple size and header size is the same
 template <typename... Args>
-bool same_number_of_columns(const std::vector<std::string> & columns_tags,
-                            const std::vector<std::tuple<Args...>> & rows)
+bool same_number_of_columns(const std::vector<std::string> & columns_tags, const std::vector<std::tuple<Args...>> &)
 {
     return columns_tags.size() == sizeof...(Args);
 }

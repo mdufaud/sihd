@@ -39,21 +39,22 @@ class TcpClient: public INetReceiver,
         bool open_and_connect(const IpAddr & ip);
         bool open_unix_and_connect(std::string_view path);
 
-        bool close();
-
         bool set_poll_timeout(int milliseconds);
         // poll for x milliseconds - returns true if socket is read
         bool poll(int milliseconds);
         // poll once with configured timeout
         bool poll();
 
-        ssize_t receive(IpAddr & addr, sihd::util::IArray & arr);
-        ssize_t receive(sihd::util::IArray & arr);
-
         ssize_t receive(void *buf, size_t len);
 
-        ssize_t send(sihd::util::ArrCharView view);
-        bool send_all(sihd::util::ArrCharView view);
+        // INetReceiver
+        bool close() override;
+        ssize_t receive(IpAddr & addr, sihd::util::IArray & arr) override;
+        ssize_t receive(sihd::util::IArray & arr) override;
+
+        // INetSender
+        ssize_t send(sihd::util::ArrCharView view) override;
+        bool send_all(sihd::util::ArrCharView view) override;
 
         // to set blocking/broadcast
         const Socket & socket() const { return _socket; }
