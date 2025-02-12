@@ -5,7 +5,7 @@ namespace sihd::util::array_utils
 {
 
 bool distribute_array(IArray & distributing_array,
-                      const std::vector<std::pair<IArray *, size_t>> assigned_arrays,
+                      const std::vector<std::pair<IArray *, size_t>> & assigned_arrays,
                       size_t starting_offset)
 {
     if (starting_offset > distributing_array.byte_size())

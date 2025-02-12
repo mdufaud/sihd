@@ -6,6 +6,7 @@
 
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/str.hpp>
+#include <sihd/util/traits.hpp>
 
 namespace sihd::util::array_utils
 {
@@ -30,26 +31,25 @@ namespace sihd::util::array_utils
  *  capacity to fill assigned_arrays
  */
 bool distribute_array(IArray & distributing_array,
-                      const std::vector<std::pair<IArray *, size_t>> assigned_arrays,
+                      const std::vector<std::pair<IArray *, size_t>> & assigned_arrays,
                       size_t starting_offset = 0);
 
 IArray *create_from_type(Type dt, size_t size = 0);
 
-template <typename T>
+template <traits::TriviallyCopyable T>
 bool read_into(const IArray & arr, size_t idx, T & val)
 {
-    static_assert(std::is_trivially_copyable_v<T>);
     return arr.copy_to_bytes(&val, sizeof(T), arr.byte_index(idx));
 }
 
-template <typename T>
+template <traits::TriviallyCopyable T>
 bool read_into(const IArray *arr, size_t idx, T & val)
 {
     return array_utils::read_into<T>(*arr, idx, val);
 }
 
 // throws std::invalid_argument if data cannot be read
-template <typename T>
+template <traits::TriviallyCopyable T>
 T read(const IArray & arr, size_t idx)
 {
     T ret;
@@ -65,20 +65,20 @@ T read(const IArray & arr, size_t idx)
     return ret;
 }
 
-template <typename T>
+template <traits::TriviallyCopyable T>
 T read(const IArray *arr, size_t idx)
 {
     return array_utils::read<T>(*arr, idx);
 }
 
-template <typename T>
+template <traits::TriviallyCopyable T>
 bool write(IArray & arr, size_t idx, T value)
 {
     static_assert(std::is_trivially_copyable_v<T>);
     return arr.copy_from_bytes(&value, sizeof(T), arr.byte_index(idx));
 }
 
-template <typename T>
+template <traits::TriviallyCopyable T>
 bool write(IArray *arr, size_t idx, T value)
 {
     return array_utils::write<T>(*arr, idx, value);

@@ -31,12 +31,12 @@ TEST_F(TestProcessInfo, test_processinfo)
 {
     ProcessInfo pi(getpid());
 
-    SIHD_TRACEV(pi.pid());
-    SIHD_TRACEV(pi.name());
-    SIHD_TRACEV(pi.cwd());
-    SIHD_TRACEV(pi.exe_path());
-    SIHD_TRACEV(fmt::join(pi.cmd_line(), " "));
-    SIHD_TRACEV(fmt::join(pi.env(), "\n"));
+    ASSERT_EQ(pi.pid(), getpid());
+    EXPECT_EQ(pi.name(), "sihd_util");
+    EXPECT_FALSE(pi.cwd().empty());
+    EXPECT_FALSE(pi.exe_path().empty());
+    EXPECT_FALSE(pi.cmd_line().empty());
+    EXPECT_FALSE(pi.env().empty());
 }
 
 } // namespace test
