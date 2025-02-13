@@ -1,6 +1,7 @@
 #include <cstring>
 #include <map>
 
+#include <sihd/util/container.hpp>
 #include <sihd/util/type.hpp>
 
 #define STR_TYPE_NONE "none"
@@ -37,8 +38,7 @@ sihd::util::Type from_str(std::string_view type)
                                                                        {STR_TYPE_FLOAT, TYPE_FLOAT},
                                                                        {STR_TYPE_DOUBLE, TYPE_DOUBLE},
                                                                        {STR_TYPE_OBJECT, TYPE_OBJECT}};
-    auto it = str_to_type.find(type);
-    return it == str_to_type.end() ? TYPE_NONE : it->second;
+    return container::get_or(str_to_type, type, TYPE_NONE);
 }
 
 const char *str(sihd::util::Type type)

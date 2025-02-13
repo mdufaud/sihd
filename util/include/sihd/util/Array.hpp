@@ -55,10 +55,7 @@ class Array: public IArray,
         /*********************************************************************/
 
         // char specialization
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        Array(std::string_view view): Array(view.data(), view.size())
-        {
-        }
+        Array(std::string_view view) requires std::same_as<T, char>: Array(view.data(), view.size()) {}
 
         Array(std::initializer_list<T> list): Array()
         {
@@ -124,14 +121,12 @@ class Array: public IArray,
 
         operator bool() const { return _buf_ptr != nullptr; }
 
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        operator std::string() const
+        operator std::string() const requires std::same_as<T, char>
         {
             return std::string(this->data(), this->byte_size());
         }
 
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        operator std::string_view() const
+        operator std::string_view() const requires std::same_as<T, char>
         {
             return std::string_view(this->data(), this->byte_size());
         }
@@ -195,8 +190,7 @@ class Array: public IArray,
         /*********************************************************************/
 
         // char specialization
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        bool from_str(std::string_view data)
+        bool from_str(std::string_view data) requires std::same_as<T, char>
         {
             this->delete_buffer();
             return this->push_back(data);
@@ -350,13 +344,13 @@ class Array: public IArray,
 
         std::string str() const
         {
-            if constexpr (std::is_same_v<T, char>)
+            if constexpr (std::same_as<T, char>)
             {
                 if (this->size() > 0 && this->data()[this->size() - 1] == '\0')
                     return std::string(this->data(), this->size() - 1);
                 return std::string(this->data(), this->size());
             }
-            if constexpr (std::is_fundamental_v<T>)
+            else if constexpr (std::is_fundamental_v<T>)
             {
                 std::string s;
                 s.reserve(_size);
@@ -384,7 +378,7 @@ class Array: public IArray,
                 {
                     if (i > 0)
                         s += delimiter;
-                    if constexpr (std::is_same_v<T, char>)
+                    if constexpr (std::same_as<T, char>)
                         s += _buf_ptr[i];
                     else
                         s += std::to_string(_buf_ptr[i]);
@@ -459,8 +453,7 @@ class Array: public IArray,
             return this->is_equal(container.data(), container.size(), byte_offset);
         }
 
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        bool is_equal(std::string_view view, size_t byte_offset = 0) const
+        bool is_equal(std::string_view view, size_t byte_offset = 0) const requires std::same_as<T, char>
         {
             return this->is_equal(view.data(), view.size(), byte_offset);
         }
@@ -487,11 +480,7 @@ class Array: public IArray,
             return this->from(container.data(), container.size());
         }
 
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        bool from(std::string_view view)
-        {
-            return this->from(view.data(), view.size());
-        }
+        bool from(std::string_view view) requires std::same_as<T, char> { return this->from(view.data(), view.size()); }
 
         bool from(std::initializer_list<T> init)
         {
@@ -522,8 +511,7 @@ class Array: public IArray,
         }
 
         // char specialization
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        bool copy_from(std::string_view view, size_t byte_offset = 0)
+        bool copy_from(std::string_view view, size_t byte_offset = 0) requires std::same_as<T, char>
         {
             return this->copy_from(view.data(), view.size(), byte_offset);
         }
@@ -553,16 +541,14 @@ class Array: public IArray,
         }
 
         // char specialization
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        bool assign(char *str)
+        bool assign(char *str) requires std::same_as<T, char>
         {
             size_t size = str != nullptr ? strlen(str) : 0;
             return this->assign(str, size, size);
         }
 
         // char specialization
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        bool assign(std::string & str)
+        bool assign(std::string & str) requires std::same_as<T, char>
         {
             return this->assign(str.data(), str.size(), str.size());
         }
@@ -595,8 +581,7 @@ class Array: public IArray,
         }
 
         // char specialization
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        bool push_back(std::string_view str)
+        bool push_back(std::string_view str) requires std::same_as<T, char>
         {
             return this->push_back(str.data(), str.size());
         }
@@ -629,8 +614,7 @@ class Array: public IArray,
         }
 
         // char specialization
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        bool push_front(std::string_view str)
+        bool push_front(std::string_view str) requires std::same_as<T, char>
         {
             return this->push_front(str.data(), str.size());
         }

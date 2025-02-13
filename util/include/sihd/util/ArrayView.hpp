@@ -43,24 +43,17 @@ class ArrayView: public IArrayView
         // fundamental & struct specializations
         // make sure the fundamental type size is divisible by type size.
         // ex: int8_t may not go into an ArrayView<int32_t> which will be size 0
-        template <typename Fundamental,
-                  std::enable_if_t<std::is_trivially_copyable_v<Fundamental> && !std::is_pointer_v<Fundamental>, bool>
-                  = 0>
-        ArrayView(const Fundamental & value): ArrayView(&value, sizeof(Fundamental) / sizeof(T))
+        template <traits::TriviallyCopyable Fundamental>
+        requires(!traits::Pointer<Fundamental>) ArrayView(const Fundamental & value):
+            ArrayView(&value, sizeof(Fundamental) / sizeof(T))
         {
         }
 
         // char specialization
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        ArrayView(std::string_view str): ArrayView(str.data(), str.size())
-        {
-        }
+        ArrayView(std::string_view str) requires std::same_as<T, char>: ArrayView(str.data(), str.size()) {}
 
         // char specialization
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        ArrayView(const char *str): ArrayView(str, strlen(str))
-        {
-        }
+        ArrayView(const char *str) requires std::same_as<T, char>: ArrayView(str, strlen(str)) {}
 
         /*********************************************************************/
         /* byte constructor */
@@ -122,14 +115,12 @@ class ArrayView: public IArrayView
 
         operator bool() const { return _buf_ptr != nullptr; }
 
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        operator std::string() const
+        operator std::string() const requires std::same_as<T, char>
         {
             return std::string(this->data(), this->byte_size());
         }
 
-        template <typename Char = T, std::enable_if_t<std::is_same_v<Char, char>, char> = 0>
-        operator std::string_view() const
+        operator std::string_view() const requires std::same_as<T, char>
         {
             return std::string_view(this->data(), this->byte_size());
         }
@@ -209,13 +200,13 @@ class ArrayView: public IArrayView
 
         std::string str() const
         {
-            if constexpr (std::is_same_v<T, char>)
+            if constexpr (std::same_as<T, char>)
             {
                 if (this->size() > 0 && this->data()[this->size() - 1] == '\0')
                     return std::string(this->data(), this->size() - 1);
                 return std::string(this->data(), this->size());
             }
-            if constexpr (std::is_fundamental_v<T>)
+            else if constexpr (std::is_fundamental_v<T>)
             {
                 std::string s;
                 s.reserve(_size);
@@ -243,7 +234,7 @@ class ArrayView: public IArrayView
                 {
                     if (i > 0)
                         s += delimiter;
-                    if constexpr (std::is_same_v<T, char>)
+                    if constexpr (std::same_as<T, char>)
                         s += _buf_ptr[i];
                     else
                         s += std::to_string(_buf_ptr[i]);

@@ -123,6 +123,14 @@ concept GreaterEqualComparable = requires(T a, T b)
  * Uses in std methods
  */
 
+// template <typename T>
+// concept ToStringable = requires(T t)
+// {
+//     {
+//         std::to_string(t)
+//     } -> std::convertible_to<std::string>;
+// };
+
 template <typename T>
 concept Swappable = requires(T a, T b)
 {
@@ -137,13 +145,13 @@ concept Hashable = requires(T a)
     } -> std::convertible_to<std::size_t>;
 };
 
-template <typename T>
-concept Streamable = requires(T a, std::ostream & os)
-{
-    {
-        os << a
-    } -> std::convertible_to<std::ostream &>;
-};
+// template <typename T>
+// concept Streamable = requires(T a, std::ostream & os)
+// {
+//     {
+//         os << a
+//     } -> std::convertible_to<std::ostream &>;
+// };
 
 template <typename T>
 concept Callable = requires(T f)
@@ -200,6 +208,18 @@ concept Erasable = requires(T t, typename T::iterator it)
 };
 
 template <typename T>
+concept BackEmplacable = requires(T t, typename T::value_type v)
+{
+    t.emplace_back(v);
+};
+
+template <typename T>
+concept FrontEmplacable = requires(T t, typename T::value_type v)
+{
+    t.emplace_front(v);
+};
+
+template <typename T>
 concept Iterable = requires(T t)
 {
     std::begin(t);
@@ -236,12 +256,12 @@ concept StdFunction = requires(T t)
     typename T::result_type;
 };
 
-template <typename T>
-concept HasRange = requires(T t)
-{
-    std::ranges::begin(t);
-    std::ranges::end(t);
-};
+// template <typename T>
+// concept HasRange = requires(T t)
+// {
+//     std::ranges::begin(t);
+//     std::ranges::end(t);
+// };
 
 /**
  * Old SNIFAE

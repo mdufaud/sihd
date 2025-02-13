@@ -23,7 +23,7 @@ bool LoggerManager::has_logger(ALogger *logger) const
 bool LoggerManager::add_logger(ALogger *logger)
 {
     std::lock_guard<std::mutex> l(_mutex);
-    return container::emplace_unique(_loggers_lst, logger);
+    return container::emplace_back_unique(_loggers_lst, logger);
 }
 
 bool LoggerManager::remove_logger(ALogger *logger)

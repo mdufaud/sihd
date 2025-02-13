@@ -17,7 +17,7 @@ if vcpkg_bin_path is None:
     vcpkg_bin_path = os.path.join(vcpkg_dir_path, "vcpkg")
     if builder.is_msys():
         vcpkg_bin_path += ".exe"
-        
+
 vcpkg_build_path = os.path.join(builder.build_path, "vcpkg")
 vcpkg_build_manifest_path = os.path.join(vcpkg_build_path, "vcpkg.json")
 
@@ -42,6 +42,8 @@ if verbose:
         builder.debug("including test libs")
 
 skip_libs = getattr(app, "extlibs_skip", [])
+skip_libs.extend(getattr(app, f"extlibs_skip_{build_platform}", []))
+
 extlibs = {}
 
 if modules_to_build != "NONE":
@@ -71,6 +73,7 @@ if modules_to_build != "NONE":
 
     for skip_lib in skip_libs:
         if skip_lib in extlibs:
+            builder.warning(f"Skipping library {skip_lib}")
             del extlibs[skip_lib]
 
     if verbose:

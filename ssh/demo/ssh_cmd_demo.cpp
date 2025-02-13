@@ -76,10 +76,10 @@ int main(int argc, char **argv)
     ssh_cmd.wait();
 
     if (!stdout_str.empty())
-        fmt::print(stdout_str);
+        fmt::print("{}", stdout_str);
 
     if (!stderr_str.empty())
-        fmt::print(stderr, stderr_str);
+        fmt::print(stderr, "{}", stderr_str);
 
     return ssh_cmd.exit_status();
 }

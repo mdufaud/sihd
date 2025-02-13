@@ -53,6 +53,12 @@ extlibs_features_windows = {
     "imgui": ["win32-binding", "dx11-binding"],
 }
 
+extlibs_skip_windows = [
+    "libwebsockets",
+    "libssh",
+    "libpcap",
+]
+
 extlibs_skip = ["libbluetooth"]
 
 vcpkg_baseline = "cd124b84feb0c02a24a2d90981e8358fdee0e077"
@@ -113,6 +119,7 @@ modules = {
     },
     "net": {
         "depends": ['util'],
+        "inherit-depends-defines": True,
         "extlibs": ['openssl'],
         "libs": ['ssl', 'crypto'],
         "windows-libs": [
@@ -124,7 +131,7 @@ modules = {
     },
     "http": {
         "depends": ['net'],
-        "inherit-depends-libs": True,
+        "inherit-depends-defines": True,
         "extlibs": [
             'libwebsockets',
             'curl',
@@ -142,7 +149,7 @@ modules = {
     },
     "pcap": {
         "depends": ['net'],
-        "inherit-depends-libs": True,
+        "inherit-depends-defines": True,
         "extlibs": ['libpcap'],
         "libs": ['pcap'],
         # if lib is installed on system
@@ -152,25 +159,25 @@ modules = {
     },
     "zip": {
         "depends": ['util'],
-        "inherit-depends-libs": True,
+        "inherit-depends-defines": True,
         "extlibs": ['libzip'],
         "libs": ['zip'],
     },
     "tui": {
         "depends": ['util'],
-        "inherit-depends-libs": True,
+        "inherit-depends-defines": True,
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
     },
     "ssh": {
         "depends": ['util'],
-        "inherit-depends-libs": True,
+        "inherit-depends-defines": True,
         "extlibs": ["libssh"],
         "libs": ['ssh'],
     },
     "usb": {
         "depends": ['util'],
-        "inherit-depends-libs": True,
+        "inherit-depends-defines": True,
         "extlibs": ['libusb'],
         "libs": ['udev'],
         "parse-configs": [

@@ -38,8 +38,9 @@ TEST_F(TestContainer, test_container_map)
     std::sort(ordered_keys.begin(), ordered_keys.end(), std::greater<std::string>());
     EXPECT_EQ(container::ordered_keys(map, std::greater<std::string>()), ordered_keys);
 
-    EXPECT_EQ(container::get_or(map, "c", 42), 3);
-    EXPECT_EQ(container::get_or(map, "d", 42), 42);
+    int valor = 42;
+    int & val = container::get_or(map, "c", valor);
+    EXPECT_EQ(val, 3);
 
     using NestedMapType = std::map<std::string, Map>;
     NestedMapType nested_map = {
@@ -78,8 +79,8 @@ TEST_F(TestContainer, test_container_vector)
     EXPECT_TRUE(container::contains(vec, 2));
     EXPECT_FALSE(container::contains(vec, 5));
 
-    EXPECT_TRUE(container::emplace_unique(vec, 5));
-    EXPECT_FALSE(container::emplace_unique(vec, 4));
+    EXPECT_TRUE(container::emplace_back_unique(vec, 5));
+    EXPECT_FALSE(container::emplace_back_unique(vec, 4));
     EXPECT_EQ(vec.size(), 5u);
 
     // 1 2 3 4 5

@@ -117,7 +117,7 @@ bool DynMessage::hide_field(const std::string & name, bool active)
         return false;
     }
     if (active)
-        return container::emplace_unique(_hidden_fields, it->second);
+        return container::emplace_back_unique(_hidden_fields, it->second);
     else
         return container::erase(_hidden_fields, it->second);
     return false;

@@ -54,31 +54,31 @@ static constexpr auto return_same_predicate = [](const auto & v) {
 
 } // namespace details
 
-template <typename Container, typename Value>
+template <traits::Iterable Container, typename Value>
 auto find(Container & container, const Value & value)
 {
     return std::find(container.begin(), container.end(), value);
 }
 
-template <typename Container, typename Predicate>
+template <traits::Iterable Container, typename Predicate>
 auto find_if(Container & container, const Predicate & predicate)
 {
     return std::find_if(container.begin(), container.end(), predicate);
 }
 
-template <typename Container, typename Value>
+template <traits::Iterable Container, typename Value>
 bool contains(const Container & container, const Value & value)
 {
     return std::find(container.begin(), container.end(), value) != container.end();
 }
 
-template <typename Container, typename Predicate>
+template <traits::Iterable Container, typename Predicate>
 void sort(Container & container, const Predicate & predicate)
 {
     std::sort(container.begin(), container.end(), predicate);
 }
 
-template <traits::Iterable Container, typename Value>
+template <traits::Erasable Container, typename Value>
 bool erase(Container & container, const Value & value)
 {
     auto it = std::remove(container.begin(), container.end(), value);
@@ -87,7 +87,7 @@ bool erase(Container & container, const Value & value)
     return ret;
 }
 
-template <traits::Iterable Container, typename Predicate>
+template <traits::Erasable Container, typename Predicate>
 bool erase_if(Container & container, const Predicate & predicate)
 {
     auto it = std::remove_if(container.begin(), container.end(), predicate);
@@ -96,17 +96,7 @@ bool erase_if(Container & container, const Predicate & predicate)
     return ret;
 }
 
-template <typename T>
-bool emplace_unique(std::vector<T> & vec, const T & value)
-{
-    const auto it = std::find(vec.begin(), vec.end(), value);
-    const bool ret = it == vec.end();
-    if (ret)
-        vec.emplace_back(value);
-    return ret;
-}
-
-template <typename Container, typename T>
+template <traits::BackEmplacable Container, typename T>
 bool emplace_back_unique(Container & container, const T & value)
 {
     const auto it = std::find(container.begin(), container.end(), value);
@@ -116,7 +106,7 @@ bool emplace_back_unique(Container & container, const T & value)
     return ret;
 }
 
-template <typename Container, typename T>
+template <traits::FrontEmplacable Container, typename T>
 bool emplace_front_unique(Container & container, const T & value)
 {
     const auto it = std::find(container.begin(), container.end(), value);
@@ -126,12 +116,21 @@ bool emplace_front_unique(Container & container, const T & value)
     return ret;
 }
 
-template <traits::Iterable Container, typename Key, typename Value>
-Value get_or(const Container & container, const Key & key, const Value & default_value)
+template <traits::Map Map, typename Key, typename Value>
+Value get_or(const Map & container, const Key & key, const Value & default_value)
 {
-    static_assert(std::is_convertible_v<typename Container::mapped_type, Value>, "Type mismatch in get_or");
+    static_assert(std::is_convertible_v<typename Map::mapped_type, Value>, "Type mismatch in get_or");
 
     const auto it = container.find(key);
+    return it != container.end() ? it->second : default_value;
+}
+
+template <traits::Map Map, typename Key, typename Value>
+Value & get_or(Map & container, const Key & key, Value & default_value)
+{
+    static_assert(std::is_convertible_v<typename Map::mapped_type, Value>, "Type mismatch in get_or");
+
+    auto it = container.find(key);
     return it != container.end() ? it->second : default_value;
 }
 
@@ -150,7 +149,7 @@ Type *recursive_map_search(Container & container, const Key & key, const Keys &.
         return found ? recursive_map_search(it->second, keys...) : nullptr;
 }
 
-template <typename Container, typename Key, typename... Keys>
+template <traits::Container Container, typename Key, typename... Keys>
 auto & recursive_get(Container & container, const Key & key, const Keys &...keys)
 {
     if constexpr (std::is_const_v<Container>)
