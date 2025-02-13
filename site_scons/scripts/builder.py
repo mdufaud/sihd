@@ -380,16 +380,17 @@ def copy_dll_to_build(generated_lld_binaries):
         dll_search_path_lst.append("/mingw64/bin")
 
     dll_lst = set()
-    for bin_conf in generated_lld_binaries:
-        path = bin_conf["path"]
-        ldd_output = subprocess.check_output(['ldd', path], universal_newlines=True)
-        for line in ldd_output.splitlines():
-            if '=>' in line:
-                parts = line.split('=>')
-                if len(parts) > 1:
-                    lib_path = parts[1].strip().split(' ')[0]
-                    if os.path.isabs(lib_path):
-                        dll_lst.add(lib_path)
+    for module_name, binaries_conf in generated_lld_binaries.items():
+        for bin_conf in binaries_conf:
+            path = bin_conf["path"]
+            ldd_output = subprocess.check_output(['ldd', path], universal_newlines=True)
+            for line in ldd_output.splitlines():
+                if '=>' in line:
+                    parts = line.split('=>')
+                    if len(parts) > 1:
+                        lib_path = parts[1].strip().split(' ')[0]
+                        if os.path.isabs(lib_path):
+                            dll_lst.add(lib_path)
 
     print(dll_lst)
 
