@@ -386,6 +386,9 @@ def copy_dll_to_build(modules_build_order):
             else:
                 dll_lst.add(lib)
 
+    if is_msys():
+        dll_lst.add("stdc++")
+
     dll_found = []
     for search_path in dll_search_path_lst:
         if not os.path.isdir(search_path):

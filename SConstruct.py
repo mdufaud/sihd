@@ -822,7 +822,10 @@ def after_build():
         app.on_build_success(build_modules, builder)
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules, builder)
-    builder.symlink_build()
+    try:
+        builder.symlink_build()
+    except Exception as e:
+        pass
     builder.copy_dll_to_build(modules_build_order)
     if success and distribution:
         builder.distribute_app(app, build_modules)
