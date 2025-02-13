@@ -387,6 +387,11 @@ modules_generated_demos = {}
 modules_cloned_git_repositories = {}
 targets = []
 
+def add_generated(gentype, dic: dict, module_name, name, path):
+    dic.setdefault(module_name, []).append({"name": name, "path": path})
+    if verbose:
+        builder.debug(f"module '{name}' registered {gentype}: {path}")
+
 def add_targets(src):
     """ Remember every source file used to build """
     global targets
@@ -429,9 +434,8 @@ def _env_build_demo(self, src, name, add_libs = [], **kwargs):
     add_targets(src)
 
     global modules_generated_demos
-    modules_generated_demos.setdefault(module_name, []).append(demo_path)
-    if verbose:
-        builder.debug(f"module '{module_name}' registered demo: {demo_path}")
+    add_generated("demo", modules_generated_demos, module_name, name, demo_path)
+
     return demo
 
 def _env_build_demos(self, srcs, **kwargs):
@@ -464,9 +468,8 @@ def _env_build_test(self, src, name = None, add_libs = [], **kwargs):
     add_targets(src)
 
     global modules_generated_tests
-    modules_generated_tests.setdefault(module_name, []).append(test_path)
-    if verbose:
-        builder.debug(f"module '{module_name}' registered test: {test_path}")
+    add_generated("test", modules_generated_tests, module_name, name, test_path)
+
     return test
 
 def _env_build_lib(self, src, name = None, static = None, **kwargs):
@@ -486,9 +489,8 @@ def _env_build_lib(self, src, name = None, static = None, **kwargs):
     add_targets(src)
 
     global modules_generated_libs
-    modules_generated_libs.setdefault(module_name, []).append(name)
-    if verbose:
-        builder.debug(f"module '{module_name}' registered lib: {name}")
+    add_generated("lib", modules_generated_libs, module_name, name, lib_path)
+
     return lib
 
 def _env_build_bin(self, src, name = None, add_libs = [], **kwargs):
@@ -508,9 +510,8 @@ def _env_build_bin(self, src, name = None, add_libs = [], **kwargs):
     add_targets(src)
 
     global modules_generated_bins
-    modules_generated_bins.setdefault(module_name, []).append(bin_path)
-    if verbose:
-        builder.debug(f"module '{module_name}' registered bin: {bin_path}")
+    add_generated("bin", modules_generated_bins, module_name, name, bin_path)
+
     return bin
 
 def _env_git_clone(self, url, branch, dest, recursive = False):
@@ -681,7 +682,7 @@ def create_module_env(conf, depends = [],
     for dep_modname in depends:
         if do_inherit_depends_generated_libs:
             for generated_lib_name in modules_generated_libs.get(dep_modname, []):
-                depends_generated_libs.insert(0, generated_lib_name)
+                depends_generated_libs.insert(0, generated_lib_name["name"])
         depend_conf = build_modules.get(dep_modname, {})
         if depend_conf:
             if do_inherit_depends_defines:
@@ -812,6 +813,16 @@ if progress_bar_fun:
 
 import atexit
 
+def merge_built():
+    merged = {}
+    for d in [modules_generated_libs, modules_generated_bins, modules_generated_tests, modules_generated_demos]:
+        for key, value in d.items():
+            if key in merged:
+                merged[key].extend(value)
+            else:
+                merged[key] = value
+    return merged
+
 def after_build():
     success, failures_message = scons_utils.build_status()
     scons_utils.build_print_status(success, failures_message, build_start_time)
@@ -826,7 +837,8 @@ def after_build():
         builder.symlink_build()
     except Exception as e:
         pass
-    builder.copy_dll_to_build(modules_build_order)
+    if builder.build_platform == "windows" and not builder.is_static_libs:
+        builder.copy_dll_to_build(merge_built())
     if success and distribution:
         builder.distribute_app(app, build_modules)
     if compile_commands:

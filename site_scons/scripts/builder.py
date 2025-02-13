@@ -353,7 +353,7 @@ def verify_args(app):
 # Windows utils
 ###############################################################################
 
-def copy_dll_to_build(modules_build_order):
+def copy_dll_to_build(generated_lld_binaries):
     build_need_dll_path_lst = [build_bin_path]
     if build_demo:
         build_need_dll_path_lst.append(build_demo_path)
@@ -370,31 +370,36 @@ def copy_dll_to_build(modules_build_order):
     dll_search_path_lst = [
         build_extlib_bin_path,
         build_extlib_lib_path,
-        "/mingw64/bin"
     ]
 
     dll_forced_path_lst = [
         build_lib_path
     ]
 
-    dll_lst = set()
-    for conf in modules_build_order:
-        for lib in conf['libs']:
-            if isinstance(lib, list):
-                for el in lib:
-                    dll_lst.add(el)
-            else:
-                dll_lst.add(lib)
-
     if is_msys():
-        dll_lst.add("stdc++")
+        dll_search_path_lst.append("/mingw64/bin")
+
+    dll_lst = set()
+    for bin_conf in generated_lld_binaries:
+        path = bin_conf["path"]
+        ldd_output = subprocess.check_output(['ldd', path], universal_newlines=True)
+        for line in ldd_output.splitlines():
+            if '=>' in line:
+                parts = line.split('=>')
+                if len(parts) > 1:
+                    lib_path = parts[1].strip().split(' ')[0]
+                    if os.path.isabs(lib_path):
+                        dll_lst.add(lib_path)
+
+    print(dll_lst)
 
     dll_found = []
     for search_path in dll_search_path_lst:
         if not os.path.isdir(search_path):
             continue
         for dll_name in dll_lst:
-            dll_found.extend(glob.glob(os.path.join(search_path, "*{}*.dll".format(dll_name))))
+            # dll_found.extend(glob.glob(os.path.join(search_path, "*{}*.dll".format(dll_name))))
+            dll_found.extend(glob.glob(os.path.join(search_path, dll_name)))
 
     for forced_path in dll_forced_path_lst:
         if not os.path.isdir(forced_path):
