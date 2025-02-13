@@ -403,27 +403,28 @@ def copy_dll_to_build(generated_lld_binaries):
 
     print(dll_lst)
 
-    dll_found = []
-    for search_path in dll_search_path_lst:
-        if not os.path.isdir(search_path):
-            continue
-        for dll_name in dll_lst:
-            # dll_found.extend(glob.glob(os.path.join(search_path, "*{}*.dll".format(dll_name))))
-            dll_found.extend(glob.glob(os.path.join(search_path, dll_name)))
+    dll_found = dll_lst
+    # for search_path in dll_search_path_lst:
+    #     if not os.path.isdir(search_path):
+    #         continue
+    #     for dll_name in dll_lst:
+    #         dll_found.extend(glob.glob(os.path.join(search_path, "*{}*.dll".format(dll_name))))
+    #         dll_found.extend(glob.glob(os.path.join(search_path, dll_name)))
 
     for forced_path in dll_forced_path_lst:
         if not os.path.isdir(forced_path):
             continue
-        dll_found.extend(glob.glob(os.path.join(forced_path, "*.dll")))
+        dll_found.update(glob.glob(os.path.join(forced_path, "*.dll")))
 
     for build_dll_path in build_need_dll_path_lst:
         if not os.path.isdir(build_dll_path):
             continue
-        for dll_src in dll_found:
-            dll_dst = os.path.join(build_dll_path, os.path.basename(dll_src))
-            if os.path.exists(dll_dst):
-                os.remove(dll_dst)
-            shutil.copyfile(dll_src, dll_dst)
+        for dll_from in dll_found:
+            dll_to = os.path.join(build_dll_path, os.path.basename(dll_from))
+            if not os.path.samefile(dll_from, dll_to):
+                if os.path.exists(dll_to):
+                    os.remove(dll_to)
+                shutil.copyfile(dll_from, dll_to)
 
 ###############################################################################
 # After build
