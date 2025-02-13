@@ -837,7 +837,7 @@ def after_build():
         builder.symlink_build()
     except Exception as e:
         pass
-    if builder.build_platform == "windows" and not builder.is_static_libs:
+    if builder.build_platform == "windows" and not builder.build_static_libs:
         builder.copy_dll_to_build(merge_built())
     if success and distribution:
         builder.distribute_app(app, build_modules)

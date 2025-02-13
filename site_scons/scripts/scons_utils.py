@@ -127,17 +127,17 @@ def build_print_built(binaries, demos, tests):
     for modname, binpaths in binaries.items():
         builder.info("module {} binaries:".format(modname))
         for binpath in binpaths:
-            builder.info("\t{}".format(binpath))
+            builder.info("\t{}".format(binpath["path"]))
 
     for modname, demopaths in demos.items():
         builder.info("module {} demos:".format(modname))
         for demopath in demopaths:
-            builder.info("\t{}".format(demopath))
+            builder.info("\t{}".format(demopath["path"]))
 
     for modname, testpaths in tests.items():
         builder.info("module {} tests:".format(modname))
         for testpath in testpaths:
-            builder.info("\t{}".format(testpath))
+            builder.info("\t{}".format(testpath["path"]))
 
 def __print_err(*args):
     print(*args, file=sys.stderr)
