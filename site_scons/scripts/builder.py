@@ -421,10 +421,10 @@ def copy_dll_to_build(generated_lld_binaries):
             continue
         for dll_from in dll_found:
             dll_to = os.path.join(build_dll_path, os.path.basename(dll_from))
-            if not os.path.samefile(dll_from, dll_to):
-                if os.path.exists(dll_to):
-                    os.remove(dll_to)
-                shutil.copyfile(dll_from, dll_to)
+            print(f"COPY {dll_from} ---> {dll_to}")
+            if os.path.exists(dll_to) and not os.path.samefile(dll_from, dll_to):
+                os.remove(dll_to)
+            shutil.copyfile(dll_from, dll_to)
 
 ###############################################################################
 # After build
