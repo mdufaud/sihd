@@ -353,6 +353,21 @@ def verify_args(app):
 # Windows utils
 ###############################################################################
 
+def _get_libs_from_bin(path):
+    ret = []
+    try:
+        ldd_output = subprocess.check_output(['ldd', path], universal_newlines=True)
+        for line in ldd_output.splitlines():
+            if '=>' in line:
+                parts = line.split('=>')
+                if len(parts) > 1:
+                    lib_path = parts[1].strip().split(' ')[0]
+                    if os.path.isabs(lib_path) and os.path.exists(lib_path):
+                        ret.append(lib_path)
+    except Exception as e:
+        pass
+    return ret
+
 def copy_dll_to_build(generated_lld_binaries):
     build_need_dll_path_lst = [build_bin_path]
     if build_demo:
@@ -383,14 +398,8 @@ def copy_dll_to_build(generated_lld_binaries):
     for module_name, binaries_conf in generated_lld_binaries.items():
         for bin_conf in binaries_conf:
             path = bin_conf["path"]
-            ldd_output = subprocess.check_output(['ldd', path], universal_newlines=True)
-            for line in ldd_output.splitlines():
-                if '=>' in line:
-                    parts = line.split('=>')
-                    if len(parts) > 1:
-                        lib_path = parts[1].strip().split(' ')[0]
-                        if os.path.isabs(lib_path):
-                            dll_lst.add(lib_path)
+            libs_path = _get_libs_from_bin(path)
+            dll_lst.update(libs_path)
 
     print(dll_lst)
 

@@ -815,7 +815,7 @@ import atexit
 
 def merge_built():
     merged = {}
-    for d in [modules_generated_libs, modules_generated_bins, modules_generated_tests, modules_generated_demos]:
+    for d in [modules_generated_bins, modules_generated_tests, modules_generated_demos]:
         for key, value in d.items():
             if key in merged:
                 merged[key].extend(value)
