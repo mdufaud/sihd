@@ -833,10 +833,7 @@ def after_build():
         app.on_build_success(build_modules, builder)
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules, builder)
-    try:
-        builder.symlink_build()
-    except Exception as e:
-        pass
+    builder.symlink_build()
     if builder.build_platform == "windows" and not builder.build_static_libs:
         builder.copy_dll_to_build(merge_built())
     if success and distribution:

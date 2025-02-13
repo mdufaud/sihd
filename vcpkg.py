@@ -283,7 +283,7 @@ def link_to_extlibs():
             os.unlink(builder.build_extlib_path)
         if os.path.exists(builder.build_extlib_path):
             os.unlink(builder.build_extlib_path)
-        os.symlink(downloaded_path, builder.build_extlib_path, target_is_directory=True)
+        builder.safe_symlink(downloaded_path, builder.build_extlib_path)
 
 if __name__ == "__main__":
     vcpkg_manifest = build_vcpkg_manifest()

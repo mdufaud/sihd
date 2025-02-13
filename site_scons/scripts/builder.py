@@ -96,8 +96,10 @@ def safe_symlink(src, dst):
     if not os.path.exists(dst):
         info(f"linking {src} -> {dst}")
         if is_msys():
-            #shutil.copyfile(src, dst)
-            shutil.copy(src, dst)
+            if os.path.isdir(src):
+                shutil.copytree(src, dst)
+            else:
+                shutil.copy(src, dst)
         else:
             os.symlink(src, dst, target_is_directory=os.path.isdir(src))
     return True
@@ -394,34 +396,30 @@ def copy_dll_to_build(generated_lld_binaries):
     if is_msys():
         dll_search_path_lst.append("/mingw64/bin")
 
-    dll_lst = set()
+    dll_found = set()
     for module_name, binaries_conf in generated_lld_binaries.items():
         for bin_conf in binaries_conf:
             path = bin_conf["path"]
             libs_path = _get_libs_from_bin(path)
-            dll_lst.update(libs_path)
-
-    print(dll_lst)
-
-    dll_found = dll_lst
-    # for search_path in dll_search_path_lst:
-    #     if not os.path.isdir(search_path):
-    #         continue
-    #     for dll_name in dll_lst:
-    #         dll_found.extend(glob.glob(os.path.join(search_path, "*{}*.dll".format(dll_name))))
-    #         dll_found.extend(glob.glob(os.path.join(search_path, dll_name)))
+            dll_found.update(libs_path)
 
     for forced_path in dll_forced_path_lst:
         if not os.path.isdir(forced_path):
             continue
         dll_found.update(glob.glob(os.path.join(forced_path, "*.dll")))
 
+    if has_verbose():
+        for dll in dll_found:
+            debug(f"Found expected DLL: {dll}")
+
     for build_dll_path in build_need_dll_path_lst:
         if not os.path.isdir(build_dll_path):
             continue
+        if has_verbose():
+            debug(f"Copying DLLs found into: {build_dll_path}")
         for dll_from in dll_found:
             dll_to = os.path.join(build_dll_path, os.path.basename(dll_from))
-            print(f"COPY {dll_from} ---> {dll_to}")
+
             if os.path.exists(dll_to):
                 if os.path.samefile(dll_from, dll_to):
                     continue
@@ -434,7 +432,8 @@ def copy_dll_to_build(generated_lld_binaries):
 ###############################################################################
 
 def symlink_build():
-    safe_symlink(build_path, build_last_link_path)
+    if not is_msys():
+        safe_symlink(build_path, build_last_link_path)
 
 ###############################################################################
 # TAR distribution
