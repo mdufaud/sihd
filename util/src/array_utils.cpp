@@ -26,10 +26,10 @@ bool distribute_array(IArray & distributing_array,
     }
     size_t distributed_byte_size;
     size_t offset_idx = starting_offset;
-    for (const auto & pair : assigned_arrays)
+    for (const auto & [assigned_array, assigned_array_size] : assigned_arrays)
     {
-        distributed_byte_size = pair.second * pair.first->data_size();
-        if (pair.first->assign_bytes(distributing_array.buf() + offset_idx, distributed_byte_size) == false)
+        distributed_byte_size = assigned_array_size * assigned_array->data_size();
+        if (assigned_array->assign_bytes(distributing_array.buf() + offset_idx, distributed_byte_size) == false)
             return false;
         offset_idx += distributed_byte_size;
     }
