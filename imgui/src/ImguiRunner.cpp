@@ -1,6 +1,8 @@
 #include <sihd/imgui/ImguiRunner.hpp>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/platform.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
@@ -20,8 +22,6 @@ ImguiRunner::ImguiRunner(const std::string & name, sihd::util::Node *parent):
     _imgui_backend_ptr(nullptr)
 {
     _running = false;
-    _emscripten = false;
-    _emscripten_fps = 0;
 }
 
 ImguiRunner::~ImguiRunner()
@@ -46,10 +46,12 @@ bool ImguiRunner::run()
             return true;
         _running = true;
     }
-    if (_emscripten)
+    if constexpr (util::os::is_emscripten)
     {
 #if defined(__SIHD_EMSCRIPTEN__)
-        emscripten_set_main_loop_arg(ImguiRunner::_emscripten_loop, this, _emscripten_fps, true);
+        constexpr int emscripten_fps = 0;
+        constexpr bool infinite_loop = true;
+        emscripten_set_main_loop_arg(ImguiRunner::_emscripten_loop, this, emscripten_fps, infinite_loop);
 #endif
     }
     else
@@ -158,18 +160,6 @@ void ImguiRunner::set_backend(IImguiBackend *backend)
 void ImguiRunner::set_build_frame(std::function<bool()> method)
 {
     _build_frame_method = std::move(method);
-}
-
-bool ImguiRunner::set_emscripten(bool active)
-{
-#if !defined(__SIHD_EMSCRIPTEN__)
-    (void)active;
-    SIHD_LOG(warning, "ImguiRunner: cannot set emscripten - it is absent");
-    return false;
-#else
-    _emscripten = active;
-    return true;
-#endif
 }
 
 } // namespace sihd::imgui

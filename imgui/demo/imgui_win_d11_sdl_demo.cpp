@@ -4,6 +4,7 @@
 
 #define SDL_MAIN_HANDLED
 #include <sihd/imgui/ImguiBackendSDL.hpp>
+#include <windows.h>
 
 using namespace sihd::util;
 using namespace sihd::imgui;
@@ -27,7 +28,7 @@ int main()
         return 1;
 
     // init DX renderer with Windows's HWND window
-    if (!dx_renderer.init(sdl_backend.windows_window()))
+    if (!dx_renderer.init((HWND)sdl_backend.windows_window()))
         return 1;
 
     // init SDL DX

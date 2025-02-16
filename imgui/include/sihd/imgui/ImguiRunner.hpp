@@ -27,8 +27,6 @@ class ImguiRunner: public sihd::util::Named
         void set_backend(IImguiBackend *backend);
         void set_build_frame(std::function<bool()> method);
 
-        bool set_emscripten(bool active);
-
     protected:
         static void _emscripten_loop(void *arg);
 
@@ -44,8 +42,6 @@ class ImguiRunner: public sihd::util::Named
 
         bool _running;
         bool _gui_running;
-        bool _emscripten;
-        int _emscripten_fps;
         IImguiRenderer *_imgui_renderer_ptr;
         IImguiBackend *_imgui_backend_ptr;
 

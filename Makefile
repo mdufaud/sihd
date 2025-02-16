@@ -436,6 +436,24 @@ mod:
 	$(QUIET) echo > /dev/null
 endif
 
+ifeq ($(MAKEARG_2), demo)
+VCPKG_ACTION := fetch
+MODULES_NAME := $(MAKEARG_3),$(m)
+dep: demo = 1
+dep: modules = $(MODULES_NAME)
+demo:
+	$(QUIET) echo > /dev/null
+endif
+
+ifeq ($(MAKEARG_2), test)
+VCPKG_ACTION := fetch
+MODULES_NAME := $(MAKEARG_3),$(m)
+dep: test = 1
+dep: modules = $(MODULES_NAME)
+test:
+	$(QUIET) echo > /dev/null
+endif
+
 ifeq ($(MAKEARG_2), list)
 VCPKG_ACTION := list
 list: dep

@@ -1,19 +1,24 @@
 #ifndef __SIHD_IMGUI_IMGUIBACKENDSDL_HPP__
 #define __SIHD_IMGUI_IMGUIBACKENDSDL_HPP__
 
-#include <SDL.h>
+#include <string>
+
+#include <SDL2/SDL.h>
 #include <imgui_impl_sdl.h>
 
 #include <sihd/imgui/IImguiBackend.hpp>
 #include <sihd/imgui/IImguiRenderer.hpp>
 #include <sihd/util/platform.hpp>
-#if defined(IMGUI_IMPL_OPENGL_ES2)
-# include <SDL_opengles2.h>
-#else
-# include <SDL_opengl.h>
-#endif
 
-#include <string>
+#if !defined(__SIHD_WINDOWS__)
+
+# if defined(IMGUI_IMPL_OPENGL_ES2)
+#  include <SDL2/SDL_opengles2.h>
+# else
+#  include <SDL2/SDL_opengl.h>
+# endif
+
+#endif
 
 namespace sihd::imgui
 {
@@ -47,7 +52,7 @@ class ImguiBackendSDL: public sihd::imgui::IImguiBackend
         SDL_Window *window() { return _sdl_window_ptr; }
         SDL_GLContext context() { return _sdl_context_ptr; }
 #if defined(__SIHD_WINDOWS__)
-        HWND windows_window();
+        void *windows_window();
 #endif
 
     protected:

@@ -51,7 +51,7 @@ distribution = builder.do_distribution()
 verbose = builder.has_verbose()
 
 libtype = builder.build_static_libs and "static" or "dyn"
-bin_ext = builder.build_compiler == "em" and ".html" or (build_platform == "windows" and ".exe" or "")
+bin_ext = build_platform == "web" and ".html" or (build_platform == "windows" and ".exe" or "")
 
 compile_commands = builder.is_opt("compile_commands", "1")
 
@@ -308,7 +308,7 @@ elif compiler == "em":
         RANLIB = "emranlib",
         LINK = "emcc",
     )
-    
+
     emscripten_conf = os.path.join(os.getenv("HOME"), ".emscripten")
     if os.path.isfile(emscripten_conf):
         try:

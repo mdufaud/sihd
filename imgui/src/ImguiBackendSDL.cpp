@@ -2,7 +2,7 @@
 #include <sihd/util/Logger.hpp>
 
 #if defined(__SIHD_WINDOWS__)
-# include <SDL_syswm.h>
+# include <SDL2/SDL_syswm.h>
 #endif
 
 namespace sihd::imgui
@@ -34,7 +34,7 @@ bool ImguiBackendSDL::_sdl_init()
         // SDL is recommended!)
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
         {
-            SIHD_LOG(error, "ImguiBackendSDL: " << SDL_GetError());
+            SIHD_LOG(error, "ImguiBackendSDL: {}", SDL_GetError());
             return false;
         }
     }
@@ -99,7 +99,7 @@ bool ImguiBackendSDL::init_window(const std::string & name, size_t width, size_t
         = SDL_CreateWindow(name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, window_flags);
     if (_sdl_window_ptr == nullptr)
     {
-        SIHD_LOG(error, "ImguiBackendSDL: " << SDL_GetError());
+        SIHD_LOG(error, "ImguiBackendSDL: {}", SDL_GetError());
         return false;
     }
     return true;
@@ -115,7 +115,7 @@ bool ImguiBackendSDL::init_backend_opengl()
     _sdl_context_ptr = SDL_GL_CreateContext(_sdl_window_ptr);
     if (_sdl_context_ptr == nullptr)
     {
-        SIHD_LOG(error, "ImguiBackendSDL: " << SDL_GetError());
+        SIHD_LOG(error, "ImguiBackendSDL: {}", SDL_GetError());
         return false;
     }
     SDL_GL_MakeCurrent(_sdl_window_ptr, _sdl_context_ptr);
@@ -215,7 +215,7 @@ void ImguiBackendSDL::terminate()
 }
 
 #if defined(__SIHD_WINDOWS__)
-HWND ImguiBackendSDL::windows_window()
+void *ImguiBackendSDL::windows_window()
 {
     if (_sdl_window_ptr == nullptr)
     {

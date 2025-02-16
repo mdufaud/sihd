@@ -23,28 +23,36 @@ sihd_imgui_srcs.extend([
     "src/ImguiRendererOpenGL.cpp",
 ])
 
-## Check for SDL2
-compile_sdl = builder.is_opt("sdl")
-compiling_with_emscripten = builder.build_compiler == "em"
+# SDL
+sihd_imgui_srcs.extend([
+    "src/ImguiBackendSDL.cpp",
+])
+
+# Lib
 
 lib = env.build_lib(sihd_imgui_srcs)
 
-if builder.build_compiler == "em":
+# Demos
+
+env.build_demo("demo/imgui_opengl3_sdl_demo.cpp", name = "imgui_opengl3_sdl_demo", add_libs = [env.module_format_name()])
+
+if builder.build_platform == "web":
     demo_etc_dir = Dir("demo").Dir("etc").Dir("sihd").Dir("demo")
     env.Append(
         LINKFLAGS = [
             "--shell-file", str(demo_etc_dir.Dir("imgui_demo").File("shell_minimal.html")),
         ]
     )
+else:
+    # glfw does not work with emscripten yet
+    env.build_demo("demo/imgui_opengl3_glfw_demo.cpp", name = "imgui_opengl3_glfw_demo", add_libs = [env.module_format_name()])
 
 if builder.build_platform == "windows":
     env.build_demo("demo/imgui_win_d11_demo.cpp", name = "imgui_win_d11_demo", add_libs = [env.module_format_name()])
-    if compile_sdl:
-        env.build_demo("demo/imgui_win_d11_sdl_demo.cpp", name = "imgui_win_d11_sdl_demo", add_libs = [env.module_format_name()])
+    env.build_demo("demo/imgui_win_d11_sdl_demo.cpp", name = "imgui_win_d11_sdl_demo", add_libs = [env.module_format_name()])
 
-env.build_demo("demo/imgui_opengl3_glfw_demo.cpp", name = "imgui_opengl3_glfw_demo", add_libs = [env.module_format_name()])
+# Tests
 
-# test
 test = env.build_test(sihd_imgui_tests, add_libs = [env.module_format_name()])
 
 Return('lib')

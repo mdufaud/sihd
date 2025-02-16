@@ -1,8 +1,13 @@
 #include <sihd/imgui/ImguiRendererOpenGL.hpp>
 #include <sihd/imgui/ImguiRunner.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/platform.hpp>
 
-#include <SDL_opengles2.h>
+#if !defined(__SIHD_WINDOWS__)
+# include <SDL2/SDL_opengles2.h>
+#endif
+
+#define SDL_MAIN_HANDLED
 #include <sihd/imgui/ImguiBackendSDL.hpp>
 
 using namespace sihd::util;
@@ -49,7 +54,6 @@ int main()
 
     imgui.set_backend(&sdl_backend);
     imgui.set_renderer(&opengl_renderer);
-    imgui.set_emscripten(true);
     imgui.set_build_frame([&]() -> bool {
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code
         // to learn more about Dear ImGui!).

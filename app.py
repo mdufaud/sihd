@@ -43,9 +43,9 @@ extlibs = {
     "libbluetooth": "",
 }
 
-# glfw need libxi-dev libxinerama-dev libxcursor-dev xorg libglu1-mesa pkg-config
+# glfw needs: libxi-dev libxinerama-dev libxcursor-dev xorg libglu1-mesa pkg-config
 extlibs_features = {
-    "imgui": ["glfw-binding", "opengl3-binding"],
+    "imgui": ["glfw-binding", "opengl3-binding", "sdl2-binding"],
     "libusb": ["udev"],
 }
 
@@ -66,8 +66,6 @@ vcpkg_baseline = "cd124b84feb0c02a24a2d90981e8358fdee0e077"
 ###############################################################################
 # modules
 ###############################################################################
-
-# ! never add libucrt with mingw
 
 modules = {
     "util": {
@@ -94,6 +92,7 @@ modules = {
             'gdi32', # wingdi
             'imagehlp', # backtrace / SymFromAddr
             'stdc++fs'
+            # ! never add libucrt with mingw
         ],
         # === Emscripten specific ===
         "em-flags": [
@@ -104,7 +103,7 @@ modules = {
         ],
         "em-link": [
             "-sFORCE_FILESYSTEM", # use filesystem
-            "-sUSE_PTHREADS", # enable threads
+            "-sUSE_PTHREADS=1", # enable threads
             "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
             "-sPROXY_TO_PTHREAD", # main is a navigator thread
         ],
@@ -194,14 +193,34 @@ modules = {
         "depends": ['util'],
     },
     "imgui": {
-        # sdl=1 to compile with SDL2
         "depends": ['util'],
+        "inherit-depends-defines": True,
         "extlibs": ['imgui'],
         "libs": ["imgui"],
-        "linux-libs": ['glfw', 'GLEW', 'GL'],
+        "linux-libs": ['glfw', 'GLEW', 'GL', 'SDL2'],
+        "windows-link": [
+            "-mwindows" # no shell window opening
+        ],
         "windows-libs": [
             "glfw3",
             "opengl32",
+            # SDL NEEDED
+            "SDL2main",
+            "SDL2",
+            "kernel32",
+            "user32",
+            "gdi32", # doubled
+            "winmm",
+            "imm32",
+            "ole32",
+            "oleaut32",
+            "version",
+            "uuid",
+            "advapi32",
+            "setupapi",
+            "shell32",
+            "dinput8",
+            # END
             # desktop window manager api
             "dwmapi",
             # direct x11
@@ -216,25 +235,29 @@ modules = {
             'ssp',
         ],
         "em-flags": [
-            # "-DIMGUI_DISABLE_FILE_FUNCTIONS",
+            "-pthread", # enable threads
+            "-Wno-deprecated-literal-operator",
+            "-Wno-unknown-pragmas",
+            "-Wno-deprecated-declarations",
+            "-sDISABLE_EXCEPTION_CATCHING=1",
+            "-sUSE_SDL=2",
+        ],
+        "em-flags-sdl2": [
+            "-sUSE_SDL=2",
+        ],
+        "em-link-sdl2": [
+            "-sFORCE_FILESYSTEM=1", # use filesystem
+            "-sUSE_PTHREADS=1", # enable threads
+            "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
+            "-sUSE_SDL=2",
+            "-sWASM=1",
         ],
         "em-link": [
-            "-sFORCE_FILESYSTEM", # use filesystem
-            "-sUSE_PTHREADS", # enable threads
+            "-sUSE_PTHREADS=1", # enable threads
             "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
-            "-sPROXY_TO_PTHREAD", # main is a navigator thread
-            "-sUSE_GLFW=3",
-            # "-sUSE_SDL=2",
+            # "-sUSE_GLFW=3", # did not manage to get glfw working with emscripten
+            "-sUSE_SDL=2",
             "-sWASM=1",
-            "-sOFFSCREENCANVAS_SUPPORT=1",
-            "-sOFFSCREEN_FRAMEBUFFER=1",
-            # "-sNO_FILESYSTEM=1",
-            # "-sALLOW_MEMORY_GROWTH=1",
-            "-sNO_EXIT_RUNTIME=0",
-            "-sASSERTIONS=1",
-            "-sDISABLE_EXCEPTION_CATCHING=1",
-            # "-sSAFE_HEAP=1",
-            # "-sOFFSCREEN_FRAMEBUFFER=1"
         ],
     },
 }

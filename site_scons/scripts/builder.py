@@ -206,6 +206,8 @@ def get_compiler():
         compiler = "clang"
     if build_platform == "windows" and not is_msys():
         compiler = "mingw"
+    elif build_platform == "web":
+        compiler = "em"
     return compiler.lower()
 
 def get_platform():
@@ -213,6 +215,8 @@ def get_platform():
     build_platform = __get_platform()
     if compiler == "mingw":
         build_platform = "windows"
+    elif compiler == "em":
+        build_platform = "web"
     return build_platform
 
 def get_pkgdep():

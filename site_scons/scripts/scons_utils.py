@@ -48,7 +48,7 @@ def load_env_packages_config(env, *configs):
 
 def parse_config_command(env, *configs):
     """ Parse configs from binaries outputs """
-    if builder.build_platform == "windows" or builder.build_compiler == "em":
+    if builder.build_platform == "windows" or builder.build_platform == "web":
         return False
     for config in configs:
         try:

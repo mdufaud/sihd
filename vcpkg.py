@@ -142,10 +142,10 @@ def build_vcpkg_triplet():
         vcpkg_liblink = "static" if builder.build_static_libs else "dynamic"
         vcpkg_mode = builder.build_mode
 
-        if builder.build_compiler == "em":
+        if builder.build_platform == "web":
             vcpkg_machine = "wasm32"
             vcpkg_platform = "emscripten"
-    
+
         if vcpkg_machine == "x86_64":
             if builder.build_architecture == "64":
                 vcpkg_machine = "x64"
