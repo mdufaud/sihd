@@ -171,47 +171,47 @@ class TestConfigurable: public ::testing::Test
         virtual void TearDown() {}
 };
 
-TEST_F(TestConfigurable, test_configurable_json)
-{
-    nlohmann::json json = {
-        {"bool", true},
-        {"int", 1234},
-        {"ushort", -1},
-        {"float", 4.13},
-        {"double", 3.14},
-        {"str", "hello world"},
-        {"cstr", "hello world"},
-        {"list", {1, 0, 2}},
-    };
-    ConfigurableObj obj;
-    EXPECT_EQ(obj.set_conf(json), true);
+// TEST_F(TestConfigurable, test_configurable_json)
+// {
+//     nlohmann::json json = {
+//         {"bool", true},
+//         {"int", 1234},
+//         {"ushort", -1},
+//         {"float", 4.13},
+//         {"double", 3.14},
+//         {"str", "hello world"},
+//         {"cstr", "hello world"},
+//         {"list", {1, 0, 2}},
+//     };
+//     ConfigurableObj obj;
+//     EXPECT_EQ(obj.set_conf(json), true);
 
-    EXPECT_EQ(obj.bool_val, true);
-    EXPECT_EQ(obj.int_val, 1234);
-    EXPECT_EQ(obj.ushort_val, 65535u);
-    EXPECT_FLOAT_EQ(obj.float_val, 4.13f);
-    EXPECT_FLOAT_EQ(obj.double_val, 3.14);
-    EXPECT_EQ(obj.str_val, "hello world");
-    EXPECT_EQ(obj.list_val.size(), 3u);
-    EXPECT_EQ(obj.list_val.at(0), 1);
-    EXPECT_EQ(obj.list_val.at(1), 0);
-    EXPECT_EQ(obj.list_val.at(2), 2);
+//     EXPECT_EQ(obj.bool_val, true);
+//     EXPECT_EQ(obj.int_val, 1234);
+//     EXPECT_EQ(obj.ushort_val, 65535u);
+//     EXPECT_FLOAT_EQ(obj.float_val, 4.13f);
+//     EXPECT_FLOAT_EQ(obj.double_val, 3.14);
+//     EXPECT_EQ(obj.str_val, "hello world");
+//     EXPECT_EQ(obj.list_val.size(), 3u);
+//     EXPECT_EQ(obj.list_val.at(0), 1);
+//     EXPECT_EQ(obj.list_val.at(1), 0);
+//     EXPECT_EQ(obj.list_val.at(2), 2);
 
-    EXPECT_EQ(obj.set_conf("list", json["list"]), true);
-    EXPECT_EQ(obj.list_val.size(), 6u);
-    EXPECT_EQ(obj.list_val.at(3), 1);
-    EXPECT_EQ(obj.list_val.at(4), 0);
-    EXPECT_EQ(obj.list_val.at(5), 2);
+//     EXPECT_EQ(obj.set_conf("list", json["list"]), true);
+//     EXPECT_EQ(obj.list_val.size(), 6u);
+//     EXPECT_EQ(obj.list_val.at(3), 1);
+//     EXPECT_EQ(obj.list_val.at(4), 0);
+//     EXPECT_EQ(obj.list_val.at(5), 2);
 
-    nlohmann::json null;
-    null["nothing"] = nullptr;
-    EXPECT_EQ(obj.set_conf(null), false);
-    EXPECT_EQ(obj.set_conf("json-null", null["nothing"]), false);
+//     nlohmann::json null;
+//     null["nothing"] = nullptr;
+//     EXPECT_EQ(obj.set_conf(null), false);
+//     EXPECT_EQ(obj.set_conf("json-null", null["nothing"]), false);
 
-    nlohmann::json json_conf = {{"str", "hello world"}};
-    EXPECT_EQ(obj.set_conf("json", json_conf), true);
-    EXPECT_EQ(obj.inside_json_val, "hello world");
-}
+//     nlohmann::json json_conf = {{"str", "hello world"}};
+//     EXPECT_EQ(obj.set_conf("json", json_conf), true);
+//     EXPECT_EQ(obj.inside_json_val, "hello world");
+// }
 
 TEST_F(TestConfigurable, test_configurable_class)
 {

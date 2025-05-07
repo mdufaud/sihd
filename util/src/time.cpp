@@ -243,4 +243,17 @@ bool is_leap_year(int year)
     return year % 4 == 0 && (year % 400 == 0 || year % 100 != 0);
 }
 
+time_t ts(const struct timespec & ts)
+{
+    return (ts.tv_sec * 1E9) + ts.tv_nsec;
+}
+
+struct timespec to_ts(time_t nano)
+{
+    struct timespec ts;
+    ts.tv_sec = (time_t)(nano / 1E9);
+    ts.tv_nsec = (time_t)(nano % (int)1E9);
+    return ts;
+}
+
 } // namespace sihd::util::time

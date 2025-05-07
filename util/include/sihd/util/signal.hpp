@@ -4,13 +4,15 @@
 #include <optional>
 #include <string>
 
+#include <sihd/util/Timestamp.hpp>
+
 namespace sihd::util::signal
 {
 
 struct SigStatus
 {
         size_t received = 0;
-        time_t time_received = -1;
+        sihd::util::Timestamp time_received = -1;
 
         operator bool() const;
 };
@@ -23,6 +25,7 @@ struct SigExitConfig
         bool log_signal = false;
         bool exit_with_sig_number = false;
 };
+void set_exit_config(const SigExitConfig & config);
 
 // set signal handling to handled
 bool handle(int sig);
@@ -46,8 +49,6 @@ bool dump_received();
 bool should_stop();
 void reset_received(int sig);
 void reset_all_received();
-
-void set_exit_config(const SigExitConfig & config);
 
 bool kill(pid_t pid, int sig);
 

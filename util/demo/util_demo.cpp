@@ -312,6 +312,8 @@ void backtrace()
 
 } // namespace demo
 
+#include <sihd/util/signal.hpp>
+
 int main(int argc, char **argv)
 {
     cxxopts::Options options(argv[0], "Testing utility for module util");
@@ -361,8 +363,14 @@ int main(int argc, char **argv)
         }
         demo::process();
         demo::read_line();
-        fmt::print("Press Ctrl + c to exit\n");
-        SigWaiter waiter;
+        fmt::print("Press Ctrl + c to exit (or wait 5 seconds)\n");
+        SigWaiter waiter({
+            .timeout = time::seconds(5),
+        });
+        if (waiter.received_signal())
+            fmt::print("(Received signal)\n");
+        else
+            fmt::print("(Timeout)\n");
         fmt::print("Exiting...\n");
     }
 

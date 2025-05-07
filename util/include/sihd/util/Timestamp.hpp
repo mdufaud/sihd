@@ -147,6 +147,7 @@ class Timestamp
         time_t hours() const;
         time_t days() const;
 
+        struct timespec ts() const;
         struct timeval tv() const;
         struct tm tm() const;
         struct tm local_tm() const;

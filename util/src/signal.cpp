@@ -193,7 +193,8 @@ bool handle(int sig)
 #else
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
-    sa.sa_flags = SA_RESTART; // Process resume what it was doing before the interruption
+    // interrupted system calls will be automatically restarted instead of failing with EINTR
+    sa.sa_flags = SA_RESTART;
     sa.sa_handler = _signal_callback;
     sigemptyset(&sa.sa_mask);
 

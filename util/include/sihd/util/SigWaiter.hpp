@@ -11,8 +11,7 @@ class SigWaiter
     public:
         struct Conf
         {
-                int sig = -1;
-                Timestamp polling_frequency = std::chrono::milliseconds(2);
+                std::optional<int> signal = std::nullopt;
                 Timestamp timeout = 0;
         };
 
@@ -26,7 +25,6 @@ class SigWaiter
     protected:
 
     private:
-        int _sig;
         bool _received_signal;
 };
 

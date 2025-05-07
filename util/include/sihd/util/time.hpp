@@ -169,6 +169,9 @@ time_t tv(const struct timeval & tv);
 // timeval with nano resolution -> nano
 time_t nano_tv(const struct timeval & tv);
 
+time_t ts(const struct timespec & ts);
+struct timespec to_ts(time_t nano);
+
 bool is_leap_year(int year);
 
 } // namespace time

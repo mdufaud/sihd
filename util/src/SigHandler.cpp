@@ -31,7 +31,7 @@ bool SigHandler::handle(int sig)
     this->unhandle();
 
     _sig = sig;
-    _previous_handler = ::signal(sig, SIG_DFL);
+    _previous_handler = std::signal(sig, SIG_DFL);
 
     if (_previous_handler == SIG_ERR)
     {
@@ -47,7 +47,7 @@ bool SigHandler::unhandle()
 
     if (this->is_handling())
     {
-        if (::signal(_sig, _previous_handler) == SIG_ERR)
+        if (std::signal(_sig, _previous_handler) == SIG_ERR)
         {
             SIHD_LOG(error, "SigHandler: could not unhandle signal {}", _sig);
             ret = false;

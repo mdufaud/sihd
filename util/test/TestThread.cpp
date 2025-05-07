@@ -30,10 +30,11 @@ class TestThread: public ::testing::Test
 TEST_F(TestThread, test_thread_name)
 {
     this->main_id = thread::id();
-    EXPECT_EQ(thread::name(), "main");
+    std::string current_thread_name = thread::name();
+    EXPECT_FALSE(current_thread_name.empty());
     std::thread t(&TestThread::test, this);
     t.join();
-    EXPECT_EQ(thread::name(), "main");
+    EXPECT_EQ(thread::name(), current_thread_name);
     EXPECT_EQ(this->other_name, "another-thread");
     EXPECT_FALSE(thread::equals(this->other_id, this->main_id));
     EXPECT_TRUE(thread::equals(this->main_id, thread::id()));

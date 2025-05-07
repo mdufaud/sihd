@@ -67,17 +67,16 @@ TEST_F(TestSignal, test_signal_handle)
 
 TEST_F(TestSignal, test_signal_waiter)
 {
-    auto test_lambda = [](int sig) {
-        Timer t([sig] { raise(sig); }, std::chrono::milliseconds(5));
+    auto signal_waiter = [](int sig) {
+        Timer t([sig] { kill(getpid(), sig); }, std::chrono::milliseconds(20));
 
-        SigWaiter wait(
-            {.sig = sig, .polling_frequency = std::chrono::milliseconds(1), .timeout = std::chrono::milliseconds(100)});
+        SigWaiter wait({.signal = sig, .timeout = std::chrono::milliseconds(100)});
 
-        EXPECT_TRUE(wait.received_signal());
+        return wait.received_signal();
     };
 
-    test_lambda(1);
-    test_lambda(63);
+    EXPECT_TRUE(signal_waiter(SIGHUP));
+    EXPECT_TRUE(signal_waiter(SIGWINCH));
 }
 
 TEST_F(TestSignal, test_signal_watcher)
@@ -101,7 +100,7 @@ TEST_F(TestSignal, test_signal_watcher)
     watcher.set_start_synchronised(true);
     watcher.start();
 
-    raise(SIGUSR1);
+    kill(getpid(), SIGUSR1);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 

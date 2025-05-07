@@ -255,6 +255,11 @@ struct timeval Timestamp::tv() const
     return time::to_nano_tv(_nano);
 }
 
+struct timespec Timestamp::ts() const
+{
+    return time::to_ts(_nano);
+}
+
 struct tm Timestamp::tm() const
 {
     return time::to_tm(std::abs(_nano), false);

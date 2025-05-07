@@ -50,12 +50,17 @@ class TestLogger: public ::testing::Test
 
         virtual void SetUp()
         {
+            _old_thread_name = thread::name();
+            thread::set_name("main");
+
             this->log_counter = new LogCounter();
             LoggerManager::add(this->log_counter);
         }
 
         virtual void TearDown()
         {
+            thread::set_name(_old_thread_name);
+
             LoggerManager::clear_loggers();
             LoggerManager::clear_filters();
         }
@@ -65,6 +70,8 @@ class TestLogger: public ::testing::Test
             return log_counter->debug > 0 && log_counter->info > 0 && log_counter->warning > 0 && log_counter->error > 0
                    && log_counter->critical > 0;
         }
+
+        std::string _old_thread_name;
 };
 
 TEST_F(TestLogger, test_logger_basic)

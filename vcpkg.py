@@ -253,7 +253,8 @@ def execute_vcpkg_install():
     if verbose:
         builder.debug(f"executing '{args}' in '{vcpkg_build_path}'")
     import subprocess
-    proc = subprocess.run(args, cwd=vcpkg_build_path, timeout=(120.0 * len(extlibs)), env=copy_env)
+    number_of_seconds_per_lib = 180
+    proc = subprocess.run(args, cwd=vcpkg_build_path, timeout=(number_of_seconds_per_lib * len(extlibs)), env=copy_env)
     return proc.returncode
 
 def execute_vcpkg_depend_info():
