@@ -82,7 +82,7 @@ size_t levenshtein_distance(std::string_view source,
 std::string format_time(Timestamp timestamp, std::string_view format, bool localtime)
 {
     constexpr size_t buffer_size = SIHD_UTIL_STR_BUFFER;
-    static char buffer[SIHD_UTIL_STR_BUFFER];
+    static char buffer[buffer_size];
     static std::mutex buffer_mutex;
 
     const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
@@ -128,23 +128,23 @@ std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bo
 
 } // namespace
 
-std::string to_str(std::wstring_view view)
+#if defined(__SIHD_WINDOWS__)
+std::string to_str(std::wstring_view utf16_view)
 {
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return converter.to_bytes(view.data(), view.data() + view.size());
+    const int size = WideCharToMultiByte(CP_UTF8, 0, utf16_view.data(), utf16_view.size(), nullptr, 0, nullptr, nullptr);
+    std::string utf8_str(size, 0);
+    WideCharToMultiByte(CP_UTF8, 0, utf16_view.data(), utf16_view.size(), utf8_str.data(), size, nullptr, nullptr);
+    return utf8_str;
 }
 
-std::wstring to_wstr(std::string_view view)
+std::wstring to_wstr(std::string_view utf8_view)
 {
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return converter.from_bytes(view.data(), view.data() + view.size());
+    const int size = MultiByteToWideChar(CP_UTF8, 0, utf8_view.data(), utf8_view.size(), nullptr, 0);
+    std::wstring utf16_str(size, 0);
+    MultiByteToWideChar(CP_UTF8, 0, utf8_view.data(), utf8_view.size(), utf16_str.data(), size);
+    return utf16_str;
 }
-
-std::u32string to_u32str(std::string_view view)
-{
-    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
-    return converter.from_bytes(view.data(), view.data() + view.size());
-}
+#endif
 
 bool regex_match(std::string_view str, const std::string & pattern)
 {

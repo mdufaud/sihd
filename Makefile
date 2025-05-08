@@ -1,14 +1,14 @@
 PYTHON_BIN := python3
-ifeq (, $(shell which $(PYTHON_BIN)))
+ifeq (, $(shell which $(PYTHON_BIN) 2>/dev/null))
 PYTHON_BIN := python
 endif
 
 PIP_BIN := pip3
-ifeq (, $(shell which $(PIP_BIN)))
+ifeq (, $(shell which $(PIP_BIN) 2>/dev/null))
 PIP_BIN := pip
 endif
 
-ifeq (, $(shell which $(PYTHON_BIN)))
+ifeq (, $(shell which $(PYTHON_BIN) 2>/dev/null))
 $(error "Makefile: no python detected - it is needed to build the project.")
 endif
 

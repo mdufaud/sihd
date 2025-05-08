@@ -21,17 +21,18 @@ extlibs = {
     "libwebsockets": "4.3.3",
     "curl": "7.87.0",
     "openssl": "1.1.1n",
-    "libssh": "0.10.5",
+    "libssh": "0.10.6",
     "libcap": "2.70",
     "libuv": "1.46.0",
     "zlib": "1.3.1",
     # pcap
-    "libpcap": "1.10.1",
+    "libpcap": "1.10.5",
     # usb
     "libusb": "1.0.27",
     # gui
     "ftxui": "5.0.0",
     "imgui": "1.86",
+    "libxcrypt": "4.4.38", #fixes a compilation issue with imgui
     # bindings
     "pybind11": "2.6.2",
     # compressing utility
@@ -61,7 +62,7 @@ extlibs_skip_windows = [
 
 extlibs_skip = ["libbluetooth"]
 
-vcpkg_baseline = "cd124b84feb0c02a24a2d90981e8358fdee0e077"
+vcpkg_baseline = "38d9cf0bd45404cd25aeb03f79bcb0af256de343"
 
 ###############################################################################
 # modules
@@ -195,7 +196,7 @@ modules = {
     "imgui": {
         "depends": ['util'],
         "inherit-depends-defines": True,
-        "extlibs": ['imgui'],
+        "extlibs": ['imgui', 'libxcrypt'],
         "libs": ["imgui"],
         "linux-libs": ['glfw', 'GLEW', 'GL', 'SDL2'],
         "windows-link": [

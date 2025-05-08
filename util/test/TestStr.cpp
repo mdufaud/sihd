@@ -76,6 +76,7 @@ class TestStr: public ::testing::Test
         double _dval;
 };
 
+#if defined(__SIHD_WINDOWS__)
 TEST_F(TestStr, test_str_to_u32str)
 {
     std::u32string u32str = str::to_u32str("hello world");
@@ -99,6 +100,7 @@ TEST_F(TestStr, test_str_to_wstr)
     wstr = str::to_wstr("");
     EXPECT_EQ(wstr, L"");
 }
+#endif
 
 TEST_F(TestStr, test_str_regex_filter)
 {

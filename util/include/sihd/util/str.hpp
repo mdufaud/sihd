@@ -4,19 +4,20 @@
 #include <string>
 #include <string_view>
 #include <typeinfo>
-#include <utility>
 #include <vector>
 
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/IArrayView.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/platform.hpp>
 
 namespace sihd::util::str
 {
 
+#if defined(__SIHD_WINDOWS__)
 std::string to_str(std::wstring_view view);
 std::wstring to_wstr(std::string_view view);
-std::u32string to_u32str(std::string_view view);
+#endif
 
 bool regex_match(std::string_view str, const std::string & pattern);
 std::vector<std::string> regex_search(std::string_view str, const std::string & pattern);
@@ -173,7 +174,11 @@ std::string remove_enclosing(std::string_view str,
                              int escape = escape_char());
 
 template <typename T>
-bool convert_from_string(std::string_view str, T & value, uint16_t base = 0);
+bool convert_from_string(std::string_view str, T & value, uint16_t base = 0)
+{
+    static_assert(false, "Type is not explicitly implemented");
+    return false;
+}
 
 } // namespace sihd::util::str
 
