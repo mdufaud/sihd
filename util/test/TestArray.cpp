@@ -47,9 +47,11 @@ TEST_F(TestArray, test_array_perf)
             int b;
     };
 
+    constexpr int test_multiplier = 1;
+
     Array<Test>::mult_resize_capacity = 2;
-    constexpr int iterations = 30000;
-    constexpr int ncopies = 100;
+    constexpr int iterations = 30000 * test_multiplier;
+    constexpr int ncopies = 100 * test_multiplier;
     std::vector<Test> vec;
     Array<Test> arr;
 

@@ -3,6 +3,7 @@
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/num.hpp>
 #include <sihd/util/os.hpp>
+#include <sihd/util/profiling.hpp>
 #include <sihd/util/time.hpp>
 
 namespace test
@@ -23,26 +24,24 @@ class TestScheduler: public ::testing::Test,
 
         virtual void TearDown() {}
 
-        virtual bool run()
+        bool run()
         {
             time_point<steady_clock, nanoseconds> now = _clock.now();
-            time_t usec = duration_cast<microseconds>(now - _last).count();
-            if (_last.time_since_epoch().count() == 0)
-                _last = now;
-            else
+            time_t diff_micro = duration_cast<microseconds>(now - _last).count();
+            if (_last.time_since_epoch().count() != 0)
             {
-                if ((usec < (this->should_run_every_us + this->delta_us)
-                     && usec > (this->should_run_every_us - this->delta_us))
+                if ((diff_micro < (this->should_run_every_us + this->delta_us)
+                     && diff_micro > (this->should_run_every_us - this->delta_us))
                     == false)
                 {
-                    SIHD_CERR("Overrun: {} usec since last run (max: {} usec)\n",
-                              usec,
+                    SIHD_CERR("Overrun: {} microseconds since last run (max: {} usec)\n",
+                              diff_micro,
                               this->should_run_every_us + this->delta_us);
                     this->good_freq = false;
                     overruns++;
                 }
-                _last += std::chrono::microseconds(this->should_run_every_us);
             }
+            _last = now;
             ran += 1;
             return true;
         }
@@ -115,7 +114,8 @@ TEST_F(TestScheduler, test_sched_perf)
     sched.set_start_synchronised(true);
     sched.start();
 
-    constexpr time_t sleep_time = 50;
+    constexpr time_t test_multiplier = 1;
+    constexpr time_t sleep_time = 50 * test_multiplier;
     std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
 
     sched.stop();
@@ -124,14 +124,19 @@ TEST_F(TestScheduler, test_sched_perf)
 
     auto level = num::near(this->ran, expected_run, 1) ? LogLevel::info : LogLevel::error;
 
-    SIHD_LOG_LVL(level, "Scheduler tasks executed: total={} expected={}", this->ran, expected_run);
-
     // 10% miss maximum
     const int expected_overruns = this->ran / 10;
+
+    SIHD_LOG_INFO("Scheduler ran on time {} times, expected {}, percent success: {}%",
+                  this->ran - overruns,
+                  expected_run,
+                  ((this->ran - overruns) / (float)expected_run) * 100);
+
     SIHD_LOG_LVL(level,
                  "Scheduler overruns: total={} test_calculated={} (expected less than {})",
                  sched.overruns,
                  overruns,
+                 (expected_run / this->ran) * 100,
                  expected_overruns);
 
     const int minimum_run = expected_run / 3;

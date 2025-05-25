@@ -12,6 +12,7 @@ sys.path.append(__sbt_root_path)
 sys.path.append(__project_root_path)
 
 from sbt import logger
+from sbt import utils
 
 def __import_no_bytecode(module_name):
     """
@@ -31,19 +32,15 @@ def load_env():
     env_module = None
     env_module_name = "default_env"
 
-    # Check if 'env=' is present in sys.argv
-    env_arg = next((arg for arg in sys.argv if arg.startswith("env=")), None)
-    if env_arg:
-        env_path = env_arg.split("=", 1)[1]
-        logger.debug(f"Loading environment from: {env_path}")
-        env_module_name = basename(env_path).replace(".py", "")
-
-    logger.debug(f"Loading environment module: {env_module_name}")
+    env_arg = utils.get_opt("env", None)
+    if env_arg is not None:
+        logger.debug(f"Loading specific environment from: {env_arg}")
+        env_module_name = basename(env_arg).replace(".py", "")
 
     try:
         env_module = __import_no_bytecode(env_module_name)
     except ImportError as e:
-        logger.debug(f"No environment module found: {e}")
+        pass
 
     if env_module is not None:
         env_keys = [item for item in dir(env_module) if not item.startswith("__")]

@@ -187,7 +187,9 @@ TEST_F(TestLineReader, test_linereader_low_buffer)
 
 TEST_F(TestLineReader, test_linereader_perf)
 {
-    size_t filesize = 4096 * 70;
+    constexpr size_t test_multiplier = 1;
+    constexpr size_t filesize = (4096 * 70) * test_multiplier;
+
     std::string random_str = str::generate_random(filesize);
 
     std::string path_input = fs::combine(_tmp_dir.path(), "perf_filegen.txt");
@@ -196,9 +198,9 @@ TEST_F(TestLineReader, test_linereader_perf)
     std::string path_line_reader_no_memory = fs::combine(_tmp_dir.path(), "perf_compare_line_reader_no_memory.txt");
 
     SIHD_LOG(info, "Input: {}", path_input);
-    SIHD_LOG(info, "Output file: {}", path_file);
-    SIHD_LOG(info, "Output line reader: {}", path_line_reader);
-    SIHD_LOG(info, "Output line reader 2: {}", path_line_reader_no_memory);
+    SIHD_LOG(info, "Output std::getline: {}", path_file);
+    SIHD_LOG(info, "Output LineReader: {}", path_line_reader);
+    SIHD_LOG(info, "Output LineReader::fast_read_line: {}", path_line_reader_no_memory);
 
     File writer(path_input, "w");
     ASSERT_TRUE(writer.is_open());
@@ -210,7 +212,7 @@ TEST_F(TestLineReader, test_linereader_perf)
     size_t total_file = 0;
     ASSERT_TRUE(writer.open(path_file, "w"));
     {
-        Timeit t("file");
+        Timeit t("std::getline");
         File file;
         file.open(path_input, "r");
         while (file.read_line(&line, &size) > 0)
@@ -228,7 +230,7 @@ TEST_F(TestLineReader, test_linereader_perf)
     ASSERT_TRUE(writer.open(path_line_reader, "w"));
     ArrCharView view;
     {
-        Timeit it("line-reader");
+        Timeit it("LineReader");
         LineReader reader(path_input,
                           {
                               .read_buffsize = 4096,
@@ -248,7 +250,7 @@ TEST_F(TestLineReader, test_linereader_perf)
     size_t total_rl_no_memory = 0;
     ASSERT_TRUE(writer.open(path_line_reader_no_memory, "w"));
     {
-        Timeit it("line-reader-2");
+        Timeit it("LineReader::fast_read_line");
         File file(path_input, "r");
         ASSERT_TRUE(file.is_open());
         std::string line;

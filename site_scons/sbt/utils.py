@@ -10,7 +10,9 @@ def get_opt(argname, default_val=""):
     for arg in sys.argv:
         idx = arg.find(arg_to_find)
         if idx >= 0:
-            return arg[idx + len(arg_to_find):]
+            val = arg[idx + len(arg_to_find):]
+            if len(val) > 0:
+                return val
     return getenv(argname, "") or default_val
 
 def is_opt(argname, default_val=""):
