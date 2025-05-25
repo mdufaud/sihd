@@ -1,15 +1,18 @@
 import sys
-import json
+from json import dump as json_dump
 import os
 
 from pprint import PrettyPrinter
 pp = PrettyPrinter(indent=2)
 
-sys.dont_write_bytecode = True
-import app
-from site_scons.scripts import modules as modules
-from site_scons.scripts import builder as builder
+import loader
 
+from sbt import modules
+from sbt import builder
+from sbt import logger
+from sbt import utils
+
+app = loader.load_app()
 
 vcpkg_bin_path = os.getenv("VCPKG_PATH", None)
 if vcpkg_bin_path is None:
@@ -37,9 +40,9 @@ has_test = builder.build_tests
 
 if verbose:
     if modules_lst:
-        builder.debug("getting libs from modules -> {}".format(modules_lst))
+        logger.debug("getting libs from modules -> {}".format(modules_lst))
     if has_test:
-        builder.debug("including test libs")
+        logger.debug("including test libs")
 
 skip_libs = getattr(app, "extlibs_skip", [])
 skip_libs.extend(getattr(app, f"extlibs_skip_{build_platform}", []))
@@ -51,19 +54,19 @@ if modules_to_build != "NONE":
     try:
         build_modules = modules.build_modules_conf(app, specific_modules=modules_lst)
     except RuntimeError as e:
-        builder.error(str(e))
+        logger.error(str(e))
         exit(1)
 
     # Checking module availability on platforms
     deleted_modules = modules.check_platform(build_modules, build_platform)
     for deleted_modules in deleted_modules:
-        builder.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
+        logger.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
 
     if not build_modules:
         exit(0)
 
     if verbose:
-        builder.debug("modules configuration: ")
+        logger.debug("modules configuration: ")
         pp.pprint(build_modules)
         print()
 
@@ -73,11 +76,11 @@ if modules_to_build != "NONE":
 
     for skip_lib in skip_libs:
         if skip_lib in extlibs:
-            builder.warning(f"Skipping library {skip_lib}")
+            logger.warning(f"skipping library {skip_lib}")
             del extlibs[skip_lib]
 
     if verbose:
-        builder.debug("modules external libs:")
+        logger.debug("modules external libs:")
         pp.pprint(extlibs)
         print()
 
@@ -108,7 +111,7 @@ def build_vcpkg_triplet():
         x64-mingw-dynamic     arm-mingw-dynamic             arm64-osx-release           loongarch32-linux
         riscv64-linux
     """
-    vcpkg_triplet = builder.get_opt("triplet", None)
+    vcpkg_triplet = utils.get_opt("triplet", None)
 
     if vcpkg_triplet is None:
         builtin_triplets = [
@@ -178,6 +181,7 @@ def build_vcpkg_triplet():
 vcpkg_triplet = build_vcpkg_triplet()
 
 def build_vcpkg_manifest():
+    # default vcpkg baseline
     vcpkg_baseline = "7977f0a771e64e9811d32aa30d9a247e09c39b2e"
     if hasattr(app, "vcpkg_baseline"):
         vcpkg_baseline = app.vcpkg_baseline
@@ -215,17 +219,23 @@ def build_vcpkg_manifest():
 def write_vcpkg_manifest(vcpkg_manifest):
     os.makedirs(vcpkg_build_path, exist_ok=True)
     with open(vcpkg_build_manifest_path, "w") as fd:
-        json.dump(vcpkg_manifest, fd, indent=2)
-    builder.info(f"Wrote vcpkg manifest at: {vcpkg_build_manifest_path}")
+        json_dump(vcpkg_manifest, fd, indent=2)
+    logger.info(f"wrote vcpkg manifest at: {vcpkg_build_manifest_path}")
 
 def __check_vcpkg():
     if os.path.exists(vcpkg_bin_path) is False:
-        builder.error(f"VCPKG path does not exist: {vcpkg_bin_path}")
-        builder.error(f"Deploy VCPKG with: make vcpkg deploy")
-        raise RuntimeError("No VCPKG installed")
+        logger.error(f"VCPKG path does not exist: {vcpkg_bin_path}")
+        logger.error(f"deploy VCPKG with: make vcpkg deploy")
+        raise RuntimeError("no VCPKG installed")
 
 def execute_vcpkg_install():
     __check_vcpkg()
+
+    from time import time
+    start_time = time()
+
+    logger.info("fetching external libraries for {}".format(app.name))
+
     copy_env = os.environ.copy()
     args = [vcpkg_bin_path, "install", f"--triplet={vcpkg_triplet}", "--allow-unsupported"]
 
@@ -241,20 +251,24 @@ def execute_vcpkg_install():
     if "arm" in vcpkg_triplet:
         copy_env["VCPKG_FORCE_SYSTEM_BINARIES"] = "1"
         def check_bins(list):
-            import shutil
+            from shutil import which
             ret = True
             for name in list:
-                if not shutil.which(name):
-                    builder.error(f"Binary {name} is not present but needed")
+                if not which(name):
+                    logger.error(f"Binary {name} is not present but needed")
                     ret = False
             return ret
         assert(check_bins(["cmake", "ninja", "pkg-config"]))
 
     if verbose:
-        builder.debug(f"executing '{args}' in '{vcpkg_build_path}'")
-    import subprocess
+        logger.debug(f"executing '{args}' in '{vcpkg_build_path}'")
+
+    from subprocess import run as subprocess_run
     number_of_seconds_per_lib = 180
-    proc = subprocess.run(args, cwd=vcpkg_build_path, timeout=(number_of_seconds_per_lib * len(extlibs)), env=copy_env)
+    proc = subprocess_run(args, cwd=vcpkg_build_path, timeout=(number_of_seconds_per_lib * len(extlibs)), env=copy_env)
+
+    logger.info("fetched in {:.3f} seconds".format(time() - start_time))
+
     return proc.returncode
 
 def execute_vcpkg_depend_info():
@@ -262,18 +276,22 @@ def execute_vcpkg_depend_info():
     args = [vcpkg_bin_path, "depend-info"] + list(extlibs.keys())
     args += [f"--triplet={vcpkg_triplet}", "--format=tree", "--max-recurse=-1"]
     if verbose:
-        builder.debug(f"executing '{args}' in '{vcpkg_build_path}'")
-    import subprocess
-    proc = subprocess.run(args, cwd=vcpkg_build_path)
+        logger.debug(f"executing '{args}' in '{vcpkg_build_path}'")
+
+    from subprocess import run as subprocess_run
+    proc = subprocess_run(args, cwd=vcpkg_build_path)
+
     return proc.returncode
 
 def execute_vcpkg_list():
     __check_vcpkg()
     args = (vcpkg_bin_path, "list", f"--triplet={vcpkg_triplet}")
     if verbose:
-        builder.debug(f"executing '{args}' in '{vcpkg_build_path}'")
-    import subprocess
-    proc = subprocess.run(args, cwd=vcpkg_build_path)
+        logger.debug(f"executing '{args}' in '{vcpkg_build_path}'")
+
+    from subprocess import run as subprocess_run
+    proc = subprocess_run(args, cwd=vcpkg_build_path)
+
     return proc.returncode
 
 def link_to_extlibs():
@@ -287,10 +305,8 @@ def link_to_extlibs():
         builder.safe_symlink(downloaded_path, builder.build_extlib_path)
 
 if __name__ == "__main__":
-    vcpkg_manifest = build_vcpkg_manifest()
-    write_vcpkg_manifest(vcpkg_manifest)
+    write_vcpkg_manifest(build_vcpkg_manifest())
     if "fetch" in sys.argv:
-        builder.info("fetching external libraries for {}".format(app.name))
         return_code = execute_vcpkg_install()
         if return_code == 0:
             link_to_extlibs()

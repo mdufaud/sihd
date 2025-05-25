@@ -21,7 +21,7 @@ execute_tests()
 (
     for module in \$module_list;
     do
-        module_path=$HERE/\$module
+        module_path=$PROJECT_ROOT_PATH/\$module
         test_bin_path=$TEST_BIN_PATH/${APP_NAME}_\$module
 
         repeat_args=

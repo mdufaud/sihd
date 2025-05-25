@@ -1,88 +1,21 @@
 import platform
-import sys
-import os
 import glob
 import shutil
 import tarfile
 import subprocess
-import datetime
-
+import os
 from os.path import join, dirname, abspath
 
-# append to python path parent build dir
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
-
-from scripts import modules as build_tools_modules
-
-# import default env configuration
 try:
-    from addon import default_build
-
-    env_keys = [item for item in dir(default_build) if not item.startswith("__")]
-    for env_key in env_keys:
-        if os.getenv(env_key, "") == "":
-            value = getattr(default_build, env_key)
-            os.environ[env_key] = str(value)
-
+    from sbt import loader
 except ImportError:
-    pass
+    import loader
 
-# remove python path manipulation
-sys.path.pop()
+from sbt import modules as sbt_modules
+from sbt import utils
+from sbt import logger
 
-default_mode = "debug"
-default_compiler = os.getenv("COMPILER", "gcc")
-
-###############################################################################
-# Term colors
-###############################################################################
-
-_term_color_prefix = "\033["
-class TermColors(object):
-
-    def __init__(self):
-        if os.getenv("TERM"):
-            self.red = f"{_term_color_prefix}0;31m"
-            self.green = f"{_term_color_prefix}0;32m"
-            self.orange = f"{_term_color_prefix}0;33m"
-            self.blue = f"{_term_color_prefix}0;34m"
-            self.bold_red = f"{_term_color_prefix}1;31m"
-            self.bold_green = f"{_term_color_prefix}1;32m"
-            self.bold_orange = f"{_term_color_prefix}1;33m"
-            self.bold_blue = f"{_term_color_prefix}1;34m"
-            self.reset = f"{_term_color_prefix}0m"
-        else:
-            self.red = ""
-            self.green = ""
-            self.orange = ""
-            self.blue = ""
-            self.bold_red = ""
-            self.bold_green = ""
-            self.bold_orange = ""
-            self.bold_blue = ""
-            self.reset = ""
-
-term_colors = TermColors()
-
-###############################################################################
-# Build log
-###############################################################################
-
-def __log(color, level, *msg, file=sys.stderr):
-    datestr = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"{color}[{datestr}] builder [{level}]:", *msg, term_colors.reset, file=file)
-
-def debug(*msg):
-    __log(term_colors.blue, "debug", *msg)
-
-def info(*msg):
-    __log(term_colors.green, "info", *msg)
-
-def warning(*msg):
-    __log(term_colors.orange, "warning", *msg)
-
-def error(*msg):
-    __log(term_colors.red, "error", *msg, )
+loader.load_env()
 
 ###############################################################################
 # Utils
@@ -94,7 +27,7 @@ def safe_symlink(src, dst):
     if os.path.islink(dst):
         os.remove(dst)
     if not os.path.exists(dst):
-        info(f"linking {src} -> {dst}")
+        logger.info(f"linking {src} -> {dst}")
         if is_msys():
             if os.path.isdir(src):
                 shutil.copytree(src, dst)
@@ -124,14 +57,14 @@ def get_architecture():
     machine_to_arch = {
         "arm": "32",
         "i386": "32"
-    }.get(get_opt('machine', None), None)
+    }.get(utils.get_opt('machine', None), None)
     if machine_to_arch is not None:
         return machine_to_arch
-    return get_opt('arch', get_host_architecture())
+    return utils.get_opt('arch', get_host_architecture())
 
 def get_machine():
-    machine = get_opt('machine', get_host_machine())
-    if get_opt('arch', None) == "32":
+    machine = utils.get_opt('machine', get_host_machine())
+    if utils.get_opt('arch', None) == "32":
         machine = {
             "arm64": "arm",
         }.get(machine, machine)
@@ -171,18 +104,6 @@ def _build_gnu_triplet(machine, vendor):
 # Build settings
 ###############################################################################
 
-def get_opt(argname, default_val=""):
-    arg_to_find = argname + "="
-    for arg in sys.argv:
-        idx = arg.find(arg_to_find)
-        if idx >= 0:
-            return arg[idx + len(arg_to_find):]
-    return os.getenv(argname, "") or default_val
-
-def is_opt(argname, default_val=""):
-    ret = get_opt(argname, default_val)
-    return ret == "1" or ret.lower() == "true"
-
 def is_termux():
     return "ANDROID_ARGUMENT" in os.environ
 
@@ -193,7 +114,7 @@ def is_msys_mingw():
     return is_msys() and "MINGW" in os.getenv("MSYSTEM")
 
 def __get_platform():
-    env = get_opt("platform", "")
+    env = utils.get_opt("platform", "")
     build_platform = (env or platform.system()).lower()
     if "win" in build_platform or is_msys():
         build_platform = "windows"
@@ -201,7 +122,7 @@ def __get_platform():
 
 def get_compiler():
     build_platform = __get_platform()
-    compiler = get_opt("compiler", default_compiler)
+    compiler = utils.get_opt("compiler", os.getenv("COMPILER", "gcc"))
     if is_termux():
         compiler = "clang"
     if build_platform == "windows" and not is_msys():
@@ -220,31 +141,31 @@ def get_platform():
     return build_platform
 
 def get_pkgdep():
-    return get_opt("pkgdep", "")
+    return utils.get_opt("pkgdep", "")
 
 def get_compile_mode():
-    return get_opt("mode", default_mode).lower()
+    return utils.get_opt("mode", "default").lower()
 
 def has_verbose():
-    return (is_opt("verbose") or is_opt("v"))
+    return (utils.is_opt("verbose") or utils.is_opt("v"))
 
 def has_test():
-    return (is_opt("test") or is_opt("t"))
+    return (utils.is_opt("test") or utils.is_opt("t"))
 
 def has_demo():
-    return is_opt("demo")
+    return utils.is_opt("demo")
 
 def is_address_sanatizer():
-    return is_opt("asan")
+    return utils.is_opt("asan")
 
 def do_distribution():
-    return get_opt("dist", "") != ""
+    return utils.get_opt("dist", "") != ""
 
 def get_modules():
-    return get_opt("modules", "") or get_opt("m", "")
+    return utils.get_opt("modules", "") or utils.get_opt("m", "")
 
 def get_force_build_modules():
-    return get_opt("fmod", "")
+    return utils.get_opt("fmod", "")
 
 def __split_modules(lst):
     return [m for m in lst.split(',') if len(m) > 0]
@@ -256,10 +177,10 @@ def get_force_build_modules_lst():
     return __split_modules(get_force_build_modules())
 
 def is_static_libs():
-    return is_opt("static")
+    return utils.is_opt("static")
 
 def force_git_clone():
-    return is_opt("fgit")
+    return utils.is_opt("fgit")
 
 ###############################################################################
 # Build initialisation
@@ -328,30 +249,30 @@ def verify_args(app):
     global build_static_libs
     ret = True
     if is_msys() and not is_msys_mingw():
-        error("msys2 supported for mingw64 only")
+        logger.error("msys2 supported for mingw64 only")
         ret = False
     # if build_compiler == "mingw":
-    #     error("please use msys2 instead of mingw")
+    #     logger.error("please use msys2 instead of mingw")
     #     ret = False
     if build_compiler not in allowed_compilers:
-        error("compiler {} is not supported".format(build_compiler))
+        logger.error("compiler {} is not supported".format(build_compiler))
         ret = False
     if hasattr(app, "modes") and build_mode not in app.modes:
-        error("mode {} unknown".format(build_mode))
+        logger.error("mode {} unknown".format(build_mode))
         ret = False
     if build_compiler == "mingw":
         if build_asan:
-            error("cannot use address sanitizer with mingw")
+            logger.error("cannot use address sanitizer with mingw")
             ret = False
         if not build_static_libs:
-            warning("not supported Mingw without static libs - switching to static libs")
+            logger.warning("not supported Mingw without static libs - switching to static libs")
             build_static_libs = True
     elif build_compiler == "em":
         if build_asan:
-            error("cannot use address sanitizer with emscripten")
+            logger.error("cannot use address sanitizer with emscripten")
             ret = False
         if not build_static_libs:
-            warning("not supported Emscripten without static libs - switching to static libs")
+            logger.warning("not supported Emscripten without static libs - switching to static libs")
             build_static_libs = True
     return ret
 
@@ -414,13 +335,13 @@ def copy_dll_to_build(generated_lld_binaries):
 
     if has_verbose():
         for dll in dll_found:
-            debug(f"Found expected DLL: {dll}")
+            logger.debug(f"Found expected DLL: {dll}")
 
     for build_dll_path in build_need_dll_path_lst:
         if not os.path.isdir(build_dll_path):
             continue
         if has_verbose():
-            debug(f"Copying DLLs found into: {build_dll_path}")
+            logger.debug(f"Copying DLLs found into: {build_dll_path}")
         for dll_from in dll_found:
             dll_to = os.path.join(build_dll_path, os.path.basename(dll_from))
 
@@ -446,7 +367,7 @@ def symlink_build():
 def create_tar_package(app):
     os.makedirs(build_dist_path, exist_ok = True)
     tar_path = join(build_dist_path, "{}-{}.tar.gz".format(app.name, app.version))
-    info("compressing build to: " + tar_path)
+    logger.info("compressing build to: " + tar_path)
     with tarfile.open(tar_path, "w:gz") as tar:
         # include
         if os.path.isdir(build_hdr_path):
@@ -479,10 +400,10 @@ def create_tar_package(app):
 
 def create_apt_package(app, modules):
     try:
-        modules_extlibs = build_tools_modules.get_modules_extlibs(app, modules, platform)
-        dependencies, missing_dep = build_tools_modules.get_modules_packages(app, "apt", modules_extlibs)
+        modules_extlibs = sbt_modules.get_modules_extlibs(app, modules, platform)
+        dependencies, missing_dep = sbt_modules.get_modules_packages(app, "apt", modules_extlibs)
     except SystemExit as err:
-        error(err)
+        logger.error(err)
         exit(1)
     apt_path = join(build_dist_path, "apt", "{}-{}".format(app.name, app.version))
     debian_path = join(apt_path, "DEBIAN")
@@ -494,10 +415,10 @@ def create_apt_package(app, modules):
     prerm_script_path = join(debian_path, "prerm")
     postrm_script_path = join(debian_path, "postrm")
     apt_share_path = join(apt_path, "usr", "share")
-    info("creating apt package: " + apt_path)
+    logger.info("creating apt package: " + apt_path)
     # debian/control
     os.makedirs(debian_path, exist_ok = True)
-    info("creating apt control file: {}".format(control_path))
+    logger.info("creating apt control file: {}".format(control_path))
     with open(control_path, "w") as fd:
         fd.write("Package: {}\n".format(app.name))
         priority = hasattr(app, "priority") and app.priority or "optional"
@@ -547,7 +468,7 @@ def create_apt_package(app, modules):
     if shutil.which("dpkg-deb") is not None:
         subprocess.call(['dpkg-deb', '--build', apt_path])
     else:
-        error("dpkg-deb is missing")
+        logger.error("dpkg-deb is missing")
 
 ###############################################################################
 # PACMAN distribution
@@ -555,19 +476,19 @@ def create_apt_package(app, modules):
 
 def create_pacman_package(app, modules):
     try:
-        modules_extlibs = build_tools_modules.get_modules_extlibs(app, modules, platform)
-        dependencies, missing_dep = build_tools_modules.get_modules_packages(app, "pacman", modules_extlibs)
+        modules_extlibs = sbt_modules.get_modules_extlibs(app, modules, platform)
+        dependencies, missing_dep = sbt_modules.get_modules_packages(app, "pacman", modules_extlibs)
     except SystemExit as err:
-        error(err)
+        logger.error(err)
         exit(1)
     pacman_path = join(build_dist_path, "pacman", "{}-{}".format(app.name, app.version))
-    info("creating pacman package: " + pacman_path)
+    logger.info("creating pacman package: " + pacman_path)
     os.makedirs(pacman_path, exist_ok = True)
     pkg_build_path = join(pacman_path, "PKGBUILD")
     # change directory to pacman path
     old_cwd = os.getcwd()
     os.chdir(pacman_path)
-    info("creating pacman PKGBUILD: {}".format(pkg_build_path))
+    logger.info("creating pacman PKGBUILD: {}".format(pkg_build_path))
     # create PKGBUILD file
     with open(pkg_build_path, "w") as fd:
         for maintainer in app.maintainers:
@@ -599,9 +520,9 @@ def create_pacman_package(app, modules):
             '\tmake modules={modules} asan={asan} static={static} '
             'platform={platform} compiler={compiler} arch={arch} machine={machine} mode={mode} ')
         .format(
-            modules = get_opt("modules"),
-            asan = get_opt("asan", "0"),
-            static = get_opt("static", "0"),
+            modules = utils.get_opt("modules"),
+            asan = utils.get_opt("asan", "0"),
+            static = utils.get_opt("static", "0"),
             platform = build_platform,
             compiler = build_compiler,
             arch = build_architecture,
@@ -609,7 +530,7 @@ def create_pacman_package(app, modules):
             mode = build_mode,
         ))
         if hasattr(app, "additionnal_build_env"):
-            fd.write(" ".join(["{}={}".format(k, get_opt(k, "0")) for k in app.additionnal_build_env]))
+            fd.write(" ".join(["{}={}".format(k, utils.get_opt(k, "0")) for k in app.additionnal_build_env]))
         fd.write('\n}\n')
         fd.write('\n')
         fd.write(('package() {{\n'
@@ -631,10 +552,10 @@ def create_pacman_package(app, modules):
 ###############################################################################
 
 def distribute_app(app, modules):
-    dist_type = get_opt("dist", None)
+    dist_type = utils.get_opt("dist", None)
     if dist_type is None:
         raise SystemExit("cannot distribute app without its type")
-    info("creating {} distribution for app {}".format(dist_type, app.name))
+    logger.info("creating {} distribution for app {}".format(dist_type, app.name))
     if dist_type == "tar":
         create_tar_package(app)
     elif dist_type == "apt":
@@ -643,40 +564,3 @@ def distribute_app(app, modules):
         create_pacman_package(app, modules)
     else:
         raise SystemExit("cannot distribute app type: {}".format(dist_type))
-
-###############################################################################
-# Python package command line utils
-###############################################################################
-
-if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        sys.exit(0)
-    if sys.argv[1] == "compiler":
-        print(build_compiler)
-    elif sys.argv[1] == "platform":
-        print(build_platform)
-    elif sys.argv[1] == "arch":
-        print(build_architecture)
-    elif sys.argv[1] == "machine":
-        print(build_machine)
-    elif sys.argv[1] == "mode":
-        print(build_mode)
-    elif sys.argv[1] == "android":
-        print(build_on_android and "true" or "false")
-    elif sys.argv[1] == "path":
-        print(build_path)
-    elif sys.argv[1] == "static":
-        print(libs_type)
-    elif sys.argv[1] == "triplet":
-        print(get_gnu_triplet())
-    elif sys.argv[1] == "all":
-        print(" ".join([
-            build_platform,
-            build_machine,
-            build_mode,
-            build_architecture,
-            build_compiler,
-            get_gnu_triplet(),
-            build_on_android and "true" or "false",
-            build_path,
-        ]))

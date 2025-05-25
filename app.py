@@ -74,7 +74,6 @@ modules = {
         # wayland=1 to compile with wayland
         "libs": ['pthread'], # threading
         "extlibs": ['nlohmann-json', 'fmt', 'cxxopts'],
-        "defines": ["FMT_HEADER_ONLY"], # static linkage of fmt lib
         # === Linux specific ===
         "linux-extlibs": ['libuuid'],
         "linux-libs": [
@@ -111,15 +110,12 @@ modules = {
     },
     "core": {
         "depends": ['util'],
-        "inherit-depends-defines": True,
     },
     "ipc": {
         "depends": ['util'],
-        "inherit-depends-defines": True,
     },
     "net": {
         "depends": ['util'],
-        "inherit-depends-defines": True,
         "extlibs": ['openssl'],
         "libs": ['ssl', 'crypto'],
         "windows-libs": [
@@ -131,25 +127,23 @@ modules = {
     },
     "http": {
         "depends": ['net'],
-        "inherit-depends-defines": True,
         "extlibs": [
             'libwebsockets',
             'curl',
             'zlib',
             'libuv',
         ],
-        "linux-extlibs": ["libcap"],
         "libs": [
             'websockets',
             'curl',
             'z',
             'uv',
         ],
+        "linux-extlibs": ["libcap"],
         "linux-libs": ["cap"],
     },
     "pcap": {
         "depends": ['net'],
-        "inherit-depends-defines": True,
         "extlibs": ['libpcap'],
         "libs": ['pcap'],
         # if lib is installed on system
@@ -159,25 +153,21 @@ modules = {
     },
     "zip": {
         "depends": ['util'],
-        "inherit-depends-defines": True,
         "extlibs": ['libzip'],
         "libs": ['zip'],
     },
     "tui": {
         "depends": ['util'],
-        "inherit-depends-defines": True,
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
     },
     "ssh": {
         "depends": ['util'],
-        "inherit-depends-defines": True,
         "extlibs": ["libssh"],
         "libs": ['ssh'],
     },
     "usb": {
         "depends": ['util'],
-        "inherit-depends-defines": True,
         "extlibs": ['libusb'],
         "libs": ['udev'],
         "parse-configs": [
@@ -195,7 +185,6 @@ modules = {
     },
     "imgui": {
         "depends": ['util'],
-        "inherit-depends-defines": True,
         "extlibs": ['imgui', 'libxcrypt'],
         "libs": ["imgui"],
         "linux-libs": ['glfw', 'GLEW', 'GL', 'SDL2'],
@@ -294,6 +283,17 @@ conditionnal_modules = {
     }
 }
 
+def add_fmt_to_modules(modules_list):
+    for module in modules_list.values():
+        # static linkage of fmt lib for all libs
+        if "defines" in module:
+            module["defines"].append("FMT_HEADER_ONLY")
+        else:
+            module["defines"] = ["FMT_HEADER_ONLY"]
+
+add_fmt_to_modules(modules)
+add_fmt_to_modules(conditionnal_modules)
+
 ###############################################################################
 # compilation
 ###############################################################################
@@ -310,7 +310,6 @@ cxx_flags = ['-std=c++20']
 static_defines = ['SIHD_STATIC']
 
 ## mode specifics
-# default is always debug unless specified in site_scons/addon/default_build.py
 modes = ["debug", "fast", "size", "release"]
 
 _default_flags = [

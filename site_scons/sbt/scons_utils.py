@@ -11,7 +11,8 @@ pp = PrettyPrinter(indent=2)
 # Build helpers
 ###############################################################################
 
-from . import builder
+from sbt import builder
+from sbt import logger
 
 __env_to_key = {
     "LIBS": "_libs",
@@ -25,7 +26,7 @@ __env_to_key = {
 def add_env_app_conf(app, env, *keys):
     key = "_".join(keys)
     if builder.build_verbose:
-        builder.debug(f"adding env app conf: {key}")
+        logger.debug(f"adding env app conf: {key}")
     for envkey, to_concat in __env_to_key.items():
         concat = key + to_concat
         attr = getattr(app, concat, None)
@@ -54,7 +55,7 @@ def parse_config_command(env, *configs):
         try:
             env.ParseConfig(config)
         except OSError as e:
-            builder.warning("config '{}' not found".format(config))
+            logger.warning("config '{}' not found".format(config))
 
 # def __do_copy(src, dst, *, follow_symlinks=True):
 #     do_copy = True
@@ -74,7 +75,7 @@ def copy_module_res_into_build(module_name, src, dst, must_exist = True, is_dry_
     module_res = os.path.join(builder.build_root_path, module_name, src)
     build_output = os.path.join(builder.build_path, dst)
     if builder.has_verbose():
-        builder.info("copying resources of module {}/{} -> build/{}".format(module_name, src, dst))
+        logger.info("copying resources of module {}/{} -> build/{}".format(module_name, src, dst))
     if os.path.isfile(module_res):
         if not is_dry_run:
             # __do_copy(module_res, build_output)
@@ -89,7 +90,7 @@ def copy_module_res_into_build(module_name, src, dst, must_exist = True, is_dry_
             errors = exc.args[0]
             for error in errors:
                 src, dst, msg = error
-                builder.error(f"{src} - {dst} -> {msg}")
+                logger.error(f"{src} - {dst} -> {msg}")
     elif must_exist:
         raise RuntimeError("for module {} resource {} not found".format(module_name, module_res))
 
@@ -120,24 +121,24 @@ def get_progress_bar_function(targets):
 
         return progress_function
     except (OSError, IOError) as e:
-        builder.error("won't display progress - reason: " + str(e))
+        logger.error("won't display progress - reason: " + str(e))
     return None
 
 def build_print_built(binaries, demos, tests):
     for modname, binpaths in binaries.items():
-        builder.info("module {} binaries:".format(modname))
+        logger.info("module {} binaries:".format(modname))
         for binpath in binpaths:
-            builder.info("\t{}".format(binpath["path"]))
+            logger.info("\t{}".format(binpath["path"]))
 
     for modname, demopaths in demos.items():
-        builder.info("module {} demos:".format(modname))
+        logger.info("module {} demos:".format(modname))
         for demopath in demopaths:
-            builder.info("\t{}".format(demopath["path"]))
+            logger.info("\t{}".format(demopath["path"]))
 
     for modname, testpaths in tests.items():
-        builder.info("module {} tests:".format(modname))
+        logger.info("module {} tests:".format(modname))
         for testpath in testpaths:
-            builder.info("\t{}".format(testpath["path"]))
+            logger.info("\t{}".format(testpath["path"]))
 
 def __print_err(*args):
     print(*args, file=sys.stderr)
@@ -145,11 +146,11 @@ def __print_err(*args):
 def build_print_status(success, failures_message, build_start_time):
     if not success:
         __print_err("==============================================================")
-        builder.error("BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
-        builder.error(failures_message)
+        logger.error("BUILD FAILED (took {:.3f} sec)".format(time.time() - build_start_time))
+        logger.error(failures_message)
         __print_err("==============================================================")
     else:
-        builder.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
+        logger.info("build succeeded (took {:.3f} sec)".format(time.time() - build_start_time))
 
 def build_failure_to_str(bf):
     """ Convert an element of GetBuildFailures() to a string in a useful way """

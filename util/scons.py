@@ -9,8 +9,8 @@ lib = env.build_lib(srcs)
 
 sihd_util_libname = env.module_format_name()
 
-compile_x11 = builder.is_opt("x11")
-compile_wayland = builder.is_opt("wayland")
+compile_x11 = env.is_opt("x11")
+compile_wayland = env.is_opt("wayland")
 
 if compile_x11:
     env.Append(LIBS = ["X11"])
