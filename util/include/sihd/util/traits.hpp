@@ -238,6 +238,17 @@ concept HasDataSize = requires(T t)
 };
 
 template <typename T>
+concept HasConstDataSize = requires(T t)
+{
+    {
+        t.data()
+    } -> std::convertible_to<typename std::add_pointer_t<const typename T::value_type>>;
+    {
+        t.size()
+    } -> std::convertible_to<std::size_t>;
+};
+
+template <typename T>
 concept Map = Iterable<T> && requires(T t)
 {
     typename T::key_type;
@@ -262,6 +273,14 @@ concept StdFunction = requires(T t)
 //     std::ranges::begin(t);
 //     std::ranges::end(t);
 // };
+
+template <typename T>
+concept IsSpan = HasDataSize<T> && requires(T t, size_t offset)
+{
+    {
+        t.subspan(offset)
+    } -> std::convertible_to<T>;
+};
 
 /**
  * Old SNIFAE

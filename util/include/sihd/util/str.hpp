@@ -174,14 +174,7 @@ std::string remove_enclosing(std::string_view str,
                              int escape = escape_char());
 
 template <typename T>
-bool convert_from_string(std::string_view str, T & value, uint16_t base = 0)
-{
-    (void)str;
-    (void)value;
-    (void)base;
-    static_assert(false, "Type is not explicitly implemented");
-    return false;
-}
+bool convert_from_string(std::string_view str, T & value, uint16_t base = 0);
 
 } // namespace sihd::util::str
 

@@ -34,7 +34,7 @@ class ArrayView: public IArrayView
         // container specialization
         // make sure Container::value_type size is divisible by type size.
         // ex: vector<int8_t> of size 3 may not go into an ArrayView<int32_t> which will be size 0
-        template <traits::HasDataSize Container, typename ValueType = typename Container::value_type>
+        template <traits::HasConstDataSize Container, typename ValueType = typename Container::value_type>
         ArrayView(const Container & container):
             ArrayView(container.data(), (container.size() * sizeof(ValueType)) / sizeof(T))
         {
@@ -44,7 +44,8 @@ class ArrayView: public IArrayView
         // make sure the fundamental type size is divisible by type size.
         // ex: int8_t may not go into an ArrayView<int32_t> which will be size 0
         template <traits::TriviallyCopyable Fundamental>
-        requires(!traits::Pointer<Fundamental>) ArrayView(const Fundamental & value):
+        requires(!traits::Pointer<Fundamental> && !traits::HasConstDataSize<Fundamental>)
+            ArrayView(const Fundamental & value):
             ArrayView(&value, sizeof(Fundamental) / sizeof(T))
         {
         }
@@ -323,7 +324,7 @@ class ArrayView: public IArrayView
         {
             public:
                 // Iterator traits - typedefs and types required to be STL compliant
-                using iterator_category = std::random_access_iterator_tag;
+                using iterator_category = std::contiguous_iterator_tag;
                 using difference_type = std::ptrdiff_t;
                 using value_type = IteratorType;
                 using pointer = IteratorType *;
@@ -381,13 +382,13 @@ class ArrayView: public IArrayView
                     return ret;
                 }
 
-                ArrayIterator & operator+=(const std::ptrdiff_t ptr_diff)
+                ArrayIterator & operator+=(const difference_type ptr_diff)
                 {
                     this->array_curr += ptr_diff;
                     return *this;
                 }
 
-                ArrayIterator & operator-=(const std::ptrdiff_t ptr_diff)
+                ArrayIterator & operator-=(const difference_type ptr_diff)
                 {
                     this->array_curr -= ptr_diff;
                     return *this;
@@ -395,12 +396,17 @@ class ArrayView: public IArrayView
 
                 difference_type operator-(const ArrayIterator & rhs) const { return this->array_curr - rhs.array_curr; }
 
-                ArrayIterator operator+(ssize_t i)
+                ArrayIterator operator+(difference_type i) const
                 {
                     return ArrayIterator(this->array_beg, this->array_curr + i, this->array_end);
                 }
 
-                ArrayIterator operator-(ssize_t i)
+                friend ArrayIterator operator+(difference_type i, const ArrayIterator & it)
+                {
+                    return ArrayIterator(it.array_beg, it.array_curr + i, it.array_end);
+                }
+
+                ArrayIterator operator-(difference_type i) const
                 {
                     return ArrayIterator(this->array_beg, this->array_curr - i, this->array_end);
                 }
@@ -413,14 +419,18 @@ class ArrayView: public IArrayView
                 bool operator<=(const ArrayIterator & rhs) const { return this->array_curr <= rhs.array_curr; }
                 bool operator>=(const ArrayIterator & rhs) const { return !(*this < rhs); }
 
-                reference operator*()
+                reference operator*() const
                 {
                     if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
                         throw std::out_of_range("Array::iterator: iterator out of range");
                     return *this->array_curr;
                 }
 
-                size_t idx()
+                pointer operator->() const { return this->array_curr; }
+
+                reference operator[](difference_type n) const { return *(this->array_curr + n); }
+
+                size_t idx() const
                 {
                     if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
                         return ArrayView<T>::npos;
@@ -445,7 +455,7 @@ class ArrayView: public IArrayView
         {
             public:
                 // Iterator traits - typedefs and types required to be STL compliant
-                using iterator_category = std::random_access_iterator_tag;
+                using iterator_category = std::contiguous_iterator_tag;
                 using difference_type = std::ptrdiff_t;
                 using value_type = IteratorType;
                 using pointer = IteratorType *;
@@ -510,23 +520,28 @@ class ArrayView: public IArrayView
                     return rhs.array_curr - this->array_curr;
                 }
 
-                ReverseArrayIterator operator+(ssize_t i)
+                ReverseArrayIterator operator+(difference_type i) const
                 {
                     return ReverseArrayIterator(this->array_beg, this->array_curr - i, this->array_end);
                 }
 
-                ReverseArrayIterator operator-(ssize_t i)
+                friend ReverseArrayIterator operator+(difference_type i, const ReverseArrayIterator & it)
+                {
+                    return ReverseArrayIterator(it.array_beg, it.array_curr - i, it.array_end);
+                }
+
+                ReverseArrayIterator operator-(difference_type i) const
                 {
                     return ReverseArrayIterator(this->array_beg, this->array_curr + i, this->array_end);
                 }
 
-                ReverseArrayIterator & operator+=(const std::ptrdiff_t ptr_diff)
+                ReverseArrayIterator & operator+=(const difference_type ptr_diff)
                 {
                     this->array_curr -= ptr_diff;
                     return *this;
                 }
 
-                ReverseArrayIterator & operator-=(const std::ptrdiff_t ptr_diff)
+                ReverseArrayIterator & operator-=(const difference_type ptr_diff)
                 {
                     this->array_curr += ptr_diff;
                     return *this;
@@ -540,14 +555,18 @@ class ArrayView: public IArrayView
                 bool operator<=(const ReverseArrayIterator & rhs) const { return this->array_curr >= rhs.array_curr; }
                 bool operator>=(const ReverseArrayIterator & rhs) const { return !(*this < rhs); }
 
-                reference operator*()
+                reference operator*() const
                 {
                     if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
                         throw std::out_of_range("Array::reverse_iterator: iterator out of range");
                     return *this->array_curr;
                 }
 
-                size_t idx()
+                pointer operator->() const { return this->array_curr; }
+
+                reference operator[](difference_type n) const { return *(this->array_curr + n); }
+
+                size_t idx() const
                 {
                     if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
                         return ArrayView<T>::npos;
@@ -574,6 +593,17 @@ class ArrayView: public IArrayView
         const T *_buf_ptr;
         size_t _size;
 };
+
+using iterator_type = ArrayView<int>::iterator;
+static_assert(std::input_iterator<iterator_type>, "failed input iterator");
+// static_assert(std::output_iterator<iterator_type, int>, "failed output iterator");
+static_assert(std::forward_iterator<iterator_type>, "failed forward iterator");
+static_assert(std::input_iterator<iterator_type>, "failed input iterator");
+static_assert(std::bidirectional_iterator<iterator_type>, "failed bidirectional iterator");
+static_assert(std::contiguous_iterator<iterator_type>, "failed contiguous iterator");
+static_assert(std::weakly_incrementable<iterator_type>, "Failed the weakly incrementable test");
+static_assert(std::movable<iterator_type>, "Failed the moveable test");
+static_assert(std::default_initializable<iterator_type>, "Failed the default initializable test");
 
 // typedef for types
 typedef ArrayView<bool> ArrBoolView;

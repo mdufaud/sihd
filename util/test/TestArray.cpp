@@ -507,69 +507,42 @@ TEST_F(TestArray, test_array_store)
 }
 
 // Test all types
+template <typename ArrayType, typename ValueType, typename TypeEnum>
+void test_array_type(ValueType test_value, TypeEnum expected_type)
+{
+    ArrayType arr(1);
+    arr[0] = test_value;
+    EXPECT_EQ(arr[0], test_value);
+    EXPECT_EQ(arr.data_size(), sizeof(ValueType));
+    EXPECT_EQ(arr.data_type(), expected_type);
+}
+
 TEST_F(TestArray, test_array_all)
 {
-    sihd::util::ArrByte buffer_byte(1);
-    buffer_byte[0] = 127;
-    EXPECT_EQ(buffer_byte[0], 127);
-    sihd::util::ArrUByte buffer_ubyte(1);
-    buffer_ubyte[0] = 255;
-    EXPECT_EQ(buffer_ubyte[0], 255);
+    test_array_type<sihd::util::ArrByte, int8_t>(127, Type::TYPE_BYTE);
+    test_array_type<sihd::util::ArrUByte, uint8_t>(255, Type::TYPE_UBYTE);
+    test_array_type<sihd::util::ArrShort, int16_t>(2, Type::TYPE_SHORT);
+    test_array_type<sihd::util::ArrUShort, uint16_t>(2, Type::TYPE_USHORT);
+    test_array_type<sihd::util::ArrInt, int32_t>(2, Type::TYPE_INT);
+    test_array_type<sihd::util::ArrUInt, uint32_t>(static_cast<uint32_t>(-1), Type::TYPE_UINT);
+    test_array_type<sihd::util::ArrLong, long>(1l, Type::TYPE_LONG);
+    test_array_type<sihd::util::ArrULong, unsigned long>(static_cast<unsigned long>(-1), Type::TYPE_ULONG);
 
-    EXPECT_EQ(buffer_byte.data_size(), sizeof(char));
-    EXPECT_EQ(buffer_byte.data_type(), Type::TYPE_BYTE);
-    EXPECT_EQ(buffer_ubyte.data_size(), sizeof(char));
-    EXPECT_EQ(buffer_ubyte.data_type(), Type::TYPE_UBYTE);
-
-    sihd::util::ArrShort buffer_short(1);
-    buffer_short[0] = 2;
-    EXPECT_EQ(buffer_short[0], 2);
-    sihd::util::ArrUShort buffer_ushort(1);
-    buffer_ushort[0] = 2;
-    EXPECT_EQ(buffer_ushort[0], 2u);
-
-    EXPECT_EQ(buffer_short.data_size(), sizeof(short));
-    EXPECT_EQ(buffer_short.data_type(), Type::TYPE_SHORT);
-    EXPECT_EQ(buffer_ushort.data_size(), sizeof(short));
-    EXPECT_EQ(buffer_ushort.data_type(), Type::TYPE_USHORT);
-
-    sihd::util::ArrInt buffer_int(1);
-    buffer_int[0] = 2;
-    EXPECT_EQ(buffer_int[0], 2);
-    sihd::util::ArrUInt buffer_uint(1);
-    buffer_uint[0] = -1;
-    EXPECT_EQ(buffer_uint[0], -1u);
-
-    EXPECT_EQ(buffer_int.data_size(), sizeof(int));
-    EXPECT_EQ(buffer_int.data_type(), Type::TYPE_INT);
-    EXPECT_EQ(buffer_uint.data_size(), sizeof(int));
-    EXPECT_EQ(buffer_uint.data_type(), Type::TYPE_UINT);
-
-    sihd::util::ArrLong buffer_long(1);
-    buffer_long[0] = 1;
-    EXPECT_EQ(buffer_long[0], 1l);
-    sihd::util::ArrULong buffer_ulong(1);
-    buffer_ulong[0] = -1;
-    EXPECT_EQ(buffer_ulong[0], -1ul);
-
-    EXPECT_EQ(buffer_long.data_size(), sizeof(long));
-    EXPECT_EQ(buffer_long.data_type(), Type::TYPE_LONG);
-    EXPECT_EQ(buffer_ulong.data_size(), sizeof(long));
-    EXPECT_EQ(buffer_ulong.data_type(), Type::TYPE_ULONG);
-
-    sihd::util::ArrFloat buffer_float(1);
-    buffer_float[0] = 133.7;
-    EXPECT_FLOAT_EQ(buffer_float[0], 133.7f);
-
-    EXPECT_EQ(buffer_float.data_size(), sizeof(float));
-    EXPECT_EQ(buffer_float.data_type(), Type::TYPE_FLOAT);
-
-    sihd::util::ArrDouble buffer_dbl(1);
-    buffer_dbl[0] = 123.4;
-    EXPECT_FLOAT_EQ(buffer_dbl[0], 123.4);
-
-    EXPECT_EQ(buffer_dbl.data_size(), sizeof(double));
-    EXPECT_EQ(buffer_dbl.data_type(), Type::TYPE_DOUBLE);
+    // For float and double, use EXPECT_FLOAT_EQ for comparison
+    {
+        sihd::util::ArrFloat arr(1);
+        arr[0] = 133.7f;
+        EXPECT_FLOAT_EQ(arr[0], 133.7f);
+        EXPECT_EQ(arr.data_size(), sizeof(float));
+        EXPECT_EQ(arr.data_type(), Type::TYPE_FLOAT);
+    }
+    {
+        sihd::util::ArrDouble arr(1);
+        arr[0] = 123.4;
+        EXPECT_FLOAT_EQ(arr[0], 123.4);
+        EXPECT_EQ(arr.data_size(), sizeof(double));
+        EXPECT_EQ(arr.data_type(), Type::TYPE_DOUBLE);
+    }
 }
 
 TEST_F(TestArray, test_array_move)
@@ -640,24 +613,6 @@ TEST_F(TestArray, test_array_util_create)
     EXPECT_EQ(array_utils::read<int>(_array_ptr, 0), 20);
 }
 
-TEST_F(TestArray, test_array_std)
-{
-    std::array<int, 3> std_arr({1, 2, 3});
-    std::vector<int> std_vec({4, 5, 6});
-
-    Array<int> arr(std_arr);
-    EXPECT_EQ(arr.size(), 3u);
-    EXPECT_EQ(arr.at(0), 1);
-    EXPECT_EQ(arr.at(1), 2);
-    EXPECT_EQ(arr.at(2), 3);
-
-    Array<int> arr2(std_vec);
-    EXPECT_EQ(arr2.size(), 3u);
-    EXPECT_EQ(arr2.at(0), 4);
-    EXPECT_EQ(arr2.at(1), 5);
-    EXPECT_EQ(arr2.at(2), 6);
-}
-
 TEST_F(TestArray, test_array_struct)
 {
     struct Test
@@ -691,6 +646,55 @@ TEST_F(TestArray, test_array_struct)
 
     EXPECT_EQ(arr.str(' '), "2a 00 00 00 39 05 00 00 2a 00 00 00 39 05 00 00");
     EXPECT_FALSE(arr.from_str("2a", " "));
+}
+
+template <typename Container>
+void test_array_from_container(const Container & container)
+{
+    Array<typename Container::value_type> arr(container);
+    EXPECT_EQ(arr.size(), container.size());
+    size_t idx = 0;
+    for (const auto & val : container)
+    {
+        EXPECT_EQ(arr[idx], val);
+        ++idx;
+    }
+
+    // If container is mutable, modify and test copy semantics
+    if constexpr (!std::is_const_v<typename std::remove_reference_t<Container>>)
+    {
+        auto copy = container;
+        if (!copy.empty())
+        {
+            copy[0] = 99;
+            EXPECT_NE(arr[0], 99);
+            arr.from(copy);
+            EXPECT_EQ(arr[0], 99);
+        }
+    }
+}
+
+TEST_F(TestArray, test_array_from_containers)
+{
+    int data[] = {10, 20, 30, 40};
+    std::vector<int> vec_data(std::begin(data), std::end(data));
+    std::array<int, 4> arr_data = {10, 20, 30, 40};
+    std::span<int> span_data(data, 4);
+
+    test_array_from_container(vec_data);
+    test_array_from_container(arr_data);
+    test_array_from_container(span_data);
+}
+
+TEST_F(TestArray, test_array_from_span)
+{
+    Array<int> arr = {1, 2, 3, 4, 5};
+    std::span<int> span(arr);
+    ASSERT_EQ(span.size(), arr.size());
+    ASSERT_EQ(span.data(), arr.data());
+    ASSERT_EQ(span.size_bytes(), arr.byte_size());
+    for (size_t i = 0; i < arr.size(); ++i)
+        EXPECT_EQ(span[i], arr[i]);
 }
 
 } // namespace test

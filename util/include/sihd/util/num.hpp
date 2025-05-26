@@ -21,6 +21,44 @@ bool near(const T & value, const T & expected, const T & abs_error)
     return std::abs(value - expected) <= std::abs(abs_error);
 }
 
+template <typename T>
+T add_no_overflow(T a, T b)
+{
+    if constexpr (std::is_unsigned_v<T>)
+    {
+        if (b > std::numeric_limits<T>::max() - a)
+            return std::numeric_limits<T>::max();
+        return a + b;
+    }
+    else
+    {
+        if ((b > 0) && (a > std::numeric_limits<T>::max() - b))
+            return std::numeric_limits<T>::max();
+        if ((b < 0) && (a < std::numeric_limits<T>::min() - b))
+            return std::numeric_limits<T>::min();
+        return a + b;
+    }
+}
+
+template <typename T>
+T substract_no_overflow(T a, T b)
+{
+    if constexpr (std::is_unsigned_v<T>)
+    {
+        if (b > a)
+            return 0;
+        return a - b;
+    }
+    else
+    {
+        if ((b > 0) && (a < std::numeric_limits<T>::min() + b))
+            return std::numeric_limits<T>::min();
+        if ((b < 0) && (a > std::numeric_limits<T>::max() + b))
+            return std::numeric_limits<T>::max();
+        return a - b;
+    }
+}
+
 } // namespace sihd::util::num
 
 #endif

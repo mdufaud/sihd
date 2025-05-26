@@ -183,4 +183,51 @@ TEST_F(TestArrayView, test_arrayview_vector)
     EXPECT_EQ(container::find(view_int, 3).idx(), 2u);
     EXPECT_EQ(TestArrayView::get_size<int>(vec), vec.size());
 }
+
+TEST_F(TestArrayView, test_arrayview_to_span)
+{
+    Array<int> arr_int({1, 2, 3, 4});
+    ArrayView<int> view_int(arr_int);
+    std::span<const int> span(view_int);
+
+    EXPECT_EQ(span.size(), arr_int.size());
+    EXPECT_EQ(span.data(), arr_int.data());
+    ASSERT_EQ(span.size_bytes(), arr_int.byte_size());
+    EXPECT_TRUE(view_int.is_equal(span));
+}
+
+TEST(TestArrayViewSpan, test_arrayview_from_span)
+{
+    int arr[] = {10, 20, 30, 40};
+    std::span<int> span(arr, 4);
+
+    ArrayView<int> view(span);
+
+    ASSERT_EQ(view.size(), 4u);
+    EXPECT_EQ(view[0], 10);
+    EXPECT_EQ(view[1], 20);
+    EXPECT_EQ(view[2], 30);
+    EXPECT_EQ(view[3], 40);
+
+    // Check that data pointers match
+    EXPECT_EQ(view.data(), span.data());
+
+    // Check is_equal with span
+    EXPECT_TRUE(view.is_equal(span));
+}
+
+TEST(TestArrayViewSpan, test_arrayview_from_span_char)
+{
+    std::string str = "test";
+    std::span<const char> span(str);
+
+    ArrCharView view(span);
+
+    ASSERT_EQ(view.size(), str.size());
+    ASSERT_EQ(view.size(), span.size());
+    ASSERT_EQ(view.byte_size(), span.size_bytes());
+    EXPECT_TRUE(view.is_equal(str));
+    EXPECT_EQ(view.str(), str);
+}
+
 } // namespace test
