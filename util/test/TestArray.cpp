@@ -55,29 +55,32 @@ TEST_F(TestArray, test_array_perf)
     std::vector<Test> vec;
     Array<Test> arr;
 
-    Perf perf_vector("vector");
-    Perf perf_array("array");
     {
-        Timeit it("vector push_back");
-        for (auto i = 0; i < iterations; ++i)
+        Perf perf_vector("vector");
+        Perf perf_array("array");
         {
-            perf_vector.begin();
-            vec.push_back({i, i + 1});
-            perf_vector.end();
+            Timeit it("vector push_back");
+            for (int i = 0; i < iterations; ++i)
+            {
+                perf_vector.begin();
+                vec.push_back({i, i + 1});
+                perf_vector.end();
+            }
         }
-    }
-    {
-        Timeit it("array push_back");
-        for (auto i = 0; i < iterations; ++i)
         {
-            perf_array.begin();
-            arr.push_back({i, i + 1});
-            perf_array.end();
+            Timeit it("array push_back");
+            for (int i = 0; i < iterations; ++i)
+            {
+                perf_array.begin();
+                arr.push_back({i, i + 1});
+                perf_array.end();
+            }
         }
+        perf_vector.log();
+        perf_array.log();
+        ASSERT_TRUE(arr.is_equal(vec));
     }
-    perf_vector.log();
-    perf_array.log();
-    ASSERT_TRUE(arr.is_equal(vec));
+
     {
         Timeit it("vector access");
         for (auto i = 0; i < iterations; ++i)
@@ -107,6 +110,37 @@ TEST_F(TestArray, test_array_perf)
         Timeit it("array copy");
         for (auto i = 0; i < ncopies; ++i)
             auto arr2 = arr;
+    }
+
+    {
+        const size_t size = arr.size();
+        Perf perf_vector("vector");
+        Perf perf_array("array");
+        {
+            Timeit it("vector pop_back");
+            for (size_t i = 0; i < size; ++i)
+            {
+                perf_vector.begin();
+                [[maybe_unused]] auto b = vec.back();
+                [[maybe_unused]] auto f = vec.front();
+                vec.pop_back();
+                perf_vector.end();
+            }
+        }
+        {
+            Timeit it("array pop_back");
+            for (size_t i = 0; i < size; ++i)
+            {
+                perf_array.begin();
+                [[maybe_unused]] auto b = arr.back();
+                [[maybe_unused]] auto f = arr.front();
+                arr.pop_back();
+                perf_array.end();
+            }
+        }
+        perf_vector.log();
+        perf_array.log();
+        ASSERT_TRUE(arr.is_equal(vec));
     }
 }
 
@@ -305,26 +339,23 @@ TEST_F(TestArray, test_array_pop)
     EXPECT_EQ(arr.front(), 10.0);
     EXPECT_EQ(arr.back(), 30.0);
 
-    double popped = arr.pop(1);
+    arr.pop(1);
     EXPECT_EQ(arr.size(), 2ul);
     EXPECT_EQ(arr.capacity(), 3ul);
-    EXPECT_FLOAT_EQ(popped, 20.0);
     EXPECT_FLOAT_EQ(arr[0], 10.0);
     EXPECT_FLOAT_EQ(arr[1], 30.0);
     EXPECT_FLOAT_EQ(arr[2], 0.0);
 
-    popped = arr.pop(0);
+    arr.pop_front();
     EXPECT_EQ(arr.size(), 1ul);
     EXPECT_EQ(arr.capacity(), 3ul);
-    EXPECT_FLOAT_EQ(popped, 10.0);
     EXPECT_FLOAT_EQ(arr[0], 30.0);
     EXPECT_FLOAT_EQ(arr[1], 0.0);
     EXPECT_FLOAT_EQ(arr[2], 0.0);
 
-    popped = arr.pop(0);
+    arr.pop_back();
     EXPECT_EQ(arr.size(), 0ul);
     EXPECT_EQ(arr.capacity(), 3ul);
-    EXPECT_FLOAT_EQ(popped, 30.0);
     EXPECT_FLOAT_EQ(arr[0], 0.0);
     EXPECT_FLOAT_EQ(arr[1], 0.0);
     EXPECT_FLOAT_EQ(arr[2], 0.0);
@@ -340,7 +371,7 @@ TEST_F(TestArray, test_array_read_write)
     EXPECT_EQ(arr[1], 2);
     EXPECT_EQ(arr[2], 3);
     EXPECT_EQ(arr[3], 4);
-    EXPECT_THROW(arr.at(4), std::out_of_range);
+    EXPECT_THROW([[maybe_unused]] auto v = arr.at(4), std::out_of_range);
     arr[1] = 42;
     EXPECT_EQ(arr.at(1), 42);
 }

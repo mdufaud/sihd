@@ -31,6 +31,8 @@ class TestSignal: public ::testing::Test
 
 TEST_F(TestSignal, test_signal_handle)
 {
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
     int sig = SIGUSR1;
     ASSERT_TRUE(signal::handle(sig));
 
@@ -67,6 +69,8 @@ TEST_F(TestSignal, test_signal_handle)
 
 TEST_F(TestSignal, test_signal_waiter)
 {
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
     auto signal_waiter = [](int sig) {
         Timer t([sig] { kill(getpid(), sig); }, std::chrono::milliseconds(20));
 
@@ -81,6 +85,9 @@ TEST_F(TestSignal, test_signal_waiter)
 
 TEST_F(TestSignal, test_signal_watcher)
 {
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
+
     int sig = -1;
 
     SigWatcher watcher("sigint-watcher-test");
@@ -109,6 +116,9 @@ TEST_F(TestSignal, test_signal_watcher)
 
 TEST_F(TestSignal, test_signal_tmp)
 {
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
+
     int sig = SIGWINCH;
 
     auto sig_status = signal::status(sig);

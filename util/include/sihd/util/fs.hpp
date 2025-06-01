@@ -3,6 +3,7 @@
 
 #include <initializer_list>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -61,14 +62,16 @@ bool is_absolute(std::string_view path);
 std::string normalize(std::string_view path);
 std::string trim_path(std::string_view path, std::string_view to_remove);
 void trim_in_path(std::string & path, std::string_view to_remove);
-void trim_in_path(std::vector<std::string> & list, std::string_view to_remove);
+void trim_in_path(std::span<std::string> list, std::string_view to_remove);
 
 std::string parent(std::string_view path);
 std::string filename(std::string_view path);
 std::string extension(std::string_view path);
 
 std::string combine(std::initializer_list<std::string_view> list);
-std::string combine(const std::vector<std::string> & list);
+std::string combine(std::span<std::string_view> list);
+std::string combine(std::span<const std::string> list);
+std::string combine(std::span<const char *> list);
 // if path2 is empty, it will append the separation character to path1
 std::string combine(std::string_view path1, std::string_view path2);
 

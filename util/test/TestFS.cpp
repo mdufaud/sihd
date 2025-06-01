@@ -166,7 +166,7 @@ TEST_F(TestFS, test_fs_fast_io)
 {
     auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
     ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
-    std::string path = fs::combine({tmp_path, "io", "test.txt"});
+    std::string path = fs::combine({tmp_path.string(), "io", "test.txt"});
 
     std::string file_content = "hello world\n";
     EXPECT_TRUE(str::ends_with(path, "/io/test.txt"));
@@ -189,7 +189,7 @@ TEST_F(TestFS, test_fs_permission)
 {
     auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
     ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
-    std::string path = fs::combine({tmp_path, "permission"});
+    std::string path = fs::combine({tmp_path.string(), "permission"});
     std::ofstream ofs(path);
     ofs << "\n";
     ofs.close();

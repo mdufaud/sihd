@@ -14,6 +14,7 @@
 #include <sstream>
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/IArrayView.hpp>
@@ -126,12 +127,149 @@ std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bo
     return s;
 }
 
+template <typename T>
+std::vector<SearchResult> search_impl(std::span<T> list, const std::string & selection)
+{
+    std::vector<SearchResult> ret;
+    ret.reserve(list.size());
+    for (const auto & str : list)
+    {
+        std::string_view sv(str);
+        ret.emplace_back(SearchResult {
+            .distance = levenshtein_distance(sv, selection),
+            .word = std::string(sv.data(), sv.size()),
+        });
+    }
+    std::sort(ret.begin(), ret.end(), [](const auto & pair1, const auto & pair2) {
+        return pair1.distance < pair2.distance;
+    });
+    return ret;
+}
+
+template <typename T>
+std::vector<std::string> to_columns_impl(std::span<T> words, size_t max_width, std::string_view join_with)
+{
+    std::vector<std::string> ret;
+
+    if (words.empty())
+        return {};
+
+    const size_t max_possible_lines = words.size();
+
+    std::vector<size_t> column_size;
+    column_size.resize(max_possible_lines);
+
+    /**
+     * Check every column combinaison to check if we are inside the maximum width
+     */
+    size_t selected_nb_lines = 0;
+    size_t selected_max_line_size = 0;
+    for (size_t line_index = 1; line_index <= max_possible_lines; ++line_index)
+    {
+        const size_t nb_columns = std::ceil(words.size() / (float)line_index);
+        const size_t nb_word_per_columns = line_index;
+
+        bool good = true;
+
+        size_t current_line_size = 0;
+        size_t column_index = 0;
+        while (column_index < nb_columns)
+        {
+            const size_t begin_word_index = nb_word_per_columns * column_index;
+
+            size_t biggest_column_word_size = 0;
+            size_t i = 0;
+            while (i < nb_word_per_columns)
+            {
+                if (begin_word_index + i >= words.size())
+                    break;
+                biggest_column_word_size
+                    = std::max(biggest_column_word_size, std::string_view(words[begin_word_index + i]).size());
+                ++i;
+            }
+
+            current_line_size += biggest_column_word_size;
+            // take the joiner into account
+            if (column_index > 0)
+                current_line_size += join_with.size();
+
+            if (current_line_size > max_width)
+            {
+                good = false;
+                break;
+            }
+
+            column_size[column_index] = biggest_column_word_size;
+
+            ++column_index;
+        }
+
+        if (good)
+        {
+            selected_max_line_size = current_line_size;
+            selected_nb_lines = line_index;
+            break;
+        }
+    }
+
+    if (selected_nb_lines == 0)
+        return {};
+
+    const size_t nb_columns = std::ceil(words.size() / (float)selected_nb_lines);
+
+    ret.reserve(selected_nb_lines);
+
+    size_t line_index = 0;
+    while (line_index < selected_nb_lines)
+    {
+        std::string str;
+        str.reserve(selected_max_line_size);
+
+        size_t column_index = 0;
+        while (column_index < nb_columns)
+        {
+            const size_t word_index = (selected_nb_lines * column_index) + line_index;
+
+            if (word_index >= words.size())
+                break;
+
+            if (column_index > 0)
+                str += join_with;
+
+            str += fmt::format("{0:<{1}}", words[word_index], column_size[column_index]);
+
+            ++column_index;
+        }
+
+        ret.emplace_back(str);
+        ++line_index;
+    }
+
+    return ret;
+}
+
+template <typename T>
+std::vector<std::string> regex_filter_impl(std::span<T> input, const std::string & pattern)
+{
+    std::regex regex_pattern(pattern);
+    std::vector<std::string> output;
+    for (const auto & str : input)
+    {
+        if (std::regex_search(std::string(str), regex_pattern))
+        {
+            output.emplace_back(str);
+        }
+    }
+    return output;
+}
+
 } // namespace
 
 #if defined(__SIHD_WINDOWS__)
 std::string to_str(std::wstring_view utf16_view)
 {
-    const int size = WideCharToMultiByte(CP_UTF8, 0, utf16_view.data(), utf16_view.size(), nullptr, 0, nullptr, nullptr);
+    const int size
+        = WideCharToMultiByte(CP_UTF8, 0, utf16_view.data(), utf16_view.size(), nullptr, 0, nullptr, nullptr);
     std::string utf8_str(size, 0);
     WideCharToMultiByte(CP_UTF8, 0, utf16_view.data(), utf16_view.size(), utf8_str.data(), size, nullptr, nullptr);
     return utf8_str;
@@ -145,6 +283,31 @@ std::wstring to_wstr(std::string_view utf8_view)
     return utf16_str;
 }
 #endif
+
+size_t table_len(const char **table)
+{
+    if (table == nullptr)
+        throw std::invalid_argument("table_len: table cannot be nullptr");
+    const char **ptr = table;
+    while (*ptr)
+        ++ptr;
+    return ptr - table;
+}
+
+size_t table_len(char **table)
+{
+    return table_len(const_cast<const char **>(table));
+}
+
+std::span<const char *> table_span(char **table)
+{
+    return std::span<const char *>(const_cast<const char **>(table), str::table_len(table));
+}
+
+std::span<const char *> table_span(const char **table)
+{
+    return std::span<const char *>(table, str::table_len(table));
+}
 
 bool regex_match(std::string_view str, const std::string & pattern)
 {
@@ -173,14 +336,19 @@ std::string regex_replace(const std::string & str, const std::string & pattern, 
     return std::regex_replace(str, regex_pattern, replace);
 }
 
-std::vector<std::string> regex_filter(const std::vector<std::string> & input, const std::string & pattern)
+std::vector<std::string> regex_filter(std::span<const std::string> input, const std::string & pattern)
 {
-    std::regex regex_pattern(pattern);
-    std::vector<std::string> output;
-    std::copy_if(input.begin(), input.end(), std::back_inserter(output), [&](const std::string & str) {
-        return std::regex_search(str, regex_pattern);
-    });
-    return output;
+    return regex_filter_impl(input, pattern);
+}
+
+std::vector<std::string> regex_filter(std::span<std::string_view> input, const std::string & pattern)
+{
+    return regex_filter_impl(input, pattern);
+}
+
+std::vector<std::string> regex_filter(std::span<const char *> input, const std::string & pattern)
+{
+    return regex_filter_impl(input, pattern);
 }
 
 std::vector<std::string> split(std::string_view str)
@@ -541,12 +709,22 @@ bool println(std::string_view str)
     return true;
 }
 
-std::string join(const std::vector<std::string> & list, std::string_view join_str)
+std::string join(std::initializer_list<std::string_view> list, std::string_view join_str)
 {
     return fmt::format("{}", fmt::join(list, join_str));
 }
 
-std::string join(const std::vector<std::string_view> & list, std::string_view join_str)
+std::string join(std::span<std::string_view> list, std::string_view join_str)
+{
+    return fmt::format("{}", fmt::join(list, join_str));
+}
+
+std::string join(std::span<const std::string> list, std::string_view join_str)
+{
+    return fmt::format("{}", fmt::join(list, join_str));
+}
+
+std::string join(std::span<const char *> list, std::string_view join_str)
 {
     return fmt::format("{}", fmt::join(list, join_str));
 }
@@ -1203,117 +1381,34 @@ std::string wrap(std::string_view s, size_t max_width, std::string_view end_with
     return fmt::format("{}{}", std::string_view(s.data(), max_width - end_with.size()), end_with);
 }
 
-std::vector<std::string>
-    to_columns(const std::vector<std::string> & words, size_t max_width, std::string_view join_with)
+std::vector<std::string> to_columns(std::span<std::string_view> words, size_t max_width, std::string_view join_with)
 {
-    std::vector<std::string> ret;
-
-    if (words.empty())
-        return {};
-
-    const size_t max_possible_lines = words.size();
-
-    std::vector<size_t> column_size;
-    column_size.resize(max_possible_lines);
-
-    /**
-     * Check every column combinaison to check if we are inside the maximum width
-     */
-    size_t selected_nb_lines = 0;
-    size_t selected_max_line_size = 0;
-    for (size_t line_index = 1; line_index <= max_possible_lines; ++line_index)
-    {
-        const size_t nb_columns = std::ceil(words.size() / (float)line_index);
-        const size_t nb_word_per_columns = line_index;
-
-        bool good = true;
-
-        size_t current_line_size = 0;
-        size_t column_index = 0;
-        while (column_index < nb_columns)
-        {
-            const size_t begin_word_index = nb_word_per_columns * column_index;
-
-            size_t biggest_column_word_size = 0;
-            size_t i = 0;
-            while (i < nb_word_per_columns)
-            {
-                if (begin_word_index + i >= words.size())
-                    break;
-                biggest_column_word_size = std::max(biggest_column_word_size, words[begin_word_index + i].size());
-                ++i;
-            }
-
-            current_line_size += biggest_column_word_size;
-            // take the joiner into account
-            if (column_index > 0)
-                current_line_size += join_with.size();
-
-            if (current_line_size > max_width)
-            {
-                good = false;
-                break;
-            }
-
-            column_size[column_index] = biggest_column_word_size;
-
-            ++column_index;
-        }
-
-        if (good)
-        {
-            selected_max_line_size = current_line_size;
-            selected_nb_lines = line_index;
-            break;
-        }
-    }
-
-    if (selected_nb_lines == 0)
-        return {};
-
-    const size_t nb_columns = std::ceil(words.size() / (float)selected_nb_lines);
-
-    ret.reserve(selected_nb_lines);
-
-    size_t line_index = 0;
-    while (line_index < selected_nb_lines)
-    {
-        std::string str;
-        str.reserve(selected_max_line_size);
-
-        size_t column_index = 0;
-        while (column_index < nb_columns)
-        {
-            const size_t word_index = (selected_nb_lines * column_index) + line_index;
-
-            if (word_index >= words.size())
-                break;
-
-            if (column_index > 0)
-                str += join_with;
-
-            str += fmt::format("{0:<{1}}", words[word_index], column_size[column_index]);
-
-            ++column_index;
-        }
-
-        ret.emplace_back(str);
-        ++line_index;
-    }
-
-    return ret;
+    return to_columns_impl(words, max_width, join_with);
 }
 
-std::vector<std::pair<size_t, std::string>> search(const std::vector<std::string> & list, const std::string & selection)
+std::vector<std::string> to_columns(std::span<const std::string> words, size_t max_width, std::string_view join_with)
 {
-    std::vector<std::pair<size_t, std::string>> ret;
-    ret.reserve(list.size());
-    for (const auto & str : list)
-    {
-        ret.emplace_back(levenshtein_distance(str, selection), str);
-    }
-    std::sort(ret.begin(), ret.end(), [](const auto & pair1, const auto & pair2) { return pair1.first < pair2.first; });
-    return ret;
+    return to_columns_impl(words, max_width, join_with);
+}
+
+std::vector<std::string> to_columns(std::span<const char *> words, size_t max_width, std::string_view join_with)
+{
+    return to_columns_impl(words, max_width, join_with);
+}
+
+std::vector<SearchResult> search(std::span<std::string_view> list, const std::string & selection)
+{
+    return search_impl(list, selection);
+}
+
+std::vector<SearchResult> search(std::span<const std::string> list, const std::string & selection)
+{
+    return search_impl(list, selection);
+}
+
+std::vector<SearchResult> search(std::span<const char *> list, const std::string & selection)
+{
+    return search_impl(list, selection);
 }
 
 } // namespace sihd::util::str

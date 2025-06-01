@@ -8,6 +8,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#include <fmt/ranges.h>
+
 #include <sihd/util/File.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
@@ -37,7 +39,7 @@ char g_separator_char = '\\';
 char g_separator_char = '/';
 #endif
 
-bool _is_file_type(std::string_view path, std::filesystem::file_type expected_type)
+bool is_file_type(std::string_view path, std::filesystem::file_type expected_type)
 {
     std::error_code ec;
     auto status = std::filesystem::status(path, ec);
@@ -46,26 +48,21 @@ bool _is_file_type(std::string_view path, std::filesystem::file_type expected_ty
     return status.type() == expected_type;
 }
 
-std::string _combine(std::string_view path1, std::string_view path2)
+std::string combine_impl(std::string_view path1, std::string_view path2)
 {
     if (path1.empty())
         return std::string(path2.data(), path2.size());
     if (path1[path1.size() - 1] == g_separator_char)
-        return std::string(path1.data(), path1.size()) + path2.data();
-    std::string ret;
-    ret.reserve(path1.size() + 1 + path2.size());
-    ret.append(path1);
-    ret.push_back(g_separator_char);
-    ret.append(path2);
-    return ret;
+        return fmt::format("{0}{1}", path1, path2);
+    return fmt::format("{0}{1}{2}", path1, g_separator_char, path2);
 }
 
 #if !defined(__SIHD_WINDOWS__)
 
-void _get_recursive_children(std::string_view path,
-                             std::vector<std::string> & children,
-                             uint32_t current_depth,
-                             uint32_t max_depth)
+void get_recursive_children(std::string_view path,
+                            std::vector<std::string> & children,
+                            uint32_t current_depth,
+                            uint32_t max_depth)
 {
     if (max_depth > 0 && current_depth >= max_depth)
         return;
@@ -78,11 +75,11 @@ void _get_recursive_children(std::string_view path,
         {
             if (strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
                 continue;
-            std::string childpath = _combine(path, dirent->d_name);
+            std::string childpath = combine_impl(path, dirent->d_name);
             if (dirent->d_type & DT_DIR)
             {
                 children.push_back(childpath + g_separator_char);
-                _get_recursive_children(childpath, children, current_depth + 1, max_depth);
+                get_recursive_children(childpath, children, current_depth + 1, max_depth);
             }
             else
             {
@@ -111,6 +108,19 @@ bool do_stat(std::string_view path, struct stat *s)
 #else
     return ::stat(path.data(), s) == 0;
 #endif
+}
+
+template <typename T>
+std::string combine_lst_impl(const T & list)
+{
+    std::string ret;
+
+    for (const auto & path : list)
+    {
+        ret = combine(ret, path);
+    }
+
+    return ret;
 }
 
 } // namespace
@@ -224,37 +234,37 @@ bool is_executable(std::string_view path)
 
 bool is_file(std::string_view path)
 {
-    return _is_file_type(path, std::filesystem::file_type::regular);
+    return is_file_type(path, std::filesystem::file_type::regular);
 }
 
 bool is_dir(std::string_view path)
 {
-    return _is_file_type(path, std::filesystem::file_type::directory);
+    return is_file_type(path, std::filesystem::file_type::directory);
 }
 
 bool is_symlink(std::string_view path)
 {
-    return _is_file_type(path, std::filesystem::file_type::symlink);
+    return is_file_type(path, std::filesystem::file_type::symlink);
 }
 
 bool is_socket(std::string_view path)
 {
-    return _is_file_type(path, std::filesystem::file_type::socket);
+    return is_file_type(path, std::filesystem::file_type::socket);
 }
 
 bool is_block(std::string_view path)
 {
-    return _is_file_type(path, std::filesystem::file_type::block);
+    return is_file_type(path, std::filesystem::file_type::block);
 }
 
 bool is_character(std::string_view path)
 {
-    return _is_file_type(path, std::filesystem::file_type::character);
+    return is_file_type(path, std::filesystem::file_type::character);
 }
 
 bool is_fifo(std::string_view path)
 {
-    return _is_file_type(path, std::filesystem::file_type::fifo);
+    return is_file_type(path, std::filesystem::file_type::fifo);
 }
 
 Timestamp last_write(std::string_view path)
@@ -505,7 +515,7 @@ std::vector<std::string> recursive_children(std::string_view path, uint32_t max_
 {
     std::vector<std::string> ret;
     uint32_t current_depth = 0;
-    _get_recursive_children(path, ret, current_depth, max_depth);
+    get_recursive_children(path, ret, current_depth, max_depth);
     return ret;
 }
 
@@ -566,7 +576,7 @@ void trim_in_path(std::string & path, std::string_view to_remove)
     path = path.substr(idx, path.size());
 }
 
-void trim_in_path(std::vector<std::string> & list, std::string_view to_remove)
+void trim_in_path(std::span<std::string> list, std::string_view to_remove)
 {
     for (auto & path : list)
         trim_in_path(path, to_remove);
@@ -621,31 +631,29 @@ std::string parent(std::string_view path)
     return ret;
 }
 
-std::string combine(std::initializer_list<std::string_view> list)
+std::string combine(std::span<const char *> list)
 {
-    std::string ret;
-
-    for (const std::string_view & path : list)
-    {
-        ret = combine(ret, path);
-    }
-    return ret;
+    return combine_lst_impl(list);
 }
 
-std::string combine(const std::vector<std::string> & list)
+std::string combine(std::initializer_list<std::string_view> list)
 {
-    std::string ret;
+    return combine_lst_impl(list);
+}
 
-    for (const std::string & path : list)
-    {
-        ret = combine(ret, path);
-    }
-    return ret;
+std::string combine(std::span<std::string_view> list)
+{
+    return combine_lst_impl(list);
+}
+
+std::string combine(std::span<const std::string> list)
+{
+    return combine_lst_impl(list);
 }
 
 std::string combine(std::string_view path1, std::string_view path2)
 {
-    return _combine(path1, path2);
+    return combine_impl(path1, path2);
 }
 
 std::string ensure_separation(std::string_view path)

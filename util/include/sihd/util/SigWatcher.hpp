@@ -1,9 +1,9 @@
 #ifndef __SIHD_UTIL_SIGWATCHER_HPP__
 #define __SIHD_UTIL_SIGWATCHER_HPP__
 
-#include <atomic>
 #include <functional>
-#include <thread>
+#include <mutex>
+#include <span>
 
 #include <sihd/util/AStepWorkerService.hpp>
 #include <sihd/util/Named.hpp>
@@ -29,8 +29,8 @@ class SigWatcher: public Named,
         bool add_signal(int sig);
         bool rm_signal(int sig);
 
-        bool add_signals(const std::vector<int> & signals);
-        bool rm_signals(const std::vector<int> & signals);
+        bool add_signals(std::span<const int> signals);
+        bool rm_signals(std::span<const int> signals);
 
         bool call_previous_handler(int sig);
 

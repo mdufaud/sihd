@@ -4,6 +4,7 @@
 #include <atomic>
 #include <csignal>
 #include <functional>
+#include <span>
 
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/IHandler.hpp>
@@ -29,9 +30,10 @@ class Process: public IHandler<Poll *>,
 
         Process();
         Process(std::function<int()> fun);
-        Process(const std::vector<std::string> & args);
-        Process(std::initializer_list<std::string> args);
-        Process(std::initializer_list<const char *> args);
+        Process(std::span<const std::string> args);
+        Process(std::span<std::string_view> args);
+        Process(std::span<const char *> args);
+        Process(std::initializer_list<std::string_view> args);
 
         template <typename... Args,
                   typename = typename std::enable_if_t<traits::are_all_constructible<std::string, Args...>::value>>
@@ -100,14 +102,18 @@ class Process: public IHandler<Poll *>,
         bool stderr_to_file(std::string_view path, bool append = false);
 
         void clear_argv();
-        Process & add_argv(const std::string & arg);
+        Process & add_argv(std::string_view arg);
         Process & add_argv(const std::vector<std::string> & args);
         Process & set_function(std::nullptr_t);
         Process & set_function(std::function<int()> fun);
 
         void env_clear();
-        void env_load(const char **to_load_environ);
-        void env_load(const std::vector<std::string> & to_load_environ);
+
+        void env_load(std::span<std::string_view> to_load_environ);
+        void env_load(std::span<const std::string> to_load_environ);
+        void env_load(std::span<const char *> to_load_environ);
+        void env_load(std::initializer_list<std::string_view> to_load_environ);
+
         void env_set(std::string_view key, std::string_view value);
         bool env_rm(std::string_view key);
         std::optional<std::string> env_get(std::string_view key) const;

@@ -65,7 +65,7 @@ int do_execute(std::shared_ptr<Process> proc_ptr, Timestamp max_timeout)
             proc_ptr->read_pipes(poll_timeout_ms);
         }
         // check the process status - break the loop if exited
-#if !defined(__SIHD_WINDOWS__)
+#if defined(WNOHANG)
         proc_ptr->wait_any(WNOHANG);
 #else
         proc_ptr->wait(poll_timeout_ms);
@@ -87,9 +87,8 @@ int do_execute(std::shared_ptr<Process> proc_ptr, Timestamp max_timeout)
     return static_cast<int>(proc_ptr->return_code());
 }
 
-} // namespace
-
-std::future<int> execute(const std::vector<std::string> & args, const Options & options)
+template <typename T>
+std::future<int> execute_impl(const T & args, const Options & options)
 {
     std::shared_ptr<Process> proc_ptr = std::make_shared<Process>(args);
 
@@ -101,6 +100,28 @@ std::future<int> execute(const std::vector<std::string> & args, const Options & 
     });
 
     return exit_code;
+}
+
+} // namespace
+
+std::future<int> execute(std::span<const std::string> args, const Options & options)
+{
+    return execute_impl(args, options);
+}
+
+std::future<int> execute(std::span<std::string_view> args, const Options & options)
+{
+    return execute_impl(args, options);
+}
+
+std::future<int> execute(std::span<const char *> args, const Options & options)
+{
+    return execute_impl(args, options);
+}
+
+std::future<int> execute(std::initializer_list<std::string_view> args, const Options & options)
+{
+    return execute_impl(args, options);
 }
 
 } // namespace sihd::util::proc

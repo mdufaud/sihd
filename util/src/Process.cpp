@@ -278,6 +278,22 @@ bool read_pipe_into_file(HANDLE fd, std::string & path, bool append)
 
 #endif // Difference LINUX / WINDOWS
 
+template <typename T>
+void env_load_impl(const T & to_load_environ, std::vector<std::string> & environment)
+{
+    for (const auto & env : to_load_environ)
+    {
+        auto [key, value] = str::split_pair_view(env, "=");
+        if (key.empty())
+            continue;
+
+        auto it = get_in_env(environment, key);
+        if (it != environment.end())
+            environment.erase(it);
+        environment.emplace_back(env);
+    }
+}
+
 } // namespace
 
 /**
@@ -583,21 +599,26 @@ Process::Process(std::function<int()> fun): Process()
     _fun_to_execute = fun;
 }
 
-Process::Process(const std::vector<std::string> & args): Process()
+Process::Process(std::span<const std::string> args): Process()
 {
-    _argv = args;
+    _argv = std::vector<std::string>(args.begin(), args.end());
 }
 
-Process::Process(std::initializer_list<const char *> args): Process()
+Process::Process(std::span<std::string_view> args): Process()
 {
-    _argv.reserve(args.size() + 1);
-    std::copy(args.begin(), args.end(), std::back_inserter(_argv));
+    _argv = std::vector<std::string>(args.begin(), args.end());
 }
 
-Process::Process(std::initializer_list<std::string> args): Process()
+Process::Process(std::initializer_list<std::string_view> args): Process()
+{
+    _argv = std::vector<std::string>(args.begin(), args.end());
+}
+
+Process::Process(std::span<const char *> args): Process()
 {
     _argv.reserve(args.size() + 1);
-    std::copy(args.begin(), args.end(), std::back_inserter(_argv));
+    for (const char *arg : args)
+        _argv.emplace_back(arg);
 }
 
 Process::~Process()
@@ -623,38 +644,24 @@ void Process::env_clear()
     _environment.clear();
 }
 
-void Process::env_load(const std::vector<std::string> & to_load_environ)
+void Process::env_load(std::span<const std::string> to_load_environ)
 {
-    for (const std::string & env : to_load_environ)
-    {
-        auto [key, value] = str::split_pair_view(env, "=");
-        if (key.empty())
-            continue;
-
-        auto it = get_in_env(_environment, key);
-        if (it != _environment.end())
-            _environment.erase(it);
-        _environment.emplace_back(env);
-    }
+    env_load_impl(to_load_environ, _environment);
 }
 
-void Process::env_load(const char **to_load_environ)
+void Process::env_load(std::span<const char *> to_load_environ)
 {
-    if (to_load_environ == nullptr)
-        return;
-    int i = 0;
-    while (to_load_environ[i] != nullptr)
-    {
-        auto [key, value] = str::split_pair_view(to_load_environ[i], "=");
-        if (key.empty())
-            continue;
+    env_load_impl(to_load_environ, _environment);
+}
 
-        auto it = get_in_env(_environment, key);
-        if (it != _environment.end())
-            _environment.erase(it);
-        _environment.emplace_back(to_load_environ[i]);
-        ++i;
-    }
+void Process::env_load(std::span<std::string_view> to_load_environ)
+{
+    env_load_impl(to_load_environ, _environment);
+}
+
+void Process::env_load(std::initializer_list<std::string_view> to_load_environ)
+{
+    env_load_impl(to_load_environ, _environment);
 }
 
 void Process::env_set(std::string_view key, std::string_view value)
@@ -714,7 +721,7 @@ void Process::set_force_fork(bool active)
 void Process::clear()
 {
     this->env_clear();
-    this->env_load(const_cast<const char **>(environ));
+    this->env_load(str::table_span(environ));
     this->reset_proc();
     _impl->pipe.reset();
 }
@@ -738,9 +745,9 @@ void Process::clear_argv()
     _argv.clear();
 }
 
-Process & Process::add_argv(const std::string & arg)
+Process & Process::add_argv(std::string_view arg)
 {
-    _argv.push_back(arg);
+    _argv.emplace_back(arg);
     return *this;
 }
 

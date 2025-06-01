@@ -1,5 +1,6 @@
 #include <cxxopts.hpp>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>

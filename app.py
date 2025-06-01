@@ -334,6 +334,7 @@ gcc_flags = [
     "-Wl,-z,now",
     "-Wl,-z,relro",
     "-Wno-unknown-pragmas",
+    # "-fconcepts-diagnostics-depth=2",/
     # hide pragma messages
     # "-ftrack-macro-expansion=0",
     # "-fno-diagnostics-show-caret",

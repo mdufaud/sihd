@@ -284,7 +284,7 @@ class ArrayView: public IArrayView
 
         // "hello world".subview(6) -> "world"
         // "hello world".subview(0, 5) -> "hello"
-        ArrayView<T> subview(size_t pos, size_t count = -1)
+        ArrayView<T> subview(size_t pos, size_t count = -1) const
         {
             pos = std::min(pos, _size);
             count = std::min(count, _size);
@@ -297,10 +297,10 @@ class ArrayView: public IArrayView
         /*********************************************************************/
 
         // data first value
-        inline T front() const { return _buf_ptr[0]; }
+        inline T front() const { return this->at(0); }
 
         // access last value
-        inline T back() const { return _buf_ptr[_size - 1]; }
+        inline T back() const { return this->at(_size - 1); }
 
         // access value at idx - throws out_of_range
         T at(size_t idx) const

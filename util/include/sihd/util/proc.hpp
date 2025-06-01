@@ -3,6 +3,8 @@
 
 #include <functional>
 #include <future>
+#include <initializer_list>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -25,7 +27,10 @@ struct Options
         std::vector<std::string> env = {};
 };
 
-std::future<int> execute(const std::vector<std::string> & args, const Options & options = {});
+std::future<int> execute(std::span<const std::string> args, const Options & options = {});
+std::future<int> execute(std::span<std::string_view> args, const Options & options = {});
+std::future<int> execute(std::span<const char *> args, const Options & options = {});
+std::future<int> execute(std::initializer_list<std::string_view> args, const Options & options = {});
 
 } // namespace sihd::util::proc
 

@@ -123,10 +123,11 @@ TEST_F(TestProcess, test_process_simple)
 
 TEST_F(TestProcess, test_process_out)
 {
+    const std::string progname = "echo";
     std::string output;
-    Process proc {"echo", "hello", "world"};
+    Process proc {progname, "hello", "world"};
 
-    proc.stdout_to([&](std::string_view buffer) { output = buffer; });
+    proc.stdout_to([&output](std::string_view buffer) { output = buffer; });
     EXPECT_EQ(output, "");
     EXPECT_TRUE(proc.execute());
     EXPECT_EQ(output, "");
@@ -491,7 +492,8 @@ TEST_F(TestProcess, test_process_exec_stderr)
     proc::Options options({.stderr_callback = [&printed](std::string_view stderr_str) {
         printed += stderr_str;
     }});
-    auto exit_code = proc::execute({"ls", "/there/is/nothing/here"}, options);
+    const std::string prog_name = "ls";
+    auto exit_code = proc::execute({prog_name, "/there/is/nothing/here"}, options);
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(100)), std::future_status::ready);
     ASSERT_EQ(exit_code.get(), 2);
     EXPECT_EQ(printed, "ls: cannot access '/there/is/nothing/here': No such file or directory\n");
@@ -514,6 +516,8 @@ TEST_F(TestProcess, test_process_exec_stdin)
 
 TEST_F(TestProcess, test_process_exec_timeout)
 {
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
     proc::Options options({.timeout = std::chrono::milliseconds(80)});
     auto exit_code = proc::execute({"cat"}, options);
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(20)), std::future_status::timeout);

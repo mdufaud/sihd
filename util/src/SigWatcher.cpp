@@ -45,7 +45,7 @@ bool SigWatcher::add_signal(int sig)
     return success;
 }
 
-bool SigWatcher::add_signals(const std::vector<int> & signals)
+bool SigWatcher::add_signals(std::span<const int> signals)
 {
     return std::all_of(signals.begin(), signals.end(), [this](int sig) { return this->add_signal(sig); });
 }
@@ -58,7 +58,7 @@ bool SigWatcher::rm_signal(int sig)
            && container::erase(_signals, sig);
 }
 
-bool SigWatcher::rm_signals(const std::vector<int> & signals)
+bool SigWatcher::rm_signals(std::span<const int> signals)
 {
     return std::all_of(signals.begin(), signals.end(), [this](int sig) { return this->rm_signal(sig); });
 }

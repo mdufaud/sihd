@@ -191,17 +191,19 @@ TEST_F(TestStr, test_str_regex_search)
 
 TEST_F(TestStr, test_str_search)
 {
-    const auto results = str::search({"paydays", "day", "moonday", "sunday", "survey"}, "sunday");
+    const std::vector<std::string> list = {"paydays", "day", "moonday", "sunday", "survey"};
+    const auto results = str::search(list, "sunday");
     for (const auto & result : results)
     {
-        fmt::print("{} - {}\n", result.first, result.second);
+        fmt::print("{} - {}\n", result.distance, result.word);
     }
     ASSERT_EQ(results.size(), 5u);
-    EXPECT_EQ(results[0].second, "sunday");
-    EXPECT_EQ(results[1].second, "survey");
-    EXPECT_EQ(results[2].second, "moonday");
-    EXPECT_EQ(results[3].second, "day");
-    EXPECT_EQ(results[4].second, "paydays");
+    EXPECT_EQ(results[0].distance, 0u);
+    EXPECT_EQ(results[0].word, "sunday");
+    EXPECT_EQ(results[1].word, "survey");
+    EXPECT_EQ(results[2].word, "moonday");
+    EXPECT_EQ(results[3].word, "day");
+    EXPECT_EQ(results[4].word, "paydays");
 }
 
 TEST_F(TestStr, test_str_split_pair)
@@ -690,7 +692,7 @@ TEST_F(TestStr, test_str_to_columns)
     std::vector<std::string> words = str::split(str);
 
     const auto create_and_print = [&](size_t max_width) {
-        std::vector columns = str::to_columns(words, max_width);
+        std::vector<std::string> columns = str::to_columns(words, max_width);
         if (!columns.empty())
             fmt::print("{}\n\n", str::join(columns));
         return columns;

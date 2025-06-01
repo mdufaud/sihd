@@ -29,6 +29,9 @@ class TestProcessInfo: public ::testing::Test
 
 TEST_F(TestProcessInfo, test_processinfo)
 {
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Does not work under valgrind";
+
     ProcessInfo pi(getpid());
 
     ASSERT_EQ(pi.pid(), getpid());

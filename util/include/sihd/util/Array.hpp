@@ -665,13 +665,15 @@ class Array: public IArray,
         bool insert(const T & value, size_t idx) { return this->insert(&value, 1, idx); }
 
         // remove value at idx and returns it
-        T pop(size_t idx)
+        void pop(size_t idx)
         {
+            if (idx >= _size)
+                throw std::out_of_range("Array::pop: index exceeds size");
+
             // ex: pop(1)
             // internal buffer: {5, 10, 15}
 
             // get value - might throw - checks idx
-            T ret = this->at(idx);
             size_t len = (_size - (idx + 1)) * this->data_size();
 
             // moving all remaining buffer to current idx
@@ -683,17 +685,11 @@ class Array: public IArray,
             // -> {5, 15, 0}
             --_size;
             // -> {5, 15}
-            return ret;
         }
 
-        T pop_back()
-        {
-            T ret = this->at(_size - 1);
-            --_size;
-            return ret;
-        }
+        void pop_back() { pop(_size - 1); }
 
-        T pop_front() { return pop(0); }
+        void pop_front() { pop(0); }
 
         // set value at idx - throws out_of_range
         void set(size_t idx, const T & value)
@@ -703,7 +699,7 @@ class Array: public IArray,
             _buf_ptr[idx] = value;
         }
 
-        T & get(size_t idx)
+        [[nodiscard]] T & get(size_t idx) const
         {
             if (idx >= _size)
                 throw std::out_of_range("Array::get: index exceeds size");
@@ -715,13 +711,13 @@ class Array: public IArray,
         /*********************************************************************/
 
         // data first value
-        T front() const { return _buf_ptr[0]; }
+        [[nodiscard]] T front() const { return this->at(0); }
 
         // access last value
-        T back() const { return _buf_ptr[_size - 1]; }
+        [[nodiscard]] T back() const { return this->at(_size - 1); }
 
         // access value at idx - throws out_of_range
-        T at(size_t idx) const
+        [[nodiscard]] T at(size_t idx) const
         {
             if (idx >= _size)
                 throw std::out_of_range("Array::at: index exceeds size");

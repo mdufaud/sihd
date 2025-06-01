@@ -117,7 +117,7 @@ VENV_PATH := $(PROJECT_ROOT_PATH)/.venv
 ############
 
 ifeq ($(j),)
-	j := $$[ $(UTILS_LOGICAL_CORE_NUMBER) - 2 ]
+	j := $$[ $(UTILS_LOGICAL_CORE_NUMBER) - 1 ]
 endif
 SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(j) $(SCONS_ARGS)
 

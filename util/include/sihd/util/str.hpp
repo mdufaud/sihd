@@ -1,9 +1,11 @@
 #ifndef __SIHD_UTIL_STR_HPP__
 #define __SIHD_UTIL_STR_HPP__
 
+#include <span>
 #include <string>
 #include <string_view>
 #include <typeinfo>
+#include <variant>
 #include <vector>
 
 #include <sihd/util/IArray.hpp>
@@ -19,10 +21,17 @@ std::string to_str(std::wstring_view view);
 std::wstring to_wstr(std::string_view view);
 #endif
 
+size_t table_len(char **table);
+size_t table_len(const char **table);
+std::span<const char *> table_span(char **table);
+std::span<const char *> table_span(const char **table);
+
 bool regex_match(std::string_view str, const std::string & pattern);
 std::vector<std::string> regex_search(std::string_view str, const std::string & pattern);
 std::string regex_replace(const std::string & str, const std::string & pattern, const std::string & replace);
-std::vector<std::string> regex_filter(const std::vector<std::string> & input, const std::string & pattern);
+std::vector<std::string> regex_filter(std::span<const std::string> input, const std::string & pattern);
+std::vector<std::string> regex_filter(std::span<std::string_view> input, const std::string & pattern);
+std::vector<std::string> regex_filter(std::span<const char *> input, const std::string & pattern);
 
 void append_sep(std::string & str, std::string_view append, std::string_view sep = ",");
 
@@ -68,8 +77,10 @@ std::vector<std::string> split(std::string_view str, std::string_view delimiter)
 std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str, std::string_view delimiter);
 std::pair<std::string, std::string> split_pair(std::string_view str, std::string_view delimiter);
 
-std::string join(const std::vector<std::string> & list, std::string_view join_str = "\n");
-std::string join(const std::vector<std::string_view> & list, std::string_view join_str = "\n");
+std::string join(std::initializer_list<std::string_view> list, std::string_view join_str = "\n");
+std::string join(std::span<std::string_view> list, std::string_view join_str = "\n");
+std::string join(std::span<const std::string> list, std::string_view join_str = "\n");
+std::string join(std::span<const char *> list, std::string_view join_str = "\n");
 
 std::string_view ltrim(std::string_view s);
 std::string_view rtrim(std::string_view s);
@@ -97,11 +108,22 @@ std::vector<std::string> hexdump_fmt(const IArray & arr, size_t cols = 8);
 std::vector<std::string> hexdump_fmt(const IArrayView & arr, size_t cols = 8);
 std::vector<std::string> hexdump_fmt(const void *mem, size_t size, size_t cols = 8);
 
-std::vector<std::pair<size_t, std::string>> search(const std::vector<std::string> & list,
-                                                   const std::string & selection);
+struct SearchResult
+{
+        size_t distance;
+        std::string word;
+};
+
+std::vector<SearchResult> search(std::span<std::string_view> list, const std::string & selection);
+std::vector<SearchResult> search(std::span<const std::string> list, const std::string & selection);
+std::vector<SearchResult> search(std::span<const char *> list, const std::string & selection);
 
 std::vector<std::string>
-    to_columns(const std::vector<std::string> & words, size_t max_col_size, std::string_view join_with = " ");
+    to_columns(std::span<std::string_view> words, size_t max_col_size, std::string_view join_with = " ");
+std::vector<std::string>
+    to_columns(std::span<const std::string> words, size_t max_col_size, std::string_view join_with = " ");
+std::vector<std::string>
+    to_columns(std::span<const char *> words, size_t max_col_size, std::string_view join_with = " ");
 
 bool to_long(std::string_view str, long *ret, uint16_t base = 0);
 bool to_ulong(std::string_view str, unsigned long *ret, uint16_t base = 0);
