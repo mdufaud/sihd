@@ -82,7 +82,7 @@ bool x11_image_to_bitmap(Bitmap & bm, size_t width, size_t height, XImage *image
                 green = (pixel & green_mask) >> 8;
                 red = (pixel & red_mask) >> 16;
 
-                bm.set(x, y, Pixel::rgb(red, green, blue));
+                bm.set(x, height - y - 1, Pixel::rgb(red, green, blue));
             }
         }
         return true;
