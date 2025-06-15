@@ -5,6 +5,7 @@
 
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/ISteppable.hpp>
+#include <sihd/util/Waitable.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/forward.hpp>
 

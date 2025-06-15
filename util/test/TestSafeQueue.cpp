@@ -4,7 +4,6 @@
 #include <gtest/gtest.h>
 
 #include <sihd/util/SafeQueue.hpp>
-#include <sihd/util/Synchronizer.hpp>
 
 namespace test
 {

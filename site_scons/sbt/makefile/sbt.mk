@@ -343,6 +343,7 @@ test: build
 					DEBUGGER_ARGS="$(DEBUGGER_ARGS)" \
 					TEST_ARGS="$(TEST_ARGS)" \
 					REPEAT="$(repeat)" \
+					ASAN_OPTIONS="$(ASAN_OPTIONS)" \
 					bash $(TEST_PATH)/execute_tests.sh "$(TEST_ACTION)" "$(MODULES_NAME_SPLIT)" "$(TEST_NAME_FILTER)" $(TEST_SCRIPT_ARGS)
 
 nointeract_test: TEST_SCRIPT_ARGS += 0>&-
@@ -364,6 +365,9 @@ gdb_test: DEBUGGER = gdb
 gdb_test: test
 gtest: gdb_test
 
+
+
+san_test: ASAN_OPTIONS="detect_leaks=1:halt_on_error=0:strict_init_order=1:detect_odr_violation=1:detect_stack_use_after_return=1:detect_container_overflow=1:alloc_dealloc_mismatch=1:dectect_invalid_pointers_pairs=2:verbosity=0:atexit=1:check_initialization_order=1"
 san_test: asan = 1
 san_test: test
 stest: san_test

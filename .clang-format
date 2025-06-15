@@ -1,6 +1,6 @@
 Language: Cpp
 
-ColumnLimit: 120
+ColumnLimit: 110
 
 # Force pointers to the type for C++.
 DerivePointerAlignment: false

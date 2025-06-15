@@ -11,7 +11,6 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Named.hpp>
-#include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Task.hpp>
 #include <sihd/util/Waitable.hpp>
 
@@ -30,9 +29,9 @@ class Scheduler: public Named,
         void resume();
 
         /**
-         * If a task has a run_at set, it will be played at this exact time, if the scheduler is paused and resumed past
-         * that timestamp, it will be played as soon as possible.
-         * If a task has a run_in set, it will be played relative to the scheduler's unpaused run time
+         * If a task has a run_at set, it will be played at this exact time, if the scheduler is paused and
+         * resumed past that timestamp, it will be played as soon as possible. If a task has a run_in set, it
+         * will be played relative to the scheduler's unpaused run time
          */
         void add_task(Task *t);
         bool remove_task(Task *t);
@@ -77,7 +76,6 @@ class Scheduler: public Named,
         std::atomic<bool> _paused;
         Waitable _waitable_pause;
 
-        Synchronizer _sync;
         time_t _begin_run;
         bool _tasks_prepared;
         std::list<Task *> _trash_task_list;

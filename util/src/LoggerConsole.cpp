@@ -64,7 +64,7 @@ void LoggerConsole::log(const LogInfo & info, std::string_view msg)
                                             level,
                                             info.thread_name.data(),
                                             info.source.data(),
-                                            msg.data(),
+                                            msg,
                                             end);
 
     fwrite(fmt_msg.c_str(), sizeof(char), fmt_msg.size(), stderr);

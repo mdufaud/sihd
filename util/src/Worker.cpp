@@ -9,7 +9,7 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-Worker::Worker(): _started(false), _running(false), _detach(false) {}
+Worker::Worker(): _started(false), _running(false), _detach(false), _sync_start(false), _barrier(2) {}
 
 Worker::Worker(IRunnable *runnable): Worker()
 {
@@ -60,7 +60,7 @@ bool Worker::start_worker(std::string_view name)
     if (ret)
     {
         _worker_thread_name = name;
-        _worker_thread = std::thread(&Worker::_prepare_run, this);
+        _worker_thread = std::thread(&Worker::pre_run, this);
         if (_detach)
             _worker_thread.detach();
     }
@@ -71,24 +71,21 @@ bool Worker::start_worker(std::string_view name)
 
 bool Worker::start_sync_worker(std::string_view name)
 {
-    if (_synchro.total_sync() > 0)
-        return true;
-    _synchro.init_sync(2);
+    ScopedModifier m(_sync_start, false);
+    _sync_start = true;
     bool ret = this->start_worker(name);
     if (ret)
-        _synchro.sync();
-    _synchro.reset();
+        _barrier.arrive_and_wait();
     return ret;
 }
 
-bool Worker::_prepare_run()
+bool Worker::pre_run()
 {
     ScopedModifier m(_running, true);
     thread::set_name(_worker_thread_name);
-    if (_synchro.total_sync() > 0)
-        _synchro.sync();
-    bool ret = this->run();
-    return ret;
+    if (_sync_start)
+        _barrier.arrive_and_wait();
+    return this->run();
 }
 
 bool Worker::run()

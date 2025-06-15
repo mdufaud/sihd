@@ -19,18 +19,20 @@ class Decorator
                 throw std::runtime_error("Error while trying to decorate");
         }
 
-        ~Decorator() {}
+        ~Decorator() { this->reset(); }
 
         bool decorate(Observable<T> *obs)
         {
             this->reset();
             constexpr bool add_to_front = true;
-            bool added = obs->add_observer(&_handler_begin, add_to_front) && obs->add_observer(&_handler_end);
-            if (added == false)
-                obs->remove_observer(&_handler_begin);
-            else
-                _obs_ptr = obs;
-            return added;
+            if (obs->add_observer(&_handler_begin, add_to_front))
+            {
+                if (obs->add_observer(&_handler_end))
+                    _obs_ptr = obs;
+                else
+                    obs->remove_observer(&_handler_begin);
+            }
+            return _obs_ptr == obs;
         }
 
         void reset()

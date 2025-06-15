@@ -127,17 +127,22 @@ bool LineReader::read_next()
         {
             // look for delimiter
             size_t copy_len = 0;
-            const char *match
-                = (const char *)memchr(_read_ptr + _last_read_index, _delimiter, _read_size - _last_read_index);
+            const char *match = (const char *)memchr(_read_ptr + _last_read_index,
+                                                     _delimiter,
+                                                     _read_size - _last_read_index);
             if (match != nullptr)
-            {
                 copy_len = (match - (_read_ptr + _last_read_index)) + (int)(_put_delimiter_in_line);
-            }
             else
                 copy_len = _read_size - _last_read_index;
             // if length to copy is too much for line buffer - reallocate
             if ((fill_idx + copy_len) >= _line_buff_size)
-                this->_reallocate_line(fill_idx + copy_len);
+            {
+                if (this->_reallocate_line(fill_idx + copy_len) == false)
+                {
+                    _error = true;
+                    return false;
+                }
+            }
             // copy from into line either full read buffer or just matching part
             memcpy(_line_ptr + fill_idx, _read_ptr + _last_read_index, copy_len);
             // prepare next loop/call

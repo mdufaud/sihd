@@ -53,7 +53,8 @@ bool x11_is_window_readable(XWindowAttributes gwa)
     SIHD_TRACEV(gwa.backing_store);
     SIHD_TRACEV(gwa.depth);
     SIHD_TRACEV(gwa.root);
-    return gwa.c_class == InputOutput && gwa.map_state == IsViewable && gwa.map_installed == 0;
+    return gwa.c_class == InputOutput && gwa.map_state == IsViewable;
+    // return gwa.c_class == InputOutput && gwa.map_state == IsViewable && gwa.map_installed == 0;
 }
 
 bool x11_image_to_bitmap(Bitmap & bm, size_t width, size_t height, XImage *image)
@@ -112,7 +113,7 @@ bool x11_screenshot_window(Bitmap & bm, Display *display, Window window)
     const int width = gwa.width;
     const int height = gwa.height;
 
-    XImage *image = XGetImage(display, window, 0, 0, 1024, 786, AllPlanes, ZPixmap);
+    XImage *image = XGetImage(display, window, 0, 0, width, height, AllPlanes, ZPixmap);
     if (image == nullptr)
     {
         return false;
@@ -153,7 +154,8 @@ bool take_screen_from_window(Bitmap & bm, HWND window)
                                       SRCCOPY | CAPTUREBLT);
                     if (bOK)
                     {
-                        SelectObject(hdcCompatible, hOldBmp); // always select the previously selected object once done
+                        SelectObject(hdcCompatible,
+                                     hOldBmp); // always select the previously selected object once done
 
                         BITMAPINFO MyBMInfo;
                         memset(&MyBMInfo, 0, sizeof(MyBMInfo));
@@ -289,7 +291,15 @@ bool take_under_cursor(Bitmap & bm)
         Window child, root_win;
         int root_x, root_y, win_x, win_y;
         unsigned int mask_return;
-        if (!XQueryPointer(x11.display, root, &root_win, &child, &root_x, &root_y, &win_x, &win_y, &mask_return))
+        if (!XQueryPointer(x11.display,
+                           root,
+                           &root_win,
+                           &child,
+                           &root_x,
+                           &root_y,
+                           &win_x,
+                           &win_y,
+                           &mask_return))
         {
             return false;
         }

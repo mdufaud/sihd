@@ -264,7 +264,8 @@ bool Scheduler::remove_task(Task *task)
         found = true;
     }
 
-    const auto map_it = container::find_if(_task_map, [&task](const auto & pair) { return task == pair.second; });
+    const auto map_it
+        = container::find_if(_task_map, [&task](const auto & pair) { return task == pair.second; });
     if (map_it != _task_map.end())
     {
         _task_map.erase(map_it);

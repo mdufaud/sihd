@@ -81,18 +81,19 @@ IpAddr find(std::string_view host, bool ipv6, int socktype, int protocol)
 {
     IpAddr ret;
 
-    ask_dns(host, [&ret, &ipv6, &socktype, &protocol](const IpAddr & addr, int addr_socktype, int addr_protocol) {
-        const bool good_socktype = socktype < 0 || socktype == addr_socktype;
-        const bool good_protocol = protocol < 0 || protocol == addr_protocol;
-        const bool good_iptype = ipv6 == addr.is_ipv6();
+    ask_dns(host,
+            [&ret, &ipv6, &socktype, &protocol](const IpAddr & addr, int addr_socktype, int addr_protocol) {
+                const bool good_socktype = socktype < 0 || socktype == addr_socktype;
+                const bool good_protocol = protocol < 0 || protocol == addr_protocol;
+                const bool good_iptype = ipv6 == addr.is_ipv6();
 
-        const bool found = good_iptype && good_protocol && good_socktype;
+                const bool found = good_iptype && good_protocol && good_socktype;
 
-        if (found)
-            ret = addr;
+                if (found)
+                    ret = addr;
 
-        return found;
-    });
+                return found;
+            });
 
     return ret;
 }

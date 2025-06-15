@@ -32,7 +32,7 @@ void LoggerFile::log(const LogInfo & info, std::string_view msg)
                            info.thread_name.data(),
                            info.strlevel,
                            info.source.data(),
-                           msg.data());
+                           msg);
 
     _file.write_unlocked(fmt_msg);
 }

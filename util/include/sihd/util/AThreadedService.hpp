@@ -1,6 +1,8 @@
 #ifndef __SIHD_UTIL_THREADEDSERVICE_HPP__
 #define __SIHD_UTIL_THREADEDSERVICE_HPP__
 
+#include <barrier>
+
 #include <sihd/util/AService.hpp>
 #include <sihd/util/ThreadedServiceController.hpp>
 #include <sihd/util/Worker.hpp>
@@ -17,7 +19,10 @@ class AThreadedService: public sihd::util::AService
         // only if service started a thread
         void set_start_synchronised(bool active);
 
-        virtual sihd::util::AService::IServiceController *service_ctrl() override { return &_service_controller; }
+        virtual sihd::util::AService::IServiceController *service_ctrl() override
+        {
+            return &_service_controller;
+        }
 
     protected:
         virtual bool on_start() = 0;
@@ -35,9 +40,8 @@ class AThreadedService: public sihd::util::AService
         ThreadedServiceController _service_controller;
 
     private:
-        Synchronizer _synchro;
+        std::unique_ptr<std::barrier<>> _barrier_ptr;
         std::string _thread_name;
-        uint8_t _number_of_threads;
         bool _start_synchronised;
 };
 

@@ -51,8 +51,8 @@ bool to_sockaddr_in(sockaddr_in *addr, std::string_view ip, int port = 0)
     int ret = inet_pton(AF_INET, ip.data(), &addr->sin_addr);
     if (ret <= 0)
     {
-        // 0 is returned if src does not contain a character string representing a valid network address in the
-        // specified address family
+        // 0 is returned if src does not contain a character string representing a valid network address in
+        // the specified address family
         if (ret == -1)
             SIHD_LOG(error, "IpAddr: to_sockaddr_in error for ip '{}': {}", ip, strerror(errno));
         return false;
@@ -67,8 +67,8 @@ bool to_sockaddr_in6(sockaddr_in6 *addr, std::string_view ip, int port = 0)
     int ret = inet_pton(AF_INET6, ip.data(), &addr->sin6_addr);
     if (ret <= 0)
     {
-        // 0 is returned if src does not contain a character string representing a valid network address in the
-        // specified address family
+        // 0 is returned if src does not contain a character string representing a valid network address in
+        // the specified address family
         if (ret == -1)
             SIHD_LOG(error, "IpAddr: to_sockaddr_in6 error for ip '{}': {}", ip, strerror(errno));
         return false;
@@ -137,16 +137,22 @@ IpAddr::IpAddr(const sockaddr & addr, size_t addr_len): IpAddr()
     }
     else if (addr.sa_family == AF_INET6 && (addr_len == 0 || addr_len == sizeof(sockaddr_in6)))
     {
-        memcpy(&_addr.sockaddr, &addr, sizeof(sockaddr_in));
+        memcpy(&_addr.sockaddr, &addr, sizeof(sockaddr_in6));
         _port = ntohs(_addr.sockaddr_in6.sin6_port);
     }
 }
 
 IpAddr::IpAddr(const sockaddr & addr): IpAddr(addr, 0) {}
 
-IpAddr::IpAddr(const sockaddr_in & addr): IpAddr(reinterpret_cast<const sockaddr &>(addr), sizeof(sockaddr_in)) {}
+IpAddr::IpAddr(const sockaddr_in & addr):
+    IpAddr(reinterpret_cast<const sockaddr &>(addr), sizeof(sockaddr_in))
+{
+}
 
-IpAddr::IpAddr(const sockaddr_in6 & addr): IpAddr(reinterpret_cast<const sockaddr &>(addr), sizeof(sockaddr_in6)) {}
+IpAddr::IpAddr(const sockaddr_in6 & addr):
+    IpAddr(reinterpret_cast<const sockaddr &>(addr), sizeof(sockaddr_in6))
+{
+}
 
 IpAddr::IpAddr(const IpAddr & addr): IpAddr()
 {

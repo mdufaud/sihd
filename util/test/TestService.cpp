@@ -20,35 +20,33 @@ class FakeThreadedService: public AThreadedService
 
         bool on_start() override
         {
-            thread = std::thread([this] {
+            thread1 = std::jthread([this] {
                 started = true;
                 this->notify_service_thread_started();
             });
+            thread2 = std::jthread([this] { this->notify_service_thread_started(); });
+            thread3 = std::jthread([this] { this->notify_service_thread_started(); });
             return true;
         }
 
         bool on_stop() override
         {
             started = false;
-            if (thread.joinable())
-                thread.join();
             return true;
         }
 
         bool is_running() const override { return started; }
 
         bool started = false;
-        std::thread thread;
+        std::jthread thread1;
+        std::jthread thread2;
+        std::jthread thread3;
 };
 
 class FakeBlockingService: public ABlockingService
 {
     public:
-        ~FakeBlockingService()
-        {
-            this->stop();
-            this->service_wait_stop();
-        }
+        ~FakeBlockingService() { this->stop(); }
 
         bool on_start() override
         {
@@ -269,6 +267,7 @@ TEST_F(TestService, test_service_normal_impl)
 TEST_F(TestService, test_service_blocking)
 {
     FakeBlockingService service;
+    service.set_service_wait_stop(true);
 
     EXPECT_FALSE(service.stop());
     EXPECT_FALSE(service.is_running());
@@ -291,21 +290,21 @@ TEST_F(TestService, test_service_blocking)
 
 TEST_F(TestService, test_service_threaded)
 {
-    FakeThreadedService service;
+    std::unique_ptr<AService> service_ptr = std::make_unique<FakeThreadedService>();
 
-    service.set_start_synchronised(true);
+    dynamic_cast<AThreadedService *>(service_ptr.get())->set_start_synchronised(true);
 
-    EXPECT_FALSE(service.stop());
+    EXPECT_FALSE(service_ptr->stop());
 
-    EXPECT_TRUE(service.start());
-    EXPECT_FALSE(service.start());
-    EXPECT_TRUE(service.is_running());
+    EXPECT_TRUE(service_ptr->start());
+    EXPECT_FALSE(service_ptr->start());
+    EXPECT_TRUE(service_ptr->is_running());
 
-    EXPECT_TRUE(service.stop());
-    EXPECT_FALSE(service.is_running());
-    EXPECT_FALSE(service.stop());
+    EXPECT_TRUE(service_ptr->stop());
+    EXPECT_FALSE(service_ptr->is_running());
+    EXPECT_FALSE(service_ptr->stop());
 
-    EXPECT_TRUE(service.reset());
+    EXPECT_TRUE(service_ptr->reset());
 }
 
 } // namespace test

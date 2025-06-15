@@ -252,14 +252,25 @@ if compiler == "clang":
         RANLIB = "ranlib",
     )
     if builder.build_asan:
+        clang_asan_flags = [
+            "-fsanitize=address,leak",
+            "-fno-omit-frame-pointer", # Leave frame pointers. Allows the fast unwinder to function properly.
+            "-fno-common", # helps detect global variables issues
+            "-fno-inline" # readable stack traces
+        ]
         base_env.Append(
-            CPPFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"],
-            LINKFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"]
+            CPPFLAGS = clang_asan_flags,
+            LINKFLAGS = clang_asan_flags
         )
     if builder.build_static_libs:
         base_env.ParseConfig("llvm-config --libs --system-libs --link-static")
     else:
         base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
+
+    if builder.build_static_libs and builder.build_asan:
+        base_env.Append(
+            LINKFLAGS = ["-static-libasan"]
+        )
 # MINGW build
 elif compiler == "mingw":
     prefix = "x86_64-w64-mingw32-"
@@ -308,13 +319,23 @@ elif compiler == "gcc":
         RANLIB = prefix + "ranlib",
     )
     if builder.build_asan:
+        gcc_asan_flags = [
+            "-fsanitize=address", # With gcc - has leak enabled by default
+            "-fno-omit-frame-pointer", # Leave frame pointers. Allows the fast unwinder to function properly.
+            "-fno-common", # helps detect global variables issues
+            "-fno-inline" # readable stack traces
+        ]
         base_env.Append(
-            CPPFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"],
-            LINKFLAGS = ["-fsanitize=address", "-fno-omit-frame-pointer"]
+            CPPFLAGS = gcc_asan_flags,
+            LINKFLAGS = gcc_asan_flags
         )
     if builder.build_static_libs:
         base_env.Append(
             LINKFLAGS = ["-static", "-static-libgcc", "-static-libstdc++"]
+        )
+    if builder.build_static_libs and builder.build_asan:
+        base_env.Append(
+            LINKFLAGS = ["-static-libasan"]
         )
 # EMSCRIPTEN build
 elif compiler == "em":

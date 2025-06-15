@@ -67,8 +67,8 @@ class TestLogger: public ::testing::Test
 
         bool has_logged_every_levels()
         {
-            return log_counter->debug > 0 && log_counter->info > 0 && log_counter->warning > 0 && log_counter->error > 0
-                   && log_counter->critical > 0;
+            return log_counter->debug > 0 && log_counter->info > 0 && log_counter->warning > 0
+                   && log_counter->error > 0 && log_counter->critical > 0;
         }
 
         std::string _old_thread_name;
@@ -140,10 +140,10 @@ TEST_F(TestLogger, test_logger_filter_message)
 TEST_F(TestLogger, test_logger_filter_thread)
 {
     // test filter all threads except main
-
     LoggerManager::filter(new LoggerFilter({
         .thread_ne = thread::id(),
     }));
+
     SIHD_LOG(info, "Should count");
     EXPECT_EQ(log_counter->info, 1);
 

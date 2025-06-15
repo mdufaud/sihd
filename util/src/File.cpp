@@ -410,8 +410,9 @@ bool File::open_mem(std::string_view mode, std::string_view put_in_buffer)
         _close(fd);
         return false;
     }
-    /*File descriptors passed into _fdopen are owned by the returned FILE * stream. If _fdopen is successful, do not
-     * call _close on the file descriptor.Calling fclose on the returned FILE * also closes the file descriptor.*/
+    /*File descriptors passed into _fdopen are owned by the returned FILE * stream. If _fdopen is successful,
+     * do not call _close on the file descriptor.Calling fclose on the returned FILE * also closes the file
+     * descriptor.*/
     rewind(stream);
 #else
     stream = fmemopen(_buf_ptr, _buf_size, mode.data());

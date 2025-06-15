@@ -23,7 +23,7 @@ void LoggerStream::log(const LogInfo & info, std::string_view msg)
                               info.thread_name.data(),
                               info.strlevel,
                               info.source.data(),
-                              msg.data());
+                              msg);
     }
     else
     {
@@ -33,7 +33,7 @@ void LoggerStream::log(const LogInfo & info, std::string_view msg)
                               info.thread_name.data(),
                               info.strlevel,
                               info.source.data(),
-                              msg.data());
+                              msg);
     }
     fwrite(fmt_msg.c_str(), sizeof(char), fmt_msg.size(), _output);
 }

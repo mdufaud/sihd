@@ -5,16 +5,19 @@ namespace sihd::util
 
 AThreadedService::AThreadedService(std::string_view thread_name):
     _thread_name(thread_name),
-    _number_of_threads(1),
     _start_synchronised(false)
 {
+    this->set_service_nb_thread(1);
 }
 
 AThreadedService::~AThreadedService() {}
 
 void AThreadedService::set_service_nb_thread(uint8_t n)
 {
-    _number_of_threads = n;
+    if (n > 0)
+        _barrier_ptr = std::make_unique<std::barrier<>>(n + 1);
+    else
+        _barrier_ptr.reset();
 }
 
 void AThreadedService::set_start_synchronised(bool active)
@@ -26,13 +29,10 @@ bool AThreadedService::do_start()
 {
     bool ret;
 
-    if (_start_synchronised && _number_of_threads > 0)
+    if (_start_synchronised && _barrier_ptr)
     {
-        _synchro.init_sync(_number_of_threads + 1);
         ret = this->on_start();
-        if (ret)
-            _synchro.sync();
-        _synchro.reset();
+        _barrier_ptr->arrive_and_wait();
     }
     else
         ret = this->on_start();
@@ -47,8 +47,8 @@ bool AThreadedService::do_stop()
 
 void AThreadedService::notify_service_thread_started()
 {
-    if (_synchro.total_sync() > 0)
-        _synchro.sync();
+    if (_barrier_ptr)
+        _barrier_ptr->arrive_and_wait();
 }
 
 const std::string & AThreadedService::thread_name() const

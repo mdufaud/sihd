@@ -64,8 +64,6 @@ class MessageField;
 class Message;
 class DynMessage;
 
-class Synchronizer;
-
 class SystemClock;
 class SteadyClock;
 

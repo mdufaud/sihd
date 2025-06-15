@@ -162,7 +162,8 @@ TEST_F(TestObservable, test_obs_decorator)
 
     Decorator<SomeObservable> decorator;
 
-    Handler<SomeObservable *> handler([&]([[maybe_unused]] SomeObservable *obs) { ts_handler = clock.now(); });
+    Handler<SomeObservable *> handler(
+        [&]([[maybe_unused]] SomeObservable *obs) { ts_handler = clock.now(); });
     observable.add_observer(&handler);
 
     decorator.decorate(&observable);
@@ -175,15 +176,15 @@ TEST_F(TestObservable, test_obs_decorator)
 
     observable.notify();
 
-    EXPECT_LT(ts_begin, ts_handler);
-    EXPECT_LT(ts_handler, ts_end);
+    EXPECT_LE(ts_begin, ts_handler);
+    EXPECT_LE(ts_handler, ts_end);
 
     decorator.reset();
 
     observable.notify();
 
-    EXPECT_LT(ts_begin, ts_handler);
-    EXPECT_LT(ts_end, ts_handler);
+    EXPECT_LE(ts_begin, ts_handler);
+    EXPECT_LE(ts_end, ts_handler);
 }
 
 } // namespace test

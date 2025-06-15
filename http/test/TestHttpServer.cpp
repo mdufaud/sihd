@@ -243,7 +243,7 @@ TEST_F(TestHttpServer, test_httpserver_websockets)
     watcher.start();
 
     SIHD_LOG(info, "=========================================================");
-    SIHD_LOG(info, "Open web browser at localhost:3000 then close it");
+    SIHD_LOG(info, "Open web browser at http://localhost:3000 then close it");
     SIHD_LOG(info, "=========================================================");
 
     server.start();
