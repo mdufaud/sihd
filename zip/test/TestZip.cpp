@@ -52,7 +52,12 @@ TEST_F(TestZip, test_zip_tools)
     {
         child = str::replace(child, "unzipped", "origin");
     }
-    EXPECT_EQ(fs::recursive_children(origin_path), children_fs);
+    std::sort(children_fs.begin(), children_fs.end());
+
+    auto origin_fs = fs::recursive_children(origin_path);
+    std::sort(origin_fs.begin(), origin_fs.end());
+
+    EXPECT_EQ(origin_fs, children_fs);
 }
 
 } // namespace test
