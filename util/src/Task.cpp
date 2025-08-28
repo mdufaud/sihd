@@ -26,7 +26,7 @@ Task::Task(std::function<bool(void)> fun, const TaskOptions & options): Task(opt
     _run_method = std::move(fun);
 }
 
-Task::~Task() {}
+Task::~Task() = default;
 
 void Task::set_method(std::function<bool(void)> fun)
 {

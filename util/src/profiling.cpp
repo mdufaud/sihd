@@ -18,12 +18,15 @@ Timeit::~Timeit()
     const time_t duration = std::max(time_t {0}, _clock.now() - _begin);
     const bool show_nano = duration < time::micro(1);
 
-    SIHD_LOG(debug, "Time<{}>: {}", _fun_name, Timestamp(duration).timeoffset_str(show_total_parenthesis, show_nano));
+    SIHD_LOG(debug,
+             "Time<{}>: {}",
+             _fun_name,
+             Timestamp(duration).timeoffset_str(show_total_parenthesis, show_nano));
 }
 
 Perf::Perf(const char *fun_name): _fun_name(fun_name), _begin(0) {}
 
-Perf::~Perf() {}
+Perf::~Perf() = default;
 
 void Perf::begin()
 {

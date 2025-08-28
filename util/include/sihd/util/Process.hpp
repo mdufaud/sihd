@@ -36,7 +36,8 @@ class Process: public IHandler<Poll *>,
         Process(std::initializer_list<std::string_view> args);
 
         template <typename... Args,
-                  typename = typename std::enable_if_t<traits::are_all_constructible<std::string, Args...>::value>>
+                  typename
+                  = typename std::enable_if_t<traits::are_all_constructible<std::string, Args...>::value>>
         Process(const Args &...args): Process()
         {
             _argv.reserve(sizeof...(Args));

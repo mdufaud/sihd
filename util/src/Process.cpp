@@ -22,8 +22,6 @@
 
 #include <cerrno>
 #include <cstdio>
-#include <cstring> // strerror
-#include <fstream>
 #include <stdexcept>
 
 #ifndef SIHD_PROCESS_READ_BUFFER_SIZE
@@ -35,6 +33,7 @@
 #endif
 
 #include <sihd/util/Defer.hpp>
+#include <sihd/util/File.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Process.hpp>
 #include <sihd/util/Timestamp.hpp>
@@ -63,7 +62,8 @@ namespace
 
 auto get_in_env(const std::vector<std::string> & env, std::string_view key)
 {
-    return container::find_if(env, [&key](const std::string & env) { return str::starts_with(env, key, "="); });
+    return container::find_if(env,
+                              [&key](const std::string & env) { return str::starts_with(env, key, "="); });
 }
 
 #if !defined(__SIHD_WINDOWS__)
@@ -74,7 +74,7 @@ void safe_close(int & fd)
         return;
     if (close(fd) == -1)
     {
-        SIHD_LOG(error, "Process: could not close fd: {}", strerror(errno));
+        SIHD_LOG(error, "Process: could not close fd: {}", os::last_error_str());
     }
     else
     {
@@ -123,7 +123,7 @@ void dup_close(int fd_from, int fd_to)
         return;
     if (dup2(fd_from, fd_to) == -1)
     {
-        SIHD_LOG(error, "Process: could not duplicate fd: {}", strerror(errno));
+        SIHD_LOG(error, "Process: could not duplicate fd: {}", os::last_error_str());
     }
     safe_close(fd_from);
 }
@@ -160,15 +160,16 @@ bool write_into_pipe(int fd, const std::string & str)
     return ret >= 0 && ret == (ssize_t)str.size();
 }
 
-bool read_pipe_into_file(int fd, std::string & path, bool append)
+bool read_pipe_into_file(int fd, const std::string & path, bool append)
 {
-    std::ofstream file(path, append ? std::ostream::app : std::ostream::out);
+    File file(path, append ? "a" : "w");
+
+    if (!file.is_open())
+        return false;
 
     auto fun = [&file](std::string_view buffer) {
-        file << buffer;
+        file.write(buffer.data(), buffer.size());
     };
-    if (!file.is_open() || !file.good())
-        return false;
     return read_pipe_into_callback(fd, fun);
 }
 
@@ -228,7 +229,7 @@ void safe_close(HANDLE & fd)
         return;
     if (!CloseHandle(fd))
     {
-        SIHD_LOG(error, "Process: could not close fd: {}", strerror(errno));
+        SIHD_LOG(error, "Process: could not close fd: {}", os::last_error_str());
     }
     else
     {
@@ -264,15 +265,16 @@ bool write_into_pipe(HANDLE fd, const std::string & str)
     return success && written == (ssize_t)str.size();
 }
 
-bool read_pipe_into_file(HANDLE fd, std::string & path, bool append)
+bool read_pipe_into_file(HANDLE fd, const std::string & path, bool append)
 {
-    std::ofstream file(path, append ? std::ostream::app : std::ostream::out);
+    File file(path, append ? "a" : "w");
+
+    if (!file.is_open())
+        return false;
 
     auto fun = [&file](std::string_view buffer) {
-        file << buffer;
+        file.write(buffer.data(), buffer.size());
     };
-    if (!file.is_open() || !file.good())
-        return false;
     return read_pipe_into_callback(fd, fun);
 }
 
@@ -492,7 +494,7 @@ void ProcessWatcher::check_status(int options)
     }
     else if (errno == EINVAL)
     {
-        SIHD_LOG_ERROR("Process: wait error: {}", strerror(errno));
+        SIHD_LOG_ERROR("Process: wait error: {}", os::last_error_str());
     }
 #else
     const DWORD timeout_ms = options == 0 ? INFINITE : options;
@@ -890,7 +892,7 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector
     pid_t pid;
     if ((pid = fork()) < 0)
     {
-        SIHD_LOG(error, "Process: fork failed: {}", strerror(errno));
+        SIHD_LOG(error, "Process: fork failed: {}", os::last_error_str());
         return false;
     }
     if (pid == 0)
@@ -899,7 +901,7 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector
         {
             if (chroot(_chroot.c_str()) != 0)
             {
-                SIHD_LOG(error, "Process: chroot failed: {}", strerror(errno));
+                SIHD_LOG(error, "Process: chroot failed: {}", os::last_error_str());
                 _exit(2);
             }
         }
@@ -908,7 +910,7 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector
         {
             if (!fs::chdir(_chdir.c_str()))
             {
-                SIHD_LOG(error, "Process: chdir failed: {}", strerror(errno));
+                SIHD_LOG(error, "Process: chdir failed: {}", os::last_error_str());
                 _exit(3);
             }
         }
@@ -941,7 +943,9 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector
             status = _fun_to_execute();
         }
         else
-            status = execvpe(argv[0], const_cast<char *const *>(&(argv[0])), const_cast<char *const *>(&(env[0])));
+            status = execvpe(argv[0],
+                             const_cast<char *const *>(&(argv[0])),
+                             const_cast<char *const *>(&(env[0])));
         _exit(status);
     }
     _impl->process_watcher.pid = pid;
@@ -994,7 +998,7 @@ bool Process::_do_spawn(const std::vector<const char *> & argv, const std::vecto
     posix_spawn_file_actions_destroy(&actions);
     if (err != 0)
     {
-        SIHD_LOG(error, "Process: '{}': {}", argv[0], strerror(errno));
+        SIHD_LOG(error, "Process: '{}': {}", argv[0], os::last_error_str());
         return false;
     }
     _impl->process_watcher.pid = pid;
@@ -1058,11 +1062,11 @@ bool Process::_do_child_process(const std::vector<const char *> & argv, const st
     const DWORD creation_flags = 0;
 
     success = CreateProcess(NULL,
-                            cmd_line.data(),                                 // command line
-                            NULL,                                            // process security attributes
-                            NULL,                                            // primary thread security attributes
-                            TRUE,                                            // handles are inherited
-                            creation_flags,                                  // creation flags
+                            cmd_line.data(), // command line
+                            NULL,            // process security attributes
+                            NULL,            // primary thread security attributes
+                            TRUE,            // handles are inherited
+                            creation_flags,  // creation flags
                             env_str.empty() ? NULL : (LPVOID)env_str.data(), // environment
                             _chdir.empty() ? NULL : _chdir.data(),           // current directory
                             &start_info,                                     // STARTUPINFO pointer
@@ -1071,7 +1075,7 @@ bool Process::_do_child_process(const std::vector<const char *> & argv, const st
     // If an error occurs, exit the application.
     if (!success)
     {
-        SIHD_LOG(error, "Process: {}", strerror(errno));
+        SIHD_LOG(error, "Process: {}", os::last_error_str());
         return false;
     }
     else
@@ -1253,7 +1257,7 @@ bool Process::kill(int sig)
     {
         ret = signal::kill(this->pid(), sig);
         if (!ret)
-            SIHD_LOG(error, "Process: could not kill: {}", strerror(errno));
+            SIHD_LOG(error, "Process: could not kill: {}", os::last_error_str());
     }
     return ret;
 }

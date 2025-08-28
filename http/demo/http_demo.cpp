@@ -41,7 +41,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
             this->setup_webservice_entry_points();
         }
 
-        ~SimpleHttpServer() {}
+        ~SimpleHttpServer() = default;
 
         void setup_webservice_entry_points()
         {

@@ -63,9 +63,9 @@ void randomize_log()
 class TestLogger: public ::testing::Test
 {
     protected:
-        TestLogger() {}
+        TestLogger() = default;
 
-        virtual ~TestLogger() {}
+        virtual ~TestLogger() = default;
 
         virtual void SetUp() {}
 

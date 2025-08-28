@@ -37,11 +37,13 @@ void LuaCoreApi::load(Vm & vm)
         // Configurable
         .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<Device>)
         // AChannelContainer
-        .addFunction("find_channel", static_cast<Channel *(Device::*)(const std::string &)>(&Device::find_channel))
-        .addFunction("get_channel", static_cast<Channel *(Device::*)(const std::string &)>(&Device::get_channel))
-        .addFunction(
-            "add_channel",
-            static_cast<Channel *(Device::*)(const std::string &, std::string_view, size_t)>(&Device::add_channel))
+        .addFunction("find_channel",
+                     static_cast<Channel *(Device::*)(const std::string &)>(&Device::find_channel))
+        .addFunction("get_channel",
+                     static_cast<Channel *(Device::*)(const std::string &)>(&Device::get_channel))
+        .addFunction("add_channel",
+                     static_cast<Channel *(Device::*)(const std::string &, std::string_view, size_t)>(
+                         &Device::add_channel))
         .addFunction("setup", static_cast<bool (Device::*)()>(&ACoreService::setup))
         .addFunction("init", static_cast<bool (Device::*)()>(&ACoreService::init))
         .addFunction("start", static_cast<bool (Device::*)()>(&ACoreService::start))
@@ -55,7 +57,8 @@ void LuaCoreApi::load(Vm & vm)
         .addConstructorFrom<SmartNodePtr<Core>, void(const std::string &, Node *)>()
         .endClass()
         .deriveClass<Channel, sihd::util::Named>("Channel")
-        .addConstructorFrom<SmartNodePtr<Channel>, void(const std::string &, const std::string &, size_t, Node *)>()
+        .addConstructorFrom<SmartNodePtr<Channel>,
+                            void(const std::string &, const std::string &, size_t, Node *)>()
         .addFunction("set_write_on_change", &Channel::set_write_on_change)
         .addFunction("notify", &Channel::notify)
         .addFunction("timestamp", &Channel::timestamp)
@@ -210,9 +213,9 @@ void LuaCoreApi::load(Vm & vm)
 /* LuaChannelHandler */
 /* ************************************************************************* */
 
-LuaCoreApi::LuaChannelHandler::LuaChannelHandler() {}
+LuaCoreApi::LuaChannelHandler::LuaChannelHandler() = default;
 
-LuaCoreApi::LuaChannelHandler::~LuaChannelHandler() {}
+LuaCoreApi::LuaChannelHandler::~LuaChannelHandler() = default;
 
 void LuaCoreApi::LuaChannelHandler::handle(Channel *c)
 {

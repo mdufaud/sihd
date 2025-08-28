@@ -7,48 +7,57 @@
 namespace sihd::util
 {
 
-class LoadingBar
+struct LoadingBarConfiguration
 {
-    private:
-        enum InternalPercentPos
+        enum class ProgressionPos
         {
             None,
             Left,
             Right
         };
 
+        size_t width = 30;
+        size_t total = 100;
+        ProgressionPos progression_pos = ProgressionPos::Right;
+
+        char filling_char = '=';
+        char remaining_char = ' ';
+        char begin_bar = '[';
+        char end_bar = ']';
+
+        std::string_view progression_prefix = "";
+        std::string_view progression_suffix = "";
+
+        FILE *output = stdout;
+};
+
+class LoadingBar
+{
+    private:
+
     public:
-        LoadingBar(size_t width = 10, size_t total = 0, FILE *output = stdout);
+        LoadingBar(const LoadingBarConfiguration & config);
         ~LoadingBar();
 
-        void set_percent_pos_left() { _percent_pos = Left; }
-        void set_percent_pos_right() { _percent_pos = Right; };
-        void set_width(size_t width) { _width = width; }
-        void set_total(size_t total) { _total = total; }
-
+        void set_progress(size_t progress);
         void add_progress(size_t progress);
         void reset_progress() { _current = 0; }
 
-        size_t width() const { return _width; }
-        size_t total() const { return _total; }
-        float progress() const { return _current / float(_total); }
+        const LoadingBarConfiguration & config() const { return _config; }
 
-        bool print() const;
+        float progress() const { return _current / float(_config.total); }
+
+        bool print(std::string_view to_print_before = "", std::string_view to_print_after = "") const;
 
     protected:
         std::string progress_str() const;
         std::string loading_bar_str() const;
 
-        bool print_bar() const;
+        bool print_bar(std::string_view to_print_before, std::string_view to_print_after) const;
 
     private:
-        size_t _width;
         size_t _current;
-        size_t _total;
-
-        FILE *_file_ptr;
-
-        InternalPercentPos _percent_pos;
+        LoadingBarConfiguration _config;
 };
 
 } // namespace sihd::util

@@ -10,7 +10,8 @@ namespace sihd::net
 class INetServer: public sihd::util::ABlockingService
 {
     public:
-        virtual ~INetServer() {};
+        virtual ~INetServer() = default;
+        ;
         virtual int accept_client(IpAddr *client_ip = nullptr) = 0;
         virtual bool add_client_read(int socket) = 0;
         virtual bool add_client_write(int socket) = 0;

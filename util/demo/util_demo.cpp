@@ -9,6 +9,7 @@
 #include <sihd/util/DynLib.hpp>
 #include <sihd/util/File.hpp>
 #include <sihd/util/LineReader.hpp>
+#include <sihd/util/LoadingBar.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/SigWaiter.hpp>
@@ -37,21 +38,29 @@ SIHD_NEW_LOGGER("demo");
 
 void worker(double frequency)
 {
-    Runnable printer([] {
-        SIHD_LOG(info, "time since epoch: {}", Timestamp::now().timeoffset_str());
+    LoadingBar bar({.width = 30, .total = 100, .progression_suffix = "%"});
+
+    Runnable printer([&bar] {
+        bar.add_progress(1);
+        bar.print("Working ", " ...");
         return true;
     });
 
     StepWorker worker;
-
     worker.set_runnable(&printer);
     worker.set_frequency(frequency);
+
+    fmt::print("Starting worker\n");
+
     worker.start_sync_worker("worker");
-
-    Waitable waiter;
-    waiter.wait_for(std::chrono::seconds(1));
-
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     worker.stop_worker();
+
+    // make sure we finish to print the bar
+    bar.set_progress(100);
+    bar.print();
+    fmt::print("\nEnded worker\n");
+
     fmt::print("\n");
 }
 
@@ -81,6 +90,7 @@ void time()
     SIHD_LOG(info, "from string date '2000/04/01': {}", Timestamp::from_str("2000/04/01", "%Y/%m/%d")->str());
     SIHD_LOG(info, "timezone name: {}", time::get_timezone_name());
     SIHD_LOG(info, "timezone offset: {}", time::get_timezone());
+    SIHD_LOG(info, "time since epoch: {}", Timestamp::now().timeoffset_str());
     fmt::print("\n");
 }
 
@@ -112,7 +122,8 @@ void uuid()
     Uuid id;
     SIHD_LOG(info, "uuid: {}", id.str());
     id = Uuid();
-    SIHD_LOG(info, "uuid2: {}", id.str());
+    SIHD_LOG(info, "uuid assigned: {}", id.str());
+    SIHD_LOG(info, "uuid namespace: {}", Uuid(Uuid::DNS(), "sihd").str());
     fmt::print("\n");
 }
 

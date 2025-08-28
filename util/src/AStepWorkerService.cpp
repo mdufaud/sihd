@@ -16,7 +16,7 @@ AStepWorkerService::AStepWorkerService(std::string_view thread_name): AThreadedS
     _step_worker.set_callback_teardown([this] { this->on_work_teardown(); });
 }
 
-AStepWorkerService::~AStepWorkerService() {}
+AStepWorkerService::~AStepWorkerService() = default;
 
 bool AStepWorkerService::set_step_frequency(double frequency)
 {

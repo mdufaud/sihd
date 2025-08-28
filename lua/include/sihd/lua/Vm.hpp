@@ -18,7 +18,7 @@ namespace sihd::lua
 class ILuaThreadStateHandler
 {
     public:
-        virtual ~ILuaThreadStateHandler() {}
+        virtual ~ILuaThreadStateHandler() = default;
         virtual lua_State *lua_state() const = 0;
 };
 

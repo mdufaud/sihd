@@ -11,7 +11,8 @@ namespace sihd::util
 class IArrayView
 {
     public:
-        virtual ~IArrayView() {};
+        virtual ~IArrayView() = default;
+        ;
 
         // informations
 

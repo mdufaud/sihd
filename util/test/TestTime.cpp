@@ -213,7 +213,8 @@ TEST_F(TestTime, test_time_duration)
     std::chrono::nanoseconds chrono_nano = time::to_duration<std::chrono::nanoseconds>(123);
     EXPECT_EQ(chrono_nano.count(), 123);
 
-    std::chrono::milliseconds chrono_milli = time::to_duration<std::chrono::milliseconds>(time::milliseconds(456));
+    std::chrono::milliseconds chrono_milli
+        = time::to_duration<std::chrono::milliseconds>(time::milliseconds(456));
     EXPECT_EQ(chrono_milli.count(), 456);
 
     std::chrono::seconds chrono_seconds = time::to_duration<std::chrono::seconds>(time::seconds(789));
@@ -272,8 +273,8 @@ TEST_F(TestTime, test_time_timeval)
 
 TEST_F(TestTime, test_time_tm)
 {
-    struct tm tm = time::to_tm(time::days(3 * 365) + time::days(31) + time::days(25) + time::hours(20) + time::min(37)
-                                   + time::sec(10),
+    struct tm tm = time::to_tm(time::days(3 * 365) + time::days(31) + time::days(25) + time::hours(20)
+                                   + time::min(37) + time::sec(10),
                                false);
     EXPECT_EQ(tm.tm_year, 70 + 3);
     EXPECT_EQ(tm.tm_mon, 1);

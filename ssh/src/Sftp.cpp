@@ -109,7 +109,10 @@ bool Sftp::send_file(std::string_view local_path, std::string_view remote_path, 
     SftpFilePtr remote_file(sftp_open(_sftp_session_ptr, remote_path.data(), flags, mode));
     if (remote_file.get() == nullptr)
     {
-        SIHD_LOG(error, "Sftp: failed to open remote file: '{}' {}", remote_path, ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error,
+                 "Sftp: failed to open remote file: '{}' {}",
+                 remote_path,
+                 ssh_get_error(_ssh_session_ptr));
         return false;
     }
     bool ret = true;
@@ -128,7 +131,10 @@ bool Sftp::send_file(std::string_view local_path, std::string_view remote_path, 
         nwritten = sftp_write(remote_file.get(), buf, nread);
         if (nwritten != nread)
         {
-            SIHD_LOG_ERROR("Sftp: failed writing remote file: '{}' '{} != '{}'", remote_path, nwritten, nread);
+            SIHD_LOG_ERROR("Sftp: failed writing remote file: '{}' '{} != '{}'",
+                           remote_path,
+                           nwritten,
+                           nread);
             ret = false;
             break;
         }
@@ -146,7 +152,10 @@ bool Sftp::get_file(std::string_view remote_path, std::string_view local_path)
     SftpFilePtr remote_file(sftp_open(_sftp_session_ptr, remote_path.data(), flags, 0));
     if (remote_file.get() == nullptr)
     {
-        SIHD_LOG(error, "Sftp: failed to open remote file: '{}' {}", remote_path, ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error,
+                 "Sftp: failed to open remote file: '{}' {}",
+                 remote_path,
+                 ssh_get_error(_ssh_session_ptr));
         return false;
     }
     bool ret = true;
@@ -348,7 +357,7 @@ SftpAttribute::SftpAttribute(std::string_view name, uint8_t type, size_t size)
     _type = type;
 }
 
-SftpAttribute::~SftpAttribute() {}
+SftpAttribute::~SftpAttribute() = default;
 
 const std::string & SftpAttribute::name() const
 {

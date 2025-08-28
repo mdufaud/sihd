@@ -29,7 +29,7 @@ CsvWriter::CsvWriter(std::string_view path, bool append): CsvWriter()
     this->open(path, append);
 }
 
-CsvWriter::~CsvWriter() {}
+CsvWriter::~CsvWriter() = default;
 
 bool CsvWriter::set_delimiter(int c)
 {

@@ -178,7 +178,8 @@ TEST_F(TestStr, test_str_regex_search)
     EXPECT_EQ(results[0], "over");
     EXPECT_EQ(results[1], "lazy");
 
-    results = str::regex_search("The quick brown fox jumps over the lazy dog", "(\\b\\w{3}\\b)|(\\b\\w{5}\\b)");
+    results
+        = str::regex_search("The quick brown fox jumps over the lazy dog", "(\\b\\w{3}\\b)|(\\b\\w{5}\\b)");
     ASSERT_EQ(results.size(), 7u);
     EXPECT_EQ(results[0], "The");
     EXPECT_EQ(results[1], "quick");
@@ -681,7 +682,8 @@ TEST_F(TestStr, test_str_replace)
 {
     EXPECT_EQ(str::replace("hello wurld", "wurld", "world"), "hello world");
     EXPECT_EQ(str::replace("its nope", "something", "other"), "its nope");
-    EXPECT_EQ(str::replace("wibbly wobbly timy wimey stuff", "i", "iii"), "wiiibbly wobbly tiiimy wiiimey stuff");
+    EXPECT_EQ(str::replace("wibbly wobbly timy wimey stuff", "i", "iii"),
+              "wiiibbly wobbly tiiimy wiiimey stuff");
     EXPECT_EQ(str::replace("heh ih", "h", "hhh"), "hhhehhh ihhh");
     EXPECT_EQ(str::replace("hello", "", ""), "hello");
 }
@@ -707,7 +709,11 @@ TEST_F(TestStr, test_str_to_columns)
     EXPECT_EQ(create_and_print(6), one_col);
 
     // 2 columns
-    const std::vector<std::string> two_col {"The    over", "quick  the ", "brown  lazy", "fox    dog ", "jumped"};
+    const std::vector<std::string> two_col {"The    over",
+                                            "quick  the ",
+                                            "brown  lazy",
+                                            "fox    dog ",
+                                            "jumped"};
     EXPECT_EQ(create_and_print(12), two_col);
 
     // 3 columns

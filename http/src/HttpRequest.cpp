@@ -48,13 +48,15 @@ HttpRequest::HttpRequest(std::string_view url, RequestType request_type)
     _request_type = request_type;
 }
 
-HttpRequest::HttpRequest(std::string_view url, const std::vector<std::string> & uri_args, RequestType request_type):
+HttpRequest::HttpRequest(std::string_view url,
+                         const std::vector<std::string> & uri_args,
+                         RequestType request_type):
     HttpRequest(url, request_type)
 {
     _uri_args_lst = uri_args;
 }
 
-HttpRequest::~HttpRequest() {}
+HttpRequest::~HttpRequest() = default;
 
 void HttpRequest::set_content(sihd::util::ArrCharView data)
 {

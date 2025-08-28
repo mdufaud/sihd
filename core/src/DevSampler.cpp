@@ -22,7 +22,7 @@ DevSampler::DevSampler(const std::string & name, sihd::util::Node *parent):
     this->add_conf("sample", &DevSampler::set_sample);
 }
 
-DevSampler::~DevSampler() {}
+DevSampler::~DevSampler() = default;
 
 bool DevSampler::set_frequency(double freq)
 {
@@ -89,7 +89,8 @@ bool DevSampler::on_start()
         return false;
     for (const auto & [channel_out_path, channel_in_path] : _conf_map)
     {
-        if (this->find_channel(channel_in_path, &channel_in) && this->find_channel(channel_out_path, &channel_out))
+        if (this->find_channel(channel_in_path, &channel_in)
+            && this->find_channel(channel_out_path, &channel_out))
         {
             if (this->observe_channel(channel_in) == false)
                 ret = false;

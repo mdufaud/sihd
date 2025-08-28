@@ -4,6 +4,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/fs.hpp>
+#include <sihd/util/os.hpp>
 
 #include <sihd/zip/ZipFile.hpp>
 #include <sihd/zip/zip.hpp>
@@ -211,10 +212,13 @@ bool ZipFile::comment_archive(std::string_view comment)
 {
     if (_zip_handle->handle_ptr == nullptr)
         return false;
-    const bool success = zip_set_archive_comment(_zip_handle->handle_ptr, comment.data(), comment.size()) == 0;
+    const bool success
+        = zip_set_archive_comment(_zip_handle->handle_ptr, comment.data(), comment.size()) == 0;
     if (!success)
     {
-        SIHD_LOG(error, "ZipFile: could not write zip archive commentary: {}", get_error(_zip_handle->handle_ptr));
+        SIHD_LOG(error,
+                 "ZipFile: could not write zip archive commentary: {}",
+                 get_error(_zip_handle->handle_ptr));
     }
     return success;
 }
@@ -360,7 +364,8 @@ std::string_view ZipFile::entry_comment() const
     if (this->is_entry_loaded() == false)
         return "";
     zip_uint32_t comment_length;
-    const char *comment = zip_file_get_comment(_zip_handle->handle_ptr, _current_zip_entry.index, &comment_length, 0);
+    const char *comment
+        = zip_file_get_comment(_zip_handle->handle_ptr, _current_zip_entry.index, &comment_length, 0);
     return comment == nullptr ? "" : std::string_view(comment, comment_length);
 }
 
@@ -397,10 +402,13 @@ ssize_t ZipFile::read_entry(std::string_view password)
     if (_zip_handle->file_handle_ptr == nullptr)
     {
         if (password.empty() == false)
-            _zip_handle->file_handle_ptr
-                = zip_fopen_index_encrypted(_zip_handle->handle_ptr, _current_zip_entry.index, 0, password.data());
+            _zip_handle->file_handle_ptr = zip_fopen_index_encrypted(_zip_handle->handle_ptr,
+                                                                     _current_zip_entry.index,
+                                                                     0,
+                                                                     password.data());
         else
-            _zip_handle->file_handle_ptr = zip_fopen_index(_zip_handle->handle_ptr, _current_zip_entry.index, 0);
+            _zip_handle->file_handle_ptr
+                = zip_fopen_index(_zip_handle->handle_ptr, _current_zip_entry.index, 0);
         if (_zip_handle->file_handle_ptr == nullptr)
         {
             SIHD_LOG(error, "ZipFile: could not open entry: {}", _current_zip_entry.name);
@@ -495,7 +503,12 @@ bool ZipFile::comment_entry(std::string_view comment)
 {
     if (this->is_entry_loaded() == false)
         return false;
-    if (zip_file_set_comment(_zip_handle->handle_ptr, _current_zip_entry.index, comment.data(), comment.size(), 0) < 0)
+    if (zip_file_set_comment(_zip_handle->handle_ptr,
+                             _current_zip_entry.index,
+                             comment.data(),
+                             comment.size(),
+                             0)
+        < 0)
     {
         SIHD_LOG(error,
                  "ZipFile: could not rename entry '{}': {}",
@@ -598,7 +611,10 @@ bool ZipFile::add_dir_from_fs(std::string_view name, std::string_view path)
         return false;
     if (this->add_dir(name) == false)
     {
-        SIHD_LOG(error, "ZipFile: could not add directory '{}' to zip: {}", name, get_error(_zip_handle->handle_ptr));
+        SIHD_LOG(error,
+                 "ZipFile: could not add directory '{}' to zip: {}",
+                 name,
+                 get_error(_zip_handle->handle_ptr));
         return false;
     }
     std::vector<std::string> children = fs::children(path);
@@ -638,7 +654,7 @@ bool ZipFile::dump_entry_to_fs(std::string_view path, std::string_view password)
             SIHD_LOG(error,
                      "ZipFile: could not write directory entry '{}' - {} for: {}",
                      _current_zip_entry.name,
-                     strerror(errno),
+                     util::os::last_error_str(),
                      path);
         return success;
     }
@@ -650,7 +666,7 @@ bool ZipFile::dump_entry_to_fs(std::string_view path, std::string_view password)
         SIHD_LOG(error,
                  "ZipFile: could not open file entry '{}' - {} for: {}",
                  _current_zip_entry.name,
-                 strerror(errno),
+                 util::os::last_error_str(),
                  path);
         return false;
     }
@@ -665,7 +681,7 @@ bool ZipFile::dump_entry_to_fs(std::string_view path, std::string_view password)
             SIHD_LOG(error,
                      "ZipFile: could not write file entry '{}' - {} for: {}",
                      _current_zip_entry.name,
-                     strerror(errno),
+                     util::os::last_error_str(),
                      path);
             close_zip_file_and_null(&_zip_handle->file_handle_ptr);
             return false;

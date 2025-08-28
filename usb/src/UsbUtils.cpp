@@ -6,8 +6,8 @@ namespace sihd::usb
 
 SIHD_LOGGER;
 
-UsbUtils::UsbUtils() {}
+UsbUtils::UsbUtils() = default;
 
-UsbUtils::~UsbUtils() {}
+UsbUtils::~UsbUtils() = default;
 
 } // namespace sihd::usb

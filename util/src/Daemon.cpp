@@ -8,6 +8,7 @@
 #include <sihd/util/LoggerFile.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/fs.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/signal.hpp>
 
 #if defined(__SIHD_WINDOWS__)
@@ -134,7 +135,7 @@ bool Daemon::run()
     pid_t pid = fork();
     if (pid < 0)
     {
-        SIHD_LOG(error, "Daemon: fork failed: {}", strerror(errno));
+        SIHD_LOG(error, "Daemon: fork failed: {}", os::last_error_str());
         return false;
     }
     else if (pid > 0)
@@ -145,13 +146,13 @@ bool Daemon::run()
     pid_t sid = setsid();
     if (sid < 0)
     {
-        SIHD_LOG(error, "Daemon: setsid failed: {}", strerror(errno));
+        SIHD_LOG(error, "Daemon: setsid failed: {}", os::last_error_str());
         _exit(1);
     }
     // second fork (cannot take a controlling terminal)
     if ((pid = fork()) < 0)
     {
-        SIHD_LOG(error, "Daemon: second fork failed: {}", strerror(errno));
+        SIHD_LOG(error, "Daemon: second fork failed: {}", os::last_error_str());
         _exit(2);
     }
     if (pid > 0)
@@ -163,7 +164,7 @@ bool Daemon::run()
     // change directory
     if (chdir(_working_dir_path.c_str()) < 0)
     {
-        SIHD_LOG(error, "Daemon: chdir failed: {}", strerror(errno));
+        SIHD_LOG(error, "Daemon: chdir failed: {}", os::last_error_str());
         _exit(3);
     }
     // change uid
@@ -211,7 +212,7 @@ bool Daemon::run()
     FreeConsole();
     if (chdir(_working_dir_path.c_str()) < 0)
     {
-        SIHD_LOG(error, "Daemon: chdir failed: {}", strerror(errno));
+        SIHD_LOG(error, "Daemon: chdir failed: {}", os::last_error_str());
         return false;
     }
     return true;

@@ -9,7 +9,8 @@ namespace sihd::util
 class IClock
 {
     public:
-        virtual ~IClock() {};
+        virtual ~IClock() = default;
+        ;
         virtual time_t now() const = 0;
         virtual bool is_steady() const = 0;
         virtual bool start() = 0;

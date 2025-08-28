@@ -42,7 +42,8 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
 
     _http_header_array.resize(SIHD_HTTP_HEADERS_BUFSIZE);
     _http_response.http_header().set_server(this->name());
-    _http_response.http_header().set_header(lws_token_to_string(WSI_TOKEN_HTTP_ACCESS_CONTROL_ALLOW_ORIGIN), "*");
+    _http_response.http_header().set_header(lws_token_to_string(WSI_TOKEN_HTTP_ACCESS_CONTROL_ALLOW_ORIGIN),
+                                            "*");
     this->set_encoding("utf-8");
 
     _protocols_count = 0;
@@ -293,7 +294,11 @@ int HttpServer::_global_http_lws_callback(struct lws *wsi,
     return server->_lws_http_callback(wsi, reason, user, in, len);
 }
 
-int HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
+int HttpServer::_lws_http_callback(struct lws *wsi,
+                                   enum lws_callback_reasons reason,
+                                   void *user,
+                                   void *in,
+                                   size_t len)
 {
     int rc = 0;
     HttpSession *session = (HttpSession *)user;
@@ -305,8 +310,8 @@ int HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons re
     }
     switch (reason)
     {
-        // an http request has come from a client that is not asking to upgrade the connection to a websocket one.
-        // this is a chance to serve http content
+        // an http request has come from a client that is not asking to upgrade the connection to a websocket
+        // one. this is a chance to serve http content
         case LWS_CALLBACK_HTTP:
         {
             if (session->len < 1)
@@ -372,7 +377,8 @@ int HttpServer::_lws_http_callback(struct lws *wsi, enum lws_callback_reasons re
         }
         case LWS_CALLBACK_ADD_HEADERS:
         {
-            // This gives your user code a chance to add headers to a server transaction bound to your protocol
+            // This gives your user code a chance to add headers to a server transaction bound to your
+            // protocol
             SIHD_LOG(debug, "HttpServer: Callback add header callback");
             struct lws_process_html_args *args = (struct lws_process_html_args *)in;
             (void)args;
@@ -800,7 +806,12 @@ bool HttpServer::send_http_headers(struct lws *wsi, HttpResponse & response)
     // HEADERS
     for (const auto & [name, value] : headers.headers())
     {
-        rc = lws_add_http_header_by_name(wsi, (u_char *)name.c_str(), (u_char *)value.c_str(), value.size(), &ptr, end);
+        rc = lws_add_http_header_by_name(wsi,
+                                         (u_char *)name.c_str(),
+                                         (u_char *)value.c_str(),
+                                         value.size(),
+                                         &ptr,
+                                         end);
         if (rc)
             SIHD_LOG(error, "HttpHeader: cannot set header '{}'", name);
     }
@@ -827,7 +838,8 @@ bool HttpServer::add_protocol(const char *name,
                               size_t tx_packet_size)
 {
     ++_protocols_count;
-    _lws_protocols_ptr = (lws_protocols *)realloc(_lws_protocols_ptr, sizeof(lws_protocols) * (_protocols_count + 1));
+    _lws_protocols_ptr
+        = (lws_protocols *)realloc(_lws_protocols_ptr, sizeof(lws_protocols) * (_protocols_count + 1));
     if (_lws_protocols_ptr != nullptr)
     {
         lws_protocols *proto = &_lws_protocols_ptr[_protocols_count - 1];
@@ -864,7 +876,7 @@ bool HttpServer::add_websocket(const char *name, IWebsocketHandler *handler, siz
 
 HttpServer::LwsPollingScheduler::LwsPollingScheduler(HttpServer *srv): server(srv) {}
 
-HttpServer::LwsPollingScheduler::~LwsPollingScheduler() {}
+HttpServer::LwsPollingScheduler::~LwsPollingScheduler() = default;
 
 bool HttpServer::LwsPollingScheduler::run()
 {

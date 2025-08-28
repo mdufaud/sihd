@@ -15,7 +15,7 @@ LogInfo::LogInfo(const std::string & src, LogLevel lvl): source(src), level(lvl)
     ::clock_gettime(CLOCK_REALTIME, &timespec);
 }
 
-LogInfo::~LogInfo() {}
+LogInfo::~LogInfo() = default;
 
 Timestamp LogInfo::timestamp() const
 {

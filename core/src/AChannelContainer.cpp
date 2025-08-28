@@ -11,7 +11,7 @@ using namespace sihd::util;
 
 AChannelContainer::AChannelContainer(const std::string & name, Node *parent): Node(name, parent) {}
 
-AChannelContainer::~AChannelContainer() {}
+AChannelContainer::~AChannelContainer() = default;
 
 Channel *AChannelContainer::find_channel(const std::string & path)
 {
@@ -130,7 +130,9 @@ bool AChannelContainer::observe_channel(const std::string & channel_name)
     Channel *c = this->get_channel(channel_name);
     if (c != nullptr)
         return this->observe_channel(c);
-    SIHD_LOG_ERROR("ChannelContainer: '{}' cannot find channel '{}' to observe", this->full_name(), channel_name);
+    SIHD_LOG_ERROR("ChannelContainer: '{}' cannot find channel '{}' to observe",
+                   this->full_name(),
+                   channel_name);
     return false;
 }
 

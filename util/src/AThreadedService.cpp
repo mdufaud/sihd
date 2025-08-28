@@ -10,7 +10,7 @@ AThreadedService::AThreadedService(std::string_view thread_name):
     this->set_service_nb_thread(1);
 }
 
-AThreadedService::~AThreadedService() {}
+AThreadedService::~AThreadedService() = default;
 
 void AThreadedService::set_service_nb_thread(uint8_t n)
 {

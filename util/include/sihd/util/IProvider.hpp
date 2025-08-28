@@ -8,7 +8,8 @@ template <typename T>
 class IProvider
 {
     public:
-        virtual ~IProvider() {};
+        virtual ~IProvider() = default;
+        ;
         // provides a data
         virtual bool provide(T *data) = 0;
         // checks if the provider is still providing

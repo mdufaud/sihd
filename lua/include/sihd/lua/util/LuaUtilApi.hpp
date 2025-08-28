@@ -207,7 +207,7 @@ class LuaUtilApi
         {
             public:
                 LuaHandler(luabridge::LuaRef lua_ref): LuaThreadRunner(lua_ref) {}
-                ~LuaHandler() {}
+                ~LuaHandler() = default;
 
                 void handle(T... args)
                 {
@@ -339,7 +339,9 @@ class LuaUtilApi
         }
 
         template <typename T>
-        static bool _array_lua_copy_table(sihd::util::Array<T> *self, luabridge::LuaRef ref, luabridge::LuaRef from_ref)
+        static bool _array_lua_copy_table(sihd::util::Array<T> *self,
+                                          luabridge::LuaRef ref,
+                                          luabridge::LuaRef from_ref)
         {
             size_t from_idx = 0;
             if (from_ref.isNil() == false)
@@ -389,8 +391,9 @@ class LuaUtilApi
         }
 
         // Configurable's recursive setting
-        static bool
-            _configurable_recursive_set(sihd::util::Configurable *obj, const std::string & key, luabridge::LuaRef ref);
+        static bool _configurable_recursive_set(sihd::util::Configurable *obj,
+                                                const std::string & key,
+                                                luabridge::LuaRef ref);
 };
 
 } // namespace sihd::lua

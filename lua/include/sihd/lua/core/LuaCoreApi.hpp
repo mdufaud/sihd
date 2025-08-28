@@ -52,8 +52,8 @@ class LuaCoreApi
     protected:
 
     private:
-        LuaCoreApi() {}
-        virtual ~LuaCoreApi() {}
+        LuaCoreApi() = default;
+        virtual ~LuaCoreApi() = default;
 
         static LuaChannelHandler _channel_handler;
 };

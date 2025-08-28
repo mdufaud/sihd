@@ -10,9 +10,9 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-LoggerConsole::LoggerConsole() {}
+LoggerConsole::LoggerConsole() = default;
 
-LoggerConsole::~LoggerConsole() {}
+LoggerConsole::~LoggerConsole() = default;
 
 void LoggerConsole::log(const LogInfo & info, std::string_view msg)
 {

@@ -12,7 +12,7 @@ SIHD_LOGGER;
 
 WebService::WebService(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent) {}
 
-WebService::~WebService() {}
+WebService::~WebService() = default;
 
 void WebService::set_entry_point(const std::string & path,
                                  std::function<void(const HttpRequest &, HttpResponse &)> fun,

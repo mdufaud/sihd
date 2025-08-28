@@ -7,7 +7,9 @@
 namespace sihd::util
 {
 
-LoggerManager::LoggerManager() {}
+LoggerManager LoggerManager::_g_singleton;
+
+LoggerManager::LoggerManager() = default;
 
 LoggerManager::~LoggerManager()
 {
@@ -56,8 +58,6 @@ void LoggerManager::_filter_and_log(const std::string & src, LogLevel level, std
             logger->log(info, msg);
     }
 }
-
-LoggerManager LoggerManager::_g_singleton;
 
 LoggerManager *LoggerManager::get()
 {

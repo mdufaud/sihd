@@ -1,5 +1,6 @@
 #include <sihd/ipc/SharedMemory.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/os.hpp>
 
 // ftruncate
 #include <unistd.h>
@@ -34,7 +35,7 @@ bool __open(int *fd, std::string_view id, mode_t mode, int shm_flags)
 {
     *fd = shm_open(id.data(), shm_flags, mode);
     if (*fd == -1)
-        SIHD_LOG(error, "SharedMemory: shm_open: {}", strerror(errno));
+        SIHD_LOG(error, "SharedMemory: shm_open: {}", util::os::last_error_str());
     return *fd >= 0;
 }
 
@@ -42,7 +43,7 @@ bool __mmap(void **addr, size_t size, int fd, int mmap_flags)
 {
     *addr = mmap(nullptr, size, mmap_flags, MAP_SHARED, fd, 0);
     if (*addr == MAP_FAILED)
-        SIHD_LOG(error, "SharedMemory: mmap: {}", strerror(errno));
+        SIHD_LOG(error, "SharedMemory: mmap: {}", util::os::last_error_str());
     return *addr != MAP_FAILED;
 }
 
@@ -56,7 +57,7 @@ std::optional<Shm> create_shm(std::string_view id, size_t size, mode_t mode, int
 
     if (ftruncate(fd, size) == -1)
     {
-        SIHD_LOG(error, "SharedMemory: ftruncate: {}", strerror(errno));
+        SIHD_LOG(error, "SharedMemory: ftruncate: {}", util::os::last_error_str());
         return std::nullopt;
     }
 
@@ -150,7 +151,7 @@ bool SharedMemory::clear()
     {
         if (_created && munmap(_addr, _size) == -1)
         {
-            SIHD_LOG(error, "SharedMemory: munmap: {}", strerror(errno));
+            SIHD_LOG(error, "SharedMemory: munmap: {}", util::os::last_error_str());
             ret = false;
         }
     }
@@ -158,7 +159,7 @@ bool SharedMemory::clear()
     {
         if (_created && shm_unlink(_id.c_str()) == -1)
         {
-            SIHD_LOG(error, "SharedMemory: shm_unlink: {}", strerror(errno));
+            SIHD_LOG(error, "SharedMemory: shm_unlink: {}", util::os::last_error_str());
             ret = false;
         }
         _fd = -1;

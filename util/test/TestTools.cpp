@@ -8,9 +8,9 @@ using namespace sihd::util;
 class TestTools: public ::testing::Test
 {
     protected:
-        TestTools() {}
+        TestTools() = default;
 
-        virtual ~TestTools() {}
+        virtual ~TestTools() = default;
 
         virtual void SetUp() {}
 

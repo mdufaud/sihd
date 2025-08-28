@@ -218,10 +218,6 @@ struct ProcessInfo::Impl
 
         void load_specific_process_infos();
 
-        // void load_cmdline();
-        // void load_cwd();
-        // void load_env();
-
         bool write_into_stdin(ArrCharView view) const;
 
 #if defined(__SIHD_WINDOWS__)
@@ -313,7 +309,9 @@ void ProcessInfo::Impl::load_specific_process_infos()
         str = str::to_str(wstr);
         this->env = str::split(str, '\0');
 
-        wstr = get_memory_info(this->process_handle, procParams.CommandLine.Buffer, procParams.CommandLine.Length);
+        wstr = get_memory_info(this->process_handle,
+                               procParams.CommandLine.Buffer,
+                               procParams.CommandLine.Length);
         str = str::to_str(wstr);
         this->cmd_line = str::split(str, ' ');
     }
@@ -425,7 +423,7 @@ ProcessInfo::ProcessInfo(const sihd::util::ProcessInfo & process_info)
     _impl = std::make_unique<Impl>(*process_info._impl);
 }
 
-ProcessInfo::~ProcessInfo() {}
+ProcessInfo::~ProcessInfo() = default;
 
 bool ProcessInfo::is_alive() const
 {

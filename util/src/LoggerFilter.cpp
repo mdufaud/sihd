@@ -6,7 +6,7 @@ namespace sihd::util
 
 LoggerFilter::LoggerFilter(const Options & options): _options(options) {}
 
-LoggerFilter::~LoggerFilter() {}
+LoggerFilter::~LoggerFilter() = default;
 
 bool LoggerFilter::filter(const LogInfo & info, [[maybe_unused]] std::string_view msg)
 {

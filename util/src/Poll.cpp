@@ -261,7 +261,7 @@ void Poll::process_poll_results(int poll_return)
     _timedout = poll_return == 0;
     _error = poll_return < 0;
     if (poll_return < 0)
-        SIHD_LOG(error, "Poll: {}", strerror(errno));
+        SIHD_LOG(error, "Poll: {}", os::last_error_str());
     if (poll_return > 0)
     {
         size_t i = 0;

@@ -20,7 +20,8 @@ class StateMachine: public IStateMachine
             _last_event = Event();
             _state = initial;
         }
-        virtual ~StateMachine() {};
+        virtual ~StateMachine() = default;
+        ;
 
         void add_transition(State from, Event event, State into) { _transitions[from][event] = into; }
 

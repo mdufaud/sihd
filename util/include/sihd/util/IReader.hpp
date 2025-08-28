@@ -9,7 +9,8 @@ namespace sihd::util
 class IReader
 {
     public:
-        virtual ~IReader() {};
+        virtual ~IReader() = default;
+        ;
         virtual bool read_next() = 0;
         virtual bool get_read_data(ArrCharView & view) const = 0;
 };
@@ -17,7 +18,8 @@ class IReader
 class IReaderTimestamp: public IReader
 {
     public:
-        virtual ~IReaderTimestamp() {};
+        virtual ~IReaderTimestamp() = default;
+        ;
         virtual bool get_read_timestamp(time_t *nano_timestamp) const = 0;
 };
 

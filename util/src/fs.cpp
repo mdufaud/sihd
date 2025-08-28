@@ -548,8 +548,8 @@ std::string normalize(std::string_view path)
 {
     std::string separator = sep_str();
     Splitter splitter(separator);
-    std::vector<std::string> lst;
     std::vector<std::string> splits = splitter.split(path);
+    std::list<std::string> lst;
 
     for (const std::string & split : splits)
     {
@@ -612,23 +612,9 @@ std::string filename(std::string_view path)
 
 std::string parent(std::string_view path)
 {
-    // removing extra slashes: /path/to/dir///// -> /path/to/dir
-    size_t i = path.size() == 0 ? 0 : path.size() - 1;
-    while (i > 0 && path[i] == g_separator_char)
-        --i;
-    // removing trailing slashes: /path/to/////dir -> /path/to
-    std::string ret;
-    size_t idx = path.find_last_of(g_separator_char, i);
-    while (idx != std::string::npos && idx > 0)
-    {
-        if (path[idx - 1] != g_separator_char)
-        {
-            ret = path.substr(0, idx);
-            break;
-        }
-        --idx;
-    }
-    return ret;
+    std::string ret = normalize(path);
+    const size_t idx = ret.find_last_of(g_separator_char);
+    return ret.substr(0, idx != std::string::npos ? idx : 0);
 }
 
 std::string combine(std::span<const char *> list)

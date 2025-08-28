@@ -1,10 +1,6 @@
 #ifndef __SIHD_UTIL_ATEXIT_HPP__
 #define __SIHD_UTIL_ATEXIT_HPP__
 
-#include <cstdlib>
-#include <list>
-#include <mutex>
-
 #include <sihd/util/IRunnable.hpp>
 
 namespace sihd::util::atexit

@@ -7,6 +7,8 @@
 #include <sihd/ssh/SshKey.hpp>
 #include <sihd/ssh/SshShell.hpp>
 
+#pragma message("TODO pImpl")
+
 namespace sihd::ssh
 {
 
@@ -33,7 +35,10 @@ class SshSession
 
         bool connect();
         bool connected();
-        bool fast_connect(std::string_view user, std::string_view host, int port = 22, int verbosity = SSH_LOG_NOLOG);
+        bool fast_connect(std::string_view user,
+                          std::string_view host,
+                          int port = 22,
+                          int verbosity = SSH_LOG_NOLOG);
 
         bool check_hostkey();
 
@@ -103,7 +108,6 @@ class SshSession
     protected:
 
     private:
-
         ssh_session_struct *_ssh_session_ptr;
         bool _auth_none_once;
 };

@@ -13,9 +13,10 @@ using namespace sihd::util;
 class EmptyConfigurableObj: public Configurable
 {
     public:
-        EmptyConfigurableObj() {}
+        EmptyConfigurableObj() = default;
 
-        ~EmptyConfigurableObj() {};
+        ~EmptyConfigurableObj() = default;
+        ;
 };
 
 class ConfigurableObj: public Configurable
@@ -29,7 +30,8 @@ class ConfigurableObj: public Configurable
                 return true;
             });
             // By bind
-            this->add_conf<int8_t>("char", std::bind(&ConfigurableObj::set_char, this, std::placeholders::_1));
+            this->add_conf<int8_t>("char",
+                                   std::bind(&ConfigurableObj::set_char, this, std::placeholders::_1));
             // By ptr
             this->add_conf("uchar", &ConfigurableObj::set_uchar);
             this->add_conf("short", &ConfigurableObj::set_short);
@@ -51,7 +53,8 @@ class ConfigurableObj: public Configurable
             });
         }
 
-        ~ConfigurableObj() {};
+        ~ConfigurableObj() = default;
+        ;
 
         bool set_bool(bool test)
         {

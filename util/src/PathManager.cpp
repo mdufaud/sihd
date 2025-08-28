@@ -32,7 +32,10 @@ std::filesystem::perms mode_from_str(std::string_view mode)
     return ret;
 }
 
-bool check_if_match(std::string_view path, std::string_view search, std::string_view mode_str, std::string & result_str)
+bool check_if_match(std::string_view path,
+                    std::string_view search,
+                    std::string_view mode_str,
+                    std::string & result_str)
 {
     bool ret = false;
     std::filesystem::perms mode = mode_from_str(mode_str);
@@ -59,7 +62,7 @@ bool check_if_match(std::string_view path, std::string_view search, std::string_
 
 } // namespace
 
-PathManager::PathManager() {}
+PathManager::PathManager() = default;
 
 std::vector<std::string> PathManager::find_all(std::string_view search, std::string_view mode_str) const
 {

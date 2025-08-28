@@ -8,7 +8,8 @@ template <typename T>
 class ICloneable
 {
     public:
-        virtual ~ICloneable() {};
+        virtual ~ICloneable() = default;
+        ;
 
         virtual T *clone() const = 0;
 };

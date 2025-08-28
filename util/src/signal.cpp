@@ -5,6 +5,7 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/signal.hpp>
 
@@ -163,7 +164,7 @@ bool ignore(int sig)
     sighandler_t previous_handler = ::signal(sig, SIG_IGN);
     if (previous_handler == SIG_ERR)
     {
-        SIHD_LOG(error, "Error ignoring signal '{}': {}", sig, strerror(errno));
+        SIHD_LOG(error, "Error ignoring signal '{}': {}", sig, os::last_error_str());
     }
     return previous_handler != SIG_ERR;
 #else
@@ -174,7 +175,7 @@ bool ignore(int sig)
 
     if (sigaction(sig, &sa, nullptr) != 0)
     {
-        SIHD_LOG(error, "Error ignoring signal '{}': {}", sig, strerror(errno));
+        SIHD_LOG(error, "Error ignoring signal '{}': {}", sig, os::last_error_str());
         return false;
     }
 #endif
@@ -187,7 +188,7 @@ bool handle(int sig)
     sighandler_t previous_handler = ::signal(sig, _signal_callback);
     if (previous_handler == SIG_ERR)
     {
-        SIHD_LOG(error, "Error handling signal '{}': {}", sig, strerror(errno));
+        SIHD_LOG(error, "Error handling signal '{}': {}", sig, os::last_error_str());
         return false;
     }
 #else
@@ -200,7 +201,7 @@ bool handle(int sig)
 
     if (sigaction(sig, &sa, nullptr) != 0)
     {
-        SIHD_LOG(error, "Error handling signal '{}': {}", sig, strerror(errno));
+        SIHD_LOG(error, "Error handling signal '{}': {}", sig, os::last_error_str());
         return false;
     }
 #endif
@@ -213,7 +214,7 @@ bool unhandle(int sig)
     sighandler_t previous_handler = ::signal(sig, SIG_DFL);
     if (previous_handler == SIG_ERR)
     {
-        SIHD_LOG(error, "Error unhandling signal '{}': {}", sig, strerror(errno));
+        SIHD_LOG(error, "Error unhandling signal '{}': {}", sig, os::last_error_str());
         return false;
     }
 #else
@@ -224,7 +225,7 @@ bool unhandle(int sig)
 
     if (sigaction(sig, &sa, nullptr) != 0)
     {
-        SIHD_LOG(error, "Error unhandling signal '{}': {}", sig, strerror(errno));
+        SIHD_LOG(error, "Error unhandling signal '{}': {}", sig, os::last_error_str());
         return false;
     }
 #endif

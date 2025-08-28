@@ -12,7 +12,7 @@ template <typename... T>
 class Handler: public IHandler<T...>
 {
     public:
-        Handler() {}
+        Handler() = default;
 
         template <typename Function>
         Handler(Function && fun)

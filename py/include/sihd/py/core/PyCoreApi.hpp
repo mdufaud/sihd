@@ -13,7 +13,8 @@ class PyCoreApi
     public:
         static void add_core_api(PyApi::PyModule & pymodule);
 
-        class __attribute__((visibility("hidden"))) PyChannelHandler: public sihd::util::IHandler<sihd::core::Channel *>
+        class __attribute__((visibility("hidden"))) PyChannelHandler
+            : public sihd::util::IHandler<sihd::core::Channel *>
         {
             public:
                 PyChannelHandler();
@@ -39,7 +40,8 @@ class PyCoreApi
         }
 
     private:
-        ~PyCoreApi() {};
+        ~PyCoreApi() = default;
+        ;
 
         static PyChannelHandler _channel_handler;
 };

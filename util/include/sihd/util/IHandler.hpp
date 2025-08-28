@@ -8,7 +8,8 @@ template <typename... T>
 class IHandler
 {
     public:
-        virtual ~IHandler() {};
+        virtual ~IHandler() = default;
+        ;
         virtual void handle(T... args) = 0;
 };
 

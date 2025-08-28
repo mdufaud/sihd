@@ -19,9 +19,9 @@ namespace sihd::net
 
 using namespace sihd::util;
 
-NetInterface::NetInterface() {}
+NetInterface::NetInterface() = default;
 
-NetInterface::~NetInterface() {}
+NetInterface::~NetInterface() = default;
 
 void NetInterface::set_name(std::string_view name)
 {

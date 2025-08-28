@@ -10,6 +10,7 @@
 
 #include <sihd/ssh/SshChannel.hpp>
 
+#pragma message("TODO pImpl")
 struct ssh_channel_callbacks_struct;
 struct ssh_channel_struct;
 struct ssh_session_struct;

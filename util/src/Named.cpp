@@ -19,7 +19,7 @@ Named::Named(const std::string & named, Node *parent)
         parent->add_child_unsafe(this);
 }
 
-Named::~Named() {}
+Named::~Named() = default;
 
 bool Named::set_parent_ownership(bool ownership)
 {

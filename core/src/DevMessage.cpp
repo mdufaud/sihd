@@ -26,7 +26,7 @@ DevMessage::DevMessage(const std::string & name, sihd::util::Node *parent):
     this->add_conf("trigger_mode", &DevMessage::set_trigger_mode);
 }
 
-DevMessage::~DevMessage() {}
+DevMessage::~DevMessage() = default;
 
 bool DevMessage::set_message_path(std::string_view path)
 {
@@ -144,8 +144,12 @@ bool DevMessage::on_init()
             if (field_child != nullptr)
             {
                 _msg_fields.emplace(name, field_child);
-                this->add_unlinked_channel(name + IN_SUFFIX, field_child->field_type(), field_child->field_size());
-                this->add_unlinked_channel(name + OUT_SUFFIX, field_child->field_type(), field_child->field_size());
+                this->add_unlinked_channel(name + IN_SUFFIX,
+                                           field_child->field_type(),
+                                           field_child->field_size());
+                this->add_unlinked_channel(name + OUT_SUFFIX,
+                                           field_child->field_type(),
+                                           field_child->field_size());
             }
         }
     }

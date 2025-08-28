@@ -24,7 +24,7 @@ Mime::Mime()
     _types["ttf"] = "application/x-font-ttf";
 }
 
-Mime::~Mime() {}
+Mime::~Mime() = default;
 
 std::string Mime::get(const std::string & ext) const
 {
@@ -50,7 +50,8 @@ std::string Mime::make_mime(std::string_view mime_type,
         suffixes_str = fmt::format("{}+{}", suffixes_str, suffix);
     }
 
-    std::string factor_weight_str = q_factor_weighting > 0.0 ? fmt::format(";q={:.1f}", q_factor_weighting) : "";
+    std::string factor_weight_str
+        = q_factor_weighting > 0.0 ? fmt::format(";q={:.1f}", q_factor_weighting) : "";
 
     return fmt::format("{}/{}{}{}", mime_type, sub_type, suffixes_str, factor_weight_str);
 }

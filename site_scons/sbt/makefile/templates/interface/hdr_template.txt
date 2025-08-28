@@ -7,7 +7,7 @@ namespace APP_NAME::MODULE_NAME
 class CLASS_NAME
 {
     public:
-        virtual ~CLASS_NAME() {};
+        virtual ~CLASS_NAME() = default;;
 		virtual void method() = 0;
 };
 

@@ -14,7 +14,8 @@ namespace sihd::http
 class IWebsocketHandler
 {
     public:
-        virtual ~IWebsocketHandler() {};
+        virtual ~IWebsocketHandler() = default;
+        ;
         virtual void on_open(std::string_view protocol_name) = 0;
         virtual bool on_read(const sihd::util::ArrChar & array) = 0;
         virtual bool on_write(sihd::util::ArrChar & array, LwsWriteProtocol & protocol) = 0;

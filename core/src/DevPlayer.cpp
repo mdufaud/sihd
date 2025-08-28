@@ -33,7 +33,7 @@ DevPlayer::DevPlayer(const std::string & name, sihd::util::Node *parent):
     this->add_conf("alias", &DevPlayer::add_alias);
 }
 
-DevPlayer::~DevPlayer() {}
+DevPlayer::~DevPlayer() = default;
 
 bool DevPlayer::is_running() const
 {

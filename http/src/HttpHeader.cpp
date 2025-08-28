@@ -26,11 +26,11 @@ std::string format_hdr_name(std::string_view entry)
 
 SIHD_LOGGER;
 
-HttpHeader::HttpHeader() {}
+HttpHeader::HttpHeader() = default;
 
 HttpHeader::HttpHeader(HeaderMap && headers): _headers(headers) {}
 
-HttpHeader::~HttpHeader() {}
+HttpHeader::~HttpHeader() = default;
 
 HttpHeader & HttpHeader::set_server(std::string_view name)
 {
@@ -66,7 +66,9 @@ HttpHeader & HttpHeader::set_accept(std::string_view mime_type)
 size_t HttpHeader::content_length() const
 {
     std::string_view value_str
-        = util::container::get_or<decltype(_headers), std::string, std::string_view>(_headers, "content-length:", "");
+        = util::container::get_or<decltype(_headers), std::string, std::string_view>(_headers,
+                                                                                     "content-length:",
+                                                                                     "");
     size_t value;
     if (util::str::convert_from_string(value_str, value) == false)
         return 0;
@@ -75,17 +77,23 @@ size_t HttpHeader::content_length() const
 
 std::string_view HttpHeader::accept_charset() const
 {
-    return util::container::get_or<decltype(_headers), std::string, std::string_view>(_headers, "accept-charset:", "");
+    return util::container::get_or<decltype(_headers), std::string, std::string_view>(_headers,
+                                                                                      "accept-charset:",
+                                                                                      "");
 }
 
 std::string_view HttpHeader::content_type() const
 {
-    return util::container::get_or<decltype(_headers), std::string, std::string_view>(_headers, "content-type:", "");
+    return util::container::get_or<decltype(_headers), std::string, std::string_view>(_headers,
+                                                                                      "content-type:",
+                                                                                      "");
 }
 
 std::string_view HttpHeader::server() const
 {
-    return util::container::get_or<decltype(_headers), std::string, std::string_view>(_headers, "server:", "");
+    return util::container::get_or<decltype(_headers), std::string, std::string_view>(_headers,
+                                                                                      "server:",
+                                                                                      "");
 }
 
 HttpHeader & HttpHeader::remove_header(const std::string & name)

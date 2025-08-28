@@ -16,8 +16,10 @@ using namespace sihd::util;
 class SomeObservable: public Observable<SomeObservable>
 {
     public:
-        SomeObservable() {};
-        ~SomeObservable() {};
+        SomeObservable() = default;
+        ;
+        ~SomeObservable() = default;
+        ;
 
         int get_val() { return val; }
 

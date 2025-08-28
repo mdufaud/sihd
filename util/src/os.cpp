@@ -90,14 +90,14 @@ std::string last_error_str()
     }
 
     LPSTR messageBuffer = nullptr;
-    size_t size
-        = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                         NULL,
-                         errorMessageID,
-                         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                         (LPSTR)&messageBuffer,
-                         0,
-                         NULL);
+    size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
+                                     | FORMAT_MESSAGE_IGNORE_INSERTS,
+                                 NULL,
+                                 errorMessageID,
+                                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                 (LPSTR)&messageBuffer,
+                                 0,
+                                 NULL);
 
     std::string message(messageBuffer, size);
 
@@ -159,7 +159,7 @@ rlim_t max_fds()
     struct rlimit r;
     if (getrlimit(RLIMIT_NOFILE, &r) == -1)
     {
-        SIHD_LOG(error, "OS: getrlim_t {}", strerror(errno));
+        SIHD_LOG(error, "OS: getrlim_t {}", last_error_str());
         return 0;
     }
     return r.rlim_cur;
@@ -176,7 +176,7 @@ bool ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
     bool ret = ::ioctlsocket(fd, request, reinterpret_cast<long unsigned int *>(arg_ptr)) == 0;
 #endif
     if (!ret && logerror)
-        SIHD_LOG(error, "OS: ioctl error: {}", strerror(errno));
+        SIHD_LOG(error, "OS: ioctl error: {}", last_error_str());
     return ret == 0;
 }
 
@@ -190,7 +190,7 @@ bool setsockopt(int socket, int level, int optname, const void *optval, socklen_
     bool ret = ::setsockopt(socket, level, optname, (const char *)optval, optlen) >= 0;
 #endif
     if (!ret && logerror)
-        SIHD_LOG(error, "OS: getsockopt error: {}", strerror(errno));
+        SIHD_LOG(error, "OS: getsockopt error: {}", last_error_str());
     return ret;
 }
 
@@ -204,7 +204,7 @@ bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *opt
     bool ret = ::getsockopt(socket, level, optname, (char *)optval, optlen) >= 0;
 #endif
     if (!ret && logerror)
-        SIHD_LOG(error, "OS: getsockopt error: {}", strerror(errno));
+        SIHD_LOG(error, "OS: getsockopt error: {}", last_error_str());
     return ret;
 }
 
@@ -481,7 +481,8 @@ bool is_run_by_debugger()
     if (!tracer_pid_ptr)
         return false;
 
-    for (const char *characterPtr = tracer_pid_ptr + sizeof(tracerPidString) - 1; characterPtr <= buf + num_read;
+    for (const char *characterPtr = tracer_pid_ptr + sizeof(tracerPidString) - 1;
+         characterPtr <= buf + num_read;
          ++characterPtr)
     {
         if (isspace(*characterPtr))
@@ -526,12 +527,12 @@ ssize_t peak_rss()
     int fd = -1;
     if ((fd = open("/proc/self/psinfo", O_RDONLY)) == -1)
     {
-        SIHD_LOG(error, "OS: peak_rss open: {}", strerror(errno));
+        SIHD_LOG(error, "OS: peak_rss open: {}", last_error_str());
         return (ssize_t)-1L;
     }
     if (read(fd, &psinfo, sizeof(psinfo)) != sizeof(psinfo))
     {
-        SIHD_LOG(error, "OS: peak_rss read: {}", strerror(errno));
+        SIHD_LOG(error, "OS: peak_rss read: {}", last_error_str());
         close(fd);
         return (ssize_t)-1L;
     }
@@ -543,7 +544,7 @@ ssize_t peak_rss()
     struct rusage rusage;
     if (getrusage(RUSAGE_SELF, &rusage) == -1)
     {
-        SIHD_LOG(error, "OS: peak_rss getrusage: {}", strerror(errno));
+        SIHD_LOG(error, "OS: peak_rss getrusage: {}", last_error_str());
         return (ssize_t)-1L;
     }
 # if defined(__SIHD_APPLE__)

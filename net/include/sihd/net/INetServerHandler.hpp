@@ -11,7 +11,8 @@ namespace sihd::net
 class INetServerHandler
 {
     public:
-        virtual ~INetServerHandler() {};
+        virtual ~INetServerHandler() = default;
+        ;
         virtual void handle_no_activity(INetServer *server, time_t nano) = 0;
         virtual void handle_activity(INetServer *server, time_t nano) = 0;
         virtual void handle_new_client(INetServer *server) = 0;

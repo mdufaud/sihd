@@ -12,7 +12,7 @@ LoggerFile::LoggerFile(const std::string & path, bool append)
     _file.open(path, append ? "a" : "w");
 }
 
-LoggerFile::~LoggerFile() {}
+LoggerFile::~LoggerFile() = default;
 
 void LoggerFile::log(const LogInfo & info, std::string_view msg)
 {

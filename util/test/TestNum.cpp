@@ -8,9 +8,9 @@ using namespace sihd::util;
 class TestNum: public ::testing::Test
 {
     protected:
-        TestNum() {}
+        TestNum() = default;
 
-        virtual ~TestNum() {}
+        virtual ~TestNum() = default;
 
         virtual void SetUp() {}
 
@@ -54,11 +54,15 @@ TEST_F(TestNum, test_num_add_no_overflow)
     EXPECT_EQ(num::add_no_overflow(0, 20), 20);
     EXPECT_EQ(num::add_no_overflow(0, 0), 0);
 
-    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<uint64_t>::max(), 1ul), std::numeric_limits<uint64_t>::max());
-    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<int64_t>::max(), 1l), std::numeric_limits<int64_t>::max());
+    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<uint64_t>::max(), 1ul),
+              std::numeric_limits<uint64_t>::max());
+    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<int64_t>::max(), 1l),
+              std::numeric_limits<int64_t>::max());
 
-    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<uint64_t>::max(), 0ul), std::numeric_limits<uint64_t>::max());
-    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<int64_t>::min(), -1l), std::numeric_limits<int64_t>::min());
+    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<uint64_t>::max(), 0ul),
+              std::numeric_limits<uint64_t>::max());
+    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<int64_t>::min(), -1l),
+              std::numeric_limits<int64_t>::min());
 }
 
 TEST_F(TestNum, test_num_substract_no_overflow)
@@ -73,9 +77,12 @@ TEST_F(TestNum, test_num_substract_no_overflow)
     EXPECT_EQ(num::substract_no_overflow(std::numeric_limits<int64_t>::min(), -1l),
               std::numeric_limits<int64_t>::min() + 1);
 
-    EXPECT_EQ(num::substract_no_overflow(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max()),
+    EXPECT_EQ(num::substract_no_overflow(std::numeric_limits<uint64_t>::max(),
+                                         std::numeric_limits<uint64_t>::max()),
               0);
-    EXPECT_EQ(num::substract_no_overflow(std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::min()), 0);
+    EXPECT_EQ(
+        num::substract_no_overflow(std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::min()),
+        0);
 }
 
 } // namespace test

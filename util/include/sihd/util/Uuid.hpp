@@ -3,22 +3,6 @@
 
 #include <string_view>
 
-#include <sihd/util/platform.hpp>
-
-#if defined(__SIHD_WINDOWS__)
-# include <rpc.h>
-#else
-# if defined __has_include
-#  if __has_include(<uuid.h>)
-#   include <uuid.h>
-#  elif __has_include(<uuid/uuid.h>)
-#   include <uuid/uuid.h>
-#  endif
-# else
-#  include <uuid.h>
-# endif
-#endif
-
 namespace sihd::util
 {
 
@@ -26,27 +10,37 @@ class Uuid
 {
     public:
         Uuid();
-        Uuid(std::string_view s);
-        Uuid(const uuid_t *uuid);
+        Uuid(std::string_view uuid_str);
+        Uuid(const Uuid & uuid_namespace, std::string_view name);
         Uuid(const Uuid & other);
         ~Uuid();
 
+        operator std::string() const { return this->str(); }
         operator bool() const { return !this->is_null(); }
 
         Uuid & operator=(const Uuid & other);
         bool operator==(const Uuid & other) const;
 
+        void clear();
+
         bool is_null() const;
         std::string str() const;
-        const uuid_t *uuid() const { return &_uuid; }
+
+        // RFC 4122 predefined namespaces
+        constexpr static auto UUID_DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+        constexpr static auto UUID_URL = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
+        constexpr static auto UUID_OID = "6ba7b812-9dad-11d1-80b4-00c04fd430c8";
+        constexpr static auto UUID_X500 = "6ba7b814-9dad-11d1-80b4-00c04fd430c8";
+
+        static Uuid DNS() { return Uuid(UUID_DNS); }
+        static Uuid URL() { return Uuid(UUID_URL); }
+        static Uuid OID() { return Uuid(UUID_OID); }
+        static Uuid X500() { return Uuid(UUID_X500); }
 
     protected:
 
     private:
-        void _clear();
-        void _copy(const uuid_t *uuid);
-
-        uuid_t _uuid;
+        unsigned char _uuid[16];
 };
 
 } // namespace sihd::util

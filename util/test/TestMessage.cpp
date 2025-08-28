@@ -131,7 +131,8 @@ TEST_F(TestMessage, test_message_waterfall)
 
     SIHD_COUT("{}\n", msg2.tree_desc_str());
 
-    EXPECT_EQ(msg2.field_byte_size(), msg1.field_byte_size() * 2 + sizeof(bool) + sizeof(double) * 2 + sizeof(short));
+    EXPECT_EQ(msg2.field_byte_size(),
+              msg1.field_byte_size() * 2 + sizeof(bool) + sizeof(double) * 2 + sizeof(short));
 
     EXPECT_EQ(msg2.field_byte_size(), sizeof(s_msg2));
 

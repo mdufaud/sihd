@@ -5,6 +5,7 @@
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/platform.hpp>
 
+#pragma message("TODO pImpl")
 struct ssh_channel_struct;
 struct ssh_session_struct;
 
@@ -25,7 +26,10 @@ class SshChannel
         bool open_session();
         bool open_agent();
         bool open_x11(std::string_view addr, int port);
-        bool open_forward(std::string_view remotehost, int remoteport, std::string_view sourcehost, int localport);
+        bool open_forward(std::string_view remotehost,
+                          int remoteport,
+                          std::string_view sourcehost,
+                          int localport);
 #if LIBSSH_VERSION_MINOR > 7
         /*
         bool open_reverse_forward(std::string_view remotehost, int remoteport,

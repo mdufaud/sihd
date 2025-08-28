@@ -42,7 +42,8 @@ class PyApi
         static std::map<std::string_view, std::function<void(PyModule &)>> api_lst;
 
     private:
-        virtual ~PyApi() {};
+        virtual ~PyApi() = default;
+        ;
 };
 
 } // namespace sihd::py

@@ -9,8 +9,8 @@ namespace sihd::bt
 
 SIHD_LOGGER;
 
-BtUtils::BtUtils() {}
+BtUtils::BtUtils() = default;
 
-BtUtils::~BtUtils() {}
+BtUtils::~BtUtils() = default;
 
 } // namespace sihd::bt

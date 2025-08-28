@@ -15,7 +15,7 @@ SIHD_LOGGER;
 
 SshShell::SshShell(ssh_session_struct *session): _ssh_session_ptr(session) {}
 
-SshShell::~SshShell() {}
+SshShell::~SshShell() = default;
 
 bool SshShell::open(bool x11)
 {

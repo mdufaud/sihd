@@ -11,9 +11,9 @@ using namespace sihd::util;
 class TestSafeQueue: public ::testing::Test
 {
     protected:
-        TestSafeQueue() {}
+        TestSafeQueue() = default;
 
-        virtual ~TestSafeQueue() {}
+        virtual ~TestSafeQueue() = default;
 
         virtual void SetUp() {}
 

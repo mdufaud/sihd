@@ -6,7 +6,7 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-Runnable::Runnable() {}
+Runnable::Runnable() = default;
 
 Runnable::Runnable(IRunnable *runnable_ptr)
 {
@@ -18,7 +18,7 @@ Runnable::Runnable(std::function<bool()> && fun)
     _run_fun = std::move(fun);
 }
 
-Runnable::~Runnable() {}
+Runnable::~Runnable() = default;
 
 void Runnable::set_runnable(IRunnable *runnable_ptr)
 {

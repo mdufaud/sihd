@@ -1,4 +1,7 @@
 #include <algorithm>
+#include <cstdlib>
+#include <list>
+#include <mutex>
 
 #include <sihd/util/AtExit.hpp>
 #include <sihd/util/Logger.hpp>

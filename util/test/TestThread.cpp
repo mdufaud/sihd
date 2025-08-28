@@ -7,8 +7,8 @@ using namespace sihd::util;
 class TestThread: public ::testing::Test
 {
     protected:
-        TestThread() {}
-        virtual ~TestThread() {}
+        TestThread() = default;
+        virtual ~TestThread() = default;
 
         virtual void SetUp() {}
 

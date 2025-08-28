@@ -6,9 +6,13 @@
 namespace sihd::util
 {
 
-LoggerStream::LoggerStream(FILE *output, bool print_thread_id): print_thread_id(print_thread_id), _output(output) {}
+LoggerStream::LoggerStream(FILE *output, bool print_thread_id):
+    print_thread_id(print_thread_id),
+    _output(output)
+{
+}
 
-LoggerStream::~LoggerStream() {}
+LoggerStream::~LoggerStream() = default;
 
 void LoggerStream::log(const LogInfo & info, std::string_view msg)
 {

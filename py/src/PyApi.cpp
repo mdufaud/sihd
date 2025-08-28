@@ -30,11 +30,12 @@ void PyApi::add_api(std::string_view name, std::function<void(PyApi::PyModule &)
 
 PyApi::PyModule::PyModule(pybind11::module *module): _module_ptr(module) {}
 
-PyApi::PyModule::~PyModule() {}
+PyApi::PyModule::~PyModule() = default;
 
 bool PyApi::PyModule::is_loaded(std::string_view submodule_name)
 {
-    return std::find(_modules_imported.begin(), _modules_imported.end(), submodule_name) != _modules_imported.end();
+    return std::find(_modules_imported.begin(), _modules_imported.end(), submodule_name)
+           != _modules_imported.end();
 }
 
 bool PyApi::PyModule::load(std::string_view submodule_name)

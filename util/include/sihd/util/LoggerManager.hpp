@@ -55,6 +55,7 @@ class LoggerManager: public ALogFilterer
         static void console(std::optional<LoggerFilter::Options> options = std::nullopt);
         static void thrower(std::optional<LoggerFilter::Options> options = std::nullopt);
 
+        // TODO add/rm/clear ILoggerFormat
         static bool add(ALogger *logger);
         static bool rm(ALogger *logger);
         static bool filter(ILoggerFilter *filter);

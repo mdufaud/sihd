@@ -55,13 +55,15 @@ TEST_F(TestFS, test_fs_path)
     EXPECT_EQ(fs::extension("/path/to/archive.tar.gz"), "tar.gz");
 
     EXPECT_EQ(fs::filename("/path/to/test.txt"), "test.txt");
-    EXPECT_EQ(fs::filename("/path/to/////test.txt"), "test.txt");
+    EXPECT_EQ(fs::filename("/path/to///..///test.txt"), "test.txt");
     EXPECT_EQ(fs::filename("test.txt"), "test.txt");
     EXPECT_EQ(fs::filename(""), "");
 
     EXPECT_EQ(fs::parent("/path/to/test.txt"), "/path/to");
     EXPECT_EQ(fs::parent("/path/to////test.txt"), "/path/to");
     EXPECT_EQ(fs::parent("/path/to"), "/path");
+    EXPECT_EQ(fs::parent("/path/to/.."), "");
+    EXPECT_EQ(fs::parent("/path/to/test/.."), "/path");
     EXPECT_EQ(fs::parent("/path/to/"), "/path");
     EXPECT_EQ(fs::parent("/path/to////"), "/path");
     EXPECT_EQ(fs::parent("/path"), "");
@@ -70,6 +72,7 @@ TEST_F(TestFS, test_fs_path)
     EXPECT_EQ(fs::parent("/"), "");
     EXPECT_EQ(fs::parent("//////"), "");
     EXPECT_EQ(fs::parent("filename.txt"), "");
+    EXPECT_EQ(fs::parent("path/to/..///../..///test"), "..");
     EXPECT_EQ(fs::parent(""), "");
 
     EXPECT_EQ(fs::trim_path("/path/to/test", "/path/to"), "test");

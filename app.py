@@ -16,7 +16,7 @@ extlibs = {
     # util
     "cxxopts": "3.0.0",
     "fmt": "7.1.3",
-    "libuuid": "1.0.3",
+    "libuuid": "",
     # http
     "libwebsockets": "4.3.3",
     "curl": "7.87.0",
@@ -41,6 +41,7 @@ extlibs = {
     "libjpeg": "9d",
     "lua": "5.3.5-5",
     "luabridge3": "3.0-rc3",
+    # bt
     "libbluetooth": "",
 }
 
@@ -54,13 +55,18 @@ extlibs_features_windows = {
     "imgui": ["win32-binding", "dx11-binding"],
 }
 
+# on windows some libs are not available through vcpkg
 extlibs_skip_windows = [
     "libwebsockets",
     "libssh",
     "libpcap",
 ]
 
-extlibs_skip = ["libbluetooth"]
+# on linux libbluetooth and libuuid are provided by the system
+extlibs_skip = [
+    "libbluetooth",
+    "libuuid"
+]
 
 vcpkg_baseline = "38d9cf0bd45404cd25aeb03f79bcb0af256de343"
 

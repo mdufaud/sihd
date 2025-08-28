@@ -66,9 +66,11 @@ TEST_F(TestSshSession, test_sshsession_auth_interactive_keyboard)
         GTEST_SKIP_("no user input");
     SIHD_LOG(info, "Connection to {}@{}", user, host);
     SshSession session;
-    GTEST_ASSERT_EQ(
-        session.fast_connect(user, host, 22, SSH_LOG_PROTOCOL | SSH_LOG_DEBUG | SSH_LOG_PACKET | SSH_LOG_WARN),
-        true);
+    GTEST_ASSERT_EQ(session.fast_connect(user,
+                                         host,
+                                         22,
+                                         SSH_LOG_PROTOCOL | SSH_LOG_DEBUG | SSH_LOG_PACKET | SSH_LOG_WARN),
+                    true);
     session.set_verbosity(SSH_LOG_PROTOCOL);
     EXPECT_TRUE(session.connected());
     auto auth = session.auth_interactive_keyboard();

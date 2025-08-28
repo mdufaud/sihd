@@ -6,23 +6,34 @@
 #if defined(__SIHD_WINDOWS__)
 # include <rpc.h>
 #else
-# if defined __has_include
-#  if __has_include(<uuid.h>)
-#   include <uuid.h>
-#  elif __has_include(<uuid/uuid.h>)
-#   include <uuid/uuid.h>
-#  endif
-# else
-#  include <uuid.h>
-# endif
+# include <uuid/uuid.h>
 #endif
 
 namespace sihd::util
 {
 
+namespace
+{
+
+void do_copy(uuid_t uuid_to, const uuid_t uuid_from)
+{
+#if defined(__SIHD_WINDOWS__)
+    memcpy(uuid_to, uuid_from, sizeof(uuid_t));
+#else
+    uuid_copy(uuid_to, uuid_from);
+#endif
+}
+
+void do_clear(uuid_t uuid)
+{
+    memset(uuid, 0, sizeof(uuid_t));
+}
+
+} // namespace
+
 Uuid::Uuid()
 {
-    this->_clear();
+    this->clear();
 #if defined(__SIHD_WINDOWS__)
     UuidCreate(&_uuid);
 #else
@@ -30,28 +41,87 @@ Uuid::Uuid()
 #endif
 }
 
-Uuid::Uuid(std::string_view s)
+Uuid::Uuid(std::string_view uuid_str)
 {
-    this->_clear();
+    this->clear();
 #if defined(__SIHD_WINDOWS__)
-    UuidFromString((unsigned char *)s.data(), &_uuid);
+    UuidFromString((unsigned char *)uuid_str.data(), &_uuid);
 #else
-    uuid_parse(s.data(), _uuid);
+    uuid_parse(uuid_str.data(), _uuid);
 #endif
 }
 
-Uuid::Uuid(const uuid_t *uuid)
+Uuid::Uuid(const Uuid & uuid_namespace, std::string_view name)
 {
-    this->_copy(uuid);
+    if (uuid_namespace.is_null())
+        throw std::invalid_argument("Namespace uuid is null");
+
+    this->clear();
+
+#if defined(__SIHD_WINDOWS__)
+    // 1. Build input buffer = namespace UUID (big endian) + name
+    std::vector<unsigned char> data;
+    data.reserve(16 + name.size());
+
+    // Convert namespace (which is also an unsigned char[16]) into big-endian order
+    data.insert(data.end(), uuid_namespace._uuid, uuid_namespace._uuid + 16);
+
+    // Append the name bytes
+    data.insert(data.end(), name.begin(), name.end());
+
+    // 2. Compute SHA-1
+    HCRYPTPROV hProv = 0;
+    HCRYPTHASH hHash = 0;
+    BYTE hash[20];
+    DWORD hashLen = sizeof(hash);
+
+    if (!CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
+        throw std::runtime_error("CryptAcquireContext failed");
+
+    if (!CryptCreateHash(hProv, CALG_SHA1, 0, 0, &hHash))
+    {
+        CryptReleaseContext(hProv, 0);
+        throw std::runtime_error("CryptCreateHash failed");
+    }
+
+    if (!CryptHashData(hHash, data.data(), (DWORD)data.size(), 0))
+    {
+        CryptDestroyHash(hHash);
+        CryptReleaseContext(hProv, 0);
+        throw std::runtime_error("CryptHashData failed");
+    }
+
+    if (!CryptGetHashParam(hHash, HP_HASHVAL, hash, &hashLen, 0))
+    {
+        CryptDestroyHash(hHash);
+        CryptReleaseContext(hProv, 0);
+        throw std::runtime_error("CryptGetHashParam failed");
+    }
+
+    CryptDestroyHash(hHash);
+    CryptReleaseContext(hProv, 0);
+
+    // 3. Copy first 16 bytes of SHA1 into _uuid
+    memcpy(_uuid, hash, 16);
+
+    // 4. Set version (5) and variant (RFC 4122)
+    _uuid[6] = (_uuid[6] & 0x0F) | (5 << 4); // version 5
+    _uuid[8] = (_uuid[8] & 0x3F) | 0x80;     // variant RFC4122
+#else
+    uuid_generate_sha1(_uuid, uuid_namespace._uuid, name.data(), name.size());
+#endif
 }
 
-Uuid::Uuid(const Uuid & other): Uuid(other.uuid()) {}
+Uuid::Uuid(const Uuid & other)
+{
+    do_copy(_uuid, other._uuid);
+}
 
-Uuid::~Uuid() {}
+Uuid::~Uuid() = default;
 
 Uuid & Uuid::operator=(const Uuid & other)
 {
-    this->_copy(other.uuid());
+    do_copy(_uuid, other._uuid);
     return *this;
 }
 
@@ -59,10 +129,10 @@ bool Uuid::operator==(const Uuid & other) const
 {
 #if defined(__SIHD_WINDOWS__)
     RPC_STATUS status;
-    return UuidCompare(const_cast<uuid_t *>(&_uuid), const_cast<uuid_t *>(other.uuid()), &status) == 0
+    return UuidCompare(const_cast<uuid_t *>(&_uuid), const_cast<uuid_t *>(other._uuid), &status) == 0
            && status == RPC_S_OK;
 #else
-    return uuid_compare(_uuid, *other.uuid()) == 0;
+    return uuid_compare(_uuid, other._uuid) == 0;
 #endif
 }
 
@@ -94,23 +164,9 @@ std::string Uuid::str() const
     return ret;
 }
 
-void Uuid::_copy(const uuid_t *uuid)
+void Uuid::clear()
 {
-    this->_clear();
-#if defined(__SIHD_WINDOWS__)
-    memcpy(&_uuid, uuid, sizeof(uuid_t));
-#else
-    uuid_copy(_uuid, *uuid);
-#endif
-}
-
-void Uuid::_clear()
-{
-#if defined(__SIHD_WINDOWS__)
-    memset(&_uuid, 0, sizeof(uuid_t));
-#else
-    memset(_uuid, 0, sizeof(uuid_t));
-#endif
+    do_clear(_uuid);
 }
 
 } // namespace sihd::util

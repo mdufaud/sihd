@@ -15,7 +15,7 @@ HttpResponse::HttpResponse(Mime *mimes): _status(HTTP_STATUS_OK), _mime_ptr(mime
     _http_header.set_accept_charset("utf-8");
 }
 
-HttpResponse::~HttpResponse() {}
+HttpResponse::~HttpResponse() = default;
 
 void HttpResponse::set_content_type(std::string_view mime_type)
 {

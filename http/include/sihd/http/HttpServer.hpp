@@ -17,10 +17,15 @@
 #include <sihd/http/Mime.hpp>
 #include <sihd/http/WebService.hpp>
 
+#pragma message("TODO pImpl")
 // forward declarations of libwebsockets to prevent header leaking
 struct lws;
 struct lws_protocols;
-typedef int lws_callback_function(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
+typedef int lws_callback_function(struct lws *wsi,
+                                  enum lws_callback_reasons reason,
+                                  void *user,
+                                  void *in,
+                                  size_t len);
 struct lws_http_mount;
 struct lws_context;
 
@@ -111,7 +116,11 @@ class HttpServer: public sihd::util::Node,
                                              void *user,
                                              void *in,
                                              size_t len);
-        int _lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
+        int _lws_http_callback(struct lws *wsi,
+                               enum lws_callback_reasons reason,
+                               void *user,
+                               void *in,
+                               size_t len);
 
         HttpRequest::RequestType get_request_type(struct lws *wsi);
 

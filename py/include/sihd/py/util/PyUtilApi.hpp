@@ -133,7 +133,8 @@ class PyUtilApi
         }
 
     private:
-        ~PyUtilApi() {};
+        ~PyUtilApi() = default;
+        ;
 };
 
 } // namespace sihd::py

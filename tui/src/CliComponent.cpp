@@ -30,7 +30,7 @@ class CliBase: public ComponentBase
             };
             _input_cpt = Input(default_options);
         }
-        ~CliBase() {}
+        ~CliBase() = default;
 
     private:
         Element Render() final
@@ -58,7 +58,8 @@ class CliBase: public ComponentBase
 
             if (event == Event::ArrowUp || (event.is_mouse() && event.mouse().button == Mouse::WheelUp))
                 _focused_line--;
-            else if ((event == Event::ArrowDown || (event.is_mouse() && event.mouse().button == Mouse::WheelDown)))
+            else if ((event == Event::ArrowDown
+                      || (event.is_mouse() && event.mouse().button == Mouse::WheelDown)))
                 _focused_line++;
             else if (event == Event::PageDown)
                 _focused_line += _log_box.y_max - _log_box.y_min;

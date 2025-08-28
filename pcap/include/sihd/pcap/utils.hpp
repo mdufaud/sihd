@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#pragma message("TODO forward")
 #include <pcap.h>
 
 #include <sihd/util/platform.hpp>
@@ -13,7 +14,7 @@ namespace sihd::pcap::utils
 
 bool init(int opts = -1);
 
-// TODO return IpAddr
+// TODO return net::IpAddr
 bool lookupnet(std::string_view dev, bpf_u_int32 *ip, bpf_u_int32 *mask);
 
 std::string status_str(int code);

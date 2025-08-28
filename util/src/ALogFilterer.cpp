@@ -4,7 +4,7 @@
 namespace sihd::util
 {
 
-ALogFilterer::ALogFilterer() {}
+ALogFilterer::ALogFilterer() = default;
 
 ALogFilterer::~ALogFilterer()
 {

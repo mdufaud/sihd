@@ -4,6 +4,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/SigHandler.hpp>
 #include <sihd/util/SigWaiter.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/signal.hpp>
 #include <sihd/util/str.hpp>
@@ -47,7 +48,7 @@ SigWaiter::SigWaiter(const Conf & conf): _received_signal(false)
     sigaddset(&newmask, wanted_signal);
     if (sigprocmask(SIG_BLOCK, &newmask, &oldmask) == -1)
     {
-        SIHD_LOG(error, "sigprocmask failed: {}", strerror(errno));
+        SIHD_LOG(error, "sigprocmask failed: {}", os::last_error_str());
         return;
     }
 
@@ -105,7 +106,7 @@ SigWaiter::SigWaiter(const Conf & conf): _received_signal(false)
     }
     if (sigprocmask(SIG_SETMASK, &oldmask, nullptr) == -1)
     {
-        SIHD_LOG(error, "sigprocmask restore failed: {}", strerror(errno));
+        SIHD_LOG(error, "sigprocmask restore failed: {}", os::last_error_str());
         return;
     }
 #endif
@@ -113,7 +114,7 @@ SigWaiter::SigWaiter(const Conf & conf): _received_signal(false)
 
 SigWaiter::SigWaiter(): SigWaiter(SigWaiter::Conf()) {}
 
-SigWaiter::~SigWaiter() {}
+SigWaiter::~SigWaiter() = default;
 
 bool SigWaiter::received_signal() const
 {

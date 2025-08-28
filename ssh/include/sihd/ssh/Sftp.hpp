@@ -6,6 +6,7 @@
 #include <string_view>
 #include <vector>
 
+#pragma message("TODO pImpl")
 struct sftp_file_struct;
 struct sftp_attributes_struct;
 struct ssh_session_struct;

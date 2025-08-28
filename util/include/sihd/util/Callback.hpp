@@ -13,9 +13,9 @@ namespace sihd::util
 class CallbackManager
 {
     public:
-        CallbackManager() {}
+        CallbackManager() = default;
 
-        ~CallbackManager() {}
+        ~CallbackManager() = default;
 
         bool exists(const std::string & name) { return _callbacks.find(name) != _callbacks.end(); }
 
@@ -25,25 +25,26 @@ class CallbackManager
         template <typename R, typename... Targs>
         void set(const std::string & name, R (*fun)(Targs...))
         {
-            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun](Targs... args) {
-                                   return (*fun)(args...);
-                               })));
+            _callbacks.emplace(name,
+                               std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(
+                                   [fun](Targs... args) { return (*fun)(args...); })));
         }
 
         // Member functions binding
         template <typename C, typename R, typename... Targs>
         void set(const std::string & name, C *obj, R (C::*fun)(Targs...))
         {
-            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun, obj](Targs... args) {
-                                   return (obj->*fun)(args...);
-                               })));
+            _callbacks.emplace(name,
+                               std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(
+                                   [fun, obj](Targs... args) { return (obj->*fun)(args...); })));
         }
 
         // std::function binding
         template <typename R, typename... Targs>
         void set(const std::string & name, std::function<R(Targs...)> fun)
         {
-            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
+            _callbacks.emplace(name,
+                               std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
         }
 
         // The entire signature of the lambda must be passed to this overload.
@@ -51,7 +52,8 @@ class CallbackManager
         void set(const std::string & name, Callable callable)
         {
             std::function<R(Targs...)> fun(callable);
-            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
+            _callbacks.emplace(name,
+                               std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
         }
 
         // Calling
@@ -87,9 +89,9 @@ class CallbackManager
         class CallbackBase
         {
             public:
-                CallbackBase() {}
+                CallbackBase() = default;
 
-                virtual ~CallbackBase() {}
+                virtual ~CallbackBase() = default;
         };
 
         template <typename R, typename... Targs>
@@ -98,7 +100,7 @@ class CallbackManager
             public:
                 Callback(std::function<R(Targs...)> && fun) { _fun = std::move(fun); }
 
-                ~Callback() {}
+                ~Callback() = default;
 
                 R call(Targs... args) { return _fun(args...); }
 

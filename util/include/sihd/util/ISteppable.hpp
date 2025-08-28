@@ -7,7 +7,8 @@ namespace sihd::util
 class ISteppable
 {
     public:
-        virtual ~ISteppable() {};
+        virtual ~ISteppable() = default;
+        ;
         virtual bool step() = 0;
 };
 

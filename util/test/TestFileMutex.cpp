@@ -67,7 +67,8 @@ TEST_F(TestFileMutex, test_filemutex_unique)
         if (other_lock.try_lock_for(std::chrono::milliseconds(5)) == false)
             ret += 1 << 2;
 
-        if (other_lock.try_lock_until(std::chrono::system_clock::now() + std::chrono::milliseconds(5)) == false)
+        if (other_lock.try_lock_until(std::chrono::system_clock::now() + std::chrono::milliseconds(5))
+            == false)
             ret += 1 << 3;
 
         return ret;

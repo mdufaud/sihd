@@ -7,7 +7,8 @@ namespace sihd::util
 class IRunnable
 {
     public:
-        virtual ~IRunnable() {};
+        virtual ~IRunnable() = default;
+        ;
         virtual bool run() = 0;
 };
 

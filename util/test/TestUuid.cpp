@@ -25,18 +25,33 @@ class TestUuid: public ::testing::Test
 
 TEST_F(TestUuid, test_uuid)
 {
-    Uuid uuid;
-    ASSERT_FALSE(uuid.is_null());
+    {
+        Uuid uuid;
+        ASSERT_FALSE(uuid.is_null());
 
-    Uuid uuid2(uuid);
-    EXPECT_TRUE(uuid == uuid2);
-    EXPECT_EQ(uuid.str(), uuid2.str());
+        Uuid uuid2(uuid);
+        EXPECT_TRUE(uuid == uuid2);
+        EXPECT_EQ(uuid.str(), uuid2.str());
 
-    Uuid uuid3(uuid.str());
-    EXPECT_TRUE(uuid == uuid3);
-    EXPECT_EQ(uuid.str(), uuid3.str());
+        Uuid uuid3(uuid.str());
+        EXPECT_TRUE(uuid == uuid3);
+        EXPECT_EQ(uuid.str(), uuid3.str());
+    }
+    {
+        Uuid uuid("not-a-uuid");
+        EXPECT_TRUE(uuid.is_null());
+    }
 
-    Uuid uuid4("test");
-    EXPECT_TRUE(uuid4.is_null());
+    {
+        EXPECT_EQ(Uuid(Uuid::DNS(), "sihd").str(), "ac25224e-7775-5a3f-a8c5-efa7eb15f5fd");
+        EXPECT_EQ(Uuid(Uuid::URL(), "sihd").str(), "609c7508-0214-5ac8-b045-235be114eea7");
+        EXPECT_EQ(Uuid(Uuid::OID(), "sihd").str(), "5997563a-725e-5b41-b2a6-fdb389c01f16");
+        EXPECT_EQ(Uuid(Uuid::X500(), "sihd").str(), "65d77e6b-3499-5b92-859e-79021df31f42");
+    }
+
+    {
+        EXPECT_THROW(Uuid uuid(Uuid("not-a-uuid"), "name"), std::invalid_argument);
+    }
 }
+
 } // namespace test

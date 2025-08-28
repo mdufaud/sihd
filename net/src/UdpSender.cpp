@@ -11,7 +11,7 @@ SIHD_LOGGER;
 
 UdpSender::UdpSender(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent) {}
 
-UdpSender::~UdpSender() {}
+UdpSender::~UdpSender() = default;
 
 bool UdpSender::open_socket_unix()
 {

@@ -19,9 +19,9 @@ Location my_function_location()
 class TestLocation: public ::testing::Test
 {
     protected:
-        TestLocation() {}
+        TestLocation() = default;
 
-        virtual ~TestLocation() {}
+        virtual ~TestLocation() = default;
 
         virtual void SetUp() {}
 

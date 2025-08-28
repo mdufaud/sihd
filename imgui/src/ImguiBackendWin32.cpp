@@ -2,7 +2,10 @@
 #include <sihd/util/Logger.hpp>
 
 // Forward declare message handler from imgui_impl_win32.cpp
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd,
+                                                             UINT msg,
+                                                             WPARAM wParam,
+                                                             LPARAM lParam);
 
 // Win32 message handler
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -134,9 +137,9 @@ bool ImguiBackendWin32::should_close()
     return _close;
 }
 
-void ImguiBackendWin32::pre_render() {}
+void ImguiBackendWin32::pre_render() = default;
 
-void ImguiBackendWin32::post_render() {}
+void ImguiBackendWin32::post_render() = default;
 
 void ImguiBackendWin32::shutdown()
 {

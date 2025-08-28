@@ -23,8 +23,11 @@ class ACoreObject: public sihd::util::Named,
         using ACoreService::start;
         using ACoreService::stop;
 
-        ACoreObject(const std::string & name, sihd::util::Node *parent = nullptr): sihd::util::Named(name, parent) {}
-        virtual ~ACoreObject() {}
+        ACoreObject(const std::string & name, sihd::util::Node *parent = nullptr):
+            sihd::util::Named(name, parent)
+        {
+        }
+        virtual ~ACoreObject() = default;
 
         bool is_running() const override { return false; }
 

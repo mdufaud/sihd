@@ -9,7 +9,8 @@ namespace sihd::net
 class INetSender
 {
     public:
-        virtual ~INetSender() {};
+        virtual ~INetSender() = default;
+        ;
 
         virtual ssize_t send(sihd::util::ArrCharView view) = 0;
         virtual bool send_all(sihd::util::ArrCharView view) = 0;

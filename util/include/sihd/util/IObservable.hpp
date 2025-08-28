@@ -8,7 +8,8 @@ template <typename T>
 class IObservable
 {
     public:
-        virtual ~IObservable() {};
+        virtual ~IObservable() = default;
+        ;
 
     protected:
         virtual void notify_observers(T *sender) = 0;

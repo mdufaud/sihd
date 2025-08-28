@@ -19,8 +19,10 @@ static const char *hwdb_get(const char *modalias, const char *key)
 
     udev_list_entry_foreach(
         entry,
-        udev_hwdb_get_properties_list_entry(hwdb, modalias, 0)) if (strcmp(udev_list_entry_get_name(entry), key)
-                                                                    == 0) return udev_list_entry_get_value(entry);
+        udev_hwdb_get_properties_list_entry(hwdb,
+                                            modalias,
+                                            0)) if (strcmp(udev_list_entry_get_name(entry), key)
+                                                    == 0) return udev_list_entry_get_value(entry);
 
     return NULL;
 }
@@ -153,8 +155,11 @@ int read_sysfs_prop(char *buf, size_t size, char *sysfs_name, const char *propna
     return n;
 }
 
-static void
-    get_vendor_product_with_fallback(char *vendor, int vendor_len, char *product, int product_len, libusb_device *dev)
+static void get_vendor_product_with_fallback(char *vendor,
+                                             int vendor_len,
+                                             char *product,
+                                             int product_len,
+                                             libusb_device *dev)
 {
     struct libusb_device_descriptor desc;
     char sysfs_name[PATH_MAX];

@@ -52,7 +52,7 @@ CsvReader::CsvReader(std::string_view path): CsvReader()
     this->open(path);
 }
 
-CsvReader::~CsvReader() {}
+CsvReader::~CsvReader() = default;
 
 bool CsvReader::set_delimiter(int c)
 {
@@ -134,7 +134,8 @@ bool CsvReader::read_next()
         _line += view.data();
 
         const bool number_of_quotes_are_odd = count_unescaped_quotes(view) % 2;
-        const bool quotes_are_even = searching_for_end_quote ? number_of_quotes_are_odd : !number_of_quotes_are_odd;
+        const bool quotes_are_even
+            = searching_for_end_quote ? number_of_quotes_are_odd : !number_of_quotes_are_odd;
 
         if (quotes_are_even)
         {

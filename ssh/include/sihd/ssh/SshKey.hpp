@@ -3,7 +3,7 @@
 
 #include <string>
 
-#pragma message("TODO forward enum")
+#pragma message("TODO pImpl")
 #include <libssh/libssh.h>
 
 struct ssh_key_struct;

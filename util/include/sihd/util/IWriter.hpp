@@ -10,7 +10,8 @@ namespace sihd::util
 class IWriter
 {
     public:
-        virtual ~IWriter() {};
+        virtual ~IWriter() = default;
+        ;
         virtual ssize_t write(ArrCharView view) = 0;
 };
 
@@ -19,7 +20,8 @@ class IWriterTimestamp: public IWriter
     public:
         using IWriter::write;
 
-        virtual ~IWriterTimestamp() {};
+        virtual ~IWriterTimestamp() = default;
+        ;
         virtual ssize_t write(ArrCharView view, Timestamp timestamp) = 0;
 };
 

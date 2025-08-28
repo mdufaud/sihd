@@ -22,9 +22,12 @@ class TestDevice: public ::testing::Test
 class SomeDevice: public Device
 {
     public:
-        SomeDevice(const std::string & name, Node *parent = nullptr): Device(name, parent) { _running = false; }
+        SomeDevice(const std::string & name, Node *parent = nullptr): Device(name, parent)
+        {
+            _running = false;
+        }
 
-        ~SomeDevice() {}
+        ~SomeDevice() = default;
 
         bool is_running() const { return _running; }
 

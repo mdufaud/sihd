@@ -124,7 +124,7 @@ PcapIFace::PcapIFace(pcap_if_t *ptr): _if_ptr(ptr)
     }
 }
 
-PcapIFace::~PcapIFace() {}
+PcapIFace::~PcapIFace() = default;
 
 const std::vector<struct pcap_addr *> & PcapIFace::addresses() const
 {

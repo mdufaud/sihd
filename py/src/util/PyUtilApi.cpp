@@ -16,26 +16,26 @@
 #include <sihd/util/type.hpp>
 #include <sihd/util/version.hpp>
 
-#define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType)                                                                 \
-    pybind11::class_<ArrType, IArray>(m_util, #ArrType)                                                                \
-        .def(pybind11::init<>())                                                                                       \
-        .def(pybind11::init<size_t>())                                                                                 \
-        .def(pybind11::init<const std::vector<PrimitiveType>>())                                                       \
-        .def("clone", &ArrType::clone)                                                                                 \
-        .def("push_back", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_back))                  \
-        .def("push_back", &PyUtilApi::_array_py_push_back_list<PrimitiveType>)                                         \
-        .def("push_back", &PyUtilApi::_array_py_push_back_tuple<PrimitiveType>)                                        \
-        .def("push_front", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_front))                \
-        .def("push_front", &PyUtilApi::_array_py_push_front_list<PrimitiveType>)                                       \
-        .def("push_front", &PyUtilApi::_array_py_push_front_tuple<PrimitiveType>)                                      \
-        .def("pop", &ArrType::pop)                                                                                     \
-        .def("front", &ArrType::front)                                                                                 \
-        .def("back", &ArrType::back)                                                                                   \
-        .def("at", &ArrType::at)                                                                                       \
-        .def("__setitem__", &ArrType::set)                                                                             \
-        .def("__getitem__", &PyUtilApi::_array_py_getitem<PrimitiveType>)                                              \
-        .def("__contains__", &PyUtilApi::_array_py_contains<PrimitiveType>)                                            \
-        .def("__reversed__", &PyUtilApi::_array_py_reversed<PrimitiveType>)                                            \
+#define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType)                                                       \
+    pybind11::class_<ArrType, IArray>(m_util, #ArrType)                                                      \
+        .def(pybind11::init<>())                                                                             \
+        .def(pybind11::init<size_t>())                                                                       \
+        .def(pybind11::init<const std::vector<PrimitiveType>>())                                             \
+        .def("clone", &ArrType::clone)                                                                       \
+        .def("push_back", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_back))        \
+        .def("push_back", &PyUtilApi::_array_py_push_back_list<PrimitiveType>)                               \
+        .def("push_back", &PyUtilApi::_array_py_push_back_tuple<PrimitiveType>)                              \
+        .def("push_front", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_front))      \
+        .def("push_front", &PyUtilApi::_array_py_push_front_list<PrimitiveType>)                             \
+        .def("push_front", &PyUtilApi::_array_py_push_front_tuple<PrimitiveType>)                            \
+        .def("pop", &ArrType::pop)                                                                           \
+        .def("front", &ArrType::front)                                                                       \
+        .def("back", &ArrType::back)                                                                         \
+        .def("at", &ArrType::at)                                                                             \
+        .def("__setitem__", &ArrType::set)                                                                   \
+        .def("__getitem__", &PyUtilApi::_array_py_getitem<PrimitiveType>)                                    \
+        .def("__contains__", &PyUtilApi::_array_py_contains<PrimitiveType>)                                  \
+        .def("__reversed__", &PyUtilApi::_array_py_reversed<PrimitiveType>)                                  \
         .def("__iter__", &PyUtilApi::_array_py_iter<PrimitiveType>, pybind11::keep_alive<0, 1>());
 
 namespace sihd::py
@@ -115,7 +115,8 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("clear", &path::clear)
         .def("clear_all", &path::clear_all)
         .def("get", static_cast<std::string (*)(const std::string &)>(&path::get))
-        .def("get_from_url", static_cast<std::string (*)(const std::string &, const std::string &)>(&path::get))
+        .def("get_from_url",
+             static_cast<std::string (*)(const std::string &, const std::string &)>(&path::get))
         .def("get_from_path", &path::get_from)
         .def("find", &path::find);
 
@@ -157,7 +158,8 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("split", &Splitter::split)
         .def("count_tokens", &Splitter::count_tokens);
 
-    pybind11::class_<Configurable>(m_util, "Configurable").def("set_conf", &PyUtilApi::_configurable_set_conf);
+    pybind11::class_<Configurable>(m_util, "Configurable")
+        .def("set_conf", &PyUtilApi::_configurable_set_conf);
 
     pybind11::class_<Named, SmartNodePtr<Named>>(m_util, "Named")
         // keep_alive 1 -> this | 2 -> first arg | 3 -> parent
@@ -242,7 +244,8 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
     //      pybind11::call_guard<pybind11::gil_scoped_release>())
     // .def("wait_until", &Waitable::wait_until, pybind11::call_guard<pybind11::gil_scoped_release>())
     // .def("wait_for", &Waitable::wait_for, pybind11::call_guard<pybind11::gil_scoped_release>())
-    // .def("wait_for_elapsed", &Waitable::wait_for_elapsed, pybind11::call_guard<pybind11::gil_scoped_release>());
+    // .def("wait_for_elapsed", &Waitable::wait_for_elapsed,
+    // pybind11::call_guard<pybind11::gil_scoped_release>());
 
     pybind11::class_<Scheduler, Named, Configurable, SmartNodePtr<Scheduler>>(m_util, "Scheduler")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
@@ -400,7 +403,7 @@ PyUtilApi::PyTask::PyTask(const pybind11::function & task, const sihd::util::Tas
 {
 }
 
-PyUtilApi::PyTask::~PyTask() {}
+PyUtilApi::PyTask::~PyTask() = default;
 
 bool PyUtilApi::PyTask::run()
 {

@@ -27,7 +27,7 @@ DevRecorder::DevRecorder(const std::string & name, sihd::util::Node *parent):
     this->add_conf("unrecord", &DevRecorder::remove_recorded_channel);
 }
 
-DevRecorder::~DevRecorder() {}
+DevRecorder::~DevRecorder() = default;
 
 bool DevRecorder::set_handler(std::string_view path)
 {
@@ -41,7 +41,9 @@ bool DevRecorder::add_record_channel(std::string_view conf)
     std::vector<std::string> split = splitter.split(conf);
     if (split.size() != 2)
     {
-        SIHD_LOG(error, "DevRecorder: record channel configuration got '{}' - expected: ALIAS=CHANNEL_PATH", conf);
+        SIHD_LOG(error,
+                 "DevRecorder: record channel configuration got '{}' - expected: ALIAS=CHANNEL_PATH",
+                 conf);
         return false;
     }
     _map_channels_alias[split[0]] = split[1];

@@ -8,6 +8,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Poll.hpp>
 #include <sihd/util/fs.hpp>
+#include <sihd/util/os.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <windows.h>
@@ -145,13 +146,17 @@ struct FileWatcher::Impl: public sihd::util::IHandler<sihd::util::Poll *>
 
 bool FileWatcher::Impl::is_watching(std::string_view path)
 {
-    return std::find_if(_watchers.begin(), _watchers.end(), [path](const Watcher & w) { return w.path == path; })
+    return std::find_if(_watchers.begin(),
+                        _watchers.end(),
+                        [path](const Watcher & w) { return w.path == path; })
            != _watchers.end();
 }
 
 bool FileWatcher::Impl::rm_watch(std::string_view path)
 {
-    auto it = std::find_if(_watchers.begin(), _watchers.end(), [path](const Watcher & w) { return w.path == path; });
+    auto it = std::find_if(_watchers.begin(), _watchers.end(), [path](const Watcher & w) {
+        return w.path == path;
+    });
     if (it != _watchers.end())
     {
         it->close();
@@ -182,7 +187,7 @@ void FileWatcher::Impl::Watcher::close()
     }
 }
 
-void FileWatcher::Impl::init() {}
+void FileWatcher::Impl::init() = default;
 
 bool FileWatcher::Impl::add_watch(std::string_view path)
 {
@@ -329,7 +334,7 @@ void FileWatcher::Impl::terminate()
 
 #else // WINDOWS
 
-FileWatcher::Impl::Watcher::Watcher() {}
+FileWatcher::Impl::Watcher::Watcher() = default;
 
 void FileWatcher::Impl::Watcher::close()
 {
@@ -349,7 +354,7 @@ void FileWatcher::Impl::init()
     _inotify_fd = inotify_init();
     if (_inotify_fd < 0)
     {
-        throw std::runtime_error(strerror(errno));
+        throw std::runtime_error(os::last_error_str());
     }
     _poll.set_limit(1);
     _poll.set_read_fd(_inotify_fd);
@@ -366,7 +371,7 @@ bool FileWatcher::Impl::add_watch(std::string_view path)
     int watch_fd = inotify_add_watch(_inotify_fd, path.data(), IN_ALL_EVENTS);
     if (watch_fd < 0)
     {
-        SIHD_LOG(error, "FileWatcher: {}", strerror(errno));
+        SIHD_LOG(error, "FileWatcher: {}", os::last_error_str());
         return false;
     }
     Watcher watcher;
@@ -416,7 +421,7 @@ void FileWatcher::Impl::handle(Poll *poll)
             int avail;
             if (ioctl(_inotify_fd, FIONREAD, &avail) < 0)
             {
-                SIHD_LOG(error, "FileWatcher: ioctl error {}", strerror(errno));
+                SIHD_LOG(error, "FileWatcher: ioctl error {}", os::last_error_str());
                 return;
             }
             if (avail > (int)_buffer.size())
@@ -428,7 +433,7 @@ void FileWatcher::Impl::handle(Poll *poll)
             ssize_t length = read(_inotify_fd, _buffer.data(), avail);
             if (length < 0)
             {
-                SIHD_LOG(error, "FileWatcher: read error {}", strerror(errno));
+                SIHD_LOG(error, "FileWatcher: read error {}", os::last_error_str());
                 return;
             }
             else if ((int)length != avail)
@@ -496,8 +501,9 @@ void FileWatcher::Impl::handle(Poll *poll)
                     watcher.old_filename.clear();
                 }
 
-                else if (event->mask & IN_DELETE_SELF || event->mask & IN_MOVE_SELF || event->mask & IN_UNMOUNT
-                         || event->mask & IN_Q_OVERFLOW || event->mask & IN_IGNORED)
+                else if (event->mask & IN_DELETE_SELF || event->mask & IN_MOVE_SELF
+                         || event->mask & IN_UNMOUNT || event->mask & IN_Q_OVERFLOW
+                         || event->mask & IN_IGNORED)
                 {
                     // not supported or termination events
                     fw_event.type = FileWatcherEventType::terminated;
@@ -551,7 +557,7 @@ FileWatcher::FileWatcher(std::string_view path, int run_timeout_milliseconds): F
     this->set_run_timeout(run_timeout_milliseconds);
 }
 
-FileWatcher::~FileWatcher() {}
+FileWatcher::~FileWatcher() = default;
 
 void FileWatcher::set_run_timeout(int milliseconds)
 {

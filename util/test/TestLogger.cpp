@@ -11,8 +11,10 @@ using namespace sihd::util;
 class LogCounter: public ALogger
 {
     public:
-        LogCounter() {};
-        ~LogCounter() {};
+        LogCounter() = default;
+        ;
+        ~LogCounter() = default;
+        ;
 
         int debug = 0;
         int info = 0;
@@ -43,8 +45,10 @@ class LogCounter: public ALogger
 class TestLogger: public ::testing::Test
 {
     protected:
-        TestLogger() {};
-        virtual ~TestLogger() {};
+        TestLogger() = default;
+        ;
+        virtual ~TestLogger() = default;
+        ;
 
         LogCounter *log_counter = nullptr;
 

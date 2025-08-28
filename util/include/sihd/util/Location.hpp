@@ -11,7 +11,7 @@ class Location
         Location(Location &&) = default;
 
 #if SIHD_DISABLE_LOCATION
-        constexpr Location() {}
+        constexpr Location() = default;
 
         constexpr const char *file() const { return ""; }
         constexpr const char *function() const { return ""; }

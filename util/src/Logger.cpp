@@ -7,7 +7,7 @@ SIHD_NEW_LOGGER("sihd::util");
 
 Logger::Logger(const std::string & name): name(name) {}
 
-Logger::~Logger() {}
+Logger::~Logger() = default;
 
 void Logger::emergency(std::string_view msg)
 {

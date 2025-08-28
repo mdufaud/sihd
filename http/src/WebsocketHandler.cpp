@@ -7,9 +7,9 @@ namespace sihd::http
 
 SIHD_LOGGER;
 
-WebsocketHandler::WebsocketHandler() {}
+WebsocketHandler::WebsocketHandler() = default;
 
-WebsocketHandler::~WebsocketHandler() {}
+WebsocketHandler::~WebsocketHandler() = default;
 
 void WebsocketHandler::on_open(std::string_view protocol_name)
 {

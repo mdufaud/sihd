@@ -9,9 +9,9 @@ using namespace sihd::util;
 class TestLoadingBar: public ::testing::Test
 {
     protected:
-        TestLoadingBar() {}
+        TestLoadingBar() = default;
 
-        virtual ~TestLoadingBar() {}
+        virtual ~TestLoadingBar() = default;
 
         virtual void SetUp() {}
 
@@ -23,9 +23,9 @@ TEST_F(TestLoadingBar, test_loadingbar)
     constexpr size_t width = 20;
     constexpr size_t total = 100;
 
-    LoadingBar bar(width, total);
+    LoadingBar bar(
+        {.width = width, .total = total, .progression_pos = LoadingBarConfiguration::ProgressionPos::Right});
 
-    bar.set_percent_pos_right();
     for (size_t i = 0; i < 100; ++i)
     {
         bar.add_progress(1);

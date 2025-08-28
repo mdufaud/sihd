@@ -59,7 +59,9 @@ TEST_F(TestNetInterface, test_netinterface)
             fmt::print("    netmask: {}\n", netif.netmask4().str());
             if (netif.broadcast() || netif.point2point())
             {
-                fmt::print("    {}: {}\n", netif.broadcast() ? "broadcast" : "point2point", netif.extra_addr4().str());
+                fmt::print("    {}: {}\n",
+                           netif.broadcast() ? "broadcast" : "point2point",
+                           netif.extra_addr4().str());
             }
         }
         if (netif.addr6().has_ip())
@@ -69,7 +71,9 @@ TEST_F(TestNetInterface, test_netinterface)
             fmt::print("    netmask: {}\n", netif.netmask4().str());
             if (netif.broadcast() || netif.point2point())
             {
-                fmt::print("    {}: {}\n", netif.broadcast() ? "broadcast" : "point2point", netif.extra_addr6().str());
+                fmt::print("    {}: {}\n",
+                           netif.broadcast() ? "broadcast" : "point2point",
+                           netif.extra_addr6().str());
             }
         }
     }

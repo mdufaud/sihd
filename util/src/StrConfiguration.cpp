@@ -69,8 +69,8 @@ const std::string & StrConfiguration::get(const std::string & key) const
 
 std::string StrConfiguration::str() const
 {
-    bool first = true;
     std::string ret;
+    bool first = true;
 
     for (const auto & [key, value] : _configuration)
     {

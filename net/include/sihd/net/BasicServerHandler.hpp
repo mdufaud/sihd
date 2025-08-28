@@ -20,8 +20,15 @@ class BasicServerHandler: public INetServerHandler,
         class Client
         {
             public:
-                Client(int sock): socket(sock), time_connected(0), time_total(0), error(false), disconnected(false) {}
-                ~Client() {}
+                Client(int sock):
+                    socket(sock),
+                    time_connected(0),
+                    time_total(0),
+                    error(false),
+                    disconnected(false)
+                {
+                }
+                ~Client() = default;
 
                 int fd() { return socket.socket(); }
 

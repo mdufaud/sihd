@@ -6,6 +6,7 @@
 
 #include <sihd/net/Socket.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/os.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <fcntl.h>       // fcntl
@@ -78,7 +79,8 @@ Socket::Socket(int socket, int domain, int socket_type, int protocol): Socket()
     _protocol = protocol;
 }
 
-Socket::Socket(int socket, std::string_view domain, std::string_view socket_type, std::string_view protocol): Socket()
+Socket::Socket(int socket, std::string_view domain, std::string_view socket_type, std::string_view protocol):
+    Socket()
 {
     _socket = socket;
     _domain = ip::domain(domain);
@@ -172,7 +174,12 @@ bool Socket::bind_socket_to_device(int socket, std::string_view name)
     char device_name[IFNAMSIZ];
 
     strncpy(device_name, name.data(), std::min(name.size(), (size_t)IFNAMSIZ));
-    return sihd::util::os::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name), true);
+    return sihd::util::os::setsockopt(socket,
+                                      SOL_SOCKET,
+                                      SO_BINDTODEVICE,
+                                      device_name,
+                                      sizeof(device_name),
+                                      true);
 #else
     (void)socket;
     (void)name;
@@ -726,8 +733,8 @@ bool Socket::is_socket_blocking(int socket)
     if (socket < 0)
         throw std::runtime_error("Socket: check blocking on a closed socket");
     /// @note windows sockets are created in blocking mode by default
-    // currently on windows, there is no easy way to obtain the socket's current blocking mode since WSAIsBlocking was
-    // deprecated
+    // currently on windows, there is no easy way to obtain the socket's current blocking mode since
+    // WSAIsBlocking was deprecated
     unsigned long mode = 1;
     bool set_blocking = util::os::ioctl(socket, FIONBIO, &mode);
     if (set_blocking)
