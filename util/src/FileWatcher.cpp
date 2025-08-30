@@ -187,7 +187,7 @@ void FileWatcher::Impl::Watcher::close()
     }
 }
 
-void FileWatcher::Impl::init() = default;
+void FileWatcher::Impl::init() {}
 
 bool FileWatcher::Impl::add_watch(std::string_view path)
 {

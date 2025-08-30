@@ -40,7 +40,8 @@ class Uuid
     protected:
 
     private:
-        unsigned char _uuid[16];
+        struct Impl;
+        std::unique_ptr<Impl> _impl;
 };
 
 } // namespace sihd::util

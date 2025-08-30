@@ -18,7 +18,7 @@ namespace
 void do_copy(uuid_t uuid_to, const uuid_t uuid_from)
 {
 #if defined(__SIHD_WINDOWS__)
-    memcpy(uuid_to, uuid_from, sizeof(uuid_t));
+    memcpy(&uuid_to, &uuid_from, sizeof(uuid_t));
 #else
     uuid_copy(uuid_to, uuid_from);
 #endif
@@ -26,28 +26,40 @@ void do_copy(uuid_t uuid_to, const uuid_t uuid_from)
 
 void do_clear(uuid_t uuid)
 {
+#if defined(__SIHD_WINDOWS__)
+    memset(&uuid, 0, sizeof(uuid_t));
+#else
     memset(uuid, 0, sizeof(uuid_t));
+#endif
 }
 
 } // namespace
 
+struct Uuid::Impl
+{
+        Impl() { do_clear(uuid); }
+        ~Impl() = default;
+
+        uuid_t uuid;
+};
+
 Uuid::Uuid()
 {
-    this->clear();
+    _impl = std::make_unique<Impl>();
 #if defined(__SIHD_WINDOWS__)
-    UuidCreate(&_uuid);
+    UuidCreate(&_impl->uuid);
 #else
-    uuid_generate(_uuid);
+    uuid_generate(_impl->uuid);
 #endif
 }
 
 Uuid::Uuid(std::string_view uuid_str)
 {
-    this->clear();
+    _impl = std::make_unique<Impl>();
 #if defined(__SIHD_WINDOWS__)
-    UuidFromString((unsigned char *)uuid_str.data(), &_uuid);
+    UuidFromString((unsigned char *)uuid_str.data(), &_impl->uuid);
 #else
-    uuid_parse(uuid_str.data(), _uuid);
+    uuid_parse(uuid_str.data(), _impl->uuid);
 #endif
 }
 
@@ -56,15 +68,26 @@ Uuid::Uuid(const Uuid & uuid_namespace, std::string_view name)
     if (uuid_namespace.is_null())
         throw std::invalid_argument("Namespace uuid is null");
 
-    this->clear();
+    _impl = std::make_unique<Impl>();
 
 #if defined(__SIHD_WINDOWS__)
+    unsigned char *uuid_ptr = (unsigned char *)(&_impl->uuid);
+    unsigned char *namespace_uuid_ptr = (unsigned char *)(&uuid_namespace._impl->uuid);
+
     // 1. Build input buffer = namespace UUID (big endian) + name
     std::vector<unsigned char> data;
     data.reserve(16 + name.size());
 
-    // Convert namespace (which is also an unsigned char[16]) into big-endian order
-    data.insert(data.end(), uuid_namespace._uuid, uuid_namespace._uuid + 16);
+    // Convert namespace (GUID) to big-endian order and append to data
+    data.push_back((namespace_uuid_ptr[3]));
+    data.push_back((namespace_uuid_ptr[2]));
+    data.push_back((namespace_uuid_ptr[1]));
+    data.push_back((namespace_uuid_ptr[0]));
+    data.push_back((namespace_uuid_ptr[5]));
+    data.push_back((namespace_uuid_ptr[4]));
+    data.push_back((namespace_uuid_ptr[7]));
+    data.push_back((namespace_uuid_ptr[6]));
+    data.insert(data.end(), &namespace_uuid_ptr[8], &namespace_uuid_ptr[16]);
 
     // Append the name bytes
     data.insert(data.end(), name.begin(), name.end());
@@ -101,27 +124,27 @@ Uuid::Uuid(const Uuid & uuid_namespace, std::string_view name)
     CryptDestroyHash(hHash);
     CryptReleaseContext(hProv, 0);
 
-    // 3. Copy first 16 bytes of SHA1 into _uuid
-    memcpy(_uuid, hash, 16);
+    // 3. Copy first 16 bytes of SHA1 into _impl->uuid
+    memcpy(&_impl->uuid, hash, 16);
 
     // 4. Set version (5) and variant (RFC 4122)
-    _uuid[6] = (_uuid[6] & 0x0F) | (5 << 4); // version 5
-    _uuid[8] = (_uuid[8] & 0x3F) | 0x80;     // variant RFC4122
+    uuid_ptr[6] = (uuid_ptr[6] & 0x0F) | (5 << 4); // version 5
+    uuid_ptr[8] = (uuid_ptr[8] & 0x3F) | 0x80;     // variant RFC4122
 #else
-    uuid_generate_sha1(_uuid, uuid_namespace._uuid, name.data(), name.size());
+    uuid_generate_sha1(_impl->uuid, uuid_namespace._impl->uuid, name.data(), name.size());
 #endif
 }
 
 Uuid::Uuid(const Uuid & other)
 {
-    do_copy(_uuid, other._uuid);
+    do_copy(_impl->uuid, other._impl->uuid);
 }
 
 Uuid::~Uuid() = default;
 
 Uuid & Uuid::operator=(const Uuid & other)
 {
-    do_copy(_uuid, other._uuid);
+    do_copy(_impl->uuid, other._impl->uuid);
     return *this;
 }
 
@@ -129,10 +152,11 @@ bool Uuid::operator==(const Uuid & other) const
 {
 #if defined(__SIHD_WINDOWS__)
     RPC_STATUS status;
-    return UuidCompare(const_cast<uuid_t *>(&_uuid), const_cast<uuid_t *>(other._uuid), &status) == 0
+    return UuidCompare(const_cast<uuid_t *>(&_impl->uuid), const_cast<uuid_t *>(&other._impl->uuid), &status)
+               == 0
            && status == RPC_S_OK;
 #else
-    return uuid_compare(_uuid, other._uuid) == 0;
+    return uuid_compare(_impl->uuid, other._impl->uuid) == 0;
 #endif
 }
 
@@ -140,9 +164,9 @@ bool Uuid::is_null() const
 {
 #if defined(__SIHD_WINDOWS__)
     RPC_STATUS status;
-    return UuidIsNil(const_cast<uuid_t *>(&_uuid), &status) == TRUE;
+    return UuidIsNil(const_cast<uuid_t *>(&_impl->uuid), &status) == TRUE;
 #else
-    return uuid_is_null(_uuid) == 1;
+    return uuid_is_null(_impl->uuid) == 1;
 #endif
 }
 
@@ -151,14 +175,14 @@ std::string Uuid::str() const
     std::string ret;
 #if defined(__SIHD_WINDOWS__)
     unsigned char *out;
-    if (UuidToString(const_cast<uuid_t *>(&_uuid), &out) == RPC_S_OK)
+    if (UuidToString(const_cast<uuid_t *>(&_impl->uuid), &out) == RPC_S_OK)
     {
         ret = (char *)out;
         RpcStringFree(&out);
     }
 #else
     char out[36 + 1];
-    uuid_unparse(_uuid, out);
+    uuid_unparse(_impl->uuid, out);
     ret = out;
 #endif
     return ret;
@@ -166,7 +190,7 @@ std::string Uuid::str() const
 
 void Uuid::clear()
 {
-    do_clear(_uuid);
+    do_clear(_impl->uuid);
 }
 
 } // namespace sihd::util

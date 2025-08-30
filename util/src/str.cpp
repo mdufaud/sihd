@@ -28,6 +28,10 @@
 # define SIHD_UTIL_STR_BUFFER 4096
 #endif
 
+#if defined(__SIHD_WINDOWS__)
+# include <stringapiset.h>
+#endif
+
 namespace sihd::util::str
 {
 

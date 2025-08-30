@@ -60,6 +60,7 @@ extlibs_skip_windows = [
     "libwebsockets",
     "libssh",
     "libpcap",
+    "libxcrypt"
 ]
 
 # on linux libbluetooth and libuuid are provided by the system
