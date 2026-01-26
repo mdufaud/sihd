@@ -66,16 +66,11 @@ class WaitableImpl
         bool wait_until(Timestamp timestamp, Predicate pred_stop_waiting)
         {
             std::unique_lock lock(_mutex);
-#if defined(__SIHD_EMSCRIPTEN__)
-            // emscripten clock is microseconds
             return _condition.wait_until(lock,
-                                         std::chrono::system_clock::time_point(std::chrono::microseconds(timestamp)),
+                                         std::chrono::system_clock::time_point(
+                                             std::chrono::duration_cast<std::chrono::system_clock::duration>(
+                                                 std::chrono::nanoseconds(timestamp))),
                                          pred_stop_waiting);
-#else
-            return _condition.wait_until(lock,
-                                         std::chrono::system_clock::time_point(std::chrono::nanoseconds(timestamp)),
-                                         pred_stop_waiting);
-#endif
         }
 
         // predicate must return false to keep waiting
@@ -103,16 +98,11 @@ class WaitableImpl
         bool wait_until(Timestamp timestamp)
         {
             std::unique_lock lock(_mutex);
-            // emscripten clock is microseconds
-#if defined(__SIHD_EMSCRIPTEN__)
             return _condition.wait_until(lock,
-                                         std::chrono::system_clock::time_point(std::chrono::microseconds(timestamp)))
+                                         std::chrono::system_clock::time_point(
+                                             std::chrono::duration_cast<std::chrono::system_clock::duration>(
+                                                 std::chrono::nanoseconds(timestamp))))
                    == std::cv_status::timeout;
-#else
-            return _condition.wait_until(lock,
-                                         std::chrono::system_clock::time_point(std::chrono::nanoseconds(timestamp)))
-                   == std::cv_status::timeout;
-#endif
         }
 
         /**

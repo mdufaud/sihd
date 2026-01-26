@@ -48,3 +48,8 @@ dist/*
 # vcpkg
 .vcpkg
 .vcpkg/*
+
+# env
+.env.d
+
+.github

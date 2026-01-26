@@ -471,6 +471,12 @@ list: dep
 	$(QUIET) echo > /dev/null
 endif
 
+ifeq ($(MAKEARG_2), tree)
+VCPKG_ACTION := tree
+tree: dep
+	$(QUIET) echo > /dev/null
+endif
+
 ifeq ($(MAKEARG_2), install)
 VCPKG_ACTION :=
 install: vcpkg_deploy
@@ -488,6 +494,7 @@ VCPKG_ACTION :=
 update: vcpkg_deploy
 	cd $(VCPKG_PATH) && git pull && $(VCPKG_BIN) update
 endif
+
 
 endif # dep
 

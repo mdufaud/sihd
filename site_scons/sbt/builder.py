@@ -11,8 +11,8 @@ try:
 except ImportError:
     import loader
 
-from sbt import modules as sbt_modules
-from sbt import utils
+from site_scons.sbt.build import modules as sbt_modules
+from site_scons.sbt.build import utils
 from sbt import logger
 
 loader.load_env()
@@ -44,6 +44,18 @@ def get_host_architecture():
     elif "32" in arch:
         return "32"
 
+def get_architecture():
+    machine_to_arch = {
+        "arm": "32",
+        "i386": "32",
+        "x86": "32",
+        "riscv32": "32",
+        "riscv64": "64",
+    }.get(utils.get_opt('machine', None), None)
+    if machine_to_arch is not None:
+        return machine_to_arch
+    return utils.get_opt('arch', get_host_architecture())
+
 def __get_machine(machine):
     return {
         "aarch64": "arm64",
@@ -53,21 +65,24 @@ def __get_machine(machine):
 def get_host_machine():
     return __get_machine(platform.machine().lower())
 
-def get_architecture():
-    machine_to_arch = {
-        "arm": "32",
-        "i386": "32"
-    }.get(utils.get_opt('machine', None), None)
-    if machine_to_arch is not None:
-        return machine_to_arch
-    return utils.get_opt('arch', get_host_architecture())
-
 def get_machine():
-    machine = utils.get_opt('machine', get_host_machine())
-    if utils.get_opt('arch', None) == "32":
+    arch = utils.get_opt('arch', None)
+    if arch is not None and arch not in ("32", "64"):
+        raise SystemExit("unknown architecture: {}".format(arch))
+    
+    machine = utils.get_opt('machine', None)
+    if machine is not None:
+        if arch == "32" and "64" in machine:
+            raise SystemExit("cannot use 32 bits architecture with 64 bits machine: {}".format(machine))
+    else:
+        machine = get_host_machine()
+
+    if arch == "32":
         machine = {
+            "riscv64": "riscv32",
             "arm64": "arm",
         }.get(machine, machine)
+        
     return __get_machine(machine)
 
 ###############################################################################
@@ -92,9 +107,11 @@ def _build_gnu_triplet(machine, vendor):
         "neutrino": "nto-qnx"
     }.get(vendor, vendor)
     if vendor in ("linux", "android"):
-        if "arm" in machine and "armv8" not in machine:
+        if machine in ("armv6", "armv6l", "armv7", "armv7l"):
+            # Add 'eabi' for ARM architectures
             op_system += "eabi"
-        if (machine == "armv5hf" or machine == "armv7hf") and vendor == "linux":
+        if machine in ("armv5hf", "armv7hf") and vendor == "linux":
+            # Add 'hf' for hard-float ABI
             op_system += "hf"
         if machine == "armv8_32" and vendor == "linux":
             op_system += "_ilp32"
@@ -208,6 +225,10 @@ build_for_linux = build_platform == "linux"
 
 def get_gnu_triplet():
     return _build_gnu_triplet(build_machine, build_platform)
+
+sbt_path = abspath(dirname(__file__))
+
+use_zig = utils.is_opt("zig")
 
 # path ROOT -> root/site_scons/builder.py
 build_root_path = abspath(dirname(dirname(dirname(__file__))))

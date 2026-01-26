@@ -25,6 +25,8 @@ struct LoadingBarConfiguration
         char begin_bar = '[';
         char end_bar = ']';
 
+        bool percentage = true;
+
         std::string_view progression_prefix = "";
         std::string_view progression_suffix = "";
 

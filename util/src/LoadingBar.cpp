@@ -77,10 +77,21 @@ std::string LoadingBar::loading_bar_str() const
 
 std::string LoadingBar::progress_str() const
 {
-    return fmt::format("{}{:<3.0f}{}",
-                       _config.progression_prefix,
-                       this->progress() * 100.f,
-                       _config.progression_suffix);
+    if (_config.percentage)
+    {
+        return fmt::format("{}{:<3.0f}%{}",
+                           _config.progression_prefix,
+                           this->progress() * 100.f,
+                           _config.progression_suffix);
+    }
+    else
+    {
+        return fmt::format("{}{}/{}{}",
+                           _config.progression_prefix,
+                           _current,
+                           _config.total,
+                           _config.progression_suffix);
+    }
 }
 
 } // namespace sihd::util

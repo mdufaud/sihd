@@ -1,13 +1,13 @@
 #ifndef __SIHD_UTIL_FILE_HPP__
 #define __SIHD_UTIL_FILE_HPP__
 
+#include <cstdio> // FILE
+
 #include <optional>
 #include <string>
 #include <string_view>
 
 #include <sihd/util/ArrayView.hpp>
-
-struct stat;
 
 namespace sihd::util
 {

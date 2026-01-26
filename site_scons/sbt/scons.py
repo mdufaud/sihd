@@ -24,12 +24,13 @@ pp = PrettyPrinter(indent=2)
 ###############################################################################
 
 from sbt import loader
-
-from sbt import modules
 from sbt import builder
-from sbt import scons_utils
 from sbt import logger
-from sbt import utils
+
+from site_scons.sbt.build import modules
+from site_scons.sbt.build import utils as build_utils
+
+from site_scons.sbt.scons import utils as scons_utils
 
 app = loader.load_app()
 
@@ -60,7 +61,7 @@ verbose = builder.has_verbose()
 libtype = builder.build_static_libs and "static" or "dyn"
 bin_ext = build_platform == "web" and ".html" or (build_platform == "windows" and ".exe" or "")
 
-compile_commands = utils.is_opt("compile_commands", "1")
+compile_commands = build_utils.is_opt("compile_commands", "1")
 
 if verbose:
     logger.info("modules: {}".format(modules_lst or "all"))
@@ -143,6 +144,8 @@ base_env = Environment(
     CPPDEFINES = getattr(app, 'defines', []),
     # link flags
     LINKFLAGS = getattr(app, 'link', []),
+    # link flags for binaries
+    BIN_LINKFLAGS = getattr(app, 'bin_link', []),
     # headers path
     CPPPATH = [builder.build_extlib_hdr_path],
     # libraries path
@@ -214,8 +217,26 @@ if build_platform == "windows":
 # Compiler settings
 ###############################################################################
 
+compiler = builder.build_compiler
+# CLANG build
+if compiler == "clang":
+    from site_scons.sbt.scons.compilers import clang as compiler_clang
+    compiler_clang.load_in_env(base_env)
+# MINGW build
+elif compiler == "mingw":
+    from site_scons.sbt.scons.compilers import mingw as compiler_mingw
+    compiler_mingw.load_in_env(base_env)
+# GCC build
+elif compiler == "gcc":
+    from site_scons.sbt.scons.compilers import gcc as compiler_gcc
+    compiler_gcc.load_in_env(base_env)
+# EMSCRIPTEN build
+elif compiler == "em":
+    from site_scons.sbt.scons.compilers import emscripten as compiler_emscripten
+    compiler_emscripten.load_in_env(base_env)
+
 ccache = ""
-if not utils.is_opt("nocache"):
+if not build_utils.is_opt("nocache"):
     ccache = shutil_which("ccache") and "ccache " or ""
     if verbose and ccache:
         logger.info("using ccache at: {}".format(shutil_which("ccache")))
@@ -227,133 +248,6 @@ if not utils.is_opt("nocache"):
             logger.info("using scons cache at: {}".format(scons_cache_path))
         CacheDir(scons_cache_path)
 
-compiler = builder.build_compiler
-# CLANG build
-if compiler == "clang":
-    if builder.is_cross_building:
-        base_env.Append(
-            CPPFLAGS = [f"--target={builder.get_gnu_triplet()}"],
-            LINKFLAGS = [f"--target={builder.get_gnu_triplet()}"],
-        )
-    elif builder.build_architecture == "32":
-        base_env.Append(
-            CPPFLAGS = ["-m32"],
-            LINKFLAGS = ["-m32"]
-        )
-
-    base_env.Replace(
-        # compiler for c
-        CC = "clang",
-        # compiler for c++
-        CXX = "clang++",
-        # static library archiver
-        AR = "ar",
-        # static library indexer
-        RANLIB = "ranlib",
-    )
-    if builder.build_asan:
-        clang_asan_flags = [
-            "-fsanitize=address,leak",
-            "-fno-omit-frame-pointer", # Leave frame pointers. Allows the fast unwinder to function properly.
-            "-fno-common", # helps detect global variables issues
-            "-fno-inline" # readable stack traces
-        ]
-        base_env.Append(
-            CPPFLAGS = clang_asan_flags,
-            LINKFLAGS = clang_asan_flags
-        )
-    if builder.build_static_libs:
-        base_env.ParseConfig("llvm-config --libs --system-libs --link-static")
-    else:
-        base_env.ParseConfig("llvm-config --libs --ldflags --system-libs")
-
-    if builder.build_static_libs and builder.build_asan:
-        base_env.Append(
-            LINKFLAGS = ["-static-libasan"]
-        )
-# MINGW build
-elif compiler == "mingw":
-    prefix = "x86_64-w64-mingw32-"
-    base_env.Replace(
-        CC = prefix + "gcc",
-        CXX = prefix + "c++",
-        AR = prefix + "ar",
-        RANLIB = prefix + "ranlib",
-    )
-    base_env.Replace(
-        SHLIBSUFFIX = ".dll",
-        LIBSUFFIX = ".lib",
-        LIBPREFIX = "",
-    )
-    if builder.build_static_libs:
-        base_env.Append(
-            LINKFLAGS = ["-static", "-static-libgcc", "-static-libstdc++"]
-        )
-# GCC build
-elif compiler == "gcc":
-    prefix = ""
-
-    if builder.is_cross_building:
-        if builder.build_machine == "x86_64":
-            prefix = "x86_64-linux-gnu-"
-        elif builder.build_machine == "arm":
-            # hardfloat
-            prefix = "arm-linux-gnueabihf-"
-        elif builder.build_machine == "arm64":
-            prefix = "aarch64-linux-gnu-"
-        elif builder.build_machine == "riscv64":
-            prefix = "riscv64-linux-gnu-"
-        elif builder.build_machine == "riscv32":
-            prefix = "riscv32-linux-gnu-"
-    else:
-        if builder.build_architecture == "32":
-            base_env.Append(
-                CPPFLAGS = ["-m32"],
-                LINKFLAGS = ["-m32"]
-            )
-
-    base_env.Replace(
-        CC = prefix + "gcc",
-        CXX = prefix + "g++",
-        AR = prefix + "ar",
-        RANLIB = prefix + "ranlib",
-    )
-    if builder.build_asan:
-        gcc_asan_flags = [
-            "-fsanitize=address", # With gcc - has leak enabled by default
-            "-fno-omit-frame-pointer", # Leave frame pointers. Allows the fast unwinder to function properly.
-            "-fno-common", # helps detect global variables issues
-            "-fno-inline" # readable stack traces
-        ]
-        base_env.Append(
-            CPPFLAGS = gcc_asan_flags,
-            LINKFLAGS = gcc_asan_flags
-        )
-    if builder.build_static_libs:
-        base_env.Append(
-            LINKFLAGS = ["-static", "-static-libgcc", "-static-libstdc++"]
-        )
-    if builder.build_static_libs and builder.build_asan:
-        base_env.Append(
-            LINKFLAGS = ["-static-libasan"]
-        )
-# EMSCRIPTEN build
-elif compiler == "em":
-    base_env.Replace(
-        CC = "emcc",
-        CXX = "em++",
-        AR = "emar",
-        RANLIB = "emranlib",
-        LINK = "emcc",
-    )
-
-    emscripten_conf = os_path.join(os.getenv("HOME"), ".emscripten")
-    if os_path.isfile(emscripten_conf):
-        try:
-            exec(open(emscripten_conf).read())
-        except Exception as e:
-            logger.warning("could not execute emscripten configuration: " + emscripten_conf)
-
 base_env.Prepend(
     CC = ccache,
     CXX = ccache,
@@ -363,6 +257,10 @@ base_env.Prepend(
 
 if compiler != "mingw" and not builder.is_msys():
     base_env.Replace(SHLIBVERSION = app.version)
+
+###############################################################################
+# General app configurations
+###############################################################################
 
 # add $platform-[flags/defines/link/libs]
 # add $libtype-[flags/defines/link/libs]
@@ -465,6 +363,9 @@ def _env_build_demo(self, src, name, add_libs = [], **kwargs):
     for app_conf in default_app_conf_to_get:
         scons_utils.add_env_app_conf(app, demo_env, "demo", app_conf)
 
+    if self['BIN_LINKFLAGS']:
+        demo_env.Append(LINKFLAGS = self['BIN_LINKFLAGS'])
+
     name += bin_ext
     demo_path = os_path.join(builder.build_demo_path, name)
     demo = demo_env.Program(demo_path, src, **kwargs)
@@ -501,6 +402,10 @@ def _env_build_test(self, src, name = None, add_libs = [], **kwargs):
         name = self["APP_MODULE_FORMAT_NAME"]
     name += bin_ext
     test_path = os_path.join(builder.build_test_path, "bin", name)
+
+    if self['BIN_LINKFLAGS']:
+        test_env.Append(LINKFLAGS = self['BIN_LINKFLAGS'])
+
     test = test_env.Program(test_path, src, **kwargs)
 
     add_targets(src)
@@ -540,6 +445,9 @@ def _env_build_bin(self, src, name = None, add_libs = [], **kwargs):
 
     if name is None:
         name = self['APP_MODULE_FORMAT_NAME']
+
+    if self['BIN_LINKFLAGS']:
+        bin_env.Append(LINKFLAGS = self['BIN_LINKFLAGS'])
 
     name += bin_ext
     bin_path = os_path.join(builder.build_bin_path, name)
@@ -653,8 +561,8 @@ base_env.AddMethod(_env_replace_in_file, "file_replace")
 base_env.AddMethod(_env_find_in_file, "find_in_file")
 base_env.AddMethod(_env_file_basename, "file_basename")
 base_env.AddMethod(_env_filter_files, "filter_files")
-base_env.AddMethod(lambda self, *args, **kwargs: utils.is_opt(*args, **kwargs), "is_opt")
-base_env.AddMethod(lambda self, *args, **kwargs: utils.get_opt(*args, **kwargs), "get_opt")
+base_env.AddMethod(lambda self, *args, **kwargs: build_utils.is_opt(*args, **kwargs), "is_opt")
+base_env.AddMethod(lambda self, *args, **kwargs: build_utils.get_opt(*args, **kwargs), "get_opt")
 base_env.AddMethod(lambda self: self['APP_MODULE_NAME'], "module_name")
 base_env.AddMethod(lambda self: self['APP_MODULE_FORMAT_NAME'], "module_format_name")
 base_env.AddMethod(lambda self: self['APP_MODULE_CONF'], "module_conf")
@@ -664,7 +572,6 @@ base_env.AddMethod(lambda self: app, "app")
 base_env.AddMethod(lambda self: builder, "builder")
 base_env.AddMethod(lambda self: logger, "logger")
 base_env.AddMethod(lambda self: is_dry_run, "is_dry_run")
-
 
 modules_options = [
     libtype,
@@ -704,6 +611,9 @@ def create_module_env(conf, depends = [],
     # get platform dependent libs
     libs = modules.get_module_libs(build_modules, modname, add_depends_libs = do_inherit_depends_libs)
     libs += get_compilation_options(conf, "libs")
+    # remove when using musl with zig
+    if builder.use_zig:
+        libs = [lib for lib in libs if not lib in ["pthread", "m", "dl", "stdc++fs"]]
     # add flag
     flags = conf.get("flags", [])
     flags += get_compilation_options(conf, "flags")
@@ -820,7 +730,7 @@ for conf in modules_build_order:
         scons_utils.copy_module_res_into_build(modname, "demo/share", "share", must_exist=False, is_dry_run=is_dry_run)
     # read module's scons script file
     module_format_name = env['APP_MODULE_FORMAT_NAME']
-    built[modname] = SConscript(Dir(modname).File("scons.py"),
+    built[modname] = SConscript(Dir(builder.build_root_path).Dir(modname).File("scons.py"),
                                 variant_dir = os_path.join(builder.build_obj_path, modname),
                                 duplicate = 0,
                                 exports = ['env'])

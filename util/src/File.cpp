@@ -1,3 +1,5 @@
+#include "sihd/util/str.hpp"
+#include <string>
 #include <sys/stat.h>
 
 #include <cerrno>

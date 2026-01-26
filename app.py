@@ -12,11 +12,11 @@ extlibs = {
     # unit test
     "gtest": "1.11.0",
     # json parsing
-    "nlohmann-json": "3.9.1",
+    "nlohmann-json": "3.12.0#1",
     # util
     "cxxopts": "3.0.0",
-    "fmt": "7.1.3",
-    "libuuid": "",
+    "fmt": "12.1.0",
+    "libuuid": "1.0.3#15",
     # http
     "libwebsockets": "4.3.3",
     "curl": "7.87.0",
@@ -63,10 +63,9 @@ extlibs_skip_windows = [
     "libxcrypt"
 ]
 
-# on linux libbluetooth and libuuid are provided by the system
+# on linux: those libs are provided by the system
 extlibs_skip = [
     "libbluetooth",
-    "libuuid"
 ]
 
 vcpkg_baseline = "38d9cf0bd45404cd25aeb03f79bcb0af256de343"
@@ -334,17 +333,24 @@ gcc_flags = [
     "-Werror",
     "-fasynchronous-unwind-tables",
     "-fexceptions",
-    "-Wl,-pie",
     "-fstack-protector",
     "-fstack-protector-strong",
-    "-Wl,-z,defs",
-    "-Wl,-z,now",
-    "-Wl,-z,relro",
     "-Wno-unknown-pragmas",
     # "-fconcepts-diagnostics-depth=2",/
     # hide pragma messages
     # "-ftrack-macro-expansion=0",
     # "-fno-diagnostics-show-caret",
+]
+
+gcc_link = [
+    "-Wl,-z,defs",
+    "-Wl,-z,now",
+    "-Wl,-z,relro",
+]
+
+# Position Independent Executable for security hardening - only for binaries
+gcc_dyn_bin_link = [
+    "-Wl,-pie",
 ]
 
 if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():

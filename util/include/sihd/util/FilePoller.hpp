@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_FILEPOLLER_HPP__
 #define __SIHD_UTIL_FILEPOLLER_HPP__
 
+#include <memory>
 #include <string>
 #include <string_view>
 

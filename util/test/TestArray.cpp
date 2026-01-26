@@ -326,6 +326,51 @@ TEST_F(TestArray, test_array_str)
     EXPECT_TRUE(arr.is_equal("aaaa"));
 }
 
+TEST_F(TestArray, test_array_char_trim)
+{
+    ArrChar arr;
+
+    // Test trim leading spaces
+    EXPECT_TRUE(arr.from("   hello"));
+    arr.trim();
+    EXPECT_EQ(arr.str(), "hello");
+
+    // Test trim trailing spaces
+    EXPECT_TRUE(arr.from("hello   "));
+    arr.trim();
+    EXPECT_EQ(arr.str(), "hello");
+
+    // Test trim both leading and trailing spaces
+    EXPECT_TRUE(arr.from("   hello world   "));
+    arr.trim();
+    EXPECT_EQ(arr.str(), "hello world");
+
+    // Test trim with tabs and newlines
+    EXPECT_TRUE(arr.from("\t\n  hello  \n\t"));
+    arr.trim();
+    EXPECT_EQ(arr.str(), "hello");
+
+    // Test trim empty string
+    EXPECT_TRUE(arr.from(""));
+    arr.trim();
+    EXPECT_EQ(arr.str(), "");
+
+    // Test trim whitespace-only string
+    EXPECT_TRUE(arr.from("   \t\n  "));
+    arr.trim();
+    EXPECT_EQ(arr.str(), "");
+
+    // Test trim no spaces
+    EXPECT_TRUE(arr.from("hello"));
+    arr.trim();
+    EXPECT_EQ(arr.str(), "hello");
+
+    // Test trim internal spaces preserved
+    EXPECT_TRUE(arr.from("  hello   world  "));
+    arr.trim();
+    EXPECT_EQ(arr.str(), "hello   world");
+}
+
 TEST_F(TestArray, test_array_pop)
 {
     Array<double> arr;

@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_UUID_HPP__
 #define __SIHD_UTIL_UUID_HPP__
 
+#include <memory>
 #include <string_view>
 
 namespace sihd::util

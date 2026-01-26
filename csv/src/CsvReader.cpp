@@ -21,7 +21,7 @@ int count_unescaped_quotes(std::string_view view)
 
     while (view.size() > 0)
     {
-        idx = str::find_char_not_escaped(view.data(), '"', '"');
+        idx = str::find_char_not_escaped(view, '"', '"');
         if (idx < 0)
             break;
         view = view.substr(idx + 1);
@@ -140,7 +140,8 @@ bool CsvReader::read_next()
         if (quotes_are_even)
         {
             // remove last linefeed
-            _line[_line.size() - 1] = 0;
+            if (!_line.empty())
+                _line.resize(_line.size() - 1);
             _has_data = true;
             return true;
         }

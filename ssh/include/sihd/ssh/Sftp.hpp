@@ -56,12 +56,15 @@ class Sftp
         bool mkdir(std::string_view path, mode_t mode = 0755);
         bool symlink(std::string_view from, std::string_view to);
 
+        // TODO replace std::string return with optional
         std::string readlink(std::string_view path);
 
         bool send_file(std::string_view local_path, std::string_view remote_path, mode_t mode = 0644);
         bool get_file(std::string_view remote_path, std::string_view local_path);
 
+        // TODO replace bool return with optional
         bool list_dir(std::string_view path, std::vector<SftpAttribute> & list);
+        // TODO replace bool return with optional
         bool list_dir_filenames(std::string_view path, std::vector<std::string> & list);
 
         bool rename(std::string_view from, std::string_view to);

@@ -247,7 +247,9 @@ class Array: public IArray,
         {
             if (byte_size % sizeof(T) != 0)
                 throw std::invalid_argument(
-                    str::format("Array::from_bytes buffer - %lu not divisible by data size %lu", byte_size, sizeof(T)));
+                    str::format("Array::from_bytes buffer - %lu not divisible by data size %lu",
+                                byte_size,
+                                sizeof(T)));
             return this->from((const T *)buf, byte_size / sizeof(T));
         }
 
@@ -270,6 +272,15 @@ class Array: public IArray,
 
         void clear() { this->resize(0); }
 
+        void trim() requires std::same_as<T, char>
+        {
+            auto view = this->cpp_str_view();
+            auto ltrim = sihd::util::str::ltrim(view);
+            if (ltrim.size() < view.size())
+                *this = sihd::util::str::rtrim(ltrim);
+            else
+                this->resize(sihd::util::str::rtrim(ltrim).size());
+        }
         /*********************************************************************/
         /* reserve */
         /*********************************************************************/
@@ -300,7 +311,9 @@ class Array: public IArray,
         {
             if (byte_size % this->data_size() != 0)
                 throw std::invalid_argument(
-                    str::format("Array::assign_bytes - size %lu not divisible by data size %lu", byte_size, sizeof(T)));
+                    str::format("Array::assign_bytes - size %lu not divisible by data size %lu",
+                                byte_size,
+                                sizeof(T)));
             if (byte_capacity % this->data_size() != 0)
                 throw std::invalid_argument(
                     str::format("Array::assign_bytes - capacity %lu not divisible by data size %lu",
@@ -340,7 +353,10 @@ class Array: public IArray,
         /* views */
         /*********************************************************************/
 
-        std::string hexdump(char delimiter = ' ') const { return str::hexdump(_buf_ptr, this->byte_size(), delimiter); }
+        std::string hexdump(char delimiter = ' ') const
+        {
+            return str::hexdump(_buf_ptr, this->byte_size(), delimiter);
+        }
 
         std::string str() const
         {
@@ -372,7 +388,7 @@ class Array: public IArray,
             {
                 std::string s;
                 // trying to reserve at least 1 char by element + delimiters (if there are)
-                s.reserve(_size + std::max(0, int(_size - 2)));
+                s.reserve(_size + (delimiter != '\0' ? std::max(0, int(_size - 2)) : 0));
                 size_t i = 0;
                 while (i < _size)
                 {
@@ -403,6 +419,12 @@ class Array: public IArray,
         {
             return _buf_ptr != nullptr ? std::string_view((const char *)_buf_ptr, this->byte_size()) : "";
         }
+
+        /*********************************************************************/
+        /* formatting */
+        /*********************************************************************/
+
+        std::vector<T> format_as() const { return std::vector<T>(this->data(), this->data() + this->size()); }
 
         /*********************************************************************/
         /* clone */
@@ -480,7 +502,10 @@ class Array: public IArray,
             return this->from(container.data(), container.size());
         }
 
-        bool from(std::string_view view) requires std::same_as<T, char> { return this->from(view.data(), view.size()); }
+        bool from(std::string_view view) requires std::same_as<T, char>
+        {
+            return this->from(view.data(), view.size());
+        }
 
         bool from(std::initializer_list<T> init)
         {
@@ -749,7 +774,9 @@ class Array: public IArray,
                 pointer array_curr;
                 pointer array_end;
 
-                ArrayIterator(pointer ptr_begin = nullptr, pointer ptr_curr = nullptr, pointer ptr_end = nullptr):
+                ArrayIterator(pointer ptr_begin = nullptr,
+                              pointer ptr_curr = nullptr,
+                              pointer ptr_end = nullptr):
                     array_beg(ptr_begin),
                     array_curr(ptr_curr),
                     array_end(ptr_end)
@@ -809,7 +836,10 @@ class Array: public IArray,
                     return *this;
                 }
 
-                difference_type operator-(const ArrayIterator & rhs) const { return this->array_curr - rhs.array_curr; }
+                difference_type operator-(const ArrayIterator & rhs) const
+                {
+                    return this->array_curr - rhs.array_curr;
+                }
 
                 ArrayIterator operator+(difference_type i) const
                 {
@@ -826,12 +856,18 @@ class Array: public IArray,
                     return ArrayIterator(this->array_beg, this->array_curr - i, this->array_end);
                 }
 
-                bool operator==(const ArrayIterator & rhs) const { return this->array_curr == rhs.array_curr; }
+                bool operator==(const ArrayIterator & rhs) const
+                {
+                    return this->array_curr == rhs.array_curr;
+                }
                 bool operator!=(const ArrayIterator & rhs) const { return !(*this == rhs); }
 
                 bool operator<(const ArrayIterator & rhs) const { return this->array_curr < rhs.array_curr; }
                 bool operator>(const ArrayIterator & rhs) const { return !(*this <= rhs); }
-                bool operator<=(const ArrayIterator & rhs) const { return this->array_curr <= rhs.array_curr; }
+                bool operator<=(const ArrayIterator & rhs) const
+                {
+                    return this->array_curr <= rhs.array_curr;
+                }
                 bool operator>=(const ArrayIterator & rhs) const { return !(*this < rhs); }
 
                 reference operator*() const
@@ -857,7 +893,10 @@ class Array: public IArray,
         typedef ArrayIterator<const T> const_iterator;
 
         iterator begin() { return iterator(this->data(), this->data(), this->data() + this->size()); }
-        iterator end() { return iterator(this->data(), this->data() + this->size(), this->data() + this->size()); }
+        iterator end()
+        {
+            return iterator(this->data(), this->data() + this->size(), this->data() + this->size());
+        }
 
         const_iterator cbegin() const
         {
@@ -968,12 +1007,21 @@ class Array: public IArray,
                     return *this;
                 }
 
-                bool operator==(const ReverseArrayIterator & rhs) const { return this->array_curr == rhs.array_curr; }
+                bool operator==(const ReverseArrayIterator & rhs) const
+                {
+                    return this->array_curr == rhs.array_curr;
+                }
                 bool operator!=(const ReverseArrayIterator & rhs) const { return !(*this == rhs); }
 
-                bool operator<(const ReverseArrayIterator & rhs) const { return this->array_curr > rhs.array_curr; }
+                bool operator<(const ReverseArrayIterator & rhs) const
+                {
+                    return this->array_curr > rhs.array_curr;
+                }
                 bool operator>(const ReverseArrayIterator & rhs) const { return !(*this <= rhs); }
-                bool operator<=(const ReverseArrayIterator & rhs) const { return this->array_curr >= rhs.array_curr; }
+                bool operator<=(const ReverseArrayIterator & rhs) const
+                {
+                    return this->array_curr >= rhs.array_curr;
+                }
                 bool operator>=(const ReverseArrayIterator & rhs) const { return !(*this < rhs); }
 
                 reference operator*() const
@@ -1000,7 +1048,9 @@ class Array: public IArray,
 
         reverse_iterator rbegin()
         {
-            return reverse_iterator(this->data(), this->data() + this->size() - 1, this->data() + this->size());
+            return reverse_iterator(this->data(),
+                                    this->data() + this->size() - 1,
+                                    this->data() + this->size());
         }
         reverse_iterator rend()
         {
@@ -1009,7 +1059,9 @@ class Array: public IArray,
 
         const_reverse_iterator crbegin() const
         {
-            return const_reverse_iterator(this->data(), this->data() + this->size() - 1, this->data() + this->size());
+            return const_reverse_iterator(this->data(),
+                                          this->data() + this->size() - 1,
+                                          this->data() + this->size());
         }
 
         const_reverse_iterator crend() const
@@ -1127,9 +1179,11 @@ static_assert(std::forward_iterator<Array<int>::reverse_iterator>, "failed forwa
 static_assert(std::input_iterator<Array<int>::reverse_iterator>, "failed input iterator");
 static_assert(std::bidirectional_iterator<Array<int>::reverse_iterator>, "failed bidirectional iterator");
 static_assert(std::contiguous_iterator<Array<int>::reverse_iterator>, "failed random access iterator");
-static_assert(std::weakly_incrementable<Array<int>::reverse_iterator>, "Failed the weakly incrementable test");
+static_assert(std::weakly_incrementable<Array<int>::reverse_iterator>,
+              "Failed the weakly incrementable test");
 static_assert(std::movable<Array<int>::reverse_iterator>, "Failed the moveable test");
-static_assert(std::default_initializable<Array<int>::reverse_iterator>, "Failed the default initializable test");
+static_assert(std::default_initializable<Array<int>::reverse_iterator>,
+              "Failed the default initializable test");
 
 // typedef for types
 typedef Array<bool> ArrBool;
@@ -1151,12 +1205,6 @@ template <traits::TriviallyCopyable T>
 using ArrayShared = std::shared_ptr<Array<T>>;
 template <traits::TriviallyCopyable T>
 using ArrayWeak = std::weak_ptr<Array<T>>;
-
-template <traits::TriviallyCopyable T>
-std::string_view format_as(const Array<T> & arr)
-{
-    return arr.cpp_str_view();
-}
 
 } // namespace sihd::util
 

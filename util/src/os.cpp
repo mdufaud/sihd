@@ -46,7 +46,9 @@
 #endif
 
 // backtrace not available in windows / android / emscripten
-#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
+#if defined(__GLIBC__) && !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__)                           \
+    && !defined(__SIHD_EMSCRIPTEN__)
+# define SIHD_UTIL_OS_HAVE_BACKTRACE
 # include <execinfo.h>
 #endif
 
@@ -303,7 +305,7 @@ bool is_root()
 namespace
 {
 
-#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
+#if defined(SIHD_UTIL_OS_HAVE_BACKTRACE)
 
 ssize_t write(int fd, const char *s)
 {
@@ -336,7 +338,7 @@ ssize_t write_number(int fd, int number)
 
 } // namespace
 
-#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
+#if defined(SIHD_UTIL_OS_HAVE_BACKTRACE)
 
 ssize_t backtrace(int fd, size_t backtrace_size)
 {

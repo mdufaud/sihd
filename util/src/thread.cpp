@@ -1,14 +1,10 @@
 #include <cstring>
-// #include <map>
-// #include <mutex>
-// #include <sstream>
 
 #include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/thread.hpp>
 
 #if defined(__SIHD_LINUX__)
-# include <linux/prctl.h> /* Definition of PR_* constants */
 # include <sys/prctl.h>
 #elif defined(__SIHD_WINDOWS__)
 # include <windows.h>

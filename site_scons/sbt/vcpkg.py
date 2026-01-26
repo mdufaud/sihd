@@ -7,10 +7,10 @@ pp = PrettyPrinter(indent=2)
 
 import loader
 
-from sbt import modules
+from site_scons.sbt.build import modules
 from sbt import builder
 from sbt import logger
-from sbt import utils
+from site_scons.sbt.build import utils
 
 app = loader.load_app()
 
@@ -23,6 +23,8 @@ if vcpkg_bin_path is None:
 
 vcpkg_build_path = os.path.join(builder.build_path, "vcpkg")
 vcpkg_build_manifest_path = os.path.join(vcpkg_build_path, "vcpkg.json")
+
+sbt_triplet_path = f"{builder.sbt_path}/vcpkg/triplets"
 
 if builder.verify_args(app) == False:
     exit(1)
@@ -139,7 +141,14 @@ def build_vcpkg_triplet():
             "x64-mingw-dynamic", "arm-mingw-dynamic", "arm64-osx-release", "loongarch32-linux",
             "riscv64-linux"
         ]
+        sbt_triplets = [
+            "zig-arm-linux-dynamic",
+            "zig-arm-linux-static",
+            "zig-arm64-linux-dynamic",
+            "zig-arm64-linux-static",
+        ]
 
+        prefix = ""
         vcpkg_machine = builder.build_machine
         vcpkg_platform = builder.build_platform
         vcpkg_liblink = "static" if builder.build_static_libs else "dynamic"
@@ -153,7 +162,9 @@ def build_vcpkg_triplet():
             if builder.build_architecture == "64":
                 vcpkg_machine = "x64"
             elif builder.build_architecture == "32":
-                vcpkg_machine = "x86"
+                vcpkg_machine = "x64"
+            # elif builder.build_architecture == "32":
+            #     vcpkg_machine = "x86"
 
         if vcpkg_machine == "aarch64":
             if builder.build_architecture == "64":
@@ -163,18 +174,28 @@ def build_vcpkg_triplet():
 
         if builder.build_platform == "windows":
             vcpkg_platform = "mingw"
+        
+        if builder.use_zig:
+            prefix = "zig-"
 
-    triplet_tries = [
-        f"{vcpkg_machine}-{vcpkg_platform}-{vcpkg_liblink}-{vcpkg_mode}",
-        f"{vcpkg_machine}-{vcpkg_platform}-{vcpkg_liblink}",
-        f"{vcpkg_machine}-{vcpkg_platform}-{vcpkg_mode}",
-        f"{vcpkg_machine}-{vcpkg_platform}"
-    ]
+        triplet_tries = [
+            f"{prefix}{vcpkg_machine}-{vcpkg_platform}-{vcpkg_liblink}-{vcpkg_mode}",
+            f"{prefix}{vcpkg_machine}-{vcpkg_platform}-{vcpkg_liblink}",
+            f"{prefix}{vcpkg_machine}-{vcpkg_platform}-{vcpkg_mode}",
+            f"{prefix}{vcpkg_machine}-{vcpkg_platform}"
+        ]
 
-    for triplet_try in triplet_tries:
-        if triplet_try in builtin_triplets or triplet_try in community_triplets:
-            vcpkg_triplet = triplet_try
-            break
+        for triplet_try in triplet_tries:
+            if triplet_try in builtin_triplets \
+                  or triplet_try in community_triplets \
+                    or triplet_try in sbt_triplets:
+                vcpkg_triplet = triplet_try
+                break
+
+        logger.info(f"VCPKG triplet auto-detected as: {vcpkg_triplet}")
+
+    if vcpkg_triplet is None:
+        raise RuntimeError("no VCPKG triplet detected")
 
     return vcpkg_triplet
 
@@ -182,7 +203,7 @@ vcpkg_triplet = build_vcpkg_triplet()
 
 def build_vcpkg_manifest():
     # default vcpkg baseline
-    vcpkg_baseline = "7977f0a771e64e9811d32aa30d9a247e09c39b2e"
+    vcpkg_baseline = "3a3285c4878c7f5a957202201ba41e6fdeba8db4"
     if hasattr(app, "vcpkg_baseline"):
         vcpkg_baseline = app.vcpkg_baseline
     vcpkg_manifest = {
@@ -237,7 +258,13 @@ def execute_vcpkg_install():
     logger.info("fetching external libraries for {}".format(app.name))
 
     copy_env = os.environ.copy()
-    args = [vcpkg_bin_path, "install", f"--triplet={vcpkg_triplet}", "--allow-unsupported"]
+    args = [
+        vcpkg_bin_path,
+        "install",
+        f"--triplet={vcpkg_triplet}",
+        "--allow-unsupported",
+        f"--overlay-triplets={sbt_triplet_path}",
+    ]
 
     if copy_env.get("VCPKG_DEFAULT_BINARY_CACHE", None) is None:
         vcpkg_archive_path = os.path.join(vcpkg_dir_path, "archives")
@@ -274,7 +301,12 @@ def execute_vcpkg_install():
 def execute_vcpkg_depend_info():
     __check_vcpkg()
     args = [vcpkg_bin_path, "depend-info"] + list(extlibs.keys())
-    args += [f"--triplet={vcpkg_triplet}", "--format=tree", "--max-recurse=-1"]
+    args += [
+        f"--triplet={vcpkg_triplet}",
+        f"--overlay-triplets={sbt_triplet_path}",
+        "--format=tree",
+        "--max-recurse=-1"
+    ]
     if verbose:
         logger.debug(f"executing '{args}' in '{vcpkg_build_path}'")
 
@@ -285,7 +317,10 @@ def execute_vcpkg_depend_info():
 
 def execute_vcpkg_list():
     __check_vcpkg()
-    args = (vcpkg_bin_path, "list", f"--triplet={vcpkg_triplet}")
+    args = (
+        vcpkg_bin_path,
+        "list",
+    )
     if verbose:
         logger.debug(f"executing '{args}' in '{vcpkg_build_path}'")
 
@@ -313,5 +348,5 @@ if __name__ == "__main__":
         sys.exit(return_code)
     elif "list" in sys.argv:
         execute_vcpkg_list()
-    elif "info" in sys.argv:
+    elif "tree" in sys.argv:
         execute_vcpkg_depend_info()

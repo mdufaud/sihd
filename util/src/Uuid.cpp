@@ -1,5 +1,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Uuid.hpp>
+#include <sihd/util/hash.hpp>
 
 #include <sihd/util/platform.hpp>
 
@@ -70,73 +71,59 @@ Uuid::Uuid(const Uuid & uuid_namespace, std::string_view name)
 
     _impl = std::make_unique<Impl>();
 
-#if defined(__SIHD_WINDOWS__)
-    unsigned char *uuid_ptr = (unsigned char *)(&_impl->uuid);
-    unsigned char *namespace_uuid_ptr = (unsigned char *)(&uuid_namespace._impl->uuid);
-
-    // 1. Build input buffer = namespace UUID (big endian) + name
+    // Build input buffer = namespace UUID + name
     std::vector<unsigned char> data;
     data.reserve(16 + name.size());
 
-    // Convert namespace (GUID) to big-endian order and append to data
-    data.push_back((namespace_uuid_ptr[3]));
-    data.push_back((namespace_uuid_ptr[2]));
-    data.push_back((namespace_uuid_ptr[1]));
-    data.push_back((namespace_uuid_ptr[0]));
-    data.push_back((namespace_uuid_ptr[5]));
-    data.push_back((namespace_uuid_ptr[4]));
-    data.push_back((namespace_uuid_ptr[7]));
-    data.push_back((namespace_uuid_ptr[6]));
+#if defined(__SIHD_WINDOWS__)
+    // Convert namespace (GUID) to big-endian order
+    unsigned char *namespace_uuid_ptr = (unsigned char *)(&uuid_namespace._impl->uuid);
+    // Windows Data1 (4 bytes) - swapped
+    data.push_back(namespace_uuid_ptr[3]);
+    data.push_back(namespace_uuid_ptr[2]);
+    data.push_back(namespace_uuid_ptr[1]);
+    data.push_back(namespace_uuid_ptr[0]);
+    // Windows Data2 (2 bytes) - swapped
+    data.push_back(namespace_uuid_ptr[5]);
+    data.push_back(namespace_uuid_ptr[4]);
+    // Windows Data3 (2 bytes) - swapped
+    data.push_back(namespace_uuid_ptr[7]);
+    data.push_back(namespace_uuid_ptr[6]);
+    // Windows Data4 (8 bytes) - Already a byte array, no swap needed
     data.insert(data.end(), &namespace_uuid_ptr[8], &namespace_uuid_ptr[16]);
+#else
+    // UUID already in network byte order
+    data.insert(data.end(),
+                (unsigned char *)uuid_namespace._impl->uuid,
+                (unsigned char *)uuid_namespace._impl->uuid + 16);
+#endif
 
     // Append the name bytes
     data.insert(data.end(), name.begin(), name.end());
 
-    // 2. Compute SHA-1
-    HCRYPTPROV hProv = 0;
-    HCRYPTHASH hHash = 0;
-    BYTE hash[20];
-    DWORD hashLen = sizeof(hash);
+    // Compute SHA-1
+    unsigned char hash[20];
+    hash::sha1(data.data(), data.size(), hash);
 
-    if (!CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
-        throw std::runtime_error("CryptAcquireContext failed");
+    // Set Version and Variant bits
+    hash[6] = (hash[6] & 0x0F) | 0x50; // version 5
+    hash[8] = (hash[8] & 0x3F) | 0x80; // variant RFC4122
 
-    if (!CryptCreateHash(hProv, CALG_SHA1, 0, 0, &hHash))
-    {
-        CryptReleaseContext(hProv, 0);
-        throw std::runtime_error("CryptCreateHash failed");
-    }
-
-    if (!CryptHashData(hHash, data.data(), (DWORD)data.size(), 0))
-    {
-        CryptDestroyHash(hHash);
-        CryptReleaseContext(hProv, 0);
-        throw std::runtime_error("CryptHashData failed");
-    }
-
-    if (!CryptGetHashParam(hHash, HP_HASHVAL, hash, &hashLen, 0))
-    {
-        CryptDestroyHash(hHash);
-        CryptReleaseContext(hProv, 0);
-        throw std::runtime_error("CryptGetHashParam failed");
-    }
-
-    CryptDestroyHash(hHash);
-    CryptReleaseContext(hProv, 0);
-
-    // 3. Copy first 16 bytes of SHA1 into _impl->uuid
-    memcpy(&_impl->uuid, hash, 16);
-
-    // 4. Set version (5) and variant (RFC 4122)
-    uuid_ptr[6] = (uuid_ptr[6] & 0x0F) | (5 << 4); // version 5
-    uuid_ptr[8] = (uuid_ptr[8] & 0x3F) | 0x80;     // variant RFC4122
+    // Write the result into the uuid structure
+#if defined(__SIHD_WINDOWS__)
+    GUID *guid_ptr = (GUID *)(&_impl->uuid);
+    guid_ptr->Data1 = (hash[0] << 24) | (hash[1] << 16) | (hash[2] << 8) | hash[3];
+    guid_ptr->Data2 = (hash[4] << 8) | hash[5];
+    guid_ptr->Data3 = (hash[6] << 8) | hash[7];
+    memcpy(guid_ptr->Data4, &hash[8], 8);
 #else
-    uuid_generate_sha1(_impl->uuid, uuid_namespace._impl->uuid, name.data(), name.size());
+    memcpy(_impl->uuid, hash, 16);
 #endif
 }
 
 Uuid::Uuid(const Uuid & other)
 {
+    _impl = std::make_unique<Impl>();
     do_copy(_impl->uuid, other._impl->uuid);
 }
 

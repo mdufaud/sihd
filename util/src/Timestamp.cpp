@@ -7,6 +7,7 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
 
 namespace sihd::util
@@ -113,7 +114,8 @@ Timestamp Timestamp::floor_day() const
 Timestamp Timestamp::modulo_min(uint32_t minutes) const
 {
     if (minutes > 60)
-        throw std::invalid_argument(fmt::format("modulo minutes must be inferior or equal to 60 - was {}", minutes));
+        throw std::invalid_argument(
+            fmt::format("modulo minutes must be inferior or equal to 60 - was {}", minutes));
 
     const int now_minutes = this->clocktime().minute;
     const uint32_t interval = (now_minutes / minutes) * minutes;
@@ -155,8 +157,20 @@ Calendar Timestamp::local_calendar() const
     return {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
 }
 
-std::optional<Timestamp> Timestamp::from_str(std::string_view date_str, std::string_view format)
+std::optional<Timestamp> Timestamp::from_str(const std::string & date_str, std::string_view format)
 {
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
+    std::chrono::system_clock::time_point tp;
+
+    std::istringstream ss {date_str};
+    ss.imbue(std::locale("C"));
+    ss >> std::chrono::parse(format.data(), tp);
+
+    if (ss.fail())
+        return std::nullopt;
+
+    return Timestamp {tp};
+#else
     struct tm t = {};
     std::istringstream ss {date_str.data()};
 
@@ -167,6 +181,7 @@ std::optional<Timestamp> Timestamp::from_str(std::string_view date_str, std::str
         return std::nullopt;
 
     return Timestamp {time::local_tm(t)};
+#endif
 }
 
 std::string Clocktime::str() const

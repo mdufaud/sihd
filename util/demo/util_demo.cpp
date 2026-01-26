@@ -1,3 +1,4 @@
+#include "sihd/util/ArrayView.hpp"
 #include <cxxopts.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -18,6 +19,7 @@
 #include <sihd/util/TmpDir.hpp>
 #include <sihd/util/Uuid.hpp>
 #include <sihd/util/clipboard.hpp>
+#include <sihd/util/fmt.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/macro.hpp>
 #include <sihd/util/os.hpp>
@@ -38,7 +40,13 @@ SIHD_NEW_LOGGER("demo");
 
 void worker(double frequency)
 {
-    LoadingBar bar({.width = 30, .total = 100, .progression_suffix = "%"});
+    constexpr std::chrono::seconds work_time(2);
+
+    LoadingBar bar({
+        .width = 30,
+        .total = (size_t)frequency * (size_t)work_time.count(),
+        .percentage = true,
+    });
 
     Runnable printer([&bar] {
         bar.add_progress(1);
@@ -53,14 +61,10 @@ void worker(double frequency)
     fmt::print("Starting worker\n");
 
     worker.start_sync_worker("worker");
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(work_time);
     worker.stop_worker();
 
-    // make sure we finish to print the bar
-    bar.set_progress(100);
-    bar.print();
     fmt::print("\nEnded worker\n");
-
     fmt::print("\n");
 }
 
@@ -168,6 +172,7 @@ void file_mem_write()
     ssize_t read_size = file.read(str);
 
     SIHD_LOG(info, "Memory file wrote {} and read {} with content: {}", write_size, read_size, str);
+
     fmt::print("\n");
 }
 

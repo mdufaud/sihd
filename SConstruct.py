@@ -1,1 +1,1 @@
-import sbt.scons
+SConscript('site_scons/sbt/scons.py')

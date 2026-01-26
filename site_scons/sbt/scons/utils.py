@@ -14,21 +14,22 @@ pp = PrettyPrinter(indent=2)
 from sbt import builder
 from sbt import logger
 
-__env_to_key = {
+__env_to_suffix_keys = {
     "LIBS": "_libs",
     "CFLAGS": "_c_flags",
     "CXXFLAGS": "_cxx_flags",
     "CPPFLAGS": "_flags",
     "CPPDEFINES": "_defines",
     "LINKFLAGS": "_link",
+    "BIN_LINKFLAGS": "_bin_link",
 }
 
 def add_env_app_conf(app, env, *keys):
     key = "_".join(keys)
     if builder.build_verbose:
         logger.debug(f"adding env app conf: {key}")
-    for envkey, to_concat in __env_to_key.items():
-        concat = key + to_concat
+    for envkey, suffix in __env_to_suffix_keys.items():
+        concat = key + suffix
         attr = getattr(app, concat, None)
         if attr is not None:
             #prepends

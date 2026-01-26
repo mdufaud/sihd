@@ -1,6 +1,12 @@
 #ifndef __SIHD_UTIL_PLATFORM_H__
 #define __SIHD_UTIL_PLATFORM_H__
 
+#if defined(__LP64__) || defined(_WIN64)
+# define __SIHD_64BITS__
+#else
+# define __SIHD_32BITS__
+#endif
+
 #if defined(__EMSCRIPTEN__)
 # define __SIHD_EMSCRIPTEN__
 #endif
@@ -10,8 +16,8 @@
 # define __SIHD_WINDOWS__
 # define __SIHD_PLATFORM__ "windows"
 
-#elif (defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__) || defined(__CYGWIN__)       \
-       || defined(__EMSCRIPTEN__))
+#elif (defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)                    \
+       || defined(__CYGWIN__) || defined(__EMSCRIPTEN__))
 
 # define __SIHD_UNIX__
 # define __SIHD_LINUX__
