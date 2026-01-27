@@ -162,9 +162,7 @@ def build_vcpkg_triplet():
             if builder.build_architecture == "64":
                 vcpkg_machine = "x64"
             elif builder.build_architecture == "32":
-                vcpkg_machine = "x64"
-            # elif builder.build_architecture == "32":
-            #     vcpkg_machine = "x86"
+                vcpkg_machine = "x86"
 
         if vcpkg_machine == "aarch64":
             if builder.build_architecture == "64":
@@ -175,7 +173,7 @@ def build_vcpkg_triplet():
         if builder.build_platform == "windows":
             vcpkg_platform = "mingw"
         
-        if builder.use_zig:
+        if builder.build_compiler == "zig":
             prefix = "zig-"
 
         triplet_tries = [

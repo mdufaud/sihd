@@ -35,10 +35,6 @@ def load_in_env(env):
             CPPFLAGS = clang_asan_flags,
             LINKFLAGS = clang_asan_flags
         )
-    if builder.build_static_libs:
-        env.ParseConfig("llvm-config --libs --system-libs --link-static")
-    else:
-        env.ParseConfig("llvm-config --libs --ldflags --system-libs")
 
     if builder.build_static_libs and builder.build_asan:
         env.Append(

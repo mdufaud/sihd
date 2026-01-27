@@ -258,28 +258,28 @@ modules = {
     },
 }
 
-# conditionnal modules - activated only if compiled explicitly or by env variable
-conditionnal_modules = {
+# conditional modules - activated only if compiled explicitly or by env variable
+conditional_modules = {
     "lua": {
         # apt liblua5.3-dev / pacman lua
         "extlibs": ['lua', 'luabridge3'],
         "depends": ['util'],
-        "conditionnal-env": "lua",
-        "conditionnal-depends": ['core'],
+        "conditional-env": "lua",
+        "conditional-depends": ['core'],
         "flags": ["-Wno-unused-parameter", "-Wno-unused-but-set-parameter"],
         "pkg-configs": ["lua-5.3", "lua53"],
     },
     "luabin": {
         "depends": ['lua'],
-        "conditionnal-env": "lua",
+        "conditional-env": "lua",
         "flags": ["-Wno-unused-parameter"],
     },
     "py": {
         "platforms": ["linux"],
         "depends": ['util'],
         "extlibs": ['pybind11'],
-        "conditionnal-env": "py",
-        "conditionnal-depends": ['core'],
+        "conditional-env": "py",
+        "conditional-depends": ['core'],
         "clang-flags": ["-Wno-unused-command-line-argument"],
         # pip install python-config
         "parse-configs": [
@@ -298,7 +298,7 @@ def add_fmt_to_modules(modules_list):
             module["defines"] = ["FMT_HEADER_ONLY"]
 
 add_fmt_to_modules(modules)
-add_fmt_to_modules(conditionnal_modules)
+add_fmt_to_modules(conditional_modules)
 
 ###############################################################################
 # compilation

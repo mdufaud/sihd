@@ -23,7 +23,7 @@ class TestNamedFactory: public ::testing::Test
 TEST_F(TestNamedFactory, test_namedfactory)
 {
     if (os::is_run_with_asan)
-        GTEST_SKIP() << "test does not work with address sanatizer";
+        GTEST_SKIP() << "test does not work with address sanitizer";
     EXPECT_EQ(NamedFactory::load("unknown_lib", "symbol", "err"), nullptr);
     EXPECT_EQ(NamedFactory::load("sihd_util", "unknown_symbol", "err"), nullptr);
 

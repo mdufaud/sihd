@@ -137,7 +137,7 @@ Flavours (you can mix them mostly)
 ```shell
 # static libraries
 make static=1
-# address sanatizer
+# address sanitizer
 make asan=1
 # no debug symbols
 make mode=release

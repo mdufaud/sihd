@@ -172,7 +172,7 @@ def has_test():
 def has_demo():
     return utils.is_opt("demo")
 
-def is_address_sanatizer():
+def is_address_sanitizer():
     return utils.is_opt("asan")
 
 def do_distribution():
@@ -199,11 +199,18 @@ def is_static_libs():
 def force_git_clone():
     return utils.is_opt("fgit")
 
+def get_libc():
+    libc = utils.get_opt("libc", "gnu").lower()
+    if libc not in ("gnu", "musl"):
+        raise SystemExit("unknown libc: {}".format(libc))
+    return libc
+
 ###############################################################################
 # Build initialisation
 ###############################################################################
 
 # compilation
+libc = get_libc()
 build_compiler = get_compiler()
 host_architecture = get_host_architecture()
 build_architecture = get_architecture()
@@ -212,7 +219,7 @@ build_machine = get_machine()
 is_cross_building = host_machine != build_machine
 build_mode = get_compile_mode()
 build_static_libs = is_static_libs()
-build_asan = is_address_sanatizer()
+build_asan = is_address_sanitizer()
 build_tests = has_test()
 build_demo = has_demo()
 build_verbose = has_verbose()
@@ -227,8 +234,6 @@ def get_gnu_triplet():
     return _build_gnu_triplet(build_machine, build_platform)
 
 sbt_path = abspath(dirname(__file__))
-
-use_zig = utils.is_opt("zig")
 
 # path ROOT -> root/site_scons/builder.py
 build_root_path = abspath(dirname(dirname(dirname(__file__))))
@@ -261,7 +266,7 @@ build_obj_path = join(build_path, "obj")
 libs_type = "static" if is_static_libs() else "dynamic"
 
 ###############################################################################
-# App settings sanatizer
+# App settings sanitizer
 ###############################################################################
 
 allowed_compilers = ("gcc", "clang", "em", "mingw")

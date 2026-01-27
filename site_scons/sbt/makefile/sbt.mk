@@ -160,7 +160,7 @@ help:
 	$(call mk_log_info,makefile,get dependencies: make dep)
 	$(call mk_log_info,makefile,build and run tests: make test)
 	$(call mk_log_info,makefile,build specific modules: modules=<comma_separated_modules>)
-	$(call mk_log_info,makefile,build with address sanatizer: asan=1)
+	$(call mk_log_info,makefile,build with address sanitizer: asan=1)
 	$(call mk_log_info,makefile,build with static libs: static=1)
 	$(call mk_log_info,makefile,build specific release: mode=debug|release)
 	$(call mk_log_info,makefile,cross build for windows: platform=win)
@@ -269,7 +269,7 @@ endif # module
 ########
 
 .PHONY: test # Build modules, tests and runs tests ([comma_separated_modules|all|ls] [filter] [repeat=x])
-.PHONY: stest san_test # Build and run tests with address sanatizer and runs tests
+.PHONY: stest san_test # Build and run tests with address sanitizer and runs tests
 .PHONY: itest nointeract_test # Build and run tests with stdin closed
 .PHONY: vtest valgrind_test # Build and run tests with valgrind debugger
 .PHONY: ltest valgrind_leak_test # Build and run tests with valgrind leak checking debugger

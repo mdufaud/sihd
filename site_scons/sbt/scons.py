@@ -72,7 +72,7 @@ if verbose:
     logger.info("mode: " + build_mode)
     logger.info("tests: " + (builder.build_tests and "yes" or "no"))
     logger.info("libraries: " + (builder.build_static_libs and "static" or "shared"))
-    logger.info("address sanatizer: " + (builder.build_asan and "yes" or "no"))
+    logger.info("address sanitizer: " + (builder.build_asan and "yes" or "no"))
 
 # Get modules configuration for this build
 try:
@@ -218,18 +218,23 @@ if build_platform == "windows":
 ###############################################################################
 
 compiler = builder.build_compiler
+
+# GCC build
+if compiler == "gcc":
+    from site_scons.sbt.scons.compilers import gcc as compiler_gcc
+    compiler_gcc.load_in_env(base_env)
 # CLANG build
-if compiler == "clang":
+elif compiler == "clang":
     from site_scons.sbt.scons.compilers import clang as compiler_clang
     compiler_clang.load_in_env(base_env)
 # MINGW build
 elif compiler == "mingw":
     from site_scons.sbt.scons.compilers import mingw as compiler_mingw
     compiler_mingw.load_in_env(base_env)
-# GCC build
-elif compiler == "gcc":
-    from site_scons.sbt.scons.compilers import gcc as compiler_gcc
-    compiler_gcc.load_in_env(base_env)
+# ZIG build
+elif compiler == "zig":
+    from site_scons.sbt.scons.compilers import zig as compiler_zig
+    compiler_zig.load_in_env(base_env)
 # EMSCRIPTEN build
 elif compiler == "em":
     from site_scons.sbt.scons.compilers import emscripten as compiler_emscripten
@@ -612,7 +617,7 @@ def create_module_env(conf, depends = [],
     libs = modules.get_module_libs(build_modules, modname, add_depends_libs = do_inherit_depends_libs)
     libs += get_compilation_options(conf, "libs")
     # remove when using musl with zig
-    if builder.use_zig:
+    if builder.libc == "musl" or builder.build_compiler == "zig":
         libs = [lib for lib in libs if not lib in ["pthread", "m", "dl", "stdc++fs"]]
     # add flag
     flags = conf.get("flags", [])
