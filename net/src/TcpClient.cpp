@@ -61,6 +61,12 @@ bool TcpClient::open_and_connect(const IpAddr & ip)
     return this->open_socket(ip.is_ipv6()) && this->connect(ip);
 }
 
+bool TcpClient::open_and_connect(std::string_view ip, int port)
+{
+    IpAddr addr(ip, port);
+    return this->open_socket(addr.is_ipv6()) && this->connect(addr);
+}
+
 bool TcpClient::open_unix_and_connect(std::string_view path)
 {
     return this->open_socket_unix() && this->connect(path);

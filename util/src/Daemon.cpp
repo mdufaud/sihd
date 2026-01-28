@@ -1,3 +1,4 @@
+#include <fcntl.h>    // open, O_RDWR
 #include <sys/stat.h> //umask
 #include <unistd.h>
 
@@ -27,8 +28,8 @@ Daemon::Daemon(const std::string & name, sihd::util::Node *parent): sihd::util::
     _signals_handled = false;
     _uid = 0;
 #if !defined(__SIHD_WINDOWS__)
-    _working_dir_path = fs::sep_str();
-    _pid_file_path = "/var/lock/" + this->name() + "_daemon.lock";
+    _working_dir_path = "/";
+    _pid_file_path = fmt::format("/var/lock/{}_daemon.lock", this->name());
 #else
     _working_dir_path = fs::home_path();
 #endif
@@ -180,41 +181,81 @@ bool Daemon::run()
             SIHD_LOG(warning, "Daemon: can't set process ownership to uid: {}", _uid);
         }
     }
-    // close file descriptors
+    // redirect standard file descriptors to /dev/null
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
-    /*
     if (open("/dev/null", O_RDWR) == STDIN_FILENO)
     {
         if (dup2(STDIN_FILENO, STDOUT_FILENO) != STDOUT_FILENO)
-            SIHD_LOG(warning, "Daemon: could not open back stdout file number");
+            SIHD_LOG(warning, "Daemon: could not redirect stdout to /dev/null");
         if (dup2(STDIN_FILENO, STDERR_FILENO) != STDERR_FILENO)
-            SIHD_LOG(warning, "Daemon: could not open back stderr file number");
+            SIHD_LOG(warning, "Daemon: could not redirect stderr to /dev/null");
     }
     else
     {
-        SIHD_LOG(warning, "Daemon: could not open back stdin file number");
+        SIHD_LOG(warning, "Daemon: could not redirect stdin to /dev/null");
     }
-    */
     SIHD_LOG(info, "Daemon: started with pid: {}", getpid());
     return true;
 }
 
 #else
 
-# pragma message("TODO windows")
-
 bool Daemon::run()
 {
-    // TODO
-    // maybe use windows services
-    FreeConsole();
-    if (chdir(_working_dir_path.c_str()) < 0)
+    // Note: Windows doesn't have fork/setsid like Unix.
+    // For a true Windows daemon, use Windows Services (SC API).
+    // This implementation provides a simple "detached console" mode.
+
+    // Lock file
+    if (_lock_pid_file() == false)
+        return false;
+
+    // Install signal handlers
+    this->_handle_signals();
+
+    // Detach from console
+    if (!FreeConsole())
     {
-        SIHD_LOG(error, "Daemon: chdir failed: {}", os::last_error_str());
+        // Not an error if there's no console attached
+        DWORD err = GetLastError();
+        if (err != ERROR_INVALID_PARAMETER) // ERROR_INVALID_PARAMETER = no console
+        {
+            SIHD_LOG(warning, "Daemon: FreeConsole failed: {}", os::last_error_str());
+        }
+    }
+
+    // Change directory
+    if (!SetCurrentDirectoryA(_working_dir_path.c_str()))
+    {
+        SIHD_LOG(error, "Daemon: SetCurrentDirectory failed: {}", os::last_error_str());
         return false;
     }
+
+    // Write pid file
+    _write_pid_file();
+
+    // Redirect standard handles to NUL
+    HANDLE nul_handle = CreateFileA("NUL",
+                                    GENERIC_READ | GENERIC_WRITE,
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                    nullptr,
+                                    OPEN_EXISTING,
+                                    FILE_ATTRIBUTE_NORMAL,
+                                    nullptr);
+    if (nul_handle != INVALID_HANDLE_VALUE)
+    {
+        SetStdHandle(STD_INPUT_HANDLE, nul_handle);
+        SetStdHandle(STD_OUTPUT_HANDLE, nul_handle);
+        SetStdHandle(STD_ERROR_HANDLE, nul_handle);
+    }
+    else
+    {
+        SIHD_LOG(warning, "Daemon: could not redirect standard handles to NUL");
+    }
+
+    SIHD_LOG(info, "Daemon: started with pid: {}", GetCurrentProcessId());
     return true;
 }
 
