@@ -65,6 +65,11 @@ class Bitmap
         bool save_bmp(std::string_view path) const;
         bool read_bmp(std::string_view path);
 
+        // Serialize bitmap to BMP format in memory
+        Pixels to_bmp_data() const;
+        // Read BMP from memory buffer
+        bool read_bmp_data(const Pixels & data);
+
         bool empty() const { return _data.empty(); };
         size_t height() const { return _height; }
         size_t width() const { return _width; }

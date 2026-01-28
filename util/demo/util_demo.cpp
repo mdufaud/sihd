@@ -191,19 +191,38 @@ void file_mem_read()
 
 void clipboard()
 {
-    auto opt_str = clipboard::get();
-    if (opt_str)
+    auto opt_content = clipboard::get_any();
+    if (opt_content)
     {
-        SIHD_LOG_INFO("You have '{}' in you clipboard", *opt_str);
+        if (std::holds_alternative<std::string>(*opt_content))
+        {
+            const auto & text = std::get<std::string>(*opt_content);
+            SIHD_LOG_INFO("You have text in your clipboard: '{}'", text);
+        }
+        else if (std::holds_alternative<Bitmap>(*opt_content))
+        {
+            const auto & bitmap = std::get<Bitmap>(*opt_content);
+            SIHD_LOG_INFO("You have an image in your clipboard: {}x{} ({}bpp)",
+                          bitmap.width(),
+                          bitmap.height(),
+                          bitmap.byte_per_pixel() * 8);
+
+            std::string path = fs::combine(fs::tmp_path(), "clipboard_image.bmp");
+            if (bitmap.save_bmp(path))
+                SIHD_LOG(notice, "Saved clipboard image to: {}", path);
+
+            // for the fun of it all
+            clipboard::set_image(bitmap);
+        }
     }
     else
     {
         SIHD_LOG_ERROR("Could not get clipboard data");
     }
 
-    if (clipboard::set("love you"))
+    if (clipboard::set_text("love you"))
     {
-        SIHD_LOG_INFO("Setted 'love you' in your clipboard");
+        SIHD_LOG_INFO("Set 'love you' in your clipboard");
     }
     else
     {

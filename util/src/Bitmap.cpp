@@ -61,8 +61,8 @@ struct BitmapInfoHeader
         uint32_t pixel_per_meter_y;
         // Specifies the number of color indexes in the color table that are actually used by the bitmap
         uint32_t nb_colors;
-        // Specifies the number of color indexes required for displaying the bitmap. If this value is zero, all colors
-        // are required.
+        // Specifies the number of color indexes required for displaying the bitmap. If this value is zero,
+        // all colors are required.
         uint32_t nb_important_colors;
 };
 #pragma pack(pop)
@@ -130,7 +130,8 @@ void Bitmap::set(uint8_t *data, size_t size)
 {
     if (size > _data.size())
     {
-        throw std::invalid_argument(fmt::format("pixels data ({}) is out of bounds (pixels[{}])", size, _data.size()));
+        throw std::invalid_argument(
+            fmt::format("pixels data ({}) is out of bounds (pixels[{}])", size, _data.size()));
     }
     memcpy(_data.data(), data, size);
 }
@@ -163,6 +164,53 @@ size_t Bitmap::coordinate_to_pixel(size_t row, size_t line) const
     return (line * _width + row) * this->byte_per_pixel();
 }
 
+Bitmap::Pixels Bitmap::to_bmp_data() const
+{
+    if (this->empty())
+        return {};
+
+    // BMP rows must be padded to 4-byte boundaries
+    const size_t bytes_per_row = _width * this->byte_per_pixel();
+    const size_t padded_row_size = ((bytes_per_row + 3) / 4) * 4;
+    const size_t image_size = padded_row_size * _height;
+    const size_t file_size = sizeof(BitmapFileHeader) + sizeof(BitmapInfoHeader) + image_size;
+
+    Pixels bmp_data(file_size, 0);
+
+    // Fill file header
+    BitmapFileHeader *file_hdr = reinterpret_cast<BitmapFileHeader *>(bmp_data.data());
+    ((unsigned char *)&file_hdr->signature)[0] = 'B';
+    ((unsigned char *)&file_hdr->signature)[1] = 'M';
+    file_hdr->filesize = file_size;
+    file_hdr->reserved = 0;
+    file_hdr->fileoffset_to_pixelarray = sizeof(BitmapFileHeader) + sizeof(BitmapInfoHeader);
+
+    // Fill info header
+    BitmapInfoHeader *info_hdr
+        = reinterpret_cast<BitmapInfoHeader *>(bmp_data.data() + sizeof(BitmapFileHeader));
+    info_hdr->header_size = sizeof(BitmapInfoHeader);
+    info_hdr->width = _width;
+    info_hdr->height = _height;
+    info_hdr->planes = 1;
+    info_hdr->bits_per_pixel = _bit_per_pixel;
+    info_hdr->compression = BI_RGB;
+    info_hdr->image_size = image_size;
+    info_hdr->pixel_per_meter_x = 0x130B; // 2835 - 72 dpi
+    info_hdr->pixel_per_meter_y = 0x130B; // 2835 - 72 dpi
+    info_hdr->nb_colors = 0;
+    info_hdr->nb_important_colors = 0;
+
+    // Copy pixel data with padding
+    uint8_t *pixels = bmp_data.data() + file_hdr->fileoffset_to_pixelarray;
+    for (size_t y = 0; y < _height; ++y)
+    {
+        memcpy(pixels + y * padded_row_size, this->c_data() + y * bytes_per_row, bytes_per_row);
+        // Padding bytes are already zero from initialization
+    }
+
+    return bmp_data;
+}
+
 bool Bitmap::save_bmp(std::string_view path) const
 {
     File file(path, "wb");
@@ -170,73 +218,103 @@ bool Bitmap::save_bmp(std::string_view path) const
     if (!file.is_open())
         return false;
 
-    BitmapFileHeader bitmap_file_hdr;
-    ((unsigned char *)&bitmap_file_hdr.signature)[0] = 'B';
-    ((unsigned char *)&bitmap_file_hdr.signature)[1] = 'M';
-    bitmap_file_hdr.filesize = sizeof(BitmapFileHeader) + sizeof(BitmapInfoHeader) + _data.size();
-    bitmap_file_hdr.reserved = 0;
-    bitmap_file_hdr.fileoffset_to_pixelarray = sizeof(BitmapFileHeader) + sizeof(BitmapInfoHeader);
+    Pixels bmp_data = this->to_bmp_data();
+    if (bmp_data.empty())
+        return false;
 
-    BitmapInfoHeader bitmap_info_hdr;
-    bitmap_info_hdr.header_size = sizeof(BitmapInfoHeader);
-    bitmap_info_hdr.width = _width;
-    bitmap_info_hdr.height = _height;
-    bitmap_info_hdr.planes = 1;
-    bitmap_info_hdr.bits_per_pixel = _bit_per_pixel;
-    bitmap_info_hdr.compression = BI_RGB;
-    bitmap_info_hdr.image_size = _data.size();
-    bitmap_info_hdr.pixel_per_meter_x = 0x130B; // 2835 - 72 dpi
-    bitmap_info_hdr.pixel_per_meter_y = 0x130B; // 2835 - 72 dpi
-    bitmap_info_hdr.nb_colors = 0;
-    bitmap_info_hdr.nb_important_colors = 0;
-
-    bool success = file.write(&bitmap_file_hdr, sizeof(BitmapFileHeader)) == sizeof(BitmapFileHeader);
-    success = success && file.write(&bitmap_info_hdr, sizeof(BitmapInfoHeader)) == sizeof(BitmapInfoHeader);
-
-    // skip Extra bit masks because we are always in BI_RGB
-
-    // skip Color table because bit_per_pixel is not <= 8
-
-    // ignore Gap1 because fileoffset_to_pixelarray is not aligned
-
-    success = success && file.write(this->c_data(), _data.size()) == (ssize_t)_data.size();
-
-    // ignore Gap2 because ICC profile data is not set
-
-    // ignore ICC color profile path
-
-    return success;
+    return file.write(bmp_data.data(), bmp_data.size()) == static_cast<ssize_t>(bmp_data.size());
 }
 
 bool Bitmap::read_bmp(std::string_view path)
 {
-    this->clear();
-
     File file(path, "rb");
 
     if (!file.is_open())
         return false;
 
-    BitmapFileHeader bitmap_file_hdr;
-    BitmapInfoHeader bitmap_info_hdr;
-
-    bool success = file.read(&bitmap_file_hdr, sizeof(BitmapFileHeader)) == sizeof(BitmapFileHeader);
-    success = success && file.read(&bitmap_info_hdr, sizeof(BitmapInfoHeader)) == sizeof(BitmapInfoHeader);
-
-    if (!success)
+    // Get file size
+    file.seek_end(0);
+    const ssize_t file_size = file.tell();
+    if (file_size <= 0)
         return false;
 
-    this->create(bitmap_info_hdr.width, bitmap_info_hdr.height, bitmap_info_hdr.bits_per_pixel);
+    file.seek_begin(0);
 
-    if (bitmap_file_hdr.fileoffset_to_pixelarray > (sizeof(BitmapFileHeader) + sizeof(BitmapInfoHeader)))
+    // Read entire file into memory
+    Pixels data(file_size);
+    if (file.read(data.data(), file_size) != file_size)
+        return false;
+
+    // Parse BMP from memory
+    return this->read_bmp_data(data);
+}
+
+bool Bitmap::read_bmp_data(const Pixels & data)
+{
+    this->clear();
+
+    if (data.size() < sizeof(BitmapFileHeader) + sizeof(BitmapInfoHeader))
+        return false;
+
+    const BitmapFileHeader *file_hdr = reinterpret_cast<const BitmapFileHeader *>(data.data());
+    const BitmapInfoHeader *info_hdr
+        = reinterpret_cast<const BitmapInfoHeader *>(data.data() + sizeof(BitmapFileHeader));
+
+    // Validate signature
+    if (((unsigned char *)&file_hdr->signature)[0] != 'B'
+        || ((unsigned char *)&file_hdr->signature)[1] != 'M')
+        return false;
+
+    // Handle negative height (top-down DIB)
+    const bool top_down = static_cast<int32_t>(info_hdr->height) < 0;
+    const uint32_t abs_height
+        = top_down ? static_cast<uint32_t>(-static_cast<int32_t>(info_hdr->height)) : info_hdr->height;
+
+    this->create(info_hdr->width, abs_height, info_hdr->bits_per_pixel);
+
+    // Check if we have enough data
+    if (data.size() < file_hdr->fileoffset_to_pixelarray)
+        return false;
+
+    const uint8_t *pixel_data = data.data() + file_hdr->fileoffset_to_pixelarray;
+    const size_t available_size = data.size() - file_hdr->fileoffset_to_pixelarray;
+
+    // BMP rows are padded to 4-byte boundaries
+    const size_t bytes_per_row = info_hdr->width * this->byte_per_pixel();
+    const size_t padded_row_size = ((bytes_per_row + 3) / 4) * 4;
+    const size_t padding = padded_row_size - bytes_per_row;
+
+    bool success = true;
+    if (padding == 0)
     {
-        size_t offset_to_pixels
-            = bitmap_file_hdr.fileoffset_to_pixelarray - (sizeof(BitmapFileHeader) + sizeof(BitmapInfoHeader));
-
-        file.seek(offset_to_pixels);
+        // No padding - copy directly
+        const size_t data_size = bytes_per_row * abs_height;
+        if (available_size >= data_size)
+        {
+            memcpy(_data.data(), pixel_data, data_size);
+        }
+        else
+        {
+            success = false;
+        }
     }
-
-    success = success && file.read(_data.data(), bitmap_info_hdr.image_size) == (ssize_t)bitmap_info_hdr.image_size;
+    else
+    {
+        // Has padding - copy row by row
+        for (uint32_t y = 0; y < abs_height && success; ++y)
+        {
+            const size_t row_offset = y * padded_row_size;
+            if (row_offset + bytes_per_row <= available_size)
+            {
+                const size_t dst_y = top_down ? (abs_height - 1 - y) : y;
+                memcpy(_data.data() + dst_y * bytes_per_row, pixel_data + row_offset, bytes_per_row);
+            }
+            else
+            {
+                success = false;
+            }
+        }
+    }
 
     if (!success)
         this->clear();

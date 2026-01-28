@@ -7,6 +7,12 @@
 # include <X11/Xutil.h>
 #endif
 
+#if defined(SIHD_COMPILE_WITH_WAYLAND)
+# include <sihd/util/File.hpp>
+# include <sihd/util/fs.hpp>
+# include <sihd/util/proc.hpp>
+#endif
+
 #if defined(__SIHD_WINDOWS__)
 # include <windows.h>
 # include <wingdi.h>
@@ -36,51 +42,73 @@ struct X11Display
         Display *display;
 };
 
-bool x11_is_window_readable(XWindowAttributes gwa)
+/**
+ * Check if window can be captured via XGetImage.
+ * XGetImage will fail/abort on:
+ * - InputOnly windows (no pixmap backing)
+ * - Unmapped windows (not visible)
+ * - Unviewable windows (obscured or minimized)
+ */
+bool x11_is_window_readable(const XWindowAttributes & gwa)
 {
-    SIHD_TRACEV(gwa.map_installed);
-    SIHD_TRACEV(InputOutput);
-    SIHD_TRACEV(InputOnly);
-    SIHD_TRACEV(gwa.c_class);
-    SIHD_TRACEV(IsUnmapped);
-    SIHD_TRACEV(IsUnviewable);
-    SIHD_TRACEV(IsViewable);
-    SIHD_TRACEV(gwa.map_state);
-    SIHD_TRACEV(gwa.x);
-    SIHD_TRACEV(gwa.y);
-    SIHD_TRACEV(gwa.width);
-    SIHD_TRACEV(gwa.height);
-    SIHD_TRACEV(gwa.backing_store);
-    SIHD_TRACEV(gwa.depth);
-    SIHD_TRACEV(gwa.root);
-    return gwa.c_class == InputOutput && gwa.map_state == IsViewable;
-    // return gwa.c_class == InputOutput && gwa.map_state == IsViewable && gwa.map_installed == 0;
+    // InputOnly windows have no drawable content
+    if (gwa.c_class != InputOutput)
+        return false;
+    // Window must be mapped and viewable
+    if (gwa.map_state != IsViewable)
+        return false;
+    // Sanity check dimensions
+    if (gwa.width <= 0 || gwa.height <= 0)
+        return false;
+    return true;
+}
+
+int count_trailing_zeros(unsigned long mask)
+{
+    if (mask == 0)
+        return 0;
+    int count = 0;
+    while ((mask & 1) == 0)
+    {
+        mask >>= 1;
+        ++count;
+    }
+    return count;
+}
+
+uint8_t extract_channel(unsigned long pixel, unsigned long mask)
+{
+    if (mask == 0)
+        return 0;
+    const int shift = count_trailing_zeros(mask);
+    const unsigned long extracted = (pixel & mask) >> shift;
+    // Normalize to 8-bit (handle masks of different sizes)
+    const unsigned long mask_max = mask >> shift;
+    if (mask_max == 0)
+        return 0;
+    return static_cast<uint8_t>((extracted * 255) / mask_max);
 }
 
 bool x11_image_to_bitmap(Bitmap & bm, size_t width, size_t height, XImage *image)
 {
     try
     {
-        bm.create(width, height, image->bits_per_pixel);
+        // Always create 32-bit bitmap for consistency
+        bm.create(width, height, 32);
 
         const unsigned long red_mask = image->red_mask;
         const unsigned long green_mask = image->green_mask;
         const unsigned long blue_mask = image->blue_mask;
 
-        unsigned long pixel;
-        unsigned char blue;
-        unsigned char green;
-        unsigned char red;
-
         for (size_t y = 0; y < height; y++)
         {
             for (size_t x = 0; x < width; x++)
             {
-                pixel = XGetPixel(image, x, y);
+                const unsigned long pixel = XGetPixel(image, x, y);
 
-                blue = pixel & blue_mask;
-                green = (pixel & green_mask) >> 8;
-                red = (pixel & red_mask) >> 16;
+                const uint8_t red = extract_channel(pixel, red_mask);
+                const uint8_t green = extract_channel(pixel, green_mask);
+                const uint8_t blue = extract_channel(pixel, blue_mask);
 
                 bm.set(x, height - y - 1, Pixel::rgb(red, green, blue));
             }
@@ -119,7 +147,120 @@ bool x11_screenshot_window(Bitmap & bm, Display *display, Window window)
         return false;
     }
 
+    Defer defer_destroy_image([&] { XDestroyImage(image); });
+
     return x11_image_to_bitmap(bm, width, height, image);
+}
+
+#endif
+
+#if defined(SIHD_COMPILE_WITH_WAYLAND) && !defined(SIHD_COMPILE_WITH_X11)
+
+bool wayland_screenshot(Bitmap & bm, const std::string & output_name = "")
+{
+    proc::Options options;
+    options.timeout = std::chrono::seconds(5);
+    options.close_stderr = true;
+    std::string tmp_path = fs::tmp_path() + "/sihd_screenshot.bmp";
+
+    // Try different screenshot tools in order of preference
+    std::vector<std::vector<std::string>> tools;
+
+    // grim (wlroots compositors: Sway, etc.)
+    {
+        std::vector<std::string> args;
+        args.emplace_back("grim");
+        args.emplace_back("-t");
+        args.emplace_back("bmp");
+        if (!output_name.empty())
+        {
+            args.emplace_back("-o");
+            args.emplace_back(output_name);
+        }
+        args.emplace_back(tmp_path);
+        tools.push_back(args);
+    }
+
+    // spectacle (KDE Plasma)
+    {
+        std::vector<std::string> args = {"spectacle", "-b", "-n", "-f", "-o", tmp_path};
+        tools.push_back(args);
+    }
+
+    // gnome-screenshot (GNOME)
+    {
+        std::vector<std::string> args = {"gnome-screenshot", "-f", tmp_path};
+        tools.push_back(args);
+    }
+
+    for (const auto & args : tools)
+    {
+        auto exit_code_future = proc::execute(args, options);
+        auto status = exit_code_future.wait_for(std::chrono::seconds(5));
+
+        if (status == std::future_status::timeout || exit_code_future.get() != 0)
+            continue;
+
+        if (fs::is_file(tmp_path))
+        {
+            Defer defer_cleanup([&] { fs::remove_file(tmp_path); });
+            if (bm.read_bmp(tmp_path))
+                return true;
+        }
+    }
+
+    SIHD_LOG(error, "No working screenshot tool found (tried: grim, spectacle, gnome-screenshot)");
+    return false;
+}
+
+bool wayland_screenshot_focused(Bitmap & bm)
+{
+    proc::Options options;
+    options.timeout = std::chrono::seconds(5);
+    options.close_stderr = true;
+
+    std::string tmp_path = fs::tmp_path() + "/sihd_screenshot.bmp";
+
+    // Try tools that support active window capture
+    std::vector<std::vector<std::string>> tools = {
+        // spectacle (KDE) - active window
+        {"spectacle", "-b", "-n", "-a", "-o", tmp_path},
+        // gnome-screenshot - current window
+        {"gnome-screenshot", "-w", "-f", tmp_path},
+    };
+
+    for (const auto & args : tools)
+    {
+        auto exit_code_future = proc::execute(args, options);
+        auto status = exit_code_future.wait_for(std::chrono::seconds(5));
+
+        if (status == std::future_status::timeout || exit_code_future.get() != 0)
+            continue;
+
+        if (fs::is_file(tmp_path))
+        {
+            Defer defer_cleanup([&] { fs::remove_file(tmp_path); });
+            if (bm.read_bmp(tmp_path))
+                return true;
+        }
+    }
+
+    SIHD_LOG(warning, "Wayland: focused window capture not supported, falling back to full screen");
+    return wayland_screenshot(bm);
+}
+
+bool wayland_screenshot_under_cursor(Bitmap & bm)
+{
+    // spectacle supports interactive region selection with -r but not "under cursor" specifically
+    SIHD_LOG(warning, "Wayland: under cursor capture not supported, falling back to full screen");
+    return wayland_screenshot(bm);
+}
+
+bool wayland_screenshot_window_name([[maybe_unused]] Bitmap & bm, [[maybe_unused]] std::string_view name)
+{
+    // Wayland doesn't expose window list to clients for security
+    SIHD_LOG(error, "Wayland: window name capture not supported");
+    return false;
 }
 
 #endif
@@ -129,69 +270,84 @@ bool x11_screenshot_window(Bitmap & bm, Display *display, Window window)
 bool take_screen_from_window(Bitmap & bm, HWND window)
 {
     bool ret = false;
-    if (window)
+    if (window == nullptr)
+        return false;
+
+    HDC hdcScreen = GetDC(window);
+    if (hdcScreen == nullptr)
+        return false;
+
+    Defer defer_release_dc([&] { ReleaseDC(window, hdcScreen); });
+
+    HDC hdcCompatible = CreateCompatibleDC(hdcScreen);
+    if (hdcCompatible == nullptr)
+        return false;
+
+    Defer defer_delete_dc([&] { DeleteDC(hdcCompatible); });
+
+    RECT rect;
+    if (window == GetDesktopWindow())
     {
-        HDC hdcScreen = GetDC(window);
-        if (hdcScreen)
-        {
-            HDC hdcCompatible = CreateCompatibleDC(hdcScreen);
-            if (hdcCompatible)
-            {
-                int nScreenWidth = GetSystemMetrics(SM_CXSCREEN);
-                int nScreenHeight = GetSystemMetrics(SM_CYSCREEN);
-                HBITMAP hBmp = CreateCompatibleBitmap(hdcScreen, nScreenWidth, nScreenHeight);
-                if (hBmp)
-                {
-                    HGDIOBJ hOldBmp = SelectObject(hdcCompatible, hBmp);
-                    BOOL bOK = BitBlt(hdcCompatible,
-                                      0,
-                                      0,
-                                      nScreenWidth,
-                                      nScreenHeight,
-                                      hdcScreen,
-                                      0,
-                                      0,
-                                      SRCCOPY | CAPTUREBLT);
-                    if (bOK)
-                    {
-                        SelectObject(hdcCompatible,
-                                     hOldBmp); // always select the previously selected object once done
-
-                        BITMAPINFO MyBMInfo;
-                        memset(&MyBMInfo, 0, sizeof(MyBMInfo));
-                        MyBMInfo.bmiHeader.biSize = sizeof(MyBMInfo.bmiHeader);
-
-                        // Get the BITMAPINFO structure from the bitmap
-                        GetDIBits(hdcScreen, hBmp, 0, 0, NULL, &MyBMInfo, DIB_RGB_COLORS);
-
-                        // create the bitmap buffer
-                        char *lpPixels = new char[MyBMInfo.bmiHeader.biSizeImage];
-
-                        MyBMInfo.bmiHeader.biCompression = BI_RGB;
-                        MyBMInfo.bmiHeader.biBitCount = 24;
-
-                        // get the actual bitmap buffer
-                        GetDIBits(hdcScreen,
-                                  hBmp,
-                                  0,
-                                  MyBMInfo.bmiHeader.biHeight,
-                                  (LPVOID)lpPixels,
-                                  &MyBMInfo,
-                                  DIB_RGB_COLORS);
-
-                        bm.create(nScreenWidth, nScreenHeight, 24);
-                        bm.set((uint8_t *)lpPixels, MyBMInfo.bmiHeader.biSizeImage);
-
-                        delete[] lpPixels;
-                        ret = true;
-                    }
-                    DeleteObject(hBmp);
-                }
-                DeleteDC(hdcCompatible);
-            }
-        }
-        ReleaseDC(window, hdcScreen);
+        rect.left = 0;
+        rect.top = 0;
+        rect.right = GetSystemMetrics(SM_CXSCREEN);
+        rect.bottom = GetSystemMetrics(SM_CYSCREEN);
     }
+    else
+    {
+        GetClientRect(window, &rect);
+    }
+
+    const int width = rect.right - rect.left;
+    const int height = rect.bottom - rect.top;
+
+    if (width <= 0 || height <= 0)
+        return false;
+
+    HBITMAP hBmp = CreateCompatibleBitmap(hdcScreen, width, height);
+    if (hBmp == nullptr)
+        return false;
+
+    Defer defer_delete_bmp([&] { DeleteObject(hBmp); });
+
+    HGDIOBJ hOldBmp = SelectObject(hdcCompatible, hBmp);
+    BOOL bOK = BitBlt(hdcCompatible, 0, 0, width, height, hdcScreen, 0, 0, SRCCOPY | CAPTUREBLT);
+
+    if (!bOK)
+    {
+        SelectObject(hdcCompatible, hOldBmp);
+        return false;
+    }
+
+    SelectObject(hdcCompatible, hOldBmp);
+
+    // Use 32-bit to avoid row padding issues (32-bit rows are always DWORD aligned)
+    BITMAPINFOHEADER bi;
+    memset(&bi, 0, sizeof(bi));
+    bi.biSize = sizeof(BITMAPINFOHEADER);
+    bi.biWidth = width;
+    bi.biHeight = height; // positive = bottom-up DIB (matches our Bitmap storage)
+    bi.biPlanes = 1;
+    bi.biBitCount = 32; // 32-bit = no padding needed
+    bi.biCompression = BI_RGB;
+    bi.biSizeImage = width * height * 4;
+
+    std::vector<uint8_t> pixels(bi.biSizeImage);
+
+    BITMAPINFO bmi;
+    memset(&bmi, 0, sizeof(bmi));
+    bmi.bmiHeader = bi;
+
+    int lines = GetDIBits(hdcScreen, hBmp, 0, height, pixels.data(), &bmi, DIB_RGB_COLORS);
+    if (lines != height)
+        return false;
+
+    // Windows returns BGRA, our Pixel struct in little-endian is {blue, green, red, alpha}
+    // So the byte order matches - we can copy directly
+    bm.create(width, height, 32);
+    bm.set(pixels.data(), pixels.size());
+    ret = true;
+
     return ret;
 }
 
@@ -209,7 +365,7 @@ bool take_window_name(Bitmap & bm, [[maybe_unused]] std::string_view name)
         Window root = DefaultRootWindow(x11.display);
 
         XWindowAttributes gwa;
-        Window named_window;
+        Window named_window = 0;
         Window root_win;
         Window parent_win;
         Window *list_win;
@@ -231,7 +387,7 @@ bool take_window_name(Bitmap & bm, [[maybe_unused]] std::string_view name)
             if (x11_is_window_readable(gwa) == false)
                 continue;
 
-            char *window_name = NULL;
+            char *window_name = nullptr;
             if (XFetchName(x11.display, tmp, &window_name) == True)
             {
                 if (window_name != nullptr && name == window_name)
@@ -249,6 +405,8 @@ bool take_window_name(Bitmap & bm, [[maybe_unused]] std::string_view name)
         if (found)
             return x11_screenshot_window(bm, x11.display, named_window);
     }
+#elif defined(SIHD_COMPILE_WITH_WAYLAND) && !defined(SIHD_COMPILE_WITH_X11)
+    return wayland_screenshot_window_name(bm, name);
 #elif defined(__SIHD_WINDOWS__)
     HWND active_window = FindWindowA(nullptr, name.data());
     return take_screen_from_window(bm, active_window);
@@ -272,6 +430,8 @@ bool take_focused(Bitmap & bm)
 
         return x11_screenshot_window(bm, x11.display, child);
     }
+#elif defined(SIHD_COMPILE_WITH_WAYLAND) && !defined(SIHD_COMPILE_WITH_X11)
+    return wayland_screenshot_focused(bm);
 #elif defined(__SIHD_WINDOWS__)
     HWND foreground_window = GetForegroundWindow();
     return take_screen_from_window(bm, foreground_window);
@@ -306,6 +466,8 @@ bool take_under_cursor(Bitmap & bm)
 
         return x11_screenshot_window(bm, x11.display, child);
     }
+#elif defined(SIHD_COMPILE_WITH_WAYLAND) && !defined(SIHD_COMPILE_WITH_X11)
+    return wayland_screenshot_under_cursor(bm);
 #elif defined(__SIHD_WINDOWS__)
     POINT pt;
     HWND window;
@@ -326,9 +488,68 @@ bool take_screen(Bitmap & bm)
         Window root = DefaultRootWindow(x11.display);
         return x11_screenshot_window(bm, x11.display, root);
     }
+#elif defined(SIHD_COMPILE_WITH_WAYLAND) && !defined(SIHD_COMPILE_WITH_X11)
+    return wayland_screenshot(bm);
 #elif defined(__SIHD_WINDOWS__)
-    HWND hDesktopWnd = GetDesktopWindow();
-    return take_screen_from_window(bm, hDesktopWnd);
+    // Use NULL to get DC for the entire virtual screen (all monitors)
+    HDC hdcScreen = GetDC(NULL);
+    if (hdcScreen == nullptr)
+        return false;
+
+    Defer defer_release_dc([&] { ReleaseDC(NULL, hdcScreen); });
+
+    const int width = GetSystemMetrics(SM_CXSCREEN);
+    const int height = GetSystemMetrics(SM_CYSCREEN);
+
+    if (width <= 0 || height <= 0)
+        return false;
+
+    HDC hdcCompatible = CreateCompatibleDC(hdcScreen);
+    if (hdcCompatible == nullptr)
+        return false;
+
+    Defer defer_delete_dc([&] { DeleteDC(hdcCompatible); });
+
+    HBITMAP hBmp = CreateCompatibleBitmap(hdcScreen, width, height);
+    if (hBmp == nullptr)
+        return false;
+
+    Defer defer_delete_bmp([&] { DeleteObject(hBmp); });
+
+    HGDIOBJ hOldBmp = SelectObject(hdcCompatible, hBmp);
+    BOOL bOK = BitBlt(hdcCompatible, 0, 0, width, height, hdcScreen, 0, 0, SRCCOPY | CAPTUREBLT);
+
+    if (!bOK)
+    {
+        SelectObject(hdcCompatible, hOldBmp);
+        return false;
+    }
+
+    SelectObject(hdcCompatible, hOldBmp);
+
+    BITMAPINFOHEADER bi;
+    memset(&bi, 0, sizeof(bi));
+    bi.biSize = sizeof(BITMAPINFOHEADER);
+    bi.biWidth = width;
+    bi.biHeight = height;
+    bi.biPlanes = 1;
+    bi.biBitCount = 32;
+    bi.biCompression = BI_RGB;
+    bi.biSizeImage = width * height * 4;
+
+    std::vector<uint8_t> pixels(bi.biSizeImage);
+
+    BITMAPINFO bmi;
+    memset(&bmi, 0, sizeof(bmi));
+    bmi.bmiHeader = bi;
+
+    int lines = GetDIBits(hdcScreen, hBmp, 0, height, pixels.data(), &bmi, DIB_RGB_COLORS);
+    if (lines != height)
+        return false;
+
+    bm.create(width, height, 32);
+    bm.set(pixels.data(), pixels.size());
+    return true;
 #endif
     return false;
 }

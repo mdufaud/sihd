@@ -2,8 +2,11 @@
 #define __SIHD_UTIL_CLIPBOARD_HPP__
 
 #include <optional>
+#include <string>
 #include <string_view>
+#include <variant>
 
+#include <sihd/util/Bitmap.hpp>
 #include <sihd/util/platform.hpp>
 
 namespace sihd::util::clipboard
@@ -15,8 +18,19 @@ constexpr bool usable = true;
 constexpr bool usable = false;
 #endif
 
-bool set(std::string_view str);
-std::optional<std::string> get();
+using Content = std::variant<std::string, Bitmap>;
+
+// Set text to clipboard
+bool set_text(std::string_view str);
+// Set image to clipboard
+bool set_image(const Bitmap & bitmap);
+
+// Get text from clipboard (alias)
+std::optional<std::string> get_text();
+// Get image from clipboard
+std::optional<Bitmap> get_image();
+// Get either text or image from clipboard (prefers image if both available)
+std::optional<Content> get_any();
 
 } // namespace sihd::util::clipboard
 
