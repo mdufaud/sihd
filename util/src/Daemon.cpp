@@ -2,8 +2,6 @@
 #include <sys/stat.h> //umask
 #include <unistd.h>
 
-#include <csignal>
-
 #include <sihd/util/Daemon.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerFile.hpp>

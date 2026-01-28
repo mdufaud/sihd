@@ -4,7 +4,7 @@
 #include <sihd/util/str.hpp>
 #include <sihd/util/thread.hpp>
 
-#if defined(__SIHD_LINUX__)
+#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
 # include <sys/prctl.h>
 #elif defined(__SIHD_WINDOWS__)
 # include <windows.h>
@@ -52,7 +52,7 @@ std::string id_str(pthread_t id)
 
 void set_name(const std::string & name)
 {
-#if defined(__SIHD_LINUX__)
+#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
     const std::string subname = name.substr(0, 15);
     if (prctl(PR_SET_NAME, subname.c_str()) != 0)
     {
@@ -77,12 +77,14 @@ void set_name(const std::string & name)
         throw std::runtime_error("Failed to set thread name");
     }
     l_thread_name = name;
+#else
+    l_thread_name = name;
 #endif
 }
 
 const std::string & name()
 {
-#if defined(__SIHD_LINUX__)
+#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
     if (l_thread_name.empty())
     {
         l_thread_name.resize(16);
@@ -117,7 +119,6 @@ const std::string & name()
     }
 #endif
     return l_thread_name;
-    ;
 }
 
 } // namespace sihd::util::thread

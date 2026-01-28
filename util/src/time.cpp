@@ -1,7 +1,6 @@
 #include <sys/time.h>
 
 #include <atomic>
-#include <codecvt>
 #include <cstring>
 #include <mutex>
 #include <thread>
@@ -14,6 +13,7 @@ extern char *tzname[2]; // 0 is standard and 1 is daylight saving
 extern long timezone;
 #else
 # include <timezoneapi.h>
+# include <windows.h>
 #endif
 
 namespace sihd::util::time
@@ -49,11 +49,22 @@ std::string get_timezone_name()
     TIME_ZONE_INFORMATION tzi;
 
     DWORD dwRet = GetTimeZoneInformation(&tzi);
+    const wchar_t *wname = nullptr;
     if (dwRet == TIME_ZONE_ID_STANDARD)
-        return std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(tzi.StandardName);
+        wname = tzi.StandardName;
     else if (dwRet == TIME_ZONE_ID_DAYLIGHT)
-        return std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(tzi.DaylightName);
-    return "";
+        wname = tzi.DaylightName;
+    else
+        return "";
+
+    // Convert wide string to UTF-8 using Windows API (std::wstring_convert is deprecated)
+    int size = WideCharToMultiByte(CP_UTF8, 0, wname, -1, nullptr, 0, nullptr, nullptr);
+    if (size <= 0)
+        return "";
+
+    std::string result(size - 1, '\0'); // size includes null terminator
+    WideCharToMultiByte(CP_UTF8, 0, wname, -1, &result[0], size, nullptr, nullptr);
+    return result;
 #else
     if (g_tz_is_set.exchange(true))
         tzset();

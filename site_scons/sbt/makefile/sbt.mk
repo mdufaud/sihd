@@ -635,17 +635,15 @@ endif # uninstall
 ##########
 
 .PHONY: serve_bin # Serve a python http.server on port $(PORT) (default: 8000)
-.PHONY: serve_demo # Serve a python http.server on port $(PORT) (default: 8000)
+.PHONY: serve_demo # Serve a python http.server on port $(PORT) (default: 8000) with CORS headers for WASM
 
-# TODO add
-# Cross-Origin-Opener-Policy: same-origin
-# Cross-Origin-Embedder-Policy: require-corp
+PORT ?= 8000
 
 serve_bin:
-	$(PYTHON_BIN) -m http.server -d $(BIN_PATH) ${PORT}
+	$(PYTHON_BIN) $(SBT_PATH)/scripts/serve_wasm.py ${PORT} $(BIN_PATH)
 
 serve_demo:
-	$(PYTHON_BIN) -m http.server -d $(DEMO_PATH) ${PORT}
+	$(PYTHON_BIN) $(SBT_PATH)/scripts/serve_wasm.py ${PORT} $(DEMO_PATH)
 
 ##########
 # Cleanup
