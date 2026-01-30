@@ -86,9 +86,6 @@ modules = {
             'dl', # dl_open...
             'uuid',
         ],
-        "linux-dyn-libs": [
-            'stdc++fs'
-        ],
         # === Windows specific ===
         "windows-libs": [
             'rpcrt4', # Uuid
@@ -97,9 +94,10 @@ modules = {
             'ws2_32', # windows socket api
             'gdi32', # wingdi
             'imagehlp', # backtrace / SymFromAddr
-            'stdc++fs'
             # ! never add libucrt with mingw
         ],
+        # stdc++fs only needed for GCC < 9 with glibc
+        "mingw-gnu-libs": ['stdc++fs'],
         # === Emscripten specific ===
         "em-flags": [
             "-pthread", # enable threads
@@ -363,6 +361,8 @@ clang_flags = [
     "-Wno-unused-command-line-argument",
     "-Wno-unknown-pragmas",
 ]
+# clang uses libstdc++ by default on Linux, libc++ on macOS
+# use clang-musl-libs if you need different libs for musl
 clang_libs = ['stdc++']
 clang_defines = [
     'LLVM_ENABLE_EH=YES',

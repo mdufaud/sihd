@@ -1,4 +1,5 @@
 from sbt import builder
+from sbt import architectures
 
 def load_in_env(env):
     cmd_cc = "zig cc"
@@ -7,25 +8,18 @@ def load_in_env(env):
     target_triple = ""
     extra_flags = ""
 
-    builder.libc = "musl"  # Ensure musl is used for zig builds
+    builder.libc = "musl"  # Zig always uses musl
 
     if builder.is_cross_building:
-        if builder.build_machine == "x86_64":
-            target_triple = "x86_64-linux-musl"
-        elif builder.build_machine == "i386" or builder.build_machine == "x86":
-            target_triple = "i386-linux-musl"
-        elif builder.build_machine == "arm":
-            target_triple = "arm-linux-musleabihf"
-            extra_flags = " -mcpu=generic+v7a" 
-        elif builder.build_machine == "arm64":
-            target_triple = "aarch64-linux-musl"
-        elif builder.build_machine == "riscv64":
-            target_triple = "riscv64-linux-musl"
-        elif builder.build_machine == "riscv32":
-            target_triple = "riscv32-linux-musl"
+        target_triple = architectures.get_zig_target(builder.build_machine)
+        extra_flags = architectures.get_zig_flags(builder.build_machine)
+        if not target_triple:
+            raise SystemExit(f"No Zig target for machine={builder.build_machine}")
 
     if target_triple:
-        target_arg = f" -target {target_triple}{extra_flags}"
+        target_arg = f" -target {target_triple}"
+        if extra_flags:
+            target_arg += f" {extra_flags}"
         cmd_cc += target_arg
         cmd_cxx += target_arg
 

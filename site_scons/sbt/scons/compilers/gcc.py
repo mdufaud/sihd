@@ -1,21 +1,12 @@
 from sbt import builder
+from sbt import architectures
 
 def load_in_env(env):
     prefix = ""
     if builder.is_cross_building:
-        if builder.build_machine == "x86_64":
-            prefix = "x86_64-linux-gnu-"
-        elif builder.build_machine == "i386" or builder.build_machine == "x86":
-            prefix = "i686-linux-gnu-"
-        elif builder.build_machine == "arm":
-            # hardfloat
-            prefix = "arm-linux-gnueabihf-"
-        elif builder.build_machine == "arm64":
-            prefix = "aarch64-linux-gnu-"
-        elif builder.build_machine == "riscv64":
-            prefix = "riscv64-linux-gnu-"
-        elif builder.build_machine == "riscv32":
-            prefix = "riscv32-linux-gnu-"
+        prefix = architectures.get_gcc_prefix(builder.build_machine, builder.libc)
+        if not prefix:
+            raise SystemExit(f"No GCC cross-compiler prefix for machine={builder.build_machine} libc={builder.libc}")
 
     env.Replace(
         CC = prefix + "gcc",

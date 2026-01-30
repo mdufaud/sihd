@@ -26,6 +26,7 @@ pp = PrettyPrinter(indent=2)
 from sbt import loader
 from sbt import builder
 from sbt import logger
+from sbt import architectures
 
 from site_scons.sbt.build import modules
 from site_scons.sbt.build import utils as build_utils
@@ -276,7 +277,7 @@ if compiler != "mingw" and not builder.is_msys():
 if verbose:
     logger.debug(f"looking for app configurations:")
 
-default_app_conf_to_get = (build_platform, libtype, build_mode, compiler)
+default_app_conf_to_get = (build_platform, libtype, build_mode, compiler, builder.libc)
 
 def add_combinaison_app_conf_to_env(env):
     for idx, app_config in enumerate(default_app_conf_to_get, start=1):
@@ -616,9 +617,9 @@ def create_module_env(conf, depends = [],
     # get platform dependent libs
     libs = modules.get_module_libs(build_modules, modname, add_depends_libs = do_inherit_depends_libs)
     libs += get_compilation_options(conf, "libs")
-    # remove when using musl with zig
-    if builder.libc == "musl" or builder.build_compiler == "zig":
-        libs = [lib for lib in libs if not lib in ["pthread", "m", "dl", "stdc++fs"]]
+    # filter out libs that don't exist with musl
+    if builder.libc == "musl":
+        libs = [lib for lib in libs if lib not in architectures.musl_excluded_libs]
     # add flag
     flags = conf.get("flags", [])
     flags += get_compilation_options(conf, "flags")

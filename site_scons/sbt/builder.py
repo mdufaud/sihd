@@ -8,8 +8,10 @@ from os.path import join, dirname, abspath
 
 try:
     from sbt import loader
+    from sbt import architectures
 except ImportError:
     import loader
+    import architectures
 
 from site_scons.sbt.build import modules as sbt_modules
 from site_scons.sbt.build import utils
@@ -45,22 +47,13 @@ def get_host_architecture():
         return "32"
 
 def get_architecture():
-    machine_to_arch = {
-        "arm": "32",
-        "i386": "32",
-        "x86": "32",
-        "riscv32": "32",
-        "riscv64": "64",
-    }.get(utils.get_opt('machine', None), None)
-    if machine_to_arch is not None:
-        return machine_to_arch
+    machine = utils.get_opt('machine', None)
+    if machine is not None:
+        return architectures.get_default_arch(machine)
     return utils.get_opt('arch', get_host_architecture())
 
 def __get_machine(machine):
-    return {
-        "aarch64": "arm64",
-        "amd64": "x86_64",
-    }.get(machine, machine)
+    return architectures.normalize_machine(machine)
 
 def get_host_machine():
     return __get_machine(platform.machine().lower())
@@ -78,10 +71,7 @@ def get_machine():
         machine = get_host_machine()
 
     if arch == "32":
-        machine = {
-            "riscv64": "riscv32",
-            "arm64": "arm",
-        }.get(machine, machine)
+        machine = architectures.arch_32bit_map.get(machine, machine)
         
     return __get_machine(machine)
 

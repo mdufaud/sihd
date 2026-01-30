@@ -10,6 +10,7 @@ import loader
 from site_scons.sbt.build import modules
 from sbt import builder
 from sbt import logger
+from sbt import architectures
 from site_scons.sbt.build import utils
 
 app = loader.load_app()
@@ -146,10 +147,16 @@ def build_vcpkg_triplet():
             "zig-arm-linux-static",
             "zig-arm64-linux-dynamic",
             "zig-arm64-linux-static",
+            # musl triplets
+            "x64-linux-musl",
+            "arm64-linux-musl",
+            "arm-linux-musl",
+            "riscv64-linux-musl",
         ]
 
         prefix = ""
-        vcpkg_machine = builder.build_machine
+        suffix = ""
+        vcpkg_machine = architectures.get_vcpkg_machine(builder.build_machine)
         vcpkg_platform = builder.build_platform
         vcpkg_liblink = "static" if builder.build_static_libs else "dynamic"
         vcpkg_mode = builder.build_mode
@@ -158,29 +165,20 @@ def build_vcpkg_triplet():
             vcpkg_machine = "wasm32"
             vcpkg_platform = "emscripten"
 
-        if vcpkg_machine == "x86_64":
-            if builder.build_architecture == "64":
-                vcpkg_machine = "x64"
-            elif builder.build_architecture == "32":
-                vcpkg_machine = "x86"
-
-        if vcpkg_machine == "aarch64":
-            if builder.build_architecture == "64":
-                vcpkg_machine = "arm64"
-            elif builder.build_architecture == "32":
-                vcpkg_machine = "arm"
-
         if builder.build_platform == "windows":
             vcpkg_platform = "mingw"
         
         if builder.build_compiler == "zig":
             prefix = "zig-"
 
+        if builder.libc == "musl" and builder.build_platform == "linux":
+            suffix = "-musl"
+
         triplet_tries = [
-            f"{prefix}{vcpkg_machine}-{vcpkg_platform}-{vcpkg_liblink}-{vcpkg_mode}",
-            f"{prefix}{vcpkg_machine}-{vcpkg_platform}-{vcpkg_liblink}",
-            f"{prefix}{vcpkg_machine}-{vcpkg_platform}-{vcpkg_mode}",
-            f"{prefix}{vcpkg_machine}-{vcpkg_platform}"
+            f"{prefix}{vcpkg_machine}-{vcpkg_platform}{suffix}-{vcpkg_liblink}-{vcpkg_mode}",
+            f"{prefix}{vcpkg_machine}-{vcpkg_platform}{suffix}-{vcpkg_liblink}",
+            f"{prefix}{vcpkg_machine}-{vcpkg_platform}{suffix}-{vcpkg_mode}",
+            f"{prefix}{vcpkg_machine}-{vcpkg_platform}{suffix}"
         ]
 
         for triplet_try in triplet_tries:
