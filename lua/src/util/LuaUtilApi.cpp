@@ -1,5 +1,6 @@
 #include <unistd.h>
 
+#include <memory>
 #include <regex>
 
 #include <sihd/lua/util/LuaUtilApi.hpp>
@@ -9,13 +10,13 @@
 
 #include <sihd/util/AService.hpp>
 #include <sihd/util/Clocks.hpp>
-#include <sihd/util/Endian.hpp>
 #include <sihd/util/LineReader.hpp>
+#include <sihd/util/PathManager.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/endian.hpp>
 #include <sihd/util/fs.hpp>
 #include <sihd/util/os.hpp>
-#include <sihd/util/path.hpp>
 #include <sihd/util/signal.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
@@ -26,8 +27,6 @@
 #include <sihd/util/Process.hpp>
 
 #include <sihd/util/File.hpp>
-
-#include <sihd/util/SharedMemory.hpp>
 
 #define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType)                                                       \
     .deriveClass<ArrType, IArray>(#ArrType)                                                                  \
@@ -101,19 +100,73 @@ bool LuaUtilApi::_configurable_recursive_set(Configurable *obj,
     return false;
 }
 
+/**
+ * LuaProcess - Wrapper around Process with thread-safe Lua callbacks
+ */
+class LuaProcess: public Process
+{
+    public:
+        LuaProcess(): Process() {}
+        ~LuaProcess() = default;
+
+        void set_stdout_callback(luabridge::LuaRef callback)
+        {
+            if (!callback.isFunction())
+                return;
+            _stdout_callback = std::make_shared<LuaUtilApi::LuaProcessCallback>(callback);
+            auto cb = _stdout_callback;
+            this->stdout_to([cb](std::string_view data) { (*cb)(data); });
+        }
+
+        void set_stderr_callback(luabridge::LuaRef callback)
+        {
+            if (!callback.isFunction())
+                return;
+            _stderr_callback = std::make_shared<LuaUtilApi::LuaProcessCallback>(callback);
+            auto cb = _stderr_callback;
+            this->stderr_to([cb](std::string_view data) { (*cb)(data); });
+        }
+
+        void flush_stdout()
+        {
+            if (_stdout_callback)
+                _stdout_callback->flush();
+        }
+
+        void flush_stderr()
+        {
+            if (_stderr_callback)
+                _stderr_callback->flush();
+        }
+
+        void flush_all()
+        {
+            flush_stdout();
+            flush_stderr();
+        }
+
+        bool has_pending_stdout() const { return _stdout_callback && _stdout_callback->has_pending(); }
+
+        bool has_pending_stderr() const { return _stderr_callback && _stderr_callback->has_pending(); }
+
+    private:
+        std::shared_ptr<LuaUtilApi::LuaProcessCallback> _stdout_callback;
+        std::shared_ptr<LuaUtilApi::LuaProcessCallback> _stderr_callback;
+};
+
 void LuaUtilApi::load_process(Vm & vm)
 {
     luabridge::getGlobalNamespace(vm.lua_state())
         .beginNamespace("sihd")
         .beginNamespace("util")
         /**
-         * Process
+         * Process - uses LuaProcess wrapper for thread-safe callbacks
          */
-        .deriveClass<Process, ABlockingService>("Process")
+        .beginClass<LuaProcess>("Process")
         .addConstructor<void (*)()>()
         .addFunction(
             "add_argv",
-            +[](Process *self, luabridge::LuaRef ref, lua_State *state) {
+            +[](LuaProcess *self, luabridge::LuaRef ref, lua_State *state) {
                 if (ref.isString())
                     self->add_argv(std::string(ref));
                 else if (ref.isTable())
@@ -121,134 +174,95 @@ void LuaUtilApi::load_process(Vm & vm)
                 else
                     luaL_error(state, "add_argv argument must be either a string or a string table");
             })
-        .addFunction("clear_argv", &Process::clear_argv)
+        .addFunction("clear_argv", &LuaProcess::clear_argv)
         // stdin
         .addFunction(
             "stdin_from",
-            +[](Process *self, const std::string & from) { self->stdin_from(from); })
+            +[](LuaProcess *self, const std::string & from) { self->stdin_from(from); })
         .addFunction(
             "stdin_from_fd",
-            +[](Process *self, int fd) { self->stdin_from(fd); })
-        .addFunction("stdin_from_file", &Process::stdin_from_file)
-        .addFunction("stdin_close", &Process::stdin_close)
-        // stdout
+            +[](LuaProcess *self, int fd) { self->stdin_from(fd); })
+        .addFunction("stdin_from_file", &LuaProcess::stdin_from_file)
+        .addFunction(
+            "stdin_close",
+            +[](LuaProcess *self) { self->stdin_close(); })
+        // stdout - thread-safe with flush
         .addFunction(
             "stdout_to",
-            +[](Process *self, luabridge::LuaRef ref, lua_State *state) {
+            +[](LuaProcess *self, luabridge::LuaRef ref, lua_State *state) {
                 if (ref.isFunction() == false)
                     luaL_error(state, "stdout_to argument must a function callback");
-                self->stdout_to([ref](std::string_view output) {
-                    try
-                    {
-                        ref(output);
-                    }
-                    catch (const luabridge::LuaException & e)
-                    {
-                        SIHD_LOG(error, e.what());
-                    }
-                });
+                self->set_stdout_callback(ref);
             })
         .addFunction(
             "stdout_to_fd",
-            +[](Process *self, int fd) { self->stdout_to(fd); })
+            +[](LuaProcess *self, int fd) { self->stdout_to(fd); })
         .addFunction(
             "stdout_to_process",
-            +[](Process *self, Process *another) { self->stdout_to(*another); })
-        .addFunction("stdout_to_file", &Process::stdout_to_file)
-        .addFunction("stdout_close", &Process::stdout_close)
-        // stderr
+            +[](LuaProcess *self, LuaProcess *another) { self->stdout_to(*another); })
+        .addFunction("stdout_to_file", &LuaProcess::stdout_to_file)
+        .addFunction(
+            "stdout_close",
+            +[](LuaProcess *self) { self->stdout_close(); })
+        .addFunction("flush_stdout", &LuaProcess::flush_stdout)
+        // stderr - thread-safe with flush
         .addFunction(
             "stderr_to",
-            +[](Process *self, luabridge::LuaRef ref, lua_State *state) {
+            +[](LuaProcess *self, luabridge::LuaRef ref, lua_State *state) {
                 if (ref.isFunction() == false)
                     luaL_error(state, "stderr_to argument must a function callback");
-                self->stderr_to([ref](std::string_view output) {
-                    try
-                    {
-                        ref(output);
-                    }
-                    catch (const luabridge::LuaException & e)
-                    {
-                        SIHD_LOG(error, e.what());
-                    }
-                });
+                self->set_stderr_callback(ref);
             })
         .addFunction(
             "stderr_to_fd",
-            +[](Process *self, int fd) { self->stderr_to(fd); })
+            +[](LuaProcess *self, int fd) { self->stderr_to(fd); })
         .addFunction(
             "stderr_to_process",
-            +[](Process *self, Process *another) { self->stderr_to(*another); })
-        .addFunction("stderr_to_file", &Process::stderr_to_file)
-        .addFunction("stderr_close", &Process::stderr_close)
+            +[](LuaProcess *self, LuaProcess *another) { self->stderr_to(*another); })
+        .addFunction("stderr_to_file", &LuaProcess::stderr_to_file)
+        .addFunction(
+            "stderr_close",
+            +[](LuaProcess *self) { self->stderr_close(); })
+        .addFunction("flush_stderr", &LuaProcess::flush_stderr)
+        // flush all callbacks
+        .addFunction("flush", &LuaProcess::flush_all)
         // start - restart
-        .addFunction("execute", &Process::execute)
-        .addFunction("clear", &Process::clear)
-        .addFunction("reset_proc", &Process::reset_proc)
+        .addFunction("execute", &LuaProcess::execute)
+        .addFunction(
+            "clear",
+            +[](LuaProcess *self) { self->clear(); })
+        .addFunction(
+            "reset_proc",
+            +[](LuaProcess *self) { self->reset_proc(); })
+        // service
+        .addFunction("start", &LuaProcess::start)
+        .addFunction("stop", &LuaProcess::stop)
+        .addFunction("is_running", &LuaProcess::is_running)
         // wait
-        .addFunction("wait", &Process::wait)
-        .addFunction("wait_exit", &Process::wait_exit)
-        .addFunction("wait_stop", &Process::wait_stop)
-        .addFunction("wait_continue", &Process::wait_continue)
-        .addFunction("wait_any", &Process::wait_any)
+        .addFunction("wait", &LuaProcess::wait)
+        .addFunction("wait_exit", &LuaProcess::wait_exit)
+        .addFunction("wait_stop", &LuaProcess::wait_stop)
+        .addFunction("wait_continue", &LuaProcess::wait_continue)
+        .addFunction("wait_any", &LuaProcess::wait_any)
         // manual pipe process
-        .addFunction("read_pipes", &Process::read_pipes)
+        .addFunction("read_pipes", &LuaProcess::read_pipes)
         // end execution
-        .addFunction("terminate", &Process::terminate)
-        .addFunction("kill", &Process::kill)
+        .addFunction("terminate", &LuaProcess::terminate)
+        .addFunction("kill", &LuaProcess::kill)
         // post execution
-        .addFunction("has_exited", &Process::has_exited)
-        .addFunction("has_core_dumped", &Process::has_core_dumped)
-        .addFunction("has_stopped_by_signal", &Process::has_stopped_by_signal)
-        .addFunction("has_exited_by_signal", &Process::has_exited_by_signal)
-        .addFunction("has_continued", &Process::has_continued)
-        .addFunction("signal_exit_number", &Process::signal_exit_number)
-        .addFunction("signal_stop_number", &Process::signal_stop_number)
-        .addFunction("return_code", &Process::return_code)
+        .addFunction("has_exited", &LuaProcess::has_exited)
+        .addFunction("has_core_dumped", &LuaProcess::has_core_dumped)
+        .addFunction("has_stopped_by_signal", &LuaProcess::has_stopped_by_signal)
+        .addFunction("has_exited_by_signal", &LuaProcess::has_exited_by_signal)
+        .addFunction("has_continued", &LuaProcess::has_continued)
+        .addFunction("signal_exit_number", &LuaProcess::signal_exit_number)
+        .addFunction("signal_stop_number", &LuaProcess::signal_stop_number)
+        .addFunction("return_code", &LuaProcess::return_code)
         // utils
-        .addFunction("pid", &Process::pid)
-        .addFunction("argv", &Process::argv)
+        .addFunction("pid", &LuaProcess::pid)
+        .addFunction("argv", &LuaProcess::argv)
         .endClass()
-        /**
-         * SharedMemory
-         */
-        .beginClass<SharedMemory>("SharedMemory")
-        .addConstructor<void (*)()>()
-        .addFunction(
-            "create",
-            +[](SharedMemory *self, const std::string & id, size_t size, luabridge::LuaRef ref) {
-                if (ref.isNil())
-                    return self->create(id, size);
-                return self->create(id, size, static_cast<mode_t>(ref));
-            })
-        .addFunction(
-            "attach",
-            +[](SharedMemory *self, const std::string & id, size_t size, luabridge::LuaRef ref) {
-                if (ref.isNil())
-                    return self->attach(id, size);
-                return self->attach(id, size, static_cast<mode_t>(ref));
-            })
-        .addFunction(
-            "attach_read_only",
-            +[](SharedMemory *self, const std::string & id, size_t size, luabridge::LuaRef ref) {
-                if (ref.isNil())
-                    return self->attach_read_only(id, size);
-                return self->attach_read_only(id, size, static_cast<mode_t>(ref));
-            })
-        .addFunction(
-            "data",
-            +[](SharedMemory *self) {
-                ArrByte array;
-                if (self->data() != nullptr)
-                    array.assign_bytes((uint8_t *)self->data(), self->size());
-                return array;
-            })
-        .addFunction("clear", &SharedMemory::clear)
-        .addFunction("fd", &SharedMemory::fd)
-        .addFunction("size", &SharedMemory::size)
-        .addFunction("id", &SharedMemory::id)
-        .addFunction("creator", &SharedMemory::creator)
-        .endClass()
+        // SharedMemory removed - requires ipc module
         .endNamespace()
         .endNamespace();
 }
@@ -469,13 +483,6 @@ void LuaUtilApi::load_threading(Vm & vm)
                      static_cast<Timestamp (Waitable::*)(Timestamp)>(&Waitable::wait_until_elapsed))
         .addFunction("wait_for_elapsed",
                      static_cast<Timestamp (Waitable::*)(Timestamp)>(&Waitable::wait_for_elapsed))
-        // TODO
-        .addFunction(
-            "wait_to_test",
-            +[](Waitable *self, luabridge::LuaRef method) {
-                return self->wait([method]() { return method(); });
-            })
-        .addFunction("cancel_loop", &Waitable::cancel_loop)
         .endClass()
         /**
          * Waitable
@@ -682,26 +689,17 @@ void LuaUtilApi::load_tools(Vm & vm)
                 return splitter.split(str);
             })
         .endNamespace() // str
-        .beginNamespace("path")
-        .addFunction("set", &path::set)
-        .addFunction("clear", &path::clear)
-        .addFunction("clear_all", &path::clear_all)
-        .addFunction("get", static_cast<std::string (*)(const std::string &)>(&path::get))
-        .addFunction("get_from_url",
-                     static_cast<std::string (*)(const std::string &, const std::string &)>(&path::get))
-        .addFunction("get_from_path", &path::get_from)
-        .addFunction("find", &path::find)
-        .endNamespace() // path
+        // path namespace removed - use PathManager class instead
         .beginNamespace("term")
         .addFunction("is_interactive", &term::is_interactive)
         .endNamespace() // term
         .beginNamespace("endian")
         .addFunction(
             "is_big",
-            +[] { return sihd::util::Endian::endian() == Endian::Big; })
+            +[] { return std::endian::native == std::endian::big; })
         .addFunction(
             "is_little",
-            +[] { return sihd::util::Endian::endian() == Endian::Little; })
+            +[] { return std::endian::native == std::endian::little; })
         .endNamespace()  // edian
         .endNamespace()  // util
         .endNamespace(); // sihd
@@ -832,9 +830,9 @@ void LuaUtilApi::load_base(Vm & vm)
         // .addVariable("OBJECT", Type::TYPE_OBJECT)
         // .endNamespace()
         .beginNamespace("types")
-        .addFunction("type_size", &type::size)
-        .addFunction("type_str", &type::str)
-        .addFunction("from_str", &type::from_str)
+        .addFunction("type_size", static_cast<size_t (*)(Type)>(&type::size))
+        .addFunction("type_str", static_cast<const char *(*)(Type)>(&type::str))
+        .addFunction("from_str", static_cast<Type (*)(std::string_view)>(&type::from_str))
         .endNamespace()
         .beginClass<IArray>("IArray")
         .addFunction("size", &IArray::size)
@@ -945,6 +943,9 @@ bool LuaUtilApi::LuaScheduler::start()
         }
     }
 
+    // Enable synchronized start so that the scheduler thread is fully ready before returning
+    this->set_start_synchronised(true);
+
     const bool started = Scheduler::start();
     if (started == false)
         _vm_thread.close_state();
@@ -1015,7 +1016,7 @@ bool LuaUtilApi::LuaRunnable::run()
     }
     catch (const luabridge::LuaException & e)
     {
-        SIHD_LOG(error, e.what());
+        SIHD_LOG(error, "{}", e.what());
     }
     return false;
 }
@@ -1040,7 +1041,11 @@ bool LuaUtilApi::LuaTask::run()
     }
     catch (const luabridge::LuaException & e)
     {
-        SIHD_LOG(error, e.what());
+        SIHD_LOG(error, "LuaTask: {}", e.what());
+    }
+    catch (const std::exception & e)
+    {
+        SIHD_LOG(error, "LuaTask: {}", e.what());
     }
     return false;
 }
@@ -1105,6 +1110,48 @@ bool LuaUtilApi::LuaStepWorker::start_worker(const std::string_view name)
         _lua_runnable.new_lua_state(state);
     }
     return StepWorker::start_worker(name);
+}
+
+/* ************************************************************************* */
+/* LuaProcessCallback */
+/* ************************************************************************* */
+
+LuaUtilApi::LuaProcessCallback::LuaProcessCallback(luabridge::LuaRef callback): _callback(callback) {}
+
+LuaUtilApi::LuaProcessCallback::~LuaProcessCallback() = default;
+
+void LuaUtilApi::LuaProcessCallback::operator()(std::string_view data)
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    _queue.push(std::string(data));
+}
+
+void LuaUtilApi::LuaProcessCallback::flush()
+{
+    std::queue<std::string> to_process;
+    {
+        std::lock_guard<std::mutex> lock(_mutex);
+        std::swap(to_process, _queue);
+    }
+
+    while (!to_process.empty())
+    {
+        try
+        {
+            _callback(to_process.front());
+        }
+        catch (const luabridge::LuaException & e)
+        {
+            SIHD_LOG(error, "LuaProcessCallback: {}", e.what());
+        }
+        to_process.pop();
+    }
+}
+
+bool LuaUtilApi::LuaProcessCallback::has_pending() const
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    return !_queue.empty();
 }
 
 } // namespace sihd::lua

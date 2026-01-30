@@ -62,7 +62,7 @@ TEST_F(TestLuaUtilApi, test_luautil_process)
 {
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_process(_vm);
-    // EXPECT_TRUE(this->do_script("test/util/lua/test_process.lua"));
+    EXPECT_TRUE(this->do_script("test/util/lua/test_process.lua"));
 }
 
 TEST_F(TestLuaUtilApi, test_luautil_files)

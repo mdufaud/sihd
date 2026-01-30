@@ -262,6 +262,7 @@ conditional_modules = {
         # apt liblua5.3-dev / pacman lua
         "extlibs": ['lua', 'luabridge3'],
         "depends": ['util'],
+        "libs": ["lua"],
         "conditional-env": "lua",
         "conditional-depends": ['core'],
         "flags": ["-Wno-unused-parameter", "-Wno-unused-but-set-parameter"],

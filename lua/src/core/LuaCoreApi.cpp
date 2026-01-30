@@ -26,10 +26,32 @@ SIHD_LOGGER;
 using namespace sihd::util;
 using namespace sihd::core;
 
-LuaCoreApi::LuaChannelHandler LuaCoreApi::_channel_handler;
+std::mutex LuaCoreApi::_handler_map_mutex;
+std::map<lua_State *, std::unique_ptr<LuaCoreApi::LuaChannelHandler>> LuaCoreApi::_handler_map;
+
+LuaCoreApi::LuaChannelHandler *LuaCoreApi::get_handler(lua_State *state)
+{
+    std::lock_guard l(_handler_map_mutex);
+    auto it = _handler_map.find(state);
+    if (it != _handler_map.end())
+        return it->second.get();
+    return nullptr;
+}
+
+void LuaCoreApi::unload(Vm & vm)
+{
+    std::lock_guard l(_handler_map_mutex);
+    _handler_map.erase(vm.lua_state());
+}
 
 void LuaCoreApi::load(Vm & vm)
 {
+    // Create a handler for this VM
+    {
+        std::lock_guard l(_handler_map_mutex);
+        _handler_map[vm.lua_state()] = std::make_unique<LuaChannelHandler>();
+    }
+
     luabridge::getGlobalNamespace(vm.lua_state())
         .beginNamespace("sihd")
         .beginNamespace("core")
@@ -66,15 +88,21 @@ void LuaCoreApi::load(Vm & vm)
         .addFunction(
             "set_observer",
             +[](Channel *self, luabridge::LuaRef fun, lua_State *state) {
+                LuaChannelHandler *handler = LuaCoreApi::get_handler(state);
+                if (handler == nullptr)
+                {
+                    luaL_error(state, "LuaCoreApi not loaded for this VM");
+                    return;
+                }
                 if (fun.isNil())
                 {
-                    LuaCoreApi::_channel_handler.remove_channel_obs(self);
-                    self->remove_observer(&LuaCoreApi::_channel_handler);
+                    handler->remove_channel_obs(self);
+                    self->remove_observer(handler);
                 }
                 else if (fun.isFunction())
                 {
-                    LuaCoreApi::_channel_handler.add_channel_obs(self, state, fun);
-                    self->add_observer(&LuaCoreApi::_channel_handler);
+                    handler->add_channel_obs(self, state, fun);
+                    self->add_observer(handler);
                 }
                 else
                     luaL_error(state, "set_observer argument must be a function");

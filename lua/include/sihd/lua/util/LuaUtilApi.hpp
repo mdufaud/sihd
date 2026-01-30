@@ -20,7 +20,10 @@
 #include <sihd/util/IReader.hpp>
 #include <sihd/util/IWriter.hpp>
 
-#include <sihd/util/Endian.hpp>
+#include <sihd/util/endian.hpp>
+
+#include <mutex>
+#include <queue>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/version.hpp>
 
@@ -88,16 +91,16 @@ struct luabridge::Stack<sihd::util::Type>: luabridge::Enum<sihd::util::Type,
 template <>
 struct luabridge::Stack<sihd::util::ServiceController::State>
     : luabridge::Enum<sihd::util::ServiceController::State,
-                      sihd::util::ServiceController::State::NONE,
-                      sihd::util::ServiceController::State::CONFIGURING,
-                      sihd::util::ServiceController::State::CONFIGURED,
-                      sihd::util::ServiceController::State::INITIALIZING,
-                      sihd::util::ServiceController::State::STARTING,
-                      sihd::util::ServiceController::State::RUNNING,
-                      sihd::util::ServiceController::State::STOPPING,
-                      sihd::util::ServiceController::State::STOPPED,
-                      sihd::util::ServiceController::State::RESETTING,
-                      sihd::util::ServiceController::State::ERROR>
+                      sihd::util::ServiceController::State::None,
+                      sihd::util::ServiceController::State::Configuring,
+                      sihd::util::ServiceController::State::Configured,
+                      sihd::util::ServiceController::State::Initializing,
+                      sihd::util::ServiceController::State::Starting,
+                      sihd::util::ServiceController::State::Running,
+                      sihd::util::ServiceController::State::Stopping,
+                      sihd::util::ServiceController::State::Stopped,
+                      sihd::util::ServiceController::State::Resetting,
+                      sihd::util::ServiceController::State::Error>
 {
 };
 
@@ -261,6 +264,31 @@ class LuaUtilApi
             private:
                 lua_State *_state_ptr;
                 LuaRunnable _lua_runnable;
+        };
+
+        /**
+         * Thread-safe callback for Process stdout/stderr
+         * Data is queued and must be flushed from the Lua thread via flush()
+         */
+        class LuaProcessCallback
+        {
+            public:
+                LuaProcessCallback(luabridge::LuaRef callback);
+                ~LuaProcessCallback();
+
+                // Called from Process reader thread - thread-safe
+                void operator()(std::string_view data);
+
+                // Called from Lua thread to process queued data
+                void flush();
+
+                // Check if there's pending data
+                bool has_pending() const;
+
+            private:
+                luabridge::LuaRef _callback;
+                std::queue<std::string> _queue;
+                mutable std::mutex _mutex;
         };
 
     private:

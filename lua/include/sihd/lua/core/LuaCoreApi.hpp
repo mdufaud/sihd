@@ -8,6 +8,7 @@
 
 #include <sihd/core/Channel.hpp>
 
+#include <memory>
 #include <queue>
 
 namespace sihd::lua
@@ -17,6 +18,7 @@ class LuaCoreApi
 {
     public:
         static void load(Vm & vm);
+        static void unload(Vm & vm);
 
         class LuaChannelHandler: public sihd::util::IHandler<sihd::core::Channel *>
         {
@@ -49,13 +51,16 @@ class LuaCoreApi
                 std::mutex _mutex_map;
         };
 
+        static LuaChannelHandler *get_handler(lua_State *state);
+
     protected:
 
     private:
         LuaCoreApi() = default;
         virtual ~LuaCoreApi() = default;
 
-        static LuaChannelHandler _channel_handler;
+        static std::mutex _handler_map_mutex;
+        static std::map<lua_State *, std::unique_ptr<LuaChannelHandler>> _handler_map;
 };
 
 } // namespace sihd::lua

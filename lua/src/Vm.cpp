@@ -102,7 +102,9 @@ luabridge::LuaRef Vm::get_ref(std::string_view name)
 bool Vm::ref_exists(std::string_view name)
 {
     lua_getglobal(_state_ptr, name.data());
-    return lua_isnil(_state_ptr, -1) == 0;
+    const bool exists = lua_isnil(_state_ptr, -1) == 0;
+    lua_pop(_state_ptr, 1);
+    return exists;
 }
 
 bool Vm::refs_exists(const std::initializer_list<std::string_view> & lst)

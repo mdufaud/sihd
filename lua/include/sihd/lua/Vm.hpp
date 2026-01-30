@@ -1,14 +1,15 @@
 #ifndef __SIHD_LUA_VM_HPP__
 #define __SIHD_LUA_VM_HPP__
 
-#include <lua5.3/lauxlib.h>
-#include <lua5.3/lua.h>
-#include <lua5.3/lualib.h>
+extern "C"
+{
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
+}
 
 #include <luabridge3/LuaBridge/LuaBridge.h>
 
-#include <map>
-#include <mutex>
 #include <string>
 #include <string_view>
 
