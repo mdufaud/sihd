@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <strings.h>
 
 #include <functional>
@@ -80,6 +81,15 @@ bool ask_dns(std::string_view host, std::function<bool(const IpAddr &, int, int)
 IpAddr find(std::string_view host, bool ipv6, int socktype, int protocol)
 {
     IpAddr ret;
+
+    if (host.empty())
+        throw std::invalid_argument("dns::find: empty host");
+
+    if (protocol == IPPROTO_ICMP || protocol == IPPROTO_ICMPV6)
+    {
+        throw std::invalid_argument(
+            fmt::format("dns::find: invalid protocol {}", ip::protocol_str(protocol)));
+    }
 
     ask_dns(host,
             [&ret, &ipv6, &socktype, &protocol](const IpAddr & addr, int addr_socktype, int addr_protocol) {

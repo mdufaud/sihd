@@ -1,11 +1,14 @@
+#include <cstdint>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 
 #include <sihd/net/IcmpSender.hpp>
 #include <sihd/net/utils.hpp>
+#include <stdexcept>
 
 #if !defined(__SIHD_WINDOWS__)
+# include <arpa/inet.h>     // inet_ntop
 # include <netinet/icmp6.h> // icmpv6 macros
 # include <netinet/ip6.h>
 # include <netinet/ip_icmp.h> // icmp macros
@@ -47,7 +50,16 @@ SIHD_UTIL_REGISTER_FACTORY(IcmpSender);
 
 SIHD_LOGGER;
 
-IcmpSender::IcmpSender(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
+IcmpSender::IcmpSender(const std::string & name, sihd::util::Node *parent):
+    sihd::util::Named(name, parent),
+    _config_applied(false),
+    _echo_mode(false),
+    _type(-1),
+    _code(-1),
+    _ttl(-1),
+    _id(0),
+    _seq(0),
+    _socket_type(SOCK_RAW)
 {
     _array_rcv_ptr = std::make_unique<util::ArrByte>();
     _array_send_ptr = std::make_unique<util::ArrByte>();
@@ -79,6 +91,7 @@ bool IcmpSender::open_socket_unix()
 {
     if (_socket.is_open())
         return false;
+    _config_applied = false;
     return _socket.open(AF_UNIX, SOCK_RAW, IPPROTO_ICMP);
 }
 
@@ -86,21 +99,24 @@ bool IcmpSender::open_socket(bool ipv6)
 {
     if (_socket.is_open())
         return false;
-    bool ret = _socket.open((ipv6 ? AF_INET6 : AF_INET), SOCK_RAW, (ipv6 ? (int)IPPROTO_ICMPV6 : (int)IPPROTO_ICMP));
+    _config_applied = false;
+
+    // Default: use SOCK_RAW for both IPv4 and IPv6 (cross-platform)
+    // Exception: On Linux, use SOCK_DGRAM for IPv6 echo mode (kernel handles checksums)
+    _socket_type = SOCK_RAW;
+#if defined(__SIHD_LINUX__)
+    if (ipv6 && _echo_mode)
+    {
+        _socket_type = SOCK_DGRAM;
+    }
+#endif
+
+    bool ret = _socket.open((ipv6 ? AF_INET6 : AF_INET),
+                            _socket_type,
+                            (ipv6 ? (int)IPPROTO_ICMPV6 : (int)IPPROTO_ICMP));
     if (ret)
     {
         _socket.set_reuseaddr(true);
-        if (ipv6)
-        {
-            struct icmp6_filter filter;
-            ICMP6_FILTER_SETBLOCKALL(&filter);
-            ICMP6_FILTER_SETPASS(ICMP6_ECHO_REPLY, &filter);
-            ret = sihd::util::os::setsockopt(_socket,
-                                             IPPROTO_ICMPV6,
-                                             ICMP6_FILTER,
-                                             (const void *)&filter,
-                                             sizeof(filter));
-        }
     }
     return ret;
 }
@@ -113,78 +129,140 @@ bool IcmpSender::close()
 
 bool IcmpSender::set_data_size(size_t byte_size)
 {
+    _config_applied = false;
     return _array_send_ptr->byte_resize(ICMP_MINLEN + byte_size);
 }
 
-bool IcmpSender::set_ttl(int ttl)
+void IcmpSender::set_ttl(int ttl)
 {
-    return _socket.is_open() && _socket.set_ttl(ttl);
+    _config_applied = false;
+    _ttl = ttl;
 }
 
 void IcmpSender::set_echo()
 {
-    if (_socket.is_ipv6())
-    {
-        this->set_type(ICMP6_ECHO_REQUEST);
-        this->set_code(ICMP6_ECHO_REPLY);
-    }
-    else
-    {
-        this->set_type(ICMP_ECHO);
-        this->set_code(ICMP_ECHOREPLY);
-    }
+    _config_applied = false;
+    _echo_mode = true;
 }
 
 void IcmpSender::set_type(int type)
 {
-    if (_socket.is_ipv6())
-        icmp6()->icmp6_type = type;
-    else
-        icmp()->icmp_type = type;
+    _config_applied = false;
+    _type = type;
+    _echo_mode = false;
 }
 
 void IcmpSender::set_code(int code)
 {
-    if (_socket.is_ipv6())
-        icmp6()->icmp6_code = code;
-    else
-        icmp()->icmp_code = code;
+    _config_applied = false;
+    _code = code;
+    _echo_mode = false;
 }
 
-void IcmpSender::set_id(pid_t id)
+void IcmpSender::set_id(uint16_t id)
 {
-    if (_socket.is_ipv6())
-        icmp6()->icmp6_id = htons(id);
-    else
-        icmp()->icmp_id = htons(id);
+    _config_applied = false;
+    _id = id;
 }
 
 void IcmpSender::set_seq(int seq)
 {
-    if (_socket.is_ipv6())
-        icmp6()->icmp6_seq = htons(seq);
-    else
-        icmp()->icmp_seq = htons(seq);
+    _config_applied = false;
+    _seq = seq;
 }
 
 bool IcmpSender::set_data(sihd::util::ArrByteView view)
 {
-    bool ret;
-    if (_socket.is_ipv6())
-        ret = _array_send_ptr->copy_from_bytes(view, offsetof(struct icmp6_hdr, icmp6_data8));
+    _config_applied = false;
+    if (!_data_to_set)
+        _data_to_set = std::make_unique<util::ArrByte>();
+    return _data_to_set && _data_to_set->copy_from_bytes(view);
+}
+
+void IcmpSender::_apply_config()
+{
+    const bool is_ipv6 = _socket.is_ipv6();
+
+    // Apply TTL
+    if (_ttl >= 0)
+        _socket.set_ttl(_ttl);
+
+    // Apply echo mode or explicit type/code
+    if (_echo_mode)
+    {
+        if (is_ipv6)
+        {
+            _type = ICMP6_ECHO_REQUEST;
+            _code = ICMP_ECHOREPLY; // Not ICMP6_ECHO_REPLY
+        }
+        else
+        {
+            _type = ICMP_ECHO;
+            _code = ICMP_ECHOREPLY;
+        }
+    }
+
+    if (_type >= 0)
+    {
+        if (is_ipv6)
+            icmp6()->icmp6_type = _type;
+        else
+            icmp()->icmp_type = _type;
+    }
+    if (_code >= 0)
+    {
+        if (is_ipv6)
+            icmp6()->icmp6_code = _code;
+        else
+            icmp()->icmp_code = _code;
+    }
+
+    // Apply ID
+    if (is_ipv6)
+        icmp6()->icmp6_id = htons(_id);
     else
-        ret = _array_send_ptr->copy_from_bytes(view, offsetof(struct icmp, icmp_data));
-    return ret;
+        icmp()->icmp_id = htons(_id);
+
+    // Apply sequence
+    if (is_ipv6)
+        icmp6()->icmp6_seq = htons(_seq);
+    else
+        icmp()->icmp_seq = htons(_seq);
+
+    // Apply data
+    if (_data_to_set && _data_to_set->size() > 0)
+    {
+        if (is_ipv6)
+            _array_send_ptr->copy_from_bytes(*_data_to_set, sizeof(struct icmp6_hdr));
+        else
+            _array_send_ptr->copy_from_bytes(*_data_to_set, offsetof(struct icmp, icmp_data));
+    }
+
+    _config_applied = true;
 }
 
 bool IcmpSender::send_to(const IpAddr & addr)
 {
+    if (!_socket.is_open())
+    {
+        SIHD_LOG(error, "IcmpSender: cannot send - socket not opened");
+        return false;
+    }
+
+    if (_config_applied == false)
+        this->_apply_config();
+
     if (_socket.is_ipv6())
     {
         icmp6()->icmp6_cksum = 0;
-        icmp6()->icmp6_cksum = utils::checksum((unsigned short *)icmp6(), _array_send_ptr->size());
-        if (icmp6()->icmp6_cksum == 0)
-            icmp6()->icmp6_cksum = 0xffff;
+        if (_socket_type == SOCK_RAW)
+        {
+            // For SOCK_RAW, calculate the checksum manually
+            icmp6()->icmp6_cksum = utils::checksum((unsigned short *)icmp6(), _array_send_ptr->size());
+            if (icmp6()->icmp6_cksum == 0)
+                icmp6()->icmp6_cksum = 0xffff;
+        }
+        // For SOCK_DGRAM, kernel calculates checksum automatically (icmp6_cksum = 0)
     }
     else
     {
@@ -251,9 +329,37 @@ void IcmpSender::handle(sihd::util::Poll *poll)
 void IcmpSender::_read_socket()
 {
     _icmp_response.client = IpAddr();
-    ssize_t ret = _socket.receive_from(_icmp_response.client, *_array_rcv_ptr);
+
+    struct sockaddr_storage addr_storage;
+    socklen_t addr_len = sizeof(addr_storage);
+
+    ssize_t ret = ::recvfrom(_socket.socket(),
+                             _array_rcv_ptr->buf(),
+                             _array_rcv_ptr->byte_capacity(),
+                             0,
+                             (struct sockaddr *)&addr_storage,
+                             &addr_len);
+
     if (ret > 0)
     {
+        _array_rcv_ptr->byte_resize(ret);
+
+        // Extract IP address from sockaddr
+        if (addr_storage.ss_family == AF_INET6)
+        {
+            struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr_storage;
+            char buf[INET6_ADDRSTRLEN];
+            inet_ntop(AF_INET6, &sin6->sin6_addr, buf, sizeof(buf));
+            _icmp_response.client = IpAddr(buf, true);
+        }
+        else
+        {
+            struct sockaddr_in *sin = (struct sockaddr_in *)&addr_storage;
+            char buf[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &sin->sin_addr, buf, sizeof(buf));
+            _icmp_response.client = IpAddr(buf, false);
+        }
+
         if (_socket.is_ipv6())
             this->_process_ipv6();
         else
@@ -263,34 +369,43 @@ void IcmpSender::_read_socket()
 
 void IcmpSender::_process_ipv6()
 {
-    struct ip6_hdr *ip6hdr = (struct ip6_hdr *)_array_rcv_ptr->buf();
-    size_t ip6hdr_len = sizeof(struct ip6_hdr);
-    struct icmp6_hdr *icmp6hdr = (struct icmp6_hdr *)((char *)ip6hdr + ip6hdr_len);
+    struct icmp6_hdr *icmp6hdr = (struct icmp6_hdr *)_array_rcv_ptr->buf();
+    uint8_t ttl = 0;
 
-    if (ip6hdr->ip6_nxt == IPPROTO_ICMPV6)
+    // On Linux with SOCK_DGRAM, kernel strips IPv6 header
+    // With SOCK_RAW, IPv6 header might be present
+    // Check if first byte looks like IPv6 version (0x6X)
+    if (_socket_type == SOCK_RAW && _array_rcv_ptr->byte_size() >= sizeof(struct ip6_hdr))
     {
-        if (icmp6hdr->icmp6_type == ICMP6_ECHO_REPLY || icmp6hdr->icmp6_type == ICMP6_ECHO_REQUEST
-            || (icmp6hdr->icmp6_type == ICMP6_TIME_EXCEEDED && icmp6hdr->icmp6_code == ICMP6_TIME_EXCEED_TRANSIT))
+        uint8_t version = (*_array_rcv_ptr->buf() >> 4) & 0x0F;
+        if (version == 6)
         {
-            if (icmp6hdr->icmp6_type == ICMP6_TIME_EXCEEDED && icmp6hdr->icmp6_code == ICMP6_TIME_EXCEED_TRANSIT)
-            {
-                // get original packet
-                ip6hdr = (struct ip6_hdr *)((char *)icmp6hdr + sizeof(struct icmp6_hdr));
-                ip6hdr_len = sizeof(struct ip6_hdr);
-                icmp6hdr = (struct icmp6_hdr *)((char *)ip6hdr + ip6hdr_len);
-            }
-            // id is the same as original packet and it is our type
-            _icmp_response.data = (char *)(icmp6hdr + 1);
-            _icmp_response.size
-                = _array_rcv_ptr->byte_size() - ((char *)(icmp6hdr + 1) - (char *)_array_rcv_ptr->buf());
-            _icmp_response.type = icmp6hdr->icmp6_type;
-            _icmp_response.code = icmp6hdr->icmp6_code;
-            _icmp_response.ttl = ip6hdr->ip6_hlim;
-            _icmp_response.id = ntohs(icmp6hdr->icmp6_id);
-            _icmp_response.seq = ntohs(icmp6hdr->icmp6_seq);
-
-            this->notify_observers(this);
+            // IPv6 header is present
+            struct ip6_hdr *ip6hdr = (struct ip6_hdr *)_array_rcv_ptr->buf();
+            ttl = ip6hdr->ip6_hlim;
+            icmp6hdr = (struct icmp6_hdr *)((char *)ip6hdr + sizeof(struct ip6_hdr));
         }
+    }
+
+    if (icmp6hdr->icmp6_type == ICMP6_ECHO_REPLY || icmp6hdr->icmp6_type == ICMP6_ECHO_REQUEST
+        || (icmp6hdr->icmp6_type == ICMP6_TIME_EXCEEDED && icmp6hdr->icmp6_code == ICMP6_TIME_EXCEED_TRANSIT))
+    {
+        if (icmp6hdr->icmp6_type == ICMP6_TIME_EXCEEDED && icmp6hdr->icmp6_code == ICMP6_TIME_EXCEED_TRANSIT)
+        {
+            // get original packet from the error message
+            icmp6hdr
+                = (struct icmp6_hdr *)((char *)icmp6hdr + sizeof(struct icmp6_hdr) + sizeof(struct ip6_hdr));
+        }
+        _icmp_response.data = (char *)(icmp6hdr + 1);
+        _icmp_response.size
+            = _array_rcv_ptr->byte_size() - ((char *)(icmp6hdr + 1) - (char *)_array_rcv_ptr->buf());
+        _icmp_response.type = icmp6hdr->icmp6_type;
+        _icmp_response.code = icmp6hdr->icmp6_code;
+        _icmp_response.ttl = ttl;
+        _icmp_response.id = ntohs(icmp6hdr->icmp6_id);
+        _icmp_response.seq = ntohs(icmp6hdr->icmp6_seq);
+
+        this->notify_observers(this);
     }
 }
 

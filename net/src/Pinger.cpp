@@ -1,3 +1,6 @@
+#include <cstddef>
+#include <memory>
+#include <regex.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -9,6 +12,8 @@
 #include <sihd/net/Pinger.hpp>
 
 #define ICMP_ECHO_REQUEST_LENGTH 56
+#define ICMP6_ECHO_REQUEST_LENGTH 56
+
 namespace sihd::net
 {
 
@@ -18,14 +23,31 @@ SIHD_LOGGER;
 
 using namespace sihd::util;
 
+namespace
+{
+
+void set_internal_data_size(IcmpSender & sender, std::unique_ptr<sihd::util::ArrByte> & data_ptr, size_t len)
+{
+    // Initialize data buffer now that socket type is known
+    sender.set_data_size(len);
+    data_ptr = std::make_unique<sihd::util::ArrByte>();
+    data_ptr->resize(len);
+    // set gibberish values like ping in packet
+    char values = 10;
+    for (size_t j = sizeof(time_t); j < len; ++j)
+    {
+        data_ptr->get(j) = values++;
+    }
+}
+
+} // namespace
+
 Pinger::Pinger(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent),
     _sender("icmp-sender")
 {
     _ping_count = 0;
 
-    _sender.set_data_size(ICMP_ECHO_REQUEST_LENGTH);
-    _sender.set_echo();
     _sender.add_observer(this);
 
     _stop = false;
@@ -36,23 +58,12 @@ Pinger::Pinger(const std::string & name, sihd::util::Node *parent):
 
     _clock_ptr = &sihd::util::Clock::default_clock;
 
-    _data_ptr = std::make_unique<sihd::util::ArrByte>();
-    _data_ptr->resize(ICMP_ECHO_REQUEST_LENGTH);
-
-    // set gibberish values like ping in packet
-    char values = 10;
-    size_t i = sizeof(time_t);
-    while (i < ICMP_ECHO_REQUEST_LENGTH)
-    {
-        _data_ptr->get(i) = values++;
-        ++i;
-    }
-
     this->add_conf("ttl", &Pinger::set_ttl);
     this->add_conf("timeout", &Pinger::set_timeout);
     this->add_conf("interval", &Pinger::set_interval);
     this->add_conf("ping_count", &Pinger::set_ping_count);
-    this->add_conf<std::string_view>("client", [this](std::string_view host) { return this->set_client(host); });
+    this->add_conf<std::string_view>("client",
+                                     [this](std::string_view host) { return this->set_client(host); });
 }
 
 Pinger::~Pinger()
@@ -63,11 +74,16 @@ Pinger::~Pinger()
 
 bool Pinger::open_unix()
 {
+    set_internal_data_size(_sender, _data_ptr, ICMP_ECHO_REQUEST_LENGTH);
     return _sender.open_socket_unix();
 }
 
 bool Pinger::open(bool ipv6)
 {
+    if (ipv6)
+        set_internal_data_size(_sender, _data_ptr, ICMP6_ECHO_REQUEST_LENGTH);
+    else
+        set_internal_data_size(_sender, _data_ptr, ICMP_ECHO_REQUEST_LENGTH);
     return _sender.open_socket(ipv6);
 }
 
@@ -115,15 +131,24 @@ bool Pinger::on_stop()
 
 bool Pinger::on_start()
 {
+    if (_sender.socket_opened() == false)
+    {
+        SIHD_LOG_ERROR("Pinger: socket not opened");
+        return false;
+    }
+
     // setup ping
     this->_clear_event();
     _result.clear();
-    _stop = false;
-    _sender.set_id(os::pid());
+
+    _expected_id = os::pid() & 0xFFFF;
+    _sender.set_id(_expected_id);
     _sender.set_ttl(_ttl);
+    _sender.set_echo();
 
     _result.time_start = _clock_ptr->now();
 
+    _stop = false;
     bool ret = true;
     size_t i = 0;
     while (_stop == false && (_ping_count == 0 || i < _ping_count))
@@ -153,13 +178,20 @@ bool Pinger::on_start()
         }
         _result.transmitted += 1;
         this->_notify_send();
+        SIHD_LOG(debug, "Pinger: sent ICMP echo request seq={} to {}", _current_seq, _client.str());
 
         // wait until seq number is received by polling
         _received_icmp_response = false;
         while (_stop == false && _received_icmp_response == false && _sender.poll())
             ;
         if (_received_icmp_response == false)
+        {
+            SIHD_LOG(debug,
+                     "Pinger: timeout waiting for ICMP echo reply seq={} from {}",
+                     _current_seq,
+                     _client.str());
             this->_notify_timeout();
+        }
         ++i;
     }
     _result.time_end = _clock_ptr->now();
@@ -176,8 +208,21 @@ void Pinger::_notify_send()
 void Pinger::handle(IcmpSender *sender)
 {
     const IcmpResponse & response = sender->response();
-    if (_current_seq != response.seq || os::pid() != response.id)
+
+    if (_current_seq != response.seq)
         return;
+
+    // For IPv4 SOCK_RAW: also verify ID matches our PID (truncated to 16 bits)
+    // For IPv6 SOCK_DGRAM: kernel assigns its own ID
+    if (sender->socket().is_ipv6() && response.seq == 1)
+    {
+        // First response, store expected ID
+        _expected_id = response.id;
+    }
+
+    if (_expected_id != response.id)
+        return;
+
     _received_icmp_response = true;
 
     const time_t timestamp = ((time_t *)response.data)[0];

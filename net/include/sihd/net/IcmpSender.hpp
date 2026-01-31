@@ -48,8 +48,8 @@ class IcmpSender: public sihd::util::Named,
         void set_type(int type);
         void set_code(int code);
 
-        bool set_ttl(int ttl);
-        void set_id(pid_t id);
+        void set_ttl(int ttl);
+        void set_id(uint16_t id);
         void set_seq(int seq);
         bool set_data(sihd::util::ArrByteView view);
         bool set_data_size(size_t byte_size);
@@ -81,6 +81,7 @@ class IcmpSender: public sihd::util::Named,
         void _read_socket();
         void _process_ipv4();
         void _process_ipv6();
+        void _apply_config();
 
         Socket _socket;
         std::mutex _poll_mutex;
@@ -89,6 +90,17 @@ class IcmpSender: public sihd::util::Named,
         std::unique_ptr<sihd::util::ArrByte> _array_send_ptr;
 
         IcmpResponse _icmp_response;
+
+        // Configuration stored internall
+        bool _config_applied;
+        bool _echo_mode;
+        int _type;
+        int _code;
+        int _ttl;
+        uint16_t _id;
+        int _seq;
+        int _socket_type;
+        std::unique_ptr<sihd::util::ArrByte> _data_to_set;
 };
 
 } // namespace sihd::net

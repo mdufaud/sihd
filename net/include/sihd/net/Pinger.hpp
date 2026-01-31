@@ -95,6 +95,8 @@ class Pinger: public sihd::util::Named,
         int _current_seq;
         PingResult _result;
         PingEvent _event;
+
+        uint16_t _expected_id;
 };
 
 } // namespace sihd::net
