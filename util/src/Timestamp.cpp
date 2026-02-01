@@ -70,6 +70,16 @@ std::string Timestamp::local_format(std::string_view format) const
     return str::format_localtime(std::abs(_nano), format);
 }
 
+std::string Timestamp::format(std::string_view format, const std::locale & loc) const
+{
+    return str::format_time(std::abs(_nano), format, loc);
+}
+
+std::string Timestamp::local_format(std::string_view format, const std::locale & loc) const
+{
+    return str::format_localtime(std::abs(_nano), format, loc);
+}
+
 std::string Timestamp::sec_str(std::string_view format) const
 {
     return str::format_time(this->floor<std::chrono::seconds>(), format);
@@ -163,7 +173,7 @@ std::optional<Timestamp> Timestamp::from_str(const std::string & date_str, std::
     std::chrono::system_clock::time_point tp;
 
     std::istringstream ss {date_str};
-    ss.imbue(std::locale("C"));
+    ss.imbue(std::locale::classic());
     ss >> std::chrono::parse(format.data(), tp);
 
     if (ss.fail())
@@ -174,7 +184,35 @@ std::optional<Timestamp> Timestamp::from_str(const std::string & date_str, std::
     struct tm t = {};
     std::istringstream ss {date_str.data()};
 
-    ss.imbue(std::locale(""));
+    ss.imbue(std::locale::classic());
+    ss >> std::get_time(&t, format.data());
+
+    if (ss.fail())
+        return std::nullopt;
+
+    return Timestamp {time::local_tm(t)};
+#endif
+}
+
+std::optional<Timestamp>
+    Timestamp::from_str(const std::string & date_str, std::string_view format, const std::locale & loc)
+{
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
+    std::chrono::system_clock::time_point tp;
+
+    std::istringstream ss {date_str};
+    ss.imbue(loc);
+    ss >> std::chrono::parse(format.data(), tp);
+
+    if (ss.fail())
+        return std::nullopt;
+
+    return Timestamp {tp};
+#else
+    struct tm t = {};
+    std::istringstream ss {date_str.data()};
+
+    ss.imbue(loc);
     ss >> std::get_time(&t, format.data());
 
     if (ss.fail())

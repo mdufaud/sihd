@@ -21,9 +21,10 @@ if compile_wayland:
     env.Append(CPPDEFINES = ["SIHD_COMPILE_WITH_WAYLAND"])
 
 env.build_demo("demo/util_demo.cpp", name = "util_demo", add_libs = [sihd_util_libname])
-# file_watcher and file_poller use inotify/filesystem watching features not available in emscripten
+
 if builder.build_platform != "web":
     env.build_demo("demo/file_watcher.cpp", name = "file_watcher", add_libs = [sihd_util_libname])
     env.build_demo("demo/file_poller.cpp", name = "file_poller", add_libs = [sihd_util_libname])
-env.build_demo("demo/process_info.cpp", name = "process_info", add_libs = [sihd_util_libname])
+    env.build_demo("demo/process_info.cpp", name = "process_info", add_libs = [sihd_util_libname])
+
 test = env.build_test(Glob('test/*.cpp'), add_libs = [sihd_util_libname])

@@ -145,9 +145,18 @@ make mode=release
 make compiler=clang
 # build with emscripten (automatically builds with static libraries)
 make compiler=em
+```
+
+### Cross compilation
+
+```shell
 # build for windows
 make platform=win
 ```
+
+### Musl
+
+Download - extract - link in PATH: https://musl.cc/x86_64-linux-musl-cross.tgz 
 
 ### Python bindings build
 

@@ -37,7 +37,8 @@ time_t get_timezone()
         return tzi.Bias * 60;
     return 0;
 #else
-    if (g_tz_is_set.exchange(true))
+    // Call tzset() only once
+    if (!g_tz_is_set.exchange(true))
         tzset();
     return timezone;
 #endif
@@ -175,7 +176,8 @@ struct tm to_tm(time_t nano, bool localtime)
     struct tm result;
     if (localtime)
     {
-        if (g_tz_is_set.exchange(true))
+        // Call tzset() only once
+        if (!g_tz_is_set.exchange(true))
             tzset();
         ::localtime_r(&sec, &result);
     }

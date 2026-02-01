@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
 #include <cmath>   // HUGE_VAL
-#include <codecvt>
 #include <cstdarg>
 #include <locale>
 #include <mutex>
@@ -84,20 +83,38 @@ size_t levenshtein_distance(std::string_view source,
     return lev_dist[min_size];
 }
 
-std::string format_time(Timestamp timestamp, std::string_view format, bool localtime)
+std::string format_time(Timestamp timestamp,
+                        std::string_view format,
+                        bool localtime,
+                        [[maybe_unused]] const std::locale *loc = nullptr)
 {
-    constexpr size_t buffer_size = SIHD_UTIL_STR_BUFFER;
-    static char buffer[buffer_size];
-    static std::mutex buffer_mutex;
+#if !defined(__SIHD_EMSCRIPTEN__)
+    if (loc != nullptr)
+    {
+        // Locale-aware formatting with std::put_time
+        std::ostringstream oss;
+        oss.imbue(*loc);
+        struct tm tm_val = localtime ? timestamp.local_tm() : timestamp.tm();
+        oss << std::put_time(&tm_val, format.data());
+        return oss.str();
+    }
+    else
+#endif
+    {
+        // Fast path: strftime with C locale
+        constexpr size_t buffer_size = SIHD_UTIL_STR_BUFFER;
+        static char buffer[buffer_size];
+        static std::mutex buffer_mutex;
 
-    const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
-
-    std::lock_guard<std::mutex> l(buffer_mutex);
-    const size_t ret = strftime(buffer, buffer_size, format.data(), &tm);
-    return std::string(buffer, ret);
+        const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
+        std::lock_guard<std::mutex> l(buffer_mutex);
+        const size_t ret = strftime(buffer, buffer_size, format.data(), &tm);
+        return std::string(buffer, ret);
+    }
 }
 
-std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bool nano_resolution, bool localtime)
+std::string
+    timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bool nano_resolution, bool localtime)
 {
     const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
     std::string s;
@@ -187,8 +204,8 @@ std::vector<std::string> to_columns_impl(std::span<T> words, size_t max_width, s
             {
                 if (begin_word_index + i >= words.size())
                     break;
-                biggest_column_word_size
-                    = std::max(biggest_column_word_size, std::string_view(words[begin_word_index + i]).size());
+                biggest_column_word_size = std::max(biggest_column_word_size,
+                                                    std::string_view(words[begin_word_index + i]).size());
                 ++i;
             }
 
@@ -275,7 +292,14 @@ std::string to_str(std::wstring_view utf16_view)
     const int size
         = WideCharToMultiByte(CP_UTF8, 0, utf16_view.data(), utf16_view.size(), nullptr, 0, nullptr, nullptr);
     std::string utf8_str(size, 0);
-    WideCharToMultiByte(CP_UTF8, 0, utf16_view.data(), utf16_view.size(), utf8_str.data(), size, nullptr, nullptr);
+    WideCharToMultiByte(CP_UTF8,
+                        0,
+                        utf16_view.data(),
+                        utf16_view.size(),
+                        utf8_str.data(),
+                        size,
+                        nullptr,
+                        nullptr);
     return utf8_str;
 }
 
@@ -376,7 +400,8 @@ std::vector<std::string> split(std::string_view str, std::string_view delimiter)
     return splitter.split(str);
 }
 
-std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str, std::string_view delimiter)
+std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str,
+                                                              std::string_view delimiter)
 {
     std::pair<std::string_view, std::string_view> ret;
 
@@ -759,7 +784,8 @@ bool is_digit(int c, uint16_t base)
     if (base <= 10)
         return base != 0 && c >= '0' && c <= '0' + (base - 1);
     base = base - 10;
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'a' + (base - 1)) || (c >= 'A' && c <= 'A' + (base - 1));
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'a' + (base - 1))
+           || (c >= 'A' && c <= 'A' + (base - 1));
 }
 
 bool is_number(std::string_view s, uint16_t base)
@@ -1044,8 +1070,8 @@ int stopping_enclose_index(std::string_view view, int index, const char *authori
         return -1;
 
     const int stopping_enclose = stopping_enclose_of(open_esc);
-    const bool is_an_escape
-        = escape == stopping_enclose && ((size_t)index + 1 < view.size() && view[index + 1] == stopping_enclose);
+    const bool is_an_escape = escape == stopping_enclose
+                              && ((size_t)index + 1 < view.size() && view[index + 1] == stopping_enclose);
 
     if (stopping_enclose < 0 || is_an_escape || is_escaped_char(view.data(), index, escape))
         return -1;
@@ -1194,12 +1220,22 @@ std::string localtimeoffset_str(Timestamp timestamp, bool total_parenthesis, boo
 
 std::string format_time(Timestamp t, std::string_view format)
 {
-    return format_time(t, format, false);
+    return format_time(t, format, false, nullptr);
 }
 
 std::string format_localtime(Timestamp t, std::string_view format)
 {
-    return format_time(t, format, true);
+    return format_time(t, format, true, nullptr);
+}
+
+std::string format_time(Timestamp t, std::string_view format, const std::locale & loc)
+{
+    return format_time(t, format, false, &loc);
+}
+
+std::string format_localtime(Timestamp t, std::string_view format, const std::locale & loc)
+{
+    return format_time(t, format, true, &loc);
 }
 
 std::string bytes_str(int64_t bytes, bool iec)
@@ -1329,7 +1365,8 @@ std::string word_wrap(std::string_view s, size_t max_width, bool append_hyphen)
                     curr_width = add_size;
                 }
             }
-            else if ((curr_width + word_size > max_width) || (curr_width > 0 && curr_width + word_size + 1 > max_width))
+            else if ((curr_width + word_size > max_width)
+                     || (curr_width > 0 && curr_width + word_size + 1 > max_width))
             {
                 ret.append("\n");
                 ret.append(s.data() + word_begin, word_size);
@@ -1358,7 +1395,8 @@ std::string word_wrap(std::string_view s, size_t max_width, bool append_hyphen)
 
 std::string generate_random(size_t size)
 {
-    constexpr char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n\t ()[]{}'123456789!@#$%^&*_+";
+    constexpr char charset[]
+        = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n\t ()[]{}'123456789!@#$%^&*_+";
 
     std::random_device dev;
     std::mt19937 rng(dev());
@@ -1385,17 +1423,20 @@ std::string wrap(std::string_view s, size_t max_width, std::string_view end_with
     return fmt::format("{}{}", std::string_view(s.data(), max_width - end_with.size()), end_with);
 }
 
-std::vector<std::string> to_columns(std::span<std::string_view> words, size_t max_width, std::string_view join_with)
+std::vector<std::string>
+    to_columns(std::span<std::string_view> words, size_t max_width, std::string_view join_with)
 {
     return to_columns_impl(words, max_width, join_with);
 }
 
-std::vector<std::string> to_columns(std::span<const std::string> words, size_t max_width, std::string_view join_with)
+std::vector<std::string>
+    to_columns(std::span<const std::string> words, size_t max_width, std::string_view join_with)
 {
     return to_columns_impl(words, max_width, join_with);
 }
 
-std::vector<std::string> to_columns(std::span<const char *> words, size_t max_width, std::string_view join_with)
+std::vector<std::string>
+    to_columns(std::span<const char *> words, size_t max_width, std::string_view join_with)
 {
     return to_columns_impl(words, max_width, join_with);
 }

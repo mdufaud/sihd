@@ -122,6 +122,9 @@ class Timestamp
         static Timestamp now();
         static std::optional<Timestamp> from_str(const std::string & date_str,
                                                  std::string_view format = default_format);
+        // Parse with explicit locale (default: C locale for deterministic behavior)
+        static std::optional<Timestamp>
+            from_str(const std::string & date_str, std::string_view format, const std::locale & loc);
 
         // auto convert
         constexpr operator time_t() const { return _nano; }
@@ -160,6 +163,9 @@ class Timestamp
         // UTC format
         std::string format(std::string_view format) const;
         std::string local_format(std::string_view format) const;
+        // UTC format with explicit locale (default: C locale)
+        std::string format(std::string_view format, const std::locale & loc) const;
+        std::string local_format(std::string_view format, const std::locale & loc) const;
 
         // uses UTC with default_format
         std::string str() const;

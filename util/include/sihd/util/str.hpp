@@ -40,6 +40,9 @@ std::string localtimeoffset_str(Timestamp t, bool total_parenthesis = false, boo
 // fmt strftime -> "%Y-%m-%d %H:%M:%S"
 std::string format_time(Timestamp t, std::string_view format);
 std::string format_localtime(Timestamp t, std::string_view format);
+// With explicit locale (default: C locale) - note: strftime uses C locale unless setlocale called
+std::string format_time(Timestamp t, std::string_view format, const std::locale & loc);
+std::string format_localtime(Timestamp t, std::string_view format, const std::locale & loc);
 
 std::string word_wrap(std::string_view s, size_t max_width, bool append_hyphen = true);
 std::string wrap(std::string_view s, size_t max_width, std::string_view end_with = "...");
@@ -74,7 +77,8 @@ bool ends_with(std::string_view s, std::string_view end, std::string_view prefix
 std::vector<std::string> split(std::string_view str);
 std::vector<std::string> split(std::string_view str, char delimiter);
 std::vector<std::string> split(std::string_view str, std::string_view delimiter);
-std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str, std::string_view delimiter);
+std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str,
+                                                              std::string_view delimiter);
 std::pair<std::string, std::string> split_pair(std::string_view str, std::string_view delimiter);
 
 std::string join(std::initializer_list<std::string_view> list, std::string_view join_str = "\n");

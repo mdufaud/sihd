@@ -67,6 +67,13 @@ TEST_F(TestTime, test_time_timestamp_from_str)
     EXPECT_EQ(conv_clocktime.hour, 10);
     EXPECT_EQ(conv_clocktime.minute, 9);
     EXPECT_EQ(conv_clocktime.second, 8);
+
+    conversion = Timestamp::from_str("2024-06-15", "%Y-%m-%d", std::locale::classic());
+    ASSERT_TRUE(conversion.has_value());
+    conv_calendar = conversion->calendar();
+    EXPECT_EQ(conv_calendar.year, 2024);
+    EXPECT_EQ(conv_calendar.month, 6);
+    EXPECT_EQ(conv_calendar.day, 15);
 }
 
 TEST_F(TestTime, test_time_timestamp_strings)

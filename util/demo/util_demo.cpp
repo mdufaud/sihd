@@ -92,6 +92,13 @@ void time()
         SIHD_LOG(info, "today's zoned hour: {}", today.zone_str());
     }
     SIHD_LOG(info, "from string date '2000/04/01': {}", Timestamp::from_str("2000/04/01", "%Y/%m/%d")->str());
+
+    // Locale examples - uses C locale by default for deterministic behavior
+    SIHD_LOG(info, "format with C locale (default): {}", today.format("%Y-%m-%d %H:%M:%S"));
+    SIHD_LOG(info,
+             "format with explicit C locale: {}",
+             today.format("%Y-%m-%d %H:%M:%S", std::locale::classic()));
+
     SIHD_LOG(info, "timezone name: {}", time::get_timezone_name());
     SIHD_LOG(info, "timezone offset: {}", time::get_timezone());
     SIHD_LOG(info, "time since epoch: {}", Timestamp::now().timeoffset_str());
