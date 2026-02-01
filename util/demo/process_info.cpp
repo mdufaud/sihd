@@ -1,4 +1,4 @@
-#include <cxxopts.hpp>
+#include <CLI/CLI.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
@@ -37,34 +37,23 @@ int main(int argc, char **argv)
         term::set_output_utf8();
     }
 
-    cxxopts::Options options(argv[0], "Testing process info");
+    std::string process_name;
+    int id = -1;
+    bool dump_env = false;
 
-    // clang-format off
-    options.add_options()
-        ("h,help", "Prints usage")
-        ("p,process", "Dump process info by name", cxxopts::value<std::string>())
-        ("i,id", "Dump process info by id", cxxopts::value<int>())
-        ("e,env", "Dump process full env", cxxopts::value<bool>()->default_value("false"))
-    ;
-    // clang-format on
+    CLI::App app {"Testing process info"};
+    app.add_option("-p,--process", process_name, "Dump process info by name");
+    app.add_option("-i,--id", id, "Dump process info by id");
+    app.add_flag("-e,--env", dump_env, "Dump process full env");
+    app.add_option("process", process_name);
 
-    options.parse_positional({"process"});
-
-    cxxopts::ParseResult result = options.parse(argc, argv);
-
-    if (result.count("help"))
-    {
-        fmt::print("{}\n", options.help());
-        return 0;
-    }
+    CLI11_PARSE(app, argc, argv);
 
     LoggerManager::console(LoggerFilter::Options {.level_lower = LogLevel::info});
 
-    const bool dump_env = result["env"].as<bool>();
-
-    if (result.count("process"))
+    if (!process_name.empty())
     {
-        for (const ProcessInfo & process : ProcessInfo::get_all_process_from_name(result["process"].as<std::string>()))
+        for (const ProcessInfo & process : ProcessInfo::get_all_process_from_name(process_name))
         {
             SIHD_LOG(info, "pid: {}", process.pid());
             SIHD_LOG(info, "name: {}", process.name());
@@ -79,9 +68,9 @@ int main(int argc, char **argv)
             SIHD_LOG(notice, "---");
         }
     }
-    else if (result.count("id"))
+    else if (id != -1)
     {
-        ProcessInfo process(result["id"].as<int>());
+        ProcessInfo process(id);
         SIHD_LOG(info, "pid: {}", process.pid());
         SIHD_LOG(info, "name: {}", process.name());
         SIHD_LOG(info, "cwd: {}", process.cwd());

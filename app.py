@@ -14,7 +14,7 @@ extlibs = {
     # json parsing
     "nlohmann-json": "3.12.0#1",
     # util
-    "cxxopts": "3.0.0",
+    "cli11": "2.6.1",
     "fmt": "12.1.0",
     "libuuid": "1.0.3#15",
     # http
@@ -34,7 +34,7 @@ extlibs = {
     "imgui": "1.86",
     "libxcrypt": "4.4.38", #fixes a compilation issue with imgui
     # bindings
-    "pybind11": "2.6.2",
+    "pybind11": "3.0.1",
     # compressing utility
     "libzip": "1.7.3",
     # other
@@ -79,7 +79,7 @@ modules = {
         # x11=1 to compile with X11
         # wayland=1 to compile with wayland
         "libs": ['pthread'], # threading
-        "extlibs": ['nlohmann-json', 'fmt', 'cxxopts'],
+        "extlibs": ['nlohmann-json', 'fmt'],
         # === Linux specific ===
         "linux-extlibs": ['libuuid'],
         "linux-libs": [
@@ -279,6 +279,7 @@ conditional_modules = {
         "extlibs": ['pybind11'],
         "conditional-env": "py",
         "conditional-depends": ['core'],
+        "flags": ['-U_FORTIFY_SOURCE', '-Wno-cpp'], # Undefine _FORTIFY_SOURCE for py module since it requires optimization from builds using -O0
         "clang-flags": ["-Wno-unused-command-line-argument"],
         # pip install python-config
         "parse-configs": [
@@ -395,6 +396,11 @@ windows_defines = [
 test_extlibs = ['gtest']
 test_libs = ['gtest']
 
+## demo specifics
+
+demo_extlibs = ['cli11']
+demo_libs = ['CLI11']
+
 ###############################################################################
 # distribution
 ###############################################################################
@@ -416,7 +422,7 @@ apt_packages = {
     "nlohmann-json": "nlohmann-json3-dev",
     "fmt": "libfmt-dev",
     "libuuid": "uuid-dev",
-    "cxxopts": "libcxxopts-dev",
+    "cli11": "cli11-dev",
     "openssl": "openssl",
     "curl": "libcurl4-openssl-dev",
     "libwebsockets": "libwebsockets-dev",
@@ -452,7 +458,7 @@ pacman_packages = {
     "nlohmann-json": "nlohmann-json",
     "fmt": "fmt",
     "libuuid": "util-linux-libs",
-    "cxxopts": "cxxopts",
+    "cli11": "cli11",
     "openssl": "openssl",
     "curl": "curl",
     "libwebsockets": "libwebsockets",
@@ -478,7 +484,7 @@ yum_packages = {
     "nlohmann-json": "json-devel",
     "fmt": "fmt-devel",
     "libuuid": "uuid-devel",
-    "cxxopts": "cxxopts-devel",
+    "cli11": "cli11-devel",
     "openssl": "openssl",
     "curl": "libcurl-devel",
     "libwebsockets": "libwebsockets-devel",
@@ -504,7 +510,7 @@ msys2_packages = {
     "gtest": f"{__msys2_mingw}gtest",
     "nlohmann-json": f"{__msys2_mingw}nlohmann-json",
     "fmt": f"{__msys2_mingw}fmt",
-    "cxxopts": f"{__msys2_mingw}cxxopts",
+    "cli11": f"{__msys2_mingw}cli11",
     "openssl": f"{__msys2_mingw}openssl",
     "curl": f"{__msys2_mingw}curl",
     "libwebsockets": f"{__msys2_mingw}libwebsockets",

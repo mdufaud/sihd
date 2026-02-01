@@ -10,7 +10,6 @@
 #include <sihd/util/AService.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/ServiceController.hpp>
-#include <sihd/util/path.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
 #include <sihd/util/type.hpp>
@@ -101,7 +100,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
 
     m_util.def_submodule("types", "sihd::util::Types")
         .def("type_size", &type::size)
-        .def("type_str", &type::str)
+        .def("type_str", static_cast<const char *(*)(Type)>(&type::str))
         .def("from_str", &type::from_str);
 
     m_util.def_submodule("thread", "sihd::util::Thread")
@@ -110,15 +109,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("set_name", &thread::set_name)
         .def("name", &thread::name);
 
-    m_util.def_submodule("path", "sihd::util::Path")
-        .def("set", &path::set)
-        .def("clear", &path::clear)
-        .def("clear_all", &path::clear_all)
-        .def("get", static_cast<std::string (*)(const std::string &)>(&path::get))
-        .def("get_from_url",
-             static_cast<std::string (*)(const std::string &, const std::string &)>(&path::get))
-        .def("get_from_path", &path::get_from)
-        .def("find", &path::find);
+    // path namespace removed - use PathManager class instead (see below)
 
     m_util
         .def_submodule("time", "sihd::util::time")

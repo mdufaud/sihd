@@ -1,5 +1,5 @@
 #include "sihd/util/ArrayView.hpp"
-#include <cxxopts.hpp>
+#include <CLI/CLI.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
@@ -352,20 +352,12 @@ void backtrace()
 
 int main(int argc, char **argv)
 {
-    cxxopts::Options options(argv[0], "Testing utility for module util");
-    // clang-format off
-    options.add_options()
-        ("h,help", "Prints usage")
-        ("f,worker-frequency", "Change the worker execution frequency in HZ", cxxopts::value<double>()->default_value("10.0"));
-    // clang-format on
+    double worker_frequency = 10.0;
+    CLI::App app {"Testing utility for module util"};
+    app.add_option("-f,--worker-frequency", worker_frequency, "Change the worker execution frequency in HZ")
+        ->default_val("10.0");
 
-    auto result = options.parse(argc, argv);
-
-    if (result.count("help"))
-    {
-        fmt::print("{}\n", options.help());
-        return 0;
-    }
+    CLI11_PARSE(app, argc, argv);
 
     if (term::is_interactive() && !os::is_emscripten)
         LoggerManager::console();
@@ -381,7 +373,7 @@ int main(int argc, char **argv)
     demo::file_mem_write();
     demo::bitmap();
     demo::backtrace();
-    demo::worker(result["worker-frequency"].as<double>());
+    demo::worker(worker_frequency);
 
     if constexpr (os::is_emscripten)
     {

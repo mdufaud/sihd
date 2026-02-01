@@ -108,7 +108,7 @@ def get_modules_packages(app, packet_manager_name, modules_extlibs):
     pkg_manager_conf_name = "{}_packages".format(packet_manager_name)
     pkg_manager_conf = getattr(app, pkg_manager_conf_name, None)
     if pkg_manager_conf is None:
-        raise RuntimeError("app configuration does not have a package manager conf named: '{}'".format(pkg_manager_conf_name))
+        raise RuntimeError("app configuration does not have a package manager '{}' conf named: '{}'".format(packet_manager_name, pkg_manager_conf_name))
     ret = {}
     missing = []
     for libname, version in modules_extlibs.items():

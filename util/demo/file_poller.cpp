@@ -1,4 +1,4 @@
-#include <cxxopts.hpp>
+#include <CLI/CLI.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
@@ -21,25 +21,18 @@ std::string display_fw(std::string_view category, const std::vector<std::string>
 
 int main(int argc, char **argv)
 {
-    cxxopts::Options options(argv[0], "Testing file poller");
+    std::string path;
+    size_t depth = 10;
+    double time_val = 0.5;
 
-    // clang-format off
-    options.add_options()
-        ("h,help", "Prints usage")
-        ("p,path", "Watch path for changes", cxxopts::value<std::string>())
-        ("d,depth", "Depth to watch files", cxxopts::value<size_t>()->default_value("10"))
-        ("t,time", "Execute x times per seconds", cxxopts::value<double>()->default_value("0.5"));
-    // clang-format on
+    CLI::App app {"Testing file poller"};
+    app.add_option("-p,--path", path, "Watch path for changes")->required();
+    app.add_option("-d,--depth", depth, "Depth to watch files")->default_val("10");
+    app.add_option("-t,--time", time_val, "Execute x times per seconds")->default_val("0.5");
+    app.add_option("path", path);
+    app.add_option("depth", depth);
 
-    options.parse_positional({"path", "depth"});
-
-    cxxopts::ParseResult result = options.parse(argc, argv);
-
-    if (result.count("help"))
-    {
-        fmt::print("{}\n", options.help());
-        return 0;
-    }
+    CLI11_PARSE(app, argc, argv);
 
     LoggerManager::console();
     Logger log("demo");
@@ -55,8 +48,8 @@ int main(int argc, char **argv)
             log.info(display_fw("changed", fw->changed()));
     });
 
-    const Timestamp sleep_for = time::from_double(result["time"].as<double>());
-    FilePoller fpoller(result["path"].as<std::string>(), result["depth"].as<size_t>());
+    const Timestamp sleep_for = time::from_double(time_val);
+    FilePoller fpoller(path, depth);
 
     fpoller.add_observer(&handler);
 

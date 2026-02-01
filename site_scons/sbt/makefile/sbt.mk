@@ -392,12 +392,39 @@ endif # test
 
 ifeq ($(MAKEARG_1), pkgdep)
 
+ifeq ($(MAKEARG_2),)
+PKG_MANAGER_NAME := auto
+else
+
+DEMO_MOD := $(demo)
+TEST_MOD := $(test)
+
+# make pkgdep mod MODULE
+ifeq ($(MAKEARG_2), mod)
+.PHONY: mod
+PKG_MANAGER_NAME := auto
+MODULES_NAME := $(MAKEARG_3),$(m)
+else ifeq ($(MAKEARG_2), demo)
+.PHONY: demo
+PKG_MANAGER_NAME := auto
+MODULES_NAME := $(MAKEARG_3),$(m)
+DEMO_MOD := 1
+else ifeq ($(MAKEARG_2), test)
+.PHONY: test
+PKG_MANAGER_NAME := auto
+MODULES_NAME := $(MAKEARG_3),$(m)
+TEST_MOD := 1
+else
 PKG_MANAGER_NAME := $(MAKEARG_2)
+endif # pkgdep mod
 
-ifeq ($(PKG_MANAGER_NAME),)
-$(error "Makefile: must provide a package manager name")
-endif
 
+endif # pkgdep 
+
+.PHONY: pkgdep
+pkgdep: test = $(TEST_MOD)
+pkgdep: demo = $(DEMO_MOD)
+pkgdep: modules = $(MODULES_NAME)
 pkgdep: pkgdep = $(PKG_MANAGER_NAME)
 pkgdep: build
 

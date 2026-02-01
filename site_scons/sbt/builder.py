@@ -147,8 +147,52 @@ def get_platform():
         build_platform = "web"
     return build_platform
 
+def detect_package_manager():
+    """Detect the package manager of the current Linux distribution"""
+    # Check for package managers in order of preference/commonality
+    pkg_managers = [
+        ("apt", ["apt", "apt-get"]),           # Debian, Ubuntu, Mint
+        ("pacman", ["pacman"]),                 # Arch, Manjaro
+        ("dnf", ["dnf"]),                       # Fedora, RHEL 8+, CentOS 8+
+        ("yum", ["yum"]),                       # CentOS, RHEL, Amazon Linux
+        ("zypper", ["zypper"]),                 # openSUSE, SLES
+        ("apk", ["apk"]),                       # Alpine
+        ("emerge", ["emerge"]),                 # Gentoo
+        ("xbps", ["xbps-install"]),             # Void Linux
+        ("swupd", ["swupd"]),                   # Clear Linux
+        ("nix", ["nix-env"]),                   # NixOS
+    ]
+    
+    for pkg_name, binaries in pkg_managers:
+        for binary in binaries:
+            if shutil.which(binary) is not None:
+                return pkg_name
+    
+    # Fallback: try to detect from system files
+    if os.path.exists("/etc/debian_version"):
+        return "apt"
+    elif os.path.exists("/etc/arch-release"):
+        return "pacman"
+    elif os.path.exists("/etc/fedora-release"):
+        return "dnf"
+    elif os.path.exists("/etc/redhat-release"):
+        return "yum"
+    elif os.path.exists("/etc/SuSE-release") or os.path.exists("/etc/SUSE-brand"):
+        return "zypper"
+    elif os.path.exists("/etc/alpine-release"):
+        return "apk"
+    elif os.path.exists("/etc/gentoo-release"):
+        return "emerge"
+    
+    return ""
+
 def get_pkgdep():
-    return utils.get_opt("pkgdep", "")
+    pkgmanager = utils.get_opt("pkgdep", "")
+    if pkgmanager == "auto":
+        pkgmanager = detect_package_manager()
+        if pkgmanager:
+            logger.info(f"Auto-detected package manager: {pkgmanager}")
+    return pkgmanager.lower()
 
 def get_compile_mode():
     return utils.get_opt("mode", "default").lower()

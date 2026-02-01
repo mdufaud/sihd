@@ -1,6 +1,6 @@
 #include <csignal>
 
-#include <cxxopts.hpp>
+#include <CLI/CLI.hpp>
 
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
@@ -20,24 +20,18 @@ int main(int argc, char **argv)
 {
     sihd::util::LoggerManager::console();
 
-    cxxopts::Options options(argv[0], "Testing ping of module net");
-    // clang-format off
-    options.add_options()
-        ("h,help", "Prints usage")
-        ("t,timeout", "Timeout in ms", cxxopts::value<int>()->default_value("1000"))
-        ("i,interval", "Interval in ms", cxxopts::value<int>()->default_value("200"))
-        ("host", "Host to ping", cxxopts::value<std::string>()->default_value("google.com"))
-        ("pings", "Number of pings to send", cxxopts::value<int>()->default_value("10"));
-    // clang-format on
-    options.parse_positional({"host", "pings"});
+    int timeout = 1000;
+    int interval = 200;
+    std::string host = "google.com";
+    int npings = 10;
 
-    auto args = options.parse(argc, argv);
+    CLI::App app {"Testing ping of module net"};
+    app.add_option("-t,--timeout", timeout, "Timeout in ms")->default_val("1000");
+    app.add_option("-i,--interval", interval, "Interval in ms")->default_val("200");
+    app.add_option("host", host, "Host to ping")->default_val("google.com");
+    app.add_option("pings", npings, "Number of pings to send")->default_val("10");
 
-    if (args.count("help"))
-    {
-        fmt::print("{}\n", options.help());
-        return EXIT_SUCCESS;
-    }
+    CLI11_PARSE(app, argc, argv);
 
     Pinger pinger("pinger");
 
@@ -52,10 +46,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    const int npings = args["pings"].as<int>();
-    const std::string host = args["host"].as<std::string>();
     const IpAddr hostaddr = dns::find(host);
-
     if (hostaddr.empty())
     {
         return EXIT_FAILURE;
@@ -64,7 +55,6 @@ int main(int argc, char **argv)
     SIHD_LOG(notice, "Sending {} pings to {} ({})", npings, host, hostaddr.str());
 
     sihd::util::SigWatcher watcher("signal-watcher");
-
     watcher.add_signal(SIGINT);
     watcher.set_step_frequency(5);
 
@@ -105,8 +95,8 @@ int main(int argc, char **argv)
     });
     pinger.add_observer(&ping_handler);
 
-    SIHD_DIE_FALSE(pinger.set_interval(args["interval"].as<int>()));
-    SIHD_DIE_FALSE(pinger.set_timeout(args["timeout"].as<int>()));
+    SIHD_DIE_FALSE(pinger.set_interval(interval));
+    SIHD_DIE_FALSE(pinger.set_timeout(timeout));
     SIHD_DIE_FALSE(pinger.set_client(hostaddr));
     SIHD_DIE_FALSE(pinger.set_ping_count(npings));
 

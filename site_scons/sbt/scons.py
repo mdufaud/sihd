@@ -111,6 +111,12 @@ if pkg_manager_name:
         for missing in missing_test_packages:
             logger.warning("external library '{}' not declared in packet manager '{}'".format(missing, pkg_manager_name))
         deps.update(test_packages.keys())
+    if builder.build_demo:
+        demo_extlibs = modules.get_extlibs_versions(app, getattr(app, "demo_extlibs", []))
+        demo_packages, missing_demo_packages = modules.get_modules_packages(app, pkg_manager_name, demo_extlibs)
+        for missing in missing_demo_packages:
+            logger.warning("external library '{}' not declared in packet manager '{}'".format(missing, pkg_manager_name))
+        deps.update(demo_packages.keys())
     logger.info("dependencies:")
     print(" ".join(deps))
     Return()

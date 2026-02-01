@@ -1,4 +1,4 @@
-#include <cxxopts.hpp>
+#include <CLI/CLI.hpp>
 #include <fmt/format.h>
 
 #include <sihd/util/FileWatcher.hpp>
@@ -23,23 +23,12 @@ int main(int argc, char **argv)
         term::set_output_utf8();
     }
 
-    cxxopts::Options options(argv[0], "Testing file watcher");
+    std::string path;
+    CLI::App app {"Testing file watcher"};
+    app.add_option("-p,--path", path, "Watch path for changes")->required();
+    app.add_option("path", path);
 
-    // clang-format off
-    options.add_options()
-        ("h,help", "Prints usage")
-        ("p,path", "Watch path for changes", cxxopts::value<std::string>());
-    // clang-format on
-
-    options.parse_positional({"path"});
-
-    cxxopts::ParseResult result = options.parse(argc, argv);
-
-    if (result.count("help"))
-    {
-        fmt::print("{}\n", options.help());
-        return 0;
-    }
+    CLI11_PARSE(app, argc, argv);
 
     LoggerManager::console();
 
@@ -58,7 +47,9 @@ int main(int argc, char **argv)
             }
             else if (event.type == FileWatcherEventType::terminated)
             {
-                SIHD_LOG(warning, "Event: watch is terminated ({} has probably been deleted)", event.watch_path);
+                SIHD_LOG(warning,
+                         "Event: watch is terminated ({} has probably been deleted)",
+                         event.watch_path);
                 stop = true;
             }
             else
@@ -68,7 +59,7 @@ int main(int argc, char **argv)
         }
     });
 
-    const std::string & watch_path = result["path"].as<std::string>();
+    const std::string & watch_path = path;
     FileWatcher fw;
     if (!fw.watch(watch_path))
     {

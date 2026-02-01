@@ -8,6 +8,7 @@ extern "C"
 #include <lualib.h>
 }
 
+#include <cstdint> // need this for LuaBridge
 #include <luabridge3/LuaBridge/LuaBridge.h>
 
 #include <string>

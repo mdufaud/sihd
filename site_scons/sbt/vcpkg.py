@@ -73,9 +73,11 @@ if modules_to_build != "NONE":
         pp.pprint(build_modules)
         print()
 
-    extlibs.update(modules.get_modules_extlibs(app, build_modules, build_platform))
-    if has_test and hasattr(app, "test_extlibs"):
-        extlibs.update(modules.get_extlibs_versions(app, app.test_extlibs))
+    for other_extlibs in ["test", "demo"]:
+        extlibs.update(modules.get_modules_extlibs(app, build_modules, build_platform))
+        if has_test and hasattr(app, f"{other_extlibs}_extlibs"):
+            other_libs = getattr(app, f"{other_extlibs}_extlibs")
+            extlibs.update(modules.get_extlibs_versions(app, other_libs))
 
     for skip_lib in skip_libs:
         if skip_lib in extlibs:
