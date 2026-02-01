@@ -153,6 +153,7 @@ void read_line()
     if (term::is_interactive() == false)
         return;
     fmt::print("Say something: ");
+    std::cout.flush();
     std::string input;
     LineReader::fast_read_stdin(input);
     fmt::print("You said: '{}'\n", input);

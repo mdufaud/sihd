@@ -47,7 +47,7 @@ BUILD_TOOLS := $(PROJECT_ROOT_PATH)/site_scons
 SBT_PATH := $(BUILD_TOOLS)/sbt
 
 SBT_CLI := $(SBT_PATH)/cli_helper.py
-SBT_RESP := $(shell machine=$(machine) arch=$(arch) mode=$(mode) platform=$(platform) compiler=$(compiler) $(PYTHON_BIN) $(SBT_CLI) all)
+SBT_RESP := $(shell machine=$(machine) arch=$(arch) mode=$(mode) platform=$(platform) compiler=$(compiler) libc=$(libc) $(PYTHON_BIN) $(SBT_CLI) all)
 
 PLATFORM := $(word 1, $(SBT_RESP))
 ifeq ($(PLATFORM),)
@@ -241,6 +241,7 @@ build:
 			verbose=$(verbose) \
 			pkgdep=$(pkgdep) \
 			demo=$(demo) \
+			libc=$(libc) \
 	)
 	$(QUIET) $(call echo_log_info,makefile,starting build with command: '$(SCONS_BUILD_CMD) $(BUILD_CMD_LINE)')
 	$(QUIET) $(SCONS_BUILD_CMD) $(BUILD_CMD_LINE)
@@ -471,6 +472,7 @@ dep: vcpkg_deploy
 			verbose=$(verbose) \
 			pkgdep=$(pkgdep) \
 			demo=$(demo) \
+			libc=$(libc) \
 	)
 	$(QUIET) $(VCPKG_SCRIPT) $(BUILD_CMD_LINE)
 

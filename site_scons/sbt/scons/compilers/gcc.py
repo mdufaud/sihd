@@ -3,7 +3,7 @@ from sbt import architectures
 
 def load_in_env(env):
     prefix = ""
-    if builder.is_cross_building:
+    if builder.is_cross_building():
         prefix = architectures.get_gcc_prefix(builder.build_machine, builder.libc)
         if not prefix:
             raise SystemExit(f"No GCC cross-compiler prefix for machine={builder.build_machine} libc={builder.libc}")
@@ -14,6 +14,14 @@ def load_in_env(env):
         AR = prefix + "ar",
         RANLIB = prefix + "ranlib",
     )
+
+    # For musl builds, always link libstdc++ and libgcc statically
+    # because host system's libstdc++ is built for glibc
+    if builder.libc == "musl":
+        env.Append(
+            LINKFLAGS = ["-static-libgcc", "-static-libstdc++"]
+        )
+
     if builder.build_asan:
         gcc_asan_flags = [
             "-fsanitize=address", # With gcc - has leak enabled by default

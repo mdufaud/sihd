@@ -2,6 +2,10 @@
 #include <atomic>
 #include <csignal>
 
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__)
+# include <unistd.h> // for _exit
+#endif
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/os.hpp>

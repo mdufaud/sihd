@@ -178,11 +178,12 @@ def build_vcpkg_triplet():
         if builder.build_platform == "windows":
             vcpkg_platform = "mingw"
         
-        if builder.build_compiler == "zig":
-            prefix = "zig-"
-
+        # For zig with musl, use the generic musl triplets (no zig prefix)
         if builder.libc == "musl" and builder.build_platform == "linux":
             suffix = "-musl"
+        elif builder.build_compiler == "zig":
+            # For non-musl zig builds, use zig- prefix
+            prefix = "zig-"
 
         triplet_tries = [
             f"{prefix}{vcpkg_machine}-{vcpkg_platform}{suffix}-{vcpkg_liblink}-{vcpkg_mode}",

@@ -80,10 +80,10 @@ def get_machine():
 # from conans/client/tools/oss.py in https://github.com/conan-io
 ###############################################################################
 # from conans/conan/tools/gnu/get_gnu_triplet.py in https://github.com/conan-io
-def _build_gnu_triplet(machine, vendor):
+def _build_gnu_triplet(machine, vendor, libc="gnu"):
     op_system = {
         "windows": "w64-mingw32",
-        "linux": "linux-gnu",
+        "linux": f"linux-{libc}",
         "darwin": "apple-darwin",
         "android": "linux-android",
         "macos": "apple-darwin",
@@ -239,6 +239,20 @@ def get_libc():
         raise SystemExit("unknown libc: {}".format(libc))
     return libc
 
+def get_host_libc():
+    """Detect the host system's libc (gnu or musl)"""
+    # Try to check if the system uses musl
+    try:
+        import subprocess
+        # Check if ldd is using musl
+        result = subprocess.run(['ldd', '--version'], capture_output=True, text=True)
+        if 'musl' in result.stdout.lower() or 'musl' in result.stderr.lower():
+            return "musl"
+    except:
+        pass
+    # Default to gnu for most systems
+    return "gnu"
+
 ###############################################################################
 # Build initialisation
 ###############################################################################
@@ -246,11 +260,11 @@ def get_libc():
 # compilation
 libc = get_libc()
 build_compiler = get_compiler()
+host_libc = get_host_libc()
 host_architecture = get_host_architecture()
 build_architecture = get_architecture()
 host_machine = get_host_machine()
 build_machine = get_machine()
-is_cross_building = host_machine != build_machine
 build_mode = get_compile_mode()
 build_static_libs = is_static_libs()
 build_asan = is_address_sanitizer()
@@ -265,7 +279,7 @@ build_for_windows = build_platform == "windows"
 build_for_linux = build_platform == "linux"
 
 def get_gnu_triplet():
-    return _build_gnu_triplet(build_machine, build_platform)
+    return _build_gnu_triplet(build_machine, build_platform, libc)
 
 sbt_path = abspath(dirname(__file__))
 
@@ -303,23 +317,30 @@ libs_type = "static" if is_static_libs() else "dynamic"
 # App settings sanitizer
 ###############################################################################
 
-allowed_compilers = ("gcc", "clang", "em", "mingw")
+def is_cross_building():
+    return (host_machine != build_machine) or (host_libc != libc)
+
+allowed_compilers = ("gcc", "clang", "em", "mingw", "zig")
 
 def verify_args(app):
     global build_static_libs
+    global libc
     ret = True
     if is_msys() and not is_msys_mingw():
         logger.error("msys2 supported for mingw64 only")
         ret = False
-    # if build_compiler == "mingw":
-    #     logger.error("please use msys2 instead of mingw")
-    #     ret = False
     if build_compiler not in allowed_compilers:
         logger.error("compiler {} is not supported".format(build_compiler))
         ret = False
     if hasattr(app, "modes") and build_mode not in app.modes:
         logger.error("mode {} unknown".format(build_mode))
         ret = False
+
+    if build_compiler == "zig":
+        if libc != "musl":
+            logger.warning("gnu libc is not supported with zig - switching to musl")
+            libc = "musl"
+
     if build_compiler == "mingw":
         if build_asan:
             logger.error("cannot use address sanitizer with mingw")

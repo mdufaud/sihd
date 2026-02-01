@@ -10,7 +10,7 @@ def load_in_env(env):
 
     builder.libc = "musl"  # Zig always uses musl
 
-    if builder.is_cross_building:
+    if builder.is_cross_building():
         target_triple = architectures.get_zig_target(builder.build_machine)
         extra_flags = architectures.get_zig_flags(builder.build_machine)
         if not target_triple:
@@ -31,8 +31,10 @@ def load_in_env(env):
     )
 
     # Use LLVM's lld linker for better cross-compilation support
+    # Disable ubsan to avoid missing runtime symbols
     env.Append(
-        LINKFLAGS = ['-fuse-ld=lld']
+        CPPFLAGS = ['-fno-sanitize=undefined'],
+        LINKFLAGS = ['-fuse-ld=lld', '-fno-sanitize=undefined']
     )
 
     if builder.build_asan:
