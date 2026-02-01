@@ -5,120 +5,144 @@
 #include <sihd/util/SigHandler.hpp>
 #include <sihd/util/SigWaiter.hpp>
 #include <sihd/util/os.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/signal.hpp>
-#include <sihd/util/str.hpp>
 
 namespace sihd::util
 {
 
 SIHD_LOGGER;
 
-SigWaiter::SigWaiter(const Conf & conf): _received_signal(false)
+SigWaiter::SigWaiter(): _received_signal(false) {}
+
+SigWaiter::SigWaiter(const Conf & conf): SigWaiter()
 {
-    const int wanted_signal = conf.signal.value_or(SIGINT);
-    const bool has_timeout = conf.timeout > 0;
-
-#if defined(__SIHD_WINDOWS__)
-    SteadyClock clock;
-    const time_t begin = has_timeout ? clock.now() : 0;
-
-    SigHandler sighandler(wanted_signal);
-    if (sighandler.is_handling())
-    {
-        while (true)
-        {
-            const auto status = signal::status(wanted_signal);
-
-            _received_signal = status.has_value() && status->received > 0;
-            if (_received_signal)
-                break;
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-            if (has_timeout && ((clock.now() - begin) > conf.timeout))
-                break;
-        }
-    }
-#else
-    sigset_t oldmask;
-    sigemptyset(&oldmask);
-    sigset_t newmask;
-    sigemptyset(&newmask);
-    sigaddset(&newmask, wanted_signal);
-    if (sigprocmask(SIG_BLOCK, &newmask, &oldmask) == -1)
-    {
-        SIHD_LOG(error, "sigprocmask failed: {}", os::last_error_str());
-        return;
-    }
-
-    if (has_timeout)
-    {
-        Timestamp timeout = conf.timeout;
-
-        SteadyClock clock;
-        const time_t begin = has_timeout ? clock.now() : 0;
-        while (1)
-        {
-            timeout = timeout - (clock.now() - begin);
-            timespec ts = timeout.ts();
-            siginfo_t info;
-            if (sigtimedwait(&newmask, &info, &ts) == -1)
-            {
-                // errno EINTR signal interrupted
-                if (errno == EINTR)
-                {
-                    continue;
-                }
-                // errno EAGAIN timed out
-                // errno EINVAL timeout invalid
-                break;
-            }
-            if (info.si_signo == wanted_signal)
-            {
-                SIHD_TRACE("Signal {} received", wanted_signal);
-                _received_signal = true;
-                break;
-            }
-        }
-    }
-    else
-    {
-        while (1)
-        {
-            siginfo_t info;
-            if (sigwaitinfo(&newmask, &info) == -1)
-            {
-                // errno EINTR signal interrupted
-                if (errno == EINTR)
-                {
-                    continue;
-                }
-                break;
-            }
-            if (info.si_signo == wanted_signal)
-            {
-                SIHD_TRACE("Signal {} received", wanted_signal);
-                _received_signal = true;
-                break;
-            }
-        }
-    }
-    if (sigprocmask(SIG_SETMASK, &oldmask, nullptr) == -1)
-    {
-        SIHD_LOG(error, "sigprocmask restore failed: {}", os::last_error_str());
-        return;
-    }
-#endif
+    _do_wait(conf.signal.value_or(SIGINT), conf.timeout);
 }
-
-SigWaiter::SigWaiter(): SigWaiter(SigWaiter::Conf()) {}
 
 SigWaiter::~SigWaiter() = default;
 
 bool SigWaiter::received_signal() const
 {
     return _received_signal;
+}
+
+bool SigWaiter::_do_wait(int sig, Timestamp timeout)
+{
+    _received_signal = false;
+    const bool has_timeout = timeout > 0;
+
+#if defined(__SIHD_WINDOWS__) || defined(__SIHD_ANDROID__)
+    // Polling-based implementation for Windows and Android
+    SteadyClock clock;
+    const time_t begin = has_timeout ? clock.now() : 0;
+
+    SigHandler sighandler(sig);
+    if (!sighandler.is_handling())
+    {
+        SIHD_LOG(error, "SigWaiter: could not handle signal {}", sig);
+        return false;
+    }
+
+    // Get initial received count
+    const auto initial_status = signal::status(sig);
+    const size_t initial_received
+        = initial_status.has_value() ? initial_status->received.load(std::memory_order_relaxed) : 0;
+
+    while (true)
+    {
+        const auto status = signal::status(sig);
+        const size_t current_received
+            = status.has_value() ? status->received.load(std::memory_order_relaxed) : 0;
+
+        if (current_received > initial_received)
+        {
+            _received_signal = true;
+            return true;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        if (has_timeout && ((clock.now() - begin) > timeout))
+            return false;
+    }
+#else
+    sigset_t oldmask;
+    sigemptyset(&oldmask);
+    sigset_t newmask;
+    sigemptyset(&newmask);
+    sigaddset(&newmask, sig);
+
+    if (sigprocmask(SIG_BLOCK, &newmask, &oldmask) == -1)
+    {
+        SIHD_LOG(error, "SigWaiter: sigprocmask failed: {}", os::last_error_str());
+        return false;
+    }
+
+    bool result = false;
+
+    if (has_timeout)
+    {
+        Timestamp remaining = timeout;
+        SteadyClock clock;
+        const time_t begin = clock.now();
+
+        while (true)
+        {
+            remaining = timeout - (clock.now() - begin);
+            if (remaining <= 0)
+                break;
+
+            timespec ts = remaining.ts();
+            siginfo_t info;
+
+            const int ret = sigtimedwait(&newmask, &info, &ts);
+            if (ret == -1)
+            {
+                if (errno == EINTR)
+                    continue; // Interrupted, retry with remaining time
+                // EAGAIN = timeout, EINVAL = invalid args
+                break;
+            }
+
+            if (info.si_signo == sig)
+            {
+                SIHD_TRACE("SigWaiter: signal {} received", sig);
+                _received_signal = true;
+                result = true;
+                break;
+            }
+        }
+    }
+    else
+    {
+        while (true)
+        {
+            siginfo_t info;
+            if (sigwaitinfo(&newmask, &info) == -1)
+            {
+                if (errno == EINTR)
+                    continue;
+                SIHD_LOG(error, "SigWaiter: sigwaitinfo failed: {}", os::last_error_str());
+                break;
+            }
+
+            if (info.si_signo == sig)
+            {
+                SIHD_TRACE("SigWaiter: signal {} received", sig);
+                _received_signal = true;
+                result = true;
+                break;
+            }
+        }
+    }
+
+    if (sigprocmask(SIG_SETMASK, &oldmask, nullptr) == -1)
+    {
+        SIHD_LOG(error, "SigWaiter: sigprocmask restore failed: {}", os::last_error_str());
+    }
+
+    return result;
+#endif
 }
 
 } // namespace sihd::util

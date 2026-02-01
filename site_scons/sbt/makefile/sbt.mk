@@ -462,7 +462,17 @@ vcpkg_deploy:
 .PHONY: dep # Run vcpkg to get dependencies
 
 dep: vcpkg_deploy
-	$(QUIET) env test=$(test) verbose=$(verbose) modules=$(modules) $(VCPKG_SCRIPT)
+	$(eval BUILD_CMD_LINE = \
+			modules=$(modules) \
+			test=$(test) \
+			dist=$(dist) \
+			mode=$(mode) \
+			asan=$(asan) \
+			verbose=$(verbose) \
+			pkgdep=$(pkgdep) \
+			demo=$(demo) \
+	)
+	$(QUIET) $(VCPKG_SCRIPT) $(BUILD_CMD_LINE)
 
 ifeq ($(MAKEARG_1), dep)
 

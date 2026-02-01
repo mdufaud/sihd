@@ -79,10 +79,10 @@ TEST_F(TestNum, test_num_substract_no_overflow)
 
     EXPECT_EQ(num::substract_no_overflow(std::numeric_limits<uint64_t>::max(),
                                          std::numeric_limits<uint64_t>::max()),
-              0);
+              0u);
     EXPECT_EQ(
         num::substract_no_overflow(std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::min()),
-        0);
+        0l);
 }
 
 } // namespace test

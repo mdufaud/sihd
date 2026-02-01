@@ -56,7 +56,7 @@ int main(int argc, char **argv)
 
     sihd::util::SigWatcher watcher("signal-watcher");
     watcher.add_signal(SIGINT);
-    watcher.set_step_frequency(5);
+    watcher.set_polling_frequency(5);
 
     Handler<SigWatcher *> sig_handler([&pinger](SigWatcher *watcher) {
         auto & catched_signals = watcher->catched_signals();

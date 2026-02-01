@@ -212,7 +212,7 @@ class HttpServer: public sihd::util::Node,
         Mime _mime;
         // poll handler
         LwsPollingScheduler _polling_scheduler;
-        sihd::util::StepWorker _worker;
+        sihd::util::StepWorker _stepworker;
 };
 
 } // namespace sihd::http

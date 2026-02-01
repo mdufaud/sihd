@@ -93,7 +93,7 @@ TEST_F(TestSignal, test_signal_watcher)
     SigWatcher watcher("sigint-watcher-test");
 
     watcher.add_signal(SIGUSR1);
-    watcher.set_step_frequency(30);
+    watcher.set_polling_frequency(30);
 
     Handler<SigWatcher *> handler([&sig](SigWatcher *watcher) {
         auto & catched_signals = watcher->catched_signals();
@@ -104,12 +104,14 @@ TEST_F(TestSignal, test_signal_watcher)
     });
     watcher.add_observer(&handler);
 
-    watcher.set_start_synchronised(true);
     watcher.start();
+
+    // Give worker time to start
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     kill(getpid(), SIGUSR1);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     EXPECT_EQ(sig, SIGUSR1);
 }

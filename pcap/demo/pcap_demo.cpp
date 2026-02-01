@@ -1,4 +1,5 @@
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <sihd/util/platform.hpp>
 

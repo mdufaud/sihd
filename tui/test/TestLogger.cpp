@@ -52,7 +52,7 @@ void randomize_log()
                 "Quisque malesuada eros quis imperdiet molestie. Curabitur dui nunc, lacinia nec molestie vitae, vulputate vitae ligula");
             break;
         case 6:
-            SIHD_LOG(info, fmt::format("Current memory: {}", str::bytes_str(os::current_rss())));
+            SIHD_LOG(info, "Current memory: {}", str::bytes_str(os::current_rss()));
             break;
         case 7:
             SIHD_LOG(debug, "Lorem ipsum dolor sit amet, consectetur adipiscing elit");

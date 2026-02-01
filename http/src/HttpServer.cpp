@@ -37,8 +37,8 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
     _lws_protocols_ptr(nullptr),
     _polling_scheduler(this)
 {
-    _worker.set_runnable(&_polling_scheduler);
-    _worker.set_frequency(10);
+    _stepworker.set_runnable(&_polling_scheduler);
+    _stepworker.set_frequency(10);
 
     _http_header_array.resize(SIHD_HTTP_HEADERS_BUFSIZE);
     _http_response.http_header().set_server(this->name());
@@ -104,7 +104,7 @@ bool HttpServer::set_root_dir(std::string_view root_dir)
 
 bool HttpServer::set_poll_frequency(double freq)
 {
-    return _worker.set_frequency(freq);
+    return _stepworker.set_frequency(freq);
 }
 
 bool HttpServer::set_ssl_cert_path(std::string_view path)
@@ -232,14 +232,14 @@ bool HttpServer::on_start()
     // update port if _port set to 0
     _port = lws_info.port;
 
-    if (_worker.start_sync_worker(this->name() + "-callback") == false)
+    if (_stepworker.start_sync_worker(this->name() + "-callback") == false)
         return false;
 
     int n = 0;
     while (_stop == false && n >= 0)
         n = lws_service(_lws_context_ptr, 0);
 
-    _worker.stop_worker();
+    _stepworker.stop_worker();
     return true;
 }
 

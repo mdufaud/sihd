@@ -2,12 +2,12 @@
 #include <atomic>
 #include <csignal>
 
-#include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/os.hpp>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/signal.hpp>
+#include <sihd/util/time.hpp>
 
 #define FIRST_SIG 1
 #define LAST_SIG 64
@@ -17,6 +17,10 @@
 typedef void (*sighandler_t)(int);
 #endif
 
+#if defined(__SIHD_EMSCRIPTEN__)
+# include <emscripten/emscripten.h>
+#endif
+
 namespace sihd::util::signal
 {
 
@@ -24,8 +28,6 @@ SIHD_NEW_LOGGER("sihd::util::signal");
 
 namespace
 {
-
-SystemClock g_clock;
 
 SigExitConfig g_exit_config;
 
@@ -43,36 +45,47 @@ void _check_exit_config(int sig)
     if (!do_exit)
         return;
 
-    if (g_exit_config.log_signal)
-        SIHD_LOG(warning, "Signal caught '{}' ({}) - exiting", signal::name(sig), sig);
-
+#if !defined(__SIHD_EMSCRIPTEN__)
     if (g_exit_config.exit_with_sig_number)
-        exit(sig);
-
-    exit(0);
+        _exit(sig); // signal safe but won't execute atexit
+    _exit(0);
+#else
+    if (g_exit_config.exit_with_sig_number)
+        emscripten_force_exit(sig);
+    emscripten_force_exit(1);
+#endif
 }
 
 void _set_signal_received(int sig)
 {
-    sig = sig - 1;
-    if (sig >= 0 && (size_t)sig < g_signals_status.size())
+    const int idx = sig - 1;
+    if (idx >= 0 && static_cast<size_t>(idx) < g_signals_status.size())
     {
-        auto & status = g_signals_status.at(sig);
+        auto & status = g_signals_status[idx];
 
-        status.received++;
-        status.time_received = g_clock.now();
+        status.received.fetch_add(1, std::memory_order_relaxed);
+
+#if !defined(__SIHD_WINDOWS__)
+        // clock_gettime is async-signal-safe
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        status.time_received.store(time::sec(ts.tv_sec) + ts.tv_nsec, std::memory_order_relaxed);
+#else
+        // On windows, use time(nullptr) with second resolution
+        status.time_received.store(time::sec(::time(nullptr)), std::memory_order_relaxed);
+#endif
     }
 }
 
 void _reset_signal(int sig)
 {
-    sig = sig - 1;
-    if (sig >= 0 && (size_t)sig < g_signals_status.size())
+    const int idx = sig - 1;
+    if (idx >= 0 && static_cast<size_t>(idx) < g_signals_status.size())
     {
-        auto & status = g_signals_status.at(sig);
+        auto & status = g_signals_status[idx];
 
-        status.received = 0;
-        status.time_received = -1;
+        status.received.store(0, std::memory_order_relaxed);
+        status.time_received.store(-1, std::memory_order_relaxed);
     }
 }
 
@@ -89,6 +102,40 @@ void _signal_callback(int sig)
     // put errno back for program usage
     errno = tmp_errno;
 }
+
+#if defined(__SIHD_WINDOWS__)
+// Windows console control handler for better CTRL+C, CTRL+BREAK, etc. support
+BOOL WINAPI _console_ctrl_handler(DWORD ctrl_type)
+{
+    switch (ctrl_type)
+    {
+        case CTRL_C_EVENT:
+            _signal_callback(SIGINT);
+            return TRUE;
+        case CTRL_BREAK_EVENT:
+            _signal_callback(SIGTERM);
+            return TRUE;
+        case CTRL_CLOSE_EVENT:
+        case CTRL_LOGOFF_EVENT:
+        case CTRL_SHUTDOWN_EVENT:
+            _signal_callback(SIGTERM);
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
+bool g_console_handler_installed = false;
+
+bool _install_console_handler()
+{
+    if (!g_console_handler_installed)
+    {
+        g_console_handler_installed = SetConsoleCtrlHandler(_console_ctrl_handler, TRUE) != 0;
+    }
+    return g_console_handler_installed;
+}
+#endif
 
 } // namespace
 
@@ -185,6 +232,9 @@ bool ignore(int sig)
 bool handle(int sig)
 {
 #if defined(__SIHD_WINDOWS__)
+    // Install console control handler for better CTRL+C/BREAK handling
+    _install_console_handler();
+
     sighandler_t previous_handler = ::signal(sig, _signal_callback);
     if (previous_handler == SIG_ERR)
     {
@@ -241,7 +291,7 @@ std::optional<SigStatus> status(int sig)
 {
     if (sig < FIRST_SIG || sig >= LAST_SIG)
         return std::nullopt;
-    return g_signals_status.at(sig - FIRST_SIG);
+    return SigStatus(g_signals_status[sig - FIRST_SIG]);
 }
 
 bool stop_received()
@@ -339,12 +389,14 @@ std::string status_str()
         const auto status = signal::status(sig);
         if (status.has_value())
         {
-            if (status->received > 0)
+            const size_t received = status->received.load(std::memory_order_relaxed);
+            if (received > 0)
             {
+                const time_t time_received = status->time_received.load(std::memory_order_relaxed);
                 ret += fmt::format("{} -> {} ({})\n",
                                    signal::name(sig),
-                                   status->received,
-                                   Timestamp(status->time_received).day_str());
+                                   received,
+                                   Timestamp(time_received).day_str());
             }
         }
         else
@@ -356,9 +408,26 @@ std::string status_str()
     return ret;
 }
 
+SigStatus::SigStatus() = default;
+
+SigStatus::~SigStatus() = default;
+
+SigStatus::SigStatus(const SigStatus & other):
+    received(other.received.load(std::memory_order_relaxed)),
+    time_received(other.time_received.load(std::memory_order_relaxed))
+{
+}
+
+SigStatus & SigStatus::operator=(const SigStatus & other)
+{
+    received.store(other.received.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    time_received.store(other.time_received.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    return *this;
+}
+
 SigStatus::operator bool() const
 {
-    return received;
+    return received.load(std::memory_order_relaxed) > 0;
 }
 
 } // namespace sihd::util::signal

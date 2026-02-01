@@ -1,24 +1,52 @@
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/SigWatcher.hpp>
 #include <sihd/util/container.hpp>
 #include <sihd/util/signal.hpp>
 #include <sihd/util/thread.hpp>
+#include <sihd/util/time.hpp>
 
-#include <fmt/format.h>
+// signalfd is only available on Linux (not Android, not Emscripten)
+#if defined(SIHD_HAS_SIGNALFD)
+# define SIHD_HAS_SIGNALFD 1
+# include <sys/signalfd.h>
+# include <unistd.h>
+#endif
 
 namespace sihd::util
 {
 
-SigWatcher::SigWatcher(const std::string & name, Node *parent): Named(name, parent), AStepWorkerService(name)
-{
-    this->set_step_frequency(1.0);
+SIHD_LOGGER;
 
-    this->add_conf("polling_frequency", &SigWatcher::set_step_frequency);
+SigWatcher::SigWatcher(const std::string & name, Node *parent):
+    Named(name, parent),
+    _running(false),
+    _polling_interval(time::sec(1)) // Default 1 second for polling mode
+{
+#if defined(SIHD_HAS_SIGNALFD)
+    _signalfd = -1;
+    sigemptyset(&_sigset);
+#endif
+
+    this->add_conf("polling_frequency", &SigWatcher::set_polling_frequency);
 }
 
 SigWatcher::~SigWatcher()
 {
     if (this->is_running())
         this->stop();
+}
+
+bool SigWatcher::set_polling_frequency(double frequency)
+{
+    if (frequency <= 0)
+        return false;
+    _polling_interval = time::freq(frequency);
+    return true;
+}
+
+bool SigWatcher::is_running() const
+{
+    return _running.load(std::memory_order_relaxed);
 }
 
 bool SigWatcher::add_signal(int sig)
@@ -33,14 +61,21 @@ bool SigWatcher::add_signal(int sig)
         success = status.has_value();
         if (success)
         {
-            sig_controller.last_received = status->received;
+            sig_controller.last_received = status->received.load(std::memory_order_relaxed);
         }
     }
 
     if (success)
+    {
         _signals.emplace_back(sig);
+#if defined(SIHD_HAS_SIGNALFD)
+        sigaddset(&_sigset, sig);
+#endif
+    }
     else
+    {
         _sig_controllers.pop_back();
+    }
 
     return success;
 }
@@ -53,8 +88,12 @@ bool SigWatcher::add_signals(std::span<const int> signals)
 bool SigWatcher::rm_signal(int sig)
 {
     std::lock_guard l(_mutex);
-    return container::erase_if(_sig_controllers,
-                               [sig](const auto & sig_controller) { return sig_controller.sig_handler.sig() == sig; })
+#if defined(SIHD_HAS_SIGNALFD)
+    sigdelset(&_sigset, sig);
+#endif
+    return container::erase_if(
+               _sig_controllers,
+               [sig](const auto & sig_controller) { return sig_controller.sig_handler.sig() == sig; })
            && container::erase(_signals, sig);
 }
 
@@ -75,47 +114,174 @@ bool SigWatcher::call_previous_handler(int sig)
     return found;
 }
 
-bool SigWatcher::on_work_setup()
+bool SigWatcher::start()
 {
-    return true;
-}
+    if (_running.load(std::memory_order_relaxed))
+        return false;
 
-bool SigWatcher::on_work_start()
-{
+    _running.store(true, std::memory_order_relaxed);
+
+#if defined(SIHD_HAS_SIGNALFD)
+    if (sigprocmask(SIG_BLOCK, &_sigset, nullptr) == -1)
     {
-        std::lock_guard l(_mutex);
-        for (int signal : _signals)
-        {
-            auto it_sigcontroller = container::find_if(_sig_controllers, [signal](const auto & sig_controller) {
-                return sig_controller.sig_handler.sig() == signal;
-            });
-
-            const auto status = signal::status(signal);
-            if (status.has_value() && status->received != it_sigcontroller->last_received)
-            {
-                it_sigcontroller->last_received = status->received;
-                _signals_to_handle.emplace_back(signal);
-            }
-        }
+        SIHD_LOG(error, "SigWatcher: sigprocmask failed");
+        _running.store(false, std::memory_order_relaxed);
+        return false;
     }
 
-    if (_signals_to_handle.size() > 0)
+    _signalfd = signalfd(-1, &_sigset, SFD_NONBLOCK | SFD_CLOEXEC);
+    if (_signalfd == -1)
+    {
+        SIHD_LOG(error, "SigWatcher: signalfd creation failed");
+        _running.store(false, std::memory_order_relaxed);
+        return false;
+    }
+
+    _worker.set_method([this]() {
+        this->_run_signalfd_loop();
+        return true;
+    });
+#else
+    // Fallback to polling mode for Windows and Android
+    _worker.set_method([this]() {
+        this->_run_polling_loop();
+        return true;
+    });
+#endif
+
+    return _worker.start_worker("sigwatcher");
+}
+
+bool SigWatcher::stop()
+{
+    _running.store(false, std::memory_order_relaxed);
+
+#if defined(SIHD_HAS_SIGNALFD)
+    if (_signalfd >= 0)
+    {
+        ::close(_signalfd);
+        _signalfd = -1;
+    }
+
+    sigprocmask(SIG_UNBLOCK, &_sigset, nullptr);
+#endif
+
+    return _worker.stop_worker();
+}
+
+void SigWatcher::_notify_signals()
+{
+    if (!_signals_to_handle.empty())
     {
         this->notify_observers(this);
         _signals_to_handle.clear();
     }
-
-    return true;
 }
 
-bool SigWatcher::on_work_stop()
+#if defined(SIHD_HAS_SIGNALFD)
+
+void SigWatcher::_run_signalfd_loop()
 {
-    return true;
+    thread::set_name("sigwatcher");
+
+    _poll.set_read_fd(_signalfd);
+    _poll.set_timeout(100); // 100ms timeout for checking _running flag
+
+    while (_running.load(std::memory_order_relaxed))
+    {
+        int ret = _poll.poll();
+
+        if (ret < 0)
+        {
+            if (_poll.polling_error())
+            {
+                SIHD_LOG(error, "SigWatcher: poll failed");
+                break;
+            }
+            continue;
+        }
+
+        if (ret == 0 || _poll.polling_timeout())
+            continue; // Timeout, check _running flag
+
+        for (const auto & event : _poll.events())
+        {
+            if (event.fd == _signalfd && event.readable)
+            {
+                struct signalfd_siginfo siginfo;
+                ssize_t s = read(_signalfd, &siginfo, sizeof(siginfo));
+
+                if (s != sizeof(siginfo))
+                {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK)
+                        continue;
+                    SIHD_LOG(error, "SigWatcher: signalfd read failed");
+                    break;
+                }
+
+                {
+                    std::lock_guard l(_mutex);
+                    const int sig = static_cast<int>(siginfo.ssi_signo);
+
+                    auto it_sigcontroller
+                        = container::find_if(_sig_controllers, [sig](const auto & sig_controller) {
+                              return sig_controller.sig_handler.sig() == sig;
+                          });
+
+                    if (it_sigcontroller != _sig_controllers.end())
+                    {
+                        // With signalfd, signals are blocked and delivered via fd
+                        // The signal handler is never called, so we directly add to signals_to_handle
+                        it_sigcontroller->last_received++;
+                        _signals_to_handle.emplace_back(sig);
+                    }
+                }
+
+                this->_notify_signals();
+            }
+        }
+    }
+
+    _poll.clear_fd(_signalfd);
 }
 
-bool SigWatcher::on_work_teardown()
+#endif
+
+void SigWatcher::_run_polling_loop()
 {
-    return true;
+    thread::set_name("sigwatcher");
+
+    while (_running.load(std::memory_order_relaxed))
+    {
+        {
+            std::lock_guard l(_mutex);
+            for (int sig : _signals)
+            {
+                auto it_sigcontroller
+                    = container::find_if(_sig_controllers, [sig](const auto & sig_controller) {
+                          return sig_controller.sig_handler.sig() == sig;
+                      });
+
+                const auto status = signal::status(sig);
+                if (status.has_value())
+                {
+                    const size_t current_received = status->received.load(std::memory_order_relaxed);
+                    if (current_received != it_sigcontroller->last_received)
+                    {
+                        it_sigcontroller->last_received = current_received;
+                        _signals_to_handle.emplace_back(sig);
+                    }
+                }
+            }
+        }
+
+        this->_notify_signals();
+
+        // Sleep for polling interval
+        std::this_thread::sleep_for(std::chrono::nanoseconds(_polling_interval.nanoseconds()));
+    }
 }
 
 } // namespace sihd::util
+
+#undef SIHD_HAS_SIGNALFD

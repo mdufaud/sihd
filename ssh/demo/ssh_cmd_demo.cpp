@@ -1,4 +1,4 @@
-#include <cxxopts.hpp>
+#include <CLI/CLI.hpp>
 
 #include <sihd/ssh/SshCommand.hpp>
 #include <sihd/ssh/SshSession.hpp>
@@ -14,23 +14,18 @@ using namespace sihd::ssh;
 
 int main(int argc, char **argv)
 {
-    cxxopts::Options options(argv[0], "Testing utility for module util");
-    // clang-format off
-    options.add_options()
-        ("h,help", "Prints usage")
-        ("u,user", "User for the ssh connexion", cxxopts::value<std::string>())
-        ("p,password", "Password for the ssh connexion", cxxopts::value<std::string>())
-        ("H,host", "Host for the ssh connexion", cxxopts::value<std::string>())
-        ("c,cmd", "Command to execute in ssh host", cxxopts::value<std::string>());
-    // clang-format on
+    std::string user;
+    std::string password;
+    std::string host;
+    std::string cmd;
 
-    auto result = options.parse(argc, argv);
+    CLI::App app {"Testing utility for module util"};
+    app.add_option("-u,--user", user, "User for the ssh connexion")->required();
+    app.add_option("-p,--password", password, "Password for the ssh connexion");
+    app.add_option("-H,--host", host, "Host for the ssh connexion")->required();
+    app.add_option("-c,--cmd", cmd, "Command to execute in ssh host")->required();
 
-    if (result.count("help"))
-    {
-        fmt::print("{}\n", options.help());
-        return 0;
-    }
+    CLI11_PARSE(app, argc, argv);
 
     if (term::is_interactive() && os::is_unix && !os::is_emscripten)
         LoggerManager::console();
@@ -38,17 +33,12 @@ int main(int argc, char **argv)
         LoggerManager::stream();
 
     SshSession session;
-    const std::string user = result["user"].as<std::string>();
-    const std::string host = result["host"].as<std::string>();
-    const std::string cmd = result["cmd"].as<std::string>();
-
     if (!session.fast_connect(user, host))
         return EXIT_FAILURE;
 
     SshSession::AuthState auth_state {-1};
-    if (result.count("password"))
+    if (!password.empty())
     {
-        const std::string password = result["password"].as<std::string>();
         auth_state = session.auth_password(password);
     }
     else

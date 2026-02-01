@@ -39,13 +39,14 @@ if modules_forced_to_build:
 
 build_platform = builder.build_platform
 verbose = builder.build_verbose
-has_test = builder.build_tests
 
 if verbose:
     if modules_lst:
         logger.debug("getting libs from modules -> {}".format(modules_lst))
-    if has_test:
+    if builder.build_tests:
         logger.debug("including test libs")
+    if builder.build_demo:
+        logger.debug("including demo libs")
 
 skip_libs = getattr(app, "extlibs_skip", [])
 skip_libs.extend(getattr(app, f"extlibs_skip_{build_platform}", []))
@@ -65,6 +66,7 @@ if modules_to_build != "NONE":
     for deleted_modules in deleted_modules:
         logger.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
 
+    # exit if no modules to build after deleted 
     if not build_modules:
         exit(0)
 
@@ -73,12 +75,16 @@ if modules_to_build != "NONE":
         pp.pprint(build_modules)
         print()
 
-    for other_extlibs in ["test", "demo"]:
-        extlibs.update(modules.get_modules_extlibs(app, build_modules, build_platform))
-        if has_test and hasattr(app, f"{other_extlibs}_extlibs"):
-            other_libs = getattr(app, f"{other_extlibs}_extlibs")
-            extlibs.update(modules.get_extlibs_versions(app, other_libs))
+    # get external libraries from modules, tests and demo
+    extlibs.update(modules.get_modules_extlibs(app, build_modules, build_platform))
 
+    if builder.build_tests and hasattr(app, "test_extlibs"):
+        extlibs.update(modules.get_extlibs_versions(app, app.test_extlibs))
+
+    if builder.build_demo and hasattr(app, "demo_extlibs"):
+        extlibs.update(modules.get_extlibs_versions(app, app.demo_extlibs))
+
+    # emove specifically skipped libraries
     for skip_lib in skip_libs:
         if skip_lib in extlibs:
             logger.warning(f"skipping library {skip_lib}")
@@ -154,6 +160,8 @@ def build_vcpkg_triplet():
             "arm64-linux-musl",
             "arm-linux-musl",
             "riscv64-linux-musl",
+            # emscripten with threads
+            "wasm32-emscripten-threads",
         ]
 
         prefix = ""
@@ -165,7 +173,7 @@ def build_vcpkg_triplet():
 
         if builder.build_platform == "web":
             vcpkg_machine = "wasm32"
-            vcpkg_platform = "emscripten"
+            vcpkg_platform = "emscripten-threads"
 
         if builder.build_platform == "windows":
             vcpkg_platform = "mingw"
@@ -263,6 +271,10 @@ def execute_vcpkg_install():
         "--allow-unsupported",
         f"--overlay-triplets={sbt_triplet_path}",
     ]
+    
+    # Disable binary caching for emscripten to force recompilation
+    if builder.build_platform == "web":
+        args.append("--no-binarycaching")
 
     if copy_env.get("VCPKG_DEFAULT_BINARY_CACHE", None) is None:
         vcpkg_archive_path = os.path.join(vcpkg_dir_path, "archives")
@@ -273,17 +285,17 @@ def execute_vcpkg_install():
     if builder.is_msys():
         args += ["--host-triplet=x64-mingw-dynamic"]
 
-    if "arm" in vcpkg_triplet:
-        copy_env["VCPKG_FORCE_SYSTEM_BINARIES"] = "1"
-        def check_bins(list):
-            from shutil import which
-            ret = True
-            for name in list:
-                if not which(name):
-                    logger.error(f"Binary {name} is not present but needed")
-                    ret = False
-            return ret
-        assert(check_bins(["cmake", "ninja", "pkg-config"]))
+    # if "arm" in vcpkg_triplet:
+    #     copy_env["VCPKG_FORCE_SYSTEM_BINARIES"] = "1"
+    #     def check_bins(list):
+    #         from shutil import which
+    #         ret = True
+    #         for name in list:
+    #             if not which(name):
+    #                 logger.error(f"Binary {name} is not present but needed")
+    #                 ret = False
+    #         return ret
+    #     assert(check_bins(["cmake", "ninja", "pkg-config"]))
 
     if verbose:
         logger.debug(f"executing '{args}' in '{vcpkg_build_path}'")

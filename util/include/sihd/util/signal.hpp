@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_SIGNAL_HPP__
 #define __SIHD_UTIL_SIGNAL_HPP__
 
+#include <atomic>
 #include <optional>
 #include <string>
 
@@ -11,8 +12,13 @@ namespace sihd::util::signal
 
 struct SigStatus
 {
-        size_t received = 0;
-        sihd::util::Timestamp time_received = -1;
+        std::atomic<size_t> received = 0;
+        std::atomic<time_t> time_received = -1;
+
+        SigStatus();
+        ~SigStatus();
+        SigStatus(const SigStatus & other);
+        SigStatus & operator=(const SigStatus & other);
 
         operator bool() const;
 };

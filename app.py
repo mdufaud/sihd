@@ -68,6 +68,19 @@ extlibs_skip = [
     "libbluetooth",
 ]
 
+# on web: those libs don't compile properly with emscripten threading
+extlibs_skip_web = [
+    "openssl",
+    "libwebsockets",
+    "curl",
+    "libssh",
+    "libpcap",
+    "libusb",
+    "libxcrypt",
+    "ftxui",
+    "imgui",
+]
+
 vcpkg_baseline = "38d9cf0bd45404cd25aeb03f79bcb0af256de343"
 
 ###############################################################################

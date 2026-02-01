@@ -31,12 +31,29 @@ bool SigHandler::handle(int sig)
     this->unhandle();
 
     _sig = sig;
-    _previous_handler = std::signal(sig, SIG_DFL);
 
+#if defined(__SIHD_WINDOWS__)
+    // On Windows, we must use std::signal which installs and returns previous handler
+    // We temporarily install SIG_DFL just to get the previous handler, then immediately
+    // install our custom handler via signal::handle()
+    _previous_handler = std::signal(sig, SIG_DFL);
     if (_previous_handler == SIG_ERR)
     {
         SIHD_LOG(warning, "SigHandler: could not get previous handler for signal '{}'", _sig);
     }
+#else
+    // On POSIX, use sigaction to query previous handler without installing anything
+    struct sigaction old_sa;
+    if (sigaction(sig, nullptr, &old_sa) == 0)
+    {
+        _previous_handler = old_sa.sa_handler;
+    }
+    else
+    {
+        SIHD_LOG(warning, "SigHandler: could not get previous handler for signal '{}'", _sig);
+        _previous_handler = SIG_ERR;
+    }
+#endif
 
     return signal::handle(sig);
 }
