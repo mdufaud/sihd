@@ -1,6 +1,5 @@
 #include <sys/time.h>
 
-#include <iomanip>
 #include <locale>
 #include <sstream>
 
@@ -9,6 +8,10 @@
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
+
+#if !defined(__cpp_lib_chrono) || __cpp_lib_chrono < 201907L
+# include <iomanip>
+#endif
 
 namespace sihd::util
 {

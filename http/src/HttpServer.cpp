@@ -235,6 +235,8 @@ bool HttpServer::on_start()
     if (_stepworker.start_sync_worker(this->name() + "-callback") == false)
         return false;
 
+    this->service_set_ready();
+
     int n = 0;
     while (_stop == false && n >= 0)
         n = lws_service(_lws_context_ptr, 0);

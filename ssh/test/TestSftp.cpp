@@ -7,11 +7,14 @@
 #include <sihd/util/os.hpp>
 #include <sihd/util/term.hpp>
 
+#include "ssh_test_helpers.hpp"
+
 namespace test
 {
 SIHD_LOGGER;
 using namespace sihd::ssh;
 using namespace sihd::util;
+
 class TestSftp: public ::testing::Test
 {
     protected:
@@ -32,12 +35,13 @@ TEST_F(TestSftp, test_sftp)
     sihd::util::fs::remove_directories(test_dir);
     sihd::util::fs::make_directories(test_dir);
 
-    std::string user = getenv("USER");
-    SshSession session;
+    // Start test server with SFTP enabled, using tmp_dir as root
+    auto test_server = make_test_server_with_sftp("test-sftp", "/");
+    ASSERT_NE(test_server, nullptr);
 
-    GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
+    SshSession session;
+    ASSERT_TRUE(connect_to_test_server(*test_server, session));
     EXPECT_TRUE(session.connected());
-    EXPECT_TRUE(session.auth_key_auto().success());
 
     Sftp sftp = session.make_sftp();
     ASSERT_TRUE(sftp.open());
@@ -63,7 +67,7 @@ TEST_F(TestSftp, test_sftp)
 
     std::vector<SftpAttribute> attrs;
     EXPECT_TRUE(sftp.list_dir(test_dir, attrs));
-    EXPECT_EQ(list.size(), 3u);
+    EXPECT_EQ(attrs.size(), 3u);
     int nlink = 0;
     int nregular = 0;
     int ndir = 0;

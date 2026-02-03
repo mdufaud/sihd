@@ -10,7 +10,7 @@ git_url = "https://github.com/mdufaud/sihd.git"
 
 extlibs = {
     # unit test
-    "gtest": "1.11.0",
+    "gtest": "1.17.0#2",
     # json parsing
     "nlohmann-json": "3.12.0#1",
     # util
@@ -34,6 +34,7 @@ extlibs = {
     "imgui": "1.86",
     "libxcrypt": "4.4.38", #fixes a compilation issue with imgui
     # bindings
+    "python3": "3.12.9",
     "pybind11": "3.0.1",
     # compressing utility
     "libzip": "1.7.3",

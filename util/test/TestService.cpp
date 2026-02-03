@@ -50,6 +50,7 @@ class FakeBlockingService: public ABlockingService
 
         bool on_start() override
         {
+            this->service_set_ready();
             started = true;
             return true;
         }
@@ -273,14 +274,19 @@ TEST_F(TestService, test_service_blocking)
     EXPECT_FALSE(service.is_running());
 
     EXPECT_TRUE(service.start());
+    EXPECT_TRUE(service.wait_ready(time::ms(500)));
+    EXPECT_TRUE(service.is_ready());
     EXPECT_TRUE(service.is_running());
     EXPECT_FALSE(service.start());
 
     EXPECT_TRUE(service.stop());
     EXPECT_FALSE(service.is_running());
+    EXPECT_FALSE(service.is_ready());
     EXPECT_FALSE(service.stop());
 
     EXPECT_TRUE(service.start());
+    EXPECT_TRUE(service.wait_ready(time::ms(500)));
+    EXPECT_TRUE(service.is_ready());
     EXPECT_TRUE(service.is_running());
     EXPECT_FALSE(service.start());
 

@@ -1302,23 +1302,24 @@ void Process::handle(Poll *poll)
 
 bool Process::on_start()
 {
-    bool ret = this->execute();
+    const bool ret = this->execute();
 
-#if !defined(__SIHD_WINDOWS__)
-    if (ret && _poll.max_fds() > 0)
-    {
-        _poll.start();
-    }
-#else
     if (ret)
     {
+        this->service_set_ready();
+#if !defined(__SIHD_WINDOWS__)
+        if (_poll.max_fds() > 0)
+        {
+            _poll.start();
+        }
+#else
         while (this->is_running())
         {
             constexpr DWORD timeout_ms = 50;
             this->read_pipes(timeout_ms);
         }
-    }
 #endif
+    }
 
     return ret;
 }

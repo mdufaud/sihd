@@ -16,6 +16,8 @@ class SshSession
 {
     public:
         SshSession();
+        // Constructor for server-side sessions (wraps an accepted session)
+        SshSession(ssh_session_struct *session);
         virtual ~SshSession();
 
         bool new_session();
@@ -105,11 +107,15 @@ class SshSession
         const char *error() const;
         int error_code() const;
 
+        void set_userdata(void *userdata) { _userdata = userdata; }
+        void *userdata() const { return _userdata; }
+
     protected:
 
     private:
         ssh_session_struct *_ssh_session_ptr;
         bool _auth_none_once;
+        void *_userdata;
 };
 
 } // namespace sihd::ssh

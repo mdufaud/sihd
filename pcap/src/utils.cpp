@@ -55,7 +55,7 @@ bool lookupnet(std::string_view dev, bpf_u_int32 *ip, bpf_u_int32 *mask)
     int ret = pcap_lookupnet(dev.data(), ip, mask, errbuf);
     if (ret != 0)
         SIHD_LOG(error, "{}", errbuf);
-    return ret;
+    return ret == 0;
 }
 
 bool is_datalink(int dtl)

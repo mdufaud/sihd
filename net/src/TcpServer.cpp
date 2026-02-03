@@ -139,11 +139,18 @@ bool TcpServer::on_start()
     if (ret == false)
     {
         this->_setup_poll();
-        ret = _server_handler_ptr != nullptr;
-        if (!ret)
+        if ((ret = _server_handler_ptr != nullptr))
+        {
+            if ((ret = _socket.listen(this->queue_size())))
+            {
+                this->service_set_ready();
+                ret = _poll.start();
+            }
+        }
+        else
+        {
             SIHD_LOG(error, "TcpServer: cannot serve without a server handler");
-        ret = ret && _socket.listen(this->queue_size());
-        ret = ret && _poll.start();
+        }
     }
     return ret;
 }

@@ -1,37 +1,47 @@
 #include <libssh/libssh.h>
+#include <libssh/server.h>
 
 #include <sihd/ssh/SshChannel.hpp>
+#include <sihd/ssh/utils.hpp>
 
 #include <sihd/util/Logger.hpp>
 
-#define WHILE_SSH_AGAIN_AND_RETURN(method)                                                                             \
- {                                                                                                                     \
-  int r;                                                                                                               \
-  while ((r = method) == SSH_AGAIN)                                                                                    \
-  {                                                                                                                    \
-   ;                                                                                                                   \
-  }                                                                                                                    \
-  return r == SSH_OK;                                                                                                  \
- }
+#define WHILE_SSH_AGAIN_AND_RETURN(method)                                                                   \
+    {                                                                                                        \
+        int r;                                                                                               \
+        while ((r = method) == SSH_AGAIN)                                                                    \
+        {                                                                                                    \
+            ;                                                                                                \
+        }                                                                                                    \
+        return r == SSH_OK;                                                                                  \
+    }
 
 namespace sihd::ssh
 {
 
 SIHD_LOGGER;
 
-SshChannel::SshChannel(ssh_channel_struct *channel): _ssh_channel_ptr(channel) {}
+SshChannel::SshChannel(ssh_channel_struct *channel): _ssh_channel_ptr(channel), _userdata(nullptr)
+{
+    utils::init();
+}
 
 SshChannel::~SshChannel()
 {
     this->clear_channel();
+    utils::finalize();
 }
 
 void SshChannel::clear_channel()
 {
     if (_ssh_channel_ptr != nullptr)
     {
-        this->close();
-        this->send_eof();
+        // Only try to close/send_eof if the channel is still open
+        if (ssh_channel_is_open(_ssh_channel_ptr) && !ssh_channel_is_closed(_ssh_channel_ptr))
+        {
+            this->send_eof();
+            this->close();
+        }
         ssh_channel_free(_ssh_channel_ptr);
         _ssh_channel_ptr = nullptr;
     }
@@ -64,12 +74,18 @@ bool SshChannel::open_x11(std::string_view addr, int port)
     WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_x11(_ssh_channel_ptr, addr.data(), port));
 }
 
-bool SshChannel::open_forward(std::string_view remotehost, int remoteport, std::string_view sourcehost, int localport)
+bool SshChannel::open_forward(std::string_view remotehost,
+                              int remoteport,
+                              std::string_view sourcehost,
+                              int localport)
 {
     if (_ssh_channel_ptr == nullptr)
         return false;
-    WHILE_SSH_AGAIN_AND_RETURN(
-        ssh_channel_open_forward(_ssh_channel_ptr, remotehost.data(), remoteport, sourcehost.data(), localport));
+    WHILE_SSH_AGAIN_AND_RETURN(ssh_channel_open_forward(_ssh_channel_ptr,
+                                                        remotehost.data(),
+                                                        remoteport,
+                                                        sourcehost.data(),
+                                                        localport));
 }
 
 #if LIBSSH_VERSION_MINOR > 7
@@ -213,6 +229,28 @@ bool SshChannel::send_eof()
 bool SshChannel::is_eof()
 {
     return ssh_channel_is_eof(_ssh_channel_ptr) != 0;
+}
+
+bool SshChannel::request_send_exit_status(int exit_status)
+{
+    if (_ssh_channel_ptr == nullptr)
+        return false;
+    return ssh_channel_request_send_exit_status(_ssh_channel_ptr, exit_status) == SSH_OK;
+}
+
+bool SshChannel::request_send_exit_signal(std::string_view signum,
+                                          bool core_dumped,
+                                          std::string_view errmsg,
+                                          std::string_view lang)
+{
+    if (_ssh_channel_ptr == nullptr)
+        return false;
+    return ssh_channel_request_send_exit_signal(_ssh_channel_ptr,
+                                                signum.data(),
+                                                core_dumped ? 1 : 0,
+                                                errmsg.data(),
+                                                lang.data())
+           == SSH_OK;
 }
 
 int SshChannel::read(sihd::util::IArray & array)

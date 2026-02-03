@@ -3,8 +3,10 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/fmt.hpp>
 
 #include <sihd/ssh/SshShell.hpp>
+#include <sihd/ssh/utils.hpp>
 
 namespace sihd::ssh
 {
@@ -13,9 +15,15 @@ using namespace sihd::util;
 
 SIHD_LOGGER;
 
-SshShell::SshShell(ssh_session_struct *session): _ssh_session_ptr(session) {}
+SshShell::SshShell(ssh_session_struct *session): _ssh_session_ptr(session)
+{
+    utils::init();
+}
 
-SshShell::~SshShell() = default;
+SshShell::~SshShell()
+{
+    utils::finalize();
+}
 
 bool SshShell::open(bool x11)
 {

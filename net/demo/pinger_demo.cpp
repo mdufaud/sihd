@@ -54,19 +54,10 @@ int main(int argc, char **argv)
 
     SIHD_LOG(notice, "Sending {} pings to {} ({})", npings, host, hostaddr.str());
 
-    sihd::util::SigWatcher watcher("signal-watcher");
-    watcher.add_signal(SIGINT);
-    watcher.set_polling_frequency(5);
-
-    Handler<SigWatcher *> sig_handler([&pinger](SigWatcher *watcher) {
-        auto & catched_signals = watcher->catched_signals();
-        if (catched_signals.empty())
-            return;
+    SigWatcher watcher({SIGINT}, [&pinger]([[maybe_unused]] int sig) {
         SIHD_LOG(notice, "Stopping ping");
         pinger.stop();
     });
-    watcher.add_observer(&sig_handler);
-    watcher.start();
 
     SIHD_LOG(notice, "Press ctrl+C to stop or wait until all pings are done");
 

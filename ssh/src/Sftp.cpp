@@ -9,6 +9,7 @@
 #include <sihd/util/Logger.hpp>
 
 #include <sihd/ssh/Sftp.hpp>
+#include <sihd/ssh/utils.hpp>
 
 #ifndef SIHD_SSH_SFTP_BUFSIZE
 # define SIHD_SSH_SFTP_BUFSIZE 4096
@@ -60,11 +61,15 @@ using SftpAttributePtr = std::unique_ptr<sftp_attributes_struct, SftpAttributeDe
 
 SIHD_LOGGER;
 
-Sftp::Sftp(ssh_session_struct *session): _ssh_session_ptr(session), _sftp_session_ptr(nullptr) {}
+Sftp::Sftp(ssh_session_struct *session): _ssh_session_ptr(session), _sftp_session_ptr(nullptr)
+{
+    utils::init();
+}
 
 Sftp::~Sftp()
 {
     this->close();
+    utils::finalize();
 }
 
 bool Sftp::open()

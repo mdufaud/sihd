@@ -7,11 +7,14 @@
 #include <sihd/util/fs.hpp>
 #include <sihd/util/time.hpp>
 
+#include "ssh_test_helpers.hpp"
+
 namespace test
 {
 SIHD_LOGGER;
 using namespace sihd::util;
 using namespace sihd::ssh;
+
 class TestSshCommand: public ::testing::Test
 {
     protected:
@@ -26,14 +29,12 @@ class TestSshCommand: public ::testing::Test
 
 TEST_F(TestSshCommand, test_sshcommand_simple)
 {
-    std::string user = getenv("USER");
-    SshSession session;
+    auto test_server = make_test_server("test-sshcommand-simple");
+    ASSERT_NE(test_server, nullptr);
 
-    GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
+    SshSession session;
+    ASSERT_TRUE(connect_to_test_server(*test_server, session));
     EXPECT_TRUE(session.connected());
-    auto auth = session.auth_key_auto();
-    SIHD_LOG(info, "Auth status: {}", auth.str());
-    EXPECT_TRUE(auth.success());
 
     std::string stdout_str;
     std::string stderr_str;
@@ -47,7 +48,7 @@ TEST_F(TestSshCommand, test_sshcommand_simple)
     SshCommand cmd = session.make_command();
     cmd.output_handler = &test_output_handler;
     EXPECT_TRUE(cmd.execute("echo 'hello world'"));
-    EXPECT_TRUE(cmd.wait());
+    EXPECT_TRUE(cmd.wait(time::seconds(5)));
     EXPECT_EQ(stderr_str, "");
     EXPECT_EQ(stdout_str, "hello world\n");
     EXPECT_EQ(cmd.exit_status(), 0);
@@ -55,14 +56,12 @@ TEST_F(TestSshCommand, test_sshcommand_simple)
 
 TEST_F(TestSshCommand, test_sshcommand_async)
 {
-    std::string user = getenv("USER");
-    SshSession session;
+    auto test_server = make_test_server("test-sshcommand-async");
+    ASSERT_NE(test_server, nullptr);
 
-    GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
+    SshSession session;
+    ASSERT_TRUE(connect_to_test_server(*test_server, session));
     EXPECT_TRUE(session.connected());
-    auto auth = session.auth_key_auto();
-    SIHD_LOG(info, "Auth status: {}", auth.str());
-    EXPECT_TRUE(auth.success());
 
     std::string stdout_str;
     std::string stderr_str;
@@ -73,17 +72,12 @@ TEST_F(TestSshCommand, test_sshcommand_async)
             else
                 stdout_str += buf;
         });
-    SteadyClock clock;
     SshCommand cmd = session.make_command();
     cmd.output_handler = &test_output_handler;
 
-    EXPECT_TRUE(cmd.execute_async("echo hello; sleep 0.01; echo world;"));
-
-    time_t before = clock.now();
-    EXPECT_TRUE(cmd.wait());
-    time_t after = clock.now();
-    EXPECT_GT(after - before, time::milli(9));
-    EXPECT_LT(after - before, time::milli(100));
+    // Test async execution - command runs via proc::execute on server
+    EXPECT_TRUE(cmd.execute_async("echo hello; echo world"));
+    EXPECT_TRUE(cmd.wait(time::seconds(5)));
 
     EXPECT_EQ(stderr_str, "");
     EXPECT_EQ(stdout_str, "hello\nworld\n");

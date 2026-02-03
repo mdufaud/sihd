@@ -137,6 +137,8 @@ bool Pinger::on_start()
         return false;
     }
 
+    this->service_set_ready();
+
     // setup ping
     this->_clear_event();
     _result.clear();

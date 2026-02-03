@@ -30,6 +30,14 @@ class SigWatcher: public Named,
         using Callback = std::function<void(int)>;
 
         SigWatcher(const std::string & name, Node *parent = nullptr);
+
+        /**
+         * @brief Simple constructor with signals and callback, auto-starts the watcher
+         * @param signals List of signals to watch (e.g., {SIGINT, SIGTERM})
+         * @param callback Function called when a signal is received
+         */
+        SigWatcher(std::initializer_list<int> signals, Callback callback);
+
         ~SigWatcher();
 
         bool set_polling_frequency(double frequency);
@@ -71,6 +79,8 @@ class SigWatcher: public Named,
 
         std::vector<int> _signals;
         std::vector<int> _signals_to_handle;
+
+        Callback _callback;
 
         Worker _worker;
         std::atomic<bool> _running;

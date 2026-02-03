@@ -55,6 +55,8 @@ class Collector: public Observable<Collector<T>>,
     protected:
         bool on_start() override
         {
+            this->service_set_ready();
+
             _running = true;
             while (_running && _provider_ptr->providing())
             {

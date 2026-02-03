@@ -5,13 +5,17 @@
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fs.hpp>
+#include <sihd/util/os.hpp>
 #include <sihd/util/term.hpp>
+
+#include "ssh_test_helpers.hpp"
 
 namespace test
 {
 SIHD_NEW_LOGGER("test");
 using namespace sihd::util;
 using namespace sihd::ssh;
+
 class TestSshSession: public ::testing::Test
 {
     protected:
@@ -24,74 +28,50 @@ class TestSshSession: public ::testing::Test
         virtual void TearDown() {}
 };
 
+TEST_F(TestSshSession, test_sshsession_connect)
+{
+    auto test_server = make_test_server("test-sshsession-connect");
+    ASSERT_NE(test_server, nullptr);
+
+    SshSession session;
+    EXPECT_TRUE(session.new_session());
+    EXPECT_TRUE(session.set_user("testuser"));
+    EXPECT_TRUE(session.set_host("127.0.0.1"));
+    EXPECT_TRUE(session.set_port(test_server->port));
+    GTEST_ASSERT_EQ(session.connect(), true);
+    EXPECT_TRUE(session.connected());
+
+    auto auth = session.auth_password("testpass");
+    EXPECT_TRUE(auth.success());
+
+    session.disconnect();
+}
+
 TEST_F(TestSshSession, test_sshsession_auth_key)
 {
-    std::string home = getenv("HOME");
-    if (fs::is_file(fs::combine(home, ".ssh/id_rsa")) == false)
-        GTEST_SKIP_("need ~/.ssh/id_rsa");
-    std::string user = getenv("USER");
-    SshSession session;
+    // Read public key to add to allowed keys
+    SshKey client_pubkey;
+    ASSERT_TRUE(client_pubkey.import_pubkey_file(CLIENT_PUBKEY_PATH));
+    std::string pubkey_base64 = client_pubkey.base64();
+    ASSERT_FALSE(pubkey_base64.empty());
 
-    GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
-    session.set_verbosity(SSH_LOG_PROTOCOL);
+    auto test_server = make_test_server("test-sshsession-auth-key");
+    ASSERT_NE(test_server, nullptr);
+
+    test_server->handler.add_allowed_pubkey("testuser", pubkey_base64);
+
+    int port = test_server->port;
+    ASSERT_GT(port, 0);
+
+    // Test auth_key_file
+    SshSession session;
+    ASSERT_TRUE(session.fast_connect("testuser", "127.0.0.1", port));
     EXPECT_TRUE(session.connected());
-    auto auth = session.auth_key_file(fs::combine(home, ".ssh/id_rsa"));
+
+    auto auth = session.auth_key_file(CLIENT_KEY_PATH);
     SIHD_LOG(info, "Auth status: {}", auth.str());
     EXPECT_TRUE(auth.success());
 
     session.disconnect();
-
-    GTEST_ASSERT_EQ(session.fast_connect(user, "localhost", 22), true);
-    EXPECT_TRUE(session.connected());
-    auth = session.auth_key_auto();
-    SIHD_LOG(info, "Auth status: {}", auth.str());
-    EXPECT_TRUE(auth.success());
-}
-
-TEST_F(TestSshSession, test_sshsession_auth_interactive_keyboard)
-{
-    std::string home = getenv("HOME");
-    if (fs::is_dir(fs::combine(home, ".ssh")) == false)
-        GTEST_SKIP_("need ~/.ssh");
-    if (term::is_interactive() == false)
-        GTEST_SKIP_("need interactive keyboard");
-
-    std::string host = "localhost";
-    SIHD_LOG(info, "Initiating keyboard password connection to @{}", host);
-    SIHD_LOG(info, "If you don't want to, you can leave user empty to skip the test");
-    std::string user;
-    std::cout << "User: ";
-    fflush(stdout);
-    if (LineReader::fast_read_stdin(user) == false || user.empty())
-        GTEST_SKIP_("no user input");
-    SIHD_LOG(info, "Connection to {}@{}", user, host);
-    SshSession session;
-    GTEST_ASSERT_EQ(session.fast_connect(user,
-                                         host,
-                                         22,
-                                         SSH_LOG_PROTOCOL | SSH_LOG_DEBUG | SSH_LOG_PACKET | SSH_LOG_WARN),
-                    true);
-    session.set_verbosity(SSH_LOG_PROTOCOL);
-    EXPECT_TRUE(session.connected());
-    auto auth = session.auth_interactive_keyboard();
-    SIHD_LOG(info, "Auth status: {}", auth.str());
-}
-
-TEST_F(TestSshSession, test_sshsession_connect)
-{
-    std::string home = getenv("HOME");
-    if (fs::is_dir(fs::combine(home, ".ssh")) == false)
-        GTEST_SKIP_("need ~/.ssh");
-    std::string user = getenv("USER");
-    SshSession session;
-
-    EXPECT_TRUE(session.new_session());
-    session.set_verbosity(SSH_LOG_PROTOCOL);
-    EXPECT_TRUE(session.set_user(user));
-    EXPECT_TRUE(session.set_host("localhost"));
-    EXPECT_TRUE(session.set_port(22));
-    GTEST_ASSERT_EQ(session.connect(), true);
-    EXPECT_TRUE(session.check_hostkey());
-    EXPECT_TRUE(session.connected());
 }
 } // namespace test

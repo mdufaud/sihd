@@ -3,17 +3,22 @@
 #include <sihd/util/Logger.hpp>
 
 #include <sihd/ssh/SshKey.hpp>
+#include <sihd/ssh/utils.hpp>
 
 namespace sihd::ssh
 {
 
 SIHD_NEW_LOGGER("sihd::ssh");
 
-SshKey::SshKey(ssh_key_struct *key): _ssh_key_ptr(key) {}
+SshKey::SshKey(ssh_key_struct *key): _ssh_key_ptr(key)
+{
+    utils::init();
+}
 
 SshKey::~SshKey()
 {
     this->clear_key();
+    utils::finalize();
 }
 
 void SshKey::set_key(ssh_key_struct *key)
@@ -96,6 +101,31 @@ bool SshKey::is_public() const
 bool SshKey::is_private() const
 {
     return _ssh_key_ptr != nullptr && ssh_key_is_private(_ssh_key_ptr);
+}
+
+std::string SshKey::base64() const
+{
+    if (_ssh_key_ptr == nullptr)
+        return {};
+
+    char *b64_key = nullptr;
+    if (ssh_pki_export_pubkey_base64(_ssh_key_ptr, &b64_key) != SSH_OK)
+        return {};
+
+    std::string result(b64_key);
+    ssh_string_free_char(b64_key);
+    return result;
+}
+
+bool SshKey::export_privkey_file(std::string_view path, const char *passphrase) const
+{
+    if (_ssh_key_ptr == nullptr || !this->is_private())
+    {
+        SIHD_LOG(error, "SshKey: cannot export - no private key available");
+        return false;
+    }
+
+    return ssh_pki_export_privkey_file(_ssh_key_ptr, passphrase, nullptr, nullptr, path.data()) == SSH_OK;
 }
 
 enum ssh_keytypes_e SshKey::type_from_name(std::string_view name)

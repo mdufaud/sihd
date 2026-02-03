@@ -226,21 +226,11 @@ TEST_F(TestHttpServer, test_httpserver_websockets)
     server.set_root_dir("test/resources/mount_point");
     server.set_port(3000);
 
-    sihd::util::SigWatcher watcher("signal-watcher");
-
-    watcher.add_signal(SIGINT);
-    watcher.set_polling_frequency(5);
-
-    Handler<SigWatcher *> sig_handler([&server](SigWatcher *watcher) {
-        auto & catched_signals = watcher->catched_signals();
-        if (catched_signals.empty())
-            return;
+    SigWatcher watcher({SIGINT}, [&server]([[maybe_unused]] int sig) {
         SIHD_LOG(info, "Stopping http server...");
         server.stop();
         SIHD_LOG(info, "Stopped http server");
     });
-    watcher.add_observer(&sig_handler);
-    watcher.start();
 
     SIHD_LOG(info, "=========================================================");
     SIHD_LOG(info, "Open web browser at http://localhost:3000 then close it");

@@ -132,21 +132,11 @@ static void http_test()
 {
     SimpleHttpServer server;
 
-    sihd::util::SigWatcher watcher("signal-watcher");
-
-    watcher.add_signal(SIGINT);
-    watcher.set_polling_frequency(5);
-
-    Handler<SigWatcher *> sig_handler([&server](SigWatcher *watcher) {
-        auto & catched_signals = watcher->catched_signals();
-        if (catched_signals.empty())
-            return;
+    SigWatcher watcher({SIGINT}, [&server]([[maybe_unused]] int sig) {
         SIHD_LOG(info, "Stopping http server...");
         server.stop();
         SIHD_LOG(info, "Stopped http server");
     });
-    watcher.add_observer(&sig_handler);
-    watcher.start();
 
     std::string root_path = fs::parent(fs::parent(fs::executable_path()));
     std::string res_path = fs::combine({root_path, "etc", "sihd", "demo", "http_demo"});

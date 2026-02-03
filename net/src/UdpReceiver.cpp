@@ -94,6 +94,7 @@ void UdpReceiver::_setup_poll()
 bool UdpReceiver::on_start()
 {
     this->_setup_poll();
+    this->service_set_ready();
     std::lock_guard lock(_poll_mutex);
     return _poll.start();
 }

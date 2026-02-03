@@ -273,9 +273,11 @@ def execute_vcpkg_install():
         f"--overlay-triplets={sbt_triplet_path}",
     ]
     
-    # Disable binary caching for emscripten to force recompilation
-    if builder.build_platform == "web":
-        args.append("--no-binarycaching")
+    # force recompilation
+    # if builder.build_platform == "web":
+    #     args.append("--no-binarycaching")
+
+    copy_env["VCPKG_BINARY_SOURCES"] = "clear;default"
 
     if copy_env.get("VCPKG_DEFAULT_BINARY_CACHE", None) is None:
         vcpkg_archive_path = os.path.join(vcpkg_dir_path, "archives")

@@ -72,6 +72,13 @@ class SshChannel
         bool send_eof();
         bool is_eof();
 
+        // Server-side methods
+        bool request_send_exit_status(int exit_status);
+        bool request_send_exit_signal(std::string_view signum,
+                                      bool core_dumped,
+                                      std::string_view errmsg,
+                                      std::string_view lang);
+
         // ABRT - ALRM - FPE - HUP - ILL - INT - KILL - PIPE - QUIT - SEGV - TERM - USR1 - USR2
         bool send_signal(std::string_view sig);
 
@@ -80,12 +87,22 @@ class SshChannel
         ssh_channel_struct *channel() const { return _ssh_channel_ptr; }
         ssh_session_struct *session() const;
 
+        void set_userdata(void *userdata) { _userdata = userdata; }
+        void *userdata() const { return _userdata; }
+
+        /**
+         * Detach the channel pointer without freeing it.
+         * Use when libssh has already freed the channel (e.g., session close).
+         */
+        void detach() { _ssh_channel_ptr = nullptr; }
+
     protected:
 
     private:
         void _init_channel_if_none();
 
         ssh_channel_struct *_ssh_channel_ptr;
+        void *_userdata;
 };
 
 } // namespace sihd::ssh

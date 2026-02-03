@@ -231,6 +231,9 @@ bool Poll::on_start()
         SIHD_LOG(error, "Poll: cannot start polling without a timeout");
         return false;
     }
+
+    this->service_set_ready();
+
     _stop = false;
     int ret = 0;
     while (ret >= 0 && _stop == false)

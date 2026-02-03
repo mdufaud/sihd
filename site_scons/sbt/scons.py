@@ -149,8 +149,8 @@ base_env = Environment(
     CPPFLAGS = getattr(app, 'flags', []),
     # extra #define for inside the code
     CPPDEFINES = getattr(app, 'defines', []),
-    # link flags
-    LINKFLAGS = getattr(app, 'link', []),
+    # link flags - explicitly add -L flags to ensure extlib paths are searched before system paths
+    LINKFLAGS = [f"-L{builder.build_lib_path}", f"-L{builder.build_extlib_lib_path}"] + getattr(app, 'link', []),
     # link flags for binaries
     BIN_LINKFLAGS = getattr(app, 'bin_link', []),
     # headers path

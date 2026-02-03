@@ -30,6 +30,17 @@ SigWatcher::SigWatcher(const std::string & name, Node *parent):
     this->add_conf("polling_frequency", &SigWatcher::set_polling_frequency);
 }
 
+SigWatcher::SigWatcher(std::initializer_list<int> signals, Callback callback):
+    SigWatcher("sig-watcher", nullptr)
+{
+    _callback = std::move(callback);
+
+    for (int sig : signals)
+        this->add_signal(sig);
+
+    this->start();
+}
+
 SigWatcher::~SigWatcher()
 {
     if (this->is_running())
@@ -173,6 +184,11 @@ void SigWatcher::_notify_signals()
 {
     if (!_signals_to_handle.empty())
     {
+        if (_callback)
+        {
+            for (int sig : _signals_to_handle)
+                _callback(sig);
+        }
         this->notify_observers(this);
         _signals_to_handle.clear();
     }

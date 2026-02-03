@@ -4,9 +4,11 @@
 
 #include <sihd/util/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/fmt.hpp>
 #include <sihd/util/str.hpp>
 
 #include <sihd/ssh/SshSession.hpp>
+#include <sihd/ssh/utils.hpp>
 
 namespace sihd::ssh
 {
@@ -27,7 +29,10 @@ struct SshKeyHashDeleter
 
 using SshKeyHash = std::unique_ptr<uint8_t, SshKeyHashDeleter>;
 
-bool anon_ssh_options_set(ssh_session_struct *session, const char *from, ssh_options_e option, const void *value)
+bool anon_ssh_options_set(ssh_session_struct *session,
+                          const char *from,
+                          ssh_options_e option,
+                          const void *value)
 {
     int r = ssh_options_set(session, option, value);
     if (r != SSH_OK)
@@ -37,16 +42,18 @@ bool anon_ssh_options_set(ssh_session_struct *session, const char *from, ssh_opt
 
 } // namespace
 
-SshSession::SshSession(): _ssh_session_ptr()
+SshSession::SshSession(ssh_session_struct *session): _ssh_session_ptr(session), _userdata(nullptr)
 {
+    utils::init();
     _auth_none_once = false;
-    ssh_init();
 }
+
+SshSession::SshSession(): SshSession(nullptr) {}
 
 SshSession::~SshSession()
 {
     this->delete_session();
-    ssh_finalize();
+    utils::finalize();
 }
 
 bool SshSession::fast_connect(std::string_view user, std::string_view host, int port, int verbosity)
@@ -95,7 +102,9 @@ bool SshSession::check_hostkey()
     ret = ssh_get_publickey_hash(pubkey_ptr, SSH_PUBLICKEY_HASH_SHA1, &hash_ptr, &hash_len);
     if (ret == SSH_ERROR)
     {
-        SIHD_LOG(error, "SshSession: failed to get public key sha1 hash: {}", ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error,
+                 "SshSession: failed to get public key sha1 hash: {}",
+                 ssh_get_error(_ssh_session_ptr));
         return false;
     }
     SshKeyHash hash_pubkey(hash_ptr);
@@ -116,7 +125,10 @@ bool SshSession::check_hostkey()
             return true;
         default:
             hexa = ssh_get_hexa(hash_ptr, hash_len);
-            SIHD_LOG(error, "SshSession: host key verification failed: {} (code = {})", hexa, state);
+            SIHD_LOG(error,
+                     "SshSession: host key verification failed: {} (code = {})",
+                     hexa,
+                     static_cast<int>(state));
             break;
     }
 #else

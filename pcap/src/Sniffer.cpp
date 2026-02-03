@@ -93,6 +93,7 @@ void Sniffer::_callback(u_char *user, const struct pcap_pkthdr *h, const u_char 
 
 bool Sniffer::on_start()
 {
+    this->service_set_ready();
     int ret = pcap_loop(_pcap_ptr, _max_sniff, Sniffer::_callback, (u_char *)this);
     if (ret == PCAP_ERROR)
     {
@@ -333,7 +334,9 @@ bool Sniffer::set_direction(std::string_view direction)
         dir = PCAP_D_INOUT;
     else
     {
-        SIHD_LOG(error, "Sniffer: packet direction unknown: '{}' possible values are: in - out - both", direction);
+        SIHD_LOG(error,
+                 "Sniffer: packet direction unknown: '{}' possible values are: in - out - both",
+                 direction);
         return false;
     }
     int ret = pcap_setdirection(_pcap_ptr, dir);
@@ -410,7 +413,8 @@ bool Sniffer::set_timestamp_type(int ts_type)
 
 bool Sniffer::set_timestamp_nano(bool active)
 {
-    int ret = pcap_set_tstamp_precision(_pcap_ptr, active ? PCAP_TSTAMP_PRECISION_NANO : PCAP_TSTAMP_PRECISION_MICRO);
+    int ret = pcap_set_tstamp_precision(_pcap_ptr,
+                                        active ? PCAP_TSTAMP_PRECISION_NANO : PCAP_TSTAMP_PRECISION_MICRO);
     this->_log_if_error(ret);
     _nano_precision = ret == 0 && active;
     return ret == 0;

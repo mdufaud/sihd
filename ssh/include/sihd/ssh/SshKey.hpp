@@ -44,6 +44,12 @@ class SshKey
         bool is_private() const;
         ssh_key_struct *key() const { return _ssh_key_ptr; }
 
+        // Export public key to base64 string
+        std::string base64() const;
+
+        // Export private key to file (PEM format)
+        bool export_privkey_file(std::string_view path, const char *passphrase = nullptr) const;
+
         // takes ownership
         void set_key(ssh_key_struct *key);
         void clear_key();
