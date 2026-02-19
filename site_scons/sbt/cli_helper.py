@@ -14,8 +14,8 @@ if __name__ == '__main__':
         print(builder.build_machine)
     elif sys.argv[1] == "mode":
         print(builder.build_mode)
-    elif sys.argv[1] == "android":
-        print(builder.build_on_android and "true" or "false")
+    elif sys.argv[1] == "termux":
+        print(builder.build_on_termux and "true" or "false")
     elif sys.argv[1] == "path":
         print(builder.build_path)
     elif sys.argv[1] == "static":
@@ -30,6 +30,6 @@ if __name__ == '__main__':
             builder.build_architecture,
             builder.build_compiler,
             builder.get_gnu_triplet(),
-            builder.build_on_android and "true" or "false",
+            builder.build_on_termux and "true" or "false",
             builder.build_path,
         ]))

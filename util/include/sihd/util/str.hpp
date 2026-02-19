@@ -5,7 +5,6 @@
 #include <string>
 #include <string_view>
 #include <typeinfo>
-#include <variant>
 #include <vector>
 
 #include <sihd/util/IArray.hpp>

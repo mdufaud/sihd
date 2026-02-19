@@ -363,3 +363,5 @@ if __name__ == "__main__":
         execute_vcpkg_list()
     elif "tree" in sys.argv:
         execute_vcpkg_depend_info()
+    else:
+        logger.error("unknown vcpkg command, use 'fetch', 'list' or 'tree'")

@@ -1,14 +1,16 @@
+find_exec = $(shell if command -v which >/dev/null 2>&1; then which $(1) 2>/dev/null; elif command -v command >/dev/null 2>&1; then command -v $(1) 2>/dev/null; elif command -v type >/dev/null 2>&1; then type -P $(1) 2>/dev/null; fi)
+
 PYTHON_BIN := python3
-ifeq (, $(shell which $(PYTHON_BIN) 2>/dev/null))
+ifeq (, $(call find_exec,$(PYTHON_BIN)))
 PYTHON_BIN := python
 endif
 
 PIP_BIN := pip3
-ifeq (, $(shell which $(PIP_BIN) 2>/dev/null))
+ifeq (, $(call find_exec,$(PIP_BIN)))
 PIP_BIN := pip
 endif
 
-ifeq (, $(shell which $(PYTHON_BIN) 2>/dev/null))
+ifeq (, $(call find_exec,$(PYTHON_BIN)))
 $(error "Makefile: no python detected - it is needed to build the project.")
 endif
 
@@ -68,7 +70,7 @@ ARCH := $(word 4, $(SBT_RESP))
 
 COMPILER := $(word 5, $(SBT_RESP))
 GNU_TRIPLET := $(word 6, $(SBT_RESP))
-ANDROID := $(word 7, $(SBT_RESP))
+TERMUX := $(word 7, $(SBT_RESP))
 BUILD_PATH := $(word 8, $(SBT_RESP))
 
 ##########
@@ -184,8 +186,8 @@ info:
 	$(call mk_log_info,makefile,gnu_triplet = $(GNU_TRIPLET))
 	$(call mk_log_info,makefile,mode = $(COMPILE_MODE))
 	$(call mk_log_info,makefile,logical cores = $(UTILS_LOGICAL_CORE_NUMBER) ($(j) used))
-ifeq ($(ANDROID), true)
-	$(call mk_log_warning,makefile,android detected)
+ifeq ($(TERMUX), true)
+	$(call mk_log_warning,makefile,termux detected)
 endif
 	$(call mk_log_info,makefile,build: $(BUILD_PATH))
 	$(QUIET) echo > /dev/null

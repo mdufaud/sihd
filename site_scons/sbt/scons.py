@@ -334,6 +334,8 @@ modules_generated_tests = {}
 modules_generated_demos = {}
 modules_cloned_git_repositories = {}
 targets = []
+# compiled object nodes per module for combined library
+modules_lib_objects = {}
 
 def add_generated(gentype, dic: dict, module_name, name, path):
     dic.setdefault(module_name, []).append({"name": name, "path": path})
@@ -435,16 +437,26 @@ def _env_build_lib(self, src, name = None, static = None, **kwargs):
         name = self["APP_MODULE_FORMAT_NAME"]
     lib_path = os_path.join(builder.build_lib_path, name)
 
-    # no cache for symlinks renewal
+    # compile sources to objects first so they can be reused
+    # by both the per-module library and the combined library
     if (static is not None and static) or builder.build_static_libs:
-        lib = NoCache(self.StaticLibrary(lib_path, src, **kwargs))
+        objects = self.Object(src)
+        lib = NoCache(self.StaticLibrary(lib_path, objects, **kwargs))
     else:
-        lib = NoCache(self.SharedLibrary(lib_path, src, **kwargs))
+        objects = self.SharedObject(src)
+        lib = NoCache(self.SharedLibrary(lib_path, objects, **kwargs))
 
     add_targets(src)
 
     global modules_generated_libs
     add_generated("lib", modules_generated_libs, module_name, name, lib_path)
+
+    # store compiled objects for combined library
+    if builder.build_combined:
+        global modules_lib_objects
+        modules_lib_objects.setdefault(module_name, []).extend(
+            objects if isinstance(objects, list) else [objects]
+        )
 
     return lib
 
@@ -758,6 +770,48 @@ for conf in modules_build_order:
         pp.pprint(conf)
     if verbose and len(modules_build_order) > 1:
         print("")
+
+###############################################################################
+# Combined library
+###############################################################################
+
+if builder.build_combined and modules_lib_objects:
+    # collect all pre-compiled objects from all built modules
+    combined_objects = []
+    for conf in modules_build_order:
+        modname = conf["modname"]
+        combined_objects.extend(modules_lib_objects.get(modname, []))
+
+    if combined_objects:
+        # collect external libs (exclude our own generated libs)
+        internal_lib_names = set()
+        for libs_info_list in modules_generated_libs.values():
+            for lib_info in libs_info_list:
+                internal_lib_names.add(lib_info["name"])
+
+        combined_external_libs = []
+        seen_libs = set()
+        for conf in modules_build_order:
+            for lib in conf.get("libs", []):
+                lib_str = str(lib)
+                if lib_str not in seen_libs and lib_str not in internal_lib_names:
+                    combined_external_libs.append(lib)
+                    seen_libs.add(lib_str)
+
+        combined_env = base_env.Clone()
+        combined_env.Replace(LIBS = combined_external_libs)
+        for conf in modules_build_order:
+            combined_env.AppendUnique(
+                CPPPATH = [os_path.join(builder.build_root_path, conf["modname"], "include")]
+            )
+
+        combined_lib_path = os_path.join(builder.build_lib_path, app.name)
+        if builder.build_static_libs:
+            NoCache(combined_env.StaticLibrary(combined_lib_path, combined_objects))
+        else:
+            NoCache(combined_env.SharedLibrary(combined_lib_path, combined_objects))
+
+        logger.info("combined library target registered: {}".format(app.name))
 
 if verbose:
     logger.debug(f"total targets registered: {len(targets)}")

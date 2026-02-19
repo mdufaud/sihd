@@ -209,6 +209,9 @@ def has_demo():
 def is_address_sanitizer():
     return utils.is_opt("asan")
 
+def has_combined():
+    return utils.is_opt("combined")
+
 def do_distribution():
     return utils.get_opt("dist", "") != ""
 
@@ -268,13 +271,14 @@ build_machine = get_machine()
 build_mode = get_compile_mode()
 build_static_libs = is_static_libs()
 build_asan = is_address_sanitizer()
+build_combined = has_combined()
 build_tests = has_test()
 build_demo = has_demo()
 build_verbose = has_verbose()
 
 # platform
 build_platform = get_platform()
-build_on_android = is_termux()
+build_on_termux = is_termux()
 build_for_windows = build_platform == "windows"
 build_for_linux = build_platform == "linux"
 
