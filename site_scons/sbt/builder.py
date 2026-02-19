@@ -39,19 +39,6 @@ def safe_symlink(src, dst):
             os.symlink(src, dst, target_is_directory=os.path.isdir(src))
     return True
 
-def get_host_architecture():
-    arch = platform.architecture()[0]
-    if "64" in arch:
-        return "64"
-    elif "32" in arch:
-        return "32"
-
-def get_architecture():
-    machine = utils.get_opt('machine', None)
-    if machine is not None:
-        return architectures.get_default_arch(machine)
-    return utils.get_opt('arch', get_host_architecture())
-
 def __get_machine(machine):
     return architectures.normalize_machine(machine)
 
@@ -59,20 +46,9 @@ def get_host_machine():
     return __get_machine(platform.machine().lower())
 
 def get_machine():
-    arch = utils.get_opt('arch', None)
-    if arch is not None and arch not in ("32", "64"):
-        raise SystemExit("unknown architecture: {}".format(arch))
-    
     machine = utils.get_opt('machine', None)
-    if machine is not None:
-        if arch == "32" and "64" in machine:
-            raise SystemExit("cannot use 32 bits architecture with 64 bits machine: {}".format(machine))
-    else:
+    if machine is None:
         machine = get_host_machine()
-
-    if arch == "32":
-        machine = architectures.arch_32bit_map.get(machine, machine)
-        
     return __get_machine(machine)
 
 ###############################################################################
@@ -81,6 +57,7 @@ def get_machine():
 ###############################################################################
 # from conans/conan/tools/gnu/get_gnu_triplet.py in https://github.com/conan-io
 def _build_gnu_triplet(machine, vendor, libc="gnu"):
+    machine = architectures.get_gnu_machine(machine)
     op_system = {
         "windows": "w64-mingw32",
         "linux": f"linux-{libc}",
@@ -264,8 +241,6 @@ def get_host_libc():
 libc = get_libc()
 build_compiler = get_compiler()
 host_libc = get_host_libc()
-host_architecture = get_host_architecture()
-build_architecture = get_architecture()
 host_machine = get_host_machine()
 build_machine = get_machine()
 build_mode = get_compile_mode()
@@ -297,7 +272,7 @@ build_entry_path = join(build_root_path, "build")
 # last build link path
 build_last_link_path = join(build_entry_path, "last")
 # build full path
-build_path = join(build_entry_path, f"{build_platform}-{build_machine}-{build_architecture}", build_compiler, build_mode)
+build_path = join(build_entry_path, f"{build_platform}-{build_machine}", build_compiler, build_mode)
 
 build_extlib_path = join(build_path, "extlib")
 build_extlib_bin_path = join(build_extlib_path, "bin")
@@ -603,14 +578,13 @@ def create_pacman_package(app, modules):
             '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
             '\tmake fclean\n'
             '\tmake modules={modules} asan={asan} static={static} '
-            'platform={platform} compiler={compiler} arch={arch} machine={machine} mode={mode} ')
+            'platform={platform} compiler={compiler} machine={machine} mode={mode} ')
         .format(
             modules = utils.get_opt("modules"),
             asan = utils.get_opt("asan", "0"),
             static = utils.get_opt("static", "0"),
             platform = build_platform,
             compiler = build_compiler,
-            arch = build_architecture,
             machine = build_machine,
             mode = build_mode,
         ))
@@ -621,11 +595,10 @@ def create_pacman_package(app, modules):
         fd.write(('package() {{\n'
             '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
             '\tmake install INSTALL_DESTDIR="${{pkgdir}}" INSTALL_PREFIX="/usr" '
-            'platform={platform} compiler={compiler} arch={arch} machine={machine} mode={mode}\n'
+            'platform={platform} compiler={compiler} machine={machine} mode={mode}\n'
         '}}\n').format(
             platform = build_platform,
             compiler = build_compiler,
-            arch = build_architecture,
             machine = build_machine,
             mode = build_mode,
         ))

@@ -3,15 +3,9 @@ from sbt import builder
 def load_in_env(env):
     if builder.is_cross_building():
         gnu_triplet = builder.get_gnu_triplet()
-        gnu_triplet = gnu_triplet.replace("arm64", "aarch64")
         env.Append(
             CPPFLAGS = [f"--target={gnu_triplet}"],
             LINKFLAGS = [f"--target={gnu_triplet}"],
-        )
-    elif builder.build_architecture == "32":
-        env.Append(
-            CPPFLAGS = ["-m32"],
-            LINKFLAGS = ["-m32"]
         )
 
     env.Replace(

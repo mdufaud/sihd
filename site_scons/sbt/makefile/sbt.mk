@@ -49,7 +49,7 @@ BUILD_TOOLS := $(PROJECT_ROOT_PATH)/site_scons
 SBT_PATH := $(BUILD_TOOLS)/sbt
 
 SBT_CLI := $(SBT_PATH)/cli_helper.py
-SBT_RESP := $(shell machine=$(machine) arch=$(arch) mode=$(mode) platform=$(platform) compiler=$(compiler) libc=$(libc) $(PYTHON_BIN) $(SBT_CLI) all)
+SBT_RESP := $(shell machine=$(machine) mode=$(mode) platform=$(platform) compiler=$(compiler) libc=$(libc) $(PYTHON_BIN) $(SBT_CLI) all)
 
 PLATFORM := $(word 1, $(SBT_RESP))
 ifeq ($(PLATFORM),)
@@ -66,12 +66,10 @@ ifeq ($(COMPILE_MODE),)
 $(error "Makefile: compilation mode not found - cannot find build path")
 endif
 
-ARCH := $(word 4, $(SBT_RESP))
-
-COMPILER := $(word 5, $(SBT_RESP))
-GNU_TRIPLET := $(word 6, $(SBT_RESP))
-TERMUX := $(word 7, $(SBT_RESP))
-BUILD_PATH := $(word 8, $(SBT_RESP))
+COMPILER := $(word 4, $(SBT_RESP))
+GNU_TRIPLET := $(word 5, $(SBT_RESP))
+TERMUX := $(word 6, $(SBT_RESP))
+BUILD_PATH := $(word 7, $(SBT_RESP))
 
 ##########
 # Paths
@@ -182,7 +180,6 @@ info:
 	$(call mk_log_info,makefile,platform = $(PLATFORM))
 	$(call mk_log_info,makefile,compiler = $(COMPILER))
 	$(call mk_log_info,makefile,machine = $(MACHINE))
-	$(call mk_log_info,makefile,arch = $(ARCH))
 	$(call mk_log_info,makefile,gnu_triplet = $(GNU_TRIPLET))
 	$(call mk_log_info,makefile,mode = $(COMPILE_MODE))
 	$(call mk_log_info,makefile,logical cores = $(UTILS_LOGICAL_CORE_NUMBER) ($(j) used))
@@ -690,9 +687,9 @@ serve_demo:
 # Cleanup
 ##########
 
-.PHONY: clean # Remove platform-arch/release build
-.PHONY: clean_dep # Remove platform-arch dependencies
-.PHONY: cclean # Remove platform-arch/release build and cache
+.PHONY: clean # Remove platform-machine/release build
+.PHONY: clean_dep # Remove platform-machine dependencies
+.PHONY: cclean # Remove platform-machine/release build and cache
 .PHONY: clean_dist # Remove distribution
 .PHONY: clean_cache # Remove build cache
 .PHONY: clean_build # Remove all builds and dependencies

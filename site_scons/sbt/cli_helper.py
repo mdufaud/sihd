@@ -8,8 +8,6 @@ if __name__ == '__main__':
         print(builder.build_compiler)
     elif sys.argv[1] == "platform":
         print(builder.build_platform)
-    elif sys.argv[1] == "arch":
-        print(builder.build_architecture)
     elif sys.argv[1] == "machine":
         print(builder.build_machine)
     elif sys.argv[1] == "mode":
@@ -27,7 +25,6 @@ if __name__ == '__main__':
             builder.build_platform,
             builder.build_machine,
             builder.build_mode,
-            builder.build_architecture,
             builder.build_compiler,
             builder.get_gnu_triplet(),
             builder.build_on_termux and "true" or "false",

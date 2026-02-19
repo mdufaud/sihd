@@ -68,7 +68,6 @@ if verbose:
     logger.info("modules: {}".format(modules_lst or "all"))
     logger.info("platform: " + build_platform)
     logger.info("compiler: " + compiler)
-    logger.info("arch: " + builder.build_architecture)
     logger.info("machine: " + builder.build_machine)
     logger.info("mode: " + build_mode)
     logger.info("tests: " + (builder.build_tests and "yes" or "no"))
