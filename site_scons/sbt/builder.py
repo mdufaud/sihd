@@ -85,6 +85,56 @@ def _build_gnu_triplet(machine, vendor, libc="gnu"):
     return "{}-{}".format(machine, op_system)
 
 ###############################################################################
+# Compiler version detection
+###############################################################################
+
+def _detect_compiler_major_version(compiler, machine=None, libc="gnu"):
+    """Detect the major version of a compiler, returns empty string on failure."""
+    try:
+        if compiler in ("gcc", "mingw"):
+            if compiler == "mingw":
+                cmd = "x86_64-w64-mingw32-gcc"
+            elif machine is not None:
+                prefix = architectures.get_gcc_prefix(machine, libc)
+                cmd = f"{prefix}gcc"
+            else:
+                cmd = "gcc"
+            result = subprocess.run([cmd, "-dumpversion"], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                return result.stdout.strip().split(".")[0]
+        elif compiler == "clang":
+            result = subprocess.run(["clang", "--version"], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                import re
+                match = re.search(r"version\s+(\d+)", result.stdout)
+                if match:
+                    return match.group(1)
+        elif compiler == "em":
+            result = subprocess.run(["emcc", "--version"], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                import re
+                match = re.search(r"(\d+)\.\d+", result.stdout)
+                if match:
+                    return match.group(1)
+        elif compiler == "zig":
+            result = subprocess.run(["zig", "version"], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                return result.stdout.strip().split(".")[0]
+    except Exception:
+        pass
+    return ""
+
+def get_compiler_version():
+    """Get the compiler name with major version suffix, e.g. gcc-15, clang-21"""
+    machine = get_machine()
+    compiler = get_compiler()
+    libc = get_libc()
+    version = _detect_compiler_major_version(compiler, machine, libc)
+    if version:
+        return f"{compiler}-{version}"
+    return compiler
+
+###############################################################################
 # Build settings
 ###############################################################################
 
@@ -240,6 +290,7 @@ def get_host_libc():
 # compilation
 libc = get_libc()
 build_compiler = get_compiler()
+build_compiler_version = get_compiler_version()
 host_libc = get_host_libc()
 host_machine = get_host_machine()
 build_machine = get_machine()
@@ -271,8 +322,8 @@ build_dist_path = join(build_root_path, "dist")
 build_entry_path = join(build_root_path, "build")
 # last build link path
 build_last_link_path = join(build_entry_path, "last")
-# build full path
-build_path = join(build_entry_path, f"{build_platform}-{build_machine}", build_compiler, build_mode)
+# build full path: <machine>-<platform>-<libc>/<compiler>-<version>/<mode>
+build_path = join(build_entry_path, f"{build_machine}-{build_platform}-{libc}", build_compiler_version, build_mode)
 
 build_extlib_path = join(build_path, "extlib")
 build_extlib_bin_path = join(build_extlib_path, "bin")

@@ -77,14 +77,14 @@ SshSftpHandler::SftpAttributes SshSftpHandler::SftpAttributes::from_stat(const s
     localtime_r(&st.st_mtime, &tm_info);
     strftime(time_str, sizeof(time_str), "%b %d %H:%M", &tm_info);
 
-    attrs.longname = sihd::util::str::format("{} {:3d} {:5d} {:5d} {:8d} {} {}",
-                                             mode_str,
-                                             static_cast<int>(st.st_nlink),
-                                             st.st_uid,
-                                             st.st_gid,
-                                             static_cast<long>(st.st_size),
-                                             time_str,
-                                             name);
+    attrs.longname = fmt::format("{} {:3d} {:5d} {:5d} {:8d} {} {}",
+                                 mode_str,
+                                 static_cast<int>(st.st_nlink),
+                                 st.st_uid,
+                                 st.st_gid,
+                                 static_cast<long>(st.st_size),
+                                 time_str,
+                                 name);
 
     return attrs;
 }

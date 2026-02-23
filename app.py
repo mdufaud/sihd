@@ -5,93 +5,15 @@ version = "0.1.0"
 git_url = "https://github.com/mdufaud/sihd.git"
 
 ###############################################################################
-# external libs
-###############################################################################
-
-extlibs = {
-    # unit test
-    "gtest": "1.17.0#2",
-    # json parsing
-    "nlohmann-json": "3.12.0#1",
-    # util
-    "cli11": "2.6.1",
-    "fmt": "12.1.0",
-    "libuuid": "1.0.3#15",
-    # http
-    "libwebsockets": "4.3.3",
-    "curl": "7.87.0",
-    "openssl": "1.1.1n",
-    "libssh": "0.10.6",
-    "libcap": "2.70",
-    "libuv": "1.46.0",
-    "zlib": "1.3.1",
-    # pcap
-    "libpcap": "1.10.5",
-    # usb
-    "libusb": "1.0.27",
-    # gui
-    "ftxui": "5.0.0",
-    "imgui": "1.86",
-    "libxcrypt": "4.4.38", #fixes a compilation issue with imgui
-    # bindings
-    "python3": "3.12.9",
-    "pybind11": "3.0.1",
-    # compressing utility
-    "libzip": "1.7.3",
-    # other
-    "libjpeg": "9d",
-    "lua": "5.3.5-5",
-    "luabridge3": "3.0-rc3",
-    # bt
-    "libbluetooth": "",
-}
-
-# glfw needs: libxi-dev libxinerama-dev libxcursor-dev xorg libglu1-mesa pkg-config
-extlibs_features = {
-    "imgui": ["glfw-binding", "opengl3-binding", "sdl2-binding"],
-    "libusb": ["udev"],
-}
-
-extlibs_features_windows = {
-    "imgui": ["win32-binding", "dx11-binding"],
-}
-
-# on windows some libs are not available through vcpkg
-extlibs_skip_windows = [
-    "libwebsockets",
-    "libssh",
-    "libpcap",
-    "libxcrypt"
-]
-
-# on linux: those libs are provided by the system
-extlibs_skip = [
-    "libbluetooth",
-]
-
-# on web: those libs don't compile properly with emscripten threading
-extlibs_skip_web = [
-    "openssl",
-    "libwebsockets",
-    "curl",
-    "libssh",
-    "libpcap",
-    "libusb",
-    "libxcrypt",
-    "ftxui",
-    "imgui",
-]
-
-vcpkg_baseline = "38d9cf0bd45404cd25aeb03f79bcb0af256de343"
-
-###############################################################################
 # modules
 ###############################################################################
 
 modules = {
     "util": {
-        # x11=1 to compile with X11
-        # wayland=1 to compile with wayland
+        "env": {
+            "x11": 0, # x11=1 to compile with X11
+            "wayland": 0, # wayland=1 to compile with Wayland
+        },
         "libs": ['pthread'], # threading
         "extlibs": ['nlohmann-json', 'fmt'],
         # === Linux specific ===
@@ -158,7 +80,8 @@ modules = {
             'uv',
         ],
         "linux-extlibs": ["libcap"],
-        "linux-libs": ["cap"],
+        # ssl/crypto: transitive deps of libwebsockets & curl (needed for static linking)
+        "linux-libs": ["cap", "ssl", "crypto"],
     },
     "pcap": {
         "depends": ['net'],
@@ -173,6 +96,8 @@ modules = {
         "depends": ['util'],
         "extlibs": ['libzip'],
         "libs": ['zip'],
+        # z/bz2/lzma/ssl/crypto: transitive deps of libzip (needed for static linking)
+        "linux-libs": ['z', 'bz2', 'lzma', 'ssl', 'crypto'],
     },
     "tui": {
         "depends": ['util'],
@@ -183,29 +108,39 @@ modules = {
         "depends": ['util'],
         "extlibs": ["libssh"],
         "libs": ['ssh'],
+        # libssh.a depends on OpenSSL (needed for cross static linking)
+        "linux-cross-libs": ['ssl', 'crypto'],
     },
     "usb": {
         "depends": ['util'],
         "extlibs": ['libusb'],
-        "libs": ['udev'],
+        # native linux: udev is a system transitive dep of libusb, parse-config provides libusb flags
+        "native-libs": ['udev'],
         "parse-configs": [
             "pkg-config libusb-1.0 --cflags --libs",
         ],
+        # cross linux: vcpkg libusb built without udev, parse-configs skipped in cross
+        "cross-libs": ['usb-1.0'],
     },
     "bt": {
-        "platforms": ["linux"],
         "depends": ['util'],
-        "extlibs": ['libbluetooth'],
-        "libs": ['bluetooth'],
+        "extlibs": ['simpleble'],
+        "libs": ['simpleble'],
+        # dbus-1 is a transitive dep of simpleble on Linux (needed for static linking)
+        "linux-libs": ['dbus-1'],
     },
     "csv": {
         "depends": ['util'],
     },
     "imgui": {
         "depends": ['util'],
-        "extlibs": ['imgui', 'libxcrypt'],
+        "extlibs": ['imgui', 'libxcrypt', 'opengl'],
         "libs": ["imgui"],
-        "linux-libs": ['glfw', 'GLEW', 'GL', 'SDL2'],
+        # native linux: system provides libglfw.so, libGLEW.so, libGL.so
+        "linux-native-libs": ['glfw', 'GLEW', 'GL', 'SDL3'],
+        # cross linux: vcpkg provides libglfw3.a (not libglfw.a), no GLEW/GL needed
+        # (imgui has its own GL loader via dlopen, GLEW is unused)
+        "linux-cross-libs": ['glfw3', 'SDL3'],
         "windows-link": [
             "-mwindows" # no shell window opening
         ],
@@ -213,8 +148,7 @@ modules = {
             "glfw3",
             "opengl32",
             # SDL NEEDED
-            "SDL2main",
-            "SDL2",
+            "SDL3",
             "kernel32",
             "user32",
             "gdi32", # doubled
@@ -248,23 +182,11 @@ modules = {
             "-Wno-unknown-pragmas",
             "-Wno-deprecated-declarations",
             "-sDISABLE_EXCEPTION_CATCHING=1",
-            "-sUSE_SDL=2",
-        ],
-        "em-flags-sdl2": [
-            "-sUSE_SDL=2",
-        ],
-        "em-link-sdl2": [
-            "-sFORCE_FILESYSTEM=1", # use filesystem
-            "-sUSE_PTHREADS=1", # enable threads
-            "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
-            "-sUSE_SDL=2",
-            "-sWASM=1",
         ],
         "em-link": [
             "-sUSE_PTHREADS=1", # enable threads
             "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
             # "-sUSE_GLFW=3", # did not manage to get glfw working with emscripten
-            "-sUSE_SDL=2",
             "-sWASM=1",
         ],
     },
@@ -313,6 +235,166 @@ def add_fmt_to_modules(modules_list):
 
 add_fmt_to_modules(modules)
 add_fmt_to_modules(conditional_modules)
+
+###############################################################################
+# external libs
+###############################################################################
+
+extlibs = {
+    # unit test
+    "gtest": "1.17.0#2",
+    # json parsing
+    "nlohmann-json": "3.12.0#1",
+    # util
+    "cli11": "2.6.1",
+    "fmt": "12.1.0",
+    "libuuid": "1.0.3#15",
+    # http
+    "libwebsockets": "4.5.2",
+    "curl": "7.87.0",
+    "openssl": "3.1.0",
+    "libssh": "0.10.6",
+    "libcap": "2.70",
+    "libuv": "1.46.0",
+    "zlib": "1.3.1",
+    # pcap
+    "libpcap": "1.10.5",
+    # usb
+    "libusb": "1.0.27",
+    # gui
+    "opengl": "",  # provides GL/gl.h headers for cross-compilation (via opengl-registry)
+    "ftxui": "6.1.9",
+    "imgui": "1.91.9",
+    "libxcrypt": "4.5.2", #fixes a compilation issue with imgui
+    # bindings
+    "python3": "3.12.9",
+    "pybind11": "3.0.1",
+    # compressing utility
+    "libzip": "1.7.3",
+    # other
+    "libjpeg": "9d",
+    "lua": "5.3.5-5",
+    "luabridge3": "3.0-rc3",
+    # bt
+    "simpleble": "0.8.1#1",
+}
+
+# glfw needs: libxi-dev libxinerama-dev libxcursor-dev xorg libglu1-mesa pkg-config
+extlibs_features = {
+    "imgui": ["glfw-binding", "opengl3-binding", "sdl3-binding"],
+}
+
+extlibs_features_linux = {
+    "libusb": ["udev"],  # udev is linux-only
+}
+
+extlibs_features_windows = {
+    "imgui": ["win32-binding", "dx11-binding"],
+}
+
+# on windows some libs are not available through vcpkg
+extlibs_skip_windows = [
+    "libwebsockets",
+    "libssh",
+    "libpcap",
+    "libxcrypt"
+]
+
+# on web: those libs don't compile properly with emscripten threading
+extlibs_skip_web = [
+    "openssl",
+    "libwebsockets",
+    "curl",
+    "libssh",
+    "libpcap",
+    "libusb",
+    "libxcrypt",
+    "ftxui",
+    "imgui",
+]
+
+vcpkg_baseline = "3a3285c4878c7f5a957202201ba41e6fdeba8db4"
+
+vcpkg_cflags = [
+    "-Wno-error=discarded-qualifiers",   # libwebsockets v4.5.2 + GCC >= 14
+]
+vcpkg_cxxflags = []
+
+# default config for cross compilation - to override with specific conf
+vcpkg_cmake_configure_options = {
+    "dbus": [
+        "-DDBUS_SESSION_SOCKET_DIR=/tmp",
+    ],
+    # SDL3: disable system-dependent features by default.
+    "sdl3": [
+        "-DSDL_X11=OFF", "-DSDL_WAYLAND=OFF", "-DSDL_IBUS=OFF",
+        "-DSDL_JACK=OFF", "-DSDL_PULSEAUDIO=OFF", "-DSDL_PIPEWIRE=OFF",
+        "-DSDL_SNDIO=OFF", "-DSDL_KMSDRM=OFF",
+        "-DSDL_OPENGL=OFF", "-DSDL_OPENGLES=OFF",
+        "-DSDL_LIBUDEV=OFF", "-DSDL_LIBURING=OFF",
+    ],
+    # glfw3 enables X11 by default on Linux (REQUIRED) which fails without X11 headers
+    "glfw3": ["-DGLFW_BUILD_X11=OFF"],
+    # imgui: prevent glfw3.h from including GL/gl.h (imgui has its own GL3 loader)
+    "imgui": ["-DCMAKE_CXX_FLAGS_INIT=-DGLFW_INCLUDE_NONE"],
+}
+
+# re-enable system features on native Linux (X11/Wayland/etc. from system packages)
+vcpkg_cmake_configure_options_linux = {
+    "sdl3": [],
+    "glfw3": [],
+    "imgui": [],
+}
+
+# cross-linux: re-enable X11/Wayland (headers now from vcpkg).
+# Audio backends (JACK, PulseAudio...), ibus, udev etc. remain disabled (no vcpkg ports).
+vcpkg_cmake_configure_options_cross_linux = {
+    "sdl3": [
+        # X11 and Wayland: enabled (built from vcpkg)
+        # OpenGL: enabled (headers from opengl vcpkg package)
+        "-DSDL_IBUS=OFF",
+        "-DSDL_JACK=OFF", "-DSDL_PULSEAUDIO=OFF", "-DSDL_PIPEWIRE=OFF",
+        "-DSDL_SNDIO=OFF", "-DSDL_KMSDRM=OFF",
+        "-DSDL_OPENGLES=OFF",
+        "-DSDL_LIBUDEV=OFF", "-DSDL_LIBURING=OFF",
+        "-DSDL_WAYLAND_LIBDECOR=OFF",  # no vcpkg port for libdecor
+        # Pre-set HAVE_XGENERICEVENT: the check_c_source_compiles test fails because
+        # static libX11.a needs transitive deps (libxcb, libXau...) for linking, but
+        # SDL3's cmake only passes libX11.a. The headers ARE correct.
+        "-DHAVE_XGENERICEVENT=1",
+    ],
+    "glfw3": [],  # X11 from vcpkg, use GLFW defaults (X11=ON)
+    "imgui": ["-DCMAKE_CXX_FLAGS_INIT=-DGLFW_INCLUDE_NONE"],
+}
+
+# Libraries whose default-features should be disabled in vcpkg manifest (cross-compilation only).
+# Only explicitly listed features from extlibs_features will be used.
+vcpkg_no_default_features = [
+    "libusb",  # udev default requires libudev headers (no vcpkg port for libudev exists)
+]
+
+# Additional vcpkg packages needed only for cross-linux builds.
+# On native Linux, X11/Wayland come from system packages.
+# On cross-Linux (aarch64, riscv64, arm32...), vcpkg builds them from source
+# using X_VCPKG_FORCE_VCPKG_X_LIBRARIES and X_VCPKG_FORCE_VCPKG_WAYLAND_LIBRARIES.
+vcpkg_cross_linux_extlibs = {
+    # X11 core + extensions
+    "libx11": "",       # core X11 (transitive: xcb, xproto, xtrans, libxau, libxdmcp, xorg-macros)
+    "libxext": "",      # X11 extension library (Xshape, Xshm...)
+    "libxi": "",        # X Input extension (gamepad, touch...)
+    "libxinerama": "",  # multi-monitor support
+    "libxcursor": "",   # cursor management (needed by GLFW3, dlopen'd at runtime)
+    "libxrandr": "",    # resolution/rotation (transitive: libxrender, libxfixes)
+    "libxkbcommon": "", # keyboard handling (needed by both X11 and Wayland)
+    # Wayland
+    "wayland": "",            # core Wayland (requires force-build for cross)
+    "wayland-protocols": "", # Wayland protocol extensions (requires force-build for cross)
+}
+
+vcpkg_cross_linux_extlibs_features = {
+    "wayland": ["force-build"],
+    "wayland-protocols": ["force-build"],
+}
 
 ###############################################################################
 # compilation
@@ -444,12 +526,12 @@ apt_packages = {
     "libssh": "libssh-dev",
     "libusb": "libusb-1.0-0-dev",
     "libzip": "libzip-dev",
-    "libbluetooth": "libbluetooth-dev",
+    "simpleble": "libsimpleble-dev",
     "pybind11": "python3-pybind11",
     # apt libmesa-dev for opengl
     "glfw3": "libglfw3-dev",
     "glew": "libglew-dev",
-    "sdl2": "libsdl2-dev",
+    "sdl3": "libsdl3-dev",
     "lua": "liblua5.3-dev",
     "libusb": "libusb-dev",
     "x11": "libx11-dev",
@@ -480,11 +562,11 @@ pacman_packages = {
     "libssh": "libssh",
     "libusb": "libusb",
     "libzip": "libzip",
-    "libbluetooth": "bluez",
+    "simpleble": "simpleble",
     "pybind11": "pybind11",
     "glfw3": "glfw",
     "glew": "glew",
-    "sdl2": "sdl2",
+    "sdl3": "sdl3",
     "lua": "lua",
     "libusb": "libusb",
     "x11": "libx11",
@@ -506,11 +588,11 @@ yum_packages = {
     "libssh": "libssh-devel",
     "libusb": "libusb-devel",
     "libzip": "libzip-devel",
-    "libbluetooth": "bluez-libs-devel",
+    "simpleble": "simpleble-devel",
     "pybind11": "python3-pybind11",
     "glfw3": "glfw-devel",
     "glew": "glew-devel",
-    "sdl2": "sdl2-devel",
+    "sdl3": "sdl3-devel",
     "lua": "lua5.3-devel",
     "libusb": "libusb-devel",
     "x11": "libx11-devel",
@@ -535,7 +617,7 @@ msys2_packages = {
     "pybind11": f"{__msys2_mingw}pybind11",
     "glfw3": f"{__msys2_mingw}glfw",
     "glew": f"{__msys2_mingw}glew",
-    "sdl2": f"{__msys2_mingw}SDL2",
+    "sdl3": f"{__msys2_mingw}sdl3",
     "lua": f"{__msys2_mingw}lua",
     "libusb": f"{__msys2_mingw}libusb",
     "x11": f"{__msys2_mingw}libx11",

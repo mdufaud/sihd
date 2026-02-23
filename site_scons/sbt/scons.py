@@ -67,7 +67,7 @@ compile_commands = build_utils.is_opt("compile_commands", "1")
 if verbose:
     logger.info("modules: {}".format(modules_lst or "all"))
     logger.info("platform: " + build_platform)
-    logger.info("compiler: " + compiler)
+    logger.info("compiler: " + builder.build_compiler_version)
     logger.info("machine: " + builder.build_machine)
     logger.info("mode: " + build_mode)
     logger.info("tests: " + (builder.build_tests and "yes" or "no"))
@@ -602,6 +602,13 @@ modules_options = [
     f"mode-{build_mode}",
     compiler,
 ]
+
+if builder.is_cross_building():
+    modules_options.append("cross")
+    modules_options.append(f"{build_platform}-cross")
+else:
+    modules_options.append("native")
+    modules_options.append(f"{build_platform}-native")
 
 def _add_lib_type_to_modules_options(modules_options):
     to_append = []

@@ -52,6 +52,10 @@ def parse_config_command(env, *configs):
     """ Parse configs from binaries outputs """
     if builder.build_platform == "windows" or builder.build_platform == "web":
         return False
+    # Skip host pkg-config/pcap-config when cross-compiling:
+    # they return host paths (e.g. -I/usr/include) that poison cross builds.
+    if builder.is_cross_building():
+        return False
     for config in configs:
         try:
             env.ParseConfig(config)

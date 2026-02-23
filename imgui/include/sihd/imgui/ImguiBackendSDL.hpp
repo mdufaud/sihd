@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include <SDL2/SDL.h>
-#include <imgui_impl_sdl.h>
+#include <SDL3/SDL.h>
+#include <imgui_impl_sdl3.h>
 
 #include <sihd/imgui/IImguiBackend.hpp>
 #include <sihd/imgui/IImguiRenderer.hpp>
@@ -13,9 +13,9 @@
 #if !defined(__SIHD_WINDOWS__)
 
 # if defined(IMGUI_IMPL_OPENGL_ES2)
-#  include <SDL2/SDL_opengles2.h>
+#  include <SDL3/SDL_opengles2.h>
 # else
-#  include <SDL2/SDL_opengl.h>
+#  include <SDL3/SDL_opengl.h>
 # endif
 
 #endif

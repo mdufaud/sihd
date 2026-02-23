@@ -1,7 +1,10 @@
 #ifndef __SIHD_IMGUI_IMGUIRENDEREROPENGL_HPP__
 #define __SIHD_IMGUI_IMGUIRENDEREROPENGL_HPP__
 
-#include <GL/gl.h>
+#define GL_GLEXT_PROTOTYPES
+#include <GL/glcorearb.h>
+// Prevent GLAPI redefinition conflicts with SDL3/SDL_opengl.h
+#undef GLAPI
 #include <imgui_impl_opengl3.h>
 #include <sihd/imgui/IImguiRenderer.hpp>
 

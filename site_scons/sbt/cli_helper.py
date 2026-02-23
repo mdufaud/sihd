@@ -5,7 +5,7 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         sys.exit(0)
     if sys.argv[1] == "compiler":
-        print(builder.build_compiler)
+        print(builder.build_compiler_version)
     elif sys.argv[1] == "platform":
         print(builder.build_platform)
     elif sys.argv[1] == "machine":
@@ -25,7 +25,7 @@ if __name__ == '__main__':
             builder.build_platform,
             builder.build_machine,
             builder.build_mode,
-            builder.build_compiler,
+            builder.build_compiler_version,
             builder.get_gnu_triplet(),
             builder.build_on_termux and "true" or "false",
             builder.build_path,

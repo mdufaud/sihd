@@ -1,4 +1,7 @@
 #include <sihd/imgui/ImguiRendererOpenGL.hpp>
+// Include imgui's GL loader to redirect glViewport/glClear/glClearColor
+// to dynamically loaded function pointers (avoids link-time dependency on libGL)
+#include <imgui_impl_opengl3_loader.h>
 #include <sihd/util/Logger.hpp>
 
 namespace sihd::imgui

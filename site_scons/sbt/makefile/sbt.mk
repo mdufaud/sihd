@@ -687,9 +687,9 @@ serve_demo:
 # Cleanup
 ##########
 
-.PHONY: clean # Remove platform-machine/release build
-.PHONY: clean_dep # Remove platform-machine dependencies
-.PHONY: cclean # Remove platform-machine/release build and cache
+.PHONY: clean # Remove triplet build
+.PHONY: clean_dep # Remove triplet dependencies
+.PHONY: cclean # Remove triplet build and cache
 .PHONY: clean_dist # Remove distribution
 .PHONY: clean_cache # Remove build cache
 .PHONY: clean_build # Remove all builds and dependencies

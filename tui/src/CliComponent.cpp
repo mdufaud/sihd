@@ -33,7 +33,7 @@ class CliBase: public ComponentBase
         ~CliBase() = default;
 
     private:
-        Element Render() final
+        Element Render()
         {
             auto focused = Focused() ? focus : ftxui::select;
             auto style = Focused() ? inverted : nothing;

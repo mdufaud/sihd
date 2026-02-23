@@ -45,8 +45,15 @@ class LoggerBase: public ComponentBase,
                 Component container_search;
                 Component container_level_filter;
                 int selected_level_filter = 0;
-                std::vector<std::string> level_entries
-                    = {"all", "emergency", "alert", "critical", "error", "warning", "notice", "info", "debug"};
+                std::vector<std::string> level_entries = {"all",
+                                                          "emergency",
+                                                          "alert",
+                                                          "critical",
+                                                          "error",
+                                                          "warning",
+                                                          "notice",
+                                                          "info",
+                                                          "debug"};
                 std::string str_tmp_filter;
                 std::string str_filter;
         };
@@ -112,7 +119,8 @@ class LoggerBase: public ComponentBase,
         bool check_filter(const SavedLog & log)
         {
             return _options.add_bar
-                   && (_bar.selected_level_filter == 0 || (_bar.selected_level_filter - 1) >= (int)log.info.level);
+                   && (_bar.selected_level_filter == 0
+                       || (_bar.selected_level_filter - 1) >= (int)log.info.level);
         }
 
         bool check_search(const SavedLog & log)
@@ -124,7 +132,7 @@ class LoggerBase: public ComponentBase,
                    || log.info.thread_name.find(_bar.str_filter) != std::string::npos;
         }
 
-        Element Render() final
+        Element Render()
         {
             const auto is_focused = Focused();
 
@@ -170,7 +178,8 @@ class LoggerBase: public ComponentBase,
 
             if (event == Event::ArrowUp || (event.is_mouse() && event.mouse().button == Mouse::WheelUp))
                 _focused_log--;
-            else if ((event == Event::ArrowDown || (event.is_mouse() && event.mouse().button == Mouse::WheelDown)))
+            else if ((event == Event::ArrowDown
+                      || (event.is_mouse() && event.mouse().button == Mouse::WheelDown)))
                 _focused_log++;
             else if (event == Event::PageDown)
                 _focused_log += _log_box.y_max - _log_box.y_min;
