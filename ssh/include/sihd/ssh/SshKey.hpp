@@ -1,65 +1,61 @@
 #ifndef __SIHD_SSH_SSHKEY_HPP__
 #define __SIHD_SSH_SSHKEY_HPP__
 
+#include <cstdint>
+#include <memory>
 #include <string>
-
-#pragma message("TODO pImpl")
-#include <libssh/libssh.h>
-
-struct ssh_key_struct;
+#include <string_view>
 
 namespace sihd::ssh
 {
 
+// Mirrors libssh ssh_keytypes_e
+enum class KeyType : int
+{
+    Unknown = 0,
+    Dss = 1,
+    Rsa = 2,
+    Rsa1 = 3,
+    Ecdsa = 4,
+    Ed25519 = 5,
+    DssCert01 = 6,
+    RsaCert01 = 7,
+};
+
 class SshKey
 {
     public:
-        SshKey(ssh_key_struct *key = nullptr);
+        SshKey(void *key = nullptr);
         ~SshKey();
 
-        static enum ssh_keytypes_e type_from_name(std::string_view name);
-        static const char *type_str(enum ssh_keytypes_e type);
+        static KeyType type_from_name(std::string_view name);
+        static const char *type_str(KeyType type);
 
-        bool generate(enum ssh_keytypes_e type, int parameter);
+        bool generate(KeyType type, int parameter);
         bool import_pubkey_file(std::string_view path);
         bool import_privkey_file(std::string_view path, const char *passphrase = nullptr);
-        /*
-            SSH_KEYTYPE_UNKNOWN, SSH_KEYTYPE_DSS, SSH_KEYTYPE_RSA,
-            SSH_KEYTYPE_RSA1, SSH_KEYTYPE_ECDSA, SSH_KEYTYPE_ED25519,
-            SSH_KEYTYPE_DSS_CERT01, SSH_KEYTYPE_RSA_CERT01
-        */
-        bool import_pubkey_mem(const char *base64_key, enum ssh_keytypes_e type);
-        /*
-            SSH_KEYTYPE_UNKNOWN, SSH_KEYTYPE_DSS, SSH_KEYTYPE_RSA,
-            SSH_KEYTYPE_RSA1, SSH_KEYTYPE_ECDSA, SSH_KEYTYPE_ED25519,
-            SSH_KEYTYPE_DSS_CERT01, SSH_KEYTYPE_RSA_CERT01
-        */
+        bool import_pubkey_mem(const char *base64_key, KeyType type = KeyType::Unknown);
         bool import_privkey_mem(const char *base64_key, const char *passphrase = nullptr);
 
         bool is_equal(const SshKey & sshkey);
 
         const char *ecdsa_name() const;
-        enum ssh_keytypes_e type() const;
+        KeyType type() const;
         bool is_public() const;
         bool is_private() const;
-        ssh_key_struct *key() const { return _ssh_key_ptr; }
 
-        // Export public key to base64 string
+        void *key() const;
+
         std::string base64() const;
-
-        // Export private key to file (PEM format)
         bool export_privkey_file(std::string_view path, const char *passphrase = nullptr) const;
 
-        // takes ownership
-        void set_key(ssh_key_struct *key);
+        // Takes ownership
+        void set_key(void *key);
         void clear_key();
 
-    protected:
-
     private:
-        void _new_key();
-
-        ssh_key_struct *_ssh_key_ptr;
+        struct Impl;
+        std::unique_ptr<Impl> _impl_ptr;
 };
 
 } // namespace sihd::ssh

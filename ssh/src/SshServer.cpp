@@ -624,7 +624,7 @@ struct SshServer::Impl
 
             for (auto & session_wrapper : sessions)
             {
-                ssh_session session = session_wrapper->session();
+                ssh_session session = static_cast<ssh_session>(session_wrapper->session());
 
                 // Check if session is closed (not just disconnected)
                 int status = ssh_get_status(session);

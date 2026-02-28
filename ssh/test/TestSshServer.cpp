@@ -3,11 +3,10 @@
 #include <sihd/ssh/BasicSshServerHandler.hpp>
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshCommand.hpp>
-#include <sihd/ssh/SshExecHandler.hpp>
 #include <sihd/ssh/SshKey.hpp>
 #include <sihd/ssh/SshServer.hpp>
 #include <sihd/ssh/SshSession.hpp>
-#include <sihd/ssh/SshShellHandler.hpp>
+#include <sihd/ssh/SshSubsystemExec.hpp>
 
 #include <sihd/util/Array.hpp>
 #include <sihd/util/File.hpp>

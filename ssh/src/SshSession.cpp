@@ -42,10 +42,17 @@ bool anon_ssh_options_set(ssh_session_struct *session,
 
 } // namespace
 
-SshSession::SshSession(ssh_session_struct *session): _ssh_session_ptr(session), _userdata(nullptr)
+struct SshSession::Impl
 {
+        ssh_session_struct *ssh_session_ptr {nullptr};
+        bool auth_none_once {false};
+        void *userdata {nullptr};
+};
+
+SshSession::SshSession(void *session): _impl_ptr(std::make_unique<Impl>())
+{
+    _impl_ptr->ssh_session_ptr = static_cast<ssh_session_struct *>(session);
     utils::init();
-    _auth_none_once = false;
 }
 
 SshSession::SshSession(): SshSession(nullptr) {}
@@ -54,6 +61,21 @@ SshSession::~SshSession()
 {
     this->delete_session();
     utils::finalize();
+}
+
+void *SshSession::session() const
+{
+    return _impl_ptr->ssh_session_ptr;
+}
+
+void SshSession::set_userdata(void *userdata)
+{
+    _impl_ptr->userdata = userdata;
+}
+
+void *SshSession::userdata() const
+{
+    return _impl_ptr->userdata;
 }
 
 bool SshSession::fast_connect(std::string_view user, std::string_view host, int port, int verbosity)
@@ -73,16 +95,16 @@ bool SshSession::fast_connect(std::string_view user, std::string_view host, int 
 bool SshSession::connect()
 {
     int r;
-    while ((r = ssh_connect(_ssh_session_ptr)) == SSH_AGAIN)
+    while ((r = ssh_connect(_impl_ptr->ssh_session_ptr)) == SSH_AGAIN)
         ;
     if (r != SSH_OK)
-        SIHD_LOG(error, "SshSession: connection failed: {}", ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "SshSession: connection failed: {}", ssh_get_error(_impl_ptr->ssh_session_ptr));
     return r == SSH_OK;
 }
 
 bool SshSession::connected()
 {
-    return _ssh_session_ptr != nullptr && ssh_is_connected(_ssh_session_ptr);
+    return _impl_ptr->ssh_session_ptr != nullptr && ssh_is_connected(_impl_ptr->ssh_session_ptr);
 }
 
 bool SshSession::check_hostkey()
@@ -91,10 +113,12 @@ bool SshSession::check_hostkey()
     size_t hash_len;
     ssh_key_struct *pubkey_ptr = nullptr;
 
-    int ret = ssh_get_server_publickey(_ssh_session_ptr, &pubkey_ptr);
+    int ret = ssh_get_server_publickey(_impl_ptr->ssh_session_ptr, &pubkey_ptr);
     if (ret == SSH_ERROR)
     {
-        SIHD_LOG(error, "SshSession: failed to get public key: {}", ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error,
+                 "SshSession: failed to get public key: {}",
+                 ssh_get_error(_impl_ptr->ssh_session_ptr));
         return false;
     }
     SshKey pubkey(pubkey_ptr);
@@ -104,14 +128,14 @@ bool SshSession::check_hostkey()
     {
         SIHD_LOG(error,
                  "SshSession: failed to get public key sha1 hash: {}",
-                 ssh_get_error(_ssh_session_ptr));
+                 ssh_get_error(_impl_ptr->ssh_session_ptr));
         return false;
     }
     SshKeyHash hash_pubkey(hash_ptr);
 
     char *hexa;
 #if LIBSSH_VERSION_MINOR > 7
-    ssh_known_hosts_e state = ssh_session_is_known_server(_ssh_session_ptr);
+    ssh_known_hosts_e state = ssh_session_is_known_server(_impl_ptr->ssh_session_ptr);
     switch (state)
     {
         case SSH_KNOWN_HOSTS_OK:
@@ -132,7 +156,7 @@ bool SshSession::check_hostkey()
             break;
     }
 #else
-    int state = ssh_is_server_known(_ssh_session_ptr);
+    int state = ssh_is_server_known(_impl_ptr->ssh_session_ptr);
     switch (state)
     {
         case SSH_SERVER_KNOWN_OK:
@@ -156,35 +180,35 @@ bool SshSession::check_hostkey()
 
 SshSession::AuthMethods SshSession::auth_methods()
 {
-    if (_auth_none_once == false)
+    if (_impl_ptr->auth_none_once == false)
         this->auth_none();
-    return AuthMethods(ssh_userauth_list(_ssh_session_ptr, nullptr));
+    return AuthMethods(ssh_userauth_list(_impl_ptr->ssh_session_ptr, nullptr));
 }
 
 SshSession::AuthState SshSession::auth_none()
 {
-    _auth_none_once = true;
-    return AuthState(ssh_userauth_none(_ssh_session_ptr, nullptr));
+    _impl_ptr->auth_none_once = true;
+    return AuthState(ssh_userauth_none(_impl_ptr->ssh_session_ptr, nullptr));
 }
 
 SshSession::AuthState SshSession::auth_agent()
 {
-    return AuthState(ssh_userauth_agent(_ssh_session_ptr, nullptr));
+    return AuthState(ssh_userauth_agent(_impl_ptr->ssh_session_ptr, nullptr));
 }
 
 SshSession::AuthState SshSession::auth_gssapi()
 {
-    return AuthState(ssh_userauth_gssapi(_ssh_session_ptr));
+    return AuthState(ssh_userauth_gssapi(_impl_ptr->ssh_session_ptr));
 }
 
 SshSession::AuthState SshSession::auth_password(std::string_view password)
 {
-    return AuthState(ssh_userauth_password(_ssh_session_ptr, nullptr, password.data()));
+    return AuthState(ssh_userauth_password(_impl_ptr->ssh_session_ptr, nullptr, password.data()));
 }
 
 SshSession::AuthState SshSession::auth_key_auto(const char *passphrase)
 {
-    return AuthState(ssh_userauth_publickey_auto(_ssh_session_ptr, nullptr, passphrase));
+    return AuthState(ssh_userauth_publickey_auto(_impl_ptr->ssh_session_ptr, nullptr, passphrase));
 }
 
 SshSession::AuthState SshSession::auth_key_file(std::string_view private_key_path, const char *passphrase)
@@ -209,43 +233,47 @@ SshSession::AuthState SshSession::auth_key_try_file(std::string_view public_key_
 
 SshSession::AuthState SshSession::auth_key(const SshKey & private_key)
 {
-    return AuthState(ssh_userauth_publickey(_ssh_session_ptr, nullptr, private_key.key()));
+    return AuthState(
+        ssh_userauth_publickey(_impl_ptr->ssh_session_ptr, nullptr, static_cast<ssh_key>(private_key.key())));
 }
 
 SshSession::AuthState SshSession::auth_key_try(const SshKey & public_key)
 {
-    return AuthState(ssh_userauth_try_publickey(_ssh_session_ptr, nullptr, public_key.key()));
+    return AuthState(ssh_userauth_try_publickey(_impl_ptr->ssh_session_ptr,
+                                                nullptr,
+                                                static_cast<ssh_key>(public_key.key())));
 }
 
 SshSession::AuthState SshSession::auth_interactive_keyboard()
 {
-    int r = ssh_userauth_kbdint(_ssh_session_ptr, NULL, NULL);
+    int r = ssh_userauth_kbdint(_impl_ptr->ssh_session_ptr, NULL, NULL);
     while (r == SSH_AUTH_INFO)
     {
-        const char *name = ssh_userauth_kbdint_getname(_ssh_session_ptr);
-        const char *instruction = ssh_userauth_kbdint_getinstruction(_ssh_session_ptr);
+        const char *name = ssh_userauth_kbdint_getname(_impl_ptr->ssh_session_ptr);
+        const char *instruction = ssh_userauth_kbdint_getinstruction(_impl_ptr->ssh_session_ptr);
         if (name != nullptr && name[0])
             fmt::print("{}\n", name);
         if (instruction != nullptr && instruction[0])
             fmt::print("{}\n", instruction);
-        int n = ssh_userauth_kbdint_getnprompts(_ssh_session_ptr);
+        int n = ssh_userauth_kbdint_getnprompts(_impl_ptr->ssh_session_ptr);
         int i = 0;
         while (i < n)
         {
             char echo;
-            const char *prompt = ssh_userauth_kbdint_getprompt(_ssh_session_ptr, i, &echo);
+            const char *prompt = ssh_userauth_kbdint_getprompt(_impl_ptr->ssh_session_ptr, i, &echo);
             if (echo)
             {
                 fmt::print("{}", prompt);
                 std::string answer;
                 sihd::util::LineReader::fast_read_stdin(answer);
-                if (ssh_userauth_kbdint_setanswer(_ssh_session_ptr, i, answer.c_str()) < 0)
+                if (ssh_userauth_kbdint_setanswer(_impl_ptr->ssh_session_ptr, i, answer.c_str()) < 0)
                     return AuthState(SSH_AUTH_ERROR);
             }
             else
             {
                 char *ptr = getpass(prompt);
-                bool error = ptr == nullptr || ssh_userauth_kbdint_setanswer(_ssh_session_ptr, i, ptr) < 0;
+                bool error
+                    = ptr == nullptr || ssh_userauth_kbdint_setanswer(_impl_ptr->ssh_session_ptr, i, ptr) < 0;
                 if (ptr != nullptr)
                     free(ptr);
                 if (error)
@@ -253,42 +281,45 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
             }
             ++i;
         }
-        r = ssh_userauth_kbdint(_ssh_session_ptr, NULL, NULL);
+        r = ssh_userauth_kbdint(_impl_ptr->ssh_session_ptr, NULL, NULL);
     }
     return AuthState(r);
 }
 
 bool SshSession::set_user(std::string_view user)
 {
-    return anon_ssh_options_set(_ssh_session_ptr, "user", SSH_OPTIONS_USER, user.data());
+    return anon_ssh_options_set(_impl_ptr->ssh_session_ptr, "user", SSH_OPTIONS_USER, user.data());
 }
 
 bool SshSession::set_host(std::string_view host)
 {
-    return anon_ssh_options_set(_ssh_session_ptr, "host", SSH_OPTIONS_HOST, host.data());
+    return anon_ssh_options_set(_impl_ptr->ssh_session_ptr, "host", SSH_OPTIONS_HOST, host.data());
 }
 
 bool SshSession::set_port(int port)
 {
-    return anon_ssh_options_set(_ssh_session_ptr, "port", SSH_OPTIONS_PORT, &port);
+    return anon_ssh_options_set(_impl_ptr->ssh_session_ptr, "port", SSH_OPTIONS_PORT, &port);
 }
 
 bool SshSession::set_verbosity(int verbosity)
 {
-    return anon_ssh_options_set(_ssh_session_ptr, "verbosity", SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
+    return anon_ssh_options_set(_impl_ptr->ssh_session_ptr,
+                                "verbosity",
+                                SSH_OPTIONS_LOG_VERBOSITY,
+                                &verbosity);
 }
 
 void SshSession::set_blocking(bool active)
 {
-    ssh_set_blocking(_ssh_session_ptr, (int)active);
+    ssh_set_blocking(_impl_ptr->ssh_session_ptr, (int)active);
 }
 
 bool SshSession::update_known_hosts()
 {
 #if LIBSSH_VERSION_MINOR > 7
-    return ssh_session_update_known_hosts(_ssh_session_ptr) == SSH_OK;
+    return ssh_session_update_known_hosts(_impl_ptr->ssh_session_ptr) == SSH_OK;
 #else
-    return ssh_write_knownhost(_ssh_session_ptr) == SSH_OK;
+    return ssh_write_knownhost(_impl_ptr->ssh_session_ptr) == SSH_OK;
 #endif
 }
 
@@ -296,7 +327,7 @@ bool SshSession::known_hosts(std::string & hosts)
 {
     char *hosts_ptr;
 #if LIBSSH_VERSION_MINOR > 7
-    int r = ssh_session_export_known_hosts_entry(_ssh_session_ptr, &hosts_ptr);
+    int r = ssh_session_export_known_hosts_entry(_impl_ptr->ssh_session_ptr, &hosts_ptr);
     if (r == SSH_OK)
     {
         hosts = hosts_ptr;
@@ -304,7 +335,7 @@ bool SshSession::known_hosts(std::string & hosts)
     }
     return r == SSH_OK;
 #else
-    hosts_ptr = ssh_dump_knownhost(_ssh_session_ptr);
+    hosts_ptr = ssh_dump_knownhost(_impl_ptr->ssh_session_ptr);
     if (hosts_ptr != nullptr)
     {
         hosts = hosts_ptr;
@@ -316,48 +347,48 @@ bool SshSession::known_hosts(std::string & hosts)
 
 void SshSession::disconnect()
 {
-    ssh_disconnect(_ssh_session_ptr);
+    ssh_disconnect(_impl_ptr->ssh_session_ptr);
 }
 
 void SshSession::silent_disconnect()
 {
-    ssh_silent_disconnect(_ssh_session_ptr);
+    ssh_silent_disconnect(_impl_ptr->ssh_session_ptr);
 }
 
 bool SshSession::new_session()
 {
     this->delete_session();
-    _ssh_session_ptr = ssh_new();
-    if (_ssh_session_ptr == nullptr)
+    _impl_ptr->ssh_session_ptr = ssh_new();
+    if (_impl_ptr->ssh_session_ptr == nullptr)
         SIHD_LOG(error, "SshSession: failed to init a new ssh session");
-    return _ssh_session_ptr != nullptr;
+    return _impl_ptr->ssh_session_ptr != nullptr;
 }
 
 void SshSession::delete_session()
 {
-    if (_ssh_session_ptr != nullptr)
+    if (_impl_ptr->ssh_session_ptr != nullptr)
     {
         this->disconnect();
-        ssh_free(_ssh_session_ptr);
-        _ssh_session_ptr = nullptr;
-        _auth_none_once = false;
+        ssh_free(_impl_ptr->ssh_session_ptr);
+        _impl_ptr->ssh_session_ptr = nullptr;
+        _impl_ptr->auth_none_once = false;
     }
 }
 
 const char *SshSession::error() const
 {
-    return ssh_get_error(_ssh_session_ptr);
+    return ssh_get_error(_impl_ptr->ssh_session_ptr);
 }
 
 int SshSession::error_code() const
 {
-    return ssh_get_error_code(_ssh_session_ptr);
+    return ssh_get_error_code(_impl_ptr->ssh_session_ptr);
 }
 
 std::string SshSession::get_banner()
 {
     std::string ret;
-    char *banner = ssh_get_issue_banner(_ssh_session_ptr);
+    char *banner = ssh_get_issue_banner(_impl_ptr->ssh_session_ptr);
     if (banner != nullptr)
     {
         ret = banner;
@@ -368,22 +399,22 @@ std::string SshSession::get_banner()
 
 SshShell SshSession::make_shell()
 {
-    return SshShell(_ssh_session_ptr);
+    return SshShell(_impl_ptr->ssh_session_ptr);
 }
 
 SshCommand SshSession::make_command()
 {
-    return SshCommand(_ssh_session_ptr);
+    return SshCommand(_impl_ptr->ssh_session_ptr);
 }
 
 Sftp SshSession::make_sftp()
 {
-    return Sftp(_ssh_session_ptr);
+    return Sftp(_impl_ptr->ssh_session_ptr);
 }
 
 bool SshSession::make_channel(SshChannel & channel)
 {
-    ssh_channel channel_ptr = ssh_channel_new(_ssh_session_ptr);
+    ssh_channel channel_ptr = ssh_channel_new(_impl_ptr->ssh_session_ptr);
     if (channel_ptr == nullptr)
     {
         SIHD_LOG(error, "SshSession: failed to create a channel");

@@ -4,11 +4,10 @@
 #include "sihd/util/macro.hpp"
 #include <chrono>
 #include <sihd/ssh/BasicSshServerHandler.hpp>
-#include <sihd/ssh/SshExecHandler.hpp>
 #include <sihd/ssh/SshServer.hpp>
 #include <sihd/ssh/SshSession.hpp>
-#include <sihd/ssh/SshSftpHandler.hpp>
-#include <sihd/ssh/SshShellHandler.hpp>
+#include <sihd/ssh/SshSubsystemExec.hpp>
+#include <sihd/ssh/SshSubsystemSftp.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
 #include <thread>
@@ -57,7 +56,7 @@ struct SshServerHelper
                        [[maybe_unused]] const struct winsize & winsize) -> ISshSubsystemHandler * {
                     if (subsystem == "sftp")
                     {
-                        auto *sftp_handler = new SshSftpHandler();
+                        auto *sftp_handler = new SshSubsystemSftp();
                         sftp_handler->set_root_path(root);
                         return sftp_handler;
                     }
@@ -76,7 +75,7 @@ struct SshServerHelper
                    std::string_view command,
                    [[maybe_unused]] bool has_pty,
                    [[maybe_unused]] const struct winsize & winsize) -> ISshSubsystemHandler * {
-                    auto *exec = new SshExecHandler(command);
+                    auto *exec = new SshSubsystemExec(command);
                     // Default: use shell mode (ParseMode::Shell is default)
                     return exec;
                 });

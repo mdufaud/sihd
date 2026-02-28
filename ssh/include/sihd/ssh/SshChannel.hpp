@@ -1,13 +1,10 @@
 #ifndef __SIHD_SSH_SSHCHANNEL_HPP__
 #define __SIHD_SSH_SSHCHANNEL_HPP__
 
+#include <memory>
+
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/IArray.hpp>
-#include <sihd/util/platform.hpp>
-
-#pragma message("TODO pImpl")
-struct ssh_channel_struct;
-struct ssh_session_struct;
 
 namespace sihd::ssh
 {
@@ -15,10 +12,10 @@ namespace sihd::ssh
 class SshChannel
 {
     public:
-        SshChannel(ssh_channel_struct *channel = nullptr);
+        SshChannel(void *channel = nullptr);
         ~SshChannel();
 
-        void set_channel(ssh_channel_struct *channel);
+        void set_channel(void *channel);
         void clear_channel();
 
         void set_blocking(bool active);
@@ -30,13 +27,8 @@ class SshChannel
                           int remoteport,
                           std::string_view sourcehost,
                           int localport);
-#if LIBSSH_VERSION_MINOR > 7
-        /*
-        bool open_reverse_forward(std::string_view remotehost, int remoteport,
-                                    std::string_view sourcehost, int localport);
-        */
         bool open_forward_unix(std::string_view remotepath, std::string_view sourcehost, int localport);
-#endif
+
         bool is_open();
         bool close();
 
@@ -84,25 +76,18 @@ class SshChannel
 
         int exit_status();
 
-        ssh_channel_struct *channel() const { return _ssh_channel_ptr; }
-        ssh_session_struct *session() const;
+        void *channel() const;
+        void *session() const;
 
-        void set_userdata(void *userdata) { _userdata = userdata; }
-        void *userdata() const { return _userdata; }
+        void set_userdata(void *userdata);
+        void *userdata() const;
 
-        /**
-         * Detach the channel pointer without freeing it.
-         * Use when libssh has already freed the channel (e.g., session close).
-         */
-        void detach() { _ssh_channel_ptr = nullptr; }
-
-    protected:
+        // Detach pointer without freeing (use when libssh already freed the channel)
+        void detach();
 
     private:
-        void _init_channel_if_none();
-
-        ssh_channel_struct *_ssh_channel_ptr;
-        void *_userdata;
+        struct Impl;
+        std::unique_ptr<Impl> _impl_ptr;
 };
 
 } // namespace sihd::ssh

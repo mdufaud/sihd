@@ -1,7 +1,7 @@
 #include <sihd/util/Logger.hpp>
 
 #include <sihd/ssh/SshChannel.hpp>
-#include <sihd/ssh/SshPtyHandler.hpp>
+#include <sihd/ssh/SshSubsystemPty.hpp>
 #include <sihd/ssh/utils.hpp>
 
 namespace sihd::ssh
@@ -9,49 +9,49 @@ namespace sihd::ssh
 
 SIHD_LOGGER;
 
-SshPtyHandler::SshPtyHandler(): _channel(nullptr)
+SshSubsystemPty::SshSubsystemPty(): _channel(nullptr)
 {
     utils::init();
 }
 
-SshPtyHandler::~SshPtyHandler()
+SshSubsystemPty::~SshSubsystemPty()
 {
     utils::finalize();
 }
 
-bool SshPtyHandler::is_supported()
+bool SshSubsystemPty::is_supported()
 {
     return Pty::is_supported();
 }
 
-void SshPtyHandler::set_shell(std::string_view shell)
+void SshSubsystemPty::set_shell(std::string_view shell)
 {
     _shell = shell;
 }
 
-void SshPtyHandler::set_args(std::vector<std::string> args)
+void SshSubsystemPty::set_args(std::vector<std::string> args)
 {
     _args = std::move(args);
 }
 
-void SshPtyHandler::set_env(std::string_view name, std::string_view value)
+void SshSubsystemPty::set_env(std::string_view name, std::string_view value)
 {
     _env.emplace_back(name, value);
 }
 
-void SshPtyHandler::set_working_directory(std::string_view path)
+void SshSubsystemPty::set_working_directory(std::string_view path)
 {
     _working_dir = path;
 }
 
-bool SshPtyHandler::on_start(SshChannel *channel, bool has_pty, const struct winsize & winsize)
+bool SshSubsystemPty::on_start(SshChannel *channel, bool has_pty, const struct winsize & winsize)
 {
     _channel = channel;
 
     // Check PTY support
     if (!Pty::is_supported())
     {
-        SIHD_LOG(error, "SshPtyHandler: PTY not supported on this platform");
+        SIHD_LOG(error, "SshSubsystemPty: PTY not supported on this platform");
         return false;
     }
 
@@ -59,7 +59,7 @@ bool SshPtyHandler::on_start(SshChannel *channel, bool has_pty, const struct win
     _pty = Pty::create();
     if (!_pty)
     {
-        SIHD_LOG(error, "SshPtyHandler: failed to create PTY");
+        SIHD_LOG(error, "SshSubsystemPty: failed to create PTY");
         return false;
     }
 
@@ -95,22 +95,22 @@ bool SshPtyHandler::on_start(SshChannel *channel, bool has_pty, const struct win
     // Warn if no PTY was requested (shell may not work properly)
     if (!has_pty)
     {
-        SIHD_LOG(warning, "SshPtyHandler: client did not request PTY, shell may not work properly");
+        SIHD_LOG(warning, "SshSubsystemPty: client did not request PTY, shell may not work properly");
     }
 
     // Spawn the shell
     if (!_pty->spawn())
     {
-        SIHD_LOG(error, "SshPtyHandler: failed to spawn shell");
+        SIHD_LOG(error, "SshSubsystemPty: failed to spawn shell");
         _pty.reset();
         return false;
     }
 
-    SIHD_LOG(debug, "SshPtyHandler: started ({}x{})", winsize.ws_col, winsize.ws_row);
+    SIHD_LOG(debug, "SshSubsystemPty: started ({}x{})", winsize.ws_col, winsize.ws_row);
     return true;
 }
 
-int SshPtyHandler::on_data(const void *data, size_t len)
+int SshSubsystemPty::on_data(const void *data, size_t len)
 {
     if (!_pty)
         return 0;
@@ -120,14 +120,14 @@ int SshPtyHandler::on_data(const void *data, size_t len)
 
     if (written < 0)
     {
-        SIHD_LOG(error, "SshPtyHandler: write to PTY failed");
+        SIHD_LOG(error, "SshSubsystemPty: write to PTY failed");
         return -1;
     }
 
     return static_cast<int>(written);
 }
 
-void SshPtyHandler::on_resize(const struct winsize & winsize)
+void SshSubsystemPty::on_resize(const struct winsize & winsize)
 {
     if (!_pty)
         return;
@@ -140,17 +140,17 @@ void SshPtyHandler::on_resize(const struct winsize & winsize)
 
     if (_pty->resize(size))
     {
-        SIHD_LOG(debug, "SshPtyHandler: resized to {}x{}", winsize.ws_col, winsize.ws_row);
+        SIHD_LOG(debug, "SshSubsystemPty: resized to {}x{}", winsize.ws_col, winsize.ws_row);
     }
     else
     {
-        SIHD_LOG(warning, "SshPtyHandler: resize failed");
+        SIHD_LOG(warning, "SshSubsystemPty: resize failed");
     }
 }
 
-void SshPtyHandler::on_eof()
+void SshSubsystemPty::on_eof()
 {
-    SIHD_LOG(debug, "SshPtyHandler: EOF from client");
+    SIHD_LOG(debug, "SshSubsystemPty: EOF from client");
 
     if (_pty)
     {
@@ -158,9 +158,9 @@ void SshPtyHandler::on_eof()
     }
 }
 
-int SshPtyHandler::on_close()
+int SshSubsystemPty::on_close()
 {
-    SIHD_LOG(debug, "SshPtyHandler: closing");
+    SIHD_LOG(debug, "SshSubsystemPty: closing");
 
     if (!_pty)
         return -1;
@@ -171,7 +171,7 @@ int SshPtyHandler::on_close()
     // Wait for exit and get exit code
     int exit_code = _pty->wait();
 
-    SIHD_LOG(debug, "SshPtyHandler: shell exited with code {}", exit_code);
+    SIHD_LOG(debug, "SshSubsystemPty: shell exited with code {}", exit_code);
 
     // Clean up
     _pty.reset();
@@ -179,7 +179,7 @@ int SshPtyHandler::on_close()
     return exit_code;
 }
 
-int SshPtyHandler::stdout_fd() const
+int SshSubsystemPty::stdout_fd() const
 {
     if (!_pty)
         return -1;
@@ -187,7 +187,7 @@ int SshPtyHandler::stdout_fd() const
     return _pty->read_fd();
 }
 
-bool SshPtyHandler::is_running() const
+bool SshSubsystemPty::is_running() const
 {
     if (!_pty)
         return false;

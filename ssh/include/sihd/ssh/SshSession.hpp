@@ -1,13 +1,15 @@
 #ifndef __SIHD_SSH_SSHSESSION_HPP__
 #define __SIHD_SSH_SSHSESSION_HPP__
 
+#include <memory>
+#include <string>
+#include <string_view>
+
 #include <sihd/ssh/Sftp.hpp>
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshCommand.hpp>
 #include <sihd/ssh/SshKey.hpp>
 #include <sihd/ssh/SshShell.hpp>
-
-#pragma message("TODO pImpl")
 
 namespace sihd::ssh
 {
@@ -17,7 +19,7 @@ class SshSession
     public:
         SshSession();
         // Constructor for server-side sessions (wraps an accepted session)
-        SshSession(ssh_session_struct *session);
+        SshSession(void *session);
         virtual ~SshSession();
 
         bool new_session();
@@ -25,22 +27,13 @@ class SshSession
         bool set_user(std::string_view user);
         bool set_host(std::string_view host);
         bool set_port(int port);
-        /**
-         * No logging at all = 0;
-         * Only warnings = 1;
-         * High level protocol information = 2;
-         * Lower level protocol infomations, packet level = 3;
-         * Every function path = 4;
-         */
+        // 0=none, 1=warnings, 2=protocol, 3=packet, 4=functions
         bool set_verbosity(int verbosity);
         void set_blocking(bool active);
 
         bool connect();
         bool connected();
-        bool fast_connect(std::string_view user,
-                          std::string_view host,
-                          int port = 22,
-                          int verbosity = SSH_LOG_NOLOG);
+        bool fast_connect(std::string_view user, std::string_view host, int port = 22, int verbosity = 0);
 
         bool check_hostkey();
 
@@ -103,19 +96,17 @@ class SshSession
 
         std::string get_banner();
 
-        ssh_session_struct *session() const { return _ssh_session_ptr; }
+        // Returns internal session pointer (void*)
+        void *session() const;
         const char *error() const;
         int error_code() const;
 
-        void set_userdata(void *userdata) { _userdata = userdata; }
-        void *userdata() const { return _userdata; }
-
-    protected:
+        void set_userdata(void *userdata);
+        void *userdata() const;
 
     private:
-        ssh_session_struct *_ssh_session_ptr;
-        bool _auth_none_once;
-        void *_userdata;
+        struct Impl;
+        std::unique_ptr<Impl> _impl_ptr;
 };
 
 } // namespace sihd::ssh

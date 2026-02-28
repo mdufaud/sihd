@@ -30,10 +30,10 @@
 
 #include <sihd/ssh/BasicSshServerHandler.hpp>
 #include <sihd/ssh/SshChannel.hpp>
-#include <sihd/ssh/SshExecHandler.hpp>
-#include <sihd/ssh/SshPtyHandler.hpp>
 #include <sihd/ssh/SshServer.hpp>
-#include <sihd/ssh/SshSftpHandler.hpp>
+#include <sihd/ssh/SshSubsystemExec.hpp>
+#include <sihd/ssh/SshSubsystemPty.hpp>
+#include <sihd/ssh/SshSubsystemSftp.hpp>
 
 SIHD_NEW_LOGGER("ssh-demo");
 
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
            [[maybe_unused]] const struct winsize & winsize) -> ISshSubsystemHandler * {
             SIHD_LOG(info, "Exec command: {}", command);
             // Use shell mode to execute commands (like bash -c "command")
-            auto *exec = new SshExecHandler(command);
+            auto *exec = new SshSubsystemExec(command);
             return exec;
         });
 
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
             return nullptr;
         }
 
-        if (!SshPtyHandler::is_supported())
+        if (!SshSubsystemPty::is_supported())
         {
             SIHD_LOG(error, "PTY not supported on this platform");
             return nullptr;
@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 
         SIHD_LOG(info, "Opening interactive shell (pty {}x{})", winsize.ws_col, winsize.ws_row);
 
-        auto *pty = new SshPtyHandler();
+        auto *pty = new SshSubsystemPty();
         // Use /bin/bash for interactive shell
         pty->set_shell("/bin/bash");
         pty->set_args({"-i"}); // interactive mode
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
             if (subsystem == "sftp")
             {
                 SIHD_LOG(info, "SFTP session started (root: {})", sftp_root_copy);
-                auto *sftp = new SshSftpHandler();
+                auto *sftp = new SshSubsystemSftp();
                 sftp->set_root_path(sftp_root_copy);
                 return sftp;
             }

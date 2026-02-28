@@ -4,13 +4,8 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <sys/types.h> // mode_t (POSIX, not guaranteed by standard C++ headers)
 #include <vector>
-
-#pragma message("TODO pImpl")
-struct sftp_file_struct;
-struct sftp_attributes_struct;
-struct ssh_session_struct;
-struct sftp_session_struct;
 
 namespace sihd::ssh
 {
@@ -43,7 +38,7 @@ class SftpAttribute
 class Sftp
 {
     public:
-        Sftp(ssh_session_struct *session);
+        Sftp(void *session);
         ~Sftp();
 
         Sftp(const Sftp & other) = delete;
@@ -80,11 +75,9 @@ class Sftp
 
         const char *error();
 
-    protected:
-
     private:
-        ssh_session_struct *_ssh_session_ptr;
-        sftp_session_struct *_sftp_session_ptr;
+        struct Impl;
+        std::unique_ptr<Impl> _impl_ptr;
 };
 
 } // namespace sihd::ssh

@@ -114,9 +114,9 @@ struct SshCommand::Impl
         }
 };
 
-SshCommand::SshCommand(ssh_session_struct *session):
+SshCommand::SshCommand(void *session):
     output_handler(nullptr),
-    _impl(std::make_unique<Impl>(session, this))
+    _impl(std::make_unique<Impl>(static_cast<ssh_session_struct *>(session), this))
 {
 }
 
@@ -163,7 +163,7 @@ bool SshCommand::execute_async(std::string_view cmd)
     _impl->ssh_callbacks_ptr->channel_exit_signal_function = Impl::ssh_command_exit_signal_callback;
     _impl->ssh_callbacks_ptr->channel_exit_status_function = Impl::ssh_command_exit_status_callback;
     ssh_callbacks_init(_impl->ssh_callbacks_ptr.get());
-    if (ssh_set_channel_callbacks(_impl->channel.channel(), _impl->ssh_callbacks_ptr.get()) != SSH_OK)
+    if (ssh_set_channel_callbacks(static_cast<ssh_channel>(_impl->channel.channel()), _impl->ssh_callbacks_ptr.get()) != SSH_OK)
     {
         SIHD_LOG(error, "SshCommand: failed to set callbacks to the channel");
         _impl->channel.clear_channel();

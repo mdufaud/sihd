@@ -41,7 +41,7 @@ TEST_F(TestSshShell, test_sshshell_interactive)
         GTEST_SKIP_("no SSH server on localhost:22");
     if (session.auth_key_auto().success() == false)
         GTEST_SKIP_("SSH key authentication failed");
-    session.set_verbosity(SSH_LOG_PROTOCOL);
+    session.set_verbosity(2); // SSH_LOG_PROTOCOL
 
     SshShell shell = session.make_shell();
     ASSERT_TRUE(shell.open(true));

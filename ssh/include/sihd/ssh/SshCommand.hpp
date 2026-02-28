@@ -9,15 +9,13 @@
 
 #include <sihd/ssh/SshChannel.hpp>
 
-struct ssh_session_struct;
-
 namespace sihd::ssh
 {
 
 class SshCommand
 {
     public:
-        SshCommand(ssh_session_struct *session);
+        SshCommand(void *session);
         ~SshCommand();
 
         SshCommand(const SshCommand & other) = delete;

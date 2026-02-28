@@ -17,42 +17,23 @@ namespace sihd::ssh
 class SshKey;
 
 /**
- * Ready-to-use SSH server handler with built-in defaults.
- *
- * Features:
- * - User/password and pubkey authentication with simple lists
- * - Multi-channel per session support
- * - Automatic handler lifecycle and FD polling
- * - Callbacks for creating custom handlers (shell, exec, subsystem)
- * - Banner and goodbye messages
- * - Automatic EOF handling
- *
+ * Ready-to-use SSH server handler with user/password and pubkey auth,
+ * multi-channel support, automatic handler lifecycle and FD polling.
  */
 class BasicSshServerHandler: public ISshServerHandler
 {
     public:
-        /**
-         * Callback for creating shell handlers.
-         * @return Handler instance (ownership transferred), or nullptr to reject
-         */
+        // Handler factory callbacks - return nullptr to reject the request
         using ShellHandlerCallback = std::function<
             ISshSubsystemHandler
                 *(SshSession *session, SshChannel *channel, bool has_pty, const struct winsize & winsize)>;
 
-        /**
-         * Callback for creating exec handlers.
-         * @return Handler instance (ownership transferred), or nullptr to reject
-         */
         using ExecHandlerCallback = std::function<ISshSubsystemHandler *(SshSession *session,
                                                                          SshChannel *channel,
                                                                          std::string_view command,
                                                                          bool has_pty,
                                                                          const struct winsize & winsize)>;
 
-        /**
-         * Callback for creating subsystem handlers.
-         * @return Handler instance (ownership transferred), or nullptr to reject
-         */
         using SubsystemHandlerCallback
             = std::function<ISshSubsystemHandler *(SshSession *session,
                                                    SshChannel *channel,
@@ -60,10 +41,7 @@ class BasicSshServerHandler: public ISshServerHandler
                                                    bool has_pty,
                                                    const struct winsize & winsize)>;
 
-        /**
-         * Callback for custom authentication.
-         * If set, called in addition to allowed user lists.
-         */
+        // Custom auth callbacks (called in addition to allowed user/key lists)
         using AuthPasswordCallback
             = std::function<bool(SshSession *session, std::string_view user, std::string_view password)>;
         using AuthPubkeyCallback
@@ -72,90 +50,30 @@ class BasicSshServerHandler: public ISshServerHandler
         BasicSshServerHandler();
         ~BasicSshServerHandler() override;
 
-        // ===== Authentication Configuration =====
+        // ===== Authentication =====
 
-        /**
-         * Add a user/password pair to allowed list.
-         */
         void add_allowed_user(std::string_view user, std::string_view password);
-
-        /**
-         * Remove a user from allowed list.
-         */
         void remove_allowed_user(std::string_view user);
-
-        /**
-         * Clear all allowed users.
-         */
         void clear_allowed_users();
-
-        /**
-         * Add a public key for a user.
-         * @param user Username
-         * @param pubkey_base64 Base64-encoded public key
-         */
         void add_allowed_pubkey(std::string_view user, std::string_view pubkey_base64);
-
-        /**
-         * Set custom authentication callbacks (called in addition to lists).
-         */
         void set_auth_password_callback(AuthPasswordCallback callback);
         void set_auth_pubkey_callback(AuthPubkeyCallback callback);
 
         // ===== Handler Callbacks =====
 
-        /**
-         * Set callback for creating shell handlers.
-         */
         void set_shell_handler_callback(ShellHandlerCallback callback);
-
-        /**
-         * Set callback for creating exec handlers.
-         */
         void set_exec_handler_callback(ExecHandlerCallback callback);
-
-        /**
-         * Set callback for creating subsystem handlers.
-         */
         void set_subsystem_handler_callback(SubsystemHandlerCallback callback);
 
-        // ===== Defaults Configuration =====
+        // ===== Defaults =====
 
-        /**
-         * Set default welcome message for built-in shell handler.
-         */
-        void set_default_welcome_message(std::string_view message);
-
-        /**
-         * Set default goodbye message for built-in shell handler.
-         */
-        void set_default_goodbye_message(std::string_view message);
-
-        /**
-         * Set whether to use fork mode for built-in exec handler.
-         */
         void set_default_exec_fork_mode(bool enable);
-
-        /**
-         * Set shell path for built-in fork exec handler.
-         */
         void set_default_shell(std::string_view shell);
 
         // ===== Session Info =====
 
-        /**
-         * Get unique session ID.
-         */
         uint64_t session_id(SshSession *session) const;
-
-        /**
-         * Get number of active sessions.
-         */
         size_t session_count() const;
-
-        /**
-         * Get number of active channels for a session.
-         */
         size_t channel_count(SshSession *session) const;
 
         // ===== Event Counters (for testing) =====
@@ -179,7 +97,7 @@ class BasicSshServerHandler: public ISshServerHandler
         const EventCounters & counters() const { return _counters; }
         void reset_counters() { _counters = {}; }
 
-        // ===== ISshServerHandler Interface =====
+        // ===== ISshServerHandler =====
 
         bool on_auth_password(SshServer *server,
                               SshSession *session,
@@ -247,28 +165,21 @@ class BasicSshServerHandler: public ISshServerHandler
         ChannelState *get_channel_state(SshSession *session, SshChannel *channel);
         void poll_handler(SshChannel *channel, ISshSubsystemHandler *handler);
 
-        // Authentication
         std::unordered_map<std::string, std::string> _allowed_users;
         std::unordered_map<std::string, std::vector<std::string>> _allowed_pubkeys;
         AuthPasswordCallback _auth_password_callback;
         AuthPubkeyCallback _auth_pubkey_callback;
 
-        // Handler callbacks
         ShellHandlerCallback _shell_callback;
         ExecHandlerCallback _exec_callback;
         SubsystemHandlerCallback _subsystem_callback;
 
-        // Defaults
-        std::string _default_welcome_message;
-        std::string _default_goodbye_message;
         std::string _default_shell;
         bool _default_exec_fork_mode;
 
-        // Session tracking
         std::unordered_map<SshSession *, SessionState> _sessions;
         uint64_t _next_session_id;
 
-        // Event counters
         EventCounters _counters;
 };
 

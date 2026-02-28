@@ -6,11 +6,10 @@
 
 #include <sihd/ssh/BasicSshServerHandler.hpp>
 #include <sihd/ssh/SshChannel.hpp>
-#include <sihd/ssh/SshExecHandler.hpp>
 #include <sihd/ssh/SshKey.hpp>
 #include <sihd/ssh/SshServer.hpp>
 #include <sihd/ssh/SshSession.hpp>
-#include <sihd/ssh/SshShellHandler.hpp>
+#include <sihd/ssh/SshSubsystemExec.hpp>
 #include <sihd/ssh/utils.hpp>
 
 namespace sihd::ssh
@@ -79,16 +78,6 @@ void BasicSshServerHandler::set_subsystem_handler_callback(SubsystemHandlerCallb
 }
 
 // ===== Defaults Configuration =====
-
-void BasicSshServerHandler::set_default_welcome_message(std::string_view message)
-{
-    _default_welcome_message = message;
-}
-
-void BasicSshServerHandler::set_default_goodbye_message(std::string_view message)
-{
-    _default_goodbye_message = message;
-}
 
 void BasicSshServerHandler::set_default_exec_fork_mode(bool enable)
 {

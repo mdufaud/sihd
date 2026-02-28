@@ -61,8 +61,15 @@ using SftpAttributePtr = std::unique_ptr<sftp_attributes_struct, SftpAttributeDe
 
 SIHD_LOGGER;
 
-Sftp::Sftp(ssh_session_struct *session): _ssh_session_ptr(session), _sftp_session_ptr(nullptr)
+struct Sftp::Impl
 {
+        ssh_session_struct *ssh_session_ptr {nullptr};
+        sftp_session_struct *sftp_session_ptr {nullptr};
+};
+
+Sftp::Sftp(void *session): _impl_ptr(std::make_unique<Impl>())
+{
+    _impl_ptr->ssh_session_ptr = static_cast<ssh_session_struct *>(session);
     utils::init();
 }
 
@@ -74,13 +81,13 @@ Sftp::~Sftp()
 
 bool Sftp::open()
 {
-    _sftp_session_ptr = sftp_new(_ssh_session_ptr);
-    if (_sftp_session_ptr == nullptr)
+    _impl_ptr->sftp_session_ptr = sftp_new(_impl_ptr->ssh_session_ptr);
+    if (_impl_ptr->sftp_session_ptr == nullptr)
     {
-        SIHD_LOG(error, "Sftp: failed to create sftp session: {}", ssh_get_error(_ssh_session_ptr));
+        SIHD_LOG(error, "Sftp: failed to create sftp session: {}", ssh_get_error(_impl_ptr->ssh_session_ptr));
         return false;
     }
-    int r = sftp_init(_sftp_session_ptr);
+    int r = sftp_init(_impl_ptr->sftp_session_ptr);
     if (r != SSH_FX_OK)
     {
         SIHD_LOG(error, "Sftp: failed to initialize sftp session: {}", this->error());
@@ -92,15 +99,15 @@ bool Sftp::open()
 
 bool Sftp::is_open() const
 {
-    return _sftp_session_ptr != nullptr;
+    return _impl_ptr->sftp_session_ptr != nullptr;
 }
 
 void Sftp::close()
 {
-    if (_sftp_session_ptr != nullptr)
+    if (_impl_ptr->sftp_session_ptr != nullptr)
     {
-        sftp_free(_sftp_session_ptr);
-        _sftp_session_ptr = nullptr;
+        sftp_free(_impl_ptr->sftp_session_ptr);
+        _impl_ptr->sftp_session_ptr = nullptr;
     }
 }
 
@@ -111,13 +118,13 @@ bool Sftp::send_file(std::string_view local_path, std::string_view remote_path, 
         return false;
 
     int flags = O_WRONLY | O_CREAT | O_TRUNC;
-    SftpFilePtr remote_file(sftp_open(_sftp_session_ptr, remote_path.data(), flags, mode));
+    SftpFilePtr remote_file(sftp_open(_impl_ptr->sftp_session_ptr, remote_path.data(), flags, mode));
     if (remote_file.get() == nullptr)
     {
         SIHD_LOG(error,
                  "Sftp: failed to open remote file: '{}' {}",
                  remote_path,
-                 ssh_get_error(_ssh_session_ptr));
+                 ssh_get_error(_impl_ptr->ssh_session_ptr));
         return false;
     }
     bool ret = true;
@@ -154,13 +161,13 @@ bool Sftp::get_file(std::string_view remote_path, std::string_view local_path)
         return false;
 
     int flags = O_RDONLY;
-    SftpFilePtr remote_file(sftp_open(_sftp_session_ptr, remote_path.data(), flags, 0));
+    SftpFilePtr remote_file(sftp_open(_impl_ptr->sftp_session_ptr, remote_path.data(), flags, 0));
     if (remote_file.get() == nullptr)
     {
         SIHD_LOG(error,
                  "Sftp: failed to open remote file: '{}' {}",
                  remote_path,
-                 ssh_get_error(_ssh_session_ptr));
+                 ssh_get_error(_impl_ptr->ssh_session_ptr));
         return false;
     }
     bool ret = true;
@@ -191,7 +198,7 @@ bool Sftp::get_file(std::string_view remote_path, std::string_view local_path)
 
 bool Sftp::mkdir(std::string_view path, mode_t mode)
 {
-    int r = sftp_mkdir(_sftp_session_ptr, path.data(), mode);
+    int r = sftp_mkdir(_impl_ptr->sftp_session_ptr, path.data(), mode);
     if (r != 0)
         SIHD_LOG(error, "Sftp: failed to mkdir: '{}' {}", path, this->error());
     return r == SSH_FX_OK;
@@ -199,7 +206,7 @@ bool Sftp::mkdir(std::string_view path, mode_t mode)
 
 bool Sftp::symlink(std::string_view from, std::string_view to)
 {
-    int r = sftp_symlink(_sftp_session_ptr, from.data(), to.data());
+    int r = sftp_symlink(_impl_ptr->sftp_session_ptr, from.data(), to.data());
     if (r != 0)
         SIHD_LOG_ERROR("Sftp: failed to create symbolic link from '{}' to '{}' {}", from, to, this->error());
     return r == SSH_FX_OK;
@@ -226,7 +233,7 @@ bool Sftp::list_dir_filenames(std::string_view path, std::vector<std::string> & 
 
 bool Sftp::list_dir(std::string_view path, std::vector<SftpAttribute> & list)
 {
-    SftpDirPtr dir(sftp_opendir(_sftp_session_ptr, path.data()));
+    SftpDirPtr dir(sftp_opendir(_impl_ptr->sftp_session_ptr, path.data()));
     if (dir.get() == nullptr)
     {
         SIHD_LOG(error, "Stfp: failed to open directory: {}", path);
@@ -234,7 +241,7 @@ bool Sftp::list_dir(std::string_view path, std::vector<SftpAttribute> & list)
     }
     while (true)
     {
-        SftpAttributePtr attr(sftp_readdir(_sftp_session_ptr, dir.get()));
+        SftpAttributePtr attr(sftp_readdir(_impl_ptr->sftp_session_ptr, dir.get()));
         if (attr.get() == nullptr)
             break;
         if (attr->name == nullptr || strcmp(attr->name, ".") == 0 || strcmp(attr->name, "..") == 0)
@@ -249,7 +256,7 @@ bool Sftp::list_dir(std::string_view path, std::vector<SftpAttribute> & list)
 
 std::string Sftp::readlink(std::string_view path)
 {
-    char *ret = sftp_readlink(_sftp_session_ptr, path.data());
+    char *ret = sftp_readlink(_impl_ptr->sftp_session_ptr, path.data());
     if (ret == nullptr)
         return "";
     return std::string(ret);
@@ -257,7 +264,7 @@ std::string Sftp::readlink(std::string_view path)
 
 bool Sftp::rename(std::string_view from, std::string_view to)
 {
-    int r = sftp_rename(_sftp_session_ptr, from.data(), to.data());
+    int r = sftp_rename(_impl_ptr->sftp_session_ptr, from.data(), to.data());
     if (r != 0)
         SIHD_LOG_ERROR("Sftp: failed to rename '{}' to '{}' {}", from, to, this->error());
     return r == SSH_FX_OK;
@@ -265,7 +272,7 @@ bool Sftp::rename(std::string_view from, std::string_view to)
 
 bool Sftp::rm(std::string_view path)
 {
-    int r = sftp_unlink(_sftp_session_ptr, path.data());
+    int r = sftp_unlink(_impl_ptr->sftp_session_ptr, path.data());
     if (r != 0)
         SIHD_LOG(error, "Sftp: failed to remove '{}': {}", path, this->error());
     return r == SSH_FX_OK;
@@ -273,7 +280,7 @@ bool Sftp::rm(std::string_view path)
 
 bool Sftp::rmdir(std::string_view path)
 {
-    int r = sftp_rmdir(_sftp_session_ptr, path.data());
+    int r = sftp_rmdir(_impl_ptr->sftp_session_ptr, path.data());
     if (r != 0)
         SIHD_LOG(error, "Sftp: failed to remove directory '{}': {}", path, this->error());
     return r == SSH_FX_OK;
@@ -281,7 +288,7 @@ bool Sftp::rmdir(std::string_view path)
 
 bool Sftp::chmod(std::string_view path, mode_t mode)
 {
-    int r = sftp_chmod(_sftp_session_ptr, path.data(), mode);
+    int r = sftp_chmod(_impl_ptr->sftp_session_ptr, path.data(), mode);
     if (r != 0)
         SIHD_LOG(error, "Sftp: failed to change permission '{}' ({}):  {}", path, mode, this->error());
     return r == SSH_FX_OK;
@@ -289,7 +296,7 @@ bool Sftp::chmod(std::string_view path, mode_t mode)
 
 bool Sftp::chown(std::string_view path, uid_t owner, gid_t group)
 {
-    int r = sftp_chown(_sftp_session_ptr, path.data(), owner, group);
+    int r = sftp_chown(_impl_ptr->sftp_session_ptr, path.data(), owner, group);
     if (r != 0)
         SIHD_LOG(error, "Sftp: failed to change group '{}' ({}:{}):  {}", path, owner, group, this->error());
     return r == SSH_FX_OK;
@@ -297,18 +304,18 @@ bool Sftp::chown(std::string_view path, uid_t owner, gid_t group)
 
 int Sftp::version()
 {
-    return sftp_server_version(_sftp_session_ptr);
+    return sftp_server_version(_impl_ptr->sftp_session_ptr);
 }
 
 std::vector<SftpExtension> Sftp::extensions()
 {
     std::vector<SftpExtension> ret;
-    int extensions_nb = sftp_extensions_get_count(_sftp_session_ptr);
+    int extensions_nb = sftp_extensions_get_count(_impl_ptr->sftp_session_ptr);
     int i = 0;
     while (i < extensions_nb)
     {
-        const char *extname = sftp_extensions_get_name(_sftp_session_ptr, i);
-        const char *data = sftp_extensions_get_data(_sftp_session_ptr, i);
+        const char *extname = sftp_extensions_get_name(_impl_ptr->sftp_session_ptr, i);
+        const char *data = sftp_extensions_get_data(_impl_ptr->sftp_session_ptr, i);
         SftpExtension ext;
         ext.name = extname;
         ext.data = data;
@@ -320,7 +327,7 @@ std::vector<SftpExtension> Sftp::extensions()
 
 const char *Sftp::error()
 {
-    switch (sftp_get_error(_sftp_session_ptr))
+    switch (sftp_get_error(_impl_ptr->sftp_session_ptr))
     {
         case SSH_FX_OK:
             return "ok";
