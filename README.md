@@ -4,6 +4,26 @@ Simple Input Handler Displayer
 
 Aimed to be a simple C++ library with some python and/or LUA bindings that gets, parse and displays data.
 
+## Modules
+
+| Module | Description | Dependencies |
+|--------|-------------|--------------|
+| `util` | Base: threading, logging, filesystem, types, named objects | — |
+| `core` | Devices, Channels, data flow, service lifecycle | util |
+| `ipc` | Inter-process communication (shared memory, message queues) | util |
+| `net` | Networking with SSL/TLS | util, openssl |
+| `http` | HTTP server, WebSocket, curl client | net, libwebsockets, curl |
+| `csv` | CSV reading/writing | util |
+| `zip` | Archive compression | util, libzip |
+| `tui` | Terminal UI (ftxui) | util |
+| `ssh` | SSH client | util, libssh |
+| `usb` | USB device access | util, libusb |
+| `bt` | Bluetooth LE scanning | util, simpleble |
+| `pcap` | Packet capture | net, libpcap |
+| `imgui` | Dear ImGui (OpenGL3 + GLFW/SDL3, DirectX11) | util, imgui |
+| `lua` | Lua bindings (conditional: `lua=1`) | util, core |
+| `py` | Python bindings via pybind11 (conditional: `py=1`) | util, core |
+
 ---
 
 ## Dependencies
@@ -12,7 +32,7 @@ Aimed to be a simple C++ library with some python and/or LUA bindings that gets,
 
 Used by core application.
 
-### SCons 4.1.0
+### SCons 4.10
 
 Manages compilation rules with python.
 
@@ -81,19 +101,19 @@ pacman -S --needed git mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x
 
 ### Compilers
 
-**g++ 11.4.0**
+**g++ 15**
 
 ```shell
 apt install g++
 ```
 
-**clang++ 18.1.3**
+**clang++ 21**
 
 ```shell
 apt install clang libc++-dev libc++abi-dev llvm
 ```
 
-**g++-mingw 13-posix**
+**g++-mingw 15-posix**
 
 ```shell
 apt install g++-mingw-w64-x86-64
@@ -101,7 +121,7 @@ apt install g++-mingw-w64-x86-64
 update-alternatives --config x86_64-w64-mingw32-g++
 ```
 
-**emscripten 3.0.0**
+**emscripten 5**
 
 ```shell
 apt install emscripten
@@ -152,6 +172,14 @@ make compiler=em
 ```shell
 # build for windows
 make platform=win
+# build for aarch64
+make machine=aarch64
+# build for riscv64
+make machine=riscv64
+# build for arm32
+make machine=arm32 m=util,core
+# build with musl libc
+make libc=musl
 ```
 
 ### Musl
@@ -160,7 +188,7 @@ Download - extract - link in PATH: https://musl.cc/x86_64-linux-musl-cross.tgz
 
 ### Python bindings build
 
-**python-3.6.7**
+**python 3**
 
 It is recommended to install it on your system with a package manager: `python3-dev`
 
@@ -176,7 +204,7 @@ make mod core,py
 
 ### Lua bindings build
 
-**lua-5.3.5**
+**lua 5.3**
 
 It is recommended to install it on your system with a package manager: `lua5.3-dev`
 
