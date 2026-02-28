@@ -1,0 +1,70 @@
+#!/bin/sh
+
+set -e
+
+linkage=shared
+prefix=
+for OPTION; do
+    case "${OPTION}" in
+    --prefix=*)
+        prefix="${OPTION#--prefix=}"
+        ;;
+    --enable-static)
+        linkage=static
+        ;;
+    esac
+done
+
+# Derive OBJCOPY from CC cross-compile prefix when not explicitly set.
+# libcap's Make.Rules defines OBJCOPY := $(CROSS_COMPILE)objcopy, but
+# vcpkg_configure_make overrides CC/AR/RANLIB without setting CROSS_COMPILE.
+# Without this, the host objcopy is used and fails on cross-compiled binaries.
+if [ -z "$OBJCOPY" ] && [ -n "$CC" ]; then
+    case "$CC" in
+        *-gcc)
+            cross_prefix="${CC%-gcc}-"
+            derived="${cross_prefix}objcopy"
+            # Only use the cross-prefixed objcopy if it actually exists.
+            # Musl toolchains (e.g. Arch's musl package) don't ship objcopy.
+            if command -v "$derived" >/dev/null 2>&1; then
+                OBJCOPY="$derived"
+            fi
+            ;;
+    esac
+fi
+: "${OBJCOPY:=objcopy}"
+
+cat > Makefile.vcpkg <<END_MAKEFILE ;
+
+BUILD_OPTIONS = \
+    "AR=$AR" \
+    "BUILD_CC=$CC" \
+    "CC=$CC" \
+    "RANLIB=$RANLIB" \
+    "OBJCOPY=$OBJCOPY" \
+    "lib=lib" \
+    "prefix=$prefix"
+
+ifeq ($linkage,shared)
+libs := libcap.so libpsx.so
+BUILD_OPTIONS += SHARED=yes
+else
+libs := libcap.a libpsx.a
+BUILD_OPTIONS += SHARED=no
+endif
+
+all: libcap/cap_names.h
+	\$(MAKE) -C libcap pcs \$(libs) \$(BUILD_OPTIONS)
+
+libcap/cap_names.h:
+	\$(MAKE) -C libcap cap_names.h \$(BUILD_OPTIONS)
+
+install: install-cap_names
+	\$(MAKE) -C libcap install-$linkage \$(BUILD_OPTIONS)
+
+install-cap_names:
+	mkdir -p -m 0755 "\$(DESTDIR)$prefix/include/sys/libcap-private"
+	install -m 0644 libcap/cap_names.h "\$(DESTDIR)$prefix/include/sys/libcap-private"
+	install -m 0644 libcap/cap_names.list.h "\$(DESTDIR)$prefix/include/sys/libcap-private"
+
+END_MAKEFILE

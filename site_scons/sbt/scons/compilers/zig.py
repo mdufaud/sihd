@@ -23,6 +23,13 @@ def load_in_env(env):
         cmd_cc += target_arg
         cmd_cxx += target_arg
 
+    # CPU target (-march=/-mcpu= depending on architecture)
+    cpu_flags = builder.get_cpu_flags(builder.build_machine, builder.build_cpu)
+    if cpu_flags:
+        cpu_str = " ".join(cpu_flags)
+        cmd_cc += f" {cpu_str}"
+        cmd_cxx += f" {cpu_str}"
+
     env.Replace(
         CC = cmd_cc,
         CXX = cmd_cxx,

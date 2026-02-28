@@ -127,7 +127,7 @@ SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(j) $(SCONS_ARGS)
 
 VCPKG_PATH := $(PROJECT_ROOT_PATH)/.vcpkg
 VCPKG_BIN := $(VCPKG_PATH)/vcpkg
-VCPKG_SCRIPT_PATH := $(SBT_PATH)/vcpkg.py
+VCPKG_SCRIPT_PATH := $(SBT_PATH)/vcpkg/install.py
 VCPKG_ACTION := fetch
 
 VCPKG_SCRIPT = $(PYTHON_BIN) $(VCPKG_SCRIPT_PATH) $(VCPKG_ACTION)
@@ -167,6 +167,7 @@ help:
 	$(call mk_log_info,makefile,distribute app: dist=tar|apt|pacman)
 	$(call mk_log_info,makefile,build with clang: compiler=clang)
 	$(call mk_log_info,makefile,build with emscripten: compiler=em)
+	$(call mk_log_info,makefile,target cpu: cpu=<value> e.g. cpu=x86-64-v3 cpu=cortex-a72)
 	$(QUIET) echo > /dev/null
 
 ######################
@@ -207,7 +208,7 @@ targets:
 # Venv
 ##################
 
-.PHONY: venv # Go into a python virtual environnement
+.PHONY: venv # Go into a python virtual environment
 
 venv:
 ifeq ($(VIRTUAL_ENV), )
@@ -241,6 +242,7 @@ build:
 			pkgdep=$(pkgdep) \
 			demo=$(demo) \
 			libc=$(libc) \
+			cpu=$(cpu) \
 	)
 	$(QUIET) $(call echo_log_info,makefile,starting build with command: '$(SCONS_BUILD_CMD) $(BUILD_CMD_LINE)')
 	$(QUIET) $(SCONS_BUILD_CMD) $(BUILD_CMD_LINE)
@@ -472,6 +474,7 @@ dep: vcpkg_deploy
 			pkgdep=$(pkgdep) \
 			demo=$(demo) \
 			libc=$(libc) \
+			cpu=$(cpu) \
 	)
 	$(QUIET) $(VCPKG_SCRIPT) $(BUILD_CMD_LINE)
 

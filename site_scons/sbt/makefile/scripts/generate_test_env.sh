@@ -16,5 +16,5 @@ export EXTLIB_LIB_PATH="$EXTLIB_LIB_PATH"
 EOF
 )
 
-echo "generating environnement variables in: $TEST_PATH/.env"
+echo "generating environment variables in: $TEST_PATH/.env"
 generate_env

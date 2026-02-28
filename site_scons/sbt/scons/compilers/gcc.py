@@ -15,6 +15,11 @@ def load_in_env(env):
         RANLIB = prefix + "ranlib",
     )
 
+    # CPU target (-march=/-mcpu= depending on architecture)
+    cpu_flags = builder.get_cpu_flags(builder.build_machine, builder.build_cpu)
+    if cpu_flags:
+        env.Append(CPPFLAGS = cpu_flags)
+
     # For musl builds, always link libstdc++ and libgcc statically
     # because host system's libstdc++ is built for glibc
     if builder.libc == "musl":

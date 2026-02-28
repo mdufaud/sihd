@@ -269,6 +269,22 @@ def get_libc():
         raise SystemExit("unknown libc: {}".format(libc))
     return libc
 
+def get_cpu():
+    """Get the target CPU model/architecture for -march/-mcpu.
+    Examples: cortex-a72, x86-64-v3, skylake, rv64gc"""
+    return utils.get_opt("cpu", os.getenv("CPU", ""))
+
+def get_cpu_flags(machine: str, cpu: str) -> list:
+    """Return the compiler cpu flag(s) for the given machine and cpu value.
+    x86/x86_64 use -march=, arm/arm64/other use -mcpu=.
+    Returns an empty list if cpu is empty."""
+    if not cpu:
+        return []
+    if machine in ("x86_64", "x86", "i386", "riscv64", "riscv32"):
+        return [f"-march={cpu}"]
+    else:
+        return [f"-mcpu={cpu}"]
+
 def get_host_libc():
     """Detect the host system's libc (gnu or musl)"""
     # Try to check if the system uses musl
@@ -291,6 +307,7 @@ def get_host_libc():
 libc = get_libc()
 build_compiler = get_compiler()
 build_compiler_version = get_compiler_version()
+build_cpu = get_cpu()
 host_libc = get_host_libc()
 host_machine = get_host_machine()
 build_machine = get_machine()
@@ -639,8 +656,22 @@ def create_pacman_package(app, modules):
             machine = build_machine,
             mode = build_mode,
         ))
-        if hasattr(app, "additionnal_build_env"):
-            fd.write(" ".join(["{}={}".format(k, utils.get_opt(k, "0")) for k in app.additionnal_build_env]))
+        if hasattr(app, "additional_build_env"):
+            fd.write(" ".join(["{}={}".format(k, utils.get_opt(k, "0")) for k in app.additional_build_env]))
+        else:
+            # Auto-deduce additional env vars from module configs:
+            # - "conditional-env" keys from conditional_modules (e.g. py=1, lua=1)
+            # - "env" dict keys from all modules (e.g. x11=1, wayland=1)
+            extra_env_keys = set()
+            for mod_conf in getattr(app, "conditional_modules", {}).values():
+                cond_env = mod_conf.get("conditional-env")
+                if cond_env:
+                    extra_env_keys.add(cond_env)
+            for mod_conf in getattr(app, "modules", {}).values():
+                for env_key in mod_conf.get("env", {}).keys():
+                    extra_env_keys.add(env_key)
+            if extra_env_keys:
+                fd.write(" ".join(["{}={}".format(k, utils.get_opt(k, "0")) for k in sorted(extra_env_keys)]))
         fd.write('\n}\n')
         fd.write('\n')
         fd.write(('package() {{\n'

@@ -3,7 +3,7 @@ import os
 import sys
 import shutil
 
-# Pretty utility for verbosis
+# Pretty utility for verbose output
 from pprint import PrettyPrinter
 pp = PrettyPrinter(indent=2)
 

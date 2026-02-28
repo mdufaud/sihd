@@ -80,9 +80,49 @@ def load_env():
 
     return env_module
 
+def _process_includes(app):
+    """
+    Process app.includes: load each file and merge its public attributes into the app module.
+    Include paths are relative to the site_scons/ directory.
+
+    Two-phase processing:
+      1. Merge all public attributes from each include into the app module
+      2. Call configure(app) on includes that define it, allowing them to
+         compute values that depend on app-level attributes (name, version, ...)
+    """
+    if getattr(app, '_includes_processed', False):
+        return
+    includes = getattr(app, "includes", [])
+    loaded_modules = []
+    # phase 1: merge static attributes
+    for include_path in includes:
+        if not include_path.startswith('/'):
+            abs_path = abspath(__sbt_root_path + '/' + include_path)
+        else:
+            abs_path = include_path
+        try:
+            module = __import_from_path(abs_path)
+        except ImportError as e:
+            logger.error(f"Failed to load include '{include_path}': {e}")
+            raise
+        for attr in dir(module):
+            if not attr.startswith('_'):
+                setattr(app, attr, getattr(module, attr))
+        loaded_modules.append((include_path, module))
+        logger.debug(f"included '{include_path}'")
+    # phase 2: call configure(app) callbacks
+    for include_path, module in loaded_modules:
+        configure_fn = getattr(module, 'configure', None)
+        if callable(configure_fn):
+            configure_fn(app)
+            logger.debug(f"configured '{include_path}'")
+    app._includes_processed = True
+
 def load_app():
     try:
-        return __import_module_no_bytecode("app")
+        app = __import_module_no_bytecode("app")
     except ImportError as e:
         logger.error(f"Failed to load app module: {e}")
         raise
+    _process_includes(app)
+    return app

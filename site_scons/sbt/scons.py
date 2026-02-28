@@ -15,7 +15,7 @@ from fileinput import input as file_input
 from subprocess import call as subprocess_call
 from shutil import which as shutil_which
 
-# Pretty utility for verbosis
+# Pretty utility for verbose output
 from pprint import PrettyPrinter
 pp = PrettyPrinter(indent=2)
 
@@ -121,7 +121,7 @@ if pkg_manager_name:
     Return()
 
 ###############################################################################
-# Build environnement
+# Build environment
 ###############################################################################
 
 global_libs = getattr(app, "libs", [])
@@ -284,7 +284,7 @@ if verbose:
 
 default_app_conf_to_get = (build_platform, libtype, build_mode, compiler, builder.libc)
 
-def add_combinaison_app_conf_to_env(env):
+def add_combination_app_conf_to_env(env):
     for idx, app_config in enumerate(default_app_conf_to_get, start=1):
         keys = [app_config]
         scons_utils.add_env_app_conf(app, env, *keys)
@@ -292,7 +292,7 @@ def add_combinaison_app_conf_to_env(env):
             keys.append(sub_app_config)
             scons_utils.add_env_app_conf(app, env, *keys)
 
-add_combinaison_app_conf_to_env(base_env)
+add_combination_app_conf_to_env(base_env)
 
 ###############################################################################
 # Scons options
@@ -351,7 +351,7 @@ def add_targets(src):
     else:
         targets.append(src)
 
-## modules environnement methods
+## modules environment methods
 
 def _env_copy_into_build(self, src, dst):
     module_name = self['APP_MODULE_NAME']

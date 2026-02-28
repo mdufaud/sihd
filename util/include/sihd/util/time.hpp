@@ -4,6 +4,7 @@
 #include <chrono>
 #include <ctime>
 #include <string>
+#include <sys/time.h> // struct timeval (POSIX, not guaranteed by <ctime>)
 
 #include <sihd/util/traits.hpp>
 
@@ -149,7 +150,8 @@ constexpr time_t duration(Duration duration)
     // seconds -> count() * 1E9     == count() * (1E9 / 1) * 1
     // nano -> count() * 1          == count() * (1E9 / 1E9) * 1
     // min -> count() * 1E9 * 60    == count() * (1E9 / 1) * 60
-    return (duration.count() * (std::chrono::duration<int64_t, std::nano>::period::den / Duration::period::den))
+    return (duration.count()
+            * (std::chrono::duration<int64_t, std::nano>::period::den / Duration::period::den))
            * Duration::period::num;
 }
 

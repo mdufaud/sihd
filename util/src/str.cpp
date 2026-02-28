@@ -6,6 +6,7 @@
 #include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
 #include <cmath>   // HUGE_VAL
 #include <cstdarg>
+#include <iomanip> // std::put_time
 #include <locale>
 #include <mutex>
 #include <random>

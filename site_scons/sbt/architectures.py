@@ -70,3 +70,100 @@ def get_vcpkg_machine(machine: str) -> str:
 def get_meson_info(machine: str) -> dict:
     """Get meson cross-compilation info (cpu_family, cpu, endian) for the given machine."""
     return get_config(machine).get("meson", {})
+
+
+# ── Cross-compilation system packages ──────────────────────────────────────
+# Packages required to cross-compile for each architecture, per package manager.
+# "cross" = cross-compiler toolchain, "libc" = target libc headers/libs,
+# "platform" = extra platform-specific packages.
+
+cross_packages = {
+    # arch: { pkg_manager: [packages] }
+    # Note: on apt, g++ cross packages pull libc6-dev-*-cross and linux-libc-dev-*-cross
+    # as transitive dependencies. We list them explicitly for robustness and documentation.
+    "arm64": {
+        "pacman": ["aarch64-linux-gnu-gcc"],
+        "apt":    ["gcc-aarch64-linux-gnu", "g++-aarch64-linux-gnu",
+                    "linux-libc-dev-arm64-cross"],
+        "dnf":    ["gcc-aarch64-linux-gnu", "gcc-c++-aarch64-linux-gnu",
+                    "kernel-headers"],
+    },
+    "arm32": {
+        "pacman": ["arm-linux-gnueabihf-gcc"],
+        "apt":    ["gcc-arm-linux-gnueabihf", "g++-arm-linux-gnueabihf",
+                    "linux-libc-dev-armhf-cross"],
+        "dnf":    ["gcc-arm-linux-gnueabihf", "gcc-c++-arm-linux-gnueabihf",
+                    "kernel-headers"],
+    },
+    "riscv64": {
+        "pacman": ["riscv64-linux-gnu-gcc"],
+        "apt":    ["gcc-riscv64-linux-gnu", "g++-riscv64-linux-gnu",
+                    "linux-libc-dev-riscv64-cross"],
+        "dnf":    ["gcc-riscv64-linux-gnu", "gcc-c++-riscv64-linux-gnu",
+                    "kernel-headers"],
+    },
+    "riscv32": {
+        "pacman": ["riscv32-linux-gnu-gcc"],
+        "apt":    ["gcc-riscv32-linux-gnu", "g++-riscv32-linux-gnu"],
+    },
+    "x86": {
+        "pacman": ["lib32-gcc-libs"],
+        "apt":    ["gcc-multilib", "g++-multilib"],
+        "dnf":    ["gcc-x86_64-linux-gnu", "libstdc++-devel.i686"],
+    },
+    "loongarch64": {
+        "apt": ["gcc-loongarch64-linux-gnu", "g++-loongarch64-linux-gnu"],
+    },
+    "mips64el": {
+        "apt": ["gcc-mips64el-linux-gnuabi64", "g++-mips64el-linux-gnuabi64"],
+    },
+    "s390x": {
+        "pacman": ["s390x-linux-gnu-gcc"],
+        "apt":    ["gcc-s390x-linux-gnu", "g++-s390x-linux-gnu",
+                    "linux-libc-dev-s390x-cross"],
+        "dnf":    ["gcc-s390x-linux-gnu", "gcc-c++-s390x-linux-gnu",
+                    "kernel-headers"],
+    },
+    "ppc64le": {
+        "pacman": ["powerpc64le-linux-gnu-gcc"],
+        "apt":    ["gcc-powerpc64le-linux-gnu", "g++-powerpc64le-linux-gnu",
+                    "linux-libc-dev-ppc64el-cross"],
+        "dnf":    ["gcc-ppc64le-linux-gnu", "gcc-c++-ppc64le-linux-gnu",
+                    "kernel-headers"],
+    },
+}
+
+libc_packages = {
+    "musl": {
+        "pacman": ["musl", "kernel-headers-musl"],
+        "apt":    ["musl-tools", "musl-dev"],
+        "dnf":    ["musl-gcc", "musl-devel", "kernel-headers"],
+    },
+}
+
+platform_packages = {
+    "windows": {
+        "pacman": ["mingw-w64-gcc"],
+        "apt":    ["gcc-mingw-w64", "g++-mingw-w64"],
+        "dnf":    ["mingw64-gcc", "mingw64-gcc-c++"],
+    },
+    "web": {
+        "pacman": ["emscripten"],
+        "apt":    ["emscripten"],
+    },
+}
+
+
+def get_cross_packages(machine: str, pkg_manager: str) -> list:
+    """Get cross-compiler packages for a target architecture and package manager."""
+    return cross_packages.get(normalize_machine(machine), {}).get(pkg_manager, [])
+
+
+def get_libc_packages(libc: str, pkg_manager: str) -> list:
+    """Get libc packages needed for cross-compilation with a given libc."""
+    return libc_packages.get(libc, {}).get(pkg_manager, [])
+
+
+def get_platform_packages(platform: str, pkg_manager: str) -> list:
+    """Get platform-specific packages for cross-compilation."""
+    return platform_packages.get(platform, {}).get(pkg_manager, [])

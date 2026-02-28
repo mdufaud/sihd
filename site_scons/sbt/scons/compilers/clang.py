@@ -18,6 +18,11 @@ def load_in_env(env):
         # static library indexer
         RANLIB = "ranlib",
     )
+
+    # CPU target (-march=/-mcpu= depending on architecture)
+    cpu_flags = builder.get_cpu_flags(builder.build_machine, builder.build_cpu)
+    if cpu_flags:
+        env.Append(CPPFLAGS = cpu_flags)
     if builder.build_asan:
         clang_asan_flags = [
             "-fsanitize=address,leak",

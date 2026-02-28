@@ -4,6 +4,12 @@ name = 'sihd'
 version = "0.1.0"
 git_url = "https://github.com/mdufaud/sihd.git"
 
+# files to include into this module (paths relative to site_scons/)
+includes = [
+    "addon/vcpkg/config.py",
+    "addon/distribution.py",
+]
+
 ###############################################################################
 # modules
 ###############################################################################
@@ -96,8 +102,10 @@ modules = {
         "depends": ['util'],
         "extlibs": ['libzip'],
         "libs": ['zip'],
-        # z/bz2/lzma/ssl/crypto: transitive deps of libzip (needed for static linking)
-        "linux-libs": ['z', 'bz2', 'lzma', 'ssl', 'crypto'],
+        # z/bz2/lzma/ssl/crypto: transitive deps of libzip (needed for static linking on native)
+        "linux-native-libs": ['z', 'bz2', 'lzma', 'ssl', 'crypto'],
+        # cross builds use dynamic vcpkg libs; libzip.so links its own transitive deps
+        "linux-cross-libs": ['z', 'bz2', 'ssl', 'crypto'],
     },
     "tui": {
         "depends": ['util'],
@@ -138,9 +146,9 @@ modules = {
         "libs": ["imgui"],
         # native linux: system provides libglfw.so, libGLEW.so, libGL.so
         "linux-native-libs": ['glfw', 'GLEW', 'GL', 'SDL3'],
-        # cross linux: vcpkg provides libglfw3.a (not libglfw.a), no GLEW/GL needed
+        # cross linux: vcpkg provides libglfw.so (dynamic) / libglfw3.a (static)
         # (imgui has its own GL loader via dlopen, GLEW is unused)
-        "linux-cross-libs": ['glfw3', 'SDL3'],
+        "linux-cross-libs": ['glfw', 'SDL3'],
         "windows-link": [
             "-mwindows" # no shell window opening
         ],
@@ -315,87 +323,6 @@ extlibs_skip_web = [
 
 vcpkg_baseline = "3a3285c4878c7f5a957202201ba41e6fdeba8db4"
 
-vcpkg_cflags = [
-    "-Wno-error=discarded-qualifiers",   # libwebsockets v4.5.2 + GCC >= 14
-]
-vcpkg_cxxflags = []
-
-# default config for cross compilation - to override with specific conf
-vcpkg_cmake_configure_options = {
-    "dbus": [
-        "-DDBUS_SESSION_SOCKET_DIR=/tmp",
-    ],
-    # SDL3: disable system-dependent features by default.
-    "sdl3": [
-        "-DSDL_X11=OFF", "-DSDL_WAYLAND=OFF", "-DSDL_IBUS=OFF",
-        "-DSDL_JACK=OFF", "-DSDL_PULSEAUDIO=OFF", "-DSDL_PIPEWIRE=OFF",
-        "-DSDL_SNDIO=OFF", "-DSDL_KMSDRM=OFF",
-        "-DSDL_OPENGL=OFF", "-DSDL_OPENGLES=OFF",
-        "-DSDL_LIBUDEV=OFF", "-DSDL_LIBURING=OFF",
-    ],
-    # glfw3 enables X11 by default on Linux (REQUIRED) which fails without X11 headers
-    "glfw3": ["-DGLFW_BUILD_X11=OFF"],
-    # imgui: prevent glfw3.h from including GL/gl.h (imgui has its own GL3 loader)
-    "imgui": ["-DCMAKE_CXX_FLAGS_INIT=-DGLFW_INCLUDE_NONE"],
-}
-
-# re-enable system features on native Linux (X11/Wayland/etc. from system packages)
-vcpkg_cmake_configure_options_linux = {
-    "sdl3": [],
-    "glfw3": [],
-    "imgui": [],
-}
-
-# cross-linux: re-enable X11/Wayland (headers now from vcpkg).
-# Audio backends (JACK, PulseAudio...), ibus, udev etc. remain disabled (no vcpkg ports).
-vcpkg_cmake_configure_options_cross_linux = {
-    "sdl3": [
-        # X11 and Wayland: enabled (built from vcpkg)
-        # OpenGL: enabled (headers from opengl vcpkg package)
-        "-DSDL_IBUS=OFF",
-        "-DSDL_JACK=OFF", "-DSDL_PULSEAUDIO=OFF", "-DSDL_PIPEWIRE=OFF",
-        "-DSDL_SNDIO=OFF", "-DSDL_KMSDRM=OFF",
-        "-DSDL_OPENGLES=OFF",
-        "-DSDL_LIBUDEV=OFF", "-DSDL_LIBURING=OFF",
-        "-DSDL_WAYLAND_LIBDECOR=OFF",  # no vcpkg port for libdecor
-        # Pre-set HAVE_XGENERICEVENT: the check_c_source_compiles test fails because
-        # static libX11.a needs transitive deps (libxcb, libXau...) for linking, but
-        # SDL3's cmake only passes libX11.a. The headers ARE correct.
-        "-DHAVE_XGENERICEVENT=1",
-    ],
-    "glfw3": [],  # X11 from vcpkg, use GLFW defaults (X11=ON)
-    "imgui": ["-DCMAKE_CXX_FLAGS_INIT=-DGLFW_INCLUDE_NONE"],
-}
-
-# Libraries whose default-features should be disabled in vcpkg manifest (cross-compilation only).
-# Only explicitly listed features from extlibs_features will be used.
-vcpkg_no_default_features = [
-    "libusb",  # udev default requires libudev headers (no vcpkg port for libudev exists)
-]
-
-# Additional vcpkg packages needed only for cross-linux builds.
-# On native Linux, X11/Wayland come from system packages.
-# On cross-Linux (aarch64, riscv64, arm32...), vcpkg builds them from source
-# using X_VCPKG_FORCE_VCPKG_X_LIBRARIES and X_VCPKG_FORCE_VCPKG_WAYLAND_LIBRARIES.
-vcpkg_cross_linux_extlibs = {
-    # X11 core + extensions
-    "libx11": "",       # core X11 (transitive: xcb, xproto, xtrans, libxau, libxdmcp, xorg-macros)
-    "libxext": "",      # X11 extension library (Xshape, Xshm...)
-    "libxi": "",        # X Input extension (gamepad, touch...)
-    "libxinerama": "",  # multi-monitor support
-    "libxcursor": "",   # cursor management (needed by GLFW3, dlopen'd at runtime)
-    "libxrandr": "",    # resolution/rotation (transitive: libxrender, libxfixes)
-    "libxkbcommon": "", # keyboard handling (needed by both X11 and Wayland)
-    # Wayland
-    "wayland": "",            # core Wayland (requires force-build for cross)
-    "wayland-protocols": "", # Wayland protocol extensions (requires force-build for cross)
-}
-
-vcpkg_cross_linux_extlibs_features = {
-    "wayland": ["force-build"],
-    "wayland-protocols": ["force-build"],
-}
-
 ###############################################################################
 # compilation
 ###############################################################################
@@ -477,9 +404,9 @@ em_link = ["--emrun"]
 
 ## windows specifics
 
-# _WIN64 -> activates sihd functionnalities
-# _WIN32_WINNT -> activates higher version of WIN functionnalities (mingw)
-# NTDDI_VERSION -> activates higher version of WIN functionnalities (mingw)
+# _WIN64 -> activates sihd functionalities
+# _WIN32_WINNT -> activates higher version of WIN functionalities (mingw)
+# NTDDI_VERSION -> activates higher version of WIN functionalities (mingw)
 windows_defines = [
     "_WIN64",
     "_WIN32_WINNT=0x0600",
@@ -496,133 +423,6 @@ test_libs = ['gtest']
 
 demo_extlibs = ['cli11']
 demo_libs = ['CLI11']
-
-###############################################################################
-# distribution
-###############################################################################
-
-description = "Simple Input Handler Displayer"
-license = "GPL3"
-section = "libdevel"
-priority = "optional"
-architecture = "any"
-multi_architecture = "same"
-maintainers = ["mdufaud <maxence_dufaud@hotmail.fr>"]
-contributors = ["azouiten <alexandre.zouiten1@gmail.com>"]
-
-## APT
-
-# packages equivalent to build DEBIAN/control dependencies
-apt_packages = {
-    "gtest": "libgtest-dev",
-    "nlohmann-json": "nlohmann-json3-dev",
-    "fmt": "libfmt-dev",
-    "libuuid": "uuid-dev",
-    "cli11": "cli11-dev",
-    "openssl": "openssl",
-    "curl": "libcurl4-openssl-dev",
-    "libwebsockets": "libwebsockets-dev",
-    "libpcap": "libpcap-dev",
-    "libssh": "libssh-dev",
-    "libusb": "libusb-1.0-0-dev",
-    "libzip": "libzip-dev",
-    "simpleble": "libsimpleble-dev",
-    "pybind11": "python3-pybind11",
-    # apt libmesa-dev for opengl
-    "glfw3": "libglfw3-dev",
-    "glew": "libglew-dev",
-    "sdl3": "libsdl3-dev",
-    "lua": "liblua5.3-dev",
-    "libusb": "libusb-dev",
-    "x11": "libx11-dev",
-    "wayland": "libwayland-dev",
-}
-
-## PACMAN
-
-# used to create PKGBUILD build command
-additionnal_build_env = ['py', 'lua', 'sdl', 'x11', 'wayland']
-# source to clone and build
-pacman_source = "{name}-{version}::git+{git_url}#tag={version}".format(
-    name=name,
-    version=version,
-    git_url=git_url,
-)
-# packages equivalent to build PKGBUILD dependencies
-pacman_packages = {
-    "gtest": "gtest",
-    "nlohmann-json": "nlohmann-json",
-    "fmt": "fmt",
-    "libuuid": "util-linux-libs",
-    "cli11": "cli11",
-    "openssl": "openssl",
-    "curl": "curl",
-    "libwebsockets": "libwebsockets",
-    "libpcap": "libpcap",
-    "libssh": "libssh",
-    "libusb": "libusb",
-    "libzip": "libzip",
-    "simpleble": "simpleble",
-    "pybind11": "pybind11",
-    "glfw3": "glfw",
-    "glew": "glew",
-    "sdl3": "sdl3",
-    "lua": "lua",
-    "libusb": "libusb",
-    "x11": "libx11",
-    "wayland": "wayland",
-}
-
-## YUM
-
-yum_packages = {
-    "gtest": "gtest-devel",
-    "nlohmann-json": "json-devel",
-    "fmt": "fmt-devel",
-    "libuuid": "uuid-devel",
-    "cli11": "cli11-devel",
-    "openssl": "openssl",
-    "curl": "libcurl-devel",
-    "libwebsockets": "libwebsockets-devel",
-    "libpcap": "libpcap-devel",
-    "libssh": "libssh-devel",
-    "libusb": "libusb-devel",
-    "libzip": "libzip-devel",
-    "simpleble": "simpleble-devel",
-    "pybind11": "python3-pybind11",
-    "glfw3": "glfw-devel",
-    "glew": "glew-devel",
-    "sdl3": "sdl3-devel",
-    "lua": "lua5.3-devel",
-    "libusb": "libusb-devel",
-    "x11": "libx11-devel",
-    "wayland": "libwayland-devel",
-}
-
-## MSYS2
-
-__msys2_mingw = "mingw-w64-x86_64-"
-msys2_packages = {
-    "gtest": f"{__msys2_mingw}gtest",
-    "nlohmann-json": f"{__msys2_mingw}nlohmann-json",
-    "fmt": f"{__msys2_mingw}fmt",
-    "cli11": f"{__msys2_mingw}cli11",
-    "openssl": f"{__msys2_mingw}openssl",
-    "curl": f"{__msys2_mingw}curl",
-    "libwebsockets": f"{__msys2_mingw}libwebsockets",
-    "libpcap": f"{__msys2_mingw}libpcap",
-    "libssh": f"{__msys2_mingw}libssh",
-    "libusb": f"{__msys2_mingw}libusb",
-    "libzip": f"{__msys2_mingw}libzip",
-    "pybind11": f"{__msys2_mingw}pybind11",
-    "glfw3": f"{__msys2_mingw}glfw",
-    "glew": f"{__msys2_mingw}glew",
-    "sdl3": f"{__msys2_mingw}sdl3",
-    "lua": f"{__msys2_mingw}lua",
-    "libusb": f"{__msys2_mingw}libusb",
-    "x11": f"{__msys2_mingw}libx11",
-    "wayland": f"{__msys2_mingw}wayland",
-}
 
 ###############################################################################
 # after build

@@ -2,7 +2,7 @@ Import('env')
 
 builder = env.builder()
 
-# build library from lib sources - not added to environnement
+# build library from lib sources - not added to environment
 lib = env.build_lib(Glob('src/*.cpp'), name = env.module_format_name())
 
 # build unittest from test sources with newly created lib
