@@ -18,10 +18,11 @@ SIHD_NEW_LOGGER("sihd::imgui");
 
 ImguiRunner::ImguiRunner(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent),
+    _running(false),
+    _gui_running(false),
     _imgui_renderer_ptr(nullptr),
     _imgui_backend_ptr(nullptr)
 {
-    _running = false;
 }
 
 ImguiRunner::~ImguiRunner()
@@ -40,6 +41,11 @@ void ImguiRunner::_emscripten_loop(void *arg)
 
 bool ImguiRunner::run()
 {
+    if (_imgui_backend_ptr == nullptr || _imgui_renderer_ptr == nullptr)
+    {
+        SIHD_LOG(error, "ImguiRunner: backend and renderer must be set before run()");
+        return false;
+    }
     {
         std::lock_guard l(_mutex);
         if (_running)
@@ -69,6 +75,10 @@ bool ImguiRunner::stop()
             return true;
         _running = false;
     }
+#if defined(__SIHD_EMSCRIPTEN__)
+    if constexpr (util::os::is_emscripten)
+        emscripten_cancel_main_loop();
+#endif
     return _running == false;
 }
 
@@ -104,6 +114,11 @@ void ImguiRunner::_loop_once()
         _gui_running = this->_new_frame();
         _gui_running = _gui_running && this->_build_frame();
         _gui_running = _gui_running && this->_render();
+    }
+    if constexpr (util::os::is_emscripten)
+    {
+        if (!_running || !_gui_running)
+            this->_shutdown();
     }
 }
 
@@ -141,8 +156,9 @@ bool ImguiRunner::_render()
 
 void ImguiRunner::_shutdown()
 {
-    _imgui_backend_ptr->shutdown();
+    // Official ImGui order: renderer first, then backend
     _imgui_renderer_ptr->shutdown();
+    _imgui_backend_ptr->shutdown();
     ImGui::DestroyContext();
     _imgui_backend_ptr->terminate();
 }

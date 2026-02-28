@@ -22,10 +22,10 @@ int main()
     if (!glfw_backend.init_window("OpenGL3 GLFW demo"))
         return 1;
 
-    if (!opengl_renderer.init())
+    if (!glfw_backend.init_backend_opengl())
         return 1;
 
-    if (!glfw_backend.init_backend_opengl())
+    if (!opengl_renderer.init())
         return 1;
 
     bool show_demo_window = true;

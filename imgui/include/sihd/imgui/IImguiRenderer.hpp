@@ -10,7 +10,7 @@ class IImguiRenderer
 {
     public:
         virtual ~IImguiRenderer() = default;
-        ;
+
         virtual void new_frame() = 0;
         virtual void render(ImDrawData *draw_data) = 0;
         virtual void shutdown() = 0;

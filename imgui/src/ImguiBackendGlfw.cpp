@@ -34,7 +34,7 @@ bool ImguiBackendGlfw::init_window(const std::string & name, size_t width, size_
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return false;
-        // Decide GL+GLSL versions
+    // Decide GL+GLSL versions
 #if defined(IMGUI_IMPL_OPENGL_ES2)
     // GL ES 2.0 + GLSL 100
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
@@ -88,13 +88,7 @@ bool ImguiBackendGlfw::should_close()
     return glfwWindowShouldClose(_glfw_window_ptr);
 }
 
-void ImguiBackendGlfw::pre_render()
-{
-    int display_w;
-    int display_h;
-
-    glfwGetFramebufferSize(_glfw_window_ptr, &display_w, &display_h);
-}
+void ImguiBackendGlfw::pre_render() {}
 
 void ImguiBackendGlfw::post_render()
 {

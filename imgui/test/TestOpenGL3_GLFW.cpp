@@ -43,8 +43,8 @@ TEST_F(TestOpenGL3_GLFW, test_simple_interactive)
 
     ImguiBackendGlfw glfw_backend;
     ASSERT_TRUE(glfw_backend.init_window("OpenGL3 GLFW test"));
-    ASSERT_TRUE(opengl_renderer.init());
     ASSERT_TRUE(glfw_backend.init_backend_opengl());
+    ASSERT_TRUE(opengl_renderer.init());
 
     bool show_demo_window = true;
     bool show_another_window = false;

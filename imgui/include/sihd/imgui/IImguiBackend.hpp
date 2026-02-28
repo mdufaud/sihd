@@ -8,7 +8,7 @@ class IImguiBackend
 {
     public:
         virtual ~IImguiBackend() = default;
-        ;
+
         virtual void new_frame() = 0;
         virtual bool should_close() = 0;
         virtual void poll() = 0;

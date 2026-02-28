@@ -53,7 +53,7 @@ bool ImguiBackendWin32::init_window(const std::string & name, size_t width, size
     _win_cls.hIconSm = NULL;
     ::RegisterClassEx(&_win_cls);
     _window = ::CreateWindow(_win_cls.lpszClassName,
-                             _T(name.c_str()),
+                             name.c_str(),
                              WS_OVERLAPPEDWINDOW,
                              // x - y - width - height
                              100,
@@ -137,9 +137,9 @@ bool ImguiBackendWin32::should_close()
     return _close;
 }
 
-void ImguiBackendWin32::pre_render() = default;
+void ImguiBackendWin32::pre_render() {}
 
-void ImguiBackendWin32::post_render() = default;
+void ImguiBackendWin32::post_render() {}
 
 void ImguiBackendWin32::shutdown()
 {

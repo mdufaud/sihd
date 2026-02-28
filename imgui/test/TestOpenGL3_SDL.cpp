@@ -43,8 +43,8 @@ TEST_F(TestOpenGL3_SDL, test_opengl3_sdl_interactive)
     ImguiBackendSDL sdl_backend;
     sdl_backend.decide_opengl_version();
     ASSERT_TRUE(sdl_backend.init_window("OpenGL3 SDL test"));
-    ASSERT_TRUE(opengl_renderer.init());
     ASSERT_TRUE(sdl_backend.init_backend_opengl());
+    ASSERT_TRUE(opengl_renderer.init());
 
     bool show_demo_window = true;
     bool show_another_window = false;

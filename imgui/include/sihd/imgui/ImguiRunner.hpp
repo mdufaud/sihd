@@ -1,6 +1,7 @@
 #ifndef __SIHD_IMGUI_IMGUIRUNNER_HPP__
 #define __SIHD_IMGUI_IMGUIRUNNER_HPP__
 
+#include <atomic>
 #include <functional>
 #include <mutex>
 
@@ -40,7 +41,7 @@ class ImguiRunner: public sihd::util::Named
     private:
         std::mutex _mutex;
 
-        bool _running;
+        std::atomic<bool> _running;
         bool _gui_running;
         IImguiRenderer *_imgui_renderer_ptr;
         IImguiBackend *_imgui_backend_ptr;
