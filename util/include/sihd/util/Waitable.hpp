@@ -6,7 +6,6 @@
 
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/util/os.hpp>
 
 namespace sihd::util
 {

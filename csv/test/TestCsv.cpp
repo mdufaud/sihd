@@ -3,14 +3,15 @@
 #include <sihd/csv/CsvWriter.hpp>
 #include <sihd/csv/utils.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/TmpDir.hpp>
-#include <sihd/util/fs.hpp>
+#include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
 
 namespace test
 {
 SIHD_NEW_LOGGER("test");
 using namespace sihd::csv;
 using namespace sihd::util;
+using namespace sihd::sys;
 class TestCsv: public ::testing::Test
 {
     protected:
@@ -100,7 +101,7 @@ TEST_F(TestCsv, test_csv_writer)
 
     fmt::print("{}\n", fs::read_all(path).value());
 
-    EXPECT_TRUE(sihd::util::fs::are_equals(path, "test/resources/expected.csv"));
+    EXPECT_TRUE(sihd::sys::fs::are_equals(path, "test/resources/expected.csv"));
 }
 
 TEST_F(TestCsv, test_csv_reader)

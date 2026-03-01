@@ -1,7 +1,7 @@
 #include <fmt/format.h>
 
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/fs.hpp>
+#include <sihd/sys/fs.hpp>
 
 #include <sihd/zip/ZipFile.hpp>
 #include <sihd/zip/zip.hpp>
@@ -12,6 +12,7 @@ namespace sihd::zip
 SIHD_LOGGER;
 
 using namespace sihd::util;
+using namespace sihd::sys;
 
 std::vector<std::string> list_entries(std::string_view archive_path)
 {

@@ -8,7 +8,7 @@
 #include <sihd/util/Node.hpp>
 #include <sihd/util/StepWorker.hpp>
 #include <sihd/util/Waitable.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 
 #include <sihd/http/HttpHeader.hpp>
 #include <sihd/http/HttpRequest.hpp>

@@ -11,7 +11,7 @@
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Observable.hpp>
-#include <sihd/util/Poll.hpp>
+#include <sihd/sys/Poll.hpp>
 #include <sihd/util/Waitable.hpp>
 
 namespace sihd::net
@@ -23,7 +23,7 @@ class TcpClient: public INetReceiver,
                  public sihd::util::Configurable,
                  public sihd::util::ABlockingService,
                  public sihd::util::Observable<INetReceiver>,
-                 public sihd::util::IHandler<sihd::util::Poll *>
+                 public sihd::util::IHandler<sihd::sys::Poll *>
 {
     public:
         TcpClient(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -63,7 +63,7 @@ class TcpClient: public INetReceiver,
         const IpAddr & client_addr() const { return _client_addr; }
 
     protected:
-        void handle(sihd::util::Poll *poll) override;
+        void handle(sihd::sys::Poll *poll) override;
         bool on_start() override;
         bool on_stop() override;
 
@@ -74,7 +74,7 @@ class TcpClient: public INetReceiver,
         IpAddr _client_addr;
         bool _connected;
         std::mutex _poll_mutex;
-        sihd::util::Poll _poll;
+        sihd::sys::Poll _poll;
 };
 
 } // namespace sihd::net

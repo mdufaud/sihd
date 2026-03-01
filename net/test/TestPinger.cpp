@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <sihd/net/Pinger.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
@@ -10,6 +10,7 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::net;
 using namespace sihd::util;
+using namespace sihd::sys;
 class TestPinger: public ::testing::Test
 {
     protected:

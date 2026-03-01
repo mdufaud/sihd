@@ -6,7 +6,7 @@
 
 #include <sihd/net/Socket.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/sys/os.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <fcntl.h>       // fcntl
@@ -133,39 +133,39 @@ void Socket::_clear_socket_info()
 
 bool Socket::set_socket_ttl(int socket, int ttl, bool ipv6)
 {
-    return sihd::util::os::setsockopt(socket, ipv6 ? IPPROTO_IPV6 : IPPROTO_IP, IP_TTL, &ttl, sizeof(int));
+    return sihd::sys::os::setsockopt(socket, ipv6 ? IPPROTO_IPV6 : IPPROTO_IP, IP_TTL, &ttl, sizeof(int));
 }
 
 bool Socket::set_socket_reuseaddr(int socket, bool active)
 {
     int opt = active ? 1 : 0;
-    return sihd::util::os::setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
+    return sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
 }
 
 bool Socket::set_socket_broadcast(int socket, bool active)
 {
     int opt = active ? 1 : 0;
-    return sihd::util::os::setsockopt(socket, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(int));
+    return sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(int));
 }
 
 bool Socket::set_socket_tcp_nodelay(int socket, bool active)
 {
     int opt = (active ? 1 : 0);
-    return sihd::util::os::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt), true);
+    return sihd::sys::os::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt), true);
 }
 
 bool Socket::is_socket_tcp_nodelay(int socket)
 {
     int opt;
     socklen_t len = sizeof(opt);
-    return sihd::util::os::getsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, &len, true) && opt != 0;
+    return sihd::sys::os::getsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, &len, true) && opt != 0;
 }
 
 bool Socket::is_socket_broadcast(int socket)
 {
     int res;
     socklen_t length = sizeof(int);
-    return sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_BROADCAST, &res, &length, true) && res != 0;
+    return sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_BROADCAST, &res, &length, true) && res != 0;
 }
 
 bool Socket::bind_socket_to_device(int socket, std::string_view name)
@@ -174,7 +174,7 @@ bool Socket::bind_socket_to_device(int socket, std::string_view name)
     char device_name[IFNAMSIZ];
 
     strncpy(device_name, name.data(), std::min(name.size(), (size_t)IFNAMSIZ));
-    return sihd::util::os::setsockopt(socket,
+    return sihd::sys::os::setsockopt(socket,
                                       SOL_SOCKET,
                                       SO_BINDTODEVICE,
                                       device_name,
@@ -191,16 +191,16 @@ bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
 {
 #if !defined(__SIHD_WINDOWS__)
     socklen_t length = sizeof(int);
-    bool found = sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_DOMAIN, domain, &length);
+    bool found = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_DOMAIN, domain, &length);
     length = sizeof(int);
-    found = found && sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_TYPE, type, &length);
+    found = found && sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_TYPE, type, &length);
     length = sizeof(int);
-    found = found && sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_PROTOCOL, protocol, &length);
+    found = found && sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_PROTOCOL, protocol, &length);
     return found;
 #else
     CSADDR_INFO addrinfo;
     socklen_t length = sizeof(addrinfo);
-    bool found = sihd::util::os::getsockopt(socket, SOL_SOCKET, SO_BSP_STATE, &addrinfo, &length);
+    bool found = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_BSP_STATE, &addrinfo, &length);
     if (found)
     {
         *protocol = addrinfo.iProtocol;
@@ -736,12 +736,12 @@ bool Socket::is_socket_blocking(int socket)
     // currently on windows, there is no easy way to obtain the socket's current blocking mode since
     // WSAIsBlocking was deprecated
     unsigned long mode = 1;
-    bool set_blocking = util::os::ioctl(socket, FIONBIO, &mode);
+    bool set_blocking = sihd::sys::os::ioctl(socket, FIONBIO, &mode);
     if (set_blocking)
     {
         // put back non blocking
         mode = 0;
-        return util::os::ioctl(socket, FIONBIO, &mode, true);
+        return sihd::sys::os::ioctl(socket, FIONBIO, &mode, true);
     }
     return set_blocking == false;
 }
@@ -751,7 +751,7 @@ bool Socket::set_socket_blocking(int socket, bool active)
     if (socket < 0)
         throw std::runtime_error("Socket: cannot set blocking on a closed socket");
     unsigned long mode = active ? 0 : 1;
-    if (sihd::util::os::ioctl(socket, FIONBIO, &mode) != 0)
+    if (sihd::sys::os::ioctl(socket, FIONBIO, &mode) != 0)
     {
         SIHD_LOG(error, "Socket: could not set ioctl: {}", strerror(errno));
         return false;

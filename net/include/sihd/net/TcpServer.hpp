@@ -8,7 +8,7 @@
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Named.hpp>
-#include <sihd/util/Poll.hpp>
+#include <sihd/sys/Poll.hpp>
 #include <sihd/util/Waitable.hpp>
 
 namespace sihd::net
@@ -17,7 +17,7 @@ namespace sihd::net
 class TcpServer: public INetServer,
                  public sihd::util::Named,
                  public sihd::util::Configurable,
-                 public sihd::util::IHandler<sihd::util::Poll *>
+                 public sihd::util::IHandler<sihd::sys::Poll *>
 {
     public:
         TcpServer(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -54,7 +54,7 @@ class TcpServer: public INetServer,
         size_t queue_size() const { return _queue_size; }
 
     protected:
-        void handle(sihd::util::Poll *poll) override;
+        void handle(sihd::sys::Poll *poll) override;
         bool on_start() override;
         bool on_stop() override;
 
@@ -64,7 +64,7 @@ class TcpServer: public INetServer,
         Socket _socket;
         size_t _queue_size;
         std::mutex _poll_mutex;
-        sihd::util::Poll _poll;
+        sihd::sys::Poll _poll;
         INetServerHandler *_server_handler_ptr;
 };
 

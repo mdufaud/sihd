@@ -2,7 +2,7 @@
 
 #include <libssh/libssh.h>
 
-#include <sihd/util/LineReader.hpp>
+#include <sihd/sys/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fmt.hpp>
 #include <sihd/util/str.hpp>
@@ -12,6 +12,8 @@
 
 namespace sihd::ssh
 {
+
+using namespace sihd::sys;
 
 SIHD_LOGGER;
 
@@ -265,7 +267,7 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
             {
                 fmt::print("{}", prompt);
                 std::string answer;
-                sihd::util::LineReader::fast_read_stdin(answer);
+                sihd::sys::LineReader::fast_read_stdin(answer);
                 if (ssh_userauth_kbdint_setanswer(_impl_ptr->ssh_session_ptr, i, answer.c_str()) < 0)
                     return AuthState(SSH_AUTH_ERROR);
             }

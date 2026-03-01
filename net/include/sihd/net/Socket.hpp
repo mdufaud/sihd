@@ -2,7 +2,6 @@
 #define __SIHD_NET_SOCKET_HPP__
 
 #include <sihd/util/ArrayView.hpp>
-#include <sihd/util/os.hpp>
 #include <sihd/util/platform.hpp>
 
 #include <sihd/net/IpAddr.hpp>

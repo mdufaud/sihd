@@ -3,7 +3,7 @@
 
 #include <sihd/util/Array.hpp>
 #include <sihd/util/IReader.hpp>
-#include <sihd/util/LineReader.hpp>
+#include <sihd/sys/LineReader.hpp>
 #include <sihd/util/Splitter.hpp>
 
 namespace sihd::csv
@@ -48,7 +48,7 @@ class CsvReader: public sihd::util::IReaderTimestamp
         mutable std::vector<std::string> _csv_cols;
 
         sihd::util::Splitter _splitter;
-        sihd::util::LineReader _line_reader;
+        sihd::sys::LineReader _line_reader;
 };
 
 } // namespace sihd::csv

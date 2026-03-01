@@ -16,28 +16,8 @@ includes = [
 
 modules = {
     "util": {
-        "env": {
-            "x11": 0, # x11=1 to compile with X11
-            "wayland": 0, # wayland=1 to compile with Wayland
-        },
         "libs": ['pthread'], # threading
         "extlibs": ['nlohmann-json', 'fmt'],
-        # === Linux specific ===
-        "linux-extlibs": ['libuuid'],
-        "linux-libs": [
-            'dl', # dl_open...
-            'uuid',
-        ],
-        # === Windows specific ===
-        "windows-libs": [
-            'rpcrt4', # Uuid
-            'psapi', # GetModuleFileName/GetProcessMemoryInfo
-            'ssp', # winsock
-            'ws2_32', # windows socket api
-            'gdi32', # wingdi
-            'imagehlp', # backtrace / SymFromAddr
-            # ! never add libucrt with mingw
-        ],
         # stdc++fs only needed for GCC < 9 with glibc
         "mingw-gnu-libs": ['stdc++fs'],
         # === Emscripten specific ===
@@ -51,17 +31,37 @@ modules = {
             "-sFORCE_FILESYSTEM", # use filesystem
             "-sUSE_PTHREADS=1", # enable threads
             "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
-            "-sPROXY_TO_PTHREAD", # main is a navigator thread
+            "-sPROXY_TO_PTHREAD", # main is a narrator thread
+        ],
+    },
+    "sys": {
+        "depends": ['util'],
+        "env": {
+            "x11": 0, # x11=1 to compile with X11
+            "wayland": 0, # wayland=1 to compile with Wayland
+        },
+        # === Linux specific ===
+        "linux-extlibs": ['libuuid'],
+        "linux-libs": [
+            'dl', # dlopen
+            'uuid', # libuuid
+        ],
+        # === Windows specific ===
+        "windows-libs": [
+            'rpcrt4', # Uuid
+            'psapi', # GetProcessMemoryInfo
+            'ssp', # winsock (Poll)
+            'ws2_32', # windows socket api (Poll)
+            'gdi32', # wingdi (screenshot/clipboard)
+            'imagehlp', # backtrace / SymFromAddr
+            # ! never add libucrt with mingw
         ],
     },
     "core": {
-        "depends": ['util'],
-    },
-    "ipc": {
-        "depends": ['util'],
+        "depends": ['util', 'sys'],
     },
     "net": {
-        "depends": ['util'],
+        "depends": ['util', 'sys'],
         "extlibs": ['openssl'],
         "libs": ['ssl', 'crypto'],
         "windows-libs": [
@@ -99,7 +99,7 @@ modules = {
         ],
     },
     "zip": {
-        "depends": ['util'],
+        "depends": ['util', 'sys'],
         "extlibs": ['libzip'],
         "libs": ['zip'],
         # z/bz2/lzma/ssl/crypto: transitive deps of libzip (needed for static linking on native)
@@ -108,19 +108,19 @@ modules = {
         "linux-cross-libs": ['z', 'bz2', 'ssl', 'crypto'],
     },
     "tui": {
-        "depends": ['util'],
+        "depends": ['util', 'sys'],
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
     },
     "ssh": {
-        "depends": ['util'],
+        "depends": ['util', 'sys'],
         "extlibs": ["libssh"],
         "libs": ['ssh'],
         # libssh.a depends on OpenSSL (needed for cross static linking)
         "linux-cross-libs": ['ssl', 'crypto'],
     },
     "usb": {
-        "depends": ['util'],
+        "depends": ['util', 'sys'],
         "extlibs": ['libusb'],
         # native linux: udev is a system transitive dep of libusb, parse-config provides libusb flags
         "native-libs": ['udev'],
@@ -131,17 +131,17 @@ modules = {
         "cross-libs": ['usb-1.0'],
     },
     "bt": {
-        "depends": ['util'],
+        "depends": ['util', 'sys'],
         "extlibs": ['simpleble'],
         "libs": ['simpleble'],
         # dbus-1 is a transitive dep of simpleble on Linux (needed for static linking)
         "linux-libs": ['dbus-1'],
     },
     "csv": {
-        "depends": ['util'],
+        "depends": ['util', 'sys'],
     },
     "imgui": {
-        "depends": ['util'],
+        "depends": ['util', 'sys'],
         "extlibs": ['imgui', 'libxcrypt', 'opengl'],
         "libs": ["imgui"],
         # native linux: system provides libglfw.so, libGLEW.so, libGL.so
@@ -205,7 +205,7 @@ conditional_modules = {
     "lua": {
         # apt liblua5.3-dev / pacman lua
         "extlibs": ['lua', 'luabridge3'],
-        "depends": ['util'],
+        "depends": ['util', 'sys'],
         "libs": ["lua"],
         "conditional-env": "lua",
         "conditional-depends": ['core'],
@@ -219,7 +219,7 @@ conditional_modules = {
     },
     "py": {
         "platforms": ["linux"],
-        "depends": ['util'],
+        "depends": ['util', 'sys'],
         "extlibs": ['pybind11'],
         "conditional-env": "py",
         "conditional-depends": ['core'],

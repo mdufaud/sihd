@@ -1,6 +1,6 @@
 #include <sihd/net/TcpServer.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 
 namespace sihd::net
 {
@@ -8,7 +8,7 @@ namespace sihd::net
 using namespace std::placeholders;
 using namespace sihd::util;
 
-SIHD_UTIL_REGISTER_FACTORY(TcpServer)
+SIHD_REGISTER_FACTORY(TcpServer)
 
 SIHD_LOGGER;
 
@@ -162,7 +162,7 @@ bool TcpServer::on_stop()
     return true;
 }
 
-void TcpServer::handle(sihd::util::Poll *poll)
+void TcpServer::handle(sihd::sys::Poll *poll)
 {
     if (poll->polling_timeout())
         _server_handler_ptr->handle_no_activity(this, poll->polling_time());

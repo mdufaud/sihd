@@ -1,14 +1,11 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/MessageField.hpp>
-#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/array_utils.hpp>
 
 namespace sihd::util
 {
 
 SIHD_LOGGER;
-
-SIHD_UTIL_REGISTER_FACTORY(MessageField);
 
 MessageField::MessageField(const std::string & name, Node *parent): Named(name, parent)
 {

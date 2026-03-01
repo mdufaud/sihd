@@ -2,7 +2,6 @@
 
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
 
 #include <sihd/ssh/BasicSshServerHandler.hpp>
 #include <sihd/ssh/SshChannel.hpp>

@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include <sihd/util/File.hpp>
+#include <sihd/sys/File.hpp>
 #include <sihd/util/IWriter.hpp>
 
 namespace sihd::csv
@@ -37,7 +37,7 @@ class CsvWriter: public sihd::util::IWriter
         size_t current_col() const { return _col; }
         size_t max_col() const { return _max_col; }
 
-        const sihd::util::File & file() { return _file; };
+        const sihd::sys::File & file() { return _file; };
 
     protected:
 
@@ -50,7 +50,7 @@ class CsvWriter: public sihd::util::IWriter
         int _comment;
         int _line_feed;
 
-        sihd::util::File _file;
+        sihd::sys::File _file;
 };
 
 } // namespace sihd::csv

@@ -4,7 +4,7 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/fs.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/time.hpp>
 
 #include "ssh_test_helpers.hpp"

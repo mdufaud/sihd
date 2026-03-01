@@ -47,7 +47,10 @@ void add_child_informations(const Node *node,
         add_node_informations(child_node, s, opts);
 }
 
-void add_children_informations(const Node *node, std::string & s, Node::TreeOpts & opts, const std::string & indent)
+void add_children_informations(const Node *node,
+                               std::string & s,
+                               Node::TreeOpts & opts,
+                               const std::string & indent)
 {
     for (const std::string & name : node->children_keys())
     {
@@ -71,8 +74,6 @@ void add_node_informations(const Node *node, std::string & s, Node::TreeOpts opt
 
 } // namespace
 
-SIHD_UTIL_REGISTER_FACTORY(Node);
-
 SIHD_LOGGER;
 
 Node::Node(const std::string & name, Node *parent): Named(name, parent) {}
@@ -85,7 +86,8 @@ Node::~Node()
 void Node::add_child_unsafe(Named *child, bool ownership)
 {
     if (this->add_child(child->name(), child, ownership) == false)
-        throw std::invalid_argument(fmt::format("Node '{}' already has child '{}'", this->full_name(), child->name()));
+        throw std::invalid_argument(
+            fmt::format("Node '{}' already has child '{}'", this->full_name(), child->name()));
 }
 
 bool Node::add_child(Named *child, bool ownership)

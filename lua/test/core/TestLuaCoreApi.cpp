@@ -4,8 +4,8 @@
 #include <sihd/lua/core/LuaCoreApi.hpp>
 #include <sihd/lua/util/LuaUtilApi.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test

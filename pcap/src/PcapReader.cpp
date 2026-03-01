@@ -1,5 +1,5 @@
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/time.hpp>
 
 #include <sihd/pcap/PcapReader.hpp>
@@ -7,7 +7,7 @@
 namespace sihd::pcap
 {
 
-SIHD_UTIL_REGISTER_FACTORY(PcapReader)
+SIHD_REGISTER_FACTORY(PcapReader)
 
 SIHD_LOGGER;
 

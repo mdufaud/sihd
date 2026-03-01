@@ -1,7 +1,7 @@
 #ifndef __SIHD_PCAP_PCAPREADER_HPP__
 #define __SIHD_PCAP_PCAPREADER_HPP__
 
-#include <sihd/util/File.hpp>
+#include <sihd/sys/File.hpp>
 #include <sihd/util/IReader.hpp>
 #include <sihd/util/Node.hpp>
 

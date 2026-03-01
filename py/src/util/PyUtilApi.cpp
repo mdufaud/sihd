@@ -1,7 +1,6 @@
 #include <sihd/py/util/PyUtilApi.hpp>
 
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Splitter.hpp>
@@ -48,8 +47,6 @@ namespace
 {
 // logger used by python code
 Logger g_py_logger("sihd::py");
-// from path/bin/script.py -> path/bin -> path
-std::string g_exe_dir = fs::parent(fs::parent(fs::executable_path()));
 } // namespace
 
 void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
@@ -243,7 +240,12 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def(pybind11::init<const std::string &>())
         .def("clock", &Scheduler::clock, pybind11::return_value_policy::reference_internal)
         .def("set_clock", &Scheduler::set_clock)
-        .def("start", &Scheduler::start, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("start",
+             [](Scheduler & self) -> bool {
+                 self.set_start_synchronised(true);
+                 pybind11::gil_scoped_release release;
+                 return self.start();
+             })
         .def("stop", &Scheduler::stop, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("is_running", &Scheduler::is_running)
         .def("pause", &Scheduler::pause)
@@ -266,7 +268,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
             pybind11::arg("run_at") = 0,
             pybind11::arg("run_in") = 0,
             pybind11::arg("reschedule_time") = 0)
-        .def("clear_tasks", &Scheduler::clear_tasks, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("clear_tasks", &Scheduler::clear_tasks)
         .def_readonly("overruns", &Scheduler::overruns)
         .def_readwrite("overrun_at", &Scheduler::overrun_at)
         .def_readwrite("acceptable_task_preplay_ns_time", &Scheduler::acceptable_task_preplay_ns_time);
@@ -394,12 +396,22 @@ PyUtilApi::PyTask::PyTask(const pybind11::function & task, const sihd::util::Tas
 {
 }
 
-PyUtilApi::PyTask::~PyTask() = default;
+PyUtilApi::PyTask::~PyTask()
+{
+    if (_fun.ptr() != nullptr && Py_IsInitialized())
+    {
+        pybind11::gil_scoped_acquire acquire;
+        _fun.dec_ref();
+        _fun.release();
+    }
+}
 
 bool PyUtilApi::PyTask::run()
 {
     pybind11::gil_scoped_acquire acquire;
     pybind11::object ret = _fun();
+    if (ret.is_none())
+        return true;
     return ret.cast<bool>();
 }
 

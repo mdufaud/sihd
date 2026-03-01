@@ -1,10 +1,10 @@
 #include <zip.h>
 
-#include <sihd/util/File.hpp>
+#include <sihd/sys/File.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 
 #include <sihd/zip/ZipFile.hpp>
 #include <sihd/zip/zip.hpp>
@@ -74,6 +74,7 @@ void close_zip_file_and_null(zip_file **file_ptr)
 } // namespace
 
 using namespace sihd::util;
+using namespace sihd::sys;
 
 struct ZipFile::ZipHandle
 {
@@ -654,7 +655,7 @@ bool ZipFile::dump_entry_to_fs(std::string_view path, std::string_view password)
             SIHD_LOG(error,
                      "ZipFile: could not write directory entry '{}' - {} for: {}",
                      _current_zip_entry.name,
-                     util::os::last_error_str(),
+                     sys::os::last_error_str(),
                      path);
         return success;
     }
@@ -666,7 +667,7 @@ bool ZipFile::dump_entry_to_fs(std::string_view path, std::string_view password)
         SIHD_LOG(error,
                  "ZipFile: could not open file entry '{}' - {} for: {}",
                  _current_zip_entry.name,
-                 util::os::last_error_str(),
+                 sys::os::last_error_str(),
                  path);
         return false;
     }
@@ -681,7 +682,7 @@ bool ZipFile::dump_entry_to_fs(std::string_view path, std::string_view password)
             SIHD_LOG(error,
                      "ZipFile: could not write file entry '{}' - {} for: {}",
                      _current_zip_entry.name,
-                     util::os::last_error_str(),
+                     sys::os::last_error_str(),
                      path);
             close_zip_file_and_null(&_zip_handle->file_handle_ptr);
             return false;

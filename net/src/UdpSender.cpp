@@ -1,11 +1,11 @@
 #include <sihd/net/UdpSender.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 
 namespace sihd::net
 {
 
-SIHD_UTIL_REGISTER_FACTORY(UdpSender)
+SIHD_REGISTER_FACTORY(UdpSender)
 
 SIHD_LOGGER;
 

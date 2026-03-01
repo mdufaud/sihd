@@ -1,5 +1,9 @@
-#ifndef __SIHD_UTIL_PLATFORM_H__
-#define __SIHD_UTIL_PLATFORM_H__
+#ifndef __SIHD_UTIL_PLATFORM_HPP__
+#define __SIHD_UTIL_PLATFORM_HPP__
+
+#include <sys/types.h> // pid_t, ssize_t
+
+// === Architecture ===
 
 #if defined(__LP64__) || defined(_WIN64)
 # define __SIHD_64BITS__
@@ -10,6 +14,8 @@
 #if defined(__EMSCRIPTEN__)
 # define __SIHD_EMSCRIPTEN__
 #endif
+
+// === Platform macros ===
 
 #if (defined(_WIN16) || defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__) || defined(__MINGW32__))
 
@@ -79,5 +85,68 @@
 # define __SIHD_BSD__
 
 #endif
+
+// === Platform typedefs ===
+
+#if !defined(__SIHD_WINDOWS__)
+# include <sys/resource.h> // rlim_t
+# include <sys/socket.h>   // socklen_t
+#else
+typedef int socklen_t;
+typedef unsigned long rlim_t;
+// missing mingw — int and not uint (libwebsockets)
+typedef int uid_t;
+#endif
+
+// === Platform constexpr booleans ===
+
+namespace sihd::util::platform
+{
+
+#if defined(SIHD_STATIC)
+constexpr bool is_statically_linked = true;
+#else
+constexpr bool is_statically_linked = false;
+#endif
+
+#if defined(__SIHD_WINDOWS__)
+constexpr bool is_windows = true;
+constexpr bool is_unix = false;
+#else
+constexpr bool is_windows = false;
+constexpr bool is_unix = true;
+#endif
+
+#if defined(__SIHD_ANDROID__)
+constexpr bool is_android = true;
+#else
+constexpr bool is_android = false;
+#endif
+
+#if defined(__SIHD_APPLE__)
+constexpr bool is_apple = true;
+#else
+constexpr bool is_apple = false;
+#endif
+
+#if defined(__SIHD_IOS__)
+constexpr bool is_ios = true;
+#else
+constexpr bool is_ios = false;
+#endif
+
+#if defined(__SIHD_EMSCRIPTEN__)
+constexpr bool is_emscripten = true;
+#else
+constexpr bool is_emscripten = false;
+#endif
+
+#if defined(__SANITIZE_ADDRESS__)
+constexpr bool is_run_with_asan = true;
+#else
+constexpr bool is_run_with_asan = false;
+#endif
+
+} // namespace sihd::util::platform
 
 #endif

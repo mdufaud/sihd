@@ -1,11 +1,11 @@
 #include <sihd/net/TcpClient.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 
 namespace sihd::net
 {
 
-SIHD_UTIL_REGISTER_FACTORY(TcpClient)
+SIHD_REGISTER_FACTORY(TcpClient)
 
 SIHD_LOGGER;
 
@@ -146,7 +146,7 @@ bool TcpClient::send_all(sihd::util::ArrCharView view)
     return _socket.send_all(view);
 }
 
-void TcpClient::handle(sihd::util::Poll *poll)
+void TcpClient::handle(sihd::sys::Poll *poll)
 {
     auto events = poll->events();
     if (events.size() > 0)

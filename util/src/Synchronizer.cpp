@@ -1,5 +1,3 @@
-#include <unistd.h>
-
 #include <stdexcept>
 
 #include <sihd/util/Logger.hpp>

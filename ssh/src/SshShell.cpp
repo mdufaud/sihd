@@ -1,7 +1,7 @@
 #include <libssh/libssh.h>
 
 #include <sihd/util/Array.hpp>
-#include <sihd/util/LineReader.hpp>
+#include <sihd/sys/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fmt.hpp>
 
@@ -12,6 +12,7 @@ namespace sihd::ssh
 {
 
 using namespace sihd::util;
+using namespace sihd::sys;
 
 SIHD_LOGGER;
 
@@ -97,7 +98,7 @@ bool SshShell::read_loop()
     if (!buf.reserve(4096))
         return false;
 
-    sihd::util::LineReader reader({
+    sihd::sys::LineReader reader({
         .read_buffsize = 1,
         .delimiter_in_line = true,
     });

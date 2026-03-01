@@ -5,7 +5,7 @@
 #include <libssh/libssh.h>
 #include <libssh/sftp.h>
 
-#include <sihd/util/File.hpp>
+#include <sihd/sys/File.hpp>
 #include <sihd/util/Logger.hpp>
 
 #include <sihd/ssh/Sftp.hpp>
@@ -17,6 +17,8 @@
 
 namespace sihd::ssh
 {
+
+using namespace sihd::sys;
 
 namespace
 {
@@ -113,7 +115,7 @@ void Sftp::close()
 
 bool Sftp::send_file(std::string_view local_path, std::string_view remote_path, mode_t mode)
 {
-    sihd::util::File local_file(local_path, "rb");
+    sihd::sys::File local_file(local_path, "rb");
     if (local_file.is_open() == false)
         return false;
 
@@ -156,7 +158,7 @@ bool Sftp::send_file(std::string_view local_path, std::string_view remote_path, 
 
 bool Sftp::get_file(std::string_view remote_path, std::string_view local_path)
 {
-    sihd::util::File local_file(local_path, "wb");
+    sihd::sys::File local_file(local_path, "wb");
     if (local_file.is_open() == false)
         return false;
 

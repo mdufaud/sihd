@@ -5,13 +5,14 @@
 #include "ftxui/component/screen_interactive.hpp" // for ScreenInteractive
 #include "ftxui/dom/elements.hpp"                 // for text, vbox, window, Element, Elements
 
+#include <sihd/sys/os.hpp>
 #include <sihd/tui/LoggerComponent.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/num.hpp>
-#include <sihd/util/os.hpp>
 #include <sihd/util/str.hpp>
 
 using namespace sihd::util;
+using namespace sihd::sys;
 using namespace sihd::tui;
 using namespace ftxui;
 
@@ -43,7 +44,7 @@ void randomize_log()
                 "Quisque malesuada eros quis imperdiet molestie. Curabitur dui nunc, lacinia nec molestie vitae, vulputate vitae ligula");
             break;
         case 6:
-            logger.info(fmt::format("Current memory: {}", str::bytes_str(os::current_rss())));
+            logger.info(fmt::format("Current memory: {}", str::bytes_str(sihd::sys::os::current_rss())));
             break;
         case 7:
             logger.debug("Lorem ipsum dolor sit amet, consectetur adipiscing elit");

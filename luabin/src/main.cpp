@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <sihd/lua/Vm.hpp>
+#include <sihd/lua/sys/LuaSysApi.hpp>
 #include <sihd/lua/util/LuaUtilApi.hpp>
 
 using namespace sihd::util;
@@ -13,6 +14,7 @@ int main(void)
     Vm vm;
 
     LuaUtilApi::load_base(vm);
+    LuaSysApi::load_base(vm);
 
     vm.do_string("package.path = sihd.dir .. '/etc/sihd/lua/?.lua;' .. package.path");
     vm.do_string("require 'luabin.preload'");

@@ -1,6 +1,4 @@
 #include <sihd/util/CmdInterpreter.hpp>
-#include <sihd/util/File.hpp>
-#include <sihd/util/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/container.hpp>
 
@@ -44,43 +42,23 @@ void CmdInterpreter::add_history(std::string_view line)
     _history.emplace_back(line);
 }
 
-bool CmdInterpreter::dump_history(std::string_view path) const
+std::vector<std::string> CmdInterpreter::dump_history() const
 {
-    File f(path, "a");
-
-    if (f.is_open() == false)
-        return false;
-
-    ssize_t wrote;
-    std::string to_write;
-
+    std::vector<std::string> result;
+    result.reserve(_history.size());
     for (const std::string & history_line : _history)
     {
-        to_write = fmt::format("{}\n", history_line);
-        wrote = f.write(to_write);
-        if ((size_t)wrote != to_write.size())
-            return false;
+        result.push_back(history_line);
     }
-    return true;
+    return result;
 }
 
-bool CmdInterpreter::load_history(std::string_view path)
+void CmdInterpreter::load_history(const std::vector<std::string> & lines)
 {
-    LineReader reader(path);
-
-    if (reader.is_open() == false)
-        return false;
-
-    Splitter history_splitter(" ");
-
-    ArrCharView line;
-    while (reader.read_next())
+    for (const std::string & line : lines)
     {
-        if (reader.get_read_data(line))
-            return false;
         this->add_history(line);
     }
-    return true;
 }
 
 bool CmdInterpreter::handle(std::string_view line)

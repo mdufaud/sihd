@@ -1,8 +1,7 @@
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Value.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test

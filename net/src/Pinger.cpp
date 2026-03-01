@@ -4,10 +4,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/time.hpp>
+
+#include <sihd/sys/os.hpp>
 
 #include <sihd/net/Pinger.hpp>
 
@@ -17,7 +19,7 @@
 namespace sihd::net
 {
 
-SIHD_UTIL_REGISTER_FACTORY(Pinger)
+SIHD_REGISTER_FACTORY(Pinger)
 
 SIHD_LOGGER;
 
@@ -143,7 +145,7 @@ bool Pinger::on_start()
     this->_clear_event();
     _result.clear();
 
-    _expected_id = os::pid() & 0xFFFF;
+    _expected_id = sihd::sys::os::pid() & 0xFFFF;
     _sender.set_id(_expected_id);
     _sender.set_ttl(_ttl);
     _sender.set_echo();

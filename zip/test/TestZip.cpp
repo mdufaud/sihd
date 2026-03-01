@@ -3,10 +3,10 @@
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Process.hpp>
-#include <sihd/util/TmpDir.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/sys/Process.hpp>
+#include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 
@@ -17,6 +17,7 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::zip;
 using namespace sihd::util;
+using namespace sihd::sys;
 class TestZip: public ::testing::Test
 {
     protected:
@@ -31,7 +32,7 @@ class TestZip: public ::testing::Test
 
 TEST_F(TestZip, test_zip_tools)
 {
-    sihd::util::TmpDir tmp_dir;
+    sihd::sys::TmpDir tmp_dir;
 
     const auto origin_path = tmp_dir.path() + "/origin";
     const auto test_path = origin_path + "/test";

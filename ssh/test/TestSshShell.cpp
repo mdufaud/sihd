@@ -2,8 +2,8 @@
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshShell.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
@@ -31,7 +31,7 @@ TEST_F(TestSshShell, test_sshshell_interactive)
     // 3. Valid SSH key authentication
     if (sihd::util::term::is_interactive() == false)
         GTEST_SKIP_("requires interaction");
-    if (sihd::util::os::is_run_by_valgrind())
+    if (sihd::sys::os::is_run_by_valgrind())
         GTEST_SKIP_("no valgrind");
 
     std::string user = getenv("USER");

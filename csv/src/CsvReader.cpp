@@ -1,5 +1,4 @@
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/str.hpp>
 
 #include <sihd/csv/CsvReader.hpp>

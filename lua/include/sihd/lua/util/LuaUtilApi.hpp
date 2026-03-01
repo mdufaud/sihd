@@ -116,8 +116,6 @@ class LuaUtilApi
         static void load_base(Vm & vm);
         static void load_tools(Vm & vm);
         static void load_threading(Vm & vm);
-        static void load_files(Vm & vm);
-        static void load_process(Vm & vm);
 
         /**
          * Inheritance APIs
@@ -264,31 +262,6 @@ class LuaUtilApi
             private:
                 lua_State *_state_ptr;
                 LuaRunnable _lua_runnable;
-        };
-
-        /**
-         * Thread-safe callback for Process stdout/stderr
-         * Data is queued and must be flushed from the Lua thread via flush()
-         */
-        class LuaProcessCallback
-        {
-            public:
-                LuaProcessCallback(luabridge::LuaRef callback);
-                ~LuaProcessCallback();
-
-                // Called from Process reader thread - thread-safe
-                void operator()(std::string_view data);
-
-                // Called from Lua thread to process queued data
-                void flush();
-
-                // Check if there's pending data
-                bool has_pending() const;
-
-            private:
-                luabridge::LuaRef _callback;
-                std::queue<std::string> _queue;
-                mutable std::mutex _mutex;
         };
 
     private:

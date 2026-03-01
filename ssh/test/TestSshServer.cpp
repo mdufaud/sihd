@@ -9,13 +9,13 @@
 #include <sihd/ssh/SshSubsystemExec.hpp>
 
 #include <sihd/util/Array.hpp>
-#include <sihd/util/File.hpp>
+#include <sihd/sys/File.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/TmpDir.hpp>
+#include <sihd/sys/TmpDir.hpp>
 #include <sihd/util/Worker.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/time.hpp>
 
 #include "ssh_test_helpers.hpp"
@@ -25,6 +25,7 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::ssh;
 using namespace sihd::util;
+using namespace sihd::sys;
 
 class TestSshServer: public ::testing::Test
 {

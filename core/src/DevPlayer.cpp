@@ -1,6 +1,6 @@
 #include <sihd/core/DevPlayer.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Task.hpp>
 
@@ -10,7 +10,7 @@
 namespace sihd::core
 {
 
-SIHD_UTIL_REGISTER_FACTORY(DevPlayer)
+SIHD_REGISTER_FACTORY(DevPlayer)
 
 SIHD_LOGGER;
 

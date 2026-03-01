@@ -1,12 +1,12 @@
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 
 #include <sihd/http/WebService.hpp>
 
 namespace sihd::http
 {
 
-SIHD_UTIL_REGISTER_FACTORY(WebService)
+SIHD_REGISTER_FACTORY(WebService)
 
 SIHD_LOGGER;
 

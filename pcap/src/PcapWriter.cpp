@@ -1,11 +1,11 @@
 #include <sihd/pcap/PcapWriter.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 
 namespace sihd::pcap
 {
 
-SIHD_UTIL_REGISTER_FACTORY(PcapWriter)
+SIHD_REGISTER_FACTORY(PcapWriter)
 
 SIHD_LOGGER;
 

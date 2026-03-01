@@ -26,8 +26,8 @@ class CmdInterpreter
         void set_splitter(const Splitter & splitter);
 
         void set_max_history(size_t max);
-        bool dump_history(std::string_view path) const;
-        bool load_history(std::string_view path);
+        std::vector<std::string> dump_history() const;
+        void load_history(const std::vector<std::string> & lines);
 
         bool handle(std::string_view line);
         bool handle(const std::string & cmd, const std::vector<std::string> & args);

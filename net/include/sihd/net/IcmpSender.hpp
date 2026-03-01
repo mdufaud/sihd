@@ -6,7 +6,7 @@
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Named.hpp>
-#include <sihd/util/Poll.hpp>
+#include <sihd/sys/Poll.hpp>
 #include <sihd/util/forward.hpp>
 
 #include <sihd/net/Socket.hpp>
@@ -34,7 +34,7 @@ class IcmpSender: public sihd::util::Named,
                   public sihd::util::Configurable,
                   public sihd::util::ABlockingService,
                   public sihd::util::Observable<IcmpSender>,
-                  public sihd::util::IHandler<sihd::util::Poll *>
+                  public sihd::util::IHandler<sihd::sys::Poll *>
 {
     public:
         IcmpSender(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -69,7 +69,7 @@ class IcmpSender: public sihd::util::Named,
         const IcmpResponse & response() const { return _icmp_response; }
 
     protected:
-        void handle(sihd::util::Poll *poll) override;
+        void handle(sihd::sys::Poll *poll) override;
         bool on_start() override;
         bool on_stop() override;
 
@@ -85,7 +85,7 @@ class IcmpSender: public sihd::util::Named,
 
         Socket _socket;
         std::mutex _poll_mutex;
-        sihd::util::Poll _poll;
+        sihd::sys::Poll _poll;
         std::unique_ptr<sihd::util::ArrByte> _array_rcv_ptr;
         std::unique_ptr<sihd::util::ArrByte> _array_send_ptr;
 

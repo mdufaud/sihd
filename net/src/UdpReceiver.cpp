@@ -1,11 +1,11 @@
 #include <sihd/net/UdpReceiver.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 
 namespace sihd::net
 {
 
-SIHD_UTIL_REGISTER_FACTORY(UdpReceiver)
+SIHD_REGISTER_FACTORY(UdpReceiver)
 
 SIHD_LOGGER;
 
@@ -111,7 +111,7 @@ bool UdpReceiver::poll()
     return _poll.poll(_poll.timeout()) > 0;
 }
 
-void UdpReceiver::handle(sihd::util::Poll *poll)
+void UdpReceiver::handle(sihd::sys::Poll *poll)
 {
     auto events = poll->events();
     if (events.size() > 0)

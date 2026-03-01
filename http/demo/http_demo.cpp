@@ -5,15 +5,14 @@
 
 #include <libwebsockets.h>
 
-#include <sihd/util/File.hpp>
+#include <sihd/sys/File.hpp>
+#include <sihd/sys/Process.hpp>
+#include <sihd/sys/SigWatcher.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
-#include <sihd/util/Process.hpp>
 #include <sihd/util/Runnable.hpp>
-#include <sihd/util/SigWatcher.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
@@ -26,6 +25,7 @@ namespace demo
 {
 
 using namespace sihd::util;
+using namespace sihd::sys;
 using namespace sihd::http;
 
 SIHD_NEW_LOGGER("demo");

@@ -1,11 +1,11 @@
+#include <pybind11/embed.h>
+
 #include <iostream>
 
 #include <gtest/gtest.h>
-#include <pybind11/embed.h>
 
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 #include <sihd/py/util/PyUtilApi.hpp>

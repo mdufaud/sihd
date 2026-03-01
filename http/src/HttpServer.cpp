@@ -1,9 +1,9 @@
 #include <libwebsockets.h>
 
+#include <sihd/sys/NamedFactory.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/fs.hpp>
 
 #include <sihd/http/HttpServer.hpp>
 
@@ -22,11 +22,12 @@
 namespace sihd::http
 {
 
-SIHD_UTIL_REGISTER_FACTORY(HttpServer)
+SIHD_REGISTER_FACTORY(HttpServer)
 
 SIHD_NEW_LOGGER("sihd::http");
 
 using namespace sihd::util;
+using namespace sihd::sys;
 
 HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
     sihd::util::Node(name, parent),

@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshSession.hpp>
-#include <sihd/util/File.hpp>
-#include <sihd/util/LineReader.hpp>
+#include <sihd/sys/File.hpp>
+#include <sihd/sys/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 #include "ssh_test_helpers.hpp"
@@ -14,6 +14,7 @@ namespace test
 {
 SIHD_NEW_LOGGER("test");
 using namespace sihd::util;
+using namespace sihd::sys;
 using namespace sihd::ssh;
 
 class TestSshSession: public ::testing::Test

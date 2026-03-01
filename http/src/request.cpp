@@ -4,8 +4,8 @@
 #include <nlohmann/json.hpp>
 
 #include <sihd/http/request.hpp>
+#include <sihd/sys/File.hpp>
 #include <sihd/util/Defer.hpp>
-#include <sihd/util/File.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/tools.hpp>
 
@@ -24,7 +24,8 @@ struct CurlHandler
             const CURLcode code = curl_global_init(CURL_GLOBAL_ALL);
             if (code != CURLE_OK)
             {
-                throw std::runtime_error(fmt::format("Curl initialization failed: {}", curl_easy_strerror(code)));
+                throw std::runtime_error(
+                    fmt::format("Curl initialization failed: {}", curl_easy_strerror(code)));
             }
         }
 
@@ -69,7 +70,11 @@ struct ProgressCallbackWrapper
         std::function<bool(curl_off_t, curl_off_t, curl_off_t, curl_off_t)> method = {};
 };
 
-int curl_progress_callback(void *userdata, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
+int curl_progress_callback(void *userdata,
+                           curl_off_t dltotal,
+                           curl_off_t dlnow,
+                           curl_off_t ultotal,
+                           curl_off_t ulnow)
 {
     ProgressCallbackWrapper *wrapper = static_cast<ProgressCallbackWrapper *>(userdata);
     if (wrapper->method(dltotal, dlnow, ultotal, ulnow))
@@ -109,7 +114,8 @@ struct CurlRequest
         {
             CURLcode code = curl_easy_getinfo(handle, opt, data);
             if (code != CURLE_OK)
-                throw std::runtime_error(fmt::format("could not get curl option: {}", curl_easy_strerror(code)));
+                throw std::runtime_error(
+                    fmt::format("could not get curl option: {}", curl_easy_strerror(code)));
         }
 
         template <typename T>
@@ -117,14 +123,16 @@ struct CurlRequest
         {
             CURLcode code = curl_easy_setopt(handle, opt, data);
             if (code != CURLE_OK)
-                throw std::runtime_error(fmt::format("could not set curl option: {}", curl_easy_strerror(code)));
+                throw std::runtime_error(
+                    fmt::format("could not set curl option: {}", curl_easy_strerror(code)));
         }
 
         void perform_request()
         {
             CURLcode code = curl_easy_perform(handle);
             if (code != CURLE_OK)
-                throw std::runtime_error(fmt::format("could not perform request: {}", curl_easy_strerror(code)));
+                throw std::runtime_error(
+                    fmt::format("could not perform request: {}", curl_easy_strerror(code)));
         }
 
         void append_header(std::string_view str)
@@ -277,6 +285,7 @@ struct CurlRequest
 } // namespace
 
 using namespace sihd::util;
+using namespace sihd::sys;
 
 std::optional<HttpResponse> get(std::string_view url, const CurlOptions & options)
 {
@@ -296,7 +305,8 @@ std::optional<HttpResponse> get(std::string_view url, const CurlOptions & option
     return std::nullopt;
 }
 
-std::optional<HttpResponse> post(std::string_view url, sihd::util::ArrCharView data_view, const CurlOptions & options)
+std::optional<HttpResponse>
+    post(std::string_view url, sihd::util::ArrCharView data_view, const CurlOptions & options)
 {
     CurlRequest curl;
 
@@ -316,7 +326,9 @@ std::optional<HttpResponse> post(std::string_view url, sihd::util::ArrCharView d
             if (options.file->data.empty() == false)
                 curl.add_file_to_form(options.file->form_name, options.file->file_name, options.file->data);
             else if (options.file->file_path.empty() == false)
-                curl.add_filestream_to_form(options.file->form_name, options.file->file_name, options.file->file_path);
+                curl.add_filestream_to_form(options.file->form_name,
+                                            options.file->file_name,
+                                            options.file->file_path);
         }
 
         return curl.send_request(url, options);

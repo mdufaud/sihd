@@ -3,8 +3,7 @@
 #include <sihd/lua/Vm.hpp>
 #include <sihd/lua/util/LuaUtilApi.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
@@ -56,20 +55,6 @@ TEST_F(TestLuaUtilApi, test_luautil_tools)
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);
     EXPECT_TRUE(this->do_script("test/util/lua/test_tools.lua"));
-}
-
-TEST_F(TestLuaUtilApi, test_luautil_process)
-{
-    LuaUtilApi::load_base(_vm);
-    LuaUtilApi::load_process(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_process.lua"));
-}
-
-TEST_F(TestLuaUtilApi, test_luautil_files)
-{
-    LuaUtilApi::load_base(_vm);
-    LuaUtilApi::load_files(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_files.lua"));
 }
 
 TEST_F(TestLuaUtilApi, test_luautil_thread)

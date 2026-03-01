@@ -3,9 +3,11 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
 
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <netinet/in.h> // sockaddr

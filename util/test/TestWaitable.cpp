@@ -1,3 +1,5 @@
+#include <cstring>
+#include <cstdlib>
 #include <barrier>
 
 #include <gtest/gtest.h>
@@ -5,7 +7,7 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Waitable.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/time.hpp>
 
 namespace test
@@ -26,7 +28,7 @@ class TestWaitable: public ::testing::Test
 
 TEST_F(TestWaitable, test_waitable_basic)
 {
-    if (os::is_run_by_valgrind())
+    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
         GTEST_SKIP() << "Buggy with valgrind";
 
     Waitable waitable;
@@ -49,7 +51,7 @@ TEST_F(TestWaitable, test_waitable_basic)
 
 TEST_F(TestWaitable, test_waitable_for)
 {
-    if (os::is_run_by_valgrind())
+    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
         GTEST_SKIP() << "Buggy with valgrind";
 
     Waitable waitable;
@@ -73,7 +75,7 @@ TEST_F(TestWaitable, test_waitable_for)
 
 TEST_F(TestWaitable, test_waitable_until)
 {
-    if (os::is_run_by_valgrind())
+    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
         GTEST_SKIP() << "Buggy with valgrind";
 
     SystemClock clock;
@@ -97,7 +99,7 @@ TEST_F(TestWaitable, test_waitable_until)
 
 TEST_F(TestWaitable, test_waitable_for_elapsed)
 {
-    if (os::is_run_by_valgrind())
+    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
         GTEST_SKIP() << "Buggy with valgrind";
     Waitable waitable;
     std::atomic<bool> data = false;

@@ -1,5 +1,4 @@
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Task.hpp>
 #include <sihd/util/container.hpp>
@@ -8,8 +7,6 @@
 
 namespace sihd::util
 {
-
-SIHD_UTIL_REGISTER_FACTORY(Scheduler);
 
 SIHD_LOGGER;
 

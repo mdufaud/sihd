@@ -11,7 +11,7 @@
 
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 
 #include <sihd/ssh/ISshServerHandler.hpp>
 #include <sihd/ssh/SshChannel.hpp>
@@ -701,7 +701,7 @@ struct SshServer::Impl
         }
 };
 
-SIHD_UTIL_REGISTER_FACTORY(SshServer)
+SIHD_REGISTER_FACTORY(SshServer)
 
 SshServer::SshServer(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent),

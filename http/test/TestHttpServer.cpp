@@ -6,13 +6,13 @@
 #include <sihd/http/WebService.hpp>
 #include <sihd/http/WebsocketHandler.hpp>
 #include <sihd/http/request.hpp>
-#include <sihd/util/File.hpp>
+#include <sihd/sys/File.hpp>
+#include <sihd/sys/SigWatcher.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/SigWatcher.hpp>
-#include <sihd/util/TmpDir.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/sys/TmpDir.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 
@@ -21,6 +21,7 @@ namespace test
 SIHD_NEW_LOGGER("test");
 using namespace sihd::http;
 using namespace sihd::util;
+using namespace sihd::sys;
 class TestHttpServer: public ::testing::Test
 {
     protected:

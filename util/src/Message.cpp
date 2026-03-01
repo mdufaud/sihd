@@ -5,8 +5,6 @@
 namespace sihd::util
 {
 
-SIHD_UTIL_REGISTER_FACTORY(Message);
-
 SIHD_LOGGER;
 
 Message::Message(const std::string & name, Node *parent): Node(name, parent)

@@ -20,12 +20,12 @@
 #include <CLI/CLI.hpp>
 #include <signal.h>
 
+#include <sihd/sys/SigWatcher.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerManager.hpp>
-#include <sihd/util/SigWatcher.hpp>
 #include <sihd/util/Worker.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 #include <sihd/ssh/BasicSshServerHandler.hpp>
@@ -38,6 +38,7 @@
 SIHD_NEW_LOGGER("ssh-demo");
 
 using namespace sihd::util;
+using namespace sihd::sys;
 using namespace sihd::ssh;
 
 int main(int argc, char **argv)

@@ -11,8 +11,8 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
@@ -21,6 +21,7 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::net;
 using namespace sihd::util;
+using namespace sihd::sys;
 class TestIcmp: public ::testing::Test
 {
     protected:

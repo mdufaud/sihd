@@ -4,8 +4,8 @@
 #include <sihd/core/Core.hpp>
 #include <sihd/core/DevFilter.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
@@ -13,6 +13,7 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::core;
 using namespace sihd::util;
+using namespace sihd::sys;
 class TestDevFilter: public ::testing::Test
 {
     protected:

@@ -1,5 +1,5 @@
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/StrConfiguration.hpp>
 
@@ -173,7 +173,7 @@ bool parse_write_config(DevFilter::Rule & rule, const util::StrConfiguration & c
 
 } // namespace
 
-SIHD_UTIL_REGISTER_FACTORY(DevFilter)
+SIHD_REGISTER_FACTORY(DevFilter)
 
 DevFilter::DevFilter(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),

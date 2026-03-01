@@ -2,9 +2,9 @@
 #include <sihd/ssh/Sftp.hpp>
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/TmpDir.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 #include "ssh_test_helpers.hpp"
@@ -14,6 +14,7 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::ssh;
 using namespace sihd::util;
+using namespace sihd::sys;
 
 class TestSftp: public ::testing::Test
 {
@@ -31,9 +32,9 @@ TEST_F(TestSftp, test_sftp)
 {
     TmpDir tmp_dir;
 
-    std::string test_dir = sihd::util::fs::combine(tmp_dir.path(), "mkdir");
-    sihd::util::fs::remove_directories(test_dir);
-    sihd::util::fs::make_directories(test_dir);
+    std::string test_dir = sihd::sys::fs::combine(tmp_dir.path(), "mkdir");
+    sihd::sys::fs::remove_directories(test_dir);
+    sihd::sys::fs::make_directories(test_dir);
 
     // Start test server with SFTP enabled, using tmp_dir as root
     auto test_server = make_test_server_with_sftp("test-sftp", "/");

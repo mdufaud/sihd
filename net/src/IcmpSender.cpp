@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 
 #include <sihd/net/IcmpSender.hpp>
 #include <sihd/net/utils.hpp>
@@ -46,7 +46,7 @@ struct ip6_hdr
 namespace sihd::net
 {
 
-SIHD_UTIL_REGISTER_FACTORY(IcmpSender);
+SIHD_REGISTER_FACTORY(IcmpSender);
 
 SIHD_LOGGER;
 
@@ -307,7 +307,7 @@ bool IcmpSender::poll()
     return _poll.poll(_poll.timeout()) > 0;
 }
 
-void IcmpSender::handle(sihd::util::Poll *poll)
+void IcmpSender::handle(sihd::sys::Poll *poll)
 {
     auto events = poll->events();
     if (events.size() > 0)

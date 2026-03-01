@@ -2,7 +2,6 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/util/fs.hpp>
 #include <sihd/util/time.hpp>
 
 namespace test

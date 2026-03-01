@@ -1,9 +1,11 @@
+#include <cstring>
+#include <cstdlib>
 #include <gtest/gtest.h>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/StepWorker.hpp>
 #include <sihd/util/Worker.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 
 namespace test
 {
@@ -23,7 +25,7 @@ class TestWorker: public ::testing::Test
 
 TEST_F(TestWorker, test_worker_simple)
 {
-    if (os::is_run_by_valgrind())
+    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
         GTEST_SKIP() << "Buggy with valgrind";
     int ran = 0;
     Runnable runnable([&]() -> bool {
@@ -42,7 +44,7 @@ TEST_F(TestWorker, test_worker_simple)
 
 TEST_F(TestWorker, test_stepworker_multiple)
 {
-    if (os::is_run_by_valgrind())
+    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
         GTEST_SKIP() << "Buggy with valgrind";
     int ran = 0;
     Runnable runnable([&]() -> bool {
@@ -63,7 +65,7 @@ TEST_F(TestWorker, test_stepworker_multiple)
 
 TEST_F(TestWorker, test_stepworker_once)
 {
-    if (os::is_run_by_valgrind())
+    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
         GTEST_SKIP() << "Buggy with valgrind";
     int ran = 0;
     Runnable runnable([&]() -> bool {

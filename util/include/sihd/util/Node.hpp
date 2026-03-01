@@ -6,7 +6,6 @@
 #include <vector>
 
 #include <sihd/util/Named.hpp>
-#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::util
 {

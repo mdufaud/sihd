@@ -1,7 +1,6 @@
 #include <sihd/csv/CsvWriter.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/container.hpp>
 #include <sihd/util/str.hpp>
 

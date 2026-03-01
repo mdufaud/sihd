@@ -1,5 +1,5 @@
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 
 #include <APP_NAME/MODULE_NAME/CLASS_NAME.hpp>
 
@@ -8,7 +8,7 @@ namespace APP_NAME::MODULE_NAME
 
 SIHD_LOGGER;
 
-SIHD_UTIL_REGISTER_FACTORY(CLASS_NAME)
+SIHD_REGISTER_FACTORY(CLASS_NAME)
 
 CLASS_NAME::CLASS_NAME(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent), _running(false)

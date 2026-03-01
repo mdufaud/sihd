@@ -2,16 +2,17 @@
 
 #include <CLI/CLI.hpp>
 
+#include <sihd/sys/SigWatcher.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/SigWatcher.hpp>
-#include <sihd/util/fs.hpp>
 #include <sihd/util/macro.hpp>
 
 #include <sihd/net/Pinger.hpp>
 #include <sihd/net/dns.hpp>
 
 using namespace sihd::util;
+using namespace sihd::sys;
 using namespace sihd::net;
 
 SIHD_NEW_LOGGER("ping-demo");
@@ -41,7 +42,7 @@ int main(int argc, char **argv)
         SIHD_LOG(notice,
                  "For capabilities, execute linux command: 'sudo setcap cap_net_raw=pe {}'\n",
                  fs::executable_path());
-        if (os::is_windows)
+        if (platform::is_windows)
             time::sleep(5);
         return EXIT_FAILURE;
     }
@@ -102,7 +103,7 @@ int main(int argc, char **argv)
     else
         SIHD_LOG(error, "Cannot ping: {}", host);
 
-    if constexpr (os::is_windows)
+    if constexpr (platform::is_windows)
         time::sleep(5);
 
     return success ? EXIT_SUCCESS : EXIT_FAILURE;

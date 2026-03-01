@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/TmpDir.hpp>
-#include <sihd/util/fs.hpp>
+#include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
 
 #include <sihd/pcap/PcapReader.hpp>
 #include <sihd/pcap/PcapWriter.hpp>
@@ -12,6 +12,7 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::pcap;
 using namespace sihd::util;
+using namespace sihd::sys;
 class TestPcap: public ::testing::Test
 {
     protected:

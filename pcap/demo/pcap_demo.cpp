@@ -1,16 +1,14 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
-#include <sihd/util/platform.hpp>
-
-#include <sihd/util/File.hpp>
+#include <sihd/sys/File.hpp>
+#include <sihd/sys/SigWaiter.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Runnable.hpp>
-#include <sihd/util/SigWaiter.hpp>
-#include <sihd/util/fs.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 
@@ -28,6 +26,7 @@ namespace test::module
 {
 
 using namespace sihd::util;
+using namespace sihd::sys;
 using namespace sihd::pcap;
 
 SIHD_NEW_LOGGER("demo");
@@ -88,7 +87,7 @@ int main()
 
     std::string interface_to_sniff = test::module::interfaces_test();
     test::module::sniffer_test(interface_to_sniff);
-    if (sihd::util::os::is_windows)
+    if (sihd::util::platform::is_windows)
         sihd::util::time::sleep(5);
 
     return 0;

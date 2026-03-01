@@ -4,7 +4,7 @@
 #include <sihd/ssh/SshShell.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 SIHD_NEW_LOGGER("ssh-demo");
@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 
     CLI11_PARSE(app, argc, argv);
 
-    if (term::is_interactive() && os::is_unix && !os::is_emscripten)
+    if (term::is_interactive() && platform::is_unix && !platform::is_emscripten)
         LoggerManager::console();
     else
         LoggerManager::stream();

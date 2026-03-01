@@ -8,7 +8,7 @@
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Named.hpp>
-#include <sihd/util/Poll.hpp>
+#include <sihd/sys/Poll.hpp>
 #include <sihd/util/Stat.hpp>
 #include <sihd/util/Waitable.hpp>
 

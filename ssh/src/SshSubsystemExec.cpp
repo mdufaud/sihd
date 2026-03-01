@@ -9,7 +9,7 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
-#include <sihd/util/proc.hpp>
+#include <sihd/sys/proc.hpp>
 
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshSubsystemExec.hpp>
@@ -94,7 +94,7 @@ bool SshSubsystemExec::start_sync_mode()
     std::string output;
     std::string errors;
 
-    sihd::util::proc::Options opts;
+    sihd::sys::proc::Options opts;
     opts.stdout_callback = [&output](std::string_view data) {
         output += data;
     };
@@ -115,7 +115,7 @@ bool SshSubsystemExec::start_sync_mode()
         args = splitter.split(_command);
     }
 
-    auto future = sihd::util::proc::execute(args, opts);
+    auto future = sihd::sys::proc::execute(args, opts);
     _exit_code = future.get();
 
     if (_channel)

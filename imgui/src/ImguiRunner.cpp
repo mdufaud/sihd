@@ -1,8 +1,7 @@
 #include <sihd/imgui/ImguiRunner.hpp>
 
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/platform.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
@@ -12,7 +11,7 @@
 namespace sihd::imgui
 {
 
-SIHD_UTIL_REGISTER_FACTORY(ImguiRunner)
+SIHD_REGISTER_FACTORY(ImguiRunner)
 
 SIHD_NEW_LOGGER("sihd::imgui");
 
@@ -52,7 +51,7 @@ bool ImguiRunner::run()
             return true;
         _running = true;
     }
-    if constexpr (util::os::is_emscripten)
+    if constexpr (util::platform::is_emscripten)
     {
 #if defined(__SIHD_EMSCRIPTEN__)
         constexpr int emscripten_fps = 0;
@@ -76,7 +75,7 @@ bool ImguiRunner::stop()
         _running = false;
     }
 #if defined(__SIHD_EMSCRIPTEN__)
-    if constexpr (util::os::is_emscripten)
+    if constexpr (util::platform::is_emscripten)
         emscripten_cancel_main_loop();
 #endif
     return _running == false;
@@ -115,7 +114,7 @@ void ImguiRunner::_loop_once()
         _gui_running = _gui_running && this->_build_frame();
         _gui_running = _gui_running && this->_render();
     }
-    if constexpr (util::os::is_emscripten)
+    if constexpr (util::platform::is_emscripten)
     {
         if (!_running || !_gui_running)
             this->_shutdown();

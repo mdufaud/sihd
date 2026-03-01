@@ -2,18 +2,19 @@
 
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/TmpDir.hpp>
-#include <sihd/util/fs.hpp>
+#include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
 
 #include <sihd/zip/ZipFile.hpp>
 
-#include <sihd/util/Process.hpp>
+#include <sihd/sys/Process.hpp>
 
 namespace test
 {
 SIHD_NEW_LOGGER("test");
 using namespace sihd::zip;
 using namespace sihd::util;
+using namespace sihd::sys;
 class TestZipFile: public ::testing::Test
 {
     protected:

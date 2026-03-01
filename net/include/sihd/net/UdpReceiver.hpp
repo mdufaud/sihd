@@ -8,7 +8,7 @@
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Named.hpp>
-#include <sihd/util/Poll.hpp>
+#include <sihd/sys/Poll.hpp>
 
 namespace sihd::net
 {
@@ -18,7 +18,7 @@ class UdpReceiver: public INetReceiver,
                    public sihd::util::Configurable,
                    public sihd::util::ABlockingService,
                    public sihd::util::Observable<INetReceiver>,
-                   public sihd::util::IHandler<sihd::util::Poll *>
+                   public sihd::util::IHandler<sihd::sys::Poll *>
 {
     public:
         UdpReceiver(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -54,7 +54,7 @@ class UdpReceiver: public INetReceiver,
         const Socket & socket() const { return _socket; }
 
     protected:
-        void handle(sihd::util::Poll *poll) override;
+        void handle(sihd::sys::Poll *poll) override;
         bool on_start() override;
         bool on_stop() override;
 
@@ -63,7 +63,7 @@ class UdpReceiver: public INetReceiver,
 
         Socket _socket;
         std::mutex _poll_mutex;
-        sihd::util::Poll _poll;
+        sihd::sys::Poll _poll;
 };
 
 } // namespace sihd::net

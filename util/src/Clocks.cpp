@@ -1,5 +1,5 @@
 #include <sihd/util/Clocks.hpp>
-#include <sihd/util/os.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/time.hpp>
 
 namespace sihd::util
@@ -10,7 +10,7 @@ SystemClock Clock::default_clock;
 time_t SteadyClock::now() const
 {
     // emscripten clock is microseconds
-    if constexpr (os::is_emscripten)
+    if constexpr (platform::is_emscripten)
         return time::microseconds(_clock.now().time_since_epoch().count());
     else
         return _clock.now().time_since_epoch().count();
@@ -24,7 +24,7 @@ bool SteadyClock::is_steady() const
 time_t SystemClock::now() const
 {
     // emscripten clock is microseconds
-    if constexpr (os::is_emscripten)
+    if constexpr (platform::is_emscripten)
         return time::microseconds(_clock.now().time_since_epoch().count());
     else
         return _clock.now().time_since_epoch().count();

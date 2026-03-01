@@ -1,6 +1,6 @@
 #include <sihd/core/DevMessage.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/NamedFactory.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 
 #define CHANNEL_TRIGGER "trigger"
 #define IN_SUFFIX "_in"
@@ -11,7 +11,7 @@
 namespace sihd::core
 {
 
-SIHD_UTIL_REGISTER_FACTORY(DevMessage)
+SIHD_REGISTER_FACTORY(DevMessage)
 
 SIHD_LOGGER;
 
