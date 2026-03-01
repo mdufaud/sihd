@@ -337,10 +337,6 @@ def _pre_install_display_foundation():
     if not cross_extlibs:
         return
 
-    if _foundation_packages_installed():
-        logger.info("cross-linux: X11/Wayland foundation already installed, skipping phase 1")
-        return
-
     logger.info("cross-linux phase 1: installing X11/Wayland foundation packages")
     foundation_manifest = build_cross_linux_foundation_manifest(app)
     write_vcpkg_manifest(vcpkg_build_manifest_path, foundation_manifest)

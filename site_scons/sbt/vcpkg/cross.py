@@ -218,6 +218,10 @@ def build_overlay_triplet_with_flags(app, vcpkg_triplet: str, vcpkg_build_path: 
         lines.append("# Force vcpkg X11/Wayland libraries for cross-compilation")
         lines.append("set(X_VCPKG_FORCE_VCPKG_X_LIBRARIES ON)")
         lines.append("set(X_VCPKG_FORCE_VCPKG_WAYLAND_LIBRARIES ON)")
+        # Musl doesn't ship libintl.h (it's part of glibc, not musl).
+        # Force gettext-libintl to build from source instead of expecting system headers.
+        if builder.libc == "musl":
+            lines.append("set(X_VCPKG_FORCE_VCPKG_GETTEXT_LIBINTL ON)")
         lines.append("")
 
         # Build the include path for vcpkg-installed cross deps so that meson's

@@ -3,6 +3,7 @@
 
 #if defined(__SIHD_WINDOWS__)
 # include <SDL3/SDL_properties.h>
+# include <windows.h>
 #endif
 
 namespace sihd::imgui

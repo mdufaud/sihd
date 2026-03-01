@@ -335,7 +335,7 @@ void IcmpSender::_read_socket()
     socklen_t addr_len = sizeof(addr_storage);
 
     ssize_t ret = ::recvfrom(_socket.socket(),
-                             _array_rcv_ptr->buf(),
+                             reinterpret_cast<char *>(_array_rcv_ptr->buf()),
                              _array_rcv_ptr->byte_capacity(),
                              0,
                              (struct sockaddr *)&addr_storage,

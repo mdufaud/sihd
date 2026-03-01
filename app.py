@@ -79,15 +79,30 @@ modules = {
             'zlib',
             'libuv',
         ],
-        "libs": [
-            'websockets',
-            'curl',
-            'z',
-            'uv',
-        ],
         "linux-extlibs": ["libcap"],
-        # ssl/crypto: transitive deps of libwebsockets & curl (needed for static linking)
-        "linux-libs": ["cap", "ssl", "crypto"],
+        # all libs are platform-specific due to different names and link order requirements
+        "linux-libs": ["websockets", "curl", "z", "uv", "cap", "ssl", "crypto"],
+        # Windows static linking: all transitive deps must be explicit
+        # order matters: higher-level libs first, their deps after
+        "windows-libs": [
+            'websockets_static', # vcpkg builds libwebsockets_static.a on mingw
+            'curl',              # libcurl
+            'ssl', 'crypto',     # OpenSSL (libwebsockets, curl, net)
+            'uv',                # libuv (libwebsockets uses it)
+            'zlib',              # vcpkg zlib installs libzlib.a on mingw
+            'ws2_32',            # Winsock (libwebsockets, curl, libuv, net)
+            'crypt32',           # CryptoAPI (OpenSSL, libwebsockets, curl)
+            'bcrypt',            # BCrypt (curl)
+            'winmm',             # Multimedia (curl)
+            'iphlpapi',          # IP Helper (libwebsockets, libuv)
+            'userenv',           # User environment (libwebsockets, libuv)
+            'psapi',             # Process status (libwebsockets, libuv)
+            'advapi32',          # Advanced API (curl, libuv)
+            'user32',            # User interface (libuv)
+            'dbghelp',           # Debug (libuv)
+            'ole32',             # COM (libuv)
+            'uuid',              # UUID (libuv)
+        ],
     },
     "pcap": {
         "depends": ['net'],
@@ -97,6 +112,8 @@ modules = {
         "parse-configs": [
             "pcap-config --cflags --libs",
         ],
+        # Windows static linking: libpcap needs winsock
+        "windows-libs": ['ws2_32'],
     },
     "zip": {
         "depends": ['util', 'sys'],
@@ -111,8 +128,18 @@ modules = {
         "depends": ['util', 'sys'],
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
+        # Windows static linking: sys module transitive deps
+        "windows-libs": [
+            'ws2_32',    # Winsock (sys)
+            'psapi',     # GetProcessMemoryInfo (sys)
+            'imagehlp',  # backtrace / SymFromAddr (sys)
+            'ssp',       # winsock (sys)
+            'rpcrt4',    # Uuid (sys)
+            'gdi32',     # wingdi (sys)
+        ],
     },
     "ssh": {
+        "platforms": ["linux"],
         "depends": ['util', 'sys'],
         "extlibs": ["libssh"],
         "libs": ['ssh'],
@@ -142,7 +169,9 @@ modules = {
     },
     "imgui": {
         "depends": ['util', 'sys'],
-        "extlibs": ['imgui', 'libxcrypt', 'opengl'],
+        "extlibs": ['imgui', 'opengl'],
+        # libxcrypt only supports linux|osx (autotools, no Windows/web port)
+        "linux-extlibs": ['libxcrypt'],
         "libs": ["imgui"],
         # native linux: system provides libglfw.so, libGLEW.so, libGL.so
         "linux-native-libs": ['glfw', 'GLEW', 'GL', 'SDL3'],
@@ -215,14 +244,25 @@ conditional_modules = {
     "luabin": {
         "depends": ['lua'],
         "conditional-env": "lua",
+        "libs": ["lua"],
         "flags": ["-Wno-unused-parameter"],
+        # Windows static linking: sys module transitive deps
+        "windows-libs": [
+            'rpcrt4',    # Uuid (from sys)
+            'psapi',     # GetProcessMemoryInfo (from sys)
+            'ssp',       # winsock (from sys)
+            'ws2_32',    # windows socket api (from sys)
+            'gdi32',     # wingdi (from sys)
+            'imagehlp',  # backtrace / SymFromAddr (from sys)
+        ],
     },
     "py": {
         "platforms": ["linux"],
         "depends": ['util', 'sys'],
-        "extlibs": ['pybind11'],
+        "extlibs": ['pybind11', 'python3'],
         "conditional-env": "py",
         "conditional-depends": ['core'],
+        "libs": ["python3.12"],
         "flags": ['-U_FORTIFY_SOURCE', '-Wno-cpp'], # Undefine _FORTIFY_SOURCE for py module since it requires optimization from builds using -O0
         "clang-flags": ["-Wno-unused-command-line-argument"],
         # pip install python-config
@@ -302,10 +342,6 @@ extlibs_features_windows = {
 
 # on windows some libs are not available through vcpkg
 extlibs_skip_windows = [
-    "libwebsockets",
-    "libssh",
-    "libpcap",
-    "libxcrypt"
 ]
 
 # on web: those libs don't compile properly with emscripten threading

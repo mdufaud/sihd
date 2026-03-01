@@ -1,7 +1,5 @@
 #include <unistd.h>
 
-#include <memory>
-
 #include <sihd/lua/sys/LuaSysApi.hpp>
 
 #include <sihd/sys/File.hpp>
@@ -13,6 +11,18 @@
 #include <sihd/sys/signal.hpp>
 
 #include <sihd/util/platform.hpp>
+
+namespace
+{
+inline sihd::sys::Process::FileDescType fd_to_filedesc(int fd)
+{
+#if defined(__SIHD_WINDOWS__)
+    return reinterpret_cast<sihd::sys::Process::FileDescType>(static_cast<intptr_t>(fd));
+#else
+    return static_cast<sihd::sys::Process::FileDescType>(fd);
+#endif
+}
+} // namespace
 
 namespace sihd::lua
 {
@@ -116,7 +126,7 @@ void LuaSysApi::load_process(Vm & vm)
             +[](LuaProcess *self, const std::string & from) { self->stdin_from(from); })
         .addFunction(
             "stdin_from_fd",
-            +[](LuaProcess *self, int fd) { self->stdin_from(fd); })
+            +[](LuaProcess *self, int fd) { self->stdin_from(fd_to_filedesc(fd)); })
         .addFunction("stdin_from_file", &LuaProcess::stdin_from_file)
         .addFunction(
             "stdin_close",
@@ -131,7 +141,7 @@ void LuaSysApi::load_process(Vm & vm)
             })
         .addFunction(
             "stdout_to_fd",
-            +[](LuaProcess *self, int fd) { self->stdout_to(fd); })
+            +[](LuaProcess *self, int fd) { self->stdout_to(fd_to_filedesc(fd)); })
         .addFunction(
             "stdout_to_process",
             +[](LuaProcess *self, LuaProcess *another) { self->stdout_to(*another); })
@@ -150,7 +160,7 @@ void LuaSysApi::load_process(Vm & vm)
             })
         .addFunction(
             "stderr_to_fd",
-            +[](LuaProcess *self, int fd) { self->stderr_to(fd); })
+            +[](LuaProcess *self, int fd) { self->stderr_to(fd_to_filedesc(fd)); })
         .addFunction(
             "stderr_to_process",
             +[](LuaProcess *self, LuaProcess *another) { self->stderr_to(*another); })
@@ -175,16 +185,19 @@ void LuaSysApi::load_process(Vm & vm)
         .addFunction("is_running", &LuaProcess::is_running)
         // wait
         .addFunction("wait", &LuaProcess::wait)
+#if !defined(__SIHD_WINDOWS__)
         .addFunction("wait_exit", &LuaProcess::wait_exit)
         .addFunction("wait_stop", &LuaProcess::wait_stop)
         .addFunction("wait_continue", &LuaProcess::wait_continue)
         .addFunction("wait_any", &LuaProcess::wait_any)
+#endif
         // manual pipe process
         .addFunction("read_pipes", &LuaProcess::read_pipes)
         // end execution
         .addFunction("terminate", &LuaProcess::terminate)
         .addFunction("kill", &LuaProcess::kill)
-        // post execution
+    // post execution
+#if !defined(__SIHD_WINDOWS__)
         .addFunction("has_exited", &LuaProcess::has_exited)
         .addFunction("has_core_dumped", &LuaProcess::has_core_dumped)
         .addFunction("has_stopped_by_signal", &LuaProcess::has_stopped_by_signal)
@@ -192,6 +205,7 @@ void LuaSysApi::load_process(Vm & vm)
         .addFunction("has_continued", &LuaProcess::has_continued)
         .addFunction("signal_exit_number", &LuaProcess::signal_exit_number)
         .addFunction("signal_stop_number", &LuaProcess::signal_stop_number)
+#endif
         .addFunction("return_code", &LuaProcess::return_code)
         // utils
         .addFunction("pid", &LuaProcess::pid)

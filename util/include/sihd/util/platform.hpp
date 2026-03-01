@@ -94,8 +94,7 @@
 #else
 typedef int socklen_t;
 typedef unsigned long rlim_t;
-// missing mingw — int and not uint (libwebsockets)
-typedef int uid_t;
+typedef unsigned int uid_t;
 #endif
 
 // === Platform constexpr booleans ===

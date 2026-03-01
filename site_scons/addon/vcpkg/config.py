@@ -16,7 +16,9 @@ module/dependency declarations.
 
 # Extra flags injected into VCPKG_C_FLAGS / VCPKG_CXX_FLAGS via overlay triplet.
 vcpkg_cflags = [
-    "-Wno-error=discarded-qualifiers",   # libwebsockets v4.5.2 + GCC >= 14
+    "-Wno-error=discarded-qualifiers",         # libwebsockets v4.5.2 + GCC >= 14
+    "-Wno-error=incompatible-pointer-types",   # libzip 1.7.3 Win32 API function pointers vs mingw-w64 headers + GCC >= 14
+    "-Wno-error=unused-variable",              # libwebsockets v4.5.2 unused 'cname' in context.c on mingw (Windows path not fully valid)
 ]
 vcpkg_cxxflags = []
 
@@ -70,6 +72,22 @@ vcpkg_cmake_configure_options_cross_linux = {
     ],
     "glfw3": [],  # X11 from vcpkg, use GLFW defaults (X11=ON)
     "imgui": ["-DCMAKE_CXX_FLAGS_INIT=-DGLFW_INCLUDE_NONE"],
+}
+
+# Windows (mingw cross-compilation from Linux):
+# curl 7.87.0 cmake check_c_source_runs for ioctlsocket/FIONBIO fails because
+# the test binary can't execute on the host. Pre-set the result.
+# NOTE: uses _windows (not _cross_windows) because is_cross_building() returns False
+# for x86_64-linux → x86_64-windows (same machine + libc, different platform).
+vcpkg_cmake_configure_options_windows = {
+    "curl": [
+        "-DHAVE_IOCTLSOCKET_FIONBIO=ON",
+    ],
+    # simpleble Windows backend requires WinRT C++/CX headers (winrt/Windows.Devices.Bluetooth.*)
+    # which are only available with MSVC. Use the "plain" stub backend for mingw cross-compilation.
+    "simpleble": [
+        "-DSIMPLEBLE_PLAIN=ON",
+    ],
 }
 
 ###############################################################################

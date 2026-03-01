@@ -213,6 +213,16 @@ if not distribution \
             os_path.abspath(builder.build_extlib_lib_path)
         ],
     )
+    # Cross-compiling linkers (musl, aarch64...) don't resolve transitive shared
+    # library dependencies via -L or -rpath. Adding -rpath-link lets the linker
+    # find libs at link time.
+    if builder.is_cross_building():
+        base_env.Append(
+            LINKFLAGS = [
+                '-Wl,-rpath-link=' + os_path.abspath(builder.build_lib_path),
+                '-Wl,-rpath-link=' + os_path.abspath(builder.build_extlib_lib_path),
+            ],
+        )
 
 if build_platform == "windows":
     base_env.Append(

@@ -2,6 +2,14 @@ from os.path import join, exists
 
 Import('env')
 
+builder = env.builder()
+
+# vcpkg installs python headers in a versioned subdirectory (e.g. python3.12/)
+# that is not in the default CPPPATH - add it so pybind11 can find Python.h
+python_include = join(builder.build_extlib_hdr_path, "python3.12")
+if exists(python_include):
+    env.AppendUnique(CPPPATH=[python_include])
+
 modules = env.modules_to_build()
 
 test_dir = Dir("test")

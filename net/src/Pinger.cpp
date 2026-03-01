@@ -1,8 +1,12 @@
 #include <cstddef>
 #include <memory>
-#include <regex.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include <sihd/util/platform.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <regex.h>
+# include <sys/types.h>
+# include <unistd.h>
+#endif
 
 #include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Array.hpp>
