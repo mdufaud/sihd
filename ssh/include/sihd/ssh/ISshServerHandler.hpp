@@ -2,7 +2,8 @@
 #define __SIHD_SSH_ISSHSERVERHANDLER_HPP__
 
 #include <string_view>
-#include <sys/ioctl.h>
+
+#include <sihd/ssh/WinSize.hpp>
 
 namespace sihd::ssh
 {
@@ -37,7 +38,7 @@ class ISshServerHandler
                                             SshSession *session,
                                             SshChannel *channel,
                                             std::string_view term,
-                                            const struct winsize & size)
+                                            const WinSize & size)
             = 0;
         virtual bool on_channel_request_shell(SshServer *server, SshSession *session, SshChannel *channel)
             = 0;
@@ -63,7 +64,7 @@ class ISshServerHandler
         virtual void on_channel_pty_resize(SshServer *server,
                                            SshSession *session,
                                            SshChannel *channel,
-                                           const struct winsize & size)
+                                           const WinSize & size)
             = 0;
 
         // Called on each event loop iteration (poll child FDs, forward data, etc.)

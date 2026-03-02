@@ -2,7 +2,8 @@
 #define __SIHD_SSH_ISSHSUBSYSTEMHANDLER_HPP__
 
 #include <cstddef>
-#include <sys/ioctl.h>
+
+#include <sihd/ssh/WinSize.hpp>
 
 namespace sihd::ssh
 {
@@ -20,10 +21,10 @@ class ISshSubsystemHandler
         virtual ~ISshSubsystemHandler() = default;
 
         // Returns true to accept the request
-        virtual bool on_start(SshChannel *channel, bool has_pty, const struct winsize & winsize) = 0;
+        virtual bool on_start(SshChannel *channel, bool has_pty, const WinSize & winsize) = 0;
         // Returns bytes consumed, or -1 on error
         virtual int on_data(const void *data, size_t len) = 0;
-        virtual void on_resize(const struct winsize & winsize) = 0;
+        virtual void on_resize(const WinSize & winsize) = 0;
         virtual void on_eof() = 0;
         // Returns exit code (0-255)
         virtual int on_close() = 0;
@@ -34,6 +35,10 @@ class ISshSubsystemHandler
 
         virtual SshChannel *channel() const = 0;
         virtual bool is_running() const = 0;
+
+        // Called by the server to let the handler forward pending output to its channel.
+        // Returns true if output was forwarded.
+        virtual bool forward_output() { return false; }
 
         // When true, the server leaves channel data in libssh's buffers
         // for the handler to read directly (e.g. SFTP)

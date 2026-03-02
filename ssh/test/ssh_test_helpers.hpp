@@ -8,6 +8,7 @@
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshSubsystemExec.hpp>
 #include <sihd/ssh/SshSubsystemSftp.hpp>
+#include <sihd/ssh/WinSize.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
 #include <thread>
@@ -53,7 +54,7 @@ struct SshServerHelper
                        [[maybe_unused]] SshChannel *channel,
                        std::string_view subsystem,
                        [[maybe_unused]] bool has_pty,
-                       [[maybe_unused]] const struct winsize & winsize) -> ISshSubsystemHandler * {
+                       [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
                     if (subsystem == "sftp")
                     {
                         auto *sftp_handler = new SshSubsystemSftp();
@@ -74,7 +75,7 @@ struct SshServerHelper
                    [[maybe_unused]] SshChannel *channel,
                    std::string_view command,
                    [[maybe_unused]] bool has_pty,
-                   [[maybe_unused]] const struct winsize & winsize) -> ISshSubsystemHandler * {
+                   [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
                     auto *exec = new SshSubsystemExec(command);
                     // Default: use shell mode (ParseMode::Shell is default)
                     return exec;

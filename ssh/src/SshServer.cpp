@@ -1,7 +1,13 @@
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <poll.h>
-#include <sys/ioctl.h>
+#include <sihd/util/platform.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <arpa/inet.h>
+# include <netinet/in.h>
+# include <poll.h>
+#else
+# include <winsock2.h>
+# include <ws2tcpip.h>
+#endif
 
 #include <unordered_map>
 #include <vector>
@@ -9,9 +15,10 @@
 #include <libssh/callbacks.h>
 #include <libssh/server.h>
 
+#include <sihd/sys/NamedFactory.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 
 #include <sihd/ssh/ISshServerHandler.hpp>
 #include <sihd/ssh/SshChannel.hpp>
@@ -33,7 +40,7 @@ struct ChannelData
 {
         SshChannel *wrapper;
         bool has_pty;
-        struct winsize winsize;
+        WinSize winsize;
         struct ssh_channel_callbacks_struct callbacks;
 };
 
@@ -47,7 +54,7 @@ struct SessionData
         bool authenticated;
         // For requests that come before channel is fully created (pty, etc.)
         bool pending_has_pty;
-        struct winsize pending_winsize;
+        WinSize pending_winsize;
 
         // Callback structs must persist for the lifetime of the session
         struct ssh_server_callbacks_struct server_callbacks;
@@ -204,10 +211,11 @@ int callback_channel_pty_request(ssh_session session,
     auto *data = static_cast<SessionData *>(userdata);
     (void)session;
 
-    struct winsize ws = {.ws_row = static_cast<unsigned short>(rows),
-                         .ws_col = static_cast<unsigned short>(cols),
-                         .ws_xpixel = static_cast<unsigned short>(px),
-                         .ws_ypixel = static_cast<unsigned short>(py)};
+    WinSize ws;
+    ws.ws_row = static_cast<uint16_t>(rows);
+    ws.ws_col = static_cast<uint16_t>(cols);
+    ws.ws_xpixel = static_cast<uint16_t>(px);
+    ws.ws_ypixel = static_cast<uint16_t>(py);
 
     // Find the channel
     ChannelData *ch_data = data->find_channel(channel);
@@ -250,10 +258,10 @@ int callback_channel_pty_resize(ssh_session session,
     if (!ch_data)
         return SSH_ERROR;
 
-    ch_data->winsize.ws_row = rows;
-    ch_data->winsize.ws_col = cols;
-    ch_data->winsize.ws_xpixel = px;
-    ch_data->winsize.ws_ypixel = py;
+    ch_data->winsize.ws_row = static_cast<uint16_t>(rows);
+    ch_data->winsize.ws_col = static_cast<uint16_t>(cols);
+    ch_data->winsize.ws_xpixel = static_cast<uint16_t>(px);
+    ch_data->winsize.ws_ypixel = static_cast<uint16_t>(py);
 
     if (data->server->server_handler())
     {
@@ -533,7 +541,7 @@ struct SshServer::Impl
                                           .auth_attempts = 0,
                                           .authenticated = false,
                                           .pending_has_pty = false,
-                                          .pending_winsize = {0, 0, 0, 0},
+                                          .pending_winsize = {},
                                           .server_callbacks = {}};
 
             session_wrapper->set_userdata(data);
@@ -667,9 +675,17 @@ struct SshServer::Impl
 
             while (!server->should_stop())
             {
+#if !defined(__SIHD_WINDOWS__)
                 struct pollfd pfd = {.fd = bind_fd, .events = POLLIN, .revents = 0};
                 constexpr int poll_timeout_ms = 0;
                 int poll_rc = poll(&pfd, 1, poll_timeout_ms);
+#else
+                WSAPOLLFD pfd = {};
+                pfd.fd = static_cast<SOCKET>(bind_fd);
+                pfd.events = POLLIN;
+                constexpr int poll_timeout_ms = 0;
+                int poll_rc = WSAPoll(&pfd, 1, poll_timeout_ms);
+#endif
 
                 if (poll_rc > 0 && (pfd.revents & POLLIN))
                 {
@@ -678,9 +694,9 @@ struct SshServer::Impl
                         SIHD_LOG(error, "SshServer: failed to accept session");
                     }
                 }
-                else if (poll_rc < 0 && errno != EINTR)
+                else if (poll_rc < 0)
                 {
-                    SIHD_LOG(error, "SshServer: poll error: {}", strerror(errno));
+                    SIHD_LOG(error, "SshServer: poll error: {}", sihd::sys::os::last_error_str());
                     break;
                 }
 

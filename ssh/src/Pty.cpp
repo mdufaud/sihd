@@ -477,7 +477,7 @@ std::unique_ptr<Pty> Pty::create()
 # ifndef WIN32_LEAN_AND_MEAN
 #  define WIN32_LEAN_AND_MEAN
 # endif
-# include <Windows.h>
+# include <windows.h>
 
 namespace sihd::ssh
 {
@@ -595,9 +595,12 @@ static bool CheckConPtySupport()
         return false;
     }
 
-    pfnCreatePseudoConsole = (PFN_CreatePseudoConsole)GetProcAddress(kernel32, "CreatePseudoConsole");
-    pfnResizePseudoConsole = (PFN_ResizePseudoConsole)GetProcAddress(kernel32, "ResizePseudoConsole");
-    pfnClosePseudoConsole = (PFN_ClosePseudoConsole)GetProcAddress(kernel32, "ClosePseudoConsole");
+    pfnCreatePseudoConsole = reinterpret_cast<PFN_CreatePseudoConsole>(
+        reinterpret_cast<void *>(GetProcAddress(kernel32, "CreatePseudoConsole")));
+    pfnResizePseudoConsole = reinterpret_cast<PFN_ResizePseudoConsole>(
+        reinterpret_cast<void *>(GetProcAddress(kernel32, "ResizePseudoConsole")));
+    pfnClosePseudoConsole = reinterpret_cast<PFN_ClosePseudoConsole>(
+        reinterpret_cast<void *>(GetProcAddress(kernel32, "ClosePseudoConsole")));
 
     if (pfnCreatePseudoConsole && pfnResizePseudoConsole && pfnClosePseudoConsole)
     {
@@ -758,6 +761,9 @@ bool ConPty::spawn()
         return false;
     }
 
+# ifndef PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE
+#  define PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE 0x00020016
+# endif
     // Associate the pseudo console with the process
     if (!UpdateProcThreadAttribute(_attr_list,
                                    0,

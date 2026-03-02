@@ -1,5 +1,3 @@
-#include <poll.h>
-
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -230,7 +228,7 @@ bool BasicSshServerHandler::on_channel_request_pty([[maybe_unused]] SshServer *s
                                                    SshSession *session,
                                                    SshChannel *channel,
                                                    [[maybe_unused]] std::string_view term,
-                                                   const struct winsize & size)
+                                                   const WinSize & size)
 {
     ChannelState *state = get_channel_state(session, channel);
     if (!state)
@@ -377,7 +375,7 @@ void BasicSshServerHandler::on_channel_data([[maybe_unused]] SshServer *server,
 void BasicSshServerHandler::on_channel_pty_resize([[maybe_unused]] SshServer *server,
                                                   SshSession *session,
                                                   SshChannel *channel,
-                                                  const struct winsize & size)
+                                                  const WinSize & size)
 {
     ChannelState *state = get_channel_state(session, channel);
     if (!state)
@@ -483,76 +481,15 @@ BasicSshServerHandler::ChannelState *BasicSshServerHandler::get_channel_state(Ss
 
 void BasicSshServerHandler::poll_handler(SshChannel *channel, ISshSubsystemHandler *handler)
 {
-    int stdout_fd = handler->stdout_fd();
-    int stderr_fd = handler->stderr_fd();
-
-    // For handlers without FDs (like SFTP), check if they need processing
-    // by calling on_data with dummy parameters - the handler will poll internally
-    if (stdout_fd < 0 && stderr_fd < 0)
+    // Check if channel is EOF - if so, notify handler to stop
+    if (channel->is_eof())
     {
-        // Check if channel is EOF - if so, notify handler to stop
-        if (channel->is_eof())
-        {
-            handler->on_eof();
-            return;
-        }
-        handler->on_data(nullptr, 0);
+        handler->on_eof();
         return;
     }
 
-    struct pollfd pfds[2];
-    int nfds = 0;
-
-    if (stdout_fd >= 0)
-    {
-        pfds[nfds].fd = stdout_fd;
-        pfds[nfds].events = POLLIN;
-        pfds[nfds].revents = 0;
-        ++nfds;
-    }
-
-    if (stderr_fd >= 0)
-    {
-        pfds[nfds].fd = stderr_fd;
-        pfds[nfds].events = POLLIN;
-        pfds[nfds].revents = 0;
-        ++nfds;
-    }
-
-    // Non-blocking poll
-    int ret = poll(pfds, nfds, 0);
-    if (ret <= 0)
-    {
-        return;
-    }
-
-    char buffer[4096];
-    int idx = 0;
-
-    if (stdout_fd >= 0)
-    {
-        if (pfds[idx].revents & POLLIN)
-        {
-            ssize_t n = read(stdout_fd, buffer, sizeof(buffer));
-            if (n > 0)
-            {
-                channel->write(sihd::util::ArrCharView(buffer, static_cast<size_t>(n)));
-            }
-        }
-        ++idx;
-    }
-
-    if (stderr_fd >= 0 && idx < nfds)
-    {
-        if (pfds[idx].revents & POLLIN)
-        {
-            ssize_t n = read(stderr_fd, buffer, sizeof(buffer));
-            if (n > 0)
-            {
-                channel->write_stderr(sihd::util::ArrCharView(buffer, static_cast<size_t>(n)));
-            }
-        }
-    }
+    // Let the handler forward its pending output to the channel
+    handler->forward_output();
 }
 
 } // namespace sihd::ssh

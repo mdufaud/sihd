@@ -85,9 +85,9 @@ class SshSubsystemSftp: public ISshSubsystemHandler
 
         void set_root_path(std::string_view path);
 
-        bool on_start(SshChannel *channel, bool has_pty, const struct winsize & winsize) override;
+        bool on_start(SshChannel *channel, bool has_pty, const WinSize & winsize) override;
         int on_data(const void *data, size_t len) override;
-        void on_resize(const struct winsize & winsize) override;
+        void on_resize(const WinSize & winsize) override;
         void on_eof() override;
         int on_close() override;
 
@@ -95,6 +95,7 @@ class SshSubsystemSftp: public ISshSubsystemHandler
         int stderr_fd() const override { return -1; }
         SshChannel *channel() const override;
         bool is_running() const override;
+        bool forward_output() override;
 
         // SFTP manages its own channel I/O via sftp_get_client_message
         bool manages_channel_io() const override { return true; }

@@ -1,9 +1,14 @@
 #include <libssh/libssh.h>
 
-#include <sihd/util/Array.hpp>
 #include <sihd/sys/LineReader.hpp>
+#include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fmt.hpp>
+#include <sihd/util/platform.hpp>
+
+#if defined(__SIHD_WINDOWS__)
+# include <conio.h>
+#endif
 
 #include <sihd/ssh/SshShell.hpp>
 #include <sihd/ssh/utils.hpp>
@@ -117,9 +122,14 @@ bool SshShell::read_loop()
         in_channels[0] = static_cast<ssh_channel>(_impl_ptr->channel.channel());
         in_channels[1] = nullptr;
         FD_ZERO(&fds);
+#if !defined(__SIHD_WINDOWS__)
         FD_SET(0, &fds);
         FD_SET(ssh_get_fd(_impl_ptr->ssh_session_ptr), &fds);
         maxfd = ssh_get_fd(_impl_ptr->ssh_session_ptr) + 1;
+#else
+        FD_SET(ssh_get_fd(_impl_ptr->ssh_session_ptr), &fds);
+        maxfd = ssh_get_fd(_impl_ptr->ssh_session_ptr) + 1;
+#endif
 
         ssh_select(in_channels, out_channels, maxfd, &fds, &timeout);
 
@@ -156,7 +166,13 @@ bool SshShell::read_loop()
                 }
             }
         }
-        if (FD_ISSET(0, &fds))
+        // Check for stdin input
+#if !defined(__SIHD_WINDOWS__)
+        bool stdin_ready = FD_ISSET(0, &fds);
+#else
+        bool stdin_ready = _kbhit();
+#endif
+        if (stdin_ready)
         {
             if (reader.read_next())
             {

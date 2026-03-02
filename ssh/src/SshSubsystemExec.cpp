@@ -1,18 +1,13 @@
-#include "sihd/ssh/utils.hpp"
 #include <cerrno>
 #include <cstring>
 
-#include <fcntl.h>
-#include <signal.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
+#include <sihd/sys/proc.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
-#include <sihd/sys/proc.hpp>
 
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshSubsystemExec.hpp>
+#include <sihd/ssh/utils.hpp>
 
 namespace sihd::ssh
 {
@@ -22,15 +17,15 @@ SIHD_LOGGER;
 SshSubsystemExec::SshSubsystemExec(std::string_view command):
     _channel(nullptr),
     _command(command),
+#if !defined(__SIHD_WINDOWS__)
     _shell("/bin/sh"),
+#else
+    _shell("cmd.exe"),
+#endif
     _parse_mode(ParseMode::Shell),
     _fork_mode(true),
     _started(false),
     _exit_code(0),
-    _pid(-1),
-    _stdout_fd(-1),
-    _stderr_fd(-1),
-    _stdin_fd(-1),
     _has_pty(false),
     _winsize {}
 {
@@ -69,7 +64,7 @@ void SshSubsystemExec::set_working_directory(std::string_view path)
     _working_dir = path;
 }
 
-bool SshSubsystemExec::on_start(SshChannel *channel, bool has_pty, const struct winsize & winsize)
+bool SshSubsystemExec::on_start(SshChannel *channel, bool has_pty, const WinSize & winsize)
 {
     _channel = channel;
     _has_pty = has_pty;
@@ -79,7 +74,7 @@ bool SshSubsystemExec::on_start(SshChannel *channel, bool has_pty, const struct 
 
     if (_fork_mode)
     {
-        return start_fork_mode();
+        return start_process_mode();
     }
     else
     {
@@ -105,7 +100,11 @@ bool SshSubsystemExec::start_sync_mode()
     std::vector<std::string> args;
     if (_parse_mode == ParseMode::Shell)
     {
+#if !defined(__SIHD_WINDOWS__)
         args = {_shell, "-c", _command};
+#else
+        args = {_shell, "/c", _command};
+#endif
     }
     else
     {
@@ -142,137 +141,77 @@ bool SshSubsystemExec::start_sync_mode()
     return true;
 }
 
-bool SshSubsystemExec::start_fork_mode()
+bool SshSubsystemExec::start_process_mode()
 {
-    int stdin_pipe[2] = {-1, -1};
-    int stdout_pipe[2] = {-1, -1};
-    int stderr_pipe[2] = {-1, -1};
-
-    if (pipe(stdin_pipe) != 0 || pipe(stdout_pipe) != 0 || pipe(stderr_pipe) != 0)
+    // Configure command
+    _process.clear_argv();
+    if (_parse_mode == ParseMode::Shell)
     {
-        SIHD_LOG(error, "SshSubsystemExec: pipe failed: {}", strerror(errno));
-        if (stdin_pipe[0] >= 0)
-        {
-            close(stdin_pipe[0]);
-            close(stdin_pipe[1]);
-        }
-        if (stdout_pipe[0] >= 0)
-        {
-            close(stdout_pipe[0]);
-            close(stdout_pipe[1]);
-        }
-        if (stderr_pipe[0] >= 0)
-        {
-            close(stderr_pipe[0]);
-            close(stderr_pipe[1]);
-        }
+        _process.add_argv(_shell);
+#if !defined(__SIHD_WINDOWS__)
+        _process.add_argv("-c");
+#else
+        _process.add_argv("/c");
+#endif
+        _process.add_argv(_command);
+    }
+    else
+    {
+        sihd::util::Splitter splitter;
+        splitter.set_delimiter_spaces();
+        splitter.set_escape_sequences_all();
+        auto args = splitter.split(_command);
+        _process.add_argv(args);
+    }
+
+    // Set environment
+    for (const auto & [name, value] : _env)
+    {
+        _process.env_set(name, value);
+    }
+
+    // Set working directory
+    if (!_working_dir.empty())
+    {
+        _process.set_chdir(_working_dir);
+    }
+
+    // Configure stdout/stderr forwarding via callbacks
+    _process.stdout_to([this](std::string_view data) {
+        if (_channel)
+            _channel->write(sihd::util::ArrCharView(data.data(), data.size()));
+    });
+
+    _process.stderr_to([this](std::string_view data) {
+        if (_channel)
+            _channel->write_stderr(sihd::util::ArrCharView(data.data(), data.size()));
+    });
+
+    // Execute the child process
+    if (!_process.execute())
+    {
+        SIHD_LOG(error, "SshSubsystemExec: failed to execute command");
         return false;
     }
-
-    _pid = fork();
-    if (_pid == -1)
-    {
-        SIHD_LOG(error, "SshSubsystemExec: fork failed: {}", strerror(errno));
-        close(stdin_pipe[0]);
-        close(stdin_pipe[1]);
-        close(stdout_pipe[0]);
-        close(stdout_pipe[1]);
-        close(stderr_pipe[0]);
-        close(stderr_pipe[1]);
-        return false;
-    }
-
-    if (_pid == 0)
-    {
-        // Child process
-        close(stdin_pipe[1]);
-        close(stdout_pipe[0]);
-        close(stderr_pipe[0]);
-
-        dup2(stdin_pipe[0], STDIN_FILENO);
-        dup2(stdout_pipe[1], STDOUT_FILENO);
-        dup2(stderr_pipe[1], STDERR_FILENO);
-
-        close(stdin_pipe[0]);
-        close(stdout_pipe[1]);
-        close(stderr_pipe[1]);
-
-        // Set environment variables
-        for (const auto & [name, value] : _env)
-        {
-            setenv(name.c_str(), value.c_str(), 1);
-        }
-
-        // Change working directory
-        if (!_working_dir.empty())
-        {
-            if (chdir(_working_dir.c_str()) != 0)
-            {
-                _exit(127);
-            }
-        }
-
-        if (_parse_mode == ParseMode::Shell)
-        {
-            execl(_shell.c_str(), _shell.c_str(), "-c", _command.c_str(), nullptr);
-        }
-        else
-        {
-            // Direct mode: split and exec
-            sihd::util::Splitter splitter;
-            splitter.set_delimiter_spaces();
-            splitter.set_escape_sequences_all();
-            auto args = splitter.split(_command);
-            if (!args.empty())
-            {
-                std::vector<const char *> argv;
-                for (const auto & a : args)
-                    argv.push_back(a.c_str());
-                argv.push_back(nullptr);
-                execvp(argv[0], const_cast<char *const *>(argv.data()));
-            }
-        }
-        _exit(127);
-    }
-
-    // Parent process
-    close(stdin_pipe[0]);
-    close(stdout_pipe[1]);
-    close(stderr_pipe[1]);
-
-    _stdin_fd = stdin_pipe[1];
-    _stdout_fd = stdout_pipe[0];
-    _stderr_fd = stderr_pipe[0];
-
-    // Set non-blocking
-    int flags = fcntl(_stdout_fd, F_GETFL, 0);
-    fcntl(_stdout_fd, F_SETFL, flags | O_NONBLOCK);
-    flags = fcntl(_stderr_fd, F_GETFL, 0);
-    fcntl(_stderr_fd, F_SETFL, flags | O_NONBLOCK);
 
     _started = true;
-    SIHD_LOG(debug, "SshSubsystemExec: forked pid={}", _pid);
+    SIHD_LOG(debug, "SshSubsystemExec: process started");
     return true;
 }
 
 int SshSubsystemExec::on_data(const void *data, size_t len)
 {
-    if (!_started || _stdin_fd < 0)
+    if (!_started)
         return 0;
 
-    ssize_t written = write(_stdin_fd, data, len);
-    if (written < 0)
-    {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return 0;
-        SIHD_LOG(error, "SshSubsystemExec: write failed: {}", strerror(errno));
-        return -1;
-    }
+    if (data == nullptr || len == 0)
+        return 0;
 
-    return static_cast<int>(written);
+    _process.stdin_from(std::string(static_cast<const char *>(data), len));
+    return static_cast<int>(len);
 }
 
-void SshSubsystemExec::on_resize(const struct winsize & winsize)
+void SshSubsystemExec::on_resize(const WinSize & winsize)
 {
     _winsize = winsize;
 }
@@ -280,11 +219,7 @@ void SshSubsystemExec::on_resize(const struct winsize & winsize)
 void SshSubsystemExec::on_eof()
 {
     SIHD_LOG(debug, "SshSubsystemExec: EOF from client");
-    if (_stdin_fd >= 0)
-    {
-        close(_stdin_fd);
-        _stdin_fd = -1;
-    }
+    _process.stdin_close();
 }
 
 bool SshSubsystemExec::is_running() const
@@ -295,73 +230,30 @@ bool SshSubsystemExec::is_running() const
     if (!_fork_mode)
         return false;
 
-    if (_pid <= 0)
-        return false;
-
-    int status;
-    pid_t ret = waitpid(_pid, &status, WNOHANG);
-    if (ret == _pid)
-    {
-        auto *self = const_cast<SshSubsystemExec *>(this);
-        if (WIFEXITED(status))
-            self->_exit_code = WEXITSTATUS(status);
-        else if (WIFSIGNALED(status))
-            self->_exit_code = 128 + WTERMSIG(status);
-        self->_pid = -1;
-        return false;
-    }
-
-    return (ret == 0);
+    return _process.is_process_running();
 }
 
-void SshSubsystemExec::close_fds()
+bool SshSubsystemExec::forward_output()
 {
-    if (_stdin_fd >= 0)
-    {
-        close(_stdin_fd);
-        _stdin_fd = -1;
-    }
-    if (_stdout_fd >= 0)
-    {
-        close(_stdout_fd);
-        _stdout_fd = -1;
-    }
-    if (_stderr_fd >= 0)
-    {
-        close(_stderr_fd);
-        _stderr_fd = -1;
-    }
+    if (!_started || !_fork_mode)
+        return false;
+
+    if (!_process.can_read_pipes())
+        return false;
+
+    return _process.read_pipes(0);
 }
 
 int SshSubsystemExec::on_close()
 {
     SIHD_LOG(debug, "SshSubsystemExec: close");
 
-    if (_fork_mode && _pid > 0)
+    if (_fork_mode && _started)
     {
-        int status;
-        pid_t ret = waitpid(_pid, &status, WNOHANG);
-        if (ret == 0)
-        {
-            kill(_pid, SIGTERM);
-            usleep(50000);
-            ret = waitpid(_pid, &status, WNOHANG);
-            if (ret == 0)
-            {
-                kill(_pid, SIGKILL);
-                waitpid(_pid, &status, 0);
-            }
-        }
-
-        if (WIFEXITED(status))
-            _exit_code = WEXITSTATUS(status);
-        else if (WIFSIGNALED(status))
-            _exit_code = 128 + WTERMSIG(status);
-
-        _pid = -1;
+        _process.terminate();
+        _exit_code = static_cast<int>(_process.return_code());
     }
 
-    close_fds();
     _started = false;
     _channel = nullptr;
 

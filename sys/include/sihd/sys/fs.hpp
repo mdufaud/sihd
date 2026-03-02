@@ -80,7 +80,12 @@ std::string ensure_separation(std::string_view path);
 
 // files
 bool remove_file(std::string_view path);
+bool rename(std::string_view from, std::string_view to);
+bool truncate(std::string_view path, int64_t size);
 bool are_equals(std::string_view path1, std::string_view path2);
+
+// resolve
+std::string realpath(std::string_view path);
 
 // links
 bool make_file_link(std::string_view target, std::string_view link);

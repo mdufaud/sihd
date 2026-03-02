@@ -1,3 +1,4 @@
+#include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 
 #include <sihd/ssh/SshChannel.hpp>
@@ -44,7 +45,7 @@ void SshSubsystemPty::set_working_directory(std::string_view path)
     _working_dir = path;
 }
 
-bool SshSubsystemPty::on_start(SshChannel *channel, bool has_pty, const struct winsize & winsize)
+bool SshSubsystemPty::on_start(SshChannel *channel, bool has_pty, const WinSize & winsize)
 {
     _channel = channel;
 
@@ -127,7 +128,7 @@ int SshSubsystemPty::on_data(const void *data, size_t len)
     return static_cast<int>(written);
 }
 
-void SshSubsystemPty::on_resize(const struct winsize & winsize)
+void SshSubsystemPty::on_resize(const WinSize & winsize)
 {
     if (!_pty)
         return;
@@ -193,6 +194,25 @@ bool SshSubsystemPty::is_running() const
         return false;
 
     return _pty->is_running();
+}
+
+bool SshSubsystemPty::forward_output()
+{
+    if (!_pty || !_channel)
+        return false;
+
+    sihd::util::ArrChar buf;
+    if (!buf.reserve(4096))
+        return false;
+
+    ssize_t n = _pty->read(buf.buf(), buf.byte_capacity());
+    if (n > 0)
+    {
+        _channel->write(
+            sihd::util::ArrCharView(reinterpret_cast<const char *>(buf.buf()), static_cast<size_t>(n)));
+        return true;
+    }
+    return false;
 }
 
 } // namespace sihd::ssh

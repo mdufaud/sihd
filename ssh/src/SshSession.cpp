@@ -5,7 +5,12 @@
 #include <sihd/sys/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fmt.hpp>
+#include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
+
+#if defined(__SIHD_WINDOWS__)
+# include <conio.h>
+#endif
 
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/utils.hpp>
@@ -195,7 +200,12 @@ SshSession::AuthState SshSession::auth_none()
 
 SshSession::AuthState SshSession::auth_agent()
 {
+#if !defined(__SIHD_WINDOWS__)
     return AuthState(ssh_userauth_agent(_impl_ptr->ssh_session_ptr, nullptr));
+#else
+    SIHD_LOG(warning, "SshSession: ssh-agent auth not supported on Windows");
+    return AuthState(SSH_AUTH_DENIED);
+#endif
 }
 
 SshSession::AuthState SshSession::auth_gssapi()
@@ -273,6 +283,7 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
             }
             else
             {
+#if !defined(__SIHD_WINDOWS__)
                 char *ptr = getpass(prompt);
                 bool error
                     = ptr == nullptr || ssh_userauth_kbdint_setanswer(_impl_ptr->ssh_session_ptr, i, ptr) < 0;
@@ -280,6 +291,21 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
                     free(ptr);
                 if (error)
                     return AuthState(SSH_AUTH_ERROR);
+#else
+                fmt::print("{}", prompt);
+                std::string answer;
+                int c;
+                while ((c = _getch()) != '\r' && c != '\n')
+                {
+                    if (c == '\b' && !answer.empty())
+                        answer.pop_back();
+                    else
+                        answer += static_cast<char>(c);
+                }
+                fmt::print("\n");
+                if (ssh_userauth_kbdint_setanswer(_impl_ptr->ssh_session_ptr, i, answer.c_str()) < 0)
+                    return AuthState(SSH_AUTH_ERROR);
+#endif
             }
             ++i;
         }

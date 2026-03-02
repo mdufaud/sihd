@@ -26,20 +26,19 @@ class BasicSshServerHandler: public ISshServerHandler
         // Handler factory callbacks - return nullptr to reject the request
         using ShellHandlerCallback = std::function<
             ISshSubsystemHandler
-                *(SshSession *session, SshChannel *channel, bool has_pty, const struct winsize & winsize)>;
+                *(SshSession *session, SshChannel *channel, bool has_pty, const WinSize & winsize)>;
 
         using ExecHandlerCallback = std::function<ISshSubsystemHandler *(SshSession *session,
                                                                          SshChannel *channel,
                                                                          std::string_view command,
                                                                          bool has_pty,
-                                                                         const struct winsize & winsize)>;
+                                                                         const WinSize & winsize)>;
 
-        using SubsystemHandlerCallback
-            = std::function<ISshSubsystemHandler *(SshSession *session,
-                                                   SshChannel *channel,
-                                                   std::string_view subsystem,
-                                                   bool has_pty,
-                                                   const struct winsize & winsize)>;
+        using SubsystemHandlerCallback = std::function<ISshSubsystemHandler *(SshSession *session,
+                                                                              SshChannel *channel,
+                                                                              std::string_view subsystem,
+                                                                              bool has_pty,
+                                                                              const WinSize & winsize)>;
 
         // Custom auth callbacks (called in addition to allowed user/key lists)
         using AuthPasswordCallback
@@ -118,7 +117,7 @@ class BasicSshServerHandler: public ISshServerHandler
                                     SshSession *session,
                                     SshChannel *channel,
                                     std::string_view term,
-                                    const struct winsize & size) override;
+                                    const WinSize & size) override;
 
         bool on_channel_request_shell(SshServer *server, SshSession *session, SshChannel *channel) override;
 
@@ -142,7 +141,7 @@ class BasicSshServerHandler: public ISshServerHandler
         void on_channel_pty_resize(SshServer *server,
                                    SshSession *session,
                                    SshChannel *channel,
-                                   const struct winsize & size) override;
+                                   const WinSize & size) override;
 
         void on_poll(SshServer *server) override;
 
@@ -153,7 +152,7 @@ class BasicSshServerHandler: public ISshServerHandler
         {
                 std::unique_ptr<ISshSubsystemHandler> handler;
                 bool has_pty;
-                struct winsize winsize;
+                WinSize winsize;
         };
 
         struct SessionState

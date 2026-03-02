@@ -18,7 +18,7 @@
  */
 
 #include <CLI/CLI.hpp>
-#include <signal.h>
+#include <csignal>
 
 #include <sihd/sys/SigWatcher.hpp>
 #include <sihd/sys/fs.hpp>
@@ -34,6 +34,7 @@
 #include <sihd/ssh/SshSubsystemExec.hpp>
 #include <sihd/ssh/SshSubsystemPty.hpp>
 #include <sihd/ssh/SshSubsystemSftp.hpp>
+#include <sihd/ssh/WinSize.hpp>
 
 SIHD_NEW_LOGGER("ssh-demo");
 
@@ -44,14 +45,14 @@ using namespace sihd::ssh;
 int main(int argc, char **argv)
 {
     std::string key_path;
-    std::string sftp_root = "/tmp";
+    std::string sftp_root = sihd::sys::fs::tmp_path();
     int port = 2222;
     bool verbose = false;
 
     CLI::App app {"SSH Server Demo - complete SSH/SFTP server"};
     app.add_option("-k,--key", key_path, "Host key file path")->required();
     app.add_option("-p,--port", port, "Port to listen on")->default_val("2222");
-    app.add_option("-d,--dir", sftp_root, "SFTP root directory")->default_val("/tmp");
+    app.add_option("-d,--dir", sftp_root, "SFTP root directory")->default_val(sihd::sys::fs::tmp_path());
     app.add_flag("-v,--verbose", verbose, "Verbose logging");
 
     CLI11_PARSE(app, argc, argv);
@@ -89,17 +90,16 @@ int main(int argc, char **argv)
     // 2. EXEC HANDLER (ssh user@host "command")
     // ========================================
 
-    handler.set_exec_handler_callback(
-        []([[maybe_unused]] SshSession *session,
-           [[maybe_unused]] SshChannel *channel,
-           std::string_view command,
-           [[maybe_unused]] bool has_pty,
-           [[maybe_unused]] const struct winsize & winsize) -> ISshSubsystemHandler * {
-            SIHD_LOG(info, "Exec command: {}", command);
-            // Use shell mode to execute commands (like bash -c "command")
-            auto *exec = new SshSubsystemExec(command);
-            return exec;
-        });
+    handler.set_exec_handler_callback([]([[maybe_unused]] SshSession *session,
+                                         [[maybe_unused]] SshChannel *channel,
+                                         std::string_view command,
+                                         [[maybe_unused]] bool has_pty,
+                                         [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
+        SIHD_LOG(info, "Exec command: {}", command);
+        // Use shell mode to execute commands (like bash -c "command")
+        auto *exec = new SshSubsystemExec(command);
+        return exec;
+    });
 
     // ========================================
     // 3. SHELL HANDLER (interactive ssh session)
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
     handler.set_shell_handler_callback([]([[maybe_unused]] SshSession *session,
                                           [[maybe_unused]] SshChannel *channel,
                                           bool has_pty,
-                                          const struct winsize & winsize) -> ISshSubsystemHandler * {
+                                          const WinSize & winsize) -> ISshSubsystemHandler * {
         if (!has_pty)
         {
             SIHD_LOG(warning, "Shell requested without PTY - rejecting");
@@ -124,9 +124,12 @@ int main(int argc, char **argv)
         SIHD_LOG(info, "Opening interactive shell (pty {}x{})", winsize.ws_col, winsize.ws_row);
 
         auto *pty = new SshSubsystemPty();
-        // Use /bin/bash for interactive shell
+#if !defined(__SIHD_WINDOWS__)
         pty->set_shell("/bin/bash");
-        pty->set_args({"-i"}); // interactive mode
+        pty->set_args({"-i"});
+#else
+        pty->set_shell("cmd.exe");
+#endif
         return pty;
     });
 
@@ -140,7 +143,7 @@ int main(int argc, char **argv)
                          [[maybe_unused]] SshChannel *channel,
                          std::string_view subsystem,
                          [[maybe_unused]] bool has_pty,
-                         [[maybe_unused]] const struct winsize & winsize) -> ISshSubsystemHandler * {
+                         [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
             if (subsystem == "sftp")
             {
                 SIHD_LOG(info, "SFTP session started (root: {})", sftp_root_copy);

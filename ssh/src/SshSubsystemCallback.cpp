@@ -29,7 +29,7 @@ void SshSubsystemCallback::set_callback(Callback callback)
 
 bool SshSubsystemCallback::on_start(SshChannel *channel,
                                     [[maybe_unused]] bool has_pty,
-                                    [[maybe_unused]] const struct winsize & winsize)
+                                    [[maybe_unused]] const WinSize & winsize)
 {
     _channel = channel;
 
@@ -68,7 +68,7 @@ int SshSubsystemCallback::on_data([[maybe_unused]] const void *data, [[maybe_unu
     return 0;
 }
 
-void SshSubsystemCallback::on_resize([[maybe_unused]] const struct winsize & winsize)
+void SshSubsystemCallback::on_resize([[maybe_unused]] const WinSize & winsize)
 {
     // No-op: callback mode doesn't use PTY
 }

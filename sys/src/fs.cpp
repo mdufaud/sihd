@@ -18,7 +18,9 @@
 
 #if defined(__SIHD_WINDOWS__)
 # include <direct.h> // _mkdir _stat
+# include <fcntl.h> // _O_WRONLY
 # include <fileapi.h>
+# include <io.h> // _open _close _chsize_s
 # include <libloaderapi.h>
 #else
 # include <unistd.h>
@@ -734,6 +736,42 @@ bool are_equals(std::string_view path1, std::string_view path2)
 bool remove_file(std::string_view path)
 {
     return remove(path.data()) == 0;
+}
+
+bool rename(std::string_view from, std::string_view to)
+{
+    return ::rename(from.data(), to.data()) == 0;
+}
+
+bool truncate(std::string_view path, int64_t size)
+{
+#if !defined(__SIHD_WINDOWS__)
+    return ::truncate(path.data(), static_cast<off_t>(size)) == 0;
+#else
+    int fd = _open(path.data(), _O_WRONLY);
+    if (fd < 0)
+        return false;
+    errno_t rc = _chsize_s(fd, size);
+    _close(fd);
+    return rc == 0;
+#endif
+}
+
+std::string realpath(std::string_view path)
+{
+#if !defined(__SIHD_WINDOWS__)
+    char *real = ::realpath(path.data(), nullptr);
+    if (!real)
+        return "";
+    std::string result(real);
+    free(real);
+    return result;
+#else
+    char resolved[PATH_MAX];
+    if (_fullpath(resolved, path.data(), PATH_MAX) == nullptr)
+        return "";
+    return std::string(resolved);
+#endif
 }
 
 bool write(std::string_view path, std::string_view view, bool append)

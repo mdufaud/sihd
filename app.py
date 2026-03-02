@@ -139,12 +139,23 @@ modules = {
         ],
     },
     "ssh": {
-        "platforms": ["linux"],
         "depends": ['util', 'sys'],
         "extlibs": ["libssh"],
         "libs": ['ssh'],
         # libssh.a depends on OpenSSL (needed for cross static linking)
         "linux-cross-libs": ['ssl', 'crypto'],
+        "windows-libs": [
+            'ssh',               # libssh
+            'ssl', 'crypto',     # OpenSSL (libssh dep)
+            'ws2_32',            # Winsock (libssh, OpenSSL, sys)
+            'crypt32',           # CryptoAPI (OpenSSL)
+            'bcrypt',            # BCrypt (OpenSSL)
+            'iphlpapi',          # if_nametoindex (libssh)
+            'psapi',             # GetProcessMemoryInfo (sys)
+            'imagehlp',          # backtrace / SymFromAddr (sys)
+            'ssp',               # winsock (sys)
+            'rpcrt4',            # Uuid (sys)
+        ],
     },
     "usb": {
         "depends": ['util', 'sys'],

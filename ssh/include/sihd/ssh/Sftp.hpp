@@ -4,8 +4,15 @@
 #include <memory>
 #include <string>
 #include <string_view>
-#include <sys/types.h> // mode_t (POSIX, not guaranteed by standard C++ headers)
 #include <vector>
+
+#include <sihd/util/platform.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <sys/types.h> // mode_t, uid_t, gid_t
+#else
+typedef unsigned int gid_t;
+#endif
 
 namespace sihd::ssh
 {
