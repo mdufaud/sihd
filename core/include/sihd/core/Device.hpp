@@ -1,5 +1,5 @@
-#ifndef __SIHD_UTIL_DEVICE_HPP__
-#define __SIHD_UTIL_DEVICE_HPP__
+#ifndef __SIHD_CORE_DEVICE_HPP__
+#define __SIHD_CORE_DEVICE_HPP__
 
 #include <sihd/core/AChannelContainer.hpp>
 #include <sihd/core/ACoreService.hpp>
@@ -40,7 +40,10 @@ class Device: public AChannelContainer,
         virtual bool on_stop() { return true; };
         virtual bool on_reset() { return true; };
 
-        virtual sihd::util::AService::IServiceController *service_ctrl() override { return &_service_controller; }
+        virtual sihd::util::AService::IServiceController *service_ctrl() override
+        {
+            return &_service_controller;
+        }
         sihd::util::ServiceController _service_controller;
 
     private:

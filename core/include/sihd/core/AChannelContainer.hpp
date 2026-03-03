@@ -1,5 +1,5 @@
-#ifndef __SIHD_CORE_CHANNELCONTAINER_HPP__
-#define __SIHD_CORE_CHANNELCONTAINER_HPP__
+#ifndef __SIHD_CORE_ACHANNELCONTAINER_HPP__
+#define __SIHD_CORE_ACHANNELCONTAINER_HPP__
 
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IHandler.hpp>
@@ -25,7 +25,8 @@ class AChannelContainer: public sihd::util::Node,
         Channel *get_channel(const std::string & name);
         bool get_channel(const std::string & name, Channel **to_fill);
 
-        // store channel configuration, when links are resolved, create the channel if unlinked or get the linked one
+        // store channel configuration, when links are resolved, create the channel if unlinked or get the
+        // linked one
         Channel *add_unlinked_channel(const std::string & name,
                                       sihd::util::Type type,
                                       size_t size = 1,

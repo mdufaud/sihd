@@ -1,5 +1,5 @@
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/StrConfiguration.hpp>
 
@@ -282,13 +282,13 @@ void DevFilter::_apply_rule(const sihd::core::Channel *channel_in,
             matched = in_value <= rule_ptr->trigger_value;
             break;
         case ByteAnd:
-            matched = in_value.data.n & rule_ptr->trigger_value.data.n;
+            matched = (in_value.data.n & rule_ptr->trigger_value.data.n) != 0;
             break;
         case ByteOr:
-            matched = in_value.data.n | rule_ptr->trigger_value.data.n;
+            matched = (in_value.data.n | rule_ptr->trigger_value.data.n) != 0;
             break;
         case ByteXor:
-            matched = in_value.data.n ^ rule_ptr->trigger_value.data.n;
+            matched = (in_value.data.n ^ rule_ptr->trigger_value.data.n) != 0;
             break;
         default:
             break;
@@ -305,6 +305,9 @@ void DevFilter::_apply_rule(const sihd::core::Channel *channel_in,
 
 void DevFilter::handle(sihd::core::Channel *channel)
 {
+    std::lock_guard l(_run_mutex);
+    if (_running == false)
+        return;
     auto it = _rules_map.find(channel);
     if (it == _rules_map.end())
         return;
@@ -358,7 +361,10 @@ bool DevFilter::on_start()
         else
             ret = false;
     }
-    _running = ret;
+    {
+        std::lock_guard l(_run_mutex);
+        _running = ret;
+    }
     return ret;
 }
 
@@ -367,8 +373,8 @@ bool DevFilter::on_stop()
     {
         std::lock_guard l(_run_mutex);
         _running = false;
+        _rules_map.clear();
     }
-    _rules_map.clear();
     return true;
 }
 
@@ -525,7 +531,7 @@ bool DevFilter::InternalRule::verify()
     // check if index will be good
     if (rule_ptr->trigger_idx >= this->channel_in_ptr->array()->size())
     {
-        SIHD_LOG_ERROR("DevFilter: trigger index %lu is higher or equal than channel input '{}' size %lu",
+        SIHD_LOG_ERROR("DevFilter: trigger index {} is higher or equal than channel input '{}' size {}",
                        rule_ptr->trigger_idx,
                        rule_ptr->channel_in,
                        this->channel_in_ptr->array()->size());
@@ -533,7 +539,7 @@ bool DevFilter::InternalRule::verify()
     }
     if (rule_ptr->write_idx >= this->channel_out_ptr->array()->size())
     {
-        SIHD_LOG_ERROR("DevFilter: write index %lu is higher or equal than channel output '{}' size %lu",
+        SIHD_LOG_ERROR("DevFilter: write index {} is higher or equal than channel output '{}' size {}",
                        rule_ptr->write_idx,
                        rule_ptr->channel_out,
                        this->channel_out_ptr->array()->size());

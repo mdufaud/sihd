@@ -20,7 +20,6 @@ class ACoreService: public sihd::util::AService,
         using sihd::util::AService::stop;
 
         virtual ~ACoreService() = default;
-        ;
 
     protected:
         virtual void handle([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}

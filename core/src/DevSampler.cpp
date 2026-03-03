@@ -1,5 +1,5 @@
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 
 #include <sihd/core/DevSampler.hpp>

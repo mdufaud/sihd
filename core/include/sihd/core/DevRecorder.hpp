@@ -38,7 +38,6 @@ class DevRecorder: public sihd::core::Device
 
     private:
         std::mutex _run_mutex;
-        std::mutex _mutex_recorded_values;
         // list of channels path to get at start
         std::map<std::string, std::string> _map_channels_alias;
         // corresponding channel ptr to its recorded path
@@ -47,7 +46,6 @@ class DevRecorder: public sihd::core::Device
         bool _running;
         std::string _handler_path;
         std::unique_ptr<sihd::util::ArrUInt> _records_array_ptr;
-        // sihd::util::ArrUInt _records_array;
         sihd::util::IHandler<const std::string &, const Channel *> *_handler_ptr;
 
         Channel *_channel_records_ptr;

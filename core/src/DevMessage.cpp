@@ -1,6 +1,6 @@
 #include <sihd/core/DevMessage.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 
 #define CHANNEL_TRIGGER "trigger"
 #define IN_SUFFIX "_in"
@@ -168,26 +168,42 @@ bool DevMessage::on_start()
     {
         std::string suffix_name = name + IN_SUFFIX;
 
-        ret = this->find_channel(suffix_name, &c) && ret;
-        _channels_in_to_field[c] = field;
-        this->observe_channel(c);
+        if (this->find_channel(suffix_name, &c))
+        {
+            _channels_in_to_field[c] = field;
+            this->observe_channel(c);
+        }
+        else
+            ret = false;
 
         suffix_name = name + OUT_SUFFIX;
 
-        ret = this->find_channel(suffix_name, &c) && ret;
-        _fields_to_channel_out[field] = c;
+        if (this->find_channel(suffix_name, &c))
+            _fields_to_channel_out[field] = c;
+        else
+            ret = false;
     }
 
-    ret = this->find_channel(CHANNEL_MSG_IN, &c) && ret;
-    _channel_msg_in = c;
-    this->observe_channel(c);
+    if (this->find_channel(CHANNEL_MSG_IN, &c))
+    {
+        _channel_msg_in = c;
+        this->observe_channel(c);
+    }
+    else
+        ret = false;
 
-    ret = this->find_channel(CHANNEL_MSG_OUT, &c) && ret;
-    _channel_msg_out = c;
+    if (this->find_channel(CHANNEL_MSG_OUT, &c))
+        _channel_msg_out = c;
+    else
+        ret = false;
 
-    ret = this->find_channel(CHANNEL_TRIGGER, &c) && ret;
-    _channel_trigger = c;
-    this->observe_channel(c);
+    if (this->find_channel(CHANNEL_TRIGGER, &c))
+    {
+        _channel_trigger = c;
+        this->observe_channel(c);
+    }
+    else
+        ret = false;
 
     _running = ret;
     return ret;

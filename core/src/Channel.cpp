@@ -94,6 +94,7 @@ bool Channel::copy_to(IArray & arr, size_t byte_offset) const
 
 bool Channel::write(const Channel & other)
 {
+    std::lock_guard lock(other._arr_mutex);
     const IArray *other_array = other.array();
     return other_array != nullptr && this->write(*other_array);
 }
@@ -117,7 +118,8 @@ bool Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_offset
                            _array_ptr->byte_size());
             return false;
         }
-        if (_write_change_only && _array_ptr->is_bytes_equal(arr_view.buf(), arr_view.byte_size(), byte_offset))
+        if (_write_change_only
+            && _array_ptr->is_bytes_equal(arr_view.buf(), arr_view.byte_size(), byte_offset))
             return true;
         if ((ret = _array_ptr->copy_from_bytes(arr_view, byte_offset)))
             this->do_timestamp();

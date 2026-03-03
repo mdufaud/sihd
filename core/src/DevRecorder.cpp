@@ -1,6 +1,6 @@
+#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/str.hpp>
 
@@ -65,6 +65,9 @@ bool DevRecorder::is_running() const
 
 void DevRecorder::handle(sihd::core::Channel *channel)
 {
+    std::lock_guard l(_run_mutex);
+    if (_running == false || _channel_records_ptr == nullptr)
+        return;
     std::string & alias = _map_channels[channel];
     _handler_ptr->handle(alias, channel);
     _records_array_ptr->get(0) += 1;

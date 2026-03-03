@@ -1,6 +1,6 @@
 #include <sihd/core/DevPlayer.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Task.hpp>
 
@@ -71,7 +71,7 @@ bool DevPlayer::add_alias(std::string_view alias_conf)
     if (conf.size() != 2)
     {
         SIHD_LOG(error,
-                 "DevReplayer: wrong alias configuration: '{}' - expected RECORD_CHANNEL_NAME=CHANNEL_PATH",
+                 "DevPlayer: wrong alias configuration: '{}' - expected RECORD_CHANNEL_NAME=CHANNEL_PATH",
                  alias_conf);
         return false;
     }
@@ -112,7 +112,7 @@ bool DevPlayer::on_start()
     IProvider<PlayableRecord> *provider = this->find<IProvider<PlayableRecord>>(_provider_path);
     if (provider == nullptr)
     {
-        SIHD_LOG(error, "DevReplayer: could not find provider: {}", _provider_path);
+        SIHD_LOG(error, "DevPlayer: could not find provider: {}", _provider_path);
         return false;
     }
     _collector.set_provider(provider);
@@ -134,7 +134,7 @@ bool DevPlayer::on_start()
         channel_ptr = this->find<Channel>(pair.second);
         if (channel_ptr == nullptr)
         {
-            SIHD_LOG(error, "DevRecorder: channel to record '{}' not found: {}", pair.first, pair.second);
+            SIHD_LOG(error, "DevPlayer: channel to play '{}' not found: {}", pair.first, pair.second);
             return false;
         }
         _map_channels[pair.first] = channel_ptr;
@@ -150,7 +150,7 @@ bool DevPlayer::on_start()
     {
         _running = false;
         _scheduler_ptr->stop();
-        SIHD_LOG(error, "DevReplayer: could not start worker");
+        SIHD_LOG(error, "DevPlayer: could not start worker");
     }
     return _running;
 }
@@ -199,8 +199,6 @@ void DevPlayer::handle(Collector<PlayableRecord> *collector)
 
 bool DevPlayer::_main_loop()
 {
-    // _channel_end_ptr->write<bool>(0, false);
-
     _first_timestamp.reset();
     _last_record = false;
     // run collector loop which calls DevPlayer::handle for each record
@@ -226,7 +224,7 @@ bool DevPlayer::on_stop()
         _waitable.notify();
     }
     if (_worker.stop_worker() == false)
-        SIHD_LOG(error, "DevReplayer: could not stop worker");
+        SIHD_LOG(error, "DevPlayer: could not stop worker");
     _channel_play_ptr = nullptr;
     _channel_end_ptr = nullptr;
     _collector.stop();

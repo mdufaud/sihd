@@ -9,6 +9,25 @@ using namespace sihd::util;
 
 SIHD_LOGGER;
 
+namespace
+{
+
+template <typename Callable>
+bool for_each_child_service(Node *node, Callable && fn)
+{
+    bool ret = true;
+    for (const std::string & child_name : node->children_keys())
+    {
+        Named *child = node->get_child(child_name);
+        AService *service = dynamic_cast<AService *>(child);
+        if (service != nullptr && fn(service, child_name) == false)
+            ret = false;
+    }
+    return ret;
+}
+
+} // namespace
+
 // permits copying of existent maps instead of instanciating every time the same maps
 sihd::util::ServiceController Device::_default_service_controller;
 
@@ -42,32 +61,28 @@ const char *Device::device_state_str() const
 
 bool Device::do_setup()
 {
-    for (const std::string & child_name : this->children_keys())
-    {
-        Named *child = this->get_child(child_name);
-        AService *service = dynamic_cast<AService *>(child);
-        if (service != nullptr && service->setup() == false)
+    bool ret = for_each_child_service(this, [this](AService *service, const std::string & child_name) {
+        if (service->setup() == false)
         {
             SIHD_LOG(error, "Device: {} could not setup service: {}", this->name(), child_name);
             return false;
         }
-    }
-    return this->on_setup();
+        return true;
+    });
+    return ret && this->on_setup();
 }
 
 bool Device::do_init()
 {
-    for (const std::string & child_name : this->children_keys())
-    {
-        Named *child = this->get_child(child_name);
-        AService *service = dynamic_cast<AService *>(child);
-        if (service != nullptr && service->init() == false)
+    bool ret = for_each_child_service(this, [this](AService *service, const std::string & child_name) {
+        if (service->init() == false)
         {
             SIHD_LOG(error, "Device: {} could not init service: {}", this->name(), child_name);
             return false;
         }
-    }
-    return this->on_init();
+        return true;
+    });
+    return ret && this->on_init();
 }
 
 bool Device::do_start()
@@ -91,47 +106,44 @@ bool Device::do_start()
         }
     }
     ret = ret && this->resolve_links();
+    if (ret)
+        ret = this->on_start();
     if (ret == false)
     {
-        // return started service to stop state if failed
         for (AService *service : started_services)
         {
             service->stop();
         }
     }
-    return ret && this->on_start();
+    return ret;
 }
 
 bool Device::do_stop()
 {
     this->remove_channels_observation();
-    for (const std::string & child_name : this->children_keys())
-    {
-        Named *child = this->get_child(child_name);
-        AService *service = dynamic_cast<AService *>(child);
-        if (service != nullptr && service->stop() == false)
+    bool ret = for_each_child_service(this, [this](AService *service, const std::string & child_name) {
+        if (service->stop() == false)
         {
             SIHD_LOG(error, "Device: {} could not stop service: {}", this->name(), child_name);
             return false;
         }
-    }
-    return this->on_stop();
+        return true;
+    });
+    return this->on_stop() && ret;
 }
 
 bool Device::do_reset()
 {
-    for (const std::string & child_name : this->children_keys())
-    {
-        Named *child = this->get_child(child_name);
-        AService *service = dynamic_cast<AService *>(child);
-        if (service != nullptr && service->reset() == false)
+    bool ret = for_each_child_service(this, [this](AService *service, const std::string & child_name) {
+        if (service->reset() == false)
         {
             SIHD_LOG(error, "Device: {} could not reset service: {}", this->name(), child_name);
             return false;
         }
-    }
+        return true;
+    });
     this->remove_children();
-    return this->on_reset();
+    return this->on_reset() && ret;
 }
 
 } // namespace sihd::core
