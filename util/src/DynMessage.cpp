@@ -21,6 +21,7 @@ bool DynMessage::finish()
         IMessageField *field = _fields.at(name);
         field->field_resize(field->field_size());
     }
+    _finished = true;
     return true;
 }
 

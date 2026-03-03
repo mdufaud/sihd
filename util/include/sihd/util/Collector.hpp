@@ -38,7 +38,7 @@ class Collector: public Observable<Collector<T>>,
         {
             if (_provider_ptr->providing() && _provider_ptr->provide(&_data))
             {
-                this->notify_observers();
+                this->notify_observers(this);
                 return true;
             }
             return false;
