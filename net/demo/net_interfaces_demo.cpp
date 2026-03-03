@@ -42,17 +42,21 @@ int main()
             fmt::print("    netmask: {}\n", netif.netmask4().str());
             if (netif.broadcast() || netif.point2point())
             {
-                fmt::print("    {}: {}\n", netif.broadcast() ? "broadcast" : "point2point", netif.extra_addr4().str());
+                fmt::print("    {}: {}\n",
+                           netif.broadcast() ? "broadcast" : "point2point",
+                           netif.extra_addr4().str());
             }
         }
         if (netif.addr6().has_ip())
         {
             fmt::print("  IPV6:\n");
             fmt::print("    addr: {}\n", netif.addr6().str());
-            fmt::print("    netmask: {}\n", netif.netmask4().str());
+            fmt::print("    netmask: {}\n", netif.netmask6().str());
             if (netif.broadcast() || netif.point2point())
             {
-                fmt::print("    {}: {}\n", netif.broadcast() ? "broadcast" : "point2point", netif.extra_addr6().str());
+                fmt::print("    {}: {}\n",
+                           netif.broadcast() ? "broadcast" : "point2point",
+                           netif.extra_addr6().str());
             }
         }
     }

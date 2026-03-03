@@ -1,6 +1,6 @@
 #include <sihd/net/TcpServer.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::net
 {
@@ -53,7 +53,7 @@ bool TcpServer::open_socket_unix()
 {
     if (_socket.is_open())
         return false;
-    return _socket.open(AF_UNIX, SOCK_STREAM, IPPROTO_TCP);
+    return _socket.open(AF_UNIX, SOCK_STREAM, 0);
 }
 
 bool TcpServer::open_socket(bool ipv6)
@@ -84,7 +84,7 @@ bool TcpServer::open_and_bind(std::string_view ip, int port)
 
 bool TcpServer::open_unix_and_bind(std::string_view path)
 {
-    return this->open_socket_unix() && this->bind(path);
+    return this->open_socket_unix() && this->bind_unix(path);
 }
 
 bool TcpServer::close()

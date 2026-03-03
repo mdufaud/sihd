@@ -275,6 +275,11 @@ uint32_t IpAddr::subnet_value() const
 
 bool IpAddr::set_subnet_mask(uint32_t mask_value)
 {
+    if (mask_value == 0)
+    {
+        _netmask_value = 0;
+        return true;
+    }
     uint32_t actual_mask = ip::to_netmask(mask_value);
     if (ip::is_valid_netmask(htonl(actual_mask)) == false)
     {
@@ -399,9 +404,9 @@ size_t IpAddr::addr_len() const
 uint16_t IpAddr::port() const
 {
     if (this->is_ipv4())
-        return _addr.sockaddr_in.sin_port;
+        return ntohs(_addr.sockaddr_in.sin_port);
     else if (this->is_ipv6())
-        return _addr.sockaddr_in6.sin6_port;
+        return ntohs(_addr.sockaddr_in6.sin6_port);
     return 0;
 }
 

@@ -1,6 +1,6 @@
 #include <sihd/net/UdpReceiver.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::net
 {
@@ -33,7 +33,7 @@ bool UdpReceiver::open_socket_unix()
 {
     if (_socket.is_open())
         return false;
-    return _socket.open(AF_UNIX, SOCK_DGRAM, IPPROTO_UDP);
+    return _socket.open(AF_UNIX, SOCK_DGRAM, 0);
 }
 
 bool UdpReceiver::open_socket(bool ipv6)
@@ -69,7 +69,7 @@ bool UdpReceiver::open_and_bind(std::string_view ip, int port)
 
 bool UdpReceiver::open_unix_and_bind(std::string_view path)
 {
-    return this->open_socket_unix() && this->bind(path);
+    return this->open_socket_unix() && this->bind_unix(path);
 }
 
 bool UdpReceiver::close()

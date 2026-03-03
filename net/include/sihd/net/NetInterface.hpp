@@ -66,7 +66,7 @@ class NetInterface
 
     private:
         std::string _name;
-        uint32_t _flags;
+        uint32_t _flags = 0;
 
         IpAddr _addr4;
         IpAddr _netmask4;

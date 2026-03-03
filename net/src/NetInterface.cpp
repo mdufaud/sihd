@@ -218,7 +218,10 @@ std::optional<std::map<std::string, NetInterface>> NetInterface::get_all_interfa
     while (iface != nullptr)
     {
         if (iface->ifa_name == nullptr)
+        {
+            iface = iface->ifa_next;
             continue;
+        }
 
         NetInterface & netif = ret[iface->ifa_name];
 

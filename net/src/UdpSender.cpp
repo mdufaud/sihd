@@ -1,6 +1,6 @@
 #include <sihd/net/UdpSender.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::net
 {
@@ -15,12 +15,16 @@ UdpSender::~UdpSender() = default;
 
 bool UdpSender::open_socket_unix()
 {
-    return _socket.is_open() || _socket.open(AF_UNIX, SOCK_DGRAM, IPPROTO_UDP);
+    if (_socket.is_open())
+        return false;
+    return _socket.open(AF_UNIX, SOCK_DGRAM, 0);
 }
 
 bool UdpSender::open_socket(bool ipv6)
 {
-    return _socket.is_open() || _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (_socket.is_open())
+        return false;
+    return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 }
 
 bool UdpSender::connect(const IpAddr & addr)

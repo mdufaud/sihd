@@ -9,9 +9,6 @@
 
 #if !defined(__SIHD_WINDOWS__)
 #else
-# define SHUT_RD SD_RECEIVE
-# define SHUT_WR SD_SEND
-# define SHUT_RDWR SD_BOTH
 #endif
 
 namespace sihd::net
@@ -45,7 +42,8 @@ class Socket
         // returns true if getpeername worked and the provided addr_len is still the same
         static bool get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len);
 
-        // return an IpAdress from socket using get_socket_peername; if ipv6 is true, checks for an ipv6 addr first
+        // return an IpAdress from socket using get_socket_peername; if ipv6 is true, checks for an ipv6 addr
+        // first
         static std::optional<IpAddr> socket_ip(int socket, bool ipv6 = false);
         static bool get_socket_infos(int socket, int *domain, int *type, int *protocol);
 

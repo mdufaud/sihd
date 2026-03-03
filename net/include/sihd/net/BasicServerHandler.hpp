@@ -59,7 +59,11 @@ class BasicServerHandler: public INetServerHandler,
         const std::vector<Client *> & new_clients() const { return _connect_event_lst; }
         sihd::util::Timestamp poll_time() const { return _poll_time; }
         INetServer *server() { return _server; }
-        Client *client(int socket) { return _client_map[socket]; }
+        Client *client(int socket)
+        {
+            auto it = _client_map.find(socket);
+            return it != _client_map.end() ? it->second : nullptr;
+        }
 
     protected:
         void handle_no_activity(INetServer *server, time_t nano);

@@ -1,17 +1,18 @@
 #ifndef __SIHD_NET_TCPCLIENT_HPP__
 #define __SIHD_NET_TCPCLIENT_HPP__
 
+#include <atomic>
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/INetSender.hpp>
 #include <sihd/net/Socket.hpp>
 
+#include <sihd/sys/Poll.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Observable.hpp>
-#include <sihd/sys/Poll.hpp>
 #include <sihd/util/Waitable.hpp>
 
 namespace sihd::net
@@ -72,7 +73,7 @@ class TcpClient: public INetReceiver,
 
         Socket _socket;
         IpAddr _client_addr;
-        bool _connected;
+        std::atomic<bool> _connected;
         std::mutex _poll_mutex;
         sihd::sys::Poll _poll;
 };

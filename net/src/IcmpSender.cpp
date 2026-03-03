@@ -1,7 +1,7 @@
 #include <cstdint>
+#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 
 #include <sihd/net/IcmpSender.hpp>
 #include <sihd/net/utils.hpp>
@@ -349,16 +349,12 @@ void IcmpSender::_read_socket()
         if (addr_storage.ss_family == AF_INET6)
         {
             struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr_storage;
-            char buf[INET6_ADDRSTRLEN];
-            inet_ntop(AF_INET6, &sin6->sin6_addr, buf, sizeof(buf));
-            _icmp_response.client = IpAddr(buf, true);
+            _icmp_response.client = IpAddr(*reinterpret_cast<sockaddr *>(sin6));
         }
         else
         {
             struct sockaddr_in *sin = (struct sockaddr_in *)&addr_storage;
-            char buf[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &sin->sin_addr, buf, sizeof(buf));
-            _icmp_response.client = IpAddr(buf, false);
+            _icmp_response.client = IpAddr(*reinterpret_cast<sockaddr *>(sin));
         }
 
         if (_socket.is_ipv6())

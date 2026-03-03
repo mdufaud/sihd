@@ -1,6 +1,6 @@
 #include <sihd/net/TcpClient.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::net
 {
@@ -34,7 +34,7 @@ bool TcpClient::open_socket_unix()
 {
     if (_socket.is_open())
         return false;
-    return _socket.open(AF_UNIX, SOCK_STREAM, IPPROTO_TCP);
+    return _socket.open(AF_UNIX, SOCK_STREAM, 0);
 }
 
 bool TcpClient::open_socket(bool ipv6)
@@ -116,7 +116,7 @@ ssize_t TcpClient::receive(IpAddr & addr, sihd::util::IArray & arr)
 {
     ssize_t ret = _socket.receive_from(addr, arr);
     if (_connected)
-        _connected = ret != 0;
+        _connected = ret > 0;
     return ret;
 }
 
@@ -124,7 +124,7 @@ ssize_t TcpClient::receive(sihd::util::IArray & arr)
 {
     ssize_t ret = _socket.receive(arr);
     if (_connected)
-        _connected = ret != 0;
+        _connected = ret > 0;
     return ret;
 }
 
@@ -132,7 +132,7 @@ ssize_t TcpClient::receive(void *buf, size_t len)
 {
     ssize_t ret = _socket.receive(buf, len);
     if (_connected)
-        _connected = ret != 0;
+        _connected = ret > 0;
     return ret;
 }
 

@@ -5,8 +5,8 @@
 #include <stdexcept>
 
 #include <sihd/net/Socket.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/util/Logger.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <fcntl.h>       // fcntl
@@ -175,11 +175,11 @@ bool Socket::bind_socket_to_device(int socket, std::string_view name)
 
     strncpy(device_name, name.data(), std::min(name.size(), (size_t)IFNAMSIZ));
     return sihd::sys::os::setsockopt(socket,
-                                      SOL_SOCKET,
-                                      SO_BINDTODEVICE,
-                                      device_name,
-                                      sizeof(device_name),
-                                      true);
+                                     SOL_SOCKET,
+                                     SO_BINDTODEVICE,
+                                     device_name,
+                                     sizeof(device_name),
+                                     true);
 #else
     (void)socket;
     (void)name;
@@ -249,8 +249,16 @@ std::optional<IpAddr> Socket::peeraddr(bool ipv6) const
 
 int Socket::local_port() const
 {
-    auto opt_ip = this->peeraddr(true);
-    return opt_ip ? opt_ip.value().port() : -1;
+    sockaddr_in6 addr6;
+    socklen_t len = sizeof(addr6);
+    if (::getsockname(_socket, (sockaddr *)&addr6, &len) != 0)
+        return -1;
+    if (addr6.sin6_family == AF_INET6)
+        return ntohs(addr6.sin6_port);
+    sockaddr_in *addr4 = reinterpret_cast<sockaddr_in *>(&addr6);
+    if (addr4->sin_family == AF_INET)
+        return ntohs(addr4->sin_port);
+    return -1;
 }
 
 /* ************************************************************************* */
@@ -483,7 +491,7 @@ bool Socket::send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util::A
     {
         ret = this->send_to(addr, addr_len, {view.data() + sent, view.size() - sent});
         if (ret <= 0)
-            return ret;
+            return false;
         sent += ret;
     }
     return sent == view.size();
@@ -494,9 +502,9 @@ ssize_t Socket::receive_from(sockaddr *addr, socklen_t *addr_len, void *data, si
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot receive_from on a closed socket");
 #if !defined(__SIHD_WINDOWS__)
-    ssize_t rcv = ::recvfrom(_socket, data, size, _send_flags, addr, addr_len);
+    ssize_t rcv = ::recvfrom(_socket, data, size, _rcv_flags, addr, addr_len);
 #else
-    ssize_t rcv = ::recvfrom(_socket, (char *)data, size, _send_flags, addr, addr_len);
+    ssize_t rcv = ::recvfrom(_socket, (char *)data, size, _rcv_flags, addr, addr_len);
 #endif
     if (rcv < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
         SIHD_LOG(error, "Socket receive_from error: {}", strerror(errno));
@@ -622,24 +630,27 @@ int Socket::accept()
 bool Socket::bind_unix(std::string_view path)
 {
     sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path)));
+    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path) - 1));
     return this->bind((sockaddr *)&addr, SUN_LEN(&addr));
 }
 
 bool Socket::connect_unix(std::string_view path)
 {
     sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path)));
+    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path) - 1));
     return this->connect((sockaddr *)&addr, SUN_LEN(&addr));
 }
 
 ssize_t Socket::send_to_unix(std::string_view path, sihd::util::ArrCharView view)
 {
     sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path)));
+    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path) - 1));
     return this->send_to((sockaddr *)&addr, SUN_LEN(&addr), view);
 }
 
@@ -648,18 +659,19 @@ bool Socket::send_all_to_unix(std::string_view path, sihd::util::ArrCharView vie
     ssize_t ret;
     size_t sent = 0;
     sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path)));
+    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path) - 1));
     size_t sun_len = SUN_LEN(&addr);
 
     while (sent < view.size())
     {
         ret = this->send_to((sockaddr *)&addr, sun_len, {view.data() + sent, view.size() - sent});
         if (ret <= 0)
-            return ret;
+            return false;
         sent += ret;
     }
-    return sent;
+    return sent == view.size();
 }
 
 ssize_t Socket::receive_from_unix(std::string & path, void *data, size_t size)
@@ -667,7 +679,7 @@ ssize_t Socket::receive_from_unix(std::string & path, void *data, size_t size)
     sockaddr_un addr;
     memset(&addr, 0, sizeof(sockaddr_un));
     addr.sun_family = AF_UNIX;
-    socklen_t addr_len = SUN_LEN(&addr);
+    socklen_t addr_len = sizeof(sockaddr_un);
     ssize_t ret = this->receive_from((sockaddr *)&addr, &addr_len, data, size);
     if (ret > 0)
         path = addr.sun_path;
@@ -700,9 +712,9 @@ bool Socket::set_socket_blocking(int socket, bool active)
         return false;
     }
     if (active)
-        opts |= O_NONBLOCK;
-    else
         opts &= ~O_NONBLOCK;
+    else
+        opts |= O_NONBLOCK;
     opts = ::fcntl(socket, F_SETFL, opts);
     if (opts < 0)
         SIHD_LOG(error, "Socket: could not set fcntl options: {}", strerror(errno));
@@ -712,14 +724,14 @@ bool Socket::set_socket_blocking(int socket, bool active)
 bool Socket::is_socket_blocking(int socket)
 {
     if (socket < 0)
-        throw std::runtime_error("Socket: cannot set blocking on a closed socket");
+        throw std::runtime_error("Socket: cannot check blocking on a closed socket");
     int opts = ::fcntl(socket, F_GETFL);
     if (opts < 0)
     {
         SIHD_LOG(error, "Socket: could not get fcntl: {}", strerror(errno));
         return false;
     }
-    return opts & O_NONBLOCK;
+    return !(opts & O_NONBLOCK);
 }
 
 #else
@@ -751,7 +763,7 @@ bool Socket::set_socket_blocking(int socket, bool active)
     if (socket < 0)
         throw std::runtime_error("Socket: cannot set blocking on a closed socket");
     unsigned long mode = active ? 0 : 1;
-    if (sihd::sys::os::ioctl(socket, FIONBIO, &mode) != 0)
+    if (!sihd::sys::os::ioctl(socket, FIONBIO, &mode))
     {
         SIHD_LOG(error, "Socket: could not set ioctl: {}", strerror(errno));
         return false;

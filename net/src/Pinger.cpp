@@ -233,6 +233,9 @@ void Pinger::handle(IcmpSender *sender)
 
     _received_icmp_response = true;
 
+    if (response.size < sizeof(time_t))
+        return;
+
     const time_t timestamp = ((time_t *)response.data)[0];
     const time_t now = _clock_ptr->now();
     const time_t triptime = now - timestamp;

@@ -1,6 +1,9 @@
 #include <sihd/net/BasicServerHandler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <unistd.h>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <unistd.h>
+#endif
 
 namespace sihd::net
 {
@@ -65,6 +68,7 @@ bool BasicServerHandler::remove_client(Client *client)
         auto it = std::find(_client_lst.begin(), _client_lst.end(), client);
         if (it != _client_lst.end())
             _client_lst.erase(it);
+        _client_map.erase(client->fd());
         this->server()->remove_client_read(client->fd());
         this->server()->remove_client_write(client->fd());
         delete client;
@@ -112,7 +116,11 @@ void BasicServerHandler::handle_new_client(INetServer *server)
     {
         if (_client_lst.size() >= _max_clients)
         {
-            close(socket);
+#if !defined(__SIHD_WINDOWS__)
+            ::close(socket);
+#else
+            ::closesocket(socket);
+#endif
             return;
         }
         Client *client = new Client(socket);
@@ -134,9 +142,10 @@ void BasicServerHandler::handle_new_client(INetServer *server)
 void BasicServerHandler::handle_client_read(INetServer *server, int socket)
 {
     (void)server;
-    Client *client = _client_map[socket];
-    if (client != nullptr)
+    auto it = _client_map.find(socket);
+    if (it != _client_map.end())
     {
+        Client *client = it->second;
         ssize_t rcv = client->socket.receive(client->read_array);
         client->error = (rcv < 0);
         client->disconnected = rcv == 0;
@@ -147,9 +156,10 @@ void BasicServerHandler::handle_client_read(INetServer *server, int socket)
 void BasicServerHandler::handle_client_write(INetServer *server, int socket)
 {
     (void)server;
-    Client *client = _client_map[socket];
-    if (client != nullptr)
+    auto it = _client_map.find(socket);
+    if (it != _client_map.end())
     {
+        Client *client = it->second;
         bool success = client->socket.send_all(client->write_array);
         client->error = !success;
         _write_event_lst.push_back(client);

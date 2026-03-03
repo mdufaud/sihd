@@ -11,7 +11,6 @@ class INetReceiver
 {
     public:
         virtual ~INetReceiver() = default;
-        ;
 
         virtual ssize_t receive(IpAddr & addr, sihd::util::IArray & arr) = 0;
         virtual ssize_t receive(sihd::util::IArray & arr) = 0;

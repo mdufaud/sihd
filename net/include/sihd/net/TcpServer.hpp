@@ -5,10 +5,10 @@
 #include <sihd/net/INetServerHandler.hpp>
 #include <sihd/net/Socket.hpp>
 
+#include <sihd/sys/Poll.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Named.hpp>
-#include <sihd/sys/Poll.hpp>
 #include <sihd/util/Waitable.hpp>
 
 namespace sihd::net
@@ -28,7 +28,7 @@ class TcpServer: public INetServer,
         bool socket_opened() { return _socket.is_open(); }
 
         bool bind(const IpAddr & addr);
-        bool bind(std::string_view path) { return _socket.bind(path); }
+        bool bind_unix(std::string_view path) { return _socket.bind_unix(path); }
 
         bool open_and_bind(const IpAddr & ip);
         bool open_and_bind(std::string_view ip, int port);

@@ -182,11 +182,15 @@ std::string to_str(const in6_addr *addr_in)
 
 uint32_t to_netmask(uint32_t value)
 {
+    if (value == 0)
+        return 0;
+    if (value >= 32)
+        return ntohl(0xffffffff);
     return ntohl(0xffffffff << (32 - value));
 }
 
-//  A valid netmask cannot have a zero with a one to the right of it. All zeros must have another zero to the right of
-//  it or be bit 0. must apply htonl if mask is in host byte order
+//  A valid netmask cannot have a zero with a one to the right of it. All zeros must have another zero to the
+//  right of it or be bit 0. must apply htonl if mask is in host byte order
 bool is_valid_netmask(uint32_t mask)
 {
     if (mask == 0)

@@ -68,7 +68,7 @@ TEST_F(TestNetInterface, test_netinterface)
         {
             fmt::print("  IPV6:\n");
             fmt::print("    addr: {}\n", netif.addr6().str());
-            fmt::print("    netmask: {}\n", netif.netmask4().str());
+            fmt::print("    netmask: {}\n", netif.netmask6().str());
             if (netif.broadcast() || netif.point2point())
             {
                 fmt::print("    {}: {}\n",
