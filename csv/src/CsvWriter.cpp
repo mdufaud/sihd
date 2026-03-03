@@ -9,7 +9,7 @@ namespace sihd::csv
 
 using namespace sihd::util;
 
-SIHD_LOGGER;
+SIHD_NEW_LOGGER("sihd::csv::writer");
 
 CsvWriter::CsvWriter()
 {
@@ -86,15 +86,26 @@ bool CsvWriter::new_row()
 
 ssize_t CsvWriter::write_commentary(std::string_view comment)
 {
-    ssize_t ret = 0;
     if (_col > 0)
-        ret = (ssize_t)this->new_row();
-    ret += (ssize_t)_file.write_char(_comment);
-    ret += _file.write(comment);
-    ret += (ssize_t)this->new_row();
-    if (ret < (ssize_t)(comment.size() + 2))
-        SIHD_LOG_ERROR("CsvWriter: commentary write failed '{}' < '{}'", ret, comment.size());
-    return ret;
+    {
+        if (!this->new_row())
+            return -1;
+    }
+    if (!_file.write_char(_comment))
+    {
+        SIHD_LOG(error, "CsvWriter: commentary write failed for comment char");
+        return -1;
+    }
+    ssize_t wrote = _file.write(comment);
+    if (wrote < (ssize_t)comment.size())
+    {
+        SIHD_LOG(error, "CsvWriter: commentary write failed '{}' < '{}'", wrote, comment.size());
+        return -1;
+    }
+    if (!this->new_row())
+        return -1;
+    // 1 for comment char + comment size + 1 for newline
+    return 1 + wrote + 1;
 }
 
 ssize_t CsvWriter::write(sihd::util::ArrCharView view)
@@ -102,11 +113,22 @@ ssize_t CsvWriter::write(sihd::util::ArrCharView view)
     ssize_t ret = 0;
     //,
     if (_col > 0)
-        ret = (ssize_t)_file.write_char(_delimiter);
-    ret += _file.write(view);
-    if (ret < (ssize_t)view.size())
-        SIHD_LOG_ERROR("CsvWriter: write failed '{}' < '{}'", ret, view.size());
-    _col += ret;
+    {
+        if (!_file.write_char(_delimiter))
+        {
+            SIHD_LOG(error, "CsvWriter: write failed for delimiter char");
+            return -1;
+        }
+        ret += 1;
+    }
+    ssize_t wrote = _file.write(view);
+    if (wrote < (ssize_t)view.size())
+    {
+        SIHD_LOG(error, "CsvWriter: write failed '{}' < '{}'", wrote, view.size());
+        return -1;
+    }
+    ret += wrote;
+    _col += 1;
     _max_col = std::max(_max_col, _col);
     return ret;
 }

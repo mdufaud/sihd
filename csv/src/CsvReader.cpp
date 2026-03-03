@@ -1,4 +1,5 @@
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Timestamp.hpp>
 #include <sihd/util/str.hpp>
 
 #include <sihd/csv/CsvReader.hpp>
@@ -36,8 +37,6 @@ CsvReader::CsvReader()
 {
     this->_reset_line();
 
-    _comment = '#';
-
     _splitter.set_delimiter(",");
     _splitter.set_empty_delimitations(true);
     _splitter.set_open_escape_sequences("\"");
@@ -61,7 +60,7 @@ bool CsvReader::set_delimiter(int c)
         return false;
     }
     _delimiter = c;
-    _splitter.set_delimiter((char *)&_delimiter);
+    _splitter.set_delimiter_char(_delimiter);
     return true;
 }
 
@@ -76,7 +75,7 @@ bool CsvReader::set_commentary(int c)
     return false;
 }
 
-void CsvReader::set_timestamp_col(size_t n)
+void CsvReader::set_timestamp_col(int n)
 {
     _timestamp_col = n;
 }
@@ -113,6 +112,8 @@ void CsvReader::_reset_line()
 bool CsvReader::read_next()
 {
     this->_reset_line();
+    if (!this->is_open())
+        return false;
     while (_line_reader.read_next())
     {
         ArrCharView view;
@@ -124,13 +125,13 @@ bool CsvReader::read_next()
 
         const bool searching_for_end_quote = _line.empty() == false;
         const bool is_commentary = !searching_for_end_quote && view[0] == _comment;
-        const bool is_unecessary_spaces = !searching_for_end_quote && str::is_all_spaces(view);
+        const bool is_unnecessary_spaces = !searching_for_end_quote && str::is_all_spaces(view);
 
         // skip spaces or linefeed only if we are not searching for an end quote
-        if (is_commentary || is_unecessary_spaces)
+        if (is_commentary || is_unnecessary_spaces)
             continue;
 
-        _line += view.data();
+        _line.append(view.data(), view.size());
 
         const bool number_of_quotes_are_odd = count_unescaped_quotes(view) % 2;
         const bool quotes_are_even
@@ -163,7 +164,7 @@ bool CsvReader::get_read_timestamp(time_t *nano_timestamp) const
 
     const auto & columns = this->columns();
 
-    if ((int)columns.size() < _timestamp_col)
+    if ((int)columns.size() <= _timestamp_col)
     {
         return false;
     }
@@ -172,7 +173,13 @@ bool CsvReader::get_read_timestamp(time_t *nano_timestamp) const
 
     if (_timestamp_fmt.empty())
     {
-        return sihd::util::str::to_long(time_str, (long *)nano_timestamp);
+        long value;
+        if (sihd::util::str::to_long(time_str, &value))
+        {
+            *nano_timestamp = static_cast<time_t>(value);
+            return true;
+        }
+        return false;
     }
     else
     {
@@ -186,8 +193,8 @@ bool CsvReader::get_read_timestamp(time_t *nano_timestamp) const
         {
             SIHD_LOG(error,
                      "CsvReader: cannot process timestamp value '{}' with format '{}'",
-                     _timestamp_fmt,
-                     time_str);
+                     time_str,
+                     _timestamp_fmt);
         }
     }
 

@@ -1,9 +1,8 @@
 #ifndef __SIHD_CSV_CSVREADER_HPP__
 #define __SIHD_CSV_CSVREADER_HPP__
 
-#include <sihd/util/Array.hpp>
-#include <sihd/util/IReader.hpp>
 #include <sihd/sys/LineReader.hpp>
+#include <sihd/util/IReader.hpp>
 #include <sihd/util/Splitter.hpp>
 
 namespace sihd::csv
@@ -18,16 +17,16 @@ class CsvReader: public sihd::util::IReaderTimestamp
 
         bool set_delimiter(int c);
         bool set_commentary(int c);
-        void set_timestamp_col(size_t n);
+        void set_timestamp_col(int n);
         void set_timestamp_format(std::string format);
 
         bool open(std::string_view path);
         bool is_open() const;
         bool close();
 
-        bool read_next();
-        bool get_read_data(sihd::util::ArrCharView & view) const;
-        bool get_read_timestamp(time_t *nano_timestamp) const;
+        bool read_next() override;
+        bool get_read_data(sihd::util::ArrCharView & view) const override;
+        bool get_read_timestamp(time_t *nano_timestamp) const override;
 
         const std::vector<std::string> & columns() const;
 
@@ -36,10 +35,10 @@ class CsvReader: public sihd::util::IReaderTimestamp
     private:
         void _reset_line();
 
-        int _comment;
-        int _delimiter;
+        int _comment = '#';
+        int _delimiter = ',';
 
-        int _timestamp_col;
+        int _timestamp_col = -1;
         std::string _timestamp_fmt;
 
         bool _has_data;

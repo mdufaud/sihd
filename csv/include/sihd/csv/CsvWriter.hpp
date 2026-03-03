@@ -23,7 +23,7 @@ class CsvWriter: public sihd::util::IWriter
         bool is_open() const;
         bool close();
 
-        ssize_t write(sihd::util::ArrCharView view);
+        ssize_t write(sihd::util::ArrCharView view) override;
         ssize_t write_row(sihd::util::ArrCharView view);
         ssize_t write(const std::vector<std::string> & values);
         ssize_t write_row(const std::vector<std::string> & values);
@@ -37,7 +37,7 @@ class CsvWriter: public sihd::util::IWriter
         size_t current_col() const { return _col; }
         size_t max_col() const { return _max_col; }
 
-        const sihd::sys::File & file() { return _file; };
+        const sihd::sys::File & file() const { return _file; };
 
     protected:
 

@@ -16,12 +16,12 @@
 // For O_* constants
 #include <fcntl.h>
 
+using namespace sihd::util;
+
 namespace sihd::sys
 {
 
-using namespace sihd::util;
-
-SIHD_NEW_LOGGER("sihd::sys::shm");
+SIHD_LOGGER;
 
 namespace
 {

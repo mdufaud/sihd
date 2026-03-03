@@ -31,10 +31,11 @@
 #endif
 
 using namespace sihd::util;
+
 namespace sihd::sys
 {
 
-SIHD_LOGGER;
+SIHD_NEW_LOGGER("sihd::sys");
 
 File::File()
 {

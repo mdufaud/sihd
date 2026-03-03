@@ -1,5 +1,6 @@
 #include <sihd/csv/CsvReader.hpp>
 #include <sihd/csv/utils.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
 namespace sihd::csv::utils
@@ -23,7 +24,7 @@ CsvData csv_from_string(std::string_view content, bool remove_header, int delimi
     std::vector<std::string_view> lines = rows_splitter.split_view(content);
 
     sihd::util::Splitter cols_splitter;
-    cols_splitter.set_delimiter((char *)&delimiter);
+    cols_splitter.set_delimiter_char(delimiter);
     cols_splitter.set_escape_char('\"');
     cols_splitter.set_open_escape_sequences("\"");
     cols_splitter.set_empty_delimitations(true);
