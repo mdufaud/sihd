@@ -52,7 +52,10 @@ void save_entry(struct zip_stat *zip_stat, ZipFile::ZipEntry & zip_entry)
 ssize_t add_source(zip_t *zip_ptr, std::string_view name, zip_source_t *source)
 {
     if (zip_ptr == nullptr)
-        return false;
+    {
+        zip_source_free(source);
+        return -1;
+    }
     const ssize_t file_idx = zip_file_add(zip_ptr, name.data(), source, ZIP_FL_ENC_UTF_8);
     if (file_idx < 0)
     {
@@ -278,11 +281,15 @@ bool ZipFile::encrypt_all(std::string_view password)
 
 ssize_t ZipFile::count_original_entries() const
 {
+    if (_zip_handle->handle_ptr == nullptr)
+        return -1;
     return zip_get_num_entries(_zip_handle->handle_ptr, ZIP_FL_UNCHANGED);
 }
 
 ssize_t ZipFile::count_entries() const
 {
+    if (_zip_handle->handle_ptr == nullptr)
+        return -1;
     return zip_get_num_entries(_zip_handle->handle_ptr, 0);
 }
 
@@ -375,9 +382,9 @@ bool ZipFile::is_entry_directory() const
     if (_zip_handle->handle_ptr == nullptr || _current_zip_entry.name == nullptr)
         return false;
     size_t len = strlen(_current_zip_entry.name);
-    if (_current_zip_entry.name[len - 1] == '/')
-        return true;
-    return false;
+    if (len == 0)
+        return false;
+    return _current_zip_entry.name[len - 1] == '/';
 }
 
 bool ZipFile::read_next()
@@ -398,7 +405,7 @@ ssize_t ZipFile::read_entry(std::string_view password)
 {
     _buf.clear();
     if (this->is_entry_loaded() == false)
-        return false;
+        return -1;
 
     if (_zip_handle->file_handle_ptr == nullptr)
     {
@@ -491,7 +498,7 @@ bool ZipFile::modify_entry_time(sihd::util::Timestamp new_timestamp)
     if (zip_file_set_mtime(_zip_handle->handle_ptr, _current_zip_entry.index, new_timestamp.seconds(), 0) < 0)
     {
         SIHD_LOG(error,
-                 "ZipFile: could not rename entry '{}': {}",
+                 "ZipFile: could not modify entry time '{}': {}",
                  ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry),
                  get_error(_zip_handle->handle_ptr));
         return false;
@@ -512,7 +519,7 @@ bool ZipFile::comment_entry(std::string_view comment)
         < 0)
     {
         SIHD_LOG(error,
-                 "ZipFile: could not rename entry '{}': {}",
+                 "ZipFile: could not comment entry '{}': {}",
                  ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry),
                  get_error(_zip_handle->handle_ptr));
         return false;
@@ -572,7 +579,13 @@ bool ZipFile::add_dir(std::string_view name)
     if (_zip_handle->handle_ptr == nullptr)
         return false;
     if (zip_dir_add(_zip_handle->handle_ptr, name.data(), 0) < 0)
+    {
+        SIHD_LOG(error,
+                 "ZipFile: could not add directory '{}': {}",
+                 name,
+                 get_error(_zip_handle->handle_ptr));
         return false;
+    }
     return true;
 }
 
@@ -640,7 +653,7 @@ bool ZipFile::add_file_from_fs(std::string_view name, std::string_view path)
                  get_error(_zip_handle->handle_ptr));
         return false;
     }
-    return add_source(_zip_handle->handle_ptr, name, source);
+    return add_source(_zip_handle->handle_ptr, name, source) >= 0;
 }
 
 bool ZipFile::dump_entry_to_fs(std::string_view path, std::string_view password)
@@ -689,6 +702,11 @@ bool ZipFile::dump_entry_to_fs(std::string_view path, std::string_view password)
         }
         else if (wrote == 0)
             break;
+    }
+    if (read < 0)
+    {
+        SIHD_LOG(error, "ZipFile: error reading entry '{}' for: {}", _current_zip_entry.name, path);
+        return false;
     }
     return true;
 }

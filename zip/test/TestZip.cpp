@@ -2,10 +2,10 @@
 
 #include <gtest/gtest.h>
 
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
@@ -59,6 +59,46 @@ TEST_F(TestZip, test_zip_tools)
     std::sort(origin_fs.begin(), origin_fs.end());
 
     EXPECT_EQ(origin_fs, children_fs);
+}
+
+TEST_F(TestZip, test_list_entries)
+{
+    sihd::sys::TmpDir tmp_dir;
+
+    const auto test_path = tmp_dir.path() + "/data";
+    ASSERT_TRUE(fs::make_directories(test_path));
+    ASSERT_TRUE(fs::make_directory(test_path + "/subdir"));
+    ASSERT_TRUE(fs::write(test_path + "/file1.txt", "content1"));
+    ASSERT_TRUE(fs::write(test_path + "/subdir/file2.txt", "content2"));
+
+    const auto archive_path = tmp_dir.path() + "/test.zip";
+    ASSERT_TRUE(sihd::zip::zip(test_path, archive_path));
+
+    auto entries = sihd::zip::list_entries(archive_path);
+    EXPECT_FALSE(entries.empty());
+
+    // check that known entries are present
+    bool has_dir = false;
+    bool has_file1 = false;
+    bool has_file2 = false;
+    for (const auto & entry : entries)
+    {
+        if (entry.find("subdir/") != std::string::npos && entry.back() == '/')
+            has_dir = true;
+        if (entry.find("file1.txt") != std::string::npos)
+            has_file1 = true;
+        if (entry.find("file2.txt") != std::string::npos)
+            has_file2 = true;
+    }
+    EXPECT_TRUE(has_dir);
+    EXPECT_TRUE(has_file1);
+    EXPECT_TRUE(has_file2);
+}
+
+TEST_F(TestZip, test_list_entries_nonexistent)
+{
+    auto entries = sihd::zip::list_entries("/nonexistent/archive.zip");
+    EXPECT_TRUE(entries.empty());
 }
 
 } // namespace test

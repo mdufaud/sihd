@@ -3,7 +3,6 @@
 
 #include <sihd/util/Array.hpp>
 #include <sihd/util/IReader.hpp>
-#include <sihd/util/IWriter.hpp>
 
 namespace sihd::zip
 {
@@ -24,6 +23,11 @@ class ZipFile: public sihd::util::IReader
         ZipFile();
         ZipFile(std::string_view path, bool read_only = false, bool do_strict_checks = false);
         virtual ~ZipFile();
+
+        ZipFile(const ZipFile &) = delete;
+        ZipFile & operator=(const ZipFile &) = delete;
+        ZipFile(ZipFile &&) = delete;
+        ZipFile & operator=(ZipFile &&) = delete;
 
         // set internal reading buff size
         bool set_buffer_size(size_t size);
@@ -84,11 +88,13 @@ class ZipFile: public sihd::util::IReader
         bool modify_entry_time(sihd::util::Timestamp new_timestamp);
         bool comment_entry(std::string_view comment);
         bool encrypt_entry(std::string_view password);
+        // note: the view data must remain valid until close() or discard() is called
         bool replace_entry(sihd::util::ArrCharView view);
 
         // add dir in memory
         bool add_dir(std::string_view name);
         // add file content in memory
+        // note: the view data must remain valid until close() or discard() is called
         bool add_file(std::string_view name, sihd::util::ArrCharView view);
 
         // add either file or directory from filesystem
