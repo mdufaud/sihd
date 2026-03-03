@@ -176,7 +176,7 @@ FileWatcher::Impl::Watcher::Watcher()
 
 void FileWatcher::Impl::Watcher::close()
 {
-    if (handle == INVALID_HANDLE_VALUE)
+    if (handle != INVALID_HANDLE_VALUE)
     {
         CloseHandle(handle);
         handle = INVALID_HANDLE_VALUE;

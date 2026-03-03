@@ -20,11 +20,11 @@ std::filesystem::perms mode_from_str(std::string_view mode)
     while (i < mode.size())
     {
         if (mode[i] == 'r')
-            ret &= std::filesystem::perms::owner_read;
+            ret |= std::filesystem::perms::owner_read;
         else if (mode[i] == 'w')
-            ret &= std::filesystem::perms::owner_write;
+            ret |= std::filesystem::perms::owner_write;
         else if (mode[i] == 'x')
-            ret &= std::filesystem::perms::owner_exec;
+            ret |= std::filesystem::perms::owner_exec;
         ++i;
     }
 
@@ -45,7 +45,7 @@ bool check_if_match(std::string_view path,
         {
             std::error_code ec;
             std::filesystem::perms file_perms = std::filesystem::status(path_to_search, ec).permissions();
-            ret = !ec && (file_perms & mode) == std::filesystem::perms::none;
+            ret = !ec && (file_perms & mode) != std::filesystem::perms::none;
         }
         else
         {

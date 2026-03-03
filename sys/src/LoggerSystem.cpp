@@ -15,7 +15,7 @@ using namespace sihd::util;
 
 SIHD_LOGGER;
 
-LoggerSystem::LoggerSystem(std::string_view progname, int options, int facility)
+LoggerSystem::LoggerSystem(std::string_view progname, int facility, int options)
 {
 #if !defined(__SIHD_WINDOWS__)
     openlog(progname.data(), options, facility);

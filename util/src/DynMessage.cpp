@@ -93,14 +93,14 @@ bool DynMessage::field_write_to(void *buffer, size_t size)
         IMessageField *field = _fields.at(name);
         if (this->_is_hidden(field))
             continue;
+        if (current + field->field_byte_size() > size)
+        {
+            SIHD_LOG(error, "DynMessage: write error - not enough buffer size {} < {}", size, current + field->field_byte_size());
+            return false;
+        }
         if (!field->field_write_to((uint8_t *)buffer + current, size - current))
             return false;
         current += field->field_byte_size();
-        if (current > size)
-        {
-            SIHD_LOG(error, "DynMessage: write error - not enough buffer size {} < {}", size, current);
-            return false;
-        }
     }
     return true;
 }

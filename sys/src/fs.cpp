@@ -537,8 +537,8 @@ std::vector<std::string> children(std::string_view path)
             else
                 ret.push_back(dirent->d_name);
         }
+        closedir(dir_ptr);
     }
-    closedir(dir_ptr);
     return ret;
 }
 
@@ -789,7 +789,7 @@ bool write_binary(std::string_view path, std::string_view view, bool append)
 
     if (file.is_open())
         return file.write(view) == (ssize_t)view.size();
-    return -1;
+    return false;
 }
 
 std::optional<std::string> read(std::string_view path, size_t size, long offset)
@@ -808,7 +808,6 @@ std::optional<std::string> read(std::string_view path, size_t size, long offset)
     std::string str;
     if ((ret = file.read(str, size)) > 0)
     {
-        str[ret] = 0;
         return str;
     }
 

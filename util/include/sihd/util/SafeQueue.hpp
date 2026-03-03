@@ -23,7 +23,7 @@ class SafeQueue
         {
             std::unique_lock lock(_mutex);
 
-            const bool can_push = max_size == 0 || max_size < _queue.size();
+            const bool can_push = max_size == 0 || _queue.size() < max_size;
             if (!can_push)
                 return false;
             _queue.push(value);
@@ -93,9 +93,11 @@ class SafeQueue
 
         void terminate()
         {
-            _terminated = true;
-
-            this->clear();
+            {
+                std::lock_guard lock(_mutex);
+                _terminated = true;
+                _queue = {};
+            }
 
             _cv_push.notify_all();
             _cv_pop.notify_all();

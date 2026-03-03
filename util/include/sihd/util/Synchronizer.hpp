@@ -28,6 +28,7 @@ class Synchronizer
 
         std::atomic<int32_t> _sync_count;
         std::atomic<int32_t> _wanted_count;
+        std::atomic<int32_t> _generation;
         Waitable _waitable;
 };
 

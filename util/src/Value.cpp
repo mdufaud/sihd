@@ -219,37 +219,37 @@ int Value::compare(const Value & val) const
 }
 
 template <>
-bool Value::operator==(const float & val)
+bool Value::operator==(const float & val) const
 {
     return this->compare_float(val) == 0;
 }
 
 template <>
-bool Value::operator!=(const float & val)
+bool Value::operator!=(const float & val) const
 {
     return this->compare_float(val) != 0;
 }
 
 template <>
-bool Value::operator>(const float & val)
+bool Value::operator>(const float & val) const
 {
     return this->compare_float(val) > 0;
 }
 
 template <>
-bool Value::operator>=(const float & val)
+bool Value::operator>=(const float & val) const
 {
     return this->compare_float(val) >= 0;
 }
 
 template <>
-bool Value::operator<(const float & val)
+bool Value::operator<(const float & val) const
 {
     return this->compare_float(val) < 0;
 }
 
 template <>
-bool Value::operator<=(const float & val)
+bool Value::operator<=(const float & val) const
 {
     return this->compare_float(val) <= 0;
 }
@@ -257,37 +257,37 @@ bool Value::operator<=(const float & val)
 // double
 
 template <>
-bool Value::operator==(const double & val)
+bool Value::operator==(const double & val) const
 {
     return this->compare_double(val) == 0;
 }
 
 template <>
-bool Value::operator!=(const double & val)
+bool Value::operator!=(const double & val) const
 {
     return this->compare_double(val) != 0;
 }
 
 template <>
-bool Value::operator>(const double & val)
+bool Value::operator>(const double & val) const
 {
     return this->compare_double(val) > 0;
 }
 
 template <>
-bool Value::operator>=(const double & val)
+bool Value::operator>=(const double & val) const
 {
     return this->compare_double(val) >= 0;
 }
 
 template <>
-bool Value::operator<(const double & val)
+bool Value::operator<(const double & val) const
 {
     return this->compare_double(val) < 0;
 }
 
 template <>
-bool Value::operator<=(const double & val)
+bool Value::operator<=(const double & val) const
 {
     return this->compare_double(val) <= 0;
 }

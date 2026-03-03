@@ -89,6 +89,7 @@ class Array: public IArray,
         {
             if (&other != this)
             {
+                this->delete_buffer();
                 _buf_ptr = nullptr;
                 _size = 0;
                 _capacity = 0;
@@ -872,7 +873,7 @@ class Array: public IArray,
 
                 reference operator*() const
                 {
-                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
+                    if (this->array_curr < this->array_beg || this->array_curr >= this->array_end)
                         throw std::out_of_range("Array::iterator: iterator out of range");
                     return *this->array_curr;
                 }
@@ -883,7 +884,7 @@ class Array: public IArray,
 
                 size_t idx() const
                 {
-                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
+                    if (this->array_curr < this->array_beg || this->array_curr >= this->array_end)
                         return Array<T>::npos;
                     return this->array_curr - this->array_beg;
                 }
@@ -1026,7 +1027,7 @@ class Array: public IArray,
 
                 reference operator*() const
                 {
-                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
+                    if (this->array_curr < this->array_beg || this->array_curr >= this->array_end)
                         throw std::out_of_range("Array::reverse_iterator: iterator out of range");
                     return *this->array_curr;
                 }
@@ -1037,7 +1038,7 @@ class Array: public IArray,
 
                 size_t idx() const
                 {
-                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
+                    if (this->array_curr < this->array_beg || this->array_curr >= this->array_end)
                         return Array<T>::npos;
                     return this->array_curr - this->array_beg;
                 }

@@ -84,37 +84,37 @@ class Value
         }
 
         template <typename T>
-        inline bool operator==(const T & val)
+        inline bool operator==(const T & val) const
         {
             return this->compare<T>(val) == 0;
         }
 
         template <typename T>
-        inline bool operator!=(const T & val)
+        inline bool operator!=(const T & val) const
         {
             return this->compare<T>(val) != 0;
         }
 
         template <typename T>
-        inline bool operator>(const T & val)
+        inline bool operator>(const T & val) const
         {
             return this->compare<T>(val) > 0;
         }
 
         template <typename T>
-        inline bool operator>=(const T & val)
+        inline bool operator>=(const T & val) const
         {
             return this->compare<T>(val) >= 0;
         }
 
         template <typename T>
-        inline bool operator<(const T & val)
+        inline bool operator<(const T & val) const
         {
             return this->compare<T>(val) < 0;
         }
 
         template <typename T>
-        inline bool operator<=(const T & val)
+        inline bool operator<=(const T & val) const
         {
             return this->compare<T>(val) <= 0;
         }
@@ -148,42 +148,42 @@ int Value::compare(const Value & val) const;
 // float
 
 template <>
-bool Value::operator==(const float & val);
+bool Value::operator==(const float & val) const;
 
 template <>
-bool Value::operator!=(const float & val);
+bool Value::operator!=(const float & val) const;
 
 template <>
-bool Value::operator>(const float & val);
+bool Value::operator>(const float & val) const;
 
 template <>
-bool Value::operator>=(const float & val);
+bool Value::operator>=(const float & val) const;
 
 template <>
-bool Value::operator<(const float & val);
+bool Value::operator<(const float & val) const;
 
 template <>
-bool Value::operator<=(const float & val);
+bool Value::operator<=(const float & val) const;
 
 // double
 
 template <>
-bool Value::operator==(const double & val);
+bool Value::operator==(const double & val) const;
 
 template <>
-bool Value::operator!=(const double & val);
+bool Value::operator!=(const double & val) const;
 
 template <>
-bool Value::operator>(const double & val);
+bool Value::operator>(const double & val) const;
 
 template <>
-bool Value::operator>=(const double & val);
+bool Value::operator>=(const double & val) const;
 
 template <>
-bool Value::operator<(const double & val);
+bool Value::operator<(const double & val) const;
 
 template <>
-bool Value::operator<=(const double & val);
+bool Value::operator<=(const double & val) const;
 
 } // namespace sihd::util
 

@@ -267,7 +267,8 @@ bool Scheduler::remove_task(Task *task)
     {
         _task_map.erase(map_it);
         found = true;
-        _next_run = _task_map.begin()->first;
+        if (!_task_map.empty())
+            _next_run = _task_map.begin()->first;
     }
 
     _waitable_task.notify();

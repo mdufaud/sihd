@@ -75,7 +75,7 @@ class Poll: public sihd::util::Observable<Poll>,
         void process_poll_results(int poll_return);
 
     private:
-        bool _stop;
+        std::atomic<bool> _stop;
         int _timeout_milliseconds;
 
         mutable std::mutex _fds_mutex;

@@ -25,7 +25,7 @@
 #include <sihd/util/time.hpp>
 
 #ifndef SIHD_UTIL_STR_BUFFER
-# define SIHD_UTIL_STR_BUFFER 4096
+# define SIHD_UTIL_STR_BUFFER 1024
 #endif
 
 #if defined(__SIHD_WINDOWS__)
@@ -104,11 +104,9 @@ std::string format_time(Timestamp timestamp,
     {
         // Fast path: strftime with C locale
         constexpr size_t buffer_size = SIHD_UTIL_STR_BUFFER;
-        static char buffer[buffer_size];
-        static std::mutex buffer_mutex;
+        thread_local char buffer[buffer_size];
 
         const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
-        std::lock_guard<std::mutex> l(buffer_mutex);
         const size_t ret = strftime(buffer, buffer_size, format.data(), &tm);
         return std::string(buffer, ret);
     }

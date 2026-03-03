@@ -154,7 +154,7 @@ bool ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
 #endif
     if (!ret && logerror)
         SIHD_LOG(error, "OS: ioctl error: {}", last_error_str());
-    return ret == 0;
+    return ret;
 }
 
 bool setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror)

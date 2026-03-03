@@ -7,7 +7,7 @@
 namespace sihd::util
 {
 
-Synchronizer::Synchronizer(): _sync_count(0), _wanted_count(0) {}
+Synchronizer::Synchronizer(): _sync_count(0), _wanted_count(0), _generation(0) {}
 
 Synchronizer::~Synchronizer()
 {
@@ -24,24 +24,25 @@ bool Synchronizer::init_sync(int32_t total)
 
 void Synchronizer::reset()
 {
-    while (_sync_count.load() > 0)
-        _waitable.notify_all();
+    _generation.fetch_add(1);
+    _sync_count = 0;
+    _waitable.notify_all();
     _wanted_count = 0;
 }
 
 void Synchronizer::sync()
 {
+    const int32_t gen = _generation.load();
     if (_sync_count.fetch_add(1) + 1 >= _wanted_count)
     {
-        // the last thread to sync
-        --_sync_count;
-        while (_sync_count.load() > 0)
-            _waitable.notify_all();
+        // the last thread to sync - reset count and wake everyone
+        _sync_count = 0;
+        _generation.fetch_add(1);
+        _waitable.notify_all();
     }
     else
     {
-        _waitable.wait();
-        --_sync_count;
+        _waitable.wait([this, gen] { return _generation.load() != gen; });
     }
 }
 

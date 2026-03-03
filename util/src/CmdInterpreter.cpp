@@ -22,8 +22,10 @@ void CmdInterpreter::set_cmd(const std::string & cmd, CmdFun && fun)
 void CmdInterpreter::set_max_history(size_t max)
 {
     _max_history = max;
-    size_t to_remove = std::min(max, _history.size());
-    _history.erase(std::prev(_history.end(), to_remove), _history.end());
+    while (_history.size() > max)
+    {
+        _history.pop_front();
+    }
 }
 
 void CmdInterpreter::set_splitter(const Splitter & splitter)

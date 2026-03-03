@@ -61,11 +61,15 @@ std::optional<Shm> create_shm(std::string_view id, size_t size, mode_t mode, int
     if (ftruncate(fd, size) == -1)
     {
         SIHD_LOG(error, "SharedMemory: ftruncate: {}", os::last_error_str());
+        close(fd);
         return std::nullopt;
     }
 
     if (!__mmap(&addr, size, fd, mmap_flags))
+    {
+        close(fd);
         return std::nullopt;
+    }
 
     return Shm {fd, addr};
 }
@@ -79,7 +83,10 @@ std::optional<Shm> shm_attach(std::string_view id, size_t size, mode_t mode, int
         return std::nullopt;
 
     if (!__mmap(&addr, size, fd, mmap_flags))
+    {
+        close(fd);
         return std::nullopt;
+    }
 
     return Shm {fd, addr};
 }
@@ -123,7 +130,7 @@ bool SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
         _fd = opt->fd;
         _addr = opt->addr;
 
-        _created = true;
+        _created = false;
         _id = id;
         _size = size;
     }
@@ -140,7 +147,7 @@ bool SharedMemory::attach_read_only(std::string_view id, size_t size, mode_t mod
         _fd = opt->fd;
         _addr = opt->addr;
 
-        _created = true;
+        _created = false;
         _id = id;
         _size = size;
     }
@@ -152,7 +159,7 @@ bool SharedMemory::clear()
     bool ret = true;
     if (_addr != nullptr && _addr != MAP_FAILED)
     {
-        if (_created && munmap(_addr, _size) == -1)
+        if (munmap(_addr, _size) == -1)
         {
             SIHD_LOG(error, "SharedMemory: munmap: {}", os::last_error_str());
             ret = false;
@@ -165,6 +172,7 @@ bool SharedMemory::clear()
             SIHD_LOG(error, "SharedMemory: shm_unlink: {}", os::last_error_str());
             ret = false;
         }
+        close(_fd);
         _fd = -1;
         _id.clear();
     }

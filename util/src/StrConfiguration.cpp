@@ -74,7 +74,7 @@ std::string StrConfiguration::str() const
 
     for (const auto & [key, value] : _configuration)
     {
-        ret += fmt::format("{}{}={}", (first ? ";" : ""), key, value);
+        ret += fmt::format("{}{}={}", (first ? "" : ";"), key, value);
         first = false;
     }
 
