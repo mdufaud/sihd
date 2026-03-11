@@ -93,6 +93,9 @@ def detect_triplet(vcpkg_bin_path: str, sbt_triplet_path: str, addon_triplet_pat
         if builder.build_platform == "windows":
             vcpkg_platform = "mingw"
 
+        if builder.build_platform == "android":
+            vcpkg_platform = "android"
+
         # For zig with musl, use the generic musl triplets (no zig prefix)
         if builder.libc == "musl" and builder.build_platform == "linux":
             suffix = "-musl"

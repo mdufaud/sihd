@@ -11,23 +11,33 @@ sihd_imgui_tests = [
     "test/TestOpenGL3_SDL.cpp",
 ]
 
-if builder.build_platform == "windows":
-    ## Windows directX
+if builder.build_platform == "android":
+    ## Android: NativeActivity + EGL + OpenGL ES 3
     sihd_imgui_srcs.extend([
-        "src/ImguiBackendWin32.cpp",
-        "src/ImguiRendererDirectX.cpp",
+        "src/ImguiBackendAndroid.cpp",
+        "src/ImguiRendererOpenGL.cpp",
+    ])
+    sihd_imgui_tests = [
+        "test/main.cpp",
+    ]
+else:
+    if builder.build_platform == "windows":
+        ## Windows directX
+        sihd_imgui_srcs.extend([
+            "src/ImguiBackendWin32.cpp",
+            "src/ImguiRendererDirectX.cpp",
+        ])
+
+    ## Glfw + OpenGL
+    sihd_imgui_srcs.extend([
+        "src/ImguiBackendGlfw.cpp",
+        "src/ImguiRendererOpenGL.cpp",
     ])
 
-## Glfw + OpenGL
-sihd_imgui_srcs.extend([
-    "src/ImguiBackendGlfw.cpp",
-    "src/ImguiRendererOpenGL.cpp",
-])
-
-# SDL
-sihd_imgui_srcs.extend([
-    "src/ImguiBackendSDL.cpp",
-])
+    # SDL
+    sihd_imgui_srcs.extend([
+        "src/ImguiBackendSDL.cpp",
+    ])
 
 # Lib
 
@@ -35,9 +45,10 @@ lib = env.build_lib(sihd_imgui_srcs)
 
 # Demos
 
-env.build_demo("demo/imgui_opengl3_sdl_demo.cpp", name = "imgui_opengl3_sdl_demo", add_libs = [env.module_format_name()])
-
-if builder.build_platform == "web":
+if builder.build_platform == "android":
+    env.build_demo("demo/imgui_opengl3_android_demo.cpp", name = "imgui_opengl3_android_demo", add_libs = [env.module_format_name()], android_dir = "android")
+elif builder.build_platform == "web":
+    env.build_demo("demo/imgui_opengl3_sdl_demo.cpp", name = "imgui_opengl3_sdl_demo", add_libs = [env.module_format_name()])
     demo_etc_dir = Dir("demo").Dir("etc").Dir("sihd").Dir("demo")
     env.Append(
         LINKFLAGS = [
@@ -45,12 +56,12 @@ if builder.build_platform == "web":
         ]
     )
 else:
-    # glfw does not work with emscripten yet
+    env.build_demo("demo/imgui_opengl3_sdl_demo.cpp", name = "imgui_opengl3_sdl_demo", add_libs = [env.module_format_name()])
     env.build_demo("demo/imgui_opengl3_glfw_demo.cpp", name = "imgui_opengl3_glfw_demo", add_libs = [env.module_format_name()])
 
-if builder.build_platform == "windows":
-    env.build_demo("demo/imgui_win_d11_demo.cpp", name = "imgui_win_d11_demo", add_libs = [env.module_format_name()])
-    env.build_demo("demo/imgui_win_d11_sdl_demo.cpp", name = "imgui_win_d11_sdl_demo", add_libs = [env.module_format_name()])
+    if builder.build_platform == "windows":
+        env.build_demo("demo/imgui_win_d11_demo.cpp", name = "imgui_win_d11_demo", add_libs = [env.module_format_name()])
+        env.build_demo("demo/imgui_win_d11_sdl_demo.cpp", name = "imgui_win_d11_sdl_demo", add_libs = [env.module_format_name()])
 
 # Tests
 

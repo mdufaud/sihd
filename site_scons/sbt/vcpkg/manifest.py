@@ -61,21 +61,21 @@ def build_vcpkg_manifest(app, extlibs: dict, needs_display_libs: bool = False) -
     vcpkg_manifest = _new_manifest(app)
 
     features = dict(getattr(app, "extlibs_features", {}))
-    # Platform-specific features (e.g. libusb[udev] on linux).
-    # Only applied on native (non-cross) builds; cross targets use base features only
-    # since target sysroot may not have the required system libraries.
-    if not builder.is_cross_building():
-        for name, feature_list in getattr(app, f"extlibs_features_{builder.build_platform}", {}).items():
-            if name in features:
-                features[name] = features[name] + feature_list
-            else:
-                features[name] = feature_list
+    # Platform-specific features (e.g. imgui[android-binding] on android, libusb[udev] on linux).
+    # Skipped only for cross-linux builds (no system X11/Wayland libs available).
+    is_cross_linux = builder.is_cross_building() and builder.build_platform == "linux"
+    if not is_cross_linux:
+        platform_features = getattr(app, f"extlibs_features_{builder.build_platform}", {})
+        for name, feature_list in platform_features.items():
+            features[name] = feature_list
 
     # Libraries for which vcpkg default-features should be disabled (e.g. when cross-compiling)
     # This also adds the library to the manifest if it's not already there (transitive dep override)
     no_default_features = set()
     if builder.is_cross_building():
-        no_default_features = set(getattr(app, "vcpkg_no_default_features", []))
+        skip_libs = set(getattr(app, "extlibs_skip", []))
+        skip_libs |= set(getattr(app, f"extlibs_skip_{builder.build_platform}", []))
+        no_default_features = set(getattr(app, "vcpkg_no_default_features", [])) - skip_libs
 
     for libname, libversion in sorted(extlibs.items()):
         dep = {"name": libname}

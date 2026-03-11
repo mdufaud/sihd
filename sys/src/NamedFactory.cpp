@@ -1,4 +1,5 @@
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/sys/SigWatcher.hpp>
 #include <sihd/util/DynMessage.hpp>
 #include <sihd/util/Message.hpp>
 #include <sihd/util/MessageField.hpp>
@@ -6,6 +7,7 @@
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Scheduler.hpp>
 
+using sihd::sys::SigWatcher;
 using sihd::util::DynMessage;
 using sihd::util::Message;
 using sihd::util::MessageField;
@@ -19,3 +21,4 @@ SIHD_REGISTER_FACTORY(Message);
 SIHD_REGISTER_FACTORY(MessageField);
 SIHD_REGISTER_FACTORY(DynMessage);
 SIHD_REGISTER_FACTORY(Scheduler);
+SIHD_REGISTER_FACTORY(SigWatcher);

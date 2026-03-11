@@ -16,10 +16,13 @@ includes = [
 
 modules = {
     "util": {
-        "libs": ['pthread'], # threading
+        "linux-libs": ['pthread'], # threading (bionic has it in libc)
+        "windows-libs": ['pthread'], # mingw winpthread
         "extlibs": ['nlohmann-json', 'fmt'],
         # stdc++fs only needed for GCC < 9 with glibc
         "mingw-gnu-libs": ['stdc++fs'],
+        # === Android specific ===
+        "android-libs": ['log'],
         # === Emscripten specific ===
         "em-flags": [
             "-pthread", # enable threads
@@ -46,6 +49,9 @@ modules = {
             'dl', # dlopen
             'uuid', # libuuid
         ],
+        # === Android specific ===
+        "android-extlibs": ['libuuid'],
+        "android-libs": ['log', 'android', 'uuid'],
         # === Windows specific ===
         "windows-libs": [
             'rpcrt4', # Uuid
@@ -169,6 +175,7 @@ modules = {
         "cross-libs": ['usb-1.0'],
     },
     "bt": {
+        "platforms": ["linux"],
         "depends": ['util', 'sys'],
         "extlibs": ['simpleble'],
         "libs": ['simpleble'],
@@ -189,6 +196,9 @@ modules = {
         # cross linux: vcpkg provides libglfw.so (dynamic) / libglfw3.a (static)
         # (imgui has its own GL loader via dlopen, GLEW is unused)
         "linux-cross-libs": ['glfw', 'SDL3'],
+        # === Android specific ===
+        "android-libs": ['android', 'EGL', 'GLESv3', 'log'],
+        "android-defines": ['IMGUI_IMPL_OPENGL_ES3'],
         "windows-link": [
             "-mwindows" # no shell window opening
         ],
@@ -243,18 +253,17 @@ modules = {
 # conditional modules - activated only if compiled explicitly or by env variable
 conditional_modules = {
     "lua": {
-        # apt liblua5.3-dev / pacman lua
+        "conditional-env": "lua",
         "extlibs": ['lua', 'luabridge3'],
         "depends": ['util', 'sys'],
-        "libs": ["lua"],
-        "conditional-env": "lua",
         "conditional-depends": ['core'],
+        "libs": ["lua"],
         "flags": ["-Wno-unused-parameter", "-Wno-unused-but-set-parameter"],
         "pkg-configs": ["lua-5.3", "lua53"],
     },
     "luabin": {
-        "depends": ['lua'],
         "conditional-env": "lua",
+        "depends": ['lua'],
         "libs": ["lua"],
         "flags": ["-Wno-unused-parameter"],
         # Windows static linking: sys module transitive deps
@@ -268,10 +277,10 @@ conditional_modules = {
         ],
     },
     "py": {
-        "platforms": ["linux"],
-        "depends": ['util', 'sys'],
-        "extlibs": ['pybind11', 'python3'],
         "conditional-env": "py",
+        "platforms": ["linux"],
+        "extlibs": ['pybind11', 'python3'],
+        "depends": ['util', 'sys'],
         "conditional-depends": ['core'],
         "libs": ["python3.12"],
         "flags": ['-U_FORTIFY_SOURCE', '-Wno-cpp'], # Undefine _FORTIFY_SOURCE for py module since it requires optimization from builds using -O0
@@ -348,11 +357,18 @@ extlibs_features_linux = {
 }
 
 extlibs_features_windows = {
-    "imgui": ["win32-binding", "dx11-binding"],
+    "imgui": ["glfw-binding", "opengl3-binding", "sdl3-binding", "win32-binding", "dx11-binding"],
+}
+
+extlibs_features_android = {
+    "imgui": ["android-binding", "opengl3-binding"],
 }
 
 # on windows some libs are not available through vcpkg
 extlibs_skip_windows = [
+    "dbus",
+    "libcap",
+    "simpleble",
 ]
 
 # on web: those libs don't compile properly with emscripten threading
@@ -366,6 +382,25 @@ extlibs_skip_web = [
     "libxcrypt",
     "ftxui",
     "imgui",
+    "dbus",
+    "simpleble",
+    "libcap",
+]
+
+# on android: libs that are linux-only or not relevant
+extlibs_skip_android = [
+    "dbus",
+    "libcap",
+    "libwebsockets",
+    "curl",
+    "libssh",
+    "libpcap",
+    "libusb",
+    "libxcrypt",
+    "ftxui",
+    "opengl",
+    "glfw3",
+    "simpleble",
 ]
 
 vcpkg_baseline = "3a3285c4878c7f5a957202201ba41e6fdeba8db4"

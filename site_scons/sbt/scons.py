@@ -32,6 +32,7 @@ from site_scons.sbt.build import modules
 from site_scons.sbt.build import utils as build_utils
 
 from site_scons.sbt.scons import utils as scons_utils
+from site_scons.sbt.scons import android as scons_android
 
 app = loader.load_app()
 
@@ -206,7 +207,7 @@ if not verbose:
     )
 
 if not distribution \
-    and not compiler in ("mingw", "em"):
+    and not compiler in ("mingw", "em", "ndk"):
     base_env.Append(
         RPATH = [
             os_path.abspath(builder.build_lib_path),
@@ -255,6 +256,10 @@ elif compiler == "zig":
 elif compiler == "em":
     from site_scons.sbt.scons.compilers import emscripten as compiler_emscripten
     compiler_emscripten.load_in_env(base_env)
+# ANDROID NDK build
+elif compiler == "ndk":
+    from site_scons.sbt.scons.compilers import ndk as compiler_ndk
+    compiler_ndk.load_in_env(base_env)
 
 ccache = ""
 if not build_utils.is_opt("nocache"):
@@ -276,7 +281,7 @@ base_env.Prepend(
     RANLIB = ccache,
 )
 
-if compiler != "mingw" and not builder.is_msys():
+if compiler != "mingw" and compiler != "ndk" and not builder.is_msys():
     base_env.Replace(SHLIBVERSION = app.version)
 
 ###############################################################################
@@ -370,8 +375,95 @@ def _env_copy_into_build(self, src, dst):
 def _env_file_basename(self, path):
     return os_path.basename(os_path.splitext(str(path))[0])
 
-def _env_build_demo(self, src, name, add_libs = [], **kwargs):
+def _android_build_apk(env, src, name, output_dir, add_libs, android_dir=None, **kwargs):
+    """ Build an Android APK from the given source(s). """
+    import os
+    import shutil
+
+    module_name = env['APP_MODULE_NAME']
+    module_dir = env['APP_MODULE_DIR']
+
+    apk_env = env.Clone()
+    apk_env.Prepend(LIBS = add_libs)
+    scons_utils.add_env_app_conf(app, apk_env, "demo")
+    for app_conf in default_app_conf_to_get:
+        scons_utils.add_env_app_conf(app, apk_env, "demo", app_conf)
+
+    # Resolve override directory
+    module_android_dir = None
+    if android_dir:
+        module_android_dir = os_path.join(module_dir, android_dir)
+
+    # Load override config
+    config = scons_android.load_override_config(module_android_dir) if module_android_dir else {
+        "namespace": "sihd.android.terminal",
+        "native_activity": False,
+    }
+
+    sanitized_name = name.replace("-", "_").lower()
+
+    # Determine extra sources
+    extra_srcs = []
+    ndk_root = builder.get_ndk_root()
+    if config["native_activity"]:
+        # NativeActivity mode: add android_native_app_glue.c
+        glue_src = os_path.join(ndk_root, "sources", "android", "native_app_glue", "android_native_app_glue.c")
+        extra_srcs.append(glue_src)
+        apk_env.Append(SHLINKFLAGS = [
+            '-u', 'ANativeActivity_onCreate',
+            '-Wl,--no-undefined',
+            '-static-libstdc++',
+        ])
+    else:
+        # Terminal mode: add terminal_bridge.cpp
+        bridge_src = os_path.join(scons_android.TEMPLATE_DIR, "app", "src", "main", "cpp", "terminal_bridge.cpp")
+        extra_srcs.append(bridge_src)
+        apk_env.Append(SHLINKFLAGS = [
+            '-Wl,--no-undefined',
+            '-static-libstdc++',
+        ])
+        # Ensure android and log libs are linked
+        for lib in ['android', 'log']:
+            if lib not in apk_env.get('LIBS', []):
+                apk_env.Append(LIBS = [lib])
+
+    # Build SharedLibrary
+    all_srcs = [src] if isinstance(src, str) else list(src)
+    objects = apk_env.SharedObject(all_srcs)
+    # Compile extra sources (from template/NDK dirs) into build area
+    # to avoid creating .os files next to the original sources
+    for extra_src in extra_srcs:
+        basename = os_path.splitext(os_path.basename(extra_src))[0]
+        obj_path = os_path.join(builder.build_path, "apk-obj", sanitized_name, basename)
+        objects.extend(apk_env.SharedObject(obj_path, extra_src))
+    so_path = os_path.join(builder.build_lib_path, sanitized_name)
+    so_lib = apk_env.SharedLibrary(so_path, objects)
+
+    # Stage Gradle project, copy .so, build APK via env.Command
+    staging_dir = os_path.join(builder.build_path, "apk-staging", sanitized_name)
+    abi = scons_android.get_abi()
+    jnilibs_so = os_path.join(staging_dir, "app", "src", "main", "jniLibs", abi, f"lib{sanitized_name}.so")
+
+    apk_output = os_path.join(output_dir, f"{name}.apk")
+
+    # Collect Android permissions from module config
+    module_conf = env['APP_MODULE_CONF']
+    android_permissions = module_conf.get('android-permissions', [])
+
+    def _stage_and_build_apk(target, source, env):
+        scons_android.stage_gradle_project(staging_dir, name, module_android_dir, permissions=android_permissions)
+        scons_android.copy_so_to_jnilibs(staging_dir, str(source[0]), sanitized_name)
+        return scons_android.build_apk(staging_dir, str(target[0]))
+
+    apk_cmd = apk_env.Command(apk_output, so_lib, _stage_and_build_apk)
+    apk_env.AlwaysBuild(apk_cmd)
+
+    add_targets(src)
+    return apk_cmd
+
+def _env_build_demo(self, src, name, add_libs = [], android_dir = None, **kwargs):
     """ Environment method to build unit test binary for a module """
+    global modules_generated_demos
     if builder.build_demo == False:
         return None
     module_name = self['APP_MODULE_NAME']
@@ -379,6 +471,11 @@ def _env_build_demo(self, src, name, add_libs = [], **kwargs):
     # if modules are specified, demo is built only if specified by user and not automatically by dependencies
     if modules_lst and module_name not in modules_lst:
         return None
+
+    if build_platform == "android":
+        demo = _android_build_apk(self, src, name, builder.build_demo_path, add_libs, android_dir, **kwargs)
+        add_generated("demo", modules_generated_demos, module_name, f"{name}.apk", os_path.join(builder.build_demo_path, f"{name}.apk"))
+        return demo
 
     demo_env = self.Clone()
     demo_env.Prepend(LIBS = add_libs)
@@ -395,7 +492,6 @@ def _env_build_demo(self, src, name, add_libs = [], **kwargs):
 
     add_targets(src)
 
-    global modules_generated_demos
     add_generated("demo", modules_generated_demos, module_name, name, demo_path)
 
     return demo
@@ -469,15 +565,21 @@ def _env_build_lib(self, src, name = None, static = None, **kwargs):
 
     return lib
 
-def _env_build_bin(self, src, name = None, add_libs = [], **kwargs):
+def _env_build_bin(self, src, name = None, add_libs = [], android_dir = None, **kwargs):
     """ Environment method to build a binary for a module """
+    global modules_generated_bins
     module_name = self['APP_MODULE_NAME']
-
-    bin_env = self.Clone()
-    bin_env.Prepend(LIBS = add_libs)
 
     if name is None:
         name = self['APP_MODULE_FORMAT_NAME']
+
+    if build_platform == "android":
+        apk = _android_build_apk(self, src, name, builder.build_bin_path, add_libs, android_dir, **kwargs)
+        add_generated("bin", modules_generated_bins, module_name, f"{name}.apk", os_path.join(builder.build_bin_path, f"{name}.apk"))
+        return apk
+
+    bin_env = self.Clone()
+    bin_env.Prepend(LIBS = add_libs)
 
     if self['BIN_LINKFLAGS']:
         bin_env.Append(LINKFLAGS = self['BIN_LINKFLAGS'])
@@ -488,7 +590,6 @@ def _env_build_bin(self, src, name = None, add_libs = [], **kwargs):
 
     add_targets(src)
 
-    global modules_generated_bins
     add_generated("bin", modules_generated_bins, module_name, name, bin_path)
 
     return bin

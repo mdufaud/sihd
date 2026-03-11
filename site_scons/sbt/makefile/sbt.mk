@@ -672,6 +672,66 @@ endif # uninstall
 
 
 ##########
+# ADB
+##########
+
+.PHONY: adb # Install and launch an APK via adb: make adb <path/to/apk>
+.PHONY: emu_setup # Setup Android emulator AVD: make emu_setup
+.PHONY: emu # Start Android emulator (headless): make emu
+.PHONY: emu_stop # Stop Android emulator: make emu_stop
+
+ADB_APK := $(MAKEARG_2)
+
+# Prevent make from interpreting the APK path argument as a target
+ifneq ($(filter adb,$(MAKECMDGOALS)),)
+ifneq ($(ADB_APK),)
+$(ADB_APK):
+	@:
+endif
+endif
+
+adb:
+ifeq ($(ADB_APK),)
+	$(error Usage: make adb <path/to/apk>)
+endif
+	adb install -r $(ADB_APK)
+	@ADB_PKG=$$($(BUILD_TOOLS)/sbt/scripts/apk_info.sh package $(ADB_APK)) && \
+		ADB_ACT=$$($(BUILD_TOOLS)/sbt/scripts/apk_info.sh activity $(ADB_APK)) && \
+		echo "launching $${ADB_PKG}/$${ADB_ACT}" && \
+		adb shell am start -n "$${ADB_PKG}/$${ADB_ACT}"
+	@echo "showing logcat (Ctrl+C to stop)"
+	adb logcat -c
+	adb logcat -s $(APP_NAME):* AndroidRuntime:E ActivityManager:W
+
+EMU_BIN := $(ANDROID_SDK_PATH)/emulator/emulator
+AVD_NAME ?= $(APP_NAME)_emulation
+EMU_SYS_IMAGE ?= system-images;android-35;google_apis;x86_64
+EMU_DEVICE ?= pixel_6
+
+emu_setup:
+	$(ANDROID_SDK_PATH)/cmdline-tools/latest/bin/sdkmanager --install "$(EMU_SYS_IMAGE)" "emulator"
+	$(ANDROID_SDK_PATH)/cmdline-tools/latest/bin/avdmanager create avd -n $(AVD_NAME) -k "$(EMU_SYS_IMAGE)" -d $(EMU_DEVICE) --force
+	@echo "AVD '$(AVD_NAME)' created. Start with: make emu"
+
+emu:
+	@if adb devices 2>/dev/null | grep -q "emulator.*device"; then \
+		echo "Emulator already running"; \
+	else \
+		echo "Starting emulator $(AVD_NAME) (headless)..."; \
+		$(EMU_BIN) -avd $(AVD_NAME) -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect & \
+		echo "Waiting for boot..."; \
+		adb wait-for-device; \
+		timeout 180 bash -c 'while [ "$$(adb shell getprop sys.boot_completed 2>/dev/null)" != "1" ]; do sleep 3; done'; \
+		echo "Waiting for package manager..."; \
+		sleep 30; \
+		echo "Emulator ready"; \
+	fi
+
+emu_stop:
+	@adb emu kill 2>/dev/null || echo "No emulator running"
+
+
+##########
 # Serve
 ##########
 

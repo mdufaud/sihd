@@ -48,7 +48,11 @@ def get_host_machine():
 def get_machine():
     machine = utils.get_opt('machine', None)
     if machine is None:
-        machine = get_host_machine()
+        # Android defaults to arm64 (most common Android device architecture)
+        if __get_platform() == "android":
+            machine = "arm64"
+        else:
+            machine = get_host_machine()
     return __get_machine(machine)
 
 ###############################################################################
@@ -120,6 +124,15 @@ def _detect_compiler_major_version(compiler, machine=None, libc="gnu"):
             result = subprocess.run(["zig", "version"], capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
                 return result.stdout.strip().split(".")[0]
+        elif compiler == "ndk":
+            ndk_root = os.getenv("ANDROID_NDK_PATH", "")
+            if ndk_root:
+                source_props = os.path.join(ndk_root, "source.properties")
+                if os.path.isfile(source_props):
+                    with open(source_props) as f:
+                        for line in f:
+                            if line.startswith("Pkg.Revision"):
+                                return line.split("=")[1].strip().split(".")[0]
     except Exception:
         pass
     return ""
@@ -163,6 +176,8 @@ def get_compiler():
         compiler = "mingw"
     elif build_platform == "web":
         compiler = "em"
+    elif build_platform == "android":
+        compiler = "ndk"
     return compiler.lower()
 
 def get_platform():
@@ -172,6 +187,8 @@ def get_platform():
         build_platform = "windows"
     elif compiler == "em":
         build_platform = "web"
+    elif compiler == "ndk":
+        build_platform = "android"
     return build_platform
 
 def detect_package_manager():
@@ -264,6 +281,9 @@ def force_git_clone():
     return utils.is_opt("fgit")
 
 def get_libc():
+    # Android uses bionic libc — force it when platform=android
+    if __get_platform() == "android":
+        return "bionic"
     libc = utils.get_opt("libc", "gnu").lower()
     if libc not in ("gnu", "musl"):
         raise SystemExit("unknown libc: {}".format(libc))
@@ -321,9 +341,11 @@ build_verbose = has_verbose()
 
 # platform
 build_platform = get_platform()
+host_platform = "linux"  # sbt runs on linux
 build_on_termux = is_termux()
 build_for_windows = build_platform == "windows"
 build_for_linux = build_platform == "linux"
+build_for_android = build_platform == "android"
 
 def get_gnu_triplet():
     return _build_gnu_triplet(build_machine, build_platform, libc)
@@ -365,9 +387,32 @@ libs_type = "static" if is_static_libs() else "dynamic"
 ###############################################################################
 
 def is_cross_building():
-    return (host_machine != build_machine) or (host_libc != libc)
+    return (host_machine != build_machine) or (host_libc != libc) or (host_platform != build_platform)
 
-allowed_compilers = ("gcc", "clang", "em", "mingw", "zig")
+allowed_compilers = ("gcc", "clang", "em", "mingw", "zig", "ndk")
+
+def get_android_sdk_root():
+    """Get Android SDK root path."""
+    return utils.get_opt("ANDROID_SDK_PATH", "")
+
+def get_java_home():
+    """Get JAVA_HOME path."""
+    return utils.get_opt("JAVA_HOME", "")
+
+def get_ndk_root():
+    """Get Android NDK root path."""
+    return utils.get_opt("ANDROID_NDK_PATH", "")
+
+def get_ndk_api_level():
+    """Get Android API level (default 24)."""
+    return utils.get_opt("ANDROID_API", "24")
+
+def get_ndk_toolchain_bin():
+    """Get the NDK prebuilt toolchain bin directory."""
+    ndk_root = get_ndk_root()
+    if not ndk_root:
+        return ""
+    return os.path.join(ndk_root, "toolchains", "llvm", "prebuilt", "linux-x86_64", "bin")
 
 def verify_args(app):
     global build_static_libs
@@ -387,6 +432,18 @@ def verify_args(app):
         if libc != "musl":
             logger.warning("gnu libc is not supported with zig - switching to musl")
             libc = "musl"
+
+    if build_compiler == "ndk":
+        ndk_root = get_ndk_root()
+        if not ndk_root or not os.path.isdir(ndk_root):
+            logger.error("ANDROID_NDK_PATH is not set or does not exist")
+            ret = False
+        if build_asan:
+            logger.error("cannot use address sanitizer with Android NDK")
+            ret = False
+        if not build_static_libs:
+            logger.warning("not supported Android NDK without static libs - switching to static libs")
+            build_static_libs = True
 
     if build_compiler == "mingw":
         if build_asan:

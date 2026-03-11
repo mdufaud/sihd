@@ -3,12 +3,12 @@
 #include <fmt/ranges.h>
 
 #include <sihd/sys/FilePoller.hpp>
-#include <sihd/util/Handler.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/LoggerStream.hpp>
 #include <sihd/sys/SigHandler.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/signal.hpp>
+#include <sihd/util/Handler.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/LoggerStream.hpp>
 #include <sihd/util/str.hpp>
 
 using namespace sihd::util;
@@ -30,8 +30,6 @@ int main(int argc, char **argv)
     app.add_option("-p,--path", path, "Watch path for changes")->required();
     app.add_option("-d,--depth", depth, "Depth to watch files")->default_val("10");
     app.add_option("-t,--time", time_val, "Execute x times per seconds")->default_val("0.5");
-    app.add_option("path", path);
-    app.add_option("depth", depth);
 
     CLI11_PARSE(app, argc, argv);
 

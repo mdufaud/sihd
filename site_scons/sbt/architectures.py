@@ -34,6 +34,14 @@ _gnu_machine_map = {
     "arm64": "aarch64",
 }
 
+# Android NDK target triplets and ABI names per architecture
+_ndk_config = {
+    "arm64":   {"target": "aarch64-linux-android",    "abi": "arm64-v8a"},
+    "arm32":   {"target": "armv7a-linux-androideabi",  "abi": "armeabi-v7a"},
+    "x86_64":  {"target": "x86_64-linux-android",     "abi": "x86_64"},
+    "x86":     {"target": "i686-linux-android",        "abi": "x86"},
+}
+
 # Libraries that don't exist or are built-in with musl libc
 musl_excluded_libs = ["pthread", "m", "dl", "rt", "crypt", "util", "xnet", "resolv"]
 
@@ -70,6 +78,16 @@ def get_vcpkg_machine(machine: str) -> str:
 def get_meson_info(machine: str) -> dict:
     """Get meson cross-compilation info (cpu_family, cpu, endian) for the given machine."""
     return get_config(machine).get("meson", {})
+
+
+def get_ndk_target(machine: str) -> str:
+    """Get the Android NDK clang target triplet for the given machine (e.g. aarch64-linux-android)."""
+    return _ndk_config.get(normalize_machine(machine), {}).get("target", "")
+
+
+def get_ndk_abi(machine: str) -> str:
+    """Get the Android ABI name for the given machine (e.g. arm64-v8a)."""
+    return _ndk_config.get(normalize_machine(machine), {}).get("abi", "")
 
 
 # ── Cross-compilation system packages ──────────────────────────────────────
@@ -150,6 +168,9 @@ platform_packages = {
     "web": {
         "pacman": ["emscripten"],
         "apt":    ["emscripten"],
+    },
+    "android": {
+        # Android NDK must be installed separately from developer.android.com
     },
 }
 

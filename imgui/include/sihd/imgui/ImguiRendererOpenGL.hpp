@@ -1,10 +1,14 @@
 #ifndef __SIHD_IMGUI_IMGUIRENDEREROPENGL_HPP__
 #define __SIHD_IMGUI_IMGUIRENDEREROPENGL_HPP__
 
-#define GL_GLEXT_PROTOTYPES
-#include <GL/glcorearb.h>
+#if defined(__ANDROID__)
+# include <GLES3/gl3.h>
+#else
+# define GL_GLEXT_PROTOTYPES
+# include <GL/glcorearb.h>
 // Prevent GLAPI redefinition conflicts with SDL3/SDL_opengl.h
-#undef GLAPI
+# undef GLAPI
+#endif
 #include <imgui_impl_opengl3.h>
 #include <sihd/imgui/IImguiRenderer.hpp>
 

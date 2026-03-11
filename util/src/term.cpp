@@ -3,6 +3,10 @@
 #include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
+#if defined(__ANDROID__)
+# include <sys/stat.h>
+#endif
+
 #if defined(__SIHD_WINDOWS__)
 # include <windows.h>
 #endif
@@ -30,6 +34,14 @@ std::string fmt(std::string_view str, const char *attr1, const char *attr2)
 
 bool is_interactive()
 {
+#if defined(__ANDROID__)
+    // On Android the terminal bridge connects stdin to a pipe from the UI.
+    // isatty() returns 0 for pipes even though the user can type via the UI,
+    // so also return true when stdin is a FIFO/pipe.
+    struct stat st;
+    if (fstat(fileno(stdin), &st) == 0 && S_ISFIFO(st.st_mode))
+        return true;
+#endif
     return isatty(fileno(stdin));
 }
 

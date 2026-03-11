@@ -6,7 +6,9 @@
 #include <sihd/sys/DynLib.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/LineReader.hpp>
+#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/sys/SigWaiter.hpp>
+#include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/Uuid.hpp>
 #include <sihd/sys/clipboard.hpp>
 #include <sihd/sys/fs.hpp>
@@ -17,7 +19,7 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/sys/TmpDir.hpp>
+#include <sihd/util/fmt.hpp>
 #include <sihd/util/macro.hpp>
 #include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
@@ -85,9 +87,9 @@ void dynlib()
 {
     DynLib lib;
 
-    if (lib.open("sihd_util"))
+    if (lib.open("sihd_sys"))
     {
-        SIHD_LOG_INFO("Opened DLL sihd_util");
+        SIHD_LOG_INFO("Opened DLL sihd_sys");
 
         void *handle = lib.load("sihd_factory_Node");
         if (handle != nullptr)

@@ -2,11 +2,11 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
+#include <sihd/sys/ProcessInfo.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerStream.hpp>
-#include <sihd/sys/ProcessInfo.hpp>
-#include <sihd/sys/os.hpp>
 #include <sihd/util/term.hpp>
 
 using namespace sihd::util;
@@ -46,7 +46,6 @@ int main(int argc, char **argv)
     app.add_option("-p,--process", process_name, "Dump process info by name");
     app.add_option("-i,--id", id, "Dump process info by id");
     app.add_flag("-e,--env", dump_env, "Dump process full env");
-    app.add_option("process", process_name);
 
     CLI11_PARSE(app, argc, argv);
 

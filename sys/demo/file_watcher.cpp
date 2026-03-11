@@ -2,13 +2,13 @@
 #include <fmt/format.h>
 
 #include <sihd/sys/FileWatcher.hpp>
-#include <sihd/util/Handler.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/LoggerStream.hpp>
 #include <sihd/sys/SigHandler.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
+#include <sihd/util/Handler.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/LoggerStream.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 
@@ -27,7 +27,6 @@ int main(int argc, char **argv)
     std::string path;
     CLI::App app {"Testing file watcher"};
     app.add_option("-p,--path", path, "Watch path for changes")->required();
-    app.add_option("path", path);
 
     CLI11_PARSE(app, argc, argv);
 

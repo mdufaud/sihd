@@ -1,7 +1,10 @@
 #include <sihd/imgui/ImguiRendererOpenGL.hpp>
-// Include imgui's GL loader to redirect glViewport/glClear/glClearColor
+// On Android, GLES3/gl3.h is included via the header and provides all GL symbols.
+// On desktop, include imgui's GL loader to redirect glViewport/glClear/glClearColor
 // to dynamically loaded function pointers (avoids link-time dependency on libGL)
-#include <imgui_impl_opengl3_loader.h>
+#if !defined(__ANDROID__)
+# include <imgui_impl_opengl3_loader.h>
+#endif
 #include <sihd/util/Logger.hpp>
 
 namespace sihd::imgui

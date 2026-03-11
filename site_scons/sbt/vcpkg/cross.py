@@ -137,6 +137,9 @@ def build_overlay_triplet_with_flags(app, vcpkg_triplet: str, vcpkg_build_path: 
     # Generate cross-compilation helpers when cross-compiling for Linux
     is_cross_linux = builder.is_cross_building() and builder.build_platform == "linux"
 
+    # Generate cross-compilation helpers when building for Android
+    is_android = builder.build_platform == "android"
+
     # Per-port CMake configure options: base config (restrictive, safe for cross)
     cmake_opts = dict(getattr(app, "vcpkg_cmake_configure_options", {}))
     # Platform-specific overrides:
@@ -153,7 +156,7 @@ def build_overlay_triplet_with_flags(app, vcpkg_triplet: str, vcpkg_build_path: 
     # Check if this triplet needs dynamic generation (musl/zig)
     is_dynamic = triplets.is_musl_triplet(vcpkg_triplet) or triplets.is_zig_triplet(vcpkg_triplet)
 
-    if not need_flags and not is_cross_linux and not need_cmake_opts and not is_dynamic:
+    if not need_flags and not is_cross_linux and not is_android and not need_cmake_opts and not is_dynamic:
         return None
 
     overlay_dir = os.path.join(vcpkg_build_path, "overlay-triplets")
@@ -252,6 +255,18 @@ def build_overlay_triplet_with_flags(app, vcpkg_triplet: str, vcpkg_build_path: 
             cmake_toolchain_path = cmake_toolchain_path.replace("\\", "/")
             lines.append(f'set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE "{cmake_toolchain_path}")')
             lines.append("")
+
+    # Android: chainload the NDK's cmake toolchain
+    if is_android:
+        ndk_root = builder.get_ndk_root()
+        api_level = builder.get_ndk_api_level()
+        ndk_abi = architectures.get_ndk_abi(builder.build_machine)
+        ndk_toolchain = os.path.join(ndk_root, "build", "cmake", "android.toolchain.cmake").replace("\\", "/")
+        lines.append("# Android NDK toolchain")
+        lines.append(f'set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE "{ndk_toolchain}")')
+        lines.append(f'set(ANDROID_ABI "{ndk_abi}")')
+        lines.append(f'set(ANDROID_PLATFORM android-{api_level})')
+        lines.append("")
 
     # Apply per-port CMake configure options (base + platform-resolved)
     # Ports with empty option lists are skipped (platform override cleared them)
