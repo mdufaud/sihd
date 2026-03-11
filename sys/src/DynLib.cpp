@@ -1,6 +1,6 @@
 #include <sihd/util/platform.hpp>
 
-#if defined(__SIHD_LINUX__)
+#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
 # include <dlfcn.h>
 #endif
 #if defined(__SIHD_WINDOWS__)
@@ -25,7 +25,7 @@ namespace
 
 std::string get_error()
 {
-#if !defined(SIHD_STATIC)
+#if !defined(SIHD_STATIC) && !defined(__SIHD_EMSCRIPTEN__)
 # if !defined(__SIHD_WINDOWS__)
     return dlerror();
 # else
@@ -36,7 +36,7 @@ std::string get_error()
 #endif
 }
 
-#if !defined(SIHD_STATIC)
+#if !defined(SIHD_STATIC) && !defined(__SIHD_EMSCRIPTEN__)
 bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)
 {
 # if !defined(__SIHD_WINDOWS__)
@@ -68,7 +68,7 @@ DynLib::~DynLib()
 
 bool DynLib::open(std::string_view lib_name)
 {
-#if !defined(SIHD_STATIC)
+#if !defined(SIHD_STATIC) && !defined(__SIHD_EMSCRIPTEN__)
     this->close();
     std::string test_lib_name;
 
@@ -90,15 +90,15 @@ bool DynLib::open(std::string_view lib_name)
 #endif
 }
 
-void *DynLib::load(std::string_view symbol_name)
+void *DynLib::load([[maybe_unused]] std::string_view symbol_name)
 {
     void *ret = nullptr;
 
     if (this->is_open())
     {
-#if !defined(__SIHD_WINDOWS__)
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__)
         ret = dlsym(_handle, symbol_name.data());
-#else
+#elif defined(__SIHD_WINDOWS__)
         ret = (void *)GetProcAddress((HMODULE)_handle, symbol_name.data());
 #endif
         if (ret == nullptr)
@@ -113,9 +113,9 @@ bool DynLib::close()
 
     if (this->is_open())
     {
-#if !defined(__SIHD_WINDOWS__)
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__)
         ret = dlclose(_handle) == 0;
-#else
+#elif defined(__SIHD_WINDOWS__)
         ret = FreeLibrary((HMODULE)_handle);
 #endif
         if (ret == false)

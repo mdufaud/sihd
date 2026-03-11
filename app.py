@@ -199,6 +199,8 @@ modules = {
         # === Android specific ===
         "android-libs": ['android', 'EGL', 'GLESv3', 'log'],
         "android-defines": ['IMGUI_IMPL_OPENGL_ES3'],
+        # === Web/Emscripten specific ===
+        "web-libs": ['SDL3'],
         "windows-link": [
             "-mwindows" # no shell window opening
         ],
@@ -244,9 +246,10 @@ modules = {
         "em-link": [
             "-sUSE_PTHREADS=1", # enable threads
             "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
-            # "-sUSE_GLFW=3", # did not manage to get glfw working with emscripten
             "-sWASM=1",
+            "-sALLOW_MEMORY_GROWTH=1", # dynamic heap growth
         ],
+        "em-defines": ["IMGUI_IMPL_OPENGL_ES2"],
     },
 }
 
@@ -364,6 +367,10 @@ extlibs_features_android = {
     "imgui": ["android-binding", "opengl3-binding"],
 }
 
+extlibs_features_web = {
+    "imgui": ["sdl3-binding", "opengl3-binding"],
+}
+
 # on windows some libs are not available through vcpkg
 extlibs_skip_windows = [
     "dbus",
@@ -381,7 +388,8 @@ extlibs_skip_web = [
     "libusb",
     "libxcrypt",
     "ftxui",
-    "imgui",
+    "opengl",
+    "glfw3",
     "dbus",
     "simpleble",
     "libcap",

@@ -125,7 +125,7 @@ bool Daemon::_write_pid_file()
     return ret;
 }
 
-#if !defined(__SIHD_WINDOWS__)
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__)
 
 bool Daemon::run()
 {
@@ -200,7 +200,7 @@ bool Daemon::run()
     return true;
 }
 
-#else
+#elif defined(__SIHD_WINDOWS__)
 
 bool Daemon::run()
 {
@@ -257,6 +257,14 @@ bool Daemon::run()
 
     SIHD_LOG(info, "Daemon: started with pid: {}", GetCurrentProcessId());
     return true;
+}
+
+#else
+
+bool Daemon::run()
+{
+    SIHD_LOG(error, "Daemon: not supported on this platform");
+    return false;
 }
 
 #endif

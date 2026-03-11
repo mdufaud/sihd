@@ -28,11 +28,16 @@ else:
             "src/ImguiRendererDirectX.cpp",
         ])
 
-    ## Glfw + OpenGL
+    ## OpenGL renderer
     sihd_imgui_srcs.extend([
-        "src/ImguiBackendGlfw.cpp",
         "src/ImguiRendererOpenGL.cpp",
     ])
+
+    ## Glfw (not available on web/emscripten)
+    if builder.build_platform != "web":
+        sihd_imgui_srcs.extend([
+            "src/ImguiBackendGlfw.cpp",
+        ])
 
     # SDL
     sihd_imgui_srcs.extend([

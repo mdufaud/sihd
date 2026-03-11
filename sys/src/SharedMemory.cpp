@@ -26,7 +26,7 @@ SIHD_LOGGER;
 namespace
 {
 
-#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__)
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 
 struct Shm
 {
@@ -102,7 +102,7 @@ SharedMemory::~SharedMemory()
     this->clear();
 }
 
-#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__)
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 
 bool SharedMemory::create(std::string_view id, size_t size, mode_t mode)
 {

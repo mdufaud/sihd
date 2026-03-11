@@ -1,8 +1,9 @@
 #include <sihd/imgui/ImguiRendererOpenGL.hpp>
 // On Android, GLES3/gl3.h is included via the header and provides all GL symbols.
+// On Emscripten with ES2, GLES2/gl2.h is included via the header.
 // On desktop, include imgui's GL loader to redirect glViewport/glClear/glClearColor
 // to dynamically loaded function pointers (avoids link-time dependency on libGL)
-#if !defined(__ANDROID__)
+#if !defined(__ANDROID__) && !defined(IMGUI_IMPL_OPENGL_ES2)
 # include <imgui_impl_opengl3_loader.h>
 #endif
 #include <sihd/util/Logger.hpp>

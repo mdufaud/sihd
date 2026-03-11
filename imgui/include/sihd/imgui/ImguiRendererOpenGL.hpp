@@ -3,6 +3,8 @@
 
 #if defined(__ANDROID__)
 # include <GLES3/gl3.h>
+#elif defined(IMGUI_IMPL_OPENGL_ES2)
+# include <GLES2/gl2.h>
 #else
 # define GL_GLEXT_PROTOTYPES
 # include <GL/glcorearb.h>

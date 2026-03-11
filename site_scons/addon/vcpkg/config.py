@@ -90,6 +90,30 @@ vcpkg_cmake_configure_options_windows = {
     ],
 }
 
+# Emscripten/web: SDL3 via emscripten port system, imgui uses OpenGL ES2
+vcpkg_cmake_configure_options_web = {
+    "sdl3": [
+        "-DSDL_X11=OFF", "-DSDL_WAYLAND=OFF", "-DSDL_IBUS=OFF",
+        "-DSDL_JACK=OFF", "-DSDL_PULSEAUDIO=OFF", "-DSDL_PIPEWIRE=OFF",
+        "-DSDL_SNDIO=OFF", "-DSDL_KMSDRM=OFF",
+        "-DSDL_OPENGLES=ON",
+        "-DSDL_LIBUDEV=OFF", "-DSDL_LIBURING=OFF",
+    ],
+    "imgui": ["-DCMAKE_CXX_FLAGS_INIT=-DIMGUI_IMPL_OPENGL_ES2"],
+}
+
+# Also provide cross_web variant (emscripten is cross-compilation: wasm32 != x86_64)
+vcpkg_cmake_configure_options_cross_web = {
+    "sdl3": [
+        "-DSDL_X11=OFF", "-DSDL_WAYLAND=OFF", "-DSDL_IBUS=OFF",
+        "-DSDL_JACK=OFF", "-DSDL_PULSEAUDIO=OFF", "-DSDL_PIPEWIRE=OFF",
+        "-DSDL_SNDIO=OFF", "-DSDL_KMSDRM=OFF",
+        "-DSDL_OPENGLES=ON",
+        "-DSDL_LIBUDEV=OFF", "-DSDL_LIBURING=OFF",
+    ],
+    "imgui": ["-DCMAKE_CXX_FLAGS_INIT=-DIMGUI_IMPL_OPENGL_ES2"],
+}
+
 ###############################################################################
 # vcpkg default-features control
 ###############################################################################
