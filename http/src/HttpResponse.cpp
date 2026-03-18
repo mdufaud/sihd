@@ -1,16 +1,16 @@
-#include <libwebsockets.h>
 #include <nlohmann/json.hpp>
 
 #include <sihd/util/Logger.hpp>
 
 #include <sihd/http/HttpResponse.hpp>
+#include <sihd/http/HttpStatus.hpp>
 
 namespace sihd::http
 {
 
 SIHD_LOGGER;
 
-HttpResponse::HttpResponse(Mime *mimes): _status(HTTP_STATUS_OK), _mime_ptr(mimes)
+HttpResponse::HttpResponse(Mime *mimes): _status(HttpStatus::Ok), _mime_ptr(mimes)
 {
     _http_header.set_accept_charset("utf-8");
 }

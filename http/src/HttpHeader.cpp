@@ -104,22 +104,6 @@ HttpHeader & HttpHeader::remove_header(const std::string & name)
     return *this;
 }
 
-HttpHeader & HttpHeader::remove_header(const unsigned char *name)
-{
-    if (name == nullptr)
-        throw std::runtime_error("header is null");
-    this->remove_header((const char *)name);
-    return *this;
-}
-
-HttpHeader & HttpHeader::set_header(const unsigned char *name, std::string_view value)
-{
-    if (name == nullptr)
-        throw std::runtime_error("header is null");
-    this->set_header((const char *)name, value);
-    return *this;
-}
-
 HttpHeader & HttpHeader::set_header(const std::string & header_name, std::string_view value)
 {
     std::string lower_name = format_hdr_name(header_name);

@@ -16,13 +16,15 @@ class WebsocketHandler: public sihd::http::IWebsocketHandler
 
         void on_open(std::string_view protocol_number);
         bool on_read(const sihd::util::ArrChar & array);
-        bool on_write(sihd::util::ArrChar & array, LwsWriteProtocol & protocol);
+        bool on_write(sihd::util::ArrChar & array, WriteProtocol & protocol);
         void on_close();
+        void on_peer_close(uint16_t code, std::string_view reason);
 
         std::function<void(std::string_view)> callback_open;
         std::function<bool(const sihd::util::ArrChar &)> callback_read;
-        std::function<bool(sihd::util::ArrChar &, LwsWriteProtocol &)> callback_write;
+        std::function<bool(sihd::util::ArrChar &, WriteProtocol &)> callback_write;
         std::function<void()> callback_close;
+        std::function<void(uint16_t, std::string_view)> callback_peer_close;
 
     protected:
 

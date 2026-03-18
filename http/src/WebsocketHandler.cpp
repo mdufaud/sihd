@@ -22,7 +22,7 @@ bool WebsocketHandler::on_read(const sihd::util::ArrChar & array)
     return !this->callback_read || this->callback_read(array);
 }
 
-bool WebsocketHandler::on_write(sihd::util::ArrChar & array, LwsWriteProtocol & protocol)
+bool WebsocketHandler::on_write(sihd::util::ArrChar & array, WriteProtocol & protocol)
 {
     return !this->callback_write || this->callback_write(array, protocol);
 }
@@ -31,6 +31,12 @@ void WebsocketHandler::on_close()
 {
     if (this->callback_close)
         this->callback_close();
+}
+
+void WebsocketHandler::on_peer_close(uint16_t code, std::string_view reason)
+{
+    if (this->callback_peer_close)
+        this->callback_peer_close(code, reason);
 }
 
 } // namespace sihd::http

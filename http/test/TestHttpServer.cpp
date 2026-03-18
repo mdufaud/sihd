@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include <libwebsockets.h>
 #include <nlohmann/json.hpp>
 
 #include <sihd/http/HttpServer.hpp>
+#include <sihd/http/HttpStatus.hpp>
 #include <sihd/http/WebService.hpp>
 #include <sihd/http/WebsocketHandler.hpp>
 #include <sihd/http/request.hpp>
@@ -67,11 +67,11 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                     {
                         _post_content = req.content().str();
                         SIHD_LOG(info, "Received POST body: {}", _post_content);
-                        resp.set_status(HTTP_STATUS_OK);
+                        resp.set_status(HttpStatus::Ok);
                         ++_npost;
                     }
                     else
-                        resp.set_status(HTTP_STATUS_BAD_REQUEST);
+                        resp.set_status(HttpStatus::BadRequest);
                 },
                 HttpRequest::Post);
 
@@ -79,7 +79,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                 "some_delete",
                 [this](const HttpRequest & req, HttpResponse & resp) {
                     SIHD_LOG(info, "{} request received", req.type_str());
-                    resp.set_status(HTTP_STATUS_OK);
+                    resp.set_status(HttpStatus::Ok);
                     resp.set_json_content({"hello", "world"});
                     ++_ndelete;
                 },
@@ -93,11 +93,11 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                     {
                         _post_content = req.content().str();
                         SIHD_LOG(info, "Received PUT body: {}", _post_content);
-                        resp.set_status(HTTP_STATUS_OK);
+                        resp.set_status(HttpStatus::Ok);
                         ++_nput;
                     }
                     else
-                        resp.set_status(HTTP_STATUS_BAD_REQUEST);
+                        resp.set_status(HttpStatus::BadRequest);
                 },
                 HttpRequest::Put);
         }
@@ -118,7 +118,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
             return true;
         };
 
-        bool on_write(sihd::util::ArrChar & array, LwsWriteProtocol & protocol)
+        bool on_write(sihd::util::ArrChar & array, WriteProtocol & protocol)
         {
             if (_client_wrote)
             {
@@ -128,7 +128,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                 const char hw[] = "hello world";
                 array.from(hw);
 
-                protocol.set_txt();
+                protocol = WriteProtocol::Text;
                 SIHD_LOG(debug, "Wrote back to client websocket: {}", hw);
             }
             return true;
