@@ -120,6 +120,11 @@ class SimpleHttpServer: public sihd::http::HttpServer,
 
         void on_close() { SIHD_LOG(debug, "Closed websocket"); }
 
+        void on_peer_close([[maybe_unused]] uint16_t code, [[maybe_unused]] std::string_view reason)
+        {
+            SIHD_LOG(debug, "Peer closed websocket: code={} reason={}", code, reason);
+        }
+
         bool _client_wrote = false;
         // websocket
         WebsocketHandler _websocket_handler;

@@ -1,5 +1,7 @@
 #include <libwebsockets.h>
 
+#include <future>
+
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/HttpStatus.hpp>
 #include <sihd/http/WriteProtocol.hpp>
@@ -8,6 +10,7 @@
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/StepWorker.hpp>
+#include <sihd/util/ThreadPool.hpp>
 
 #ifndef SIHD_HTTP_URI_BUFSIZE
 # define SIHD_HTTP_URI_BUFSIZE 512
@@ -51,6 +54,10 @@ struct HttpServer::Impl
                     content.reset();
                     content_size = 0;
                     should_complete_transaction = true;
+                    stream_provider = nullptr;
+                    if (cached_auth_header)
+                        cached_auth_header->clear();
+                    pending_response.reset();
                 }
 
                 // forward lws callback args
@@ -68,6 +75,12 @@ struct HttpServer::Impl
                 std::unique_ptr<HttpRequest> request;
                 // if true lws_http_transaction_completed will be called
                 bool should_complete_transaction;
+                // streaming state
+                HttpResponse::StreamProvider stream_provider;
+                // cached auth header for deferred POST/PUT (heap-allocated for lws zero-init safety)
+                std::unique_ptr<std::string> cached_auth_header;
+                // pending async response from thread pool (heap-allocated for lws zero-init safety)
+                std::unique_ptr<std::future<HttpResponse>> pending_response;
         };
 
         struct WebsocketSession
@@ -100,6 +113,8 @@ struct HttpServer::Impl
             lws_context_ptr(nullptr),
             protocols_count(0),
             lws_protocols_ptr(nullptr),
+            http_filter(nullptr),
+            http_authenticator(nullptr),
             polling_scheduler(server)
         {
             stepworker.set_runnable(&polling_scheduler);
@@ -140,10 +155,10 @@ struct HttpServer::Impl
         }
 
         static int _global_websocket_lws_callback(struct lws *wsi,
-                                                   enum lws_callback_reasons reason,
-                                                   void *user,
-                                                   void *in,
-                                                   size_t len)
+                                                  enum lws_callback_reasons reason,
+                                                  void *user,
+                                                  void *in,
+                                                  size_t len)
         {
             HttpServer *srv = (HttpServer *)lws_context_user(lws_get_context(wsi));
             return srv->_impl->_lws_websocket_callback(wsi, reason, user, in, len);
@@ -207,6 +222,59 @@ struct HttpServer::Impl
                         rc = -1;
                     break;
                 }
+                case LWS_CALLBACK_HTTP_WRITEABLE:
+                {
+                    if (session != nullptr && session->pending_response)
+                    {
+                        auto & future = *session->pending_response;
+                        if (future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                        {
+                            HttpResponse response = future.get();
+                            session->pending_response.reset();
+                            bool is_streaming = this->send_response(session, response);
+                            if (!is_streaming)
+                            {
+                                if (session->rc < 0)
+                                    rc = -1;
+                                else if (lws_http_transaction_completed(session->wsi))
+                                    rc = -1;
+                            }
+                        }
+                        else
+                            lws_callback_on_writable(session->wsi);
+                        break;
+                    }
+                    if (session != nullptr && session->stream_provider)
+                    {
+                        ArrByte chunk;
+                        bool has_more = session->stream_provider(chunk);
+                        if (chunk.size() > 0)
+                        {
+                            ArrByte buffer;
+                            buffer.resize(chunk.size() + LWS_PRE);
+                            memcpy(buffer.data() + LWS_PRE, chunk.data(), chunk.size());
+                            auto write_proto = has_more ? LWS_WRITE_HTTP : LWS_WRITE_HTTP_FINAL;
+                            if (lws_write(wsi,
+                                          (u_char *)(buffer.data() + LWS_PRE),
+                                          chunk.size(),
+                                          (enum lws_write_protocol)write_proto)
+                                < (int)chunk.size())
+                            {
+                                rc = -1;
+                                break;
+                            }
+                        }
+                        if (has_more)
+                            lws_callback_on_writable(wsi);
+                        else
+                        {
+                            session->stream_provider = nullptr;
+                            [[maybe_unused]] int ret = lws_http_transaction_completed(wsi);
+                            rc = -1;
+                        }
+                    }
+                    break;
+                }
                 case LWS_CALLBACK_CLOSED_HTTP:
                 {
                     break;
@@ -223,13 +291,95 @@ struct HttpServer::Impl
                 }
                 case LWS_CALLBACK_ADD_HEADERS:
                 {
-                    SIHD_LOG(debug, "HttpServer: Callback add header callback");
+                    if (!default_cors_origin.empty())
+                    {
+                        struct lws_process_html_args *args = (struct lws_process_html_args *)in;
+                        if (lws_add_http_header_by_name(wsi,
+                                                        (const unsigned char *)"access-control-allow-origin:",
+                                                        (const unsigned char *)default_cors_origin.c_str(),
+                                                        (int)default_cors_origin.size(),
+                                                        (unsigned char **)&args->p,
+                                                        (unsigned char *)args->p + args->max_len))
+                        {
+                            SIHD_LOG(error, "HttpServer: failed to add CORS header");
+                            rc = 1;
+                        }
+                    }
                     break;
                 }
                 case LWS_CALLBACK_LOCK_POLL:
                 case LWS_CALLBACK_UNLOCK_POLL:
                 case LWS_CALLBACK_WSI_DESTROY:
+                case LWS_CALLBACK_PROTOCOL_INIT:
+                case LWS_CALLBACK_PROTOCOL_DESTROY:
+                case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
+                case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
                     break;
+                case LWS_CALLBACK_FILTER_HTTP_CONNECTION:
+                {
+                    if (http_filter != nullptr)
+                    {
+                        std::string_view uri((const char *)in, len);
+
+                        HttpFilterInfo info;
+                        info.uri = uri;
+                        info.method = this->get_request_type(wsi);
+                        info.client_ip = this->get_client_ip(wsi);
+
+                        static constexpr enum lws_token_indexes filter_headers[] = {
+                            WSI_TOKEN_HOST,
+                            WSI_TOKEN_HTTP_CONTENT_TYPE,
+                            WSI_TOKEN_HTTP_USER_AGENT,
+                            WSI_TOKEN_HTTP_ACCEPT,
+                            WSI_TOKEN_ORIGIN,
+                            WSI_TOKEN_HTTP_AUTHORIZATION,
+                            WSI_TOKEN_HTTP_COOKIE,
+                            WSI_TOKEN_HTTP_REFERER,
+                        };
+                        static constexpr const char *filter_header_names[] = {
+                            "host",
+                            "content-type",
+                            "user-agent",
+                            "accept",
+                            "origin",
+                            "authorization",
+                            "cookie",
+                            "referer",
+                        };
+                        for (size_t i = 0; i < sizeof(filter_headers) / sizeof(filter_headers[0]); ++i)
+                        {
+                            auto val = this->get_header(wsi, filter_headers[i]);
+                            if (val.has_value() && !val->empty())
+                                info.headers[filter_header_names[i]] = std::move(*val);
+                        }
+
+                        if (!http_filter->on_filter_connection(info))
+                        {
+                            lws_return_http_status(wsi, HTTP_STATUS_FORBIDDEN, nullptr);
+                            rc = -1;
+                        }
+                    }
+                    break;
+                }
+                case LWS_CALLBACK_VERIFY_BASIC_AUTHORIZATION:
+                {
+                    if (http_authenticator != nullptr)
+                    {
+                        std::string_view credentials((const char *)in, len);
+                        auto sep = credentials.find(':');
+                        if (sep != std::string_view::npos)
+                        {
+                            std::string_view user = credentials.substr(0, sep);
+                            std::string_view pass = credentials.substr(sep + 1);
+                            rc = http_authenticator->on_basic_auth(user, pass) ? 1 : 0;
+                        }
+                        else
+                            rc = 0;
+                    }
+                    else
+                        rc = 1;
+                    break;
+                }
                 case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
                 {
                     char client_name[128];
@@ -241,8 +391,15 @@ struct HttpServer::Impl
                                            sizeof(client_name),
                                            client_ip,
                                            sizeof(client_ip));
-                    SIHD_LOG(debug, "HttpServer: received client connect from {} ({})", client_name, client_ip);
+                    SIHD_LOG(debug,
+                             "HttpServer: received client connect from {} ({})",
+                             client_name,
+                             client_ip);
                     rc = 0;
+                    break;
+                }
+                case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
+                {
                     break;
                 }
                 default:
@@ -261,12 +418,39 @@ struct HttpServer::Impl
                 return HttpRequest::Put;
             else if (lws_hdr_total_length(wsi, WSI_TOKEN_DELETE_URI))
                 return HttpRequest::Delete;
+            else if (lws_hdr_total_length(wsi, WSI_TOKEN_OPTIONS_URI))
+                return HttpRequest::Options;
             return HttpRequest::None;
         }
 
         int on_http_request(HttpSession *session, std::string_view path)
         {
             SIHD_LOG(debug, "HttpServer: {} request: {}", HttpRequest::type_str(session->request_type), path);
+
+            // CORS preflight
+            if (session->request_type == HttpRequest::Options && !default_cors_origin.empty())
+            {
+                HttpResponse response;
+                response.set_status(HttpStatus::NoContent);
+                response.http_header().set_server(default_server_name);
+                response.http_header().set_header("access-control-allow-origin:", default_cors_origin);
+                response.http_header().set_header("access-control-allow-methods:",
+                                                  "GET, POST, PUT, DELETE, OPTIONS");
+                response.http_header().set_header("access-control-allow-headers:",
+                                                  "content-type, authorization");
+                response.http_header().set_header("access-control-max-age:", "86400");
+                response.http_header().set_content_length(0);
+                this->send_http_headers(session->wsi, response);
+                return 0;
+            }
+
+            // Auth enforcement (Basic or Bearer) - per webservice, with server fallback
+            {
+                auto auth_header = this->get_header(session->wsi, WSI_TOKEN_HTTP_AUTHORIZATION);
+                if (auth_header.has_value())
+                    session->cached_auth_header = std::make_unique<std::string>(std::move(*auth_header));
+            }
+
             int rc = 0;
             std::string resource_path;
             if (server->get_resource_path(path, resource_path))
@@ -352,8 +536,9 @@ struct HttpServer::Impl
                 auto content_length_header_opt
                     = this->get_header(session->wsi, WSI_TOKEN_HTTP_CONTENT_LENGTH);
                 if (content_length_header_opt.has_value() == false)
-                    throw std::runtime_error(fmt::format(
-                        "failed to copy content length header serving webservice: {}", webservice_name));
+                    throw std::runtime_error(
+                        fmt::format("failed to copy content length header serving webservice: {}",
+                                    webservice_name));
 
                 std::string & content_length_header = content_length_header_opt.value();
                 if (content_length_header.empty())
@@ -372,8 +557,9 @@ struct HttpServer::Impl
                 {
                     session->content_size = 0;
                     session->content = std::make_unique<ArrUByte>();
-                    session->request = std::make_unique<HttpRequest>(
-                        path, this->get_uri_args(session->wsi), session->request_type);
+                    session->request = std::make_unique<HttpRequest>(path,
+                                                                     this->get_uri_args(session->wsi),
+                                                                     session->request_type);
                     session->content->resize(content_length_header_size);
                     session->should_complete_transaction = false;
                 }
@@ -385,6 +571,72 @@ struct HttpServer::Impl
                 this->serve_webservice(session, webservice, request);
             }
             return true;
+        }
+
+        static std::unordered_map<std::string, std::string>
+            parse_query_params(const std::vector<std::string> & uri_args)
+        {
+            std::unordered_map<std::string, std::string> params;
+            for (const auto & arg : uri_args)
+            {
+                size_t eq = arg.find('=');
+                if (eq != std::string::npos)
+                    params[arg.substr(0, eq)] = arg.substr(eq + 1);
+                else
+                    params[arg] = "";
+            }
+            return params;
+        }
+
+        // Checks auth for the webservice. Sends 401 and returns false if unauthorized.
+        bool check_and_apply_auth(HttpSession *session, WebService *webservice, HttpRequest & request)
+        {
+            IHttpAuthenticator *authenticator = this->get_authenticator_for(webservice);
+            if (authenticator == nullptr)
+                return true;
+
+            std::string_view auth_header_value;
+            if (session->cached_auth_header)
+                auth_header_value = *session->cached_auth_header;
+
+            AuthResult auth = this->parse_authorization(auth_header_value, authenticator);
+            if (!auth.authorized)
+            {
+                HttpResponse response(&mime);
+                response.set_status(HttpStatus::Unauthorized);
+                response.http_header().set_server(default_server_name);
+                response.http_header().set_header("www-authenticate:", "Basic realm=\"sihd\", Bearer");
+                response.http_header().set_content_length(0);
+                this->send_http_headers(session->wsi, response);
+                return false;
+            }
+            if (!auth.user.empty())
+                request.set_auth_user(auth.user);
+            if (!auth.token.empty())
+                request.set_auth_token(auth.token);
+            return true;
+        }
+
+        // Sends the response to the client.
+        // Returns true if streaming was initiated (subsequent writes via LWS_CALLBACK_HTTP_WRITEABLE).
+        // Returns false if the full response was sent synchronously; sets session->rc on write error.
+        bool send_response(HttpSession *session, HttpResponse & response)
+        {
+            if (response.is_streaming())
+            {
+                response.http_header().set_header("connection:", "close");
+                this->send_http_headers(session->wsi, response);
+                session->stream_provider = std::move(response.stream_provider());
+                session->should_complete_transaction = false;
+                lws_callback_on_writable(session->wsi);
+                return true;
+            }
+            const ArrByte & data = response.content();
+            response.http_header().set_content_length(data.size());
+            this->send_http_headers(session->wsi, response);
+            if (data.size() > 0 && lws_write_http(session->wsi, data.buf(), data.size()) < 0)
+                session->rc = -1;
+            return false;
         }
 
         bool serve_webservice(HttpSession *session, WebService *webservice, HttpRequest & request)
@@ -399,25 +651,40 @@ struct HttpServer::Impl
                 return false;
             std::string rest_of_path(path_view.substr(first_slash_idx + 1));
 
-            std::string ip = this->get_client_ip(session->wsi);
-            request.set_client_ip(ip);
+            request.set_client_ip(this->get_client_ip(session->wsi));
+            request.set_query_params(parse_query_params(request.uri_args()));
+
+            if (!check_and_apply_auth(session, webservice, request))
+                return true;
+
+            if (thread_pool != nullptr)
+            {
+                session->pending_response = std::make_unique<std::future<HttpResponse>>(
+                    thread_pool->add_job([this,
+                                          webservice,
+                                          rest_of_path = std::move(rest_of_path),
+                                          request = std::move(request)]() mutable {
+                        HttpResponse response(&mime);
+                        response.http_header().set_server(default_server_name);
+                        webservice->call(rest_of_path, request, response);
+                        {
+                            std::lock_guard l(mutex);
+                            if (lws_context_ptr != nullptr)
+                                lws_cancel_service(lws_context_ptr);
+                        }
+                        return response;
+                    }));
+                session->should_complete_transaction = false;
+                lws_callback_on_writable(session->wsi);
+                return true;
+            }
 
             HttpResponse response(&mime);
             response.http_header().set_server(default_server_name);
-            if (webservice->call(rest_of_path, request, response))
-            {
-                const ArrByte & data = response.content();
-                response.http_header().set_content_length(data.size());
-
-                this->send_http_headers(session->wsi, response);
-                if (data.size() > 0)
-                {
-                    if (lws_write_http(session->wsi, data.buf(), data.size()) < 0)
-                        session->rc = -1;
-                }
-                return true;
-            }
-            return false;
+            if (!webservice->call(rest_of_path, request, response))
+                return false;
+            send_response(session, response);
+            return true;
         }
 
         // websocket callback
@@ -466,6 +733,22 @@ struct HttpServer::Impl
                 {
                     if (handler != nullptr)
                         handler->on_close();
+                    break;
+                }
+                case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
+                {
+                    if (handler != nullptr)
+                    {
+                        uint16_t close_code = 0;
+                        std::string_view close_reason;
+                        if (len >= 2)
+                        {
+                            close_code = (uint16_t)(((uint8_t *)in)[0] << 8 | ((uint8_t *)in)[1]);
+                            if (len > 2)
+                                close_reason = std::string_view((const char *)in + 2, len - 2);
+                        }
+                        handler->on_peer_close(close_code, close_reason);
+                    }
                     break;
                 }
                 case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
@@ -578,14 +861,15 @@ struct HttpServer::Impl
             response.http_header().set_accept_charset(encoding);
             response.http_header().set_content_type(mime.get("html"), encoding);
             response.http_header().set_content_length(0);
-            response.http_header().set_header(
-                (const char *)lws_token_to_string(WSI_TOKEN_HTTP_LOCATION), redirect_path);
+            response.http_header().set_header((const char *)lws_token_to_string(WSI_TOKEN_HTTP_LOCATION),
+                                              redirect_path);
             return this->send_http_headers(wsi, response);
         }
 
         bool send_http_headers(struct lws *wsi, HttpResponse & response)
         {
             int rc;
+            memset(http_header_array.data(), 0, http_header_array.size());
             u_char *ptr = (u_char *)http_header_array.buf();
             u_char *end = (u_char *)http_header_array.buf() + http_header_array.size();
 
@@ -599,8 +883,12 @@ struct HttpServer::Impl
             }
             for (const auto & [name, value] : headers.headers())
             {
-                rc = lws_add_http_header_by_name(
-                    wsi, (u_char *)name.c_str(), (u_char *)value.c_str(), value.size(), &ptr, end);
+                rc = lws_add_http_header_by_name(wsi,
+                                                 (u_char *)name.c_str(),
+                                                 (u_char *)value.c_str(),
+                                                 value.size(),
+                                                 &ptr,
+                                                 end);
                 if (rc)
                 {
                     SIHD_LOG(error, "HttpHeader: cannot set header '{}'", name);
@@ -657,13 +945,71 @@ struct HttpServer::Impl
 
         bool check_all_protocols()
         {
-            size_t i = 0;
+            // Start at 1: protocol 0 is HTTP, which uses per-session lws_callback_on_writable.
+            // Websocket protocols (1+) need polling to trigger LWS_CALLBACK_SERVER_WRITEABLE.
+            size_t i = 1;
             while (i < protocols_count)
             {
                 lws_callback_on_writable_all_protocol(lws_context_ptr, &lws_protocols_ptr[i]);
                 ++i;
             }
-            return i != 0;
+            return i > 1;
+        }
+
+        struct AuthResult
+        {
+                bool authorized = false;
+                std::string user;
+                std::string token;
+        };
+
+        AuthResult parse_authorization(std::string_view auth_header_value, IHttpAuthenticator *authenticator)
+        {
+            AuthResult result;
+            if (authenticator == nullptr || auth_header_value.empty())
+            {
+                result.authorized = (authenticator == nullptr);
+                return result;
+            }
+
+            constexpr std::string_view bearer_prefix = "Bearer ";
+            constexpr std::string_view basic_prefix = "Basic ";
+            if (auth_header_value.starts_with(bearer_prefix))
+            {
+                std::string_view token_view = auth_header_value.substr(bearer_prefix.size());
+                result.authorized = authenticator->on_token_auth(token_view);
+                if (result.authorized)
+                    result.token = token_view;
+            }
+            else if (auth_header_value.starts_with(basic_prefix))
+            {
+                std::string_view b64 = auth_header_value.substr(basic_prefix.size());
+                char decoded[256];
+                int decoded_len
+                    = lws_b64_decode_string(std::string(b64).c_str(), decoded, sizeof(decoded) - 1);
+                if (decoded_len > 0)
+                {
+                    decoded[decoded_len] = '\0';
+                    std::string_view credentials(decoded, decoded_len);
+                    auto sep = credentials.find(':');
+                    if (sep != std::string_view::npos)
+                    {
+                        std::string_view user = credentials.substr(0, sep);
+                        std::string_view pass = credentials.substr(sep + 1);
+                        result.authorized = authenticator->on_basic_auth(user, pass);
+                        if (result.authorized)
+                            result.user = user;
+                    }
+                }
+            }
+            return result;
+        }
+
+        IHttpAuthenticator *get_authenticator_for(WebService *webservice)
+        {
+            if (webservice->authenticator() != nullptr)
+                return webservice->authenticator();
+            return http_authenticator;
         }
 
         // members
@@ -672,7 +1018,6 @@ struct HttpServer::Impl
         std::atomic<bool> stop;
         int port;
         std::string root_dir;
-        std::string old_dir;
         std::set<std::string> resources_path;
         std::string ssl_cert_path;
         std::string ssl_cert_key;
@@ -684,6 +1029,8 @@ struct HttpServer::Impl
         lws_protocols *lws_protocols_ptr;
 
         std::vector<IWebsocketHandler *> websocket_handler_lst;
+        IHttpFilter *http_filter;
+        IHttpAuthenticator *http_authenticator;
         std::string encoding;
         std::string default_server_name;
         std::string default_cors_origin;
@@ -695,6 +1042,9 @@ struct HttpServer::Impl
         Mime mime;
         LwsPollingScheduler polling_scheduler;
         StepWorker stepworker;
+
+        size_t thread_pool_size = 0;
+        std::unique_ptr<ThreadPool> thread_pool;
 };
 
 // HttpServer public methods
@@ -711,7 +1061,9 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
     this->add_conf("ssl_cert_key", &HttpServer::set_ssl_cert_key);
     this->add_conf("404_path", &HttpServer::set_404_path);
     this->add_conf("server_name", &HttpServer::set_server_name);
+    this->add_conf("cors_origin", &HttpServer::set_cors_origin);
     this->add_conf("resource_path", &HttpServer::add_resource_path);
+    this->add_conf("thread_pool_size", &HttpServer::set_thread_pool_size);
 }
 
 HttpServer::~HttpServer()
@@ -736,7 +1088,7 @@ bool HttpServer::set_root_dir(std::string_view root_dir)
 {
     bool ret = fs::is_dir(root_dir);
     if (ret)
-        _impl->root_dir = root_dir;
+        _impl->root_dir = fs::realpath(root_dir);
     else
         SIHD_LOG(error, "HttpServer: root dir does not exists: {}", root_dir);
     return ret;
@@ -793,6 +1145,28 @@ bool HttpServer::set_server_name(std::string_view name)
     return true;
 }
 
+bool HttpServer::set_cors_origin(std::string_view origin)
+{
+    _impl->default_cors_origin = origin;
+    return true;
+}
+
+void HttpServer::set_http_filter(IHttpFilter *filter)
+{
+    _impl->http_filter = filter;
+}
+
+void HttpServer::set_authenticator(IHttpAuthenticator *authenticator)
+{
+    _impl->http_authenticator = authenticator;
+}
+
+bool HttpServer::set_thread_pool_size(size_t size)
+{
+    _impl->thread_pool_size = size;
+    return true;
+}
+
 void HttpServer::request_stop()
 {
     _impl->stop = true;
@@ -811,28 +1185,7 @@ bool HttpServer::on_stop()
 
 bool HttpServer::on_start()
 {
-    if (!_impl->root_dir.empty())
-    {
-        _impl->old_dir = fs::cwd();
-        if (!fs::chdir(_impl->root_dir))
-        {
-            SIHD_LOG(error, "HttpServer: could not change directory to: {}", _impl->root_dir);
-            return false;
-        }
-    }
-
     _impl->stop = false;
-
-    Defer put_old_dir_back([this] {
-        if (!_impl->old_dir.empty())
-        {
-            if (!fs::chdir(_impl->old_dir))
-            {
-                SIHD_LOG(error, "HttpServer: could not return to directory: {}", _impl->old_dir);
-            }
-            _impl->old_dir.clear();
-        }
-    });
 
     struct lws_context_creation_info lws_info;
     memset(&lws_info, 0, sizeof(lws_context_creation_info));
@@ -874,12 +1227,16 @@ bool HttpServer::on_start()
     if (_impl->stepworker.start_sync_worker(this->name() + "-callback") == false)
         return false;
 
+    if (_impl->thread_pool_size > 0)
+        _impl->thread_pool = std::make_unique<ThreadPool>(this->name() + "-pool", _impl->thread_pool_size);
+
     this->service_set_ready();
 
     int n = 0;
     while (_impl->stop == false && n >= 0)
         n = lws_service(_impl->lws_context_ptr, 0);
 
+    _impl->thread_pool.reset();
     _impl->stepworker.stop_worker();
     return true;
 }
@@ -889,22 +1246,29 @@ bool HttpServer::get_resource_path(std::string_view path, std::string & res)
     if (path.size() > 0 && path[0] == '/')
         path = path.substr(1);
 
-    if (!path.empty() && fs::is_file(path))
+    if (!_impl->root_dir.empty())
     {
-        res = std::string(path);
-        return true;
-    }
-
-    if (path.empty() || fs::is_dir(path))
-    {
-        res = fs::combine(path, "index.html");
-        return true;
+        std::string full_path = fs::combine(_impl->root_dir, path);
+        if (fs::is_file(full_path))
+        {
+            res = std::move(full_path);
+            return true;
+        }
+        if (path.empty() || fs::is_dir(full_path))
+        {
+            std::string index_path = fs::combine(full_path, "index.html");
+            if (fs::is_file(index_path))
+            {
+                res = std::move(index_path);
+                return true;
+            }
+        }
     }
 
     for (const std::string & resource_path : _impl->resources_path)
     {
-        std::string tmp_path = fs::combine(path, resource_path);
-        if (fs::exists(tmp_path))
+        std::string tmp_path = fs::combine(resource_path, path);
+        if (fs::is_file(tmp_path))
         {
             res = std::move(tmp_path);
             return true;
@@ -916,8 +1280,10 @@ bool HttpServer::get_resource_path(std::string_view path, std::string & res)
 
 bool HttpServer::add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size)
 {
-    bool ret = _impl->add_protocol(
-        name, Impl::_global_websocket_lws_callback, sizeof(Impl::WebsocketSession), tx_packet_size);
+    bool ret = _impl->add_protocol(name,
+                                   Impl::_global_websocket_lws_callback,
+                                   sizeof(Impl::WebsocketSession),
+                                   tx_packet_size);
     if (ret)
     {
         _impl->websocket_handler_lst.resize(_impl->protocols_count);

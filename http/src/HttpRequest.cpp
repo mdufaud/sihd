@@ -24,6 +24,8 @@ std::string HttpRequest::type_str(HttpRequest::RequestType type)
             return "PUT";
         case Delete:
             return "DELETE";
+        case Options:
+            return "OPTIONS";
         default:
             return "None";
     }
@@ -39,6 +41,8 @@ HttpRequest::RequestType HttpRequest::type_from_str(std::string_view type)
         return Put;
     else if (str::iequals(type, "delete"))
         return Delete;
+    else if (str::iequals(type, "options"))
+        return Options;
     return None;
 }
 
@@ -66,6 +70,42 @@ void HttpRequest::set_content(sihd::util::ArrCharView data)
 void HttpRequest::set_client_ip(const std::string & ip)
 {
     _ip = ip;
+}
+
+void HttpRequest::set_auth_user(std::string_view user)
+{
+    _auth_user = user;
+}
+
+void HttpRequest::set_auth_token(std::string_view token)
+{
+    _auth_token = token;
+}
+
+void HttpRequest::set_path_params(std::unordered_map<std::string, std::string> && params)
+{
+    _path_params = std::move(params);
+}
+
+void HttpRequest::set_query_params(std::unordered_map<std::string, std::string> && params)
+{
+    _query_params = std::move(params);
+}
+
+std::optional<std::string_view> HttpRequest::path_param(std::string_view name) const
+{
+    auto it = _path_params.find(std::string(name));
+    if (it == _path_params.end())
+        return std::nullopt;
+    return it->second;
+}
+
+std::optional<std::string_view> HttpRequest::query_param(std::string_view name) const
+{
+    auto it = _query_params.find(std::string(name));
+    if (it == _query_params.end())
+        return std::nullopt;
+    return it->second;
 }
 
 nlohmann::json HttpRequest::content_as_json() const

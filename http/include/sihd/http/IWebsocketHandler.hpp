@@ -19,7 +19,7 @@ class IWebsocketHandler
         virtual bool on_read(const sihd::util::ArrChar & array) = 0;
         virtual bool on_write(sihd::util::ArrChar & array, WriteProtocol & protocol) = 0;
         virtual void on_close() = 0;
-        virtual void on_peer_close([[maybe_unused]] uint16_t code, [[maybe_unused]] std::string_view reason) {}
+        virtual void on_peer_close(uint16_t code, std::string_view reason) = 0;
 };
 
 } // namespace sihd::http

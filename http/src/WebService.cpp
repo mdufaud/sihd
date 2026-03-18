@@ -18,15 +18,17 @@ void WebService::set_entry_point(const std::string & path,
                                  std::function<void(const HttpRequest &, HttpResponse &)> fun,
                                  HttpRequest::RequestType type)
 {
-    _callback_manager_map[type].set<void, const HttpRequest &, HttpResponse &>(path, fun);
+    _route_table.add(path, std::move(fun), type);
 }
 
-bool WebService::call(const std::string & path, const HttpRequest & request, HttpResponse & response)
+bool WebService::call(std::string_view path, HttpRequest & request, HttpResponse & response)
 {
-    sihd::util::CallbackManager & callback_manager = _callback_manager_map[request.request_type()];
-    if (callback_manager.exists(path) == false)
+    auto result = _route_table.find(request.request_type(), path);
+    if (!result.has_value())
         return false;
-    callback_manager.call<void, const HttpRequest &, HttpResponse &>(path, request, response);
+    if (result->match.matched)
+        request.set_path_params(std::move(result->match.params));
+    result->handler(request, response);
     return true;
 }
 

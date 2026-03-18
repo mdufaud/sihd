@@ -11,6 +11,8 @@
 
 #include <sihd/http/HttpRequest.hpp>
 #include <sihd/http/HttpResponse.hpp>
+#include <sihd/http/IHttpAuthenticator.hpp>
+#include <sihd/http/IHttpFilter.hpp>
 #include <sihd/http/IWebsocketHandler.hpp>
 #include <sihd/http/Mime.hpp>
 #include <sihd/http/WebService.hpp>
@@ -34,6 +36,11 @@ class HttpServer: public sihd::util::Node,
         bool set_ssl_cert_key(std::string_view path);
         bool set_404_path(std::string_view path);
         bool set_server_name(std::string_view path);
+        bool set_cors_origin(std::string_view origin);
+
+        void set_http_filter(IHttpFilter *filter);
+        void set_authenticator(IHttpAuthenticator *authenticator);
+        bool set_thread_pool_size(size_t size);
 
         void request_stop();
 

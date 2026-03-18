@@ -5,6 +5,7 @@
 
 #include <sihd/http/request.hpp>
 #include <sihd/sys/File.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/tools.hpp>
@@ -347,15 +348,16 @@ std::optional<HttpResponse> put(std::string_view url, std::string_view file_path
 
     try
     {
-        File file(file_path, "rb");
-        if (file.is_open() == false)
-            throw std::runtime_error(fmt::format("cannot open file: {}", file_path));
+        auto content_opt = fs::read_all(file_path);
+        if (!content_opt.has_value())
+            throw std::runtime_error(fmt::format("cannot read file: {}", file_path));
+
+        const std::string & data = content_opt.value();
 
         curl.init();
-        curl.set(CURLOPT_UPLOAD, 1L);
-        // curl.set(CURLOPT_READFUNCTION, curl_put_read_callback);
-        curl.set(CURLOPT_READDATA, static_cast<void *>(file.file()));
-        curl.set(CURLOPT_INFILESIZE_LARGE, (curl_off_t)file.file_size());
+        curl.set(CURLOPT_CUSTOMREQUEST, "PUT");
+        curl.set(CURLOPT_POSTFIELDS, data.data());
+        curl.set(CURLOPT_POSTFIELDSIZE, (long)data.size());
         auto resp = curl.send_request(url, options);
 
         return resp;
@@ -384,6 +386,52 @@ std::optional<HttpResponse> del(std::string_view url, const CurlOptions & option
     }
 
     return std::nullopt;
+}
+
+std::optional<HttpResponse> options(std::string_view url, const CurlOptions & options)
+{
+    CurlRequest curl;
+
+    try
+    {
+        curl.init();
+        curl.set(CURLOPT_CUSTOMREQUEST, "OPTIONS");
+        curl.set(CURLOPT_NOBODY, 1L);
+        return curl.send_request(url, options);
+    }
+    catch (const std::runtime_error & error)
+    {
+        SIHD_LOG(error, "OPTIONS request {}", error.what());
+    }
+
+    return std::nullopt;
+}
+
+std::future<std::optional<HttpResponse>> async_get(std::string_view url, const CurlOptions & curlopt)
+{
+    return std::async(std::launch::async, get, url, curlopt);
+}
+
+std::future<std::optional<HttpResponse>>
+    async_post(std::string_view url, sihd::util::ArrCharView data_view, const CurlOptions & curlopt)
+{
+    return std::async(std::launch::async, post, url, data_view, curlopt);
+}
+
+std::future<std::optional<HttpResponse>>
+    async_put(std::string_view url, std::string_view file_path, const CurlOptions & curlopt)
+{
+    return std::async(std::launch::async, put, url, file_path, curlopt);
+}
+
+std::future<std::optional<HttpResponse>> async_del(std::string_view url, const CurlOptions & curlopt)
+{
+    return std::async(std::launch::async, del, url, curlopt);
+}
+
+std::future<std::optional<HttpResponse>> async_options(std::string_view url, const CurlOptions & curlopt)
+{
+    return std::async(std::launch::async, options, url, curlopt);
 }
 
 } // namespace sihd::http

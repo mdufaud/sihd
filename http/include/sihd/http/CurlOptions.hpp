@@ -23,7 +23,7 @@ struct CurlOptions
 {
         bool verbose = false;
         bool follow_location = false;
-        long timeout_s = 10;
+        long timeout_s = 30;
         bool ssl_verify_peer = false;
         bool ssl_verify_host = false;
         std::map<std::string, std::string> parameters = {};

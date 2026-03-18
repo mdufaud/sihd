@@ -1,6 +1,8 @@
 #ifndef __SIHD_HTTP_HTTPRESPONSE_HPP__
 #define __SIHD_HTTP_HTTPRESPONSE_HPP__
 
+#include <functional>
+
 #include <nlohmann/json_fwd.hpp>
 
 #include <sihd/util/ArrayView.hpp>
@@ -14,6 +16,9 @@ namespace sihd::http
 class HttpResponse
 {
     public:
+        // returns true while there is more data to send, false when done
+        using StreamProvider = std::function<bool(sihd::util::ArrByte & chunk)>;
+
         HttpResponse(Mime *mimes = nullptr);
         virtual ~HttpResponse();
 
@@ -26,6 +31,10 @@ class HttpResponse
 
         void set_content_type(std::string_view mime_type);
         void set_content_type_from_extension(const std::string & extension);
+
+        void set_stream_provider(StreamProvider provider);
+        bool is_streaming() const { return _stream_provider != nullptr; }
+        StreamProvider & stream_provider() { return _stream_provider; }
 
         uint32_t status() { return _status; }
         HttpHeader & http_header() { return _http_header; }
@@ -42,6 +51,7 @@ class HttpResponse
         HttpHeader _http_header;
         sihd::util::ArrByte _array;
         Mime *_mime_ptr;
+        StreamProvider _stream_provider;
 };
 
 } // namespace sihd::http

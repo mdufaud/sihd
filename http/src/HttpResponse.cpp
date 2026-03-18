@@ -66,4 +66,9 @@ void HttpResponse::_set_mime_type_if_not_set(const char *type)
         this->set_content_type(type);
 }
 
+void HttpResponse::set_stream_provider(StreamProvider provider)
+{
+    _stream_provider = std::move(provider);
+}
+
 } // namespace sihd::http

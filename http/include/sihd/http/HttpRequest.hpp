@@ -6,6 +6,9 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
 
+#include <optional>
+#include <unordered_map>
+
 namespace sihd::http
 {
 
@@ -19,10 +22,13 @@ class HttpRequest
             Get = 1,
             Put = 2,
             Delete = 3,
+            Options = 4,
         };
 
         HttpRequest(std::string_view url, RequestType request_type = Get);
-        HttpRequest(std::string_view url, const std::vector<std::string> & uri_args, RequestType request_type = Get);
+        HttpRequest(std::string_view url,
+                    const std::vector<std::string> & uri_args,
+                    RequestType request_type = Get);
         virtual ~HttpRequest();
 
         static RequestType type_from_str(std::string_view type);
@@ -32,15 +38,27 @@ class HttpRequest
         bool has_content() const;
         void set_content(sihd::util::ArrCharView data);
         void set_client_ip(const std::string & ip);
+        void set_path_params(std::unordered_map<std::string, std::string> && params);
+        void set_query_params(std::unordered_map<std::string, std::string> && params);
+        void set_auth_user(std::string_view user);
+        void set_auth_token(std::string_view token);
 
         // check for json.is_discarded() for parsing error
         nlohmann::json content_as_json() const;
+
+        std::optional<std::string_view> path_param(std::string_view name) const;
+        std::optional<std::string_view> query_param(std::string_view name) const;
 
         const std::string & client_ip() const { return _ip; }
         const sihd::util::ArrChar & content() const { return _array; }
         const std::string & url() const { return _url; }
         const std::vector<std::string> & uri_args() const { return _uri_args_lst; }
+        const std::unordered_map<std::string, std::string> & path_params() const { return _path_params; }
+        const std::unordered_map<std::string, std::string> & query_params() const { return _query_params; }
         RequestType request_type() const { return _request_type; }
+        const std::string & auth_user() const { return _auth_user; }
+        const std::string & auth_token() const { return _auth_token; }
+        bool is_authenticated() const { return !_auth_user.empty() || !_auth_token.empty(); }
 
     protected:
 
@@ -48,7 +66,11 @@ class HttpRequest
         RequestType _request_type;
         std::string _url;
         std::vector<std::string> _uri_args_lst;
+        std::unordered_map<std::string, std::string> _path_params;
+        std::unordered_map<std::string, std::string> _query_params;
         std::string _ip;
+        std::string _auth_user;
+        std::string _auth_token;
         sihd::util::ArrChar _array;
 };
 
