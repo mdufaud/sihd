@@ -40,7 +40,7 @@ class HttpServer: public sihd::util::Node,
 
         void set_http_filter(IHttpFilter *filter);
         void set_authenticator(IHttpAuthenticator *authenticator);
-        bool set_thread_pool_size(size_t size);
+        bool set_service_thread_count(size_t count);
 
         void request_stop();
 

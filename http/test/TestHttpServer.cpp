@@ -1,9 +1,13 @@
 #include "sihd/util/LogInfo.hpp"
 #include "sihd/util/LoggerFilter.hpp"
 #include "sihd/util/LoggerManager.hpp"
+#include <arpa/inet.h>
 #include <chrono>
 #include <gtest/gtest.h>
+#include <netinet/in.h>
 #include <nlohmann/json.hpp>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/HttpStatus.hpp>
@@ -113,13 +117,13 @@ class SimpleHttpServer: public sihd::http::HttpServer,
 
         // IWebsocketHandler
 
-        void on_open(std::string_view protocol_name)
+        void on_open(std::string_view protocol_name) override
         {
             SIHD_LOG(debug, "Opened websocket of protocol: {}", protocol_name);
             ++_nopen;
         };
 
-        bool on_read(const sihd::util::ArrChar & array)
+        bool on_read(const sihd::util::ArrChar & array) override
         {
             SIHD_LOG(debug, "Read from client websocket: {}", array.str());
             _client_wrote = true;
@@ -127,7 +131,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
             return true;
         };
 
-        bool on_write(sihd::util::ArrChar & array, WriteProtocol & protocol)
+        bool on_write(sihd::util::ArrChar & array, WriteProtocol & protocol) override
         {
             if (_client_wrote)
             {
@@ -143,14 +147,14 @@ class SimpleHttpServer: public sihd::http::HttpServer,
             return true;
         }
 
-        void on_close()
+        void on_close() override
         {
             SIHD_LOG(debug, "Closed websocket");
             ++_nclosed;
             this->request_stop();
         }
 
-        void on_peer_close(uint16_t code, std::string_view reason)
+        void on_peer_close(uint16_t code, std::string_view reason) override
         {
             SIHD_LOG(debug, "Peer closed websocket: code={} reason={}", code, reason);
         }
@@ -260,6 +264,173 @@ TEST_F(TestHttpServer, test_httpserver_websockets)
     EXPECT_GT(server._nread, 0);
     EXPECT_GT(server._nwrite, 0);
     EXPECT_GT(server._nclosed, 0);
+}
+
+// Minimal WebSocket client for automated testing using raw POSIX sockets.
+class SimpleWsClient
+{
+    public:
+        SimpleWsClient() = default;
+        ~SimpleWsClient() { disconnect(); }
+
+        bool connect(int port)
+        {
+            _fd = ::socket(AF_INET, SOCK_STREAM, 0);
+            if (_fd < 0)
+                return false;
+
+            struct timeval tv;
+            tv.tv_sec = 2;
+            tv.tv_usec = 0;
+            setsockopt(_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+            struct sockaddr_in addr {};
+            addr.sin_family = AF_INET;
+            addr.sin_port = htons(port);
+            inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+
+            if (::connect(_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+            {
+                ::close(_fd);
+                _fd = -1;
+                return false;
+            }
+            return true;
+        }
+
+        // Perform the HTTP → WebSocket upgrade handshake.
+        bool handshake(const char *protocol)
+        {
+            // Fixed 16-byte WebSocket key (base64 of 0x01..0x10).
+            const char *key = "AQIDBAUGBwgJCgsMDQ4PEA==";
+            std::string req = "GET / HTTP/1.1\r\n"
+                              "Host: localhost\r\n"
+                              "Upgrade: websocket\r\n"
+                              "Connection: Upgrade\r\n"
+                              "Sec-WebSocket-Key: ";
+            req += key;
+            req += "\r\nSec-WebSocket-Version: 13\r\n"
+                   "Sec-WebSocket-Protocol: ";
+            req += protocol;
+            req += "\r\n\r\n";
+
+            if (::send(_fd, req.c_str(), req.size(), 0) != (ssize_t)req.size())
+                return false;
+
+            std::string response;
+            char buf[1];
+            while (response.find("\r\n\r\n") == std::string::npos)
+            {
+                if (::recv(_fd, buf, 1, 0) <= 0)
+                    return false;
+                response += buf[0];
+            }
+            return response.find(" 101 ") != std::string::npos;
+        }
+
+        // Send a masked WebSocket text frame (len <= 125).
+        bool send_text(std::string_view text)
+        {
+            std::vector<uint8_t> frame;
+            frame.push_back(0x81);                        // FIN + opcode=text
+            frame.push_back(0x80 | (uint8_t)text.size()); // MASK + len
+            const uint8_t mask[4] = {0x11, 0x22, 0x33, 0x44};
+            frame.insert(frame.end(), mask, mask + 4);
+            for (size_t i = 0; i < text.size(); ++i)
+                frame.push_back((uint8_t)text[i] ^ mask[i % 4]);
+            return ::send(_fd, frame.data(), frame.size(), 0) == (ssize_t)frame.size();
+        }
+
+        // Receive one unmasked text frame from the server.
+        std::optional<std::string> recv_text()
+        {
+            uint8_t header[2];
+            if (!recv_exact(header, 2))
+                return {};
+
+            uint8_t opcode = header[0] & 0x0F;
+            if (opcode != 0x01) // not a text frame
+                return {};
+
+            size_t len = header[1] & 0x7F;
+            if (len == 126)
+            {
+                uint8_t ext[2];
+                if (!recv_exact(ext, 2))
+                    return {};
+                len = ((size_t)ext[0] << 8) | ext[1];
+            }
+
+            std::string payload(len, '\0');
+            if (len > 0 && !recv_exact((uint8_t *)payload.data(), len))
+                return {};
+            return payload;
+        }
+
+        // Send a masked WebSocket close frame with no payload.
+        void send_close()
+        {
+            const uint8_t frame[] = {0x88, 0x80, 0x00, 0x00, 0x00, 0x00};
+            ::send(_fd, frame, sizeof(frame), 0);
+        }
+
+        void disconnect()
+        {
+            if (_fd >= 0)
+            {
+                ::close(_fd);
+                _fd = -1;
+            }
+        }
+
+    private:
+        bool recv_exact(uint8_t *buf, size_t n)
+        {
+            size_t received = 0;
+            while (received < n)
+            {
+                ssize_t r = ::recv(_fd, buf + received, n - received, 0);
+                if (r <= 0)
+                    return false;
+                received += (size_t)r;
+            }
+            return true;
+        }
+
+        int _fd = -1;
+};
+
+TEST_F(TestHttpServer, test_httpserver_websockets_auto)
+{
+    SimpleHttpServer server;
+    server.set_root_dir("test/resources/mount_point");
+    server.set_port(3002);
+
+    Worker worker([&server] {
+        server.start();
+        return true;
+    });
+    ASSERT_TRUE(worker.start_sync_worker("ws-auto-server"));
+    ASSERT_TRUE(server.wait_ready(std::chrono::milliseconds(500)));
+
+    SimpleWsClient client;
+    ASSERT_TRUE(client.connect(3002));
+    ASSERT_TRUE(client.handshake("proto-two"));
+    ASSERT_TRUE(client.send_text("hello from client"));
+
+    auto reply = client.recv_text();
+    ASSERT_TRUE(reply.has_value());
+    EXPECT_EQ(*reply, "hello world");
+
+    client.send_close();
+
+    server.set_service_wait_stop(true);
+    server.stop();
+
+    EXPECT_EQ(server._nopen, 1);
+    EXPECT_EQ(server._nread, 1);
+    EXPECT_EQ(server._nwrite, 1);
+    EXPECT_GE(server._nclosed, 1);
 }
 
 // --- Test helpers for new features ---
@@ -694,11 +865,11 @@ TEST_F(TestHttpServer, test_auth_context_propagation)
     EXPECT_EQ(captured_token, "my-secret-token-123");
 }
 
-TEST_F(TestHttpServer, test_thread_pool)
+TEST_F(TestHttpServer, test_concurrent_service)
 {
     constexpr bool run_monothreaded = false;
     constexpr bool run_multithreaded = true;
-    constexpr int num_threads = 8;
+    constexpr int num_threads = 4;
     constexpr int num_requests = 10000;
     constexpr int batch_size = 50; // stay well below ulimit -n (default 1024)
     constexpr int port = 3002;
@@ -734,7 +905,7 @@ TEST_F(TestHttpServer, test_thread_pool)
         return sihd::util::time::to_milli(stopwatch.time());
     };
 
-    // --- Baseline: no thread pool ---
+    // --- Baseline: single service thread ---
     if constexpr (run_monothreaded)
     {
         ServerScope scope;
@@ -746,24 +917,24 @@ TEST_F(TestHttpServer, test_thread_pool)
         scope.start(port);
 
         auto no_pool_ms = run_batched(num_requests, handler_calls);
-        SIHD_LOG(warning, "BENCHMARK no-pool: {} requests in {}ms", num_requests, no_pool_ms);
+        SIHD_LOG(warning, "BENCHMARK single-thread: {} requests in {}ms", num_requests, no_pool_ms);
     }
 
-    // --- Thread pool ---
+    // --- Multiple lws service threads ---
     if constexpr (run_multithreaded)
     {
         ServerScope scope;
         std::atomic<int> handler_calls {0};
         scope.server._webservice->set_entry_point("task", [&](const HttpRequest &, HttpResponse & resp) {
             ++handler_calls;
-            resp.set_plain_content("hello world");
+            resp.set_plain_content("pool-ok");
             resp.set_status(HttpStatus::Ok);
         });
-        scope.server.set_thread_pool_size(num_threads);
+        scope.server.set_service_thread_count(num_threads);
         scope.start(port);
 
         auto pool_ms = run_batched(num_requests, handler_calls);
-        SIHD_LOG(warning, "BENCHMARK thread-pool: {} requests in {}ms", num_requests, pool_ms);
+        SIHD_LOG(warning, "BENCHMARK multi-thread: {} requests in {}ms", num_requests, pool_ms);
     }
 }
 

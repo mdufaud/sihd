@@ -1,0 +1,20 @@
+diff --git a/lib/core-net/vhost.c b/lib/core-net/vhost.c
+--- a/lib/core-net/vhost.c
++++ b/lib/core-net/vhost.c
+@@ -1144,7 +1144,7 @@
+ 		pt = &context->pt[n];
+ 
+ 		if (pt->pipe_wsi)
+-			return 0;
++			continue;
+ 
+ 		wsi = __lws_wsi_create_with_role(context, n, &role_ops_pipe,
+ 							NULL);
+@@ -1172,7 +1172,6 @@
+ 
+ 			if (lws_wsi_inject_to_loop(pt, wsi))
+ 					goto bail;
+-			return 0;
+ 		}
+ 	}
+ 

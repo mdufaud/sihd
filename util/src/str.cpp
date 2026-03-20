@@ -565,7 +565,7 @@ bool iequals(std::string_view s1, std::string_view s2)
 {
     if (s1.size() != s2.size())
         return false;
-    return strncasecmp(s1.data(), s2.data(), s1.size());
+    return strncasecmp(s1.data(), s2.data(), s1.size()) == 0;
 }
 
 char num_to_char(size_t num)

@@ -1,6 +1,6 @@
 #include <libwebsockets.h>
 
-#include <future>
+#include <thread>
 
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/HttpStatus.hpp>
@@ -10,7 +10,6 @@
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/StepWorker.hpp>
-#include <sihd/util/ThreadPool.hpp>
 
 #ifndef SIHD_HTTP_URI_BUFSIZE
 # define SIHD_HTTP_URI_BUFSIZE 512
@@ -57,7 +56,6 @@ struct HttpServer::Impl
                     stream_provider = nullptr;
                     if (cached_auth_header)
                         cached_auth_header->clear();
-                    pending_response.reset();
                 }
 
                 // forward lws callback args
@@ -79,8 +77,6 @@ struct HttpServer::Impl
                 HttpResponse::StreamProvider stream_provider;
                 // cached auth header for deferred POST/PUT (heap-allocated for lws zero-init safety)
                 std::unique_ptr<std::string> cached_auth_header;
-                // pending async response from thread pool (heap-allocated for lws zero-init safety)
-                std::unique_ptr<std::future<HttpResponse>> pending_response;
         };
 
         struct WebsocketSession
@@ -120,7 +116,6 @@ struct HttpServer::Impl
             stepworker.set_runnable(&polling_scheduler);
             stepworker.set_frequency(10);
 
-            http_header_array.resize(SIHD_HTTP_HEADERS_BUFSIZE);
             default_server_name = server->name();
             default_cors_origin = "*";
             encoding = "utf-8";
@@ -224,26 +219,6 @@ struct HttpServer::Impl
                 }
                 case LWS_CALLBACK_HTTP_WRITEABLE:
                 {
-                    if (session != nullptr && session->pending_response)
-                    {
-                        auto & future = *session->pending_response;
-                        if (future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-                        {
-                            HttpResponse response = future.get();
-                            session->pending_response.reset();
-                            bool is_streaming = this->send_response(session, response);
-                            if (!is_streaming)
-                            {
-                                if (session->rc < 0)
-                                    rc = -1;
-                                else if (lws_http_transaction_completed(session->wsi))
-                                    rc = -1;
-                            }
-                        }
-                        else
-                            lws_callback_on_writable(session->wsi);
-                        break;
-                    }
                     if (session != nullptr && session->stream_provider)
                     {
                         ArrByte chunk;
@@ -631,11 +606,24 @@ struct HttpServer::Impl
                 lws_callback_on_writable(session->wsi);
                 return true;
             }
+            // HTTP/1.0 clients (e.g. ab) require explicit Connection: keep-alive in the
+            // response to reuse the connection. Without it they assume the server will
+            // close the connection (HTTP/1.0 default), while lws keeps it open → deadlock.
+            char conn_hdr[32];
+            if (lws_hdr_copy(session->wsi, conn_hdr, sizeof(conn_hdr), WSI_TOKEN_CONNECTION) > 0
+                && str::iequals(conn_hdr, "keep-alive"))
+            {
+                response.http_header().set_header("connection:", "keep-alive");
+            }
             const ArrByte & data = response.content();
             response.http_header().set_content_length(data.size());
             this->send_http_headers(session->wsi, response);
-            if (data.size() > 0 && lws_write_http(session->wsi, data.buf(), data.size()) < 0)
-                session->rc = -1;
+            if (data.size() > 0)
+            {
+                if (lws_write(session->wsi, (unsigned char *)data.buf(), data.size(), LWS_WRITE_HTTP_FINAL)
+                    < (int)data.size())
+                    session->rc = -1;
+            }
             return false;
         }
 
@@ -656,28 +644,6 @@ struct HttpServer::Impl
 
             if (!check_and_apply_auth(session, webservice, request))
                 return true;
-
-            if (thread_pool != nullptr)
-            {
-                session->pending_response = std::make_unique<std::future<HttpResponse>>(
-                    thread_pool->add_job([this,
-                                          webservice,
-                                          rest_of_path = std::move(rest_of_path),
-                                          request = std::move(request)]() mutable {
-                        HttpResponse response(&mime);
-                        response.http_header().set_server(default_server_name);
-                        webservice->call(rest_of_path, request, response);
-                        {
-                            std::lock_guard l(mutex);
-                            if (lws_context_ptr != nullptr)
-                                lws_cancel_service(lws_context_ptr);
-                        }
-                        return response;
-                    }));
-                session->should_complete_transaction = false;
-                lws_callback_on_writable(session->wsi);
-                return true;
-            }
 
             HttpResponse response(&mime);
             response.http_header().set_server(default_server_name);
@@ -726,6 +692,8 @@ struct HttpServer::Impl
                         ArrChar arr;
                         arr.assign_bytes((uint8_t *)session->in, session->len);
                         rc = handler->on_read(arr) ? 0 : -1;
+                        if (rc == 0)
+                            lws_callback_on_writable(session->wsi);
                     }
                     break;
                 }
@@ -839,7 +807,8 @@ struct HttpServer::Impl
             response.http_header().set_content_type(mime.get("html"), encoding);
             response.http_header().set_content_length(html_404.size());
             this->send_http_headers(wsi, response);
-            return lws_write_http(wsi, html_404.data(), html_404.size()) == (int)html_404.size();
+            return lws_write(wsi, (unsigned char *)html_404.data(), html_404.size(), LWS_WRITE_HTTP_FINAL)
+                   == (int)html_404.size();
         }
 
         bool send_http_no_content(struct lws *wsi, int code)
@@ -869,9 +838,10 @@ struct HttpServer::Impl
         bool send_http_headers(struct lws *wsi, HttpResponse & response)
         {
             int rc;
-            memset(http_header_array.data(), 0, http_header_array.size());
-            u_char *ptr = (u_char *)http_header_array.buf();
-            u_char *end = (u_char *)http_header_array.buf() + http_header_array.size();
+            uint8_t header_buf[SIHD_HTTP_HEADERS_BUFSIZE];
+            memset(header_buf, 0, SIHD_HTTP_HEADERS_BUFSIZE);
+            u_char *ptr = header_buf;
+            u_char *end = header_buf + SIHD_HTTP_HEADERS_BUFSIZE;
 
             HttpHeader & headers = response.http_header();
 
@@ -902,9 +872,8 @@ struct HttpServer::Impl
                 return false;
             }
             *ptr = 0;
-            size_t write_size = ptr - http_header_array.buf();
-            if (lws_write(wsi, http_header_array.buf(), write_size, LWS_WRITE_HTTP_HEADERS)
-                != (int)write_size)
+            size_t write_size = ptr - header_buf;
+            if (lws_write(wsi, header_buf, write_size, LWS_WRITE_HTTP_HEADERS) != (int)write_size)
             {
                 SIHD_LOG(error, "HttpServer: failed to write HTTP headers");
                 return false;
@@ -1035,16 +1004,14 @@ struct HttpServer::Impl
         std::string default_server_name;
         std::string default_cors_origin;
 
-        ArrUByte http_header_array;
-
         std::string page_404_path;
 
         Mime mime;
         LwsPollingScheduler polling_scheduler;
         StepWorker stepworker;
 
-        size_t thread_pool_size = 0;
-        std::unique_ptr<ThreadPool> thread_pool;
+        size_t service_thread_count = 1;
+        std::vector<std::jthread> service_threads;
 };
 
 // HttpServer public methods
@@ -1063,7 +1030,7 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
     this->add_conf("server_name", &HttpServer::set_server_name);
     this->add_conf("cors_origin", &HttpServer::set_cors_origin);
     this->add_conf("resource_path", &HttpServer::add_resource_path);
-    this->add_conf("thread_pool_size", &HttpServer::set_thread_pool_size);
+    this->add_conf("service_thread_count", &HttpServer::set_service_thread_count);
 }
 
 HttpServer::~HttpServer()
@@ -1161,9 +1128,9 @@ void HttpServer::set_authenticator(IHttpAuthenticator *authenticator)
     _impl->http_authenticator = authenticator;
 }
 
-bool HttpServer::set_thread_pool_size(size_t size)
+bool HttpServer::set_service_thread_count(size_t count)
 {
-    _impl->thread_pool_size = size;
+    _impl->service_thread_count = count < 1 ? 1 : count;
     return true;
 }
 
@@ -1195,6 +1162,7 @@ bool HttpServer::on_start()
     lws_info.gid = -1;
     lws_info.uid = -1;
     lws_info.user = this;
+    lws_info.count_threads = _impl->service_thread_count;
     if (_impl->page_404_path.empty() == false)
         lws_info.error_document_404 = _impl->page_404_path.c_str();
     if (_impl->lws_mount_ptr != nullptr)
@@ -1227,16 +1195,20 @@ bool HttpServer::on_start()
     if (_impl->stepworker.start_sync_worker(this->name() + "-callback") == false)
         return false;
 
-    if (_impl->thread_pool_size > 0)
-        _impl->thread_pool = std::make_unique<ThreadPool>(this->name() + "-pool", _impl->thread_pool_size);
+    for (size_t tsi = 1; tsi < _impl->service_thread_count; ++tsi)
+    {
+        _impl->service_threads.emplace_back([this, tsi] {
+            while (!_impl->stop)
+                lws_service_tsi(_impl->lws_context_ptr, 0, (int)tsi);
+        });
+    }
 
     this->service_set_ready();
 
-    int n = 0;
-    while (_impl->stop == false && n >= 0)
-        n = lws_service(_impl->lws_context_ptr, 0);
+    while (!_impl->stop)
+        lws_service_tsi(_impl->lws_context_ptr, 0, 0);
 
-    _impl->thread_pool.reset();
+    _impl->service_threads.clear();
     _impl->stepworker.stop_worker();
     return true;
 }
