@@ -1,8 +1,8 @@
 #include <stdexcept>
 
-#include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
+#include "curl_global.hpp"
 #include <sihd/http/request.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/fs.hpp>
@@ -18,29 +18,9 @@ SIHD_LOGGER;
 namespace
 {
 
-struct CurlHandler
-{
-        CurlHandler()
-        {
-            const CURLcode code = curl_global_init(CURL_GLOBAL_ALL);
-            if (code != CURLE_OK)
-            {
-                throw std::runtime_error(
-                    fmt::format("Curl initialization failed: {}", curl_easy_strerror(code)));
-            }
-        }
-
-        ~CurlHandler() { curl_global_cleanup(); }
-};
-
 void init_first_curl()
 {
-    static std::unique_ptr<CurlHandler> curl_handler;
-    static std::mutex curl_mutex;
-
-    std::lock_guard l(curl_mutex);
-    if (curl_handler.get() == nullptr)
-        curl_handler = std::make_unique<CurlHandler>();
+    curl_init_once();
 }
 
 size_t curl_content_callback(char *ptr, size_t size, size_t nmemb, void *userdata)

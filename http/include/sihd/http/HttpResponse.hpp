@@ -2,6 +2,8 @@
 #define __SIHD_HTTP_HTTPRESPONSE_HPP__
 
 #include <functional>
+#include <string>
+#include <vector>
 
 #include <nlohmann/json_fwd.hpp>
 
@@ -32,6 +34,8 @@ class HttpResponse
         void set_content_type(std::string_view mime_type);
         void set_content_type_from_extension(const std::string & extension);
 
+        void set_cookie(std::string_view name, std::string_view value, std::string_view options = {});
+
         void set_stream_provider(StreamProvider provider);
         bool is_streaming() const { return _stream_provider != nullptr; }
         StreamProvider & stream_provider() { return _stream_provider; }
@@ -39,6 +43,7 @@ class HttpResponse
         uint32_t status() { return _status; }
         HttpHeader & http_header() { return _http_header; }
         const HttpHeader & http_header() const { return _http_header; }
+        const std::vector<std::string> & set_cookie_headers() const { return _cookies; }
 
         const sihd::util::ArrByte & content() const { return _array; }
 
@@ -52,6 +57,7 @@ class HttpResponse
         sihd::util::ArrByte _array;
         Mime *_mime_ptr;
         StreamProvider _stream_provider;
+        std::vector<std::string> _cookies;
 };
 
 } // namespace sihd::http

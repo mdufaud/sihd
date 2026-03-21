@@ -71,4 +71,15 @@ void HttpResponse::set_stream_provider(StreamProvider provider)
     _stream_provider = std::move(provider);
 }
 
+void HttpResponse::set_cookie(std::string_view name, std::string_view value, std::string_view options)
+{
+    std::string cookie_str = fmt::format("{}={}", name, value);
+    if (!options.empty())
+    {
+        cookie_str += "; ";
+        cookie_str += options;
+    }
+    _cookies.emplace_back(std::move(cookie_str));
+}
+
 } // namespace sihd::http

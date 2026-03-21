@@ -92,20 +92,33 @@ void HttpRequest::set_query_params(std::unordered_map<std::string, std::string> 
     _query_params = std::move(params);
 }
 
-std::optional<std::string_view> HttpRequest::path_param(std::string_view name) const
+std::optional<std::string_view> HttpRequest::path_param(const std::string & name) const
 {
-    auto it = _path_params.find(std::string(name));
+    auto it = _path_params.find(name);
     if (it == _path_params.end())
         return std::nullopt;
     return it->second;
 }
 
-std::optional<std::string_view> HttpRequest::query_param(std::string_view name) const
+std::optional<std::string_view> HttpRequest::query_param(const std::string & name) const
 {
-    auto it = _query_params.find(std::string(name));
+    auto it = _query_params.find(name);
     if (it == _query_params.end())
         return std::nullopt;
     return it->second;
+}
+
+std::optional<std::string_view> HttpRequest::cookie(const std::string & name) const
+{
+    auto it = _cookies.find(name);
+    if (it == _cookies.end())
+        return std::nullopt;
+    return it->second;
+}
+
+void HttpRequest::set_cookie(std::string_view name, std::string_view value)
+{
+    _cookies.emplace(std::string(name), std::string(value));
 }
 
 nlohmann::json HttpRequest::content_as_json() const

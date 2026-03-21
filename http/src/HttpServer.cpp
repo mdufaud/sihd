@@ -526,7 +526,9 @@ struct HttpServer::Impl
                 {
                     HttpRequest request
                         = HttpRequest(path, this->get_uri_args(session->wsi), session->request_type);
-                    this->serve_webservice(session, webservice, request);
+                    // if the webservice did not handle the request, signal not handled
+                    if (this->serve_webservice(session, webservice, request) == false)
+                        return false;
                 }
                 else
                 {
@@ -543,7 +545,9 @@ struct HttpServer::Impl
             {
                 HttpRequest request
                     = HttpRequest(path, this->get_uri_args(session->wsi), session->request_type);
-                this->serve_webservice(session, webservice, request);
+                // if the webservice did not handle the request, signal not handled
+                if (this->serve_webservice(session, webservice, request) == false)
+                    return false;
             }
             return true;
         }
@@ -641,6 +645,22 @@ struct HttpServer::Impl
 
             request.set_client_ip(this->get_client_ip(session->wsi));
             request.set_query_params(parse_query_params(request.uri_args()));
+
+            // parse Cookie header into HttpRequest cookies
+            {
+                auto cookie_hdr = this->get_header(session->wsi, WSI_TOKEN_HTTP_COOKIE);
+                if (cookie_hdr.has_value() && !cookie_hdr->empty())
+                {
+                    for (auto & part : sihd::util::str::split(*cookie_hdr, ';'))
+                    {
+                        auto [name, value]
+                            = sihd::util::str::split_pair_view(sihd::util::str::trim(std::string_view(part)),
+                                                               "=");
+                        if (!name.empty())
+                            request.set_cookie(std::string(name), std::string(value));
+                    }
+                }
+            }
 
             if (!check_and_apply_auth(session, webservice, request))
                 return true;
@@ -840,7 +860,7 @@ struct HttpServer::Impl
             int rc;
             uint8_t header_buf[SIHD_HTTP_HEADERS_BUFSIZE];
             memset(header_buf, 0, SIHD_HTTP_HEADERS_BUFSIZE);
-            u_char *ptr = header_buf;
+            u_char *ptr = header_buf + LWS_PRE;
             u_char *end = header_buf + SIHD_HTTP_HEADERS_BUFSIZE;
 
             HttpHeader & headers = response.http_header();
@@ -853,6 +873,7 @@ struct HttpServer::Impl
             }
             for (const auto & [name, value] : headers.headers())
             {
+                SIHD_LOG(debug, "HttpServer: header -> {}: {}", name, value);
                 rc = lws_add_http_header_by_name(wsi,
                                                  (u_char *)name.c_str(),
                                                  (u_char *)value.c_str(),
@@ -865,6 +886,22 @@ struct HttpServer::Impl
                     return false;
                 }
             }
+            // Add Set-Cookie headers if any
+            for (const auto & ck : response.set_cookie_headers())
+            {
+                SIHD_LOG(debug, "HttpServer: set-cookie -> {}", ck);
+                rc = lws_add_http_header_by_name(wsi,
+                                                 (u_char *)"set-cookie:",
+                                                 (u_char *)ck.c_str(),
+                                                 ck.size(),
+                                                 &ptr,
+                                                 end);
+                if (rc)
+                {
+                    SIHD_LOG(error, "HttpHeader: cannot set cookie header");
+                    return false;
+                }
+            }
             rc = lws_finalize_http_header(wsi, &ptr, end);
             if (rc)
             {
@@ -872,8 +909,9 @@ struct HttpServer::Impl
                 return false;
             }
             *ptr = 0;
-            size_t write_size = ptr - header_buf;
-            if (lws_write(wsi, header_buf, write_size, LWS_WRITE_HTTP_HEADERS) != (int)write_size)
+            size_t write_size = ptr - (header_buf + LWS_PRE);
+            SIHD_LOG(debug, "HttpServer: writing {} header bytes", write_size);
+            if (lws_write(wsi, header_buf + LWS_PRE, write_size, LWS_WRITE_HTTP_HEADERS) != (int)write_size)
             {
                 SIHD_LOG(error, "HttpServer: failed to write HTTP headers");
                 return false;

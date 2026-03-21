@@ -7,6 +7,7 @@
 #include <sihd/util/ArrayView.hpp>
 
 #include <optional>
+#include <string>
 #include <unordered_map>
 
 namespace sihd::http
@@ -42,12 +43,14 @@ class HttpRequest
         void set_query_params(std::unordered_map<std::string, std::string> && params);
         void set_auth_user(std::string_view user);
         void set_auth_token(std::string_view token);
+        void set_cookie(std::string_view name, std::string_view value);
 
         // check for json.is_discarded() for parsing error
         nlohmann::json content_as_json() const;
 
-        std::optional<std::string_view> path_param(std::string_view name) const;
-        std::optional<std::string_view> query_param(std::string_view name) const;
+        std::optional<std::string_view> path_param(const std::string & name) const;
+        std::optional<std::string_view> query_param(const std::string & name) const;
+        std::optional<std::string_view> cookie(const std::string & name) const;
 
         const std::string & client_ip() const { return _ip; }
         const sihd::util::ArrChar & content() const { return _array; }
@@ -55,6 +58,7 @@ class HttpRequest
         const std::vector<std::string> & uri_args() const { return _uri_args_lst; }
         const std::unordered_map<std::string, std::string> & path_params() const { return _path_params; }
         const std::unordered_map<std::string, std::string> & query_params() const { return _query_params; }
+        const std::unordered_map<std::string, std::string> & cookies() const { return _cookies; }
         RequestType request_type() const { return _request_type; }
         const std::string & auth_user() const { return _auth_user; }
         const std::string & auth_token() const { return _auth_token; }
@@ -71,6 +75,7 @@ class HttpRequest
         std::string _ip;
         std::string _auth_user;
         std::string _auth_token;
+        std::unordered_map<std::string, std::string> _cookies;
         sihd::util::ArrChar _array;
 };
 
