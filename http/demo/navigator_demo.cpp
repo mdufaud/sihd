@@ -51,7 +51,7 @@ void demo_http_cookies()
 
 void demo_websocket()
 {
-    SIHD_LOG(info, "=== WebSocket demo: echo.websocket.events ===");
+    SIHD_LOG(info, "=== WebSocket demo: ws.postman-echo.com ===");
 
     Navigator nav;
     nav.set_ssl_verify(false, false);
@@ -79,7 +79,7 @@ void demo_websocket()
         SIHD_LOG(info, "[WS] Server closed: code={} reason={}", code, reason);
     };
 
-    if (!nav.ws_connect("wss://echo.websocket.events", ""))
+    if (!nav.ws_connect("wss://ws.postman-echo.com/raw", ""))
     {
         SIHD_LOG(error, "WebSocket connect failed");
         return;
