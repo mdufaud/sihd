@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <nlohmann/json.hpp>
+#include <sihd/json/Json.hpp>
 
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/HttpStatus.hpp>
@@ -30,8 +30,8 @@ TEST_F(TestHttpResponse, test_content_types)
     // json: serializes and sets application/json
     HttpResponse json;
     EXPECT_TRUE(json.set_json_content({{"k", "v"}, {"n", 1}}));
-    auto parsed = nlohmann::json::parse(json.content().cpp_str());
-    EXPECT_EQ(parsed["k"], "v");
+    auto parsed = sihd::json::Json::parse(json.content().cpp_str());
+    EXPECT_EQ(parsed["k"].get<std::string>(), "v");
     EXPECT_NE(json.http_header().content_type().find("application/json"), std::string::npos);
 
     // byte: sets octet-stream and preserves raw bytes

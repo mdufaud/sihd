@@ -1,14 +1,13 @@
 #ifndef __SIHD_HTTP_HTTPREQUEST_HPP__
 #define __SIHD_HTTP_HTTPREQUEST_HPP__
 
-#include <nlohmann/json_fwd.hpp>
-
-#include <sihd/util/Array.hpp>
-#include <sihd/util/ArrayView.hpp>
-
 #include <optional>
 #include <string>
 #include <unordered_map>
+
+#include <sihd/json/fwd.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/ArrayView.hpp>
 
 namespace sihd::http
 {
@@ -45,8 +44,7 @@ class HttpRequest
         void set_auth_token(std::string_view token);
         void set_cookie(std::string_view name, std::string_view value);
 
-        // check for json.is_discarded() for parsing error
-        nlohmann::json content_as_json() const;
+        sihd::json::Json content_as_json() const;
 
         std::optional<std::string_view> path_param(const std::string & name) const;
         std::optional<std::string_view> query_param(const std::string & name) const;

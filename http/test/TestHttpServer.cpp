@@ -5,7 +5,7 @@
 #include <chrono>
 #include <gtest/gtest.h>
 #include <netinet/in.h>
-#include <nlohmann/json.hpp>
+#include <sihd/json/Json.hpp>
 #include <sys/socket.h>
 #include <unistd.h>
 

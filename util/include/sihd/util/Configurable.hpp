@@ -1,9 +1,9 @@
 #ifndef __SIHD_UTIL_CONFIGURABLE_HPP__
 #define __SIHD_UTIL_CONFIGURABLE_HPP__
 
-#include <nlohmann/json_fwd.hpp>
-
 #include <functional>
+
+#include <sihd/json/fwd.hpp>
 
 #include <sihd/util/Callback.hpp>
 
@@ -74,14 +74,15 @@ class Configurable
 
         bool set_conf_str(const std::string & name, const char *param);
 
-        bool set_conf(const std::string & key, const nlohmann::json & val);
-
-        bool set_conf(const nlohmann::json & json);
+        // Json-based configuration
+        bool set_conf(const sihd::json::Json & json);
+        bool set_conf(const std::string & key, const sihd::json::Json & val);
 
     private:
         CallbackManager _callbackManager;
 
-        bool _set_conf_json(const std::string & name, const nlohmann::json & val);
+        bool _set_conf_from_json(const std::string & name, const sihd::json::Json & val);
+        bool _set_conf_json(const std::string & name, const sihd::json::Json & val);
 };
 
 } // namespace sihd::util

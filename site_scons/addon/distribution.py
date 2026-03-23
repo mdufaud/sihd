@@ -16,7 +16,7 @@ contributors = ["azouiten <alexandre.zouiten1@gmail.com>"]
 # packages equivalent to build DEBIAN/control dependencies
 apt_packages = {
     "gtest": "libgtest-dev",
-    "nlohmann-json": "nlohmann-json3-dev",
+    "simdjson": "libsimdjson-dev",
     "fmt": "libfmt-dev",
     "libuuid": "uuid-dev",
     "cli11": "cli11-dev",
@@ -50,7 +50,7 @@ apt_packages = {
 # packages equivalent to build PKGBUILD dependencies
 pacman_packages = {
     "gtest": "gtest",
-    "nlohmann-json": "nlohmann-json",
+    "simdjson": "simdjson",
     "fmt": "fmt",
     "libuuid": "util-linux-libs",
     "cli11": "cli11",
@@ -83,7 +83,7 @@ pacman_packages = {
 
 yum_packages = {
     "gtest": "gtest-devel",
-    "nlohmann-json": "json-devel",
+    "simdjson": "simdjson-devel",
     "fmt": "fmt-devel",
     "libuuid": "libuuid-devel",
     "cli11": "cli11-devel",

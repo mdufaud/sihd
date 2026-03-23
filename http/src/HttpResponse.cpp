@@ -1,4 +1,4 @@
-#include <nlohmann/json.hpp>
+#include <sihd/json/Json.hpp>
 
 #include <sihd/util/Logger.hpp>
 
@@ -28,7 +28,7 @@ void HttpResponse::set_content_type_from_extension(const std::string & type)
         this->set_content_type(_mime_ptr->get(type));
 }
 
-bool HttpResponse::set_json_content(const nlohmann::json & data)
+bool HttpResponse::set_json_content(const sihd::json::Json & data)
 {
     this->_set_mime_type_if_not_set(Mime::MIME_APPLICATION_JSON);
     std::string json_string = data.dump();

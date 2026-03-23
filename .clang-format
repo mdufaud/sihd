@@ -1,61 +1,85 @@
 Language: Cpp
 
+# Max line width before clang-format starts wrapping.
 ColumnLimit: 110
 
 # Force pointers to the type for C++.
 DerivePointerAlignment: false
 PointerAlignment: Right
+# Keep references visually distinct from pointers.
 ReferenceAlignment: Middle
 
+# Base indentation width for blocks.
 IndentWidth: 4
 # ConstructorInitializerIndentWidth: 4
 # AccessModifierOffset: 4
 # ContinuationIndentWidth: 4
+# Indent `public:`/`private:` one extra level inside classes.
 IndentAccessModifiers: true
+# Keep the block after a `case:` aligned with the case label itself.
 IndentCaseBlocks: false
+# Indent `case` labels inside `switch`.
 IndentCaseLabels: true
+# Do not indent inside `extern "C" {}` blocks.
 IndentExternBlock: false
+# Indent labels used by `goto`.
 IndentGotoLabels: true
+# Indent `requires` clauses when they are on their own line.
 IndentRequiresClause: true
+# Indent function names when return type is wrapped above them.
 IndentWrappedFunctionNames: true
 
+# Indent preprocessor directives after `#`.
 IndentPPDirectives: AfterHash
 PPIndentWidth: 1
 
 # someLongFunction(argument1,
 #                  argument2);
-AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: true
 
 # int aaa = bbbbbbbbbbbbbbb
 #           + ccccccccccccccc;
 AlignOperands: true
+# Put wrapped binary operators at the start of the next line.
 BreakBeforeBinaryOperators: true
 
+# Align trailing `// comments` into columns when possible.
 AlignTrailingComments: true
 # AlignTrailingComments:
 #   Kind: Always
 #   OverEmptyLines: 2
 
+# If a call wraps, keep one argument per line instead of moving all args together.
 AllowAllArgumentsOnNextLine: false
+# Same idea for declarations: avoid dumping all parameters on the next line.
 AllowAllParametersOfDeclarationOnNextLine: false
 
+# Allow only empty blocks like `{}` to stay on one line.
 AllowShortBlocksOnASingleLine: Empty
 AllowShortEnumsOnASingleLine: false
+# Keep tiny inline class methods compact, but not free functions.
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: Never
+# Allow lambdas passed inline as arguments to remain compact.
 AllowShortLambdasOnASingleLine: Inline
 AllowShortLoopsOnASingleLine: false
 
+# Do not force a line break after the return type.
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
+# Preserve manual formatting of long string literals.
 AlwaysBreakBeforeMultilineStrings: false
+# Always break after `template <...>` declarations.
 AlwaysBreakTemplateDeclarations: Yes
 
+# When wrapping, use one argument/parameter per line rather than packing many.
 BinPackArguments: false
 BinPackParameters: false
 
+# Format bit-fields as `field: value`.
 BitFieldColonSpacing: After
 
+# Use per-context brace rules defined below.
 BreakBeforeBraces: Custom
 BraceWrapping:
   # Opening brace under case label
@@ -97,85 +121,156 @@ BraceWrapping:
 
   # BreakBeforeBinaryOperators: NonAssignment
 
+# Put `concept` on a new line after the template declaration.
 BreakBeforeConceptDeclarations: Always
 
 # BreakBeforeInlineASMColon: OnlyMultiline
 
+# Put `?` and `:` at the start of wrapped lines.
 BreakBeforeTernaryOperators: true
 
+# Break constructor initializer lists after the `:`.
 BreakConstructorInitializers: AfterColon
 
+# Break inheritance lists after commas when wrapping.
 BreakInheritanceList: AfterComma
 
+# Do not split string literals to satisfy the column limit.
 BreakStringLiterals: false
 
+# Format braced initializers like modern C++ call syntax.
 Cpp11BracedListStyle: true
 
+# Keep current spacing after access modifiers if already present.
 EmptyLineAfterAccessModifier: Leave
+# Always separate access sections with a blank line.
 EmptyLineBeforeAccessModifier: Always
 
+# Maintain `// namespace foo` closing comments.
 FixNamespaceComments: true
 
-IncludeBlocks: Preserve
+# Merge include blocks, sort them, then split them by category.
+IncludeBlocks: Regroup
+
+IncludeCategories:
+  # C and POSIX headers.
+  - Regex: '^<([[:alnum:]_]+|arpa/[[:alnum:]_]+|netinet/[[:alnum:]_]+|sys/[[:alnum:]_]+)\.h>$'
+    Priority: 1
+    SortPriority: 1
+    CaseSensitive: true
+  # C++ standard library headers.
+  - Regex: '^<[^./][^/>]*>$'
+    Priority: 2
+    SortPriority: 2
+    CaseSensitive: true
+  # External dependencies used by the repository.
+  - Regex: '^<(android|curl|EGL|fmt|ftxui|GLES3|GLFW|gtest|libssh|libusb-1\.0|luabridge3|ncursesw|pybind11|SDL3|simpleble)/[^>]+>$'
+    Priority: 3
+    SortPriority: 3
+    CaseSensitive: true
+  # SIHD headers.
+  - Regex: '^<sihd/[^>]+>$'
+    Priority: 4
+    SortPriority: 4
+    CaseSensitive: true
 
 # InsertNewlineAtEOF: false
 
+# Remove blank lines at the start of blocks.
 KeepEmptyLinesAtTheStartOfBlocks: false
 
+# Indent lambda bodies relative to the lambda signature.
 LambdaBodyIndentation: Signature
 
+# Never keep more than one consecutive empty line.
 MaxEmptyLinesToKeep: 1
 
+# Do not indent inside namespaces.
 NamespaceIndentation: None
 
+# Keep constructor initializers on the declaration line if they fit.
 PackConstructorInitializers: CurrentLine
 
+# Normalize qualifiers like `const` to the left of the type.
 QualifierAlignment: Left
 
 # QualifierOrder: ['inline', 'static', 'type', 'const', 'volatile']
 
+# Reflow comments to match indentation and line width.
 ReflowComments: true
 
+# Put `requires` clauses on their own line.
 RequiresClausePosition: OwnLine
 
 # meh
 # SeparateDefinitionBlocks: Always
 
-SortIncludes: CaseSensitive
+SortIncludes:
+  # Actually enable include sorting.
+  Enabled: true
+  # Keep case-sensitive ordering for paths.
+  IgnoreCase: false
 
+# Sort `using` declarations consistently.
 SortUsingDeclarations: true
 
+# No space after a C-style cast: `(int)x`.
 SpaceAfterCStyleCast: false
+# No space after `!`: `!value`.
 SpaceAfterLogicalNot: false
+# Keep `template <T>` with a space after `template`.
 SpaceAfterTemplateKeyword: true
+# Apply pointer-qualifier spacing after the qualifier.
 SpaceAroundPointerQualifiers: After
+# Keep spaces around `=` and similar assignment operators.
 SpaceBeforeAssignmentOperators: true
+# Use `case 1:` rather than `case 1 :`.
 SpaceBeforeCaseColon: false
+# Prefer `Type value {x}` over `Type value{x}`.
 SpaceBeforeCpp11BracedList: true
+# Use `Foo() : member()` rather than `Foo(): member()`.
 SpaceBeforeCtorInitializerColon: false
+# Use `class A : B` spacing style.
 SpaceBeforeInheritanceColon: false
+# Enable spaces before parentheses according to the sub-rules below.
 SpaceBeforeParens: true
+# Keep `for (auto x : xs)` spacing.
 SpaceBeforeRangeBasedForLoopColon: true
+# Use `arr[i]` rather than `arr [i]`.
 SpaceBeforeSquareBrackets: false
+# Keep empty blocks compact as `{}`.
 SpaceInEmptyBlock: false
+# Keep empty call parens as `()`.
 SpaceInEmptyParentheses: false
+# Use a single space before trailing line comments.
 SpacesBeforeTrailingComments: 1
+# Use `vector<int>` rather than `vector< int >`.
 SpacesInAngles: Never
+# Use `(int)x` rather than `( int )x`.
 SpacesInCStyleCastParentheses: false
+# Use `if (x)` rather than `if ( x )`.
 SpacesInConditionalStatement: false
+# Do not add spaces inside braced container literals.
 SpacesInContainerLiterals: false
 
 SpaceBeforeParensOptions:
+  # Only control statements get a space before `(`.
   AfterControlStatements: true
 
 SpacesInLineCommentPrefix:
+  # Enforce at least one space after `//`.
   Minimum: 1
+  # Do not cap extra alignment spaces in comments.
   Maximum: -1
 
+# Use `f(x)` rather than `f( x )`.
 SpacesInParentheses: false
+# Use `[i]` rather than `[ i ]`.
 SpacesInSquareBrackets: false
 
-Standard: c++17
+# Parse and format using C++20 rules.
+Standard: c++20
 
 TabWidth: 4
+# Always indent with spaces, never tabs.
 UseTab: Never

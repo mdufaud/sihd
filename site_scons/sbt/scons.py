@@ -840,7 +840,9 @@ for conf in modules_build_order:
     logger.info("building module: {}".format(modname))
     env = create_module_env(conf,
         depends = conf.get("original-depends", []),
-        do_inherit_depends_libs = conf.get("inherit-depends-libs", False),
+        # inherit dependencies libs/flags/links from parent modules by default only for static libraries as it is the most common use case
+        # and dynamic libraries usually don't need to re-export their dependencies
+        do_inherit_depends_libs = conf.get("inherit-depends-libs", builder.build_static_libs),
         do_inherit_depends_defines = conf.get("inherit-depends-defines", False),
         do_inherit_depends_links = conf.get("inherit-depends-links", False),
         do_inherit_depends_flags = conf.get("inherit-depends-flags", False),

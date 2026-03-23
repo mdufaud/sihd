@@ -1,4 +1,4 @@
-#include <nlohmann/json.hpp>
+#include <sihd/json/Json.hpp>
 
 #include <sihd/util/Configurable.hpp>
 
@@ -11,7 +11,29 @@ bool Configurable::set_conf_str(const std::string & name, const char *param)
     return this->set_conf_str(name, str_view);
 }
 
-bool Configurable::set_conf(const std::string & key, const nlohmann::json & val)
+// ─── Json-based configuration ───
+
+bool Configurable::set_conf(const sihd::json::Json & json)
+{
+    if (json.is_null() || !json.is_object())
+        return false;
+    bool ret = true;
+    for (auto it = json.begin(); it != json.end(); ++it)
+    {
+        if (!this->_set_conf_from_json(it.key(), it.value()))
+            ret = false;
+    }
+    return ret;
+}
+
+bool Configurable::set_conf(const std::string & key, const sihd::json::Json & val)
+{
+    return this->_set_conf_from_json(key, val);
+}
+
+// ─── Private Json dispatch ───
+
+bool Configurable::_set_conf_from_json(const std::string & key, const sihd::json::Json & val)
 {
     if (val.is_null())
         return false;
@@ -20,47 +42,36 @@ bool Configurable::set_conf(const std::string & key, const nlohmann::json & val)
     if (val.is_array())
     {
         bool ret = true;
-        for (auto it = val.begin(); it != val.end(); ++it)
+        for (const auto & elem : val)
         {
-            if (this->set_conf(key, it.value()) == false)
+            if (!this->_set_conf_from_json(key, elem))
                 ret = false;
         }
         return ret;
     }
     if (val.is_number_integer())
         return this->set_conf_int(key, val.get<int64_t>());
+    if (val.is_number_unsigned())
+        return this->set_conf_int(key, static_cast<int64_t>(val.get<uint64_t>()));
     if (val.is_number_float())
         return this->set_conf_float(key, val.get<double>());
     if (val.is_string())
         return this->set_conf_str(key, val.get<std::string>());
-    if (val.is_boolean())
+    if (val.is_bool())
         return this->set_conf(key, val.get<bool>());
     return false;
 }
 
-bool Configurable::set_conf(const nlohmann::json & json)
-{
-    if (json.is_object() == false || json.is_null())
-        return false;
-    bool ret = true;
-    for (auto it = json.begin(); it != json.end(); ++it)
-    {
-        if (this->set_conf(it.key(), it.value()) == false)
-            ret = false;
-    }
-    return ret;
-}
-
-bool Configurable::_set_conf_json(const std::string & name, const nlohmann::json & val)
+bool Configurable::_set_conf_json(const std::string & name, const sihd::json::Json & val)
 {
     try
     {
-        return _callbackManager.call<bool, const nlohmann::json &>(name, val);
+        return _callbackManager.call<bool, const sihd::json::Json &>(name, val);
     }
     catch (const std::invalid_argument & e)
     {
     }
-    return _callbackManager.call<bool, const nlohmann::json>(name, val);
+    return _callbackManager.call<bool, const sihd::json::Json>(name, val);
 }
 
 bool Configurable::set_conf_float(const std::string & name, double param)

@@ -15,10 +15,16 @@ includes = [
 ###############################################################################
 
 modules = {
+    "json": {
+        "extlibs": ['simdjson'],
+        "libs": ['simdjson'],
+    },
     "util": {
+        "depends": ['json'],
+        "inherit-depends-libs": True,
         "linux-libs": ['pthread'], # threading (bionic has it in libc)
         "windows-libs": ['pthread'], # mingw winpthread
-        "extlibs": ['nlohmann-json', 'fmt'],
+        "extlibs": ['fmt'],
         # stdc++fs only needed for GCC < 9 with glibc
         "mingw-gnu-libs": ['stdc++fs'],
         # === Android specific ===
@@ -65,6 +71,7 @@ modules = {
     },
     "core": {
         "depends": ['util', 'sys'],
+        "inherit-depends-libs": True,
     },
     "net": {
         "depends": ['util', 'sys'],
@@ -79,6 +86,7 @@ modules = {
     },
     "http": {
         "depends": ['net'],
+        "inherit-depends-libs": True,
         "extlibs": [
             'libwebsockets',
             'curl',
@@ -315,7 +323,7 @@ extlibs = {
     # unit test
     "gtest": "1.17.0#2",
     # json parsing
-    "nlohmann-json": "3.12.0#1",
+    "simdjson": "4.2.2",
     # util
     "cli11": "2.6.1",
     "fmt": "12.1.0",

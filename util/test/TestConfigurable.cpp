@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <nlohmann/json.hpp>
+#include <sihd/json/Json.hpp>
 
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Logger.hpp>
@@ -140,7 +140,7 @@ class ConfigurableObj: public Configurable
             return true;
         }
 
-        bool set_json(const nlohmann::json & json)
+        bool set_json(const sihd::json::Json & json)
         {
             inside_json_val = json["str"].get<std::string>();
             return true;
@@ -176,7 +176,7 @@ class TestConfigurable: public ::testing::Test
 
 TEST_F(TestConfigurable, test_configurable_json)
 {
-    nlohmann::json json = {
+    sihd::json::Json json = {
         {"bool", true},
         {"int", 1234},
         {"ushort", -1},
@@ -206,12 +206,12 @@ TEST_F(TestConfigurable, test_configurable_json)
     EXPECT_EQ(obj.list_val.at(4), 0);
     EXPECT_EQ(obj.list_val.at(5), 2);
 
-    nlohmann::json null;
-    null["nothing"] = nullptr;
+    sihd::json::Json null;
+    null = {{"nothing", nullptr}};
     EXPECT_EQ(obj.set_conf(null), false);
     EXPECT_EQ(obj.set_conf("json-null", null["nothing"]), false);
 
-    nlohmann::json json_conf = {{"str", "hello world"}};
+    sihd::json::Json json_conf = {{"str", "hello world"}};
     EXPECT_EQ(obj.set_conf("json", json_conf), true);
     EXPECT_EQ(obj.inside_json_val, "hello world");
 }

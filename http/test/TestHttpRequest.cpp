@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <nlohmann/json.hpp>
+#include <sihd/json/Json.hpp>
 
 #include <sihd/http/HttpRequest.hpp>
 #include <sihd/util/Logger.hpp>
@@ -49,8 +49,8 @@ TEST_F(TestHttpRequest, test_content)
     // valid json roundtrip
     auto parsed = req.content_as_json();
     EXPECT_FALSE(parsed.is_discarded());
-    EXPECT_EQ(parsed["key"], "val");
-    EXPECT_EQ(parsed["n"], 7);
+    EXPECT_EQ(parsed["key"].get<std::string>(), "val");
+    EXPECT_EQ(parsed["n"].get<int32_t>(), 7);
 
     // invalid json returns discarded
     std::string bad = "{ not json }";

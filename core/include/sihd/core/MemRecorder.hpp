@@ -1,8 +1,6 @@
 #ifndef __SIHD_CORE_MEMRECORDER_HPP__
 #define __SIHD_CORE_MEMRECORDER_HPP__
 
-#include <nlohmann/json_fwd.hpp>
-
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/IProvider.hpp>
 

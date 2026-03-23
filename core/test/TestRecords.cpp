@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <nlohmann/json.hpp>
+#include <sihd/json/Json.hpp>
 
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>

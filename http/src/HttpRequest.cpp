@@ -1,4 +1,4 @@
-#include <nlohmann/json.hpp>
+#include <sihd/json/Json.hpp>
 
 #include <sihd/util/str.hpp>
 
@@ -121,11 +121,13 @@ void HttpRequest::set_cookie(std::string_view name, std::string_view value)
     _cookies.emplace(std::string(name), std::string(value));
 }
 
-nlohmann::json HttpRequest::content_as_json() const
+sihd::json::Json HttpRequest::content_as_json() const
 {
     if (!_array)
-        return {};
-    return nlohmann::json::parse(_array.buf(), _array.buf() + _array.size(), nullptr, false);
+        return sihd::json::Json();
+    const auto *buf = reinterpret_cast<const char *>(_array.buf());
+    std::string_view content(buf, _array.size());
+    return sihd::json::Json::parse(content, false);
 }
 
 std::string HttpRequest::type_str() const

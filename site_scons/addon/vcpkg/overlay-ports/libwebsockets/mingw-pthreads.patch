@@ -12,3 +12,16 @@ index 1234567..abcdefg 100644
      find_package(pthreads_windows REQUIRED)
      set(LWS_EXT_PTHREAD_INCLUDE_DIR ${PThreads4W_INCLUDE_DIR})
      set(LWS_EXT_PTHREAD_LIBRARIES ${PThreads4W_LIBRARY})
+diff --git a/CMakeLists-implied-options.txt b/CMakeLists-implied-options.txt
+--- a/CMakeLists-implied-options.txt
++++ b/CMakeLists-implied-options.txt
+@@ -443,7 +443,8 @@ if (LWS_WITH_PLUGINS OR (LWS_WITH_EVLIB_PLUGINS AND LWS_WITH_EVENT_LIBS))
+ 	set(LWS_WITH_PLUGINS_API 1)
+ endif()
+ 
+-if (WIN32 AND NOT LWS_EXT_PTHREAD_LIBRARIES)
++# MinGW has built-in pthreads, so don't force LWS_MAX_SMP=1 for it.
++if (WIN32 AND NOT MINGW AND NOT LWS_EXT_PTHREAD_LIBRARIES)
+         set(LWS_MAX_SMP 1)
+         message("SMD requires pthreads")
+         set(LWS_WITH_SYS_SMD 0)

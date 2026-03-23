@@ -5,8 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <nlohmann/json_fwd.hpp>
-
+#include <sihd/json/fwd.hpp>
 #include <sihd/util/ArrayView.hpp>
 
 #include <sihd/http/HttpHeader.hpp>
@@ -29,7 +28,7 @@ class HttpResponse
         bool set_content(sihd::util::ArrCharView data);
         bool set_plain_content(std::string_view str);
         bool set_byte_content(sihd::util::ArrByteView data);
-        bool set_json_content(const nlohmann::json & data);
+        bool set_json_content(const sihd::json::Json & data);
 
         void set_content_type(std::string_view mime_type);
         void set_content_type_from_extension(const std::string & extension);

@@ -1,7 +1,5 @@
 #include <stdexcept>
 
-#include <nlohmann/json.hpp>
-
 #include "curl_global.hpp"
 #include <sihd/http/request.hpp>
 #include <sihd/sys/File.hpp>

@@ -1,5 +1,3 @@
-#include <nlohmann/json.hpp>
-
 #include <sihd/util/Logger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
 
