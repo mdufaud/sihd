@@ -115,7 +115,16 @@ These values are set in `os.environ` at load time. The module's `scons.py` reads
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `inherit-depends-libs` | `bool` | Inherit LIBS from dependencies |
+| `export-libs` | `list[str]` | Export module libraries to dependent modules |
+| `export-defines` | `list[str]` | Export preprocessor defines to dependent modules |
+| `export-flags` | `list[str]` | Export compiler flags to dependent modules |
+| `export-all-libs` | `bool` | Export all active direct `libs` and variant `*-libs` of the module |
+| `export-all-defines` | `bool` | Export all active direct `defines` and variant `*-defines` of the module |
+| `export-all-flags` | `bool` | Export all active direct `flags` and variant `*-flags` of the module |
+| `export-all-link` | `bool` | Export all active direct `link` and variant `*-link` of the module |
+| `export-<variant>-libs` | `list[str]` | Export variant-specific libraries such as `export-windows-libs` |
+| `export-<variant>-defines` | `list[str]` | Export variant-specific defines |
+| `export-<variant>-flags` | `list[str]` | Export variant-specific compiler flags such as `export-em-flags` |
 | `inherit-depends-defines` | `bool` | Inherit CPPDEFINES from dependencies |
 | `inherit-depends-links` | `bool` | Inherit LINKFLAGS from dependencies |
 | `inherit-depends-flags` | `bool` | Inherit CPPFLAGS from dependencies |
@@ -184,6 +193,25 @@ All combinations of `(platform, libtype, mode, compiler, libc, native/cross)` ar
 | `env.build_test(sources, add_libs=[])` | Build test binary (only if `test=1`) |
 | `env.build_demo(source, name=, add_libs=[], android_dir=None)` | Build demo (only if `demo=1`) |
 | `env.build_demos(sources)` | Build multiple demos (one per source file) |
+| `env.build_cpp_modules(sources, module_name=, imports=[])` | Build GCC C++20 module interfaces and register them for later imports |
+
+When a target imports named modules, pass them explicitly with `cpp_modules=[...]`:
+
+```python
+cpp_modules = env.build_cpp_modules('test/modules/TestGreeting.cppm')
+
+env.build_test(
+    Glob('test/*.cpp') + cpp_modules,
+    add_libs=[env.module_format_name()],
+    cpp_modules=['sihd.util.test.greeting'],
+)
+```
+
+This does three things:
+
+1. enables `-fmodules` on the importer build,
+2. wires SCons dependencies so imported interfaces are compiled first,
+3. links the interface object together with the importer target.
 
 ### Module info
 

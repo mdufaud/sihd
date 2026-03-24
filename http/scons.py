@@ -1,6 +1,7 @@
 Import('env')
 
 lib = env.build_lib(Glob('src/*.cpp'))
+env.export_test(includes = ['test'], resources = ['test/resources'])
 
 for src in Glob('demo/*.cpp'):
     name = env.file_basename(src)

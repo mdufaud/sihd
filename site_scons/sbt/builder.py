@@ -388,6 +388,8 @@ libs_type = "static" if is_static_libs() else "dynamic"
 def is_cross_building():
     return (host_machine != build_machine) or (host_libc != libc) or (host_platform != build_platform)
 
+is_cpp_modules = build_compiler == "gcc" and build_platform == "linux" and not is_cross_building() and int(_detect_compiler_major_version(build_compiler, build_machine, libc) or 0) >= 15
+
 allowed_compilers = ("gcc", "clang", "em", "mingw", "zig", "ndk")
 
 def get_android_sdk_root():

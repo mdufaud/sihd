@@ -346,6 +346,10 @@ modules_generated_libs = {}
 modules_generated_bins = {}
 modules_generated_tests = {}
 modules_generated_demos = {}
+modules_exported_test_includes = {}
+modules_exported_test_resources = {}
+modules_exported_bmis = {}
+modules_cpp_modules = {}
 modules_cloned_git_repositories = {}
 targets = []
 # compiled object nodes per module for combined library
@@ -365,6 +369,139 @@ def add_targets(src):
         targets.extend(src)
     else:
         targets.append(src)
+
+def _normalize_module_relative_path(module_name, path):
+    path = os_path.normpath(str(path))
+    module_root = os_path.join(builder.build_root_path, module_name)
+    module_obj_root = os_path.join(builder.build_obj_path, module_name)
+    if os_path.isabs(path):
+        if path.startswith(module_root + os_path.sep):
+            return os_path.relpath(path, module_root)
+        if path.startswith(module_obj_root + os_path.sep):
+            return os_path.relpath(path, module_obj_root)
+        return path
+    if path.startswith(module_root + os_path.sep):
+        return os_path.relpath(path, module_root)
+    if path.startswith(module_obj_root + os_path.sep):
+        return os_path.relpath(path, module_obj_root)
+    return path
+
+def _prepend_unique_paths(env, key, values):
+    existing = {str(v) for v in env.get(key, [])}
+    to_prepend = []
+    for value in values:
+        s = str(value)
+        if s not in existing and s not in {str(v) for v in to_prepend}:
+            to_prepend.append(value)
+    if to_prepend:
+        env.Prepend(**{key: to_prepend})
+
+def _enable_cpp_modules(env):
+    """Register .cppm and .ixx as compilable suffixes in *env* using GCC named-module support.
+
+    Reuses the existing .cpp LazyAction — do NOT use the CompositeBuilder's
+    CommandGeneratorAction (object_builder.action), it recurses infinitely.
+
+    Passes -fmodule-mapper=<mapper_file> so GCC writes/reads BMIs from
+    build_path/gcm.cache/ regardless of SCons' CWD (workspace root).
+    The mapper file is a simple '<module-name> <bmi-path>' text file.
+    It is written/updated each time a module is registered and always
+    complete before GCC actually compiles anything (config phase vs build phase).
+    """
+    mapper_file = _write_cpp_module_mapper()
+    cpp_suffixes = ['.cppm', '.ixx']
+    for builder_name in ['Object', 'SharedObject']:
+        object_builder = env['BUILDERS'][builder_name]
+        cpp_action = object_builder.builder.action.generator['.cpp']
+        cpp_emitter = object_builder.emitter['.cpp']
+        for suffix in cpp_suffixes:
+            object_builder.add_action(suffix, cpp_action)
+            object_builder.add_emitter(suffix, cpp_emitter)
+            if suffix not in object_builder.builder.src_suffix:
+                object_builder.builder.src_suffix.append(suffix)
+    env.AppendUnique(CXXFLAGS=['-fmodules', f'-fmodule-mapper={mapper_file}'])
+    env.AppendUnique(CPPSUFFIXES=cpp_suffixes)
+
+def _ensure_cpp_modules_cache_dir():
+    # Lives inside build_path which already encodes machine/platform/libc/compiler/mode.
+    cache_dir = os_path.join(builder.build_path, 'gcm.cache')
+    if not is_dry_run:
+        os.makedirs(cache_dir, exist_ok=True)
+    return cache_dir
+
+def _write_cpp_module_mapper():
+    """Write/update the GCC module mapper file from the current modules registry.
+
+    Format (from GCC mapper spec): '<module-name> <bmi-path>' one per line.
+    The file is rewritten on each new module registration during the SCons
+    configuration phase — always complete before compilation starts.
+    """
+    cache_dir = _ensure_cpp_modules_cache_dir()
+    mapper_file = os_path.join(builder.build_path, 'gcm.cache.mapper')
+    if is_dry_run:
+        return mapper_file
+    with open(mapper_file, 'w') as f:
+        for module_name in modules_cpp_modules:
+            bmi_path = os_path.join(cache_dir, f'{module_name}.gcm')
+            f.write(f'{module_name} {bmi_path}\n')
+    return mapper_file
+
+def _parse_cpp_module_name(path):
+    import re
+    module_re = re.compile(r'^\s*(?:export\s+)?module\s+([A-Za-z_][A-Za-z0-9_.:.]*)\s*;')
+    with open(path, 'r', encoding='utf-8') as fd:
+        for line in fd:
+            m = module_re.match(line)
+            if m:
+                return m.group(1)
+    raise RuntimeError(f"unable to determine C++ module name from: {path}")
+
+def _resolve_cpp_module_source_path(module_dir, source):
+    source_path = str(source)
+    if os_path.isabs(source_path):
+        return source_path
+    candidate = os_path.join(module_dir, source_path)
+    return candidate if os_path.exists(candidate) else source_path
+
+def _split_build_inputs(env, src):
+    """Split *src* into (sources_to_compile, prebuilt_object_nodes)."""
+    sources = []
+    prebuilt = []
+    object_suffixes = {env.subst('$OBJSUFFIX'), env.subst('$SHOBJSUFFIX')}
+    for value in scons_utils.as_list(src):
+        get_suffix = getattr(value, 'get_suffix', None)
+        suffix = get_suffix() if get_suffix else os_path.splitext(str(value))[1]
+        (prebuilt if suffix in object_suffixes else sources).append(value)
+    return sources, prebuilt
+
+def _resolve_cpp_module_nodes(imports):
+    missing = []
+    resolved = []
+    for name in scons_utils.dedupe_keep_order(scons_utils.as_list(imports)):
+        info = modules_cpp_modules.get(name)
+        if info is None:
+            missing.append(name)
+        else:
+            resolved.extend(info.get('objects', []))
+    if missing:
+        raise RuntimeError("missing exported C++ modules: {}".format(", ".join(missing)))
+    return scons_utils.dedupe_keep_order(resolved)
+
+def _extract_cpp_module_imports(kwargs):
+    local_kwargs = kwargs.copy()
+    imports = scons_utils.as_list(local_kwargs.pop('cpp_modules', []))
+    return imports, local_kwargs
+
+def _build_objects_for_target(env, src, shared=False, cpp_modules=[], **kwargs):
+    """Compile sources and wire GCC module Depends() edges; pass prebuilt objects through."""
+    sources, prebuilt = _split_build_inputs(env, src)
+    objects = []
+    if sources:
+        builder_func = env.SharedObject if shared else env.Object
+        objects = scons_utils.as_list(builder_func(sources, **kwargs))
+        if cpp_modules:
+            env.Depends(objects, _resolve_cpp_module_nodes(cpp_modules))
+    return objects + prebuilt
 
 ## modules environment methods
 
@@ -479,16 +616,23 @@ def _env_build_demo(self, src, name, add_libs = [], android_dir = None, **kwargs
 
     demo_env = self.Clone()
     demo_env.Prepend(LIBS = add_libs)
+    cpp_modules, build_kwargs = _extract_cpp_module_imports(kwargs)
     scons_utils.add_env_app_conf(app, demo_env, "demo")
     for app_conf in default_app_conf_to_get:
         scons_utils.add_env_app_conf(app, demo_env, "demo", app_conf)
+    if cpp_modules:
+        _enable_cpp_modules(demo_env)
 
     if self['BIN_LINKFLAGS']:
         demo_env.Append(LINKFLAGS = self['BIN_LINKFLAGS'])
 
     name += bin_ext
     demo_path = os_path.join(builder.build_demo_path, name)
-    demo = demo_env.Program(demo_path, src, **kwargs)
+    if cpp_modules:
+        demo_objects = _build_objects_for_target(demo_env, src, cpp_modules = cpp_modules, **build_kwargs)
+        demo = demo_env.Program(demo_path, demo_objects, **build_kwargs)
+    else:
+        demo = demo_env.Program(demo_path, src, **build_kwargs)
 
     add_targets(src)
 
@@ -513,9 +657,24 @@ def _env_build_test(self, src, name = None, add_libs = [], **kwargs):
 
     test_env = self.Clone()
     test_env.Prepend(LIBS = add_libs)
+    cpp_modules, build_kwargs = _extract_cpp_module_imports(kwargs)
+    conf = self['APP_MODULE_CONF']
+    exported_test_cpppaths = []
+    for dep_modname in conf.get("depends", []):
+        for include_path in modules_exported_test_includes.get(dep_modname, []):
+            exported_test_cpppaths.append(os_path.join(builder.build_root_path, dep_modname, include_path))
+        for resource_path in modules_exported_test_resources.get(dep_modname, []):
+            resource_src = os_path.join(builder.build_root_path, dep_modname, resource_path)
+            resource_dst = os_path.join("test", "resources", dep_modname)
+            if os_path.isfile(resource_src):
+                resource_dst = os_path.join(resource_dst, os_path.basename(resource_path))
+            scons_utils.copy_module_res_into_build(dep_modname, resource_path, resource_dst, must_exist=False, is_dry_run=is_dry_run)
+    _prepend_unique_paths(test_env, "CPPPATH", exported_test_cpppaths)
     scons_utils.add_env_app_conf(app, test_env, "test")
     for app_conf in default_app_conf_to_get:
         scons_utils.add_env_app_conf(app, test_env, "test", app_conf)
+    if cpp_modules:
+        _enable_cpp_modules(test_env)
 
     if name is None:
         name = self["APP_MODULE_FORMAT_NAME"]
@@ -525,7 +684,11 @@ def _env_build_test(self, src, name = None, add_libs = [], **kwargs):
     if self['BIN_LINKFLAGS']:
         test_env.Append(LINKFLAGS = self['BIN_LINKFLAGS'])
 
-    test = test_env.Program(test_path, src, **kwargs)
+    if cpp_modules:
+        test_objects = _build_objects_for_target(test_env, src, cpp_modules = cpp_modules, **build_kwargs)
+        test = test_env.Program(test_path, test_objects, **build_kwargs)
+    else:
+        test = test_env.Program(test_path, src, **build_kwargs)
 
     add_targets(src)
 
@@ -541,15 +704,18 @@ def _env_build_lib(self, src, name = None, static = None, **kwargs):
     if name is None:
         name = self["APP_MODULE_FORMAT_NAME"]
     lib_path = os_path.join(builder.build_lib_path, name)
+    cpp_modules, build_kwargs = _extract_cpp_module_imports(kwargs)
+    if cpp_modules:
+        _enable_cpp_modules(self)
 
     # compile sources to objects first so they can be reused
     # by both the per-module library and the combined library
     if (static is not None and static) or builder.build_static_libs:
-        objects = self.Object(src)
-        lib = NoCache(self.StaticLibrary(lib_path, objects, **kwargs))
+        objects = _build_objects_for_target(self, src, cpp_modules = cpp_modules, **build_kwargs)
+        lib = NoCache(self.StaticLibrary(lib_path, objects, **build_kwargs))
     else:
-        objects = self.SharedObject(src)
-        lib = NoCache(self.SharedLibrary(lib_path, objects, **kwargs))
+        objects = _build_objects_for_target(self, src, shared = True, cpp_modules = cpp_modules, **build_kwargs)
+        lib = NoCache(self.SharedLibrary(lib_path, objects, **build_kwargs))
 
     add_targets(src)
 
@@ -564,6 +730,62 @@ def _env_build_lib(self, src, name = None, static = None, **kwargs):
         )
 
     return lib
+
+def _env_export_test(self, includes = [], resources = []):
+    module_name = self['APP_MODULE_NAME']
+    if includes:
+        normalized_includes = [_normalize_module_relative_path(module_name, path) for path in includes]
+        modules_exported_test_includes.setdefault(module_name, [])
+        for include_path in normalized_includes:
+            if include_path not in modules_exported_test_includes[module_name]:
+                modules_exported_test_includes[module_name].append(include_path)
+    if resources:
+        normalized_resources = [_normalize_module_relative_path(module_name, path) for path in resources]
+        modules_exported_test_resources.setdefault(module_name, [])
+        for resource_path in normalized_resources:
+            if resource_path not in modules_exported_test_resources[module_name]:
+                modules_exported_test_resources[module_name].append(resource_path)
+
+def _env_build_cpp_modules(self, src, **kwargs):
+    owner_module_name = self['APP_MODULE_NAME']
+    if not builder.is_cpp_modules:
+        raise RuntimeError("C++ modules are only supported with GCC 15+ on native Linux builds")
+    local_kwargs = kwargs.copy()
+    explicit_module_names = local_kwargs.pop('module_name', None)
+    imports = scons_utils.as_list(local_kwargs.pop('imports', []))
+    sources = scons_utils.as_list(src)
+    module_dir = self['APP_MODULE_DIR']
+    if explicit_module_names is None:
+        module_names = [_parse_cpp_module_name(_resolve_cpp_module_source_path(module_dir, s)) for s in sources]
+    else:
+        module_names = scons_utils.as_list(explicit_module_names)
+    if len(module_names) != len(sources):
+        raise RuntimeError("module_name must match the number of C++ module sources")
+    cppm_env = self.Clone()
+    # Enable on the clone for compilation and on self so that other sources in
+    # the same module env can link against the produced BMIs.
+    _enable_cpp_modules(cppm_env)
+    _enable_cpp_modules(self)
+    cache_dir = _ensure_cpp_modules_cache_dir()
+    objects = scons_utils.as_list(cppm_env.Object(sources, **local_kwargs))
+    if imports:
+        cppm_env.Depends(objects, _resolve_cpp_module_nodes(imports))
+    exported = modules_exported_bmis.setdefault(owner_module_name, [])
+    for module_name, object_node in zip(module_names, objects):
+        if module_name not in exported:
+            exported.append(module_name)
+        modules_cpp_modules[module_name] = {
+            'owner': owner_module_name,
+            'cache_dir': cache_dir,
+            'objects': [object_node],
+        }
+    # Rewrite the mapper file now that new modules are registered.
+    # Modules that import these will call _enable_cpp_modules() later
+    # (guarantee: SCons processes dependencies first), so the mapper file
+    # will already contain these entries when those envs are configured.
+    _write_cpp_module_mapper()
+    add_targets(src)
+    return objects
 
 def _env_build_bin(self, src, name = None, add_libs = [], android_dir = None, **kwargs):
     """ Environment method to build a binary for a module """
@@ -580,13 +802,20 @@ def _env_build_bin(self, src, name = None, add_libs = [], android_dir = None, **
 
     bin_env = self.Clone()
     bin_env.Prepend(LIBS = add_libs)
+    cpp_modules, build_kwargs = _extract_cpp_module_imports(kwargs)
+    if cpp_modules:
+        _enable_cpp_modules(bin_env)
 
     if self['BIN_LINKFLAGS']:
         bin_env.Append(LINKFLAGS = self['BIN_LINKFLAGS'])
 
     name += bin_ext
     bin_path = os_path.join(builder.build_bin_path, name)
-    bin = bin_env.Program(bin_path, src, **kwargs)
+    if cpp_modules:
+        bin_objects = _build_objects_for_target(bin_env, src, cpp_modules = cpp_modules, **build_kwargs)
+        bin = bin_env.Program(bin_path, bin_objects, **build_kwargs)
+    else:
+        bin = bin_env.Program(bin_path, src, **build_kwargs)
 
     add_targets(src)
 
@@ -685,6 +914,8 @@ base_env.AddMethod(_env_build_bin, "build_bin")
 base_env.AddMethod(_env_build_test, "build_test")
 base_env.AddMethod(_env_build_demo, "build_demo")
 base_env.AddMethod(_env_build_demos, "build_demos")
+base_env.AddMethod(_env_export_test, "export_test")
+base_env.AddMethod(_env_build_cpp_modules, "build_cpp_modules")
 base_env.AddMethod(_env_pkg_config, "pkg_config")
 base_env.AddMethod(_env_parse_config, "parse_config")
 base_env.AddMethod(_env_replace_in_build, "build_replace")
@@ -741,28 +972,36 @@ def get_compilation_options(conf, key):
         ret += val
     return ret
 
+modules.resolve_modules_exports(build_modules, modules_options)
+
 def create_module_env(conf, depends = [],
-                        do_inherit_depends_libs = False,
                         do_inherit_depends_defines = False,
                         do_inherit_depends_links = False,
                         do_inherit_depends_flags = False,
                         do_inherit_depends_generated_libs = False,
                     ):
     modname = conf["modname"]
-    # get platform dependent libs
-    libs = modules.get_module_libs(build_modules, modname, add_depends_libs = do_inherit_depends_libs)
+    ordered_depends = depends[:]
+    ordered_depends.sort(
+        key = lambda dep_modname: len(build_modules.get(dep_modname, {}).get("depends", [])),
+        reverse = True,
+    )
+    # Keep module-local libraries before transitive exports so static link order
+    # remains correct on platforms like MinGW.
+    libs = modules.get_module_libs(build_modules, modname)
     libs += get_compilation_options(conf, "libs")
+    libs += conf.get("_resolved_export_libs", [])
     # filter out libs that don't exist with musl
     if builder.libc == "musl":
         libs = [lib for lib in libs if lib not in architectures.musl_excluded_libs]
     # add flag
-    flags = conf.get("flags", [])
+    flags = conf.get("_resolved_export_flags", []) + conf.get("flags", [])
     flags += get_compilation_options(conf, "flags")
     # add linkflags
-    link = conf.get("link", [])
+    link = conf.get("_resolved_export_link", []) + conf.get("link", [])
     link += get_compilation_options(conf, "link")
     # add defines
-    defines = conf.get("defines", [])
+    defines = conf.get("_resolved_export_defines", []) + conf.get("defines", [])
     defines += get_compilation_options(conf, "defines")
 
     # add libs generated by parent modules
@@ -770,10 +1009,11 @@ def create_module_env(conf, depends = [],
     depends_defines = []
     depends_links = []
     depends_flags = []
-    for dep_modname in depends:
+    for dep_modname in ordered_depends:
         if do_inherit_depends_generated_libs:
             for generated_lib_name in modules_generated_libs.get(dep_modname, []):
-                depends_generated_libs.insert(0, generated_lib_name["name"])
+                if generated_lib_name["name"] not in depends_generated_libs:
+                    depends_generated_libs.append(generated_lib_name["name"])
         depend_conf = build_modules.get(dep_modname, {})
         if depend_conf:
             if do_inherit_depends_defines:
@@ -782,6 +1022,8 @@ def create_module_env(conf, depends = [],
                 depends_links.extend(depend_conf.get("link", []))
             if do_inherit_depends_flags:
                 depends_flags.extend(depend_conf.get("flags", []))
+            if dep_modname in modules_exported_bmis:
+                flags.append('-fmodules')
 
     # Create a specific environment for the module
     env = base_env.Clone()
@@ -801,6 +1043,8 @@ def create_module_env(conf, depends = [],
             os_path.join(builder.build_root_path, modname, "include"),
         ],
     )
+    if any(dep_modname in modules_exported_bmis for dep_modname in ordered_depends):
+        _enable_cpp_modules(env)
     # module name
     env["APP_MODULE_NAME"] = modname
     # formatted module name PROJNAME_MODULENAME
@@ -839,10 +1083,7 @@ for conf in modules_build_order:
     modname = conf["modname"]
     logger.info("building module: {}".format(modname))
     env = create_module_env(conf,
-        depends = conf.get("original-depends", []),
-        # inherit dependencies libs/flags/links from parent modules by default only for static libraries as it is the most common use case
-        # and dynamic libraries usually don't need to re-export their dependencies
-        do_inherit_depends_libs = conf.get("inherit-depends-libs", builder.build_static_libs),
+        depends = conf.get("depends", []),
         do_inherit_depends_defines = conf.get("inherit-depends-defines", False),
         do_inherit_depends_links = conf.get("inherit-depends-links", False),
         do_inherit_depends_flags = conf.get("inherit-depends-flags", False),

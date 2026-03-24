@@ -18,13 +18,14 @@ modules = {
     "json": {
         "extlibs": ['simdjson'],
         "libs": ['simdjson'],
+        "export-libs": ['simdjson'],
     },
     "util": {
         "depends": ['json'],
-        "inherit-depends-libs": True,
         "linux-libs": ['pthread'], # threading (bionic has it in libc)
         "windows-libs": ['pthread'], # mingw winpthread
         "extlibs": ['fmt'],
+        "export-defines": ['FMT_HEADER_ONLY'],
         # stdc++fs only needed for GCC < 9 with glibc
         "mingw-gnu-libs": ['stdc++fs'],
         # === Android specific ===
@@ -36,6 +37,7 @@ modules = {
             "-Wno-unknown-pragmas",
             "-Wno-deprecated-declarations",
         ],
+        "export-all-flags": True,
         "em-link": [
             "-sFORCE_FILESYSTEM", # use filesystem
             "-sUSE_PTHREADS=1", # enable threads
@@ -49,6 +51,7 @@ modules = {
             "x11": 0, # x11=1 to compile with X11
             "wayland": 0, # wayland=1 to compile with Wayland
         },
+        "export-all-libs": True,
         # === Linux specific ===
         "linux-extlibs": ['libuuid'],
         "linux-libs": [
@@ -71,22 +74,19 @@ modules = {
     },
     "core": {
         "depends": ['util', 'sys'],
-        "inherit-depends-libs": True,
     },
     "net": {
         "depends": ['util', 'sys'],
         "extlibs": ['openssl'],
         "libs": ['ssl', 'crypto'],
-        "windows-libs": [
-            'psapi', # GetModuleFileName/GetProcessMemoryInfo
-            'ssp', # winsock
-            'imagehlp', # backtrace / SymFromAddr
-            'ws2_32', # windows socket api
+        "export-libs": ['ssl', 'crypto'],
+        "export-windows-libs": [
+            'crypt32',
+            'bcrypt',
         ],
     },
     "http": {
         "depends": ['net'],
-        "inherit-depends-libs": True,
         "extlibs": [
             'libwebsockets',
             'curl',
@@ -95,22 +95,17 @@ modules = {
         ],
         "linux-extlibs": ["libcap"],
         # all libs are platform-specific due to different names and link order requirements
-        "linux-libs": ["websockets", "curl", "z", "uv", "cap", "ssl", "crypto"],
+        "linux-libs": ["websockets", "curl", "z", "uv", "cap"],
         # Windows static linking: all transitive deps must be explicit
         # order matters: higher-level libs first, their deps after
         "windows-libs": [
             'websockets_static', # vcpkg builds libwebsockets_static.a on mingw
             'curl',              # libcurl
-            'ssl', 'crypto',     # OpenSSL (libwebsockets, curl, net)
             'uv',                # libuv (libwebsockets uses it)
             'zlib',              # vcpkg zlib installs libzlib.a on mingw
-            'ws2_32',            # Winsock (libwebsockets, curl, libuv, net)
-            'crypt32',           # CryptoAPI (OpenSSL, libwebsockets, curl)
-            'bcrypt',            # BCrypt (curl)
             'winmm',             # Multimedia (curl)
             'iphlpapi',          # IP Helper (libwebsockets, libuv)
             'userenv',           # User environment (libwebsockets, libuv)
-            'psapi',             # Process status (libwebsockets, libuv)
             'advapi32',          # Advanced API (curl, libuv)
             'user32',            # User interface (libuv)
             'dbghelp',           # Debug (libuv)
@@ -127,7 +122,6 @@ modules = {
             "pcap-config --cflags --libs",
         ],
         # Windows static linking: libpcap needs winsock
-        "windows-libs": ['ws2_32'],
     },
     "zip": {
         "depends": ['util', 'sys'],
@@ -142,15 +136,6 @@ modules = {
         "depends": ['util', 'sys'],
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
-        # Windows static linking: sys module transitive deps
-        "windows-libs": [
-            'ws2_32',    # Winsock (sys)
-            'psapi',     # GetProcessMemoryInfo (sys)
-            'imagehlp',  # backtrace / SymFromAddr (sys)
-            'ssp',       # winsock (sys)
-            'rpcrt4',    # Uuid (sys)
-            'gdi32',     # wingdi (sys)
-        ],
     },
     "ssh": {
         "depends": ['util', 'sys'],
@@ -161,14 +146,9 @@ modules = {
         "windows-libs": [
             'ssh',               # libssh
             'ssl', 'crypto',     # OpenSSL (libssh dep)
-            'ws2_32',            # Winsock (libssh, OpenSSL, sys)
             'crypt32',           # CryptoAPI (OpenSSL)
             'bcrypt',            # BCrypt (OpenSSL)
             'iphlpapi',          # if_nametoindex (libssh)
-            'psapi',             # GetProcessMemoryInfo (sys)
-            'imagehlp',          # backtrace / SymFromAddr (sys)
-            'ssp',               # winsock (sys)
-            'rpcrt4',            # Uuid (sys)
         ],
     },
     "usb": {
@@ -219,7 +199,6 @@ modules = {
             "SDL3",
             "kernel32",
             "user32",
-            "gdi32", # doubled
             "winmm",
             "imm32",
             "ole32",
@@ -239,10 +218,6 @@ modules = {
             "d3dcompiler",
             # directx graphics infrastructure
             "dxgi",
-            # graphics device interface
-            "gdi32",
-            # winsock
-            'ssp',
         ],
         "em-flags": [
             "-pthread", # enable threads
@@ -277,15 +252,6 @@ conditional_modules = {
         "depends": ['lua'],
         "libs": ["lua"],
         "flags": ["-Wno-unused-parameter"],
-        # Windows static linking: sys module transitive deps
-        "windows-libs": [
-            'rpcrt4',    # Uuid (from sys)
-            'psapi',     # GetProcessMemoryInfo (from sys)
-            'ssp',       # winsock (from sys)
-            'ws2_32',    # windows socket api (from sys)
-            'gdi32',     # wingdi (from sys)
-            'imagehlp',  # backtrace / SymFromAddr (from sys)
-        ],
     },
     "py": {
         "conditional-env": "py",
@@ -303,17 +269,6 @@ conditional_modules = {
         ],
     }
 }
-
-def add_fmt_to_modules(modules_list):
-    for module in modules_list.values():
-        # static linkage of fmt lib for all libs
-        if "defines" in module:
-            module["defines"].append("FMT_HEADER_ONLY")
-        else:
-            module["defines"] = ["FMT_HEADER_ONLY"]
-
-add_fmt_to_modules(modules)
-add_fmt_to_modules(conditional_modules)
 
 ###############################################################################
 # external libs

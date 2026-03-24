@@ -7,6 +7,25 @@ import shutil
 from pprint import PrettyPrinter
 pp = PrettyPrinter(indent=2)
 
+
+def as_list(value):
+    """Normalize any scalar, tuple, SCons NodeList, or other iterable to a plain list."""
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    if hasattr(value, '__iter__') and not isinstance(value, (str, bytes, dict)):
+        try:
+            return list(value)
+        except TypeError:
+            pass
+    return [value]
+
+
+def dedupe_keep_order(values):
+    """Remove duplicates from *values* while preserving first-seen order."""
+    return list(dict.fromkeys(values))
+
 ###############################################################################
 # Build helpers
 ###############################################################################

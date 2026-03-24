@@ -3,6 +3,21 @@ import sys
 
 must_have_parameters = ['depends', 'libs', 'link', 'flags']
 
+def __dedupe_keep_order(values):
+    return list(dict.fromkeys(values))
+
+def _get_export_options(conf, key, modules_options):
+    ret = conf.get(f"export-{key}", [])[:]
+    for option in modules_options:
+        ret.extend(conf.get(f"export-{option}-{key}", []))
+    return ret
+
+def _get_active_options(conf, key, modules_options):
+    ret = conf.get(key, [])[:]
+    for option in modules_options:
+        ret.extend(conf.get(f"{option}-{key}", []))
+    return ret
+
 def fill_modlist_from_modules(modules, specific_modules, modlist):
     """ @brief Gets all modules to build from a single module to build
     """
@@ -63,24 +78,49 @@ def resolve_modules_dependencies(modules):
         for param in must_have_parameters:
             if param not in conf:
                 conf[param] = []
-        conf["original-depends"] = conf["depends"]
+        conf["original-depends"] = conf["depends"][:]
         # Adds conditional dependencies if they are in the current build
         conditional_depends = conf.get("conditional-depends", [])
         if conditional_depends:
             conf['depends'].extend([cond_mod for cond_mod in conditional_depends if cond_mod in modules])
+        conf["declared-depends"] = conf['depends'][:]
         # Get dependency tree
         __rec_fill_module_real_depends(modules, name, conf)
 
-def get_module_libs(modules, modname, add_depends_libs = False):
+def resolve_modules_exports(modules, modules_options):
+    order = __get_module_fill_order(modules)
+    for name in order:
+        conf = modules[name]
+        resolved_export_libs = []
+        resolved_export_defines = []
+        resolved_export_flags = []
+        resolved_export_link = []
+        if conf.get("export-all-libs", False):
+            resolved_export_libs.extend(_get_active_options(conf, "libs", modules_options))
+        if conf.get("export-all-defines", False):
+            resolved_export_defines.extend(_get_active_options(conf, "defines", modules_options))
+        if conf.get("export-all-flags", False):
+            resolved_export_flags.extend(_get_active_options(conf, "flags", modules_options))
+        if conf.get("export-all-link", False):
+            resolved_export_link.extend(_get_active_options(conf, "link", modules_options))
+        resolved_export_libs.extend(_get_export_options(conf, "libs", modules_options))
+        resolved_export_defines.extend(_get_export_options(conf, "defines", modules_options))
+        resolved_export_flags.extend(_get_export_options(conf, "flags", modules_options))
+        resolved_export_link.extend(_get_export_options(conf, "link", modules_options))
+        for dep in conf.get("declared-depends", []):
+            dep_conf = modules.get(dep, {})
+            resolved_export_libs.extend(dep_conf.get("_resolved_export_libs", []))
+            resolved_export_defines.extend(dep_conf.get("_resolved_export_defines", []))
+            resolved_export_flags.extend(dep_conf.get("_resolved_export_flags", []))
+            resolved_export_link.extend(dep_conf.get("_resolved_export_link", []))
+        conf["_resolved_export_libs"] = __dedupe_keep_order(resolved_export_libs)
+        conf["_resolved_export_defines"] = __dedupe_keep_order(resolved_export_defines)
+        conf["_resolved_export_flags"] = __dedupe_keep_order(resolved_export_flags)
+        conf["_resolved_export_link"] = __dedupe_keep_order(resolved_export_link)
+
+def get_module_libs(modules, modname):
     conf = modules[modname]
-    libs = []
-    if add_depends_libs:
-        for dep in conf["depends"]:
-            dep_conf = modules[dep]
-            dep_libs = dep_conf.get('libs', [])
-            libs[:0] = dep_libs
-    libs[:0] = conf['libs']
-    return libs
+    return conf['libs'][:]
 
 def get_extlibs_versions(app, modules_extlibs):
     extlibs = getattr(app, "extlibs", {})
@@ -225,8 +265,9 @@ def build_modules_conf(app, specific_modules=[], conditionals=[]):
     else:
         modules = app.modules
     # Add specific conditional modules
+    all_modules = get_module_merged_with_conditionals(app)
     for modname in conditionals:
-        add_conditional_module(app.conditional_modules, modules, modname)
+        fill_modlist_from_modules(all_modules, [modname], modules)
     # Get every dependencies configuration for modules
     resolve_modules_dependencies(modules)
     return modules
