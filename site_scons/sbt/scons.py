@@ -30,6 +30,7 @@ from sbt import architectures
 
 from site_scons.sbt.build import modules
 from site_scons.sbt.build import utils as build_utils
+from site_scons.sbt.build import cpp_modules as build_cpp_modules
 
 from site_scons.sbt.scons import utils as scons_utils
 from site_scons.sbt.scons import android as scons_android
@@ -396,19 +397,7 @@ def _prepend_unique_paths(env, key, values):
     if to_prepend:
         env.Prepend(**{key: to_prepend})
 
-def _enable_cpp_modules(env):
-    """Register .cppm and .ixx as compilable suffixes in *env* using GCC named-module support.
-
-    Reuses the existing .cpp LazyAction — do NOT use the CompositeBuilder's
-    CommandGeneratorAction (object_builder.action), it recurses infinitely.
-
-    Passes -fmodule-mapper=<mapper_file> so GCC writes/reads BMIs from
-    build_path/gcm.cache/ regardless of SCons' CWD (workspace root).
-    The mapper file is a simple '<module-name> <bmi-path>' text file.
-    It is written/updated each time a module is registered and always
-    complete before GCC actually compiles anything (config phase vs build phase).
-    """
-    mapper_file = _write_cpp_module_mapper()
+def _register_cpp_module_suffixes(env):
     cpp_suffixes = ['.cppm', '.ixx']
     for builder_name in ['Object', 'SharedObject']:
         object_builder = env['BUILDERS'][builder_name]
@@ -419,49 +408,23 @@ def _enable_cpp_modules(env):
             object_builder.add_emitter(suffix, cpp_emitter)
             if suffix not in object_builder.builder.src_suffix:
                 object_builder.builder.src_suffix.append(suffix)
-    env.AppendUnique(CXXFLAGS=['-fmodules', f'-fmodule-mapper={mapper_file}'])
-    env.AppendUnique(CPPSUFFIXES=cpp_suffixes)
+    env.AppendUnique(CPPSUFFIXES = cpp_suffixes)
 
-def _ensure_cpp_modules_cache_dir():
-    # Lives inside build_path which already encodes machine/platform/libc/compiler/mode.
-    cache_dir = os_path.join(builder.build_path, 'gcm.cache')
-    if not is_dry_run:
-        os.makedirs(cache_dir, exist_ok=True)
-    return cache_dir
-
-def _write_cpp_module_mapper():
-    """Write/update the GCC module mapper file from the current modules registry.
-
-    Format (from GCC mapper spec): '<module-name> <bmi-path>' one per line.
-    The file is rewritten on each new module registration during the SCons
-    configuration phase — always complete before compilation starts.
-    """
-    cache_dir = _ensure_cpp_modules_cache_dir()
-    mapper_file = os_path.join(builder.build_path, 'gcm.cache.mapper')
-    if is_dry_run:
-        return mapper_file
-    with open(mapper_file, 'w') as f:
-        for module_name in modules_cpp_modules:
-            bmi_path = os_path.join(cache_dir, f'{module_name}.gcm')
-            f.write(f'{module_name} {bmi_path}\n')
-    return mapper_file
-
-def _parse_cpp_module_name(path):
-    import re
-    module_re = re.compile(r'^\s*(?:export\s+)?module\s+([A-Za-z_][A-Za-z0-9_.:.]*)\s*;')
-    with open(path, 'r', encoding='utf-8') as fd:
-        for line in fd:
-            m = module_re.match(line)
-            if m:
-                return m.group(1)
-    raise RuntimeError(f"unable to determine C++ module name from: {path}")
-
-def _resolve_cpp_module_source_path(module_dir, source):
-    source_path = str(source)
-    if os_path.isabs(source_path):
-        return source_path
-    candidate = os_path.join(module_dir, source_path)
-    return candidate if os_path.exists(candidate) else source_path
+def _enable_cpp_modules(env):
+    backend = builder.cpp_modules_backend
+    if backend is None:
+        raise RuntimeError("C++ modules are not supported for compiler '{}' on this build target".format(builder.build_compiler))
+    _register_cpp_module_suffixes(env)
+    bmi_dir = build_cpp_modules.get_bmi_dir(backend, builder.build_path, is_dry_run)
+    if backend == 'gcc':
+        mapper_file = build_cpp_modules.write_gcc_mapper(builder.build_path, modules_cpp_modules, is_dry_run)
+        env.AppendUnique(CXXFLAGS = ['-fmodules', f'-fmodule-mapper={mapper_file}'])
+    elif backend == 'clang':
+        clang_module_flags = [f'-fprebuilt-module-path={bmi_dir}']
+        if builder.cpp_modules_compiler_major >= 22:
+            clang_module_flags.append('-fno-modules-reduced-bmi')
+        env.AppendUnique(CXXFLAGS = clang_module_flags)
+    return bmi_dir
 
 def _split_build_inputs(env, src):
     """Split *src* into (sources_to_compile, prebuilt_object_nodes)."""
@@ -749,14 +712,15 @@ def _env_export_test(self, includes = [], resources = []):
 def _env_build_cpp_modules(self, src, **kwargs):
     owner_module_name = self['APP_MODULE_NAME']
     if not builder.is_cpp_modules:
-        raise RuntimeError("C++ modules are only supported with GCC 15+ on native Linux builds")
+        raise RuntimeError("C++ modules are not supported with compiler '{}' on this build target".format(builder.build_compiler))
     local_kwargs = kwargs.copy()
     explicit_module_names = local_kwargs.pop('module_name', None)
     imports = scons_utils.as_list(local_kwargs.pop('imports', []))
     sources = scons_utils.as_list(src)
+    backend = builder.cpp_modules_backend
     module_dir = self['APP_MODULE_DIR']
     if explicit_module_names is None:
-        module_names = [_parse_cpp_module_name(_resolve_cpp_module_source_path(module_dir, s)) for s in sources]
+        module_names = [build_cpp_modules.parse_module_name(build_cpp_modules.resolve_source_path(module_dir, s)) for s in sources]
     else:
         module_names = scons_utils.as_list(explicit_module_names)
     if len(module_names) != len(sources):
@@ -766,24 +730,37 @@ def _env_build_cpp_modules(self, src, **kwargs):
     # the same module env can link against the produced BMIs.
     _enable_cpp_modules(cppm_env)
     _enable_cpp_modules(self)
-    cache_dir = _ensure_cpp_modules_cache_dir()
-    objects = scons_utils.as_list(cppm_env.Object(sources, **local_kwargs))
-    if imports:
-        cppm_env.Depends(objects, _resolve_cpp_module_nodes(imports))
+    bmi_dir = build_cpp_modules.get_bmi_dir(backend, builder.build_path, is_dry_run)
+    imported_objects = _resolve_cpp_module_nodes(imports) if imports else []
+    objects = []
+    if backend == 'gcc':
+        objects = scons_utils.as_list(cppm_env.Object(sources, **local_kwargs))
+        if imported_objects:
+            cppm_env.Depends(objects, imported_objects)
+    elif backend == 'clang':
+        for source, module_name in zip(sources, module_names):
+            source_env = cppm_env.Clone()
+            bmi_path = build_cpp_modules.get_bmi_path(backend, builder.build_path, module_name, is_dry_run)
+            source_env.AppendUnique(CXXFLAGS = [f'-fmodule-output={bmi_path}'])
+            source_objects = scons_utils.as_list(source_env.Object(source, **local_kwargs))
+            if imported_objects:
+                source_env.Depends(source_objects, imported_objects)
+            objects.extend(source_objects)
+    else:
+        raise RuntimeError("unsupported C++ modules backend '{}'".format(backend))
     exported = modules_exported_bmis.setdefault(owner_module_name, [])
     for module_name, object_node in zip(module_names, objects):
         if module_name not in exported:
             exported.append(module_name)
         modules_cpp_modules[module_name] = {
             'owner': owner_module_name,
-            'cache_dir': cache_dir,
+            'compiler': builder.build_compiler,
+            'bmi_dir': bmi_dir,
+            'bmi_path': build_cpp_modules.get_bmi_path(backend, builder.build_path, module_name, is_dry_run),
             'objects': [object_node],
         }
-    # Rewrite the mapper file now that new modules are registered.
-    # Modules that import these will call _enable_cpp_modules() later
-    # (guarantee: SCons processes dependencies first), so the mapper file
-    # will already contain these entries when those envs are configured.
-    _write_cpp_module_mapper()
+    if backend == 'gcc':
+        build_cpp_modules.write_gcc_mapper(builder.build_path, modules_cpp_modules, is_dry_run)
     add_targets(src)
     return objects
 

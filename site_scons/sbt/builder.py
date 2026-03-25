@@ -388,7 +388,18 @@ libs_type = "static" if is_static_libs() else "dynamic"
 def is_cross_building():
     return (host_machine != build_machine) or (host_libc != libc) or (host_platform != build_platform)
 
-is_cpp_modules = build_compiler == "gcc" and build_platform == "linux" and not is_cross_building() and int(_detect_compiler_major_version(build_compiler, build_machine, libc) or 0) >= 15
+def _detect_cpp_modules_backend():
+    if build_platform != "linux" or is_cross_building():
+        return None
+    if build_compiler == "gcc" and cpp_modules_compiler_major >= 15:
+        return "gcc"
+    if build_compiler == "clang" and cpp_modules_compiler_major >= 21:
+        return "clang"
+    return None
+
+cpp_modules_compiler_major = int(_detect_compiler_major_version(build_compiler, build_machine, libc) or 0)
+cpp_modules_backend = _detect_cpp_modules_backend()
+is_cpp_modules = cpp_modules_backend is not None
 
 allowed_compilers = ("gcc", "clang", "em", "mingw", "zig", "ndk")
 

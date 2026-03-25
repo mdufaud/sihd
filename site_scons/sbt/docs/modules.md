@@ -193,7 +193,7 @@ All combinations of `(platform, libtype, mode, compiler, libc, native/cross)` ar
 | `env.build_test(sources, add_libs=[])` | Build test binary (only if `test=1`) |
 | `env.build_demo(source, name=, add_libs=[], android_dir=None)` | Build demo (only if `demo=1`) |
 | `env.build_demos(sources)` | Build multiple demos (one per source file) |
-| `env.build_cpp_modules(sources, module_name=, imports=[])` | Build GCC C++20 module interfaces and register them for later imports |
+| `env.build_cpp_modules(sources, module_name=, imports=[])` | Build C++20 module interfaces and register them for later imports |
 
 When a target imports named modules, pass them explicitly with `cpp_modules=[...]`:
 
@@ -209,9 +209,21 @@ env.build_test(
 
 This does three things:
 
-1. enables `-fmodules` on the importer build,
+1. enables the active compiler backend for module consumption,
 2. wires SCons dependencies so imported interfaces are compiled first,
 3. links the interface object together with the importer target.
+
+### Compiler support for `build_cpp_modules`
+
+Current SBT support matrix:
+
+| Compiler | Support | Notes |
+|----------|---------|-------|
+| GCC 15+ native Linux | supported | uses `gcm.cache/` + GCC mapper file |
+| Clang 21+ native Linux | supported | uses one-phase `.pcm` emission via `-fmodule-output=` and consumption through `-fprebuilt-module-path=` |
+| Cross builds / mingw / emscripten / Android NDK | unsupported | backend intentionally disabled for now |
+
+The public SBT API is the same for GCC and Clang. The backend is selected automatically from the active compiler.
 
 ### Module info
 
