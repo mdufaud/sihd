@@ -1,6 +1,5 @@
-#include <libwebsockets.h>
-
 #include <thread>
+#include <unordered_set>
 
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/HttpStatus.hpp>
@@ -10,6 +9,8 @@
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/StepWorker.hpp>
+
+#include "lws.hpp"
 
 #ifndef SIHD_HTTP_URI_BUFSIZE
 # define SIHD_HTTP_URI_BUFSIZE 512
@@ -40,11 +41,24 @@ struct HttpServer::Impl
 {
         struct HttpSession
         {
-                void clear_request()
+                void init()
+                {
+                    wsi = nullptr;
+                    in = nullptr;
+                    len = 0;
+                    rc = 0;
+                    request_type = HttpRequest::None;
+                    content_size = 0;
+                    should_complete_transaction = true;
+                    stream_provider = nullptr;
+                }
+
+                void clean()
                 {
                     request.reset();
                     content.reset();
-                    content_size = 0;
+                    cached_auth_header.reset();
+                    stream_provider = nullptr;
                 }
 
                 void new_request()
@@ -54,8 +68,14 @@ struct HttpServer::Impl
                     content_size = 0;
                     should_complete_transaction = true;
                     stream_provider = nullptr;
-                    if (cached_auth_header)
-                        cached_auth_header->clear();
+                    cached_auth_header.reset();
+                }
+
+                void clear_request()
+                {
+                    request.reset();
+                    content.reset();
+                    content_size = 0;
                 }
 
                 // forward lws callback args
@@ -75,8 +95,8 @@ struct HttpServer::Impl
                 bool should_complete_transaction;
                 // streaming state
                 HttpResponse::StreamProvider stream_provider;
-                // cached auth header for deferred POST/PUT (heap-allocated for lws zero-init safety)
-                std::unique_ptr<std::string> cached_auth_header;
+                // cached auth header for deferred POST/PUT
+                std::optional<std::string> cached_auth_header;
         };
 
         struct WebsocketSession
@@ -125,6 +145,16 @@ struct HttpServer::Impl
 
         ~Impl()
         {
+            {
+                std::lock_guard sl(sessions_mutex);
+                for (HttpSession *session : active_sessions)
+                {
+                    session->clean();
+                    if (lws_context_ptr == nullptr)
+                        free(session);
+                }
+                active_sessions.clear();
+            }
             std::lock_guard l(mutex);
             if (lws_protocols_ptr != nullptr)
             {
@@ -136,6 +166,21 @@ struct HttpServer::Impl
                 lws_context_destroy(lws_context_ptr);
                 lws_context_ptr = nullptr;
             }
+        }
+
+        void session_init(HttpSession *session)
+        {
+            session->init();
+            std::lock_guard sl(sessions_mutex);
+            active_sessions.insert(session);
+        }
+
+        void session_cleanup(HttpSession *session)
+        {
+            std::lock_guard sl(sessions_mutex);
+            if (active_sessions.erase(session) == 0)
+                return;
+            session->clean();
         }
 
         // static lws callbacks
@@ -160,11 +205,7 @@ struct HttpServer::Impl
         }
 
         // http callback
-        int _lws_http_callback(struct lws *wsi,
-                               enum lws_callback_reasons reason,
-                               void *user,
-                               void *in,
-                               size_t len)
+        int _lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
         {
             int rc = 0;
             HttpSession *session = (HttpSession *)user;
@@ -287,8 +328,14 @@ struct HttpServer::Impl
                 case LWS_CALLBACK_WSI_DESTROY:
                 case LWS_CALLBACK_PROTOCOL_INIT:
                 case LWS_CALLBACK_PROTOCOL_DESTROY:
+                    break;
                 case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
+                    if (session != nullptr)
+                        this->session_init(session);
+                    break;
                 case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
+                    if (session != nullptr)
+                        this->session_cleanup(session);
                     break;
                 case LWS_CALLBACK_FILTER_HTTP_CONNECTION:
                 {
@@ -360,16 +407,8 @@ struct HttpServer::Impl
                     char client_name[128];
                     char client_ip[INET6_ADDRSTRLEN];
                     lws_sockfd_type fd = (size_t)in;
-                    lws_get_peer_addresses(wsi,
-                                           fd,
-                                           client_name,
-                                           sizeof(client_name),
-                                           client_ip,
-                                           sizeof(client_ip));
-                    SIHD_LOG(debug,
-                             "HttpServer: received client connect from {} ({})",
-                             client_name,
-                             client_ip);
+                    lws_get_peer_addresses(wsi, fd, client_name, sizeof(client_name), client_ip, sizeof(client_ip));
+                    SIHD_LOG(debug, "HttpServer: received client connect from {} ({})", client_name, client_ip);
                     rc = 0;
                     break;
                 }
@@ -409,10 +448,8 @@ struct HttpServer::Impl
                 response.set_status(HttpStatus::NoContent);
                 response.http_header().set_server(default_server_name);
                 response.http_header().set_header("access-control-allow-origin:", default_cors_origin);
-                response.http_header().set_header("access-control-allow-methods:",
-                                                  "GET, POST, PUT, DELETE, OPTIONS");
-                response.http_header().set_header("access-control-allow-headers:",
-                                                  "content-type, authorization");
+                response.http_header().set_header("access-control-allow-methods:", "GET, POST, PUT, DELETE, OPTIONS");
+                response.http_header().set_header("access-control-allow-headers:", "content-type, authorization");
                 response.http_header().set_header("access-control-max-age:", "86400");
                 response.http_header().set_content_length(0);
                 this->send_http_headers(session->wsi, response);
@@ -421,17 +458,16 @@ struct HttpServer::Impl
 
             // Auth enforcement (Basic or Bearer) - per webservice, with server fallback
             {
-                auto auth_header = this->get_header(session->wsi, WSI_TOKEN_HTTP_AUTHORIZATION);
+                std::optional<std::string> auth_header = this->get_header(session->wsi, WSI_TOKEN_HTTP_AUTHORIZATION);
                 if (auth_header.has_value())
-                    session->cached_auth_header = std::make_unique<std::string>(std::move(*auth_header));
+                    session->cached_auth_header = std::move(*auth_header);
             }
 
             int rc = 0;
             std::string resource_path;
             if (server->get_resource_path(path, resource_path))
             {
-                std::string type
-                    = fmt::format("{}; charset={}", mime.get(fs::extension(resource_path)), encoding);
+                std::string type = fmt::format("{}; charset={}", mime.get(fs::extension(resource_path)), encoding);
                 if (lws_serve_http_file(session->wsi, resource_path.c_str(), type.c_str(), nullptr, 0) < 0)
                     rc = -1;
                 session->should_complete_transaction = false;
@@ -449,9 +485,7 @@ struct HttpServer::Impl
             }
 
             if (page_404_path.empty())
-                return this->send_404(session->wsi, "<html><body><h1>404 file not found</h1></body></html>")
-                           ? 0
-                           : -1;
+                return this->send_404(session->wsi, "<html><body><h1>404 file not found</h1></body></html>") ? 0 : -1;
 
             return rc;
         }
@@ -508,12 +542,10 @@ struct HttpServer::Impl
                 return false;
             if (session->request_type == HttpRequest::Post || session->request_type == HttpRequest::Put)
             {
-                auto content_length_header_opt
-                    = this->get_header(session->wsi, WSI_TOKEN_HTTP_CONTENT_LENGTH);
+                auto content_length_header_opt = this->get_header(session->wsi, WSI_TOKEN_HTTP_CONTENT_LENGTH);
                 if (content_length_header_opt.has_value() == false)
                     throw std::runtime_error(
-                        fmt::format("failed to copy content length header serving webservice: {}",
-                                    webservice_name));
+                        fmt::format("failed to copy content length header serving webservice: {}", webservice_name));
 
                 std::string & content_length_header = content_length_header_opt.value();
                 if (content_length_header.empty())
@@ -524,8 +556,7 @@ struct HttpServer::Impl
 
                 if (content_length_header_size == 0)
                 {
-                    HttpRequest request
-                        = HttpRequest(path, this->get_uri_args(session->wsi), session->request_type);
+                    HttpRequest request = HttpRequest(path, this->get_uri_args(session->wsi), session->request_type);
                     // if the webservice did not handle the request, signal not handled
                     if (this->serve_webservice(session, webservice, request) == false)
                         return false;
@@ -534,17 +565,15 @@ struct HttpServer::Impl
                 {
                     session->content_size = 0;
                     session->content = std::make_unique<ArrUByte>();
-                    session->request = std::make_unique<HttpRequest>(path,
-                                                                     this->get_uri_args(session->wsi),
-                                                                     session->request_type);
+                    session->request
+                        = std::make_unique<HttpRequest>(path, this->get_uri_args(session->wsi), session->request_type);
                     session->content->resize(content_length_header_size);
                     session->should_complete_transaction = false;
                 }
             }
             else
             {
-                HttpRequest request
-                    = HttpRequest(path, this->get_uri_args(session->wsi), session->request_type);
+                HttpRequest request = HttpRequest(path, this->get_uri_args(session->wsi), session->request_type);
                 // if the webservice did not handle the request, signal not handled
                 if (this->serve_webservice(session, webservice, request) == false)
                     return false;
@@ -575,7 +604,7 @@ struct HttpServer::Impl
                 return true;
 
             std::string_view auth_header_value;
-            if (session->cached_auth_header)
+            if (session->cached_auth_header.has_value())
                 auth_header_value = *session->cached_auth_header;
 
             AuthResult auth = this->parse_authorization(auth_header_value, authenticator);
@@ -654,8 +683,7 @@ struct HttpServer::Impl
                     for (auto & part : sihd::util::str::split(*cookie_hdr, ';'))
                     {
                         auto [name, value]
-                            = sihd::util::str::split_pair_view(sihd::util::str::trim(std::string_view(part)),
-                                                               "=");
+                            = sihd::util::str::split_pair_view(sihd::util::str::trim(std::string_view(part)), "=");
                         if (!name.empty())
                             request.set_cookie(std::string(name), std::string(value));
                     }
@@ -674,11 +702,7 @@ struct HttpServer::Impl
         }
 
         // websocket callback
-        int _lws_websocket_callback(struct lws *wsi,
-                                    enum lws_callback_reasons reason,
-                                    void *user,
-                                    void *in,
-                                    size_t len)
+        int _lws_websocket_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
         {
             int rc = 0;
             IWebsocketHandler *handler = nullptr;
@@ -920,10 +944,7 @@ struct HttpServer::Impl
         }
 
         // protocols
-        bool add_protocol(const char *name,
-                          lws_callback_function *callback,
-                          size_t struct_size,
-                          size_t tx_packet_size)
+        bool add_protocol(const char *name, lws_callback_function *callback, size_t struct_size, size_t tx_packet_size)
         {
             ++protocols_count;
             lws_protocols *old_ptr = lws_protocols_ptr;
@@ -992,8 +1013,7 @@ struct HttpServer::Impl
             {
                 std::string_view b64 = auth_header_value.substr(basic_prefix.size());
                 char decoded[256];
-                int decoded_len
-                    = lws_b64_decode_string(std::string(b64).c_str(), decoded, sizeof(decoded) - 1);
+                int decoded_len = lws_b64_decode_string(std::string(b64).c_str(), decoded, sizeof(decoded) - 1);
                 if (decoded_len > 0)
                 {
                     decoded[decoded_len] = '\0';
@@ -1050,6 +1070,9 @@ struct HttpServer::Impl
 
         size_t service_thread_count = 1;
         std::vector<std::jthread> service_threads;
+
+        std::mutex sessions_mutex;
+        std::unordered_set<HttpSession *> active_sessions;
 };
 
 // HttpServer public methods

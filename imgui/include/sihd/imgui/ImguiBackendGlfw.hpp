@@ -4,7 +4,14 @@
 #include <string>
 
 #define GLFW_INCLUDE_NONE
+#ifdef __clang__
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wmodule-import-in-extern-c"
+#endif
 #include <GLFW/glfw3.h>
+#ifdef __clang__
+# pragma clang diagnostic pop
+#endif
 #include <imgui_impl_glfw.h>
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 # include <GLES2/gl2.h>

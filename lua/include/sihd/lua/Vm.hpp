@@ -1,18 +1,27 @@
 #ifndef __SIHD_LUA_VM_HPP__
 #define __SIHD_LUA_VM_HPP__
 
+// clang-21 with C++ modules raises an error when <limits.h> (via luaconf.h)
+// is included inside extern "C" — suppress that diagnostic.
+#ifdef __clang__
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wmodule-import-in-extern-c"
+#endif
 extern "C"
 {
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
 }
+#ifdef __clang__
+# pragma clang diagnostic pop
+#endif
 
 #include <cstdint> // need this for LuaBridge
-#include <luabridge3/LuaBridge/LuaBridge.h>
-
 #include <string>
 #include <string_view>
+
+#include <luabridge3/LuaBridge/LuaBridge.h>
 
 namespace sihd::lua
 {

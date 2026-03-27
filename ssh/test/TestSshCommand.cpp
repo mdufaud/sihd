@@ -1,10 +1,11 @@
 #include <gtest/gtest.h>
+
 #include <sihd/ssh/SshCommand.hpp>
 #include <sihd/ssh/SshSession.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/sys/fs.hpp>
 #include <sihd/util/time.hpp>
 
 #include "ssh_test_helpers.hpp"
@@ -77,7 +78,7 @@ TEST_F(TestSshCommand, test_sshcommand_async)
 
     // Test async execution - command runs via proc::execute on server
     EXPECT_TRUE(cmd.execute_async("echo hello; echo world"));
-    EXPECT_TRUE(cmd.wait(time::seconds(5)));
+    EXPECT_TRUE(cmd.wait(time::seconds(2)));
 
     EXPECT_EQ(stderr_str, "");
     EXPECT_EQ(stdout_str, "hello\nworld\n");

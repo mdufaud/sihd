@@ -312,6 +312,7 @@ TEST_F(TestArray, test_array_str)
     EXPECT_TRUE(arr.is_equal("hello world !"));
 
     char *str = strdup("test");
+    ASSERT_NE(str, nullptr);
     EXPECT_TRUE(arr.assign(str));
     EXPECT_EQ(arr.str(), "test");
     EXPECT_TRUE(arr.is_equal("test"));

@@ -271,12 +271,20 @@ endif # module
 ########
 
 .PHONY: test # Build modules, tests and runs tests ([comma_separated_modules|all|ls] [filter] [repeat=x])
-.PHONY: stest san_test # Build and run tests with address sanitizer and runs tests
-.PHONY: itest nointeract_test # Build and run tests with stdin closed
-.PHONY: vtest valgrind_test # Build and run tests with valgrind debugger
-.PHONY: ltest valgrind_leak_test # Build and run tests with valgrind leak checking debugger
-.PHONY: gtest gdb_test # Build and run tests with gdb debugger
-.PHONY: ttest strace_test # Build and run tests with strace
+.PHONY: itest  nointeract_test # Build and run tests with stdin closed
+.PHONY: gtest  gdb_test # Build and run tests with gdb debugger
+
+.PHONY: stest  san_test # Build and run tests with address sanitizer and runs tests
+.PHONY: istest nointeract_san_test # Build and run tests with address sanitizer and runs tests
+
+.PHONY: vtest  valgrind_test # Build and run tests with valgrind debugger
+.PHONY: ivtest nointeract_valgrind_test # Build and run tests with valgrind debugger (non-interactive)
+
+.PHONY: ltest  valgrind_leak_test # Build and run tests with valgrind leak checking debugger
+.PHONY: iltest nointeract_valgrind_leak_test # Build and run tests with valgrind leak checking debugger (non-interactive)
+
+.PHONY: ttest  strace_test # Build and run tests with strace
+.PHONY: ittest nointeract_strace_test # Build and run tests with strace (non-interactive)
 
 # find string 'test' in target
 ifneq ($(findstring test,$(MAKEARG_1)), )
@@ -367,8 +375,6 @@ gdb_test: DEBUGGER = gdb
 gdb_test: test
 gtest: gdb_test
 
-
-
 san_test: ASAN_OPTIONS="detect_leaks=1:halt_on_error=0:strict_init_order=1:detect_odr_violation=1:detect_stack_use_after_return=1:detect_container_overflow=1:alloc_dealloc_mismatch=1:dectect_invalid_pointers_pairs=2:verbosity=0:atexit=1:check_initialization_order=1"
 san_test: asan = 1
 san_test: test
@@ -377,6 +383,18 @@ stest: san_test
 strace_test: DEBUGGER = strace
 strace_test: test
 ttest: strace_test
+
+define mk_nointeract_debug_test
+.PHONY: nointeract_$(1) $(2)
+nointeract_$(1): TEST_SCRIPT_ARGS += 0>&-
+nointeract_$(1): $(1)
+$(2): nointeract_$(1)
+endef
+
+$(eval $(call mk_nointeract_debug_test,valgrind_test,ivtest))
+$(eval $(call mk_nointeract_debug_test,valgrind_leak_test,iltest))
+$(eval $(call mk_nointeract_debug_test,strace_test,ittest))
+$(eval $(call mk_nointeract_debug_test,san_test,istest))
 
 $(MODULES_NAME):
 	$(QUIET) echo > /dev/null

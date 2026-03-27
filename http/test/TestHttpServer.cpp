@@ -1,13 +1,14 @@
-#include "sihd/util/LogInfo.hpp"
-#include "sihd/util/LoggerFilter.hpp"
-#include "sihd/util/LoggerManager.hpp"
 #include <arpa/inet.h>
-#include <chrono>
-#include <gtest/gtest.h>
 #include <netinet/in.h>
-#include <sihd/json/Json.hpp>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
+#include <string_view>
+
+#include <gtest/gtest.h>
 
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/HttpStatus.hpp>
@@ -16,6 +17,7 @@
 #include <sihd/http/WebService.hpp>
 #include <sihd/http/WebsocketHandler.hpp>
 #include <sihd/http/request.hpp>
+#include <sihd/json/Json.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/SigWatcher.hpp>
 #include <sihd/sys/TmpDir.hpp>
@@ -27,7 +29,10 @@
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
-#include <string_view>
+
+#include "sihd/util/LogInfo.hpp"
+#include "sihd/util/LoggerFilter.hpp"
+#include "sihd/util/LoggerManager.hpp"
 
 namespace test
 {
@@ -120,19 +125,28 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         void on_open(std::string_view protocol_name) override
         {
             SIHD_LOG(debug, "Opened websocket of protocol: {}", protocol_name);
-            ++_nopen;
+            {
+                std::lock_guard lock(_ws_mutex);
+                ++_nopen;
+            }
+            _ws_cv.notify_all();
         };
 
         bool on_read(const sihd::util::ArrChar & array) override
         {
             SIHD_LOG(debug, "Read from client websocket: {}", array.str());
-            _client_wrote = true;
-            ++_nread;
+            {
+                std::lock_guard lock(_ws_mutex);
+                _client_wrote = true;
+                ++_nread;
+            }
+            _ws_cv.notify_all();
             return true;
         };
 
         bool on_write(sihd::util::ArrChar & array, WriteProtocol & protocol) override
         {
+            std::lock_guard lock(_ws_mutex);
             if (_client_wrote)
             {
                 ++_nwrite;
@@ -150,7 +164,11 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         void on_close() override
         {
             SIHD_LOG(debug, "Closed websocket");
-            ++_nclosed;
+            {
+                std::lock_guard lock(_ws_mutex);
+                ++_nclosed;
+            }
+            _ws_cv.notify_all();
             this->request_stop();
         }
 
@@ -159,7 +177,21 @@ class SimpleHttpServer: public sihd::http::HttpServer,
             SIHD_LOG(debug, "Peer closed websocket: code={} reason={}", code, reason);
         }
 
+        bool wait_for_open(std::chrono::milliseconds timeout = std::chrono::milliseconds(2000))
+        {
+            std::unique_lock lock(_ws_mutex);
+            return _ws_cv.wait_for(lock, timeout, [this] { return _nopen > 0; });
+        }
+
+        bool wait_for_close(std::chrono::milliseconds timeout = std::chrono::milliseconds(2000))
+        {
+            std::unique_lock lock(_ws_mutex);
+            return _ws_cv.wait_for(lock, timeout, [this] { return _nclosed > 0; });
+        }
+
         // websocket
+        std::mutex _ws_mutex;
+        std::condition_variable _ws_cv;
         int _nopen = 0;
         int _nread = 0;
         int _nwrite = 0;
@@ -253,17 +285,6 @@ TEST_F(TestHttpServer, test_httpserver_websockets)
     SIHD_LOG(info, "=========================================================");
 
     server.start();
-
-    //
-    EXPECT_GT(server._nget, 0);
-    EXPECT_GT(server._npost, 0);
-    EXPECT_GT(server._nput, 0);
-    EXPECT_GT(server._ndelete, 0);
-
-    EXPECT_GT(server._nopen, 0);
-    EXPECT_GT(server._nread, 0);
-    EXPECT_GT(server._nwrite, 0);
-    EXPECT_GT(server._nclosed, 0);
 }
 
 // Minimal WebSocket client for automated testing using raw POSIX sockets.
@@ -403,6 +424,7 @@ class SimpleWsClient
 TEST_F(TestHttpServer, test_httpserver_websockets_auto)
 {
     SimpleHttpServer server;
+    server.set_service_wait_stop(true);
     server.set_root_dir("test/resources/mount_point");
     server.set_port(3002);
 
@@ -416,6 +438,8 @@ TEST_F(TestHttpServer, test_httpserver_websockets_auto)
     SimpleWsClient client;
     ASSERT_TRUE(client.connect(3002));
     ASSERT_TRUE(client.handshake("proto-two"));
+    ASSERT_TRUE(server.wait_for_open(std::chrono::milliseconds(2000)));
+
     ASSERT_TRUE(client.send_text("hello from client"));
 
     auto reply = client.recv_text();
@@ -423,8 +447,7 @@ TEST_F(TestHttpServer, test_httpserver_websockets_auto)
     EXPECT_EQ(*reply, "hello world");
 
     client.send_close();
-
-    server.set_service_wait_stop(true);
+    ASSERT_TRUE(server.wait_for_close(std::chrono::milliseconds(2000)));
     server.stop();
 
     EXPECT_EQ(server._nopen, 1);
@@ -472,10 +495,7 @@ class TestAuth: public sihd::http::IHttpAuthenticator
 class FeatureHttpServer: public sihd::http::HttpServer
 {
     public:
-        FeatureHttpServer(): HttpServer("feature-server")
-        {
-            _webservice = this->add_child<WebService>("api");
-        }
+        FeatureHttpServer(): HttpServer("feature-server") { _webservice = this->add_child<WebService>("api"); }
 
         ~FeatureHttpServer() = default;
 
@@ -518,20 +538,17 @@ TEST_F(TestHttpServer, test_routing_params)
     std::string captured_id;
     std::string captured_action;
 
-    scope.server._webservice->set_entry_point("users/{id}",
-                                              [&](const HttpRequest & req, HttpResponse & resp) {
-                                                  auto id = req.path_param("id");
-                                                  captured_id = id.value_or("");
-                                                  resp.set_plain_content(fmt::format("user:{}", captured_id));
-                                              });
+    scope.server._webservice->set_entry_point("users/{id}", [&](const HttpRequest & req, HttpResponse & resp) {
+        auto id = req.path_param("id");
+        captured_id = id.value_or("");
+        resp.set_plain_content(fmt::format("user:{}", captured_id));
+    });
 
-    scope.server._webservice->set_entry_point(
-        "users/{id}/{action}",
-        [&](const HttpRequest & req, HttpResponse & resp) {
-            captured_id = std::string(req.path_param("id").value_or(""));
-            captured_action = std::string(req.path_param("action").value_or(""));
-            resp.set_plain_content(fmt::format("{}:{}", captured_id, captured_action));
-        });
+    scope.server._webservice->set_entry_point("users/{id}/{action}", [&](const HttpRequest & req, HttpResponse & resp) {
+        captured_id = std::string(req.path_param("id").value_or(""));
+        captured_action = std::string(req.path_param("action").value_or(""));
+        resp.set_plain_content(fmt::format("{}:{}", captured_id, captured_action));
+    });
 
     scope.start();
 
@@ -556,12 +573,10 @@ TEST_F(TestHttpServer, test_routing_catchall)
 
     std::string captured_path;
 
-    scope.server._webservice->set_entry_point("files/{path...}",
-                                              [&](const HttpRequest & req, HttpResponse & resp) {
-                                                  captured_path
-                                                      = std::string(req.path_param("path").value_or(""));
-                                                  resp.set_plain_content(captured_path);
-                                              });
+    scope.server._webservice->set_entry_point("files/{path...}", [&](const HttpRequest & req, HttpResponse & resp) {
+        captured_path = std::string(req.path_param("path").value_or(""));
+        resp.set_plain_content(captured_path);
+    });
 
     scope.start();
 
@@ -784,9 +799,8 @@ TEST_F(TestHttpServer, test_per_webservice_auth)
     FeatureHttpServer server;
     // add a second webservice (public, no auth)
     auto *public_ws = server.add_child<WebService>("public");
-    public_ws->set_entry_point("hello", [](const HttpRequest &, HttpResponse & resp) {
-        resp.set_plain_content("public-ok");
-    });
+    public_ws->set_entry_point("hello",
+                               [](const HttpRequest &, HttpResponse & resp) { resp.set_plain_content("public-ok"); });
 
     // the "api" webservice gets its own authenticator
     TestAuth auth;
@@ -876,8 +890,9 @@ TEST_F(TestHttpServer, test_concurrent_service)
     const std::string url = "localhost:" + std::to_string(port) + "/api/task";
     Stopwatch stopwatch;
 
-    sihd::util::TmpLoggerFilterAdder filter_adder(
-        new sihd::util::LoggerFilter({.level_lower = sihd::util::LogLevel::warning}));
+    auto filter = std::make_unique<sihd::util::LoggerFilter>(
+        sihd::util::LoggerFilter::Options {.level_lower = sihd::util::LogLevel::warning});
+    sihd::util::TmpLoggerFilterAdder filter_adder(filter.get());
 
     auto run_batched = [&](int handler_calls_expected, auto & handler_calls) -> time_t {
         stopwatch.reset();

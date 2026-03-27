@@ -1,10 +1,11 @@
 #ifndef __SIHD_IMGUI_IMGUIBACKENDSDL_HPP__
 #define __SIHD_IMGUI_IMGUIBACKENDSDL_HPP__
 
+#include <imgui_impl_sdl3.h>
+
 #include <string>
 
 #include <SDL3/SDL.h>
-#include <imgui_impl_sdl3.h>
 
 #include <sihd/imgui/IImguiBackend.hpp>
 #include <sihd/imgui/IImguiRenderer.hpp>
@@ -12,10 +13,17 @@
 
 #if !defined(__SIHD_WINDOWS__)
 
+# ifdef __clang__
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wmodule-import-in-extern-c"
+# endif
 # if defined(IMGUI_IMPL_OPENGL_ES2)
 #  include <SDL3/SDL_opengles2.h>
 # else
 #  include <SDL3/SDL_opengl.h>
+# endif
+# ifdef __clang__
+#  pragma clang diagnostic pop
 # endif
 
 #endif

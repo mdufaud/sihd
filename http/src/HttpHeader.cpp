@@ -1,9 +1,9 @@
-#include <libwebsockets.h>
-
 #include <sihd/http/HttpHeader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/container.hpp>
 #include <sihd/util/str.hpp>
+
+#include "lws.hpp"
 
 namespace sihd::http
 {

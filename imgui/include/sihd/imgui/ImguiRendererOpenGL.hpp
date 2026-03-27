@@ -7,11 +7,19 @@
 # include <GLES2/gl2.h>
 #else
 # define GL_GLEXT_PROTOTYPES
+# ifdef __clang__
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wmodule-import-in-extern-c"
+# endif
 # include <GL/glcorearb.h>
+# ifdef __clang__
+#  pragma clang diagnostic pop
+# endif
 // Prevent GLAPI redefinition conflicts with SDL3/SDL_opengl.h
 # undef GLAPI
 #endif
 #include <imgui_impl_opengl3.h>
+
 #include <sihd/imgui/IImguiRenderer.hpp>
 
 namespace sihd::imgui

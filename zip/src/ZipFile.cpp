@@ -1,11 +1,17 @@
+#ifdef __clang__
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wmodule-import-in-extern-c"
+#endif
 #include <zip.h>
+#ifdef __clang__
+# pragma clang diagnostic pop
+#endif
 
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/platform.hpp>
-
 #include <sihd/zip/ZipFile.hpp>
 #include <sihd/zip/zip.hpp>
 

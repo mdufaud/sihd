@@ -1,11 +1,10 @@
 #include <libssh/callbacks.h>
 
+#include <sihd/ssh/SshCommand.hpp>
+#include <sihd/ssh/utils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/time.hpp>
-
-#include <sihd/ssh/SshCommand.hpp>
-#include <sihd/ssh/utils.hpp>
 
 namespace sihd::ssh
 {
@@ -59,17 +58,21 @@ struct SshCommand::Impl
 
         void callback_exit_status(int exit_status)
         {
-            auto l = waitable.guard();
-            command_status.exit_status = exit_status;
+            {
+                auto l = waitable.guard();
+                command_status.exit_status = exit_status;
+            }
             waitable.notify_all();
         }
 
         void callback_exit_signal(const char *signal, int core, const char *errmsg)
         {
-            auto l = waitable.guard();
-            command_status.signal_str = signal;
-            command_status.err_msg = errmsg;
-            command_status.core_dumped = core != 0;
+            {
+                auto l = waitable.guard();
+                command_status.signal_str = signal;
+                command_status.err_msg = errmsg;
+                command_status.core_dumped = core != 0;
+            }
             waitable.notify_all();
         }
 
@@ -144,9 +147,7 @@ bool SshCommand::execute_async(std::string_view cmd)
     ssh_channel channel_ptr = ssh_channel_new(_impl->ssh_session_ptr);
     if (channel_ptr == nullptr)
     {
-        SIHD_LOG(error,
-                 "SshCommand: failed to create a ssh channel: {}",
-                 ssh_get_error(_impl->ssh_session_ptr));
+        SIHD_LOG(error, "SshCommand: failed to create a ssh channel: {}", ssh_get_error(_impl->ssh_session_ptr));
         return false;
     }
     _impl->channel.set_channel(channel_ptr);
@@ -163,7 +164,8 @@ bool SshCommand::execute_async(std::string_view cmd)
     _impl->ssh_callbacks_ptr->channel_exit_signal_function = Impl::ssh_command_exit_signal_callback;
     _impl->ssh_callbacks_ptr->channel_exit_status_function = Impl::ssh_command_exit_status_callback;
     ssh_callbacks_init(_impl->ssh_callbacks_ptr.get());
-    if (ssh_set_channel_callbacks(static_cast<ssh_channel>(_impl->channel.channel()), _impl->ssh_callbacks_ptr.get()) != SSH_OK)
+    if (ssh_set_channel_callbacks(static_cast<ssh_channel>(_impl->channel.channel()), _impl->ssh_callbacks_ptr.get())
+        != SSH_OK)
     {
         SIHD_LOG(error, "SshCommand: failed to set callbacks to the channel");
         _impl->channel.clear_channel();

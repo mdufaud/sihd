@@ -1,7 +1,7 @@
 Language: Cpp
 
 # Max line width before clang-format starts wrapping.
-ColumnLimit: 110
+ColumnLimit: 120
 
 # Force pointers to the type for C++.
 DerivePointerAlignment: false

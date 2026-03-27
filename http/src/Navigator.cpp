@@ -5,13 +5,12 @@
 #include <thread>
 #include <vector>
 
-#include <libwebsockets.h>
-
-#include "curl_global.hpp"
+#include <sihd/http/Navigator.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
-#include <sihd/http/Navigator.hpp>
+#include "curl_global.hpp"
+#include "lws.hpp"
 
 namespace sihd::http
 {

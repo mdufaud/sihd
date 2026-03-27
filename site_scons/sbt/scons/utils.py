@@ -204,3 +204,61 @@ def build_status():
         success = True
         failures_message = ''
     return (success, failures_message)
+
+
+###############################################################################
+# Path helpers
+###############################################################################
+
+def normalize_module_relative_path(module_name, path):
+    """Normalize *path* to be relative to the module root or obj root (if absolute)."""
+    path = os.path.normpath(str(path))
+    module_root = os.path.join(builder.build_root_path, module_name)
+    module_obj_root = os.path.join(builder.build_obj_path, module_name)
+    if os.path.isabs(path):
+        if path.startswith(module_root + os.sep):
+            return os.path.relpath(path, module_root)
+        if path.startswith(module_obj_root + os.sep):
+            return os.path.relpath(path, module_obj_root)
+        return path
+    if path.startswith(module_root + os.sep):
+        return os.path.relpath(path, module_root)
+    if path.startswith(module_obj_root + os.sep):
+        return os.path.relpath(path, module_obj_root)
+    return path
+
+
+def prepend_unique_paths(env, key, values):
+    """Prepend *values* to env[*key*], skipping any already present."""
+    existing = {str(v) for v in env.get(key, [])}
+    to_prepend = []
+    for value in values:
+        s = str(value)
+        if s not in existing and s not in {str(v) for v in to_prepend}:
+            to_prepend.append(value)
+    if to_prepend:
+        env.Prepend(**{key: to_prepend})
+
+
+###############################################################################
+# File replacement helpers
+###############################################################################
+
+def fileinput_replace(path, replace_dic):
+    """In-place line-by-line string replacement using fileinput."""
+    from fileinput import input as file_input
+    if not os.path.isfile(path):
+        raise RuntimeError("File to replace {} does not exist".format(path))
+    for line in file_input(path, inplace=True):
+        for key, value in replace_dic.items():
+            line = line.replace(key, value)
+        print(line, end='')
+
+
+def sed_replace(path, replace_dic):
+    """In-place string replacement using sed -i."""
+    import subprocess
+    if not os.path.isfile(path):
+        raise RuntimeError("File to replace {} does not exist".format(path))
+    for key, value in replace_dic.items():
+        subprocess.call(['sed', '-i', 's/{}/{}/g'.format(key, value), path])
