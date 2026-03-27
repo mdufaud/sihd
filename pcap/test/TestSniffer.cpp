@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <sihd/net/IpAddr.hpp>
+
 #include <sihd/pcap/PcapInterfaces.hpp>
 #include <sihd/pcap/Sniffer.hpp>
 #include <sihd/util/Handler.hpp>
@@ -20,14 +20,6 @@ class TestSniffer: public ::testing::Test
         virtual void SetUp() {}
 
         virtual void TearDown() {}
-
-        void dump_ip(const std::string & pre, sockaddr *addr)
-        {
-            sihd::net::IpAddr ip(*addr);
-
-            if (!ip.empty())
-                SIHD_LOG(debug, "{} {}", pre, ip.str());
-        }
 };
 
 TEST_F(TestSniffer, test_sniffer_interfaces)
@@ -39,13 +31,14 @@ TEST_F(TestSniffer, test_sniffer_interfaces)
         SIHD_LOG(debug, "Interface: {}", iface.dump());
         for (const auto & addr : iface.addresses())
         {
-            dump_ip("Addr:", addr->addr);
-            if (addr->broadaddr)
-                dump_ip("    broadcast:", addr->broadaddr);
-            if (addr->dstaddr)
-                dump_ip("    dst:", addr->dstaddr);
-            if (addr->netmask)
-                dump_ip("    netmask:", addr->netmask);
+            if (!addr.addr.empty())
+                SIHD_LOG(debug, "Addr: {}", addr.addr.str());
+            if (!addr.broadaddr.empty())
+                SIHD_LOG(debug, "    broadcast: {}", addr.broadaddr.str());
+            if (!addr.dstaddr.empty())
+                SIHD_LOG(debug, "    dst: {}", addr.dstaddr.str());
+            if (!addr.netmask.empty())
+                SIHD_LOG(debug, "    netmask: {}", addr.netmask.str());
         }
     }
 }

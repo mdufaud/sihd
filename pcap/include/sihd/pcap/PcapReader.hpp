@@ -1,12 +1,11 @@
 #ifndef __SIHD_PCAP_PCAPREADER_HPP__
 #define __SIHD_PCAP_PCAPREADER_HPP__
 
+#include <memory>
+
 #include <sihd/sys/File.hpp>
 #include <sihd/util/IReader.hpp>
 #include <sihd/util/Node.hpp>
-
-#pragma message("TODO pImpl")
-#include <sihd/pcap/utils.hpp>
 
 namespace sihd::pcap
 {
@@ -16,7 +15,7 @@ class PcapReader: public sihd::util::Named,
 {
     public:
         PcapReader(const std::string & name, sihd::util::Node *parent = nullptr);
-        virtual ~PcapReader();
+        ~PcapReader();
 
         bool open(std::string_view path);
         bool open_micro_precision(std::string_view path);
@@ -26,7 +25,6 @@ class PcapReader: public sihd::util::Named,
         bool open_nano_precision(FILE *file);
         bool close();
         bool is_open() const;
-        void set_pcap(pcap_t *pcap, bool ownership = false);
 
         bool is_swapped();
 
@@ -36,7 +34,8 @@ class PcapReader: public sihd::util::Named,
         bool get_read_data(sihd::util::ArrCharView & view) const;
         bool get_read_timestamp(time_t *nano_timestamp) const;
 
-        const struct pcap_pkthdr *packet_header() const;
+        size_t packet_len() const;
+        size_t packet_caplen() const;
 
         FILE *file();
         int major_version();
@@ -46,19 +45,12 @@ class PcapReader: public sihd::util::Named,
 
         std::string error();
 
-        pcap_t *pcap() { return _pcap_ptr; }
-
-    protected:
-
     private:
-        bool _open_precision(const char *path, u_int precision);
-        bool _open_precision(FILE *file, u_int precision);
+        bool _open_precision(const char *path, unsigned int precision);
+        bool _open_precision(FILE *file, unsigned int precision);
 
-        bool _ownership;
-        pcap_t *_pcap_ptr;
-        u_char *_pkt_data_ptr;
-        struct pcap_pkthdr *_pkt_hdr_ptr;
-        u_int _precision;
+        struct Impl;
+        std::unique_ptr<Impl> _impl_ptr;
 };
 
 } // namespace sihd::pcap

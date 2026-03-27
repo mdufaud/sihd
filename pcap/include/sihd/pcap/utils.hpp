@@ -1,21 +1,16 @@
 #ifndef __SIHD_PCAP_PCAPUTILS_HPP__
 #define __SIHD_PCAP_PCAPUTILS_HPP__
 
+#include <cstdint>
 #include <string>
-#include <vector>
-
-#pragma message("TODO forward")
-#include <pcap.h>
-
-#include <sihd/util/platform.hpp>
+#include <string_view>
 
 namespace sihd::pcap::utils
 {
 
 bool init(int opts = -1);
 
-// TODO return net::IpAddr
-bool lookupnet(std::string_view dev, bpf_u_int32 *ip, bpf_u_int32 *mask);
+bool lookupnet(std::string_view dev, uint32_t *ip, uint32_t *mask);
 
 std::string status_str(int code);
 std::string version();

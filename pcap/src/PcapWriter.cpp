@@ -1,9 +1,18 @@
+#include <pcap.h>
+
 #include <sihd/pcap/PcapWriter.hpp>
-#include <sihd/util/Logger.hpp>
+#include <sihd/pcap/utils.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::pcap
 {
+
+struct PcapWriter::Impl
+{
+        pcap_t *pcap_ptr {nullptr};
+        pcap_dumper_t *dumper_ptr {nullptr};
+};
 
 SIHD_REGISTER_FACTORY(PcapWriter)
 
@@ -11,8 +20,7 @@ SIHD_LOGGER;
 
 PcapWriter::PcapWriter(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent),
-    _pcap_ptr(nullptr),
-    _pcap_dumper_ptr(nullptr),
+    _impl_ptr(std::make_unique<Impl>()),
     _clock_ptr(&_default_clock),
     _linktype(0),
     _snaplen(65535)
@@ -27,9 +35,11 @@ PcapWriter::~PcapWriter()
     this->close();
 }
 
-const char *PcapWriter::error()
+std::string PcapWriter::error()
 {
-    return pcap_geterr(_pcap_ptr);
+    if (_impl_ptr->pcap_ptr == nullptr)
+        return {};
+    return pcap_geterr(_impl_ptr->pcap_ptr);
 }
 
 bool PcapWriter::set_datalink(int dtl)
@@ -66,10 +76,10 @@ bool PcapWriter::open(std::string_view path, int datalink)
 bool PcapWriter::open(std::string_view path)
 {
     this->close();
-    _pcap_ptr = pcap_open_dead(_linktype, _snaplen);
-    if (_pcap_ptr != nullptr)
+    _impl_ptr->pcap_ptr = pcap_open_dead(_linktype, _snaplen);
+    if (_impl_ptr->pcap_ptr != nullptr)
     {
-        if ((_pcap_dumper_ptr = pcap_dump_open(_pcap_ptr, path.data())) == nullptr)
+        if ((_impl_ptr->dumper_ptr = pcap_dump_open(_impl_ptr->pcap_ptr, path.data())) == nullptr)
         {
             SIHD_LOG(error, "PcapWriter: can not open pcap for writing: {}", path);
             this->close();
@@ -79,32 +89,32 @@ bool PcapWriter::open(std::string_view path)
     {
         SIHD_LOG(error, "PcapWriter: can not open fake pcap for writing");
     }
-    return _pcap_dumper_ptr != nullptr;
+    return _impl_ptr->dumper_ptr != nullptr;
 }
 
 bool PcapWriter::is_open() const
 {
-    return _pcap_ptr != nullptr;
+    return _impl_ptr->pcap_ptr != nullptr;
 }
 
 bool PcapWriter::close()
 {
-    if (_pcap_dumper_ptr != nullptr)
+    if (_impl_ptr->dumper_ptr != nullptr)
     {
-        pcap_dump_close(_pcap_dumper_ptr);
-        _pcap_dumper_ptr = nullptr;
+        pcap_dump_close(_impl_ptr->dumper_ptr);
+        _impl_ptr->dumper_ptr = nullptr;
     }
-    if (_pcap_ptr != nullptr)
+    if (_impl_ptr->pcap_ptr != nullptr)
     {
-        pcap_close(_pcap_ptr);
-        _pcap_ptr = nullptr;
+        pcap_close(_impl_ptr->pcap_ptr);
+        _impl_ptr->pcap_ptr = nullptr;
     }
     return true;
 }
 
 FILE *PcapWriter::file()
 {
-    return pcap_dump_file(_pcap_dumper_ptr);
+    return pcap_dump_file(_impl_ptr->dumper_ptr);
 }
 
 ssize_t PcapWriter::write(sihd::util::ArrCharView view, sihd::util::Timestamp timestamp)
@@ -113,7 +123,7 @@ ssize_t PcapWriter::write(sihd::util::ArrCharView view, sihd::util::Timestamp ti
     hdr.caplen = view.size();
     hdr.len = view.size();
     hdr.ts = timestamp.tv();
-    pcap_dump((u_char *)_pcap_dumper_ptr, &hdr, (const u_char *)view.data());
+    pcap_dump((u_char *)_impl_ptr->dumper_ptr, &hdr, (const u_char *)view.data());
     return view.size();
 }
 
@@ -129,28 +139,28 @@ ssize_t PcapWriter::write(sihd::util::ArrCharView view, time_t sec, time_t usec)
     hdr.len = view.size();
     hdr.ts.tv_sec = sec;
     hdr.ts.tv_usec = usec;
-    pcap_dump((u_char *)_pcap_dumper_ptr, &hdr, (const u_char *)view.data());
+    pcap_dump((u_char *)_impl_ptr->dumper_ptr, &hdr, (const u_char *)view.data());
     return view.size();
 }
 
 int64_t PcapWriter::pos()
 {
-    return pcap_dump_ftell64(_pcap_dumper_ptr);
+    return pcap_dump_ftell64(_impl_ptr->dumper_ptr);
 }
 
 bool PcapWriter::flush()
 {
-    return pcap_dump_flush(_pcap_dumper_ptr) == 0;
+    return pcap_dump_flush(_impl_ptr->dumper_ptr) == 0;
 }
 
 int PcapWriter::snaplen()
 {
-    return pcap_snapshot(_pcap_ptr);
+    return pcap_snapshot(_impl_ptr->pcap_ptr);
 }
 
 int PcapWriter::datalink()
 {
-    return pcap_datalink(_pcap_ptr);
+    return pcap_datalink(_impl_ptr->pcap_ptr);
 }
 
 } // namespace sihd::pcap

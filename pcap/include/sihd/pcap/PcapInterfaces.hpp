@@ -1,23 +1,32 @@
 #ifndef __SIHD_PCAP_PCAPINTERFACES_HPP__
 #define __SIHD_PCAP_PCAPINTERFACES_HPP__
 
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
-#pragma message("TODO pImpl")
-#include <sihd/pcap/utils.hpp>
+#include <sihd/net/IpAddr.hpp>
 
 namespace sihd::pcap
 {
 
+struct PcapAddress
+{
+        sihd::net::IpAddr addr;
+        sihd::net::IpAddr netmask;
+        sihd::net::IpAddr broadaddr;
+        sihd::net::IpAddr dstaddr;
+};
+
 class PcapIFace
 {
     public:
-        PcapIFace(pcap_if_t *ptr);
+        PcapIFace(std::string name, std::string description, uint32_t flags, std::vector<PcapAddress> addresses);
         ~PcapIFace();
 
-        std::string name() const;
-        std::string description() const;
+        const std::string & name() const;
+        const std::string & description() const;
 
         bool loopback() const;
         bool up() const;
@@ -28,19 +37,21 @@ class PcapIFace
         bool disconnected() const;
         bool can_be_connected() const;
 
-        const std::vector<struct pcap_addr *> & addresses() const;
+        const std::vector<PcapAddress> & addresses() const;
         std::string dump() const;
 
     private:
-        pcap_if_t *_if_ptr;
-        std::vector<struct pcap_addr *> _addr;
+        std::string _name;
+        std::string _description;
+        uint32_t _flags;
+        std::vector<PcapAddress> _addresses;
 };
 
 class PcapInterfaces
 {
     public:
         PcapInterfaces();
-        virtual ~PcapInterfaces();
+        ~PcapInterfaces();
         bool find();
         bool error();
 
@@ -49,16 +60,9 @@ class PcapInterfaces
 
         std::string status();
 
-        struct pcap_addr *pcap_addr(std::string_view name);
-        pcap_if_t *get() { return _interfaces_ptr; }
-
-    protected:
-
     private:
-        void _free();
-
-        int _code;
-        pcap_if_t *_interfaces_ptr;
+        struct Impl;
+        std::unique_ptr<Impl> _impl_ptr;
 };
 
 } // namespace sihd::pcap

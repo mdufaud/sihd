@@ -1,14 +1,13 @@
 #ifndef __SIHD_PCAP_PCAPWRITER_HPP__
 #define __SIHD_PCAP_PCAPWRITER_HPP__
 
+#include <memory>
+
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IWriter.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/time.hpp>
-
-#pragma message("TODO pImpl")
-#include <sihd/pcap/utils.hpp>
 
 namespace sihd::pcap
 {
@@ -19,7 +18,7 @@ class PcapWriter: public sihd::util::Named,
 {
     public:
         PcapWriter(const std::string & name, sihd::util::Node *parent = nullptr);
-        virtual ~PcapWriter();
+        ~PcapWriter();
 
         bool open(std::string_view path);
         bool open(std::string_view path, int datalink);
@@ -40,16 +39,11 @@ class PcapWriter: public sihd::util::Named,
         int snaplen();
         int datalink();
 
-        const char *error();
-
-        pcap_t *pcap() { return _pcap_ptr; }
-        pcap_dumper_t *pcap_dumper() { return _pcap_dumper_ptr; }
-
-    protected:
+        std::string error();
 
     private:
-        pcap_t *_pcap_ptr;
-        pcap_dumper_t *_pcap_dumper_ptr;
+        struct Impl;
+        std::unique_ptr<Impl> _impl_ptr;
         sihd::util::IClock *_clock_ptr;
         sihd::util::SystemClock _default_clock;
         int _linktype;

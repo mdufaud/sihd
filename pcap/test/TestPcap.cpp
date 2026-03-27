@@ -1,11 +1,12 @@
-#include <gtest/gtest.h>
+#include <pcap.h>
 
-#include <sihd/util/Logger.hpp>
-#include <sihd/sys/TmpDir.hpp>
-#include <sihd/sys/fs.hpp>
+#include <gtest/gtest.h>
 
 #include <sihd/pcap/PcapReader.hpp>
 #include <sihd/pcap/PcapWriter.hpp>
+#include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace test
 {
@@ -43,9 +44,8 @@ TEST_F(TestPcap, test_pcap_reader)
     size_t n = 0;
     while (reader.read_next())
     {
-        const struct pcap_pkthdr *hdr = reader.packet_header();
         EXPECT_TRUE(reader.get_read_data(view));
-        EXPECT_EQ(hdr->len, view.size());
+        EXPECT_EQ(reader.packet_len(), view.size());
         ++n;
     }
     SIHD_TRACE("{} packets read", n);

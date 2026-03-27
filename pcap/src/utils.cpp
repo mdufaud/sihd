@@ -1,8 +1,9 @@
+#include <pcap.h>
+
 #include <mutex>
 
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/pcap/utils.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::pcap::utils
 {
@@ -11,7 +12,7 @@ SIHD_NEW_LOGGER("sihd::pcap::utils");
 
 namespace
 {
-std::mutex _init_mutex;
+std::once_flag _init_once;
 bool _is_init = false;
 } // namespace
 
@@ -27,32 +28,35 @@ std::string version()
 
 bool init(int opts)
 {
-    std::lock_guard l(_init_mutex);
-    if (_is_init)
-        return true;
+    std::call_once(_init_once, [opts]() {
 #if defined(PCAP_CHAR_ENC_UTF_8)
-    if (opts < 0)
-        opts = PCAP_CHAR_ENC_UTF_8;
-    char errbuf[PCAP_ERRBUF_SIZE];
-    _is_init = pcap_init(opts, errbuf) == 0;
-    if (_is_init == false)
-        SIHD_LOG(error, "{}", errbuf);
+        int local_opts = opts;
+        if (local_opts < 0)
+            local_opts = PCAP_CHAR_ENC_UTF_8;
+        char errbuf[PCAP_ERRBUF_SIZE];
+        _is_init = pcap_init(local_opts, errbuf) == 0;
+        if (_is_init == false)
+            SIHD_LOG(error, "{}", errbuf);
 #else
-    (void)opts;
+        (void)opts;
 # if defined(__SIHD_WINDOWS__)
-    _is_init = pcap_wsockinit() == 0;
+        _is_init = pcap_wsockinit() == 0;
 # else
-    _is_init = true;
+        _is_init = true;
 # endif
 #endif
+    });
     return _is_init;
 }
 
-bool lookupnet(std::string_view dev, bpf_u_int32 *ip, bpf_u_int32 *mask)
+bool lookupnet(std::string_view dev, uint32_t *ip, uint32_t *mask)
 {
+    static_assert(sizeof(bpf_u_int32) == sizeof(uint32_t));
     char errbuf[PCAP_ERRBUF_SIZE];
-
-    int ret = pcap_lookupnet(dev.data(), ip, mask, errbuf);
+    int ret = pcap_lookupnet(dev.data(),
+                             reinterpret_cast<bpf_u_int32 *>(ip),
+                             reinterpret_cast<bpf_u_int32 *>(mask),
+                             errbuf);
     if (ret != 0)
         SIHD_LOG(error, "{}", errbuf);
     return ret == 0;
