@@ -36,12 +36,17 @@ PPIndentWidth: 1
 # someLongFunction(argument1,
 #                  argument2);
 AlignAfterOpenBracket: true
+# High penalty to avoid breaking around = (keeps .distance = f(...) together)
+PenaltyBreakAssignment: 10000
+# Low penalty to encourage breaking inside call args rather than at =
+PenaltyBreakBeforeFirstCallParameter: 0
+PenaltyBreakOpenParenthesis: 0
 
 # int aaa = bbbbbbbbbbbbbbb
 #           + ccccccccccccccc;
 AlignOperands: true
-# Put wrapped binary operators at the start of the next line.
-BreakBeforeBinaryOperators: true
+# Break before non-assignment binary operators only (keeps `= foo()` together)
+BreakBeforeBinaryOperators: NonAssignment
 
 # Align trailing `// comments` into columns when possible.
 AlignTrailingComments: true
@@ -53,6 +58,7 @@ AlignTrailingComments: true
 AllowAllArgumentsOnNextLine: false
 # Same idea for declarations: avoid dumping all parameters on the next line.
 AllowAllParametersOfDeclarationOnNextLine: false
+ExperimentalAutoDetectBinPacking: false
 
 # Allow only empty blocks like `{}` to stay on one line.
 AllowShortBlocksOnASingleLine: Empty

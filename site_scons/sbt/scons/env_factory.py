@@ -154,8 +154,6 @@ def create_module_env(conf, ctx,
                 depends_links.extend(depend_conf.get("link", []))
             if do_inherit_depends_flags:
                 depends_flags.extend(depend_conf.get("flags", []))
-            if dep_modname in ctx.state.exported_bmis:
-                flags.append('-fmodules')
 
     # --- Clone and configure environment ---
     env = ctx.base_env.Clone()
@@ -168,9 +166,10 @@ def create_module_env(conf, ctx,
         CPPDEFINES=defines + depends_defines,
         CPPPATH=[os_path.join(builder.build_root_path, modname, "include")],
     )
-
-    if any(dep_modname in ctx.state.exported_bmis for dep_modname in ordered_depends):
-        scons_cpp_modules.enable(env, ctx)
+    # Do NOT auto-enable C++ module flags here even if a dependency exported BMIs.
+    # Modules flags (-fmodules / -fmodule-mapper) are injected on demand by
+    # build_lib/build_test/build_demo/build_bin when the caller passes cpp_modules=.
+    # Auto-propagation would pollute every source of every dependent module.
 
     env["APP_MODULE_NAME"] = modname
     env["APP_MODULE_FORMAT_NAME"] = f"{ctx.app.name}_{modname}"

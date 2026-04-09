@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include <algorithm>
+#include <cctype>
 #include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
 #include <cmath>   // HUGE_VAL
 #include <cstdarg>
@@ -42,12 +43,13 @@ size_t levenshtein_distance(std::string_view source,
                             std::string_view target,
                             size_t insert_cost = 3,
                             size_t delete_cost = 4,
-                            size_t replace_cost = 2)
+                            size_t replace_cost = 2,
+                            bool ascii_case_insensitive = false)
 {
     // https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance
     if (source.size() > target.size())
     {
-        return levenshtein_distance(target, source, delete_cost, insert_cost, replace_cost);
+        return levenshtein_distance(target, source, delete_cost, insert_cost, replace_cost, ascii_case_insensitive);
     }
 
     const size_t min_size = source.size();
@@ -68,7 +70,14 @@ size_t levenshtein_distance(std::string_view source,
         for (size_t i = 1; i <= min_size; ++i)
         {
             previous_diagonal_save = lev_dist[i];
-            if (source[i - 1] == target[j - 1])
+            char sc = source[i - 1];
+            char tc = target[j - 1];
+            if (ascii_case_insensitive)
+            {
+                sc = static_cast<char>(std::tolower(static_cast<unsigned char>(sc)));
+                tc = static_cast<char>(std::tolower(static_cast<unsigned char>(tc)));
+            }
+            if (sc == tc)
             {
                 lev_dist[i] = previous_diagonal;
             }
@@ -112,8 +121,7 @@ std::string format_time(Timestamp timestamp,
     }
 }
 
-std::string
-    timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bool nano_resolution, bool localtime)
+std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bool nano_resolution, bool localtime)
 {
     const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
     std::string s;
@@ -155,13 +163,24 @@ std::vector<SearchResult> search_impl(std::span<T> list, const std::string & sel
     for (const auto & str : list)
     {
         std::string_view sv(str);
+        constexpr size_t insert_cost = 3;
+        constexpr size_t delete_cost = 4;
+        constexpr size_t replace_cost = 2;
+        constexpr bool ascii_case_insensitive = true;
         ret.emplace_back(SearchResult {
-            .distance = levenshtein_distance(sv, selection),
+            .distance = levenshtein_distance(sv,
+                                             selection,
+                                             insert_cost,
+                                             delete_cost,
+                                             replace_cost,
+                                             ascii_case_insensitive),
             .word = std::string(sv.data(), sv.size()),
         });
     }
-    std::sort(ret.begin(), ret.end(), [](const auto & pair1, const auto & pair2) {
-        return pair1.distance < pair2.distance;
+    std::stable_sort(ret.begin(), ret.end(), [](const auto & a, const auto & b) {
+        if (a.distance != b.distance)
+            return a.distance < b.distance;
+        return a.word < b.word;
     });
     return ret;
 }
@@ -286,19 +305,12 @@ std::vector<std::string> regex_filter_impl(std::span<T> input, const std::string
 } // namespace
 
 #if defined(__SIHD_WINDOWS__)
+// clang-format off
 std::string to_str(std::wstring_view utf16_view)
 {
-    const int size
-        = WideCharToMultiByte(CP_UTF8, 0, utf16_view.data(), utf16_view.size(), nullptr, 0, nullptr, nullptr);
+    const int size = WideCharToMultiByte(CP_UTF8, 0, utf16_view.data(), utf16_view.size(), nullptr, 0, nullptr, nullptr);
     std::string utf8_str(size, 0);
-    WideCharToMultiByte(CP_UTF8,
-                        0,
-                        utf16_view.data(),
-                        utf16_view.size(),
-                        utf8_str.data(),
-                        size,
-                        nullptr,
-                        nullptr);
+    WideCharToMultiByte(CP_UTF8, 0, utf16_view.data(), utf16_view.size(), utf8_str.data(), size, nullptr, nullptr);
     return utf8_str;
 }
 
@@ -309,6 +321,7 @@ std::wstring to_wstr(std::string_view utf8_view)
     MultiByteToWideChar(CP_UTF8, 0, utf8_view.data(), utf8_view.size(), utf16_str.data(), size);
     return utf16_str;
 }
+// clang-format on
 #endif
 
 size_t table_len(const char **table)
@@ -399,8 +412,7 @@ std::vector<std::string> split(std::string_view str, std::string_view delimiter)
     return splitter.split(str);
 }
 
-std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str,
-                                                              std::string_view delimiter)
+std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str, std::string_view delimiter)
 {
     std::pair<std::string_view, std::string_view> ret;
 
@@ -783,8 +795,7 @@ bool is_digit(int c, uint16_t base)
     if (base <= 10)
         return base != 0 && c >= '0' && c <= '0' + (base - 1);
     base = base - 10;
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'a' + (base - 1))
-           || (c >= 'A' && c <= 'A' + (base - 1));
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'a' + (base - 1)) || (c >= 'A' && c <= 'A' + (base - 1));
 }
 
 bool is_number(std::string_view s, uint16_t base)
@@ -1080,8 +1091,8 @@ int stopping_enclose_index(std::string_view view, int index, const char *authori
     {
         if (view[i] == stopping_enclose)
         {
-            const bool is_an_escape
-                = escape == stopping_enclose && (i + 1 < view.size() && view[i + 1] == stopping_enclose);
+            const bool is_an_escape = escape == stopping_enclose
+                                      && (i + 1 < view.size() && view[i + 1] == stopping_enclose);
             if (!is_an_escape && is_escaped_char(view.data(), i, escape) == false)
                 return i + 1;
         }
@@ -1364,8 +1375,7 @@ std::string word_wrap(std::string_view s, size_t max_width, bool append_hyphen)
                     curr_width = add_size;
                 }
             }
-            else if ((curr_width + word_size > max_width)
-                     || (curr_width > 0 && curr_width + word_size + 1 > max_width))
+            else if ((curr_width + word_size > max_width) || (curr_width > 0 && curr_width + word_size + 1 > max_width))
             {
                 ret.append("\n");
                 ret.append(s.data() + word_begin, word_size);
@@ -1394,8 +1404,7 @@ std::string word_wrap(std::string_view s, size_t max_width, bool append_hyphen)
 
 std::string generate_random(size_t size)
 {
-    constexpr char charset[]
-        = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n\t ()[]{}'123456789!@#$%^&*_+";
+    constexpr char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n\t ()[]{}'123456789!@#$%^&*_+";
 
     std::random_device dev;
     std::mt19937 rng(dev());
@@ -1422,20 +1431,17 @@ std::string wrap(std::string_view s, size_t max_width, std::string_view end_with
     return fmt::format("{}{}", std::string_view(s.data(), max_width - end_with.size()), end_with);
 }
 
-std::vector<std::string>
-    to_columns(std::span<std::string_view> words, size_t max_width, std::string_view join_with)
+std::vector<std::string> to_columns(std::span<std::string_view> words, size_t max_width, std::string_view join_with)
 {
     return to_columns_impl(words, max_width, join_with);
 }
 
-std::vector<std::string>
-    to_columns(std::span<const std::string> words, size_t max_width, std::string_view join_with)
+std::vector<std::string> to_columns(std::span<const std::string> words, size_t max_width, std::string_view join_with)
 {
     return to_columns_impl(words, max_width, join_with);
 }
 
-std::vector<std::string>
-    to_columns(std::span<const char *> words, size_t max_width, std::string_view join_with)
+std::vector<std::string> to_columns(std::span<const char *> words, size_t max_width, std::string_view join_with)
 {
     return to_columns_impl(words, max_width, join_with);
 }

@@ -30,7 +30,7 @@ struct Stats
         double p99_us;
 };
 
-Stats compute_stats(std::vector<int64_t> & samples_ns)
+Stats compute_stats(std::vector<long long> & samples_ns)
 {
     Stats s {};
     if (samples_ns.empty())
@@ -39,7 +39,7 @@ Stats compute_stats(std::vector<int64_t> & samples_ns)
     std::sort(samples_ns.begin(), samples_ns.end());
     size_t n = samples_ns.size();
 
-    auto to_us = [](int64_t ns) {
+    auto to_us = [](long long ns) {
         return (double)ns / 1000.0;
     };
     auto percentile = [&](double p) -> double {
@@ -119,7 +119,7 @@ LatencyResult bench_latency(size_t task_count, time_t interval_ns, time_t run_du
     // per-task sample collection to avoid lock contention
     struct TaskData
     {
-            std::vector<int64_t> latencies_ns;
+            std::vector<long long> latencies_ns;
             time_t last_expected = 0;
     };
     std::vector<TaskData> task_data(task_count);
@@ -137,7 +137,7 @@ LatencyResult bench_latency(size_t task_count, time_t interval_ns, time_t run_du
             time_t expected = td->last_expected;
             if (expected > 0)
             {
-                int64_t latency = (int64_t)(now - expected);
+                long long latency = (long long)(now - expected);
                 td->latencies_ns.push_back(latency);
             }
             td->last_expected = now + interval_ns;
@@ -154,19 +154,19 @@ LatencyResult bench_latency(size_t task_count, time_t interval_ns, time_t run_du
     scheduler.stop();
 
     // merge all latency samples
-    std::vector<int64_t> all_latencies;
+    std::vector<long long> all_latencies;
     all_latencies.reserve(reserve_per_task * task_count);
     for (auto & td : task_data)
         all_latencies.insert(all_latencies.end(), td.latencies_ns.begin(), td.latencies_ns.end());
 
     // compute jitter (absolute difference between consecutive latencies per task)
-    std::vector<int64_t> all_jitter;
+    std::vector<long long> all_jitter;
     all_jitter.reserve(all_latencies.size());
     for (auto & td : task_data)
     {
         for (size_t j = 1; j < td.latencies_ns.size(); j++)
         {
-            int64_t diff = std::abs(td.latencies_ns[j] - td.latencies_ns[j - 1]);
+            long long diff = std::abs(td.latencies_ns[j] - td.latencies_ns[j - 1]);
             all_jitter.push_back(diff);
         }
     }

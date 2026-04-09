@@ -316,10 +316,12 @@ def _build_cpp_modules_method(self, src, ctx, **kwargs):
         raise RuntimeError("module_name must match the number of C++ module sources")
 
     cppm_env = self.Clone()
-    # Enable on both the clone (for compilation) and self (so other sources in
-    # the same module env can link against the produced BMIs).
+    # Only enable on the clone used for compiling the module interface unit.
+    # The parent env must NOT be mutated here: build_lib/build_test/build_demo
+    # already call enable() themselves when cpp_modules= is passed, and mutating
+    # self would inject -fmodules/-fmodule-mapper into every source registered
+    # before this call (SCons is lazy: flags are evaluated at build time).
     scons_cpp_modules.enable(cppm_env, ctx)
-    scons_cpp_modules.enable(self, ctx)
 
     bmi_dir = build_cpp_modules.get_bmi_dir(backend, builder.build_path, ctx.is_dry_run)
     imported_objects = scons_cpp_modules.resolve_nodes(imports, ctx) if imports else []

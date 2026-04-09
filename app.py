@@ -17,7 +17,6 @@ includes = [
 modules = {
     "json": {
         "extlibs": ['simdjson'],
-        "libs": ['simdjson'],
         "export-libs": ['simdjson'],
     },
     "util": {
@@ -25,7 +24,7 @@ modules = {
         "linux-libs": ['pthread'], # threading (bionic has it in libc)
         "windows-libs": ['pthread'], # mingw winpthread
         "extlibs": ['fmt'],
-        "export-defines": ['FMT_HEADER_ONLY'],
+        "export-libs": ['fmt'],
         # stdc++fs only needed for GCC < 9 with glibc
         "mingw-gnu-libs": ['stdc++fs'],
         # === Android specific ===
@@ -418,6 +417,9 @@ gcc_flags = [
     # "-fno-diagnostics-show-caret",
 ]
 
+gcc_size_link = ['-s']
+gcc_release_link = ['-s']
+
 gcc_link = [
     "-Wl,-z,defs",
     "-Wl,-z,now",
@@ -447,6 +449,9 @@ clang_defines = [
     'LLVM_ENABLE_RTTI=ON',
 ]
 
+clang_size_link = ['-s']
+clang_release_link = ['-s']
+
 ## mingw specifics
 
 mingw_flags = gcc_flags
@@ -454,6 +459,8 @@ mingw_flags = gcc_flags
 ## emscripten specifics
 
 em_link = ["--emrun"]
+em_size_link = ['--strip-debug']
+em_release_link = ['--strip-debug']
 
 ## windows specifics
 

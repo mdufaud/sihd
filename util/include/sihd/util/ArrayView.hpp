@@ -381,14 +381,14 @@ class ArrayView: public IArrayView
 
                 ArrayIterator operator++(int)
                 {
-                    ArrayIterator ret(this);
+                    ArrayIterator ret(*this);
                     ++(*this);
                     return ret;
                 }
 
                 ArrayIterator operator--(int)
                 {
-                    ArrayIterator ret(this);
+                    ArrayIterator ret(*this);
                     --(*this);
                     return ret;
                 }
@@ -523,14 +523,14 @@ class ArrayView: public IArrayView
 
                 ReverseArrayIterator operator++(int)
                 {
-                    ReverseArrayIterator ret(this);
+                    ReverseArrayIterator ret(*this);
                     ++(*this);
                     return ret;
                 }
 
                 ReverseArrayIterator operator--(int)
                 {
-                    ReverseArrayIterator ret(this);
+                    ReverseArrayIterator ret(*this);
                     --(*this);
                     return ret;
                 }
@@ -607,6 +607,8 @@ class ArrayView: public IArrayView
 
         reverse_iterator rbegin() const
         {
+            if (_size == 0)
+                return this->rend();
             return reverse_iterator(this->data(),
                                     this->data() + this->size() - 1,
                                     this->data() + this->size());

@@ -114,6 +114,7 @@ class Array: public IArray,
                 other._buf_ptr = nullptr;
                 other._capacity = 0;
                 other._size = 0;
+                other._has_ownership = false;
             }
             return *this;
         };
@@ -528,10 +529,6 @@ class Array: public IArray,
                 _size = size;
             }
 
-            if constexpr (std::is_same_v<T, char>)
-            {
-                printf("%.*s %zu\n", static_cast<int>(size), arr, size);
-            }
             return _buf_ptr != nullptr;
         }
 
@@ -740,7 +737,14 @@ class Array: public IArray,
             _buf_ptr[idx] = value;
         }
 
-        [[nodiscard]] T & get(size_t idx) const
+        [[nodiscard]] T & get(size_t idx)
+        {
+            if (idx >= _size)
+                throw std::out_of_range("Array::get: index exceeds size");
+            return _buf_ptr[idx];
+        }
+
+        [[nodiscard]] const T & get(size_t idx) const
         {
             if (idx >= _size)
                 throw std::out_of_range("Array::get: index exceeds size");
@@ -826,14 +830,14 @@ class Array: public IArray,
 
                 ArrayIterator operator++(int)
                 {
-                    ArrayIterator ret(this);
+                    ArrayIterator ret(*this);
                     ++(*this);
                     return ret;
                 }
 
                 ArrayIterator operator--(int)
                 {
-                    ArrayIterator ret(this);
+                    ArrayIterator ret(*this);
                     --(*this);
                     return ret;
                 }
@@ -965,14 +969,14 @@ class Array: public IArray,
 
                 ReverseArrayIterator operator++(int)
                 {
-                    ReverseArrayIterator ret(this);
+                    ReverseArrayIterator ret(*this);
                     ++(*this);
                     return ret;
                 }
 
                 ReverseArrayIterator operator--(int)
                 {
-                    ReverseArrayIterator ret(this);
+                    ReverseArrayIterator ret(*this);
                     --(*this);
                     return ret;
                 }
@@ -1041,6 +1045,8 @@ class Array: public IArray,
 
         reverse_iterator rbegin()
         {
+            if (_size == 0)
+                return this->rend();
             return reverse_iterator(this->data(), this->data() + this->size() - 1, this->data() + this->size());
         }
         reverse_iterator rend()
@@ -1050,6 +1056,8 @@ class Array: public IArray,
 
         const_reverse_iterator crbegin() const
         {
+            if (_size == 0)
+                return this->crend();
             return const_reverse_iterator(this->data(), this->data() + this->size() - 1, this->data() + this->size());
         }
 
@@ -1088,7 +1096,7 @@ class Array: public IArray,
             for (const IArray *array : arrays)
                 total += array->byte_size();
             Array<MergedType> *ret = new Array<MergedType>();
-            if (ret->resize(total * ret->data_size()) == false)
+            if (ret->byte_resize(total) == false)
             {
                 delete ret;
                 return nullptr;
@@ -1119,9 +1127,10 @@ class Array: public IArray,
                 capacity = new_capacity;
             }
 
-            _buf_ptr = (T *)realloc(_buf_ptr, capacity * sizeof(T));
-            if (_buf_ptr == nullptr)
+            T *new_ptr = (T *)realloc(_buf_ptr, capacity * sizeof(T));
+            if (new_ptr == nullptr)
                 return false;
+            _buf_ptr = new_ptr;
 
             if (clear_mem && capacity > _capacity)
                 memset(_buf_ptr + _capacity, 0, (capacity - _capacity) * sizeof(T));

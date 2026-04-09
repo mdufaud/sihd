@@ -3,9 +3,11 @@
 #include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
 
-// for get_max_rss / peak_rss
 #if defined(__SIHD_WINDOWS__)
 
+// order is mandatory, cannot let clang-format mess with it
+
+// clang-format off
 # include <debugapi.h>
 # include <psapi.h>
 # include <winsock2.h>
@@ -14,10 +16,11 @@
 # include <ws2def.h>
 
 # include <dbghelp.h> // backtrace
-
 # include <winternl.h>
-
 # include <windows.h>
+# include <io.h>
+
+// clang-format on
 
 #elif defined(__SIHD_APPLE__)
 
@@ -46,8 +49,7 @@
 #endif
 
 // backtrace not available in windows / android / emscripten
-#if defined(__GLIBC__) && !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__)                           \
-    && !defined(__SIHD_EMSCRIPTEN__)
+#if defined(__GLIBC__) && !defined(__SIHD_WINDOWS__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 # define SIHD_UTIL_OS_HAVE_BACKTRACE
 # include <execinfo.h>
 #endif
@@ -60,13 +62,14 @@ using _NtQuerySystemInformation = NTSTATUS(WINAPI *)(SYSTEM_INFORMATION_CLASS, P
 
 #endif
 
+#include <ctype.h>
+
 #include <algorithm>
 #include <cerrno>
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <ctype.h>
 
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
@@ -561,14 +564,14 @@ std::string last_error_str()
     }
 
     LPSTR messageBuffer = nullptr;
-    size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
-                                     | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                 NULL,
-                                 errorMessageID,
-                                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                                 (LPSTR)&messageBuffer,
-                                 0,
-                                 NULL);
+    size_t size = FormatMessageA(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        errorMessageID,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPSTR)&messageBuffer,
+        0,
+        NULL);
 
     std::string message(messageBuffer, size);
     LocalFree(messageBuffer);
@@ -606,8 +609,7 @@ bool is_run_by_debugger()
     if (!tracer_pid_ptr)
         return false;
 
-    for (const char *characterPtr = tracer_pid_ptr + sizeof(tracerPidString) - 1;
-         characterPtr <= buf + num_read;
+    for (const char *characterPtr = tracer_pid_ptr + sizeof(tracerPidString) - 1; characterPtr <= buf + num_read;
          ++characterPtr)
     {
         if (isspace(*characterPtr))

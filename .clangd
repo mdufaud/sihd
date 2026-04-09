@@ -1,3 +1,6 @@
 CompileFlags:
   CompilationDatabase: build/last
   Add: [-ferror-limit=0]
+  Remove:
+    - -fmodules
+    - -fmodule-mapper
