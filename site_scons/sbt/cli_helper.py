@@ -1,6 +1,7 @@
 if __name__ == '__main__':
     import sys
     import builder
+    import loader
 
     if len(sys.argv) != 2:
         sys.exit(0)
@@ -21,6 +22,7 @@ if __name__ == '__main__':
     elif sys.argv[1] == "triplet":
         print(builder.get_gnu_triplet())
     elif sys.argv[1] == "all":
+        app_name = loader.load_app().name
         print(" ".join([
             builder.build_platform,
             builder.build_machine,
@@ -29,4 +31,5 @@ if __name__ == '__main__':
             builder.get_gnu_triplet(),
             builder.build_on_termux and "true" or "false",
             builder.build_path,
+            app_name,
         ]))

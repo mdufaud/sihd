@@ -39,8 +39,6 @@ MAKEARG_4 := $(word 4, $(MAKECMDGOALS))
 
 PROJECT_ROOT_PATH := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-APP_NAME := $(shell basename $(PROJECT_ROOT_PATH))
-
 ##############
 # Builder env
 ##############
@@ -70,6 +68,7 @@ COMPILER := $(word 4, $(SBT_RESP))
 GNU_TRIPLET := $(word 5, $(SBT_RESP))
 TERMUX := $(word 6, $(SBT_RESP))
 BUILD_PATH := $(word 7, $(SBT_RESP))
+APP_NAME := $(word 8, $(SBT_RESP))
 
 ##########
 # Paths
@@ -688,6 +687,25 @@ uninstall:
 
 endif # uninstall
 
+##########
+# Project
+##########
+
+ifeq ($(MAKEARG_1), newsbt)
+
+PROJECT_PATH := $(MAKEARG_2)
+
+newsbt:
+ifeq ($(PROJECT_PATH),)
+	$(error Usage: make newsbt <project_path>)
+endif
+	if [ -d "$(PROJECT_PATH)" ]; then echo "Error: directory already exists: $(PROJECT_PATH)"; exit 1; fi
+	mkdir -p $(PROJECT_PATH)/site_scons
+	cp -r $(SBT_PATH)/genesis_fs/* $(PROJECT_PATH)
+	cp -r $(SBT_PATH)/ $(PROJECT_PATH)/site_scons/sbt
+	echo "New SBT project created in: $(PROJECT_PATH)"
+
+endif # newsbt
 
 ##########
 # ADB

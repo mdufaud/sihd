@@ -126,10 +126,6 @@ modules = {
         "depends": ['util', 'sys'],
         "extlibs": ['libzip'],
         "libs": ['zip'],
-        # z/bz2/lzma/ssl/crypto: transitive deps of libzip (needed for static linking on native)
-        "linux-native-libs": ['z', 'bz2', 'lzma', 'ssl', 'crypto'],
-        # cross builds use dynamic vcpkg libs; libzip.so links its own transitive deps
-        "linux-cross-libs": ['z', 'bz2', 'ssl', 'crypto'],
     },
     "tui": {
         "depends": ['util', 'sys'],
