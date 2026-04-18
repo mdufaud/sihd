@@ -91,7 +91,8 @@ void add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_t
     if (dup_from >= 0 && dup_to >= 0)
     {
         posix_spawn_file_actions_adddup2(actions, dup_from, dup_to);
-        posix_spawn_file_actions_addclose(actions, dup_from);
+        if (dup_from != dup_to)
+            posix_spawn_file_actions_addclose(actions, dup_from);
     }
 }
 
@@ -127,7 +128,8 @@ void dup_close(int fd_from, int fd_to)
     {
         SIHD_LOG(error, "Process: could not duplicate fd: {}", os::last_error_str());
     }
-    safe_close(fd_from);
+    if (fd_from != fd_to)
+        safe_close(fd_from);
 }
 
 # endif // ENABLE_FORK

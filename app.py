@@ -257,11 +257,6 @@ conditional_modules = {
         "libs": ["python3.12"],
         "flags": ['-U_FORTIFY_SOURCE', '-Wno-cpp'], # Undefine _FORTIFY_SOURCE for py module since it requires optimization from builds using -O0
         "clang-flags": ["-Wno-unused-command-line-argument"],
-        # pip install python-config
-        "parse-configs": [
-            'python-config --cflags --ldflags --embed',
-            'python3-config --cflags --ldflags --embed',
-        ],
     }
 }
 
@@ -491,9 +486,22 @@ demo_libs = ['CLI11']
 
 def __get_python_libname():
     import subprocess
-    proc = subprocess.Popen("python3-config --extension-suffix",
-                            shell=True, stdout=subprocess.PIPE)
-    return proc.stdout.read().decode().strip()
+    # Use the vcpkg Python version for the extension suffix, not the system one.
+    # python3-config --extension-suffix returns the system Python suffix which may
+    # differ from the vcpkg-provided Python version we actually link against.
+    major_minor = "312"
+    try:
+        proc = subprocess.Popen("python3-config --extension-suffix",
+                                shell=True, stdout=subprocess.PIPE)
+        suffix = proc.stdout.read().decode().strip()
+        if suffix:
+            # Replace the version in the suffix (e.g. cpython-314 -> cpython-312)
+            import re
+            suffix = re.sub(r'cpython-\d+', 'cpython-{}'.format(major_minor), suffix)
+            return suffix
+    except Exception:
+        pass
+    return ""
 
 
 def on_build_success(build_modules, builder):

@@ -2,13 +2,13 @@
 
 #include <gtest/gtest.h>
 
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/TmpDir.hpp>
-#include <sihd/util/Worker.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/proc.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Worker.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
@@ -478,9 +478,7 @@ TEST_F(TestProcess, test_process_exec_simple)
 TEST_F(TestProcess, test_process_exec_stdout)
 {
     std::string printed;
-    proc::Options options({.stdout_callback = [&printed](std::string_view stdout_str) {
-        printed += stdout_str;
-    }});
+    proc::Options options({.stdout_callback = [&printed](std::string_view stdout_str) { printed += stdout_str; }});
     auto exit_code = proc::execute({"echo", "hello", "world"}, options);
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(100)), std::future_status::ready);
     ASSERT_EQ(exit_code.get(), 0);
@@ -490,9 +488,7 @@ TEST_F(TestProcess, test_process_exec_stdout)
 TEST_F(TestProcess, test_process_exec_stderr)
 {
     std::string printed;
-    proc::Options options({.stderr_callback = [&printed](std::string_view stderr_str) {
-        printed += stderr_str;
-    }});
+    proc::Options options({.stderr_callback = [&printed](std::string_view stderr_str) { printed += stderr_str; }});
     const std::string prog_name = "ls";
     auto exit_code = proc::execute({prog_name, "/there/is/nothing/here"}, options);
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(100)), std::future_status::ready);
@@ -506,9 +502,7 @@ TEST_F(TestProcess, test_process_exec_stdin)
     std::string printed;
     proc::Options options({.timeout = std::chrono::milliseconds(100),
                            .to_stdin = stdin_input,
-                           .stdout_callback = [&printed](std::string_view stdout_str) {
-                               printed += stdout_str;
-                           }});
+                           .stdout_callback = [&printed](std::string_view stdout_str) { printed += stdout_str; }});
     auto exit_code = proc::execute({"cat"}, options);
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(200)), std::future_status::ready);
     ASSERT_EQ(exit_code.get(), 0);
@@ -520,7 +514,7 @@ TEST_F(TestProcess, test_process_exec_timeout)
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
     proc::Options options({.timeout = std::chrono::milliseconds(80)});
-    auto exit_code = proc::execute({"cat"}, options);
+    auto exit_code = proc::execute({"sleep", "10"}, options);
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(20)), std::future_status::timeout);
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(70)), std::future_status::ready);
     // kill by signal SIGTERM (9)
