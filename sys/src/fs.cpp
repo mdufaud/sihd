@@ -11,14 +11,14 @@
 #include <fmt/ranges.h>
 
 #include <sihd/sys/File.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
-#include <sihd/sys/fs.hpp>
 #include <sihd/util/platform.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <direct.h> // _mkdir _stat
-# include <fcntl.h> // _O_WRONLY
+# include <fcntl.h>  // _O_WRONLY
 # include <fileapi.h>
 # include <io.h> // _open _close _chsize_s
 # include <libloaderapi.h>
@@ -675,7 +675,9 @@ std::optional<std::string> read_link(std::string_view path)
     std::filesystem::path link_path = std::filesystem::read_symlink(path, ec);
     if (ec)
     {
-        SIHD_LOG(debug, "read_link: {}: {}", ec.message(), path);
+        // it is expected that some links are not readable, so only log if it is not a permission error
+        if (ec != std::errc::permission_denied)
+            SIHD_LOG(error, "read_link: {}: {}", ec.message(), path);
         return std::nullopt;
     }
     return {link_path.string()};
