@@ -49,6 +49,10 @@ dist/*
 .vcpkg
 .vcpkg/*
 
+# sbt external deps
+.sbt-deps
+.sbt-deps/*
+
 # env
 .env.d
 

@@ -37,7 +37,9 @@ app = loader.load_app()
 
 vcpkg_bin_path = os.getenv("VCPKG_PATH", None)
 if vcpkg_bin_path is None:
-    vcpkg_dir_path = os.path.join(builder.build_root_path, ".vcpkg")
+    # VCPKG_ROOT is the standard env var for sharing a vcpkg installation directory
+    vcpkg_root = os.getenv("VCPKG_ROOT", None)
+    vcpkg_dir_path = vcpkg_root if vcpkg_root else os.path.join(builder.build_root_path, ".vcpkg")
     vcpkg_bin_path = os.path.join(vcpkg_dir_path, "vcpkg")
     if builder.is_msys():
         vcpkg_bin_path += ".exe"

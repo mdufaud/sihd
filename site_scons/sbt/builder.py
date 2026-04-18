@@ -379,6 +379,9 @@ build_test_path = join(build_path, "test")
 build_demo_path = join(build_path, "demo")
 build_obj_path = join(build_path, "obj")
 
+# SBT external project dependencies
+sbt_deps_path = join(build_root_path, ".sbt-deps")
+
 libs_type = "static" if is_static_libs() else "dynamic"
 
 ###############################################################################

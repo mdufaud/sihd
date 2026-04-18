@@ -124,7 +124,12 @@ SCONS_BUILD_CMD = $(SCONS_PREFIX) scons -Q -j$(j) $(SCONS_ARGS)
 # VCPKG
 ############
 
+# VCPKG_ROOT env var allows sharing a vcpkg installation across SBT projects
+ifdef VCPKG_ROOT
+VCPKG_PATH := $(VCPKG_ROOT)
+else
 VCPKG_PATH := $(PROJECT_ROOT_PATH)/.vcpkg
+endif
 VCPKG_BIN := $(VCPKG_PATH)/vcpkg
 VCPKG_SCRIPT_PATH := $(SBT_PATH)/vcpkg/install.py
 VCPKG_ACTION := fetch
@@ -478,9 +483,36 @@ vcpkg_deploy:
 	$(QUIET) if [ ! -d "$(VCPKG_PATH)" ]; then git clone https://github.com/microsoft/vcpkg $(VCPKG_PATH); fi
 	$(QUIET) if [ ! -f "$(VCPKG_BIN)" ]; then $(VCPKG_PATH)/bootstrap-vcpkg.sh -disableMetrics; fi
 
+############################
+# SBT external dependencies
+############################
+
+SBT_DEPS_SCRIPT_PATH := $(SBT_PATH)/build/sbt_deps.py
+SBT_DEPS_SCRIPT = $(PYTHON_BIN) $(SBT_DEPS_SCRIPT_PATH) fetch
+
+.PHONY: sbt_dep # Fetch and build SBT project dependencies
+
+sbt_dep: vcpkg_deploy
+	$(eval BUILD_CMD_LINE = \
+			modules=$(modules) \
+			test=$(test) \
+			dist=$(dist) \
+			mode=$(mode) \
+			asan=$(asan) \
+			verbose=$(verbose) \
+			demo=$(demo) \
+			libc=$(libc) \
+			cpu=$(cpu) \
+	)
+	$(QUIET) $(SBT_DEPS_SCRIPT) $(BUILD_CMD_LINE)
+
+##################
+# Dependencies
+##################
+
 .PHONY: dep # Run vcpkg to get dependencies
 
-dep: vcpkg_deploy
+dep: sbt_dep
 	$(eval BUILD_CMD_LINE = \
 			modules=$(modules) \
 			test=$(test) \
