@@ -2,8 +2,29 @@
 # Env
 ###############################################################################
 
+import os
 import sys
 from os import getenv
+
+###############################################################################
+# Filesystem
+###############################################################################
+
+def link_tree(src, dst):
+    """Recursively create symlinks in dst for each file found under src."""
+    if not os.path.isdir(src):
+        return
+    os.makedirs(dst, exist_ok=True)
+    for entry in os.scandir(src):
+        # Resolve to absolute real path to avoid chaining symlinks
+        s = os.path.realpath(entry.path)
+        d = os.path.join(dst, entry.name)
+        if entry.is_dir(follow_symlinks=False):
+            link_tree(entry.path, d)
+        else:
+            if os.path.islink(d) or os.path.exists(d):
+                os.unlink(d)
+            os.symlink(s, d)
 
 def get_opt(argname, default_val=""):
     arg_to_find = argname + "="

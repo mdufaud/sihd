@@ -298,9 +298,12 @@ def _execute_vcpkg_list():
 def _link_to_extlibs():
     downloaded_path = os.path.join(vcpkg_build_path, "vcpkg_installed", vcpkg_triplet)
     if os.path.exists(downloaded_path):
-        # remove existing link:
         if os.path.islink(builder.build_extlib_path):
             os.unlink(builder.build_extlib_path)
+        if os.path.isdir(builder.build_extlib_path):
+            # extlib is a real directory (pre-populated by sbt_deps); add vcpkg artifacts as symlinks
+            utils.link_tree(downloaded_path, builder.build_extlib_path)
+            return
         if os.path.exists(builder.build_extlib_path):
             os.unlink(builder.build_extlib_path)
         builder.safe_symlink(downloaded_path, builder.build_extlib_path)

@@ -271,20 +271,27 @@ def _copy_tree(src, dst):
 
 
 def _install_artifacts(name, dep_build_path, consumer_extlib_path):
-    """Copy built artifacts from dep's build output into consumer's extlib/."""
+    """Link built artifacts from dep's build output into consumer's extlib/."""
     if not os.path.isdir(dep_build_path):
         logger.warning(f"dependency '{name}' build path not found: {dep_build_path}")
         return
 
-    # Copy dep's own built libs and headers
+    # If extlib/ is currently a single symlink (created by a prior vcpkg-only run),
+    # dissolve it into a real directory with individual symlinks so we can merge into it.
+    if os.path.islink(consumer_extlib_path):
+        vcpkg_target = os.path.realpath(consumer_extlib_path)
+        os.unlink(consumer_extlib_path)
+        utils.link_tree(vcpkg_target, consumer_extlib_path)
+
+    # Link dep's own built libs and headers
     for subdir in ("lib", "include", "bin", "etc", "share"):
         src = os.path.join(dep_build_path, subdir)
         if os.path.isdir(src):
             dst = os.path.join(consumer_extlib_path, subdir)
             logger.info(f"installing {name}/{subdir}/ -> {dst}")
-            _copy_tree(src, dst)
+            utils.link_tree(src, dst)
 
-    # Also copy dep's extlib (transitive vcpkg deps)
+    # Also link dep's extlib (transitive vcpkg deps)
     dep_extlib = os.path.join(dep_build_path, "extlib")
     if os.path.isdir(dep_extlib):
         for subdir in ("lib", "include", "bin", "etc", "share"):
@@ -292,7 +299,7 @@ def _install_artifacts(name, dep_build_path, consumer_extlib_path):
             if os.path.isdir(src):
                 dst = os.path.join(consumer_extlib_path, subdir)
                 logger.info(f"installing {name}/extlib/{subdir}/ -> {dst}")
-                _copy_tree(src, dst)
+                utils.link_tree(src, dst)
 
 
 def fetch():
