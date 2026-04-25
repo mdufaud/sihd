@@ -1,11 +1,13 @@
 #ifndef __SIHD_UTIL_PROFILING_HPP__
 #define __SIHD_UTIL_PROFILING_HPP__
 
+#include <source_location>
 #include <string>
+#include <string_view>
 
 #include <sihd/util/Clocks.hpp>
-#include <sihd/util/Location.hpp>
 #include <sihd/util/Stat.hpp>
+#include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
 {
@@ -13,21 +15,37 @@ namespace sihd::util
 class Timeit
 {
     public:
-        Timeit(const char *fun_name);
+        Timeit(std::source_location loc = std::source_location::current());
+        Timeit(std::string_view label, std::source_location loc = std::source_location::current());
         ~Timeit();
+
+        Timestamp elapsed() const;
 
     protected:
 
     private:
         SteadyClock _clock;
-        const char *_fun_name;
+        std::string _label;
         time_t _begin;
 };
 
 class Perf
 {
     public:
-        Perf(const char *fun_name);
+        class Guard
+        {
+            public:
+                Guard(Perf & perf): _perf(perf) { _perf.begin(); }
+                ~Guard() { _perf.end(); }
+                Guard(const Guard &) = delete;
+                Guard & operator=(const Guard &) = delete;
+
+            private:
+                Perf & _perf;
+        };
+
+        Perf(std::source_location loc = std::source_location::current());
+        Perf(std::string_view label, std::source_location loc = std::source_location::current());
         ~Perf();
 
         void begin();
@@ -41,7 +59,7 @@ class Perf
 
     private:
         SteadyClock _clock;
-        const char *_fun_name;
+        std::string _label;
         time_t _begin;
         Stat<time_t> _stat;
 };

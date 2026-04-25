@@ -13,7 +13,7 @@ time_t SteadyClock::now() const
     if constexpr (platform::is_emscripten)
         return time::microseconds(_clock.now().time_since_epoch().count());
     else
-        return _clock.now().time_since_epoch().count();
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(_clock.now().time_since_epoch()).count();
 }
 
 bool SteadyClock::is_steady() const
@@ -27,7 +27,7 @@ time_t SystemClock::now() const
     if constexpr (platform::is_emscripten)
         return time::microseconds(_clock.now().time_since_epoch().count());
     else
-        return _clock.now().time_since_epoch().count();
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(_clock.now().time_since_epoch()).count();
 }
 
 bool SystemClock::is_steady() const

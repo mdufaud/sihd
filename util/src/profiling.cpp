@@ -9,7 +9,9 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-Timeit::Timeit(const char *fun_name): _fun_name(fun_name), _begin(_clock.now()) {}
+Timeit::Timeit(std::source_location loc): _label(loc.function_name()), _begin(_clock.now()) {}
+
+Timeit::Timeit(std::string_view label, std::source_location /*loc*/): _label(label), _begin(_clock.now()) {}
 
 Timeit::~Timeit()
 {
@@ -20,11 +22,18 @@ Timeit::~Timeit()
 
     SIHD_LOG(debug,
              "Time<{}>: {}",
-             _fun_name,
+             _label,
              Timestamp(duration).timeoffset_str(show_total_parenthesis, show_nano));
 }
 
-Perf::Perf(const char *fun_name): _fun_name(fun_name), _begin(0) {}
+Timestamp Timeit::elapsed() const
+{
+    return std::max(time_t {0}, _clock.now() - _begin);
+}
+
+Perf::Perf(std::source_location loc): _label(loc.function_name()), _begin(0) {}
+
+Perf::Perf(std::string_view label, std::source_location /*loc*/): _label(label), _begin(0) {}
 
 Perf::~Perf() = default;
 
@@ -58,7 +67,7 @@ void Perf::log() const
     const bool show_standard_deviation_nano = standard_deviation < time::micro(1);
 
     SIHD_LOG_DEBUG("Perf<{}>: [samples: {}] [min: {}] [max: {}] [avg/var/dev: {} / {} / {}]",
-                   _fun_name,
+                   _label,
                    _stat.samples,
                    Timestamp(_stat.min).timeoffset_str(show_total, show_min_nano),
                    Timestamp(_stat.max).timeoffset_str(show_total, show_max_nano),

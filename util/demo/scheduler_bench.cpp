@@ -9,6 +9,7 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Scheduler.hpp>
+#include <sihd/util/Stat.hpp>
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/Task.hpp>
 #include <sihd/util/platform.hpp>
@@ -16,64 +17,6 @@
 #include <sihd/util/time.hpp>
 
 using namespace sihd::util;
-
-// --- Statistics helpers ---
-
-struct Stats
-{
-        double min_us;
-        double max_us;
-        double mean_us;
-        double median_us;
-        double stddev_us;
-        double p95_us;
-        double p99_us;
-};
-
-Stats compute_stats(std::vector<long long> & samples_ns)
-{
-    Stats s {};
-    if (samples_ns.empty())
-        return s;
-
-    std::sort(samples_ns.begin(), samples_ns.end());
-    size_t n = samples_ns.size();
-
-    auto to_us = [](long long ns) {
-        return (double)ns / 1000.0;
-    };
-    auto percentile = [&](double p) -> double {
-        double idx = p / 100.0 * (double)(n - 1);
-        size_t lo = (size_t)idx;
-        size_t hi = lo + 1;
-        if (hi >= n)
-            return to_us(samples_ns[n - 1]);
-        double frac = idx - (double)lo;
-        return to_us(samples_ns[lo]) * (1.0 - frac) + to_us(samples_ns[hi]) * frac;
-    };
-
-    double sum = 0;
-    for (auto v : samples_ns)
-        sum += (double)v;
-    double mean = sum / (double)n;
-
-    double var = 0;
-    for (auto v : samples_ns)
-    {
-        double d = (double)v - mean;
-        var += d * d;
-    }
-    var /= (double)n;
-
-    s.min_us = to_us(samples_ns.front());
-    s.max_us = to_us(samples_ns.back());
-    s.mean_us = mean / 1000.0;
-    s.median_us = percentile(50);
-    s.stddev_us = std::sqrt(var) / 1000.0;
-    s.p95_us = percentile(95);
-    s.p99_us = percentile(99);
-    return s;
-}
 
 std::string format_us(double us)
 {
@@ -101,8 +44,8 @@ struct LatencyResult
         size_t actual_ticks;
         size_t overruns;
         double accuracy_pct;
-        Stats latency;
-        Stats jitter;
+        PSquareStat<long long> latency;
+        PSquareStat<long long> jitter;
 };
 
 LatencyResult bench_latency(size_t task_count, time_t interval_ns, time_t run_duration_ns)
@@ -153,23 +96,15 @@ LatencyResult bench_latency(size_t task_count, time_t interval_ns, time_t run_du
     std::this_thread::sleep_for(std::chrono::nanoseconds(run_duration_ns));
     scheduler.stop();
 
-    // merge all latency samples
-    std::vector<long long> all_latencies;
-    all_latencies.reserve(reserve_per_task * task_count);
+    PSquareStat<long long> latency_stat;
     for (auto & td : task_data)
-        all_latencies.insert(all_latencies.end(), td.latencies_ns.begin(), td.latencies_ns.end());
+        for (auto v : td.latencies_ns)
+            latency_stat.add_sample(v);
 
-    // compute jitter (absolute difference between consecutive latencies per task)
-    std::vector<long long> all_jitter;
-    all_jitter.reserve(all_latencies.size());
+    PSquareStat<long long> jitter_stat;
     for (auto & td : task_data)
-    {
         for (size_t j = 1; j < td.latencies_ns.size(); j++)
-        {
-            long long diff = std::abs(td.latencies_ns[j] - td.latencies_ns[j - 1]);
-            all_jitter.push_back(diff);
-        }
-    }
+            jitter_stat.add_sample(std::abs(td.latencies_ns[j] - td.latencies_ns[j - 1]));
 
     size_t expected_per_task = run_duration_ns / interval_ns;
     size_t expected_total = expected_per_task * task_count;
@@ -183,8 +118,8 @@ LatencyResult bench_latency(size_t task_count, time_t interval_ns, time_t run_du
         .actual_ticks = actual,
         .overruns = scheduler.overruns,
         .accuracy_pct = accuracy,
-        .latency = compute_stats(all_latencies),
-        .jitter = compute_stats(all_jitter),
+        .latency = latency_stat,
+        .jitter = jitter_stat,
     };
 }
 
@@ -222,11 +157,11 @@ void print_latency_row(const char *label, const LatencyResult & r)
                r.actual_ticks,
                r.accuracy_pct,
                r.overruns,
-               format_us(r.latency.mean_us),
-               format_us(r.latency.median_us),
-               format_us(r.latency.p99_us),
-               format_us(r.jitter.mean_us),
-               format_us(r.jitter.p99_us));
+               format_us((double)r.latency.average() / 1000.0),
+               format_us((double)r.latency.median() / 1000.0),
+               format_us((double)r.latency.p99() / 1000.0),
+               format_us((double)r.jitter.average() / 1000.0),
+               format_us((double)r.jitter.p99() / 1000.0));
 }
 
 // --- Phase 2: Throughput ---
@@ -486,12 +421,12 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv)
         fmt::print("\n  Best stable latency profile ({} tasks @ {}):\n",
                    best_lat->tasks,
                    format_interval(best_lat->interval_ns));
-        fmt::print("    Mean latency : {}\n", format_us(best_lat->latency.mean_us));
-        fmt::print("    p50  latency : {}\n", format_us(best_lat->latency.median_us));
-        fmt::print("    p99  latency : {}\n", format_us(best_lat->latency.p99_us));
-        fmt::print("    Max  latency : {}\n", format_us(best_lat->latency.max_us));
-        fmt::print("    Mean jitter  : {}\n", format_us(best_lat->jitter.mean_us));
-        fmt::print("    p99  jitter  : {}\n", format_us(best_lat->jitter.p99_us));
+        fmt::print("    Mean latency : {}\n", format_us((double)best_lat->latency.average() / 1000.0));
+        fmt::print("    p50  latency : {}\n", format_us((double)best_lat->latency.median() / 1000.0));
+        fmt::print("    p99  latency : {}\n", format_us((double)best_lat->latency.p99() / 1000.0));
+        fmt::print("    Max  latency : {}\n", format_us((double)best_lat->latency.max / 1000.0));
+        fmt::print("    Mean jitter  : {}\n", format_us((double)best_lat->jitter.average() / 1000.0));
+        fmt::print("    p99  jitter  : {}\n", format_us((double)best_lat->jitter.p99() / 1000.0));
     }
 
     double score = resolution.max_throughput_khz;

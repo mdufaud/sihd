@@ -77,4 +77,47 @@ TEST_F(TestStat, test_stat_single_sample)
     EXPECT_DOUBLE_EQ(stat.variance(), 0.0);
 }
 
+// Stat uses inverse-normal (z-score) approximation for percentiles.
+// Symmetric uniform distribution [1..200]: mean=100.5, stddev~57.7
+// p95 = mean + 1.645*stddev ~ 195, p99 = mean + 2.326*stddev ~ 235 (capped by distribution)
+TEST_F(TestStat, test_gaussian_stat_percentiles)
+{
+    Stat<double> stat;
+    for (int i = 1; i <= 200; ++i)
+        stat.add_sample(static_cast<double>(i));
+
+    EXPECT_NEAR(stat.median(), 100.5, 1.0);
+    EXPECT_GT(stat.p95(), 150.0);
+    EXPECT_GT(stat.p99(), 180.0);
+}
+
+// PSquareStat: accurate online estimator for asymmetric distributions.
+// Uniform [1..100]: exact median=50, p95~95, p99~99; P-Square has bounded approximation error.
+TEST_F(TestStat, test_psquare_stat_percentiles)
+{
+    PSquareStat<long long> stat;
+    for (long long i = 1; i <= 100; ++i)
+        stat.add_sample(i);
+
+    EXPECT_NEAR(stat.median(), 50LL, 5LL);
+    EXPECT_GE(stat.p95(), 90LL);
+    EXPECT_GE(stat.p99(), 95LL);
+}
+
+// PSquareStat clear resets estimators: fresh run after clear gives same results.
+TEST_F(TestStat, test_psquare_stat_clear)
+{
+    PSquareStat<long long> stat;
+    for (long long i = 1; i <= 100; ++i)
+        stat.add_sample(i);
+
+    stat.clear();
+    EXPECT_EQ(stat.samples, 0u);
+
+    for (long long i = 1; i <= 100; ++i)
+        stat.add_sample(i);
+
+    EXPECT_NEAR(stat.median(), 50LL, 5LL);
+}
+
 } // namespace test
