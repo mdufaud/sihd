@@ -236,6 +236,11 @@ def _execute_vcpkg_install():
     #     args.append("--no-binarycaching")
 
     copy_env["VCPKG_BINARY_SOURCES"] = "clear;default,readwrite"
+    # Force vcpkg to use its own bundled cmake/ninja instead of the system ones.
+    # The system cmake version is included in every port's ABI hash, so a pacman
+    # upgrade of cmake invalidates the entire binary cache and triggers a full
+    # rebuild across all architectures.
+    copy_env["VCPKG_FORCE_DOWNLOADED_BINARIES"] = "1"
 
     if copy_env.get("VCPKG_DEFAULT_BINARY_CACHE", None) is None:
         vcpkg_archive_path = os.path.join(vcpkg_dir_path, "archives")
