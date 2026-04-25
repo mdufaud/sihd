@@ -36,4 +36,12 @@ TEST_F(TestStopwatch, test_stopwatch_reset)
     EXPECT_LT(elapsed, time::milli(50));
 }
 
+TEST_F(TestStopwatch, test_stopwatch_monotone)
+{
+    Stopwatch sw;
+    Timestamp t1 = sw.time();
+    Timestamp t2 = sw.time();
+    EXPECT_LE(t1, t2);
+}
+
 } // namespace test

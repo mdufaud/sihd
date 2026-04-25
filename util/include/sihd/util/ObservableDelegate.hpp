@@ -29,9 +29,9 @@ class ObservableDelegate: Observable<T>
                 }
 
                 template <typename... Parameters>
-                bool remove_observer(Parameters &&...args)
+                void remove_observer(Parameters &&...args)
                 {
-                    return _delegate.remove_observer(std::forward<Parameters>(args)...);
+                    _delegate.remove_observer(std::forward<Parameters>(args)...);
                 }
 
                 template <typename... Parameters>

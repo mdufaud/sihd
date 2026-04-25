@@ -80,4 +80,22 @@ TEST_F(TestDynMessage, test_dynmessage_clone)
     delete cloned;
 }
 
+TEST_F(TestDynMessage, test_dynmessage_rule_callback)
+{
+    DynMessage msg("test");
+    EXPECT_TRUE(msg.add_field<int>("val"));
+    EXPECT_TRUE(msg.finish());
+
+    int callback_count = 0;
+    EXPECT_TRUE(msg.add_rule("val", [&callback_count](DynMessage &, const IMessageField &) { ++callback_count; }));
+
+    int data = 42;
+    EXPECT_TRUE(msg.field_read_from(&data, sizeof(data)));
+    EXPECT_EQ(callback_count, 1);
+
+    data = 99;
+    EXPECT_TRUE(msg.field_read_from(&data, sizeof(data)));
+    EXPECT_EQ(callback_count, 2);
+}
+
 } // namespace test

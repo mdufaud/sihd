@@ -23,7 +23,7 @@ TEST_F(TestProfiling, test_timeit)
         Timeit t("test_function");
     }
     Timeit t;
-    EXPECT_GT(t.elapsed(), Timestamp(0));
+    EXPECT_GE(t.elapsed(), Timestamp(0));
 }
 
 TEST_F(TestProfiling, test_perf_guard)

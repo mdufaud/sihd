@@ -47,10 +47,7 @@ void add_child_informations(const Node *node,
         add_node_informations(child_node, s, opts);
 }
 
-void add_children_informations(const Node *node,
-                               std::string & s,
-                               Node::TreeOpts & opts,
-                               const std::string & indent)
+void add_children_informations(const Node *node, std::string & s, Node::TreeOpts & opts, const std::string & indent)
 {
     for (const std::string & name : node->children_keys())
     {
@@ -86,8 +83,7 @@ Node::~Node()
 void Node::add_child_unsafe(Named *child, bool ownership)
 {
     if (this->add_child(child->name(), child, ownership) == false)
-        throw std::invalid_argument(
-            fmt::format("Node '{}' already has child '{}'", this->full_name(), child->name()));
+        throw std::invalid_argument(fmt::format("Node '{}' already has child '{}'", this->full_name(), child->name()));
 }
 
 bool Node::add_child(Named *child, bool ownership)
@@ -119,12 +115,7 @@ bool Node::add_child(const std::string & name, Named *child, bool ownership)
 
 Node::ChildEntry *Node::_get_child_entry(const Named *child) const
 {
-    for (const auto & pair : _children_map)
-    {
-        if (pair.second->obj == child)
-            return pair.second;
-    }
-    return nullptr;
+    return this->_get_child_entry(child->name());
 }
 
 bool Node::has_ownership(const Named *child) const
@@ -203,11 +194,13 @@ bool Node::_remove_child_entry(Node::ChildEntry *entry)
 
 void Node::remove_children()
 {
-    for (auto it = _children_map.begin(); it != _children_map.end();)
+    for (const std::string & name : _children_keys)
     {
-        ChildEntry *entry = it->second;
-        it = _children_map.erase(it);
-        this->_remove_child_entry(entry);
+        ChildEntry *entry = _children_map.at(name);
+        this->on_remove_child(entry->name, entry->obj);
+        if (entry->ownership && entry->obj != nullptr)
+            delete entry->obj;
+        delete entry;
     }
     _children_map.clear();
     _children_keys.clear();

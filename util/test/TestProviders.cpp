@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Providers.hpp>
 
@@ -117,4 +118,54 @@ TEST_F(TestProviders, test_provider_vector)
     EXPECT_FALSE(provider.provide(&value));
     EXPECT_EQ(value, lst2.at(1));
 }
+
+TEST_F(TestProviders, test_provider_reset_index)
+{
+    int value = 0;
+    std::vector<int> lst = {5, 10, 15};
+    VectorProvider<int> provider(&lst);
+
+    EXPECT_TRUE(provider.provide(&value));
+    EXPECT_EQ(value, 5);
+    EXPECT_TRUE(provider.provide(&value));
+    EXPECT_EQ(value, 10);
+    EXPECT_TRUE(provider.provide(&value));
+    EXPECT_EQ(value, 15);
+
+    EXPECT_FALSE(provider.providing());
+
+    provider.reset_index();
+
+    EXPECT_TRUE(provider.providing());
+    EXPECT_TRUE(provider.provide(&value));
+    EXPECT_EQ(value, 5);
+}
+
+TEST_F(TestProviders, test_provider_providing_exhausted)
+{
+    int value = 0;
+    std::vector<int> lst = {1};
+    VectorProvider<int> provider(&lst);
+
+    EXPECT_TRUE(provider.providing());
+    EXPECT_TRUE(provider.provide(&value));
+    EXPECT_FALSE(provider.providing());
+    EXPECT_FALSE(provider.provide(&value));
+}
+
+TEST_F(TestProviders, test_provider_deque)
+{
+    int value = 0;
+    std::deque<int> dq = {7, 8, 9};
+    DequeProvider<int> provider(&dq);
+
+    EXPECT_TRUE(provider.provide(&value));
+    EXPECT_EQ(value, 7);
+    EXPECT_TRUE(provider.provide(&value));
+    EXPECT_EQ(value, 8);
+    EXPECT_TRUE(provider.provide(&value));
+    EXPECT_EQ(value, 9);
+    EXPECT_FALSE(provider.provide(&value));
+}
+
 } // namespace test

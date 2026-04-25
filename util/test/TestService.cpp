@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/AService.hpp>
 #include <sihd/util/AThreadedService.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ServiceController.hpp>
-
 #include <sihd/util/profiling.hpp>
 
 namespace test
@@ -20,12 +20,13 @@ class FakeThreadedService: public AThreadedService
 
         bool on_start() override
         {
-            thread1 = std::jthread([this] {
+            auto b = std::make_shared<std::barrier<std::function<void()>>>(3, [this] {
                 started = true;
                 this->notify_service_thread_started();
             });
-            thread2 = std::jthread([this] { this->notify_service_thread_started(); });
-            thread3 = std::jthread([this] { this->notify_service_thread_started(); });
+            thread1 = std::jthread([b] { b->arrive_and_wait(); });
+            thread2 = std::jthread([b] { b->arrive_and_wait(); });
+            thread3 = std::jthread([b] { b->arrive_and_wait(); });
             return true;
         }
 

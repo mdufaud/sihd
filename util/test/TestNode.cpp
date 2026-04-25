@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 
@@ -125,6 +126,52 @@ TEST_F(TestNode, test_node_errors)
     EXPECT_TRUE(root.add_link("name", "..some.path"));
     EXPECT_FALSE(root.add_link("name", "..some.other.path"));
     delete n2;
+}
+
+TEST_F(TestNode, test_node_add_child_unsafe_throws)
+{
+    Node root("root");
+    root.add_child(new Named("dup"), true);
+    Named *dup2 = new Named("dup");
+    EXPECT_THROW(root.add_child_unsafe(dup2, false), std::invalid_argument);
+    delete dup2;
+}
+
+TEST_F(TestNode, test_node_ownership)
+{
+    Node root("root");
+    Named *owned = new Named("owned");
+    Named *borrowed = new Named("borrowed");
+
+    root.add_child(owned, true);
+    root.add_child(borrowed, false);
+
+    EXPECT_TRUE(root.has_ownership(owned));
+    EXPECT_TRUE(root.has_ownership("owned"));
+    EXPECT_FALSE(root.has_ownership(borrowed));
+    EXPECT_FALSE(root.has_ownership("borrowed"));
+
+    root.set_child_ownership("borrowed", true);
+    EXPECT_TRUE(root.has_ownership(borrowed));
+
+    root.set_child_ownership(owned, false);
+    EXPECT_FALSE(root.has_ownership(owned));
+    // cleanup manually since ownership was released
+    delete owned;
+}
+
+TEST_F(TestNode, test_node_remove_children)
+{
+    Node root("root");
+    root.add_child(new Named("a"), true);
+    root.add_child(new Named("b"), true);
+    root.add_child(new Named("c"), true);
+
+    EXPECT_NE(root.get_child("a"), nullptr);
+    root.remove_children();
+    EXPECT_EQ(root.get_child("a"), nullptr);
+    EXPECT_EQ(root.get_child("b"), nullptr);
+    EXPECT_EQ(root.get_child("c"), nullptr);
 }
 
 } // namespace test

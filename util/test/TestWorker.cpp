@@ -1,6 +1,8 @@
-#include <cstring>
 #include <cstdlib>
+#include <cstring>
+
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/StepWorker.hpp>
@@ -25,7 +27,10 @@ class TestWorker: public ::testing::Test
 
 TEST_F(TestWorker, test_worker_simple)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if ([] {
+            const char *p = std::getenv("LD_PRELOAD");
+            return p && std::strstr(p, "valgrind");
+        }())
         GTEST_SKIP() << "Buggy with valgrind";
     int ran = 0;
     Runnable runnable([&]() -> bool {
@@ -44,7 +49,10 @@ TEST_F(TestWorker, test_worker_simple)
 
 TEST_F(TestWorker, test_stepworker_multiple)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if ([] {
+            const char *p = std::getenv("LD_PRELOAD");
+            return p && std::strstr(p, "valgrind");
+        }())
         GTEST_SKIP() << "Buggy with valgrind";
     int ran = 0;
     Runnable runnable([&]() -> bool {
@@ -65,7 +73,10 @@ TEST_F(TestWorker, test_stepworker_multiple)
 
 TEST_F(TestWorker, test_stepworker_once)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if ([] {
+            const char *p = std::getenv("LD_PRELOAD");
+            return p && std::strstr(p, "valgrind");
+        }())
         GTEST_SKIP() << "Buggy with valgrind";
     int ran = 0;
     Runnable runnable([&]() -> bool {
@@ -79,5 +90,72 @@ TEST_F(TestWorker, test_stepworker_once)
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
     EXPECT_TRUE(worker.stop_worker());
     EXPECT_EQ(ran, 1);
+}
+
+class HookedWorker: public Worker
+{
+    public:
+        HookedWorker(): Worker([this] { return this->run(); }) {}
+
+        bool on_worker_start() override
+        {
+            started_hook = true;
+            return Worker::on_worker_start();
+        }
+
+        bool on_worker_stop() override
+        {
+            stopped_hook = true;
+            return Worker::on_worker_stop();
+        }
+
+        bool run() override
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            return true;
+        }
+
+        bool started_hook = false;
+        bool stopped_hook = false;
+};
+
+TEST_F(TestWorker, test_worker_hooks)
+{
+    if ([] {
+            const char *p = std::getenv("LD_PRELOAD");
+            return p && std::strstr(p, "valgrind");
+        }())
+        GTEST_SKIP() << "Buggy with valgrind";
+
+    HookedWorker worker;
+    EXPECT_FALSE(worker.started_hook);
+    EXPECT_FALSE(worker.stopped_hook);
+
+    EXPECT_TRUE(worker.start_sync_worker("hooked-worker"));
+    EXPECT_TRUE(worker.started_hook);
+
+    EXPECT_TRUE(worker.stop_worker());
+    EXPECT_TRUE(worker.stopped_hook);
+}
+
+TEST_F(TestWorker, test_worker_state_transitions)
+{
+    if ([] {
+            const char *p = std::getenv("LD_PRELOAD");
+            return p && std::strstr(p, "valgrind");
+        }())
+        GTEST_SKIP() << "Buggy with valgrind";
+
+    Worker worker([] { return true; });
+
+    EXPECT_FALSE(worker.is_worker_started());
+    EXPECT_FALSE(worker.is_worker_running());
+
+    EXPECT_TRUE(worker.start_sync_worker("state-worker"));
+    EXPECT_TRUE(worker.is_worker_started());
+
+    EXPECT_TRUE(worker.stop_worker());
+    EXPECT_FALSE(worker.is_worker_started());
+    EXPECT_FALSE(worker.is_worker_running());
 }
 } // namespace test

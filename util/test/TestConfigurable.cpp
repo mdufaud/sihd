@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include <sihd/json/Json.hpp>
-
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -30,8 +29,7 @@ class ConfigurableObj: public Configurable
                 return true;
             });
             // By bind
-            this->add_conf<int8_t>("char",
-                                   std::bind(&ConfigurableObj::set_char, this, std::placeholders::_1));
+            this->add_conf<int8_t>("char", std::bind(&ConfigurableObj::set_char, this, std::placeholders::_1));
             // By ptr
             this->add_conf("uchar", &ConfigurableObj::set_uchar);
             this->add_conf("short", &ConfigurableObj::set_short);
@@ -298,5 +296,13 @@ TEST_F(TestConfigurable, test_configurable_class)
     EXPECT_EQ(obj.str_val, "hello world");
     obj.set_conf_str("cstr", "hello world sup");
     EXPECT_EQ(obj.str_val, "hello world sup");
+}
+
+TEST_F(TestConfigurable, test_configurable_unknown_key)
+{
+    ConfigurableObj obj;
+    EXPECT_THROW(obj.set_conf_int("nonexistent", 42), std::exception);
+    EXPECT_THROW(obj.set_conf_float("nonexistent", 3.14), std::exception);
+    EXPECT_THROW(obj.set_conf_str("nonexistent", "value"), std::exception);
 }
 } // namespace test

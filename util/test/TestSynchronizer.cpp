@@ -55,4 +55,35 @@ TEST_F(TestSynchronizer, test_synchronizer_reset)
     EXPECT_EQ(sync.total_sync(), 3);
 }
 
+TEST_F(TestSynchronizer, test_synchronizer_multi_round)
+{
+    constexpr int nthreads = 3;
+    Synchronizer sync;
+    EXPECT_TRUE(sync.init_sync(nthreads));
+
+    auto run_round = [&] {
+        std::atomic<int> counter {0};
+        std::vector<std::thread> threads;
+        for (int i = 0; i < nthreads; ++i)
+        {
+            threads.emplace_back([&sync, &counter] {
+                counter.fetch_add(1);
+                sync.sync();
+            });
+        }
+        for (auto & t : threads)
+            t.join();
+        return counter.load();
+    };
+
+    EXPECT_EQ(run_round(), nthreads);
+    EXPECT_EQ(sync.current_sync(), 0);
+
+    // second round after re-init
+    sync.reset();
+    EXPECT_TRUE(sync.init_sync(nthreads));
+    EXPECT_EQ(run_round(), nthreads);
+    EXPECT_EQ(sync.current_sync(), 0);
+}
+
 } // namespace test

@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/StateMachine.hpp>
 
@@ -119,5 +120,30 @@ TEST_F(TestStateMachine, test_statemachine_naming)
     EXPECT_EQ(machine.state_name(State::DONE_EVT1), "DONE_EVT1");
     EXPECT_EQ(machine.state_name(State::DONE_EVT2), "DONE_EVT2");
     EXPECT_EQ(machine.state_name(State::Error), "Error");
+}
+
+TEST_F(TestStateMachine, test_statemachine_bulk_init)
+{
+    // A machine built via set_transitions_map must behave identically to one built add_transition by add_transition
+    std::map<State, std::map<Event, State>> transitions = {
+        {State::FIRST, {{Event::EVT1, State::BEFORE_EVT1}}},
+        {State::BEFORE_EVT1, {{Event::EVT_SUCCESS, State::DONE_EVT1}, {Event::EVT_ERROR, State::Error}}},
+        {State::DONE_EVT1, {{Event::EVT2, State::DONE_EVT2}}},
+    };
+
+    StateMachine<State, Event> machine(FIRST);
+    machine.set_transitions_map(transitions);
+
+    EXPECT_FALSE(machine.transition(Event::EVT2));
+    EXPECT_EQ(machine.state(), State::FIRST);
+
+    EXPECT_TRUE(machine.transition(Event::EVT1));
+    EXPECT_EQ(machine.state(), State::BEFORE_EVT1);
+
+    EXPECT_TRUE(machine.transition(Event::EVT_SUCCESS));
+    EXPECT_EQ(machine.state(), State::DONE_EVT1);
+
+    EXPECT_TRUE(machine.transition(Event::EVT2));
+    EXPECT_EQ(machine.state(), State::DONE_EVT2);
 }
 } // namespace test
