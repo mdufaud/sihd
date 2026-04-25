@@ -43,6 +43,14 @@ class MessageField: public Named,
             return array_utils::read<T>(*_array_ptr, idx);
         }
 
+        template <typename T>
+        bool write_value(size_t idx, T value)
+        {
+            if (_array_ptr == nullptr)
+                throw std::logic_error("array is not built yet");
+            return array_utils::write<T>(*_array_ptr, idx, value);
+        }
+
         const IArray *array() const { return _array_ptr; }
 
     protected:

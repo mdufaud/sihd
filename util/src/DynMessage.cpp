@@ -1,6 +1,7 @@
+#include <algorithm>
+
 #include <sihd/util/DynMessage.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/container.hpp>
 
 namespace sihd::util
 {
@@ -9,6 +10,7 @@ SIHD_LOGGER;
 
 DynMessage::DynMessage(const std::string & name, sihd::util::Node *parent): sihd::util::Message(name, parent)
 {
+    _next_rule_id = 0;
     _total_dyn_size = 0;
 }
 
@@ -42,12 +44,34 @@ bool DynMessage::remove_rules(const std::string & field_name)
     return _rules.erase(field_name) > 0;
 }
 
-bool DynMessage::add_rule(const std::string & field_name, RuleCallback && callback)
+bool DynMessage::remove_rule(const std::string & field_name, size_t rule_id)
+{
+    const auto it = _rules.find(field_name);
+    if (it == _rules.end())
+        return false;
+    auto & vec = it->second;
+    const auto eit = std::find_if(vec.begin(), vec.end(), [rule_id](const auto & entry) {
+        return entry.first == rule_id;
+    });
+    if (eit == vec.end())
+        return false;
+    vec.erase(eit);
+    return true;
+}
+
+std::optional<size_t> DynMessage::add_rule(const std::string & field_name, RuleCallback && callback)
 {
     if (_fields.count(field_name) == 0)
-        return false;
-    _rules[field_name].emplace_back(std::move(callback));
-    return true;
+        return std::nullopt;
+    const size_t id = _next_rule_id++;
+    _rules[field_name].emplace_back(id, std::move(callback));
+    return id;
+}
+
+void DynMessage::reset()
+{
+    _total_dyn_size = 0;
+    _hidden_fields.clear();
 }
 
 void DynMessage::_play_rules(const std::string & name, const IMessageField *field)
@@ -55,15 +79,14 @@ void DynMessage::_play_rules(const std::string & name, const IMessageField *fiel
     const auto it = _rules.find(name);
     if (it == _rules.end())
         return;
-    for (const auto & callback : it->second)
-    {
+    for (const auto & [id, callback] : it->second)
         callback(*this, *field);
-    }
 }
 
 bool DynMessage::field_read_from(const void *buffer, size_t size)
 {
     size_t current = 0;
+    _total_dyn_size = 0;
     for (const auto & name : this->children_keys())
     {
         IMessageField *field = _fields.at(name);
@@ -96,7 +119,10 @@ bool DynMessage::field_write_to(void *buffer, size_t size)
             continue;
         if (current + field->field_byte_size() > size)
         {
-            SIHD_LOG(error, "DynMessage: write error - not enough buffer size {} < {}", size, current + field->field_byte_size());
+            SIHD_LOG(error,
+                     "DynMessage: write error - not enough buffer size {} < {}",
+                     size,
+                     current + field->field_byte_size());
             return false;
         }
         if (!field->field_write_to((uint8_t *)buffer + current, size - current))
@@ -115,15 +141,14 @@ bool DynMessage::hide_field(const std::string & name, bool active)
         return false;
     }
     if (active)
-        return container::emplace_back_unique(_hidden_fields, it->second);
+        return _hidden_fields.insert(it->second).second;
     else
-        return container::erase(_hidden_fields, it->second);
-    return false;
+        return _hidden_fields.erase(it->second) > 0;
 }
 
 bool DynMessage::_is_hidden(const IMessageField *field) const
 {
-    return container::contains(_hidden_fields, field);
+    return _hidden_fields.count(field) > 0;
 }
 
 IMessageField *DynMessage::clone() const
@@ -135,7 +160,11 @@ IMessageField *DynMessage::clone() const
         IMessageField *field = _fields.at(name);
         IMessageField *cloned_field = field->clone();
         if (cloned_field != nullptr)
+        {
             cloned->add_field(name, cloned_field);
+            if (this->_is_hidden(field))
+                cloned->hide_field(name, true);
+        }
         else
         {
             SIHD_LOG(error, "DynMessage: clone failed for field '{}'", name);
@@ -153,6 +182,7 @@ IMessageField *DynMessage::clone() const
     else
     {
         cloned->_rules = _rules;
+        cloned->_next_rule_id = _next_rule_id;
     }
     return cloned;
 }

@@ -43,7 +43,7 @@ bool Message::finish()
     _arr.resize(_total_size);
     __assign_arr_at = 0;
     _finished = this->field_assign_buffer(_arr.buf());
-    return true;
+    return _finished;
 }
 
 bool Message::field_resize(size_t size)
@@ -153,6 +153,27 @@ IMessageField *Message::clone() const
 std::string Message::description() const
 {
     return fmt::format("{} bytes", this->field_byte_size());
+}
+
+const MessageField *Message::_require_field(const std::string & name) const
+{
+    const MessageField *field = this->cget_child<MessageField>(name);
+    if (field == nullptr)
+        throw std::invalid_argument("Message: no such field '" + name + "'");
+    return field;
+}
+
+std::vector<uint8_t> Message::to_bytes()
+{
+    const size_t sz = this->field_byte_size();
+    std::vector<uint8_t> result(sz);
+    this->field_write_to(result.data(), sz);
+    return result;
+}
+
+bool Message::from_bytes(std::span<const uint8_t> data)
+{
+    return this->field_read_from(data.data(), data.size());
 }
 
 } // namespace sihd::util

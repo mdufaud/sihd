@@ -1,11 +1,14 @@
 #ifndef __SIHD_UTIL_MESSAGE_HPP__
 #define __SIHD_UTIL_MESSAGE_HPP__
 
+#include <span>
 #include <stdexcept>
 #include <unordered_map>
+#include <vector>
 
 #include <sihd/util/Array.hpp>
 #include <sihd/util/IMessageField.hpp>
+#include <sihd/util/MessageField.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/type.hpp>
 
@@ -57,7 +60,25 @@ class Message: public Node,
 
         virtual std::string description() const override;
 
-        const IArray *array() const { return &_arr; }
+        virtual const IArray *array() const { return &_arr; }
+
+        std::vector<uint8_t> to_bytes();
+        bool from_bytes(std::span<const uint8_t> data);
+
+        template <typename T>
+        T get(const std::string & name, size_t idx = 0) const
+        {
+            return _require_field(name)->read_value<T>(idx);
+        }
+
+        template <typename T>
+        bool set(const std::string & name, T value, size_t idx = 0)
+        {
+            MessageField *field = this->get_child<MessageField>(name);
+            if (field == nullptr)
+                return false;
+            return field->write_value<T>(idx, value);
+        }
 
     protected:
         ArrByte _arr;
@@ -69,6 +90,7 @@ class Message: public Node,
     private:
         bool _add_field_size(IMessageField *field);
         bool _assign_field_array(IMessageField *field);
+        const MessageField *_require_field(const std::string & name) const;
 
         size_t __assign_arr_at;
 };
