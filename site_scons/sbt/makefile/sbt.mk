@@ -165,6 +165,14 @@ help:
 	$(call mk_log_info,makefile,build and run tests: make test)
 	$(call mk_log_info,makefile,build specific modules: modules=<comma_separated_modules>)
 	$(call mk_log_info,makefile,build with address sanitizer: asan=1)
+	$(call mk_log_info,makefile,build with undefined behavior sanitizer: ubsan=1)
+	$(call mk_log_info,makefile,build with thread sanitizer: tsan=1)
+	$(call mk_log_info,makefile,build with leak sanitizer: lsan=1)
+	$(call mk_log_info,makefile,build with memory sanitizer (clang only): msan=1)
+	$(call mk_log_info,makefile,build with hwaddress sanitizer (arm64 only): hwasan=1)
+	$(call mk_log_info,makefile,build with code coverage instrumentation: coverage=1)
+	$(call mk_log_info,makefile,run cppcheck static analysis: make cppcheck [m=modules])
+	$(call mk_log_info,makefile,run tests with coverage and emit cobertura xml: make covtest [m=modules])
 	$(call mk_log_info,makefile,build with static libs: static=1)
 	$(call mk_log_info,makefile,build specific release: mode=debug|release)
 	$(call mk_log_info,makefile,cross build for windows: platform=win)
@@ -242,6 +250,12 @@ build:
 			dist=$(dist) \
 			mode=$(mode) \
 			asan=$(asan) \
+			ubsan=$(ubsan) \
+			tsan=$(tsan) \
+			lsan=$(lsan) \
+			msan=$(msan) \
+			hwasan=$(hwasan) \
+			coverage=$(coverage) \
 			verbose=$(verbose) \
 			pkgdep=$(pkgdep) \
 			demo=$(demo) \
@@ -280,6 +294,23 @@ endif # module
 
 .PHONY: stest  san_test # Build and run tests with address sanitizer and runs tests
 .PHONY: istest nointeract_san_test # Build and run tests with address sanitizer and runs tests
+
+.PHONY: utest  ubsan_test # Build and run tests with undefined behavior sanitizer
+.PHONY: iutest nointeract_ubsan_test # Build and run tests with undefined behavior sanitizer (non-interactive)
+
+.PHONY: tsantest  tsan_test # Build and run tests with thread sanitizer
+.PHONY: itsantest nointeract_tsan_test # Build and run tests with thread sanitizer (non-interactive)
+
+.PHONY: lsantest  lsan_test # Build and run tests with leak sanitizer
+.PHONY: ilsantest nointeract_lsan_test # Build and run tests with leak sanitizer (non-interactive)
+
+.PHONY: mtest  msan_test # Build and run tests with memory sanitizer (clang only)
+.PHONY: imtest nointeract_msan_test # Build and run tests with memory sanitizer (non-interactive)
+
+.PHONY: hwtest  hwasan_test # Build and run tests with hwaddress sanitizer (arm64 only)
+.PHONY: ihwtest nointeract_hwasan_test # Build and run tests with hwaddress sanitizer (non-interactive)
+
+.PHONY: covtest coverage_test # Build and run tests with coverage and emit coverage.xml (cobertura)
 
 .PHONY: vtest  valgrind_test # Build and run tests with valgrind debugger
 .PHONY: ivtest nointeract_valgrind_test # Build and run tests with valgrind debugger (non-interactive)
@@ -358,6 +389,10 @@ test: build
 					TEST_ARGS="$(TEST_ARGS)" \
 					REPEAT="$(repeat)" \
 					ASAN_OPTIONS="$(ASAN_OPTIONS)" \
+					UBSAN_OPTIONS="$(UBSAN_OPTIONS)" \
+					TSAN_OPTIONS="$(TSAN_OPTIONS)" \
+					LSAN_OPTIONS="$(LSAN_OPTIONS)" \
+					MSAN_OPTIONS="$(MSAN_OPTIONS)" \
 					bash $(TEST_PATH)/execute_tests.sh "$(TEST_ACTION)" "$(MODULES_NAME_SPLIT)" "$(TEST_NAME_FILTER)" $(TEST_SCRIPT_ARGS)
 
 nointeract_test: TEST_SCRIPT_ARGS += 0>&-
@@ -384,6 +419,40 @@ san_test: asan = 1
 san_test: test
 stest: san_test
 
+ubsan_test: UBSAN_OPTIONS="print_stacktrace=1:halt_on_error=0:report_error_type=1"
+ubsan_test: ubsan = 1
+ubsan_test: test
+utest: ubsan_test
+
+tsan_test: TSAN_OPTIONS="halt_on_error=0:second_deadlock_stack=1:history_size=7"
+tsan_test: tsan = 1
+tsan_test: test
+tsantest: tsan_test
+
+lsan_test: LSAN_OPTIONS="report_objects=1"
+lsan_test: lsan = 1
+lsan_test: test
+lsantest: lsan_test
+
+msan_test: MSAN_OPTIONS="halt_on_error=0:print_stats=1"
+msan_test: msan = 1
+msan_test: test
+mtest: msan_test
+
+hwasan_test: hwasan = 1
+hwasan_test: test
+hwtest: hwasan_test
+
+# Coverage: build with --coverage instrumentation, run tests, then run gcovr.
+# The recipe runs after the 'test' prerequisite has executed, so .gcda files exist.
+coverage_test: coverage = 1
+coverage_test: test
+	$(QUIET) command -v gcovr >/dev/null 2>&1 || { $(call echo_log_error,makefile,gcovr not found - install with: pip install gcovr); exit 1; }
+	$(QUIET) $(call echo_log_info,makefile,generating cobertura coverage report at $(BUILD_PATH)/coverage/)
+	$(QUIET) bash $(MAKEFILE_TOOLS)/scripts/run_coverage.sh \
+		"$(BUILD_PATH)" "$(PROJECT_ROOT_PATH)" $(MODULES_NAME_SPLIT)
+covtest: coverage_test
+
 strace_test: DEBUGGER = strace
 strace_test: test
 ttest: strace_test
@@ -399,6 +468,11 @@ $(eval $(call mk_nointeract_debug_test,valgrind_test,ivtest))
 $(eval $(call mk_nointeract_debug_test,valgrind_leak_test,iltest))
 $(eval $(call mk_nointeract_debug_test,strace_test,ittest))
 $(eval $(call mk_nointeract_debug_test,san_test,istest))
+$(eval $(call mk_nointeract_debug_test,ubsan_test,iutest))
+$(eval $(call mk_nointeract_debug_test,tsan_test,itsantest))
+$(eval $(call mk_nointeract_debug_test,lsan_test,ilsantest))
+$(eval $(call mk_nointeract_debug_test,msan_test,imtest))
+$(eval $(call mk_nointeract_debug_test,hwasan_test,ihwtest))
 
 $(MODULES_NAME):
 	$(QUIET) echo > /dev/null
@@ -407,6 +481,40 @@ $(TEST_NAME_FILTER):
 	$(QUIET) echo > /dev/null
 
 endif # test
+
+##################
+# Cppcheck
+##################
+
+.PHONY: cppcheck # Run cppcheck static analysis ([m=modules])
+
+ifeq ($(MAKEARG_1), cppcheck)
+
+# Allow `make cppcheck mod` and `make cppcheck mod mod` in addition to `make cppcheck m=mod`
+ifeq ($(MAKEARG_2), mod)
+CPPCHECK_MODULES_ARG := $(MAKEARG_3),$(m)
+else
+CPPCHECK_MODULES_ARG := $(MAKEARG_2),$(m)
+endif
+
+cppcheck:
+	$(QUIET) command -v cppcheck >/dev/null 2>&1 || { $(call echo_log_error,makefile,cppcheck not found - install with your package manager); exit 1; }
+	$(QUIET) $(call echo_log_info,makefile,running cppcheck - reports in $(BUILD_PATH)/cppcheck/)
+	$(QUIET) bash $(MAKEFILE_TOOLS)/scripts/run_cppcheck.sh \
+		"$(BUILD_PATH)" "$(PROJECT_ROOT_PATH)" \
+		$(shell printf '%s' "$(CPPCHECK_MODULES_ARG)" | tr ',' ' ')
+
+# Prevent 'no rule to make target' for module name args
+ifneq ($(MAKEARG_2),)
+$(MAKEARG_2):
+	$(QUIET) echo > /dev/null
+endif
+ifneq ($(MAKEARG_3),)
+$(MAKEARG_3):
+	$(QUIET) echo > /dev/null
+endif
+
+endif # cppcheck
 
 ##################
 # Extlibs
@@ -499,6 +607,12 @@ sbt_dep: vcpkg_deploy
 			dist=$(dist) \
 			mode=$(mode) \
 			asan=$(asan) \
+			ubsan=$(ubsan) \
+			tsan=$(tsan) \
+			lsan=$(lsan) \
+			msan=$(msan) \
+			hwasan=$(hwasan) \
+			coverage=$(coverage) \
 			verbose=$(verbose) \
 			demo=$(demo) \
 			libc=$(libc) \
@@ -519,6 +633,12 @@ dep: sbt_dep
 			dist=$(dist) \
 			mode=$(mode) \
 			asan=$(asan) \
+			ubsan=$(ubsan) \
+			tsan=$(tsan) \
+			lsan=$(lsan) \
+			msan=$(msan) \
+			hwasan=$(hwasan) \
+			coverage=$(coverage) \
 			verbose=$(verbose) \
 			pkgdep=$(pkgdep) \
 			demo=$(demo) \

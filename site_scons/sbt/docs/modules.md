@@ -430,10 +430,41 @@ make mode=debug                # Debug build
 make mode=release              # Release build
 make static=1                  # Static libraries
 make v=1                       # Verbose output
-make asan=1                    # Address sanitizer
 make compiler=clang            # Use clang
 make def=MY_DEFINE=1           # Add preprocessor define
 ```
+
+#### Sanitizers (build flags)
+
+| Flag | Sanitizer | Compiler | Notes |
+|------|-----------|----------|-------|
+| `asan=1` | AddressSanitizer (`-fsanitize=address`) | gcc, clang | Detects buffer overflows, use-after-free, heap/stack/global overflows. Includes LSan on Linux. |
+| `ubsan=1` | UndefinedBehaviorSanitizer (`-fsanitize=undefined`) | gcc, clang | Signed overflow, null deref, misaligned access. Mutually exclusive with other primary sanitizers. |
+| `tsan=1` | ThreadSanitizer (`-fsanitize=thread`) | gcc, clang | Data races and deadlocks. Mutually exclusive with ASan/MSan/LSan/HWASan. |
+| `lsan=1` | LeakSanitizer (`-fsanitize=leak`) | gcc, clang | Standalone memory leak detection (integrated in ASan by default on Linux). |
+| `msan=1` | MemorySanitizer (`-fsanitize=memory`) | **clang only** | Reads from uninitialized memory. Mutually exclusive with other primary sanitizers. |
+| `hwasan=1` | HWAddressSanitizer (`-fsanitize=hwaddress`) | gcc, clang | Like ASan but via ARM MTE hardware tagging. **arm64 only**. |
+
+Primary sanitizers (asan, tsan, msan, hwasan, lsan) are **mutually exclusive** — enable only one at a time. UBSan and coverage can be combined with them freely.
+
+#### Code coverage (gcovr / Cobertura)
+
+```bash
+make coverage=1                # Build with --coverage instrumentation
+make covtest m=util            # Build + run tests + emit coverage.xml (Cobertura) + coverage.html
+```
+
+Requires `gcovr` (`pip install gcovr`). Output files are written to `<build_path>/coverage/coverage.xml` and `<build_path>/coverage/index.html`.
+
+#### Static analysis (cppcheck)
+
+```bash
+make cppcheck                  # Analyse all modules
+make cppcheck m=util,core      # Analyse specific modules
+make cppcheck util             # Short form (positional arg)
+```
+
+Requires `cppcheck` (install via package manager). Checks are run with `--std=c++20`, `--enable=warning,style,performance,portability`, and `--error-exitcode=1`. `unusedFunction` and `missingInclude` warnings are suppressed by default.
 
 ### Testing
 
@@ -441,6 +472,13 @@ make def=MY_DEFINE=1           # Add preprocessor define
 make test m=core               # Build + run tests
 make itest                     # Non-interactive tests
 make vtest                     # Tests with valgrind
+make ltest                     # Tests with valgrind leak checking
 make ttest                     # Tests with strace
-make stest                     # Tests with sanitizer
+make stest / make istest       # Tests with ASan (+ non-interactive)
+make utest / make iutest       # Tests with UBSan
+make tsantest / make itsantest # Tests with TSan
+make lsantest / make ilsantest # Tests with LSan (standalone)
+make mtest / make imtest       # Tests with MSan (clang only)
+make hwtest / make ihwtest     # Tests with HWASan (arm64 only)
+make covtest                   # Tests + Cobertura coverage report
 ```

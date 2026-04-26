@@ -74,6 +74,12 @@ if verbose:
     logger.info("tests: " + (builder.build_tests and "yes" or "no"))
     logger.info("libraries: " + (builder.build_static_libs and "static" or "shared"))
     logger.info("address sanitizer: " + (builder.build_asan and "yes" or "no"))
+    logger.info("undefined behavior sanitizer: " + (builder.build_ubsan and "yes" or "no"))
+    logger.info("thread sanitizer: " + (builder.build_tsan and "yes" or "no"))
+    logger.info("leak sanitizer: " + (builder.build_lsan and "yes" or "no"))
+    logger.info("memory sanitizer: " + (builder.build_msan and "yes" or "no"))
+    logger.info("hwaddress sanitizer: " + (builder.build_hwasan and "yes" or "no"))
+    logger.info("coverage: " + (builder.build_coverage and "yes" or "no"))
 
 # Get modules configuration for this build
 try:

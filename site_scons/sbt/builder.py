@@ -252,6 +252,24 @@ def has_demo():
 def is_address_sanitizer():
     return utils.is_opt("asan")
 
+def is_ubsan():
+    return utils.is_opt("ubsan")
+
+def is_tsan():
+    return utils.is_opt("tsan")
+
+def is_lsan():
+    return utils.is_opt("lsan")
+
+def is_msan():
+    return utils.is_opt("msan")
+
+def is_hwasan():
+    return utils.is_opt("hwasan")
+
+def is_coverage():
+    return utils.is_opt("coverage")
+
 def has_combined():
     return utils.is_opt("combined")
 
@@ -333,6 +351,12 @@ build_machine = get_machine()
 build_mode = get_compile_mode()
 build_static_libs = is_static_libs()
 build_asan = is_address_sanitizer()
+build_ubsan = is_ubsan()
+build_tsan = is_tsan()
+build_lsan = is_lsan()
+build_msan = is_msan()
+build_hwasan = is_hwasan()
+build_coverage = is_coverage()
 build_combined = has_combined()
 build_tests = has_test()
 build_demo = has_demo()
@@ -429,6 +453,27 @@ def get_ndk_toolchain_bin():
         return ""
     return os.path.join(ndk_root, "toolchains", "llvm", "prebuilt", "linux-x86_64", "bin")
 
+def _enabled_sanitizers():
+    """Return dict of {name: bool} for all sanitizer-like build flags."""
+    return {
+        "asan": build_asan,
+        "ubsan": build_ubsan,
+        "tsan": build_tsan,
+        "lsan": build_lsan,
+        "msan": build_msan,
+        "hwasan": build_hwasan,
+        "coverage": build_coverage,
+    }
+
+def _check_unsupported_sanitizers(compiler_label):
+    """Log error for any active sanitizer/coverage flag — return False if any active."""
+    ok = True
+    for name, active in _enabled_sanitizers().items():
+        if active:
+            logger.error("cannot use {} with {}".format(name, compiler_label))
+            ok = False
+    return ok
+
 def verify_args(app):
     global build_static_libs
     global libc
@@ -443,6 +488,28 @@ def verify_args(app):
         logger.error("mode {} unknown".format(build_mode))
         ret = False
 
+    # Primary sanitizers are mutually exclusive (different allocators / shadow memory).
+    # ubsan and coverage compose freely with any primary.
+    primary = {
+        "asan": build_asan,
+        "tsan": build_tsan,
+        "msan": build_msan,
+        "hwasan": build_hwasan,
+        "lsan": build_lsan,
+    }
+    active_primary = sorted(n for n, v in primary.items() if v)
+    if len(active_primary) > 1:
+        logger.error("sanitizers are mutually exclusive — enable only one of {}".format(active_primary))
+        ret = False
+
+    if build_msan and build_compiler != "clang":
+        logger.error("memory sanitizer (msan) is only supported with clang")
+        ret = False
+
+    if build_hwasan and build_machine != "arm64":
+        logger.error("hardware-assisted address sanitizer (hwasan) requires arm64 machine, got {}".format(build_machine))
+        ret = False
+
     if build_compiler == "zig":
         if libc != "musl":
             logger.warning("gnu libc is not supported with zig - switching to musl")
@@ -453,23 +520,20 @@ def verify_args(app):
         if not ndk_root or not os.path.isdir(ndk_root):
             logger.error("ANDROID_NDK_PATH is not set or does not exist")
             ret = False
-        if build_asan:
-            logger.error("cannot use address sanitizer with Android NDK")
+        if not _check_unsupported_sanitizers("Android NDK"):
             ret = False
         if not build_static_libs:
             logger.warning("not supported Android NDK without static libs - switching to static libs")
             build_static_libs = True
 
     if build_compiler == "mingw":
-        if build_asan:
-            logger.error("cannot use address sanitizer with mingw")
+        if not _check_unsupported_sanitizers("mingw"):
             ret = False
         if not build_static_libs:
             logger.warning("not supported Mingw without static libs - switching to static libs")
             build_static_libs = True
     elif build_compiler == "em":
-        if build_asan:
-            logger.error("cannot use address sanitizer with emscripten")
+        if not _check_unsupported_sanitizers("emscripten"):
             ret = False
         if not build_static_libs:
             logger.warning("not supported Emscripten without static libs - switching to static libs")

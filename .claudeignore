@@ -1,0 +1,42 @@
+# Build artifacts (9GB+)
+build/
+
+# Compiled binaries and objects
+*.o
+*.os
+*.so
+*.a
+*.dll
+*.lib
+*.exe
+
+# SCons cache
+.sconsign.dblite
+.scon*
+.build_cache
+
+# Python
+*__pycache__*
+*.pyc
+*.pyo
+.venv/
+
+# External deps
+.vcpkg/
+.sbt-deps/
+lua/luabridge/
+imgui/imgui/
+
+# Dev/internal
+.internal/
+tmp/
+.env.d
+
+# Logs / dumps
+*.log
+vgcore*
+*.bmp
+
+# CI/config meta
+.github/
+.claude/

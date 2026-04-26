@@ -27,11 +27,10 @@ def link_tree(src, dst):
             os.symlink(s, d)
 
 def get_opt(argname, default_val=""):
-    arg_to_find = argname + "="
+    prefix = argname + "="
     for arg in sys.argv:
-        idx = arg.find(arg_to_find)
-        if idx >= 0:
-            val = arg[idx + len(arg_to_find):]
+        if arg.startswith(prefix):
+            val = arg[len(prefix):]
             if len(val) > 0:
                 return val
     return getenv(argname, "") or default_val
