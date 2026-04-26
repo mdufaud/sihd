@@ -57,9 +57,11 @@ dist/*
 .env.d
 
 .github
+.claude
+CLAUDE.md
 
+# internal dev tools
 .internal/*
+tmp/*
 
 gcm.cache
-
-tmp/*

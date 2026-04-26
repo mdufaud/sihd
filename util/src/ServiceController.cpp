@@ -1,5 +1,66 @@
 #include <sihd/util/ServiceController.hpp>
 
+namespace
+{
+
+using SM = sihd::util::StateMachine<sihd::util::ServiceController::State, sihd::util::AService::Operation>;
+using St = sihd::util::ServiceController;
+using Op = sihd::util::AService;
+
+const SM & default_statemachine()
+{
+    static const SM sm = [] {
+        SM m(St::None);
+        m.set_transitions_map({
+            // none -> setup -> configured
+            {SM::pack_key(St::None,         Op::Setup),   St::Configuring},
+            {SM::pack_key(St::Configuring,  Op::Error),   St::Error},
+            {SM::pack_key(St::Configuring,  Op::Success), St::Configured},
+            // configured -> init -> stopped
+            {SM::pack_key(St::Configured,   Op::Init),    St::Initializing},
+            {SM::pack_key(St::Initializing, Op::Error),   St::Error},
+            {SM::pack_key(St::Initializing, Op::Success), St::Stopped},
+            // stopped -> start -> running
+            {SM::pack_key(St::Stopped,      Op::Start),   St::Starting},
+            {SM::pack_key(St::Starting,     Op::Error),   St::Error},
+            {SM::pack_key(St::Starting,     Op::Success), St::Running},
+            // running -> stop -> stopped
+            {SM::pack_key(St::Running,      Op::Stop),    St::Stopping},
+            {SM::pack_key(St::Stopping,     Op::Error),   St::Error},
+            {SM::pack_key(St::Stopping,     Op::Success), St::Stopped},
+            // configured/stopped -> reset -> none
+            {SM::pack_key(St::Configured,   Op::Reset),   St::Resetting},
+            {SM::pack_key(St::Stopped,      Op::Reset),   St::Resetting},
+            {SM::pack_key(St::Resetting,    Op::Error),   St::Error},
+            {SM::pack_key(St::Resetting,    Op::Success), St::None},
+        });
+        m.set_states_names_map({
+            {St::None,         "none"},
+            {St::Configuring,  "configuring"},
+            {St::Configured,   "configured"},
+            {St::Initializing, "initializing"},
+            {St::Starting,     "starting"},
+            {St::Running,      "running"},
+            {St::Stopping,     "stopping"},
+            {St::Stopped,      "stopped"},
+            {St::Resetting,    "resetting"},
+        });
+        m.set_events_names_map({
+            {Op::Setup,   "setup"},
+            {Op::Init,    "init"},
+            {Op::Start,   "start"},
+            {Op::Stop,    "stop"},
+            {Op::Reset,   "reset"},
+            {Op::Success, "success"},
+            {Op::Error,   "error"},
+        });
+        return m;
+    }();
+    return sm;
+}
+
+} // namespace
+
 namespace sihd::util
 {
 
@@ -8,53 +69,8 @@ ServiceController::ServiceController(const StateMachine<State, AService::Operati
 {
 }
 
-ServiceController::ServiceController(): statemachine(None)
+ServiceController::ServiceController(): statemachine(default_statemachine())
 {
-    // none -> setup -> configured
-    statemachine.add_transition(None, AService::Setup, Configuring);
-    statemachine.add_transition(Configuring, AService::Error, Error);
-    statemachine.add_transition(Configuring, AService::Success, Configured);
-
-    // configured -> init -> stopped
-    statemachine.add_transition(Configured, AService::Init, Initializing);
-    statemachine.add_transition(Initializing, AService::Error, Error);
-    statemachine.add_transition(Initializing, AService::Success, Stopped);
-
-    // stopped -> start -> running
-    statemachine.add_transition(Stopped, AService::Start, Starting);
-    statemachine.add_transition(Starting, AService::Error, Error);
-    statemachine.add_transition(Starting, AService::Success, Running);
-
-    // running -> stop -> stopped
-    statemachine.add_transition(Running, AService::Stop, Stopping);
-    statemachine.add_transition(Stopping, AService::Error, Error);
-    statemachine.add_transition(Stopping, AService::Success, Stopped);
-
-    // configured -> reset -> none
-    statemachine.add_transition(Configured, AService::Reset, Resetting);
-
-    // stopped -> reset -> none
-    statemachine.add_transition(Stopped, AService::Reset, Resetting);
-    statemachine.add_transition(Resetting, AService::Error, Error);
-    statemachine.add_transition(Resetting, AService::Success, None);
-
-    statemachine.set_state_name(None, "none");
-    statemachine.set_state_name(Configuring, "configuring");
-    statemachine.set_state_name(Configured, "configured");
-    statemachine.set_state_name(Initializing, "initializing");
-    statemachine.set_state_name(Starting, "starting");
-    statemachine.set_state_name(Running, "running");
-    statemachine.set_state_name(Stopping, "stopping");
-    statemachine.set_state_name(Stopped, "stopped");
-    statemachine.set_state_name(Resetting, "resetting");
-
-    statemachine.set_event_name(AService::Setup, "setup");
-    statemachine.set_event_name(AService::Init, "init");
-    statemachine.set_event_name(AService::Start, "start");
-    statemachine.set_event_name(AService::Stop, "stop");
-    statemachine.set_event_name(AService::Reset, "reset");
-    statemachine.set_event_name(AService::Success, "success");
-    statemachine.set_event_name(AService::Error, "error");
 }
 
 void ServiceController::optional_setup()

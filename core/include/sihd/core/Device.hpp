@@ -40,14 +40,10 @@ class Device: public AChannelContainer,
         virtual bool on_stop() { return true; };
         virtual bool on_reset() { return true; };
 
-        virtual sihd::util::AService::IServiceController *service_ctrl() override
-        {
-            return &_service_controller;
-        }
+        virtual sihd::util::AService::IServiceController *service_ctrl() override { return &_service_controller; }
         sihd::util::ServiceController _service_controller;
 
     private:
-        static sihd::util::ServiceController _default_service_controller;
 };
 
 } // namespace sihd::core

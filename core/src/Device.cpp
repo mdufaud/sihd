@@ -1,6 +1,5 @@
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/core/Device.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::core
 {
@@ -26,14 +25,18 @@ bool for_each_child_service(Node *node, Callable && fn)
     return ret;
 }
 
-} // namespace
-
 // permits copying of existent maps instead of instanciating every time the same maps
-sihd::util::ServiceController Device::_default_service_controller;
+sihd::util::ServiceController & default_service_controller()
+{
+    static sihd::util::ServiceController sc;
+    return sc;
+}
+
+} // namespace
 
 Device::Device(const std::string & name, Node *parent):
     AChannelContainer(name, parent),
-    _service_controller(_default_service_controller.statemachine)
+    _service_controller(default_service_controller().statemachine)
 {
     _service_controller.optional_setup();
 }
@@ -42,9 +45,9 @@ Device::~Device()
 {
     if (this->parent() == nullptr)
     {
-        if (_default_service_controller.statemachine.last_event() == AService::Start)
+        if (_service_controller.statemachine.last_event() == AService::Start)
             this->stop();
-        if (_default_service_controller.statemachine.last_event() == AService::Stop)
+        if (_service_controller.statemachine.last_event() == AService::Stop)
             this->reset();
     }
 }

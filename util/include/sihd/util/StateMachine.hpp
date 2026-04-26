@@ -2,6 +2,7 @@
 #define __SIHD_UTIL_STATEMACHINE_HPP__
 
 #include <cstdint>
+#include <initializer_list>
 #include <map>
 #include <string>
 #include <unordered_map>
@@ -52,8 +53,14 @@ class StateMachine: public IStateMachine
         {
             _transitions = transitions;
         }
+        void set_transitions_map(std::initializer_list<std::pair<const uint64_t, State>> init)
+        {
+            _transitions = init;
+        }
         void set_states_names_map(const std::map<State, std::string> & states) { _states_name = states; }
+        void set_states_names_map(std::initializer_list<std::pair<const State, std::string>> init) { _states_name = init; }
         void set_events_names_map(const std::map<Event, std::string> & events) { _events_name = events; }
+        void set_events_names_map(std::initializer_list<std::pair<const Event, std::string>> init) { _events_name = init; }
 
         [[nodiscard]] const std::unordered_map<uint64_t, State> & transitions_map() const { return _transitions; }
         const std::map<State, std::string> & states_names_map() const { return _states_name; }
