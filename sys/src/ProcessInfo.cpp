@@ -1,6 +1,6 @@
 #include <functional>
 
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include <sihd/sys/ProcessInfo.hpp>
 #include <sihd/sys/fs.hpp>

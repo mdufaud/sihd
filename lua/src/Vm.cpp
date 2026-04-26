@@ -1,4 +1,4 @@
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include <sihd/lua/Vm.hpp>
 #include <sihd/util/Logger.hpp>

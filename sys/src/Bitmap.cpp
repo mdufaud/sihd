@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/File.hpp>

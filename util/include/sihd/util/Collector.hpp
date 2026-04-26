@@ -8,8 +8,6 @@
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/Waitable.hpp>
 
-#include <fmt/format.h>
-
 namespace sihd::util
 {
 

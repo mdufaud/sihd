@@ -13,7 +13,7 @@
 #include <stdexcept>
 
 #include <curl/curl.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 namespace sihd::http
 {

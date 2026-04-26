@@ -1,8 +1,6 @@
 #include <exception>
 #include <memory>
 
-#include <fmt/format.h>
-
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/proc.hpp>
 #include <sihd/util/thread.hpp>

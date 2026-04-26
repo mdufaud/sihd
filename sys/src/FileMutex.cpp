@@ -1,7 +1,5 @@
 #include <stdexcept>
 
-#include <fmt/format.h>
-
 #include <sihd/sys/FileMutex.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Clocks.hpp>

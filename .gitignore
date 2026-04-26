@@ -58,7 +58,6 @@ dist/*
 
 .github
 .claude
-CLAUDE.md
 
 # internal dev tools
 .internal/*

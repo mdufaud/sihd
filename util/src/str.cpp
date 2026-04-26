@@ -14,7 +14,6 @@
 #include <regex>
 #include <sstream>
 
-#include <fmt/format.h>
 #include <fmt/ranges.h>
 
 #include <sihd/util/IArray.hpp>

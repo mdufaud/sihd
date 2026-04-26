@@ -1,5 +1,3 @@
-#include <fmt/format.h>
-
 #include <sihd/util/Logger.hpp>
 #include <sihd/sys/fs.hpp>
 
