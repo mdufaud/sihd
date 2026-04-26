@@ -1,11 +1,11 @@
 #ifndef __SIHD_UTIL_STAT_HPP__
 #define __SIHD_UTIL_STAT_HPP__
 
+#include <sys/types.h>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
-
-#include <sys/types.h>
 
 namespace sihd::util
 {
@@ -63,15 +63,9 @@ struct Stat
         // Accurate for symmetric, unimodal distributions; degrades on heavy tails.
         SampleType median() const { return this->average(); }
 
-        SampleType p95() const
-        {
-            return static_cast<SampleType>(this->average() + 1.645 * this->standard_deviation());
-        }
+        SampleType p95() const { return static_cast<SampleType>(this->average() + 1.645 * this->standard_deviation()); }
 
-        SampleType p99() const
-        {
-            return static_cast<SampleType>(this->average() + 2.326 * this->standard_deviation());
-        }
+        SampleType p99() const { return static_cast<SampleType>(this->average() + 2.326 * this->standard_deviation()); }
 };
 
 namespace detail
@@ -81,7 +75,7 @@ namespace detail
 // Uses 5 markers; no memory allocation; accurate on arbitrary continuous distributions.
 struct PSquareEstimator
 {
-        explicit PSquareEstimator(double quantile) : p(quantile) {}
+        explicit PSquareEstimator(double quantile): p(quantile) {}
 
         void add(double x)
         {
@@ -156,8 +150,7 @@ struct PSquareEstimator
                         q[i] = qnew;
                     else
                         q[i] = qi
-                               + static_cast<double>(sign) * (q[i + sign] - qi)
-                                     / static_cast<double>(n[i + sign] - ni);
+                               + static_cast<double>(sign) * (q[i + sign] - qi) / static_cast<double>(n[i + sign] - ni);
 
                     n[i] += sign;
                 }
@@ -171,10 +164,19 @@ struct PSquareEstimator
             if (count < 5)
             {
                 std::array<double, 5> sorted = init;
-                std::sort(sorted.begin(), sorted.begin() + count);
-                const size_t idx = std::min(
-                    static_cast<size_t>(p * static_cast<double>(count - 1)),
-                    static_cast<size_t>(count - 1));
+                for (size_t i = 1; i < count; ++i)
+                {
+                    const double key = sorted[i];
+                    size_t j = i;
+                    while (j > 0 && sorted[j - 1] > key)
+                    {
+                        sorted[j] = sorted[j - 1];
+                        --j;
+                    }
+                    sorted[j] = key;
+                }
+                const size_t idx = std::min(static_cast<size_t>(p * static_cast<double>(count - 1)),
+                                            static_cast<size_t>(count - 1));
                 return sorted[idx];
             }
             return q[2];
@@ -190,7 +192,7 @@ struct PSquareEstimator
 
     private:
         double p;
-        int count = 0;
+        size_t count = 0;
         std::array<int, 5> n = {1, 2, 3, 4, 5};
         std::array<double, 5> q = {};
         std::array<double, 5> init = {};
@@ -202,9 +204,9 @@ struct PSquareEstimator
 // Accurate on asymmetric and heavy-tailed distributions (e.g. network latency).
 // Extra memory: 3 estimators × ~200 bytes = ~600 bytes.
 template <typename SampleType>
-struct PSquareStat : public Stat<SampleType>
+struct PSquareStat: public Stat<SampleType>
 {
-        PSquareStat() : _p50(0.50), _p95(0.95), _p99(0.99) {}
+        PSquareStat(): _p50(0.50), _p95(0.95), _p99(0.99) {}
 
         void add_sample(const SampleType & sample)
         {

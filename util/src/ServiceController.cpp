@@ -4,11 +4,8 @@ namespace sihd::util
 {
 
 ServiceController::ServiceController(const StateMachine<State, AService::Operation> & to_copy_statemachine):
-    statemachine(None)
+    statemachine(to_copy_statemachine)
 {
-    statemachine.set_transitions_map(to_copy_statemachine.transitions_map());
-    statemachine.set_states_names_map(to_copy_statemachine.states_names_map());
-    statemachine.set_events_names_map(to_copy_statemachine.events_names_map());
 }
 
 ServiceController::ServiceController(): statemachine(None)

@@ -125,10 +125,12 @@ TEST_F(TestStateMachine, test_statemachine_naming)
 TEST_F(TestStateMachine, test_statemachine_bulk_init)
 {
     // A machine built via set_transitions_map must behave identically to one built add_transition by add_transition
-    std::map<State, std::map<Event, State>> transitions = {
-        {State::FIRST, {{Event::EVT1, State::BEFORE_EVT1}}},
-        {State::BEFORE_EVT1, {{Event::EVT_SUCCESS, State::DONE_EVT1}, {Event::EVT_ERROR, State::Error}}},
-        {State::DONE_EVT1, {{Event::EVT2, State::DONE_EVT2}}},
+    using SM = StateMachine<State, Event>;
+    std::unordered_map<uint64_t, State> transitions = {
+        {SM::pack_key(State::FIRST, Event::EVT1), State::BEFORE_EVT1},
+        {SM::pack_key(State::BEFORE_EVT1, Event::EVT_SUCCESS), State::DONE_EVT1},
+        {SM::pack_key(State::BEFORE_EVT1, Event::EVT_ERROR), State::Error},
+        {SM::pack_key(State::DONE_EVT1, Event::EVT2), State::DONE_EVT2},
     };
 
     StateMachine<State, Event> machine(FIRST);
@@ -145,5 +147,33 @@ TEST_F(TestStateMachine, test_statemachine_bulk_init)
 
     EXPECT_TRUE(machine.transition(Event::EVT2));
     EXPECT_EQ(machine.state(), State::DONE_EVT2);
+}
+
+TEST_F(TestStateMachine, test_statemachine_copy)
+{
+    // A copied machine must carry over all transitions and reach the same states
+    StateMachine<State, Event> original(FIRST);
+    this->add_transitions(original);
+    this->add_names(original);
+
+    original.transition(EVT1);
+    EXPECT_EQ(original.state(), BEFORE_EVT1);
+
+    StateMachine<State, Event> copy = original;
+
+    // copy starts in the same state as original at the moment of copy
+    EXPECT_EQ(copy.state(), BEFORE_EVT1);
+    EXPECT_EQ(copy.last_event(), EVT1);
+
+    // transitions from original are preserved in copy
+    EXPECT_TRUE(copy.transition(EVT_SUCCESS));
+    EXPECT_EQ(copy.state(), DONE_EVT1);
+
+    // original is unaffected
+    EXPECT_EQ(original.state(), BEFORE_EVT1);
+
+    // name maps are preserved
+    EXPECT_EQ(copy.state_name(DONE_EVT1), "DONE_EVT1");
+    EXPECT_EQ(copy.event_name(EVT_SUCCESS), "EVT_SUCCESS");
 }
 } // namespace test
