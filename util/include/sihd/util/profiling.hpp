@@ -36,7 +36,16 @@ class Perf
         {
             public:
                 Guard(Perf & perf): _perf(perf) { _perf.begin(); }
-                ~Guard() { _perf.end(); }
+                ~Guard() noexcept
+                {
+                    try
+                    {
+                        _perf.end();
+                    }
+                    catch (...)
+                    {
+                    }
+                }
                 Guard(const Guard &) = delete;
                 Guard & operator=(const Guard &) = delete;
 

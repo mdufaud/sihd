@@ -500,7 +500,7 @@ endif
 cppcheck:
 	$(QUIET) command -v cppcheck >/dev/null 2>&1 || { $(call echo_log_error,makefile,cppcheck not found - install with your package manager); exit 1; }
 	$(QUIET) $(call echo_log_info,makefile,running cppcheck - reports in $(BUILD_PATH)/cppcheck/)
-	$(QUIET) bash $(MAKEFILE_TOOLS)/scripts/run_cppcheck.sh \
+	$(QUIET) $(PYTHON_BIN) $(SBT_PATH)/run_cppcheck.py \
 		"$(BUILD_PATH)" "$(PROJECT_ROOT_PATH)" \
 		$(shell printf '%s' "$(CPPCHECK_MODULES_ARG)" | tr ',' ' ')
 
