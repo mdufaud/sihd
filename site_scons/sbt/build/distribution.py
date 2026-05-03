@@ -422,7 +422,7 @@ def create_docker_package(app, modules):
     lines += [
         "RUN make {args}".format(args=make_args_str),
         "",
-        "RUN make install INSTALL_DESTDIR=/dist INSTALL_PREFIX=/usr INSTALL_NOCONFIRM=1",
+        "RUN make install INSTALL_DESTDIR=/dist INSTALL_PREFIX=/usr INSTALL_NOCONFIRM=1 mode=release",
         "",
         "###############################################################################",
         "# Stage 2: runtime ({img})".format(img=runtime_image),
