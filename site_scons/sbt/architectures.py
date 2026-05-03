@@ -75,6 +75,21 @@ def get_vcpkg_machine(machine: str) -> str:
     return get_config(machine).get("vcpkg", machine)
 
 
+# Pacman/AUR arch names per SBT machine name
+_pacman_arch_map = {
+    "x86":         "i686",
+    "i386":        "i686",
+    "arm64":       "aarch64",
+    "arm32":       "armv7h",
+    "ppc64le":     "powerpc64le",
+}
+
+
+def get_pacman_arch(machine: str) -> str:
+    """Return the pacman/AUR arch string for the given SBT machine name."""
+    return _pacman_arch_map.get(normalize_machine(machine), machine)
+
+
 def get_meson_info(machine: str) -> dict:
     """Get meson cross-compilation info (cpu_family, cpu, endian) for the given machine."""
     return get_config(machine).get("meson", {})

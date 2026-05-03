@@ -19,7 +19,6 @@ apt_packages = {
     "simdjson": "libsimdjson-dev",
     "fmt": "libfmt-dev",
     "libuuid": "uuid-dev",
-    "cli11": "cli11-dev",
     "openssl": "libssl-dev",
     "curl": "libcurl4-openssl-dev",
     "libwebsockets": "libwebsockets-dev",
@@ -77,6 +76,34 @@ pacman_packages = {
     "python3": "python",
     "x11": "libx11",
     "wayland": "wayland",
+}
+
+## APK (Alpine Linux — runtime packages)
+
+# packages providing shared libs at runtime in an Alpine container
+apk_packages = {
+    "simdjson": "simdjson",
+    "fmt": "fmt",
+    "libuuid": "util-linux",
+    "openssl": "openssl",
+    "curl": "libcurl",
+    "libwebsockets": "libwebsockets",
+    "libcap": "libcap",
+    "libuv": "libuv",
+    "zlib": "zlib",
+    "libpcap": "libpcap",
+    "libssh": "libssh",
+    "libusb": "libusb",
+    "libzip": "libzip",
+    "opengl": "mesa-gl",
+    "glfw3": "glfw",
+    "glew": "glew",
+    "sdl3": "sdl3",
+    "lua": "lua5.3",
+    "libjpeg": "libjpeg-turbo",
+    "python3": "python3",
+    "x11": "libx11",
+    "wayland": "wayland-libs-server",
 }
 
 ## YUM

@@ -361,6 +361,7 @@ build_combined = has_combined()
 build_tests = has_test()
 build_demo = has_demo()
 build_verbose = has_verbose()
+logger.set_verbose(build_verbose)
 
 # platform
 build_platform = get_platform()

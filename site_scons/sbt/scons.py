@@ -96,6 +96,14 @@ for deleted_modules in deleted_modules:
 if not build_modules:
     Exit(0)
 
+# Some distribution types only generate metadata files (no compilation needed).
+# Exit early so the user doesn't need local dev deps installed.
+_NO_COMPILE_DIST_TYPES = {"docker", "pacman"}
+_dist_type = build_utils.get_opt("dist", "")
+if distribution and _dist_type in _NO_COMPILE_DIST_TYPES:
+    builder.distribute_app(app, build_modules)
+    Exit(0)
+
 ###############################################################################
 # Package manager dependencies
 ###############################################################################

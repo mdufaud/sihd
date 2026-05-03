@@ -78,6 +78,16 @@ if verbose:
 skip_libs = getattr(app, "extlibs_skip", [])
 skip_libs.extend(getattr(app, f"extlibs_skip_{build_platform}", []))
 
+# with-system-packages=apt|pacman|apk|yum — skip all extlibs covered by that package manager
+_with_sys_pkg = utils.get_opt("with-system-packages", "")
+if _with_sys_pkg:
+    _pkg_conf_name = "{}_packages".format(_with_sys_pkg)
+    _pkg_conf = getattr(app, _pkg_conf_name, None)
+    if _pkg_conf is None:
+        logger.warning("with-system-packages: app has no '{}' configuration".format(_pkg_conf_name))
+    else:
+        skip_libs.extend(_pkg_conf.keys())
+
 extlibs = {}
 build_modules = {}
 

@@ -628,7 +628,7 @@ sbt_dep: vcpkg_deploy
 
 dep: sbt_dep
 	$(eval BUILD_CMD_LINE = \
-			modules=$(modules) \
+			modules=$(modules)$(m) \
 			test=$(test) \
 			dist=$(dist) \
 			mode=$(mode) \
@@ -644,6 +644,7 @@ dep: sbt_dep
 			demo=$(demo) \
 			libc=$(libc) \
 			cpu=$(cpu) \
+			with-system-packages=$(with-system-packages) \
 	)
 	$(QUIET) $(VCPKG_SCRIPT) $(BUILD_CMD_LINE)
 
@@ -767,7 +768,11 @@ confirm_install:
 	$(QUIET) $(call mk_log_info,makefile,will install in: $(INSTALL_DESTDIR)$(INSTALL_PREFIX))
 	$(QUIET) $(call mk_log_info,makefile,change install directory with: INSTALL_DESTDIR)
 	$(QUIET) $(call mk_log_info,makefile,change default /usr/local with: INSTALL_PREFIX)
+ifeq ($(INSTALL_NOCONFIRM),)
 	$(QUIET) echo -n "Please confirm installation directory [y/N] " && read answer && [ $${answer:-N} = y ]
+else
+	$(QUIET) $(call mk_log_info,makefile,INSTALL_NOCONFIRM set — skipping confirmation)
+endif
 
 .PHONY: install # List dirs to install, ask confirmation and install on system and creates a file with path of all installed files
 

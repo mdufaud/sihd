@@ -13,6 +13,7 @@ except ImportError:
 
 from site_scons.sbt.build import modules as sbt_modules
 from site_scons.sbt.build import utils
+from site_scons.sbt import architectures
 
 ###############################################################################
 # TAR distribution
@@ -98,7 +99,7 @@ def create_apt_package(app, modules):
         fd.write("Version: {}\n".format(app.version))
         if dependencies:
             # Depends: libname (>= version), other_libname (>= other_version)
-            fd.write("Depends: {}\n".format(", ".join(["{} (>= {})".format(k, v) for k, v in dependencies.items()])))
+            fd.write("Depends: {}\n".format(", ".join(["{} (>= {})".format(k, v.split('#')[0]) for k, v in dependencies.items()])))
         fd.write("Description: {}\n".format(app.description))
     # /usr/bin
     apt_binary_path = join(apt_path, "usr", "bin")
@@ -166,7 +167,7 @@ def create_pacman_package(app, modules):
         fd.write('pkgver={}\n'.format(app.version))
         fd.write('pkgrel={}\n'.format(1))
         fd.write('pkgdesc="{}"\n'.format(app.description))
-        fd.write("arch=('{}')\n".format(app.architecture))
+        fd.write("arch=('{}')\n".format(architectures.get_pacman_arch(_b.build_machine)))
         if hasattr(app, "url"):
             fd.write('url="{}"\n'.format(app.url))
         if hasattr(app, "license"):
@@ -176,7 +177,8 @@ def create_pacman_package(app, modules):
         fd.write("makedepends=('git' 'make' 'scons')\n")
         if dependencies:
             # depends=('libname>=version' 'other_libname>=other_version')
-            fd.write("depends=({})\n".format(" ".join(["'{}>={}'".format(k, v) for k, v in dependencies.items()])))
+            # strip pkgrel suffix (e.g. '1.0.3#15' -> '1.0.3')
+            fd.write("depends=({})\n".format(" ".join(["'{}>={}'".format(k, v.split('#')[0]) for k, v in dependencies.items()])))
         if hasattr(app, "pacman_source"):
             fd.write('source=("{}")\n'.format(app.pacman_source))
         fd.write("sha512sums=('SKIP')\n\n")
@@ -215,7 +217,7 @@ def create_pacman_package(app, modules):
         fd.write('\n')
         fd.write(('package() {{\n'
             '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
-            '\tmake install INSTALL_DESTDIR="${{pkgdir}}" INSTALL_PREFIX="/usr" '
+            '\tmake install INSTALL_DESTDIR="${{pkgdir}}" INSTALL_PREFIX="/usr" INSTALL_NOCONFIRM=1 '
             'platform={platform} compiler={compiler} machine={machine} libc={libc} mode={mode}\n'
         '}}\n').format(
             platform = _b.build_platform,
@@ -224,8 +226,179 @@ def create_pacman_package(app, modules):
             libc = _b.libc,
             mode = _b.build_mode,
         ))
+    # generate .SRCINFO if makepkg is available
+    srcinfo_path = join(pacman_path, ".SRCINFO")
+    if shutil.which("makepkg") is not None:
+        result = subprocess.run(["makepkg", "--printsrcinfo"], capture_output=True, text=True)
+        if result.returncode == 0:
+            with open(srcinfo_path, "w") as fd:
+                fd.write(result.stdout)
+            logger.info("generated .SRCINFO at: {}".format(srcinfo_path))
+        else:
+            logger.warning("makepkg --printsrcinfo failed: {}".format(result.stderr.strip()))
+    else:
+        logger.warning(
+            "makepkg not found — generate .SRCINFO manually:\n"
+            "  cd {} && makepkg --printsrcinfo > .SRCINFO".format(pacman_path)
+        )
     # change back to old directory
     os.chdir(old_cwd)
+
+###############################################################################
+# Docker distribution
+###############################################################################
+
+def _get_docker_modules_str(modules):
+    """Return a compact string suitable for use as a directory name."""
+    return "-".join(sorted(modules.keys()))
+
+
+def _get_docker_make_args(modules, has_demo):
+    """Return a list of make variable assignments for the docker build stage."""
+    mods_str = ",".join(sorted(modules.keys()))
+    args = [f"m={mods_str}", "mode=release"]
+    if has_demo:
+        args.append("demo=1")
+    return args
+
+
+def create_docker_package(app, modules):
+    """Generate a multi-stage Dockerfile (debian:bookworm-slim builder + alpine runtime).
+
+    Output: dist/docker/Dockerfile
+    Usage:  docker build -t <app>-<modules> dist/docker/
+    """
+    has_demo = _b.build_demo
+
+    try:
+        modules_extlibs = sbt_modules.get_modules_extlibs(app, modules, _b.build_platform)
+        # Include demo_extlibs when demo=1 (build stage only)
+        demo_extlibs = {}
+        if has_demo and hasattr(app, "demo_extlibs"):
+            demo_extlibs = sbt_modules.get_extlibs_versions(app, app.demo_extlibs)
+        build_extlibs = dict(modules_extlibs)
+        build_extlibs.update(demo_extlibs)
+        # Build stage: apt -dev packages (modules + demo)
+        build_deps, missing_build = sbt_modules.get_modules_packages(app, "apt", build_extlibs)
+        # Runtime stage: apk packages — demo_extlibs excluded (header-only / build tools)
+        if hasattr(app, "apk_packages"):
+            runtime_deps, missing_runtime = sbt_modules.get_modules_packages(app, "apk", modules_extlibs)
+        else:
+            runtime_deps = {}
+            missing_runtime = list(modules_extlibs.keys())
+    except SystemExit as err:
+        logger.error(err)
+        exit(1)
+
+    if missing_build:
+        logger.warning("apt build packages not found for: {} — will use make dep".format(", ".join(missing_build)))
+    if missing_runtime:
+        logger.warning("apk runtime packages not found for: {}".format(", ".join(missing_runtime)))
+
+    make_args = _get_docker_make_args(modules, has_demo)
+    make_args_str = " ".join(make_args)
+    # For make dep: skip all extlibs already provided by apt
+    dep_make_args = make_args + ["with-system-packages=apt"]
+    dep_make_args_str = " ".join(dep_make_args)
+    modules_str = _get_docker_modules_str(modules)
+
+    docker_path = join(_b.build_dist_path, "docker")
+    os.makedirs(docker_path, exist_ok=True)
+    dockerfile_path = join(docker_path, "Dockerfile")  # overwritten on each run
+
+    # Toolchain packages always needed in the builder stage
+    builder_base_pkgs = [
+        "git", "make", "python3", "scons",
+        "g++", "pkg-config", "ca-certificates",
+    ]
+    # If some extlibs are missing from apt, vcpkg will be used — add its prerequisites
+    if missing_build:
+        builder_base_pkgs += ["curl", "zip", "unzip", "tar", "cmake", "ninja-build"]
+    # Add -dev packages resolved from module extlibs
+    all_build_pkgs = builder_base_pkgs + sorted(build_deps.keys())
+    build_pkgs_line = " \\\n        ".join(all_build_pkgs)
+
+    git_url = getattr(app, "git_url", "")
+    app_version = getattr(app, "version", "main")
+
+    runtime_pkgs_line = " \\\n        ".join(sorted(runtime_deps.keys())) if runtime_deps else ""
+
+    lines = [
+        "# Generated by SBT — do not edit manually",
+        "# Build: docker build -t {app}-{mods} .".format(app=app.name, mods=modules_str),
+        "# Run:   docker run --rm {app}-{mods} <binary>".format(app=app.name, mods=modules_str),
+        "",
+        "###############################################################################",
+        "# Stage 1: builder (debian:bookworm-slim)",
+        "###############################################################################",
+        "FROM debian:bookworm-slim AS builder",
+        "",
+        "RUN apt-get update && apt-get install -y --no-install-recommends \\",
+        "        {pkgs} \\".format(pkgs=build_pkgs_line),
+        "    && rm -rf /var/lib/apt/lists/*",
+        "",
+        "RUN git clone --depth 1 {url} /src".format(url=git_url),
+        "",
+        "WORKDIR /src",
+        "",
+    ]
+
+    if missing_build:
+        lines += [
+            "RUN make dep {args}".format(args=dep_make_args_str),
+            "",
+        ]
+
+    lines += [
+        "RUN make {args}".format(args=make_args_str),
+        "",
+        "RUN make install INSTALL_DESTDIR=/dist INSTALL_PREFIX=/usr",
+        "",
+        "###############################################################################",
+        "# Stage 2: runtime (alpine:latest)",
+        "###############################################################################",
+        "FROM alpine:latest",
+        "",
+    ]
+
+    if runtime_pkgs_line:
+        lines += [
+            "RUN apk add --no-cache \\",
+            "        {pkgs}".format(pkgs=runtime_pkgs_line),
+            "",
+        ]
+
+    lines += [
+        "COPY --from=builder /dist/usr/bin/  /usr/bin/",
+        "COPY --from=builder /dist/usr/lib/  /usr/lib/{app}/".format(app=app.name),
+        "COPY --from=builder /dist/etc/      /etc/",
+        "",
+        "ENV LD_LIBRARY_PATH=/usr/lib/{app}".format(app=app.name),
+    ]
+
+    if has_demo:
+        lines += [
+            "",
+            "COPY --from=builder /dist/usr/share/ /usr/share/",
+        ]
+
+    content = "\n".join(lines) + "\n"
+    with open(dockerfile_path, "w") as fd:
+        fd.write(content)
+    logger.info("generated Dockerfile at: {}".format(dockerfile_path))
+
+    # .dockerignore — placed next to the Dockerfile (overwritten on each run)
+    dockerignore_path = join(docker_path, ".dockerignore")
+    with open(dockerignore_path, "w") as fd:
+        fd.write("# Generated by SBT\n")
+        fd.write("build/\n")
+        fd.write("dist/\n")
+        fd.write(".vcpkg/\n")
+        fd.write(".venv/\n")
+        fd.write("*.pyc\n")
+        fd.write("__pycache__/\n")
+    logger.info("generated .dockerignore at: {}".format(dockerignore_path))
+
 
 ###############################################################################
 # Distribution
@@ -242,5 +415,7 @@ def distribute_app(app, modules):
         create_apt_package(app, modules)
     elif dist_type == "pacman":
         create_pacman_package(app, modules)
+    elif dist_type == "docker":
+        create_docker_package(app, modules)
     else:
         raise SystemExit("cannot distribute app type: {}".format(dist_type))

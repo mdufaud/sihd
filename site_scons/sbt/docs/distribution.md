@@ -122,6 +122,32 @@ makepkg -si
 
 The `PKGBUILD` embeds the current build options (`platform`, `compiler`, `machine`, `libc`, `mode`) so the package is reproducible. Additional env vars (`py=`, `lua=`, `x11=`, etc.) are auto-deduced from the module configuration. Package dependencies are resolved via `app.pacman_packages`.
 
+If `makepkg` is available on the host, `.SRCINFO` is generated automatically alongside the `PKGBUILD` (required for AUR submission). Otherwise a warning is printed:
+
+```bash
+cd dist/pacman/<name>-<version> && makepkg --printsrcinfo > .SRCINFO
+```
+
+#### `docker` — Container image (Dockerfile)
+
+Does **not** call `docker build` — generates `dist/docker/Dockerfile` and `dist/docker/.dockerignore`. The file is overwritten on each run. Build the image manually:
+
+```bash
+docker build -t sihd-http dist/docker/
+docker run --rm sihd-http <binary>
+```
+
+The Dockerfile is **multi-stage**:
+
+1. **Builder** (`debian:bookworm-slim`) — installs apt `-dev` packages, clones the repo via `git_url`, runs `make dep` then `make` in release mode, installs artefacts to `/dist` via `make install`
+2. **Runtime** (`alpine:latest`) — installs only the runtime `apk` packages, copies `/dist/usr/bin/` → `/usr/bin/`, `/dist/usr/lib/` → `/usr/lib/<name>/`, sets `LD_LIBRARY_PATH`
+
+Runtime library paths require `app.apk_packages` (Alpine package name mapping):
+
+```python
+apk_packages = {"openssl": "openssl", "curl": "libcurl", "zlib": "zlib", ...}
+```
+
 ---
 
 ## `app.py` fields used by packaging
@@ -144,6 +170,7 @@ additional_build_env = ["py", "lua"]    # if absent, auto-deduced from module co
 # Package manager → system package name mapping
 apt_packages    = {"libfmt": "libfmt-dev", ...}
 pacman_packages = {"libfmt": "fmt", ...}
+apk_packages    = {"libfmt": "fmt", ...}     # Alpine runtime packages (docker dist)
 
 # optional: pacman source= line
 pacman_source = "https://github.com/org/repo/archive/v${pkgver}.tar.gz"

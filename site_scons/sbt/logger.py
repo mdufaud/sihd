@@ -37,12 +37,19 @@ term_colors = TermColors()
 # Build log
 ###############################################################################
 
+_verbose = False
+
+def set_verbose(v: bool):
+    global _verbose
+    _verbose = v
+
 def __log(color, level, *msg, file=stderr):
     datestr = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"{color}[{datestr}] builder [{level}]:", *msg, term_colors.reset, file=file)
 
 def debug(*msg):
-    __log(term_colors.blue, "debug", *msg)
+    if _verbose:
+        __log(term_colors.blue, "debug", *msg)
 
 def info(*msg):
     __log(term_colors.green, "info", *msg)
