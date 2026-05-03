@@ -14,9 +14,10 @@ contributors = ["azouiten <alexandre.zouiten1@gmail.com>"]
 ## APT
 
 # packages equivalent to build DEBIAN/control dependencies
+# Note: simdjson is NOT listed — the system package lacks simdjson::builder (added in 4.x),
+#       use vcpkg to get the correct version.
 apt_packages = {
     "gtest": "libgtest-dev",
-    "simdjson": "libsimdjson-dev",
     "fmt": "libfmt-dev",
     "libuuid": "uuid-dev",
     "openssl": "libssl-dev",
@@ -81,8 +82,8 @@ pacman_packages = {
 ## APK (Alpine Linux — runtime packages)
 
 # packages providing shared libs at runtime in an Alpine container
+# Note: simdjson excluded — runtime lib must match the vcpkg-built version.
 apk_packages = {
-    "simdjson": "simdjson",
     "fmt": "fmt",
     "libuuid": "util-linux",
     "openssl": "openssl",

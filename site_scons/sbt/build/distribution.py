@@ -248,6 +248,37 @@ def create_pacman_package(app, modules):
 # Docker distribution
 ###############################################################################
 
+# Maps pkg manager name → (install command template, list-join separator)
+# {pkgs} is replaced by the space/newline-joined package list
+_DOCKER_PKG_INSTALL = {
+    "apt":    "apt-get update && apt-get install -y --no-install-recommends \\\n        {pkgs} \\\n    && rm -rf /var/lib/apt/lists/*",
+    "apk":    "apk add --no-cache \\\n        {pkgs}",
+    "pacman": "pacman -Syu --noconfirm --needed \\\n        {pkgs}",
+    "yum":    "yum install -y \\\n        {pkgs}",
+    "dnf":    "dnf install -y \\\n        {pkgs}",
+}
+_DOCKER_PKG_SEPARATOR = {
+    "apt":    " \\\n        ",
+    "apk":    " \\\n        ",
+    "pacman": " \\\n        ",
+    "yum":    " \\\n        ",
+    "dnf":    " \\\n        ",
+}
+
+def _detect_pkg_manager(image):
+    """Auto-detect package manager from image name."""
+    img = image.lower()
+    if any(x in img for x in ("debian", "ubuntu")):
+        return "apt"
+    if "alpine" in img:
+        return "apk"
+    if any(x in img for x in ("arch", "manjaro")):
+        return "pacman"
+    if any(x in img for x in ("fedora", "centos", "rhel", "rocky", "alma", "amazon")):
+        return "dnf"
+    return "apt"  # safe default
+
+
 def _get_docker_modules_str(modules):
     """Return a compact string suitable for use as a directory name."""
     return "-".join(sorted(modules.keys()))
@@ -262,13 +293,31 @@ def _get_docker_make_args(modules, has_demo):
     return args
 
 
+_DOCKER_DEFAULT_BUILDER_IMAGE = "debian:trixie-slim"
+_DOCKER_DEFAULT_RUNTIME_IMAGE = "alpine:latest"
+
+
 def create_docker_package(app, modules):
-    """Generate a multi-stage Dockerfile (debian:bookworm-slim builder + alpine runtime).
+    """Generate a multi-stage Dockerfile.
+
+    Builder image: app.docker_builder_image (default: debian:trixie-slim, GCC 14)
+    Runtime image: app.docker_runtime_image (default: alpine:latest)
+    Builder pkg manager: app.docker_builder_pkg_manager (auto-detected from image name)
+    Runtime pkg manager: app.docker_runtime_pkg_manager (auto-detected from image name)
+    Override in app.py:
+        docker_builder_image = "archlinux:latest"
+        docker_builder_pkg_manager = "pacman"
+        docker_runtime_image = "ubuntu:26.04"
+        docker_runtime_pkg_manager = "apt"
 
     Output: dist/docker/Dockerfile
     Usage:  docker build -t <app>-<modules> dist/docker/
     """
     has_demo = _b.build_demo
+    builder_image = getattr(app, "docker_builder_image", _DOCKER_DEFAULT_BUILDER_IMAGE)
+    runtime_image = getattr(app, "docker_runtime_image", _DOCKER_DEFAULT_RUNTIME_IMAGE)
+    builder_pm = getattr(app, "docker_builder_pkg_manager", _detect_pkg_manager(builder_image))
+    runtime_pm = getattr(app, "docker_runtime_pkg_manager", _detect_pkg_manager(runtime_image))
 
     try:
         modules_extlibs = sbt_modules.get_modules_extlibs(app, modules, _b.build_platform)
@@ -278,11 +327,12 @@ def create_docker_package(app, modules):
             demo_extlibs = sbt_modules.get_extlibs_versions(app, app.demo_extlibs)
         build_extlibs = dict(modules_extlibs)
         build_extlibs.update(demo_extlibs)
-        # Build stage: apt -dev packages (modules + demo)
-        build_deps, missing_build = sbt_modules.get_modules_packages(app, "apt", build_extlibs)
-        # Runtime stage: apk packages — demo_extlibs excluded (header-only / build tools)
-        if hasattr(app, "apk_packages"):
-            runtime_deps, missing_runtime = sbt_modules.get_modules_packages(app, "apk", modules_extlibs)
+        # Build stage: packages for builder_pm
+        build_deps, missing_build = sbt_modules.get_modules_packages(app, builder_pm, build_extlibs)
+        # Runtime stage: packages for runtime_pm — demo_extlibs excluded (header-only / build tools)
+        runtime_conf_name = "{}_packages".format(runtime_pm)
+        if hasattr(app, runtime_conf_name):
+            runtime_deps, missing_runtime = sbt_modules.get_modules_packages(app, runtime_pm, modules_extlibs)
         else:
             runtime_deps = {}
             missing_runtime = list(modules_extlibs.keys())
@@ -291,14 +341,16 @@ def create_docker_package(app, modules):
         exit(1)
 
     if missing_build:
-        logger.warning("apt build packages not found for: {} — will use make dep".format(", ".join(missing_build)))
+        logger.warning("{} build packages not found for: {} — will use make dep".format(
+            builder_pm, ", ".join(missing_build)))
     if missing_runtime:
-        logger.warning("apk runtime packages not found for: {}".format(", ".join(missing_runtime)))
+        logger.warning("{} runtime packages not found for: {}".format(
+            runtime_pm, ", ".join(missing_runtime)))
 
     make_args = _get_docker_make_args(modules, has_demo)
     make_args_str = " ".join(make_args)
-    # For make dep: skip all extlibs already provided by apt
-    dep_make_args = make_args + ["with-system-packages=apt"]
+    # For make dep: skip all extlibs already provided by the builder's pkg manager
+    dep_make_args = make_args + ["with-system-packages={}".format(builder_pm)]
     dep_make_args_str = " ".join(dep_make_args)
     modules_str = _get_docker_modules_str(modules)
 
@@ -307,21 +359,41 @@ def create_docker_package(app, modules):
     dockerfile_path = join(docker_path, "Dockerfile")  # overwritten on each run
 
     # Toolchain packages always needed in the builder stage
-    builder_base_pkgs = [
-        "git", "make", "python3", "scons",
-        "g++", "pkg-config", "ca-certificates",
-    ]
-    # If some extlibs are missing from apt, vcpkg will be used — add its prerequisites
+    # Keyed by package manager
+    _builder_base_pkgs = {
+        "apt":    ["git", "make", "python3", "scons", "g++", "pkg-config", "ca-certificates"],
+        "apk":    ["git", "make", "python3", "py3-scons", "g++", "pkgconf", "ca-certificates"],
+        "pacman": ["git", "make", "python", "scons", "gcc", "pkgconf", "ca-certificates"],
+        "dnf":    ["git", "make", "python3", "scons", "gcc-c++", "pkgconf", "ca-certificates"],
+        "yum":    ["git", "make", "python3", "scons", "gcc-c++", "pkgconf", "ca-certificates"],
+    }
+    # vcpkg prerequisites (needed when some extlibs must be fetched)
+    _vcpkg_prereqs = {
+        "apt":    ["curl", "zip", "unzip", "tar", "cmake", "ninja-build"],
+        "apk":    ["curl", "zip", "unzip", "tar", "cmake", "samurai"],
+        "pacman": ["curl", "zip", "unzip", "tar", "cmake", "ninja"],
+        "dnf":    ["curl", "zip", "unzip", "tar", "cmake", "ninja-build"],
+        "yum":    ["curl", "zip", "unzip", "tar", "cmake", "ninja-build"],
+    }
+
+    builder_base_pkgs = list(_builder_base_pkgs.get(builder_pm, _builder_base_pkgs["apt"]))
+    # If some extlibs are missing from the pkg manager, vcpkg will be used
     if missing_build:
-        builder_base_pkgs += ["curl", "zip", "unzip", "tar", "cmake", "ninja-build"]
-    # Add -dev packages resolved from module extlibs
+        builder_base_pkgs += _vcpkg_prereqs.get(builder_pm, _vcpkg_prereqs["apt"])
+    # Add packages resolved from module extlibs
     all_build_pkgs = builder_base_pkgs + sorted(build_deps.keys())
-    build_pkgs_line = " \\\n        ".join(all_build_pkgs)
+
+    sep = _DOCKER_PKG_SEPARATOR.get(builder_pm, " \\\n        ")
+    build_pkgs_line = sep.join(all_build_pkgs)
+    build_install_cmd = _DOCKER_PKG_INSTALL.get(builder_pm, _DOCKER_PKG_INSTALL["apt"]).format(
+        pkgs=build_pkgs_line)
 
     git_url = getattr(app, "git_url", "")
-    app_version = getattr(app, "version", "main")
 
-    runtime_pkgs_line = " \\\n        ".join(sorted(runtime_deps.keys())) if runtime_deps else ""
+    sep_rt = _DOCKER_PKG_SEPARATOR.get(runtime_pm, " \\\n        ")
+    runtime_pkgs_line = sep_rt.join(sorted(runtime_deps.keys())) if runtime_deps else ""
+    runtime_install_cmd = _DOCKER_PKG_INSTALL.get(runtime_pm, _DOCKER_PKG_INSTALL["apk"]).format(
+        pkgs=runtime_pkgs_line) if runtime_pkgs_line else ""
 
     lines = [
         "# Generated by SBT — do not edit manually",
@@ -329,13 +401,11 @@ def create_docker_package(app, modules):
         "# Run:   docker run --rm {app}-{mods} <binary>".format(app=app.name, mods=modules_str),
         "",
         "###############################################################################",
-        "# Stage 1: builder (debian:bookworm-slim)",
+        "# Stage 1: builder ({img})".format(img=builder_image),
         "###############################################################################",
-        "FROM debian:bookworm-slim AS builder",
+        "FROM {img} AS builder".format(img=builder_image),
         "",
-        "RUN apt-get update && apt-get install -y --no-install-recommends \\",
-        "        {pkgs} \\".format(pkgs=build_pkgs_line),
-        "    && rm -rf /var/lib/apt/lists/*",
+        "RUN {cmd}".format(cmd=build_install_cmd),
         "",
         "RUN git clone --depth 1 {url} /src".format(url=git_url),
         "",
@@ -352,19 +422,18 @@ def create_docker_package(app, modules):
     lines += [
         "RUN make {args}".format(args=make_args_str),
         "",
-        "RUN make install INSTALL_DESTDIR=/dist INSTALL_PREFIX=/usr",
+        "RUN make install INSTALL_DESTDIR=/dist INSTALL_PREFIX=/usr INSTALL_NOCONFIRM=1",
         "",
         "###############################################################################",
-        "# Stage 2: runtime (alpine:latest)",
+        "# Stage 2: runtime ({img})".format(img=runtime_image),
         "###############################################################################",
-        "FROM alpine:latest",
+        "FROM {img}".format(img=runtime_image),
         "",
     ]
 
-    if runtime_pkgs_line:
+    if runtime_install_cmd:
         lines += [
-            "RUN apk add --no-cache \\",
-            "        {pkgs}".format(pkgs=runtime_pkgs_line),
+            "RUN {cmd}".format(cmd=runtime_install_cmd),
             "",
         ]
 
