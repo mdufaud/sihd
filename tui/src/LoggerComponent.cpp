@@ -101,8 +101,13 @@ class LoggerBase: public ComponentBase,
                 focus_idx = _focused_log;
             }
 
-            if (is_focused && focus_idx >= 0 && focus_idx < _visible_count)
-                elements[focus_idx] = elements[focus_idx] | focus | inverted;
+            if (focus_idx >= 0 && focus_idx < _visible_count)
+            {
+                // focus drives yframe scrolling; inverted highlights only in manual-browse mode
+                elements[focus_idx] = elements[focus_idx] | focus;
+                if (is_focused && !_options.scroll_to_last_log)
+                    elements[focus_idx] = elements[focus_idx] | inverted;
+            }
 
             auto log_element = vbox(elements) | vscroll_indicator | yframe | yflex | reflect(_log_box);
 
@@ -111,8 +116,8 @@ class LoggerBase: public ComponentBase,
 
             auto level_label = text(" " + _level_entries[_selected_level_filter] + " ▼ ") | inverted
                                | reflect(_level_btn_box);
-            auto scroll_label
-                = text(_options.scroll_to_last_log ? " ● scroll " : " ○ scroll ") | reflect(_scroll_btn_box);
+            auto scroll_label = text(_options.scroll_to_last_log ? " ● scroll " : " ○ scroll ")
+                                | reflect(_scroll_btn_box);
             auto bar = hbox({
                            _filter_input->Render() | flex_grow,
                            separator(),
@@ -133,8 +138,7 @@ class LoggerBase: public ComponentBase,
                 auto entry_style = ((int)j == _selected_level_filter) ? inverted : nothing;
                 menu_items.push_back(text(" " + _level_entries[j] + " ") | _level_colors[j] | entry_style);
             }
-            auto menu_element
-                = vbox(menu_items) | bgcolor(Color::Black) | border | clear_under | reflect(_menu_box);
+            auto menu_element = vbox(menu_items) | bgcolor(Color::Black) | border | clear_under | reflect(_menu_box);
 
             return dbox({
                 main_content,
@@ -149,8 +153,7 @@ class LoggerBase: public ComponentBase,
         {
             if (_show_level_menu)
             {
-                if (event.is_mouse() && event.mouse().button == Mouse::Left
-                    && event.mouse().motion == Mouse::Released)
+                if (event.is_mouse() && event.mouse().button == Mouse::Left && event.mouse().motion == Mouse::Released)
                 {
                     if (_menu_box.Contain(event.mouse().x, event.mouse().y))
                     {
@@ -169,8 +172,7 @@ class LoggerBase: public ComponentBase,
                 return true;
             }
 
-            if (event.is_mouse() && event.mouse().button == Mouse::Left
-                && event.mouse().motion == Mouse::Released)
+            if (event.is_mouse() && event.mouse().button == Mouse::Left && event.mouse().motion == Mouse::Released)
             {
                 if (_options.add_bar && _level_btn_box.Contain(event.mouse().x, event.mouse().y))
                 {
@@ -192,10 +194,14 @@ class LoggerBase: public ComponentBase,
             if (event.is_mouse() && _log_box.Contain(event.mouse().x, event.mouse().y))
                 TakeFocus();
 
+            // When leaving auto-scroll via any navigation, start from the last visible
+            // position — otherwise _focused_log stays at 0 and jumps to the top.
+            if (_options.scroll_to_last_log && _visible_count > 0)
+                _focused_log = _visible_count - 1;
+
             if (event == Event::ArrowUp || (event.is_mouse() && event.mouse().button == Mouse::WheelUp))
                 _focused_log--;
-            else if (event == Event::ArrowDown
-                     || (event.is_mouse() && event.mouse().button == Mouse::WheelDown))
+            else if (event == Event::ArrowDown || (event.is_mouse() && event.mouse().button == Mouse::WheelDown))
                 _focused_log++;
             else if (event == Event::PageDown)
                 _focused_log += _log_box.y_max - _log_box.y_min;
@@ -276,6 +282,8 @@ class LoggerBase: public ComponentBase,
         void log(const sihd::util::LogInfo & info, std::string_view msg) override
         {
             std::lock_guard<std::mutex> lock(_log_mutex);
+            if (_pending_logs.size() >= _options.max_logs)
+                _pending_logs.pop_front();
             _pending_logs.emplace_back(SavedLog {
                 .info = info,
                 .msg = std::string(msg),
@@ -289,8 +297,8 @@ class LoggerBase: public ComponentBase,
 
         std::string _str_tmp_filter;
         std::string _str_filter;
-        std::vector<std::string> _level_entries
-            = {"all", "emergency", "alert", "critical", "error", "warning", "notice", "info", "debug"};
+        std::vector<std::string> _level_entries =
+            {"all", "emergency", "alert", "critical", "error", "warning", "notice", "info", "debug"};
         std::vector<Decorator> _level_colors = {
             nothing,
             ftxui::color(Color::Magenta1) | bold,

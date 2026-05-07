@@ -1,9 +1,8 @@
-#include <gtest/gtest.h>
-
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/event.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
+#include <gtest/gtest.h>
 
 #include <sihd/tui/CliComponent.hpp>
 #include <sihd/util/Logger.hpp>
@@ -60,19 +59,18 @@ TEST_F(TestCli, test_tui_cli)
         }
     };
 
-    cli = CliComponent(
-        std::move(cli_callback),
-        CliOptions {
-            .max_lines = 200,
-            .scroll_to_last_output = true,
-            .completions = std::move(completions),
-        });
+    cli = CliComponent(std::move(cli_callback),
+                       CliOptions {
+                           .max_lines = 200,
+                           .scroll_to_last_output = true,
+                           .completions = std::move(completions),
+                       });
 
-    dynamic_cast<Cli &>(*cli).add_output("Type 'help' for available commands. Tab for completion. 'q' to quit.");
+    Cli & cli_component = dynamic_cast<Cli &>(*cli);
+    cli_component.add_output("Type 'help' for available commands. Tab for completion. 'q' to quit.");
 
     auto renderer = ftxui::Renderer(cli, [&] {
-        return window(text("cli") | hcenter | bold, cli->Render()) | size(WIDTH, EQUAL, 80)
-               | size(HEIGHT, EQUAL, 20);
+        return window(text("cli") | hcenter | bold, cli->Render()) | size(WIDTH, EQUAL, 80) | size(HEIGHT, EQUAL, 20);
     });
 
     renderer |= ftxui::CatchEvent([&](ftxui::Event event) {

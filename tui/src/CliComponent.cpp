@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <list>
+#include <mutex>
 
 #include <ftxui/component/captured_mouse.hpp>
 #include <ftxui/component/component.hpp>
@@ -27,9 +28,9 @@ class CliBase: public ComponentBase,
         {
             InputOption input_options;
             input_options.content = &_input_str;
-            input_options.placeholder = "> ";
             input_options.cursor_position = &_cursor_pos;
             input_options.multiline = false;
+            input_options.placeholder = "Type something... ";
             input_options.transform = [](InputState state) {
                 return state.element;
             };
@@ -45,18 +46,29 @@ class CliBase: public ComponentBase,
         }
         ~CliBase() = default;
 
+        // Thread-safe: may be called from any thread
         void add_output(std::string_view line) override
         {
-            if (_lines.size() >= _options.max_lines)
-                _lines.pop_front();
-            _lines.emplace_back(line);
-            if (_options.scroll_to_last_output)
-                _focused_line = (ssize_t)_lines.size() - 1;
+            std::lock_guard<std::mutex> lock(_lines_mutex);
+            if (_pending_lines.size() >= _options.max_lines)
+                _pending_lines.pop_front();
+            _pending_lines.emplace_back(line);
         }
 
     private:
         Element OnRender() override
         {
+            // Drain pending lines produced by other threads
+            {
+                std::lock_guard<std::mutex> lock(_lines_mutex);
+                _lines.splice(_lines.end(), _pending_lines);
+            }
+            while (_lines.size() > _options.max_lines)
+                _lines.pop_front();
+
+            if (_options.scroll_to_last_output)
+                _focused_line = (ssize_t)_lines.size() - 1;
+
             const auto is_focused = Focused();
 
             Elements elements;
@@ -64,15 +76,18 @@ class CliBase: public ComponentBase,
             size_t i = 0;
             for (const auto & line : _lines)
             {
-                const auto focus_management = is_focused && (_focused_line == (ssize_t)i) ? focus : nothing;
-                const auto style = is_focused && (_focused_line == (ssize_t)i) ? inverted : nothing;
-                elements.push_back(text(line) | focus_management | style);
+                // focus drives yframe scrolling; inverted highlights only in manual-browse mode
+                const auto scroll_focus = (_focused_line == (ssize_t)i) ? focus : nothing;
+                const auto style = (is_focused && !_options.scroll_to_last_output && _focused_line == (ssize_t)i)
+                                       ? inverted
+                                       : nothing;
+                elements.push_back(text(line) | scroll_focus | style);
                 ++i;
             }
 
             auto output_element = vbox(elements) | vscroll_indicator | yframe | yflex | reflect(_log_box);
 
-            auto input_line = hbox({text("> "), _input_cpt->Render()});
+            auto input_line = _input_cpt->Render();
 
             if (_tab_matches.size() > 1)
             {
@@ -111,27 +126,28 @@ class CliBase: public ComponentBase,
                 return true;
             }
 
+            // Up/Down always consumed for history: prevents fallthrough to output scrolling
             if (event == Event::ArrowUp)
             {
-                if (navigate_history(-1))
-                    return true;
+                navigate_history(1);
+                return true;
             }
             if (event == Event::ArrowDown)
             {
-                if (navigate_history(1))
-                    return true;
+                navigate_history(-1);
+                return true;
             }
 
             if (_input_cpt->OnEvent(event))
                 return true;
 
             if (event.is_mouse() && _log_box.Contain(event.mouse().x, event.mouse().y))
-                TakeFocus();
+                _input_cpt->TakeFocus();
 
-            if (event == Event::ArrowUp || (event.is_mouse() && event.mouse().button == Mouse::WheelUp))
+            // Arrow keys are fully consumed above for history; only mouse wheel scrolls output
+            if (event.is_mouse() && event.mouse().button == Mouse::WheelUp)
                 _focused_line--;
-            else if (event == Event::ArrowDown
-                     || (event.is_mouse() && event.mouse().button == Mouse::WheelDown))
+            else if (event.is_mouse() && event.mouse().button == Mouse::WheelDown)
                 _focused_line++;
             else if (event == Event::PageDown)
                 _focused_line += _log_box.y_max - _log_box.y_min;
@@ -147,6 +163,10 @@ class CliBase: public ComponentBase,
             _focused_line = std::max((ssize_t)0, std::min((ssize_t)_lines.size() - 1, _focused_line));
             return true;
         }
+
+        // Expose _input_cpt as the focused leaf so that ftxui routes cursor rendering
+        // and focus state to it (required for Input::OnEvent to process characters).
+        Component ActiveChild() override { return _input_cpt; }
 
         bool Focusable() const final { return ComponentBase::Focusable(); }
 
@@ -238,7 +258,8 @@ class CliBase: public ComponentBase,
                 return true;
             }
 
-            auto it = _history.begin();
+            // idx 0 = most recently entered; iterate from end
+            auto it = _history.rbegin();
             std::advance(it, _history_idx);
             _input_str = *it;
             _cursor_pos = (int)_input_str.size();
@@ -250,9 +271,7 @@ class CliBase: public ComponentBase,
             _tab_matches.clear();
             _tab_idx = 0;
 
-            if (_lines.size() >= _options.max_lines)
-                _lines.pop_front();
-
+            // Echo directly on UI thread; trim is handled by OnRender after pending drain
             _lines.push_back("> " + _input_str);
 
             if (!_input_str.empty())
@@ -268,9 +287,6 @@ class CliBase: public ComponentBase,
 
             _input_str.clear();
             _cursor_pos = 0;
-
-            if (_options.scroll_to_last_output)
-                _focused_line = (ssize_t)_lines.size() - 1;
         }
 
         ssize_t _focused_line = 0;
@@ -285,6 +301,8 @@ class CliBase: public ComponentBase,
         std::vector<std::string> _tab_matches;
         size_t _tab_idx = 0;
         std::function<void(Cli *, std::string_view)> _on_input;
+        std::mutex _lines_mutex;
+        std::list<std::string> _pending_lines;
 };
 
 } // namespace
