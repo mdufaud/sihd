@@ -152,7 +152,7 @@ sbt provides default Android project templates in `site_scons/sbt/android/`. Whe
 | Placeholder | Replaced with |
 |------------|---------------|
 | `__SBT_PROJECT_NAME__` | Demo/binary name |
-| `__SBT_NAMESPACE__` | Java namespace (e.g. `sihd.android.terminal`) |
+| `__SBT_NAMESPACE__` | Java namespace (defaults to `<app-name>.android.terminal`) |
 | `__SBT_APP_ID__` | Application ID (namespace + sanitized name) |
 | `__SBT_APP_LABEL__` | Display name in launcher |
 | `__SBT_LIB_NAME__` | Shared library name (without lib prefix / .so suffix) |
@@ -185,11 +185,11 @@ mymodule/android/
 ### Example: imgui override
 
 ```
-imgui/android/
-├── config.py                     # namespace="sihd.imgui.demo", native_activity=True
+mymodule/android/
+├── config.py                     # namespace="com.example.imgui", native_activity=True
 └── app/src/main/
     ├── AndroidManifest.xml       # NativeActivity with configChanges
-    └── java/sihd/imgui/demo/
+    └── java/com/example/imgui/
         └── MainActivity.kt       # NativeActivity + keyboard/unicode JNI
 ```
 
@@ -216,7 +216,7 @@ export ANDROID_NDK_PATH=/path/to/android-sdk/ndk/28.0.13004108
 
 Check logcat for native crash details:
 ```bash
-adb logcat -s sihd:* AndroidRuntime:* DEBUG:*
+adb logcat -s <app-name>:* AndroidRuntime:* DEBUG:*
 ```
 
 The terminal bridge wraps `main()` in a try/catch and reports uncaught exceptions. For signal crashes (SIGSEGV, etc.), check the `DEBUG` tag in logcat.

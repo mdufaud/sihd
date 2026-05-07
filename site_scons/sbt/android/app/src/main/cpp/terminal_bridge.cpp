@@ -3,7 +3,6 @@
 // Provides stdin pipe, TMPDIR, crash reporting, and signal handling.
 // The user's program provides: extern "C" int main(int argc, char** argv);
 
-#include <android/log.h>
 #include <jni.h>
 #include <pthread.h>
 #include <signal.h>
@@ -14,6 +13,8 @@
 
 #include <exception>
 #include <vector>
+
+#include <android/log.h>
 
 extern int main(int argc, char **argv);
 
@@ -59,7 +60,7 @@ static void forward_to_java_fmt(const char *fmt, ...)
     vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
     forward_to_java(buf);
-    __android_log_write(ANDROID_LOG_ERROR, "sihd", buf);
+    __android_log_write(ANDROID_LOG_ERROR, "__SBT_LOG_TAG__", buf);
 }
 
 static void close_if_valid(int & fd)
@@ -155,7 +156,7 @@ static void setup_tmpdir(JNIEnv *env, jobject thiz)
     {
         setenv("TMPDIR", path, 1);
         setenv("HOME", path, 1);
-        __android_log_print(ANDROID_LOG_INFO, "sihd", "TMPDIR=%s", path);
+        __android_log_print(ANDROID_LOG_INFO, "__SBT_LOG_TAG__", "TMPDIR=%s", path);
         env->ReleaseStringUTFChars(jpath, path);
     }
     env->DeleteLocalRef(jpath);
@@ -201,7 +202,7 @@ static void *read_pipe_thread(void *arg)
         {
             buf[send_len] = '\0';
             forward_to_java(buf);
-            __android_log_write(ANDROID_LOG_INFO, "sihd", buf);
+            __android_log_write(ANDROID_LOG_INFO, "__SBT_LOG_TAG__", buf);
         }
         if (tail > 0)
             memmove(buf, buf + send_len, tail);
@@ -211,12 +212,12 @@ static void *read_pipe_thread(void *arg)
     {
         buf[carry] = '\0';
         forward_to_java(buf);
-        __android_log_write(ANDROID_LOG_INFO, "sihd", buf);
+        __android_log_write(ANDROID_LOG_INFO, "__SBT_LOG_TAG__", buf);
     }
     return nullptr;
 }
 
-extern "C" JNIEXPORT void JNICALL Java_sihd_android_terminal_TerminalActivity_nativeMain(JNIEnv *env,
+extern "C" JNIEXPORT void JNICALL Java___SBT_NAMESPACE_JNI___TerminalActivity_nativeMain(JNIEnv *env,
                                                                                          jobject thiz,
                                                                                          jobjectArray jargs)
 {
@@ -229,7 +230,7 @@ extern "C" JNIEXPORT void JNICALL Java_sihd_android_terminal_TerminalActivity_na
     if (g_append_output == nullptr || g_set_stdin_pipe_fd == nullptr)
     {
         __android_log_print(ANDROID_LOG_ERROR,
-                            "sihd",
+                            "__SBT_LOG_TAG__",
                             "JNI method lookup failed: appendOutput=%p setStdinPipeFd=%p",
                             g_append_output,
                             g_set_stdin_pipe_fd);
@@ -300,7 +301,7 @@ extern "C" JNIEXPORT void JNICALL Java_sihd_android_terminal_TerminalActivity_na
     }
     else
     {
-        __android_log_print(ANDROID_LOG_WARN, "sihd", "stdin pipe creation failed");
+        __android_log_print(ANDROID_LOG_WARN, "__SBT_LOG_TAG__", "stdin pipe creation failed");
         g_stdin_pipe[0] = -1;
         g_stdin_pipe[1] = -1;
     }
@@ -321,14 +322,14 @@ extern "C" JNIEXPORT void JNICALL Java_sihd_android_terminal_TerminalActivity_na
     {
         restore_stdio();
         forward_to_java_fmt("\n[CRASH] Uncaught exception: %s\n", e.what());
-        __android_log_print(ANDROID_LOG_ERROR, "sihd", "Uncaught exception: %s", e.what());
+        __android_log_print(ANDROID_LOG_ERROR, "__SBT_LOG_TAG__", "Uncaught exception: %s", e.what());
         crashed = true;
     }
     catch (...)
     {
         restore_stdio();
         forward_to_java_fmt("\n[CRASH] Unknown exception\n");
-        __android_log_write(ANDROID_LOG_ERROR, "sihd", "Unknown exception");
+        __android_log_write(ANDROID_LOG_ERROR, "__SBT_LOG_TAG__", "Unknown exception");
         crashed = true;
     }
 
@@ -364,7 +365,7 @@ extern "C" JNIEXPORT void JNICALL Java_sihd_android_terminal_TerminalActivity_na
 }
 
 extern "C" JNIEXPORT void JNICALL
-    Java_sihd_android_terminal_TerminalActivity_nativeWriteStdin([[maybe_unused]] JNIEnv *env,
+    Java___SBT_NAMESPACE_JNI___TerminalActivity_nativeWriteStdin([[maybe_unused]] JNIEnv *env,
                                                                  [[maybe_unused]] jobject thiz,
                                                                  jint fd,
                                                                  jstring jtext)
@@ -386,7 +387,7 @@ extern "C" JNIEXPORT void JNICALL
 }
 
 extern "C" JNIEXPORT void JNICALL
-    Java_sihd_android_terminal_TerminalActivity_nativeCloseStdin([[maybe_unused]] JNIEnv *env,
+    Java___SBT_NAMESPACE_JNI___TerminalActivity_nativeCloseStdin([[maybe_unused]] JNIEnv *env,
                                                                  [[maybe_unused]] jobject thiz,
                                                                  jint fd)
 {

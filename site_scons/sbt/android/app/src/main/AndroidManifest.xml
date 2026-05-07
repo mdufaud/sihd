@@ -9,7 +9,7 @@
         android:hasCode="true">
 
         <activity
-            android:name="sihd.android.terminal.TerminalActivity"
+            android:name="__SBT_NAMESPACE__.TerminalActivity"
             android:theme="@android:style/Theme.NoTitleBar"
             android:windowSoftInputMode="adjustResize|stateHidden"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|keyboard|keyboardHidden"

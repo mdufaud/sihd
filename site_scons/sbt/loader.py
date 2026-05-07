@@ -12,6 +12,8 @@ __project_root_path = dirname(__sbt_root_path)
 sys.path.append(__sbt_root_path)
 sys.path.append(__project_root_path)
 
+import re
+
 from sbt import logger
 from site_scons.sbt.build import utils
 
@@ -118,6 +120,16 @@ def _process_includes(app):
             logger.debug(f"configured '{include_path}'")
     app._includes_processed = True
 
+def _validate_app(app):
+    name = getattr(app, 'name', None)
+    if not name:
+        raise ValueError("app.py: 'name' is required")
+    if not re.match(r'^[A-Za-z0-9_\-]+$', name):
+        raise ValueError(
+            f"app.py: 'name' must contain only letters, digits, hyphens and underscores (got: {name!r})"
+        )
+
+
 def load_app():
     try:
         app = __import_module_no_bytecode("app")
@@ -125,4 +137,5 @@ def load_app():
         logger.error(f"Failed to load app module: {e}")
         raise
     _process_includes(app)
+    _validate_app(app)
     return app

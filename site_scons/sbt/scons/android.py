@@ -50,15 +50,27 @@ def _copy_tree(src_dir, dst_dir):
             shutil.copy2(src_file, dst_file)
 
 
-def load_override_config(android_dir):
+def _remove_empty_dirs(path):
+    """Recursively remove empty directories bottom-up."""
+    if not os.path.isdir(path):
+        return
+    for entry in os.scandir(path):
+        if entry.is_dir():
+            _remove_empty_dirs(entry.path)
+    if not os.listdir(path):
+        os.rmdir(path)
+
+
+def load_override_config(android_dir, project_name=None):
     """Load config.py from an override directory if it exists.
 
     Returns a dict with:
         namespace (str): Java package namespace
         native_activity (bool): whether to use NativeActivity mode
     """
+    default_ns = f"{project_name}.android.terminal"
     defaults = {
-        "namespace": "sihd.android.terminal",
+        "namespace": default_ns,
         "native_activity": False,
         "permissions": [],
     }
@@ -72,7 +84,7 @@ def load_override_config(android_dir):
     return defaults
 
 
-def stage_gradle_project(staging_dir, name, module_android_dir=None, permissions=None):
+def stage_gradle_project(staging_dir, name, module_android_dir=None, permissions=None, project_name=None):
     """Stage a complete Gradle project from templates + optional overrides.
 
     Args:
@@ -80,15 +92,17 @@ def stage_gradle_project(staging_dir, name, module_android_dir=None, permissions
         name: demo/bin name (used for placeholders)
         module_android_dir: optional module-relative android/ override directory
         permissions: list of Android permission strings (e.g. ["android.permission.INTERNET"])
+        project_name: app name used to derive the default Java namespace
     Returns:
         dict with:
             namespace (str): Java namespace
             native_activity (bool): NativeActivity mode
     """
     # Load override config
-    config = {"namespace": "sihd.android.terminal", "native_activity": False}
     if module_android_dir and os.path.isdir(module_android_dir):
-        config = load_override_config(module_android_dir)
+        config = load_override_config(module_android_dir, project_name=project_name)
+    else:
+        config = {"namespace": f"{project_name}.android.terminal", "native_activity": False}
 
     # Clean and create staging dir
     if os.path.isdir(staging_dir):
@@ -98,10 +112,21 @@ def stage_gradle_project(staging_dir, name, module_android_dir=None, permissions
     # Step 1: Copy default templates
     _copy_tree(TEMPLATE_DIR, staging_dir)
 
+    # Step 1b: Move default java package dir to match the configured namespace
+    default_ns_path = os.path.join(staging_dir, "app", "src", "main", "java", "sbt", "android", "terminal")
+    target_ns_path = os.path.join(staging_dir, "app", "src", "main", "java",
+                                  *config["namespace"].split("."))
+    if default_ns_path != target_ns_path and os.path.isdir(default_ns_path):
+        os.makedirs(os.path.dirname(target_ns_path), exist_ok=True)
+        shutil.move(default_ns_path, target_ns_path)
+        # Clean up empty parent dirs left by the move
+        _remove_empty_dirs(os.path.join(staging_dir, "app", "src", "main", "java", "sbt"))
+
     # Step 2: If terminal mode, remove NativeActivity-specific files (none in default)
     # If NativeActivity mode, remove terminal-specific files
     if config["native_activity"]:
-        terminal_kt = os.path.join(staging_dir, "app", "src", "main", "java", "sihd", "android", "terminal")
+        terminal_kt = os.path.join(staging_dir, "app", "src", "main", "java",
+                                   *config["namespace"].split("."))
         if os.path.isdir(terminal_kt):
             shutil.rmtree(terminal_kt)
         bridge_cpp = os.path.join(staging_dir, "app", "src", "main", "cpp", "terminal_bridge.cpp")
@@ -139,6 +164,8 @@ def stage_gradle_project(staging_dir, name, module_android_dir=None, permissions
     replacements = {
         "__SBT_PROJECT_NAME__": name,
         "__SBT_NAMESPACE__": config["namespace"],
+        "__SBT_NAMESPACE_JNI__": config["namespace"].replace(".", "_"),
+        "__SBT_LOG_TAG__": project_name,
         "__SBT_APP_ID__": app_id,
         "__SBT_APP_LABEL__": name,
         "__SBT_LIB_NAME__": sanitized_name,

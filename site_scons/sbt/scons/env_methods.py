@@ -69,8 +69,9 @@ def _android_build_apk(env, src, name, output_dir, add_libs, ctx, android_dir=No
         scons_utils.add_env_app_conf(ctx.app, apk_env, "demo", app_conf)
 
     module_android_dir = os_path.join(module_dir, android_dir) if android_dir else None
-    config = scons_android.load_override_config(module_android_dir) if module_android_dir else {
-        "namespace": "sihd.android.terminal",
+    project_name = ctx.app.name
+    config = scons_android.load_override_config(module_android_dir, project_name=project_name) if module_android_dir else {
+        "namespace": f"{project_name}.android.terminal",
         "native_activity": False,
     }
 
@@ -114,7 +115,8 @@ def _android_build_apk(env, src, name, output_dir, add_libs, ctx, android_dir=No
 
     def _stage_and_build_apk(target, source, env):
         scons_android.stage_gradle_project(
-            staging_dir, name, module_android_dir, permissions=android_permissions
+            staging_dir, name, module_android_dir, permissions=android_permissions,
+            project_name=project_name,
         )
         scons_android.copy_so_to_jnilibs(staging_dir, str(source[0]), sanitized_name)
         return scons_android.build_apk(staging_dir, str(target[0]))

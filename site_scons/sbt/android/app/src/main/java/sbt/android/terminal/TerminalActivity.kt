@@ -1,4 +1,4 @@
-package sihd.android.terminal
+package __SBT_NAMESPACE__
 
 import android.app.Activity
 import android.content.Intent

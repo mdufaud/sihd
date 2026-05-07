@@ -133,8 +133,8 @@ cd dist/pacman/<name>-<version> && makepkg --printsrcinfo > .SRCINFO
 Does **not** call `docker build` — generates `dist/docker/Dockerfile` and `dist/docker/.dockerignore`. The file is overwritten on each run. Build the image manually:
 
 ```bash
-docker build -t sihd-http dist/docker/
-docker run --rm sihd-http <binary>
+docker build -t my-app dist/docker/
+docker run --rm my-app <binary>
 ```
 
 The Dockerfile is **multi-stage**:

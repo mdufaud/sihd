@@ -314,8 +314,10 @@ def create_docker_package(app, modules):
     Usage:  docker build -t <app>-<modules> dist/docker/
     """
     has_demo = _b.build_demo
-    builder_image = getattr(app, "docker_builder_image", _DOCKER_DEFAULT_BUILDER_IMAGE)
-    runtime_image = getattr(app, "docker_runtime_image", _DOCKER_DEFAULT_RUNTIME_IMAGE)
+    builder_image = utils.get_opt("docker_builder_image") \
+        or getattr(app, "docker_builder_image", _DOCKER_DEFAULT_BUILDER_IMAGE)
+    runtime_image = utils.get_opt("docker_runtime_image") \
+        or getattr(app, "docker_runtime_image", _DOCKER_DEFAULT_RUNTIME_IMAGE)
     builder_pm = getattr(app, "docker_builder_pkg_manager", _detect_pkg_manager(builder_image))
     runtime_pm = getattr(app, "docker_runtime_pkg_manager", _detect_pkg_manager(runtime_image))
 
@@ -389,6 +391,7 @@ def create_docker_package(app, modules):
         pkgs=build_pkgs_line)
 
     git_url = getattr(app, "git_url", "")
+    build_local = utils.is_opt("docker_build_local")
 
     sep_rt = _DOCKER_PKG_SEPARATOR.get(runtime_pm, " \\\n        ")
     runtime_pkgs_line = sep_rt.join(sorted(runtime_deps.keys())) if runtime_deps else ""
@@ -407,8 +410,20 @@ def create_docker_package(app, modules):
         "",
         "RUN {cmd}".format(cmd=build_install_cmd),
         "",
-        "RUN git clone --depth 1 {url} /src".format(url=git_url),
-        "",
+    ]
+
+    if build_local:
+        lines += [
+            "COPY . /src",
+            "",
+        ]
+    else:
+        lines += [
+            "RUN git clone --depth 1 {url} /src".format(url=git_url),
+            "",
+        ]
+
+    lines += [
         "WORKDIR /src",
         "",
     ]
@@ -426,6 +441,19 @@ def create_docker_package(app, modules):
         + (" INSTALL_EXTLIBS=1" if missing_build else ""),
         # ^ INSTALL_EXTLIBS=1: copies vcpkg-built .so files (when some extlibs weren't in system pkgs)
         "RUN mkdir -p /dist/usr/bin /dist/usr/lib /dist/etc /dist/usr/share",
+    ]
+
+    # When builder and runtime images differ, system .so versions may not match.
+    # ldd-bundling only works reliably within the same distro family and libc.
+    # For cross-distro (e.g. debian→alpine/musl), binaries are not compatible at all.
+    # For same-family (e.g. debian→ubuntu), package install in runtime is simpler and safer.
+    if builder_image != runtime_image:
+        lines += [
+            "# Bundle vcpkg-built and project .so that aren't in the runtime pkg manager",
+            "# System libs are provided by the runtime image's package manager instead",
+        ]
+
+    lines += [
         "",
         "###############################################################################",
         "# Stage 2: runtime ({img})".format(img=runtime_image),
@@ -434,6 +462,9 @@ def create_docker_package(app, modules):
         "",
     ]
 
+    # runtime_install_cmd installs system libs from the runtime's package manager.
+    # This works for same-distro and same-family (debian/ubuntu) runtimes.
+    # For incompatible runtimes (e.g. alpine/musl vs glibc), the user must handle deps manually.
     if runtime_install_cmd:
         lines += [
             "RUN {cmd}".format(cmd=runtime_install_cmd),

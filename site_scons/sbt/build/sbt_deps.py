@@ -10,8 +10,8 @@ Usage (from Makefile):
 
 Syntax in app.py:
     sbt_dependencies = {
-        "sihd": {
-            "git": "https://github.com/mdufaud/sihd.git",
+        "myproject": {
+            "git": "https://github.com/example/myproject.git",
             "ref": "main",
             "args": {
                 "mode": "release",

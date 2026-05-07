@@ -203,7 +203,7 @@ cpp_modules = env.build_cpp_modules('test/modules/TestGreeting.cppm')
 env.build_test(
     Glob('test/*.cpp') + cpp_modules,
     add_libs=[env.module_format_name()],
-    cpp_modules=['sihd.util.test.greeting'],
+    cpp_modules=['mymodule.test.greeting'],
 )
 ```
 
