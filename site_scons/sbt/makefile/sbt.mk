@@ -786,11 +786,27 @@ install: confirm_install
 		install -D --compare --mode=755 "$(LIB_PATH)/$$path" "$$dest"; \
 		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
 	done
+ifneq ($(INSTALL_EXTLIBS),)
+# install extlibs (vcpkg-built shared libraries)
+	$(QUIET) $(call echo_log_info,makefile,installing extlibs: ${EXTLIB_LIB_PATH} -> $(INSTALL_LIB_DEST))
+	$(QUIET) for path in `ls -A $(EXTLIB_LIB_PATH) 2>/dev/null | grep '\.so'`; do \
+		dest=$(INSTALL_LIB_DEST)/$$path; \
+		install -D --compare --mode=755 "$(EXTLIB_LIB_PATH)/$$path" "$$dest"; \
+		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
+	done
+endif
 # install bin
 	$(QUIET) $(call echo_log_info,makefile,installing binaries: ${BIN_PATH} -> $(INSTALL_BIN_DEST))
 	$(QUIET) for path in `ls -A $(BIN_PATH) 2>/dev/null`; do \
 		dest=$(INSTALL_BIN_DEST)/$$path; \
 		install -D --compare --mode=755 "$(BIN_PATH)/$$path" "$$dest"; \
+		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
+	done
+# install demo bins
+	$(QUIET) $(call echo_log_info,makefile,installing demos: ${DEMO_PATH} -> $(INSTALL_BIN_DEST))
+	$(QUIET) for path in `ls -A $(DEMO_PATH) 2>/dev/null`; do \
+		dest=$(INSTALL_BIN_DEST)/$$path; \
+		install -D --compare --mode=755 "$(DEMO_PATH)/$$path" "$$dest"; \
 		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
 	done
 # getting all root directories of built resources for future removal

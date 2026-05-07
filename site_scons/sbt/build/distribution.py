@@ -294,7 +294,7 @@ def _get_docker_make_args(modules, has_demo):
 
 
 _DOCKER_DEFAULT_BUILDER_IMAGE = "debian:trixie-slim"
-_DOCKER_DEFAULT_RUNTIME_IMAGE = "alpine:latest"
+_DOCKER_DEFAULT_RUNTIME_IMAGE = "debian:trixie-slim"
 
 
 def create_docker_package(app, modules):
@@ -422,7 +422,10 @@ def create_docker_package(app, modules):
     lines += [
         "RUN make {args}".format(args=make_args_str),
         "",
-        "RUN make install INSTALL_DESTDIR=/dist INSTALL_PREFIX=/usr INSTALL_NOCONFIRM=1 mode=release",
+        "RUN make install INSTALL_DESTDIR=/dist INSTALL_PREFIX=/usr INSTALL_NOCONFIRM=1 mode=release"
+        + (" INSTALL_EXTLIBS=1" if missing_build else ""),
+        # ^ INSTALL_EXTLIBS=1: copies vcpkg-built .so files (when some extlibs weren't in system pkgs)
+        "RUN mkdir -p /dist/usr/bin /dist/usr/lib /dist/etc /dist/usr/share",
         "",
         "###############################################################################",
         "# Stage 2: runtime ({img})".format(img=runtime_image),
