@@ -35,7 +35,7 @@ TEST_F(TestProfiling, test_perf_guard)
         Perf::Guard guard(p);
         volatile int x = 0;
         for (int j = 0; j < 100; ++j)
-            x += j;
+            x = x + j;
         (void)x;
     }
 
