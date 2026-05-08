@@ -202,6 +202,8 @@ def _build_test(self, src, name, add_libs, ctx, **kwargs):
     test_env = self.Clone()
     test_env.Prepend(LIBS=add_libs)
     cpp_mods, build_kwargs = scons_cpp_modules.extract_imports(kwargs)
+    if cpp_mods and not builder.is_cpp_modules:
+        return None
     conf = self['APP_MODULE_CONF']
 
     exported_test_cpppaths = []
