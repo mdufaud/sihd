@@ -7,9 +7,10 @@ private implementation functions receive it as an explicit parameter.
 
 Public API (methods available in module scons.py scripts):
   env.build_lib(src, name=None, static=None, **kwargs)
-  env.build_bin(src, name=None, add_libs=[], android_dir=None, **kwargs)
-  env.build_test(src, name=None, add_libs=[], **kwargs)
-  env.build_demo(src, name, add_libs=[], android_dir=None, **kwargs)
+  env.build_bin(src, name=None, libs=[], android_dir=None, static_stdlib=False, static_libs=False, **kwargs)
+  env.build_test(src, name=None, libs=[], static_stdlib=False, static_libs=False, **kwargs)
+  env.build_demo(src, name, libs=[], android_dir=None, static_stdlib=False, static_libs=False, **kwargs)
+  # static_libs: True (wrap all LIBS, requires .a files) or list[str] (wrap named libs only)
   env.build_demos(srcs, **kwargs)
   env.build_cpp_modules(src, **kwargs)
   env.export_test(includes=[], resources=[])
@@ -54,7 +55,7 @@ from site_scons.sbt.scons import env_factory
 # Private helpers
 ###############################################################################
 
-def _android_build_apk(env, src, name, output_dir, add_libs, ctx, android_dir=None, **kwargs):
+def _android_build_apk(env, src, name, output_dir, libs, ctx, android_dir=None, **kwargs):
     """Orchestrate building an Android APK from the given source(s).
 
     Stages a Gradle project from templates, compiles a SharedLibrary, copies
@@ -63,7 +64,7 @@ def _android_build_apk(env, src, name, output_dir, add_libs, ctx, android_dir=No
     module_dir = env['APP_MODULE_DIR']
 
     apk_env = env.Clone()
-    apk_env.Prepend(LIBS=add_libs)
+    apk_env.Prepend(LIBS=libs)
     scons_utils.add_env_app_conf(ctx.app, apk_env, "demo")
     for app_conf in ctx.default_app_conf_to_get:
         scons_utils.add_env_app_conf(ctx.app, apk_env, "demo", app_conf)
@@ -131,6 +132,60 @@ def _android_build_apk(env, src, name, output_dir, add_libs, ctx, android_dir=No
 # Build method implementations
 ###############################################################################
 
+def _get_static_stdlib_flags():
+    """Return per-compiler flags to link the C++ stdlib statically.
+
+    Returns [] when it is already handled globally (build_static_libs, musl)
+    or when the compiler/platform embeds its stdlib unconditionally (em, zig, ndk).
+    """
+    if builder.build_static_libs or builder.libc == "musl":
+        return []
+    compiler = builder.build_compiler
+    if compiler in ("gcc", "mingw"):
+        return ["-static-libgcc", "-static-libstdc++"]
+    if compiler == "clang":
+        return ["-static-libstdc++"]
+    # em, ndk, zig: stdlib always statically embedded — no extra flags needed
+    return []
+
+
+def _wrap_libs_static(env, static_libs):
+    """Wrap selected LIBS with -Wl,-Bstatic/-Bdynamic to force static linking.
+
+    static_libs can be:
+      True        - wrap every string lib in LIBS (requires .a files to exist)
+      list[str]   - wrap only the named libs; others remain in LIBS unchanged
+
+    File-node LIBS (explicit .a/.so paths) are always left in LIBS untouched.
+    No-op when build_static_libs is already set (entire build is static)
+    or on compilers where the flag is irrelevant (em, zig).
+
+    The wrapped flags are injected AFTER $SOURCES in LINKCOM so that static
+    archives (.a) are resolved correctly (linker must see object undefined
+    references before scanning the archive).
+    """
+    if builder.build_static_libs or builder.build_compiler in ("em", "zig"):
+        return
+    all_libs = list(env["LIBS"])
+    if static_libs is True:
+        to_wrap = [l for l in all_libs if isinstance(l, str)]
+        keep = [l for l in all_libs if not isinstance(l, str)]
+    else:
+        wrap_set = set(static_libs)
+        to_wrap_from_libs = [l for l in all_libs if isinstance(l, str) and l in wrap_set]
+        keep = [l for l in all_libs if not isinstance(l, str) or l not in wrap_set]
+        # Libs named in static_libs but not in LIBS are added directly to the static section
+        found = set(to_wrap_from_libs)
+        to_wrap = to_wrap_from_libs + [l for l in static_libs if l not in found]
+    if not to_wrap:
+        return
+    env.Replace(LIBS=keep)
+    wrapped_str = " ".join(["-Wl,-Bstatic"] + [f"-l{l}" for l in to_wrap] + ["-Wl,-Bdynamic"])
+    env["_SBT_STATIC_LIBFLAGS"] = wrapped_str
+    if "${_SBT_STATIC_LIBFLAGS}" not in str(env["LINKCOM"]):
+        env["LINKCOM"] = str(env["LINKCOM"]) + " ${_SBT_STATIC_LIBFLAGS}"
+
+
 def _build_lib(self, src, name, static, ctx, **kwargs):
     module_name = self['APP_MODULE_NAME']
     if name is None:
@@ -141,7 +196,7 @@ def _build_lib(self, src, name, static, ctx, **kwargs):
     if cpp_mods:
         scons_cpp_modules.enable(self, ctx)
 
-    if (static is not None and static) or builder.build_static_libs:
+    if (static is not None and static is True) or builder.build_static_libs:
         objects = scons_cpp_modules.build_objects(self, src, ctx, cpp_modules=cpp_mods, **build_kwargs)
         lib = NoCache(self.StaticLibrary(lib_path, objects, **build_kwargs))
     else:
@@ -158,13 +213,15 @@ def _build_lib(self, src, name, static, ctx, **kwargs):
     return lib
 
 
-def _build_bin(self, src, name, add_libs, android_dir, ctx, **kwargs):
+def _build_bin(self, src, name, libs, android_dir, ctx, **kwargs):
+    static_stdlib = kwargs.pop("static_stdlib", False)
+    static_libs = kwargs.pop("static_libs", False)
     module_name = self['APP_MODULE_NAME']
     if name is None:
         name = self['APP_MODULE_FORMAT_NAME']
 
     if ctx.build_platform == "android":
-        apk = _android_build_apk(self, src, name, builder.build_bin_path, add_libs, ctx, android_dir, **kwargs)
+        apk = _android_build_apk(self, src, name, builder.build_bin_path, libs, ctx, android_dir, **kwargs)
         ctx.state.add_generated(
             "bin", ctx.state.generated_bins, module_name,
             f"{name}.apk", os_path.join(builder.build_bin_path, f"{name}.apk")
@@ -172,7 +229,11 @@ def _build_bin(self, src, name, add_libs, android_dir, ctx, **kwargs):
         return apk
 
     bin_env = self.Clone()
-    bin_env.Prepend(LIBS=add_libs)
+    bin_env.Prepend(LIBS=libs)
+    if static_stdlib:
+        bin_env.Append(LINKFLAGS=_get_static_stdlib_flags())
+    if static_libs:
+        _wrap_libs_static(bin_env, static_libs)
     cpp_mods, build_kwargs = scons_cpp_modules.extract_imports(kwargs)
     if cpp_mods:
         scons_cpp_modules.enable(bin_env, ctx)
@@ -192,7 +253,9 @@ def _build_bin(self, src, name, add_libs, android_dir, ctx, **kwargs):
     return result
 
 
-def _build_test(self, src, name, add_libs, ctx, **kwargs):
+def _build_test(self, src, name, libs, ctx, **kwargs):
+    static_stdlib = kwargs.pop("static_stdlib", False)
+    static_libs = kwargs.pop("static_libs", False)
     if not builder.build_tests:
         return None
     module_name = self['APP_MODULE_NAME']
@@ -200,7 +263,9 @@ def _build_test(self, src, name, add_libs, ctx, **kwargs):
         return None
 
     test_env = self.Clone()
-    test_env.Prepend(LIBS=add_libs)
+    test_env.Prepend(LIBS=libs)
+    if static_stdlib:
+        test_env.Append(LINKFLAGS=_get_static_stdlib_flags())
     cpp_mods, build_kwargs = scons_cpp_modules.extract_imports(kwargs)
     if cpp_mods and not builder.is_cpp_modules:
         return None
@@ -227,6 +292,8 @@ def _build_test(self, src, name, add_libs, ctx, **kwargs):
         scons_utils.add_env_app_conf(ctx.app, test_env, "test", app_conf)
     if cpp_mods:
         scons_cpp_modules.enable(test_env, ctx)
+    if static_libs:
+        _wrap_libs_static(test_env, static_libs)
     if self['BIN_LINKFLAGS']:
         test_env.Append(LINKFLAGS=self['BIN_LINKFLAGS'])
 
@@ -246,7 +313,9 @@ def _build_test(self, src, name, add_libs, ctx, **kwargs):
     return test
 
 
-def _build_demo(self, src, name, add_libs, android_dir, ctx, **kwargs):
+def _build_demo(self, src, name, libs, android_dir, ctx, **kwargs):
+    static_stdlib = kwargs.pop("static_stdlib", False)
+    static_libs = kwargs.pop("static_libs", False)
     if not builder.build_demo:
         return None
     module_name = self['APP_MODULE_NAME']
@@ -254,7 +323,7 @@ def _build_demo(self, src, name, add_libs, android_dir, ctx, **kwargs):
         return None
 
     if ctx.build_platform == "android":
-        demo = _android_build_apk(self, src, name, builder.build_demo_path, add_libs, ctx, android_dir, **kwargs)
+        demo = _android_build_apk(self, src, name, builder.build_demo_path, libs, ctx, android_dir, **kwargs)
         ctx.state.add_generated(
             "demo", ctx.state.generated_demos, module_name,
             f"{name}.apk", os_path.join(builder.build_demo_path, f"{name}.apk")
@@ -262,13 +331,17 @@ def _build_demo(self, src, name, add_libs, android_dir, ctx, **kwargs):
         return demo
 
     demo_env = self.Clone()
-    demo_env.Prepend(LIBS=add_libs)
+    demo_env.Prepend(LIBS=libs)
+    if static_stdlib:
+        demo_env.Append(LINKFLAGS=_get_static_stdlib_flags())
     cpp_mods, build_kwargs = scons_cpp_modules.extract_imports(kwargs)
     scons_utils.add_env_app_conf(ctx.app, demo_env, "demo")
     for app_conf in ctx.default_app_conf_to_get:
         scons_utils.add_env_app_conf(ctx.app, demo_env, "demo", app_conf)
     if cpp_mods:
         scons_cpp_modules.enable(demo_env, ctx)
+    if static_libs:
+        _wrap_libs_static(demo_env, static_libs)
     if self['BIN_LINKFLAGS']:
         demo_env.Append(LINKFLAGS=self['BIN_LINKFLAGS'])
 
@@ -487,14 +560,14 @@ def register_methods(base_env, ctx):
     def build_lib(self, src, name=None, static=None, **kwargs):
         return _build_lib(self, src, name, static, ctx, **kwargs)
 
-    def build_bin(self, src, name=None, add_libs=[], android_dir=None, **kwargs):
-        return _build_bin(self, src, name, add_libs, android_dir, ctx, **kwargs)
+    def build_bin(self, src, name=None, libs=[], android_dir=None, **kwargs):
+        return _build_bin(self, src, name, libs, android_dir, ctx, **kwargs)
 
-    def build_test(self, src, name=None, add_libs=[], **kwargs):
-        return _build_test(self, src, name, add_libs, ctx, **kwargs)
+    def build_test(self, src, name=None, libs=[], **kwargs):
+        return _build_test(self, src, name, libs, ctx, **kwargs)
 
-    def build_demo(self, src, name, add_libs=[], android_dir=None, **kwargs):
-        return _build_demo(self, src, name, add_libs, android_dir, ctx, **kwargs)
+    def build_demo(self, src, name, libs=[], android_dir=None, **kwargs):
+        return _build_demo(self, src, name, libs, android_dir, ctx, **kwargs)
 
     def build_demos(self, srcs, **kwargs):
         return _build_demos(self, srcs, **kwargs)

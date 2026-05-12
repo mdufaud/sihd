@@ -220,7 +220,7 @@ TEST_F(TestProcess, test_process_file_in)
 
     std::string test_file = fs::combine(_tmp_dir.path(), "file_in_hello.txt");
 
-    SIHD_LOG(info, "Writing file for 'cat' input: {}", test_file)
+    SIHD_LOG(info, "Writing file for 'cat' input: {}", test_file);
     EXPECT_TRUE(fs::write(test_file, "hello world"));
 
     if (term::is_interactive() == false)

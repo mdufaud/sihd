@@ -31,6 +31,6 @@ for module in modules:
     tests += Glob(str(test_dir) + "/{}/*.cpp".format(module))
 
 lib = env.build_lib(srcs)
-test = env.build_test(tests, add_libs = [env.module_format_name()])
+test = env.build_test(tests, libs = [env.module_format_name()])
 
 Return('lib')

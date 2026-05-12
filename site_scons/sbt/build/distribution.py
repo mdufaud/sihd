@@ -290,6 +290,8 @@ def _get_docker_make_args(modules, has_demo):
     args = [f"m={mods_str}", "mode=release"]
     if has_demo:
         args.append("demo=1")
+    if _b.build_static_libs:
+        args.append("static=1")
     return args
 
 
@@ -438,8 +440,8 @@ def create_docker_package(app, modules):
         "RUN make {args}".format(args=make_args_str),
         "",
         "RUN make install INSTALL_DESTDIR=/dist INSTALL_PREFIX=/usr INSTALL_NOCONFIRM=1 mode=release"
-        + (" INSTALL_EXTLIBS=1" if missing_build else ""),
-        # ^ INSTALL_EXTLIBS=1: copies vcpkg-built .so files (when some extlibs weren't in system pkgs)
+        # INSTALL_EXTLIBS=1: copies vcpkg-built .so files — not needed when static (all linked in)
+        + (" INSTALL_EXTLIBS=1" if missing_build and not _b.build_static_libs else ""),
         "RUN mkdir -p /dist/usr/bin /dist/usr/lib /dist/etc /dist/usr/share",
     ]
 
@@ -464,8 +466,8 @@ def create_docker_package(app, modules):
 
     # runtime_install_cmd installs system libs from the runtime's package manager.
     # This works for same-distro and same-family (debian/ubuntu) runtimes.
-    # For incompatible runtimes (e.g. alpine/musl vs glibc), the user must handle deps manually.
-    if runtime_install_cmd:
+    # Not needed when static=1: binaries are fully self-contained.
+    if runtime_install_cmd and not _b.build_static_libs:
         lines += [
             "RUN {cmd}".format(cmd=runtime_install_cmd),
             "",

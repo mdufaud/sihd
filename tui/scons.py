@@ -5,10 +5,10 @@ builder = env.builder()
 # build library from lib sources - not added to environment
 lib = env.build_lib(Glob('src/*.cpp'), name = env.module_format_name())
 
-env.build_demos(Glob("demo/*.cpp"), add_libs = [env.module_format_name()])
+env.build_demos(Glob("demo/*.cpp"), libs = [env.module_format_name()])
 
 # build unittest from test sources with newly created lib
-test = env.build_test(Glob('test/*.cpp'), add_libs = [env.module_format_name()])
+test = env.build_test(Glob('test/*.cpp'), libs = [env.module_format_name()])
 
 # build ftxui examples
 env.Append(

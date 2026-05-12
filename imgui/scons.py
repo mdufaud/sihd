@@ -51,9 +51,9 @@ lib = env.build_lib(sihd_imgui_srcs)
 # Demos
 
 if builder.build_platform == "android":
-    env.build_demo("demo/imgui_opengl3_android_demo.cpp", name = "imgui_opengl3_android_demo", add_libs = [env.module_format_name()], android_dir = "android")
+    env.build_demo("demo/imgui_opengl3_android_demo.cpp", name = "imgui_opengl3_android_demo", libs = [env.module_format_name()], android_dir = "android")
 elif builder.build_platform == "web":
-    env.build_demo("demo/imgui_opengl3_sdl_demo.cpp", name = "imgui_opengl3_sdl_demo", add_libs = [env.module_format_name()])
+    env.build_demo("demo/imgui_opengl3_sdl_demo.cpp", name = "imgui_opengl3_sdl_demo", libs = [env.module_format_name()])
     demo_etc_dir = Dir("demo").Dir("etc").Dir("sihd").Dir("demo")
     env.Append(
         LINKFLAGS = [
@@ -61,15 +61,15 @@ elif builder.build_platform == "web":
         ]
     )
 else:
-    env.build_demo("demo/imgui_opengl3_sdl_demo.cpp", name = "imgui_opengl3_sdl_demo", add_libs = [env.module_format_name()])
-    env.build_demo("demo/imgui_opengl3_glfw_demo.cpp", name = "imgui_opengl3_glfw_demo", add_libs = [env.module_format_name()])
+    env.build_demo("demo/imgui_opengl3_sdl_demo.cpp", name = "imgui_opengl3_sdl_demo", libs = [env.module_format_name()])
+    env.build_demo("demo/imgui_opengl3_glfw_demo.cpp", name = "imgui_opengl3_glfw_demo", libs = [env.module_format_name()])
 
     if builder.build_platform == "windows":
-        env.build_demo("demo/imgui_win_d11_demo.cpp", name = "imgui_win_d11_demo", add_libs = [env.module_format_name()])
-        env.build_demo("demo/imgui_win_d11_sdl_demo.cpp", name = "imgui_win_d11_sdl_demo", add_libs = [env.module_format_name()])
+        env.build_demo("demo/imgui_win_d11_demo.cpp", name = "imgui_win_d11_demo", libs = [env.module_format_name()])
+        env.build_demo("demo/imgui_win_d11_sdl_demo.cpp", name = "imgui_win_d11_sdl_demo", libs = [env.module_format_name()])
 
 # Tests
 
-test = env.build_test(sihd_imgui_tests, add_libs = [env.module_format_name()])
+test = env.build_test(sihd_imgui_tests, libs = [env.module_format_name()])
 
 Return('lib')
