@@ -5,7 +5,7 @@ conf = env.module_conf()
 
 srcs = Glob('src/*.cpp')
 
-lib = env.build_lib(srcs, static=True)
+lib = env.build_lib(srcs)
 
 sihd_util_libname = env.module_format_name()
 
