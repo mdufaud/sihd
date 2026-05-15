@@ -130,23 +130,23 @@ def get_progress_bar_function(targets):
     global __node_count
     global __node_count_max
 
-    try:
-        screen = open('/dev/tty', 'w')
-        __node_count = 0
-        __node_count_max = len(targets)
+    screen = sys.stderr
+    if not hasattr(screen, 'isatty') or not screen.isatty():
+        return None
 
-        def progress_function(node):
-            if node not in targets:
-                return
-            global __node_count
-            __node_count += 1
-            if __node_count_max > 0 :
-                screen.write('\r[%3d%%] ' % (__node_count * 100 / __node_count_max))
+    __node_count = 0
+    __node_count_max = len(targets)
 
-        return progress_function
-    except (OSError, IOError) as e:
-        logger.error("won't display progress - reason: " + str(e))
-    return None
+    def progress_function(node):
+        if node not in targets:
+            return
+        global __node_count
+        __node_count += 1
+        if __node_count_max > 0:
+            screen.write('\r[%3d%%] ' % (__node_count * 100 / __node_count_max))
+            screen.flush()
+
+    return progress_function
 
 def build_print_built(binaries, demos, tests):
     for modname, binpaths in binaries.items():

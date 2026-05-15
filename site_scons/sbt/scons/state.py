@@ -35,7 +35,7 @@ class BuildState:
         self.lib_objects = {}
 
         # All source file nodes touched during the build (used for progress bar)
-        self.targets = []
+        self.targets = set()
 
     # ------------------------------------------------------------------
     # Helpers
@@ -48,11 +48,11 @@ class BuildState:
             logger.debug(f"module '{module_name}' registered {gentype}: {path}")
 
     def add_targets(self, src):
-        """Append *src* to the targets list, converting strings to SCons File nodes."""
+        """Add *src* to the targets set, converting strings to SCons File nodes."""
         from SCons.Script import File
         if isinstance(src, str):
-            self.targets.append(File(src))
+            self.targets.add(File(src))
         elif isinstance(src, list):
-            self.targets.extend(src)
+            self.targets.update(File(s) if isinstance(s, str) else s for s in src)
         else:
-            self.targets.append(src)
+            self.targets.add(src)
