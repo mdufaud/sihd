@@ -691,6 +691,12 @@ tree: dep
 	$(QUIET) echo > /dev/null
 endif
 
+ifeq ($(MAKEARG_2), licenses)
+VCPKG_ACTION := licenses
+licenses: dep
+	$(QUIET) echo > /dev/null
+endif
+
 ifeq ($(MAKEARG_2), install)
 VCPKG_ACTION :=
 install: vcpkg_deploy

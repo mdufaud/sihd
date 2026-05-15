@@ -89,6 +89,8 @@ make dep mod COMMA_SEPARATED_MODULES
 make dep platform=win
 # for lua/python bindings
 make dep lua=1 python=1
+# dump installed library licenses (stdout + build/.../vcpkg/licenses.txt)
+make dep licenses
 ```
 
 #### Using MSYS2
