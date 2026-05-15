@@ -164,12 +164,8 @@ def generate_musl_triplet_content(machine: str) -> str:
         f"set(VCPKG_CRT_LINKAGE dynamic)",
         f"set(VCPKG_LIBRARY_LINKAGE dynamic)",
         f"set(VCPKG_CMAKE_SYSTEM_NAME Linux)",
-        # GCC 16+ adds -latomic_asneeded to implicit link libs via its spec file.
-        # The musl-gcc wrapper calls the host GCC, so this spec applies to musl
-        # builds too — but the musl sysroot does not provide libatomic_asneeded.
-        # -fno-link-libatomic suppresses that spec entry (safe on all GCC versions).
-        f'set(CMAKE_C_FLAGS "-fPIC -fno-link-libatomic" CACHE STRING "" FORCE)',
-        f'set(CMAKE_CXX_FLAGS "-fPIC -fno-link-libatomic" CACHE STRING "" FORCE)',
+        f'set(CMAKE_C_FLAGS "-fPIC" CACHE STRING "" FORCE)',
+        f'set(CMAKE_CXX_FLAGS "-fPIC" CACHE STRING "" FORCE)',
     ]
 
     # Inline toolchain: set cross-compiler and sysroot isolation

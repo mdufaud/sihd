@@ -2,11 +2,8 @@ cmake_minimum_required(VERSION 3.0)
 
 set(CMAKE_SYSTEM_NAME Linux)
 
-# Directory where wrappers will be generated (inside the toolchain directory)
-set(WRAPPER_DIR "${CMAKE_CURRENT_LIST_DIR}/generated_wrappers")
-
-set(ZIG_CC "${WRAPPER_DIR}/zig-cc${SCRIPT_EXT}")
-set(ZIG_CXX "${WRAPPER_DIR}/zig-cxx${SCRIPT_EXT}")
+set(ZIG_CC "${CMAKE_CURRENT_LIST_DIR}/wrappers/zig-cc.sh")
+set(ZIG_CXX "${CMAKE_CURRENT_LIST_DIR}/wrappers/zig-cxx.sh")
 
 # --- CMAKE CONFIGURATION ---
 

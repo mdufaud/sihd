@@ -10,6 +10,7 @@ Handles:
 
 import os
 import shutil
+import subprocess
 
 from sbt import architectures
 from sbt import builder
@@ -17,7 +18,66 @@ from sbt import logger
 from sbt.vcpkg import triplets
 
 
-def generate_cmake_cross_toolchain(overlay_dir: str, vcpkg_installed_inc: str, vcpkg_bin_path: str) -> str:
+def _resolve_compiler_wrapper(
+        role: str,
+        overlay_dir: str,
+        sbt_toolchains_path: str,
+        addon_toolchains_path: str | None,
+) -> str | None:
+    """
+    Look up a static compiler wrapper script for the current build context
+    (compiler family, version, libc, arch) by decreasing specificity:
+
+      {family}{version}-{libc}-{arch}-{role}.sh   e.g. gcc16-musl-x86_64-cc.sh
+      {family}{version}-{libc}-{role}.sh           e.g. gcc16-musl-cc.sh
+      {libc}-{arch}-{role}.sh                      e.g. musl-x86_64-cc.sh
+      {libc}-{role}.sh                             e.g. musl-cc.sh
+
+    Compiler family and version come from builder.build_compiler_version
+    (e.g. "gcc-16" → family="gcc", version="16").
+    Addon directory is tried before sbt at each level.
+    Returns the absolute path to the matched script, or None if no match found.
+    """
+    libc = builder.libc or "glibc"
+    arch = builder.build_machine
+
+    # build_compiler_version is e.g. "gcc-16" or "clang-21"; split on first "-"
+    cv = builder.build_compiler_version  # e.g. "gcc-16"
+    if "-" in cv:
+        family, version = cv.split("-", 1)
+    else:
+        family, version = cv, None
+
+    candidates: list[str] = []
+    if family and version:
+        candidates.append(f"{family}{version}-{libc}-{arch}-{role}.sh")
+        candidates.append(f"{family}{version}-{libc}-{role}.sh")
+    candidates.append(f"{libc}-{arch}-{role}.sh")
+    candidates.append(f"{libc}-{role}.sh")
+
+    search_roots: list[str] = []
+    if addon_toolchains_path:
+        search_roots.append(addon_toolchains_path)
+    search_roots.append(sbt_toolchains_path)
+
+    for name in candidates:
+        for root in search_roots:
+            candidate = os.path.join(root, "wrappers", name)
+            if os.path.isfile(candidate):
+                logger.info(f"using compiler wrapper {name!r} for {role}")
+                return candidate
+
+    return None
+
+
+
+def generate_cmake_cross_toolchain(
+        overlay_dir: str,
+        vcpkg_installed_inc: str,
+        vcpkg_bin_path: str,
+        sbt_toolchains_path: str,
+        addon_toolchains_path: str | None = None,
+) -> str:
     """
     Generate a cmake toolchain file for cross-compilation that:
       - includes the original vcpkg Linux toolchain (compiler setup)
@@ -40,7 +100,6 @@ def generate_cmake_cross_toolchain(overlay_dir: str, vcpkg_installed_inc: str, v
     gcc_cmd = f"{gcc_prefix}gcc" if gcc_prefix else None
     sysroot = None
     if gcc_cmd:
-        import subprocess
         try:
             result = subprocess.run(
                 [gcc_cmd, "--print-sysroot"],
@@ -66,8 +125,12 @@ def generate_cmake_cross_toolchain(overlay_dir: str, vcpkg_installed_inc: str, v
     # would otherwise fall back to /bin/cc.
     if gcc_prefix:
         toolchain_lines.append("# Cross-compiler tools (set before linux.cmake so they take precedence)")
-        toolchain_lines.append(f'set(CMAKE_C_COMPILER "{gcc_prefix}gcc")')
-        toolchain_lines.append(f'set(CMAKE_CXX_COMPILER "{gcc_prefix}g++")')
+        c_compiler = _resolve_compiler_wrapper("cc", overlay_dir, sbt_toolchains_path, addon_toolchains_path) \
+            or f"{gcc_prefix}gcc"
+        cxx_compiler = _resolve_compiler_wrapper("cxx", overlay_dir, sbt_toolchains_path, addon_toolchains_path) \
+            or f"{gcc_prefix}g++"
+        toolchain_lines.append(f'set(CMAKE_C_COMPILER "{c_compiler}")')
+        toolchain_lines.append(f'set(CMAKE_CXX_COMPILER "{cxx_compiler}")')
         # Only set optional tools if they actually exist on the system.
         # Musl toolchains (e.g. Arch's musl package) only provide gcc/g++/ar/ranlib
         # and do NOT ship objcopy, strip, nm, ld — the host binutils work fine.
@@ -225,7 +288,7 @@ def build_overlay_triplet_with_flags(app, vcpkg_triplet: str, vcpkg_build_path: 
         # Force gettext-libintl to build from source instead of expecting system headers.
         if builder.libc == "musl":
             lines.append("set(X_VCPKG_FORCE_VCPKG_GETTEXT_LIBINTL ON)")
-        lines.append("")
+            lines.append("")
 
         # Build the include path for vcpkg-installed cross deps so that meson's
         # cc.has_header() checks (e.g. sys/capability.h from libcap) can find them.
@@ -250,7 +313,12 @@ def build_overlay_triplet_with_flags(app, vcpkg_triplet: str, vcpkg_build_path: 
         # only search within the cross sysroot and vcpkg installed dirs.
         # Also sets CMAKE_C_COMPILER/CMAKE_CXX_COMPILER for same-architecture
         # cross-builds (musl) where vcpkg's linux.cmake doesn't auto-detect.
-        cmake_toolchain_path = generate_cmake_cross_toolchain(overlay_dir, vcpkg_installed_inc, vcpkg_bin_path)
+        sbt_toolchains_path = os.path.join(os.path.dirname(sbt_triplet_path), "toolchains")
+        addon_toolchains_path = os.path.join(os.path.dirname(addon_triplet_path), "toolchains") if addon_triplet_path else None
+        cmake_toolchain_path = generate_cmake_cross_toolchain(
+            overlay_dir, vcpkg_installed_inc, vcpkg_bin_path,
+            sbt_toolchains_path, addon_toolchains_path,
+        )
         if cmake_toolchain_path:
             cmake_toolchain_path = cmake_toolchain_path.replace("\\", "/")
             lines.append(f'set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE "{cmake_toolchain_path}")')
