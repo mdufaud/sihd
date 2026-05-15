@@ -56,7 +56,7 @@ void for_each(std::string_view data, std::function<bool(Json)> callback)
     {
         std::string_view raw;
         if (elem.raw_json().get(raw) != simdjson::SUCCESS)
-            return;
+            continue;
 
         if (!callback(Json::parse(raw, false)))
             return;

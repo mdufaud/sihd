@@ -1,5 +1,5 @@
-#ifndef __SIHD_JSON_ONDEMAND_HPP__
-#define __SIHD_JSON_ONDEMAND_HPP__
+#ifndef __SIHD_JSON_UTILS_HPP__
+#define __SIHD_JSON_UTILS_HPP__
 
 #include <functional>
 #include <optional>
@@ -21,4 +21,4 @@ void for_each(std::string_view data, std::function<bool(Json)> callback);
 
 } // namespace sihd::json::utils
 
-#endif
+#endif // __SIHD_JSON_UTILS_HPP__

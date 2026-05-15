@@ -509,10 +509,10 @@ Json Json::parse(std::string_view str)
 
 Json Json::parse(std::string_view str, bool allow_exceptions)
 {
-    return parse(str.data(), str.data() + str.size(), nullptr, allow_exceptions);
+    return parse(str.data(), str.data() + str.size(), allow_exceptions);
 }
 
-Json Json::parse(const char *begin, const char *end, void * /*callback*/, bool allow_exceptions)
+Json Json::parse(const char *begin, const char *end, bool allow_exceptions)
 {
     try
     {

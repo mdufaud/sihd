@@ -93,7 +93,7 @@ class Json
 
         static Json parse(std::string_view str);
         static Json parse(std::string_view str, bool allow_exceptions);
-        static Json parse(const char *begin, const char *end, void *callback, bool allow_exceptions);
+        static Json parse(const char *begin, const char *end, bool allow_exceptions);
 
         // serialization
 

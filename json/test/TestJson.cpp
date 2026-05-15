@@ -178,7 +178,7 @@ TEST_F(TestJson, test_json_parse_error)
 TEST_F(TestJson, test_json_parse_pointer_range)
 {
     std::string data = R"({"hello": "world"})";
-    auto j = Json::parse(data.data(), data.data() + data.size(), nullptr, false);
+    auto j = Json::parse(data.data(), data.data() + data.size(), false);
     EXPECT_TRUE(j.is_object());
     EXPECT_EQ(j["hello"].get<std::string>(), "world");
 }
