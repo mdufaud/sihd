@@ -107,6 +107,7 @@ class Array: public IArray,
         {
             if (&other != this)
             {
+                this->delete_buffer();
                 _buf_ptr = other._buf_ptr;
                 _capacity = other._capacity;
                 _size = other._size;
