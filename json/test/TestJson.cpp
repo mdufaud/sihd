@@ -193,6 +193,86 @@ TEST_F(TestJson, test_json_dump)
     EXPECT_NE(pretty.find('\n'), std::string::npos);
 }
 
+TEST_F(TestJson, test_json_dump_parsed_indent)
+{
+    auto j = Json::parse(R"({"a": 1, "b": [2, 3]})");
+
+    EXPECT_EQ(j.dump(), R"({"a":1,"b":[2,3]})");
+
+    EXPECT_EQ(j.dump(2), "{\n"
+                          "  \"a\": 1,\n"
+                          "  \"b\": [\n"
+                          "    2,\n"
+                          "    3\n"
+                          "  ]\n"
+                          "}");
+
+    EXPECT_EQ(j.dump(4), "{\n"
+                          "    \"a\": 1,\n"
+                          "    \"b\": [\n"
+                          "        2,\n"
+                          "        3\n"
+                          "    ]\n"
+                          "}");
+}
+
+TEST_F(TestJson, test_json_contains)
+{
+    Json j = {{"key", 42}, {"null_key", nullptr}};
+    EXPECT_TRUE(j.contains("key"));
+    EXPECT_TRUE(j.contains("null_key"));
+    EXPECT_FALSE(j.contains("missing"));
+
+    EXPECT_FALSE(Json(42).contains("x"));
+    EXPECT_FALSE(Json().contains("x"));
+
+    auto parsed = Json::parse(R"({"a": 1, "b": null})");
+    EXPECT_TRUE(parsed.contains("a"));
+    EXPECT_TRUE(parsed.contains("b"));
+    EXPECT_FALSE(parsed.contains("c"));
+}
+
+TEST_F(TestJson, test_json_get_or)
+{
+    Json j = {{"name", "alice"}, {"age", 30}};
+
+    EXPECT_EQ(j["name"].get_or<std::string>("default"), "alice");
+    EXPECT_EQ(j["missing"].get_or<std::string>("default"), "default");
+    EXPECT_EQ(j["age"].get_or<int32_t>(0), 30);
+    EXPECT_EQ(j["missing"].get_or<int32_t>(99), 99);
+
+    EXPECT_EQ(j["name"].get_or<int32_t>(42), 42);
+}
+
+TEST_F(TestJson, test_json_equality)
+{
+    EXPECT_EQ(Json(), Json(nullptr));
+    EXPECT_EQ(Json(true), Json(true));
+    EXPECT_EQ(Json(42), Json(42));
+    EXPECT_EQ(Json("hello"), Json("hello"));
+
+    EXPECT_FALSE(Json(true) == Json(false));
+    EXPECT_FALSE(Json(1) == Json(2));
+    EXPECT_FALSE(Json("a") == Json("b"));
+    EXPECT_FALSE(Json(42) == Json("42"));
+
+    Json arr1 = {1, 2, 3};
+    Json arr2 = {1, 2, 3};
+    Json arr3 = {1, 2, 4};
+    EXPECT_EQ(arr1, arr2);
+    EXPECT_FALSE(arr1 == arr3);
+
+    Json obj1 = {{"a", 1}, {"b", 2}};
+    Json obj2 = {{"a", 1}, {"b", 2}};
+    Json obj3 = {{"a", 1}, {"b", 3}};
+    EXPECT_EQ(obj1, obj2);
+    EXPECT_FALSE(obj1 == obj3);
+
+    auto parsed = Json::parse(R"({"x": [1, 2]})");
+    Json built = {{"x", {1, 2}}};
+    EXPECT_EQ(parsed, built);
+}
+
 TEST_F(TestJson, test_json_iteration_object)
 {
     Json j = {{"a", 1}, {"b", 2}, {"c", 3}};

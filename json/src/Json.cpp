@@ -350,6 +350,25 @@ bool Json::empty() const
     return false;
 }
 
+bool Json::contains(std::string_view key) const
+{
+    if (_dom_holder != nullptr)
+    {
+        if (_dom_element.type() != simdjson::dom::element_type::OBJECT)
+            return false;
+        simdjson::dom::element found;
+        return simdjson::dom::object(_dom_element).at_key(key).get(found) == simdjson::SUCCESS;
+    }
+    if (!is_object())
+        return false;
+    for (const auto & [k, v] : *std::get<ObjectPtr>(_value))
+    {
+        if (k == key)
+            return true;
+    }
+    return false;
+}
+
 // get specializations — read from DOM directly when available
 
 template <>
@@ -533,15 +552,72 @@ Json Json::parse(const char *begin, const char *end, bool allow_exceptions)
     }
 }
 
-// serialization — use simdjson directly when DOM-backed
+// comparison
+
+bool Json::operator==(const Json & other) const
+{
+    Type t = type();
+    if (t != other.type())
+        return false;
+    switch (t)
+    {
+        case Type::Null:
+        case Type::Discarded:
+            return true;
+        case Type::Bool:
+            return get<bool>() == other.get<bool>();
+        case Type::Int:
+            return get<int64_t>() == other.get<int64_t>();
+        case Type::Uint:
+            return get<uint64_t>() == other.get<uint64_t>();
+        case Type::Float:
+            return get<double>() == other.get<double>();
+        case Type::String:
+            return get<std::string>() == other.get<std::string>();
+        case Type::Array:
+        {
+            if (size() != other.size())
+                return false;
+            auto it_a = begin();
+            auto it_b = other.begin();
+            for (; it_a != end(); ++it_a, ++it_b)
+            {
+                if (!(*it_a == *it_b))
+                    return false;
+            }
+            return true;
+        }
+        case Type::Object:
+        {
+            if (size() != other.size())
+                return false;
+            auto it_a = begin();
+            auto it_b = other.begin();
+            for (; it_a != end(); ++it_a, ++it_b)
+            {
+                if (it_a.key() != it_b.key() || !(*it_a == *it_b))
+                    return false;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+// serialization
 
 std::string Json::dump(int indent) const
 {
     if (_dom_holder != nullptr)
     {
-        if (indent >= 0)
-            return simdjson::prettify(_dom_element);
-        return simdjson::minify(_dom_element);
+        if (indent < 0)
+            return simdjson::minify(_dom_element);
+        simdjson::builder::string_builder sb;
+        _dump_dom_to_builder(sb, _dom_element, indent, 0);
+        std::string_view view;
+        if (sb.view().get(view))
+            return {};
+        return std::string(view);
     }
     simdjson::builder::string_builder sb;
     _dump_to_builder(sb, indent, 0);
@@ -560,12 +636,77 @@ void Json::_write_indent(simdjson::builder::string_builder & sb, int indent, int
         sb.append(' ');
 }
 
+void Json::_dump_dom_to_builder(simdjson::builder::string_builder & sb,
+                                simdjson::dom::element elem,
+                                int indent,
+                                int depth)
+{
+    switch (elem.type())
+    {
+        case simdjson::dom::element_type::NULL_VALUE:
+            sb.append_null();
+            break;
+        case simdjson::dom::element_type::BOOL:
+            sb.append(bool(elem));
+            break;
+        case simdjson::dom::element_type::INT64:
+            sb.append(int64_t(elem));
+            break;
+        case simdjson::dom::element_type::UINT64:
+            sb.append(uint64_t(elem));
+            break;
+        case simdjson::dom::element_type::DOUBLE:
+            sb.append(double(elem));
+            break;
+        case simdjson::dom::element_type::STRING:
+            sb.escape_and_append_with_quotes(std::string_view(elem));
+            break;
+        case simdjson::dom::element_type::ARRAY:
+        {
+            simdjson::dom::array arr(elem);
+            sb.start_array();
+            size_t i = 0;
+            for (simdjson::dom::element child : arr)
+            {
+                if (i > 0)
+                    sb.append_comma();
+                _write_indent(sb, indent, depth + 1);
+                _dump_dom_to_builder(sb, child, indent, depth + 1);
+                ++i;
+            }
+            _write_indent(sb, indent, depth);
+            sb.end_array();
+            break;
+        }
+        case simdjson::dom::element_type::OBJECT:
+        {
+            simdjson::dom::object obj(elem);
+            sb.start_object();
+            size_t i = 0;
+            for (auto field : obj)
+            {
+                if (i > 0)
+                    sb.append_comma();
+                _write_indent(sb, indent, depth + 1);
+                sb.escape_and_append_with_quotes(field.key);
+                sb.append_colon();
+                if (indent >= 0)
+                    sb.append(' ');
+                _dump_dom_to_builder(sb, field.value, indent, depth + 1);
+                ++i;
+            }
+            _write_indent(sb, indent, depth);
+            sb.end_object();
+            break;
+        }
+    }
+}
+
 void Json::_dump_to_builder(simdjson::builder::string_builder & sb, int indent, int depth) const
 {
     if (_dom_holder != nullptr)
     {
-        std::string s = simdjson::minify(_dom_element);
-        sb.append_raw(std::string_view(s));
+        _dump_dom_to_builder(sb, _dom_element, indent, depth);
         return;
     }
 

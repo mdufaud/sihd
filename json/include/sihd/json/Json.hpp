@@ -2,6 +2,7 @@
 #define __SIHD_JSON_JSON_HPP__
 
 #include <cstdint>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -83,11 +84,25 @@ class Json
 
         size_t size() const;
         bool empty() const;
+        bool contains(std::string_view key) const;
 
         // value extraction
 
         template <typename T>
         T get() const;
+
+        template <typename T>
+        T get_or(T default_value) const
+        {
+            try
+            {
+                return get<T>();
+            }
+            catch (const std::runtime_error &)
+            {
+                return default_value;
+            }
+        }
 
         // parsing
 
@@ -99,12 +114,7 @@ class Json
 
         std::string dump(int indent = -1) const;
 
-        // DOM backing: kept after parse() for lazy access via simdjson
-        struct DomHolder
-        {
-                simdjson::dom::parser parser;
-                simdjson::padded_string source;
-        };
+        bool operator==(const Json & other) const;
 
         // iteration (defined after Json is complete to allow inline Json member)
 
@@ -116,17 +126,27 @@ class Json
     private:
         friend class iterator;
 
+        struct DomHolder
+        {
+                simdjson::dom::parser parser;
+                simdjson::padded_string source;
+        };
+
         struct DiscardedTag
         {
         };
         Json(DiscardedTag);
 
-        mutable Value _value;
+        Value _value;
         bool _discarded;
         std::shared_ptr<DomHolder> _dom_holder;
         simdjson::dom::element _dom_element {};
 
         void _dump_to_builder(simdjson::builder::string_builder & sb, int indent, int depth) const;
+        static void _dump_dom_to_builder(simdjson::builder::string_builder & sb,
+                                         simdjson::dom::element elem,
+                                         int indent,
+                                         int depth);
         static void _write_indent(simdjson::builder::string_builder & sb, int indent, int depth);
 };
 
@@ -135,6 +155,12 @@ class Json
 class Json::iterator
 {
     public:
+        using iterator_category = std::input_iterator_tag;
+        using value_type = Json;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const Json *;
+        using reference = const Json &;
+
         iterator() = default;
 
         const std::string & key() const;
