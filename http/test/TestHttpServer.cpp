@@ -227,11 +227,13 @@ TEST_F(TestHttpServer, test_httpserver_auto)
     std::string tmpfile_path = fs::combine(tmpdir.path(), "test_file.txt");
     fs::write(tmpfile_path, "hello put world");
 
+    CurlOptions options;
+    options.proxy = "";
     // launch all requests async
-    auto get_future = sihd::http::async_get("localhost:3000/web/some_get");
-    auto post_future = sihd::http::async_post("localhost:3000/web/some_post", "hello world");
-    auto put_future = sihd::http::async_put("localhost:3000/web/some_put", tmpfile_path);
-    auto del_future = sihd::http::async_del("localhost:3000/web/some_delete");
+    auto get_future = sihd::http::async_get("localhost:3000/web/some_get", options);
+    auto post_future = sihd::http::async_post("localhost:3000/web/some_post", "hello world", options);
+    auto put_future = sihd::http::async_put("localhost:3000/web/some_put", tmpfile_path, options);
+    auto del_future = sihd::http::async_del("localhost:3000/web/some_delete", options);
 
     // wait all
     auto get_resp = get_future.get();
