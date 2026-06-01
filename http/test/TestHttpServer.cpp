@@ -220,8 +220,7 @@ TEST_F(TestHttpServer, test_httpserver_auto)
         return true;
     });
     ASSERT_TRUE(worker.start_sync_worker("server-thread"));
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ASSERT_TRUE(server.wait_ready(std::chrono::milliseconds(500)));
 
     TmpDir tmpdir;
     std::string tmpfile_path = fs::combine(tmpdir.path(), "test_file.txt");
