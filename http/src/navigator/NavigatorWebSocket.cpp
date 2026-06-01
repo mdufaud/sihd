@@ -132,6 +132,33 @@ int Navigator::Impl::ws_lws_callback(struct lws *wsi, enum lws_callback_reasons 
     return 0;
 }
 
+std::string Navigator::Impl::ws_proxy_address()
+{
+    if (proxy.disabled)
+        return "";
+
+    auto selected = select_proxy();
+    if (!selected.has_value())
+        return "";
+
+    const auto & [pu, pt] = *selected;
+    if (pt != ProxyType::Http)
+    {
+        SIHD_LOG(warning, "Navigator: WebSocket only supports HTTP proxy, ignoring proxy");
+        return "";
+    }
+
+    std::string host = pu;
+    if (host.rfind("http://", 0) == 0)
+        host.erase(0, 7);
+    else if (host.rfind("https://", 0) == 0)
+        host.erase(0, 8);
+
+    if (!proxy.user.empty() && !proxy.pass.empty())
+        return proxy.user + ":" + proxy.pass + "@" + host;
+    return host;
+}
+
 bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view protocol)
 {
     Url parsed(url);
@@ -150,6 +177,13 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
     ctx_info.uid = -1;
     if (scheme_is_ssl(parsed.scheme))
         ctx_info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+
+    // Apply Navigator proxy config: lws otherwise silently uses the http_proxy env var.
+    // A non-null http_proxy_address disables that env-var fallback ("" means no proxy).
+    std::string ws_proxy_addr = ws_proxy_address();
+    if (proxy.disabled || !ws_proxy_addr.empty())
+        ctx_info.http_proxy_address = ws_proxy_addr.c_str();
+    // else: leave http_proxy_address null so lws uses the env proxy
 
     ws.context = lws_create_context(&ctx_info);
     if (ws.context == nullptr)

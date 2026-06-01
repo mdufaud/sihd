@@ -136,17 +136,8 @@ void Navigator::Impl::reset_handle_for_request()
     apply_proxy();
 }
 
-void Navigator::Impl::apply_proxy()
+std::optional<std::pair<std::string, ProxyType>> Navigator::Impl::select_proxy()
 {
-    if (proxy.disabled)
-    {
-        curl_easy_setopt(curl_handle, CURLOPT_PROXY, "");
-        return;
-    }
-
-    std::string pu;
-    ProxyType pt = ProxyType::Http;
-
     if (proxy.rotation != ProxyRotation::None && !proxy.pool.empty())
     {
         size_t idx = 0;
@@ -160,29 +151,38 @@ void Navigator::Impl::apply_proxy()
             std::uniform_int_distribution<size_t> dist(0, proxy.pool.size() - 1);
             idx = dist(rate.rng);
         }
-        pu = proxy.pool[idx].url;
-        pt = proxy.pool[idx].type;
+        return std::make_pair(proxy.pool[idx].url, proxy.pool[idx].type);
     }
-    else if (!proxy.url.empty())
+    if (!proxy.url.empty())
+        return std::make_pair(proxy.url, proxy.type);
+    return std::nullopt;
+}
+
+void Navigator::Impl::apply_proxy()
+{
+    if (proxy.disabled)
     {
-        pu = proxy.url;
-        pt = proxy.type;
+        curl_easy_setopt(curl_handle, CURLOPT_PROXY, "");
+        return;
     }
 
-    if (!pu.empty())
+    auto selected = select_proxy();
+    if (!selected.has_value())
+        return;
+
+    const auto & [pu, pt] = *selected;
+
+    curl_easy_setopt(curl_handle, CURLOPT_PROXY, pu.c_str());
+    long curl_proxy_type = CURLPROXY_HTTP;
+    if (pt == ProxyType::Socks4)
+        curl_proxy_type = CURLPROXY_SOCKS4;
+    else if (pt == ProxyType::Socks5)
+        curl_proxy_type = CURLPROXY_SOCKS5;
+    curl_easy_setopt(curl_handle, CURLOPT_PROXYTYPE, curl_proxy_type);
+    if (!proxy.user.empty() && !proxy.pass.empty())
     {
-        curl_easy_setopt(curl_handle, CURLOPT_PROXY, pu.c_str());
-        long curl_proxy_type = CURLPROXY_HTTP;
-        if (pt == ProxyType::Socks4)
-            curl_proxy_type = CURLPROXY_SOCKS4;
-        else if (pt == ProxyType::Socks5)
-            curl_proxy_type = CURLPROXY_SOCKS5;
-        curl_easy_setopt(curl_handle, CURLOPT_PROXYTYPE, curl_proxy_type);
-        if (!proxy.user.empty() && !proxy.pass.empty())
-        {
-            curl_easy_setopt(curl_handle, CURLOPT_PROXYUSERNAME, proxy.user.c_str());
-            curl_easy_setopt(curl_handle, CURLOPT_PROXYPASSWORD, proxy.pass.c_str());
-        }
+        curl_easy_setopt(curl_handle, CURLOPT_PROXYUSERNAME, proxy.user.c_str());
+        curl_easy_setopt(curl_handle, CURLOPT_PROXYPASSWORD, proxy.pass.c_str());
     }
 }
 

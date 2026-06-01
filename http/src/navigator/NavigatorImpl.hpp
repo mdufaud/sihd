@@ -133,6 +133,7 @@ struct Navigator::Impl
 
         std::vector<std::string> extract_raw_cookies();
         void reset_handle_for_request();
+        std::optional<std::pair<std::string, ProxyType>> select_proxy();
         void apply_proxy();
         curl_slist *build_headers();
         void configure_handle(const std::string & url,
@@ -153,6 +154,7 @@ struct Navigator::Impl
 
         // WebSocket methods (NavigatorWebSocket.cpp)
         static int ws_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
+        std::string ws_proxy_address();
         bool ws_do_connect(std::string_view url, std::string_view protocol);
         void ws_disconnect();
         bool ws_queue_message(const void *data, size_t len, bool binary);

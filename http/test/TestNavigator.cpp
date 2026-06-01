@@ -432,6 +432,7 @@ TEST_F(TestNavigator, test_navigator_ws_send_receive)
 
     Navigator nav;
     nav.clear_proxy();
+
     std::optional<std::string> ws_reply;
     std::mutex reply_mutex;
     std::condition_variable reply_cv;
@@ -581,6 +582,67 @@ TEST_F(TestNavigator, test_navigator_interceptor_cancel)
 
     auto resp = nav.get("localhost:3001/api/hello");
     EXPECT_FALSE(resp.has_value());
+}
+
+TEST_F(TestNavigator, test_navigator_ws_proxy_auth)
+{
+    if constexpr (sihd::util::build::is_run_with_tsan)
+        GTEST_SKIP_("has weird interaction with lws and tsan");
+
+    SimpleConnectProxy proxy("testuser", "testpass");
+    ASSERT_TRUE(proxy.start(3099));
+
+    SimpleWsServer server;
+    server.set_root_dir("test/resources/mount_point");
+    server.set_port(3013);
+    Worker worker([&server] {
+        server.start();
+        return true;
+    });
+    ASSERT_TRUE(worker.start_sync_worker("ws-proxy-server"));
+    ASSERT_TRUE(server.wait_ready(std::chrono::milliseconds(500)));
+
+    const auto run_ws = [](const std::string & user, const std::string & pass) {
+        Navigator nav;
+        nav.set_proxy("localhost:3099");
+        nav.set_proxy_auth(user, pass);
+
+        std::optional<std::string> reply;
+        std::mutex m;
+        std::condition_variable cv;
+        nav.on_ws_text = [&](std::string_view msg) {
+            std::lock_guard lock(m);
+            reply = std::string(msg);
+            cv.notify_all();
+        };
+        bool connected = nav.ws_connect("ws://localhost:3013", "proto-two");
+        if (connected)
+        {
+            nav.ws_send("hello from navigator");
+            std::unique_lock lock(m);
+            cv.wait_for(lock, std::chrono::seconds(2), [&] { return reply.has_value(); });
+            nav.ws_close();
+        }
+        return std::make_pair(connected, reply);
+    };
+
+    // correct credentials: proxy tunnels, echo works
+    auto [ok_connected, ok_reply] = run_ws("testuser", "testpass");
+    EXPECT_TRUE(ok_connected);
+    ASSERT_TRUE(ok_reply.has_value());
+    EXPECT_EQ(*ok_reply, "hello world");
+
+    // wrong credentials: proxy returns 407, connection must fail (proves proxy is actually used)
+    auto [bad_connected, bad_reply] = run_ws("wrong", "creds");
+    EXPECT_FALSE(bad_connected);
+    EXPECT_FALSE(bad_reply.has_value());
+
+    EXPECT_GE(proxy.n_200, 1);
+    EXPECT_GE(proxy.n_407, 1);
+
+    server.set_service_wait_stop(true);
+    server.stop();
+    proxy.stop();
 }
 
 } // namespace test
