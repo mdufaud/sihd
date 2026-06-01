@@ -2,7 +2,7 @@
 #define __SIHD_SYS_LOGGERSYSTEM_HPP__
 
 #include <sihd/util/ALogger.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <syslog.h>

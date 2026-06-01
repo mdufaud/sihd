@@ -1,15 +1,14 @@
 #include <csignal>
 
-#include <CLI/CLI.hpp>
-
+#include <sihd/net/Pinger.hpp>
+#include <sihd/net/dns.hpp>
 #include <sihd/sys/SigWatcher.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/macro.hpp>
 
-#include <sihd/net/Pinger.hpp>
-#include <sihd/net/dns.hpp>
+#include <CLI/CLI.hpp>
 
 using namespace sihd::util;
 using namespace sihd::sys;
@@ -42,7 +41,7 @@ int main(int argc, char **argv)
         SIHD_LOG(notice,
                  "For capabilities, execute linux command: 'sudo setcap cap_net_raw=pe {}'\n",
                  fs::executable_path());
-        if (platform::is_windows)
+        if (build::is_windows)
             time::sleep(5);
         return EXIT_FAILURE;
     }
@@ -103,7 +102,7 @@ int main(int argc, char **argv)
     else
         SIHD_LOG(error, "Cannot ping: {}", host);
 
-    if constexpr (platform::is_windows)
+    if constexpr (build::is_windows)
         time::sleep(5);
 
     return success ? EXIT_SUCCESS : EXIT_FAILURE;

@@ -1,3 +1,5 @@
+#include <sihd/util/build.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <mutex>
@@ -12,7 +14,6 @@
 #include <sihd/util/Stat.hpp>
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/Task.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
 
@@ -302,10 +303,14 @@ ResolutionResult find_resolution(time_t run_duration_ns)
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv)
 {
-    if (term::is_interactive() && !sihd::util::platform::is_emscripten)
+#if defined(__SIHD_EMSCRIPTEN__)
+    LoggerManager::stream(stdout);
+#else
+    if (term::is_interactive())
         LoggerManager::console();
     else
-        LoggerManager::stream(sihd::util::platform::is_emscripten ? stdout : stderr);
+        LoggerManager::stream(stderr);
+#endif
 
     constexpr time_t phase_duration = time::milli(500);
 

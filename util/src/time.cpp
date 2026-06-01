@@ -5,7 +5,7 @@
 #include <mutex>
 #include <thread>
 
-#include <sihd/util/platform.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/time.hpp>
 
 #if !defined(__SIHD_WINDOWS__)

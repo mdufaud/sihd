@@ -293,13 +293,13 @@ endif # module
 
 .PHONY: test # Build modules, tests and runs tests ([comma_separated_modules|all|ls] [filter] [repeat=x])
 .PHONY: itest  nointeract_test # Build and run tests with stdin closed
-.PHONY: gtest  gdb_test # Build and run tests with gdb debugger
+.PHONY: gdbtest  gdb_test # Build and run tests with gdb debugger
 
-.PHONY: stest  san_test # Build and run tests with address sanitizer and runs tests
-.PHONY: istest nointeract_san_test # Build and run tests with address sanitizer and runs tests
+.PHONY: asantest  asan_test # Build and run tests with address sanitizer and runs tests
+.PHONY: iasantest nointeract_san_test # Build and run tests with address sanitizer and runs tests
 
-.PHONY: utest  ubsan_test # Build and run tests with undefined behavior sanitizer
-.PHONY: iutest nointeract_ubsan_test # Build and run tests with undefined behavior sanitizer (non-interactive)
+.PHONY: ubsantest  ubsan_test # Build and run tests with undefined behavior sanitizer
+.PHONY: iubsantest nointeract_ubsan_test # Build and run tests with undefined behavior sanitizer (non-interactive)
 
 .PHONY: tsantest  tsan_test # Build and run tests with thread sanitizer
 .PHONY: itsantest nointeract_tsan_test # Build and run tests with thread sanitizer (non-interactive)
@@ -307,19 +307,19 @@ endif # module
 .PHONY: lsantest  lsan_test # Build and run tests with leak sanitizer
 .PHONY: ilsantest nointeract_lsan_test # Build and run tests with leak sanitizer (non-interactive)
 
-.PHONY: mtest  msan_test # Build and run tests with memory sanitizer (clang only)
-.PHONY: imtest nointeract_msan_test # Build and run tests with memory sanitizer (non-interactive)
+.PHONY: msantest  msan_test # Build and run tests with memory sanitizer (clang only)
+.PHONY: imsantest nointeract_msan_test # Build and run tests with memory sanitizer (non-interactive)
 
-.PHONY: hwtest  hwasan_test # Build and run tests with hwaddress sanitizer (arm64 only)
-.PHONY: ihwtest nointeract_hwasan_test # Build and run tests with hwaddress sanitizer (non-interactive)
+.PHONY: hwasantest  hwasan_test # Build and run tests with hwaddress sanitizer (arm64 only)
+.PHONY: ihwasantest nointeract_hwasan_test # Build and run tests with hwaddress sanitizer (non-interactive)
 
 .PHONY: covtest coverage_test # Build and run tests with coverage and emit coverage.xml (cobertura)
 
-.PHONY: vtest  valgrind_test # Build and run tests with valgrind debugger
-.PHONY: ivtest nointeract_valgrind_test # Build and run tests with valgrind debugger (non-interactive)
+.PHONY: valtest  valgrind_test # Build and run tests with valgrind debugger
+.PHONY: ivaltest nointeract_valgrind_test # Build and run tests with valgrind debugger (non-interactive)
 
-.PHONY: ltest  valgrind_leak_test # Build and run tests with valgrind leak checking debugger
-.PHONY: iltest nointeract_valgrind_leak_test # Build and run tests with valgrind leak checking debugger (non-interactive)
+.PHONY: lvaltest  valgrind_leak_test # Build and run tests with valgrind leak checking debugger
+.PHONY: ilvaltest nointeract_valgrind_leak_test # Build and run tests with valgrind leak checking debugger (non-interactive)
 
 .PHONY: ttest  strace_test # Build and run tests with strace
 .PHONY: ittest nointeract_strace_test # Build and run tests with strace (non-interactive)
@@ -359,7 +359,7 @@ endif
 ifeq ($(MAKEARG_2),ls)
 ifeq ($(TEST_NAME_FILTER), )
 	TEST_ACTION := list
-	MODULES_NAME :=
+	MODULES_NAME := 
 endif
 endif
 
@@ -405,27 +405,27 @@ itest: nointeract_test
 valgrind_test: DEBUGGER_ARGS = --trace-children=no --track-origins=no --show-leak-kinds=definite
 valgrind_test: DEBUGGER = valgrind
 valgrind_test: test
-vtest: valgrind_test
+valtest: valgrind_test
 
 valgrind_leak_test: DEBUGGER_ARGS = --leak-check=full --show-leak-kinds=all --trace-children=no --track-origins=yes
 valgrind_leak_test: DEBUGGER = valgrind
 valgrind_leak_test: test
-ltest: valgrind_leak_test
+lvaltest: valgrind_leak_test
 
 gdb_test: DEBUGGER_ARGS = --args
 gdb_test: DEBUGGER = gdb
 gdb_test: test
-gtest: gdb_test
+gdbtest: gdb_test
 
-san_test: ASAN_OPTIONS="detect_leaks=1:halt_on_error=0:strict_init_order=1:detect_odr_violation=1:detect_stack_use_after_return=1:detect_container_overflow=1:alloc_dealloc_mismatch=1:dectect_invalid_pointers_pairs=2:verbosity=0:atexit=1:check_initialization_order=1"
-san_test: asan = 1
-san_test: test
-stest: san_test
+asan_test: ASAN_OPTIONS="detect_leaks=1:halt_on_error=0:strict_init_order=1:detect_odr_violation=1:detect_stack_use_after_return=1:detect_container_overflow=1:alloc_dealloc_mismatch=1:dectect_invalid_pointers_pairs=2:verbosity=0:atexit=1:check_initialization_order=1"
+asan_test: asan = 1
+asan_test: test
+asantest: asan_test
 
 ubsan_test: UBSAN_OPTIONS="print_stacktrace=1:halt_on_error=0:report_error_type=1"
 ubsan_test: ubsan = 1
 ubsan_test: test
-utest: ubsan_test
+ubsantest: ubsan_test
 
 tsan_test: TSAN_OPTIONS="halt_on_error=0:second_deadlock_stack=1:history_size=7"
 tsan_test: tsan = 1
@@ -440,11 +440,11 @@ lsantest: lsan_test
 msan_test: MSAN_OPTIONS="halt_on_error=0:print_stats=1"
 msan_test: msan = 1
 msan_test: test
-mtest: msan_test
+msantest: msan_test
 
 hwasan_test: hwasan = 1
 hwasan_test: test
-hwtest: hwasan_test
+hwasantest: hwasan_test
 
 # Coverage: build with --coverage instrumentation, run tests, then run gcovr.
 # The recipe runs after the 'test' prerequisite has executed, so .gcda files exist.
@@ -470,12 +470,12 @@ endef
 $(eval $(call mk_nointeract_debug_test,valgrind_test,ivtest))
 $(eval $(call mk_nointeract_debug_test,valgrind_leak_test,iltest))
 $(eval $(call mk_nointeract_debug_test,strace_test,ittest))
-$(eval $(call mk_nointeract_debug_test,san_test,istest))
-$(eval $(call mk_nointeract_debug_test,ubsan_test,iutest))
+$(eval $(call mk_nointeract_debug_test,asan_test,iasantest))
+$(eval $(call mk_nointeract_debug_test,ubsan_test,iubsantest))
 $(eval $(call mk_nointeract_debug_test,tsan_test,itsantest))
 $(eval $(call mk_nointeract_debug_test,lsan_test,ilsantest))
-$(eval $(call mk_nointeract_debug_test,msan_test,imtest))
-$(eval $(call mk_nointeract_debug_test,hwasan_test,ihwtest))
+$(eval $(call mk_nointeract_debug_test,msan_test,imsantest))
+$(eval $(call mk_nointeract_debug_test,hwasan_test,ihwasantest))
 
 $(MODULES_NAME):
 	$(QUIET) echo > /dev/null

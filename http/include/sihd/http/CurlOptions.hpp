@@ -24,6 +24,7 @@ struct CurlOptions
         bool verbose = false;
         bool follow_location = false;
         long timeout_s = 30;
+        long connect_timeout_s = 10;
         bool ssl_verify_peer = false;
         bool ssl_verify_host = false;
         std::map<std::string, std::string> parameters = {};
@@ -32,6 +33,13 @@ struct CurlOptions
         std::string password = {};
         std::string token = {};
         std::string user_agent = {};
+
+        // nullopt: use environment proxy (default curl behavior)
+        // empty string: disable any proxy (overrides environment)
+        // non-empty: use given proxy url
+        std::optional<std::string> proxy = {};
+        std::string proxy_username = {};
+        std::string proxy_password = {};
 
         std::optional<CurlFileOptions> file = {};
         std::map<std::string, std::string> form_parameters = {};

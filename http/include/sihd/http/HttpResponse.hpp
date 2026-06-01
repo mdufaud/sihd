@@ -2,6 +2,7 @@
 #define __SIHD_HTTP_HTTPRESPONSE_HPP__
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -21,7 +22,12 @@ class HttpResponse
         using StreamProvider = std::function<bool(sihd::util::ArrByte & chunk)>;
 
         HttpResponse(Mime *mimes = nullptr);
+        HttpResponse(HttpResponse &&) = default;
+        HttpResponse & operator=(HttpResponse &&) = default;
         virtual ~HttpResponse();
+
+        static std::optional<HttpResponse> from_string(std::string_view raw);
+        std::string to_string() const;
 
         void set_status(uint32_t status);
 
@@ -39,7 +45,7 @@ class HttpResponse
         bool is_streaming() const { return _stream_provider != nullptr; }
         StreamProvider & stream_provider() { return _stream_provider; }
 
-        uint32_t status() { return _status; }
+        uint32_t status() const { return _status; }
         HttpHeader & http_header() { return _http_header; }
         const HttpHeader & http_header() const { return _http_header; }
         const std::vector<std::string> & set_cookie_headers() const { return _cookies; }

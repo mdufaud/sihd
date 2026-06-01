@@ -14,7 +14,7 @@
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <direct.h> // _mkdir _stat

@@ -1,43 +1,13 @@
-#include <sihd/util/Logger.hpp>
-
-#include <sihd/http/NavigatorResponse.hpp>
+#include <sihd/http/navigator/NavigatorResponse.hpp>
 
 namespace sihd::http
 {
 
-SIHD_LOGGER;
-
 NavigatorResponse::NavigatorResponse() = default;
 
-NavigatorResponse::NavigatorResponse(HttpResponse && response): _response(std::move(response)) {}
+NavigatorResponse::NavigatorResponse(HttpResponse && response): HttpResponse(std::move(response)) {}
 
 NavigatorResponse::~NavigatorResponse() = default;
-
-uint32_t NavigatorResponse::status() const
-{
-    // const_cast needed because HttpResponse::status() is not const
-    return const_cast<HttpResponse &>(_response).status();
-}
-
-const sihd::util::ArrByte & NavigatorResponse::content() const
-{
-    return _response.content();
-}
-
-const HttpHeader & NavigatorResponse::http_header() const
-{
-    return _response.http_header();
-}
-
-HttpResponse & NavigatorResponse::response()
-{
-    return _response;
-}
-
-const HttpResponse & NavigatorResponse::response() const
-{
-    return _response;
-}
 
 const std::map<std::string, std::string> & NavigatorResponse::cookies() const
 {
@@ -67,6 +37,16 @@ void NavigatorResponse::set_redirect_history(std::vector<std::string> && history
 void NavigatorResponse::set_final_url(std::string && url)
 {
     _final_url = std::move(url);
+}
+
+bool NavigatorResponse::was_method_downgraded() const
+{
+    return _method_downgraded;
+}
+
+void NavigatorResponse::set_method_downgraded(bool downgraded)
+{
+    _method_downgraded = downgraded;
 }
 
 } // namespace sihd::http

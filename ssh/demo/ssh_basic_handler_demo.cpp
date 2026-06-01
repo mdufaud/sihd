@@ -25,7 +25,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/Worker.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/term.hpp>
 
 #include <sihd/ssh/BasicSshServerHandler.hpp>

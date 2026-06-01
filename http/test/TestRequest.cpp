@@ -26,7 +26,8 @@ class TestRequest: public ::testing::Test
 TEST_F(TestRequest, test_http_get_external)
 {
     auto resp = http::get("https://www.google.com");
-    ASSERT_TRUE(resp.has_value());
+    if (!resp.has_value())
+        GTEST_SKIP() << "no external network connectivity";
     EXPECT_EQ(resp->status(), 200u);
     EXPECT_GT(resp->content().size(), 0u);
 }
@@ -52,6 +53,14 @@ TEST_F(TestRequest, test_http_methods)
         "res",
         [](const HttpRequest &, HttpResponse & resp) { resp.set_status(HttpStatus::Ok); },
         HttpRequest::Delete);
+    scope.server._webservice->set_entry_point(
+        "res",
+        [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
+        HttpRequest::Patch);
+    scope.server._webservice->set_entry_point(
+        "res",
+        [](const HttpRequest &, HttpResponse & resp) { resp.set_plain_content("ok"); },
+        HttpRequest::Head);
     scope.server.set_cors_origin("https://app.com");
     scope.start(3004);
 
@@ -75,6 +84,16 @@ TEST_F(TestRequest, test_http_methods)
     cors.headers["Origin"] = "https://app.com";
     cors.headers["Access-Control-Request-Method"] = "POST";
     EXPECT_EQ(http::options("localhost:3004/api/res", cors)->status(), HttpStatus::NoContent);
+    {
+        auto r = http::patch("localhost:3004/api/res", "patched");
+        ASSERT_TRUE(r.has_value());
+        EXPECT_EQ(r->content().cpp_str(), "patched");
+    }
+    {
+        auto r = http::head("localhost:3004/api/res");
+        ASSERT_TRUE(r.has_value());
+        EXPECT_EQ(r->status(), HttpStatus::Ok);
+    }
 }
 
 // async_get, async_post, parallel fan-out all work correctly
@@ -208,6 +227,29 @@ TEST_F(TestRequest, test_routing)
         ASSERT_TRUE(r.has_value());
         EXPECT_EQ(r->status(), HttpStatus::NotFound);
     }
+}
+
+TEST_F(TestRequest, test_http_status)
+{
+    EXPECT_EQ(HttpStatus::to_string(200), "OK");
+    EXPECT_EQ(HttpStatus::to_string(404), "Not Found");
+    EXPECT_EQ(HttpStatus::to_string(500), "Internal Server Error");
+    EXPECT_EQ(HttpStatus::to_string(429), "Too Many Requests");
+    EXPECT_EQ(HttpStatus::to_string(999), "Unknown");
+
+    EXPECT_TRUE(HttpStatus::is_redirect(301));
+    EXPECT_TRUE(HttpStatus::is_redirect(302));
+    EXPECT_TRUE(HttpStatus::is_redirect(307));
+    EXPECT_TRUE(HttpStatus::is_redirect(308));
+    EXPECT_FALSE(HttpStatus::is_redirect(200));
+
+    EXPECT_TRUE(HttpStatus::is_post_downgrade(301));
+    EXPECT_TRUE(HttpStatus::is_post_downgrade(303));
+    EXPECT_FALSE(HttpStatus::is_post_downgrade(307));
+
+    EXPECT_TRUE(HttpStatus::is_rate_limit(429));
+    EXPECT_TRUE(HttpStatus::is_rate_limit(503));
+    EXPECT_FALSE(HttpStatus::is_rate_limit(200));
 }
 
 } // namespace test

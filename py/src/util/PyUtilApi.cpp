@@ -1,6 +1,5 @@
 #include <sihd/py/util/PyUtilApi.hpp>
 
-#include <sihd/util/platform.hpp>
 
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Splitter.hpp>

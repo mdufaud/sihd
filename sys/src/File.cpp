@@ -11,7 +11,7 @@
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 #if defined(__SIHD_WINDOWS__) or defined(__SIHD_ANDROID__)
 # define fwrite_unlocked fwrite

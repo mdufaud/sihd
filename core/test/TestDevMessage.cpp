@@ -6,7 +6,7 @@
 #include <sihd/util/Message.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test

@@ -1,5 +1,5 @@
+#include <sihd/util/build.hpp>
 #include <sihd/util/locale.hpp>
-#include <sihd/util/platform.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <algorithm>

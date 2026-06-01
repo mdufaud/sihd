@@ -1,4 +1,4 @@
-# Build artifacts (9GB+)
+# Build artifacts
 build/
 
 # Compiled binaries and objects

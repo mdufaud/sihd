@@ -273,11 +273,11 @@ Debug tests
 
 ```shell
 # gdb
-make gtest
+make gdbtest
 # valgrind
-make vtest
+make valtest
 # compiled with libasan
-make stest
+make asantest
 ```
 
 ---

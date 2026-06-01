@@ -19,7 +19,7 @@ SIHD_NEW_LOGGER("demo");
 
 int main(int argc, char **argv)
 {
-    if constexpr (sihd::util::platform::is_windows)
+    if constexpr (sihd::util::build::is_windows)
     {
         term::set_output_utf8();
     }

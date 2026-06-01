@@ -16,6 +16,8 @@ class HttpHeader
 
         HttpHeader();
         HttpHeader(HeaderMap && headers);
+        HttpHeader(HttpHeader &&) = default;
+        HttpHeader & operator=(HttpHeader &&) = default;
         virtual ~HttpHeader();
 
         HttpHeader & set_server(std::string_view name);

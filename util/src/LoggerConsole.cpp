@@ -2,7 +2,6 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerConsole.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 namespace sihd::util

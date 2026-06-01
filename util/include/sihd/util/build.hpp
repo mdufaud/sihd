@@ -1,5 +1,5 @@
-#ifndef __SIHD_UTIL_PLATFORM_HPP__
-#define __SIHD_UTIL_PLATFORM_HPP__
+#ifndef __SIHD_UTIL_BUILD_HPP__
+#define __SIHD_UTIL_BUILD_HPP__
 
 #include <sys/types.h> // pid_t, ssize_t
 
@@ -22,8 +22,8 @@
 # define __SIHD_WINDOWS__
 # define __SIHD_PLATFORM__ "windows"
 
-#elif (defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)                    \
-       || defined(__CYGWIN__) || defined(__EMSCRIPTEN__))
+#elif (defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__) || defined(__CYGWIN__)       \
+       || defined(__EMSCRIPTEN__))
 
 # define __SIHD_UNIX__
 # define __SIHD_LINUX__
@@ -86,26 +86,27 @@
 
 #endif
 
-// === Platform typedefs ===
+// === Build and platform constexpr ===
 
-#if !defined(__SIHD_WINDOWS__)
-# include <sys/resource.h> // rlim_t
-# include <sys/socket.h>   // socklen_t
-#else
-typedef int socklen_t;
-typedef unsigned long rlim_t;
-typedef unsigned int uid_t;
-#endif
-
-// === Platform constexpr booleans ===
-
-namespace sihd::util::platform
+namespace sihd::util::build
 {
 
 #if defined(SIHD_STATIC)
 constexpr bool is_statically_linked = true;
 #else
 constexpr bool is_statically_linked = false;
+#endif
+
+#if defined(__SANITIZE_ADDRESS__)
+constexpr bool is_run_with_asan = true;
+#else
+constexpr bool is_run_with_asan = false;
+#endif
+
+#if defined(__SANITIZE_THREAD__)
+constexpr bool is_run_with_tsan = true;
+#else
+constexpr bool is_run_with_tsan = false;
 #endif
 
 #if defined(__SIHD_WINDOWS__)
@@ -140,12 +141,6 @@ constexpr bool is_emscripten = true;
 constexpr bool is_emscripten = false;
 #endif
 
-#if defined(__SANITIZE_ADDRESS__)
-constexpr bool is_run_with_asan = true;
-#else
-constexpr bool is_run_with_asan = false;
-#endif
-
-} // namespace sihd::util::platform
+} // namespace sihd::util::build
 
 #endif

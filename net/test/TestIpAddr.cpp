@@ -169,4 +169,34 @@ TEST_F(TestIpAddr, test_ipaddr_str)
     EXPECT_FALSE(notdns.is_ipv6());
 }
 
+TEST_F(TestIpAddr, test_is_private_ipv4)
+{
+    // 0.0.0.0/8
+    EXPECT_TRUE(ip::is_private_ipv4(0x00000000));
+    EXPECT_TRUE(ip::is_private_ipv4(0x00FFFFFF));
+    // 127.0.0.0/8 loopback
+    EXPECT_TRUE(ip::is_private_ipv4(0x7F000001));
+    // 10.0.0.0/8
+    EXPECT_TRUE(ip::is_private_ipv4(0x0A000001));
+    EXPECT_TRUE(ip::is_private_ipv4(0x0AFFFFFF));
+    // 172.16.0.0/12
+    EXPECT_TRUE(ip::is_private_ipv4(0xAC100001));
+    EXPECT_TRUE(ip::is_private_ipv4(0xAC1FFFFF));
+    EXPECT_FALSE(ip::is_private_ipv4(0xAC200001));
+    // 192.168.0.0/16
+    EXPECT_TRUE(ip::is_private_ipv4(0xC0A80001));
+    EXPECT_TRUE(ip::is_private_ipv4(0xC0A8FFFF));
+    // 169.254.0.0/16 link-local
+    EXPECT_TRUE(ip::is_private_ipv4(0xA9FE0001));
+    // public
+    EXPECT_FALSE(ip::is_private_ipv4(0x08080808)); // 8.8.8.8
+    EXPECT_FALSE(ip::is_private_ipv4(0xD83AD32E)); // 216.58.211.46
+}
+
+TEST_F(TestIpAddr, test_is_private_host)
+{
+    EXPECT_TRUE(ip::is_private_host("localhost"));
+    EXPECT_TRUE(ip::is_private_host("127.0.0.1"));
+}
+
 } // namespace test

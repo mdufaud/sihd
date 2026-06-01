@@ -25,7 +25,8 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Stopwatch.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
@@ -881,6 +882,9 @@ TEST_F(TestHttpServer, test_auth_context_propagation)
 
 TEST_F(TestHttpServer, test_concurrent_service)
 {
+    if constexpr (sihd::util::build::is_run_with_tsan)
+        GTEST_SKIP_("has weird interaction with lws and tsan");
+
     constexpr bool run_monothreaded = false;
     constexpr bool run_multithreaded = true;
     constexpr int num_threads = 4;

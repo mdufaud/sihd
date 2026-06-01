@@ -1,13 +1,13 @@
-#include <CLI/CLI.hpp>
-
 #include <sihd/ssh/Sftp.hpp>
 #include <sihd/ssh/SshSession.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/container.hpp>
-#include <sihd/sys/fs.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
+
+#include <CLI/CLI.hpp>
 
 SIHD_NEW_LOGGER("ssh-demo");
 
@@ -72,7 +72,7 @@ int main(int argc, char **argv)
 
     CLI11_PARSE(app, argc, argv);
 
-    if (term::is_interactive() && platform::is_unix && !platform::is_emscripten)
+    if (term::is_interactive() && build::is_unix && !build::is_emscripten)
         LoggerManager::console();
     else
         LoggerManager::stream();

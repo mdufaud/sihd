@@ -2,7 +2,7 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/sys/SigHandler.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/sys/signal.hpp>
 
 #if defined(__SIHD_WINDOWS__)

@@ -4,7 +4,7 @@
 #include <sihd/sys/PathManager.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/container.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 namespace sihd::sys
 {

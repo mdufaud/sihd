@@ -1,8 +1,7 @@
 #include <sihd/imgui/ImguiRunner.hpp>
-
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
+#include <sihd/util/Logger.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
 # include <emscripten.h>
@@ -51,7 +50,7 @@ bool ImguiRunner::run()
             return true;
         _running = true;
     }
-    if constexpr (util::platform::is_emscripten)
+    if constexpr (util::build::is_emscripten)
     {
 #if defined(__SIHD_EMSCRIPTEN__)
         constexpr int emscripten_fps = 0;
@@ -75,7 +74,7 @@ bool ImguiRunner::stop()
         _running = false;
     }
 #if defined(__SIHD_EMSCRIPTEN__)
-    if constexpr (util::platform::is_emscripten)
+    if constexpr (util::build::is_emscripten)
         emscripten_cancel_main_loop();
 #endif
     return _running == false;
@@ -110,11 +109,14 @@ void ImguiRunner::_loop_once()
     _gui_running = _imgui_backend_ptr->should_close() == false;
     if (_running && _gui_running)
     {
-        _gui_running = this->_new_frame();
-        _gui_running = _gui_running && this->_build_frame();
-        _gui_running = _gui_running && this->_render();
+        this->_new_frame();
+        // _render() must always be called when _new_frame() was called:
+        // every ImGui::NewFrame() must be matched by ImGui::Render() or
+        // imgui's internal state (frame counter, draw lists) gets corrupted.
+        _gui_running = this->_build_frame();
+        this->_render();
     }
-    if constexpr (util::platform::is_emscripten)
+    if constexpr (util::build::is_emscripten)
     {
         if (!_running || !_gui_running)
             this->_shutdown();

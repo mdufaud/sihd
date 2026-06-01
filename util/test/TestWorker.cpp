@@ -7,7 +7,6 @@
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/StepWorker.hpp>
 #include <sihd/util/Worker.hpp>
-#include <sihd/util/platform.hpp>
 
 namespace test
 {

@@ -3,7 +3,7 @@
 #include <sihd/bt/BtUtils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/sys/fs.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test

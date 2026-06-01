@@ -5,7 +5,7 @@
 #include <sihd/sys/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fmt.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/str.hpp>
 
 #if defined(__SIHD_WINDOWS__)

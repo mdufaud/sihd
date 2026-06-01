@@ -11,7 +11,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Runnable.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 

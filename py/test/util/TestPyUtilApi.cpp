@@ -5,7 +5,6 @@
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 #include <sihd/py/util/PyUtilApi.hpp>

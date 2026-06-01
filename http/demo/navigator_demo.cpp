@@ -6,10 +6,9 @@
 
 #include <fmt/format.h>
 
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/http/HttpStatus.hpp>
 #include <sihd/http/Navigator.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace demo
 {

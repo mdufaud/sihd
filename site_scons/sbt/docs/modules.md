@@ -469,16 +469,16 @@ Requires `cppcheck` (install via package manager). Checks are run with `--std=c+
 ### Testing
 
 ```bash
-make test m=core               # Build + run tests
-make itest                     # Non-interactive tests
-make vtest                     # Tests with valgrind
-make ltest                     # Tests with valgrind leak checking
-make ttest                     # Tests with strace
-make stest / make istest       # Tests with ASan (+ non-interactive)
-make utest / make iutest       # Tests with UBSan
-make tsantest / make itsantest # Tests with TSan
-make lsantest / make ilsantest # Tests with LSan (standalone)
-make mtest / make imtest       # Tests with MSan (clang only)
-make hwtest / make ihwtest     # Tests with HWASan (arm64 only)
-make covtest                   # Tests + Cobertura coverage report
+make test m=core                    # Build + run tests
+make itest                          # Non-interactive tests
+make valtest                        # Tests with valgrind
+make lvaltest                       # Tests with valgrind leak checking
+make tracetest                      # Tests with strace
+make asantest / make iasantest      # Tests with ASan (+ non-interactive)
+make ubsantest / make iubsantest    # Tests with UBSan
+make tsantest / make itsantest      # Tests with TSan
+make lsantest / make ilsantest      # Tests with LSan (standalone)
+make msantest / make imsantest      # Tests with MSan (clang only)
+make hwasantest / make ihwasantest  # Tests with HWASan (arm64 only)
+make covtest                        # Tests + Cobertura coverage report
 ```

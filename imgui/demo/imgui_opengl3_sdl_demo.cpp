@@ -1,7 +1,7 @@
 #include <sihd/imgui/ImguiRendererOpenGL.hpp>
 #include <sihd/imgui/ImguiRunner.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <SDL3/SDL_opengles2.h>

@@ -175,9 +175,10 @@ modules = {
         "linux-extlibs": ['libxcrypt'],
         "libs": ["imgui"],
         # native linux: system provides libglfw.so, libGLEW.so, libGL.so
-        "linux-native-libs": ['glfw', 'GLEW', 'GL', 'SDL3'],
+        "linux-native-libs": ['glfw', 'GLEW', 'GL', 'SDL3', 'ncurses'],
         # cross linux: vcpkg provides libglfw.so (dynamic) / libglfw3.a (static)
         # (imgui has its own GL loader via dlopen, GLEW is unused)
+        # ncurses omitted: native-only backend, not built when cross-compiling
         "linux-cross-libs": ['glfw', 'SDL3'],
         # === Android specific ===
         "android-libs": ['android', 'EGL', 'GLESv3', 'log'],

@@ -28,6 +28,12 @@ std::optional<HttpResponse> del(std::string_view url, const CurlOptions & curlop
 
 std::optional<HttpResponse> options(std::string_view url, const CurlOptions & curlopt = CurlOptions::none());
 
+std::optional<HttpResponse> patch(std::string_view url,
+                                  sihd::util::ArrCharView data_view,
+                                  const CurlOptions & curlopt = CurlOptions::none());
+
+std::optional<HttpResponse> head(std::string_view url, const CurlOptions & curlopt = CurlOptions::none());
+
 std::future<std::optional<HttpResponse>> async_get(std::string_view url,
                                                    const CurlOptions & curlopt = CurlOptions::none());
 
@@ -44,6 +50,13 @@ std::future<std::optional<HttpResponse>> async_del(std::string_view url,
 
 std::future<std::optional<HttpResponse>> async_options(std::string_view url,
                                                        const CurlOptions & curlopt = CurlOptions::none());
+
+std::future<std::optional<HttpResponse>> async_patch(std::string_view url,
+                                                     sihd::util::ArrCharView data_view,
+                                                     const CurlOptions & curlopt = CurlOptions::none());
+
+std::future<std::optional<HttpResponse>> async_head(std::string_view url,
+                                                    const CurlOptions & curlopt = CurlOptions::none());
 
 } // namespace sihd::http
 

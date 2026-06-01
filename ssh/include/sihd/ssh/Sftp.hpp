@@ -1,12 +1,14 @@
 #ifndef __SIHD_SSH_SFTP_HPP__
 #define __SIHD_SSH_SFTP_HPP__
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include <sihd/util/platform.hpp>
+
+#include <sihd/sys/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <sys/types.h> // mode_t, uid_t, gid_t

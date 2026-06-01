@@ -81,7 +81,7 @@ struct ServerScope
         {
             server.set_port(port);
             ASSERT_TRUE(worker.start_sync_worker("test-server"));
-            server.wait_ready(std::chrono::milliseconds(100));
+            ASSERT_TRUE(server.wait_ready(std::chrono::milliseconds(100)));
         }
 
         void stop()

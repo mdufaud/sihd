@@ -4,7 +4,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/num.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/profiling.hpp>
 #include <sihd/util/time.hpp>
 

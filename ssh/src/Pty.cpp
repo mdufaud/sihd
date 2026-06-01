@@ -21,16 +21,17 @@
  * @copyright MIT License
  */
 
+#include <cstring>
+
 #include <sihd/ssh/Pty.hpp>
 #include <sihd/util/Logger.hpp>
-
-#include <cstring>
+#include <sihd/util/build.hpp>
 
 // ============================================================================
 // Platform detection
 // ============================================================================
 
-#if defined(_WIN32)
+#if defined(__SIHD_WINDOWS__)
 # define SIHD_PTY_WINDOWS 1
 #else
 # define SIHD_PTY_POSIX 1
@@ -42,14 +43,15 @@
 
 #if defined(SIHD_PTY_POSIX)
 
-# include <cerrno>
-# include <cstdlib>
 # include <fcntl.h>
 # include <signal.h>
 # include <sys/ioctl.h>
 # include <sys/wait.h>
 # include <termios.h>
 # include <unistd.h>
+
+# include <cerrno>
+# include <cstdlib>
 
 // forkpty() is in different headers on different systems
 # if defined(__linux__)

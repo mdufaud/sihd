@@ -7,7 +7,7 @@
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Node.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 #include <sihd/http/HttpRequest.hpp>
 #include <sihd/http/HttpResponse.hpp>

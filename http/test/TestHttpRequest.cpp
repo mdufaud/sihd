@@ -87,6 +87,86 @@ TEST_F(TestHttpRequest, test_cookies)
     EXPECT_EQ(req.cookies().size(), 2u);
 }
 
+TEST_F(TestHttpRequest, test_from_string)
+{
+    std::string raw = "GET /api/items?page=2&q=hello HTTP/1.1\r\n"
+                      "Host: localhost\r\n"
+                      "Content-Type: text/plain\r\n"
+                      "\r\n";
+
+    auto req = HttpRequest::from_string(raw);
+    ASSERT_TRUE(req.has_value());
+    EXPECT_EQ(req->request_type(), HttpRequest::Get);
+    EXPECT_EQ(req->url(), "/api/items");
+    EXPECT_EQ(req->query_param("page").value_or(""), "2");
+    EXPECT_EQ(req->query_param("q").value_or(""), "hello");
+    EXPECT_EQ(req->http_header().find("host"), "localhost");
+    EXPECT_FALSE(req->has_content());
+}
+
+TEST_F(TestHttpRequest, test_from_string_with_body)
+{
+    std::string raw = "POST /api/data HTTP/1.1\r\n"
+                      "Content-Type: application/json\r\n"
+                      "\r\n"
+                      R"({"key":"val"})";
+
+    auto req = HttpRequest::from_string(raw);
+    ASSERT_TRUE(req.has_value());
+    EXPECT_EQ(req->request_type(), HttpRequest::Post);
+    EXPECT_EQ(req->url(), "/api/data");
+    EXPECT_TRUE(req->has_content());
+    EXPECT_EQ(req->content().cpp_str(), R"({"key":"val"})");
+}
+
+TEST_F(TestHttpRequest, test_from_string_http10)
+{
+    std::string raw = "GET /old HTTP/1.0\r\n\r\n";
+
+    auto req = HttpRequest::from_string(raw);
+    ASSERT_TRUE(req.has_value());
+    EXPECT_EQ(req->request_type(), HttpRequest::Get);
+    EXPECT_EQ(req->url(), "/old");
+}
+
+TEST_F(TestHttpRequest, test_from_string_malformed)
+{
+    EXPECT_FALSE(HttpRequest::from_string("garbage").has_value());
+    EXPECT_FALSE(HttpRequest::from_string("GET /path\r\n\r\n").has_value());
+    EXPECT_FALSE(HttpRequest::from_string("INVALID /path HTTP/1.1\r\n\r\n").has_value());
+    EXPECT_FALSE(HttpRequest::from_string("GET /path HTTP/2.0\r\n\r\n").has_value());
+}
+
+TEST_F(TestHttpRequest, test_to_string)
+{
+    HttpRequest req("/api/users", HttpRequest::Post);
+    req.http_header().set_content_type("application/json");
+    std::string body = R"({"name":"test"})";
+    req.set_content({body.data(), body.size()});
+
+    std::string serialized = req.to_string();
+    EXPECT_NE(serialized.find("POST /api/users HTTP/1.1\r\n"), std::string::npos);
+    EXPECT_NE(serialized.find("content-type: application/json"), std::string::npos);
+    EXPECT_NE(serialized.find("\r\n\r\n"), std::string::npos);
+    EXPECT_NE(serialized.find(body), std::string::npos);
+}
+
+TEST_F(TestHttpRequest, test_roundtrip)
+{
+    HttpRequest original("/api/test", HttpRequest::Put);
+    original.http_header().set_header("x-custom", "value");
+    std::string body = "hello world";
+    original.set_content({body.data(), body.size()});
+
+    std::string serialized = original.to_string();
+    auto parsed = HttpRequest::from_string(serialized);
+    ASSERT_TRUE(parsed.has_value());
+    EXPECT_EQ(parsed->request_type(), HttpRequest::Put);
+    EXPECT_EQ(parsed->url(), "/api/test");
+    EXPECT_EQ(parsed->content().cpp_str(), body);
+    EXPECT_EQ(parsed->http_header().find("x-custom"), "value");
+}
+
 TEST_F(TestHttpRequest, test_auth)
 {
     HttpRequest req("/protected");

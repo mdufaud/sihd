@@ -10,7 +10,8 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
 
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
+#include <sihd/util/build.hpp>
 
 namespace
 {
@@ -377,7 +378,7 @@ void LuaSysApi::load_tools(Vm & vm)
         .addFunction("is_run_by_valgrind", &sihd::sys::os::is_run_by_valgrind)
         .addProperty(
             "is_run_with_asan",
-            +[] { return sihd::util::platform::is_run_with_asan; })
+            +[] { return sihd::util::build::is_run_with_asan; })
         .addFunction("peak_rss", &sihd::sys::os::peak_rss)
         .addFunction("current_rss", &sihd::sys::os::current_rss)
         .endNamespace()  // os

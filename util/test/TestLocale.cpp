@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include <sihd/util/locale.hpp>
-#include <sihd/util/platform.hpp>
 
 namespace test
 {

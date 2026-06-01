@@ -1,8 +1,7 @@
 #include <algorithm>
 
-#include <sihd/util/str.hpp>
-
 #include <sihd/http/Route.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::http
 {
@@ -21,7 +20,7 @@ int hex_digit(char c)
     return -1;
 }
 
-std::string percent_decode(std::string_view s)
+std::string str_decode(std::string_view s)
 {
     std::string result;
     result.reserve(s.size());
@@ -51,7 +50,7 @@ std::string normalize_path(std::string_view raw)
     if (segments.empty())
         return "";
     for (auto & seg : segments)
-        seg = percent_decode(seg);
+        seg = str_decode(seg);
     return sihd::util::str::join(std::span<const std::string>(segments), "/");
 }
 
@@ -113,7 +112,7 @@ RouteMatch Route::match(std::string_view path) const
             {
                 if (!joined.empty())
                     joined += '/';
-                joined += percent_decode(parts[j]);
+                joined += str_decode(parts[j]);
             }
             result.params[_segments[i].value] = std::move(joined);
             result.matched = true;
@@ -121,9 +120,9 @@ RouteMatch Route::match(std::string_view path) const
         }
         else if (_segments[i].is_param)
         {
-            result.params[_segments[i].value] = percent_decode(parts[i]);
+            result.params[_segments[i].value] = str_decode(parts[i]);
         }
-        else if (_segments[i].value != percent_decode(parts[i]))
+        else if (_segments[i].value != str_decode(parts[i]))
         {
             return RouteMatch {};
         }
@@ -137,8 +136,7 @@ void RouteTable::add(std::string_view pattern, Route::Handler handler, HttpReque
     _routes[static_cast<int>(method)].emplace_back(pattern, std::move(handler));
 }
 
-std::optional<RouteTable::FindResult> RouteTable::find(HttpRequest::RequestType method,
-                                                       std::string_view path) const
+std::optional<RouteTable::FindResult> RouteTable::find(HttpRequest::RequestType method, std::string_view path) const
 {
     auto it = _routes.find(static_cast<int>(method));
     if (it == _routes.end())

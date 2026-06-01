@@ -10,7 +10,7 @@
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/time.hpp>
 
 #define FIRST_SIG 1

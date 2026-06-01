@@ -5,8 +5,6 @@
 #include <cstdint>
 #include <string>
 
-#include <sihd/util/portable_endian.h>
-
 namespace sihd::util
 {
 

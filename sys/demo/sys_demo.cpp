@@ -21,7 +21,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fmt.hpp>
 #include <sihd/util/macro.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
@@ -265,13 +265,13 @@ void process()
         fmt::print("=========================\n");
     };
 
-    if constexpr (sihd::util::platform::is_unix)
+    if constexpr (sihd::util::build::is_unix)
     {
         args.push_back("ls");
         args.push_back("-l");
     }
 
-    if constexpr (sihd::util::platform::is_windows)
+    if constexpr (sihd::util::build::is_windows)
     {
         term::set_output_utf8();
         args.push_back("cmd.exe");
@@ -307,10 +307,10 @@ int main(int argc, char **argv)
 
     CLI11_PARSE(app, argc, argv);
 
-    if (term::is_interactive() && !sihd::util::platform::is_emscripten)
+    if (term::is_interactive() && !sihd::util::build::is_emscripten)
         LoggerManager::console();
     else
-        LoggerManager::stream(sihd::util::platform::is_emscripten ? stdout : stderr);
+        LoggerManager::stream(sihd::util::build::is_emscripten ? stdout : stderr);
 
     demo::os();
     demo::fs();
@@ -321,7 +321,7 @@ int main(int argc, char **argv)
     demo::bitmap();
     demo::backtrace();
 
-    if constexpr (sihd::util::platform::is_emscripten)
+    if constexpr (sihd::util::build::is_emscripten)
     {
         demo::read_line();
     }

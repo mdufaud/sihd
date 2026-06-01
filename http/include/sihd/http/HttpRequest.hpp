@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include <sihd/json/fwd.hpp>
+#include <sihd/http/HttpHeader.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
 
@@ -23,13 +24,20 @@ class HttpRequest
             Put = 2,
             Delete = 3,
             Options = 4,
+            Patch = 5,
+            Head = 6,
         };
 
         HttpRequest(std::string_view url, RequestType request_type = Get);
         HttpRequest(std::string_view url,
                     const std::vector<std::string> & uri_args,
                     RequestType request_type = Get);
+        HttpRequest(HttpRequest &&) = default;
+        HttpRequest & operator=(HttpRequest &&) = default;
         virtual ~HttpRequest();
+
+        static std::optional<HttpRequest> from_string(std::string_view raw);
+        std::string to_string() const;
 
         static RequestType type_from_str(std::string_view type);
         static std::string type_str(RequestType type);
@@ -61,6 +69,8 @@ class HttpRequest
         const std::string & auth_user() const { return _auth_user; }
         const std::string & auth_token() const { return _auth_token; }
         bool is_authenticated() const { return !_auth_user.empty() || !_auth_token.empty(); }
+        HttpHeader & http_header() { return _http_header; }
+        const HttpHeader & http_header() const { return _http_header; }
 
     protected:
 
@@ -74,6 +84,7 @@ class HttpRequest
         std::string _auth_user;
         std::string _auth_token;
         std::unordered_map<std::string, std::string> _cookies;
+        HttpHeader _http_header;
         sihd::util::ArrChar _array;
 };
 

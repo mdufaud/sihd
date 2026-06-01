@@ -2,6 +2,10 @@ Import('env')
 
 builder = env.builder()
 
+# ncurses backend is a native-linux TUI: its header/lib live in the host system,
+# not in cross sysroots (riscv/arm/musl) -> only build it when not cross-compiling
+build_ncurses = builder.build_platform == "linux" and not builder.is_cross_building()
+
 # choose sources to build sihd_imgui lib
 
 sihd_imgui_srcs = ["src/ImguiRunner.cpp"]
@@ -44,6 +48,13 @@ else:
         "src/ImguiBackendSDL.cpp",
     ])
 
+    if build_ncurses:
+        sihd_imgui_srcs.extend([
+            "src/ImguiBackendNcurses.cpp",
+            "src/ImguiRendererNcurses.cpp",
+        ])
+        sihd_imgui_tests.append("test/TestNcursesRenderer.cpp")
+
 # Lib
 
 lib = env.build_lib(sihd_imgui_srcs)
@@ -63,6 +74,9 @@ elif builder.build_platform == "web":
 else:
     env.build_demo("demo/imgui_opengl3_sdl_demo.cpp", name = "imgui_opengl3_sdl_demo", libs = [env.module_format_name()])
     env.build_demo("demo/imgui_opengl3_glfw_demo.cpp", name = "imgui_opengl3_glfw_demo", libs = [env.module_format_name()])
+
+    if build_ncurses:
+        env.build_demo("demo/imgui_ncurses_demo.cpp", name = "imgui_ncurses_demo", libs = [env.module_format_name()])
 
     if builder.build_platform == "windows":
         env.build_demo("demo/imgui_win_d11_demo.cpp", name = "imgui_win_d11_demo", libs = [env.module_format_name()])

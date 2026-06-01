@@ -24,7 +24,6 @@
 
 #include <mutex>
 #include <queue>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/version.hpp>
 
 #include <luabridge3/LuaBridge/Map.h>

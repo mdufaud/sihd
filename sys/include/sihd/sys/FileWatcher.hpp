@@ -10,7 +10,7 @@
 
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Observable.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 namespace sihd::sys
 {

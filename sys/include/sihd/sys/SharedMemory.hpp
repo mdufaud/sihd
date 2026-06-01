@@ -6,7 +6,7 @@
 #include <string>
 #include <string_view>
 
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
 # define mode_t unsigned int

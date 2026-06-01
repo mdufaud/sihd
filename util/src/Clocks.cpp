@@ -1,5 +1,6 @@
+#include <ratio>
+
 #include <sihd/util/Clocks.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/time.hpp>
 
 namespace sihd::util
@@ -7,13 +8,23 @@ namespace sihd::util
 
 SystemClock Clock::default_clock;
 
+namespace
+{
+
+template <typename ClockType>
+time_t clock_now_ns(const ClockType & clk)
+{
+    if constexpr (std::ratio_equal_v<typename ClockType::period, std::micro>)
+        return time::microseconds(clk.now().time_since_epoch().count());
+    else
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(clk.now().time_since_epoch()).count();
+}
+
+} // namespace
+
 time_t SteadyClock::now() const
 {
-    // emscripten clock is microseconds
-    if constexpr (platform::is_emscripten)
-        return time::microseconds(_clock.now().time_since_epoch().count());
-    else
-        return std::chrono::duration_cast<std::chrono::nanoseconds>(_clock.now().time_since_epoch()).count();
+    return clock_now_ns(_clock);
 }
 
 bool SteadyClock::is_steady() const
@@ -23,11 +34,7 @@ bool SteadyClock::is_steady() const
 
 time_t SystemClock::now() const
 {
-    // emscripten clock is microseconds
-    if constexpr (platform::is_emscripten)
-        return time::microseconds(_clock.now().time_since_epoch().count());
-    else
-        return std::chrono::duration_cast<std::chrono::nanoseconds>(_clock.now().time_since_epoch()).count();
+    return clock_now_ns(_clock);
 }
 
 bool SystemClock::is_steady() const

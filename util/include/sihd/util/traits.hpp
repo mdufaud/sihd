@@ -54,69 +54,44 @@ template <typename T>
 concept MoveAssignable = std::is_move_assignable_v<T>;
 
 template <typename T>
-concept Comparable = requires(T a, T b)
-{
-    {
-        a == b
-    } -> std::convertible_to<bool>;
-    {
-        a != b
-    } -> std::convertible_to<bool>;
-    {
-        a < b
-    } -> std::convertible_to<bool>;
-    {
-        a <= b
-    } -> std::convertible_to<bool>;
-    {
-        a > b
-    } -> std::convertible_to<bool>;
-    {
-        a >= b
-    } -> std::convertible_to<bool>;
+concept Comparable = requires(T a, T b) {
+    { a == b } -> std::convertible_to<bool>;
+    { a != b } -> std::convertible_to<bool>;
+    { a < b } -> std::convertible_to<bool>;
+    { a <= b } -> std::convertible_to<bool>;
+    { a > b } -> std::convertible_to<bool>;
+    { a >= b } -> std::convertible_to<bool>;
 };
 
 template <typename T>
-concept EqualityComparable = requires(T a, T b)
-{
-    {
-        a == b
-    } -> std::convertible_to<bool>;
-    {
-        a != b
-    } -> std::convertible_to<bool>;
+concept EqualityComparable = requires(T a, T b) {
+    { a == b } -> std::convertible_to<bool>;
+    { a != b } -> std::convertible_to<bool>;
 };
 
 template <typename T>
-concept LessThanComparable = requires(T a, T b)
-{
-    {
-        a < b
-    } -> std::convertible_to<bool>;
+concept LessThanComparable = requires(T a, T b) {
+    { a < b } -> std::convertible_to<bool>;
 };
 
 template <typename T>
-concept GreaterThanComparable = requires(T a, T b)
-{
-    {
-        a > b
-    } -> std::convertible_to<bool>;
+concept GreaterThanComparable = requires(T a, T b) {
+    { a > b } -> std::convertible_to<bool>;
 };
 
 template <typename T>
-concept LessEqualComparable = requires(T a, T b)
-{
-    {
-        a <= b
-    } -> std::convertible_to<bool>;
+concept LessEqualComparable = requires(T a, T b) {
+    { a <= b } -> std::convertible_to<bool>;
 };
 
 template <typename T>
-concept GreaterEqualComparable = requires(T a, T b)
-{
-    {
-        a >= b
-    } -> std::convertible_to<bool>;
+concept GreaterEqualComparable = requires(T a, T b) {
+    { a >= b } -> std::convertible_to<bool>;
+};
+
+template <typename T>
+concept CanConcatWithLiteral = requires(T t) {
+    { "" + t };
 };
 
 /**
@@ -124,26 +99,17 @@ concept GreaterEqualComparable = requires(T a, T b)
  */
 
 // template <typename T>
-// concept ToStringable = requires(T t)
-// {
-//     {
-//         std::to_string(t)
-//     } -> std::convertible_to<std::string>;
+// concept ToStringable = requires(T t) {
+//     { std::to_string(t) } -> std::convertible_to<std::string>;
 // };
 
 template <typename T>
-concept Swappable = requires(T a, T b)
-{
-    std::swap(a, b);
-};
+concept Swappable = requires(T a, T b) { std::swap(a, b); };
 
-template <typename T>
-concept Hashable = requires(T a)
-{
-    {
-        std::hash<T> {}(a)
-    } -> std::convertible_to<std::size_t>;
-};
+// template <typename T>
+// concept Hashable = requires(T a) {
+//     { std::hash<T> {}(a) } -> std::convertible_to<std::size_t>;
+// };
 
 // template <typename T>
 // concept Streamable = requires(T a, std::ostream & os)
@@ -154,15 +120,13 @@ concept Hashable = requires(T a)
 // };
 
 template <typename T>
-concept Callable = requires(T f)
-{
-    {f()};
+concept Callable = requires(T f) {
+    { f() };
 };
 
 template <typename F, typename... Args>
-concept CallableWith = requires(F f, Args... args)
-{
-    {f(args...)};
+concept CallableWith = requires(F f, Args... args) {
+    { f(args...) };
 };
 
 /**
@@ -170,102 +134,63 @@ concept CallableWith = requires(F f, Args... args)
  */
 
 template <typename T>
-concept Container = requires(T t)
-{
+concept Container = requires(T t) {
     typename T::value_type;
     typename T::size_type;
     typename T::iterator;
     typename T::const_iterator;
     t.begin();
     t.end();
-    {
-        t.size()
-    } -> std::convertible_to<std::size_t>;
+    { t.size() } -> std::convertible_to<std::size_t>;
 };
 
 template <typename T>
-concept Resizable = requires(T t, typename T::size_type n)
-{
-    t.resize(n);
-};
+concept Resizable = requires(T t, typename T::size_type n) { t.resize(n); };
 
 template <typename T>
-concept Reservable = requires(T t, typename T::size_type n)
-{
-    t.reserve(n);
-};
+concept Reservable = requires(T t, typename T::size_type n) { t.reserve(n); };
 
 template <typename T>
-concept Insertable = requires(T t, typename T::value_type v)
-{
-    t.insert(v);
-};
+concept Insertable = requires(T t, typename T::value_type v) { t.insert(v); };
 
 template <typename T>
-concept Erasable = requires(T t, typename T::iterator it)
-{
-    t.erase(it);
-};
+concept Erasable = requires(T t, typename T::iterator it) { t.erase(it); };
 
 template <typename T>
-concept BackEmplacable = requires(T t, typename T::value_type v)
-{
-    t.emplace_back(v);
-};
+concept BackEmplacable = requires(T t, typename T::value_type v) { t.emplace_back(v); };
 
 template <typename T>
-concept FrontEmplacable = requires(T t, typename T::value_type v)
-{
-    t.emplace_front(v);
-};
+concept FrontEmplacable = requires(T t, typename T::value_type v) { t.emplace_front(v); };
 
 template <typename T>
-concept Iterable = requires(T t)
-{
+concept Iterable = requires(T t) {
     std::begin(t);
     std::end(t);
 };
 
 template <typename T>
-concept HasDataSize = requires(T t)
-{
-    {
-        t.data()
-    } -> std::convertible_to<typename std::add_pointer<typename T::value_type>::type>;
-    {
-        t.size()
-    } -> std::convertible_to<std::size_t>;
+concept HasDataSize = requires(T t) {
+    { t.data() } -> std::convertible_to<typename std::add_pointer<typename T::value_type>::type>;
+    { t.size() } -> std::convertible_to<std::size_t>;
 };
 
 template <typename T>
-concept HasConstDataSize = requires(T t)
-{
-    {
-        t.data()
-    } -> std::convertible_to<typename std::add_pointer_t<const typename T::value_type>>;
-    {
-        t.size()
-    } -> std::convertible_to<std::size_t>;
+concept HasConstDataSize = requires(T t) {
+    { t.data() } -> std::convertible_to<typename std::add_pointer_t<const typename T::value_type>>;
+    { t.size() } -> std::convertible_to<std::size_t>;
 };
 
 template <typename T>
-concept Map = Iterable<T> && requires(T t)
-{
+concept Map = Iterable<T> && requires(T t) {
     typename T::key_type;
     typename T::mapped_type;
 };
 
 template <typename T>
-concept Duration = requires(T t)
-{
-    typename T::period;
-};
+concept Duration = requires(T t) { typename T::period; };
 
 template <typename T>
-concept StdFunction = requires(T t)
-{
-    typename T::result_type;
-};
+concept StdFunction = requires(T t) { typename T::result_type; };
 
 // template <typename T>
 // concept HasRange = requires(T t)
@@ -275,11 +200,8 @@ concept StdFunction = requires(T t)
 // };
 
 template <typename T>
-concept IsSpan = HasDataSize<T> && requires(T t, size_t offset)
-{
-    {
-        t.subspan(offset)
-    } -> std::convertible_to<T>;
+concept IsSpan = HasDataSize<T> && requires(T t, size_t offset) {
+    { t.subspan(offset) } -> std::convertible_to<T>;
 };
 
 /**
@@ -287,8 +209,8 @@ concept IsSpan = HasDataSize<T> && requires(T t, size_t offset)
  */
 
 template <class T, class U>
-using is_same_uncvref
-    = std::is_same<std::remove_cv_t<std::remove_reference_t<T>>, std::remove_cv_t<std::remove_reference_t<U>>>;
+using is_same_uncvref = std::is_same<std::remove_cv_t<std::remove_reference_t<T>>,
+                                     std::remove_cv_t<std::remove_reference_t<U>>>;
 
 template <typename T, typename... U>
 using are_all_same = std::integral_constant<bool, (... && std::is_same_v<T, U>)>;

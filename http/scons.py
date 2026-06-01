@@ -1,6 +1,6 @@
 Import('env')
 
-lib = env.build_lib(Glob('src/*.cpp') + Glob('src/navigator/*.cpp'))
+lib = env.build_lib(Glob('src/*.cpp') + Glob('src/navigator/*.cpp') + Glob('src/server/*.cpp') + Glob('src/curl/*.cpp'))
 env.export_test(includes = ['test'], resources = ['test/resources'])
 
 for src in Glob('demo/*.cpp'):

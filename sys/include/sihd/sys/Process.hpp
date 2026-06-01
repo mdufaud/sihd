@@ -10,7 +10,7 @@
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Waitable.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/traits.hpp>
 
 namespace sihd::sys

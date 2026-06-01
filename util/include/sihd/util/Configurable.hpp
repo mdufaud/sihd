@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_CONFIGURABLE_HPP__
 #define __SIHD_UTIL_CONFIGURABLE_HPP__
 
+#include <cstdint>
 #include <functional>
 
 #include <sihd/json/fwd.hpp>

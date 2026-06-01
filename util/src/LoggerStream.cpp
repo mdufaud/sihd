@@ -1,7 +1,6 @@
 #include <fmt/printf.h>
 
 #include <sihd/util/LoggerStream.hpp>
-#include <sihd/util/platform.hpp>
 
 namespace sihd::util
 {

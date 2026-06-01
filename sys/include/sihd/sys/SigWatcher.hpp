@@ -13,7 +13,7 @@
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/Worker.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 // signalfd is only available on Linux (not Android, not Emscripten)
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)

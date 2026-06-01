@@ -6,7 +6,6 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
 
 #if !defined(__cpp_lib_chrono) || __cpp_lib_chrono < 201907L

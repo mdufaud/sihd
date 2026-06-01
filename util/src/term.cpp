@@ -1,6 +1,6 @@
 #include <fmt/format.h>
 
-#include <sihd/util/platform.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/term.hpp>
 
 #if defined(__ANDROID__)

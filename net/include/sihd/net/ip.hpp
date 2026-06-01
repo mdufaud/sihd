@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 // shutdown function corresponding values unix -> windows
@@ -36,6 +36,9 @@ int socktype(std::string_view name);
 bool is_valid_ipv4(std::string_view ip);
 bool is_valid_ipv6(std::string_view ip);
 bool is_valid_ip(std::string_view ip);
+
+bool is_private_ipv4(uint32_t addr);
+bool is_private_host(std::string_view host);
 
 std::string to_str(const sockaddr *addr);
 std::string to_str(const sockaddr_in *addr_in);

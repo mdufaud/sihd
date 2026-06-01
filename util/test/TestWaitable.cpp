@@ -7,7 +7,6 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Waitable.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/time.hpp>
 
 namespace test

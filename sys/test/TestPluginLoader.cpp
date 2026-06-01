@@ -2,7 +2,8 @@
 #include <sihd/sys/PluginLoader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
+#include <sihd/util/build.hpp>
 
 namespace test
 {
@@ -23,7 +24,7 @@ class TestPluginLoader: public ::testing::Test
 
 TEST_F(TestPluginLoader, test_pluginloader)
 {
-    if (sihd::util::platform::is_run_with_asan)
+    if (sihd::util::build::is_run_with_asan)
         GTEST_SKIP() << "test does not work with address sanitizer";
     EXPECT_EQ(PluginLoader::load("unknown_lib", "symbol", "err"), nullptr);
     EXPECT_EQ(PluginLoader::load("sihd_util", "unknown_symbol", "err"), nullptr);

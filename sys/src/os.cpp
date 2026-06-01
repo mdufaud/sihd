@@ -1,6 +1,6 @@
 #include <stdexcept>
 
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/str.hpp>
 
 #if defined(__SIHD_WINDOWS__)
@@ -131,7 +131,7 @@ pid_t pid()
 
 rlim_t max_fds()
 {
-    if constexpr (sihd::util::platform::is_emscripten)
+    if constexpr (sihd::util::build::is_emscripten)
     {
         return __SIHD_UTIL_OS_DEFAULT_MAX_FDS__;
     }
@@ -444,7 +444,7 @@ ssize_t backtrace(int fd, size_t backtrace_size)
  */
 ssize_t peak_rss()
 {
-    if constexpr (sihd::util::platform::is_emscripten)
+    if constexpr (sihd::util::build::is_emscripten)
     {
         return -1L;
     }
@@ -498,7 +498,7 @@ ssize_t peak_rss()
  */
 ssize_t current_rss()
 {
-    if constexpr (sihd::util::platform::is_emscripten)
+    if constexpr (sihd::util::build::is_emscripten)
     {
         return -1L;
     }

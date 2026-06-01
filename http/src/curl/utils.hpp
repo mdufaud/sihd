@@ -1,5 +1,5 @@
-#ifndef __SIHD_HTTP_SRC_CURL_GLOBAL_HPP__
-#define __SIHD_HTTP_SRC_CURL_GLOBAL_HPP__
+#ifndef __SIHD_HTTP_SRC_CURL_UTILS_HPP__
+#define __SIHD_HTTP_SRC_CURL_UTILS_HPP__
 
 // Internal header
 // Provides a single curl global initialisation point

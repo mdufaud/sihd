@@ -1,6 +1,5 @@
 #include <cstring>
 
-#include <sihd/util/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/thread.hpp>
 

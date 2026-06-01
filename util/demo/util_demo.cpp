@@ -1,13 +1,13 @@
 #include <CLI/CLI.hpp>
 #include <fmt/format.h>
 
+#include <sihd/util/build.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/LoadingBar.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/StepWorker.hpp>
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
 
@@ -54,11 +54,10 @@ void time()
     SIHD_LOG(info, "today's day: {}", today.local_day_str());
     SIHD_LOG(info, "today's time: {}", today.local_sec_str());
     SIHD_LOG(info, "today's hour: {}", today.local_clocktime().hour);
-    if constexpr (!sihd::util::platform::is_windows)
-    {
-        // no %z in windows
-        SIHD_LOG(info, "today's zoned hour: {}", today.zone_str());
-    }
+#if !defined(__SIHD_WINDOWS__)
+    // no %z in windows
+    SIHD_LOG(info, "today's zoned hour: {}", today.zone_str());
+#endif
     SIHD_LOG(info, "from string date '2000/04/01': {}", Timestamp::from_str("2000/04/01", "%Y/%m/%d")->str());
 
     // Locale examples - uses C locale by default for deterministic behavior
@@ -84,10 +83,14 @@ int main(int argc, char **argv)
 
     CLI11_PARSE(app, argc, argv);
 
-    if (term::is_interactive() && !sihd::util::platform::is_emscripten)
+#if defined(__SIHD_EMSCRIPTEN__)
+    LoggerManager::stream(stdout);
+#else
+    if (term::is_interactive())
         LoggerManager::console();
     else
-        LoggerManager::stream(sihd::util::platform::is_emscripten ? stdout : stderr);
+        LoggerManager::stream(stderr);
+#endif
 
     demo::time();
     demo::worker(worker_frequency);

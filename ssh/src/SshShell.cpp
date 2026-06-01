@@ -4,7 +4,7 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fmt.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <conio.h>

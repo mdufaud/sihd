@@ -7,7 +7,7 @@
 #include <variant>
 
 #include <sihd/sys/Bitmap.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 namespace sihd::sys::clipboard
 {

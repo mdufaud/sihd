@@ -1,7 +1,7 @@
 #include <sihd/sys/SharedMemory.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 // ftruncate
 #include <unistd.h>

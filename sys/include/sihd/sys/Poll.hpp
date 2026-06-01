@@ -9,7 +9,7 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <poll.h>         //pollfd

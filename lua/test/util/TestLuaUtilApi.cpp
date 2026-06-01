@@ -3,7 +3,6 @@
 #include <sihd/lua/Vm.hpp>
 #include <sihd/lua/util/LuaUtilApi.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test

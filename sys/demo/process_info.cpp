@@ -33,7 +33,7 @@ void do_dump_env(bool do_dump, const std::vector<std::string> & env)
 
 int main(int argc, char **argv)
 {
-    if constexpr (sihd::util::platform::is_windows)
+    if constexpr (sihd::util::build::is_windows)
     {
         term::set_output_utf8();
     }

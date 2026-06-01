@@ -6,7 +6,7 @@
 #include <string_view>
 
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 namespace sihd::sys::os
 {

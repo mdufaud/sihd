@@ -4,7 +4,6 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/container.hpp>
-#include <sihd/util/platform.hpp>
 #include <sihd/util/term.hpp>
 
 #include <sihd/util/ThreadPool.hpp>

@@ -111,6 +111,87 @@ TEST_F(TestHttpResponse, test_streaming)
     EXPECT_EQ(body, "chunk0chunk1chunk2");
 }
 
+TEST_F(TestHttpResponse, test_from_string)
+{
+    std::string raw = "HTTP/1.1 200 OK\r\n"
+                      "Content-Type: text/plain\r\n"
+                      "\r\n"
+                      "hello";
+
+    auto resp = HttpResponse::from_string(raw);
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(resp->status(), HttpStatus::Ok);
+    EXPECT_EQ(resp->content().cpp_str(), "hello");
+    EXPECT_NE(resp->http_header().content_type().find("text/plain"), std::string::npos);
+}
+
+TEST_F(TestHttpResponse, test_from_string_no_body)
+{
+    std::string raw = "HTTP/1.1 204 No Content\r\n\r\n";
+
+    auto resp = HttpResponse::from_string(raw);
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(resp->status(), HttpStatus::NoContent);
+    EXPECT_EQ(resp->content().size(), 0u);
+}
+
+TEST_F(TestHttpResponse, test_from_string_with_cookies)
+{
+    std::string raw = "HTTP/1.1 200 OK\r\n"
+                      "Set-Cookie: session=abc\r\n"
+                      "Set-Cookie: token=xyz; HttpOnly\r\n"
+                      "\r\n";
+
+    auto resp = HttpResponse::from_string(raw);
+    ASSERT_TRUE(resp.has_value());
+    ASSERT_EQ(resp->set_cookie_headers().size(), 2u);
+    EXPECT_EQ(resp->set_cookie_headers()[0], "session=abc");
+    EXPECT_EQ(resp->set_cookie_headers()[1], "token=xyz; HttpOnly");
+}
+
+TEST_F(TestHttpResponse, test_from_string_http10)
+{
+    std::string raw = "HTTP/1.0 301 Moved Permanently\r\n\r\n";
+    auto resp = HttpResponse::from_string(raw);
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(resp->status(), HttpStatus::MovedPermanently);
+}
+
+TEST_F(TestHttpResponse, test_from_string_malformed)
+{
+    EXPECT_FALSE(HttpResponse::from_string("garbage").has_value());
+    EXPECT_FALSE(HttpResponse::from_string("HTTP/2.0 200 OK\r\n\r\n").has_value());
+    EXPECT_FALSE(HttpResponse::from_string("HTTP/1.1\r\n\r\n").has_value());
+}
+
+TEST_F(TestHttpResponse, test_to_string)
+{
+    HttpResponse resp;
+    resp.set_status(HttpStatus::NotFound);
+    resp.set_plain_content("not found");
+    resp.set_cookie("id", "42");
+
+    std::string s = resp.to_string();
+    EXPECT_NE(s.find("HTTP/1.1 404 Not Found\r\n"), std::string::npos);
+    EXPECT_NE(s.find("Set-Cookie: id=42\r\n"), std::string::npos);
+    EXPECT_NE(s.find("\r\n\r\nnot found"), std::string::npos);
+}
+
+TEST_F(TestHttpResponse, test_roundtrip)
+{
+    HttpResponse original;
+    original.set_status(HttpStatus::Created);
+    original.http_header().set_header("x-request-id", "abc-123");
+    original.set_plain_content("created");
+
+    std::string serialized = original.to_string();
+    auto parsed = HttpResponse::from_string(serialized);
+    ASSERT_TRUE(parsed.has_value());
+    EXPECT_EQ(parsed->status(), HttpStatus::Created);
+    EXPECT_EQ(parsed->content().cpp_str(), "created");
+    EXPECT_EQ(parsed->http_header().find("x-request-id"), "abc-123");
+}
+
 TEST_F(TestHttpResponse, test_status)
 {
     HttpResponse resp;

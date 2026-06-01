@@ -1,4 +1,4 @@
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 

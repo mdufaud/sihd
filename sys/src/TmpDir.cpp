@@ -2,7 +2,7 @@
 #include <random>
 
 #include <sihd/sys/TmpDir.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 namespace sihd::sys
 {

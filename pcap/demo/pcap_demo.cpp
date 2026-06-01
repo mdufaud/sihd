@@ -8,7 +8,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Runnable.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 
@@ -87,7 +87,7 @@ int main()
 
     std::string interface_to_sniff = test::module::interfaces_test();
     test::module::sniffer_test(interface_to_sniff);
-    if (sihd::util::platform::is_windows)
+    if (sihd::util::build::is_windows)
         sihd::util::time::sleep(5);
 
     return 0;

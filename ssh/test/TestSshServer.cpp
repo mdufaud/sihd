@@ -15,7 +15,7 @@
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/sys/fs.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/time.hpp>
 
 #include "ssh_test_helpers.hpp"

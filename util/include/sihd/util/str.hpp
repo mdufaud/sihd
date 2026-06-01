@@ -10,8 +10,7 @@
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/IArrayView.hpp>
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/util/platform.hpp>
-
+#include <sihd/util/build.hpp>
 namespace sihd::util::str
 {
 

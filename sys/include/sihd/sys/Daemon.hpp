@@ -8,7 +8,7 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Node.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 
 namespace sihd::sys
 {

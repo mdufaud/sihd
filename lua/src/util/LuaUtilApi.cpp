@@ -13,7 +13,7 @@
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/endian.hpp>
-#include <sihd/util/platform.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/thread.hpp>
