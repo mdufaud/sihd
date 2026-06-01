@@ -2,10 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <string>
 #include <vector>
 
 #include <imgui_internal.h>
@@ -31,116 +29,6 @@ constexpr uint8_t kMinVisibleAlpha = 8;
 inline ImVec2 tri_centroid(ImVec2 a, ImVec2 b, ImVec2 c)
 {
     return {(a.x + b.x + c.x) / 3.0f, (a.y + b.y + c.y) / 3.0f};
-}
-
-// Env-driven trace match. SIHD_IMGUI_TRACE_CELL="x,y" — fires WRITE trace at (cx,cy).
-inline bool trace_cell(int cx, int cy)
-{
-    static int tx = -2, ty = -2;
-    static bool parsed = false;
-    if (!parsed)
-    {
-        parsed = true;
-        const char *env = std::getenv("SIHD_IMGUI_TRACE_CELL");
-        if (env && *env)
-        {
-            const char *comma = std::strchr(env, ',');
-            if (comma)
-            {
-                tx = std::atoi(env);
-                ty = std::atoi(comma + 1);
-            }
-        }
-    }
-    return cx == tx && cy == ty;
-}
-
-// Env-gated CSV dump of every triangle entering the classifier.
-// Set SIHD_IMGUI_NCURSES_DUMP=/path/to/dump.csv to enable.
-// SIHD_IMGUI_NCURSES_DUMP_FRAMES=N caps frames (default 1).
-struct DumpState
-{
-    FILE *fp = nullptr;
-    int   frame = 0;
-    int   cl = -1;
-    int   cmd = -1;
-    int   max_frames = 1;
-    bool  inited = false;
-};
-
-inline DumpState & dump_state()
-{
-    static DumpState s;
-    return s;
-}
-
-inline void dump_init_if_needed()
-{
-    DumpState & s = dump_state();
-    if (s.inited)
-        return;
-    s.inited = true;
-    const char *path = std::getenv("SIHD_IMGUI_NCURSES_DUMP");
-    if (!path || !*path)
-        return;
-    const char *n = std::getenv("SIHD_IMGUI_NCURSES_DUMP_FRAMES");
-    if (n && *n)
-        s.max_frames = std::max(1, std::atoi(n));
-    s.fp = std::fopen(path, "w");
-    if (s.fp)
-    {
-        std::fprintf(s.fp,
-                     "frame,cl,cmd,tri,col,clipx,clipy,clipz,clipw,"
-                     "p0x,p0y,p1x,p1y,p2x,p2y,u0,v0,u1,v1,u2,v2\n");
-        std::fflush(s.fp);
-    }
-}
-
-inline void dump_frame_begin()
-{
-    DumpState & s = dump_state();
-    dump_init_if_needed();
-    if (!s.fp)
-        return;
-    s.frame++;
-    s.cl = -1;
-    s.cmd = -1;
-    if (s.frame > s.max_frames)
-    {
-        std::fclose(s.fp);
-        s.fp = nullptr;
-    }
-}
-
-inline void dump_cl_begin(int cl)
-{
-    dump_state().cl = cl;
-    dump_state().cmd = -1;
-}
-
-inline void dump_cmd_begin(int cmd)
-{
-    dump_state().cmd = cmd;
-}
-
-inline bool dump_active()
-{
-    return dump_state().fp != nullptr;
-}
-
-inline void dump_triangle(int cl, int cmd, unsigned int tri, const ImVec4 & clip,
-                          const ImDrawVert & v0, const ImDrawVert & v1, const ImDrawVert & v2)
-{
-    DumpState & s = dump_state();
-    if (!s.fp)
-        return;
-    std::fprintf(s.fp,
-                 "%d,%d,%d,%u,%08x,%.3f,%.3f,%.3f,%.3f,"
-                 "%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",
-                 s.frame, cl, cmd, tri, v0.col,
-                 clip.x, clip.y, clip.z, clip.w,
-                 v0.pos.x, v0.pos.y, v1.pos.x, v1.pos.y, v2.pos.x, v2.pos.y,
-                 v0.uv.x, v0.uv.y, v1.uv.x, v1.uv.y, v2.uv.x, v2.uv.y);
 }
 
 } // namespace
@@ -264,7 +152,6 @@ uint8_t ImguiRendererNcurses::rgb_to_ansi256(uint8_t r, uint8_t g, uint8_t b)
 ImguiRendererNcurses::ImguiRendererNcurses():
     _is_init(false),
     _needs_full_redraw(false),
-    _diag_enabled(false),
     _clear_color_ptr(nullptr),
     _tex_w(0),
     _tex_h(0),
@@ -275,8 +162,7 @@ ImguiRendererNcurses::ImguiRendererNcurses():
     _check_col(0),
     _slider_grab_col(0),
     _slider_grab_col_active(0),
-    _plot_histogram_col(0),
-    _diag {}
+    _plot_histogram_col(0)
 {
 }
 
@@ -301,12 +187,6 @@ bool ImguiRendererNcurses::init()
 {
     if (_is_init)
         return true;
-
-    _diag = {};
-    const char *diag_env = std::getenv("SIHD_IMGUI_NCURSES_DIAG");
-    _diag_enabled = diag_env != nullptr && diag_env[0] != '\0' && std::strcmp(diag_env, "0") != 0;
-    if (_diag_enabled)
-        SIHD_LOG(info, "ImguiRendererNcurses: diagnostics enabled via SIHD_IMGUI_NCURSES_DIAG");
 
     if (_clear_color_ptr == nullptr)
     {
@@ -461,7 +341,6 @@ void ImguiRendererNcurses::_build_uv_map()
 {
     _uv_map.clear();
     const ImFontAtlas *atlas = ImGui::GetIO().Fonts;
-    const bool trace = std::getenv("SIHD_IMGUI_TRACE_GLYPH") != nullptr;
     for (ImFont *font : atlas->Fonts)
     {
         for (const ImFontGlyph & g : font->Glyphs)
@@ -485,7 +364,6 @@ void ImguiRendererNcurses::_build_uv_map()
                     _uv_map.emplace(key, g.Codepoint);
                 }
             }
-            (void)trace;
         }
     }
     SIHD_LOG(info,
@@ -516,44 +394,6 @@ void ImguiRendererNcurses::render(ImDrawData *draw_data)
     _rasterize(draw_data);
     _inject_resize_grips();
     _flush_to_ncurses();
-
-    static int dump_frame = 0;
-    static const char *dump_path = std::getenv("SIHD_IMGUI_NCURSES_SCREENDUMP");
-    static const char *dump_frame_env = std::getenv("SIHD_IMGUI_NCURSES_DUMPFRAME");
-    static const int target_frame = dump_frame_env ? std::atoi(dump_frame_env) : 2;
-    if (dump_path && dump_frame == target_frame)
-    {
-        FILE *f = std::fopen(dump_path, "w");
-        FILE *fbg = std::fopen((std::string(dump_path) + ".bg").c_str(), "w");
-        if (f)
-        {
-            for (int y = 0; y < _screen_h; ++y)
-            {
-                for (int x = 0; x < _screen_w; ++x)
-                {
-                    const TCell &c = _screen[y * _screen_w + x];
-                    char ch = (c.ch == 0 || c.ch > 126) ? '.' : (char)c.ch;
-                    std::fputc(ch, f);
-                }
-                std::fputc('\n', f);
-            }
-            std::fclose(f);
-        }
-        if (fbg)
-        {
-            for (int y = 0; y < _screen_h; ++y)
-            {
-                for (int x = 0; x < _screen_w; ++x)
-                {
-                    const TCell &c = _screen[y * _screen_w + x];
-                    std::fprintf(fbg, "%3u ", (unsigned)c.bg);
-                }
-                std::fputc('\n', fbg);
-            }
-            std::fclose(fbg);
-        }
-    }
-    ++dump_frame;
 }
 
 void ImguiRendererNcurses::_inject_resize_grips()
@@ -601,9 +441,6 @@ void ImguiRendererNcurses::_inject_resize_grips()
             // Inside window bg region → restore window bg (copy clean neighbor).
             // Outside (grip triangle bled past window edge) → restore terminal bg.
             const bool inside = (cx < gx && cy < gy);
-            if (trace_cell(cx, cy))
-                std::fprintf(stderr, "WRITE (%d,%d) ch=' ' fn=resize_clear prev_ch=%u prev_bg=%u inside=%d win=%s pos=(%.1f,%.1f) size=(%.1f,%.1f) gx=%d gy=%d\n",
-                             cx, cy, dst.ch, dst.bg, inside, w->Name, w->Pos.x, w->Pos.y, w->Size.x, w->Size.y, gx, gy);
             dst.ch = (uint32_t)' ';
             if (inside)
             {
@@ -631,8 +468,6 @@ void ImguiRendererNcurses::_inject_resize_grips()
         // Skip if another window/widget already painted text at the grip cell (occluded window).
         if (cell.ch != 0 && cell.ch != (uint32_t)' ' && cell.ch != (uint32_t)'+')
             continue;
-        if (trace_cell(gx, gy))
-            std::fprintf(stderr, "WRITE (%d,%d) ch='+' fn=resize_grip prev_ch=%u prev_bg=%u win=%s\n", gx, gy, cell.ch, cell.bg, w->Name);
         cell.ch = (uint32_t)'+';
         cell.fg = 245;
     }
@@ -699,12 +534,6 @@ void ImguiRendererNcurses::_draw_fill_triangle(ImVec2 p0, ImVec2 p1, ImVec2 p2, 
             if (x >= clip_x0 && x < clip_x1 && sy >= clip_y0 && sy < clip_y1)
             {
                 TCell & cell = _screen[(size_t)(sy * _screen_w + x)];
-                if (trace_cell(x, sy))
-                    std::fprintf(stderr,
-                                 "WRITE (%d,%d) ch=' ' fn=fill_tri prev_ch=%u prev_bg=%u "
-                                 "p0=(%.3f,%.3f) p1=(%.3f,%.3f) p2=(%.3f,%.3f) bg=%u\n",
-                                 x, sy, cell.ch, (unsigned)cell.bg, p0.x, p0.y, p1.x, p1.y, p2.x, p2.y,
-                                 (unsigned)bg_col);
                 cell.ch = (uint32_t)' ';
                 cell.bg = bg_col;
             }
@@ -759,9 +588,6 @@ uint32_t ImguiRendererNcurses::classify_arrow(ImVec2 p0, ImVec2 p1, ImVec2 p2)
 void ImguiRendererNcurses::_draw_glyph_quad(const ImDrawVert & v0, const ImDrawVert & v1,
                                             [[maybe_unused]] const ImDrawVert & v2, const ImVec4 & clip)
 {
-    if (_diag_enabled)
-        _diag.glyph_quads++;
-
     // Use horizontal quad midpoint (TL.x + TR.x) / 2 to map glyph to its cell.
     // Variable-width glyphs (e.g. 'L') have a quad whose top-left is offset by
     // the font bearing — top-left round mis-mapped those into the next cell.
@@ -780,22 +606,11 @@ void ImguiRendererNcurses::_draw_glyph_quad(const ImDrawVert & v0, const ImDrawV
     }
 
     const auto it = _uv_map.find(_pack_uv(v0.uv.x, v0.uv.y));
-    if (std::getenv("SIHD_IMGUI_TRACE_GLYPH") && row == 79)
-        std::fprintf(stderr, "GLYPH row=%d col=%d uv=(%.6f,%.6f) v0=(%.3f,%.3f) v1=(%.3f,%.3f) found=%d ch=%u\n",
-                     row, col, v0.uv.x, v0.uv.y, v0.pos.x, v0.pos.y, v1.pos.x, v1.pos.y,
-                     it != _uv_map.end() ? 1 : 0, it != _uv_map.end() ? it->second : 0);
     if (it != _uv_map.end())
     {
         TCell & cell = _screen[(size_t)(row * _screen_w + col)];
-        if (trace_cell(col, row))
-            std::fprintf(stderr, "WRITE (%d,%d) ch=glyph(%u) fn=glyph prev_ch=%u prev_bg=%u\n", col, row, it->second, cell.ch, cell.bg);
         cell.ch = it->second;
         cell.fg = col_to_ansi256(v0.col);
-    }
-    else
-    {
-        if (_diag_enabled)
-            _diag.uv_misses++;
     }
 }
 
@@ -841,8 +656,6 @@ void ImguiRendererNcurses::_draw_rect(float xmin, float ymin, float xmax, float 
         if (_in_clip(cx, cy, clip))
         {
             TCell & cell = _screen[(size_t)(cy * _screen_w + cx)];
-            if (trace_cell(cx, cy))
-                std::fprintf(stderr, "WRITE (%d,%d) ch='I' fn=draw_rect_grab prev_ch=%u prev_bg=%u\n", cx, cy, cell.ch, cell.bg);
             cell.ch = (uint32_t)'I';
             cell.fg = col_to_ansi256(col);
         }
@@ -856,8 +669,6 @@ void ImguiRendererNcurses::_draw_rect(float xmin, float ymin, float xmax, float 
         if (_in_clip(cx, cy, clip))
         {
             TCell & cell = _screen[(size_t)(cy * _screen_w + cx)];
-            if (trace_cell(cx, cy))
-                std::fprintf(stderr, "WRITE (%d,%d) ch='I' fn=draw_rect_I prev_ch=%u prev_bg=%u\n", cx, cy, cell.ch, cell.bg);
             cell.ch = (uint32_t)'I';
             cell.fg = col_to_ansi256(col);
         }
@@ -903,9 +714,6 @@ void ImguiRendererNcurses::_draw_rect(float xmin, float ymin, float xmax, float 
             if (x < clip_x0 || x >= clip_x1)
                 continue;
             TCell & cell = _screen[(size_t)(y * _screen_w + x)];
-            if (trace_cell(x, y))
-                std::fprintf(stderr, "WRITE (%d,%d) ch=' ' fn=draw_rect prev_ch=%u prev_bg=%u col=0x%08x bg=%u rect=(%.3f,%.3f,%.3f,%.3f)\n",
-                             x, y, cell.ch, cell.bg, col, bg, xmin, ymin, xmax, ymax);
             cell.ch = (uint32_t)' ';
             cell.bg = bg;
         }
@@ -943,19 +751,12 @@ void ImguiRendererNcurses::_draw_nonglyph_triangle(ImVec2 p0, ImVec2 p1, ImVec2 
             const uint32_t arrow_ch = classify_arrow(p0, p1, p2);
             if (arrow_ch)
             {
-                if (_diag_enabled)
-                    _diag.arrows++;
                 const ImVec2 center = tri_centroid(p0, p1, p2);
                 const int ax = (int)center.x;
                 const int ay = (int)center.y;
-                if (std::getenv("SIHD_IMGUI_TRACE_ARROW"))
-                    std::fprintf(stderr, "ARROW ch=%c ax=%d ay=%d p0=(%.3f,%.3f) p1=(%.3f,%.3f) p2=(%.3f,%.3f) in_clip=%d\n",
-                                 (char)arrow_ch, ax, ay, p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, _in_clip(ax, ay, clip) ? 1 : 0);
                 if (_in_clip(ax, ay, clip))
                 {
                     TCell & cell = _screen[(size_t)(ay * _screen_w + ax)];
-                    if (trace_cell(ax, ay))
-                        std::fprintf(stderr, "WRITE (%d,%d) ch=arrow(%c) fn=arrow prev_ch=%u prev_bg=%u\n", ax, ay, (char)arrow_ch, cell.ch, cell.bg);
                     cell.ch = arrow_ch;
                     cell.fg = col_to_ansi256(col);
                 }
@@ -1094,8 +895,6 @@ unsigned int ImguiRendererNcurses::_try_detect_check(const ImDrawList *dl,
     if (_in_clip(cx, cy, clip))
     {
         TCell & cell = _screen[(size_t)(cy * _screen_w + cx)];
-        if (trace_cell(cx, cy))
-            std::fprintf(stderr, "WRITE (%d,%d) ch='x' fn=check prev_ch=%u prev_bg=%u\n", cx, cy, cell.ch, cell.bg);
         cell.ch = (uint32_t)'x';
         cell.fg = col_to_ansi256(_check_col);
     }
@@ -1178,8 +977,6 @@ unsigned int ImguiRendererNcurses::_try_detect_cross(const ImDrawList *dl,
     if (_in_clip(cx, cy, clip))
     {
         TCell & cell = _screen[(size_t)(cy * _screen_w + cx)];
-        if (trace_cell(cx, cy))
-            std::fprintf(stderr, "WRITE (%d,%d) ch='X' fn=cross prev_ch=%u prev_bg=%u\n", cx, cy, cell.ch, cell.bg);
         cell.ch = (uint32_t)'X';
         cell.fg = col_to_ansi256(base_col);
     }
@@ -1298,9 +1095,6 @@ void ImguiRendererNcurses::_rasterize_cmd(const ImDrawList *dl,
         const ImDrawVert & v1 = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + i + 1]];
         const ImDrawVert & v2 = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + i + 2]];
 
-        if (dump_active())
-            dump_triangle(dump_state().cl, dump_state().cmd, i, clip, v0, v1, v2);
-
         if (is_glyph_triangle(v0, v1, v2))
         {
             _draw_glyph_quad(v0, v1, v2, clip);
@@ -1352,15 +1146,8 @@ void ImguiRendererNcurses::_rasterize_draw_list(const ImDrawList *dl,
                                                 const ImVec2 & clip_off,
                                                 const ImVec2 & clip_scale)
 {
-    static int s_cl_idx = 0;
-    if (dump_active())
-        dump_cl_begin(s_cl_idx++);
     for (int ci = 0; ci < dl->CmdBuffer.Size; ++ci)
-    {
-        if (dump_active())
-            dump_cmd_begin(ci);
         _rasterize_cmd(dl, dl->CmdBuffer[ci], fb_w, fb_h, clip_off, clip_scale);
-    }
 }
 
 // ── _rasterize() ─────────────────────────────────────────────────────────────
@@ -1373,12 +1160,7 @@ void ImguiRendererNcurses::_rasterize(ImDrawData *draw_data)
     if (fb_w <= 0 || fb_h <= 0)
         return;
 
-    if (_diag_enabled)
-        _diag.frames++;
-
     std::fill(_screen.begin(), _screen.end(), TCell {0, 0, 0});
-
-    dump_frame_begin();
 
     for (int n = 0; n < draw_data->CmdListsCount; ++n)
         _rasterize_draw_list(draw_data->CmdLists[n], fb_w, fb_h, draw_data->DisplayPos, draw_data->FramebufferScale);
@@ -1490,20 +1272,7 @@ void ImguiRendererNcurses::_flush_to_ncurses()
 
 void ImguiRendererNcurses::shutdown()
 {
-    if (_diag_enabled)
-    {
-        SIHD_LOG(
-            info,
-            "ImguiRendererNcurses diag — frames:{} glyphs:{} uv_miss:{} arrows:{}",
-            _diag.frames,
-            _diag.glyph_quads,
-            _diag.uv_misses,
-            _diag.arrows);
-    }
-
     _is_init = false;
-    _diag_enabled = false;
-    _diag = {};
     _uv_map.clear();
     std::fill(_pair_cache.begin(), _pair_cache.end(), (short)-1);
     _screen.clear();

@@ -33,15 +33,6 @@ public:
     void    set_clear_color(ImVec4 *clear_color) override;
     ImVec4 *get_clear_color() override;
 
-    // Optional diagnostic counters — enable with env SIHD_IMGUI_NCURSES_DIAG=1
-    struct DiagCounters
-    {
-        uint64_t frames      = 0;
-        uint64_t glyph_quads = 0;
-        uint64_t uv_misses   = 0;
-        uint64_t arrows      = 0;
-    };
-
     // ── Pure functions (public for unit testing) ─────────────────────────────
     static uint8_t  rgb_to_ansi256(uint8_t r, uint8_t g, uint8_t b);
     static uint8_t  col_to_ansi256(ImU32 col);
@@ -145,7 +136,6 @@ private:
     // ── State ─────────────────────────────────────────────────────────────────
     bool    _is_init;
     bool    _needs_full_redraw;
-    bool    _diag_enabled;
     ImVec4 *_clear_color_ptr;
 
     int _tex_w; // font atlas width  (texels)
@@ -167,8 +157,6 @@ private:
     ImU32 _slider_grab_col;       // packed ImGuiCol_SliderGrab
     ImU32 _slider_grab_col_active; // packed ImGuiCol_SliderGrabActive
     ImU32 _plot_histogram_col;     // packed ImGuiCol_PlotHistogram
-
-    DiagCounters _diag;
 };
 
 } // namespace sihd::imgui

@@ -290,7 +290,6 @@ void ImguiBackendNcurses::poll()
 
     // Track press transitions within THIS poll so a same-poll release gets latched.
     bool pressed_l = false, pressed_r = false;
-    int n_mouse = 0, n_key = 0;
 
     while (true)
     {
@@ -300,25 +299,10 @@ void ImguiBackendNcurses::poll()
             break;
 
         if (key == KEY_RESIZE) { continue; }
-        if (key == KEY_MOUSE)  { _process_mouse_event(io, pressed_l, pressed_r); ++n_mouse; continue; }
+        if (key == KEY_MOUSE)  { _process_mouse_event(io, pressed_l, pressed_r); continue; }
 
-        ++n_key;
         if (_process_key_event(key, io))
             _should_close = true;
-    }
-
-    // Env-gated input diagnostics: SIHD_IMGUI_NCURSES_INPUT_DUMP=path appends one
-    // line per poll (poll#, mouse-events drained, key-events, mx, my, lbut, rbut).
-    // Lets us see if events accumulate (pty/ncurses side) or position lags.
-    static FILE *dump = []() -> FILE * {
-        const char *p = getenv("SIHD_IMGUI_NCURSES_INPUT_DUMP");
-        return p ? fopen(p, "w") : nullptr;
-    }();
-    if (dump)
-    {
-        static unsigned long poll_idx = 0;
-        fprintf(dump, "%lu %d %d %d %d %d %d\n", poll_idx++, n_mouse, n_key, _mx, _my, _lbut, _rbut);
-        fflush(dump);
     }
 
     // Coalesce all motion into a single position event per poll (mode-1003 can emit
