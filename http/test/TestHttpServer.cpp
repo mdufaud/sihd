@@ -22,10 +22,10 @@
 #include <sihd/sys/SigWatcher.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Stopwatch.hpp>
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
@@ -816,21 +816,24 @@ TEST_F(TestHttpServer, test_per_webservice_auth)
     });
     server.set_port(3001);
     ASSERT_TRUE(w.start_sync_worker("test-server"));
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ASSERT_TRUE(server.wait_ready(std::chrono::milliseconds(100)));
 
+    CurlOptions no_proxy;
+    no_proxy.proxy = "";
     // public webservice accessible without credentials
-    auto pub_resp = sihd::http::get("localhost:3001/public/hello");
+    auto pub_resp = sihd::http::get("localhost:3001/public/hello", no_proxy);
     ASSERT_TRUE(pub_resp.has_value());
     EXPECT_EQ(pub_resp->status(), HttpStatus::Ok);
     EXPECT_EQ(pub_resp->content().cpp_str(), "public-ok");
 
     // protected webservice rejects without credentials
-    auto priv_resp = sihd::http::get("localhost:3001/api/secure");
+    auto priv_resp = sihd::http::get("localhost:3001/api/secure", no_proxy);
     ASSERT_TRUE(priv_resp.has_value());
     EXPECT_EQ(priv_resp->status(), HttpStatus::Unauthorized);
 
     // protected webservice accepts with correct token
     CurlOptions good_token;
+    good_token.proxy = "";
     good_token.token = "my-secret-token-123";
     priv_resp = sihd::http::get("localhost:3001/api/secure", good_token);
     ASSERT_TRUE(priv_resp.has_value());
@@ -862,6 +865,7 @@ TEST_F(TestHttpServer, test_auth_context_propagation)
     CurlOptions basic_creds;
     basic_creds.username = "admin";
     basic_creds.password = "secret";
+    basic_creds.proxy = "";
     auto resp = sihd::http::get("localhost:3001/api/whoami", basic_creds);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
@@ -873,6 +877,7 @@ TEST_F(TestHttpServer, test_auth_context_propagation)
     captured_token.clear();
     CurlOptions token_opts;
     token_opts.token = "my-secret-token-123";
+    token_opts.proxy = "";
     resp = sihd::http::get("localhost:3001/api/whoami", token_opts);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
