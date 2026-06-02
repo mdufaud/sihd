@@ -6,6 +6,7 @@
 #include <stdexcept> // out of range
 
 #include <sihd/util/IArrayView.hpp>
+#include <sihd/util/Slice.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/traits.hpp>
 
@@ -180,17 +181,22 @@ class ArrayView: public IArrayView
         /* copy_to */
         /*********************************************************************/
 
-        bool copy_to_bytes(void *buf, size_t size, size_t byte_offset = 0) const
+        bool copy_to_bytes(void *buf, Slice byte_slice = {}) const
         {
-            if (size + byte_offset > this->byte_size())
+            auto range = byte_slice.resolve(this->byte_size());
+            if (range.empty())
                 return false;
-            memcpy(buf, this->buf() + byte_offset, size);
+            memcpy(buf, this->buf() + range.from, range.size());
             return true;
         }
 
-        bool copy_to(T *arr, size_t size, size_t offset = 0) const
+        bool copy_to(T *arr, Slice slice = {}) const
         {
-            return this->copy_to_bytes(arr, size * this->data_size(), offset * this->data_size());
+            auto range = slice.resolve(_size);
+            if (range.empty())
+                return false;
+            memcpy(arr, this->data() + range.from, range.size() * sizeof(T));
+            return true;
         }
 
         /*********************************************************************/
@@ -291,14 +297,10 @@ class ArrayView: public IArrayView
             return *this;
         }
 
-        // "hello world".subview(6) -> "world"
-        // "hello world".subview(0, 5) -> "hello"
-        ArrayView<T> subview(size_t pos, size_t count = -1) const
+        ArrayView<T> subview(Slice slice = {}) const
         {
-            pos = std::min(pos, _size);
-            count = std::min(count, _size);
-            count = std::min(count - pos, _size);
-            return ArrayView<T>(this->data() + pos, count);
+            auto range = slice.resolve(_size);
+            return ArrayView<T>(this->data() + range.from, range.size());
         }
 
         /*********************************************************************/

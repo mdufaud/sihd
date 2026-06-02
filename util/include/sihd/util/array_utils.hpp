@@ -39,7 +39,7 @@ IArray *create_from_type(Type dt, size_t size = 0);
 template <traits::TriviallyCopyable T>
 bool read_into(const IArray & arr, size_t idx, T & val)
 {
-    return arr.copy_to_bytes(&val, sizeof(T), arr.byte_index(idx));
+    return arr.copy_to_bytes(&val, Slice::from_size(arr.byte_index(idx), sizeof(T)));
 }
 
 template <traits::TriviallyCopyable T>

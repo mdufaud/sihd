@@ -8,6 +8,7 @@
 
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/ICloneable.hpp>
+#include <sihd/util/Slice.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/traits.hpp>
@@ -186,12 +187,21 @@ class Array: public IArray,
         /* copy_to */
         /*********************************************************************/
 
-        bool copy_to_bytes(void *buf, size_t size, size_t byte_offset = 0) const
+        bool copy_to_bytes(void *buf, Slice byte_slice = {}) const
         {
-            if (size + byte_offset > this->byte_size())
+            auto range = byte_slice.resolve(this->byte_size());
+            if (range.empty())
                 return false;
-            memmove(buf, this->buf() + byte_offset, size);
+            memmove(buf, this->buf() + range.from, range.size());
             return true;
+        }
+
+        bool copy_to(Array<T> & arr, Slice slice = {}) const
+        {
+            auto range = slice.resolve(_size);
+            if (range.empty())
+                return false;
+            return arr.from(_buf_ptr + range.from, range.size());
         }
 
         /*********************************************************************/

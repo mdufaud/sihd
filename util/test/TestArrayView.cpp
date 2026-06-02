@@ -99,10 +99,10 @@ TEST_F(TestArrayView, test_arrayview_str)
     EXPECT_TRUE(view_str.is_equal("hello world"));
     EXPECT_EQ(view_str.str(), "hello world");
 
-    EXPECT_TRUE(view_str.subview(0, 5).is_equal("hello"));
-    EXPECT_TRUE(view_str.subview(6).is_equal("world"));
-    EXPECT_TRUE(view_str.subview(10000).is_equal(""));
-    EXPECT_TRUE(view_str.subview(10000, 10000).is_equal(""));
+    EXPECT_TRUE(view_str.subview({0, 4}).is_equal("hello"));
+    EXPECT_TRUE(view_str.subview({6, -1}).is_equal("world"));
+    EXPECT_TRUE(view_str.subview({10000, -1}).empty());
+    EXPECT_TRUE(view_str.subview({10000, 20000}).empty());
 
     view_str.remove_prefix(6);
     EXPECT_TRUE(view_str.is_equal("world"));
@@ -228,6 +228,70 @@ TEST(TestArrayViewSpan, test_arrayview_from_span_char)
     ASSERT_EQ(view.byte_size(), span.size_bytes());
     EXPECT_TRUE(view.is_equal(str));
     EXPECT_EQ(view.str(), str);
+}
+
+TEST(TestArrayViewSlice, test_arrayview_subview_slice)
+{
+    Array<int> arr({10, 20, 30, 40, 50});
+    ArrayView<int> view(arr);
+
+    auto sub = view.subview({1, 3});
+    ASSERT_EQ(sub.size(), 3u);
+    EXPECT_EQ(sub[0], 20);
+    EXPECT_EQ(sub[1], 30);
+    EXPECT_EQ(sub[2], 40);
+}
+
+TEST(TestArrayViewSlice, test_arrayview_subview_slice_negative)
+{
+    Array<int> arr({10, 20, 30, 40, 50});
+    ArrayView<int> view(arr);
+
+    auto sub = view.subview({-2, -1});
+    ASSERT_EQ(sub.size(), 2u);
+    EXPECT_EQ(sub[0], 40);
+    EXPECT_EQ(sub[1], 50);
+}
+
+TEST(TestArrayViewSlice, test_arrayview_copy_to_bytes_slice)
+{
+    Array<uint8_t> arr({0x11, 0x22, 0x33, 0x44, 0x55});
+    ArrayView<uint8_t> view(arr);
+    uint8_t dst[3] = {};
+
+    EXPECT_TRUE(view.copy_to_bytes(dst, {1, 3}));
+    EXPECT_EQ(dst[0], 0x22);
+    EXPECT_EQ(dst[1], 0x33);
+    EXPECT_EQ(dst[2], 0x44);
+}
+
+TEST(TestArrayViewSlice, test_arrayview_subview_slice_empty)
+{
+    Array<int> arr({10, 20, 30, 40, 50});
+    ArrayView<int> view(arr);
+
+    EXPECT_TRUE(view.subview({10, 3}).empty());
+    EXPECT_TRUE(view.subview({3, 1}).empty());
+    EXPECT_TRUE(view.subview({-1, -3}).empty());
+
+    uint8_t buf[4] = {};
+    EXPECT_FALSE(view.copy_to_bytes(buf, {100, 50}));
+}
+
+TEST(TestArrayViewSlice, test_arrayview_subview_slice_clamp)
+{
+    Array<int> arr({10, 20, 30});
+    ArrayView<int> view(arr);
+
+    auto sub = view.subview({0, 100});
+    ASSERT_EQ(sub.size(), 3u);
+    EXPECT_EQ(sub[0], 10);
+    EXPECT_EQ(sub[1], 20);
+    EXPECT_EQ(sub[2], 30);
+
+    auto sub2 = view.subview({-100, -1});
+    ASSERT_EQ(sub2.size(), 3u);
+    EXPECT_EQ(sub2[0], 10);
 }
 
 } // namespace test

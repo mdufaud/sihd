@@ -779,4 +779,63 @@ TEST_F(TestStr, test_str_time_format)
     EXPECT_EQ(fmt, "03:02:01");
 }
 
+TEST_F(TestStr, test_str_csub)
+{
+    char *result = str::csub("hello world", {0, 4});
+    ASSERT_NE(result, nullptr);
+    EXPECT_STREQ(result, "hello");
+    delete[] result;
+
+    result = str::csub("hello world", {6, -1});
+    ASSERT_NE(result, nullptr);
+    EXPECT_STREQ(result, "world");
+    delete[] result;
+
+    result = str::csub("hello world", {-5, -1});
+    ASSERT_NE(result, nullptr);
+    EXPECT_STREQ(result, "world");
+    delete[] result;
+
+    result = str::csub("hello world");
+    ASSERT_NE(result, nullptr);
+    EXPECT_STREQ(result, "hello world");
+    delete[] result;
+
+    EXPECT_EQ(str::csub("hello world", {5, 2}), nullptr);
+}
+
+TEST_F(TestStr, test_str_csub_negative)
+{
+    char *result = str::csub("abcdefghij", {-3, -1});
+    ASSERT_NE(result, nullptr);
+    EXPECT_STREQ(result, "hij");
+    delete[] result;
+
+    result = str::csub("abcdefghij", {-30, -2});
+    ASSERT_NE(result, nullptr);
+    EXPECT_STREQ(result, "abcdefghi");
+    delete[] result;
+}
+
+TEST_F(TestStr, test_str_csub_empty)
+{
+    EXPECT_EQ(str::csub("hello", {10, 3}), nullptr);
+    EXPECT_EQ(str::csub("hello", {3, 1}), nullptr);
+    EXPECT_EQ(str::csub("hello", {-1, -3}), nullptr);
+    EXPECT_EQ(str::csub("", {}), nullptr);
+}
+
+TEST_F(TestStr, test_str_csub_clamp)
+{
+    char *result = str::csub("hello", {0, 100});
+    ASSERT_NE(result, nullptr);
+    EXPECT_STREQ(result, "hello");
+    delete[] result;
+
+    result = str::csub("hello", {-100, -1});
+    ASSERT_NE(result, nullptr);
+    EXPECT_STREQ(result, "hello");
+    delete[] result;
+}
+
 } // namespace test

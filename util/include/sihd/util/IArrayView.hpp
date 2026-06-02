@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include <sihd/util/Slice.hpp>
 #include <sihd/util/type.hpp>
 
 namespace sihd::util
@@ -37,7 +38,7 @@ class IArrayView
 
         // copy to data from internal buffer
 
-        virtual bool copy_to_bytes(void *buf, size_t byte_size, size_t byte_offset = 0) const = 0;
+        virtual bool copy_to_bytes(void *buf, Slice byte_slice = {}) const = 0;
 
         // views
 

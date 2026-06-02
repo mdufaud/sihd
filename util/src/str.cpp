@@ -449,21 +449,14 @@ void append_sep(std::string & str, std::string_view append, std::string_view sep
     }
 }
 
-char *csub(std::string_view str, size_t from_idx, ssize_t size)
+char *csub(std::string_view str, Slice slice)
 {
-    if (size < 0)
+    auto range = slice.resolve(str.size());
+    if (range.empty())
         return nullptr;
-    char *ret = new char[size + 1];
-    size_t idx_src = from_idx;
-    size_t idx_dst = 0;
-
-    while (idx_dst < (size_t)size && str[idx_src])
-    {
-        ret[idx_dst] = str[idx_src];
-        ++idx_dst;
-        ++idx_src;
-    }
-    ret[idx_dst] = 0;
+    char *ret = new char[range.size() + 1];
+    memcpy(ret, str.data() + range.from, range.size());
+    ret[range.size()] = 0;
     return ret;
 }
 

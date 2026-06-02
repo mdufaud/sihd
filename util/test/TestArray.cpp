@@ -774,4 +774,91 @@ TEST_F(TestArray, test_array_from_span)
         EXPECT_EQ(span[i], arr[i]);
 }
 
+TEST_F(TestArray, test_array_copy_to_slice)
+{
+    Array<int> src({10, 20, 30, 40, 50});
+    Array<int> dst;
+
+    EXPECT_TRUE(src.copy_to(dst, {1, 3}));
+    ASSERT_EQ(dst.size(), 3u);
+    EXPECT_EQ(dst[0], 20);
+    EXPECT_EQ(dst[1], 30);
+    EXPECT_EQ(dst[2], 40);
+}
+
+TEST_F(TestArray, test_array_copy_to_slice_negative)
+{
+    Array<int> src({10, 20, 30, 40, 50});
+    Array<int> dst;
+
+    EXPECT_TRUE(src.copy_to(dst, {-3, -1}));
+    ASSERT_EQ(dst.size(), 3u);
+    EXPECT_EQ(dst[0], 30);
+    EXPECT_EQ(dst[1], 40);
+    EXPECT_EQ(dst[2], 50);
+}
+
+TEST_F(TestArray, test_array_copy_to_slice_full)
+{
+    Array<int> src({10, 20, 30});
+    Array<int> dst;
+
+    EXPECT_TRUE(src.copy_to(dst));
+    ASSERT_EQ(dst.size(), 3u);
+    EXPECT_EQ(dst[0], 10);
+    EXPECT_EQ(dst[1], 20);
+    EXPECT_EQ(dst[2], 30);
+}
+
+TEST_F(TestArray, test_array_copy_to_bytes_slice)
+{
+    Array<uint8_t> src({0x11, 0x22, 0x33, 0x44, 0x55});
+    uint8_t dst[3] = {};
+
+    EXPECT_TRUE(src.copy_to_bytes(dst, {1, 3}));
+    EXPECT_EQ(dst[0], 0x22);
+    EXPECT_EQ(dst[1], 0x33);
+    EXPECT_EQ(dst[2], 0x44);
+}
+
+TEST_F(TestArray, test_array_copy_to_bytes_slice_negative)
+{
+    Array<uint8_t> src({0x11, 0x22, 0x33, 0x44, 0x55});
+    uint8_t dst[2] = {};
+
+    EXPECT_TRUE(src.copy_to_bytes(dst, {-2, -1}));
+    EXPECT_EQ(dst[0], 0x44);
+    EXPECT_EQ(dst[1], 0x55);
+}
+
+TEST_F(TestArray, test_array_copy_to_slice_empty)
+{
+    Array<int> src({10, 20, 30, 40, 50});
+    Array<int> dst;
+
+    EXPECT_FALSE(src.copy_to(dst, {10, 3}));
+    EXPECT_FALSE(src.copy_to(dst, {3, 1}));
+    EXPECT_FALSE(src.copy_to(dst, {-1, -3}));
+
+    uint8_t buf[4] = {};
+    EXPECT_FALSE(src.copy_to_bytes(buf, {100, 50}));
+    EXPECT_FALSE(src.copy_to_bytes(buf, {5, 2}));
+}
+
+TEST_F(TestArray, test_array_copy_to_slice_clamp)
+{
+    Array<int> src({10, 20, 30});
+    Array<int> dst;
+
+    EXPECT_TRUE(src.copy_to(dst, {0, 100}));
+    ASSERT_EQ(dst.size(), 3u);
+    EXPECT_EQ(dst[0], 10);
+    EXPECT_EQ(dst[1], 20);
+    EXPECT_EQ(dst[2], 30);
+
+    EXPECT_TRUE(src.copy_to(dst, {-100, -1}));
+    ASSERT_EQ(dst.size(), 3u);
+    EXPECT_EQ(dst[0], 10);
+}
+
 } // namespace test

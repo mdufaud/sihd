@@ -1,6 +1,8 @@
 #ifndef __SIHD_CORE_DEVFILTER_HPP__
 #define __SIHD_CORE_DEVFILTER_HPP__
 
+#include <atomic>
+
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Task.hpp>
 #include <sihd/util/Value.hpp>
@@ -139,7 +141,7 @@ class DevFilter: public sihd::core::Device
         bool _parse_conf(std::string_view conf, RuleType type);
         void _apply_rule(const Channel *channel_in, Channel *channel_out, const Rule *rule_ptr);
 
-        bool _running;
+        std::atomic<bool> _running;
         std::mutex _run_mutex;
         std::vector<Rule> _rules_lst;
         std::map<Channel *, std::vector<std::unique_ptr<InternalRule>>> _rules_map;

@@ -19,6 +19,7 @@ using namespace sihd::util;
 DevPlayer::DevPlayer(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
     _running(false),
+    _end_notified(false),
     _channel_play_ptr(nullptr),
     _channel_end_ptr(nullptr)
 {
@@ -163,9 +164,9 @@ bool DevPlayer::run()
     PlayableRecord record = _safe_queue.front();
     _safe_queue.pop();
 
-    Channel *c = _map_channels[record.name];
-    if (c != nullptr)
-        c->write(*record.value.get());
+    auto it = _map_channels.find(record.name);
+    if (it != _map_channels.end())
+        it->second->write(*record.value.get());
     else
         SIHD_LOG(error, "DevPlayer: channel '{}' not found", record.name);
 
@@ -201,6 +202,7 @@ bool DevPlayer::_main_loop()
 {
     _first_timestamp.reset();
     _last_record = false;
+    _end_notified = false;
     // run collector loop which calls DevPlayer::handle for each record
     const bool collector_started = _collector.start();
     // last record to be played in scheduler thread can have no next record
@@ -211,8 +213,7 @@ bool DevPlayer::_main_loop()
 
 void DevPlayer::_provider_ended()
 {
-    // if no task in queue - notify end of player
-    if (_safe_queue.empty())
+    if (_safe_queue.empty() && !_end_notified.exchange(true))
         _channel_end_ptr->write<bool>(0, true);
 }
 

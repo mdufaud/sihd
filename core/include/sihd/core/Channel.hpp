@@ -8,6 +8,7 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Observable.hpp>
+#include <sihd/util/Slice.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/array_utils.hpp>
 
@@ -64,7 +65,9 @@ class Channel: public sihd::util::Named,
         void notify();
 
         // copy internal array into arr
-        bool copy_to(sihd::util::IArray & arr, size_t byte_offset = 0) const;
+        bool copy_to(sihd::util::IArray & arr, sihd::util::Timestamp *timestamp = nullptr) const;
+        bool copy_to(sihd::util::IArray & arr, sihd::util::Slice slice, sihd::util::Timestamp *timestamp = nullptr) const;
+        bool copy_to_bytes(sihd::util::IArray & arr, sihd::util::Slice byte_slice, sihd::util::Timestamp *timestamp = nullptr) const;
 
         // utility for reading
 

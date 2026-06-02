@@ -50,8 +50,9 @@ class DevPlayer: public sihd::core::Device,
         bool _main_loop();
         void _provider_ended();
 
-        bool _running;
+        std::atomic<bool> _running;
         std::atomic<bool> _last_record;
+        std::atomic<bool> _end_notified;
         size_t _records_queue_limit;
         std::string _provider_path;
 

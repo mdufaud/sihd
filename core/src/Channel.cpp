@@ -1,9 +1,8 @@
+#include <sihd/core/Channel.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/StrConfiguration.hpp>
 #include <sihd/util/array_utils.hpp>
-
-#include <sihd/core/Channel.hpp>
 
 namespace sihd::core
 {
@@ -86,22 +85,50 @@ void Channel::do_timestamp()
     _timestamp = _clock_ptr->now();
 }
 
-bool Channel::copy_to(IArray & arr, size_t byte_offset) const
+bool Channel::copy_to(IArray & arr, Timestamp *timestamp) const
+{
+    return this->copy_to(arr, {}, timestamp);
+}
+
+bool Channel::copy_to_bytes(IArray & arr, Slice byte_slice, Timestamp *timestamp) const
 {
     std::lock_guard lock(_arr_mutex);
-    return arr.copy_from_bytes(*_array_ptr, byte_offset);
+    if (timestamp != nullptr)
+        *timestamp = _timestamp;
+    auto range = byte_slice.resolve(_array_ptr->byte_size());
+    if (range.empty())
+        return false;
+    return arr.copy_from_bytes(_array_ptr->buf() + range.from, range.size());
+}
+
+bool Channel::copy_to(IArray & arr, Slice slice, Timestamp *timestamp) const
+{
+    std::lock_guard lock(_arr_mutex);
+    if (timestamp != nullptr)
+        *timestamp = _timestamp;
+    auto range = slice.resolve(_array_ptr->size());
+    if (range.empty())
+        return false;
+    return arr.copy_from_bytes(_array_ptr->buf_at(range.from), range.size() * _array_ptr->data_size());
 }
 
 bool Channel::write(const Channel & other)
 {
-    std::lock_guard lock(other._arr_mutex);
-    const IArray *other_array = other.array();
-    return other_array != nullptr && this->write(*other_array);
+    std::unique_ptr<IArray> copy;
+    {
+        std::lock_guard lock(other._arr_mutex);
+        const IArray *other_array = other.array();
+        if (other_array == nullptr)
+            return false;
+        copy.reset(other_array->clone_array());
+    }
+    return this->write(*copy);
 }
 
 bool Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_offset)
 {
-    if (_notifying)
+    std::unique_lock notify_lock(_notify_mutex, std::try_to_lock);
+    if (!notify_lock.owns_lock())
     {
         SIHD_LOG(warning, "Channel: cannot write while notifying");
         return false;
@@ -118,14 +145,17 @@ bool Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_offset
                            _array_ptr->byte_size());
             return false;
         }
-        if (_write_change_only
-            && _array_ptr->is_bytes_equal(arr_view.buf(), arr_view.byte_size(), byte_offset))
+        if (_write_change_only && _array_ptr->is_bytes_equal(arr_view.buf(), arr_view.byte_size(), byte_offset))
             return true;
         if ((ret = _array_ptr->copy_from_bytes(arr_view, byte_offset)))
             this->do_timestamp();
     }
     if (ret)
-        this->notify();
+    {
+        _notifying = true;
+        this->notify_observers(this);
+        _notifying = false;
+    }
     return ret;
 }
 

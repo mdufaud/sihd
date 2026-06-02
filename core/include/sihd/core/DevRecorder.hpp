@@ -1,6 +1,7 @@
 #ifndef __SIHD_CORE_DEVRECORDER_HPP__
 #define __SIHD_CORE_DEVRECORDER_HPP__
 
+#include <atomic>
 #include <list>
 #include <memory>
 #include <set>
@@ -43,7 +44,7 @@ class DevRecorder: public sihd::core::Device
         // corresponding channel ptr to its recorded path
         std::map<Channel *, std::string> _map_channels;
 
-        bool _running;
+        std::atomic<bool> _running;
         std::string _handler_path;
         std::unique_ptr<sihd::util::ArrUInt> _records_array_ptr;
         sihd::util::IHandler<const std::string &, const Channel *> *_handler_ptr;

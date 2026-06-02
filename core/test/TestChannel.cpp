@@ -113,4 +113,102 @@ TEST_F(TestChannel, test_channel_conf)
     delete c;
 }
 
+TEST_F(TestChannel, test_channel_copy_to)
+{
+    Channel c("chan", "int", 5);
+    ArrInt src = {10, 20, 30, 40, 50};
+    c.write(src);
+
+    ArrInt dst;
+    dst.resize(5);
+    EXPECT_TRUE(c.copy_to(dst));
+    EXPECT_EQ(dst[0], 10);
+    EXPECT_EQ(dst[1], 20);
+    EXPECT_EQ(dst[2], 30);
+    EXPECT_EQ(dst[3], 40);
+    EXPECT_EQ(dst[4], 50);
+}
+
+TEST_F(TestChannel, test_channel_copy_to_slice)
+{
+    Channel c("chan", "int", 5);
+    ArrInt src = {10, 20, 30, 40, 50};
+    c.write(src);
+
+    ArrInt dst;
+    dst.resize(3);
+    EXPECT_TRUE(c.copy_to(dst, {1, 3}));
+    EXPECT_EQ(dst[0], 20);
+    EXPECT_EQ(dst[1], 30);
+    EXPECT_EQ(dst[2], 40);
+}
+
+TEST_F(TestChannel, test_channel_copy_to_slice_negative)
+{
+    Channel c("chan", "int", 5);
+    ArrInt src = {10, 20, 30, 40, 50};
+    c.write(src);
+
+    ArrInt dst;
+    dst.resize(2);
+    EXPECT_TRUE(c.copy_to(dst, {-2, -1}));
+    EXPECT_EQ(dst[0], 40);
+    EXPECT_EQ(dst[1], 50);
+}
+
+TEST_F(TestChannel, test_channel_copy_to_bytes_slice)
+{
+    Channel c("chan", "ubyte", 5);
+    Array<uint8_t> src = {0x11, 0x22, 0x33, 0x44, 0x55};
+    c.write(src);
+
+    Array<uint8_t> dst;
+    dst.resize(3);
+    EXPECT_TRUE(c.copy_to_bytes(dst, {1, 3}));
+    EXPECT_EQ(dst[0], 0x22);
+    EXPECT_EQ(dst[1], 0x33);
+    EXPECT_EQ(dst[2], 0x44);
+}
+
+TEST_F(TestChannel, test_channel_copy_to_slice_empty)
+{
+    Channel c("chan", "int", 5);
+    ArrInt src = {10, 20, 30, 40, 50};
+    c.write(src);
+
+    ArrInt dst;
+    dst.resize(1);
+    EXPECT_FALSE(c.copy_to(dst, {10, 3}));
+    EXPECT_FALSE(c.copy_to(dst, {3, 1}));
+    EXPECT_FALSE(c.copy_to_bytes(dst, {100, 50}));
+}
+
+TEST_F(TestChannel, test_channel_copy_to_slice_clamp)
+{
+    Channel c("chan", "int", 3);
+    ArrInt src = {10, 20, 30};
+    c.write(src);
+
+    ArrInt dst;
+    dst.resize(3);
+    EXPECT_TRUE(c.copy_to(dst, {0, 100}));
+    EXPECT_EQ(dst[0], 10);
+    EXPECT_EQ(dst[1], 20);
+    EXPECT_EQ(dst[2], 30);
+}
+
+TEST_F(TestChannel, test_channel_copy_to_timestamp)
+{
+    Channel c("chan", "int");
+    ArrInt src = {42};
+    c.write(src);
+
+    ArrInt dst;
+    dst.resize(1);
+    Timestamp ts = 0;
+    EXPECT_TRUE(c.copy_to(dst, &ts));
+    EXPECT_EQ(dst[0], 42);
+    EXPECT_GT(ts, 0);
+}
+
 } // namespace test
