@@ -41,6 +41,16 @@ TEST_F(TestSlice, test_resolve_positive)
     EXPECT_EQ(range.size(), 4u);
 }
 
+TEST_F(TestSlice, test_resolve_from_only)
+{
+    constexpr size_t container_size = 10;
+    auto range = Slice {3}.resolve(container_size);
+    EXPECT_EQ(range.from, 3u);
+    EXPECT_EQ(range.to, 10u);
+    EXPECT_EQ(range.size(), 7u);
+    EXPECT_FALSE(range.empty());
+}
+
 TEST_F(TestSlice, test_resolve_negative_from)
 {
     constexpr size_t container_size = 10;

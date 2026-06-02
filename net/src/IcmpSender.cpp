@@ -233,9 +233,9 @@ void IcmpSender::_apply_config()
     if (_data_to_set && _data_to_set->size() > 0)
     {
         if (is_ipv6)
-            _array_send_ptr->copy_from_bytes(*_data_to_set, sizeof(struct icmp6_hdr));
+            _array_send_ptr->copy_from_bytes(*_data_to_set, {(ssize_t)sizeof(struct icmp6_hdr)});
         else
-            _array_send_ptr->copy_from_bytes(*_data_to_set, offsetof(struct icmp, icmp_data));
+            _array_send_ptr->copy_from_bytes(*_data_to_set, {(ssize_t)offsetof(struct icmp, icmp_data)});
     }
 
     _config_applied = true;

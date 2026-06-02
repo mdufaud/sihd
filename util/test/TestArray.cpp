@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/util/Array.hpp>
+#include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/array_utils.hpp>
 #include <sihd/util/container.hpp>
@@ -651,7 +652,12 @@ TEST_F(TestArray, test_array_equal)
     EXPECT_TRUE(arr_int->is_equal({1, 2, 3}));
     EXPECT_TRUE(arr_int->is_equal({2, 3}, 1));
     EXPECT_TRUE(arr_int->is_bytes_equal((const uint8_t *)tbl_all, 3 * sizeof(int)));
-    EXPECT_TRUE(arr_int->is_bytes_equal((const uint8_t *)tbl_two, 2 * sizeof(int), 1 * sizeof(int)));
+    EXPECT_TRUE(arr_int->is_bytes_equal((const uint8_t *)tbl_two, 2 * sizeof(int), {(ssize_t)(1 * sizeof(int))}));
+
+    Array<int> arr_two({2, 3});
+    EXPECT_TRUE(arr_int->is_bytes_equal(arr_two, {(ssize_t)(1 * sizeof(int))}));
+    ArrayView<int> view_two(arr_two);
+    EXPECT_TRUE(arr_int->is_bytes_equal(view_two, {(ssize_t)(1 * sizeof(int))}));
 }
 
 TEST_F(TestArray, test_array_from)
@@ -859,6 +865,24 @@ TEST_F(TestArray, test_array_copy_to_slice_clamp)
     EXPECT_TRUE(src.copy_to(dst, {-100, -1}));
     ASSERT_EQ(dst.size(), 3u);
     EXPECT_EQ(dst[0], 10);
+}
+
+TEST_F(TestArray, test_array_copy_from_bytes_slice)
+{
+    const uint8_t two[2] = {0x22, 0x33};
+
+    Array<uint8_t> dst({0x00, 0x00, 0x00, 0x00, 0x00});
+    EXPECT_TRUE(dst.copy_from_bytes(two, sizeof(two), {(ssize_t)1}));
+    EXPECT_TRUE(dst.is_bytes_equal((const uint8_t *)"\x00\x22\x33\x00\x00", 5));
+
+    Array<uint8_t> src_arr({0x44, 0x55});
+    EXPECT_TRUE(dst.copy_from_bytes(src_arr, {(ssize_t)3}));
+    EXPECT_TRUE(dst.is_bytes_equal((const uint8_t *)"\x00\x22\x33\x44\x55", 5));
+
+    Array<uint8_t> dst_view_target({0x00, 0x00, 0x00, 0x00});
+    ArrayView<uint8_t> src_view(src_arr);
+    EXPECT_TRUE(dst_view_target.copy_from_bytes(src_view, {(ssize_t)2}));
+    EXPECT_TRUE(dst_view_target.is_bytes_equal((const uint8_t *)"\x00\x00\x44\x55", 4));
 }
 
 } // namespace test

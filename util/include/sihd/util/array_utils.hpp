@@ -75,7 +75,7 @@ template <traits::TriviallyCopyable T>
 bool write(IArray & arr, size_t idx, T value)
 {
     static_assert(std::is_trivially_copyable_v<T>);
-    return arr.copy_from_bytes(&value, sizeof(T), arr.byte_index(idx));
+    return arr.copy_from_bytes(&value, sizeof(T), Slice::from_size(arr.byte_index(idx), sizeof(T)));
 }
 
 template <traits::TriviallyCopyable T>

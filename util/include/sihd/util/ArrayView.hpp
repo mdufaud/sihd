@@ -148,33 +148,28 @@ class ArrayView: public IArrayView
 
         bool is_same_type(const IArrayView & arr) const { return this->data_type() == arr.data_type(); }
 
-        bool is_bytes_equal(const void *buf, size_t size, size_t byte_offset = 0) const
+        bool is_bytes_equal(const void *buf, size_t buf_byte_size) const
         {
-            if (byte_offset > this->byte_size())
+            if (this->byte_size() < buf_byte_size)
                 return false;
-            if ((this->byte_size() - byte_offset) < size)
-                return false;
-            return memcmp(this->buf() + byte_offset, buf, size) == 0;
+            return memcmp(this->buf(), buf, buf_byte_size) == 0;
         }
 
-        bool is_bytes_equal(const IArrayView & arr, size_t byte_offset = 0) const
+        bool is_bytes_equal(const IArrayView & arr) const
         {
-            return this->is_bytes_equal(arr.buf(), arr.byte_size(), byte_offset);
+            return this->is_bytes_equal(arr.buf(), arr.byte_size());
         }
 
         bool operator==(ArrayView<T> other) const { return this->is_equal(other); }
 
         bool operator!=(ArrayView<T> other) const { return !this->is_equal(other); }
 
-        bool is_equal(ArrayView<T> arr, size_t offset = 0) const
-        {
-            return this->is_equal(arr.data(), arr.size(), offset);
-        }
+        bool is_equal(ArrayView<T> arr) const { return this->is_equal(arr.data(), arr.size()); }
 
         // compares memory from internal buffer and array of size
-        bool is_equal(const T *arr, size_t size, size_t offset = 0) const
+        bool is_equal(const T *arr, size_t size) const
         {
-            return this->is_bytes_equal(arr, size * this->data_size(), offset * this->data_size());
+            return this->is_bytes_equal(arr, size * this->data_size());
         }
 
         /*********************************************************************/

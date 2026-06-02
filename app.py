@@ -178,8 +178,8 @@ modules = {
         "linux-native-libs": ['glfw', 'GLEW', 'GL', 'SDL3', 'ncurses'],
         # cross linux: vcpkg provides libglfw.so (dynamic) / libglfw3.a (static)
         # (imgui has its own GL loader via dlopen, GLEW is unused)
-        # ncurses omitted: native-only backend, not built when cross-compiling
-        "linux-cross-libs": ['glfw', 'SDL3'],
+        # ncursesw: vcpkg overlay-port builds the wide-char ncurses from source
+        "linux-cross-libs": ['glfw', 'SDL3', 'ncursesw'],
         # === Android specific ===
         "android-libs": ['android', 'EGL', 'GLESv3', 'log'],
         "android-defines": ['IMGUI_IMPL_OPENGL_ES3'],

@@ -33,8 +33,8 @@ class IArrayView
 
         // comparison
 
-        virtual bool is_bytes_equal(const IArrayView & arr, size_t byte_offset = 0) const = 0;
-        virtual bool is_bytes_equal(const void *buf, size_t size, size_t byte_offset = 0) const = 0;
+        virtual bool is_bytes_equal(const IArrayView & arr) const = 0;
+        virtual bool is_bytes_equal(const void *buf, size_t buf_byte_size) const = 0;
 
         // copy to data from internal buffer
 

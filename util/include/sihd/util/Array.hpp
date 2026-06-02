@@ -165,22 +165,23 @@ class Array: public IArray,
         /* copy_from */
         /*********************************************************************/
 
-        bool copy_from_bytes(const void *buf, size_t size, size_t byte_offset = 0)
+        bool copy_from_bytes(const void *buf, size_t buf_byte_size, Slice byte_slice = {})
         {
-            if ((size + byte_offset) > this->byte_size())
+            auto range = byte_slice.resolve(this->byte_size());
+            if ((range.from + buf_byte_size) > this->byte_size())
                 return false;
-            memmove(this->buf() + byte_offset, buf, size);
+            memmove(this->buf() + range.from, buf, buf_byte_size);
             return true;
         }
 
-        bool copy_from_bytes(const IArray & arr, size_t byte_offset = 0)
+        bool copy_from_bytes(const IArray & arr, Slice byte_slice = {})
         {
-            return this->copy_from_bytes(arr.buf(), arr.byte_size(), byte_offset);
+            return this->copy_from_bytes(arr.buf(), arr.byte_size(), byte_slice);
         }
 
-        bool copy_from_bytes(const IArrayView & arr, size_t byte_offset = 0)
+        bool copy_from_bytes(const IArrayView & arr, Slice byte_slice = {})
         {
-            return this->copy_from_bytes(arr.buf(), arr.byte_size(), byte_offset);
+            return this->copy_from_bytes(arr.buf(), arr.byte_size(), byte_slice);
         }
 
         /*********************************************************************/
@@ -263,12 +264,12 @@ class Array: public IArray,
         bool from_bytes(const IArray & arr) { return this->from_bytes(arr.buf(), arr.byte_size()); }
 
         // throws std::invalid_argument if byte size is not aligned with type size
-        bool from_bytes(const void *buf, size_t byte_size)
+        bool from_bytes(const void *buf, size_t buf_byte_size)
         {
-            if (byte_size % sizeof(T) != 0)
-                throw std::invalid_argument(
-                    str::format("Array::from_bytes buffer - %lu not divisible by data size %lu", byte_size, sizeof(T)));
-            return this->from((const T *)buf, byte_size / sizeof(T));
+            if (buf_byte_size % sizeof(T) != 0)
+                throw std::invalid_argument(str::format(
+                    "Array::from_bytes buffer - %lu not divisible by data size %lu", buf_byte_size, sizeof(T)));
+            return this->from((const T *)buf, buf_byte_size / sizeof(T));
         }
 
         /*********************************************************************/
@@ -322,44 +323,43 @@ class Array: public IArray,
         /*********************************************************************/
 
         // throws std::invalid_argument if byte size is not aligned with type size
-        bool assign_bytes(void *buf, size_t size) { return this->assign_bytes(buf, size, size); }
+        bool assign_bytes(void *buf, size_t buf_byte_size) { return this->assign_bytes(buf, buf_byte_size, buf_byte_size); }
 
         // delete internal buffer if exists then sets it to bytes buffer buf - does not take ownership
         // throws std::invalid_argument if byte size or capacity is not aligned with type size
-        bool assign_bytes(void *buf, size_t byte_size, size_t byte_capacity)
+        bool assign_bytes(void *buf, size_t buf_byte_size, size_t buf_byte_capacity)
         {
-            if (byte_size % this->data_size() != 0)
-                throw std::invalid_argument(
-                    str::format("Array::assign_bytes - size %lu not divisible by data size %lu", byte_size, sizeof(T)));
-            if (byte_capacity % this->data_size() != 0)
+            if (buf_byte_size % this->data_size() != 0)
+                throw std::invalid_argument(str::format(
+                    "Array::assign_bytes - size %lu not divisible by data size %lu", buf_byte_size, sizeof(T)));
+            if (buf_byte_capacity % this->data_size() != 0)
                 throw std::invalid_argument(
                     str::format("Array::assign_bytes - capacity %lu not divisible by data size %lu",
-                                byte_capacity,
+                                buf_byte_capacity,
                                 sizeof(T)));
-            return this->assign((T *)buf, byte_size / this->data_size(), byte_capacity / this->data_size());
+            return this->assign((T *)buf, buf_byte_size / this->data_size(), buf_byte_capacity / this->data_size());
         }
 
         /*********************************************************************/
         /* comparison */
         /*********************************************************************/
 
-        bool is_bytes_equal(const void *buf, size_t size, size_t byte_offset = 0) const
+        bool is_bytes_equal(const void *buf, size_t buf_byte_size, Slice byte_slice = {}) const
         {
-            if (byte_offset > this->byte_size())
+            auto range = byte_slice.resolve(this->byte_size());
+            if ((range.from + buf_byte_size) > this->byte_size())
                 return false;
-            if ((this->byte_size() - byte_offset) < size)
-                return false;
-            return memcmp(this->buf() + byte_offset, buf, size) == 0;
+            return memcmp(this->buf() + range.from, buf, buf_byte_size) == 0;
         }
 
-        bool is_bytes_equal(const IArray & arr, size_t byte_offset = 0) const
+        bool is_bytes_equal(const IArray & arr, Slice byte_slice = {}) const
         {
-            return this->is_bytes_equal(arr.buf(), arr.byte_size(), byte_offset);
+            return this->is_bytes_equal(arr.buf(), arr.byte_size(), byte_slice);
         }
 
-        bool is_bytes_equal(const IArrayView & arr, size_t byte_offset = 0) const
+        bool is_bytes_equal(const IArrayView & arr, Slice byte_slice = {}) const
         {
-            return this->is_bytes_equal(arr.buf(), arr.byte_size(), byte_offset);
+            return this->is_bytes_equal(arr.buf(), arr.byte_size(), byte_slice);
         }
 
         bool is_same_type(const IArray & arr) const { return this->data_type() == arr.data_type(); }
@@ -504,7 +504,7 @@ class Array: public IArray,
         // compares memory from internal buffer and array of size
         bool is_equal(const T *arr, size_t size, size_t byte_offset = 0) const
         {
-            return this->is_bytes_equal(arr, size * this->data_size(), byte_offset * this->data_size());
+            return this->is_bytes_equal(arr, size * this->data_size(), {(ssize_t)(byte_offset * this->data_size())});
         }
 
         /*********************************************************************/
@@ -570,7 +570,7 @@ class Array: public IArray,
         // copies values from array
         bool copy_from(const T *arr, size_t size, size_t byte_offset = 0)
         {
-            return this->copy_from_bytes(arr, size * this->data_size(), byte_offset * this->data_size());
+            return this->copy_from_bytes(arr, size * this->data_size(), {(ssize_t)(byte_offset * this->data_size())});
         }
 
         /*********************************************************************/

@@ -145,9 +145,9 @@ bool Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_offset
                            _array_ptr->byte_size());
             return false;
         }
-        if (_write_change_only && _array_ptr->is_bytes_equal(arr_view.buf(), arr_view.byte_size(), byte_offset))
+        if (_write_change_only && _array_ptr->is_bytes_equal(arr_view, {(ssize_t)byte_offset}))
             return true;
-        if ((ret = _array_ptr->copy_from_bytes(arr_view, byte_offset)))
+        if ((ret = _array_ptr->copy_from_bytes(arr_view, {(ssize_t)byte_offset})))
             this->do_timestamp();
     }
     if (ret)

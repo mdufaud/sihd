@@ -145,6 +145,8 @@ vcpkg_cross_linux_extlibs = {
     # Wayland
     "wayland": "",            # core Wayland (requires force-build for cross)
     "wayland-protocols": "",  # Wayland protocol extensions (requires force-build for cross)
+    # ncurses (wide-char): imgui ncurses TUI backend, built from source via overlay-port
+    "ncurses": "",
 }
 
 vcpkg_cross_linux_extlibs_features = {
