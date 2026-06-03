@@ -34,7 +34,7 @@ enum class FileWatcherEventType
 struct FileWatcherEvent
 {
         FileWatcherEventType type;
-        std::string_view watch_path;
+        std::string watch_path;
         std::string filename = "";
         std::string old_filename = "";
 

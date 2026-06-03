@@ -159,12 +159,13 @@ bool FileWatcher::Impl::rm_watch(std::string_view path)
     auto it = std::find_if(_watchers.begin(), _watchers.end(), [path](const Watcher & w) {
         return w.path == path;
     });
-    if (it != _watchers.end())
+    const bool found = it != _watchers.end();
+    if (found)
     {
         it->close();
         _watchers.erase(it);
     }
-    return it != _watchers.end();
+    return found;
 }
 
 #if defined(__SIHD_WINDOWS__)
@@ -456,7 +457,8 @@ void FileWatcher::Impl::handle(Poll *poll)
                 if (it == _watchers.end())
                 {
                     SIHD_LOG_WARN("FileWatcher: watch not found {}", event->wd);
-                    return;
+                    offset += EVENT_SIZE + event->len;
+                    continue;
                 }
 
                 bool add_event = true;

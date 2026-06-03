@@ -85,8 +85,8 @@ class Poll: public sihd::util::Observable<Poll>,
 
         std::vector<PollEvent> _lst_events;
         sihd::util::Timestamp _last_poll_time;
-        bool _timedout;
-        bool _error;
+        std::atomic<bool> _timedout;
+        std::atomic<bool> _error;
 };
 
 } // namespace sihd::sys

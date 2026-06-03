@@ -8,6 +8,7 @@
 #include <sihd/sys/SharedMemory.hpp>
 
 #include <semaphore.h>
+#include <sys/mman.h>
 #define BUF_SIZE 2
 struct shmbuf
 {
@@ -35,8 +36,7 @@ class TestSharedMemory: public ::testing::Test
 
 TEST_F(TestSharedMemory, test_sharedmemory)
 {
-    if (sihd::util::term::is_interactive() == false)
-        GTEST_SKIP_("requires interaction");
+    shm_unlink("/id");
     int pid = fork();
     ASSERT_NE(pid, -1);
     if (pid != 0)

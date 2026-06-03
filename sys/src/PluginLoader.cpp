@@ -46,6 +46,8 @@ sihd::util::Named *PluginLoader::load(const std::string & libname,
 bool PluginLoader::unload(const std::string & libname)
 {
     std::lock_guard<std::mutex> lock(g_libs_mutex);
+    if (g_loaded_libs.count(libname) > 0)
+        SIHD_LOG(warning, "PluginLoader: unloading '{}' — objects created from this library become dangling", libname);
     return g_loaded_libs.erase(libname) > 0;
 }
 

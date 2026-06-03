@@ -152,7 +152,7 @@ bool FilePoller::watch(std::string_view path, size_t max_depth)
     _impl->max_depth = max_depth;
 
     _impl->path_exists = fs::exists(path);
-    _impl->last_modif = _impl->path_exists ? Timestamp {} : fs::last_write(path);
+    _impl->last_modif = _impl->path_exists ? fs::last_write(path) : Timestamp {};
 
     map_path_into(_impl->last, _impl->watch_path, max_depth);
 

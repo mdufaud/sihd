@@ -6,8 +6,11 @@
 #include <sihd/util/time.hpp>
 
 // signalfd is only available on Linux (not Android, not Emscripten)
-#if defined(SIHD_HAS_SIGNALFD)
+#if defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 # define SIHD_HAS_SIGNALFD 1
+#endif
+
+#if defined(SIHD_HAS_SIGNALFD)
 # include <sys/signalfd.h>
 # include <unistd.h>
 #endif
@@ -22,7 +25,7 @@ SIHD_LOGGER;
 SigWatcher::SigWatcher(const std::string & name, Node *parent):
     Named(name, parent),
     _running(false),
-    _polling_interval(time::sec(1)) // Default 1 second for polling mode
+    _polling_interval_ns(time::sec(1)) // Default 1 second for polling mode
 {
 #if defined(SIHD_HAS_SIGNALFD)
     _signalfd = -1;
@@ -53,7 +56,7 @@ bool SigWatcher::set_polling_frequency(double frequency)
 {
     if (frequency <= 0)
         return false;
-    _polling_interval = time::freq(frequency);
+    _polling_interval_ns = time::freq(frequency);
     return true;
 }
 
@@ -168,6 +171,7 @@ bool SigWatcher::start()
 bool SigWatcher::stop()
 {
     _running.store(false, std::memory_order_relaxed);
+    bool ret = _worker.stop_worker();
 
 #if defined(SIHD_HAS_SIGNALFD)
     if (_signalfd >= 0)
@@ -179,7 +183,7 @@ bool SigWatcher::stop()
     sigprocmask(SIG_UNBLOCK, &_sigset, nullptr);
 #endif
 
-    return _worker.stop_worker();
+    return ret;
 }
 
 void SigWatcher::_notify_signals()
@@ -202,12 +206,14 @@ void SigWatcher::_run_signalfd_loop()
 {
     thread::set_name("sigwatcher");
 
+    _poll.set_limit(1);
     _poll.set_read_fd(_signalfd);
-    _poll.set_timeout(100); // 100ms timeout for checking _running flag
+
+    constexpr int poll_timeout_ms = 100;
 
     while (_running.load(std::memory_order_relaxed))
     {
-        int ret = _poll.poll();
+        int ret = _poll.poll(poll_timeout_ms);
 
         if (ret < 0)
         {
@@ -296,7 +302,7 @@ void SigWatcher::_run_polling_loop()
         this->_notify_signals();
 
         // Sleep for polling interval
-        std::this_thread::sleep_for(std::chrono::nanoseconds(_polling_interval.nanoseconds()));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(_polling_interval_ns.load(std::memory_order_relaxed)));
     }
 }
 

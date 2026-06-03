@@ -255,9 +255,10 @@ int Poll::poll(int milliseconds_timeout)
 #else
         ret = ::WSAPoll(_lst_fds.data(), _lst_fds.size(), milliseconds_timeout);
 #endif
+        _last_poll_time = _clock.now() - before;
+        this->process_poll_results(ret);
     }
-    _last_poll_time = _clock.now() - before;
-    this->process_poll_results(ret);
+    this->notify_observers(this);
     return ret;
 }
 
@@ -271,7 +272,6 @@ void Poll::process_poll_results(int poll_return)
     if (poll_return > 0)
     {
         size_t i = 0;
-        std::lock_guard lock_fds(_fds_mutex);
         while (poll_return > 0 && i < _lst_fds.size())
         {
             short revt = _lst_fds[i].revents;
@@ -294,8 +294,6 @@ void Poll::process_poll_results(int poll_return)
             ++i;
         }
     }
-    // also notify the timeout
-    this->notify_observers(this);
 }
 
 } // namespace sihd::sys

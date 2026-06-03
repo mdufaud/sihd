@@ -107,7 +107,7 @@ SharedMemory::~SharedMemory()
 bool SharedMemory::create(std::string_view id, size_t size, mode_t mode)
 {
     this->clear();
-    auto opt = create_shm(id, size, mode, O_RDWR | O_CREAT, PROT_READ | PROT_WRITE);
+    auto opt = create_shm(id, size, mode, O_RDWR | O_CREAT | O_EXCL, PROT_READ | PROT_WRITE);
     if (opt)
     {
         _fd = opt->fd;
