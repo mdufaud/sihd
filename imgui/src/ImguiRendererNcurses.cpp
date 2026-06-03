@@ -1,4 +1,8 @@
-#include <ncurses.h>
+#include <ncursesw/ncurses.h>
+// ncurses defines `bool` as a macro (NCURSES_BOOL) on builds where the C++
+// builtin-bool probe fails (e.g. musl cross) - undef it so it cannot poison
+// the C++ standard headers / imgui types included below
+#undef bool
 
 #include <algorithm>
 #include <cmath>

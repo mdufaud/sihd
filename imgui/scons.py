@@ -1,19 +1,11 @@
-from os.path import join, exists
-
 Import('env')
 
 builder = env.builder()
 
-# ncurses backend is a linux TUI: native uses the host system ncurses, cross-linux
-# (riscv/arm/musl) builds ncursesw from source via the vcpkg overlay-port
+# ncurses backend is a linux TUI: wide-char ncursesw comes from the vcpkg
+# overlay-port (versioned), built from source for native and cross alike;
+# headers live under extlib/include/ncursesw/ which is already in CPPPATH
 build_ncurses = builder.build_platform == "linux"
-
-# vcpkg's ncurses overlay installs the wide-char headers under include/ncursesw/,
-# which is not in the default CPPPATH - add it so <ncurses.h> resolves when cross
-if build_ncurses and builder.is_cross_building():
-    ncursesw_include = join(builder.build_extlib_hdr_path, "ncursesw")
-    if exists(ncursesw_include):
-        env.AppendUnique(CPPPATH=[ncursesw_include])
 
 # choose sources to build sihd_imgui lib
 

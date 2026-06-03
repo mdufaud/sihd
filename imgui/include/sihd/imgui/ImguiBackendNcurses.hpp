@@ -1,8 +1,6 @@
 #ifndef __SIHD_IMGUI_IMGUIBACKENDNCURSES_HPP__
 #define __SIHD_IMGUI_IMGUIBACKENDNCURSES_HPP__
 
-#include <ncurses.h>
-
 #include <chrono>
 
 #include <sihd/imgui/IImguiBackend.hpp>

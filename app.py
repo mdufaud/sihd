@@ -175,7 +175,8 @@ modules = {
         "linux-extlibs": ['libxcrypt'],
         "libs": ["imgui"],
         # native linux: system provides libglfw.so, libGLEW.so, libGL.so
-        "linux-native-libs": ['glfw', 'GLEW', 'GL', 'SDL3', 'ncurses'],
+        # ncursesw: vcpkg overlay-port (versioned), same wide-char build as cross
+        "linux-native-libs": ['glfw', 'GLEW', 'GL', 'SDL3', 'ncursesw'],
         # cross linux: vcpkg provides libglfw.so (dynamic) / libglfw3.a (static)
         # (imgui has its own GL loader via dlopen, GLEW is unused)
         # ncursesw: vcpkg overlay-port builds the wide-char ncurses from source
