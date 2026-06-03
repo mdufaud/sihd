@@ -22,7 +22,7 @@ SshSubsystemPty::~SshSubsystemPty()
 
 bool SshSubsystemPty::is_supported()
 {
-    return Pty::is_supported();
+    return sys::Pty::is_supported();
 }
 
 void SshSubsystemPty::set_shell(std::string_view shell)
@@ -50,14 +50,14 @@ bool SshSubsystemPty::on_start(SshChannel *channel, bool has_pty, const WinSize 
     _channel = channel;
 
     // Check PTY support
-    if (!Pty::is_supported())
+    if (!sys::Pty::is_supported())
     {
         SIHD_LOG(error, "SshSubsystemPty: PTY not supported on this platform");
         return false;
     }
 
     // Create PTY
-    _pty = Pty::create();
+    _pty = sys::Pty::create();
     if (!_pty)
     {
         SIHD_LOG(error, "SshSubsystemPty: failed to create PTY");
@@ -86,7 +86,7 @@ bool SshSubsystemPty::on_start(SshChannel *channel, bool has_pty, const WinSize 
     }
 
     // Set terminal size
-    PtySize size;
+    sys::PtySize size;
     size.cols = winsize.ws_col;
     size.rows = winsize.ws_row;
     size.xpixel = winsize.ws_xpixel;
@@ -111,21 +111,49 @@ bool SshSubsystemPty::on_start(SshChannel *channel, bool has_pty, const WinSize 
     return true;
 }
 
+void SshSubsystemPty::drain_pending_input()
+{
+    if (!_pty || _pending_in.empty())
+        return;
+
+    ssize_t written = _pty->write(_pending_in.data(), _pending_in.size());
+    if (written > 0)
+        _pending_in.erase(0, static_cast<size_t>(written));
+}
+
 int SshSubsystemPty::on_data(const void *data, size_t len)
 {
     if (!_pty)
         return 0;
 
-    // Write data from SSH client to PTY input (goes to shell's stdin)
-    ssize_t written = _pty->write(data, len);
+    if (data == nullptr || len == 0)
+        return 0;
 
+    // Preserve ordering: if a previous partial write left bytes buffered, append
+    // the new data behind them and drain in order. libssh's data callback always
+    // reports all bytes consumed, so unwritten bytes must be kept locally to
+    // avoid data loss.
+    if (!_pending_in.empty())
+    {
+        _pending_in.append(static_cast<const char *>(data), len);
+        this->drain_pending_input();
+        return static_cast<int>(len);
+    }
+
+    ssize_t written = _pty->write(data, len);
     if (written < 0)
     {
         SIHD_LOG(error, "SshSubsystemPty: write to PTY failed");
         return -1;
     }
 
-    return static_cast<int>(written);
+    if (static_cast<size_t>(written) < len)
+    {
+        const char *tail = static_cast<const char *>(data) + written;
+        _pending_in.append(tail, len - static_cast<size_t>(written));
+    }
+
+    return static_cast<int>(len);
 }
 
 void SshSubsystemPty::on_resize(const WinSize & winsize)
@@ -133,7 +161,7 @@ void SshSubsystemPty::on_resize(const WinSize & winsize)
     if (!_pty)
         return;
 
-    PtySize size;
+    sys::PtySize size;
     size.cols = winsize.ws_col;
     size.rows = winsize.ws_row;
     size.xpixel = winsize.ws_xpixel;
@@ -201,15 +229,17 @@ bool SshSubsystemPty::forward_output()
     if (!_pty || !_channel)
         return false;
 
-    sihd::util::ArrChar buf;
-    if (!buf.reserve(4096))
+    // Flush any client input the PTY could not accept earlier before reading.
+    this->drain_pending_input();
+
+    if (_read_buf.byte_capacity() < 4096 && !_read_buf.reserve(4096))
         return false;
 
-    ssize_t n = _pty->read(buf.buf(), buf.byte_capacity());
+    ssize_t n = _pty->read(_read_buf.buf(), _read_buf.byte_capacity());
     if (n > 0)
     {
         _channel->write(
-            sihd::util::ArrCharView(reinterpret_cast<const char *>(buf.buf()), static_cast<size_t>(n)));
+            sihd::util::ArrCharView(reinterpret_cast<const char *>(_read_buf.buf()), static_cast<size_t>(n)));
         return true;
     }
     return false;

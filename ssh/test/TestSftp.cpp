@@ -86,4 +86,47 @@ TEST_F(TestSftp, test_sftp)
     EXPECT_EQ(nregular, 2);
     EXPECT_EQ(ndir, 1);
 }
+
+TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
+{
+    TmpDir base;
+    std::string jail = fs::combine(base.path(), "jail");
+    ASSERT_TRUE(fs::make_directories(jail));
+
+    // Secret sits OUTSIDE the jail (in its parent)
+    std::string secret = fs::combine(base.path(), "secret.txt");
+    ASSERT_TRUE(fs::write(secret, "TOPSECRET"));
+    // Legit file inside the jail
+    ASSERT_TRUE(fs::write(fs::combine(jail, "ok.txt"), "hello"));
+
+    auto test_server = make_test_server_with_sftp("test-sftp-jail", jail);
+    ASSERT_NE(test_server, nullptr);
+
+    SshSession session;
+    ASSERT_TRUE(connect_to_test_server(*test_server, session));
+
+    Sftp sftp = session.make_sftp();
+    ASSERT_TRUE(sftp.open());
+
+    TmpDir out;
+    std::string leaked = fs::combine(out.path(), "leaked.txt");
+
+    // Traversal read must fail and must not retrieve the secret.
+    // get_file opens the local sink before the remote file, so an empty local
+    // file may remain; the security guarantee is that no secret bytes leak.
+    EXPECT_FALSE(sftp.get_file("../secret.txt", leaked));
+    if (fs::is_file(leaked))
+    {
+        EXPECT_EQ(fs::file_size(leaked), 0u);
+    }
+
+    // Legit read inside the jail still works
+    std::string got = fs::combine(out.path(), "got.txt");
+    EXPECT_TRUE(sftp.get_file("ok.txt", got));
+    EXPECT_TRUE(fs::is_file(got));
+
+    // Traversal write must not escape the jail
+    EXPECT_FALSE(sftp.send_file(fs::combine(jail, "ok.txt"), "../escape.txt"));
+    EXPECT_FALSE(fs::is_file(fs::combine(base.path(), "escape.txt")));
+}
 } // namespace test

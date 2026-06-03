@@ -114,7 +114,8 @@ struct SshServerHelper
                             const char *user = "testuser",
                             const char *password = "testpass")
         {
-            if (!session.fast_connect(user, "127.0.0.1", port))
+            // process_config=false: ignore ~/.ssh/config (proxy) for localhost tests
+            if (!session.fast_connect({.user = user, .host = "127.0.0.1", .port = port, .process_config = false}))
                 return false;
             if (!session.connected())
                 return false;
@@ -153,7 +154,8 @@ inline bool connect_to_test_server(const SshServerHelper & server,
                                    const char *user = "testuser",
                                    const char *password = "testpass")
 {
-    if (!session.fast_connect(user, "127.0.0.1", server.port))
+    // process_config=false: ignore ~/.ssh/config (proxy) for localhost tests
+    if (!session.fast_connect({.user = user, .host = "127.0.0.1", .port = server.port, .process_config = false}))
         return false;
     if (!session.connected())
         return false;

@@ -1,15 +1,16 @@
 #ifndef __SIHD_SSH_BASICSSHSERVERHANDLER_HPP__
 #define __SIHD_SSH_BASICSSHSERVERHANDLER_HPP__
 
-#include <sihd/ssh/ISshServerHandler.hpp>
-#include <sihd/ssh/ISshSubsystemHandler.hpp>
-
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include <sihd/ssh/ISshServerHandler.hpp>
+#include <sihd/ssh/ISshSubsystemHandler.hpp>
 
 namespace sihd::ssh
 {
@@ -25,8 +26,7 @@ class BasicSshServerHandler: public ISshServerHandler
     public:
         // Handler factory callbacks - return nullptr to reject the request
         using ShellHandlerCallback = std::function<
-            ISshSubsystemHandler
-                *(SshSession *session, SshChannel *channel, bool has_pty, const WinSize & winsize)>;
+            ISshSubsystemHandler *(SshSession *session, SshChannel *channel, bool has_pty, const WinSize & winsize)>;
 
         using ExecHandlerCallback = std::function<ISshSubsystemHandler *(SshSession *session,
                                                                          SshChannel *channel,
@@ -41,10 +41,9 @@ class BasicSshServerHandler: public ISshServerHandler
                                                                               const WinSize & winsize)>;
 
         // Custom auth callbacks (called in addition to allowed user/key lists)
-        using AuthPasswordCallback
-            = std::function<bool(SshSession *session, std::string_view user, std::string_view password)>;
-        using AuthPubkeyCallback
-            = std::function<bool(SshSession *session, std::string_view user, const SshKey & key)>;
+        using AuthPasswordCallback = std::function<
+            bool(SshSession *session, std::string_view user, std::string_view password)>;
+        using AuthPubkeyCallback = std::function<bool(SshSession *session, std::string_view user, const SshKey & key)>;
 
         BasicSshServerHandler();
         ~BasicSshServerHandler() override;
@@ -75,7 +74,7 @@ class BasicSshServerHandler: public ISshServerHandler
         size_t session_count() const;
         size_t channel_count(SshSession *session) const;
 
-        // ===== Event Counters (for testing) =====
+        // ===== Event Counters (runtime stats) =====
 
         struct EventCounters
         {
@@ -93,8 +92,8 @@ class BasicSshServerHandler: public ISshServerHandler
                 size_t bytes_received = 0;
         };
 
-        const EventCounters & counters() const { return _counters; }
-        void reset_counters() { _counters = {}; }
+        EventCounters counters() const;
+        void reset_counters();
 
         // ===== ISshServerHandler =====
 
@@ -103,10 +102,7 @@ class BasicSshServerHandler: public ISshServerHandler
                               std::string_view user,
                               std::string_view password) override;
 
-        bool on_auth_pubkey(SshServer *server,
-                            SshSession *session,
-                            std::string_view user,
-                            const SshKey & key) override;
+        bool on_auth_pubkey(SshServer *server, SshSession *session, std::string_view user, const SshKey & key) override;
 
         void on_session_opened(SshServer *server, SshSession *session) override;
         void on_session_closed(SshServer *server, SshSession *session) override;
@@ -164,6 +160,8 @@ class BasicSshServerHandler: public ISshServerHandler
         ChannelState *get_channel_state(SshSession *session, SshChannel *channel);
         void poll_handler(SshChannel *channel, ISshSubsystemHandler *handler);
 
+        void inc_counter(size_t EventCounters::*field);
+
         std::unordered_map<std::string, std::string> _allowed_users;
         std::unordered_map<std::string, std::vector<std::string>> _allowed_pubkeys;
         AuthPasswordCallback _auth_password_callback;
@@ -177,8 +175,10 @@ class BasicSshServerHandler: public ISshServerHandler
         bool _default_exec_fork_mode;
 
         std::unordered_map<SshSession *, SessionState> _sessions;
+        std::unordered_map<SshChannel *, ChannelState *> _channel_index;
         uint64_t _next_session_id;
 
+        mutable std::mutex _counters_mtx;
         EventCounters _counters;
 };
 

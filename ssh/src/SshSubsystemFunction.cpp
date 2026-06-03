@@ -1,7 +1,7 @@
 #include <sihd/util/Logger.hpp>
 
 #include <sihd/ssh/SshChannel.hpp>
-#include <sihd/ssh/SshSubsystemCallback.hpp>
+#include <sihd/ssh/SshSubsystemFunction.hpp>
 #include <sihd/ssh/utils.hpp>
 
 namespace sihd::ssh
@@ -9,7 +9,7 @@ namespace sihd::ssh
 
 SIHD_LOGGER;
 
-SshSubsystemCallback::SshSubsystemCallback(std::string_view command):
+SshSubsystemFunction::SshSubsystemFunction(std::string_view command):
     _channel(nullptr),
     _command(command),
     _exit_code(0)
@@ -17,17 +17,17 @@ SshSubsystemCallback::SshSubsystemCallback(std::string_view command):
     utils::init();
 }
 
-SshSubsystemCallback::~SshSubsystemCallback()
+SshSubsystemFunction::~SshSubsystemFunction()
 {
     utils::finalize();
 }
 
-void SshSubsystemCallback::set_callback(Callback callback)
+void SshSubsystemFunction::set_callback(Callback callback)
 {
     _callback = std::move(callback);
 }
 
-bool SshSubsystemCallback::on_start(SshChannel *channel,
+bool SshSubsystemFunction::on_start(SshChannel *channel,
                                     [[maybe_unused]] bool has_pty,
                                     [[maybe_unused]] const WinSize & winsize)
 {
@@ -35,11 +35,11 @@ bool SshSubsystemCallback::on_start(SshChannel *channel,
 
     if (!_callback)
     {
-        SIHD_LOG(error, "SshSubsystemCallback: no callback set for command '{}'", _command);
+        SIHD_LOG(error, "SshSubsystemFunction: no callback set for command '{}'", _command);
         return false;
     }
 
-    SIHD_LOG(debug, "SshSubsystemCallback: exec '{}'", _command);
+    SIHD_LOG(debug, "SshSubsystemFunction: exec '{}'", _command);
 
     Result result = _callback(_command);
     _exit_code = result.exit_code;
@@ -62,25 +62,25 @@ bool SshSubsystemCallback::on_start(SshChannel *channel,
     return true;
 }
 
-int SshSubsystemCallback::on_data([[maybe_unused]] const void *data, [[maybe_unused]] size_t len)
+int SshSubsystemFunction::on_data([[maybe_unused]] const void *data, [[maybe_unused]] size_t len)
 {
     // Callback mode is synchronous - no data expected after start
     return 0;
 }
 
-void SshSubsystemCallback::on_resize([[maybe_unused]] const WinSize & winsize)
+void SshSubsystemFunction::on_resize([[maybe_unused]] const WinSize & winsize)
 {
     // No-op: callback mode doesn't use PTY
 }
 
-void SshSubsystemCallback::on_eof()
+void SshSubsystemFunction::on_eof()
 {
-    SIHD_LOG(debug, "SshSubsystemCallback: EOF");
+    SIHD_LOG(debug, "SshSubsystemFunction: EOF");
 }
 
-int SshSubsystemCallback::on_close()
+int SshSubsystemFunction::on_close()
 {
-    SIHD_LOG(debug, "SshSubsystemCallback: close");
+    SIHD_LOG(debug, "SshSubsystemFunction: close");
     _channel = nullptr;
     return _exit_code;
 }

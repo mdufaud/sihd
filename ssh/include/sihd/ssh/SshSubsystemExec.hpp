@@ -57,6 +57,7 @@ class SshSubsystemExec: public ISshSubsystemHandler
         bool forward_output() override;
 
     private:
+        void configure_process_command();
         bool start_process_mode();
         bool start_sync_mode();
 
@@ -73,7 +74,11 @@ class SshSubsystemExec: public ISshSubsystemHandler
 
         std::vector<std::pair<std::string, std::string>> _env;
 
-        // Process-based execution (fork mode)
+        // Buffered output for sync (non-fork) mode, flushed on completion
+        std::string _sync_out;
+        std::string _sync_err;
+
+        // Process-based execution (both modes, async/non-blocking)
         sihd::sys::Process _process;
 };
 

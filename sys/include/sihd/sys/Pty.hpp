@@ -1,5 +1,5 @@
-#ifndef __SIHD_SSH_PTY_HPP__
-#define __SIHD_SSH_PTY_HPP__
+#ifndef __SIHD_SYS_PTY_HPP__
+#define __SIHD_SYS_PTY_HPP__
 
 #include <cstdint>
 #include <memory>
@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-namespace sihd::ssh
+namespace sihd::sys
 {
 
 struct PtySize
@@ -58,6 +58,6 @@ class Pty
         virtual void send_eof() = 0;
 };
 
-} // namespace sihd::ssh
+} // namespace sihd::sys
 
 #endif

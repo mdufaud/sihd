@@ -3,7 +3,6 @@
 #if !defined(__SIHD_WINDOWS__)
 # include <arpa/inet.h>
 # include <netinet/in.h>
-# include <poll.h>
 #else
 # include <winsock2.h>
 # include <ws2tcpip.h>
@@ -16,6 +15,7 @@
 #include <libssh/server.h>
 
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/sys/Poll.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
@@ -52,9 +52,6 @@ struct SessionData
         std::vector<std::unique_ptr<ChannelData>> channels;
         int auth_attempts;
         bool authenticated;
-        // For requests that come before channel is fully created (pty, etc.)
-        bool pending_has_pty;
-        WinSize pending_winsize;
 
         // Callback structs must persist for the lifetime of the session
         struct ssh_server_callbacks_struct server_callbacks;
@@ -133,6 +130,10 @@ int callback_auth_pubkey(ssh_session session,
     if (data->server->server_handler() == nullptr)
         return SSH_AUTH_DENIED;
 
+    data->auth_attempts++;
+    if (data->auth_attempts >= 3)
+        return SSH_AUTH_DENIED;
+
     // Duplicate the key since libssh owns the original and will free it
     ssh_key key_dup = ssh_key_dup(pubkey);
     if (key_dup == nullptr)
@@ -162,8 +163,8 @@ ssh_channel callback_channel_open(ssh_session session, void *userdata)
     auto ch_data = std::make_unique<ChannelData>();
     ch_data->wrapper = new SshChannel(raw_channel);
     ch_data->wrapper->set_userdata(data);
-    ch_data->has_pty = data->pending_has_pty; // Use pending values if set before channel open
-    ch_data->winsize = data->pending_winsize;
+    ch_data->has_pty = false;
+    ch_data->winsize = {};
 
     // Setup channel callbacks (stored in ChannelData to persist)
     ssh_callbacks_init(&ch_data->callbacks);
@@ -183,6 +184,8 @@ ssh_channel callback_channel_open(ssh_session session, void *userdata)
             = data->server->server_handler()->on_channel_open(data->server, data->session, ch_data->wrapper);
         if (!allowed)
         {
+            // ~SshChannel frees the channel; detach so we free it exactly once.
+            ch_data->wrapper->detach();
             delete ch_data->wrapper;
             ssh_channel_free(raw_channel);
             return nullptr;
@@ -190,10 +193,6 @@ ssh_channel callback_channel_open(ssh_session session, void *userdata)
     }
 
     data->channels.push_back(std::move(ch_data));
-
-    // Reset pending values
-    data->pending_has_pty = false;
-    data->pending_winsize = {};
 
     SIHD_LOG(debug, "SshServer: channel opened (total: {})", data->channels.size());
     return raw_channel;
@@ -217,21 +216,18 @@ int callback_channel_pty_request(ssh_session session,
     ws.ws_xpixel = static_cast<uint16_t>(px);
     ws.ws_ypixel = static_cast<uint16_t>(py);
 
-    // Find the channel
+    // RFC 4254: pty-req always targets an already-open channel.
     ChannelData *ch_data = data->find_channel(channel);
-    if (ch_data)
+    if (!ch_data)
     {
-        ch_data->has_pty = true;
-        ch_data->winsize = ws;
-    }
-    else
-    {
-        // Store as pending for next channel open
-        data->pending_has_pty = true;
-        data->pending_winsize = ws;
+        SIHD_LOG(warning, "SshServer: pty-req for unknown channel");
+        return SSH_ERROR;
     }
 
-    if (data->server->server_handler() && ch_data)
+    ch_data->has_pty = true;
+    ch_data->winsize = ws;
+
+    if (data->server->server_handler())
     {
         bool allowed = data->server->server_handler()->on_channel_request_pty(data->server,
                                                                               data->session,
@@ -371,18 +367,19 @@ struct SshServer::Impl
 {
         ssh_bind bind;
         ssh_event event;
+        sihd::sys::Poll poll;
         std::vector<std::unique_ptr<SshSession>> sessions;
-        std::unordered_map<ssh_session, SessionData *> session_data;
+        std::unordered_map<ssh_session, std::unique_ptr<SessionData>> session_data;
 
         int port;
         int actual_port;
         std::string bind_addr;
         std::string rsa_key;
-        std::string dsa_key;
         std::string ecdsa_key;
         std::string authorized_keys;
         std::string banner;
         int verbosity;
+        int kex_timeout_sec;
 
         Impl():
             bind(nullptr),
@@ -390,7 +387,8 @@ struct SshServer::Impl
             port(22),
             actual_port(0),
             bind_addr("0.0.0.0"),
-            verbosity(SSH_LOG_NOLOG)
+            verbosity(SSH_LOG_NOLOG),
+            kex_timeout_sec(SshServer::default_kex_timeout_sec)
         {
         }
 
@@ -416,7 +414,6 @@ struct SshServer::Impl
                         }
                     }
                     data->channels.clear();
-                    delete data;
                 }
             }
             session_data.clear();
@@ -457,8 +454,6 @@ struct SshServer::Impl
             // Use SSH_BIND_OPTIONS_HOSTKEY for all key types (modern API)
             if (!rsa_key.empty())
                 ssh_bind_options_set(bind, SSH_BIND_OPTIONS_HOSTKEY, rsa_key.c_str());
-            if (!dsa_key.empty())
-                ssh_bind_options_set(bind, SSH_BIND_OPTIONS_HOSTKEY, dsa_key.c_str());
             if (!ecdsa_key.empty())
                 ssh_bind_options_set(bind, SSH_BIND_OPTIONS_HOSTKEY, ecdsa_key.c_str());
 
@@ -519,7 +514,7 @@ struct SshServer::Impl
             {
                 // No connection waiting, normal for non-blocking
                 ssh_free(session);
-                return true;
+                return false;
             }
 
             if (rc == SSH_ERROR)
@@ -534,18 +529,22 @@ struct SshServer::Impl
             // Create session wrapper (session is still in blocking mode)
             auto session_wrapper = std::make_unique<SshSession>(session);
 
+            // Bound the blocking key-exchange so a connect-and-stall client cannot
+            // hang the single-threaded loop (pre-auth DoS). libssh applies this
+            // timeout to the blocking handshake read below.
+            session_wrapper->set_timeout(kex_timeout_sec);
+
             // Setup session data for callbacks
-            auto *data = new SessionData {.server = server,
-                                          .session = session_wrapper.get(),
-                                          .channels = {},
-                                          .auth_attempts = 0,
-                                          .authenticated = false,
-                                          .pending_has_pty = false,
-                                          .pending_winsize = {},
-                                          .server_callbacks = {}};
+            auto data_holder = std::make_unique<SessionData>(SessionData {.server = server,
+                                                                          .session = session_wrapper.get(),
+                                                                          .channels = {},
+                                                                          .auth_attempts = 0,
+                                                                          .authenticated = false,
+                                                                          .server_callbacks = {}});
+            SessionData *data = data_holder.get();
 
             session_wrapper->set_userdata(data);
-            session_data[session] = data;
+            session_data[session] = std::move(data_holder);
 
             // Setup server callbacks (stored in SessionData to persist)
             ssh_callbacks_init(&data->server_callbacks);
@@ -568,15 +567,25 @@ struct SshServer::Impl
             if (ssh_handle_key_exchange(session) != SSH_OK)
             {
                 SIHD_LOG(error, "SshServer: key exchange failed: {}", ssh_get_error(session));
-                delete data;
                 session_data.erase(session);
                 return false;
             }
 
             SIHD_LOG(debug, "SshServer: key exchange completed");
 
+            // Send the pre-auth issue banner (MOTD) while still blocking, before auth
+            if (!banner.empty())
+            {
+                ssh_string banner_str = ssh_string_from_char(banner.c_str());
+                if (banner_str != nullptr)
+                {
+                    ssh_send_issue_banner(session, banner_str);
+                    ssh_string_free(banner_str);
+                }
+            }
+
             // NOW set session to non-blocking for event loop
-            ssh_set_blocking(session, 0);
+            session_wrapper->set_blocking(false);
 
             // Add to event loop to handle subsequent messages
             ssh_event_add_session(event, session);
@@ -610,7 +619,6 @@ struct SshServer::Impl
                         }
                     }
                     it->second->channels.clear();
-                    delete it->second;
                 }
                 session_data.erase(it);
             }
@@ -673,36 +681,43 @@ struct SshServer::Impl
 
             server->service_set_ready();
 
+            // ssh_event_dopoll() with a non-zero timeout blocks indefinitely once a
+            // session is registered (it honours the session's own timeout, not the
+            // one passed in), so delivery only works with a 0 timeout. To avoid the
+            // resulting busy-spin we block on a sys::Poll over the bind fd plus every
+            // session fd, then drive ssh_event_dopoll(event, 0) once data is ready.
+            // The 100 ms cap bounds latency for handlers without an fd in the event
+            // (Sftp, buffered Exec) and for is_running/deadline polling.
+            constexpr int wait_timeout_ms = 100;
+            poll.set_limit(-1);
             while (!server->should_stop())
             {
-#if !defined(__SIHD_WINDOWS__)
-                struct pollfd pfd = {.fd = bind_fd, .events = POLLIN, .revents = 0};
-                constexpr int poll_timeout_ms = 0;
-                int poll_rc = poll(&pfd, 1, poll_timeout_ms);
-#else
-                WSAPOLLFD pfd = {};
-                pfd.fd = static_cast<SOCKET>(bind_fd);
-                pfd.events = POLLIN;
-                constexpr int poll_timeout_ms = 0;
-                int poll_rc = WSAPoll(&pfd, 1, poll_timeout_ms);
-#endif
-
-                if (poll_rc > 0 && (pfd.revents & POLLIN))
+                poll.clear_fds();
+                poll.set_read_fd(bind_fd);
+                for (auto & session_wrapper : sessions)
                 {
-                    if (!this->accept_session(server))
+                    int sfd = static_cast<int>(ssh_get_fd(static_cast<ssh_session>(session_wrapper->session())));
+                    if (sfd >= 0)
+                        poll.set_read_fd(sfd);
+                }
+
+                poll.poll(wait_timeout_ms);
+
+                // Accept any pending connection (bind fd readable).
+                bool bind_readable = false;
+                for (const auto & ev : poll.events())
+                {
+                    if (ev.fd == bind_fd && ev.readable)
                     {
-                        SIHD_LOG(error, "SshServer: failed to accept session");
+                        bind_readable = true;
+                        break;
                     }
                 }
-                else if (poll_rc < 0)
-                {
-                    SIHD_LOG(error, "SshServer: poll error: {}", sihd::sys::os::last_error_str());
-                    break;
-                }
+                if (bind_readable)
+                    this->accept_session(server);
 
-                // Process all sessions
-                constexpr int event_poll_timeout_ms = 0;
-                ssh_event_dopoll(event, event_poll_timeout_ms);
+                // Non-blocking dispatch of all ready session traffic.
+                ssh_event_dopoll(event, 0);
 
                 // Allow handler to poll child FDs
                 if (server->server_handler())
@@ -758,12 +773,6 @@ bool SshServer::set_bind_address(std::string_view addr)
     return true;
 }
 
-bool SshServer::add_host_key(std::string_view key_path)
-{
-    // For now, just set as RSA key (user should use specific methods)
-    return set_rsa_key(key_path);
-}
-
 bool SshServer::set_rsa_key(std::string_view key_path)
 {
     if (this->is_running())
@@ -772,17 +781,6 @@ bool SshServer::set_rsa_key(std::string_view key_path)
         return false;
     }
     _impl_ptr->rsa_key = key_path;
-    return true;
-}
-
-bool SshServer::set_dsa_key(std::string_view key_path)
-{
-    if (this->is_running())
-    {
-        SIHD_LOG(error, "SshServer: cannot change keys while running");
-        return false;
-    }
-    _impl_ptr->dsa_key = key_path;
     return true;
 }
 
@@ -822,6 +820,17 @@ bool SshServer::set_banner(std::string_view banner)
 bool SshServer::set_verbosity(int level)
 {
     _impl_ptr->verbosity = level;
+    return true;
+}
+
+bool SshServer::set_kex_timeout(int seconds)
+{
+    if (this->is_running())
+    {
+        SIHD_LOG(error, "SshServer: cannot change kex timeout while running");
+        return false;
+    }
+    _impl_ptr->kex_timeout_sec = seconds;
     return true;
 }
 

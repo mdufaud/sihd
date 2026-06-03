@@ -1,7 +1,6 @@
 #include <cerrno>
 #include <cstring>
 
-#include <sihd/sys/proc.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 
@@ -82,68 +81,8 @@ bool SshSubsystemExec::on_start(SshChannel *channel, bool has_pty, const WinSize
     }
 }
 
-bool SshSubsystemExec::start_sync_mode()
+void SshSubsystemExec::configure_process_command()
 {
-    _started = true;
-
-    std::string output;
-    std::string errors;
-
-    sihd::sys::proc::Options opts;
-    opts.stdout_callback = [&output](std::string_view data) {
-        output += data;
-    };
-    opts.stderr_callback = [&errors](std::string_view data) {
-        errors += data;
-    };
-
-    std::vector<std::string> args;
-    if (_parse_mode == ParseMode::Shell)
-    {
-#if !defined(__SIHD_WINDOWS__)
-        args = {_shell, "-c", _command};
-#else
-        args = {_shell, "/c", _command};
-#endif
-    }
-    else
-    {
-        sihd::util::Splitter splitter;
-        splitter.set_delimiter_spaces();
-        splitter.set_escape_sequences_all();
-        args = splitter.split(_command);
-    }
-
-    auto future = sihd::sys::proc::execute(args, opts);
-    _exit_code = future.get();
-
-    if (_channel)
-    {
-        if (!output.empty())
-        {
-            _channel->write(sihd::util::ArrCharView(output.data(), output.size()));
-        }
-        if (!errors.empty())
-        {
-            _channel->write_stderr(sihd::util::ArrCharView(errors.data(), errors.size()));
-        }
-    }
-
-    // Immediate completion for sync mode
-    if (_channel)
-    {
-        _channel->request_send_exit_status(_exit_code);
-        _channel->send_eof();
-        _channel->close();
-    }
-
-    _started = false;
-    return true;
-}
-
-bool SshSubsystemExec::start_process_mode()
-{
-    // Configure command
     _process.clear_argv();
     if (_parse_mode == ParseMode::Shell)
     {
@@ -164,19 +103,43 @@ bool SshSubsystemExec::start_process_mode()
         _process.add_argv(args);
     }
 
-    // Set environment
     for (const auto & [name, value] : _env)
     {
         _process.env_set(name, value);
     }
 
-    // Set working directory
     if (!_working_dir.empty())
     {
         _process.set_chdir(_working_dir);
     }
+}
 
-    // Configure stdout/stderr forwarding via callbacks
+bool SshSubsystemExec::start_sync_mode()
+{
+    configure_process_command();
+
+    // Buffer child output; flushed to the channel on completion in on_close().
+    _sync_out.clear();
+    _sync_err.clear();
+    _process.stdout_to(_sync_out);
+    _process.stderr_to(_sync_err);
+
+    if (!_process.execute())
+    {
+        SIHD_LOG(error, "SshSubsystemExec: failed to execute command");
+        return false;
+    }
+
+    _started = true;
+    SIHD_LOG(debug, "SshSubsystemExec: process started (buffered)");
+    return true;
+}
+
+bool SshSubsystemExec::start_process_mode()
+{
+    configure_process_command();
+
+    // Stream stdout/stderr to the channel incrementally
     _process.stdout_to([this](std::string_view data) {
         if (_channel)
             _channel->write(sihd::util::ArrCharView(data.data(), data.size()));
@@ -187,7 +150,6 @@ bool SshSubsystemExec::start_process_mode()
             _channel->write_stderr(sihd::util::ArrCharView(data.data(), data.size()));
     });
 
-    // Execute the child process
     if (!_process.execute())
     {
         SIHD_LOG(error, "SshSubsystemExec: failed to execute command");
@@ -227,15 +189,12 @@ bool SshSubsystemExec::is_running() const
     if (!_started)
         return false;
 
-    if (!_fork_mode)
-        return false;
-
     return _process.is_process_running();
 }
 
 bool SshSubsystemExec::forward_output()
 {
-    if (!_started || !_fork_mode)
+    if (!_started)
         return false;
 
     if (!_process.can_read_pipes())
@@ -248,10 +207,21 @@ int SshSubsystemExec::on_close()
 {
     SIHD_LOG(debug, "SshSubsystemExec: close");
 
-    if (_fork_mode && _started)
+    if (_started)
     {
+        // terminate() drains remaining pipes (filling the sync buffers), then
+        // waits/reaps the child.
         _process.terminate();
         _exit_code = static_cast<int>(_process.return_code());
+
+        // In buffered (non-fork) mode, flush the accumulated output now.
+        if (!_fork_mode && _channel)
+        {
+            if (!_sync_out.empty())
+                _channel->write(sihd::util::ArrCharView(_sync_out.data(), _sync_out.size()));
+            if (!_sync_err.empty())
+                _channel->write_stderr(sihd::util::ArrCharView(_sync_err.data(), _sync_err.size()));
+        }
     }
 
     _started = false;

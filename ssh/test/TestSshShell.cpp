@@ -37,7 +37,7 @@ TEST_F(TestSshShell, test_sshshell_interactive)
     std::string user = getenv("USER");
     SshSession session;
 
-    if (session.fast_connect(user, "localhost", 22) == false)
+    if (session.fast_connect({.user = user, .host = "localhost", .port = 22}) == false)
         GTEST_SKIP_("no SSH server on localhost:22");
     if (session.auth_key_auto().success() == false)
         GTEST_SKIP_("SSH key authentication failed");

@@ -776,6 +776,47 @@ std::string realpath(std::string_view path)
 #endif
 }
 
+std::string jail(std::string_view root_view, std::string_view path_view)
+{
+    if (root_view.empty())
+        return std::string(path_view);
+
+    // Normalize the root and drop trailing separators (keep a bare "/")
+    std::string root = normalize(root_view);
+    while (root.size() > 1 && root.back() == '/')
+        root.pop_back();
+
+    // Treat the client path as relative to the jail root
+    std::string clean_path(path_view);
+    if (!clean_path.empty() && clean_path[0] == '/')
+        clean_path.erase(0, 1);
+
+    // Lexically resolve '.'/'..' before touching the filesystem so create/write
+    // targets (which don't exist yet, so realpath fails) are jailed too.
+    // Avoid building a '//' prefix when root is "/" (normalize does not collapse it)
+    std::string joined = (root == "/") ? ("/" + clean_path) : (root + "/" + clean_path);
+    std::string candidate = normalize(joined);
+
+    auto under_root = [&root](const std::string & p) {
+        if (root == "/")
+            return !p.empty() && p[0] == '/';
+        return p == root
+               || (p.size() > root.size() && p.compare(0, root.size(), root) == 0 && p[root.size()] == '/');
+    };
+
+    // Escape attempt (e.g. ../../etc/passwd): clamp to the jail root
+    if (!under_root(candidate))
+        return root;
+
+    // If the target exists, resolve symlinks and re-check to catch links that
+    // escape the jail; nonexistent targets keep the lexically-jailed path
+    std::string real_str = realpath(candidate);
+    if (!real_str.empty())
+        return under_root(real_str) ? real_str : root;
+
+    return candidate;
+}
+
 bool write(std::string_view path, std::string_view view, bool append)
 {
     File file(path, append ? "a" : "w");

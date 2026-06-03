@@ -85,15 +85,18 @@ void *SshSession::userdata() const
     return _impl_ptr->userdata;
 }
 
-bool SshSession::fast_connect(std::string_view user, std::string_view host, int port, int verbosity)
+bool SshSession::fast_connect(const SshSession::ConnectOptions & options)
 {
     this->delete_session();
     if (this->new_session() == false)
         return false;
-    bool ret = this->set_verbosity(verbosity);
-    ret = ret && this->set_user(user);
-    ret = ret && this->set_host(host);
-    ret = ret && this->set_port(port);
+    bool ret = this->set_verbosity(options.verbosity);
+    ret = ret && this->set_user(options.user);
+    ret = ret && this->set_host(options.host);
+    ret = ret && this->set_port(options.port);
+    ret = ret && this->set_timeout(options.timeout_sec);
+    if (!options.process_config)
+        ret = ret && this->set_process_config(false);
     ret = ret && this->connect();
     ret = ret && this->check_hostkey();
     return ret;
@@ -149,7 +152,7 @@ bool SshSession::check_hostkey()
             return true;
         case SSH_KNOWN_HOSTS_NOT_FOUND:
         case SSH_KNOWN_HOSTS_UNKNOWN:
-            // this->update_known_hosts();
+            // intentional: accept unknown host with a warning (local-server use)
             hexa = ssh_get_hexa(hash_ptr, hash_len);
             SIHD_LOG(warning, "SshSession: host key unknown: {}", hexa);
             free(hexa);
@@ -170,7 +173,7 @@ bool SshSession::check_hostkey()
             return true;
         case SSH_SERVER_NOT_KNOWN:
         case SSH_SERVER_FILE_NOT_FOUND:
-            // this->update_known_hosts();
+            // intentional: accept unknown host with a warning (local-server use)
             hexa = ssh_get_hexa(hash_ptr, hash_len);
             SIHD_LOG(warning, "SshSession: host key unknown: {}", hexa);
             free(hexa);
@@ -337,6 +340,25 @@ bool SshSession::set_verbosity(int verbosity)
                                 &verbosity);
 }
 
+bool SshSession::set_process_config(bool enable)
+{
+    return anon_ssh_options_set(_impl_ptr->ssh_session_ptr,
+                                "process_config",
+                                SSH_OPTIONS_PROCESS_CONFIG,
+                                &enable);
+}
+
+bool SshSession::set_ssh_dir(std::string_view path)
+{
+    return anon_ssh_options_set(_impl_ptr->ssh_session_ptr, "ssh_dir", SSH_OPTIONS_SSH_DIR, path.data());
+}
+
+bool SshSession::set_timeout(int seconds)
+{
+    long value = seconds > 0 ? seconds : 0;
+    return anon_ssh_options_set(_impl_ptr->ssh_session_ptr, "timeout", SSH_OPTIONS_TIMEOUT, &value);
+}
+
 void SshSession::set_blocking(bool active)
 {
     ssh_set_blocking(_impl_ptr->ssh_session_ptr, (int)active);
@@ -388,8 +410,12 @@ bool SshSession::new_session()
     this->delete_session();
     _impl_ptr->ssh_session_ptr = ssh_new();
     if (_impl_ptr->ssh_session_ptr == nullptr)
+    {
         SIHD_LOG(error, "SshSession: failed to init a new ssh session");
-    return _impl_ptr->ssh_session_ptr != nullptr;
+        return false;
+    }
+    this->set_timeout(default_timeout_sec);
+    return true;
 }
 
 void SshSession::delete_session()

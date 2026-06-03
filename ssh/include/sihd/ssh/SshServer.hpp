@@ -24,16 +24,20 @@ class SshServer: public sihd::util::Named,
         SshServer(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~SshServer();
 
+        // Default backstop applied to each connection's blocking key exchange
+        static constexpr int default_kex_timeout_sec = 10;
+
         // Configuration methods (call before start)
         bool set_port(int port);
         bool set_bind_address(std::string_view addr);
-        bool add_host_key(std::string_view key_path);
         bool set_rsa_key(std::string_view key_path);
-        bool set_dsa_key(std::string_view key_path);
         bool set_ecdsa_key(std::string_view key_path);
         bool set_authorized_keys_file(std::string_view path);
+        // Pre-auth issue banner (MOTD) sent to clients before authentication
         bool set_banner(std::string_view banner);
         bool set_verbosity(int level);
+        // Bound the blocking key exchange (seconds) to defuse connect-and-stall DoS
+        bool set_kex_timeout(int seconds);
 
         // Handler
         void set_server_handler(ISshServerHandler *handler);

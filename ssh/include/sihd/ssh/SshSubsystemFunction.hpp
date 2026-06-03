@@ -1,5 +1,5 @@
-#ifndef __SIHD_SSH_SSHSUBSYSTEMCALLBACK_HPP__
-#define __SIHD_SSH_SSHSUBSYSTEMCALLBACK_HPP__
+#ifndef __SIHD_SSH_SSHSUBSYSTEMFUNCTION_HPP__
+#define __SIHD_SSH_SSHSUBSYSTEMFUNCTION_HPP__
 
 #include <sihd/ssh/ISshSubsystemHandler.hpp>
 
@@ -10,13 +10,16 @@ namespace sihd::ssh
 {
 
 /**
- * SSH callback subsystem - request/response pattern.
+ * SSH function subsystem - in-process request/response handler.
  *
- * Receives a command string, calls the user callback, sends output back.
- * The entire exchange is synchronous in on_start().
- * Without a callback, the request is rejected.
+ * Receives a command string, calls a user std::function, sends its output back.
+ * The whole exchange runs synchronously in on_start(); no OS process is spawned.
+ * Without a callback set, the request is rejected.
+ *
+ * Difference from SshSubsystemExec: Exec spawns a real OS process (sys::Process)
+ * and streams its stdout/stderr; Function runs user C++ code and returns a Result.
  */
-class SshSubsystemCallback: public ISshSubsystemHandler
+class SshSubsystemFunction: public ISshSubsystemHandler
 {
     public:
         struct Result
@@ -28,8 +31,8 @@ class SshSubsystemCallback: public ISshSubsystemHandler
 
         using Callback = std::function<Result(const std::string & command)>;
 
-        explicit SshSubsystemCallback(std::string_view command);
-        ~SshSubsystemCallback() override;
+        explicit SshSubsystemFunction(std::string_view command);
+        ~SshSubsystemFunction() override;
 
         // Must be set before on_start()
         void set_callback(Callback callback);

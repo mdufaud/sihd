@@ -23,7 +23,7 @@
 
 #include <cstring>
 
-#include <sihd/ssh/Pty.hpp>
+#include <sihd/sys/Pty.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 
@@ -33,6 +33,8 @@
 
 #if defined(__SIHD_WINDOWS__)
 # define SIHD_PTY_WINDOWS 1
+#elif defined(__SIHD_EMSCRIPTEN__)
+# define SIHD_PTY_UNSUPPORTED 1
 #else
 # define SIHD_PTY_POSIX 1
 #endif
@@ -60,7 +62,7 @@
 #  include <util.h>
 # endif
 
-namespace sihd::ssh
+namespace sihd::sys
 {
 
 SIHD_LOGGER;
@@ -466,7 +468,7 @@ std::unique_ptr<Pty> Pty::create()
     return std::make_unique<PosixPty>();
 }
 
-} // namespace sihd::ssh
+} // namespace sihd::sys
 
 #endif // SIHD_PTY_POSIX
 
@@ -481,10 +483,10 @@ std::unique_ptr<Pty> Pty::create()
 # endif
 # include <windows.h>
 
-namespace sihd::ssh
+namespace sihd::sys
 {
 
-SIHD_NEW_LOGGER("sihd::ssh::pty");
+SIHD_NEW_LOGGER("sihd::sys::pty");
 
 /**
  * @brief Windows ConPTY implementation.
@@ -961,6 +963,29 @@ std::unique_ptr<Pty> Pty::create()
     return std::make_unique<ConPty>();
 }
 
-} // namespace sihd::ssh
+} // namespace sihd::sys
 
 #endif // SIHD_PTY_WINDOWS
+
+// ============================================================================
+// Unsupported platform (emscripten/web: no processes, no forkpty)
+// ============================================================================
+
+#if defined(SIHD_PTY_UNSUPPORTED)
+
+namespace sihd::sys
+{
+
+bool Pty::is_supported()
+{
+    return false;
+}
+
+std::unique_ptr<Pty> Pty::create()
+{
+    return nullptr;
+}
+
+} // namespace sihd::sys
+
+#endif // SIHD_PTY_UNSUPPORTED

@@ -62,7 +62,7 @@ TEST_F(TestSshServer, test_password_auth_failure)
 
     // Client connects
     SshSession client;
-    ASSERT_TRUE(client.fast_connect("testuser", "127.0.0.1", port));
+    ASSERT_TRUE(client.fast_connect({.user = "testuser", .host = "127.0.0.1", .port = port, .process_config = false}));
     EXPECT_TRUE(client.connected());
 
     auto auth = client.auth_password("wrongpass");
@@ -76,6 +76,44 @@ TEST_F(TestSshServer, test_password_auth_failure)
 
     EXPECT_EQ(handler.counters().auth_password_success, 0u);
     EXPECT_GE(handler.counters().auth_password_fail, 1u);
+}
+
+TEST_F(TestSshServer, test_server_issue_banner)
+{
+    SshServer server("test-ssh-server");
+    BasicSshServerHandler handler;
+
+    handler.add_allowed_user("testuser", "testpass");
+
+    ASSERT_TRUE(server.set_port(0));
+    ASSERT_TRUE(server.set_rsa_key(HOST_KEY_PATH));
+    ASSERT_TRUE(server.set_banner("Welcome to SIHD SSH\n"));
+    server.set_server_handler(&handler);
+
+    Worker worker([&server] {
+        server.start();
+        return true;
+    });
+    ASSERT_TRUE(worker.start_sync_worker("ssh-server"));
+    ASSERT_TRUE(server.wait_ready(std::chrono::seconds(1)));
+
+    int port = server.get_port();
+    ASSERT_GT(port, 0);
+
+    SshSession client;
+    ASSERT_TRUE(client.fast_connect({.user = "testuser", .host = "127.0.0.1", .port = port, .process_config = false}));
+    EXPECT_TRUE(client.connected());
+
+    auto auth = client.auth_password("testpass");
+    EXPECT_TRUE(auth.success());
+
+    // The pre-auth issue banner is captured during authentication
+    EXPECT_EQ(client.get_banner(), "Welcome to SIHD SSH\n");
+
+    client.disconnect();
+
+    server.stop();
+    worker.stop_worker();
 }
 
 TEST_F(TestSshServer, test_pubkey_auth_success)
@@ -107,7 +145,7 @@ TEST_F(TestSshServer, test_pubkey_auth_success)
 
     // Client connects with pubkey auth
     SshSession client;
-    ASSERT_TRUE(client.fast_connect("testuser", "127.0.0.1", port));
+    ASSERT_TRUE(client.fast_connect({.user = "testuser", .host = "127.0.0.1", .port = port, .process_config = false}));
     EXPECT_TRUE(client.connected());
 
     auto auth = client.auth_key_file(CLIENT_KEY_PATH);
@@ -146,13 +184,13 @@ TEST_F(TestSshServer, test_multiple_sessions)
 
     // First client
     SshSession client1;
-    ASSERT_TRUE(client1.fast_connect("user1", "127.0.0.1", port));
+    ASSERT_TRUE(client1.fast_connect({.user = "user1", .host = "127.0.0.1", .port = port, .process_config = false}));
     auto auth1 = client1.auth_password("pass1");
     ASSERT_TRUE(auth1.success());
 
     // Second client
     SshSession client2;
-    ASSERT_TRUE(client2.fast_connect("user2", "127.0.0.1", port));
+    ASSERT_TRUE(client2.fast_connect({.user = "user2", .host = "127.0.0.1", .port = port, .process_config = false}));
     auto auth2 = client2.auth_password("pass2");
     ASSERT_TRUE(auth2.success());
 
@@ -202,7 +240,7 @@ TEST_F(TestSshServer, test_custom_auth_callback)
 
     // Client connects with dynamic credentials
     SshSession client;
-    ASSERT_TRUE(client.fast_connect("dynamic", "127.0.0.1", port));
+    ASSERT_TRUE(client.fast_connect({.user = "dynamic", .host = "127.0.0.1", .port = port, .process_config = false}));
     auto auth = client.auth_password("secret");
     EXPECT_TRUE(auth.success());
 

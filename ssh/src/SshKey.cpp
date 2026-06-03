@@ -65,43 +65,33 @@ void *SshKey::key() const
 bool SshKey::generate(KeyType type, int parameter)
 {
     this->clear_key();
-    _impl_ptr->ssh_key_ptr = ssh_key_new();
-    return _impl_ptr->ssh_key_ptr != nullptr
-           && ssh_pki_generate(to_libssh(type), parameter, &_impl_ptr->ssh_key_ptr) == SSH_OK;
+    return ssh_pki_generate(to_libssh(type), parameter, &_impl_ptr->ssh_key_ptr) == SSH_OK;
 }
 
 bool SshKey::import_privkey_file(std::string_view path, const char *passphrase)
 {
     this->clear_key();
-    _impl_ptr->ssh_key_ptr = ssh_key_new();
-    return _impl_ptr->ssh_key_ptr != nullptr
-           && ssh_pki_import_privkey_file(path.data(), passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr)
-                  == SSH_OK;
+    return ssh_pki_import_privkey_file(path.data(), passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr)
+           == SSH_OK;
 }
 
 bool SshKey::import_privkey_mem(const char *base64_key, const char *passphrase)
 {
     this->clear_key();
-    _impl_ptr->ssh_key_ptr = ssh_key_new();
-    return _impl_ptr->ssh_key_ptr != nullptr
-           && ssh_pki_import_privkey_base64(base64_key, passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr)
-                  == SSH_OK;
+    return ssh_pki_import_privkey_base64(base64_key, passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr)
+           == SSH_OK;
 }
 
 bool SshKey::import_pubkey_file(std::string_view path)
 {
     this->clear_key();
-    _impl_ptr->ssh_key_ptr = ssh_key_new();
-    return _impl_ptr->ssh_key_ptr != nullptr
-           && ssh_pki_import_pubkey_file(path.data(), &_impl_ptr->ssh_key_ptr) == SSH_OK;
+    return ssh_pki_import_pubkey_file(path.data(), &_impl_ptr->ssh_key_ptr) == SSH_OK;
 }
 
 bool SshKey::import_pubkey_mem(const char *base64_key, KeyType type)
 {
     this->clear_key();
-    _impl_ptr->ssh_key_ptr = ssh_key_new();
-    return _impl_ptr->ssh_key_ptr != nullptr
-           && ssh_pki_import_pubkey_base64(base64_key, to_libssh(type), &_impl_ptr->ssh_key_ptr) == SSH_OK;
+    return ssh_pki_import_pubkey_base64(base64_key, to_libssh(type), &_impl_ptr->ssh_key_ptr) == SSH_OK;
 }
 
 bool SshKey::is_equal(const SshKey & sshkey)

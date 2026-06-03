@@ -6,6 +6,7 @@
 #include <sihd/sys/File.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/TmpDir.hpp>
 #include <sihd/util/num.hpp>
 
 namespace test
@@ -110,6 +111,45 @@ TEST_F(TestFS, test_fs_path)
     fs::set_sep('\\');
     EXPECT_EQ(fs::filename("\\path\\to\\test.txt"), "test.txt");
     EXPECT_EQ(fs::parent("\\path\\to\\test.txt"), "\\path\\to");
+}
+
+TEST_F(TestFS, test_fs_jail)
+{
+    fs::set_sep('/');
+
+    // Empty root: no jail, path returned unchanged
+    EXPECT_EQ(fs::jail("", "any/../path"), "any/../path");
+
+    // Use a nonexistent root so realpath fails and jail returns the
+    // lexically-jailed candidate (deterministic, filesystem-independent)
+    EXPECT_EQ(fs::jail("/srv/ftp", "file.txt"), "/srv/ftp/file.txt");
+    EXPECT_EQ(fs::jail("/srv/ftp", "sub/dir/file.txt"), "/srv/ftp/sub/dir/file.txt");
+
+    // Leading '/' on the client path is treated as relative to the jail root
+    EXPECT_EQ(fs::jail("/srv/ftp", "/file.txt"), "/srv/ftp/file.txt");
+
+    // Trailing slash on root is normalized away
+    EXPECT_EQ(fs::jail("/srv/ftp/", "file.txt"), "/srv/ftp/file.txt");
+
+    // Internal '..' that stays inside the jail is collapsed
+    EXPECT_EQ(fs::jail("/srv/ftp", "sub/../file.txt"), "/srv/ftp/file.txt");
+
+    // Escape attempts clamp to the jail root
+    EXPECT_EQ(fs::jail("/srv/ftp", "../../etc/passwd"), "/srv/ftp");
+    EXPECT_EQ(fs::jail("/srv/ftp", "../ftp_evil"), "/srv/ftp");
+    EXPECT_EQ(fs::jail("/srv/ftp", "/../etc/passwd"), "/srv/ftp");
+
+    // A symlink inside the jail that points outside must be clamped to root
+    TmpDir root_dir;
+    ASSERT_TRUE(static_cast<bool>(root_dir));
+    const std::string & root = root_dir.path();
+    ASSERT_TRUE(fs::make_file_link("/etc/passwd", fs::combine(root, "escape")));
+    EXPECT_EQ(fs::jail(root, "escape"), root);
+
+    // A real file inside the jail resolves to itself
+    const std::string inside = fs::combine(root, "inside.txt");
+    ASSERT_TRUE(fs::write(inside, "data"));
+    EXPECT_EQ(fs::jail(root, "inside.txt"), fs::realpath(inside));
 }
 
 TEST_F(TestFS, test_fs_creation)

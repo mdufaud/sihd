@@ -2,7 +2,8 @@
 #define __SIHD_SSH_SSHSUBSYSTEMPTY_HPP__
 
 #include <sihd/ssh/ISshSubsystemHandler.hpp>
-#include <sihd/ssh/Pty.hpp>
+#include <sihd/sys/Pty.hpp>
+#include <sihd/util/Array.hpp>
 
 #include <memory>
 #include <string>
@@ -46,13 +47,20 @@ class SshSubsystemPty: public ISshSubsystemHandler
         bool forward_output() override;
 
     private:
+        void drain_pending_input();
+
         SshChannel *_channel;
-        std::unique_ptr<Pty> _pty;
+        std::unique_ptr<sys::Pty> _pty;
 
         std::string _shell;
         std::vector<std::string> _args;
         std::vector<std::pair<std::string, std::string>> _env;
         std::string _working_dir;
+
+        // Buffered client input not yet accepted by the PTY (partial write)
+        std::string _pending_in;
+        // Reused read buffer for forward_output (avoids per-tick alloc)
+        sihd::util::ArrChar _read_buf;
 };
 
 } // namespace sihd::ssh

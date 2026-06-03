@@ -63,12 +63,14 @@ int main(int argc, char **argv)
     std::string password;
     std::string path;
     std::string host;
+    int port = 22;
 
     CLI::App app {"Testing utility for module util"};
     app.add_option("-u,--user", user, "User for the ssh connexion")->required();
     app.add_option("-p,--password", password, "Password for the ssh connexion");
     app.add_option("-P,--path", path, "Path for the sftp list dir")->required();
     app.add_option("-H,--host", host, "Host for the ssh connexion")->required();
+    app.add_option("--port", port, "Port for the ssh connexion")->default_val("22");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -78,7 +80,7 @@ int main(int argc, char **argv)
         LoggerManager::stream();
 
     SshSession session;
-    if (!session.fast_connect(user, host))
+    if (!session.fast_connect({.user = user, .host = host, .port = port}))
         return EXIT_FAILURE;
 
     SshSession::AuthState auth_state {-1};

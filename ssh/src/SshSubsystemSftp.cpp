@@ -362,13 +362,12 @@ int SshSubsystemSftp::on_data([[maybe_unused]] const void *data, [[maybe_unused]
         }
     }
 
-    // Process SFTP messages
+    // One message per callback: sftp_get_client_message blocks when the
+    // channel buffer is empty, so draining in a loop would stall the single
+    // -threaded server. libssh re-invokes this callback for each packet.
     sftp_client_message msg = sftp_get_client_message(_impl_ptr->sftp);
-    if (!msg)
-    {
-        // No message available or error
-        return 0;
-    }
+    if (msg == nullptr)
+        return static_cast<int>(len);
 
     int type = sftp_client_message_get_type(msg);
     SIHD_LOG(debug, "SshSubsystemSftp: received message type {}", type);
@@ -1077,28 +1076,7 @@ void SshSubsystemSftp::Impl::handle_symlink(sftp_client_message_struct *msg)
 
 std::string SshSubsystemSftp::Impl::resolve_path(const std::string & path)
 {
-    if (root_path.empty())
-        return path;
-
-    // Handle absolute vs relative paths
-    std::string clean_path = path;
-    if (!clean_path.empty() && clean_path[0] == '/')
-        clean_path = clean_path.substr(1);
-
-    // Simple path traversal protection
-    std::string result = root_path + clean_path;
-
-    // Normalize the path to prevent escape
-    std::string real_str = sihd::sys::fs::realpath(result);
-    if (!real_str.empty())
-    {
-        // Verify it's still under root
-        if (real_str.find(root_path) == 0 || root_path.find(real_str) == 0)
-            return real_str;
-    }
-
-    // If realpath failed or path is outside root, return resolved without normalization
-    return result;
+    return sihd::sys::fs::jail(root_path, path);
 }
 
 std::string SshSubsystemSftp::Impl::generate_handle()

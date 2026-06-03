@@ -87,6 +87,14 @@ bool are_equals(std::string_view path1, std::string_view path2);
 // resolve
 std::string realpath(std::string_view path);
 
+// Confine 'path' (treated as relative to 'root', a leading '/' is stripped)
+// inside the jail 'root'. Lexically collapses '.'/'..' before touching the
+// filesystem so create targets that don't exist yet are jailed too, then
+// resolves symlinks to catch links escaping the jail. Returns an absolute path
+// guaranteed to be 'root' itself or a descendant; escape attempts clamp to
+// 'root'. If 'root' is empty, returns 'path' unchanged (no jail).
+std::string jail(std::string_view root, std::string_view path);
+
 // links
 bool make_file_link(std::string_view target, std::string_view link);
 bool make_dir_link(std::string_view target, std::string_view link);

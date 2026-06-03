@@ -30,10 +30,34 @@ class SshSession
         // 0=none, 1=warnings, 2=protocol, 3=packet, 4=functions
         bool set_verbosity(int verbosity);
         void set_blocking(bool active);
+        // When disabled, libssh ignores ~/.ssh/config and system ssh_config
+        // (ProxyCommand/ProxyJump, etc). libssh default is enabled.
+        bool set_process_config(bool enable);
+        // Override the .ssh directory libssh reads (config, known_hosts, keys)
+        bool set_ssh_dir(std::string_view path);
+        // Bound connect/handshake/blocking ops (seconds). Applied by default in
+        // new_session(); pass <= 0 to disable (block indefinitely).
+        bool set_timeout(int seconds);
+
+        // Default connect/handshake timeout (seconds) set by new_session().
+        static constexpr int default_timeout_sec = 10;
 
         bool connect();
         bool connected();
-        bool fast_connect(std::string_view user, std::string_view host, int port = 22, int verbosity = 0);
+
+        struct ConnectOptions
+        {
+                std::string_view user;
+                std::string_view host;
+                int port = 22;
+                // 0=none, 1=warnings, 2=protocol, 3=packet, 4=functions
+                int verbosity = 0;
+                // false: ignore ~/.ssh/config + system ssh_config (ProxyCommand, etc)
+                bool process_config = true;
+                // Connect/handshake timeout (seconds); <= 0 blocks indefinitely
+                int timeout_sec = default_timeout_sec;
+        };
+        bool fast_connect(const ConnectOptions & options);
 
         bool check_hostkey();
 
