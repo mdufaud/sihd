@@ -75,10 +75,11 @@ modules = {
         "depends": ['util', 'sys'],
     },
     "net": {
-        "depends": ['util', 'sys'],
+        "depends": ['util', 'sys', 'core'],
         "extlibs": ['openssl'],
         "libs": ['ssl', 'crypto'],
         "export-libs": ['ssl', 'crypto'],
+        "windows-libs": ['iphlpapi'],
         "export-windows-libs": [
             'crypt32',
             'bcrypt',

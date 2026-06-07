@@ -25,17 +25,15 @@ void Value::clear()
 
 Value Value::from_bool_string(const std::string & str)
 {
-    bool val;
-    if (str::convert_from_string<bool>(str, val))
-        return Value(val);
+    if (const auto val = str::convert_from_string<bool>(str))
+        return Value(*val);
     return {};
 }
 
 Value Value::from_char_string(const std::string & str)
 {
-    char val;
-    if (str::convert_from_string<char>(str, val))
-        return Value(val);
+    if (const auto val = str::convert_from_string<char>(str))
+        return Value(*val);
     return {};
 }
 
@@ -67,15 +65,13 @@ Value Value::from_int_string(const std::string & str)
 
     if (is_signed)
     {
-        int64_t val;
-        if (str::convert_from_string<int64_t>(str.c_str() + prefix_size, val, base))
-            return Value(val);
+        if (const auto val = str::convert_from_string<int64_t>(str.c_str() + prefix_size, base))
+            return Value(*val);
     }
     else
     {
-        uint64_t val;
-        if (str::convert_from_string<uint64_t>(str.c_str() + prefix_size, val, base))
-            return Value(val);
+        if (const auto val = str::convert_from_string<uint64_t>(str.c_str() + prefix_size, base))
+            return Value(*val);
     }
 
     return {};
@@ -87,15 +83,13 @@ Value Value::from_float_string(const std::string & str)
         return {};
     if (str::ends_with(str, "f"))
     {
-        float f;
-        if (str::convert_from_string<float>(str, f))
-            return Value(f);
+        if (const auto f = str::convert_from_string<float>(str))
+            return Value(*f);
     }
     else
     {
-        double dbl;
-        if (str::convert_from_string<double>(str, dbl))
-            return Value(dbl);
+        if (const auto dbl = str::convert_from_string<double>(str))
+            return Value(*dbl);
     }
     return {};
 }

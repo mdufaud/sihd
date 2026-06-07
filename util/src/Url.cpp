@@ -68,9 +68,8 @@ Url::Url(std::string_view url)
                 authority = authority.substr(bracket + 1);
                 if (!authority.empty() && authority[0] == ':')
                 {
-                    long port_val = 0;
-                    if (sihd::util::str::to_long(authority.substr(1), &port_val))
-                        port = static_cast<int>(port_val);
+                    if (const auto port_val = sihd::util::str::convert_from_string<long>(authority.substr(1)))
+                        port = static_cast<int>(*port_val);
                 }
             }
         }
@@ -79,11 +78,10 @@ Url::Url(std::string_view url)
             auto port_colon = authority.rfind(':');
             if (port_colon != std::string_view::npos)
             {
-                long port_val = 0;
-                if (sihd::util::str::to_long(authority.substr(port_colon + 1), &port_val))
+                if (const auto port_val = sihd::util::str::convert_from_string<long>(authority.substr(port_colon + 1)))
                 {
                     host = std::string(authority.substr(0, port_colon));
-                    port = static_cast<int>(port_val);
+                    port = static_cast<int>(*port_val);
                 }
                 else
                     host = std::string(authority);

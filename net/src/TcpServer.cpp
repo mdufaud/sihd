@@ -95,8 +95,6 @@ bool TcpServer::close()
 
 void TcpServer::set_server_handler(INetServerHandler *handler)
 {
-    if (_server_handler_ptr != nullptr)
-        delete _server_handler_ptr;
     _server_handler_ptr = handler;
 }
 
@@ -106,11 +104,11 @@ void TcpServer::_setup_poll()
     _poll.set_read_fd(_socket.socket());
 }
 
-int TcpServer::accept_client(IpAddr *client_ip)
+int TcpServer::accept_client(IpAddr *client_ip, int timeout_ms)
 {
     if (client_ip != nullptr)
-        return _socket.accept(*client_ip);
-    return _socket.accept();
+        return _socket.accept(*client_ip, timeout_ms);
+    return _socket.accept(timeout_ms);
 }
 
 bool TcpServer::add_client_read(int socket)

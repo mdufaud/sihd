@@ -1,6 +1,9 @@
 #ifndef __SIHD_NET_BASICSERVERHANDLER_HPP__
 #define __SIHD_NET_BASICSERVERHANDLER_HPP__
 
+#include <memory>
+#include <mutex>
+
 #include <sihd/net/INetServerHandler.hpp>
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/Socket.hpp>
@@ -43,31 +46,30 @@ class BasicServerHandler: public INetServerHandler,
                 bool disconnected;
         };
 
+        using ClientPtr = std::shared_ptr<Client>;
+
         BasicServerHandler();
         virtual ~BasicServerHandler();
 
         bool set_max_clients(size_t max);
 
-        bool send_to_client(Client *client, const sihd::util::IArray & arr);
-        bool remove_client(Client *client);
+        bool send_to_client(const ClientPtr & client, const sihd::util::IArray & arr);
+        bool remove_client(const ClientPtr & client);
         bool send_to_client(int socket, const sihd::util::IArray & arr);
         bool remove_client(int socket);
 
-        const std::vector<Client *> & clients() const { return _client_lst; }
-        const std::vector<Client *> & read_activity() const { return _read_event_lst; }
-        const std::vector<Client *> & write_activity() const { return _write_event_lst; }
-        const std::vector<Client *> & new_clients() const { return _connect_event_lst; }
+        std::vector<ClientPtr> clients() const;
+        const std::vector<ClientPtr> & read_activity() const { return _read_event_lst; }
+        const std::vector<ClientPtr> & write_activity() const { return _write_event_lst; }
+        const std::vector<ClientPtr> & new_clients() const { return _connect_event_lst; }
         sihd::util::Timestamp poll_time() const { return _poll_time; }
         INetServer *server() { return _server; }
-        Client *client(int socket)
-        {
-            auto it = _client_map.find(socket);
-            return it != _client_map.end() ? it->second : nullptr;
-        }
+        size_t client_count() const;
+        ClientPtr client(int socket);
 
     protected:
-        void handle_no_activity(INetServer *server, time_t nano);
-        void handle_activity(INetServer *server, time_t nano);
+        void handle_no_activity(INetServer *server, time_t milliseconds);
+        void handle_activity(INetServer *server, time_t milliseconds);
         void handle_new_client(INetServer *server);
         void handle_client_read(INetServer *server, int socket);
         void handle_client_write(INetServer *server, int socket);
@@ -77,13 +79,13 @@ class BasicServerHandler: public INetServerHandler,
         void _reset();
         void _add_time_to_clients();
 
-        std::vector<Client *> _client_lst;
-        std::map<int, Client *> _client_map;
+        mutable std::recursive_mutex _mutex;
+        std::map<int, ClientPtr> _client_map;
         sihd::util::SystemClock _clock;
 
-        std::vector<Client *> _read_event_lst;
-        std::vector<Client *> _write_event_lst;
-        std::vector<Client *> _connect_event_lst;
+        std::vector<ClientPtr> _read_event_lst;
+        std::vector<ClientPtr> _write_event_lst;
+        std::vector<ClientPtr> _connect_event_lst;
         time_t _poll_time;
         time_t _last_time;
         INetServer *_server;

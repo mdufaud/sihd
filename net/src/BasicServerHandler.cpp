@@ -19,13 +19,7 @@ BasicServerHandler::BasicServerHandler()
     this->add_conf("max_clients", &BasicServerHandler::set_max_clients);
 }
 
-BasicServerHandler::~BasicServerHandler()
-{
-    for (Client *client : _client_lst)
-    {
-        delete client;
-    }
-}
+BasicServerHandler::~BasicServerHandler() = default;
 
 void BasicServerHandler::_reset()
 {
@@ -38,8 +32,9 @@ void BasicServerHandler::_add_time_to_clients()
 {
     if (_last_time <= 0)
         return;
+    std::lock_guard lock(_mutex);
     time_t t = _clock.now() - _last_time;
-    for (Client *client : _client_lst)
+    for (auto & [fd, client] : _client_map)
     {
         client->time_total += t;
     }
@@ -51,61 +46,95 @@ bool BasicServerHandler::set_max_clients(size_t max)
     return true;
 }
 
-bool BasicServerHandler::send_to_client(Client *client, const sihd::util::IArray & arr)
+size_t BasicServerHandler::client_count() const
 {
-    if (client != nullptr && client->write_array.copy_from_bytes(arr))
+    std::lock_guard lock(_mutex);
+    return _client_map.size();
+}
+
+BasicServerHandler::ClientPtr BasicServerHandler::client(int socket)
+{
+    std::lock_guard lock(_mutex);
+    auto it = _client_map.find(socket);
+    return it != _client_map.end() ? it->second : nullptr;
+}
+
+std::vector<BasicServerHandler::ClientPtr> BasicServerHandler::clients() const
+{
+    std::lock_guard lock(_mutex);
+    std::vector<ClientPtr> result;
+    result.reserve(_client_map.size());
+    for (const auto & [fd, client] : _client_map)
     {
-        client->write_array.resize(arr.byte_size());
-        return this->server()->add_client_write(client->fd());
+        result.push_back(client);
     }
+    return result;
+}
+
+bool BasicServerHandler::send_to_client(const ClientPtr & client, const sihd::util::IArray & arr)
+{
+    if (!client)
+        return false;
+    std::lock_guard lock(_mutex);
+    auto it = _client_map.find(client->fd());
+    if (it == _client_map.end() || it->second != client)
+        return false;
+    client->write_array.byte_resize(arr.byte_size());
+    if (client->write_array.copy_from_bytes(arr))
+        return this->server()->add_client_write(client->fd());
     return false;
 }
 
-bool BasicServerHandler::remove_client(Client *client)
+bool BasicServerHandler::remove_client(const ClientPtr & client)
 {
-    if (client != nullptr)
-    {
-        auto it = std::find(_client_lst.begin(), _client_lst.end(), client);
-        if (it != _client_lst.end())
-            _client_lst.erase(it);
-        _client_map.erase(client->fd());
-        this->server()->remove_client_read(client->fd());
-        this->server()->remove_client_write(client->fd());
-        delete client;
-    }
-    return client != nullptr;
+    if (!client)
+        return false;
+    std::lock_guard lock(_mutex);
+    auto it = _client_map.find(client->fd());
+    if (it == _client_map.end() || it->second != client)
+        return false;
+    int fd = client->fd();
+    client->disconnected = true;
+    this->server()->remove_client_read(fd);
+    this->server()->remove_client_write(fd);
+    _client_map.erase(it);
+    return true;
 }
 
 bool BasicServerHandler::send_to_client(int socket, const sihd::util::IArray & arr)
 {
-    if (_client_map.find(socket) == _client_map.end())
+    std::lock_guard lock(_mutex);
+    auto it = _client_map.find(socket);
+    if (it == _client_map.end())
         return false;
-    return this->send_to_client(_client_map[socket], arr);
+    return this->send_to_client(it->second, arr);
 }
 
 bool BasicServerHandler::remove_client(int socket)
 {
-    if (_client_map.find(socket) == _client_map.end())
+    std::lock_guard lock(_mutex);
+    auto it = _client_map.find(socket);
+    if (it == _client_map.end())
         return false;
-    return this->remove_client(_client_map[socket]);
+    return this->remove_client(it->second);
 }
 
-void BasicServerHandler::handle_no_activity([[maybe_unused]] INetServer *server, time_t nano)
+void BasicServerHandler::handle_no_activity([[maybe_unused]] INetServer *server, time_t milliseconds)
 {
     if (_last_time <= 0)
-        _last_time = _clock.now() + nano;
+        _last_time = _clock.now() + milliseconds;
     this->_reset();
     this->_add_time_to_clients();
-    _poll_time = nano;
+    _poll_time = milliseconds;
 }
 
-void BasicServerHandler::handle_activity([[maybe_unused]] INetServer *server, time_t nano)
+void BasicServerHandler::handle_activity([[maybe_unused]] INetServer *server, time_t milliseconds)
 {
     if (_last_time <= 0)
-        _last_time = _clock.now() + nano;
+        _last_time = _clock.now() + milliseconds;
     this->_reset();
     this->_add_time_to_clients();
-    _poll_time = nano;
+    _poll_time = milliseconds;
 }
 
 void BasicServerHandler::handle_new_client(INetServer *server)
@@ -114,7 +143,8 @@ void BasicServerHandler::handle_new_client(INetServer *server)
     int socket = server->accept_client(&addr);
     if (socket >= 0)
     {
-        if (_client_lst.size() >= _max_clients)
+        std::lock_guard lock(_mutex);
+        if (_client_map.size() >= _max_clients)
         {
 #if !defined(__SIHD_WINDOWS__)
             ::close(socket);
@@ -123,43 +153,40 @@ void BasicServerHandler::handle_new_client(INetServer *server)
 #endif
             return;
         }
-        Client *client = new Client(socket);
-        // add client to internal listing
-        _client_map[socket] = client;
-        _client_lst.push_back(client);
-        // fill client
+        auto client = std::make_shared<Client>(socket);
         client->read_array.reserve(4096);
         client->write_array.reserve(4096);
         client->addr = addr;
         client->time_connected = _clock.now();
-        // add client to new events
-        _connect_event_lst.push_back(client);
-        // add client socket to poll reading
         server->add_client_read(socket);
+        _client_map[socket] = client;
+        _connect_event_lst.push_back(client);
     }
 }
 
 void BasicServerHandler::handle_client_read(INetServer *server, int socket)
 {
-    (void)server;
+    std::lock_guard lock(_mutex);
     auto it = _client_map.find(socket);
     if (it != _client_map.end())
     {
-        Client *client = it->second;
+        auto & client = it->second;
         ssize_t rcv = client->socket.receive(client->read_array);
         client->error = (rcv < 0);
         client->disconnected = rcv == 0;
+        if (rcv <= 0)
+            server->remove_client_read(socket);
         _read_event_lst.push_back(client);
     }
 }
 
 void BasicServerHandler::handle_client_write(INetServer *server, int socket)
 {
-    (void)server;
+    std::lock_guard lock(_mutex);
     auto it = _client_map.find(socket);
     if (it != _client_map.end())
     {
-        Client *client = it->second;
+        auto & client = it->second;
         bool success = client->socket.send_all(client->write_array);
         client->error = !success;
         _write_event_lst.push_back(client);

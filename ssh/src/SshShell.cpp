@@ -63,14 +63,20 @@ bool SshShell::open(bool x11)
         ret = false;
     }
 
-    long columns;
+    long columns = 80;
     const char *env_columns = getenv("COLUMNS");
-    if (env_columns == nullptr || str::to_long(env_columns, &columns, 10) == false || columns <= 0)
-        columns = 80;
-    long rows;
+    if (env_columns != nullptr)
+    {
+        if (const auto val = str::convert_from_string<long>(env_columns); val.has_value() && *val > 0)
+            columns = *val;
+    }
+    long rows = 24;
     const char *env_rows = getenv("LINES");
-    if (env_rows == nullptr || str::to_long(env_rows, &rows, 10) == false || rows <= 0)
-        rows = 24;
+    if (env_rows != nullptr)
+    {
+        if (const auto val = str::convert_from_string<long>(env_rows); val.has_value() && *val > 0)
+            rows = *val;
+    }
 
     if (ret && _impl_ptr->channel.change_pty_size(columns, rows) == false)
     {

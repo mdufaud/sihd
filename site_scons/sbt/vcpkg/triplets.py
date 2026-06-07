@@ -156,13 +156,17 @@ def generate_musl_triplet_content(machine: str) -> str:
     cmake_processor = meson_info.get("cpu", vcpkg_machine)
     gcc_prefix = config.get("gcc", {}).get("musl", "")
 
+    # Honor static builds: a self-contained `static=1 libc=musl` binary needs the
+    # vcpkg deps as .a archives, not .so.
+    lib_linkage = "static" if builder.build_static_libs else "dynamic"
+
     lines = [
         f"# Auto-generated musl triplet for {machine}",
         f"set(CMAKE_SYSTEM_NAME Linux)",
         f"set(CMAKE_SYSTEM_PROCESSOR {cmake_processor})",
         f"set(VCPKG_TARGET_ARCHITECTURE {vcpkg_machine})",
         f"set(VCPKG_CRT_LINKAGE dynamic)",
-        f"set(VCPKG_LIBRARY_LINKAGE dynamic)",
+        f"set(VCPKG_LIBRARY_LINKAGE {lib_linkage})",
         f"set(VCPKG_CMAKE_SYSTEM_NAME Linux)",
         f'set(CMAKE_C_FLAGS "-fPIC" CACHE STRING "" FORCE)',
         f'set(CMAKE_CXX_FLAGS "-fPIC" CACHE STRING "" FORCE)',

@@ -1,6 +1,5 @@
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/core/AChannelContainer.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::core
 {
@@ -57,7 +56,8 @@ Channel *AChannelContainer::add_unlinked_channel(const std::string & name,
 {
     if (this->is_link(name))
     {
-        _channels_link[name] = {type, size, check_match};
+        constexpr bool resizable = false;
+        _channels_link[name] = {type, size, check_match, resizable};
         return nullptr;
     }
     return this->add_channel(name, type, size);
@@ -69,6 +69,30 @@ Channel *AChannelContainer::add_unlinked_channel(const std::string & name,
                                                  bool check_match)
 {
     return this->add_unlinked_channel(name, sihd::util::type::from_str(type), size, check_match);
+}
+
+Channel *AChannelContainer::add_unlinked_channel_resizable(const std::string & name,
+                                                           sihd::util::Type type,
+                                                           size_t size,
+                                                           size_t capacity,
+                                                           bool check_match)
+{
+    if (this->is_link(name))
+    {
+        constexpr bool resizable = true;
+        _channels_link[name] = {type, size, check_match, resizable};
+        return nullptr;
+    }
+    return this->add_channel_resizable(name, type, size, capacity);
+}
+
+Channel *AChannelContainer::add_unlinked_channel_resizable(const std::string & name,
+                                                           std::string_view type,
+                                                           size_t size,
+                                                           size_t capacity,
+                                                           bool check_match)
+{
+    return this->add_unlinked_channel_resizable(name, sihd::util::type::from_str(type), size, capacity, check_match);
 }
 
 Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Type type, size_t size)
@@ -93,6 +117,27 @@ Channel *AChannelContainer::add_channel(const std::string & name, std::string_vi
     return this->add_channel(name, sihd::util::type::from_str(type), size);
 }
 
+Channel *AChannelContainer::add_channel_resizable(const std::string & name,
+                                                  sihd::util::Type type,
+                                                  size_t size,
+                                                  size_t capacity)
+{
+    Channel *c = this->add_channel(name, type, size);
+    if (c == nullptr)
+        return nullptr;
+    c->reserve(capacity);
+    c->set_resizable(true);
+    return c;
+}
+
+Channel *AChannelContainer::add_channel_resizable(const std::string & name,
+                                                  std::string_view type,
+                                                  size_t size,
+                                                  size_t capacity)
+{
+    return this->add_channel_resizable(name, sihd::util::type::from_str(type), size, capacity);
+}
+
 bool AChannelContainer::on_check_link(const std::string & name, Named *child)
 {
     Channel *chan = dynamic_cast<Channel *>(child);
@@ -104,6 +149,15 @@ bool AChannelContainer::on_check_link(const std::string & name, Named *child)
     }
     bool ret = true;
     ChannelConfiguration conf = _channels_link[name];
+    if (conf.resizable != chan->resizable())
+    {
+        SIHD_LOG_ERROR("ChannelContainer: '{}' channel link resizable mismatch '{}': expected {} got {}",
+                       this->full_name(),
+                       name,
+                       conf.resizable,
+                       chan->resizable());
+        ret = false;
+    }
     if (conf.match && conf.type != chan->array()->data_type())
     {
         SIHD_LOG_ERROR("ChannelContainer: '{}' channel link size not same type '{}': '{}' != '{}'",
@@ -130,9 +184,7 @@ bool AChannelContainer::observe_channel(const std::string & channel_name)
     Channel *c = this->get_channel(channel_name);
     if (c != nullptr)
         return this->observe_channel(c);
-    SIHD_LOG_ERROR("ChannelContainer: '{}' cannot find channel '{}' to observe",
-                   this->full_name(),
-                   channel_name);
+    SIHD_LOG_ERROR("ChannelContainer: '{}' cannot find channel '{}' to observe", this->full_name(), channel_name);
     return false;
 }
 

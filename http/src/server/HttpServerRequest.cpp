@@ -393,9 +393,10 @@ bool HttpServer::Impl::check_webservices(HttpSession *session, std::string_view 
         std::string & content_length_header = content_length_header_opt.value();
         if (content_length_header.empty())
             return false;
-        size_t content_length_header_size;
-        if (str::convert_from_string(content_length_header, content_length_header_size, 10) == false)
+        const auto content_length_opt = str::convert_from_string<size_t>(content_length_header, 10);
+        if (content_length_opt.has_value() == false)
             throw std::runtime_error("content length header has no number");
+        const size_t content_length_header_size = *content_length_opt;
 
         if (content_length_header_size == 0)
         {

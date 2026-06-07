@@ -199,4 +199,31 @@ TEST_F(TestIpAddr, test_is_private_host)
     EXPECT_TRUE(ip::is_private_host("127.0.0.1"));
 }
 
+TEST_F(TestIpAddr, test_ipaddr_dns_lookup_async)
+{
+    auto future = dns::lookup_async("localhost");
+    auto dns = future.get();
+    EXPECT_TRUE(dns.success);
+    EXPECT_FALSE(dns.results.empty());
+    EXPECT_EQ(dns.host, "localhost");
+}
+
+TEST_F(TestIpAddr, test_ipaddr_operators)
+{
+    IpAddr a("127.0.0.1", 80);
+    IpAddr b("127.0.0.1", 80);
+    IpAddr c("127.0.0.1", 81);
+    IpAddr d("192.168.0.1", 80);
+    IpAddr e("::1", 80);
+
+    EXPECT_EQ(a, b);
+    EXPECT_FALSE(a == c);
+    EXPECT_FALSE(a == d);
+    EXPECT_FALSE(a == e);
+
+    // move
+    IpAddr moved(std::move(a));
+    EXPECT_EQ(moved, b);
+}
+
 } // namespace test

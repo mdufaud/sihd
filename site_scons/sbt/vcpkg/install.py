@@ -266,7 +266,7 @@ def _execute_vcpkg_install():
         logger.debug(f"executing '{args}' in '{vcpkg_build_path}'")
 
     from subprocess import run as subprocess_run
-    number_of_seconds_per_lib = 180
+    number_of_seconds_per_lib = 1000
     proc = subprocess_run(args, cwd=vcpkg_build_path, timeout=(number_of_seconds_per_lib * len(extlibs)), env=copy_env)
 
     logger.info("fetched in {:.3f} seconds".format(time() - start_time))

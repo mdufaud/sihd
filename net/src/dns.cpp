@@ -145,4 +145,9 @@ std::string DnsLookup::dump() const
     return dump;
 }
 
+std::future<DnsLookup> lookup_async(std::string_view host)
+{
+    return std::async(std::launch::async, [h = std::string(host)] { return lookup(h); });
+}
+
 } // namespace sihd::net::dns

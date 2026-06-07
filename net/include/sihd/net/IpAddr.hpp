@@ -49,9 +49,13 @@ class IpAddr
         IpAddr(const sockaddr_in & addr);
         IpAddr(const sockaddr_in6 & addr);
         IpAddr(const IpAddr & addr);
+        IpAddr(IpAddr && addr) = default;
         ~IpAddr() = default;
 
         IpAddr & operator=(const IpAddr & addr);
+        IpAddr & operator=(IpAddr && addr) = default;
+
+        bool operator==(const IpAddr & other) const;
 
         // build IpAddr from localhost
         static IpAddr localhost(int port, bool ipv6 = false);

@@ -173,10 +173,9 @@ bool CsvReader::get_read_timestamp(time_t *nano_timestamp) const
 
     if (_timestamp_fmt.empty())
     {
-        long value;
-        if (sihd::util::str::to_long(time_str, &value))
+        if (const auto value = sihd::util::str::convert_from_string<long>(time_str))
         {
-            *nano_timestamp = static_cast<time_t>(value);
+            *nano_timestamp = static_cast<time_t>(*value);
             return true;
         }
         return false;

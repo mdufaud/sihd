@@ -13,8 +13,8 @@ class INetServerHandler
     public:
         virtual ~INetServerHandler() = default;
 
-        virtual void handle_no_activity(INetServer *server, time_t nano) = 0;
-        virtual void handle_activity(INetServer *server, time_t nano) = 0;
+        virtual void handle_no_activity(INetServer *server, time_t milliseconds) = 0;
+        virtual void handle_activity(INetServer *server, time_t milliseconds) = 0;
         virtual void handle_new_client(INetServer *server) = 0;
         virtual void handle_client_read(INetServer *server, int socket) = 0;
         virtual void handle_client_write(INetServer *server, int socket) = 0;

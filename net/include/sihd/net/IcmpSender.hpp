@@ -74,6 +74,14 @@ class IcmpSender: public sihd::util::Named,
         bool on_stop() override;
 
     private:
+        bool _set_conf_echo(bool active);
+        bool _set_conf_type(int type);
+        bool _set_conf_code(int code);
+        bool _set_conf_ttl(int ttl);
+        bool _set_conf_id(int id);
+        bool _set_conf_seq(int seq);
+        bool _set_conf_data_size(int byte_size);
+
         struct icmp *icmp();
         struct icmp6_hdr *icmp6();
 

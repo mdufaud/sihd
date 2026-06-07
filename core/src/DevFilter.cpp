@@ -30,21 +30,23 @@ bool parse_options_config(DevFilter::Rule & rule, const util::StrConfiguration &
 
     if (key_match.has_value())
     {
-        if (util::str::convert_from_string<bool>(*key_match, rule.should_match) == false)
+        const auto should_match = util::str::convert_from_string<bool>(*key_match);
+        if (should_match.has_value() == false)
         {
             SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_MATCH, *key_match);
             return false;
         }
+        rule.should_match = *should_match;
     }
     if (key_delay.has_value())
     {
-        double delay;
-        if (util::str::convert_from_string<double>(*key_delay, delay) == false)
+        const auto delay = util::str::convert_from_string<double>(*key_delay);
+        if (delay.has_value() == false)
         {
             SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_DELAY, *key_delay);
             return false;
         }
-        rule.nano_delay = sihd::util::time::from_double(delay);
+        rule.nano_delay = sihd::util::time::from_double(*delay);
     }
     return true;
 }
@@ -87,11 +89,15 @@ bool parse_trigger_config(DevFilter::Rule & rule, const util::StrConfiguration &
             SIHD_LOG(error, "DevFilter: trigger idx and value empty: '{}'", *key_trigger);
             return false;
         }
-        if (split_trigger[0].empty() == false
-            && util::str::convert_from_string<size_t>(split_trigger[0], rule.trigger_idx) == false)
+        if (split_trigger[0].empty() == false)
         {
-            SIHD_LOG(error, "DevFilter: cannot convert trigger idx: {}", split_trigger[0]);
-            return false;
+            const auto trigger_idx = util::str::convert_from_string<size_t>(split_trigger[0]);
+            if (trigger_idx.has_value() == false)
+            {
+                SIHD_LOG(error, "DevFilter: cannot convert trigger idx: {}", split_trigger[0]);
+                return false;
+            }
+            rule.trigger_idx = *trigger_idx;
         }
         if (split_trigger[1].empty() == false)
         {
@@ -151,11 +157,15 @@ bool parse_write_config(DevFilter::Rule & rule, const util::StrConfiguration & c
             SIHD_LOG(error, "DevFilter: write idx and value empty: '{}'", *key_write);
             return false;
         }
-        if (split_write[0].empty() == false
-            && util::str::convert_from_string<size_t>(split_write[0], rule.write_idx) == false)
+        if (split_write[0].empty() == false)
         {
-            SIHD_LOG(error, "DevFilter: cannot convert write idx: {}", split_write[0]);
-            return false;
+            const auto write_idx = util::str::convert_from_string<size_t>(split_write[0]);
+            if (write_idx.has_value() == false)
+            {
+                SIHD_LOG(error, "DevFilter: cannot convert write idx: {}", split_write[0]);
+                return false;
+            }
+            rule.write_idx = *write_idx;
         }
         rule.write_same_value = split_write[1].empty();
         if (rule.write_same_value == false)

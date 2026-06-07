@@ -1,6 +1,8 @@
 #ifndef __SIHD_NET_DNS_HPP__
 #define __SIHD_NET_DNS_HPP__
 
+#include <future>
+
 #include <sihd/net/IpAddr.hpp>
 
 namespace sihd::net::dns
@@ -26,6 +28,7 @@ struct DnsLookup
 };
 
 DnsLookup lookup(std::string_view host);
+std::future<DnsLookup> lookup_async(std::string_view host);
 
 } // namespace sihd::net::dns
 

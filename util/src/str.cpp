@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
 #include <cmath>   // HUGE_VAL
 #include <cstdarg>
@@ -299,6 +300,51 @@ std::vector<std::string> regex_filter_impl(std::span<T> input, const std::string
         }
     }
     return output;
+}
+
+// strips a base prefix (0x, 0b, 0o) when it matches the requested base and returns the base to use
+// base == 0 auto-detects from the prefix: 0x -> 16, 0b -> 2, 0o -> 8, otherwise 10
+uint16_t resolve_base_prefix(std::string_view & str, uint16_t base)
+{
+    if (str.size() >= 2 && str[0] == '0')
+    {
+        uint16_t prefix_base = 0;
+        switch (str[1])
+        {
+            case 'x':
+            case 'X':
+                prefix_base = 16;
+                break;
+            case 'b':
+            case 'B':
+                prefix_base = 2;
+                break;
+            case 'o':
+            case 'O':
+                prefix_base = 8;
+                break;
+            default:
+                break;
+        }
+        if (prefix_base != 0 && (base == 0 || base == prefix_base))
+        {
+            str.remove_prefix(2);
+            return prefix_base;
+        }
+    }
+    return base == 0 ? 10 : base;
+}
+
+template <typename T, typename... Args>
+std::optional<T> from_chars_to(std::string_view str, Args... args)
+{
+    T value {};
+    const char *const first = str.data();
+    const char *const last = first + str.size();
+    const auto [ptr, ec] = std::from_chars(first, last, value, args...);
+    if (ec != std::errc {} || ptr == first)
+        return std::nullopt;
+    return value;
 }
 
 } // namespace
@@ -597,22 +643,10 @@ std::string to_oct(uint64_t n)
 
 std::string num_str(uint64_t num, uint16_t base)
 {
-    if (num == 0)
-        return "0";
-    size_t i = num::size(num, base);
-    std::string ret;
-
-    ret.resize(i);
-    while (num != 0)
-    {
-        i--;
-        if (num < base)
-            ret[i] = num_to_char(num);
-        else
-            ret[i] = num_to_char(num % base);
-        num = num / base;
-    }
-    return ret;
+    // max 64 digits (uint64_t in base 2)
+    char buffer[64];
+    const auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), num, static_cast<int>(base));
+    return std::string(buffer, ptr);
 }
 
 std::string addr_str(const void *addr, size_t padding)
@@ -804,78 +838,39 @@ bool is_number(std::string_view s, uint16_t base)
     return true;
 }
 
-bool to_long(std::string_view str, long *ret, uint16_t base)
+std::optional<long long> to_signed(std::string_view str, uint16_t base)
 {
-    errno = 0;
-    char *endptr = NULL;
-    *ret = strtol(str.data(), &endptr, base);
-    if (str.data() == endptr)
-        return false;
-    if (*ret == 0L && errno == EINVAL)
-        return false;
-    if ((*ret == LONG_MIN || *ret == LONG_MAX) && errno == ERANGE)
-        return false;
-    return true;
+    // std::from_chars handles neither a leading '+' nor a base prefix, strtol did
+    bool negate = false;
+    if (!str.empty() && (str.front() == '-' || str.front() == '+'))
+    {
+        negate = str.front() == '-';
+        str.remove_prefix(1);
+    }
+    base = resolve_base_prefix(str, base);
+    const auto opt = from_chars_to<long long>(str, static_cast<int>(base));
+    if (!opt)
+        return std::nullopt;
+    return negate ? -*opt : *opt;
 }
 
-bool to_ulong(std::string_view str, unsigned long *ret, uint16_t base)
+std::optional<unsigned long long> to_unsigned(std::string_view str, uint16_t base)
 {
-    errno = 0;
-    char *endptr = NULL;
-    *ret = strtoul(str.data(), &endptr, base);
-    if (str.data() == endptr)
-        return false;
-    if (*ret == 0UL && errno == EINVAL)
-        return false;
-    if (*ret == ULONG_MAX && errno == ERANGE)
-        return false;
-    return true;
+    // std::from_chars rejects a sign for unsigned, strtoul wrapped a negative input around
+    bool negate = false;
+    if (!str.empty() && (str.front() == '-' || str.front() == '+'))
+    {
+        negate = str.front() == '-';
+        str.remove_prefix(1);
+    }
+    base = resolve_base_prefix(str, base);
+    const auto opt = from_chars_to<unsigned long long>(str, static_cast<int>(base));
+    if (!opt)
+        return std::nullopt;
+    return negate ? static_cast<unsigned long long>(0) - *opt : *opt;
 }
 
-bool to_llong(std::string_view str, long long *ret, uint16_t base)
-{
-    errno = 0;
-    char *endptr = NULL;
-    *ret = strtoll(str.data(), &endptr, base);
-    if (str.data() == endptr)
-        return false;
-    if (*ret == 0L && errno == EINVAL)
-        return false;
-    if ((*ret == LLONG_MIN || *ret == LLONG_MAX) && errno == ERANGE)
-        return false;
-    return true;
-}
-
-bool to_ullong(std::string_view str, unsigned long long *ret, uint16_t base)
-{
-    errno = 0;
-    char *endptr = NULL;
-    *ret = strtoull(str.data(), &endptr, base);
-    if (str.data() == endptr)
-        return false;
-    if (*ret == 0UL && errno == EINVAL)
-        return false;
-    if (*ret == ULLONG_MAX && errno == ERANGE)
-        return false;
-    return true;
-}
-
-bool to_double(std::string_view str, double *ret)
-{
-    errno = 0;
-    char *endptr = NULL;
-    *ret = strtod(str.data(), &endptr);
-    if (str.data() == endptr)
-        return false;
-    if (*ret == 0 && errno == EINVAL)
-        return false;
-    if ((*ret == HUGE_VAL || *ret == -HUGE_VAL) && errno == ERANGE)
-        return false;
-    return true;
-}
-
-template <>
-bool convert_from_string<bool>(std::string_view str, bool & value, [[maybe_unused]] uint16_t base)
+bool to_bool(std::string_view str, bool & value)
 {
     bool ret = false;
     if (str == "1")
@@ -906,8 +901,7 @@ bool convert_from_string<bool>(std::string_view str, bool & value, [[maybe_unuse
     return ret;
 }
 
-template <>
-bool convert_from_string<char>(std::string_view str, char & value, [[maybe_unused]] uint16_t base)
+bool to_char(std::string_view str, char & value)
 {
     char c = 0;
     if (str.size() == 1)
@@ -921,105 +915,55 @@ bool convert_from_string<char>(std::string_view str, char & value, [[maybe_unuse
     return c != 0;
 }
 
-template <>
-bool convert_from_string<int8_t>(std::string_view str, int8_t & value, uint16_t base)
+#if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
+
+std::optional<float> to_float(std::string_view str, std::chars_format fmt)
 {
-    long longval;
-    const bool ret = to_long(str, &longval, base);
-    if (ret)
-        value = longval;
-    return ret;
+    return from_chars_to<float>(str, fmt);
 }
 
-template <>
-bool convert_from_string<int16_t>(std::string_view str, int16_t & value, uint16_t base)
+std::optional<double> to_double(std::string_view str, std::chars_format fmt)
 {
-    long longval;
-    const bool ret = to_long(str, &longval, base);
-    if (ret)
-        value = longval;
-    return ret;
+    return from_chars_to<double>(str, fmt);
 }
 
-template <>
-bool convert_from_string<int32_t>(std::string_view str, int32_t & value, uint16_t base)
+#else
+
+namespace
 {
-    long longval;
-    const bool ret = to_long(str, &longval, base);
-    if (ret)
-        value = longval;
-    return ret;
+
+std::optional<double> strtod_fallback(std::string_view str)
+{
+    // string_view is not guaranteed null-terminated, copy before strtod
+    const std::string tmp(str);
+    errno = 0;
+    char *endptr = nullptr;
+    const double val = strtod(tmp.c_str(), &endptr);
+    if (endptr == tmp.c_str())
+        return std::nullopt;
+    if (val == 0 && errno == EINVAL)
+        return std::nullopt;
+    if ((val == HUGE_VAL || val == -HUGE_VAL) && errno == ERANGE)
+        return std::nullopt;
+    return val;
 }
 
-template <>
-bool convert_from_string<int64_t>(std::string_view str, int64_t & value, uint16_t base)
+} // namespace
+
+std::optional<float> to_float(std::string_view str, [[maybe_unused]] std::chars_format fmt)
 {
-    long long longval;
-    const bool ret = to_llong(str, &longval, base);
-    if (ret)
-        value = longval;
-    return ret;
+    const auto opt = strtod_fallback(str);
+    if (!opt)
+        return std::nullopt;
+    return static_cast<float>(*opt);
 }
 
-template <>
-bool convert_from_string<uint8_t>(std::string_view str, uint8_t & value, uint16_t base)
+std::optional<double> to_double(std::string_view str, [[maybe_unused]] std::chars_format fmt)
 {
-    unsigned long longval;
-    const bool ret = to_ulong(str, &longval, base);
-    if (ret)
-        value = longval;
-    return ret;
+    return strtod_fallback(str);
 }
 
-template <>
-bool convert_from_string<uint16_t>(std::string_view str, uint16_t & value, uint16_t base)
-{
-    unsigned long longval;
-    const bool ret = to_ulong(str, &longval, base);
-    if (ret)
-        value = longval;
-    return ret;
-}
-
-template <>
-bool convert_from_string<uint32_t>(std::string_view str, uint32_t & value, uint16_t base)
-{
-    unsigned long longval;
-    const bool ret = to_ulong(str, &longval, base);
-    if (ret)
-        value = longval;
-    return ret;
-}
-
-template <>
-bool convert_from_string<uint64_t>(std::string_view str, uint64_t & value, uint16_t base)
-{
-    unsigned long long longval;
-    const bool ret = to_ullong(str, &longval, base);
-    if (ret)
-        value = longval;
-    return ret;
-}
-
-template <>
-bool convert_from_string<float>(std::string_view str, float & value, [[maybe_unused]] uint16_t base)
-{
-    double doubleval;
-    const bool ret = to_double(str, &doubleval);
-    if (ret)
-        value = doubleval;
-    return ret;
-}
-
-template <>
-bool convert_from_string<double>(std::string_view str, double & value, [[maybe_unused]] uint16_t base)
-{
-    double doubleval;
-    const bool ret = to_double(str, &doubleval);
-    if (ret)
-        value = doubleval;
-    return ret;
-}
+#endif
 
 bool is_char_enclose_start(int c, const char *authorized_start_enclose)
 {

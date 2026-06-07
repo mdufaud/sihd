@@ -38,13 +38,13 @@ namespace
 
 uint32_t netmask_value_from_str(std::string_view mask_value_str)
 {
-    uint32_t mask_value;
-    if (!str::is_number(mask_value_str) || !str::convert_from_string<uint32_t>(mask_value_str, mask_value))
+    if (str::is_number(mask_value_str))
     {
-        SIHD_LOG(error, "IpAddr: not a subnet mask: {}", mask_value_str);
-        return -1;
+        if (const auto mask_value = str::convert_from_string<uint32_t>(mask_value_str))
+            return *mask_value;
     }
-    return mask_value;
+    SIHD_LOG(error, "IpAddr: not a subnet mask: {}", mask_value_str);
+    return -1;
 }
 
 bool to_sockaddr_in(sockaddr_in *addr, std::string_view ip, int port = 0)
@@ -181,6 +181,20 @@ IpAddr & IpAddr::operator=(const IpAddr & addr)
     this->_netmask_value = addr._netmask_value;
     return *this;
 }
+
+bool IpAddr::operator==(const IpAddr & other) const
+{
+    if (_addr.sockaddr.sa_family != other._addr.sockaddr.sa_family)
+        return false;
+    if (this->port() != other.port())
+        return false;
+    if (_addr.sockaddr.sa_family == AF_INET)
+        return memcmp(&_addr.sockaddr_in.sin_addr, &other._addr.sockaddr_in.sin_addr, sizeof(in_addr)) == 0;
+    if (_addr.sockaddr.sa_family == AF_INET6)
+        return memcmp(&_addr.sockaddr_in6.sin6_addr, &other._addr.sockaddr_in6.sin6_addr, sizeof(in6_addr)) == 0;
+    return true;
+}
+
 
 void IpAddr::set_hostname(std::string_view hostname)
 {

@@ -211,4 +211,53 @@ TEST_F(TestChannel, test_channel_copy_to_timestamp)
     EXPECT_GT(ts, 0);
 }
 
+TEST_F(TestChannel, test_channel_resizable)
+{
+    Channel c("chan", "byte", 4);
+    c.reserve(64);
+    c.set_resizable(true);
+
+    EXPECT_TRUE(c.resizable());
+    EXPECT_EQ(c.size(), 4u);
+    EXPECT_EQ(c.capacity(), 64u);
+
+    ArrByte small = {1, 2, 3, 4};
+    EXPECT_TRUE(c.write(small));
+    EXPECT_EQ(c.size(), 4u);
+
+    ArrByte bigger = {10, 20, 30, 40, 50, 60, 70, 80};
+    EXPECT_TRUE(c.write(bigger));
+    EXPECT_EQ(c.byte_size(), 8u);
+    EXPECT_EQ(c.read<int8_t>(7), 80);
+
+    ArrByte too_big;
+    too_big.resize(128);
+    EXPECT_FALSE(c.write(too_big));
+}
+
+TEST_F(TestChannel, test_channel_not_resizable)
+{
+    Channel c("chan", "byte", 4);
+
+    EXPECT_FALSE(c.resizable());
+    ArrByte bigger = {1, 2, 3, 4, 5};
+    EXPECT_FALSE(c.write(bigger));
+}
+
+TEST_F(TestChannel, test_channel_build_capacity)
+{
+    Channel *c = Channel::build("name=rx;type=byte;size=16;capacity=1024");
+    ASSERT_NE(c, nullptr);
+    EXPECT_TRUE(c->resizable());
+    EXPECT_EQ(c->size(), 16u);
+    EXPECT_EQ(c->capacity(), 1024u);
+
+    ArrByte data;
+    data.resize(512);
+    EXPECT_TRUE(c->write(data));
+    EXPECT_EQ(c->byte_size(), 512u);
+
+    delete c;
+}
+
 } // namespace test

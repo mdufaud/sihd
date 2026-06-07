@@ -58,6 +58,30 @@ class SomeDevice: public Device
         bool _running;
 };
 
+class ResizableDevice: public Device
+{
+    public:
+        ResizableDevice(const std::string & name, Node *parent = nullptr): Device(name, parent) {}
+
+        ~ResizableDevice() = default;
+
+        bool is_running() const { return false; }
+
+        void handle(Channel *c) { (void)c; }
+
+    protected:
+        bool on_init()
+        {
+            this->add_channel_resizable("local", "byte", 1, 128);
+            this->add_unlinked_channel_resizable("shared", "byte", 1, 128);
+            return true;
+        }
+
+        bool on_start() { return true; }
+
+        bool on_stop() { return true; }
+};
+
 TEST_F(TestDevice, test_device_service)
 {
     Node root("root");
@@ -91,5 +115,47 @@ TEST_F(TestDevice, test_device_service)
     EXPECT_EQ(dev->get_channel("c1"), nullptr);
     EXPECT_EQ(dev->get_channel("c2"), nullptr);
     EXPECT_EQ(dev->get_channel("c3"), nullptr);
+}
+
+TEST_F(TestDevice, test_device_channel_resizable)
+{
+    Node root("root");
+    ResizableDevice *dev = root.add_child<ResizableDevice>("device");
+
+    EXPECT_TRUE(dev->init());
+    Channel *c = dev->get_channel("local");
+    ASSERT_NE(c, nullptr);
+    EXPECT_TRUE(c->resizable());
+    EXPECT_EQ(c->size(), 1u);
+    EXPECT_EQ(c->capacity(), 128u);
+}
+
+TEST_F(TestDevice, test_device_resizable_link_match)
+{
+    Node root("root");
+    Channel *ext = new Channel("ext", "byte", 1, &root);
+    ext->reserve(256);
+    ext->set_resizable(true);
+
+    ResizableDevice *dev = root.add_child<ResizableDevice>("device");
+    dev->add_link("shared", "..ext");
+
+    EXPECT_TRUE(dev->init());
+    // both ends resizable -> link contract satisfied
+    EXPECT_TRUE(dev->start());
+    EXPECT_TRUE(dev->stop());
+}
+
+TEST_F(TestDevice, test_device_resizable_link_mismatch)
+{
+    Node root("root");
+    // ext is not resizable -> contract violated
+    new Channel("ext", "byte", 1, &root);
+
+    ResizableDevice *dev = root.add_child<ResizableDevice>("device");
+    dev->add_link("shared", "..ext");
+
+    EXPECT_TRUE(dev->init());
+    EXPECT_FALSE(dev->start());
 }
 } // namespace test

@@ -12,6 +12,8 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::util;
 using namespace sihd::net;
+constexpr int connect_timeout_ms = 1000;
+
 class TestTcp: public ::testing::Test
 {
     protected:
@@ -47,16 +49,16 @@ TEST_F(TestTcp, test_tcp_server)
     server.set_queue_size(3);
     server_handler.set_max_clients(4);
     sihd::util::Handler<BasicServerHandler *> handler([&welcome_arr](BasicServerHandler *srv) {
-        for (BasicServerHandler::Client *client : srv->new_clients())
+        for (auto & client : srv->new_clients())
         {
             SIHD_LOG(info, "Server new client: {}", client->fd());
             srv->send_to_client(client, welcome_arr);
         }
-        for (BasicServerHandler::Client *client : srv->read_activity())
+        for (auto & client : srv->read_activity())
         {
             SIHD_LOG(info, "Client said: {}", client->read_array.str(','));
         }
-        for (BasicServerHandler::Client *client : srv->write_activity())
+        for (auto & client : srv->write_activity())
         {
             SIHD_LOG(info, "Server wrote to client: {}", client->write_array.str(','));
         }
@@ -67,7 +69,7 @@ TEST_F(TestTcp, test_tcp_server)
     EXPECT_TRUE(worker.start_sync_worker("tcp-server"));
 
     SIHD_LOG(debug, "Simulating a new connection");
-    client1.open_and_connect(localhost);
+    client1.open_and_connect(localhost, connect_timeout_ms);
 
     usleep(1000);
 
@@ -76,29 +78,31 @@ TEST_F(TestTcp, test_tcp_server)
 
     usleep(1000);
 
-    EXPECT_EQ(server_handler.clients().size(), 1u);
-    if (server_handler.clients().size() == 1)
+    EXPECT_EQ(server_handler.client_count(), 1u);
     {
-        BasicServerHandler::Client *client = server_handler.clients()[0];
-        EXPECT_TRUE(client->read_array.is_bytes_equal(hello_world_arr));
+        auto all_clients = server_handler.clients();
+        if (all_clients.size() == 1)
+        {
+            EXPECT_TRUE(all_clients[0]->read_array.is_bytes_equal(hello_world_arr));
+        }
     }
 
     SIHD_LOG(debug, "Simulating 3 new connections");
 
-    client2.open_and_connect(localhost);
-    client3.open_and_connect(localhost);
-    client4.open_and_connect(localhost);
+    client2.open_and_connect(localhost, connect_timeout_ms);
+    client3.open_and_connect(localhost, connect_timeout_ms);
+    client4.open_and_connect(localhost, connect_timeout_ms);
 
     usleep(2000);
 
     SIHD_LOG(debug, "Simulating a new unacceptable connection");
-    client5.open_and_connect(localhost);
+    client5.open_and_connect(localhost, connect_timeout_ms);
 
     usleep(1000);
 
     // connection not accepted
-    EXPECT_EQ(server_handler.clients().size(), 4u);
-    if (server_handler.clients().size() == 4u)
+    EXPECT_EQ(server_handler.client_count(), 4u);
+    if (server_handler.client_count() == 4u)
     {
         // disconnected
         EXPECT_EQ(client5.receive(hello_world_arr), 0);
@@ -128,7 +132,7 @@ TEST_F(TestTcp, test_tcp_client)
     EXPECT_TRUE(server.listen(2));
 
     // client connect
-    EXPECT_TRUE(client.open_and_connect(localhost));
+    EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms));
     EXPECT_TRUE(client.socket_opened());
     EXPECT_TRUE(client.connected());
 
@@ -159,4 +163,73 @@ TEST_F(TestTcp, test_tcp_client)
     EXPECT_TRUE(accepted.close());
     EXPECT_TRUE(server.close());
 }
+TEST_F(TestTcp, test_tcp_connect_timeout)
+{
+    IpAddr localhost = IpAddr::localhost(4243);
+    sihd::util::ArrChar hello("hello");
+    sihd::util::ArrChar recv(20);
+    TcpClient client("tcp-client");
+    Socket server;
+
+    EXPECT_TRUE(server.open(AF_INET, SOCK_STREAM, 0));
+    EXPECT_TRUE(server.set_reuseaddr(true));
+    EXPECT_TRUE(server.bind(localhost));
+    EXPECT_TRUE(server.listen(2));
+
+    EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms));
+    EXPECT_TRUE(client.connected());
+
+    int accepted_socket = server.accept();
+    Socket accepted(accepted_socket);
+
+    EXPECT_EQ(client.send(hello), (ssize_t)hello.size());
+    EXPECT_EQ(accepted.receive(recv), (ssize_t)hello.size());
+    EXPECT_TRUE(hello.is_equal(recv));
+
+    EXPECT_TRUE(client.close());
+    EXPECT_TRUE(accepted.close());
+    EXPECT_TRUE(server.close());
+}
+
+TEST_F(TestTcp, test_tcp_reconnect)
+{
+    IpAddr localhost = IpAddr::localhost(4244);
+    sihd::util::ArrChar hello("hello");
+    sihd::util::ArrChar recv(20);
+    TcpClient client("tcp-client");
+    Socket server;
+
+    EXPECT_TRUE(server.open(AF_INET, SOCK_STREAM, 0));
+    EXPECT_TRUE(server.set_reuseaddr(true));
+    EXPECT_TRUE(server.bind(localhost));
+    EXPECT_TRUE(server.listen(2));
+
+    EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms));
+    EXPECT_TRUE(client.connected());
+
+    int accepted_socket = server.accept();
+    Socket accepted(accepted_socket);
+
+    EXPECT_EQ(client.send(hello), (ssize_t)hello.size());
+    EXPECT_EQ(accepted.receive(recv), (ssize_t)hello.size());
+
+    accepted.close();
+    EXPECT_TRUE(client.close());
+    EXPECT_FALSE(client.connected());
+
+    EXPECT_TRUE(client.reconnect(connect_timeout_ms));
+    EXPECT_TRUE(client.connected());
+
+    int accepted_socket2 = server.accept();
+    Socket accepted2(accepted_socket2);
+
+    EXPECT_EQ(client.send(hello), (ssize_t)hello.size());
+    EXPECT_EQ(accepted2.receive(recv), (ssize_t)hello.size());
+    EXPECT_TRUE(hello.is_equal(recv));
+
+    EXPECT_TRUE(client.close());
+    EXPECT_TRUE(accepted2.close());
+    EXPECT_TRUE(server.close());
+}
+
 } // namespace test

@@ -1,15 +1,13 @@
 #ifndef __SIHD_NET_SOCKET_HPP__
 #define __SIHD_NET_SOCKET_HPP__
 
+#include <optional>
+
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/sys/platform.hpp>
 
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/ip.hpp>
-
-#if !defined(__SIHD_WINDOWS__)
-#else
-#endif
 
 namespace sihd::net
 {
@@ -17,6 +15,8 @@ namespace sihd::net
 class Socket
 {
     public:
+        static constexpr int blocking_timeout = -1;
+
         Socket();
         // open socket
         Socket(int domain, int socket_type, int protocol);
@@ -56,6 +56,16 @@ class Socket
         static bool is_socket_blocking(int socket);
         static bool is_socket_broadcast(int socket);
         static bool set_socket_ttl(int socket, int ttl, bool ipv6 = false);
+        static bool set_socket_keepalive(int socket, bool active);
+        static bool is_socket_keepalive(int socket);
+#ifdef SO_REUSEPORT
+        static bool set_socket_reuseport(int socket, bool active);
+        static bool is_socket_reuseport(int socket);
+#endif
+        static bool set_socket_rcvbuf(int socket, int size);
+        static bool set_socket_sndbuf(int socket, int size);
+        static int get_socket_rcvbuf(int socket);
+        static int get_socket_sndbuf(int socket);
 
         // Operations on internal socket //
 
@@ -70,6 +80,21 @@ class Socket
         bool is_blocking() const;
         bool is_broadcast() const;
         bool set_ttl(int ttl) const;
+        bool set_keepalive(bool active) const;
+        bool is_keepalive() const;
+#ifdef SO_REUSEPORT
+        bool set_reuseport(bool active) const;
+        bool is_reuseport() const;
+#endif
+        bool set_rcvbuf(int size) const;
+        bool set_sndbuf(int size) const;
+        int get_rcvbuf() const;
+        int get_sndbuf() const;
+
+        bool join_multicast(const IpAddr & group, std::string_view iface = "");
+        bool leave_multicast(const IpAddr & group, std::string_view iface = "");
+        bool set_multicast_ttl(int ttl);
+        bool set_multicast_loop(bool active);
 
         bool open(std::string_view domain, std::string_view type, std::string_view protocol);
         bool open(int domain, int socket_type, int protocol);
@@ -84,10 +109,9 @@ class Socket
         ssize_t receive(sihd::util::IArray & arr);
 
         bool listen(uint16_t queue_size);
-        // fill addr and addr_len based on incoming connections
-        int accept(sockaddr *addr, socklen_t *addr_len);
-        int accept();
-        int accept(IpAddr & ipaddr);
+        int accept(sockaddr *addr, socklen_t *addr_len, int timeout_ms = blocking_timeout);
+        int accept(int timeout_ms = blocking_timeout);
+        int accept(IpAddr & ipaddr, int timeout_ms = blocking_timeout);
 
         // Utilities for internal socket //
 
@@ -98,7 +122,7 @@ class Socket
 
         // sockaddr
         bool bind(const sockaddr *addr, socklen_t addr_len);
-        bool connect(const sockaddr *addr, socklen_t addr_len);
+        bool connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms = blocking_timeout);
         ssize_t send_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrCharView view);
         bool send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrCharView view);
         ssize_t receive_from(sockaddr *addr, socklen_t *addr_len, void *data, size_t size);
@@ -108,7 +132,7 @@ class Socket
             sihd::net::IpAddr
         */
         bool bind(const IpAddr & addr);
-        bool connect(const IpAddr & addr);
+        bool connect(const IpAddr & addr, int timeout_ms = blocking_timeout);
         // calls send_to_ip  or first IPV4 ip
         ssize_t send_to(const IpAddr & addr, sihd::util::ArrCharView view);
         bool send_all_to(const IpAddr & addr, sihd::util::ArrCharView view);
@@ -143,13 +167,25 @@ class Socket
         bool is_ipv4() const;
         bool is_ipv6() const;
 
+        std::optional<std::string> get_last_error() const;
+
+        bool reconnect(int timeout_ms = -1);
+
+        const IpAddr & connect_addr() const { return _connect_addr; }
+        std::string connect_unix_path() const { return _connect_unix_path; }
+
     protected:
         void _clear_socket_info();
+        bool _multicast_membership(const IpAddr & group, std::string_view iface, int ipv4_opt, int ipv6_opt);
 
         int _domain;
         int _type;
         int _protocol;
         int _socket;
+
+        std::string _unix_bind_path;
+        IpAddr _connect_addr;
+        std::string _connect_unix_path;
 
         bool _verbose;
         int _send_flags;

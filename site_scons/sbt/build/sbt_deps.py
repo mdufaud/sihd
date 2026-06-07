@@ -263,10 +263,17 @@ def _copy_tree(src, dst):
     os.makedirs(dst, exist_ok=True)
     for entry in os.scandir(src):
         s = entry.path
+        if not os.path.exists(s):
+            continue
         d = os.path.join(dst, entry.name)
         if entry.is_dir(follow_symlinks=False):
             _copy_tree(s, d)
         else:
+            # On a re-run the consumer extlib may hold symlinks pointing back
+            # into the dep's own extlib; copying those onto themselves raises
+            # SameFileError. Skip when src resolves to dst.
+            if os.path.exists(d) and os.path.samefile(s, d):
+                continue
             shutil.copy2(s, d)
 
 

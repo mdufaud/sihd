@@ -105,12 +105,12 @@ std::optional<HttpResponse> HttpResponse::from_string(std::string_view raw)
     if (!str::starts_with(status_parts[0], "HTTP/1."))
         return std::nullopt;
 
-    uint32_t status;
-    if (!str::convert_from_string(status_parts[1], status))
+    const auto status = str::convert_from_string<uint32_t>(status_parts[1]);
+    if (status.has_value() == false)
         return std::nullopt;
 
     HttpResponse resp;
-    resp.set_status(status);
+    resp.set_status(*status);
 
     for (size_t i = 1; i < lines.size(); ++i)
     {

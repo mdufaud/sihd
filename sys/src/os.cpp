@@ -233,10 +233,9 @@ Timestamp boot_time()
                 std::string_view btime_line(content.data() + pos, content.size() - pos);
                 btime_line.remove_prefix(btime_line.find_first_of(' ') + 1);
                 btime_line = btime_line.substr(0, btime_line.find('\n'));
-                long long btime;
-                if (str::to_llong(btime_line, &btime))
+                if (const auto btime = str::convert_from_string<long long>(btime_line))
                 {
-                    boot_timestamp = Timestamp(std::chrono::seconds(btime));
+                    boot_timestamp = Timestamp(std::chrono::seconds(*btime));
                 }
             }
         }
@@ -552,22 +551,19 @@ bool exists_in_path(std::string_view binary_name)
     return false;
 }
 
-std::string last_error_str()
+std::string error_str(int error_code)
 {
 #if !defined(__SIHD_WINDOWS__)
-    return strerror(errno);
+    return strerror(error_code);
 #else
-    DWORD errorMessageID = GetLastError();
-    if (errorMessageID == 0)
-    {
-        return std::string();
-    }
+    if (error_code == 0)
+        return {};
 
     LPSTR messageBuffer = nullptr;
     size_t size = FormatMessageA(
         FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         NULL,
-        errorMessageID,
+        static_cast<DWORD>(error_code),
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPSTR)&messageBuffer,
         0,
@@ -576,6 +572,15 @@ std::string last_error_str()
     std::string message(messageBuffer, size);
     LocalFree(messageBuffer);
     return message;
+#endif
+}
+
+std::string last_error_str()
+{
+#if !defined(__SIHD_WINDOWS__)
+    return error_str(errno);
+#else
+    return error_str(WSAGetLastError());
 #endif
 }
 

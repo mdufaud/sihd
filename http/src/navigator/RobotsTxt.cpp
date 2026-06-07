@@ -101,11 +101,10 @@ void RobotsTxt::parse(std::string_view content)
         {
             if (!current_agents.empty())
             {
-                long delay = 0;
-                if (sihd::util::str::to_long(value, &delay))
+                if (const auto delay = sihd::util::str::convert_from_string<long>(value))
                 {
                     for (const auto & a : current_agents)
-                        _agents[a].crawl_delay_s = delay;
+                        _agents[a].crawl_delay_s = *delay;
                 }
                 else
                     SIHD_LOG(warning, "RobotsTxt: invalid crawl-delay value: {}", value);

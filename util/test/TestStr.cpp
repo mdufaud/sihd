@@ -26,49 +26,43 @@ class TestStr: public ::testing::Test
 
         virtual void TearDown() {}
 
-        bool test_long(const std::string & str, int base = 0)
+        bool test_long(const std::string & str, uint16_t base = 10)
         {
-            long val;
-            bool ret = str::to_long(str, &val, base);
-            SIHD_LOG(debug, "Test signed long (errno = {}) -> {}", errno, str);
-            if (ret)
+            const auto val = str::convert_from_string<long>(str, base);
+            if (val)
             {
-                SIHD_LOG(debug, "Value found: {}", val);
-                _val = val;
+                SIHD_LOG(debug, "Value found: {} -> {}", str, *val);
+                _val = *val;
                 return true;
             }
-            SIHD_LOG(debug, "Failed to find a signed long");
-            return ret;
+            SIHD_LOG(debug, "Failed to find a signed long -> {}", str);
+            return false;
         }
 
-        bool test_ulong(const std::string & str, int base = 0)
+        bool test_ulong(const std::string & str, uint16_t base = 10)
         {
-            unsigned long val;
-            bool ret = str::to_ulong(str, &val, base);
-            SIHD_LOG(debug, "Test unsigned long (errno = {}) -> {}", errno, str);
-            if (ret)
+            const auto val = str::convert_from_string<unsigned long>(str, base);
+            if (val)
             {
-                SIHD_LOG(debug, "Value found: {}", val);
-                _uval = val;
+                SIHD_LOG(debug, "Value found: {} -> {}", str, *val);
+                _uval = *val;
                 return true;
             }
-            SIHD_LOG(debug, "Failed to find an unsigned long");
-            return ret;
+            SIHD_LOG(debug, "Failed to find an unsigned long -> {}", str);
+            return false;
         }
 
         bool test_double(const std::string & str)
         {
-            double val;
-            bool ret = str::to_double(str, &val);
-            SIHD_LOG(debug, "Test double (errno = {}) -> {}", errno, str);
-            if (ret)
+            const auto val = str::to_double(str);
+            if (val)
             {
-                SIHD_LOG(debug, "Value found: {}", val);
-                _dval = val;
+                SIHD_LOG(debug, "Value found: {} -> {}", str, *val);
+                _dval = *val;
                 return true;
             }
-            SIHD_LOG(debug, "Failed to find a double");
-            return ret;
+            SIHD_LOG(debug, "Failed to find a double -> {}", str);
+            return false;
         }
 
         long _val;
@@ -491,68 +485,51 @@ TEST_F(TestStr, test_str_enclosures)
 
 TEST_F(TestStr, test_str_from_string)
 {
-    bool b = false;
-    char c;
-    int16_t i16;
-    uint32_t ui32;
-    int64_t i64;
-    float f;
-    double d;
+    EXPECT_FALSE(str::convert_from_string<bool>("").has_value());
+    EXPECT_FALSE(str::convert_from_string<int16_t>("").has_value());
+    EXPECT_FALSE(str::convert_from_string<uint32_t>("").has_value());
+    EXPECT_FALSE(str::convert_from_string<int64_t>("").has_value());
+    EXPECT_FALSE(str::convert_from_string<float>("").has_value());
+    EXPECT_FALSE(str::convert_from_string<double>("").has_value());
 
-    EXPECT_FALSE(str::convert_from_string<bool>("", b));
-    EXPECT_FALSE(str::convert_from_string("", i16));
-    EXPECT_FALSE(str::convert_from_string("", ui32));
-    EXPECT_FALSE(str::convert_from_string("", i64));
-    EXPECT_FALSE(str::convert_from_string("", f));
-    EXPECT_FALSE(str::convert_from_string("", d));
+    EXPECT_EQ(str::convert_from_string<bool>("1"), true);
+    EXPECT_EQ(str::convert_from_string<bool>("0"), false);
+    EXPECT_EQ(str::convert_from_string<bool>("true"), true);
+    EXPECT_EQ(str::convert_from_string<bool>("false"), false);
+    EXPECT_FALSE(str::convert_from_string<bool>("nope").has_value());
+    EXPECT_FALSE(str::convert_from_string<bool>("T").has_value());
 
-    EXPECT_TRUE(str::convert_from_string<bool>("1", b));
-    EXPECT_EQ(b, true);
-    EXPECT_TRUE(str::convert_from_string<bool>("0", b));
-    EXPECT_EQ(b, false);
-    EXPECT_TRUE(str::convert_from_string<bool>("true", b));
-    EXPECT_EQ(b, true);
-    EXPECT_TRUE(str::convert_from_string<bool>("false", b));
-    EXPECT_EQ(b, false);
-    EXPECT_FALSE(str::convert_from_string<bool>("nope", b));
-    EXPECT_FALSE(str::convert_from_string<bool>("T", b));
+    EXPECT_EQ(str::convert_from_string<char>("c"), 'c');
+    EXPECT_EQ(str::convert_from_string<char>("A"), 'A');
+    EXPECT_FALSE(str::convert_from_string<char>("Abc").has_value());
 
-    EXPECT_TRUE(str::convert_from_string("c", c));
-    EXPECT_EQ(c, 'c');
-    EXPECT_TRUE(str::convert_from_string("A", c));
-    EXPECT_EQ(c, 'A');
-    EXPECT_FALSE(str::convert_from_string("Abc", c));
+    EXPECT_EQ(str::convert_from_string<int16_t>("123"), 123);
+    EXPECT_EQ(str::convert_from_string<int16_t>("-321"), -321);
+    // truncation to a smaller type wraps around
+    EXPECT_EQ(str::convert_from_string<int16_t>("32768"), -32768);
 
-    EXPECT_TRUE(str::convert_from_string("123", i16));
-    EXPECT_EQ(i16, 123);
-    EXPECT_TRUE(str::convert_from_string("-321", i16));
-    EXPECT_EQ(i16, -321);
-    // test overflow
-    EXPECT_TRUE(str::convert_from_string("32768", i16));
-    EXPECT_EQ(i16, -32768);
+    EXPECT_EQ(str::convert_from_string<uint32_t>("1000"), 1000u);
+    // trailing data is ignored
+    EXPECT_EQ(str::convert_from_string<uint32_t>("1000,hello world"), 1000u);
+    // a leading '-' wraps around
+    EXPECT_EQ(str::convert_from_string<uint32_t>("-1"), 4294967295u);
 
-    EXPECT_TRUE(str::convert_from_string("1000", ui32));
-    EXPECT_EQ(ui32, 1000u);
-    EXPECT_TRUE(str::convert_from_string("1000,hello world", ui32));
-    EXPECT_EQ(ui32, 1000u);
-    // test overflow
-    EXPECT_TRUE(str::convert_from_string("-1", ui32));
-    EXPECT_EQ(ui32, 4294967295u);
+    EXPECT_EQ(str::convert_from_string<int64_t>("100"), 100);
+    EXPECT_EQ(str::convert_from_string<int64_t>("-1"), -1);
 
-    EXPECT_TRUE(str::convert_from_string("100", i64));
-    EXPECT_EQ(i64, 100);
-    EXPECT_TRUE(str::convert_from_string("-1", i64));
-    EXPECT_EQ(i64, -1);
+    const auto f01 = str::convert_from_string<float>("0.1");
+    ASSERT_TRUE(f01.has_value());
+    EXPECT_FLOAT_EQ(*f01, 0.1f);
+    const auto f123 = str::convert_from_string<float>("123.456");
+    ASSERT_TRUE(f123.has_value());
+    EXPECT_FLOAT_EQ(*f123, 123.456f);
 
-    EXPECT_TRUE(str::convert_from_string("0.1", f));
-    EXPECT_FLOAT_EQ(f, 0.1);
-    EXPECT_TRUE(str::convert_from_string("123.456", f));
-    EXPECT_FLOAT_EQ(f, 123.456);
-
-    EXPECT_TRUE(str::convert_from_string("0.01", d));
-    EXPECT_FLOAT_EQ(d, 0.01);
-    EXPECT_TRUE(str::convert_from_string("123.456", d));
-    EXPECT_FLOAT_EQ(d, 123.456);
+    const auto d001 = str::convert_from_string<double>("0.01");
+    ASSERT_TRUE(d001.has_value());
+    EXPECT_DOUBLE_EQ(*d001, 0.01);
+    const auto d123 = str::convert_from_string<double>("123.456");
+    ASSERT_TRUE(d123.has_value());
+    EXPECT_DOUBLE_EQ(*d123, 123.456);
 }
 
 TEST_F(TestStr, test_str_tonumber)
@@ -570,18 +547,35 @@ TEST_F(TestStr, test_str_tonumber)
     EXPECT_FALSE(this->test_long("toto -1234"));
     // overflow
     EXPECT_FALSE(this->test_long("151615165151561132133554654"));
-    EXPECT_EQ(errno, ERANGE);
 
+    // a prefix that does not match the base is left untouched, "0x2a" in base 10 stops at 'x'
     EXPECT_TRUE(this->test_long("0x2a", 10));
     EXPECT_EQ(_val, 0);
-    EXPECT_EQ(errno, 0);
+    // hexadecimal without prefix
+    EXPECT_TRUE(this->test_long("2a", 16));
+    EXPECT_EQ(_val, 0x2a);
+    EXPECT_TRUE(this->test_long("DEADCAFE", 16));
+    EXPECT_EQ(_val, (long)0xDEADCAFE);
+    // a prefix matching the base is stripped
     EXPECT_TRUE(this->test_long("0x2a", 16));
     EXPECT_EQ(_val, 0x2a);
-    // auto detect base
-    EXPECT_TRUE(this->test_long("0x2a"));
-    EXPECT_EQ(_val, 0x2a);
-    EXPECT_TRUE(this->test_long("0XDEADCAFE"));
+    EXPECT_TRUE(this->test_long("0XdeadCAFE", 16));
     EXPECT_EQ(_val, (long)0xDEADCAFE);
+    EXPECT_TRUE(this->test_long("0b101", 2));
+    EXPECT_EQ(_val, 0b101);
+    EXPECT_TRUE(this->test_long("0o17", 8));
+    EXPECT_EQ(_val, 017);
+    EXPECT_TRUE(this->test_long("-0xff", 16));
+    EXPECT_EQ(_val, -0xff);
+    // base 0 auto-detects from the prefix
+    EXPECT_TRUE(this->test_long("0xff", 0));
+    EXPECT_EQ(_val, 0xff);
+    EXPECT_TRUE(this->test_long("0b101", 0));
+    EXPECT_EQ(_val, 0b101);
+    EXPECT_TRUE(this->test_long("42", 0));
+    EXPECT_EQ(_val, 42);
+    EXPECT_TRUE(this->test_ulong("0xff", 16));
+    EXPECT_EQ(_uval, 0xffu);
 
     // unsigned long
     EXPECT_TRUE(this->test_ulong("1234"));
@@ -592,9 +586,7 @@ TEST_F(TestStr, test_str_tonumber)
     EXPECT_FALSE(this->test_ulong("toto"));
     EXPECT_FALSE(this->test_ulong("toto1234"));
     // overflow
-    EXPECT_EQ(errno, 0);
     EXPECT_FALSE(this->test_ulong("15151651651651515113132132132132132"));
-    EXPECT_EQ(errno, ERANGE);
 
     // double
     EXPECT_TRUE(this->test_double("1234"));

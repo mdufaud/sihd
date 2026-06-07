@@ -32,6 +32,7 @@ class Channel: public sihd::util::Named,
 
         // write and notify only if a change happened
         void set_write_on_change(bool activate) { _write_change_only = activate; }
+        void set_resizable(bool activate) { _resizable = activate; }
         void set_clock(sihd::util::IClock *clock);
 
         // Named
@@ -43,6 +44,11 @@ class Channel: public sihd::util::Named,
         size_t size() const { return _array_ptr->size(); }
         size_t byte_size() const { return _array_ptr->byte_size(); }
         size_t byte_index(size_t idx) const { return _array_ptr->byte_index(idx); }
+
+        bool resizable() const { return _resizable; }
+        size_t capacity() const { return _array_ptr->capacity(); }
+        size_t byte_capacity() const { return _array_ptr->byte_capacity(); }
+        bool reserve(size_t capacity) { return _array_ptr->reserve(capacity); }
 
         size_t data_size() const { return _array_ptr->data_size(); }
         sihd::util::Type data_type() const { return _array_ptr->data_type(); }
@@ -111,6 +117,7 @@ class Channel: public sihd::util::Named,
         mutable std::mutex _notify_mutex;
 
         bool _write_change_only;
+        bool _resizable;
 };
 
 } // namespace sihd::core

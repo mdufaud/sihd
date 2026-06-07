@@ -228,10 +228,10 @@ class Array: public IArray,
                 this->resize(0);
                 for (const std::string & split : splits)
                 {
-                    T value;
-                    if (str::convert_from_string<T>(split, value) == false)
+                    const auto value = str::convert_from_string<T>(split);
+                    if (value.has_value() == false)
                         return false;
-                    this->push_back(value);
+                    this->push_back(*value);
                 }
             }
             else
@@ -245,12 +245,12 @@ class Array: public IArray,
                 for (const std::string & split : splits)
                 {
                     constexpr uint16_t base = 16;
-                    uint8_t byte;
-                    if (str::convert_from_string<uint8_t>(split, byte, base) == false)
+                    const auto byte = str::convert_from_string<uint8_t>(split, base);
+                    if (byte.has_value() == false)
                         return false;
                     if (this->resize((idx / sizeof(T)) + 1) == false)
                         return false;
-                    this->buf()[idx] = byte;
+                    this->buf()[idx] = *byte;
                     ++idx;
                 }
             }

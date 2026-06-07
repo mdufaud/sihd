@@ -24,6 +24,7 @@ Channel::Channel(const std::string & name, Type type, size_t size, Node *parent)
     _array_ptr->resize(size);
     _notifying = false;
     _write_change_only = true;
+    _resizable = false;
     _timestamp = 0;
     _clock_ptr = Channel::default_clock();
 }
@@ -63,15 +64,29 @@ Channel *Channel::build(std::string_view configuration)
     if (!good)
         return nullptr;
 
-    unsigned long val;
-    if (str::to_ulong(*size, &val) == false)
+    const auto val = str::convert_from_string<unsigned long>(*size);
+    if (val.has_value() == false)
     {
         SIHD_LOG(error,
                  "Channel: cannot build from configuration '{}' size is either overflow or invalid",
                  configuration);
         return nullptr;
     }
-    return new Channel(*name, *type, val);
+
+    Channel *channel = new Channel(*name, *type, *val);
+
+    auto capacity = conf.find("capacity");
+    if (capacity.has_value())
+    {
+        const auto cap = str::convert_from_string<unsigned long>(*capacity);
+        if (cap.has_value() && *cap > *val)
+        {
+            channel->reserve(*cap);
+            channel->set_resizable(true);
+        }
+    }
+
+    return channel;
 }
 
 Timestamp Channel::timestamp() const
@@ -137,13 +152,18 @@ bool Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_offset
     bool ret = false;
     {
         std::lock_guard lock(_arr_mutex);
-        if (arr_view.byte_size() + byte_offset > _array_ptr->byte_size())
+        const size_t needed = arr_view.byte_size() + byte_offset;
+        if (needed > _array_ptr->byte_size())
         {
-            SIHD_LOG_ERROR("Channel: cannot write {} bytes at {} offset into {} bytes",
-                           arr_view.byte_size(),
-                           byte_offset,
-                           _array_ptr->byte_size());
-            return false;
+            if (!_resizable || needed > _array_ptr->byte_capacity())
+            {
+                SIHD_LOG_ERROR("Channel: cannot write {} bytes at {} offset into {} bytes",
+                               arr_view.byte_size(),
+                               byte_offset,
+                               _array_ptr->byte_size());
+                return false;
+            }
+            _array_ptr->byte_resize(needed);
         }
         if (_write_change_only && _array_ptr->is_bytes_equal(arr_view, {(ssize_t)byte_offset}))
             return true;

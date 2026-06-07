@@ -69,10 +69,10 @@ size_t HttpHeader::content_length() const
         = util::container::get_or<decltype(_headers), std::string, std::string_view>(_headers,
                                                                                      "content-length:",
                                                                                      "");
-    size_t value;
-    if (util::str::convert_from_string(value_str, value) == false)
+    const auto value = util::str::convert_from_string<size_t>(value_str);
+    if (value.has_value() == false)
         return 0;
-    return value;
+    return *value;
 }
 
 std::string_view HttpHeader::accept_charset() const

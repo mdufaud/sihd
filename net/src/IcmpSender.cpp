@@ -73,6 +73,13 @@ IcmpSender::IcmpSender(const std::string & name, sihd::util::Node *parent):
     _array_send_ptr->resize(ICMP_MINLEN);
 
     this->add_conf("poll_timeout", &IcmpSender::set_poll_timeout);
+    this->add_conf("echo", &IcmpSender::_set_conf_echo);
+    this->add_conf("type", &IcmpSender::_set_conf_type);
+    this->add_conf("code", &IcmpSender::_set_conf_code);
+    this->add_conf("ttl", &IcmpSender::_set_conf_ttl);
+    this->add_conf("id", &IcmpSender::_set_conf_id);
+    this->add_conf("seq", &IcmpSender::_set_conf_seq);
+    this->add_conf("data_size", &IcmpSender::_set_conf_data_size);
 }
 
 IcmpSender::~IcmpSender()
@@ -85,6 +92,48 @@ IcmpSender::~IcmpSender()
 bool IcmpSender::set_poll_timeout(int milliseconds)
 {
     return _poll.set_timeout(milliseconds);
+}
+
+bool IcmpSender::_set_conf_echo(bool active)
+{
+    if (active)
+        this->set_echo();
+    return true;
+}
+
+bool IcmpSender::_set_conf_type(int type)
+{
+    this->set_type(type);
+    return true;
+}
+
+bool IcmpSender::_set_conf_code(int code)
+{
+    this->set_code(code);
+    return true;
+}
+
+bool IcmpSender::_set_conf_ttl(int ttl)
+{
+    this->set_ttl(ttl);
+    return true;
+}
+
+bool IcmpSender::_set_conf_id(int id)
+{
+    this->set_id(static_cast<uint16_t>(id));
+    return true;
+}
+
+bool IcmpSender::_set_conf_seq(int seq)
+{
+    this->set_seq(seq);
+    return true;
+}
+
+bool IcmpSender::_set_conf_data_size(int byte_size)
+{
+    return this->set_data_size(static_cast<size_t>(byte_size));
 }
 
 bool IcmpSender::open_socket_unix()

@@ -34,11 +34,12 @@ class TcpClient: public INetReceiver,
         bool open_socket_unix();
         bool socket_opened() { return _socket.is_open(); }
 
-        bool connect(const IpAddr & addr);
+        bool connect(const IpAddr & addr, int timeout_ms = Socket::blocking_timeout);
         bool connect(std::string_view path);
+        bool reconnect(int timeout_ms = Socket::blocking_timeout);
 
-        bool open_and_connect(const IpAddr & ip);
-        bool open_and_connect(std::string_view ip, int port);
+        bool open_and_connect(const IpAddr & ip, int timeout_ms = Socket::blocking_timeout);
+        bool open_and_connect(std::string_view ip, int port, int timeout_ms = Socket::blocking_timeout);
         bool open_unix_and_connect(std::string_view path);
 
         bool set_poll_timeout(int milliseconds);

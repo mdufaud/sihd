@@ -1,3 +1,6 @@
+#include <poll.h>
+#include <sys/stat.h>
+
 #include <gtest/gtest.h>
 
 #include <sihd/util/Array.hpp>
@@ -113,6 +116,84 @@ TEST_F(TestSocket, test_socket_datagram_connect)
     EXPECT_EQ(socket_send.send(buff), (ssize_t)buff_len);
     EXPECT_EQ(socket_receive.receive(byte_arr), (ssize_t)buff_len);
     EXPECT_EQ(strcmp(buff, byte_arr.data()), 0);
+}
+
+TEST_F(TestSocket, test_socket_options)
+{
+    Socket sock;
+    EXPECT_TRUE(sock.open(AF_INET, SOCK_STREAM, IPPROTO_TCP));
+
+    EXPECT_TRUE(sock.set_keepalive(true));
+    EXPECT_TRUE(sock.is_keepalive());
+    EXPECT_TRUE(sock.set_keepalive(false));
+    EXPECT_FALSE(sock.is_keepalive());
+
+#ifdef SO_REUSEPORT
+    EXPECT_TRUE(sock.set_reuseport(true));
+    EXPECT_TRUE(sock.is_reuseport());
+    EXPECT_TRUE(sock.set_reuseport(false));
+    EXPECT_FALSE(sock.is_reuseport());
+#endif
+
+    EXPECT_TRUE(sock.set_rcvbuf(32768));
+    EXPECT_GT(sock.get_rcvbuf(), 0);
+
+    EXPECT_TRUE(sock.set_sndbuf(32768));
+    EXPECT_GT(sock.get_sndbuf(), 0);
+}
+
+TEST_F(TestSocket, test_socket_multicast)
+{
+    Socket sock;
+    EXPECT_TRUE(sock.open(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
+    EXPECT_TRUE(sock.set_reuseaddr(true));
+
+    IpAddr group("239.0.0.1");
+    IpAddr bind_addr(4250);
+
+    EXPECT_TRUE(sock.bind(bind_addr));
+    EXPECT_TRUE(sock.join_multicast(group));
+    EXPECT_TRUE(sock.set_multicast_ttl(2));
+    EXPECT_TRUE(sock.set_multicast_loop(true));
+
+    Socket sender;
+    EXPECT_TRUE(sender.open(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
+    EXPECT_TRUE(sender.set_multicast_loop(true));
+
+    const char msg[] = "multicast";
+    IpAddr dest("239.0.0.1", 4250);
+    EXPECT_EQ(sender.send_to(dest, msg), (ssize_t)strlen(msg));
+
+    struct pollfd pfd = {.fd = sock.socket(), .events = POLLIN, .revents = 0};
+    int poll_ret = ::poll(&pfd, 1, 500);
+    if (poll_ret <= 0)
+        GTEST_SKIP() << "Multicast loopback not available";
+    sihd::util::ArrChar recv(32);
+    ssize_t received = sock.receive(recv);
+    EXPECT_EQ(received, (ssize_t)strlen(msg));
+    EXPECT_EQ(strncmp(recv.data(), msg, strlen(msg)), 0);
+
+    EXPECT_TRUE(sock.leave_multicast(group));
+    EXPECT_TRUE(sock.close());
+    EXPECT_TRUE(sender.close());
+}
+
+TEST_F(TestSocket, test_socket_unix_cleanup)
+{
+    std::string path = "/tmp/sihd_test_unix_cleanup.sock";
+
+    {
+        Socket server;
+        EXPECT_TRUE(server.open(AF_UNIX, SOCK_STREAM, 0));
+        EXPECT_TRUE(server.bind_unix(path));
+        EXPECT_TRUE(server.listen(1));
+
+        struct stat st;
+        EXPECT_EQ(::stat(path.c_str(), &st), 0);
+
+        EXPECT_TRUE(server.close());
+        EXPECT_NE(::stat(path.c_str(), &st), 0);
+    }
 }
 
 } // namespace test

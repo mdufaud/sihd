@@ -1,9 +1,12 @@
 #ifndef __SIHD_UTIL_STR_HPP__
 #define __SIHD_UTIL_STR_HPP__
 
+#include <charconv>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <typeinfo>
 #include <vector>
 
@@ -75,8 +78,7 @@ bool ends_with(std::string_view s, std::string_view end, std::string_view prefix
 std::vector<std::string> split(std::string_view str);
 std::vector<std::string> split(std::string_view str, char delimiter);
 std::vector<std::string> split(std::string_view str, std::string_view delimiter);
-std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str,
-                                                              std::string_view delimiter);
+std::pair<std::string_view, std::string_view> split_pair_view(std::string_view str, std::string_view delimiter);
 std::pair<std::string, std::string> split_pair(std::string_view str, std::string_view delimiter);
 
 std::string join(std::initializer_list<std::string_view> list, std::string_view join_str = "\n");
@@ -126,12 +128,6 @@ std::vector<std::string>
     to_columns(std::span<const std::string> words, size_t max_col_size, std::string_view join_with = " ");
 std::vector<std::string>
     to_columns(std::span<const char *> words, size_t max_col_size, std::string_view join_with = " ");
-
-bool to_long(std::string_view str, long *ret, uint16_t base = 0);
-bool to_ulong(std::string_view str, unsigned long *ret, uint16_t base = 0);
-bool to_llong(std::string_view str, long long *ret, uint16_t base = 0);
-bool to_ullong(std::string_view str, unsigned long long *ret, uint16_t base = 0);
-bool to_double(std::string_view str, double *ret);
 
 constexpr const char *encloses_start()
 {
@@ -197,50 +193,55 @@ std::string remove_enclosing(std::string_view str,
                              const char *authorized_start_enclose = encloses_start(),
                              int escape = escape_char());
 
+bool to_bool(std::string_view str, bool & value);
+bool to_char(std::string_view str, char & value);
+std::optional<long long> to_signed(std::string_view str, uint16_t base);
+std::optional<unsigned long long> to_unsigned(std::string_view str, uint16_t base);
+std::optional<float> to_float(std::string_view str, std::chars_format fmt = std::chars_format::general);
+std::optional<double> to_double(std::string_view str, std::chars_format fmt = std::chars_format::general);
+
 template <typename T>
-bool convert_from_string(std::string_view str, T & value, uint16_t base = 0);
+std::optional<T> convert_from_string(std::string_view str, uint16_t base = 10)
+{
+    if constexpr (std::is_same_v<T, bool>)
+    {
+        bool value;
+        if (to_bool(str, value))
+            return value;
+        return std::nullopt;
+    }
+    else if constexpr (std::is_same_v<T, char>)
+    {
+        char value;
+        if (to_char(str, value))
+            return value;
+        return std::nullopt;
+    }
+    else if constexpr (std::is_floating_point_v<T>)
+    {
+        if constexpr (std::is_same_v<T, float>)
+            return to_float(str);
+        else
+            return to_double(str);
+    }
+    else
+    {
+        static_assert(std::is_integral_v<T>,
+                      "convert_from_string supports bool, char, integral and floating point types");
+        if constexpr (std::is_signed_v<T>)
+        {
+            if (const auto opt = to_signed(str, base))
+                return static_cast<T>(*opt);
+        }
+        else
+        {
+            if (const auto opt = to_unsigned(str, base))
+                return static_cast<T>(*opt);
+        }
+        return std::nullopt;
+    }
+}
 
 } // namespace sihd::util::str
-
-namespace sihd::util
-{
-
-template <>
-bool str::convert_from_string<bool>(std::string_view str, bool & value, uint16_t base);
-
-template <>
-bool str::convert_from_string<char>(std::string_view str, char & value, uint16_t base);
-
-template <>
-bool str::convert_from_string<int8_t>(std::string_view str, int8_t & value, uint16_t base);
-
-template <>
-bool str::convert_from_string<uint8_t>(std::string_view str, uint8_t & value, uint16_t base);
-
-template <>
-bool str::convert_from_string<int16_t>(std::string_view str, int16_t & value, uint16_t base);
-
-template <>
-bool str::convert_from_string<uint16_t>(std::string_view str, uint16_t & value, uint16_t base);
-
-template <>
-bool str::convert_from_string<int32_t>(std::string_view str, int32_t & value, uint16_t base);
-
-template <>
-bool str::convert_from_string<uint32_t>(std::string_view str, uint32_t & value, uint16_t base);
-
-template <>
-bool str::convert_from_string<int64_t>(std::string_view str, int64_t & value, uint16_t base);
-
-template <>
-bool str::convert_from_string<uint64_t>(std::string_view str, uint64_t & value, uint16_t base);
-
-template <>
-bool str::convert_from_string<float>(std::string_view str, float & value, uint16_t base);
-
-template <>
-bool str::convert_from_string<double>(std::string_view str, double & value, uint16_t base);
-
-} // namespace sihd::util
 
 #endif

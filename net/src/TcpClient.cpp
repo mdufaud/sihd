@@ -44,9 +44,9 @@ bool TcpClient::open_socket(bool ipv6)
     return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
 }
 
-bool TcpClient::connect(const IpAddr & addr)
+bool TcpClient::connect(const IpAddr & addr, int timeout_ms)
 {
-    _connected = _socket.connect(addr);
+    _connected = _socket.connect(addr, timeout_ms);
     return _connected;
 }
 
@@ -56,15 +56,21 @@ bool TcpClient::connect(std::string_view path)
     return _connected;
 }
 
-bool TcpClient::open_and_connect(const IpAddr & ip)
+bool TcpClient::reconnect(int timeout_ms)
 {
-    return this->open_socket(ip.is_ipv6()) && this->connect(ip);
+    _connected = _socket.reconnect(timeout_ms);
+    return _connected;
 }
 
-bool TcpClient::open_and_connect(std::string_view ip, int port)
+bool TcpClient::open_and_connect(const IpAddr & ip, int timeout_ms)
+{
+    return this->open_socket(ip.is_ipv6()) && this->connect(ip, timeout_ms);
+}
+
+bool TcpClient::open_and_connect(std::string_view ip, int port, int timeout_ms)
 {
     IpAddr addr(ip, port);
-    return this->open_socket(addr.is_ipv6()) && this->connect(addr);
+    return this->open_socket(addr.is_ipv6()) && this->connect(addr, timeout_ms);
 }
 
 bool TcpClient::open_unix_and_connect(std::string_view path)

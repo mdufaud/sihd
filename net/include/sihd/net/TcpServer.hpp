@@ -6,6 +6,7 @@
 #include <sihd/net/Socket.hpp>
 
 #include <sihd/sys/Poll.hpp>
+#include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Named.hpp>
@@ -15,6 +16,7 @@ namespace sihd::net
 {
 
 class TcpServer: public INetServer,
+                 public sihd::util::ABlockingService,
                  public sihd::util::Named,
                  public sihd::util::Configurable,
                  public sihd::util::IHandler<sihd::sys::Poll *>
@@ -37,7 +39,7 @@ class TcpServer: public INetServer,
         bool close();
 
         // INetServer
-        int accept_client(IpAddr *client_ip = nullptr) override;
+        int accept_client(IpAddr *client_ip = nullptr, int timeout_ms = -1) override;
         bool add_client_read(int socket) override;
         bool add_client_write(int socket) override;
         bool remove_client_read(int socket) override;
