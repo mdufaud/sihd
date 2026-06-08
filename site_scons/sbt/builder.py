@@ -350,6 +350,7 @@ host_machine = get_host_machine()
 build_machine = get_machine()
 build_mode = get_compile_mode()
 build_static_libs = is_static_libs()
+liblink = "static" if build_static_libs else "dynamic"
 build_asan = is_address_sanitizer()
 build_ubsan = is_ubsan()
 build_tsan = is_tsan()
@@ -385,8 +386,8 @@ build_dist_path = join(build_root_path, "dist")
 build_entry_path = join(build_root_path, "build")
 # last build link path
 build_last_link_path = join(build_entry_path, "last")
-# build full path: <machine>-<platform>-<libc>/<compiler>-<version>/<mode>
-build_path = join(build_entry_path, f"{build_machine}-{build_platform}-{libc}", build_compiler_version, build_mode)
+# build full path: <machine>-<platform>-<libc>/<compiler>-<version>/<mode>/<static|dynamic>
+build_path = join(build_entry_path, f"{build_machine}-{build_platform}-{libc}", build_compiler_version, build_mode, liblink)
 
 build_extlib_path = join(build_path, "extlib")
 build_extlib_bin_path = join(build_extlib_path, "bin")
@@ -407,7 +408,7 @@ build_obj_path = join(build_path, "obj")
 # SBT external project dependencies
 sbt_deps_path = join(build_root_path, ".sbt-deps")
 
-libs_type = "static" if is_static_libs() else "dynamic"
+libs_type = liblink
 
 ###############################################################################
 # App settings sanitizer

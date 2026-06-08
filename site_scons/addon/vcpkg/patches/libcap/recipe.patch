@@ -1,0 +1,99 @@
+diff --git a/configure b/configure
+index a4749cd..aaabe70 100755
+--- a/configure
++++ b/configure
+@@ -15,14 +15,33 @@ for OPTION; do
+     esac
+ done
+ 
++# Derive OBJCOPY from CC cross-compile prefix when not explicitly set.
++# libcap's Make.Rules defines OBJCOPY := $(CROSS_COMPILE)objcopy, but
++# vcpkg_configure_make overrides CC/AR/RANLIB without setting CROSS_COMPILE.
++# Without this, the host objcopy is used and fails on cross-compiled binaries.
++if [ -z "$OBJCOPY" ] && [ -n "$CC" ]; then
++    case "$CC" in
++        *-gcc)
++            cross_prefix="${CC%-gcc}-"
++            derived="${cross_prefix}objcopy"
++            # Only use the cross-prefixed objcopy if it actually exists.
++            # Musl toolchains (e.g. Arch's musl package) don't ship objcopy.
++            if command -v "$derived" >/dev/null 2>&1; then
++                OBJCOPY="$derived"
++            fi
++            ;;
++    esac
++fi
++: "${OBJCOPY:=objcopy}"
++
+ cat > Makefile.vcpkg <<END_MAKEFILE ;
+ 
+ BUILD_OPTIONS = \
+     "AR=$AR" \
+     "BUILD_CC=$CC" \
+     "CC=$CC" \
+-    "OBJCOPY=$OBJCOPY" \
+     "RANLIB=$RANLIB" \
++    "OBJCOPY=$OBJCOPY" \
+     "lib=lib" \
+     "prefix=$prefix"
+ 
+diff --git a/portfile.cmake b/portfile.cmake
+index 3ee2bdc..fa983a0 100644
+--- a/portfile.cmake
++++ b/portfile.cmake
+@@ -2,7 +2,7 @@ vcpkg_download_distfile(ARCHIVE
+     URLS "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-${VERSION}.tar.xz"
+          "https://www.mirrorservice.org/sites/ftp.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-${VERSION}.tar.xz"
+     FILENAME "libcap-${VERSION}.tar.xz"
+-    SHA512 c783cb43ffb40eb005fb880efe18e72667c743af79d647f67ee3201d5ff1e64446f9c850cced935a04b63a8ee3380bbf28dd91e2dfbcbddb561c8d096da610d0
++    SHA512 4e0bf0efeccb654c409afe9727b2b53c1d4da8190d7a0a9848fc52550ff3e13502add3eacde04a68a5b7bec09e91df487f64c5746ba987f873236a9e53b3d4e8
+ )
+ 
+ vcpkg_extract_source_archive(SOURCE_PATH
+@@ -18,14 +18,14 @@ if(VCPKG_CROSSCOMPILING)
+     file(TOUCH "${SOURCE_PATH}/libcap/cap_names.h")
+ endif()
+ 
+-vcpkg_cmake_get_vars(cmake_vars_file)
+-set(ENV{OBJCOPY} "${VCPKG_DETECTED_CMAKE_OBJCOPY}")
+-
+-vcpkg_make_configure(
++vcpkg_configure_make(
+     SOURCE_PATH "${SOURCE_PATH}"
+     COPY_SOURCE
++    DETERMINE_BUILD_TRIPLET
++)
++vcpkg_install_make(
++    MAKEFILE "Makefile.vcpkg"
+ )
+-vcpkg_make_install(MAKEFILE "Makefile.vcpkg")
+ vcpkg_fixup_pkgconfig()
+ 
+ file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
+diff --git a/vcpkg.json b/vcpkg.json
+index 036ef08..3ca2c6c 100644
+--- a/vcpkg.json
++++ b/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "libcap",
+-  "version": "2.77",
++  "version": "2.70",
+   "description": "A library for getting and setting POSIX.1e (formerly POSIX 6) draft 15 capabilities.",
+   "homepage": "https://sites.google.com/site/fullycapable/",
+   "license": "BSD-3-Clause OR GPL-2.0-only",
+@@ -9,14 +9,6 @@
+     {
+       "name": "libcap",
+       "host": true
+-    },
+-    {
+-      "name": "vcpkg-cmake-get-vars",
+-      "host": true
+-    },
+-    {
+-      "name": "vcpkg-make",
+-      "host": true
+     }
+   ]
+ }

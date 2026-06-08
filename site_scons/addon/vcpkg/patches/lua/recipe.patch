@@ -1,0 +1,507 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 70a3c64..fd04503 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,142 +1,118 @@
+ # Lua can be compiled as either C or C++.
+-# The vcpkg port always builds the lua C library.
+-# Option COMPILE_AS_CPP enables building a lua-c++ library.
++# Default configuration is C, set COMPILE_AS_CPP to ON to use C++.
+ # See http://stackoverflow.com/questions/13560945/c-and-c-library-using-longjmp for why would you want to do that.
+ # Primary differences:
+ # - Exceptions will be used instead of setjmp/longjmp
+ # - The name mangling for functions will be C++ instead of C.
+-# The use of headers must match the selected library.
+-# 'lua.hpp' can be used by C++ apps with the lua C library.
+-# The other headers can be used
+-# - by C apps with the lua C library
+-# - by C++ apps with the lua C++ library
+-# - by C++ apps with the lua C library only with explicit 'extern "C" ...'
++#     - This is a source-incompatible change because extern "C" is chosen by the including application.
++# - The lua.hpp header will not be available.
+ 
+-cmake_minimum_required(VERSION 3.31)
++PROJECT ( lua )
+ 
+-option(COMPILE_AS_CPP "Enable the lua C++ library")
+-option(INSTALL_TOOLS  "Install compiler and interpreter")
+ 
+-project(lua)
++CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+ 
+-set(CMAKE_C_STANDARD 99)
+-
+-if(WIN32)
+-    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+-endif()
+-
+-if(UNIX)
+-    add_compile_definitions(LUA_USE_POSIX LUA_USE_DLOPEN)
+-    find_library(HAVE_LIBM NAMES m)
+-endif()
+-
+-set(SRC_LUAI "${PROJECT_SOURCE_DIR}/src/lua.c")
+-set(SRC_LUAC "${PROJECT_SOURCE_DIR}/src/luac.c")
+-file(GLOB SRC_LIBLUA "${PROJECT_SOURCE_DIR}/src/*.c")
+-list(REMOVE_ITEM SRC_LIBLUA "${SRC_LUAI}" "${SRC_LUAC}")
+-
+-# C library
+-
+-add_library(lua ${SRC_LIBLUA})
+-target_include_directories(lua PUBLIC
+-    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+-    $<INSTALL_INTERFACE:include>
++SET (HDR_LIBLUA
++src/lapi.h src/lauxlib.h src/lcode.h src/lctype.h src/ldebug.h src/ldo.h src/lfunc.h
++src/lgc.h src/llex.h src/llimits.h src/lmem.h src/lobject.h src/lopcodes.h src/lparser.h
++src/lstate.h src/lstring.h src/ltable.h src/ltm.h src/lua.h src/luaconf.h src/lualib.h
++src/lundump.h src/lvm.h src/lzio.h
+ )
+ 
+-if(WIN32 AND BUILD_SHARED_LIBS)
+-    target_compile_definitions(lua PUBLIC LUA_BUILD_AS_DLL)
+-endif()
+-
+-if(UNIX)
+-    target_link_libraries(lua PRIVATE ${CMAKE_DL_LIBS})
+-    if(HAVE_LIBM)
+-        target_link_libraries(lua PRIVATE m)
+-    endif()
+-endif()
+-
+-install(FILES src/lualib.h src/lua.h src/luaconf.h src/lauxlib.h src/lua.hpp
+-    DESTINATION include
+-)
+-install(TARGETS lua
+-    EXPORT unofficial-lua-config
+-    RUNTIME DESTINATION bin
+-    LIBRARY DESTINATION lib
+-    ARCHIVE DESTINATION lib
++# Build Libraries
++SET (SRC_LIBLUA
++src/lapi.c src/lauxlib.c src/lbaselib.c src/lbitlib.c src/lcode.c src/lcorolib.c
++src/lctype.c src/ldblib.c src/ldebug.c src/ldo.c src/ldump.c src/lfunc.c src/lgc.c
++src/linit.c src/liolib.c src/llex.c src/lmathlib.c src/lmem.c src/loadlib.c src/lobject.c
++src/lopcodes.c src/loslib.c src/lparser.c src/lstate.c src/lstring.c src/lstrlib.c
++src/ltable.c src/ltablib.c src/ltm.c src/lundump.c src/lutf8lib.c src/lvm.c src/lzio.c
+ )
+ 
+-# CXX library
+-
+-if(COMPILE_AS_CPP)
+-    # creating distinct source files with LANGUAGE CXX
+-    file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/cpp")
+-    file(COPY ${SRC_LIBLUA} DESTINATION "${PROJECT_BINARY_DIR}/cpp")
+-    file(GLOB SRC_LIBLUACPP "${PROJECT_BINARY_DIR}/cpp/*.c")
+-    set_source_files_properties(${SRC_LIBLUACPP} PROPERTIES LANGUAGE CXX)
+-    add_library(lua-cpp ${SRC_LIBLUACPP})
+-    set_target_properties(lua-cpp PROPERTIES OUTPUT_NAME "lua-c++")
+-    target_include_directories(lua-cpp PUBLIC
+-        "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+-        $<INSTALL_INTERFACE:include>
+-    )
+-
+-    if(WIN32 AND BUILD_SHARED_LIBS)
+-        target_compile_definitions(lua-cpp PUBLIC LUA_BUILD_AS_DLL)
+-    endif()
+-
+-    if(UNIX)
+-        target_compile_definitions(lua-cpp PUBLIC LUA_USE_DLOPEN)
+-        target_link_libraries(lua-cpp PRIVATE ${CMAKE_DL_LIBS})
+-        if(HAVE_LIBM)
+-            target_link_libraries(lua-cpp PRIVATE m)
+-        endif()
+-    endif()
+-
+-    install(TARGETS lua-cpp
+-        EXPORT unofficial-lua-config
+-        RUNTIME DESTINATION bin
+-        LIBRARY DESTINATION lib
+-        ARCHIVE DESTINATION lib
+-    )
+-endif()
+-
+-# tools
+-
+-if(INSTALL_TOOLS)
+-    # The compiler uses non-exported APIs, so it cannot use the shared library
+-    add_executable(luac "${SRC_LUAC}" $<TARGET_OBJECTS:lua>)
+-    target_include_directories(luac PRIVATE "${PROJECT_SOURCE_DIR}/src")
+-    if(UNIX AND HAVE_LIBM)
+-        target_link_libraries(luac PRIVATE m)
+-    endif()
+-    
+-    # The Interpreter
+-    add_executable(luai "${SRC_LUAI}")
+-    set_target_properties(luai PROPERTIES OUTPUT_NAME "lua" PDB_NAME "luai")
+-    target_link_libraries(luai PRIVATE lua)
+-    if(UNIX)
+-        find_package(PkgConfig REQUIRED)
+-        pkg_check_modules(PC_READLINE readline REQUIRED)
+-        target_compile_definitions(luai PRIVATE LUA_USE_READLINE)
+-        target_include_directories(luai PRIVATE ${PC_READLINE_INCLUDE_DIRS})
+-        target_link_libraries(luai PRIVATE ${PC_READLINE_LINK_LIBRARIES})
+-    endif()
++IF (COMPILE_AS_CPP)
++    SET_SOURCE_FILES_PROPERTIES(${SRC_LIBLUA} src/lua.c src/luac.c PROPERTIES LANGUAGE CXX)
++ELSE ()
++    SET (CMAKE_C_STANDARD 99)
++ENDIF ()
++
++# append headers to sources to make them show up in MSVC GUI
++LIST(APPEND SRC_LIBLUA ${HDR_LIBLUA})
++
++IF (WIN32)
++    # remove warnings
++    ADD_DEFINITIONS (-D_CRT_SECURE_NO_WARNINGS )
++ENDIF ()
++
++IF (UNIX)
++    ADD_DEFINITIONS (-DLUA_USE_POSIX)
++    FIND_LIBRARY (LIB_MATH NAMES m)
++    IF (LIB_MATH)
++        LINK_LIBRARIES (${LIB_MATH})
++    ENDIF ()
++ENDIF ()
++
++#DLL
++ADD_LIBRARY ( lua ${SRC_LIBLUA} )
++SET_PROPERTY (TARGET lua PROPERTY POSITION_INDEPENDENT_CODE ON)
++IF (COMPILE_AS_CPP)
++    SET_TARGET_PROPERTIES(lua PROPERTIES OUTPUT_NAME "lua-c++")
++ENDIF()
++
++IF (BUILD_SHARED_LIBS AND WIN32)
++    TARGET_COMPILE_DEFINITIONS (lua PUBLIC -DLUA_BUILD_AS_DLL )
++ENDIF ()
++
++IF (UNIX)
++    IF (APPLE)
++        TARGET_COMPILE_DEFINITIONS (lua PUBLIC -DLUA_USE_DLOPEN)
++    ELSE ()
++        FIND_LIBRARY (LIB_DLOPEN NAMES dl)
++        IF (LIB_DLOPEN)
++            TARGET_COMPILE_DEFINITIONS (lua PUBLIC -DLUA_USE_DLOPEN)
++            TARGET_LINK_LIBRARIES (lua ${LIB_DLOPEN})
++        ENDIF ()
++    ENDIF ()
++ENDIF ()
++
++INSTALL ( TARGETS lua
++    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
++    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
++    ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
++)
+ 
+-    install(TARGETS luai luac
+-        DESTINATION bin
++IF (NOT DEFINED SKIP_INSTALL_TOOLS)
++    ADD_EXECUTABLE ( luac src/luac.c ${SRC_LIBLUA} ) # compiler uses non-exported APIs, so must include sources directly.
++    ADD_EXECUTABLE ( luai src/lua.c )  # interpreter
++    TARGET_LINK_LIBRARIES ( luai lua )
++    SET_TARGET_PROPERTIES ( luai PROPERTIES OUTPUT_NAME lua PDB_NAME luai )
++    IF (UNIX)
++        IF (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
++            SET (_LIB_READLINE_NAME edit)
++        ELSE ()
++            SET (_LIB_READLINE_NAME readline)
++        ENDIF ()
++        FIND_LIBRARY (LIB_READLINE NAMES ${_LIB_READLINE_NAME})
++        IF (LIB_READLINE)
++            TARGET_COMPILE_DEFINITIONS (luai PUBLIC -DLUA_USE_READLINE)
++            TARGET_LINK_LIBRARIES(luai ${LIB_READLINE})
++            IF (_LIB_READLINE_NAME STREQUAL edit)
++                TARGET_INCLUDE_DIRECTORIES (luai PUBLIC /usr/include/edit)
++            ENDIF ()
++        ENDIF ()
++    ENDIF ()
++    INSTALL ( TARGETS luai luac RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/tools/lua )
++ENDIF ()
++
++IF (NOT DEFINED SKIP_INSTALL_HEADERS)
++    INSTALL(
++        FILES
++            src/lualib.h
++            src/lua.h
++            src/luaconf.h
++            src/lauxlib.h
++        DESTINATION include
+     )
+-endif()
+-
+-# unofficial config
+-
+-include(CMakePackageConfigHelpers)
+-write_basic_package_version_file("${PROJECT_BINARY_DIR}/unofficial-lua-config-version.cmake"
+-    VERSION "${VERSION}"
+-    COMPATIBILITY "SameMajorVersion"
+-)
+-install(FILES "${PROJECT_BINARY_DIR}/unofficial-lua-config-version.cmake"
+-    DESTINATION share/unofficial-lua
+-)
+-install(EXPORT unofficial-lua-config
+-    NAMESPACE unofficial::lua::
+-    DESTINATION share/unofficial-lua
+-)
++    # If using C++, don't install extern "C" wrapper.
++    IF (NOT COMPILE_AS_CPP)
++        INSTALL(FILES src/lua.hpp DESTINATION include)
++    ENDIF ()
++ENDIF ()
+diff --git a/fix-ios-system.patch b/fix-ios-system.patch
+deleted file mode 100644
+index f51c944..0000000
+--- a/fix-ios-system.patch
++++ /dev/null
+@@ -1,29 +0,0 @@
+-diff --git a/src/loslib.c b/src/loslib.c
+-index ad5a927..7812011 100644
+---- a/src/loslib.c
+-+++ b/src/loslib.c
+-@@ -4,6 +4,10 @@
+- ** See Copyright Notice in lua.h
+- */
+- 
+-+#if defined(__APPLE__)
+-+#include <TargetConditionals.h>
+-+#endif
+-+
+- #define loslib_c
+- #define LUA_LIB
+- 
+-@@ -143,7 +147,12 @@ static int os_execute (lua_State *L) {
+-   const char *cmd = luaL_optstring(L, 1, NULL);
+-   int stat;
+-   errno = 0;
+--  stat = l_system(cmd);
+-+#if defined(__APPLE__) && !TARGET_OS_OSX
+-+   // system() is __IOS_PROHIBITED, __WATCHOS_PROHIBITED, and __TVOS_PROHIBITED.
+-+   stat = 127; // error: shell execution failed
+-+#else
+-+   stat = system(cmd);
+-+#endif
+-   if (cmd != NULL)
+-     return luaL_execresult(L, stat);
+-   else {
+diff --git a/portfile.cmake b/portfile.cmake
+index 08f951f..60b5aa6 100644
+--- a/portfile.cmake
++++ b/portfile.cmake
+@@ -1,57 +1,62 @@
+ vcpkg_download_distfile(ARCHIVE
+-    URLS "https://www.lua.org/ftp/lua-${VERSION}.tar.gz"
+-    FILENAME "lua-${VERSION}.tar.gz"
+-    SHA512 3253d2cdc929da6438095a30d66ef16a1abdbb0ada8fee238705b3b38492f14be9553640fdca6b25661e01155ba5582032e0a2ef064e4c283e85efc0a128cabe
++    URLS "https://www.lua.org/ftp/lua-5.3.5.tar.gz"
++    FILENAME "lua-5.3.5.tar.gz"
++    SHA512 4f9516acc4659dfd0a9e911bfa00c0788f0ad9348e5724fe8fb17aac59e9c0060a64378f82be86f8534e49c6c013e7488ad17321bafcc787831d3d67406bd0f4
+ )
+-vcpkg_extract_source_archive(
+-    SOURCE_PATH
+-    ARCHIVE "${ARCHIVE}"
+-    PATCHES
+-        vs2015-impl-c99.patch
+-        fix-ios-system.patch
+-        uwp-no-popen.diff
++vcpkg_extract_source_archive_ex(
++    OUT_SOURCE_PATH SOURCE_PATH
++    ARCHIVE ${ARCHIVE}
++    PATCHES vs2015-impl-c99.patch
+ )
+-file(COPY "${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt" DESTINATION "${SOURCE_PATH}")
+ 
+-if(NOT VCPKG_TARGET_IS_WINDOWS)
+-    vcpkg_find_acquire_program(PKGCONFIG)
+-    set(ENV{PKG_CONFIG} "${PKGCONFIG}")
+-endif()
+-
+-vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
+-    FEATURES
+-        cpp     COMPILE_AS_CPP
+-        tools   INSTALL_TOOLS
+-)
++file(COPY ${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt DESTINATION ${SOURCE_PATH})
+ 
+-vcpkg_cmake_configure(
+-    SOURCE_PATH "${SOURCE_PATH}"
++vcpkg_configure_cmake(
++    SOURCE_PATH ${SOURCE_PATH}
++    PREFER_NINJA
+     OPTIONS
+-        ${FEATURE_OPTIONS}
+-        -DVERSION=${VERSION}
++        -DCOMPILE_AS_CPP=OFF
+     OPTIONS_DEBUG
+-        -DINSTALL_TOOLS=OFF
++        -DSKIP_INSTALL_HEADERS=ON
++        -DSKIP_INSTALL_TOOLS=ON
+ )
+-vcpkg_cmake_install()
+-vcpkg_copy_pdbs()
+-vcpkg_cmake_config_fixup(PACKAGE_NAME unofficial-lua CONFIG_PATH share/unofficial-lua)
+ 
+-if("tools" IN_LIST FEATURES)
+-    vcpkg_copy_tools(TOOL_NAMES lua luac  AUTO_CLEAN)
++vcpkg_install_cmake()
++
++set(ENABLE_LUA_CPP 0)
++if("cpp" IN_LIST FEATURES)
++    set(ENABLE_LUA_CPP 1)
++    vcpkg_configure_cmake(
++        SOURCE_PATH ${SOURCE_PATH}
++        PREFER_NINJA
++        OPTIONS
++            -DCOMPILE_AS_CPP=ON
++        OPTIONS_DEBUG
++            -DSKIP_INSTALL_HEADERS=ON
++            -DSKIP_INSTALL_TOOLS=ON
++    )
++
++    vcpkg_install_cmake()
+ endif()
+ 
+-if(VCPKG_TARGET_IS_WINDOWS AND VCPKG_LIBRARY_LINKAGE STREQUAL "dynamic")
+-    vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/include/luaconf.h" "defined(LUA_BUILD_AS_DLL)" "1")
++vcpkg_copy_pdbs()
++
++# vcpkg_copy_tool_dependencies requires PowerShell which is unavailable on mingw cross-compilation
++if(NOT VCPKG_CMAKE_SYSTEM_NAME STREQUAL "MinGW")
++    vcpkg_copy_tool_dependencies(${CURRENT_PACKAGES_DIR}/tools/lua)
+ endif()
+ 
+-file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
++if(VCPKG_LIBRARY_LINKAGE STREQUAL dynamic)
++    if(NOT VCPKG_CMAKE_SYSTEM_NAME OR VCPKG_CMAKE_SYSTEM_NAME STREQUAL WindowsStore)
++        file(READ ${CURRENT_PACKAGES_DIR}/include/luaconf.h LUA_CONF_H)
++        string(REPLACE "defined(LUA_BUILD_AS_DLL)" "1" LUA_CONF_H "${LUA_CONF_H}")
++        file(WRITE ${CURRENT_PACKAGES_DIR}/include/luaconf.h "${LUA_CONF_H}")
++    endif()
++endif()
+ 
+-file(INSTALL "${CMAKE_CURRENT_LIST_DIR}/vcpkg-cmake-wrapper.cmake" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}")
+-file(INSTALL "${CMAKE_CURRENT_LIST_DIR}/usage" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}")
++# Handle post-build CMake instructions
++configure_file(${CMAKE_CURRENT_LIST_DIR}/vcpkg-cmake-wrapper.cmake.in  ${CURRENT_PACKAGES_DIR}/share/${PORT}/vcpkg-cmake-wrapper.cmake @ONLY)
++file(INSTALL ${CMAKE_CURRENT_LIST_DIR}/usage DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT})
+ 
+-file(READ "${SOURCE_PATH}/doc/readme.html" readme)
+-string(REGEX REPLACE "^.*<H2><A NAME=\"license\">License</A></H2>" "" license "${readme}")
+-string(REGEX REPLACE [[<A HREF="([^"]+)">([^<]*)</A>]] "\\2 [\\1]" license "${license}")
+-string(REGEX REPLACE "<[^>]*>" "" license "${license}")
+-string(REGEX REPLACE "\n\n+" "\n\n" license "${license}")
+-file(WRITE "${CURRENT_PACKAGES_DIR}/share/${PORT}/copyright" "${license}")
++# Handle copyright
++file(INSTALL ${CMAKE_CURRENT_LIST_DIR}/COPYRIGHT DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
+diff --git a/usage b/usage
+index 47caa5b..8a11e20 100644
+--- a/usage
++++ b/usage
+@@ -1,10 +1,9 @@
+-lua provides CMake integration for the C library:
++Use this package via the module FindLua that comes with CMake. To use in your CMakeLists.txt:
+ 
+-  find_package(Lua REQUIRED)
+-  target_include_directories(main PRIVATE ${LUA_INCLUDE_DIR})
+-  target_link_libraries(main PRIVATE ${LUA_LIBRARIES})
++    include(FindLua)
++    find_package(lua REQUIRED)
++    target_link_libraries(main PRIVATE ${LUA_LIBRARIES})
++    target_include_directories(main PRIVATE ${LUA_INCLUDE_DIR})
+ 
+-lua[cpp] provides a C++ library with exception handling:
+-
+-  find_package(unofficial-lua)
+-  target_link_libraries(main PRIVATE unofficial::lua::lua-cpp)
++For more information about the variables set by this module, please see:
++    https://cmake.org/cmake/help/latest/module/FindLua.html
+\ No newline at end of file
+diff --git a/uwp-no-popen.diff b/uwp-no-popen.diff
+deleted file mode 100644
+index ad6b17b..0000000
+--- a/uwp-no-popen.diff
++++ /dev/null
+@@ -1,24 +0,0 @@
+-diff --git a/src/liolib.c b/src/liolib.c
+-index 57615e6..70e5899 100644
+---- a/src/liolib.c
+-+++ b/src/liolib.c
+-@@ -23,6 +23,9 @@
+- #include "lualib.h"
+- #include "llimits.h"
+- 
+-+#if defined(_WIN32)
+-+#include <winapifamily.h>
+-+#endif
+- 
+- /*
+- ** Change this macro to accept other modes for 'fopen' besides
+-@@ -58,7 +61,8 @@ static int l_checkmode (const char *mode) {
+- #define l_popen(L,c,m)		(fflush(NULL), popen(c,m))
+- #define l_pclose(L,file)	(pclose(file))
+- 
+--#elif defined(LUA_USE_WINDOWS)	/* }{ */
+-+#elif defined(LUA_USE_WINDOWS)	/* }{ */ \
+-+      && !(defined(WINAPI_FAMILY_PARTITION) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP))
+- 
+- #define l_popen(L,c,m)		(_popen(c,m))
+- #define l_pclose(L,file)	(_pclose(file))
+diff --git a/vcpkg-cmake-wrapper.cmake b/vcpkg-cmake-wrapper.cmake
+deleted file mode 100644
+index 5f1470d..0000000
+--- a/vcpkg-cmake-wrapper.cmake
++++ /dev/null
+@@ -1,15 +0,0 @@
+-# Not using/wrapping FindLua.cmake because
+-# it poorly handles new Lua versions and multi-config.
+-_find_package(${ARGS} NAMES unofficial-lua)
+-if(Lua_FOUND)
+-    get_filename_component(LUA_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}" PATH)
+-    get_filename_component(LUA_INCLUDE_DIR "${LUA_INCLUDE_DIR}" PATH)
+-    set(LUA_INCLUDE_DIR ${LUA_INCLUDE_DIR}/include)
+-    set(LUA_LIBRARIES unofficial::lua::lua)
+-    # deprecated vars
+-    set(LUA_FOUND 1)
+-    set(LUA_VERSION_STRING "${Lua_VERSION}")
+-    set(LUA_VERSION_MAJOR "${Lua_VERSION_MAJOR}")
+-    set(LUA_VERSION_MINOR "${Lua_VERSION_MINOR}")
+-    set(LUA_VERSION_PATCH "${Lua_VERSION_PATCH}")
+-endif()
+diff --git a/vcpkg.json b/vcpkg.json
+deleted file mode 100644
+index 30a88e0..0000000
+--- a/vcpkg.json
++++ /dev/null
+@@ -1,33 +0,0 @@
+-{
+-  "name": "lua",
+-  "version": "5.5.0",
+-  "port-version": 1,
+-  "description": "A powerful, fast, lightweight, embeddable scripting language",
+-  "homepage": "https://www.lua.org",
+-  "license": "MIT",
+-  "dependencies": [
+-    {
+-      "name": "vcpkg-cmake",
+-      "host": true
+-    },
+-    {
+-      "name": "vcpkg-cmake-config",
+-      "host": true
+-    }
+-  ],
+-  "features": {
+-    "cpp": {
+-      "description": "Builds Lua for C++ linkage"
+-    },
+-    "tools": {
+-      "description": "Builds Lua compiler and interpreter",
+-      "supports": "!ios",
+-      "dependencies": [
+-        {
+-          "name": "readline-unix",
+-          "platform": "!windows"
+-        }
+-      ]
+-    }
+-  }
+-}

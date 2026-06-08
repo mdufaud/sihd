@@ -1,0 +1,131 @@
+diff --git a/0004-devendor-external-dependencies.patch b/0004-devendor-external-dependencies.patch
+index 809c890..ad31c1e 100644
+--- a/0004-devendor-external-dependencies.patch
++++ b/0004-devendor-external-dependencies.patch
+@@ -73,6 +73,19 @@ index 7e0062692b..6fb3279a20 100644
+        <Project>{a1a295e5-463c-437f-81ca-1f32367685da}</Project>
+        <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      </ProjectReference>
++diff --git a/PCbuild/_ssl.vcxproj b/PCbuild/_ssl.vcxproj
++index 4907f49b66..4dffa202b7 100644
++--- a/PCbuild/_ssl.vcxproj
+++++ b/PCbuild/_ssl.vcxproj
++@@ -99,7 +99,7 @@
++   </ItemDefinitionGroup>
++   <ItemGroup>
++     <ClCompile Include="..\Modules\_ssl.c" />
++-    <ClCompile Include="$(opensslIncludeDir)\applink.c">
+++    <ClCompile Condition="false" Include="$(opensslIncludeDir)\applink.c">
++       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;$(PreprocessorDefinitions)</PreprocessorDefinitions>
++     </ClCompile>
++   </ItemGroup>
+ diff --git a/PCbuild/pyexpat.vcxproj b/PCbuild/pyexpat.vcxproj
+ index b2d9f5d57d..4efb826a05 100644
+ --- a/PCbuild/pyexpat.vcxproj
+diff --git a/portfile.cmake b/portfile.cmake
+index d2404a6..ccaebd7 100644
+--- a/portfile.cmake
++++ b/portfile.cmake
+@@ -28,6 +28,7 @@ set(PATCHES
+     0005-dont-copy-vcruntime.patch
+     0008-python.pc.patch
+     0010-dont-skip-rpath.patch
++    0012-force-disable-modules.patch
+     0015-dont-use-WINDOWS-def.patch
+     0016-undup-ffi-symbols.patch # Required for lld-link.
+     0018-fix-sysconfig-include.patch
+@@ -61,7 +62,7 @@ vcpkg_from_github(
+     OUT_SOURCE_PATH SOURCE_PATH
+     REPO python/cpython
+     REF v${VERSION}
+-    SHA512 39298ac5ee6e751264b196710dff998e4ba530f5ed0cb9ec143c138faf00e32356ff387f71287840e7d0acef855cabd75d71d3d636c23807659e79b1643d891c
++    SHA512 0ca83685fe00d374857ce544eb10037f284a702b14f4cd5c22402b9fbeb557d6d4d23722eae3adbcff1208bf780a50c71146d8d5e3e8a65b84f50bcc5b6968c3
+     HEAD_REF master
+     PATCHES ${PATCHES}
+ )
+@@ -111,8 +112,8 @@ if(VCPKG_TARGET_IS_WINDOWS)
+     else()
+         message(STATUS "WARNING: Extensions have been disabled. No C extension modules will be available.")
+     endif()
+-    find_library(ZLIB_RELEASE NAMES z zs zlib PATHS "${CURRENT_INSTALLED_DIR}/lib" NO_DEFAULT_PATH)
+-    find_library(ZLIB_DEBUG NAMES zd zsd zlibd PATHS "${CURRENT_INSTALLED_DIR}/debug/lib" NO_DEFAULT_PATH)
++    find_library(ZLIB_RELEASE NAMES zlib PATHS "${CURRENT_INSTALLED_DIR}/lib" NO_DEFAULT_PATH)
++    find_library(ZLIB_DEBUG NAMES zlib zlibd PATHS "${CURRENT_INSTALLED_DIR}/debug/lib" NO_DEFAULT_PATH)
+     list(APPEND add_libs_rel "${ZLIB_RELEASE}")
+     list(APPEND add_libs_dbg "${ZLIB_DEBUG}")
+ 
+@@ -263,8 +264,9 @@ else()
+         list(APPEND VCPKG_CMAKE_CONFIGURE_OPTIONS "-DANDROID_NO_UNDEFINED=OFF")
+     endif()
+ 
++    # Cross-compilation: cannot run target executables during configure.
++    # Pre-seed autoconf cache variables that require runtime tests.
+     if(VCPKG_CROSSCOMPILING)
+-        # Cannot not run target executables during configure
+         if(NOT PYTHON3_BUGGY_GETADDRINFO)
+             list(APPEND OPTIONS "ac_cv_buggy_getaddrinfo=no")
+         endif()
+@@ -280,15 +282,22 @@ else()
+         list(APPEND OPTIONS "--with-build-python=${_python_for_build}")
+     endif()
+ 
++    # Cross-compilation: checksharedmods runs the host Python with PYTHONPATH
++    # pointing to target extension modules (.so). When the target uses a different
++    # libc (e.g. musl on x86_64), the host Python loads these .so files and crashes
++    # with "invalid ELF header" because of libc mismatch. Replace with a no-op.
++    if(VCPKG_CROSSCOMPILING)
++        vcpkg_replace_string("${SOURCE_PATH}/Makefile.pre.in"
++            "@$(RUNSHARED) $(PYTHON_FOR_BUILD) $(srcdir)/Tools/build/check_extension_modules.py"
++            "@echo 'Skipping check_extension_modules.py (cross-compiling)'"
++        )
++    endif()
++
+     vcpkg_make_configure(
+         SOURCE_PATH "${SOURCE_PATH}"
+         AUTORECONF
+-        DEFAULT_OPTIONS_EXCLUDE "^--(disable|enable)-static"
+         OPTIONS
+             ${OPTIONS}
+-            py_cv_module__curses=n/a
+-            py_cv_module__curses_panel=n/a
+-            py_cv_module__tkinter=n/a
+         OPTIONS_DEBUG
+             "--with-pydebug"
+             "vcpkg_rpath=${CURRENT_INSTALLED_DIR}/debug/lib"
+diff --git a/vcpkg.json b/vcpkg.json
+index 05b754f..9e0d549 100644
+--- a/vcpkg.json
++++ b/vcpkg.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "python3",
+-  "version": "3.12.13",
+-  "port-version": 1,
++  "version": "3.12.9",
++  "port-version": 7,
+   "description": "The Python programming language",
+   "homepage": "https://github.com/python/cpython",
+   "license": "Python-2.0",
+@@ -66,11 +66,6 @@
+           "name": "expat",
+           "default-features": false
+         },
+-        {
+-          "name": "libb2",
+-          "default-features": false,
+-          "platform": "!windows"
+-        },
+         {
+           "name": "libffi",
+           "default-features": false
+@@ -79,6 +74,10 @@
+           "name": "liblzma",
+           "default-features": false
+         },
++        {
++          "name": "ncurses",
++          "platform": "!windows | mingw"
++        },
+         {
+           "name": "openssl",
+           "default-features": false

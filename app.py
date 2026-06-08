@@ -173,15 +173,14 @@ modules = {
         "depends": ['util', 'sys'],
         "extlibs": ['imgui', 'opengl'],
         # libxcrypt only supports linux|osx (autotools, no Windows/web port)
-        "linux-extlibs": ['libxcrypt'],
+        "linux-extlibs": ['ncurses', 'libxcrypt'],
         "libs": ["imgui"],
+        "linux-libs": ['glfw', 'SDL3', 'ncursesw'],
         # native linux: system provides libglfw.so, libGLEW.so, libGL.so
-        # ncursesw: vcpkg overlay-port (versioned), same wide-char build as cross
-        "linux-native-libs": ['glfw', 'GLEW', 'GL', 'SDL3', 'ncursesw'],
+        "linux-native-libs": ['GLEW', 'GL'],
         # cross linux: vcpkg provides libglfw.so (dynamic) / libglfw3.a (static)
         # (imgui has its own GL loader via dlopen, GLEW is unused)
-        # ncursesw: vcpkg overlay-port builds the wide-char ncurses from source
-        "linux-cross-libs": ['glfw', 'SDL3', 'ncursesw'],
+        "linux-cross-libs": ['glfw'],
         # === Android specific ===
         "android-libs": ['android', 'EGL', 'GLESv3', 'log'],
         "android-defines": ['IMGUI_IMPL_OPENGL_ES3'],
@@ -264,14 +263,6 @@ conditional_modules = {
 }
 
 ###############################################################################
-# cppcheck
-###############################################################################
-
-cppcheck = {
-    "undefines": ["SIHD_LOGGING_OFF"],
-}
-
-###############################################################################
 # external libs
 ###############################################################################
 
@@ -300,7 +291,8 @@ extlibs = {
     "opengl": "",  # provides GL/gl.h headers for cross-compilation (via opengl-registry)
     "ftxui": "6.1.9",
     "imgui": "1.91.9",
-    "libxcrypt": "4.5.2", #fixes a compilation issue with imgui
+    "ncurses": "6.5#3", # ncursesw
+    "libxcrypt": "4.5.2", # fixes a compilation issue with imgui
     # bindings
     "python3": "3.12.9",
     "pybind11": "3.0.1",
@@ -376,6 +368,51 @@ extlibs_skip_android = [
 ]
 
 vcpkg_baseline = "3a3285c4878c7f5a957202201ba41e6fdeba8db4"
+
+# Declarative overlays over stock vcpkg ports (replaces hand-written overlay-ports/).
+# Schema: patches / remove_patches / manifest / files / recipe_patches (see sbt/vcpkg/patches.py).
+vcpkg_ports = {
+    "dbus": {
+        "remove_patches": ["session-socket-dir.diff"],
+        "manifest": {"port-version": 2, "default-features": []},
+        "recipe_patches": ["patches/dbus/recipe.patch"],
+    },
+    "libwebsockets": {
+        "patches": [
+            "patches/libwebsockets/mingw-pthreads.patch",
+            "patches/libwebsockets/fix-smp-event-pipes.patch",
+            "patches/libwebsockets/fix-gcc15-const.patch",
+        ],
+        "manifest": {"version-semver": "4.5.2"},
+        "recipe_patches": ["patches/libwebsockets/recipe.patch"],
+    },
+    "libcap": {
+        "recipe_patches": ["patches/libcap/recipe.patch"],
+    },
+    "ncurses": {
+        "recipe_patches": ["patches/ncurses/recipe.patch"],
+    },
+    "python3": {
+        "files": {"files/python3/0012-force-disable-modules.patch": "0012-force-disable-modules.patch"},
+        "recipe_patches": ["patches/python3/recipe.patch"],
+    },
+    "lua": {
+        "files": {
+            "files/lua/CONTROL": "CONTROL",
+            "files/lua/COPYRIGHT": "COPYRIGHT",
+            "files/lua/vcpkg-cmake-wrapper.cmake.in": "vcpkg-cmake-wrapper.cmake.in",
+        },
+        "recipe_patches": ["patches/lua/recipe.patch"],
+    },
+}
+
+###############################################################################
+# cppcheck
+###############################################################################
+
+cppcheck = {
+    "undefines": ["SIHD_LOGGING_OFF"],
+}
 
 ###############################################################################
 # compilation

@@ -154,21 +154,73 @@ Patched vcpkg ports that override the official ones. Each subdirectory is a comp
 
 ```
 addon/vcpkg/overlay-ports/
-├── dbus/
-│   ├── portfile.cmake
-│   └── vcpkg.json
-├── libcap/
-│   ├── portfile.cmake
-│   └── vcpkg.json
 └── libxcursor/
     ├── portfile.cmake
     └── vcpkg.json
 ```
 
+Only `libxcursor` stays a manual overlay (no stock port in vcpkg). All other port edits
+(dbus, libwebsockets, libcap, ncurses, python3, lua) are declared via `vcpkg_ports` below.
+
 Passed to vcpkg as `--overlay-ports=site_scons/addon/vcpkg/overlay-ports`. Typical reasons to patch:
 - Remove a dependency that doesn't build on a target (e.g., dbus without systemd)
 - Fix cross-compilation variables (e.g., libcap OBJCOPY)
 - Fix dependency resolution bugs
+
+A full manual overlay is rarely needed. For most port edits — adding/removing patches,
+changing the manifest, splicing build options, pinning a SHA — prefer `vcpkg_ports` below,
+which declares the edits in `app.py` and lets SBT generate the overlay.
+
+## vcpkg_ports (declarative port overlays)
+
+Declare per-port edits in `app.py` instead of hand-writing a manual overlay. SBT copies the
+stock port from `.vcpkg/ports/<port>/` into a generated overlay
+(`build/<target>/vcpkg/gen-overlay-ports/<port>/`), applies the declared edits, and passes the
+generated dir as a second `--overlay-ports`.
+
+```python
+vcpkg_ports = {
+    "dbus": {
+        "remove_patches": ["session-socket-dir.diff"],
+        "manifest": {"port-version": 2, "default-features": []},
+        "recipe_patches": ["patches/dbus/recipe.patch"],
+    },
+    "libwebsockets": {
+        "patches": ["patches/libwebsockets/mingw-pthreads.patch"],
+        "manifest": {"version-semver": "4.5.2"},
+        "recipe_patches": ["patches/libwebsockets/recipe.patch"],
+    },
+}
+```
+
+Per-port keys (all optional):
+- `patches`: `[<path>, ...]` — patch files (rel to `addon/vcpkg/`) copied beside the portfile
+  and **merged** into the source-extract call's `PATCHES` argument (canonical vcpkg mechanism;
+  works for `vcpkg_from_github/gitlab/git`, `vcpkg_extract_source_archive[_ex]`). These patch
+  the extracted **upstream source**.
+- `remove_patches`: `[<name>, ...]` — stock patch basenames dropped from `PATCHES` (and the
+  `.patch` file removed).
+- `manifest`: `{<key>: <val>}` — shallow merge into the port's `vcpkg.json` (e.g.
+  `default-features`, `port-version`, `version-semver`). Scalar-key only; structural changes
+  (array-element removals) go in a `recipe_patch`.
+- `files`: `{<src>: <dst>}` — whole files (src rel to `addon/vcpkg/`) copied into the generated
+  port (local build inputs: wrapper `.cmake.in`, an extra `.patch`, `CONTROL`, …).
+- `recipe_patches`: `[<path>, ...]` — `.patch` files (rel to `addon/vcpkg/`) applied with
+  `git apply` to the **generated port dir** (`portfile.cmake` / `vcpkg.json` edits: SHA pin,
+  option splice, guard change, block deletion, structural manifest change). Applied **last**.
+  Distinct from `patches`, which patch the upstream source, not the port recipe.
+
+Order of operations per port: `remove_patches` → `patches` → `manifest` → `files` →
+`recipe_patches`.
+
+Rules:
+- A port may appear in `vcpkg_ports` **or** have a manual `overlay-ports/<port>/` — not both
+  (SBT errors).
+- A `patches` entry needs a source-extract call producing `SOURCE_PATH`; if absent, SBT errors
+  (use a `recipe_patch` instead).
+- A missing `recipe_patch` file, or one that fails to apply, errors loud.
+- If the working-tree portfile differs from the pinned baseline, SBT warns (generated overlay
+  copies the working tree).
 
 ## vcpkg/triplets/
 
@@ -227,7 +279,15 @@ includes = [
 ]
 ```
 
-### Adding a custom overlay port
+### Patching a port
+
+1. Write the `.patch` under `addon/vcpkg/` (e.g. `addon/vcpkg/patches/<name>.patch`)
+2. Add `vcpkg_ports = {"<port>": {"patches": ["patches/<name>.patch"]}}` to `app.py`
+3. `make dep m=<module>` — SBT generates the overlay and merges the patch (see vcpkg_ports above)
+
+### Adding a custom overlay port (structural)
+
+Only when you must inject local build files or change build options:
 
 1. Copy the port from `.vcpkg/ports/<name>/` to `addon/vcpkg/overlay-ports/<name>/`
 2. Edit `portfile.cmake` or `vcpkg.json` as needed

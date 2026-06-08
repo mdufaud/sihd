@@ -47,7 +47,7 @@ BUILD_TOOLS := $(PROJECT_ROOT_PATH)/site_scons
 SBT_PATH := $(BUILD_TOOLS)/sbt
 
 SBT_CLI := $(SBT_PATH)/cli_helper.py
-SBT_RESP := $(shell machine=$(machine) mode=$(mode) platform=$(platform) compiler=$(compiler) libc=$(libc) $(PYTHON_BIN) $(SBT_CLI) all)
+SBT_RESP := $(shell machine=$(machine) mode=$(mode) platform=$(platform) compiler=$(compiler) libc=$(libc) static=$(static) $(PYTHON_BIN) $(SBT_CLI) all)
 
 PLATFORM := $(word 1, $(SBT_RESP))
 ifeq ($(PLATFORM),)

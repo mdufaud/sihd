@@ -218,8 +218,9 @@ def create_pacman_package(app, modules):
         fd.write(('package() {{\n'
             '\tcd "${{srcdir}}/${{pkgname}}-${{pkgver}}"\n'
             '\tmake install INSTALL_DESTDIR="${{pkgdir}}" INSTALL_PREFIX="/usr" INSTALL_NOCONFIRM=1 '
-            'platform={platform} compiler={compiler} machine={machine} libc={libc} mode={mode}\n'
+            'static={static} platform={platform} compiler={compiler} machine={machine} libc={libc} mode={mode}\n'
         '}}\n').format(
+            static = utils.get_opt("static", "0"),
             platform = _b.build_platform,
             compiler = _b.build_compiler,
             machine = _b.build_machine,

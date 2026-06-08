@@ -212,12 +212,14 @@ def _compute_dep_build_path(dep_path, make_args):
     dep_libc = make_args.get("libc", builder.libc)
     dep_mode = make_args.get("mode", builder.build_mode)
     dep_compiler_version = builder.build_compiler_version
+    dep_liblink = "static" if make_args.get("static") == "1" else "dynamic"
 
     dep_build_path = os.path.join(
         dep_path, "build",
         f"{dep_machine}-{dep_platform}-{dep_libc}",
         dep_compiler_version,
-        dep_mode
+        dep_mode,
+        dep_liblink
     )
     return dep_build_path
 

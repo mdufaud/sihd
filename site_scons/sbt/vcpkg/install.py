@@ -32,7 +32,9 @@ from sbt.vcpkg.manifest import (
     build_vcpkg_manifest,
     write_vcpkg_manifest,
     build_cross_linux_foundation_manifest,
+    _get_baseline,
 )
+from sbt.vcpkg.patches import generate_overlay_ports
 
 app = loader.load_app()
 
@@ -54,6 +56,10 @@ sbt_triplet_path = f"{builder.sbt_path}/vcpkg/triplets"
 sbt_vcpkg_addon_path = os.path.join(builder.build_root_path, "site_scons", "addon", "vcpkg")
 sbt_vcpkg_addon_overlay_ports_path = os.path.join(sbt_vcpkg_addon_path, "overlay-ports")
 addon_triplet_path = os.path.join(sbt_vcpkg_addon_path, "triplets")
+
+# Generated overlay ports from app.vcpkg_ports (declarative port overlays)
+vcpkg_ports_path = os.path.join(os.path.dirname(vcpkg_bin_path), "ports")
+gen_overlay_path = os.path.join(vcpkg_build_path, "gen-overlay-ports")
 
 if builder.verify_args(app) == False:
     exit(1)
@@ -202,6 +208,24 @@ def _check_vcpkg():
         raise RuntimeError("no VCPKG installed")
 
 
+def _append_generated_overlay_ports(args):
+    """Generate overlay ports from app.vcpkg_ports and append --overlay-ports."""
+    try:
+        gen = generate_overlay_ports(
+            app,
+            vcpkg_ports_path,
+            gen_overlay_path,
+            vcpkg_dir_path,
+            _get_baseline(app),
+            sbt_vcpkg_addon_path,
+            sbt_vcpkg_addon_overlay_ports_path,
+        )
+    except RuntimeError:
+        sys.exit(1)
+    if gen:
+        args.append(f"--overlay-ports={gen}")
+
+
 def _execute_vcpkg_install():
     _check_vcpkg()
 
@@ -241,6 +265,9 @@ def _execute_vcpkg_install():
     # Custom overlay ports (e.g. libxcursor, libcap which need cross-compilation fixes)
     if os.path.isdir(sbt_vcpkg_addon_overlay_ports_path):
         args.append(f"--overlay-ports={sbt_vcpkg_addon_overlay_ports_path}")
+
+    # Generated overlay ports from app.vcpkg_ports
+    _append_generated_overlay_ports(args)
 
     # force recompilation
     # if builder.build_platform == "web":
@@ -287,6 +314,7 @@ def _execute_vcpkg_depend_info():
         args.append(f"--overlay-triplets={addon_triplet_path}")
     if os.path.isdir(sbt_vcpkg_addon_overlay_ports_path):
         args.append(f"--overlay-ports={sbt_vcpkg_addon_overlay_ports_path}")
+    _append_generated_overlay_ports(args)
     if verbose:
         logger.debug(f"executing '{args}' in '{vcpkg_build_path}'")
 
