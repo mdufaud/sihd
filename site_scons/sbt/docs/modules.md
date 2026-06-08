@@ -407,7 +407,7 @@ Modules are sorted by dependency depth and built in order.
 ## Build output
 
 ```
-build/<machine>-<platform>-<libc>/<compiler>-<version>/<mode>/
+build/<machine>-<platform>-<libc>/<compiler>-<version>/<mode>/<static|dynamic>/
 ├── lib/           # Libraries (.so/.a/.dll)
 ├── bin/           # Binaries
 ├── demo/          # Demo executables

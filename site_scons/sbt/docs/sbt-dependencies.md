@@ -95,7 +95,7 @@ sbt_dependencies = {
 ## Installed artifacts
 
 After `make dep`, the dependency's build artifacts appear in your project's
-`build/<triplet>/<compiler>/<mode>/extlib/`:
+`build/<triplet>/<compiler>/<mode>/<static|dynamic>/extlib/`:
 
 ```
 extlib/
@@ -118,7 +118,7 @@ modules = {
 
 ## `make dep` is per build config
 
-`extlib/` lives under the build directory: `build/<triplet>/<compiler>/<mode>/extlib/`. Every
+`extlib/` lives under the build directory: `build/<triplet>/<compiler>/<mode>/<static|dynamic>/extlib/`. Every
 distinct combination of `mode`, `libc`, and `static` gets its own. Run `make dep` once **per build
 config** — a release build does not inherit the debug build's installed headers and libraries:
 

@@ -62,6 +62,13 @@ def _import_app_from_path(app_path):
         sys.dont_write_bytecode = before
 
 
+def _ref_is_branch(dest, ref):
+    """True if ref names a remote branch (origin/<ref>), False for tags/SHAs (immutable)."""
+    return subprocess.call(
+        ["git", "-C", dest, "show-ref", "--verify", "--quiet", f"refs/remotes/origin/{ref}"]
+    ) == 0
+
+
 def _clone_dep(name, config, deps_dir, force):
     """Clone a dependency git repo into deps_dir/name/."""
     git_url = config.get("git")
@@ -76,7 +83,14 @@ def _clone_dep(name, config, deps_dir, force):
         shutil.rmtree(dest)
 
     if os.path.isdir(dest):
-        logger.info(f"dependency already cloned: {name} -> {dest}")
+        if _ref_is_branch(dest, ref):
+            logger.info(f"updating dependency branch: {name} @ {ref}")
+            if subprocess.call(["git", "-C", dest, "fetch", "--depth", "1", "origin", ref]) != 0:
+                raise RuntimeError(f"git fetch failed for dependency '{name}' @ {ref}")
+            if subprocess.call(["git", "-C", dest, "reset", "--hard", f"origin/{ref}"]) != 0:
+                raise RuntimeError(f"git reset failed for dependency '{name}' @ {ref}")
+        else:
+            logger.info(f"dependency already cloned (pinned ref): {name} -> {dest}")
         return dest
 
     logger.info(f"cloning dependency: {name} ({git_url} @ {ref})")
