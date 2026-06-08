@@ -360,6 +360,9 @@ Return('lib')
 
 Modules that are only built when explicitly requested.
 
+> `conditional_modules` must be defined in `app.py` even if you have none — set
+> `conditional_modules = {}`. The `modules=`/`m=` build filter reads it unconditionally.
+
 ```python
 # app.py
 conditional_modules = {

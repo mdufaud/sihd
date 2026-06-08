@@ -63,6 +63,10 @@ verbose = builder.has_verbose()
 libtype = builder.build_static_libs and "static" or "dyn"
 bin_ext = build_platform == "web" and ".html" or (build_platform == "windows" and ".exe" or "")
 
+modules_options = env_factory.compute_modules_options(
+    build_platform, libtype, build_mode, compiler, builder
+)
+
 compile_commands = build_utils.is_opt("compile_commands", "1")
 
 if verbose:
@@ -80,6 +84,15 @@ if verbose:
     logger.info("memory sanitizer: " + (builder.build_msan and "yes" or "no"))
     logger.info("hwaddress sanitizer: " + (builder.build_hwasan and "yes" or "no"))
     logger.info("coverage: " + (builder.build_coverage and "yes" or "no"))
+
+# Resolve cross-project `project:module` depends into synthetic local modules
+try:
+    modules.resolve_external_modules(
+        app, os_path.join(builder.build_root_path, ".sbt-deps"), modules_options
+    )
+except RuntimeError as e:
+    logger.error(str(e))
+    Exit(1)
 
 # Get modules configuration for this build
 try:
@@ -339,10 +352,6 @@ Decider('MD5-timestamp')
 
 build_state = scons_state.BuildState(verbose)
 
-modules_options = env_factory.compute_modules_options(
-    build_platform, libtype, build_mode, compiler, builder
-)
-
 if verbose:
     logger.debug(f"will look for modules options:")
     pp.pprint([[f"{option}-{key}" for option in modules_options] for key in ("libs", "flags", "link", "defines")])
@@ -378,6 +387,9 @@ modules_build_order.sort(key=lambda obj: len(obj["depends"]))
 built = {}
 for conf in modules_build_order:
     modname = conf["modname"]
+    if conf.get("external"):
+        # synthetic cross-project module: no scons.py to compile, link metadata only
+        continue
     logger.info("building module: {}".format(modname))
     env = env_factory.create_module_env(conf, ctx,
         depends=conf.get("depends", []),

@@ -6,6 +6,11 @@ must_have_parameters = ['depends', 'libs', 'link', 'flags']
 def __dedupe_keep_order(values):
     return list(dict.fromkeys(values))
 
+def is_external_depend(name):
+    """A "<project>:<module>" depend refers to a module of an SBT dependency,
+    not a local module."""
+    return ":" in name
+
 def _get_export_options(conf, key, modules_options):
     ret = conf.get(f"export-{key}", [])[:]
     for option in modules_options:
@@ -26,6 +31,9 @@ def fill_modlist_from_modules(modules, specific_modules, modlist):
     for module_name in specific_modules:
         conf = modules.get(module_name, None)
         if conf is None:
+            # "<project>:<module>" cross-project depend: not a local module
+            if is_external_depend(module_name):
+                continue
             raise RuntimeError("No such module: {}".format(module_name))
         modlist[module_name] = conf
         fill_modlist_from_modules(modules, conf.get('depends', []), modlist)
@@ -36,6 +44,9 @@ def __rec_fill_module_real_depends(modules, module_name, to_fill_module_conf):
     """
     conf = modules.get(module_name, None)
     if conf is None:
+        # "<project>:<module>" cross-project depend: no local real-dependency tree
+        if is_external_depend(module_name):
+            return
         raise RuntimeError("Error in module's configuration, not a module: {}".format(module_name))
     curr_depends = to_fill_module_conf.setdefault("depends", [])
     depends = conf.get('depends', [])
@@ -55,7 +66,9 @@ def __get_module_fill_order(modules):
             if modname in order:
                 continue
             depends = conf.get("depends", [])
-            if all(dep in order for dep in depends):
+            # "<project>:<module>" cross-project depends are not local modules and
+            # never join the local build order; ignore them for ordering.
+            if all(dep in order for dep in depends if not is_external_depend(dep)):
                 order.append(modname)
         iterations += 1
         if iterations > max_iterations:
@@ -91,6 +104,9 @@ def resolve_modules_exports(modules, modules_options):
     order = __get_module_fill_order(modules)
     for name in order:
         conf = modules[name]
+        if conf.get("external"):
+            # synthetic cross-project module: exports already resolved at injection
+            continue
         resolved_export_libs = []
         resolved_export_defines = []
         resolved_export_flags = []
@@ -244,6 +260,78 @@ def check_platform(modules, platform):
     for name in to_remove:
         del modules[name]
     return to_remove
+
+def _external_module_closure(dep_modules, dep_app_name, modname):
+    """Ordered static link closure for an external project module.
+
+    Mirrors create_module_env's LIBS assembly: the module's own archive first,
+    then its transitive dependency archives (deepest first), then the module's
+    resolved export libs (extlibs). MinGW-safe consumer-before-provider order.
+    """
+    conf = dep_modules[modname]
+    depends = conf.get("depends", [])
+    ordered = sorted(
+        depends,
+        key=lambda d: len(dep_modules.get(d, {}).get("depends", [])),
+        reverse=True,
+    )
+    libs = [f"{dep_app_name}_{modname}"]
+    libs += [f"{dep_app_name}_{d}" for d in ordered]
+    libs += conf.get("libs", [])
+    libs += conf.get("_resolved_export_libs", [])
+    return __dedupe_keep_order(libs)
+
+def _load_external_app(deps_dir, project):
+    from site_scons.sbt.build import sbt_deps
+    app_path = os.path.join(deps_dir, project, "app.py")
+    if not os.path.isfile(app_path):
+        raise RuntimeError(
+            "external dependency '{}' not found at {} - run 'make dep'".format(project, app_path))
+    try:
+        return sbt_deps._import_app_from_path(app_path)
+    except Exception as e:
+        raise RuntimeError(
+            "could not load external dependency '{}' app.py: {}".format(project, e))
+
+def resolve_external_modules(app, deps_dir, modules_options):
+    """Resolve `project:module` depends into synthetic local module entries.
+
+    Scans every (conditional) module's depends for `project:module` refs, loads
+    each referenced dependency's app.py from deps_dir/<project>/app.py, resolves
+    that project's module export graph, and injects a synthetic entry keyed
+    `project:module` into app.modules carrying the full ordered link closure.
+    """
+    if not hasattr(app, "modules"):
+        return
+    universe = get_module_merged_with_conditionals(app)
+    refs = {}
+    for conf in universe.values():
+        for dep in conf.get("depends", []) + conf.get("conditional-depends", []):
+            if not is_external_depend(dep):
+                continue
+            project, _, mod = dep.partition(":")
+            refs.setdefault(project, set()).add(mod)
+    if not refs:
+        return
+    for project, wanted in refs.items():
+        dep_app = _load_external_app(deps_dir, project)
+        dep_modules = build_modules_conf(dep_app)
+        resolve_modules_exports(dep_modules, modules_options)
+        for mod in wanted:
+            if mod not in dep_modules:
+                raise RuntimeError(
+                    "external module '{}:{}' does not exist in dependency '{}'".format(project, mod, project))
+            closure = _external_module_closure(dep_modules, dep_app.name, mod)
+            mconf = dep_modules[mod]
+            app.modules["{}:{}".format(project, mod)] = {
+                "external": True,
+                "depends": [],
+                "libs": [],
+                "_resolved_export_libs": closure,
+                "_resolved_export_defines": mconf.get("_resolved_export_defines", [])[:],
+                "_resolved_export_flags": mconf.get("_resolved_export_flags", [])[:],
+                "_resolved_export_link": mconf.get("_resolved_export_link", [])[:],
+            }
 
 def build_modules_conf(app, specific_modules=[], conditionals=[]):
     """ @brief build modules from application configuration

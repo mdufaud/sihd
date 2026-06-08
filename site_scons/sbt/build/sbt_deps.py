@@ -40,7 +40,7 @@ from site_scons.sbt.build import utils
 _ABI_ARGS = frozenset({"platform", "compiler", "machine", "libc"})
 
 # Args forwarded from consumer build config to dep builds
-_FORWARDED_ARGS = ("platform", "compiler", "machine", "libc", "cpu", "static")
+_FORWARDED_ARGS = ("platform", "compiler", "machine", "libc", "cpu", "static", "mode")
 
 
 def _import_app_from_path(app_path):
@@ -178,11 +178,17 @@ def _compute_dep_build_args(dep_config):
     if builder.build_static_libs:
         make_args["static"] = "1"
 
-    # Apply dep-specific overrides (skip ABI args)
+    # A dependency is consumed as a library; never build its tests.
+    make_args["test"] = "0"
+
+    # Apply dep-specific overrides (skip ABI args and test)
     dep_args = dep_config.get("args", {})
     for key, value in dep_args.items():
         if key in _ABI_ARGS:
             logger.warning(f"ignoring ABI-critical override '{key}' in sbt_dependencies args")
+            continue
+        if key == "test":
+            logger.warning("ignoring 'test' override in sbt_dependencies args: dependency tests are never built")
             continue
         make_args[key] = str(value)
 
@@ -225,6 +231,11 @@ def _build_dep(name, dep_path, dep_config, consumer_vcpkg_path, consumer_extlib_
     use_own_vcpkg = dep_config.get("vcpkg", "") == "own"
 
     env = os.environ.copy()
+    # Drop the consumer make's command-line variables (carried as MAKEFLAGS/
+    # MAKEOVERRIDES) so they don't leak into the dependency build and override its
+    # own makefile assignments. The dep build gets only the explicit args below.
+    for make_var in ("MAKEFLAGS", "MAKEOVERRIDES", "MFLAGS"):
+        env.pop(make_var, None)
     if not use_own_vcpkg and consumer_vcpkg_path:
         # Share consumer's vcpkg installation directory via VCPKG_ROOT
         # This is picked up by both the Makefile (skips vcpkg_deploy clone)
@@ -260,6 +271,14 @@ def _copy_tree(src, dst):
     """Recursively copy src into dst, creating dst if needed, overwriting files."""
     if not os.path.isdir(src):
         return
+    # If dst is a symlink (e.g. extlib pointing into the dep's own vcpkg tree from a
+    # vcpkg-only run), dissolve it into a real dir of links first. Writing through the
+    # dir-symlink would corrupt the dep's vcpkg_installed and create self-referential
+    # symlinks (-> "Too many levels of symbolic links" / ELOOP).
+    if os.path.islink(dst):
+        vcpkg_target = os.path.realpath(dst)
+        os.unlink(dst)
+        utils.link_tree(vcpkg_target, dst)
     os.makedirs(dst, exist_ok=True)
     for entry in os.scandir(src):
         s = entry.path
@@ -269,12 +288,16 @@ def _copy_tree(src, dst):
         if entry.is_dir(follow_symlinks=False):
             _copy_tree(s, d)
         else:
-            # On a re-run the consumer extlib may hold symlinks pointing back
-            # into the dep's own extlib; copying those onto themselves raises
-            # SameFileError. Skip when src resolves to dst.
-            if os.path.exists(d) and os.path.samefile(s, d):
-                continue
-            shutil.copy2(s, d)
+            # Consumer extlib leaves are symlinks (utils.link_tree); copy them as
+            # links, not by dereferencing, to avoid duplicating every vcpkg/dep
+            # binary into each dep's extlib (and the back-reference SameFileError).
+            if os.path.lexists(d):
+                # already the same file (s and d resolve identically): leave it,
+                # removing+recreating would risk a self-referential link.
+                if os.path.realpath(s) == os.path.realpath(d):
+                    continue
+                os.remove(d)
+            shutil.copy2(s, d, follow_symlinks=False)
 
 
 def _install_artifacts(name, dep_build_path, consumer_extlib_path):
