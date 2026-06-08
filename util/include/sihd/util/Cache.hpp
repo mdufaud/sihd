@@ -28,6 +28,12 @@ class Cache
         Cache() = default;
         ~Cache() = default;
 
+        /** Sets a value in the cache.
+         * @param key The key for the value.
+         * @param getter The function to call to get the value.
+         * @param max_age The maximum age of the cached value.
+         * @param lazy Whether to lazily initialize the cached value.
+         */
         void set(const Key & key, CacheGetter getter, Timestamp max_age = -1, bool lazy = false)
         {
             if (lazy)
@@ -43,17 +49,11 @@ class Cache
                                       .cached_value = std::move(cached_value)};
         }
 
+        // This method throws if the key is missing.
         Value & get(const Key & key, Timestamp ttl = -1)
         {
             auto & entry = _get_cache(key);
-
-            const Timestamp now = _clock.now();
-            const bool was_never_refreshed = (entry.last_refresh < 0);
-            const bool is_expired_by_ttl = (ttl >= 0) && ((now - entry.last_refresh) > ttl);
-            const bool is_expired_by_max_age = (entry.max_age >= 0) && ((now - entry.last_refresh) > entry.max_age);
-
-            const bool needs_refresh = was_never_refreshed || is_expired_by_ttl || is_expired_by_max_age;
-            if (needs_refresh)
+            if (this->_needs_refresh(entry, ttl))
             {
                 entry.miss++;
                 entry.cached_value = entry.getter();
@@ -67,11 +67,12 @@ class Cache
             return entry.cached_value;
         }
 
+        // This method does not throw if the key is missing, it returns std::nullopt instead.
         std::optional<std::reference_wrapper<Value>> get_optional(const Key & key, Timestamp ttl = -1)
         {
             try
             {
-                return std::make_optional<std::reference_wrapper<Value>>(get(key, ttl));
+                return std::make_optional<std::reference_wrapper<Value>>(this->get(key, ttl));
             }
             catch (const std::out_of_range &)
             {
@@ -79,9 +80,45 @@ class Cache
             }
         }
 
+        // This method does not refresh the cache, it only returns the cached value if it exists.
+        std::optional<std::reference_wrapper<Value>> get_cached(const Key & key)
+        {
+            try
+            {
+                auto & entry = this->_get_cache(key);
+                return std::make_optional<std::reference_wrapper<Value>>(entry.cached_value);
+            }
+            catch (const std::out_of_range &)
+            {
+                return std::nullopt;
+            }
+        }
+
+        void refresh_stale()
+        {
+            for (auto & [_, entry] : _cache)
+            {
+                const Timestamp now = _clock.now();
+                if (this->_needs_refresh(entry, -1, now))
+                {
+                    entry.cached_value = entry.getter();
+                    entry.last_refresh = now;
+                }
+            }
+        }
+
+        void refresh_all()
+        {
+            for (auto & [_, entry] : _cache)
+            {
+                entry.cached_value = entry.getter();
+                entry.last_refresh = _clock.now();
+            }
+        }
+
         void invalidate(const Key & key)
         {
-            auto & entry = _get_cache(key);
+            auto & entry = this->_get_cache(key);
             entry.last_refresh = -1;
         }
 
@@ -120,6 +157,20 @@ class Cache
             return result;
         }
 
+        std::vector<Key> stale_entries(Timestamp ttl = -1) const
+        {
+            std::vector<Key> result;
+            const Timestamp now = _clock.now();
+            for (const auto & [key, entry] : _cache)
+            {
+                if (this->_needs_refresh(entry, ttl, now))
+                {
+                    result.emplace_back(key);
+                }
+            }
+            return result;
+        }
+
     private:
         struct CacheEntry
         {
@@ -133,6 +184,15 @@ class Cache
                 std::function<Value()> getter;
                 Value cached_value;
         };
+
+        bool _needs_refresh(const CacheEntry & entry, Timestamp ttl, Timestamp now = -1) const
+        {
+            now = now < 0 ? Timestamp(_clock.now()) : now;
+            const bool was_never_refreshed = (entry.last_refresh < 0);
+            const bool is_expired_by_ttl = (ttl >= 0) && ((now - entry.last_refresh) > ttl);
+            const bool is_expired_by_max_age = (entry.max_age >= 0) && ((now - entry.last_refresh) > entry.max_age);
+            return was_never_refreshed || is_expired_by_ttl || is_expired_by_max_age;
+        }
 
         [[noreturn]] void _throw_missing_key(const Key & key)
         {

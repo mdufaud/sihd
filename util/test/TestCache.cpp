@@ -207,4 +207,58 @@ TEST_F(TestCache, test_stats)
     EXPECT_EQ(agg.miss, 1u);
 }
 
+TEST_F(TestCache, test_get_cached)
+{
+    Cache<int, int> cache;
+
+    // missing key returns nullopt
+    EXPECT_FALSE(cache.get_cached(1));
+
+    int counter = 0;
+    constexpr bool lazy = true;
+    cache.set(1, [&] { return ++counter; }, std::chrono::seconds(60), lazy);
+
+    // lazy entry exposes its default cached value without refreshing or touching stats
+    auto cached = cache.get_cached(1);
+    ASSERT_TRUE(cached);
+    EXPECT_EQ(cached->get(), 0);
+
+    auto stats = cache.entry_stats(1);
+    ASSERT_TRUE(stats);
+    EXPECT_EQ(stats->hit, 0u);
+    EXPECT_EQ(stats->miss, 0u);
+
+    // after a real get, get_cached returns the refreshed value
+    EXPECT_EQ(cache.get(1), 1);
+    EXPECT_EQ(cache.get_cached(1)->get(), 1);
+}
+
+TEST_F(TestCache, test_refresh_and_stale_entries)
+{
+    Cache<int, int> cache;
+    int counter = 0;
+    cache.set(1, [&] { return ++counter; }, std::chrono::seconds(60));       // eager, fresh, value 1
+    cache.set(2, [&] { return ++counter; }, std::chrono::seconds(60), true); // lazy, never refreshed
+
+    // only the lazy/never-refreshed entry is stale
+    auto stale = cache.stale_entries();
+    ASSERT_EQ(stale.size(), 1u);
+    EXPECT_EQ(stale[0], 2);
+
+    // refresh_stale only refreshes the stale entry
+    cache.refresh_stale();
+    EXPECT_EQ(cache.get_cached(1)->get(), 1);
+    EXPECT_EQ(cache.get_cached(2)->get(), 2);
+    EXPECT_TRUE(cache.stale_entries().empty());
+
+    // refresh_all refreshes everything regardless of freshness (values become 3 and 4)
+    cache.refresh_all();
+    EXPECT_EQ(cache.get_cached(1)->get() + cache.get_cached(2)->get(), 7);
+
+    // refresh does not affect hit/miss stats
+    auto agg = cache.stats();
+    EXPECT_EQ(agg.hit, 0u);
+    EXPECT_EQ(agg.miss, 0u);
+}
+
 } // namespace test
