@@ -54,8 +54,10 @@ def load_in_env(env):
         coverage_flags = ["--coverage", "-fprofile-arcs", "-ftest-coverage"]
         env.Append(CPPFLAGS = coverage_flags, LINKFLAGS = coverage_flags)
     if builder.build_static_libs:
+        # -no-pie: emit a plain static (non-PIE) binary. A fully static binary gains
+        # nothing from being PIE, and static-pie TLS relocations crash under qemu-user.
         env.Append(
-            LINKFLAGS = ["-static", "-static-libgcc", "-static-libstdc++"]
+            LINKFLAGS = ["-static", "-no-pie", "-static-libgcc", "-static-libstdc++"]
         )
     if builder.build_static_libs and builder.build_asan:
         env.Append(

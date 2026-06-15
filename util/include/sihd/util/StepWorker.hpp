@@ -30,7 +30,7 @@ class StepWorker: public Worker,
         virtual void pause_worker();
         virtual void resume_worker();
 
-        time_t nano_sleep_time() const { return _sleep_time; }
+        time::UnixTime nano_sleep_time() const { return _sleep_time; }
         double frequency() const;
 
     protected:
@@ -41,7 +41,7 @@ class StepWorker: public Worker,
 
     private:
         std::atomic<bool> _pause;
-        time_t _sleep_time;
+        time::UnixTime _sleep_time;
 
         Callback _callback_setup;
         Callback _callback_teardown;

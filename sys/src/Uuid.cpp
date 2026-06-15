@@ -18,7 +18,7 @@ using namespace sihd::util;
 namespace
 {
 
-void do_copy(uuid_t uuid_to, const uuid_t uuid_from)
+void do_copy(uuid_t & uuid_to, const uuid_t & uuid_from)
 {
 #if defined(__SIHD_WINDOWS__)
     memcpy(&uuid_to, &uuid_from, sizeof(uuid_t));
@@ -27,7 +27,7 @@ void do_copy(uuid_t uuid_to, const uuid_t uuid_from)
 #endif
 }
 
-void do_clear(uuid_t uuid)
+void do_clear(uuid_t & uuid)
 {
 #if defined(__SIHD_WINDOWS__)
     memset(&uuid, 0, sizeof(uuid_t));
@@ -56,13 +56,15 @@ Uuid::Uuid()
 #endif
 }
 
-Uuid::Uuid(std::string_view uuid_str)
+Uuid::Uuid(const std::string & uuid_str)
 {
     _impl = std::make_unique<Impl>();
 #if defined(__SIHD_WINDOWS__)
-    UuidFromString((unsigned char *)uuid_str.data(), &_impl->uuid);
+    if (UuidFromString((unsigned char *)uuid_str.c_str(), &_impl->uuid) != RPC_S_OK)
+        do_clear(_impl->uuid);
 #else
-    uuid_parse(uuid_str.data(), _impl->uuid);
+    if (uuid_parse(uuid_str.c_str(), _impl->uuid) != 0)
+        do_clear(_impl->uuid);
 #endif
 }
 

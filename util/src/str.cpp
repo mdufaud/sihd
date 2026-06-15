@@ -140,14 +140,14 @@ std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bo
         s += fmt::format("{}m:", tm.tm_min);
     if ((next_step = next_step || tm.tm_sec > 0))
         s += fmt::format("{}s:", tm.tm_sec);
-    time_t ms = time::to_milli(timestamp) % (int)1E3;
+    time::UnixTime ms = time::to_milli(timestamp) % (int)1E3;
     if ((next_step = next_step || ms > 0))
         s += fmt::format("{}ms:", ms);
-    time_t us = time::to_micro(timestamp) % (int)1E3;
+    time::UnixTime us = time::to_micro(timestamp) % (int)1E3;
     s += fmt::format("{}us", us);
     if (nano_resolution)
     {
-        time_t ns = std::abs(timestamp) % (int)1E3;
+        time::UnixTime ns = std::abs(timestamp) % (int)1E3;
         s += fmt::format(":{}ns", ns);
     }
     if (total_parenthesis)
@@ -365,6 +365,29 @@ std::wstring to_wstr(std::string_view utf8_view)
     std::wstring utf16_str(size, 0);
     MultiByteToWideChar(CP_UTF8, 0, utf8_view.data(), utf8_view.size(), utf16_str.data(), size);
     return utf16_str;
+}
+
+std::u32string to_u32str(std::string_view utf8_view)
+{
+    const std::wstring utf16_str = to_wstr(utf8_view);
+    std::u32string utf32_str;
+    utf32_str.reserve(utf16_str.size());
+    for (size_t i = 0; i < utf16_str.size(); ++i)
+    {
+        const char32_t unit = static_cast<char32_t>(static_cast<uint16_t>(utf16_str[i]));
+        if (unit >= 0xD800 && unit <= 0xDBFF && i + 1 < utf16_str.size())
+        {
+            const char32_t low = static_cast<char32_t>(static_cast<uint16_t>(utf16_str[i + 1]));
+            if (low >= 0xDC00 && low <= 0xDFFF)
+            {
+                utf32_str.push_back(0x10000 + ((unit - 0xD800) << 10) + (low - 0xDC00));
+                ++i;
+                continue;
+            }
+        }
+        utf32_str.push_back(unit);
+    }
+    return utf32_str;
 }
 // clang-format on
 #endif

@@ -1,9 +1,8 @@
+#include <sihd/core/DevFilter.hpp>
 #include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/StrConfiguration.hpp>
-
-#include <sihd/core/DevFilter.hpp>
 
 #define CONF_SETTINGS_DELIMITER ";"
 #define CONF_SETTER_DELIMITER "="
@@ -263,8 +262,7 @@ bool DevFilter::set_filter_byte_xor(std::string_view rule_str)
 void DevFilter::_rule_match(Channel *channel_out, const Rule *rule_ptr, int64_t out_val)
 {
     const sihd::util::IArray *array_out = channel_out->array();
-    channel_out->write({(const int8_t *)&out_val, array_out->data_size()},
-                       array_out->byte_index(rule_ptr->write_idx));
+    channel_out->write({(const int8_t *)&out_val, array_out->data_size()}, array_out->byte_index(rule_ptr->write_idx));
 }
 
 void DevFilter::_apply_rule(const sihd::core::Channel *channel_in,
@@ -358,8 +356,7 @@ bool DevFilter::on_start()
     ret = true;
     for (const Rule & conf : _rules_lst)
     {
-        if (this->find_channel(conf.channel_in, &channel_in)
-            && this->find_channel(conf.channel_out, &channel_out))
+        if (this->find_channel(conf.channel_in, &channel_in) && this->find_channel(conf.channel_out, &channel_out))
         {
             std::unique_ptr<InternalRule> rule(new InternalRule());
             if (rule.get()->set(&conf, channel_in, channel_out))
@@ -452,7 +449,7 @@ DevFilter::Rule & DevFilter::Rule::delay(double delay)
     return *this;
 }
 
-DevFilter::Rule & DevFilter::Rule::delay(time_t nano_delay)
+DevFilter::Rule & DevFilter::Rule::delay(sihd::util::time::UnixTime nano_delay)
 {
     this->nano_delay = nano_delay;
     return *this;
@@ -462,39 +459,31 @@ bool DevFilter::Rule::parse(std::string_view conf_str)
 {
     util::StrConfiguration conf(conf_str);
 
-    auto [channel_in_name, channel_out_name, channel_key_trigger]
-        = conf.find_all(CONF_KEY_CHANNEL_IN, CONF_KEY_CHANNEL_OUT, CONF_KEY_TRIGGER);
+    auto [channel_in_name, channel_out_name, channel_key_trigger] = conf.find_all(CONF_KEY_CHANNEL_IN,
+                                                                                  CONF_KEY_CHANNEL_OUT,
+                                                                                  CONF_KEY_TRIGGER);
 
     if (channel_in_name.has_value() == false)
-        SIHD_LOG_ERROR("DevFilter: no channel input '{}' in configuration: {}",
-                       CONF_KEY_CHANNEL_IN,
-                       conf_str);
+        SIHD_LOG_ERROR("DevFilter: no channel input '{}' in configuration: {}", CONF_KEY_CHANNEL_IN, conf_str);
     if (channel_out_name.has_value() == false)
-        SIHD_LOG_ERROR("DevFilter: no channel output '{}' in configuration: {}",
-                       CONF_KEY_CHANNEL_OUT,
-                       conf_str);
+        SIHD_LOG_ERROR("DevFilter: no channel output '{}' in configuration: {}", CONF_KEY_CHANNEL_OUT, conf_str);
     if (channel_key_trigger.has_value() == false)
         SIHD_LOG_ERROR("DevFilter: no trigger value '{}' in configuration: {}", CONF_KEY_TRIGGER, conf_str);
 
-    const bool good
-        = channel_in_name.has_value() && channel_out_name.has_value() && channel_key_trigger.has_value();
+    const bool good = channel_in_name.has_value() && channel_out_name.has_value() && channel_key_trigger.has_value();
     if (!good)
         return false;
 
     this->channel_in = *channel_in_name;
     this->channel_out = *channel_out_name;
-    return parse_trigger_config(*this, conf) && parse_write_config(*this, conf)
-           && parse_options_config(*this, conf);
+    return parse_trigger_config(*this, conf) && parse_write_config(*this, conf) && parse_options_config(*this, conf);
 }
 
 /* ************************************************************************* */
 /* DevFilter::DelayWriter */
 /* ************************************************************************* */
 
-DevFilter::DelayWriter::DelayWriter(DevFilter *dev,
-                                    Channel *channel_out,
-                                    const Rule *rule_ptr,
-                                    int64_t out_val):
+DevFilter::DelayWriter::DelayWriter(DevFilter *dev, Channel *channel_out, const Rule *rule_ptr, int64_t out_val):
     sihd::util::Task(this, {.run_in = rule_ptr->nano_delay}),
     dev(dev),
     channel_out(channel_out),
@@ -515,9 +504,7 @@ bool DevFilter::DelayWriter::run()
 /* DevFilter::InternalRule */
 /* ************************************************************************* */
 
-DevFilter::InternalRule::InternalRule(): channel_in_ptr(nullptr), channel_out_ptr(nullptr), rule_ptr(nullptr)
-{
-}
+DevFilter::InternalRule::InternalRule(): channel_in_ptr(nullptr), channel_out_ptr(nullptr), rule_ptr(nullptr) {}
 
 DevFilter::InternalRule::~InternalRule() = default;
 
@@ -560,9 +547,8 @@ bool DevFilter::InternalRule::verify()
     // check if trigger value type against channel
     if (rule_ptr->trigger_value.is_float() && in_array_is_float == false)
     {
-        SIHD_LOG_ERROR(
-            "DevFilter: type error, trigger value is float and channel input '{}' is not a floating type",
-            this->channel_in_ptr->name());
+        SIHD_LOG_ERROR("DevFilter: type error, trigger value is float and channel input '{}' is not a floating type",
+                       this->channel_in_ptr->name());
         return false;
     }
     // check write value type against channel
@@ -572,9 +558,8 @@ bool DevFilter::InternalRule::verify()
         && ((rule_ptr->write_same_value && rule_ptr->trigger_value.is_float())
             || (rule_ptr->write_same_value == false && rule_ptr->write_value.is_float())))
     {
-        SIHD_LOG_ERROR(
-            "DevFilter: type error, write value is float and channel output '{}' is not a floating type",
-            this->channel_out_ptr->name());
+        SIHD_LOG_ERROR("DevFilter: type error, write value is float and channel output '{}' is not a floating type",
+                       this->channel_out_ptr->name());
         return false;
     }
     return true;

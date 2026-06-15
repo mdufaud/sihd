@@ -1,4 +1,3 @@
-#include <CLI/CLI.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
@@ -10,6 +9,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerStream.hpp>
 #include <sihd/util/str.hpp>
+
+#include <CLI/CLI.hpp>
 
 using namespace sihd::util;
 using namespace sihd::sys;
@@ -55,7 +56,7 @@ int main(int argc, char **argv)
     SigHandler sig_handler(SIGINT);
     while (!signal::termination_received())
     {
-        time::sleep_t(sleep_for);
+        time::sleep(sleep_for);
         fpoller.run();
     }
 

@@ -126,8 +126,7 @@ Timestamp Timestamp::floor_day() const
 Timestamp Timestamp::modulo_min(uint32_t minutes) const
 {
     if (minutes > 60)
-        throw std::invalid_argument(
-            fmt::format("modulo minutes must be inferior or equal to 60 - was {}", minutes));
+        throw std::invalid_argument(fmt::format("modulo minutes must be inferior or equal to 60 - was {}", minutes));
 
     const int now_minutes = this->clocktime().minute;
     const uint32_t interval = (now_minutes / minutes) * minutes;
@@ -270,37 +269,37 @@ Timestamp::operator std::chrono::hours() const
     return time::to_duration<std::chrono::hours>(_nano);
 }
 
-time_t Timestamp::nanoseconds() const
+time::UnixTime Timestamp::nanoseconds() const
 {
     return _nano;
 }
 
-time_t Timestamp::microseconds() const
+time::UnixTime Timestamp::microseconds() const
 {
     return time::to_microseconds(_nano);
 }
 
-time_t Timestamp::milliseconds() const
+time::UnixTime Timestamp::milliseconds() const
 {
     return time::to_milliseconds(_nano);
 }
 
-time_t Timestamp::seconds() const
+time::UnixTime Timestamp::seconds() const
 {
     return time::to_seconds(_nano);
 }
 
-time_t Timestamp::minutes() const
+time::UnixTime Timestamp::minutes() const
 {
     return time::to_minutes(_nano);
 }
 
-time_t Timestamp::hours() const
+time::UnixTime Timestamp::hours() const
 {
     return time::to_hours(_nano);
 }
 
-time_t Timestamp::days() const
+time::UnixTime Timestamp::days() const
 {
     return time::to_days(_nano);
 }
@@ -324,15 +323,5 @@ struct tm Timestamp::local_tm() const
 {
     return time::to_tm(std::abs(_nano), true);
 }
-
-namespace time
-{
-
-void sleep_t(Timestamp ts)
-{
-    std::this_thread::sleep_for(std::chrono::nanoseconds(ts.nanoseconds()));
-}
-
-} // namespace time
 
 } // namespace sihd::util

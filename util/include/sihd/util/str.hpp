@@ -21,6 +21,7 @@ namespace sihd::util::str
 #if defined(__SIHD_WINDOWS__)
 std::string to_str(std::wstring_view view);
 std::wstring to_wstr(std::string_view view);
+std::u32string to_u32str(std::string_view view);
 #endif
 
 size_t table_len(char **table);

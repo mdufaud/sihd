@@ -35,9 +35,9 @@ class Task: public IRunnable
         void set_method(std::function<bool(void)> fun);
         void set_runnable(IRunnable *to_run);
 
-        time_t run_at;
-        time_t run_in;
-        time_t reschedule_time;
+        time::UnixTime run_at;
+        time::UnixTime run_in;
+        time::UnixTime reschedule_time;
 
     private:
         IRunnable *_runnable_ptr;

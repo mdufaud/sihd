@@ -55,6 +55,7 @@ TEST_F(TestFileMutex, test_filemutex_unique)
     ASSERT_NO_THROW(l.unlock());
     ASSERT_TRUE(l.try_lock());
 
+#if !defined(__SIHD_WINDOWS__)
     Process proc;
     proc.set_function([path = mutex.file().path()] {
         FileMutex mutex(path);
@@ -79,6 +80,15 @@ TEST_F(TestFileMutex, test_filemutex_unique)
     EXPECT_TRUE(proc.return_code() & (1 << 1));
     EXPECT_TRUE(proc.return_code() & (1 << 2));
     EXPECT_TRUE(proc.return_code() & (1 << 3));
+#else
+    // windows: LockFileEx locks are per-handle, a second FileMutex on the same path conflicts
+    FileMutex other(mutex.file().path());
+    std::unique_lock other_lock(other, std::defer_lock);
+
+    EXPECT_FALSE(other_lock.try_lock());
+    EXPECT_FALSE(other_lock.try_lock_for(std::chrono::milliseconds(5)));
+    EXPECT_FALSE(other_lock.try_lock_until(std::chrono::system_clock::now() + std::chrono::milliseconds(5)));
+#endif
 }
 
 TEST_F(TestFileMutex, test_filemutex_shared)
@@ -96,6 +106,7 @@ TEST_F(TestFileMutex, test_filemutex_shared)
     ASSERT_NO_THROW(l.unlock());
     ASSERT_TRUE(l.try_lock());
 
+#if !defined(__SIHD_WINDOWS__)
     Process proc;
     proc.set_function([path = mutex.file().path()] {
         FileMutex mutex(path);
@@ -125,6 +136,17 @@ TEST_F(TestFileMutex, test_filemutex_shared)
     EXPECT_TRUE(proc.return_code() & (1 << 1));
     EXPECT_TRUE(proc.return_code() & (1 << 2));
     EXPECT_TRUE(proc.return_code() & (1 << 3));
+#else
+    // windows: a second handle may share the lock while we hold it shared
+    FileMutex other(mutex.file().path());
+    std::shared_lock other_lock(other, std::defer_lock);
+
+    EXPECT_TRUE(other_lock.try_lock());
+    ASSERT_NO_THROW(other_lock.unlock());
+    EXPECT_TRUE(other_lock.try_lock_for(std::chrono::milliseconds(5)));
+    ASSERT_NO_THROW(other_lock.unlock());
+    EXPECT_TRUE(other_lock.try_lock_until(std::chrono::system_clock::now() + std::chrono::milliseconds(5)));
+#endif
 }
 
 } // namespace test

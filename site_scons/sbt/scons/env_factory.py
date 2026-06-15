@@ -33,6 +33,7 @@ def compute_modules_options(build_platform, libtype, build_mode, compiler, _buil
         f"mode-{build_mode}",
         compiler,
         _builder.libc,
+        _builder.build_machine,
     ]
     if _builder.is_cross_building():
         options.append("cross")

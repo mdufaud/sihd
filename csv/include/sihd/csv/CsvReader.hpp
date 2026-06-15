@@ -26,7 +26,7 @@ class CsvReader: public sihd::util::IReaderTimestamp
 
         bool read_next() override;
         bool get_read_data(sihd::util::ArrCharView & view) const override;
-        bool get_read_timestamp(time_t *nano_timestamp) const override;
+        bool get_read_timestamp(sihd::util::time::UnixTime *nano_timestamp) const override;
 
         const std::vector<std::string> & columns() const;
 

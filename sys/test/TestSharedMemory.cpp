@@ -1,20 +1,18 @@
 #include <gtest/gtest.h>
 
-#include <sihd/util/Logger.hpp>
+#include <sihd/sys/Process.hpp>
+#include <sihd/sys/SharedMemory.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/term.hpp>
 
-#include <sihd/sys/SharedMemory.hpp>
+#include "test_helper.hpp"
 
-#include <semaphore.h>
-#include <sys/mman.h>
-#define BUF_SIZE 2
 struct shmbuf
 {
-        sem_t sem1;         /* POSIX unnamed semaphore */
-        sem_t sem2;         /* POSIX unnamed semaphore */
-        int data[BUF_SIZE]; /* Data being transferred */
+        int data[2];
 };
 
 namespace test
@@ -22,6 +20,7 @@ namespace test
 SIHD_NEW_LOGGER("test");
 using namespace sihd::util;
 using namespace sihd::sys;
+
 class TestSharedMemory: public ::testing::Test
 {
     protected:
@@ -36,56 +35,29 @@ class TestSharedMemory: public ::testing::Test
 
 TEST_F(TestSharedMemory, test_sharedmemory)
 {
-    shm_unlink("/id");
-    int pid = fork();
-    ASSERT_NE(pid, -1);
-    if (pid != 0)
-    {
-        SIHD_LOG(debug, "--- begin of parent ---");
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    SharedMemory first;
+    ASSERT_TRUE(first.create("/id", sizeof(shmbuf)));
+    // testing move
+    SharedMemory mem(std::move(first));
+    ASSERT_NE(mem.data(), nullptr);
+    EXPECT_TRUE(mem.creator());
 
-        SIHD_LOG(debug, "--- parent attaching ---");
-        // no attach_read_only with semaphores - it segfaults
-        SharedMemory mem;
-        ASSERT_TRUE(mem.attach("/id", sizeof(shmbuf)));
-        ASSERT_NE(mem.data(), nullptr);
-        SIHD_LOG(debug, "--- parent attached ---");
+    struct shmbuf *shmp = (struct shmbuf *)mem.data();
+    shmp->data[0] = 42;
+    shmp->data[1] = 24;
 
-        SIHD_LOG(debug, "--- parent reading shared memory ---");
-        struct shmbuf *shmp = (struct shmbuf *)mem.data();
-        EXPECT_NE(sem_wait(&shmp->sem1), -1);
-        SIHD_LOG(debug, "[parent] data[0] -> {}", shmp->data[0]);
-        SIHD_LOG(debug, "[parent] data[1] -> {}", shmp->data[1]);
-        EXPECT_EQ(shmp->data[0], 42);
-        EXPECT_EQ(shmp->data[1], 24);
-        EXPECT_NE(sem_post(&shmp->sem2), -1);
+    // another process attaches, reads our writes and writes back its own
+    Process proc({helper_path(), "shm", "/id"});
+    proc.execute();
+    proc.wait_any();
 
-        SIHD_LOG(debug, "--- end of parent ---");
-    }
-    else if (pid == 0)
-    {
-        SIHD_LOG(debug, "--- begin of child ---");
-        SharedMemory first;
-        ASSERT_TRUE(first.create("/id", sizeof(shmbuf)));
-        // testing move
-        SharedMemory mem(std::move(first));
-        ASSERT_NE(mem.data(), nullptr);
+    EXPECT_TRUE(proc.return_code() & (1 << 1));
+    EXPECT_TRUE(proc.return_code() & (1 << 2));
 
-        SIHD_LOG(debug, "--- child created shared memory ---");
-        struct shmbuf *shmp = (struct shmbuf *)mem.data();
-        ASSERT_NE(sem_init(&shmp->sem1, 1, 0), -1);
-        ASSERT_NE(sem_init(&shmp->sem2, 1, 0), -1);
-        SIHD_LOG(debug, "--- child writing data ---");
-        shmp->data[0] = 42;
-        shmp->data[1] = 24;
-        EXPECT_NE(sem_post(&shmp->sem1), -1);
+    EXPECT_EQ(shmp->data[0], 7);
+    EXPECT_EQ(shmp->data[1], 8);
 
-        SIHD_LOG(debug, "--- child wrote data - waiting for parent to read it ---");
-        EXPECT_NE(sem_wait(&shmp->sem2), -1);
-
-        SIHD_LOG(debug, "--- end of child ---");
-        exit(0);
-    }
+    EXPECT_TRUE(mem.clear());
 }
 
 } // namespace test

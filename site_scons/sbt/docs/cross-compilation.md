@@ -8,7 +8,7 @@
 | Clang | `make compiler=clang` | clang | `x64-linux` |
 | Musl x86_64 | `make libc=musl` | x86_64-linux-musl-gcc | `x64-linux-musl` |
 | aarch64 | `make machine=aarch64` | aarch64-linux-gnu-gcc | `arm64-linux` |
-| arm32 | `make machine=arm32` | arm-linux-gnueabihf-gcc | `arm-linux` |
+| arm32 | `make machine=arm32` | arm-none-linux-gnueabihf-gcc (fallback arm-linux-gnueabihf-gcc) | `arm-linux` |
 | riscv64 | `make machine=riscv64` | riscv64-linux-gnu-gcc | `riscv64-linux` |
 | Windows | `make platform=windows` | x86_64-w64-mingw32-gcc | `x64-mingw-dynamic` |
 | Emscripten | `make compiler=em` | emcc/em++ | `wasm32-emscripten-threads` |
@@ -104,10 +104,16 @@ Prefix resolved from `architectures.py`:
 |---------|------|--------|
 | x86_64 | gnu | *(none — native)* |
 | arm64 | gnu | `aarch64-linux-gnu-` |
-| arm32 | gnu | `arm-linux-gnueabihf-` |
+| arm32 | gnu | `arm-none-linux-gnueabihf-`, else `arm-linux-gnueabihf-` |
 | riscv64 | gnu | `riscv64-linux-gnu-` |
 | x86_64 | musl | `x86_64-linux-musl-` |
 | arm64 | musl | `aarch64-linux-musl-` |
+
+`get_gcc_prefix` picks the first installed prefix from `gnu_alts` (see `architectures.py`).
+arm32 prefers ARM's `arm-none-linux-gnueabihf-` because the distro `arm-linux-gnueabihf`
+package is shared-only (no `libstdc++.a`/`libatomic.a`) and so cannot build `static=1`;
+ARM's toolchain ships the static archives. It falls back to `arm-linux-gnueabihf-` (dynamic
+only) when arm-none is absent.
 
 Install cross-compilers:
 ```bash
@@ -117,6 +123,11 @@ sudo apt install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
 sudo apt install gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
 # Musl
 sudo apt install musl-tools  # x86_64 only
+
+# arm32 static needs ARM's toolchain (ships static libstdc++/libatomic):
+#   Arch (AUR):    arm-none-linux-gnueabihf-toolchain-bin
+#   others:        https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads
+#                  (aarch64/x86_64 host -> arm-none-linux-gnueabihf), add its bin/ to PATH
 ```
 
 ### Clang
@@ -333,6 +344,87 @@ machine_aliases = {
 
 These allow `make machine=aarch64` to resolve to the `arm64` architecture entry.
 
+## Running tests on cross targets
+
+`make itest` / `make test` run the unit tests of cross-built binaries through an emulator,
+selected automatically — no new flag. The runner is computed in
+[builder.py:get_test_runner()](../builder.py) and threaded through `sbt.mk` into the generated
+`build/.../test/execute_tests.sh`.
+
+| Target | Runner | Notes |
+|--------|--------|-------|
+| native / same-ISA narrower (x86 on x86_64, arm32 on arm64) | *(none)* | runs directly |
+| `platform=windows` | `wine` | test binary has `.exe` suffix |
+| foreign-arch linux (`machine=arm64/riscv64/...`) | `qemu-<arch>` | `qemu-aarch64`, `qemu-riscv64`, ... |
+
+```bash
+# qemu-user — static-musl is the simplest cross config (self-contained, no sysroot)
+make dep  m=util machine=arm64 libc=musl static=1
+make itest m=util machine=arm64 libc=musl static=1     # runs under qemu-aarch64
+make itest util ls machine=arm64 libc=musl static=1    # list tests (also via runner)
+
+# wine
+make dep  m=util platform=windows
+make itest m=util platform=windows                     # runs under wine
+```
+
+Rules when a runner is active:
+- **`DEBUGGER` (gdb/valgrind/strace) and all sanitizers (asan/ubsan/tsan/...) are forced off**
+  with a warning — none work under qemu-user/wine.
+- **wine** always gets `WINEPREFIX=build/.../test/.wine` so the wine filesystem lives in the
+  build tree and dies with `make clean` instead of polluting `~/.wine`.
+- **static** builds need no lib-search env. **dynamic** builds inject lib search paths: wine →
+  `WINEPATH=build/lib;extlib/lib;extlib/bin`; qemu-glibc → `QEMU_LD_PREFIX=/usr/<gnu-triplet>` +
+  `QEMU_SET_ENV=LD_LIBRARY_PATH=...`. Runner env is written as `export` lines into `.env`
+  (sourced, not splatted) so `;`/spaces are safe.
+
+Host-compat is keyed on a native-runnable target set (`builder.host_can_run`), NOT on
+`is_cross_building()` — a same-ISA musl-on-glibc build is "cross" but still runs natively.
+AUTO selects only the *runner*; it never forces libc or link mode.
+
+Install emulators: `make dep` advertises them
+([architectures.py:runner_packages](../architectures.py)) — `qemu-user-static` (qemu) and
+`wine`. Android/emscripten have no runner path (out of scope).
+
+### qemu-user: binfmt_misc required for tests that spawn child processes
+
+`qemu-<arch> ./test_bin` runs a foreign ELF directly — no setup. But a test that **spawns a
+child process** (`Process` / `proc::execute` → `posix_spawn` → the child `execve`s another guest
+ELF, e.g. the `sihd_sys_test_helper` used by `TestProcess.test_process_exec_timeout` and
+`TestSharedMemory`) needs `binfmt_misc` registered for that arch. Otherwise the host kernel can't
+launch a guest-arch child from inside the qemu process and the `execve` returns
+`errno 8 (ENOEXEC)`; the spawn child exits 127 and the test fails. This is an **environment**
+requirement, not a code issue — the test binary itself runs fine.
+
+Debian's `qemu-user-static` registers binfmt on install. **Arch's does not** — you register it
+once, persistently, via `systemd-binfmt` (`/etc/binfmt.d/`):
+
+```bash
+# /etc/binfmt.d/qemu-aarch64.conf  (one line; magic/mask are \x-escaped ASCII — do NOT write raw
+# bytes, the kernel truncates at the first NUL and the entry then matches every ELF -> ELOOP)
+sudo tee /etc/binfmt.d/qemu-aarch64.conf >/dev/null <<'EOF'
+:qemu-aarch64:M::\x7f\x45\x4c\x46\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-aarch64-static:F
+EOF
+sudo systemctl restart systemd-binfmt.service
+cat /proc/sys/fs/binfmt_misc/qemu-aarch64        # -> "enabled", "flags: F"
+```
+
+The `F` (fix-binary) flag is **mandatory** here: it opens the interpreter at registration and
+keeps the fd, so the child `execve`d inside the qemu process still resolves it. For arm32 swap the
+interpreter to `qemu-arm-static`, class byte `\x02\x01` → `\x01\x01`, and e_machine `\x02\x00\xb7`
+→ `\x02\x00\x28`. The AUR `qemu-user-static-binfmt` package drops these confs for all arches.
+
+To verify without touching the host (no root, ephemeral), register inside a user+mount namespace:
+`unshare -r -m`, mount `binfmt_misc`, write the same line to `/proc/sys/fs/binfmt_misc/register`,
+then run the test — the registration dies with the namespace.
+
+### Adapting tests for cross targets
+
+See the [sihd-test skill](../../../.github/skills/sihd-test/references/patterns.md) (§11) for
+the two compile-time guard mechanisms: `#if !defined(__SIHD_WINDOWS__)` (POSIX-only symbols) and
+`#if !defined(SIHD_STATIC)` (dynamic-loading-only tests — mingw forces static, so `DynLib`/
+`PluginLoader` are no-ops). Tests must run and pass under the cross runner, not skip on it.
+
 ## Build paths
 
 Each cross-target gets its own build directory:
@@ -364,8 +456,10 @@ make platform=windows
 make compiler=em m=util,core
 make platform=android m=imgui static=1 demo=1
 
-# Test (native only — can't run cross binaries)
-make test
+# Test — native runs directly, cross targets run under wine/qemu automatically
+make itest m=util                                      # native
+make itest m=util machine=arm64 libc=musl static=1     # qemu-aarch64
+make itest m=util platform=windows                     # wine
 
 # Serve WASM demo
 make serve_demo

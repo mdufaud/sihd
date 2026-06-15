@@ -1,17 +1,17 @@
-#include <sihd/util/str.hpp>
-#include <string>
 #include <sys/stat.h>
 
 #include <cerrno>
 #include <climits>
 #include <cstring>
+#include <string>
 
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/sys/platform.hpp>
+#include <sihd/util/str.hpp>
 
 #if defined(__SIHD_WINDOWS__) or defined(__SIHD_ANDROID__)
 # define fwrite_unlocked fwrite
@@ -36,6 +36,53 @@ namespace sihd::sys
 {
 
 SIHD_NEW_LOGGER("sihd::sys");
+
+#if defined(__SIHD_WINDOWS__)
+
+namespace
+{
+
+// mingw-w64 does not ship getline/getdelim, so provide a portable equivalent
+ssize_t win_getdelim(char **line, size_t *size, int delim, FILE *stream)
+{
+    if (line == nullptr || size == nullptr || stream == nullptr)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    if (*line == nullptr || *size == 0)
+    {
+        *size = 128;
+        *line = (char *)realloc(*line, *size);
+        if (*line == nullptr)
+            return -1;
+    }
+    size_t pos = 0;
+    int c;
+    while ((c = fgetc(stream)) != EOF)
+    {
+        if (pos + 1 >= *size)
+        {
+            const size_t new_size = *size * 2;
+            char *new_line = (char *)realloc(*line, new_size);
+            if (new_line == nullptr)
+                return -1;
+            *line = new_line;
+            *size = new_size;
+        }
+        (*line)[pos++] = (char)c;
+        if (c == delim)
+            break;
+    }
+    if (pos == 0 && c == EOF)
+        return -1;
+    (*line)[pos] = '\0';
+    return (ssize_t)pos;
+}
+
+} // namespace
+
+#endif
 
 File::File()
 {
@@ -210,9 +257,6 @@ bool File::open_tmp(std::string_view prefix, bool write_binary, std::string_view
     strcpy(path + prefix.size() + 6, suffix.data());
 #if !defined(__SIHD_WINDOWS__)
     int fd = mkstemps(path, suffix.size());
-#else
-    int fd = _mktemp_s(path, suffix.size());
-#endif
     if (fd < 0)
     {
         SIHD_LOG(error, "File: could not open temporary file: {}", os::last_error_str());
@@ -220,6 +264,22 @@ bool File::open_tmp(std::string_view prefix, bool write_binary, std::string_view
     }
     if (this->open_fd(fd, write_binary ? "wb" : "w"))
         _path = path;
+#else
+    // _mktemp_s only fills a trailing XXXXXX (no suffix support) and returns errno_t, not a fd;
+    // null-terminate after XXXXXX, generate the name, restore the suffix, then open by path.
+    const size_t name_len = prefix.size() + 6;
+    const char saved = path[name_len];
+    path[name_len] = '\0';
+    const errno_t err = _mktemp_s(path, name_len + 1);
+    path[name_len] = saved;
+    if (err != 0)
+    {
+        SIHD_LOG(error, "File: could not open temporary file: {}", os::last_error_str());
+        return false;
+    }
+    if (this->open(path, write_binary ? "wb" : "w"))
+        _path = path;
+#endif
     return this->is_open();
 }
 
@@ -527,26 +587,15 @@ bool File::write_char_unlocked(int c)
 
 ssize_t File::read_line(char **line, size_t *size)
 {
-#if !defined(__SIHD_WINDOWS__)
-    return getline(line, size, _file_ptr);
-#else
-# pragma message("File::read_line is not supported on windows")
-    *line = nullptr;
-    *size = 0;
-    return -1;
-#endif
+    return this->read_line_delim(line, size, '\n');
 }
 
 ssize_t File::read_line_delim(char **line, size_t *size, int delim)
 {
-#if !defined(__SIHD_WINDOWS__)
-    return getdelim(line, size, delim, _file_ptr);
+#if defined(__SIHD_WINDOWS__)
+    return win_getdelim(line, size, delim, _file_ptr);
 #else
-# pragma message("File::read_line_delim is not supported on windows")
-    *line = nullptr;
-    *size = 0;
-    (void)delim;
-    return -1;
+    return getdelim(line, size, delim, _file_ptr);
 #endif
 }
 

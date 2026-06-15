@@ -53,7 +53,7 @@ bool DevPlayer::set_provider(std::string_view path)
     return true;
 }
 
-bool DevPlayer::set_provider_wait_time(time_t milliseconds)
+bool DevPlayer::set_provider_wait_time(sihd::util::time::UnixTime milliseconds)
 {
     if (milliseconds <= 0)
     {

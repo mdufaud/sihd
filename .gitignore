@@ -65,4 +65,8 @@ tmp/*
 
 gcm.cache
 
+# docker
 .dockerignore
+
+# core dumps
+*.core

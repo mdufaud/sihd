@@ -24,12 +24,15 @@ using years = std::chrono::duration<int64_t, std::ratio<31556952>>;
 namespace time
 {
 
+// nanosecond count (absolute epoch time or relative duration)
+using UnixTime = int64_t;
+
 time_t get_timezone();
 std::string get_timezone_name();
 
-void nsleep(time_t nano);
-void usleep(time_t micro);
-void msleep(time_t milli);
+void nsleep(UnixTime nano);
+void usleep(UnixTime micro);
+void msleep(UnixTime milli);
 void sleep(time_t sec);
 
 // tv (micro resolution) -> seconds,milliseconds
@@ -42,49 +45,49 @@ struct timeval double_to_tv(double time);
 // seconds,milliseconds -> timeval
 struct timeval double_to_nano_tv(double time);
 // milliseconds -> timeval (micro resolution)
-struct timeval milli_to_tv(time_t milliseconds);
+struct timeval milli_to_tv(UnixTime milliseconds);
 static constexpr auto ms_to_tv = milli_to_tv;
 static constexpr auto milliseconds_to_tv = milli_to_tv;
 // nano -> timeval (micro resolution)
-struct timeval to_tv(time_t micro);
+struct timeval to_tv(UnixTime micro);
 // nano -> timeval (nano resolution)
-struct timeval to_nano_tv(time_t nano);
+struct timeval to_nano_tv(UnixTime nano);
 
 /*
  * nano -> statically allocated nano, other call to localtime/gmtime erase previous result
  * may be nullptr if year cannot be contained
  */
-struct tm to_tm(time_t nano, bool localtime = false);
+struct tm to_tm(UnixTime nano, bool localtime = false);
 
 // nano -> micro
-time_t to_micro(time_t nano);
+UnixTime to_micro(UnixTime nano);
 static constexpr auto to_us = to_micro;
 static constexpr auto to_microseconds = to_micro;
 // nano -> milli
-time_t to_milli(time_t nano);
+UnixTime to_milli(UnixTime nano);
 static constexpr auto to_ms = to_milli;
 static constexpr auto to_milliseconds = to_milli;
 // nano -> sec
-time_t to_sec(time_t nano);
+UnixTime to_sec(UnixTime nano);
 static constexpr auto to_seconds = to_sec;
 // nano -> min
-time_t to_min(time_t nano);
+UnixTime to_min(UnixTime nano);
 static constexpr auto to_minutes = to_min;
 // nano -> hour
-time_t to_hours(time_t nano);
+UnixTime to_hours(UnixTime nano);
 // nano -> day
-time_t to_days(time_t nano);
+UnixTime to_days(UnixTime nano);
 // nano -> seconds,milliseconds
-double to_double(time_t nano);
-double to_double_milliseconds(time_t nano);
+double to_double(UnixTime nano);
+double to_double_milliseconds(UnixTime nano);
 // nano -> hz
-double to_freq(time_t nano);
+double to_freq(UnixTime nano);
 static constexpr auto to_hz = to_freq;
 static constexpr auto to_frequency = to_freq;
 
 // chrono -> nano
 template <traits::Duration Duration>
-constexpr Duration to_duration(time_t nano)
+constexpr Duration to_duration(UnixTime nano)
 {
     // seconds -> nano / 1E9        = nano / (1E9 / 1) / 1
     // milliseconds -> nano / 1E6   = nano / (1E9 / 1E3) / 1
@@ -95,43 +98,43 @@ constexpr Duration to_duration(time_t nano)
 }
 
 // micro -> nano
-constexpr time_t micro(time_t micro)
+constexpr UnixTime micro(UnixTime micro)
 {
     return micro * 1E3;
 }
 static constexpr auto us = micro;
 static constexpr auto microseconds = micro;
 // milli -> nano
-constexpr time_t milli(time_t milli)
+constexpr UnixTime milli(UnixTime milli)
 {
     return milli * 1E6;
 }
 static constexpr auto ms = milli;
 static constexpr auto milliseconds = milli;
 // sec -> nano
-constexpr time_t sec(time_t sec)
+constexpr UnixTime sec(UnixTime sec)
 {
     return sec * 1E9;
 }
 static constexpr auto seconds = sec;
 // min -> nano
-constexpr time_t min(time_t min)
+constexpr UnixTime min(UnixTime min)
 {
     return sec(min) * 60;
 }
 static constexpr auto minutes = min;
 // hour -> nano
-constexpr time_t hours(time_t hour)
+constexpr UnixTime hours(UnixTime hour)
 {
     return min(hour) * 60;
 }
 // day -> nano
-constexpr time_t days(time_t day)
+constexpr UnixTime days(UnixTime day)
 {
     return hours(day) * 24;
 }
 // hz -> nano
-constexpr time_t freq(double hz)
+constexpr UnixTime freq(double hz)
 {
     if (hz < 0.0)
         return 0;
@@ -140,12 +143,12 @@ constexpr time_t freq(double hz)
 static constexpr auto frequency = freq;
 static constexpr auto hz = freq;
 // seconds,milliseconds -> nano
-time_t from_double(double sec_milli);
-time_t from_double_milliseconds(double milli_micro);
+UnixTime from_double(double sec_milli);
+UnixTime from_double_milliseconds(double milli_micro);
 
 // duration -> nano
 template <traits::Duration Duration>
-constexpr time_t duration(Duration duration)
+constexpr UnixTime duration(Duration duration)
 {
     // seconds -> count() * 1E9     == count() * (1E9 / 1) * 1
     // nano -> count() * 1          == count() * (1E9 / 1E9) * 1
@@ -157,22 +160,22 @@ constexpr time_t duration(Duration duration)
 
 // timepoint -> nano
 template <traits::Duration Duration>
-constexpr time_t floor(time_t val)
+constexpr UnixTime floor(UnixTime val)
 {
     return val - (val % time::duration<Duration>(Duration {1}));
 }
 
 // tm struct -> nano
-time_t tm(struct tm & tm);
+UnixTime tm(struct tm & tm);
 // tm struct -> nano
-time_t local_tm(struct tm & tm);
+UnixTime local_tm(struct tm & tm);
 // timeval with micro resolution -> nano
-time_t tv(const struct timeval & tv);
+UnixTime tv(const struct timeval & tv);
 // timeval with nano resolution -> nano
-time_t nano_tv(const struct timeval & tv);
+UnixTime nano_tv(const struct timeval & tv);
 
-time_t ts(const struct timespec & ts);
-struct timespec to_ts(time_t nano);
+UnixTime ts(const struct timespec & ts);
+struct timespec to_ts(UnixTime nano);
 
 bool is_leap_year(int year);
 

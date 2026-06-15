@@ -7,6 +7,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/TmpDir.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/num.hpp>
 
 namespace test
@@ -139,6 +140,8 @@ TEST_F(TestFS, test_fs_jail)
     EXPECT_EQ(fs::jail("/srv/ftp", "../ftp_evil"), "/srv/ftp");
     EXPECT_EQ(fs::jail("/srv/ftp", "/../etc/passwd"), "/srv/ftp");
 
+#if !defined(__SIHD_WINDOWS__)
+    // symlink creation + realpath resolution are POSIX-specific (windows symlinks need privilege)
     // A symlink inside the jail that points outside must be clamped to root
     TmpDir root_dir;
     ASSERT_TRUE(static_cast<bool>(root_dir));
@@ -150,6 +153,7 @@ TEST_F(TestFS, test_fs_jail)
     const std::string inside = fs::combine(root, "inside.txt");
     ASSERT_TRUE(fs::write(inside, "data"));
     EXPECT_EQ(fs::jail(root, "inside.txt"), fs::realpath(inside));
+#endif
 }
 
 TEST_F(TestFS, test_fs_creation)
@@ -177,6 +181,10 @@ TEST_F(TestFS, test_fs_creation)
     EXPECT_TRUE(file1.is_open());
     EXPECT_TRUE(file2.is_open());
     EXPECT_TRUE(file3.is_open());
+    // windows cannot delete a still-open file -> close before remove_directories
+    file1.close();
+    file2.close();
+    file3.close();
 
     std::vector<std::string> rec_children = fs::recursive_children(sandbox_path);
     for (const auto & child : rec_children)
@@ -213,7 +221,7 @@ TEST_F(TestFS, test_fs_fast_io)
     std::string path = fs::combine({tmp_path.string(), "io", "test.txt"});
 
     std::string file_content = "hello world\n";
-    EXPECT_TRUE(str::ends_with(path, "/io/test.txt"));
+    EXPECT_TRUE(str::ends_with(path, fs::combine("io", "test.txt")));
     EXPECT_TRUE(this->log_make_dirs(fs::parent(path)));
     SIHD_LOG(info, "Writing file to: {}", path);
     EXPECT_TRUE(fs::write(path, file_content));
@@ -239,6 +247,8 @@ TEST_F(TestFS, test_fs_permission)
     ofs.close();
     EXPECT_TRUE(fs::is_readable(path));
     EXPECT_TRUE(fs::is_writable(path));
+
+#if !defined(__SIHD_WINDOWS__)
     EXPECT_FALSE(fs::is_executable(path));
 
     EXPECT_TRUE(fs::permission_set(path, 0700));
@@ -255,6 +265,13 @@ TEST_F(TestFS, test_fs_permission)
 
     EXPECT_TRUE(fs::permission_set(path, fs::permission_from_str("rwxr-x-w-")));
     EXPECT_EQ(fs::permission_get(path), 0752U);
+#else
+    // windows only models the read-only attribute (no rwx/owner-group-other bits)
+    EXPECT_TRUE(fs::permission_set(path, fs::permission_from_str("r--r--r--")));
+    EXPECT_FALSE(fs::is_writable(path));
+    EXPECT_TRUE(fs::permission_set(path, fs::permission_from_str("rw-rw-rw-")));
+    EXPECT_TRUE(fs::is_writable(path));
+#endif
 }
 
 } // namespace test

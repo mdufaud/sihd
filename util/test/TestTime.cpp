@@ -265,7 +265,7 @@ TEST_F(TestTime, test_time_double)
 
 TEST_F(TestTime, test_time_timeval)
 {
-    time_t t = time::sec(55) + time::micro(300);
+    time::UnixTime t = time::sec(55) + time::micro(300);
     struct timeval tv = time::to_tv(time::to_micro(t));
     EXPECT_EQ(tv.tv_sec, 55);
     EXPECT_EQ(tv.tv_usec, 300);

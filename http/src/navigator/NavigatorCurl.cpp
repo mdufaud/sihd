@@ -57,7 +57,7 @@ long parse_retry_after(std::string_view value)
         return *n;
     if (auto ts = sihd::util::Timestamp::from_str(std::string(value), "%a, %d %b %Y %H:%M:%S GMT"))
     {
-        long delta = static_cast<long>((static_cast<time_t>(*ts) - static_cast<time_t>(sihd::util::Timestamp::now()))
+        long delta = static_cast<long>((static_cast<int64_t>(*ts) - static_cast<int64_t>(sihd::util::Timestamp::now()))
                                        / 1'000'000'000LL);
         return delta > 0 ? delta : 0;
     }

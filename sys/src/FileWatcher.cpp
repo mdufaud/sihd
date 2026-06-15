@@ -10,27 +10,25 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 
+// FILEWATCHER_BACKEND: a real file-watching backend is available (ReadDirectoryChangesW or inotify).
+// emscripten has neither -> FileWatcher is a no-op stub there.
 #if defined(__SIHD_WINDOWS__)
+# define FILEWATCHER_BACKEND
 # include <windows.h>
 
 # define EVENT_SIZE (sizeof(FILE_NOTIFY_INFORMATION))
 # define EVENT_BUFFER_LEN (20 * (EVENT_SIZE + MAX_PATH))
 
-#else
+#elif !defined(__SIHD_EMSCRIPTEN__)
+# define FILEWATCHER_BACKEND
+# define INOTIFY_ENABLED
 
-# if !defined(__SIHD_EMSCRIPTEN__)
-#  define INOTIFY_ENABLED
-# endif
+# define EVENT_SIZE (sizeof(struct inotify_event))
+# define EVENT_BUFFER_LEN (5 * (EVENT_SIZE + NAME_MAX))
 
-# if defined(INOTIFY_ENABLED)
-#  define EVENT_SIZE (sizeof(struct inotify_event))
-#  define EVENT_BUFFER_LEN (5 * (EVENT_SIZE + NAME_MAX))
-
-// no inotify with emscripten
-#  include <sys/inotify.h>
-#  include <sys/ioctl.h>
-#  include <unistd.h>
-# endif
+# include <sys/inotify.h>
+# include <sys/ioctl.h>
+# include <unistd.h>
 
 #endif
 
@@ -119,7 +117,7 @@ struct FileWatcher::Impl: public sihd::util::IHandler<sihd::sys::Poll *>
 
         Impl(std::vector<FileWatcherEvent> & events): _events(events)
         {
-#if defined(INOTIFY_ENABLED)
+#if defined(FILEWATCHER_BACKEND)
             _buffer.resize(EVENT_BUFFER_LEN);
 #endif
         }

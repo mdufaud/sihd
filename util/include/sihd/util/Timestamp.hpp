@@ -7,33 +7,33 @@
 
 #include <sihd/util/time.hpp>
 
-#define __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(OP)                                                 \
-    template <traits::Duration Duration>                                                                     \
-    constexpr bool operator OP(Duration duration) const                                                      \
-    {                                                                                                        \
-        return _nano OP time::duration<Duration>(duration);                                                  \
+#define __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(OP)                                                           \
+    template <traits::Duration Duration>                                                                               \
+    constexpr bool operator OP(Duration duration) const                                                                \
+    {                                                                                                                  \
+        return _nano OP time::duration<Duration>(duration);                                                            \
     }
 
-#define __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(OP)                                                  \
-    template <traits::Duration Duration>                                                                     \
-    constexpr Timestamp operator OP(Duration duration)                                                       \
-    {                                                                                                        \
-        return Timestamp(_nano OP time::duration<Duration>(duration));                                       \
+#define __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(OP)                                                            \
+    template <traits::Duration Duration>                                                                               \
+    constexpr Timestamp operator OP(Duration duration)                                                                 \
+    {                                                                                                                  \
+        return Timestamp(_nano OP time::duration<Duration>(duration));                                                 \
     }
 
-#define __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(OP)                                                      \
-    template <traits::Duration Duration>                                                                     \
-    constexpr Timestamp & operator OP(Duration duration)                                                     \
-    {                                                                                                        \
-        _nano OP time::duration<Duration>(duration);                                                         \
-        return *this;                                                                                        \
+#define __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(OP)                                                                \
+    template <traits::Duration Duration>                                                                               \
+    constexpr Timestamp & operator OP(Duration duration)                                                               \
+    {                                                                                                                  \
+        _nano OP time::duration<Duration>(duration);                                                                   \
+        return *this;                                                                                                  \
     }
 
-#define __TMP_TIMESTAMP_ASSIGN_OPERATION__(OP)                                                               \
-    constexpr Timestamp & operator OP(time_t t)                                                              \
-    {                                                                                                        \
-        _nano OP t;                                                                                          \
-        return *this;                                                                                        \
+#define __TMP_TIMESTAMP_ASSIGN_OPERATION__(OP)                                                                         \
+    constexpr Timestamp & operator OP(time::UnixTime t)                                                                \
+    {                                                                                                                  \
+        _nano OP t;                                                                                                    \
+        return *this;                                                                                                  \
     }
 
 namespace sihd::util
@@ -72,7 +72,7 @@ class Timestamp
         static constexpr const char *default_day_format = "%Y-%m-%d";
         static constexpr const char *default_zone_format = "%FT%T%z";
 
-        constexpr Timestamp(time_t nano = 0): _nano(nano) {};
+        constexpr Timestamp(time::UnixTime nano = 0): _nano(nano) {};
         constexpr Timestamp(timespec ts): _nano(ts.tv_nsec + time::sec(ts.tv_sec)) {};
         constexpr Timestamp(Clocktime clocktime): _nano(0)
         {
@@ -83,8 +83,7 @@ class Timestamp
         };
 
         template <typename T>
-        constexpr Timestamp(std::chrono::time_point<T> timepoint):
-            _nano(timepoint.time_since_epoch().count()) {};
+        constexpr Timestamp(std::chrono::time_point<T> timepoint): _nano(timepoint.time_since_epoch().count()) {};
 
         template <traits::Duration Duration>
         constexpr Timestamp(Duration duration): _nano(time::duration(duration)) {};
@@ -127,7 +126,7 @@ class Timestamp
             from_str(const std::string & date_str, std::string_view format, const std::locale & loc);
 
         // auto convert
-        constexpr operator time_t() const { return _nano; }
+        constexpr operator time::UnixTime() const { return _nano; }
         operator std::chrono::nanoseconds() const;
         operator std::chrono::microseconds() const;
         operator std::chrono::milliseconds() const;
@@ -144,13 +143,13 @@ class Timestamp
             return time::to_duration<Duration>(_nano);
         }
 
-        time_t nanoseconds() const;
-        time_t microseconds() const;
-        time_t milliseconds() const;
-        time_t seconds() const;
-        time_t minutes() const;
-        time_t hours() const;
-        time_t days() const;
+        time::UnixTime nanoseconds() const;
+        time::UnixTime microseconds() const;
+        time::UnixTime milliseconds() const;
+        time::UnixTime seconds() const;
+        time::UnixTime minutes() const;
+        time::UnixTime hours() const;
+        time::UnixTime days() const;
 
         struct timespec ts() const;
         struct timeval tv() const;
@@ -194,7 +193,7 @@ class Timestamp
         Timestamp floor_day() const;
         Timestamp modulo_min(uint32_t minutes) const;
 
-        constexpr time_t get() const { return _nano; }
+        constexpr time::UnixTime get() const { return _nano; }
 
         Clocktime clocktime() const;
         Calendar calendar() const;
@@ -204,15 +203,8 @@ class Timestamp
     protected:
 
     private:
-        time_t _nano;
+        time::UnixTime _nano;
 };
-
-namespace time
-{
-
-void sleep_t(Timestamp ts);
-
-} // namespace time
 
 } // namespace sihd::util
 

@@ -130,7 +130,7 @@ SshSubsystemSftp::SftpAttributes SshSubsystemSftp::SftpAttributes::from_stat(con
     mode_str[10] = '\0';
 
     char time_str[64];
-    struct tm tm_info = sihd::util::time::to_tm(st.st_mtime * static_cast<time_t>(1e9), true);
+    struct tm tm_info = sihd::util::time::to_tm(st.st_mtime * static_cast<int64_t>(1e9), true);
     strftime(time_str, sizeof(time_str), "%b %d %H:%M", &tm_info);
 
     attrs.longname = fmt::format("{} {:3d} {:5d} {:5d} {:8d} {} {}",

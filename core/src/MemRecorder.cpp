@@ -33,7 +33,8 @@ void MemRecorder::add_record(const std::string & name, sihd::util::Timestamp tim
 {
     sihd::util::IArrayShared arr(array->clone_array());
     std::lock_guard l(_mutex);
-    _map_sorted_records.insert(std::pair<time_t, PlayableRecord>(timestamp.nanoseconds(), {name, timestamp, arr}));
+    _map_sorted_records.insert(
+        std::pair<sihd::util::time::UnixTime, PlayableRecord>(timestamp.nanoseconds(), {name, timestamp, arr}));
 }
 
 void MemRecorder::add_record(const PlayableRecord & record)

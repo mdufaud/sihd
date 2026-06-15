@@ -1,13 +1,12 @@
-#include <sihd/py/sys/PySysApi.hpp>
+#include <pybind11/stl.h>
 
+#include <sihd/py/sys/PySysApi.hpp>
 #include <sihd/sys/ProcessInfo.hpp>
 #include <sihd/sys/Uuid.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
-
-#include <pybind11/stl.h>
 
 namespace sihd::py
 {
@@ -61,7 +60,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
         .def("max_fds", &os::max_fds)
         .def(
             "boot_time",
-            +[]() -> time_t { return os::boot_time(); })
+            +[]() -> int64_t { return os::boot_time(); })
         .def("exists_in_path", &os::exists_in_path)
         .def("last_error_str", &os::last_error_str)
         .def("is_run_by_valgrind", &os::is_run_by_valgrind)
@@ -85,8 +84,8 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
 
     pybind11::class_<Uuid>(m_sys, "Uuid")
         .def(pybind11::init<>())
-        .def(pybind11::init<std::string_view>())
-        .def(pybind11::init<const Uuid &, std::string_view>())
+        .def(pybind11::init<const std::string &>())
+        .def(pybind11::init<const Uuid &, const std::string &>())
         .def("is_null", &Uuid::is_null)
         .def("clear", &Uuid::clear)
         .def("__str__", &Uuid::str)
@@ -110,7 +109,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
         .def("env", &ProcessInfo::env)
         .def(
             "creation_time",
-            +[](const ProcessInfo & self) -> time_t { return self.creation_time(); })
+            +[](const ProcessInfo & self) -> int64_t { return self.creation_time(); })
         .def_static("get_all_process_from_name", &ProcessInfo::get_all_process_from_name);
 }
 

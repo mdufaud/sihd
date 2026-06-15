@@ -33,7 +33,7 @@ void BasicServerHandler::_add_time_to_clients()
     if (_last_time <= 0)
         return;
     std::lock_guard lock(_mutex);
-    time_t t = _clock.now() - _last_time;
+    sihd::util::time::UnixTime t = _clock.now() - _last_time;
     for (auto & [fd, client] : _client_map)
     {
         client->time_total += t;

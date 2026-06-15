@@ -108,7 +108,7 @@ class Channel: public sihd::util::Named,
 
     private:
         sihd::util::IClock *_clock_ptr;
-        time_t _timestamp;
+        sihd::util::Timestamp _timestamp;
 
         sihd::util::IArray *_array_ptr;
         mutable std::mutex _arr_mutex;

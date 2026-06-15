@@ -94,6 +94,21 @@ Both are **skipped in cross-compilation** to avoid host header pollution. In cro
 },
 ```
 
+### Link mode restriction
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `linkage_only_dynamic` | `bool` | Module dropped from static builds (`static=1`). |
+| `linkage_only_static` | `bool` | Module dropped from dynamic builds. |
+
+```python
+"imgui": {
+    # GUI pulls system-only dynamic libs (libGL/libGLEW) with no static
+    # archive + dlopen GL loader: cannot link fully static
+    "linkage_only_dynamic": True,
+},
+```
+
 ### Module-level env defaults
 
 | Key | Type | Description |

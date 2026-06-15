@@ -1,6 +1,9 @@
+#include <cstdlib>
+
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/sys/os.hpp>
 
 namespace test
@@ -23,7 +26,11 @@ class TestOs: public ::testing::Test
 TEST_F(TestOs, test_os_backtrace)
 {
     ssize_t size = sihd::sys::os::backtrace(1);
-    EXPECT_GE(size, 1);
+    if constexpr (build::is_gnu || build::is_windows)
+        EXPECT_GE(size, 1);
+    else
+        // musl/android/emscripten ship no backtrace() - os::backtrace is a no-op stub
+        EXPECT_EQ(size, 0);
 }
 
 TEST_F(TestOs, test_os_resources)

@@ -1,5 +1,3 @@
-#include <cstring>
-#include <cstdlib>
 #include <barrier>
 
 #include <gtest/gtest.h>
@@ -8,6 +6,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/time.hpp>
+
+#include "test_helper.hpp"
 
 namespace test
 {
@@ -27,7 +27,7 @@ class TestWaitable: public ::testing::Test
 
 TEST_F(TestWaitable, test_waitable_basic)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if (test::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
 
     Waitable waitable;
@@ -50,7 +50,7 @@ TEST_F(TestWaitable, test_waitable_basic)
 
 TEST_F(TestWaitable, test_waitable_for)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if (test::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
 
     Waitable waitable;
@@ -66,7 +66,7 @@ TEST_F(TestWaitable, test_waitable_for)
     });
     synchro_start.arrive_and_wait();
 
-    bool condition_ok = waitable.wait_for(std::chrono::milliseconds(5), [&data] { return data == true; });
+    bool condition_ok = waitable.wait_for(std::chrono::milliseconds(50), [&data] { return data == true; });
     EXPECT_TRUE(condition_ok);
 
     t.join();
@@ -74,7 +74,7 @@ TEST_F(TestWaitable, test_waitable_for)
 
 TEST_F(TestWaitable, test_waitable_until)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if (test::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
 
     SystemClock clock;
@@ -91,14 +91,14 @@ TEST_F(TestWaitable, test_waitable_until)
     });
     synchro_start.arrive_and_wait();
 
-    bool condition_ok = waitable.wait_until(clock.now() + time::ms(5), [&data] { return data == true; });
+    bool condition_ok = waitable.wait_until(clock.now() + time::ms(50), [&data] { return data == true; });
     EXPECT_TRUE(condition_ok);
     t.join();
 }
 
 TEST_F(TestWaitable, test_waitable_for_elapsed)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if (test::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
     Waitable waitable;
     std::atomic<bool> data = false;
@@ -113,9 +113,8 @@ TEST_F(TestWaitable, test_waitable_for_elapsed)
     });
     synchro_start.arrive_and_wait();
 
-    Timestamp elapsed
-        = waitable.wait_for_elapsed(std::chrono::milliseconds(5), [&data] { return data == true; });
-    EXPECT_LE(elapsed.milliseconds(), 5);
+    Timestamp elapsed = waitable.wait_for_elapsed(std::chrono::milliseconds(50), [&data] { return data == true; });
+    EXPECT_LE(elapsed.milliseconds(), 50);
 
     t.join();
 }

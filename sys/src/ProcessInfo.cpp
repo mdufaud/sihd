@@ -270,9 +270,7 @@ void ProcessInfo::Impl::load_time()
         ULARGE_INTEGER li;
         li.LowPart = creation_time.dwLowDateTime;
         li.HighPart = creation_time.dwHighDateTime;
-        // Convert from 100-nanosecond intervals since January 1, 1601 (UTC) to nanoseconds epoch time
-        ULONGLONG epoch_time = (li.QuadPart - 116444736000000000ULL) * 100;
-        this->creation_time = Timestamp(epoch_time);
+        this->creation_time = os::filetime_to_timestamp(li.QuadPart);
     }
 #else
     Timestamp boot_time = os::boot_time();

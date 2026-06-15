@@ -35,7 +35,7 @@ bool SigWaiter::_do_wait(int sig, Timestamp timeout)
 #if defined(__SIHD_WINDOWS__) || defined(__SIHD_ANDROID__)
     // Polling-based implementation for Windows and Android
     SteadyClock clock;
-    const time_t begin = has_timeout ? clock.now() : 0;
+    const time::UnixTime begin = has_timeout ? clock.now() : 0;
 
     SigHandler sighandler(sig);
     if (!sighandler.is_handling())
@@ -85,7 +85,7 @@ bool SigWaiter::_do_wait(int sig, Timestamp timeout)
     {
         Timestamp remaining = timeout;
         SteadyClock clock;
-        const time_t begin = clock.now();
+        const time::UnixTime begin = clock.now();
 
         while (true)
         {

@@ -6,6 +6,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/sys/TmpDir.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/term.hpp>
 
 #include <sihd/sys/ProcessInfo.hpp>
@@ -35,7 +36,11 @@ TEST_F(TestProcessInfo, test_processinfo)
     ProcessInfo pi(getpid());
 
     ASSERT_EQ(pi.pid(), getpid());
+#if defined(__SIHD_WINDOWS__)
+    EXPECT_EQ(pi.name(), "sihd_sys.exe");
+#else
     EXPECT_EQ(pi.name(), "sihd_sys");
+#endif
     EXPECT_FALSE(pi.cwd().empty());
     EXPECT_FALSE(pi.exe_path().empty());
     EXPECT_FALSE(pi.cmd_line().empty());

@@ -10,6 +10,7 @@
 #include <sihd/util/Named.hpp>
 #include <sihd/sys/Poll.hpp>
 #include <sihd/util/Stat.hpp>
+#include <sihd/util/time.hpp>
 #include <sihd/util/Waitable.hpp>
 
 #include <sihd/net/IcmpSender.hpp>
@@ -29,10 +30,10 @@ struct PingEvent
 
 struct PingResult
 {
-        time_t time_start;
-        time_t last_time_sent;
-        time_t last_time_received;
-        time_t time_end;
+        sihd::util::time::UnixTime time_start;
+        sihd::util::time::UnixTime last_time_sent;
+        sihd::util::time::UnixTime last_time_received;
+        sihd::util::time::UnixTime time_end;
 
         int transmitted;
         int received;

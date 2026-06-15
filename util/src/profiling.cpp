@@ -17,7 +17,7 @@ Timeit::~Timeit()
 {
     constexpr bool show_total_parenthesis = false;
 
-    const time_t duration = std::max(time_t {0}, _clock.now() - _begin);
+    const time::UnixTime duration = std::max(time::UnixTime {0}, _clock.now() - _begin);
     const bool show_nano = duration < time::micro(1);
 
     SIHD_LOG(debug,
@@ -28,7 +28,7 @@ Timeit::~Timeit()
 
 Timestamp Timeit::elapsed() const
 {
-    return std::max(time_t {0}, _clock.now() - _begin);
+    return std::max(time::UnixTime {0}, _clock.now() - _begin);
 }
 
 Perf::Perf(std::source_location loc): _label(loc.function_name()), _begin(0) {}
@@ -47,7 +47,7 @@ void Perf::end()
     if (_begin == 0)
         throw std::runtime_error("Cannot call end() before calling begin()");
 
-    const time_t diff = std::max(time_t {0}, _clock.now() - _begin);
+    const time::UnixTime diff = std::max(time::UnixTime {0}, _clock.now() - _begin);
 
     _stat.add_sample(diff);
 }
@@ -56,9 +56,9 @@ void Perf::log() const
 {
     constexpr bool show_total = false;
 
-    const time_t average = _stat.average();
-    const time_t variance = _stat.variance();
-    const time_t standard_deviation = _stat.standard_deviation();
+    const time::UnixTime average = _stat.average();
+    const time::UnixTime variance = _stat.variance();
+    const time::UnixTime standard_deviation = _stat.standard_deviation();
 
     const bool show_min_nano = _stat.min < time::micro(1);
     const bool show_max_nano = _stat.max < time::micro(1);

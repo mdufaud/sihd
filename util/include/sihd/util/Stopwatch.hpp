@@ -21,7 +21,7 @@ class Stopwatch
 
     private:
         SteadyClock _clock;
-        time_t _before;
+        time::UnixTime _before;
 };
 
 } // namespace sihd::util

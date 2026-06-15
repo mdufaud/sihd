@@ -37,7 +37,7 @@ class Scheduler: public Named,
         bool remove_task(Task *t);
         void clear_tasks();
 
-        time_t now() const;
+        time::UnixTime now() const;
 
         IClock *clock() const;
         void set_clock(IClock *clock);
@@ -47,9 +47,9 @@ class Scheduler: public Named,
         // number of overruns that occured after started
         size_t overruns;
         // time after not running a task is considered an overrun
-        time_t overrun_at;
+        time::UnixTime overrun_at;
         // nanoseconds acceptable before a task may be run ahead of time
-        time_t acceptable_task_preplay_ns_time;
+        time::UnixTime acceptable_task_preplay_ns_time;
 
     protected:
         bool on_work_start() override;
@@ -57,7 +57,7 @@ class Scheduler: public Named,
 
         Waitable _waitable_task;
         std::vector<Task *> _tasks_to_add;
-        std::multimap<time_t, Task *> _task_map;
+        std::multimap<time::UnixTime, Task *> _task_map;
 
     private:
         void _prepare_tasks();
@@ -66,20 +66,20 @@ class Scheduler: public Named,
         void _unprotected_add_task_to_map(Task *task);
 
         void _wait_for_next_task();
-        Task *_get_playable_task(time_t now);
-        void _play_task(Task *task, time_t now);
+        Task *_get_playable_task(time::UnixTime now);
+        void _play_task(Task *task, time::UnixTime now);
 
         void _resume_tasks();
 
         IClock *_clock_ptr;
-        time_t _paused_time_at;
+        time::UnixTime _paused_time_at;
         std::atomic<bool> _paused;
         Waitable _waitable_pause;
 
-        time_t _begin_run;
+        time::UnixTime _begin_run;
         bool _tasks_prepared;
         std::list<Task *> _trash_task_list;
-        time_t _next_run;
+        time::UnixTime _next_run;
 
         SystemClock _default_clock;
         bool _no_delay;

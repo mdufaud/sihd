@@ -8,6 +8,7 @@ if GetOption("help"):
     Return()
 
 # General utilities
+import subprocess
 from os import environ
 from os import path as os_path
 from shutil import which as shutil_which
@@ -106,6 +107,11 @@ deleted_modules = modules.check_platform(build_modules, build_platform)
 for deleted_modules in deleted_modules:
     logger.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
 
+# Checking module availability for the requested link mode (static/dynamic)
+deleted_modules = modules.check_linkage(build_modules, builder.liblink)
+for deleted_modules in deleted_modules:
+    logger.warning("module '{}' cannot compile in {} link mode".format(deleted_modules, builder.liblink))
+
 if not build_modules:
     Exit(0)
 
@@ -153,16 +159,12 @@ if pkg_manager_name:
 ###############################################################################
 
 global_libs = getattr(app, "libs", [])
-global_platform_libs = getattr(app, "{}_libs".format(build_platform), [])
 if verbose:
     logger.debug("modules configuration:")
     pp.pprint(build_modules)
     if global_libs:
         logger.debug("libs:")
         pp.pprint(global_libs)
-    if global_platform_libs:
-        logger.debug("{} libs:".format(build_platform))
-        pp.pprint(global_platform_libs)
     print()
 
 base_env = Environment(
@@ -185,7 +187,7 @@ base_env = Environment(
     # libraries path
     LIBPATH = [builder.build_lib_path, builder.build_extlib_lib_path],
     # libraries name
-    LIBS = global_platform_libs + global_libs,
+    LIBS = global_libs,
     # extra key for modules to build
     APP_MODULES_BUILD = build_modules.keys(),
     COMPILATIONDB_USE_ABSPATH = True,
@@ -228,17 +230,24 @@ if not verbose:
         LINKCOMSTR = "linking object files into executable: $TARGET",
     )
 
+# Absolute RUNPATH dirs outside the build tree ($ORIGIN-relative ones are computed
+# per-artifact in env_methods, which consumes this via base_env["RPATH_EXTRA_DIRS"]).
+rpath_extra_dirs = []
 if not distribution \
     and not compiler in ("mingw", "em", "ndk"):
-    base_env.Append(
-        RPATH = [
-            os_path.abspath(builder.build_lib_path),
-            os_path.abspath(builder.build_extlib_lib_path)
-        ],
-    )
+    # vcpkg extlibs need libstdc++.so.6; under musl the loader would grab the host's
+    # glibc one and fail relocations, so point RPATH at the musl toolchain's libstdc++.
+    if builder.libc == "musl" and not builder.build_static_libs:
+        prefix = architectures.get_gcc_prefix(builder.build_machine, builder.libc)
+        libstdcxx = subprocess.run(
+            [prefix + "g++", "-print-file-name=libstdc++.so.6"],
+            capture_output=True, text=True,
+        ).stdout.strip()
+        if libstdcxx:
+            rpath_extra_dirs.append(os_path.abspath(os_path.dirname(libstdcxx)))
     # Cross-compiling linkers (musl, aarch64...) don't resolve transitive shared
     # library dependencies via -L or -rpath. Adding -rpath-link lets the linker
-    # find libs at link time.
+    # find libs at link time (no runtime effect).
     if builder.is_cross_building():
         base_env.Append(
             LINKFLAGS = [
@@ -246,6 +255,7 @@ if not distribution \
                 '-Wl,-rpath-link=' + os_path.abspath(builder.build_extlib_lib_path),
             ],
         )
+base_env["RPATH_EXTRA_DIRS"] = rpath_extra_dirs
 
 if build_platform == "windows":
     base_env.Append(
@@ -314,7 +324,7 @@ if compiler != "mingw" and compiler != "ndk" and not builder.is_msys():
 if verbose:
     logger.debug(f"looking for app configurations:")
 
-default_app_conf_to_get = (build_platform, libtype, build_mode, compiler, builder.libc)
+default_app_conf_to_get = (build_platform, libtype, build_mode, compiler, builder.libc, builder.build_machine)
 env_factory.add_combination_app_conf_to_env(base_env, app, default_app_conf_to_get)
 
 ###############################################################################

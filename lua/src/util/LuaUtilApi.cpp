@@ -106,7 +106,7 @@ void LuaUtilApi::load_threading(Vm & vm)
         .addFunction("is_running", static_cast<bool (LuaScheduler::*)() const>(&Scheduler::is_running))
         .addFunction("pause", static_cast<void (LuaScheduler::*)()>(&Scheduler::pause))
         .addFunction("resume", static_cast<void (LuaScheduler::*)()>(&Scheduler::resume))
-        .addFunction("now", static_cast<time_t (LuaScheduler::*)() const>(&Scheduler::now))
+        .addFunction("now", static_cast<time::UnixTime (LuaScheduler::*)() const>(&Scheduler::now))
         .addFunction("clock", static_cast<IClock *(LuaScheduler::*)() const>(&Scheduler::clock))
         .addFunction("set_clock", static_cast<void (LuaScheduler::*)(IClock *)>(&Scheduler::set_clock))
         .addFunction("set_no_delay", static_cast<bool (LuaScheduler::*)(bool)>(&Scheduler::set_no_delay))
@@ -117,11 +117,11 @@ void LuaUtilApi::load_threading(Vm & vm)
         .addProperty(
             "overrun_at",
             +[](const LuaScheduler *self) { return self->overrun_at; },
-            +[](LuaScheduler *self, uint32_t val) { self->overrun_at = val; })
+            +[](LuaScheduler *self, time::UnixTime val) { self->overrun_at = val; })
         .addProperty(
             "acceptable_task_preplay_ns_time",
             +[](const LuaScheduler *self) { return self->acceptable_task_preplay_ns_time; },
-            +[](LuaScheduler *self, uint32_t val) { self->acceptable_task_preplay_ns_time = val; })
+            +[](LuaScheduler *self, time::UnixTime val) { self->acceptable_task_preplay_ns_time = val; })
         // LuaScheduler
         .addFunction(
             "start",
@@ -140,20 +140,20 @@ void LuaUtilApi::load_threading(Vm & vm)
                 if (lua_fun.isFunction() == false)
                     luaL_error(state, "add_task table at 'task' must contain a function");
 
-                time_t timestamp_to_run_at = 0;
+                time::UnixTime timestamp_to_run_at = 0;
                 luabridge::LuaRef run_at = tbl["run_at"];
                 if (run_at.isNumber())
-                    timestamp_to_run_at = static_cast<mode_t>(run_at);
+                    timestamp_to_run_at = static_cast<time::UnixTime>(run_at);
 
-                time_t timestamp_to_run_in = 0;
+                time::UnixTime timestamp_to_run_in = 0;
                 luabridge::LuaRef run_in = tbl["run_in"];
                 if (run_in.isNumber())
-                    timestamp_to_run_in = static_cast<mode_t>(run_in);
+                    timestamp_to_run_in = static_cast<time::UnixTime>(run_in);
 
-                time_t reschedule_time = 0;
+                time::UnixTime reschedule_time = 0;
                 luabridge::LuaRef reschedule = tbl["reschedule_time"];
                 if (reschedule.isNumber())
-                    reschedule_time = static_cast<time_t>(reschedule);
+                    reschedule_time = static_cast<time::UnixTime>(reschedule);
 
                 LuaTask *task_ptr = new LuaTask(lua_fun,
                                                 util::TaskOptions {.run_at = timestamp_to_run_at,
@@ -228,7 +228,7 @@ void LuaUtilApi::load_threading(Vm & vm)
         .addFunction("pause_worker", static_cast<void (LuaStepWorker::*)()>(&StepWorker::pause_worker))
         .addFunction("resume_worker", static_cast<void (LuaStepWorker::*)()>(&StepWorker::resume_worker))
         .addFunction("nano_sleep_time",
-                     static_cast<time_t (LuaStepWorker::*)() const>(&StepWorker::nano_sleep_time))
+                     static_cast<time::UnixTime (LuaStepWorker::*)() const>(&StepWorker::nano_sleep_time))
         .addFunction("frequency", static_cast<double (LuaStepWorker::*)() const>(&StepWorker::frequency))
         .endClass()
         .endNamespace()
@@ -275,7 +275,7 @@ void LuaUtilApi::load_tools(Vm & vm)
          * Timestamp
          */
         .beginClass<Timestamp>("Timestamp")
-        .addConstructor<void (*)(time_t)>()
+        .addConstructor<void (*)(int64_t)>()
         .addFunction("get", &Timestamp::get)
         .addFunction("in_interval", &Timestamp::in_interval)
         .addFunction("nanoseconds", &Timestamp::nanoseconds)

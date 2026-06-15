@@ -1,11 +1,15 @@
-#include <cstring>
-#include <cstdlib>
+#include <condition_variable>
+#include <mutex>
+
 #include <gtest/gtest.h>
+
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/num.hpp>
 #include <sihd/util/profiling.hpp>
 #include <sihd/util/time.hpp>
+
+#include "test_helper.hpp"
 
 namespace test
 {
@@ -58,7 +62,7 @@ class TestScheduler: public ::testing::Test,
 
 TEST_F(TestScheduler, test_sched_order)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if (test::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
     Scheduler sched("sched");
 
@@ -90,7 +94,7 @@ TEST_F(TestScheduler, test_sched_order)
     sched.set_start_synchronised(true);
     sched.start();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     sched.stop();
 
@@ -100,7 +104,7 @@ TEST_F(TestScheduler, test_sched_order)
 
 TEST_F(TestScheduler, test_sched_perf)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if (test::is_run_by_valgrind())
         GTEST_SKIP() << "Perf under valgrind debugger is unthinkable";
 
     Scheduler sched("sched");
@@ -146,40 +150,55 @@ TEST_F(TestScheduler, test_sched_perf)
 
 TEST_F(TestScheduler, test_sched_stop)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if (test::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
     Scheduler sched("sched");
 
-    int ran = 0;
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool first_ran = false;
+    bool second_ran = false;
+
     sched.add_task(new Task(
         [&]() -> bool {
             SIHD_TRACE("Should run once");
-            ++ran;
+            {
+                std::lock_guard lock(mutex);
+                first_ran = true;
+            }
+            cv.notify_one();
             return true;
         },
         {.run_in = time::milli(10)}));
     sched.add_task(new Task(
         [&]() -> bool {
             SIHD_TRACE("Should not run");
-            ++ran;
+            {
+                std::lock_guard lock(mutex);
+                second_ran = true;
+            }
+            cv.notify_one();
             return true;
         },
-        {.run_in = time::milli(30)}));
+        {.run_in = time::milli(70)}));
     sched.set_start_synchronised(true);
     sched.start();
-    SIHD_TRACE("Before sleep");
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    EXPECT_EQ(ran, 0);
-    std::this_thread::sleep_for(std::chrono::milliseconds(15));
-    EXPECT_EQ(ran, 1);
+
+    {
+        std::unique_lock lock(mutex);
+        ASSERT_TRUE(cv.wait_for(lock, std::chrono::milliseconds(100), [&] { return first_ran; }));
+    }
     sched.stop();
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    EXPECT_EQ(ran, 1);
+
+    {
+        std::unique_lock lock(mutex);
+        EXPECT_FALSE(cv.wait_for(lock, std::chrono::milliseconds(100), [&] { return second_ran; }));
+    }
 }
 
 TEST_F(TestScheduler, test_sched_pause)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if (test::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
     constexpr time_t should_run_every_ms = 15;
     constexpr time_t sleep_ms = should_run_every_ms + 15;
@@ -230,7 +249,7 @@ TEST_F(TestScheduler, test_sched_pause)
 
 TEST_F(TestScheduler, test_sched_as_fast)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if (test::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
     Scheduler sched("sched");
     int lambda_ran = 0;
@@ -255,7 +274,7 @@ TEST_F(TestScheduler, test_sched_as_fast)
 
 TEST_F(TestScheduler, test_sched_burst)
 {
-    if ([]{ const char *p = std::getenv("LD_PRELOAD"); return p && std::strstr(p, "valgrind"); }())
+    if (test::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
     Scheduler sched("sched");
     sched.set_start_synchronised(true);

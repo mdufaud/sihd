@@ -45,7 +45,7 @@ IClock *Scheduler::clock() const
     return _clock_ptr;
 }
 
-time_t Scheduler::now() const
+time::UnixTime Scheduler::now() const
 {
     return _clock_ptr != nullptr ? _clock_ptr->now() : 0;
 }
@@ -72,12 +72,12 @@ void Scheduler::_wait_for_next_task()
     _waitable_task.wait_for(_next_run - _clock_ptr->now(), [this] { return this->stop_requested.load(); });
 }
 
-Task *Scheduler::_get_playable_task(time_t now)
+Task *Scheduler::_get_playable_task(time::UnixTime now)
 {
     auto l = _waitable_task.guard();
     Task *task = _task_map.begin()->second;
 
-    time_t diff = task->run_at - now;
+    time::UnixTime diff = task->run_at - now;
     if (task->run_at > 0 && -diff > this->overrun_at)
         this->overruns += 1;
 
@@ -89,7 +89,7 @@ Task *Scheduler::_get_playable_task(time_t now)
     return task;
 }
 
-void Scheduler::_play_task(Task *task, time_t now)
+void Scheduler::_play_task(Task *task, time::UnixTime now)
 {
     task->run();
     if (task->reschedule_time > 0)
@@ -137,7 +137,7 @@ bool Scheduler::on_work_start()
 
     this->_prepare_tasks();
 
-    time_t now = _begin_run;
+    time::UnixTime now = _begin_run;
 
     Task *task = nullptr;
     while (this->stop_requested == false)
@@ -178,10 +178,10 @@ void Scheduler::_resume_tasks()
     if (_tasks_prepared == false)
         return;
 
-    const time_t paused_time = this->now() - std::max(_begin_run, _paused_time_at);
+    const time::UnixTime paused_time = this->now() - std::max(_begin_run, _paused_time_at);
     _paused_time_at = 0;
 
-    std::multimap<time_t, Task *> new_task_map;
+    std::multimap<time::UnixTime, Task *> new_task_map;
     for (auto & [_, task] : _task_map)
     {
         if (task->run_in > 0)

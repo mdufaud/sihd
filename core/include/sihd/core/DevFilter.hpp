@@ -3,11 +3,10 @@
 
 #include <atomic>
 
+#include <sihd/core/Device.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Task.hpp>
 #include <sihd/util/Value.hpp>
-
-#include <sihd/core/Device.hpp>
 
 namespace sihd::core
 {
@@ -44,7 +43,7 @@ class DevFilter: public sihd::core::Device
                 // must be called after setting trigger index with 'trigger' method
                 Rule & write_same();
                 // delay write by X nanoseconds
-                Rule & delay(time_t nano_delay);
+                Rule & delay(sihd::util::time::UnixTime nano_delay);
                 // delay write by seconds.milliseconds
                 Rule & delay(double delay);
 
@@ -78,7 +77,7 @@ class DevFilter: public sihd::core::Device
                 sihd::util::Value write_value;
                 // options
                 bool should_match;
-                time_t nano_delay;
+                sihd::util::time::UnixTime nano_delay;
         };
 
         DevFilter(const std::string & name, sihd::util::Node *parent = nullptr);

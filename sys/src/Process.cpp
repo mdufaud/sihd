@@ -198,23 +198,16 @@ std::pair<HANDLE, HANDLE> make_pipe()
     HANDLE rw;
     SECURITY_ATTRIBUTES saAttr;
 
-    // Set the bInheritHandle flag so pipe handles are inherited.
-
+    // locked-down default: neither end is inherited by a child and the read end is
+    // non-blocking (the parent peeks it). Each call site opts a specific end into
+    // inheritance / blocking when it actually needs it.
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-    saAttr.bInheritHandle = TRUE;
+    saAttr.bInheritHandle = FALSE;
     saAttr.lpSecurityDescriptor = NULL;
 
     if (!CreatePipe(&rd, &rw, &saAttr, 0))
         throw std::runtime_error("Cannot make pipe: CreatePipe");
 
-    if (!SetHandleInformation(rd, HANDLE_FLAG_INHERIT, 0))
-    {
-        CloseHandle(rd);
-        CloseHandle(rw);
-        throw std::runtime_error("Cannot make pipe: SetHandleInformation");
-    }
-
-    // enables peeking pipe
     DWORD mode = PIPE_NOWAIT;
     if (!SetNamedPipeHandleState(rd, &mode, NULL, NULL))
     {
@@ -225,6 +218,24 @@ std::pair<HANDLE, HANDLE> make_pipe()
 
     // read - write;
     return std::make_pair(rd, rw);
+}
+
+// the read end is non-blocking by default; a child that reads it as its stdin needs it blocking
+void make_read_blocking(HANDLE fd_read)
+{
+    DWORD mode = PIPE_WAIT;
+    SetNamedPipeHandleState(fd_read, &mode, NULL, NULL);
+}
+
+// opt an end into inheritance so the child receives it (read end = its stdin, write end = its stdout/stderr)
+void make_read_inheritable(HANDLE fd_read)
+{
+    SetHandleInformation(fd_read, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+}
+
+void make_write_inheritable(HANDLE fd_write)
+{
+    SetHandleInformation(fd_write, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
 }
 
 void safe_close(HANDLE & fd)
@@ -400,12 +411,19 @@ void StdFdWrapper::close()
 void StdFdWrapper::redirect_to(std::function<void(std::string_view)> && fun)
 {
     this->add_pipe();
+#if defined(__SIHD_WINDOWS__)
+    // child writes its stdout/stderr into the pipe; the parent peeks the read end (left non-blocking)
+    make_write_inheritable(this->fd_write);
+#endif
     this->fun = std::move(fun);
 }
 
 void StdFdWrapper::redirect_to(std::string & output)
 {
     this->add_pipe();
+#if defined(__SIHD_WINDOWS__)
+    make_write_inheritable(this->fd_write);
+#endif
     this->fun = [&output](std::string_view buffer) {
         output.append(buffer);
     };
@@ -427,12 +445,16 @@ bool StdFdWrapper::redirect_to_file(std::string_view path, bool append, mode_t o
 #else
 # pragma message("TODO CreateFile permissions in windows")
     (void)open_mode;
-    this->fd_write = CreateFile(path.data(),
+    SECURITY_ATTRIBUTES sec_attr;
+    sec_attr.nLength = sizeof(sec_attr);
+    sec_attr.lpSecurityDescriptor = NULL;
+    sec_attr.bInheritHandle = TRUE;
+    this->fd_write = CreateFile(std::string(path).c_str(),
                                 GENERIC_WRITE,
-                                0,
-                                NULL,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                &sec_attr,
                                 (append ? OPEN_ALWAYS : CREATE_ALWAYS),
-                                FILE_ATTRIBUTE_READONLY,
+                                FILE_ATTRIBUTE_NORMAL,
                                 NULL);
     success = this->fd_write != nullptr;
 #endif
@@ -506,7 +528,8 @@ void ProcessWatcher::check_status(int options)
     if (result == WAIT_OBJECT_0)
     {
         // The child process was terminated
-        if (GetExitCodeProcess(this->procinfo.hProcess, &this->code))
+        const BOOL got_code = GetExitCodeProcess(this->procinfo.hProcess, &this->code);
+        if (got_code)
         {
             this->exited = true;
 
@@ -774,6 +797,11 @@ Process & Process::stdin_close()
 Process & Process::stdin_from(const std::string & input)
 {
     _impl->pipe.std_in.add_pipe();
+#if defined(__SIHD_WINDOWS__)
+    // child reads this end as its stdin: it must be inherited and blocking (the parent keeps the write end)
+    make_read_inheritable(_impl->pipe.std_in.fd_read);
+    make_read_blocking(_impl->pipe.std_in.fd_read);
+#endif
     write_into_pipe(_impl->pipe.std_in.fd_write, input);
     return *this;
 }
@@ -791,9 +819,20 @@ bool Process::stdin_from_file(std::string_view path)
     _impl->pipe.std_in.fd_read = open(path.data(), O_RDONLY);
     success = _impl->pipe.std_in.fd_read >= 0;
 #else
-    _impl->pipe.std_in.fd_read
-        = CreateFile(path.data(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    success = _impl->pipe.std_in.fd_read != nullptr;
+    SECURITY_ATTRIBUTES sec_attr;
+    sec_attr.nLength = sizeof(sec_attr);
+    sec_attr.lpSecurityDescriptor = NULL;
+    sec_attr.bInheritHandle = TRUE;
+    _impl->pipe.std_in.fd_read = CreateFile(std::string(path).c_str(),
+                                            GENERIC_READ,
+                                            FILE_SHARE_READ,
+                                            &sec_attr,
+                                            OPEN_EXISTING,
+                                            FILE_ATTRIBUTE_NORMAL,
+                                            NULL);
+    success = _impl->pipe.std_in.fd_read != INVALID_HANDLE_VALUE;
+    if (!success)
+        _impl->pipe.std_in.fd_read = nullptr;
 #endif
     if (!success)
         SIHD_LOG(error, "Process: could not open file input: {}", path);
@@ -835,6 +874,13 @@ Process & Process::stdout_to(FileDescType fd)
 Process & Process::stdout_to(Process & proc)
 {
     _impl->pipe.std_out.add_pipe();
+#if defined(__SIHD_WINDOWS__)
+    // both ends go to children: this child writes its stdout (write end), proc reads it as its
+    // stdin (read end), so both must be inherited and the read end must be blocking
+    make_write_inheritable(_impl->pipe.std_out.fd_write);
+    make_read_inheritable(_impl->pipe.std_out.fd_read);
+    make_read_blocking(_impl->pipe.std_out.fd_read);
+#endif
     proc.stdin_from(_impl->pipe.std_out.fd_read);
     _impl->pipe.std_out.zero_fd_read();
     return *this;
@@ -874,6 +920,13 @@ Process & Process::stderr_to(FileDescType fd)
 Process & Process::stderr_to(Process & proc)
 {
     _impl->pipe.std_err.add_pipe();
+#if defined(__SIHD_WINDOWS__)
+    // both ends go to children: this child writes its stderr (write end), proc reads it as its
+    // stdin (read end), so both must be inherited and the read end must be blocking
+    make_write_inheritable(_impl->pipe.std_err.fd_write);
+    make_read_inheritable(_impl->pipe.std_err.fd_read);
+    make_read_blocking(_impl->pipe.std_err.fd_read);
+#endif
     proc.stdin_from(_impl->pipe.std_err.fd_read);
     _impl->pipe.std_err.zero_fd_read();
     return *this;
@@ -1017,6 +1070,12 @@ bool Process::_do_child_process(const std::vector<const char *> & argv, const st
     (void)env;
     return false;
 #else
+    if (_fun_to_execute)
+    {
+        SIHD_LOG(error, "Process: set_function is not supported on windows (no fork)");
+        return false;
+    }
+
     STARTUPINFO start_info;
     BOOL success = FALSE;
 
@@ -1046,19 +1105,21 @@ bool Process::_do_child_process(const std::vector<const char *> & argv, const st
     {
         if (arg == nullptr)
             break;
+        if (!cmd_line.empty())
+            cmd_line += " ";
         cmd_line += arg;
-        cmd_line += " ";
     }
 
+    // CreateProcess wants a double-null-terminated block of null-separated strings
     std::string env_str;
     for (const char *val : env)
     {
         if (val == nullptr)
             break;
         env_str += val;
-        env_str += "\0";
+        env_str.push_back('\0');
     }
-    env_str += "\0";
+    env_str.push_back('\0');
 
     // Create the child process.
 
@@ -1197,8 +1258,8 @@ bool Process::read_pipes(int milliseconds_timeout)
     if (this->can_read_pipes() == false)
         return false;
     SteadyClock clock;
-    const time_t begin = clock.now();
-    const time_t timeout = time::milliseconds(milliseconds_timeout);
+    const time::UnixTime begin = clock.now();
+    const time::UnixTime timeout = time::milliseconds(milliseconds_timeout);
     bool timed_out = false;
     while (!timed_out)
     {
@@ -1259,7 +1320,13 @@ bool Process::kill(int sig)
     bool ret = this->is_process_running();
     if (ret)
     {
+#if defined(__SIHD_WINDOWS__)
+        // own the process handle: kill it with a POSIX-like code so return_code() matches unix
+        (void)sig;
+        ret = TerminateProcess(_impl->process_watcher.procinfo.hProcess, failure_return_code) != 0;
+#else
         ret = signal::kill(this->pid(), sig);
+#endif
         if (!ret)
             SIHD_LOG(error, "Process: could not kill: {}", os::last_error_str());
     }
@@ -1317,10 +1384,13 @@ bool Process::on_start()
             _poll.start();
         }
 #else
-        while (this->is_running())
+        // exits when the child terminates (reaped by wait_no_hang) or when on_stop's
+        // reset_proc terminates the process, mirroring the unix poll loop in handle()
+        while (this->is_running() && this->is_process_running())
         {
             constexpr DWORD timeout_ms = 50;
             this->read_pipes(timeout_ms);
+            this->wait_no_hang();
         }
 #endif
     }
@@ -1449,6 +1519,21 @@ uint8_t Process::signal_stop_number() const
 }
 
 #else
+
+bool Process::wait_exit(int options)
+{
+    return this->wait(options);
+}
+
+bool Process::wait_any(int options)
+{
+    return this->wait(options);
+}
+
+bool Process::has_exited() const
+{
+    return _impl->process_watcher.has_terminated();
+}
 
 #endif
 

@@ -157,7 +157,7 @@ bool CsvReader::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-bool CsvReader::get_read_timestamp(time_t *nano_timestamp) const
+bool CsvReader::get_read_timestamp(time::UnixTime *nano_timestamp) const
 {
     if (_has_data == false || _timestamp_col < 0)
         return false;
@@ -173,9 +173,9 @@ bool CsvReader::get_read_timestamp(time_t *nano_timestamp) const
 
     if (_timestamp_fmt.empty())
     {
-        if (const auto value = sihd::util::str::convert_from_string<long>(time_str))
+        if (const auto value = sihd::util::str::convert_from_string<int64_t>(time_str))
         {
-            *nano_timestamp = static_cast<time_t>(*value);
+            *nano_timestamp = static_cast<time::UnixTime>(*value);
             return true;
         }
         return false;

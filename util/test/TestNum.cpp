@@ -54,14 +54,14 @@ TEST_F(TestNum, test_num_add_no_overflow)
     EXPECT_EQ(num::add_no_overflow(0, 20), 20);
     EXPECT_EQ(num::add_no_overflow(0, 0), 0);
 
-    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<uint64_t>::max(), 1ul),
+    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<uint64_t>::max(), uint64_t(1)),
               std::numeric_limits<uint64_t>::max());
-    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<int64_t>::max(), 1l),
+    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<int64_t>::max(), int64_t(1)),
               std::numeric_limits<int64_t>::max());
 
-    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<uint64_t>::max(), 0ul),
+    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<uint64_t>::max(), uint64_t(0)),
               std::numeric_limits<uint64_t>::max());
-    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<int64_t>::min(), -1l),
+    EXPECT_EQ(num::add_no_overflow(std::numeric_limits<int64_t>::min(), int64_t(-1)),
               std::numeric_limits<int64_t>::min());
 }
 
@@ -72,9 +72,9 @@ TEST_F(TestNum, test_num_substract_no_overflow)
     EXPECT_EQ(num::substract_no_overflow(0, 20), -20);
     EXPECT_EQ(num::substract_no_overflow(0, 0), 0);
 
-    EXPECT_EQ(num::substract_no_overflow(std::numeric_limits<uint64_t>::max(), 1ul),
+    EXPECT_EQ(num::substract_no_overflow(std::numeric_limits<uint64_t>::max(), uint64_t(1)),
               std::numeric_limits<uint64_t>::max() - 1);
-    EXPECT_EQ(num::substract_no_overflow(std::numeric_limits<int64_t>::min(), -1l),
+    EXPECT_EQ(num::substract_no_overflow(std::numeric_limits<int64_t>::min(), int64_t(-1)),
               std::numeric_limits<int64_t>::min() + 1);
 
     EXPECT_EQ(num::substract_no_overflow(std::numeric_limits<uint64_t>::max(),

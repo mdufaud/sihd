@@ -411,6 +411,60 @@ sbt_deps_path = join(build_root_path, ".sbt-deps")
 libs_type = liblink
 
 ###############################################################################
+# Cross-test runner (qemu-user / wine)
+###############################################################################
+
+# Targets the host CPU can execute natively (same ISA, possibly narrower).
+_host_native_machines = {
+    "x86_64": ["x86_64", "x86", "i386"],
+    "arm64":  ["arm64", "arm32"],
+}
+
+def host_can_run(machine):
+    return machine in _host_native_machines.get(host_machine, [host_machine])
+
+def get_test_bin_ext():
+    """Filename suffix of a test binary (".exe" on windows, "" elsewhere)."""
+    return ".exe" if build_platform == "windows" else ""
+
+def get_test_runner():
+    """Emulator command that wraps a cross-built test binary, or "" when it runs natively."""
+    if build_platform == "windows":
+        return "wine"
+    if build_platform == "linux" and not host_can_run(build_machine):
+        return "qemu-" + architectures.get_qemu_arch(build_machine)
+    return ""
+
+def get_test_runner_env():
+    """Runtime env (list of KEY=VAL) the emulator needs; emitted as export lines into .env."""
+    runner = get_test_runner()
+    if not runner:
+        return []
+    env = []
+    if runner == "wine":
+        # keep the prefix in the build tree so `make clean` wipes it
+        env.append("WINEPREFIX=" + join(build_test_path, ".wine"))
+        # silence wine chatter polluting gtest output
+        env.append("WINEDEBUG=-all")
+        # stop winemenubuilder writing desktop entries outside WINEPREFIX
+        env.append("WINEDLLOVERRIDES=winemenubuilder.exe=d")
+        # static mingw has no DLLs -> no WINEPATH needed
+        if not build_static_libs:
+            env.append("WINEPATH=" + ";".join([build_lib_path, build_extlib_lib_path, build_extlib_bin_path]))
+    else:
+        # qemu dynamic-glibc needs the cross sysroot + lib search path; static-musl needs nothing
+        if not build_static_libs:
+            # ask the compiler for its sysroot; layout varies (arm-none keeps libc under <prefix>/libc)
+            gcc_prefix = architectures.get_gcc_prefix(build_machine, libc)
+            sysroot = subprocess.run(
+                [gcc_prefix + "gcc", "-print-sysroot"],
+                capture_output=True, text=True,
+            ).stdout.strip()
+            env.append("QEMU_LD_PREFIX=" + abspath(sysroot))
+            env.append("QEMU_SET_ENV=LD_LIBRARY_PATH=" + ":".join([build_lib_path, build_extlib_lib_path]))
+    return env
+
+###############################################################################
 # App settings sanitizer
 ###############################################################################
 

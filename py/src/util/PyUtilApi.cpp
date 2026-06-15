@@ -133,7 +133,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("from_double", &time::from_double)
         .def("hz", &time::freq);
 
-    pybind11::class_<Timestamp>(m_util, "Timestamp").def(pybind11::init<time_t>());
+    pybind11::class_<Timestamp>(m_util, "Timestamp").def(pybind11::init<int64_t>());
 
     pybind11::class_<Splitter>(m_util, "Splitter")
         .def(pybind11::init<>())
@@ -253,9 +253,9 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
             "add_task",
             +[](Scheduler & self,
                 const pybind11::function & task,
-                time_t run_at,
-                time_t run_in,
-                time_t reschedule_time) {
+                int64_t run_at,
+                int64_t run_in,
+                int64_t reschedule_time) {
                 self.add_task(new PyUtilApi::PyTask(task,
                                                     util::TaskOptions {
                                                         .run_at = run_at,

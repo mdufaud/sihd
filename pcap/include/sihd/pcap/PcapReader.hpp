@@ -32,7 +32,7 @@ class PcapReader: public sihd::util::Named,
 
         bool read_next();
         bool get_read_data(sihd::util::ArrCharView & view) const;
-        bool get_read_timestamp(time_t *nano_timestamp) const;
+        bool get_read_timestamp(sihd::util::time::UnixTime *nano_timestamp) const;
 
         size_t packet_len() const;
         size_t packet_caplen() const;

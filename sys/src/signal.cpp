@@ -76,8 +76,7 @@ void _set_signal_received(int sig)
         clock_gettime(CLOCK_REALTIME, &ts);
         status.time_received.store(time::sec(ts.tv_sec) + ts.tv_nsec, std::memory_order_relaxed);
 #else
-        // On windows, use time(nullptr) with second resolution
-        status.time_received.store(time::sec(::time(nullptr)), std::memory_order_relaxed);
+        status.time_received.store(os::filetime_now(), std::memory_order_relaxed);
 #endif
     }
 }
@@ -103,6 +102,12 @@ void _signal_callback(int sig)
     g_last_signal_received = sig;
     _check_exit_config(sig);
     _set_signal_received(sig);
+
+#if defined(__SIHD_WINDOWS__)
+    // MSVCRT resets the handler to SIG_DFL on delivery; re-arm to mimic the
+    // persistent POSIX sigaction handler so repeated signals stay caught
+    ::signal(sig, _signal_callback);
+#endif
 
     // put errno back for program usage
     errno = tmp_errno;
@@ -397,7 +402,7 @@ std::string status_str()
             const size_t received = status->received.load(std::memory_order_relaxed);
             if (received > 0)
             {
-                const time_t time_received = status->time_received.load(std::memory_order_relaxed);
+                const sihd::util::time::UnixTime time_received = status->time_received.load(std::memory_order_relaxed);
                 ret += fmt::format("{} -> {} ({})\n",
                                    signal::name(sig),
                                    received,

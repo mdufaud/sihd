@@ -603,8 +603,8 @@ TEST_F(TestArray, test_array_all)
     test_array_type<sihd::util::ArrUShort, uint16_t>(2, Type::TYPE_USHORT);
     test_array_type<sihd::util::ArrInt, int32_t>(2, Type::TYPE_INT);
     test_array_type<sihd::util::ArrUInt, uint32_t>(static_cast<uint32_t>(-1), Type::TYPE_UINT);
-    test_array_type<sihd::util::ArrLong, long>(1l, Type::TYPE_LONG);
-    test_array_type<sihd::util::ArrULong, unsigned long>(static_cast<unsigned long>(-1), Type::TYPE_ULONG);
+    test_array_type<sihd::util::ArrLong, int64_t>(int64_t(1), Type::TYPE_LONG);
+    test_array_type<sihd::util::ArrULong, uint64_t>(static_cast<uint64_t>(-1), Type::TYPE_ULONG);
 
     // For float and double, use EXPECT_FLOAT_EQ for comparison
     {

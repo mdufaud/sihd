@@ -174,7 +174,7 @@ bool Sniffer::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-bool Sniffer::get_read_timestamp(time_t *nano_timestamp) const
+bool Sniffer::get_read_timestamp(sihd::util::time::UnixTime *nano_timestamp) const
 {
     *nano_timestamp = _pkt_nano_timestamp;
     return true;

@@ -2,6 +2,8 @@
 SBT Architecture Configuration for cross-compilation.
 """
 
+import shutil
+
 machine_aliases = {
     "aarch64": "arm64",
     "amd64": "x86_64",
@@ -17,7 +19,7 @@ architectures = {
     "x86_64":      {"gcc": {"gnu": "x86_64-linux-gnu-",        "musl": "x86_64-linux-musl-"},       "zig": "x86_64-linux-musl",       "vcpkg": "x64",        "meson": {"cpu_family": "x86_64",     "cpu": "x86_64",     "endian": "little"}},
     "x86":         {"gcc": {"gnu": "i686-linux-gnu-",           "musl": "i686-linux-musl-"},          "zig": "i686-linux-musl",         "vcpkg": "x86",        "meson": {"cpu_family": "x86",        "cpu": "i686",       "endian": "little"}},
     "i386":        {"gcc": {"gnu": "i686-linux-gnu-",           "musl": "i686-linux-musl-"},          "zig": "i386-linux-musl",         "vcpkg": "x86",        "meson": {"cpu_family": "x86",        "cpu": "i386",       "endian": "little"}},
-    "arm32":       {"gcc": {"gnu": "arm-linux-gnueabihf-",      "musl": "arm-linux-musleabihf-"},     "zig": "arm-linux-musleabihf",   "zig_flags": "-mcpu=generic+v7a", "vcpkg": "arm",   "meson": {"cpu_family": "arm",        "cpu": "armv7",      "endian": "little"}},
+    "arm32":       {"gcc": {"gnu": "arm-linux-gnueabihf-",      "musl": "arm-linux-musleabihf-"},     "gnu_alts": ["arm-none-linux-gnueabihf-", "arm-linux-gnueabihf-"], "zig": "arm-linux-musleabihf",   "zig_flags": "-mcpu=generic+v7a", "vcpkg": "arm",   "meson": {"cpu_family": "arm",        "cpu": "armv7",      "endian": "little"}},
     "arm64":       {"gcc": {"gnu": "aarch64-linux-gnu-",        "musl": "aarch64-linux-musl-"},       "zig": "aarch64-linux-musl",     "vcpkg": "arm64",      "meson": {"cpu_family": "aarch64",    "cpu": "aarch64",   "endian": "little"}},
     "riscv64":     {"gcc": {"gnu": "riscv64-linux-gnu-",        "musl": "riscv64-linux-musl-"},       "zig": "riscv64-linux-musl",     "vcpkg": "riscv64",    "meson": {"cpu_family": "riscv64",    "cpu": "riscv64",   "endian": "little"}},
     "riscv32":     {"gcc": {"gnu": "riscv32-linux-gnu-",        "musl": "riscv32-linux-musl-"},       "zig": "riscv32-linux-musl",     "vcpkg": "riscv32",    "meson": {"cpu_family": "riscv32",    "cpu": "riscv32",   "endian": "little"}},
@@ -30,6 +32,13 @@ architectures = {
 
 # Machine name used in GNU triplets (differs from internal machine name)
 _gnu_machine_map = {
+    "arm32": "arm",
+    "arm64": "aarch64",
+}
+
+# qemu-user binary suffix per SBT machine name (qemu-<arch>); defaults to the machine name
+_qemu_arch_map = {
+    "x86": "i386",
     "arm32": "arm",
     "arm64": "aarch64",
 }
@@ -59,8 +68,20 @@ def get_gnu_machine(machine: str) -> str:
     return _gnu_machine_map.get(machine, machine)
 
 
+def get_qemu_arch(machine: str) -> str:
+    """Get the qemu-user binary arch suffix for a machine (e.g. arm64 -> aarch64 => qemu-aarch64)."""
+    machine = normalize_machine(machine)
+    return _qemu_arch_map.get(machine, machine)
+
+
 def get_gcc_prefix(machine: str, libc: str) -> str:
-    return get_config(machine).get("gcc", {}).get(libc, "")
+    config = get_config(machine)
+    if libc == "gnu":
+        # Prefer first installed prefix (arm32 needs ARM's "arm-none-linux-gnueabihf" for static libs).
+        for prefix in config.get("gnu_alts", []):
+            if shutil.which(prefix + "gcc"):
+                return prefix
+    return config.get("gcc", {}).get(libc, "")
 
 
 def get_zig_target(machine: str) -> str:
@@ -189,6 +210,20 @@ platform_packages = {
     },
 }
 
+# Emulator packages for running cross-built test binaries: qemu-user (foreign linux), wine (windows).
+runner_packages = {
+    "qemu": {
+        "pacman": ["qemu-user-static"],
+        "apt":    ["qemu-user-static"],
+        "dnf":    ["qemu-user-static"],
+    },
+    "wine": {
+        "pacman": ["wine"],
+        "apt":    ["wine"],
+        "dnf":    ["wine"],
+    },
+}
+
 
 def get_cross_packages(machine: str, pkg_manager: str) -> list:
     """Get cross-compiler packages for a target architecture and package manager."""
@@ -203,3 +238,8 @@ def get_libc_packages(libc: str, pkg_manager: str) -> list:
 def get_platform_packages(platform: str, pkg_manager: str) -> list:
     """Get platform-specific packages for cross-compilation."""
     return platform_packages.get(platform, {}).get(pkg_manager, [])
+
+
+def get_runner_packages(runner: str, pkg_manager: str) -> list:
+    """Get packages providing the test emulator (qemu/wine) for a package manager."""
+    return runner_packages.get(runner, {}).get(pkg_manager, [])

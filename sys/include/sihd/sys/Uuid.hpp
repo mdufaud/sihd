@@ -12,7 +12,7 @@ class Uuid
 {
     public:
         Uuid();
-        Uuid(std::string_view uuid_str);
+        Uuid(const std::string & uuid_str);
         Uuid(const Uuid & uuid_namespace, std::string_view name);
         Uuid(const Uuid & other);
         ~Uuid();

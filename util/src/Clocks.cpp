@@ -12,7 +12,7 @@ namespace
 {
 
 template <typename ClockType>
-time_t clock_now_ns(const ClockType & clk)
+time::UnixTime clock_now_ns(const ClockType & clk)
 {
     if constexpr (std::ratio_equal_v<typename ClockType::period, std::micro>)
         return time::microseconds(clk.now().time_since_epoch().count());
@@ -22,7 +22,7 @@ time_t clock_now_ns(const ClockType & clk)
 
 } // namespace
 
-time_t SteadyClock::now() const
+time::UnixTime SteadyClock::now() const
 {
     return clock_now_ns(_clock);
 }
@@ -32,7 +32,7 @@ bool SteadyClock::is_steady() const
     return _clock.is_steady;
 }
 
-time_t SystemClock::now() const
+time::UnixTime SystemClock::now() const
 {
     return clock_now_ns(_clock);
 }

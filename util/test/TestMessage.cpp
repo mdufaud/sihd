@@ -207,9 +207,9 @@ TEST_F(TestMessage, test_message_simple)
     EXPECT_TRUE(array_utils::distribute_array(buf, {{&barr, 1}, {&iarr, 2}, {&farr, 5}}));
     barr[0] = true;
     for (size_t i = 0; i < iarr.size(); ++i)
-        iarr[i] = 10 * i;
+        array_utils::write(iarr, i, (uint32_t)(10 * i));
     for (size_t i = 0; i < farr.size(); ++i)
-        farr[i] = 3.0 + (0.1 * i);
+        array_utils::write(farr, i, (float)(3.0 + (0.1 * i)));
 
     EXPECT_EQ(buf.size(), msg.field_byte_size());
 

@@ -261,6 +261,23 @@ def check_platform(modules, platform):
         del modules[name]
     return to_remove
 
+def check_linkage(modules, linkage):
+    """ @brief sanatize modules based on link mode ("static"|"dynamic")
+        @return modules to remove
+
+        "linkage_only_dynamic": dropped from static builds (e.g. GUI modules
+        needing system-only dynamic libs like libGL). "linkage_only_static": inverse.
+    """
+    to_remove = []
+    for name, conf in modules.items():
+        if conf.get("linkage_only_dynamic", False) and linkage != "dynamic":
+            to_remove.append(name)
+        elif conf.get("linkage_only_static", False) and linkage != "static":
+            to_remove.append(name)
+    for name in to_remove:
+        del modules[name]
+    return to_remove
+
 def _external_module_closure(dep_modules, dep_app_name, modname):
     """Ordered static link closure for an external project module.
 

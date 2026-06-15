@@ -769,6 +769,10 @@ std::string realpath(std::string_view path)
     free(real);
     return result;
 #else
+    // POSIX realpath requires every path component to exist; _fullpath is purely
+    // lexical and succeeds for nonexistent paths -> guard to keep the same contract
+    if (!fs::exists(path))
+        return "";
     char resolved[PATH_MAX];
     if (_fullpath(resolved, path.data(), PATH_MAX) == nullptr)
         return "";

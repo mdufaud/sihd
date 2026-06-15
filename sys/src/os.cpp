@@ -188,6 +188,24 @@ bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *opt
     return ret;
 }
 
+#if defined(__SIHD_WINDOWS__)
+Timestamp filetime_to_timestamp(uint64_t filetime_ticks)
+{
+    // 100ns ticks since 1601-01-01 -> nanoseconds since the unix epoch
+    return Timestamp(static_cast<int64_t>((filetime_ticks - 116444736000000000ULL) * 100));
+}
+
+Timestamp filetime_now()
+{
+    FILETIME ft;
+    GetSystemTimePreciseAsFileTime(&ft);
+    ULARGE_INTEGER uli;
+    uli.LowPart = ft.dwLowDateTime;
+    uli.HighPart = ft.dwHighDateTime;
+    return filetime_to_timestamp(uli.QuadPart);
+}
+#endif
+
 Timestamp boot_time()
 {
     static Timestamp boot_timestamp = 0;
@@ -220,8 +238,7 @@ Timestamp boot_time()
             return Timestamp {};
         }
 
-        ULONGLONG epoch_time = (sysInfo.BootTime.QuadPart - 116444736000000000ULL) * 100;
-        boot_timestamp = Timestamp(epoch_time);
+        boot_timestamp = filetime_to_timestamp(sysInfo.BootTime.QuadPart);
 #else
         auto content_opt = fs::read_all("/proc/stat");
         if (content_opt.has_value())
@@ -589,6 +606,13 @@ bool is_run_by_valgrind()
     char *ldpreload = getenv("LD_PRELOAD");
     return ldpreload != nullptr
            && (strstr(ldpreload, "/valgrind/") != nullptr || strstr(ldpreload, "/vgpreload") != nullptr);
+}
+
+bool is_run_by_qemu()
+{
+    // qemu-user passes its own QEMU_LD_PREFIX into the guest environment (cross sysroot).
+    // No reliable non-env signal: qemu-11 emulates the vDSO and fakes uname/auxv to the guest.
+    return getenv("QEMU_LD_PREFIX") != nullptr;
 }
 
 bool is_run_by_debugger()

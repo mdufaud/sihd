@@ -141,6 +141,20 @@ constexpr bool is_emscripten = true;
 constexpr bool is_emscripten = false;
 #endif
 
+// glibc (__GLIBC__ comes from <sys/types.h>)
+#if defined(__GLIBC__)
+constexpr bool is_gnu = true;
+#else
+constexpr bool is_gnu = false;
+#endif
+
+// musl libc: linux without glibc, excluding android (bionic) and emscripten
+#if defined(__SIHD_LINUX__) && !defined(__GLIBC__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
+constexpr bool is_musl = true;
+#else
+constexpr bool is_musl = false;
+#endif
+
 } // namespace sihd::util::build
 
 #endif

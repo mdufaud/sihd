@@ -30,8 +30,8 @@ TEST_F(TestCache, test_override_ttl)
 
     Cache<int, StructTest> cache;
 
-    auto cache_function = []() -> StructTest {
-        static int counter = 0;
+    int counter = 0;
+    auto cache_function = [&counter]() -> StructTest {
         return StructTest {.a = ++counter, .b = "test"};
     };
 
@@ -67,8 +67,8 @@ TEST_F(TestCache, test_lazy)
 {
     Cache<std::string, int> cache;
 
-    auto cache_function = []() -> int {
-        static int counter = 0;
+    int counter = 0;
+    auto cache_function = [&counter]() -> int {
         return ++counter;
     };
 

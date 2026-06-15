@@ -3,6 +3,9 @@
 
 #include <queue>
 
+#include <sihd/core/DevRecorder.hpp>
+#include <sihd/core/Device.hpp>
+#include <sihd/core/Records.hpp>
 #include <sihd/util/Collector.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/IProvider.hpp>
@@ -10,10 +13,6 @@
 #include <sihd/util/SafeQueue.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Worker.hpp>
-
-#include <sihd/core/DevRecorder.hpp>
-#include <sihd/core/Device.hpp>
-#include <sihd/core/Records.hpp>
 
 namespace sihd::core
 {
@@ -29,7 +28,7 @@ class DevPlayer: public sihd::core::Device,
         bool is_running() const override;
 
         bool set_provider(std::string_view path);
-        bool set_provider_wait_time(time_t milliseconds);
+        bool set_provider_wait_time(sihd::util::time::UnixTime milliseconds);
         bool add_alias(std::string_view alias_conf);
         bool set_scheduler_queue_size(size_t limit);
 
@@ -65,7 +64,7 @@ class DevPlayer: public sihd::core::Device,
         // channels to write configuration
         std::map<std::string, std::string> _map_channels_alias;
 
-        std::optional<time_t> _first_timestamp;
+        std::optional<sihd::util::time::UnixTime> _first_timestamp;
 
         // queue to pass data between scheduler thread and worker thread
         sihd::util::SafeQueue<PlayableRecord> _safe_queue;

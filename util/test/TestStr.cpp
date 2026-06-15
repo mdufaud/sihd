@@ -393,7 +393,7 @@ TEST_F(TestStr, test_str_bytes)
     ssize_t gbyte = 1024L * 1024L * 1024L;
     EXPECT_EQ(str::bytes_str(gbyte), "1G");
     EXPECT_EQ(str::bytes_str((gbyte) + (gbyte - mbyte)), "1.9G");
-    ssize_t tbyte = 1024L * 1024L * 1024L * 1024L;
+    int64_t tbyte = 1024LL * 1024LL * 1024LL * 1024LL;
     EXPECT_EQ(str::bytes_str(tbyte), "1T");
     EXPECT_EQ(str::bytes_str((tbyte) + (tbyte - gbyte)), "1.9T");
 }

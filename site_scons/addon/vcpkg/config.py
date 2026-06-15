@@ -125,6 +125,14 @@ vcpkg_no_default_features = [
     "libusb",  # udev default requires libudev headers (no vcpkg port for libudev exists)
 ]
 
+# Force-add the libs above only when an extlib that pulls them is in the build, else a
+# cross build of unrelated modules drags in e.g. libusb (fails on riscv64-musl).
+#   no entry -> always (legacy). [] -> never. [requirer,...] -> only if a requirer present.
+vcpkg_no_default_features_requires = {
+    "dbus": ["simpleble"],  # transitive dep of simpleble; never a direct extlib
+    "libusb": [],           # always a direct extlib (usb module); never a hidden transitive
+}
+
 ###############################################################################
 # Cross-linux display packages
 ###############################################################################

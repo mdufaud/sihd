@@ -7,10 +7,10 @@
 #include <span>
 
 #include <sihd/sys/Poll.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Waitable.hpp>
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/traits.hpp>
 
 namespace sihd::sys
@@ -20,13 +20,15 @@ class Process: public sihd::util::IHandler<Poll *>,
                public sihd::util::ABlockingService
 {
     public:
+        using ReturnCodeType = uint8_t;
 #if !defined(__SIHD_WINDOWS__)
         using FileDescType = int;
-        using ReturnCodeType = uint8_t;
 #else
         using FileDescType = HANDLE;
-        using ReturnCodeType = DWORD;
 #endif
+
+        // POSIX-like observable code for "launch failed or killed" (-1 wrapped to 8 bits)
+        static constexpr ReturnCodeType failure_return_code = 255;
 
         Process();
         Process(std::function<int()> fun);
@@ -36,8 +38,8 @@ class Process: public sihd::util::IHandler<Poll *>,
         Process(std::initializer_list<std::string_view> args);
 
         template <typename... Args,
-                  typename = typename std::enable_if_t<
-                      sihd::util::traits::are_all_constructible<std::string, Args...>::value>>
+                  typename =
+                      typename std::enable_if_t<sihd::util::traits::are_all_constructible<std::string, Args...>::value>>
         Process(const Args &...args): Process()
         {
             _argv.reserve(sizeof...(Args));
@@ -130,16 +132,11 @@ class Process: public sihd::util::IHandler<Poll *>,
         // use fork instead of spawn
         void set_force_fork(bool active);
 
-        // wait for process - report dead child
-        bool wait_exit(int options = 0);
         // wait for process - report stopped child
         bool wait_stop(int options = 0);
         // wait for process - report continued child
         bool wait_continue(int options = 0);
-        // wait for process
-        bool wait_any(int options = 0);
 
-        bool has_exited() const;
         bool has_core_dumped() const;
         bool has_stopped_by_signal() const;
         bool has_exited_by_signal() const;
@@ -156,15 +153,19 @@ class Process: public sihd::util::IHandler<Poll *>,
         HANDLE process() const;
 #endif
 
+        // wait for process - report dead child (options = timeout ms, 0 = block)
+        bool wait_exit(int options = 0);
+        // wait for process (options = timeout ms, 0 = block)
+        bool wait_any(int options = 0);
+        // windows processes always terminate by exit (no signal/stop semantics)
+        bool has_exited() const;
+
         ReturnCodeType return_code() const;
         bool has_terminated() const;
 
         // get setted argv
         const std::vector<std::string> & argv() const { return _argv; }
         const std::vector<std::string> & env() const { return _environment; }
-
-        // check if process will execute fork + exit(fun())
-        bool runs_function() const { return _fun_to_execute ? true : false; }
 
         // default file opening mode
         mode_t open_mode;

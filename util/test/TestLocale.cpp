@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <sihd/util/build.hpp>
 #include <sihd/util/locale.hpp>
 
 namespace test
@@ -24,9 +25,18 @@ TEST_F(TestLocale, test_locale_normalize_name)
     EXPECT_EQ(locale::normalize_locale_name("C"), "C");
     EXPECT_EQ(locale::normalize_locale_name("POSIX"), "POSIX");
     EXPECT_EQ(locale::normalize_locale_name(""), "");
-    EXPECT_EQ(locale::normalize_locale_name("en_US.UTF-8"), "en_US.UTF-8");
-    EXPECT_EQ(locale::normalize_locale_name("fr_FR.ISO-8859-1"), "fr_FR.ISO-8859-1");
-    EXPECT_EQ(locale::normalize_locale_name("de_DE"), "de_DE");
+    if constexpr (build::is_windows)
+    {
+        EXPECT_EQ(locale::normalize_locale_name("en_US.UTF-8"), "en-US");
+        EXPECT_EQ(locale::normalize_locale_name("fr_FR.ISO-8859-1"), "fr-FR");
+        EXPECT_EQ(locale::normalize_locale_name("de_DE"), "de-DE");
+    }
+    else
+    {
+        EXPECT_EQ(locale::normalize_locale_name("en_US.UTF-8"), "en_US.UTF-8");
+        EXPECT_EQ(locale::normalize_locale_name("fr_FR.ISO-8859-1"), "fr_FR.ISO-8859-1");
+        EXPECT_EQ(locale::normalize_locale_name("de_DE"), "de_DE");
+    }
 }
 
 TEST_F(TestLocale, test_locale_create_classic)

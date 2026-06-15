@@ -183,7 +183,7 @@ bool SshCommand::execute_async(std::string_view cmd)
     return ret;
 }
 
-bool SshCommand::wait(time_t timeout_nano, time_t milliseconds_poll_time)
+bool SshCommand::wait(sihd::util::time::UnixTime timeout_nano, time_t milliseconds_poll_time)
 {
     if (_impl->channel.is_open() == false)
         return true;

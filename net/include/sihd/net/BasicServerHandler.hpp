@@ -86,8 +86,8 @@ class BasicServerHandler: public INetServerHandler,
         std::vector<ClientPtr> _read_event_lst;
         std::vector<ClientPtr> _write_event_lst;
         std::vector<ClientPtr> _connect_event_lst;
-        time_t _poll_time;
-        time_t _last_time;
+        sihd::util::time::UnixTime _poll_time;
+        sihd::util::time::UnixTime _last_time;
         INetServer *_server;
 
         size_t _max_clients;

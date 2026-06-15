@@ -40,7 +40,7 @@ void set_internal_data_size(IcmpSender & sender, std::unique_ptr<sihd::util::Arr
     data_ptr->resize(len);
     // set gibberish values like ping in packet
     char values = 10;
-    for (size_t j = sizeof(time_t); j < len; ++j)
+    for (size_t j = sizeof(sihd::util::time::UnixTime); j < len; ++j)
     {
         data_ptr->get(j) = values++;
     }
@@ -163,7 +163,7 @@ bool Pinger::on_start()
     {
         if (i > 0)
         {
-            const time_t time_spent_sending_last_ping = _clock_ptr->now() - _result.last_time_sent;
+            const time::UnixTime time_spent_sending_last_ping = _clock_ptr->now() - _result.last_time_sent;
             // wait between pings
             _waitable.wait_for(time::milliseconds(_ping_ms_interval) - time_spent_sending_last_ping,
                                [this] { return _stop.load(); });
@@ -175,7 +175,7 @@ bool Pinger::on_start()
         _current_seq = i + 1;
         _sender.set_seq(_current_seq);
         _result.last_time_sent = _clock_ptr->now();
-        _data_ptr->copy_from_bytes(&_result.last_time_sent, sizeof(time_t));
+        _data_ptr->copy_from_bytes(&_result.last_time_sent, sizeof(_result.last_time_sent));
         _sender.set_data(*_data_ptr);
         // send icmp echo
         ret = _sender.send_to(_client);
@@ -233,12 +233,12 @@ void Pinger::handle(IcmpSender *sender)
 
     _received_icmp_response = true;
 
-    if (response.size < sizeof(time_t))
+    if (response.size < sizeof(time::UnixTime))
         return;
 
-    const time_t timestamp = ((time_t *)response.data)[0];
-    const time_t now = _clock_ptr->now();
-    const time_t triptime = now - timestamp;
+    const time::UnixTime timestamp = ((time::UnixTime *)response.data)[0];
+    const time::UnixTime now = _clock_ptr->now();
+    const time::UnixTime triptime = now - timestamp;
 
     _result.received++;
     _result.last_time_received = now;

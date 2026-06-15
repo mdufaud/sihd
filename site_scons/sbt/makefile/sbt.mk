@@ -14,6 +14,10 @@ ifeq (, $(call find_exec,$(PYTHON_BIN)))
 $(error "Makefile: no python detected - it is needed to build the project.")
 endif
 
+ifeq (, $(call find_exec,jq))
+$(error "Makefile: no jq detected - it is needed to read the build environment.")
+endif
+
 OS := $(shell uname)
 
 ifeq ($(OS),Linux)
@@ -47,45 +51,51 @@ BUILD_TOOLS := $(PROJECT_ROOT_PATH)/site_scons
 SBT_PATH := $(BUILD_TOOLS)/sbt
 
 SBT_CLI := $(SBT_PATH)/cli_helper.py
-SBT_RESP := $(shell machine=$(machine) mode=$(mode) platform=$(platform) compiler=$(compiler) libc=$(libc) static=$(static) $(PYTHON_BIN) $(SBT_CLI) all)
+SBT_ENV_PATH := $(shell machine=$(machine) mode=$(mode) platform=$(platform) compiler=$(compiler) libc=$(libc) static=$(static) $(PYTHON_BIN) $(SBT_CLI) dump)
 
-PLATFORM := $(word 1, $(SBT_RESP))
+jq_get = $(shell jq -r '.$(1)' $(SBT_ENV_PATH))
+jq_path = $(BUILD_PATH)/$(call jq_get,paths.$(1))
+
+PLATFORM := $(call jq_get,build.platform)
 ifeq ($(PLATFORM),)
 $(error "Makefile: platform not found - cannot find build path")
 endif
 
-MACHINE := $(word 2, $(SBT_RESP))
+MACHINE := $(call jq_get,build.machine)
 ifeq ($(MACHINE),)
 $(error "Makefile: machine not found - cannot find build path")
 endif
 
-COMPILE_MODE := $(word 3, $(SBT_RESP))
+COMPILE_MODE := $(call jq_get,build.mode)
 ifeq ($(COMPILE_MODE),)
 $(error "Makefile: compilation mode not found - cannot find build path")
 endif
 
-COMPILER := $(word 4, $(SBT_RESP))
-GNU_TRIPLET := $(word 5, $(SBT_RESP))
-TERMUX := $(word 6, $(SBT_RESP))
-BUILD_PATH := $(word 7, $(SBT_RESP))
-APP_NAME := $(word 8, $(SBT_RESP))
+COMPILER := $(call jq_get,build.compiler)
+GNU_TRIPLET := $(call jq_get,build.triplet)
+BUILD_PATH := $(call jq_get,build_path)
+APP_NAME := $(call jq_get,app_name)
+
+# Cross-test runner (qemu-user/wine) and test binary suffix; empty string means none
+TEST_RUNNER := $(call jq_get,test.runner)
+TEST_BIN_EXT := $(call jq_get,test.bin_ext)
 
 ##########
 # Paths
 ##########
 
 BUILD_ENTRY_PATH := $(PROJECT_ROOT_PATH)/build
-EXTLIB_PATH := $(BUILD_PATH)/extlib
-EXTLIB_LIB_PATH := $(EXTLIB_PATH)/lib
-LIB_PATH := $(BUILD_PATH)/lib
-INCLUDE_PATH := $(BUILD_PATH)/include
-TEST_PATH := $(BUILD_PATH)/test
-TEST_BIN_PATH := $(TEST_PATH)/bin
-BIN_PATH := $(BUILD_PATH)/bin
-OBJ_PATH := $(BUILD_PATH)/obj
-ETC_PATH := $(BUILD_PATH)/etc
-DEMO_PATH := $(BUILD_PATH)/demo
-SHARE_PATH := $(BUILD_PATH)/share
+EXTLIB_PATH := $(call jq_path,extlib)
+EXTLIB_LIB_PATH := $(call jq_path,extlib_lib)
+LIB_PATH := $(call jq_path,lib)
+INCLUDE_PATH := $(call jq_path,include)
+TEST_PATH := $(call jq_path,test)
+TEST_BIN_PATH := $(call jq_path,test_bin)
+BIN_PATH := $(call jq_path,bin)
+OBJ_PATH := $(call jq_path,obj)
+ETC_PATH := $(call jq_path,etc)
+DEMO_PATH := $(call jq_path,demo)
+SHARE_PATH := $(call jq_path,share)
 DIST_PATH := $(PROJECT_ROOT_PATH)/dist
 
 ####################
@@ -196,9 +206,6 @@ info:
 	$(call mk_log_info,makefile,gnu_triplet = $(GNU_TRIPLET))
 	$(call mk_log_info,makefile,mode = $(COMPILE_MODE))
 	$(call mk_log_info,makefile,logical cores = $(UTILS_LOGICAL_CORE_NUMBER) ($(j) used))
-ifeq ($(TERMUX), true)
-	$(call mk_log_warning,makefile,termux detected)
-endif
 	$(call mk_log_info,makefile,build: $(BUILD_PATH))
 	$(QUIET) echo > /dev/null
 
@@ -383,19 +390,18 @@ MODULES_NAME_SPLIT := $(subst $(COMMA), ,$(MODULES_NAME))
 test: test = 1
 test: build
 	$(call mk_log_info,makefile,starting tests in build: $(TEST_PATH))
-	$(QUIET) bash $(MAKEFILE_TOOLS)/scripts/generate_test_env.sh
-	$(QUIET) env TEST_BIN_PATH="$(TEST_BIN_PATH)" \
-					PROJECT_ROOT_PATH="$(PROJECT_ROOT_PATH)" \
-					bash $(MAKEFILE_TOOLS)/scripts/generate_test_executor.sh
-	$(QUIET) env DEBUGGER="$(DEBUGGER)" \
-					DEBUGGER_ARGS="$(DEBUGGER_ARGS)" \
+	$(if $(TEST_RUNNER),$(call mk_log_warning,makefile,test runner '$(TEST_RUNNER)' active - DEBUGGER and sanitizer options disabled (unsupported under emulation)))
+	$(QUIET) env SBT_ENV_JSON="$(SBT_ENV_PATH)" \
+					bash $(MAKEFILE_TOOLS)/scripts/tests/generate.sh
+	$(QUIET) env DEBUGGER="$(if $(TEST_RUNNER),,$(DEBUGGER))" \
+					DEBUGGER_ARGS="$(if $(TEST_RUNNER),,$(DEBUGGER_ARGS))" \
 					TEST_ARGS="$(TEST_ARGS)" \
 					REPEAT="$(repeat)" \
-					ASAN_OPTIONS="$(ASAN_OPTIONS)" \
-					UBSAN_OPTIONS="$(UBSAN_OPTIONS)" \
-					TSAN_OPTIONS="$(TSAN_OPTIONS)" \
-					LSAN_OPTIONS="$(LSAN_OPTIONS)" \
-					MSAN_OPTIONS="$(MSAN_OPTIONS)" \
+					ASAN_OPTIONS="$(if $(TEST_RUNNER),,$(ASAN_OPTIONS))" \
+					UBSAN_OPTIONS="$(if $(TEST_RUNNER),,$(UBSAN_OPTIONS))" \
+					TSAN_OPTIONS="$(if $(TEST_RUNNER),,$(TSAN_OPTIONS))" \
+					LSAN_OPTIONS="$(if $(TEST_RUNNER),,$(LSAN_OPTIONS))" \
+					MSAN_OPTIONS="$(if $(TEST_RUNNER),,$(MSAN_OPTIONS))" \
 					bash $(TEST_PATH)/execute_tests.sh "$(TEST_ACTION)" "$(MODULES_NAME_SPLIT)" "$(TEST_NAME_FILTER)" $(TEST_SCRIPT_ARGS)
 
 nointeract_test: TEST_SCRIPT_ARGS += 0>&-
@@ -800,8 +806,9 @@ install: confirm_install
 		install -D --compare --mode=755 "$(LIB_PATH)/$$path" "$$dest"; \
 		echo "$$dest" >> $(INSTALLED_FILES_DESTINATION); \
 	done
-ifneq ($(INSTALL_EXTLIBS),)
-# install extlibs (vcpkg-built shared libraries)
+ifeq ($(INSTALL_NO_EXTLIBS),)
+# install extlibs (vcpkg-built shared libraries) - installed binaries resolve
+# them via their $ORIGIN/../lib RUNPATH; opt out with INSTALL_NO_EXTLIBS=1
 	$(QUIET) $(call echo_log_info,makefile,installing extlibs: ${EXTLIB_LIB_PATH} -> $(INSTALL_LIB_DEST))
 	$(QUIET) for path in `ls -A $(EXTLIB_LIB_PATH) 2>/dev/null | grep '\.so'`; do \
 		dest=$(INSTALL_LIB_DEST)/$$path; \

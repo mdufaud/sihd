@@ -4,6 +4,7 @@
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/proc.hpp>
 #include <sihd/util/thread.hpp>
+#include <sihd/util/time.hpp>
 
 namespace sihd::sys::proc
 {
@@ -50,13 +51,13 @@ int do_execute(std::shared_ptr<Process> proc_ptr, Timestamp max_timeout)
     constexpr int poll_timeout_ms = 10;
     SteadyClock clock;
 
-    // if process failed to execute return -1
+    // if process failed to execute return the POSIX-like failure code
     if (!proc_ptr->execute())
-        return static_cast<int>(static_cast<unsigned char>(-1));
+        return Process::failure_return_code;
 
     const bool has_to_poll = proc_ptr->can_read_pipes();
     bool timed_out = false;
-    time_t begin = clock.now();
+    time::UnixTime begin = clock.now();
     while (!timed_out)
     {
         // ensure reading the stdout/stderr

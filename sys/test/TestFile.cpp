@@ -5,6 +5,7 @@
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/util/build.hpp>
 
 namespace test
 {
@@ -136,14 +137,14 @@ TEST_F(TestFile, test_file_open_nonexistent)
 {
     File f;
     EXPECT_FALSE(f.is_open());
-    EXPECT_FALSE(f.open("/tmp/sihd_nonexistent_12345/nope.txt", "r"));
+    EXPECT_FALSE(f.open(fs::combine(fs::tmp_path(), "sihd_nonexistent_12345/nope.txt"), "r"));
     EXPECT_FALSE(f.is_open());
 }
 
 TEST_F(TestFile, test_file_open_tmp)
 {
     File f;
-    EXPECT_TRUE(f.open_tmp("/tmp/sihd_test_", true));
+    EXPECT_TRUE(f.open_tmp(fs::combine(fs::tmp_path(), "sihd_test_"), true));
     EXPECT_TRUE(f.is_open());
     EXPECT_EQ(f.write("tmp", 3), 3);
 }

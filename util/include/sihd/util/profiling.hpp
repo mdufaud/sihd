@@ -26,7 +26,7 @@ class Timeit
     private:
         SteadyClock _clock;
         std::string _label;
-        time_t _begin;
+        time::UnixTime _begin;
 };
 
 class Perf
@@ -62,15 +62,15 @@ class Perf
 
         void log() const;
 
-        const Stat<time_t> & stat() const { return _stat; };
+        const Stat<time::UnixTime> & stat() const { return _stat; };
 
     protected:
 
     private:
         SteadyClock _clock;
         std::string _label;
-        time_t _begin;
-        Stat<time_t> _stat;
+        time::UnixTime _begin;
+        Stat<time::UnixTime> _stat;
 };
 
 } // namespace sihd::util

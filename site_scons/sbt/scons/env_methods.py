@@ -55,6 +55,29 @@ from site_scons.sbt.scons import env_factory
 # Private helpers
 ###############################################################################
 
+def _origin_rpath_flags(env, artifact_dir):
+    """$ORIGIN-relative -rpath flags so an artifact in *artifact_dir* finds its libs.
+
+    Relpath to the lib dirs follows the layout and survives `make install` (bin stays
+    a sibling of lib). Each lib needs its own rpath: DT_RUNPATH is not inherited from
+    the loader. Emitted as LINKFLAGS via Literal() because the RPATH var routes through
+    RDirs and consumes the literal $ORIGIN.
+    """
+    if builder.do_distribution() or builder.build_compiler in ("mingw", "em", "ndk"):
+        return []
+    flags = []
+    seen = set()
+    for lib_dir in (builder.build_lib_path, builder.build_extlib_lib_path):
+        rel = os_path.relpath(lib_dir, artifact_dir)
+        origin = "$ORIGIN" if rel == os_path.curdir else os_path.join("$ORIGIN", rel)
+        if origin not in seen:
+            seen.add(origin)
+            flags.append(env.Literal("-Wl,-rpath," + origin))
+    for extra in env.get("RPATH_EXTRA_DIRS", []):
+        flags.append(env.Literal("-Wl,-rpath," + extra))
+    return flags
+
+
 def _android_build_apk(env, src, name, output_dir, libs, ctx, android_dir=None, **kwargs):
     """Orchestrate building an Android APK from the given source(s).
 
@@ -201,7 +224,9 @@ def _build_lib(self, src, name, static, ctx, **kwargs):
         lib = NoCache(self.StaticLibrary(lib_path, objects, **build_kwargs))
     else:
         objects = scons_cpp_modules.build_objects(self, src, ctx, shared=True, cpp_modules=cpp_mods, **build_kwargs)
-        lib = NoCache(self.SharedLibrary(lib_path, objects, **build_kwargs))
+        lib_env = self.Clone()
+        lib_env.Append(LINKFLAGS=_origin_rpath_flags(lib_env, builder.build_lib_path))
+        lib = NoCache(lib_env.SharedLibrary(lib_path, objects, **build_kwargs))
 
     ctx.state.add_targets(src)
     ctx.state.add_generated("lib", ctx.state.generated_libs, module_name, name, lib_path)
@@ -239,6 +264,7 @@ def _build_bin(self, src, name, libs, android_dir, ctx, **kwargs):
         scons_cpp_modules.enable(bin_env, ctx)
     if self['BIN_LINKFLAGS']:
         bin_env.Append(LINKFLAGS=self['BIN_LINKFLAGS'])
+    bin_env.Append(LINKFLAGS=_origin_rpath_flags(bin_env, builder.build_bin_path))
 
     name += ctx.bin_ext
     bin_path = os_path.join(builder.build_bin_path, name)
@@ -296,6 +322,9 @@ def _build_test(self, src, name, libs, ctx, **kwargs):
         _wrap_libs_static(test_env, static_libs)
     if self['BIN_LINKFLAGS']:
         test_env.Append(LINKFLAGS=self['BIN_LINKFLAGS'])
+    test_env.Append(
+        LINKFLAGS=_origin_rpath_flags(test_env, os_path.join(builder.build_test_path, "bin"))
+    )
 
     if name is None:
         name = self["APP_MODULE_FORMAT_NAME"]
@@ -344,6 +373,7 @@ def _build_demo(self, src, name, libs, android_dir, ctx, **kwargs):
         _wrap_libs_static(demo_env, static_libs)
     if self['BIN_LINKFLAGS']:
         demo_env.Append(LINKFLAGS=self['BIN_LINKFLAGS'])
+    demo_env.Append(LINKFLAGS=_origin_rpath_flags(demo_env, builder.build_demo_path))
 
     name += ctx.bin_ext
     demo_path = os_path.join(builder.build_demo_path, name)

@@ -39,7 +39,7 @@ class TestIcmp: public ::testing::Test
             sender.set_id(getpid());
             sender.set_ttl(64);
             sender.set_data_size(56u);
-            time_t now = sihd::util::Clock::default_clock.now();
+            sihd::util::time::UnixTime now = sihd::util::Clock::default_clock.now();
             sender.set_data({&now, sizeof(now)});
             sender.set_seq(1);
 
@@ -57,7 +57,7 @@ class TestIcmp: public ::testing::Test
                     EXPECT_EQ(response.id, getpid() & 0xFFFF);
                 }
 
-                time_t timestamp = ((time_t *)response.data)[0];
+                sihd::util::time::UnixTime timestamp = ((sihd::util::time::UnixTime *)response.data)[0];
                 int64_t elapsed_ms
                     = sihd::util::time::to_ms(sihd::util::Clock::default_clock.now() - timestamp);
 
@@ -102,7 +102,7 @@ class TestIcmp: public ::testing::Test
 
         bool send(IcmpSender & sender, const IpAddr & host)
         {
-            time_t now = sihd::util::Clock::default_clock.now();
+            sihd::util::time::UnixTime now = sihd::util::Clock::default_clock.now();
             sender.set_data({&now, sizeof(now)});
 
             sender.set_seq(_seq);

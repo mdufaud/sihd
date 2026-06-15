@@ -73,17 +73,17 @@ std::string get_timezone_name()
 #endif
 }
 
-void nsleep(time_t nano)
+void nsleep(UnixTime nano)
 {
     std::this_thread::sleep_for(std::chrono::nanoseconds(nano));
 }
 
-void usleep(time_t micro)
+void usleep(UnixTime micro)
 {
     std::this_thread::sleep_for(std::chrono::microseconds(micro));
 }
 
-void msleep(time_t milli)
+void msleep(UnixTime milli)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(milli));
 }
@@ -103,17 +103,17 @@ double nano_tv_to_double(const struct timeval & tv)
     return (double)tv.tv_sec + (tv.tv_usec / 1E9);
 }
 
-double to_double(time_t nano)
+double to_double(UnixTime nano)
 {
     return nano / 1E9;
 }
 
-double to_double_milliseconds(time_t nano)
+double to_double_milliseconds(UnixTime nano)
 {
     return nano / 1E6;
 }
 
-double to_freq(time_t nano)
+double to_freq(UnixTime nano)
 {
     return (1 / (double)(nano / 1E9));
 }
@@ -136,7 +136,7 @@ struct timeval double_to_nano_tv(double time)
     return ret;
 }
 
-struct timeval milli_to_tv(time_t milliseconds)
+struct timeval milli_to_tv(UnixTime milliseconds)
 {
     struct timeval ret;
 
@@ -145,7 +145,7 @@ struct timeval milli_to_tv(time_t milliseconds)
     return ret;
 }
 
-struct timeval to_tv(time_t micro)
+struct timeval to_tv(UnixTime micro)
 {
     struct timeval ret;
 
@@ -154,7 +154,7 @@ struct timeval to_tv(time_t micro)
     return ret;
 }
 
-struct timeval to_nano_tv(time_t nano)
+struct timeval to_nano_tv(UnixTime nano)
 {
     struct timeval ret;
 
@@ -163,7 +163,7 @@ struct timeval to_nano_tv(time_t nano)
     return ret;
 }
 
-struct tm to_tm(time_t nano, bool localtime)
+struct tm to_tm(UnixTime nano, bool localtime)
 {
     time_t sec = nano / 1E9;
 #if defined(__SIHD_WINDOWS__)
@@ -187,66 +187,66 @@ struct tm to_tm(time_t nano, bool localtime)
 #endif
 }
 
-time_t to_micro(time_t nano)
+UnixTime to_micro(UnixTime nano)
 {
     return nano / 1E3;
 }
 
-time_t to_milli(time_t nano)
+UnixTime to_milli(UnixTime nano)
 {
     return nano / 1E6;
 }
 
-time_t to_sec(time_t nano)
+UnixTime to_sec(UnixTime nano)
 {
     return nano / 1E9;
 }
 
-time_t to_min(time_t nano)
+UnixTime to_min(UnixTime nano)
 {
     return to_sec(nano) / 60;
 }
 
-time_t to_hours(time_t nano)
+UnixTime to_hours(UnixTime nano)
 {
     return to_min(nano) / 60;
 }
 
-time_t to_days(time_t nano)
+UnixTime to_days(UnixTime nano)
 {
     return to_hours(nano) / 24;
 }
 
-time_t from_double(double sec_milli)
+UnixTime from_double(double sec_milli)
 {
     time_t sec = (time_t)sec_milli;
-    time_t nano = (double)(sec_milli - sec) * 1E9;
+    UnixTime nano = (double)(sec_milli - sec) * 1E9;
     return time::sec(sec) + nano;
 }
 
-time_t from_double_milliseconds(double milli_micro)
+UnixTime from_double_milliseconds(double milli_micro)
 {
     time_t milliseconds = (time_t)milli_micro;
-    time_t nano = (double)(milli_micro - milliseconds) * 1E6;
+    UnixTime nano = (double)(milli_micro - milliseconds) * 1E6;
     return time::milliseconds(milliseconds) + nano;
 }
 
-time_t tv(const struct timeval & tv)
+UnixTime tv(const struct timeval & tv)
 {
     return (tv.tv_sec * 1E9) + (tv.tv_usec * 1E3);
 }
 
-time_t nano_tv(const struct timeval & tv)
+UnixTime nano_tv(const struct timeval & tv)
 {
     return (tv.tv_sec * 1E9) + tv.tv_usec;
 }
 
-time_t tm(struct tm & tm)
+UnixTime tm(struct tm & tm)
 {
     return mktime(&tm) * 1E9;
 }
 
-time_t local_tm(struct tm & tm)
+UnixTime local_tm(struct tm & tm)
 {
     return (mktime(&tm) - get_timezone()) * 1E9;
 }
@@ -256,12 +256,12 @@ bool is_leap_year(int year)
     return year % 4 == 0 && (year % 400 == 0 || year % 100 != 0);
 }
 
-time_t ts(const struct timespec & ts)
+UnixTime ts(const struct timespec & ts)
 {
     return (ts.tv_sec * 1E9) + ts.tv_nsec;
 }
 
-struct timespec to_ts(time_t nano)
+struct timespec to_ts(UnixTime nano)
 {
     struct timespec ts;
     ts.tv_sec = (time_t)(nano / 1E9);

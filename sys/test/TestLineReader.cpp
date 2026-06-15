@@ -3,6 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/profiling.hpp>
 
 namespace test
@@ -204,7 +205,7 @@ TEST_F(TestLineReader, test_linereader_perf)
     SIHD_LOG(info, "Output LineReader: {}", path_line_reader);
     SIHD_LOG(info, "Output LineReader::fast_read_line: {}", path_line_reader_no_memory);
 
-    File writer(path_input, "w");
+    File writer(path_input, "wb");
     ASSERT_TRUE(writer.is_open());
     ASSERT_TRUE(writer.write(random_str) == (ssize_t)random_str.size());
     ASSERT_TRUE(writer.close());
@@ -212,11 +213,11 @@ TEST_F(TestLineReader, test_linereader_perf)
     char *line = nullptr;
     size_t size = 0;
     size_t total_file = 0;
-    ASSERT_TRUE(writer.open(path_file, "w"));
+    ASSERT_TRUE(writer.open(path_file, "wb"));
     {
         Timeit t("std::getline");
         File file;
-        file.open(path_input, "r");
+        file.open(path_input, "rb");
         while (file.read_line(&line, &size) > 0)
         {
             writer.write(line);
@@ -229,7 +230,7 @@ TEST_F(TestLineReader, test_linereader_perf)
     ASSERT_TRUE(writer.close());
 
     size_t total_rl = 0;
-    ASSERT_TRUE(writer.open(path_line_reader, "w"));
+    ASSERT_TRUE(writer.open(path_line_reader, "wb"));
     ArrCharView view;
     {
         Timeit it("LineReader");
@@ -250,10 +251,10 @@ TEST_F(TestLineReader, test_linereader_perf)
     ASSERT_TRUE(writer.close());
 
     size_t total_rl_no_memory = 0;
-    ASSERT_TRUE(writer.open(path_line_reader_no_memory, "w"));
+    ASSERT_TRUE(writer.open(path_line_reader_no_memory, "wb"));
     {
         Timeit it("LineReader::fast_read_line");
-        File file(path_input, "r");
+        File file(path_input, "rb");
         ASSERT_TRUE(file.is_open());
         std::string line;
         LineReader::LineReaderOptions options = {

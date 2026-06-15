@@ -21,10 +21,10 @@ namespace
 
 bool filemutex_try_lock_for_ex_sh(FileMutex & mutex, Timestamp duration, bool shared)
 {
-    constexpr time_t retry_in_ms = time::milliseconds(10);
+    constexpr time::UnixTime retry_in_ms = time::milliseconds(10);
 
     SteadyClock clock;
-    time_t begin = clock.now();
+    time::UnixTime begin = clock.now();
     bool success;
 
     while (true)
@@ -33,7 +33,7 @@ bool filemutex_try_lock_for_ex_sh(FileMutex & mutex, Timestamp duration, bool sh
         if (success)
             break;
 
-        time_t diff = clock.now() - begin;
+        time::UnixTime diff = clock.now() - begin;
         if (diff > duration)
             break;
         time::nsleep(std::min(retry_in_ms, duration - diff));
@@ -157,6 +157,7 @@ bool FileMutex::try_lock_shared()
     HANDLE handle = (HANDLE)_get_osfhandle(_file.fd());
     const DWORD allBitsSet = ~DWORD(0);
     _OVERLAPPED overlapped;
+    memset(&overlapped, 0, sizeof(_OVERLAPPED));
     return LockFileEx(handle, LOCKFILE_FAIL_IMMEDIATELY, 0, allBitsSet, allBitsSet, &overlapped);
 #endif
 }

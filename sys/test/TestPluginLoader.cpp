@@ -29,6 +29,8 @@ TEST_F(TestPluginLoader, test_pluginloader)
     EXPECT_EQ(PluginLoader::load("unknown_lib", "symbol", "err"), nullptr);
     EXPECT_EQ(PluginLoader::load("sihd_util", "unknown_symbol", "err"), nullptr);
 
+#if !defined(SIHD_STATIC)
+    // plugin loading needs a dynamic build — static links have no loadable module
     Named *node = PluginLoader::load("sihd_sys", "Node", "test_node");
     ASSERT_NE(node, nullptr);
     EXPECT_EQ(node->name(), "test_node");
@@ -40,5 +42,6 @@ TEST_F(TestPluginLoader, test_pluginloader)
     if (child->parent() != casted)
         delete child;
     delete node;
+#endif
 }
 } // namespace test

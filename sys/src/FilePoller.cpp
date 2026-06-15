@@ -34,7 +34,7 @@ void map_path_into(std::vector<FileStat> & file_stats, const std::string & path,
     auto files = fs::recursive_children(path, max_depth);
     std::sort(files.begin(), files.end());
 
-    time_t last_write;
+    sihd::util::time::UnixTime last_write;
     file_stats.reserve(files.size());
     for (std::string & file : files)
     {
@@ -80,7 +80,7 @@ struct FilePoller::Impl
         std::string watch_path;
         size_t max_depth;
         bool path_exists;
-        time_t last_modif;
+        sihd::util::time::UnixTime last_modif;
         std::vector<FileStat> last;
 
         std::vector<std::string> created;
@@ -165,7 +165,7 @@ bool FilePoller::run()
         return false;
 
     const bool new_path_exists = fs::exists(_impl->watch_path);
-    const time_t new_last_modif = fs::last_write(_impl->watch_path);
+    const sihd::util::time::UnixTime new_last_modif = fs::last_write(_impl->watch_path);
 
     std::vector<FileStat> new_files;
     new_files.reserve(_impl->last.size());

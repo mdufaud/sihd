@@ -6,6 +6,7 @@
 
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/IHandler.hpp>
+#include <sihd/util/time.hpp>
 
 #include <sihd/ssh/SshChannel.hpp>
 
@@ -24,7 +25,7 @@ class SshCommand
         bool execute(std::string_view cmd);
         bool execute_async(std::string_view cmd);
         bool input(sihd::util::ArrCharView view);
-        bool wait(time_t timeout_nano = 0, time_t milliseconds_poll_time = 1);
+        bool wait(sihd::util::time::UnixTime timeout_nano = 0, time_t milliseconds_poll_time = 1);
 
         sihd::util::IHandler<std::string_view, bool> *output_handler;
 
