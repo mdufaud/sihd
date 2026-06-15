@@ -168,7 +168,7 @@ class Array: public IArray,
         bool copy_from_bytes(const void *buf, size_t buf_byte_size, Slice byte_slice = {})
         {
             auto range = byte_slice.resolve(this->byte_size());
-            if ((range.from + buf_byte_size) > this->byte_size())
+            if (range.empty() || (range.from + buf_byte_size) > this->byte_size())
                 return false;
             memmove(this->buf() + range.from, buf, buf_byte_size);
             return true;
@@ -267,8 +267,9 @@ class Array: public IArray,
         bool from_bytes(const void *buf, size_t buf_byte_size)
         {
             if (buf_byte_size % sizeof(T) != 0)
-                throw std::invalid_argument(str::format(
-                    "Array::from_bytes buffer - %lu not divisible by data size %lu", buf_byte_size, sizeof(T)));
+                throw std::invalid_argument(str::format("Array::from_bytes buffer - %lu not divisible by data size %lu",
+                                                        buf_byte_size,
+                                                        sizeof(T)));
             return this->from((const T *)buf, buf_byte_size / sizeof(T));
         }
 
@@ -323,15 +324,19 @@ class Array: public IArray,
         /*********************************************************************/
 
         // throws std::invalid_argument if byte size is not aligned with type size
-        bool assign_bytes(void *buf, size_t buf_byte_size) { return this->assign_bytes(buf, buf_byte_size, buf_byte_size); }
+        bool assign_bytes(void *buf, size_t buf_byte_size)
+        {
+            return this->assign_bytes(buf, buf_byte_size, buf_byte_size);
+        }
 
         // delete internal buffer if exists then sets it to bytes buffer buf - does not take ownership
         // throws std::invalid_argument if byte size or capacity is not aligned with type size
         bool assign_bytes(void *buf, size_t buf_byte_size, size_t buf_byte_capacity)
         {
             if (buf_byte_size % this->data_size() != 0)
-                throw std::invalid_argument(str::format(
-                    "Array::assign_bytes - size %lu not divisible by data size %lu", buf_byte_size, sizeof(T)));
+                throw std::invalid_argument(str::format("Array::assign_bytes - size %lu not divisible by data size %lu",
+                                                        buf_byte_size,
+                                                        sizeof(T)));
             if (buf_byte_capacity % this->data_size() != 0)
                 throw std::invalid_argument(
                     str::format("Array::assign_bytes - capacity %lu not divisible by data size %lu",
@@ -703,7 +708,7 @@ class Array: public IArray,
                     memmove((uint8_t *)(_buf_ptr + (idx + size)), (uint8_t *)(_buf_ptr + idx), len_move);
                     // -> {0, 1, _, _, _, 2, 3}
                 }
-                    memmove((uint8_t *)(_buf_ptr + idx), buf, size * this->data_size());
+                memmove((uint8_t *)(_buf_ptr + idx), buf, size * this->data_size());
                 // -> {0, 1, 4, 5}
                 _size += size;
                 // -> {0, 1, 4, 5, 6, 2, 3}

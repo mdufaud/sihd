@@ -45,17 +45,24 @@ class ArrayView: public IArrayView
         // make sure the fundamental type size is divisible by type size.
         // ex: int8_t may not go into an ArrayView<int32_t> which will be size 0
         template <traits::TriviallyCopyable Fundamental>
-        requires(!traits::Pointer<Fundamental> && !traits::HasConstDataSize<Fundamental>)
-            ArrayView(const Fundamental & value):
-            ArrayView(&value, sizeof(Fundamental) / sizeof(T))
+            requires(!traits::Pointer<Fundamental> && !traits::HasConstDataSize<Fundamental>)
+        ArrayView(const Fundamental & value): ArrayView(&value, sizeof(Fundamental) / sizeof(T))
         {
         }
 
         // char specialization
-        ArrayView(std::string_view str) requires std::same_as<T, char>: ArrayView(str.data(), str.size()) {}
+        ArrayView(std::string_view str)
+            requires std::same_as<T, char>
+            : ArrayView(str.data(), str.size())
+        {
+        }
 
         // char specialization
-        ArrayView(const char *str) requires std::same_as<T, char>: ArrayView(str, strlen(str)) {}
+        ArrayView(const char *str)
+            requires std::same_as<T, char>
+            : ArrayView(str, strlen(str))
+        {
+        }
 
         /*********************************************************************/
         /* byte constructor */
@@ -117,12 +124,14 @@ class ArrayView: public IArrayView
 
         operator bool() const { return _buf_ptr != nullptr; }
 
-        operator std::string() const requires std::same_as<T, char>
+        operator std::string() const
+            requires std::same_as<T, char>
         {
             return std::string(this->data(), this->byte_size());
         }
 
-        operator std::string_view() const requires std::same_as<T, char>
+        operator std::string_view() const
+            requires std::same_as<T, char>
         {
             return std::string_view(this->data(), this->byte_size());
         }
@@ -155,10 +164,7 @@ class ArrayView: public IArrayView
             return memcmp(this->buf(), buf, buf_byte_size) == 0;
         }
 
-        bool is_bytes_equal(const IArrayView & arr) const
-        {
-            return this->is_bytes_equal(arr.buf(), arr.byte_size());
-        }
+        bool is_bytes_equal(const IArrayView & arr) const { return this->is_bytes_equal(arr.buf(), arr.byte_size()); }
 
         bool operator==(ArrayView<T> other) const { return this->is_equal(other); }
 
@@ -167,10 +173,7 @@ class ArrayView: public IArrayView
         bool is_equal(ArrayView<T> arr) const { return this->is_equal(arr.data(), arr.size()); }
 
         // compares memory from internal buffer and array of size
-        bool is_equal(const T *arr, size_t size) const
-        {
-            return this->is_bytes_equal(arr, size * this->data_size());
-        }
+        bool is_equal(const T *arr, size_t size) const { return this->is_bytes_equal(arr, size * this->data_size()); }
 
         /*********************************************************************/
         /* copy_to */
@@ -198,10 +201,7 @@ class ArrayView: public IArrayView
         /* views */
         /*********************************************************************/
 
-        std::string hexdump(char delimiter = ' ') const
-        {
-            return str::hexdump(_buf_ptr, this->byte_size(), delimiter);
-        }
+        std::string hexdump(char delimiter = ' ') const { return str::hexdump(_buf_ptr, this->byte_size(), delimiter); }
 
         std::string str() const
         {
@@ -295,6 +295,8 @@ class ArrayView: public IArrayView
         ArrayView<T> subview(Slice slice = {}) const
         {
             auto range = slice.resolve(_size);
+            if (range.empty())
+                return ArrayView<T>();
             return ArrayView<T>(this->data() + range.from, range.size());
         }
 
@@ -340,9 +342,7 @@ class ArrayView: public IArrayView
                 pointer array_curr;
                 pointer array_end;
 
-                ArrayIterator(pointer ptr_begin = nullptr,
-                              pointer ptr_curr = nullptr,
-                              pointer ptr_end = nullptr):
+                ArrayIterator(pointer ptr_begin = nullptr, pointer ptr_curr = nullptr, pointer ptr_end = nullptr):
                     array_beg(ptr_begin),
                     array_curr(ptr_curr),
                     array_end(ptr_end)
@@ -402,10 +402,7 @@ class ArrayView: public IArrayView
                     return *this;
                 }
 
-                difference_type operator-(const ArrayIterator & rhs) const
-                {
-                    return this->array_curr - rhs.array_curr;
-                }
+                difference_type operator-(const ArrayIterator & rhs) const { return this->array_curr - rhs.array_curr; }
 
                 ArrayIterator operator+(difference_type i) const
                 {
@@ -422,18 +419,12 @@ class ArrayView: public IArrayView
                     return ArrayIterator(this->array_beg, this->array_curr - i, this->array_end);
                 }
 
-                bool operator==(const ArrayIterator & rhs) const
-                {
-                    return this->array_curr == rhs.array_curr;
-                }
+                bool operator==(const ArrayIterator & rhs) const { return this->array_curr == rhs.array_curr; }
                 bool operator!=(const ArrayIterator & rhs) const { return !(*this == rhs); }
 
                 bool operator<(const ArrayIterator & rhs) const { return this->array_curr < rhs.array_curr; }
                 bool operator>(const ArrayIterator & rhs) const { return !(*this <= rhs); }
-                bool operator<=(const ArrayIterator & rhs) const
-                {
-                    return this->array_curr <= rhs.array_curr;
-                }
+                bool operator<=(const ArrayIterator & rhs) const { return this->array_curr <= rhs.array_curr; }
                 bool operator>=(const ArrayIterator & rhs) const { return !(*this < rhs); }
 
                 reference operator*() const
@@ -564,21 +555,12 @@ class ArrayView: public IArrayView
                     return *this;
                 }
 
-                bool operator==(const ReverseArrayIterator & rhs) const
-                {
-                    return this->array_curr == rhs.array_curr;
-                }
+                bool operator==(const ReverseArrayIterator & rhs) const { return this->array_curr == rhs.array_curr; }
                 bool operator!=(const ReverseArrayIterator & rhs) const { return !(*this == rhs); }
 
-                bool operator<(const ReverseArrayIterator & rhs) const
-                {
-                    return this->array_curr > rhs.array_curr;
-                }
+                bool operator<(const ReverseArrayIterator & rhs) const { return this->array_curr > rhs.array_curr; }
                 bool operator>(const ReverseArrayIterator & rhs) const { return !(*this <= rhs); }
-                bool operator<=(const ReverseArrayIterator & rhs) const
-                {
-                    return this->array_curr >= rhs.array_curr;
-                }
+                bool operator<=(const ReverseArrayIterator & rhs) const { return this->array_curr >= rhs.array_curr; }
                 bool operator>=(const ReverseArrayIterator & rhs) const { return !(*this < rhs); }
 
                 reference operator*() const
@@ -606,9 +588,7 @@ class ArrayView: public IArrayView
         {
             if (_size == 0)
                 return this->rend();
-            return reverse_iterator(this->data(),
-                                    this->data() + this->size() - 1,
-                                    this->data() + this->size());
+            return reverse_iterator(this->data(), this->data() + this->size() - 1, this->data() + this->size());
         }
         reverse_iterator rend() const
         {

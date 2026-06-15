@@ -12,9 +12,9 @@
 
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
-#include <sihd/sys/platform.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <direct.h> // _mkdir _stat
@@ -804,8 +804,7 @@ std::string jail(std::string_view root_view, std::string_view path_view)
     auto under_root = [&root](const std::string & p) {
         if (root == "/")
             return !p.empty() && p[0] == '/';
-        return p == root
-               || (p.size() > root.size() && p.compare(0, root.size(), root) == 0 && p[root.size()] == '/');
+        return p == root || (p.size() > root.size() && p.compare(0, root.size(), root) == 0 && p[root.size()] == '/');
     };
 
     // Escape attempt (e.g. ../../etc/passwd): clamp to the jail root
@@ -839,21 +838,24 @@ bool write_binary(std::string_view path, std::string_view view, bool append)
     return false;
 }
 
-std::optional<std::string> read(std::string_view path, size_t size, long offset)
+std::optional<std::string> read(std::string_view path, sihd::util::Slice slice)
 {
     File file(path, "r");
-
     if (!file.is_open())
         return std::nullopt;
 
-    if (offset > 0)
-        file.seek_begin(offset);
-    else if (offset < 0)
-        file.seek_end(-offset);
+    const size_t file_size = file.file_size();
+    const auto range = slice.resolve(file_size);
+
+    if (range.empty())
+        return std::nullopt;
+
+    if (!file.seek_begin(range.from))
+        return std::nullopt;
 
     ssize_t ret;
     std::string str;
-    if ((ret = file.read(str, size)) > 0)
+    if ((ret = file.read(str, range.size())) > 0)
     {
         return str;
     }

@@ -17,6 +17,7 @@ template <typename Key, typename Value>
 class Cache
 {
     public:
+        using OptionalCachedValue = std::optional<std::reference_wrapper<Value>>;
         using CacheGetter = std::function<Value()>;
 
         struct Stats
@@ -68,7 +69,7 @@ class Cache
         }
 
         // This method does not throw if the key is missing, it returns std::nullopt instead.
-        std::optional<std::reference_wrapper<Value>> get_optional(const Key & key, Timestamp ttl = -1)
+        OptionalCachedValue get_optional(const Key & key, Timestamp ttl = -1)
         {
             try
             {
@@ -81,7 +82,7 @@ class Cache
         }
 
         // This method does not refresh the cache, it only returns the cached value if it exists.
-        std::optional<std::reference_wrapper<Value>> get_cached(const Key & key)
+        OptionalCachedValue get_cached(const Key & key)
         {
             try
             {

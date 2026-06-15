@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/Callback.hpp>
 #include <sihd/util/Logger.hpp>
 

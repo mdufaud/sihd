@@ -1,12 +1,13 @@
 #include <filesystem>
 #include <fstream>
+
 #include <gtest/gtest.h>
 
-#include <sihd/util/Array.hpp>
 #include <sihd/sys/File.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/sys/fs.hpp>
 #include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/num.hpp>
 
@@ -225,8 +226,8 @@ TEST_F(TestFS, test_fs_fast_io)
     EXPECT_TRUE(this->log_make_dirs(fs::parent(path)));
     SIHD_LOG(info, "Writing file to: {}", path);
     EXPECT_TRUE(fs::write(path, file_content));
-    EXPECT_EQ(fs::read_all(path), file_content);
-    EXPECT_EQ(fs::read(path, 5), "hello");
+    EXPECT_EQ(fs::read_all(path).value_or(""), file_content);
+    EXPECT_EQ(fs::read(path, {0, 4}).value_or(""), "hello");
     char data[10];
     EXPECT_EQ(fs::read_binary(path, data, 5), 5);
     data[5] = 0;

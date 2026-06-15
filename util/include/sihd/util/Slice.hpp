@@ -19,16 +19,18 @@ struct Slice
 
                 size_t size() const { return to - from; }
                 bool empty() const { return from >= to; }
+
+                operator bool() const { return !this->empty(); }
         };
 
         static Slice from_size(size_t offset, size_t size)
         {
-            return Slice{static_cast<ssize_t>(offset), static_cast<ssize_t>(offset + size - 1)};
+            return Slice {static_cast<ssize_t>(offset), static_cast<ssize_t>(offset + size - 1)};
         }
 
         Range resolve(size_t size) const
         {
-            ssize_t sz = static_cast<ssize_t>(size);
+            const ssize_t sz = static_cast<ssize_t>(size);
             ssize_t f = from < 0 ? from + sz : from;
             ssize_t t = to < 0 ? to + sz : to;
             f = std::clamp(f, ssize_t(0), sz);
