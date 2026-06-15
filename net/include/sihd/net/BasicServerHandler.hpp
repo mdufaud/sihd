@@ -23,14 +23,7 @@ class BasicServerHandler: public INetServerHandler,
         class Client
         {
             public:
-                Client(int sock):
-                    socket(sock),
-                    time_connected(0),
-                    time_total(0),
-                    error(false),
-                    disconnected(false)
-                {
-                }
+                Client(int sock): socket(sock), time_connected(0), time_total(0), error(false), disconnected(false) {}
                 ~Client() = default;
 
                 int fd() { return socket.socket(); }
@@ -62,14 +55,14 @@ class BasicServerHandler: public INetServerHandler,
         const std::vector<ClientPtr> & read_activity() const { return _read_event_lst; }
         const std::vector<ClientPtr> & write_activity() const { return _write_event_lst; }
         const std::vector<ClientPtr> & new_clients() const { return _connect_event_lst; }
-        sihd::util::Timestamp poll_time() const { return _poll_time; }
+        sihd::util::Duration poll_time() const { return _poll_time; }
         INetServer *server() { return _server; }
         size_t client_count() const;
         ClientPtr client(int socket);
 
     protected:
-        void handle_no_activity(INetServer *server, time_t milliseconds);
-        void handle_activity(INetServer *server, time_t milliseconds);
+        void handle_no_activity(INetServer *server, sihd::util::time::UnixTime milliseconds);
+        void handle_activity(INetServer *server, sihd::util::time::UnixTime milliseconds);
         void handle_new_client(INetServer *server);
         void handle_client_read(INetServer *server, int socket);
         void handle_client_write(INetServer *server, int socket);
@@ -86,8 +79,8 @@ class BasicServerHandler: public INetServerHandler,
         std::vector<ClientPtr> _read_event_lst;
         std::vector<ClientPtr> _write_event_lst;
         std::vector<ClientPtr> _connect_event_lst;
-        sihd::util::time::UnixTime _poll_time;
-        sihd::util::time::UnixTime _last_time;
+        sihd::util::Duration _poll_time;
+        sihd::util::Timestamp _last_time;
         INetServer *_server;
 
         size_t _max_clients;

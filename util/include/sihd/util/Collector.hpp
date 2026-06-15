@@ -16,7 +16,7 @@ class Collector: public Observable<Collector<T>>,
                  public ABlockingService
 {
     public:
-        Collector(IProvider<T> *provider = nullptr, Timestamp duration = std::chrono::milliseconds(1)):
+        Collector(IProvider<T> *provider = nullptr, Duration duration = std::chrono::milliseconds(1)):
             _provider_ptr(provider),
             _running(false),
             _wait_duration(duration)
@@ -42,12 +42,12 @@ class Collector: public Observable<Collector<T>>,
             return false;
         }
 
-        void set_timeout(Timestamp duration) { _wait_duration = duration; }
+        void set_timeout(Duration duration) { _wait_duration = duration; }
         void set_provider(IProvider<T> *ptr) { _provider_ptr = ptr; }
 
         T data() const { return _data; }
         IProvider<T> *provider() const { return _provider_ptr; }
-        Timestamp timeout_duration() const { return _wait_duration; }
+        Duration timeout_duration() const { return _wait_duration; }
         bool can_collect() const { return _provider_ptr != nullptr && _provider_ptr->providing(); }
 
     protected:
@@ -81,7 +81,7 @@ class Collector: public Observable<Collector<T>>,
         IProvider<T> *_provider_ptr;
 
         bool _running;
-        Timestamp _wait_duration;
+        Duration _wait_duration;
 
         std::mutex _run_mutex;
         Waitable _waitable;

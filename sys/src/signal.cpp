@@ -402,11 +402,11 @@ std::string status_str()
             const size_t received = status->received.load(std::memory_order_relaxed);
             if (received > 0)
             {
-                const sihd::util::time::UnixTime time_received = status->time_received.load(std::memory_order_relaxed);
+                const sihd::util::Timestamp time_received = status->time_received.load(std::memory_order_relaxed);
                 ret += fmt::format("{} -> {} ({})\n",
                                    signal::name(sig),
                                    received,
-                                   Timestamp(time_received).day_str());
+                                   time_received.day_str());
             }
         }
         else

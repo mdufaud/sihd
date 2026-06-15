@@ -246,7 +246,7 @@ bool Poll::on_start()
 
 int Poll::poll(int milliseconds_timeout)
 {
-    time::UnixTime before = _clock.now();
+    Timestamp before = _clock.now();
     int ret;
     {
         std::lock_guard lock(_fds_mutex);

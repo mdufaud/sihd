@@ -1,5 +1,3 @@
-#include <sihd/util/build.hpp>
-
 #include <algorithm>
 #include <cmath>
 #include <mutex>
@@ -14,6 +12,7 @@
 #include <sihd/util/Stat.hpp>
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/Task.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
 
@@ -26,13 +25,13 @@ std::string format_us(double us)
     return fmt::format("{:.2f} us", us);
 }
 
-std::string format_interval(time_t ns)
+std::string format_interval(sihd::util::Duration ns)
 {
     if (ns >= time::milli(1))
         return fmt::format("{} ms", time::to_milli(ns));
     if (ns >= time::micro(1))
         return fmt::format("{} us", time::to_micro(ns));
-    return fmt::format("{} ns", ns);
+    return fmt::format("{} ns", ns.nanoseconds());
 }
 
 // --- Phase 1: Latency & Jitter ---
@@ -40,7 +39,7 @@ std::string format_interval(time_t ns)
 struct LatencyResult
 {
         size_t tasks;
-        time_t interval_ns;
+        sihd::util::Duration interval_ns;
         size_t expected_ticks;
         size_t actual_ticks;
         size_t overruns;
@@ -49,7 +48,7 @@ struct LatencyResult
         PSquareStat<long long> jitter;
 };
 
-LatencyResult bench_latency(size_t task_count, time_t interval_ns, time_t run_duration_ns)
+LatencyResult bench_latency(size_t task_count, sihd::util::Duration interval_ns, sihd::util::Duration run_duration_ns)
 {
     Scheduler scheduler("bench_latency");
     SteadyClock clock;
@@ -64,7 +63,7 @@ LatencyResult bench_latency(size_t task_count, time_t interval_ns, time_t run_du
     struct TaskData
     {
             std::vector<long long> latencies_ns;
-            time_t last_expected = 0;
+            sihd::util::Timestamp last_expected = 0;
     };
     std::vector<TaskData> task_data(task_count);
     for (auto & td : task_data)
@@ -77,8 +76,8 @@ LatencyResult bench_latency(size_t task_count, time_t interval_ns, time_t run_du
         Task *task = new Task();
         TaskData *td = &task_data[i];
         task->set_method([td, &scheduler, &total_ticks, interval_ns] {
-            time_t now = scheduler.now();
-            time_t expected = td->last_expected;
+            sihd::util::Timestamp now = scheduler.now();
+            sihd::util::Timestamp expected = td->last_expected;
             if (expected > 0)
             {
                 long long latency = (long long)(now - expected);
@@ -170,15 +169,16 @@ void print_latency_row(const char *label, const LatencyResult & r)
 struct ThroughputResult
 {
         size_t tasks;
-        time_t interval_ns;
-        time_t total_time_ns;
+        sihd::util::Duration interval_ns;
+        sihd::util::Duration total_time_ns;
         size_t total_ticks;
         double throughput_khz;
         double accuracy_pct;
         size_t overruns;
 };
 
-ThroughputResult bench_throughput(size_t task_count, time_t interval_ns, time_t run_duration_ns)
+ThroughputResult
+    bench_throughput(size_t task_count, sihd::util::Duration interval_ns, sihd::util::Duration run_duration_ns)
 {
     Scheduler scheduler("bench_throughput");
     SteadyClock clock;
@@ -203,9 +203,9 @@ ThroughputResult bench_throughput(size_t task_count, time_t interval_ns, time_t 
 
     Stopwatch sw;
     scheduler.start();
-    std::this_thread::sleep_for(std::chrono::nanoseconds(run_duration_ns));
+    std::this_thread::sleep_for(std::chrono::nanoseconds(run_duration_ns.nanoseconds()));
     scheduler.stop();
-    time_t elapsed = sw.time();
+    sihd::util::Duration elapsed = sw.time();
 
     size_t actual = total_ticks.load();
     size_t expected_per_task = run_duration_ns / interval_ns;
@@ -228,23 +228,23 @@ ThroughputResult bench_throughput(size_t task_count, time_t interval_ns, time_t 
 
 struct ResolutionResult
 {
-        time_t min_stable_interval_ns;
+        sihd::util::Duration min_stable_interval_ns;
         size_t max_stable_tasks;
         double max_throughput_khz;
 };
 
-ResolutionResult find_resolution(time_t run_duration_ns)
+ResolutionResult find_resolution(sihd::util::Duration run_duration_ns)
 {
     // binary search for the minimum interval at which 1 task stays above 95% accuracy
-    time_t lo = time::micro(1);
-    time_t hi = time::milli(10);
-    time_t best_interval = hi;
+    sihd::util::Duration lo = sihd::util::time::micro(1);
+    sihd::util::Duration hi = sihd::util::time::milli(10);
+    sihd::util::Duration best_interval = hi;
 
     fmt::print("  Binary search: 1 task, finding minimum stable interval...\n");
 
-    while (hi - lo > time::micro(1))
+    while (hi - lo > sihd::util::time::micro(1))
     {
-        time_t mid = (lo + hi) / 2;
+        sihd::util::Duration mid = (lo + hi) / 2;
         auto r = bench_throughput(1, mid, run_duration_ns);
         bool stable = r.accuracy_pct >= 95.0;
         fmt::print("    {} -> {:.1f}% accuracy, {:.1f} kHz throughput {}\n",
@@ -264,9 +264,9 @@ ResolutionResult find_resolution(time_t run_duration_ns)
     }
 
     // find max tasks at 2x the found resolution
-    time_t test_interval = best_interval * 2;
-    if (test_interval < time::micro(100))
-        test_interval = time::micro(100);
+    sihd::util::Duration test_interval = best_interval * 2;
+    if (test_interval < sihd::util::time::micro(100))
+        test_interval = sihd::util::time::micro(100);
 
     fmt::print("\n  Scaling tasks at {} interval...\n", format_interval(test_interval));
 
@@ -312,7 +312,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv)
         LoggerManager::stream(stderr);
 #endif
 
-    constexpr time_t phase_duration = time::milli(500);
+    constexpr sihd::util::Duration phase_duration = sihd::util::time::milli(500);
 
     // ===================================================================
     fmt::print(
@@ -331,7 +331,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv)
     struct TestCase
     {
             size_t tasks;
-            time_t interval_ns;
+            sihd::util::Duration interval_ns;
             const char *label;
     };
 
@@ -364,7 +364,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv)
         "\n── Phase 2: Throughput scaling ────────────────────────────────────────────────────────────────────────\n");
     fmt::print("  Fixed interval, increasing task count to find scheduler throughput ceiling\n\n");
 
-    constexpr time_t tp_interval = time::micro(500);
+    constexpr sihd::util::Duration tp_interval = sihd::util::time::micro(500);
     fmt::print("{:<22s} {:>8s} {:>8s} {:>9s} {:>8s}  {:>12s}\n",
                "Config",
                "Expect",

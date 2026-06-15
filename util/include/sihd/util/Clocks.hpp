@@ -3,6 +3,7 @@
 
 #include <chrono>
 
+#include <sihd/util/Timestamp.hpp>
 #include <sihd/util/time.hpp>
 
 namespace sihd::util
@@ -13,7 +14,7 @@ class IClock
     public:
         virtual ~IClock() = default;
         ;
-        virtual time::UnixTime now() const = 0;
+        virtual Timestamp now() const = 0;
         virtual bool is_steady() const = 0;
         virtual bool start() = 0;
         virtual bool stop() = 0;
@@ -25,7 +26,7 @@ class SteadyClock: public IClock
         SteadyClock() = default;
         ~SteadyClock() = default;
 
-        time::UnixTime now() const;
+        Timestamp now() const;
         bool is_steady() const;
         bool start() { return true; };
         bool stop() { return true; };
@@ -40,7 +41,7 @@ class SystemClock: public IClock
         SystemClock() = default;
         ~SystemClock() = default;
 
-        time::UnixTime now() const;
+        Timestamp now() const;
         bool is_steady() const;
         bool start() { return true; };
         bool stop() { return true; };

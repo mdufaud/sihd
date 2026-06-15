@@ -19,7 +19,7 @@ class ABlockingService: public sihd::util::AService
 
         void set_service_wait_stop(bool active);
 
-        virtual bool wait_ready(Timestamp timeout) const;
+        virtual bool wait_ready(Duration timeout) const;
         virtual bool is_ready() const;
         virtual bool is_running() const override;
 

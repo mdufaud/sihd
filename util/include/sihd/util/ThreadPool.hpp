@@ -38,13 +38,13 @@ class ThreadPool
                 ~Thread();
 
                 void stop();
-                Stat<Timestamp> stats() const;
+                Stat<Duration> stats() const;
 
             private:
                 void _loop();
 
                 SafeQueue<Job> & _jobs;
-                Stat<Timestamp> _jobs_stat;
+                Stat<Duration> _jobs_stat;
                 Stopwatch _stopwatch;
                 bool _stop;
                 std::thread _thread;
@@ -104,7 +104,7 @@ class ThreadPool
         void wait_all_jobs() const;
 
         size_t remaining_jobs() const;
-        std::vector<Stat<Timestamp>> stats() const;
+        std::vector<Stat<Duration>> stats() const;
 
     protected:
 

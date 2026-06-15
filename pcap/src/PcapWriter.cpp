@@ -132,7 +132,7 @@ ssize_t PcapWriter::write(sihd::util::ArrCharView view)
     return write(view, _clock_ptr->now());
 }
 
-ssize_t PcapWriter::write(sihd::util::ArrCharView view, time_t sec, time_t usec)
+ssize_t PcapWriter::write(sihd::util::ArrCharView view, sihd::util::time::UnixTime sec, sihd::util::time::UnixTime usec)
 {
     pcap_pkthdr hdr;
     hdr.caplen = view.size();

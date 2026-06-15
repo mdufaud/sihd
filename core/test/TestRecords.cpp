@@ -147,7 +147,7 @@ TEST_F(TestRecords, test_records_dev_recorder)
     const MapListRecordedValues & map = mem_recorder.make_recorded_values();
     const SortedRecordedValues & sorted_map = mem_recorder.sorted_recorded_values();
 
-    sihd::util::time::UnixTime last_timestamp = -1;
+    sihd::util::Timestamp last_timestamp = -1;
     for (const auto & pair : sorted_map)
     {
         if (last_timestamp < 0)

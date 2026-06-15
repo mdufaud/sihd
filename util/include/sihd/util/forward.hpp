@@ -59,6 +59,7 @@ typedef ArrayView<double> ArrDoubleView;
 class Named;
 class Node;
 class Timestamp;
+class Duration;
 
 class MessageField;
 class Message;

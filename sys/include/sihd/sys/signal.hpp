@@ -13,7 +13,7 @@ namespace sihd::sys::signal
 struct SigStatus
 {
         std::atomic<size_t> received = 0;
-        std::atomic<sihd::util::time::UnixTime> time_received = -1;
+        std::atomic<sihd::util::Timestamp> time_received {sihd::util::Timestamp(-1)};
 
         SigStatus();
         ~SigStatus();

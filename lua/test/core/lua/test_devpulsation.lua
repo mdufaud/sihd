@@ -19,7 +19,7 @@ ch_beat:set_observer(function (ch)
 end)
 
 ch_activate:write(0, true)
-local ret = waiter:wait_for(sihd.util.Timestamp(sihd.util.time.ms(50)), 5)
+local ret = waiter:wait_for(sihd.util.Duration(sihd.util.time.ms(50)), 5)
 ch_activate:write(0, false)
 
 ch_beat:set_observer(nil)

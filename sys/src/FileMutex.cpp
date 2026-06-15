@@ -19,12 +19,12 @@ namespace sihd::sys
 namespace
 {
 
-bool filemutex_try_lock_for_ex_sh(FileMutex & mutex, Timestamp duration, bool shared)
+bool filemutex_try_lock_for_ex_sh(FileMutex & mutex, Duration duration, bool shared)
 {
-    constexpr time::UnixTime retry_in_ms = time::milliseconds(10);
+    const Duration retry_in_ms = time::milliseconds(10);
 
     SteadyClock clock;
-    time::UnixTime begin = clock.now();
+    Timestamp begin = clock.now();
     bool success;
 
     while (true)
@@ -33,7 +33,7 @@ bool filemutex_try_lock_for_ex_sh(FileMutex & mutex, Timestamp duration, bool sh
         if (success)
             break;
 
-        time::UnixTime diff = clock.now() - begin;
+        Duration diff = clock.now() - begin;
         if (diff > duration)
             break;
         time::nsleep(std::min(retry_in_ms, duration - diff));
@@ -167,13 +167,13 @@ void FileMutex::unlock_shared()
     this->unlock();
 }
 
-bool FileMutex::try_lock_for(Timestamp duration)
+bool FileMutex::try_lock_for(Duration duration)
 {
     constexpr bool shared = false;
     return filemutex_try_lock_for_ex_sh(*this, duration, shared);
 }
 
-bool FileMutex::try_lock_shared_for(Timestamp duration)
+bool FileMutex::try_lock_shared_for(Duration duration)
 {
     constexpr bool shared = true;
     return filemutex_try_lock_for_ex_sh(*this, duration, shared);

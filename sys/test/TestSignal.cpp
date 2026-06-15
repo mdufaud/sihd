@@ -77,7 +77,7 @@ TEST_F(TestSignal, test_signal_handle)
     auto sig_status = signal::status(sig);
     ASSERT_TRUE(sig_status);
     EXPECT_EQ(sig_status->received, 1U);
-    sihd::util::time::UnixTime last_time = sig_status->time_received;
+    sihd::util::Timestamp last_time = sig_status->time_received.load();
 
     raise(sig);
 
@@ -85,8 +85,8 @@ TEST_F(TestSignal, test_signal_handle)
 
     sig_status = signal::status(sig);
     EXPECT_EQ(sig_status->received, 2U);
-    EXPECT_GT(sig_status->time_received, last_time);
-    last_time = sig_status->time_received;
+    EXPECT_GT(sig_status->time_received.load(), last_time);
+    last_time = sig_status->time_received.load();
 
     EXPECT_TRUE(signal::should_stop());
 

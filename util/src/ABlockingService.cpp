@@ -29,7 +29,7 @@ bool ABlockingService::is_running() const
     return _running;
 }
 
-bool ABlockingService::wait_ready(Timestamp timeout) const
+bool ABlockingService::wait_ready(Duration timeout) const
 {
     return _waitable.wait_for(timeout, [this]() { return this->is_ready(); });
 }

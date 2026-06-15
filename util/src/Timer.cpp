@@ -3,7 +3,7 @@
 namespace sihd::util
 {
 
-Timer::Timer(Callback && callback, Timestamp timeout): _stop(false)
+Timer::Timer(Callback && callback, Duration timeout): _stop(false)
 {
     _thread = std::thread([this, callback, timeout] {
         _waitable.wait_for(timeout, [this] { return _stop == true; });

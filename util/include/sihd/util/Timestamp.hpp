@@ -1,40 +1,14 @@
 #ifndef __SIHD_UTIL_TIMESTAMP_HPP__
 #define __SIHD_UTIL_TIMESTAMP_HPP__
 
+#include <concepts>
 #include <optional>
 #include <string>
 #include <string_view>
 
+#include <sihd/util/Duration.hpp>
+#include <sihd/util/TimeBase.hpp>
 #include <sihd/util/time.hpp>
-
-#define __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(OP)                                                           \
-    template <traits::Duration Duration>                                                                               \
-    constexpr bool operator OP(Duration duration) const                                                                \
-    {                                                                                                                  \
-        return _nano OP time::duration<Duration>(duration);                                                            \
-    }
-
-#define __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(OP)                                                            \
-    template <traits::Duration Duration>                                                                               \
-    constexpr Timestamp operator OP(Duration duration)                                                                 \
-    {                                                                                                                  \
-        return Timestamp(_nano OP time::duration<Duration>(duration));                                                 \
-    }
-
-#define __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(OP)                                                                \
-    template <traits::Duration Duration>                                                                               \
-    constexpr Timestamp & operator OP(Duration duration)                                                               \
-    {                                                                                                                  \
-        _nano OP time::duration<Duration>(duration);                                                                   \
-        return *this;                                                                                                  \
-    }
-
-#define __TMP_TIMESTAMP_ASSIGN_OPERATION__(OP)                                                                         \
-    constexpr Timestamp & operator OP(time::UnixTime t)                                                                \
-    {                                                                                                                  \
-        _nano OP t;                                                                                                    \
-        return *this;                                                                                                  \
-    }
 
 namespace sihd::util
 {
@@ -65,16 +39,16 @@ struct Calendar
         std::string str() const;
 };
 
-class Timestamp
+class Timestamp : public TimeBase<Timestamp>
 {
     public:
         static constexpr const char *default_format = "%Y/%m/%d %H:%M:%S";
         static constexpr const char *default_day_format = "%Y-%m-%d";
         static constexpr const char *default_zone_format = "%FT%T%z";
 
-        constexpr Timestamp(time::UnixTime nano = 0): _nano(nano) {};
-        constexpr Timestamp(timespec ts): _nano(ts.tv_nsec + time::sec(ts.tv_sec)) {};
-        constexpr Timestamp(Clocktime clocktime): _nano(0)
+        using TimeBase<Timestamp>::TimeBase;
+
+        constexpr Timestamp(Clocktime clocktime): TimeBase<Timestamp>(0)
         {
             _nano = time::hours(clocktime.hour);
             _nano += time::minutes(clocktime.minute);
@@ -82,41 +56,8 @@ class Timestamp
             _nano += time::milliseconds(clocktime.millisecond);
         };
 
-        template <typename T>
-        constexpr Timestamp(std::chrono::time_point<T> timepoint): _nano(timepoint.time_since_epoch().count()) {};
-
-        template <traits::Duration Duration>
-        constexpr Timestamp(Duration duration): _nano(time::duration(duration)) {};
-
         Timestamp(Calendar calendar);
         Timestamp(Calendar calendar, Clocktime clocktime);
-
-        // std::chrono::duration templates
-        __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(==);
-        __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(!=);
-        __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(>=);
-        __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(<=);
-        __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(<);
-        __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__(>);
-
-        __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(+);
-        __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(-);
-        __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(/);
-        __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(*);
-        __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__(%);
-
-        __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(+=);
-        __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(-=);
-        __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(*=);
-        __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(/=);
-        __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__(%=);
-
-        // time_t assign
-        __TMP_TIMESTAMP_ASSIGN_OPERATION__(+=);
-        __TMP_TIMESTAMP_ASSIGN_OPERATION__(-=);
-        __TMP_TIMESTAMP_ASSIGN_OPERATION__(*=);
-        __TMP_TIMESTAMP_ASSIGN_OPERATION__(/=);
-        __TMP_TIMESTAMP_ASSIGN_OPERATION__(%=);
 
         static Timestamp now();
         static std::optional<Timestamp> from_str(const std::string & date_str,
@@ -125,31 +66,8 @@ class Timestamp
         static std::optional<Timestamp>
             from_str(const std::string & date_str, std::string_view format, const std::locale & loc);
 
-        // auto convert
-        constexpr operator time::UnixTime() const { return _nano; }
-        operator std::chrono::nanoseconds() const;
-        operator std::chrono::microseconds() const;
-        operator std::chrono::milliseconds() const;
-        operator std::chrono::seconds() const;
-        operator std::chrono::minutes() const;
-        operator std::chrono::hours() const;
-
         // this >= from && this <= (from + offset)
-        bool in_interval(Timestamp from, Timestamp offset) const;
-
-        template <traits::Duration Duration>
-        constexpr Duration duration() const
-        {
-            return time::to_duration<Duration>(_nano);
-        }
-
-        time::UnixTime nanoseconds() const;
-        time::UnixTime microseconds() const;
-        time::UnixTime milliseconds() const;
-        time::UnixTime seconds() const;
-        time::UnixTime minutes() const;
-        time::UnixTime hours() const;
-        time::UnixTime days() const;
+        bool in_interval(Timestamp from, Duration offset) const;
 
         struct timespec ts() const;
         struct timeval tv() const;
@@ -185,32 +103,79 @@ class Timestamp
 
         bool is_leap_year() const;
 
-        template <typename Ratio>
-        constexpr Timestamp floor() const
-        {
-            return Timestamp(time::floor<Ratio>(_nano));
-        }
         Timestamp floor_day() const;
         Timestamp modulo_min(uint32_t minutes) const;
-
-        constexpr time::UnixTime get() const { return _nano; }
 
         Clocktime clocktime() const;
         Calendar calendar() const;
         Clocktime local_clocktime() const;
         Calendar local_calendar() const;
-
-    protected:
-
-    private:
-        time::UnixTime _nano;
 };
 
-} // namespace sihd::util
+// Strict time algebra (chrono-like). The cross-type operators are constrained to the *exact*
+// peer type via std::same_as: template deduction ignores implicit conversions, so chrono/UnixTime
+// operands fall through to the TimeBase chrono operators (back-compat) instead of being absorbed here.
+//
+//   Timestamp - Timestamp -> Duration (elapsed)   Timestamp +/- Duration -> Timestamp
+//   Duration +/- Duration -> Duration             Duration * / scalar -> Duration
+//   Timestamp + Timestamp is intentionally ill-formed.
 
-#undef __TMP_TIMESTAMP_DURATION_COMPARISION_OPERATION__
-#undef __TMP_TIMESTAMP_DURATION_ARITHMETIC_OPERATION__
-#undef __TMP_TIMESTAMP_DURATION_ASSIGN_OPERATION__
-#undef __TMP_TIMESTAMP_ASSIGN_OPERATION__
+template <std::same_as<Duration> D>
+constexpr Timestamp operator+(Timestamp ts, D offset)
+{
+    return Timestamp(ts.get() + offset.get());
+}
+template <std::same_as<Duration> D>
+constexpr Timestamp operator+(D offset, Timestamp ts)
+{
+    return Timestamp(ts.get() + offset.get());
+}
+template <std::same_as<Duration> D>
+constexpr Timestamp operator-(Timestamp ts, D offset)
+{
+    return Timestamp(ts.get() - offset.get());
+}
+template <std::same_as<Timestamp> T>
+constexpr Duration operator-(Timestamp lhs, T rhs)
+{
+    return Duration(lhs.get() - rhs.get());
+}
+template <std::same_as<Timestamp> T>
+Timestamp operator+(Timestamp lhs, T rhs) = delete;
+
+template <std::same_as<Duration> D>
+constexpr Duration operator+(Duration lhs, D rhs)
+{
+    return Duration(lhs.get() + rhs.get());
+}
+template <std::same_as<Duration> D>
+constexpr Duration operator-(Duration lhs, D rhs)
+{
+    return Duration(lhs.get() - rhs.get());
+}
+template <traits::Arithmetic T>
+constexpr Duration operator*(Duration d, T scalar)
+{
+    return Duration(static_cast<time::UnixTime>(d.get() * scalar));
+}
+template <traits::Arithmetic T>
+constexpr Duration operator/(Duration d, T scalar)
+{
+    return Duration(static_cast<time::UnixTime>(d.get() / scalar));
+}
+template <std::same_as<Duration> D>
+constexpr Duration operator%(Duration lhs, D rhs)
+{
+    return Duration(lhs.get() % rhs.get());
+}
+
+namespace time
+{
+
+void sleep_t(Duration duration);
+
+} // namespace time
+
+} // namespace sihd::util
 
 #endif

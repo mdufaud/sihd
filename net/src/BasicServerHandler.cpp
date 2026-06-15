@@ -33,7 +33,7 @@ void BasicServerHandler::_add_time_to_clients()
     if (_last_time <= 0)
         return;
     std::lock_guard lock(_mutex);
-    sihd::util::time::UnixTime t = _clock.now() - _last_time;
+    sihd::util::Duration t = _clock.now() - _last_time;
     for (auto & [fd, client] : _client_map)
     {
         client->time_total += t;
@@ -122,7 +122,7 @@ bool BasicServerHandler::remove_client(int socket)
 void BasicServerHandler::handle_no_activity([[maybe_unused]] INetServer *server, time_t milliseconds)
 {
     if (_last_time <= 0)
-        _last_time = _clock.now() + milliseconds;
+        _last_time = _clock.now() + sihd::util::Duration(milliseconds);
     this->_reset();
     this->_add_time_to_clients();
     _poll_time = milliseconds;
@@ -131,7 +131,7 @@ void BasicServerHandler::handle_no_activity([[maybe_unused]] INetServer *server,
 void BasicServerHandler::handle_activity([[maybe_unused]] INetServer *server, time_t milliseconds)
 {
     if (_last_time <= 0)
-        _last_time = _clock.now() + milliseconds;
+        _last_time = _clock.now() + sihd::util::Duration(milliseconds);
     this->_reset();
     this->_add_time_to_clients();
     _poll_time = milliseconds;

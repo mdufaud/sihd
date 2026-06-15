@@ -29,13 +29,13 @@ for i = 1, 100 do
 end
 
 -- waiting for 10 call or 1 sec
-local timestamp = sihd.util.Timestamp(sihd.util.time.sec(1))
+local timestamp = sihd.util.Duration(sihd.util.time.sec(1))
 waitable:wait_for(timestamp)
 sched:stop()
 
 local after = sched:now()
 
-print("process time: " .. sihd.util.time.to_double(after - before))
+print("process time: " .. sihd.util.time.to_double((after - before):get()))
 print("total called: " .. called)
 
 -- can be 11 sometimes
@@ -70,7 +70,7 @@ second_sched:add_task({
     run_in = 0
 })
 
-local timestamp = sihd.util.Timestamp(sihd.util.time.sec(1))
+local timestamp = sihd.util.Duration(sihd.util.time.sec(1))
 waitable:wait_for(timestamp)
 
 second_sched:stop()
@@ -110,7 +110,7 @@ assert(stepworker:set_frequency(1000.0))
 
 stepworker:start_sync_worker("stepworker")
 -- 10 ms
-local timestamp = sihd.util.Timestamp(sihd.util.time.sec(1))
+local timestamp = sihd.util.Duration(sihd.util.time.sec(1))
 waitable:wait_for(timestamp)
 stepworker:pause_worker()
 
@@ -118,7 +118,7 @@ sihd.util.time.msleep(10)
 
 stepworker:resume_worker()
 -- 10 ms
-local timestamp = sihd.util.Timestamp(sihd.util.time.sec(1))
+local timestamp = sihd.util.Duration(sihd.util.time.sec(1))
 waitable:wait_for(timestamp)
 stepworker:stop_worker()
 

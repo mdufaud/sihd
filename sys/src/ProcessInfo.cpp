@@ -287,7 +287,7 @@ void ProcessInfo::Impl::load_time()
     if (status.size() > 21)
     {
         this->creation_time
-            = Timestamp(std::chrono::seconds(std::stoll(status[21]) / sysconf(_SC_CLK_TCK))) + boot_time;
+            = Duration(std::chrono::seconds(std::stoll(status[21]) / sysconf(_SC_CLK_TCK))) + boot_time;
     }
 #endif
 }

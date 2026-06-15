@@ -6,6 +6,7 @@
 #include <sihd/util/Waitable.hpp>
 
 #include <sihd/util/AService.hpp>
+#include <sihd/util/Duration.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/ServiceController.hpp>
 #include <sihd/util/thread.hpp>
@@ -134,6 +135,8 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("hz", &time::freq);
 
     pybind11::class_<Timestamp>(m_util, "Timestamp").def(pybind11::init<int64_t>());
+
+    pybind11::class_<Duration>(m_util, "Duration").def(pybind11::init<int64_t>());
 
     pybind11::class_<Splitter>(m_util, "Splitter")
         .def(pybind11::init<>())

@@ -60,7 +60,7 @@ bool DevPlayer::set_provider_wait_time(sihd::util::time::UnixTime milliseconds)
         SIHD_LOG(error, "DevPlayer: cannot wait for {} milliseconds", milliseconds);
         return false;
     }
-    _collector.set_timeout(milliseconds);
+    _collector.set_timeout(sihd::util::time::milliseconds(milliseconds));
     return true;
 }
 

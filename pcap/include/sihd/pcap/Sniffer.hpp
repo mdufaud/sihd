@@ -45,7 +45,7 @@ class Sniffer: public sihd::util::Named,
         bool read_next() override;
         // get datas
         bool get_read_data(sihd::util::ArrCharView & view) const override;
-        bool get_read_timestamp(sihd::util::time::UnixTime *nano_timestamp) const override;
+        bool get_read_timestamp(sihd::util::Timestamp *nano_timestamp) const override;
         const sihd::util::ArrByte & data() const;
 
         // maximum pkts to sniff before stopping
@@ -106,7 +106,7 @@ class Sniffer: public sihd::util::Named,
         int _timestamp_type;
         bool _nano_precision;
 
-        sihd::util::time::UnixTime _pkt_nano_timestamp;
+        sihd::util::Timestamp _pkt_nano_timestamp;
         sihd::util::ArrByte _array;
 };
 

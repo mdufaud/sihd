@@ -1,4 +1,3 @@
-#include "sihd/net/IpAddr.hpp"
 #include <netdb.h> // addrinfo
 
 #include <atomic>
@@ -7,13 +6,15 @@
 
 #include <sihd/net/IcmpSender.hpp>
 #include <sihd/net/dns.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
-#include <sihd/sys/fs.hpp>
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/term.hpp>
+
+#include "sihd/net/IpAddr.hpp"
 
 namespace test
 {
@@ -39,7 +40,7 @@ class TestIcmp: public ::testing::Test
             sender.set_id(getpid());
             sender.set_ttl(64);
             sender.set_data_size(56u);
-            sihd::util::time::UnixTime now = sihd::util::Clock::default_clock.now();
+            sihd::util::Timestamp now = sihd::util::Clock::default_clock.now();
             sender.set_data({&now, sizeof(now)});
             sender.set_seq(1);
 
@@ -57,9 +58,8 @@ class TestIcmp: public ::testing::Test
                     EXPECT_EQ(response.id, getpid() & 0xFFFF);
                 }
 
-                sihd::util::time::UnixTime timestamp = ((sihd::util::time::UnixTime *)response.data)[0];
-                int64_t elapsed_ms
-                    = sihd::util::time::to_ms(sihd::util::Clock::default_clock.now() - timestamp);
+                sihd::util::Timestamp timestamp = ((sihd::util::Timestamp *)response.data)[0];
+                sihd::util::Duration elapsed_ms = sihd::util::Clock::default_clock.now() - timestamp;
 
                 SIHD_LOG(info,
                          "ICMP response: type={} code={} ttl={} id={} seq={} time={}ms from {}",
@@ -68,12 +68,11 @@ class TestIcmp: public ::testing::Test
                          response.ttl,
                          response.id,
                          response.seq,
-                         elapsed_ms,
+                         elapsed_ms.milliseconds(),
                          response.client.str());
 
                 // Sequence identifies the ping; ID only matters for IPv4
-                reached = (response.seq == 1)
-                          && (sender->socket().is_ipv6() || response.id == (getpid() & 0xFFFF));
+                reached = (response.seq == 1) && (sender->socket().is_ipv6() || response.id == (getpid() & 0xFFFF));
                 response_received = true;
             });
             sender.add_observer(&handler);
@@ -102,7 +101,7 @@ class TestIcmp: public ::testing::Test
 
         bool send(IcmpSender & sender, const IpAddr & host)
         {
-            sihd::util::time::UnixTime now = sihd::util::Clock::default_clock.now();
+            sihd::util::Timestamp now = sihd::util::Clock::default_clock.now();
             sender.set_data({&now, sizeof(now)});
 
             sender.set_seq(_seq);

@@ -31,7 +31,7 @@ class PcapWriter: public sihd::util::Named,
 
         ssize_t write(sihd::util::ArrCharView view);
         ssize_t write(sihd::util::ArrCharView view, sihd::util::Timestamp timestamp);
-        ssize_t write(sihd::util::ArrCharView view, time_t sec, time_t usec);
+        ssize_t write(sihd::util::ArrCharView view, sihd::util::time::UnixTime sec, sihd::util::time::UnixTime usec);
 
         FILE *file();
         int64_t pos();

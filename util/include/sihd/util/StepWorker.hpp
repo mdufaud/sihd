@@ -4,6 +4,7 @@
 #include <atomic>
 
 #include <sihd/util/Clocks.hpp>
+#include <sihd/util/Duration.hpp>
 #include <sihd/util/ISteppable.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/Worker.hpp>
@@ -30,7 +31,7 @@ class StepWorker: public Worker,
         virtual void pause_worker();
         virtual void resume_worker();
 
-        time::UnixTime nano_sleep_time() const { return _sleep_time; }
+        Duration nano_sleep_time() const { return _sleep_time; }
         double frequency() const;
 
     protected:
@@ -41,7 +42,7 @@ class StepWorker: public Worker,
 
     private:
         std::atomic<bool> _pause;
-        time::UnixTime _sleep_time;
+        Duration _sleep_time;
 
         Callback _callback_setup;
         Callback _callback_teardown;

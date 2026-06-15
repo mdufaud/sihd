@@ -64,7 +64,7 @@ class DevPlayer: public sihd::core::Device,
         // channels to write configuration
         std::map<std::string, std::string> _map_channels_alias;
 
-        std::optional<sihd::util::time::UnixTime> _first_timestamp;
+        std::optional<sihd::util::Timestamp> _first_timestamp;
 
         // queue to pass data between scheduler thread and worker thread
         sihd::util::SafeQueue<PlayableRecord> _safe_queue;

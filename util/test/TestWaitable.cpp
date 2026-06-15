@@ -113,7 +113,7 @@ TEST_F(TestWaitable, test_waitable_for_elapsed)
     });
     synchro_start.arrive_and_wait();
 
-    Timestamp elapsed = waitable.wait_for_elapsed(std::chrono::milliseconds(50), [&data] { return data == true; });
+    Duration elapsed = waitable.wait_for_elapsed(std::chrono::milliseconds(50), [&data] { return data == true; });
     EXPECT_LE(elapsed.milliseconds(), 50);
 
     t.join();

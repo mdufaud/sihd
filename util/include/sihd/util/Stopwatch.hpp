@@ -13,7 +13,7 @@ class Stopwatch
         Stopwatch() { this->reset(); }
         ~Stopwatch() = default;
 
-        Timestamp time() const { return _clock.now() - _before; }
+        Duration time() const { return _clock.now() - _before; }
 
         void reset() { _before = _clock.now(); }
 
@@ -21,7 +21,7 @@ class Stopwatch
 
     private:
         SteadyClock _clock;
-        time::UnixTime _before;
+        Timestamp _before;
 };
 
 } // namespace sihd::util

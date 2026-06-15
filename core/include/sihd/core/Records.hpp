@@ -5,7 +5,7 @@
 #include <map>
 
 #include <sihd/util/IArray.hpp>
-#include <sihd/util/time.hpp>
+#include <sihd/util/Timestamp.hpp>
 
 namespace sihd::core
 {
@@ -13,14 +13,14 @@ namespace sihd::core
 struct PlayableRecord
 {
         std::string name;
-        sihd::util::time::UnixTime timestamp = 0;
+        sihd::util::Timestamp timestamp = 0;
         sihd::util::IArrayShared value = nullptr;
 };
 
-typedef std::pair<sihd::util::time::UnixTime, sihd::util::IArrayShared> RecordedValue;
+typedef std::pair<sihd::util::Timestamp, sihd::util::IArrayShared> RecordedValue;
 typedef std::list<RecordedValue> ListRecordedValues;
 typedef std::map<std::string, ListRecordedValues> MapListRecordedValues;
-typedef std::multimap<sihd::util::time::UnixTime, PlayableRecord> SortedRecordedValues;
+typedef std::multimap<sihd::util::Timestamp, PlayableRecord> SortedRecordedValues;
 
 } // namespace sihd::core
 

@@ -64,7 +64,7 @@ class ObserverWaiter: public IHandler<T *>
         }
 
         // wait for a fixed number of notification
-        bool wait_for_nb(sihd::util::Timestamp duration, uint32_t total)
+        bool wait_for_nb(sihd::util::Duration duration, uint32_t total)
         {
             const bool ret = _waitable.wait_for(duration, [this, total] {
                 return _obs_ptr == nullptr || _current_count.load() >= total;
@@ -81,7 +81,7 @@ class ObserverWaiter: public IHandler<T *>
         }
 
         // wait x new notifications since this call
-        bool wait_for(sihd::util::Timestamp duration, uint32_t notifications = 1)
+        bool wait_for(sihd::util::Duration duration, uint32_t notifications = 1)
         {
             const uint32_t total = _current_count.load() + notifications;
             return this->wait_for_nb(duration, total);
@@ -97,7 +97,7 @@ class ObserverWaiter: public IHandler<T *>
 
         // wait with previous waited number of notifications
         // use this if you write and wait in the same thread
-        bool prev_wait_for(sihd::util::Timestamp duration, uint32_t notifications = 1)
+        bool prev_wait_for(sihd::util::Duration duration, uint32_t notifications = 1)
         {
             const uint32_t total = _last_waited_count.load() + notifications;
             return this->wait_for_nb(duration, total);

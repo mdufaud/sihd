@@ -85,7 +85,7 @@ class SigWatcher: public sihd::util::Named,
 
         sihd::util::Worker _worker;
         std::atomic<bool> _running;
-        std::atomic<sihd::util::time::UnixTime> _polling_interval_ns;
+        std::atomic<sihd::util::Duration> _polling_interval_ns;
 };
 
 } // namespace sihd::sys

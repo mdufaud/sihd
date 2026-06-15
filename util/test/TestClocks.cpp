@@ -24,9 +24,9 @@ TEST_F(TestClocks, test_clocks_steady_monotone)
 {
     SteadyClock clock;
 
-    const time::UnixTime t1 = clock.now();
-    const time::UnixTime t2 = clock.now();
-    const time::UnixTime t3 = clock.now();
+    const Timestamp t1 = clock.now();
+    const Timestamp t2 = clock.now();
+    const Timestamp t3 = clock.now();
 
     EXPECT_LE(t1, t2);
     EXPECT_LE(t2, t3);
@@ -46,12 +46,12 @@ TEST_F(TestClocks, test_clocks_elapsed)
 {
     SteadyClock clock;
 
-    const sihd::util::time::UnixTime before = clock.now();
+    const sihd::util::Timestamp before = clock.now();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    const sihd::util::time::UnixTime after = clock.now();
+    const sihd::util::Timestamp after = clock.now();
 
     // elapsed should be at least 5ms in nanoseconds
-    constexpr sihd::util::time::UnixTime five_ms_ns = 5'000'000;
+    constexpr sihd::util::Duration five_ms_ns = 5'000'000;
     EXPECT_GT(after - before, five_ms_ns);
 }
 

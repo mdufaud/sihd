@@ -34,32 +34,32 @@ class FileMutex
         template <class Rep, class Period>
         bool try_lock_for(const std::chrono::duration<Rep, Period> & duration)
         {
-            return this->try_lock_for(sihd::util::Timestamp(duration));
+            return this->try_lock_for(sihd::util::Duration(duration));
         }
 
         template <class Clock, class Duration>
         bool try_lock_until(const std::chrono::time_point<Clock, Duration> & timepoint)
         {
-            return this->try_lock_for(sihd::util::Timestamp(timepoint)
-                                      - Clock::now().time_since_epoch().count());
+            return this->try_lock_for(sihd::util::Duration(
+                sihd::util::Timestamp(timepoint).get() - Clock::now().time_since_epoch().count()));
         }
 
-        bool try_lock_for(sihd::util::Timestamp duration);
+        bool try_lock_for(sihd::util::Duration duration);
 
         template <class Rep, class Period>
         bool try_lock_shared_for(const std::chrono::duration<Rep, Period> & duration)
         {
-            return this->try_lock_shared_for(sihd::util::Timestamp(duration));
+            return this->try_lock_shared_for(sihd::util::Duration(duration));
         }
 
         template <class Clock, class Duration>
         bool try_lock_shared_until(const std::chrono::time_point<Clock, Duration> & timepoint)
         {
-            return this->try_lock_shared_for(sihd::util::Timestamp(timepoint)
-                                             - Clock::now().time_since_epoch().count());
+            return this->try_lock_shared_for(sihd::util::Duration(
+                sihd::util::Timestamp(timepoint).get() - Clock::now().time_since_epoch().count()));
         }
 
-        bool try_lock_shared_for(sihd::util::Timestamp duration);
+        bool try_lock_shared_for(sihd::util::Duration duration);
 
         File & file();
 

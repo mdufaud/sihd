@@ -47,7 +47,7 @@ Timestamp Timestamp::now()
     return Timestamp(Clock::default_clock.now());
 }
 
-bool Timestamp::in_interval(Timestamp from, Timestamp offset) const
+bool Timestamp::in_interval(Timestamp from, Duration offset) const
 {
     return _nano >= from.get() && _nano <= (from.get() + offset.get());
 }
@@ -131,7 +131,7 @@ Timestamp Timestamp::modulo_min(uint32_t minutes) const
     const int now_minutes = this->clocktime().minute;
     const uint32_t interval = (now_minutes / minutes) * minutes;
 
-    return this->floor<std::chrono::hours>() + time::minutes(interval);
+    return this->floor<std::chrono::hours>() + Duration(time::minutes(interval));
 }
 
 Clocktime Timestamp::clocktime() const
@@ -237,71 +237,6 @@ bool Timestamp::is_leap_year() const
 {
     Calendar c = this->local_calendar();
     return time::is_leap_year(c.year);
-}
-
-Timestamp::operator std::chrono::nanoseconds() const
-{
-    return std::chrono::nanoseconds(_nano);
-}
-
-Timestamp::operator std::chrono::microseconds() const
-{
-    return time::to_duration<std::chrono::microseconds>(_nano);
-}
-
-Timestamp::operator std::chrono::milliseconds() const
-{
-    return time::to_duration<std::chrono::milliseconds>(_nano);
-}
-
-Timestamp::operator std::chrono::seconds() const
-{
-    return time::to_duration<std::chrono::seconds>(_nano);
-}
-
-Timestamp::operator std::chrono::minutes() const
-{
-    return time::to_duration<std::chrono::minutes>(_nano);
-}
-
-Timestamp::operator std::chrono::hours() const
-{
-    return time::to_duration<std::chrono::hours>(_nano);
-}
-
-time::UnixTime Timestamp::nanoseconds() const
-{
-    return _nano;
-}
-
-time::UnixTime Timestamp::microseconds() const
-{
-    return time::to_microseconds(_nano);
-}
-
-time::UnixTime Timestamp::milliseconds() const
-{
-    return time::to_milliseconds(_nano);
-}
-
-time::UnixTime Timestamp::seconds() const
-{
-    return time::to_seconds(_nano);
-}
-
-time::UnixTime Timestamp::minutes() const
-{
-    return time::to_minutes(_nano);
-}
-
-time::UnixTime Timestamp::hours() const
-{
-    return time::to_hours(_nano);
-}
-
-time::UnixTime Timestamp::days() const
-{
-    return time::to_days(_nano);
 }
 
 struct timeval Timestamp::tv() const

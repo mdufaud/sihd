@@ -46,7 +46,7 @@ void configure_process(std::shared_ptr<Process> & proc_ptr, const Options & opti
         proc_ptr->env_load(options.env);
 }
 
-int do_execute(std::shared_ptr<Process> proc_ptr, Timestamp max_timeout)
+int do_execute(std::shared_ptr<Process> proc_ptr, Duration max_timeout)
 {
     constexpr int poll_timeout_ms = 10;
     SteadyClock clock;
@@ -57,7 +57,7 @@ int do_execute(std::shared_ptr<Process> proc_ptr, Timestamp max_timeout)
 
     const bool has_to_poll = proc_ptr->can_read_pipes();
     bool timed_out = false;
-    time::UnixTime begin = clock.now();
+    Timestamp begin = clock.now();
     while (!timed_out)
     {
         // ensure reading the stdout/stderr

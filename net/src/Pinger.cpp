@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <memory>
+
 #include <sihd/sys/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
@@ -8,14 +9,12 @@
 # include <unistd.h>
 #endif
 
+#include <sihd/net/Pinger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/time.hpp>
-
-#include <sihd/sys/os.hpp>
-
-#include <sihd/net/Pinger.hpp>
 
 #define ICMP_ECHO_REQUEST_LENGTH 56
 #define ICMP6_ECHO_REQUEST_LENGTH 56
@@ -40,7 +39,7 @@ void set_internal_data_size(IcmpSender & sender, std::unique_ptr<sihd::util::Arr
     data_ptr->resize(len);
     // set gibberish values like ping in packet
     char values = 10;
-    for (size_t j = sizeof(sihd::util::time::UnixTime); j < len; ++j)
+    for (size_t j = sizeof(sihd::util::Timestamp); j < len; ++j)
     {
         data_ptr->get(j) = values++;
     }
@@ -68,8 +67,7 @@ Pinger::Pinger(const std::string & name, sihd::util::Node *parent):
     this->add_conf("timeout", &Pinger::set_timeout);
     this->add_conf("interval", &Pinger::set_interval);
     this->add_conf("ping_count", &Pinger::set_ping_count);
-    this->add_conf<std::string_view>("client",
-                                     [this](std::string_view host) { return this->set_client(host); });
+    this->add_conf<std::string_view>("client", [this](std::string_view host) { return this->set_client(host); });
 }
 
 Pinger::~Pinger()
@@ -113,12 +111,12 @@ bool Pinger::set_ttl(int ttl)
     return true;
 }
 
-bool Pinger::set_timeout(time_t milliseconds_interval)
+bool Pinger::set_timeout(sihd::util::time::UnixTime milliseconds_interval)
 {
     return _sender.set_poll_timeout(milliseconds_interval);
 }
 
-bool Pinger::set_interval(time_t milliseconds_interval)
+bool Pinger::set_interval(sihd::util::time::UnixTime milliseconds_interval)
 {
     if (milliseconds_interval < 0)
         return false;
@@ -163,9 +161,9 @@ bool Pinger::on_start()
     {
         if (i > 0)
         {
-            const time::UnixTime time_spent_sending_last_ping = _clock_ptr->now() - _result.last_time_sent;
+            const Duration time_spent_sending_last_ping = Timestamp(_clock_ptr->now()) - _result.last_time_sent;
             // wait between pings
-            _waitable.wait_for(time::milliseconds(_ping_ms_interval) - time_spent_sending_last_ping,
+            _waitable.wait_for(Duration(time::milliseconds(_ping_ms_interval)) - time_spent_sending_last_ping,
                                [this] { return _stop.load(); });
             if (_stop)
                 break;
@@ -194,10 +192,7 @@ bool Pinger::on_start()
             ;
         if (_received_icmp_response == false)
         {
-            SIHD_LOG(debug,
-                     "Pinger: timeout waiting for ICMP echo reply seq={} from {}",
-                     _current_seq,
-                     _client.str());
+            SIHD_LOG(debug, "Pinger: timeout waiting for ICMP echo reply seq={} from {}", _current_seq, _client.str());
             this->_notify_timeout();
         }
         ++i;
@@ -233,12 +228,12 @@ void Pinger::handle(IcmpSender *sender)
 
     _received_icmp_response = true;
 
-    if (response.size < sizeof(time::UnixTime))
+    if (response.size < sizeof(sihd::util::Timestamp))
         return;
 
-    const time::UnixTime timestamp = ((time::UnixTime *)response.data)[0];
-    const time::UnixTime now = _clock_ptr->now();
-    const time::UnixTime triptime = now - timestamp;
+    const sihd::util::Timestamp timestamp = ((sihd::util::Timestamp *)response.data)[0];
+    const sihd::util::Timestamp now = _clock_ptr->now();
+    const sihd::util::Duration triptime = now - timestamp;
 
     _result.received++;
     _result.last_time_received = now;

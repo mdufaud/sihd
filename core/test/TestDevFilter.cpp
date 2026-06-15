@@ -138,7 +138,7 @@ TEST_F(TestDevFilter, test_devfilter_float)
                             .trigger(0, 3.14f)
                             .out("..out_channel")
                             .write(0, 0x1)
-                            .delay(time::ms(5)));
+                            .delay(std::chrono::milliseconds(5)));
     ASSERT_TRUE(
         dev_ptr->set_conf_str("filter_equal",
                               "in=..in_channel;out=..out_channel;trigger=6.28f;write=0b101;delay=0.01"));

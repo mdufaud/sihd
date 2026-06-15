@@ -77,7 +77,7 @@ int main(int argc, char **argv)
                      icmp_response.client.hostname(),
                      icmp_response.seq,
                      icmp_response.ttl,
-                     event.trip_time.timeoffset_str());
+                     event.trip_time.str());
         }
         else if (event.timeout)
         {

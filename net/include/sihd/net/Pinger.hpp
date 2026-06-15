@@ -4,16 +4,15 @@
 #include <atomic>
 #include <memory>
 
+#include <sihd/net/IcmpSender.hpp>
+#include <sihd/sys/Poll.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Named.hpp>
-#include <sihd/sys/Poll.hpp>
 #include <sihd/util/Stat.hpp>
-#include <sihd/util/time.hpp>
 #include <sihd/util/Waitable.hpp>
-
-#include <sihd/net/IcmpSender.hpp>
+#include <sihd/util/time.hpp>
 
 namespace sihd::net
 {
@@ -24,16 +23,16 @@ struct PingEvent
         bool received = false;
         bool timeout = false;
 
-        sihd::util::Timestamp trip_time = 0;
+        sihd::util::Duration trip_time = 0;
         IcmpResponse icmp_response = {};
 };
 
 struct PingResult
 {
-        sihd::util::time::UnixTime time_start;
-        sihd::util::time::UnixTime last_time_sent;
-        sihd::util::time::UnixTime last_time_received;
-        sihd::util::time::UnixTime time_end;
+        sihd::util::Timestamp time_start;
+        sihd::util::Timestamp last_time_sent;
+        sihd::util::Timestamp last_time_received;
+        sihd::util::Timestamp time_end;
 
         int transmitted;
         int received;
@@ -55,8 +54,8 @@ class Pinger: public sihd::util::Named,
         virtual ~Pinger();
 
         bool set_ttl(int ttl);
-        bool set_timeout(time_t milliseconds_timeout);
-        bool set_interval(time_t milliseconds_interval);
+        bool set_timeout(sihd::util::time::UnixTime milliseconds_timeout);
+        bool set_interval(sihd::util::time::UnixTime milliseconds_interval);
         bool set_client(const IpAddr & client);
         bool set_ping_count(size_t n);
 
@@ -89,7 +88,7 @@ class Pinger: public sihd::util::Named,
 
         std::unique_ptr<sihd::util::ArrByte> _data_ptr;
         int _ttl;
-        time_t _ping_ms_interval;
+        sihd::util::time::UnixTime _ping_ms_interval;
 
         std::atomic<bool> _stop;
         bool _received_icmp_response;

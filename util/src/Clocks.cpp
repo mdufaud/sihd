@@ -22,7 +22,7 @@ time::UnixTime clock_now_ns(const ClockType & clk)
 
 } // namespace
 
-time::UnixTime SteadyClock::now() const
+Timestamp SteadyClock::now() const
 {
     return clock_now_ns(_clock);
 }
@@ -32,7 +32,7 @@ bool SteadyClock::is_steady() const
     return _clock.is_steady;
 }
 
-time::UnixTime SystemClock::now() const
+Timestamp SystemClock::now() const
 {
     return clock_now_ns(_clock);
 }

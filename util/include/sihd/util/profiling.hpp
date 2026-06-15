@@ -19,14 +19,14 @@ class Timeit
         Timeit(std::string_view label, std::source_location loc = std::source_location::current());
         ~Timeit();
 
-        Timestamp elapsed() const;
+        Duration elapsed() const;
 
     protected:
 
     private:
         SteadyClock _clock;
         std::string _label;
-        time::UnixTime _begin;
+        Timestamp _begin;
 };
 
 class Perf
@@ -69,7 +69,7 @@ class Perf
     private:
         SteadyClock _clock;
         std::string _label;
-        time::UnixTime _begin;
+        Timestamp _begin;
         Stat<time::UnixTime> _stat;
 };
 

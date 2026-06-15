@@ -41,9 +41,9 @@ void ThreadPool::wait_all_jobs() const
     _jobs.wait_for_space(1);
 }
 
-std::vector<Stat<Timestamp>> ThreadPool::stats() const
+std::vector<Stat<Duration>> ThreadPool::stats() const
 {
-    std::vector<Stat<Timestamp>> threads_stats;
+    std::vector<Stat<Duration>> threads_stats;
 
     threads_stats.reserve(_threads.size());
     for (const auto & thread_ptr : _threads)
@@ -99,7 +99,7 @@ void ThreadPool::Thread::stop()
     }
 }
 
-Stat<Timestamp> ThreadPool::Thread::stats() const
+Stat<Duration> ThreadPool::Thread::stats() const
 {
     std::lock_guard l(_stat_mutex);
     return _jobs_stat;

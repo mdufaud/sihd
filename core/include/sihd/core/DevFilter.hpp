@@ -43,7 +43,7 @@ class DevFilter: public sihd::core::Device
                 // must be called after setting trigger index with 'trigger' method
                 Rule & write_same();
                 // delay write by X nanoseconds
-                Rule & delay(sihd::util::time::UnixTime nano_delay);
+                Rule & delay(sihd::util::Duration nano_delay);
                 // delay write by seconds.milliseconds
                 Rule & delay(double delay);
 
@@ -77,7 +77,7 @@ class DevFilter: public sihd::core::Device
                 sihd::util::Value write_value;
                 // options
                 bool should_match;
-                sihd::util::time::UnixTime nano_delay;
+                sihd::util::Duration nano_delay;
         };
 
         DevFilter(const std::string & name, sihd::util::Node *parent = nullptr);

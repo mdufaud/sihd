@@ -17,18 +17,18 @@ Timeit::~Timeit()
 {
     constexpr bool show_total_parenthesis = false;
 
-    const time::UnixTime duration = std::max(time::UnixTime {0}, _clock.now() - _begin);
-    const bool show_nano = duration < time::micro(1);
+    const Duration duration = std::max(Duration(0), _clock.now() - _begin);
+    const bool show_nano = duration < std::chrono::microseconds(1);
 
     SIHD_LOG(debug,
              "Time<{}>: {}",
              _label,
-             Timestamp(duration).timeoffset_str(show_total_parenthesis, show_nano));
+             duration.str(show_total_parenthesis, show_nano));
 }
 
-Timestamp Timeit::elapsed() const
+Duration Timeit::elapsed() const
 {
-    return std::max(time::UnixTime {0}, _clock.now() - _begin);
+    return std::max(Duration(0), _clock.now() - _begin);
 }
 
 Perf::Perf(std::source_location loc): _label(loc.function_name()), _begin(0) {}
@@ -47,9 +47,9 @@ void Perf::end()
     if (_begin == 0)
         throw std::runtime_error("Cannot call end() before calling begin()");
 
-    const time::UnixTime diff = std::max(time::UnixTime {0}, _clock.now() - _begin);
+    const Duration diff = std::max(Duration(0), _clock.now() - _begin);
 
-    _stat.add_sample(diff);
+    _stat.add_sample(diff.nanoseconds());
 }
 
 void Perf::log() const
@@ -69,11 +69,11 @@ void Perf::log() const
     SIHD_LOG_DEBUG("Perf<{}>: [samples: {}] [min: {}] [max: {}] [avg/var/dev: {} / {} / {}]",
                    _label,
                    _stat.samples,
-                   Timestamp(_stat.min).timeoffset_str(show_total, show_min_nano),
-                   Timestamp(_stat.max).timeoffset_str(show_total, show_max_nano),
-                   Timestamp(average).timeoffset_str(show_total, show_average_nano),
-                   Timestamp(variance).timeoffset_str(show_total, show_variance_nano),
-                   Timestamp(standard_deviation).timeoffset_str(show_total, show_standard_deviation_nano));
+                   Duration(_stat.min).str(show_total, show_min_nano),
+                   Duration(_stat.max).str(show_total, show_max_nano),
+                   Duration(average).str(show_total, show_average_nano),
+                   Duration(variance).str(show_total, show_variance_nano),
+                   Duration(standard_deviation).str(show_total, show_standard_deviation_nano));
 }
 
 } // namespace sihd::util

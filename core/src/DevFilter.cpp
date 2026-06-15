@@ -449,7 +449,7 @@ DevFilter::Rule & DevFilter::Rule::delay(double delay)
     return *this;
 }
 
-DevFilter::Rule & DevFilter::Rule::delay(sihd::util::time::UnixTime nano_delay)
+DevFilter::Rule & DevFilter::Rule::delay(sihd::util::Duration nano_delay)
 {
     this->nano_delay = nano_delay;
     return *this;

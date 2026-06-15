@@ -1235,7 +1235,7 @@ HANDLE Process::process() const
 }
 #endif
 
-bool Process::wait_process_end(Timestamp nano_duration)
+bool Process::wait_process_end(Duration nano_duration)
 {
     return _waitable.wait_for(nano_duration, [this] { return this->is_process_running() == false; });
 }
@@ -1258,8 +1258,8 @@ bool Process::read_pipes(int milliseconds_timeout)
     if (this->can_read_pipes() == false)
         return false;
     SteadyClock clock;
-    const time::UnixTime begin = clock.now();
-    const time::UnixTime timeout = time::milliseconds(milliseconds_timeout);
+    const Timestamp begin = clock.now();
+    const Duration timeout = time::milliseconds(milliseconds_timeout);
     bool timed_out = false;
     while (!timed_out)
     {

@@ -16,7 +16,7 @@ namespace sihd::sys::proc
 
 struct Options
 {
-        sihd::util::Timestamp timeout = -1;
+        sihd::util::Duration timeout = -1;
         std::string to_stdin = {};
         std::function<void(std::string_view)> stdout_callback = {};
         std::function<void(std::string_view)> stderr_callback = {};

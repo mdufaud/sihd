@@ -174,7 +174,7 @@ class Process: public sihd::util::IHandler<Poll *>,
         // start process then if stdout or stderr is piped, polls them until the process is stopped
         bool on_start() override;
         bool on_stop() override;
-        bool wait_process_end(sihd::util::Timestamp nano_duration = 0);
+        bool wait_process_end(sihd::util::Duration nano_duration = 0);
 
     private:
         struct Impl;

@@ -36,7 +36,7 @@ class WaitableImpl
 
         // predicate must return false to keep waiting
         template <class Predicate>
-        Timestamp wait_elapsed(Predicate pred_stop_waiting)
+        Duration wait_elapsed(Predicate pred_stop_waiting)
         {
             Stopwatch watch;
             this->wait(pred_stop_waiting);
@@ -45,7 +45,7 @@ class WaitableImpl
 
         // predicate must return false to keep waiting - return the last value of the predicate
         template <class Predicate>
-        bool wait_for(Timestamp duration, Predicate pred_stop_waiting)
+        bool wait_for(Duration duration, Predicate pred_stop_waiting)
         {
             std::unique_lock lock(_mutex);
             return _condition.wait_for(lock, std::chrono::nanoseconds(duration), pred_stop_waiting);
@@ -53,7 +53,7 @@ class WaitableImpl
 
         // predicate must return false to keep waiting
         template <class Predicate>
-        Timestamp wait_for_elapsed(Timestamp duration, Predicate pred_stop_waiting)
+        Duration wait_for_elapsed(Duration duration, Predicate pred_stop_waiting)
         {
             Stopwatch watch;
             this->wait_for(duration, pred_stop_waiting);
@@ -74,7 +74,7 @@ class WaitableImpl
 
         // predicate must return false to keep waiting
         template <class Predicate>
-        Timestamp wait_until_elapsed(Timestamp timestamp, Predicate pred_stop_waiting)
+        Duration wait_until_elapsed(Timestamp timestamp, Predicate pred_stop_waiting)
         {
             Stopwatch watch;
             this->wait_until(timestamp, pred_stop_waiting);
@@ -111,28 +111,28 @@ class WaitableImpl
          * @return true if timedout
          * @return false if notification came
          */
-        bool wait_for(Timestamp duration)
+        bool wait_for(Duration duration)
         {
             std::unique_lock lock(_mutex);
             return _condition.wait_for(lock, std::chrono::nanoseconds(duration)) == std::cv_status::timeout;
         }
 
         // waits - returns time elapsed
-        Timestamp wait_elapsed()
+        Duration wait_elapsed()
         {
             Stopwatch hg;
             this->wait();
             return hg.time();
         }
         // waits until timestamp - returns time elapsed
-        Timestamp wait_until_elapsed(Timestamp timestamp)
+        Duration wait_until_elapsed(Timestamp timestamp)
         {
             Stopwatch hg;
             this->wait_until(timestamp);
             return hg.time();
         }
         // wait for duration -- returns time elapsed
-        Timestamp wait_for_elapsed(Timestamp duration)
+        Duration wait_for_elapsed(Duration duration)
         {
             Stopwatch hg;
             this->wait_for(duration);

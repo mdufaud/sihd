@@ -15,7 +15,7 @@ class SigWaiter
         struct Conf
         {
                 std::optional<int> signal = std::nullopt;
-                sihd::util::Timestamp timeout = 0;
+                sihd::util::Duration timeout = 0;
         };
 
         SigWaiter();
@@ -26,7 +26,7 @@ class SigWaiter
         bool received_signal() const;
 
     private:
-        bool _do_wait(int sig, sihd::util::Timestamp timeout);
+        bool _do_wait(int sig, sihd::util::Duration timeout);
 
         bool _received_signal;
 };

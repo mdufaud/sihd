@@ -5,11 +5,11 @@
 #include <mutex>
 #include <vector>
 
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/sys/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <poll.h>         //pollfd
@@ -57,7 +57,7 @@ class Poll: public sihd::util::Observable<Poll>,
         // filled with file descriptors - call in observer
         const std::vector<PollEvent> & events() const { return _lst_events; };
 
-        sihd::util::time::UnixTime polling_time() const { return _last_poll_time; }
+        sihd::util::Duration polling_time() const { return _last_poll_time; }
         bool polling_timeout() const { return _timedout; }
         bool polling_error() const { return _error; }
 
@@ -66,7 +66,7 @@ class Poll: public sihd::util::Observable<Poll>,
         size_t fds_size() const { return _lst_fds.size(); }
         rlim_t max_fds() const { return _max_fds; };
         // in ms
-        time_t timeout() const { return _timeout_milliseconds; }
+        sihd::util::time::UnixTime timeout() const { return _timeout_milliseconds; }
 
     protected:
         bool on_start() override;
@@ -84,7 +84,7 @@ class Poll: public sihd::util::Observable<Poll>,
         sihd::util::SteadyClock _clock;
 
         std::vector<PollEvent> _lst_events;
-        sihd::util::Timestamp _last_poll_time;
+        sihd::util::Duration _last_poll_time;
         std::atomic<bool> _timedout;
         std::atomic<bool> _error;
 };

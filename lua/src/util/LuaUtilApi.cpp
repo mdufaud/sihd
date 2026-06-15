@@ -2,39 +2,37 @@
 #include <regex>
 
 #include <sihd/lua/util/LuaUtilApi.hpp>
-
-#include <sihd/util/Named.hpp>
-#include <sihd/util/Node.hpp>
-
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/AService.hpp>
 #include <sihd/util/AThreadedService.hpp>
 #include <sihd/util/Clocks.hpp>
+#include <sihd/util/Named.hpp>
+#include <sihd/util/Node.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/endian.hpp>
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
 #include <sihd/util/type.hpp>
 
-#define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType)                                                       \
-    .deriveClass<ArrType, IArray>(#ArrType)                                                                  \
-        .addStaticFunction("new", &LuaUtilApi::_array_lua_new<PrimitiveType>)                                \
-        .addConstructor<void (*)()>()                                                                        \
-        .addFunction("clone", &ArrType::clone)                                                               \
-        .addFunction("push_back", &LuaUtilApi::_array_lua_push_back<PrimitiveType>)                          \
-        .addFunction("push_front", &LuaUtilApi::_array_lua_push_front<PrimitiveType>)                        \
-        .addFunction("copy_from", &LuaUtilApi::_array_lua_copy_table<PrimitiveType>)                         \
-        .addFunction("from", &LuaUtilApi::_array_lua_from<PrimitiveType>)                                    \
-        .addFunction("pop", &ArrType::pop)                                                                   \
-        .addFunction("front", &ArrType::front)                                                               \
-        .addFunction("back", &ArrType::back)                                                                 \
-        .addFunction("at", &ArrType::at)                                                                     \
-        .addFunction("set", &ArrType::set)                                                                   \
-        .addFunction("__len", &ArrType::size)                                                                \
+#define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType)                                                                 \
+    .deriveClass<ArrType, IArray>(#ArrType)                                                                            \
+        .addStaticFunction("new", &LuaUtilApi::_array_lua_new<PrimitiveType>)                                          \
+        .addConstructor<void (*)()>()                                                                                  \
+        .addFunction("clone", &ArrType::clone)                                                                         \
+        .addFunction("push_back", &LuaUtilApi::_array_lua_push_back<PrimitiveType>)                                    \
+        .addFunction("push_front", &LuaUtilApi::_array_lua_push_front<PrimitiveType>)                                  \
+        .addFunction("copy_from", &LuaUtilApi::_array_lua_copy_table<PrimitiveType>)                                   \
+        .addFunction("from", &LuaUtilApi::_array_lua_from<PrimitiveType>)                                              \
+        .addFunction("pop", &ArrType::pop)                                                                             \
+        .addFunction("front", &ArrType::front)                                                                         \
+        .addFunction("back", &ArrType::back)                                                                           \
+        .addFunction("at", &ArrType::at)                                                                               \
+        .addFunction("set", &ArrType::set)                                                                             \
+        .addFunction("__len", &ArrType::size)                                                                          \
         .endClass()
 
 namespace sihd::lua
@@ -49,9 +47,7 @@ namespace
 Logger g_lua_logger("sihd::lua");
 } // namespace
 
-bool LuaUtilApi::_configurable_recursive_set(Configurable *obj,
-                                             const std::string & key,
-                                             luabridge::LuaRef ref)
+bool LuaUtilApi::_configurable_recursive_set(Configurable *obj, const std::string & key, luabridge::LuaRef ref)
 {
     switch (ref.type())
     {
@@ -106,7 +102,7 @@ void LuaUtilApi::load_threading(Vm & vm)
         .addFunction("is_running", static_cast<bool (LuaScheduler::*)() const>(&Scheduler::is_running))
         .addFunction("pause", static_cast<void (LuaScheduler::*)()>(&Scheduler::pause))
         .addFunction("resume", static_cast<void (LuaScheduler::*)()>(&Scheduler::resume))
-        .addFunction("now", static_cast<time::UnixTime (LuaScheduler::*)() const>(&Scheduler::now))
+        .addFunction("now", static_cast<Timestamp (LuaScheduler::*)() const>(&Scheduler::now))
         .addFunction("clock", static_cast<IClock *(LuaScheduler::*)() const>(&Scheduler::clock))
         .addFunction("set_clock", static_cast<void (LuaScheduler::*)(IClock *)>(&Scheduler::set_clock))
         .addFunction("set_no_delay", static_cast<bool (LuaScheduler::*)(bool)>(&Scheduler::set_no_delay))
@@ -117,18 +113,17 @@ void LuaUtilApi::load_threading(Vm & vm)
         .addProperty(
             "overrun_at",
             +[](const LuaScheduler *self) { return self->overrun_at; },
-            +[](LuaScheduler *self, time::UnixTime val) { self->overrun_at = val; })
+            +[](LuaScheduler *self, Duration val) { self->overrun_at = val; })
         .addProperty(
             "acceptable_task_preplay_ns_time",
             +[](const LuaScheduler *self) { return self->acceptable_task_preplay_ns_time; },
-            +[](LuaScheduler *self, time::UnixTime val) { self->acceptable_task_preplay_ns_time = val; })
+            +[](LuaScheduler *self, Duration val) { self->acceptable_task_preplay_ns_time = val; })
         // LuaScheduler
-        .addFunction(
-            "start",
-            std::function<bool(LuaScheduler *, lua_State *)>(+[](LuaScheduler *self, lua_State *state) {
-                self->set_state(state);
-                return self->start();
-            }))
+        .addFunction("start",
+                     std::function<bool(LuaScheduler *, lua_State *)>(+[](LuaScheduler *self, lua_State *state) {
+                         self->set_state(state);
+                         return self->start();
+                     }))
         .addFunction("stop", static_cast<bool (LuaScheduler::*)()>(&Scheduler::stop))
         .addFunction(
             "add_task",
@@ -140,20 +135,20 @@ void LuaUtilApi::load_threading(Vm & vm)
                 if (lua_fun.isFunction() == false)
                     luaL_error(state, "add_task table at 'task' must contain a function");
 
-                time::UnixTime timestamp_to_run_at = 0;
+                Timestamp timestamp_to_run_at = 0;
                 luabridge::LuaRef run_at = tbl["run_at"];
                 if (run_at.isNumber())
-                    timestamp_to_run_at = static_cast<time::UnixTime>(run_at);
+                    timestamp_to_run_at = Timestamp(static_cast<time::UnixTime>(run_at));
 
-                time::UnixTime timestamp_to_run_in = 0;
+                Duration timestamp_to_run_in = 0;
                 luabridge::LuaRef run_in = tbl["run_in"];
                 if (run_in.isNumber())
-                    timestamp_to_run_in = static_cast<time::UnixTime>(run_in);
+                    timestamp_to_run_in = Duration(static_cast<time::UnixTime>(run_in));
 
-                time::UnixTime reschedule_time = 0;
+                Duration reschedule_time = 0;
                 luabridge::LuaRef reschedule = tbl["reschedule_time"];
                 if (reschedule.isNumber())
-                    reschedule_time = static_cast<time::UnixTime>(reschedule);
+                    reschedule_time = Duration(static_cast<time::UnixTime>(reschedule));
 
                 LuaTask *task_ptr = new LuaTask(lua_fun,
                                                 util::TaskOptions {.run_at = timestamp_to_run_at,
@@ -174,12 +169,11 @@ void LuaUtilApi::load_threading(Vm & vm)
         .addFunction("notify_all", &Waitable::notify_all)
         .addFunction("wait", static_cast<void (Waitable::*)()>(&Waitable::wait))
         .addFunction("wait_until", static_cast<bool (Waitable::*)(Timestamp)>(&Waitable::wait_until))
-        .addFunction("wait_for", static_cast<bool (Waitable::*)(Timestamp)>(&Waitable::wait_for))
-        .addFunction("wait_elapsed", static_cast<Timestamp (Waitable::*)()>(&Waitable::wait_elapsed))
+        .addFunction("wait_for", static_cast<bool (Waitable::*)(Duration)>(&Waitable::wait_for))
+        .addFunction("wait_elapsed", static_cast<Duration (Waitable::*)()>(&Waitable::wait_elapsed))
         .addFunction("wait_until_elapsed",
-                     static_cast<Timestamp (Waitable::*)(Timestamp)>(&Waitable::wait_until_elapsed))
-        .addFunction("wait_for_elapsed",
-                     static_cast<Timestamp (Waitable::*)(Timestamp)>(&Waitable::wait_for_elapsed))
+                     static_cast<Duration (Waitable::*)(Timestamp)>(&Waitable::wait_until_elapsed))
+        .addFunction("wait_for_elapsed", static_cast<Duration (Waitable::*)(Duration)>(&Waitable::wait_for_elapsed))
         .endClass()
         /**
          * Waitable
@@ -199,15 +193,12 @@ void LuaUtilApi::load_threading(Vm & vm)
                              return self->start_sync_worker(name);
                          }))
         .addFunction("stop_worker", static_cast<bool (LuaWorker::*)()>(&Worker::stop_worker))
-        .addFunction("is_worker_running",
-                     static_cast<bool (LuaWorker::*)() const>(&Worker::is_worker_running))
-        .addFunction("is_worker_started",
-                     static_cast<bool (LuaWorker::*)() const>(&Worker::is_worker_started))
+        .addFunction("is_worker_running", static_cast<bool (LuaWorker::*)() const>(&Worker::is_worker_running))
+        .addFunction("is_worker_started", static_cast<bool (LuaWorker::*)() const>(&Worker::is_worker_started))
         .endClass()
         .beginClass<LuaStepWorker>("StepWorker")
         .addConstructor<void (*)(luabridge::LuaRef ref)>()
-        .addFunction("set_frequency",
-                     static_cast<bool (LuaStepWorker::*)(double)>(&StepWorker::set_frequency))
+        .addFunction("set_frequency", static_cast<bool (LuaStepWorker::*)(double)>(&StepWorker::set_frequency))
         .addFunction("start_worker",
                      std::function<bool(LuaStepWorker *, const std::string &, lua_State *)>(
                          [](LuaStepWorker *self, const std::string & name, lua_State *state) {
@@ -221,14 +212,11 @@ void LuaUtilApi::load_threading(Vm & vm)
                              return self->start_sync_worker(name);
                          }))
         .addFunction("stop_worker", static_cast<bool (LuaStepWorker::*)()>(&Worker::stop_worker))
-        .addFunction("is_worker_running",
-                     static_cast<bool (LuaStepWorker::*)() const>(&Worker::is_worker_running))
-        .addFunction("is_worker_started",
-                     static_cast<bool (LuaStepWorker::*)() const>(&Worker::is_worker_started))
+        .addFunction("is_worker_running", static_cast<bool (LuaStepWorker::*)() const>(&Worker::is_worker_running))
+        .addFunction("is_worker_started", static_cast<bool (LuaStepWorker::*)() const>(&Worker::is_worker_started))
         .addFunction("pause_worker", static_cast<void (LuaStepWorker::*)()>(&StepWorker::pause_worker))
         .addFunction("resume_worker", static_cast<void (LuaStepWorker::*)()>(&StepWorker::resume_worker))
-        .addFunction("nano_sleep_time",
-                     static_cast<time::UnixTime (LuaStepWorker::*)() const>(&StepWorker::nano_sleep_time))
+        .addFunction("nano_sleep_time", static_cast<Duration (LuaStepWorker::*)() const>(&StepWorker::nano_sleep_time))
         .addFunction("frequency", static_cast<double (LuaStepWorker::*)() const>(&StepWorker::frequency))
         .endClass()
         .endNamespace()
@@ -287,11 +275,9 @@ void LuaUtilApi::load_tools(Vm & vm)
         .addFunction("days", &Timestamp::days)
         .addFunction("timeoffset_str", &Timestamp::timeoffset_str)
         .addFunction("localtimeoffset_str", &Timestamp::localtimeoffset_str)
-        .addFunction("format",
-                     static_cast<std::string (Timestamp::*)(std::string_view) const>(&Timestamp::format))
-        .addFunction(
-            "local_format",
-            static_cast<std::string (Timestamp::*)(std::string_view) const>(&Timestamp::local_format))
+        .addFunction("format", static_cast<std::string (Timestamp::*)(std::string_view) const>(&Timestamp::format))
+        .addFunction("local_format",
+                     static_cast<std::string (Timestamp::*)(std::string_view) const>(&Timestamp::local_format))
         .addFunction("str", &Timestamp::str)
         .addFunction("local_str", &Timestamp::local_str)
         .addFunction("zone_str", &Timestamp::zone_str)
@@ -302,6 +288,51 @@ void LuaUtilApi::load_tools(Vm & vm)
         .addFunction("is_leap_year", &Timestamp::is_leap_year)
         .addFunction("floor_day", &Timestamp::floor_day)
         .addFunction("modulo_min", &Timestamp::modulo_min)
+        .addFunction(
+            "__eq",
+            +[](Timestamp self, Timestamp other) -> bool { return self == other; })
+        .addFunction(
+            "__lt",
+            +[](Timestamp self, Timestamp other) -> bool { return self < other; })
+        .addFunction(
+            "__le",
+            +[](Timestamp self, Timestamp other) -> bool { return self <= other; })
+        .addFunction(
+            "__add",
+            +[](Timestamp self, Duration other) -> Timestamp { return self + other; })
+        .addFunction(
+            "__sub",
+            +[](Timestamp self, Timestamp other) -> Duration { return self - other; })
+        .endClass()
+        /**
+         * Duration
+         */
+        .beginClass<Duration>("Duration")
+        .addConstructor<void (*)(int64_t)>()
+        .addFunction("get", &Duration::get)
+        .addFunction("nanoseconds", &Duration::nanoseconds)
+        .addFunction("microseconds", &Duration::microseconds)
+        .addFunction("milliseconds", &Duration::milliseconds)
+        .addFunction("seconds", &Duration::seconds)
+        .addFunction("minutes", &Duration::minutes)
+        .addFunction("hours", &Duration::hours)
+        .addFunction("days", &Duration::days)
+        .addFunction("str", &Duration::str)
+        .addFunction(
+            "__eq",
+            +[](Duration self, Duration other) -> bool { return self == other; })
+        .addFunction(
+            "__lt",
+            +[](Duration self, Duration other) -> bool { return self < other; })
+        .addFunction(
+            "__le",
+            +[](Duration self, Duration other) -> bool { return self <= other; })
+        .addFunction(
+            "__add",
+            +[](Duration self, Duration other) -> Duration { return self + other; })
+        .addFunction(
+            "__sub",
+            +[](Duration self, Duration other) -> Duration { return self - other; })
         .endClass()
         /**
          * Namespaces
@@ -456,8 +487,7 @@ void LuaUtilApi::load_base(Vm & vm)
             "add_child_name",
             +[](Node *self, const std::string & name, Named *child) { return self->add_child(name, child); })
         .addFunction("remove_child", static_cast<bool (Node::*)(const Named *)>(&Node::remove_child))
-        .addFunction("remove_child_name",
-                     static_cast<bool (Node::*)(const std::string &)>(&Node::remove_child))
+        .addFunction("remove_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::remove_child))
         .addFunction("is_link", &Node::is_link)
         .addFunction("add_link", &Node::add_link)
         .addFunction("remove_link", &Node::remove_link)
@@ -642,9 +672,7 @@ void LuaUtilApi::LuaScheduler::set_state(lua_State *state)
 /* LuaThreadRunner */
 /* ************************************************************************* */
 
-LuaUtilApi::LuaThreadRunner::LuaThreadRunner(luabridge::LuaRef lua_ref): _original_fun(lua_ref), _fun(lua_ref)
-{
-}
+LuaUtilApi::LuaThreadRunner::LuaThreadRunner(luabridge::LuaRef lua_ref): _original_fun(lua_ref), _fun(lua_ref) {}
 
 LuaUtilApi::LuaThreadRunner::~LuaThreadRunner() = default;
 
@@ -745,9 +773,7 @@ bool LuaUtilApi::LuaWorker::start_worker(const std::string_view name)
 /* LuaStepWorker */
 /* ************************************************************************* */
 
-LuaUtilApi::LuaStepWorker::LuaStepWorker(luabridge::LuaRef lua_ref):
-    _state_ptr(nullptr),
-    _lua_runnable(lua_ref)
+LuaUtilApi::LuaStepWorker::LuaStepWorker(luabridge::LuaRef lua_ref): _state_ptr(nullptr), _lua_runnable(lua_ref)
 {
     this->set_runnable(&_lua_runnable);
 }

@@ -34,7 +34,7 @@ void MemRecorder::add_record(const std::string & name, sihd::util::Timestamp tim
     sihd::util::IArrayShared arr(array->clone_array());
     std::lock_guard l(_mutex);
     _map_sorted_records.insert(
-        std::pair<sihd::util::time::UnixTime, PlayableRecord>(timestamp.nanoseconds(), {name, timestamp, arr}));
+        std::pair<sihd::util::Timestamp, PlayableRecord>(timestamp, {name, timestamp, arr}));
 }
 
 void MemRecorder::add_record(const PlayableRecord & record)
@@ -101,7 +101,7 @@ std::string MemRecorder::hexdump_recorded_values(const MapListRecordedValues & r
         str += fmt::format("Channel {} ({}):\n", channel_name, recorded_values_lst.size());
         for (const auto & [time, value] : recorded_values_lst)
         {
-            str += fmt::format("  {}: {}\n", time, value->hexdump(' '));
+            str += fmt::format("  {}: {}\n", time.nanoseconds(), value->hexdump(' '));
         }
     }
     return str;
@@ -117,7 +117,7 @@ std::string MemRecorder::hexdump_records(std::string_view separation_cols, char 
         str += fmt::format("{0}{1}{2}{1}{3}\n",
                            playable_record.name,
                            separation_cols,
-                           playable_record.timestamp,
+                           playable_record.timestamp.nanoseconds(),
                            playable_record.value->hexdump(separation_data));
     }
     return str;

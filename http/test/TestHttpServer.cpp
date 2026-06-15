@@ -904,7 +904,7 @@ TEST_F(TestHttpServer, test_concurrent_service)
         sihd::util::LoggerFilter::Options {.level_lower = sihd::util::LogLevel::warning});
     sihd::util::TmpLoggerFilterAdder filter_adder(filter.get());
 
-    auto run_batched = [&](int handler_calls_expected, auto & handler_calls) -> time_t {
+    auto run_batched = [&](int handler_calls_expected, auto & handler_calls) -> sihd::util::time::UnixTime {
         stopwatch.reset();
         int completed = 0;
         while (completed < num_requests)
