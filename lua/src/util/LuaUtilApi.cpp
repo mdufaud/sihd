@@ -455,7 +455,18 @@ void LuaUtilApi::load_base(Vm & vm)
         .addProperty("ownership", &Node::ChildEntry::ownership)
         .endClass()
         .beginClass<Named>("Named")
-        .addConstructorFrom<SmartNodePtr<Named>, void(const std::string &, Node *)>()
+        .addFactory(
+            +[](lua_State *L) -> Named * {
+                std::string name = *luabridge::Stack<std::string>::get(L, 2);
+                Node *parent = nullptr;
+                if (!lua_isnoneornil(L, 3))
+                    parent = *luabridge::Stack<Node *>::get(L, 3);
+                Named *node = new Named(name);
+                if (parent != nullptr)
+                    parent->add_child(node, false);
+                return node;
+            },
+            +[](Named *node) { delete node; })
         .addProperty(
             "c_ptr",
             +[](const Named *self) -> int64_t { return (int64_t)self; })
@@ -478,14 +489,25 @@ void LuaUtilApi::load_base(Vm & vm)
         })
         .endClass()
         .deriveClass<Node, Named>("Node")
-        .addConstructorFrom<SmartNodePtr<Node>, void(const std::string &, Node *)>()
+        .addFactory(
+            +[](lua_State *L) -> Node * {
+                std::string name = *luabridge::Stack<std::string>::get(L, 2);
+                Node *parent = nullptr;
+                if (!lua_isnoneornil(L, 3))
+                    parent = *luabridge::Stack<Node *>::get(L, 3);
+                Node *node = new Node(name);
+                if (parent != nullptr)
+                    parent->add_child(node, false);
+                return node;
+            },
+            +[](Node *node) { delete node; })
         .addFunction("get_child", static_cast<Named *(Node::*)(const std::string &)>(&Node::get_child))
         .addFunction(
             "add_child",
-            +[](Node *self, Named *child) { return self->add_child(child); })
+            +[](Node *self, Named *child) { return self->add_child(child, false); })
         .addFunction(
             "add_child_name",
-            +[](Node *self, const std::string & name, Named *child) { return self->add_child(name, child); })
+            +[](Node *self, const std::string & name, Named *child) { return self->add_child(name, child, false); })
         .addFunction("remove_child", static_cast<bool (Node::*)(const Named *)>(&Node::remove_child))
         .addFunction("remove_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::remove_child))
         .addFunction("is_link", &Node::is_link)

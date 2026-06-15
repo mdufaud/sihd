@@ -366,11 +366,11 @@ def create_docker_package(app, modules):
     # Toolchain packages always needed in the builder stage
     # Keyed by package manager
     _builder_base_pkgs = {
-        "apt":    ["git", "make", "python3", "scons", "g++", "pkg-config", "ca-certificates"],
-        "apk":    ["git", "make", "python3", "py3-scons", "g++", "pkgconf", "ca-certificates"],
-        "pacman": ["git", "make", "python", "scons", "gcc", "pkgconf", "ca-certificates"],
-        "dnf":    ["git", "make", "python3", "scons", "gcc-c++", "pkgconf", "ca-certificates"],
-        "yum":    ["git", "make", "python3", "scons", "gcc-c++", "pkgconf", "ca-certificates"],
+        "apt":    ["git", "make", "jq", "python3", "scons", "g++", "pkg-config", "ca-certificates"],
+        "apk":    ["git", "make", "jq", "python3", "py3-scons", "g++", "pkgconf", "ca-certificates"],
+        "pacman": ["git", "make", "jq", "python", "scons", "gcc", "pkgconf", "ca-certificates"],
+        "dnf":    ["git", "make", "jq", "python3", "scons", "gcc-c++", "pkgconf", "ca-certificates"],
+        "yum":    ["git", "make", "jq", "python3", "scons", "gcc-c++", "pkgconf", "ca-certificates"],
     }
     # vcpkg prerequisites (needed when some extlibs must be fetched)
     _vcpkg_prereqs = {

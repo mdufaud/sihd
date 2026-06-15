@@ -154,7 +154,13 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
     pybind11::class_<Named, SmartNodePtr<Named>>(m_util, "Named")
         // keep_alive 1 -> this | 2 -> first arg | 3 -> parent
         // keeps alive parent while named object is alive
-        .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
+        .def(pybind11::init([](const std::string & name, Node *parent) {
+                 Named *node = new Named(name);
+                 if (parent != nullptr)
+                     parent->add_child(node, false);
+                 return node;
+             }),
+             pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
         .def_property_readonly(
             "c_ptr",
@@ -177,17 +183,23 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
 
     pybind11::class_<Node, Named, SmartNodePtr<Node>>(m_util, "Node")
         // keeps alive parent while node object is alive
-        .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
+        .def(pybind11::init([](const std::string & name, Node *parent) {
+                 Node *node = new Node(name);
+                 if (parent != nullptr)
+                     parent->add_child(node, false);
+                 return node;
+             }),
+             pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
         .def("get_child",
              static_cast<Named *(Node::*)(const std::string &)>(&Node::get_child),
              pybind11::return_value_policy::reference_internal)
         .def(
             "add_child",
-            +[](Node *self, Named *child) { return self->add_child(child); })
+            +[](Node *self, Named *child) { return self->add_child(child, false); })
         .def(
             "add_child_name",
-            +[](Node *self, const std::string & name, Named *child) { return self->add_child(name, child); })
+            +[](Node *self, const std::string & name, Named *child) { return self->add_child(name, child, false); })
         .def("remove_child", static_cast<bool (Node::*)(const Named *)>(&Node::remove_child))
         .def("remove_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::remove_child))
         .def("is_link", &Node::is_link)

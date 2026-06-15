@@ -408,7 +408,8 @@ std::optional<NavigatorResponse>
 #if defined(__SIHD_WINDOWS__)
             _chsize_s(_fileno(opts.download_fp), 0);
 #else
-            ftruncate(fileno(opts.download_fp), 0);
+            if (ftruncate(fileno(opts.download_fp), 0) != 0)
+                SIHD_LOG(warning, "Navigator: failed to truncate download file before retry");
 #endif
             rewind(opts.download_fp);
         }
