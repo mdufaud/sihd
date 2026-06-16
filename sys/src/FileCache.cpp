@@ -76,17 +76,25 @@ void FileCache::handle(FileWatcher *file_watcher)
             case FileWatcherEventType::deleted:
             case FileWatcherEventType::modified:
             case FileWatcherEventType::renamed:
+            {
                 _cache.invalidate(event.watch_path);
                 break;
+            }
             case FileWatcherEventType::unknown:
+#if defined(__SIHD_UNIX__)
             case FileWatcherEventType::opened:
             case FileWatcherEventType::accessed:
             case FileWatcherEventType::closed:
+#endif
+            {
                 // do nothing, we don't care about these events
                 break;
+            }
             case FileWatcherEventType::terminated:
+            {
                 SIHD_LOG_DEBUG("File watcher terminated for file: {}", event.watch_path);
                 break;
+            }
         }
     }
 }

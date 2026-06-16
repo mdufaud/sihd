@@ -96,7 +96,7 @@ OBJ_PATH := $(call jq_path,obj)
 ETC_PATH := $(call jq_path,etc)
 DEMO_PATH := $(call jq_path,demo)
 SHARE_PATH := $(call jq_path,share)
-DIST_PATH := $(PROJECT_ROOT_PATH)/dist
+DIST_PATH := $(BUILD_PATH)/dist
 
 ####################
 # Makefile includes
@@ -753,7 +753,7 @@ dist: modules = $(MODULES_NAME)
 dist: build
 ifeq ($(DIST_TYPE), docker)
 	$(QUIET) $(call echo_log_info,makefile,Dockerfile generated — to build and run:)
-	$(QUIET) echo "  docker build -t $(APP_NAME) dist/docker/"
+	$(QUIET) echo "  docker build -t $(APP_NAME) $(BUILD_ENTRY_PATH)/last/dist/docker/"
 	$(QUIET) echo "  docker run --rm $(APP_NAME) <binary>"
 endif
 

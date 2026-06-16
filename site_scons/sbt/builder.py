@@ -380,14 +380,14 @@ sbt_path = abspath(dirname(__file__))
 # path ROOT -> root/site_scons/builder.py
 build_root_path = abspath(dirname(dirname(dirname(__file__))))
 
-# distribution path next to root
-build_dist_path = join(build_root_path, "dist")
 # build dir path next to root
 build_entry_path = join(build_root_path, "build")
 # last build link path
 build_last_link_path = join(build_entry_path, "last")
 # build full path: <machine>-<platform>-<libc>/<compiler>-<version>/<mode>/<static|dynamic>
 build_path = join(build_entry_path, f"{build_machine}-{build_platform}-{libc}", build_compiler_version, build_mode, liblink)
+# distribution path inside the build variant dir
+build_dist_path = join(build_path, "dist")
 
 build_extlib_path = join(build_path, "extlib")
 build_extlib_bin_path = join(build_extlib_path, "bin")

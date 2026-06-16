@@ -1,4 +1,7 @@
-#pragma once
+#ifndef __SIHD_UTIL_FWD_HPP__
+#define __SIHD_UTIL_FWD_HPP__
+
+#include <cstdint>
 
 #include <sihd/util/traits.hpp>
 
@@ -72,3 +75,5 @@ class Task;
 class Defer;
 
 } // namespace sihd::util
+
+#endif

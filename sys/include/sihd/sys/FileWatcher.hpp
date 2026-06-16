@@ -1,16 +1,14 @@
 #ifndef __SIHD_SYS_FILEWATCHER_HPP__
 #define __SIHD_SYS_FILEWATCHER_HPP__
 
-#include <functional>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Observable.hpp>
-#include <sihd/sys/platform.hpp>
 
 namespace sihd::sys
 {
@@ -23,8 +21,7 @@ enum class FileWatcherEventType
     modified,
     renamed,
     terminated, // watch is finished
-#if !defined(__SIHD_WINDOWS__)
-    // not available in windows
+#if defined(__SIHD_UNIX__)
     opened,
     accessed,
     closed,

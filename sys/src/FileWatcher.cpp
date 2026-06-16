@@ -1,6 +1,7 @@
 #include <sihd/sys/platform.hpp>
 
 #include <cstring>
+#include <list>
 #include <stdexcept>
 
 #include <sihd/sys/FileWatcher.hpp>
@@ -9,6 +10,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/str.hpp>
 
 // FILEWATCHER_BACKEND: a real file-watching backend is available (ReadDirectoryChangesW or inotify).
 // emscripten has neither -> FileWatcher is a no-op stub there.
@@ -51,7 +53,7 @@ std::string FileWatcherEvent::type_str() const
             return "modified";
         case FileWatcherEventType::renamed:
             return "renamed";
-#if !defined(__SIHD_WINDOWS__)
+#if defined(__SIHD_UNIX__)
         case FileWatcherEventType::opened:
             return "opened";
         case FileWatcherEventType::accessed:
@@ -88,6 +90,7 @@ struct FileWatcher::Impl: public sihd::util::IHandler<sihd::sys::Poll *>
                         other.handle = INVALID_HANDLE_VALUE;
                         memcpy(&overlapped, &other.overlapped, sizeof(overlapped));
                         memset(&other.overlapped, 0, sizeof(other.overlapped));
+                        filename_filter = std::move(other.filename_filter);
 #else
 # if defined(INOTIFY_ENABLED)
                         inotify_fd = other.inotify_fd;
@@ -105,7 +108,9 @@ struct FileWatcher::Impl: public sihd::util::IHandler<sihd::sys::Poll *>
                 std::string path;
 #if defined(__SIHD_WINDOWS__)
                 HANDLE handle = INVALID_HANDLE_VALUE;
-                OVERLAPPED overlapped;
+                OVERLAPPED overlapped {};
+                // empty when watching a directory, else the file name to filter on (parent dir is watched)
+                std::string filename_filter;
 #else
 # if defined(INOTIFY_ENABLED)
                 int inotify_fd = -1;
@@ -134,7 +139,7 @@ struct FileWatcher::Impl: public sihd::util::IHandler<sihd::sys::Poll *>
         void handle(Poll *poll);
 # endif
 #endif
-        std::vector<Watcher> _watchers;
+        std::list<Watcher> _watchers;
 
         void init();
         bool add_watch(std::string_view path);
@@ -181,7 +186,7 @@ void FileWatcher::Impl::Watcher::close()
         handle = INVALID_HANDLE_VALUE;
     }
 
-    if (overlapped.hEvent != INVALID_HANDLE_VALUE)
+    if (overlapped.hEvent != NULL)
     {
         CloseHandle(overlapped.hEvent);
         memset(&overlapped, 0, sizeof(overlapped));
@@ -192,28 +197,44 @@ void FileWatcher::Impl::init() {}
 
 bool FileWatcher::Impl::add_watch(std::string_view path)
 {
-    if (!fs::is_dir(path))
-    {
-        SIHD_LOG(error, "FileWatcher: Is not a directory: {}", path);
-        return false;
-    }
     if (this->is_watching(path))
         return true;
 
-    Watcher watcher;
-    watcher.handle = CreateFile(path.data(),
-                                FILE_LIST_DIRECTORY,
-                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                NULL,
-                                OPEN_EXISTING,
-                                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
-                                NULL);
-    if (watcher.handle == INVALID_HANDLE_VALUE)
+    // ReadDirectoryChangesW only watches directories: when given a file, watch its
+    // parent directory and filter incoming events on the file name.
+    std::string filename_filter;
+    std::string dir_to_watch(path);
+    if (!fs::is_dir(path))
+    {
+        if (!fs::is_file(path))
+        {
+            SIHD_LOG(error, "FileWatcher: No such file or directory: {}", path);
+            return false;
+        }
+        filename_filter = fs::filename(path);
+        dir_to_watch = fs::parent(path);
+    }
+
+    HANDLE handle = CreateFile(dir_to_watch.c_str(),
+                               FILE_LIST_DIRECTORY,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+                               NULL);
+    if (handle == INVALID_HANDLE_VALUE)
     {
         SIHD_LOG(error, "FileWatcher: {}", os::last_error_str());
         return false;
     }
 
+    // ReadDirectoryChangesW is asynchronous: the OVERLAPPED it is given must keep a stable address
+    // until the operation completes. Store the Watcher first (std::list nodes never move) so the OS
+    // never ends up writing the completion result into freed/moved memory.
+    Watcher & watcher = _watchers.emplace_back();
+    watcher.path = std::string(path);
+    watcher.filename_filter = std::move(filename_filter);
+    watcher.handle = handle;
     watcher.overlapped.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
     constexpr bool watch_subtree = FALSE;
@@ -230,11 +251,10 @@ bool FileWatcher::Impl::add_watch(std::string_view path)
                                NULL))
     {
         SIHD_LOG(error, "FileWatcher: {}", os::last_error_str());
+        _watchers.pop_back();
         return false;
     }
 
-    watcher.path = std::string(path);
-    _watchers.emplace_back(std::move(watcher));
     return true;
 }
 
@@ -287,6 +307,10 @@ bool FileWatcher::Impl::poll_new_events(int milliseconds_timeout)
                     add_event = false;
                     break;
             }
+
+            // when watching a single file, drop events for the other entries of the parent directory
+            if (!watcher.filename_filter.empty() && !str::iequals(fw_event.filename, watcher.filename_filter))
+                add_event = false;
 
             if (add_event)
             {

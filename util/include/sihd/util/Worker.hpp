@@ -8,7 +8,7 @@
 
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IRunnable.hpp>
-#include <sihd/util/forward.hpp>
+#include <sihd/util/fwd.hpp>
 
 namespace sihd::util
 {

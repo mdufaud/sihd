@@ -7,7 +7,7 @@
 #include <unordered_set>
 
 #include <sihd/util/Message.hpp>
-#include <sihd/util/forward.hpp>
+#include <sihd/util/fwd.hpp>
 
 namespace sihd::util
 {

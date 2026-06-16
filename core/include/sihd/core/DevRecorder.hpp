@@ -7,7 +7,7 @@
 #include <set>
 
 #include <sihd/util/IHandler.hpp>
-#include <sihd/util/forward.hpp>
+#include <sihd/util/fwd.hpp>
 
 #include <sihd/core/Device.hpp>
 

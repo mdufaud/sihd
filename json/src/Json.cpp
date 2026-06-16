@@ -137,7 +137,6 @@ Json & Json::operator=(Json && other) noexcept
 
 Json::~Json() = default;
 
-
 bool Json::is_null() const
 {
     if (_dom_holder != nullptr)
@@ -230,10 +229,8 @@ Json::Type Json::type() const
                 return Type::Array;
             case simdjson::dom::element_type::OBJECT:
                 return Type::Object;
-#if SIMDJSON_VERSION_MAJOR > 4 || (SIMDJSON_VERSION_MAJOR == 4 && SIMDJSON_VERSION_MINOR >= 6)
             case simdjson::dom::element_type::BIGINT:
                 return Type::String;
-#endif
         }
         return Type::Null;
     }
@@ -665,11 +662,9 @@ void Json::_dump_dom_to_builder(simdjson::builder::string_builder & sb,
         case simdjson::dom::element_type::STRING:
             sb.escape_and_append_with_quotes(std::string_view(elem));
             break;
-#if SIMDJSON_VERSION_MAJOR > 4 || (SIMDJSON_VERSION_MAJOR == 4 && SIMDJSON_VERSION_MINOR >= 6)
         case simdjson::dom::element_type::BIGINT:
             sb.append_raw(std::string_view(elem.get_bigint()));
             break;
-#endif
         case simdjson::dom::element_type::ARRAY:
         {
             simdjson::dom::array arr(elem);

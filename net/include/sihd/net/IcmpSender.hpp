@@ -7,7 +7,7 @@
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/sys/Poll.hpp>
-#include <sihd/util/forward.hpp>
+#include <sihd/util/fwd.hpp>
 
 #include <sihd/net/Socket.hpp>
 #include <sihd/net/ip.hpp>

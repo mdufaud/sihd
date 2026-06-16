@@ -33,7 +33,6 @@ lua/luabridge
 
 # build specific
 build/*
-dist/*
 .installed
 .build_cache
 .cache

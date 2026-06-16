@@ -2,6 +2,7 @@
 #define __SIHD_UTIL_TRAITS_HPP__
 
 #include <concepts>
+#include <iterator>
 #include <type_traits>
 
 namespace sihd::util::traits
