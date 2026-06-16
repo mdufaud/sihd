@@ -8,6 +8,7 @@ includes = [
     "addon/distribution.py",
     "addon/extlibs.py",
     "addon/compilation.py",
+    "addon/test.py",
 ]
 
 ###############################################################################

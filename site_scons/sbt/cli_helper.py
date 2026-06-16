@@ -13,6 +13,16 @@ def _runner_env():
     return env
 
 
+def _test_env(app):
+    fn = getattr(app, "generate_test_env", None)
+    if fn is not None:
+        if callable(fn):
+            return fn(builder)
+        else:
+            raise TypeError(f"app.generate_test_env is not callable: {fn}")
+    return {}
+
+
 def _relative_paths(build_path):
     abs_paths = {
         "bin": builder.build_bin_path,
@@ -49,6 +59,7 @@ def _build_env():
             "runner": builder.get_test_runner() or "",
             "bin_ext": builder.get_test_bin_ext() or "",
             "runner_env": _runner_env(),
+            "env": _test_env(app),
         },
     }
 
