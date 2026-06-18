@@ -15,9 +15,9 @@ AThreadedService::~AThreadedService() = default;
 void AThreadedService::set_service_nb_thread(uint8_t n)
 {
     if (n > 0)
-        _barrier_ptr = std::make_unique<std::barrier<>>(n + 1);
+        _sync_ptr = std::make_unique<Synchronizer>(n + 1);
     else
-        _barrier_ptr.reset();
+        _sync_ptr.reset();
 }
 
 void AThreadedService::set_start_synchronised(bool active)
@@ -29,10 +29,10 @@ bool AThreadedService::do_start()
 {
     bool ret;
 
-    if (_start_synchronised && _barrier_ptr)
+    if (_start_synchronised && _sync_ptr)
     {
         ret = this->on_start();
-        _barrier_ptr->arrive_and_wait();
+        _sync_ptr->sync();
     }
     else
         ret = this->on_start();
@@ -47,8 +47,8 @@ bool AThreadedService::do_stop()
 
 void AThreadedService::notify_service_thread_started()
 {
-    if (_barrier_ptr)
-        _barrier_ptr->arrive_and_wait();
+    if (_sync_ptr)
+        _sync_ptr->sync();
 }
 
 const std::string & AThreadedService::thread_name() const

@@ -67,8 +67,8 @@ Socket::Socket(int socket, bool get_infos): Socket()
     if (socket >= 0)
     {
         _socket = socket;
-        if (get_infos && this->get_infos() == false)
-            this->_clear_socket_info();
+        if (get_infos)
+            this->get_infos();
     }
 }
 
@@ -197,7 +197,12 @@ bool Socket::set_socket_keepalive(int socket, bool active)
 
 bool Socket::is_socket_keepalive(int socket)
 {
-    int opt;
+#if defined(__SIHD_WINDOWS__)
+    // Winsock getsockopt(SO_KEEPALIVE) writes a single byte boolean, not a 4-byte int
+    char opt = 0;
+#else
+    int opt = 0;
+#endif
     socklen_t len = sizeof(opt);
     return sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &opt, &len, true) && opt != 0;
 }
@@ -254,14 +259,23 @@ bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
     found = found && sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_PROTOCOL, protocol, &length);
     return found;
 #else
-    CSADDR_INFO addrinfo;
-    socklen_t length = sizeof(addrinfo);
-    bool found = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_BSP_STATE, &addrinfo, &length);
+    // SO_BSP_STATE returns a CSADDR_INFO whose LocalAddr/RemoteAddr point into the
+    // same buffer right after the struct; the buffer must be large enough for both
+    // appended sockaddrs or getsockopt fails with WSAEFAULT.
+    char buffer[sizeof(CSADDR_INFO) + 2 * sizeof(SOCKADDR_STORAGE)];
+    CSADDR_INFO *addrinfo = reinterpret_cast<CSADDR_INFO *>(buffer);
+    socklen_t length = sizeof(buffer);
+    bool found = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_BSP_STATE, addrinfo, &length);
     if (found)
     {
-        *protocol = addrinfo.iProtocol;
-        *type = addrinfo.iSocketType;
-        *domain = AF_INET;
+        *protocol = addrinfo->iProtocol;
+        *type = addrinfo->iSocketType;
+        if (addrinfo->LocalAddr.lpSockaddr != nullptr)
+            *domain = addrinfo->LocalAddr.lpSockaddr->sa_family;
+        else if (addrinfo->RemoteAddr.lpSockaddr != nullptr)
+            *domain = addrinfo->RemoteAddr.lpSockaddr->sa_family;
+        else
+            *domain = AF_INET;
     }
     return found;
 #endif
@@ -431,7 +445,11 @@ bool Socket::close()
     bool ret = true;
     if (_socket >= 0)
     {
+#if defined(__SIHD_WINDOWS__)
+        ret = ::closesocket(_socket) == 0;
+#else
         ret = ::close(_socket) == 0;
+#endif
         if (ret == false)
             SIHD_LOG(error, "Socket: close error: {}", sihd::sys::os::last_error_str());
         if (!_unix_bind_path.empty())

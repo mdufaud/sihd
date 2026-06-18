@@ -85,7 +85,13 @@ class TestProcess: public ::testing::Test
 
         virtual ~TestProcess() { sihd::util::LoggerManager::clear_loggers(); }
 
-        virtual void SetUp() {}
+        virtual void SetUp()
+        {
+            if constexpr (!Process::supported)
+            {
+                GTEST_SKIP() << "subprocess (fork/exec) not supported on this platform";
+            }
+        }
 
         virtual void TearDown() {}
 

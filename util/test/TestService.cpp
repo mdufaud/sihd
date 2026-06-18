@@ -5,6 +5,7 @@
 #include <sihd/util/AThreadedService.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ServiceController.hpp>
+#include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/profiling.hpp>
 
 namespace test
@@ -20,13 +21,14 @@ class FakeThreadedService: public AThreadedService
 
         bool on_start() override
         {
-            auto b = std::make_shared<std::barrier<std::function<void()>>>(3, [this] {
+            auto b = std::make_shared<Synchronizer>(3);
+            thread1 = std::jthread([b] { b->sync(); });
+            thread2 = std::jthread([b] { b->sync(); });
+            thread3 = std::jthread([b, this] {
+                b->sync();
                 started = true;
                 this->notify_service_thread_started();
             });
-            thread1 = std::jthread([b] { b->arrive_and_wait(); });
-            thread2 = std::jthread([b] { b->arrive_and_wait(); });
-            thread3 = std::jthread([b] { b->arrive_and_wait(); });
             return true;
         }
 

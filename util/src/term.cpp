@@ -1,3 +1,6 @@
+#include <cstdlib>
+#include <cstring>
+
 #include <fmt/format.h>
 
 #include <sihd/util/build.hpp>
@@ -43,6 +46,35 @@ bool is_interactive()
         return true;
 #endif
     return isatty(fileno(stdin));
+}
+
+bool supports_color(FILE *output)
+{
+    // explicit overrides (https://no-color.org, https://bixense.com/clicolors)
+    if (::getenv("NO_COLOR") != nullptr)
+        return false;
+    const char *clicolor_force = ::getenv("CLICOLOR_FORCE");
+    if (clicolor_force != nullptr && clicolor_force[0] != '0' && clicolor_force[0] != '\0')
+        return true;
+    if constexpr (build::is_emscripten)
+    {
+        return false;
+    }
+    else if constexpr (build::is_android)
+    {
+        // The terminal bridge UI renders ANSI escapes, so color is supported even
+        // though stdout/stderr is a pipe (not a tty).
+        return true;
+    }
+    else
+    {
+        if (!isatty(fileno(output)))
+            return false;
+        const char *term_env = ::getenv("TERM");
+        if (term_env == nullptr || std::strcmp(term_env, "dumb") == 0)
+            return false;
+        return true;
+    }
 }
 
 std::string underline(std::string_view str)

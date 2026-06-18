@@ -13,7 +13,7 @@ SIHD_LOGGER;
 DeviceUdpReceiver::DeviceUdpReceiver(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
     _udp_receiver("udp-receiver"),
-    _start_barrier(2),
+    _start_sync(2),
     _stop_requested(false),
     _start_ok(false),
     _port(0),
@@ -85,7 +85,7 @@ bool DeviceUdpReceiver::on_start()
     if (!_worker.start_worker("DeviceUdpReceiver"))
         return false;
 
-    _start_barrier.arrive_and_wait();
+    _start_sync.sync();
     return _start_ok;
 }
 
@@ -114,14 +114,14 @@ bool DeviceUdpReceiver::run()
     {
         SIHD_LOG(error, "DeviceUdpReceiver: failed to bind on {}:{}", _host, _port);
         _start_ok = false;
-        _start_barrier.arrive_and_wait();
+        _start_sync.sync();
         return false;
     }
 
     _udp_receiver.add_observer(this);
 
     _start_ok = true;
-    _start_barrier.arrive_and_wait();
+    _start_sync.sync();
 
     _udp_receiver.start();
 

@@ -1,3 +1,6 @@
+#include <chrono>
+#include <thread>
+
 #include <gtest/gtest.h>
 
 #include <sihd/net/BasicServerHandler.hpp>
@@ -67,16 +70,26 @@ TEST_F(TestTcp, test_tcp_server)
 
     Worker worker([&server] { return server.start(); });
     EXPECT_TRUE(worker.start_sync_worker("tcp-server"));
+    ASSERT_TRUE(server.wait_ready(std::chrono::seconds(1)));
+
+    // poll-wait instead of fixed sleeps (slow under qemu emulation)
+    auto wait_for = [](auto pred) {
+        for (int i = 0; i < 200 && !pred(); ++i)
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    };
 
     SIHD_LOG(debug, "Simulating a new connection");
     client1.open_and_connect(localhost, connect_timeout_ms);
 
-    usleep(1000);
+    wait_for([&] { return server_handler.client_count() == 1u; });
 
     SIHD_LOG(debug, "Simulating a send from client: {}", hello_world_arr.str());
     EXPECT_TRUE(client1.send_all(hello_world_arr));
 
-    usleep(1000);
+    wait_for([&] {
+        auto all_clients = server_handler.clients();
+        return all_clients.size() == 1 && all_clients[0]->read_array.is_bytes_equal(hello_world_arr);
+    });
 
     EXPECT_EQ(server_handler.client_count(), 1u);
     {
@@ -93,12 +106,12 @@ TEST_F(TestTcp, test_tcp_server)
     client3.open_and_connect(localhost, connect_timeout_ms);
     client4.open_and_connect(localhost, connect_timeout_ms);
 
-    usleep(2000);
+    wait_for([&] { return server_handler.client_count() == 4u; });
 
     SIHD_LOG(debug, "Simulating a new unacceptable connection");
     client5.open_and_connect(localhost, connect_timeout_ms);
 
-    usleep(1000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     // connection not accepted
     EXPECT_EQ(server_handler.client_count(), 4u);

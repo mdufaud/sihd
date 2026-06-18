@@ -248,15 +248,23 @@ def get_conditionals_from_env(app):
                 ret.append(key)
     return ret
 
-def check_platform(modules, platform):
-    """ @brief sanatize modules based on platform
+def check_platform(modules, platform, modules_options=None):
+    """ @brief sanatize modules based on platform and build selectors
+        @param platform current build platform (allowlist check)
+        @param modules_options selector tokens (libtype/platform/mode/compiler/libc/
+               machine/...) used by the generic "exclude-platforms" blocklist
         @return modules to remove
     """
     to_remove = []
     for name, conf in modules.items():
-        module_platforms = conf.get("platforms", None)
+        module_platforms = conf.get("allow-platforms", None)
         if module_platforms is not None and platform not in module_platforms:
             to_remove.append(name)
+            continue
+        if modules_options is not None:
+            excluded = conf.get("exclude-platforms", [])
+            if any(opt in modules_options for opt in excluded):
+                to_remove.append(name)
     for name in to_remove:
         del modules[name]
     return to_remove
@@ -265,14 +273,14 @@ def check_linkage(modules, linkage):
     """ @brief sanatize modules based on link mode ("static"|"dynamic")
         @return modules to remove
 
-        "linkage_only_dynamic": dropped from static builds (e.g. GUI modules
-        needing system-only dynamic libs like libGL). "linkage_only_static": inverse.
+        "allow-link-dyn": dropped from static builds (e.g. GUI modules
+        needing system-only dynamic libs like libGL). "allow-link-static": inverse.
     """
     to_remove = []
     for name, conf in modules.items():
-        if conf.get("linkage_only_dynamic", False) and linkage != "dynamic":
+        if conf.get("allow-link-dyn", False) and linkage != "dynamic":
             to_remove.append(name)
-        elif conf.get("linkage_only_static", False) and linkage != "static":
+        elif conf.get("allow-link-static", False) and linkage != "static":
             to_remove.append(name)
     for name in to_remove:
         del modules[name]

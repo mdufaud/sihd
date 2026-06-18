@@ -1,8 +1,9 @@
 #include <gtest/gtest.h>
+
 #include <sihd/net/Pinger.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
@@ -25,6 +26,9 @@ class TestPinger: public ::testing::Test
 
 TEST_F(TestPinger, test_pinger)
 {
+#if defined(__SIHD_WINDOWS__)
+    GTEST_SKIP() << "raw ICMPv4 sockets not functional under wine/mingw";
+#endif
     Pinger pinger("pinger");
 
     if (pinger.open(false) == false)

@@ -34,18 +34,18 @@ TEST_F(TestZip, test_zip_tools)
 {
     sihd::sys::TmpDir tmp_dir;
 
-    const auto origin_path = tmp_dir.path() + "/origin";
-    const auto test_path = origin_path + "/test";
+    const auto origin_path = fs::combine(tmp_dir.path(), "origin");
+    const auto test_path = fs::combine(origin_path, "test");
     ASSERT_TRUE(fs::make_directories(test_path));
-    ASSERT_TRUE(fs::make_directory(test_path + "/one"));
-    ASSERT_TRUE(fs::make_directory(test_path + "/two"));
-    ASSERT_TRUE(fs::write(test_path + "/one/file.txt", str::generate_random(10100)));
+    ASSERT_TRUE(fs::make_directory(fs::combine(test_path, "one")));
+    ASSERT_TRUE(fs::make_directory(fs::combine(test_path, "two")));
+    ASSERT_TRUE(fs::write(fs::combine({test_path, "one", "file.txt"}), str::generate_random(10100)));
 
-    const auto archive_path = tmp_dir.path() + "/archive.zip";
+    const auto archive_path = fs::combine(tmp_dir.path(), "archive.zip");
     ASSERT_TRUE(sihd::zip::zip(test_path, archive_path));
     EXPECT_TRUE(fs::exists(archive_path));
 
-    const auto unzipped_path = tmp_dir.path() + "/unzipped";
+    const auto unzipped_path = fs::combine(tmp_dir.path(), "unzipped");
     ASSERT_TRUE(sihd::zip::unzip(archive_path, unzipped_path));
 
     auto children_fs = fs::recursive_children(unzipped_path);
@@ -65,13 +65,13 @@ TEST_F(TestZip, test_list_entries)
 {
     sihd::sys::TmpDir tmp_dir;
 
-    const auto test_path = tmp_dir.path() + "/data";
+    const auto test_path = fs::combine(tmp_dir.path(), "data");
     ASSERT_TRUE(fs::make_directories(test_path));
-    ASSERT_TRUE(fs::make_directory(test_path + "/subdir"));
-    ASSERT_TRUE(fs::write(test_path + "/file1.txt", "content1"));
-    ASSERT_TRUE(fs::write(test_path + "/subdir/file2.txt", "content2"));
+    ASSERT_TRUE(fs::make_directory(fs::combine(test_path, "subdir")));
+    ASSERT_TRUE(fs::write(fs::combine(test_path, "file1.txt"), "content1"));
+    ASSERT_TRUE(fs::write(fs::combine({test_path, "subdir", "file2.txt"}), "content2"));
 
-    const auto archive_path = tmp_dir.path() + "/test.zip";
+    const auto archive_path = fs::combine(tmp_dir.path(), "test.zip");
     ASSERT_TRUE(sihd::zip::zip(test_path, archive_path));
 
     auto entries = sihd::zip::list_entries(archive_path);

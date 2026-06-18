@@ -9,6 +9,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Observable.hpp>
+#include <sihd/util/build.hpp>
 
 namespace sihd::sys
 {
@@ -42,6 +43,8 @@ class FileWatcher: public sihd::util::Observable<FileWatcher>,
                    public sihd::util::IRunnable
 {
     public:
+        static constexpr bool supported = !sihd::util::build::is_emscripten;
+
         FileWatcher();
         FileWatcher(std::string_view path);
         FileWatcher(std::string_view path, int run_timeout_milliseconds);

@@ -178,10 +178,10 @@ class Socket
         void _clear_socket_info();
         bool _multicast_membership(const IpAddr & group, std::string_view iface, int ipv4_opt, int ipv6_opt);
 
-        int _domain;
-        int _type;
-        int _protocol;
-        int _socket;
+        int _domain = -1;
+        int _type = -1;
+        int _protocol = -1;
+        int _socket = -1;
 
         std::string _unix_bind_path;
         IpAddr _connect_addr;

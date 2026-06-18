@@ -7,7 +7,12 @@
 namespace sihd::util
 {
 
-Synchronizer::Synchronizer(): _sync_count(0), _wanted_count(0), _generation(0) {}
+Synchronizer::Synchronizer(int32_t total): _sync_count(0), _wanted_count(0), _round(0)
+{
+    this->init_sync(total);
+}
+
+Synchronizer::Synchronizer(): _sync_count(0), _wanted_count(0), _round(0) {}
 
 Synchronizer::~Synchronizer()
 {
@@ -24,7 +29,7 @@ bool Synchronizer::init_sync(int32_t total)
 
 void Synchronizer::reset()
 {
-    _generation.fetch_add(1);
+    _round.fetch_add(1);
     _sync_count = 0;
     _waitable.notify_all();
     _wanted_count = 0;
@@ -32,18 +37,32 @@ void Synchronizer::reset()
 
 void Synchronizer::sync()
 {
-    const int32_t gen = _generation.load();
+    (void)this->sync(Duration {});
+}
+
+bool Synchronizer::sync(Duration timeout)
+{
+    const int32_t round = _round.load();
     if (_sync_count.fetch_add(1) + 1 >= _wanted_count)
     {
         // the last thread to sync - reset count and wake everyone
         _sync_count = 0;
-        _generation.fetch_add(1);
+        _round.fetch_add(1);
         _waitable.notify_all();
+        return true;
     }
-    else
+    // wait for the round to change (the last thread to sync will change it)
+    const auto pred = [this, round] {
+        return _round.load() != round;
+    };
+    if (timeout.nanoseconds() <= 0)
     {
-        _waitable.wait([this, gen] { return _generation.load() != gen; });
+        // no timeout: wait indefinitely
+        _waitable.wait(pred);
+        return true;
     }
+    // wait_for returns the last predicate value: true if round changed (synced), false on timeout
+    return _waitable.wait_for(timeout, pred);
 }
 
 } // namespace sihd::util

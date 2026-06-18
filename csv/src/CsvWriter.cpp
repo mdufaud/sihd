@@ -57,7 +57,8 @@ bool CsvWriter::open(std::string_view path, bool append)
     _col = 0;
     _row = 0;
     _max_col = 0;
-    if (_file.open(path, append ? "a" : "w"))
+    // binary mode: avoid Windows text-mode CRLF translation (consistent LF output)
+    if (_file.open(path, append ? "ab" : "wb"))
         return _file.buff_stream();
     return false;
 }

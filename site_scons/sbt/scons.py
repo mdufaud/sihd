@@ -102,10 +102,10 @@ except RuntimeError as e:
     logger.error(str(e))
     Exit(1)
 
-# Checking module availability on platforms
-deleted_modules = modules.check_platform(build_modules, build_platform)
+# Checking module availability on platforms and build selectors
+deleted_modules = modules.check_platform(build_modules, build_platform, modules_options)
 for deleted_modules in deleted_modules:
-    logger.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
+    logger.warning("module '{}' excluded from this build (platform/selector)".format(deleted_modules))
 
 # Checking module availability for the requested link mode (static/dynamic)
 deleted_modules = modules.check_linkage(build_modules, builder.liblink)

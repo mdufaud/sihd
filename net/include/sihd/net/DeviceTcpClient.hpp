@@ -1,12 +1,11 @@
 #ifndef __SIHD_NET_DEVICETCPCLIENT_HPP__
 #define __SIHD_NET_DEVICETCPCLIENT_HPP__
 
-#include <barrier>
-
 #include <sihd/core/Device.hpp>
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/TcpClient.hpp>
 #include <sihd/util/IRunnable.hpp>
+#include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Worker.hpp>
 
 namespace sihd::net
@@ -48,7 +47,7 @@ class DeviceTcpClient: public sihd::core::Device,
 
         TcpClient _tcp_client;
         sihd::util::Worker _worker;
-        std::barrier<> _start_barrier;
+        sihd::util::Synchronizer _start_sync;
         std::atomic<bool> _stop_requested;
         bool _start_ok;
 

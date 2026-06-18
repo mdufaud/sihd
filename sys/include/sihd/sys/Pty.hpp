@@ -7,6 +7,8 @@
 #include <string_view>
 #include <vector>
 
+#include <sihd/util/build.hpp>
+
 namespace sihd::sys
 {
 
@@ -28,10 +30,13 @@ struct PtySize
 class Pty
 {
     public:
+        static constexpr bool supported = !sihd::util::build::is_emscripten;
+
         virtual ~Pty() = default;
 
         // Returns nullptr if PTY is not supported on this platform
         static std::unique_ptr<Pty> create();
+        // Runtime check (e.g. Windows ConPTY availability)
         static bool is_supported();
 
         // Configuration (call before spawn)

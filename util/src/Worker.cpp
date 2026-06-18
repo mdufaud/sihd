@@ -9,7 +9,7 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-Worker::Worker(): _started(false), _running(false), _detach(false), _sync_start(false), _barrier(2) {}
+Worker::Worker(): _started(false), _running(false), _detach(false), _sync_start(false), _start_sync(2) {}
 
 Worker::Worker(IRunnable *runnable): Worker()
 {
@@ -75,7 +75,7 @@ bool Worker::start_sync_worker(std::string_view name)
     _sync_start = true;
     bool ret = this->start_worker(name);
     if (ret)
-        _barrier.arrive_and_wait();
+        _start_sync.sync();
     return ret;
 }
 
@@ -84,7 +84,7 @@ bool Worker::pre_run()
     ScopedModifier m(_running, true);
     thread::set_name(_worker_thread_name);
     if (_sync_start)
-        _barrier.arrive_and_wait();
+        _start_sync.sync();
     return this->run();
 }
 

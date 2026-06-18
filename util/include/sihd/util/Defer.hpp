@@ -15,6 +15,12 @@ class Defer
 
         ~Defer() { _cb(); }
 
+        void cancel()
+        {
+            _cb = [] {
+            };
+        }
+
     private:
         Callback _cb;
 };

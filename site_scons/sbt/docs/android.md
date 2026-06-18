@@ -127,6 +127,72 @@ adb install build/arm64-android-bionic/ndk-28/fast/demo/imgui_opengl3_android_de
 adb install build/last/demo/imgui_opengl3_android_demo.apk
 ```
 
+## Running in an emulator
+
+sbt ships makefile targets that drive the Android emulator end-to-end: create an
+AVD, start a **visible** emulator window, install an APK, launch it, and stream
+logcat. Terminal-mode demos render their `stdout`/`stderr` in a scrollable view on a
+fake phone — no physical device needed.
+
+### Required tools
+
+| Tool | Location under `ANDROID_SDK_PATH` | Used by |
+|------|-----------------------------------|---------|
+| `adb` | `platform-tools/adb` | `adb`, `android-emu*` |
+| `emulator` | `emulator/emulator` | `android-emu`, `android-emu-run` |
+| `sdkmanager` | `cmdline-tools/latest/bin/sdkmanager` | `android-emu-setup` |
+| `avdmanager` | `cmdline-tools/latest/bin/avdmanager` | `android-emu-setup` |
+
+`ANDROID_SDK_PATH` **must** be set for any of these targets — they fail fast
+otherwise. Each target also checks the specific binary it needs and reports the
+missing path. If your tools live under **different** roots (e.g. the emulator was
+installed via Android Studio in `~/Android/Sdk` while command-line tools are in
+`/opt/android-sdk`), point `ANDROID_SDK_PATH` at the root holding most of them and
+override the rest:
+
+```bash
+make android-emu ANDROID_EMU_BIN=~/Android/Sdk/emulator/emulator
+```
+
+AVDs live in `~/.android/avd` regardless of which SDK root is used.
+
+### Targets
+
+```bash
+make android-emu-setup    # create the AVD (one-time)
+make android-emu          # start the visible emulator window
+make android-emu-run <path/to/apk>   # start emulator if down, then install+launch+logcat
+make android-emu-stop     # kill the running emulator
+make adb <path/to/apk>    # install+launch+logcat on an already-running device/emulator
+```
+
+`android-emu-setup` creates an **x86_64** `google_apis` AVD. An x86_64 AVD runs an
+**arm64-v8a** APK via the image's built-in ARM-to-x86 translation (API 30+
+`google_apis` images) — no separate arm64 AVD is needed.
+
+Typical run-only flow (assumes the APK is already built):
+
+```bash
+make demo m=sys platform=android   # build -> build/.../demo/sys_demo.apk
+make android-emu-run build/arm64-android-bionic/ndk-28/fast/dynamic/demo/sys_demo.apk
+```
+
+`android-emu-run` takes an **explicit APK path**, so it works for any APK whether it
+came from `demo/` or `bin/`. `android-emu` is idempotent — if an emulator is already
+up it is reused, no second instance starts.
+
+### Tunable variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ANDROID_SDK_PATH` | _(none)_ | SDK root; required |
+| `ANDROID_ADB_BIN` | `$(ANDROID_SDK_PATH)/platform-tools/adb` | adb binary |
+| `ANDROID_EMU_BIN` | `$(ANDROID_SDK_PATH)/emulator/emulator` | emulator binary |
+| `AVD_NAME` | `<app-name>_emulation` | AVD name |
+| `EMU_SYS_IMAGE` | `system-images;android-35;google_apis;x86_64` | system image |
+| `EMU_DEVICE` | `pixel_6` | device profile |
+| `EMU_WINDOW` | `1` | `0` = headless (`-no-window`, swiftshader), for CI |
+
 ## How It Works
 
 ### Template system

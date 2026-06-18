@@ -640,7 +640,13 @@ bool ZipFile::add_dir_from_fs(std::string_view name, std::string_view path)
     std::vector<std::string> children = fs::children(path);
     for (std::string_view child : children)
     {
-        if (this->add_from_fs(fs::combine(name, child), fs::combine(path, child)) == false)
+        // fs::children appends the host separator to directory entries: strip it
+        std::string child_name(child);
+        if (!child_name.empty() && child_name.back() == fs::sep())
+            child_name.pop_back();
+        // archive entry names always use '/', regardless of the host fs separator
+        std::string entry_name = std::string(name) + "/" + child_name;
+        if (this->add_from_fs(entry_name, fs::combine(path, child_name)) == false)
             return false;
     }
     return true;

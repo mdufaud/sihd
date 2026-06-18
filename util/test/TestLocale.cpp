@@ -53,6 +53,11 @@ TEST_F(TestLocale, test_locale_create_classic)
 
 TEST_F(TestLocale, test_locale_create_throws_on_invalid)
 {
+    if constexpr (build::is_emscripten)
+    {
+        GTEST_SKIP() << "emscripten libc++ ships no locale data: std::locale(invalid) "
+                        "silently yields the C locale instead of throwing";
+    }
     // Invalid locale should throw
     EXPECT_THROW(locale::create_locale("this_does_not_exist_XYZ.UTF-99"), std::runtime_error);
 }

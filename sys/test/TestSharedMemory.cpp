@@ -28,7 +28,13 @@ class TestSharedMemory: public ::testing::Test
 
         virtual ~TestSharedMemory() { sihd::util::LoggerManager::clear_loggers(); }
 
-        virtual void SetUp() {}
+        virtual void SetUp()
+        {
+            if constexpr (!SharedMemory::supported)
+            {
+                GTEST_SKIP() << "shared memory (shm_open) not supported on this platform";
+            }
+        }
 
         virtual void TearDown() {}
 };

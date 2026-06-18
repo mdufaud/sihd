@@ -5,6 +5,7 @@
 
 namespace test
 {
+using namespace sihd::util;
 using namespace sihd::sys;
 
 namespace
@@ -57,7 +58,13 @@ class TestProc: public ::testing::Test
     protected:
         TestProc() = default;
         virtual ~TestProc() = default;
-        virtual void SetUp() {}
+        virtual void SetUp()
+        {
+            if constexpr (!proc::supported)
+            {
+                GTEST_SKIP() << "subprocess (fork/exec) not supported on this platform";
+            }
+        }
         virtual void TearDown() {}
 };
 

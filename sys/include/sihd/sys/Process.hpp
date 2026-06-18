@@ -11,6 +11,7 @@
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Waitable.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/traits.hpp>
 
 namespace sihd::sys
@@ -26,6 +27,8 @@ class Process: public sihd::util::IHandler<Poll *>,
 #else
         using FileDescType = HANDLE;
 #endif
+
+        static constexpr bool supported = !sihd::util::build::is_emscripten;
 
         // POSIX-like observable code for "launch failed or killed" (-1 wrapped to 8 bits)
         static constexpr ReturnCodeType failure_return_code = 255;

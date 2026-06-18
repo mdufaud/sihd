@@ -1,8 +1,8 @@
-#include <poll.h>
-#include <sys/stat.h>
-
 #include <gtest/gtest.h>
 
+#include <sihd/sys/Poll.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -164,9 +164,9 @@ TEST_F(TestSocket, test_socket_multicast)
     IpAddr dest("239.0.0.1", 4250);
     EXPECT_EQ(sender.send_to(dest, msg), (ssize_t)strlen(msg));
 
-    struct pollfd pfd = {.fd = sock.socket(), .events = POLLIN, .revents = 0};
-    int poll_ret = ::poll(&pfd, 1, 500);
-    if (poll_ret <= 0)
+    sihd::sys::Poll poll(1);
+    poll.set_read_fd(sock.socket());
+    if (poll.poll(500) <= 0)
         GTEST_SKIP() << "Multicast loopback not available";
     sihd::util::ArrChar recv(32);
     ssize_t received = sock.receive(recv);
@@ -178,6 +178,7 @@ TEST_F(TestSocket, test_socket_multicast)
     EXPECT_TRUE(sender.close());
 }
 
+#if !defined(__SIHD_WINDOWS__)
 TEST_F(TestSocket, test_socket_unix_cleanup)
 {
     std::string path = "/tmp/sihd_test_unix_cleanup.sock";
@@ -188,12 +189,12 @@ TEST_F(TestSocket, test_socket_unix_cleanup)
         EXPECT_TRUE(server.bind_unix(path));
         EXPECT_TRUE(server.listen(1));
 
-        struct stat st;
-        EXPECT_EQ(::stat(path.c_str(), &st), 0);
+        EXPECT_TRUE(sihd::sys::fs::exists(path));
 
         EXPECT_TRUE(server.close());
-        EXPECT_NE(::stat(path.c_str(), &st), 0);
+        EXPECT_FALSE(sihd::sys::fs::exists(path));
     }
 }
+#endif
 
 } // namespace test

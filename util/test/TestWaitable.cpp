@@ -1,9 +1,8 @@
-#include <barrier>
-
 #include <gtest/gtest.h>
 
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/time.hpp>
 
@@ -33,15 +32,15 @@ TEST_F(TestWaitable, test_waitable_basic)
     Waitable waitable;
     std::atomic<bool> data = false;
 
-    std::barrier synchro_start(2);
+    Synchronizer synchro_start(2);
     std::thread t([&]() {
-        synchro_start.arrive_and_wait();
+        synchro_start.sync();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         auto l = waitable.guard();
         data = true;
         waitable.notify(1);
     });
-    synchro_start.arrive_and_wait();
+    synchro_start.sync();
 
     waitable.wait([&data] { return data == true; });
 
@@ -56,15 +55,15 @@ TEST_F(TestWaitable, test_waitable_for)
     Waitable waitable;
     std::atomic<bool> data = false;
 
-    std::barrier synchro_start(2);
+    Synchronizer synchro_start(2);
     std::thread t([&]() {
-        synchro_start.arrive_and_wait();
+        synchro_start.sync();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         auto l = waitable.guard();
         data = true;
         waitable.notify(1);
     });
-    synchro_start.arrive_and_wait();
+    synchro_start.sync();
 
     bool condition_ok = waitable.wait_for(std::chrono::milliseconds(50), [&data] { return data == true; });
     EXPECT_TRUE(condition_ok);
@@ -81,15 +80,15 @@ TEST_F(TestWaitable, test_waitable_until)
     Waitable waitable;
     std::atomic<bool> data = false;
 
-    std::barrier synchro_start(2);
+    Synchronizer synchro_start(2);
     std::thread t([&]() {
-        synchro_start.arrive_and_wait();
+        synchro_start.sync();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         auto l = waitable.guard();
         data = true;
         waitable.notify(1);
     });
-    synchro_start.arrive_and_wait();
+    synchro_start.sync();
 
     bool condition_ok = waitable.wait_until(clock.now() + time::ms(50), [&data] { return data == true; });
     EXPECT_TRUE(condition_ok);
@@ -103,15 +102,15 @@ TEST_F(TestWaitable, test_waitable_for_elapsed)
     Waitable waitable;
     std::atomic<bool> data = false;
 
-    std::barrier synchro_start(2);
+    Synchronizer synchro_start(2);
     std::thread t([&]() {
-        synchro_start.arrive_and_wait();
+        synchro_start.sync();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         auto l = waitable.guard();
         data = true;
         waitable.notify(1);
     });
-    synchro_start.arrive_and_wait();
+    synchro_start.sync();
 
     Duration elapsed = waitable.wait_for_elapsed(std::chrono::milliseconds(50), [&data] { return data == true; });
     EXPECT_LE(elapsed.milliseconds(), 50);

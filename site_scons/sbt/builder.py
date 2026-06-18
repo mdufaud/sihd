@@ -424,13 +424,19 @@ def host_can_run(machine):
     return machine in _host_native_machines.get(host_machine, [host_machine])
 
 def get_test_bin_ext():
-    """Filename suffix of a test binary (".exe" on windows, "" elsewhere)."""
-    return ".exe" if build_platform == "windows" else ""
+    """Filename suffix of a test binary (".exe" windows, ".js" web/node, "" elsewhere)."""
+    if build_platform == "windows":
+        return ".exe"
+    if build_platform == "web":
+        return ".js"
+    return ""
 
 def get_test_runner():
     """Emulator command that wraps a cross-built test binary, or "" when it runs natively."""
     if build_platform == "windows":
         return "wine"
+    if build_platform == "web":
+        return "node"
     if build_platform == "linux" and not host_can_run(build_machine):
         return "qemu-" + architectures.get_qemu_arch(build_machine)
     return ""

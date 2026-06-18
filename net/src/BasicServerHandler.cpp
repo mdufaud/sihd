@@ -119,7 +119,7 @@ bool BasicServerHandler::remove_client(int socket)
     return this->remove_client(it->second);
 }
 
-void BasicServerHandler::handle_no_activity([[maybe_unused]] INetServer *server, time_t milliseconds)
+void BasicServerHandler::handle_no_activity([[maybe_unused]] INetServer *server, sihd::util::time::UnixTime milliseconds)
 {
     if (_last_time <= 0)
         _last_time = _clock.now() + sihd::util::Duration(milliseconds);
@@ -128,7 +128,7 @@ void BasicServerHandler::handle_no_activity([[maybe_unused]] INetServer *server,
     _poll_time = milliseconds;
 }
 
-void BasicServerHandler::handle_activity([[maybe_unused]] INetServer *server, time_t milliseconds)
+void BasicServerHandler::handle_activity([[maybe_unused]] INetServer *server, sihd::util::time::UnixTime milliseconds)
 {
     if (_last_time <= 0)
         _last_time = _clock.now() + sihd::util::Duration(milliseconds);
@@ -197,7 +197,14 @@ void BasicServerHandler::handle_client_write(INetServer *server, int socket)
 void BasicServerHandler::handle_after_activity(INetServer *server)
 {
     _server = server;
-    this->notify_observers(this);
+    bool had_activity;
+    {
+        std::lock_guard lock(_mutex);
+        had_activity = !_connect_event_lst.empty() || !_read_event_lst.empty() || !_write_event_lst.empty();
+    }
+    // only notify on real activity (idle poll timeouts would otherwise spam observers)
+    if (had_activity)
+        this->notify_observers(this);
 }
 
 } // namespace sihd::net

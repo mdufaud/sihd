@@ -1,5 +1,8 @@
+#include <chrono>
+
 #include <sihd/net/DeviceTcpServer.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace sihd::net
@@ -12,9 +15,6 @@ SIHD_LOGGER;
 DeviceTcpServer::DeviceTcpServer(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
     _tcp_server("tcp-server"),
-    _start_barrier(2),
-    _stop_requested(false),
-    _start_ok(false),
     _port(0),
     _buffer_capacity(4096),
     _channel_rx(nullptr),
@@ -111,21 +111,45 @@ bool DeviceTcpServer::on_start()
         return false;
     }
 
-    this->observe_channel(_channel_tx);
+    bool bound;
+    if (!_unix_path.empty())
+        bound = _tcp_server.open_unix_and_bind(_unix_path);
+    else
+        bound = _tcp_server.open_and_bind(_host, _port);
 
-    _stop_requested = false;
-    _start_ok = false;
+    if (!bound)
+    {
+        SIHD_LOG(error, "DeviceTcpServer: failed to bind");
+        return false;
+    }
+
+    this->observe_channel(_channel_tx);
+    _server_handler.add_observer(this);
+    _channel_client_count->write<int32_t>(0, 0);
+
+    util::Defer cleanup([this] {
+        _server_handler.remove_observer(this);
+        _tcp_server.close();
+    });
 
     if (!_worker.start_worker("DeviceTcpServer"))
+    {
         return false;
+    }
 
-    _start_barrier.arrive_and_wait();
-    return _start_ok;
+    if (!_tcp_server.wait_ready(std::chrono::seconds(1)))
+    {
+        _tcp_server.stop();
+        _worker.stop_worker();
+        return false;
+    }
+
+    cleanup.cancel();
+    return true;
 }
 
 bool DeviceTcpServer::on_stop()
 {
-    _stop_requested = true;
     _tcp_server.stop();
     _worker.stop_worker();
     _server_handler.remove_observer(this);
@@ -143,28 +167,7 @@ bool DeviceTcpServer::on_reset()
 
 bool DeviceTcpServer::run()
 {
-    bool ok;
-    if (!_unix_path.empty())
-        ok = _tcp_server.open_unix_and_bind(_unix_path);
-    else
-        ok = _tcp_server.open_and_bind(_host, _port);
-
-    if (!ok)
-    {
-        SIHD_LOG(error, "DeviceTcpServer: failed to bind");
-        _start_ok = false;
-        _start_barrier.arrive_and_wait();
-        return false;
-    }
-
-    _server_handler.add_observer(this);
-    _channel_client_count->write<int32_t>(0, 0);
-
-    _start_ok = true;
-    _start_barrier.arrive_and_wait();
-
     _tcp_server.start();
-
     return true;
 }
 

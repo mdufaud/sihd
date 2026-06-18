@@ -32,8 +32,9 @@ bool SigWaiter::_do_wait(int sig, Duration timeout)
     _received_signal = false;
     const bool has_timeout = timeout > 0;
 
-#if defined(__SIHD_WINDOWS__) || defined(__SIHD_ANDROID__)
-    // Polling-based implementation for Windows and Android
+#if defined(__SIHD_WINDOWS__) || defined(__SIHD_ANDROID__) || defined(__SIHD_EMSCRIPTEN__)
+    // Polling-based implementation for Windows, Android and emscripten
+    // (emscripten has no working sigtimedwait/sigwaitinfo)
     SteadyClock clock;
     const Timestamp begin = has_timeout ? clock.now() : Timestamp(0);
 

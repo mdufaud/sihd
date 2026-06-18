@@ -8,6 +8,7 @@
 
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/build.hpp>
 
 namespace sihd::sys
 {
@@ -15,6 +16,8 @@ namespace sihd::sys
 class ProcessInfo
 {
     public:
+        static constexpr bool supported = !sihd::util::build::is_emscripten;
+
         ProcessInfo(int pid);
         // exact name match
         ProcessInfo(std::string_view name);

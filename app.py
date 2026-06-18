@@ -19,6 +19,9 @@ modules = {
     "json": {
         "extlibs": ['simdjson'],
         "export-libs": ['simdjson'],
+        # emscripten: build with atomics so objects are link-compatible
+        "web-flags": ["-pthread"],
+        "export-web-flags": ["-pthread"],
     },
     "util": {
         "depends": ['json'],
@@ -31,19 +34,16 @@ modules = {
         # === Android specific ===
         "android-libs": ['log'],
         # === Emscripten specific ===
-        "em-flags": [
-            "-pthread", # enable threads
+        "web-flags": [
             "-Wno-deprecated-literal-operator",
             "-Wno-unknown-pragmas",
             "-Wno-deprecated-declarations",
         ],
-        "export-all-flags": True,
-        "em-link": [
+        "web-link": [
             "-sFORCE_FILESYSTEM", # use filesystem
-            "-sUSE_PTHREADS=1", # enable threads
-            "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
-            "-sPROXY_TO_PTHREAD", # main is a narrator thread
         ],
+        # === Export every flags for convenience ===
+        "export-all-flags": True,
     },
     "sys": {
         "depends": ['util'],
@@ -51,7 +51,6 @@ modules = {
             "x11": 0, # x11=1 to compile with X11
             "wayland": 0, # wayland=1 to compile with Wayland
         },
-        "export-all-libs": True,
         # === Linux specific ===
         "linux-extlibs": ['libuuid'],
         "linux-libs": [
@@ -71,20 +70,18 @@ modules = {
             'imagehlp', # backtrace / SymFromAddr
             # ! never add libucrt with mingw
         ],
+        # === Export every libs for convenience ===
+        "export-all-libs": True,
     },
     "core": {
         "depends": ['util', 'sys'],
     },
     "net": {
+        # poll()/select() not proxied by emscripten + no raw sockets/getifaddrs: net unusable on web
+        "exclude-platforms": ["web"],
         "depends": ['util', 'sys', 'core'],
-        "extlibs": ['openssl'],
-        "libs": ['ssl', 'crypto'],
-        "export-libs": ['ssl', 'crypto'],
         "windows-libs": ['iphlpapi'],
-        "export-windows-libs": [
-            'crypt32',
-            'bcrypt',
-        ],
+        "export-windows-libs": ['iphlpapi'],
     },
     "http": {
         "depends": ['net'],
@@ -93,10 +90,12 @@ modules = {
             'curl',
             'zlib',
             'libuv',
+            'openssl', # TLS for libwebsockets + curl
         ],
         "linux-extlibs": ["libcap"],
         # all libs are platform-specific due to different names and link order requirements
-        "linux-libs": ["websockets", "curl", "z", "uv", "cap"],
+        # ssl/crypto last: openssl provides symbols used by websockets/curl
+        "linux-libs": ["websockets", "curl", "z", "uv", "cap", "ssl", "crypto"],
         # Windows static linking: all transitive deps must be explicit
         # order matters: higher-level libs first, their deps after
         "windows-libs": [
@@ -112,6 +111,10 @@ modules = {
             'dbghelp',           # Debug (libuv)
             'ole32',             # COM (libuv)
             'uuid',              # UUID (libuv)
+            'ssl',               # OpenSSL TLS (libwebsockets/curl) - mingw uses openssl not schannel
+            'crypto',            # OpenSSL (ssl dep)
+            'crypt32',           # Windows crypto (openssl backend)
+            'bcrypt',            # Windows crypto (openssl backend)
         ],
     },
     "pcap": {
@@ -128,6 +131,18 @@ modules = {
         "depends": ['util', 'sys'],
         "extlibs": ['libzip'],
         "libs": ['zip'],
+        # Windows static linking: libzip's transitive deps must be explicit
+        "windows-libs": [
+            'zlib',   # vcpkg zlib installs libzlib.a on mingw (deflate/inflate/crc32)
+            'bz2',    # bzip2 compression (zip_algorithm_bzip2.c)
+            'bcrypt', # Windows CNG crypto (zip_crypto_win.c)
+        ],
+        # emscripten static linking: libzip's transitive deps must be explicit
+        "web-libs": [
+            'z',      # vcpkg zlib installs libz.a on wasm (deflate/inflate/crc32/zError)
+            'bz2',    # bzip2 compression (zip_algorithm_bzip2.c)
+            'crypto', # openssl crypto for AES/HMAC (zip_crypto_openssl.c, zip_winzip_aes.c)
+        ],
     },
     "tui": {
         "depends": ['util', 'sys'],
@@ -162,7 +177,7 @@ modules = {
         "cross-libs": ['usb-1.0'],
     },
     "bt": {
-        "platforms": ["linux"],
+        "allow-platforms": ["linux"],
         "depends": ['util', 'sys'],
         "extlibs": ['simpleble'],
         "libs": ['simpleble'],
@@ -175,7 +190,7 @@ modules = {
     "imgui": {
         "depends": ['util', 'sys'],
         # pulls libGL/libGLEW (no static archive) + dlopen GL loader: can't link static
-        "linkage_only_dynamic": True,
+        "allow-link-dyn": True,
         "extlibs": ['imgui', 'opengl'],
         # libxcrypt only supports linux|osx (autotools, no Windows/web port)
         "linux-extlibs": ['ncurses', 'libxcrypt'],
@@ -257,7 +272,7 @@ conditional_modules = {
     },
     "py": {
         "conditional-env": "py",
-        "platforms": ["linux"],
+        "allow-platforms": ["linux"],
         "extlibs": ['pybind11', 'python3'],
         "depends": ['util', 'sys'],
         "conditional-depends": ['core'],

@@ -6,7 +6,6 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
-#include <stdexcept>
 
 #include <fmt/ranges.h>
 
@@ -456,10 +455,22 @@ bool make_directories(std::string_view path, unsigned int mode)
         std::string separator = sep_str();
         Splitter splitter(separator);
         std::vector<std::string> dirnames = splitter.split(path);
-        std::string current_path = path[0] == g_separator_char ? separator : "";
-        for (const auto & dirname : dirnames)
+        std::string current_path;
+        size_t start = 0;
+#if defined(__SIHD_WINDOWS__)
+        // drive-absolute path "C:\..." -> first token "C:" is the root, not a dir to create
+        if (!dirnames.empty() && dirnames[0].size() == 2 && dirnames[0][1] == ':')
         {
-            current_path = combine(current_path, dirname);
+            current_path = dirnames[0] + separator;
+            start = 1;
+        }
+        else
+#endif
+            if (path[0] == g_separator_char)
+            current_path = separator;
+        for (size_t i = start; i < dirnames.size(); ++i)
+        {
+            current_path = combine(current_path, dirnames[i]);
             if (is_dir(current_path))
                 continue;
             ret = make_directory(current_path, mode);
@@ -483,7 +494,11 @@ std::vector<std::string> children(std::string_view path)
 
     while (it != end)
     {
-        ret.push_back(it->path().string());
+        // match the posix contract: basename only, trailing separator for directories
+        std::string name = it->path().filename().string();
+        if (it->is_directory(ec))
+            name += g_separator_char;
+        ret.push_back(name);
         it = it.increment(ec);
     }
 

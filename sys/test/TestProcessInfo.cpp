@@ -2,14 +2,13 @@
 
 #include <gtest/gtest.h>
 
+#include <sihd/sys/ProcessInfo.hpp>
+#include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/sys/TmpDir.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/term.hpp>
-
-#include <sihd/sys/ProcessInfo.hpp>
 
 namespace test
 {
@@ -23,7 +22,13 @@ class TestProcessInfo: public ::testing::Test
 
         virtual ~TestProcessInfo() { sihd::util::LoggerManager::clear_loggers(); }
 
-        virtual void SetUp() {}
+        virtual void SetUp()
+        {
+            if constexpr (!ProcessInfo::supported)
+            {
+                GTEST_SKIP() << "process introspection not supported on this platform";
+            }
+        }
 
         virtual void TearDown() {}
 };
@@ -36,11 +41,14 @@ TEST_F(TestProcessInfo, test_processinfo)
     ProcessInfo pi(getpid());
 
     ASSERT_EQ(pi.pid(), getpid());
-#if defined(__SIHD_WINDOWS__)
-    EXPECT_EQ(pi.name(), "sihd_sys.exe");
-#else
-    EXPECT_EQ(pi.name(), "sihd_sys");
-#endif
+    if constexpr (build::is_windows)
+    {
+        EXPECT_EQ(pi.name(), "sihd_sys.exe");
+    }
+    else
+    {
+        EXPECT_EQ(pi.name(), "sihd_sys");
+    }
     EXPECT_FALSE(pi.cwd().empty());
     EXPECT_FALSE(pi.exe_path().empty());
     EXPECT_FALSE(pi.cmd_line().empty());

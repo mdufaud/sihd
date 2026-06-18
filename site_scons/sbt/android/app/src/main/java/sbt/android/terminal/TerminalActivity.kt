@@ -20,6 +20,11 @@ import android.widget.TextView
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.TextUtils
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.util.TypedValue
 
 class TerminalActivity : Activity() {
@@ -43,9 +48,28 @@ class TerminalActivity : Activity() {
     @Volatile
     private var flushPending = false
 
+    // ANSI SGR parser state, carried across flushes
+    private var ansiFg: Int? = null
+    private var ansiBold = false
+    private val ansiPending = StringBuilder()
+
+    // Scrollback cap: keep the newest chars, drop oldest whole lines. Bounds the
+    // TextView buffer so append + relayout stay O(1) per flush instead of O(n).
+    private val maxOutputChars = 100_000
+
     companion object {
         var loadError: Throwable? = null
         @Volatile var nativeMainCalled = false
+
+        // ANSI 16-color palette (VS Code dark terminal theme)
+        private val ANSI_NORMAL = intArrayOf(
+            0xFF000000.toInt(), 0xFFCD3131.toInt(), 0xFF0DBC79.toInt(), 0xFFE5E510.toInt(),
+            0xFF2472C8.toInt(), 0xFFBC3FBC.toInt(), 0xFF11A8CD.toInt(), 0xFFE5E5E5.toInt()
+        )
+        private val ANSI_BRIGHT = intArrayOf(
+            0xFF666666.toInt(), 0xFFF14C4C.toInt(), 0xFF23D18B.toInt(), 0xFFF5F543.toInt(),
+            0xFF3B8EEA.toInt(), 0xFFD670D6.toInt(), 0xFF29B8DB.toInt(), 0xFFFFFFFF.toInt()
+        )
         init {
             try {
                 System.loadLibrary("__SBT_LIB_NAME__")
@@ -336,9 +360,77 @@ class TerminalActivity : Activity() {
         }
         flushPending = false
         if (chunk.isNotEmpty()) {
-            outputView.append(chunk)
+            outputView.append(ansiToSpannable(chunk))
+            trimOutput()
             if (!userScrolling || isNearBottom()) {
                 scrollToBottom()
+            }
+        }
+    }
+
+    // Drop oldest lines once the buffer exceeds maxOutputChars. Deletes up to the
+    // next newline after the overflow so a line is never cut mid-way; the removed
+    // range's spans go with it. TextView.append makes the text Editable, so
+    // editableText is non-null here.
+    private fun trimOutput() {
+        val editable = outputView.editableText ?: return
+        val overflow = editable.length - maxOutputChars
+        if (overflow <= 0) return
+        val nl = TextUtils.indexOf(editable, '\n', overflow)
+        val cut = if (nl >= 0) nl + 1 else overflow
+        editable.delete(0, cut)
+    }
+
+    // Translate ANSI SGR escapes into colored/bold spans, stripping other CSI
+    // sequences (cursor moves, clears). State persists across chunks; a partial
+    // escape at a chunk boundary is held in ansiPending until completed.
+    private fun ansiToSpannable(chunk: String): CharSequence {
+        val sb = SpannableStringBuilder()
+        val input = ansiPending.toString() + chunk
+        ansiPending.setLength(0)
+        val run = StringBuilder()
+        fun flushRun() {
+            if (run.isEmpty()) return
+            val start = sb.length
+            sb.append(run)
+            ansiFg?.let { sb.setSpan(ForegroundColorSpan(it), start, sb.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) }
+            if (ansiBold) sb.setSpan(StyleSpan(Typeface.BOLD), start, sb.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            run.setLength(0)
+        }
+        var i = 0
+        while (i < input.length) {
+            val c = input[i]
+            if (c == '\u001b') {
+                if (i + 1 >= input.length) { ansiPending.append(input.substring(i)); break }
+                if (input[i + 1] == '[') {
+                    var j = i + 2
+                    while (j < input.length && input[j] !in '@'..'~') j++
+                    if (j >= input.length) { ansiPending.append(input.substring(i)); break }
+                    if (input[j] == 'm') { flushRun(); applySgr(input.substring(i + 2, j)) }
+                    i = j + 1
+                    continue
+                }
+                i++ // lone ESC, drop
+                continue
+            }
+            run.append(c)
+            i++
+        }
+        flushRun()
+        return sb
+    }
+
+    private fun applySgr(params: String) {
+        val codes = if (params.isEmpty()) listOf(0) else params.split(';').map { it.toIntOrNull() ?: 0 }
+        for (code in codes) {
+            when (code) {
+                0 -> { ansiFg = null; ansiBold = false }
+                1 -> ansiBold = true
+                22 -> ansiBold = false
+                39 -> ansiFg = null
+                in 30..37 -> ansiFg = ANSI_NORMAL[code - 30]
+                in 90..97 -> ansiFg = ANSI_BRIGHT[code - 90]
+                // background and unsupported codes are ignored
             }
         }
     }

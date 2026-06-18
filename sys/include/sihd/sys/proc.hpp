@@ -10,9 +10,12 @@
 #include <vector>
 
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/build.hpp>
 
 namespace sihd::sys::proc
 {
+
+constexpr bool supported = !sihd::util::build::is_emscripten;
 
 struct Options
 {

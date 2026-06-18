@@ -1,8 +1,6 @@
 #ifndef __SIHD_NET_DEVICETCPSERVER_HPP__
 #define __SIHD_NET_DEVICETCPSERVER_HPP__
 
-#include <barrier>
-
 #include <sihd/core/Device.hpp>
 #include <sihd/net/BasicServerHandler.hpp>
 #include <sihd/net/TcpServer.hpp>
@@ -48,9 +46,6 @@ class DeviceTcpServer: public sihd::core::Device,
         TcpServer _tcp_server;
         BasicServerHandler _server_handler;
         sihd::util::Worker _worker;
-        std::barrier<> _start_barrier;
-        std::atomic<bool> _stop_requested;
-        bool _start_ok;
 
         std::string _host;
         int _port;

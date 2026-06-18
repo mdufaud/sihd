@@ -86,11 +86,11 @@ Both are **skipped in cross-compilation** to avoid host header pollution. In cro
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `platforms` | `list[str]` | Whitelist of platforms (`linux`, `windows`, `web`, `android`). Omit = all platforms. |
+| `allow-platforms` | `list[str]` | Whitelist of platforms (`linux`, `windows`, `web`, `android`). Omit = all platforms. |
 
 ```python
 "bt": {
-    "platforms": ["linux"],  # bluetooth only on linux
+    "allow-platforms": ["linux"],  # bluetooth only on linux
 },
 ```
 
@@ -98,14 +98,14 @@ Both are **skipped in cross-compilation** to avoid host header pollution. In cro
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `linkage_only_dynamic` | `bool` | Module dropped from static builds (`static=1`). |
-| `linkage_only_static` | `bool` | Module dropped from dynamic builds. |
+| `allow-link-dyn` | `bool` | Module dropped from static builds (`static=1`). |
+| `allow-link-static` | `bool` | Module dropped from dynamic builds. |
 
 ```python
 "imgui": {
     # GUI pulls system-only dynamic libs (libGL/libGLEW) with no static
     # archive + dlopen GL loader: cannot link fully static
-    "linkage_only_dynamic": True,
+    "allow-link-dyn": True,
 },
 ```
 

@@ -2,12 +2,12 @@
 #define __SIHD_UTIL_WORKER_HPP__
 
 #include <atomic>
-#include <barrier>
 #include <mutex>
 #include <thread>
 
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IRunnable.hpp>
+#include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/fwd.hpp>
 
 namespace sihd::util
@@ -49,7 +49,7 @@ class Worker: protected IRunnable
         std::atomic<bool> _running;
         bool _detach;
         bool _sync_start;
-        std::barrier<> _barrier;
+        Synchronizer _start_sync;
         std::thread _worker_thread;
 };
 

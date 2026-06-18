@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <sihd/util/build.hpp>
 #include <sihd/util/thread.hpp>
 
 namespace test
@@ -30,6 +31,11 @@ class TestThread: public ::testing::Test
 
 TEST_F(TestThread, test_thread_name)
 {
+    if constexpr (build::is_emscripten)
+    {
+        GTEST_SKIP() << "emscripten has no OS thread-name API and PROXY_TO_PTHREAD runs "
+                        "the test on a proxy worker, not the named main thread";
+    }
     this->main_id = thread::id();
     std::string current_thread_name = thread::name();
     EXPECT_FALSE(current_thread_name.empty());
@@ -43,6 +49,10 @@ TEST_F(TestThread, test_thread_name)
 
 TEST_F(TestThread, test_thread_main_id)
 {
+#if defined(__SIHD_EMSCRIPTEN__)
+    GTEST_SKIP() << "PROXY_TO_PTHREAD: main() runs on a proxy worker while thread::main() "
+                    "is captured at static init on the runtime host thread; they never match";
+#endif
     // thread::main() captures the program entry thread — must equal the test runner thread ID
     const pthread_t main_id = thread::main();
     EXPECT_TRUE(thread::equals(main_id, thread::id()));

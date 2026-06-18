@@ -3,6 +3,7 @@
 
 #include <atomic>
 
+#include <sihd/util/Duration.hpp>
 #include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
@@ -12,10 +13,12 @@ class Synchronizer
 {
     public:
         Synchronizer();
+        Synchronizer(int32_t total);
         ~Synchronizer();
 
         bool init_sync(int32_t total);
         void sync();
+        [[nodiscard]] bool sync(Duration timeout);
         void reset();
 
         int32_t current_sync() const { return _sync_count.load(); }
@@ -28,7 +31,7 @@ class Synchronizer
 
         std::atomic<int32_t> _sync_count;
         std::atomic<int32_t> _wanted_count;
-        std::atomic<int32_t> _generation;
+        std::atomic<int32_t> _round;
         Waitable _waitable;
 };
 

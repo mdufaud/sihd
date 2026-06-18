@@ -8,6 +8,7 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Node.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/sys/platform.hpp>
 
 namespace sihd::sys
@@ -18,6 +19,10 @@ class Daemon: public sihd::util::Named,
               public sihd::util::IRunnable
 {
     public:
+        // daemonize (fork/setsid) only on unix; no-op on windows and emscripten
+        static constexpr bool supported
+            = !sihd::util::build::is_windows && !sihd::util::build::is_emscripten;
+
         Daemon(const std::string & name, sihd::util::Node *parent = nullptr);
         ~Daemon();
 

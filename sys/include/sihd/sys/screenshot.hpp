@@ -10,9 +10,9 @@ namespace sihd::sys::screenshot
 {
 
 #if defined(SIHD_COMPILE_WITH_X11) || defined(SIHD_COMPILE_WITH_WAYLAND) || defined(__SIHD_WINDOWS__)
-constexpr bool usable = true;
+constexpr bool supported = true;
 #else
-constexpr bool usable = false;
+constexpr bool supported = false;
 #endif
 
 bool take_screen(Bitmap & bm);

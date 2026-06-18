@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
@@ -24,7 +25,13 @@ class TestFileWatcher: public ::testing::Test
 
         virtual ~TestFileWatcher() { sihd::util::LoggerManager::clear_loggers(); }
 
-        virtual void SetUp() {}
+        virtual void SetUp()
+        {
+            if constexpr (!FileWatcher::supported)
+            {
+                GTEST_SKIP() << "filesystem-watch backend not supported on this platform";
+            }
+        }
 
         virtual void TearDown() {}
 };

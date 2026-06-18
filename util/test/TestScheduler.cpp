@@ -5,6 +5,7 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Scheduler.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/num.hpp>
 #include <sihd/util/profiling.hpp>
 #include <sihd/util/time.hpp>
@@ -70,31 +71,41 @@ TEST_F(TestScheduler, test_sched_order)
     Timestamp task_second = 0;
     Timestamp task_third = 0;
 
+#if defined(__SIHD_EMSCRIPTEN__)
+    // emscripten thread-wake granularity is coarse: space tasks in milliseconds
+    // so their execution timestamps stay distinct instead of tying
+    const auto step = std::chrono::milliseconds(10);
+    const auto wait = std::chrono::milliseconds(100);
+#else
+    const auto step = std::chrono::microseconds(100);
+    const auto wait = std::chrono::milliseconds(50);
+#endif
+
     sched.add_task(new Task(
         [&] {
             task_second = sched.now();
             return true;
         },
-        {.run_in = std::chrono::microseconds(200)}));
+        {.run_in = step * 2}));
 
     sched.add_task(new Task(
         [&] {
             task_third = sched.now();
             return true;
         },
-        {.run_in = std::chrono::microseconds(300)}));
+        {.run_in = step * 3}));
 
     sched.add_task(new Task(
         [&] {
             task_first = sched.now();
             return true;
         },
-        {.run_in = std::chrono::microseconds(100)}));
+        {.run_in = step}));
 
     sched.set_start_synchronised(true);
     sched.start();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(wait);
 
     sched.stop();
 

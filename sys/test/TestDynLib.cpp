@@ -22,10 +22,11 @@ class TestDynLib: public ::testing::Test
         virtual void TearDown() {}
 };
 
-// DynLib::open is a no-op (always false) in fully static builds — nothing to dlopen
-#if !defined(SIHD_STATIC)
 TEST_F(TestDynLib, test_dynlib_open_close)
 {
+    if constexpr (!DynLib::supported)
+        GTEST_SKIP() << "dynamic loading not supported in this build";
+
     DynLib lib;
     EXPECT_FALSE(lib.is_open());
 
@@ -38,12 +39,18 @@ TEST_F(TestDynLib, test_dynlib_open_close)
 
 TEST_F(TestDynLib, test_dynlib_constructor_open)
 {
+    if constexpr (!DynLib::supported)
+        GTEST_SKIP() << "dynamic loading not supported in this build";
+
     DynLib lib(SIHD_TEST_LIBC);
     EXPECT_TRUE(lib.is_open());
 }
 
 TEST_F(TestDynLib, test_dynlib_load_symbol)
 {
+    if constexpr (!DynLib::supported)
+        GTEST_SKIP() << "dynamic loading not supported in this build";
+
     DynLib lib(SIHD_TEST_LIBC);
     ASSERT_TRUE(lib.is_open());
 
@@ -53,7 +60,6 @@ TEST_F(TestDynLib, test_dynlib_load_symbol)
     void *bad = lib.load("nonexistent_symbol_12345");
     EXPECT_EQ(bad, nullptr);
 }
-#endif
 
 TEST_F(TestDynLib, test_dynlib_open_nonexistent)
 {

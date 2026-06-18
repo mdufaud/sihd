@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
 
-#include <sihd/util/Array.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/Worker.hpp>
-
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/UdpReceiver.hpp>
 #include <sihd/net/UdpSender.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Synchronizer.hpp>
+#include <sihd/util/Worker.hpp>
 
 namespace test
 {
@@ -34,10 +34,12 @@ TEST_F(TestUdp, test_udp_receiver_run)
     EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4242}));
     EXPECT_TRUE(receiver.open_and_bind({"127.0.0.1", 4242}));
 
+    sihd::util::Synchronizer start_sync(2);
     ssize_t receive_ret = -1;
-    sihd::util::Handler<INetReceiver *> handler([&receive_ret, &array_rcv](INetReceiver *rcv) {
+    sihd::util::Handler<INetReceiver *> handler([&receive_ret, &array_rcv, &start_sync](INetReceiver *rcv) {
         receive_ret = rcv->receive(array_rcv);
         SIHD_LOG(debug, "Data received: {} - {} bytes", array_rcv.str(' '), array_rcv.byte_size());
+        (void)start_sync.sync(std::chrono::milliseconds(500));
     });
     receiver.add_observer(&handler);
     receiver.set_poll_timeout(1);
@@ -48,7 +50,7 @@ TEST_F(TestUdp, test_udp_receiver_run)
     SIHD_LOG(debug, "Sending: {} ({} bytes)", array_send.str(','), array_send.byte_size());
     EXPECT_EQ(sender.send(array_send), (ssize_t)array_send.byte_size());
 
-    usleep(1000);
+    EXPECT_TRUE(start_sync.sync(std::chrono::milliseconds(500)));
 
     EXPECT_TRUE(array_rcv.is_equal(array_send));
 

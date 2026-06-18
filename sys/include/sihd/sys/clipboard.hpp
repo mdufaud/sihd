@@ -13,9 +13,9 @@ namespace sihd::sys::clipboard
 {
 
 #if defined(SIHD_COMPILE_WITH_X11) || defined(SIHD_COMPILE_WITH_WAYLAND) || defined(__SIHD_WINDOWS__)
-constexpr bool usable = true;
+constexpr bool supported = true;
 #else
-constexpr bool usable = false;
+constexpr bool supported = false;
 #endif
 
 using Content = std::variant<std::string, Bitmap>;

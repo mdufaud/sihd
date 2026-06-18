@@ -79,6 +79,13 @@ TEST_F(TestSignal, test_signal_handle)
     EXPECT_EQ(sig_status->received, 1U);
     sihd::util::Timestamp last_time = sig_status->time_received.load();
 
+    if constexpr (build::is_emscripten)
+    {
+        // emscripten clock granularity is coarse: space the two raises so the second
+        // time_received is strictly greater instead of tying
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
     raise(sig);
 
     EXPECT_TRUE(signal::termination_received());

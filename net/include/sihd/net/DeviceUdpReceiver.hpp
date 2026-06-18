@@ -1,12 +1,11 @@
 #ifndef __SIHD_NET_DEVICEUDPRECEIVER_HPP__
 #define __SIHD_NET_DEVICEUDPRECEIVER_HPP__
 
-#include <barrier>
-
 #include <sihd/core/Device.hpp>
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/UdpReceiver.hpp>
 #include <sihd/util/IRunnable.hpp>
+#include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Worker.hpp>
 
 namespace sihd::net
@@ -43,7 +42,7 @@ class DeviceUdpReceiver: public sihd::core::Device,
     private:
         UdpReceiver _udp_receiver;
         sihd::util::Worker _worker;
-        std::barrier<> _start_barrier;
+        sihd::util::Synchronizer _start_sync;
         std::atomic<bool> _stop_requested;
         bool _start_ok;
 

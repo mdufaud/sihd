@@ -307,7 +307,7 @@ int main(int argc, char **argv)
 
     CLI11_PARSE(app, argc, argv);
 
-    if (term::is_interactive() && !sihd::util::build::is_emscripten)
+    if (term::supports_color())
         LoggerManager::console();
     else
         LoggerManager::stream(sihd::util::build::is_emscripten ? stdout : stderr);
@@ -327,11 +327,11 @@ int main(int argc, char **argv)
     }
     else
     {
-        if constexpr (clipboard::usable)
+        if constexpr (clipboard::supported)
         {
             demo::clipboard();
         }
-        if constexpr (screenshot::usable)
+        if constexpr (screenshot::supported)
         {
             demo::screenshot();
         }

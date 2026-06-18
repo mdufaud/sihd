@@ -92,6 +92,11 @@ void set_output_utf8();
 
 bool is_interactive();
 
+// True when ANSI color escapes will be rendered on the given output.
+// Honors NO_COLOR / CLICOLOR_FORCE, the TERM variable and isatty; on Android the
+// terminal bridge UI renders ANSI, so color is always supported.
+bool supports_color(FILE *output = stderr);
+
 std::string fmt(std::string_view str, const char *attr);
 std::string fmt(std::string_view str, const char *attr1, const char *attr2);
 

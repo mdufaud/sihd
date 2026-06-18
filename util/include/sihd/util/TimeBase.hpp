@@ -49,7 +49,7 @@ class TimeBase
         constexpr TimeBase(timespec ts): _nano(ts.tv_nsec + time::sec(ts.tv_sec)) {};
 
         template <typename T>
-        constexpr TimeBase(std::chrono::time_point<T> timepoint): _nano(timepoint.time_since_epoch().count()) {};
+        constexpr TimeBase(std::chrono::time_point<T> timepoint): _nano(time::duration(timepoint.time_since_epoch())) {};
 
         template <traits::Duration Duration>
         constexpr TimeBase(Duration duration): _nano(time::duration(duration)) {};

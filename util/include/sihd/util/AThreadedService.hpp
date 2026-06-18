@@ -1,9 +1,8 @@
 #ifndef __SIHD_UTIL_THREADEDSERVICE_HPP__
 #define __SIHD_UTIL_THREADEDSERVICE_HPP__
 
-#include <barrier>
-
 #include <sihd/util/AService.hpp>
+#include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/ThreadedServiceController.hpp>
 #include <sihd/util/Worker.hpp>
 
@@ -40,7 +39,7 @@ class AThreadedService: public sihd::util::AService
         ThreadedServiceController _service_controller;
 
     private:
-        std::unique_ptr<std::barrier<>> _barrier_ptr;
+        std::unique_ptr<Synchronizer> _sync_ptr;
         std::string _thread_name;
         bool _start_synchronised;
 };

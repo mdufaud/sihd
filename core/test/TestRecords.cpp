@@ -1,14 +1,17 @@
-#include <gtest/gtest.h>
-#include <sihd/json/Json.hpp>
+#include <chrono>
+#include <thread>
 
-#include <sihd/util/Array.hpp>
-#include <sihd/util/Logger.hpp>
+#include <gtest/gtest.h>
 
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>
 #include <sihd/core/DevPlayer.hpp>
 #include <sihd/core/DevRecorder.hpp>
 #include <sihd/core/MemRecorder.hpp>
+#include <sihd/json/Json.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
 
 namespace test
 {
@@ -95,6 +98,16 @@ TEST_F(TestRecords, test_records_dev_player)
 
 TEST_F(TestRecords, test_records_dev_recorder)
 {
+#if defined(__SIHD_EMSCRIPTEN__)
+    // emscripten clock granularity is coarse: space recorded writes so their
+    // timestamps stay strictly increasing instead of tying
+    const auto tick = [] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    };
+#else
+    const auto tick = [] {
+    };
+#endif
     Core core;
     Channel *int_channel = core.add_channel("int_channel", sihd::util::TYPE_INT, 2);
     Channel *bool_channel = core.add_channel("bool_channel", sihd::util::TYPE_BOOL, 4);
@@ -126,13 +139,19 @@ TEST_F(TestRecords, test_records_dev_recorder)
 
     // write multiple values
     int_channel->write(0, 10);
+    tick();
     int_channel->write(1, 20);
+    tick();
 
     // first write should occur because of set_write_on_change(false)
     bool_channel->write(0, false);
+    tick();
     bool_channel->write(1, true);
+    tick();
     bool_channel->write(2, true);
+    tick();
     bool_channel->write(3, true);
+    tick();
 
     // should be only one write (same)
     double_channel->write(0, 12.34);

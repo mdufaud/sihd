@@ -1,3 +1,5 @@
+#include <atomic>
+#include <chrono>
 #include <thread>
 #include <vector>
 
@@ -83,6 +85,37 @@ TEST_F(TestSynchronizer, test_synchronizer_multi_round)
     sync.reset();
     EXPECT_TRUE(sync.init_sync(nthreads));
     EXPECT_EQ(run_round(), nthreads);
+    EXPECT_EQ(sync.current_sync(), 0);
+}
+
+TEST_F(TestSynchronizer, test_synchronizer_timeout)
+{
+    Synchronizer sync;
+    EXPECT_TRUE(sync.init_sync(2));
+
+    // only one participant arrives - must time out
+    EXPECT_FALSE(sync.sync(std::chrono::milliseconds(20)));
+}
+
+TEST_F(TestSynchronizer, test_synchronizer_timeout_success)
+{
+    constexpr int nthreads = 3;
+    Synchronizer sync;
+    EXPECT_TRUE(sync.init_sync(nthreads));
+
+    std::atomic<int> synced {0};
+    std::vector<std::thread> threads;
+    for (int i = 0; i < nthreads; ++i)
+    {
+        threads.emplace_back([&] {
+            if (sync.sync(std::chrono::seconds(5)))
+                synced.fetch_add(1);
+        });
+    }
+    for (auto & t : threads)
+        t.join();
+
+    EXPECT_EQ(synced.load(), nthreads);
     EXPECT_EQ(sync.current_sync(), 0);
 }
 

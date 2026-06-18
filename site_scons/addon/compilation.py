@@ -86,7 +86,23 @@ mingw_flags = gcc_flags
 
 ## emscripten specifics
 
-em_link = ["--emrun"]
+# re-enable C++ exception catching (emscripten disables it by default for size):
+# the sihd libs catch internally (e.g. Json::parse wraps simdjson_error into
+# std::runtime_error). Without landing pads at compile time those catch blocks
+# are no-ops and exceptions escape uncaught.
+# threads must be enabled at compile (-pthread) and link (USE_PTHREADS) for every
+# em binary: sihd is threaded across all modules, so std::thread otherwise throws
+# "thread constructor failed: Not supported" at runtime. PROXY_TO_PTHREAD moves
+# main() onto a worker so the host thread stays free to service pthread spawns
+# (without it threaded executables deadlock on join/condvar).
+em_flags = ["-sDISABLE_EXCEPTION_CATCHING=0", "-pthread"]
+em_link = [
+    "--emrun",
+    "-sDISABLE_EXCEPTION_CATCHING=0",
+    "-sUSE_PTHREADS=1",
+    "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency",
+    "-sPROXY_TO_PTHREAD",
+]
 em_size_link = ['--strip-debug']
 em_release_link = ['--strip-debug']
 
@@ -106,6 +122,15 @@ windows_defines = [
 
 test_extlibs = ['gtest']
 test_libs = ['gtest']
+
+# emscripten test binaries run under node: propagate the gtest exit code and
+# give the real filesystem so file-based tests work. Exception catching is
+# re-enabled globally for em (see em_flags).
+test_web_link = [
+    "-sEXIT_RUNTIME=1",
+    "-sNODERAWFS=1",
+    "-sALLOW_MEMORY_GROWTH=1",
+]
 
 ## demo specifics
 

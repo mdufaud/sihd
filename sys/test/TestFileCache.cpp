@@ -22,7 +22,13 @@ class TestFileCache: public ::testing::Test
 
         virtual ~TestFileCache() { sihd::util::LoggerManager::clear_loggers(); }
 
-        virtual void SetUp() {}
+        virtual void SetUp()
+        {
+            if constexpr (!FileCache::supported)
+            {
+                GTEST_SKIP() << "FileCache not supported on this platform";
+            }
+        }
 
         virtual void TearDown() {}
 };

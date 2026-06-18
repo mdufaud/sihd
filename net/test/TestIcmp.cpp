@@ -1,5 +1,3 @@
-#include <netdb.h> // addrinfo
-
 #include <atomic>
 
 #include <gtest/gtest.h>
@@ -7,6 +5,7 @@
 #include <sihd/net/IcmpSender.hpp>
 #include <sihd/net/dns.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Handler.hpp>
@@ -37,7 +36,7 @@ class TestIcmp: public ::testing::Test
         void test_icmp(IcmpSender & sender)
         {
             sender.set_poll_timeout(500); // Augmente le timeout pour IPv6
-            sender.set_id(getpid());
+            sender.set_id(os::pid());
             sender.set_ttl(64);
             sender.set_data_size(56u);
             sihd::util::Timestamp now = sihd::util::Clock::default_clock.now();
@@ -55,7 +54,7 @@ class TestIcmp: public ::testing::Test
                 // For IPv4 SOCK_RAW, we control the ID and it should match getpid() (truncated to 16 bits)
                 if (!sender->socket().is_ipv6())
                 {
-                    EXPECT_EQ(response.id, getpid() & 0xFFFF);
+                    EXPECT_EQ(response.id, os::pid() & 0xFFFF);
                 }
 
                 sihd::util::Timestamp timestamp = ((sihd::util::Timestamp *)response.data)[0];
@@ -72,7 +71,7 @@ class TestIcmp: public ::testing::Test
                          response.client.str());
 
                 // Sequence identifies the ping; ID only matters for IPv4
-                reached = (response.seq == 1) && (sender->socket().is_ipv6() || response.id == (getpid() & 0xFFFF));
+                reached = (response.seq == 1) && (sender->socket().is_ipv6() || response.id == (os::pid() & 0xFFFF));
                 response_received = true;
             });
             sender.add_observer(&handler);
@@ -130,7 +129,11 @@ TEST_F(TestIcmp, test_icmp_ipv4)
         GTEST_SKIP() << "Must be root or have capabilities to do the test\n"
                      << "execute command: 'sudo setcap cap_net_raw=pe " << fs::executable_path() << "'";
     }
+#if defined(__SIHD_WINDOWS__)
+    GTEST_SKIP() << "raw ICMPv4 sockets not functional under wine/mingw";
+#else
     this->test_icmp(sender);
+#endif
 }
 
 TEST_F(TestIcmp, test_icmp_ipv6)

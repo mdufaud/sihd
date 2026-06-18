@@ -114,8 +114,9 @@ def _android_build_apk(env, src, name, output_dir, libs, ctx, android_dir=None, 
             '-static-libstdc++',
         ])
     else:
-        bridge_src = os_path.join(
-            scons_android.TEMPLATE_DIR, "app", "src", "main", "cpp", "terminal_bridge.cpp"
+        bridge_src = scons_android.stage_bridge_source(
+            os_path.join(builder.build_path, "apk-obj", sanitized_name, "terminal_bridge.cpp"),
+            config["namespace"], project_name,
         )
         extra_srcs.append(bridge_src)
         apk_env.Append(SHLINKFLAGS=['-Wl,--no-undefined', '-static-libstdc++'])
@@ -255,13 +256,16 @@ def _build_bin(self, src, name, libs, android_dir, ctx, **kwargs):
 
     bin_env = self.Clone()
     bin_env.Prepend(LIBS=libs)
+
     if static_stdlib:
         bin_env.Append(LINKFLAGS=_get_static_stdlib_flags())
     if static_libs:
         _wrap_libs_static(bin_env, static_libs)
+
     cpp_mods, build_kwargs = scons_cpp_modules.extract_imports(kwargs)
     if cpp_mods:
         scons_cpp_modules.enable(bin_env, ctx)
+
     if self['BIN_LINKFLAGS']:
         bin_env.Append(LINKFLAGS=self['BIN_LINKFLAGS'])
     bin_env.Append(LINKFLAGS=_origin_rpath_flags(bin_env, builder.build_bin_path))
@@ -316,10 +320,13 @@ def _build_test(self, src, name, libs, ctx, **kwargs):
     scons_utils.add_env_app_conf(ctx.app, test_env, "test")
     for app_conf in ctx.default_app_conf_to_get:
         scons_utils.add_env_app_conf(ctx.app, test_env, "test", app_conf)
+
     if cpp_mods:
         scons_cpp_modules.enable(test_env, ctx)
+
     if static_libs:
         _wrap_libs_static(test_env, static_libs)
+
     if self['BIN_LINKFLAGS']:
         test_env.Append(LINKFLAGS=self['BIN_LINKFLAGS'])
     test_env.Append(
@@ -361,16 +368,21 @@ def _build_demo(self, src, name, libs, android_dir, ctx, **kwargs):
 
     demo_env = self.Clone()
     demo_env.Prepend(LIBS=libs)
+
     if static_stdlib:
         demo_env.Append(LINKFLAGS=_get_static_stdlib_flags())
+
     cpp_mods, build_kwargs = scons_cpp_modules.extract_imports(kwargs)
     scons_utils.add_env_app_conf(ctx.app, demo_env, "demo")
     for app_conf in ctx.default_app_conf_to_get:
         scons_utils.add_env_app_conf(ctx.app, demo_env, "demo", app_conf)
+
     if cpp_mods:
         scons_cpp_modules.enable(demo_env, ctx)
+
     if static_libs:
         _wrap_libs_static(demo_env, static_libs)
+
     if self['BIN_LINKFLAGS']:
         demo_env.Append(LINKFLAGS=self['BIN_LINKFLAGS'])
     demo_env.Append(LINKFLAGS=_origin_rpath_flags(demo_env, builder.build_demo_path))

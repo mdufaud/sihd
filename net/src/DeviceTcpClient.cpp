@@ -13,7 +13,7 @@ SIHD_LOGGER;
 DeviceTcpClient::DeviceTcpClient(const std::string & name, sihd::util::Node *parent):
     sihd::core::Device(name, parent),
     _tcp_client("tcp-client"),
-    _start_barrier(2),
+    _start_sync(2),
     _stop_requested(false),
     _start_ok(false),
     _port(0),
@@ -117,7 +117,7 @@ bool DeviceTcpClient::on_start()
     if (!_worker.start_worker("DeviceTcpClient"))
         return false;
 
-    _start_barrier.arrive_and_wait();
+    _start_sync.sync();
     return _start_ok;
 }
 
@@ -164,7 +164,7 @@ bool DeviceTcpClient::run()
     }
 
     _start_ok = ok;
-    _start_barrier.arrive_and_wait();
+    _start_sync.sync();
 
     if (!ok)
         return false;

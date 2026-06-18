@@ -6,6 +6,7 @@
 
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/build.hpp>
 
 namespace sihd::sys::os
 {
@@ -29,6 +30,8 @@ bool is_root();
 rlim_t max_fds();
 pid_t pid();
 
+// real backtrace only on glibc (linux) and windows; no-op elsewhere (musl/android/emscripten/apple)
+constexpr bool backtrace_supported = sihd::util::build::is_windows || sihd::util::build::is_gnu;
 // prints formatted backtrace into file descriptor
 ssize_t backtrace(int fd, size_t backtrace_size = -1);
 // bytes

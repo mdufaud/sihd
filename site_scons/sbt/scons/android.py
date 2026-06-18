@@ -191,6 +191,24 @@ def copy_so_to_jnilibs(staging_dir, so_path, lib_name):
     return dst
 
 
+def stage_bridge_source(dst_path, namespace, log_tag):
+    """Write terminal_bridge.cpp to dst_path with placeholders replaced.
+
+    The bridge is compiled into the SharedLibrary by scons, so its JNI symbol
+    name (Java_<namespace>_TerminalActivity_nativeMain) and log tag must be
+    resolved before compilation, not at gradle staging time.
+    """
+    src = os.path.join(TEMPLATE_DIR, "app", "src", "main", "cpp", "terminal_bridge.cpp")
+    os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+    with open(src) as f:
+        content = f.read()
+    content = content.replace("__SBT_NAMESPACE_JNI__", namespace.replace(".", "_"))
+    content = content.replace("__SBT_LOG_TAG__", log_tag)
+    with open(dst_path, "w") as f:
+        f.write(content)
+    return dst_path
+
+
 def build_apk(staging_dir, apk_output_path):
     """Run gradle assembleDebug and copy the APK to the output path.
 

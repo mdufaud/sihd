@@ -1,14 +1,37 @@
 #include <gtest/gtest.h>
 
+#include <cstdlib>
 #include <iostream>
 
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
 {
 SIHD_LOGGER;
 using namespace sihd::util;
+
+namespace
+{
+void set_env(const char *name, const char *value)
+{
+#if defined(__SIHD_WINDOWS__)
+    _putenv_s(name, value);
+#else
+    setenv(name, value, 1);
+#endif
+}
+
+void unset_env(const char *name)
+{
+#if defined(__SIHD_WINDOWS__)
+    _putenv_s(name, "");
+#else
+    unsetenv(name);
+#endif
+}
+} // namespace
 class TestTerm: public ::testing::Test
 {
     protected:
@@ -20,6 +43,21 @@ class TestTerm: public ::testing::Test
 
         virtual void TearDown() {}
 };
+
+TEST_F(TestTerm, test_supports_color)
+{
+    // explicit overrides win regardless of the underlying tty state
+    unset_env("NO_COLOR");
+    set_env("CLICOLOR_FORCE", "1");
+    EXPECT_EQ(term::supports_color(), true);
+
+    // NO_COLOR takes precedence over CLICOLOR_FORCE
+    set_env("NO_COLOR", "1");
+    EXPECT_EQ(term::supports_color(), false);
+
+    unset_env("NO_COLOR");
+    unset_env("CLICOLOR_FORCE");
+}
 
 TEST_F(TestTerm, test_term_colors)
 {

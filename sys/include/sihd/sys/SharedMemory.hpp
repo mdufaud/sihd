@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/build.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
 # define mode_t unsigned int
@@ -18,6 +19,10 @@ namespace sihd::sys
 class SharedMemory
 {
     public:
+        static constexpr bool supported = sihd::util::build::is_windows
+            || (sihd::util::build::is_unix && !sihd::util::build::is_android
+                && !sihd::util::build::is_emscripten);
+
         SharedMemory();
         virtual ~SharedMemory();
 
