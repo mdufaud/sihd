@@ -15,6 +15,13 @@ from site_scons.sbt.build import modules as sbt_modules
 from site_scons.sbt.build import utils
 from site_scons.sbt import architectures
 
+def _copy_tree_if_exists(src, dst):
+    """Recursively copy *src* into *dst* (creating *dst*) when *src* is a directory."""
+    if os.path.isdir(src):
+        os.makedirs(dst, exist_ok = True)
+        shutil.copytree(src, dst, dirs_exist_ok = True)
+
+
 ###############################################################################
 # TAR distribution
 ###############################################################################
@@ -74,6 +81,10 @@ def create_apt_package(app, modules):
     except SystemExit as err:
         logger.error(err)
         exit(1)
+    maintainers = getattr(app, "maintainers", None)
+    if not maintainers:
+        logger.error("app.maintainers is required to build a Debian package")
+        exit(1)
     apt_path = join(_b.build_dist_path, "apt", "{}-{}".format(app.name, app.version))
     debian_path = join(apt_path, "DEBIAN")
     control_path = join(debian_path, "control")
@@ -85,15 +96,15 @@ def create_apt_package(app, modules):
         fd.write("Package: {}\n".format(app.name))
         priority = hasattr(app, "priority") and app.priority or "optional"
         fd.write("Priority: {}\n".format(priority))
-        fd.write("Maintainer: {}\n".format(app.maintainers[0]))
-        all_contributors = app.maintainers[1:] + getattr(app, "contributors", [])
+        fd.write("Maintainer: {}\n".format(maintainers[0]))
+        all_contributors = maintainers[1:] + getattr(app, "contributors", [])
         if all_contributors:
             fd.write("Uploaders: {}\n".format(", ".join(all_contributors)))
         if hasattr(app, "url"):
             fd.write("Homepage: {}\n".format(app.url))
         if hasattr(app, "section"):
             fd.write("Section: {}\n".format(app.section))
-        fd.write("Architecture: {}\n".format(app.architecture))
+        fd.write("Architecture: {}\n".format(getattr(app, "architecture", "all")))
         if hasattr(app, "multi_architecture"):
             fd.write("Multi-Arch: {}\n".format(app.multi_architecture))
         fd.write("Version: {}\n".format(app.version))
@@ -102,31 +113,16 @@ def create_apt_package(app, modules):
             fd.write("Depends: {}\n".format(", ".join(["{} (>= {})".format(k, v.split('#')[0]) for k, v in dependencies.items()])))
         fd.write("Description: {}\n".format(app.description))
     # /usr/bin
-    apt_binary_path = join(apt_path, "usr", "bin")
-    if os.path.isdir(_b.build_bin_path):
-        os.makedirs(apt_binary_path, exist_ok = True)
-        shutil.copytree(_b.build_bin_path, apt_binary_path, dirs_exist_ok = True)
+    _copy_tree_if_exists(_b.build_bin_path, join(apt_path, "usr", "bin"))
     # /usr/include
-    apt_include_path = join(apt_path, "usr", "include")
-    if os.path.isdir(_b.build_hdr_path):
-        os.makedirs(apt_include_path, exist_ok = True)
-        shutil.copytree(_b.build_hdr_path, apt_include_path, dirs_exist_ok = True)
+    _copy_tree_if_exists(_b.build_hdr_path, join(apt_path, "usr", "include"))
     # /usr/share
-    apt_share_path = join(apt_path, "usr", "share")
-    if os.path.isdir(_b.build_share_path):
-        os.makedirs(apt_share_path, exist_ok = True)
-        shutil.copytree(_b.build_share_path, apt_share_path, dirs_exist_ok = True)
+    _copy_tree_if_exists(_b.build_share_path, join(apt_path, "usr", "share"))
     # /usr/lib/<multiarch-triplet> — prefer dpkg-architecture if available
     _deb_multiarch = _get_deb_multiarch()
-    apt_lib_path = join(apt_path, "usr", "lib", _deb_multiarch)
-    if os.path.isdir(_b.build_lib_path):
-        os.makedirs(apt_lib_path, exist_ok = True)
-        shutil.copytree(_b.build_lib_path, apt_lib_path, dirs_exist_ok = True)
+    _copy_tree_if_exists(_b.build_lib_path, join(apt_path, "usr", "lib", _deb_multiarch))
     # /etc
-    apt_etc_path = join(apt_path, "etc")
-    if os.path.isdir(_b.build_etc_path):
-        os.makedirs(apt_etc_path, exist_ok = True)
-        shutil.copytree(_b.build_etc_path, apt_etc_path, dirs_exist_ok = True)
+    _copy_tree_if_exists(_b.build_etc_path, join(apt_path, "etc"))
     # dpkg-deb to build package — use fakeroot so installed files are owned by root
     if shutil.which("dpkg-deb") is not None:
         if shutil.which("fakeroot") is not None:

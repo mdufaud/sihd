@@ -6,6 +6,10 @@ import os
 import sys
 from os import getenv
 
+def dedupe_keep_order(values):
+    """Remove duplicates from *values* while preserving first-seen order."""
+    return list(dict.fromkeys(values))
+
 ###############################################################################
 # Filesystem
 ###############################################################################

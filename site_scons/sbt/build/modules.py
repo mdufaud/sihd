@@ -1,10 +1,9 @@
 import os
 import sys
 
-must_have_parameters = ['depends', 'libs', 'link', 'flags']
+from site_scons.sbt.build.utils import dedupe_keep_order
 
-def __dedupe_keep_order(values):
-    return list(dict.fromkeys(values))
+must_have_parameters = ['depends', 'libs', 'link', 'flags']
 
 def is_external_depend(name):
     """A "<project>:<module>" depend refers to a module of an SBT dependency,
@@ -129,10 +128,10 @@ def resolve_modules_exports(modules, modules_options):
             resolved_export_defines.extend(dep_conf.get("_resolved_export_defines", []))
             resolved_export_flags.extend(dep_conf.get("_resolved_export_flags", []))
             resolved_export_link.extend(dep_conf.get("_resolved_export_link", []))
-        conf["_resolved_export_libs"] = __dedupe_keep_order(resolved_export_libs)
-        conf["_resolved_export_defines"] = __dedupe_keep_order(resolved_export_defines)
-        conf["_resolved_export_flags"] = __dedupe_keep_order(resolved_export_flags)
-        conf["_resolved_export_link"] = __dedupe_keep_order(resolved_export_link)
+        conf["_resolved_export_libs"] = dedupe_keep_order(resolved_export_libs)
+        conf["_resolved_export_defines"] = dedupe_keep_order(resolved_export_defines)
+        conf["_resolved_export_flags"] = dedupe_keep_order(resolved_export_flags)
+        conf["_resolved_export_link"] = dedupe_keep_order(resolved_export_link)
 
 def get_module_libs(modules, modname):
     conf = modules[modname]
@@ -304,7 +303,7 @@ def _external_module_closure(dep_modules, dep_app_name, modname):
     libs += [f"{dep_app_name}_{d}" for d in ordered]
     libs += conf.get("libs", [])
     libs += conf.get("_resolved_export_libs", [])
-    return __dedupe_keep_order(libs)
+    return dedupe_keep_order(libs)
 
 def _load_external_app(deps_dir, project):
     from site_scons.sbt.build import sbt_deps
@@ -358,13 +357,15 @@ def resolve_external_modules(app, deps_dir, modules_options):
                 "_resolved_export_link": mconf.get("_resolved_export_link", [])[:],
             }
 
-def build_modules_conf(app, specific_modules=[], conditionals=[]):
+def build_modules_conf(app, specific_modules=None, conditionals=None):
     """ @brief build modules from application configuration
         @param app the application configuration module
         @param specific_modules_list build specific modules instead of all
         @param conditionals list of conditional modules to be added to the build
         @return list
     """
+    specific_modules = list(specific_modules or [])
+    conditionals = list(conditionals or [])
     if not hasattr(app, "modules"):
         raise RuntimeError("App's configuration file should have modules")
     conditionals.extend(get_conditionals_from_env(app))

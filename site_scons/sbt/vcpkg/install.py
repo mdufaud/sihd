@@ -108,8 +108,8 @@ if modules_to_build != "NONE":
 
     # Checking module availability on platforms
     deleted_modules = modules.check_platform(build_modules, build_platform)
-    for deleted_modules in deleted_modules:
-        logger.warning("module '{}' cannot compile on platform: {}".format(deleted_modules, build_platform))
+    for mod in deleted_modules:
+        logger.warning("module '{}' cannot compile on platform: {}".format(mod, build_platform))
 
     # exit if no modules to build after deleted
     if not build_modules:
@@ -190,7 +190,7 @@ def _foundation_packages_installed() -> bool:
     Check whether X11/Wayland foundation packages are already present in vcpkg_installed.
     We probe for libX11 (X11 core) and libwayland-client (Wayland core) as sentinels.
     """
-    installed_lib = os.path.join(vcpkg_build_path, "vcpkg_installed", vcpkg_triplet, "lib")
+    installed_lib = _vcpkg_installed_path("lib")
     for sentinel in ("libX11.so", "libwayland-client.so"):
         if not os.path.exists(os.path.join(installed_lib, sentinel)):
             return False
@@ -226,6 +226,20 @@ def _append_generated_overlay_ports(args):
         args.append(f"--overlay-ports={gen}")
 
 
+def _vcpkg_installed_path(*parts):
+    """Path inside vcpkg_installed/<triplet> for the current build triplet."""
+    return os.path.join(vcpkg_build_path, "vcpkg_installed", vcpkg_triplet, *parts)
+
+
+def _append_addon_overlays(args):
+    """Append the addon overlay-triplets/ports and generated overlay ports shared by commands."""
+    if os.path.isdir(addon_triplet_path):
+        args.append(f"--overlay-triplets={addon_triplet_path}")
+    if os.path.isdir(sbt_vcpkg_addon_overlay_ports_path):
+        args.append(f"--overlay-ports={sbt_vcpkg_addon_overlay_ports_path}")
+    _append_generated_overlay_ports(args)
+
+
 def _execute_vcpkg_install():
     _check_vcpkg()
 
@@ -259,15 +273,7 @@ def _execute_vcpkg_install():
         args.append(f"--overlay-triplets={overlay_flags_dir}")
 
     args.append(f"--overlay-triplets={sbt_triplet_path}")
-    if os.path.isdir(addon_triplet_path):
-        args.append(f"--overlay-triplets={addon_triplet_path}")
-
-    # Custom overlay ports (e.g. libxcursor, libcap which need cross-compilation fixes)
-    if os.path.isdir(sbt_vcpkg_addon_overlay_ports_path):
-        args.append(f"--overlay-ports={sbt_vcpkg_addon_overlay_ports_path}")
-
-    # Generated overlay ports from app.vcpkg_ports
-    _append_generated_overlay_ports(args)
+    _append_addon_overlays(args)
 
     # force recompilation
     # if builder.build_platform == "web":
@@ -310,11 +316,7 @@ def _execute_vcpkg_depend_info():
         "--format=tree",
         "--max-recurse=-1"
     ]
-    if os.path.isdir(addon_triplet_path):
-        args.append(f"--overlay-triplets={addon_triplet_path}")
-    if os.path.isdir(sbt_vcpkg_addon_overlay_ports_path):
-        args.append(f"--overlay-ports={sbt_vcpkg_addon_overlay_ports_path}")
-    _append_generated_overlay_ports(args)
+    _append_addon_overlays(args)
     if verbose:
         logger.debug(f"executing '{args}' in '{vcpkg_build_path}'")
 
@@ -361,7 +363,7 @@ def _execute_vcpkg_licenses():
 
 
 def _link_to_extlibs():
-    downloaded_path = os.path.join(vcpkg_build_path, "vcpkg_installed", vcpkg_triplet)
+    downloaded_path = _vcpkg_installed_path()
     if os.path.exists(downloaded_path):
         if os.path.islink(builder.build_extlib_path):
             os.unlink(builder.build_extlib_path)
@@ -423,10 +425,15 @@ def _pre_install_display_foundation():
 # Entry points
 ###############################################################################
 
-def fetch():
-    """Write manifest, pre-install display foundations if needed, then install all."""
+def _write_default_manifest():
+    """Write the full vcpkg manifest, including display foundations when needed."""
     display = _needs_display_libs()
     write_vcpkg_manifest(vcpkg_build_manifest_path, build_vcpkg_manifest(app, extlibs, needs_display_libs=display))
+
+
+def fetch():
+    """Write manifest, pre-install display foundations if needed, then install all."""
+    _write_default_manifest()
     _pre_install_display_foundation()
     return_code = _execute_vcpkg_install()
     if return_code == 0:
@@ -436,15 +443,13 @@ def fetch():
 
 def list_packages():
     """Write manifest and list installed packages."""
-    display = _needs_display_libs()
-    write_vcpkg_manifest(vcpkg_build_manifest_path, build_vcpkg_manifest(app, extlibs, needs_display_libs=display))
+    _write_default_manifest()
     _execute_vcpkg_list()
 
 
 def depend_info():
     """Write manifest and show dependency tree."""
-    display = _needs_display_libs()
-    write_vcpkg_manifest(vcpkg_build_manifest_path, build_vcpkg_manifest(app, extlibs, needs_display_libs=display))
+    _write_default_manifest()
     _execute_vcpkg_depend_info()
 
 

@@ -22,9 +22,7 @@ def as_list(value):
     return [value]
 
 
-def dedupe_keep_order(values):
-    """Remove duplicates from *values* while preserving first-seen order."""
-    return list(dict.fromkeys(values))
+from site_scons.sbt.build.utils import dedupe_keep_order
 
 ###############################################################################
 # Build helpers

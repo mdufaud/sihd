@@ -104,13 +104,13 @@ except RuntimeError as e:
 
 # Checking module availability on platforms and build selectors
 deleted_modules = modules.check_platform(build_modules, build_platform, modules_options)
-for deleted_modules in deleted_modules:
-    logger.warning("module '{}' excluded from this build (platform/selector)".format(deleted_modules))
+for mod in deleted_modules:
+    logger.warning("module '{}' excluded from this build (platform/selector)".format(mod))
 
 # Checking module availability for the requested link mode (static/dynamic)
 deleted_modules = modules.check_linkage(build_modules, builder.liblink)
-for deleted_modules in deleted_modules:
-    logger.warning("module '{}' cannot compile in {} link mode".format(deleted_modules, builder.liblink))
+for mod in deleted_modules:
+    logger.warning("module '{}' cannot compile in {} link mode".format(mod, builder.liblink))
 
 if not build_modules:
     Exit(0)
@@ -129,27 +129,24 @@ if distribution and _dist_type in _NO_COMPILE_DIST_TYPES:
 
 pkg_manager_name = builder.get_pkgdep()
 if pkg_manager_name:
-    try:
-        modules_extlibs = modules.get_modules_extlibs(app, build_modules, build_platform)
-        packages, missing_packages = modules.get_modules_packages(app, pkg_manager_name, modules_extlibs)
+    def collect_packages(extlibs):
+        packages, missing_packages = modules.get_modules_packages(app, pkg_manager_name, extlibs)
         for missing in missing_packages:
             logger.warning("external library '{}' not declared in packet manager '{}'".format(missing, pkg_manager_name))
+        return packages
+    try:
+        modules_extlibs = modules.get_modules_extlibs(app, build_modules, build_platform)
+        packages = collect_packages(modules_extlibs)
     except RuntimeError as e:
         logger.error(str(e))
         Exit(1)
     deps = set(packages.keys())
     if builder.build_tests:
         test_extlibs = modules.get_extlibs_versions(app, getattr(app, "test_extlibs", []))
-        test_packages, missing_test_packages = modules.get_modules_packages(app, pkg_manager_name, test_extlibs)
-        for missing in missing_test_packages:
-            logger.warning("external library '{}' not declared in packet manager '{}'".format(missing, pkg_manager_name))
-        deps.update(test_packages.keys())
+        deps.update(collect_packages(test_extlibs).keys())
     if builder.build_demo:
         demo_extlibs = modules.get_extlibs_versions(app, getattr(app, "demo_extlibs", []))
-        demo_packages, missing_demo_packages = modules.get_modules_packages(app, pkg_manager_name, demo_extlibs)
-        for missing in missing_demo_packages:
-            logger.warning("external library '{}' not declared in packet manager '{}'".format(missing, pkg_manager_name))
-        deps.update(demo_packages.keys())
+        deps.update(collect_packages(demo_extlibs).keys())
     logger.info("dependencies:")
     print(" ".join(deps))
     Return()

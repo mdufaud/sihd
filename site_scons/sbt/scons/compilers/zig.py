@@ -1,5 +1,6 @@
 from sbt import builder
 from sbt import architectures
+from sbt.scons import compilers
 
 def load_in_env(env):
     cmd_cc = "zig cc"
@@ -61,7 +62,4 @@ def load_in_env(env):
             LINKFLAGS = ["-static"]
         )
 
-    if builder.build_static_libs and builder.build_asan:
-        env.Append(
-            LINKFLAGS = ["-static-libasan"]
-        )
+    compilers.apply_static_libasan(env)

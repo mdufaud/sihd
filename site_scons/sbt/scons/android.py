@@ -17,6 +17,11 @@ from sbt import logger
 _sbt_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_DIR = os.path.join(_sbt_dir, "android")
 
+# Java namespace the bundled template ships with; the per-project default namespace
+# reuses everything after the leading segment (e.g. "android.terminal").
+TEMPLATE_NAMESPACE = "sbt.android.terminal"
+TEMPLATE_NAMESPACE_SUFFIX = TEMPLATE_NAMESPACE.split(".", 1)[1]
+
 
 def get_abi():
     """Get the Android ABI string for the current build machine."""
@@ -68,7 +73,7 @@ def load_override_config(android_dir, project_name=None):
         namespace (str): Java package namespace
         native_activity (bool): whether to use NativeActivity mode
     """
-    default_ns = f"{project_name}.android.terminal"
+    default_ns = f"{project_name}.{TEMPLATE_NAMESPACE_SUFFIX}"
     defaults = {
         "namespace": default_ns,
         "native_activity": False,
@@ -102,7 +107,7 @@ def stage_gradle_project(staging_dir, name, module_android_dir=None, permissions
     if module_android_dir and os.path.isdir(module_android_dir):
         config = load_override_config(module_android_dir, project_name=project_name)
     else:
-        config = {"namespace": f"{project_name}.android.terminal", "native_activity": False}
+        config = {"namespace": f"{project_name}.{TEMPLATE_NAMESPACE_SUFFIX}", "native_activity": False}
 
     # Clean and create staging dir
     if os.path.isdir(staging_dir):
@@ -113,14 +118,14 @@ def stage_gradle_project(staging_dir, name, module_android_dir=None, permissions
     _copy_tree(TEMPLATE_DIR, staging_dir)
 
     # Step 1b: Move default java package dir to match the configured namespace
-    default_ns_path = os.path.join(staging_dir, "app", "src", "main", "java", "sbt", "android", "terminal")
+    default_ns_path = os.path.join(staging_dir, "app", "src", "main", "java", *TEMPLATE_NAMESPACE.split("."))
     target_ns_path = os.path.join(staging_dir, "app", "src", "main", "java",
                                   *config["namespace"].split("."))
     if default_ns_path != target_ns_path and os.path.isdir(default_ns_path):
         os.makedirs(os.path.dirname(target_ns_path), exist_ok=True)
         shutil.move(default_ns_path, target_ns_path)
         # Clean up empty parent dirs left by the move
-        _remove_empty_dirs(os.path.join(staging_dir, "app", "src", "main", "java", "sbt"))
+        _remove_empty_dirs(os.path.join(staging_dir, "app", "src", "main", "java", TEMPLATE_NAMESPACE.split(".")[0]))
 
     # Step 2: If terminal mode, remove NativeActivity-specific files (none in default)
     # If NativeActivity mode, remove terminal-specific files

@@ -536,6 +536,15 @@ def _check_unsupported_sanitizers(compiler_label):
             ok = False
     return ok
 
+def _force_static_no_sanitizers(sanitizer_label, display_label):
+    """Reject sanitizers and force static libs for compilers that require them (ndk/mingw/em)."""
+    global build_static_libs
+    ok = _check_unsupported_sanitizers(sanitizer_label)
+    if not build_static_libs:
+        logger.warning("not supported {} without static libs - switching to static libs".format(display_label))
+        build_static_libs = True
+    return ok
+
 def verify_args(app):
     global build_static_libs
     global libc
@@ -582,24 +591,15 @@ def verify_args(app):
         if not ndk_root or not os.path.isdir(ndk_root):
             logger.error("ANDROID_NDK_PATH is not set or does not exist")
             ret = False
-        if not _check_unsupported_sanitizers("Android NDK"):
+        if not _force_static_no_sanitizers("Android NDK", "Android NDK"):
             ret = False
-        if not build_static_libs:
-            logger.warning("not supported Android NDK without static libs - switching to static libs")
-            build_static_libs = True
 
     if build_compiler == "mingw":
-        if not _check_unsupported_sanitizers("mingw"):
+        if not _force_static_no_sanitizers("mingw", "Mingw"):
             ret = False
-        if not build_static_libs:
-            logger.warning("not supported Mingw without static libs - switching to static libs")
-            build_static_libs = True
     elif build_compiler == "em":
-        if not _check_unsupported_sanitizers("emscripten"):
+        if not _force_static_no_sanitizers("emscripten", "Emscripten"):
             ret = False
-        if not build_static_libs:
-            logger.warning("not supported Emscripten without static libs - switching to static libs")
-            build_static_libs = True
     return ret
 
 ###############################################################################

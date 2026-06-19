@@ -1,5 +1,6 @@
 from sbt import builder
 from sbt import architectures
+from sbt.scons import compilers
 
 def load_in_env(env):
     prefix = ""
@@ -38,28 +39,11 @@ def load_in_env(env):
             CPPFLAGS = gcc_asan_flags,
             LINKFLAGS = gcc_asan_flags
         )
-    if builder.build_ubsan:
-        ubsan_flags = ["-fsanitize=undefined", "-fno-omit-frame-pointer"]
-        env.Append(CPPFLAGS = ubsan_flags, LINKFLAGS = ubsan_flags)
-    if builder.build_tsan:
-        tsan_flags = ["-fsanitize=thread", "-fno-omit-frame-pointer"]
-        env.Append(CPPFLAGS = tsan_flags, LINKFLAGS = tsan_flags)
-    if builder.build_lsan:
-        lsan_flags = ["-fsanitize=leak"]
-        env.Append(CPPFLAGS = lsan_flags, LINKFLAGS = lsan_flags)
-    if builder.build_hwasan and builder.build_machine == "arm64":
-        hwasan_flags = ["-fsanitize=hwaddress", "-fno-omit-frame-pointer"]
-        env.Append(CPPFLAGS = hwasan_flags, LINKFLAGS = hwasan_flags)
-    if builder.build_coverage:
-        coverage_flags = ["--coverage", "-fprofile-arcs", "-ftest-coverage"]
-        env.Append(CPPFLAGS = coverage_flags, LINKFLAGS = coverage_flags)
+    compilers.apply_common_sanitizers(env)
     if builder.build_static_libs:
         # -no-pie: emit a plain static (non-PIE) binary. A fully static binary gains
         # nothing from being PIE, and static-pie TLS relocations crash under qemu-user.
         env.Append(
             LINKFLAGS = ["-static", "-no-pie", "-static-libgcc", "-static-libstdc++"]
         )
-    if builder.build_static_libs and builder.build_asan:
-        env.Append(
-            LINKFLAGS = ["-static-libasan"]
-        )
+    compilers.apply_static_libasan(env)

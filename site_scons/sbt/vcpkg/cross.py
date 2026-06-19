@@ -9,6 +9,7 @@ Handles:
 """
 
 import os
+import platform
 import shutil
 import subprocess
 
@@ -366,7 +367,8 @@ def build_overlay_triplet_with_flags(app, vcpkg_triplet: str, vcpkg_build_path: 
 
 def _generate_host_overlay_triplet(overlay_dir: str, vcpkg_bin_path: str):
     """Generate a host triplet overlay with X11/Wayland force flags for cross-linux builds."""
-    host_triplet = "x64-linux"
+    host_machine = architectures.get_vcpkg_machine(platform.machine())
+    host_triplet = f"{host_machine}-linux"
     vcpkg_root = os.path.dirname(vcpkg_bin_path)
     host_orig_candidates = [
         os.path.join(vcpkg_root, "triplets", f"{host_triplet}.cmake"),
@@ -412,7 +414,7 @@ def generate_pkgconfig_wrapper(overlay_dir: str, vcpkg_triplet: str,
     os.makedirs(overlay_dir, exist_ok=True)
 
     wrapper_path = os.path.join(overlay_dir, "pkg-config-cross-wrapper")
-    real_pkgconfig = "/bin/pkg-config"
+    real_pkgconfig = shutil.which("pkg-config") or "/usr/bin/pkg-config"
 
     pkgconfig_dirs = ":".join([
         f"{vcpkg_installed_base}/lib/pkgconfig",

@@ -210,6 +210,22 @@ def _wrap_libs_static(env, static_libs):
         env["LINKCOM"] = str(env["LINKCOM"]) + " ${_SBT_STATIC_LIBFLAGS}"
 
 
+def _clone_env_with_new_libs(self, libs, static_stdlib):
+    """Clone the module env for a bin/test/demo artifact: prepend LIBS + static stdlib."""
+    artifact_env = self.Clone()
+    artifact_env.Prepend(LIBS=libs)
+    if static_stdlib:
+        artifact_env.Append(LINKFLAGS=_get_static_stdlib_flags())
+    return artifact_env
+
+
+def _apply_bin_linkflags(self, env, rpath_target):
+    """Append BIN_LINKFLAGS and the $ORIGIN rpath flags shared by bin/test/demo links."""
+    if self['BIN_LINKFLAGS']:
+        env.Append(LINKFLAGS=self['BIN_LINKFLAGS'])
+    env.Append(LINKFLAGS=_origin_rpath_flags(env, rpath_target))
+
+
 def _build_lib(self, src, name, static, ctx, **kwargs):
     module_name = self['APP_MODULE_NAME']
     if name is None:
@@ -254,11 +270,7 @@ def _build_bin(self, src, name, libs, android_dir, ctx, **kwargs):
         )
         return apk
 
-    bin_env = self.Clone()
-    bin_env.Prepend(LIBS=libs)
-
-    if static_stdlib:
-        bin_env.Append(LINKFLAGS=_get_static_stdlib_flags())
+    bin_env = _clone_env_with_new_libs(self, libs, static_stdlib)
     if static_libs:
         _wrap_libs_static(bin_env, static_libs)
 
@@ -266,9 +278,7 @@ def _build_bin(self, src, name, libs, android_dir, ctx, **kwargs):
     if cpp_mods:
         scons_cpp_modules.enable(bin_env, ctx)
 
-    if self['BIN_LINKFLAGS']:
-        bin_env.Append(LINKFLAGS=self['BIN_LINKFLAGS'])
-    bin_env.Append(LINKFLAGS=_origin_rpath_flags(bin_env, builder.build_bin_path))
+    _apply_bin_linkflags(self, bin_env, builder.build_bin_path)
 
     name += ctx.bin_ext
     bin_path = os_path.join(builder.build_bin_path, name)
@@ -292,10 +302,7 @@ def _build_test(self, src, name, libs, ctx, **kwargs):
     if ctx.modules_lst and module_name not in ctx.modules_lst:
         return None
 
-    test_env = self.Clone()
-    test_env.Prepend(LIBS=libs)
-    if static_stdlib:
-        test_env.Append(LINKFLAGS=_get_static_stdlib_flags())
+    test_env = _clone_env_with_new_libs(self, libs, static_stdlib)
     cpp_mods, build_kwargs = scons_cpp_modules.extract_imports(kwargs)
     if cpp_mods and not builder.is_cpp_modules:
         return None
@@ -327,11 +334,7 @@ def _build_test(self, src, name, libs, ctx, **kwargs):
     if static_libs:
         _wrap_libs_static(test_env, static_libs)
 
-    if self['BIN_LINKFLAGS']:
-        test_env.Append(LINKFLAGS=self['BIN_LINKFLAGS'])
-    test_env.Append(
-        LINKFLAGS=_origin_rpath_flags(test_env, os_path.join(builder.build_test_path, "bin"))
-    )
+    _apply_bin_linkflags(self, test_env, os_path.join(builder.build_test_path, "bin"))
 
     if name is None:
         name = self["APP_MODULE_FORMAT_NAME"]
@@ -366,11 +369,7 @@ def _build_demo(self, src, name, libs, android_dir, ctx, **kwargs):
         )
         return demo
 
-    demo_env = self.Clone()
-    demo_env.Prepend(LIBS=libs)
-
-    if static_stdlib:
-        demo_env.Append(LINKFLAGS=_get_static_stdlib_flags())
+    demo_env = _clone_env_with_new_libs(self, libs, static_stdlib)
 
     cpp_mods, build_kwargs = scons_cpp_modules.extract_imports(kwargs)
     scons_utils.add_env_app_conf(ctx.app, demo_env, "demo")
@@ -383,9 +382,7 @@ def _build_demo(self, src, name, libs, android_dir, ctx, **kwargs):
     if static_libs:
         _wrap_libs_static(demo_env, static_libs)
 
-    if self['BIN_LINKFLAGS']:
-        demo_env.Append(LINKFLAGS=self['BIN_LINKFLAGS'])
-    demo_env.Append(LINKFLAGS=_origin_rpath_flags(demo_env, builder.build_demo_path))
+    _apply_bin_linkflags(self, demo_env, builder.build_demo_path)
 
     name += ctx.bin_ext
     demo_path = os_path.join(builder.build_demo_path, name)
