@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <climits>
 #include <cstring>
+#include <random>
 #include <string>
 
 #include <sihd/sys/File.hpp>
@@ -265,20 +266,28 @@ bool File::open_tmp(std::string_view prefix, bool write_binary, std::string_view
     if (this->open_fd(fd, write_binary ? "wb" : "w"))
         _path = path;
 #else
-    // _mktemp_s only fills a trailing XXXXXX (no suffix support) and returns errno_t, not a fd;
-    // null-terminate after XXXXXX, generate the name, restore the suffix, then open by path.
-    const size_t name_len = prefix.size() + 6;
-    const char saved = path[name_len];
-    path[name_len] = '\0';
-    const errno_t err = _mktemp_s(path, name_len + 1);
-    path[name_len] = saved;
-    if (err != 0)
+    // _mktemp_s only derives 5 digits from the PID and varies a single letter (max 26 names,
+    // and is broken under wine where it returns EEXIST on the first call). Generate the random
+    // XXXXXX part ourselves and create the file exclusively ("x"), retrying on collision.
+    static constexpr std::string_view charset = "abcdefghijklmnopqrstuvwxyz0123456789";
+    thread_local std::mt19937 gen(std::random_device {}());
+    std::uniform_int_distribution<size_t> dist(0, charset.size() - 1);
+    for (int attempt = 0; attempt < 100; ++attempt)
     {
-        SIHD_LOG(error, "File: could not open temporary file: {}", os::last_error_str());
-        return false;
+        for (size_t i = 0; i < 6; ++i)
+            path[prefix.size() + i] = charset[dist(gen)];
+        _file_ptr = fopen(path, write_binary ? "wbx" : "wx");
+        if (_file_ptr != nullptr)
+        {
+            _path = path;
+            _stream_ownership = true;
+            return true;
+        }
+        if (errno != EEXIST)
+            break;
     }
-    if (this->open(path, write_binary ? "wb" : "w"))
-        _path = path;
+    SIHD_LOG(error, "File: could not open temporary file: {}", os::last_error_str());
+    return false;
 #endif
     return this->is_open();
 }

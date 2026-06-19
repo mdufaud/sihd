@@ -41,6 +41,28 @@ bool is_readable(std::string_view path);
 bool is_writable(std::string_view path);
 bool is_executable(std::string_view path);
 
+// storage
+enum class MountType
+{
+    local,    // regular disk fs (ext4/xfs/btrfs/ntfs/...)
+    network,  // nfs/smb/cifs
+    ram,      // tmpfs (RAM-backed)
+    readonly, // squashfs (read-only compressed; live-ISO/snap/overlay lower)
+    unknown,
+};
+enum class StorageMedium
+{
+    ssd,
+    hdd,
+    unknown,
+};
+
+// reliable classification of the filesystem backing 'path'
+MountType mount_type(std::string_view path);
+// heuristic (rotational vs seek-penalty); returns unknown for
+// network/ram/readonly/virtual/unresolvable backings
+StorageMedium storage_medium(std::string_view path);
+
 // permissions
 std::string permission_to_str(unsigned int mode);
 unsigned int permission_from_str(std::string_view mode);

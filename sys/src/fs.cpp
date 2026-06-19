@@ -16,13 +16,21 @@
 #include <sihd/util/Splitter.hpp>
 
 #if defined(__SIHD_WINDOWS__)
-# include <direct.h> // _mkdir _stat
-# include <fcntl.h>  // _O_WRONLY
+# include <windows.h> // HANDLE / CreateFileA / CloseHandle / DeviceIoControl
+# include <direct.h>  // _mkdir _stat
+# include <fcntl.h>   // _O_WRONLY
 # include <fileapi.h>
 # include <io.h> // _open _close _chsize_s
 # include <libloaderapi.h>
+# include <winioctl.h> // IOCTL_STORAGE_QUERY_PROPERTY / IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS
 #else
 # include <unistd.h>
+#endif
+
+#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
+# include <linux/magic.h>   // *_SUPER_MAGIC
+# include <sys/statfs.h>     // statfs
+# include <sys/sysmacros.h> // major / minor
 #endif
 
 using namespace sihd::util;
@@ -123,6 +131,31 @@ std::string combine_lst_impl(const T & list)
 
     return ret;
 }
+
+#if defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
+
+StorageMedium read_rotational(const std::string & sysfs_dir)
+{
+    std::ifstream file(sysfs_dir + "/queue/rotational");
+    char c;
+    if (file.is_open() && file.get(c))
+        return c == '1' ? StorageMedium::hdd : StorageMedium::ssd;
+    return StorageMedium::unknown;
+}
+
+StorageMedium storage_medium_from_devnum(dev_t st_dev)
+{
+    // /sys/dev/block/<major>:<minor> symlinks to the block device's sysfs dir.
+    // A whole disk exposes queue/rotational directly; a partition does not, but
+    // its parent disk (..) does (best-effort for dm/LVM via the same parent walk).
+    const std::string base = fmt::format("/sys/dev/block/{}:{}", major(st_dev), minor(st_dev));
+    StorageMedium ret = read_rotational(base);
+    if (ret == StorageMedium::unknown)
+        ret = read_rotational(base + "/..");
+    return ret;
+}
+
+#endif
 
 } // namespace
 
@@ -925,6 +958,140 @@ bool chdir(std::string_view path)
     return ::_chdir(path.data()) == 0;
 #else
     return ::chdir(path.data()) == 0;
+#endif
+}
+
+MountType mount_type([[maybe_unused]] std::string_view path)
+{
+#if defined(__SIHD_WINDOWS__)
+    // UNC path (\\server\share) is always a network mount
+    if (path.size() >= 2 && (path[0] == '\\' || path[0] == '/') && (path[1] == '\\' || path[1] == '/'))
+        return MountType::network;
+
+    // GetVolumePathNameA resolves a nonexistent path to its drive root (local);
+    // match the POSIX statfs-fails behavior so unresolvable paths are unknown
+    if (!exists(path))
+        return MountType::unknown;
+
+    char root[MAX_PATH];
+    if (GetVolumePathNameA(std::string(path).c_str(), root, sizeof(root)) == 0)
+        return MountType::unknown;
+
+    switch (GetDriveTypeA(root))
+    {
+        case DRIVE_REMOTE:
+            return MountType::network;
+        case DRIVE_RAMDISK:
+            return MountType::ram;
+        case DRIVE_CDROM:
+            return MountType::readonly;
+        case DRIVE_FIXED:
+        case DRIVE_REMOVABLE:
+            return MountType::local;
+        default:
+            return MountType::unknown;
+    }
+#elif defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
+    struct statfs buf;
+    if (::statfs(path.data(), &buf) != 0)
+        return MountType::unknown;
+
+    switch (static_cast<unsigned long>(buf.f_type))
+    {
+        case NFS_SUPER_MAGIC:
+        case SMB_SUPER_MAGIC:
+        case 0xFF534D42UL: // CIFS_MAGIC_NUMBER
+        case 0xFE534D42UL: // SMB2_MAGIC_NUMBER
+        case V9FS_MAGIC:
+            return MountType::network;
+        case TMPFS_MAGIC:
+            return MountType::ram;
+        case SQUASHFS_MAGIC:
+            return MountType::readonly;
+        default:
+            // FUSE-based remotes (sshfs) report FUSE_SUPER_MAGIC and fall here as
+            // local: telling them apart needs parsing the mount source.
+            return MountType::local;
+    }
+#else
+    return MountType::unknown;
+#endif
+}
+
+StorageMedium storage_medium([[maybe_unused]] std::string_view path)
+{
+    // no rotational backing for these (or backing is a loop file)
+    const MountType type = mount_type(path);
+    if (type == MountType::network || type == MountType::ram || type == MountType::readonly)
+        return StorageMedium::unknown;
+
+#if defined(__SIHD_WINDOWS__)
+    char root[MAX_PATH];
+    if (GetVolumePathNameA(std::string(path).c_str(), root, sizeof(root)) == 0)
+        return StorageMedium::unknown;
+
+    // \\.\X: addressing the volume by its drive letter
+    std::string volume_path = fmt::format("\\\\.\\{}:", root[0]);
+    HANDLE volume = CreateFileA(volume_path.c_str(),
+                                0,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                nullptr,
+                                OPEN_EXISTING,
+                                0,
+                                nullptr);
+    if (volume == INVALID_HANDLE_VALUE)
+        return StorageMedium::unknown;
+
+    StorageMedium ret = StorageMedium::unknown;
+    VOLUME_DISK_EXTENTS extents;
+    DWORD bytes = 0;
+    if (DeviceIoControl(volume,
+                        IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
+                        nullptr,
+                        0,
+                        &extents,
+                        sizeof(extents),
+                        &bytes,
+                        nullptr)
+        && extents.NumberOfDiskExtents > 0)
+    {
+        std::string disk_path = fmt::format("\\\\.\\PhysicalDrive{}", extents.Extents[0].DiskNumber);
+        HANDLE disk = CreateFileA(disk_path.c_str(),
+                                  0,
+                                  FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                  nullptr,
+                                  OPEN_EXISTING,
+                                  0,
+                                  nullptr);
+        if (disk != INVALID_HANDLE_VALUE)
+        {
+            STORAGE_PROPERTY_QUERY query {};
+            query.PropertyId = StorageDeviceSeekPenaltyProperty;
+            query.QueryType = PropertyStandardQuery;
+            DEVICE_SEEK_PENALTY_DESCRIPTOR desc {};
+            if (DeviceIoControl(disk,
+                                IOCTL_STORAGE_QUERY_PROPERTY,
+                                &query,
+                                sizeof(query),
+                                &desc,
+                                sizeof(desc),
+                                &bytes,
+                                nullptr))
+            {
+                ret = desc.IncursSeekPenalty ? StorageMedium::hdd : StorageMedium::ssd;
+            }
+            CloseHandle(disk);
+        }
+    }
+    CloseHandle(volume);
+    return ret;
+#elif defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
+    struct stat s;
+    if (!do_stat(path, &s))
+        return StorageMedium::unknown;
+    return storage_medium_from_devnum(s.st_dev);
+#else
+    return StorageMedium::unknown;
 #endif
 }
 

@@ -275,4 +275,44 @@ TEST_F(TestFS, test_fs_permission)
 #endif
 }
 
+TEST_F(TestFS, test_fs_mount_type)
+{
+    // the build tree lives on a real local disk on every CI we run
+    EXPECT_EQ(fs::mount_type(fs::cwd()), fs::MountType::local);
+
+    // unresolvable paths never crash, report unknown
+    EXPECT_EQ(fs::mount_type(""), fs::MountType::unknown);
+    EXPECT_EQ(fs::mount_type("/nonexistent/zzz"), fs::MountType::unknown);
+
+    // storage_medium contract: no rotational backing for these kinds
+    const fs::MountType type = fs::mount_type(fs::cwd());
+    if (type == fs::MountType::network || type == fs::MountType::ram || type == fs::MountType::readonly)
+    {
+        EXPECT_EQ(fs::storage_medium(fs::cwd()), fs::StorageMedium::unknown);
+    }
+
+#if defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
+    // /dev/shm is tmpfs on a normal Linux host (unprivileged); guard the rare host without it
+    if (fs::is_dir("/dev/shm"))
+    {
+        EXPECT_EQ(fs::mount_type("/dev/shm"), fs::MountType::ram);
+        EXPECT_EQ(fs::storage_medium("/dev/shm"), fs::StorageMedium::unknown);
+    }
+#endif
+
+#if defined(__SIHD_WINDOWS__)
+    EXPECT_EQ(fs::mount_type("C:\\"), fs::MountType::local);
+    // pure path-prefix branch, no real share needed
+    EXPECT_EQ(fs::mount_type("\\\\nonexistent\\share"), fs::MountType::network);
+#endif
+}
+
+TEST_F(TestFS, test_fs_storage_medium)
+{
+    // documents the enum, tolerates sandboxed sysfs / unresolvable backings
+    const fs::StorageMedium medium = fs::storage_medium(fs::cwd());
+    EXPECT_TRUE(medium == fs::StorageMedium::ssd || medium == fs::StorageMedium::hdd
+                || medium == fs::StorageMedium::unknown);
+}
+
 } // namespace test

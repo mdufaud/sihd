@@ -23,6 +23,7 @@ if builder.build_platform != "web":
     env.build_demo("demo/file_watcher.cpp", name = "file_watcher", libs = [sihd_sys_libname])
     env.build_demo("demo/file_poller.cpp", name = "file_poller", libs = [sihd_sys_libname])
     env.build_demo("demo/process_info.cpp", name = "process_info", libs = [sihd_sys_libname])
+    env.build_demo("demo/fs_info.cpp", name = "fs_info", libs = [sihd_sys_libname])
 
 test = env.build_test(Glob('test/*.cpp'), libs = [sihd_sys_libname])
 
