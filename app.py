@@ -97,8 +97,8 @@ modules = {
         # ssl/crypto last: openssl provides symbols used by websockets/curl
         "linux-libs": ["websockets", "curl", "z", "uv", "cap", "ssl", "crypto"],
         # Windows static linking: all transitive deps must be explicit
-        # order matters: higher-level libs first, their deps after
-        "windows-libs": [
+        # order matters: higher-level libs first, their deps after; ssl/crypto last
+        "windows-static-libs": [
             'websockets_static', # vcpkg builds libwebsockets_static.a on mingw
             'curl',              # libcurl
             'uv',                # libuv (libwebsockets uses it)
@@ -116,6 +116,12 @@ modules = {
             'crypt32',           # Windows crypto (openssl backend)
             'bcrypt',            # Windows crypto (openssl backend)
         ],
+        # Windows dynamic linking: import libs (.dll.a) resolve transitive deps
+        # inside each DLL, so only the directly-used libs are needed
+        "windows-dyn-libs": [
+            'websockets',        # libwebsockets.dll.a
+            'curl',              # libcurl.dll.a
+        ],
     },
     "pcap": {
         "depends": ['net'],
@@ -132,7 +138,8 @@ modules = {
         "extlibs": ['libzip'],
         "libs": ['zip'],
         # Windows static linking: libzip's transitive deps must be explicit
-        "windows-libs": [
+        # (dynamic build resolves them inside libzip.dll via the plain 'zip' lib)
+        "windows-static-libs": [
             'zlib',   # vcpkg zlib installs libzlib.a on mingw (deflate/inflate/crc32)
             'bz2',    # bzip2 compression (zip_algorithm_bzip2.c)
             'bcrypt', # Windows CNG crypto (zip_crypto_win.c)
@@ -157,7 +164,9 @@ modules = {
         "linux-cross-libs": ['ssl', 'crypto'],
         # native static: libssh.a needs system OpenSSL archives after it
         "linux-native-static-libs": ['ssl', 'crypto'],
-        "windows-libs": [
+        # static: libssh.a's transitive deps must be explicit
+        # (dynamic build resolves them inside libssh.dll via the plain 'ssh' lib)
+        "windows-static-libs": [
             'ssh',               # libssh
             'ssl', 'crypto',     # OpenSSL (libssh dep)
             'crypt32',           # CryptoAPI (OpenSSL)
@@ -170,11 +179,11 @@ modules = {
         "extlibs": ['libusb'],
         # native linux: udev is a system transitive dep of libusb, parse-config provides libusb flags
         "native-libs": ['udev'],
+        # cross linux: vcpkg libusb built without udev, parse-configs skipped in cross
+        "cross-libs": ['usb-1.0'],
         "parse-configs": [
             "pkg-config libusb-1.0 --cflags --libs",
         ],
-        # cross linux: vcpkg libusb built without udev, parse-configs skipped in cross
-        "cross-libs": ['usb-1.0'],
     },
     "bt": {
         "allow-platforms": ["linux"],
@@ -204,8 +213,7 @@ modules = {
         # === Android specific ===
         "android-libs": ['android', 'EGL', 'GLESv3', 'log'],
         "android-defines": ['IMGUI_IMPL_OPENGL_ES3'],
-        # === Web/Emscripten specific ===
-        "web-libs": ['SDL3'],
+        # == Windows specific ===
         "windows-link": [
             "-mwindows" # no shell window opening
         ],
@@ -236,20 +244,22 @@ modules = {
             # directx graphics infrastructure
             "dxgi",
         ],
-        "em-flags": [
+        # === Web/Emscripten specific ===
+        "web-libs": ['SDL3'],
+        "web-flags": [
             "-pthread", # enable threads
             "-Wno-deprecated-literal-operator",
             "-Wno-unknown-pragmas",
             "-Wno-deprecated-declarations",
             "-sDISABLE_EXCEPTION_CATCHING=1",
         ],
-        "em-link": [
+        "web-link": [
             "-sUSE_PTHREADS=1", # enable threads
             "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
             "-sWASM=1",
             "-sALLOW_MEMORY_GROWTH=1", # dynamic heap growth
         ],
-        "em-defines": ["IMGUI_IMPL_OPENGL_ES2"],
+        "web-defines": ["IMGUI_IMPL_OPENGL_ES2"],
     },
 }
 

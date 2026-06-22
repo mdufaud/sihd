@@ -21,7 +21,7 @@ mymodule/
 Import('env')
 
 lib = env.build_lib(Glob('src/*.cpp'))
-test = env.build_test(Glob('test/*.cpp'), add_libs=[env.module_format_name()])
+test = env.build_test(Glob('test/*.cpp'), libs=[env.module_format_name()])
 
 Return('lib')
 ```
@@ -139,7 +139,7 @@ These values are set in `os.environ` at load time. The module's `scons.py` reads
 | `export-all-link` | `bool` | Export all active direct `link` and variant `*-link` of the module |
 | `export-<variant>-libs` | `list[str]` | Export variant-specific libraries such as `export-windows-libs` |
 | `export-<variant>-defines` | `list[str]` | Export variant-specific defines |
-| `export-<variant>-flags` | `list[str]` | Export variant-specific compiler flags such as `export-em-flags` |
+| `export-<variant>-flags` | `list[str]` | Export variant-specific compiler flags such as `export-web-flags` |
 | `inherit-depends-defines` | `bool` | Inherit CPPDEFINES from dependencies |
 | `inherit-depends-links` | `bool` | Inherit LINKFLAGS from dependencies |
 | `inherit-depends-flags` | `bool` | Inherit CPPFLAGS from dependencies |
@@ -190,10 +190,14 @@ All combinations of `(platform, libtype, mode, compiler, libc, native/cross)` ar
     "extlibs": ['libwebsockets', 'curl', 'zlib', 'libuv'],
     "linux-extlibs": ["libcap"],
     "linux-libs": ["websockets", "curl", "z", "uv", "cap", "ssl", "crypto"],
-    "windows-libs": [
-        'websockets_static', 'curl', 'ssl', 'crypto',
-        'uv', 'zlib', 'ws2_32', 'crypt32', 'bcrypt',
+    # static build: full ordered closure, ssl/crypto last (GNU ld order)
+    "windows-static-libs": [
+        'websockets_static', 'curl', 'uv', 'zlib',
+        'winmm', 'iphlpapi', 'userenv', 'advapi32', 'user32', 'dbghelp',
+        'ole32', 'uuid', 'ssl', 'crypto', 'crypt32', 'bcrypt',
     ],
+    # dynamic build (default): import libs only
+    "windows-dyn-libs": ['websockets', 'curl'],
 },
 ```
 
@@ -203,10 +207,10 @@ All combinations of `(platform, libtype, mode, compiler, libc, native/cross)` ar
 
 | Method | Description |
 |--------|-------------|
-| `env.build_lib(sources)` | Build shared/static library. Returns lib node. |
-| `env.build_bin(sources, name=, add_libs=[])` | Build executable binary |
-| `env.build_test(sources, add_libs=[])` | Build test binary (only if `test=1`) |
-| `env.build_demo(source, name=, add_libs=[], android_dir=None)` | Build demo (only if `demo=1`) |
+| `env.build_lib(sources, name=, static=, static_libs=[])` | Build shared/static library. Returns lib node. `static_libs=[...]` whole-archives static-only vcpkg `.a` (owning a process-global) into the module DLL on the windows dynamic build — PE has no symbol interposition. |
+| `env.build_bin(sources, name=, libs=[], static_libs=)` | Build executable binary. `static_libs=True\|[...]` wraps libs in `-Bstatic/-Bdynamic`. |
+| `env.build_test(sources, libs=[])` | Build test binary (only if `test=1`) |
+| `env.build_demo(source, name=, libs=[], android_dir=None)` | Build demo (only if `demo=1`) |
 | `env.build_demos(sources)` | Build multiple demos (one per source file) |
 | `env.build_cpp_modules(sources, module_name=, imports=[])` | Build C++20 module interfaces and register them for later imports |
 
@@ -217,7 +221,7 @@ cpp_modules = env.build_cpp_modules('test/modules/TestGreeting.cppm')
 
 env.build_test(
     Glob('test/*.cpp') + cpp_modules,
-    add_libs=[env.module_format_name()],
+    libs=[env.module_format_name()],
     cpp_modules=['mymodule.test.greeting'],
 )
 ```
@@ -344,9 +348,9 @@ lib = env.build_lib(Glob('src/*.cpp'))
 
 for src in Glob('demo/*.cpp'):
     name = env.file_basename(src)
-    env.build_demo(src, name=name, add_libs=[env.module_format_name()])
+    env.build_demo(src, name=name, libs=[env.module_format_name()])
 
-test = env.build_test(Glob('test/*.cpp'), add_libs=[env.module_format_name()])
+test = env.build_test(Glob('test/*.cpp'), libs=[env.module_format_name()])
 Return('lib')
 ```
 
@@ -367,7 +371,7 @@ for module in modules:
     tests += Glob(f"test/{module}/*.cpp")
 
 lib = env.build_lib(srcs)
-test = env.build_test(tests, add_libs=[env.module_format_name()])
+test = env.build_test(tests, libs=[env.module_format_name()])
 Return('lib')
 ```
 

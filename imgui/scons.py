@@ -58,7 +58,7 @@ else:
 
 # Lib
 
-lib = env.build_lib(sihd_imgui_srcs)
+lib = env.build_lib(sihd_imgui_srcs, static_libs=["imgui"])
 
 # Demos
 

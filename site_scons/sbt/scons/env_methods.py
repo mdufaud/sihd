@@ -226,7 +226,26 @@ def _apply_bin_linkflags(self, env, rpath_target):
     env.Append(LINKFLAGS=_origin_rpath_flags(env, rpath_target))
 
 
+def _static_link_into_shared_lib(self, lib_env, static_libs):
+    """Whole-archive static-only libs into the shared lib; drop them from consumers.
+
+    PE has no symbol interposition: an archive linked into both this DLL and a
+    consumer yields two copies of any global, breaking libs with process-global
+    state. Bundling the full archive into the DLL keeps a single copy.
+
+    Windows shared build only; elsewhere the libs link normally.
+    """
+    if builder.build_platform != "windows" or builder.build_static_libs:
+        return
+    drop = set(static_libs)
+    archives = [os_path.join(builder.build_extlib_lib_path, f"lib{l}.a") for l in static_libs]
+    self["LIBS"] = [l for l in self["LIBS"] if l not in drop]
+    lib_env["LIBS"] = [l for l in lib_env["LIBS"] if l not in drop]
+    lib_env.Append(LINKFLAGS=["-Wl,--whole-archive"] + archives + ["-Wl,--no-whole-archive"])
+
+
 def _build_lib(self, src, name, static, ctx, **kwargs):
+    static_libs = kwargs.pop("static_libs", None)
     module_name = self['APP_MODULE_NAME']
     if name is None:
         name = self["APP_MODULE_FORMAT_NAME"]
@@ -243,6 +262,8 @@ def _build_lib(self, src, name, static, ctx, **kwargs):
         objects = scons_cpp_modules.build_objects(self, src, ctx, shared=True, cpp_modules=cpp_mods, **build_kwargs)
         lib_env = self.Clone()
         lib_env.Append(LINKFLAGS=_origin_rpath_flags(lib_env, builder.build_lib_path))
+        if static_libs:
+            _static_link_into_shared_lib(self, lib_env, static_libs)
         lib = NoCache(lib_env.SharedLibrary(lib_path, objects, **build_kwargs))
 
     ctx.state.add_targets(src)

@@ -441,6 +441,31 @@ def get_test_runner():
         return "qemu-" + architectures.get_qemu_arch(build_machine)
     return ""
 
+def _mingw_runtime_dll_dirs():
+    """Dirs holding the mingw runtime DLLs (libstdc++/libgcc/libwinpthread) a shared build needs."""
+    runtime_dlls = ["libstdc++-6.dll", "libgcc_s_seh-1.dll", "libgcc_s_dw2-1.dll", "libwinpthread-1.dll"]
+    candidates = []
+    try:
+        out = subprocess.run(
+            ["x86_64-w64-mingw32-gcc", "-print-search-dirs"],
+            capture_output=True, text=True,
+        ).stdout
+        for line in out.splitlines():
+            if line.startswith("install:"):
+                candidates.append(line.split(":", 1)[1].strip())
+    except Exception:
+        pass
+    gcc_path = shutil.which("x86_64-w64-mingw32-gcc")
+    if gcc_path:
+        toolchain_prefix = dirname(dirname(gcc_path))
+        candidates.append(join(toolchain_prefix, "x86_64-w64-mingw32", "bin"))
+    dirs = []
+    for d in candidates:
+        if d and os.path.isdir(d) and d not in dirs \
+                and any(os.path.isfile(join(d, dll)) for dll in runtime_dlls):
+            dirs.append(d)
+    return dirs
+
 def get_test_runner_env():
     """Runtime env (list of KEY=VAL) the emulator needs; emitted as export lines into .env."""
     runner = get_test_runner()
@@ -456,7 +481,10 @@ def get_test_runner_env():
         env.append("WINEDLLOVERRIDES=winemenubuilder.exe=d")
         # static mingw has no DLLs -> no WINEPATH needed
         if not build_static_libs:
-            env.append("WINEPATH=" + ";".join([build_lib_path, build_extlib_lib_path, build_extlib_bin_path]))
+            # shared build also needs the mingw runtime DLLs (libstdc++/libgcc/libwinpthread)
+            wine_paths = [build_lib_path, build_extlib_lib_path, build_extlib_bin_path]
+            wine_paths.extend(_mingw_runtime_dll_dirs())
+            env.append("WINEPATH=" + ";".join(wine_paths))
     else:
         # qemu dynamic-glibc needs the cross sysroot + lib search path; static-musl needs nothing
         if not build_static_libs:
@@ -595,7 +623,7 @@ def verify_args(app):
             ret = False
 
     if build_compiler == "mingw":
-        if not _force_static_no_sanitizers("mingw", "Mingw"):
+        if not _check_unsupported_sanitizers("mingw"):
             ret = False
     elif build_compiler == "em":
         if not _force_static_no_sanitizers("emscripten", "Emscripten"):
@@ -606,20 +634,21 @@ def verify_args(app):
 # Windows utils
 ###############################################################################
 
-def _get_libs_from_bin(path):
-    ret = []
+def _pe_dll_imports(path):
+    """DLL names a PE binary imports (cross-compile: ldd can't read PE, use objdump)."""
+    objdump = shutil.which("x86_64-w64-mingw32-objdump") or shutil.which("objdump")
+    if not objdump:
+        return []
+    names = []
     try:
-        ldd_output = subprocess.check_output(['ldd', path], universal_newlines=True)
-        for line in ldd_output.splitlines():
-            if '=>' in line:
-                parts = line.split('=>')
-                if len(parts) > 1:
-                    lib_path = parts[1].strip().split(' ')[0]
-                    if os.path.isabs(lib_path) and os.path.exists(lib_path):
-                        ret.append(lib_path)
-    except Exception as e:
+        out = subprocess.run([objdump, "-p", path], capture_output=True, text=True).stdout
+        for line in out.splitlines():
+            line = line.strip()
+            if line.startswith("DLL Name:"):
+                names.append(line.split(":", 1)[1].strip())
+    except Exception:
         pass
-    return ret
+    return names
 
 def copy_dll_to_build(generated_lld_binaries):
     build_need_dll_path_lst = [build_bin_path]
@@ -635,29 +664,43 @@ def copy_dll_to_build(generated_lld_binaries):
     if not do_copy:
         return
 
+    # dirs to resolve imported DLL names against: own libs, extlib DLLs, mingw runtime
     dll_search_path_lst = [
+        build_lib_path,
         build_extlib_bin_path,
         build_extlib_lib_path,
     ]
-
-    dll_forced_path_lst = [
-        build_lib_path
-    ]
-
+    dll_search_path_lst.extend(_mingw_runtime_dll_dirs())
     if is_msys():
         dll_search_path_lst.append("/mingw64/bin")
 
-    dll_found = set()
+    def _resolve_dll(name):
+        for d in dll_search_path_lst:
+            cand = os.path.join(d, name)
+            if os.path.isfile(cand):
+                return cand
+        return None
+
+    # recursively follow imports so transitive DLLs (and their runtime deps) are copied
+    dll_found = {}
+    seen = set()
+    queue = []
     for module_name, binaries_conf in generated_lld_binaries.items():
         for bin_conf in binaries_conf:
-            path = bin_conf["path"]
-            libs_path = _get_libs_from_bin(path)
-            dll_found.update(libs_path)
+            queue.extend(_pe_dll_imports(bin_conf["path"]))
 
-    for forced_path in dll_forced_path_lst:
-        if not os.path.isdir(forced_path):
+    while queue:
+        name = queue.pop()
+        key = name.lower()
+        if key in seen:
             continue
-        dll_found.update(glob.glob(os.path.join(forced_path, "*.dll")))
+        seen.add(key)
+        resolved = _resolve_dll(name)
+        if resolved:
+            dll_found[key] = resolved
+            queue.extend(_pe_dll_imports(resolved))
+
+    dll_found = set(dll_found.values())
 
     if has_verbose():
         for dll in dll_found:

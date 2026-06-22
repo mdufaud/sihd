@@ -44,10 +44,10 @@ Any module config key can be prefixed with a selector. See [modules.md](modules.
     "windows-libs": ['ws2_32'],
     "android-libs": ['log'],
 
-    # Compiler
+    # Compiler / web
     "gcc-flags": ['-Wno-specific-warning'],
-    "em-flags": ['-pthread'],
-    "em-link": ['-sUSE_PTHREADS=1'],
+    "web-flags": ['-pthread'],
+    "web-link": ['-sUSE_PTHREADS=1'],
     "mingw-gnu-libs": ['stdc++fs'],
 
     # Native vs Cross
@@ -142,16 +142,17 @@ Same cross-compilation sysroot as GCC (needs the cross-gcc packages installed fo
 
 ### MinGW (Linux → Windows)
 
-Fixed prefix: `x86_64-w64-mingw32-`. Always static linking.
+Fixed prefix: `x86_64-w64-mingw32-`. Defaults to **dynamic** (sihd `.dll` + import libs); `static=1` for a fully static build. Tested via wine.
 
 ```bash
 sudo apt install mingw-w64
 ```
 
 Gotchas:
-- Library names differ: `websockets_static` instead of `websockets`, `zlib` instead of `z`
-- Link order matters more (all transitive deps must be explicit)
-- After build, DLLs are copied from the cross toolchain to `bin/`
+- Library names differ: `zlib` instead of `z`; static build wants `websockets_static`, dynamic build `websockets` (split via `windows-static-libs` / `windows-dyn-libs`)
+- Link order matters more (all transitive deps must be explicit; defining `.a` after the referencing one — ssl/crypto last)
+- Static-only vcpkg port owning a process-global → bundle into the DLL with `build_lib(srcs, static_libs=[...])` (PE has no symbol interposition)
+- After build, PE imports are followed recursively (`objdump -p`) to copy transitive DLLs + the mingw runtime (`libstdc++-6`/`libgcc`/`libwinpthread`) to `bin/`; the test runner adds their dirs to `WINEPATH`
 
 ### Emscripten (WebAssembly)
 
@@ -422,8 +423,9 @@ then run the test — the registration dies with the namespace.
 
 See the [sihd-test skill](../../../.github/skills/sihd-test/references/patterns.md) (§11) for
 the two compile-time guard mechanisms: `#if !defined(__SIHD_WINDOWS__)` (POSIX-only symbols) and
-`#if !defined(SIHD_STATIC)` (dynamic-loading-only tests — mingw forces static, so `DynLib`/
-`PluginLoader` are no-ops). Tests must run and pass under the cross runner, not skip on it.
+`#if !defined(SIHD_STATIC)` (dynamic-loading-only tests — `SIHD_STATIC` is defined on any
+`static=1` build, making `DynLib`/`PluginLoader` no-ops; they work on the default dynamic mingw
+build). Tests must run and pass under the cross runner, not skip on it.
 
 ## Build paths
 

@@ -155,7 +155,9 @@ def _apply_recipe_patches(dst_port: str, port: str, patch_paths, addon_vcpkg_pat
             logger.error(f"vcpkg_ports: recipe_patch file not found: {patch_abs}")
             raise RuntimeError(f"vcpkg_ports: missing recipe_patch '{patch_rel}' for port '{port}'")
         proc = subprocess.run(
-            ["git", "-c", "core.autocrlf=false", "apply", "--whitespace=nowarn", patch_abs],
+            # --ignore-whitespace: stock vcpkg ports drift between LF/CRLF across baseline
+            # bumps (a single port can even be mixed), so match patch context ignoring EOL.
+            ["git", "-c", "core.autocrlf=false", "apply", "--whitespace=nowarn", "--ignore-whitespace", patch_abs],
             cwd=dst_port,
             capture_output=True,
             check=False,

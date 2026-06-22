@@ -8,7 +8,7 @@ index b43eedd..3b255bf 100644
  # ref: https://gitlab.archlinux.org/archlinux/packaging/packages/ncurses/-/issues/3
 -list(APPEND OPTIONS "CFLAGS=\$CFLAGS -std=c17")
 +if(VCPKG_DETECTED_CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND VCPKG_DETECTED_CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)
-+    set(ENV{CFLAGS} "$ENV{CFLAGS} -std=c17")
++    set(ENV{CFLAGS} "$ENV{CFLAGS} -std=gnu17")
 +endif()
  
 -vcpkg_make_configure(

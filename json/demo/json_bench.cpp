@@ -218,7 +218,7 @@ std::string_view detect_first_key(simdjson::ondemand::parser & parser, simdjson:
 
 void bench_file(const char *path)
 {
-    std::printf("─────────────────────────────────────────────\n");
+    std::printf("---------------------------------------------\n");
     std::printf("file: %s\n", path);
 
     auto t0 = Clock::now();
@@ -518,6 +518,6 @@ int main(int argc, char **argv)
     for (int i = 1; i < argc; ++i)
         bench_file(argv[i]);
 
-    std::printf("─────────────────────────────────────────────\n");
+    std::printf("---------------------------------------------\n");
     return 0;
 }
