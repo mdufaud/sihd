@@ -61,7 +61,7 @@ build_mode = builder.get_compile_mode()
 distribution = builder.do_distribution()
 verbose = builder.has_verbose()
 
-libtype = builder.build_static_libs and "static" or "dyn"
+libtype = builder.build_static_libs and "static" or "shared"
 bin_ext = build_platform == "web" and ".html" or (build_platform == "windows" and ".exe" or "")
 
 modules_options = env_factory.compute_modules_options(

@@ -46,8 +46,11 @@ bool Synchronizer::sync(Duration timeout)
     if (_sync_count.fetch_add(1) + 1 >= _wanted_count)
     {
         // the last thread to sync - reset count and wake everyone
-        _sync_count = 0;
-        _round.fetch_add(1);
+        {
+            auto l = _waitable.guard();
+            _sync_count = 0;
+            _round.fetch_add(1);
+        }
         _waitable.notify_all();
         return true;
     }

@@ -65,7 +65,7 @@ SBT builds a list of variant selectors for the current build:
 ```python
 # Always present:
 [platform, libtype, mode, compiler, libc]
-# e.g.: ["linux", "dyn", "fast", "gcc", "gnu"]
+# e.g.: ["linux", "shared", "fast", "gcc", "gnu"]
 
 # Plus cross/native:
 ["cross", "linux-cross"]  # or ["native", "linux-native"]
@@ -149,7 +149,7 @@ sudo apt install mingw-w64
 ```
 
 Gotchas:
-- Library names differ: `zlib` instead of `z`; static build wants `websockets_static`, dynamic build `websockets` (split via `windows-static-libs` / `windows-dyn-libs`)
+- Library names differ: `zlib` instead of `z`; static build wants `websockets_static`, dynamic build `websockets` (split via `windows-static-libs` / `windows-shared-libs`)
 - Link order matters more (all transitive deps must be explicit; defining `.a` after the referencing one — ssl/crypto last)
 - Static-only vcpkg port owning a process-global → bundle into the DLL with `build_lib(srcs, static_libs=[...])` (PE has no symbol interposition)
 - After build, PE imports are followed recursively (`objdump -p`) to copy transitive DLLs + the mingw runtime (`libstdc++-6`/`libgcc`/`libwinpthread`) to `bin/`; the test runner adds their dirs to `WINEPATH`

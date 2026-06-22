@@ -269,15 +269,15 @@ def check_platform(modules, platform, modules_options=None):
     return to_remove
 
 def check_linkage(modules, linkage):
-    """ @brief sanatize modules based on link mode ("static"|"dynamic")
+    """ @brief sanatize modules based on link mode ("static"|"shared")
         @return modules to remove
 
-        "allow-link-dyn": dropped from static builds (e.g. GUI modules
+        "allow-link-shared": dropped from static builds (e.g. GUI modules
         needing system-only dynamic libs like libGL). "allow-link-static": inverse.
     """
     to_remove = []
     for name, conf in modules.items():
-        if conf.get("allow-link-dyn", False) and linkage != "dynamic":
+        if conf.get("allow-link-shared", False) and linkage != "shared":
             to_remove.append(name)
         elif conf.get("allow-link-static", False) and linkage != "static":
             to_remove.append(name)

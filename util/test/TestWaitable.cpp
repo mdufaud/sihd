@@ -106,8 +106,10 @@ TEST_F(TestWaitable, test_waitable_for_elapsed)
     std::thread t([&]() {
         synchro_start.sync();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        auto l = waitable.guard();
-        data = true;
+        {
+            auto l = waitable.guard();
+            data = true;
+        }
         waitable.notify(1);
     });
     synchro_start.sync();

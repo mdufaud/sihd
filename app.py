@@ -118,7 +118,7 @@ modules = {
         ],
         # Windows dynamic linking: import libs (.dll.a) resolve transitive deps
         # inside each DLL, so only the directly-used libs are needed
-        "windows-dyn-libs": [
+        "windows-shared-libs": [
             'websockets',        # libwebsockets.dll.a
             'curl',              # libcurl.dll.a
         ],
@@ -199,7 +199,7 @@ modules = {
     "imgui": {
         "depends": ['util', 'sys'],
         # pulls libGL/libGLEW (no static archive) + dlopen GL loader: can't link static
-        "allow-link-dyn": True,
+        "allow-link-shared": True,
         "extlibs": ['imgui', 'opengl'],
         # libxcrypt only supports linux|osx (autotools, no Windows/web port)
         "linux-extlibs": ['ncurses', 'libxcrypt'],

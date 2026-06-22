@@ -67,7 +67,7 @@ gcc_link = [
 ]
 
 # Position Independent Executable for security hardening - only for binaries
-gcc_dyn_bin_link = ["-Wl,-pie",]
+gcc_shared_bin_link = ["-Wl,-pie",]
 
 if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
     gcc_flags.append("-fdiagnostics-color=always")

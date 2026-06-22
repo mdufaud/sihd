@@ -42,7 +42,7 @@ def compute_modules_options(build_platform, libtype, build_mode, compiler, _buil
         options.append("native")
         options.append(f"{build_platform}-native")
 
-    # Add libtype-suffixed variants: e.g. "linux-static", "gcc-dyn"
+    # Add libtype-suffixed variants: e.g. "linux-static", "gcc-shared"
     to_append = [f"{opt}-{libtype}" for opt in options if opt != libtype]
     options += to_append
     return options

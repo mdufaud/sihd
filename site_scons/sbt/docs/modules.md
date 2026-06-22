@@ -98,14 +98,14 @@ Both are **skipped in cross-compilation** to avoid host header pollution. In cro
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `allow-link-dyn` | `bool` | Module dropped from static builds (`static=1`). |
+| `allow-link-shared` | `bool` | Module dropped from static builds (`static=1`). |
 | `allow-link-static` | `bool` | Module dropped from dynamic builds. |
 
 ```python
 "imgui": {
     # GUI pulls system-only dynamic libs (libGL/libGLEW) with no static
     # archive + dlopen GL loader: cannot link fully static
-    "allow-link-dyn": True,
+    "allow-link-shared": True,
 },
 ```
 
@@ -165,7 +165,7 @@ Where `{variant}` is one or a combination of:
 |---------|--------|---------|
 | Platform | `linux`, `windows`, `web`, `android` | `linux-libs` |
 | Compiler | `gcc`, `clang`, `mingw`, `em`, `ndk`, `zig` | `em-flags` |
-| Lib type | `static`, `dyn` | `static-defines` |
+| Lib type | `static`, `shared` | `static-defines` |
 | Mode | `debug`, `fast`, `size`, `release` | `debug-flags` |
 | Libc | `gnu`, `musl` | `musl-flags` |
 | Cross | `native`, `cross` | `native-libs`, `cross-libs` |
@@ -197,7 +197,7 @@ All combinations of `(platform, libtype, mode, compiler, libc, native/cross)` ar
         'ole32', 'uuid', 'ssl', 'crypto', 'crypt32', 'bcrypt',
     ],
     # dynamic build (default): import libs only
-    "windows-dyn-libs": ['websockets', 'curl'],
+    "windows-shared-libs": ['websockets', 'curl'],
 },
 ```
 

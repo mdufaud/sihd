@@ -53,7 +53,7 @@ gcc_link = [
 ]
 
 # Position Independent Executable for security hardening - only for binaries
-gcc_dyn_bin_link = [
+gcc_shared_bin_link = [
     "-Wl,-pie",
 ]
 
