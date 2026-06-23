@@ -1,3 +1,5 @@
+#include <atomic>
+
 #include <gtest/gtest.h>
 
 #include <sihd/sys/SigHandler.hpp>
@@ -121,32 +123,32 @@ TEST_F(TestSignal, test_signal_watcher)
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
 
-    int sig = -1;
+    std::atomic<int> sig = -1;
 
     SigWatcher watcher("sigint-watcher-test");
 
     watcher.add_signal(sig_term);
-    watcher.set_polling_frequency(30);
+    watcher.set_polling_frequency(400);
 
-    Handler<SigWatcher *> handler([&sig](SigWatcher *watcher) {
+    Synchronizer sync(2);
+    Handler<SigWatcher *> handler([&sig, &sync](SigWatcher *watcher) {
         auto & catched_signals = watcher->catched_signals();
         if (catched_signals.empty())
             return;
         sig = catched_signals[0];
-        SIHD_LOG(debug, "Watcher found signal {}", sig);
+        SIHD_LOG(debug, "Watcher found signal {}", sig.load());
+        (void)sync.sync(std::chrono::milliseconds(100));
     });
     watcher.add_observer(&handler);
-
     watcher.start();
-
-    // Give worker time to start
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     send_self(sig_term);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    ASSERT_TRUE(sync.sync(std::chrono::milliseconds(100)));
 
-    EXPECT_EQ(sig, sig_term);
+    watcher.stop();
+
+    EXPECT_EQ(sig.load(), sig_term);
 }
 
 #if !defined(__SIHD_WINDOWS__)

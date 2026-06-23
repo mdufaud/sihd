@@ -35,8 +35,7 @@ SigWatcher::SigWatcher(const std::string & name, Node *parent):
     this->add_conf("polling_frequency", &SigWatcher::set_polling_frequency);
 }
 
-SigWatcher::SigWatcher(std::initializer_list<int> signals, Callback callback):
-    SigWatcher("sig-watcher", nullptr)
+SigWatcher::SigWatcher(std::initializer_list<int> signals, Callback callback): SigWatcher("sig-watcher", nullptr)
 {
     _callback = std::move(callback);
 
@@ -107,9 +106,8 @@ bool SigWatcher::rm_signal(int sig)
 #if defined(SIHD_HAS_SIGNALFD)
     sigdelset(&_sigset, sig);
 #endif
-    return container::erase_if(
-               _sig_controllers,
-               [sig](const auto & sig_controller) { return sig_controller.sig_handler.sig() == sig; })
+    return container::erase_if(_sig_controllers,
+                               [sig](const auto & sig_controller) { return sig_controller.sig_handler.sig() == sig; })
            && container::erase(_signals, sig);
 }
 
@@ -209,11 +207,9 @@ void SigWatcher::_run_signalfd_loop()
     _poll.set_limit(1);
     _poll.set_read_fd(_signalfd);
 
-    constexpr int poll_timeout_ms = 100;
-
     while (_running.load(std::memory_order_relaxed))
     {
-        int ret = _poll.poll(poll_timeout_ms);
+        int ret = _poll.poll(time::to_ms(_polling_interval_ns.load()));
 
         if (ret < 0)
         {
@@ -247,10 +243,9 @@ void SigWatcher::_run_signalfd_loop()
                     std::lock_guard l(_mutex);
                     const int sig = static_cast<int>(siginfo.ssi_signo);
 
-                    auto it_sigcontroller
-                        = container::find_if(_sig_controllers, [sig](const auto & sig_controller) {
-                              return sig_controller.sig_handler.sig() == sig;
-                          });
+                    auto it_sigcontroller = container::find_if(_sig_controllers, [sig](const auto & sig_controller) {
+                        return sig_controller.sig_handler.sig() == sig;
+                    });
 
                     if (it_sigcontroller != _sig_controllers.end())
                     {
@@ -281,10 +276,9 @@ void SigWatcher::_run_polling_loop()
             std::lock_guard l(_mutex);
             for (int sig : _signals)
             {
-                auto it_sigcontroller
-                    = container::find_if(_sig_controllers, [sig](const auto & sig_controller) {
-                          return sig_controller.sig_handler.sig() == sig;
-                      });
+                auto it_sigcontroller = container::find_if(_sig_controllers, [sig](const auto & sig_controller) {
+                    return sig_controller.sig_handler.sig() == sig;
+                });
 
                 const auto status = signal::status(sig);
                 if (status.has_value())

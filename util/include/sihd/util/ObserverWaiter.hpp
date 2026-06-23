@@ -24,15 +24,17 @@ class ObserverWaiter: public IHandler<T *>
 
         void clear()
         {
-            auto l = _waitable.guard();
-            if (_obs_ptr != nullptr)
+            Observable<T> *obs_to_remove = nullptr;
             {
-                _obs_ptr->remove_observer(this);
+                auto l = _waitable.guard();
+                obs_to_remove = _obs_ptr;
                 _obs_ptr = nullptr;
+                _current_count = 0;
+                _last_waited_count = 0;
             }
-            _current_count = 0;
-            _last_waited_count = 0;
             _waitable.notify_all();
+            if (obs_to_remove != nullptr)
+                obs_to_remove->remove_observer(this);
         }
 
         bool observe(Observable<T> *obs)

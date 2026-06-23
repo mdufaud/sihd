@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_THREADPOOL_HPP__
 #define __SIHD_UTIL_THREADPOOL_HPP__
 
+#include <atomic>
 #include <functional>
 #include <future>
 #include <string>
@@ -46,7 +47,7 @@ class ThreadPool
                 SafeQueue<Job> & _jobs;
                 Stat<Duration> _jobs_stat;
                 Stopwatch _stopwatch;
-                bool _stop;
+                std::atomic<bool> _stop;
                 std::thread _thread;
                 mutable std::mutex _stat_mutex;
         };

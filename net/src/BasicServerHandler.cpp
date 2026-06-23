@@ -171,7 +171,11 @@ void BasicServerHandler::handle_client_read(INetServer *server, int socket)
     if (it != _client_map.end())
     {
         auto & client = it->second;
-        ssize_t rcv = client->socket.receive(client->read_array);
+        ssize_t rcv;
+        {
+            std::lock_guard lk(client->mutex);
+            rcv = client->socket.receive(client->read_array);
+        }
         client->error = (rcv < 0);
         client->disconnected = rcv == 0;
         if (rcv <= 0)

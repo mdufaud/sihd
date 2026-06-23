@@ -71,6 +71,7 @@ class SigWatcher: public sihd::util::Named,
 #if defined(SIHD_HAS_SIGNALFD)
         void _run_signalfd_loop();
         int _signalfd;
+        int _wakeup_fd;
         sigset_t _sigset;
         Poll _poll;
 #endif

@@ -90,6 +90,7 @@ void BasicSshServerHandler::set_default_shell(std::string_view shell)
 
 uint64_t BasicSshServerHandler::session_id(SshSession *session) const
 {
+    std::lock_guard<std::mutex> lock(_sessions_mtx);
     auto it = _sessions.find(session);
     if (it != _sessions.end())
     {
@@ -100,11 +101,13 @@ uint64_t BasicSshServerHandler::session_id(SshSession *session) const
 
 size_t BasicSshServerHandler::session_count() const
 {
+    std::lock_guard<std::mutex> lock(_sessions_mtx);
     return _sessions.size();
 }
 
 size_t BasicSshServerHandler::channel_count(SshSession *session) const
 {
+    std::lock_guard<std::mutex> lock(_sessions_mtx);
     auto it = _sessions.find(session);
     if (it != _sessions.end())
     {
@@ -198,28 +201,36 @@ bool BasicSshServerHandler::on_auth_pubkey([[maybe_unused]] SshServer *server,
 
 void BasicSshServerHandler::on_session_opened([[maybe_unused]] SshServer *server, SshSession *session)
 {
-    SessionState state;
-    state.id = _next_session_id++;
-    _sessions[session] = std::move(state);
+    uint64_t id;
+    {
+        std::lock_guard<std::mutex> lock(_sessions_mtx);
+        SessionState state;
+        state.id = _next_session_id++;
+        id = state.id;
+        _sessions[session] = std::move(state);
+    }
 
     inc_counter(&EventCounters::sessions_opened);
-    SIHD_LOG(debug, "BasicSshServerHandler: session {} opened", _sessions[session].id);
+    SIHD_LOG(debug, "BasicSshServerHandler: session {} opened", id);
 }
 
 void BasicSshServerHandler::on_session_closed([[maybe_unused]] SshServer *server, SshSession *session)
 {
-    auto it = _sessions.find(session);
-    if (it != _sessions.end())
     {
-        SIHD_LOG(debug,
-                 "BasicSshServerHandler: session {} closed ({} channels)",
-                 it->second.id,
-                 it->second.channels.size());
-        for (const auto & [channel, ch_state] : it->second.channels)
+        std::lock_guard<std::mutex> lock(_sessions_mtx);
+        auto it = _sessions.find(session);
+        if (it != _sessions.end())
         {
-            _channel_index.erase(channel);
+            SIHD_LOG(debug,
+                     "BasicSshServerHandler: session {} closed ({} channels)",
+                     it->second.id,
+                     it->second.channels.size());
+            for (const auto & [channel, ch_state] : it->second.channels)
+            {
+                _channel_index.erase(channel);
+            }
+            _sessions.erase(it);
         }
-        _sessions.erase(it);
     }
     inc_counter(&EventCounters::sessions_closed);
 }
@@ -228,24 +239,28 @@ bool BasicSshServerHandler::on_channel_open([[maybe_unused]] SshServer *server,
                                             SshSession *session,
                                             SshChannel *channel)
 {
-    auto it = _sessions.find(session);
-    if (it == _sessions.end())
+    uint64_t id;
+    size_t channel_total;
     {
-        SIHD_LOG(error, "BasicSshServerHandler: channel open for unknown session");
-        return false;
+        std::lock_guard<std::mutex> lock(_sessions_mtx);
+        auto it = _sessions.find(session);
+        if (it == _sessions.end())
+        {
+            SIHD_LOG(error, "BasicSshServerHandler: channel open for unknown session");
+            return false;
+        }
+
+        ChannelState ch_state;
+        ch_state.has_pty = false;
+        ch_state.winsize = {};
+        auto [ch_it, inserted] = it->second.channels.insert_or_assign(channel, std::move(ch_state));
+        _channel_index[channel] = &ch_it->second;
+        id = it->second.id;
+        channel_total = it->second.channels.size();
     }
 
-    ChannelState ch_state;
-    ch_state.has_pty = false;
-    ch_state.winsize = {};
-    auto [ch_it, inserted] = it->second.channels.insert_or_assign(channel, std::move(ch_state));
-    _channel_index[channel] = &ch_it->second;
-
     inc_counter(&EventCounters::channels_opened);
-    SIHD_LOG(debug,
-             "BasicSshServerHandler: channel opened for session {} (total: {})",
-             it->second.id,
-             it->second.channels.size());
+    SIHD_LOG(debug, "BasicSshServerHandler: channel opened for session {} (total: {})", id, channel_total);
     return true;
 }
 
@@ -421,12 +436,16 @@ void BasicSshServerHandler::on_channel_pty_resize([[maybe_unused]] SshServer *se
 
 bool BasicSshServerHandler::channel_bypasses_data_callback(SshChannel *channel) const
 {
-    auto it = _channel_index.find(channel);
-    if (it != _channel_index.end() && it->second->handler)
+    ISshSubsystemHandler *handler = nullptr;
     {
-        return it->second->handler->manages_channel_io();
+        std::lock_guard<std::mutex> lock(_sessions_mtx);
+        auto it = _channel_index.find(channel);
+        if (it != _channel_index.end())
+        {
+            handler = it->second->handler.get();
+        }
     }
-    return false;
+    return handler ? handler->manages_channel_io() : false;
 }
 
 void BasicSshServerHandler::on_poll([[maybe_unused]] SshServer *server)
@@ -472,10 +491,14 @@ void BasicSshServerHandler::on_poll([[maybe_unused]] SshServer *server)
         }
 
         // Cleanup finished handlers
-        for (SshChannel *ch : channels_to_cleanup)
+        if (!channels_to_cleanup.empty())
         {
-            _channel_index.erase(ch);
-            session_state.channels.erase(ch);
+            std::lock_guard<std::mutex> lock(_sessions_mtx);
+            for (SshChannel *ch : channels_to_cleanup)
+            {
+                _channel_index.erase(ch);
+                session_state.channels.erase(ch);
+            }
         }
     }
 }
@@ -485,6 +508,7 @@ void BasicSshServerHandler::on_poll([[maybe_unused]] SshServer *server)
 BasicSshServerHandler::ChannelState *BasicSshServerHandler::get_channel_state(SshSession *session,
                                                                               SshChannel *channel)
 {
+    std::lock_guard<std::mutex> lock(_sessions_mtx);
     auto session_it = _sessions.find(session);
     if (session_it == _sessions.end())
     {

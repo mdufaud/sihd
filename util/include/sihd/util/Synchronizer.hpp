@@ -31,7 +31,7 @@ class Synchronizer
 
         std::atomic<int32_t> _sync_count;
         std::atomic<int32_t> _wanted_count;
-        std::atomic<int32_t> _round;
+        std::atomic<int32_t> _total_sync_round;
         Waitable _waitable;
 };
 

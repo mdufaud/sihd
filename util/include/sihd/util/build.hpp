@@ -109,6 +109,8 @@ constexpr bool is_run_with_tsan = true;
 constexpr bool is_run_with_tsan = false;
 #endif
 
+constexpr bool is_run_with_sanitizer = is_run_with_asan || is_run_with_tsan;
+
 #if defined(__SIHD_WINDOWS__)
 constexpr bool is_windows = true;
 constexpr bool is_unix = false;

@@ -29,6 +29,9 @@ class BasicServerHandler: public INetServerHandler,
                 int fd() { return socket.socket(); }
 
                 Socket socket;
+                // guards read_array/write_array: mutated by the server poll thread,
+                // readable by callers holding a ClientPtr from another thread
+                mutable std::mutex mutex;
                 sihd::util::ArrByte read_array;
                 sihd::util::ArrByte write_array;
                 IpAddr addr;

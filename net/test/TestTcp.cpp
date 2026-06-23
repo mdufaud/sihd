@@ -88,7 +88,10 @@ TEST_F(TestTcp, test_tcp_server)
 
     wait_for([&] {
         auto all_clients = server_handler.clients();
-        return all_clients.size() == 1 && all_clients[0]->read_array.is_bytes_equal(hello_world_arr);
+        if (all_clients.size() != 1)
+            return false;
+        std::lock_guard lk(all_clients[0]->mutex);
+        return all_clients[0]->read_array.is_bytes_equal(hello_world_arr);
     });
 
     EXPECT_EQ(server_handler.client_count(), 1u);
@@ -96,6 +99,7 @@ TEST_F(TestTcp, test_tcp_server)
         auto all_clients = server_handler.clients();
         if (all_clients.size() == 1)
         {
+            std::lock_guard lk(all_clients[0]->mutex);
             EXPECT_TRUE(all_clients[0]->read_array.is_bytes_equal(hello_world_arr));
         }
     }
