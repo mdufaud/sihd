@@ -113,8 +113,6 @@ def install_module_res_into_build(env, module_name, src, dst, must_exist = True)
     elif must_exist:
         raise RuntimeError("for module {} resource {} not found".format(module_name, module_res))
     if nodes:
-        from SCons.Script import Default
-        Default(nodes)
         if builder.has_verbose():
             logger.info("installing resources of module {}/{} -> build/{}".format(module_name, src, dst))
     return nodes

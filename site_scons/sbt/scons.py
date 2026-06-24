@@ -500,7 +500,6 @@ if builder.build_platform == "windows" and not builder.build_static_libs:
         dll_stamp = os_path.join(builder.build_path, ".dll_collect.stamp")
         dll_collect_node = base_env.Command(dll_stamp, dll_dependency_bins, _collect_dlls)
         NoCache(dll_collect_node)
-        Default(dll_collect_node)
 
 if verbose:
     logger.debug(f"total targets registered: {len(build_state.targets)}")

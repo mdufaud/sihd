@@ -2,6 +2,16 @@ Import('env')
 
 builder = env.builder()
 
+env.Append(
+    CPPFLAGS = [
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-pessimizing-move",
+        "-Wno-unused-function",
+        "-Wno-error=maybe-uninitialized",
+    ]
+)
+
 # build library from lib sources - not added to environment
 lib = env.build_lib(Glob('src/*.cpp'), name = env.module_format_name())
 
@@ -13,12 +23,6 @@ test = env.build_test(Glob('test/*.cpp'), libs = [env.module_format_name()])
 # build ftxui examples
 env.Append(
     LIBS = ["pthread"],
-    CPPFLAGS = [
-        "-Wno-unused-parameter",
-        "-Wno-sign-compare",
-        "-Wno-pessimizing-move",
-        "-Wno-unused-function",
-    ]
 )
 
 import os

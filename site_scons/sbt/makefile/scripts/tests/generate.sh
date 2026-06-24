@@ -8,6 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 test_path="$(jq -r '"\(.build_path)/\(.paths.test)"' "$SBT_ENV_JSON")"
 env_file="$test_path/.env"
+mkdir -p "$test_path"
 
 # Whole .env in one pass: fixed paths, then runner env, then app test env.
 # Add a var = add one `ex(...)` line; values shell-quoted via @sh.
