@@ -90,31 +90,34 @@ def parse_config_command(env, *configs):
 #         return shutil.copy2(src, dst, follow_symlinks=follow_symlinks)
 #     return dst
 
-def copy_module_res_into_build(module_name, src, dst, must_exist = True, is_dry_run = False):
-    """ recursive copy of MODNAME/DIRNAME to build/DIRNAME """
+def install_module_res_into_build(env, module_name, src, dst, must_exist = True):
+    """Register build-time Install nodes copying MODNAME/SRC into build/DST.
+
+    Replaces the former eager shutil copy: as SCons nodes these participate in
+    the dependency graph (incremental rebuild when a resource changes) and honor
+    --dry-run / clean natively. Returns the created nodes.
+    """
     src = str(src)
     dst = str(dst)
     module_res = os.path.join(builder.build_root_path, module_name, src)
     build_output = os.path.join(builder.build_path, dst)
-    if builder.has_verbose():
-        logger.info("copying resources of module {}/{} -> build/{}".format(module_name, src, dst))
+    nodes = []
     if os.path.isfile(module_res):
-        if not is_dry_run:
-            # __do_copy(module_res, build_output)
-            shutil.copy2(module_res, build_output)
+        nodes = as_list(env.InstallAs(build_output, module_res))
     elif os.path.isdir(module_res):
-        if is_dry_run:
-            return
-        try:
-            # shutil.copytree(module_res, build_output, copy_function=__do_copy, dirs_exist_ok = True)
-            shutil.copytree(module_res, build_output, dirs_exist_ok = True)
-        except shutil.Error as exc:
-            errors = exc.args[0]
-            for error in errors:
-                src, dst, msg = error
-                logger.error(f"{src} - {dst} -> {msg}")
+        for root, _dirs, files in os.walk(module_res):
+            rel = os.path.relpath(root, module_res)
+            target_dir = build_output if rel == "." else os.path.join(build_output, rel)
+            for fname in files:
+                nodes += as_list(env.Install(target_dir, os.path.join(root, fname)))
     elif must_exist:
         raise RuntimeError("for module {} resource {} not found".format(module_name, module_res))
+    if nodes:
+        from SCons.Script import Default
+        Default(nodes)
+        if builder.has_verbose():
+            logger.info("installing resources of module {}/{} -> build/{}".format(module_name, src, dst))
+    return nodes
 
 
 ###############################################################################
@@ -251,12 +254,3 @@ def fileinput_replace(path, replace_dic):
         for key, value in replace_dic.items():
             line = line.replace(key, value)
         print(line, end='')
-
-
-def sed_replace(path, replace_dic):
-    """In-place string replacement using sed -i."""
-    import subprocess
-    if not os.path.isfile(path):
-        raise RuntimeError("File to replace {} does not exist".format(path))
-    for key, value in replace_dic.items():
-        subprocess.call(['sed', '-i', 's/{}/{}/g'.format(key, value), path])

@@ -7,7 +7,6 @@ wrapper that hides host .pc files from cross builds.
 import os
 import platform
 import shutil
-import subprocess
 
 from sbt import architectures
 from sbt import builder
@@ -99,17 +98,8 @@ def generate_cmake_cross_toolchain(
 
     # Cross-compiler sysroot, e.g. /usr/aarch64-linux-gnu
     gcc_prefix = architectures.get_gcc_prefix(builder.build_machine, builder.libc)
-    sysroot = None
-    if gcc_prefix:
-        try:
-            result = subprocess.run(
-                [f"{gcc_prefix}gcc", "--print-sysroot"],
-                capture_output=True, text=True, timeout=5,
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                sysroot = _posix(result.stdout.strip())
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
+    raw_sysroot = builder.probe_gcc_sysroot()
+    sysroot = _posix(raw_sysroot) if raw_sysroot else None
 
     lines = ["# Auto-generated cmake cross-compilation toolchain", ""]
 

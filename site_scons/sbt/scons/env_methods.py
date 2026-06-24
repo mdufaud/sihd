@@ -340,8 +340,8 @@ def _build_test(self, src, name, libs, ctx, **kwargs):
             resource_dst = os_path.join("test", "resources", dep_modname)
             if os_path.isfile(resource_src):
                 resource_dst = os_path.join(resource_dst, os_path.basename(resource_path))
-            scons_utils.copy_module_res_into_build(
-                dep_modname, resource_path, resource_dst, must_exist=False, is_dry_run=ctx.is_dry_run
+            scons_utils.install_module_res_into_build(
+                test_env, dep_modname, resource_path, resource_dst, must_exist=False
             )
     scons_utils.prepend_unique_paths(test_env, "CPPPATH", exported_test_cpppaths)
 
@@ -523,7 +523,7 @@ def _export_test(self, includes, resources, ctx):
 
 def _copy_into_build(self, src, dst, ctx):
     module_name = self['APP_MODULE_NAME']
-    scons_utils.copy_module_res_into_build(module_name, src, dst, is_dry_run=ctx.is_dry_run)
+    scons_utils.install_module_res_into_build(self, module_name, src, dst)
 
 
 def _file_basename(self, path):
@@ -546,7 +546,7 @@ def _git_clone(self, url, branch, dest, recursive, ctx):
         args.extend(['--branch', branch, '--depth', '1', url, dest])
         if ctx.verbose:
             logger.info("git clone cmd: '{}'".format(" ".join(args)))
-        if not ctx.is_dry_run or builder.force_git_clone():
+        if not ctx.is_dry_run:
             ret = subprocess_call(args) == 0
     if ret:
         ctx.state.cloned_git_repos.setdefault(modname, []).append(dest)
@@ -573,7 +573,7 @@ def _replace_in_build(self, to_replace, replace_dic, ctx):
     for path in files_to_replace:
         logger.debug("replacing file: " + path)
         if not ctx.is_dry_run:
-            scons_utils.sed_replace(path, replace_dic)
+            scons_utils.fileinput_replace(path, replace_dic)
 
 
 def _create_module_env(self, ctx, **kwargs):

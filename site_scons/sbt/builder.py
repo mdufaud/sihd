@@ -147,6 +147,42 @@ def get_compiler_version():
         return f"{compiler}-{version}"
     return compiler
 
+def probe_gcc_sysroot(machine=None, libc_=None):
+    """Return the cross-compiler sysroot (raw, stripped) or empty string on failure."""
+    prefix = architectures.get_gcc_prefix(
+        build_machine if machine is None else machine,
+        libc if libc_ is None else libc_,
+    )
+    try:
+        result = subprocess.run(
+            [prefix + "gcc", "-print-sysroot"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return ""
+
+def probe_libstdcxx_dir(machine=None, libc_=None):
+    """Return the abspath dir holding libstdc++.so.6 for the toolchain, or empty string."""
+    prefix = architectures.get_gcc_prefix(
+        build_machine if machine is None else machine,
+        libc if libc_ is None else libc_,
+    )
+    try:
+        result = subprocess.run(
+            [prefix + "g++", "-print-file-name=libstdc++.so.6"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0:
+            path = result.stdout.strip()
+            if path:
+                return os.path.abspath(os.path.dirname(path))
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return ""
+
 ###############################################################################
 # Build settings
 ###############################################################################
@@ -491,11 +527,7 @@ def get_test_runner_env():
         # qemu dynamic-glibc needs the cross sysroot + lib search path; static-musl needs nothing
         if not build_static_libs:
             # ask the compiler for its sysroot; layout varies (arm-none keeps libc under <prefix>/libc)
-            gcc_prefix = architectures.get_gcc_prefix(build_machine, libc)
-            sysroot = subprocess.run(
-                [gcc_prefix + "gcc", "-print-sysroot"],
-                capture_output=True, text=True,
-            ).stdout.strip()
+            sysroot = probe_gcc_sysroot(build_machine, libc)
             env.append("QEMU_LD_PREFIX=" + abspath(sysroot))
             env.append("QEMU_SET_ENV=LD_LIBRARY_PATH=" + ":".join([build_lib_path, build_extlib_lib_path]))
     return env

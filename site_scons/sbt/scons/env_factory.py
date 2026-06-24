@@ -156,6 +156,15 @@ def create_module_env(conf, ctx,
             if do_inherit_depends_flags:
                 depends_flags.extend(depend_conf.get("flags", []))
 
+    # each module sees exactly its declared dependencies' headers,
+    # deterministically ordered, without leaking includes between unrelated modules.
+    cpppath = [os_path.join(builder.build_root_path, modname, "include")]
+    cpppath += [
+        os_path.join(builder.build_root_path, dep, "include")
+        for dep in ordered_depends
+        if not build_modules_util.is_external_depend(dep)
+    ]
+
     # --- Clone and configure environment ---
     env = ctx.base_env.Clone()
     env.PrependUnique(
@@ -165,7 +174,7 @@ def create_module_env(conf, ctx,
         CPPFLAGS=flags + depends_flags,
         LINKFLAGS=link + depends_links,
         CPPDEFINES=defines + depends_defines,
-        CPPPATH=[os_path.join(builder.build_root_path, modname, "include")],
+        CPPPATH=cpppath,
     )
     # Do NOT auto-enable C++ module flags here even if a dependency exported BMIs.
     # Modules flags (-fmodules / -fmodule-mapper) are injected on demand by

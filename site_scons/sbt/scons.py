@@ -8,7 +8,6 @@ if GetOption("help"):
     Return()
 
 # General utilities
-import subprocess
 from os import environ
 from os import path as os_path
 from shutil import which as shutil_which
@@ -24,7 +23,6 @@ pp = PrettyPrinter(indent=2)
 from sbt import loader
 from sbt import builder
 from sbt import logger
-from sbt import architectures
 
 from site_scons.sbt.build import modules
 from site_scons.sbt.build import utils as build_utils
@@ -235,13 +233,9 @@ if not distribution \
     # vcpkg extlibs need libstdc++.so.6; under musl the loader would grab the host's
     # glibc one and fail relocations, so point RPATH at the musl toolchain's libstdc++.
     if builder.libc == "musl" and not builder.build_static_libs:
-        prefix = architectures.get_gcc_prefix(builder.build_machine, builder.libc)
-        libstdcxx = subprocess.run(
-            [prefix + "g++", "-print-file-name=libstdc++.so.6"],
-            capture_output=True, text=True,
-        ).stdout.strip()
-        if libstdcxx:
-            rpath_extra_dirs.append(os_path.abspath(os_path.dirname(libstdcxx)))
+        libstdcxx_dir = builder.probe_libstdcxx_dir()
+        if libstdcxx_dir:
+            rpath_extra_dirs.append(libstdcxx_dir)
     # Cross-compiling linkers (musl, aarch64...) don't resolve transitive shared
     # library dependencies via -L or -rpath. Adding -rpath-link lets the linker
     # find libs at link time (no runtime effect).
@@ -420,12 +414,11 @@ for conf in modules_build_order:
         if parse_configs:
             logger.debug("needed specific packages configs")
             pp.pprint(parse_configs)
-    # copy module/[etc|include|share] to build/[etc|include|share]
-    resources_kwargs = dict(must_exist=False, is_dry_run=is_dry_run)
+    # install module/[etc|include|share] to build/[etc|include|share] (build-time nodes)
     for resource_dir in ("etc", "include", "share"):
-        scons_utils.copy_module_res_into_build(modname, resource_dir, resource_dir, **resources_kwargs)
+        scons_utils.install_module_res_into_build(env, modname, resource_dir, resource_dir, must_exist=False)
         if builder.build_demo:
-            scons_utils.copy_module_res_into_build(modname, f"demo/{resource_dir}", resource_dir, **resources_kwargs)
+            scons_utils.install_module_res_into_build(env, modname, f"demo/{resource_dir}", resource_dir, must_exist=False)
     # read module's scons script file
     module_format_name = env['APP_MODULE_FORMAT_NAME']
     built[modname] = SConscript(Dir(builder.build_root_path).Dir(modname).File("scons.py"),
@@ -437,8 +430,6 @@ for conf in modules_build_order:
     conf["flags"] = env['CPPFLAGS']
     conf["link"] = env['LINKFLAGS']
     conf["defines"] = env["CPPDEFINES"]
-    # update added paths
-    base_env["CPPPATH"] = list(set(env["CPPPATH"]))
     if verbose:
         logger.debug(f"Final configuration for module {modname}")
         pp.pprint(conf)
@@ -486,6 +477,31 @@ if builder.build_combined and build_state.lib_objects:
 
         logger.info("combined library target registered: {}".format(app.name))
 
+###############################################################################
+# Windows transitive DLL collection
+###############################################################################
+
+# Shared Windows builds need the mingw runtime + extlib DLLs copied next to the
+# binaries. Model it as a graph node depending on the built binaries (instead of
+# the former atexit side effect) so it honors --dry-run/clean and only re-runs
+# when a binary changes.
+if builder.build_platform == "windows" and not builder.build_static_libs:
+    dll_dependency_bins = [
+        artefact["path"]
+        for registry in (build_state.generated_bins, build_state.generated_tests, build_state.generated_demos)
+        for artefacts in registry.values()
+        for artefact in artefacts
+    ]
+    if dll_dependency_bins:
+        def _collect_dlls(target, source, env):
+            builder.copy_dll_to_build(merge_built())
+            with open(str(target[0]), "w"):
+                pass
+        dll_stamp = os_path.join(builder.build_path, ".dll_collect.stamp")
+        dll_collect_node = base_env.Command(dll_stamp, dll_dependency_bins, _collect_dlls)
+        NoCache(dll_collect_node)
+        Default(dll_collect_node)
+
 if verbose:
     logger.debug(f"total targets registered: {len(build_state.targets)}")
 
@@ -526,8 +542,6 @@ def after_build():
     elif hasattr(app, "on_build_fail"):
         app.on_build_fail(build_modules, builder)
     builder.symlink_build()
-    if builder.build_platform == "windows" and not builder.build_static_libs:
-        builder.copy_dll_to_build(merge_built())
     if success and distribution:
         builder.distribute_app(app, build_modules)
     if compile_commands:
