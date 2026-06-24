@@ -41,7 +41,7 @@ class FileMutex
         bool try_lock_until(const std::chrono::time_point<Clock, Duration> & timepoint)
         {
             return this->try_lock_for(sihd::util::Duration(
-                sihd::util::Timestamp(timepoint).get() - Clock::now().time_since_epoch().count()));
+                sihd::util::Timestamp(timepoint).get() - sihd::util::Timestamp(Clock::now()).get()));
         }
 
         bool try_lock_for(sihd::util::Duration duration);
@@ -56,7 +56,7 @@ class FileMutex
         bool try_lock_shared_until(const std::chrono::time_point<Clock, Duration> & timepoint)
         {
             return this->try_lock_shared_for(sihd::util::Duration(
-                sihd::util::Timestamp(timepoint).get() - Clock::now().time_since_epoch().count()));
+                sihd::util::Timestamp(timepoint).get() - sihd::util::Timestamp(Clock::now()).get()));
         }
 
         bool try_lock_shared_for(sihd::util::Duration duration);

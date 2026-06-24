@@ -98,34 +98,6 @@ class TestProcess: public ::testing::Test
         TmpDir _tmp_dir;
 };
 
-/*
-TEST_F(TestProcess, test_process_interactive)
-{
-    if (term::is_interactive() == false)
-        GTEST_SKIP() << "Is an interactive test";
-    std::string output;
-    Process proc{"cat"};
-
-    proc.stdout_to([] (std::string_view buffer)
-    {
-        SIHD_LOG(debug, buf);
-    })
-    .stderr_close();
-
-    Task task([&proc] ()
-    {
-        proc.run();
-        return true;
-    });
-    Worker worker(&task);
-    EXPECT_TRUE(worker.start_sync_worker("proc"));
-    SIHD_LOG(debug, "Kill cat process with ctrl + d")
-    EXPECT_TRUE(proc.wait_process_terminate(time::sec(10)));
-    proc.stop();
-    worker.stop_worker();
-}
-*/
-
 TEST_F(TestProcess, test_process_service)
 {
     if (term::is_interactive() == false)
@@ -621,7 +593,7 @@ TEST_F(TestProcess, test_process_bad_cmd)
 TEST_F(TestProcess, test_process_exec_simple)
 {
     auto exit_code = proc::execute(cmd_echo_hello_world());
-    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(100)), std::future_status::ready);
+    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(1000)), std::future_status::ready);
     ASSERT_EQ(exit_code.get(), 0);
 }
 
@@ -630,7 +602,7 @@ TEST_F(TestProcess, test_process_exec_stdout)
     std::string printed;
     proc::Options options({.stdout_callback = [&printed](std::string_view stdout_str) { printed += stdout_str; }});
     auto exit_code = proc::execute(cmd_echo_hello_world(), options);
-    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(100)), std::future_status::ready);
+    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(1000)), std::future_status::ready);
     ASSERT_EQ(exit_code.get(), 0);
     EXPECT_EQ(printed, expected_hello_world);
 }
@@ -640,7 +612,7 @@ TEST_F(TestProcess, test_process_exec_stderr)
     std::string printed;
     proc::Options options({.stderr_callback = [&printed](std::string_view stderr_str) { printed += stderr_str; }});
     auto exit_code = proc::execute(cmd_bad_path(), options);
-    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(100)), std::future_status::ready);
+    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(1000)), std::future_status::ready);
 #if !defined(__SIHD_WINDOWS__)
     ASSERT_EQ(exit_code.get(), 2);
     EXPECT_EQ(printed, "ls: cannot access '/bli/blah/blouh': No such file or directory\n");

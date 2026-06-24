@@ -174,8 +174,6 @@ class BasicSshServerHandler: public ISshServerHandler
         std::string _default_shell;
         bool _default_exec_fork_mode;
 
-        // guards _sessions and _channel_index: mutated by the server loop thread,
-        // queried (session_count/session_id/channel_count) from other threads
         mutable std::mutex _sessions_mtx;
         std::unordered_map<SshSession *, SessionState> _sessions;
         std::unordered_map<SshChannel *, ChannelState *> _channel_index;

@@ -23,16 +23,20 @@ test_filter="$3"
 print_module_failure()
 (
     local module="$1"
-    local stdout_log="${log_dir}/${module}/stdout.log"
-    local stderr_log="${log_dir}/${module}/stderr.log"
+    local output_log="${log_dir}/${module}/output.log"
+    [ -s "${output_log}" ] || return 0
 
     echo ""
     echo "--- ${module} ---"
-    grep -E "^\[  FAILED  \]" "${stdout_log}" 2>/dev/null || true
-    if [ -s "${stderr_log}" ]; then
-        echo "stderr tail output: ${stderr_log}"
-        echo "------------------"
-        tail "${stderr_log}"
+    echo "output log: ${output_log}"
+    echo "------------------"
+    # show each [ FAILED ] line with the assertion context above it (colors kept);
+    # markers/assertions are in the combined log since 2>&1. fall back to tail if
+    # no failed marker (crash/sanitizer before any gtest output)
+    if grep -qaE "\[  FAILED  \]" "${output_log}"; then
+        grep -aE -B 12 -A 1 "\[  FAILED  \]" "${output_log}"
+    else
+        tail -n 40 "${output_log}"
     fi
     echo ""
 )
@@ -41,12 +45,12 @@ module_failed()
 (
     local module="$1"
     local exit_log="${log_dir}/${module}/exit_code"
-    local stderr_log="${log_dir}/${module}/stderr.log"
+    local output_log="${log_dir}/${module}/output.log"
 
     if [ -f "${exit_log}" ] && [ "$(cat "${exit_log}")" != "0" ]; then
         return 0
     fi
-    if [ -f "${stderr_log}" ] && grep -qE "^==[0-9]+==ERROR: (AddressSanitizer|LeakSanitizer|ThreadSanitizer|UndefinedBehaviorSanitizer):|^SUMMARY: AddressSanitizer:" "${stderr_log}" 2>/dev/null; then
+    if [ -f "${output_log}" ] && grep -qaE "^==[0-9]+==ERROR: (AddressSanitizer|LeakSanitizer|ThreadSanitizer|UndefinedBehaviorSanitizer):|^SUMMARY: AddressSanitizer:" "${output_log}" 2>/dev/null; then
         return 0
     fi
     return 1
@@ -90,29 +94,38 @@ execute_tests()
             repeat_args="--gtest_repeat="$REPEAT" --gtest_throw_on_failure"
         fi
 
+        brief_args=
+        if [ ! -z "$BRIEF" ] && [ "$BRIEF" != "0" ]; then
+            brief_args="--gtest_brief=1"
+        fi
+
         cmd="env $DEBUGGER $DEBUGGER_ARGS $TEST_RUNNER $test_bin_path \
                 --gtest_death_test_style=threadsafe \
                 --gtest_shuffle \
                 --gtest_color=yes \
                 --gtest_filter="*$test_filter*" \
-                $repeat_args $TEST_ARGS"
+                $repeat_args $brief_args $TEST_ARGS"
 
-        stdout_log="${log_dir}/${module}/stdout.log"
-        stderr_log="${log_dir}/${module}/stderr.log"
+        output_log="${log_dir}/${module}/output.log"
         exit_log="${log_dir}/${module}/exit_code"
 
         echo ""
         echo "###################################################################################"
         echo "# testing module: $module"
-        echo "# test command: $cmd"
+        echo "# test command: $(echo "$cmd" | tr -s ' ')"
         echo "###################################################################################"
         echo ""
 
         mkdir -p "${log_dir}/${module}"
-        (cd $module_path && $cmd; echo $? > "${exit_log}") \
-            1> >(tee "${stdout_log}") \
-            2> >(tee "${stderr_log}" >&2)
-        wait
+        if [ -n "$brief_args" ]; then
+            # brief: write everything to the log only, no live console output;
+            # failures are printed at the end by print_failures
+            (cd $module_path && $cmd; echo $? > "${exit_log}") > "${output_log}" 2>&1
+        else
+            # merge stdout (gtest markers/assertions) and stderr (sihd debug logs)
+            # into one ordered log so failure context stays correlated
+            (cd $module_path && $cmd; echo $? > "${exit_log}") 2>&1 | tee "${output_log}"
+        fi
     done
 
     print_failures

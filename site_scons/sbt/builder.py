@@ -122,7 +122,8 @@ def _detect_compiler_major_version(compiler, machine=None, libc="gnu"):
         elif compiler == "zig":
             result = subprocess.run(["zig", "version"], capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
-                return result.stdout.strip().split(".")[0]
+                # zig is pre-1.0: breaking changes ride the minor, so keep major.minor
+                return ".".join(result.stdout.strip().split(".")[:2])
         elif compiler == "ndk":
             ndk_root = os.getenv("ANDROID_NDK_PATH", "")
             if ndk_root:
@@ -351,6 +352,7 @@ build_machine = get_machine()
 build_mode = get_compile_mode()
 build_static_libs = is_static_libs()
 liblink = "static" if build_static_libs else "shared"
+
 build_asan = is_address_sanitizer()
 build_ubsan = is_ubsan()
 build_tsan = is_tsan()
@@ -514,7 +516,7 @@ def _detect_cpp_modules_backend():
         return "clang"
     return None
 
-cpp_modules_compiler_major = int(_detect_compiler_major_version(build_compiler, build_machine, libc) or 0)
+cpp_modules_compiler_major = int((_detect_compiler_major_version(build_compiler, build_machine, libc) or "0").split(".")[0] or 0)
 cpp_modules_backend = _detect_cpp_modules_backend()
 is_cpp_modules = cpp_modules_backend is not None
 

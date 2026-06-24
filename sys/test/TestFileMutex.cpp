@@ -3,14 +3,13 @@
 
 #include <gtest/gtest.h>
 
-#include <sihd/sys/fs.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/sys/TmpDir.hpp>
-#include <sihd/sys/platform.hpp>
-#include <sihd/util/term.hpp>
-
 #include <sihd/sys/FileMutex.hpp>
 #include <sihd/sys/Process.hpp>
+#include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/sys/platform.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/term.hpp>
 
 namespace test
 {
@@ -41,6 +40,7 @@ TEST_F(TestFileMutex, test_filemutex_guard)
 
     std::lock_guard l(mutex);
 }
+
 TEST_F(TestFileMutex, test_filemutex_unique)
 {
     TmpDir tmpdir;
@@ -68,8 +68,7 @@ TEST_F(TestFileMutex, test_filemutex_unique)
         if (other_lock.try_lock_for(std::chrono::milliseconds(5)) == false)
             ret += 1 << 2;
 
-        if (other_lock.try_lock_until(std::chrono::system_clock::now() + std::chrono::milliseconds(5))
-            == false)
+        if (other_lock.try_lock_until(std::chrono::system_clock::now() + std::chrono::milliseconds(5)) == false)
             ret += 1 << 3;
 
         return ret;

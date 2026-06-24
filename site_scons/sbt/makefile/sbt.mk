@@ -51,6 +51,12 @@ BUILD_TOOLS := $(PROJECT_ROOT_PATH)/site_scons
 SBT_PATH := $(BUILD_TOOLS)/sbt
 
 SBT_CLI := $(SBT_PATH)/cli_helper.py
+
+ifeq ($(zig),1)
+override compiler := zig
+export compiler
+endif
+
 SBT_ENV_PATH := $(shell machine=$(machine) mode=$(mode) platform=$(platform) compiler=$(compiler) libc=$(libc) static=$(static) $(PYTHON_BIN) $(SBT_CLI) dump)
 
 jq_get = $(shell jq -r '.$(1)' $(SBT_ENV_PATH))
@@ -397,6 +403,7 @@ test: build
 					DEBUGGER_ARGS="$(if $(TEST_RUNNER),,$(DEBUGGER_ARGS))" \
 					TEST_ARGS="$(TEST_ARGS)" \
 					REPEAT="$(repeat)" \
+					BRIEF="$(brief)" \
 					ASAN_OPTIONS="$(if $(TEST_RUNNER),,$(ASAN_OPTIONS))" \
 					UBSAN_OPTIONS="$(if $(TEST_RUNNER),,$(UBSAN_OPTIONS))" \
 					TSAN_OPTIONS="$(if $(TEST_RUNNER),,$(TSAN_OPTIONS))" \

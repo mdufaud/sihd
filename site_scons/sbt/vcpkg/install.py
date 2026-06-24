@@ -250,6 +250,16 @@ def _execute_vcpkg_install():
 
     copy_env = os.environ.copy()
 
+    # Zig is a self-contained toolchain forced to musl. A chainload toolchain
+    # bypasses vcpkg's flag-injection, so the per-arch `-target` cannot be passed
+    # through CMAKE_*_FLAGS reliably. Pass it to the zig-cc/zig-cxx wrappers via
+    # this env var instead; without it `zig cc` defaults to the native (glibc)
+    # target and builds deps a musl-linked binary cannot load.
+    if builder.build_compiler == "zig":
+        zig_target = architectures.get_zig_target(builder.build_machine)
+        if zig_target:
+            copy_env["ZIG_TARGET"] = zig_target
+
     # Cross-linux: create a pkg-config wrapper that isolates from host .pc files
     if builder.is_cross_building() and builder.build_platform == "linux":
         overlay_dir = os.path.join(vcpkg_build_path, "overlay-triplets")

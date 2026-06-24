@@ -53,9 +53,9 @@ TEST_F(TestLocale, test_locale_create_classic)
 
 TEST_F(TestLocale, test_locale_create_throws_on_invalid)
 {
-    if constexpr (build::is_emscripten)
+    if constexpr (build::is_emscripten || build::is_musl)
     {
-        GTEST_SKIP() << "emscripten libc++ ships no locale data: std::locale(invalid) "
+        GTEST_SKIP() << "emscripten/musl libc++ ships no locale data: std::locale(invalid) "
                         "silently yields the C locale instead of throwing";
     }
     // Invalid locale should throw

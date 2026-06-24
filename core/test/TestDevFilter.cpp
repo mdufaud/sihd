@@ -3,9 +3,9 @@
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>
 #include <sihd/core/DevFilter.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
@@ -31,8 +31,7 @@ TEST_F(TestDevFilter, test_devfilter_equal)
     Core core;
 
     DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
-    ASSERT_TRUE(
-        dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..out_channel;trigger=1:10;write=2:15"));
+    ASSERT_TRUE(dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..out_channel;trigger=1:10;write=2:15"));
 
     core.add_channel("in_channel", "int", 3);
     core.add_channel("out_channel", "int", 3);
@@ -63,8 +62,7 @@ TEST_F(TestDevFilter, test_devfilter_superior)
                             .trigger<int>(1, 10)
                             .out("..out_channel")
                             .write<int>(2, 15));
-    ASSERT_TRUE(
-        dev_ptr->set_conf_str("filter_superior_equal", "in=..in_channel;out=..out_channel;trigger=0x200"));
+    ASSERT_TRUE(dev_ptr->set_conf_str("filter_superior_equal", "in=..in_channel;out=..out_channel;trigger=0x200"));
 
     core.add_channel("in_channel", "int", 3);
     core.add_channel("out_channel", "int", 3);
@@ -97,10 +95,8 @@ TEST_F(TestDevFilter, test_devfilter_inferior)
     Core core;
 
     DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
-    ASSERT_TRUE(dev_ptr->set_conf_str("filter_inferior",
-                                      "in=..in_channel;out=..out_channel;trigger=1:10;write=2:15"));
-    ASSERT_TRUE(
-        dev_ptr->set_conf_str("filter_inferior_equal", "in=..in_channel;out=..out_channel;trigger=200"));
+    ASSERT_TRUE(dev_ptr->set_conf_str("filter_inferior", "in=..in_channel;out=..out_channel;trigger=1:10;write=2:15"));
+    ASSERT_TRUE(dev_ptr->set_conf_str("filter_inferior_equal", "in=..in_channel;out=..out_channel;trigger=200"));
 
     core.add_channel("in_channel", "int", 3);
     core.add_channel("out_channel", "int", 3);
@@ -138,10 +134,9 @@ TEST_F(TestDevFilter, test_devfilter_float)
                             .trigger(0, 3.14f)
                             .out("..out_channel")
                             .write(0, 0x1)
-                            .delay(std::chrono::milliseconds(5)));
+                            .delay(std::chrono::milliseconds((50))));
     ASSERT_TRUE(
-        dev_ptr->set_conf_str("filter_equal",
-                              "in=..in_channel;out=..out_channel;trigger=6.28f;write=0b101;delay=0.01"));
+        dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..out_channel;trigger=6.28f;write=0b101;delay=0.1"));
 
     core.add_channel("in_channel", "float");
     core.add_channel("out_channel", "int");
@@ -163,20 +158,20 @@ TEST_F(TestDevFilter, test_devfilter_float)
 
     ChannelWaiter waiter(out_channel);
 
-    // delay -> 5ms
+    // delay -> 100ms
     EXPECT_EQ(out_channel->read<int>(0), 0);
     in_channel->write<float>(0, 3.14f);
-    EXPECT_FALSE(waiter.prev_wait_for(std::chrono::milliseconds(3)));
+    EXPECT_FALSE(waiter.prev_wait_for(std::chrono::milliseconds(10)));
     EXPECT_EQ(out_channel->read<int>(0), 0);
-    EXPECT_TRUE(waiter.prev_wait_for(std::chrono::milliseconds(10)));
+    EXPECT_TRUE(waiter.prev_wait_for(std::chrono::milliseconds(300)));
     EXPECT_EQ(out_channel->read<int>(0), 1);
 
-    // delay -> 0.01 = 10ms
+    // delay -> 0.1 = 100ms
     EXPECT_EQ(out_channel->read<int>(0), 1);
     in_channel->write<float>(0, 6.28f);
-    EXPECT_FALSE(waiter.prev_wait_for(std::chrono::milliseconds(3)));
+    EXPECT_FALSE(waiter.prev_wait_for(std::chrono::milliseconds(10)));
     EXPECT_EQ(out_channel->read<int>(0), 1);
-    EXPECT_TRUE(waiter.prev_wait_for(std::chrono::milliseconds(10)));
+    EXPECT_TRUE(waiter.prev_wait_for(std::chrono::milliseconds(300)));
     EXPECT_EQ(out_channel->read<int>(0), 0b101);
 }
 
@@ -186,9 +181,8 @@ TEST_F(TestDevFilter, test_devfilter_byte)
 
     DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
     ASSERT_TRUE(dev_ptr->set_conf_str("filter_byte_and", "in=..in_channel;out=..out_channel;trigger=0b1"));
-    ASSERT_TRUE(
-        dev_ptr->set_conf_str("filter_byte_and",
-                              "in=..in_channel;out=..out_channel;trigger=1:0b1;write=1:;match=false"));
+    ASSERT_TRUE(dev_ptr->set_conf_str("filter_byte_and",
+                                      "in=..in_channel;out=..out_channel;trigger=1:0b1;write=1:;match=false"));
 
     core.add_channel("in_channel", "int", 2);
     core.add_channel("out_channel", "int", 2);
