@@ -2,6 +2,9 @@ name = 'sihd'
 version = "0.1.0"
 git_url = "https://github.com/mdufaud/sihd.git"
 
+# modules live under modules/ instead of the project root
+modules_path = "modules"
+
 # files to include into this module (paths relative to site_scons/)
 includes = [
     "addon/vcpkg/config.py",

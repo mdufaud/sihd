@@ -6,6 +6,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 from sbt.core import builder
 from sbt.core import loader
+from sbt.core import architectures
+from sbt.build import modules as build_modules_util
+from sbt.scons import env_factory
 
 
 def _runner_env():
@@ -79,6 +82,38 @@ def _build_env():
     }
 
 
+def _conf(module_filter=None):
+    app = loader.load_app()
+    modules_options = env_factory.compute_modules_options(
+        builder.build_platform,
+        builder.libs_type,
+        builder.build_mode,
+        builder.build_compiler,
+        builder,
+    )
+    specific = None
+    if module_filter:
+        specific = [m for m in module_filter.split(",") if m]
+    build_modules = build_modules_util.build_modules_conf(app, specific_modules=specific)
+
+    print("build selectors: " + " ".join(modules_options))
+
+    candidate_conf_keys = set(architectures.CONF_FLAG_ENV.keys())
+    for opt in modules_options:
+        for key in architectures.CONF_FLAG_ENV.keys():
+            candidate_conf_keys.add(f"{opt}-{key}")
+
+    for modname, conf in build_modules.items():
+        if not isinstance(conf, dict):
+            continue
+        matched = {k: v for k, v in conf.items() if k in candidate_conf_keys}
+        if not matched:
+            continue
+        print(f"\n{modname}:")
+        for key in sorted(matched):
+            print(f"  {key} = {' '.join(str(v) for v in matched[key])}")
+
+
 def _dump():
     os.makedirs(builder.build_path, exist_ok=True)
     json_path = os.path.join(builder.build_path, "sbt_env.json")
@@ -90,6 +125,9 @@ def _dump():
 if __name__ == '__main__':
     import sys
 
+    if len(sys.argv) >= 2 and sys.argv[1] == "conf":
+        _conf(sys.argv[2] if len(sys.argv) > 2 else None)
+        sys.exit(0)
     if len(sys.argv) != 2:
         sys.exit(0)
     if sys.argv[1] == "dump":

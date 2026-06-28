@@ -27,12 +27,13 @@ def compute_modules_options(build_platform, libtype, build_mode, compiler, _buil
     These prefixes are used to find platform/mode/compiler specific values in a
     module's conf dict, e.g. conf.get("linux-libs", []) or conf.get("gcc-flags", []).
     """
+    libc = _builder.libc
     options = [
         libtype,
         build_platform,
         f"mode-{build_mode}",
         compiler,
-        _builder.libc,
+        libc,
         _builder.build_machine,
     ]
     if _builder.is_cross_building():
@@ -42,8 +43,10 @@ def compute_modules_options(build_platform, libtype, build_mode, compiler, _buil
         options.append("native")
         options.append(f"{build_platform}-native")
 
-    # Add libtype-suffixed variants: e.g. "linux-static", "gcc-shared"
+    # Add libtype- and libc-suffixed variants: e.g. "linux-static", "gcc-shared",
+    # "gcc-gnu", "clang-musl", "linux-musl" — lets modules tune libs/flags per libc.
     to_append = [f"{opt}-{libtype}" for opt in options if opt != libtype]
+    to_append += [f"{opt}-{libc}" for opt in options if opt != libc]
     options += to_append
     return options
 

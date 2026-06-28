@@ -23,7 +23,6 @@ pp = PrettyPrinter(indent=2)
 from sbt.core import loader
 from sbt.core import builder
 from sbt.core import logger
-from sbt.core import architectures
 
 from site_scons.sbt.build import modules
 from site_scons.sbt.core import utils as build_utils
@@ -353,10 +352,6 @@ Decider('MD5-timestamp')
 ###############################################################################
 
 build_state = scons_state.BuildState(verbose)
-
-if verbose:
-    logger.debug(f"will look for modules options:")
-    pp.pprint([[f"{option}-{key}" for option in modules_options] for key in architectures.CONF_FLAG_ENV.keys()])
 
 modules.resolve_modules_exports(build_modules, modules_options)
 

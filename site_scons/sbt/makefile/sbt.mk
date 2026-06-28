@@ -217,6 +217,11 @@ info:
 	$(call mk_log_info,makefile,build: $(BUILD_PATH))
 	$(QUIET) echo > /dev/null
 
+.PHONY: conf # print modules configurations selected for this build ([m=modules])
+
+conf:
+	$(QUIET) machine=$(machine) mode=$(mode) platform=$(platform) compiler=$(compiler) libc=$(libc) static=$(static) $(PYTHON_BIN) $(SBT_CLI) conf $(m)
+
 ######################
 # List Makefile rules
 ######################

@@ -23,10 +23,10 @@ _default_flags = [
     "-D_FORTIFY_SOURCE=2",
 ]
 
-debug_flags = _default_flags + ["-g", "-Og"]
-fast_flags = ["-O0"]
-size_flags = _default_flags + ["-Os"]
-release_flags = _default_flags + ["-O3"]
+mode_debug_flags = _default_flags + ["-g", "-Og"]
+mode_fast_flags = ["-O0"]
+mode_size_flags = _default_flags + ["-Os"]
+mode_release_flags = _default_flags + ["-O3"]
 
 ## gcc specifics
 
@@ -43,8 +43,8 @@ gcc_flags = [
     # "-fno-diagnostics-show-caret",
 ]
 
-gcc_size_link = ['-s']
-gcc_release_link = ['-s']
+mode_size_gcc_link = ['-s']
+mode_release_gcc_link = ['-s']
 
 gcc_link = [
     "-Wl,-z,defs",
@@ -77,8 +77,8 @@ clang_defines = [
     'LLVM_ENABLE_RTTI=ON',
 ]
 
-clang_size_link = ['-s']
-clang_release_link = ['-s']
+mode_size_clang_link = ['-s']
+mode_release_clang_link = ['-s']
 
 ## mingw specifics
 
@@ -103,8 +103,8 @@ em_link = [
     "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency",
     "-sPROXY_TO_PTHREAD",
 ]
-em_size_link = ['--strip-debug']
-em_release_link = ['--strip-debug']
+mode_size_em_link = ['--strip-debug']
+mode_release_em_link = ['--strip-debug']
 
 ## windows specifics
 
