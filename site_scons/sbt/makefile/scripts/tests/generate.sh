@@ -18,6 +18,7 @@ jq -r '
     | [
         ex("APP_NAME";         .app_name),
         ex("PROJECT_ROOT_PATH";.root_path),
+        ex("MODULES_PATH";     .modules_path),
         ex("BUILD_PATH";       $b),
         ex("LIB_PATH";         "\($b)/\(.paths.lib)"),
         ex("BIN_PATH";         "\($b)/\(.paths.bin)"),
@@ -32,11 +33,13 @@ jq -r '
       ]
     + [ (.test.runner_env // {} | to_entries[] | ex(.key; .value)) ]
     + [ (.test.env        // {} | to_entries[] | ex(.key; .value)) ]
+    + [ (.test.command    // {} | to_entries[] | ex(.key; .value)) ]
     | .[]
     ' "$SBT_ENV_JSON" > "$env_file"
 
 cp "$SCRIPT_DIR/executor.sh" "$test_path/execute_tests.sh"
 chmod +x "$test_path/execute_tests.sh"
+cp -r "$SCRIPT_DIR/profiles" "$test_path/profiles"
 
 printf 'generated test env: %s\n' "$env_file"
 printf 'generated test executor: %s\n' "$test_path/execute_tests.sh"

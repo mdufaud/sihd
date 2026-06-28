@@ -5,7 +5,7 @@ through the BuildContext to every env method. It replaces the ~10 module-level
 global dicts/lists that previously lived directly in sbt/scons.py.
 """
 
-from sbt import logger
+from sbt.core import logger
 
 
 class BuildState:

@@ -10,9 +10,9 @@ Handles:
 
 import os
 
-from sbt import architectures
-from sbt import builder
-from sbt import logger
+from sbt.core import architectures
+from sbt.core import builder
+from sbt.core import logger
 
 
 def scan_vcpkg_triplets(vcpkg_bin_path: str) -> set:
@@ -70,7 +70,7 @@ def detect_triplet(vcpkg_bin_path: str, sbt_triplet_path: str, addon_triplet_pat
     Scans vcpkg's triplet directories at runtime instead of maintaining
     hardcoded lists. Also includes SBT/addon-generated triplets (musl, zig).
     """
-    from site_scons.sbt.build import utils
+    from site_scons.sbt.core import utils
 
     vcpkg_triplet = utils.get_opt("triplet", None)
 

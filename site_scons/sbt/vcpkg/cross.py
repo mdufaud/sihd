@@ -8,9 +8,9 @@ import os
 import platform
 import shutil
 
-from sbt import architectures
-from sbt import builder
-from sbt import logger
+from sbt.core import architectures
+from sbt.core import builder
+from sbt.core import logger
 from sbt.vcpkg import triplets
 
 

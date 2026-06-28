@@ -3,8 +3,8 @@ import re
 import glob
 import subprocess
 
-from sbt import builder
-from sbt import architectures
+from sbt.core import builder
+from sbt.core import architectures
 from sbt.scons import compilers
 
 # Common compile flags for every runtime object (libunwind / libc++abi / libc++).

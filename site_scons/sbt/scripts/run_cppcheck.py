@@ -40,9 +40,14 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from multiprocessing import cpu_count
 
-import loader
-import builder
-from sbt import logger
+# site_scons/sbt/scripts/run_cppcheck.py -> site_scons (for `from sbt...` imports)
+_site_scons = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+if _site_scons not in sys.path:
+    sys.path.insert(0, _site_scons)
+
+from sbt.core import loader
+from sbt.core import builder
+from sbt.core import logger
 from site_scons.sbt.build import modules as sbt_modules
 
 _BASE_SUPPRESSES = [

@@ -9,21 +9,21 @@ Sub-modules handle triplet detection, cross-compilation, and manifest building.
 import sys
 import os
 
-# Ensure sbt root (site_scons/sbt/) is on sys.path for loader import
-_sbt_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-if _sbt_dir not in sys.path:
-    sys.path.insert(0, _sbt_dir)
+# Ensure site_scons/ is on sys.path for `from sbt...` imports
+_site_scons = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+if _site_scons not in sys.path:
+    sys.path.insert(0, _site_scons)
 
 from pprint import PrettyPrinter
 pp = PrettyPrinter(indent=2)
 
-import loader
+from sbt.core import loader
 
 from site_scons.sbt.build import modules
-from sbt import builder
-from sbt import logger
-from sbt import architectures
-from site_scons.sbt.build import utils
+from sbt.core import builder
+from sbt.core import logger
+from sbt.core import architectures
+from site_scons.sbt.core import utils
 
 from sbt.vcpkg.triplets import detect_triplet
 from sbt.vcpkg.cross import build_overlay_triplet_with_flags, generate_pkgconfig_wrapper

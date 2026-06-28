@@ -27,14 +27,14 @@ import os
 import shutil
 import subprocess
 
-_sbt_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-if _sbt_dir not in sys.path:
-    sys.path.insert(0, _sbt_dir)
+_site_scons = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+if _site_scons not in sys.path:
+    sys.path.insert(0, _site_scons)
 
-import loader
-from sbt import builder
-from sbt import logger
-from site_scons.sbt.build import utils
+from sbt.core import loader
+from sbt.core import builder
+from sbt.core import logger
+from site_scons.sbt.core import utils
 
 # ABI-critical args inherited from the consumer — cannot be overridden by dep args
 _ABI_ARGS = frozenset({"platform", "compiler", "machine", "libc"})
@@ -219,7 +219,7 @@ def _compute_dep_build_path(dep_path, make_args):
     Compute the build output path of a dependency based on its make args.
     Mirrors builder.py's build_path computation.
     """
-    from sbt import architectures
+    from sbt.core import architectures
 
     dep_machine = make_args.get("machine", builder.build_machine)
     dep_platform = make_args.get("platform", builder.build_platform)

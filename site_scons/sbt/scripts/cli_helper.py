@@ -1,8 +1,11 @@
 import os
+import sys
 import json
 
-import builder
-import loader
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from sbt.core import builder
+from sbt.core import loader
 
 
 def _runner_env():
@@ -20,6 +23,16 @@ def _test_env(app):
             return fn(builder)
         else:
             raise TypeError(f"app.generate_test_env is not callable: {fn}")
+    return {}
+
+
+def _test_command(app):
+    fn = getattr(app, "generate_test_command", None)
+    if fn is not None:
+        if callable(fn):
+            return fn(builder)
+        else:
+            raise TypeError(f"app.generate_test_command is not callable: {fn}")
     return {}
 
 
@@ -45,6 +58,7 @@ def _build_env():
     return {
         "app_name": app.name,
         "root_path": builder.build_root_path,
+        "modules_path": builder.build_modules_path,
         "build_path": builder.build_path,
         "build": {
             "platform": builder.build_platform,
@@ -60,6 +74,7 @@ def _build_env():
             "bin_ext": builder.get_test_bin_ext() or "",
             "runner_env": _runner_env(),
             "env": _test_env(app),
+            "command": _test_command(app),
         },
     }
 
@@ -91,6 +106,9 @@ if __name__ == '__main__':
         print(builder.build_on_termux and "true" or "false")
     elif sys.argv[1] == "path":
         print(builder.build_path)
+    elif sys.argv[1] == "modules_path":
+        loader.load_app()
+        print(builder.build_modules_path)
     elif sys.argv[1] == "static":
         print(builder.libs_type)
     elif sys.argv[1] == "triplet":

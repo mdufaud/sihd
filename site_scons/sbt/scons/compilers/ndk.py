@@ -7,9 +7,9 @@ the build environment for cross-compilation to Android targets.
 
 import os
 
-from sbt import architectures
-from sbt import builder
-from sbt import logger
+from sbt.core import architectures
+from sbt.core import builder
+from sbt.core import logger
 
 
 def load_in_env(env):

@@ -10,7 +10,7 @@ SBT (`site_scons/sbt/`) is a generic, reusable build framework. `addon/` contain
 site_scons/
 ├── sbt/           # Generic build system
 │   ├── scons.py
-│   ├── builder.py
+│   ├── core/      # foundations (builder, loader, architectures, logger, utils)
 │   ├── vcpkg/
 │   └── ...
 └── addon/         # Project-specific extensions (stays in your repo)

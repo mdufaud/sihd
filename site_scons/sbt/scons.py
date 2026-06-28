@@ -20,12 +20,13 @@ pp = PrettyPrinter(indent=2)
 # App settings
 ###############################################################################
 
-from sbt import loader
-from sbt import builder
-from sbt import logger
+from sbt.core import loader
+from sbt.core import builder
+from sbt.core import logger
+from sbt.core import architectures
 
 from site_scons.sbt.build import modules
-from site_scons.sbt.build import utils as build_utils
+from site_scons.sbt.core import utils as build_utils
 
 from site_scons.sbt.scons import utils as scons_utils
 from site_scons.sbt.scons import state as scons_state
@@ -315,7 +316,7 @@ if compiler != "mingw" and compiler != "ndk" and not builder.is_msys():
 if verbose:
     logger.debug(f"looking for app configurations:")
 
-default_app_conf_to_get = (build_platform, libtype, build_mode, compiler, builder.libc, builder.build_machine)
+default_app_conf_to_get = (build_platform, libtype, f"mode_{build_mode}", compiler, builder.libc, builder.build_machine)
 env_factory.add_combination_app_conf_to_env(base_env, app, default_app_conf_to_get)
 
 ###############################################################################
@@ -355,7 +356,7 @@ build_state = scons_state.BuildState(verbose)
 
 if verbose:
     logger.debug(f"will look for modules options:")
-    pp.pprint([[f"{option}-{key}" for option in modules_options] for key in ("libs", "flags", "link", "defines")])
+    pp.pprint([[f"{option}-{key}" for option in modules_options] for key in architectures.CONF_FLAG_ENV.keys()])
 
 modules.resolve_modules_exports(build_modules, modules_options)
 
@@ -391,6 +392,10 @@ for conf in modules_build_order:
     if conf.get("external"):
         # synthetic cross-project module: no scons.py to compile, link metadata only
         continue
+    module_script_path = os_path.join(builder.build_modules_path, modname, "scons.py")
+    if not os_path.isfile(module_script_path):
+        logger.error("module '{}' declared but {} missing".format(modname, module_script_path))
+        Exit(1)
     logger.info("building module: {}".format(modname))
     env = env_factory.create_module_env(conf, ctx,
         depends=conf.get("depends", []),
@@ -421,7 +426,7 @@ for conf in modules_build_order:
             scons_utils.install_module_res_into_build(env, modname, f"demo/{resource_dir}", resource_dir, must_exist=False)
     # read module's scons script file
     module_format_name = env['APP_MODULE_FORMAT_NAME']
-    built[modname] = SConscript(Dir(builder.build_root_path).Dir(modname).File("scons.py"),
+    built[modname] = SConscript(Dir(builder.build_modules_path).Dir(modname).File("scons.py"),
                                 variant_dir=os_path.join(builder.build_obj_path, modname),
                                 duplicate=0,
                                 exports=['env'])
@@ -466,7 +471,7 @@ if builder.build_combined and build_state.lib_objects:
         combined_env.Replace(LIBS=combined_external_libs)
         for conf in modules_build_order:
             combined_env.AppendUnique(
-                CPPPATH=[os_path.join(builder.build_root_path, conf["modname"], "include")]
+                CPPPATH=[os_path.join(builder.build_modules_path, conf["modname"], "include")]
             )
 
         combined_lib_path = os_path.join(builder.build_lib_path, app.name)

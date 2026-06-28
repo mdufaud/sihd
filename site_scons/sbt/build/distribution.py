@@ -5,15 +5,15 @@ import subprocess
 from os.path import join
 
 try:
-    from sbt import builder as _b
-    from sbt import logger
+    from sbt.core import builder as _b
+    from sbt.core import logger
 except ImportError:
-    from site_scons.sbt import builder as _b
-    from site_scons.sbt import logger
+    from site_scons.sbt.core import builder as _b
+    from site_scons.sbt.core import logger
 
 from site_scons.sbt.build import modules as sbt_modules
-from site_scons.sbt.build import utils
-from site_scons.sbt import architectures
+from site_scons.sbt.core import utils
+from site_scons.sbt.core import architectures
 
 def _copy_tree_if_exists(src, dst):
     """Recursively copy *src* into *dst* (creating *dst*) when *src* is a directory."""

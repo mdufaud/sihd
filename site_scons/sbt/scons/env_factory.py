@@ -10,8 +10,8 @@ Provides helpers to:
 
 from os import path as os_path
 
-from sbt import builder
-from sbt import architectures
+from sbt.core import builder
+from sbt.core import architectures
 from site_scons.sbt.build import modules as build_modules_util
 from site_scons.sbt.scons import utils as scons_utils
 from site_scons.sbt.scons import cpp_modules as scons_cpp_modules
@@ -118,7 +118,7 @@ def create_module_env(conf, ctx,
         reverse=True,
     )
 
-    # --- Libraries ---
+    # --- Libraries (special: prepended, musl-filtered, dep-generated, deduped) ---
     # Keep module-local libraries before transitive exports so static link order
     # remains correct on platforms like MinGW.
     libs = build_modules_util.get_module_libs(ctx.build_modules, modname)
@@ -127,15 +127,19 @@ def create_module_env(conf, ctx,
     if builder.libc == "musl":
         libs = [lib for lib in libs if lib not in architectures.musl_excluded_libs]
 
-    # --- Flags / link / defines ---
-    flags = conf.get("_resolved_export_flags", []) + conf.get("flags", [])
-    flags += get_compilation_options(conf, "flags", modules_options)
-
-    link = conf.get("_resolved_export_link", []) + conf.get("link", [])
-    link += get_compilation_options(conf, "link", modules_options)
-
-    defines = conf.get("_resolved_export_defines", []) + conf.get("defines", [])
-    defines += get_compilation_options(conf, "defines", modules_options)
+    # --- Other flag-keys: map-driven from the canonical CONF_FLAG_ENV taxonomy ---
+    # Only flags/link/defines carry resolved exports and inherited-from-deps values.
+    _export_keys = ("flags", "link", "defines")
+    append_values = {}
+    for base, env_var in architectures.CONF_FLAG_ENV.items():
+        if base == "libs":
+            continue
+        values = []
+        if base in _export_keys:
+            values += conf.get(f"_resolved_export_{base}", [])
+        values += conf.get(base, [])
+        values += get_compilation_options(conf, base, modules_options)
+        append_values[env_var] = values
 
     # --- Inherited values from dependency modules ---
     depends_generated_libs = []
@@ -158,9 +162,9 @@ def create_module_env(conf, ctx,
 
     # each module sees exactly its declared dependencies' headers,
     # deterministically ordered, without leaking includes between unrelated modules.
-    cpppath = [os_path.join(builder.build_root_path, modname, "include")]
+    cpppath = [os_path.join(builder.build_modules_path, modname, "include")]
     cpppath += [
-        os_path.join(builder.build_root_path, dep, "include")
+        os_path.join(builder.build_modules_path, dep, "include")
         for dep in ordered_depends
         if not build_modules_util.is_external_depend(dep)
     ]
@@ -170,12 +174,11 @@ def create_module_env(conf, ctx,
     env.PrependUnique(
         LIBS=depends_generated_libs + libs,
     )
-    env.AppendUnique(
-        CPPFLAGS=flags + depends_flags,
-        LINKFLAGS=link + depends_links,
-        CPPDEFINES=defines + depends_defines,
-        CPPPATH=cpppath,
-    )
+    append_values["CPPFLAGS"] += depends_flags
+    append_values["LINKFLAGS"] += depends_links
+    append_values["CPPDEFINES"] += depends_defines
+    append_values["CPPPATH"] = cpppath
+    env.AppendUnique(**append_values)
     # Do NOT auto-enable C++ module flags here even if a dependency exported BMIs.
     # Modules flags (-fmodules / -fmodule-mapper) are injected on demand by
     # build_lib/build_test/build_demo/build_bin when the caller passes cpp_modules=.
@@ -184,7 +187,7 @@ def create_module_env(conf, ctx,
     env["APP_MODULE_NAME"] = modname
     env["APP_MODULE_FORMAT_NAME"] = f"{ctx.app.name}_{modname}"
     env["APP_MODULE_CONF"] = conf
-    env["APP_MODULE_DIR"] = os_path.join(builder.build_root_path, modname)
+    env["APP_MODULE_DIR"] = os_path.join(builder.build_modules_path, modname)
 
     # Apply pkg-config and binary-config
     package_configs = conf.get("pkg-configs", [])

@@ -19,6 +19,11 @@ fi
 
 set -e
 
+if [ -n "${MODULES_DIR:-}" ]; then
+    mkdir -p "$MODULES_DIR"
+    cd "$MODULES_DIR"
+fi
+
 APP_NAME=$1
 MODULE_NAME=$2
 CLASS_NAME=$3

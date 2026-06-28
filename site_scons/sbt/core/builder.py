@@ -6,15 +6,15 @@ import os
 from os.path import join, dirname, abspath
 
 try:
-    from sbt import loader
-    from sbt import architectures
+    from sbt.core import loader
+    from sbt.core import architectures
 except ImportError:
-    import loader
-    import architectures
+    from . import loader
+    from . import architectures
 
 from site_scons.sbt.build import modules as sbt_modules
-from site_scons.sbt.build import utils
-from sbt import logger
+from site_scons.sbt.core import utils
+from sbt.core import logger
 
 loader.load_env()
 
@@ -76,6 +76,8 @@ def _build_gnu_triplet(machine, vendor, libc="gnu"):
         "aix": "ibm-aix",
         "neutrino": "nto-qnx"
     }.get(vendor, vendor)
+    if op_system is None:
+        raise SystemExit("unknown vendor: {}".format(vendor))
     if vendor in ("linux", "android"):
         if machine in ("armv6", "armv6l", "armv7", "armv7l"):
             # Add 'eabi' for ARM architectures
@@ -337,9 +339,9 @@ def force_git_clone():
 def get_libc():
     # Android uses bionic libc — force it when platform=android
     if __get_platform() == "android":
-        return "bionic"
+        return architectures.ANDROID_LIBC
     libc = utils.get_opt("libc", "gnu").lower()
-    if libc not in ("gnu", "musl"):
+    if libc not in architectures.LIBCS:
         raise SystemExit("unknown libc: {}".format(libc))
     return libc
 
@@ -413,10 +415,19 @@ build_for_android = build_platform == "android"
 def get_gnu_triplet():
     return _build_gnu_triplet(build_machine, build_platform, libc)
 
-sbt_path = abspath(dirname(__file__))
+# core/builder.py -> root/site_scons/sbt
+sbt_path = abspath(dirname(dirname(__file__)))
 
-# path ROOT -> root/site_scons/builder.py
-build_root_path = abspath(dirname(dirname(dirname(__file__))))
+# core/builder.py -> root
+build_root_path = abspath(dirname(dirname(dirname(dirname(__file__)))))
+
+# base directory modules are read from. defaults to root (modules at <root>/<modname>).
+# overridable via app.py 'modules_path' (relative to root) through set_modules_path().
+build_modules_path = build_root_path
+
+def set_modules_path(modules_path):
+    global build_modules_path
+    build_modules_path = join(build_root_path, modules_path) if modules_path else build_root_path
 
 # build dir path next to root
 build_entry_path = join(build_root_path, "build")
@@ -481,7 +492,12 @@ def get_test_runner():
 
 def _mingw_runtime_dll_dirs():
     """Dirs holding the mingw runtime DLLs (libstdc++/libgcc/libwinpthread) a shared build needs."""
-    runtime_dlls = ["libstdc++-6.dll", "libgcc_s_seh-1.dll", "libgcc_s_dw2-1.dll", "libwinpthread-1.dll"]
+    runtime_dlls = [
+        "libstdc++-6.dll",
+        "libgcc_s_seh-1.dll",
+        "libgcc_s_dw2-1.dll",
+        "libwinpthread-1.dll"
+    ]
     candidates = []
     try:
         out = subprocess.run(
@@ -552,7 +568,7 @@ cpp_modules_compiler_major = int((_detect_compiler_major_version(build_compiler,
 cpp_modules_backend = _detect_cpp_modules_backend()
 is_cpp_modules = cpp_modules_backend is not None
 
-allowed_compilers = ("gcc", "clang", "em", "mingw", "zig", "ndk")
+allowed_compilers = architectures.COMPILERS
 
 def get_android_sdk_root():
     """Get Android SDK root path."""
@@ -570,12 +586,24 @@ def get_ndk_api_level():
     """Get Android API level (default 24)."""
     return utils.get_opt("ANDROID_API", "24")
 
+def get_ndk_host_tag():
+    """Get the NDK prebuilt host tag (override: ANDROID_NDK_HOST_TAG)."""
+    override = utils.get_opt("ANDROID_NDK_HOST_TAG", "")
+    if override:
+        return override
+    system = platform.system().lower()
+    if system == "darwin":
+        return "darwin-x86_64"
+    if system == "windows":
+        return "windows-x86_64"
+    return "linux-x86_64"
+
 def get_ndk_toolchain_bin():
     """Get the NDK prebuilt toolchain bin directory."""
     ndk_root = get_ndk_root()
     if not ndk_root:
         return ""
-    return os.path.join(ndk_root, "toolchains", "llvm", "prebuilt", "linux-x86_64", "bin")
+    return os.path.join(ndk_root, "toolchains", "llvm", "prebuilt", get_ndk_host_tag(), "bin")
 
 def _enabled_sanitizers():
     """Return dict of {name: bool} for all sanitizer-like build flags."""
@@ -617,7 +645,8 @@ def verify_args(app):
     if build_compiler not in allowed_compilers:
         logger.error("compiler {} is not supported".format(build_compiler))
         ret = False
-    if hasattr(app, "modes") and build_mode not in app.modes:
+    app_modes = getattr(app, "modes", None)
+    if app_modes is not None and build_mode not in app_modes:
         logger.error("mode {} unknown".format(build_mode))
         ret = False
 

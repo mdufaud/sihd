@@ -6,6 +6,10 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/.env"
+# Test framework profile (gtest by default). Sourced after .env so any flag the
+# project already exported via app.generate_test_command takes precedence.
+profile_dir="${TEST_PROFILE_DIR:-$SCRIPT_DIR/profiles}"
+source "$profile_dir/${TEST_PROFILE:-gtest}.sh"
 cd "$TEST_PATH"
 
 log_dir="$TEST_PATH/logs"
@@ -33,8 +37,8 @@ print_module_failure()
     # show each [ FAILED ] line with the assertion context above it (colors kept);
     # markers/assertions are in the combined log since 2>&1. fall back to tail if
     # no failed marker (crash/sanitizer before any gtest output)
-    if grep -qaE "\[  FAILED  \]" "${output_log}"; then
-        grep -aE -B 12 -A 1 "\[  FAILED  \]" "${output_log}"
+    if grep -qaE "$TEST_FAILURE_PATTERN" "${output_log}"; then
+        grep -aE -B 12 -A 1 "$TEST_FAILURE_PATTERN" "${output_log}"
     else
         tail -n 40 "${output_log}"
     fi
@@ -86,24 +90,22 @@ execute_tests()
 (
     for module in $module_list;
     do
-        module_path=$PROJECT_ROOT_PATH/$module
+        module_path=${MODULES_PATH:-$PROJECT_ROOT_PATH}/$module
         test_bin_path=$TEST_BIN_PATH/${APP_NAME}_${module}${TEST_BIN_EXT}
 
         repeat_args=
         if [ ! -z "$REPEAT" ]; then
-            repeat_args="--gtest_repeat="$REPEAT" --gtest_throw_on_failure"
+            repeat_args="${TEST_REPEAT_FLAGS//REPEAT/$REPEAT}"
         fi
 
         brief_args=
         if [ ! -z "$BRIEF" ] && [ "$BRIEF" != "0" ]; then
-            brief_args="--gtest_brief=1"
+            brief_args="$TEST_BRIEF_FLAGS"
         fi
 
         cmd="env $DEBUGGER $DEBUGGER_ARGS $TEST_RUNNER $test_bin_path \
-                --gtest_death_test_style=threadsafe \
-                --gtest_shuffle \
-                --gtest_color=yes \
-                --gtest_filter="*$test_filter*" \
+                $TEST_RUN_FLAGS \
+                ${TEST_FILTER_FLAG//FILTER/$test_filter} \
                 $repeat_args $brief_args $TEST_ARGS"
 
         output_log="${log_dir}/${module}/output.log"
@@ -146,7 +148,7 @@ list_tests()
 
         test_bin_path=$TEST_BIN_PATH/${APP_NAME}_${module}${TEST_BIN_EXT}
 
-        $TEST_RUNNER $test_bin_path --gtest_list_tests
+        $TEST_RUNNER $test_bin_path $TEST_LIST_FLAGS
     done
 )
 

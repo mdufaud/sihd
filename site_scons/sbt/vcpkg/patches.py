@@ -32,7 +32,7 @@ import re
 import shutil
 import subprocess
 
-from sbt import logger
+from sbt.core import logger
 
 # Source-acquisition functions whose extracted path we can patch.
 # Longest names first so the alternation prefers the more specific match.

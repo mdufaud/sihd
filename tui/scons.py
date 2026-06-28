@@ -2,15 +2,18 @@ Import('env')
 
 builder = env.builder()
 
-env.Append(
-    CPPFLAGS = [
-        "-Wno-unused-parameter",
-        "-Wno-sign-compare",
-        "-Wno-pessimizing-move",
-        "-Wno-unused-function",
-        "-Wno-error=maybe-uninitialized",
-    ]
-)
+cppflags = [
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-pessimizing-move",
+    "-Wno-unused-function",
+]
+
+# gcc-only warning; clang rejects it as an unknown warning option under -Werror
+if builder.build_compiler == "gcc":
+    cppflags.append("-Wno-error=maybe-uninitialized")
+
+env.Append(CPPFLAGS = cppflags)
 
 # build library from lib sources - not added to environment
 lib = env.build_lib(Glob('src/*.cpp'), name = env.module_format_name())

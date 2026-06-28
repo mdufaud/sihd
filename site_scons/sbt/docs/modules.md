@@ -59,9 +59,12 @@ SBT auto-fills missing keys (`depends`, `libs`, `link`, `flags`) as empty lists.
 |-----|------|-------------|
 | `depends` | `list[str]` | Internal module dependencies (built before this module) |
 | `libs` | `list[str]` | System/external libraries to link (`-l<name>`) |
-| `flags` | `list[str]` | Compiler flags (`CPPFLAGS`) |
+| `flags` | `list[str]` | Compiler flags, C and C++ (`CPPFLAGS`) |
+| `c-flags` | `list[str]` | C-only compiler flags (`CFLAGS`) |
+| `cxx-flags` | `list[str]` | C++-only compiler flags (`CXXFLAGS`) |
 | `defines` | `list[str]` | Preprocessor defines (`-D<name>`) |
 | `link` | `list[str]` | Linker flags (`LINKFLAGS`) |
+| `bin-link` | `list[str]` | Linker flags for binaries/tests/demos only (`BIN_LINKFLAGS`) |
 | `extlibs` | `list[str]` | External library names (vcpkg), see [dependencies.md](dependencies.md) |
 
 ### Discovery keys
@@ -166,7 +169,7 @@ Where `{variant}` is one or a combination of:
 | Platform | `linux`, `windows`, `web`, `android` | `linux-libs` |
 | Compiler | `gcc`, `clang`, `mingw`, `em`, `ndk`, `zig` | `em-flags` |
 | Lib type | `static`, `shared` | `static-defines` |
-| Mode | `debug`, `fast`, `size`, `release` | `debug-flags` |
+| Mode | `mode-debug`, `mode-fast`, `mode-size`, `mode-release` | `mode-debug-flags` |
 | Libc | `gnu`, `musl` | `musl-flags` |
 | Cross | `native`, `cross` | `native-libs`, `cross-libs` |
 
@@ -176,11 +179,11 @@ Where `{variant}` is one or a combination of:
 "linux-static-libs": ['z'],          # linux + static
 "linux-native-libs": ['udev'],       # linux + native build
 "linux-cross-libs": ['usb-1.0'],     # linux + cross build
-"gcc-debug-flags": ['-Og'],          # gcc + debug
-"mingw-gnu-libs": ['stdc++fs'],      # mingw + gnu libc
+"mode-debug-flags": ['-Og'],         # debug mode (bare "debug-flags" WARNS)
+"mode-fast-static-flags": ['-O2'],   # fast mode + static
 ```
 
-All combinations of `(platform, libtype, mode, compiler, libc, native/cross)` are valid. SBT iterates over all of them at build time.
+Modes are project-defined (`app.modes`) and always `mode-` prefixed. SBT generates each base selector plus its `{selector}-{libtype}` pairing and the `{platform}-cross`/`{platform}-native` pairs; it iterates over all of them at build time.
 
 ### Example: full module
 

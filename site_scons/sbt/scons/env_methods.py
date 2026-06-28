@@ -42,9 +42,9 @@ from os import path as os_path
 
 from SCons.Script import NoCache
 
-from sbt import builder
-from sbt import logger
-from site_scons.sbt.build import cpp_modules as build_cpp_modules
+from sbt.core import builder
+from sbt.core import logger
+from site_scons.sbt.build import cpp_module_parse as build_cpp_modules
 from site_scons.sbt.scons import utils as scons_utils
 from site_scons.sbt.scons import android as scons_android
 from site_scons.sbt.scons import cpp_modules as scons_cpp_modules
@@ -333,10 +333,10 @@ def _build_test(self, src, name, libs, ctx, **kwargs):
     for dep_modname in conf.get("depends", []):
         for include_path in ctx.state.exported_test_includes.get(dep_modname, []):
             exported_test_cpppaths.append(
-                os_path.join(builder.build_root_path, dep_modname, include_path)
+                os_path.join(builder.build_modules_path, dep_modname, include_path)
             )
         for resource_path in ctx.state.exported_test_resources.get(dep_modname, []):
-            resource_src = os_path.join(builder.build_root_path, dep_modname, resource_path)
+            resource_src = os_path.join(builder.build_modules_path, dep_modname, resource_path)
             resource_dst = os_path.join("test", "resources", dep_modname)
             if os_path.isfile(resource_src):
                 resource_dst = os_path.join(resource_dst, os_path.basename(resource_path))
@@ -533,7 +533,7 @@ def _file_basename(self, path):
 def _git_clone(self, url, branch, dest, recursive, ctx):
     modname = self['APP_MODULE_NAME']
     if not os_path.isabs(dest):
-        dest = os_path.join(builder.build_root_path, modname, dest)
+        dest = os_path.join(builder.build_modules_path, modname, dest)
     ret = True
     if os_path.isdir(dest):
         logger.info("repository already cloned: {}".format(dest))
@@ -556,7 +556,7 @@ def _git_clone(self, url, branch, dest, recursive, ctx):
 def _replace_in_file(self, path, dic, ctx):
     module_name = self['APP_MODULE_NAME']
     if not os_path.isabs(path):
-        path = os_path.join(builder.build_root_path, module_name, path)
+        path = os_path.join(builder.build_modules_path, module_name, path)
     logger.debug("replacing file: " + path)
     if not ctx.is_dry_run:
         scons_utils.fileinput_replace(path, dic)
@@ -591,7 +591,7 @@ def _parse_config(self, config):
 def _find_in_file(self, src, search_str, ctx):
     module_name = self['APP_MODULE_NAME']
     if not os_path.isabs(src):
-        src = os_path.join(builder.build_root_path, module_name, src)
+        src = os_path.join(builder.build_modules_path, module_name, src)
     with open(src, 'r') as fd:
         for line in fd:
             if search_str in line:
@@ -613,7 +613,7 @@ def register_methods(base_env, ctx):
     After this call, every module's scons.py can access these methods on the
     *env* object exported to it via SConscript.
     """
-    from site_scons.sbt.build import utils as build_utils
+    from site_scons.sbt.core import utils as build_utils
 
     # --- Artefact builders ---
 

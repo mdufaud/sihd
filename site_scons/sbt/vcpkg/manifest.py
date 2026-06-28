@@ -10,8 +10,8 @@ Handles:
 import os
 from json import dump as json_dump
 
-from sbt import builder
-from sbt import logger
+from sbt.core import builder
+from sbt.core import logger
 
 # Single source of truth for the default vcpkg baseline commit hash.
 # app.py can override this via `vcpkg_baseline = "..."`.

@@ -1,5 +1,5 @@
-from sbt import builder
-from sbt import logger
+from sbt.core import builder
+from sbt.core import logger
 import os
 import re
 

@@ -1,4 +1,4 @@
-from sbt import builder
+from sbt.core import builder
 
 def _append_both(env, flags):
     env.Append(CPPFLAGS = flags, LINKFLAGS = flags)

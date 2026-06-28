@@ -13,6 +13,11 @@ set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
+if [ -n "${MODULES_DIR:-}" ]; then
+    mkdir -p "$MODULES_DIR"
+    cd "$MODULES_DIR"
+fi
+
 APP_NAME=$1
 MODULE_NAME=$2
 echo "Building module $MODULE_NAME"

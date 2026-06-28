@@ -22,23 +22,19 @@ def as_list(value):
     return [value]
 
 
-from site_scons.sbt.build.utils import dedupe_keep_order
+from site_scons.sbt.core.utils import dedupe_keep_order, get_opt
 
 ###############################################################################
 # Build helpers
 ###############################################################################
 
-from sbt import builder
-from sbt import logger
+from sbt.core import builder
+from sbt.core import logger
+from sbt.core import architectures
 
 __env_to_suffix_keys = {
-    "LIBS": "_libs",
-    "CFLAGS": "_c_flags",
-    "CXXFLAGS": "_cxx_flags",
-    "CPPFLAGS": "_flags",
-    "CPPDEFINES": "_defines",
-    "LINKFLAGS": "_link",
-    "BIN_LINKFLAGS": "_bin_link",
+    env: "_" + name.replace("-", "_")
+    for name, env in architectures.CONF_FLAG_ENV.items()
 }
 
 def add_env_app_conf(app, env, *keys):
@@ -69,15 +65,35 @@ def parse_config_command(env, *configs):
     """ Parse configs from binaries outputs """
     if builder.build_platform == "windows" or builder.build_platform == "web":
         return False
-    # Skip host pkg-config/pcap-config when cross-compiling:
-    # they return host paths (e.g. -I/usr/include) that poison cross builds.
+    # Skip host pkg-config/pcap-config when cross-compiling: they return host
+    # paths (e.g. -I/usr/include) that poison cross builds. The cross_sysroot=
+    # option re-enables them, pointing pkg-config at the target sysroot.
+    cross_sysroot = ""
     if builder.is_cross_building():
-        return False
-    for config in configs:
-        try:
-            env.ParseConfig(config)
-        except OSError as e:
-            logger.warning("config '{}' not found".format(config))
+        cross_sysroot = get_opt("cross_sysroot", "")
+        if not cross_sysroot:
+            return False
+    saved_env = None
+    if cross_sysroot:
+        saved_env = {k: os.environ.get(k) for k in ("PKG_CONFIG_SYSROOT_DIR", "PKG_CONFIG_PATH")}
+        os.environ["PKG_CONFIG_SYSROOT_DIR"] = cross_sysroot
+        os.environ["PKG_CONFIG_PATH"] = os.pathsep.join([
+            os.path.join(cross_sysroot, "usr", "lib", "pkgconfig"),
+            os.path.join(cross_sysroot, "usr", "share", "pkgconfig"),
+        ])
+    try:
+        for config in configs:
+            try:
+                env.ParseConfig(config)
+            except OSError as e:
+                logger.warning("config '{}' not found".format(config))
+    finally:
+        if saved_env is not None:
+            for k, v in saved_env.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
 
 # def __do_copy(src, dst, *, follow_symlinks=True):
 #     do_copy = True
@@ -99,7 +115,7 @@ def install_module_res_into_build(env, module_name, src, dst, must_exist = True)
     """
     src = str(src)
     dst = str(dst)
-    module_res = os.path.join(builder.build_root_path, module_name, src)
+    module_res = os.path.join(builder.build_modules_path, module_name, src)
     build_output = os.path.join(builder.build_path, dst)
     nodes = []
     if os.path.isfile(module_res):
@@ -212,7 +228,7 @@ def build_status():
 def normalize_module_relative_path(module_name, path):
     """Normalize *path* to be relative to the module root or obj root (if absolute)."""
     path = os.path.normpath(str(path))
-    module_root = os.path.join(builder.build_root_path, module_name)
+    module_root = os.path.join(builder.build_modules_path, module_name)
     module_obj_root = os.path.join(builder.build_obj_path, module_name)
     if os.path.isabs(path):
         if path.startswith(module_root + os.sep):

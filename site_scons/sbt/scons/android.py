@@ -9,9 +9,9 @@ import os
 import shutil
 import subprocess
 
-from sbt import architectures
-from sbt import builder
-from sbt import logger
+from sbt.core import architectures
+from sbt.core import builder
+from sbt.core import logger
 
 # Path to default Android templates shipped with sbt
 _sbt_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -48,7 +48,7 @@ Any module config key can be prefixed with a selector. See [modules.md](modules.
     "gcc-flags": ['-Wno-specific-warning'],
     "web-flags": ['-pthread'],
     "web-link": ['-sUSE_PTHREADS=1'],
-    "mingw-gnu-libs": ['stdc++fs'],
+    "mingw-libs": ['stdc++fs'],
 
     # Native vs Cross
     "native-libs": ['udev'],
@@ -64,14 +64,14 @@ SBT builds a list of variant selectors for the current build:
 
 ```python
 # Always present:
-[platform, libtype, mode, compiler, libc]
-# e.g.: ["linux", "shared", "fast", "gcc", "gnu"]
+[platform, libtype, mode-<mode>, compiler, libc, machine]
+# e.g.: ["linux", "shared", "mode-fast", "gcc", "gnu", "x86_64"]
 
 # Plus cross/native:
 ["cross", "linux-cross"]  # or ["native", "linux-native"]
 ```
 
-For each selector and key (`libs`, `flags`, `link`, `defines`), SBT looks up `{selector}-{key}`. All 2-way combinations are also checked (e.g., `linux-static-libs`, `gcc-debug-flags`).
+For each selector and key (`libs`, `flags`, `c-flags`, `cxx-flags`, `link`, `bin-link`, `defines`), SBT looks up `{selector}-{key}`. Each selector's `{selector}-{libtype}` pairing is also checked (e.g., `linux-static-libs`, `mode-debug-static-flags`).
 
 ### Platform-specific sources in scons.py
 
@@ -317,7 +317,7 @@ In cross-compilation, vcpkg libs are often static (`.a`). When linking a shared 
 
 ### gcc-based
 
-1. Add entry to `site_scons/sbt/architectures.py`:
+1. Add entry to `site_scons/sbt/core/architectures.py`:
 
 ```python
 architectures = {
@@ -349,7 +349,7 @@ These allow `make machine=aarch64` to resolve to the `arm64` architecture entry.
 
 `make itest` / `make test` run the unit tests of cross-built binaries through an emulator,
 selected automatically — no new flag. The runner is computed in
-[builder.py:get_test_runner()](../builder.py) and threaded through `sbt.mk` into the generated
+[builder.py:get_test_runner()](../core/builder.py) and threaded through `sbt.mk` into the generated
 `build/.../test/execute_tests.sh`.
 
 | Target | Runner | Notes |
@@ -384,7 +384,7 @@ Host-compat is keyed on a native-runnable target set (`builder.host_can_run`), N
 AUTO selects only the *runner*; it never forces libc or link mode.
 
 Install emulators: `make dep` advertises them
-([architectures.py:runner_packages](../architectures.py)) — `qemu-user-static` (qemu) and
+([architectures.py:runner_packages](../core/architectures.py)) — `qemu-user-static` (qemu) and
 `wine`. Android/emscripten have no runner path (out of scope).
 
 ### qemu-user: binfmt_misc required for tests that spawn child processes

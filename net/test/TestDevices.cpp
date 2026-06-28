@@ -113,7 +113,7 @@ TEST_F(TestDevices, test_tcp_client_device)
     const char reply[] = "reply from server";
     EXPECT_EQ(accepted.send(reply), (ssize_t)strlen(reply));
 
-    ASSERT_TRUE(rx_waiter.wait_for(std::chrono::milliseconds(500)));
+    ASSERT_TRUE(rx_waiter.wait_for_nb(std::chrono::milliseconds(500), 1));
     EXPECT_EQ(rx->byte_size(), strlen(reply));
     EXPECT_EQ(memcmp(rx->data(), reply, strlen(reply)), 0);
 
@@ -160,7 +160,7 @@ TEST_F(TestDevices, test_tcp_server_device)
     const char hello[] = "hello server device";
     EXPECT_EQ(client.send(hello), (ssize_t)strlen(hello));
 
-    ASSERT_TRUE(rx_waiter.wait_for(std::chrono::milliseconds(500)));
+    ASSERT_TRUE(rx_waiter.wait_for_nb(std::chrono::milliseconds(500), 1));
     EXPECT_EQ(rx->byte_size(), strlen(hello));
     EXPECT_EQ(memcmp(rx->data(), hello, strlen(hello)), 0);
 

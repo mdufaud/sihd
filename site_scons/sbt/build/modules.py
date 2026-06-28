@@ -1,9 +1,60 @@
 import os
 import sys
 
-from site_scons.sbt.build.utils import dedupe_keep_order
+from site_scons.sbt.core.utils import dedupe_keep_order
+from sbt.core import architectures
+from sbt.core import logger
 
 must_have_parameters = ['depends', 'libs', 'link', 'flags']
+
+_NON_FLAG_CONF_KEYS = frozenset([
+    "depends", "extlibs", "pkg-configs", "parse-configs",
+    "inherit-depends-libs", "inherit-depends-defines",
+    "inherit-depends-links", "inherit-depends-generated-libs",
+    "platforms", "env", "android-permissions",
+    "conditional-env", "conditional-depends",
+    "allow-platforms", "exclude-platforms",
+    "allow-link-shared", "allow-link-static",
+])
+
+_BASE_CONF_KEYS = _NON_FLAG_CONF_KEYS | frozenset(architectures.CONF_FLAG_ENV)
+
+_EXPORT_ALL_KEYS = frozenset([
+    "export-all-libs", "export-all-defines", "export-all-flags", "export-all-link",
+])
+
+_SELECTOR_TOKENS = architectures.SELECTOR_TOKENS
+
+def _is_known_conf_key(key):
+    if key in _BASE_CONF_KEYS or key in _EXPORT_ALL_KEYS:
+        return True
+    k = key[len("export-"):] if key.startswith("export-") else key
+    if k in _BASE_CONF_KEYS:
+        return True
+    parts = k.split("-")
+    while parts:
+        if parts[0] in _SELECTOR_TOKENS:
+            parts.pop(0)
+        elif parts[0] == "mode" and len(parts) > 1:
+            parts.pop(0)
+            parts.pop(0)
+        else:
+            break
+    return "-".join(parts) in _BASE_CONF_KEYS
+
+def check_unknown_conf_keys(modules):
+    """ @brief warn on conf keys that are neither a known base key nor a
+        known selector-prefixed variant of one (catches typos like
+        'export-lib' or 'linux-lbis')
+    """
+    for modname, conf in modules.items():
+        if not isinstance(conf, dict):
+            continue
+        for key in conf:
+            if key.startswith("_"):
+                continue
+            if not _is_known_conf_key(key):
+                logger.warning("module '{}': unknown conf key '{}'".format(modname, key))
 
 def is_external_depend(name):
     """A "<project>:<module>" depend refers to a module of an SBT dependency,
@@ -368,6 +419,7 @@ def build_modules_conf(app, specific_modules=None, conditionals=None):
     conditionals = list(conditionals or [])
     if not hasattr(app, "modules"):
         raise RuntimeError("App's configuration file should have modules")
+    check_unknown_conf_keys(get_module_merged_with_conditionals(app))
     conditionals.extend(get_conditionals_from_env(app))
     modules = {}
     if specific_modules and specific_modules[0] != '':

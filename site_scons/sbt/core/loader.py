@@ -3,10 +3,10 @@ import sys
 import importlib.util
 from os import getenv, environ
 
-# root/site_scons/sbt/loader.py -> root/site_scons
-__sbt_root_path = dirname(dirname(realpath(__file__)))
+# root/site_scons/sbt/core/loader.py -> root/site_scons
+__sbt_root_path = dirname(dirname(dirname(realpath(__file__))))
 
-# root/site_scons/sbt/loader.py -> root
+# root/site_scons -> root
 __project_root_path = dirname(__sbt_root_path)
 
 sys.path.append(__sbt_root_path)
@@ -14,8 +14,8 @@ sys.path.append(__project_root_path)
 
 import re
 
-from sbt import logger
-from site_scons.sbt.build import utils
+from sbt.core import logger
+from site_scons.sbt.core import utils
 
 def __import_module_no_bytecode(module_name):
     """
@@ -128,6 +128,16 @@ def _validate_app(app):
         raise ValueError(
             f"app.py: 'name' must contain only letters, digits, hyphens and underscores (got: {name!r})"
         )
+    modules_path = getattr(app, 'modules_path', "")
+    if modules_path and not isdir(abspath(__project_root_path + '/' + modules_path)):
+        raise ValueError(f"app.py: modules_path '{modules_path}' does not exist")
+    if not isinstance(getattr(app, 'modules', None), dict):
+        raise ValueError("app.py: 'modules' dict is required")
+    version = getattr(app, 'version', None)
+    if not version or not re.match(r'^\d+\.\d+\.\d+$', str(version)):
+        raise ValueError(
+            f"app.py: 'version' must be in 'x.y.z' format (got: {version!r})"
+        )
 
 
 def load_app():
@@ -138,4 +148,9 @@ def load_app():
         raise
     _process_includes(app)
     _validate_app(app)
+    from sbt.core import builder
+    builder.set_modules_path(getattr(app, "modules_path", ""))
+    from sbt.core import architectures
+    architectures.register_machines(getattr(app, "architectures", None))
+    architectures.register_machines(getattr(app, "extra_machines", None))
     return app
