@@ -56,6 +56,9 @@ bool should_stop();
 void reset_received(int sig);
 void reset_all_received();
 
+bool block_thread(int sig);
+bool unblock_thread(int sig);
+
 bool kill(pid_t pid, int sig);
 
 std::string name(int sig);

@@ -18,7 +18,7 @@ class Synchronizer
 
         bool init_sync(int32_t total);
         void sync();
-        [[nodiscard]] bool sync(Duration timeout);
+        bool sync(Duration timeout);
         void reset();
 
         int32_t current_sync() const { return _sync_count.load(); }

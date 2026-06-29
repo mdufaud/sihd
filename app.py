@@ -79,10 +79,16 @@ modules = {
     "core": {
         "depends": ['util', 'sys'],
     },
+    "crypto": {
+        "depends": ['util'],
+        "extlibs": ['openssl'],
+        "export-libs": ['ssl', 'crypto'],
+        "export-windows-libs": ['crypt32', 'bcrypt', 'ws2_32', 'mincore'],
+    },
     "net": {
         # poll()/select() not proxied by emscripten + no raw sockets/getifaddrs: net unusable on web
         "exclude-platforms": ["web"],
-        "depends": ['util', 'sys', 'core'],
+        "depends": ['sys', 'core', 'crypto'],
         "windows-libs": ['iphlpapi'],
         "export-windows-libs": ['iphlpapi'],
     },

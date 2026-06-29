@@ -364,6 +364,34 @@ void reset_all_received()
     }
 }
 
+bool block_thread(int sig)
+{
+#if !defined(__SIHD_WINDOWS__)
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, sig);
+    return pthread_sigmask(SIG_BLOCK, &set, nullptr) == 0;
+#else
+    SIHD_LOG(warning, "block_thread: no-op on Windows (signal {} has no thread mask support)", sig);
+    return false;
+#endif
+}
+
+bool unblock_thread(int sig)
+{
+#if !defined(__SIHD_WINDOWS__)
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, sig);
+    struct timespec ts = {0, 0};
+    sigtimedwait(&set, nullptr, &ts);
+    return pthread_sigmask(SIG_UNBLOCK, &set, nullptr) == 0;
+#else
+    SIHD_LOG(warning, "unblock_thread: no-op on Windows (signal {} has no thread mask support)", sig);
+    return false;
+#endif
+}
+
 // utilities
 
 bool kill(pid_t pid, int sig)

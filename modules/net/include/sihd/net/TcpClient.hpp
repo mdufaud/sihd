@@ -4,7 +4,7 @@
 #include <atomic>
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/INetSender.hpp>
-#include <sihd/net/Socket.hpp>
+#include <sihd/net/TlsSocket.hpp>
 
 #include <sihd/sys/Poll.hpp>
 #include <sihd/util/ABlockingService.hpp>
@@ -59,8 +59,10 @@ class TcpClient: public INetReceiver,
         ssize_t send(sihd::util::ArrCharView view) override;
         bool send_all(sihd::util::ArrCharView view) override;
 
+        void set_tls_context(sihd::crypto::TlsContext ctx);
+
         // to set blocking/broadcast
-        const Socket & socket() const { return _socket; }
+        const TlsSocket & socket() const { return _socket; }
         bool connected() const { return _connected; }
         const IpAddr & client_addr() const { return _client_addr; }
 
@@ -72,7 +74,7 @@ class TcpClient: public INetReceiver,
     private:
         void _setup_poll();
 
-        Socket _socket;
+        TlsSocket _socket;
         IpAddr _client_addr;
         std::atomic<bool> _connected;
         std::mutex _poll_mutex;

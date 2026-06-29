@@ -4,9 +4,11 @@
 #include <memory>
 #include <mutex>
 
+#include <optional>
+
 #include <sihd/net/INetServerHandler.hpp>
 #include <sihd/net/IpAddr.hpp>
-#include <sihd/net/Socket.hpp>
+#include <sihd/net/TlsSocket.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Configurable.hpp>
@@ -28,7 +30,7 @@ class BasicServerHandler: public INetServerHandler,
 
                 int fd() { return socket.socket(); }
 
-                Socket socket;
+                TlsSocket socket;
                 mutable std::mutex mutex;
                 sihd::util::ArrByte read_array;
                 sihd::util::ArrByte write_array;
@@ -44,6 +46,8 @@ class BasicServerHandler: public INetServerHandler,
 
         BasicServerHandler();
         virtual ~BasicServerHandler();
+
+        void set_tls_context(sihd::crypto::TlsContext ctx);
 
         bool set_max_clients(size_t max);
 
@@ -84,6 +88,7 @@ class BasicServerHandler: public INetServerHandler,
         sihd::util::Timestamp _last_time;
         INetServer *_server;
 
+        std::optional<sihd::crypto::TlsContext> _tls_ctx;
         size_t _max_clients;
 };
 

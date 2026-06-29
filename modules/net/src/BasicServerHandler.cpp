@@ -21,6 +21,11 @@ BasicServerHandler::BasicServerHandler()
 
 BasicServerHandler::~BasicServerHandler() = default;
 
+void BasicServerHandler::set_tls_context(sihd::crypto::TlsContext ctx)
+{
+    _tls_ctx = std::move(ctx);
+}
+
 void BasicServerHandler::_reset()
 {
     _read_event_lst.clear();
@@ -158,6 +163,15 @@ void BasicServerHandler::handle_new_client(INetServer *server)
         client->write_array.reserve(4096);
         client->addr = addr;
         client->time_connected = _clock.now();
+        if (_tls_ctx)
+        {
+            client->socket.set_tls_context(*_tls_ctx);
+            if (!client->socket.tls_accept())
+            {
+                SIHD_LOG(error, "BasicServerHandler: TLS accept failed for client");
+                return;
+            }
+        }
         server->add_client_read(socket);
         _client_map[socket] = client;
         _connect_event_lst.push_back(client);

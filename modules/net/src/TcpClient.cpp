@@ -25,6 +25,11 @@ TcpClient::~TcpClient()
         this->stop();
 }
 
+void TcpClient::set_tls_context(sihd::crypto::TlsContext ctx)
+{
+    _socket.set_tls_context(std::move(ctx));
+}
+
 bool TcpClient::set_poll_timeout(int milliseconds)
 {
     return _poll.set_timeout(milliseconds);
