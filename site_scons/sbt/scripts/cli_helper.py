@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 from sbt.core import builder
 from sbt.core import loader
-from sbt.core import architectures
+from sbt.core import conf as sbt_conf
 from sbt.build import modules as build_modules_util
 from sbt.scons import env_factory
 
@@ -98,9 +98,9 @@ def _conf(module_filter=None):
 
     print("build selectors: " + " ".join(modules_options))
 
-    candidate_conf_keys = set(architectures.CONF_FLAG_ENV.keys())
+    candidate_conf_keys = set(sbt_conf.CONF_FLAG_ENV.keys())
     for opt in modules_options:
-        for key in architectures.CONF_FLAG_ENV.keys():
+        for key in sbt_conf.CONF_FLAG_ENV.keys():
             candidate_conf_keys.add(f"{opt}-{key}")
 
     for modname, conf in build_modules.items():
@@ -112,6 +112,11 @@ def _conf(module_filter=None):
         print(f"\n{modname}:")
         for key in sorted(matched):
             print(f"  {key} = {' '.join(str(v) for v in matched[key])}")
+
+
+def _keys():
+    app = loader.load_app()
+    return sbt_conf.get_conf_vocabulary(app)
 
 
 def _dump():
@@ -132,6 +137,8 @@ if __name__ == '__main__':
         sys.exit(0)
     if sys.argv[1] == "dump":
         print(_dump())
+    elif sys.argv[1] == "keys":
+        print(json.dumps(_keys(), indent=4))
     elif sys.argv[1] == "compiler":
         print(builder.build_compiler_version)
     elif sys.argv[1] == "platform":

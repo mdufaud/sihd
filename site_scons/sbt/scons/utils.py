@@ -30,11 +30,11 @@ from site_scons.sbt.core.utils import dedupe_keep_order, get_opt
 
 from sbt.core import builder
 from sbt.core import logger
-from sbt.core import architectures
+from sbt.core import conf
 
 __env_to_suffix_keys = {
     env: "_" + name.replace("-", "_")
-    for name, env in architectures.CONF_FLAG_ENV.items()
+    for name, env in conf.CONF_FLAG_ENV.items()
 }
 
 def add_env_app_conf(app, env, *keys):

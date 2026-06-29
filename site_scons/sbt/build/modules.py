@@ -2,86 +2,7 @@ import os
 import sys
 
 from site_scons.sbt.core.utils import dedupe_keep_order
-from sbt.core import architectures
-from sbt.core import logger
-
-_NON_FLAG_CONF_KEYS = frozenset([
-    "depends", "extlibs", "pkg-configs", "parse-configs",
-    "inherit-depends-libs", "inherit-depends-defines",
-    "inherit-depends-links", "inherit-depends-generated-libs",
-    "platforms", "env", "android-permissions",
-    "conditional-env", "conditional-depends",
-    "allow-platforms", "exclude-platforms",
-    "allow-link-shared", "allow-link-static",
-])
-
-_BASE_CONF_KEYS = _NON_FLAG_CONF_KEYS | frozenset(architectures.CONF_FLAG_ENV)
-
-_EXPORT_ALL_KEYS = frozenset([
-    "export-all-libs", "export-all-defines", "export-all-flags", "export-all-link",
-])
-
-_SELECTOR_TOKENS = architectures.SELECTOR_TOKENS
-
-def _is_known_conf_key(key, modes):
-    if key in _BASE_CONF_KEYS or key in _EXPORT_ALL_KEYS:
-        return True
-    k = key[len("export-"):] if key.startswith("export-") else key
-    if k in _BASE_CONF_KEYS:
-        return True
-    parts = k.split("-")
-    while parts:
-        if parts[0] in _SELECTOR_TOKENS:
-            parts.pop(0)
-        elif parts[0] == "mode" and len(parts) > 1 and parts[1] in modes:
-            parts.pop(0)
-            parts.pop(0)
-        else:
-            break
-    return "-".join(parts) in _BASE_CONF_KEYS
-
-def get_app_modes(app):
-    """ @brief project-defined mode allowlist (from app.py + its includes) """
-    return frozenset(getattr(app, "modes", []))
-
-def check_unknown_conf_keys(modules, modes):
-    """ @brief warn on conf keys that are neither a known base key nor a
-        known selector-prefixed variant of one (catches typos like
-        'export-lib', 'linux-lbis', or a 'mode-<x>' whose <x> is not in
-        the project's app.modes allowlist)
-    """
-    for modname, conf in modules.items():
-        if not isinstance(conf, dict):
-            continue
-        for key in conf:
-            if key.startswith("_"):
-                continue
-            if not _is_known_conf_key(key, modes):
-                logger.warning("module '{}': unknown conf key '{}'".format(modname, key))
-
-_APP_FLAG_SUFFIXES = tuple("_" + name.replace("-", "_") for name in architectures.CONF_FLAG_ENV)
-# app-only build-phase scopes prepended to flag attrs (e.g. test_libs, demo_web_link)
-_APP_CONF_SCOPES = frozenset(["test", "demo"])
-
-def _is_known_app_conf_attr(attr, modes):
-    dash = attr.replace("_", "-")
-    parts = dash.split("-")
-    while parts and parts[0] in _APP_CONF_SCOPES:
-        parts.pop(0)
-    return _is_known_conf_key("-".join(parts), modes)
-
-def check_unknown_app_conf_keys(app, modes):
-    """ @brief warn on app.py / include top-level flag attributes whose
-        selector prefix is unknown (catches typos like 'debug_flags' instead
-        of 'mode_debug_flags', or 'gcc_size_link' that is never consumed)
-    """
-    for attr in dir(app):
-        if attr.startswith("_"):
-            continue
-        if not attr.endswith(_APP_FLAG_SUFFIXES):
-            continue
-        if not _is_known_app_conf_attr(attr, modes):
-            logger.warning("app.py: unknown configuration attribute '{}'".format(attr))
+from sbt.core import conf
 
 def is_external_depend(name):
     """A "<project>:<module>" depend refers to a module of an SBT dependency,
@@ -444,9 +365,9 @@ def build_modules_conf(app, specific_modules=None, conditionals=None):
     conditionals = list(conditionals or [])
     if not hasattr(app, "modules"):
         raise RuntimeError("App's configuration file should have modules")
-    modes = get_app_modes(app)
-    check_unknown_app_conf_keys(app, modes)
-    check_unknown_conf_keys(get_module_merged_with_conditionals(app), modes)
+    modes = conf.get_app_modes(app)
+    conf.check_unknown_app_conf_keys(app, modes)
+    conf.check_unknown_conf_keys(get_module_merged_with_conditionals(app), modes)
     conditionals.extend(get_conditionals_from_env(app))
     modules = {}
     if specific_modules and specific_modules[0] != '':

@@ -14,19 +14,6 @@ LIBCS = ("gnu", "musl")          # user-selectable libc
 ANDROID_LIBC = "bionic"          # forced when platform=android
 CROSS_STATES = ("native", "cross")
 
-# Canonical flag-key → SCons env var map. Single source for every flag-key list:
-# module conf keys use the dash base name ("cxx-flags"), app.py top-level vars use
-# the underscore form ("cxx_flags"); both derive from this map.
-CONF_FLAG_ENV = {
-    "libs": "LIBS",
-    "c-flags": "CFLAGS",
-    "cxx-flags": "CXXFLAGS",
-    "flags": "CPPFLAGS",
-    "defines": "CPPDEFINES",
-    "link": "LINKFLAGS",
-    "bin-link": "BIN_LINKFLAGS",
-}
-
 machine_aliases = {
     "aarch64": "arm64",
     "amd64": "x86_64",
@@ -56,13 +43,6 @@ architectures = {
 # Machine names usable as bare conf-key selectors (e.g. "x86_64-libs"). Contain
 # "_" not "-", so they survive split("-") as single tokens.
 MACHINES = tuple(architectures.keys())
-
-# Every token usable as a conf-key selector prefix (e.g. "linux-libs", "gcc-flags").
-# Modes are excluded — handled by the "mode-" prefix special case in validation.
-SELECTOR_TOKENS = frozenset(
-    PLATFORMS + COMPILERS + LIBTYPES + LIBCS
-    + (ANDROID_LIBC,) + CROSS_STATES + MACHINES
-)
 
 # Machine name used in GNU triplets (differs from internal machine name)
 _gnu_machine_map = {

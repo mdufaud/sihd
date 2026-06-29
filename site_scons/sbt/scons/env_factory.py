@@ -12,6 +12,7 @@ from os import path as os_path
 
 from sbt.core import builder
 from sbt.core import architectures
+from sbt.core import conf as sbt_conf
 from site_scons.sbt.build import modules as build_modules_util
 from site_scons.sbt.scons import utils as scons_utils
 from site_scons.sbt.scons import cpp_modules as scons_cpp_modules
@@ -134,7 +135,7 @@ def create_module_env(conf, ctx,
     # Only flags/link/defines carry resolved exports and inherited-from-deps values.
     _export_keys = ("flags", "link", "defines")
     append_values = {}
-    for base, env_var in architectures.CONF_FLAG_ENV.items():
+    for base, env_var in sbt_conf.CONF_FLAG_ENV.items():
         if base == "libs":
             continue
         values = []
