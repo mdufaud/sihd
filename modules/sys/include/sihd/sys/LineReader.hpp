@@ -2,6 +2,7 @@
 #define __SIHD_SYS_LINEREADER_HPP__
 
 #include <sihd/sys/File.hpp>
+#include <sihd/util/Array.hpp>
 #include <sihd/util/IReader.hpp>
 
 namespace sihd::sys
@@ -26,7 +27,6 @@ class LineReader: public sihd::util::IReader
         LineReader(FILE *stream,
                    bool ownership,
                    const LineReaderOptions & options = LineReaderOptions::none());
-        ~LineReader();
 
         static bool fast_read_line(std::string & line,
                                    FILE *stream = stdin,
@@ -62,17 +62,16 @@ class LineReader: public sihd::util::IReader
         bool _allocate_line();
         bool _reallocate_line(size_t needed);
         void _reset();
-        void _delete_buffers();
 
         sihd::sys::File _file;
 
         size_t _read_buff_size;
-        char *_read_ptr;
+        sihd::util::ArrChar _read_buff;
 
         size_t _line_buff_size;
 
         size_t _line_size;
-        char *_line_ptr;
+        sihd::util::ArrChar _line_buff;
 
         size_t _last_read_index;
         ssize_t _read_size;

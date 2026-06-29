@@ -1,3 +1,8 @@
+#if !defined(__SIHD_WINDOWS__)
+# include <fcntl.h>
+# include <unistd.h>
+#endif
+
 #include <gtest/gtest.h>
 #include <sihd/sys/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
@@ -186,6 +191,130 @@ TEST_F(TestLineReader, test_linereader_low_buffer)
     EXPECT_FALSE(reader.read_next());
     EXPECT_TRUE(reader.close());
 }
+
+TEST_F(TestLineReader, test_linereader_delimiter_in_line)
+{
+    LineReader reader({.delimiter_in_line = true});
+    ArrCharView view;
+
+    std::string path = fs::combine(_tmp_dir.path(), "delim_in_line.txt");
+    EXPECT_TRUE(fs::write(path, "hello world\nbye\n"));
+
+    EXPECT_TRUE(reader.open(path));
+    EXPECT_TRUE(reader.read_next());
+    EXPECT_TRUE(reader.get_read_data(view));
+    EXPECT_EQ(view, "hello world\n");
+    EXPECT_TRUE(reader.read_next());
+    EXPECT_TRUE(reader.get_read_data(view));
+    EXPECT_EQ(view, "bye\n");
+    EXPECT_FALSE(reader.read_next());
+    EXPECT_TRUE(reader.close());
+}
+
+TEST_F(TestLineReader, test_linereader_custom_delimiter)
+{
+    LineReader reader({.delimiter = ';'});
+    ArrCharView view;
+
+    std::string path = fs::combine(_tmp_dir.path(), "custom_delim.txt");
+    EXPECT_TRUE(fs::write(path, "a;b;c"));
+
+    EXPECT_TRUE(reader.open(path));
+    EXPECT_TRUE(reader.read_next());
+    EXPECT_TRUE(reader.get_read_data(view));
+    EXPECT_EQ(view, "a");
+    EXPECT_TRUE(reader.read_next());
+    EXPECT_TRUE(reader.get_read_data(view));
+    EXPECT_EQ(view, "b");
+    EXPECT_TRUE(reader.read_next());
+    EXPECT_TRUE(reader.get_read_data(view));
+    EXPECT_EQ(view, "c");
+    EXPECT_FALSE(reader.read_next());
+    EXPECT_TRUE(reader.close());
+}
+
+TEST_F(TestLineReader, test_linereader_long_line)
+{
+    LineReader reader;
+    ArrCharView view;
+
+    const std::string long_line(2000, 'a');
+    std::string path = fs::combine(_tmp_dir.path(), "long_line.txt");
+    EXPECT_TRUE(fs::write(path, long_line));
+
+    EXPECT_TRUE(reader.open(path));
+    EXPECT_TRUE(reader.read_next());
+    EXPECT_TRUE(reader.get_read_data(view));
+    EXPECT_EQ(view, long_line);
+    EXPECT_FALSE(reader.read_next());
+    EXPECT_TRUE(reader.close());
+}
+
+TEST_F(TestLineReader, test_linereader_errors)
+{
+    LineReader reader;
+    ArrCharView view;
+
+    EXPECT_FALSE(reader.get_read_data(view));
+
+    std::string missing = fs::combine(_tmp_dir.path(), "does_not_exist.txt");
+    EXPECT_FALSE(reader.open(missing));
+
+    std::string path = fs::combine(_tmp_dir.path(), "clean_eof.txt");
+    EXPECT_TRUE(fs::write(path, "one line\n"));
+    EXPECT_TRUE(reader.open(path));
+    EXPECT_TRUE(reader.read_next());
+    EXPECT_FALSE(reader.read_next());
+    EXPECT_FALSE(reader.error());
+    EXPECT_TRUE(reader.close());
+}
+
+#if !defined(__SIHD_WINDOWS__)
+TEST_F(TestLineReader, test_linereader_open_fd)
+{
+    LineReader reader;
+    ArrCharView view;
+
+    std::string path = fs::combine(_tmp_dir.path(), "open_fd.txt");
+    EXPECT_TRUE(fs::write(path, "first\nsecond\n"));
+
+    int fd = ::open(path.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+
+    EXPECT_TRUE(reader.open_fd(fd));
+    EXPECT_TRUE(reader.read_next());
+    EXPECT_TRUE(reader.get_read_data(view));
+    EXPECT_EQ(view, "first");
+    EXPECT_TRUE(reader.read_next());
+    EXPECT_TRUE(reader.get_read_data(view));
+    EXPECT_EQ(view, "second");
+    EXPECT_FALSE(reader.read_next());
+    EXPECT_TRUE(reader.close());
+}
+
+TEST_F(TestLineReader, test_linereader_fast_read_stdin)
+{
+    int pipefd[2];
+    ASSERT_EQ(::pipe(pipefd), 0);
+
+    const char *msg = "from stdin\n";
+    const ssize_t len = static_cast<ssize_t>(::strlen(msg));
+    ASSERT_EQ(::write(pipefd[1], msg, len), len);
+    ASSERT_EQ(::close(pipefd[1]), 0);
+
+    int saved_stdin = ::dup(STDIN_FILENO);
+    ASSERT_GE(saved_stdin, 0);
+    ASSERT_GE(::dup2(pipefd[0], STDIN_FILENO), 0);
+
+    std::string line;
+    EXPECT_TRUE(LineReader::fast_read_stdin(line));
+    EXPECT_EQ(line, "from stdin");
+
+    ASSERT_GE(::dup2(saved_stdin, STDIN_FILENO), 0);
+    ::close(saved_stdin);
+    ::close(pipefd[0]);
+}
+#endif
 
 TEST_F(TestLineReader, test_linereader_perf)
 {
