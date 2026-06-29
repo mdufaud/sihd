@@ -1,6 +1,7 @@
 #include <array>
 #include <atomic>
 #include <csignal>
+#include <span>
 
 #if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__)
 # include <unistd.h> // for _exit
@@ -364,33 +365,43 @@ void reset_all_received()
     }
 }
 
+#if !defined(__SIHD_WINDOWS__)
 bool block_thread(int sig)
 {
-#if !defined(__SIHD_WINDOWS__)
+    const int sigs[] = {sig};
+    return block_thread(sigs);
+}
+
+bool block_thread(std::span<const int> sigs)
+{
     sigset_t set;
     sigemptyset(&set);
-    sigaddset(&set, sig);
+    for (int sig : sigs)
+        sigaddset(&set, sig);
     return pthread_sigmask(SIG_BLOCK, &set, nullptr) == 0;
-#else
-    SIHD_LOG(warning, "block_thread: no-op on Windows (signal {} has no thread mask support)", sig);
-    return false;
-#endif
 }
 
 bool unblock_thread(int sig)
 {
-#if !defined(__SIHD_WINDOWS__)
+    const int sigs[] = {sig};
+    return unblock_thread(sigs);
+}
+
+bool unblock_thread(std::span<const int> sigs)
+{
     sigset_t set;
     sigemptyset(&set);
-    sigaddset(&set, sig);
+    for (int sig : sigs)
+        sigaddset(&set, sig);
+
+    // drain any pending instances so unblocking does not deliver them
     struct timespec ts = {0, 0};
-    sigtimedwait(&set, nullptr, &ts);
+    while (sigtimedwait(&set, nullptr, &ts) > 0)
+        ;
+
     return pthread_sigmask(SIG_UNBLOCK, &set, nullptr) == 0;
-#else
-    SIHD_LOG(warning, "unblock_thread: no-op on Windows (signal {} has no thread mask support)", sig);
-    return false;
-#endif
 }
+#endif
 
 // utilities
 

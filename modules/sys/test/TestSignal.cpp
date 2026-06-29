@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/sys/SigHandler.hpp>
+#include <sihd/sys/SigThreadBlocker.hpp>
 #include <sihd/sys/SigWaiter.hpp>
 #include <sihd/sys/SigWatcher.hpp>
 #include <sihd/sys/os.hpp>
@@ -205,6 +206,57 @@ TEST_F(TestSignal, test_signal_tmp)
     sig_status = signal::status(sig);
     ASSERT_TRUE(sig_status);
     EXPECT_EQ(sig_status->received, 3u);
+}
+
+TEST_F(TestSignal, test_block_thread_set)
+{
+    const int sigs[] = {sig_term, sig_alt};
+    ASSERT_TRUE(signal::block_thread(sigs));
+
+    raise(sig_term);
+    raise(sig_alt);
+
+    sigset_t pending;
+    sigemptyset(&pending);
+    ASSERT_EQ(sigpending(&pending), 0);
+    EXPECT_EQ(sigismember(&pending, sig_term), 1);
+    EXPECT_EQ(sigismember(&pending, sig_alt), 1);
+
+    // unblock drains pending so the signals are never delivered
+    ASSERT_TRUE(signal::unblock_thread(sigs));
+
+    sigemptyset(&pending);
+    ASSERT_EQ(sigpending(&pending), 0);
+    EXPECT_EQ(sigismember(&pending, sig_term), 0);
+    EXPECT_EQ(sigismember(&pending, sig_alt), 0);
+}
+
+TEST_F(TestSignal, test_sig_thread_blocker_restores_mask)
+{
+    // pre-block sig_term so we can verify the prior mask is restored, not cleared
+    sigset_t pre;
+    sigemptyset(&pre);
+    sigaddset(&pre, sig_term);
+    ASSERT_EQ(pthread_sigmask(SIG_BLOCK, &pre, nullptr), 0);
+
+    {
+        SigThreadBlocker blocker({sig_term, sig_alt});
+        EXPECT_TRUE(blocker.is_blocking());
+
+        sigset_t cur;
+        sigemptyset(&cur);
+        ASSERT_EQ(pthread_sigmask(SIG_BLOCK, nullptr, &cur), 0);
+        EXPECT_EQ(sigismember(&cur, sig_term), 1);
+        EXPECT_EQ(sigismember(&cur, sig_alt), 1);
+    }
+
+    sigset_t after;
+    sigemptyset(&after);
+    ASSERT_EQ(pthread_sigmask(SIG_BLOCK, nullptr, &after), 0);
+    EXPECT_EQ(sigismember(&after, sig_term), 1); // was pre-blocked -> restored
+    EXPECT_EQ(sigismember(&after, sig_alt), 0);  // unblocked on scope exit
+
+    pthread_sigmask(SIG_UNBLOCK, &pre, nullptr);
 }
 #endif
 

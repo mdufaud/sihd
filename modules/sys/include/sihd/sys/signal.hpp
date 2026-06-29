@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <optional>
+#include <span>
 #include <string>
 
 #include <sihd/util/Timestamp.hpp>
@@ -56,8 +57,12 @@ bool should_stop();
 void reset_received(int sig);
 void reset_all_received();
 
+#if !defined(__SIHD_WINDOWS__)
 bool block_thread(int sig);
+bool block_thread(std::span<const int> sigs);
 bool unblock_thread(int sig);
+bool unblock_thread(std::span<const int> sigs);
+#endif
 
 bool kill(pid_t pid, int sig);
 

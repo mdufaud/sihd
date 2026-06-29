@@ -20,6 +20,15 @@
 # define SIHD_HAS_SIGNALFD 1
 #endif
 
+// other POSIX targets (macOS/BSD/Android) use a dedicated sigwait thread instead of polling
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__) && !defined(SIHD_HAS_SIGNALFD)
+# define SIHD_HAS_SIGWAIT 1
+#endif
+
+#if defined(SIHD_HAS_SIGNALFD) || defined(SIHD_HAS_SIGWAIT)
+# define SIHD_HAS_SIGSET 1
+#endif
+
 namespace sihd::sys
 {
 
@@ -68,11 +77,16 @@ class SigWatcher: public sihd::util::Named,
         void _run_polling_loop();
         void _notify_signals();
 
+#if defined(SIHD_HAS_SIGSET)
+        sigset_t _sigset;
+#endif
 #if defined(SIHD_HAS_SIGNALFD)
         void _run_signalfd_loop();
         int _signalfd;
-        sigset_t _sigset;
         Poll _poll;
+#endif
+#if defined(SIHD_HAS_SIGWAIT)
+        void _run_sigwait_loop();
 #endif
 
         std::mutex _mutex;
@@ -91,5 +105,7 @@ class SigWatcher: public sihd::util::Named,
 } // namespace sihd::sys
 
 #undef SIHD_HAS_SIGNALFD
+#undef SIHD_HAS_SIGWAIT
+#undef SIHD_HAS_SIGSET
 
 #endif

@@ -10,6 +10,15 @@
 # define SIHD_HAS_SIGNALFD 1
 #endif
 
+// other POSIX targets (macOS/BSD/Android) use a dedicated sigwait thread instead of polling
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__) && !defined(SIHD_HAS_SIGNALFD)
+# define SIHD_HAS_SIGWAIT 1
+#endif
+
+#if defined(SIHD_HAS_SIGNALFD) || defined(SIHD_HAS_SIGWAIT)
+# define SIHD_HAS_SIGSET 1
+#endif
+
 #if defined(SIHD_HAS_SIGNALFD)
 # include <sys/signalfd.h>
 # include <unistd.h>
@@ -27,9 +36,11 @@ SigWatcher::SigWatcher(const std::string & name, Node *parent):
     _running(false),
     _polling_interval_ns(time::sec(1)) // Default 1 second for polling mode
 {
+#if defined(SIHD_HAS_SIGSET)
+    sigemptyset(&_sigset);
+#endif
 #if defined(SIHD_HAS_SIGNALFD)
     _signalfd = -1;
-    sigemptyset(&_sigset);
 #endif
 
     this->add_conf("polling_frequency", &SigWatcher::set_polling_frequency);
@@ -83,7 +94,7 @@ bool SigWatcher::add_signal(int sig)
     if (success)
     {
         _signals.emplace_back(sig);
-#if defined(SIHD_HAS_SIGNALFD)
+#if defined(SIHD_HAS_SIGSET)
         sigaddset(&_sigset, sig);
 #endif
     }
@@ -103,7 +114,7 @@ bool SigWatcher::add_signals(std::span<const int> signals)
 bool SigWatcher::rm_signal(int sig)
 {
     std::lock_guard l(_mutex);
-#if defined(SIHD_HAS_SIGNALFD)
+#if defined(SIHD_HAS_SIGSET)
     sigdelset(&_sigset, sig);
 #endif
     return container::erase_if(_sig_controllers,
@@ -135,18 +146,21 @@ bool SigWatcher::start()
 
     _running.store(true, std::memory_order_relaxed);
 
-#if defined(SIHD_HAS_SIGNALFD)
-    if (sigprocmask(SIG_BLOCK, &_sigset, nullptr) == -1)
+#if defined(SIHD_HAS_SIGSET)
+    if (!signal::block_thread(_signals))
     {
-        SIHD_LOG(error, "SigWatcher: sigprocmask failed");
+        SIHD_LOG(error, "SigWatcher: blocking signals failed");
         _running.store(false, std::memory_order_relaxed);
         return false;
     }
+#endif
 
+#if defined(SIHD_HAS_SIGNALFD)
     _signalfd = signalfd(-1, &_sigset, SFD_NONBLOCK | SFD_CLOEXEC);
     if (_signalfd == -1)
     {
         SIHD_LOG(error, "SigWatcher: signalfd creation failed");
+        signal::unblock_thread(_signals);
         _running.store(false, std::memory_order_relaxed);
         return false;
     }
@@ -155,8 +169,14 @@ bool SigWatcher::start()
         this->_run_signalfd_loop();
         return true;
     });
+#elif defined(SIHD_HAS_SIGWAIT)
+    // Dedicated sigwait thread for POSIX targets without signalfd (macOS/BSD/Android)
+    _worker.set_method([this]() {
+        this->_run_sigwait_loop();
+        return true;
+    });
 #else
-    // Fallback to polling mode for Windows and Android
+    // Fallback to polling mode for Windows and Emscripten
     _worker.set_method([this]() {
         this->_run_polling_loop();
         return true;
@@ -177,8 +197,10 @@ bool SigWatcher::stop()
         ::close(_signalfd);
         _signalfd = -1;
     }
+#endif
 
-    sigprocmask(SIG_UNBLOCK, &_sigset, nullptr);
+#if defined(SIHD_HAS_SIGSET)
+    signal::unblock_thread(_signals);
 #endif
 
     return ret;
@@ -266,6 +288,52 @@ void SigWatcher::_run_signalfd_loop()
 
 #endif
 
+#if defined(SIHD_HAS_SIGWAIT)
+
+void SigWatcher::_run_sigwait_loop()
+{
+    thread::set_name("sigwatcher");
+
+    while (_running.load(std::memory_order_relaxed))
+    {
+        const Duration interval = _polling_interval_ns.load(std::memory_order_relaxed);
+        struct timespec ts = {
+            static_cast<time_t>(interval.nanoseconds() / time::sec(1)),
+            static_cast<long>(interval.nanoseconds() % time::sec(1)),
+        };
+
+        siginfo_t info;
+        int sig = sigtimedwait(&_sigset, &info, &ts);
+
+        if (sig < 0)
+        {
+            if (errno == EAGAIN || errno == EINTR)
+                continue; // timeout or interrupted, re-check _running flag
+            SIHD_LOG(error, "SigWatcher: sigtimedwait failed");
+            break;
+        }
+
+        {
+            std::lock_guard l(_mutex);
+
+            auto it_sigcontroller = container::find_if(_sig_controllers, [sig](const auto & sig_controller) {
+                return sig_controller.sig_handler.sig() == sig;
+            });
+
+            if (it_sigcontroller != _sig_controllers.end())
+            {
+                // signals are blocked and consumed via sigtimedwait, the async handler never fires
+                it_sigcontroller->last_received++;
+                _signals_to_handle.emplace_back(sig);
+            }
+        }
+
+        this->_notify_signals();
+    }
+}
+
+#endif
+
 void SigWatcher::_run_polling_loop()
 {
     thread::set_name("sigwatcher");
@@ -303,3 +371,5 @@ void SigWatcher::_run_polling_loop()
 } // namespace sihd::sys
 
 #undef SIHD_HAS_SIGNALFD
+#undef SIHD_HAS_SIGWAIT
+#undef SIHD_HAS_SIGSET

@@ -1,13 +1,24 @@
 #ifndef __SIHD_SYS_SIGTHREADBLOCKER_HPP__
 #define __SIHD_SYS_SIGTHREADBLOCKER_HPP__
 
+#include <sihd/sys/platform.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+
+# include <signal.h>
+
+# include <initializer_list>
+# include <span>
+
 namespace sihd::sys
 {
 
 class SigThreadBlocker
 {
     public:
-        SigThreadBlocker(int sig);
+        explicit SigThreadBlocker(int sig);
+        explicit SigThreadBlocker(std::span<const int> sigs);
+        SigThreadBlocker(std::initializer_list<int> sigs);
         ~SigThreadBlocker();
 
         SigThreadBlocker(const SigThreadBlocker &) = delete;
@@ -16,13 +27,17 @@ class SigThreadBlocker
         SigThreadBlocker & operator=(SigThreadBlocker &&) = delete;
 
         bool is_blocking() const { return _blocking; }
-        int sig() const { return _sig; }
 
     private:
-        int _sig;
+        void _block(std::span<const int> sigs);
+
+        sigset_t _old_set;
+        sigset_t _blocked_set;
         bool _blocking;
 };
 
 } // namespace sihd::sys
+
+#endif
 
 #endif
