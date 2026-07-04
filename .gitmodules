@@ -1,0 +1,4 @@
+[submodule "site_scons/sbt"]
+	path = site_scons/sbt
+	url = https://github.com/mdufaud/sbt
+	branch = main

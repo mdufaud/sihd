@@ -1,1 +1,0 @@
-SConscript('site_scons/sbt/scons.py')
